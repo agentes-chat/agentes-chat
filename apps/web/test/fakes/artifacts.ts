@@ -19,6 +19,7 @@ import type {
   ArtifactFilters,
   ArtifactKind,
   ArtifactVersion,
+  DriveFolder,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
 import { clone, type MockContext, MockNotFoundError, minutesAgo, mockId, perOrg } from "./context";
@@ -75,6 +76,11 @@ export function serializeContent(content: ArtifactContent): { text: string; type
       return { text: content.question, type: "text/plain" };
     case "choices":
       return { text: content.questions.map((q) => q.question).join("\n"), type: "text/plain" };
+    // A live file's content is its card's preview (ADR 0196 §7); the server exports the document itself.
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return { text: JSON.stringify(content.preview), type: "application/json" };
   }
 }
 
@@ -158,6 +164,16 @@ export function createMockArtifacts(
     }
     return list;
   });
+  /** The Drive's folders: none seeded (a test adds its own with `createFolder`). */
+  const folders = perOrg(async (): Promise<DriveFolder[]> => []);
+  const inside = (all: DriveFolder[], id: string): Set<string> => {
+    const out = new Set([id]);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const f of all) if (f.parentId && out.has(f.parentId) && !out.has(f.id)) grew = out.add(f.id).size > 0;
+    }
+    return out;
+  };
   /** Like the server: the DM's other participant, the channel's name and privacy, else the whole workspace. */
   const audienceOf = async (orgId: string, channelId: string | null): Promise<ArtifactAudience> => {
     if (!channelId) return { kind: "workspace" };
@@ -173,16 +189,35 @@ export function createMockArtifacts(
   };
   const view = async (orgId: string, s: Stored): Promise<Artifact> => {
     const audience = await audienceOf(orgId, s.meta.channelId);
+    // A file of the Drive itself lives with its maker, made shared with everyone (ADR 0157, amendment 2026-11-17).
+    const drive = audience.kind === "workspace";
+    const viewer = await me();
+    const mine = s.meta.createdBy.type === "person" && s.meta.createdBy.id === viewer.id;
+    const sharing = s.meta.sharing ?? { mode: drive ? "everyone" : "conversation", userIds: [], roleIds: [] };
+    // As the server's `accessOf` (ADR 0202): a file nobody set levels on, whoever sees it edits, an agent where it lives.
+    const access = s.meta.access ?? {
+      place: "edit" as const,
+      workspace: sharing.mode === "everyone" ? ("edit" as const) : ("none" as const),
+      users: sharing.mode === "people" ? sharing.userIds.map((id) => ({ id, level: "edit" as const })) : [],
+      roles: sharing.mode === "people" ? sharing.roleIds.map((id) => ({ id, level: "edit" as const })) : [],
+      agents: !drive || sharing.mode === "everyone" ? ("edit" as const) : ("none" as const),
+      agentRows: [],
+      limited: false,
+    };
     return {
       canDelete: true,
-      sharing: { mode: "conversation", userIds: [], roleIds: [] },
+      sharing,
+      access,
+      myAccess: "edit" as const,
       ...clone(s.meta),
       canEdit: editable(s.meta.kind),
       untrusted: s.meta.kind === "html" || s.meta.kind === "file",
       audience,
-      // As the server: whoever reads it where it lives may share what not everyone sees (the fake's viewer is there).
+      // As the server: whoever reads it where it lives may share what not everyone sees (the fake's viewer is there);
+      // a Drive file, its maker (administrators too, which the fake's viewer isn't).
       canShare:
-        s.meta.inDrive !== false && (audience.kind === "dm" || (audience.kind === "channel" && audience.private)),
+        s.meta.inDrive !== false &&
+        (drive ? mine : audience.kind === "dm" || (audience.kind === "channel" && audience.private)),
     };
   };
   const detail = async (orgId: string, s: Stored, version?: number): Promise<ArtifactDetail> => {
@@ -203,6 +238,7 @@ export function createMockArtifacts(
       .filter((s) => !s.deletedAt)
       .filter((s) => allKinds || !filters.kind || s.meta.kind === filters.kind)
       .filter((s) => allKinds || !filters.kinds?.length || filters.kinds.includes(s.meta.kind))
+      .filter((s) => filters.folderId === undefined || (s.meta.folderId ?? null) === filters.folderId)
       .filter((s) => !filters.channelId || s.meta.channelId === filters.channelId)
       .filter((s) => !filters.channelIds?.length || filters.channelIds.includes(s.meta.channelId ?? ""))
       .filter((s) => !filters.author || s.versions.some((v) => same(v.author, filters.author)))
@@ -239,6 +275,12 @@ export function createMockArtifacts(
       };
     },
     get: async (orgId, id, version) => detail(orgId, await find(orgId, id), version),
+    // A live file's conversation (ADR 0199): a stable channel and root per file, as the server makes on first use.
+    conversation: async (orgId, id) => {
+      record("artifacts.conversation", orgId, id);
+      await find(orgId, id);
+      return { channelId: `file-conversation-${id}`, rootId: `file-root-${id}` };
+    },
     keep: async (orgId, id) => {
       const s = await find(orgId, id);
       s.meta.inDrive = true;
@@ -246,6 +288,7 @@ export function createMockArtifacts(
     },
     reply: async () => ({ id: mockId("msg") }),
     blockState: async (_orgId, id, version) => ({ id, version, state: {}, changes: {}, rev: 0 }),
+    setWave: async (_orgId, _id, _version, wave) => wave,
     setBlockState: async (_orgId, id, version, values) => ({ id, version, state: values, changes: {}, rev: 1 }),
     drawBlock: async (_orgId, id, version, name, options) => ({
       id,
@@ -264,17 +307,22 @@ export function createMockArtifacts(
       },
       messageId: mockId("msg"),
     }),
-    setSharing: async (orgId, id, sharing) => {
-      record("artifacts.setSharing", orgId, id, sharing);
+    setAccess: async (orgId, id, access) => {
+      record("artifacts.setAccess", orgId, id, access);
       const s = await find(orgId, id);
-      const listed = [...(sharing.userIds ?? []), ...(sharing.roleIds ?? [])];
-      if (sharing.mode === "people" && listed.length === 0) {
-        throw new ApiError(400, "artifact.sharing_empty", "Choose who sees it");
-      }
+      const limited =
+        access.workspace !== "edit" &&
+        (access.place === "view" ||
+          access.workspace === "view" ||
+          [...access.users, ...access.roles].some((r) => r.level === "view"));
+      s.meta.access = { ...clone(access), limited };
+      // Who sees, as the server keeps it beside the levels (ADR 0157).
       s.meta.sharing =
-        sharing.mode === "people"
-          ? { mode: "people", userIds: sharing.userIds ?? [], roleIds: sharing.roleIds ?? [] }
-          : { mode: sharing.mode, userIds: [], roleIds: [] };
+        access.workspace !== "none"
+          ? { mode: "everyone", userIds: [], roleIds: [] }
+          : access.users.length + access.roles.length > 0
+            ? { mode: "people", userIds: access.users.map((u) => u.id), roleIds: access.roles.map((r) => r.id) }
+            : { mode: "conversation", userIds: [], roleIds: [] };
       return view(orgId, s);
     },
     versions: async (orgId, id) =>
@@ -286,6 +334,8 @@ export function createMockArtifacts(
       const qs = params.toString();
       return `/api/app/organizations/${orgId}/artifacts/${id}/file${qs ? `?${qs}` : ""}`;
     },
+    thumbUrl: (orgId, id, { version, width }) =>
+      `/api/app/organizations/${orgId}/artifacts/${id}/thumb?version=${version}&w=${width}`,
     download: async (orgId, id, version) => {
       const { text, type } = serializeContent((await detail(orgId, await find(orgId, id), version)).content);
       return {
@@ -328,6 +378,7 @@ export function createMockArtifacts(
           version: 1,
           channelId: options.channelId ?? null,
           threadId: options.threadId ?? null,
+          folderId: options.folderId ?? null,
           createdBy: author,
           updatedBy: author,
           createdAt: at,
@@ -382,6 +433,60 @@ export function createMockArtifacts(
       });
       Object.assign(s.meta, { version, updatedBy: author, updatedAt: at, title: input.title ?? s.meta.title });
       return detail(orgId, s);
+    },
+    rename: async (orgId, id, title) => {
+      record("artifacts.rename", id, title);
+      const s = await find(orgId, id);
+      s.meta.title = title.trim();
+      return view(orgId, s);
+    },
+    move: async (orgId, ids, folderId) => {
+      record("artifacts.move", ids, folderId);
+      for (const id of ids) (await find(orgId, id)).meta.folderId = folderId;
+      return { moved: ids.length };
+    },
+    folders: async (orgId) => clone(await folders(orgId)),
+    createFolder: async (orgId, input) => {
+      record("artifacts.createFolder", input);
+      const at = ctx.now().toISOString();
+      const f: DriveFolder = {
+        id: mockId("folder"),
+        name: input.name.trim(),
+        parentId: input.parentId ?? null,
+        createdBy: await me(),
+        createdAt: at,
+        updatedAt: at,
+      };
+      (await folders(orgId)).push(f);
+      return clone(f);
+    },
+    updateFolder: async (orgId, id, patch) => {
+      record("artifacts.updateFolder", id, patch);
+      const all = await folders(orgId);
+      const f = all.find((x) => x.id === id);
+      if (!f) throw new MockNotFoundError("Pasta não encontrada.");
+      if (patch.parentId && inside(all, id).has(patch.parentId)) {
+        throw new ApiError(400, "drive.folder_into_itself", "A folder can't go inside itself");
+      }
+      if (patch.name !== undefined) f.name = patch.name.trim();
+      if (patch.parentId !== undefined) f.parentId = patch.parentId;
+      return clone(f);
+    },
+    deleteFolder: async (orgId, id) => {
+      record("artifacts.deleteFolder", id);
+      const all = await folders(orgId);
+      const gone = inside(all, id);
+      let trashed = 0;
+      for (const s of await store(orgId)) {
+        if (s.meta.folderId && gone.has(s.meta.folderId) && !s.deletedAt) {
+          s.deletedAt = ctx.now().toISOString();
+          s.meta.folderId = null;
+          trashed++;
+        }
+      }
+      const kept = all.filter((f) => !gone.has(f.id));
+      all.splice(0, all.length, ...kept);
+      return { trashed, kept: 0 };
     },
     remove: async (orgId, id) => {
       record("artifacts.remove", id);

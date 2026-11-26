@@ -14,6 +14,8 @@ import type {
   SocketFactory,
 } from "@agenteschat/client";
 import { ApiError, keys } from "@agenteschat/client";
+import { SHARED_SEAT } from "@agenteschat/client/lib/seat";
+import { SeatContext } from "@agenteschat/client/lib/seat-context";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ComputerDialog } from "@/components/computer/ComputerDialog";
 import { useChannelRealtime } from "@/realtime/context";
@@ -69,6 +71,8 @@ const SPECS = { cpus: 4, memoryGb: 8, diskGb: 100 };
 const RUNNING: Partial<DesktopStatus> = { available: true, reason: null, running: true, canControl: true };
 
 interface Options {
+  /** The agent is the built-in right hand: its computer is the workspace's own. */
+  rightHand?: boolean;
   /** The workspace gets its own computer (the Cloud), this far. */
   setup?: Partial<ComputerSetup>;
   /** Ada's computer; null: none. */
@@ -110,9 +114,17 @@ async function backend(o: Options = {}) {
   return { state, api, fake, machines, machine, sockets: socketsFor() };
 }
 
+/**
+ * Ada as the server sends her to me, the way the app hands her to the dialog: with what I may do with her (whether I
+ * manage her, `canManage`, ADR 0085 addendum of 2026-11-17).
+ */
+const adaOf = async (b: Awaited<ReturnType<typeof backend>>) =>
+  (await b.api.agents.list(ORG_ID)).find((a) => a.id === ADA_ID) as Agent;
+
 async function dialog(o: Options = {}) {
   const b = await backend(o);
-  const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+  const found = await adaOf(b);
+  const ada = o.rightHand ? ({ ...found, builtin: "right_hand" } as Agent) : found;
   let closed = 0;
   const r = await renderPage(<ComputerDialog agent={ada} open onClose={() => closed++} />, {
     api: b.api,
@@ -303,6 +315,20 @@ describe("the computer dialog, Cloud: the workspace's own computer", () => {
     expect(t.sockets.screens).toHaveLength(0);
   });
 
+  test("its computer moving to another server: said so, back in a few minutes, never that it isn't answering", async () => {
+    await dialog({
+      setup: { state: "ready" },
+      machine: { name: "Acme's computer", kind: "managed", os: "other", online: false, moving: true },
+      desktop: { available: false, reason: "offline" },
+      browser: true,
+    });
+    expect(sub()).toBe("Mudando de servidor");
+    const text = box().textContent ?? "";
+    expect(text).toContain("Mudando de servidor… volta em alguns minutos");
+    expect(text).not.toContain("Sem resposta");
+    expect(text).not.toContain("Já estamos cuidando");
+  });
+
   test("back while this tab was away: the reconnect asks for the computers again, and its screen opens", async () => {
     const t = await dialog({
       setup: { state: "ready" },
@@ -353,9 +379,27 @@ describe("the computer dialog, live", () => {
     expect(box().querySelector(".cmp-body")?.lastElementChild).toBe(row);
   });
 
+  test("opened for an agent's shared place: named for it, and what it reads and shows is that place", async () => {
+    const b = await backend();
+    const ada = await adaOf(b);
+    await renderPage(
+      <SeatContext.Provider value={{ agentId: ADA_ID, seat: SHARED_SEAT }}>
+        <ComputerDialog agent={ada} open onClose={() => {}} />
+      </SeatContext.Provider>,
+      { api: b.api, org: true, createSocket: b.sockets.factory },
+    );
+    await settle(8);
+    // The name's gender is the agent's own, whatever is written beside it.
+    expect(screen().getByRole("dialog", { name: "Computador da Ada (compartilhado)" })).toBeTruthy();
+    const status = calls(b, "desktop.status");
+    expect(status.length).toBeGreaterThan(0);
+    expect(status.every((args) => args[2] === SHARED_SEAT)).toBe(true);
+    expect(b.sockets.screens.at(-1)?.url).toContain("seat=shared");
+  });
+
   test("the steps' line comes under the screen while the agent works there, and goes with its run", async () => {
     const b = await backend();
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     /** The conversation the agent works in, open in this tab: its runs come live. */
     function Listening() {
       useChannelRealtime(ORG_ID, ENG_ID, true);
@@ -460,7 +504,7 @@ describe("the computer dialog, live", () => {
     const browserAsk = screenAsk({ id: "h-sign-in", screen: "browser", instructions: "Entrar no painel da loja" });
     const b = await backend({ handoff: browserAsk, browser: true });
     b.fake.sameWindow.add(ADA_ID);
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
       api: b.api,
       org: true,
@@ -634,7 +678,7 @@ describe("the computer dialog, self-host", () => {
       ],
       targets: [],
     });
-    const ada = listed.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(listed);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
       api: listed.api,
       org: true,
@@ -644,6 +688,26 @@ describe("the computer dialog, self-host", () => {
     await click(view().getByRole("button", { name: "Trocar computador" }));
     expect(screen().getByRole("dialog", { name: "Trocar o computador" })).toBeTruthy();
     expect(t.closed()).toBe(0);
+  });
+
+  test("offline while her owner's laptop helps: the cover says her new work can think there meanwhile", async () => {
+    setSystemTime(new Date(2026, 9, 21, 12));
+    const seen = new Date(Date.now() - 30 * 60_000).toISOString();
+    const b = await backend({
+      machine: { online: false, lastSeenAt: seen },
+      desktop: { available: false, reason: "offline" },
+    });
+    const ada = await adaOf(b);
+    b.machines.pair({ name: "MacBook do Bruno", online: true, pairedBy: { id: ada.ownerUserId ?? "", name: "Bruno" } });
+    await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
+      api: b.api,
+      org: true,
+      createSocket: b.sockets.factory,
+    });
+    await settle(8);
+    expect(box().textContent).toContain(
+      "A Ada espera o computador voltar. Enquanto isso, o trabalho novo pode pensar em MacBook do Bruno.",
+    );
   });
 
   test("a Mac with its browser off: that, and who turns it on, never a screen it doesn't have", async () => {
@@ -660,7 +724,7 @@ describe("the computer dialog, self-host", () => {
     });
     expect(box().textContent).toContain("O navegador da Ada está desligado no Mac mini");
     expect(box().textContent).toContain(
-      "Só quem está no computador liga, no app do agentes.chat: Preferências → Ferramentas.",
+      "Quem conectou o computador liga aqui ou no app do agentes.chat nele: Preferências → Ferramentas.",
     );
     expect(box().textContent).not.toContain("A tela da Ada não pode ser mostrada agora");
   });
@@ -670,6 +734,11 @@ describe("the computer dialog, self-host", () => {
     expect(sub()).toBe("Sem computador ainda");
     expect(box().textContent).toContain("Escolha um computador para a Ada.");
     expect(view().getByRole("button", { name: "Escolher um computador" })).toBeTruthy();
+  });
+
+  test("no computer yet for the right hand: never one to choose", async () => {
+    await dialog({ machine: null, desktop: { available: false, reason: "no_computer" }, rightHand: true });
+    expect(view().queryByRole("button", { name: "Escolher um computador" })).toBeNull();
   });
 
   test("neither its screen nor its browser: where to allow them is the button", async () => {

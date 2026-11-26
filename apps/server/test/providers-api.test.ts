@@ -1,4 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
+import { eq, schema } from "@agenteschat/db";
+import { createLocalKeyWrapper, sealSecret } from "@agenteschat/engine";
 import { enableOpenRouterModels, ProviderError, setOpenRouterModels } from "@agenteschat/providers";
 import fixture from "../../../packages/providers/test/fixtures/openrouter-models.json";
 import { browser, createTestServer, seedOrg, signUp, type TestServer } from "./harness";
@@ -103,8 +105,11 @@ test("a Gemini key: Gemini third among the providers, its three models available
   expect(models.providers.map((p) => p.id).slice(0, 3)).toEqual(["anthropic", "openai", "gemini"]);
   expect(models.providers.find((p) => p.id === "gemini")).toMatchObject({ label: "Gemini", hasKey: true });
   expect(models.models.filter((m) => m.provider === "gemini")).toMatchObject([
+    { id: "gemini-4-carbon", available: true, recommended: false },
+    { id: "gemini-4-neon", available: true, recommended: false },
     { id: "gemini-4-argon", available: true, recommended: false },
-    { id: "gemini-3.8-flash", available: true, recommended: true },
+    { id: "gemini-4-hydrogen", available: true, recommended: true },
+    { id: "gemini-3.8-flash", available: true, recommended: false },
     { id: "gemini-3.5-flash-lite", available: true, recommended: false },
   ]);
 });
@@ -220,6 +225,33 @@ test("a key saved says it passed; it can be tried again; with `release` it goes 
   expect((await api(`/credentials/${key.id}?purge=true&release=true`, { method: "DELETE" })).status).toBe(204);
 });
 
+test("a key this server can't open (saved under another AGENTES_SECRET) says so, and pasting it again fixes it", async () => {
+  t = await createTestServer();
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+  const key = (await (
+    await api("/credentials", { json: { provider: "openai", label: "OpenAI", apiKey: "sk-proj-abcdefgh" } })
+  ).json()) as { id: string };
+  const sealed = await sealSecret(
+    createLocalKeyWrapper("another-install-secret"),
+    "sk-proj-abcdefgh",
+    `provider-credential|${orgId}|${key.id}`,
+  );
+  await t.db
+    .update(schema.providerCredentials)
+    .set({ secretCiphertext: sealed.ciphertext, wrappedDataKey: sealed.wrappedDataKey })
+    .where(eq(schema.providerCredentials.id, key.id));
+  const refused = await api(`/credentials/${key.id}/check`, { json: {} });
+  expect(refused.status).toBe(400);
+  expect(((await refused.json()) as { error: { code: string } }).error.code).toBe("credential_unreadable");
+  const pasted = await api(`/credentials/${key.id}/rotate`, { json: { apiKey: "sk-proj-abcdefgh" } });
+  expect(pasted.status).toBe(200);
+  expect((await (await api(`/credentials/${key.id}/check`, { json: {} })).json()) as object).toEqual({ check: "ok" });
+});
+
 test("past a person's hourly key tests a key saves unchecked: no one sorts stolen keys through this server", async () => {
   t = await createTestServer();
   const owner = browser(t);
@@ -240,3 +272,38 @@ test("past a person's hourly key tests a key saves unchecked: no one sorts stole
   expect(checks.at(0)).toBe("ok");
   expect(checks.at(-1)).toBe("unchecked");
 }, 20_000);
+
+test("the same key saved again comes back as the saved one; copies made before list as one and fold together", async () => {
+  t = await createTestServer();
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+  const save = async (apiKey: string) =>
+    (await (await api("/credentials", { json: { provider: "openai", label: "OpenAI", apiKey } })).json()) as {
+      id: string;
+      reused?: boolean;
+    };
+  const first = await save("sk-proj-same-key-1111");
+  expect(first.reused).toBeUndefined();
+  expect(await save("sk-proj-same-key-1111")).toMatchObject({ id: first.id, reused: true });
+
+  // A copy as one was made before: another key given the same secret.
+  const other = await save("sk-proj-other-key-2222");
+  expect((await api(`/credentials/${other.id}/rotate`, { json: { apiKey: "sk-proj-same-key-1111" } })).status).toBe(
+    200,
+  );
+  type Listed = { id: string; provider: string; copies?: number; copyOf?: string };
+  const list = async () =>
+    ((await (await api("/credentials")).json()) as { credentials: Listed[] }).credentials.filter(
+      (k) => k.provider === "openai",
+    );
+  const listed = await list();
+  const kept = listed.find((k) => k.copies === 1);
+  expect(kept).toBeDefined();
+  expect(listed.filter((k) => k.copyOf === kept?.id)).toHaveLength(1);
+  const removed = await api(`/credentials/${kept?.id}/remove-copies`, { json: {} });
+  expect((await removed.json()) as object).toEqual({ removed: 1 });
+  expect((await list()).map((k) => k.id)).toEqual([kept?.id ?? ""]);
+});

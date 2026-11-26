@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { ASK_AGAIN } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import { systemText } from "@agenteschat/providers";
@@ -12,8 +13,10 @@ import {
   createSetupToolSource,
   createToolGateway,
   drainOutbox,
+  enqueue,
   grantScopes,
   insertMessage,
+  type JobHandlers,
   NEW_AGENT_DEFAULTS,
   postPersonMessage,
   REFUSALS,
@@ -166,7 +169,7 @@ describe("work that comes back goes on for the person behind it", () => {
         };
       },
     });
-    await createAgent(
+    const infra = await createAgent(
       f.db,
       f.owner.id,
       f.org.id,
@@ -179,9 +182,27 @@ describe("work that comes back goes on for the person behind it", () => {
       },
       { model: "claude-sonnet-5-5" },
     );
+    // Infra's run waits until its note is no handed work (as one that never reached the person): only then does what
+    // came of it wake @dev (`reportHandOffs`).
+    const held: JobHandlers = {
+      ...f.handlers,
+      "agent_run.execute": async (job, ctx) => {
+        const [run] = await f.db
+          .select({ agentId: schema.agentRuns.agentId })
+          .from(schema.agentRuns)
+          .where(eq(schema.agentRuns.id, String(job.payload.runId)));
+        if (run?.agentId === infra.id) return;
+        await f.handlers["agent_run.execute"]?.(job, ctx);
+      },
+    };
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
       body: "@dev avisa o infra que o deploy terminou",
     });
+    await drainOutbox(f.db, held);
+    await f.db.update(schema.agentRuns).set({ workId: null }).where(eq(schema.agentRuns.agentId, infra.id));
+    await f.db.delete(schema.agentWorks).where(eq(schema.agentWorks.agentId, infra.id));
+    for (const run of await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.agentId, infra.id)))
+      await enqueue(f.db, { orgId: f.org.id, kind: "agent_run.execute", payload: { runId: run.id } });
     await drainOutbox(f.db, f.handlers);
     // What came of the note, back in @dev's conversation (a note's reply, or the answer kind a note may come back as).
     const reply = (await f.db.select().from(schema.messages)).find((m) =>
@@ -473,7 +494,7 @@ describe("with nobody behind it, a run works as the agent itself", () => {
     await f.db.update(schema.agents).set({ ownerUserId: bia.id }).where(eq(schema.agents.id, f.agent.id));
     await grantScopes(f.db, f.org.id, f.agent.id, [{ connectionId: null, scope: "sandbox:run" }]);
     const ran: Record<string, unknown>[] = [];
-    // Like run_code: a call that says why asks a person first.
+    // Like run_code: the computer holds a push to main for a person, and the call's why is the card's reason.
     const computer: ToolSource = {
       name: "computer",
       tools: async () => [
@@ -488,8 +509,12 @@ describe("with nobody behind it, a run works as the agent itself", () => {
           },
           scope: "sandbox:run",
           whyAsks: true,
-          execute: async (input) => {
+          execute: async (input, c) => {
             ran.push(input);
+            if (String(input.code).includes("git push") && !c.approved) {
+              const content = `Not run: This push goes to the default branch main: a person approves it first. ${ASK_AGAIN}`;
+              return { content, isError: true, data: { code: "command.approval_needed" } };
+            }
             return { content: "ran" };
           },
         },
@@ -514,7 +539,7 @@ describe("with nobody behind it, a run works as the agent itself", () => {
     if (asked.type !== "approval") throw new Error(`expected an approval, got ${JSON.stringify(asked)}`);
     expect(asked.approval).toMatchObject({ ownerUserId: bia.id, origin: { kind: "unattended" }, why });
     expect(await approverIds(f.db, asked.approval)).toContain(bia.id);
-    expect(ran).toEqual([{ code: "bun test" }]);
+    expect(ran).toEqual([{ code: "bun test" }, { code: "git push origin main", why }]);
   });
 });
 

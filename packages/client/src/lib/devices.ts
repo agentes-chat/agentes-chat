@@ -6,14 +6,19 @@ import type {
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
+  MachineOfflineCause,
+  MachineTool,
+  OrgSummary,
   PhoneDevice,
   WifiPairing,
 } from "../api/types";
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
-import { clockAt, firstName } from "./format";
-import { computerKind } from "./machines";
+import { computerNameOf } from "./computer";
+import { clockAt, firstName, joinNames } from "./format";
+import { computerKind, osName } from "./machines";
 import { norm as fold } from "./tool-review";
+import { isPersonal } from "./workspace-mode";
 
 /**
  * Bring your own devices: the words, pictures and order the web and phone apps give the devices list
@@ -34,11 +39,13 @@ export const statusLook = (s: DeviceStatus): StatusLook =>
     ? "inuse"
     : s.kind === "needs_you"
       ? "needs"
-      : s.kind === "busy" || s.kind === "preparing" || s.kind === "paused" || s.kind === "offline"
-        ? s.kind
-        : s.kind === "unsupported"
-          ? "unsupported"
-          : "ready";
+      : s.kind === "moving"
+        ? "preparing"
+        : s.kind === "busy" || s.kind === "preparing" || s.kind === "paused" || s.kind === "offline"
+          ? s.kind
+          : s.kind === "unsupported"
+            ? "unsupported"
+            : "ready";
 
 /** The pill's words: the state only ("In use by Lia", "Busy 1/1"); the rest goes beside it (`statusDetail`). */
 export function statusPill(t: TFunction, s: DeviceStatus): string {
@@ -49,13 +56,17 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
       return name ? t("devices.status.inUseBy", { name }) : t("devices.status.inUse");
     }
     case "busy":
-      return t("devices.status.busy", { running: s.running, max: s.max });
+      return s.max === null
+        ? t("devices.status.busyRunning", { running: s.running })
+        : t("devices.status.busy", { running: s.running, max: s.max });
     case "needs_you":
       return t("devices.status.needs");
     case "preparing":
       return t("devices.status.preparing");
     case "paused":
       return t("devices.status.paused");
+    case "moving":
+      return t("machines.moving.short");
     case "offline":
       return t("devices.status.offline");
     case "unsupported":
@@ -84,6 +95,7 @@ const REASONS = new Set([
   "ui_automation_off",
   "xcode_missing",
   "xcode_too_old",
+  "ios_behind_xcode",
   "device_support",
   "helper_missing",
   "helper_expired",
@@ -151,6 +163,7 @@ export function statusDetail(
       return s.until ? t("devices.detail.until", { time: clockAt(locale, s.until, now) }) : null;
     case "offline":
       if (s.withHost && options.host) return t("devices.detail.withHost", { host: options.host });
+      if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "detail");
       return s.lastSeenAt ? t("devices.detail.lastSeen", { time: clockAt(locale, s.lastSeenAt, now) }) : null;
     case "unsupported":
       return s.reason === "os_too_old" && options.ios != null
@@ -161,7 +174,10 @@ export function statusDetail(
   }
 }
 
-/** The device page's status line, after the pill: the reason in words, never a bare code. */
+/**
+ * The device page's line under its chips: the reason in words, never a bare code. Null when the pill says it all (ready,
+ * busy with its count), so the page shows no line then.
+ */
 export function statusSentence(
   t: TFunction,
   locale: string,
@@ -172,15 +188,17 @@ export function statusSentence(
   switch (s.kind) {
     case "needs_you":
       return reasonText(t, s.reason, options.hostOs);
+    case "moving":
+      return t("machines.moving.line");
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
+      if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
       return s.lastSeenAt
         ? t("devices.line.offlineSeen", { time: clockAt(locale, s.lastSeenAt, now) })
         : t("devices.line.offline");
     case "busy":
-      return t("devices.line.busy", { count: s.running, max: s.max });
     case "ready":
-      return t("devices.line.ready");
+      return null;
     default:
       return statusDetail(t, locale, s, options);
   }
@@ -207,10 +225,7 @@ export function portraitOf(d: ComputerDevice | PhoneDevice): { kind: DevicePortr
 export const deviceName = (t: TFunction, d: { name: string; machineKind?: string; hostname?: string }) =>
   d.name || (d.machineKind === "host" ? t("machines.host.label") : (d.hostname ?? ""));
 
-const OS_CODES = new Set(["linux", "darwin", "windows", "other"]);
-
-/** "macOS", "Windows", or the server's own words when it sends a full name with a version ("Ubuntu 24.04"). */
-export const osName = (t: TFunction, os: string) => (OS_CODES.has(os) ? say(t, `machines.os.${os}`) : os);
+export { osName };
 
 /** "macOS 26.1 · 12 CPU · 36 GB"; the workspace computer says "Cloud" where a system would go. */
 export function computerLine(t: TFunction, d: ComputerDevice): string {
@@ -221,6 +236,124 @@ export function computerLine(t: TFunction, d: ComputerDevice): string {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+// ── Tasks at once ────────────────────────────────────────────────────────────
+
+/** The choices for a computer's tasks at once (`TASK_LIMIT_BOUNDS`), with the one it has when that isn't one of them. */
+export const taskChoices = (current: number) =>
+  [...new Set([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, current])].sort((a, b) => a - b);
+
+/** Who changes it: whoever connected the computer, or an admin on one nobody did (`updateComputerDevice`). */
+export const mayChangeTasks = (d: ComputerDevice, viewerId: string, admin: boolean) =>
+  d.machineKind !== "managed" && (d.ownerUserId === viewerId || (d.ownerUserId === null && admin));
+
+/**
+ * Under a busy computer's pill: its limit and where it changes, so a full one doesn't read as stuck. `maxTasks` null:
+ * an app too old to say it or change it from here.
+ */
+export function taskLimitLine(t: TFunction, d: ComputerDevice, mayChange: boolean): string | null {
+  if (d.status.kind !== "busy") return null;
+  const room = d.taskRoom;
+  if (room) {
+    if (room.pushHarder) return t("devices.line.tasksPushing", { gb: room.freeGb });
+    if (room.more > 0) return null;
+    return room.cpuBusy ? t("devices.line.tasksNoCpu") : t("devices.line.tasksNoMemory", { gb: room.freeGb });
+  }
+  if (d.maxTasks === null) return t("devices.line.tasksUpdate", { max: d.status.max });
+  return t(mayChange ? "devices.line.tasksChange" : "devices.line.tasksOwner", { max: d.maxTasks });
+}
+
+/** The Tasks at once row where tasks start on room: "Automatic · 3 running · room for about 8 more". */
+export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
+  if (!d.taskRoom) return null;
+  const running = d.status.kind === "busy" ? d.status.running : 0;
+  return d.taskRoom.more > 0
+    ? t("devices.tasksAutoRoom", { running, more: d.taskRoom.more })
+    : t("devices.tasksAutoFull", { running });
+}
+
+/** How a computer helps its owner's agents: never, while their own computer is full or away, or first for their work. */
+export const SPILL_USES = ["off", "help", "first"] as const;
+export type SpillUse = (typeof SPILL_USES)[number];
+export const spillUseOf = (d: Pick<ComputerDevice, "spill">): SpillUse =>
+  d.spill.first ? "first" : d.spill.own ? "help" : "off";
+export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use === "first" });
+
+/**
+ * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the
+ * computer that lends now, `lending`, from the same list). Null: nothing to say.
+ */
+export function shareInternetText(t: TFunction, d: ComputerDevice, lending: ComputerDevice | null): string | null {
+  if (!d.shareInternet?.on) return null;
+  if (d.shareInternet.inUse) return t("devices.shareInternetInUse");
+  return lending && lending.id !== d.id ? t("devices.shareInternetOther", { name: lending.name }) : null;
+}
+
+/** The computer of a devices list whose internet the workspace's computer uses now (ADR 0237), if any. */
+export const lendingDevice = (devices: readonly ComputerDevice[] | undefined) =>
+  devices?.find((x) => x.shareInternet?.inUse) ?? null;
+
+/** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */
+export const spillDeviceText = (t: TFunction, d: ComputerDevice, plan: string | null) =>
+  [statusPill(t, d.status), computerLine(t, d), plan && t("queue.spill.plan", { plan })].filter(Boolean).join(" · ");
+
+/**
+ * The line under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`,
+ * ADR 0233): "Thought on Bruno's MacBook: Acme's computer was full." The workspace's own computer reads in the
+ * reader's words (`computerNameOf`). Null on any other reply.
+ */
+export function spilledText(
+  t: TFunction,
+  meta: Record<string, unknown> | null | undefined,
+  org: Pick<OrgSummary, "name" | "mode"> | null | undefined,
+): string | null {
+  const s = meta?.spilled as { to?: unknown; from?: unknown; cause?: unknown } | undefined;
+  if (!s || typeof s.to !== "string") return null;
+  // Its owner chose that computer for their agents' work (`spill.first`): nothing was wrong with its own.
+  if (s.cause === "chosen") return t("chat.spilled.chosen", { to: s.to });
+  const from =
+    typeof s.from === "string" && s.from
+      ? computerNameOf(t, org?.name ?? "", s.from, isPersonal(org))
+      : t("chat.spilled.itsComputer");
+  return t(s.cause === "away" ? "chat.spilled.away" : "chat.spilled.full", { to: s.to, from });
+}
+
+/**
+ * The computers that take an agent's new work while its own (`home`) is away (ADR 0233), as the server picks them
+ * (`spillTarget`): online and helping in a workspace that lets them, never a server install, and its owner's own or
+ * one marked the workspace's.
+ */
+export function helpingDevices(
+  list: { devices: ComputerDevice[]; devicesHelp?: boolean } | undefined,
+  agentOwner: string | null,
+  home: string | null,
+): ComputerDevice[] {
+  if (!list || list.devicesHelp === false) return [];
+  return list.devices.filter(
+    (d) =>
+      d.id !== home &&
+      d.machineKind === "connected" &&
+      !d.systemMode &&
+      d.spill.own &&
+      (d.status.kind === "ready" || d.status.kind === "busy") &&
+      (d.belongsToWorkspace || (agentOwner !== null && d.ownerUserId === agentOwner)),
+  );
+}
+
+/**
+ * Under the agent's computer while it is away, appended to what the cover says (`help`): "Meanwhile, its new work
+ * thinks on Bruno's MacBook." when computers help (`helpingDevices`), else `help` alone.
+ */
+export function withHelping(t: TFunction, help: string | undefined, helping: ComputerDevice[]): string | undefined {
+  if (helping.length === 0) return help;
+  const line = t("agentComputer.state.helping", {
+    names: joinNames(
+      helping.map((d) => d.name),
+      t,
+    ),
+  });
+  return help ? t("common.joinSentences", { a: help, b: line }) : line;
 }
 
 /** "Android 16" or "iOS 27.1". */
@@ -500,6 +633,10 @@ export const wifiHosts = (hosts: readonly ComputerDevice[]) =>
 
 const LOCAL_NETWORK = new Set(["timed_out", "same_wifi", "mdns_off"]);
 
+/** A Wi-Fi pairing that failed in a way macOS's Local Network permission for the app may cause. */
+export const failedOnLocalNetwork = (p: Pick<WifiPairing, "state" | "reason"> | undefined) =>
+  p?.state === "failed" && LOCAL_NETWORK.has(p.reason ?? "");
+
 /**
  * The line a Wi-Fi pairing shows: where it is while it runs, else why it failed (the cause and the way out). A code
  * the phone refused reads differently from a pairing it stopped. On a Mac, a phone it never heard from, couldn't reach
@@ -539,6 +676,7 @@ export type IphoneStep = (typeof IPHONE_STEPS)[number];
 const IPHONE_REASON: Record<string, IphoneStep> = {
   xcode_missing: "xcode",
   xcode_too_old: "xcode",
+  ios_behind_xcode: "helper",
   device_support: "tools",
   untrusted: "trust",
   locked: "trust",
@@ -571,6 +709,73 @@ export const iosMajor = (version: string) => version.split(".")[0] ?? version;
 /** What Xcode needs for an iPhone on a newer iOS than it knows, after installing the matching Xcode. */
 export const DDIS_UPDATE = "xcrun devicectl manage ddis update";
 
+/**
+ * What the Mac runs in Terminal for Xcode installed but blocked (the runner's `toolchains.xcodeBlocked`): the developer
+ * folder left on the Command Line Tools, or the license not agreed to. One paste, one password, both causes, and the
+ * first-launch packages an iPhone's build needs: the same commands the Mac's own fix runs (`xcode.fix` `select`).
+ * Each line ends in `&&` so a paste is read whole before sudo asks: sudo flushes typed-ahead input, which would drop
+ * the lines after the first in a shell without bracketed paste.
+ */
+export const XCODE_FIX_COMMAND = [
+  "sudo xcode-select -s /Applications/Xcode.app &&",
+  "sudo xcodebuild -license accept &&",
+  "sudo xcodebuild -runFirstLaunch",
+].join("\n");
+export const XCODE_BLOCKED = ["command_line_tools", "license"] as const;
+export type XcodeBlocked = (typeof XCODE_BLOCKED)[number];
+
+/** Why the Mac's Xcode doesn't answer, when it's installed and one command fixes it; null otherwise. */
+export function xcodeBlockedOf(host: ComputerDevice | undefined): XcodeBlocked | null {
+  const blocked = host?.toolchains.xcodeBlocked;
+  return !host?.toolchains.xcode && blocked && (XCODE_BLOCKED as readonly string[]).includes(blocked)
+    ? (blocked as XcodeBlocked)
+    : null;
+}
+
+/** What updates a runner installed from the Terminal (the app updates its own). */
+export const RUNNER_UPDATE_COMMAND = "agentes-runner update";
+/** What tells why a runner installed from the Terminal is down. */
+export const RUNNER_DOCTOR_COMMAND = "agentes-runner doctor";
+
+const CAUSE_KEY = { unresponsive: "Unresponsive", stopped: "Stopped", dropped: "Dropped" } as const;
+
+/**
+ * Why a computer someone brought went offline, at `time` (already in words): `detail`, the short words after a row's
+ * pill; `line`, the sentence on its page with the one way out.
+ */
+export const offlineCauseText = (t: TFunction, cause: MachineOfflineCause, time: string, form: "detail" | "line") =>
+  t(`devices.${form}.offline${CAUSE_KEY[cause]}`, { time, command: RUNNER_DOCTOR_COMMAND });
+
+/** How often the iPhone guide asks where a fix of the Mac's Xcode stands while it runs. */
+export const XCODE_FIX_POLL_MS = 1500;
+
+/** A fix of the Mac's Xcode still under way: the password window open, or its commands running. */
+export const xcodeFixLive = (fix: { state: string } | null | undefined) =>
+  fix?.state === "asking" || fix?.state === "running";
+
+export type XcodeFixStage = "offer" | "asking" | "running" | "done" | "missed" | "failed" | "still" | "terminal";
+
+/**
+ * What the Xcode step shows for a fix of `kind`: the button (`offer`), the password window open, the commands
+ * running, done (the Mac looks at Xcode again), nobody typed the password or Cancel (`missed`), failed, every command
+ * ran yet Xcode is still blocked (`still`: why, the command and Try again), or the Terminal command: picked
+ * (`terminal`), for who can't press the button, or a Mac whose app can't fix it.
+ */
+export function xcodeFixStage(
+  fix: { kind: string; state: string; still?: string } | null | undefined,
+  kind: "select" | "update",
+  o: { mayFix: boolean; terminal: boolean; outdated?: boolean },
+): XcodeFixStage {
+  const mine = fix?.kind === kind ? fix : null;
+  if (!o.mayFix || o.outdated || mine?.state === "unsupported") return "terminal";
+  if (mine?.state === "asking" || mine?.state === "running") return mine.state;
+  if (o.terminal) return "terminal";
+  if (mine?.state === "done") return "done";
+  if (mine?.state === "canceled" || mine?.state === "no_answer") return "missed";
+  if (mine?.state === "failed") return mine.still ? "still" : "failed";
+  return "offer";
+}
+
 /** A step under way or waiting on the person this long, unchanged, says what most likely holds it and one way out. */
 export const SETUP_STALL_MS = 45_000;
 
@@ -591,6 +796,58 @@ export function useStalled(key: string | null, ms = SETUP_STALL_MS): boolean {
   return key !== null && since.key === key && Date.now() - since.at >= ms;
 }
 
+/** How long an iPhone gone from its Mac at the Developer Mode step reads as restarting before the guide asks for it. */
+export const IPHONE_RESTART_MS = 3 * 60_000;
+
+/** The iPhone guide's memory of the Developer Mode step: which phone was at it, since when it is gone, whether it came back. */
+export interface IphoneRestartMemo {
+  at: string | null;
+  goneAt: number | null;
+  back: boolean;
+}
+export const NO_IPHONE_RESTART: IphoneRestartMemo = { at: null, goneAt: null, back: false };
+/** `restarting`: gone from its Mac after the Developer Mode step; `back`: there again and the mode still off. */
+export type IphoneRestart = "restarting" | "back" | null;
+/** An iPhone as the guide sees it now: a key that names it, and its reason (null: none, ready). */
+export type IphoneSeen = { key: string; reason: string | null | undefined } | null;
+
+/** The memo after seeing `phone` (null: the Mac lists none) at `now`. */
+export function iphoneRestartNext(memo: IphoneRestartMemo, phone: IphoneSeen, now: number): IphoneRestartMemo {
+  if (!phone) return memo.at && memo.goneAt === null ? { ...memo, goneAt: now } : memo;
+  if (phone.reason !== "developer_mode_off") return NO_IPHONE_RESTART;
+  const same = memo.at === phone.key;
+  return { at: phone.key, goneAt: null, back: same && (memo.back || memo.goneAt !== null) };
+}
+
+export function iphoneRestartOf(memo: IphoneRestartMemo, phone: IphoneSeen, now: number): IphoneRestart {
+  if (!phone) return memo.at && memo.goneAt !== null && now - memo.goneAt < IPHONE_RESTART_MS ? "restarting" : null;
+  return memo.back && memo.at === phone.key && phone.reason === "developer_mode_off" ? "back" : null;
+}
+
+/**
+ * An iPhone restarts to turn Developer Mode on, and is gone from its Mac meanwhile: the guide stays on that step
+ * (`restarting`) for up to `IPHONE_RESTART_MS` instead of asking for the cable again, then says what to do once it is
+ * back (`back`). Kept in memory: a guide opened during the restart starts from what the Mac sees.
+ */
+export function useIphoneRestart(phone: IphoneSeen): IphoneRestart {
+  const [memo, setMemo] = useState(NO_IPHONE_RESTART);
+  const [, rerender] = useState(0);
+  const now = Date.now();
+  const next = iphoneRestartNext(memo, phone, now);
+  const changed = next.at !== memo.at || next.goneAt !== memo.goneAt || next.back !== memo.back;
+  useEffect(() => {
+    if (changed) setMemo(next);
+  }, [changed, next]);
+  const goneAt = next.goneAt;
+  useEffect(() => {
+    if (goneAt === null) return;
+    // Read again just after the time is up: the answer is the clock's.
+    const timer = setTimeout(() => rerender((n) => n + 1), Math.max(0, goneAt + IPHONE_RESTART_MS - Date.now()) + 100);
+    return () => clearTimeout(timer);
+  }, [goneAt]);
+  return iphoneRestartOf(next, phone, now);
+}
+
 /** The iPhone a Mac reaches (a real one first), for the iPhone guide. */
 export const iphoneOf = (host: ComputerDevice | undefined) =>
   host?.phones.find((p) => p.platform === "ios" && p.phoneKind === "device" && p.status.kind !== "offline") ?? null;
@@ -598,15 +855,19 @@ export const iphoneOf = (host: ComputerDevice | undefined) =>
 /**
  * The iPhone guide's checklist, mirrored from what the Mac reports: steps before the phone's reason are done, that
  * one is current (amber when only the person can do it), the rest wait. No Xcode on the Mac stops at step one; with
- * no iPhone plugged in yet, the Apple Account comes from what the Mac found in Xcode.
+ * no iPhone plugged in yet, the Apple Account comes from what the Mac found in Xcode. An iPhone restarting to turn
+ * Developer Mode on (`restarting`, `useIphoneRestart`) stays on that step, under way.
  */
 export function iphoneSteps(
   host: ComputerDevice | undefined,
   phone: PhoneDevice | null,
+  restarting = false,
 ): Record<IphoneStep, StepState> {
   let at: IphoneStep | null;
   let needs = false;
-  if (!phone) {
+  if (!phone && restarting) {
+    at = "developerMode";
+  } else if (!phone) {
     at = !host?.toolchains.xcode ? "xcode" : !hasAppleTeam(host) ? "account" : "connected";
     needs = at !== "connected";
   } else if (phone.status.kind === "unsupported") {
@@ -978,12 +1239,24 @@ export function screenGesture(
   };
 }
 
-export type DeviceNoticeKind = "device.join_request" | "device.in_use" | "device.access_request" | "device.waiting";
+export type DeviceNoticeKind =
+  | "device.join_request"
+  | "device.in_use"
+  | "device.access_request"
+  | "device.waiting"
+  | "device.tool_request"
+  | "device.cli_request"
+  | "device.folder_request"
+  | "device.internet_shared";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
   "device.access_request",
   "device.waiting",
+  "device.tool_request",
+  "device.cli_request",
+  "device.folder_request",
+  "device.internet_shared",
 ]);
 
 /**
@@ -1006,6 +1279,14 @@ export interface DeviceNotice {
   forName: string | null;
   text: string | null;
   join: { name: string; os: string; ip: string; location: string | null } | null;
+  /**
+   * `device.tool_request`: the tool to turn on (`latest.reason`) and who asked (the person actor);
+   * `device.cli_request`: the coding CLI to install, the same way.
+   */
+  tool: MachineTool | null;
+  /** `device.folder_request`: the folder an agent waits for on this computer (`latest.title`). */
+  path: string | null;
+  askerId: string | null;
 }
 
 export function deviceNoticeOf(
@@ -1017,6 +1298,8 @@ export function deviceNoticeOf(
   const l = n.latest as Record<string, unknown>;
   const join = kind === "device.join_request";
   const actor = n.actors?.find((a) => a.type === "agent");
+  const tool =
+    kind === "device.tool_request" || kind === "device.cli_request" ? (str(l.reason) as MachineTool | null) : null;
   return {
     kind: kind as DeviceNoticeKind,
     requestId: str(s.requestId),
@@ -1026,7 +1309,8 @@ export function deviceNoticeOf(
     device: str(s.label) ?? str(l.title) ?? "",
     agentId: actor?.id ?? str(s.agentId),
     userId: str(s.userId),
-    forName: join ? null : str(l.title),
+    // A folder request's `latest.title` is the folder itself, and a lent internet's the computer: neither is a person.
+    forName: join || kind === "device.folder_request" || kind === "device.internet_shared" ? null : str(l.title),
     text: str(l.text),
     join: join
       ? {
@@ -1036,5 +1320,8 @@ export function deviceNoticeOf(
           location: str(l.location),
         }
       : null,
+    tool,
+    path: kind === "device.folder_request" ? str(l.title) : null,
+    askerId: tool ? (n.actors?.find((a) => a.type === "user")?.id ?? null) : null,
   };
 }

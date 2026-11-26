@@ -28,9 +28,16 @@ const MENTION_KINDS: NotificationKind[] = ["mention", "dm", "agent_question"];
 
 /**
  * Waiting ones in this order: an agent's secret request (it expires in minutes), an agent's question, an
- * approval, then someone asking to join (nobody's work waits on it).
+ * approval, someone asking to join (nobody's work waits on it), then what the right hand found to fix.
  */
-const WAITING_ORDER: NotificationKind[] = ["secret_request", "agent_question", "approval", "join_request"];
+const WAITING_ORDER: NotificationKind[] = [
+  "secret_request",
+  "agent_question",
+  "approval",
+  "join_request",
+  "team_watch",
+  "budget_paused",
+];
 
 export const isSnoozed = (n: Pick<AppNotification, "snoozedUntil">, now = Date.now()) =>
   !!n.snoozedUntil && new Date(n.snoozedUntil).getTime() > now;
@@ -38,6 +45,20 @@ export const isSnoozed = (n: Pick<AppNotification, "snoozedUntil">, now = Date.n
 /** In the inbox at all: not done and not snoozed. */
 export const isVisible = (n: Pick<AppNotification, "doneAt" | "snoozedUntil">, now = Date.now()) =>
   !n.doneAt && !isSnoozed(n, now);
+
+/**
+ * Whether "Concluir todas" has anything to move in a filter: what waits on the person stays. A filter's count holds
+ * what waits too; the list puts waiting rows first, so the loaded waiting rows stand for all of them.
+ */
+export function canClearAll(
+  filter: NotificationFilter,
+  counts: NotificationCounts | undefined,
+  loaded: readonly Pick<AppNotification, "waiting">[],
+): boolean {
+  if (!counts || filter === "done" || filter === "waiting") return false;
+  if (filter === "all") return counts.all > counts.waiting;
+  return counts[filter] > loaded.filter((n) => n.waiting).length;
+}
 
 export function matchesFilter(n: AppNotification, filter: NotificationFilter, now = Date.now()) {
   if (filter === "done") return !!n.doneAt;
@@ -196,6 +217,8 @@ export function workspaceHeadline(n: Pick<AppNotification, "kind" | "latest">) {
   if (n.kind === "composio_limit") return "connectors.composio.limitNotice" as const;
   if (n.kind === "computer_disk_full") return "machines.shared.diskFullNotice" as const;
   if (n.kind === "computer_no_chrome") return "machines.chromeMissingNotice" as const;
+  if (n.kind === "computer_down") return "machines.outage.down" as const;
+  if (n.kind === "computer_back") return "machines.outage.back" as const;
   if (n.kind === "skill_update") {
     const to = n.latest.statusTo;
     return to === "waiting"
@@ -234,6 +257,49 @@ export function restrictionOf(n: Pick<AppNotification, "kind" | "latest">) {
   return { code: l.statusTo === "hold" ? "org.paused" : "org.suspended", facts: { reason: l.text, cloud: true } };
 }
 
+/** What the right hand's notice may be about (`latest.reason`), each worded by `notifications.teamWatch.<cause>`. */
+export const TEAM_WATCH_CAUSES = [
+  "sign_in",
+  "connector",
+  "mailbox",
+  "database",
+  "budget_out",
+  "budget_low",
+  "computer",
+] as const;
+export type TeamWatchCause = (typeof TEAM_WATCH_CAUSES)[number];
+
+/** The way out of each cause, the notice's one button (`notifications.teamWatch.act.<act>`). */
+const TEAM_WATCH_ACT = {
+  sign_in: "sign_in",
+  connector: "reconnect",
+  mailbox: "reconnect",
+  database: "reconnect",
+  budget_out: "budget",
+  budget_low: "budget",
+  computer: "computer",
+} as const satisfies Record<TeamWatchCause, string>;
+
+/**
+ * What the right hand found wrong (ADR 0177 §1): its cause, the key of the sentence saying it (`key`, said by
+ * `teamWatchLine` with `names`, the first things it is about, and `count`, how many in all) and the name of its one
+ * button (`act`). A cause this build doesn't know has neither: `text`, the server's own sentence, stands for it and
+ * its button only opens. Null for any other notice.
+ */
+export function teamWatchOf(n: Pick<AppNotification, "kind" | "count" | "latest">) {
+  if (n.kind !== "team_watch") return null;
+  const names = n.latest.names ?? [];
+  const cause = TEAM_WATCH_CAUSES.find((c) => c === n.latest.reason) ?? null;
+  return {
+    cause,
+    key: cause && names.length > 0 ? `notifications.teamWatch.${cause}` : null,
+    names,
+    count: Math.max(n.count, names.length),
+    text: n.latest.text ?? "",
+    act: cause ? `notifications.teamWatch.act.${TEAM_WATCH_ACT[cause]}` : null,
+  };
+}
+
 /**
  * Whether an item's headline already names the place called `name` ("Theo replied in #general"), so nothing beside
  * it says that again. The headline names its `source.label` for a reply, an agent's answer, a mention in a thread and a
@@ -268,6 +334,7 @@ const FAILED_CAUSES = new Set([
   "gave_up",
   "missing_credential",
   "credential_revoked",
+  "credential_unreadable",
 ]);
 const PLAN_CAUSES = new Set(["not_logged_in", "plan_limit"]);
 
@@ -338,6 +405,8 @@ export type OpenTarget =
   | { to: "/org/$orgId/agents/$agentId"; params: { agentId: string }; search?: { sec: "brain"; brain?: "model" } }
   | { to: "/org/$orgId/dm/person/$userId"; params: { userId: string }; search?: { m: string } }
   | { to: "/org/$orgId/issues/$number"; params: { number: string }; search?: { m: string } }
+  | { to: "/org/$orgId/drive/$fileId"; params: { fileId: string }; search?: { m: string } }
+  | { to: "/org/$orgId/code/$sessionId"; params: { sessionId: string } }
   | { to: "/org/$orgId/approvals"; search?: { open: string } }
   | { to: "/org/$orgId/proposals" }
   | { to: "/org/$orgId/routines"; search?: { open: string } }
@@ -345,7 +414,9 @@ export type OpenTarget =
   | { to: "/org/$orgId/settings/computers/$machineId"; params: { machineId: string } }
   | {
       to: "/org/$orgId/settings/$section";
-      params: { section: "computers" | "members" | "usage" | "connectors" | "billing" | "approvals" | "right_hand" };
+      params: {
+        section: "computers" | "members" | "invites" | "usage" | "connectors" | "billing" | "approvals" | "right_hand";
+      };
     }
   | { to: "/org/$orgId/home"; search?: { widget: string } }
   | { to: "/org/$orgId/dashboards" }
@@ -381,13 +452,36 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     return { to: "/org/$orgId/approvals", ...(s.approvalId ? { search: { open: s.approvalId } } : {}) };
   // A change someone sent to whoever decides (ADR 0137) is decided on its card in the row: the DM it came from is theirs.
   if (n.kind === "change_request") return null;
-  if (n.kind === "proposal_waiting") return { to: "/org/$orgId/proposals" };
+  // What agents applied themselves (ADR 0219) is in their history, with Undo.
+  if (n.kind === "proposal_waiting" || n.kind === "proposal_applied") return { to: "/org/$orgId/proposals" };
   // Who approves for whom (ADR 0139) is set, seen and declined in Configurações › Sua conta › Aprovações.
   if (n.kind === "approval_cover") return { to: "/org/$orgId/settings/$section", params: { section: "approvals" } };
   // What the right hand does without asking is on its own page, which its old settings address opens.
   if (n.kind === "right_hand_paused") return { to: "/org/$orgId/settings/$section", params: { section: "right_hand" } };
-  // Requests to join are answered in Members (ADR 0068).
-  if (n.kind === "join_request") return { to: "/org/$orgId/settings/$section", params: { section: "members" } };
+  // An agent paused on its budget opens its page, where its budget is raised.
+  if (n.kind === "budget_paused" && s.agentId)
+    return { to: "/org/$orgId/agents/$agentId", params: { agentId: s.agentId } };
+  // What the right hand found (ADR 0177 §1) opens where it is fixed: the plans, the connections, the agent whose
+  // budget it is, the computer.
+  const found = teamWatchOf(n);
+  if (found) {
+    if (found.cause === "sign_in") return { to: "/org/$orgId/settings/$section", params: { section: "usage" } };
+    if (found.cause === "budget_out" || found.cause === "budget_low")
+      return s.agentId
+        ? { to: "/org/$orgId/agents/$agentId", params: { agentId: s.agentId } }
+        : { to: "/org/$orgId/settings/$section", params: { section: "usage" } };
+    if (found.cause === "computer")
+      return s.machineId
+        ? { to: "/org/$orgId/settings/computers/$machineId", params: { machineId: s.machineId } }
+        : { to: "/org/$orgId/settings/$section", params: { section: "computers" } };
+    return found.cause ? { to: "/org/$orgId/settings/$section", params: { section: "connectors" } } : null;
+  }
+  // Requests to join are answered in People › Convites (ADR 0068, 0184).
+  if (n.kind === "join_request") return { to: "/org/$orgId/settings/$section", params: { section: "invites" } };
+  // "Pedir a um admin": roles are given in Members, webhooks set up from a routine; an agent is added in its channel.
+  if (n.kind === "admin_ask" && n.latest.reason === "create_agents")
+    return { to: "/org/$orgId/settings/$section", params: { section: "members" } };
+  if (n.kind === "admin_ask" && n.latest.reason === "webhook") return { to: "/org/$orgId/routines" };
   // Someone accepted an invitation (ADR 0090): a conversation with them, to say hi.
   if (n.kind === "invitation_accepted") {
     const who = n.actors[0];
@@ -431,7 +525,8 @@ export function openTarget(n: AppNotification): OpenTarget | null {
       search: { sec: "brain", brain: "model" },
     };
   // Someone gave an agent the person's plan: IA e uso, where their plans and the agents on them are.
-  if (n.kind === "plan_lent") return { to: "/org/$orgId/settings/$section", params: { section: "usage" } };
+  if (n.kind === "plan_lent" || n.kind === "plan_serves")
+    return { to: "/org/$orgId/settings/$section", params: { section: "usage" } };
   // An update of a skill from its link: the skill, in Skills.
   if (n.kind === "skill_update")
     return {
@@ -443,7 +538,9 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     n.kind === "machine_connected" ||
     n.kind === "computer_ready" ||
     n.kind === "computer_disk_full" ||
-    n.kind === "computer_no_chrome"
+    n.kind === "computer_no_chrome" ||
+    n.kind === "computer_down" ||
+    n.kind === "computer_back"
   )
     return s.machineId
       ? { to: "/org/$orgId/settings/computers/$machineId", params: { machineId: s.machineId } }
@@ -461,19 +558,21 @@ export function openTarget(n: AppNotification): OpenTarget | null {
   // A reply in a task's conversation (ADR 0145) opens the task at that message.
   if (s.issueNumber != null)
     return { to: "/org/$orgId/issues/$number", params: { number: String(s.issueNumber) }, ...at };
+  // One in a live file's conversation (ADR 0199) opens the file with its conversation at that message.
+  if (s.artifactId) return { to: "/org/$orgId/drive/$fileId", params: { fileId: s.artifactId }, ...at };
+  // One in a code session's conversation (ADR 0215) opens the session on the Code page.
+  if (s.codeSessionId) return { to: "/org/$orgId/code/$sessionId", params: { sessionId: s.codeSessionId } };
   // A routine that failed, paused or waits for its computer: the routine in Rotinas (its state and fix).
   // What a routine found opens the agent's message in its conversation (below); without one, the routine.
   if (ROUTINE_TROUBLE.has(n.kind) || (n.kind === "routine_finished" && !s.messageId && !s.threadId))
     return s.routineId ? { to: "/org/$orgId/routines", search: { open: s.routineId } } : { to: "/org/$orgId/routines" };
-  // An agent's answer or request in my DM with it opens that DM (a DM has no channel page of its own); one in a thread
-  // there opens the thread, the only place its message is.
+  // An agent's answer or request in a DM opens the DM it was posted in, by its channel (that page opens the DM's own):
+  // the agent that wrote it may not be the DM's, as with a delegated agent's report in the right hand's DM. One in a
+  // thread there opens the thread, the only place its message is.
   if (s.dmId && n.actors[0]?.type === "agent" && !s.threadId)
-    return { to: "/org/$orgId/dm/agent/$agentId", params: { agentId: n.actors[0].id }, ...at };
-  if (n.kind === "dm" && !s.threadId) {
-    const who = n.actors[0];
-    if (who?.type === "agent") return { to: "/org/$orgId/dm/agent/$agentId", params: { agentId: who.id }, ...at };
-    if (who) return { to: "/org/$orgId/dm/person/$userId", params: { userId: who.id }, ...at };
-  }
+    return { to: "/org/$orgId/c/$channelId", params: { channelId: s.dmId }, ...at };
+  if (n.kind === "dm" && !s.threadId && n.actors[0])
+    return { to: "/org/$orgId/dm/person/$userId", params: { userId: n.actors[0].id }, ...at };
   if (s.threadId) return { to: "/org/$orgId/threads/$threadId", params: { threadId: s.threadId }, ...at };
   const channelId = channelOf(n);
   if (channelId) return { to: "/org/$orgId/c/$channelId", params: { channelId }, ...at };
@@ -603,6 +702,9 @@ export function waitingCardOf(n: Pick<AppNotification, "kind" | "count" | "lates
     return { kind: "question", title: l.text ?? l.title ?? "", expiresAt: null, action: "open" };
   // A person at their limit asks for more (ADR 0141): raised or refused on the card itself.
   if (n.kind === "usage_limit") return { kind: "limit", title: "", expiresAt: null, action: "review" };
+  // What the right hand found has nobody to answer: it opens where it is fixed.
+  if (n.kind === "team_watch" || n.kind === "budget_paused")
+    return { kind: "question", title: l.text ?? "", expiresAt: null, action: "open" };
   return { kind: "question", title: l.text ?? l.title ?? "", expiresAt: null, action: "answer" };
 }
 

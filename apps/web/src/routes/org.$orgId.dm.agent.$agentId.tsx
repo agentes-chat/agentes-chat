@@ -1,18 +1,25 @@
 import { isPaidReturn } from "@agenteschat/client/lib/billing";
 import { createFileRoute } from "@tanstack/react-router";
-import { threadSearch } from "@/lib/open-param";
+import { agentPanelSearch, threadSearch } from "@/lib/open-param";
+import { prefetchDm } from "@/lib/prefetch";
 import { DmPage } from "@/pages/DmPage";
 
 /** Direct message with an agent (sidebar "Agentes"). */
 export const Route = createFileRoute("/org/$orgId/dm/agent/$agentId")({
   // `?m=<message>` opens the DM at that message (a search hit); `?paid`: back from paying for the workspace (the hold
   // banner says the payment is being confirmed), where a new workspace opens its right hand's DM (ADR 0137); `?thread=`
-  // is the one in its panel.
-  validateSearch: (search: Record<string, unknown>): { m?: string; paid?: true } & ReturnType<typeof threadSearch> => ({
+  // is the one in its panel, `?agent=` the agent's page there instead.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { m?: string; paid?: true } & ReturnType<typeof threadSearch> & ReturnType<typeof agentPanelSearch> => ({
     ...threadSearch(search),
+    ...agentPanelSearch(search),
     ...(typeof search.m === "string" && search.m ? { m: search.m } : {}),
     ...(isPaidReturn(search) ? { paid: true as const } : {}),
   }),
+  // A DM already in my list opens with its messages read on the link's hover, and no round trip to find it.
+  loader: ({ context: { queryClient, api }, params: { orgId, agentId } }) =>
+    prefetchDm(queryClient, api, orgId, "agent", agentId),
   component: function AgentDm() {
     const { agentId } = Route.useParams();
     return <DmPage key={agentId} target={{ agentId }} focusMessageId={Route.useSearch().m} />;

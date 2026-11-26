@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { orgTopic } from "@agenteschat/adapters";
 import { testConfig } from "@agenteschat/config";
-import { desc, eq, schema, sql } from "@agenteschat/db";
+import { desc, eq, inArray, schema, sql } from "@agenteschat/db";
 import {
   countComposio,
   countToolCall,
@@ -34,6 +34,7 @@ beforeAll(async () => {
     version: "test",
     log: createLogger("error"),
     pubsub: t.adapters.pubsub,
+    blobs: t.adapters.platformBlobs,
     hub: t.engine.machineHub,
   };
   const app = createOperatorApp(deps, TOKEN);
@@ -104,6 +105,8 @@ test("401 without the right bearer token, on every path under the prefix", async
     ["/health", `Basic ${TOKEN}`],
     ["/health", TOKEN],
     ["/orgs", `${BEARER}x`],
+    ["/storage", null],
+    ["/storage", "Bearer wrong"],
     ["/openapi.json", null],
     ["/nope", null],
   ] as const) {
@@ -114,14 +117,173 @@ test("401 without the right bearer token, on every path under the prefix", async
   expect((await op("/nope")).status).toBe(404);
 });
 
+test("the read-only token: GET and HEAD outside /review; 403 for a write or a review block; the full token as ever", async () => {
+  const READ = "operator-read-token-".padEnd(48, "x");
+  const app = createOperatorApp(deps, TOKEN, READ);
+  const as = (token: string, path: string, method = "GET", json?: unknown) =>
+    app.request(`/api/operator/v1${path}`, {
+      method,
+      headers: { authorization: `Bearer ${token}`, ...(json ? { "content-type": "application/json" } : {}) },
+      body: json ? JSON.stringify(json) : undefined,
+    });
+  const refusal = async (res: Response) => [res.status, ((await res.json()) as { error: { code: string } }).error.code];
+  const state = async () => [
+    (await body<{ standing: unknown }>(await op(`/orgs/${acme.orgId}`))).standing,
+    (await body<{ blockedAt: unknown }>(await op(`/users/${acme.ownerId}`))).blockedAt,
+  ];
+  const before = await state();
+
+  for (const path of [
+    "/health",
+    "/orgs",
+    `/orgs/${acme.orgId}`,
+    `/users/${acme.ownerId}`,
+    "/events",
+    "/storage",
+    "/openapi.json",
+  ]) {
+    expect({ path, status: (await as(READ, path)).status }).toEqual({ path, status: 200 });
+  }
+  const head = await as(READ, "/health", "HEAD");
+  expect([head.status, await head.text()]).toEqual([200, ""]);
+  // What isn't there is its own 404, as with the full token: only what it may not do is a 403.
+  expect(await refusal(await as(READ, `/orgs/${crypto.randomUUID()}`))).toEqual([404, "not_found"]);
+
+  const review = `/review/run/${crypto.randomUUID()}?reason=check&operator=someone`;
+  const refused: [method: string, path: string, json?: unknown][] = [
+    ["PUT", `/orgs/${acme.orgId}/standing`, { state: "suspended", reason: "review", notice: "shown" }],
+    ["PUT", `/users/${acme.ownerId}/block`, { blocked: true }],
+    ["PUT", `/orgs/${acme.orgId}/agents/${acme.agentId}/hold`, { held: true }],
+    ["POST", `/orgs/${acme.orgId}/machines`, {}],
+    ["DELETE", `/orgs/${acme.orgId}/machines/${crypto.randomUUID()}`],
+    ["POST", "/nope"],
+    ["GET", review],
+    ["GET", "/review/nope"],
+  ];
+  for (const [method, path, json] of refused) {
+    expect({ method, path, answer: await refusal(await as(READ, path, method, json)) }).toEqual({
+      method,
+      path,
+      answer: [403, "forbidden"],
+    });
+  }
+  expect((await as(READ, review, "HEAD")).status).toBe(403);
+  expect(await state()).toEqual(before);
+
+  // The full token beside it: the review door opens (no such run), and a write goes through.
+  expect(await refusal(await as(TOKEN, review))).toEqual([404, "not_found"]);
+  const released = await as(TOKEN, `/orgs/${acme.orgId}/deletion-hold`, "PUT", { held: false });
+  expect(await body(released)).toEqual({ held: false, heldAt: null, reason: null });
+
+  // Neither token: 401 still, and the read-only one opens nothing on a server that didn't set it.
+  for (const token of ["", "wrong", `${READ}x`, READ.slice(0, -1)]) {
+    expect({ token, answer: await refusal(await as(token, "/health")) }).toEqual({
+      token,
+      answer: [401, "unauthorized"],
+    });
+  }
+  expect(await refusal(await op("/health", `Bearer ${READ}`))).toEqual([401, "unauthorized"]);
+
+  // The listener takes it from the configuration.
+  const config = testConfig({ OPERATOR_API_TOKEN: TOKEN, OPERATOR_API_READ_TOKEN: READ, HOST: "127.0.0.1" });
+  const server = serveOperatorApi({ ...deps, config }, 0);
+  if (!server) throw new Error("no operator listener");
+  try {
+    const url = `http://127.0.0.1:${server.port}/api/operator/v1/orgs/${acme.orgId}`;
+    const headers = { authorization: `Bearer ${READ}`, "content-type": "application/json" };
+    expect((await fetch(url, { headers })).status).toBe(200);
+    const write = await fetch(`${url}/deletion-hold`, { method: "PUT", headers, body: '{"held":true}' });
+    expect(await refusal(write)).toEqual([403, "forbidden"]);
+  } finally {
+    await server.stop(true);
+  }
+});
+
+test("the reveal token: POST under /reveal and nothing else; the other two never open that door; unset, it is closed to all", async () => {
+  const READ = "operator-read-token-".padEnd(48, "x");
+  const REVEAL = "operator-reveal-token-".padEnd(48, "x");
+  const as = (app: ReturnType<typeof createOperatorApp>, token: string, path: string, method = "GET") =>
+    app.request(`/api/operator/v1${path}`, { method, headers: { authorization: `Bearer ${token}` } });
+  const answer = async (res: Response) => [res.status, ((await res.json()) as { error: { code: string } }).error.code];
+  const door = `/reveal/orgs/${acme.orgId}`;
+
+  const open = createOperatorApp(deps, TOKEN, READ, REVEAL);
+  // Past the door: an empty body is the route's own refusal, never the door's.
+  expect(await answer(await as(open, REVEAL, door, "POST"))).toEqual([400, "invalid_request"]);
+  for (const method of ["GET", "HEAD", "PUT", "DELETE"]) {
+    expect({ method, status: (await as(open, REVEAL, door, method)).status }).toEqual({ method, status: 403 });
+  }
+  for (const [path, method] of [
+    ["/health", "GET"],
+    ["/orgs", "GET"],
+    ["/openapi.json", "GET"],
+    ["/events", "GET"],
+    [`/orgs/${acme.orgId}/deletion-hold`, "PUT"],
+    [`/review/run/${crypto.randomUUID()}?reason=check&operator=someone`, "GET"],
+    ["/nope", "POST"],
+  ] as const) {
+    expect({ path, answer: await answer(await as(open, REVEAL, path, method)) }).toEqual({
+      path,
+      answer: [403, "forbidden"],
+    });
+  }
+  for (const token of [TOKEN, READ]) {
+    for (const [path, method] of [
+      [door, "POST"],
+      [door, "GET"],
+      ["/reveal/nope", "POST"],
+    ] as const) {
+      expect({ path, method, answer: await answer(await as(open, token, path, method)) }).toEqual({
+        path,
+        method,
+        answer: [403, "forbidden"],
+      });
+    }
+    expect((await as(open, token, "/health")).status).toBe(200);
+  }
+  expect(await answer(await as(open, "wrong", door, "POST"))).toEqual([401, "unauthorized"]);
+
+  // A server that didn't set it: the door is closed whoever knocks, and the token is nobody's.
+  const closed = createOperatorApp(deps, TOKEN, READ);
+  for (const token of [TOKEN, READ, REVEAL, "wrong", ""]) {
+    expect({ token, answer: await answer(await as(closed, token, door, "POST")) }).toEqual({
+      token,
+      answer: [403, "forbidden"],
+    });
+  }
+  expect(await answer(await as(closed, REVEAL, "/health"))).toEqual([401, "unauthorized"]);
+
+  // The listener takes it from the configuration.
+  const config = testConfig({
+    OPERATOR_API_TOKEN: TOKEN,
+    OPERATOR_API_READ_TOKEN: READ,
+    OPERATOR_API_REVEAL_TOKEN: REVEAL,
+    HOST: "127.0.0.1",
+  });
+  const server = serveOperatorApi({ ...deps, config }, 0);
+  if (!server) throw new Error("no operator listener");
+  try {
+    const url = `http://127.0.0.1:${server.port}/api/operator/v1`;
+    const headers = { authorization: `Bearer ${REVEAL}` };
+    expect((await fetch(`${url}${door}`, { method: "POST", headers })).status).toBe(400);
+    expect((await fetch(`${url}/health`, { headers })).status).toBe(403);
+  } finally {
+    await server.stop(true);
+  }
+});
+
 test("health, with the bot check: off without its keys, else its state, since when, the networks it refused and the tokens it passed", async () => {
-  const off = await body<{ ok: boolean; version: string; botCheck: Record<string, unknown> & { since: string } }>(
-    await op("/health"),
-  );
+  const off = await body<{
+    ok: boolean;
+    version: string;
+    botCheck: Record<string, unknown> & { since: string };
+    eventLoopLag: unknown;
+  }>(await op("/health"));
   expect(off).toEqual({
     ok: true,
     version: "test",
     botCheck: { state: "off", since: off.botCheck.since, blocked: 0, passed: 0, testing: false },
+    eventLoopLag: null,
   });
   expect(off.botCheck.since).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
 
@@ -132,12 +294,14 @@ test("health, with the bot check: off without its keys, else its state, since wh
     probe: async () => "unreachable" as const,
     status: () => ({ state: "unreachable" as const, since, blocked: 21, passed: 3, testing: false }),
   };
-  const app = createOperatorApp({ ...deps, humanCheck }, TOKEN);
+  const eventLoopLag = { p50Ms: 1.2, p99Ms: 48.5, maxMs: 310, at: "2026-10-27T12:01:00.000Z" };
+  const app = createOperatorApp({ ...deps, humanCheck, eventLoopLag: () => eventLoopLag }, TOKEN);
   const res = await app.request("/api/operator/v1/health", { headers: { authorization: BEARER } });
   expect(await body(res)).toEqual({
     ok: true,
     version: "test",
     botCheck: { state: "unreachable", since: "2026-10-27T12:00:00.000Z", blocked: 21, passed: 3, testing: false },
+    eventLoopLag,
   });
 });
 
@@ -246,9 +410,16 @@ test("org detail: owners and admins, and counts of what is in it", async () => {
       storageBytes: null,
       uploadBytesPerDay: null,
       platformUsdPerMonth: null,
+      connectorUsdPerMonth: null,
       updatedAt: null,
     },
-    meters: { storageBytes: 0, uploadBytes24h: 0, ownStorage: false, platformUsdThisMonth: 0 },
+    meters: {
+      storageBytes: 0,
+      uploadBytes24h: 0,
+      ownStorage: false,
+      platformUsdThisMonth: 0,
+      connectorUsdThisMonth: 0,
+    },
     deletion: null,
     deletionHold: null,
   });
@@ -273,7 +444,7 @@ test("user detail: workspaces and at most the 10 newest sessions", async () => {
   const user = await body<{ sessions: { ip: string | null; userAgent: string | null; createdAt: string }[] }>(
     await op(`/users/${acme.ownerId}`),
   );
-  expect(user).toMatchObject({ id: acme.ownerId, email: "owner@acme.test", name: "owner", emailVerified: false });
+  expect(user).toMatchObject({ id: acme.ownerId, email: "owner@acme.test", name: "owner", emailVerified: true });
   expect(user).toMatchObject({
     orgs: [{ orgId: acme.orgId, name: "Acme", role: "owner", joinedAt: expect.any(String), lastSeenAt: null }],
   });
@@ -406,7 +577,7 @@ test("agent hold: that agent stops, the workspace works; let go, it answers", as
   expect(t.provider.calls).toHaveLength(calls + 1);
 });
 
-test("user block: refused at once even with a cached session, signed out, no sign-in; unblocked, back in", async () => {
+test("user block: signed out at once, refused everywhere, no sign-in; unblocked, back in", async () => {
   const bia = browser(t);
   await signUp(bia, "bia@acme.test");
   const [row] = await t.db
@@ -433,10 +604,9 @@ test("user block: refused at once even with a cached session, signed out, no sig
   const blocked = await body(await put(`/users/${biaId}/block`, { blocked: true, reason: "Phishing" }));
   expect(blocked).toEqual({ blocked: true, blockedAt: expect.any(String), reason: "Phishing", sessionsRevoked: 1 });
   expect(revoked).toEqual([{ type: "membership.revoked", orgId: acme.orgId, userId: biaId, quiet: true }]);
-  // The browser still holds the session in its signed cookie cache for minutes: refused all the same.
-  expect(bia.cookie()).toContain("session_data");
-  expect((await members()).status).toBe(403);
-  expect(await (await bia("/api/app/me")).json()).toMatchObject({ organizations: [] });
+  // Its browser reads its session from the database on its next request: gone.
+  expect((await members()).status).toBe(401);
+  expect((await bia("/api/app/me")).status).toBe(401);
   const refused = await signIn();
   expect(refused.status).toBe(403);
   const said = await refused.json();
@@ -720,6 +890,34 @@ test("the workspace's computer's agents waiting for their way out: said, kept an
   expect((await waiting(machineId, { waiting: "yes" })).status).toBe(400);
 });
 
+test("the workspace's computer moving to another server: said, kept and taken back, only for it", async () => {
+  const { orgId } = acme;
+  const NONE = "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b";
+  const issue = await createOperatorApp(deps, TOKEN).request(`/api/operator/v1/orgs/${orgId}/machines`, {
+    method: "POST",
+    headers: { authorization: BEARER, "content-type": "application/json" },
+    body: "{}",
+  });
+  const { machineId } = await body<{ machineId: string }>(issue);
+  const moving = (id: string, json: unknown, org = orgId) => put(`/orgs/${org}/machines/${id}/moving`, json);
+  const row = async () => (await t.db.select().from(schema.machines).where(eq(schema.machines.id, machineId)))[0];
+
+  expect(await body(await moving(machineId, { moving: true }))).toEqual({ moving: true });
+  expect((await row())?.movingAt).toBeInstanceOf(Date);
+  expect(await body(await moving(machineId, { moving: false }))).toEqual({ moving: false });
+  expect((await row())?.movingAt).toBeNull();
+  const listed = await body<{ machines: { id: string; name: string }[] }>(await op(`/orgs/${orgId}/machines`));
+  const mac = listed.machines.find((m) => m.name === "Mac");
+  for (const [id, org] of [
+    [mac?.id ?? NONE, orgId],
+    [NONE, orgId],
+    [machineId, NONE],
+  ] as const) {
+    expect((await moving(id, { moving: true }, org)).status).toBe(404);
+  }
+  expect((await moving(machineId, {})).status).toBe(400);
+});
+
 test("billing holds: put on, changed and lifted, never over a hold set through /standing", async () => {
   const [org] = await t.db.insert(schema.organizations).values({ name: "Billing Co" }).returning();
   if (!org) throw new Error("no org");
@@ -759,6 +957,7 @@ test("limits: set them all, read back with what the workspace uses; any standing
     storageBytes: 200 * 1024 ** 3,
     uploadBytesPerDay: 10 * 1024 ** 3,
     platformUsdPerMonth: 10,
+    connectorUsdPerMonth: 4.35,
   };
   for (const bad of [
     {},
@@ -770,6 +969,7 @@ test("limits: set them all, read back with what the workspace uses; any standing
     { ...limits, storageBytes: -1 },
     { ...limits, platformUsdPerMonth: 100_001 },
     { ...limits, platformUsdPerMonth: "10" },
+    { ...limits, connectorUsdPerMonth: -1 },
   ]) {
     expect({ bad, status: (await put(`/orgs/${orgId}/limits`, bad)).status }).toEqual({ bad, status: 400 });
   }
@@ -788,21 +988,230 @@ test("limits: set them all, read back with what the workspace uses; any standing
   expect(heard).toHaveLength(1);
   const org = await body<{ limits: unknown; meters: unknown }>(await op(`/orgs/${orgId}`));
   expect(org.limits).toEqual(set);
-  expect(org.meters).toEqual({ storageBytes: 0, uploadBytes24h: 0, ownStorage: false, platformUsdThisMonth: 0 });
+  expect(org.meters).toEqual({
+    storageBytes: 0,
+    uploadBytes24h: 0,
+    ownStorage: false,
+    platformUsdThisMonth: 0,
+    connectorUsdThisMonth: 0,
+  });
 
   // Limits and standing are apart: a held workspace takes new limits too.
   await body(await put(`/orgs/${orgId}/billing-hold`, { hold: "unpaid" }));
-  // Left out, the plan's top and who pays are none.
+  // Left out, the plan's top, who pays and the connectors' money are none.
   const none = { members: null, storageBytes: null, uploadBytesPerDay: null, platformUsdPerMonth: null };
   heard.length = 0;
   expect(await body(await put(`/orgs/${orgId}/limits`, none))).toEqual({
     ...none,
     membersMax: null,
     payerUserId: null,
+    connectorUsdPerMonth: null,
     updatedAt: expect.any(String),
   });
   expect(heard).toEqual([{ type: "org.limits", orgId }]);
   await body(await put(`/orgs/${orgId}/billing-hold`, { hold: null }));
+});
+
+test("the instance's stored bytes: zeros while no workspace keeps a file", async () => {
+  expect(await body(await op("/storage"))).toEqual({ storageBytes: 0, workspaces: 0, ownStorageWorkspaces: 0 });
+});
+
+test("the instance's stored bytes: the sum of the workspaces' meters, the trash and a workspace with its own bucket left out", async () => {
+  const { organizations, artifacts, artifactVersions, storageConfigs } = schema;
+  const made = await t.db
+    .insert(organizations)
+    .values(["Files A", "Files B", "Own bucket", "No files"].map((name) => ({ name })))
+    .returning({ id: organizations.id });
+  const ids = made.map((org) => org.id);
+  const [a = "", b = "", own = ""] = ids;
+  try {
+    const by = { type: "person", id: acme.ownerId };
+    /** A file of the Drive, one version of `size` bytes: on this server's storage unless written to `bucket`. */
+    const file = async (orgId: string, size: number, at: { trashed?: boolean; bucket?: string } = {}) => {
+      const [artifact] = await t.db
+        .insert(artifacts)
+        .values({
+          orgId,
+          kind: "file",
+          title: "report.pdf",
+          createdByType: by.type,
+          createdById: by.id,
+          updatedByType: by.type,
+          updatedById: by.id,
+          deletedAt: at.trashed ? new Date() : null,
+        })
+        .returning({ id: artifacts.id });
+      await t.db.insert(artifactVersions).values({
+        orgId,
+        artifactId: artifact?.id ?? "",
+        version: 1,
+        storageConfigId: at.bucket ?? null,
+        blobKey: `files/${artifact?.id}`,
+        contentType: "application/pdf",
+        size,
+        sha256: "",
+        authorType: by.type,
+        authorId: by.id,
+      });
+    };
+    await file(a, 3000);
+    await file(a, 5000);
+    await file(a, 7000, { trashed: true });
+    await file(b, 11_000);
+    // One file from before its bucket, still on this server, and one written to the bucket.
+    await file(own, 2000);
+    const [bucket] = await t.db
+      .insert(storageConfigs)
+      .values({ orgId: own, kind: "s3", options: {}, fingerprint: "test", status: "active" })
+      .returning({ id: storageConfigs.id });
+    await file(own, 6000, { bucket: bucket?.id });
+
+    const meters = await Promise.all(
+      ids.map(async (id) => {
+        const org = await body<{ meters: { storageBytes: number; ownStorage: boolean } }>(await op(`/orgs/${id}`));
+        return [org.meters.storageBytes, org.meters.ownStorage];
+      }),
+    );
+    expect(meters).toEqual([
+      [8000, false],
+      [11_000, false],
+      [2000, true],
+      [0, false],
+    ]);
+    expect(await body(await op("/storage"))).toEqual({
+      storageBytes: 8000 + 11_000,
+      workspaces: 2,
+      ownStorageWorkspaces: 1,
+    });
+  } finally {
+    await t.db.delete(organizations).where(inArray(organizations.id, ids));
+  }
+});
+
+test("outside collaborators (ADR 0191): asked for here, answered in the workspace, never counted, ended here", async () => {
+  const READ = "operator-read-token-".padEnd(48, "x");
+  const app = createOperatorApp(deps, TOKEN, READ);
+  const call = (method: string, path: string, json?: unknown, authorization: string | null = BEARER) =>
+    app.request(`/api/operator/v1${path}`, {
+      method,
+      headers: {
+        ...(authorization === null ? {} : { authorization }),
+        ...(json === undefined ? {} : { "content-type": "application/json" }),
+      },
+      body: json === undefined ? undefined : JSON.stringify(json),
+    });
+  const refusal = async (res: Response) => [res.status, ((await res.json()) as { error: { code: string } }).error.code];
+  const NONE = "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b";
+
+  // A workspace of one, full at one person, and an account from outside it.
+  const boss = browser(t);
+  await signUp(boss, "boss@example.com");
+  const { orgId } = await seedOrg(boss);
+  const visitor = browser(t);
+  await signUp(visitor, "consultant@example.com");
+  const idOf = async (email: string) =>
+    (await t.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)))[0]?.id ?? "";
+  const [bossId, visitorId] = [await idOf("boss@example.com"), await idOf("consultant@example.com")];
+  const path = `/orgs/${orgId}/outside-access`;
+  const ask = { userId: visitorId, outsideOf: "Example Consulting", note: "Sets up the agents" };
+  const limits = { members: 1, storageBytes: null, uploadBytesPerDay: null, platformUsdPerMonth: null };
+  await body(await put(`/orgs/${orgId}/limits`, limits));
+
+  // Every route needs the token; the read-only one lists and changes nothing.
+  const routes: [method: string, path: string, json?: unknown][] = [
+    ["POST", path, ask],
+    ["GET", path],
+    ["DELETE", `${path}/${visitorId}`],
+  ];
+  for (const [method, to, json] of routes) {
+    expect(await refusal(await call(method, to, json, null))).toEqual([401, "unauthorized"]);
+    if (method === "GET") continue;
+    expect(await refusal(await call(method, to, json, `Bearer ${READ}`))).toEqual([403, "forbidden"]);
+  }
+  expect(await body(await call("GET", path, undefined, `Bearer ${READ}`))).toEqual({ people: [] });
+
+  for (const bad of [{}, { ...ask, outsideOf: "  " }, { ...ask, outsideOf: "x".repeat(81) }, { ...ask, userId: "" }]) {
+    expect({ bad, status: (await call("POST", path, bad)).status }).toEqual({ bad, status: 400 });
+  }
+  expect(await refusal(await call("POST", `/orgs/${NONE}/outside-access`, ask))).toEqual([404, "not_found"]);
+  expect(await refusal(await call("POST", path, { ...ask, userId: "nobody" }))).toEqual([404, "not_found"]);
+  expect(await refusal(await call("GET", `/orgs/${NONE}/outside-access`))).toEqual([404, "not_found"]);
+  expect(await refusal(await call("DELETE", `/orgs/${NONE}/outside-access/${visitorId}`))).toEqual([404, "not_found"]);
+  // Someone already in is the workspace's own: neither let in again nor taken out from here.
+  expect(await refusal(await call("POST", path, { ...ask, userId: bossId }))).toEqual([409, "join.member"]);
+  expect(await refusal(await call("DELETE", `${path}/${bossId}`))).toEqual([409, "outside_access.member"]);
+
+  enableOperatorEvents();
+  try {
+    // Asked, and asked again: one request, which the workspace reads with who they work for.
+    expect(await body(await call("POST", path, ask))).toEqual({ state: "pending" });
+    expect(await body(await call("POST", path, { ...ask, outsideOf: "Another Firm" }))).toEqual({ state: "pending" });
+    expect(await body(await call("GET", path))).toEqual({
+      people: [{ userId: visitorId, outsideOf: "Example Consulting", state: "pending", since: expect.any(String) }],
+    });
+    type Waiting = { requests: { id: string; name: string; outsideOf?: string | null }[] };
+    const { requests } = await body<Waiting>(await boss(`/api/app/organizations/${orgId}/join-requests`));
+    expect(requests.map((r) => [r.name, r.outsideOf])).toEqual([["consultant", "Example Consulting"]]);
+
+    // The workspace is full, and approving lets them in all the same.
+    const approved = await boss(`/api/app/organizations/${orgId}/join-requests/${requests[0]?.id}/approve`, {
+      json: {},
+    });
+    expect(await body(approved)).toEqual({ outcome: "joined" });
+    expect(await body(await call("GET", path))).toEqual({
+      people: [{ userId: visitorId, outsideOf: "Example Consulting", state: "member", since: expect.any(String) }],
+    });
+    type People = { members: { userId: string; outsideOf?: string | null }[] };
+    const { members } = await body<People>(await boss(`/api/app/organizations/${orgId}/members`));
+    expect(members.map((m) => [m.userId, m.outsideOf])).toEqual([
+      [bossId, null],
+      [visitorId, "Example Consulting"],
+    ]);
+    const { people } = await body<{ people: People["members"] }>(await boss(`/api/app/organizations/${orgId}/people`));
+    expect(people.find((p) => p.userId === visitorId)?.outsideOf).toBe("Example Consulting");
+
+    // Two people are in; the plan's count is still one, and the workspace still exactly full for an ordinary person.
+    expect((await body<{ counts: { members: number } }>(await op(`/orgs/${orgId}`))).counts.members).toBe(1);
+    const listed = await body<Page>(await op(`/orgs?q=${orgId}`));
+    expect(listed.orgs.map((o) => o.members)).toEqual([1]);
+    const seats = await body<{ members: { used: number; limit: number } }>(
+      await boss(`/api/app/organizations/${orgId}/limits`),
+    );
+    expect(seats.members).toMatchObject({ used: 1, limit: 1 });
+    const invited = await boss(`/api/app/organizations/${orgId}/invitations`, {
+      json: { email: "hire@example.com", roleIds: [] },
+    });
+    expect(await refusal(invited)).toEqual([409, "org.members_full"]);
+    expect(await refusal(await call("POST", path, ask))).toEqual([409, "join.member"]);
+
+    // Ended from here, twice over: they are out, and nothing is left to end.
+    expect(await body(await call("DELETE", `${path}/${visitorId}`))).toEqual({ state: "none" });
+    expect(await body(await call("DELETE", `${path}/${visitorId}`))).toEqual({ state: "none" });
+    expect(await body(await call("GET", path))).toEqual({ people: [] });
+    expect((await visitor(`/api/app/organizations/${orgId}/members`)).status).toBe(403);
+
+    // A request the workspace denies, and one ended while it waits.
+    await body(await call("POST", path, ask));
+    const again = await body<Waiting>(await boss(`/api/app/organizations/${orgId}/join-requests`));
+    const denied = await boss(`/api/app/organizations/${orgId}/join-requests/${again.requests[0]?.id}/deny`, {
+      json: {},
+    });
+    expect(denied.status).toBe(204);
+    await body(await call("POST", path, ask));
+    expect(await body(await call("DELETE", `${path}/${visitorId}`))).toEqual({ state: "none" });
+
+    const { events } = await body<{ events: { type: string; orgId: string | null; data: unknown }[] }>(
+      await op("/events?limit=1000"),
+    );
+    expect(events.filter((e) => e.type.startsWith("outside_access.")).map((e) => [e.type, e.orgId, e.data])).toEqual([
+      ["outside_access.granted", orgId, { userId: visitorId }],
+      ["outside_access.ended", orgId, { userId: visitorId }],
+      ["outside_access.denied", orgId, { userId: visitorId }],
+      ["outside_access.ended", orgId, { userId: visitorId }],
+    ]);
+  } finally {
+    enableOperatorEvents(false);
+  }
 });
 
 test("early access: every route needs the token, answers in its shape, and refuses with its codes", async () => {
@@ -995,11 +1404,34 @@ test("no answer carries a secret or a field named like one", async () => {
     if (access) secrets.push(access);
   }
   expect(secrets.length).toBeGreaterThan(10);
+  const [run] = await t.db
+    .select({ id: schema.agentRuns.id, messageId: schema.agentRuns.triggerMessageId })
+    .from(schema.agentRuns)
+    .where(eq(schema.agentRuns.orgId, acme.orgId))
+    .limit(1);
+  // Removed ones too: their rows keep what they held.
+  const machines = await t.db.select({ id: schema.machines.id }).from(schema.machines);
+  expect(machines.length).toBeGreaterThan(0);
   for (const path of [
     "/health",
     "/orgs?limit=200",
     `/orgs/${acme.orgId}`,
     `/users/${acme.ownerId}`,
+    "/users?q=acme&limit=200",
+    `/orgs/${acme.orgId}/members?limit=200`,
+    `/orgs/${acme.orgId}/channels?limit=200`,
+    `/orgs/${acme.orgId}/agents?limit=200`,
+    `/agents/${acme.agentId}`,
+    `/resolve?ref=${acme.agentId}`,
+    `/orgs/${acme.orgId}/runs?limit=200`,
+    `/orgs/${acme.orgId}/runs?groupBy=error`,
+    `/orgs/${acme.orgId}/timeline?channelId=${acme.channelId}&limit=200`,
+    ...(run ? [`/runs/${run.id}/trace`, `/messages/${run.messageId}/explain`, `/usage?runId=${run.id}`] : []),
+    "/jobs?limit=200",
+    "/jobs?summary=true",
+    `/usage?orgId=${acme.orgId}&groupBy=agent`,
+    `/orgs/${acme.orgId}/machines`,
+    ...machines.map((m) => `/machines/${m.id}`),
     "/signup",
     "/waitlist",
     "/early-access/invitations?limit=200",
@@ -1179,6 +1611,62 @@ test("work analytics: fleet-wide and one workspace's; 401 without the token, 400
   expect(fleet.workspaces.map((w) => w.orgId)).toContain(acme.orgId);
   const after = await agentTokens();
   expect([after.input - before.input, after.output - before.output]).toEqual([40, 2]);
+});
+
+test("a workspace's look (ADR 0193): logo and accent set, kept or cleared, as the system, seen by its members", async () => {
+  const READ = "operator-read-token-".padEnd(48, "x");
+  const app = createOperatorApp(deps, TOKEN, READ);
+  const call = (json: unknown, orgId = acme.orgId, authorization: string | null = BEARER) =>
+    app.request(`/api/operator/v1/orgs/${orgId}/look`, {
+      method: "PUT",
+      headers: { ...(authorization === null ? {} : { authorization }), "content-type": "application/json" },
+      body: JSON.stringify(json),
+    });
+  const refusal = async (res: Response) => [res.status, ((await res.json()) as { error: { code: string } }).error.code];
+  const JPEG = Buffer.from([
+    0xff, 0xd8, 0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0xff, 0xda, 0x00, 0x02, 0x01, 0xff, 0xd9,
+  ]).toString("base64");
+  const seen = async () =>
+    (
+      (await (await owner("/api/app/me")).json()) as { organizations: { id: string; logo?: string; accent?: string }[] }
+    ).organizations
+      .filter((o) => o.id === acme.orgId)
+      .map((o) => ({ logo: o.logo ?? null, accent: o.accent ?? null }))[0];
+
+  expect(await refusal(await call({ accent: "#7c3aed" }, acme.orgId, null))).toEqual([401, "unauthorized"]);
+  expect(await refusal(await call({ accent: "#7c3aed" }, acme.orgId, `Bearer ${READ}`))).toEqual([403, "forbidden"]);
+  expect(await refusal(await call({}, "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b"))).toEqual([404, "not_found"]);
+  for (const bad of [{ accent: "purple" }, { logo: { contentType: "image/gif", base64: JPEG } }, { logo: "x" }]) {
+    expect({ bad, status: (await call(bad)).status }).toEqual({ bad, status: 400 });
+  }
+  // Bytes that aren't the declared image: the logo's own refusal, and the accent beside it is left alone.
+  const svg = { contentType: "image/png", base64: Buffer.from("<svg/>").toString("base64") };
+  expect(await refusal(await call({ accent: "#7c3aed", logo: svg }))).toEqual([400, "logo.type"]);
+  expect(await seen()).toEqual({ logo: null, accent: null });
+
+  const both = await body<{ logo: string; accent: string }>(
+    await call({ accent: "#F97316", logo: { contentType: "image/jpeg", base64: JPEG } }),
+  );
+  expect(both).toEqual({ accent: "#f97316", logo: expect.stringContaining(`/api/app/org-logos/${acme.orgId}/`) });
+  expect(await seen()).toEqual(both);
+  expect((await owner(both.logo)).status).toBe(200);
+
+  // An absent field is left alone; null clears it.
+  expect(await body(await call({ accent: null }))).toEqual({ accent: null, logo: both.logo });
+  expect(await body(await call({ logo: null }))).toEqual({ accent: null, logo: null });
+  expect(await body(await call({}))).toEqual({ accent: null, logo: null });
+
+  const audit = await t.db
+    .select({ action: schema.auditLog.action, actorType: schema.auditLog.actorType })
+    .from(schema.auditLog)
+    .where(eq(schema.auditLog.orgId, acme.orgId))
+    .orderBy(schema.auditLog.id);
+  expect(audit.filter((a) => a.action.startsWith("organization.logo") || a.action.endsWith("accent_changed"))).toEqual([
+    { action: "organization.logo_changed", actorType: "system" },
+    { action: "organization.accent_changed", actorType: "system" },
+    { action: "organization.accent_changed", actorType: "system" },
+    { action: "organization.logo_removed", actorType: "system" },
+  ]);
 });
 
 test("the OpenAPI document is the committed contract (ADR 0056)", async () => {

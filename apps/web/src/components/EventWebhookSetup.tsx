@@ -10,7 +10,8 @@ import { githubHookLink, SENTRY_NEW_INTEGRATION, webhookTestState } from "@agent
 import { Button, Field, Icon, Input, SearchSelect, Spinner } from "@agenteschat/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { AskAdminButton } from "@/components/AdminAsk";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { useToast } from "@/lib/toast";
@@ -81,7 +82,12 @@ export function EventWebhookSetup({ provider }: { provider: WebhookProvider }) {
     return (
       <div className="routine-setup">
         {head}
-        {status ?? <p className="small muted">{t("routines.setup.adminOnly", { provider: name })}</p>}
+        {status ?? (
+          <p className="small muted skill-line">
+            <span>{t("routines.setup.adminOnly", { provider: name })}</span>
+            <AskAdminButton ask={{ what: "webhook", provider }} />
+          </p>
+        )}
       </div>
     );
   }

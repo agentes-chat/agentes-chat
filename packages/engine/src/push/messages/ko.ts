@@ -32,6 +32,10 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "새 컴퓨터가 워크스페이스에 연결됐어요",
   computerReadyTitle: "워크스페이스 컴퓨터가 준비됐어요",
   computerReadyBody: "에이전트 페이지를 열어 실시간으로 보세요.",
+  computerDownTitle: (n) => `${n}이(가) 응답하지 않아요`,
+  computerDownBody: "이 컴퓨터에서 에이전트의 작업이 기다리고 있어요. 눌러서 할 일을 확인하세요.",
+  computerBackTitle: (n) => `${n}이(가) 다시 연결됐어요`,
+  computerBackBody: (away) => `${away} 동안 연결이 끊겼어요. 기다리던 작업이 이제 계속돼요.`,
   browserHandoffTitle: (a) => `${a} 님이 브라우저에서 도움을 기다려요`,
   browserHandoffReminderTitle: (a) => `${a} 님이 아직 브라우저에서 기다려요`,
   browserHandoffBody: "탭해서 화면을 여세요.",
@@ -83,6 +87,19 @@ export const strings: Partial<PushStrings> = {
   deviceAccessTitle: (a, p, d) =>
     p ? `${a}이(가) ${p} 님을 위해 내 ${d} 사용을 요청해요` : `${a}이(가) 내 ${d} 사용을 요청해요`,
   deviceAccessBody: "탭해서 한 번 허용, 항상 허용 또는 거절을 선택하세요.",
+  deviceToolTitle: (a, d) => `${a} 님이 ${d}의 도구를 켜 달라고 요청합니다`,
+  deviceToolBody: "탭해서 한 번에 켜세요.",
+  deviceCliTitle: (a, d) => `${a} 님이 ${d}에 프로그램을 설치해 달라고 요청합니다`,
+  deviceCliBody: "탭해서 한 번에 설치하세요.",
+  deviceFolderTitle: (a, f, d) =>
+    f ? `${a}님이 회원님의 ${d}에서 ${f}을(를) 요청합니다` : `${a}님이 회원님의 ${d}에서 폴더를 요청합니다`,
+  deviceFolderBody: "그 컴퓨터의 앱에서 허용하세요.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} 님이 #${l}에 에이전트를 추가해 달라고 요청합니다`
+      : what === "create_agents"
+        ? `${a} 님이 에이전트를 만들 수 있게 해 달라고 요청합니다`
+        : `${a} 님이 루틴용 ${l} 웹훅을 설정해 달라고 요청합니다`,
   deviceWaitingTitle: (p, d) => `${p} 님의 에이전트가 내 ${d}을(를) 기다리고 있어요`,
   deviceWaitingBody: "돌아오면 시작해요.",
   teamWeekReady: "팀의 한 주 정리가 준비됐어요",
@@ -94,4 +111,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} 님이 내 워크스페이스에 참여를 요청했어요`,
   joinSuggestionTitlePersonal: (by, name) => `${by} 님이 ${name} 님을 초대하자고 제안했어요`,
   teamWeekReadyPersonal: "한 주 정리가 준비됐어요",
+  teamWatchStill: (n) => `${n}건이 아직 기다리고 있어요`,
 };

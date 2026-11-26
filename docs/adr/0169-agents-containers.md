@@ -1,6 +1,6 @@
 # 0169. Agents' containers: rootless Podman, each agent its own containers service
 
-- Status: Proposed
+- Status: Proposed. Amended 2026-11-20 by ADR 0209: §1 and §4 (`docker` is Docker's own rootless daemon of the agent's where the computer has it; `DOCKER_HOST` its socket).
 - Date: 2026-11-11
 - Amends: ADR 0030 and 0101 (no_new_privs: kept on every launch of an agent but its containers service), ADR 0096
   (what a uid-keyed firewall must count as an agent's), ADR 0057 (what an agent's share holds)
@@ -92,7 +92,8 @@ started inside it.
    outside it, and through Podman's socket or its user manager runs what it is asked (a container with the agent's home
    mounted, any command), so for those agents it doesn't run at all. The agents frame says which may have it
    (`MachineAgent.containers`, `machineAgents`): every agent but those on those four brains (`isSandboxedBrain`) and the
-   team's right hand, which thinks on several. Root keeps the service only for those (`keepContainers` before a worker,
+   team's right hand, which thinks on several (amended 2026-11-12, ADR 0175: each person's seat of the right hand has
+   it, since no turn of a CLI runs as a seat). Root keeps the service only for those (`keepContainers` before a worker,
    desktop or terminal) and stops it as soon as a frame takes it away (a brain changed: before its next turn); one given
    it back gets it at once while its worker runs, else with its next start. Every launch of a sandboxed CLI (Codex's
    turns, app-server, background tasks and routes; Cursor's, Grok's and Antigravity's turns) also goes without

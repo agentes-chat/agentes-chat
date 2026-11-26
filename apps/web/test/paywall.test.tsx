@@ -100,6 +100,10 @@ describe("the wall", () => {
     expect(document.querySelector(".noai-banner")).toBeNull();
     await click(about, 2);
     expect(screen().getByRole("tooltip").textContent).toContain("O plano traz o computador dos agentes");
+    // A computer of one's own connected to the workspace isn't the free way: that is one's own server.
+    expect(screen().getByRole("tooltip").textContent).toContain(
+      "Um computador seu conectado aqui não substitui o plano. Rodar o agentes.chat no seu próprio servidor ou computador é grátis.",
+    );
   });
 
   test("a key saved before reads as ready and changes nothing: no answer starts, the wall stays", async () => {
@@ -258,7 +262,19 @@ describe("what stays out of reach on a hold", () => {
   test("a saved key can't be changed, only removed", async () => {
     await open(held(seedState()), "settings/keys");
     expect(screen().queryByRole("button", { name: "Trocar a chave" })).toBeNull();
-    expect(screen().getByRole("button", { name: "Apagar" })).toBeTruthy();
+    const more = screen().getByRole("button", { name: "Ações de Claude da Acme" });
+    more.focus();
+    await act(async () => {
+      fireEvent.keyDown(more, { key: "Enter" });
+      fireEvent.keyUp(more, { key: "Enter" });
+    });
+    await settle(2);
+    const menu = screen().getByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["Apagar"]);
     expect(document.body.textContent).toContain("As chaves de API abrem com o plano do agentes.chat");
   });
 

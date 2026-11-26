@@ -22,7 +22,7 @@ import {
 } from "@agenteschat/client/lib/drive";
 import { PAGE_CSP } from "@agenteschat/client/lib/isolated-page";
 import { act, cleanup, fireEvent, render, within } from "@testing-library/react";
-import { fileSaver } from "@/components/artifacts/ArtifactViewer";
+import { fileSaver } from "@/components/artifacts/fileSaver";
 import { HTML_SANDBOX, HtmlFrame, withShim } from "@/components/artifacts/HtmlFrame";
 import { setMermaidRenderer } from "@/components/artifacts/Mermaid";
 import { Markdown, parseMarkdown } from "@/lib/markdown";
@@ -82,10 +82,11 @@ async function byKind(api: ApiClient) {
 }
 
 /** Channel #eng with one agent message carrying every kind of artifact. */
-async function openChannel() {
+async function openChannel(before?: (api: ApiClient, a: Awaited<ReturnType<typeof byKind>>) => Promise<void>) {
   const state = seedState();
   const api = createFakeApi(state);
   const a = await byKind(api);
+  await before?.(api, a);
   state.messages.push({
     id: "m-art",
     channelId: ENG_ID,
@@ -125,11 +126,12 @@ describe("artifact cards in the chat", () => {
     await openChannel();
     const meta = (tile: HTMLElement) => tile.querySelector(".artifact-tile__meta")?.textContent;
     const doc = card("Relatório de incidente: checkout");
-    // The document's own start, its headings and lists as in the document; no "made by" (the message says who).
-    expect(doc.querySelector(".artifact-tile__cover h2")?.textContent).toBe("Incidente no checkout");
-    expect(doc.querySelector(".artifact-tile__cover li")?.textContent).toBe("142 eventos desde ontem");
+    // A document is a live file (ADR 0200): its first page drawn small, its headings and lists as in the document,
+    // its kind alone under its name (no versions to count); no "made by" (the message says who).
+    expect(doc.querySelector(".lf-doc-mini__h")?.textContent).toBe("Incidente no checkout");
+    expect(doc.querySelector(".lf-doc-mini__p[data-list='bullet']")?.textContent).toBe("142 eventos desde ontem");
     expect(doc.querySelector(".artifact-tile__title")?.textContent).toBe("Relatório de incidente: checkout");
-    expect(meta(doc)).toBe("Documento · v2");
+    expect(meta(doc)).toBe("Documento");
     expect(doc.textContent).not.toContain("gerado por");
 
     const table = card("Pedidos mais comuns nos reviews");
@@ -173,10 +175,100 @@ describe("a tile's actions", () => {
     const acts = doc.querySelector(".artifact-tile__acts") as HTMLElement;
     await click(within(acts).getByRole("button", { name: "Baixar" }));
     await settle(2);
-    expect(saved.at(-1)?.name).toMatch(/\.md$/);
+    // A document downloads as Word (ADR 0200).
+    expect(saved.at(-1)?.name).toMatch(/\.docx$/);
     await pick(acts, "Mais ações: Relatório de incidente: checkout", "Copiar link");
     await settle(2);
     expect(copied.at(-1)).toContain("/drive");
+  });
+});
+
+describe("a picture's tile", () => {
+  test("a card with its file's facts shows the picture's small copy, kept by the browser and loaded as it nears the screen", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    const shot = await api.artifacts.upload(ORG_ID, new File(["png"], "tela.png", { type: "image/png" }), {
+      channelId: ENG_ID,
+    });
+    state.messages.push({
+      id: "m-pic",
+      channelId: ENG_ID,
+      threadId: null,
+      author: { type: "agent", id: ATLAS_ID },
+      body: "A tela.",
+      mentionedAgentIds: [],
+      agentRunId: "r-pic",
+      meta: {
+        artifacts: [
+          {
+            id: shot.id,
+            version: 1,
+            title: "tela.png",
+            name: "tela.png",
+            contentType: "image/png",
+            size: 3,
+            width: 800,
+            height: 600,
+          },
+        ],
+      },
+      createdAt: new Date().toISOString(),
+    });
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+    await settle(8);
+    const tile = card("tela.png");
+    const img = tile.querySelector("img") as HTMLImageElement;
+    expect(img.getAttribute("src")).toBe(`/api/app/organizations/${ORG_ID}/artifacts/${shot.id}/thumb?version=1&w=480`);
+    expect(img.getAttribute("srcset")).toContain("w=960 960w");
+    expect(img.getAttribute("sizes")).toBe("400px");
+    expect(img.getAttribute("loading")).toBe("lazy");
+    expect(tile.getAttribute("data-ratio")).toBe("true");
+  });
+
+  test("More has Copiar imagem: the picture goes on the clipboard as a PNG, and a toast says so", async () => {
+    const written: Record<string, Blob | Promise<Blob>>[] = [];
+    const g = globalThis as { ClipboardItem?: unknown };
+    const had = g.ClipboardItem;
+    g.ClipboardItem = class {
+      constructor(items: Record<string, Blob | Promise<Blob>>) {
+        written.push(items);
+      }
+    };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (v: string) => void copied.push(v), write: async () => undefined },
+    });
+    try {
+      const state = seedState();
+      const api = createFakeApi(state);
+      const shot = await api.artifacts.upload(ORG_ID, new File(["png"], "tela.png", { type: "image/png" }), {
+        channelId: ENG_ID,
+      });
+      state.messages.push({
+        id: "m-pic",
+        channelId: ENG_ID,
+        threadId: null,
+        author: { type: "agent", id: ATLAS_ID },
+        body: "A tela.",
+        mentionedAgentIds: [],
+        agentRunId: "r-pic",
+        meta: { artifacts: [{ id: shot.id, version: 1 }] },
+        createdAt: new Date().toISOString(),
+      });
+      await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+      await settle(8);
+      const acts = card("tela.png").querySelector(".artifact-tile__acts") as HTMLElement;
+      await pick(acts, "Mais ações: tela.png", "Copiar imagem");
+      await settle(4);
+      expect(Object.keys(written.at(-1) ?? {})).toEqual(["image/png"]);
+      expect(screen().getByText("Imagem copiada.")).toBeTruthy();
+    } finally {
+      g.ClipboardItem = had;
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText: async (v: string) => void copied.push(v) },
+      });
+    }
   });
 });
 
@@ -208,38 +300,6 @@ describe("a file card's right click (desktop app)", () => {
 });
 
 describe("artifact viewer", () => {
-  test("document: rendered Markdown with code in mono, download and copy link", async () => {
-    const { a } = await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
-    expect(within(dialog).getByRole("heading", { name: "O que aconteceu" })).toBeTruthy();
-    expect(dialog.querySelector("pre.code-card__code code")?.textContent).toContain("if (!cart.items.length)");
-    expect(within(dialog).getByText("38 clientes").tagName).toBe("STRONG");
-    await pick(dialog, "Baixar", "Original");
-    await settle(3);
-    expect(saved[0]?.name).toBe("relatorio-de-incidente-checkout.md");
-    expect(saved[0]?.url.startsWith("data:text/markdown")).toBe(true);
-    await pick(dialog, "Baixar", "PDF");
-    expect(saved[1]?.name).toBe("relatorio-de-incidente-checkout.pdf");
-    expect(saved[1]?.url).toBe(`/api/app/organizations/${ORG_ID}/artifacts/${a.document.id}/file?version=2&format=pdf`);
-    await pick(dialog, "Baixar", "Word (.docx)");
-    expect(saved[2]?.name).toBe("relatorio-de-incidente-checkout.docx");
-    expect(saved[2]?.url).toBe(
-      `/api/app/organizations/${ORG_ID}/artifacts/${a.document.id}/file?version=2&format=docx`,
-    );
-    await pick(dialog, /^Mais ações: /, "Copiar link");
-    await settle(2);
-    expect(copied[0]).toBe(`http://localhost:3000/org/${ORG_ID}/drive?artifact=${a.document.id}`);
-    expect(screen().getByText("Link copiado.")).toBeTruthy();
-    // The whole text in one click, right after Baixar and Compartilhar: the document's Markdown as it was written.
-    const copy = within(dialog).getByRole("button", { name: "Copiar texto" });
-    expect(copy.previousElementSibling?.textContent).toContain("Compartilhar");
-    await click(copy);
-    await settle(2);
-    expect(copied[1]).toContain("## O que aconteceu");
-    expect(copied[1]).toContain("**38 clientes**");
-    expect(screen().getByText("Texto copiado.")).toBeTruthy();
-  });
-
   test("an uploaded text file (HTML, JSON, code): Copiar texto between Baixar and Enviar nova versão", async () => {
     const api = createFakeApi(seedState());
     const page = '<h2 id="combo">Como funciona</h2>\n<p>Texto da matéria.</p>\n';
@@ -363,56 +423,49 @@ describe("artifact viewer", () => {
 
 describe("versions and editing", () => {
   test("switch versions, see who changed what and the note", async () => {
-    await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
+    // A second version of the table after the message named its first: the card opens that first one.
+    await openChannel((api, a) =>
+      api.artifacts
+        .update(ORG_ID, a.table.id, {
+          content: {
+            kind: "table",
+            columns: ["Pedido", "Menções", "Nota média"],
+            rows: [["Modo offline", "38", "2,6"]],
+          },
+          note: "Acrescentei as menções desta semana.",
+          baseVersion: 1,
+        })
+        .then(() => undefined),
+    );
+    const dialog = await openCard("Pedidos mais comuns nos reviews");
+    expect(dialog.textContent).toContain("Vendo a v1. A mais recente é a v2.");
+    expect(dialog.textContent).toContain("Exportar em PDF");
     const history = within(dialog).getByRole("navigation", { name: "Versões" });
     const items = within(history).getAllByRole("button");
     expect(items).toHaveLength(2);
     expect(items[0]?.textContent).toContain("v2");
     expect(items[0]?.textContent).toContain("Atual");
-    expect(items[0]?.textContent).toContain("Acrescentei quem foi afetado.");
-    expect(items[0]?.getAttribute("aria-current")).toBe("true");
+    expect(items[0]?.textContent).toContain("Acrescentei as menções desta semana.");
     expect(items[1]?.textContent).toContain("Sem nota");
-    expect(dialog.textContent).toContain("38 clientes");
-
-    await click(items[1] as HTMLElement);
-    await settle(4);
-    const again = screen().getByRole("dialog", { name: "Relatório de incidente: checkout" });
-    expect(again.textContent).toContain("Vendo a v1. A mais recente é a v2.");
-    expect(again.textContent).not.toContain("38 clientes");
+    expect(items[1]?.getAttribute("aria-current")).toBe("true");
     // Old versions are read-only.
-    expect(within(again).queryByRole("button", { name: "Editar" })).toBeNull();
-    await click(within(again).getByRole("button", { name: "Ver a mais recente" }));
+    expect(within(dialog).queryByRole("button", { name: "Editar" })).toBeNull();
+    await click(within(dialog).getByRole("button", { name: "Ver a mais recente" }));
     await settle(4);
-    expect(screen().getByRole("dialog").textContent).toContain("38 clientes");
-  });
-
-  test("editing a document saves a new version with a note", async () => {
-    const { api, a } = await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
-    await click(within(dialog).getByRole("button", { name: "Editar" }));
-    expect(dialog.textContent).toContain("Editando: salvar cria a v3.");
-    await type(within(dialog).getByLabelText("Texto em Markdown"), "# Incidente\n\nResolvido às 19h.");
-    await type(within(dialog).getByLabelText("Nota da alteração (opcional)"), "Fechei o incidente.");
-    await click(within(dialog).getByRole("button", { name: "Salvar nova versão" }));
-    await settle(6);
-    expect(screen().getByText("Versão 3 salva.")).toBeTruthy();
-    const view = screen().getByRole("dialog");
-    expect(view.textContent).toContain("Resolvido às 19h.");
-    const history = within(view).getByRole("navigation", { name: "Versões" });
-    expect(within(history).getAllByRole("button")[0]?.textContent).toContain("Fechei o incidente.");
-    expect((await api.artifacts.versions(ORG_ID, a.document.id)).map((v) => v.version)).toEqual([3, 2, 1]);
+    const latest = screen().getByRole("dialog", { name: "Pedidos mais comuns nos reviews" });
+    expect(latest.textContent).not.toContain("Exportar em PDF");
+    expect(within(latest).getByRole("button", { name: "Editar" })).toBeTruthy();
   });
 
   test("a stale edit (someone saved first) is explained, not lost silently", async () => {
     const { api, a } = await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
+    const dialog = await openCard("Pedidos mais comuns nos reviews");
     await click(within(dialog).getByRole("button", { name: "Editar" }));
-    await api.artifacts.update(ORG_ID, a.document.id, {
-      content: { kind: "document", markdown: "outra" },
-      baseVersion: 2,
+    await api.artifacts.update(ORG_ID, a.table.id, {
+      content: { kind: "table", columns: ["Pedido", "Menções", "Nota média"], rows: [["Modo offline", "40", "2,6"]] },
+      baseVersion: 1,
     });
-    await type(within(dialog).getByLabelText("Texto em Markdown"), "minha versão");
+    await type(within(dialog).getByLabelText("Menções, linha 1"), "33");
     await click(within(dialog).getByRole("button", { name: "Salvar nova versão" }));
     await settle(4);
     expect(dialog.textContent).toContain("Alguém salvou uma versão nova enquanto você editava.");
@@ -486,27 +539,40 @@ describe("Drive", () => {
   const card = (title: string) => screen().getByRole("button", { name: title });
   const keyDown = (key: string, init: Record<string, unknown> = {}) =>
     act(async () => fireEvent.keyDown(document.body, { key, ...init }));
-  /** Opens a dropdown (Radix: keyboard) and picks one of its radio items. */
-  const pickRadio = async (trigger: RegExp, item: string) => {
-    const button = screen().getByRole("button", { name: trigger });
-    button.focus();
-    await act(async () => {
-      fireEvent.keyDown(button, { key: "Enter" });
-      fireEvent.keyUp(button, { key: "Enter" });
-    });
-    await act(() => new Promise((r) => setTimeout(r, 0)));
-    await click(within(screen().getByRole("menu")).getByRole("menuitemradio", { name: item }));
-    await settle(2);
-  };
   beforeEach(() => localStorage.removeItem("agentes.drive.view"));
 
-  /** Tipo, one filter of the bar (FilterChip): its trigger. */
-  const kindTrigger = () =>
-    screen()
-      .getAllByRole("button")
-      .find((b) => b.classList.contains("ac-filter__trigger") && /Tipo|tipos/.test(b.textContent ?? "")) as HTMLElement;
   const pressEscape = () =>
     act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
+  /** Opens the bar's filter menu (Radix: keyboard) by its button's name ("Filtro"), and gives the menu. */
+  const filterMenu = async (button = "Filtro") => {
+    const trigger = screen().getByRole("button", { name: button });
+    trigger.focus();
+    await act(async () => {
+      fireEvent.keyDown(trigger, { key: "Enter" });
+      fireEvent.keyUp(trigger, { key: "Enter" });
+    });
+    await act(() => new Promise((r) => setTimeout(r, 0)));
+    return screen().getByRole("menu");
+  };
+  /** Ticks one item of the filter menu and closes it. */
+  const filterBy = async (name: string | RegExp, button = "Filtro") => {
+    await click(within(await filterMenu(button)).getByRole("menuitemcheckbox", { name }));
+    await pressEscape();
+    await settle(4);
+  };
+  /** Opens "Exibição" (grid or list, groups, order) and gives it. */
+  const display = async () => {
+    await click(screen().getByRole("button", { name: /^Exibição: / }));
+    return screen().getByRole("dialog", { name: "Exibição" });
+  };
+  /** Picks one option of a row of "Exibição" ("Agrupar por", "Ordenar por"). */
+  const choose = async (row: string, option: string) => {
+    await click(
+      within(within(await display()).getByRole("radiogroup", { name: row })).getByRole("radio", { name: option }),
+    );
+    await pressEscape();
+    await settle(2);
+  };
 
   test("lists everything, newest update first; search and Tipo narrow it", async () => {
     await goDrive();
@@ -527,29 +593,29 @@ describe("Drive", () => {
     await type(screen().getByRole("searchbox", { name: "Buscar arquivos" }), "");
     await settle(4);
 
-    // Tipo: one filter of the bar, never a row of its own; each kind with its icon and how many there are.
+    // Tipo: a part of the Filtro's menu, never a row of its own; each kind with its icon and how many there are.
     expect(screen().queryByRole("group", { name: "Tipos" })).toBeNull();
-    await click(kindTrigger());
-    const kinds = screen().getByRole("listbox", { name: "Tipo" });
-    const diffs = within(kinds).getByRole("option", { name: /^Alterações de código/ });
+    const menu = await filterMenu();
+    const diffs = within(menu).getByRole("menuitemcheckbox", { name: /^Alterações de código/ });
     expect(diffs.querySelector("svg")).not.toBeNull();
-    expect(diffs.querySelector(".ac-countchip")?.textContent).toBe("1");
+    expect(diffs.querySelector(".ac-menu__hint")?.textContent).toBe("1");
     await click(diffs);
     await settle(4);
-    expect(diffs.getAttribute("aria-selected")).toBe("true");
+    expect(diffs.getAttribute("aria-checked")).toBe("true");
     expect(names()).toEqual(["Corrige o checkout com carrinho vazio"]);
-    // Two kinds: either of them.
-    await click(within(kinds).getByRole("option", { name: /^Diagramas/ }));
+    // Two kinds: either of them, the menu open between them; each in use is a chip.
+    await click(within(menu).getByRole("menuitemcheckbox", { name: /^Diagramas/ }));
     await pressEscape();
     await settle(4);
     expect(names()).toEqual(["Organograma do time", "Corrige o checkout com carrinho vazio"]);
-    expect(kindTrigger().textContent).toContain("2 tipos");
+    expect(screen().getByRole("button", { name: "Tipo: Alterações de código" })).toBeTruthy();
+    expect(screen().getByRole("button", { name: "Tipo: Diagramas" })).toBeTruthy();
 
     // Nothing matches → explained, with a way out that also clears the search.
     await type(screen().getByRole("searchbox", { name: "Buscar arquivos" }), "nada disso");
     await settle(4);
     expect(screen().getByText("Nenhum arquivo com esses filtros.")).toBeTruthy();
-    // The bar's own "Limpar filtros" shows too, with Tipo active: the empty state's clears the search as well.
+    // The empty state's "Limpar filtros" clears the search and every filter.
     const empty = screen().getByText("Nenhum arquivo com esses filtros.").closest(".ac-empty") as HTMLElement;
     await click(within(empty).getByRole("button", { name: "Limpar filtros" }));
     await settle(4);
@@ -564,10 +630,8 @@ describe("Drive", () => {
     expect(documents).toBeGreaterThan(100);
     await goDrive({ api });
     expect(names()).toHaveLength(100);
-    await click(kindTrigger());
-    const kinds = screen().getByRole("listbox", { name: "Tipo" });
-    const docs = within(kinds).getByRole("option", { name: /^Documentos/ });
-    expect(docs.querySelector(".ac-countchip")?.textContent).toBe(String(documents));
+    const docs = within(await filterMenu()).getByRole("menuitemcheckbox", { name: /^Documentos/ });
+    expect(docs.querySelector(".ac-menu__hint")?.textContent).toBe(String(documents));
     await pressEscape();
     await click(screen().getByRole("button", { name: "Carregar mais" }));
     await settle(6);
@@ -575,89 +639,75 @@ describe("Drive", () => {
     expect(screen().queryByRole("button", { name: "Carregar mais" })).toBeNull();
   });
 
-  test("who made it: agents or people", async () => {
+  test("who made it: agents or people, one at a time, its chip's × takes it off", async () => {
     await goDrive();
-    await click(screen().getByRole("radio", { name: "Pessoas" }));
+    const menu = await filterMenu();
+    await click(within(menu).getByRole("menuitemcheckbox", { name: "Pessoas" }));
     await settle(4);
     expect(names()).toEqual([]);
     expect(screen().getByText("Nenhum arquivo com esses filtros.")).toBeTruthy();
-    await click(screen().getByRole("radio", { name: "Agentes" }));
+    await click(within(menu).getByRole("menuitemcheckbox", { name: "Agentes" }));
     await settle(4);
+    expect(within(menu).getByRole("menuitemcheckbox", { name: "Pessoas" }).getAttribute("aria-checked")).toBe("false");
+    await pressEscape();
     expect(names()).toHaveLength(5);
+    expect(screen().getByRole("button", { name: "Quem fez: Agentes" })).toBeTruthy();
+    await click(screen().getByRole("button", { name: "Limpar Agentes" }));
+    await settle(4);
+    expect(screen().queryByRole("button", { name: "Quem fez: Agentes" })).toBeNull();
+    expect(screen().getByRole("button", { name: "Filtro" }).textContent).toBe("Filtro");
   });
 
   test("filter by person or agent and by channel", async () => {
     const { api } = await goDrive();
     const list = await api.artifacts.list(ORG_ID);
     const doc = list.find((a) => a.kind === "document") as Artifact;
-    await click(screen().getByRole("button", { name: "Pessoa ou agente" }));
-    const listbox = screen().getByRole("listbox", { name: "Pessoa ou agente" });
-    expect(listbox.getAttribute("aria-multiselectable")).toBe("true");
-    expect(listbox.querySelector(".ac-avatar--agent")).not.toBeNull();
-    expect(listbox.textContent).toContain("Agentes");
-    expect(listbox.textContent).toContain("Pessoas");
+    // Under "Quem fez", past Agentes and Pessoas: each agent and person, with their avatars.
+    const menu = await filterMenu();
+    expect(menu.querySelector(".ac-avatar--agent")).not.toBeNull();
+    await pressEscape();
     // The person who edited the report (v2) finds it.
     const me = (await api.account.me())?.user.name ?? "";
-    await click(within(listbox).getByRole("option", { name: me }));
-    await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
-    await settle(4);
+    await filterBy(me);
     expect(names()).toEqual([doc.title]);
+    expect(screen().getByRole("button", { name: `Quem fez: ${me}` })).toBeTruthy();
 
     const channels = await api.chat.channels(ORG_ID);
     const home = channels.find((c) => c.id === doc.channelId);
     const elsewhere = channels.find((c) => c.id !== doc.channelId);
-    const pickChannel = async (name: string) => {
-      const trigger = screen()
-        .getAllByRole("button")
-        .find((b) => b.classList.contains("ac-filter__trigger") && /Canal|#|canais/.test(b.textContent ?? ""));
-      await click(trigger as HTMLElement);
-      await click(within(screen().getByRole("listbox", { name: "Canal" })).getByRole("option", { name: `#${name}` }));
-      await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
-      await settle(4);
-    };
-    await pickChannel(elsewhere?.name ?? "");
+    await filterBy(elsewhere?.name ?? "");
     expect(screen().getByText("Nenhum arquivo com esses filtros.")).toBeTruthy();
-    expect(screen().getByRole("button", { name: `#${elsewhere?.name}` })).toBeTruthy();
-    // Several channels: any of them, and the chip counts them.
-    await pickChannel(home?.name ?? "");
+    expect(screen().getByRole("button", { name: `Canal: #${elsewhere?.name}` })).toBeTruthy();
+    // Several channels: any of them, each with its chip.
+    await filterBy(home?.name ?? "");
     expect(names()).toEqual([doc.title]);
-    expect(screen().getByRole("button", { name: "2 canais" })).toBeTruthy();
+    expect(screen().getByRole("button", { name: `Canal: #${home?.name}` })).toBeTruthy();
   });
 
   // The worst case for CI's geometry check (the capture keeps each of these screens): German words, a long channel,
-  // every filter in use and Typ open, then Japanese. One toolbar, on two rows only where one can't hold it.
-  test("German and Japanese with every filter in use: still one toolbar, Typ among its filters", async () => {
+  // a chip for every kind of filter, the filter menu open, then Japanese. One toolbar, on two rows only where one
+  // can't hold it.
+  test("German and Japanese with every filter in use: still one toolbar, Typ in the filter menu", async () => {
     const state = seedState();
     const eng = state.channels.find((c) => c.id === ENG_ID);
     if (eng) eng.name = "produkteinfuehrung-herbstkampagne-2026";
     const { services, api } = await goDrive({ api: createFakeApi(state, { seed: true }) });
     await showIn(services, "de");
-    const trigger = (name: RegExp) =>
-      screen()
-        .getAllByRole("button")
-        .find((b) => b.classList.contains("ac-filter__trigger") && name.test(b.textContent ?? "")) as HTMLElement;
     // Typ first, while every kind is there to pick.
-    await click(trigger(/^Typ/));
-    const kinds = screen().getByRole("listbox", { name: "Typ" });
+    const menu = await filterMenu("Filtern");
     for (const kind of [/^Dokumente/, /^Codeänderungen/])
-      await click(within(kinds).getByRole("option", { name: kind }));
+      await click(within(menu).getByRole("menuitemcheckbox", { name: kind }));
     await pressEscape();
     await settle(4);
-    await click(trigger(/Kanal/));
-    await click(
-      within(screen().getByRole("listbox", { name: "Kanal" })).getByRole("option", {
-        name: "#produkteinfuehrung-herbstkampagne-2026",
-      }),
-    );
-    await pressEscape();
-    await settle(4);
+    await filterBy("produkteinfuehrung-herbstkampagne-2026", "Filtern");
     const me = (await api.account.me())?.user.name ?? "";
-    await click(trigger(/Person oder Agent/));
-    await click(within(screen().getByRole("listbox", { name: "Person oder Agent" })).getByRole("option", { name: me }));
-    await pressEscape();
-    await settle(4);
-    expect(trigger(/Typen/).textContent).toContain("2 Typen");
+    await filterBy(me, "Filtern");
+    expect(screen().getByRole("button", { name: "Typ: Codeänderungen" })).toBeTruthy();
+    expect(screen().getByRole("button", { name: "Kanal: #produkteinfuehrung-herbstkampagne-2026" })).toBeTruthy();
+    // The menu open over its chips, as someone adding one more filter sees it.
+    await filterMenu("Filtern");
     expect(document.querySelectorAll(".drive .ac-toolbar")).toHaveLength(1);
+    await pressEscape();
     await showIn(services, "ja");
     expect(screen().getByRole("searchbox", { name: "ファイルを検索" })).toBeTruthy();
   });
@@ -677,10 +727,12 @@ describe("Drive", () => {
 
   test("grid or list, remembered", async () => {
     await goDrive();
-    const view = screen().getByRole("radiogroup", { name: "Visualização" });
-    expect(within(view).getByRole("radio", { name: "Grade" }).getAttribute("aria-checked")).toBe("true");
-    await click(within(view).getByRole("radio", { name: "Lista" }));
+    const view = within(await display()).getByRole("group", { name: "Visualização" });
+    expect(within(view).getByRole("button", { name: "Grade" }).getAttribute("aria-pressed")).toBe("true");
+    await click(within(view).getByRole("button", { name: "Lista" }));
     await settle(2);
+    expect(screen().getByRole("button", { name: "Exibição: Lista · Data" })).toBeTruthy();
+    await pressEscape();
     expect(document.querySelector(".drive-grid")).toBeNull();
     expect(document.querySelectorAll(".drive-list .drive-row")).toHaveLength(5);
     expect(localStorage.getItem("agentes.drive.view")).toBe("list");
@@ -695,9 +747,9 @@ describe("Drive", () => {
 
   test("group by channel or none, sort by name", async () => {
     await goDrive();
-    await pickRadio(/^Organizar:/, "Sem grupos");
+    await choose("Agrupar por", "Sem grupos");
     expect(document.querySelectorAll(".drive-group__head")).toHaveLength(0);
-    await pickRadio(/^Organizar:/, "Nome");
+    await choose("Ordenar por", "Nome");
     expect(names()).toEqual([
       "Corrige o checkout com carrinho vazio",
       "Organograma do time",
@@ -705,59 +757,27 @@ describe("Drive", () => {
       "Pedidos mais comuns nos reviews",
       "Relatório de incidente: checkout",
     ]);
-    await pickRadio(/^Organizar:/, "Canal");
+    await choose("Agrupar por", "Canal");
     expect(document.querySelector(".drive-group__head .ac-grouphead__title")?.textContent).toMatch(/^#/);
   });
 
-  test("a click shows the details: preview, Abrir, Baixar, Copiar link, versions, where", async () => {
+  test("a click opens the file in the viewer at once, with no details dialog before it", async () => {
     await goDrive();
     // The card says it opens a dialog (checked before: the open modal hides the page behind it).
     expect(card("Organograma do time").getAttribute("aria-haspopup")).toBe("dialog");
     await click(card("Organograma do time"));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Organograma do time" });
-    expect(within(panel).getByRole("heading", { level: 2, name: "Organograma do time" })).toBeTruthy();
-    expect(panel.querySelector(".drive-pv--lg")).not.toBeNull();
-    expect(panel.textContent).toContain("Feito por");
-    expect(panel.textContent).toContain("Onde aparece");
-
-    // Baixar: diagrams have one format (the original).
-    await click(within(panel).getByRole("button", { name: "Baixar" }));
-    await settle(2);
-    expect(saved[0]?.name).toBe("organograma-do-time.mmd");
-    await click(within(panel).getByRole("button", { name: "Copiar link" }));
-    await settle(2);
-    expect(copied[0]).toContain("/drive?artifact=");
-    expect(within(panel).getByRole("button", { name: "Mais ações: Organograma do time" })).toBeTruthy();
+    await settle(6);
+    const viewer = screen().getByRole("dialog", { name: "Organograma do time" });
+    expect(viewer.querySelector(".artifact-sheet__title")?.textContent).toBe("Organograma do time");
+    // The file itself, with its actions: no step with "Abrir" in between.
+    expect(document.querySelector(".drive-details")).toBeNull();
+    expect(within(viewer).queryByRole("button", { name: "Abrir" })).toBeNull();
+    expect(within(viewer).getByRole("button", { name: "Mais ações: Organograma do time" })).toBeTruthy();
 
     // Esc closes it.
     await keyDown("Escape");
     await settle(2);
     expect(screen().queryByRole("dialog", { name: "Organograma do time" })).toBeNull();
-
-    // Abrir: the same viewer as everywhere.
-    await click(card("Organograma do time"));
-    await settle(4);
-    const details = screen().getByRole("dialog", { name: "Organograma do time" });
-    // Two "Abrir": the dialog header's icon (open in its own page) and the file action with a text label.
-    const openAction = within(details)
-      .getAllByRole("button", { name: "Abrir" })
-      .find((b) => b.textContent?.trim() === "Abrir");
-    await click(openAction as HTMLElement);
-    await settle(4);
-    expect(screen().getByRole("dialog", { name: "Organograma do time" })).toBeTruthy();
-  });
-
-  test("the details' … matches Copiar link; who can see it, in plain words", async () => {
-    await goDrive();
-    await click(card("Organograma do time"));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Organograma do time" });
-    const more = within(panel).getByRole("button", { name: "Mais ações: Organograma do time" });
-    expect(more.className).toBe(within(panel).getByRole("button", { name: "Copiar link" }).className);
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe(
-      "Todo o workspace pode ver: está no canal público #eng",
-    );
   });
 
   /** A file Atlas left in its DM with me, and one in the Drive only. */
@@ -771,11 +791,12 @@ describe("Drive", () => {
     await api.artifacts.create(ORG_ID, {
       title: "Rascunho da proposta",
       channelId: "dm-atlas",
-      content: { kind: "document", markdown: "# Proposta" },
+      // A file the viewer opens (a document is a live file with a page of its own, ADR 0200).
+      content: { kind: "table", columns: ["Item", "Valor"], rows: [["Proposta", "1"]] },
     });
     await api.artifacts.create(ORG_ID, {
       title: "Manual do time",
-      content: { kind: "document", markdown: "# Manual" },
+      content: { kind: "table", columns: ["Passo", "Quem"], rows: [["Abrir o turno", "Walter"]] },
     });
     return goDrive({ api });
   };
@@ -792,37 +813,11 @@ describe("Drive", () => {
     expect(within(privateSection).queryByRole("button", { name: "Manual do time" })).toBeNull();
 
     await click(card("Rascunho da proposta"));
-    await settle(4);
+    await settle(6);
     const panel = screen().getByRole("dialog", { name: "Rascunho da proposta" });
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe(
-      "Só você e Atlas podem ver: veio de uma mensagem direta",
-    );
-    expect(panel.textContent).toContain("Mensagem direta com Atlas");
     await pick(panel, /^Mais ações: /, "Abrir a conversa");
     await settle(4);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${ATLAS_ID}`);
-  });
-
-  test("a Drive-only file is seen by the whole workspace and has no conversation to open", async () => {
-    await withDmFile();
-    await click(card("Manual do time"));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Manual do time" });
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe("Todo o workspace pode ver");
-    expect(panel.textContent).toContain("Só no Drive");
-    expect(panel.querySelector("button.drive-where")).toBeNull();
-  });
-
-  test("details list the versions; Ver opens an older one", async () => {
-    await goDrive();
-    await click(card("Relatório de incidente: checkout"));
-    await settle(6);
-    const panel = screen().getByRole("dialog", { name: "Relatório de incidente: checkout" });
-    expect(panel.querySelectorAll(".drive-versions li")).toHaveLength(2);
-    expect(panel.textContent).toContain("Acrescentei quem foi afetado.");
-    await click(within(panel).getByRole("button", { name: "Ver a v1" }));
-    await settle(6);
-    expect(screen().getByRole("dialog").textContent).toContain("Vendo a v1");
   });
 
   test("a shared link opens the viewer directly", async () => {
@@ -839,10 +834,10 @@ describe("Drive", () => {
     await click(screen().getByRole("checkbox", { name: "Selecionar Organograma do time" }));
     const bar = () => screen().getByRole("toolbar", { name: "Seleção" });
     expect(bar().textContent).toContain("1 selecionado");
-    // While selecting, a click selects (no details).
+    // While selecting, a click selects (the file doesn't open).
     await act(async () => fireEvent.click(card("Pedidos mais comuns nos reviews"), { metaKey: true }));
     expect(bar().textContent).toContain("2 selecionados");
-    expect(document.querySelector(".drive-details")).toBeNull();
+    expect(screen().queryByRole("dialog")).toBeNull();
 
     await click(within(bar()).getByRole("button", { name: "Copiar links" }));
     await settle(2);
@@ -888,8 +883,8 @@ describe("Drive", () => {
 
   test("the list's head checkbox: all, some (a dash) and none", async () => {
     await goDrive();
-    const view = screen().getByRole("radiogroup", { name: "Visualização" });
-    await click(within(view).getByRole("radio", { name: "Lista" }));
+    await click(within(await display()).getByRole("button", { name: "Lista" }));
+    await pressEscape();
     const all = screen().getByRole("checkbox", { name: "Selecionar os 5" });
     expect(all.closest(".drive-table__head")).not.toBeNull();
     expect(all.getAttribute("aria-checked")).toBe("false");
@@ -1027,18 +1022,18 @@ describe("deleting a file", () => {
   };
   test("the viewer header: one-line title with a tooltip, Baixar ▾, Editar, … with Mover para a lixeira", async () => {
     await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
+    const dialog = await openCard("Pedidos mais comuns nos reviews");
     const title = dialog.querySelector(".artifact-sheet__title") as HTMLElement;
-    expect(title.getAttribute("title")).toBe("Relatório de incidente: checkout");
+    expect(title.getAttribute("title")).toBe("Pedidos mais comuns nos reviews");
     expect(within(dialog).getByRole("button", { name: "Editar" }).getAttribute("title")).toBe("Editar");
     expect(within(dialog).queryByRole("button", { name: "Baixar PDF" })).toBeNull();
   });
 
   test("Mover para a lixeira asks, naming the file; then 'Movido para a lixeira · Desfazer' restores it", async () => {
     const { state } = await goDrive();
-    // From the details panel's "…".
+    // From the open file's "…".
     await click(screen().getByRole("button", { name: "Organograma do time" }));
-    await settle(4);
+    await settle(6);
     const panel = screen().getByRole("dialog", { name: "Organograma do time" });
     await pick(panel, /^Mais ações: /, "Mover para a lixeira");
     const confirm = screen().getByRole("dialog", { name: "Mover “Organograma do time” para a lixeira?" });
@@ -1047,7 +1042,7 @@ describe("deleting a file", () => {
     await settle(5);
     expect(state.calls.some((c) => c.method === "artifacts.remove")).toBe(true);
     expect(screen().queryByRole("button", { name: "Organograma do time" })).toBeNull();
-    expect(document.querySelector(".drive-details")).toBeNull();
+    expect(screen().queryByRole("dialog", { name: "Organograma do time" })).toBeNull();
     expect(screen().getByText("Movido para a lixeira")).toBeTruthy();
     await click(screen().getByRole("button", { name: "Desfazer" }));
     await settle(5);
@@ -1097,7 +1092,7 @@ describe("deleting a file", () => {
 describe("html shim", () => {
   test("runs before the page, behind the policy", () => {
     const page = withShim("<!doctype html><html><head><title>x</title></head><body></body></html>");
-    expect(page.startsWith("<!doctype html><html><head>")).toBe(true);
+    expect(page.startsWith('<!doctype html><html translate="no"><head>')).toBe(true);
     expect(page.indexOf("Content-Security-Policy")).toBeLessThan(page.indexOf("<script>"));
     expect(page.indexOf("<script>")).toBeLessThan(page.indexOf("<title>"));
     expect(withShim("<h1>a</h1>").indexOf("<script>")).toBeLessThan(withShim("<h1>a</h1>").indexOf("<h1>"));

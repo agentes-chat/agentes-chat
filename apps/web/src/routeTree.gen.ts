@@ -15,15 +15,19 @@ import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as ConectandoRouteImport } from './routes/conectando'
 import { Route as ConectarRouteImport } from './routes/conectar'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as EmailUndoRouteImport } from './routes/email-undo'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ReferRouteImport } from './routes/refer'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SurfacePageRouteImport } from './routes/surface-page'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as DesktopBackRouteImport } from './routes/desktop.back'
 import { Route as DesktopConnectorRouteImport } from './routes/desktop.connector'
 import { Route as DesktopHandoverRouteImport } from './routes/desktop.handover'
 import { Route as DesktopSignInRouteImport } from './routes/desktop.sign-in'
@@ -34,6 +38,7 @@ import { Route as OrgOrgIdRouteImport } from './routes/org.$orgId'
 import { Route as OrgOrgIdIndexRouteImport } from './routes/org.$orgId.index'
 import { Route as OrgOrgIdApprovalsRouteImport } from './routes/org.$orgId.approvals'
 import { Route as OrgOrgIdCalendarRouteImport } from './routes/org.$orgId.calendar'
+import { Route as OrgOrgIdConnectorsRouteImport } from './routes/org.$orgId.connectors'
 import { Route as OrgOrgIdDriveRouteImport } from './routes/org.$orgId.drive'
 import { Route as OrgOrgIdHomeRouteImport } from './routes/org.$orgId.home'
 import { Route as OrgOrgIdMembersRouteImport } from './routes/org.$orgId.members'
@@ -49,11 +54,16 @@ import { Route as OrgOrgIdWaitingRouteImport } from './routes/org.$orgId.waiting
 import { Route as OrgOrgIdWikiRouteImport } from './routes/org.$orgId.wiki'
 import { Route as OrgOrgIdAgentsNewRouteImport } from './routes/org.$orgId.agents.new'
 import { Route as OrgOrgIdCChannelIdRouteImport } from './routes/org.$orgId.c.$channelId'
+import { Route as OrgOrgIdCodeIndexRouteImport } from './routes/org.$orgId.code.index'
+import { Route as OrgOrgIdCodeSessionIdRouteImport } from './routes/org.$orgId.code.$sessionId'
 import { Route as OrgOrgIdDashboardsIndexRouteImport } from './routes/org.$orgId.dashboards.index'
 import { Route as OrgOrgIdDashboardsDashboardIdRouteImport } from './routes/org.$orgId.dashboards.$dashboardId'
+import { Route as OrgOrgIdDriveFileIdRouteImport } from './routes/org.$orgId.drive_.$fileId'
 import { Route as OrgOrgIdIssuesIndexRouteImport } from './routes/org.$orgId.issues.index'
 import { Route as OrgOrgIdIssuesNumberRouteImport } from './routes/org.$orgId.issues.$number'
 import { Route as OrgOrgIdSettingsSectionRouteImport } from './routes/org.$orgId.settings_.$section'
+import { Route as OrgOrgIdSkillsIndexRouteImport } from './routes/org.$orgId.skills.index'
+import { Route as OrgOrgIdSkillsSkillIdRouteImport } from './routes/org.$orgId.skills.$skillId'
 import { Route as OrgOrgIdThreadsIndexRouteImport } from './routes/org.$orgId.threads.index'
 import { Route as OrgOrgIdThreadsThreadIdRouteImport } from './routes/org.$orgId.threads.$threadId'
 import { Route as OrgOrgIdWikiSlugRouteImport } from './routes/org.$orgId.wiki_.$slug'
@@ -65,6 +75,7 @@ import { Route as OrgOrgIdSettingsComputersMachineIdRouteImport } from './routes
 import { Route as OrgOrgIdSettingsDevicesDeviceIdRouteImport } from './routes/org.$orgId.settings_.devices.$deviceId'
 import { Route as OrgOrgIdSettingsDevicesAndroidSetupRouteImport } from './routes/org.$orgId.settings_.devices.android-setup'
 import { Route as OrgOrgIdSettingsDevicesIphoneSetupRouteImport } from './routes/org.$orgId.settings_.devices.iphone-setup'
+import { Route as OrgOrgIdSettingsRolesRoleIdRouteImport } from './routes/org.$orgId.settings_.roles.$roleId'
 import { Route as OrgOrgIdSettingsDevicesPhonesPhoneIdRouteImport } from './routes/org.$orgId.settings_.devices.phones.$phoneId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -97,6 +108,11 @@ const DownloadRoute = DownloadRouteImport.update({
   path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailUndoRoute = EmailUndoRouteImport.update({
+  id: '/email-undo',
+  path: '/email-undo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -122,6 +138,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReferRoute = ReferRouteImport.update({
+  id: '/refer',
+  path: '/refer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -132,6 +153,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SurfacePageRoute = SurfacePageRouteImport.update({
+  id: '/surface-page',
+  path: '/surface-page',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
@@ -140,6 +166,11 @@ const TermosRoute = TermosRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesktopBackRoute = DesktopBackRouteImport.update({
+  id: '/desktop/back',
+  path: '/desktop/back',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesktopConnectorRoute = DesktopConnectorRouteImport.update({
@@ -190,6 +221,11 @@ const OrgOrgIdApprovalsRoute = OrgOrgIdApprovalsRouteImport.update({
 const OrgOrgIdCalendarRoute = OrgOrgIdCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdConnectorsRoute = OrgOrgIdConnectorsRouteImport.update({
+  id: '/connectors',
+  path: '/connectors',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
 const OrgOrgIdDriveRoute = OrgOrgIdDriveRouteImport.update({
@@ -267,6 +303,16 @@ const OrgOrgIdCChannelIdRoute = OrgOrgIdCChannelIdRouteImport.update({
   path: '/c/$channelId',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
+const OrgOrgIdCodeIndexRoute = OrgOrgIdCodeIndexRouteImport.update({
+  id: '/code/',
+  path: '/code/',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdCodeSessionIdRoute = OrgOrgIdCodeSessionIdRouteImport.update({
+  id: '/code/$sessionId',
+  path: '/code/$sessionId',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdDashboardsIndexRoute = OrgOrgIdDashboardsIndexRouteImport.update({
   id: '/dashboards/',
   path: '/dashboards/',
@@ -278,6 +324,11 @@ const OrgOrgIdDashboardsDashboardIdRoute =
     path: '/dashboards/$dashboardId',
     getParentRoute: () => OrgOrgIdRoute,
   } as any)
+const OrgOrgIdDriveFileIdRoute = OrgOrgIdDriveFileIdRouteImport.update({
+  id: '/drive_/$fileId',
+  path: '/drive/$fileId',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdIssuesIndexRoute = OrgOrgIdIssuesIndexRouteImport.update({
   id: '/issues/',
   path: '/issues/',
@@ -291,6 +342,16 @@ const OrgOrgIdIssuesNumberRoute = OrgOrgIdIssuesNumberRouteImport.update({
 const OrgOrgIdSettingsSectionRoute = OrgOrgIdSettingsSectionRouteImport.update({
   id: '/settings_/$section',
   path: '/settings/$section',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdSkillsIndexRoute = OrgOrgIdSkillsIndexRouteImport.update({
+  id: '/skills/',
+  path: '/skills/',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdSkillsSkillIdRoute = OrgOrgIdSkillsSkillIdRouteImport.update({
+  id: '/skills/$skillId',
+  path: '/skills/$skillId',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
 const OrgOrgIdThreadsIndexRoute = OrgOrgIdThreadsIndexRouteImport.update({
@@ -354,6 +415,12 @@ const OrgOrgIdSettingsDevicesIphoneSetupRoute =
     path: '/settings/devices/iphone-setup',
     getParentRoute: () => OrgOrgIdRoute,
   } as any)
+const OrgOrgIdSettingsRolesRoleIdRoute =
+  OrgOrgIdSettingsRolesRoleIdRouteImport.update({
+    id: '/settings_/roles/$roleId',
+    path: '/settings/roles/$roleId',
+    getParentRoute: () => OrgOrgIdRoute,
+  } as any)
 const OrgOrgIdSettingsDevicesPhonesPhoneIdRoute =
   OrgOrgIdSettingsDevicesPhonesPhoneIdRouteImport.update({
     id: '/settings_/devices/phones/$phoneId',
@@ -368,15 +435,19 @@ export interface FileRoutesByFullPath {
   '/conectando': typeof ConectandoRoute
   '/conectar': typeof ConectarRoute
   '/download': typeof DownloadRoute
+  '/email-undo': typeof EmailUndoRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/owner': typeof OwnerRoute
   '/privacidade': typeof PrivacidadeRoute
   '/privacy': typeof PrivacyRoute
+  '/refer': typeof ReferRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
+  '/desktop/back': typeof DesktopBackRoute
   '/desktop/connector': typeof DesktopConnectorRoute
   '/desktop/handover': typeof DesktopHandoverRoute
   '/desktop/sign-in': typeof DesktopSignInRoute
@@ -386,6 +457,7 @@ export interface FileRoutesByFullPath {
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
+  '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
   '/org/$orgId/drive': typeof OrgOrgIdDriveRoute
   '/org/$orgId/home': typeof OrgOrgIdHomeRoute
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
@@ -402,13 +474,18 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
   '/org/$orgId/c/$channelId': typeof OrgOrgIdCChannelIdRoute
+  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/dashboards/$dashboardId': typeof OrgOrgIdDashboardsDashboardIdRoute
+  '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
+  '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills/': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -417,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/settings/devices/$deviceId': typeof OrgOrgIdSettingsDevicesDeviceIdRoute
   '/org/$orgId/settings/devices/android-setup': typeof OrgOrgIdSettingsDevicesAndroidSetupRoute
   '/org/$orgId/settings/devices/iphone-setup': typeof OrgOrgIdSettingsDevicesIphoneSetupRoute
+  '/org/$orgId/settings/roles/$roleId': typeof OrgOrgIdSettingsRolesRoleIdRoute
   '/org/$orgId/agents/$agentId/': typeof OrgOrgIdAgentsAgentIdIndexRoute
   '/org/$orgId/settings/devices/phones/$phoneId': typeof OrgOrgIdSettingsDevicesPhonesPhoneIdRoute
 }
@@ -427,15 +505,19 @@ export interface FileRoutesByTo {
   '/conectando': typeof ConectandoRoute
   '/conectar': typeof ConectarRoute
   '/download': typeof DownloadRoute
+  '/email-undo': typeof EmailUndoRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/owner': typeof OwnerRoute
   '/privacidade': typeof PrivacidadeRoute
   '/privacy': typeof PrivacyRoute
+  '/refer': typeof ReferRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
+  '/desktop/back': typeof DesktopBackRoute
   '/desktop/connector': typeof DesktopConnectorRoute
   '/desktop/handover': typeof DesktopHandoverRoute
   '/desktop/sign-in': typeof DesktopSignInRoute
@@ -444,6 +526,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
+  '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
   '/org/$orgId/drive': typeof OrgOrgIdDriveRoute
   '/org/$orgId/home': typeof OrgOrgIdHomeRoute
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
@@ -460,13 +543,18 @@ export interface FileRoutesByTo {
   '/org/$orgId': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
   '/org/$orgId/c/$channelId': typeof OrgOrgIdCChannelIdRoute
+  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/dashboards/$dashboardId': typeof OrgOrgIdDashboardsDashboardIdRoute
+  '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
+  '/org/$orgId/code': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -475,6 +563,7 @@ export interface FileRoutesByTo {
   '/org/$orgId/settings/devices/$deviceId': typeof OrgOrgIdSettingsDevicesDeviceIdRoute
   '/org/$orgId/settings/devices/android-setup': typeof OrgOrgIdSettingsDevicesAndroidSetupRoute
   '/org/$orgId/settings/devices/iphone-setup': typeof OrgOrgIdSettingsDevicesIphoneSetupRoute
+  '/org/$orgId/settings/roles/$roleId': typeof OrgOrgIdSettingsRolesRoleIdRoute
   '/org/$orgId/agents/$agentId': typeof OrgOrgIdAgentsAgentIdIndexRoute
   '/org/$orgId/settings/devices/phones/$phoneId': typeof OrgOrgIdSettingsDevicesPhonesPhoneIdRoute
 }
@@ -486,15 +575,19 @@ export interface FileRoutesById {
   '/conectando': typeof ConectandoRoute
   '/conectar': typeof ConectarRoute
   '/download': typeof DownloadRoute
+  '/email-undo': typeof EmailUndoRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/owner': typeof OwnerRoute
   '/privacidade': typeof PrivacidadeRoute
   '/privacy': typeof PrivacyRoute
+  '/refer': typeof ReferRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
+  '/desktop/back': typeof DesktopBackRoute
   '/desktop/connector': typeof DesktopConnectorRoute
   '/desktop/handover': typeof DesktopHandoverRoute
   '/desktop/sign-in': typeof DesktopSignInRoute
@@ -504,6 +597,7 @@ export interface FileRoutesById {
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
+  '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
   '/org/$orgId/drive': typeof OrgOrgIdDriveRoute
   '/org/$orgId/home': typeof OrgOrgIdHomeRoute
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
@@ -520,13 +614,18 @@ export interface FileRoutesById {
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
   '/org/$orgId/c/$channelId': typeof OrgOrgIdCChannelIdRoute
+  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/dashboards/$dashboardId': typeof OrgOrgIdDashboardsDashboardIdRoute
+  '/org/$orgId/drive_/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings_/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki_/$slug': typeof OrgOrgIdWikiSlugRoute
+  '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills/': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -535,6 +634,7 @@ export interface FileRoutesById {
   '/org/$orgId/settings_/devices/$deviceId': typeof OrgOrgIdSettingsDevicesDeviceIdRoute
   '/org/$orgId/settings_/devices/android-setup': typeof OrgOrgIdSettingsDevicesAndroidSetupRoute
   '/org/$orgId/settings_/devices/iphone-setup': typeof OrgOrgIdSettingsDevicesIphoneSetupRoute
+  '/org/$orgId/settings_/roles/$roleId': typeof OrgOrgIdSettingsRolesRoleIdRoute
   '/org/$orgId/agents/$agentId/': typeof OrgOrgIdAgentsAgentIdIndexRoute
   '/org/$orgId/settings_/devices/phones/$phoneId': typeof OrgOrgIdSettingsDevicesPhonesPhoneIdRoute
 }
@@ -547,15 +647,19 @@ export interface FileRouteTypes {
     | '/conectando'
     | '/conectar'
     | '/download'
+    | '/email-undo'
     | '/login'
     | '/onboarding'
     | '/owner'
     | '/privacidade'
     | '/privacy'
+    | '/refer'
     | '/reset-password'
     | '/signup'
+    | '/surface-page'
     | '/termos'
     | '/terms'
+    | '/desktop/back'
     | '/desktop/connector'
     | '/desktop/handover'
     | '/desktop/sign-in'
@@ -565,6 +669,7 @@ export interface FileRouteTypes {
     | '/org/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
+    | '/org/$orgId/connectors'
     | '/org/$orgId/drive'
     | '/org/$orgId/home'
     | '/org/$orgId/members'
@@ -581,13 +686,18 @@ export interface FileRouteTypes {
     | '/org/$orgId/'
     | '/org/$orgId/agents/new'
     | '/org/$orgId/c/$channelId'
+    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/dashboards/$dashboardId'
+    | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
+    | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
+    | '/org/$orgId/skills/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -596,6 +706,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings/devices/$deviceId'
     | '/org/$orgId/settings/devices/android-setup'
     | '/org/$orgId/settings/devices/iphone-setup'
+    | '/org/$orgId/settings/roles/$roleId'
     | '/org/$orgId/agents/$agentId/'
     | '/org/$orgId/settings/devices/phones/$phoneId'
   fileRoutesByTo: FileRoutesByTo
@@ -606,15 +717,19 @@ export interface FileRouteTypes {
     | '/conectando'
     | '/conectar'
     | '/download'
+    | '/email-undo'
     | '/login'
     | '/onboarding'
     | '/owner'
     | '/privacidade'
     | '/privacy'
+    | '/refer'
     | '/reset-password'
     | '/signup'
+    | '/surface-page'
     | '/termos'
     | '/terms'
+    | '/desktop/back'
     | '/desktop/connector'
     | '/desktop/handover'
     | '/desktop/sign-in'
@@ -623,6 +738,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
+    | '/org/$orgId/connectors'
     | '/org/$orgId/drive'
     | '/org/$orgId/home'
     | '/org/$orgId/members'
@@ -639,13 +755,18 @@ export interface FileRouteTypes {
     | '/org/$orgId'
     | '/org/$orgId/agents/new'
     | '/org/$orgId/c/$channelId'
+    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/dashboards/$dashboardId'
+    | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
+    | '/org/$orgId/code'
     | '/org/$orgId/dashboards'
     | '/org/$orgId/issues'
+    | '/org/$orgId/skills'
     | '/org/$orgId/threads'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -654,6 +775,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings/devices/$deviceId'
     | '/org/$orgId/settings/devices/android-setup'
     | '/org/$orgId/settings/devices/iphone-setup'
+    | '/org/$orgId/settings/roles/$roleId'
     | '/org/$orgId/agents/$agentId'
     | '/org/$orgId/settings/devices/phones/$phoneId'
   id:
@@ -664,15 +786,19 @@ export interface FileRouteTypes {
     | '/conectando'
     | '/conectar'
     | '/download'
+    | '/email-undo'
     | '/login'
     | '/onboarding'
     | '/owner'
     | '/privacidade'
     | '/privacy'
+    | '/refer'
     | '/reset-password'
     | '/signup'
+    | '/surface-page'
     | '/termos'
     | '/terms'
+    | '/desktop/back'
     | '/desktop/connector'
     | '/desktop/handover'
     | '/desktop/sign-in'
@@ -682,6 +808,7 @@ export interface FileRouteTypes {
     | '/org/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
+    | '/org/$orgId/connectors'
     | '/org/$orgId/drive'
     | '/org/$orgId/home'
     | '/org/$orgId/members'
@@ -698,13 +825,18 @@ export interface FileRouteTypes {
     | '/org/$orgId/'
     | '/org/$orgId/agents/new'
     | '/org/$orgId/c/$channelId'
+    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/dashboards/$dashboardId'
+    | '/org/$orgId/drive_/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings_/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki_/$slug'
+    | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
+    | '/org/$orgId/skills/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -713,6 +845,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings_/devices/$deviceId'
     | '/org/$orgId/settings_/devices/android-setup'
     | '/org/$orgId/settings_/devices/iphone-setup'
+    | '/org/$orgId/settings_/roles/$roleId'
     | '/org/$orgId/agents/$agentId/'
     | '/org/$orgId/settings_/devices/phones/$phoneId'
   fileRoutesById: FileRoutesById
@@ -724,15 +857,19 @@ export interface RootRouteChildren {
   ConectandoRoute: typeof ConectandoRoute
   ConectarRoute: typeof ConectarRoute
   DownloadRoute: typeof DownloadRoute
+  EmailUndoRoute: typeof EmailUndoRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   OwnerRoute: typeof OwnerRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   PrivacyRoute: typeof PrivacyRoute
+  ReferRoute: typeof ReferRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  SurfacePageRoute: typeof SurfacePageRoute
   TermosRoute: typeof TermosRoute
   TermsRoute: typeof TermsRoute
+  DesktopBackRoute: typeof DesktopBackRoute
   DesktopConnectorRoute: typeof DesktopConnectorRoute
   DesktopHandoverRoute: typeof DesktopHandoverRoute
   DesktopSignInRoute: typeof DesktopSignInRoute
@@ -786,6 +923,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email-undo': {
+      id: '/email-undo'
+      path: '/email-undo'
+      fullPath: '/email-undo'
+      preLoaderRoute: typeof EmailUndoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -821,6 +965,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/refer': {
+      id: '/refer'
+      path: '/refer'
+      fullPath: '/refer'
+      preLoaderRoute: typeof ReferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -835,6 +986,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/surface-page': {
+      id: '/surface-page'
+      path: '/surface-page'
+      fullPath: '/surface-page'
+      preLoaderRoute: typeof SurfacePageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/termos': {
       id: '/termos'
       path: '/termos'
@@ -847,6 +1005,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desktop/back': {
+      id: '/desktop/back'
+      path: '/desktop/back'
+      fullPath: '/desktop/back'
+      preLoaderRoute: typeof DesktopBackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desktop/connector': {
@@ -917,6 +1082,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/org/$orgId/calendar'
       preLoaderRoute: typeof OrgOrgIdCalendarRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/connectors': {
+      id: '/org/$orgId/connectors'
+      path: '/connectors'
+      fullPath: '/org/$orgId/connectors'
+      preLoaderRoute: typeof OrgOrgIdConnectorsRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
     '/org/$orgId/drive': {
@@ -1024,6 +1196,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdCChannelIdRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/code/': {
+      id: '/org/$orgId/code/'
+      path: '/code'
+      fullPath: '/org/$orgId/code/'
+      preLoaderRoute: typeof OrgOrgIdCodeIndexRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/code/$sessionId': {
+      id: '/org/$orgId/code/$sessionId'
+      path: '/code/$sessionId'
+      fullPath: '/org/$orgId/code/$sessionId'
+      preLoaderRoute: typeof OrgOrgIdCodeSessionIdRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/dashboards/': {
       id: '/org/$orgId/dashboards/'
       path: '/dashboards'
@@ -1036,6 +1222,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboards/$dashboardId'
       fullPath: '/org/$orgId/dashboards/$dashboardId'
       preLoaderRoute: typeof OrgOrgIdDashboardsDashboardIdRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/drive_/$fileId': {
+      id: '/org/$orgId/drive_/$fileId'
+      path: '/drive/$fileId'
+      fullPath: '/org/$orgId/drive/$fileId'
+      preLoaderRoute: typeof OrgOrgIdDriveFileIdRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
     '/org/$orgId/issues/': {
@@ -1057,6 +1250,20 @@ declare module '@tanstack/react-router' {
       path: '/settings/$section'
       fullPath: '/org/$orgId/settings/$section'
       preLoaderRoute: typeof OrgOrgIdSettingsSectionRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/skills/': {
+      id: '/org/$orgId/skills/'
+      path: '/skills'
+      fullPath: '/org/$orgId/skills/'
+      preLoaderRoute: typeof OrgOrgIdSkillsIndexRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/skills/$skillId': {
+      id: '/org/$orgId/skills/$skillId'
+      path: '/skills/$skillId'
+      fullPath: '/org/$orgId/skills/$skillId'
+      preLoaderRoute: typeof OrgOrgIdSkillsSkillIdRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
     '/org/$orgId/threads/': {
@@ -1136,6 +1343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdSettingsDevicesIphoneSetupRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/settings_/roles/$roleId': {
+      id: '/org/$orgId/settings_/roles/$roleId'
+      path: '/settings/roles/$roleId'
+      fullPath: '/org/$orgId/settings/roles/$roleId'
+      preLoaderRoute: typeof OrgOrgIdSettingsRolesRoleIdRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/settings_/devices/phones/$phoneId': {
       id: '/org/$orgId/settings_/devices/phones/$phoneId'
       path: '/settings/devices/phones/$phoneId'
@@ -1149,6 +1363,7 @@ declare module '@tanstack/react-router' {
 interface OrgOrgIdRouteChildren {
   OrgOrgIdApprovalsRoute: typeof OrgOrgIdApprovalsRoute
   OrgOrgIdCalendarRoute: typeof OrgOrgIdCalendarRoute
+  OrgOrgIdConnectorsRoute: typeof OrgOrgIdConnectorsRoute
   OrgOrgIdDriveRoute: typeof OrgOrgIdDriveRoute
   OrgOrgIdHomeRoute: typeof OrgOrgIdHomeRoute
   OrgOrgIdMembersRoute: typeof OrgOrgIdMembersRoute
@@ -1165,13 +1380,18 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdIndexRoute: typeof OrgOrgIdIndexRoute
   OrgOrgIdAgentsNewRoute: typeof OrgOrgIdAgentsNewRoute
   OrgOrgIdCChannelIdRoute: typeof OrgOrgIdCChannelIdRoute
+  OrgOrgIdCodeSessionIdRoute: typeof OrgOrgIdCodeSessionIdRoute
   OrgOrgIdDashboardsDashboardIdRoute: typeof OrgOrgIdDashboardsDashboardIdRoute
+  OrgOrgIdDriveFileIdRoute: typeof OrgOrgIdDriveFileIdRoute
   OrgOrgIdIssuesNumberRoute: typeof OrgOrgIdIssuesNumberRoute
   OrgOrgIdSettingsSectionRoute: typeof OrgOrgIdSettingsSectionRoute
+  OrgOrgIdSkillsSkillIdRoute: typeof OrgOrgIdSkillsSkillIdRoute
   OrgOrgIdThreadsThreadIdRoute: typeof OrgOrgIdThreadsThreadIdRoute
   OrgOrgIdWikiSlugRoute: typeof OrgOrgIdWikiSlugRoute
+  OrgOrgIdCodeIndexRoute: typeof OrgOrgIdCodeIndexRoute
   OrgOrgIdDashboardsIndexRoute: typeof OrgOrgIdDashboardsIndexRoute
   OrgOrgIdIssuesIndexRoute: typeof OrgOrgIdIssuesIndexRoute
+  OrgOrgIdSkillsIndexRoute: typeof OrgOrgIdSkillsIndexRoute
   OrgOrgIdThreadsIndexRoute: typeof OrgOrgIdThreadsIndexRoute
   OrgOrgIdAgentsAgentIdMemoryRoute: typeof OrgOrgIdAgentsAgentIdMemoryRoute
   OrgOrgIdDmAgentAgentIdRoute: typeof OrgOrgIdDmAgentAgentIdRoute
@@ -1180,6 +1400,7 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdSettingsDevicesDeviceIdRoute: typeof OrgOrgIdSettingsDevicesDeviceIdRoute
   OrgOrgIdSettingsDevicesAndroidSetupRoute: typeof OrgOrgIdSettingsDevicesAndroidSetupRoute
   OrgOrgIdSettingsDevicesIphoneSetupRoute: typeof OrgOrgIdSettingsDevicesIphoneSetupRoute
+  OrgOrgIdSettingsRolesRoleIdRoute: typeof OrgOrgIdSettingsRolesRoleIdRoute
   OrgOrgIdAgentsAgentIdIndexRoute: typeof OrgOrgIdAgentsAgentIdIndexRoute
   OrgOrgIdSettingsDevicesPhonesPhoneIdRoute: typeof OrgOrgIdSettingsDevicesPhonesPhoneIdRoute
 }
@@ -1187,6 +1408,7 @@ interface OrgOrgIdRouteChildren {
 const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdApprovalsRoute: OrgOrgIdApprovalsRoute,
   OrgOrgIdCalendarRoute: OrgOrgIdCalendarRoute,
+  OrgOrgIdConnectorsRoute: OrgOrgIdConnectorsRoute,
   OrgOrgIdDriveRoute: OrgOrgIdDriveRoute,
   OrgOrgIdHomeRoute: OrgOrgIdHomeRoute,
   OrgOrgIdMembersRoute: OrgOrgIdMembersRoute,
@@ -1203,13 +1425,18 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdIndexRoute: OrgOrgIdIndexRoute,
   OrgOrgIdAgentsNewRoute: OrgOrgIdAgentsNewRoute,
   OrgOrgIdCChannelIdRoute: OrgOrgIdCChannelIdRoute,
+  OrgOrgIdCodeSessionIdRoute: OrgOrgIdCodeSessionIdRoute,
   OrgOrgIdDashboardsDashboardIdRoute: OrgOrgIdDashboardsDashboardIdRoute,
+  OrgOrgIdDriveFileIdRoute: OrgOrgIdDriveFileIdRoute,
   OrgOrgIdIssuesNumberRoute: OrgOrgIdIssuesNumberRoute,
   OrgOrgIdSettingsSectionRoute: OrgOrgIdSettingsSectionRoute,
+  OrgOrgIdSkillsSkillIdRoute: OrgOrgIdSkillsSkillIdRoute,
   OrgOrgIdThreadsThreadIdRoute: OrgOrgIdThreadsThreadIdRoute,
   OrgOrgIdWikiSlugRoute: OrgOrgIdWikiSlugRoute,
+  OrgOrgIdCodeIndexRoute: OrgOrgIdCodeIndexRoute,
   OrgOrgIdDashboardsIndexRoute: OrgOrgIdDashboardsIndexRoute,
   OrgOrgIdIssuesIndexRoute: OrgOrgIdIssuesIndexRoute,
+  OrgOrgIdSkillsIndexRoute: OrgOrgIdSkillsIndexRoute,
   OrgOrgIdThreadsIndexRoute: OrgOrgIdThreadsIndexRoute,
   OrgOrgIdAgentsAgentIdMemoryRoute: OrgOrgIdAgentsAgentIdMemoryRoute,
   OrgOrgIdDmAgentAgentIdRoute: OrgOrgIdDmAgentAgentIdRoute,
@@ -1221,6 +1448,7 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
     OrgOrgIdSettingsDevicesAndroidSetupRoute,
   OrgOrgIdSettingsDevicesIphoneSetupRoute:
     OrgOrgIdSettingsDevicesIphoneSetupRoute,
+  OrgOrgIdSettingsRolesRoleIdRoute: OrgOrgIdSettingsRolesRoleIdRoute,
   OrgOrgIdAgentsAgentIdIndexRoute: OrgOrgIdAgentsAgentIdIndexRoute,
   OrgOrgIdSettingsDevicesPhonesPhoneIdRoute:
     OrgOrgIdSettingsDevicesPhonesPhoneIdRoute,
@@ -1237,15 +1465,19 @@ const rootRouteChildren: RootRouteChildren = {
   ConectandoRoute: ConectandoRoute,
   ConectarRoute: ConectarRoute,
   DownloadRoute: DownloadRoute,
+  EmailUndoRoute: EmailUndoRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   OwnerRoute: OwnerRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   PrivacyRoute: PrivacyRoute,
+  ReferRoute: ReferRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  SurfacePageRoute: SurfacePageRoute,
   TermosRoute: TermosRoute,
   TermsRoute: TermsRoute,
+  DesktopBackRoute: DesktopBackRoute,
   DesktopConnectorRoute: DesktopConnectorRoute,
   DesktopHandoverRoute: DesktopHandoverRoute,
   DesktopSignInRoute: DesktopSignInRoute,

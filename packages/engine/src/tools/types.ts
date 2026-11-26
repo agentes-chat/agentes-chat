@@ -1,5 +1,6 @@
 import type { Database, schema } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
+import type { CodeSessionContext } from "../code-sessions";
 import type { OutcomeKind } from "../context/outcomes";
 import type { JsonSchema } from "./json-schema";
 
@@ -27,6 +28,11 @@ export interface ToolContext {
   channelId: string;
   threadRootId: string;
   triggerMessageId: string;
+  /**
+   * Set by whoever runs the run, never from a call's input: its `reply_in_thread` (ADR 0214), so what it posts goes
+   * under the message that asked it (`replyThreadOf`).
+   */
+  replyInThread?: boolean;
   /** The model's id of this tool call (set by the gateway): live output events refer to it. */
   toolUseId?: string;
   /** Aborted when a person cancels the run: long tools (running code) stop early. */
@@ -58,6 +64,24 @@ export interface ToolContext {
    * approve one exact call for a routine's run later, after every check that call meets then (ADR 0015, ahead).
    */
   prepareAhead?(request: AheadRequest): Promise<AheadOutcome>;
+  /**
+   * What thinks for the run, set by whoever runs it and never from a call's input: `model:<provider>` for a model the
+   * server calls (the provider as the model catalog names it, `custom` for a workspace's own endpoint), else the kind
+   * of the program on a computer. A server the operator listed is told (`callerStatement`, ADR 0181).
+   */
+  thinksWith?: string;
+  /**
+   * Set by the gateway and the executor, never from a call's input: the run's thread holds a confidential result
+   * (ADR 0190), so what it posts goes under the message that asked it (`replyThreadOf`).
+   */
+  confidential?: boolean;
+  /**
+   * Set by whoever runs it (the executor, the bridge), never from a call's input: the run is in a code session's
+   * conversation (ADR 0215, `codeSessionContext`). Its `place` (the session's computer and worktree, for the session's
+   * own agent) is where the engine's computer tools work, as the agent's CLI does; the session hides the tools that
+   * make no sense there.
+   */
+  codeSession?: CodeSessionContext | null;
 }
 
 export interface ToolOutput {
@@ -68,6 +92,8 @@ export interface ToolOutput {
   images?: ToolImage[];
   /** Structured result kept in the run steps, not sent to the model. */
   data?: Record<string, unknown>;
+  /** What the vendor bills this server for the call (X), in nano-US$: the gateway adds it to the connector's day. */
+  costNanoUsd?: number;
   /** Ground truth this call produced (tests passed, PR merged…), recorded by the gateway. */
   outcome?: { kind: OutcomeKind; subject?: string; summary?: string; details?: Record<string, unknown> };
   /** Built-in `ask_user` only: suspend the run until a person answers this question (its `why` is the gateway's). */
@@ -76,6 +102,12 @@ export interface ToolOutput {
   waitForSecret?: { requestId: string };
   /** `schedule_action` only: suspend the run until a person decides this approval (`prepareAhead` made it). */
   waitForApproval?: ApprovalRow;
+  /**
+   * The connector source alone sets it, for an answer its server marked confidential when that server is one the
+   * operator listed (ADR 0190): the gateway marks the step and the run's thread, or hands a stub to a run that
+   * can't be held to the lock.
+   */
+  confidential?: true;
 }
 
 export type ConnectorVia = schema.ConnectorVia;
@@ -129,6 +161,11 @@ export interface ToolDefinition {
    */
   unasked?: boolean;
   /**
+   * Set by the gateway's listing, never by a source: a person kept "Aprovar sempre" for the whole tool, so a call opens
+   * no card (`coveringRules`, read again at the call).
+   */
+  alwaysApproved?: boolean;
+  /**
    * Set by the gateway for one call, never by a source: every action this call runs opens a pull request, so it is
    * judged as a connected app's own tool for that (`opensPullRequest`).
    */
@@ -143,8 +180,8 @@ export interface ToolDefinition {
    */
   asksNobody?(input: Record<string, unknown>): boolean;
   /**
-   * A call that carries `why` (in the tool's own schema) asks a person's approval first: how an agent asks for
-   * a command the computer held for a person (ADR 0053 §3, amended 2026-10-30).
+   * A command the computer held for a person (`command.approval_needed`) asks their approval with the call's `why`
+   * (in the tool's own schema) on the card (ADR 0053 §3). The `why` alone never makes a call ask.
    */
   whyAsks?: boolean;
   /**
@@ -160,6 +197,23 @@ export interface ToolDefinition {
    * posts next carries `meta.readOutside` (ADR 0117). It changes nothing about the call itself.
    */
   readsOutside?: true;
+  /**
+   * A person's own connection's tool: that person, the only run it serves (the gateway refuses it to any other) and
+   * the only one who reads its calls in the audit log.
+   */
+  ownerUserId?: string;
+  /**
+   * Whose server a connected app's tool runs on, when that says who reads its arguments (ADR 0190): `catalog`, a
+   * connector of our catalog on its vendor's own server; `vouched`, a server by address the operator listed in
+   * `MCP_CALLER_IDENTITY`. Unset: anyone's (a custom server by address, a connections broker, a mailbox, a database).
+   */
+  server?: "catalog" | "vouched";
+  /**
+   * A server connected by address: what it said in `initialize` on how to use it (MCP's `instructions`), the same
+   * text on each of that connection's tools. Third-party text: a run granted any of them reads it once, in the
+   * outside envelope (`serverInstructionsPrompt`).
+   */
+  serverInstructions?: string;
   /** A mission's tool (agent mode, ADR 0029): its approvals are bound to that mission too. */
   missionId?: string;
   /**
@@ -200,9 +254,9 @@ export interface ToolDefinition {
   /** Human summary of a call, for approval cards. */
   describe?(input: Record<string, unknown>): { title: string; detail?: string };
   /**
-   * Our own tools only (`request_approval`, ADR 0126; a person's own mailbox, ADR 0038): who decides this call's
-   * approval instead of the agent's owner and admins; `requestedBy` is the person behind the run. A message refuses
-   * the call (a role that isn't there); null approvers: the usual rule.
+   * Our own tools only (`request_approval`, ADR 0126; a person's own mailbox, ADR 0038, or connection): who decides
+   * this call's approval instead of the agent's owner and admins; `requestedBy` is the person behind the run. A message
+   * refuses the call (a role that isn't there); null approvers: the usual rule.
    */
   approvers?(
     input: Record<string, unknown>,

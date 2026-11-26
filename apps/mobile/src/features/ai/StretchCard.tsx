@@ -1,5 +1,6 @@
 import { type Message, useApi } from "@agenteschat/client";
 import { mayContinueStretch, stretchCardOf, stretchCardText } from "@agenteschat/client/lib/action-cards";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { clockAt } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useState } from "react";
@@ -10,6 +11,7 @@ import { EventPillAction } from "@/ui";
 import { AskDone, AskWaiting } from "../chat/asks";
 import { useFailed } from "../routines/hooks";
 import { useDirectory, useMeId } from "../shared/hooks";
+import { ownsIn } from "../shared/owner";
 
 /**
  * The web's pause of a stretch (ADR 0089) in place of its text, as a waiting pill: the agents did what they may do on
@@ -31,7 +33,19 @@ export function StretchCard({ message: m }: { message: Message }) {
   const continued = card.state === "continued";
   const by = card.continuedByUserId;
   const time = card.continuedAt ? clockAt(i18n.language, card.continuedAt) : "";
-  const may = mayContinueStretch(card, meId, (id) => dir.agentById.get(id)?.ownerUserId, can(org, "manage_agents"));
+  // Who manages every one of its agents (the server's `canManage`, ADR 0085 addendum of 2026-11-17), as the server's
+  // `continueStretch` checks, so a private agent on the card isn't restarted by who can't manage it; a card naming no
+  // agent, "Edit agents".
+  const manages =
+    card.agentIds.length > 0
+      ? card.agentIds.every((id) => managesAgent(dir.agentById.get(id)))
+      : can(org, "manage_agents");
+  // One who holds the role that answers for an agent continues it as its owner (ADR 0085, addendum of 2026-11-21).
+  const ownerOf = (id: string) => {
+    const agent = dir.agentById.get(id);
+    return ownsIn(dir.memberById, meId, agent) ? meId : agent?.ownerUserId;
+  };
+  const may = mayContinueStretch(card, meId, ownerOf, manages);
   const go = async () => {
     setPending(true);
     try {

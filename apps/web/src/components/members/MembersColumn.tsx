@@ -1,22 +1,44 @@
 import type { Agent, Channel, Member } from "@agenteschat/client";
-import { agentStateIn, useRoles } from "@agenteschat/client";
+import { agentStateIn, useChannelName, useRoles } from "@agenteschat/client";
+import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { memberGroups } from "@agenteschat/client/lib/member-groups";
-import { agentStatusShort, isOutOfOffice } from "@agenteschat/client/lib/presence";
-import { Avatar, Button, Icon, matchesWords, PixelSpinner, RoleMark, SearchField } from "@agenteschat/ui";
+import {
+  agentFaceWord,
+  agentMemberLine,
+  agentStatusShort,
+  agentWhyKey,
+  isOutOfOffice,
+} from "@agenteschat/client/lib/presence";
+import { Avatar, Button, Icon, matchesWords, OPEN_LAYER, PixelSpinner, RoleMark, SearchField } from "@agenteschat/ui";
 import { type KeyboardEvent, type TouchEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { AgentWorkLine } from "@/components/AgentWorkLine";
 import { ChannelPinsButton } from "@/components/ChannelPins";
+import { arrivalProps } from "@/components/lodi-cursor/arrivals";
+import { useRowsDrawIn } from "@/components/lodi-cursor/runner";
+import { useNow } from "@/components/missions/MissionBits";
 import { useOrg } from "@/components/org-context";
 import { StatusLine } from "@/components/Presence";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { unshownRow } from "@/components/Sidebar";
 import { AgentTrail, colorOf } from "@/components/Sky";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
+import { useArrived } from "@/hooks/useArrived";
+import { useDirectory } from "@/hooks/useDirectory";
 import { useModalSheet } from "@/hooks/useModalSheet";
-import { agentLine, personLine, useAgentPresence, usePersonPresence, usePresences } from "@/hooks/usePresence";
+import {
+  agentLine,
+  personLine,
+  useAgentOff,
+  useAgentPresence,
+  useAgentsWorking,
+  usePersonPresence,
+  usePresences,
+  usePresencesLoaded,
+} from "@/hooks/usePresence";
 import { useStreams } from "@/realtime/context";
 import "./members.css";
 
@@ -31,6 +53,8 @@ interface Lists {
   agents: Agent[];
   /** Who manages the channel: "Adicionar pessoa ou agente" at the bottom, the channel details' add flow. */
   onAdd?: () => void;
+  /** Its members still loading: laid out but unseen, so the rows never push "Adicionar" down as they come. */
+  pending?: boolean;
 }
 
 /** The channel's members on the right, as Discord's: grouped by the owner, hoisted roles, agents, online, offline. */
@@ -63,7 +87,7 @@ export function MembersSheet({
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
-      const over = document.querySelectorAll('[role="dialog"], [role="menu"], [role="listbox"]');
+      const over = document.querySelectorAll(OPEN_LAYER);
       if (Array.from(over).some((el) => el !== sheet.current)) return;
       e.preventDefault();
       onClose();
@@ -145,11 +169,15 @@ export function MembersSheet({
 }
 
 // The right hand (ADR 0137) is in no channel and isn't listed as a member: an @mention reaches it anywhere.
-function MembersList({ channelId, people, agents, onAdd }: Lists) {
+function MembersList({ channelId, people, agents, onAdd, pending }: Lists) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const presences = usePresences();
-  const roles = useRoles(org.id).data?.roles ?? [];
+  const rolesRead = useRoles(org.id);
+  const roles = rolesRead.data?.roles ?? [];
+  // Who is online and the hoisted roles group the rows: until both are in, the column waits unseen.
+  const presencesLoaded = usePresencesLoaded();
+  const waiting = pending || !presencesLoaded || rolesRead.isPending;
   const busyKey = useStreams((s) =>
     agents
       .filter((a) => agentStateIn(s, a.id) !== "idle")
@@ -157,13 +185,25 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
       .join(" "),
   );
   const [allOffline, setAllOffline] = useState(false);
-  const busy = new Set(busyKey.split(" "));
+  // At work: a run this tab hears here, or its work anywhere (work handed off in two agents' DM too).
+  const atWork = useAgentsWorking();
+  const heard = new Set(busyKey.split(" "));
+  const busy = new Set([...heard, ...atWork]);
+  const off = useAgentOff();
+  // Someone joining while the column shows: their row opens its room and draws itself in (an agent's face bursts).
+  const arrived = useArrived(
+    [...people.map((p) => p.userId), ...agents.map((a) => a.id)],
+    people.length + agents.length > 0,
+  );
+  const list = useRef<HTMLDivElement>(null);
+  useRowsDrawIn(list);
   const groups = memberGroups({
     people,
     agents,
     roles,
     presenceOf: (id) => presences.get(id),
     busy: (id) => busy.has(id),
+    agentOff: (id) => off(id, heard.has(id)),
   });
   // ↑/↓ move between the rows (each row is a button).
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -182,14 +222,20 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
         : t(key === "online" ? "presence.online" : "presence.offline");
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: arrow keys between the row buttons
-    <div className="members-side__groups" onKeyDown={onKey}>
+    <div ref={list} className="members-side__groups" data-pending={waiting || undefined} onKeyDown={onKey}>
       <h2 className="members-side__title">{t("members.title")}</h2>
       {groups.map((g) => {
         const label = g.role?.name ?? name(g.key);
         // ponytail: every row is in the DOM (offline capped at 100); virtualize if a channel reaches thousands.
         const rows = g.key === "offline" && !allOffline ? g.rows.slice(0, OFFLINE_CAP) : g.rows;
         return (
-          <section key={g.key} className="members-side__group" aria-label={label}>
+          <section
+            key={g.key}
+            // A state, so an attribute and not a class: the layout check samples screens by their classes.
+            className="members-side__group"
+            data-off={g.key === "offline" || undefined}
+            aria-label={label}
+          >
             <h2 className="members-side__head">
               {g.key === "owner" && <RoleMark color="violet" icon="audienceOwner" size={16} />}
               {g.role && <RoleMark color={g.role.color} icon={g.role.icon} size={16} />}
@@ -199,11 +245,20 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
             {rows.map((r) =>
               r.kind === "person" ? (
                 <ErrorBoundary key={r.person.userId} resetKey={r.person} fallback={unshownRow}>
-                  <PersonRow member={r.person} you={r.person.userId === me.user.id} />
+                  <PersonRow
+                    member={r.person}
+                    you={r.person.userId === me.user.id}
+                    arrival={arrivalProps(arrived, r.person.userId)}
+                  />
                 </ErrorBoundary>
               ) : (
                 <ErrorBoundary key={r.agent.id} resetKey={r.agent} fallback={unshownRow}>
-                  <AgentRow agent={r.agent} channelId={channelId} busy={busy.has(r.agent.id)} />
+                  <AgentRow
+                    agent={r.agent}
+                    channelId={channelId}
+                    busy={busy.has(r.agent.id)}
+                    arrival={arrivalProps(arrived, r.agent.id)}
+                  />
                 </ErrorBoundary>
               ),
             )}
@@ -228,7 +283,16 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
 }
 
 /** A person: their face with the badge, the crown on an owner, and their line (or away/busy when they wrote none). */
-function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
+function PersonRow({
+  member: m,
+  you,
+  arrival,
+}: {
+  member: Member;
+  you: boolean;
+  /** Its marks while it lands (`arrivalProps`). */
+  arrival?: ReturnType<typeof arrivalProps>;
+}) {
   const { t, i18n } = useTranslation();
   const shown = usePersonPresence(m.userId);
   // Yourself hidden: your badge says so, and the row reads offline as everyone else sees it.
@@ -250,6 +314,7 @@ function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
       <span
         id={shows}
         className="members-side__inner"
+        {...arrival}
         data-presence={looks}
         title={seen ? `${word} · ${t("presence.seen", { when: relativeTime(t, i18n.language, seen) })}` : undefined}
       >
@@ -277,18 +342,56 @@ function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
   );
 }
 
-/** An agent: its face, what it is doing (its line, its state here, else its role), the trail while it works. */
-function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string; busy: boolean }) {
+/**
+ * An agent: its face, what it is doing (its work first: for whom or where, "aqui" for this conversation, what it waits
+ * on, how long; then its line, its role, its presence), the orbit and the trail while it works, anywhere.
+ */
+function AgentRow({
+  agent,
+  channelId,
+  busy,
+  arrival,
+}: {
+  agent: Agent;
+  channelId: string;
+  busy: boolean;
+  /** Its marks while it lands (`arrivalProps`). */
+  arrival?: ReturnType<typeof arrivalProps>;
+}) {
   const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
   const state = useStreams((s) => agentStateIn(s, agent.id, channelId));
   const shown = useAgentPresence(agent.id);
-  const word = shown ? t(`presence.${shown.presence}`) : null;
+  const work = shown?.work ?? null;
+  // The name of where it works alone: the whole list moves with every message's unread count.
+  const workChannel = useChannelName(org.id, work?.channelId);
+  const clock = useNow(work !== null, WORK_TICK_MS);
+  const now = workLine(
+    t,
+    i18n.language,
+    work,
+    {
+      agentName: (id) => dir.agentById.get(id)?.name,
+      channelName: () => workChannel,
+      here: channelId,
+    },
+    clock,
+  );
+  const word = shown ? agentFaceWord(t, shown.presence) : null;
   // One short line here; the whole one in the row's title and on its profile card.
   const line = shown?.line ? agentStatusShort(t, shown.line, i18n.language) : null;
   const full = agentLine(t, shown?.line ?? null, i18n.language)?.text;
-  const doing = state !== "idle" ? t(`channel.agentState.${state}`) : null;
-  // Under the name, one line of one height: its line (why it is out, what it is on), else its role (the agent's fixed
-  // label) as a tag, else its presence. Working here is the pixel orbit beside its name, so the row never jumps.
+  const under = agentMemberLine(now, line, shown ? agentWhyKey(shown.presence, shown.noAi) : null);
+  // What it does here now (a run this tab hears), else its work's words: the orbit's label and the row's title.
+  const doing =
+    state !== "idle"
+      ? t(`channel.agentState.${state}`)
+      : work?.state === "working"
+        ? (now && workLineText(now)) || agentFaceWord(t, "working")
+        : null;
+  // Under the name, one line of one height: `agentMemberLine`, else its role (the agent's fixed label) as a tag, else its
+  // presence. Working here is the pixel orbit beside its name, so the row never jumps.
   const shows = useId();
   return (
     <ProfileTrigger
@@ -301,9 +404,13 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
       <span
         id={shows}
         className="members-side__inner"
+        {...arrival}
+        data-arriving-agent={arrival && "data-arriving" in arrival ? agent.id : undefined}
         data-presence={shown?.presence}
         data-busy={busy || undefined}
-        title={[full ?? doing ?? word, agent.role].filter(Boolean).join(" · ") || undefined}
+        title={
+          [doing ?? (now && workLineText(now)) ?? full ?? word, agent.role].filter(Boolean).join(" · ") || undefined
+        }
       >
         {busy && <AgentTrail color={colorOf(agent)} />}
         <AgentAvatar
@@ -320,8 +427,12 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
             <span className="members-side__label">{agent.name}</span>
             {doing && <PixelSpinner size={14} color={colorOf(agent)} label={doing} className="members-side__spin" />}
           </span>
-          {line ? (
-            <StatusLine {...line} className="members-side__line" />
+          {under?.work ? (
+            <AgentWorkLine line={under.work} className="members-side__line" />
+          ) : under?.line ? (
+            <StatusLine {...under.line} className="members-side__line" />
+          ) : under?.why ? (
+            <span className="members-side__line">{t(`presence.agentWhy.${under.why}`)}</span>
           ) : agent.role ? (
             <span className="members-side__line ac-tag">{agent.role}</span>
           ) : (

@@ -143,7 +143,7 @@ test("Preferences › Servers: the server here leads to Jev's key in its Setting
   );
 });
 
-test("Connect to my server: what it finds on the Tailscale network by Tailscale's icon, this Mac by its glyph", async () => {
+test("Sign in by address: what it finds on the Tailscale network by Tailscale's icon, this Mac by its glyph", async () => {
   const host = createFakeHost("welcome", "first");
   // Discovery answers at once (the fake host waits like a network would); both still get checked.
   host.discover = async () => [
@@ -167,8 +167,7 @@ test("Connect to my server: what it finds on the Tailscale network by Tailscale'
         </I18nextProvider>,
       ),
     );
-    await act(async () => button("Use your own server")?.click());
-    await act(async () => button("Connect to my server")?.click());
+    await act(async () => button("Sign in by its address")?.click());
     // Each found server shows as soon as its own check answers: both, then.
     for (let i = 0; i < 100 && el.querySelectorAll(".dk-fr__foundrow").length < 2; i++) {
       await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
@@ -179,7 +178,7 @@ test("Connect to my server: what it finds on the Tailscale network by Tailscale'
     ]);
     expect(rows).toEqual([
       ["agentes.chat is running here", "ac-icon"],
-      ["On your Tailscale network", "dk-tailscale"],
+      ["On your team's network", "dk-tailscale"],
     ]);
   } finally {
     await act(async () => root.unmount());

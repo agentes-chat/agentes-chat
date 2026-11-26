@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LiveConsult, LiveRun, LiveWork, Message, RunConsultation, SecretRequest } from "@agenteschat/client";
-import { activitySentence, barElapsed, barFaces, barWords } from "@agenteschat/client/lib/activity";
+import { activitySentence, barElapsed, barFaces, barWords, facesOf } from "@agenteschat/client/lib/activity";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import { runAround, runPosition } from "@agenteschat/client/lib/chat";
 import { consultBlocksNearEnd, consultsForLine } from "@agenteschat/client/lib/consult-group";
@@ -19,6 +19,7 @@ import { secretOutcome } from "@agenteschat/client/lib/secret-words";
 import { toolCalls, toolNow, toolPhrase, toolWhy } from "@agenteschat/client/lib/work";
 import {
   AGENT_WORDS_MIN,
+  aboutFits,
   artifactsOf,
   awayRun,
   buildRows,
@@ -74,10 +75,13 @@ import {
   withOpacity,
 } from "../../src/features/chat/turn";
 import { pacedClock } from "../../src/features/shared/logic";
+import { chatScreenSource } from "./chat-screen-source";
 import { at, message, translator } from "./fixtures";
 
 /** A screen's source, for the wiring a test can't render (React Native). */
 const source = (path: string) => Bun.file(new URL(`../../src/${path}`, import.meta.url).pathname).text();
+/** People typing, as `typingIn` gives them. */
+const typing = (...ids: string[]) => ids.map((id) => ({ id, kind: "typing" as const }));
 
 describe("timeline", () => {
   test("top-level messages and loaded thread replies, in time order, no duplicates", () => {
@@ -168,18 +172,16 @@ describe("timeline", () => {
   });
 
   test("my row takes its place in the run: the bubble's corners and the time under the run's last", async () => {
-    expect(await source("features/chat/ChatScreen.tsx")).toContain(
-      "run={runPosition(item.grouped, item.continued ?? false)}",
-    );
+    expect(chatScreenSource()).toContain("run={runPosition(item.grouped, item.continued ?? false)}");
     const row = await source("features/chat/MessageRow.tsx");
     expect(row).toContain("BUBBLE_RUN[run]");
     expect(row).toContain('(run === "end" || run === "solo")');
   });
 
   test("reading marks read up to the message posted last, wherever its place, and counts a reply placed above as new", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toContain("const postedNow = useMemo(() => lastPostedId(list), [list]);");
-    expect(screen).toContain("if (peeking || !member || !postedNow) return;");
+    expect(screen).toContain("if (peeking || !focused || !inFront || !member || !postedNow) return;");
     expect(screen).toContain("unseenBelow(scrollRows, seenKey, seenPostedId)");
   });
 
@@ -351,7 +353,7 @@ describe("working line", () => {
     const personName = (id: string) => people[id];
     const agents = ["atlas", "ada", "infra"].map((agentId) => run({ runId: `r-${agentId}`, agentId }));
     // Someone the directory doesn't know (gone from the workspace) isn't named.
-    const entries = workingEntries(agents, [], name, ["u1", "u2", "u3", "gone"], personName);
+    const entries = workingEntries(agents, [], name, typing("u1", "u2", "u3", "gone"), personName);
     expect(entries.map((e) => `${e.type}:${e.id}`)).toEqual([
       "agent:atlas",
       "agent:ada",
@@ -362,15 +364,96 @@ describe("working line", () => {
     ]);
     expect(activitySentence(t, entries)).toBe("Atlas e mais 2 estão trabalhando · Marina e mais 2 estão digitando…");
     expect(barFaces(entries).map((e) => e.id)).toEqual(["atlas", "ada", "u1"]);
-    expect(activitySentence(t, workingEntries([], [], name, ["u1"], personName))).toBe("Marina está digitando…");
+    expect(activitySentence(t, workingEntries([], [], name, typing("u1"), personName))).toBe("Marina está digitando…");
+  });
+
+  test("someone recording a voice message joins the line as on the web: last, with their own mark and faces", async () => {
+    const [pt, en] = await Promise.all([translator("pt-BR"), translator("en")]);
+    const people: Record<string, string> = { u1: "Marina", u2: "Rui", u3: "Gabi" };
+    const personName = (id: string) => people[id];
+    const voice = (...ids: string[]) => ids.map((id) => ({ id, kind: "voice" as const }));
+    const alone = workingEntries([], [], name, voice("u1"), personName);
+    expect(activitySentence(pt, alone)).toBe("Marina está gravando áudio…");
+    expect(activitySentence(en, alone)).toBe("Marina is recording audio…");
+    expect(activitySentence(pt, workingEntries([], [], name, voice("u1", "u2", "u3"), personName))).toBe(
+      "Marina e mais 2 estão gravando áudio…",
+    );
+    const mixed = workingEntries([], [], name, [...typing("u1"), ...voice("u2")], personName);
+    expect(activitySentence(pt, mixed)).toBe("Marina está digitando · Rui está gravando áudio…");
+    expect(barWords(pt, mixed)).toEqual(["", "", "Marina", " está digitando", " · ", "Rui", " está gravando áudio…"]);
+    // Both at it: each group shows its own faces after its mark, and nobody's face leads the line.
+    expect(barFaces(mixed)).toEqual([]);
+    expect(facesOf(mixed, "typing").map((e) => e.id)).toEqual(["u1"]);
+    expect(facesOf(mixed, "recordingVoice").map((e) => e.id)).toEqual(["u2"]);
+    const withAgent = workingEntries([run({ runId: "r", agentId: "ada" })], [], name, voice("u1"), personName);
+    expect(activitySentence(pt, withAgent)).toBe("Ada está trabalhando · Marina está gravando áudio…");
+    // Names cut short keep to what they drew, as who types' do.
+    expect(lineFit({ agents: 60.2, recorders: 41.5 }, true)).toEqual({ agents: 61, recorders: 42 });
+  });
+
+  test("the line draws the bars where the dots are, each verb with its own mark beside the other, nothing empty before them", async () => {
+    const lines = await source("features/chat/LiveRows.tsx");
+    const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
+    expect(line).toContain(
+      "{lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}",
+    );
+    // A bare line on the conversation's ground: no glass pill, no band sweeping behind it, the faces' plates the
+    // ground's own color.
+    expect(line).not.toContain("<Dither");
+    expect(line).not.toContain("glassSolid");
+    expect(line).toContain("const plate = [styles.tok, { backgroundColor: c.bg }];");
+    // The requests' lines over the composer are as bare.
+    const asks = await source("features/chat/asks.tsx");
+    const askLines = asks.slice(asks.indexOf("export function AskBar("), asks.indexOf("const styles"));
+    expect(askLines).not.toContain("glassSolid");
+    expect(askLines).not.toContain("<Sky");
+    expect(line).toContain("{faces.length > 0 ? (");
+    expect(line).toContain('faces={{ typing: groupFaces("typing"), voice: groupFaces("recordingVoice") }}');
+    const words = lines.slice(lines.indexOf("function BarWords("), lines.indexOf("function TypingDots("));
+    expect(words).toContain("<RecordingBars color={c.muted} />");
+    expect(words).toContain("<TypingDots color={c.muted} />");
+    // Short of room, the second group takes a line of its own: every verb stays whole.
+    expect(words).toContain("typing && recording ? styles.wrap : undefined");
+    // Still with Reduce Motion, in the voice wave's look.
+    const bars = lines.slice(lines.indexOf("function RecordingBars("), lines.indexOf("function TypingDots("));
+    expect(bars).toContain("reduced ? still :");
+    expect(lines).toContain("bar: { width: 3, height: 12, borderRadius: 1.5, opacity: 0.7 },");
+  });
+
+  test("the phone tells the conversation while it records (held or hands free, not paused) and while the take uploads", async () => {
+    const take = await source("features/voice/useVoiceTake.ts");
+    const tick = take.slice(take.indexOf("const tick = useCallback("), take.indexOf("const record = useCallback("));
+    expect(tick).toContain('if (phaseNow === "hold" || phaseNow === "locked") targetRef.current.onRecording?.();');
+    const screen = chatScreenSource();
+    // Recording never waits on what was just written (an agent asked in it waits for the take); the upload's frames do.
+    expect(screen).toContain(
+      'const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);',
+    );
+    // Through the field's own component, which keeps what it is handed (`ChatComposer`).
+    const field = screen.slice(screen.indexOf("const ChatComposer = memo("), screen.indexOf("function ToLatest("));
+    expect(field).toContain("afterSend: onVoiceSent,\n    onRecording,\n  });");
+    expect(screen).toContain("!m.meta?.voiceAccepted &&");
+    expect(screen).toContain('const timer = setInterval(() => sendTyping(threadId, undefined, "voice", true), 1000);');
+    const live = (await source("features/chat/live.ts")).replace(/\s+/g, " ");
+    expect(live).toContain("throttle(Date.now(), text, kind, keepAlive)");
+    // Its message ends the line, also one too big for its event (`applyTypingEvent`, apps/web/test/live.test.ts).
+    expect(live).toContain("const typing = applyTypingEvent(state.typing, event, action.at);");
   });
 
   test("beside a long name typing, the agents' words give way first and leave whole when only a sliver would show", async () => {
     const t = await translator("en");
     const people: Record<string, string> = { u1: "Maria Fernanda Albuquerque" };
-    const entries = workingEntries([run({ runId: "r", agentId: "ada" })], [], name, ["u1"], (id) => people[id]);
+    const entries = workingEntries([run({ runId: "r", agentId: "ada" })], [], name, typing("u1"), (id) => people[id]);
     // The shared pieces, in the order they give way: the agents' words (and their " · "), then the names.
-    expect(barWords(t, entries)).toEqual(["Ada is working", " · ", "Maria Fernanda Albuquerque", " is typing…"]);
+    expect(barWords(t, entries)).toEqual([
+      "Ada is working",
+      " · ",
+      "Maria Fernanda Albuquerque",
+      " is typing…",
+      "",
+      "",
+      "",
+    ]);
     // What iOS drew of each: a cut-off "A" beside someone typing leaves, " · " with it.
     expect(lineFit({ agents: 4.7, typers: 170.3 }, true)).toEqual({ agents: null, typers: 171 });
     expect(lineFit({ agents: AGENT_WORDS_MIN }, true).agents).toBe(AGENT_WORDS_MIN);
@@ -390,7 +473,7 @@ describe("working line", () => {
   });
 
   test("the phrase turns as on the web: only the one shown and the one leaving are drawn, each shown whole", () => {
-    const words = (agents: string): LineWords => [agents, "", "", ""];
+    const words = (agents: string): LineWords => [agents, "", "", "", "", "", ""];
     const drawn = ({ was, now }: PhraseTurn) => [was, now].flatMap((w) => (w ? [w[0]] : []));
     const first: PhraseTurn = { now: words("Ada is working…"), was: null, n: 0, since: 1_000 };
     // A fast tool's start turns it...
@@ -416,7 +499,7 @@ describe("working line", () => {
   });
 
   test("a leaving phrase is drawn only during its crossfade, never under Reduce Motion, so it can't come back whole", () => {
-    const words = (agents: string): LineWords => [agents, "", "", ""];
+    const words = (agents: string): LineWords => [agents, "", "", "", "", "", ""];
     const turned: PhraseTurn = {
       now: words("Ada is working…"),
       was: words("Ada is checking GitHub…"),
@@ -436,17 +519,18 @@ describe("working line", () => {
   test("one agent on its own shows how long it has been at it, as on the web; several, or a question out, don't", async () => {
     const [pt, en] = await Promise.all([translator("pt-BR"), translator("en")]);
     const now = 1_000_000;
-    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 16_400 });
+    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 75_400 });
     const one = workingEntries([ada], [], name);
-    expect(barElapsed(pt, one, [ada], now)).toBe("16 s");
-    expect(barElapsed(en, one, [ada], now)).toBe("16s");
-    expect(barElapsed(pt, one, [ada], now + 49_000)).toBe("1 min 5 s");
-    expect(barElapsed(en, one, [ada], now - 15_000)).toBeNull();
+    expect(barElapsed(pt, one, [ada], now)).toBe("1 min");
+    expect(barElapsed(en, one, [ada], now)).toBe("1 min");
+    expect(barElapsed(pt, one, [ada], now + 60_000)).toBe("2 min");
+    // Its first minute shows no time.
+    expect(barElapsed(en, one, [ada], now - 16_000)).toBeNull();
     // Someone typing beside it doesn't take its time away, nor does a turn of its own that failed before.
-    const typing = workingEntries([ada], [], name, ["u1"], () => "Marina");
-    expect(barElapsed(en, typing, [ada], now)).toBe("16s");
-    const failed = run({ runId: "r0", agentId: "ada", status: "failed", startedAt: now - 90_000 });
-    expect(barElapsed(en, workingEntries([failed, ada], [], name), [failed, ada], now)).toBe("16s");
+    const typingToo = workingEntries([ada], [], name, typing("u1"), () => "Marina");
+    expect(barElapsed(en, typingToo, [ada], now)).toBe("1 min");
+    const failed = run({ runId: "r0", agentId: "ada", status: "failed", startedAt: now - 300_000 });
+    expect(barElapsed(en, workingEntries([failed, ada], [], name), [failed, ada], now)).toBe("1 min");
     const atlas = run({ runId: "r2", agentId: "atlas", status: "running", startedAt: now - 30_000 });
     expect(barElapsed(en, workingEntries([ada, atlas], [], name), [ada, atlas], now)).toBeNull();
     const asking: LiveConsult = {
@@ -462,15 +546,15 @@ describe("working line", () => {
     expect(barElapsed(en, workingEntries([ada], [asking], name), [ada], now)).toBeNull();
   });
 
-  test("left on its own mid-turn, an agent's seconds are right from the first draw and step evenly: one clock, read afresh as the line narrows", async () => {
+  test("left on its own mid-turn, an agent's time is right from the first draw and turns on the clock's reads: one clock, read afresh as the line narrows", async () => {
     const en = await translator("en");
     const U = 1_000_000;
-    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: U - 148_700 });
+    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: U - 87_700 });
     // Atlas is done. With two at work the clock moved once a minute, so it can be 50 s old: the new pace reads it afresh.
     const alone = workingEntries([ada], [], name);
     let clock = pacedClock({ every: 60_000, now: U - 50_000 }, 1000, U);
     const shown = [{ at: U, took: barElapsed(en, alone, [ada], clock.now) }];
-    expect(shown[0]?.took).toBe("2m 28s");
+    expect(shown[0]?.took).toBe("1 min");
     // Each second its interval reads the time; an event redraws the line in between (every 2.6 s here).
     const reads = Array.from({ length: 12 }, (_, k) => U + 4 + (k + 1) * 1000);
     const turns = Array.from({ length: 4 }, (_, k) => U + 4 + (k + 1) * 2600);
@@ -479,7 +563,8 @@ describe("working line", () => {
       const took = barElapsed(en, alone, [ada], clock.now);
       if (took !== shown.at(-1)?.took) shown.push({ at, took });
     }
-    expect(shown.slice(1, -1).map((s, i) => (shown[i + 2]?.at ?? 0) - s.at)).toEqual(Array(11).fill(1000));
+    // 90 s of work falls between the read at +2 s and the redraw at +2.6 s: the minute turns at the next read.
+    expect(shown.slice(1)).toEqual([{ at: U + 3004, took: "2 min" }]);
     // The line shows that clock, never a time read at each draw.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
@@ -493,21 +578,23 @@ describe("working line", () => {
     const atlas = run({ runId: "s", agentId: "atlas" });
     expect(barWords(en, workingEntries([ada], [], name), markName)[0]).toBe(markName("Ada"));
     expect(barWords(en, workingEntries([ada, atlas], [], name))[0]).toBe("Ada and Atlas are working…");
-    // The agents at work lead it with their faces (no orbit).
+    // The agent at work leads it with its face and its rings (`OrbitFace`, not the pixel orbit); the stack's small faces
+    // are the others.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
-    expect(line).toContain("const faces = barFaces(entries);");
+    expect(line).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(line).toContain("<OrbitFace ");
     expect(line).not.toContain("PixelOrbit");
   });
 
   test("the line speaks for one agent at work: its step, its time right after it, and its stop", async () => {
     const en = await translator("en");
     const now = 1_000_000;
-    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 16_000 });
+    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 76_000 });
     const atlas = run({ runId: "s", agentId: "atlas", status: "running" });
     const alone = workingEntries([ada], [], name);
     expect(awayRun(alone, [ada])?.runId).toBe("r");
-    expect(barElapsed(en, alone, [ada], now)).toBe("16s");
+    expect(barElapsed(en, alone, [ada], now)).toBe("1 min");
     expect(lineStops(alone, [ada], () => true).map((r) => r.runId)).toEqual(["r"]);
     // Two agents at work: the line can't say whose time or stop.
     const both = workingEntries([ada, atlas], [], name);
@@ -525,10 +612,9 @@ describe("working line", () => {
     expect(line).not.toContain("seeable");
     expect(line).toContain("const stopHere = stop?.runs ?? [];");
     expect(line).toContain('<LineStop runs={stopHere} onStop={stop.onStop} place="word" />');
-    const screen = await source("features/chat/ChatScreen.tsx");
-    expect(screen).toContain(
-      "const working = useMemo<ComposerWorking | null>(() => (busyRuns.length === 0 ? null : {}), [busyRuns]);",
-    );
+    const screen = chatScreenSource();
+    expect(screen).toContain("const busy = busyRuns.length > 0;");
+    expect(screen).toContain("const working = useMemo<ComposerWorking | null>(() => (busy ? {} : null), [busy]);");
   });
 
   test("no row of its own while it works, writing or not: the line speaks; the reply rises in whole once posted", async () => {
@@ -536,7 +622,7 @@ describe("working line", () => {
     expect(lines).not.toContain("TurnRow");
     expect(lines).not.toContain("RevealText");
     expect(lines).not.toContain("WaitLine");
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).not.toContain('kind: "run"');
     expect(screen).toContain("entering={isFresh(item.key) ? ENTER : undefined}");
     // 24 points drawn, 44 to the finger.
@@ -1051,15 +1137,27 @@ describe("an agent's turn: nothing drawn while it works, its work kept for the r
 
   test("the saved reply finds the work its run did, heard a moment ago", () => {
     const items = turnItems(run({ runId: "r9", work: [call("1", "sentry_list_issues", false)] }));
-    rememberTurn("r9", { items, quotes: {}, at: 1000 });
+    rememberTurn("r9", { items, at: 1000 });
     expect(recentTurn("r9", 2000)?.items).toEqual(items);
     expect(recentTurn("r9", 1000 + 60_000)).toBeNull();
     expect(recentTurn("nope", 2000)).toBeNull();
   });
 
   test("a stopped reply: who stopped it and whether it was continued", () => {
-    expect(stoppedOf({ canceled: { byUserId: "u1" } })).toEqual({ byUserId: "u1", continuedRunId: null });
-    expect(stoppedOf({ canceled: true })).toEqual({ byUserId: null, continuedRunId: null });
+    const none = { byAgentId: null, code: null, continuedRunId: null };
+    expect(stoppedOf({ canceled: { byUserId: "u1" } })).toEqual({ ...none, byUserId: "u1" });
+    expect(stoppedOf({ canceled: true })).toEqual({ ...none, byUserId: null });
+    // The right hand at u1's word, or the system's cause.
+    expect(stoppedOf({ canceled: { byUserId: "u1", byAgentId: "lodi" } })).toEqual({
+      ...none,
+      byUserId: "u1",
+      byAgentId: "lodi",
+    });
+    expect(stoppedOf({ canceled: { byUserId: null, code: "run.agent_archived" } })).toEqual({
+      ...none,
+      byUserId: null,
+      code: "run.agent_archived",
+    });
     expect(stoppedOf({})).toBeNull();
     const next = withContinued({ canceled: { byUserId: "u1", text: "Oi" }, other: 1 }, "r2");
     expect(next).toEqual({ canceled: { byUserId: "u1", text: "Oi", continuedRunId: "r2" }, other: 1 });
@@ -1107,7 +1205,6 @@ describe("automatic lines (notices) and fast replies", () => {
       key: "chat.notice.routineHandoff",
       values: { routine: "Sentry diário" },
       detail: { content: "3 erros novos" },
-      pending: false,
       answer: false,
     });
     const fromOnly = eventLineOf(
@@ -1166,60 +1263,20 @@ describe("automatic lines (notices) and fast replies", () => {
     });
   });
 
-  test("an agent's follow-up: when it will be back and for what (Cancel while it is to come), then the line that woke it", () => {
-    // Today, so the line needs no day.
-    const at = new Date(new Date().setHours(12, 0, 0, 0)).toISOString();
-    const when = { time: (iso: string) => (iso === at ? "12:00" : "?"), locale: "pt-BR" };
-    const refs = { runId: "r1", at, about: "ver o CI" };
-    const set = eventLineOf(
-      agentMsg("n1", { notice: { kind: "follow_up", text: "Check CI run 42", refs: { ...refs, state: "pending" } } }),
-      names,
-      when,
-    );
-    expect(set).toEqual({
-      kind: "notice",
-      icon: "clock",
-      key: "chat.notice.followUp",
-      values: { name: "Ada", about: "ver o CI", time: "12:00", day: "" },
-      // Its note to itself is the agent's: nothing to open.
-      detail: null,
-      pending: true,
-      answer: false,
-    });
-    const canceled = eventLineOf(
-      agentMsg("n2", { notice: { kind: "follow_up", text: "x", refs: { ...refs, state: "canceled" } } }),
-      names,
-      when,
-    );
-    expect(canceled?.key).toBe("chat.notice.followUpCanceled");
-    expect(canceled?.pending).toBe(false);
-    const woke = eventLineOf(
-      agentMsg("n3", { notice: { kind: "follow_up", text: "x", refs: { ...refs, wake: "1", followUpId: "n1" } } }),
-      names,
-      when,
-    );
-    expect(woke).toMatchObject({ key: "chat.notice.followUpWake", values: { name: "Ada", about: "ver o CI" } });
-  });
-
-  test("as on the web, a follow-up that came leaves the conversation once the agent's turn is over", () => {
+  test("as on the web, a return's line never shows (set, come, canceled, the one that woke it): the dock holds it", () => {
     const refs = { runId: "r1", at: "x", about: "ver o CI" };
     const at = (minute: number) => new Date(Date.UTC(2026, 10, 6, 20, minute)).toISOString();
+    const line = (id: string, more: Record<string, string>, minute: number) =>
+      agentMsg(id, { notice: { kind: "follow_up", text: "x", refs: { ...refs, ...more } } }, { createdAt: at(minute) });
     const list = [
-      agentMsg(
-        "set",
-        { notice: { kind: "follow_up", text: "x", refs: { ...refs, state: "done" } } },
-        { createdAt: at(0) },
-      ),
-      agentMsg(
-        "woke",
-        { notice: { kind: "follow_up", text: "x", refs: { ...refs, wake: "1" } } },
-        { createdAt: at(20) },
-      ),
+      line("pending", { state: "pending" }, 0),
+      line("canceled", { state: "canceled", canceledBy: "u1" }, 1),
+      line("done", { state: "done" }, 2),
+      line("woke", { wake: "1", followUpId: "done" }, 20),
     ];
     const ids = (rows: ReturnType<typeof buildRows>) =>
       rows.flatMap((r) => (r.kind === "message" ? [r.message.id] : []));
-    // At work: the line that woke it stays.
-    expect(ids(buildRows(list, undefined, new Set(["ada"])))).toEqual(["woke"]);
+    expect(ids(buildRows(list))).toEqual([]);
     const reply = message({
       id: "reply",
       author: { type: "agent", id: "ada" },
@@ -1227,6 +1284,27 @@ describe("automatic lines (notices) and fast replies", () => {
       createdAt: at(21),
     });
     expect(ids(buildRows([...list, reply]))).toEqual(["reply"]);
+  });
+
+  test("the dock's line shows her words only when they fit whole beside the sentence", () => {
+    // 390 points: the sentence takes most of the line, her words don't fit and leave it.
+    expect(aboutFits(250, 140, 180)).toBe(false);
+    // A wide screen: they fit, whole.
+    expect(aboutFits(600, 140, 180)).toBe(true);
+    expect(aboutFits(320, 140, 180)).toBe(true);
+    // Not laid out yet: nothing but the sentence.
+    expect(aboutFits(0, 140, 180)).toBe(false);
+    expect(aboutFits(600, 0, 180)).toBe(false);
+  });
+
+  test("the dock's line measures its sentence off the line, so a name never gives way to her words; 44 points to touch", async () => {
+    const src = await source("features/chat/Returns.tsx");
+    // The visible sentence shrinks its name to make room: measured there, her words would stay once shown (a canceled
+    // return's next one would read "… retorna às 00:50 · …"). An unseen copy, out of the row, says its own width.
+    expect(src).toContain("<View style={styles.said}>{pieces}</View>");
+    expect(src).toMatch(/style=\{\[styles\.said, styles\.measure\]\}[^>]*onLayout=\{\(e\) => setSaid\(/);
+    expect(src.match(/setSaid\(/g)?.length).toBe(1);
+    expect(src).toContain("hitSlop={{ top: 8, bottom: 8 }}");
   });
 
   test("a wait's result names the agent that waited, and opens nothing written for the agent", () => {
@@ -1412,6 +1490,42 @@ describe("reading a conversation", () => {
   test("a thread view marks only its thread read, never its channel", () => {
     expect(readMark("c1", "t1")).toEqual({ kind: "thread", id: "t1" });
     expect(readMark("c1", null)).toEqual({ kind: "channel", id: "c1" });
+  });
+
+  // The mark is its own piece (`ReadMark`): its requests' states and the threads' replies redraw it, not the screen.
+  const readMarkOf = (screen: string) =>
+    screen.slice(
+      screen.indexOf("const ReadMark = memo("),
+      screen.indexOf("return null;", screen.indexOf("const ReadMark")),
+    );
+
+  test("only the screen in view reads: under another screen or with the app in the background nothing is marked, and coming back marks it", async () => {
+    const screen = chatScreenSource();
+    const reading = readMarkOf(screen);
+    // The screen's focus is read once, before "Novas" (which goes when the screen is left), and handed to the mark.
+    expect(screen.match(/const focused = useIsFocused\(\);/g)).toHaveLength(1);
+    expect(screen.indexOf("const focused = useIsFocused();")).toBeLessThan(
+      screen.indexOf("const peeking = useIsPreview();"),
+    );
+    expect(screen).toMatch(/<ReadMark[^>]*peeking=\{peeking\}\s*focused=\{focused\}/);
+    expect(reading).toContain("const inFront = useAppActive();");
+    expect(reading).toContain("if (peeking || !focused || !inFront || !member || !postedNow) return;");
+    // Both are among what the effect runs again on: back on the screen, or back in the app, it reads.
+    const again = reading.slice(reading.lastIndexOf("}, ["));
+    expect(again).toContain("focused, inFront,");
+    // In front means the app's state is "active", and it follows every change of it: a glance away (the notification
+    // shade) marks nothing either, unlike the socket that stays through it (test/app-active.test.ts).
+    const active = await source("lib/useAppActive.ts");
+    expect(active).toContain('useState(AppState.currentState === "active")');
+    expect(active).toContain("export function useAppActive(inactiveGraceMs = 0)");
+    expect(active).toContain('else listener(s === "active");');
+  });
+
+  test("a reply in one of the conversation's threads marks it read again", async () => {
+    const screen = chatScreenSource();
+    const reading = readMarkOf(screen);
+    expect(reading).toContain("const threadReplies = useThreadActivity(orgId, channelId);");
+    expect(reading.slice(reading.lastIndexOf("}, ["))).toContain("postedNow, threadReplies]);");
   });
 });
 

@@ -231,10 +231,13 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // browser, the device's name in its words), that `this_mac` takes `servers` and `files` (older apps
         // refuse them, so the sign-in's other server and Storage's "Show the folder" show only where this says
         // so), that a connector's sign-in and the window's own browser sign-in come back here (`deep_link.rs`,
-        // older apps don't take them), and that it lists the other servers' workspaces (`workspaces`,
-        // ADR 0154); nothing else.
+        // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
+        // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
+        // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true }});"
+            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            renderer = crate::graphics::renderer(),
+            system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
         .on_navigation(move |url| match route_now(&on_nav, url) {
             Route::Stay => true,
@@ -266,10 +269,14 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
             NewWindowResponse::Deny
         })
         // A whole page loading again (⌘R, macOS ended it, a full navigation): the cover, never a blank window.
-        .on_page_load(move |_, payload| match payload.event() {
-            PageLoadEvent::Started => crate::cover::show(&on_load, Duration::ZERO),
+        .on_page_load(move |page, payload| match payload.event() {
+            PageLoadEvent::Started => crate::cover::show(&on_load),
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
-            PageLoadEvent::Finished => fit_page(&on_load),
+            PageLoadEvent::Finished => {
+                page_loaded();
+                fit_page(&on_load);
+                crate::cover::site_loaded(&on_load, &page);
+            }
         })
         .on_download(move |_, event| match event {
             DownloadEvent::Requested { destination, .. } => match downloads_path(&on_download, destination) {
@@ -281,8 +288,9 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
             },
             DownloadEvent::Finished { path, success, .. } => {
                 if success {
-                    if let Some(p) = path.as_ref() {
-                        quarantine(p);
+                    // Marked off the main thread: `xattr` is a program it would wait on.
+                    if let Some(p) = path.clone() {
+                        std::thread::spawn(move || quarantine(&p));
                     }
                     if let Some(name) = path.as_ref().and_then(|p| p.file_name()) {
                         crate::menus::downloaded(&on_download, &name.to_string_lossy());
@@ -296,12 +304,38 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         (Some(x), Some(y)) => builder.position(x, y),
         _ => builder.center(),
     };
+    #[cfg(target_os = "windows")]
+    let builder = builder.zoom_hotkeys_enabled(true);
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
     let built = builder.build().map_err(|e| e.to_string())?;
+    crate::bench::window_built();
+    // Linux's side of lib.rs `on_web_content_process_terminate` (macOS only in Tauri): a web process that died
+    // leaves the window blank, so the page loads again.
+    #[cfg(target_os = "linux")]
+    {
+        let app = app.clone();
+        let _ = built.with_webview(move |view| {
+            use webkit2gtk::WebViewExt;
+            view.inner().connect_web_process_terminated(move |view, reason| {
+                crate::health::note(&app, &format!("the web process of {LABEL} ended ({reason:?}): loading it again"));
+                crate::cover::show(&app);
+                view.reload();
+            });
+        });
+    }
+    // Windows' side: WebView2 has no reload of its own when the page's renderer ends (a crash, the system out of
+    // memory), it shows its "This page is having a problem" page and keeps it until someone presses Refresh.
+    #[cfg(target_os = "windows")]
+    {
+        let app = app.clone();
+        let _ = built.with_webview(move |view| reload_when_renderer_ends(app, &view));
+    }
+    // A new window starts with the bundle's icon on Windows and Linux: the person's pick (ADR 0179).
+    crate::app_icon::show(app);
     let window = built.as_ref().window();
     if saved.maximized {
         let _ = window.maximize();
@@ -317,6 +351,58 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
     front(app)
 }
 
+/// The main frame's renderer ended: logged with its exit code (`0x80000003` is the `STATUS_BREAKPOINT` WebView2's page
+/// shows, a crash of the renderer itself), the cover over it and the page loaded again, as on macOS and Linux. Only the
+/// page's own renderer: an iframe's, or one that stopped answering and may come back, leave the page as it is, and
+/// WebView2's browser process ending takes the web view with it, which no reload brings back.
+#[cfg(target_os = "windows")]
+fn reload_when_renderer_ends(app: AppHandle, view: &tauri::webview::PlatformWebview) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2ProcessFailedEventArgs2, COREWEBVIEW2_PROCESS_FAILED_KIND,
+        COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED,
+    };
+    use webview2_com::ProcessFailedEventHandler;
+    use windows::core::Interface;
+
+    // SAFETY: on the main thread (`with_webview`), the controller is this window's live one, and WebView2 calls the
+    // handler on that same thread.
+    unsafe {
+        let Ok(core) = view.controller().CoreWebView2() else { return };
+        let last_reload = std::cell::Cell::new(None::<Instant>);
+        let handler = ProcessFailedEventHandler::create(Box::new(move |sender, args| {
+            let (Some(sender), Some(args)) = (sender, args) else { return Ok(()) };
+            let mut kind = COREWEBVIEW2_PROCESS_FAILED_KIND::default();
+            args.ProcessFailedKind(&mut kind)?;
+            if kind != COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED {
+                return Ok(());
+            }
+            let mut code = 0i32;
+            if let Ok(args) = args.cast::<ICoreWebView2ProcessFailedEventArgs2>() {
+                let _ = args.ExitCode(&mut code);
+            }
+            // A renderer that ends again within a minute of the last reload would only crash again: WebView2's own
+            // page stays, with its Refresh button, instead of a reload loop. Unlike macOS and Linux, where the window
+            // would be left blank, Windows has that page to fall back on.
+            if last_reload.get().is_some_and(|at| at.elapsed() < Duration::from_secs(60)) {
+                crate::health::note(
+                    &app,
+                    &format!("the web process of {LABEL} ended again ({:#010x}): left as it is", code as u32),
+                );
+                return Ok(());
+            }
+            last_reload.set(Some(Instant::now()));
+            crate::health::note(
+                &app,
+                &format!("the web process of {LABEL} ended ({:#010x}): loading it again", code as u32),
+            );
+            crate::cover::show(&app);
+            sender.Reload()
+        }));
+        let mut token = 0i64;
+        let _ = core.add_ProcessFailed(&handler, &mut token);
+    }
+}
+
 /// The window's name for the page's title: the site's own long title (sign-in, the landing) is just the app's.
 fn window_title(title: &str) -> &str {
     let title = title.trim();
@@ -329,7 +415,8 @@ fn window_title(title: &str) -> &str {
 
 /// Tells the page the zoom (`--app-zoom`: its title bar stays 48pt and level with the window's buttons) and
 /// whether the window is full screen (no room kept for the buttons then), and puts the buttons back in the
-/// bar's middle (a resize or full screen lays them out anew). AppKit is touched on the main thread.
+/// bar's middle (a resize or full screen lays them out anew). AppKit is touched on the main thread. The page hears
+/// only a change: a live resize calls this for every frame, and each script run costs the page a style pass.
 pub fn fit_page(app: &AppHandle) {
     keep_lights(app);
     let handle = app.clone();
@@ -337,12 +424,26 @@ pub fn fit_page(app: &AppHandle) {
         let window = handle.get_window(LABEL);
         let full = window.as_ref().is_some_and(in_full_screen);
         let Some(page) = handle.get_webview(LABEL) else { return };
-        let zoom = crate::menus::current_zoom(&handle);
-        let _ = page.eval(format!(
+        let zoom = crate::menus::current_zoom(&handle).to_string();
+        let mut told = PAGE_TOLD.lock().unwrap_or_else(|e| e.into_inner());
+        if told.as_ref() == Some(&(zoom.clone(), full)) {
+            return;
+        }
+        let sent = page.eval(format!(
             "document.documentElement.style.setProperty('--app-zoom','{zoom}');\
              document.documentElement.toggleAttribute('data-fullscreen',{full});"
         ));
+        *told = sent.is_ok().then_some((zoom, full));
     });
+}
+
+/// The zoom and full screen the page loaded now was told (`fit_page`); a new page load starts with none.
+static PAGE_TOLD: Mutex<Option<(String, bool)>> = Mutex::new(None);
+
+/// A whole page loaded: it hears the zoom and full screen again. Not as it starts loading: a resize meanwhile is told
+/// to the page being replaced, and the new one would never hear it.
+fn page_loaded() {
+    *PAGE_TOLD.lock().unwrap_or_else(|e| e.into_inner()) = None;
 }
 
 /// Whether the window is in full screen, asked of AppKit. tao's `is_fullscreen` takes the lock it holds through a
@@ -368,29 +469,69 @@ pub fn in_full_screen(window: &tauri::Window) -> bool {
 }
 
 /// The window's buttons back in the middle of the site's title bar after AppKit lays it out anew (a resize,
-/// a new title, focus, the cover going): now, on the next turn of the main loop, and once more a moment later
-/// (a new title's layout pass can come after both). Nothing in full screen (no buttons).
+/// a new title, focus, the cover going): now, on the next turn of the main loop, and once more a moment after the
+/// last call (a new title's layout pass can come after both). Nothing in full screen (no buttons). A live resize
+/// calls this for every frame: while a placement waits for the main thread, more calls add nothing, and one timer
+/// thread, pushed back by each call, does the later one.
 pub fn keep_lights(app: &AppHandle) {
     #[cfg(target_os = "macos")]
     {
-        let handle = app.clone();
-        let _ = app.run_on_main_thread(move || {
-            place_now(&handle);
-            let again = handle.clone();
-            let _ = handle.run_on_main_thread(move || place_now(&again));
-        });
-        let later = app.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(LIGHTS_AGAIN);
-            let handle = later.clone();
-            let _ = later.run_on_main_thread(move || place_now(&handle));
-        });
+        if !LIGHTS_QUEUED.swap(true, Ordering::AcqRel) {
+            let handle = app.clone();
+            let queued = app.run_on_main_thread(move || {
+                LIGHTS_QUEUED.store(false, Ordering::Release);
+                place_now(&handle);
+                let again = handle.clone();
+                let _ = handle.run_on_main_thread(move || place_now(&again));
+            });
+            if queued.is_err() {
+                LIGHTS_QUEUED.store(false, Ordering::Release);
+            }
+        }
+        lights_later(app);
     }
     #[cfg(not(target_os = "macos"))]
     let _ = app;
 }
 
-/// How long after a layout the buttons are placed once more.
+/// A placement is waiting for the main thread (`keep_lights`).
+#[cfg(target_os = "macos")]
+static LIGHTS_QUEUED: AtomicBool = AtomicBool::new(false);
+
+/// The placement `LIGHTS_AGAIN` after the last call to `keep_lights`, from one thread made on first use.
+#[cfg(target_os = "macos")]
+fn lights_later(app: &AppHandle) {
+    static LATER: std::sync::OnceLock<mpsc::Sender<()>> = std::sync::OnceLock::new();
+    let app = app.clone();
+    let later = LATER.get_or_init(move || {
+        debounced(LIGHTS_AGAIN, move || {
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || place_now(&handle));
+        })
+    });
+    let _ = later.send(());
+}
+
+/// A thread that runs `run` once `wait` has passed since the last signal sent to it: a burst of signals runs it once.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn debounced(wait: Duration, run: impl Fn() + Send + 'static) -> mpsc::Sender<()> {
+    let (tx, rx) = mpsc::channel::<()>();
+    std::thread::spawn(move || {
+        while rx.recv().is_ok() {
+            loop {
+                match rx.recv_timeout(wait) {
+                    Ok(()) => continue,
+                    Err(mpsc::RecvTimeoutError::Timeout) => break,
+                    Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                }
+            }
+            run();
+        }
+    });
+    tx
+}
+
+/// How long after the last layout the buttons are placed once more.
 #[cfg(target_os = "macos")]
 const LIGHTS_AGAIN: Duration = Duration::from_millis(300);
 
@@ -683,7 +824,6 @@ fn front(app: &AppHandle) -> Result<(), String> {
     let window = app.get_window(LABEL).ok_or("window not found")?;
     let _ = window.unminimize();
     window.show().map_err(|e| e.to_string())?;
-    crate::sync_dock(app);
     window.set_focus().map_err(|e| e.to_string())
 }
 
@@ -692,9 +832,10 @@ fn front(app: &AppHandle) -> Result<(), String> {
 /// code with its own session), reconnecting it (`reconnect`), Preferences on a tab (`prefs`), the menu bar's
 /// access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
 /// notification while the app is in the background (`notify`), the first run's window to pick another server
-/// (`servers`: the sign-in page's way out, the same window as Servers › Add a server…) and, on the server
-/// here, signing its owner in (`signIn`: the app spends its owner key on a one-time sign-in, which the window
-/// trades itself) and the folder of its files (`files`: Storage's "Show the folder"). Rust checks
+/// (`servers`: the sign-in page's way out, the same window as Servers › Add a server…), the app's own speed numbers
+/// for the site's report (`vitals`: its opening and its web view's memory) and, on the server here, signing its
+/// owner in (`signIn`: the app spends its owner key on a one-time sign-in, which the window trades itself) and the
+/// folder of its files (`files`: Storage's "Show the folder"). Rust checks
 /// each request, rebuilds it from the keys it may have, adds the asking page's own `origin`, whether agents may
 /// work here for it and whether it is the server here (`local`), and relays it: the popover's code owns the
 /// runners (apps/desktop/src/control/this-mac.ts) and answers through `this_mac_reply`. The machine's token
@@ -766,10 +907,39 @@ fn checked(request: &Value) -> Result<Value, String> {
             if servers::origin_of(server).as_deref() != Some(server) {
                 return Err("bad server".into());
             }
-            Ok(json!({ "kind": "openWorkspace", "server": server, "orgId": org()? }))
+            let mut out = json!({ "kind": "openWorkspace", "server": server, "orgId": org()? });
+            // Which of that server's accounts it belongs to (ADR 0183): an id, like the workspace's.
+            if let Some(account) = text("account") {
+                if !crate::workspaces::good_id(account) {
+                    return Err("bad account id".into());
+                }
+                out["account"] = json!(account);
+            }
+            Ok(out)
         }
         // The folder is the app's to know: the page names none.
         Some("files") => Ok(json!({ "kind": "files" })),
+        // The app's own speed numbers (vitals.rs): the page asks, and says nothing.
+        Some("vitals") => Ok(json!({ "kind": "vitals" })),
+        // The app icon (ADR 0179): one of the app's own ids, an agent the site drew (who it is and its two PNGs), or
+        // none to read the one kept.
+        Some("appIcon") => {
+            if let Some(agent) = request.get("agent") {
+                let about = crate::app_icon::about(agent).ok_or("bad agent")?;
+                let picture = |key: &str| {
+                    agent.get(key).and_then(Value::as_str).filter(|b| crate::app_icon::picture(b).is_some())
+                };
+                let (Some(dock), Some(window)) = (picture("dock"), picture("window")) else {
+                    return Err("bad picture".into());
+                };
+                return Ok(json!({ "kind": "appIcon", "agent": about, "dock": dock, "window": window }));
+            }
+            match text("icon") {
+                None => Ok(json!({ "kind": "appIcon" })),
+                Some(id) if crate::app_icon::find(id).is_some() => Ok(json!({ "kind": "appIcon", "icon": id })),
+                Some(_) => Err("unknown icon".into()),
+            }
+        }
         Some("connect") => {
             let mut out = json!({ "kind": "connect", "orgId": org()? });
             if let Some(name) = display_name(request.get("orgName")) {
@@ -846,25 +1016,23 @@ fn files_gate(mut request: Value, server_here: bool) -> Result<Value, String> {
 }
 
 /// The site's notifications: at most one every 3 seconds and 60 an hour, only while the window isn't in
-/// front, and only while the person wants them (Preferences › General). Coming back to the app within 30
-/// seconds opens the last one's page.
+/// front, and only while the person wants them (Preferences › General). Only a click on one opens its page
+/// (`stop_from_notices`): coming back to the app any other way (its icon, Alt+Tab) leaves the window where it was.
 pub struct Notices(Mutex<NoticeState>);
 
 struct NoticeState {
     on: bool,
     sent: VecDeque<Instant>,
-    pending: Option<(Url, Instant)>,
 }
 
 impl Default for Notices {
     fn default() -> Self {
-        Self(Mutex::new(NoticeState { on: true, sent: VecDeque::new(), pending: None }))
+        Self(Mutex::new(NoticeState { on: true, sent: VecDeque::new() }))
     }
 }
 
 const NOTIFY_GAP: Duration = Duration::from_secs(3);
 const NOTIFY_PER_HOUR: usize = 60;
-const NOTIFY_OPENS_FOR: Duration = Duration::from_secs(30);
 
 /// Whether one more notification fits the limits at `now` (and counts it).
 fn notice_fits(sent: &mut VecDeque<Instant>, now: Instant) -> bool {
@@ -888,7 +1056,7 @@ fn notify(app: &AppHandle, request: &Value, site: &Url) {
 }
 
 /// A notification with the site's limits: `url` (a page of a server of the app's list, the one open or another,
-/// ADR 0154) opens when the app comes back within 30 seconds.
+/// ADR 0154) opens when it is clicked.
 pub fn notice(app: &AppHandle, title: &str, body: &str, url: Url) {
     show_notice(app, title, body, url, None);
 }
@@ -906,7 +1074,6 @@ fn show_notice(app: &AppHandle, title: &str, body: &str, url: Url, stop: Option<
         if in_front || !state.on || !notice_fits(&mut state.sent, Instant::now()) {
             return;
         }
-        state.pending = Some((url.clone(), Instant::now()));
     }
     let mut builder = app.notification().builder().title(title).body(body).extra("url", url.as_str());
     if let (Some(stop), Some(label)) = (stop, crate::menus::labels(app).get("notifyStop").cloned()) {
@@ -918,9 +1085,10 @@ fn show_notice(app: &AppHandle, title: &str, body: &str, url: Url, stop: Option<
 }
 
 /// A notification's click and its Stop. With a handler registered the plugin reports every click here, and the app
-/// may not come forward by itself (`focused` would not see it): the click opens its own page. Stop: the stop the
-/// web's button makes, with the window's session for that server. When it can't (signed out, offline, no longer
-/// allowed), the phone's page opens, where Stop is.
+/// may not come forward by itself: the click opens its own page. Windows reports a click only while the toast is
+/// on screen, not from the Action Center: that one brings the app back where it was, like its icon would. Stop: the
+/// stop the web's button makes, with the window's session for that server. When it can't (signed out, offline, no
+/// longer allowed), the phone's page opens, where Stop is.
 pub fn stop_from_notices(app: &AppHandle) {
     let handle = app.clone();
     let _ = app.notification().on_action(move |performed| {
@@ -930,10 +1098,8 @@ pub fn stop_from_notices(app: &AppHandle) {
         }
         let extra = |key: &str| performed.notification().and_then(|n| n.extra().get(key)).cloned();
         let app = handle.clone();
-        // Handled here: the app coming forward from this click opens nothing more.
-        app.state::<Notices>().0.lock().unwrap_or_else(|e| e.into_inner()).pending = None;
         if action == "tap" {
-            let Some(url) = extra("url").and_then(|u| u.as_str().and_then(|u| u.parse::<Url>().ok())) else { return };
+            let Some(url) = tapped_page(extra("url").as_ref()) else { return };
             std::thread::spawn(move || {
                 let _ = show_url(&app, url);
             });
@@ -955,29 +1121,19 @@ pub fn stop_from_notices(app: &AppHandle) {
     });
 }
 
-/// The main window came to the front: within 30 seconds of a notification, its page (on its server, which
-/// becomes the one open); and the other servers' workspaces are read again.
+/// The page a click on a notification opens: the one it was shown with (its `url` extra).
+fn tapped_page(url: Option<&Value>) -> Option<Url> {
+    url?.as_str()?.parse().ok()
+}
+
+/// The main window came to the front: the other servers' workspaces are read again. Its page stays as it was, even
+/// when a notification came meanwhile: only that notification's click opens its page.
 pub fn focused(app: &AppHandle) {
     keep_lights(app);
     crate::workspaces::on_focus(app);
     // Brought forward by a notification of the server here: the popover says what happened and how to fix it.
     if crate::local_server::take_notice_click() {
         let _ = crate::present(app, "popover");
-        return;
-    }
-    let pending = {
-        let notices = app.state::<Notices>();
-        let mut state = notices.0.lock().unwrap_or_else(|e| e.into_inner());
-        state.pending.take()
-    };
-    if let Some((url, at)) = pending {
-        if at.elapsed() <= NOTIFY_OPENS_FOR {
-            let app = app.clone();
-            // Another server's page loads the window anew: not from inside the focus event.
-            std::thread::spawn(move || {
-                let _ = show_url(&app, url);
-            });
-        }
     }
 }
 
@@ -1053,10 +1209,28 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
     }
     // What the app itself answers (the popover isn't needed).
     match request["kind"].as_str() {
+        // Its opening (once) and its web view's memory, for the site's speed report.
+        Some("vitals") => {
+            let measurer = app.clone();
+            let vitals = tauri::async_runtime::spawn_blocking(move || crate::vitals::for_site(&measurer))
+                .await
+                .map_err(|e| e.to_string())?;
+            return serde_json::to_value(vitals).map_err(|e| e.to_string());
+        }
         Some("badge") => {
             let count = |key: &str| u32::try_from(request[key].as_u64().unwrap_or(0)).unwrap_or(u32::MAX);
             crate::dock::set_badge(&app, count("waiting"), count("unread"));
             return Ok(json!({}));
+        }
+        // The app icon picked on this computer (ADR 0179): kept by the app, for every server's pages.
+        Some("appIcon") => {
+            if request.get("agent").is_some() {
+                let picture = |key: &str| request[key].as_str().and_then(crate::app_icon::picture).ok_or("bad picture");
+                crate::app_icon::set_agent(&app, request["agent"].clone(), &picture("dock")?, &picture("window")?)?;
+            } else if let Some(id) = request["icon"].as_str() {
+                crate::app_icon::set(&app, id)?;
+            }
+            return Ok(crate::app_icon::kept(&app));
         }
         Some("orgs") => {
             // A new organization on the server here: this computer works for it within seconds. Signed in or a new
@@ -1098,15 +1272,14 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             crate::present(&app, "welcome")?;
             return Ok(json!({}));
         }
-        // The other servers' workspaces, as last read (the page's own server lists its own).
+        // The other servers' workspaces, as last read (the page's own server lists its own): the app reads them every
+        // minute while this window shows.
         Some("workspaces") => {
             // Never read yet (the app's first check ran before this window existed): read now and answer with it,
             // so the site's menu never starts empty for a minute.
             if crate::workspaces::never_read(&app) {
                 let reader = app.clone();
                 let _ = tauri::async_runtime::spawn_blocking(move || crate::workspaces::refresh_now(&reader)).await;
-            } else if crate::workspaces::stale(&app) {
-                crate::workspaces::trigger(&app);
             }
             let others: Vec<_> = crate::workspaces::list(&app).into_iter().filter(|s| s.server != origin).collect();
             return Ok(json!({ "servers": others }));
@@ -1123,7 +1296,9 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             if !servers::get(&app).servers.iter().any(|s| s == server) {
                 return Err("not a server of this app".into());
             }
-            let url: Url = format!("{server}/org/{}", request["orgId"].as_str().unwrap_or_default())
+            // The page there moves the window to that account before it opens (`?as=`, ADR 0183).
+            let account = request["account"].as_str().map(|id| format!("?as={id}")).unwrap_or_default();
+            let url: Url = format!("{server}/org/{}{account}", request["orgId"].as_str().unwrap_or_default())
                 .parse()
                 .map_err(|_| "not a URL")?;
             show_url(&app, url)?;
@@ -1245,6 +1420,38 @@ mod tests {
     }
 
     #[test]
+    fn a_burst_of_layouts_places_the_buttons_once_after_it() {
+        use std::sync::atomic::AtomicUsize;
+        use std::sync::Arc;
+        let runs = Arc::new(AtomicUsize::new(0));
+        let counted = runs.clone();
+        let later = debounced(Duration::from_millis(150), move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+        });
+        for _ in 0..20 {
+            later.send(()).unwrap();
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(runs.load(Ordering::SeqCst), 0, "not while the burst lasts");
+        std::thread::sleep(Duration::from_millis(600));
+        assert_eq!(runs.load(Ordering::SeqCst), 1, "once after it");
+        later.send(()).unwrap();
+        std::thread::sleep(Duration::from_millis(600));
+        assert_eq!(runs.load(Ordering::SeqCst), 2, "and once more for the next one");
+    }
+
+    #[test]
+    fn only_a_click_opens_a_notice_page() {
+        // The click opens the page the notification was shown with.
+        assert_eq!(
+            tapped_page(Some(&json!("https://app.agentes.chat/org/o1/dm/agent/a1?m=9"))).map(|u| u.to_string()),
+            Some("https://app.agentes.chat/org/o1/dm/agent/a1?m=9".to_string())
+        );
+        assert_eq!(tapped_page(None), None);
+        assert_eq!(tapped_page(Some(&json!("not a page"))), None);
+    }
+
+    #[test]
     fn in_page_moves_and_titles() {
         let go = |u: &str| go_in_page(&u.parse().unwrap());
         assert_eq!(go("https://app.agentes.chat/"), None);
@@ -1322,6 +1529,24 @@ mod tests {
     #[test]
     fn bridge_requests() {
         assert_eq!(checked(&json!({ "kind": "status", "extra": 1 })), Ok(json!({ "kind": "status" })));
+        // The app's speed numbers: whatever else the page sends is dropped.
+        assert_eq!(checked(&json!({ "kind": "vitals", "pid": 4 })), Ok(json!({ "kind": "vitals" })));
+        // The app icon: an id of the app's, or an agent with its two PNGs (ADR 0179).
+        assert_eq!(checked(&json!({ "kind": "appIcon", "icon": "moon" })), Ok(json!({ "kind": "appIcon", "icon": "moon" })));
+        assert!(checked(&json!({ "kind": "appIcon", "icon": "../x" })).is_err());
+        let png = "iVBORw0KGgoAAAAA";
+        let agent = json!({ "orgId": "o", "id": "a", "name": "Dev", "look": { "color": "violet" }, "dock": png, "window": png });
+        assert_eq!(
+            checked(&json!({ "kind": "appIcon", "agent": agent })),
+            Ok(json!({
+                "kind": "appIcon",
+                "agent": { "orgId": "o", "id": "a", "name": "Dev", "look": { "color": "violet" } },
+                "dock": png,
+                "window": png,
+            }))
+        );
+        let gif = json!({ "orgId": "o", "id": "a", "name": "Dev", "look": {}, "dock": "R0lGODlh", "window": png });
+        assert!(checked(&json!({ "kind": "appIcon", "agent": gif })).is_err());
         assert_eq!(
             checked(&json!({ "kind": "connect", "orgId": "org_1-a", "origin": "https://evil.example" })),
             Ok(json!({ "kind": "connect", "orgId": "org_1-a" }))
@@ -1373,6 +1598,7 @@ mod tests {
             json!({ "kind": "openWorkspace", "server": "http://evil.example", "orgId": "o-1" }),
             json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "../x" }),
             json!({ "kind": "openWorkspace", "orgId": "o-1" }),
+            json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "o-1", "account": "../x" }),
         ] {
             assert!(checked(&bad).is_err(), "{bad}");
         }

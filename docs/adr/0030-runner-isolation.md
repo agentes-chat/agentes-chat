@@ -27,7 +27,7 @@ Three levels. Level 1 is the default for every connected machine; level 2 is a c
 The runner builds each command's environment for the requesting agent, without touching the owner's files:
 
 - **Git config:** `GIT_CONFIG_GLOBAL=<agent folder>/.agentes/gitconfig`. A `configure_git` op (from a tool) writes that file: name and email of the agent, a credential helper, `insteadOf` rules. The owner's `~/.gitconfig` is never read for writing and never changed.
-- **Authorship:** commits are authored as the agent (`Dev (agentes.chat) <dev+<org>@agents.agentes.chat>`) with a `Co-authored-by` trailer for the person who started the work.
+- **Authorship:** commits are authored as the agent (`Dev (agentes.chat) <dev+<org>@agents.agentes.chat>`) with a `Co-Authored-By` trailer for the person who started the work.
 - **GitHub access, preferred:** a short-lived token minted by our server from the org's GitHub connection (GitHub App installation token, ADR 0016/0024), scoped to the repos the agent may use, delivered to the runner per task through the credential helper (`agentes-runner git-credential`), never written to disk in plaintext. The policy lives server-side, like the git proxy: push only to `agentes/{handle}/*` and mission branches, no force push to protected refs, no direct push to the default branch. Merges go through our GitHub connector after an approval card. This makes approvals binding.
 - **GitHub access, fallback:** a token the person hands over with `request_secret` (ADR 0027), stored in the agent's secrets, used through the same credential helper.
 - **SSH:** if a remote needs it, an agent-only key under the agent's secrets via `GIT_SSH_COMMAND="ssh -i … -o IdentitiesOnly=yes"`.
@@ -80,8 +80,8 @@ observations clear the display. A country mark appears only when the response in
 
 A Linux system runner can optionally set `networkLauncher` in its root-owned `config.json` to an absolute
 executable path. The helper receives `<uid> -- <command> [arguments...]`, prepares or enters the network
-context synchronously, then executes the command. Root network diagnostics and the agent's `runuser` launch
-use the same helper. The executable and every parent must be root-owned, with no symlinks or group/other write
+context synchronously, then executes the command. Root network diagnostics and the agent's launch as its own
+user use the same helper. The executable and every parent must be root-owned, with no symlinks or group/other write
 permissions. A failed helper prevents the process from starting. No helper is configured by default. Apply
 changes through the root configuration; an existing process keeps its network context until it ends. The
 host loopback firewall remains active for existing processes. Helpers must preserve access to the runner's
@@ -97,7 +97,7 @@ The deployment must filter private destinations before marking packets and preve
 `CAP_NET_ADMIN` or `CAP_NET_RAW` (including through file capabilities). The mark never replaces those filters.
 Changes reconcile the local guard atomically. The shared guard for `managedBy: host` does not use per-runner marks.
 
-When `networkMark` is configured, `systemLauncher` runs `setpriv --no-new-privs --bounding-set=-net_admin,-net_raw` immediately before `runuser`, after the optional network launcher.
+When `networkMark` is configured, `systemLauncher` runs `setpriv --no-new-privs --bounding-set=-net_admin,-net_raw` immediately before the step that becomes the agent, after the optional network launcher.
 This also covers deployments using marked routing without a namespace launcher. The kernel bind self-check
 uses the same restriction. Existing processes must be drained or restarted before relying on it.
 

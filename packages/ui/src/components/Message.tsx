@@ -3,7 +3,7 @@ import {
   createContext,
   type HTMLAttributes,
   isValidElement,
-  type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   useContext,
   useEffect,
@@ -13,10 +13,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cx } from "../cx";
-import { hoverless, movesByKeys } from "../device";
+import { movesByKeys } from "../device";
 import { Icon, type IconName } from "../icons/Icon";
 import { MenuAt } from "./Menu";
-import { Tip } from "./Tip";
+import { HOLD_SLOP, TIP_HOLD_MS, Tip } from "./Tip";
 
 /**
  * How the rows under it are drawn. Every row reads it, so a view sets it once: `comfortable` keeps my rows on the right
@@ -48,6 +48,11 @@ export interface MessageProps extends Omit<HTMLAttributes<HTMLElement>, "childre
   author: ReactNode;
   time: ReactNode;
   /**
+   * A grouped row's time in its gutter, which never wraps: the clock without its day period (`formatClock`), as the
+   * gutter is a face wide. `time` when absent.
+   */
+  gutterTime?: ReactNode;
+  /**
    * Details behind the time, never in the header: "terça-feira, 14 de outubro
    * às 21:10 · sonnet 5.5 · 1.240 tokens · US$ 0,004". Shown in a tooltip on
    * hover or keyboard focus of the time (and read by screen readers).
@@ -58,6 +63,11 @@ export interface MessageProps extends Omit<HTMLAttributes<HTMLElement>, "childre
    * or keyboard focus): "entrou na conversa" on a reply nobody asked for.
    */
   note?: { label: ReactNode; tip: ReactNode };
+  /**
+   * A small glyph before the time that says where the message came from (an outside chat app), its words as its
+   * accessible name. Unlike the head, it shows on every row: my own, grouped ones and bubbles.
+   */
+  mark?: ReactNode;
   /** A person-facing state on the header line, with an icon (or a `mark`, e.g. a PixelSpinner): "enviando…". */
   status?: { icon?: IconName; mark?: ReactNode; label: ReactNode };
   /** A new row: slides in (opacity/transform only; none with reduced motion). */
@@ -89,21 +99,25 @@ export interface MessageProps extends Omit<HTMLAttributes<HTMLElement>, "childre
   nameColor?: readonly [string, string];
   /** Lays the body out as a column (approval cards). */
   stacked?: boolean;
-  /** Muted, at the end of the first line, the header's or a grouped message's text's (e.g. the receipt check). */
+  /** Muted, at the end of the header's line, or in a grouped message's gutter (e.g. the receipt check). */
   aside?: ReactNode;
   /** A line under the message, the same on a first and a grouped one (e.g. a receipt with words). */
   foot?: ReactNode;
   /**
-   * The row's actions on touch, which has no hover: a tap on the row (not on a link or a button in it) opens these
-   * items (`MenuReactions`, `MenuItem`…) in a menu beside the row, under it or over it, never on its text, and lights
-   * the row while it is open. A mouse or a keyboard gets the row's bar (`.ac-msg__actions`) instead.
+   * The row's actions for a finger, which has no hover: a long press on the row (not on a link, a button, a picture
+   * or a video in it) opens these items (`MenuReactions`, `MenuItem`…) in a menu beside the row, under it or over it,
+   * never on its text, and lights the row while it is open. A tap does what it does anywhere (opens a link, plays a
+   * video). A mouse or a keyboard gets the row's bar (`.ac-msg__actions`) and the right click instead.
    */
   menu?: { label: string; items: ReactNode };
 }
 
-/** Taps on these keep doing their own thing (no menu opens), a popover's or a menu's trigger too (`aria-haspopup`). */
-const INTERACTIVE =
-  "a[href], button, input, textarea, select, label, summary, [role='button'], [tabindex='0'], [aria-haspopup]";
+/**
+ * A long press on these keeps the browser's own (select, open, save the picture), a popover's or a menu's trigger too
+ * (`aria-haspopup`): no row menu opens.
+ */
+const OWN_PRESS =
+  "a[href], button, input, textarea, select, label, summary, [role='button'], [tabindex='0'], [aria-haspopup], img, video, audio";
 
 /**
  * The touch menu's reactions and most of two items (130px), 2px off the row and 8px inside the window. A row with less
@@ -112,12 +126,12 @@ const INTERACTIVE =
  */
 const MENU_ROOM = 140;
 
-/** A tap on touch on the row itself, not on a link or a button in it. */
-function touchTap(e: MouseEvent<HTMLElement>) {
-  if (!(navigator.maxTouchPoints > 0) || !hoverless()) return false;
-  // The menu's own taps bubble here through its portal.
+/** A finger on the row itself, not on a link, a button or a picture in it. */
+function rowPress(e: PointerEvent<HTMLElement>) {
+  if (e.pointerType !== "touch") return false;
+  // The menu's own presses bubble here through its portal.
   if (!(e.target instanceof Element) || !e.currentTarget.contains(e.target)) return false;
-  return e.target === e.currentTarget || !e.target.closest(INTERACTIVE);
+  return e.target === e.currentTarget || !e.target.closest(OWN_PRESS);
 }
 
 /** Where the row's menu opens: beside the row's part on screen, or at the tap (`tap`, in the row). Null: off screen. */
@@ -135,8 +149,10 @@ export function Message({
   avatar,
   author,
   time,
+  gutterTime,
   meta,
   note,
+  mark,
   status,
   entering,
   grouped,
@@ -154,9 +170,14 @@ export function Message({
   foot,
   menu,
   className,
-  onClick,
   onFocus,
   onBlur,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
+  onClickCapture,
+  onContextMenu,
   style,
   ...rest
 }: MessageProps) {
@@ -170,9 +191,39 @@ export function Message({
   const noteId = useId();
   const row = useRef<HTMLElement>(null);
   const tap = useRef({ x: 0, y: 0 });
+  // A finger held on the row: where it went down, and the timer that opens the menu.
+  const press = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  // The press opened the menu: the click that ends it is the press's, not the row's.
+  const held = useRef(false);
+  const endPress = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = null;
+  };
+  useEffect(
+    () => () => {
+      if (press.current) clearTimeout(press.current.timer);
+    },
+    [],
+  );
   const [menuAt, setMenuAt] = useState<ReturnType<typeof menuPlace>>(null);
+  const openMenu = (x: number, y: number) => {
+    endPress();
+    const el = row.current;
+    if (!el) return;
+    held.current = true;
+    // Whatever a held finger began to select (iOS) goes: the menu's Copiar texto copies it.
+    window.getSelection()?.removeAllRanges();
+    const box = el.getBoundingClientRect();
+    tap.current = { x: x - box.left, y: y - box.top };
+    setMenuAt(menuPlace(el, tap.current));
+  };
   const menuOpen = Boolean(menu) && menuAt !== null;
   const footed = mine && !inBubble && (run === "end" || run === "solo");
+  // A grouped row's receipt: in the gutter, or with no faces (so no gutter) on the line under the words.
+  const groupedAside = Boolean(aside || mark) && grouped && !mine && !inBubble;
+  const markNode = mark && <span className="ac-msg__mark">{mark}</span>;
+  const gutterAside = groupedAside && look?.faces !== false;
+  const footAside = groupedAside && look?.faces === false;
   // The keys' focus in my row: its head is hidden, so its time's details open under its bubble.
   const [keysIn, setKeysIn] = useState(false);
   useEffect(() => {
@@ -219,6 +270,7 @@ export function Message({
       className={grouped || waiting || mine ? "ac-visually-hidden" : inBubble ? "ac-msg__bubble-head" : "ac-msg__head"}
     >
       <span className="ac-msg__author">{author}</span>
+      {!inBubble && !grouped && !waiting && !mine && markNode}
       {/* In a bubble the time is its last thing; my row's hidden head still reads it. */}
       {(!inBubble || mine) && clock}
       {note && (
@@ -248,6 +300,7 @@ export function Message({
   // a bubble of mine), and the receipt's mark.
   const stamp = inBubble ? (
     <span className="ac-msg__stamp">
+      {markNode}
       {mine ? (
         (statusNode ?? (
           <Tip
@@ -282,7 +335,6 @@ export function Message({
     ...(nameColor && drawn === "bubbles" ? { "--msg-name": nameColor[0], "--msg-name-dark": nameColor[1] } : {}),
   };
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the tap opens on touch what the row's bar has for a keyboard
     <article
       ref={row}
       className={cx(
@@ -304,6 +356,7 @@ export function Message({
       data-faces={look?.faces === false && !mine ? "false" : undefined}
       data-run={mine || drawn === "bubbles" ? run : undefined}
       data-menu-open={menuOpen ? "true" : undefined}
+      data-hold-menu={menu ? "" : undefined}
       onFocus={(e) => {
         onFocus?.(e);
         if (footed) setKeysIn(movesByKeys());
@@ -312,12 +365,42 @@ export function Message({
         onBlur?.(e);
         if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) setKeysIn(false);
       }}
-      onClick={(e) => {
-        onClick?.(e);
-        if (!menu || !touchTap(e)) return;
-        const box = e.currentTarget.getBoundingClientRect();
-        tap.current = { x: e.clientX - box.left, y: e.clientY - box.top };
-        setMenuAt(menuPlace(e.currentTarget, tap.current));
+      onPointerDown={(e) => {
+        onPointerDown?.(e);
+        endPress();
+        held.current = false;
+        if (!menu || !rowPress(e)) return;
+        const { clientX: x, clientY: y } = e;
+        press.current = { x, y, timer: setTimeout(() => openMenu(x, y), TIP_HOLD_MS) };
+      }}
+      onPointerMove={(e) => {
+        onPointerMove?.(e);
+        const at = press.current;
+        if (at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > HOLD_SLOP) endPress();
+      }}
+      onPointerUp={(e) => {
+        onPointerUp?.(e);
+        endPress();
+      }}
+      onPointerCancel={(e) => {
+        onPointerCancel?.(e);
+        endPress();
+      }}
+      onClickCapture={(e) => {
+        onClickCapture?.(e);
+        if (!held.current) return;
+        held.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onContextMenu={(e) => {
+        onContextMenu?.(e);
+        if (!menu) return;
+        // A menu the page opened for this press is the only one: the hold's timer would open a second.
+        if (e.defaultPrevented) return endPress();
+        // Android's long press opens the page's menu (and selects a word): here it opens the row's, at once.
+        if (press.current) openMenu(e.clientX, e.clientY);
+        if (held.current) e.preventDefault();
       }}
       {...rest}
     >
@@ -328,20 +411,28 @@ export function Message({
         </span>
       )}
       {mine || look?.faces === false ? null : grouped ? (
-        // Same width as the avatar column; the time shows here on hover (it's also in the hidden header).
-        <span className="ac-msg__gutter" aria-hidden="true">
-          <Tip className="ac-msg__gutter-time" tip={meta} look="ac-msg__tip">
-            {time}
+        // Same width as the avatar column; the time shows here on hover (it's also in the hidden header). A grouped
+        // row's receipt stands here too, always seen, the time appearing on its left: the row's bar, at its right
+        // end, never covers it.
+        <span
+          className={cx("ac-msg__gutter", gutterAside && "ac-msg__gutter--aside")}
+          aria-hidden={gutterAside ? undefined : true}
+        >
+          <Tip className="ac-msg__gutter-time" tip={meta} look="ac-msg__tip" aria-hidden="true">
+            {gutterTime ?? time}
           </Tip>
+          {gutterAside && (
+            <span className="ac-msg__aside">
+              {markNode}
+              {aside}
+            </span>
+          )}
         </span>
       ) : (
         <span className="ac-msg__avatar">{avatar}</span>
       )}
       <div className="ac-msg__body" style={stacked ? { display: "flex", flexDirection: "column" } : undefined}>
         {(!inBubble || mine) && head}
-        {aside && grouped && !mine && !inBubble && (
-          <span className="ac-msg__aside ac-msg__aside--floating">{aside}</span>
-        )}
         <BubbleContext.Provider
           value={
             inBubble || (quote && quoteInBubble)
@@ -363,6 +454,7 @@ export function Message({
               </span>
             ) : (
               <>
+                {markNode}
                 <Tip
                   className="ac-msg__own-time"
                   tip={meta}
@@ -378,7 +470,18 @@ export function Message({
             )}
           </div>
         )}
-        {foot && <div className="ac-msg__foot">{foot}</div>}
+        {mine && !inBubble && !footed && markNode && <div className="ac-msg__own-foot">{markNode}</div>}
+        {(foot || footAside) && (
+          <div className="ac-msg__foot">
+            {footAside && (
+              <span className="ac-msg__aside">
+                {markNode}
+                {aside}
+              </span>
+            )}
+            {foot}
+          </div>
+        )}
       </div>
       {menu &&
         menuAt &&

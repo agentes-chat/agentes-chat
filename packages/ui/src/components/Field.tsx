@@ -194,14 +194,20 @@ export function Locked({ when, children }: { when: boolean; children: ReactNode 
   );
 }
 
-/** A border-box height that fits the text: `scrollHeight` leaves the border out. */
-function fitText(el: HTMLTextAreaElement) {
-  el.style.height = "auto";
-  el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+/**
+ * A border-box height that fits the text: `scrollHeight` leaves the border out. `grows`: text only added at the end,
+ * which can't take a line away, so the height is read as it stands; the "auto" that lets it shrink would lay out
+ * everything around the box twice per key.
+ */
+function fitText(el: HTMLTextAreaElement, grows = false) {
+  const border = el.offsetHeight - el.clientHeight;
+  if (!grows) el.style.height = "auto";
+  const height = `${el.scrollHeight + border}px`;
+  if (el.style.height !== height) el.style.height = height;
 }
 
 /**
- * A section's heading inside a picker's list ("Papéis"), with the line under it that says what picking one means: a
+ * A section's heading inside a picker's list ("Cargos"), with the line under it that says what picking one means: a
  * real gap between the two, as a field's label and its help have.
  */
 export function PickerHeading({ label, description }: { label: ReactNode; description?: ReactNode }) {
@@ -218,9 +224,12 @@ export function PickerHeading({ label, description }: { label: ReactNode; descri
  * width rewraps it (a window resize, a sidebar opening). `on` false leaves its height alone.
  */
 export function useAutoGrow(ref: RefObject<HTMLTextAreaElement | null>, value: string, on = true) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: measured again whenever the text changes
+  const measured = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (on && ref.current) fitText(ref.current);
+    if (!on || !ref.current) return;
+    const before = measured.current;
+    fitText(ref.current, before !== null && value.startsWith(before));
+    measured.current = value;
   }, [ref, value, on]);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -236,21 +245,103 @@ export function useAutoGrow(ref: RefObject<HTMLTextAreaElement | null>, value: s
   }, [ref, on]);
 }
 
+/**
+ * How much a text field holds, in place of a native `maxLength`, which drops pasted or dictated text past it without
+ * a word: here nothing is ever cut, and the screen holds its submit while `overLimit` says so.
+ */
+export interface TextLimit {
+  max: number;
+  /** For the counter's digits: "90.120 / 100.000". */
+  locale: string;
+  /** The line past the limit, given the length: its size, the limit, then the way out. */
+  over: (length: number) => ReactNode;
+}
+
+/** A field shows how much it holds from this share of its limit. Mirror: `LIMIT_NEAR` in packages/client message-length.ts. */
+const LIMIT_NEAR = 0.9;
+
+/** Counted as the server counts it (trimmed). */
+export const overLimit = (value: string, limit: TextLimit | undefined) =>
+  limit !== undefined && value.trim().length > limit.max;
+
+/** Whether `LimitLine` shows anything for this value: from 90% of the limit. */
+export const limitShown = (value: string, limit: TextLimit | undefined) =>
+  limit !== undefined && value.trim().length >= limit.max * LIMIT_NEAR;
+
+/**
+ * Under a field with a limit (`Textarea`'s `limit`, or beside a bare textarea): nothing below 90% of it, then a quiet
+ * counter, past it the field's error line.
+ */
+export function LimitLine({ id, value, limit }: { id?: string; value: string; limit: TextLimit }) {
+  if (!limitShown(value, limit)) return null;
+  const length = value.trim().length;
+  if (length > limit.max)
+    return (
+      <span id={id} className="ac-limit ac-field__error" aria-live="polite">
+        {limit.over(length)}
+      </span>
+    );
+  const digits = new Intl.NumberFormat(limit.locale);
+  return (
+    <span id={id} className="ac-limit ac-limit--count">
+      {digits.format(length)} / {digits.format(limit.max)}
+    </span>
+  );
+}
+
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean;
-  /** As tall as its text (a controlled `value`), growing and shrinking with it. */
+  /** As tall as its text (a controlled `value`), growing and shrinking with it, up to a set height, then it scrolls. */
   autoGrow?: boolean;
+  /** How much it holds (a controlled `value`); never with `maxLength`. */
+  limit?: TextLimit;
+}
+
+/**
+ * Keeps a controlled textarea's default text as its value. React writes `defaultValue` (the box's text node) on every
+ * change of `value`: a change of the page's tree under its `:has()` rules, which restyled the whole conversation around
+ * the composer on every key (40 ms a key in a long one). No form here is ever reset, so nothing reads the default.
+ */
+export function useStillDefaultText(box: RefObject<HTMLTextAreaElement | null>) {
+  // After every render: a box shown again (the composer after a voice note) is a new element.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (el && !Object.hasOwn(el, "defaultValue"))
+      Object.defineProperty(el, "defaultValue", { configurable: true, get: () => el.value, set: () => {} });
+  });
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { className, invalid, rows = 4, autoGrow = false, ...rest },
+  { className, invalid, rows = 4, autoGrow = false, limit, ...rest },
   ref,
 ) {
-  const { labelledBy: _, ...wiring } = useFieldControl({ ...rest, "aria-invalid": invalid ?? rest["aria-invalid"] });
+  const value = String(rest.value ?? "");
+  const lineId = `${useId().replace(/:/g, "")}-limit`;
+  const { labelledBy: _, ...wiring } = useFieldControl({
+    ...rest,
+    "aria-describedby": limitShown(value, limit) ? cx(rest["aria-describedby"], lineId) : rest["aria-describedby"],
+    "aria-invalid": overLimit(value, limit) || (invalid ?? rest["aria-invalid"]),
+  });
   const box = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(ref, () => box.current as HTMLTextAreaElement, []);
-  useAutoGrow(box, String(rest.value ?? ""), autoGrow);
-  return <textarea ref={box} rows={rows} className={cx("ac-input", className)} {...rest} {...wiring} />;
+  useAutoGrow(box, value, autoGrow);
+  useStillDefaultText(box);
+  const area = (
+    <textarea
+      ref={box}
+      rows={rows}
+      className={cx("ac-input", autoGrow && "ac-input--grow", className)}
+      {...rest}
+      {...wiring}
+    />
+  );
+  if (!limit) return area;
+  return (
+    <>
+      {area}
+      <LimitLine id={lineId} value={value} limit={limit} />
+    </>
+  );
 });
 
 /**

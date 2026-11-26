@@ -1,23 +1,27 @@
 import type { Agent, Message } from "@agenteschat/client";
-import { keys } from "@agenteschat/client";
+import { keys, useSurfaceLinks } from "@agenteschat/client";
 import { APP_BRANDS } from "@agenteschat/client/lib/apps";
 import { seesDetails } from "@agenteschat/client/lib/audience";
-import { pairItemOf } from "@agenteschat/client/lib/consult-group";
+import { handOffOf, pairItemOf } from "@agenteschat/client/lib/consult-group";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { formatTime } from "@agenteschat/client/lib/format";
-import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { formatTime, joinNames } from "@agenteschat/client/lib/format";
 import {
   consultationOfNotice,
+  joinLineOf,
   type NoticeView,
   noticeOf,
   noticeView,
   type StoppedNotice,
+  stopLine,
   stoppedNoticeOf,
+  stopperOf,
 } from "@agenteschat/client/lib/notices";
 import type { RoutineReply } from "@agenteschat/client/lib/routines";
-import type { AppVia } from "@agenteschat/client/lib/via";
+import { surfaceViaName } from "@agenteschat/client/lib/surface-links";
+import type { AppVia, SurfaceVia } from "@agenteschat/client/lib/via";
 import { stopsMovedOn } from "@agenteschat/client/lib/work";
 import {
+  AgentSticker,
   cx,
   EventPill,
   EventPillAction,
@@ -26,18 +30,22 @@ import {
   type IconName,
   PixelStop,
   ProviderLogo,
+  WAVE_SECONDS,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { MessageBody } from "@/chat/MessageBody";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { ConsultPairRow } from "@/components/ConsultGroup";
 import { DetailsLink } from "@/components/details-link";
 import { useOrg } from "@/components/org-context";
+import { SurfaceMark } from "@/components/SurfaceLink";
 import { SayWhy } from "@/components/tasks/TaskBits";
 import { useDirectory } from "@/hooks/useDirectory";
+import { lookOf } from "@/lib/look";
 import { useToast } from "@/lib/toast";
 import "./chat-notices.css";
 
@@ -46,7 +54,6 @@ const NOTICE_ICON: Record<string, IconName> = {
   consult_reply: "agent",
   agent_note: "message",
   wait_result: "check",
-  follow_up: "clock",
   wake_skipped: "alert",
 };
 
@@ -68,7 +75,7 @@ function EventLine({
   /** What "Ver" opens (`noticeView`): never the words written for the agent. */
   detail: NoticeView["detail"];
   labels: { show: string; hide: string };
-  /** What a person can still do about it ("Cancelar" on a follow-up): an `EventPillAction`. */
+  /** What a person can still do about it ("Pedir resposta" on GitHub): an `EventPillAction`. */
   action?: ReactNode;
 }) {
   const { t, i18n } = useTranslation();
@@ -130,15 +137,24 @@ export function UnshownLine({ part = false }: { part?: boolean }) {
  * The agent's own reply (if it has something to say) follows as a normal message.
  */
 export function NoticeLine({ message }: { message: Message }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const notice = noticeOf(message.meta);
   if (!notice) return null;
+  if (notice.kind === "joined" || notice.kind === "left") return <JoinLine message={message} />;
   // A person stopped one of the agent's tasks (ADR 0128): its pill, with "Add a reason" for who stopped it. The
   // conversation hides it while the stopped reply is here: the reply's own pill says it (`Timeline`).
   const stopped = stoppedNoticeOf(message.meta);
   if (stopped) return <StoppedLine message={message} notice={stopped} />;
+  // Another agent's request in this agent's DM: its pair row, opening the exchange.
+  const handed = handOffOf(message.meta);
+  if (handed)
+    return (
+      <div data-message-id={message.id}>
+        <ConsultPairRow askerId={handed.askerId} items={[handed.item]} handed askedIn={handed.askedIn} />
+      </div>
+    );
   // Another agent's answer with its consultation, its reply not here: the same pair row a reply has (who asked
   // whom), never the text written for the asking agent; a click opens what they said.
   const consulted = consultationOfNotice(message.meta);
@@ -148,20 +164,16 @@ export function NoticeLine({ message }: { message: Message }) {
         <ConsultPairRow askerId={consulted.askerId} items={[pairItemOf(consulted.consultation)]} />
       </div>
     );
-  const view = noticeView(
-    message,
-    {
-      author: dir.authorName(message.author),
-      agentByHandle: (handle) => dir.agentByHandle.get(handle.toLowerCase())?.name ?? null,
-    },
-    { time: (iso) => formatTime(i18n.language, iso), locale: i18n.language },
-  );
+  const view = noticeView(message, {
+    author: dir.authorName(message.author),
+    agentByHandle: (handle) => dir.agentByHandle.get(handle.toLowerCase())?.name ?? null,
+  });
   if (!view) return null;
   return (
     <EventLine
       message={message}
       mark={
-        notice.kind === "github_event" ? (
+        notice.kind === "github_event" || notice.kind === "github_check" ? (
           <ProviderLogo id="github" size="xs" />
         ) : (
           <Icon name={NOTICE_ICON[notice.kind] ?? "info"} size={14} />
@@ -170,16 +182,65 @@ export function NoticeLine({ message }: { message: Message }) {
       label={t(view.key as "chat.notice.other", view.values as { name: string })}
       detail={view.detail}
       labels={{ show: t("chat.notice.show"), hide: t("chat.notice.hide") }}
-      action={
-        view.pending ? (
-          <CancelFollowUp messageId={message.id} />
-        ) : view.answer ? (
-          <AnswerGitHub messageId={message.id} />
-        ) : undefined
-      }
+      action={view.answer ? <AnswerGitHub messageId={message.id} /> : undefined}
     />
   );
 }
+
+/** How long after a join its line still arrives with the newcomer waving. */
+const JUST_JOINED_MS = 15_000;
+
+/**
+ * Who joined or left the channel, and who added them: one pill for everyone, with the first newcomer's face. Arriving
+ * now, an agent's face waves (the kit's wave sticker) for a moment.
+ */
+function JoinLine({ message }: { message: Message }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const join = joinLineOf(message.meta);
+  // Decided when it mounts: a line read later stays still.
+  const [fresh] = useState(() => Date.now() - Date.parse(message.createdAt) < JUST_JOINED_MS);
+  if (!join) return null;
+  const nameOf = (m: { type: "person" | "agent"; id: string }) =>
+    m.type === "agent" ? (dir.anyAgent(m.id)?.name ?? null) : (dir.memberById.get(m.id)?.name ?? null);
+  const view = noticeView(message, {
+    author: dir.authorName(message.author),
+    agentByHandle: () => null,
+    nameOf,
+    list: (names) => joinNames(names, t),
+  });
+  if (!view) return null;
+  const first = join.members[0];
+  const agent = first?.type === "agent" ? dir.anyAgent(first.id) : undefined;
+  const mark = agent ? (
+    fresh && join.kind === "joined" ? (
+      <AgentSticker appearance={lookOf(agent)} mood="wave" playFor={WAVE_SECONDS} size={JOIN_FACE} />
+    ) : (
+      <AgentAvatar agentId={agent.id} name={agent.name} size="xs" />
+    )
+  ) : (
+    // A person: the people mark, as other lines' icons (their initials would read as the line's first letter).
+    <Icon name={join.kind === "joined" ? "personAdd" : "person"} size={14} />
+  );
+  return (
+    <EventPill
+      className="cn-pill"
+      mark={mark}
+      time={formatTime(i18n.language, message.createdAt)}
+      data-message-id={message.id}
+    >
+      {/* Its plural form needs the count as a number. */}
+      {t(
+        view.key as "chat.notice.left",
+        { ...view.values, count: Number(view.values.count) } as unknown as { who: string },
+      )}
+    </EventPill>
+  );
+}
+
+/** The waving face in a join's pill: the size of the pill's other marks' faces. */
+const JOIN_FACE = 18;
 
 /** Under a reply that came at standard speed because Fast was refused (`meta.speedFallback`), with the way to the agent. */
 export function SpeedFallbackLine({ agent }: { agent: Agent | undefined }) {
@@ -200,6 +261,15 @@ export function SpeedFallbackLine({ agent }: { agent: Agent | undefined }) {
   );
 }
 
+/** Under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`). */
+export function SpilledLine({ text }: { text: string }) {
+  return (
+    <EventPill className="cn-pill cn-pill--part" mark={<Icon name="computer" size={14} />}>
+      {text}
+    </EventPill>
+  );
+}
+
 /** Who stopped a task, as its pill says it: the notice when there is one, else what the stopped reply knows. */
 export interface StopWho {
   /** The notice the agent got (ADR 0128): who, their name, the reason, and "Dizer o motivo" for who stopped it. */
@@ -208,13 +278,17 @@ export interface StopWho {
   at?: string;
   /** Without a notice: the person in the reply's meta. */
   byUserId?: string | null;
+  /** Without a notice: the agent that stopped it at that person's word (the right hand). */
+  byAgentId?: string | null;
 }
 
 /**
- * A stopped task as one pill: "You stopped Ada" (with the reason once said), its time, and its actions: Continuar
- * (`cont`, where the task can pick up again) and, for who stopped it while it has no reason, "Add a reason" opening a
- * field under it; the agent reads the reason on its next turn. `fallback`: its words when no person stopped it (the
- * step limit, stuck). Under the stopped reply when it is here (`run-canceled`), else in the notice's place.
+ * A stopped task as one pill: "You stopped Ada" only for who stopped it, "Ana stopped Ada" for anyone else, "Lodi
+ * stopped Ada" when the right hand did at someone's word (with the reason once said), its time, and its actions:
+ * Continuar (`cont`, where the task can pick up again) and, for who stopped it (or asked for it) while it has no
+ * reason, "Add a reason" opening a field under it; the agent reads the reason on its next turn. `fallback`: its words
+ * when no person stopped it (the step limit, stuck, its cause). Under the stopped reply when it is here
+ * (`run-canceled`), else in the notice's place.
  */
 export function StopPill({
   agent,
@@ -240,18 +314,15 @@ export function StopPill({
   const [sent, setSent] = useState<string | null>(null);
   const notice = who.notice ?? null;
   const byUserId = notice?.byUserId || who.byUserId || null;
-  const mine = Boolean(byUserId) && byUserId === me.user.id;
+  const stopper = stopperOf({ byUserId, byAgentId: notice?.byAgentId || who.byAgentId }, me.user.id);
   const reason = notice?.reason ?? sent;
-  const stopper = notice?.byName || (byUserId ? dir.memberById.get(byUserId)?.name : undefined) || "";
-  const { context } = agentGrammar(agent);
-  const sentence = mine
-    ? t("taskManager.stopped.line", { agent, context })
-    : stopper
-      ? t("taskManager.stopped.lineBy", { name: stopper, agent, context })
-      : byUserId || !fallback
-        ? t("run.stopped")
-        : fallback;
-  const sayWhy = Boolean(notice) && mine && !reason && !asking;
+  const sentence =
+    stopLine(t, agent, stopper, {
+      agent: (id) => notice?.byAgentName || dir.anyAgent(id)?.name,
+      person: (id) => notice?.byName || dir.memberById.get(id)?.name,
+    }) ?? (byUserId || !fallback ? t("run.stopped") : fallback);
+  // The person it was stopped for says why, also when the right hand did it at their word.
+  const sayWhy = Boolean(notice) && byUserId === me.user.id && !reason && !asking;
   return (
     <EventPill
       className={cx("cn-pill", className)}
@@ -359,28 +430,6 @@ function StoppedLine({ message, notice }: { message: Message; notice: StoppedNot
   );
 }
 
-/** "Cancelar" on a follow-up still to come: the line changes in place once the server has it. */
-function CancelFollowUp({ messageId }: { messageId: string }) {
-  const { t } = useTranslation();
-  const api = useApi();
-  const { org } = useOrg();
-  const [busy, setBusy] = useState(false);
-  return (
-    <EventPillAction
-      disabled={busy}
-      onClick={() => {
-        setBusy(true);
-        void api.chat
-          .cancelFollowUp(org.id, messageId)
-          .catch(() => {})
-          .finally(() => setBusy(false));
-      }}
-    >
-      {t("chat.notice.followUpCancel")}
-    </EventPillAction>
-  );
-}
-
 /**
  * "Pedir resposta" on what someone the agent doesn't answer wrote on GitHub: the agent answers them there, with this
  * person behind it. The line changes in place once the server has it; a refusal says why.
@@ -451,6 +500,26 @@ export function AppViaTag({ via, person }: { via: AppVia; person: string }) {
     <span className="msg-reminder msg-via" title={t("apps.viaTip", { person, name: via.name })}>
       {mark ? <ProviderLogo id={mark} size="xs" /> : <Icon name="link" size={14} />}
       {t("apps.via", { name: via.name })}
+    </span>
+  );
+}
+
+/**
+ * A person's message written on the outside chat surface (ADR 0187): a glyph before the message's time (`Message`'s
+ * `mark`), named "via <surface>", or "forwarded via" for someone else's words they passed on.
+ */
+export function SurfaceViaMark({ via, person }: { via: SurfaceVia; person: string }) {
+  const { t, i18n } = useTranslation();
+  const surface = surfaceViaName(via.surface, useSurfaceLinks().data?.surface?.name, i18n.language);
+  const kind = via.forwarded ? "forwarded" : "via";
+  return (
+    <span
+      className="msg-via"
+      role="img"
+      aria-label={t(`surface.${kind}`, { surface })}
+      title={t(`surface.${kind}Tip`, { person, surface })}
+    >
+      {via.forwarded ? <Icon name="quote" size={14} /> : <SurfaceMark name={via.surface} size={14} />}
     </span>
   );
 }

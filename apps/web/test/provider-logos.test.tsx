@@ -31,7 +31,7 @@ describe("provider marks where a provider is named", () => {
       revokedAt: null,
     });
     await open("settings/keys", state);
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     const row = (label: string) => within(keys).getByText(label).closest(".ac-list__row") as HTMLElement;
     expect(marks(row("Claude da Acme"))).toEqual(["claude"]);
     expect(marks(row("OpenAI do time"))).toEqual(["openai"]);
@@ -60,6 +60,7 @@ describe("provider marks where a provider is named", () => {
       "Kimi",
       "Z.ai",
       "MiniMax",
+      "Command Code",
       // A workspace's own endpoint (ADR 0146), its line under its name.
       expect.stringContaining("Outro provedor"),
     ]);

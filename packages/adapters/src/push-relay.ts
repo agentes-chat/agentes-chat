@@ -1,11 +1,13 @@
-import { PushError, type PushMessage, type PushResult, type PushSender } from "./push";
+import { type LiveActivityMessage, PushError, type PushMessage, type PushResult, type PushSender } from "./push";
+import { APNS_ACTIVITY_TOKEN, APNS_PUSH_TOKEN } from "./push-apns";
 import { FCM_PUSH_TOKEN } from "./push-fcm";
 
 /**
- * Android pushes through the push relay (ADR 0152). The Android app is one app in the stores, built with
- * agentes.chat's Firebase project, whose service account a self-hosted server doesn't have. So the
- * server sends through a relay that holds it: it registers itself on first use (no account, nothing to
- * configure), keeps the credentials the relay gave it, and sends the messages it would send to Firebase.
+ * Phone pushes through the push relay (ADR 0152, ADR 0178). The phone app is one app in the stores, built
+ * with agentes.chat's Firebase project and signed by its Apple team, whose service account and APNs key a
+ * self-hosted server doesn't have. So the server sends through a relay that holds them: it registers itself
+ * on first use (no account, nothing to configure), keeps the credentials the relay gave it, and sends the
+ * messages it would send to Firebase or to Apple.
  */
 
 /** Where an installation keeps what the relay gave it (the engine stores it sealed in the database). */
@@ -25,7 +27,8 @@ type RegisterBody = RelayErrorBody & { instanceId?: unknown; secret?: unknown };
  * A `PushSender` that sends through the relay at `url` (its base, e.g. `https://…/api/push-relay/v1`).
  * Registers lazily (`POST {url}/instances`) and saves the credentials. A 401 means the relay no longer
  * knows this installation: the server registers again once and retries once. A 403 `blocked` never
- * retries; a 429 or a relay failure does (the outbox retries). Message text is never logged.
+ * retries; a 429 or a relay failure does (the outbox retries). Message text is never logged. Live Activity
+ * pushes (ADR 0210) go to `POST {url}/live-activities`; a relay that doesn't know that path sends none.
  */
 export function createRelayPushSender(options: {
   url: string;
@@ -114,12 +117,16 @@ export function createRelayPushSender(options: {
     id: "relay",
     async send(messages: PushMessage[]) {
       const results = new Array<PushResult>(messages.length);
-      // The relay refuses a whole request over one token that can't be an FCM token (an Expo token an older
-      // Android build registered): such a token never reaches a phone through it, so it answers as gone here.
+      // The relay refuses a whole request over one token that can't be its platform's (an Expo token an older
+      // build registered): such a token never reaches a phone through it, so it answers as gone here.
       const sendable: number[] = [];
       messages.forEach((m, i) => {
-        if (FCM_PUSH_TOKEN.test(m.to)) sendable.push(i);
-        else results[i] = { token: m.to, ok: false, unregistered: true, error: "not an FCM registration token" };
+        const ios = m.platform === "ios";
+        if ((ios ? APNS_PUSH_TOKEN : FCM_PUSH_TOKEN).test(m.to)) sendable.push(i);
+        else {
+          const error = ios ? "not an APNs device token" : "not an FCM registration token";
+          results[i] = { token: m.to, ok: false, unregistered: true, error };
+        }
       });
       for (let i = 0; i < sendable.length; i += PUSH_RELAY_BATCH) {
         const at = sendable.slice(i, i + PUSH_RELAY_BATCH);
@@ -129,22 +136,85 @@ export function createRelayPushSender(options: {
         if (!got || got.length !== batch.length) {
           throw new PushError("push relay answered with the wrong number of results", true);
         }
+        // `skipped`: the relay sends nothing to this platform, and the device stays, as with no sender here.
         batch.forEach((m, n) => {
-          const r = got[n] ?? {};
-          results[at[n] as number] =
-            r.ok === true
-              ? { token: m.to, ok: true, unregistered: false }
-              : {
-                  token: m.to,
-                  ok: false,
-                  unregistered: r.unregistered === true,
-                  ...(r.unregistered === true ? {} : { retryable: r.retryable === true }),
-                  error: typeof r.error === "string" ? r.error : "error",
-                };
+          results[at[n] as number] = resultOf(m.to, got[n] ?? {});
         });
       }
       return results;
     },
+    async sendLiveActivity(messages: LiveActivityMessage[]) {
+      const results = new Array<PushResult>(messages.length);
+      const sendable: number[] = [];
+      messages.forEach((m, i) => {
+        if (APNS_ACTIVITY_TOKEN.test(m.to)) sendable.push(i);
+        else results[i] = { token: m.to, ok: false, unregistered: true, error: "not an APNs activity token" };
+      });
+      for (let i = 0; i < sendable.length; i += PUSH_RELAY_BATCH) {
+        const at = sendable.slice(i, i + PUSH_RELAY_BATCH);
+        const batch = at.map((n) => messages[n] as LiveActivityMessage);
+        let payload: { results?: unknown };
+        try {
+          payload = (await call("/live-activities", { activities: batch.map(relayActivityOf) })) as {
+            results?: unknown;
+          };
+        } catch (error) {
+          // A relay from before Live Activities: it sends none, as a server with no sender for them.
+          if (error instanceof PushError && error.status === 404) {
+            for (const n of at) results[n] = skippedBy(messages[n]?.to ?? "");
+            continue;
+          }
+          throw error;
+        }
+        const got = Array.isArray(payload.results) ? (payload.results as Partial<PushResult>[]) : null;
+        if (!got || got.length !== batch.length) {
+          throw new PushError("push relay answered with the wrong number of results", true);
+        }
+        batch.forEach((m, n) => {
+          results[at[n] as number] = resultOf(m.to, got[n] ?? {});
+        });
+      }
+      return results;
+    },
+  };
+}
+
+const skippedBy = (token: string): PushResult => ({
+  token,
+  ok: false,
+  unregistered: false,
+  skipped: true,
+  error: "the push relay sends none",
+});
+
+/** One of the relay's results, as the installation reads it. */
+function resultOf(token: string, r: Partial<PushResult>): PushResult {
+  if (r.ok === true) return { token, ok: true, unregistered: false };
+  if (r.skipped === true) return skippedBy(token);
+  return {
+    token,
+    ok: false,
+    unregistered: r.unregistered === true,
+    ...(r.unregistered === true ? {} : { retryable: r.retryable === true }),
+    error: typeof r.error === "string" ? r.error : "error",
+  };
+}
+
+/** A Live Activity push as the relay takes it (ADR 0210): every field Apple gets, nothing else. */
+function relayActivityOf(m: LiveActivityMessage) {
+  return {
+    to: m.to,
+    event: m.event,
+    contentState: { name: m.contentState.name, props: m.contentState.props },
+    timestamp: m.timestamp,
+    priority: m.priority,
+    ...(m.staleDate !== undefined ? { staleDate: m.staleDate } : {}),
+    ...(m.dismissalDate !== undefined ? { dismissalDate: m.dismissalDate } : {}),
+    ...(m.alert ? { alert: { title: m.alert.title, body: m.alert.body } } : {}),
+    ...(m.attributesType ? { attributesType: m.attributesType } : {}),
+    ...(m.attributes ? { attributes: m.attributes } : {}),
+    ...(m.inputPushToken ? { inputPushToken: true } : {}),
+    ...(m.apns ? { apns: m.apns } : {}),
   };
 }
 
@@ -157,6 +227,9 @@ function relayMessageOf(m: PushMessage) {
     body: m.body,
     data: m.data,
     ...(m.priority ? { priority: m.priority } : {}),
+    // An iPhone's app and environment, and the buttons its notification shows (ADR 0178).
+    ...(m.platform === "ios" && m.apns ? { apns: m.apns } : {}),
+    ...(m.platform === "ios" && m.category ? { category: m.category } : {}),
   };
 }
 
@@ -169,7 +242,7 @@ function failure(what: string, status: number, payload: RelayErrorBody): PushErr
   const message = payload.error?.message;
   if (status === 403 && code === "blocked") {
     return new PushError(
-      "this installation is blocked at the push relay: Android notifications are off until its operator lifts it",
+      "this installation is blocked at the push relay: phone notifications are off until its operator lifts it",
       false,
       status,
     );

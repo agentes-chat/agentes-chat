@@ -8,6 +8,13 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       "The agentes.chat app can also run agentes.chat itself, on a Mac, a PC or a Linux computer, for you or a small team.",
     sections: [
       {
+        id: "download",
+        heading: "Download the app",
+        blocks: [
+          "[Download the agentes.chat app](/download) for your Mac, PC or Linux computer and open it. Pick **On your own server**, press **Continue on my server**, then **Run agentes.chat on this computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "How it runs",
         blocks: [
@@ -67,6 +74,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Signing in from other devices",
         blocks: [
           "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Preferences\u00a0›\u00a0Servers** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
+          "When the owner deletes their account, in **Settings\u00a0›\u00a0Your account**, it goes for good 7 days later, and the workspaces only they were in go with it. Until then, sign in and press **Restore account** to bring it back. Once it's gone, if no account is left, the app opens its welcome window to make a new owner. If other people still have accounts, each of them signs in with their own email.",
         ],
       },
       {
@@ -82,6 +90,25 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "With **Back up every night** on (app 0.8.1 and later), in **Preferences\u00a0›\u00a0Servers**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
           "**Copy to** also puts each new backup in a folder you pick, like a USB drive or iCloud Drive, where the two newest stay. They hold your keys: keep them private. **Restore…** takes agentes.chat back to a backup: messages, files and settings. It stops for a minute, and what was there before is kept in the backups folder.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Start over or uninstall",
+        blocks: [
+          "Everything agentes.chat keeps on this computer is in folders in your home folder, not inside the app. So moving the app to the Trash removes none of it, and doesn't stop agentes.chat if it's running.",
+          "To start over, press **Erase and start over…** in **Preferences\u00a0›\u00a0Servers**. It stops agentes.chat here and moves everything it holds to a new folder in your home folder, named `agentes.chat erased` and the day's date, where it stays until you delete it. What its agents kept on this computer, such as their browsers and sign-ins, is deleted from `.agentes-runner`. Its workspaces go for everyone who uses them. Then the welcome window opens, and you set it up again with a new owner account. The agents' files, in `agentes` in your home folder, stay where they are.",
+          "To bring it back later, quit the app, move a newer `.agentes` folder out of the way if there is one, rename the `agentes.chat erased` folder to `.agentes`, then open the app and set it up on this computer again. It starts with its workspaces and its owner as they were. What its agents kept on this computer doesn't come back, so they need their sign-ins again.",
+          "To remove agentes.chat from this computer entirely:",
+          {
+            list: [
+              "Turn off **Open at login** in **Preferences\u00a0›\u00a0General**.",
+              "Quit the app. Closing its window isn't enough. On a Mac, click its icon in the Dock, then choose **Quit agentes.chat** in the agentes.chat menu at the top of the screen, or press ⌘Q. On Windows and Linux, click the agentes.chat icon by the clock and choose **Quit agentes.chat**. If it asks **Quit agentes.chat?**, press **Quit**.",
+              "Delete the app. On a Mac, move it to the Trash. On Windows and Linux, uninstall it like any other app.",
+              "Delete these folders in your home folder. They hold your data, and once they're deleted it can't come back, so keep a backup somewhere else first if you might want it: `.agentes` (messages, files, accounts, settings and backups), every `agentes.chat erased` folder, `.agentes-runner` (what the agents keep on this computer, such as their browsers and sign-ins) and `agentes` (the agents' files). Folders whose name starts with a dot are hidden. On a Mac, open your home folder in Finder and press ⇧⌘. (Shift, Command and the period key) to show them.",
+              "Delete the app's own folders. They hold only its settings, its window's sign-ins and its logs. On a Mac: everything whose name starts with `chat.agentes.desktop` in the Application Support, Caches, HTTPStorages, Logs, Preferences and WebKit folders of `~/Library`, and `agentes.chat.plist` in `~/Library/LaunchAgents`. On Windows: `%APPDATA%\\chat.agentes.desktop` and `%LOCALAPPDATA%\\chat.agentes.desktop`. On Linux: `~/.config/chat.agentes.desktop` and `~/.local/share/chat.agentes.desktop`. On a Mac, to open one of these folders, press ⇧⌘G in Finder and type its path, such as `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -214,6 +241,15 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
           "Sign in to each workspace in the same app and press **Allow** for each one. Workspaces on agentes.chat Cloud and on your own servers can share a computer (app 0.6.1 and later). Each has its own agents and folders there, and disconnecting one doesn't touch the others.",
           "A server the app runs on this computer is connected already and needs nothing. To also lend that computer to a workspace somewhere else, see [Lend it to another workspace too](/help/run-on-your-computer#another-workspace).",
           "Using the app on a laptop only as a window onto your workspace? When it asks to let agents use the laptop, **Not now** keeps it a plain window.",
+          "A server connected with the terminal line works for one workspace. Connecting it from another workspace moves the server to that one, and the first no longer reaches it. For several workspaces on one computer, use the app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "When agents wait in line",
+        blocks: [
+          "Each piece of an agent's work uses the computer's memory. When free memory runs short, the next one waits in line until another ends. People go first. The number of CPUs doesn't change this.",
+          "A computer with 4 GB of memory runs two or three at once, one with 8 GB about nine. A Mac or a PC runs up to eight. Browsers and desktops the agents keep open use memory too. For a shorter line, use a computer with more memory, or connect another and split the agents between them in **Settings\u00a0›\u00a0Devices**. Workspaces that share a computer share its memory.",
         ],
       },
       {
@@ -375,7 +411,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "proposals",
         heading: "Proposed changes",
         blocks: [
-          "When a lesson repeats, the agent may propose changing its own instructions or the workspace's context. Nothing changes until someone accepts, and the text can be adjusted first. The previous version stays in the history. A refused proposal is kept as a lesson, so it isn't proposed again.",
+          "When a lesson repeats, the agent may propose changing its own instructions or the workspace's context. The agent's review applies it if it makes sense, written as one short rule, or leaves it out and says why. Every change shows in Agent improvements, where you can undo it. An undone change is kept as a lesson, so the agent doesn't make it again.",
         ],
       },
     ],
@@ -397,6 +433,44 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "Approving covers one exact action, with its values. If the agent changes anything, it asks again.",
           "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. **Always approve** is there for any kind of action, merge and deploy too, while the agent is at **Only what is risky**. **Always in this routine** is not offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
+        ],
+      },
+      {
+        id: "tool-levels",
+        heading: "Each tool of a connected app",
+        blocks: [
+          "Each tool of an app connected by its address has its own level, chosen in **Settings\u00a0›\u00a0Connectors**, on that connection's tools. On the agent's page, **Tools and access** shows which apps and tools it may use.",
+          {
+            list: [
+              "**Only looks**: reads and changes nothing. It never asks.",
+              "**Changes things**: creates and edits without asking. An agent at **Always ask** still asks.",
+              "**Asks your approval**: asks in the conversation before every call.",
+              "**Off**: agents don't get it.",
+            ],
+          },
+          "**Never ask** on the agent's page comes before all of these: an agent at that level asks for nothing, a tool at **Asks your approval** included. When a level changes while requests wait, the ones that would no longer ask are canceled, and the agent does them again without a card.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Sensitive tools",
+        blocks: [
+          "A tool its app's server marks as one that deletes, sends or pays can only be at **Asks your approval** or **Off**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "In what order approved actions run",
+        blocks: [
+          "In one turn, an agent does its actions in the order it asked for them, whatever order you approve them in. A message sent while the agent waits starts a new turn, and its actions run after the requests the agent was told were already waiting. Requests from different conversations never wait for each other.",
+          "A request waiting for a person for more than 30 minutes holds nothing back. An approved action that waits says what for, with **Approve** and **Refuse** for that request and **Run this now** to go ahead without it.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Many at once",
+        blocks: [
+          "Where requests wait for you, on the web and on the phone, **Approve all** and **Refuse all** decide every request of one agent at once.",
         ],
       },
       {
@@ -451,7 +525,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "When agentes.chat hosts your workspace, Jev is included. On a server you run yourself, it uses the owner's TypeSafe key, about US$ 0.0001 a message: [Set up Jev](/help/jev#setup).",
+          "When agentes.chat hosts your workspace, Jev is included. On a server you run yourself, it uses the owner's TypeSafe or OpenRouter key, about US$ 0.0001 a message: [Set up Jev](/help/jev#setup).",
         ],
       },
       {
@@ -511,6 +585,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "In agentes.chat, open **Settings\u00a0›\u00a0AI and usage** and paste it under **Jev**. Only the person who set up this server sees it.",
             ],
           },
+          "Already pay OpenRouter? Choose **OpenRouter** under **Jev** and paste a key from https://openrouter.ai/keys, or turn Jev on with the workspace's OpenRouter key in one press. It's the same Jev, billed through OpenRouter at the same price.",
           "On a server you run with Docker, you can put the key in `.env` as `TYPESAFE_API_KEY` instead. That one wins over the one in Settings.",
         ],
       },
@@ -545,6 +620,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
           },
           "TypeSafe runs Jev in the United States and doesn't train its models on what you send. It keeps data as long as it needs to run the service. Zero retention is available on its enterprise plans.",
           "TypeSafe's privacy policy: https://typesafe.ai/legal/privacy-policy. Its data processing agreement: https://typesafe.ai/legal/data-processing.",
+          "With an OpenRouter key, the same requests pass through OpenRouter on their way to TypeSafe, under OpenRouter's terms and your privacy settings there: https://openrouter.ai/privacy.",
         ],
       },
       {
@@ -735,7 +811,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "email",
         heading: "Email",
         blocks: [
-          "Without email, agentes.chat writes each email to its log instead of sending it, so an invitation link can still be copied from there. Password resets stay off.",
+          "Without email, agentes.chat writes each email to its log instead of sending it, so an invitation link can still be copied from there. Password resets stay off, and a new email for an account changes at once, with no code or link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },
@@ -798,7 +874,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "data",
         heading: "What it sends",
         blocks: [
-          "Once a day the server sends agentes.chat anonymous usage statistics: counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. `docker compose run --rm agentes telemetry` prints exactly what it would send. The owner turns it off in **Settings\u00a0›\u00a0General**, or with `TELEMETRY=off` in `.env`.",
+          "Once a day the server sends agentes.chat anonymous usage statistics: counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites. `docker compose run --rm agentes telemetry` prints exactly what it would send. The owner turns it off in **Settings\u00a0›\u00a0General**, or with `TELEMETRY=off` in `.env`.",
           "Error reports go nowhere unless you set `SENTRY_DSN` to a Sentry-compatible server you choose. A report holds the error and where it happened, never messages, emails, IP addresses, cookies or tokens.",
         ],
       },

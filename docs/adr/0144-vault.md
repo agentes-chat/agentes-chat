@@ -1,6 +1,8 @@
 # 0144. The Vault: logins, keys and contacts agents use, personal or the team's, from any source
 
 - Status: Accepted (built: the server, the runner, the web and the phone app)
+- Amended 2026-11-12: §2, a routine's own run uses the keys its creator allowed for it
+- Amended 2026-11-16: §2, a run a routine's work or report woke uses the keys listed for that routine
 - Addendum, 2026-11-10: §9, logins agents save in a connected password manager (sources may write)
 - Addendum, 2026-11-11: §11, keys from a .env file, and moving an item between Personal and Team
 - Date: 2026-11-03
@@ -68,6 +70,35 @@ Two narrower rules:
   report or work woke) never sends a credential, and a command holding a key could send it anywhere, so `run_code`
   with `keys` is refused there ("A routine can't use Vault keys in commands…"). A saved login it may still type in
   the browser: that value never reaches the model or a command.
+
+  *Amended 2026-11-12:* a routine's own run may put a key in a command when its creator allowed that key for it, the
+  same way its connected-app actions are its own (ADR 0053 §2 addendum of 2026-11-03). The allowed keys are kept with
+  its own actions as `vault:NAME` (`routines.own_actions`, no migration): set by `create_routine`/`update_routine`'s
+  `keys` (who decides the agent's approvals, as for `own_actions`), or kept from a card by "Sempre nesta rotina". A
+  key it wasn't given asks a person first: the Tool Gateway opens the card for that command (`routineKeysAllowed`,
+  `routineKeysKind`), the run waits, "Permitir" runs that one command with the keys and "Sempre nesta rotina" adds them
+  to the routine. At "Nunca perguntar" (ADR 0173) any key its creator may use goes without a card; at "Sempre
+  perguntar" every key asks. `vaultKeysFor` checks again (the last line): the creator still decides the agent's
+  approvals and every key is listed, or a person approved this command. Values go as before: released for the
+  routine's creator, sealed to one command, redacted, its use recorded. A run that what a routine read woke (an
+  inbound email, a webhook, a report) still gets none, now with one way out ("Ask for it in the routine's
+  conversation"). The routine's page lists its keys ("Chaves do Vault que usa", web and phone), each taken out with
+  its ×.
+
+  *Amended 2026-11-16:* a run that a routine's work or report woke may put a key in a command when that key is listed
+  for the routine (`vault:NAME`), whichever agent runs the command: the routine's own, in the conversation its report
+  woke, or a teammate its run handed a step to (`tell_agent`, `ask_agent`, a message). A routine that splits its job
+  between agents (one plans, another runs the script that calls an API) otherwise stopped at that step every run,
+  whatever its creator had set up, and the refusal's words ("Ask for it in the routine's conversation") made the
+  agent ask for a go-ahead in the chat that no message could give. The conditions (`routineKeysLent`, checked in
+  `vaultKeysFor`): every key of the command is listed for the routine the run's chain roots in (`authority.brief`,
+  followed through the server's links, never text) and its creator still decides its agent's approvals. The Vault's
+  own rule stays on top: the key is released for the routine's creator and only to an agent it is shared with.
+  "Nunca perguntar" opens no other key there, and a key off the list is refused with what a person sets up once
+  (`ROUTINE_KEYS_NOT_LENT`); an agent at "Sempre perguntar" asks a person for the command as for any other, and the
+  one a person approves runs with its keys. What this accepts: text from outside that reached the routine's work can now reach a
+  command holding a listed key in a teammate's run, as it already could in the routine's own run; the list is the
+  creator's choice of which keys carry that risk, per routine.
 - **A shared browser profile (ADR 0110) takes only what all its agents may use, for anyone.** A session signed in
   there is every granted agent's, whoever each one works for, so a personal login is never typed in one, nor a team
   login open only to some people or roles; a team login open to everyone, only when it is shared with all agents or
@@ -136,7 +167,7 @@ A saved login is typed without a person's yes each time. The guards are elsewher
 7. **Every use is recorded** on the item (who, where, for whom) and in the audit log.
 
 Keys follow the same path to step 2, then go into the environment of one command only (`run_code` with `keys`,
-`exec.vault`), with its output redacted, and are kept nowhere; never in a run a routine feeds (§2). Computer brains,
+`exec.vault`), with its output redacted, and are kept nowhere; in a run a routine feeds, only on §2's terms. Computer brains,
 whose own shells can't take a value for one command, reach the same path through a tool. A key's use is recorded
 once the computer took the command with it: an answer came back (any exit code), or none did (the link dropped, no
 answer in time). Not when the command never reached the computer or the runner refused it before opening the keys
@@ -373,6 +404,24 @@ Team from its page (`POST /vault/items/{id}/move`, `moveVaultItem`):
 
 Left out: moving several items at once, moving a password manager's item, renaming keys on import, importing a
 `.env` into a password manager, and other file formats (YAML, TOML, a shell script's logic).
+
+### 12. An import's access, and many items at once
+
+A passwords file of a thousand logins imported into the team used to come in open to everyone (the default of §2),
+with no way to narrow them but one page at a time. Two changes close that:
+
+- **The passwords import asks for the access** of its new logins, with the control a single item has (the web's
+  review step; `access` on `POST /vault/import`, absent meaning the scope's default). A login already saved keeps
+  its own, as a replaced `.env` key does (§11).
+- **Select** in a tab of items (web and phone) turns the rows into choices, with "Select all" over what the search
+  and kind filter show. "Change access" gives every chosen item one access (`PUT /vault/items/bulk/access`,
+  `setVaultItemsAccess`); "Delete" deletes them after one confirmation (`POST /vault/items/bulk/delete`,
+  `deleteVaultItems`). Each item is checked as a single one is: a personal item takes only the agents, an external
+  one stops following its connection's access, and a password manager's item still in it isn't deleted. What the
+  person doesn't manage is left and counted in `kept`, never refused as a whole. One audit line per call
+  (`vault.items_changed`, `vault.items_deleted`: the count and the first 50 ids) and an edit on each changed item.
+
+Left out: undoing an import as one step (rows carry no import id; selecting and deleting them does the same).
 
 ## Consequences
 

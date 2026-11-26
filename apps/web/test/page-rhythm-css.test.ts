@@ -24,6 +24,11 @@ test("a DM's name wraps whole on a phone, its pill 8 after it and under it when 
   // On a phone the header's search is its icon, in a DM's header as in a channel's: both hold it with their glyphs.
   const header = atRule(await read("components/channel-header.css"), "@media (max-width: 760px)");
   expect(last(header, ".channel__acts>.channel__search", "display")).toBe("none");
+  // An agent's role and its person, the one exception: one line ending in "…", whole in the tip of the button over it.
+  const top = topLevel(await read("layout.css"));
+  expect(last(top, ".dm-who__text>.channel__topic--line", "white-space")).toBe("nowrap");
+  expect(last(top, ".dm-who__text>.channel__topic--line", "text-overflow")).toBe("ellipsis");
+  expect(last(top, ".dm-who__text>.channel__topic--line", "overflow")).toBe("hidden");
   // A tag on a first line that rises keeps the line where it is, as the kit's pills do.
   expect(last(topLevel(await read("layout.css")), ".ac-captop:has(.agp-tag)", "margin-block-start")).toBe("0");
 });
@@ -94,17 +99,21 @@ test("every page starts at the page's top and side: lists, Settings, the wiki, t
   );
 });
 
-test("your name and @ wrap whole: on the account menu's top they go on under your face, in the sidebar never cut", async () => {
+test("your name and @ wrap whole on the account menu's top, under your face; in the sidebar the name keeps one line", async () => {
   const layout = topLevel(await read("layout.css"));
   // The face floats: the words beside it go on under it at the menu's width, a long @ breaking anywhere.
   expect(last(layout, ".profile-menu__head", "display")).toBe("flow-root");
   expect(last(layout, ".profile-menu__head", "overflow-wrap")).toBe("anywhere");
   expect(last(layout, ".profile-menu__head>.ac-face-edit", "float")).toBe("left");
   expect(last(layout, ".profile-menu__head>.list-col", "display")).toBe("block");
-  // The account row at a team's foot and a personal workspace's top row: the name wraps, no ellipsis.
-  const cut = declarations(layout, ".sidebar__user-name").filter(([p]) => p === "text-overflow" || p === "white-space");
-  expect(cut).toEqual([]);
-  expect(last(layout, ".sidebar__user-name", "overflow-wrap")).toBe("anywhere");
-  expect(last(layout, ".sidebar__org-button--me .sidebar__org-name", "white-space")).toBe("normal");
-  expect(last(layout, ".sidebar__org-button--me .sidebar__org-name", "overflow-wrap")).toBe("anywhere");
+  // The account row at a team's foot and a personal workspace's top row: the name on one line, cut to an ellipsis
+  // (the button's label and title say it whole), so the face never stands beside more than it and your line.
+  for (const selector of [".sidebar__user-name", ".sidebar__org-name"]) {
+    expect([
+      last(layout, selector, "overflow"),
+      last(layout, selector, "text-overflow"),
+      last(layout, selector, "white-space"),
+    ]).toEqual(["hidden", "ellipsis", "nowrap"]);
+  }
+  expect(declarations(layout, ".sidebar__org-button--me .sidebar__org-name")).toEqual([]);
 });

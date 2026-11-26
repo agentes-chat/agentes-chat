@@ -7,10 +7,8 @@ import {
   SkeletonConversation,
   SkeletonGroup,
   SkeletonList,
-  TopProgress,
   useDelayed,
 } from "@agenteschat/ui";
-import { useIsFetching } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -107,8 +105,9 @@ export function useStepText(active: boolean, steps: string[]) {
     const timer = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(timer);
   }, [active]);
-  if (!active || since === null || steps.length === 0) return undefined;
-  return steps[stepAt(since, now, steps.length)];
+  if (!active || steps.length === 0) return undefined;
+  // The first step from the render that starts it (the timer starts after): a footer note never blinks out between.
+  return since === null ? steps[0] : steps[stepAt(since, now, steps.length)];
 }
 
 /**
@@ -140,17 +139,4 @@ export function ErrorState({ error, onRetry }: { error?: unknown; onRetry?: () =
       {message}
     </EmptyState>
   );
-}
-
-/**
- * A thin bar at the top of the page while cached data refreshes (queries
- * that already have data; polling and background queries opt out with
- * `meta: { quiet: true }`).
- */
-export function RefetchBar() {
-  const { t } = useTranslation();
-  const refreshing = useIsFetching({
-    predicate: (q) => q.state.data !== undefined && q.meta?.quiet !== true,
-  });
-  return <TopProgress active={refreshing > 0} label={t("common.refreshing")} />;
 }

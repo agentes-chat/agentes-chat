@@ -1,12 +1,13 @@
-import { useProposals } from "@agenteschat/client";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Button, Card, diffLines, Icon, Textarea } from "@agenteschat/ui";
+import { Button, Card, diffLines, Textarea } from "@agenteschat/ui";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { InstructionTips } from "@/components/AgentFields";
 import { useOrg } from "@/components/org-context";
 import { ProseDiff } from "@/components/ProseDiff";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { Markdown } from "@/lib/markdown";
 import { CardHead, useAgentEdit } from "./context";
 import { ReadOnlyNote } from "./pieces";
@@ -16,15 +17,12 @@ export function InstructionsTab() {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const { agent, g, draft, saved, set, can, changeOf, goTo } = useAgentEdit();
-  const proposals = useProposals(org.id);
+  const { agent, g, draft, saved, set, can, changeOf } = useAgentEdit();
   const [showDiff, setShowDiff] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
+  const limit = useTextLimit(FIELD_LIMITS.instructions);
   const editable = can("instructions");
   const changed = Boolean(changeOf("instructions"));
-  const pending = (proposals.data ?? []).filter(
-    (p) => p.agentId === agent.id && p.status === "pending" && p.target.type === "agent_instructions",
-  );
   const helper =
     (agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : me.user.name)?.split(/\s+/)[0] ?? me.user.name;
   return (
@@ -50,7 +48,7 @@ export function InstructionsTab() {
                   ref={area}
                   className="newag__textarea agp-instructions"
                   rows={14}
-                  maxLength={50_000}
+                  limit={limit}
                   aria-label={t("agent.instructions")}
                   placeholder={t("newAgent.instructionsPlaceholder")}
                   value={draft.instructions}
@@ -107,24 +105,6 @@ export function InstructionsTab() {
                 }}
               />
             </Card>
-          )}
-          {pending.length > 0 && (
-            <div className="agp-attn ac-mediarow">
-              <span className="ac-mediarow__face">
-                <span className="agp-ib agp-ib--warn">
-                  <Icon name="document" size={16} />
-                </span>
-              </span>
-              <span className="ac-mediarow__head">
-                <b>{t("agentPage.instructions.proposals", { count: pending.length })}</b>
-              </span>
-              <span className="ac-mediarow__end ac-mediarow__end--wrap">
-                <Button size="sm" onClick={() => goTo("memory")}>
-                  {t("agentPage.overview.review")}
-                </Button>
-              </span>
-              <span className="ac-mediarow__body agp-attn__sub">{t("agentPage.overview.proposes", g)}</span>
-            </div>
           )}
         </div>
       </div>

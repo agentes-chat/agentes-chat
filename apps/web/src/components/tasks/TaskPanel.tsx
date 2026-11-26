@@ -2,10 +2,11 @@ import type { EndedTask, ManagedTask } from "@agenteschat/client";
 import { TASK_MANAGER_POLL_MS, useTaskSteps } from "@agenteschat/client";
 import { type Activity, activityVerb, toolActivity } from "@agenteschat/client/lib/activity";
 import { capitalize } from "@agenteschat/client/lib/format";
-import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { stopLine, stopperOf } from "@agenteschat/client/lib/notices";
 import {
   delegationText,
   endedState,
+  opensInChat,
   taskPlace,
   taskState,
   taskTime,
@@ -17,6 +18,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar, AgentSpinner } from "@/components/AgentAvatar";
 import { ErrorState, LoadingList } from "@/components/Loading";
+import { MetaLine } from "@/components/MetaLine";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { SidePanel } from "@/components/SidePanel";
@@ -88,11 +90,15 @@ export function TaskPanel({
     : null;
   const nameOf = (id: string) => dir.anyAgent(id)?.name;
   const chain = last ? delegationText(t, last, nameOf, me.user.id) : null;
-  const meta = [name, taskPlace(t, source), source.background ? null : (chain ?? asked)].filter(Boolean).join(" · ");
   // How it ended: the page's list, else my own stop on its way there.
   const end = task ? null : ended ? endedState(ended) : stopping ? "stopped" : null;
-  const stopper = ended?.stoppedBy ?? (stopping ? { userId: me.user.id, name: me.user.name } : null);
+  const stopper: EndedTask["stoppedBy"] =
+    ended?.stoppedBy ?? (stopping ? { userId: me.user.id, name: me.user.name } : null);
+  // The person it was stopped for says why, also when the right hand did it at their word.
   const byMe = end === "stopped" && stopper?.userId === me.user.id;
+  const who = stopper ? stopperOf({ byUserId: stopper.userId, byAgentId: stopper.agentId }, me.user.id) : null;
+  const stopSentence =
+    stopLine(t, name, who, { agent: nameOf, person: () => stopper?.name }) ?? t("taskManager.state.stopped");
   const reason = said ?? sent;
   const doing: Activity = task?.now
     ? toolActivity(task.now.tool, task.now.connector, task.now.detail, task.now)
@@ -129,7 +135,11 @@ export function TaskPanel({
           <h2 className="channel__title thread-title">
             <span className="thread-title__text">{title}</span>
           </h2>
-          <span className="channel__topic thread-head__meta">{meta}</span>
+          <MetaLine
+            where={[name, taskPlace(t, source), source.background ? null : (chain ?? asked)]
+              .filter(Boolean)
+              .join(" · ")}
+          />
         </div>
         <Button size="sm" variant="ghost" iconOnly icon="close" aria-label={t("common.close")} onClick={onClose} />
       </header>
@@ -149,17 +159,7 @@ export function TaskPanel({
             <p className="ac-iconline">
               <PixelStop size={12} dim />
               <span>
-                <b>
-                  {byMe
-                    ? t("taskManager.stopped.line", { agent: name, context: agentGrammar(name).context })
-                    : stopper
-                      ? t("taskManager.stopped.lineBy", {
-                          name: stopper.name,
-                          agent: name,
-                          context: agentGrammar(name).context,
-                        })
-                      : t("taskManager.state.stopped")}
-                </b>
+                <b>{stopSentence}</b>
                 {reason && ` · ${t("taskManager.stopped.reason", { reason })}`}
               </span>
             </p>
@@ -200,7 +200,7 @@ export function TaskPanel({
             {t("taskManager.delegated.stopNote", { name: nameOf(task.delegation.agentId) ?? "" })}
           </p>
         )}
-        {!source.background && !source.betweenAgents && (
+        {opensInChat({ ...source, delegation: last?.delegation }) && (
           <Button size="sm" variant="ghost" icon="message" onClick={() => openTask(source)}>
             {t("taskManager.actions.open")}
           </Button>

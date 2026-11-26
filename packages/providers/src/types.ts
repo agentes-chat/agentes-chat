@@ -1,3 +1,5 @@
+import type { ImageCallOptions, ImageRequest, ImageResult } from "./images";
+
 /**
  * Provider-neutral model interface. Only the Model Gateway
  * (`@agenteschat/engine`, `createModelGateway`) calls it: no other code talks
@@ -10,7 +12,7 @@ export type ContentBlock =
   (
     | { type: "text"; text: string; cache?: boolean }
     | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
-    /** `images`: pictures the tool returned (base64), shown to models that read images. */
+    /** `images`: pictures and PDFs the tool returned (base64), shown to models that read them. */
     | { type: "tool_result"; toolUseId: string; content: string; isError?: boolean; images?: ToolImage[] }
     /**
      * A block we don't interpret (e.g. Anthropic `thinking` with its signature).
@@ -27,20 +29,59 @@ export type ContentBlock =
     restart?: string;
   };
 
-/** A picture in a tool's result: PNG, JPEG, GIF or WebP, base64. */
+/**
+ * A picture (PNG, JPEG, GIF or WebP) or a PDF (`application/pdf`) in a tool's result, base64. A PDF goes to the
+ * providers that read one as a document block; `pages` counts toward the prompt as its text would.
+ */
 export interface ToolImage {
   mediaType: string;
   data: string;
+  /** A PDF: its pages, as counted when it was read. */
+  pages?: number;
+  /** A PDF: its file name (OpenAI asks for one). */
+  name?: string;
+  /**
+   * A PDF: its own text, read out of it and already marked as untrusted data: what a connection that takes no PDFs
+   * gets in its place (`withoutImages`).
+   */
+  text?: string;
 }
+
+export const PDF_MEDIA_TYPE = "application/pdf" as const;
 
 /** What an image counts for in prompt estimates: about the tokens of a large one (≈1,600), never its base64 length. */
 export const IMAGE_CHARS = 6400;
+/** What a PDF page counts for: its text and its picture, which the providers both send (≈2,000 tokens). */
+export const PDF_PAGE_CHARS = 8000;
+
+/** What one picture or PDF of a tool result counts for in prompt estimates. */
+export const toolImageChars = (i: ToolImage) =>
+  i.mediaType === PDF_MEDIA_TYPE ? Math.max(1, i.pages ?? 1) * PDF_PAGE_CHARS : IMAGE_CHARS;
+
+/** Whether a tool result carries a picture or a PDF (`which`: only one it matches). */
+export const hasToolImages = (messages: ModelMessage[], which: (image: ToolImage) => boolean = () => true) =>
+  messages.some(
+    (m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_result" && b.images?.some(which)),
+  );
+
+export const isPdfImage = (image: ToolImage) => image.mediaType === PDF_MEDIA_TYPE;
 
 /**
- * The messages with tool results' images left out, a note in their place: for endpoints that take text only
- * (another company's Anthropic-compatible API, OpenRouter), where an image would fail the whole request.
+ * Whether `withoutImages` leaves this one out with nothing read in its place: a picture, unless the endpoint reads
+ * pictures, or a PDF no text was read out of (a scan).
  */
-export const withoutImages = (messages: ModelMessage[]): ModelMessage[] =>
+export const lostWithoutImages =
+  (pictures = false) =>
+  (image: ToolImage) =>
+    isPdfImage(image) ? !image.text : !pictures;
+
+/**
+ * The messages with tool results' pictures and PDFs left out: for endpoints that take text only (another company's
+ * Anthropic-compatible API, OpenRouter), where one would fail the whole request. A PDF with text of its own goes as
+ * that text; for the rest a note names the AI (`model`) and the way out, so the agent tells the person the real cause.
+ * `pictures`: the endpoint reads pictures but no PDFs, so only the PDFs are left out.
+ */
+export const withoutImages = (messages: ModelMessage[], model?: string, pictures = false): ModelMessage[] =>
   messages.map((m) =>
     typeof m.content === "string"
       ? m
@@ -48,11 +89,31 @@ export const withoutImages = (messages: ModelMessage[]): ModelMessage[] =>
           ...m,
           content: m.content.map((b) => {
             if (b.type !== "tool_result" || !b.images?.length) return b;
-            const { images: _images, ...rest } = b;
-            return {
-              ...rest,
-              content: `${b.content}\n[The image is not shown: this model connection takes text only.]`,
-            };
+            const { images, ...rest } = b;
+            const kept = pictures ? images.filter((i) => !isPdfImage(i)) : [];
+            if (kept.length === images.length) return b;
+            const ai = model ? `this agent's AI (${model})` : "this agent's AI";
+            const reads = pictures
+              ? "reads pictures through this connection, not PDFs"
+              : "reads text only through this connection";
+            const lines = [b.content];
+            for (const i of images) {
+              if (!isPdfImage(i) || !i.text) continue;
+              lines.push(
+                `[The PDF${i.name ? ` ${i.name}` : ""} is not shown to you as pages: ${ai} ${reads}, so its text, read out of it, follows; its pictures, scanned pages and layout aren't in it. If the answer hangs on those, tell the person exactly that, and that an AI that reads PDFs (Claude, GPT or Gemini), picked in this agent's settings, would see them.]`,
+                i.text,
+              );
+            }
+            const lost = images.filter(lostWithoutImages(pictures));
+            const pdf = lost.some(isPdfImage);
+            const picture = lost.some((i) => !isPdfImage(i));
+            if (pdf || picture) {
+              const what = pdf && picture ? "picture and the PDF" : pdf ? "PDF" : "picture";
+              lines.push(
+                `[The ${what} is not shown to you: ${ai} ${reads}.${pdf ? " No text could be read out of the PDF either (a scan has none)." : ""} Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`,
+              );
+            }
+            return { ...rest, ...(kept.length > 0 ? { images: kept } : {}), content: lines.join("\n") };
           }),
         },
   );
@@ -97,9 +158,10 @@ export interface ModelRequest {
   outputSchema?: Record<string, unknown>;
   /**
    * How much reasoning to spend. Providers without the notion ignore it. Default: the provider's.
-   * `none`: the least the model allows (its catalog `leastThinking`), else `low`.
+   * `none`: the least the model allows (its catalog `leastThinking`), else `low`. `xhigh` and `max`: where the model
+   * takes them (its catalog `efforts`), else `high` (`effortWithin`).
    */
-  effort?: "none" | "low" | "medium" | "high";
+  effort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   /**
    * `1h`: the breakpoints of the stable prefix (stable tools, system blocks marked `cache`) last an hour where the
    * provider offers it (Anthropic's extended TTL, written at 2× the input price); the conversation's tail keeps the
@@ -160,6 +222,8 @@ export interface ModelResult {
    * refusal that sent the call again without any.
    */
   thinking?: { dropped?: Record<string, number>; refused?: string };
+  /** Tool results' pictures or PDFs were left out: this connection takes text only (`withoutImages`). */
+  imagesLeftOut?: true;
 }
 
 export interface StreamOptions {
@@ -178,6 +242,11 @@ export interface StreamOptions {
   session?: string;
   /** Called with each text fragment as it is generated. */
   onDelta(text: string): void;
+  /**
+   * A progress note the model wrote between its calls that the API returns apart from the reply's text (Claude's
+   * progress updates, OpenAI's reasoning summaries), whole, as each one ends. Never part of `text`.
+   */
+  onNote?(text: string): void;
 }
 
 /**
@@ -197,6 +266,11 @@ export interface ModelProvider {
     request: ModelRequest,
     options: { apiKey: string; workspaceId?: string; organization?: string; project?: string },
   ): Promise<number>;
+  /**
+   * Pictures from a prompt (ADR 0197), where the provider has an image API: the request's `model` is the provider's
+   * own id. Optional: a provider without one makes none.
+   */
+  generateImage?(request: ImageRequest, options: ImageCallOptions): Promise<ImageResult>;
 }
 
 /** What the provider had already reported or sent when a stream failed. */
@@ -298,15 +372,15 @@ export function promptChars(request: Pick<ModelRequest, "system" | "messages" | 
   return system + messages + tools;
 }
 
-/** Characters of a message's blocks, an image as `IMAGE_CHARS`. */
+/** Characters of a message's blocks, an image as `IMAGE_CHARS` and a PDF by its pages (`toolImageChars`). */
 export function blocksChars(content: ContentBlock[]): number {
   let images = 0;
   const json = JSON.stringify(content, (key, value) => {
     if (key !== "images" || !Array.isArray(value)) return value;
-    images += value.length;
+    for (const i of value as ToolImage[]) images += toolImageChars(i);
     return undefined;
   });
-  return json.length + images * IMAGE_CHARS;
+  return json.length + images;
 }
 
 /** Tools in the order providers send them: the stable ones, then the others, each part sorted by name. */

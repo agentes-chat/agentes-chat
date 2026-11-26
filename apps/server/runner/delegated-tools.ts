@@ -36,13 +36,15 @@ import {
   type McpTaskInfo,
   type McpToolResult,
   permissionPrompt,
+  reportRefusal,
   shellArg,
   type ToolCaller,
   turnAsks,
 } from "./mcp";
-import { isInside, realOrNearest } from "./paths";
+import { isInside, realOrNearest, runTmpEnv } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { holdsSecretFile } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * Claude Code's own tools, served by the agent's worker, for a sign-in shared by several agents. The CLI holding the
@@ -290,6 +292,8 @@ export type ShellStatus = ToolNotice["status"];
 export interface DelegatedScope {
   /** Claude Code's session: the cwd, what was read and the background shells carry over a restarted CLI. */
   session: string;
+  /** The agent as root's turn names it: its commands' commits end with its `coAuthors` (`agentSecrets`). */
+  agent?: AgentScope;
   cwd: string;
   /** The agent's folder and the folders granted to it: edits there need nobody. */
   folder: string;
@@ -308,6 +312,8 @@ export interface DelegatedScope {
   task?: "mission" | "local";
   /** The CLI's stdin closes after its prompt, so no notice can reach it. */
   oneShot?: boolean;
+  /** The zone of the turn's "Now": its commands' `TZ` (`turnZoneEnv`), as the CLI's own. */
+  timeZone?: string;
 }
 
 /** `agentSecrets`' answer: what commands get, and what no result may show. */
@@ -319,7 +325,8 @@ type Secrets = {
 } | null;
 
 export interface DelegatedToolsOptions {
-  secrets: () => Promise<Secrets>;
+  /** `agentSecrets` for the session's agent (`DelegatedScope.agent`), or the worker's own. */
+  secrets: (agent?: AgentScope) => Promise<Secrets>;
   /** `tool.notice`, to root. */
   onNotice?: (notice: ToolNotice) => void;
   /** A background task's call was refused with nobody to approve it: its task lists it when it ends. */
@@ -468,15 +475,22 @@ function notebookContent(raw: string): McpContent[] {
 
 /** `"3"` or `"1-5"`, or null. */
 function pageRange(pages: string) {
-  const m = /^\s*(\d+)\s*(?:-\s*(\d+))?\s*$/.exec(pages);
+  // The spaces before `-` go with it: two runs of spaces in a row would split a long run every way before failing.
+  const m = /^\s*(\d+)(?:\s*-\s*(\d+))?\s*$/.exec(pages);
   if (!m) return null;
   const first = Number(m[1]);
   const last = m[2] === undefined ? first : Number(m[2]);
   return first >= 1 && last >= first ? { first, last } : null;
 }
 
-/** `glob` split as rg takes it: by spaces and commas outside braces. */
-const grepGlobs = (glob: string) => glob.match(/(?:[^\s,{]|\{[^}]*\})+/g) ?? [];
+/**
+ * `glob` split as rg takes it: by spaces and commas outside braces. A `{` with no `}` after it opens nothing and splits
+ * as a comma does; read as one, so the pattern doesn't read on to the end from each.
+ */
+const grepGlobs = (glob: string) => {
+  const closed = glob.lastIndexOf("}") + 1;
+  return `${glob.slice(0, closed)}${glob.slice(closed).replaceAll("{", ",")}`.match(/(?:[^\s,{]|\{[^}]*\})+/g) ?? [];
+};
 
 const relativeTo = (cwd: string, file: string) => {
   const rel = path.relative(cwd, file);
@@ -638,7 +652,7 @@ export class DelegatedTools {
     s.calls.set(ctx.id, call);
     let secrets: Secrets = null;
     try {
-      secrets = await this.opts.secrets();
+      secrets = await this.opts.secrets(s.scope.agent);
       return this.finished(await handler({ s, args, ask: ctx.ask, id: ctx.id, call, secrets }), secrets);
     } catch (err) {
       return this.finished(fail(err instanceof Error ? err.message : String(err)), secrets);
@@ -688,7 +702,10 @@ export class DelegatedTools {
       return message;
     };
     if (verdict?.behavior === "deny") {
-      return refuse(s.scope.asks === "never" && !s.scope.task ? unaskedMessage(verdict.message) : verdict.message);
+      const message = s.scope.asks === "never" && !s.scope.task ? unaskedMessage(verdict.message) : verdict.message;
+      const asked = { tool_name: tool, input, tool_use_id: `delegated-${String(r.id)}`, scope };
+      reportRefusal(r.ask, asked, { code: verdict.code, message });
+      return refuse(message);
     }
     if (s.rules.deny.some((rule) => ruleMatches(rule, tool, input))) {
       return refuse(`Permission to use ${tool} has been denied.`);
@@ -808,7 +825,12 @@ export class DelegatedTools {
         ["-c", SHELL_SCRIPT, "bash", command, `${file}.cwd`],
         {
           cwd: s.cwd,
-          env: { ...process.env, ...r.secrets?.env },
+          env: {
+            ...process.env,
+            ...r.secrets?.env,
+            ...turnZoneEnv(s.scope.timeZone),
+            ...runTmpEnv(path.join(s.dir, "tmp")),
+          },
           stdio: ["ignore", fd, fd],
           detached: true,
         },
@@ -1406,6 +1428,8 @@ export interface DelegatedBridge {
   task?: "mission" | "local";
   /** `DelegatedScope.oneShot`. */
   oneShot?: true;
+  /** `DelegatedScope.timeZone`. */
+  timeZone?: string;
 }
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : undefined);
@@ -1435,6 +1459,7 @@ export function parseBridge(f: Record<string, unknown>): DelegatedBridge | null 
     ...(f.chat === true ? { chat: true as const } : {}),
     ...(f.task === "mission" || f.task === "local" ? { task: f.task } : {}),
     ...(f.oneShot === true ? { oneShot: true as const } : {}),
+    ...(turnZoneEnv(f.timeZone).TZ ? { timeZone: f.timeZone as string } : {}),
   };
 }
 
@@ -1456,6 +1481,7 @@ export function delegatedTask(
     ...(redact ? { redact } : {}),
     delegated: tools.surface({
       session: bridge.session,
+      agent: bridge.agent,
       cwd: bridge.cwd,
       folder,
       grants,
@@ -1467,6 +1493,7 @@ export function delegatedTask(
       ...(bridge.chat ? { chat: true } : {}),
       ...(bridge.task ? { task: bridge.task } : {}),
       ...(bridge.oneShot ? { oneShot: true } : {}),
+      ...(bridge.timeZone ? { timeZone: bridge.timeZone } : {}),
     }),
   };
 }

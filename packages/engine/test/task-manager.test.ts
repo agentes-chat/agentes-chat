@@ -1,18 +1,25 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { eq, schema, sql } from "@agenteschat/db";
+import { countQueries, eq, schema, sql } from "@agenteschat/db";
 import {
+  ACCESS_COLUMNS,
+  addChannelMember,
   addRunStep,
   cancelRun,
   continuePausedRuns,
   createAgent,
+  createRole,
+  createRoutine,
   drainOutbox,
   ForbiddenError,
+  insertMessage,
   listMessages,
   type Membership,
   mayContinuePause,
   NotFoundError,
+  openPersonAgentDm,
   postPersonMessage,
   sendNote,
+  setMemberRoles,
   setStopReason,
   taskManager,
   taskSteps,
@@ -78,8 +85,9 @@ describe("work agents asked of each other (ADR 0128)", () => {
       label: null,
       canStop: true,
       delegation: { agentId: f.agent.id, origin: { kind: "person", userId: f.owner.id } },
+      subject: "Vê o log de ontem",
     });
-    expect(view.tasks.find((t) => t.runId === asker.id)).toMatchObject({ delegation: null, helpers: 1 });
+    expect(view.tasks.find((t) => t.runId === asker.id)).toMatchObject({ delegation: null, helpers: 1, subject: null });
     expect(view.hidden).toEqual({ total: 0, working: 0, byAgent: {} });
     expect((await taskSteps(f.db, f.owner.id, f.org.id, helper.id)).steps).toEqual([]);
 
@@ -91,9 +99,79 @@ describe("work agents asked of each other (ADR 0128)", () => {
     expect(JSON.stringify(theirs)).not.toContain("Vê o log");
     await expect(taskSteps(f.db, member.id, f.org.id, helper.id)).rejects.toBeInstanceOf(NotFoundError);
 
-    // Its owner sees it without admin rights.
+    // Its owner sees it without admin rights, but not what was asked: they don't read #general.
     await f.db.update(schema.agents).set({ ownerUserId: member.id }).where(eq(schema.agents.id, infra.id));
-    expect((await taskManager(f.db, member.id, f.org.id)).tasks.map((t) => t.runId)).toContain(helper.id);
+    const owners = await taskManager(f.db, member.id, f.org.id);
+    expect(owners.tasks.find((t) => t.runId === helper.id)).toMatchObject({
+      delegation: { from: null },
+      subject: null,
+    });
+    expect(JSON.stringify(owners)).not.toContain("Vê o log");
+  });
+
+  test("an admin who doesn't read the conversation it came from sees the task, never what was asked", async () => {
+    f = await setup();
+    const infra = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Infra", handle: "infra", role: "Servers", instructions: "You run them.", credentialId: f.credential.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    const dm = await openPersonAgentDm(f.db, f.org.id, f.owner.id, f.agent.id);
+    await postPersonMessage(deps(), f.owner.id, f.org.id, dm.id, { body: "olha os bugs" });
+    const asker = (await runs()).find((r) => r.agentId === f.agent.id);
+    if (!asker) throw new Error("no run");
+    await sendNote(f.db, {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      runId: asker.id,
+      hop: 1,
+      targetAgentId: infra.id,
+      body: "Vê o log do meu cliente",
+      chain: [f.agent.id],
+    });
+    const helper = (await runs()).find((r) => r.agentId === infra.id);
+    if (!helper) throw new Error("no helper run");
+    await f.db.update(schema.agentRuns).set({ status: "running" });
+
+    expect((await taskManager(f.db, f.owner.id, f.org.id)).tasks.find((t) => t.runId === helper.id)?.subject).toBe(
+      "Vê o log do meu cliente",
+    );
+    const rui = await addMember(f.db, f.org.id, "admin", "rui");
+    const theirs = await taskManager(f.db, rui.id, f.org.id);
+    expect(theirs.tasks.find((t) => t.runId === helper.id)).toMatchObject({
+      delegation: { from: null },
+      subject: null,
+    });
+    expect(JSON.stringify(theirs)).not.toContain("meu cliente");
+  });
+
+  test("called by the latest question its run took, one sentence of it", async () => {
+    f = await setup();
+    const { helper } = await delegated();
+    const [first] = await f.db
+      .select()
+      .from(schema.agentConsultations)
+      .where(eq(schema.agentConsultations.targetRunId, helper.id));
+    if (!first) throw new Error("no consultation");
+    const question = "Agora veja a fila.\n\nDepois me diga quem ficou sem resposta.";
+    const message = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: first.channelId,
+      author: { type: "agent", agentId: first.askerAgentId, runId: first.askerRunId, hop: 1 },
+      body: question,
+    });
+    const { id: _id, ...rest } = first;
+    await f.db.insert(schema.agentConsultations).values({
+      ...rest,
+      messageId: message.id,
+      waitId: `${first.waitId}-2`,
+      question,
+      createdAt: new Date(first.createdAt.getTime() + 60_000),
+    });
+    const row = (await taskManager(f.db, f.owner.id, f.org.id)).tasks.find((t) => t.runId === helper.id);
+    expect(row?.subject).toBe("Agora veja a fila.");
   });
 
   test("hidden work asking its computer from the line counts as waiting, not working", async () => {
@@ -130,6 +208,29 @@ describe("work agents asked of each other (ADR 0128)", () => {
     });
     const view = await taskManager(f.db, f.owner.id, f.org.id);
     expect(view.tasks.find((t) => t.runId === asker.id)?.helpers).toBe(2);
+  });
+
+  test("'Edit agents' sees it where its audience takes them, never a private agent's; admins always", async () => {
+    f = await setup();
+    const { infra, helper } = await delegated();
+    const keys = await createRole(f.db, f.owner.id, f.org.id, { name: "Agentes", permissions: ["manage_agents"] });
+    const lia = await addMember(f.db, f.org.id, "member", "lia");
+    await setMemberRoles(f.db, f.owner.id, f.org.id, lia.id, [keys.id]);
+    const walt = await addMember(f.db, f.org.id, "admin", "walt");
+    const listed = async (userId: string) =>
+      (await taskManager(f.db, userId, f.org.id)).tasks.find((t) => t.runId === helper.id);
+    // Infra answers everyone: the key reaches it (ADR 0085 addendum of 2026-11-17).
+    expect(await listed(lia.id)).toMatchObject({ canStop: true });
+    expect((await taskSteps(f.db, lia.id, f.org.id, helper.id)).steps).toEqual([]);
+    // Kept to its owner, its work no person is in is only counted for her.
+    await f.db.update(schema.agents).set({ audienceMode: "owner" }).where(eq(schema.agents.id, infra.id));
+    const hers = await taskManager(f.db, lia.id, f.org.id);
+    expect(hers.tasks.find((t) => t.runId === helper.id)).toBeUndefined();
+    expect(hers.hidden.byAgent[infra.id]).toBe(1);
+    await expect(taskSteps(f.db, lia.id, f.org.id, helper.id)).rejects.toBeInstanceOf(NotFoundError);
+    // An administrator manages every agent.
+    expect(await listed(walt.id)).toMatchObject({ canStop: true });
+    expect((await taskManager(f.db, walt.id, f.org.id)).hidden.byAgent[infra.id]).toBeUndefined();
   });
 
   test("an agent with no owner: its work still counts for who may not see it", async () => {
@@ -306,20 +407,66 @@ describe("why a task waits", () => {
     expect(await continuePausedRuns({ db: f.db }, f.owner.id, f.org.id, [runId])).toEqual({ continued: 0 });
   });
 
-  test("managing routines is no way past the rule for a run that isn't a routine's", async () => {
+  test("managing routines is no way past the rule for a run that isn't a routine's, nor for a private agent's", async () => {
     f = await setup();
     await ask("@dev resume a semana");
     const [run] = await runs();
-    const membership = { permissions: new Set(["manage_routines"]) } as unknown as Membership;
+    const routine = await createRoutine({ db: f.db, pubsub: f.pubsub, context: f.context }, f.owner.id, f.org.id, {
+      name: "Resumo",
+      agentId: f.agent.id,
+      prompt: "Resume a semana.",
+      target: { type: "channel", channelId: f.general.id },
+      trigger: { type: "schedule", phrase: "todo dia às 8h" },
+    });
+    const membership = { permissions: new Set(["manage_routines"]), roleIds: [] } as unknown as Membership;
     const row = {
-      run: { orgId: f.org.id, triggerMessageId: run?.triggerMessageId ?? "" },
+      run: { orgId: f.org.id, agentId: f.agent.id, triggerMessageId: run?.triggerMessageId ?? "" },
       requester: null,
       ownerUserId: null,
       routineCreatorId: null,
     };
     const other = await addMember(f.db, f.org.id, "member", "caio");
     expect(await mayContinuePause(f.db, other.id, membership, { ...row, routineId: null })).toBe(false);
-    expect(await mayContinuePause(f.db, other.id, membership, { ...row, routineId: "a-routine" })).toBe(true);
+    // "Create routines" reaches the routines of an agent whose audience takes them (ADR 0085 addendum of 2026-11-17),
+    // never a private agent's.
+    expect(await mayContinuePause(f.db, other.id, membership, { ...row, routineId: routine.id })).toBe(true);
+    // Given the run's agent, as a list of runs passes it, the same answer reads nothing for it.
+    const [agent] = await f.db.select(ACCESS_COLUMNS).from(schema.agents).where(eq(schema.agents.id, f.agent.id));
+    expect(
+      await countQueries(() => mayContinuePause(f.db, other.id, membership, { ...row, routineId: routine.id, agent })),
+    ).toEqual({ result: true, queries: 0 });
+    await f.db.update(schema.agents).set({ audienceMode: "owner" }).where(eq(schema.agents.id, f.agent.id));
+    expect(await mayContinuePause(f.db, other.id, membership, { ...row, routineId: routine.id })).toBe(false);
+    // Its routine moved to an agent that answers everyone since: the run stays the private agent's.
+    const model = { model: "claude-sonnet-5-5" };
+    const infra = await createAgent(f.db, f.owner.id, f.org.id, { name: "Infra", handle: "infra" }, model);
+    await f.db.update(schema.routines).set({ agentId: infra.id }).where(eq(schema.routines.id, routine.id));
+    expect(await mayContinuePause(f.db, other.id, membership, { ...row, routineId: routine.id })).toBe(false);
+  });
+
+  test("who may continue the paused tasks is read once for them all, however many", async () => {
+    f = await setup();
+    const infra = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Infra", handle: "infra", role: "Servers", instructions: "You run them.", credentialId: f.credential.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { agentId: infra.id });
+    await ask("@dev resume a semana");
+    await ask("@infra olha os servidores");
+    const [first, second] = await runs();
+    // An administrator in #general, who asked for neither and owns neither agent: each is theirs to continue.
+    const walt = await addMember(f.db, f.org.id, "admin", "walt");
+    await f.db.insert(schema.channelMembers).values({ orgId: f.org.id, channelId: f.general.id, userId: walt.id });
+    const cost = async () => (await countQueries(() => taskManager(f.db, walt.id, f.org.id))).queries;
+    await park(first?.id ?? "", pauseWait);
+    const one = await cost();
+    await park(second?.id ?? "", pauseWait);
+    expect(await cost()).toBe(one);
+    const { tasks } = await taskManager(f.db, walt.id, f.org.id);
+    expect(tasks.map((t) => t.wait?.canContinue)).toEqual([true, true]);
   });
 
   test("Continuar agora on several says so on a run's card, as pressing the card does", async () => {
@@ -384,6 +531,56 @@ describe("the task manager", () => {
     expect(after.ended[0]).toMatchObject({ runId: run.id, status: "canceled", stoppedBy: { userId: f.owner.id } });
   });
 
+  test("each task says how it stands for its reader, by an agent's line's rule and clock", async () => {
+    f = await setup();
+    await ask("@dev faz o merge do PR #12");
+    const [run] = await runs();
+    if (!run) throw new Error("no run");
+    const bia = await addMember(f.db, f.org.id, "member", "bia");
+    const caio = await addMember(f.db, f.org.id, "member", "caio");
+    for (const id of [bia.id, caio.id])
+      await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: id });
+    const workOf = async (userId: string) =>
+      (await taskManager(f.db, userId, f.org.id)).tasks.find((t) => t.runId === run.id)?.work;
+    const startedAt = new Date(Date.now() - 600_000);
+    await f.db.update(schema.agentRuns).set({ status: "running", startedAt }).where(eq(schema.agentRuns.id, run.id));
+    expect(await workOf(caio.id)).toEqual({ state: "working", since: startedAt.toISOString(), card: null });
+
+    // Parked on a card Bia decides (she owns its approvals), as the workspace's owner does: theirs. Caio's waits on
+    // someone else, since the card was posted, however long it worked before.
+    await f.db
+      .update(schema.agentRuns)
+      .set({ status: "waiting_approval", updatedAt: new Date() })
+      .where(eq(schema.agentRuns.id, run.id));
+    const cardAt = new Date(Date.now() - 180_000);
+    await f.db.insert(schema.approvals).values({
+      orgId: f.org.id,
+      runId: run.id,
+      agentId: f.agent.id,
+      channelId: f.general.id,
+      threadRootId: run.threadRootId,
+      toolUseId: "toolu_1",
+      tool: "github_merge_pull_request",
+      scope: "",
+      params: {},
+      actionHash: "hash",
+      title: "Merge PR #12",
+      ownerUserId: bia.id,
+      requestedByUserId: f.owner.id,
+      expiresAt: new Date(Date.now() + 3600_000),
+      createdAt: cardAt,
+      messageId: run.triggerMessageId,
+    });
+    expect((await workOf(bia.id))?.state).toBe("you");
+    expect((await workOf(f.owner.id))?.state).toBe("you");
+    // Its row opens at the card.
+    expect(await workOf(caio.id)).toEqual({
+      state: "approval",
+      since: cardAt.toISOString(),
+      card: run.triggerMessageId,
+    });
+  });
+
   test("a task stopped to read a message its person sent is no ended task: it goes on in the next run", async () => {
     f = await setup();
     await ask("@dev compara os preços dos concorrentes");
@@ -399,8 +596,37 @@ describe("the task manager", () => {
     f = await setup();
     await ask("@dev arruma o link");
     const outsider = await addMember(f.db, f.org.id, "member", "caio");
-    const view = await taskManager(f.db, outsider.id, f.org.id);
+    const view = await taskManager(f.db, outsider.id, f.org.id, { doneToday: true });
     expect(view.tasks).toHaveLength(0);
+    expect(view.doneToday).toBe(0);
+  });
+
+  test("done today counts every task done, past the ended list's cut; not the failed, nor what others can't see", async () => {
+    f = await setup();
+    for (let i = 0; i < 52; i++) {
+      await ask(`@dev resumo ${i}`);
+      await f.db.execute(
+        sql`update ${schema.agentRuns} set status = ${i === 0 ? "failed" : "done"}, finished_at = now()
+          where status not in ('done', 'failed')`,
+      );
+    }
+    const view = await taskManager(f.db, f.owner.id, f.org.id, { doneToday: true });
+    expect(view.ended).toHaveLength(50);
+    expect(view.doneToday).toBe(51);
+    const outsider = await addMember(f.db, f.org.id, "member", "caio");
+    expect((await taskManager(f.db, outsider.id, f.org.id, { doneToday: true })).doneToday).toBe(0);
+  });
+
+  test("done today only when asked: a caller that doesn't ask gets no count and runs no count query", async () => {
+    f = await setup();
+    await ask("@dev resumo");
+    await f.db.execute(sql`update ${schema.agentRuns} set status = 'done', finished_at = now()`);
+    const plain = await countQueries(() => taskManager(f.db, f.owner.id, f.org.id));
+    const counted = await countQueries(() => taskManager(f.db, f.owner.id, f.org.id, { doneToday: true }));
+    expect("doneToday" in plain.result).toBe(false);
+    expect(counted.result.doneToday).toBe(1);
+    expect(counted.result.ended).toEqual(plain.result.ended);
+    expect(counted.queries).toBe(plain.queries + 1);
   });
 
   test("a task's steps: what each call was, never its input; only for who sees the task", async () => {

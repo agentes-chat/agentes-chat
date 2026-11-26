@@ -28,3 +28,9 @@ test("downloads without a filename do not override Content-Disposition", async (
   const url = await store.signedUrl("report", { expiresInSeconds: 300 });
   expect(new URL(url ?? "").searchParams.has("response-content-disposition")).toBe(false);
 });
+
+test("extended filenames encode characters outside the header parameter grammar", async () => {
+  const url = await store.signedUrl("report", { expiresInSeconds: 300, filename: "report*(draft)!.pdf" });
+  const disposition = new URL(url ?? "").searchParams.get("response-content-disposition");
+  expect(disposition).toBe(`attachment; filename="report*(draft)!.pdf"; filename*=UTF-8''report%2A%28draft%29!.pdf`);
+});

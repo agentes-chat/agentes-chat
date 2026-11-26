@@ -5,7 +5,6 @@
   position: relative;
   width: 340px;
   max-width: calc(100vw - 24px);
-  max-height: min(720px, var(--radix-popover-content-available-height, calc(100dvh - 16px)));
   padding: 0;
   gap: 0;
   overflow-x: hidden;
@@ -168,6 +167,11 @@ html:not([data-pointer]) .mcard__edit:focus-visible {
   border-top: 1px solid var(--line);
   padding-top: 12px;
 }
+/* Under "Detalhes" the summary already parts it from the facts above. */
+.mcard .profile-card__more .profile-card__facts {
+  border-top: 0;
+  padding-top: 0;
+}
 /* A card taller than the room scrolls: its message field or buttons stay at its foot, 16px from the edge as at rest, on
    the card's own face that fades in over the 12px above it, so what scrolls passes under them instead of the edge
    cutting them. At rest they sit where they did (the fade takes the body's gap back). */
@@ -212,7 +216,6 @@ html:not([data-pointer]) .mcard__emoji:focus-visible {
   gap: 12px;
   width: 380px;
   max-width: calc(100vw - 24px);
-  max-height: min(640px, var(--radix-popover-content-available-height, calc(100dvh - 16px)));
   overflow-y: auto;
   /* The foot's room is Cancelar and Salvar's own (below), so they pin to the edge with it. */
   padding: var(--menu-pad) var(--menu-pad) 0;

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next, { type TFunction } from "i18next";
 import type { Message } from "../src/api/types";
-import { failedRunFix, runFailureLine } from "../src/lib/errors";
+import { failedRunFix, filesTextOnlyOf, runErrorWords, runFailureLine } from "../src/lib/errors";
 import { serverBody } from "../src/lib/message-body";
 import { applyReceiptEvent, seedReceipt } from "../src/realtime/receipts";
 
@@ -37,9 +37,14 @@ test("a run that failed for want of an AI, or didn't fail, keeps no reason", () 
   expect(applyReceiptEvent({}, { ...handled, status: "done" }).m1?.failures).toBeUndefined();
 });
 
-test("a failed run's one fix: a key for a missing, revoked or wrong one, another model for one gone, else none", () => {
+test("a failed run's one fix: a key for a missing, revoked or wrong one, another model or account for one gone, else none", () => {
   const everyone = { keys: true, admin: true, owner: true };
-  for (const code of ["run.missing_credential", "run.credential_revoked", "run.credential_wrong_provider"])
+  for (const code of [
+    "run.missing_credential",
+    "run.credential_revoked",
+    "run.credential_unreadable",
+    "run.credential_wrong_provider",
+  ])
     expect(failedRunFix(code, everyone)).toBe("useKey");
   for (const code of ["account", "no_credit", "invalid_key", "no_access"])
     expect(failedRunFix(`run.provider_${code}`, everyone)).toBe("useKey");
@@ -47,6 +52,9 @@ test("a failed run's one fix: a key for a missing, revoked or wrong one, another
   for (const code of ["rate_limit", "down", "timeout", "unreachable", "said"])
     expect(failedRunFix(`run.provider_${code}`, everyone)).toBeNull();
   expect(failedRunFix("run.model_unlisted", everyone)).toBe("changeModel");
+  // A model that wrote no words even when asked: another model, as its line says.
+  for (const code of ["run.empty_reply", "run.empty_reply_limit"])
+    expect(failedRunFix(code, everyone)).toBe("changeModel");
   expect(failedRunFix("run.computer_failed", everyone)).toBeNull();
   expect(failedRunFix(undefined, everyone)).toBeNull();
   // Only for who can do it: a key is who manages them, a model the agent's owner or who manages agents.
@@ -55,6 +63,12 @@ test("a failed run's one fix: a key for a missing, revoked or wrong one, another
   expect(failedRunFix("run.missing_credential", { ...nobody, owner: true })).toBeNull();
   expect(failedRunFix("run.model_unlisted", nobody)).toBeNull();
   expect(failedRunFix("run.model_unlisted", { ...nobody, owner: true })).toBe("changeModel");
+  // A reply whose file reached a text-only connection: another AI, for the same people.
+  expect(failedRunFix(filesTextOnlyOf({ filesTextOnly: true }), { ...nobody, admin: true })).toBe("changeModel");
+  expect(failedRunFix(filesTextOnlyOf({ filesTextOnly: true }), nobody)).toBeNull();
+  expect(filesTextOnlyOf({})).toBeNull();
+  expect(failedRunFix("run.account_missing", everyone)).toBe("changeAccount");
+  expect(failedRunFix("run.account_missing", nobody)).toBeNull();
 });
 
 describe("a failed run as one line (runFailureLine)", () => {
@@ -122,4 +136,12 @@ describe("a failed run as one line (runFailureLine)", () => {
     expect(runFailureLine(real, "Ada", { code: "run.failed", params: { detail: "x" } })).toBeNull();
     expect(runFailureLine(real, "Ada", {})).toBeNull();
   });
+});
+
+test("a failed run's stored text stands as its reason only when it's words, never a bare code", () => {
+  expect(runErrorWords("unsupported")).toBeNull();
+  expect(runErrorWords("tools_not_locked")).toBeNull();
+  expect(runErrorWords("run.cli_failed")).toBeNull();
+  expect(runErrorWords(null)).toBeNull();
+  expect(runErrorWords("OpenCode stopped the turn by itself.")).toBe("OpenCode stopped the turn by itself.");
 });

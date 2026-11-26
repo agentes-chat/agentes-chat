@@ -15,9 +15,16 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { PassThrough } from "node:stream";
-import type { AgentScope, MachineRequest, RunnerFrame, ServerFrame } from "@agenteschat/adapters/machine-protocol";
+import {
+  type AgentScope,
+  type MachineRequest,
+  type RunnerFrame,
+  type ServerFrame,
+  SHARED_LOGIN_OFF,
+} from "@agenteschat/adapters/machine-protocol";
 import { sealSecret, secretAad, vaultAad } from "@agenteschat/adapters/secret-box";
-import { AccountBrains, type AccountBrainsOptions, SHARED_LOGIN_OFF } from "../../runner/account-brains";
+import { AccountBrains, type AccountBrainsOptions } from "../../runner/account-brains";
+import { SELF_CHECK_DEFERRED } from "../../runner/account-check";
 import { AccountManager } from "../../runner/accounts";
 import { AGENT_USERS_FILE, type AgentUser, systemLauncher } from "../../runner/agent-users";
 import { AGY_SIGN_IN_FILE } from "../../runner/agy-home";
@@ -610,10 +617,11 @@ test("protocol 31: a Claude Code or Codex task's account goes to its agent's use
   expect(lends).toHaveLength(2);
 });
 
-test("each worker hears which account its own agent thinks with, and again when that changes", async () => {
+test("each worker hears which account its own agent thinks with and its person's language, again when they change", async () => {
   const ACCOUNT = "0193ffff-0000-7000-8000-000000000001";
   const accounts: Record<string, string> = {};
-  const t = setup({ account: (agentId) => accounts[agentId] ?? null });
+  const locales: Record<string, string> = {};
+  const t = setup({ account: (agentId) => accounts[agentId] ?? null, locale: (agentId) => locales[agentId] });
   t.sup.boot();
   t.sup.attach();
   const run = handleRequest(t.ctx, exec(ANA), scope().scope);
@@ -626,13 +634,34 @@ test("each worker hears which account its own agent thinks with, and again when 
   t.sup.stateChanged();
   await waitFor(() => ana.of("worker.state").length === 2);
   expect(ana.of("worker.state")[1]).toEqual({ type: "worker.state", ...STATE, account: ACCOUNT });
-  // Another agent's account is none of its business.
+  locales[ANA.id] = "ja";
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 3);
+  expect(ana.of("worker.state")[2]).toEqual({ type: "worker.state", ...STATE, account: ACCOUNT, locale: "ja" });
+  // Another agent's account and language are none of its business.
   accounts[BIA.id] = "0193ffff-0000-7000-8000-000000000002";
+  locales[BIA.id] = "de";
   t.sup.stateChanged();
   await new Promise((r) => setTimeout(r, 50));
-  expect(ana.of("worker.state")).toHaveLength(2);
+  expect(ana.of("worker.state")).toHaveLength(3);
   ana.crash();
   expect(await errorCode(() => run)).toBe("dropped");
+});
+
+test("a worker that crashes on a full disk says so to what it ran, so the run can name the cause", async () => {
+  const t = setup();
+  t.sup.boot();
+  t.sup.attach();
+  const run = handleRequest(t.ctx, exec(ANA, "sleep 100"), scope().scope);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  await requestOn(ana);
+  ana.stderr.write("ENOSPC: no space left on device, write\n");
+  ana.crash();
+  const err = (await Promise.resolve(run).catch((e: unknown) => e)) as RunnerError;
+  expect(err.code).toBe("dropped");
+  expect(err.message).toContain("disk is full (no space left on device)");
 });
 
 test("a cancel reaches only the worker that runs that request", async () => {
@@ -713,6 +742,20 @@ test("room for a turn: root closes one idle CLI, the least recently used across 
   await waitFor(() => asks(ana).length === 4);
   answer(ana, 3, { closed: false });
   expect(await silent).toBe(false);
+
+  // No CLI left to close: the idle browser used longest ago closes; a worker with none open isn't asked to.
+  const browsers = t.sup.reclaimBrowsers();
+  // Bia's last ask above went unanswered.
+  await waitFor(() => asks(ana).length === 5 && asks(bia).length === 6);
+  expect(asks(ana)[4]).toMatchObject({ peek: true, browser: true });
+  answer(ana, 4, { closed: false });
+  answer(bia, 5, { closed: false, browserIdle: 300 });
+  await waitFor(() => asks(bia).length === 7);
+  expect(asks(bia)[6]).toMatchObject({ browser: true });
+  expect(asks(bia)[6]?.peek).toBeUndefined();
+  answer(bia, 6, { closed: true });
+  expect(await browsers).toBe(true);
+  expect(asks(ana)).toHaveLength(5);
   for (const [w, q] of [
     [ana, await requestOn(ana)],
     [bia, await requestOn(bia)],
@@ -739,7 +782,10 @@ test("room for a turn: root closes one idle CLI, the least recently used across 
   fromRoot.write(`${JSON.stringify({ type: "brain.reclaim", reclaimId: "7", spare: "a:s", peek: true })}\n`);
   fromRoot.write(`${JSON.stringify({ type: "brain.reclaim", reclaimId: "8" })}\n`);
   await waitFor(() => said.length === 2);
-  expect(heard).toEqual([{ spare: "a:s", peek: true }, { peek: false }]);
+  expect(heard).toEqual([
+    { spare: "a:s", peek: true, browser: false },
+    { peek: false, browser: false },
+  ]);
   expect(said).toEqual([
     { type: "brain.reclaimed", reclaimId: "7", closed: false, idle: { since: 5, spare: true } },
     { type: "brain.reclaimed", reclaimId: "8", closed: true },
@@ -1069,6 +1115,24 @@ test("root counts the live view of its agents' browsers it relays: frames up, pe
   const req = await requestOn(ana, 1);
   ana.send({ type: "result", id: req.id, ok: true, data: execDone });
   await Promise.all([run, input]);
+});
+
+test("a worker's pointer on its agent's desktop goes up; one said for another agent never does", async () => {
+  const t = setup();
+  t.sup.boot();
+  t.sup.attach();
+  const run = handleRequest(t.ctx, exec(ANA), scope().scope);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  const pointer = { type: "desktop.pointer", agentId: ANA.id, x: 83, y: 46, width: 1280, height: 900, act: "click" };
+  ana.send({ ...pointer, agentId: BIA.id });
+  ana.send(pointer);
+  await waitFor(() => t.up.some((f) => f.type === "desktop.pointer"));
+  expect(t.up.filter((f) => f.type === "desktop.pointer")).toEqual([pointer]);
+  const req = await requestOn(ana, 1);
+  ana.send({ type: "result", id: req.id, ok: true, data: execDone });
+  await run;
 });
 
 test("a worker's browser frames go to its agent's live view when it takes them, else up as before", async () => {
@@ -2790,6 +2854,25 @@ test.if(posix)(
     );
     expect(recovered.checks()).toBe(2);
     await recovered.daemon.stop();
+
+    // No agent's user yet to try the network with: a sign-in may begin, nothing is reported, and nothing is asked
+    // again until a turn has made one; then the pass needs no new connection.
+    const waiting = await run(on, SELF_CHECK_DEFERRED, null);
+    await waitFor(
+      () => hellos(waiting.sockets).at(-1)?.claudeLoginMethods?.toString() === "setup_token,cli_login",
+      8000,
+    );
+    expect(hellos(waiting.sockets).at(-1)).not.toHaveProperty("claudeLoginBlocked");
+    await Bun.sleep(200);
+    expect(waiting.checks()).toBe(1);
+    const connections = waiting.sockets.length;
+    await (waiting.daemon as unknown as { recheckSharedLogin(): Promise<void> }).recheckSharedLogin();
+    expect(waiting.checks()).toBe(2);
+    await Bun.sleep(50);
+    expect(waiting.sockets.length).toBe(connections);
+    await (waiting.daemon as unknown as { recheckSharedLogin(): Promise<void> }).recheckSharedLogin();
+    expect(waiting.checks()).toBe(2);
+    await waiting.daemon.stop();
   },
   20_000,
 );
@@ -2927,6 +3010,32 @@ test.if(posix)(
     }
   },
   30_000,
+);
+
+test.if(posix)(
+  "a self-check waiting for an agent's user lists the method but keeps no CLI on the store until it passed",
+  async () => {
+    const d = sharedLoginDaemon();
+    const keep = spyOn(BrainManager.prototype, "keepAccount");
+    d.daemon.start();
+    try {
+      await waitFor(() => d.checks.length === 1);
+      d.checks[0]?.(SELF_CHECK_DEFERRED);
+      await d.lists(true);
+      d.online().frame({ type: "agents", agents: [{ ...ANA, account: SHARED_LOGIN }] });
+      expect(keep).toHaveBeenLastCalledWith(null, [], ANA.id);
+
+      const recheck = (d.daemon as unknown as { recheckSharedLogin(): Promise<void> }).recheckSharedLogin();
+      await waitFor(() => d.checks.length === 2);
+      d.checks[1]?.(null);
+      await recheck;
+      expect(keep).toHaveBeenLastCalledWith(SHARED_LOGIN, undefined, ANA.id);
+    } finally {
+      keep.mockRestore();
+      await d.daemon.stop();
+    }
+  },
+  20_000,
 );
 
 test.if(posix)(
@@ -3235,10 +3344,11 @@ test("the launch line: the agent's launcher, then this runner's worker with the 
     CONTAINER_HOST: "unix:///run/user/21000/podman/podman.sock",
     DOCKER_HOST: "unix:///run/user/21000/podman/podman.sock",
   });
-  expect(workerCommand(ana, runner, home, false).argv.slice(0, 4)).toEqual([
-    "/usr/sbin/runuser",
-    "-u",
-    "ag-a1b2c3d4",
+  expect(workerCommand(ana, runner, home, false).argv.slice(0, 5)).toEqual([
+    "/usr/bin/setpriv",
+    "--reuid=ag-a1b2c3d4",
+    "--regid=ag-a1b2c3d4",
+    "--init-groups",
     "--",
   ]);
 });
@@ -4104,7 +4214,7 @@ function hosted(t: ReturnType<typeof setup>, over: Partial<AccountBrainsOptions>
   const stores = tempDir("stores-");
   dirs.push(stores);
   const log = path.join(stores, "spawns.log");
-  const state: { now: "ready" | "off" | "signed_out" } = { now: "ready" };
+  const state: { now: "ready" | "deferred" | "off" | "signed_out" } = { now: "ready" };
   const usage: unknown[][] = [];
   const refused: string[] = [];
   const store = path.join(stores, SHARED_LOGIN);
@@ -4127,6 +4237,7 @@ function hosted(t: ReturnType<typeof setup>, over: Partial<AccountBrainsOptions>
     grants: async () => [],
     relay: ["/usr/local/bin/agentes-runner"],
     shared: () => undefined,
+    recheck: async () => {},
     launcher: (_login, agent, cwd) => ({
       prefix: [],
       env: { PATH: process.env.PATH ?? "", HOME: stores, FAKE_CLAUDE_LOG: log, FAKE_CWD: String(cwd) },
@@ -4181,6 +4292,49 @@ test.if(posix)("a turn on a shared CLI login runs in root: its worker serves it,
   expect(log.system).toContain("from the worker");
   h.brains.brains.close();
 });
+
+test.if(posix)(
+  "a self-check that waited for an agent's user: the turn makes this agent's, asks the check again, then runs",
+  async () => {
+    const t = setup();
+    let rechecks = 0;
+    const h = hosted(t, {
+      recheck: async () => {
+        rechecks++;
+        // The check runs with the agent's user made by the turn's worker.
+        if (t.workers.length === 1) h.state.now = "ready";
+      },
+    });
+    t.sup.boot();
+    t.sup.attach();
+    h.state.now = "deferred";
+    const run = handleRequest(h.ctx, hostedTurn(), scope().scope);
+    await waitFor(() => t.workers.length === 1);
+    const ana = t.last(ANA.id);
+    ana.hello();
+    const stop = answersAsWorker(ana, "/home/ag-a1b2c3d4/ana-a1b2c3d4");
+    const out = (await run) as { final: { type: string; text?: string } };
+    stop();
+    expect(out.final).toMatchObject({ type: "done", text: "echo 1: hi" });
+    expect(rechecks).toBe(1);
+
+    h.brains.brains.close();
+
+    // Still waiting after the check: the turn says why, and the server tries it again later.
+    const t2 = setup();
+    const waits = hosted(t2, { recheck: async () => void rechecks++ });
+    t2.sup.boot();
+    t2.sup.attach();
+    waits.state.now = "deferred";
+    const refused = handleRequest(waits.ctx, hostedTurn(), scope().scope);
+    await waitFor(() => t2.workers.length === 1);
+    t2.last(ANA.id).hello();
+    const off = (await refused) as { final: unknown };
+    expect(off.final).toEqual({ type: "error", code: "unsupported", message: SHARED_LOGIN_OFF, retryable: true });
+    expect(rechecks).toBe(2);
+    waits.brains.brains.close();
+  },
+);
 
 test.if(posix)("a sign-in that isn't a shared CLI login goes to the worker, as it always did", async () => {
   const t = setup();
@@ -4288,14 +4442,15 @@ test.if(posix)("a turn dropped on purpose ends now: its CLI isn't taken for cras
   ana.hello();
   const stop = answersAsWorker(ana, "/home/ag-a1b2c3d4/ana-a1b2c3d4");
   await waitFor(() => h.brains.brains.hosts("run-00000001"));
-  await waitFor(() => existsSync(h.log));
+  // The log exists from the CLI's open, before its line is written: a drop then kills it with the line unwritten.
+  await waitFor(() => existsSync(h.log) && readFileSync(h.log, "utf8").endsWith("\n"));
   h.brains.dropTurns(new RunnerError("dropped", "Not this agent."), BIA.id);
   expect(h.brains.brains.hosts("run-00000001")).toBe(true);
   h.brains.dropTurns(new RunnerError("dropped", "This computer was paused."));
   expect(await errorCode(() => run)).toBe("dropped");
   await sleep(100);
   stop();
-  // The fake CLI may still be writing its last line when the turn ends: read the log once every line is whole.
+  // A CLI started again may still be writing its line: read the log once every line is whole.
   await waitFor(() => readFileSync(h.log, "utf8").endsWith("\n"));
   const started = readFileSync(h.log, "utf8")
     .trim()

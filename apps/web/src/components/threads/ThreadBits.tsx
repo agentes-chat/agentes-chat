@@ -1,5 +1,6 @@
 import type { ThreadAction, ThreadInfo } from "@agenteschat/client";
 import { keys, useThreadMutation } from "@agenteschat/client";
+import { type ThreadWorkState, threadWorkState, threadWorkWord } from "@agenteschat/client/lib/agent-work";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { type ThreadStatus, threadStatus, threadTitle } from "@agenteschat/client/lib/threads";
 import { Button, Chip, Dialog, DialogFooter, type IconName } from "@agenteschat/ui";
@@ -25,16 +26,38 @@ const STATUS_ICON: Record<ThreadStatus, IconName> = {
   archived: "archiveBox",
 };
 
-/** "Esperando você", "Trabalhando", "Aberta", "Fechada", "Arquivada": an icon and a word, never a dot. */
+/** A neutral wait's icon (ADR 0084 addendum): the clock. */
+const WAIT_ICON: Partial<Record<ThreadWorkState, IconName>> = {
+  approval: "clock",
+  input: "clock",
+  computer: "clock",
+  queued: "clock",
+  later: "clock",
+};
+
+/**
+ * "Esperando você", "Trabalhando", what its work waits on ("Esperando aprovação", "Na fila"), "Aberta", "Fechada",
+ * "Arquivada": an icon and a word, never a dot.
+ */
 export function ThreadStatusChip({
   thread,
   className,
 }: {
-  thread: Pick<ThreadInfo, "state" | "working" | "needsYou">;
+  thread: Pick<ThreadInfo, "state" | "working" | "needsYou" | "wait" | "laterAt">;
   className?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const status = threadStatus(thread);
+  // One state with the chip under its root (`threadWorkState`): a run in line counts as at work but reads "Na fila".
+  const wait = status === "open" || status === "working" ? threadWorkState(thread) : null;
+  const icon = wait ? WAIT_ICON[wait] : undefined;
+  if (wait && icon) {
+    return (
+      <Chip icon={icon} tone="neutral" className={className}>
+        {threadWorkWord(t, wait, { at: thread.laterAt, locale: i18n.language })}
+      </Chip>
+    );
+  }
   return (
     <Chip icon={STATUS_ICON[status]} tone={status === "needsYou" ? "waiting" : "neutral"} className={className}>
       {t(`threads.status.${status}`)}
@@ -85,14 +108,19 @@ export function useThreadControls() {
   };
 
   const run = async (threads: ThreadInfo[], action: ThreadAction, options: { undo?: boolean } = {}) => {
-    const done: ThreadInfo[] = [];
-    for (const thread of threads) {
-      try {
-        done.push((await mutation.mutateAsync({ type: "action", thread, action })) ?? thread);
-      } catch (error) {
-        toast.show(errorText(t, error), "error");
-      }
-    }
+    // All at once: each thread shows its change as it is asked, not after the one before it answered.
+    const answers = await Promise.all(
+      threads.map((thread) =>
+        mutation.mutateAsync({ type: "action", thread, action }).then(
+          (saved) => saved ?? thread,
+          (error: unknown) => {
+            toast.show(errorText(t, error), "error");
+            return null;
+          },
+        ),
+      ),
+    );
+    const done = answers.filter((x): x is ThreadInfo => x !== null);
     if (done.length === 0 || options.undo === false) return done;
     const one = done.length === 1 ? done[0] : undefined;
     const back = UNDO[action];

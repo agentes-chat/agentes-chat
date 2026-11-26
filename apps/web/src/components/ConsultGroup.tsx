@@ -3,6 +3,7 @@ import {
   type Message,
   type MessageConsultation,
   type RunConsultation,
+  useChannelName,
   useConsultationConversation,
   useConsultations,
 } from "@agenteschat/client";
@@ -11,7 +12,6 @@ import {
   type ConsultLineState,
   type ConsultNoticeFold,
   type ConsultPairItem,
-  type ConsultRow,
   consultAskedKey,
   consultBlocksNearEnd,
   consultLineKey,
@@ -21,20 +21,24 @@ import {
   groupsByRun,
   openableConsultation,
   pairItemOf,
+  type RelayedAnswer,
+  relayedAnswers,
 } from "@agenteschat/client/lib/consult-group";
-import { consultTimeText, withoutRelayLine } from "@agenteschat/client/lib/consultations";
+import { consultSubject, consultTimeText, previewOf, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { joinNames, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { cx, Icon } from "@agenteschat/ui";
+import { cx, Icon, Tip, useMorph } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageBody } from "@/chat/MessageBody";
 import { AgentAvatar, withAgentFace } from "@/components/AgentAvatar";
 import { useChannelActions } from "@/components/channel-actions";
 import { useNow } from "@/components/missions/MissionBits";
 import { useOrg } from "@/components/org-context";
+import { askOf, usePendingAsks, WaitMark } from "@/components/RequestCard";
+import { rowTip } from "@/components/tasks/TaskBits";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useChannelEvents } from "@/realtime/context";
 
@@ -49,10 +53,14 @@ export interface ConsultGroups {
   nearEnd: ReadonlySet<string>;
   /** Runs at work: their questions wait for their reply (a message they already posted leaves them to it). */
   live: ReadonlySet<string>;
-  /** The question open in the panel beside the conversation: its line shows pressed. */
+  /** The question open in its dialog over the conversation: its line shows pressed. */
   open: string | null;
   /** By the consulted agent's run: the question it answers, so its cards here say whom it helps. */
   helping: ReadonlyMap<string, RunConsultation>;
+  /** By the asking agent's message: the consulted agent's words it passes on, quoted at its top (`relayedAnswers`). */
+  relays: ReadonlyMap<string, RelayedAnswer<Message>>;
+  /** The consulted agents' messages those quotes stand for: no row of their own. */
+  relayed: ReadonlySet<string>;
 }
 
 const EMPTY: ConsultGroups = {
@@ -63,23 +71,26 @@ const EMPTY: ConsultGroups = {
   live: new Set(),
   open: null,
   helping: new Map(),
+  relays: new Map(),
+  relayed: new Set(),
 };
 const ConsultGroupsContext = createContext<ConsultGroups>(EMPTY);
 export const ConsultGroupsProvider = ConsultGroupsContext.Provider;
-/** The question open in the panel beside the conversation, if any (a card or a line that opens it shows pressed). */
+/** The question open in its dialog over the conversation, if any (a card or a line that opens it shows pressed). */
 export const useOpenConsultation = () => useContext(ConsultGroupsContext).open;
 
 const RELOAD_ON = new Set(["agent.consulting", "agent.consulted", "agent.consultation"]);
 
 /**
- * The conversation's questions to other agents, by the run that asked; reloaded when one changes. `rows`: the
- * messages drawn here, in order; `live`: the runs at work after them. A reply shows its run's questions: the answers'
- * notices close to it fold, and the working line leaves out the ones near the end. A run at work draws none until its
- * reply comes (its answers' notices fold meanwhile): the line says its questions.
+ * The conversation's questions to other agents, by the run that asked; reloaded when one changes, with its threads'
+ * list, whose chips say how a hand-off's work stands. `rows`: the messages drawn here, in order; `live`: the runs at
+ * work after them. A reply shows its run's questions: the answers' notices close to it fold, and the working line
+ * leaves out the ones near the end. A run at work draws none until its reply comes (its answers' notices fold
+ * meanwhile): the line says its questions.
  */
 export function useConsultGroups(
   channelId: string,
-  rows: readonly ConsultRow[],
+  rows: readonly Message[],
   live: ReadonlySet<string>,
   open: string | null = null,
 ): ConsultGroups {
@@ -87,7 +98,9 @@ export function useConsultGroups(
   const qc = useQueryClient();
   const list = useConsultations(org.id, channelId);
   useChannelEvents(channelId, true, (event) => {
-    if (RELOAD_ON.has(event.type)) void qc.invalidateQueries({ queryKey: keys.consultations(org.id, channelId) });
+    if (!RELOAD_ON.has(event.type)) return;
+    void qc.invalidateQueries({ queryKey: keys.consultations(org.id, channelId) });
+    void qc.invalidateQueries({ queryKey: keys.channelThreads(org.id, channelId, "all") });
   });
   // Its own memo: opening a question doesn't hand every row a new map.
   const helping = useMemo(() => {
@@ -108,11 +121,13 @@ export function useConsultGroups(
       live,
       open,
       helping,
+      // From the list as the server sends it (latest first), not the exchanges: each consulted run's own question.
+      ...relayedAnswers(rows, list.data ?? []),
     };
   }, [list.data, rows, live, open, helping]);
 }
 
-/** A question's state in words, in the panel and in place ("A Iris espera uma aprovação"). */
+/** A question's state in words, in the dialog and in place ("A Iris espera uma aprovação"). */
 export const consultLineLabel = (
   t: TFunction,
   state: ConsultLineState,
@@ -160,75 +175,147 @@ export function useConsultById(channelId: string, id: string | undefined): RunCo
  * The slim row right before a reply whose agent asked other agents first (`ask_agent`) or handed them work
  * (`tell_agent`): the asker's face and name, ⇄, the consulted agent's (several fold into stacked faces, "Atlas e
  * mais 2"), then how long it took, or while it runs "perguntando 42 s", or "não respondeu". Never what they said: in a
- * channel or a DM a click opens the two agents' conversation in the panel; in a thread view and inside that panel
- * (no panel to open) the question and the answer open under the row. The same row stands for an answer whose reply
- * is farther up or not here, and for a hand-off by direct message on a reach line.
+ * conversation (a channel, a DM, a thread, a task's) a click opens the two agents' conversation in a dialog; inside
+ * that dialog, and for an old question with no id of its own, the question and the answer open under the row. The
+ * same row stands for an answer whose reply is farther up or not here, and for a hand-off by direct message on a
+ * reach line.
  */
-export function ConsultPairRow({ askerId, items }: { askerId: string; items: readonly ConsultPairItem[] }) {
+export function ConsultPairRow({
+  askerId,
+  items,
+  handed = false,
+  askedIn = null,
+}: {
+  askerId: string;
+  items: readonly ConsultPairItem[];
+  /**
+   * Another agent's request in the DM of the agent it went to (`handOffOf`): "Atlas pediu à Ada por você" in place of
+   * ⇄, and nothing about its state until it ends (the agent's working line already says it).
+   */
+  handed?: boolean;
+  /** Handed: the channel where the person asked ("em #eng"). */
+  askedIn?: string | null;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
-  const panel = useChannelActions()?.openConsultation;
+  const actions = useChannelActions();
+  const dialog = actions?.openConsultation;
   const openId = useOpenConsultation();
   const [open, setOpen] = useState(false);
+  const where = useChannelName(org.id, askedIn);
   const live = items.some((c) => c.status === "open");
   const now = useNow(live);
-  const pair = consultPair(items, now, askerId);
-  if (!pair) return null;
+  // The consulted agent's card here waits on me: the row says so (amber) before the list hears the run park, and a
+  // click goes to the card (ADR 0095 addendum).
+  const asks = usePendingAsks();
+  const only = items.length === 1 && items[0]?.status === "open" ? items[0] : undefined;
+  const mine = only ? askOf(asks, only.consultedAgentId, only.consultedRunId) : null;
+  const found = consultPair(items, now, askerId, handed ? null : (mine?.on ?? null));
+  if (!found) return null;
+  const pair = handed && live ? { ...found, word: null, seconds: null, tone: null } : found;
   // An old reply's question with no id of its own has no conversation to open: it opens in place.
-  const openConsultation = openableConsultation(pair.opens) ? panel : undefined;
+  const openConsultation = openableConsultation(pair.opens) ? dialog : undefined;
+  const seeCard = mine && actions?.seeRequest ? () => actions.seeRequest?.(mine.ask.id) : undefined;
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent");
   const from = nameOf(askerId);
   const names = pair.faces.map((f) => nameOf(f.agentId));
+  // The subject comes from the question a click opens, so a folded row of several is called by the one it shows.
+  const opened = items.find((c) => c.id === pair.opens) ?? items[0];
+  const subject = consultSubject(opened?.question);
+  // The whole question, which the row's one line cuts: in its tip and, for screen readers, its description.
+  const question = previewOf(opened?.question ?? "");
   const title =
     names.length === 1
       ? t("chat.consultPanel.label", { from, to: names[0] })
       : t("chat.consultPair.labelMany", { from, to: joinNames(names, t) });
   return (
     <div className="consult-pair">
-      <button
-        type="button"
-        className={cx("consult-pair__row", pair.tone && `consult-pair__row--${pair.tone}`)}
-        title={title}
-        {...(openConsultation
-          ? {
-              "aria-pressed": items.some((c) => c.id === openId),
-              onClick: () => openConsultation(pair.opens),
-            }
-          : { "aria-expanded": open, onClick: () => setOpen((o) => !o) })}
-      >
-        {/* One sentence that wraps at its spaces: each face keeps its name's first word, the · its name's last. */}
-        <span className="consult-pair__who">
-          <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
-          <span className="consult-pair__name">{from}</span>
-        </span>
-        <Icon name="swap" size={16} className="consult-pair__swap" label={t("newAgent.and")} />
-        <span className="consult-pair__who">
-          <span className="ac-avatar-stack consult-pair__faces">
-            {pair.faces.slice(0, 3).map((f) => (
-              <AgentAvatar
-                key={f.agentId}
-                agentId={f.agentId}
-                size="xs"
-                name={nameOf(f.agentId)}
-                state={live && !f.off ? "thinking" : "idle"}
-                className={f.off ? "consult-pair__off" : undefined}
-              />
-            ))}
+      <Tip button look="ac-msg__tip tm-tip" tip={rowTip(title, question ? [question] : [])}>
+        <button
+          type="button"
+          className={cx(
+            "consult-pair__row",
+            pair.tone && `consult-pair__row--${pair.tone}`,
+            handed && "consult-pair__row--handed",
+          )}
+          aria-description={question || undefined}
+          {...(seeCard && !handed
+            ? { onClick: seeCard }
+            : openConsultation
+              ? {
+                  "aria-pressed": items.some((c) => c.id === openId),
+                  // An answer's notice names no asker of its own: the row's tells the dialog who asked.
+                  onClick: () =>
+                    openConsultation(
+                      pair.opens,
+                      items.map((i) => ({ ...i, agentId: i.agentId ?? askerId })),
+                    ),
+                }
+              : { "aria-expanded": open, onClick: () => setOpen((o) => !o) })}
+        >
+          <span className="consult-pair__lead">
+            <span className="consult-pair__who">
+              <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
+              <span className="consult-pair__name">{from}</span>
+            </span>
+            {handed ? (
+              <span className="consult-pair__asked">
+                {t("chat.consultPair.askedHere", { context: agentGrammar(names[0] ?? "").context })}
+              </span>
+            ) : pair.tone === "you" ? (
+              <span className="consult-pair__swap consult-pair__wait">
+                <WaitMark />
+              </span>
+            ) : (
+              <Icon name="swap" size={16} className="consult-pair__swap" label={t("newAgent.and")} />
+            )}
+            <span className="consult-pair__who">
+              <span className="ac-avatar-stack consult-pair__faces">
+                {pair.faces.slice(0, 3).map((f) => (
+                  <AgentAvatar
+                    key={f.agentId}
+                    agentId={f.agentId}
+                    size="xs"
+                    name={nameOf(f.agentId)}
+                    state={pair.tone === "you" ? "waiting" : pair.tone === "live" && !f.off ? "thinking" : "idle"}
+                    className={f.off ? "consult-pair__off" : undefined}
+                  />
+                ))}
+              </span>
+              <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
+            </span>
+            {handed && <span className="consult-pair__for">{t("chat.consultPair.forYou")}</span>}
           </span>
-          <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
-        </span>
-        {(pair.word || pair.seconds !== null) && (
-          <span className="consult-pair__sep" aria-hidden="true">
-            ·
-          </span>
-        )}{" "}
-        {pair.word && <span className="consult-pair__word">{t(pair.word.key, pair.word.values)}</span>}
-        {pair.seconds !== null && (
-          <span className="consult-pair__time">{consultTimeText(t, i18n.language, live, pair.seconds)}</span>
-        )}
-        <Icon name={openConsultation ? "chevronRight" : "chevronDown"} size={14} className="consult-pair__chev" />
-      </button>
+          {/* The subject carries its own ·: when it has no room left, the dot goes with it. */}
+          {subject && (
+            <span className="consult-pair__subject">
+              <span className="consult-pair__sep" aria-hidden="true">
+                ·
+              </span>
+              {subject}
+            </span>
+          )}{" "}
+          {handed && where && (
+            <span className="consult-pair__where">
+              <span className="consult-pair__sep" aria-hidden="true">
+                ·
+              </span>
+              {t("chat.consultPair.askedIn", { channel: `#${where}` })}
+            </span>
+          )}{" "}
+          {(pair.word || pair.seconds !== null) && (
+            <span className="consult-pair__sep consult-pair__how" aria-hidden="true">
+              ·
+            </span>
+          )}{" "}
+          {pair.word && <span className="consult-pair__word">{t(pair.word.key, pair.word.values)}</span>}
+          {pair.seconds !== null && (
+            <span className="consult-pair__time">{consultTimeText(t, i18n.language, live, pair.seconds)}</span>
+          )}
+          <Icon name={openConsultation ? "chevronRight" : "chevronDown"} size={14} className="consult-pair__chev" />
+        </button>
+      </Tip>
       {open && !openConsultation && (
         <div className="consult-pair__detail">
           {items.map((c) => (
@@ -240,7 +327,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   );
 }
 
-/** One question opened under its row where no panel opens: what was asked or handed, and the answer or its state. */
+/** One question opened under its row where no dialog opens: what was asked or handed, and the answer or its state. */
 function ConsultInPlace({
   consultation: c,
   askerId,
@@ -258,8 +345,11 @@ function ConsultInPlace({
   const from = agentGrammar(dir.agentById.get(askedBy)?.name ?? t("channel.unknownAgent"));
   const to = agentGrammar(dir.agentById.get(c.consultedAgentId)?.name ?? t("channel.unknownAgent"));
   const state = consultLineState(c, now);
+  // Its answer arriving: the waiting line fades out over it as the box glides to the answer's height.
+  const box = useRef<HTMLDivElement>(null);
+  useMorph(box, { live: state !== "answered" });
   return (
-    <div className="ac-consult__body ac-consult__body--inline">
+    <div ref={box} className="ac-consult__body ac-consult__body--inline">
       <small>{withAgentFace(t(consultAskedKey(c), { name: from.name }), from.name, askedBy)}</small>
       <div className="ac-consult__text ac-consult__text--q">
         <MessageBody
@@ -300,6 +390,37 @@ export function ConsultAnswerLine({
     <div data-message-id={message.id}>
       <ConsultPairRow askerId={c.agentId} items={[c]} />
     </div>
+  );
+}
+
+/**
+ * At the top of an agent's message that passes on what another agent answered it (`relayedAnswers`): that agent's
+ * face, @name and the start of its words, as a reply quotes the message it answers. Opens the two agents'
+ * conversation over the channel, where those words stay whole.
+ */
+export function RelayQuote({ relay }: { relay: RelayedAnswer<Message> }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const actions = useChannelActions();
+  const { message: m, consultation: c } = relay;
+  const name = dir.agentById.get(m.author.id ?? "")?.name ?? t("channel.unknownAgent");
+  const excerpt = previewOf(m.body);
+  return (
+    <button
+      type="button"
+      className="msg-quote"
+      aria-label={t("chat.consultPanel.relay", { name, excerpt })}
+      onClick={() => actions?.openConsultation?.(c.id)}
+    >
+      <AgentAvatar agentId={m.author.id ?? undefined} name={name} size="xs" />
+      <span className="msg-quote__who" aria-hidden="true">
+        @{name}
+      </span>
+      <span className="msg-quote__excerpt" aria-hidden="true">
+        {excerpt}
+      </span>
+    </button>
   );
 }
 

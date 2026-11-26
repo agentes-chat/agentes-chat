@@ -32,6 +32,10 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "Do przestrzeni roboczej dołączył nowy komputer",
   computerReadyTitle: "Komputer twojej przestrzeni roboczej jest gotowy",
   computerReadyBody: "Otwórz stronę agenta, żeby zobaczyć komputer na żywo.",
+  computerDownTitle: (n) => `${n} nie odpowiada`,
+  computerDownBody: "Praca twoich agentów na nim czeka. Dotknij, aby zobaczyć, co zrobić.",
+  computerBackTitle: (n) => `${n} znów działa`,
+  computerBackBody: (away) => `Był niedostępny przez ${away}. Czekająca praca idzie teraz dalej.`,
   browserHandoffTitle: (a) => `${a} potrzebuje cię w przeglądarce`,
   browserHandoffReminderTitle: (a) => `${a} nadal potrzebuje cię w przeglądarce`,
   browserHandoffBody: "Dotknij, żeby otworzyć ekran.",
@@ -83,6 +87,18 @@ export const strings: Partial<PushStrings> = {
   deviceAccessTitle: (a, p, d) =>
     p ? `${a} (dla ${p}) prosi o dostęp do twojego urządzenia ${d}` : `${a} prosi o dostęp do twojego urządzenia ${d}`,
   deviceAccessBody: "Dotknij, żeby zezwolić raz, zawsze albo odmówić.",
+  deviceToolTitle: (a, d) => `${a} prosi o włączenie narzędzia na Twoim ${d}`,
+  deviceToolBody: "Dotknij, żeby włączyć jednym kliknięciem.",
+  deviceCliTitle: (a, d) => `${a} prosi o zainstalowanie programu na Twoim ${d}`,
+  deviceCliBody: "Dotknij, żeby zainstalować jednym kliknięciem.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} prosi o ${f} na ${d}` : `${a} prosi o folder na ${d}`),
+  deviceFolderBody: "Zezwól w aplikacji na tym komputerze.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} prosi o dodanie agenta do #${l}`
+      : what === "create_agents"
+        ? `${a} prosi o możliwość tworzenia agentów`
+        : `${a} prosi o skonfigurowanie webhooka ${l} dla rutyn`,
   deviceWaitingTitle: (p, d) => `Agent dla ${p} czeka na twoje urządzenie ${d}`,
   deviceWaitingBody: "Zacznie, gdy urządzenie wróci.",
   teamWeekReady: "Tydzień twojego zespołu jest gotowy",
@@ -97,4 +113,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} prosi o dołączenie do twojej przestrzeni roboczej`,
   joinSuggestionTitlePersonal: (by, name) => `${by} proponuje zaprosić osobę ${name}`,
   teamWeekReadyPersonal: "Twój tydzień jest gotowy",
+  teamWatchStill: (n) => `Czeka na Ciebie jeszcze: ${n}`,
 };

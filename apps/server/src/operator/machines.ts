@@ -1,12 +1,15 @@
 import {
   issueManagedMachine,
   listMachineRequests,
+  OPERATOR_MACHINE_ACCOUNTS,
+  operatorMachine,
   operatorMachines,
   PROVISIONING_REASONS,
   PROVISIONING_STATES,
   PROVISIONING_STEPS,
   revokeManagedMachine,
   setMachineEgressWaiting,
+  setMachineMoving,
   setMachineStandby,
   setProvisioning,
 } from "@agenteschat/engine";
@@ -14,6 +17,8 @@ import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../http/errors";
 import { body, iso, json, noContent, OrgParams } from "../routes/app/context";
 import type { OperatorDeps } from "./app";
+import { accountFacts } from "./lookups";
+import { Count } from "./runs";
 
 const tags = ["Operator"];
 const MAX_AHEAD_MS = 7 * 86_400_000;
@@ -137,8 +142,46 @@ const Machine = z
       description:
         "When the workspace's computer was last used: the latest of the workspace's runs and this computer's tasks of the last 7 days, the last time something wanted it, and its people's last visit. Null for every other computer, or when nothing says.",
     }),
+    orgId: z.uuid(),
+    executors: z.array(z.object({ name: z.string(), version: z.string().nullable() })).openapi({
+      description:
+        "What its runner found on it that says its version: its coding CLIs (`claude`, `codex`…) and its agents' `browser`. `version` is the line each printed; null when that isn't a plain version.",
+    }),
+    accounts: z.array(z.object({ ...accountFacts, shared: z.boolean() })).openapi({
+      description: `Its AI accounts, most recently used first: at most ${OPERATOR_MACHINE_ACCOUNTS} across one answer's computers (\`GET /ai-accounts?orgId=\` pages them all). \`shared\`: one sign-in thinks for every agent its owner gives it. No email or label.`,
+    }),
+    accountCount: Count.openapi({ description: "How many AI accounts it has." }),
+    openTasks: Count.openapi({
+      description: "Background tasks queued or running on it, and interrupted ones that may still come back.",
+    }),
+    holds: Count.openapi({ description: "What agents keep running on it now (`keep_running`)." }),
+    waitingRuns: Count.openapi({ description: "Runs waiting for it: for it to come back, or for room on it." }),
+    deletedAt: z.string().nullable().openapi({
+      description: "When it was removed. Always null in a workspace's list, which leaves removed computers out.",
+    }),
   })
   .openapi("OperatorMachine");
+
+const MachineList = z
+  .object({
+    machines: z.array(Machine),
+    provisioning: Provisioning.nullable().openapi({
+      description: "How far the workspace's own computer is, as a provisioner last said; null: nothing said.",
+    }),
+  })
+  .openapi("OperatorMachineList");
+
+const machineJson = (m: NonNullable<Awaited<ReturnType<typeof operatorMachine>>>) => ({
+  ...m,
+  lastSeenAt: iso(m.lastSeenAt),
+  lastUsedAt: iso(m.lastUsedAt),
+  deletedAt: iso(m.deletedAt),
+  accounts: m.accounts.map((a) => ({
+    ...a,
+    lastSuccessAt: iso(a.lastSuccessAt),
+    lastFailureAt: iso(a.lastFailureAt),
+  })),
+});
 
 const MachineParams = OrgParams.extend({ machineId: z.uuid().openapi({ param: { name: "machineId", in: "path" } }) });
 
@@ -219,16 +262,15 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
       path: "/orgs/{orgId}/machines",
       tags,
       summary: "The workspace's computers, its own and the ones its people connected",
+      description:
+        "Oldest first. Whether each is there, what runs on it and what waits for it: never a token, a code, its hostname, its folders or its address.",
       request: { params: OrgParams },
-      responses: { 200: json(z.object({ machines: z.array(Machine) })), ...errors },
+      responses: { 200: json(MachineList), ...errors },
     }),
     async (c) => {
-      const machines = await operatorMachines(db, c.req.valid("param").orgId);
-      if (!machines) return apiError(c, 404, "not_found", "No workspace with this id");
-      return c.json(
-        { machines: machines.map((m) => ({ ...m, lastSeenAt: iso(m.lastSeenAt), lastUsedAt: iso(m.lastUsedAt) })) },
-        200,
-      );
+      const found = await operatorMachines(db, c.req.valid("param").orgId);
+      if (!found) return apiError(c, 404, "not_found", "No workspace with this id");
+      return c.json({ machines: found.machines.map(machineJson), provisioning: found.provisioning }, 200);
     },
   );
 
@@ -272,6 +314,25 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
 
   api.openapi(
     createRoute({
+      method: "put",
+      path: "/orgs/{orgId}/machines/{machineId}/moving",
+      tags,
+      summary: "Say the workspace's computer is moving to another server, or no longer",
+      description:
+        "Say it (`true`) when its move starts, and `false` once its runner paired on the new server, or the move was cancelled or failed. While it is away its people see that it is moving and comes back in a few minutes, never that it is offline or not answering, for at most two hours after the latest `true` (say it again at each step of a long move). Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
+      request: { params: MachineParams, body: body(z.object({ moving: z.boolean() })) },
+      responses: { 200: json(z.object({ moving: z.boolean() }).openapi("OperatorMoving")), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const set = await setMachineMoving({ db, pubsub }, orgId, machineId, c.req.valid("json").moving);
+      if (!set) return apiError(c, 404, "not_found", "This workspace has no managed computer with this id");
+      return c.json(set, 200);
+    },
+  );
+
+  api.openapi(
+    createRoute({
       method: "delete",
       path: "/orgs/{orgId}/machines/{machineId}",
       tags,
@@ -287,6 +348,23 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
         return apiError(c, 404, "not_found", "This workspace has no managed computer with this id");
       }
       return c.body(null, 204);
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/machines/{machineId}",
+      tags,
+      summary: "One computer, as its workspace's list shows it",
+      description: "A removed one too (`deletedAt`): runs outlive the computer they waited for.",
+      request: { params: z.object({ machineId: z.uuid().openapi({ param: { name: "machineId", in: "path" } }) }) },
+      responses: { 200: json(Machine), ...errors },
+    }),
+    async (c) => {
+      const machine = await operatorMachine(db, c.req.valid("param").machineId);
+      if (!machine) return apiError(c, 404, "not_found", "No computer with this id");
+      return c.json(machineJson(machine), 200);
     },
   );
 }

@@ -8,10 +8,10 @@ import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import type { Gaze } from "@/agent/AgentAvatar";
 import type { AgentLookInput } from "@/agent/looks";
 import { type AgentMode, agentLayout, framedByDefault } from "@/agent/poses";
-import { AgentAvatar, PersonAvatar, WithPresence } from "@/ui";
+import { AgentAvatar, type BadgePresence, PersonAvatar, WithPresence } from "@/ui";
 import { router } from "@/ui/navigation";
-import { usePresenceOf } from "../status/hooks";
-import { useDirectory } from "./hooks";
+import { useRowDirectory } from "../chat/row-data";
+import { useAgentPresence, usePersonPresence } from "../status/hooks";
 import { agentLook } from "./logic";
 import { usePersonPhoto } from "./photo";
 import { useSheetIfAny } from "./SheetHost";
@@ -19,7 +19,7 @@ import { useSheetIfAny } from "./SheetHost";
 /**
  * A person's or an agent's face. Agents are living bodies; long lists pass
  * `live={false}` (a still frame). `presence`: its badge on the corner (ADR 0084), ringed in `ring` (the surface
- * behind; default the page's color).
+ * behind; default the page's color). In a conversation the directory is the one its rows share (`useRowDirectory`).
  */
 export function Face({
   who,
@@ -29,6 +29,7 @@ export function Face({
   framed,
   presence = false,
   ring,
+  radius,
 }: {
   who: { type: string; id: string | null } | null | undefined;
   size: number;
@@ -38,19 +39,50 @@ export function Face({
   framed?: boolean;
   presence?: boolean;
   ring?: string;
+  /** The tile's corner (default 30% of the side, see AgentAvatar). */
+  radius?: number | undefined;
 }) {
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const member = who?.type !== "agent" && who?.id ? dir.memberById.get(who.id) : undefined;
   const photo = usePersonPhoto(member ? (member.avatarUrl ?? member.image) : null);
   if (who?.type === "agent")
     return (
-      <AgentFace agentId={who.id} size={size} mode={mode} live={live} framed={framed} presence={presence} ring={ring} />
+      <AgentFace
+        agentId={who.id}
+        size={size}
+        mode={mode}
+        live={live}
+        framed={framed}
+        presence={presence}
+        ring={ring}
+        radius={radius}
+      />
     );
-  const face = <PersonAvatar name={dir.nameOf(who) || "?"} size={size} photo={photo} />;
+  const face = <PersonAvatar name={dir.nameOf(who) || "?"} size={size} photo={photo} radius={radius} />;
   if (!presence || !who?.id) return face;
   return (
-    <Badged who={{ type: who.type, id: who.id }} size={size} ring={ring} inset={0}>
+    <PresentPersonFace userId={who.id} size={size} ring={ring}>
       {face}
+    </PresentPersonFace>
+  );
+}
+
+/** A person's face with their presence on the corner, drawn again only when theirs changes. */
+function PresentPersonFace({
+  userId,
+  size,
+  ring,
+  children,
+}: {
+  userId: string;
+  size: number;
+  ring: string | undefined;
+  children: ReactNode;
+}) {
+  const presence = usePersonPresence(userId)?.presence;
+  return (
+    <Badged presence={presence} size={size} ring={ring} inset={0}>
+      {children}
     </Badged>
   );
 }
@@ -61,7 +93,7 @@ export function Face({
  */
 export function OpensAgent({ agentId, children }: { agentId: string; children: ReactNode }) {
   const { t } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const sheet = useSheetIfAny();
   const agent = dir.anyAgent(agentId);
   if (!agent || !opensDetails(agent)) return <>{children}</>;
@@ -93,6 +125,7 @@ export function AgentFace({
   gaze,
   expression,
   bodyless,
+  radius,
 }: {
   agentId: string | null | undefined;
   size: number;
@@ -110,10 +143,12 @@ export function AgentFace({
   expression?: Expression | undefined;
   /** Only its sky in the frame: away on a routine. */
   bodyless?: boolean | undefined;
+  /** The tile's corner (default 30% of the side, see AgentAvatar). */
+  radius?: number | undefined;
 }) {
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const look = agentLook(agentId ? dir.anyAgent(agentId) : undefined);
-  const moment = { gaze, expression, bodyless };
+  const moment = { gaze, expression, bodyless, radius };
   if (presence && agentId)
     return (
       <PresentAgentFace
@@ -137,6 +172,7 @@ export function AgentFace({
       {...(gaze ? { gaze } : {})}
       {...(expression ? { expression } : {})}
       {...(bodyless ? { bodyless } : {})}
+      radius={radius}
     />
   );
 }
@@ -158,12 +194,18 @@ function PresentAgentFace({
   live: boolean;
   framed: boolean | undefined;
   ring: string | undefined;
-  moment: { gaze?: Gaze | undefined; expression?: Expression | undefined; bodyless?: boolean | undefined };
+  moment: {
+    gaze?: Gaze | undefined;
+    expression?: Expression | undefined;
+    bodyless?: boolean | undefined;
+    radius?: number | undefined;
+  };
 }) {
-  const status = usePresenceOf().agent(agentId)?.status?.status;
-  const asleep = mode === "idle" && isOutOfOffice(status);
+  // Its own row of the statuses: the face draws again when this agent changes, not when any other does.
+  const shown = useAgentPresence(agentId);
+  const asleep = mode === "idle" && isOutOfOffice(shown?.status?.status);
   return (
-    <Badged who={{ type: "agent", id: agentId }} size={size} ring={ring} inset={agentBadgeInset(look, size, framed)}>
+    <Badged presence={shown?.presence} size={size} ring={ring} inset={agentBadgeInset(look, size, framed)}>
       <AgentAvatar
         agent={look}
         size={size}
@@ -173,6 +215,7 @@ function PresentAgentFace({
         {...(moment.gaze ? { gaze: moment.gaze } : {})}
         {...(moment.expression ? { expression: moment.expression } : {})}
         {...(moment.bodyless ? { bodyless: true } : {})}
+        radius={moment.radius}
       />
     </Badged>
   );
@@ -188,25 +231,23 @@ export function agentBadgeInset(look: AgentLookInput, size: number, framed?: boo
   return Math.round((size - agentLayout(size, accessory).inner) / 2);
 }
 
-/** A face with its presence (people's from the people, agents' from their work); none while it loads. */
+/**
+ * A face with its presence: an agent's says free, at work, waiting on you, out or offline (ADR 0084 addendum); a
+ * person's, theirs. None while it loads.
+ */
 function Badged({
-  who,
+  presence,
   size,
   ring,
   inset,
   children,
 }: {
-  who: { type: string; id: string };
+  presence: BadgePresence | undefined;
   size: number;
   ring: string | undefined;
   inset: number;
   children: ReactNode;
 }) {
-  const of = usePresenceOf();
-  const said = who.type === "agent" ? of.agent(who.id)?.presence : of.person(who.id)?.presence;
-  // An agent at rest ("away" once its last run is a while back) wears no badge: its badge is amber, the color of what
-  // waits on the person, and resting is no news. People's "away" is theirs to say, so it stays.
-  const presence = who.type === "agent" && said === "away" ? undefined : said;
   return (
     <WithPresence size={size} presence={presence} inset={inset} {...(ring !== undefined ? { ring } : {})}>
       {children}
@@ -233,11 +274,13 @@ export function AgentWho({
   // A view inside a line of text sits on the baseline and iOS drops its margins, so the face touched the name: the
   // room around it is text (a narrow space before, unless it opens the line, and after), and it is lowered to sit on
   // the words' middle (its bottom on the baseline put it a little high next to lowercase text).
+  // In its sky tile, standing in its middle: bare, the body sits at its box's foot under the room kept for a hat, so
+  // the face read as sunk under the words and smaller than it is.
   return (
     <RNText style={whoStyles.who}>
       {lead ? "" : NARROW}
       <View style={{ width: size, height: size, transform: [{ translateY: Math.round(size * 0.2) }] }}>
-        <AgentFace agentId={agentId} size={size} live={false} />
+        <AgentFace agentId={agentId} size={size} live={false} framed />
       </View>
       {NARROW}
       {name}

@@ -5,6 +5,7 @@ import { and, eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import {
   afterDeviceAccessDecided,
+  autoComputer,
   createDeviceToolSource,
   type DeviceToolDeps,
   decideDeviceAccess,
@@ -18,6 +19,7 @@ import {
   type MachineCaller,
   type MachineHub,
   MachineRequestError,
+  markThreadConfidential,
   pickDevice,
   postPersonMessage,
   receiveMachineUpload,
@@ -271,6 +273,27 @@ describe("computer on someone else's device", () => {
     expect(one.content).toBe('- Phone "Pixel 8" (Android 15): ready, on "Sam\'s MacBook".\nYou may use it for ana.');
   });
 
+  test('computers free to help: listed by computer_status, and start_task\'s "auto" goes there only when its own has no room', async () => {
+    const w = await world();
+    const ctx = await runCtx();
+    const mac = eq(schema.machines.id, w.mac.machineId);
+    await f.db.update(schema.machines).set({ audienceMode: "everyone" }).where(mac);
+    // Sam's own computer: never for ana's agent, whatever it lets in.
+    expect((await call(ctx, "computer_status", {})).content).not.toContain("Free now to help");
+    await f.db.update(schema.machines).set({ belongsToWorkspace: true }).where(mac);
+    expect((await call(ctx, "computer_status", {})).content).toContain(
+      'Free now to help with long work: "Sam\'s MacBook". start_task with computer "auto"',
+    );
+    // Its own computer has room: "auto" stays there; paused, the free one takes it.
+    expect(await autoComputer(ctx)).toBe("");
+    const home = (await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id)))[0]?.machineId ?? "";
+    await f.db.update(schema.machines).set({ paused: true }).where(eq(schema.machines.id, home));
+    expect(await autoComputer(ctx)).toBe("Sam's MacBook");
+    // Its owner's switch off, or the workspace's: nothing helps.
+    await f.db.update(schema.machines).set({ spillOwn: false }).where(mac);
+    expect(await autoComputer(ctx)).toBe("");
+  });
+
   test("computer_status says which switches are off on a shared computer and who turns them on", async () => {
     const w = await world();
     const ctx = await runCtx();
@@ -282,7 +305,7 @@ describe("computer on someone else's device", () => {
         os: "darwin",
         execAllowed: false,
         access: { folders: [], tools: { claude: false, codex: false, commands: false } },
-        executors: { claude: { version: "2.1.0" } },
+        executors: { claude: { version: "2.1.300" } },
       })
       .where(machine);
     const mac = await call(ctx, "computer_status", { computer: "Sam's MacBook" });
@@ -345,6 +368,27 @@ describe("phone tools", () => {
     const told = (await notificationsOf(w.sam.id)).filter((n) => n.kind === "device.in_use");
     expect(told).toHaveLength(1);
     expect(told[0]?.source).toMatchObject({ phoneId: w.phone.id, label: "Pixel 8", runId: ctx.runId });
+  });
+
+  test("from a confidential thread a phone read is said in the tool's own words: the run's label reaches neither the host nor the owner", async () => {
+    const w = await world();
+    await f.db
+      .update(schema.machinePhones)
+      .set({ audienceMode: "everyone" })
+      .where(eq(schema.machinePhones.id, w.phone.id));
+    w.answer((req) =>
+      req.op === "phone.logs" ? ({ text: "I/app: started" } satisfies MachineReplies["phone.logs"]) : {},
+    );
+    const ctx = await runCtx();
+    await f.db.transaction((tx) =>
+      markThreadConfidential(tx, { orgId: f.org.id, channelId: f.general.id, rootId: ctx.threadRootId }),
+    );
+    const out = await call(ctx, "phone_logs", { phone: "pixel 8", label: "what the record said" });
+    expect(out.isError).toBeFalsy();
+    const told = (await notificationsOf(w.sam.id)).filter((n) => n.kind === "device.in_use");
+    expect(w.asked).toMatchObject([{ op: "phone.logs", holder: { label: "Reading the log" } }]);
+    expect(told).toMatchObject([{ latest: { text: "Reading the log" } }]);
+    expect(JSON.stringify([w.asked, told])).not.toContain("the record said");
   });
 
   test("busy, missing and offline answers name the cause and point at wait_for_device", async () => {
@@ -470,6 +514,52 @@ describe("phone tools", () => {
     const launch = await call(ctx, "phone_launch", { phone: "Pixel 8", app: "com.acme.app" });
     expect(launch).toMatchObject({ isError: true, data: { code: "device.app_missing" } });
     expect(launch.content).toStartWith("That app isn't installed on Pixel 8: install it first with phone_install.");
+  });
+
+  test("an iPhone refusing UI actions says so plainly; phone_repair repairs its helper, logged, an iPhone only", async () => {
+    const w = await world();
+    await f.db.update(schema.machines).set({ audienceMode: "everyone" }).where(eq(schema.machines.id, w.mac.machineId));
+    await f.db
+      .update(schema.machinePhones)
+      .set({ audienceMode: "everyone" })
+      .where(eq(schema.machinePhones.id, w.phone.id));
+    const [iphone] = await f.db
+      .insert(schema.machinePhones)
+      .values({
+        orgId: f.org.id,
+        machineId: w.mac.machineId,
+        platform: "ios",
+        serial: "00008120-001A",
+        name: "Sam's iPhone",
+        model: "iPhone 16",
+        osVersion: "26.1",
+        ownerUserId: w.sam.id,
+        followsHost: true,
+        state: "needs_you",
+        reason: "ui_not_authorized",
+      })
+      .returning();
+    w.answer((req) => {
+      if (req.op === "phone.repair") return { repairing: true };
+      throw new MachineRequestError("phone_not_ready", "Screen capture works, but iOS refuses the test helper's taps.");
+    });
+    const ctx = await runCtx();
+    const flow = await call(ctx, "phone_flow", { phone: "Sam's iPhone", flow_yaml: "- tapOn: Sign in" });
+    expect(flow).toMatchObject({ isError: true, data: { code: "device.phone_not_ready" } });
+    expect(flow.content).toStartWith(
+      "Screen capture on Sam's iPhone works, but iOS refuses the test helper's taps and other actions. Ask the person, on the iPhone: Settings → Privacy & Security → Developer Mode on; Settings → Developer → Enable UI Automation on",
+    );
+    expect(flow.content).toContain("Nothing needs rebuilding and no terminal access is needed");
+    const repaired = await call(ctx, "phone_repair", { phone: "Sam's iPhone" });
+    expect(repaired.isError).toBeFalsy();
+    expect(repaired.content).toStartWith("Sam's MacBook is repairing the test helper on Sam's iPhone");
+    expect(w.asked.at(-1)).toEqual({ op: "phone.repair", serial: "00008120-001A" });
+    const audit = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "device.iphone_repair"));
+    expect(audit.map((a) => [a.actorType, a.actorId, a.runId, a.details])).toEqual([
+      ["agent", f.agent.id, ctx.runId, { phoneId: iphone?.id }],
+    ]);
+    const android = await call(ctx, "phone_repair", { phone: "Pixel 8" });
+    expect(android).toMatchObject({ isError: true, data: { code: "device.unsupported" } });
   });
 
   test("a phone stopped by its owner for this run stays stopped", async () => {
@@ -694,5 +784,20 @@ describe("waiting for a device", () => {
     const [done] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
     expect(done?.status).toBe("done");
     expect((await cardOf()).state).toBe("allowed");
+  });
+
+  test("from a confidential thread the owner is asked with none of the run's note: not in the request, not in their notification", async () => {
+    const w = await world();
+    const ctx = await runCtx();
+    await f.db.transaction((tx) =>
+      markThreadConfidential(tx, { orgId: f.org.id, channelId: f.general.id, rootId: ctx.threadRootId }),
+    );
+    await call(ctx, "wait_for_device", { device: "Pixel 8", note: "film what the record said" });
+    const [request] = await f.db.select().from(schema.deviceAccessRequests);
+    const [told] = await notificationsOf(w.sam.id);
+    expect([request?.reason, told?.kind]).toEqual(["", "device.access_request"]);
+    expect(JSON.stringify([request, told])).not.toContain("the record said");
+    // The card in the thread itself keeps it: the people there read what the run reads.
+    expect((await cardOf()).note).toBe("film what the record said");
   });
 });

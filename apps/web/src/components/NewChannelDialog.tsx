@@ -1,4 +1,4 @@
-import { keys, type OrgRole, useChannels, useRoles } from "@agenteschat/client";
+import { type Channel, keys, type OrgRole, useAgentGroups, useChannels, useRoles } from "@agenteschat/client";
 import {
   accessInput,
   accessValid,
@@ -6,10 +6,9 @@ import {
   type ChannelAccessMode,
 } from "@agenteschat/client/lib/channel-access";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
-import { can } from "@agenteschat/client/lib/permissions";
 import { rolePicksInSight } from "@agenteschat/client/lib/personal-view";
 import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
-import { modeKey } from "@agenteschat/client/lib/workspace-mode";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Button,
   Dialog,
@@ -29,19 +28,26 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { usePersonalView } from "@/hooks/usePersonalView";
-import { CategorySelect } from "./ChannelCategoryDialogs";
 import { memberOf, PeoplePicker, type PickKey } from "./MemberPicker";
 import { useOrg } from "./org-context";
 import { RoleChecklist } from "./roles/RoleChecklist";
+import { SectorSelect } from "./SectorSelect";
 
-const ACCESS_MODES: ChannelAccessMode[] = ["public", "private", "roles"];
+const ACCESS_MODES: ChannelAccessMode[] = ["public", "roles", "private"];
+
+/** A team's three words for who sees a channel, the same as a cargo's "Quem vê #canal" says them. */
+const TEAM_ACCESS = {
+  public: "rolesPage.everyoneName",
+  roles: "rolesPage.who.some",
+  private: "rolesPage.sees.private",
+} as const;
 
 /**
- * "Quem pode entrar": Público, Privado or Departamentos ou papéis (ADR 0125). The third shows the roles picked, each
- * removable, and "Escolher papéis", which ticks them in a dialog of their own (it opens by itself while none is
- * picked). Creating a channel and its details share it. A personal workspace says the first two plainly ("Everyone
- * here can join", "Only who I add") and offers the third only when a role is worth it or it is the channel's (ADR
- * 0158); what each one does is the same.
+ * "Quem pode entrar": Todos, Só alguns cargos or Só quem for adicionado (ADR 0125), the words a cargo's Canais uses.
+ * The second shows the roles picked, each removable, and "Escolher cargos", which ticks them in a dialog of their own
+ * (it opens by itself while none is picked). Creating a channel and its details share it. A personal workspace says
+ * the open and closed ones plainly ("Everyone here can join", "Only who I add") and offers the cargos only when a
+ * role is worth it or it is the channel's (ADR 0158); what each one does is the same.
  */
 export function ChannelAccessChoice({
   value,
@@ -64,13 +70,22 @@ export function ChannelAccessChoice({
   const modes = ACCESS_MODES.filter(
     (mode) => mode !== "roles" || value.mode === "roles" || rolePicksInSight(org, roles.data?.roles ?? []),
   );
+  const personal = isPersonal(org);
   const label = (mode: ChannelAccessMode) =>
-    mode === "roles" ? ("newChannel.roles" as const) : modeKey(org, `newChannel.${mode}` as const);
+    !personal
+      ? TEAM_ACCESS[mode]
+      : mode === "roles"
+        ? ("newChannel.roles" as const)
+        : modeKey(org, `newChannel.${mode}` as const);
   const desc = (mode: ChannelAccessMode) =>
-    mode === "roles" ? ("newChannel.rolesDesc" as const) : modeKey(org, `newChannel.${mode}Desc` as const);
+    mode === "roles"
+      ? ("newChannel.rolesDesc" as const)
+      : !personal && mode === "private"
+        ? ("rolesPage.sees.privateDesc" as const)
+        : modeKey(org, `newChannel.${mode}Desc` as const);
   return (
     <div className="channel-access">
-      {/* A dropdown, as "Categoria" above it: three cards side by side broke their words in a narrow dialog. */}
+      {/* A dropdown, as "Setor" above it: three cards side by side broke their words in a narrow dialog. */}
       <Field
         label={t("newChannel.visibility")}
         id={`${idPrefix}-vis`}
@@ -219,7 +234,7 @@ export function channelNameError(name: string, taken: Set<string>): "invalid" | 
 }
 
 /**
- * "Criar canal", in one column: name, topic, sidebar category, who can join, then the initial members (people and
+ * "Criar canal", in one column: name, topic, its sector (once the workspace has one), who can join, then the initial members (people and
  * agents: search and a list that scrolls in its own box). The footer, with the count and Criar, stays in view. A
  * personal workspace calls it a group conversation, and alone leaves out who can join while it is the default, open to
  * everyone here (ADR 0159): the same channel either way.
@@ -227,12 +242,12 @@ export function channelNameError(name: string, taken: Set<string>): "invalid" | 
 export function NewChannelDialog({
   open,
   onOpenChange,
-  category = null,
+  roleIds,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Opened from a category's +: it starts chosen. */
-  category?: string | null;
+  /** Opened from a cargo's Canais: it starts limited to these cargos. */
+  roleIds?: string[];
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -243,38 +258,46 @@ export function NewChannelDialog({
   const { solo } = usePersonalView();
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
-  const [access, setAccess] = useState<ChannelAccess>({ mode: "public", roleIds: [] });
-  const [categoryId, setCategoryId] = useState<string | null>(category);
+  const [access, setAccess] = useState<ChannelAccess>(
+    roleIds?.length ? { mode: "roles", roleIds } : { mode: "public", roleIds: [] },
+  );
+  const sectors = useAgentGroups(org.id).data ?? [];
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<PickKey>>(new Set());
   const [touched, setTouched] = useState(false);
   const create = useMutation({
     mutationFn: async () => {
-      const channel = await api.chat.createChannel(org.id, {
+      // Who it starts with goes along: the server decides from them whether its agents answer in threads.
+      return api.chat.createChannel(org.id, {
         name,
         topic: topic.trim() || undefined,
         ...accessInput(access),
-        ...(categoryId ? { categoryId } : {}),
+        ...(groupId ? { groupId } : {}),
+        ...(selected.size > 0 ? { members: [...selected].map(memberOf) } : {}),
       });
-      for (const key of selected) await api.chat.addMember(org.id, channel.id, memberOf(key));
-      return channel;
     },
     onSuccess: async (channel) => {
-      await qc.invalidateQueries({ queryKey: keys.channels(org.id) });
-      void qc.invalidateQueries({ queryKey: keys.channelCategories(org.id) });
+      // In the list at once, so its page opens on it without waiting for the list to be read again.
+      qc.setQueryData<Channel[]>(keys.channels(org.id), (list) =>
+        list && !list.some((c) => c.id === channel.id) ? [...list, channel] : list,
+      );
+      void qc.invalidateQueries({ queryKey: keys.channels(org.id) });
+      if (groupId) void qc.invalidateQueries({ queryKey: keys.agentGroups(org.id) });
       onOpenChange(false);
       await navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: org.id, channelId: channel.id } });
     },
   });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the cargos it opens with are read once per opening
   useEffect(() => {
     if (!open) return;
     setName("");
     setTopic("");
-    setAccess({ mode: "public", roleIds: [] });
-    setCategoryId(category);
+    setAccess(roleIds?.length ? { mode: "roles", roleIds } : { mode: "public", roleIds: [] });
+    setGroupId(null);
     setSelected(new Set());
     setTouched(false);
     create.reset();
-  }, [open, category, create.reset]);
+  }, [open, create.reset]);
   const taken = useHeldWhile(new Set((channels.data ?? []).map((c) => c.name)), create.isPending || create.isSuccess);
   const error = channelNameError(name, taken);
 
@@ -323,16 +346,18 @@ export function NewChannelDialog({
                 placeholder={t("newChannel.topicPlaceholder")}
               />
             </Field>
-            <Field
-              label={t("channelCategories.category")}
-              id="ch-category"
-              hint={{
-                name: t("common.about", { label: t("channelCategories.category") }),
-                text: t("channelCategories.categoryHelp"),
-              }}
-            >
-              <CategorySelect value={categoryId} onChange={setCategoryId} canCreate={can(org, "manage_channels")} />
-            </Field>
+            {sectors.length > 0 && (
+              <Field
+                label={t("agentGroups.group")}
+                id="ch-sector"
+                hint={{
+                  name: t("common.about", { label: t("agentGroups.group") }),
+                  text: t("channelCategories.categoryHelp"),
+                }}
+              >
+                <SectorSelect value={groupId} onChange={setGroupId} />
+              </Field>
+            )}
             {!(solo && access.mode === "public") && (
               <ChannelAccessChoice value={access} onChange={setAccess} idPrefix="ch" showError={touched} />
             )}

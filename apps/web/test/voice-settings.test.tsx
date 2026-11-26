@@ -29,6 +29,19 @@ describe("voice messages in Configurações (ADR 0100)", () => {
     expect(card().textContent).not.toMatch(/US\$|R\$|minutos/);
   });
 
+  test("no engine: anyone else is told who turns voice on, the server's owner that the choice below does", async () => {
+    await go({ media: { voiceAvailable: false } });
+    expect(card().textContent).toContain(
+      "As mensagens de voz ainda não estão ligadas. Quem cuida deste servidor liga, nesta mesma página.",
+    );
+    cleanup();
+    await go({ speechKey: OFF, media: { voiceAvailable: false } });
+    expect(card().textContent).toContain(
+      "As mensagens de voz ligam quando você escolher abaixo quem transforma a voz em texto.",
+    );
+    expect(card().textContent).not.toContain("Quem cuida deste servidor");
+  });
+
   test("a key is tried, kept, and never shown", async () => {
     const state = await go({ speechKey: OFF, media: { voiceAvailable: false } });
     await act(async () => fireEvent.change(field(), { target: { value: "aai_key_7a1e" } }));
@@ -53,7 +66,7 @@ describe("voice messages in Configurações (ADR 0100)", () => {
     expect(screen().queryByRole("region", { name: "Mensagens de voz" })).toBeNull();
     expect(screen().getByRole("heading", { level: 2, name: "Sua conta" })).toBeTruthy();
     // Nothing about the person's role: no one has Voz on the Cloud.
-    expect(screen().queryByText(/não abre com o seu papel/)).toBeNull();
+    expect(screen().queryByText(/não abre com o seu cargo/)).toBeNull();
   });
 
   test("a key the provider refuses: said under the field, nothing kept", async () => {

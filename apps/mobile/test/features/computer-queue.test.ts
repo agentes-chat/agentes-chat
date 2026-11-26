@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ComputerQueue, QueueWaiting } from "@agenteschat/client";
-import { queueLiveText, queueWhereText, waitingFor } from "@agenteschat/client/lib/computer-queue";
+import { queueWaitText, queueWhereText, waitingFor } from "@agenteschat/client/lib/computer-queue";
+import { devicePlanName } from "@agenteschat/client/lib/no-ai";
 import { machineOfAgents, queuePlace } from "../../src/features/queue/logic";
 import { translator } from "./fixtures";
 
@@ -53,6 +54,18 @@ describe("a shared computer's line on the phone", () => {
     );
   });
 
+  test("a row keeps its words' room: the stop is its square on a plate, on the first line, and the time never breaks", async () => {
+    const sheet = await Bun.file(new URL("../../src/features/queue/QueueSheet.tsx", import.meta.url)).text();
+    const active = sheet.slice(sheet.indexOf("function ActiveLine"), sheet.indexOf("function WorkingRow"));
+    expect(active).toContain("<StopButton\n            compact");
+    expect(sheet).toContain('active: { flexDirection: "row", alignItems: "flex-start", gap: 4 },');
+    expect(sheet).toContain('.replaceAll(" ", NBSP);');
+    // What fills the computer sits beside "Working now", never on a line of its own over the rows.
+    expect(sheet).toContain(
+      '<GroupHead title={t("queue.workingNow", { n: view.working.length })} aside={fill || null} />',
+    );
+  });
+
   test("the computer the conversation's agents share: the first one that has one", () => {
     const machines = [
       { id: "m1", agents: [{ id: "nova" }, { id: "rio" }] },
@@ -87,10 +100,30 @@ describe("a shared computer's line on the phone", () => {
     expect(waitingFor(queue, undefined, "rio", "dev")?.runId).toBe("q2");
     expect(waitingFor(queue, undefined, "rio", "dm1")).toBeNull();
     expect(waitingFor(null, undefined, "nova", "dm1")).toBeNull();
-    const en = await translator("en");
-    const names: Record<string, string> = { ada: "Ada", nova: "Nova", rio: "Rio" };
+  });
+
+  test("a turn in the conversation says who waits ahead of it, as on the web", async () => {
+    const [pt, en] = await Promise.all([translator("pt-BR"), translator("en")]);
+    const names: Record<string, string> = { nova: "Nova", rio: "Rio" };
     const name = (id: string) => names[id];
-    expect(queueLiveText(en, "en", queue, "q1", name, NOW)).toBe("Waiting for the computer. Next up, in about 1 min");
-    expect(queueLiveText(en, "en", queue, "q2", name, NOW)).toBe("In line, 2nd. After Nova");
+    expect(queueWaitText(pt, queue, waitingFor(queue, undefined, "rio", "dev"), name)).toBe("Na fila, depois da Nova");
+    expect(queueWaitText(en, queue, waitingFor(queue, undefined, "nova", "dm1"), name)).toBe("In line · starts soon");
+    const row = await Bun.file(new URL("../../src/features/queue/parts.tsx", import.meta.url)).text();
+    expect(row).toContain("{queueWaitText(t, queue, w, name)}");
+  });
+
+  test("a computer's plan in the line's spill-over list: its own sign-in, else an account of mine there", async () => {
+    const pt = await translator("pt-BR");
+    const computer = { machineId: "m2", name: "MacBook", online: true, mine: true, canAdd: true, keys: true };
+    const brains = { claude_code: true, codex: true };
+    expect(
+      devicePlanName(
+        pt,
+        { accounts: [], computers: [{ ...computer, brains, own: { claude_code: { plan: "max" } } }] },
+        "m2",
+      ),
+    ).toBe("Claude Max");
+    expect(devicePlanName(pt, { accounts: [], computers: [{ ...computer, brains }] }, "m2")).toBeNull();
+    expect(devicePlanName(pt, undefined, "m2")).toBeNull();
   });
 });

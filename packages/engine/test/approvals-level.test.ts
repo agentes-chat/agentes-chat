@@ -1,15 +1,18 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { and, eq, schema } from "@agenteschat/db";
+import { and, eq, schema, sql } from "@agenteschat/db";
 import {
   type ApprovalsLevel,
   askingPermissions,
   asksOf,
   createAgent,
+  ensureRightHand,
   ForbiddenError,
+  getOrgSettings,
   grantScopes,
   insertMessage,
   type RoutineBrief,
   type RunAuthority,
+  setWorkspaceApprovalsLevel,
   type ToolContext,
   type ToolDefinition,
   type ToolSource,
@@ -20,6 +23,7 @@ import {
 } from "../src";
 import { approvalsLine, HOW_YOU_WORK, howYouWork } from "../src/context";
 import { runPermissionPrompt } from "../src/mission-commands";
+import { approvalsLevelOf } from "../src/tools/run-policy";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -693,6 +697,32 @@ describe("always", () => {
     ) as { behavior: string; message?: string; code?: string };
     expect(edit).toMatchObject({ behavior: "deny", code: "asks" });
     expect(edit.message).toContain("with write_file");
+    // Claude Code's PowerShell tool runs commands: judged as a `powershell -Command` body, asked the same way.
+    const ps = (command: string, asksFirst: boolean) =>
+      JSON.parse(
+        runPermissionPrompt({ tool_name: "PowerShell", input: { command }, scope }, { canRun: true, asksFirst }),
+      ) as { behavior: string; message?: string; code?: string };
+    expect(ps("New-Item notes.txt", false).behavior).toBe("allow");
+    expect(ps("Set-MpPreference -DisableRealtimeMonitoring 1", false)).toMatchObject({
+      behavior: "deny",
+      code: "system",
+    });
+    expect(ps("New-Item notes.txt", true).message).toContain("run the same command with run_code");
+  });
+
+  test("a Windows computer's folders reach the rules: its own folder's files are its work, the rest is judged", () => {
+    const scope = { cwd: "C:\\Users\\ada\\work", folders: ["C:\\Users\\ada\\work"], home: "C:\\Users\\ada" };
+    const prompt = (command: string) =>
+      JSON.parse(runPermissionPrompt({ tool_name: "Bash", input: { command }, scope }, { canRun: true })) as {
+        behavior: string;
+        code?: string;
+      };
+    expect(prompt("icacls 'C:\\Users\\ada\\work\\build' //grant Everyone:F").behavior).toBe("allow");
+    expect(prompt("icacls 'C:\\Users\\ada\\notes' //grant Everyone:F")).toMatchObject({
+      behavior: "deny",
+      code: "system",
+    });
+    expect(prompt("echo x > 'C:\\Users\\bob\\notes.txt'")).toMatchObject({ behavior: "deny", code: "otherUser" });
   });
 
   test("a search and a card that is itself the question open no approval in front of them", async () => {
@@ -841,5 +871,91 @@ describe("who sets it", () => {
       .from(schema.auditLog)
       .where(and(eq(schema.auditLog.action, "agent.updated"), eq(schema.auditLog.targetId, made.id)));
     expect(audit?.details).toMatchObject({ changed: ["approvalsLevel"], approvalsLevel: "never" });
+  });
+});
+
+describe("the workspace's level", () => {
+  const ownOf = async (agentId: string) =>
+    (
+      await f.db
+        .select({ level: schema.agents.approvalsLevel, own: schema.agents.approvalsLevelOwn })
+        .from(schema.agents)
+        .where(eq(schema.agents.id, agentId))
+    )[0];
+
+  test("agents follow it until someone gives one its own choice, which a workspace change leaves alone", async () => {
+    f = await setup();
+    const defaults = { model: f.agent.model };
+    const bia = await createAgent(f.db, f.owner.id, f.org.id, { name: "Bia", handle: "bia" }, defaults);
+    expect((await getOrgSettings(f.db, f.owner.id, f.org.id)).approvalsLevel).toBe("risky");
+    expect(bia.approvalsLevelOwn).toBe(false);
+    await updateAgent(f.db, f.owner.id, f.org.id, bia.id, { approvalsLevel: "always" });
+
+    expect(await setWorkspaceApprovalsLevel(f.db, f.owner.id, f.org.id, "never")).toEqual({
+      level: "never",
+      ownAgents: 1,
+    });
+    expect(await approvalsLevelOf(f.db, f.org.id, f.agent.id)).toBe("never");
+    expect(await ownOf(bia.id)).toEqual({ level: "always", own: true });
+    expect((await getOrgSettings(f.db, f.owner.id, f.org.id)).approvalsLevel).toBe("never");
+    // A new agent starts where the workspace is, following it.
+    const caio = await createAgent(f.db, f.owner.id, f.org.id, { name: "Caio", handle: "caio" }, defaults);
+    expect({ level: caio.approvalsLevel, own: caio.approvalsLevelOwn }).toEqual({ level: "never", own: false });
+    // Following it again (Desfazer after a first own choice) takes the workspace's level back.
+    await updateAgent(f.db, f.owner.id, f.org.id, bia.id, { approvalsLevel: null });
+    expect(await ownOf(bia.id)).toEqual({ level: "never", own: false });
+  });
+
+  test("the right hand starts where the workspace is, following it", async () => {
+    f = await setup();
+    await setWorkspaceApprovalsLevel(f.db, f.owner.id, f.org.id, "always");
+    const id = await ensureRightHand(f.db, f.org.id);
+    expect(id).toBeTruthy();
+    expect(await ownOf(id ?? "")).toEqual({ level: "always", own: false });
+  });
+
+  test("for every agent, it also clears each agent's own choice", async () => {
+    f = await setup();
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { approvalsLevel: "never" });
+    expect(await setWorkspaceApprovalsLevel(f.db, f.owner.id, f.org.id, "always", { everyAgent: true })).toEqual({
+      level: "always",
+      ownAgents: 0,
+    });
+    expect(await ownOf(f.agent.id)).toEqual({ level: "always", own: false });
+    const [audit] = await f.db
+      .select({ details: schema.auditLog.details })
+      .from(schema.auditLog)
+      .where(eq(schema.auditLog.action, "organization.approvals_level"));
+    expect(audit?.details).toMatchObject({ approvalsLevel: "always", everyAgent: true, agents: 1 });
+  });
+
+  test("only who manages agents sets it, with a value we know", async () => {
+    f = await setup();
+    const member = await addMember(f.db, f.org.id, "member", "Caio");
+    await expect(setWorkspaceApprovalsLevel(f.db, member.id, f.org.id, "never")).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      setWorkspaceApprovalsLevel(f.db, f.owner.id, f.org.id, "sometimes" as ApprovalsLevel),
+    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(updateAgent(f.db, member.id, f.org.id, f.agent.id, { approvalsLevel: null })).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    expect(await approvalsLevelOf(f.db, f.org.id, f.agent.id)).toBe("risky");
+  });
+
+  test("the migration keeps a level someone chose and lets the default one follow the workspace", async () => {
+    f = await setup();
+    const defaults = { model: f.agent.model };
+    const bia = await createAgent(f.db, f.owner.id, f.org.id, { name: "Bia", handle: "bia" }, defaults);
+    await f.db
+      .update(schema.agents)
+      .set({ approvalsLevel: "never", approvalsLevelOwn: false })
+      .where(eq(schema.agents.id, bia.id));
+    const file = await Bun.file(
+      new URL("../../db/migrations/0278_workspace_approvals_level.sql", import.meta.url),
+    ).text();
+    const backfill = file.split("--> statement-breakpoint").at(-1) ?? "";
+    await f.db.execute(sql.raw(backfill));
+    expect(await ownOf(bia.id)).toEqual({ level: "never", own: true });
+    expect(await ownOf(f.agent.id)).toEqual({ level: "risky", own: false });
   });
 });

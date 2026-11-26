@@ -1,33 +1,39 @@
 import {
   type AgentScope,
   ANTIGRAVITY_PROTOCOL,
+  ANTIGRAVITY_WINDOWS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
   type BrainTurnRequest,
   brainTopic,
+  CLI_COPIES_PROTOCOL,
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
+  OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PubSub,
   parseBrainEvent,
   STEER_PROTOCOL,
 } from "@agenteschat/adapters";
+import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
 import type { MachineCaller } from "../machine-hub";
 import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
-import { CODEX_MIN_VERSION, versionOf } from "../missions";
 import { runnerUpdateWay } from "../runner-update";
 import {
   accountFields,
   accountUnavailable,
   busyRefusal,
+  cliOutdated,
   contextFields,
   speedFields,
   steerOnMachine,
 } from "./claude-code";
+import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -35,8 +41,10 @@ import {
   type BrainEvent,
   type BrainIO,
   type BrainTurn,
+  brainRunsOn,
   type SteerMessage,
   type SteerReply,
+  SYSTEM_REFUSED,
 } from "./types";
 
 /**
@@ -140,15 +148,6 @@ export interface CodexBrainDeps {
   keepAlive?: boolean;
 }
 
-/** `codex-cli 0.163.0` is new enough (`CODEX_MIN_VERSION`). */
-export function codexVersionOk(version: string | undefined): boolean {
-  const have = versionOf(version);
-  const want = versionOf(CODEX_MIN_VERSION) as number[];
-  if (!have) return false;
-  for (let i = 0; i < 3; i++) if ((have[i] ?? 0) !== (want[i] ?? 0)) return (have[i] ?? 0) > (want[i] ?? 0);
-  return true;
-}
-
 /** Events pushed by a callback, read as an async iterable. */
 function channel<T>() {
   const queue: T[] = [];
@@ -211,14 +210,6 @@ const CODEX_CLI: CliBrainSpec = {
         retryable: true,
       };
     }
-    if (!codexVersionOk(codex.version)) {
-      return {
-        type: "error",
-        code: "codex_too_old",
-        message: `Codex on the computer is ${codex.version}. Agents need ${CODEX_MIN_VERSION} or newer (update it there).`,
-        retryable: true,
-      };
-    }
     return null;
   },
 };
@@ -227,6 +218,8 @@ const CURSOR_CLI: CliBrainSpec = {
   kind: "cursor",
   name: "Cursor",
   protocol: CURSOR_PROTOCOL,
+  // Windows from the runner that keeps each account's sign-in in its folder there (ADR 0228 §6).
+  windowsProtocol: CLI_COPIES_PROTOCOL,
   check: ({ cursor }) =>
     cursor
       ? null
@@ -242,6 +235,7 @@ const OPENCODE_CLI: CliBrainSpec = {
   kind: "opencode",
   name: "OpenCode",
   protocol: OPENCODE_PROTOCOL,
+  windowsProtocol: OPENCODE_ACP_PROTOCOL,
   check: ({ opencode }) =>
     opencode
       ? null
@@ -257,6 +251,7 @@ const GROK_CLI: CliBrainSpec = {
   kind: "grok",
   name: "Grok Build",
   protocol: GROK_PROTOCOL,
+  windowsProtocol: GROK_WINDOWS_PROTOCOL,
   check: ({ grok }) =>
     grok
       ? null
@@ -272,6 +267,7 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
   kind: "antigravity",
   name: "Antigravity CLI",
   protocol: ANTIGRAVITY_PROTOCOL,
+  windowsProtocol: ANTIGRAVITY_WINDOWS_PROTOCOL,
   check: ({ antigravity }) =>
     antigravity
       ? null
@@ -293,7 +289,15 @@ export class CodexBrain implements Brain {
     this.kind = cli.kind;
   }
 
+  /** A model the sign-in refused lately is left out (the CLI's default instead), and a new refusal remembered. */
   async *run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+    for await (const event of this.attempt(skipRefusedModel(this.kind, turn), io)) {
+      noteModelRefusal(this.kind, turn, event);
+      yield event;
+    }
+  }
+
+  private async *attempt(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
     const session = turn.session;
     const { name } = this.cli;
     if (!session) {
@@ -348,9 +352,21 @@ export class CodexBrain implements Brain {
       };
       return;
     }
-    const missing = this.cli.check(status.executors);
+    // Its runner would refuse every turn there in its own words; refused here, it reads in the person's language.
+    if (!brainRunsOn(this.kind, status.os)) {
+      yield { type: "error", code: SYSTEM_REFUSED, message: `${name} doesn't run on this computer's system yet.` };
+      return;
+    }
+    // Its runner fetches the pinned CLI itself (ADR 0228 §6): not there yet is no reason to refuse the turn.
+    const missing = fetchesCli(status, this.kind) ? null : this.cli.check(status.executors);
     if (missing) {
       yield missing;
+      return;
+    }
+    // At a version agentes.chat holds back (`CLI_FLOORS`): it waits for an update there instead of failing there.
+    const old = cliOutdated(status, this.kind, name);
+    if (old) {
+      yield { type: "error", code: old.code, message: old.message, retryable: true };
       return;
     }
     const account = accountUnavailable(status, turn.account, this.kind);
@@ -415,12 +431,15 @@ export class CodexBrain implements Brain {
       mcp: { ...mcp, tools: toolNames.join(" ") },
       ...(agent ? { agent } : {}),
       ...accountFields(status.protocol, turn),
-      ...contextFields(status.protocol, turn),
+      ...contextFields(status.protocol, turn, this.kind),
       ...speedFields(status.protocol, turn),
       ...(permissions ? { permissions } : {}),
       ...(this.deps.keepAlive === false ? { keepAlive: false } : {}),
       ...(freeTier ? { freeTier } : {}),
       ...(turn.personWaiting ? { personWaiting: true } : {}),
+      ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
+      // Each answer the turn finishes before it goes on is its own message (ADR 0112).
+      answers: "each",
     };
 
     const events = channel<BrainEvent>();
@@ -449,6 +468,8 @@ export class CodexBrain implements Brain {
       for await (const event of events.read()) {
         if (ended) continue;
         if (event.type === "text_delta") text += event.text;
+        // What it streamed before an answer it finished is that answer, posted on its own: never the turn's again.
+        if (event.type === "answer") text = "";
         if (event.type === "done") {
           ended = true;
           yield { type: "done", text: event.text, session: { id: session.id } };
@@ -498,8 +519,9 @@ export class CursorBrain extends CodexBrain {
 
 /**
  * The OpenCode brain (ADR 0132): OpenCode's CLI on the agent's computer, on OpenCode's free tier or a person's OpenCode
- * key, through the same `brain.turn` as Codex (`kind: "opencode"`, runner protocol 39, `brain-opencode.ts` there). A
- * person's messages wait for the turn's end: the runner answers `brain.steer` with `unsupported`.
+ * key, through the same `brain.turn` as Codex (`kind: "opencode"`, runner protocol 39, `brain-opencode.ts` there; over
+ * ACP and on Windows since protocol 64). OpenCode 2 takes a person's messages mid-turn (`brain.steer`); with 1.x they
+ * wait for the turn's end (the runner answers `unsupported`).
  */
 export class OpencodeBrain extends CodexBrain {
   constructor(deps: CodexBrainDeps) {
@@ -560,7 +582,7 @@ export function hubBrainLink(deps: {
         const event = parseBrainEvent(e.event);
         if (!event) return;
         if (event.type === "done" || event.type === "error") finalSeen = true;
-        options.onEvent(event as BrainEvent);
+        options.onEvent(withFailureCause(event as BrainEvent));
       });
       try {
         const reply = await deps.hub.call<"brain.turn">(
@@ -580,7 +602,7 @@ export function hubBrainLink(deps: {
         // The stream lost its last event: the reply carries it.
         const final = parseBrainEvent(reply?.final);
         if (!finalSeen && final && (final.type === "done" || final.type === "error"))
-          options.onEvent(final as BrainEvent);
+          options.onEvent(withFailureCause(final as BrainEvent));
       } finally {
         off();
       }

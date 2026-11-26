@@ -1,4 +1,4 @@
-import { ApiError, useAiStatus, useApi, useAuthConfig } from "@agenteschat/client";
+import { ApiError, newClientId, useAiStatus, useApi, useAuthConfig } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes } from "@agenteschat/client/lib/files";
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
@@ -12,7 +12,9 @@ import {
   type Expression,
   Icon,
   modKey,
+  overLimit,
   PixelSpinner,
+  pastedFiles,
   Textarea,
 } from "@agenteschat/ui";
 import { useMutation } from "@tanstack/react-query";
@@ -22,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { matchesNow, TOUCH } from "@/hooks/useMatchMedia";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { contextMenusOn, keepsSystemMenu, openContextMenu, selectedTextAt, setMenuReporter } from "@/lib/context-menu";
 import {
   closeFeedback,
@@ -116,6 +119,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
   const params = useRouterState({ select: (s) => JSON.stringify(s.matches.at(-1)?.params ?? {}) });
   const lead = rightHandOf(dir.agents) ?? dir.agents[0];
   const [text, setText] = useState("");
+  const textLimit = useTextLimit(MAX);
   const [sent, setSent] = useState(false);
   const [noting, setNoting] = useState(false);
   const [face, setFace] = useState<Expression>();
@@ -125,7 +129,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
   const [files, setFiles] = useState<Added[]>([]);
   const keys = useRef(0);
   // One id per message: sent again after a failure, the server sends it once.
-  const id = useRef(crypto.randomUUID());
+  const id = useRef(newClientId());
   const box = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -243,13 +247,13 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
       }),
     onError: (error) => toast.show(errorText(t, error), "error"),
     onSuccess: () => {
-      id.current = crypto.randomUUID();
+      id.current = newClientId();
       for (const f of files) if (f.preview) URL.revokeObjectURL(f.preview);
       setSent(true);
     },
   });
   const uploading = files.some((f) => f.id === null);
-  const ready = text.trim() !== "" && !send.isPending && !uploading;
+  const ready = text.trim() !== "" && !overLimit(text, textLimit) && !send.isPending && !uploading;
   const title = sent ? t("feedback.thanks") : t("feedback.ask");
   const quote = quoting ? (about?.about.text ?? "") : "";
   return (
@@ -341,7 +345,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
               ref={box}
               className="arrival-feedback__text"
               rows={about ? 4 : 5}
-              maxLength={MAX}
+              limit={textLimit}
               value={text}
               aria-label={t("feedback.ask")}
               placeholder={t("feedback.placeholder")}
@@ -351,7 +355,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
               }}
               // A screenshot on the clipboard is added as a file.
               onPaste={(e) => {
-                const pasted = [...e.clipboardData.files];
+                const pasted = pastedFiles(e.clipboardData);
                 if (pasted.length === 0) return;
                 e.preventDefault();
                 add(pasted);

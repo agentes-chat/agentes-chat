@@ -10,7 +10,7 @@ import { renderApp, screen, settle } from "./render";
 
 /**
  * The sidebar's parts (Canais, Agentes, Mensagens diretas): small-capitals titles set apart by space, one + each
- * (Canais: Novo canal, Nova categoria; Agentes: Criar agente, Novo grupo; Mensagens diretas: Nova mensagem), the
+ * (Canais: Novo canal; Agentes: Criar agente, Novo grupo; Mensagens diretas: Nova mensagem), the
  * sidebar's own menu on a right click in its empty space, and the buttons over a row's end on hover or focus.
  */
 
@@ -26,9 +26,10 @@ const asMember = (state: State = seedState()) => {
   if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
   return state;
 };
-const withCategory = (state: State = seedState()) => {
-  state.channelCategories = [{ id: ENGINEERING, name: "Engenharia", position: 0 }];
-  for (const c of state.channels) if (c.id === ENG_ID) c.categoryId = ENGINEERING;
+/** #eng in the sector Engenharia, which holds no agent (ADR 0240). */
+const withSector = (state: State = seedState()) => {
+  state.agentGroups = [...(state.agentGroups ?? []), { id: ENGINEERING, name: "Engenharia", agentIds: [] }];
+  for (const c of state.channels) if (c.id === ENG_ID) c.groupId = ENGINEERING;
   return state;
 };
 /** DMs with Ada (an hour ago), João (now, 2 unread) and Atlas (no message yet). */
@@ -90,17 +91,18 @@ const shown = (el: Element) => {
 };
 
 describe("the parts' headers", () => {
-  test("Canais holds the channels in no category, then its categories; no lines, no Nova categoria row", async () => {
-    await go(withCategory());
+  test("Canais holds the channels in no sector; a sector's channels show in it, after the agents", async () => {
+    await go(withSector());
     const titles = [...nav().querySelectorAll(".sidebar__section--part .sidebar__section-toggle")].map(
       (b) => b.textContent,
     );
     expect(titles).toEqual(["Canais", "Agentes", "Mensagens diretas"]);
     const canais = head("Canais").closest(".sidebar__section") as HTMLElement;
     expect(within(canais).getByRole("link", { name: /general/ })).toBeTruthy();
-    expect(canais.nextElementSibling?.querySelector(".sidebar__section-toggle")?.textContent).toBe("Engenharia");
+    expect(within(canais).queryByRole("link", { name: /eng/ })).toBeNull();
+    const sector = head("Engenharia").closest(".sidebar__section") as HTMLElement;
+    expect(within(sector).getByRole("link", { name: /eng/ })).toBeTruthy();
     expect(nav().querySelector(".sidebar__divider")).toBeNull();
-    expect(within(nav()).queryByRole("button", { name: "Nova categoria" })).toBeNull();
   });
 
   test("Mensagens diretas lists the people I talked to, latest first; an agent's DM is its row in Agentes", async () => {
@@ -143,9 +145,9 @@ describe("the parts' headers", () => {
     expect(nav().querySelector(".sidebar__see-all")).toBeNull();
   });
 
-  test("closed, Canais hides its categories too, but the open channel", async () => {
+  test("closed, Canais hides its channels, but the open one", async () => {
     await withLayout();
-    await go(withCategory(), `c/${ENG_ID}`);
+    await go(seedState(), `c/${ENG_ID}`);
     await click(within(nav()).getByRole("button", { name: "Canais" }));
     expect(shown(channelRow("eng"))).toBe(true);
     expect(shown(nav().querySelector('a.sidebar__item[title="#general"]') as Element)).toBe(false);
@@ -166,23 +168,16 @@ describe("the parts' headers", () => {
 });
 
 describe("one + per part", () => {
-  test("Canais: Novo canal and Nova categoria, each opening its dialog", async () => {
+  test("Canais: Novo canal, no categories any more (ADR 0240), for owners and members alike", async () => {
     await go();
-    expect(head("Canais").contains(within(nav()).getByRole("button", { name: "Novo canal ou categoria" }))).toBe(true);
-    let menu = await openPlus("Novo canal ou categoria");
-    expect(labels(menu)).toEqual(["Novo canal", "Nova categoria"]);
+    expect(head("Canais").contains(within(nav()).getByRole("button", { name: "Novo canal" }))).toBe(true);
+    const menu = await openPlus("Novo canal");
+    expect(labels(menu)).toEqual(["Novo canal"]);
     await click(within(menu).getByRole("menuitem", { name: "Novo canal" }));
     expect(screen().getByRole("dialog", { name: "Criar canal" })).toBeTruthy();
     cleanup();
-    await go();
-    menu = await openPlus("Novo canal ou categoria");
-    await click(within(menu).getByRole("menuitem", { name: "Nova categoria" }));
-    expect(screen().getByRole("dialog", { name: "Nova categoria" })).toBeTruthy();
-  });
-
-  test("a member creates channels but not categories: Novo canal alone", async () => {
     await go(asMember());
-    expect(labels(await openPlus("Novo canal ou categoria"))).toEqual(["Novo canal"]);
+    expect(labels(await openPlus("Novo canal"))).toEqual(["Novo canal"]);
   });
 
   test("Agentes: Criar agente opens the new agent's dialog over the page (ADR 0164); Equipe is a tool row of its own", async () => {
@@ -217,7 +212,6 @@ describe("the sidebar's own menu, on its empty space", () => {
     expect(labels(appMenu())).toEqual([
       "Personalizar a barra lateral",
       "Novo canal",
-      "Nova categoria",
       "Criar agente",
       "Novo setor",
       "Equipe",
@@ -262,8 +256,8 @@ describe("the sidebar's own menu, on its empty space", () => {
         .queryAllByRole("menuitem")
         .map((i) => i.textContent)
         .filter((l) => l === "Personalizar a barra lateral" || l === "Mover para cima");
-    await go(withCategory());
-    const menu = await openPlus("Novo canal ou categoria");
+    await go(withSector());
+    const menu = await openPlus("Novo canal");
     const item = within(menu).getByRole("menuitem", { name: "Novo canal" });
     await rightClick(item);
     expect(ours()).toEqual([]);
@@ -273,7 +267,7 @@ describe("the sidebar's own menu, on its empty space", () => {
     await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
     await settle(2);
     await rightClick(nav().querySelector('a.sidebar__item[title="#general"]') as Element);
-    await click(within(appMenu()).getByRole("menuitem", { name: /^Mover para/ }));
+    await click(within(appMenu()).getByRole("menuitem", { name: "Novo setor com #general" }));
     const dialog = screen().getByRole("dialog");
     await rightClick(within(dialog).getAllByRole("button")[0] as Element);
     expect(ours()).toEqual([]);

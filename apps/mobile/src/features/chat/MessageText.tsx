@@ -3,11 +3,13 @@ import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { memo, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, Text } from "@/ui";
+import { RADIUS } from "@/ui/radius";
 import { useColors } from "../shared/hooks";
 import { tapHaptic } from "../shared/parts";
 import { ChartCard } from "./ChartCard";
 import { CodeCard } from "./CodeCard";
-import { CHAT_TEXT_MAX_SCALE, type Inline, parseBlocks } from "./logic";
+import { keepOpen, keptOpen } from "./kept-sizes";
+import { blocksOf, CHAT_TEXT_MAX_SCALE, type Inline } from "./logic";
 import { useRowLook } from "./look";
 import { Spans, Table } from "./MessageSpans";
 
@@ -45,7 +47,8 @@ export const MessageText = memo(function MessageText({
 }) {
   const c = useColors();
   const look = useRowLook();
-  const blocks = useMemo(() => parseBlocks(body), [body]);
+  // Kept for the texts read lately (`blocksOf`): a row scrolled back into view doesn't parse its text again.
+  const blocks = useMemo(() => blocksOf(body), [body]);
   const inked = ink ? { color: ink } : undefined;
   const variant = small ? "footnote" : "body";
   // In a conversation, the person's Tamanho do texto, which the system's text size grows up to its cap.
@@ -82,7 +85,7 @@ export const MessageText = memo(function MessageText({
                 <Text variant={variant} tone="faint" style={[line, styles.mark, inked]} {...fit}>
                   {b.ordinal ? `${b.ordinal}.` : "•"}
                 </Text>
-                <Text variant={variant} tone={tone} style={[line, styles.flex, inked]} {...fit}>
+                <Text variant={variant} tone={tone} style={[line, styles.item, inked]} {...fit}>
                   {spans(b.inline)}
                 </Text>
               </View>
@@ -96,8 +99,10 @@ export const MessageText = memo(function MessageText({
             );
           case "quote":
             return (
+              // A quote reads on a plate a step off what is around it (on my solid bubble, its ink's), never a colored
+              // bar at its left edge.
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <View key={i} style={[styles.quote, { borderLeftColor: ink ?? c.line2 ?? c.line }]}>
+              <View key={i} style={[styles.quote, { backgroundColor: ink ? `${ink}26` : c.plate }]}>
                 <Text variant={variant} tone="muted" style={[line, inked]} {...fit}>
                   {spans(b.inline)}
                 </Text>
@@ -140,7 +145,9 @@ function Details({
 }) {
   const c = useColors();
   const sized = useRowLook().text;
-  const [open, setOpen] = useState(false);
+  // Opened, it comes back open when its row comes back into view (`keptOpen`), as the person left it.
+  const keep = `details:${body}`;
+  const [open, setOpen] = useState(() => keptOpen(keep));
   return (
     <View style={[styles.details, { borderColor: c.line }]}>
       <Pressable
@@ -148,7 +155,8 @@ function Details({
         accessibilityState={{ expanded: open }}
         onPress={() => {
           tapHaptic();
-          setOpen((v) => !v);
+          keepOpen(keep, !open);
+          setOpen(!open);
         }}
         style={({ pressed }) => [styles.summary, pressed && styles.pressed]}
       >
@@ -181,10 +189,16 @@ const styles = StyleSheet.create({
   /** Outside a conversation (a task's text, a document): the body's size on a line of ~1.42. */
   line: { lineHeight: 24 },
   flex: { flex: 1 },
+  /**
+   * A list item's words: as wide as they are, wrapping where the row ends. Never `flex: 1`: my own bubble is as
+   * wide as its words, and a basis of zero there leaves the item no width (a tall bubble with only the number).
+   */
+  item: { flexShrink: 1 },
   heading: { fontWeight: "700" },
   bullet: { flexDirection: "row", gap: 8, paddingLeft: 2 },
   mark: { minWidth: 14 },
-  quote: { borderLeftWidth: 3, paddingLeft: 10 },
+  // A plate in the words: the scale's item corner and the plates' room (12 at the sides, 10 above and under).
+  quote: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md },
   /** On a solid bubble: a table or a collapsed block stays on the page's color, in the page's ink. */
   cut: { borderRadius: 10, overflow: "hidden" },
   details: {

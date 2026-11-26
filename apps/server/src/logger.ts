@@ -2,7 +2,21 @@
 import { type ErrorReporter, type ErrorTags, noErrorReports } from "@agenteschat/adapters/error-reports";
 
 type Level = "debug" | "info" | "warn" | "error";
+
+/** How a log line is written: `json` by default, `gcp` for Google Cloud Logging. */
+export type LogFormat = "json" | "gcp";
+
 const order: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
+
+/** How many written lines `recentLogLines` keeps: the server has no log file (Docker's go to stdout). */
+const RECENT_MAX = 300;
+const recent: string[] = [];
+
+/** The last lines this process wrote at info or above, oldest first, for a problem report. */
+export const recentLogLines = (): readonly string[] => recent;
+
+/** The names Google Cloud Logging gives its severities. */
+const GCP_SEVERITY: Record<Level, string> = { debug: "DEBUG", info: "INFO", warn: "WARNING", error: "ERROR" };
 
 /** Log fields a reported error takes as tags (internal ids and what was running), under these names. */
 const TAG_FIELDS: Record<string, string> = {
@@ -28,16 +42,38 @@ const TAG_FIELDS: Record<string, string> = {
 
 /**
  * Minimal structured logger: one JSON object per line on stdout, which every
- * log collector understands without configuration. An error line that carries
- * what was thrown (`error`) is also reported to `errors` (ADR 0104), tagged with
- * its `TAG_FIELDS`; `unhandled: true` says nothing caught it.
+ * log collector understands without configuration. `format` `gcp` names the
+ * level `severity` and the text `message` (`WARNING` for `warn`), the two
+ * fields Google Cloud Logging reads, and puts the stack of a thrown `Error` in
+ * `stack_trace`, the field its Error Reporting reads; they come after the log's
+ * own fields, so none of those can replace them. `json` keeps `level` and `msg`.
+ * An error line that carries what was thrown (`error`) is also reported to `errors`
+ * (ADR 0104), tagged with its `TAG_FIELDS`; `unhandled: true` says nothing
+ * caught it.
  */
-export function createLogger(minLevel: Level, errors: ErrorReporter = noErrorReports) {
+export function createLogger(minLevel: Level, errors: ErrorReporter = noErrorReports, format: LogFormat = "json") {
   const log = (level: Level, msg: string, fields?: Record<string, unknown>) => {
     if (order[level] >= order[minLevel]) {
       const thrown = fields && "error" in fields ? { error: String(fields.error) } : {};
-      const line = JSON.stringify({ time: new Date().toISOString(), level, msg, ...fields, ...thrown });
+      const time = new Date().toISOString();
+      const stack = fields?.error instanceof Error ? fields.error.stack : undefined;
+      const line = JSON.stringify(
+        format === "gcp"
+          ? {
+              time,
+              ...fields,
+              ...thrown,
+              severity: GCP_SEVERITY[level],
+              message: msg,
+              ...(typeof stack === "string" ? { stack_trace: stack } : {}),
+            }
+          : { time, level, msg, ...fields, ...thrown },
+      );
       (level === "error" ? console.error : console.log)(line);
+      if (order[level] >= order.info) {
+        recent.push(line);
+        if (recent.length > RECENT_MAX) recent.shift();
+      }
     }
     if (level !== "error" || !fields || !("error" in fields)) return;
     const tags: ErrorTags = { log: msg };

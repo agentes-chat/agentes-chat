@@ -12,9 +12,12 @@ import type {
   Memory,
   OrgSummary,
   PreviewMeta,
+  Proposal,
 } from "@agenteschat/client";
 import { asksAt, levelOf, resourcesOf } from "@agenteschat/client/lib/access-levels";
 import { agentSections } from "@agenteschat/client/lib/agent-groups";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { planLabel, planOfAccount } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isOutOfOffice } from "@agenteschat/client/lib/presence";
@@ -40,9 +43,9 @@ export const busyChannels = (work: WorkItem[]) => new Set(work.map((w) => w.chan
 /** One agent on Agentes: what waits on you, what it is on (working) or its last conversation (free). */
 export interface TeamLine {
   agent: Agent;
-  /** What it is on now; null when free. */
+  /** What it is on now; null when free, or at work where you don't read (its line says the bare state). */
   work: WorkItem | null;
-  /** Waiting on you: the request closest to expiring (the exact item), and how many there are. */
+  /** Waiting on you: the request asked first (the exact item), and how many there are. */
   approval: Pick<Approval, "id" | "title" | "createdAt"> | null;
   waitingCount: number;
   /** Waiting: since it asked. Working: since when. Free: its DM's last message. */
@@ -58,9 +61,10 @@ export interface TeamLine {
 }
 
 /**
- * Agentes: "Esperando você" (agents with a request you may decide, the one closest to
- * expiring first; `waiting` as `waitingApprovals` gives it), "Trabalhando agora" (in `workByAgent` order:
- * missions, then the newest runs) and "Livres" (the latest conversation first, then by name), each agent once.
+ * Agentes: "Esperando você" (agents with a request you may decide, the one asked
+ * first; `waiting` as `waitingApprovals` gives it), "Trabalhando agora" (in `workByAgent` order:
+ * missions, then the newest runs, then those at work where you don't read, `atWork`) and "Livres" (the latest
+ * conversation first, then by name), each agent once.
  */
 export function teamLines(
   agents: Agent[],
@@ -69,6 +73,11 @@ export function teamLines(
   waitingOnYou: Pick<Approval, "id" | "agentId" | "title" | "createdAt">[] = [],
   /** Agents waiting for an offline computer (`waitingComputerByAgent`): never "working", listed first in Livres. */
   offline: ReadonlyMap<string, { name: string }> = new Map(),
+  /**
+   * Agents at work by their work for you (`AgentStatus.work`, ADR 0084 addendum), with since when: also work in places
+   * you don't read, which `work` leaves out. A routine's is not "working" (the agent is out on it).
+   */
+  atWork: ReadonlyMap<string, string> = new Map(),
 ): { waiting: TeamLine[]; working: TeamLine[]; free: TeamLine[] } {
   const byId = new Map(agents.map((a) => [a.id, a]));
   const waiting: TeamLine[] = [];
@@ -93,6 +102,11 @@ export function teamLines(
     const agent = byId.get(w.agentId);
     if (agent && !asking.has(agent.id) && !offline.has(agent.id))
       working.push({ agent, work: w, approval: null, waitingCount: 0, at: w.since, preview: null });
+  }
+  for (const [id, since] of atWork) {
+    const agent = byId.get(id);
+    if (agent && !asking.has(id) && !offline.has(id) && !firstWork.has(id))
+      working.push({ agent, work: null, approval: null, waitingCount: 0, at: since, preview: null });
   }
   const busy = new Set([...asking, ...working.map((l) => l.agent.id)]);
   const lastOf = new Map<string, NonNullable<DirectMessage["lastMessage"]>>();
@@ -251,14 +265,21 @@ export function statusCardShown(
   return !now.working;
 }
 
-/** Only the agent's owner or who reviews memory may correct or forget its memories (the server checks it again). */
+/**
+ * Only who answers for the agent (its owner, or who holds the role that does: ADR 0085, addendum of 2026-11-21) or who
+ * reviews memory may correct or forget its memories (the server checks it again). `roleIds`: the viewer's roles.
+ */
 export function canEditMemories(
-  agent: Pick<Agent, "ownerUserId"> | undefined,
-  viewer: { id: string | null; org: Pick<OrgSummary, "permissions"> | null | undefined },
+  agent: Pick<Agent, "ownerUserId" | "ownerRoleId"> | undefined,
+  viewer: {
+    id: string | null;
+    org: Pick<OrgSummary, "permissions"> | null | undefined;
+    roleIds?: readonly string[];
+  },
 ): boolean {
   if (!viewer.id) return false;
   if (can(viewer.org, "review_memory")) return true;
-  return Boolean(agent?.ownerUserId && agent.ownerUserId === viewer.id);
+  return Boolean(agent && ownsAgentAs(agent, viewer.id, viewer.roleIds ?? []));
 }
 
 /** Where a memory came from, said from the viewer's side. */
@@ -435,11 +456,15 @@ export interface UseLine {
   /** The app's connection, for its mark (`ConnectorIcon`); null for built-in areas. */
   connectionId: string | null;
   level: "read" | "write" | "some";
+  /** The viewer's own personal connection (the agent's tree holds no one else's): it works only when they ask. */
+  personal: boolean;
 }
 
+/** What the agent uses, the team's first and then the viewer's own personal connections (ADR 0099 addendum). */
 export function usesOf(access: AgentAccess | null | undefined): { lines: UseLine[]; asks: boolean } {
   if (!access) return { lines: [], asks: false };
   const lines: UseLine[] = [];
+  const personal = new Set(access.connectors.filter((c) => c.ownerUserId).map((c) => c.connectionId));
   let asks = false;
   for (const r of resourcesOf(access)) {
     const level = levelOf(r);
@@ -450,10 +475,18 @@ export function usesOf(access: AgentAccess | null | undefined): { lines: UseLine
       label: r.kind === "connector" || !r.area ? { text: r.label } : { area: r.area },
       connectionId: r.connectionId,
       level: level === "custom" ? "some" : level,
+      personal: r.connectionId !== null && personal.has(r.connectionId),
     });
   }
-  return { lines, asks };
+  return { lines: lines.sort((a, b) => Number(a.personal) - Number(b.personal)), asks };
 }
+
+/**
+ * Other people's personal connections this agent holds (the tree read with `others`): only who may take them off
+ * reads it, and each row offers only that.
+ */
+export const othersPersonalOf = (access: AgentAccess | null | undefined, me: string | null) =>
+  (access?.connectors ?? []).filter((c) => c.ownerUserId && c.ownerUserId !== me);
 
 /**
  * A profile's Modelo row as the web's fact sheet says it: the model it thinks with, and how after it on the value's
@@ -470,4 +503,74 @@ export function modelRow(t: TFunction, brain: AgentBrainLine | undefined, apiMod
     value: isAuto(brain.model) ? t("brain.auto.label") : (brain.model ?? apiModel),
     valueNote: planLabel(t, planOfAccount({ kind: brain.kind, provider: brain.provider ?? null })),
   };
+}
+
+/** How a proposed change stands, as its card and the history of agents' improvements say it (ADR 0219). */
+export interface ProposalOutcome {
+  /** The agent's review hasn't weighed it yet (a few seconds): only that is said. */
+  reviewing: boolean;
+  /** Applied and still in effect: the card's check. */
+  applied: boolean;
+  /** "Reviewing…", or how it ended and who did it ("Applied by Lodi", "Undone by you"). */
+  words: string;
+  /** The review's line: why it was applied or left out, in the language of the text it changed. */
+  why: string | null;
+  /** When it ended, or was put back. */
+  at: string | null;
+}
+
+/**
+ * A proposal's state in words (ADR 0219): nobody is asked to decide it any more. The agent's review applies it or
+ * leaves it out (a workspace-wide lesson no agent holds is applied automatically), and whoever may make the change
+ * can put it back. A row a person decided keeps the words it always had.
+ */
+export function proposalOutcome(
+  t: TFunction,
+  p: Pick<
+    Proposal,
+    "status" | "stale" | "decidedBy" | "decidedByAgent" | "reviewed" | "review" | "undoneBy" | "undoneAt" | "decidedAt"
+  >,
+  meId: string | null,
+): ProposalOutcome {
+  const why = p.review || null;
+  const ended = (words: string, applied = false, at = p.decidedAt): ProposalOutcome => ({
+    reviewing: false,
+    applied,
+    words,
+    why,
+    at,
+  });
+  if (p.stale) return { ...ended(t("proposals.stale")), why: null };
+  if (p.status === "pending")
+    return { reviewing: true, applied: false, words: t("mobile.proposals.reviewing"), why: null, at: null };
+  if (p.status === "undone") {
+    const by = p.undoneBy;
+    const words = !by
+      ? t("rightHand.card.undone")
+      : by.userId === meId
+        ? t("mobile.proposals.undoneByYou")
+        : t("mobile.proposals.undoneBy", { name: by.name });
+    return ended(words, false, p.undoneAt ?? p.decidedAt);
+  }
+  const accepted = p.status === "accepted";
+  const person = p.decidedBy;
+  if (person) {
+    const mine = person.userId === meId;
+    if (accepted)
+      return ended(
+        mine ? t("rightHand.card.appliedByYou") : t("rightHand.card.appliedBy", { name: person.name }),
+        true,
+      );
+    return ended(mine ? t("rightHand.card.declinedByYou") : t("rightHand.card.declinedBy", { name: person.name }));
+  }
+  // Decided with no one named and no review behind it (an older row): the plain word, as the web says.
+  if (!p.reviewed) return ended(t(accepted ? "proposals.accepted" : "proposals.refused"), accepted);
+  // An agent deleted since (no name) still applied it, as the web says: never "Applied automatically".
+  const agent = p.decidedByAgent ? p.decidedByAgent.name || t("channel.unknownAgent") : null;
+  if (accepted)
+    return ended(
+      agent ? t("mobile.proposals.appliedBy", agentGrammar(agent)) : t("mobile.proposals.appliedAuto"),
+      true,
+    );
+  return ended(agent ? t("mobile.proposals.leftOutBy", agentGrammar(agent)) : t("mobile.proposals.leftOut"));
 }

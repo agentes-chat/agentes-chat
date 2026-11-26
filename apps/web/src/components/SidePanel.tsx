@@ -5,6 +5,9 @@ import { useTranslation } from "react-i18next";
 import { useModalSheet } from "@/hooks/useModalSheet";
 import { leaveAnimated, takeOverLeaving } from "@/lib/leave";
 
+/** How long rows arriving in a pane that just opened still rise in turn (a thread's replies loading after it lands). */
+const LANDING_MS = 1200;
+
 /**
  * Every side pane (a thread, search's results, an agent's page, a task's conversation or steps, Auditoria's details, a
  * DM's side on a narrow window): a card floating 10px in from the window's top, right and bottom over a scrim that dims
@@ -12,19 +15,22 @@ import { leaveAnimated, takeOverLeaving } from "@/lib/leave";
  * click on the scrim closes it; everything behind is inert while it is open and the focus comes back when it goes. Esc
  * is the pane's own (`useEscClose`): a pane with steps inside (search, then a thread) goes back a step first. It slides
  * in from the right and out again; a pane replacing another in the same commit just swaps.
- * `className` sizes it (`thread-panel--wide`, `tm-panel`, `dm-side--float`).
+ * `className` sizes it (`thread-panel--wide`, `tm-panel`, `dm-side--float`). `inAddress`: the URL holds it open (a
+ * thread's `?thread=`, an agent's `?agent=`), so a history Back closes it by moving the URL (`useBackCloses`).
  */
 export function SidePanel({
   label,
   onClose,
   className,
   panelRef,
+  inAddress,
   children,
 }: {
   label: string;
   onClose: () => void;
   className?: string;
   panelRef?: RefObject<HTMLElement | null>;
+  inAddress?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -35,8 +41,16 @@ export function SidePanel({
   useLayoutEffect(() => {
     const panel = ref.current;
     const dim = scrim.current;
-    if (takeOverLeaving()) for (const el of [panel, dim]) el?.setAttribute("data-swap", "");
+    if (takeOverLeaving([panel, dim])) for (const el of [panel, dim]) el?.setAttribute("data-swap", "");
     return () => leaveAnimated([dim, panel]);
+  }, [ref]);
+  // Landing: what is inside rises in turn (threads.css), replies that load meanwhile too; after it, rows just appear.
+  useLayoutEffect(() => {
+    const panel = ref.current;
+    if (!panel || panel.hasAttribute("data-swap")) return;
+    panel.setAttribute("data-landing", "");
+    const timer = setTimeout(() => panel.removeAttribute("data-landing"), LANDING_MS);
+    return () => clearTimeout(timer);
   }, [ref]);
   // In <body>: `fixed` is the window's whatever the page does (a page's entrance holds a transform that would keep the
   // scrim off the sidebar), and everything else, #root, goes inert under it.
@@ -50,7 +64,13 @@ export function SidePanel({
         aria-label={t("common.close")}
         onClick={onClose}
       />
-      <aside ref={ref} tabIndex={-1} className={cx("thread-panel", className)} aria-label={label}>
+      <aside
+        ref={ref}
+        tabIndex={-1}
+        className={cx("thread-panel", className)}
+        aria-label={label}
+        data-in-address={inAddress ? "" : undefined}
+      >
         {children}
       </aside>
     </>,

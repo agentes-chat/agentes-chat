@@ -16,6 +16,21 @@ export const STICK_TO_END_THRESHOLD = 0.15;
  * Keys added at the bottom since the previous rows: after the last row both lists share, and new.
  * An older page prepended above, the first load (no previous rows) and a replaced list give none.
  */
+/** How far before the screen opened a message may be dated and still be one arriving now (the clocks differ). */
+export const ARRIVING_SLACK_MS = 2000;
+
+/**
+ * Whether a row that came in at the bottom is one arriving now (it rises in), or one that was already there before
+ * the screen opened: what the server sends right after a launch, the messages written while the app was closed, came
+ * in all at once and every one rose in, a flicker through the conversation (seen on a phone). Rows other than
+ * messages (who is working, a day's line) keep rising in.
+ */
+export function arrivesNow(createdAt: string | undefined, openedAt: number): boolean {
+  if (!createdAt) return true;
+  const at = Date.parse(createdAt);
+  return !Number.isFinite(at) || at >= openedAt - ARRIVING_SLACK_MS;
+}
+
 export function appendedKeys(prev: readonly string[], next: readonly string[]): string[] {
   if (prev.length === 0) return [];
   const before = new Set(prev);
@@ -90,6 +105,33 @@ export function unseenBelow(rows: readonly ScrollRow[], seenKey: string | null, 
     if (r.who && !out.authors.includes(r.who)) out.authors.push(r.who);
   }
   return out;
+}
+
+/**
+ * Where a row goes so it shows in the band between the floating bar and the dock, as `scrollToIndex` takes it. The list
+ * places a row in its whole height, whose top runs under the bar, so a row sent to the top (`viewPosition` 0) landed
+ * hidden under it: the band's top (`top`, points under the bar) is given as an offset, in the share that keeps the row
+ * at the same place in the band (`viewPosition` 0.5: centred in the band, 1: its end on the dock). A row taller than
+ * the band (`band`, points) shows its start or its end (`tall`).
+ *
+ * A row the list never measured (far from where it drew) is only an estimate here: the list measures it during the
+ * glide and keeps it where the estimate put it, so a tall one landed with its middle in view, its start above the bar
+ * or its end (a request's card) under the dock. It gets the list's own fallback instead, which re-aims it once measured
+ * when it doesn't fit: its start under the bar (`top`), or its end on the dock (no offset: the list takes it off even
+ * when the fallback fires, and the end would sink under the dock).
+ */
+export function bandAim(aim: {
+  viewPosition: number;
+  /** The row's measured height, if the list has it. */
+  size: number | undefined;
+  band: number;
+  top: number;
+  tall: "start" | "end";
+}): { viewPosition: number; viewOffset: number; viewPositionFallback?: "start" | "end" } {
+  const { viewPosition, size, band, top, tall } = aim;
+  if (size === undefined) return { viewPosition, viewOffset: tall === "start" ? top : 0, viewPositionFallback: tall };
+  if (size > band) return tall === "start" ? { viewPosition: 0, viewOffset: top } : { viewPosition: 1, viewOffset: 0 };
+  return { viewPosition, viewOffset: Math.round(top * (1 - viewPosition)) };
 }
 
 /**

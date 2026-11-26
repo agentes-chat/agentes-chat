@@ -1,18 +1,36 @@
 import type { ConnectorCategory, ConnectorDef, CustomConnectStart } from "@agenteschat/client";
 import { hiddenWithoutComposio } from "@agenteschat/client/lib/composio";
 import { CONNECTOR_MARK, type ConnectedItem, OWN_MARK, SERVER_ICON } from "@agenteschat/client/lib/connected";
+import { heldWhole, joinNames } from "@agenteschat/client/lib/format";
 import { mixHex } from "@agenteschat/ui/agent/engine";
 import type { TFunction } from "i18next";
+
+export { type ConnectionTab, connectionTabs } from "@agenteschat/client/lib/connected";
 
 /**
  * The connectors gallery on the phone: pure pieces the screen and
  * the tests share. No React Native imports.
  */
 
-/** Suggestions, in order (the web's list, catalog services only): the first three not connected yet. */
-export const SUGGESTED = ["github", "linear", "notion", "drive", "sentry", "stripe", "slack"];
+/**
+ * Suggestions, in order (the web's list, catalog services only): the tools a team reaches for every day, the first
+ * ready here and not connected yet featured, the rest standing in for those that aren't.
+ */
+export const SUGGESTED = [
+  "instagram",
+  "sentry",
+  "notion",
+  "linear",
+  "github",
+  "figma",
+  "canva",
+  "slack",
+  "hubspot",
+  "drive",
+  "stripe",
+];
 
-/** Categories in the order the filters show them. */
+/** Categories in the order their shelves stand. */
 export const CATEGORIES: ConnectorCategory[] = [
   "dev",
   "product",
@@ -46,7 +64,37 @@ export function accountActions(
   return item.custom ? ["rename", "reconnect", "add"] : ["rename", "reconnect"];
 }
 
-/** The first three suggestions that can be connected here and aren't yet. */
+/** A shelf of the catalog: one category's services. */
+export interface Shelf {
+  key: ConnectorCategory;
+  defs: ConnectorDef[];
+}
+
+/**
+ * The catalog as shelves (Conectores): each category in `CATEGORIES`' order with the services offered in it; a
+ * category with none has no shelf. The suggested services are the featured cards above (`FeaturedCards`), and are on
+ * their category's shelf too: each shelf is the whole of what it names.
+ */
+export function catalogShelves(offered: readonly ConnectorDef[]): Shelf[] {
+  const shelves: Shelf[] = [];
+  for (const key of CATEGORIES) {
+    const defs = offered.filter((d) => d.category === key);
+    if (defs.length > 0) shelves.push({ key, defs });
+  }
+  return shelves;
+}
+
+/** Rows in a shelf's column: the columns slide sideways, three services each. */
+export const SHELF_ROWS = 3;
+
+/** A shelf's columns, `rows` services each, in order. */
+export function shelfColumns<T>(items: readonly T[], rows = SHELF_ROWS): T[][] {
+  const columns: T[][] = [];
+  for (let i = 0; i < items.length; i += rows) columns.push(items.slice(i, i + rows));
+  return columns;
+}
+
+/** The suggestions that can be connected here and aren't yet, in `SUGGESTED`'s order (three by default). */
 export function suggestionsOf(catalog: ConnectorDef[], items: ConnectedItem[], count = 3): ConnectorDef[] {
   const out: ConnectorDef[] = [];
   for (const id of SUGGESTED) {
@@ -90,13 +138,33 @@ export function galleryTiles(list: ConnectorDef[], items: ConnectedItem[]) {
 
 /**
  * Why the sheet asks for a key: the server only lets in apps it approved (`not_approved`, with its own words on the
- * next line when it gave any), or it has no sign-in.
+ * next line when it gave any), it said no to the request headers sent alone (`sentHeaders`), or it has no sign-in.
  */
-export function needsKeyText(t: TFunction, start: Extract<CustomConnectStart, { status: "needs_key" }>, name: string) {
-  if (start.reason !== "not_approved") return t("mobile.connectors.needsKey");
-  const text = t("connectFlow.notApproved", { name });
+export function needsKeyText(
+  t: TFunction,
+  start: Extract<CustomConnectStart, { status: "needs_key" }>,
+  name: string,
+  sentHeaders = false,
+  /** Who may give the workspace its own OAuth app is pointed there instead of to a key. */
+  ownClient = false,
+) {
+  if (start.reason !== "not_approved") {
+    return t(sentHeaders ? "connectFlow.headers.refused" : "mobile.connectors.needsKey");
+  }
+  const text = t(ownClient ? "connectFlow.ownClient.notApproved" : "connectFlow.notApproved", { name });
   return start.detail ? `${text}\n${t("connectFlow.serverSaid", { detail: start.detail })}` : text;
 }
+
+/**
+ * A shared line about request headers with its `<names/>` said as a list ("X-API-Key e X-Tenant"): the web draws each
+ * name as code there, the phone as words. A name never breaks at its hyphens. The names go in through a function:
+ * `$&` and `$'` in a name are its own characters, not patterns of the replacement.
+ */
+export const headerNamesText = (
+  t: TFunction,
+  key: "connectors.sendsToo" | "connectFlow.headers.saved" | "connectFlow.headers.dropping",
+  names: readonly string[],
+) => t(key, { count: names.length }).replace("<names/>", () => joinNames(names.map(heldWhole), t));
 
 /** How a service connects on the phone: signing in in the browser, a key, or either. */
 export type ConnectHow = "signIn" | "key" | "either";
@@ -228,4 +296,59 @@ export function isHttpsUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+// ── A service's own page ─────────────────────────────────────────────────────────────────────────────────────────
+
+/** Each category's icon on a service's page (its facts' first column). */
+const CATEGORY_ICONS: Record<ConnectorCategory, string> = {
+  dev: "code",
+  product: "issue",
+  docs: "doc",
+  data: "chart",
+  payments: "wallet",
+  sales: "target",
+  support: "help",
+  marketing: "sparkle",
+  automation: "bolt",
+  social: "members",
+};
+
+export const categoryIcon = (category: ConnectorCategory): string => CATEGORY_ICONS[category] ?? "plug";
+
+/**
+ * What a service's page says of it before it is connected: how many tools it brings and how many always ask for
+ * approval (only our own connectors list them; a vendor's server shows its tools once connected: null), how it signs
+ * in, and the host it connects to (a vendor's server; ours connect through this server: null).
+ */
+export function serviceFacts(def: Pick<ConnectorDef, "kind" | "tools" | "auth" | "oauthConfigured" | "serverUrl">): {
+  tools: number | null;
+  asks: number;
+  how: ConnectHow;
+  host: string | null;
+} {
+  const known = def.kind === "catalog" && def.tools.length > 0;
+  let host: string | null = null;
+  if (def.kind === "remote_mcp" && def.serverUrl) {
+    try {
+      host = new URL(def.serverUrl).host || null;
+    } catch {
+      host = null;
+    }
+  }
+  return {
+    tools: known ? def.tools.length : null,
+    asks: known ? def.tools.filter((x) => x.sensitive).length : 0,
+    how: connectHow(def as ConnectorDef),
+    host,
+  };
+}
+
+/** "Mais em <categoria>" on a service's page: the others of its category it could connect, in the catalog's order. */
+export function relatedServices(
+  def: Pick<ConnectorDef, "id" | "category">,
+  offered: readonly ConnectorDef[],
+  max = 6,
+): ConnectorDef[] {
+  return offered.filter((d) => d.category === def.category && d.id !== def.id).slice(0, max);
 }

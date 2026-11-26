@@ -1,3 +1,8 @@
+import type { TFunction } from "i18next";
+import type { MachineTool, PlanDropped } from "../api/types";
+import { brainTool } from "./machines";
+import { planLabel, planOfAccount } from "./no-ai";
+
 /**
  * "Computador desconectado": when the computer that runs some agents' brain
  * (Claude Code / Codex) goes offline, the app says so once (a notice), each waiting agent says what it waits
@@ -26,6 +31,8 @@ export interface OutageLike {
   /** The workspace's own computer (ADR 0056 §10). */
   managed?: boolean;
   offlineSince: string;
+  /** Away moving to another server: it comes back by itself. */
+  moving?: boolean;
   agents: readonly OutageAgentLike[];
   waitingRuns: number;
 }
@@ -51,6 +58,7 @@ export interface MoveResultLike {
   skipped: readonly { agentId: string; reason: string }[];
   resumed: number;
   stillWaiting: number;
+  planDropped?: readonly PlanDropped[];
 }
 
 // ── Counts and wording inputs ───────────────────────────────────────────────
@@ -211,6 +219,33 @@ export function moveOutcome(r: MoveResultLike) {
   };
 }
 
+/**
+ * After "Trocar", each agent that moved without its plan (a sign-in is a folder on one computer): where the plan is
+ * signed in and the way back. `signIn`: the plan to open Connect on for them, when there is any.
+ */
+export function planDroppedText(
+  t: TFunction,
+  r: MoveResultLike,
+  where: { from: string; to: string; nameOf: (agentId: string) => string },
+) {
+  const dropped = r.planDropped ?? [];
+  const lines = dropped.map((d) =>
+    t("outage.done.planDropped", {
+      name: where.nameOf(d.agentId),
+      plan: planLabel(t, planOfAccount(d)),
+      from: where.from,
+      to: where.to,
+    }),
+  );
+  const first = dropped[0];
+  return {
+    lines,
+    signIn: first
+      ? { agentId: first.agentId, agentIds: dropped.map((d) => d.agentId), plan: planOfAccount(first) }
+      : null,
+  };
+}
+
 // ── The chat's waiting card ─────────────────────────────────────────────────
 
 /** `meta.brainUnavailable` of a `brain_unavailable` message. */
@@ -247,6 +282,49 @@ export function brainUnavailableOf(meta: Record<string, unknown> | null | undefi
 }
 
 /**
+ * The switch an agent's wait note needs turned on on its computer: its CLI off there (`tool_off`), or commands off
+ * (`exec_disabled`). The chat shows the one-click button under it; null for any other wait.
+ */
+export function waitToolOff(
+  info: { brain: ComputerBrain; code: string | null; machineId: string | null } | null,
+): { machineId: string; tool: MachineTool } | null {
+  if (!info?.machineId) return null;
+  if (info.code === "exec_disabled") return { machineId: info.machineId, tool: "commands" };
+  if (info.code !== "tool_off") return null;
+  return { machineId: info.machineId, tool: brainTool(info.brain) };
+}
+
+const SWITCHES: readonly string[] = [
+  "claude",
+  "codex",
+  "cursor",
+  "opencode",
+  "grok",
+  "antigravity",
+  "commands",
+  "browser",
+  "desktop",
+  "terminal",
+];
+
+/**
+ * The switches an agent's message needs turned on on its computer, for its one-click card: its wait note's
+ * (`waitToolOff`), or a call it made refused for one (`meta.toolOff`; the desktop runs commands too). Null for any
+ * other message.
+ */
+export function messageToolOff(
+  meta: Record<string, unknown> | null | undefined,
+): { machineId: string; tools: MachineTool[] } | null {
+  const wait = waitToolOff(brainUnavailableOf(meta));
+  if (wait) return { machineId: wait.machineId, tools: [wait.tool] };
+  const off = meta?.toolOff as { machineId?: unknown; tool?: unknown } | undefined;
+  if (!off || typeof off.machineId !== "string" || typeof off.tool !== "string" || !SWITCHES.includes(off.tool))
+    return null;
+  const tool = off.tool as MachineTool;
+  return { machineId: off.machineId, tools: tool === "desktop" ? ["desktop", "commands"] : [tool] };
+}
+
+/**
  * The note waits for its computer to come back (the waiting card), not for room on one that is there (`busy`) nor
  * for a plan's limit to reset: those stay the agent's own words, never "the computer is back".
  */
@@ -259,7 +337,7 @@ export const waitsForComputer = (info: Pick<BrainUnavailableInfo, "machineId" | 
  * Unknown when the outages aren't loaded or the message doesn't say which computer.
  */
 export type WaitCardState =
-  | { kind: "waiting"; machineId: string; computer: string; waiting: OutageAgentLike | null }
+  | { kind: "waiting"; machineId: string; computer: string; waiting: OutageAgentLike | null; moving: boolean }
   | { kind: "moved"; machineId: string; computer: string }
   | { kind: "back"; machineId: string }
   | { kind: "unknown" };
@@ -275,7 +353,7 @@ export function waitCardState(
   const agentId = info.agentId ?? authorId;
   const agent = agentId ? (o.agents.find((a) => a.agentId === agentId) ?? null) : null;
   if (agentId && !agent) return { kind: "moved", machineId: o.machineId, computer: o.name };
-  return { kind: "waiting", machineId: o.machineId, computer: o.name, waiting: agent };
+  return { kind: "waiting", machineId: o.machineId, computer: o.name, waiting: agent, moving: o.moving === true };
 }
 
 /**

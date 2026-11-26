@@ -7,6 +7,7 @@ import type { Agent, Message } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { setNavigateAway } from "@/lib/navigate";
 import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, meWithRole, NOW, ORG_ID, seedState } from "./fake-api";
+import { hintOf } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => {
@@ -328,6 +329,7 @@ describe("what waits on a plan's limit: Não rodar", () => {
         plan: "Claude",
         resetsAt: null,
         sharedWith: [ADA_ID],
+        chain: 2,
         rows: [
           row("r-a", { state: "answering" }),
           row("r-b"),
@@ -347,6 +349,10 @@ describe("what waits on a plan's limit: Não rodar", () => {
     // One title for the phase: it answers the first one, so it is picking up. The shared plan only behind the ⓘ.
     expect(dialog.querySelector(".ac-dialog__title")?.textContent).toContain("Atlas está retomando");
     expect(within(dialog).getByRole("button", { name: "Sobre a fila" })).toBeTruthy();
+    // Every account of its order at its limit comes first behind the ⓘ.
+    expect(hintOf("a fila", dialog).text).toBe(
+      "As 2 contas do Claude chegaram ao limite. Ada usa o mesmo plano do Claude. As conversas dos dois entram na mesma fila.",
+    );
     expect(dialog.textContent).not.toContain("mensagens depois");
     expect(dialog.textContent).not.toContain("Ver conversa");
     // Nothing skipped: no switch, the list alone.
@@ -831,9 +837,23 @@ describe("an agent's card to install or update a skill", () => {
     const flow = screen().getByRole("dialog", { name: "Conectar GitHub" });
     await click(within(flow).getByRole("button", { name: "Continuar no GitHub" }), 4);
     expect(state.calls.find((c) => c.method === "connectors.startOAuth")?.args[2]).toEqual({
-      returnTo: `/org/${ORG_ID}/settings/skills?install=${encodeURIComponent(link)}&agent=${ATLAS_ID}`,
+      returnTo: `/org/${ORG_ID}/skills?install=${encodeURIComponent(link)}&agent=${ATLAS_ID}`,
       serverUrl: undefined,
     });
+  });
+
+  test("a member who doesn't manage agents installs it as their own personal skill", async () => {
+    const state = seedState();
+    meWithRole(state, []);
+    const link = "https://github.com/acme/skills/tree/main/deploy";
+    state.messages.push(offer("c-skill", "install_skill", { url: link, why: "Faz deploys." }));
+    await open(state);
+    await click(within(cardRow("Instalar uma skill")).getByRole("button", { name: "Instalar" }), 8);
+    const install = dialog("Instalar skill") as HTMLElement;
+    expect(install.textContent).toContain("Só quem gerencia agentes adiciona skills da equipe.");
+    expect(state.calls.filter((c) => c.method === "skills.import").map((c) => c.args[1])).toEqual([
+      { url: link, list: true, personal: true },
+    ]);
   });
 
   test("done for everyone once the library has it, a member who doesn't manage agents too", async () => {
@@ -848,7 +868,7 @@ describe("an agent's card to install or update a skill", () => {
     expect(within(row).queryByRole("button", { name: "Instalar" })).toBeNull();
   });
 
-  test("an update waiting on its scripts: Revisar opens the skill, where it is applied", async () => {
+  test("an update waiting on its scripts: Review opens the skill's page, where it is applied", async () => {
     const state = seedState();
     const api = createFakeApi(state);
     const [review] = await api.skills.list(ORG_ID);
@@ -860,9 +880,9 @@ describe("an agent's card to install or update a skill", () => {
     await settle(5);
     const row = cardRow("Atualizar uma skill");
     await click(within(row).getByRole("button", { name: "Revisar" }), 8);
-    const sheet = dialog(review.name) as HTMLElement;
-    expect(sheet.textContent).toContain("A atualização do link muda arquivos que rodam: scripts/lint.sh");
-    await click(within(sheet).getByRole("button", { name: "Aplicar atualização" }), 8);
+    const page = document.querySelector(".sk-one") as HTMLElement;
+    expect(page.textContent).toContain("A atualização do link muda arquivos que rodam: scripts/lint.sh");
+    await click(within(page).getByRole("button", { name: "Aplicar atualização" }), 8);
     expect(state.calls.some((c) => c.method === "skills.approveUpdate")).toBe(true);
   });
 });

@@ -9,16 +9,28 @@ import {
   allowFolderCommand,
   allowsInApp,
   beginLogin,
+  brainTool,
+  browserNoAnswerMessage,
+  browserOffMessage,
+  CLI_GIT_MISSING,
+  CLI_HOME_ONLY,
+  cliCommandWayOut,
+  cliInstallCommand,
+  cliInstallFailure,
+  cliOneClick,
+  codexSandboxNote,
   commandInReason,
   computerKind,
   computerState,
   desktopTargetOf,
   downloadHref,
+  egressViaText,
   folderName,
   foldersOfAgent,
   formatUserCode,
   freeDuplicate,
   geminiNotShared,
+  installableCli,
   installCommand,
   isHandheld,
   isPaused,
@@ -31,16 +43,20 @@ import {
   loginReadPasses,
   machineReasonText,
   normalizeUserCode,
+  oneClickTerminal,
   otherThanHint,
   pausedByText,
   pauseUntil,
   platformOf,
+  profileRefusalLine,
+  profileToolOff,
   sharedFolderFacts,
   sharedFolderOf,
   shellQuote,
-  toolOffReason,
   toolOnCommand,
+  toolOneClick,
 } from "../src/lib/machines";
+import { gateLine } from "../src/lib/no-ai";
 import { openTarget, workspaceHeadline } from "../src/lib/notifications";
 import { accessOf, applyComputerEvent, applyMachineEvent, pauseOf } from "../src/realtime/machines";
 
@@ -172,7 +188,7 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect([android, iphone, linux, mac].map(isHandheld)).toEqual([true, true, false, false]);
   });
 
-  test("a tool turned off: the app's Preferences on a Mac or a PC, the command too elsewhere (sudo in system mode)", () => {
+  test("a tool turned off: its command (sudo in system mode), the app only on a Mac or a PC, a brain's switch by name", () => {
     expect(toolOnCommand({ mode: "single" }, "browser")).toBe("agentes-runner tools enable browser");
     expect(toolOnCommand({ mode: "system" }, "desktop")).toBe("sudo agentes-runner tools enable desktop");
     expect([allowsInApp("darwin"), allowsInApp("windows"), allowsInApp("linux"), allowsInApp("other")]).toEqual([
@@ -181,18 +197,8 @@ describe("connected computers helpers (ADR 0036)", () => {
       false,
       false,
     ]);
-    expect(toolOffReason({ os: "darwin", mode: "single" }, "claude_code")).toEqual({
-      key: "brain.reasons.tool_off",
-      command: "",
-    });
-    expect(toolOffReason({ os: "windows", mode: "single" }, "codex").key).toBe("brain.reasons.tool_off");
-    expect(toolOffReason({ os: "linux", mode: "system" }, "claude_code")).toEqual({
-      key: "brain.reasons.tool_offLinux",
-      command: "sudo agentes-runner tools enable claude",
-    });
-    expect(toolOffReason({ os: "linux", mode: "single" }, "codex").command).toBe("agentes-runner tools enable codex");
-    // Not known yet: the app's line, as before.
-    expect(toolOffReason(undefined, "codex").key).toBe("brain.reasons.tool_off");
+    expect(brainTool("claude_code")).toBe("claude");
+    expect(brainTool("opencode")).toBe("opencode");
   });
 
   test("portraits: the kind from the machine's os, the state with pause over online", () => {
@@ -264,6 +270,47 @@ describe("connected computers helpers (ADR 0036)", () => {
     applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
     applyComputerEvent(qc, "o1", { type: "agent.computer", agentId: "a1" } as { type: string });
     expect(qc.getQueryState(picture)?.isInvalidated).toBe(false);
+  });
+
+  test("a computer in standby going quiet reads online still; its hello ends the standby", () => {
+    const qc = new QueryClient();
+    const list = keys.machines("o1");
+    qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, standby: true, lastSeenAt: null }]);
+    const m1 = () => (qc.getQueryData(list) as { online: boolean; standby: boolean }[])[0];
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
+    expect(m1()).toMatchObject({ online: true, standby: true });
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: true } as { type: string });
+    expect(m1()).toMatchObject({ online: true, standby: false });
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
+    expect(m1()?.online).toBe(false);
+  });
+
+  test("put in standby after it went quiet: the list and its agents' computer read online again", () => {
+    const qc = new QueryClient();
+    const list = keys.machines("o1");
+    const target = keys.computers("o1");
+    qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, standby: false, lastSeenAt: null }]);
+    qc.setQueryData(target, { target: { kind: "machine", machineId: "m1", name: "Box", online: true } });
+    const m1 = () => (qc.getQueryData(list) as { online: boolean; standby: boolean }[])[0];
+    const t1 = () => (qc.getQueryData(target) as { target: { online: boolean } }).target;
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
+    expect(m1()?.online).toBe(false);
+    expect(t1().online).toBe(false);
+    applyMachineEvent(qc, "o1", { type: "machine.updated", machineId: "m1", standby: true } as { type: string });
+    expect(m1()).toMatchObject({ online: true, standby: true });
+    expect(t1().online).toBe(true);
+  });
+
+  test("a wake that failed (or the standby taken back): no longer waking, and the list and its agents' computer refetch", () => {
+    const qc = new QueryClient();
+    const list = keys.machines("o1");
+    const target = keys.computers("o1");
+    qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, standby: true, lastSeenAt: null }]);
+    qc.setQueryData(target, { target: { kind: "machine", machineId: "m1", name: "Box", online: true } });
+    applyMachineEvent(qc, "o1", { type: "machine.updated", machineId: "m1", standby: false } as { type: string });
+    expect((qc.getQueryData(list) as { standby: boolean }[])[0]?.standby).toBe(false);
+    expect(qc.getQueryState(list)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(target)?.isInvalidated).toBe(true);
   });
 
   test("a plan's usage moving on a computer refetches the agent list, which carries each plan's limits", () => {
@@ -360,9 +407,9 @@ describe("connected computers helpers (ADR 0036)", () => {
   });
 
   test("a sign-in's status that can't be read: reconnecting for 90 s from the first failed read, if it passes", () => {
-    // A restart that misses the runner's fifth dial (`backoffDelay`: 1, 2, 4, 8, 16, then 32 s after a drop, each up
-    // to 20 % late) has it back at the sixth: still waiting then, and for the next read 2 s on.
-    const sixthDial = [1, 2, 4, 8, 16, 32].reduce((at, s) => at + s * 1.2, 0) * 1000;
+    // A restart that misses the runner's fifth dial (`reconnectDelay`: within 1, 2, 4, 8, 16, then 32 s after a drop)
+    // has it back at the sixth: still waiting then, and for the next read 2 s on.
+    const sixthDial = [1, 2, 4, 8, 16, 32].reduce((at, s) => at + s, 0) * 1000;
     expect(LOGIN_RECONNECT_MS).toBeGreaterThan(sixthDial + 2_000);
     // The server restarting (no answer, or only the proxy's) or the computer reconnecting (offline, late).
     for (const error of [
@@ -479,7 +526,7 @@ describe("the shared folder (ADR 0115)", () => {
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
   });
 
-  test("why a sign-in ended: a line per code, the CLI's words under two of them, none when canceled", () => {
+  test("why a sign-in ended: a line per code, the CLI's words under three of them, none when canceled", () => {
     const add = "agentPage.work.brain.add";
     const worded = [
       "not_installed",
@@ -491,11 +538,12 @@ describe("the shared folder (ADR 0115)", () => {
       "status_unknown",
       "no_token",
       "not_kept",
+      "sandbox",
     ];
     for (const code of worded) {
       expect(loginFailureLine(code)).toEqual({
         key: `${add}.why.${code}`,
-        detail: code === "cli_exit" || code === "not_signed_in_after_login",
+        detail: code === "cli_exit" || code === "not_signed_in_after_login" || code === "sandbox",
       } as never);
     }
     // Too long is what an expired sign-in already says.
@@ -547,4 +595,250 @@ describe("pausing from the apps", () => {
       'machines.remotePause.byName{"name":"Bia"}',
     );
   });
+});
+
+describe("one click where a tool is off (ADR 0036 §8)", () => {
+  const bia = { id: "u-bia", name: "Bia Rocha" };
+  const mac = { kind: "connected", pairedBy: bia, accessAllow: true } as Pick<
+    Machine,
+    "kind" | "pairedBy" | "accessAllow"
+  >;
+
+  test("whoever connected it turns it on; anyone else asks them; an old app updates first; the Cloud's never", () => {
+    expect(toolOneClick(mac, "u-bia")).toEqual({ kind: "allow" });
+    expect(toolOneClick({ ...mac, accessAllow: false }, "u-bia")).toEqual({ kind: "outdated" });
+    expect(toolOneClick(mac, "u-caio")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(toolOneClick({ ...mac, kind: "managed" }, "u-bia")).toBeNull();
+    expect(toolOneClick({ ...mac, pairedBy: null }, "u-caio")).toBeNull();
+    expect(toolOneClick(null, "u-bia")).toBeNull();
+  });
+
+  test("a coding CLI: whoever connected it installs it, anyone else asks, never where no installer runs", () => {
+    const pc = { kind: "connected", pairedBy: bia, cliInstall: true, os: "windows", mode: "single" } as Pick<
+      Machine,
+      "kind" | "pairedBy" | "cliInstall" | "os" | "mode"
+    >;
+    expect(cliOneClick(pc, "u-bia", "claude")).toEqual({ kind: "allow" });
+    expect(cliOneClick({ ...pc, cliInstall: false }, "u-bia", "claude")).toEqual({ kind: "outdated" });
+    expect(cliOneClick(pc, "u-caio", "claude")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    // OpenAI's Windows build has no installer of its own; root's agents get theirs from the computer's setup.
+    expect(cliOneClick(pc, "u-bia", "codex")).toBeNull();
+    expect(cliOneClick({ ...pc, os: "darwin" }, "u-bia", "codex")).toEqual({ kind: "allow" });
+    expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
+    expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
+    expect(installableCli("claude_code")).toBe("claude");
+    const words = { program: "Claude Code", computer: "PC" };
+    const said = (k: string, v?: Record<string, unknown>) => `${k} ${JSON.stringify(v)}`;
+    const t = said as unknown as Parameters<typeof cliInstallFailure>[0];
+    expect(cliInstallFailure(t, { tool: "claude", state: "running" }, words)).toBeNull();
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", cause: "git_missing" }, words)).toContain(
+      "connectAi.cli.gitMissing",
+    );
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", message: "curl: (6)" }, words)).toBe(
+      'connectAi.cli.failed {"computer":"PC","message":"curl: (6)"}',
+    );
+    expect(installableCli("cursor")).toBeNull();
+  });
+
+  test("Codex on Windows: its own sandbox where MXC is missing, or nothing at all, in words for the computer's ⓘ", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const desk = { name: "Estudio-PC" };
+    for (const codexSandbox of ["mxc", null, undefined] as const)
+      expect(codexSandboxNote(t, { ...desk, codexSandbox })).toBeNull();
+    expect(codexSandboxNote(t, { ...desk, codexSandbox: "unelevated" })).toBe(t("brain.sandboxPartial"));
+    const none = t("brain.reasons.windows_sandbox", { computer: "Estudio-PC", program: "Codex" });
+    expect(codexSandboxNote(t, { ...desk, codexSandbox: "none" })).toBe(none);
+    expect(none).toBe(
+      "O Windows do Estudio-PC não consegue isolar os comandos do Codex. Escolha o Claude ou uma chave de API, ou atualize esse computador para o Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia.",
+    );
+    // The same words where a person picks Codex for an agent there, on the web and the phone (`gateLine`).
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "windows_sandbox" },
+        edition: "selfhost",
+        kind: "codex",
+        computer: "Estudio-PC",
+      })?.text,
+    ).toBe(none);
+    // On the Cloud's own computers (Linux) it never happens: its line is the "on our side" one.
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "windows_sandbox" },
+        edition: "cloud",
+        kind: "codex",
+        computer: "Computador da Acme",
+      })?.text,
+    ).toBe(t("aiAccounts.connect.needsCloud.stuck", { computer: "Computador da Acme", program: "Codex" }));
+  });
+
+  test("a CLI the apps don't install: the line to run there, for every agent's user in system mode", async () => {
+    const { ptBR, resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const server = { kind: "connected", os: "linux", mode: "single", cliErrors: null } as Pick<
+      Machine,
+      "kind" | "os" | "mode" | "cliErrors"
+    >;
+    const system = { ...server, mode: "system" as const };
+    expect(cliInstallCommand("antigravity", server)).toBe(
+      "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+    );
+    expect(cliInstallCommand("antigravity", system)).toBe(
+      "sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path' && sudo chmod -R a+rX /opt/agy && sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy",
+    );
+    expect(cliInstallCommand("cursor", system)).toContain(
+      "sudo ln -sf /opt/cursor/.local/bin/agent /usr/local/bin/agent",
+    );
+    for (const no of [
+      cliInstallCommand("claude_code", server),
+      cliInstallCommand("opencode", server),
+      cliInstallCommand("antigravity", { ...server, os: "windows" }),
+      cliInstallCommand("grok", { ...server, kind: "managed" }),
+    ])
+      expect(no).toBeNull();
+    // xAI's PowerShell installer, in a line cmd runs too.
+    expect(cliInstallCommand("grok", { ...server, os: "windows" })).toBe(
+      'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
+    );
+
+    const words = { program: "Antigravity CLI", computer: "srv-1" };
+    expect(cliCommandWayOut(t, "antigravity", server, "not_installed", "srv-1")?.text).toBe(
+      `${t("connectAi.cli.missing", words)} ${ptBR.connectAi.cli.runThis}`,
+    );
+    expect(cliCommandWayOut(t, "antigravity", system, "not_installed", "srv-1")?.text).toBe(
+      t("connectAi.cli.missingSystem", words),
+    );
+    const rootOnly = { ...system, cliErrors: { antigravity: CLI_HOME_ONLY } };
+    expect(cliCommandWayOut(t, "antigravity", rootOnly, "cant_start", "srv-1")).toEqual({
+      text: t("connectAi.cli.homeOnly", words),
+      command: cliInstallCommand("antigravity", system) ?? "",
+    });
+    // There and failing on its own: the CLI's own error says why, not a command.
+    const crashing = { ...system, cliErrors: { antigravity: "segfault" } };
+    expect(cliCommandWayOut(t, "antigravity", crashing, "cant_start", "srv-1")).toBeNull();
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "cant_start" },
+        edition: "selfhost",
+        kind: "antigravity",
+        computer: "srv-1",
+        machine: rootOnly,
+      })?.text,
+    ).toBe(t("brain.reasons.home_only", words));
+  });
+
+  test("a CLI there that won't start says the CLI's own words, and Gemini on Windows says why it can't", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({
+      lng: "pt-BR",
+      fallbackLng: "en",
+      resources,
+      initAsync: false,
+      // As the apps: React escapes.
+      interpolation: { escapeValue: false },
+    });
+    const t = instance.t;
+    const pc = { kind: "connected", os: "windows", mode: "single" } as const;
+    const cantStart = { state: "unsupported", reason: "cant_start" } as const;
+    const line = (
+      kind: "opencode" | "claude_code" | "antigravity",
+      machine: Parameters<typeof gateLine>[1]["machine"],
+      gate: Parameters<typeof gateLine>[1]["gate"] = cantStart,
+    ) => gateLine(t, { gate, edition: "selfhost", kind, computer: "PC da Bia", machine })?.text;
+    const said = "Error: Cannot find module 'opencode-windows-x64/package.json'";
+    expect(line("opencode", { ...pc, cliErrors: { opencode: said } })).toBe(
+      `O OpenCode está no PC da Bia, mas não abre: ${said}`,
+    );
+    // Claude Code's error is kept under its command's name; Git for Windows missing is a code, said in words.
+    expect(line("claude_code", { ...pc, cliErrors: { claude: "spawn EPERM" } })).toBe(
+      "O Claude Code está no PC da Bia, mas não abre: spawn EPERM",
+    );
+    expect(line("claude_code", { ...pc, cliErrors: { claude: CLI_GIT_MISSING } })).toBe(
+      t("connectAi.cli.gitMissing", { program: "Claude Code", computer: "PC da Bia" }),
+    );
+    // No words from the runner (an older one): the plain line.
+    expect(line("opencode", pc)).toBe(t("brain.reasons.cant_start", { program: "OpenCode", computer: "PC da Bia" }));
+  });
+
+  test("Prefiro no Terminal: the same switches as one command, only for who turns them on, where there may be no app", () => {
+    const linux: Pick<Machine, "mode" | "os"> = { mode: "single", os: "linux" };
+    expect(oneClickTerminal(linux, { kind: "allow" }, ["desktop", "commands"])).toBe(
+      "agentes-runner tools enable desktop && agentes-runner tools enable commands",
+    );
+    expect(oneClickTerminal({ ...linux, mode: "system" }, { kind: "allow" }, ["browser"])).toBe(
+      "sudo agentes-runner tools enable browser",
+    );
+    expect(oneClickTerminal({ ...linux, os: "darwin" }, { kind: "allow" }, ["browser"])).toBeNull();
+    expect(oneClickTerminal(linux, { kind: "ask", ownerId: "u-bia", ownerName: "Bia" }, ["browser"])).toBeNull();
+    expect(oneClickTerminal(linux, { kind: "allow" }, [])).toBeNull();
+  });
+
+  test("a refused Fazer login reads its cause and what this person can do", () => {
+    const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+    const off = (params: Record<string, unknown>) =>
+      new ApiError(400, "browser_profile.tool_off", "The browser is turned off on Mac", {
+        machineId: "m1",
+        machineName: "Bia's Mac",
+        tool: "browser",
+        ...params,
+      });
+    expect(profileToolOff(off({ mayAllow: true }))).toEqual({
+      machineId: "m1",
+      machineName: "Bia's Mac",
+      tool: "browser",
+      oneClick: { kind: "allow" },
+    });
+    expect(profileToolOff(off({ outdated: true }))?.oneClick).toEqual({ kind: "outdated" });
+    const ask = off({ ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(profileToolOff(ask)?.oneClick).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(profileRefusalLine(t, ask)).toBe('browser.profiles.toolOffOther{"name":"Bia"}');
+    expect(profileRefusalLine(t, off({ mayAllow: true }))).toBe("browser.profiles.toolOff");
+    const other = new ApiError(400, "browser_profile.unavailable", "Chrome isn't installed", { machineName: "Mac" });
+    expect(profileToolOff(other)).toBeNull();
+    expect(profileRefusalLine(t, other)).toBe('browser.profiles.notOpened{"machine":"Mac"}');
+    expect(profileRefusalLine(t, new ApiError(409, "browser_profile.busy", "busy"))).toBe("browser.profiles.busy");
+    expect(profileToolOff(new Error("boom"))).toBeNull();
+  });
+
+  test("the runner's refusal of a browser that is off is read in every runner version's words", () => {
+    expect(
+      browserOffMessage("Browser is turned off on this computer (its owner can turn it on from agentes.chat)"),
+    ).toBe(true);
+    expect(
+      browserOffMessage(
+        "Browser is turned off on this computer (its owner can turn it on in the agentes app (Preferences > Tools))",
+      ),
+    ).toBe(true);
+    expect(browserOffMessage("The browser is turned off on this computer")).toBe(true);
+    expect(browserOffMessage("Too many browsers are open")).toBe(false);
+    expect(browserOffMessage(undefined)).toBe(false);
+  });
+
+  test("the runner's own timeout is told apart from the computer's", () => {
+    expect(browserNoAnswerMessage("The browser didn't answer within 15 s")).toBe(true);
+    expect(browserNoAnswerMessage("the computer Desk did not answer within 120 s")).toBe(false);
+    expect(browserNoAnswerMessage(null)).toBe(false);
+  });
+});
+
+test("whose internet the workspace's computer uses: the computer and who connected it, only while it is online", () => {
+  const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+  const via = { machineId: "m-ana", name: "Ana's iMac", userName: "Ana" };
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: via })).toBe(
+    'machines.egress.viaBy{"name":"Ana\'s iMac","person":"Ana"}',
+  );
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: { ...via, userName: null } })).toBe(
+    'machines.egress.via{"name":"Ana\'s iMac"}',
+  );
+  expect(egressViaText(t, { kind: "managed", online: false, egressVia: via })).toBeNull();
+  expect(egressViaText(t, { kind: "connected", online: true, egressVia: via })).toBeNull();
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

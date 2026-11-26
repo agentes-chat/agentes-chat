@@ -1,4 +1,4 @@
-import type { ConnectIntent, MachineAccount } from "@agenteschat/client";
+import type { Credential, MachineAccount } from "@agenteschat/client";
 import {
   keys,
   useAddCredential,
@@ -9,12 +9,12 @@ import {
   useMachines,
   useModels,
 } from "@agenteschat/client";
-import { accountTitle, listsExisting } from "@agenteschat/client/lib/ai-accounts";
+import { accountInLine, listsExisting } from "@agenteschat/client/lib/ai-accounts";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
-import { errorCode, errorText, keyRefusal } from "@agenteschat/client/lib/errors";
-import { namesText } from "@agenteschat/client/lib/format";
+import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
+import { namesText, rosterText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { stepPermissions } from "@agenteschat/client/lib/home";
 import {
   type AgentAi,
   type AiChoice,
@@ -29,25 +29,28 @@ import {
   freePlanAccount,
   gateDims,
   kindOf,
-  mayConnectAi,
   noAiLockedLine,
   type PlanChoice,
   type PlanGate,
   planLabel,
   planMark,
   planOfAccount,
+  planOffSystem,
   planTitle,
   signsInOnce,
   signsInPerAgent,
 } from "@agenteschat/client/lib/no-ai";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { isPlanId, planOf } from "@agenteschat/client/lib/plans";
-import { providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
+import { keyThinks, providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
 import {
   isRightHand,
   rightHandOf,
   rightHandOnKey,
+  type SavedKey,
+  savedKeyLine,
   sceneTeam,
+  settleSavedKey,
   thinksWithLine,
 } from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
@@ -60,25 +63,14 @@ import {
   DialogFooter,
   Icon,
   type IconName,
-  OptionCard,
   ProviderLogo,
+  SettingNote,
   Spinner,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import {
-  type CSSProperties,
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import {
@@ -89,26 +81,39 @@ import {
   FaceStrip,
   type KeyDraft,
   KeyPanel,
+  KeyUntested,
   PlanAudience,
-  PlanHold,
   PlanPanel,
+  type PlanStage,
   PlanWithoutAgent,
   useExistingAi,
   useGatesWithoutAgent,
   usePlanGates,
-  usePlanHold,
 } from "@/components/ai/ConnectAiSteps";
 import { EndpointForm } from "@/components/ai/EndpointForm";
+import { PlanHold, usePlanHold } from "@/components/ai/plan-hold";
+import { AudienceCard } from "@/components/arrival/AudienceCard";
 import { ConnectChoices } from "@/components/arrival/ConnectChoices";
 import { bestHave, ConnectHave, haveId } from "@/components/arrival/ConnectHave";
 import { ConnectScene, isScenePlan, type SceneAgent, TeamScene, useDawn } from "@/components/arrival/TeamScene";
+import { NEW_AGENT_EVENT } from "@/components/new-agent/events";
+import type { NewAgentRequest } from "@/components/new-agent/new-agent-context";
 import { useOrg } from "@/components/org-context";
 import { KeyRefused, ProviderKeySelect } from "@/components/ProviderKey";
 import { useDirectory } from "@/hooks/useDirectory";
 import { lookOf } from "@/lib/look";
-import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import "./no-ai.css";
+import { type ConnectAiRequest, useConnectAi } from "./connect-ai-context";
+
+export {
+  type AnswerState,
+  type ConnectAi,
+  ConnectAiProvider,
+  type ConnectAiRequest,
+  useConnectAi,
+  useMayConnectAi,
+} from "./connect-ai-context";
 
 /*
  * "Conectar uma IA" (ADR 0061): one dialog for every place that says an agent has no AI (the banner, the agent's
@@ -120,163 +125,22 @@ import "./no-ai.css";
  * narrow dialog under the sky instead (ADR 0160, addendum: `BandDialog`).
  */
 
-export interface ConnectAiRequest {
-  /** The step the message asked for (Jev); `any`, `task` or none: the first step. */
-  intent?: ConnectIntent;
-  /** The plan it opens on, over `intent`: a card's Sign in again, on the agent's own plan (a coding plan's too). */
-  plan?: PlanChoice;
-  /** With `api_key`: the provider it named. */
-  provider?: string;
-  /** The agent to connect: the dialog is for it alone. */
-  agentId?: string;
-  /** The agents to choose from (an agent's card names them); `agentId` is chosen first. */
-  agentIds?: string[];
-  /** The no-AI card or the person's message: once connected, it is answered ("Responder agora"). */
-  from?: string;
-  /** A key pasted in the composer. */
-  apiKey?: string;
-  /** Opened by itself (Jev), not by a click: never over a dialog already open. */
-  auto?: boolean;
-  /** Opened because the workspace's computer just got ready (its email, its notification): a plan's panel says so. */
-  ready?: boolean;
-  /**
-   * Opened from the create-agent step for an agent of the person's own still being made: a plan signs in for the
-   * agents they create (as with no agent yet), never for one they have, and a computer opens in a new tab (the draft
-   * stays).
-   */
-  forNewAgent?: boolean;
-  /** Opened over a form still being filled in (Criar agente's steps): a Settings page opens in a new tab. */
-  overDraft?: boolean;
-  /**
-   * Opened right after the onboarding (ADR 0160): the team stands asleep beside the choices, which are cards in
-   * words, and wakes as the sky turns to day once an AI is connected. The plans' own steps are the same.
-   */
-  arrival?: boolean;
-  /**
-   * Opened from the agent's own conversation (the notice over the composer, its setup card), for an agent of the
-   * person's with no AI: the sky over a narrow dialog, what they already have to pick from first, and for every agent
-   * of theirs with no AI unless they narrow it to this one (ADR 0160, addendum).
-   */
-  chat?: boolean;
-  /**
-   * The card already picked (the onboarding's AI step, ADR 0162): the narrow dialog, for the team or for one agent,
-   * opens on that choice's steps, a key's too. Unlike `plan` (sign in again) and `intent: "api_key"` (a key asked
-   * for), which keep the plain dialog.
-   */
-  start?: AiChoice;
-  /**
-   * What was connected here, each time something is (a plan, a key, an account the person already had): the
-   * onboarding's AI step names it, which may not be the card it opened on, since Back leads to every other choice.
-   */
-  onConnected?: (choice: AiChoice) => void;
-}
-
-/** How "Responder agora" went for a message, in this tab. */
-export type AnswerState = "pending" | "answering" | "still_missing";
-
-export interface ConnectAi {
-  open(request: ConnectAiRequest): void;
-  /** "Responder agora" (`from`: the no-AI card or the person's message). */
-  answer(from: string): Promise<void>;
-  answered: Record<string, AnswerState>;
-}
-
-const ConnectAiContext = createContext<ConnectAi | null>(null);
-
-/** Null outside the workspace shell (an isolated page in a test): no Connect there. */
-export const useConnectAi = () => useContext(ConnectAiContext);
-
-/**
- * Whether this person has an AI to connect: the workspace's key, a plan for an agent they have or may make, or their
- * own for the right hand. Yes until the agents are known, so nobody reads "who connects it" for a moment.
- */
-export function useMayConnectAi() {
-  const { org, me } = useOrg();
-  const dir = useDirectory(org.id);
-  return (
-    dir.loading ||
-    stepPermissions(org, me.user.id, dir.agents).connectAi ||
-    can(org, "create_agents") ||
-    mayConnectAi(rightHandOf(dir.agents), me.user.id, org)
-  );
-}
-
-export function ConnectAiProvider({
-  children,
-  poll,
-  settingUp = false,
-}: {
-  children: ReactNode;
-  /**
-   * Where no socket keeps them current (the onboarding, ADR 0162): how often the dialog reads the AI status, the
-   * computers and the plans' state again while it is open.
-   */
-  poll?: number;
-  /**
-   * On the onboarding: the workspace's pages don't open until it ends (the org route sends them back to it), so the
-   * dialog offers no way out to one (Computers, the keys), saying what comes after instead.
-   */
-  settingUp?: boolean;
-}) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const api = useApi();
-  const toast = useToast();
-  // Each opening is its own dialog (`n`): what was chosen in another one doesn't carry over.
-  const [request, setRequest] = useState<(ConnectAiRequest & { n: number }) | null>(null);
-  const [answered, setAnswered] = useState<Record<string, AnswerState>>({});
-  const open = useCallback((next: ConnectAiRequest) => {
-    setRequest((current) => (current && next.auto ? current : { ...next, n: (current?.n ?? 0) + 1 }));
-  }, []);
-  // A link that asks for it (the computer ready email's "Connect your AI"): open once, then drop it from the address.
-  const [asked, clearAsked] = useOpenParam("connect");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once per link
-  useEffect(() => {
-    if (asked !== "ai") return;
-    open({ ready: true });
-    clearAsked(null);
-  }, [asked]);
-  const answer = useCallback(
-    async (from: string) => {
-      setAnswered((a) => ({ ...a, [from]: "pending" }));
-      try {
-        await api.chat.answerNow(org.id, from);
-        setAnswered((a) => ({ ...a, [from]: "answering" }));
-      } catch (error) {
-        const missing = errorCode(error) === "ai.still_missing";
-        setAnswered((a) => {
-          const { [from]: _pending, ...rest } = a;
-          return missing ? { ...rest, [from]: "still_missing" } : rest;
-        });
-        if (!missing) toast.show(errorText(t, error), "error");
-      }
-    },
-    [api, org.id, toast, t],
-  );
-  const value = useMemo(() => ({ open, answer, answered }), [open, answer, answered]);
-  return (
-    <ConnectAiContext.Provider value={value}>
-      {children}
-      {request && (
-        <ConnectAiDialog
-          key={request.n}
-          request={request}
-          poll={poll ?? false}
-          settingUp={settingUp}
-          onClose={() => setRequest(null)}
-          onConnected={(choice) => {
-            if (request.from) void answer(request.from);
-            request.onConnected?.(choice);
-          }}
-        />
-      )}
-    </ConnectAiContext.Provider>
-  );
-}
-
 /** A chosen plan's steps, named as its maker sells it; the key's, as the picker names it. */
 const stepTitle = (t: TFunction, choice: AiChoice) =>
   choice === "key" ? t("connectAi.title.api_key") : planTitle(t, choice);
+
+/**
+ * A plain plan panel's title where it is (`PlanStage`): which of the person's accounts the agent (`agent`; none: all of
+ * them) will use, or another account to sign in; else the plan's steps (`stepTitle`).
+ */
+const panelTitle = (t: TFunction, choice: AiChoice, stage: PlanStage | null, agent?: string) => {
+  if (choice === "key" || !stage) return stepTitle(t, choice);
+  const brand = planLabel(t, choice);
+  if (stage.kind === "other") return t("connectAi.which.other", { brand });
+  return agent
+    ? t("connectAi.which.title", { brand, ...agentGrammar(agent) })
+    : t("connectAi.which.titleAll", { brand });
+};
 
 /** A footer's note: its icon on the words' first line, the footer's buttons outside it, centred with the line. */
 const footNote = (icon: IconName, text: string) => (
@@ -409,18 +273,21 @@ function BandDialog({
   );
 }
 
-function ConnectAiDialog({
+export function ConnectAiDialog({
   request,
   poll,
   settingUp,
   onClose,
   onConnected,
+  onPairComputer,
 }: {
   request: ConnectAiRequest;
   poll: number | false;
   settingUp: boolean;
   onClose: () => void;
   onConnected: (choice: AiChoice) => void;
+  /** Connect a computer, in place over this dialog. */
+  onPairComputer: () => void;
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
@@ -462,6 +329,13 @@ function ConnectAiDialog({
   const askedId = request.agentId ?? sole;
   const askedFor = askedId && (request.chat || !plain) ? dir.agentById.get(askedId) : undefined;
   const asleep = (id: string) => (aiStateOf(status.data, id) ?? "no_ai") === "no_ai";
+  // Past its own screens, Back goes to the dialog it was opened from, when there is one.
+  const leave = request.onBack
+    ? () => {
+        onClose();
+        request.onBack?.();
+      }
+    : undefined;
   // Opened for several agents or none (the channel's notice, Settings › AI accounts, the first-run list, a team just
   // made, a receipt or a card for several agents, the onboarding's AI step): the narrow dialog under the sky, for every
   // agent of the person's that can't think, on the computer of the first of them since a plan signs in on one computer
@@ -611,10 +485,10 @@ function ConnectAiDialog({
   // With no set, the agent whose computer the panel reads, "All agents" too (they're on that one's computer).
   const reader = heldReader ?? defaultTarget({ ...aimed, set: [] });
   const theirs = one !== undefined && one.ownerUserId !== me.user.id && !rightHand;
-  // The one agent the dialog is for: what the person already has comes first for it while it has no AI. An admin sees
-  // the accounts of someone else's agent, locked, and may give it a workspace key (ADR 0041 §4).
-  const mayUseKeys = can(org, "manage_agents");
+  // The one agent the dialog is for: what the person already has comes first for it while it has no AI. Who manages
+  // it sees the accounts of someone else's agent, locked, and may give it a workspace key (ADR 0041 §4).
   const forId = one?.id ?? (agents.length === 1 ? agents[0]?.id : undefined);
+  const mayUseKeys = managesAgent(forId ? dir.agentById.get(forId) : undefined);
   const forAgent = forId ? { id: forId, name: dir.agentById.get(forId)?.name ?? "" } : undefined;
   const gates = usePlanGates(org.id, reader ?? (theirs && mayUseKeys ? one?.id : undefined), poll);
   const credentials = useCredentials(org.id, mayUseKeys && forId !== undefined);
@@ -623,8 +497,11 @@ function ConnectAiDialog({
   const bareGates = useGatesWithoutAgent(org.id, bare);
   const gateOf = (c: PlanChoice): PlanGate =>
     agents.length > 0 ? gates.gateOf(c) : bare ? bareGates.at(c).gate : { state: "loading" };
+  const offSystem = (c: PlanChoice) => planOffSystem(t, gateOf(c));
   const [used, setUsed] = useState<ExistingUsed | null>(null);
   const [login, setLogin] = useState<ExistingSignIn | null>(null);
+  // Where a plain plan panel is (its list of the person's accounts, or another sign-in): the title asks it.
+  const [planStage, setPlanStage] = useState<PlanStage | null>(null);
   const [picked, setPicked] = useState<AiChoice | null>(request.start ?? null);
   const choice =
     picked ??
@@ -687,6 +564,63 @@ function ConnectAiDialog({
         const a = dir.agentById.get(id);
         return a && isRightHand(a) && noAi(a.id) ? [a] : [];
       })[0];
+  // The one agent the dialog is for, the right hand aside: a key saved here goes on it. Else it is for every agent.
+  const keyAgent = one && !hand ? one : undefined;
+  const [savedKey, setSavedKey] = useState<{ key: Credential; outcome: SavedKey }>();
+  const [makingDefault, setMakingDefault] = useState(false);
+  const settleKey = async (key: Credential) => {
+    try {
+      const agent = keyAgent && { ...keyAgent, brain: keyAgent.brain?.kind };
+      const outcome = await settleSavedKey(api, org.id, key, agent, models.data?.models ?? []);
+      setSavedKey({ key, outcome });
+      if (keyAgent) {
+        void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
+        void qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, keyAgent.id) });
+      }
+      if (outcome.kind === "made") void qc.invalidateQueries({ queryKey: keys.settings(org.id) });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    }
+  };
+  const keyForAll = async (key: Credential) => {
+    setMakingDefault(true);
+    try {
+      await api.agents.makeDefaultCredential(org.id, key.id);
+      setSavedKey({ key, outcome: { kind: "all" } });
+      void qc.invalidateQueries({ queryKey: keys.settings(org.id) });
+      void qc.invalidateQueries({ queryKey: keys.aiStatus(org.id) });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    } finally {
+      setMakingDefault(false);
+    }
+  };
+  const savedLine = savedKey ? (
+    keyThinks(savedKey.key) ? (
+      <SettingNote
+        icon="check"
+        live
+        action={
+          savedKey.outcome.kind === "other" && (
+            <Button loading={makingDefault} disabled={makingDefault} onClick={() => void keyForAll(savedKey.key)}>
+              {t("connectAi.key.useForAll")}
+            </Button>
+          )
+        }
+      >
+        {savedKey.key.reused && `${t("settings.keyResaved")} `}
+        {keyNote ?? savedKeyLine(t, savedKey.outcome, savedKey.key)}
+      </SettingNote>
+    ) : (
+      <KeyUntested cred={savedKey.key} onTested={(key) => setSavedKey({ ...savedKey, key })} />
+    )
+  ) : (
+    keyNote && (
+      <SettingNote icon="check" live>
+        {keyNote}
+      </SettingNote>
+    )
+  );
   const saveKey = () => {
     if (draft.provider === CUSTOM_PROVIDER) return;
     setRefused(null);
@@ -713,13 +647,15 @@ function ConnectAiDialog({
             void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
             void qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, hand.id) });
           }
-          setKeyNote(
+          const note =
             key.check === "unchecked"
               ? t("connectAi.key.savedUnchecked", { provider })
               : moved && hand
                 ? thinksWithLine(t, "workspace", hand.name, key.label)
-                : undefined,
-          );
+                : undefined;
+          // With no saved key's own line (the right hand's), the note says the key was already there.
+          setKeyNote(hand && key.reused ? [t("settings.keyResaved"), note].filter(Boolean).join(" ") : note);
+          if (!hand) await settleKey(key);
           setKeySaved(true);
           done();
         },
@@ -735,7 +671,7 @@ function ConnectAiDialog({
       ? t("noAi.lockedAdmins")
       : undefined;
   // Over a draft a Settings page opens in a new tab: the draft behind this dialog stays.
-  const toSettings = (section: "devices" | "usage") => {
+  const toSettings = (section: "usage") => {
     if (request.forNewAgent || request.overDraft) {
       window.open(`/org/${org.id}/settings/${section}`, "_blank", "noopener");
       return;
@@ -743,7 +679,7 @@ function ConnectAiDialog({
     onClose();
     void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section } });
   };
-  const toComputers = settingUp ? undefined : () => toSettings("devices");
+  const toComputers = settingUp ? undefined : onPairComputer;
   const keySelect = mayAddKey && !keySaved && (
     <ProviderKeySelect
       value={draft.provider}
@@ -758,14 +694,16 @@ function ConnectAiDialog({
         onDraft={setDraft}
         locked={!mayAddKey}
         saved={keySaved}
-        savedNote={keyNote}
+        savedNote={savedLine || undefined}
+        {...(keyAgent ? { forLine: t("connectAi.key.forAgent", { agent: keyAgent.name }) } : {})}
         refused={refused}
         saving={add.isPending}
         onSave={saveKey}
         endpoint={
           <EndpointForm
             orgId={org.id}
-            onDone={() => {
+            onDone={async (key) => {
+              await settleKey(key);
               setKeySaved(true);
               done();
             }}
@@ -807,6 +745,7 @@ function ConnectAiDialog({
         {...(use && planOfAccount(use) === choice ? { use } : {})}
         plain={band || team}
         actionsAt={footAt}
+        onStage={setPlanStage}
         onKey={() => {
           setPicked("key");
           setLogin(null);
@@ -830,6 +769,27 @@ function ConnectAiDialog({
       />
     );
   const freeDone = bare && choice !== "key" && freePlanAccount(bareGates.accounts, choice);
+  // That plan's next step is an agent that thinks with it, for whoever may make one (never over one being made).
+  const makeWith = freeDone && !request.forNewAgent && !settingUp && makesAgents(org) ? freeDone : undefined;
+  const doneFooter = (
+    <DialogFooter>
+      <Button variant={makeWith ? "default" : "primary"} onClick={onClose}>
+        {t("connectAi.done")}
+      </Button>
+      {makeWith && (
+        <Button
+          variant="primary"
+          onClick={() => {
+            onClose();
+            const detail: NewAgentRequest = { accountId: makeWith.id };
+            window.dispatchEvent(new CustomEvent(NEW_AGENT_EVENT, { detail }));
+          }}
+        >
+          {t("connectAi.makeAgent")}
+        </Button>
+      )}
+    </DialogFooter>
+  );
   // What the person already has is read for the agent whose computer the panel reads (the team's first).
   const askedAgent = agents.find((a) => a.id === (team ? reader : asked?.id)) ?? { id: "", name: "" };
   const have = useExistingAi({
@@ -897,7 +857,8 @@ function ConnectAiDialog({
     // A personal workspace has no team (ADR 0159): its agents, in its own words.
     const personal = isPersonal(org);
     // What they think with: the account signed in, else the plan's name.
-    const plan = choice === "key" ? "" : (thinksWith?.label ?? planLabel(t, choice));
+    // "o seu {{plan}}": the name its owner gave it, else the plan's.
+    const plan = choice === "key" ? "" : thinksWith?.named === true ? thinksWith.label : planLabel(t, choice);
     const screen = !ready
       ? "loading"
       : choosing
@@ -921,7 +882,7 @@ function ConnectAiDialog({
               ? t(personal ? "connectAi.team.wokeAllPersonal" : "connectAi.team.wokeAll")
               : t("connectAi.team.woke", { count: woke.length })
           : chosen
-            ? stepTitle(t, choice)
+            ? panelTitle(t, choice, planStage)
             : listing
               ? t("connectAi.chat.allTitle")
               : adding && rows.length > 0
@@ -986,6 +947,7 @@ function ConnectAiDialog({
           back
             ? () => {
                 if (choosing) setDraftPick(null);
+                else if (chosen && planStage?.back) planStage.back();
                 else if (chosen) {
                   setChosen(false);
                   setLogin(null);
@@ -993,7 +955,7 @@ function ConnectAiDialog({
                 } else if (listing) setAllOpen(false);
                 else setAdding(false);
               }
-            : undefined
+            : leave
         }
         scene={{
           agents: drawn,
@@ -1034,7 +996,7 @@ function ConnectAiDialog({
           ) : picking && selected && account ? (
             <DialogFooter>
               <Button variant="primary" onClick={() => pick(planOfAccount(account), account)}>
-                {t("connectAi.use", { label: accountTitle(account) })}
+                {t("connectAi.use", { label: accountInLine(t, account) })}
               </Button>
             </DialogFooter>
           ) : (
@@ -1172,7 +1134,13 @@ function ConnectAiDialog({
                 )}
               </>
             ) : (
-              <ConnectChoices mayAddKey={mayAddKey} dims={dims} perAgent={perAgent} onPick={(next) => pick(next)} />
+              <ConnectChoices
+                mayAddKey={mayAddKey}
+                dims={dims}
+                offSystem={offSystem}
+                perAgent={perAgent}
+                onPick={(next) => pick(next)}
+              />
             )}
           </div>
         )}
@@ -1219,7 +1187,7 @@ function ConnectAiDialog({
     };
     const listing = picking && allOpen;
     const title = chosen
-      ? stepTitle(t, choice)
+      ? panelTitle(t, choice, planStage, wide ? undefined : asked.name)
       : listing
         ? t("connectAi.chat.allTitle")
         : adding && rows.length > 0
@@ -1250,14 +1218,15 @@ function ConnectAiDialog({
         onBack={
           back
             ? () => {
-                if (chosen) {
+                if (chosen && planStage?.back) planStage.back();
+                else if (chosen) {
                   setChosen(false);
                   setLogin(null);
                   setUse(undefined);
                 } else if (listing) setAllOpen(false);
                 else setAdding(false);
               }
-            : undefined
+            : leave
         }
         scene={{
           agents: wide
@@ -1276,11 +1245,7 @@ function ConnectAiDialog({
         actsRef={stepping ? setFootAt : undefined}
         footer={
           connected || (chosen && freeDone) ? (
-            <DialogFooter>
-              <Button variant="primary" onClick={onClose}>
-                {t("connectAi.done")}
-              </Button>
-            </DialogFooter>
+            doneFooter
           ) : picking && selected ? (
             <DialogFooter
               note={
@@ -1291,7 +1256,7 @@ function ConnectAiDialog({
             >
               <Button variant="primary" loading={have.busy} disabled={have.busy} onClick={confirm}>
                 {t("connectAi.use", {
-                  label: account ? accountTitle(account) : selected.kind === "key" ? selected.key.label : "",
+                  label: account ? accountInLine(t, account) : selected.kind === "key" ? selected.key.label : "",
                 })}
               </Button>
             </DialogFooter>
@@ -1342,26 +1307,20 @@ function ConnectAiDialog({
                 return (
                   // biome-ignore lint/a11y/useSemanticElements: pressable cards, not a native fieldset
                   <div className="arrival-for" role="group" aria-label={t("connectAi.agentAria")}>
-                    <OptionCard pressed={wide} onClick={() => choose("all")}>
-                      <AvatarStack>{everyone.slice(0, 4).map(face)}</AvatarStack>
-                      <span className="ac-option__text">
-                        <span className="ac-option__title">{t("connectAi.all")}</span>
-                        <span className="ac-option__desc">
-                          {namesText(
-                            t,
-                            everyone.map((a) => a.name),
-                            2,
-                          )}
-                        </span>
-                      </span>
-                    </OptionCard>
-                    <OptionCard pressed={!wide} onClick={() => choose("one")}>
-                      {face(asked)}
-                      <span className="ac-option__text">
-                        <span className="ac-option__title">{asked.name}</span>
-                        {asked.role && <span className="ac-option__desc">{asked.role}</span>}
-                      </span>
-                    </OptionCard>
+                    <AudienceCard
+                      pressed={wide}
+                      onClick={() => choose("all")}
+                      faces={<AvatarStack>{everyone.slice(0, 4).map(face)}</AvatarStack>}
+                      title={t("connectAi.all")}
+                      tip={rosterText(t, everyone)}
+                    />
+                    <AudienceCard
+                      pressed={!wide}
+                      onClick={() => choose("one")}
+                      faces={face(asked)}
+                      title={asked.name}
+                      tip={asked.role || undefined}
+                    />
                   </div>
                 );
               })()}
@@ -1391,7 +1350,7 @@ function ConnectAiDialog({
                 )}
               </>
             ) : (
-              <ConnectChoices mayAddKey={mayAddKey} dims={dims} onPick={(next) => pick(next)} />
+              <ConnectChoices mayAddKey={mayAddKey} dims={dims} offSystem={offSystem} onPick={(next) => pick(next)} />
             )}
           </div>
         )}
@@ -1494,6 +1453,7 @@ function ConnectAiDialog({
               <ConnectChoices
                 mayAddKey={mayAddKey}
                 dims={(c) => (agents.length > 0 || bare) && gateDims(gateOf(c))}
+                offSystem={offSystem}
                 onPick={(next) => {
                   setPicked(next);
                   setLogin(null);
@@ -1503,21 +1463,15 @@ function ConnectAiDialog({
               />
             )}
           </DialogBody>
-          {connected || (chosen && freeDone) ? (
-            <DialogFooter>
-              <Button variant="primary" onClick={onClose}>
-                {t("connectAi.done")}
-              </Button>
-            </DialogFooter>
-          ) : (
-            !chosen && (
-              <DialogFooter note={without}>
-                <Button variant="ghost" onClick={onClose}>
-                  {t("arrival.connect.later")}
-                </Button>
-              </DialogFooter>
-            )
-          )}
+          {connected || (chosen && freeDone)
+            ? doneFooter
+            : !chosen && (
+                <DialogFooter note={without}>
+                  <Button variant="ghost" onClick={onClose}>
+                    {t("arrival.connect.later")}
+                  </Button>
+                </DialogFooter>
+              )}
         </div>
       </Dialog>
     );
@@ -1560,7 +1514,6 @@ function ConnectAiDialog({
                   gates={gates}
                   agent={forAgent}
                   credentials={credentials.data ?? []}
-                  named={!one}
                   signIn={login}
                   panel={held}
                   onSignIn={(next) => {
@@ -1588,19 +1541,14 @@ function ConnectAiDialog({
                 setPickedTarget(defaultTarget({ agents: planAgents, hasAi, set: setOf(next) }));
             }}
             dims={(c) => (agents.length > 0 || bare) && gateDims(gateOf(c))}
+            offSystem={offSystem}
             busy={add.isPending}
             keySelect={keySelect}
             panel={panel}
           />
         )}
       </DialogBody>
-      {(connected || freeDone) && (
-        <DialogFooter>
-          <Button variant="primary" onClick={onClose}>
-            {t("connectAi.done")}
-          </Button>
-        </DialogFooter>
-      )}
+      {(connected || freeDone) && doneFooter}
     </Dialog>
   );
 }

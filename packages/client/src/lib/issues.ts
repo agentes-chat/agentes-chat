@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { Issue, IssueActivity, IssuePriority, IssueStatus } from "../api/types";
-import { timeAgo } from "./format";
+import { joinNames, namesText, timeAgo } from "./format";
 import { blockedText } from "./long-work";
 import { can } from "./permissions";
 
@@ -10,6 +10,13 @@ export const PRIORITIES: IssuePriority[] = ["low", "normal", "high"];
 
 /** Columns a stage of the board holds at most (mirror of packages/engine/src/issue-columns.ts). */
 export const STAGE_COLUMNS_MAX = 10;
+
+/**
+ * A handed work that finished the task: its run ended done with every criterion met. A turn that ends with criteria
+ * open ended, nothing more (the server leaves the task in review, mirror of `setWorkIssueState`).
+ */
+export const handedFinished = (i: Pick<Issue, "criteria" | "backgroundWork">) =>
+  i.backgroundWork?.how === "handed" && i.backgroundWork.status === "done" && i.criteria.every((c) => c.done);
 
 /** A circle that fills as the work goes. */
 export const STATUS_ICON: Record<IssueStatus, "stageTodo" | "stageProgress" | "stageReview" | "stageDone" | "close"> = {
@@ -54,8 +61,16 @@ export function heldBack(i: Pick<Issue, "channelId">, channels: { id: string; vi
 }
 
 /** An event of a task in the person's language from its code (`issues.event.*`); the server's words as the fallback. */
-export function issueEventText(t: TFunction, a: Pick<IssueActivity, "text" | "textCode" | "textParams">) {
+export function issueEventText(
+  t: TFunction,
+  a: Pick<IssueActivity, "text" | "textCode" | "textParams" | "assignee">,
+  /** Names who an `assigned` event put on the task or took off it; without it, the event says only what happened. */
+  nameOf?: (who: NonNullable<IssueActivity["assignee"]>) => string,
+) {
   if (!a.textCode) return a.text;
+  const who = a.assignee && nameOf ? nameOf(a.assignee) : "";
+  if (who && (a.textCode === "assigned" || a.textCode === "unassigned"))
+    return t(`issues.event.${a.textCode}_named`, { name: who, defaultValue: a.text });
   const p = a.textParams ?? {};
   const extra = {
     ...(p.status ? { status: t(`issues.status.${p.status}`, { defaultValue: p.status }) } : {}),
@@ -75,6 +90,18 @@ export function splitCriteria(text: string) {
   }
   return { description: rest.join("\n").trim(), criteria };
 }
+
+/** The agent whose work the task shows: the one its run is (`work.agentId`), else the first agent among who has it. */
+export const taskAgentId = (i: Pick<Issue, "assignees" | "work">): string | null =>
+  i.work?.agentId ?? i.assignees.find((a) => a.type === "agent")?.id ?? null;
+
+/** Whether this person or agent is one of who has the task. */
+export const isAssignee = (i: Pick<Issue, "assignees">, type: "person" | "agent", id: string | null | undefined) =>
+  i.assignees.some((a) => a.type === type && a.id === id);
+
+/** Who has a task, as words: "Ada", "Ada, João e Atlas"; past three, "João, Ada e mais 3". */
+export const assigneeNames = (t: TFunction, names: string[]) =>
+  names.length <= 3 ? joinNames(names, t) : namesText(t, names, 2);
 
 /** An agent working on the issue now (a live run), not a stalled one. */
 export const isWorking = (i: Pick<Issue, "work">) => Boolean(i.work && i.work.state !== "stalled");
