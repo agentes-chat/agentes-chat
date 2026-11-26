@@ -78,7 +78,10 @@ export function windowsCodePages(): CodePages {
 
 function decodeWith(bytes: Uint8Array, page: number): string | null {
   const table = OEM_TABLES[page];
-  if (table) return Array.from(bytes, (b) => (b < 0x80 ? String.fromCharCode(b) : table[b - 0x80])).join("");
+  if (table) {
+    const codes = Uint16Array.from(bytes, (b) => (b < 0x80 ? b : table.charCodeAt(b - 0x80)));
+    return Buffer.from(codes.buffer, codes.byteOffset, codes.byteLength).toString("utf16le");
+  }
   const label = LABELS[page] as ConstructorParameters<typeof TextDecoder>[0];
   return label ? new TextDecoder(label).decode(bytes) : null;
 }
@@ -99,13 +102,34 @@ function oddness(text: string): number {
 }
 
 /**
- * Bytes a Windows program wrote that aren't UTF-8: in the console's code page (cmd.exe, `reg`, `dir`), or in the
- * system's ANSI one (Python's, Java's), whichever reads as text; the console's when both do.
+ * The code page bytes a Windows program wrote that aren't UTF-8 are in: the console's (cmd.exe, `reg`, `dir`), or
+ * the system's ANSI one (Python's, Java's), whichever reads as text; the console's when both do.
  */
-function windowsText(bytes: Uint8Array, pages: CodePages): string {
-  const oem = decodeWith(bytes, pages.oem) ?? decodeWith(bytes, FALLBACK_CODE_PAGES.oem) ?? "";
-  const ansi = pages.ansi === pages.oem ? null : decodeWith(bytes, pages.ansi);
-  return ansi !== null && oddness(ansi) < oddness(oem) ? ansi : oem;
+function pageOf(bytes: Uint8Array, pages: CodePages): number {
+  const oem = decodeWith(bytes, pages.oem) === null ? FALLBACK_CODE_PAGES.oem : pages.oem;
+  const ansi = pages.ansi === oem ? null : decodeWith(bytes, pages.ansi);
+  return ansi !== null && oddness(ansi) < oddness(decodeWith(bytes, oem) ?? "") ? pages.ansi : oem;
+}
+
+const utf8Of = (bytes: Uint8Array) => Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length).toString("utf8");
+
+/**
+ * Output with lines that aren't UTF-8, line by line: a UTF-8 CLI's lines and the cmd.exe that started it share one
+ * pipe, and ripgrep's matches from a Latin-1 file sit among UTF-8 files' (0x0A is no part of a character in any of
+ * these code pages). `cut`: the first line may start, and the last end, mid-character.
+ */
+function windowsText(bytes: Uint8Array, pages: CodePages, cut = false): string {
+  const lines: Uint8Array[] = [];
+  for (let start = 0; start < bytes.length; ) {
+    const nl = bytes.indexOf(0x0a, start);
+    const end = nl < 0 ? bytes.length : nl + 1;
+    lines.push(bytes.subarray(start, end));
+    start = end;
+  }
+  const last = lines.length - 1;
+  const utf8 = lines.map((l, i) => isUtf8(l, cut && i === 0, cut && i === last));
+  const page = pageOf(Buffer.concat(lines.filter((_, i) => !utf8[i])), pages);
+  return lines.map((l, i) => (utf8[i] ? utf8Of(l) : (decodeWith(l, page) ?? ""))).join("");
 }
 
 const UTF8 = new TextDecoder("utf-8", { fatal: true });
@@ -120,12 +144,12 @@ function wholeEnd(bytes: Uint8Array): number {
   return bytes.length;
 }
 
-/** Whether `bytes` are UTF-8; `cut`: a window into longer output, where a character cut short at either end is too. */
-function isUtf8(bytes: Uint8Array, cut: boolean): boolean {
+/** Whether `bytes` are UTF-8; `head`/`tail`: a window into longer output, where a character cut short at that end is too. */
+function isUtf8(bytes: Uint8Array, head: boolean, tail = head): boolean {
   let start = 0;
-  while (cut && start < 3 && start < bytes.length && ((bytes[start] as number) & 0xc0) === 0x80) start++;
+  while (head && start < 3 && start < bytes.length && ((bytes[start] as number) & 0xc0) === 0x80) start++;
   try {
-    UTF8.decode(bytes.subarray(start, cut ? wholeEnd(bytes) : bytes.length));
+    UTF8.decode(bytes.subarray(start, tail ? wholeEnd(bytes) : bytes.length));
     return true;
   } catch {
     return false;
@@ -147,15 +171,13 @@ export interface ConsoleTextOptions {
 export function consoleText(bytes: Uint8Array | string, opts: ConsoleTextOptions = {}): string {
   if (typeof bytes === "string") return bytes;
   const { cut = false, platform = process.platform, pages = windowsCodePages } = opts;
-  if (platform !== "win32" || isUtf8(bytes, cut)) {
-    return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length).toString("utf8");
-  }
-  return windowsText(bytes, pages());
+  if (platform !== "win32" || isUtf8(bytes, cut)) return utf8Of(bytes);
+  return windowsText(bytes, pages(), cut);
 }
 
 /**
  * `consoleText` for a stream, as `StringDecoder` is for UTF-8: a character cut between two chunks waits for the
- * next. Each chunk is read on its own: a CLI's UTF-8 and the words of the cmd.exe that started it share one pipe.
+ * next.
  */
 export class ConsoleDecoder {
   private held: Uint8Array = new Uint8Array(0);
@@ -171,14 +193,9 @@ export class ConsoleDecoder {
     if (this.platform !== "win32") return this.utf8.write(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.length));
     const data = this.held.length ? Buffer.concat([this.held, chunk]) : chunk;
     const end = wholeEnd(data);
-    try {
-      const text = UTF8.decode(data.subarray(0, end));
-      this.held = new Uint8Array(data.subarray(end));
-      return text;
-    } catch {
-      this.held = new Uint8Array(0);
-      return windowsText(data, this.pages());
-    }
+    this.held = new Uint8Array(data.subarray(end));
+    const whole = data.subarray(0, end);
+    return isUtf8(whole, false) ? utf8Of(whole) : windowsText(whole, this.pages());
   }
 
   end(): string {

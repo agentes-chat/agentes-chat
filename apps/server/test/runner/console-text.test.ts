@@ -90,3 +90,18 @@ test("the registry's code pages, and the fallback when it can't say", () => {
   expect(codePagesOf("    OEMCP    REG_SZ    437\r\n")).toEqual({ oem: 437, ansi: 1252 });
   expect(codePagesOf("")).toEqual({ oem: 850, ansi: 1252 });
 });
+
+test("UTF-8 lines and console lines in one output each read as written", () => {
+  // A UTF-8 CLI's line, then the cmd.exe that started it saying the next program isn't there.
+  const mixed = Buffer.concat([Buffer.from("Instalando o pacote — ação concluída\n"), CMD_850]);
+  const text = `Instalando o pacote — ação concluída\n${CMD_TEXT}`;
+  expect(consoleText(mixed, win)).toBe(text);
+  const decoder = new ConsoleDecoder("win32", brazil);
+  expect(decoder.write(mixed) + decoder.end()).toBe(text);
+  // ripgrep's matches: a UTF-8 file's, then a Latin-1 file's.
+  const rg = Buffer.concat([Buffer.from("a.txt:ação\n"), Buffer.from("b.txt:café\n", "latin1")]);
+  expect(consoleText(rg, win)).toBe("a.txt:ação\nb.txt:café\n");
+  // A window into it cut mid-character at both ends.
+  const cut = Buffer.concat([Buffer.from("ção\n").subarray(1), CMD_850, Buffer.from("fim é").subarray(0, -1)]);
+  expect(consoleText(cut, { ...win, cut: true })).toBe(`�ão\n${CMD_TEXT}fim �`);
+});
