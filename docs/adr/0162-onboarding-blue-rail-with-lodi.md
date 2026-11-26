@@ -304,8 +304,15 @@ agent (ADR 0253), shows that agent's first week, and hires it with the plan. Ame
 - **Back from Checkout, the team's photo.** In the plan step's place, once per payment (ADR 0079's moment): the team
   in daylight with the person among them and a few pixels of confetti, the right hand saying hello, "<org>'s team ·
   since <date>", who is in it, and what is left (the plan checked, the AI, the people, then the first agent's
-  deliveries). Its one button connects the AI, or goes on when the team already thinks. It replaces the paid scene in
-  the onboarding; the arrival's paid dialog elsewhere in the app is unchanged.
+  deliveries). Its one button connects the AI, or goes on when the team already thinks. "Download the team photo" in
+  its footer ("your team's" in a personal workspace) saves that photo as a picture to share: a PNG of 1600×1000 (drawn
+  at twice the pixels) made on a canvas in the browser, nothing sent anywhere. The day sky and its confetti, the right
+  hand with its hello, the person (their photo, drawn portrait or initials, as their face shows) and the agents, each
+  drawn by the agent engine in its own look, then the photo's words (the team and since when, the welcome, who is in
+  it, the person by their first name in place of "You") and the product's name, small. Always in the light theme's
+  colors. It goes through the app's saver as the other downloads do (the desktop app puts it in Downloads), named
+  after the workspace ("acme-team.png"); the button waits while it draws, and a failure says so in a toast. It replaces
+  the paid scene in the onboarding; the arrival's paid dialog elsewhere in the app is unchanged.
 - **The AI step.** "Now, the AI you already pay for": the team awake on a daylight header (no computer drawn there: its
   state is not this step's to say), the plan bought in this tab over the title, Connect an AI's choices as before, and
   the ways out in the footer: "Without an AI, agents don't answer." with "Connect later", then Continue (a team's) or
@@ -322,5 +329,5 @@ agent (ADR 0253), shows that agent's first week, and hires it with the plan. Ame
 - **Code.** Client `lib/onboarding.ts` (`railSteps`, `railStepAt`, `railState`, `stepCount`, `phoneRail`),
   `lib/billing.ts` (`planOfferOf`'s `people`); web `pages/OnboardingPage.tsx`, `pages/onboarding/Shell.tsx` (`World`,
   `Box`, `PickRows`, `Pass`, `Photo`, `AppWall`), `AskStep.tsx` (`AskYourAi`), `PickStep.tsx` (`FirstAgentPick`),
-  `WeekStep.tsx` (`FirstWeek`), `HireStep.tsx` (`HireTeam`), `CelebrateStep.tsx` (`TeamWelcome`), `AiStep.tsx`,
-  `PeopleStep.tsx`.
+  `WeekStep.tsx` (`FirstWeek`), `HireStep.tsx` (`HireTeam`), `CelebrateStep.tsx` (`TeamWelcome`), `team-photo.ts`
+  (the photo to download), `AiStep.tsx`, `PeopleStep.tsx`.
