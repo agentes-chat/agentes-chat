@@ -2230,6 +2230,10 @@ export const en = {
       scratchGo: "Start from scratch",
       /** Goes to the workspace, with no agent for now. */
       later: "Not now",
+      /** Without the permission to create agents: one line, then the way into the workspace. */
+      noPermission: "To create your agent, ask an admin for the permission to create agents.",
+      enter: "Open {{org}}",
+      enterPersonal: "Open the workspace",
       /** Picking from what the AI proposed. `{{app}}`: the assistant asked, "Claude". */
       pickTitle: "Pick your agent",
       found_one: "Your {{app}} found the task that takes most of your time.",

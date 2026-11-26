@@ -20,7 +20,7 @@ import { lookOf } from "@/lib/look";
 import { AskYourAi } from "./onboarding/AskStep";
 import { roleWord } from "./onboarding/HireStep";
 import { FirstAgentPick } from "./onboarding/PickStep";
-import { Box, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
+import { Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 
 /** A member's onboarding: the hello, asking their own AI, picking from what it proposed. */
 type View = "hello" | "ask" | "pick";
@@ -38,6 +38,7 @@ const FACES_SHOWN = 3;
  * their own AI is the owner's ask and pick in a member's words (`AskYourAi`, `FirstAgentPick`); starting from scratch
  * opens the right hand's DM, where its greeting asks what they look after and it builds the agent with them. Every way
  * out lands in the workspace with the welcome wizard alone (ADR 0160): the AI is the workspace's, set up already.
+ * Someone who may not create agents there reads so in a line under the team, and its one button opens the workspace.
  */
 export function MemberOnboardingPage({ orgId }: { orgId: string }) {
   const { t, i18n } = useTranslation();
@@ -199,17 +200,42 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
 
     // The hello: the team awake on its daylight sky, beside its computer once it is ready.
     const computer = setupView(setup.data, setup.dataUpdatedAt)?.phase === "ready";
+    const cover = <Pass day={1} awake cast={[lodiFace, ...teamFaces].slice(0, FACES_SHOWN + 1)} computer={computer} />;
+    const title = first
+      ? t(modeKey(org, "onboarding.member.title"), { org: org.name, first })
+      : t(modeKey(org, "onboarding.member.titleNoName"), { org: org.name });
+    const lead = helloLead(t, i18n.language, me.user.id, team, members.data ?? [], the, makes);
+    // Without the permission to create agents: the hello says so in a line, and its one button opens the workspace.
+    if (!makes)
+      return {
+        box: (
+          <Box
+            cover={cover}
+            title={title}
+            lead={lead}
+            note={<BoxNote icon="lock">{t("onboarding.member.noPermission")}</BoxNote>}
+            acts={
+              <Button
+                variant="primary"
+                kbd={["↵"]}
+                data-enter=""
+                loading={leaving}
+                disabled={leaving}
+                onClick={toWorkspace}
+              >
+                {t(modeKey(org, "onboarding.member.enter"), { org: org.name })}
+              </Button>
+            }
+          />
+        ),
+      };
     return {
       box: (
         <Box
-          cover={<Pass day={1} awake cast={[lodiFace, ...teamFaces].slice(0, FACES_SHOWN + 1)} computer={computer} />}
+          cover={cover}
           eyebrow={stepLine(1)}
-          title={
-            first
-              ? t(modeKey(org, "onboarding.member.title"), { org: org.name, first })
-              : t(modeKey(org, "onboarding.member.titleNoName"), { org: org.name })
-          }
-          lead={helloLead(t, i18n.language, me.user.id, team, members.data ?? [], the)}
+          title={title}
+          lead={lead}
           note={
             <button type="button" className="onbx__back onbx__back--text" disabled={leaving} onClick={toWorkspace}>
               {t("onboarding.member.later")}
@@ -300,7 +326,8 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
 
 /**
  * The hello's lead: what people do here, who brought an agent (the first one someone else answers for, by their first
- * name, with its role), then the question. With no such agent, the sentence about it is left out.
+ * name, with its role), then the question, for whoever may answer it (`ask`). With no such agent, the sentence about
+ * it is left out.
  */
 function helloLead(
   t: TFunction,
@@ -309,6 +336,7 @@ function helloLead(
   team: readonly Agent[],
   people: readonly { userId: string; name: string }[],
   the: (name: string) => string,
+  ask: boolean,
 ): string {
   const nameOf = (userId: string) => firstName(people.find((p) => p.userId === userId)?.name ?? "");
   const brought = team.find((a) => a.ownerUserId && a.ownerUserId !== meId && nameOf(a.ownerUserId));
@@ -321,7 +349,7 @@ function helloLead(
         ? t("onboarding.member.brought", { person, agent: the(brought.name), role: roleWord(role, locale) })
         : t("onboarding.member.broughtNoRole", { person, agent: the(brought.name) })
       : null,
-    t("onboarding.member.question"),
+    ask ? t("onboarding.member.question") : null,
   ].filter((s): s is string => Boolean(s));
   return sentences.reduce((a, b) => t("common.joinSentences", { a, b }));
 }
