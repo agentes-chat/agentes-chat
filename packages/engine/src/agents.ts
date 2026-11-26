@@ -943,6 +943,9 @@ export async function unarchiveAgent(
     details: { name: back.name, handle: back.handle },
   });
   forgetAgentCaches(orgId, agentId);
+  // Its archive paused its routines: they come back with it. Loaded here: routines builds on this module.
+  const { resumeArchivedAgentRoutines } = await import("./routines");
+  await resumeArchivedAgentRoutines({ db, pubsub: options.pubsub }, orgId, agentId, actorId).catch(() => 0);
   await publishAgentsChanged(options.pubsub, orgId);
 }
 

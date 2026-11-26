@@ -13,6 +13,7 @@ import {
   setRoutineActive,
   stopRoutineRun,
   takeOverRoutine,
+  unarchiveAgent,
   updateRoutine,
   wakeAgentUsageWaits,
 } from "../src";
@@ -105,6 +106,20 @@ describe("structural checks pause the routine with its reason and one notificati
     await expect(updateRoutine(routineDeps(f), f.owner.id, f.org.id, routine.id, { active: true })).rejects.toThrow(
       "Agent not found",
     );
+  });
+
+  test("an archive's Undo brings back the routines the archive paused", async () => {
+    f = await setup();
+    const routine = await channelRoutine(f);
+    const off = await channelRoutine(f, { name: "Relatório" });
+    await setRoutineActive(routineDeps(f), f.owner.id, f.org.id, off.id, false);
+    await archiveAgent(f.db, f.owner.id, f.org.id, f.agent.id, f.pubsub);
+    await unarchiveAgent(f.db, f.owner.id, f.org.id, f.agent.id, { pubsub: f.pubsub });
+    const back = await routineRow(f, routine.id);
+    expect(back).toMatchObject({ active: true, pausedReason: null });
+    expect(back.nextRunAt).not.toBeNull();
+    // One a person had switched off stays off.
+    expect(await routineRow(f, off.id)).toMatchObject({ active: false });
   });
 
   test("agent no longer in the channel; creator no longer able to post there", async () => {

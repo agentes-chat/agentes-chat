@@ -2137,6 +2137,48 @@ export async function resumeRoutineBySystem(
 }
 
 /**
+ * An archived agent came back (an archive's Undo): the routines its archive paused (`agent_archived`) run again as
+ * they were, from their next slot, their pause notices done. That pause never dropped their mail watches or connector
+ * triggers, so nothing else needs restoring.
+ */
+export async function resumeArchivedAgentRoutines(
+  deps: { db: Database; pubsub?: PubSub },
+  orgId: string,
+  agentId: string,
+  actorId: string,
+): Promise<number> {
+  const paused = and(eq(routines.active, false), eq(routines.pausedReason, "agent_archived"));
+  const rows = await deps.db
+    .select()
+    .from(routines)
+    .where(and(eq(routines.orgId, orgId), eq(routines.agentId, agentId), paused, isNull(routines.deletedAt)));
+  const now = new Date();
+  for (const r of rows) {
+    await deps.db
+      .update(routines)
+      .set({
+        active: true,
+        nextRunAt: r.triggerType === "schedule" ? nextRoutineTime(r, now) : null,
+        updatedAt: now,
+        pausedReason: null,
+        failuresInRow: 0,
+      })
+      .where(and(eq(routines.id, r.id), paused));
+    await recordAudit(deps.db, {
+      orgId,
+      actor: { type: "person", id: actorId },
+      action: "routine.resumed",
+      target: { type: "routine", id: r.id },
+      details: { name: r.name, after: "agent_archived" },
+    });
+    await resolveRoutinePaused(deps, orgId, r.id).catch(() => {});
+    await wakeHeldRuns(deps, r.id);
+  }
+  if (rows.length > 0) await publishListChanged(deps.pubsub, orgId, "routines");
+  return rows.length;
+}
+
+/**
  * Queues one slot or manual run of a routine (`routine.run` job); null when that slot already ran.
  * Events go through `fireRoutineEvent` (deduplicated and coalesced).
  */
