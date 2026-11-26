@@ -837,7 +837,7 @@ export function createSetupToolSource(deps: {
           channel: {
             type: "string",
             maxLength: 81,
-            description: "Leave it out.",
+            description: "Never pass it.",
           },
         },
         required: ["agents", "reason"],
