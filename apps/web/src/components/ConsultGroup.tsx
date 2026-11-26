@@ -12,7 +12,6 @@ import {
   type ConsultLineState,
   type ConsultNoticeFold,
   type ConsultPairItem,
-  type ConsultRow,
   consultAskedKey,
   consultBlocksNearEnd,
   consultLineKey,
@@ -22,6 +21,8 @@ import {
   groupsByRun,
   openableConsultation,
   pairItemOf,
+  type RelayedAnswer,
+  relayedAnswers,
 } from "@agenteschat/client/lib/consult-group";
 import { consultSubject, consultTimeText, previewOf, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { joinNames, namesText } from "@agenteschat/client/lib/format";
@@ -56,6 +57,10 @@ export interface ConsultGroups {
   open: string | null;
   /** By the consulted agent's run: the question it answers, so its cards here say whom it helps. */
   helping: ReadonlyMap<string, RunConsultation>;
+  /** By the asking agent's message: the consulted agent's words it passes on, quoted at its top (`relayedAnswers`). */
+  relays: ReadonlyMap<string, RelayedAnswer<Message>>;
+  /** The consulted agents' messages those quotes stand for: no row of their own. */
+  relayed: ReadonlySet<string>;
 }
 
 const EMPTY: ConsultGroups = {
@@ -66,6 +71,8 @@ const EMPTY: ConsultGroups = {
   live: new Set(),
   open: null,
   helping: new Map(),
+  relays: new Map(),
+  relayed: new Set(),
 };
 const ConsultGroupsContext = createContext<ConsultGroups>(EMPTY);
 export const ConsultGroupsProvider = ConsultGroupsContext.Provider;
@@ -83,7 +90,7 @@ const RELOAD_ON = new Set(["agent.consulting", "agent.consulted", "agent.consult
  */
 export function useConsultGroups(
   channelId: string,
-  rows: readonly ConsultRow[],
+  rows: readonly Message[],
   live: ReadonlySet<string>,
   open: string | null = null,
 ): ConsultGroups {
@@ -114,6 +121,8 @@ export function useConsultGroups(
       live,
       open,
       helping,
+      // From the list as the server sends it (latest first), not the exchanges: each consulted run's own question.
+      ...relayedAnswers(rows, list.data ?? []),
     };
   }, [list.data, rows, live, open, helping]);
 }
@@ -381,6 +390,37 @@ export function ConsultAnswerLine({
     <div data-message-id={message.id}>
       <ConsultPairRow askerId={c.agentId} items={[c]} />
     </div>
+  );
+}
+
+/**
+ * At the top of an agent's message that passes on what another agent answered it (`relayedAnswers`): that agent's
+ * face, @name and the start of its words, as a reply quotes the message it answers. Opens the two agents'
+ * conversation over the channel, where those words stay whole.
+ */
+export function RelayQuote({ relay }: { relay: RelayedAnswer<Message> }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const actions = useChannelActions();
+  const { message: m, consultation: c } = relay;
+  const name = dir.agentById.get(m.author.id ?? "")?.name ?? t("channel.unknownAgent");
+  const excerpt = previewOf(m.body);
+  return (
+    <button
+      type="button"
+      className="msg-quote"
+      aria-label={t("chat.consultPanel.relay", { name, excerpt })}
+      onClick={() => actions?.openConsultation?.(c.id)}
+    >
+      <AgentAvatar agentId={m.author.id ?? undefined} name={name} size="xs" />
+      <span className="msg-quote__who" aria-hidden="true">
+        @{name}
+      </span>
+      <span className="msg-quote__excerpt" aria-hidden="true">
+        {excerpt}
+      </span>
+    </button>
   );
 }
 

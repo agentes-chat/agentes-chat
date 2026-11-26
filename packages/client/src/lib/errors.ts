@@ -624,6 +624,7 @@ const KNOWN = {
   "account.system": "brain.reasons.system",
   "machine.access_outdated": "errors.said.updateComputerApp",
   "machine.cli_outdated": "errors.said.updateComputerApp",
+  "machine.cli_not_fetched": "errors.said.cliNotFetched",
   "machine.outdated": "errors.said.updateComputerApp",
   "machine.updates_itself": "errors.said.computerUpdatesItself",
   "database.disabled": "errors.said.offHere",
