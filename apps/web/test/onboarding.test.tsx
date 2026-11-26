@@ -406,7 +406,7 @@ describe("a team's start, asking its own AI (ADR 0253)", () => {
     plans(PLANS);
     await toTheWeek(state);
     expect(lead()).toBe(
-      "Ele começa hoje mesmo, e “Revisar a semana” se repete toda segunda. Tudo chega no canal dele, e você só aprova.",
+      "O Caio começa hoje mesmo, e “Revisar a semana” se repete toda segunda. Tudo chega no canal dele, e você só aprova.",
     );
     expect(says()).toBe("Assim que o time ligar, a gente começa.");
     const strip = [...document.querySelectorAll(".onb-week__strip > li")];
@@ -477,7 +477,7 @@ describe("a team's start, asking its own AI (ADR 0253)", () => {
     await click(button(/^Continuar/), 16);
     expect(heading()).toBe(HIRE);
     expect(lead()).toBe(
-      "Você está contratando o Caio para cobrança. Ele começa hoje, com o Lodi, e trabalha de dia e de noite.",
+      "Você está contratando o Caio para cobrança. O Caio começa hoje, com o Lodi, e trabalha de dia e de noite.",
     );
     // The team asleep at night on the box's own header.
     expect(box().querySelector(".onb-pass:not([data-awake])")).not.toBeNull();
@@ -897,7 +897,7 @@ describe("for me (ADR 0159)", () => {
     expect(heading()).toBe(WEEK);
     expect(eyebrow()).toBe("Passo 3 de 4");
     expect(lead()).toBe(
-      "Ele começa hoje mesmo, e “Revisar a semana” se repete toda segunda. Tudo chega na conversa com ele, e você só aprova.",
+      "O Caio começa hoje mesmo, e “Revisar a semana” se repete toda segunda. Tudo chega na conversa com ele, e você só aprova.",
     );
     expect(says()).toBe("Assim que ligar, a gente começa.");
     await click(button(/^Continuar/), 16);
