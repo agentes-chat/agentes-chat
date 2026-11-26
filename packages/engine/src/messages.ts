@@ -859,9 +859,10 @@ export async function insertMessageWithRuns(
   const sealedWords = ofRunId ? inertLinks(body) : body;
   const rows = rowsOf<RawMessage>(
     await tx.execute(sql`with archived as (
-        -- An archived thread is read only for people (ADR 0029); an agent's run already going still lands.
+        -- An archived thread is read only for people and integration apps (ADR 0029); an agent's run already going
+        -- still lands.
         select 1 from ${threads} th
-        where ${person}::boolean and ${threadId}::uuid is not null and th.org_id = ${input.orgId}::uuid
+        where ${speaker}::boolean and ${threadId}::uuid is not null and th.org_id = ${input.orgId}::uuid
           and th.root_message_id = ${threadId}::uuid and th.state = 'archived'
       ), claimed as (
         -- Only when the message will be written (same checks as m): a refused send claims nothing.
@@ -1250,7 +1251,7 @@ export async function insertMessageWithRuns(
       }
     }
     // Only on the failure path: tell an archived thread from a wrong thread id.
-    if (threadId && person && (await isThreadArchived(tx, input.orgId, threadId))) {
+    if (threadId && speaker && (await isThreadArchived(tx, input.orgId, threadId))) {
       throw new ConflictError("This thread is archived: unarchive it to reply", "thread.archived");
     }
     throw new ValidationError("threadId must be a top-level message of this channel");
