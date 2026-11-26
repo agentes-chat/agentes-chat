@@ -1,5 +1,5 @@
 {
-  "id": "37f45475-5162-4488-99bc-a0db01c9d45d",
+  "id": "cf739bc4-ff7c-4a31-9f4b-d9fd75b058a2",
   "prevId": "5cfe16da-86d9-4152-b9ea-a5587fac3a82",
   "version": "7",
   "dialect": "postgresql",
@@ -4151,6 +4151,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
         },
         "edited_at": {
           "name": "edited_at",
@@ -30058,18 +30065,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'graphite'"
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "github_repo": {
-          "name": "github_repo",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "archived_at": {
           "name": "archived_at",

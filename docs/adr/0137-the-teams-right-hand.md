@@ -467,8 +467,12 @@ threw its rows away. The owner decided it has every tool an agent can have, by d
   login or pass a key (`describeCapabilities` with `noComputer`).
 - **One person's things stay that person's.** One row answers everyone, each acting as the person behind the run, so
   what is one person's is used only in that person's own DM with it (`rightHandReader`, null anywhere else). That DM
-  has one person and no agent but the right hand. A routine's own run there counts as its creator: only a routine's
-  creator sets what it does, and only they read that DM. A run a routine's report or work woke counts as nobody.
+  has one person and no agent but the right hand. A routine's own run counts as its creator where only they read what
+  it says: only a routine's creator sets what it does. It works in its agent-only room (ADR 0053 §4), so what counts
+  is where it speaks: a report to the creator's own DM with the right hand (not to the Drive), or a widget on the
+  creator's Home or on a private board of theirs (ADR 0135 §8). A widget on a board others see reads as nobody, its
+  draft's test too, since a confirmed draft keeps its tested data (ADR 0135 §16). Memory is still kept only from the DM itself. A run a routine's report or work woke counts as
+  nobody.
   - **The Vault** (`vaultPersonOfRun`): a personal item for its owner, a team item for its audience, only in that DM.
     Called in a channel, or by a routine that reports anywhere else, it reaches only team items open to everyone and
     shared with it.

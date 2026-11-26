@@ -286,7 +286,7 @@ test("issues API: a file taken off a task leaves its attachments, stays in the D
   );
 });
 
-test("projects API: a description and a repository, refused with their codes, cleared on null, and the counts say done and total (ADR 0250)", async () => {
+test("projects API: a description and a repository, refused with their codes, cleared on null, and the counts say done and total (ADR 0253)", async () => {
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
   const { orgId } = await seedOrg(owner);

@@ -8,6 +8,7 @@ import { type ContextDeps, resolveSummaryModel } from "./context/summaries";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { skillMarkdown } from "./exports";
 import { cutText, cutTextEnd, trimEdges } from "./format";
+import { ownTypedSql } from "./message-origin";
 import { can, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { rightHandId } from "./right-hand";
@@ -863,7 +864,8 @@ export async function agentSkillSuggestions(
         eq(schema.agentRuns.orgId, orgId),
         eq(schema.agentRuns.agentId, agentId),
         gt(schema.agentRuns.createdAt, weekAgo(now)),
-        eq(messages.authorType, "person"),
+        // What people typed themselves (ADR 0250): text relayed in under their name suggests nothing.
+        ownTypedSql(),
       ),
     )
     .orderBy(desc(schema.agentRuns.createdAt))

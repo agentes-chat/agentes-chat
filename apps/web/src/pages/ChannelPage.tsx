@@ -174,13 +174,14 @@ import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
-import { appVia, surfaceVia } from "@agenteschat/client/lib/via";
+import { appAuthor, appVia, surfaceVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, splitCanceled } from "@agenteschat/client/lib/work";
 import { CodeConversation, useShowsWork } from "@agenteschat/client/lib/work-context";
 import {
   AffixInput,
+  AppMark,
   Avatar,
   Button,
   Composer,
@@ -294,6 +295,7 @@ import { ChannelPermissions } from "@/components/ChannelPermissions";
 import { ChannelPinnedBar } from "@/components/ChannelPins";
 import { InlineProposal, MemoryChangeCard, QuestionCard, SecretCard } from "@/components/ChatCards";
 import {
+  AppAuthorTags,
   AppViaTag,
   NoticeLine,
   RoutineReport,
@@ -677,7 +679,7 @@ function QuotedMessage({ reply }: { reply: ReplyRef }) {
         else actions?.jumpTo?.(reply.messageId);
       }}
     >
-      {reply.author.id ? (
+      {reply.author.id && reply.author.type !== "app" ? (
         <ActorAvatar actor={{ type: reply.author.type, id: reply.author.id }} name={name} size="xs" />
       ) : null}
       <span className="msg-quote__who" aria-hidden="true">
@@ -2339,7 +2341,7 @@ function ChannelView({
     }
     toBottom(true);
     setDraft("");
-    const meta = localMeta(quote, quote ? dir.authorName(quote.author) : "", attached);
+    const meta = localMeta(quote, quote ? dir.authorName(quote.author, quote.meta) : "", attached);
     setQuote(null);
     // About what is selected in the file beside it (ADR 0199): the message carries it, then the quote goes. A comment
     // on a picture, a video or a PDF uploads its pictures of the place first (ADR 0208), so only a sent one keeps them.
@@ -2365,7 +2367,10 @@ function ChannelView({
   const sendMediaNow = useRef<(media: MessageMedia) => void>(() => {});
   sendMediaNow.current = (media) => {
     toBottom(true);
-    const meta: Record<string, unknown> = { ...localMeta(quote, quote ? dir.authorName(quote.author) : "", []), media };
+    const meta: Record<string, unknown> = {
+      ...localMeta(quote, quote ? dir.authorName(quote.author, quote.meta) : "", []),
+      media,
+    };
     setQuote(null);
     if (thread && chrome?.openThread) meta[OPEN_THREAD] = true;
     send("", thread ? thread.id : null, meta);
@@ -2407,7 +2412,7 @@ function ChannelView({
               replyTo: quote?.id ?? null,
               language: i18n.language.split("-")[0] ?? null,
               text,
-              meta: localMeta(quote, quote ? dir.authorName(quote.author) : "", attached),
+              meta: localMeta(quote, quote ? dir.authorName(quote.author, quote.meta) : "", attached),
             })
               .then((went) => {
                 // Refused: what was typed and attached comes back to the box (thumbnails as icons: theirs are freed).
@@ -2646,7 +2651,7 @@ function ChannelView({
       send(
         handle ? `@${handle} ${text}` : text,
         thread ? thread.id : (message.threadId ?? null),
-        localMeta(message, dir.authorName(message.author), []),
+        localMeta(message, dir.authorName(message.author, message.meta), []),
       );
     },
     jumpTo,
@@ -3119,7 +3124,7 @@ function ChannelView({
                                   quote ? (
                                     <>
                                       <QuoteBar
-                                        name={dir.authorName(quote.author)}
+                                        name={dir.authorName(quote.author, quote.meta)}
                                         onCancel={() => {
                                           setQuote(null);
                                           composer.current?.focus();
@@ -4384,10 +4389,13 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
   const [codeOpenFor, setCodeOpenFor] = useState<string | null>(null);
   const codeOpen = Boolean(code) && codeOpenFor === solo?.runId;
   if (entries.length === 0) return null;
-  // The agent at work leads in the face's column, with its rings; the line's small faces are the others.
-  const orbiting = lead && !lead.consult ? lead : undefined;
-  const faces = barFaces(entries).filter((e) => e !== orbiting);
-  const agent = orbiting ? dir.agentById.get(orbiting.id) : undefined;
+  // The face's column holds whoever does the work, with its orbit while it works: the agent at work, or the one a
+  // question or hand-off went to (its own wait holds it still). The line names both and never repeats a face: its
+  // small faces are the others at it.
+  const worker = consult ? { id: consult.to, name: consult.toName } : lead;
+  const atWork = consult ? !consult.yours && !consult.wait : Boolean(lead);
+  const faces = barFaces(entries).filter((e) => e !== lead);
+  const agent = worker ? dir.agentById.get(worker.id) : undefined;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the globe button inside is the keyboard way; the row is a bigger target
     // biome-ignore lint/a11y/useKeyWithClickEvents: same
@@ -4405,12 +4413,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
       }
     >
       <div className="working-tail__face" aria-hidden="true">
-        {orbiting ? (
+        {worker && atWork ? (
           <OrbitGlyph appearance={lookOf(agent)}>
-            <AgentAvatar agentId={orbiting.id} name={orbiting.name} state="writing" />
+            <AgentAvatar agentId={worker.id} name={worker.name} state={consult ? "thinking" : "writing"} />
           </OrbitGlyph>
-        ) : lead ? (
-          <AgentAvatar agentId={lead.id} name={lead.name} state="idle" />
+        ) : worker ? (
+          <AgentAvatar agentId={worker.id} name={worker.name} state={consult?.yours ? "waiting" : "idle"} />
         ) : someoneTypes(entries) && !bothAtIt(entries) ? (
           <TypingMark />
         ) : null}
@@ -4479,9 +4487,7 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             })}
           >
             {trail.earlier > 0 && (
-              <li className="working-tail__more" aria-label={t("chat.trail.earlier", { count: trail.earlier })}>
-                +{trail.earlier}
-              </li>
+              <li className="working-tail__more">{t("chat.trail.earlier", { count: trail.earlier })}</li>
             )}
             {trail.lines.map((l) => (
               <li key={l.key}>{l.text}</li>
@@ -4582,7 +4588,9 @@ export const TimelineMessage = memo(function TimelineMessage({
   // Mine in a DM between people: the slot of their face, from the moment it is sent, so it never rewraps a line.
   const own = m.author.type === "person" && m.author.id === me.user.id;
   const seenSlot = dmPersonId !== undefined && own;
-  const name = dir.authorName(m.author);
+  const name = dir.authorName(m.author, m.meta);
+  // An integration app's message (ADR 0251): its mark and an "App" tag, never a person's or an agent's card.
+  const app = m.author.type === "app" ? appAuthor(m.meta) : null;
   // What a routine found, told by its agent (`meta.routine`): a tag that opens the routine, and the report
   // it answers on demand (that report's own line folds into this message).
   const routine = routineReplyOf(m);
@@ -4868,7 +4876,9 @@ export const TimelineMessage = memo(function TimelineMessage({
         onFocus={feedback ? () => setActive(true) : undefined}
         onContextMenu={live || readOnly ? undefined : menu.onContextMenu}
         avatar={
-          m.author.id ? (
+          m.author.type === "app" ? (
+            <AppMark color={app?.color ?? "graphite"} name={name} />
+          ) : m.author.id ? (
             <ProfileTrigger
               actor={{ type: m.author.type, id: m.author.id }}
               label={t("profile.of", { name })}
@@ -4898,7 +4908,9 @@ export const TimelineMessage = memo(function TimelineMessage({
           )
         }
         author={
-          m.author.id ? (
+          m.author.type === "app" ? (
+            <AppAuthorTags name={name} sender={app?.sender ?? null} />
+          ) : m.author.id ? (
             <>
               <ProfileTrigger
                 actor={{ type: m.author.type, id: m.author.id }}

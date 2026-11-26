@@ -34,6 +34,7 @@ import { createAgentRuns, requesterOf } from "./dispatch";
 import { type DecidedBy, MENTION_NEEDED } from "./events";
 import { cutText, hasQuestionMark, wordCount } from "./format";
 import type { ModelGateway } from "./gateway";
+import { appAuthorOf } from "./integrations/author";
 import { PLATFORM_CAP } from "./limits";
 import type { MachineCaller } from "./machine-hub";
 import { AGENT_CHIME_IN_MAX_HOP, getMessage, type Message, type ReplyRef } from "./messages";
@@ -825,11 +826,15 @@ export async function routeMessage(
   // Waiting for its first plan: a person's message reaches the candidates, to be kept for after it (`no_ai`).
   const waitsForPlan = (await billingHold(db, input.orgId)) === "payment";
   if (refusal && !waitsForPlan) return paused;
-  const message = await getMessage(db, input.orgId, input.messageId);
-  if (!message) return { runs: [], skipped: "message_missing" };
+  const stored = await getMessage(db, input.orgId, input.messageId);
+  if (!stored) return { runs: [], skipped: "message_missing" };
+  // An integration app's message (ADR 0251) is routed as a person's, with the app as its author here (`app:<id>`,
+  // never a user id): its own earlier messages are its talk, nobody else's are, and nobody is behind it.
+  const app = stored.authorType === "app" ? appAuthorOf(stored.meta) : null;
+  const message = app ? { ...stored, authorUserId: `app:${app.id}` } : stored;
   if (waitsForPlan && message.authorType !== "person") return paused;
   const byAgent = message.authorType === "agent" && message.authorAgentId !== null;
-  if (message.authorType !== "person" && !byAgent) return { runs: [], skipped: "not_a_person" };
+  if (message.authorType !== "person" && !byAgent && !app) return { runs: [], skipped: "not_a_person" };
   if (byAgent && SYSTEM_LINE_META.some((k) => k in message.meta)) return { runs: [], skipped: "system_line" };
   if (message.mentionedAgentIds.length > 0) return { runs: [], skipped: "has_mentions" };
   if (message.hop >= deps.policy.maxHops) return { runs: [], skipped: "hop_limit" };
@@ -845,7 +850,7 @@ export async function routeMessage(
       }
     : deps.policy;
   // The person behind it (`authority.ts`): the author, or for an agent's message the person behind its run.
-  const personId = byAgent ? await requesterOf(db, message) : message.authorUserId;
+  const personId = byAgent ? await requesterOf(db, message) : app ? null : message.authorUserId;
   const [already] = await db
     .select({ id: routingDecisions.id })
     .from(routingDecisions)
@@ -1008,7 +1013,9 @@ export async function routeMessage(
         userName: users.name,
         agentHandle: agents.handle,
         authorAgentId: messages.authorAgentId,
-        authorUserId: messages.authorUserId,
+        // An app's as the router names its author (above).
+        authorUserId: sql<string | null>`case when ${messages.authorType} = 'app'
+          then 'app:' || (${messages.meta} -> 'app' ->> 'id') else ${messages.authorUserId} end`,
         mentionedAgentIds: messages.mentionedAgentIds,
         mentionedUserIds: messages.mentionedUserIds,
         routable,
@@ -1066,14 +1073,16 @@ export async function routeMessage(
     candidates = candidates.filter((c) => !spoke.has(c.agentId));
     if (candidates.length === 0) return { runs: [], skipped: "no_candidates" };
   }
-  const [author] = message.authorUserId
-    ? await db.select({ name: users.name }).from(users).where(eq(users.id, message.authorUserId))
-    : message.authorAgentId
-      ? await db
-          .select({ name: sql<string>`'@' || ${agents.handle}` })
-          .from(agents)
-          .where(eq(agents.id, message.authorAgentId))
-      : [];
+  const [author] = app
+    ? [{ name: app.name }]
+    : message.authorUserId
+      ? await db.select({ name: users.name }).from(users).where(eq(users.id, message.authorUserId))
+      : message.authorAgentId
+        ? await db
+            .select({ name: sql<string>`'@' || ${agents.handle}` })
+            .from(agents)
+            .where(eq(agents.id, message.authorAgentId))
+        : [];
 
   // The person's messages right before this one, here, each within the quiet period of the next and one the
   // router decides on itself (`routable`): decided with it, as one message (their own jobs stopped as `continued`).

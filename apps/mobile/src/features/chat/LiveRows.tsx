@@ -12,6 +12,7 @@ import {
   type ConsultWithDetails,
   facesOf,
   listNames,
+  markFaced,
   peopleGroups,
   someoneTypes,
 } from "@agenteschat/client/lib/activity";
@@ -157,7 +158,8 @@ export function WorkingLine({
     doing: `${activityVerb(t, { kind: g.kind })}${i === groups.length - 1 ? "…" : ""}`,
   }));
   const awayWords = [`${markName(lead?.name ?? "")} ${step}`, took, ...also.map((a) => `${a.names} ${a.doing}`)];
-  const sentence = step !== null ? awayWords.filter(Boolean).join(" · ") : activitySentence(t, entries, markName);
+  const sentence =
+    step !== null ? awayWords.filter(Boolean).join(" · ") : activitySentence(t, entries, markName, markFaced);
   const label = markedParts(sentence)
     .map((p) => p.text)
     .join("");
@@ -197,8 +199,11 @@ export function WorkingLine({
   const plate = [styles.tok, { backgroundColor: c.bg }];
   // The agents at work open the pill with their faces. Who records shows after the words with their mark, and so does
   // who types beside them: their faces come and go with the phrase as it turns, so they don't pop in again at each turn.
-  const orbiting = lead && !lead.consult ? lead : undefined;
-  const faces = barFaces(entries).filter((e) => e !== orbiting);
+  // Whoever does the work leads, with its orbit while it works: the agent at work, or the one a question or hand-off
+  // went to (its own wait holds it still). The words name both and no face repeats: the stack's faces are the others.
+  const worker = asking ? { id: asking.to, name: asking.toName } : lead;
+  const atWork = asking ? !asking.yours && !asking.wait : Boolean(lead);
+  const faces = barFaces(entries).filter((e) => e !== lead);
   const groupFaces = (kind: "typing" | "recordingVoice") => {
     const who = facesOf(entries, kind);
     return who.length > 0 ? (
@@ -227,11 +232,15 @@ export function WorkingLine({
         {lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}
         {/* The agent at work leads, a little larger, its rings orbiting it (`OrbitFace`); the stack's faces are the
             others. */}
-        {orbiting ? (
-          <Animated.View key={`o:${orbiting.id}`} entering={pop} style={styles.orbit}>
-            <OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>
-              <AgentFace agentId={orbiting.id} size={ORBIT_FACE} framed mode="run" />
+        {worker && atWork ? (
+          <Animated.View key={`o:${worker.id}`} entering={pop} style={styles.orbit}>
+            <OrbitFace color={agentLook(dir.agentById.get(worker.id)).color} size={ORBIT_FACE}>
+              <AgentFace agentId={worker.id} size={ORBIT_FACE} framed mode={asking ? "think" : "run"} />
             </OrbitFace>
+          </Animated.View>
+        ) : worker ? (
+          <Animated.View key={`w:${worker.id}`} entering={pop} style={styles.orbit}>
+            <AgentFace agentId={worker.id} size={ORBIT_FACE} framed mode="idle" />
           </Animated.View>
         ) : null}
         {faces.length > 0 ? (
@@ -350,18 +359,12 @@ export function WorkingLine({
       </Animated.View>
       {trail.lines.length > 0 ? (
         <View
-          style={[styles.trail, orbiting ? styles.trailUnderWords : undefined]}
+          style={[styles.trail, worker ? styles.trailUnderWords : undefined]}
           accessibilityLabel={t("chat.trail.label", agentGrammar(lead?.name ?? ""))}
         >
           {trail.earlier > 0 ? (
-            <Text
-              variant="caption"
-              tone="faint"
-              maxFontSizeMultiplier={CHROME_MAX_SCALE}
-              accessibilityLabel={t("chat.trail.earlier", { count: trail.earlier })}
-              style={styles.took}
-            >
-              +{trail.earlier}
+            <Text variant="caption" tone="faint" maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.took}>
+              {t("chat.trail.earlier", { count: trail.earlier })}
             </Text>
           ) : null}
           {trail.lines.map((l) => (
@@ -568,7 +571,7 @@ function TurningWords({
   faces: GroupFaces;
 }) {
   const { t } = useTranslation();
-  const words = barWords(t, entries, markName);
+  const words = barWords(t, entries, markName, markFaced);
   const [shown, setShown] = useState<PhraseTurn>(() => ({ now: words, was: null, n: 0, since: Date.now() }));
   const [, wake] = useState(0);
   const next = turnPhrase(shown, words, Date.now());

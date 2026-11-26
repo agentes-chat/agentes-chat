@@ -151,8 +151,10 @@ describe("the members column", () => {
     const ada = row(column() as HTMLElement, "Ada") as HTMLElement;
     // Named "Perfil de Ada", described by all it shows (presence, line, chips).
     expect(ada.getAttribute("aria-label")).toBe("Perfil de Ada");
-    // What it does here: the pixel orbit beside its name, labelled, and the row's title; the row keeps its height.
-    expect(ada.querySelector(".members-side__name .ac-pixspin")?.getAttribute("aria-label")).toBe("pensando");
+    // What it does here: its face wears the orbit, labelled, and the row's title; the row keeps its height.
+    expect(ada.querySelector(".ac-orbit > .ac-avatar")).not.toBeNull();
+    expect(ada.querySelector(".members-side__text .ac-visually-hidden")?.textContent).toBe("pensando");
+    expect(ada.querySelector(".ac-pixspin")).toBeNull();
     expect(document.getElementById(ada.getAttribute("aria-describedby") ?? "")?.getAttribute("title")).toContain(
       "pensando",
     );

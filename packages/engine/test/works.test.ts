@@ -29,6 +29,7 @@ import {
   isCatchUp,
   listIssues,
   loadAgentStatuses,
+  markChannelRead,
   moveRun,
   moveToBackground,
   openDm,
@@ -200,6 +201,13 @@ test("work_in_background: the anchor in the timeline, updates in its thread, the
   const notes = await f.db.select().from(schema.notifications);
   expect(notes.some((n) => n.groupKey === `work_end:${work?.id}`)).toBe(true);
   expect(notes.map((n) => n.source.messageId)).not.toContain(update?.id);
+
+  // Read where it landed, the report leaves the inbox like any answer there.
+  await markChannelRead(f.db, f.owner.id, f.org.id, f.general.id, new Date(), f.pubsub);
+  const after = await f.db.select().from(schema.notifications);
+  expect(after.filter((n) => n.groupKey === `work_end:${work?.id}`).map((n) => [n.userId, n.doneAt !== null])).toEqual([
+    [f.owner.id, true],
+  ]);
 });
 
 test("a work frees the conversation: a new message, or a reply in the anchor's thread, starts a reply turn of its own", async () => {
@@ -1301,6 +1309,19 @@ test("a follow-up does what the work left undone, as the person who asked, where
   const read = f.provider.calls.map((c) => lastText(c.request)).find((r) => r.includes(FOLLOW_UP_HEAD)) ?? "";
   expect(read).toContain("Do now what they asked that the work didn't do and didn't say why not");
   expect(work.requestedByUserId).toBe(f.owner.id);
+});
+
+test("a follow-up of an ask bridged in from an outside chat answers for them, never as their own words (ADR 0250)", async () => {
+  f = await setup({ workTools: true, toolSources: [createPassToolSource()] });
+  const bia = await member("bia");
+  const { run, asked } = await passedOn("depois posta o resumo no #time", bia.id);
+  await f.db.update(schema.messages).set({ origin: "surface" }).where(eq(schema.messages.id, asked));
+  await endWork(deps(), await finishRun(run.id), "done");
+  await f.db.delete(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
+  await drainOutbox(f.db, f.handlers);
+  const [notice] = await followUpNotices();
+  const followUp = (await runs()).find((r) => r.triggerMessageId === notice?.id) as AgentRun;
+  expect(await runAuthority(f.db, followUp)).toEqual({ kind: "person", personId: bia.id, relayed: true });
 });
 
 test("two people pass asks on to one work: one follow-up each, on their own authority, and no card decided for the other", async () => {

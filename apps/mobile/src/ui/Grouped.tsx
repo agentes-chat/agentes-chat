@@ -26,6 +26,8 @@ import { leadBox } from "./type-scale";
 const LEAD = GROUPED_ROW.lead;
 /** An icon's tile in a row (IconTile's own size). */
 const TILE = 30;
+/** The switch's height (`ToggleSwitch`). */
+const SWITCH_H = 28;
 /** The remove ×'s glyph, inside its 44-point button. */
 const REMOVE_GLYPH = 16;
 /**
@@ -352,6 +354,12 @@ function Row({
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
+  // The switch is taller than the label's line: its middle on the line's, overhanging it into the row's padding, so it
+  // sits level with a one-line label and the row stays a one-line row's height (from the line's top it hung 3 points
+  // low and made the row 6 taller).
+  const switchOnLine = line
+    ? { marginTop: line.middle - SWITCH_H / 2, marginBottom: line.height - line.middle - SWITCH_H / 2 }
+    : null;
   // A tree row's name wraps: its tile stays centred on the first line, as on a one-line row, and takes no more than
   // that line's height, so a one-line tree row is as tall as any other.
   const tileOnLine =
@@ -470,7 +478,7 @@ function Row({
         </View>
       ) : null}
       {toggle !== undefined ? (
-        <View style={onLine(28)}>
+        <View style={switchOnLine}>
           <ToggleSwitch value={toggle} />
         </View>
       ) : null}

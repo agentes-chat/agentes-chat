@@ -15,9 +15,11 @@ import type { LiveApi } from "../live/api";
 import type { LiveRefInput } from "../live/types";
 import type {
   SecretToVaultInput,
+  VaultAccess,
   VaultConnectInput,
   VaultConnection,
   VaultConnectionPatch,
+  VaultImportInput,
   VaultImportResult,
   VaultItem,
   VaultItemDetail,
@@ -177,6 +179,9 @@ import type {
   ImportPlan,
   InstallableCli,
   Instance,
+  IntegrationApp,
+  IntegrationAppInput,
+  IntegrationAppSecrets,
   Invitation,
   InvitationPreview,
   InvitationState,
@@ -1335,6 +1340,8 @@ export interface ApiClient {
     allowTool(orgId: string, machineId: string, tool: MachineTool): Promise<MachineAccess>;
     /** Anyone else: asks whoever paired it to turn `tool` on (an inbox row with the same button). */
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
+    /** Admins or whoever paired it: no to a folder an agent waits for there (never a yes). The request's outcome. */
+    refuseFolder(orgId: string, machineId: string, requestId: string): Promise<{ status: string }>;
     /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
     checkClis(orgId: string, machineId: string): Promise<void>;
     /** ADR 0228 §6: "Try again" on a CLI's fetch; where it stands now. */
@@ -2362,8 +2369,15 @@ export interface ApiClient {
     create(orgId: string, input: VaultItemInput): Promise<VaultItem>;
     update(orgId: string, itemId: string, patch: VaultItemPatch): Promise<VaultItem>;
     remove(orgId: string, itemId: string): Promise<void>;
-    /** A passwords file's text; `dryRun` only counts. 413 `vault.csv_too_large` past 2 MB. */
-    importCsv(orgId: string, input: { csv: string; scope: VaultScope; dryRun: boolean }): Promise<VaultImportResult>;
+    /** Many items at once: what this person may not change is left and counted in `kept`. */
+    setAccessMany(orgId: string, ids: string[], access: VaultAccess): Promise<{ changed: number; kept: number }>;
+    /** A password manager's items still in it are left too. */
+    removeMany(orgId: string, ids: string[]): Promise<{ deleted: number; kept: number }>;
+    /**
+     * A passwords file's text; `dryRun` only counts. `access` is the new logins' (absent: the scope's default). 413
+     * `vault.csv_too_large` past 2 MB.
+     */
+    importCsv(orgId: string, input: VaultImportInput): Promise<VaultImportResult>;
     /** Several keys in one save (an imported .env). 403 `vault.team_needs_permission` for the team's without it. */
     importKeys(orgId: string, input: VaultKeysImportInput): Promise<VaultKeysImportResult>;
     /**
@@ -2413,6 +2427,19 @@ export interface ApiClient {
     /** 409 `token_limit` past 10 live tokens per person here. */
     createToken(orgId: string, input: PersonalTokenInput): Promise<CreatedPersonalToken>;
     revokeToken(orgId: string, grantId: string): Promise<void>;
+  };
+  /**
+   * Integration apps (ADR 0251), for who may manage connectors: programs that post in chosen channels as themselves.
+   * A token (`agi_…`) and a webhook's signing secret show once, in the answer that made them.
+   */
+  integrationApps: {
+    list(orgId: string): Promise<IntegrationApp[]>;
+    create(orgId: string, input: IntegrationAppInput): Promise<IntegrationAppSecrets>;
+    update(orgId: string, appId: string, input: Partial<IntegrationAppInput>): Promise<IntegrationAppSecrets>;
+    newToken(orgId: string, appId: string): Promise<IntegrationAppSecrets>;
+    revokeToken(orgId: string, appId: string): Promise<IntegrationApp>;
+    newWebhookSecret(orgId: string, appId: string): Promise<IntegrationAppSecrets>;
+    remove(orgId: string, appId: string): Promise<void>;
   };
   /** "Lembrar": one-off reminders in conversations (also routines in Rotinas). */
   reminders?: {

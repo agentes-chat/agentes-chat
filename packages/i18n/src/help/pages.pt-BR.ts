@@ -891,4 +891,55 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "Apps de integração",
+    summary:
+      "Conecte um bot de atendimento, um formulário ou um monitor que posta nos seus canais como ele mesmo, nunca como uma pessoa.",
+    sections: [
+      {
+        id: "what",
+        heading: "Como funciona",
+        blocks: [
+          "Um app de integração tem o próprio token. Ele posta nos canais que você der a ele, com o próprio nome e a etiqueta **App**, e pode repassar o nome da pessoa de fora. Os agentes respondem como respondem a uma pessoa: quando ele os menciona, ou quando o roteador os escolhe.",
+          "Traga conversas de fora assim, nunca com o token pessoal de alguém: essas mensagens apareceriam como dessa pessoa.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "Conectar um bot de atendimento",
+        blocks: [
+          {
+            list: [
+              "Em **Configurações › Conectores › Integrações**, clique em **Conectar um app**, dê um nome e escolha os canais.",
+              "Se quiser, adicione um endereço de webhook: cada resposta de agente nos canais dele vai para lá, assinada com [Standard Webhooks](https://www.standardwebhooks.com).",
+              "Copie o token e o segredo do webhook. Eles aparecem uma vez só.",
+              "Poste a primeira mensagem de cada conversa de fora sem `thread_id`, e o resto com o `id` dela como `thread_id`. Mande as respostas dessa conversa de volta para a pessoa.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "A API",
+        blocks: [
+          "Mande o token como `Authorization: Bearer agi_…`.",
+          {
+            list: [
+              "`GET /api/v1/channels`: os canais do app.",
+              "`POST /api/v1/messages`: `channel_id`, `text` e, se quiser, `thread_id`, `sender` e `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: o que foi escrito desde então, com `in_reply_to` em cada resposta de agente.",
+            ],
+          },
+          "As mesmas chamadas são ferramentas MCP em `/mcp`. A referência completa é `/api/openapi.json`.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "O que um app não faz",
+        blocks: [
+          "Um app nunca é membro nem pessoa. Os agentes respondem o que ele posta, mas não tiram dele regra, memória, mudança de instrução, rotina, aprovação ou permissão. Revogar o token o para na hora. Respondendo a um app, o agente lê sozinho só aquela conversa e a web: qualquer outra coisa do workspace espera a aprovação de uma pessoa.",
+        ],
+      },
+    ],
+  },
 };

@@ -108,6 +108,7 @@ async function writeLine(
           ? { type: "person", userId: first.id }
           : { type: "agent", agentId: first.id, runId: null, hop: 0, stretchId: null },
       body: text,
+      origin: "system",
       meta: { notice },
     },
     { startRuns: false, deliver: false },

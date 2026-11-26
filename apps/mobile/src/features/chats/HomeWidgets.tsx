@@ -3,7 +3,7 @@ import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Icon, RowPressable, SideScroll, Text, useTheme } from "@/ui";
+import { Icon, type IconName, RowPressable, SideScroll, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { newWidgetHref } from "../dashboards/BoardScreen";
 import { HOME, widgetsInOrder } from "../dashboards/logic";
@@ -28,7 +28,6 @@ export const HomeWidgets = memo(function HomeWidgets({
 }) {
   const { t } = useTranslation();
   const c = useColors();
-  const { shadows } = useTheme();
   const { orgId, org } = useOrg();
   const home = useHomeBoard(orgId);
   // One object while the board stays: each card is memoized on it.
@@ -49,25 +48,14 @@ export const HomeWidgets = memo(function HomeWidgets({
               <WidgetPeek widget={w} canEdit={canAdd} board={where} compact />
             </View>
           ))}
-          {/* "Ver todos" ends the strip, on no plate: a round button with the arrow, its words under it. */}
-          <Pressable
-            onPress={() => router.push("/dashboards")}
-            accessibilityRole="button"
-            accessibilityLabel={t("dashboards.seeAll")}
-            style={({ pressed }) => [styles.all, pressed && styles.pressed]}
-          >
-            <View
-              style={[
-                styles.allButton,
-                { backgroundColor: c.raised, boxShadow: `0px 0px 0px 0.5px ${c.line2}, ${shadows.e1}` },
-              ]}
-            >
-              <Icon name="right" size={20} color={c.ink2} />
-            </View>
-            <Text variant="footnote" tone="muted" style={styles.medium} numberOfLines={1}>
-              {t("dashboards.seeAll")}
-            </Text>
-          </Pressable>
+          {/* The strip ends on round buttons on no plate, their words under them: "Add" (who edits this board)
+              beside "See all". */}
+          <View style={styles.ends}>
+            {canAdd ? (
+              <StripButton icon="plus" label={t("widgets.add.word")} said={t("widgets.add.label")} onPress={add} />
+            ) : null}
+            <StripButton icon="right" label={t("dashboards.seeAll")} onPress={() => router.push("/dashboards")} />
+          </View>
         </SideScroll>
       ) : canAdd ? (
         <RowPressable
@@ -87,6 +75,42 @@ export const HomeWidgets = memo(function HomeWidgets({
   );
 });
 
+/** A round button at the strip's end, its words under it; `said` is what VoiceOver reads when the words are short. */
+function StripButton({
+  icon,
+  label,
+  said,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  said?: string;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  const { shadows } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={said ?? label}
+      style={({ pressed }) => [styles.all, pressed && styles.pressed]}
+    >
+      <View
+        style={[
+          styles.allButton,
+          { backgroundColor: c.raised, boxShadow: `0px 0px 0px 0.5px ${c.line2}, ${shadows.e1}` },
+        ]}
+      >
+        <Icon name={icon} size={20} color={c.ink2} />
+      </View>
+      <Text variant="footnote" tone="muted" style={styles.medium} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 /** Between the cards: the lists' 12. */
 const GAP = 12;
 
@@ -97,6 +121,8 @@ const styles = StyleSheet.create({
   medium: { fontWeight: "500" },
   // Room above and below: the cards' hairline and shadow are never cut by the strip's edge.
   strip: { paddingHorizontal: 16, gap: GAP, paddingTop: 4, paddingBottom: 6 },
+  // The end's buttons side by side, as one pair (each its own 84 of room).
+  ends: { flexDirection: "row" },
   all: { width: 84, alignItems: "center", justifyContent: "center", gap: 8 },
   allButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   pressed: { opacity: 0.7 },

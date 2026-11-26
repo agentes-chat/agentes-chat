@@ -894,4 +894,55 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "Integratie-apps",
+    summary:
+      "Verbind een supportbot, een formulier of een monitor die in je kanalen als zichzelf post, nooit als een persoon.",
+    sections: [
+      {
+        id: "what",
+        heading: "Hoe het werkt",
+        blocks: [
+          "Een integratie-app heeft een eigen token. Hij post in de kanalen die je hem geeft, onder zijn eigen naam met het label **App**, en kan de naam van de persoon van buiten meegeven. Agents antwoorden hem zoals een persoon: als hij ze vermeldt, of als de router ze kiest.",
+          "Haal gesprekken van buiten zo binnen, nooit met het persoonlijke token van iemand: die berichten zouden als van die persoon verschijnen.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "Een supportbot verbinden",
+        blocks: [
+          {
+            list: [
+              "Klik in **Instellingen › Connectors › Integraties** op **App verbinden**, geef hem een naam en kies zijn kanalen.",
+              "Voeg desgewenst een webhookadres toe: elk antwoord van een agent in zijn kanalen gaat daarheen, ondertekend met [Standard Webhooks](https://www.standardwebhooks.com).",
+              "Kopieer het token en het webhookgeheim. Ze worden één keer getoond.",
+              "Post het eerste bericht van elk gesprek van buiten zonder `thread_id`, en de rest met zijn `id` als `thread_id`. Stuur de antwoorden in die thread terug naar de persoon.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "De API",
+        blocks: [
+          "Stuur het token als `Authorization: Bearer agi_…`.",
+          {
+            list: [
+              "`GET /api/v1/channels`: de kanalen van de app.",
+              "`POST /api/v1/messages`: `channel_id`, `text` en eventueel `thread_id`, `sender` en `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: wat sindsdien is geschreven, met `in_reply_to` bij elk antwoord van een agent.",
+            ],
+          },
+          "Dezelfde aanroepen zijn MCP-tools op `/mcp`. De volledige referentie is `/api/openapi.json`.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "Wat een app niet kan",
+        blocks: [
+          "Een app is nooit een lid of een persoon. Agents beantwoorden wat hij post, maar nemen er geen regel, geheugen, wijziging van instructies, routine, goedkeuring of toestemming uit over. Zijn token intrekken stopt hem meteen. Als een agent een app antwoordt, leest hij uit zichzelf alleen dat gesprek en het web: al het andere uit je werkruimte wacht op de goedkeuring van een persoon.",
+        ],
+      },
+    ],
+  },
 };

@@ -40,7 +40,7 @@ import { editDistance, firstOf } from "./format";
 import { insertMessage, messageView, parseMentionHandles } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
-import { personBehindCall } from "./requester";
+import { personBehindCall, relayedRefusal, relayedRequest } from "./requester";
 import { isRightHand } from "./right-hand";
 import { queueRightHandLook } from "./right-hand-approvals";
 import { liveLodiSwitches } from "./right-hand-lane";
@@ -78,6 +78,9 @@ export const PROPOSE_AGENT_TOOL = "propose_agent";
 export const OFFER_INVITES_TOOL = "offer_invites";
 /** Archiving or deleting teammates, one card for them all (ADR 0137 amendment): any agent with setup tools. */
 export const PROPOSE_REMOVE_AGENTS_TOOL = "propose_remove_agents";
+/** `propose_remove_agents` called with a channel: archiving would take the agents out of the whole workspace. */
+const CHANNEL_NOT_REMOVAL =
+  "Nothing proposed: propose_remove_agents archives agents from the whole workspace, never from one channel. To take agents out of a channel, call propose_settings_change with `leave` for each of them (they stay in the workspace). Archive them only if the person asked for that in so many words.";
 /** At most this many agents on one removal card. */
 export const MAX_REMOVALS_PER_CARD = 20;
 /** Teammates' settings on one card (ADR 0137): the right hand's, and any agent's with setup tools (ADR 0139). */
@@ -808,7 +811,7 @@ export function createSetupToolSource(deps: {
     {
       name: PROPOSE_REMOVE_AGENTS_TOOL,
       description:
-        "Propose archiving teammates (or deleting them for good) with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to remove, archive, delete or start the team over ('apaga os outros agentes'). Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To rebuild the team after, propose the new agents with propose_agent.",
+        "Propose archiving teammates out of the whole workspace (or deleting them for good), never out of one channel (that is propose_settings_change with `leave`), with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to archive, delete or start the team over ('apaga os outros agentes'), or to remove them from the workspace. Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To rebuild the team after, propose the new agents with propose_agent.",
       scope: SETUP_SCOPE,
       inputSchema: {
         type: "object",
@@ -831,6 +834,11 @@ export function createSetupToolSource(deps: {
             maxLength: 500,
             description: "One short line on the card, in the person's language: why.",
           },
+          channel: {
+            type: "string",
+            maxLength: 81,
+            description: "Never pass it.",
+          },
         },
         required: ["agents", "reason"],
         additionalProperties: false,
@@ -839,6 +847,9 @@ export function createSetupToolSource(deps: {
         try {
           const forUserId = await personBehindCall(ctx);
           if (!forUserId) return { content: "Only a person's request can propose removing agents.", isError: true };
+          if (await relayedRequest(ctx)) return relayedRefusal();
+          // A model asked to take agents out of a channel reaches for this tool with `channel`: send it to the right one.
+          if (input.channel !== undefined) return { content: CHANNEL_NOT_REMOVAL, isError: true };
           const reason = str(input.reason).trim();
           if (!reason) return { content: "Say in `reason` why: one short line.", isError: true };
           const field = input.delete === true ? "delete" : "archive";
@@ -1184,11 +1195,11 @@ const SETUP_TOOLS_PERSONAL: Record<string, string> = {
   [PROPOSE_AGENT_TOOL]:
     "Propose a new agent for this person with one card in this conversation: a person creates it in one click (or reviews and edits it first), or says no. Use it when someone asks for a new agent or bot, or when work needs a role none of their agents has. Put in this one call everything the request implies, so the agent works as soon as it is created: its access to the connected apps and to the asker's own mailbox (by its address) when the job reads or sends their email, and `routine` when the job runs on a schedule ('todo dia ao meio-dia'). It lives in its DM with the person: leave `channels` out, unless they asked for it in a group conversation (a channel). It creates nothing: never say the agent exists until you are told it was created. The card suggests an AI for it by itself.",
   [PROPOSE_REMOVE_AGENTS_TOOL]:
-    "Propose archiving agents (or deleting them for good) with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to remove, archive, delete or start their agents over ('apaga os outros agentes'). Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To set up new agents after, propose them with propose_agent.",
+    "Propose archiving agents out of the whole workspace (or deleting them for good), never out of one channel (that is propose_settings_change with `leave`), with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to archive, delete or start their agents over ('apaga os outros agentes'), or to remove them from the workspace. Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To set up new agents after, propose them with propose_agent.",
   [OFFER_INVITES_TOOL]:
     "Offer to invite someone the person trusts (family, a partner, someone who helps them) to this workspace with a card in this conversation: its button opens the app's invite dialog with these addresses filled in, as members. A person who may invite sends it there (and may change roles); you send nothing. Use it when they ask to invite or add someone by email, never on your own.",
   [PROPOSE_SETTINGS_TOOL]:
-    "Change agents' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+    "Change agents' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
   [OFFER_ANSWERS_TOOL]:
     "Ask the person one short question with answers to tap under it, in this conversation: each tap sends the answer as their own message (several at once with `multiple`), and they can always type instead. Use it for the questions that set their agents up (what they want help with, what takes most of their time, when they want to hear from their agents), one per turn, with `step` and `of` ('Pergunta 2 de 3'). The question shows as your message: write nothing else in this turn and end it. Their answer comes as their next message.",
   [PROPOSE_TEAM_TOOL]:
@@ -1903,7 +1914,7 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
     name: own ? REQUEST_SETTINGS_TOOL : PROPOSE_SETTINGS_TOOL,
     description: own
       ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model and its effort, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look, the department you are in or who you report to. Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
-      : "Change teammates' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+      : "Change teammates' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
     scope: own ? "" : SETUP_SCOPE,
     inputSchema: own
       ? {
@@ -1938,6 +1949,8 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
       try {
         const forUserId = await personBehindCall(ctx);
         if (!forUserId) return { content: "Only a person's request can propose a change.", isError: true };
+        // Another agent's settings only on the person's typed words (ADR 0250); an agent's own needs still get a review.
+        if (!own && (await relayedRequest(ctx))) return relayedRefusal();
         const self = own ? await getAgentCached(ctx.db, ctx.orgId, ctx.agentId) : null;
         const other = self ? await teammateNamed(ctx, self, str(input.reason)) : null;
         if (other)

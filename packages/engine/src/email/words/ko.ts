@@ -396,45 +396,6 @@ export const words: EmailWords = {
       why: () => "agentes.chat의 이 워크스페이스에 참여 중이어서 이 메일을 보내 드렸어요.",
     },
   },
-  computerDown: {
-    subject: "컴퓨터가 응답하지 않아요",
-    preheader: "이 컴퓨터에서 에이전트의 작업이 기다리고 있어요.",
-    headline: "컴퓨터가 응답하지 않아요",
-    body: (name, org, away) => [
-      { b: name },
-      " (",
-      { b: org },
-      `)이(가) ${away} 동안 응답하지 않아요. 이 컴퓨터가 필요한 작업은 기다렸다가 다시 연결되면 계속돼요.`,
-    ],
-    runs: "대기 중인 에이전트 요청",
-    calls: "대기 중인 웹훅 호출",
-    note: "지금 계속하려면 컴퓨터 페이지에서 에이전트를 다른 컴퓨터로 옮기세요.",
-    button: "컴퓨터 열기",
-    why: (org) => `agentes.chat의 ${org} 컴퓨터를 관리하고 있어서 이 메일을 보내 드렸어요.`,
-    back: {
-      subject: "컴퓨터가 다시 연결됐어요",
-      preheader: "기다리던 작업이 이제 계속돼요.",
-      headline: "컴퓨터가 다시 연결됐어요",
-      runs: "대기했던 에이전트 요청",
-      calls: "대기했던 웹훅 호출",
-      body: (name, org, away) => [
-        { b: name },
-        " (",
-        { b: org },
-        `)이(가) ${away} 후 다시 연결됐어요. 기다리던 작업이 이제 계속돼요.`,
-      ],
-    },
-    personal: {
-      body: (name, _org, away) => [
-        { b: name },
-        `이(가) ${away} 동안 응답하지 않아요. 이 컴퓨터가 필요한 작업은 기다렸다가 다시 연결되면 계속돼요.`,
-      ],
-      why: () => "agentes.chat 개인 워크스페이스의 컴퓨터를 관리하고 있어서 이 메일을 보내 드렸어요.",
-      back: {
-        body: (name, _org, away) => [{ b: name }, `이(가) ${away} 후 다시 연결됐어요. 기다리던 작업이 이제 계속돼요.`],
-      },
-    },
-  },
   appConnected: {
     subject: "agentes.chat 계정에 앱이 연결됐어요",
     preheader: "한 워크스페이스에서 나 대신 에이전트의 작업을 읽고 보낼 수 있어요.",

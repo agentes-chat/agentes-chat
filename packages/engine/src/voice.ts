@@ -387,6 +387,8 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
         attachments: clip.attachments ?? undefined,
         clientId: clip.clientId,
         replyTo: clip.replyTo,
+        // Only a surface hands a clip its `via` (ADR 0187): one recorded in our apps has none.
+        origin: clip.via ? "surface" : "app",
         meta: {
           voice,
           ...(clip.via ? { via: clip.via, ...(clip.via.forwarded === true ? { readOutside: true } : {}) } : {}),

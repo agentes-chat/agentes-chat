@@ -288,6 +288,8 @@ suggests one and makes the change as before.
   It is listed only for those agents, in runs a person can answer, and hidden in a session (`CODE_SESSION_HIDDEN_TOOLS`);
   "How you work" says when to use it only where it applies (`CODE_SESSION_LINE`). It talks, it doesn't work: it isn't
   a step of the reply's work, and a run that only suggested hasn't started the change.
+  "How you work" asks for it before `work_in_background`; a run that moved itself to the background first still
+  answers the person's request, so it may suggest, and its report carries the card where they asked.
 - The suggestion rides on the agent's reply (`meta.codeSuggestion`, as a mission's link does): the project, the title,
   the words of the message the run answered and who wrote them. The apps draw it as the chat's request card, kind
   `code` ("Sugere uma sessão de código"), with "Ver o pedido" opening those words, "Abrir sessão" and "Fazer aqui".

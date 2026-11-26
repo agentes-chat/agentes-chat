@@ -1,9 +1,9 @@
-# 0250. A project's description and repository, and the Projects page
+# 0253. A project's description and repository, and the Projects page
 
 - Status: Accepted
 - Date: 2026-11-15
 - Extends: ADR 0171 (task projects), ADR 0159 (the sidebar's defaults by the workspace's mode)
-- Code: `issue_projects.description` and `github_repo` (migration 0356), `packages/engine/src/issue-projects.ts`
+- Code: `issue_projects.description` and `github_repo` (migration 0359), `packages/engine/src/issue-projects.ts`
   (`cleanGithubRepo`, `listIssueProjects`, `listProjectsForAgent`) and `issue-tools.ts` (`list_projects`), routes
   `apps/server/src/routes/app/issues.ts`, client `lib/issue-projects.ts` (`projectStatusOf`, `githubRepoUrl`), web
   `pages/ProjectsPage.tsx` and the `projects` tool of the sidebar; tests `issue-projects.test.ts`,

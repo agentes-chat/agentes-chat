@@ -72,8 +72,6 @@ export const STORED = {
   threadsCollapsed: "threads-collapsed",
   /** Agentes' groups the person collapsed, in every workspace (JSON list of group ids). */
   agentGroupsCollapsed: "agent-groups-collapsed",
-  /** The agent profile's tab last chosen (Hoje, Acesso, Memória): every profile opens on it (features/agents). */
-  agentProfileTab: "agent-profile-tab",
   /** An invitation opened before signing in: dealt with once the person is in (features/auth/invite.ts). */
   invite: "invite",
   /** The request this phone made through a link, with the key that signs in once approved (features/auth/invite.ts). */

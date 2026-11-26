@@ -152,6 +152,7 @@ import type {
   GifCategory,
   GifKey,
   InstallableCli,
+  IntegrationAppInput,
   Invitation,
   InvitationWithStatus,
   InviteBatch,
@@ -6854,6 +6855,18 @@ export function useReduceMachineAccess(orgId: string) {
   });
 }
 
+/** No to a folder an agent waits for on a computer (`device.folder_request`): the inbox row it waited in is done. */
+export function useRefuseFolderRequest(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ machineId, requestId }: { machineId: string; requestId: string }) =>
+      api.machines.refuseFolder(orgId, machineId, requestId),
+    meta: { silent: true },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.notifications(orgId) }),
+  });
+}
+
 /**
  * One click where a tool is off on a computer: its owner turns it on (`allow`), anyone else asks them (`ask`). The
  * machines and devices lists refetch so every screen that waited on it moves on.
@@ -9004,6 +9017,45 @@ export const useApps = (orgId: string, all = false, pollMs: number | false = fal
     refetchInterval: pollMs,
   });
 };
+
+/** Settings › Integrations (ADR 0251): the workspace's integration apps. */
+export const useIntegrationApps = (orgId: string, enabled = true) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.integrationApps(orgId),
+    queryFn: () => api.integrationApps.list(orgId),
+    enabled,
+  });
+};
+
+/** Make, change, rotate and remove integration apps; what shows once comes back in each answer. */
+export function useIntegrationAppActions(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const done = () => void qc.invalidateQueries({ queryKey: keys.integrationApps(orgId) });
+  const silent = { meta: { silent: true }, onSuccess: done };
+  return {
+    create: useMutation({
+      mutationFn: (input: IntegrationAppInput) => api.integrationApps.create(orgId, input),
+      ...silent,
+    }),
+    update: useMutation({
+      mutationFn: (v: { appId: string; input: Partial<IntegrationAppInput> }) =>
+        api.integrationApps.update(orgId, v.appId, v.input),
+      ...silent,
+    }),
+    newToken: useMutation({ mutationFn: (appId: string) => api.integrationApps.newToken(orgId, appId), ...silent }),
+    revokeToken: useMutation({
+      mutationFn: (appId: string) => api.integrationApps.revokeToken(orgId, appId),
+      ...silent,
+    }),
+    newWebhookSecret: useMutation({
+      mutationFn: (appId: string) => api.integrationApps.newWebhookSecret(orgId, appId),
+      ...silent,
+    }),
+    remove: useMutation({ mutationFn: (appId: string) => api.integrationApps.remove(orgId, appId), ...silent }),
+  };
+}
 
 /** Desconectar an app, Revogar a token, Criar token: both lists refresh. */
 export function useAppActions(orgId: string) {

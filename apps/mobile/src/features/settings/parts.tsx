@@ -18,6 +18,7 @@ import { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, GroupedList, GroupedRow, type HeaderAction, type IconName, Locked, Text, useToast } from "@/ui";
 import { KeyboardBar, TOOLBAR_HEIGHT } from "@/ui/auth/AuthScaffold";
+import { useReadableSide } from "@/ui/pane";
 import { useColors, useNow, usePullRefresh } from "../shared/hooks";
 import { showActionSheet } from "../shared/PickerSheet";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
@@ -129,6 +130,7 @@ function CompactPage({
 }: SettingsPageProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const side = useReadableSide();
   const refreshControl = usePageRefresh(onRefresh);
   // The docked action rides over the keyboard (over the system's bar too, with a form's ‹ ›): what it covers there
   // (its height less the home indicator's room, which drops behind the keyboard) is kept clear of a focused field.
@@ -162,7 +164,11 @@ function CompactPage({
         extraKeyboardSpace={toolbarRoom}
         {...(refreshControl ? { refreshControl } : {})}
         // A docked action holds the home indicator's room itself.
-        contentContainerStyle={[styles.body, { paddingBottom: bottom ? 24 : 24 + insets.bottom }]}
+        // On a large screen the form keeps to the readable column (ADR 0212).
+        contentContainerStyle={[
+          styles.body,
+          { paddingHorizontal: BODY_SIDE + side, paddingBottom: bottom ? 24 : 24 + insets.bottom },
+        ]}
       >
         {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
         <Locked when={locked || busy || frozen} readable={frozen && !locked && !busy}>
@@ -408,9 +414,12 @@ export function Meter({ value, max, label }: { value: number; max: number; label
   );
 }
 
+/** A form page's sides on a phone (the readable column's margins add to them on a large screen). */
+const BODY_SIDE = 16;
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { paddingHorizontal: 16, paddingTop: 4 },
+  body: { paddingHorizontal: BODY_SIDE, paddingTop: 4 },
   gap: { height: 14 },
   command: { paddingHorizontal: 14, paddingVertical: 12 },
   mono: { fontFamily: MONO, fontSize: 13, lineHeight: 19 },

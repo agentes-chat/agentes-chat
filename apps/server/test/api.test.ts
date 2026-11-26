@@ -282,6 +282,15 @@ describe("chat over HTTP", () => {
     };
     expect(usage.usage[0]?.calls).toBe(1);
     expect(usage.usage[0]?.costUsd).toBeGreaterThan(0);
+    // Typed in our app through a signed-in session: the person's own words (ADR 0250), whatever the body says.
+    const posts = await owner(`/api/app/organizations/${orgId}/channels/${channelId}/messages`, {
+      json: { body: "oi", origin: "mcp" },
+    });
+    const [stored] = await t.db
+      .select({ origin: schema.messages.origin })
+      .from(schema.messages)
+      .where(eq(schema.messages.id, ((await posts.json()) as { id: string }).id));
+    expect(stored?.origin).toBe("app");
   });
 
   test("channels in sectors (ADR 0240): who manages channels and a channel's creator move it; a new sector takes it", async () => {

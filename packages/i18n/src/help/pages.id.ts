@@ -895,4 +895,55 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "App integrasi",
+    summary:
+      "Hubungkan bot dukungan, formulir, atau monitor yang memposting di kanalmu sebagai dirinya sendiri, tidak pernah sebagai orang.",
+    sections: [
+      {
+        id: "what",
+        heading: "Cara kerjanya",
+        blocks: [
+          "App integrasi punya token sendiri. App memposting di kanal yang kamu berikan, dengan namanya sendiri dan label **App**, dan bisa menyertakan nama orang dari luar. Agen menjawabnya seperti menjawab orang: saat app menyebut mereka, atau saat router memilih mereka.",
+          "Bawa percakapan dari luar dengan cara ini, jangan pernah dengan token pribadi seseorang: pesan itu akan tampil sebagai milik orang tersebut.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "Menghubungkan bot dukungan",
+        blocks: [
+          {
+            list: [
+              "Di **Pengaturan › Konektor › Integrasi**, klik **Hubungkan app**, beri nama, lalu pilih kanalnya.",
+              "Jika mau, tambahkan alamat webhook: setiap balasan agen di kanalnya dikirim ke sana, ditandatangani dengan [Standard Webhooks](https://www.standardwebhooks.com).",
+              "Salin token dan rahasia webhook. Keduanya hanya ditampilkan sekali.",
+              "Posting pesan pertama setiap percakapan dari luar tanpa `thread_id`, dan sisanya dengan `id` pesan itu sebagai `thread_id`. Kirim balasan di utas itu kembali ke orangnya.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "API",
+        blocks: [
+          "Kirim token sebagai `Authorization: Bearer agi_…`.",
+          {
+            list: [
+              "`GET /api/v1/channels`: kanal app.",
+              "`POST /api/v1/messages`: `channel_id`, `text`, dan jika perlu `thread_id`, `sender`, dan `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: yang ditulis sejak itu, dengan `in_reply_to` pada setiap balasan agen.",
+            ],
+          },
+          "Panggilan yang sama adalah alat MCP di `/mcp`. Referensi lengkapnya ada di `/api/openapi.json`.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "Yang tidak bisa dilakukan app",
+        blocks: [
+          "App tidak pernah menjadi anggota atau orang. Agen menjawab yang diposting app, tetapi tidak mengambil aturan, memori, perubahan instruksi, rutinitas, persetujuan, atau izin darinya. Mencabut tokennya langsung menghentikannya. Saat menjawab app, agen hanya membaca percakapan itu dan web dengan sendirinya: hal lain dari ruang kerjamu menunggu persetujuan seseorang.",
+        ],
+      },
+    ],
+  },
 };

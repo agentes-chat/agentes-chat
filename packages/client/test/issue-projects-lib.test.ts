@@ -112,7 +112,7 @@ describe("task projects", () => {
   });
 });
 
-describe("a project's status and repository (ADR 0250)", () => {
+describe("a project's status and repository (ADR 0253)", () => {
   const stand = (over: Partial<IssueProject>) => ({ ...project(1, "Acme"), ...over });
 
   test("archived wins; done needs tasks and none open; a project with no task yet is active", () => {

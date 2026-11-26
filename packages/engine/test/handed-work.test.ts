@@ -19,6 +19,7 @@ import {
   replyPolicyFor,
   type ToolContext,
   tellChannelLead,
+  updateIssue,
   WHY_GOING_ON,
   WHY_YOU_WERE_CALLED,
   workEligible,
@@ -297,6 +298,23 @@ describe("work handed to another agent reports where the person asked (F1)", () 
     expect(issue.backgroundWork?.result).toEqual({ text: "Report saved in Drive.", messageId: copy?.id ?? "" });
     // Nothing woke the agent that handed it to relay it.
     expect((await f.db.select().from(schema.agentRuns)).filter((r) => r.agentId === f.agent.id)).toHaveLength(1);
+  });
+
+  test("a turn that ends with a criterion still open leaves the card in review, not Done", async () => {
+    f = await setup({ askAgent: true });
+    await addAgent("Atlas");
+    const dev = await devRun("@dev get the report ready");
+    await tell(dev, "@atlas", "Build the October sales report.");
+    const [c] = await consultations();
+    const run = await runOf(c?.targetRunId);
+    await f.db.update(schema.agentRuns).set({ status: "running" }).where(eq(schema.agentRuns.id, run.id));
+    const issueId = (await works())[0]?.issueId ?? "";
+    const owner = { type: "person" as const, userId: f.owner.id };
+    await updateIssue({ db: f.db, pubsub: f.pubsub }, owner, f.org.id, issueId, {
+      criteria: [{ text: "Totals match the store" }],
+    });
+    await reports(await runOf(run.id), "Pulled the orders; refunds come next.");
+    expect((await getIssue(f.db, owner, f.org.id, { id: issueId })).status).toBe("in_review");
   });
 
   test("a stop posts its end where the person asked", async () => {

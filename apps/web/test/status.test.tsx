@@ -258,8 +258,9 @@ describe("where a status shows", () => {
     const ada = within(nav()).getByRole("link", { name: /^Ada/ });
     expect(ada.getAttribute("title")).toContain("Respondendo no #eng");
     expect(ada.textContent).not.toContain("💬");
-    // At work: the blue face, never red "Ocupado" (ADR 0084 addendum).
-    expect(badgeOf(ada)).toBe("working");
+    // At work: its face wears the orbit, never a red "Ocupado" badge (ADR 0084 addendum).
+    expect(ada.querySelector(".ac-orbit > .ac-avatar")).not.toBeNull();
+    expect(badgeOf(ada)).toBeUndefined();
     const atlas = within(nav()).getByRole("link", { name: /^Atlas/ });
     expect(atlas.getAttribute("title")).toContain("Deploy da v2 em staging");
     expect(badgeOf(atlas)).toBe("online");
@@ -367,7 +368,9 @@ describe("where a status shows", () => {
     await go(`c/${ENG_ID}`, working);
     const ada = () => within(nav()).getByRole("link", { name: /^Ada/ });
     expect(ada().getAttribute("data-presence")).toBe("working");
-    expect(badgeOf(ada())).toBe("working");
+    // At work its face wears the orbit, which says it: no "working" badge on it.
+    expect(ada().querySelector(".ac-orbit > .ac-avatar")).not.toBeNull();
+    expect(badgeOf(ada())).toBeUndefined();
     cleanup();
 
     // The list still reads it idle: its run, as this tab hears it, is enough.
@@ -386,6 +389,7 @@ describe("where a status shows", () => {
     );
     await settle();
     expect(ada().getAttribute("data-presence")).toBe("working");
-    expect(badgeOf(ada())).toBe("working");
+    expect(ada().querySelector(".ac-orbit > .ac-avatar")).not.toBeNull();
+    expect(badgeOf(ada())).toBeUndefined();
   });
 });

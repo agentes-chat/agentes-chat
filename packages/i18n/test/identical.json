@@ -350,6 +350,12 @@
       "shell.skills",
       "skills.page.colSkill",
       "skills.page.inRepo",
+      "integrations.badge",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "projectsPage.columns.status"
     ],
     "es": [
@@ -646,7 +652,15 @@
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "billing.plan"
+      "billing.plan",
+      "integrations.badge",
+      "integrations.color",
+      "integrations.colorOf",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "fr": [
       "agentPage.facts.budget",
@@ -1181,6 +1195,12 @@
       "live.type.gradients.graphite",
       "live.type.gradients.violet",
       "live.type.glyph",
+      "integrations.badge",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "issues.projects.description",
       "projectsPage.columns.actions"
     ],
@@ -1329,6 +1349,11 @@
       "connectors.category.support",
       "connectors.names.cloudflare_bindings",
       "connectors.names.intercom_eu",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "connectors.tools",
       "contextMenu.lookSystem",
       "database.host",
@@ -1693,6 +1718,8 @@
       "skills.page.colSkill",
       "skills.one.name",
       "skills.one.inChannel",
+      "integrations.badge",
+      "integrations.name",
       "projectsPage.columns.repository",
       "projectsPage.columns.status"
     ],
@@ -2105,6 +2132,12 @@
       "skills.page.colSkill",
       "skills.one.inChannel",
       "skills.page.inRepo",
+      "integrations.badge",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "projectsPage.columns.repository"
     ],
     "nl": [
@@ -2284,6 +2317,11 @@
       "connectors.names.cloudflare_bindings",
       "connectors.names.cloudflare_observability",
       "connectors.names.intercom_eu",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "connectors.title",
       "connectors.tools",
       "connectors.toolsCount",
@@ -2798,6 +2836,7 @@
       "skills.page.colSkill",
       "skills.one.inChannel",
       "skills.page.inRepo",
+      "integrations.badge",
       "projectsPage.columns.repository",
       "projectsPage.columns.status",
       "projectsPage.columns.project"
@@ -2983,7 +3022,12 @@
       "codeSessions.home.mode",
       "codeSessions.home.was",
       "codeSessions.gitTab.label",
-      "live.type.glyph"
+      "live.type.glyph",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "ko": [
       "live.sheet.args.k",
@@ -3159,7 +3203,12 @@
       "codeSessions.home.beta",
       "codeSessions.home.mode",
       "codeSessions.home.was",
-      "codeSessions.gitTab.label"
+      "codeSessions.gitTab.label",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3324,7 +3373,12 @@
       "codeSessions.home.mode",
       "codeSessions.home.was",
       "codeSessions.gitTab.label",
-      "live.type.glyph"
+      "live.type.glyph",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "id": [
       "drive.folder",
@@ -3671,6 +3725,13 @@
       "live.type.trackings.normal",
       "live.type.glyph",
       "skills.page.colSkill",
+      "integrations.badge",
+      "integrations.edit",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "projectsPage.columns.status"
     ],
     "tr": [
@@ -3892,7 +3953,12 @@
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "billing.plan"
+      "billing.plan",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "pl": [
       "drive.folder",
@@ -4236,6 +4302,11 @@
       "live.type.gradients.ocean",
       "live.type.glyph",
       "billing.plan",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "projectsPage.columns.status"
     ],
     "ru": [
@@ -4415,7 +4486,12 @@
       "codeSessions.home.beta",
       "codeSessions.home.mode",
       "codeSessions.home.was",
-      "codeSessions.gitTab.label"
+      "codeSessions.gitTab.label",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ]
   },
   "mobile-base": {

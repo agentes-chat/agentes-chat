@@ -130,6 +130,7 @@ import { createMockCustomConnectors } from "./fakes/custom-connectors";
 import { createFakeDashboards, type FakeDashboards } from "./fakes/dashboards";
 import { createFakeDatabases, type FakeDatabases } from "./fakes/databases";
 import { createFakeDevices, type FakeDevices } from "./fakes/devices";
+import { createFakeIntegrationApps } from "./fakes/integration-apps";
 import { createFakeLive, type FakeLive } from "./fakes/live";
 import { createFakeMachines, type FakeMachines, withNamed } from "./fakes/machines";
 import { createFakeMail, type FakeMail } from "./fakes/mail";
@@ -1287,6 +1288,7 @@ const id = (prefix: string) => `${prefix}-${++n}`;
 /** Served by the in-memory fakes in `test/fakes` (same shapes as the server). */
 type FakedParts =
   | "apps"
+  | "integrationApps"
   | "wiki"
   | "notifications"
   | "sandbox"
@@ -3945,7 +3947,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
                 m.threadId && m.threadId !== m.id
                   ? (state.messages.find((r) => r.id === m.threadId)?.body.split("\n")[0] ?? null)
                   : null,
-              author: m.author.id ? { type: m.author.type, id: m.author.id, name } : null,
+              author: m.author.id && m.author.type !== "app" ? { type: m.author.type, id: m.author.id, name } : null,
             };
           });
         const items = state.memories
@@ -4414,12 +4416,14 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   );
   const browser = createFakeBrowser((method, ...args) => state.calls.push({ method, args }), ctx.now);
   const apps = createFakeApps((method, ...args) => state.calls.push({ method, args }), ctx.now);
+  const integrationApps = createFakeIntegrationApps((method, ...args) => state.calls.push({ method, args }), ctx.now);
   const artifacts = createMockArtifacts(ctx, (method, ...args) => state.calls.push({ method, args }));
   state.drive = artifacts;
   const live = createFakeLive(ctx, (method, ...args) => state.calls.push({ method, args }), artifacts);
   const client: ApiClient = {
     ...http,
     apps: apps.client,
+    integrationApps: integrationApps.client,
     sandbox: createFakeSandbox(ctx, (method, ...args) => state.calls.push({ method, args }), machines),
     machines: machines.client,
     devices: devices.client,

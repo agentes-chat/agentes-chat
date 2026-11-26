@@ -190,7 +190,7 @@ test("it is in no channel and on no computer, whoever asks", async () => {
   const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { name: "MacBook" });
   await expect(
     setAgentComputerTarget({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, lodi.id, machineId),
-  ).rejects.toMatchObject(permanent);
+  ).rejects.toMatchObject({ code: "agent.right_hand_computer" });
 });
 
 test("its prompt says what the person may do, and shows only the agents they may see", async () => {

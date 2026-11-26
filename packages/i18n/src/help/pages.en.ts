@@ -887,4 +887,54 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "Integration apps",
+    summary: "Connect a support bot, a form or a monitor that posts in your channels as itself, never as a person.",
+    sections: [
+      {
+        id: "what",
+        heading: "How it works",
+        blocks: [
+          "An integration app has its own token. It posts in the channels you give it, under its own name with an **App** tag, and can pass the outside person's name along. Agents answer it as they answer a person: when it mentions them, or when the router picks them.",
+          "Bring outside conversations in this way, never with a person's personal token: those messages would show as that person's.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "Connect a support bot",
+        blocks: [
+          {
+            list: [
+              "In **Settings › Connectors › Integrations**, click **Connect an app**, name it and pick its channels.",
+              "Optionally add a webhook address: each agent reply in its channels is sent there, signed with [Standard Webhooks](https://www.standardwebhooks.com).",
+              "Copy the token and the webhook secret. They're shown once.",
+              "Post an outside conversation's first message without `thread_id`, and the rest with its `id` as `thread_id`. Send the replies in that thread back to the person.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "The API",
+        blocks: [
+          "Send the token as `Authorization: Bearer agi_…`.",
+          {
+            list: [
+              "`GET /api/v1/channels`: the app's channels.",
+              "`POST /api/v1/messages`: `channel_id`, `text`, and optionally `thread_id`, `sender` and `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: what was written since, with `in_reply_to` on each agent reply.",
+            ],
+          },
+          "The same calls are MCP tools at `/mcp`. The full reference is `/api/openapi.json`.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "What an app can't do",
+        blocks: [
+          "An app is never a member or a person. Agents answer what it posts, but take no rule, memory, instruction change, routine, approval or permission from it. Revoking its token stops it at once. While it answers an app, an agent reads only that conversation and the web on its own: anything else of your workspace waits for a person's approval.",
+        ],
+      },
+    ],
+  },
 };

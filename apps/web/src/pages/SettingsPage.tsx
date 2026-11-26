@@ -92,6 +92,7 @@ import type { ConnectStart } from "@/components/devices/ConnectDialog";
 import { DevicePage } from "@/components/devices/DevicePage";
 import { DevicesSection } from "@/components/devices/DevicesSection";
 import { ImportExportSection } from "@/components/ImportFlow";
+import { IntegrationAppsSection } from "@/components/IntegrationApps";
 import { BillingMeters } from "@/components/Limits";
 import { ErrorState, LoadingLine, LoadingList } from "@/components/Loading";
 import { MediaSettingsSection } from "@/components/MediaSettings";
@@ -274,6 +275,7 @@ function Settings({
       {current === "media" && <MediaSettingsSection />}
       {current === "voice" && <VoiceSettingsSection />}
       {current === "access" && <AccessMatrixSection />}
+      {current === "integrations" && <IntegrationAppsSection />}
       {current === "connectors" && (
         <ConnectorsSection
           connected={connected}

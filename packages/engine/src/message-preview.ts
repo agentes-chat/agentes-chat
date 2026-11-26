@@ -1,5 +1,6 @@
 import { plainLine } from "@agenteschat/ui/markdown";
 import { cutText } from "./format";
+import { appAuthorOf } from "./integrations/author";
 import { type MessageMedia, mediaOf } from "./media";
 
 /** Length of a channel's last-message preview (plain text). */
@@ -91,6 +92,8 @@ export interface PreviewMeta {
   media?: MessageMedia;
   /** A voice message with nothing typed beside it (ADR 0100): its length, never its words. */
   voice?: { durationMs: number };
+  /** An integration app's message (ADR 0251): the line names the app, which no directory lists. */
+  app?: { name: string };
 }
 
 /**
@@ -115,6 +118,8 @@ export function previewMeta(meta: Record<string, unknown> | null | undefined): P
   // With typed text the list shows that text, in apps that predate it too.
   const voice = voiceOf(meta);
   if (voice && !voice.text) out.voice = { durationMs: voice.durationMs };
+  const app = appAuthorOf(meta);
+  if (app) out.app = { name: app.name };
   if (meta.bodyParams && typeof meta.bodyParams === "object") {
     out.bodyParams = meta.bodyParams as Record<string, unknown>;
   }

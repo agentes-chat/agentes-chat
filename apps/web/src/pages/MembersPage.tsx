@@ -55,6 +55,7 @@ import { MenuEntries } from "@/components/DesktopMenus";
 import { usePersonMenu } from "@/components/entity-menus";
 import { useFilterCopy } from "@/components/filters";
 import { useCopied } from "@/components/invite/copied";
+import { LocalOnlyInvites } from "@/components/invite/InviteLinkPanel";
 import { State, Who, whenWords } from "@/components/invite/InviteRows";
 import { LoadingList } from "@/components/Loading";
 import { CreateAgentLink } from "@/components/new-agent/new-agent-context";
@@ -157,6 +158,7 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
         })}
         actions={invites && <InviteActions />}
       />
+      {invites && <LocalOnlyInvites />}
 
       <div className="ac-groups">
         {!invites && <Suggestions />}

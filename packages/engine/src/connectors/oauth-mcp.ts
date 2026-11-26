@@ -22,8 +22,11 @@ export interface McpOAuthDeps extends ConnectorDeps {
 export type ServerProbe =
   /** Answered without credentials: no auth needed. */
   | { kind: "open" }
-  /** Needs OAuth, and we know where. */
-  | { kind: "oauth"; resource: string; issuer: string; scopes: string[] }
+  /**
+   * Needs OAuth, and we know where. `optional`: it also answered without credentials, and its metadata says where it
+   * signs in: such servers let some tools in anonymously and refuse the rest in the tool's answer.
+   */
+  | { kind: "oauth"; resource: string; issuer: string; scopes: string[]; optional?: true }
   /** Needs credentials we can't get by OAuth (or doesn't say): ask for an API key. */
   | { kind: "needs_key" };
 
@@ -110,19 +113,49 @@ export async function probeMcpServer(
   } catch {
     throw new ValidationError("Couldn't connect to the MCP server", "connector.mcp_unreachable");
   }
+  const base = new URL(serverUrl);
+  const path = base.pathname.replace(/\/$/, "");
+  const root = `${base.origin}/.well-known/oauth-protected-resource`;
   if (res.status !== 401 && res.status !== 403) {
-    if (res.ok) return { kind: "open" };
-    throw new ValidationError(`The MCP server answered ${res.status}`, "connector.mcp_status", { status: res.status });
+    if (!res.ok) {
+      throw new ValidationError(`The MCP server answered ${res.status}`, "connector.mcp_status", {
+        status: res.status,
+      });
+    }
+    // Headers a person typed are how it signs in: they got in.
+    if (Object.keys(headers).length > 0) return { kind: "open" };
+    const signIn = await protectedResource(deps, serverUrl, [`${root}${path}`, root], root, []);
+    return signIn ? { ...signIn, optional: true } : { kind: "open" };
   }
   const header = res.headers.get("www-authenticate") ?? "";
   const fromHeader = /resource_metadata="([^"]+)"/.exec(header)?.[1];
   // The scopes this request needs (MCP authorization spec): asked for ahead of the metadata's `scopes_supported`.
   const hinted = (/\bscope="([^"]*)"/.exec(header)?.[1] ?? "").split(/\s+/).filter(Boolean);
-  const base = new URL(serverUrl);
-  const path = base.pathname.replace(/\/$/, "");
-  const root = `${base.origin}/.well-known/oauth-protected-resource`;
   const candidates = [...(fromHeader ? [fromHeader] : []), `${root}${path}`, root];
-  for (const url of candidates) {
+  const signIn = await protectedResource(deps, serverUrl, candidates, root, hinted);
+  if (signIn) return signIn;
+  // No protected-resource metadata (older servers, e.g. Atlassian or Zapier): the MCP spec's fallback
+  // is an authorization server at the server's own origin.
+  if (/^bearer\b/i.test(header)) {
+    const meta = await authServerMetadata(deps, base.origin).catch(() => null);
+    if (meta?.registration_endpoint) {
+      return { kind: "oauth", resource: canonicalResource(serverUrl), issuer: base.origin, scopes: hinted };
+    }
+  }
+  // It named where its OAuth is described, and none of it could be read: discovery failed, not "no OAuth".
+  if (fromHeader) throw discoveryFailed(fromHeader);
+  return { kind: "needs_key" };
+}
+
+/** The first protected-resource metadata (RFC 9728) at `candidates` that names an authorization server. */
+async function protectedResource(
+  deps: McpOAuthDeps,
+  serverUrl: string,
+  candidates: string[],
+  root: string,
+  hinted: string[],
+): Promise<Extract<ServerProbe, { kind: "oauth" }> | null> {
+  for (const url of new Set(candidates)) {
     const meta = await getJson(deps, url).catch(() => null);
     const servers = meta?.authorization_servers;
     if (Array.isArray(servers) && typeof servers[0] === "string") {
@@ -138,17 +171,7 @@ export async function probeMcpServer(
       return { kind: "oauth", resource, issuer: servers[0], scopes };
     }
   }
-  // No protected-resource metadata (older servers, e.g. Atlassian or Zapier): the MCP spec's fallback
-  // is an authorization server at the server's own origin.
-  if (/^bearer\b/i.test(header)) {
-    const meta = await authServerMetadata(deps, base.origin).catch(() => null);
-    if (meta?.registration_endpoint) {
-      return { kind: "oauth", resource: canonicalResource(serverUrl), issuer: base.origin, scopes: hinted };
-    }
-  }
-  // It named where its OAuth is described, and none of it could be read: discovery failed, not "no OAuth".
-  if (fromHeader) throw discoveryFailed(fromHeader);
-  return { kind: "needs_key" };
+  return null;
 }
 
 /** The server signs in with OAuth, but where that sign-in is described couldn't be read (`url`: the first such place). */

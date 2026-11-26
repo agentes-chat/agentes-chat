@@ -1,25 +1,21 @@
-import { and, count, type Database, eq, gte, inArray, schema, sql } from "@agenteschat/db";
-import { emailLocale, modeStamp, queueEmail } from "./email";
+import { and, count, type Database, eq, gte, schema, sql } from "@agenteschat/db";
 import { getMachineById, type MachineRow, shownMoving, shownOnline } from "./machines";
-import { noticeOn, noticePrefsOf } from "./notice-prefs";
 import { adminsOf } from "./notification-producers";
 import { type NotificationDeps, notify, resolveNotifications } from "./notifications";
 import { enqueue } from "./outbox";
 import { orgStanding, workRefusal } from "./standing";
 
-const { agentRuns, agents, notifications, organizationMembers, organizations, routineHookCalls, routines, users } =
-  schema;
+const { agentRuns, agents, notifications, routineHookCalls, routines } = schema;
 
 /*
  * "Computer down" and "back" (ADR 0241): who configures the workspace hears that a computer its agents work on has
  * been away for a while, and again when it is back, with how long and what waited for it. Never for a computer asleep
- * by design (standby, ADR 0161) or one the operator is moving to another host: those are away by plan.
+ * by design (standby, ADR 0161) or one the operator is moving to another host: those are away by plan. Inbox only:
+ * never an email or a push, since nobody has to act on it and it must not read as the computer sleeping.
  */
 
-/** Away this long: the inbox and a push. */
+/** Away this long: the inbox. */
 export const DOWN_NOTICE_MS = 10 * 60_000;
-/** Away this long: an email too. */
-export const DOWN_EMAIL_MS = 30 * 60_000;
 /** Back for less than this before it went again: the same outage, told once. */
 export const DOWN_JOIN_MS = 30 * 60_000;
 
@@ -100,37 +96,23 @@ async function awayByPlan(db: Database, m: MachineRow, now: Date) {
   return workRefusal(await orgStanding(db, m.orgId)) !== null;
 }
 
-/** Schedules the checks of the outage a close may start: the notice's, then the email's. */
+/** Schedules the check of the outage a close may start. */
 export async function queueDownChecks(db: Database, orgId: string, machineId: string, closedAt: Date) {
-  for (const [stage, after] of [
-    ["down", DOWN_NOTICE_MS],
-    ["email", DOWN_EMAIL_MS],
-  ] as const) {
-    await enqueue(db, {
-      orgId,
-      kind: COMPUTER_DOWN_JOB,
-      payload: { machineId, stage },
-      dedupeKey: `${COMPUTER_DOWN_JOB}:${machineId}:${closedAt.getTime()}:${stage}`,
-      runAt: new Date(closedAt.getTime() + after),
-    });
-  }
-}
-
-interface EmailDeps {
-  /** This server's address: the email's button. Absent: the server sends no email. */
-  home?: string | null;
+  await enqueue(db, {
+    orgId,
+    kind: COMPUTER_DOWN_JOB,
+    payload: { machineId, stage: "down" },
+    dedupeKey: `${COMPUTER_DOWN_JOB}:${machineId}:${closedAt.getTime()}:down`,
+    runAt: new Date(closedAt.getTime() + DOWN_NOTICE_MS),
+  });
 }
 
 /**
  * `machine.down_notice`: the computer is still away and its outage began `DOWN_NOTICE_MS` ago: who configures the
- * workspace hears it (`computer_down`, once per outage), and from `DOWN_EMAIL_MS` by email too (`stage` `email`). A
- * computer someone brought counts only while work waits for it: one put away for the night is no outage.
+ * workspace hears it (`computer_down`, once per outage). A computer someone brought counts only while work waits for
+ * it: one put away for the night is no outage.
  */
-export async function noticeComputerDown(
-  deps: NotificationDeps & EmailDeps,
-  machineId: string,
-  stage: "down" | "email",
-) {
+export async function noticeComputerDown(deps: NotificationDeps, machineId: string) {
   const { db } = deps;
   const now = deps.now?.() ?? new Date();
   const m = await getMachineById(db, machineId);
@@ -148,27 +130,14 @@ export async function noticeComputerDown(
     source: { machineId: m.id, label: m.name },
     latest: { title: m.name, since: start.toISOString(), runs: waiting.runs, calls: waiting.calls },
   });
-  if (stage !== "email" || now.getTime() - start.getTime() < DOWN_EMAIL_MS || !deps.home) return;
-  const sent = await emailPeople(deps, m, userIds, "computer_down", {
-    key: downGroup(m.id, start),
-    since: start,
-    now,
-    ...waiting,
-  });
-  // The "back" emails only whoever heard it was down.
-  if (sent)
-    await db
-      .update(notifications)
-      .set({ latest: sql`${notifications.latest} || '{"emailed":true}'::jsonb` })
-      .where(and(eq(notifications.orgId, m.orgId), eq(notifications.groupKey, downGroup(m.id, start))));
 }
 
 /**
  * A computer said hello (`machine-hub`, before its row says it is online): when its outage was told (`computer_down`),
- * the same people hear it is back (`computer_back`), with how long it was away and what waited for it, by email too
- * when the "down" went by email. The "down" row is done.
+ * the same people hear it is back (`computer_back`), with how long it was away and what waited for it. The "down" row
+ * is done.
  */
-export async function noticeComputerBack(deps: NotificationDeps & EmailDeps, m: MachineRow) {
+export async function noticeComputerBack(deps: NotificationDeps, m: MachineRow) {
   const { db } = deps;
   const now = deps.now?.() ?? new Date();
   // Most hellos follow a blip: nothing to read for one away under the notice's wait.
@@ -177,10 +146,7 @@ export async function noticeComputerBack(deps: NotificationDeps & EmailDeps, m: 
   const start = await currentOutage(db, m);
   if (!start) return;
   const down = await db
-    .select({
-      userId: notifications.userId,
-      emailed: sql<boolean>`coalesce((${notifications.latest}->>'emailed')::boolean, false)`,
-    })
+    .select({ userId: notifications.userId })
     .from(notifications)
     .where(and(eq(notifications.orgId, m.orgId), eq(notifications.groupKey, downGroup(m.id, start))));
   if (down.length === 0) return;
@@ -195,54 +161,4 @@ export async function noticeComputerBack(deps: NotificationDeps & EmailDeps, m: 
     latest: { title: m.name, since: start.toISOString(), runs: waiting.runs, calls: waiting.calls },
   });
   await resolveNotifications(deps, m.orgId, { groupKey: downGroup(m.id, start) });
-  const emailed = down.filter((d) => d.emailed).map((d) => d.userId);
-  if (emailed.length > 0 && deps.home)
-    await emailPeople(deps, m, emailed, "computer_back", {
-      key: backGroup(m.id, start),
-      since: start,
-      now,
-      ...waiting,
-    });
-}
-
-/** One email each, in their language, to those of `userIds` whose computer notices are on. Whether any was queued. */
-async function emailPeople(
-  deps: NotificationDeps & EmailDeps,
-  m: MachineRow,
-  userIds: string[],
-  kind: "computer_down" | "computer_back",
-  at: { key: string; since: Date; now: Date; runs: number; calls: number },
-) {
-  const { db } = deps;
-  if (userIds.length === 0) return false;
-  const people = await db
-    .select({ id: users.id, email: users.email, locale: users.locale, prefs: organizationMembers.noticePrefs })
-    .from(organizationMembers)
-    .innerJoin(users, eq(users.id, organizationMembers.userId))
-    .where(and(eq(organizationMembers.orgId, m.orgId), inArray(organizationMembers.userId, userIds)));
-  const to = people.filter((p) => noticeOn(noticePrefsOf(p.prefs), kind, false));
-  if (to.length === 0) return false;
-  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, m.orgId));
-  const mode = await modeStamp(db, m.orgId);
-  const home = (deps.home ?? "").replace(/\/$/, "");
-  for (const p of to) {
-    await queueEmail(db, {
-      orgId: m.orgId,
-      key: `${at.key}:${p.id}`,
-      to: [p.email],
-      template: {
-        kind: "computer_down",
-        locale: emailLocale(p.locale),
-        back: kind === "computer_back",
-        orgName: org?.name ?? "",
-        name: m.name,
-        awayMinutes: Math.max(1, Math.round((at.now.getTime() - at.since.getTime()) / 60_000)),
-        runs: at.runs,
-        calls: at.calls,
-        url: `${home}/org/${m.orgId}/settings/computers/${m.id}`,
-        ...mode,
-      },
-    });
-  }
-  return true;
 }

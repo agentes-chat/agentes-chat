@@ -124,6 +124,8 @@ test("text from a linked sender is the person's DM message to the right hand, an
   expect(m.body).toBe("What's on today?");
   expect(m.meta.via).toMatchObject({ kind: "surface", surface: "example chat" });
   expect(m.meta.readOutside).toBeUndefined();
+  // Bridged in, never typed in our apps (ADR 0250): the agents answer it, and take no standing rule from it.
+  expect(m.origin).toBe("surface");
   const [channel] = await f.db.select().from(schema.channels).where(eq(schema.channels.id, m.channelId));
   expect(channel?.kind).toBe("dm");
   const runs = await f.db.select().from(agentRuns).where(eq(agentRuns.triggerMessageId, m.id));
@@ -205,6 +207,7 @@ test("a voice note within the rules is queued, then posted by its job with the s
   expect(m.body).toBe("Ada, puxa as vendas");
   expect(m.meta.voice).toBeDefined();
   expect(m.meta.via).toMatchObject({ kind: "surface" });
+  expect(m.origin).toBe("surface");
   const [read] = await f.db
     .select()
     .from(channelReads)

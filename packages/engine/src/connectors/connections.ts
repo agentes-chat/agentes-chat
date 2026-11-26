@@ -1389,8 +1389,12 @@ async function nativeAuthorizeUrl(
     scopes: probe.scopes,
     returnTo,
     personal,
+  }).catch((error) => {
+    // A server that also lets in without a sign-in: one it can't start is no OAuth, as before it was read.
+    if (probe.optional && error instanceof ValidationError) return null;
+    throw error;
   });
-  return started.status === "oauth" ? started.authorizeUrl : null;
+  return started?.status === "oauth" ? started.authorizeUrl : null;
 }
 
 /** Callback of an MCP-native authorization: token with PKCE and `resource`, then the connection. */
