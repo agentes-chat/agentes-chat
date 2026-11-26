@@ -46,7 +46,11 @@ const asciiName = (name: string) => name.replace(/[^\x20-\x7e]|["\\;]/g, "_");
 
 /** `Content-Disposition: attachment` with the name as is (RFC 6266 `filename*`) and an ASCII fallback. */
 export function attachmentDisposition(filename: string) {
-  return `attachment; filename="${asciiName(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+  const encoded = encodeURIComponent(filename).replace(
+    /['()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+  return `attachment; filename="${asciiName(filename)}"; filename*=UTF-8''${encoded}`;
 }
 
 /**
