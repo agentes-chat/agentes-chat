@@ -78,6 +78,15 @@ place that took authority from a message's author asks it:
   private DM is read from elsewhere only for typed words; a work's follow-up carries `refs.relayed` when what was
   passed on to it wasn't typed.
 
+**A linked outside chat (amended).** A person's own message from their linked outside chat counts as their own words
+too. The bridge acts only for an active, confirmed link and only in that person's DM with the right hand (ADR 0187 §2,
+§3 and §7): the sender is the linked person, never someone else in a group, and a forwarded message is someone else's.
+So `postFromSurface` and the voice job (`surfaceWordsMeta` in `message-origin.ts`) store the linked sender's
+non-forwarded text and voice notes with `meta.ownWords: true`, and a forwarded one with `meta.readOutside` as before.
+`ownTyped` accepts `surface` only with that mark: rows bridged before it was recorded stay relayed, and the mark means
+nothing on any other origin. A token's (`mcp`) and an integration app's messages are never the person's own words. A
+surface turn keeps ADR 0187 §6's refusals; only what the person's words may teach changes.
+
 The person stays behind the run (`personBehindCall`): it works for them, with their permissions, and their approvals
 and pauses go to them. Only what their words may teach or grant changes.
 
@@ -94,8 +103,9 @@ it.)"; a bridged one the same after its surface's name.
   rule, memory in the person's name, instruction change, routine or approval. Asked through one of those, the agent says
   to ask in agentes.chat.
 - Behavior change for a person writing to the right hand from an outside chat: "remember…", a rule, a routine or
-  another agent's settings asked there are now refused or kept as the agent's own note; they ask in the app.
-  Allowing a surface again is one entry in `ownTyped`.
+  another agent's settings asked there were refused or kept as the agent's own note. Since the linked-chat amendment
+  (§2) the person's own non-forwarded messages there count again; forwarded ones and those bridged before the mark
+  still don't.
 - Conversations from before the migration teach nothing until new typed messages arrive.
 - An unattended run a person wrote into mid-run (`steeredBy`) is theirs from then on, `relayed` when what they wrote
   wasn't typed (`Transcript.steeredRelayed`, from `ownTyped` in `lastPersonAmong`): the same bounds as a run rooted in

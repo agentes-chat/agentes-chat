@@ -85,10 +85,10 @@ const Post = z
       description: "The surface's own message id (for grouped media, the first one's): a resend posts nothing new.",
     }),
     text: z.string().max(MAX_MESSAGE_LENGTH).optional(),
-    forwarded: z
-      .literal("true")
-      .optional()
-      .openapi({ description: "Forwarded from another chat: the agent reads it as quoted text, not a request." }),
+    forwarded: z.literal("true").optional().openapi({
+      description:
+        "Forwarded from another chat: the agent reads it as quoted text, not a request. Set it when any part of the post (a grouped file's caption too) wasn't written by the sender: anything unmarked counts as the sender's own words, which may keep a rule or a memory in their name.",
+    }),
     replyTo: z
       .uuid()
       .optional()
