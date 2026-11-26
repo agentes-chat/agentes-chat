@@ -19929,7 +19929,7 @@
       "brain_unavailable_commands_off": "{{brain}} è disattivato sul mio computer. Risponderò quando chi se ne occupa lo attiverà.",
       "brain_unavailable_outdated": "Il programma sul mio computer va aggiornato perché {{brain}} possa rispondere. Risponderò appena sarà aggiornato.",
       "brain_unavailable_plan_owner": "{{brain}} penserebbe con un piano che non è del mio proprietario, quindi non lo uso. Collega l'account del mio proprietario nella mia pagina.",
-      "brain_unavailable_shared_login": "Il mio computer non riesce a usare l'accesso di Claude per tutti gli agenti in questo momento. Risponderò appena possibile; se continua a non funzionare, ricollega Claude in Account IA.",
+      "brain_unavailable_shared_login": "Il mio computer non riesce a usare l'accesso di Claude per tutti gli agenti in questo momento. Risponderò appena possibile. Se continua a non funzionare, ricollega Claude in Account IA.",
       "provider_unavailable": "Il mio provider di IA non risponde in questo momento. Risponderò appena tornerà disponibile.",
       "provider_wait_rate_limit": "{{provider}} sta limitando le richieste di questa chiave. Risponderò appena lo consentirà.",
       "provider_wait_down": "{{provider}} è fuori servizio o sovraccarico in questo momento. Risponderò appena tornerà disponibile.",

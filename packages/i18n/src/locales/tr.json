@@ -19226,7 +19226,7 @@
       "brain_unavailable_commands_off": "{{brain}} bilgisayarımda kapalı. Bilgisayarla ilgilenen kişi açınca yanıtlayacağım.",
       "brain_unavailable_outdated": "{{brain}}'ın yanıt verebilmesi için bilgisayarımdaki programın güncellenmesi gerekiyor. Güncellenir güncellenmez yanıt vereceğim.",
       "brain_unavailable_plan_owner": "{{brain}}, sahibime ait olmayan bir planla düşünecekti, bu yüzden kullanmıyorum. Sayfamda sahibimin hesabını bağlayın.",
-      "brain_unavailable_shared_login": "Bilgisayarım tüm ajanlar için Claude oturumunu şu anda kullanamıyor. Kullanabildiğimde yanıtlayacağım; başarısız olmaya devam ederse Yapay zekâ hesapları bölümünde Claude'u yeniden bağlayın.",
+      "brain_unavailable_shared_login": "Bilgisayarım tüm ajanlar için Claude oturumunu şu anda kullanamıyor. Kullanabildiğimde yanıtlayacağım. Başarısız olmaya devam ederse Yapay zekâ hesapları bölümünde Claude'u yeniden bağlayın.",
       "provider_unavailable": "Yapay zeka sağlayıcım şu anda yanıt vermiyor. Geri gelir gelmez yanıt vereceğim.",
       "provider_wait_rate_limit": "{{provider}} şu anda bu anahtarın isteklerini sınırlıyor. İzin verir vermez yanıt vereceğim.",
       "provider_wait_down": "{{provider}} şu anda çalışmıyor veya aşırı yüklü. Geri gelir gelmez yanıt vereceğim.",

@@ -5504,7 +5504,7 @@ test("its online computer refusing its shared Claude login: the AI isn't answeri
   const notes = (await timeline(f)).filter((m) => m.author.type === "agent");
   expect(notes.map((m) => [m.body, m.meta.bodyCode, m.meta.bodyParams, m.meta.brainUnavailable])).toEqual([
     [
-      "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can; if it keeps failing, connect Claude again in AI accounts.",
+      "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.",
       "brain_unavailable",
       { brain: "Claude Code" },
       { brain: "claude_code", code: "shared_login_off" },

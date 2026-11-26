@@ -19302,7 +19302,7 @@
       "brain_unavailable_commands_off": "{{brain}} ist auf meinem Computer ausgeschaltet. Ich antworte, sobald die Person, die ihn betreut, es einschaltet.",
       "brain_unavailable_outdated": "Das Programm auf meinem Computer braucht ein Update, bevor {{brain}} antworten kann. Ich antworte, sobald es aktualisiert ist.",
       "brain_unavailable_plan_owner": "{{brain}} würde mit einem Abo denken, das nicht meinem Besitzer gehört, deshalb nutze ich es nicht. Verbinde das Konto meines Besitzers auf meiner Seite.",
-      "brain_unavailable_shared_login": "Mein Computer kann Claudes Anmeldung für alle Agenten gerade nicht nutzen. Ich antworte, sobald es geht; wenn es weiter fehlschlägt, verbinde Claude in KI-Konten neu.",
+      "brain_unavailable_shared_login": "Mein Computer kann Claudes Anmeldung für alle Agenten gerade nicht nutzen. Ich antworte, sobald es geht. Wenn es weiter fehlschlägt, verbinde Claude in KI-Konten neu.",
       "provider_unavailable": "Mein KI-Anbieter antwortet gerade nicht. Ich antworte, sobald er wieder da ist.",
       "provider_wait_rate_limit": "{{provider}} begrenzt gerade die Anfragen dieses Schlüssels. Ich antworte, sobald es wieder geht.",
       "provider_wait_down": "{{provider}} ist gerade ausgefallen oder überlastet. Ich antworte, sobald es wieder da ist.",

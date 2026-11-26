@@ -19375,7 +19375,7 @@
       "brain_unavailable_commands_off": "{{brain}} staat uit op mijn computer. Ik antwoord zodra wie die beheert het aanzet.",
       "brain_unavailable_outdated": "Het programma op mijn computer heeft een update nodig voordat {{brain}} kan antwoorden. Ik antwoord zodra het bijgewerkt is.",
       "brain_unavailable_plan_owner": "{{brain}} zou denken met een abonnement dat niet van mijn eigenaar is, dus ik gebruik het niet. Koppel het account van mijn eigenaar op mijn pagina.",
-      "brain_unavailable_shared_login": "Mijn computer kan Claudes login voor alle agents nu niet gebruiken. Ik antwoord zodra het lukt; blijft het mislukken, verbind Claude dan opnieuw in AI-accounts.",
+      "brain_unavailable_shared_login": "Mijn computer kan Claudes login voor alle agents nu niet gebruiken. Ik antwoord zodra het lukt. Blijft het mislukken, verbind Claude dan opnieuw in AI-accounts.",
       "provider_unavailable": "Mijn AI-aanbieder reageert nu niet. Ik antwoord zodra die terug is.",
       "provider_wait_rate_limit": "{{provider}} beperkt nu de verzoeken van deze sleutel. Ik antwoord zodra dat weer kan.",
       "provider_wait_down": "{{provider}} is nu uitgevallen of overbelast. Ik antwoord zodra die terug is.",

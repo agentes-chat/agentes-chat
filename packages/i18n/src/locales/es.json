@@ -19826,7 +19826,7 @@
       "brain_unavailable_commands_off": "{{brain}} está apagado en mi computadora. Responderé cuando quien la cuida lo encienda.",
       "brain_unavailable_outdated": "El programa de mi computadora necesita una actualización para que {{brain}} pueda responder. Responderé en cuanto se actualice.",
       "brain_unavailable_plan_owner": "{{brain}} pensaría con un plan que no es de mi dueño, así que no lo uso. Conecta la cuenta de mi dueño en mi página.",
-      "brain_unavailable_shared_login": "Mi computadora no puede usar el inicio de sesión de Claude para todos los agentes ahora. Responderé en cuanto pueda; si sigue fallando, vuelve a conectar Claude en Cuentas de IA.",
+      "brain_unavailable_shared_login": "Mi computadora no puede usar el inicio de sesión de Claude para todos los agentes ahora. Responderé en cuanto pueda. Si sigue fallando, vuelve a conectar Claude en Cuentas de IA.",
       "provider_unavailable": "Mi proveedor de IA no responde ahora. Responderé en cuanto vuelva.",
       "provider_wait_rate_limit": "{{provider}} está limitando las solicitudes de esta clave ahora. Responderé en cuanto lo permita.",
       "provider_wait_down": "{{provider}} está caído o sobrecargado ahora. Responderé en cuanto vuelva.",

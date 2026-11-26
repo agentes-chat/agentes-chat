@@ -1164,7 +1164,7 @@ const PERSON_LIMIT_TEXT = "The person who asked reached their usage limit for th
 const PROVIDER_UNAVAILABLE_TEXT = "My AI provider isn't answering right now. I'll answer as soon as it's back.";
 /** The note of a run its computer's shared Claude login refused (`brainUnavailable.code` `shared_login_off`). */
 const SHARED_LOGIN_WAIT_TEXT =
-  "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can; if it keeps failing, connect Claude again in AI accounts.";
+  "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.";
 /** That note once the provider answers again (`bodyCode` `provider_back`): it no longer says a wait is on. */
 const PROVIDER_BACK_TEXT = "My AI is back.";
 

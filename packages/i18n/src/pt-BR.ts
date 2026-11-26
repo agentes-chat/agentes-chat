@@ -19869,7 +19869,7 @@ export const ptBR = {
       brain_unavailable_plan_owner:
         "O {{brain}} pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
       brain_unavailable_shared_login:
-        "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir; se continuar falhando, conecte o Claude de novo em Contas de IA.",
+        "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
       provider_unavailable: "Meu provedor de IA não está respondendo agora. Respondo assim que ele voltar.",
       provider_wait_rate_limit: "{{provider}} está limitando os pedidos desta chave agora. Respondo assim que liberar.",
       provider_wait_down: "{{provider}} está fora do ar ou sobrecarregado agora. Respondo assim que voltar.",

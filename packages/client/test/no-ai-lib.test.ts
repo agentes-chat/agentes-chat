@@ -1067,7 +1067,7 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     );
     // Its computer online, its shared Claude login refused there: what can't run, and the way out.
     expect(serverBody(pt, "…", wait("shared_login_off"))).toBe(
-      "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir; se continuar falhando, conecte o Claude de novo em Contas de IA.",
+      "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
     );
     // Its computer gone still waits for it to come back.
     expect(serverBody(pt, "…", wait("machine_offline"))).toBe(

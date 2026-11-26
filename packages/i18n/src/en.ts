@@ -20037,7 +20037,7 @@ export const en = {
         "{{brain}} would think with a plan that isn't my owner's, so I won't use it. Connect my owner's account on my page.",
       /** The computer is online, but Claude's sign-in for all agents can't run there (its switch off, its self-check failing). */
       brain_unavailable_shared_login:
-        "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can; if it keeps failing, connect Claude again in AI accounts.",
+        "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.",
       provider_unavailable: "My AI provider isn't answering right now. I'll answer as soon as it's back.",
       provider_wait_rate_limit:
         "{{provider}} is limiting requests on this key right now. I'll answer as soon as it lets me.",

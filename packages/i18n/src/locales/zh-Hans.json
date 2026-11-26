@@ -18732,7 +18732,7 @@
       "brain_unavailable_commands_off": "我的电脑上 {{brain}} 已关闭。负责这台电脑的人打开后我会回复。",
       "brain_unavailable_outdated": "我电脑上的程序需要更新，{{brain}} 才能回答。更新后我会立即回复。",
       "brain_unavailable_plan_owner": "{{brain}} 会使用不属于我主人的套餐来思考，所以我不使用它。请在我的页面上连接我主人的账号。",
-      "brain_unavailable_shared_login": "我的电脑现在无法使用面向所有智能体的 Claude 登录。能用时我会回复；如果一直失败，请在 AI 账号中重新连接 Claude。",
+      "brain_unavailable_shared_login": "我的电脑现在无法使用面向所有智能体的 Claude 登录。能用时我会回复。如果一直失败，请在 AI 账号中重新连接 Claude。",
       "provider_unavailable": "我的 AI 服务商暂时没有响应。恢复后我会尽快回复。",
       "provider_wait_rate_limit": "{{provider}} 正在限制这个密钥的请求。一旦放开我会尽快回复。",
       "provider_wait_down": "{{provider}} 目前已中断或过载。恢复后我会尽快回复。",

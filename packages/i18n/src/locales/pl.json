@@ -20522,7 +20522,7 @@
       "brain_unavailable_commands_off": "{{brain}} jest wyłączony na moim komputerze. Odpowiem, gdy osoba, która się nim opiekuje, go włączy.",
       "brain_unavailable_outdated": "Program na moim komputerze wymaga aktualizacji, zanim {{brain}} będzie mógł odpowiedzieć. Odpowiem, gdy tylko zostanie zaktualizowany.",
       "brain_unavailable_plan_owner": "{{brain}} myślałby z planem, który nie należy do mojego właściciela, więc go nie używam. Podłącz konto mojego właściciela na mojej stronie.",
-      "brain_unavailable_shared_login": "Mój komputer nie może teraz użyć logowania Claude dla wszystkich agentów. Odpowiem, gdy tylko się da; jeśli to dalej nie działa, połącz Claude ponownie w Kontach AI.",
+      "brain_unavailable_shared_login": "Mój komputer nie może teraz użyć logowania Claude dla wszystkich agentów. Odpowiem, gdy tylko się da. Jeśli to dalej nie działa, połącz Claude ponownie w Kontach AI.",
       "provider_unavailable": "Mój dostawca AI teraz nie odpowiada. Odpowiem, gdy tylko wróci.",
       "provider_wait_rate_limit": "{{provider}} ogranicza teraz żądania z tego klucza. Odpowiem, gdy tylko będzie to możliwe.",
       "provider_wait_down": "{{provider}} teraz nie działa lub jest przeciążony. Odpowiem, gdy tylko wróci.",
