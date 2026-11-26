@@ -5313,7 +5313,7 @@
     "value": "Computers"
   },
   "noticePrefs.category.computers.help": {
-    "value": "A computer joined, is ready, or stopped answering"
+    "value": "A computer joined or is ready"
   },
   "noticePrefs.category.reactions.title": {
     "value": "Reactions"

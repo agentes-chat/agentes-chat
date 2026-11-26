@@ -2228,7 +2228,7 @@
       },
       "computers": {
         "title": "Ordinateurs",
-        "help": "Un ordinateur a rejoint, est prêt ou ne répond plus"
+        "help": "Un ordinateur a rejoint ou est prêt"
       },
       "reactions": {
         "title": "Réactions",

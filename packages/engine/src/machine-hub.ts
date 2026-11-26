@@ -816,7 +816,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       frame.claudeLoginBlocked ??
       (frame.claudeLoginMethods?.includes("cli_login") ? undefined : machine.executors?.claudeLoginBlocked);
     // Back from an outage its people were told of: they hear it, with what waited, before those runs go on.
-    await noticeComputerBack({ db, pubsub, home: deps.readyEmail?.publicUrl ?? null }, machine).catch((error) =>
+    await noticeComputerBack({ db, pubsub }, machine).catch((error) =>
       deps.log?.warn("computer back notice failed", { machineId: machine.id, error: String(error) }),
     );
     const nextHostName =

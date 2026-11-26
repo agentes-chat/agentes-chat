@@ -2153,7 +2153,7 @@
       },
       "computers": {
         "title": "Computers",
-        "help": "Een computer is bijgekomen, is klaar of reageert niet meer"
+        "help": "Een computer is bijgekomen of is klaar"
       },
       "reactions": {
         "title": "Reacties",

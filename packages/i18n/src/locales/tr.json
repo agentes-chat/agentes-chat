@@ -2153,7 +2153,7 @@
       },
       "computers": {
         "title": "Bilgisayarlar",
-        "help": "Bir bilgisayar katıldı, hazır ya da yanıt vermiyor"
+        "help": "Bir bilgisayar katıldı ya da hazır"
       },
       "reactions": {
         "title": "Tepkiler",

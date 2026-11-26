@@ -2206,7 +2206,7 @@ export const ptBR = {
       threads: { title: "Threads que você segue", help: "Respostas nas threads em que você escreveu ou que segue" },
       tasks: { title: "Tarefas", help: "Tarefa para você, comentários e quando muda de etapa" },
       routines: { title: "Rotinas e missões", help: "Quando param, falham ou esperam o computador" },
-      computers: { title: "Computadores", help: "Um computador entrou, ficou pronto ou parou de responder" },
+      computers: { title: "Computadores", help: "Um computador entrou ou ficou pronto" },
       reactions: { title: "Reações", help: "Quando reagem a uma mensagem sua" },
     },
   },

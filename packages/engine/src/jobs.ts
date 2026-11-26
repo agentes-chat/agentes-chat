@@ -1225,11 +1225,8 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     // A computer still away a while after its socket closed: who configures the workspace hears it (ADR 0241).
     [COMPUTER_DOWN_JOB]: async (job) => {
-      await noticeComputerDown(
-        { db: deps.db, pubsub: deps.pubsub, home: deps.email ? (deps.emailArt?.home ?? null) : null },
-        String(job.payload.machineId),
-        job.payload.stage === "email" ? "email" : "down",
-      );
+      // A job queued with `stage: "email"` before computer notices stopped mailing is one more "down" check.
+      await noticeComputerDown({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.machineId));
     },
     // A computer in standby wanted awake a grace ago: still asleep, people see it down (ADR 0161).
     [WAKE_OVERDUE_JOB]: async (job) => {

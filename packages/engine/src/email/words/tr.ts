@@ -419,46 +419,6 @@ export const words: EmailWords = {
       why: () => "Bu e-postayı, agentes.chat'teki bu çalışma alanında bulunduğunuz için aldınız.",
     },
   },
-  computerDown: {
-    subject: "Bir bilgisayar yanıt vermiyor",
-    preheader: "Ajanlarınızın bu bilgisayardaki işi bekliyor.",
-    headline: "Bir bilgisayar yanıt vermiyor",
-    body: (name, org, away) => [
-      { b: name },
-      " (",
-      { b: org },
-      `) ${away} süredir yanıt vermiyor. Ona ihtiyaç duyan iş bekliyor ve bilgisayar geri gelince devam edecek.`,
-    ],
-    runs: "Bekleyen ajan istekleri",
-    calls: "Bekleyen webhook çağrıları",
-    note: "Şimdi devam etmek için sayfasından ajanlarını başka bir bilgisayara taşıyın.",
-    button: "Bilgisayarı aç",
-    why: (org) => `Bu e-postayı, agentes.chat üzerindeki ${org} bilgisayarlarını yönettiğiniz için aldınız.`,
-    back: {
-      subject: "Bir bilgisayar geri geldi",
-      preheader: "Onu bekleyen iş şimdi devam ediyor.",
-      headline: "Bilgisayar geri geldi",
-      runs: "Bekleyen ajan istekleri",
-      calls: "Bekleyen webhook çağrıları",
-      body: (name, org, away) => [
-        { b: name },
-        " (",
-        { b: org },
-        `) ${away} sonra geri geldi. Onu bekleyen iş şimdi devam ediyor.`,
-      ],
-    },
-    personal: {
-      body: (name, _org, away) => [
-        { b: name },
-        ` ${away} süredir yanıt vermiyor. Ona ihtiyaç duyan iş bekliyor ve bilgisayar geri gelince devam edecek.`,
-      ],
-      why: () =>
-        "Bu e-postayı, agentes.chat üzerindeki kişisel çalışma alanınızın bilgisayarlarını yönettiğiniz için aldınız.",
-      back: {
-        body: (name, _org, away) => [{ b: name }, ` ${away} sonra geri geldi. Onu bekleyen iş şimdi devam ediyor.`],
-      },
-    },
-  },
   appConnected: {
     subject: "agentes.chat hesabınıza bir uygulama bağlandı",
     preheader: "Bir çalışma alanında sizin adınıza okuyabilir ve ajanlara görev gönderebilir.",

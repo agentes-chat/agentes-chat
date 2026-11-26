@@ -122,7 +122,6 @@ describe("every email, in both languages", () => {
   test("every kind has a sample, so the preview and a send to a test inbox show them all", () => {
     const kinds: Record<EmailTemplate["kind"], true> = {
       verify_email: true,
-      computer_down: true,
       password_reset: true,
       invitation: true,
       invite_request: true,

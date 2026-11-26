@@ -2228,7 +2228,7 @@
       },
       "computers": {
         "title": "Computer",
-        "help": "È entrato un computer, è pronto o non risponde più"
+        "help": "È entrato un computer o è pronto"
       },
       "reactions": {
         "title": "Reazioni",

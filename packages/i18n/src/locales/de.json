@@ -2153,7 +2153,7 @@
       },
       "computers": {
         "title": "Computer",
-        "help": "Ein Computer ist dazugekommen, ist bereit oder antwortet nicht mehr"
+        "help": "Ein Computer ist dazugekommen oder ist bereit"
       },
       "reactions": {
         "title": "Reaktionen",

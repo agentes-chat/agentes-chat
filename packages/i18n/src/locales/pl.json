@@ -2302,7 +2302,7 @@
       },
       "computers": {
         "title": "Komputery",
-        "help": "Dołączył komputer, jest gotowy albo przestał odpowiadać"
+        "help": "Dołączył komputer albo jest gotowy"
       },
       "reactions": {
         "title": "Reakcje",

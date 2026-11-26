@@ -2227,7 +2227,7 @@
       },
       "computers": {
         "title": "Computadoras",
-        "help": "Se sumó una computadora, está lista o dejó de responder"
+        "help": "Se sumó una computadora o está lista"
       },
       "reactions": {
         "title": "Reacciones",

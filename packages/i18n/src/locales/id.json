@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "Komputer",
-        "help": "Komputer bergabung, siap, atau berhenti merespons"
+        "help": "Komputer bergabung atau siap"
       },
       "reactions": {
         "title": "Reaksi",

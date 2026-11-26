@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "电脑",
-        "help": "有电脑加入、就绪或无响应时"
+        "help": "有电脑加入或就绪时"
       },
       "reactions": {
         "title": "表情回应",

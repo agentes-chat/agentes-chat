@@ -2306,7 +2306,7 @@ export const en = {
       threads: { title: "Threads you follow", help: "Replies in threads you wrote in or follow" },
       tasks: { title: "Tasks", help: "Tasks for you, comments and when one changes stage" },
       routines: { title: "Routines and missions", help: "When they stop, fail or wait for their computer" },
-      computers: { title: "Computers", help: "A computer joined, is ready, or stopped answering" },
+      computers: { title: "Computers", help: "A computer joined or is ready" },
       reactions: { title: "Reactions", help: "When someone reacts to a message of yours" },
     },
   },

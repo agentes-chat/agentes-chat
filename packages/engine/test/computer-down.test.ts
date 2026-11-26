@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
-import { and, eq, schema } from "@agenteschat/db";
+import { and, eq, inArray, schema } from "@agenteschat/db";
 import {
   COMPUTER_DOWN_JOB,
   createMachineHub,
-  DOWN_EMAIL_MS,
   DOWN_JOIN_MS,
   DOWN_NOTICE_MS,
   downGroup,
@@ -12,6 +11,7 @@ import {
   type MachineHub,
   noticeComputerBack,
   noticeComputerDown,
+  noticeOn,
   outageStart,
   pollDeviceToken,
   setMachineMoving,
@@ -20,7 +20,7 @@ import {
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
-/** "Computer down" and "back" (ADR 0241): who hears it, when, and never for a computer away by plan. */
+/** "Computer down" and "back" (ADR 0241): who hears it, when, only in the inbox, and never for a computer away by plan. */
 
 let f: Fixture;
 let hub: MachineHub | null = null;
@@ -79,12 +79,10 @@ async function wentAway(machineId: string, disconnects = [close(-60 * MIN, 0)]) 
     .where(eq(schema.machines.id, machineId));
 }
 
-const deps = (ms: number, home: string | null = null) => ({
-  db: f.db,
-  pubsub: f.pubsub,
-  now: () => new Date(T0 + ms),
-  home,
-});
+const deps = (ms: number) => ({ db: f.db, pubsub: f.pubsub, now: () => new Date(T0 + ms) });
+
+/** An hour away: past every wait the notices ever had. */
+const HOUR = 60 * MIN;
 
 const notices = (kind: string) =>
   f.db
@@ -92,22 +90,33 @@ const notices = (kind: string) =>
     .from(schema.notifications)
     .where(and(eq(schema.notifications.orgId, f.org.id), eq(schema.notifications.kind, kind)));
 
-const emails = async () =>
-  (await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "email.send"))).map(
-    (j) => (j.payload as { template: { kind: string; back?: boolean } }).template,
-  );
+/** What left for an inbox or a device: emails and pushes. */
+const sent = async () =>
+  (
+    await f.db
+      .select()
+      .from(schema.outbox)
+      .where(inArray(schema.outbox.kind, ["email.send", "push.send"]))
+  ).map((j) => j.kind);
+
+/** The owner has a phone, so a notice that pushes would queue `push.send`. */
+const ownerPhone = () =>
+  f.db
+    .insert(schema.pushDevices)
+    .values({ userId: f.owner.id, token: "ExponentPushToken[fake-owner]", platform: "ios", locale: "en" });
 
 describe("computer down", () => {
-  test("after 10 minutes who configures the workspace hears it once; from 30 by email; members never", async () => {
+  test("after 10 minutes who configures the workspace hears it once, in the inbox only; members never", async () => {
     f = await setup();
     const member = await addMember(f.db, f.org.id, "member", "Bruno");
     const { machineId } = await managedComputer();
+    await ownerPhone();
 
-    await noticeComputerDown(deps(DOWN_NOTICE_MS - MIN), machineId, "down");
+    await noticeComputerDown(deps(DOWN_NOTICE_MS - MIN), machineId);
     expect(await notices("computer_down")).toHaveLength(0);
 
-    await noticeComputerDown(deps(DOWN_NOTICE_MS), machineId, "down");
-    await noticeComputerDown(deps(DOWN_NOTICE_MS + MIN), machineId, "down");
+    await noticeComputerDown(deps(DOWN_NOTICE_MS), machineId);
+    await noticeComputerDown(deps(DOWN_NOTICE_MS + MIN), machineId);
     const down = await notices("computer_down");
     expect(down.map((n) => n.userId)).toEqual([f.owner.id]);
     expect(down.map((n) => n.userId)).not.toContain(member.id);
@@ -116,12 +125,11 @@ describe("computer down", () => {
       source: { machineId },
       latest: { since: at(0), runs: 0, calls: 0 },
     });
-    expect(await emails()).toEqual([]);
-
-    // The email's check: a server that sends email mails it, and the row remembers it did.
-    await noticeComputerDown(deps(DOWN_EMAIL_MS, "https://app.example.com"), machineId, "email");
-    expect(await emails()).toEqual([expect.objectContaining({ kind: "computer_down", back: false })]);
-    expect((await notices("computer_down"))[0]?.latest).toMatchObject({ emailed: true });
+    // Away an hour: still one row, and no email or push ever, nor a desktop banner.
+    await noticeComputerDown(deps(HOUR), machineId);
+    expect(await notices("computer_down")).toHaveLength(1);
+    expect(await sent()).toEqual([]);
+    expect(noticeOn({}, "computer_down", false)).toBe(false);
   });
 
   test("never for a computer in standby, one moving hosts, or a workspace on hold", async () => {
@@ -129,22 +137,22 @@ describe("computer down", () => {
     const { machineId } = await managedComputer();
 
     await setMachineStandby({ db: f.db, pubsub: f.pubsub }, f.org.id, machineId, true);
-    await noticeComputerDown(deps(DOWN_EMAIL_MS, "https://app.example.com"), machineId, "email");
+    await noticeComputerDown(deps(HOUR), machineId);
     await setMachineStandby({ db: f.db, pubsub: f.pubsub }, f.org.id, machineId, false);
     // Taken out of standby it is waking: what this test's clock calls the past, so it is cleared here.
     await f.db.update(schema.machines).set({ wakeWantedAt: null }).where(eq(schema.machines.id, machineId));
 
     expect(await setMachineMoving({ db: f.db, pubsub: f.pubsub }, f.org.id, machineId, true)).toEqual({ moving: true });
-    await noticeComputerDown(deps(DOWN_EMAIL_MS, "https://app.example.com"), machineId, "email");
+    await noticeComputerDown(deps(HOUR), machineId);
     expect(await notices("computer_down")).toHaveLength(0);
-    expect(await emails()).toEqual([]);
+    expect(await sent()).toEqual([]);
 
     // A move nobody ended hours ago no longer covers it.
     await f.db
       .update(schema.machines)
       .set({ movingAt: new Date(T0 - 3 * 3600_000) })
       .where(eq(schema.machines.id, machineId));
-    await noticeComputerDown(deps(DOWN_NOTICE_MS), machineId, "down");
+    await noticeComputerDown(deps(DOWN_NOTICE_MS), machineId);
     expect(await notices("computer_down")).toHaveLength(1);
   });
 
@@ -153,7 +161,7 @@ describe("computer down", () => {
     const paired = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { name: "Laptop" });
     await wentAway(paired.machineId);
 
-    await noticeComputerDown(deps(DOWN_NOTICE_MS), paired.machineId, "down");
+    await noticeComputerDown(deps(DOWN_NOTICE_MS), paired.machineId);
     expect(await notices("computer_down")).toHaveLength(0);
 
     const [run] = await f.db
@@ -171,7 +179,7 @@ describe("computer down", () => {
       })
       .returning();
     expect(run).toBeDefined();
-    await noticeComputerDown(deps(DOWN_NOTICE_MS), paired.machineId, "down");
+    await noticeComputerDown(deps(DOWN_NOTICE_MS), paired.machineId);
     expect((await notices("computer_down")).map((n) => n.latest)).toEqual([expect.objectContaining({ runs: 1 })]);
   });
 });
@@ -190,19 +198,22 @@ describe("computer back", () => {
     await noticeComputerBack(deps(5 * MIN), await row());
     expect(await notices("computer_back")).toHaveLength(0);
 
-    await noticeComputerDown(deps(DOWN_EMAIL_MS, "https://app.example.com"), machineId, "email");
-    await noticeComputerBack(deps(42 * MIN, "https://app.example.com"), await row());
-    await noticeComputerBack(deps(43 * MIN, "https://app.example.com"), await row());
+    await noticeComputerDown(deps(HOUR), machineId);
+    await ownerPhone();
+    await noticeComputerBack(deps(HOUR + 2 * MIN), await row());
+    await noticeComputerBack(deps(HOUR + 3 * MIN), await row());
     const back = await notices("computer_back");
     expect(back.map((n) => [n.userId, n.latest])).toEqual([[f.owner.id, expect.objectContaining({ since: at(0) })]]);
     expect((await notices("computer_down")).every((n) => n.doneAt !== null)).toBe(true);
-    // Mailed it was down: mailed it is back.
-    expect((await emails()).map((e) => e.back)).toEqual([false, true]);
+    // Inbox only: no email or push that it is back either.
+    expect(await sent()).toEqual([]);
+    expect(noticeOn({}, "computer_back", false)).toBe(false);
 
     // It goes again 10 minutes after the back: a new outage, told again after its own 10 minutes.
-    await wentAway(machineId, [close(43 * MIN, 53 * MIN), close(-60 * MIN, 0)]);
-    await noticeComputerDown(deps(53 * MIN + DOWN_NOTICE_MS), machineId, "down");
-    expect((await notices("computer_down")).map((n) => n.latest.since).sort()).toEqual([at(0), at(53 * MIN)]);
+    const back3 = HOUR + 3 * MIN;
+    await wentAway(machineId, [close(back3, back3 + 10 * MIN), close(-60 * MIN, 0)]);
+    await noticeComputerDown(deps(back3 + 10 * MIN + DOWN_NOTICE_MS), machineId);
+    expect((await notices("computer_down")).map((n) => n.latest.since).sort()).toEqual([at(0), at(back3 + 10 * MIN)]);
   });
 
   test("the hub queues the checks when a socket closes, and tells the back at the next hello", async () => {
@@ -231,14 +242,12 @@ describe("computer back", () => {
     const conn = await hello();
     await hub.close(conn);
     const jobs = await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, COMPUTER_DOWN_JOB));
-    expect(jobs.map((j) => j.payload).sort((a, b) => String(a.stage).localeCompare(String(b.stage)))).toEqual([
-      { machineId, stage: "down" },
-      { machineId, stage: "email" },
-    ]);
+    // One check, the notice's: no second one for an email.
+    expect(jobs.map((j) => j.payload)).toEqual([{ machineId, stage: "down" }]);
 
     // Away long enough and told: its next hello says it is back.
     await wentAway(machineId, [close(-60 * MIN, -20 * MIN)]);
-    await noticeComputerDown(deps(0), machineId, "down");
+    await noticeComputerDown(deps(0), machineId);
     expect(await notices("computer_down")).toHaveLength(1);
     await hello();
     expect(await notices("computer_back")).toHaveLength(1);
