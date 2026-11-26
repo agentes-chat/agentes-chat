@@ -115,6 +115,12 @@
   font-size: 13px;
   color: var(--faint);
 }
+/* The zone under the name: flush with the logo's edge, close under the field it belongs to. */
+.onb__help.onb__zone {
+  margin-top: -4px;
+  padding: 0;
+  line-height: 18px;
+}
 /* An `.ac-link` in a line of help ("trocar"): muted until hovered, the kit's faint while it can't be used. */
 .onb__link:where(:not(:disabled)) {
   color: var(--muted);

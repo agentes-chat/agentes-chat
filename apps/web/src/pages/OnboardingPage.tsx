@@ -717,7 +717,7 @@ export function OnboardingPage() {
                     />
                   </Field>
                 ) : (
-                  <p className="onb__help">
+                  <p className="onb__help onb__zone">
                     {t("onboarding.workspace.zone", { zone: timezoneName(zoneNow, i18n.language) })} ·{" "}
                     <button type="button" className="ac-link onb__link" onClick={() => setZoneOpen(true)}>
                       {t("onboarding.workspace.zoneChange")}
