@@ -1,7 +1,19 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWriteStream, existsSync, readFileSync } from "node:fs";
-import { chmod, copyFile, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  copyFile,
+  lchown,
+  lstat,
+  mkdir,
+  readdir,
+  readlink,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import type { CliFetchFailure, CliFetchState, FetchName, RunnerClisInfo } from "@agenteschat/adapters/machine-protocol";
 import {
@@ -29,7 +41,9 @@ import { envValue, isExecutable, ownCommand, setCliPick } from "./executors";
  * fetches the pinned build, checks its hash, unpacks it aside and moves it in place under the runner's home, and has
  * `resolveCommand` run it (`setCliPick`). One fetch per CLI at a time, a failed one waits `RETRY_MS` unless someone
  * asks again, and nothing here throws but `ensure`. Each fetch is told as it goes (`onFetch`, throttled by
- * `progressGate`). Outside system mode only: there the computer's setup installs the CLIs for the agents' users.
+ * `progressGate`). In system mode (`shared`) only where no agent's user reaches a copy of the CLI at all (the
+ * computer's setup installs them, and they update themselves): root's, nobody else may change it, each linked from
+ * `/usr/local/bin`, which is on every agent's PATH.
  */
 
 /**
@@ -133,8 +147,13 @@ export interface CliCopiesOptions {
   pins?: CliPins;
   platform?: PinPlatform | null;
   fetch?: typeof fetch;
-  /** The person's own copy of `cli` and its `--version` line; null: none. */
+  /** The person's own copy of `cli` and its `--version` line; null: none. In system mode: the copy the agents reach. */
   own?: (cli: PinCli, pinned: string) => Promise<{ file: string; version: string } | null>;
+  /**
+   * System mode: every agent's user runs the copies, so they are root's and closed to everyone else's writes, and each
+   * is linked from `bin` (`/usr/local/bin`) unless something else is there.
+   */
+  shared?: { bin: string };
   now?: () => number;
 }
 
@@ -148,7 +167,11 @@ export class CliCopies {
   private readonly states = new Map<PinCli, CliFetchState>();
   private readonly confined = new Set<PinCli>();
 
+  /** System mode: the copies are the agents' (`shared`). */
+  readonly forAgents: boolean;
+
   constructor(private readonly opts: CliCopiesOptions) {
+    this.forAgents = Boolean(opts.shared);
     this.platform = opts.platform === undefined ? thisPlatform() : opts.platform;
     this.pins = opts.pins ?? withKept(CLI_PINS, path.join(opts.home, "cli-pins.json"));
   }
@@ -247,15 +270,32 @@ export class CliCopies {
     return (this.opts.now ?? Date.now)();
   }
 
-  /** The person's copy of `cli` the runner may run: never a confined one (`confinedCopy`), told once. */
+  /**
+   * The person's copy of `cli` the runner may run: never a confined one (`confinedCopy`), told once. The agents
+   * reaching the runner's own link to another pin's copy: kept to fall back on, never at this pin.
+   */
   private async ownOf(cli: PinCli) {
     const own = await (this.opts.own ?? ownCopy)(cli, this.pins[cli].version);
-    if (!own || !confinedCopy(own.file)) return own;
-    if (!this.confined.has(cli)) {
-      this.confined.add(cli);
-      this.opts.log(`${cli}: ${own.file} is a snap, which reads no account folder of the runner's: not running it`);
+    if (own && confinedCopy(own.file)) {
+      if (!this.confined.has(cli)) {
+        this.confined.add(cli);
+        this.opts.log(`${cli}: ${own.file} is a snap, which reads no account folder of the runner's: not running it`);
+      }
+      return null;
     }
-    return null;
+    return own && (await this.linkedElsewhere(cli)) ? { ...own, version: "" } : own;
+  }
+
+  /** System mode: `bin/<command>` is the runner's own link to a copy other than this pin's. */
+  private async linkedElsewhere(cli: PinCli) {
+    const bin = this.opts.shared?.bin;
+    if (!bin) return false;
+    const was = await readlink(path.join(bin, CLI_COMMAND[cli])).catch(() => null);
+    return was !== null && this.runnerLink(was) && was !== this.file(cli);
+  }
+
+  private runnerLink(target: string) {
+    return target.startsWith(path.join(this.opts.home, "clis") + path.sep);
   }
 
   /** One fetch per CLI at a time, whoever asks; its end (ready or failed) is told. */
@@ -295,11 +335,34 @@ export class CliCopies {
     // Its own files to start with, relative to the copy's folder (Cursor's Windows `index.js`).
     const launch = file ? (this.buildOf(cli)?.launch ?? []).map((f) => path.join(this.folder(cli), f)) : [];
     setCliPick(CLI_COMMAND[cli], file, launch);
+    if (file && this.opts.shared) await this.link(cli, file);
     this.opts.log(
       file ? `${cli}: running the runner's own ${this.pins[cli].version}` : `${cli}: running the computer's own`,
     );
     this.opts.onChange();
     if (file) await this.prune(cli, this.folder(cli));
+  }
+
+  /**
+   * `bin/<command>` to the runner's copy, for every agent's PATH: made where nothing is there, moved along where it is
+   * the runner's own link to an older copy; never over anything else (someone's own install).
+   */
+  private async link(cli: PinCli, file: string) {
+    const bin = this.opts.shared?.bin;
+    if (!bin) return;
+    const to = path.join(bin, CLI_COMMAND[cli]);
+    const was = await readlink(to).catch((err: { code?: string }) => (err.code === "ENOENT" ? null : undefined));
+    if (was === undefined || (was !== null && !this.runnerLink(was))) return;
+    const tmp = `${to}.${process.pid}.tmp`;
+    try {
+      await mkdir(bin, { recursive: true });
+      await rm(tmp, { force: true });
+      await symlink(file, tmp);
+      await rename(tmp, to);
+    } catch (err) {
+      await rm(tmp, { force: true }).catch(() => undefined);
+      this.opts.log(`${cli}: couldn't link ${to}: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /** Other versions of `cli` the runner fetched before: a turn that started one keeps its open files. */
@@ -321,7 +384,7 @@ export class CliCopies {
     const dir = this.folder(cli);
     const staging = `${dir}.${process.pid}.tmp`;
     await rm(staging, { recursive: true, force: true });
-    await mkdir(staging, { recursive: true, mode: 0o700 });
+    await mkdir(staging, { recursive: true, mode: this.opts.shared ? 0o755 : 0o700 });
     try {
       this.opts.log(`${cli}: fetching ${pin.version} (${this.platform})`);
       this.tell(cli, { state: "fetching", version: pin.version, done: 0, total: null });
@@ -370,6 +433,7 @@ export class CliCopies {
       }
       if (!existsSync(program)) throw new FetchError("failed", `the download has no ${build.executable}`);
       if (process.platform !== "win32") await chmod(program, 0o755);
+      if (this.opts.shared) await lockDown(staging);
       await rm(dir, { recursive: true, force: true });
       await rename(staging, dir);
       return path.join(dir, build.executable);
@@ -406,6 +470,20 @@ function unpack(archive: string, into: string, build: CliBuild): Promise<void> {
       err ? fail(new FetchError("failed", `couldn't unpack it: ${err.message}`)) : done(),
     ),
   );
+}
+
+/**
+ * Every file of a shared copy root's, and writable by root alone: tar run as root keeps the owners and modes the
+ * archive says, and an agent whose uid one of them names could change what every agent runs.
+ */
+async function lockDown(dir: string) {
+  const root = process.getuid?.() === 0;
+  for (const name of ["", ...(await readdir(dir, { recursive: true }))]) {
+    const file = path.join(dir, name);
+    const st = await lstat(file);
+    if (root) await lchown(file, 0, 0);
+    if (!st.isSymbolicLink()) await chmod(file, st.mode & 0o755);
+  }
 }
 
 const safeVersion = (v: string) => v.replace(/[^\w.+-]/g, "_");

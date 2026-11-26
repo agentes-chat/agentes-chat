@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 87;
+export const MACHINE_PROTOCOL_VERSION = 88;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -2693,6 +2693,14 @@ export function parseTaskRoom(v: unknown): TaskRoomReport | null {
  */
 export const CLI_COPIES_PROTOCOL = 86;
 
+/**
+ * Protocol 88: in system mode the CLIs are what every agent's user can start (`executors`, a CLI only root can start
+ * is `CLI_HOME_ONLY`), and the runner fetches the pinned build of one no agent reaches at all, root's and linked from
+ * `/usr/local/bin` (`hello.clis`, `cli.fetch`), which `cli.install` starts too (Claude Code, Codex). An older
+ * system-mode runner fetches nothing and installs nothing.
+ */
+export const AGENTS_CLI_PROTOCOL = 88;
+
 /** Why a fetch failed: no network, a download that isn't the vendor's build, no build for this system, a full disk. */
 export type CliFetchFailure = "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
 export const CLI_FETCH_FAILURES: readonly CliFetchFailure[] = [
@@ -4060,8 +4068,8 @@ export const CLI_ERROR_MAX = 300;
 /** `executors.broken.claude` on Windows when Git for Windows, which Claude Code needs there, isn't on the computer. */
 export const CLI_GIT_MISSING = "git_missing";
 /**
- * `executors.broken.<cli>` in system mode for Cursor's, Grok Build or the Antigravity CLI found only in root's own
- * `~/.local/bin`, where its installer puts it and no agent's user can run it.
+ * `executors.broken.<cli>` in system mode for a CLI only root can start (one in root's own `~/.local/bin`, where its
+ * installer puts it, or anywhere else no agent's user can run it).
  */
 export const CLI_HOME_ONLY = "home_only";
 

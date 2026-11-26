@@ -1622,7 +1622,7 @@ describe("the dialog's size (computer.css)", () => {
     const inSheet = (selector: string) => sheet.split(`\n  ${selector} {`)[1]?.split("}")[0] ?? "";
     // The kit's full-screen sheet (Details on a phone): clear of the notch and the home bar, its full screen excepted.
     const clear = inSheet(".ac-dialog.cmp-dialog:not(.is-full)");
-    expect(clear).toContain("padding-top: env(safe-area-inset-top, 0px)");
+    expect(clear).toContain("padding-top: calc(env(safe-area-inset-top, 0px) + var(--window-top))");
     expect(clear).toContain("padding-bottom: env(safe-area-inset-bottom, 0px)");
     // The wait's and the page's stages grow to the sheet's foot, never shorter than their words.
     expect(

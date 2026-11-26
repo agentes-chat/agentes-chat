@@ -1385,8 +1385,11 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
 then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
-One installed in root's own `~/.local/bin` there is out of the agents' reach, and the apps say so with the line
-that installs it for all of them. Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
+One installed in root's own `~/.local/bin` there, or anywhere else an agent's user can't run it, is out of the
+agents' reach: the computer checks each CLI as its agents' users and the apps say so, with the line that installs it
+for all of them or an Install button. Where no agent reaches a copy at all, the runner installs its own pinned build
+for them once an account of that CLI is on the computer (in `/opt/agentes-runner/clis`, linked from `/usr/local/bin`
+unless something is already there). Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
 sign in from the apps (Settings, AI and usage), once for all of their owner's agents.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
 `agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that

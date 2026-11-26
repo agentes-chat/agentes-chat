@@ -21,6 +21,7 @@ import { AGY_CHAT_AGENT, prepareAgyHome } from "./agy-home";
 import { LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
 import { cursorPrompt, promptMaxOn } from "./brain-cursor";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { AGY_BIN, cliSpawn } from "./executors";
@@ -305,8 +306,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       return fail("antigravity_failed", err instanceof Error ? err.message : String(err));
     }
     let stderr = "";
+    const stderrText = new ConsoleDecoder();
     child.stderr?.on("data", (c: Buffer) => {
-      stderr = (stderr + c.toString("utf8")).slice(-4000);
+      stderr = (stderr + stderrText.write(c)).slice(-4000);
     });
     let tail = "";
     let streamed = false;

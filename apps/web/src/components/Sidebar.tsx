@@ -1834,7 +1834,7 @@ function AgentRow({
             <span className="ac-visually-hidden">{state === "idle" && doingTitle ? doingTitle : now}</span>
           )}
           {doing ? (
-            <AgentWorkLine line={doing} tone={agentGradient(color)[1]} className="sidebar__item-role" />
+            <AgentWorkLine line={doing} className="sidebar__item-role" />
           ) : (
             under && <span className={cx("sidebar__item-role", roleTag && "ac-tag")}>{under}</span>
           )}

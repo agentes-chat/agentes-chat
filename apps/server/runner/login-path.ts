@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path, { win32 } from "node:path";
+import { consoleText } from "./console-text";
 import { envValue } from "./executors";
 
 /**
@@ -104,12 +105,12 @@ export function windowsRegistryPath(env: NodeJS.ProcessEnv = process.env): strin
   const read = (key: string) => {
     try {
       const r = spawnSync(reg, ["query", key, "/v", "Path"], {
-        encoding: "utf8",
         timeout: 5000,
         windowsHide: true,
         stdio: ["ignore", "pipe", "ignore"],
       });
-      return registryPathValue(`${r.stdout ?? ""}`, env);
+      // In the console's code page: a folder with an accent read as UTF-8 was a folder that isn't there.
+      return registryPathValue(consoleText(r.stdout ?? ""), env);
     } catch {
       return null;
     }

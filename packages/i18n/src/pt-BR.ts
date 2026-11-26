@@ -16917,6 +16917,7 @@ export const ptBR = {
       noSkillMd: "Nenhum SKILL.md em {{path}} nem nas pastas dentro dela.",
       tooManySkills: "Este link tem mais de {{max}} skills. Use o link de uma das pastas dele.",
       zipTooManySkills: "Este .zip tem mais de {{max}} skills. Envie em partes.",
+      zipTooBig: "Este .zip passa de {{maxMb}} MB, o máximo para instalar uma skill.",
       invalidName: "O nome precisa ter só letras minúsculas, números e hífens, até {{max}} caracteres.",
       invalidDescription: "A descrição precisa ter de 1 a {{max}} caracteres.",
       tooLarge: "Esta skill tem {{size}} MB de texto e scripts, e o limite é {{max}} MB.",
@@ -20416,7 +20417,7 @@ export const ptBR = {
     },
     offer_install_skill: {
       label: "Oferecer instalar uma skill",
-      description: "Posta um cartão cujo botão abre a instalação com o link da skill preenchido.",
+      description: "Posta um cartão cujo botão abre a instalação com a skill já lida do link ou do .zip.",
     },
     update_skill_from_source: {
       label: "Atualizar skills dos links",

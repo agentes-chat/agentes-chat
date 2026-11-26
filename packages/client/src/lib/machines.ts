@@ -221,15 +221,15 @@ export function cliInstallFailure(
  * installs it there (they paired it), `ask` sends whoever paired it the same button, `outdated` means its app must
  * update first. Null where nobody installs from here (the workspace's own computer installs its own, or nobody is
  * behind it), and `allow` only where an installer exists there: never Codex on Windows, nor a computer whose agents
- * are users of their own (its setup installs for them).
+ * are users of their own unless its runner installs its own copy for all of them (`cliFetchable`).
  */
 export function cliOneClick(
-  m: Pick<Machine, "kind" | "pairedBy" | "cliInstall" | "os" | "mode"> | null | undefined,
+  m: Pick<Machine, "kind" | "pairedBy" | "cliInstall" | "os" | "mode" | "cliFetchable"> | null | undefined,
   meId: string | null | undefined,
   cli: InstallableCli,
 ): ToolOneClick | null {
   if (!m || m.kind === "managed" || !m.pairedBy) return null;
-  if (m.mode === "system" || (cli === "codex" && m.os === "windows")) return null;
+  if (m.mode === "system" ? !m.cliFetchable?.includes(cli) : cli === "codex" && m.os === "windows") return null;
   if (m.pairedBy.id !== meId) return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
   return m.cliInstall ? { kind: "allow" } : { kind: "outdated" };
 }

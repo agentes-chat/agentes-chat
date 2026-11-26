@@ -369,13 +369,14 @@ function AgentProfile({
 
   const changes: Change[] = changedKeys(saved, edits).map(({ key, field, resource }) => {
     const place = FIELD_PLACE[field];
-    // In a personal workspace the built-in areas' levels and the skills are in Advanced, as Configurações' advanced
-    // sections are; the apps' levels stay in "Can use".
+    // In a personal workspace the built-in areas' levels are in Advanced, as Configurações' advanced sections are; the
+    // apps' levels stay in "Can use", and the skills on their own tab, as in a team's.
     const advanced =
       personal &&
       // The right hand's page has no Advanced: all of what it may use is on one tab.
       !rightHand &&
-      (field === "skills" || (field === "levels" && resourceById.get(resource ?? "")?.kind !== "connector"));
+      field === "levels" &&
+      resourceById.get(resource ?? "")?.kind !== "connector";
     // What it knows is on the Skills tab; the skills' own level is with the other areas.
     const onSkills = field === "skills";
     const base = {

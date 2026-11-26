@@ -1,7 +1,8 @@
 /**
  * The workspace `scripts/geometry/shifts.ts` opens: one person, two agents, a channel long enough to load older pages, a thread whose
  * last reply asks with a question card, every kind of card on messages (a vote, a live block, a document, a table, a
- * picture alone, two pictures), and a DM with an agent that holds cards too. Made-up names and example.com addresses.
+ * picture alone, two pictures), a long channel of many days to scroll through (agents' long answers, pictures, reactions),
+ * and a DM with an agent that holds cards too. Made-up names and example.com addresses.
  */
 import { deflateSync } from "node:zlib";
 import { schema } from "@agenteschat/db";
@@ -56,6 +57,28 @@ Depois disso ainda falta conferir o mapa das mesas e a escala dos voluntários, 
 const LONG = `Conferi cada pedido na planilha. As editoras pedem 5 placas de sinalização (entrada, caixa, palco, café, saída) e uma faixa grande na fachada. As mesmas placas servem para os dois dias, porque ninguém pediu versões por dia.
 
 Perguntei se dá para imprimir tudo na gráfica do bairro, com o mesmo papel e as cores da feira. Para os dois dias são uns 40 cartazes. Minha sugestão: começar pela entrada, o caixa e o palco e deixar os outros para depois.`;
+
+/** An agent's long answer, as a busy channel holds many: a heading, a list, a code block, a table. */
+const REPORT = (n: number) => `## Resumo da semana ${n}
+
+Fechei o levantamento das barracas e das doações. O que mudou desde a última conversa:
+
+- **Barracas:** ${20 + (n % 9)} confirmadas, três esperando o comprovante.
+- **Doações:** o banco de alimentos manda as caixas na sexta, às 9h.
+- **Voluntários:** faltam duas pessoas para o turno da tarde.
+
+\`\`\`text
+turno     manhã  tarde
+sábado    6      ${4 + (n % 3)}
+domingo   5      3
+\`\`\`
+
+| Item | Quantidade |
+| --- | ---: |
+| Mesas | ${30 + n} |
+| Cadeiras | ${120 + n * 2} |
+
+Se ninguém se opuser até amanhã, eu fecho a escala assim e mando para a coordenação.`;
 
 const FILLER = [
   "Bom dia! Alguém viu o relatório de ontem?",
@@ -284,6 +307,31 @@ export async function seed(t: TestServer, origin: string) {
   await say("A faixa e o selo:", { meta: { artifacts: [ref(wide), ref(square)] } });
   await say("Fecho a lista de mesas hoje à tarde.");
 
+  // A long channel, as people scroll it: many days, agents' long answers between short lines, pictures alone and in
+  // pairs, reactions. Pages of it load as the list goes up.
+  const long = await json<{ id: string }>(api("/channels", { json: { name: "historico", visibility: "public" } }));
+  for (const agentId of [nina, otto]) await api(`/channels/${long.id}/members`, { json: { agentId } });
+  const pictures = await Promise.all([
+    file("mapa.png", 1200, 800),
+    file("cartaz.png", 600, 900),
+    file("palco.png", 800, 800),
+  ]);
+  const resume = clock;
+  clock = Date.now() - 12 * 86_400_000;
+  for (let i = 0; i < 260; i++) {
+    const inLong = { channelId: long.id, minutes: i % 25 === 24 ? 900 : 11 };
+    const text = `${FILLER[i % FILLER.length] as string} (${i})`;
+    let message: { id: string };
+    if (i % 4 === 1) message = await agentSays(i % 8 === 1 ? nina : otto, REPORT(i), inLong);
+    else if (i % 9 === 4) {
+      const shown = i % 2 ? [pictures[i % 3]] : [pictures[i % 3], pictures[(i + 1) % 3]];
+      message = await say(text, { ...inLong, meta: { artifacts: shown.map((p) => ref(p as typeof tall)) } });
+    } else message = await say(text, inLong);
+    if (i % 5 === 0)
+      await t.db.insert(schema.messageReactions).values({ orgId, messageId: message.id, userId, reaction: "👍" });
+  }
+  clock = resume;
+
   // A DM with Nina, with a card of its own.
   const dm = await json<{ channelId: string }>(api("/dms", { json: { agentId: nina } }));
   await say("Oi Nina, um resumo do dia?", { channelId: dm.channelId });
@@ -310,6 +358,15 @@ export async function seed(t: TestServer, origin: string) {
   // Everything read, and the workspace past its onboarding and first visit (which open the right hand's DM first).
   await json(api("/onboarding", { method: "PATCH", json: { finished: true } }));
   const { dms } = await json<{ dms: { channelId: string }[] }>(api("/dms"));
-  for (const id of [channelId, ...dms.map((d) => d.channelId)]) await api(`/channels/${id}/read`, { json: {} });
-  return { orgId, channelId, threadId: root.id, ninaId: nina, dmChannelId: dm.channelId, cookie: b.cookie() };
+  for (const id of [channelId, long.id, ...dms.map((d) => d.channelId)])
+    await api(`/channels/${id}/read`, { json: {} });
+  return {
+    orgId,
+    channelId,
+    longChannelId: long.id,
+    threadId: root.id,
+    ninaId: nina,
+    dmChannelId: dm.channelId,
+    cookie: b.cookie(),
+  };
 }

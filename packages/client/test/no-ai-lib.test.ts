@@ -25,6 +25,7 @@ import {
   CLOUD_AWAY_MS,
   CLOUD_INSTALL_WAIT_MS,
   catchUp,
+  connectsPlanFor,
   defaultChoice,
   defaultTarget,
   dimmedLine,
@@ -179,8 +180,15 @@ describe("planGate: what a plan's panel can do now", () => {
     expect(gate({ edition: null })).toEqual({ state: "loading" });
   });
 
-  test("an agent the viewer doesn't own, before anything about its computer", () => {
-    expect(gate({ brain: brain({ canUsePlans: false, computer: null }) })).toEqual({ state: "locked", who: "owner" });
+  test("an agent the viewer doesn't own and can't sign a plan in for, before anything about its computer", () => {
+    expect(gate({ brain: brain({ canUsePlans: false, canManageAccounts: false, computer: null }) })).toEqual({
+      state: "locked",
+      who: "owner",
+    });
+  });
+
+  test("someone else's agent that the viewer manages: a plan of their own signs in for it where they add accounts", () => {
+    expect(gate({ brain: brain({ canUsePlans: false }) })).toEqual({ state: "ready" });
   });
 
   test("self-host with no computer for the agent: missing", () => {
@@ -948,6 +956,19 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     noAi: { agentId: "ada", forUserId: null, reason, intent: "task", runId: "r1", ...extra },
   });
   const card = (reason: string, extra?: Record<string, unknown>) => noAiCardOf(meta(reason, extra));
+
+  test("Connect signs a plan in for the person's own agents, the right hand and the ones they manage; nobody else's", () => {
+    const joaos = { ownerUserId: "u-joao" };
+    expect(connectsPlanFor(joaos, "u-joao")).toBe(true);
+    // A workspace admin on João's agent: a plan of his own, lent to it, never "ask an admin".
+    expect(connectsPlanFor({ ...joaos, canManage: true }, "u-walter")).toBe(true);
+    // A plain member on João's agent: who connects it instead.
+    expect(connectsPlanFor({ ...joaos, canManage: false }, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, "u-bia")).toBe(false);
+    expect(connectsPlanFor({ ownerUserId: "u-joao", builtin: "right_hand" }, "u-bia")).toBe(true);
+    expect(connectsPlanFor(undefined, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, null)).toBe(false);
+  });
 
   test("Connect is for who can: the agent's owner, who manages it or keys, nobody else", () => {
     const agent = { ownerUserId: "u1" };
