@@ -5200,6 +5200,56 @@ html:not([data-pointer]) .ac-switch:focus-visible {
   border-radius: var(--radius-md);
   background: var(--surface-raised);
 }
+/* A list kept while its next tab or filter loads (Refreshing): dimmed, with a bar running over its top edge. The bar
+   floats, so the list doesn't move when it comes or goes. Its parts stack with its parent's gap, as they would
+   without it. */
+.ac-refreshing {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  min-width: 0;
+}
+/* Nothing in it yet (its first load shows elsewhere): no box, so no gap of its parent's around it. */
+.ac-refreshing:empty {
+  display: none;
+}
+.ac-refreshing > :not(.ac-refreshing__bar) {
+  transition: opacity 150ms ease-out;
+}
+.ac-refreshing[data-busy] > :not(.ac-refreshing__bar) {
+  opacity: 0.5;
+}
+/* Just over the list's top edge, in the gap the list keeps under its toolbar or header. */
+.ac-refreshing__bar {
+  position: absolute;
+  inset: calc(-1 * var(--space-1)) 0 auto;
+  z-index: 1;
+  height: 2px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--line);
+}
+.ac-refreshing__bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--ink);
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-refreshing__bar::before {
+    animation: ac-top-progress 1.4s ease-in-out infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-refreshing__bar::before {
+    width: 100%;
+    opacity: 0.35;
+  }
+}
 @keyframes ac-top-progress {
   from {
     transform: translateX(-100%);
@@ -10021,6 +10071,26 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   align-items: center;
   gap: 8px;
   min-height: var(--control-h-md);
+  margin-left: auto;
+}
+/* The line under the title with a control at its end (`metaActions`): the words where they'd be under the title alone
+   (the row's gap and the control's taller box taken back), the control on the header's end edge, under the title's. */
+.ac-pagehead__metaline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-top: calc(-1 * var(--space-6));
+}
+.ac-pagehead__metaline > .ac-pagehead__meta {
+  flex: 1 1 0;
+  margin: 0;
+}
+.ac-pagehead__metaacts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
   margin-left: auto;
 }
 .ac-pagehead__bar {

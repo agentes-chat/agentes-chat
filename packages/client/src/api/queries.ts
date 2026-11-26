@@ -4027,6 +4027,8 @@ export const usePeopleUsage = (orgId: string, period: { since?: string; until?: 
     queryKey: keys.peopleUsage(orgId, period),
     queryFn: () => api.orgs.peopleUsage(orgId, period),
     enabled,
+    // Another period keeps the last one on screen while it loads.
+    placeholderData: (prev) => prev,
     // ponytail: "Agora" polls; the runs' realtime events could refresh it instead.
     refetchInterval: 15_000,
   });

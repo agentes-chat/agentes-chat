@@ -1,5 +1,5 @@
 import type { ActivityEntry } from "@agenteschat/adapters/runner-control";
-import { Avatar, Button, Icon, PixelSpinner, Segmented } from "@agenteschat/ui";
+import { Avatar, Button, Icon, PixelSpinner, Refreshing, Segmented } from "@agenteschat/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
@@ -37,6 +37,8 @@ export function Activity() {
   const [entries, setEntries] = useState<HomeEntry[]>([]);
   const [cursor, setCursor] = useState<ActivityCursor>({});
   const [loading, setLoading] = useState(false);
+  // Another organization's first page: the lines shown stay, dimmed, until it comes.
+  const [replacing, setReplacing] = useState(false);
   const generation = useRef(0);
 
   const scope = filter === "all" ? homes.map((h) => h.homeId) : homes.some((h) => h.homeId === filter) ? [filter] : [];
@@ -46,6 +48,7 @@ export function Activity() {
     async (from: ActivityCursor, append: boolean) => {
       const gen = ++generation.current;
       setLoading(true);
+      setReplacing(!append);
       const ids = homesToFetch(from);
       const pages: HomePage[] = await Promise.all(
         ids.map(async (homeId) => {
@@ -62,6 +65,7 @@ export function Activity() {
       setEntries((prev) => (append ? [...prev, ...merged.entries] : merged.entries));
       setCursor(merged.cursor);
       setLoading(false);
+      setReplacing(false);
     },
     [store],
   );
@@ -116,6 +120,7 @@ export function Activity() {
     })),
   ];
   const groups = groupByDay(entries);
+  const kept = replacing && entries.length > 0;
 
   return (
     <>
@@ -146,29 +151,31 @@ export function Activity() {
       )}
       <div className="dk-card" data-padded>
         {entries.length === 0 && !loading && <p className="dk-help">{t("desktop.prefs.activity.empty")}</p>}
-        <div className="dk-act">
-          {groups.map((g) => (
-            <div key={g.key}>
-              <div className="dk-act__day">
-                {g.kind === "today"
-                  ? t("desktop.prefs.activity.today")
-                  : g.kind === "yesterday"
-                    ? t("desktop.prefs.activity.yesterday")
-                    : dayLabel(g.day, i18n.language)}
+        <Refreshing busy={kept} label={t("common.loading")}>
+          <div className="dk-act">
+            {groups.map((g) => (
+              <div key={g.key}>
+                <div className="dk-act__day">
+                  {g.kind === "today"
+                    ? t("desktop.prefs.activity.today")
+                    : g.kind === "yesterday"
+                      ? t("desktop.prefs.activity.yesterday")
+                      : dayLabel(g.day, i18n.language)}
+                </div>
+                {g.entries.map((e) => (
+                  <EntryRow
+                    key={`${e.homeId}-${e.at}-${e.summary}`}
+                    entry={e}
+                    showOrg={filter === "all" && homes.length > 1}
+                  />
+                ))}
               </div>
-              {g.entries.map((e) => (
-                <EntryRow
-                  key={`${e.homeId}-${e.at}-${e.summary}`}
-                  entry={e}
-                  showOrg={filter === "all" && homes.length > 1}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-        {(loading || hasMore(cursor)) && (
+            ))}
+          </div>
+        </Refreshing>
+        {((loading && !kept) || hasMore(cursor)) && (
           <div className="dk-act__more">
-            {loading ? (
+            {loading && !kept ? (
               <PixelSpinner size={16} />
             ) : (
               <Button size="sm" variant="ghost" onClick={() => void loadPage(cursor, true)}>
