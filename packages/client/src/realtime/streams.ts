@@ -648,7 +648,8 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
         service: event.service ?? null,
         serviceIcon: event.serviceIcon ?? null,
         toolDetail: event.detail ?? null,
-        ...(newCall ? { code: event.code ?? null, output: [] } : {}),
+        // A call means the model has the turn: whatever came before it is over, even if its end was never heard.
+        ...(newCall ? { code: event.code ?? null, output: [], phase: undefined } : {}),
         // A new call is the step now: its own words, or none (the call's verb says it). The computer's permission
         // check before a command is no step of its own: the command it lets through was told a moment before
         // (`agent.step`) and stays the step while it runs, or the bar would say "thinking" for as long as it takes.
@@ -663,7 +664,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
       const step = { tool: event.tool, ...(event.said ? { said: event.said } : {}) };
       // In a code session (ADR 0215) the call is a line of the work too: its start adds it, its end closes it.
       const cli = cliLineOf(event.cli);
-      if (!cli || !event.toolUseId) return upsert(state, event, { step });
+      if (!cli || !event.toolUseId) return upsert(state, event, { step, phase: undefined });
       const work = current.work ?? [];
       const at = work.findIndex((w) => w.kind === "call" && w.id === event.toolUseId);
       const told = work[at];
@@ -689,7 +690,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
         ...(event.said ? { said: event.said } : {}),
         cli,
       };
-      return upsert(state, event, { step, work: [...work, line] });
+      return upsert(state, event, { step, work: [...work, line], phase: undefined });
     }
     case "agent.tool.progress": {
       if (state.finished[event.runId]) return state;

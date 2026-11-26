@@ -31,11 +31,16 @@ export function phaseTeller(
     if (phase === null) {
       if (!shown) return;
       const wait = shown.at + minMs - Date.now();
-      shown = null;
-      if (wait <= 0) publish(null);
-      else pending = setTimeout(() => publish(null), wait);
+      const over = () => {
+        pending = null;
+        shown = null;
+        publish(null);
+      };
+      if (wait <= 0) over();
+      else pending = setTimeout(over, wait);
       return;
     }
+    // Still on screen (its end was being held): it stays, and the next end is held again.
     if (shown?.phase === phase) return;
     pending = setTimeout(() => {
       pending = null;

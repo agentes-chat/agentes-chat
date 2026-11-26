@@ -41,3 +41,12 @@ test("a step's end goes out even when its work failed, and the failure stays the
 test("no way to tell (an older engine's io): the work runs the same", async () => {
   expect(await inPhase({}, "code", Promise.resolve(7))).toBe(7);
 });
+
+test("the same step again while its end is held keeps the line, and its own end still goes out", async () => {
+  const { out, tell } = told();
+  await inPhase({ phase: tell }, "code", Bun.sleep(35));
+  // Ended at ~35 ms, its end held until ~70: the next turn's update starts at once and is quick.
+  await inPhase({ phase: tell }, "code", Promise.resolve());
+  await Bun.sleep(80);
+  expect(out).toEqual(["code", null]);
+});
