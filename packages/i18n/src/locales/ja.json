@@ -16912,7 +16912,7 @@
     "badge": "アプリ",
     "unknownApp": "アプリ",
     "appTip": "{{name}} はこのワークスペースに接続されたアプリです。人としてではなく、アプリ自身として投稿します。",
-    "sender": "{{sender}} の代理",
+    "sender": "{{sender}} から",
     "senderTip": "{{sender}} が agentes.chat の外で書いたものを {{name}} が転送しました。",
     "connect": "アプリを接続",
     "emptyTitle": "アプリはまだありません",
@@ -16928,7 +16928,7 @@
     "channelsHelp": "投稿するチャンネルでエージェントの返信を読みます。",
     "channelsEmpty": "ワークスペースにはまだチャンネルがありません。",
     "access": {
-      "none": "なし",
+      "none": "アクセスなし",
       "read": "読む",
       "post": "読む・投稿する"
     },
@@ -16951,6 +16951,8 @@
     "revokeText": "新しいトークンを作るまで、すぐに投稿も読み取りもできなくなります。",
     "newTokenTitle": "{{name}} の新しいトークンを作りますか？",
     "newTokenText": "今のトークンはすぐに使えなくなります。",
+    "newSecretTitle": "{{name}} の新しい Webhook シークレットを作りますか？",
+    "newSecretText": "配信はすぐに新しいシークレットで署名されます。アプリにも設定しないと、署名の確認に失敗します。",
     "removeTitle": "{{name}} を削除しますか？",
     "removeText": "メッセージは残ります。投稿も読み取りもできなくなります。",
     "removed": "{{name}} を削除しました",

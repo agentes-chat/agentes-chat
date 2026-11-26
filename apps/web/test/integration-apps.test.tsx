@@ -35,6 +35,8 @@ describe("Configurações › Conectores › Integrações", () => {
     expect(section().getByRole("tab", { name: "Integrações" }).getAttribute("aria-selected")).toBe("true");
     expect(section().getByText("Nenhum app ainda")).toBeTruthy();
     await click(section().getByRole("button", { name: "Conectar um app" }));
+    // Each channel starts with no access, said as such.
+    expect(screen().getByRole("dialog").textContent).toContain("Sem acesso");
     await act(async () => fireEvent.change(dialog().getByLabelText("Nome"), { target: { value: "Bot de suporte" } }));
     await click(dialog().getByRole("button", { name: "Conectar" }));
     expect(screen().getByRole("dialog", { name: "Token de Bot de suporte" })).toBeTruthy();
@@ -49,6 +51,41 @@ describe("Configurações › Conectores › Integrações", () => {
       `Token terminado em ${copied[0]?.slice(-4)}`,
     );
     expect(document.querySelector(".settings__body")?.textContent).not.toContain(copied[0] ?? "agi_");
+  });
+});
+
+describe("a new webhook secret", () => {
+  test("asks first: the old one stops checking deliveries the moment a new one is made", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    await renderApp(`/org/${ORG_ID}/settings/integrations`, { api });
+    await settle(6);
+    await click(section().getByRole("button", { name: "Conectar um app" }));
+    await act(async () => fireEvent.change(dialog().getByLabelText("Nome"), { target: { value: "Bot de suporte" } }));
+    await act(async () =>
+      fireEvent.change(dialog().getByPlaceholderText("https://relay.example.com/agentes"), {
+        target: { value: "https://relay.example.com/hook" },
+      }),
+    );
+    await click(dialog().getByRole("button", { name: "Conectar" }));
+    // The token, then the secret: each shown once.
+    for (const copy of ["Copiar token", "Copiar"]) {
+      await click(dialog().getByRole("button", { name: copy }));
+      await click(dialog().getByRole("button", { name: "Já copiei" }));
+    }
+    const more = section().getByRole("button", { name: "Ações de Bot de suporte" });
+    await act(async () => {
+      fireEvent.keyDown(more, { key: "Enter" });
+      fireEvent.keyUp(more, { key: "Enter" });
+    });
+    await settle(2);
+    await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Novo segredo do webhook" }));
+    const ask = screen().getByRole("dialog", { name: "Criar um segredo novo do webhook para Bot de suporte?" });
+    const made = () => state.calls.filter((c) => c.method === "integrationApps.newWebhookSecret").length;
+    expect(made()).toBe(0);
+    await click(within(ask).getByRole("button", { name: "Novo segredo do webhook" }));
+    expect(made()).toBe(1);
+    expect(screen().getByRole("dialog", { name: "Segredo do webhook de Bot de suporte" })).toBeTruthy();
   });
 });
 
@@ -74,7 +111,8 @@ describe("an integration app's message", () => {
     expect(row).toBeTruthy();
     expect(row.textContent).toContain("Bot de suporte");
     expect(row.textContent).toContain("App");
-    expect(row.textContent).toContain("para Maria");
+    expect(row.textContent).toContain("de Maria");
+    expect(row.textContent).not.toContain("para Maria");
     expect(row.querySelector(".ac-appmark")).toBeTruthy();
     expect(within(row).queryByRole("button", { name: /Perfil de Bot de suporte/ })).toBeNull();
   });

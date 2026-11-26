@@ -16980,7 +16980,7 @@
     "badge": "应用",
     "unknownApp": "某个应用",
     "appTip": "{{name}} 是连接到此工作区的应用。它以自己的身份发帖，从不以某个人的身份。",
-    "sender": "代 {{sender}}",
+    "sender": "来自 {{sender}}",
     "senderTip": "由 {{sender}} 在 agentes.chat 之外撰写，{{name}} 转发了它。",
     "connect": "连接应用",
     "emptyTitle": "还没有应用",
@@ -16996,7 +16996,7 @@
     "channelsHelp": "它会在自己发帖的频道里读取智能体的回复。",
     "channelsEmpty": "工作区还没有频道。",
     "access": {
-      "none": "不在此处",
+      "none": "无权限",
       "read": "读取",
       "post": "读取并发帖"
     },
@@ -17019,6 +17019,8 @@
     "revokeText": "它会立即停止发帖和读取，直到你创建新令牌。",
     "newTokenTitle": "为 {{name}} 创建新令牌？",
     "newTokenText": "当前令牌会立即失效。",
+    "newSecretTitle": "为 {{name}} 创建新的 Webhook 密钥？",
+    "newSecretText": "投递会立即改用新密钥签名。请在应用中填入新密钥，否则其签名校验会失败。",
     "removeTitle": "移除 {{name}}？",
     "removeText": "它的消息会保留。它将无法再发帖或读取。",
     "removed": "已移除 {{name}}",

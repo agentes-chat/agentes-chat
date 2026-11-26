@@ -18094,7 +18094,7 @@
     "badge": "App",
     "unknownApp": "Une app",
     "appTip": "{{name}} est une app connectée à cet espace de travail. Elle publie en son propre nom, jamais au nom d'une personne.",
-    "sender": "pour {{sender}}",
+    "sender": "de {{sender}}",
     "senderTip": "Écrit par {{sender}} hors d'agentes.chat. {{name}} l'a transmis.",
     "connect": "Connecter une app",
     "emptyTitle": "Aucune app pour l'instant",
@@ -18110,7 +18110,7 @@
     "channelsHelp": "Elle lit les réponses des agents là où elle publie.",
     "channelsEmpty": "L'espace de travail n'a pas encore de canaux.",
     "access": {
-      "none": "Pas ici",
+      "none": "Aucun accès",
       "read": "Lit",
       "post": "Lit et publie"
     },
@@ -18133,6 +18133,8 @@
     "revokeText": "Elle arrête aussitôt de publier et de lire, jusqu'à ce que vous créiez un nouveau token.",
     "newTokenTitle": "Créer un nouveau token pour {{name}} ?",
     "newTokenText": "Le token actuel cesse aussitôt de fonctionner.",
+    "newSecretTitle": "Créer un nouveau secret du webhook pour {{name}} ?",
+    "newSecretText": "Les livraisons sont aussitôt signées avec le nouveau secret. Mettez-le dans l'app, sinon sa vérification de signature échoue.",
     "removeTitle": "Retirer {{name}} ?",
     "removeText": "Ses messages restent. Elle ne peut plus publier ni lire.",
     "removed": "{{name}} retirée",

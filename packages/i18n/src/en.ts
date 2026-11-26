@@ -18128,7 +18128,7 @@ export const en = {
     unknownApp: "An app",
     appTip: "{{name}} is an app connected to this workspace. It posts as itself, never as a person.",
     /** The outside person an app passed a message on for (a customer on Discord, say). */
-    sender: "for {{sender}}",
+    sender: "from {{sender}}",
     senderTip: "Written by {{sender}} outside agentes.chat. {{name}} passed it on.",
     connect: "Connect an app",
     emptyTitle: "No apps yet",
@@ -18143,7 +18143,7 @@ export const en = {
     channels: "Channels",
     channelsHelp: "It reads agents' replies where it posts.",
     channelsEmpty: "The workspace has no channels yet.",
-    access: { none: "Not here", read: "Reads", post: "Reads and posts" },
+    access: { none: "No access", read: "Reads", post: "Reads and posts" },
     webhook: "Webhook address",
     webhookHelp: "Agents' replies here go to this address, signed. Empty: the app reads them through the API.",
     save: "Save",
@@ -18163,6 +18163,9 @@ export const en = {
     revokeText: "It stops posting and reading at once, until you make a new token.",
     newTokenTitle: "Make a new token for {{name}}?",
     newTokenText: "The current token stops working at once.",
+    newSecretTitle: "Make a new webhook secret for {{name}}?",
+    newSecretText:
+      "Deliveries are signed with the new secret at once. Put it in the app, or its signature check fails.",
     removeTitle: "Remove {{name}}?",
     removeText: "Its messages stay. It can't post or read anymore.",
     removed: "{{name}} removed",

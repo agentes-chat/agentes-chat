@@ -18678,7 +18678,7 @@
     "badge": "Aplikacja",
     "unknownApp": "Aplikacja",
     "appTip": "{{name}} to aplikacja połączona z tą przestrzenią roboczą. Publikuje jako ona sama, nigdy jako osoba.",
-    "sender": "dla {{sender}}",
+    "sender": "od {{sender}}",
     "senderTip": "Napisane przez {{sender}} poza agentes.chat. {{name}} to przekazała.",
     "connect": "Połącz aplikację",
     "emptyTitle": "Nie ma jeszcze aplikacji",
@@ -18694,7 +18694,7 @@
     "channelsHelp": "Czyta odpowiedzi agentów tam, gdzie publikuje.",
     "channelsEmpty": "Przestrzeń robocza nie ma jeszcze kanałów.",
     "access": {
-      "none": "Nie tutaj",
+      "none": "Brak dostępu",
       "read": "Czyta",
       "post": "Czyta i publikuje"
     },
@@ -18717,6 +18717,8 @@
     "revokeText": "Od razu przestaje publikować i czytać, dopóki nie utworzysz nowego tokenu.",
     "newTokenTitle": "Utworzyć nowy token dla {{name}}?",
     "newTokenText": "Obecny token od razu przestaje działać.",
+    "newSecretTitle": "Utworzyć nowy sekret webhooka dla {{name}}?",
+    "newSecretText": "Dostawy od razu są podpisywane nowym sekretem. Wpisz go w aplikacji, inaczej sprawdzenie podpisu się nie powiedzie.",
     "removeTitle": "Usunąć {{name}}?",
     "removeText": "Jej wiadomości zostają. Nie może już publikować ani czytać.",
     "removed": "Usunięto {{name}}",

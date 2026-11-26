@@ -17456,7 +17456,7 @@
     "badge": "Uygulama",
     "unknownApp": "Bir uygulama",
     "appTip": "{{name}}, bu çalışma alanına bağlı bir uygulamadır. Bir kişi olarak değil, kendisi olarak paylaşır.",
-    "sender": "{{sender}} için",
+    "sender": "Gönderen: {{sender}}",
     "senderTip": "{{sender}} tarafından agentes.chat dışında yazıldı. {{name}} iletti.",
     "connect": "Uygulama bağla",
     "emptyTitle": "Henüz uygulama yok",
@@ -17472,7 +17472,7 @@
     "channelsHelp": "Paylaştığı yerde ajanların yanıtlarını okur.",
     "channelsEmpty": "Çalışma alanında henüz kanal yok.",
     "access": {
-      "none": "Burada değil",
+      "none": "Erişim yok",
       "read": "Okur",
       "post": "Okur ve paylaşır"
     },
@@ -17495,6 +17495,8 @@
     "revokeText": "Yeni bir token oluşturana kadar hemen paylaşmayı ve okumayı bırakır.",
     "newTokenTitle": "{{name}} için yeni token oluşturulsun mu?",
     "newTokenText": "Mevcut token hemen çalışmayı bırakır.",
+    "newSecretTitle": "{{name}} için yeni webhook sırrı oluşturulsun mu?",
+    "newSecretText": "Teslimatlar hemen yeni sırla imzalanır. Sırrı uygulamaya girin, yoksa imza doğrulaması başarısız olur.",
     "removeTitle": "{{name}} kaldırılsın mı?",
     "removeText": "Mesajları kalır. Artık paylaşamaz veya okuyamaz.",
     "removed": "{{name}} kaldırıldı",

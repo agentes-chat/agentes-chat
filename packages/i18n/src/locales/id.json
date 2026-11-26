@@ -16970,7 +16970,7 @@
     "badge": "App",
     "unknownApp": "Sebuah app",
     "appTip": "{{name}} adalah app yang terhubung ke ruang kerja ini. App ini memposting sebagai dirinya sendiri, tidak pernah sebagai orang.",
-    "sender": "untuk {{sender}}",
+    "sender": "dari {{sender}}",
     "senderTip": "Ditulis oleh {{sender}} di luar agentes.chat. {{name}} meneruskannya.",
     "connect": "Hubungkan app",
     "emptyTitle": "Belum ada app",
@@ -16986,7 +16986,7 @@
     "channelsHelp": "App membaca balasan agen di tempat ia memposting.",
     "channelsEmpty": "Ruang kerja ini belum punya kanal.",
     "access": {
-      "none": "Tidak di sini",
+      "none": "Tanpa akses",
       "read": "Membaca",
       "post": "Membaca dan memposting"
     },
@@ -17009,6 +17009,8 @@
     "revokeText": "App langsung berhenti memposting dan membaca, sampai kamu membuat token baru.",
     "newTokenTitle": "Buat token baru untuk {{name}}?",
     "newTokenText": "Token saat ini langsung tidak berlaku.",
+    "newSecretTitle": "Buat rahasia webhook baru untuk {{name}}?",
+    "newSecretText": "Pengiriman langsung ditandatangani dengan rahasia baru. Pasang di aplikasi, atau pemeriksaan tanda tangannya gagal.",
     "removeTitle": "Hapus {{name}}?",
     "removeText": "Pesannya tetap ada. App tidak bisa memposting atau membaca lagi.",
     "removed": "{{name}} dihapus",

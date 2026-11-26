@@ -17526,7 +17526,7 @@
     "badge": "App",
     "unknownApp": "Eine App",
     "appTip": "{{name}} ist eine mit diesem Workspace verbundene App. Sie postet als sie selbst, nie als eine Person.",
-    "sender": "für {{sender}}",
+    "sender": "von {{sender}}",
     "senderTip": "Von {{sender}} außerhalb von agentes.chat geschrieben. {{name}} hat es weitergegeben.",
     "connect": "App verbinden",
     "emptyTitle": "Noch keine Apps",
@@ -17542,7 +17542,7 @@
     "channelsHelp": "Sie liest die Antworten der Agenten dort, wo sie postet.",
     "channelsEmpty": "Der Workspace hat noch keine Kanäle.",
     "access": {
-      "none": "Nicht hier",
+      "none": "Kein Zugriff",
       "read": "Liest",
       "post": "Liest und postet"
     },
@@ -17565,6 +17565,8 @@
     "revokeText": "Sie hört sofort auf zu posten und zu lesen, bis du einen neuen Token erstellst.",
     "newTokenTitle": "Neuen Token für {{name}} erstellen?",
     "newTokenText": "Der aktuelle Token funktioniert sofort nicht mehr.",
+    "newSecretTitle": "Neues Webhook-Secret für {{name}} erstellen?",
+    "newSecretText": "Zustellungen werden sofort mit dem neuen Secret signiert. Hinterlege es in der App, sonst schlägt ihre Signaturprüfung fehl.",
     "removeTitle": "{{name}} entfernen?",
     "removeText": "Ihre Nachrichten bleiben. Sie kann nicht mehr posten oder lesen.",
     "removed": "{{name}} entfernt",

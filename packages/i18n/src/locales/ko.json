@@ -16904,7 +16904,7 @@
     "badge": "앱",
     "unknownApp": "앱",
     "appTip": "{{name}}은(는) 이 워크스페이스에 연결된 앱입니다. 사람이 아닌 앱 자신으로 게시합니다.",
-    "sender": "{{sender}} 대신",
+    "sender": "{{sender}}님이 보냄",
     "senderTip": "{{sender}}이(가) agentes.chat 밖에서 쓴 글을 {{name}}이(가) 전달했습니다.",
     "connect": "앱 연결",
     "emptyTitle": "아직 앱이 없습니다",
@@ -16920,7 +16920,7 @@
     "channelsHelp": "게시하는 채널에서 에이전트의 답장을 읽습니다.",
     "channelsEmpty": "워크스페이스에 아직 채널이 없습니다.",
     "access": {
-      "none": "없음",
+      "none": "접근 권한 없음",
       "read": "읽기",
       "post": "읽기 및 게시"
     },
@@ -16943,6 +16943,8 @@
     "revokeText": "새 토큰을 만들 때까지 즉시 게시와 읽기가 중단됩니다.",
     "newTokenTitle": "{{name}}의 새 토큰을 만들까요?",
     "newTokenText": "현재 토큰은 즉시 작동을 멈춥니다.",
+    "newSecretTitle": "{{name}}의 새 Webhook 시크릿을 만들까요?",
+    "newSecretText": "전송은 즉시 새 시크릿으로 서명됩니다. 앱에도 넣지 않으면 서명 확인에 실패합니다.",
     "removeTitle": "{{name}}을(를) 제거할까요?",
     "removeText": "메시지는 남습니다. 더 이상 게시하거나 읽을 수 없습니다.",
     "removed": "{{name}} 제거됨",

@@ -86,7 +86,7 @@ export interface AppPostInput {
   /** A top-level message of that channel: the reply goes in its thread. */
   threadId?: string | null;
   text: string;
-  /** The outside person's display name, shown as "via App · name". */
+  /** The outside person's display name, shown beside the app's name as "from name". */
   sender?: string | null;
   /** The same key from the same app within a day posts once (a retry after a lost answer). */
   idempotencyKey?: string | null;

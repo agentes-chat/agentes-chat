@@ -18006,7 +18006,7 @@ export const ptBR = {
     unknownApp: "Um app",
     appTip: "{{name}} é um app conectado a este workspace. Ele posta como ele mesmo, nunca como uma pessoa.",
     /** The outside person an app passed a message on for (a customer on Discord, say). */
-    sender: "para {{sender}}",
+    sender: "de {{sender}}",
     senderTip: "Escrito por {{sender}} fora do agentes.chat. {{name}} repassou.",
     connect: "Conectar um app",
     emptyTitle: "Nenhum app ainda",
@@ -18021,7 +18021,7 @@ export const ptBR = {
     channels: "Canais",
     channelsHelp: "Ele lê as respostas dos agentes onde posta.",
     channelsEmpty: "O workspace ainda não tem canais.",
-    access: { none: "Não aqui", read: "Lê", post: "Lê e posta" },
+    access: { none: "Sem acesso", read: "Lê", post: "Lê e posta" },
     webhook: "Endereço do webhook",
     webhookHelp: "As respostas dos agentes aqui vão para este endereço, assinadas. Vazio: o app lê pela API.",
     save: "Salvar",
@@ -18041,6 +18041,9 @@ export const ptBR = {
     revokeText: "Ele para de postar e ler na hora, até você criar um token novo.",
     newTokenTitle: "Criar um token novo para {{name}}?",
     newTokenText: "O token atual para de funcionar na hora.",
+    newSecretTitle: "Criar um segredo novo do webhook para {{name}}?",
+    newSecretText:
+      "As entregas passam a ser assinadas com o segredo novo na hora. Coloque-o no app, senão a conferência da assinatura falha.",
     removeTitle: "Remover {{name}}?",
     removeText: "As mensagens dele ficam. Ele não posta nem lê mais.",
     removed: "{{name}} removido",

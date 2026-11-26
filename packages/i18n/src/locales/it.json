@@ -18117,7 +18117,7 @@
     "badge": "App",
     "unknownApp": "Un'app",
     "appTip": "{{name}} è un'app collegata a questo spazio di lavoro. Pubblica come se stessa, mai come una persona.",
-    "sender": "per {{sender}}",
+    "sender": "da {{sender}}",
     "senderTip": "Scritto da {{sender}} fuori da agentes.chat. {{name}} lo ha inoltrato.",
     "connect": "Collega un'app",
     "emptyTitle": "Ancora nessuna app",
@@ -18133,7 +18133,7 @@
     "channelsHelp": "Legge le risposte degli agenti dove pubblica.",
     "channelsEmpty": "Lo spazio di lavoro non ha ancora canali.",
     "access": {
-      "none": "Non qui",
+      "none": "Nessun accesso",
       "read": "Legge",
       "post": "Legge e pubblica"
     },
@@ -18156,6 +18156,8 @@
     "revokeText": "Smette subito di pubblicare e leggere, finché non crei un nuovo token.",
     "newTokenTitle": "Creare un nuovo token per {{name}}?",
     "newTokenText": "Il token attuale smette subito di funzionare.",
+    "newSecretTitle": "Creare un nuovo segreto del webhook per {{name}}?",
+    "newSecretText": "Le consegne vengono firmate subito con il nuovo segreto. Inseriscilo nell'app, altrimenti la verifica della firma non riesce.",
     "removeTitle": "Rimuovere {{name}}?",
     "removeText": "I suoi messaggi restano. Non può più pubblicare né leggere.",
     "removed": "{{name}} rimossa",

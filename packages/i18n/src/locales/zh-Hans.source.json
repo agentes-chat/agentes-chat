@@ -43051,7 +43051,7 @@
     "value": "{{name}} is an app connected to this workspace. It posts as itself, never as a person."
   },
   "integrations.sender": {
-    "value": "for {{sender}}"
+    "value": "from {{sender}}"
   },
   "integrations.senderTip": {
     "value": "Written by {{sender}} outside agentes.chat. {{name}} passed it on."
@@ -43096,7 +43096,7 @@
     "value": "The workspace has no channels yet."
   },
   "integrations.access.none": {
-    "value": "Not here"
+    "value": "No access"
   },
   "integrations.access.read": {
     "value": "Reads"
@@ -43160,6 +43160,12 @@
   },
   "integrations.newTokenText": {
     "value": "The current token stops working at once."
+  },
+  "integrations.newSecretTitle": {
+    "value": "Make a new webhook secret for {{name}}?"
+  },
+  "integrations.newSecretText": {
+    "value": "Deliveries are signed with the new secret at once. Put it in the app, or its signature check fails."
   },
   "integrations.removeTitle": {
     "value": "Remove {{name}}?"

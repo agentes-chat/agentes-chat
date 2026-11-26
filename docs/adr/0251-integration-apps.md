@@ -50,7 +50,7 @@ credential, its own name on its messages, and the permissions an admin gave it, 
 - The author check widens in migration 0358 with `NOT VALID`: every existing row holds the old rule, which the new
   one only widens, so no month of messages is scanned under an exclusive lock. The enum value comes in 0357, which
   ends its own step (`migrateInSteps`), so 0358 can use it.
-- The apps show the app's mark, its name, an **App** tag and "for <sender>"; never a profile, a presence or a
+- The apps show the app's mark, its name, an **App** tag and "from <sender>"; never a profile, a presence or a
   person's card. The channel list's last line names the app.
 
 ### 3. Agents answer it as a person's message, nobody is behind it

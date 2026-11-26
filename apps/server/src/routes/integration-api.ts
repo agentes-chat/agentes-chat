@@ -79,7 +79,7 @@ const PostBody = z
       .string()
       .max(INTEGRATION_LIMITS.sender)
       .optional()
-      .openapi({ description: "The outside person's display name, shown as “via App · name”." }),
+      .openapi({ description: "The outside person's display name, shown beside the app's name as “from name”." }),
     idempotency_key: z.string().max(64).optional().openapi({ description: "The same key within a day posts once." }),
   })
   .strict()

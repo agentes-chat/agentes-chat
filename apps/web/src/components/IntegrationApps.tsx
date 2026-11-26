@@ -33,7 +33,7 @@ import { useToast } from "@/lib/toast";
 import "./ai-apps.css";
 
 type Access = "none" | "read" | "post";
-type Confirm = { kind: "revoke" | "newToken" | "remove"; app: IntegrationApp };
+type Confirm = { kind: "revoke" | "newToken" | "newSecret" | "remove"; app: IntegrationApp };
 /** What shows once, after a change made it. */
 type Shown = { kind: "token" | "secret"; name: string; value: string };
 
@@ -105,12 +105,7 @@ export function IntegrationAppsSection() {
                 </span>
               </span>
               <span className="ac-mediarow__end">
-                <RowMenu
-                  app={app}
-                  onEdit={() => setEditing(app)}
-                  onConfirm={(kind) => setConfirm({ kind, app })}
-                  onShown={show}
-                />
+                <RowMenu app={app} onEdit={() => setEditing(app)} onConfirm={(kind) => setConfirm({ kind, app })} />
               </span>
               <span className="ac-mediarow__body small muted">{integrationFacts(t, i18n.language, app)}</span>
             </div>
@@ -140,17 +135,12 @@ function RowMenu({
   app,
   onEdit,
   onConfirm,
-  onShown,
 }: {
   app: IntegrationApp;
   onEdit: () => void;
   onConfirm: (kind: Confirm["kind"]) => void;
-  onShown: (name: string, out: IntegrationAppSecrets) => void;
 }) {
   const { t } = useTranslation();
-  const { org } = useOrg();
-  const { newWebhookSecret } = useIntegrationAppActions(org.id);
-  const toast = useToast();
   const label = t("integrations.actions", { name: app.name });
   return (
     <span className="ac-captail ac-captop">
@@ -166,15 +156,7 @@ function RowMenu({
           {t("integrations.newToken")}
         </MenuItem>
         {app.webhookUrl && (
-          <MenuItem
-            icon="refresh"
-            onSelect={() =>
-              newWebhookSecret.mutate(app.id, {
-                onSuccess: (out) => onShown(app.name, out),
-                onError: (err) => toast.show(errorText(t, err)),
-              })
-            }
-          >
+          <MenuItem icon="refresh" onSelect={() => onConfirm("newSecret")}>
             {t("integrations.newSecret")}
           </MenuItem>
         )}
@@ -343,7 +325,14 @@ function ConfirmDialog({
   const actions = useIntegrationAppActions(org.id);
   const kind = confirm?.kind;
   const name = confirm?.app.name ?? "";
-  const mutation = kind === "remove" ? actions.remove : kind === "revoke" ? actions.revokeToken : actions.newToken;
+  const mutation =
+    kind === "remove"
+      ? actions.remove
+      : kind === "revoke"
+        ? actions.revokeToken
+        : kind === "newSecret"
+          ? actions.newWebhookSecret
+          : actions.newToken;
   const words =
     kind === "remove"
       ? ({ title: "integrations.removeTitle", text: "integrations.removeText", action: "integrations.remove" } as const)
@@ -353,11 +342,17 @@ function ConfirmDialog({
             text: "integrations.revokeText",
             action: "integrations.revoke",
           } as const)
-        : ({
-            title: "integrations.newTokenTitle",
-            text: "integrations.newTokenText",
-            action: "integrations.newToken",
-          } as const);
+        : kind === "newSecret"
+          ? ({
+              title: "integrations.newSecretTitle",
+              text: "integrations.newSecretText",
+              action: "integrations.newSecret",
+            } as const)
+          : ({
+              title: "integrations.newTokenTitle",
+              text: "integrations.newTokenText",
+              action: "integrations.newToken",
+            } as const);
   return (
     <Dialog
       open={confirm !== null}
@@ -372,7 +367,7 @@ function ConfirmDialog({
           {t("common.cancel")}
         </Button>
         <Button
-          variant={kind === "newToken" ? "primary" : "danger"}
+          variant={kind === "newToken" || kind === "newSecret" ? "primary" : "danger"}
           loading={mutation.isPending}
           disabled={mutation.isPending}
           onClick={() =>
@@ -380,7 +375,7 @@ function ConfirmDialog({
             (mutation.mutate as (id: string, o: object) => void)(confirm.app.id, {
               onSuccess: (out: unknown) => {
                 onClose();
-                if (kind === "newToken") onShown(name, out as IntegrationAppSecrets);
+                if (kind === "newToken" || kind === "newSecret") onShown(name, out as IntegrationAppSecrets);
                 else toast.show(kind === "remove" ? t("integrations.removed", { name }) : t("integrations.revoked"));
               },
               onError: (err: unknown) => toast.show(errorText(t, err)),
