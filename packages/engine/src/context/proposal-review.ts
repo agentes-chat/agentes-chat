@@ -412,7 +412,7 @@ export async function settleProposals(
  * A skill a person asked an agent to make (`create_skill`) after the run read outside content (ADR 0219 for a new
  * skill): the same review, told it is a new skill, what the person wrote and the skill's whole text. `apply` when the
  * skill is what the person asked for and carries nothing the content slipped in. Without a model (or when its call
- * fails), the judge weighs it. Null when neither can: then the skill isn't made.
+ * fails or is cut off at `max_tokens`), the judge weighs it. Null when neither can: then the skill isn't made.
  */
 export async function reviewAskedSkill(
   deps: ContextDeps,
@@ -459,23 +459,25 @@ export async function reviewAskedSkill(
       model: await resolveSummaryModel(deps, input.orgId),
       system: personal ? REVIEW_SYSTEM_PERSONAL : REVIEW_SYSTEM,
       messages: [{ role: "user", content: block }],
-      maxTokens: 400,
+      maxTokens: 1500,
       effort: "low",
       outputSchema: REVIEW_SCHEMA,
     });
     const verdict = parseVerdicts(result.text).get("c1");
-    return verdict ? { apply: verdict.apply, why: verdict.why } : { apply: false, why: "" };
+    if (verdict) return { apply: verdict.apply, why: verdict.why };
+    if (result.stopReason !== "max_tokens") return { apply: false, why: "" };
   } catch {
-    const judged = await judgeVerdicts(deps, {
-      orgId: input.orgId,
-      agentId: input.agentId,
-      runId: input.runId,
-      blocks: [["c1", block]],
-      personal,
-    });
-    const verdict = judged?.get("c1");
-    return verdict ? { apply: verdict.apply, why: verdict.why } : null;
+    // Fall through to the judge below.
   }
+  const judged = await judgeVerdicts(deps, {
+    orgId: input.orgId,
+    agentId: input.agentId,
+    runId: input.runId,
+    blocks: [["c1", block]],
+    personal,
+  });
+  const verdict = judged?.get("c1");
+  return verdict ? { apply: verdict.apply, why: verdict.why } : null;
 }
 
 /**

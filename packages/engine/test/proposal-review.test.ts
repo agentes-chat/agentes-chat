@@ -296,6 +296,7 @@ describe("agents apply their improvements (ADR 0219)", () => {
     };
     expect(await reviewAskedSkill(f.context, skill)).toEqual({ apply: true, why: "" });
     const review = f.provider.calls.find((c) => isReview(systemText(c.request.system)));
+    expect(review?.request.maxTokens).toBe(1500);
     const asked = (review?.request.messages ?? [])
       .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
       .join("\n");
@@ -393,5 +394,24 @@ describe("with no model for the review (a workspace on plans, a server with no p
       words: "Turn what you just did into a skill.",
     };
     expect(await reviewAskedSkill(noKey(f), skill)).toEqual({ apply: true, why: "" });
+  });
+
+  test("a skill review cut off at max_tokens falls back to the judge instead of refusing silently", async () => {
+    f = await baseSetup({
+      reply: (req) =>
+        isReview(systemText(req.system))
+          ? { chunks: ['{"changes":[{"id":"c1","apply":true,"why":"Cut off'], stopReason: "max_tokens" }
+          : { chunks: ["ok"] },
+      judge: (kind) => (kind === "proposal_review" ? 0.9 : undefined),
+    });
+    const skill = {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      name: "weekly-report",
+      description: "Write the weekly report.",
+      body: "1. Read the week's issues.\n2. Summarize them in five lines.",
+      words: "Turn what you just did into a skill.",
+    };
+    expect(await reviewAskedSkill(f.context, skill)).toEqual({ apply: true, why: "" });
   });
 });
