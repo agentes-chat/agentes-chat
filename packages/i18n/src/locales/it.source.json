@@ -43041,6 +43041,153 @@
   "connect.home": {
     "value": "Go to agentes"
   },
+  "integrations.badge": {
+    "value": "App"
+  },
+  "integrations.unknownApp": {
+    "value": "An app"
+  },
+  "integrations.appTip": {
+    "value": "{{name}} is an app connected to this workspace. It posts as itself, never as a person."
+  },
+  "integrations.sender": {
+    "value": "for {{sender}}"
+  },
+  "integrations.senderTip": {
+    "value": "Written by {{sender}} outside agentes.chat. {{name}} passed it on."
+  },
+  "integrations.connect": {
+    "value": "Connect an app"
+  },
+  "integrations.emptyTitle": {
+    "value": "No apps yet"
+  },
+  "integrations.empty": {
+    "value": "A support bot, a form or a monitor posts here as itself, with its own token."
+  },
+  "integrations.api": {
+    "value": "Where apps call"
+  },
+  "integrations.apiHelp": {
+    "value": "The API and the MCP address, with the app's token as a Bearer."
+  },
+  "integrations.apiCopied": {
+    "value": "Address copied"
+  },
+  "integrations.help": {
+    "value": "How to connect a support bot"
+  },
+  "integrations.name": {
+    "value": "Name"
+  },
+  "integrations.color": {
+    "value": "Color"
+  },
+  "integrations.colorOf": {
+    "value": "Color {{color}}"
+  },
+  "integrations.channels": {
+    "value": "Channels"
+  },
+  "integrations.channelsHelp": {
+    "value": "It reads agents' replies where it posts."
+  },
+  "integrations.channelsEmpty": {
+    "value": "The workspace has no channels yet."
+  },
+  "integrations.access.none": {
+    "value": "Not here"
+  },
+  "integrations.access.read": {
+    "value": "Reads"
+  },
+  "integrations.access.post": {
+    "value": "Reads and posts"
+  },
+  "integrations.webhook": {
+    "value": "Webhook address"
+  },
+  "integrations.webhookHelp": {
+    "value": "Agents' replies here go to this address, signed. Empty: the app reads them through the API."
+  },
+  "integrations.save": {
+    "value": "Save"
+  },
+  "integrations.create": {
+    "value": "Connect"
+  },
+  "integrations.edit": {
+    "value": "Edit"
+  },
+  "integrations.actions": {
+    "value": "Actions for {{name}}"
+  },
+  "integrations.newToken": {
+    "value": "New token"
+  },
+  "integrations.revoke": {
+    "value": "Revoke token"
+  },
+  "integrations.newSecret": {
+    "value": "New webhook secret"
+  },
+  "integrations.remove": {
+    "value": "Remove"
+  },
+  "integrations.tokenTitle": {
+    "value": "Token of {{name}}"
+  },
+  "integrations.secretTitle": {
+    "value": "Webhook secret of {{name}}"
+  },
+  "integrations.secretUse": {
+    "value": "Check the webhook-signature header of each delivery with it (Standard Webhooks)."
+  },
+  "integrations.secretCopied": {
+    "value": "Secret copied"
+  },
+  "integrations.tokenUse": {
+    "value": "The app sends it as Authorization: Bearer on every call."
+  },
+  "integrations.revokeTitle": {
+    "value": "Revoke the token of {{name}}?"
+  },
+  "integrations.revokeText": {
+    "value": "It stops posting and reading at once, until you make a new token."
+  },
+  "integrations.newTokenTitle": {
+    "value": "Make a new token for {{name}}?"
+  },
+  "integrations.newTokenText": {
+    "value": "The current token stops working at once."
+  },
+  "integrations.removeTitle": {
+    "value": "Remove {{name}}?"
+  },
+  "integrations.removeText": {
+    "value": "Its messages stay. It can't post or read anymore."
+  },
+  "integrations.removed": {
+    "value": "{{name}} removed"
+  },
+  "integrations.revoked": {
+    "value": "Token revoked"
+  },
+  "integrations.facts.token": {
+    "value": "Token ending in {{hint}}"
+  },
+  "integrations.facts.noToken": {
+    "value": "No token"
+  },
+  "integrations.facts.channels": {
+    "value": {
+      "one": "{{count}} channel",
+      "other": "{{count}} channels"
+    }
+  },
+  "integrations.facts.webhookFailed": {
+    "value": "Webhook failing ({{why}})"
+  },
   "apps.connect": {
     "value": "Connect an app"
   },
@@ -44328,6 +44475,9 @@
   "settings.section.voice": {
     "value": "Voice"
   },
+  "settings.section.integrations": {
+    "value": "Integrations"
+  },
   "settings.section.apps": {
     "value": "AI apps"
   },
@@ -44408,6 +44558,9 @@
   },
   "settings.sectionText.voice": {
     "value": "Voice messages in conversations, and who turns voice into text."
+  },
+  "settings.sectionText.integrations": {
+    "value": "Apps that post in channels as themselves, like a support bot."
   },
   "settings.sectionText.apps": {
     "value": "Ask the agents for tasks from Claude, Cursor and other apps."

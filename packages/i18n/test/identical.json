@@ -349,7 +349,8 @@
       "live.type.glyph",
       "shell.skills",
       "skills.page.colSkill",
-      "skills.page.inRepo"
+      "skills.page.inRepo",
+      "integrations.badge"
     ],
     "es": [
       "surface.nudge.hours",
@@ -645,7 +646,10 @@
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "billing.plan"
+      "billing.plan",
+      "integrations.badge",
+      "integrations.color",
+      "integrations.colorOf"
     ],
     "fr": [
       "agentPage.facts.budget",
@@ -1179,7 +1183,8 @@
       "live.type.highlights.orange",
       "live.type.gradients.graphite",
       "live.type.gradients.violet",
-      "live.type.glyph"
+      "live.type.glyph",
+      "integrations.badge"
     ],
     "de": [
       "agentPage.facts.budget",
@@ -1689,7 +1694,9 @@
       "shell.skills",
       "skills.page.colSkill",
       "skills.one.name",
-      "skills.one.inChannel"
+      "skills.one.inChannel",
+      "integrations.badge",
+      "integrations.name"
     ],
     "it": [
       "agentPage.facts.budget",
@@ -2099,7 +2106,8 @@
       "live.type.glyph",
       "skills.page.colSkill",
       "skills.one.inChannel",
-      "skills.page.inRepo"
+      "skills.page.inRepo",
+      "integrations.badge"
     ],
     "nl": [
       "agentPage.facts.budget",
@@ -2791,7 +2799,8 @@
       "shell.skills",
       "skills.page.colSkill",
       "skills.one.inChannel",
-      "skills.page.inRepo"
+      "skills.page.inRepo",
+      "integrations.badge"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -3661,7 +3670,9 @@
       "live.type.groups.serif",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "skills.page.colSkill"
+      "skills.page.colSkill",
+      "integrations.badge",
+      "integrations.edit"
     ],
     "tr": [
       "live.canvas.inspector.model",

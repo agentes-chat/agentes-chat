@@ -165,7 +165,7 @@ export function NoticeLine({ message }: { message: Message }) {
       </div>
     );
   const view = noticeView(message, {
-    author: dir.authorName(message.author),
+    author: dir.authorName(message.author, message.meta),
     agentByHandle: (handle) => dir.agentByHandle.get(handle.toLowerCase())?.name ?? null,
   });
   if (!view) return null;
@@ -205,7 +205,7 @@ function JoinLine({ message }: { message: Message }) {
   const nameOf = (m: { type: "person" | "agent"; id: string }) =>
     m.type === "agent" ? (dir.anyAgent(m.id)?.name ?? null) : (dir.memberById.get(m.id)?.name ?? null);
   const view = noticeView(message, {
-    author: dir.authorName(message.author),
+    author: dir.authorName(message.author, message.meta),
     agentByHandle: () => null,
     nameOf,
     list: (names) => joinNames(names, t),
@@ -417,7 +417,8 @@ function StoppedLine({ message, notice }: { message: Message; notice: StoppedNot
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   if (useStopShownInReply(notice.runId)) return null;
-  const agent = message.author.type === "agent" ? dir.authorName(message.author) : t("channel.unknownAgent");
+  const agent =
+    message.author.type === "agent" ? dir.authorName(message.author, message.meta) : t("channel.unknownAgent");
   return (
     <div data-message-id={message.id}>
       <StopPill
@@ -487,6 +488,25 @@ export function RoutineTag({
         <button type="button" className="cn-line__toggle cn-report__toggle" aria-expanded={open} onClick={onToggle}>
           {open ? t("channel.routineReportHide") : t("channel.routineReport")}
         </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * An integration app's message (ADR 0251): its name, the "App" tag, and the outside sender it passed on, if any. Never a
+ * profile: an app is no member.
+ */
+export function AppAuthorTags({ name, sender }: { name: string; sender: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span title={t("integrations.appTip", { name })}>{name}</span>
+      <span className="msg-reminder">{t("integrations.badge")}</span>
+      {sender && (
+        <span className="msg-reminder" title={t("integrations.senderTip", { sender, name })}>
+          {t("integrations.sender", { sender })}
+        </span>
       )}
     </>
   );

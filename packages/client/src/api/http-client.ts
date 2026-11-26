@@ -133,6 +133,8 @@ import type {
   ImportedSource,
   ImportPlan,
   Instance,
+  IntegrationApp,
+  IntegrationAppSecrets,
   Invitation,
   InvitationPreview,
   InvitationState,
@@ -1507,6 +1509,26 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       disconnect: (orgId, grantId) => request<void>(`${org(orgId)}/apps/${enc(grantId)}`, { method: "DELETE" }),
       createToken: (orgId, input) => request<CreatedPersonalToken>(`${org(orgId)}/tokens`, { json: input }),
       revokeToken: (orgId, grantId) => request<void>(`${org(orgId)}/tokens/${enc(grantId)}`, { method: "DELETE" }),
+    },
+    integrationApps: {
+      list: async (orgId) => (await request<{ apps: IntegrationApp[] }>(`${org(orgId)}/integration-apps`)).apps,
+      create: (orgId, input) => request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps`, { json: input }),
+      update: (orgId, appId, input) =>
+        request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps/${enc(appId)}`, {
+          method: "PATCH",
+          json: input,
+        }),
+      newToken: (orgId, appId) =>
+        request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps/${enc(appId)}/token`, { json: {} }),
+      revokeToken: async (orgId, appId) =>
+        (
+          await request<{ app: IntegrationApp }>(`${org(orgId)}/integration-apps/${enc(appId)}/token`, {
+            method: "DELETE",
+          })
+        ).app,
+      newWebhookSecret: (orgId, appId) =>
+        request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps/${enc(appId)}/webhook-secret`, { json: {} }),
+      remove: (orgId, appId) => request<void>(`${org(orgId)}/integration-apps/${enc(appId)}`, { method: "DELETE" }),
     },
     skills: {
       list: async (orgId) => (await request<{ skills: Skill[] }>(`${org(orgId)}/skills`)).skills,

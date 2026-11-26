@@ -177,6 +177,9 @@ import type {
   ImportPlan,
   InstallableCli,
   Instance,
+  IntegrationApp,
+  IntegrationAppInput,
+  IntegrationAppSecrets,
   Invitation,
   InvitationPreview,
   InvitationState,
@@ -2404,6 +2407,19 @@ export interface ApiClient {
     /** 409 `token_limit` past 10 live tokens per person here. */
     createToken(orgId: string, input: PersonalTokenInput): Promise<CreatedPersonalToken>;
     revokeToken(orgId: string, grantId: string): Promise<void>;
+  };
+  /**
+   * Integration apps (ADR 0251), for who may manage connectors: programs that post in chosen channels as themselves.
+   * A token (`agi_…`) and a webhook's signing secret show once, in the answer that made them.
+   */
+  integrationApps: {
+    list(orgId: string): Promise<IntegrationApp[]>;
+    create(orgId: string, input: IntegrationAppInput): Promise<IntegrationAppSecrets>;
+    update(orgId: string, appId: string, input: Partial<IntegrationAppInput>): Promise<IntegrationAppSecrets>;
+    newToken(orgId: string, appId: string): Promise<IntegrationAppSecrets>;
+    revokeToken(orgId: string, appId: string): Promise<IntegrationApp>;
+    newWebhookSecret(orgId: string, appId: string): Promise<IntegrationAppSecrets>;
+    remove(orgId: string, appId: string): Promise<void>;
   };
   /** "Lembrar": one-off reminders in conversations (also routines in Rotinas). */
   reminders?: {

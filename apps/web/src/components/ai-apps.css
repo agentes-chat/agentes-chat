@@ -246,3 +246,11 @@ html:not([data-pointer]) .apps-client:focus-visible {
   justify-content: center;
   gap: 4px;
 }
+
+/* Settings › Integrations (ADR 0251): a channel and what the app does there, on one row. */
+.integration-channel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

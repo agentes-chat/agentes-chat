@@ -6763,6 +6763,13 @@ html:not([data-pointer]) .ac-hint:focus-visible {
 .ac-rolemark .ac-icon {
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.22));
 }
+/* An integration app (ADR 0251): a person's tile shape, its initial in white like a role's icon. */
+.ac-appmark {
+  border-radius: 30%;
+  font-weight: 650;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
+}
 
 /* People: the tile (a rounded square, radius 30% of the side) in a neutral gradient with initials or a photo; presence badge on the corner */
 .ac-avatar {

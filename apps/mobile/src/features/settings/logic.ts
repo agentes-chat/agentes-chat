@@ -34,6 +34,7 @@ import type { IconName } from "@/ui";
 
 export type SettingsSection =
   | "apps"
+  | "integrations"
   | "general"
   | "members"
   | "invites"
@@ -108,6 +109,14 @@ export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
   },
   // AI apps (ADR 0119): each person's own connections in this workspace; connecting one happens on the web.
   { id: "apps", group: "connectors", icon: "share", href: "/settings/apps", allowed: () => true },
+  // Integration apps (ADR 0251): who manages connectors, as on the web.
+  {
+    id: "integrations",
+    group: "connectors",
+    icon: "bolt",
+    href: "/settings/integrations",
+    allowed: (o) => can(o, "manage_connectors"),
+  },
   // Dispositivos: every member sees the computers and the phones they reach, and connects their own (ADR 0025).
   { id: "computers", group: "advanced", icon: "laptop", href: "/settings/devices", allowed: (o) => can(o, "read") },
   { id: "storage", group: "advanced", icon: "archive", href: "/settings/storage", allowed: (o) => can(o, "configure") },

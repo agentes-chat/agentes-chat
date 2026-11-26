@@ -1662,7 +1662,8 @@ export interface Message {
   id: string;
   channelId: string;
   threadId: string | null;
-  author: { type: AuthorType; id: string | null };
+  /** `app`: an integration app (ADR 0251); `appAuthor(meta)` reads its name, color and sender. */
+  author: { type: AuthorType | "app"; id: string | null };
   body: string;
   mentionedAgentIds: string[];
   agentRunId: string | null;
@@ -3505,7 +3506,7 @@ export interface ReplyRef {
   messageId: string;
   /** Its thread (null = the main timeline). */
   threadId: string | null;
-  author: { type: AuthorType; id: string | null };
+  author: { type: AuthorType | "app"; id: string | null };
   authorName: string;
   excerpt: string;
   /** What it quotes was a GIF or a sticker (ADR 0091): the quote says so where its excerpt is empty. */
@@ -6294,7 +6295,8 @@ export type ThreadChange =
 
 /** A person or an agent in a thread (`id` null: someone who left). */
 export interface ThreadActor {
-  type: AuthorType;
+  /** `app`: an integration app (ADR 0251). */
+  type: AuthorType | "app";
   id: string | null;
 }
 
@@ -9276,4 +9278,36 @@ export interface ComputerDeviceInput {
 export interface PhoneDeviceInput {
   name?: string;
   audience?: DeviceAudience;
+}
+
+/** An integration app (ADR 0251) as Settings › Integrations lists it. Its token is never shown again. */
+export interface IntegrationApp {
+  id: string;
+  name: string;
+  color: string;
+  channels: { channelId: string; canPost: boolean }[];
+  /** The live token's last four characters; null once revoked. */
+  tokenHint: string | null;
+  tokenCreatedAt: string | null;
+  webhookUrl: string | null;
+  webhookLastAt: string | null;
+  /** `http_<status>`, `network` or `address_refused`; null when the last delivery went through. */
+  webhookLastError: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+export interface IntegrationAppInput {
+  name: string;
+  color?: string;
+  channels: { channelId: string; canPost: boolean }[];
+  webhookUrl?: string | null;
+}
+
+/** What a change shows once: a new token, a new webhook signing secret. */
+export interface IntegrationAppSecrets {
+  app: IntegrationApp;
+  token?: string;
+  webhookSecret?: string | null;
 }

@@ -92,6 +92,7 @@ export {
   randomAppearance,
 } from "./components/AgentLook";
 export { AgentSticker, type AgentStickerProps } from "./components/AgentSticker";
+export { AppMark } from "./components/AppMark";
 export { ApprovalCard, type ApprovalCardProps, type ApprovalStatus } from "./components/ApprovalCard";
 export { type AutonomyKind, AutonomyPixels, drawAutonomy } from "./components/AutonomyPixels";
 export {
