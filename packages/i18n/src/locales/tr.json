@@ -2659,6 +2659,7 @@
       "backupOf": "{{name}} yedeği",
       "supervisor": "Yönetici",
       "supervisorOf": "{{name}} yöneticisi",
+      "supervisorNoAgents": "Yönetici, departmanda ajan olduğunda geçerli olur.",
       "unsupervised_one": "Yöneticisi olmayan {{count}} ajan",
       "unsupervised_other": "Yöneticisi olmayan {{count}} ajan",
       "apply": "Uygula",

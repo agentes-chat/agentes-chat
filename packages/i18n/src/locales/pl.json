@@ -2844,6 +2844,7 @@
       "backupOf": "Zastępca w dziale {{name}}",
       "supervisor": "Przełożony",
       "supervisorOf": "Przełożony działu {{name}}",
+      "supervisorNoAgents": "Przełożony obowiązuje, gdy dział będzie miał agentów.",
       "unsupervised_one": "{{count}} agent bez przełożonego",
       "unsupervised_few": "{{count}} agentów bez przełożonego",
       "unsupervised_many": "{{count}} agentów bez przełożonego",

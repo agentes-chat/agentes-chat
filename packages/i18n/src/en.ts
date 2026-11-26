@@ -2864,6 +2864,8 @@ export const en = {
       backupOf: "Substitute in {{name}}",
       supervisor: "Supervisor",
       supervisorOf: "Supervisor of {{name}}",
+      /** Under a department's disabled Supervisor picker while it has no agents. */
+      supervisorNoAgents: "A supervisor applies once the department has agents.",
       unsupervised_one: "{{count}} agent without a supervisor",
       unsupervised_other: "{{count}} agents without a supervisor",
       apply: "Apply",

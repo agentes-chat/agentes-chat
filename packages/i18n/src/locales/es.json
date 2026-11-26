@@ -2750,6 +2750,7 @@
       "backupOf": "Suplente en {{name}}",
       "supervisor": "Supervisor",
       "supervisorOf": "Supervisor de {{name}}",
+      "supervisorNoAgents": "El supervisor se aplica cuando el departamento tenga agentes.",
       "unsupervised_one": "{{count}} agente sin supervisor",
       "unsupervised_many": "{{count}} agentes sin supervisor",
       "unsupervised_other": "{{count}} agentes sin supervisor",

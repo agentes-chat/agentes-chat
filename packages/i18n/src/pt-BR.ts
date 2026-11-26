@@ -2732,6 +2732,7 @@ export const ptBR = {
       backupOf: "Substituto em {{name}}",
       supervisor: "Supervisor",
       supervisorOf: "Supervisor de {{name}}",
+      supervisorNoAgents: "O supervisor vale quando o setor tiver agentes.",
       unsupervised_one: "{{count}} agente sem supervisor",
       unsupervised_other: "{{count}} agentes sem supervisor",
       apply: "Aplicar",

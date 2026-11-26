@@ -6617,6 +6617,9 @@
   "team.sectors.supervisorOf": {
     "value": "Supervisor of {{name}}"
   },
+  "team.sectors.supervisorNoAgents": {
+    "value": "A supervisor applies once the department has agents."
+  },
   "team.sectors.unsupervised": {
     "value": {
       "one": "{{count}} agent without a supervisor",
