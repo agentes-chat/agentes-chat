@@ -149,11 +149,16 @@ const shortText = (v: unknown, max: number) =>
 /**
  * The recommended plan (or the one whose `key` is given) from the billing service's public plan list
  * (`GET {billingUrl}/plans.json`), or null when the list isn't one: the app then names no plan. The core server never names a plan nor a price (ADR 0079 §6).
+ * `alone` (a personal workspace) takes the list's `recommendedAlone`, the plan for one person, where the list has one.
  */
-export function planOfferOf(json: unknown, key?: string): PlanOffer | null {
+export function planOfferOf(json: unknown, key?: string, alone = false): PlanOffer | null {
   if (!json || typeof json !== "object") return null;
-  const { recommended, plans } = json as { recommended?: unknown; plans?: unknown };
-  const wanted = key ?? recommended;
+  const { recommended, recommendedAlone, plans } = json as {
+    recommended?: unknown;
+    recommendedAlone?: unknown;
+    plans?: unknown;
+  };
+  const wanted = key ?? (alone && typeof recommendedAlone === "string" ? recommendedAlone : recommended);
   if (typeof wanted !== "string" || !Array.isArray(plans)) return null;
   const plan = plans.find((p) => (p as { key?: unknown } | null)?.key === wanted) as
     | Record<string, unknown>

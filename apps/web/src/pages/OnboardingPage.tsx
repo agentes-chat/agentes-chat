@@ -293,7 +293,7 @@ export function OnboardingPage() {
     };
   }, [asking]);
   // Read from the first step, so the plan step has it when it opens.
-  const plans = usePlanOffer(i18n.language);
+  const plans = usePlanOffer(i18n.language, { alone: personalNow });
   const offer = plans.offer;
   // Read once is enough: a refetch that fails later keeps the step on screen with what it read. The plan step opens
   // whole, back from the billing page too: with its price, or with none once the list is late, never a line that changes.
