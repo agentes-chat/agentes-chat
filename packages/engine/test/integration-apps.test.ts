@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { verifyStandardWebhook } from "@agenteschat/adapters";
+import { createMemoryRateLimiter, verifyStandardWebhook } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import {
   authenticateIntegrationApp,
@@ -47,7 +47,7 @@ const deps = () => ({ db: f.db, keyWrappers: [f.keyWrapper], resolveHost: PUBLIC
 const traffic = () => ({
   db: f.db,
   pubsub: f.pubsub,
-  rateLimiter: { consume: async () => ({ allowed: true, remaining: 1, resetAt: Date.now() }), release: async () => {} },
+  rateLimiter: createMemoryRateLimiter(),
 });
 
 async function newChannel(name: string) {
@@ -321,6 +321,16 @@ describe("what an app posts is its own, answered, never obeyed", () => {
     );
     expect(routed.skipped).toBeUndefined();
     expect(routed.runs.map((r) => r.agentId)).toEqual([f.agent.id]);
+  });
+
+  test("an app posts at most 30 messages a minute", async () => {
+    f = await setup();
+    const { principal } = await bot();
+    const deps = traffic();
+    for (let i = 0; i < 30; i++) await postAsApp(deps, principal, { channelId: f.general.id, text: `hi ${i}` });
+    await expect(postAsApp(deps, principal, { channelId: f.general.id, text: "one more" })).rejects.toMatchObject({
+      code: "rate_limited",
+    });
   });
 
   test("the same idempotency key posts once", async () => {
