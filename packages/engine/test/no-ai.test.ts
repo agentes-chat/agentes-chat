@@ -246,7 +246,7 @@ test("Codex saved on the workspace's computer's own sign-in: the run fails at on
     execAllowed: true,
     os: "linux",
     protocol: 26,
-    executors: { codex: { version: "codex-cli 0.163.0" }, detectedAt: new Date().toISOString() },
+    executors: { codex: { version: "codex-cli 0.170.0" }, detectedAt: new Date().toISOString() },
   };
   const handlers = createJobHandlers({ ...f.jobDeps, machines: { status: async () => status } });
   await post("@dev oi");

@@ -159,19 +159,24 @@ export function cliInstallCommand(kind: string, m: Pick<Machine, "kind" | "os" |
 
 /**
  * What a card says where `kind`'s CLI is missing on `m` and the apps can't install it: the cause and the line to run
- * there (`cliInstallCommand`). Null where there is no such line, or the CLI is there and fails on its own.
+ * there (`cliInstallCommand`). Too old for agentes.chat (`cli_outdated`): the same line, which installs the newest.
+ * Null where there is no such line, or the CLI is there and fails on its own.
  */
 export function cliCommandWayOut(
   t: TFunction,
   kind: MachineAccountKind,
   m: Pick<Machine, "kind" | "os" | "mode" | "cliErrors">,
-  reason: "not_installed" | "cant_start",
+  reason: "not_installed" | "cant_start" | "cli_outdated",
   computer: string,
 ): { text: string; command: string } | null {
   const command = cliInstallCommand(kind, m);
   const homeOnly = m.cliErrors?.[kind] === CLI_HOME_ONLY;
   if (!command || (reason === "cant_start" && !homeOnly)) return null;
   const words = { program: t(`brain.card.${kind}`), computer };
+  if (reason === "cli_outdated") {
+    const outdated = t("brain.reasons.cli_outdated", words);
+    return { text: t("common.joinSentences", { a: outdated, b: t("connectAi.cli.runThis") }), command };
+  }
   const text = homeOnly
     ? t("connectAi.cli.homeOnly", words)
     : m.mode === "system"

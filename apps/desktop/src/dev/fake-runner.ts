@@ -611,8 +611,8 @@ export class FakeRunner {
       protocol: MACHINE_PROTOCOL,
       paused: this.paused,
       executors: {
-        claude: { version: "2.1.4 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
-        codex: { version: "codex-cli 0.46.0" },
+        claude: { version: "2.1.300 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
+        codex: { version: "codex-cli 0.170.0" },
       },
       workspace: this.config.workspace,
       agents: s?.agents ?? [],
