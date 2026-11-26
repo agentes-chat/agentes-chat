@@ -38,6 +38,7 @@ import type {
   EmailChange,
   EndpointCheck,
   FeedbackOffer,
+  FirstAgents,
   ForeignMailbox,
   FormerAgent,
   Gif,
@@ -314,6 +315,8 @@ export interface FakeState {
   githubFiles?: Record<string, { path: string; text: string }[]>;
   /** Each item an applied import brought, as the server keeps them (`imports.sources`). */
   imported?: { app: string; ref: string; kind: ImportItemKind }[];
+  /** My newest first-agent proposal (`firstAgents.latest`, ADR 0250): none until a test seeds one or pastes one. */
+  firstAgents?: FirstAgents | null;
   online: Set<string>;
   /** People's chosen availability and line (`orgs.setStatus`); unset = auto, nothing written. */
   statuses?: Map<string, { availability: Availability; status: MemberStatus | null }>;
@@ -3373,6 +3376,107 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (there) return { status: "exists", artifactId: there.id, title, folder };
         const created = await drive.upload(orgId, new File([file], input.name), { title });
         return { status: "created", artifactId: created.id, title, folder };
+      },
+    },
+    // Like the backend (ADR 0250): my newest proposal, a pasted answer kept as one, a pick that makes one agent once.
+    firstAgents: {
+      latest: async (orgId) => {
+        log("firstAgents.latest", orgId);
+        return structuredClone(state.firstAgents ?? null);
+      },
+      paste: async (orgId, input) => {
+        log("firstAgents.paste", orgId, input);
+        const colors = ["teal", "violet", "amber"];
+        const proposal: FirstAgents = {
+          id: id("first-agents"),
+          about: input.about ?? null,
+          source: "paste",
+          options: input.options.map((o, i) => ({
+            name: o.name,
+            handle: o.handle ?? (o.name.toLowerCase().replace(/[^a-z0-9]+/g, "") || `agent-${i + 1}`),
+            role: o.role,
+            why: o.why,
+            tasks: o.tasks,
+            apps: (o.apps ?? []).map((label) => ({ key: null, label })),
+            routine: o.routine
+              ? {
+                  title: o.routine.title,
+                  schedule: o.routine.schedule,
+                  prompt: o.routine.prompt,
+                  cron: o.routine.cron ?? null,
+                  timezone: o.routine.cron ? "America/Sao_Paulo" : null,
+                }
+              : null,
+            today: o.today ?? [],
+            instructions: o.instructions ?? "",
+            appearance: { color: colors[i % colors.length] ?? "teal", eyes: "happy", accessory: "none" },
+          })),
+          picked: null,
+          agentId: null,
+          createdAt: new Date().toISOString(),
+        };
+        state.firstAgents = proposal;
+        return structuredClone(proposal);
+      },
+      pick: async (orgId, proposalId, index) => {
+        log("firstAgents.pick", orgId, proposalId, index);
+        const proposal = state.firstAgents;
+        if (!proposal || proposal.id !== proposalId) {
+          throw new ApiError(404, "first_agents.not_found", "Proposal not found");
+        }
+        const option = proposal.options[index];
+        if (!option) throw new ApiError(400, "first_agents.no_option", "Pick one of the options");
+        const mine = state.me ? withPermissions(state.me).organizations.find((o) => o.id === orgId) : undefined;
+        if (!mine?.permissions?.includes("create_agents")) {
+          throw new ApiError(403, "create_agents_required", "Ask an admin to create agents");
+        }
+        // Picked again: the same agent.
+        const made = proposal.agentId ? state.agents.find((a) => a.id === proposal.agentId) : undefined;
+        if (made) {
+          const entry = Object.entries(state.channelMembers).find(([, ms]) => ms.some((m) => m.id === made.id));
+          return { agentId: made.id, handle: made.handle, channelId: entry?.[0] ?? "" };
+        }
+        const taken = new Set(state.agents.map((a) => a.handle));
+        let handle = option.handle;
+        for (let i = 2; taken.has(handle); i++) handle = `${option.handle}${i}`;
+        const agentId = id("agent");
+        state.agents.push({
+          id: agentId,
+          name: option.name,
+          handle,
+          role: option.role,
+          instructions: option.instructions,
+          model: "claude-sonnet-5-5",
+          ownerUserId: state.me?.user.id ?? null,
+          hasCredential: false,
+          monthlyBudgetUsd: null,
+          createdAt: new Date().toISOString(),
+          audience: { mode: "everyone", userIds: [] },
+          appearance: option.appearance,
+        });
+        const me = { type: "person" as const, id: state.me?.user.id ?? "" };
+        const agent = { type: "agent" as const, id: agentId };
+        // Its own channel in a team's workspace; in a personal one it lives in my DM with it.
+        let channelId: string;
+        if (personalOrg(orgId)) {
+          channelId = `dm-${agentId}`;
+          state.dms.push({ channelId, with: { ...agent, name: option.name, handle }, unread: 0 });
+        } else {
+          channelId = id("chan");
+          state.channels.push({
+            id: channelId,
+            name: handle,
+            topic: option.role,
+            visibility: "public",
+            isMember: true,
+            createdAt: new Date().toISOString(),
+            groupId: null,
+          });
+        }
+        state.channelMembers[channelId] = [me, agent];
+        proposal.picked = index;
+        proposal.agentId = agentId;
+        return { agentId, handle, channelId };
       },
     },
     chat: {
