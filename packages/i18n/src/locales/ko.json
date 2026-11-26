@@ -18311,6 +18311,7 @@
     "namesMore": "{{first}} 외 {{count}}명",
     "wait": {
       "thinking": "생각 중…",
+      "code": "코드 업데이트 중…",
       "held": "승인 대기 중…",
       "said": "“{{text}}”"
     },

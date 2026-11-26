@@ -30,6 +30,7 @@ import { addPersonSpend } from "../person-usage";
 import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
 import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
+import { inPhase } from "./phase";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -520,7 +521,8 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           );
           return;
         }
-        const code = chat ? null : await (turn.code ?? deps.prepare?.(turn, io.signal))?.catch(() => null);
+        const prepared = chat ? null : (turn.code ?? deps.prepare?.(turn, io.signal))?.catch(() => null);
+        const code = prepared ? await inPhase(io, "code", prepared) : null;
         // A runner that takes the conversation apart reads it at the start of the session: the system text stays the
         // agent's, the same in each of its conversations (and its cached prefix with it).
         const apart = (status?.protocol ?? 0) >= CONVERSATION_PROTOCOL;

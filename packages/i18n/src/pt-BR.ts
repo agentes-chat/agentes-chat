@@ -19461,6 +19461,8 @@ export const ptBR = {
     /** The waiting row's step line before its first step (`waitStep`). */
     wait: {
       thinking: "Pensando…",
+      /** Before the model has the turn: the agent's checkouts are being updated from their repositories. */
+      code: "Atualizando o código…",
       held: "Esperando aprovação…",
       /** The agent's own words for its step (what it wrote before the call), quoted. */
       said: "“{{text}}”",

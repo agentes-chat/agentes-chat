@@ -19029,6 +19029,7 @@
     "namesMore": "{{first}} en nog {{count}}",
     "wait": {
       "thinking": "Denkt na…",
+      "code": "Werkt de code bij…",
       "held": "Wacht op goedkeuring…",
       "said": "‘{{text}}’"
     },

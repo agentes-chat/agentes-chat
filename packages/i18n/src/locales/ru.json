@@ -20129,6 +20129,7 @@
     "namesMore": "{{first}} и ещё {{count}}",
     "wait": {
       "thinking": "Думает…",
+      "code": "Обновляет код…",
       "held": "Ждёт одобрения…",
       "said": "«{{text}}»"
     },

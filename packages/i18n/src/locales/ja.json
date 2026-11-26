@@ -18319,6 +18319,7 @@
     "namesMore": "{{first}}ほか{{count}}名",
     "wait": {
       "thinking": "考えています…",
+      "code": "コードを更新しています…",
       "held": "承認を待っています…",
       "said": "「{{text}}」"
     },

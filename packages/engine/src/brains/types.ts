@@ -220,7 +220,12 @@ export interface BrainIO {
    * `null` when it ends. Brains that can't never call it.
    */
   steerable?(steer: ((messages: SteerMessage[]) => Promise<SteerReply>) | null): void;
+  /** A step before the model has the turn (`inPhase`): `null` once it is over. */
+  phase?(phase: BrainPhase | null): void;
 }
+
+/** What a turn waits on before its model: `code`, the agent's checkouts being updated (`prepareAgentCode`). */
+export type BrainPhase = "code";
 
 export type BrainEvent =
   | { type: "text_delta"; text: string }

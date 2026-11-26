@@ -18381,6 +18381,7 @@
     "namesMore": "{{first}} 等另外 {{count}} 位",
     "wait": {
       "thinking": "思考中…",
+      "code": "正在更新代码…",
       "held": "等待审批…",
       "said": "“{{text}}”"
     },

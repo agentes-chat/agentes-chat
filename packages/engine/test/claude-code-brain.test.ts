@@ -217,6 +217,35 @@ test("before a chat turn: the agent's checkouts set where it starts and add # Yo
   expect(calls[2]?.request).toMatchObject({ cwd: "", system: "You are dev." });
 });
 
+test("the checkouts' update is the turn's phase: told as it starts and as it ends, before the turn goes out", async () => {
+  const pubsub = createMemoryPubSub();
+  const { hub, calls } = fakeHub(pubsub);
+  const told: { phase: string | null; sent: number }[] = [];
+  const brain = createClaudeCodeBrain({
+    hub,
+    pubsub,
+    agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+    finalGraceMs: 20,
+    prepare: async () => ({ cwd: "repos/acme/app", prompt: "", start: "" }),
+  });
+  await collect(brain.run(turn(), { ...io(), phase: (phase) => told.push({ phase, sent: calls.length }) }));
+  expect(told).toEqual([
+    { phase: "code", sent: 0 },
+    { phase: null, sent: 0 },
+  ]);
+  // Nothing to update (a turn of the right hand, or no checkouts set up): no phase.
+  told.length = 0;
+  await collect(
+    createClaudeCodeBrain({
+      hub,
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      finalGraceMs: 20,
+    }).run(turn(), { ...io(), phase: (phase) => told.push({ phase, sent: calls.length }) }),
+  );
+  expect(told).toEqual([]);
+});
+
 test("protocol 40: what holds for the conversation, and # Your code, go apart from the system text; an older runner gets one text", async () => {
   const conversation = "# This conversation\n\n## Your team\nOther agents: @ops.";
   const code = { cwd: "repos/acme/app", prompt: "# Your code\nacme/app", start: "" };

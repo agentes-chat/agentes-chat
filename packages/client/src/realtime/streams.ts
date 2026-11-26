@@ -155,6 +155,8 @@ export interface LiveRun {
   intent?: string;
   /** Its line on the way (`say_now`) is in the conversation: a late `agent.intent` says nothing more. */
   said?: boolean;
+  /** A step before the model has the turn that is taking a while (`agent.phase`): `code`, its checkouts updating. */
+  phase?: LivePhase;
   /** "Parar" was pressed and the server hasn't confirmed yet. */
   stopping?: boolean;
   /** Its browser command waits for a shared profile someone else has (ADR 0110). */
@@ -356,6 +358,18 @@ export interface AgentIntentEvent {
   text: string;
 }
 
+export type LivePhase = "code";
+
+/** A step before the model has the turn that is taking a while, and its end (`phase: null`). */
+export interface AgentPhaseEvent {
+  type: "agent.phase";
+  channelId: string;
+  threadId: string;
+  runId: string;
+  agentId: string;
+  phase: LivePhase | null;
+}
+
 export interface StreamsState {
   runs: Record<string, LiveRun>;
   /** Runs heard to stop, and when: late deltas for them are ignored. */
@@ -480,6 +494,7 @@ type StreamEvent =
   | AgentToolEvent
   | AgentStepEvent
   | AgentIntentEvent
+  | AgentPhaseEvent
   | AgentToolOutputEvent
   | AgentToolProgressEvent
   | RunCanceledEvent
@@ -697,6 +712,13 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
       // Its own words came first: the line it said on the way, or its reply.
       if (state.finished[event.runId] || !r || r.said) return state;
       return { ...state, runs: { ...state.runs, [event.runId]: { ...r, intent: event.text } } };
+    }
+    case "agent.phase": {
+      const r = state.runs[event.runId];
+      if (state.finished[event.runId] || !r) return state;
+      // A phase this app doesn't know says nothing: the line stays as it was.
+      const phase = event.phase === "code" ? event.phase : undefined;
+      return { ...state, runs: { ...state.runs, [event.runId]: { ...r, phase } } };
     }
     case "agent.tool.output": {
       if (state.finished[event.runId]) return state;

@@ -77,6 +77,7 @@ import { brainOf } from "./brain-settings";
 import { brainSessionId, missingTurnFolder, recordPlanUsage } from "./brains/claude-code";
 import { modelUnavailable } from "./brains/failure-causes";
 import { ModelBrain, turnEffort } from "./brains/model";
+import { phaseTeller } from "./brains/phase";
 import type { ComputerTurn } from "./brains/prompt";
 import {
   type BrainPlan,
@@ -1587,6 +1588,9 @@ async function executeRunInner(
   // another place (`adoptWork`). In a confidential thread that is under the thread's root, whatever asked.
   let replyThreadId = replyThreadOf({ ...run, confidential: sealedAtClaim });
   const where = { channelId: run.channelId, threadId: replyThreadId, agentId: run.agentId, runId: run.id };
+  const tellPhase = phaseTeller(
+    (phase) => void publishChannelEvent(deps.pubsub, { type: "agent.phase", ...where, phase }).catch(() => {}),
+  );
   // Background work (a routine's run, or long work) says so: the apps keep it out of the conversation's "working" row.
   let bg: { background?: true } = run.background || run.workId ? { background: true as const } : {};
   if (!askingForRoom) {
@@ -5540,6 +5544,7 @@ async function executeRunInner(
           executeToolForRun(deps, { orgId: run.orgId, agentId: run.agentId, runId: run.id, machineId: "" }, call),
         // A computer brain's turn that can take messages mid-turn (live steering).
         steerable: (steer) => live.steerable(steer),
+        ...(run.background || run.workId ? {} : { phase: tellPhase }),
       };
       const prompt = plan.kind === "model" ? triggerText : (nextPrompt ?? triggerText);
       // A computer brain's turn: the transcript is saved (the bridge's pauses join it), and the turn's
