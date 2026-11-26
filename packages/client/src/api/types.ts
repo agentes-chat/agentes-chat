@@ -5524,7 +5524,24 @@ export interface Machine {
    * ADR 0115: its workspace disk (free GB, share in use) and the shared folder's size (GB, measured hourly), as its
    * runner last said; null or absent for people who don't manage it, or when its runner doesn't say.
    */
-  disk?: { freeGb: number; use: number | null; sharedGb: number | null } | null;
+  disk?: {
+    freeGb: number;
+    use: number | null;
+    sharedGb: number | null;
+    /** The disk's size; null or absent from an older runner. */
+    sizeGb?: number | null;
+    /** What takes it by kind (GB), measured every few hours on the workspace's own computer; null elsewhere. */
+    parts?: DiskParts | null;
+  } | null;
+}
+
+/** What takes a computer's disk, by kind, in GB (`Machine.disk.parts`). */
+export interface DiskParts {
+  projects: number;
+  apps: number;
+  agents: number;
+  caches: number;
+  system: number;
 }
 
 /** Whether the organization uses the server's own computer (`GET …/machines/host`). */

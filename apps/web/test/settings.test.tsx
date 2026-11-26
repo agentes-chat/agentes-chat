@@ -1045,3 +1045,30 @@ describe("the same key saved more than once", () => {
     expect(document.body.textContent).toContain("Essa chave já estava salva. Atualizei os dados.");
   });
 });
+
+describe("Geral's cards and header", () => {
+  test("Memória do time ends at its last memory: its list is a plain column, never a row's 200px text block", async () => {
+    const state = seedState();
+    const [first] = state.memories;
+    if (!first) throw new Error("fixture");
+    state.memories.push({ ...first, id: "mem-team", agentId: "", text: "Respondemos clientes em até um dia útil." });
+    await go(state);
+    const card = screen().getByRole("region", { name: "Memória do time" });
+    const list = card.querySelector("ul");
+    expect(list?.textContent).toContain("Respondemos clientes em até um dia útil.");
+    expect(list?.classList.contains("agp-list")).toBe(true);
+    expect(list?.classList.contains("list-col")).toBe(false);
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
+  test("the workspace's name under Configurações stands 4px apart from the title, past the page meta's -2px", async () => {
+    const css = (await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text()).replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const body = css.split("\n.settings__head .ac-pagehead__meta {")[1]?.split("}")[0] ?? "";
+    expect(body).toContain("margin-top: var(--space-1);");
+    await go();
+    expect(document.querySelector(".settings__head .ac-pagehead__meta .settings__org")?.textContent).toContain("Acme");
+  });
+});

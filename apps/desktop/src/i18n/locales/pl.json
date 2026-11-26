@@ -468,7 +468,7 @@
     "internet": "Agenci korzystają z internetu tego komputera",
     "internetOn": "Strony otwierane przez agentów widzą Twoją lokalizację",
     "internetOff": "Wyłączone: agenci korzystają ze zwykłego połączenia",
-    "internetHint": "Agenci z workspace’u otwierają strony przez połączenie tego komputera. Tylko strony internetowe, do 5 GB dziennie i nigdy nic w Twojej własnej sieci. Gdy ten komputer jest offline, korzystają ze zwykłego połączenia.",
+    "internetHint": "Agenci z workspace’u otwierają strony przez połączenie tego komputera. Tylko strony internetowe i nigdy nic w Twojej własnej sieci. Gdy ten komputer jest offline, korzystają ze zwykłego połączenia.",
     "shareOff": "Na razie tylko ty",
     "shareHint": "Agenci wszystkich w {{org}} mogą uruchamiać na nim zadania jako twój użytkownik.",
     "addFolders": "Dodaj foldery",

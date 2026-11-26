@@ -336,12 +336,28 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** The workspace disk's size (GB, one decimal). Absent from an older runner, as `oomKills`. */
+  diskGb?: number;
+  /**
+   * What takes the workspace disk, by kind (GB, one decimal), measured every `DISK_PARTS_MS` by the runner in system
+   * mode on Linux; the rest of what is in use is everything else. Absent elsewhere and from an older runner, as
+   * `oomKills`.
+   */
+  diskParts?: DiskParts;
   /**
    * What the agents' temporary folders hold in memory now (GB), ADR 0243: system mode on Linux. Absent from an older
    * runner: no protocol number, as `oomKills`.
    */
   agentTmpRamGb?: number;
 }
+
+/** The kinds of things `MachineLoad.diskParts` splits a disk into, in the order a bar shows them. */
+export const DISK_PARTS = ["projects", "apps", "agents", "caches", "system"] as const;
+export type DiskPart = (typeof DISK_PARTS)[number];
+export type DiskParts = Record<DiskPart, number>;
+
+/** How often the runner measures `diskParts`: `du` walks the whole disk. */
+export const DISK_PARTS_MS = 6 * 3600_000;
 
 /** How often a computer's load is sampled (protocol 22). */
 export const LOAD_SAMPLE_MS = 5 * 60_000;
@@ -2686,8 +2702,6 @@ export const EGRESS_SHARE_PROTOCOL = 81;
 export const EGRESS_SHARE = {
   /** The web only: anything else leaves the workspace's computer its usual way. */
   ports: [80, 443] as readonly number[],
-  /** Bytes both ways a day (UTC) the lending computer carries before it refuses new connections until the next. */
-  dailyBytes: 5 * 1024 ** 3,
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */
@@ -5267,8 +5281,13 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
     ...(between(v.agentTmpRamGb, 0, 1e6) ? { agentTmpRamGb: v.agentTmpRamGb } : {}),
+    ...(between(v.diskGb, 0, 1e6) ? { diskGb: v.diskGb } : {}),
+    ...(isDiskParts(v.diskParts) ? { diskParts: pickDiskParts(v.diskParts) } : {}),
   };
 }
+
+const isDiskParts = (v: unknown): v is DiskParts => isObject(v) && DISK_PARTS.every((k) => between(v[k], 0, 1e6));
+const pickDiskParts = (v: DiskParts) => Object.fromEntries(DISK_PARTS.map((k) => [k, v[k]])) as DiskParts;
 
 /** `pong.browserTraffic` (protocol 23): whole bytes up to 1e15 and at most 24 hours, else none. */
 export function parseBrowserTraffic(v: unknown): BrowserTraffic | null {

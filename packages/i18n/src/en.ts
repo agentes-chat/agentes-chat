@@ -13933,6 +13933,25 @@ export const en = {
     s3: "Your own storage",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 or another compatible with S3.",
     current: "In use",
+    /** The workspace's own Cloud computer's disk, under the files' storage: a bar by what takes it, with a legend. */
+    computer: {
+      title: "Workspace computer",
+      used: "{{used}} of {{size}} in use",
+      bar: "The workspace computer's disk",
+      measuring: "Measuring what takes the space.",
+      part: {
+        projects: "Projects and code",
+        apps: "Apps and tools",
+        agents: "Agents' files",
+        caches: "Caches and temporary files",
+        system: "System",
+        other: "Other",
+        free: "Free",
+      },
+      full: "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore.",
+      /** The message an agent gets, already in its DM's composer, from the button under `full`. */
+      ask: "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room.",
+    },
     usage: {
       files: "{{size}}\u00a0of\u00a0files",
       none: "No\u00a0files",
@@ -17462,23 +17481,34 @@ export const en = {
     /** One switch per computer (`machines.spill_own`, ADR 0233): its owner's to turn on. */
     spillOwn: "Help when the team's computer is full or away",
     spillOwnHint:
-      "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in.",
+      "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer.",
     /** The same switch on a computer marked the workspace's: anyone's agents, on their owner's sign-in there. */
     spillTeamHint:
-      "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer.",
+      "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer.",
     /** Under the switch while an admin turned devices' help off for the whole workspace. */
     spillWorkspaceOff: "An admin turned this off for the workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Use this computer for my agents' work",
-    spillFirstHint:
-      "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away.",
+    /**
+     * Its owner's one choice for how the computer helps (`spillUseOf`): never, only as backup (`machines.spill_own`) or
+     * first for their own agents' work (`machines.spill_first`).
+     */
+    helpUse: "How it helps your agents",
+    helpUses: {
+      off: "Doesn't help",
+      help: "Only as backup",
+      first: "First for my agents",
+    },
+    helpUseHint:
+      "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer.",
+    /** The same choice on a computer marked the workspace's: as backup it takes anyone's agents. */
+    helpUseTeamHint:
+      "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free.",
     /** Settings › Devices, admins: the workspace's switch over every computer's own (`devicesHelp`). */
     helpWorkspace: "Computers help when the team's is full or away",
     helpWorkspaceHint: "Each computer helps only if its owner allows it. Off: none helps, whatever its owner chose.",
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection.",
+      "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
@@ -18117,7 +18147,7 @@ export const en = {
       internetShared: "Agents now open websites through the internet of <b>{{deviceName}}</b>",
       /** Under it: what lending keeps out and what happens while the computer is offline. */
       internetSharedLine:
-        "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection.",
+        "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection.",
       /** Its one button: stops lending this computer's internet. */
       internetOff: "Turn off",
       internetOffDone: "Agents no longer use the internet of {{deviceName}}.",

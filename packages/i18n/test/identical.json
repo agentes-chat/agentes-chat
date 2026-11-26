@@ -1217,6 +1217,7 @@
     ],
     "de": [
       "agentPage.facts.budget",
+      "storage.computer.part.system",
       "chat.consultPair.askedIn",
       "aiHub.detail.limits",
       "live.sheet.args.k",
@@ -4006,6 +4007,7 @@
     ],
     "pl": [
       "drive.folder",
+      "storage.computer.part.system",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",

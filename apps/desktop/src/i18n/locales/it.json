@@ -464,7 +464,7 @@
     "internet": "Gli agenti usano la connessione internet di questo computer",
     "internetOn": "I siti che gli agenti aprono vedono la tua posizione",
     "internetOff": "Disattivato: gli agenti usano la connessione abituale",
-    "internetHint": "Gli agenti del workspace aprono i siti tramite la connessione di questo computer. Solo siti web, fino a 5 GB al giorno, e mai nulla della tua rete. Finché questo computer è offline, usano la connessione abituale.",
+    "internetHint": "Gli agenti del workspace aprono i siti tramite la connessione di questo computer. Solo siti web e mai nulla della tua rete. Finché questo computer è offline, usano la connessione abituale.",
     "shareOff": "Solo tu per ora",
     "shareHint": "Gli agenti di tutti in {{org}} possono eseguirci attività, con il tuo utente.",
     "addFolders": "Aggiungi cartelle",

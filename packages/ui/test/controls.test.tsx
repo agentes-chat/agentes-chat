@@ -359,6 +359,8 @@ describe("PickerHeading", () => {
     const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     expect(rule(".ac-picker-head")).toContain("flex-direction: column;");
     expect(rule(".ac-picker-head")).toContain("gap: var(--space-1);");
+    // A list heading: 8 over its list's first line, as much as over the heading.
+    expect(rule(".ac-picker-head")).toContain("padding-block: var(--space-2);");
   });
 });
 

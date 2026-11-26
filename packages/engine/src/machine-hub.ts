@@ -1260,6 +1260,8 @@ export function createMachineHub(deps: MachineHubDeps) {
             diskUse: prev.diskUse,
             ...(prev.diskFreeGb === undefined ? {} : { diskFreeGb: prev.diskFreeGb }),
             ...(prev.sharedGb === undefined ? {} : { sharedGb: prev.sharedGb }),
+            ...(prev.diskGb === undefined ? {} : { diskGb: prev.diskGb }),
+            ...(prev.diskParts === undefined ? {} : { diskParts: prev.diskParts }),
           }
         : load;
     const wasWarned = prev?.diskWarned === true;

@@ -22,6 +22,7 @@ import {
   commandInReason,
   computerKind,
   computerState,
+  computerStorage,
   desktopTargetOf,
   downloadHref,
   egressViaText,
@@ -524,6 +525,31 @@ describe("the shared folder (ADR 0115)", () => {
       'machines.shared.size{"size":"3.2 GB"} · machines.shared.free{"free":"43 GB"}',
     );
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
+  });
+
+  test("a computer's storage: its size, what is in use, what takes it by kind with the rest as Other, and when it fills up", () => {
+    const parts = { projects: 20, apps: 10, agents: 30, caches: 8, system: 0 };
+    const s = computerStorage({ freeGb: 20, use: 0.8, sharedGb: null, sizeGb: 100, parts });
+    expect(s).toMatchObject({ sizeGb: 100, usedGb: 80, freeGb: 20, full: false });
+    // A kind that takes nothing draws nothing; what no kind covers is Other, in its gray.
+    expect(s?.parts.map((p) => [p.key, p.gb])).toEqual([
+      ["projects", 20],
+      ["apps", 10],
+      ["agents", 30],
+      ["caches", 8],
+      ["other", 12],
+    ]);
+    expect(s?.parts.at(-1)).toMatchObject({ light: "#9a9a94", dark: "#6f6f6a" });
+    expect(new Set(s?.parts.map((p) => p.light)).size).toBe(5);
+    expect(computerStorage({ freeGb: 10, use: 0.9, sharedGb: null, sizeGb: 100, parts })?.full).toBe(true);
+    // Counted over what df says is used (rounding): no negative Other.
+    expect(computerStorage({ freeGb: 40, use: 0.6, sharedGb: null, sizeGb: 100, parts })?.parts.at(-1)?.key).toBe(
+      "caches",
+    );
+    // An older runner: the size from what is free and the share in use, no parts yet.
+    expect(computerStorage({ freeGb: 25, use: 0.75, sharedGb: null })).toMatchObject({ sizeGb: 100, parts: [] });
+    expect(computerStorage({ freeGb: 25, use: null, sharedGb: null })).toBeNull();
+    expect(computerStorage(null)).toBeNull();
   });
 
   test("why a sign-in ended: a line per code, the CLI's words under three of them, none when canceled", () => {
