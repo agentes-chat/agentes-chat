@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { eq, schema, sql } from "@agenteschat/db";
+import { and, eq, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   archiveChannel,
   BILLING_FROM,
@@ -17,6 +17,7 @@ import {
   openLinkToken,
   openPersonAgentDm,
   saveStorage,
+  sayTeamHello,
   sealLinkToken,
   setBillingHold,
   setOrgStanding,
@@ -474,6 +475,70 @@ describe("mintBillingLink", () => {
     });
     // The same counts in all: every message people can read, the month's among them.
     expect(usage).toMatchObject({ messages: 7, files: 2, wikiPages: 1, issues: 2 });
+  });
+
+  test("the lines the server posts as an agent count as messages, never as the team's own: its hello first", async () => {
+    const g = await setup({ rightHand: true });
+    try {
+      // A clinic template's agent beside the right hand: each says hi in #general with no model call (ADR 0162).
+      const nina = await createAgent(
+        g.db,
+        g.owner.id,
+        g.org.id,
+        { name: "Nina", handle: "nina", role: "Agenda", instructions: "Help.", credentialId: g.credential.id },
+        { model: "claude-sonnet-5-5" },
+      );
+      const [lodi] = await g.db
+        .select({ id: schema.agents.id })
+        .from(schema.agents)
+        .where(and(eq(schema.agents.orgId, g.org.id), eq(schema.agents.builtin, "right_hand")));
+      for (const agentId of [lodi?.id, nina.id])
+        await sayTeamHello({ db: g.db }, g.org.id, { agentId, userId: g.owner.id, how: "paid" });
+      // Into a month of the past, which nothing else this workspace wrote reaches.
+      const hellos = await g.db.execute(
+        sql`update messages set created_at = '2026-10-15T12:00:00Z' where org_id = ${g.org.id}
+          and meta->>'greeting' = 'true' returning id`,
+      );
+      expect(rowsOf(hellos)).toHaveLength(2);
+      const dev = { type: "agent" as const, agentId: g.agent.id, runId: null, hop: 1, stretchId: null };
+      const say = (meta: Record<string, unknown>, at = "2026-10-16T12:00:00Z") =>
+        insertMessage(g.db, {
+          orgId: g.org.id,
+          channelId: g.general.id,
+          author: dev,
+          body: "Oi",
+          meta,
+          createdAt: new Date(at),
+        });
+      // A reminder's line, a device wait's card, a task's and a file's hidden first message, the GIF after a reply.
+      for (const meta of [
+        { reminder: true },
+        { deviceWait: { id: crypto.randomUUID(), state: "waiting" } },
+        { taskConversation: { number: 1 } },
+        { fileConversation: { kind: "doc" } },
+        { mediaAfter: crypto.randomUUID() },
+      ])
+        await say(meta);
+      const monthOf = async () =>
+        claimsOf(
+          (
+            await mintBillingLink(g.db, {
+              secret: SECRET,
+              baseUrl: "https://billing.example.com",
+              userId: g.owner.id,
+              orgId: g.org.id,
+              from: "settings",
+              now: new Date("2026-10-20T12:00:00Z"),
+            })
+          ).url,
+        ).usage.month;
+      expect(await monthOf()).toMatchObject({ messages: 7, agentActions: 0 });
+      // An agent's own line is the team's work.
+      await say({});
+      expect(await monthOf()).toMatchObject({ messages: 8, agentActions: 1 });
+    } finally {
+      await g.close();
+    }
   });
 
   test("the link stays short enough for any address bar and proxy, with the longest team and month", async () => {

@@ -152,8 +152,12 @@ three fields (`BillingTeamAgent`, `BillingMonth` in `packages/engine/src/billing
 - **`month`**: this calendar month so far in the workspace's time zone (`organization_settings.timezone`, UTC without
   one): `start` (its 1st at 00:00 there, in seconds), `days` (messages per local day from the 1st to today, today last,
   at most 31), `messages` (their sum), `agentActions` (the messages agents wrote themselves: a line the server wrote for
-  an agent, `SYSTEM_LINE_META` in `router.ts`, such as an approval card, a notice or a line from a code like "no AI
-  connected", is left out, so a workspace where no agent worked shows none), and the Drive `files`, `wikiPages` and
+  an agent is left out, so a workspace where no agent worked shows none. That is `SYSTEM_LINE_META` in `router.ts`,
+  such as an approval card, a notice or a line from a code like "no AI connected", and the lines the server posts as an
+  agent with no model call that the router has no reason to skip, `SERVER_LINE_META` in `billing-link.ts`: the team's
+  hello in #general (`meta.greeting`, ADR 0162), which every team workspace gets once its first plan starts, a
+  reminder's line, the card a run waits on while a device is away, the hidden first message of a task's or a file's
+  conversation, and the sticker or GIF added after a reply, ADR 0091 §4), and the Drive `files`, `wikiPages` and
   `issues` created in it, counted as the totals count them (the trash, deleted pages and canceled tasks left out).
   Messages are counted where `messages` counts them, per conversation on each month's `(channel_id, created_at)` index
   (ADR 0009), the days told apart by their local midnights computed on this server, so a day a DST change makes 23 or

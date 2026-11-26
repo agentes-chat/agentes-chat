@@ -5,6 +5,7 @@ import { normalizeAppearance } from "@agenteschat/tokens/look";
 import { zonedParts, zonedTimeForward } from "./cron";
 import { cutText } from "./format";
 import { isValidTimeZone } from "./management";
+import { MEDIA_AFTER_KEY } from "./media";
 import { operatorOrg } from "./operator";
 import { requirePermission, type UserLocale } from "./organizations";
 import { SYSTEM_LINE_META } from "./router";
@@ -84,7 +85,7 @@ export interface BillingMonth {
   /** Messages per day, from the 1st to today: one item per day, today last. */
   days: number[];
   messages: number;
-  /** The messages agents wrote themselves: a line the server wrote for them (`SYSTEM_LINE_META`) left out. */
+  /** The messages agents wrote themselves: a line the server wrote for them (`SERVER_LINE_META`) left out. */
   agentActions: number;
   /** Drive files added, wiki pages and tasks created this month, as `usage` counts them. */
   files: number;
@@ -255,6 +256,27 @@ async function teamOf(db: Database, orgId: string): Promise<BillingTeamAgent[]> 
   });
 }
 
+/**
+ * Meta of an agent's message the server wrote, not the agent: the router's list (cards, notices, lines from a code, a
+ * stopped run's line) and the lines the server posts as an agent with no model call that the router has no reason to
+ * skip. `agentActions` leaves them all out, so a workspace where no agent worked shows none (ADR 0079, amendment of
+ * 2026-11-26). `SYSTEM_LINE_META` itself stays as the router reads it.
+ */
+const SERVER_LINE_META = [
+  ...SYSTEM_LINE_META,
+  // The team's hello in #general once it can work (ADR 0162): one per agent in every team workspace's first paid month.
+  "greeting",
+  // A reminder's line at its time ("@ana Reminder: …"), with no run: a person sets one from a message too.
+  "reminder",
+  // The card a run waits on while a computer or phone is away: its words are the server's, as an approval card's.
+  "deviceWait",
+  // The hidden first message of a task's or a file's conversation, under the agent that made the task or the file.
+  "taskConversation",
+  "fileConversation",
+  // The sticker or GIF the server adds after an agent's reply (ADR 0091 §4): the reply itself counts.
+  MEDIA_AFTER_KEY,
+] as const;
+
 /** 00:00 of a day in `timeZone` (moved forward where a DST change skips it), its UTC midnight if none is left. */
 const midnight = (year: number, month: number, day: number, timeZone: string) =>
   zonedTimeForward(year, month, day, 0, 0, timeZone) ?? new Date(Date.UTC(year, month - 1, day));
@@ -274,12 +296,12 @@ async function monthOf(db: Database, orgId: string, zone: string | null, now: Da
   const to =
     today.month === 12 ? midnight(today.year + 1, 1, 1, timeZone) : midnight(today.year, today.month + 1, 1, timeZone);
   const bounds = `{${starts.map((at) => at.toISOString()).join(",")}}`;
-  const systemLines = `{${SYSTEM_LINE_META.join(",")}}`;
+  const serverLines = `{${SERVER_LINE_META.join(",")}}`;
   const [perDay, [kept]] = await Promise.all([
     db.execute(sql`select per.day, sum(per.n) as n, sum(per.said) as said
       from ${channels} c,
         lateral (select width_bucket(m.created_at, ${bounds}::timestamptz[]) as day, count(*) as n,
-            count(*) filter (where m.author_type = 'agent' and not (m.meta ?| ${systemLines}::text[])) as said
+            count(*) filter (where m.author_type = 'agent' and not (m.meta ?| ${serverLines}::text[])) as said
           from ${messages} m
           where m.channel_id = c.id and m.created_at >= ${from.toISOString()}::timestamptz
             and m.created_at < ${to.toISOString()}::timestamptz
