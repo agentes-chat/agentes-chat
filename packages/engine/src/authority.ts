@@ -317,6 +317,28 @@ export const transcriptKeys = (...keys: string[]) => {
 export const steeredByOf = (transcript: Record<string, unknown> | null | undefined) =>
   typeof transcript?.steeredBy === "string" ? transcript.steeredBy : null;
 
+/**
+ * The person behind a run they wrote into (`steeredBy`), `relayed` when what they wrote wasn't typed in our apps
+ * (`Transcript.steeredRelayed`, ADR 0250): a token's or a bridge's words steered in teach and grant nothing either.
+ * `steeredRelayed` isn't in the `state` copy, so without the whole transcript it is read alone, only for a steered run.
+ */
+async function steeredAuthority(
+  db: Executor,
+  run: Pick<AuthorityRun, "id" | "orgId">,
+  personId: string,
+  transcript: Record<string, unknown> | null | undefined,
+): Promise<RunAuthority> {
+  let relayed = transcript?.steeredRelayed === true;
+  if (!relayed && !Array.isArray(transcript?.messages)) {
+    const [row] = await db
+      .select({ relayed: sql<boolean | null>`(${agentRuns.transcript}->>'steeredRelayed')::boolean` })
+      .from(agentRuns)
+      .where(and(eq(agentRuns.orgId, run.orgId), eq(agentRuns.id, run.id)));
+    relayed = row?.relayed === true;
+  }
+  return relayed ? { kind: "person", personId, relayed: true } : { kind: "person", personId };
+}
+
 /** Who is behind a run (see `RunAuthority`). */
 export async function runAuthority(db: Executor, run: AuthorityRun): Promise<RunAuthority> {
   if (run.background) {
@@ -329,7 +351,7 @@ export async function runAuthority(db: Executor, run: AuthorityRun): Promise<Run
   const root = await messageRoot(db, run.orgId, run.triggerMessageId);
   if (root.kind === "person") return root;
   const steeredBy = steeredByOf(run.transcript ?? run.state);
-  if (steeredBy) return { kind: "person", personId: steeredBy };
+  if (steeredBy) return steeredAuthority(db, run, steeredBy, run.transcript ?? run.state);
   if (root.kind === "agent") return { kind: "unattended", personId: null, reason: "agent" };
   return { kind: "unattended", personId: null, reason: root.kind, brief: await feedingBrief(db, run.orgId, root) };
 }
@@ -387,7 +409,7 @@ export async function runAuthorityById(db: Executor, orgId: string, runId: strin
     .from(agentRuns)
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
   const steeredBy = steeredByOf(steered?.transcript);
-  return steeredBy ? { kind: "person", personId: steeredBy } : authority;
+  return steeredBy ? steeredAuthority(db, { id: runId, orgId }, steeredBy, null) : authority;
 }
 
 /**
