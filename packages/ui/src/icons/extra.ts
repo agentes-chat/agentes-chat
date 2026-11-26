@@ -68,6 +68,8 @@ export const extraIcons = {
   ],
   /** Sidebar: Criar agente. */
   plus: [["path", { d: "M10 4.5v11M4.5 10h11" }]],
+  /** Agent activity and the task manager. */
+  activity: [["path", { d: "M2.5 10h3.25L8 5l3.5 10 2.25-5h3.75" }]],
   /** The stages of a task, a circle that fills as the work goes (to do, doing, review, done). */
   stageTodo: [["circle", { cx: "10", cy: "10", r: "6.75" }]],
   stageProgress: [

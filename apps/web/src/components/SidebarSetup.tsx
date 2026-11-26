@@ -1,5 +1,6 @@
 import type { SidebarItem, SidebarPlace } from "@agenteschat/client";
 import {
+  keys,
   useOverview,
   useSetSidebarItem,
   useSetSidebarToolOrder,
@@ -23,11 +24,13 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
+  type DialogProps,
   Icon,
   type IconName,
   Segmented,
   type SegmentedOption,
 } from "@agenteschat/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   cloneElement,
   type DragEvent,
@@ -43,23 +46,27 @@ import { useTranslation } from "react-i18next";
 import { useOrg } from "./org-context";
 import { sectionName, useSectionOrder } from "./SidebarOrder";
 
-/** The tools at the top of the sidebar: the page each opens and its icon. */
+/** The order of the groups in the personal Tools catalog. */
+export const PERSONAL_TOOL_GROUPS = ["reviewTools", "organizeTools", "workspaceTools"] as const;
+type PersonalToolGroup = (typeof PERSONAL_TOOL_GROUPS)[number];
+
+/** The page, icon and catalog group for each sidebar tool. */
 export const SIDEBAR_TOOLS = {
   // The inbox: what waits on me, what is new and what I decided, in one place.
-  waiting: { to: "/org/$orgId/notifications", icon: "inbox" },
-  proposals: { to: "/org/$orgId/proposals", icon: "bulb" },
-  threads: { to: "/org/$orgId/threads", icon: "thread" },
-  issues: { to: "/org/$orgId/issues", icon: "issues" },
-  wiki: { to: "/org/$orgId/wiki", icon: "book" },
-  drive: { to: "/org/$orgId/drive", icon: "drive" },
-  routines: { to: "/org/$orgId/routines", icon: "routines" },
-  calendar: { to: "/org/$orgId/calendar", icon: "calendar" },
-  team: { to: "/org/$orgId/team", icon: "agent" },
-  skills: { to: "/org/$orgId/skills", icon: "bolt" },
-  dashboards: { to: "/org/$orgId/dashboards", icon: "chart" },
-  taskManager: { to: "/org/$orgId/task-manager", icon: "stageProgress" },
-  code: { to: "/org/$orgId/code", icon: "code" },
-} as const satisfies Record<SidebarItem, { to: string; icon: IconName }>;
+  waiting: { to: "/org/$orgId/notifications", icon: "inbox", group: "reviewTools" },
+  proposals: { to: "/org/$orgId/proposals", icon: "bulb", group: "reviewTools" },
+  threads: { to: "/org/$orgId/threads", icon: "thread", group: "workspaceTools" },
+  issues: { to: "/org/$orgId/issues", icon: "issues", group: "organizeTools" },
+  wiki: { to: "/org/$orgId/wiki", icon: "book", group: "workspaceTools" },
+  drive: { to: "/org/$orgId/drive", icon: "drive", group: "organizeTools" },
+  routines: { to: "/org/$orgId/routines", icon: "routines", group: "organizeTools" },
+  calendar: { to: "/org/$orgId/calendar", icon: "calendar", group: "organizeTools" },
+  team: { to: "/org/$orgId/team", icon: "agent", group: "workspaceTools" },
+  skills: { to: "/org/$orgId/skills", icon: "bolt", group: "workspaceTools" },
+  dashboards: { to: "/org/$orgId/dashboards", icon: "chart", group: "workspaceTools" },
+  taskManager: { to: "/org/$orgId/task-manager", icon: "stageProgress", group: "workspaceTools" },
+  code: { to: "/org/$orgId/code", icon: "code", group: "workspaceTools" },
+} as const satisfies Record<SidebarItem, { to: string; icon: IconName; group: PersonalToolGroup }>;
 
 /**
  * The person's order of the tools in this workspace (`…/me/sidebar/tools`), saved as `null` when it is the default of
@@ -98,7 +105,15 @@ const MOVE_KEYS = "Alt+Shift+ArrowUp Alt+Shift+ArrowDown";
  * the links `row` makes, so the browser's own menu on them is kept. Each shows its own grip on hover: the row is what
  * moves, so a mouse drags from anywhere on it and a click on the grip doesn't open the tool.
  */
-export function ToolList({ items, row }: { items: SidebarItem[]; row: (id: SidebarItem) => ReactElement }) {
+export function ToolList({
+  items,
+  row,
+  action,
+}: {
+  items: SidebarItem[];
+  row: (id: SidebarItem) => ReactElement;
+  action?: (id: SidebarItem) => ReactNode;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const { order, put } = useToolOrder(org.id, isPersonal(org));
@@ -111,7 +126,7 @@ export function ToolList({ items, row }: { items: SidebarItem[]; row: (id: Sideb
   };
   return shown.map((id) => {
     const link = row(id) as ReactElement<{ children?: ReactNode }>;
-    return cloneElement(link as ReactElement<Record<string, unknown>>, {
+    const draggableLink = cloneElement(link as ReactElement<Record<string, unknown>>, {
       children: (
         <>
           {link.props.children}
@@ -157,6 +172,15 @@ export function ToolList({ items, row }: { items: SidebarItem[]; row: (id: Sideb
       },
       onDragEnd: end,
     });
+    const trailing = action?.(id);
+    return trailing ? (
+      <div key={id} className="sidebar__row sidebar__tool-with-action" data-acts>
+        {draggableLink}
+        <div className="sidebar__row-acts">{trailing}</div>
+      </div>
+    ) : (
+      draggableLink
+    );
   });
 }
 
@@ -166,23 +190,33 @@ export function ToolList({ items, row }: { items: SidebarItem[]; row: (id: Sideb
  * workspace, so their other devices and the desktop app show the same sidebar. What shows before any choice, and what
  * Reset to default goes back to, is the workspace's mode's (ADR 0159).
  */
-export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SidebarSetupDialog({
+  open,
+  onClose,
+  returnFocus,
+}: {
+  open: boolean;
+  onClose: () => void;
+  returnFocus?: DialogProps["returnFocus"];
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const personal = isPersonal(org);
   const { data: items, refetch } = useSidebarItems(org.id);
+  const queryClient = useQueryClient();
   const save = useSetSidebarItem(org.id, personal);
   const sections = useSectionOrder(org.id, personal);
   const tools = useToolOrder(org.id, personal);
   // Code only where it has anything for me (ADR 0215 §12); the arrows move a tool past its shown neighbour.
   const shown = offeredTools(tools.order, useOverview(org.id).data?.code, items);
   // What another device changed since this one loaded shows as the dialog opens.
+  // The pending write already returns the server's full preferences. Reading before it lands can undo its optimistic update.
   useEffect(() => {
-    if (open) void refetch();
-  }, [open, refetch]);
+    if (open && queryClient.isMutating({ mutationKey: keys.sidebarItems(org.id) }) === 0) void refetch();
+  }, [open, org.id, queryClient, refetch]);
   const options = (id: SidebarItem): SegmentedOption<SidebarPlace>[] => [
-    { value: "always", label: t("shell.sidebarSetup.always") },
-    { value: "more", label: t("shell.sidebarSetup.more") },
+    { value: "always", label: t(personal ? "shell.sidebarSetup.inQuickAccess" : "shell.sidebarSetup.always") },
+    { value: "more", label: t(personal ? "shell.sidebarSetup.inTools" : "shell.sidebarSetup.more") },
     ...(SIDEBAR_COUNTED.includes(id)
       ? [{ value: "auto" as const, label: t("shell.sidebarSetup.auto"), title: t("shell.sidebarSetup.autoHint") }]
       : []),
@@ -191,6 +225,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
     <Dialog
       open={open}
       onOpenChange={(next) => !next && onClose()}
+      returnFocus={returnFocus}
       title={t("shell.customizeSidebar")}
       description={t("shell.sidebarSetup.description")}
       closeLabel={t("common.close")}
@@ -207,6 +242,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
               <Segmented
                 block
                 size="sm"
+                className={personal ? "sidebar-setup__choices" : undefined}
                 label={t(`shell.${id}`)}
                 value={sidebarPlace(items, id, personal)}
                 onValueChange={(place) => save.mutate({ item: id, place })}

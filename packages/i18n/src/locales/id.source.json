@@ -5483,6 +5483,27 @@
   "shell.sidebarSetup.always": {
     "value": "Always"
   },
+  "shell.sidebarSetup.inTools": {
+    "value": "Only in Tools"
+  },
+  "shell.sidebarSetup.reviewTools": {
+    "value": "To review"
+  },
+  "shell.sidebarSetup.organizeTools": {
+    "value": "Organization"
+  },
+  "shell.sidebarSetup.workspaceTools": {
+    "value": "Workspace"
+  },
+  "shell.sidebarSetup.inQuickAccess": {
+    "value": "In Quick access"
+  },
+  "shell.sidebarSetup.pinTool": {
+    "value": "Pin {{name}} to Quick access"
+  },
+  "shell.sidebarSetup.removeTool": {
+    "value": "Remove {{name}} from Quick access"
+  },
   "shell.sidebarSetup.more": {
     "value": "In More"
   },
@@ -5770,6 +5791,9 @@
   },
   "shell.directMessages": {
     "value": "Direct messages"
+  },
+  "shell.create": {
+    "value": "Create"
   },
   "shell.createAgent": {
     "value": "Create agent"
@@ -51257,7 +51281,10 @@
     "value": "The terminal opened in the agent's folder. Update the computer to open it in the session's folder."
   },
   "agora.label": {
-    "value": "Now"
+    "value": "Activity"
+  },
+  "agora.openActivity": {
+    "value": "View agent activity"
   },
   "agora.working": {
     "value": {

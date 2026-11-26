@@ -91,6 +91,41 @@ describe("Dialog", () => {
     expect(document.activeElement === trigger).toBe(true);
   });
 
+  test("returns focus to the current trigger when it was replaced while open", async () => {
+    function ReplacingTrigger({ compact }: { compact: boolean }) {
+      const [open, setOpen] = useState(false);
+      const trigger = useRef<HTMLButtonElement>(null);
+      return (
+        <>
+          <Button key={String(compact)} ref={trigger} onClick={() => setOpen(true)}>
+            Abrir
+          </Button>
+          <Dialog
+            open={open}
+            onOpenChange={setOpen}
+            returnFocus={open ? trigger : undefined}
+            title="Preferências"
+            closeLabel="Fechar"
+          >
+            <p>Preferências da barra lateral</p>
+          </Dialog>
+        </>
+      );
+    }
+
+    const { rerender } = render(<ReplacingTrigger compact />);
+    const original = body().getByRole("button", { name: "Abrir" });
+    original.focus();
+    await act(async () => fireEvent.click(original));
+    rerender(<ReplacingTrigger compact={false} />);
+    const dialog = body().getByRole("dialog", { name: "Preferências" });
+    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(original.isConnected).toBe(false);
+    expect(document.activeElement === body().getByRole("button", { name: "Abrir" })).toBe(true);
+  });
+
   test("its head: the face on the title's line, its actions and close in one row of actions", () => {
     render(
       <Dialog

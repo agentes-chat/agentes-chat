@@ -2302,6 +2302,13 @@
       "agentSettings": "Impostazioni di {{name}}"
     },
     "sidebarSetup": {
+      "inTools": "Solo in Strumenti",
+      "reviewTools": "Da rivedere",
+      "organizeTools": "Organizzazione",
+      "workspaceTools": "Area di lavoro",
+      "inQuickAccess": "In Accesso rapido",
+      "pinTool": "Fissa {{name}} in Accesso rapido",
+      "removeTool": "Rimuovi {{name}} da Accesso rapido",
       "description": "Scegli cosa resta in vista in cima alla barra laterale. Solo per te, in questo spazio di lavoro.",
       "always": "Sempre",
       "more": "In Altro",
@@ -2405,6 +2412,7 @@
     "channelsPersonal": "Conversazioni di gruppo",
     "agents": "Agenti",
     "directMessages": "Messaggi diretti",
+    "create": "Crea",
     "createAgent": "Crea agente",
     "importAgents": "Porta agenti da un'altra app",
     "account": "Account",
@@ -21721,7 +21729,8 @@
     "agentFolder": "Il terminale si è aperto nella cartella dell'agente. Aggiorna il computer per aprirlo nella cartella della sessione."
   },
   "agora": {
-    "label": "Ora",
+    "label": "Attività",
+    "openActivity": "Vedi l’attività degli agenti",
     "working_one": "{{count}} agente al lavoro",
     "working_many": "{{count}} agenti al lavoro",
     "working_other": "{{count}} agenti al lavoro",

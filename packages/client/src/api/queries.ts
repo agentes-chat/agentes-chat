@@ -7620,7 +7620,7 @@ export const useSidebarItems = (orgId: string) => useQuery(sidebarItemsQuery(use
 export function useSetSidebarItem(orgId: string, personal = false) {
   const api = useApi();
   const qc = useQueryClient();
-  const mutationKey = ["sidebar-items", orgId];
+  const mutationKey = keys.sidebarItems(orgId);
   return useMutation({
     mutationKey,
     scope: { id: `sidebar-items:${orgId}` },

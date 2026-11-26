@@ -2376,6 +2376,13 @@
       "agentSettings": "Ustawienia: {{name}}"
     },
     "sidebarSetup": {
+      "inTools": "Tylko w Narzędziach",
+      "reviewTools": "Do sprawdzenia",
+      "organizeTools": "Organizacja",
+      "workspaceTools": "Obszar roboczy",
+      "inQuickAccess": "W szybkim dostępie",
+      "pinTool": "Przypnij {{name}} do szybkiego dostępu",
+      "removeTool": "Usuń {{name}} z szybkiego dostępu",
       "description": "Wybierz, co ma być zawsze widoczne na górze paska bocznego. Tylko dla ciebie, w tej przestrzeni roboczej.",
       "always": "Zawsze",
       "more": "W menu Więcej",
@@ -2481,6 +2488,7 @@
     "channelsPersonal": "Rozmowy grupowe",
     "agents": "Agenci",
     "directMessages": "Wiadomości bezpośrednie",
+    "create": "Utwórz",
     "createAgent": "Utwórz agenta",
     "importAgents": "Przenieś agentów z innej aplikacji",
     "account": "Konto",
@@ -22303,7 +22311,8 @@
     "agentFolder": "Terminal otworzył się w folderze agenta. Zaktualizuj komputer, aby otwierał się w folderze sesji."
   },
   "agora": {
-    "label": "Teraz",
+    "label": "Aktywność",
+    "openActivity": "Zobacz aktywność agentów",
     "working_one": "{{count}} agent pracuje",
     "working_few": "{{count}} agenci pracują",
     "working_many": "{{count}} agentów pracuje",

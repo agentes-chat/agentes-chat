@@ -9,7 +9,7 @@ import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { offersCode } from "@agenteschat/client/lib/sidebar-items";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Avatar, CommandPalette, Icon, type PaletteItem } from "@agenteschat/ui";
+import { Avatar, CommandPalette, type DialogProps, Icon, type PaletteItem } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,7 +43,8 @@ export function CommandMenu() {
   const newAgent = useNewAgent();
   const theme = useTheme();
   const [creatingChannel, setCreatingChannel] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [palette, setPalette] = useState<{ returnFocus?: DialogProps["returnFocus"] } | null>(null);
+  const open = palette !== null;
   // The wiki only when the palette is open (no request on every page).
   const wiki = useWikiTree(org.id, open);
 
@@ -51,9 +52,12 @@ export function CommandMenu() {
     const onKey = (e: KeyboardEvent) => {
       if (!isPaletteShortcut(e)) return;
       e.preventDefault();
-      setOpen((o) => !o);
+      setPalette((current) => (current ? null : {}));
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = (event: Event) => {
+      const returnFocus = (event as CustomEvent<DialogProps["returnFocus"]>).detail ?? undefined;
+      setPalette((current) => current ?? { returnFocus });
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("agentes:palette", onOpen);
     return () => {
@@ -355,7 +359,8 @@ export function CommandMenu() {
       <NewChannelDialog open={creatingChannel} onOpenChange={setCreatingChannel} />
       <CommandPalette
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => setPalette((current) => (next ? (current ?? {}) : null))}
+        returnFocus={palette?.returnFocus}
         items={items}
         extra={extra}
         label={t("palette.open")}

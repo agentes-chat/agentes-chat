@@ -332,6 +332,7 @@
   "quiet@1280 div.ac-divider in div.ac-msg__text at section.channel__messages",
   "quiet@320 div.ac-divider in div.ac-msg__text at section.channel__messages",
   "quiet@390 div.ac-divider in div.ac-msg__text at section.channel__messages",
+  "rim@1280 span.ac-avatar.ac-avatar--agent.ac-avatar--sm in a.sidebar__item.active",
   "rim@1280 span.ac-avatar.ac-avatar--agent.ac-avatar--xs in a.plan-shares__row",
   "rim@1280 svg.ac-icon in button.ac-seg__item",
   "rim@1280 svg.ac-icon in button.ac-seg__item at div.channel__composer",

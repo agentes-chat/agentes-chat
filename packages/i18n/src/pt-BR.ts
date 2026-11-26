@@ -2278,6 +2278,13 @@ export const ptBR = {
       description: "Escolha o que fica à vista no topo da sua barra lateral. Vale só para você, neste workspace.",
       always: "Sempre",
       more: "Em Mais",
+      inTools: "Só em Ferramentas",
+      reviewTools: "Para revisar",
+      organizeTools: "Organização",
+      workspaceTools: "No workspace",
+      inQuickAccess: "No acesso rápido",
+      pinTool: "Fixar {{name}} no acesso rápido",
+      removeTool: "Remover {{name}} do acesso rápido",
       auto: "Quando tiver algo",
       autoHint: "Aparece quando tiver algo esperando você",
       reset: "Restaurar o padrão",
@@ -2384,6 +2391,7 @@ export const ptBR = {
     channelsPersonal: "Conversas em grupo",
     agents: "Agentes",
     directMessages: "Mensagens diretas",
+    create: "Criar",
     createAgent: "Criar agente",
     importAgents: "Trazer agentes de outro app",
     account: "Conta",
@@ -21792,7 +21800,8 @@ export const ptBR = {
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Ir para…" and its list. */
   agora: {
-    label: "Agora",
+    label: "Atividade",
+    openActivity: "Ver atividade dos agentes",
     /** Its tip, one line each. */
     working_one: "{{count}} agente trabalhando",
     working_other: "{{count}} agentes trabalhando",

@@ -149,7 +149,7 @@ export function MailConnectFlow({
       title={<FlowTitle tile={<MailIcon choice={choice} size="lg" />}>{title}</FlowTitle>}
       closeLabel={t("common.close")}
       width={620}
-      className="cflow"
+      className="cflow cflow--mail"
     >
       <ol className="cflow__steps" aria-label={t("connectFlow.steps")}>
         {([0, 1, 2, 3] as const).map((i) => (

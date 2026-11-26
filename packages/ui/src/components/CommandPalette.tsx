@@ -2,6 +2,7 @@ import { Dialog as RDialog } from "radix-ui";
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { cx } from "../cx";
 import { Kbd } from "./Kbd";
+import { type DialogFocusTarget, useDialogReturnFocus } from "./useDialogReturnFocus";
 
 export interface PaletteItem {
   key: string;
@@ -42,6 +43,7 @@ export function filterPalette(items: PaletteItem[], query: string): PaletteItem[
 export function CommandPalette({
   open,
   onOpenChange,
+  returnFocus,
   items,
   extra,
   label,
@@ -52,6 +54,7 @@ export function CommandPalette({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  returnFocus?: DialogFocusTarget;
   items: PaletteItem[];
   extra?: (query: string) => PaletteItem[];
   label: string;
@@ -64,6 +67,8 @@ export function CommandPalette({
   const [active, setActive] = useState(0);
   const listId = useId();
   const input = useRef<HTMLInputElement>(null);
+  const selected = useRef(false);
+  const restoreFocus = useDialogReturnFocus(open, returnFocus, false);
   useEffect(() => {
     if (open) {
       setQ("");
@@ -74,6 +79,7 @@ export function CommandPalette({
   const current = Math.min(active, Math.max(0, shown.length - 1));
   const choose = (item: PaletteItem | undefined) => {
     if (!item) return;
+    selected.current = true;
     onOpenChange(false);
     item.onSelect();
   };
@@ -87,7 +93,11 @@ export function CommandPalette({
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => {
             e.preventDefault();
+            selected.current = false;
             input.current?.focus();
+          }}
+          onCloseAutoFocus={(e) => {
+            if (!selected.current) restoreFocus(e);
           }}
         >
           <RDialog.Title className="ac-visually-hidden">{label}</RDialog.Title>

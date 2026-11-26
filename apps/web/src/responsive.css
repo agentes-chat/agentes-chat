@@ -280,7 +280,7 @@
   /* No keyboard hints on a touch screen or at phone width (the kit's own: components.css). A hint whose words only
      follow its keys goes with them. */
   .sidebar__jump .ac-kbd,
-  .sidebar__goto-keys,
+  .sidebar__more-item > .sidebar__goto-keys,
   .wiki-suggest .ac-kbd,
   .newag__hint:has(> .ac-kbd) {
     display: none;

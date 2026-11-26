@@ -2,13 +2,13 @@ import { Button } from "@agenteschat/ui";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavDrawer } from "./NavDrawer";
+import { NAV_ID, useNavDrawer } from "./NavDrawer";
 import { WorkspaceSky } from "./Sky";
 import { useSidebarCollapsed } from "./sidebar-state";
 
 /**
  * The Mac app's title bar (ADR 0036): room for the window's own buttons, the sidebar toggle, back and forward, and
- * nothing else. ⌘K and Agora stay in the sidebar, as on the web (only its collapse goes, desktop.css), so nothing sits
+ * nothing else. ⌘K and Activity stay in the sidebar, as on the web (only its collapse goes, desktop.css), so nothing sits
  * at the bar's right end, under Windows' and Linux's own close button. Anywhere that isn't a button drags the window
  * (`data-tauri-drag-region`, the only thing the window may ask of the app). In
  * the workspace only; elsewhere `DesktopDragStrip` keeps the top draggable.
@@ -51,6 +51,7 @@ export function DesktopTitleBar() {
           data-sidebar-toggle=""
           aria-label={navLabel}
           title={navLabel}
+          aria-controls={NAV_ID}
           aria-expanded={shown}
           onClick={inDrawer ? drawer.toggle : toggleSidebar}
         />

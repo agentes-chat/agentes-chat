@@ -2154,6 +2154,13 @@
       "agentSettings": "Pengaturan {{name}}"
     },
     "sidebarSetup": {
+      "inTools": "Hanya di Alat",
+      "reviewTools": "Untuk ditinjau",
+      "organizeTools": "Pengelolaan",
+      "workspaceTools": "Ruang kerja",
+      "inQuickAccess": "Di Akses cepat",
+      "pinTool": "Sematkan {{name}} ke Akses cepat",
+      "removeTool": "Hapus {{name}} dari Akses cepat",
       "description": "Pilih apa yang selalu terlihat di bagian atas sidebar-mu. Hanya untukmu, di ruang kerja ini.",
       "always": "Selalu",
       "more": "Di Lainnya",
@@ -2253,6 +2260,7 @@
     "channelsPersonal": "Percakapan grup",
     "agents": "Agen",
     "directMessages": "Pesan langsung",
+    "create": "Buat",
     "createAgent": "Buat agen",
     "importAgents": "Bawa agen dari aplikasi lain",
     "account": "Akun",
@@ -20384,7 +20392,8 @@
     "agentFolder": "Terminal terbuka di folder agen. Perbarui komputer agar terbuka di folder sesi."
   },
   "agora": {
-    "label": "Sekarang",
+    "label": "Aktivitas",
+    "openActivity": "Lihat aktivitas agen",
     "working_other": "{{count}} agen sedang bekerja",
     "waiting_other": "{{count}} hal menunggumu",
     "sections": {

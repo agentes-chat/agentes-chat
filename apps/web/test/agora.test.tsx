@@ -170,8 +170,8 @@ function busy(): TaskManagerView {
 }
 
 const nav = () => screen().getByRole("navigation", { name: "Navegação do workspace" });
-const agora = () => within(nav()).getByRole("button", { name: "Agora" });
-const list = (name = "Agora") => screen().getByRole("dialog", { name });
+const agora = () => within(nav()).getByRole("button", { name: "Atividade" });
+const list = (name = "Atividade") => screen().getByRole("dialog", { name });
 const rowOf = (words: string, name?: string) =>
   within(list(name))
     .getAllByRole("button")
@@ -185,16 +185,17 @@ async function go(state: FakeState) {
 }
 
 describe("the button", () => {
-  test("between Ir para… and the collapse: the task manager's icon at rest, its tip says nobody works", async () => {
+  test("between Ir para… and the collapse: a pulse at rest and a tip that names the action and its state", async () => {
     await go(seedState());
     const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
     expect([...row.children].map((c) => c.getAttribute("aria-label") ?? c.className)).toEqual([
       "sidebar__jump",
-      "Agora",
+      "Atividade",
       "Minimizar barra lateral",
     ]);
     expect(agora().dataset.mark).toBe("idle");
-    expect(agora().getAttribute("title")).toBe("Nenhum agente trabalhando agora");
+    expect(agora().getAttribute("title")).toBe("Ver atividade dos agentes\nNenhum agente trabalhando agora");
+    expect(agora().getAttribute("aria-description")).toBe("Nenhum agente trabalhando agora");
     // No count on it: the bell and "Esperando você" count.
     expect(agora().querySelector(".ac-count, .ac-badge")).toBeNull();
   });
@@ -209,7 +210,7 @@ describe("the button", () => {
     expect(agora().dataset.mark).toBe("working");
     const orbit = agora().querySelector("canvas.ac-pixspin") as HTMLElement;
     expect(orbit.dataset.color).toBe(colorOf(state.agents.find((a) => a.id === ATLAS_ID)));
-    expect(agora().getAttribute("title")).toBe("2 agentes trabalhando");
+    expect(agora().getAttribute("title")).toBe("Ver atividade dos agentes\n2 agentes trabalhando");
     cleanup();
 
     state.agentStatuses = [
@@ -219,7 +220,7 @@ describe("the button", () => {
     await go(state);
     expect(agora().dataset.mark).toBe("you");
     expect(agora().querySelector(".rq-wait:not(.rq-wait--still)")).not.toBeNull();
-    expect(agora().getAttribute("title")).toBe("1 agente trabalhando\n1 coisa espera você");
+    expect(agora().getAttribute("title")).toBe("Ver atividade dos agentes\n1 agente trabalhando\n1 coisa espera você");
     // Screen readers hear the state off the keys' focus too.
     expect(agora().getAttribute("aria-description")).toBe("1 agente trabalhando. 1 coisa espera você");
   });
@@ -273,7 +274,7 @@ describe("the list", () => {
     await click(rowOf("Atlas ajudando a Ada").querySelector(".tm-hit") as HTMLElement);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/t-link`);
     expect(router.state.location.search).toEqual({ m: "m-asked" });
-    expect(screen().queryByRole("dialog", { name: "Agora" })).toBeNull();
+    expect(screen().queryByRole("dialog", { name: "Atividade" })).toBeNull();
 
     await click(agora());
     await click(rowOf("Ada esperando você").querySelector(".tm-hit") as HTMLElement);
@@ -377,7 +378,7 @@ describe("the list", () => {
     // The address what waits once had opens the inbox on that filter.
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
     expect(router.state.location.search).toEqual({ filter: "waiting" });
-    expect(screen().queryByRole("dialog", { name: "Agora" })).toBeNull();
+    expect(screen().queryByRole("dialog", { name: "Atividade" })).toBeNull();
     cleanup();
 
     // Ada's approval waits on me among three things: under her row, the line counts them all, as the sidebar does.
@@ -485,13 +486,13 @@ describe("the list", () => {
     expect(rowOf(`${long} ajudando a Ada`)).toBeTruthy();
     expect(rowOf(`Ada ajudando o ${long}`)).toBeTruthy();
     // A short name stays whole beside a long phrase: the phrase ends in "…" first ("Ada ajudando o Bartolomeu Co…").
-    const css = readFileSync(join(import.meta.dir, "../src/components/agora.css"), "utf8");
+    const css = readFileSync(join(import.meta.dir, "../src/components/agora.css"), "utf8").replaceAll("\r\n", "\n");
     expect(css).toContain(".agora-row__who > b:not([data-long]) {\n  flex: none;\n}");
     expect(css).toContain(".agora-row__who:has(> b:not([data-long])) > .agora-row__phrase {\n  flex: 0 1 auto;");
     await showIn(r.services, "en");
     await settle(4);
-    expect(within(list("Now")).getAllByRole("heading")[0]?.textContent).toBe("Waiting for you1");
-    expect(rowOf(`Ada follow-up at ${formatTime("en", view.followUps?.[0]?.at ?? "")}`, "Now")).toBeTruthy();
+    expect(within(list("Activity")).getAllByRole("heading")[0]?.textContent).toBe("Waiting for you1");
+    expect(rowOf(`Ada follow-up at ${formatTime("en", view.followUps?.[0]?.at ?? "")}`, "Activity")).toBeTruthy();
   });
 });
 
@@ -509,7 +510,7 @@ describe("the rail and the Mac app", () => {
     expect(desktop).not.toContain(".sidebar__agora");
   });
 
-  test("the rail: Agora is a tile under ⌘K, the toggle under it", async () => {
+  test("the rail: Activity is a tile under ⌘K, the toggle under it", async () => {
     await go(seedState());
     await click(within(nav()).getByRole("button", { name: "Minimizar barra lateral" }));
     try {
@@ -517,7 +518,7 @@ describe("the rail and the Mac app", () => {
       const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
       expect([...row.children].map((c) => c.getAttribute("aria-label") ?? c.className)).toEqual([
         "sidebar__jump",
-        "Agora",
+        "Atividade",
         "Expandir barra lateral",
       ]);
     } finally {
@@ -525,7 +526,7 @@ describe("the rail and the Mac app", () => {
     }
   });
 
-  test("in the Mac app, ⌘K and Agora stay in the sidebar: the title bar holds the toggle, back and forward alone", async () => {
+  test("in the Mac app, ⌘K and Activity stay in the sidebar: the title bar holds the toggle, back and forward alone", async () => {
     const w = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
     w.__agentesDesktop = { version: "0.6.0" };
     w.__TAURI_INTERNALS__ = { invoke: async (cmd: string) => (cmd === "this_mac" ? { orgs: [] } : {}) };
@@ -539,7 +540,7 @@ describe("the rail and the Mac app", () => {
       ]);
       const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
       expect(row.querySelector(".sidebar__jump")).toBeTruthy();
-      expect(within(row).getByRole("button", { name: "Agora" })).toBeTruthy();
+      expect(within(row).getByRole("button", { name: "Atividade" })).toBeTruthy();
     } finally {
       delete w.__agentesDesktop;
       delete w.__TAURI_INTERNALS__;

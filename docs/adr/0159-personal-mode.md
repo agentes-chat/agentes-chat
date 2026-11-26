@@ -137,3 +137,13 @@ language, and then goes through the onboarding's rail (ADR 0162, amended 2026-11
 business step: its agents (bringing them from another app, or "Seguir sem agentes"), the plan where the workspace waits
 for its first one, and connecting an AI, then the right hand's DM. On a billing hold the card's first row is "Ligue os
 seus agentes.", before the four rows above.
+
+## Amendment (2026-11-18): personal sidebar shortcuts on web and desktop (§3)
+
+Home and Activity stay above the scrollable list on web and desktop. Settings opens Your account, and the account menu
+links to About you for people who may configure the workspace. The expanded sidebar keeps the creation actions in their
+sections. The collapsed sidebar has one Create menu with the actions the person may use.
+
+Tools replaces More in the personal sidebar. It lists the available tools, including pinned tools, and opens Go to… and
+Customize sidebar. Pinning or removing a shortcut there updates the same per-person workspace preference as
+Customize sidebar.

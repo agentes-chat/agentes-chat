@@ -733,6 +733,15 @@ html:not([data-pointer]) button.arrival-have__row[data-state="checked"]:focus-vi
   grid-row: 1;
   grid-column: 3;
 }
+/* At phone width, the provider mark stays beside the name's first line when the name wraps. */
+@media (max-width: 360px) {
+  .arrival-have__row:has(> .ac-brand) {
+    align-items: start;
+  }
+  .arrival-have__row:has(> .ac-brand) .arrival-have__head {
+    margin-block-start: calc(var(--cap-top) - 10px);
+  }
+}
 /* What tells one account from the next (its name, its email, whose it is) wraps whole, never cut. */
 .arrival-have__title,
 .arrival-have__line {
