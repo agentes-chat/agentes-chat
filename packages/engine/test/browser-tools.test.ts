@@ -216,7 +216,7 @@ test("each tool is one agent-browser command in the agent's session, with its si
   await b.call("browser_tabs", { action: "close", tab: "t3" });
   expect(b.calls.at(-1)).toMatchObject({ command: "tab", args: ["close", "t3"] });
   const tabsSent = b.calls.length;
-  for (const tab of ["2", "--help", " "]) {
+  for (const tab of ["2", "--help", " ", "close", "new"]) {
     expect((await b.call("browser_tabs", { action: "switch", tab })).isError).toBe(true);
   }
   expect(b.calls).toHaveLength(tabsSent);

@@ -1590,8 +1590,9 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
       async (input, ctx) => {
         const action = str(input.action);
         // `agent-browser` takes a tab by id (`t2`), label or target id, never by position: it refuses a bare number.
+        // Its subcommand words are no tab either: a switch to `close` would close the tab the agent is on.
         const tab = str(input.tab).trim() || null;
-        if (tab !== null && (!/^[A-Za-z0-9][\w-]*$/.test(tab) || /^\d+$/.test(tab))) {
+        if (tab !== null && (!/^[A-Za-z0-9][\w-]*$/.test(tab) || /^(\d+|new|list|close)$/i.test(tab))) {
           return { content: "Give the tab's id from `list`, like `t2`, not its position.", isError: true };
         }
         let args: string[];
