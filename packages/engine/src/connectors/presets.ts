@@ -137,7 +137,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     id: "drive",
     category: "docs",
     label: "Google Drive",
-    description: "Google Drive files and folders: search, read, create and share.",
+    description: "Google Drive files and folders: search, read, create, upload and share.",
     icon: "drive",
     serverUrl: composioToolkitUrl("googledrive"),
     // One billed call names the account: its Google address.
@@ -157,6 +157,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
         "GOOGLEDRIVE_DOWNLOAD_FILE",
         "GOOGLEDRIVE_EXPORT_GOOGLE_WORKSPACE_FILE",
         "GOOGLEDRIVE_CREATE_FILE_FROM_TEXT",
+        "GOOGLEDRIVE_UPLOAD_FILE",
         "GOOGLEDRIVE_CREATE_FOLDER",
         "GOOGLEDRIVE_MOVE_FILE",
         "GOOGLEDRIVE_CREATE_COMMENT",
@@ -225,7 +226,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     id: "onedrive",
     category: "docs",
     label: "OneDrive",
-    description: "OneDrive files and folders (Microsoft 365).",
+    description: "OneDrive files and folders (Microsoft 365): search, read, create and upload.",
     icon: "onedrive",
     serverUrl: composioToolkitUrl("one_drive"),
     composio: {
@@ -240,6 +241,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
         "ONE_DRIVE_GET_ITEM",
         "ONE_DRIVE_DOWNLOAD_FILE",
         "ONE_DRIVE_ONEDRIVE_CREATE_TEXT_FILE",
+        "ONE_DRIVE_ONEDRIVE_UPLOAD_FILE",
         "ONE_DRIVE_ONEDRIVE_CREATE_FOLDER",
         "ONE_DRIVE_MOVE_ITEM",
         "ONE_DRIVE_COPY_ITEM",

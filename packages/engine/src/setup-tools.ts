@@ -1,6 +1,7 @@
 import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, count, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { isKnownProvider, PROVIDERS } from "@agenteschat/providers";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { actWithUndo, publishMessageActions } from "./agent-actions";
 import {
   AGENT_PROPOSAL_CARD,
@@ -699,7 +700,7 @@ export function createSetupToolSource(deps: {
               prompt: {
                 type: "string",
                 minLength: 1,
-                maxLength: 10_000,
+                maxLength: ROUTINE_PROMPT_MAX,
                 description: "What each run does, in the person's language.",
               },
               title: { type: "string", maxLength: 120 },

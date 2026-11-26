@@ -961,6 +961,7 @@ export async function myAccount(db: Database, userId: string) {
       workArea: users.workArea,
       deletionDueAt: users.deletionDueAt,
       deletionRequestedAt: users.deletionRequestedAt,
+      emailUndelivered: users.emailUndelivered,
     })
     .from(users)
     .where(eq(users.id, userId));
@@ -972,6 +973,7 @@ export async function myAccount(db: Database, userId: string) {
     locale: row?.locale ?? null,
     localeAuto: row?.localeAuto ?? true,
     workArea: row?.workArea ?? null,
+    emailUndelivered: row?.emailUndelivered ?? null,
   };
 }
 
@@ -1848,6 +1850,8 @@ export async function sendInvitation(
     tokenHash: sha256(token),
     invitedByUserId: input.invitedBy,
     expiresAt: new Date(now.getTime() + INVITATION_TTL_DAYS * 86_400_000),
+    // Its email goes again: whether this one is delivered is the `email.send` job's to say.
+    undelivered: null,
   };
   const [invitation] = existing
     ? await db.update(organizationInvitations).set(fresh).where(eq(organizationInvitations.id, existing.id)).returning()
@@ -2697,7 +2701,8 @@ export async function inviteMany(
 
 /**
  * Sends an invitation again with a fresh 7-day expiry. With `secret` its link stays the same (ADR 0090); without,
- * a new token replaces it and the old link stops working.
+ * a new token replaces it and the old link stops working. `unsuppress`: the last email went nowhere because the mail
+ * provider stopped mailing the address, so the one sent now asks it to mail the address again first.
  */
 export async function resendInvitation(
   db: Database,
@@ -2718,7 +2723,7 @@ export async function resendInvitation(
   // Its roles go again, expired or not: the ones still there, when the sender may give them (ADR 0085). So do its
   // channels and agents, as far as the sender may give them now (ADR 0184).
   const roleIds = await givableRoleIds(db, actor, orgId, await rolesStillThere(db, orgId, existing.roleIds));
-  return sendInvitation(db, {
+  const sent = await sendInvitation(db, {
     orgId,
     email: existing.email,
     role: existing.role,
@@ -2732,6 +2737,7 @@ export async function resendInvitation(
     invitationId,
     resent: true,
   });
+  return { ...sent, unsuppress: existing.undelivered === "suppressed" };
 }
 
 /**
@@ -2762,6 +2768,7 @@ export async function listInvitationsWithStatus(
       channelIds: i.channelIds,
       agentIds: i.agentIds,
       status: i.expiresAt > now ? ("pending" as const) : ("expired" as const),
+      undelivered: i.undelivered,
       expiresAt: i.expiresAt,
       createdAt: i.createdAt,
       invitedByUserId: i.invitedByUserId,

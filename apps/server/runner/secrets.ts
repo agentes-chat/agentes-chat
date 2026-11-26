@@ -559,7 +559,7 @@ export function handedSiteSecret(root: string, agent: AgentScope, requestId: str
 
 /**
  * What commands of this agent get: env values (never a site's password: that one only its browser types) and the git
- * settings that end its commits with the request's `Co-authored-by` lines (`co-authors.ts`, in `<runner
+ * settings that end its commits with the request's `Co-Authored-By` lines (`co-authors.ts`, in `<runner
  * home>/git-hooks`) and author them as the person the request names (`commitAuthorEnv`), and a redactor for everything that leaves the machine: every value kept, a site's password in
  * memory, and every Vault value opened here in the last 10 minutes (ADR 0144).
  */

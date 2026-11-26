@@ -3,7 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type { jsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/types.js";
-import { ARTIFACT_LIMITS, type ArtifactDeps, createFileArtifact, fileReach } from "../artifacts";
+import { ARTIFACT_LIMITS, type ArtifactDeps, createFileArtifact, fileBytesOf, fileReach } from "../artifacts";
 import { recordAudit } from "../audit";
 import { runAuthorityById } from "../authority";
 import { CONFIDENTIAL_META_KEY } from "../confidential";
@@ -22,7 +22,7 @@ import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
 import { untrustedBlock } from "../untrusted";
 import { CONNECTOR_CATALOG, type ConnectorTool, connectorScope, fillTitle } from "./catalog";
 import { sqlArgOf } from "./classify";
-import { composioFailure, composioServiceOf } from "./composio";
+import { composioFailure, composioFileArgs, composioServiceOf } from "./composio";
 import {
   activeConnections,
   type ConnectorConnection,
@@ -47,7 +47,7 @@ import {
 } from "./custom";
 import { auditLabel, personalTool, usableConnections } from "./personal";
 import { applyToolPins } from "./pins";
-import { presetForServer } from "./presets";
+import { type ComposioWay, composioAction, presetForServer } from "./presets";
 import type { McpServerInfo } from "./server-icon";
 
 /** A tool as an MCP server lists it. */
@@ -453,7 +453,7 @@ export function createConnectorToolSource(
 
   /**
    * What the agent writes to GitHub, signed (ADR 0156): a body ends with its line naming the agent and the person it
-   * works for, a commit message with the agent's own `Co-authored-by` and that person's. The approval card showed the
+   * works for, a commit message with the agent's own `Co-Authored-By` and that person's. The approval card showed the
    * agent's own words.
    */
   async function signed(
@@ -608,9 +608,32 @@ export function createConnectorToolSource(
         execute: async (input, ctx) => {
           // Never through Composio: no server at its address ever reads a request of ours.
           const meta = composio ? undefined : await callerStatement(connection, ctx);
+          let args = input;
+          if (composio && deps.composio) {
+            const client = deps.composio.client;
+            let prepared: Awaited<ReturnType<typeof uploadComposioFiles>>;
+            try {
+              prepared = await uploadComposioFiles(
+                { client, artifacts: deps.artifacts },
+                ctx,
+                composio.way,
+                tool,
+                input,
+              );
+            } catch (error) {
+              return composioFailure(deps, connection, error);
+            }
+            if (typeof prepared === "string")
+              return {
+                content: prepared,
+                isError: true,
+                data: { connector: "custom", serverId: connection.id, tool: tool.name, isError: true },
+              };
+            args = prepared;
+          }
           let result: McpCallResult;
           try {
-            result = await withSession(connection, (s) => s.callTool(tool.name, input, meta));
+            result = await withSession(connection, (s) => s.callTool(tool.name, args, meta));
           } catch (error) {
             if (!composio) throw error;
             return composioFailure(deps, connection, error);
@@ -748,6 +771,54 @@ export function createConnectorToolSource(
     }
     return out;
   }
+}
+
+const DRIVE_ID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/**
+ * A Composio action's file arguments (`composioFileArgs`), from the Drive file ids the agent gave to what the action
+ * takes: each file the agent may read, sent to Composio's storage as it is. A string is the answer to show instead,
+ * nothing having run: a path, an id that isn't a file it may read.
+ */
+export async function uploadComposioFiles(
+  deps: { client: Pick<ComposioClient, "uploadFile">; artifacts?: ArtifactDeps },
+  ctx: ToolContext,
+  way: ComposioWay,
+  tool: { name: string; inputSchema?: unknown },
+  input: Record<string, unknown>,
+): Promise<Record<string, unknown> | string> {
+  const names = composioFileArgs(tool.inputSchema).filter((n) => typeof input[n] === "string");
+  if (names.length === 0) return input;
+  const slug = composioAction(way, tool.name);
+  if (!slug || !deps.artifacts) return "Files can't be uploaded from this server.";
+  const actor = {
+    type: "agent" as const,
+    agentId: ctx.agentId,
+    channelId: ctx.channelId,
+    threadId: replyThreadOf(ctx),
+    runId: ctx.runId,
+  };
+  const out = { ...input };
+  for (const name of names) {
+    const given = String(input[name]).trim();
+    const id = DRIVE_ID.exec(given)?.[0];
+    if (!id)
+      return `${name} takes a file of the workspace's Drive by its id, and "${cutText(given, 80)}" isn't one. A file on your computer goes to the Drive first with upload_file, which answers with its id. Nothing was uploaded.`;
+    let file: Awaited<ReturnType<typeof fileBytesOf>>;
+    try {
+      file = await fileBytesOf({ ...deps.artifacts, db: ctx.db }, actor, ctx.orgId, id);
+    } catch (error) {
+      return `File ${id} can't be uploaded: ${error instanceof Error ? error.message : "it isn't a file you can read"}. Nothing was uploaded.`;
+    }
+    out[name] = await deps.client.uploadFile({
+      toolkit: way.toolkit,
+      slug,
+      name: file.name,
+      mimetype: file.contentType || "application/octet-stream",
+      data: file.bytes,
+    });
+  }
+  return out;
 }
 
 /** What marks a file in a Composio answer: a short-lived download link, or the file's bytes inline. */

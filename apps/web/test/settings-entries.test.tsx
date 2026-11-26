@@ -114,13 +114,28 @@ describe("every old address opens its new home", () => {
     expect(screen().getByRole("heading", { level: 2, name: "Notificações" })).toBeTruthy();
   });
 
-  test("billing stands under IA e uso, and its own address marks that entry", async () => {
+  test("billing stands under IA e uso: its own address opens that page, at it, and marks that entry", async () => {
     const state = seedState({ authConfig: { cloud: true, billingUrl: "https://billing.example.com" } });
     await go("settings/usage", state);
     expect(screen().getByRole("heading", { level: 2, name: "Plano e cobrança" })).toBeTruthy();
     cleanup();
-    await go("settings/billing", state);
-    expect(marked()).toBe("IA e uso");
+    const scrolled: Element[] = [];
+    const native = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    try {
+      await go("settings/billing", state);
+      // The entry marked is the page shown: IA e uso's, its Plano e cobrança brought into view.
+      expect(marked()).toBe("IA e uso");
+      expect(screen().getByRole("heading", { level: 2, name: "IA e uso" })).toBeTruthy();
+      // The part, around its own card of the same name.
+      const part = screen().getAllByRole("region", { name: "Plano e cobrança" })[0] as HTMLElement;
+      await settle(4);
+      expect(scrolled).toContain(part);
+    } finally {
+      Element.prototype.scrollIntoView = native;
+    }
   });
 
   test("AI accounts and Computers still open where they moved", async () => {

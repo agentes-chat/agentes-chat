@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { writeAgents } from "../../runner/access";
-import { accountSelfCheck, REFUSED, type SelfCheck } from "../../runner/account-check";
+import { accountSelfCheck, REFUSED, SELF_CHECK_DEFERRED, type SelfCheck } from "../../runner/account-check";
 import {
   ACCOUNT_USERS_FILE,
   AccountUsers,
@@ -1624,7 +1624,8 @@ test.if(process.platform !== "win32")(
 
     const empty = selfCheck();
     empty.check.config = { ...config, ...network };
-    expect(await accountSelfCheck(empty.check)).toContain("No agent");
+    // Not a failure: whatever CLI is installed, the daemon tells this answer apart.
+    expect(await accountSelfCheck(empty.check)).toBe(SELF_CHECK_DEFERRED);
 
     const ran: string[][] = [];
     const routed = selfCheck({

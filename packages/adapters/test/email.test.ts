@@ -94,6 +94,61 @@ describe("MillionSend sender", () => {
     }
   });
 
+  test("a refusal about the recipient says which: suppressed, or an address no mail reaches; others say none", async () => {
+    const reply = (status: number, name: string, message: string) =>
+      createMillionSendSender({
+        apiKey: "k",
+        from: "f@x.y",
+        fetch: (async () =>
+          Response.json({ statusCode: status, name, message }, { status })) as unknown as typeof fetch,
+      })
+        .send(msg)
+        .then(() => null)
+        .catch((e: unknown) => e as EmailError);
+    expect((await reply(422, "all_recipients_suppressed", "All recipients are suppressed"))?.recipient).toBe(
+      "suppressed",
+    );
+    expect(
+      (await reply(422, "validation_error", "ana@example.invalid can never receive mail: no such domain"))?.recipient,
+    ).toBe("rejected");
+    expect((await reply(422, "validation_error", "Attachments exceed 40 MiB in total"))?.recipient).toBeUndefined();
+    expect((await reply(403, "sending_paused", "paused"))?.recipient).toBeUndefined();
+  });
+
+  test("removeSuppression lifts a bounce alone: GET, then DELETE /suppressions/{email}; 404 held nothing back; 5xx retries", async () => {
+    const calls: { url: string; method?: string }[] = [];
+    const answer = (status: number, origin = "bounce") =>
+      createMillionSendSender({
+        apiKey: "k",
+        from: "f@x.y",
+        fetch: (async (url: string, init: RequestInit) => {
+          calls.push({ url, method: init.method });
+          return Response.json(
+            init.method === "GET" ? { object: "suppression", origin } : { object: "suppression", deleted: true },
+            { status },
+          );
+        }) as unknown as typeof fetch,
+      });
+    expect(await answer(200).removeSuppression?.("ana+x@example.com")).toBe(true);
+    const url = "https://api.millionsend.com/suppressions/ana%2Bx%40example.com";
+    expect(calls).toEqual([
+      { url, method: "GET" },
+      { url, method: "DELETE" },
+    ]);
+    // A complaint, an unsubscribe or one made by hand stays: nothing is deleted.
+    for (const origin of ["complaint", "unsubscribe", "manual"]) {
+      calls.length = 0;
+      expect(await answer(200, origin).removeSuppression?.("ana@example.com")).toBe(false);
+      expect(calls.map((c) => c.method)).toEqual(["GET"]);
+    }
+    expect(await answer(404).removeSuppression?.("ana@example.com")).toBe(false);
+    const error = await answer(503)
+      .removeSuppression?.("ana@example.com")
+      .catch((e: unknown) => e as EmailError);
+    expect(error).toBeInstanceOf(EmailError);
+    expect((error as EmailError).retryable).toBe(true);
+  });
+
   test("saveContact creates the contact; one that exists (409) gets its properties merged by email", async () => {
     const calls: { url: string; method?: string; body: unknown }[] = [];
     const sender = createMillionSendSender({
@@ -260,6 +315,24 @@ describe("SMTP sender", () => {
       expect(failure).toBeInstanceOf(EmailError);
       expect((failure as EmailError).retryable).toBe(retryable);
       expect((failure as EmailError).message).toBe(`SMTP send failed: server said ${responseCode}`);
+    }
+  });
+
+  test("a 5xx to RCPT TO is the address refused; a 5xx elsewhere isn't about the recipient", async () => {
+    for (const [command, recipient] of [
+      ["RCPT TO", "rejected"],
+      ["AUTH PLAIN", undefined],
+    ] as const) {
+      const sender = createSmtpEmailSender({
+        url: "smtp://unused",
+        from: "f@x.y",
+        transport: {
+          sendMail: async () => {
+            throw Object.assign(new Error("refused"), { responseCode: 550, command });
+          },
+        },
+      });
+      expect(((await sender.send(msg).catch((e: unknown) => e)) as EmailError).recipient).toBe(recipient);
     }
   });
 

@@ -231,6 +231,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   cancel_reminder: "cancelingReminder",
   list_reminders: "listingReminders",
   list_routines: "listingRoutines",
+  // A webhook routine run reads the call that started it.
+  read_webhook_call: "listingRoutines",
   computer_status: "checkingComputer",
   wait_for_device: "waitingForDevice",
   create_wiki_page: "writingWiki",

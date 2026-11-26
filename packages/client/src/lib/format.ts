@@ -42,6 +42,15 @@ export function formatUsd(locale: string, value: number) {
   return formatMoneyUsd(locale, value);
 }
 
+/** "$10", "US$ 12,50": a budget's dollars, whole amounts without cents, as the language writes them. */
+export const formatBudgetUsd = (locale: string, n: number) =>
+  new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+
 /** Budget use: "37,5%", "12%", "<1%" (members never see money, only this). */
 export function formatPercent(locale: string, value: number) {
   const fmt = (v: number, digits: number) =>

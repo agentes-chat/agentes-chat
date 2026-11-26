@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { type AgentActionParams, recordAgentActions } from "./agent-actions";
 import { routineRow, routineSnapshot } from "./agent-undo";
 import { agentsByHandle, currentHandles, getAgentCached } from "./agents";
@@ -670,7 +671,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         properties: {
           schedule: SCHEDULE_INPUT,
           trigger: TRIGGER_SCHEMA,
-          prompt: { type: "string", minLength: 1, maxLength: 10_000 },
+          prompt: { type: "string", minLength: 1, maxLength: ROUTINE_PROMPT_MAX },
           title: { type: "string", maxLength: 120 },
           channel: { type: "string", maxLength: 100, description: "Report in this channel instead of here" },
           report: REPORT_SCHEMA,
@@ -869,7 +870,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         properties: {
           id: { type: "string", minLength: 36, maxLength: 36 },
           channel: { type: "string", maxLength: 100 },
-          prompt: { type: "string", minLength: 1, maxLength: 10_000 },
+          prompt: { type: "string", minLength: 1, maxLength: ROUTINE_PROMPT_MAX },
           schedule: SCHEDULE_INPUT,
           trigger: TRIGGER_SCHEMA,
           title: { type: "string", minLength: 1, maxLength: 120 },

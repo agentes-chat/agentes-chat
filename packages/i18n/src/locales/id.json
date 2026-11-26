@@ -611,7 +611,11 @@
       "wrongAddress": "Alamat salah? Ubah",
       "banner": "Konfirmasi email",
       "bannerSub": "Buka tautan yang kami kirim ke {{email}}.",
-      "change": "Ubah alamat"
+      "change": "Ubah alamat",
+      "undelivered": {
+        "suppressed": "Email tidak sampai: penyedia email memblokir {{email}} setelah pentalan sebelumnya. Pastikan alamatnya benar lalu minta tautan baru.",
+        "rejected": "Email tidak sampai: {{email}} ditolak. Pastikan alamatnya benar, atau ganti alamatnya."
+      }
     },
     "unconfirmed": "Email ini sudah punya akun dengan kata sandi yang belum dikonfirmasi. Masuk dengan kata sandi itu, atau buat yang baru lewat email.",
     "unconfirmedReset": "Buat kata sandi baru",
@@ -1414,6 +1418,7 @@
         "secret_other": "{{who}} memakai {{label}}. Tidak ikut di file: agen akan memintanya di chat.",
         "model_other": "{{who}} memakai {{label}}, yang tidak tersedia di sini.",
         "file_other": "{{who}} memakai {{label}}.",
+        "path_other": "Instruksi {{who}} menyebut {{label}}, tetapi itu tidak ikut dalam impor, jadi agen tidak bisa membukanya. Taruh file-file itu di Drive, atau hapus path itu dari instruksi.",
         "webhook_other": "Rutinitas {{label}} milik {{who}} mendapat alamat baru di sini: ganti di situs atau aplikasi yang memanggil alamat lama."
       },
       "say": {
@@ -1511,6 +1516,7 @@
         "app": "Hubungkan",
         "model": "Pilih model",
         "file": "Buka Drive",
+        "path": "Buka Drive",
         "webhook": "Buka rutinitas"
       },
       "linkSkipped_other": "{{count}} file melewati batas tautan",
@@ -3683,7 +3689,7 @@
     "nowEveryAgent": "Semua agen sekarang: {{level}}.",
     "undo": "Urungkan",
     "everyAgent": "Untuk semua agen di workspace",
-    "follows": "Mengikuti workspace",
+    "follows": "{{level}} · dari workspace",
     "edit": "Ubah",
     "workspaceLead": "Kapan agen bertanya kepada seseorang sebelum bertindak.",
     "workspaceHelp": "Setiap agen mengikuti pilihan ini sampai seseorang mengubah pilihannya di halaman agen.",
@@ -7460,6 +7466,10 @@
       "expires": "Berakhir dalam {{left}}",
       "expired": "Berakhir {{when}}",
       "resentState": "Dikirim ulang · berlaku sampai {{date}}",
+      "undelivered": {
+        "suppressed": "Tidak sampai: penyedia email memblokir alamat ini setelah pentalan sebelumnya. Pastikan alamatnya benar lalu kirim ulang, atau salin tautannya.",
+        "rejected": "Tidak sampai: alamatnya ditolak. Pastikan alamatnya benar, atau salin tautannya dan kirim dengan cara lain."
+      },
       "copied": "Tautan undangan {{email}} disalin. Sama dengan yang ada di email.",
       "copiedNoEmail": "Tautan undangan {{email}} disalin.",
       "resent": "Dikirim ulang ke {{email}}. Tautannya sama dan berlaku sampai {{date}}.",
@@ -8396,6 +8406,13 @@
     "notFound": "Rutinitas ini sudah tidak ada atau kamu tidak punya akses.",
     "copyWebhook": "Salin URL webhook",
     "webhookCopied": "URL webhook disalin.",
+    "runCalls": {
+      "show": "Panggilan ({{n}})",
+      "hide": "Sembunyikan panggilan",
+      "cut": "Dipersingkat",
+      "binary": "Bukan teks, tidak disimpan",
+      "copied": "Panggilan disalin."
+    },
     "webhook": {
       "when": "Saat webhook-nya dipanggil",
       "waiting": "Menunggu panggilan berikutnya",
@@ -8421,8 +8438,11 @@
       "signature": "Tanda tangan",
       "signedOff": "Mati: agen menerima semua panggilan ke alamat ini.",
       "signedOn": "Aktif: hanya panggilan yang ditandatangani dengan rahasia yang diterima.",
-      "signedHelp": "Kirim HMAC-SHA256 dari body (untuk panggilan GET: dari query string-nya, tanpa ?) di X-Agentes-Signature (sha256=…). X-Hub-Signature-256 dari GitHub juga bisa.",
+      "signedHelp": "Kirim HMAC-SHA256 dari body (untuk panggilan GET: dari query string-nya, tanpa ?) di X-Agentes-Signature (sha256=…). X-Hub-Signature-256 dari GitHub juga bisa. Untuk Linear, tempel secret penandatanganan yang ditampilkan Linear: Linear-Signature-nya diperiksa, dan panggilan yang lebih dari satu menit ditolak.",
       "addSecret": "Wajibkan tanda tangan",
+      "pasteSecret": "Pakai secret layanan",
+      "pasteLabel": "Secret penandatanganan layanan",
+      "secretPasted": "Secret disimpan. Hanya panggilan yang ditandatangani dengannya yang lolos.",
       "newSecret": "Rahasia baru",
       "newSecretTitle": "Buat rahasia baru?",
       "newSecretBody": "Rahasia saat ini langsung berhenti berfungsi. Panggilan yang ditandatangani dengannya ditolak sampai kamu memperbarui layanan yang memanggil rutinitas ini.",
@@ -8945,6 +8965,7 @@
     "busyAnyComputer_other": "Berjalan {{count}} kali sehari di komputer, yang harus tetap menyala.",
     "outcome": {
       "queued": "Dalam antrean",
+      "queuedBehind": "Dalam antrean: menunggu rutinitas {{name}} selesai",
       "running": "Sedang bekerja",
       "waiting": "Menunggu seseorang menjawab",
       "waitingApproval": "Menunggu persetujuanmu",
@@ -19731,6 +19752,9 @@
     "failed": "Tidak bisa membukanya sekarang. Coba lagi sebentar lagi.",
     "adminsOnly": "Hanya pemilik dan admin ruang kerja yang mengelola paket agentes.chat-nya.",
     "seeOptions": "Lihat opsi",
+    "plan": "Paket",
+    "planMonth": "{{plan}}, bulanan",
+    "planYear": "{{plan}}, tahunan",
     "people": "Orang",
     "files": "File",
     "usedOf": "{{used}} dari {{limit}}",
@@ -21296,6 +21320,34 @@
     },
     "approvals": "Yang dikirim ke pelanggan menunggu persetujuanmu. Kamu bisa melepasnya nanti, saat sudah percaya pada mereka.",
     "approvalsPersonal": "Apa pun yang dikirim, dibayar, atau dipesan atas namamu menunggu persetujuanmu. Kamu bisa melepasnya nanti, saat sudah percaya pada mereka."
+  },
+  "paidMoment": {
+    "on": "Paketmu sudah aktif",
+    "onPlan": "Kamu memakai paket {{plan}}",
+    "onMonth": "Kamu memakai paket {{plan}}, bulanan",
+    "onYear": "Kamu memakai paket {{plan}}, tahunan",
+    "room": {
+      "both_other": "Ruang untuk {{people}} orang dan {{files}} file.",
+      "people_other": "Ruang untuk {{people}} orang, tanpa batas file.",
+      "files": "Ruang untuk {{files}} file, tanpa batas orang.",
+      "none": "Tanpa batas orang maupun file."
+    },
+    "computer": {
+      "on": "Komputermu sudah menyala.",
+      "starting": "Komputermu sedang disiapkan.",
+      "startingTold": "Komputermu sedang disiapkan. Kami akan memberitahumu saat sudah menyala."
+    },
+    "hello": "Hai, {{first}}",
+    "hi": "Hai",
+    "say": "Kami semua sudah di sini. Ayo mulai bekerja.",
+    "sayOn": "Kami semua sudah di sini dan komputernya menyala. Ayo mulai bekerja.",
+    "sayStarting": "Kami semua sudah di sini. Kami akan memberitahumu saat komputernya menyala.",
+    "next": {
+      "ai": "Hubungkan AI",
+      "people": "Undang orang",
+      "open": "Masuk ke ruang kerja",
+      "talk": "Bicara dengan {{name}}"
+    }
   },
   "arrival": {
     "beta": {

@@ -41,7 +41,7 @@ import {
   type ToolCaller,
   turnAsks,
 } from "./mcp";
-import { isInside, realOrNearest } from "./paths";
+import { isInside, realOrNearest, runTmpEnv } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { holdsSecretFile } from "./secrets";
 import { turnZoneEnv } from "./turn-zone";
@@ -825,7 +825,12 @@ export class DelegatedTools {
         ["-c", SHELL_SCRIPT, "bash", command, `${file}.cwd`],
         {
           cwd: s.cwd,
-          env: { ...process.env, ...r.secrets?.env, ...turnZoneEnv(s.scope.timeZone) },
+          env: {
+            ...process.env,
+            ...r.secrets?.env,
+            ...turnZoneEnv(s.scope.timeZone),
+            ...runTmpEnv(path.join(s.dir, "tmp")),
+          },
           stdio: ["ignore", fd, fd],
           detached: true,
         },

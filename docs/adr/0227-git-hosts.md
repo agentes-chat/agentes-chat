@@ -102,7 +102,7 @@ asks in a code session, on that session's repository alone:
 - the commits the agent makes are authored as them: their name and the host's no-reply address for the account
   (GitHub's `<id>+<login>@users.noreply.github.com`, GitLab's `<id>-<username>@users.noreply.<site>`), never their own
   email. The runner sets it in the agent's own processes for that turn (`AgentScope.author`), never in the checkout's
-  config, which sessions share. The agent still ends each commit with its own `Co-authored-by` line;
+  config, which sessions share. The agent still ends each commit with its own `Co-Authored-By` line;
 - the push of the session's branch reaches the host with their token. The proxy's credential names the agent and its
   computer, never a run, so the session is found by its branch and the person by the run working in it now;
 - the pull request is opened with their token, and on GitHub what the agent writes to that repository through

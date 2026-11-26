@@ -64,8 +64,9 @@ describe("a personal workspace's sidebar", () => {
     await go(personal());
     const me = within(top()).getByRole("button", { name: /^Conta: / });
     expect(me.textContent).toContain("Walter");
-    // My row, not the workspace's: my name wraps whole there, never cut.
+    // My row, not the workspace's: my name on one line beside my face, the button saying it whole as its title.
     expect(me.classList.contains("sidebar__org-button--me")).toBe(true);
+    expect(me.getAttribute("title")).toContain(me.querySelector(".sidebar__org-name")?.textContent ?? "-");
     expect(within(top()).queryAllByRole("link")).toHaveLength(0);
     expect(within(nav()).getByRole("link", { name: "Caixa de entrada" }).getAttribute("href")).toBe(
       `/org/${ORG_ID}/notifications`,

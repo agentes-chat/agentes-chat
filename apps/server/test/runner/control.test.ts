@@ -14,7 +14,7 @@ import type { Dial, Socket, SocketHandlers } from "../../runner/connection";
 import { EXIT_LOCKED, type RunControlOptions, runControl } from "../../runner/control";
 import { brainLimitsFor, DEFAULT_LIMITS, RunnerDaemon, sizedTaskLimit } from "../../runner/daemon";
 import { RUNNER_VERSION } from "../../runner/errors";
-import { ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
+import { logoDataUrl, ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
 import type { FetchFn } from "../../runner/pairing";
 import { askStandby, standbyAcked } from "../../runner/standby";
 import { removeDirs, tempDir, waitFor } from "./helpers";
@@ -1101,6 +1101,12 @@ test("an edit of config.json from a terminal reaches the app and the server", as
   expect(s.of("access.changed")).toHaveLength(1);
   expect((await c.data<{ access: { tools: { claude: boolean } } }>({ type: "status" })).access.tools.claude).toBe(true);
 }, 10_000);
+
+test("the org logo's data URL carries the server's light-ink mark from its ETag, as a logo's address does", () => {
+  const logo = { etag: '"a1.png"', contentType: "image/png", base64: "AA==" };
+  expect(logoDataUrl(logo)).toBe("data:image/png;base64,AA==");
+  expect(logoDataUrl({ ...logo, etag: '"a1.png#ink=light"' })).toBe("data:image/png;base64,AA==#ink=light");
+});
 
 test("the org logo: fetched after welcome, cached by ETag, a data URL for the app, gone on 404", async () => {
   const { home } = pairedHome();

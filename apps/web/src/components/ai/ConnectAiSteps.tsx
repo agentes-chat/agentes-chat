@@ -311,7 +311,7 @@ export function useExistingAi({
   agent: PlanAgent;
   credentials: readonly Credential[];
   toEveryone?: boolean;
-  /** The account the agent is set to think with is listed too: it has no AI, so that sign-in ended or never began. */
+  /** The account the agent is set to think with is listed too while signed out: that sign-in ended or never began. */
   withOwn?: boolean;
   onUsed: (agentId: string, used: ExistingUsed) => void;
 }) {
@@ -325,7 +325,12 @@ export function useExistingAi({
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
   const view = gates.view?.agentId === agent.id ? gates.view : undefined;
-  const rows = view ? existingAi(withOwn ? { ...view, account: null } : view, credentials) : null;
+  // Its own account only while signed out (signing in again is the way out): one still signed in is already what it
+  // thinks with, so picking it again changes nothing.
+  const own = view?.accounts.find((a) => a.id === view.account);
+  const rows = view
+    ? existingAi(withOwn && own?.status !== "active" ? { ...view, account: null } : view, credentials)
+    : null;
   const save = async (run: () => Promise<ExistingUsed>) => {
     setBusy(true);
     setRefused(null);

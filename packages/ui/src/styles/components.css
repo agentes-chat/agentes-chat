@@ -2128,10 +2128,6 @@ html:not([data-pointer]) .ac-eventpill__action:focus-visible {
   height: 14px;
   margin: 0;
 }
-/* An icon's ink starts about 2px into its box: on its side the chip pads 6, so the ink reads 8 on both sides. */
-.ac-chip:has(> .ac-icon:first-child) {
-  padding-inline-start: 6px;
-}
 .ac-chip > :not(.ac-chip__text) {
   flex: none;
 }
@@ -2139,6 +2135,19 @@ html:not([data-pointer]) .ac-eventpill__action:focus-visible {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* The words centre their capitals where the icon centres, not their line, whose baseline each platform rounds to a
+   whole pixel its own way: their box is trimmed to the capitals, then padded back to the line, so the chip keeps its
+   size and the clip keeps the descenders. Source Sans 3's cap height stands 0.045em above its H, so its capitals sit
+   0.27px under a 12px chip's middle. Without text-box, nothing changes. Every engine had lh before text-box: the
+   inner condition only keeps lh behind its own @supports, as everywhere in the kit. */
+@supports (text-box: trim-both cap alphabetic) {
+  @supports (top: 1lh) {
+    .ac-chip__text {
+      text-box: trim-both cap alphabetic;
+      padding-block: calc((1lh - 1cap) / 2);
+    }
+  }
 }
 /* Words with no `.ac-chip__text` have nothing to shrink into: the chip keeps their width, or they'd eat its padding. */
 .ac-chip:not(:has(> .ac-chip__text)) {
@@ -2223,7 +2232,7 @@ html:not([data-pointer]) .ac-chip--button:focus-visible {
   white-space: nowrap;
 }
 
-/* Logo: the agent mark + the wordmark set in Onest */
+/* Logo: the agent mark + the wordmark set in Funnel Display */
 .ac-logo {
   display: inline-flex;
   align-items: center;
@@ -2240,6 +2249,23 @@ html:not([data-pointer]) .ac-chip--button:focus-visible {
   width: 1.25em;
   height: 1.25em;
   flex: none;
+}
+/* The mark's middle on the wordmark's capitals' middle at every size, as an `.ac-iconline` lead's. Centring the line
+   box left it up to 2.5px high: Funnel Display's capitals sit low in its line, and the baseline lands on a whole pixel.
+   So the words' boxes are trimmed to the font's cap height, which stands 0.027em above its capitals (0.702em against
+   0.675em), and the mark moves down half that. Without text-box it moves down from the line box's middle to the
+   capitals' middle, 0.0525em under it in Funnel Display light. */
+.ac-logo > span,
+.ac-logo__word > span {
+  text-box: trim-both cap alphabetic;
+}
+.ac-logo > .ac-logo__mark {
+  translate: 0 0.0135em;
+}
+@supports not (text-box: trim-both cap alphabetic) {
+  .ac-logo > .ac-logo__mark {
+    translate: 0 0.0525em;
+  }
 }
 .ac-logo__body {
   fill: var(--agent);
@@ -6308,6 +6334,13 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
   border: 0;
   border-radius: var(--radius-section);
   box-shadow: var(--e3), var(--top);
+}
+/* Dark: the face is barely lighter than the page under the scrim, so its edge lifts it (e3 with a brighter line). */
+[data-theme="dark"] .ac-dialog {
+  box-shadow:
+    0 28px 64px -16px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.22),
+    var(--top);
 }
 .ac-dialog__scrim {
   background: var(--scrim);
@@ -13423,6 +13456,15 @@ html:not([data-pointer]) .ac-foldrow__head:focus-visible {
 @supports (top: 1lh) {
   .ac-foldrow__head .ac-chip > .ac-icon {
     translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+}
+/* Its words trimmed to their capitals and padded back to the line (`.ac-chip__text`): the first line's capitals sit
+   at its middle, with no --cap-mid to make up. */
+@supports (text-box: trim-both cap alphabetic) {
+  @supports (top: 1lh) {
+    .ac-foldrow__head .ac-chip > .ac-icon {
+      translate: 0 calc(0.5lh - 50%);
+    }
   }
 }
 .ac-foldrow__head .ac-chip__text {

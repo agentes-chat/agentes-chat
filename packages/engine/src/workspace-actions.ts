@@ -1419,7 +1419,7 @@ const resendInvitationAction: WorkspaceAction = {
     if (!deps.server) throw new Error("Sending an invitation needs the server's address");
     await requirePermission(deps.db, actorId, orgId, "invite_people");
     const row = await pendingInvitation(deps.db, orgId, str(input.email));
-    const { invitation, token } = await resendInvitation(
+    const { invitation, token, unsuppress } = await resendInvitation(
       deps.db,
       actorId,
       orgId,
@@ -1435,6 +1435,7 @@ const resendInvitationAction: WorkspaceAction = {
       url: `${deps.server.publicUrl.replace(/\/$/, "")}/invite/${token}`,
       inviterId: actorId,
       ...(deps.server.secret ? { secret: deps.server.secret } : {}),
+      unsuppress,
     });
     return {
       target: { type: "person", id: invitation.id, title: invitation.email },

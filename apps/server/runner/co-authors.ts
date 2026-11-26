@@ -3,7 +3,7 @@ import path from "node:path";
 import type { AgentScope } from "@agenteschat/adapters/machine-protocol";
 
 /**
- * The `Co-authored-by` lines on every commit the agent's own processes make with git (ADR 0156): the server sends
+ * The `Co-Authored-By` lines on every commit the agent's own processes make with git (ADR 0156): the server sends
  * them with the work it starts (`AgentScope.coAuthors`), and the runner gives those processes, in their environment
  * only, a `core.hooksPath` to its own hooks folder (`GIT_CONFIG_PARAMETERS`, what `git -c` hands its children) and
  * the lines (`AGENTES_CO_AUTHORS`). Nothing changes in a repository or in anyone's git config: git run outside the
@@ -113,8 +113,9 @@ export function coAuthorHooks(dir: string): string | null {
   }
 }
 
+// A server older than protocol 85 sends `Co-authored-by`.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: a control character would break the trailer
-const CO_AUTHOR = /^Co-authored-by: [^\u0000-\u001f\u007f<>]{1,200} <[^\u0000- \u007f<>]{1,200}>$/;
+const CO_AUTHOR = /^Co-Authored-By: [^\u0000-\u001f\u007f<>]{1,200} <[^\u0000- \u007f<>]{1,200}>$/i;
 
 /** The lines a request carries for its agent's commits (`AgentScope.coAuthors`), each checked, at most four. */
 export function coAuthorLines(agent: AgentScope | undefined): string[] {

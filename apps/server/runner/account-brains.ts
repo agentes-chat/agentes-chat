@@ -108,6 +108,8 @@ export interface AccountBrainsOptions {
   /** The runner's own command: the relay the CLI starts. */
   relay: string[];
   shared: () => ClaudeSharedLogin | undefined;
+  /** The self-check again, now that an agent's user is here; settles once it answered. */
+  recheck: () => Promise<void>;
   idleMs?: number;
   maxProcesses?: number;
   log?: (line: string) => void;
@@ -146,8 +148,21 @@ export class AccountBrains {
     return signIn?.kind === "claude_code" && this.o.accounts.isCliShared("claude_code", signIn.account);
   }
 
-  private mustBeReady(account: string) {
+  /**
+   * Whether a turn may run on the sign-in. The self-check waited for an agent's user to try the network with: this
+   * agent's is made first, and the check asked again.
+   */
+  private async readiness(account: string, agent: AgentScope, signal: AbortSignal) {
+    if (this.o.accounts.cliSharedState(account) === "deferred") {
+      await this.o.workers.agentReady(agent, signal);
+      await this.o.recheck();
+    }
     const state = this.o.accounts.cliSharedState(account);
+    return state === "deferred" ? "off" : state;
+  }
+
+  private async mustBeReady(account: string, agent: AgentScope, signal: AbortSignal) {
+    const state = await this.readiness(account, agent, signal);
     if (state === "off") throw new RunnerError("unsupported", SHARED_LOGIN_OFF);
     if (state === "signed_out") throw new RunnerError("not_found", ACCOUNT_SIGNED_OUT);
   }
@@ -185,7 +200,7 @@ export class AccountBrains {
     task?: DelegatedTurn["task"],
   ): Promise<WireBrainEvent> {
     const account = String(req.account);
-    const state = this.o.accounts.cliSharedState(account);
+    const state = await this.readiness(account, agent, scope.signal);
     if (state !== "ready") {
       const final: WireBrainEvent =
         state === "off"
@@ -235,8 +250,9 @@ export class AccountBrains {
     agent: AgentScope,
     prepare: () => Promise<unknown>,
     signedOut: (final: WireBrainEvent) => void,
+    signal: AbortSignal,
   ) {
-    this.mustBeReady(String(req.account));
+    await this.mustBeReady(String(req.account), agent, signal);
     const { host, ...reply } = (await prepare()) as Record<string, unknown> & { host?: unknown };
     const hosted = hostOf(host);
     if (!hosted) throw new RunnerError("internal", "The agent's worker said nothing usable about this task");
@@ -294,7 +310,7 @@ export class AccountBrains {
   /** `brain.route`: the prompt carries other people's messages, and the CLI runs with no tool and nothing of anyone's. */
   async route(req: BrainRouteRequest, agent: AgentScope, scope: Pick<RequestScope, "signal">) {
     const account = String(req.account);
-    this.mustBeReady(account);
+    await this.mustBeReady(account, agent, scope.signal);
     const user = await this.o.workers.agentReady(agent, scope.signal);
     const stop = new AbortController();
     const signal = AbortSignal.any([scope.signal, stop.signal]);

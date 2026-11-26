@@ -258,7 +258,8 @@ export async function afterTurnDone(
       ? input.signal !== undefined && input.signal !== "none"
       : fixedAfterFailing(calls, cfg.minToolCalls) || (repeatedTask(calls) && usedHowTos.length === 0);
     if (!learn) return false;
-    if ((await jobsToday(db, run.agentId)) >= cfg.maxPerAgentDay) return false;
+    // A person's correction is never crowded out by the day's other learning (a routine every 15 minutes).
+    if (input.signal !== "correction" && (await jobsToday(db, run.agentId)) >= cfg.maxPerAgentDay) return false;
     await enqueue(db, {
       orgId: run.orgId,
       kind: LEARN_JOB,
@@ -454,11 +455,14 @@ const ACTIVE = ["queued", "running", "waiting_approval", "waiting_input"] as con
  * with the agent, through the Model Gateway) reads the turn (its messages, its tool calls, its reply) and proposes
  * what to keep. Code decides the rest: refs must exist, trust comes from the run (`learnTrust`) and from the refs,
  * scopes beyond the agent's own need high trust (a person's also a message of theirs), and it only adds: an item a
- * person wrote is never replaced (both stay, disputed). Bounded per agent and day, skipped while the agent works
+ * person wrote is never replaced (both stay, disputed). Bounded per agent and day (a person's correction aside), skipped while the agent works
  * in the same conversation. Posts nothing; what a person told it is a quiet receipt with Undo, the rest none
  * (`learnedQuietly`).
  */
-export async function learnRun(deps: ContextDeps, input: { orgId: string; runId: string }): Promise<LearnResult> {
+export async function learnRun(
+  deps: ContextDeps,
+  input: { orgId: string; runId: string; signal?: string },
+): Promise<LearnResult> {
   const { db } = deps;
   const out: LearnResult = { saved: [], rejected: [], skills: [] };
   const cfg = learnConfig(deps);
@@ -515,7 +519,7 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
       set: { jobs: sql`${agentLearningDays.jobs} + 1` },
     })
     .returning({ jobs: agentLearningDays.jobs });
-  if ((day?.jobs ?? 0) > cfg.maxPerAgentDay) return { ...out, skipped: "cap_reached" };
+  if ((day?.jobs ?? 0) > cfg.maxPerAgentDay && input.signal !== "correction") return { ...out, skipped: "cap_reached" };
 
   const ctx = {
     db,

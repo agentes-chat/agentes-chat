@@ -1271,11 +1271,11 @@ without an OAuth app) or the GitHub App.
 Connected with a person's GitHub account, agents open pull requests and comment as that person. With the
 GitHub App, they do it as the app: pull requests, issues, comments and commits come from the app's bot, each
 body ends with one line naming the agent and the person it works for, and commits credit that person
-(`Co-authored-by`) when they signed in with GitHub. Where the app isn't installed, the account connection is
+(`Co-Authored-By`) when they signed in with GitHub. Where the app isn't installed, the account connection is
 used, as before.
 
 Every commit an agent makes, through GitHub or with git on its computer, ends with its own line too:
-`Co-authored-by: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
+`Co-Authored-By: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
 and the person's, never twice. It is on by default; to turn it off for the whole workspace, ask any agent ("stop
 adding your co-author line to commits"), and ask again to turn it back on. On a computer the runner adds it with git
 hooks of its own, handed only to the agents' processes through their environment: your own git, outside them, is

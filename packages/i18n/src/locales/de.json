@@ -626,7 +626,11 @@
       "wrongAddress": "Falsche Adresse? Ändern",
       "banner": "Bestätige deine E-Mail",
       "bannerSub": "Öffne den Link, den wir an {{email}} gesendet haben.",
-      "change": "Adresse ändern"
+      "change": "Adresse ändern",
+      "undelivered": {
+        "suppressed": "Die E-Mail kam nicht an: Der E-Mail-Anbieter hat {{email}} nach einer früheren Rückweisung gesperrt. Prüfe, ob die Adresse stimmt, und fordere einen neuen Link an.",
+        "rejected": "Die E-Mail kam nicht an: {{email}} wurde abgelehnt. Prüfe, ob die Adresse stimmt, oder ändere sie."
+      }
     },
     "unconfirmed": "Für diese E-Mail gibt es schon ein Konto mit einem Passwort, das noch nicht bestätigt ist. Melde dich mit dem Passwort an oder erstelle per E-Mail ein neues.",
     "unconfirmedReset": "Neues Passwort erstellen",
@@ -1458,6 +1462,8 @@
         "model_other": "{{who}} nutzen {{label}}, das hier nicht verfügbar ist.",
         "file_one": "{{who}} nutzt {{label}}.",
         "file_other": "{{who}} nutzen {{label}}.",
+        "path_one": "{{who}} verweist in den Anweisungen auf {{label}}, aber das kam nicht mit dem Import, deshalb kann der Agent es nicht öffnen. Lege diese Dateien in den Drive oder nimm den Pfad aus den Anweisungen.",
+        "path_other": "{{who}} verweisen in ihren Anweisungen auf {{label}}, aber das kam nicht mit dem Import, deshalb können die Agenten es nicht öffnen. Lege diese Dateien in den Drive oder nimm den Pfad aus den Anweisungen.",
         "webhook_one": "Die Routine {{label}} von {{who}} bekommt hier eine neue Adresse: Ändere sie auf der Website oder in der App, die die alte aufgerufen hat.",
         "webhook_other": "Die Routine {{label}} von {{who}} bekommt hier eine neue Adresse: Ändere sie auf der Website oder in der App, die die alte aufgerufen hat."
       },
@@ -1565,6 +1571,7 @@
         "app": "Verbinden",
         "model": "Modell wählen",
         "file": "Drive öffnen",
+        "path": "Drive öffnen",
         "webhook": "Routinen öffnen"
       },
       "linkSkipped_one": "{{count}} Datei über dem Limit des Links",
@@ -3825,7 +3832,7 @@
     "nowEveryAgent": "Alle Agenten jetzt: {{level}}.",
     "undo": "Rückgängig",
     "everyAgent": "Für alle Agenten im Workspace",
-    "follows": "Folgt dem Workspace",
+    "follows": "{{level}} · vom Workspace",
     "edit": "Ändern",
     "workspaceLead": "Wann die Agenten vor dem Handeln eine Person fragen.",
     "workspaceHelp": "Jeder Agent folgt dieser Wahl, bis jemand seine eigene auf der Seite des Agenten ändert.",
@@ -7721,6 +7728,10 @@
       "expires": "Läuft ab in {{left}}",
       "expired": "Abgelaufen {{when}}",
       "resentState": "Erneut gesendet · gilt bis {{date}}",
+      "undelivered": {
+        "suppressed": "Nicht angekommen: Der E-Mail-Anbieter hat diese Adresse nach einer früheren Rückweisung gesperrt. Prüfe, ob sie stimmt, und sende erneut, oder kopiere den Link.",
+        "rejected": "Nicht angekommen: Die Adresse wurde abgelehnt. Prüfe, ob sie stimmt, oder kopiere den Link und schicke ihn anders."
+      },
       "copied": "Link zur Einladung von {{email}} kopiert. Es ist derselbe wie in der E-Mail.",
       "copiedNoEmail": "Link zur Einladung von {{email}} kopiert.",
       "resent": "Erneut an {{email}} gesendet. Der Link bleibt gleich und gilt bis {{date}}.",
@@ -8674,6 +8685,13 @@
     "notFound": "Diese Routine existiert nicht mehr oder du hast keinen Zugriff.",
     "copyWebhook": "Webhook-URL kopieren",
     "webhookCopied": "Webhook-URL kopiert.",
+    "runCalls": {
+      "show": "Aufrufe ({{n}})",
+      "hide": "Aufrufe ausblenden",
+      "cut": "Gekürzt",
+      "binary": "Kein Text, nicht gespeichert",
+      "copied": "Aufruf kopiert."
+    },
     "webhook": {
       "when": "Wenn ihr Webhook aufgerufen wird",
       "waiting": "Wartet auf den nächsten Aufruf",
@@ -8699,8 +8717,11 @@
       "signature": "Signatur",
       "signedOff": "Aus: Der Agent bekommt jeden Aufruf an die Adresse.",
       "signedOn": "An: Nur Aufrufe, die mit dem Secret signiert sind, kommen durch.",
-      "signedHelp": "Sende den HMAC-SHA256 des Bodys (bei einem GET-Aufruf: seines Query-Strings, ohne das ?) in X-Agentes-Signature (sha256=…). GitHubs X-Hub-Signature-256 funktioniert auch.",
+      "signedHelp": "Sende den HMAC-SHA256 des Bodys (bei einem GET-Aufruf: seines Query-Strings, ohne das ?) in X-Agentes-Signature (sha256=…). GitHubs X-Hub-Signature-256 funktioniert auch. Für Linear füge das Signatur-Secret ein, das Linear anzeigt: Seine Linear-Signature wird geprüft, und Aufrufe, die älter als eine Minute sind, werden abgelehnt.",
       "addSecret": "Signatur verlangen",
+      "pasteSecret": "Secret des Dienstes verwenden",
+      "pasteLabel": "Signatur-Secret des Dienstes",
+      "secretPasted": "Secret gespeichert. Nur damit signierte Aufrufe kommen durch.",
       "newSecret": "Neues Secret",
       "newSecretTitle": "Neues Secret erstellen?",
       "newSecretBody": "Das aktuelle Secret funktioniert sofort nicht mehr. Damit signierte Aufrufe werden abgelehnt, bis du die Dienste aktualisierst, die diese Routine aufrufen.",
@@ -9234,6 +9255,7 @@
     "busyAnyComputer_other": "Läuft {{count}}-mal am Tag auf dem Computer, der eingeschaltet bleiben muss.",
     "outcome": {
       "queued": "In der Warteschlange",
+      "queuedBehind": "In der Warteschlange: wartet, bis die Routine {{name}} fertig ist",
       "running": "Arbeitet gerade",
       "waiting": "Wartet auf eine Antwort",
       "waitingApproval": "Wartet auf deine Freigabe",
@@ -20326,6 +20348,9 @@
     "failed": "Konnte gerade nicht geöffnet werden. Versuch es gleich noch einmal.",
     "adminsOnly": "Nur Inhaber und Admins des Workspace verwalten seinen agentes.chat-Tarif.",
     "seeOptions": "Optionen ansehen",
+    "plan": "Tarif",
+    "planMonth": "{{plan}}, monatlich",
+    "planYear": "{{plan}}, jährlich",
     "people": "Personen",
     "files": "Dateien",
     "usedOf": "{{used}} von {{limit}}",
@@ -21879,6 +21904,36 @@
     },
     "approvals": "Was an Kunden rausgeht, wartet auf deine Freigabe. Du kannst es später freigeben, wenn du ihnen vertraust.",
     "approvalsPersonal": "Alles, was in deinem Namen gesendet, bezahlt oder gebucht wird, wartet auf deine Freigabe. Du kannst es später freigeben, wenn du ihnen vertraust."
+  },
+  "paidMoment": {
+    "on": "Dein Tarif ist aktiv",
+    "onPlan": "Du nutzt jetzt {{plan}}",
+    "onMonth": "Du nutzt jetzt {{plan}}, monatlich",
+    "onYear": "Du nutzt jetzt {{plan}}, jährlich",
+    "room": {
+      "both_one": "Platz für {{people}} Person und {{files}} an Dateien.",
+      "both_other": "Platz für {{people}} Personen und {{files}} an Dateien.",
+      "people_one": "Platz für {{people}} Person, ohne Limit für Dateien.",
+      "people_other": "Platz für {{people}} Personen, ohne Limit für Dateien.",
+      "files": "Platz für {{files}} an Dateien, ohne Limit für Personen.",
+      "none": "Kein Limit für Personen oder Dateien."
+    },
+    "computer": {
+      "on": "Dein Computer läuft.",
+      "starting": "Dein Computer wird vorbereitet.",
+      "startingTold": "Dein Computer wird vorbereitet. Wir sagen dir Bescheid, sobald er läuft."
+    },
+    "hello": "Hallo, {{first}}",
+    "hi": "Hallo",
+    "say": "Wir sind alle da. Legen wir los.",
+    "sayOn": "Wir sind alle da, und der Computer läuft. Legen wir los.",
+    "sayStarting": "Wir sind alle da. Wir sagen dir Bescheid, sobald der Computer läuft.",
+    "next": {
+      "ai": "KI verbinden",
+      "people": "Leute einladen",
+      "open": "Zum Workspace",
+      "talk": "Mit {{name}} sprechen"
+    }
   },
   "arrival": {
     "beta": {

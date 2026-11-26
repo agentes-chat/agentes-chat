@@ -241,11 +241,10 @@ export const Organization = z
       .string()
       .optional()
       .openapi({ description: "What the agents know of it: only for who may `configure`." }),
-    logo: z
-      .string()
-      .nullable()
-      .optional()
-      .openapi({ description: "The workspace logo (`/api/app/org-logos/…`); null = the agent mark." }),
+    logo: z.string().nullable().optional().openapi({
+      description:
+        "The workspace logo (`/api/app/org-logos/…`), ending with `#ink=light` when its ink is light; null = the agent mark.",
+    }),
     accent: AccentColor.nullable()
       .optional()
       .openapi({ description: "The workspace's accent color (ADR 0193); null = the default." }),

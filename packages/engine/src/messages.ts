@@ -58,7 +58,17 @@ import {
   workKeepsThread,
   workTakesPersonMessage,
 } from "./run-scope";
-import { computerWaitSql, KEPT_ON_HOLD, NO_AI, outageParkedSql, passedSql, runErrorDetail, usageWaitSql } from "./runs";
+import {
+  computerWaitSql,
+  KEPT_ON_HOLD,
+  NO_AI,
+  noAiDetail,
+  noAiWhySql,
+  outageParkedSql,
+  passedSql,
+  runErrorDetail,
+  usageWaitSql,
+} from "./runs";
 import { accountInUse, closedRefusal } from "./standing";
 import { afterSteered } from "./steering";
 import type { Talker } from "./talker";
@@ -225,7 +235,10 @@ export interface Receipts {
     status: "queued" | "running" | "waiting_approval" | "waiting_input" | "done" | "failed" | "canceled";
     /** `no_ai`: it failed for want of an AI to think with. */
     reason?: typeof NO_AI;
-    /** `failed` for another reason: why, for the app to word (`runErrorDetail`). */
+    /**
+     * `failed` for another reason: why, for the app to word (`runErrorDetail`). With `no_ai`: why it had nothing to
+     * think with (`noAiDetail`).
+     */
     errorCode?: string;
     errorParams?: Record<string, string>;
     /** `waiting_input` parked on a provider outage: it retries by itself. */
@@ -282,6 +295,7 @@ export async function receiptsFor(db: Database, orgId: string, list: Message[]):
     computer: computerWaitSql,
     usage: usageWaitSql,
     passed: passedSql,
+    noAiWhy: noAiWhySql,
   };
   const [decisions, runs, steeredRuns, answeredRuns] = await Promise.all([
     db
@@ -346,7 +360,7 @@ export async function receiptsFor(db: Database, orgId: string, list: Message[]):
         runId: r.id,
         // Asking its computer from the line it still waits, as `computer` says.
         status: r.computer === "queued" ? ("waiting_input" as const) : r.status,
-        ...(r.error === NO_AI ? { reason: NO_AI } : {}),
+        ...(r.error === NO_AI ? { reason: NO_AI, ...noAiDetail(r.noAiWhy?.code, r.noAiWhy?.model) } : {}),
         ...(r.status === "failed" && r.error !== NO_AI ? runErrorDetail(r.error) : {}),
         ...(r.outage ? { outage: true as const } : {}),
         ...(r.computer ? { computer: r.computer } : {}),

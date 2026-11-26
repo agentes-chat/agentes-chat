@@ -417,8 +417,9 @@ export class PermanentJobError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = "PermanentJobError";
   }
 }

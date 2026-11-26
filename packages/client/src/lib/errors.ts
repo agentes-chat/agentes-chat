@@ -502,6 +502,8 @@ const KNOWN = {
   "pull.not_found": "errors.said.gone",
   "right_hand.not_found": "errors.said.gone",
   "routine.no_webhook": "errors.said.gone",
+  "routine.run_not_found": "errors.said.gone",
+  "routine.webhook_secret_invalid": "errors.said.input",
   "task.not_found": "errors.said.gone",
   "team_proposal.no_agent": "errors.said.gone",
   "team_proposal.not_found": "errors.said.gone",

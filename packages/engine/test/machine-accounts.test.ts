@@ -2262,15 +2262,27 @@ test("a new Claude sign-in for all agents takes the policy's method once; signin
   expect(status).toMatchObject({ state: "done" });
   expect(await accountRow(login.loginId)).toMatchObject({ authMethod: "setup_token", status: "active" });
 
-  // The policy moves this workspace to Claude's own login: a runner that can't is refused, with nothing left behind.
+  // The policy moves this workspace to Claude's own login: a runner not ready for it yet signs this one in with a
+  // token, kept on its row, and the operators hear why.
   await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "selected", orgIds: [f.org.id] });
-  const before = (await accountRows(machineId)).length;
-  const refused = fakeHub(machineId, () => ({ url: "https://claude.ai/x" }), over);
-  const error = await beginAccountLogin(refused.deps, f.owner.id, f.org.id, machineId, "claude_code").catch((e) => e);
+  const errors: unknown[][] = [];
+  const log = { error: (...a: unknown[]) => void errors.push(a), warn: () => {} };
+  const fallback = fakeHub(machineId, () => ({ url: "https://claude.ai/x" }), over);
+  const token = await beginAccountLogin({ ...fallback.deps, log }, f.owner.id, f.org.id, machineId, "claude_code");
+  expect(fallback.calls[0]).toMatchObject({ action: "begin", shared: true, method: "setup_token" });
+  expect(await accountRow(token.loginId)).toMatchObject({ authMethod: "setup_token", status: "signing_in" });
+  expect(errors).toHaveLength(1);
+  expect(errors[0]?.[1]).toMatchObject({ machineId, reason: "pending" });
+
+  // One that offers neither is refused, with nothing left behind.
+  const { machineId: none } = await systemMachine(CLAUDE_AUTH_PROTOCOL, []);
+  const before = (await accountRows(none)).length;
+  const refused = fakeHub(none, () => ({ url: "https://claude.ai/x" }), over);
+  const error = await beginAccountLogin(refused.deps, f.owner.id, f.org.id, none, "claude_code").catch((e) => e);
   expect(error).toBeInstanceOf(ConflictError);
   expect(error).toMatchObject({ code: "account.method_unsupported" });
   expect(refused.calls).toEqual([]);
-  expect((await accountRows(machineId)).length).toBe(before);
+  expect((await accountRows(none)).length).toBe(before);
 
   // Signing in again keeps the account's own method, whatever the policy says now.
   await f.db
@@ -2301,12 +2313,12 @@ test("a runner that can use Claude's own login for all agents gets it; an older 
   expect(runner.calls[0]).toMatchObject({ shared: true, method: "cli_login" });
   expect(await accountRow(login.loginId)).toMatchObject({ authMethod: "cli_login", status: "signing_in" });
 
-  // Below protocol 50 in system mode: setup-token is all it does, so the policy's own login is refused.
+  // Below protocol 50 in system mode: setup-token is all it does, so that is what the policy's own login gets.
   const { machineId: old } = await systemMachine(SHARED_ACCOUNTS_PROTOCOL, ["cli_login"]);
   const oldRunner = fakeHub(old, () => ({ url: "https://claude.ai/x" }), { protocol: SHARED_ACCOUNTS_PROTOCOL });
-  await expect(beginAccountLogin(oldRunner.deps, f.owner.id, f.org.id, old, "claude_code")).rejects.toMatchObject({
-    code: "account.method_unsupported",
-  });
+  const older = await beginAccountLogin(oldRunner.deps, f.owner.id, f.org.id, old, "claude_code");
+  expect(oldRunner.calls[0]).not.toHaveProperty("method");
+  expect(await accountRow(older.loginId)).toMatchObject({ authMethod: "setup_token" });
   await setClaudeAuthPolicy(f.db, { method: "setup_token", rollout: "selected", orgIds: [] });
   const legacy = signingRunner(old, () => ({ loggedIn: true, shared: true }), { protocol: SHARED_ACCOUNTS_PROTOCOL });
   const kept = await beginAccountLogin(legacy.deps, f.owner.id, f.org.id, old, "claude_code");

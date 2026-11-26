@@ -91,6 +91,7 @@ import {
   createToolGateway,
   createUsageToolSource,
   createVaultToolSource,
+  createWebhookCallToolSource,
   createWebToolSource,
   createWikiToolSource,
   createWithdrawRequestToolSource,
@@ -500,6 +501,8 @@ export function buildEngine(o: EngineOptions) {
         tools: () => tools,
         gif: createAgentGifPoster(adapters.gifs),
       }),
+      // A webhook routine's run reads one of its calls whole: its text shortens long calls to fit.
+      createWebhookCallToolSource(),
       // Runs nobody called by name may stay quiet (reply-policy.ts): listed only for them.
       createPassToolSource(),
       createArtifactToolSource(artifacts),

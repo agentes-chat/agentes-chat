@@ -1493,6 +1493,12 @@
   "auth.confirm.change": {
     "value": "Change address"
   },
+  "auth.confirm.undelivered.suppressed": {
+    "value": "The email wasn't delivered: the mail provider blocked {{email}} after an earlier bounce. Check the address is right and ask for a new link."
+  },
+  "auth.confirm.undelivered.rejected": {
+    "value": "The email wasn't delivered: {{email}} was refused. Check the address is right, or change it."
+  },
   "auth.unconfirmed": {
     "value": "This email already has an account with a password that isn't confirmed yet. Sign in with the password, or create a new one by email."
   },
@@ -3581,6 +3587,12 @@
       "other": "{{who}} use {{label}}."
     }
   },
+  "onboarding.import.need.path": {
+    "value": {
+      "one": "{{who}} points to {{label}} in its instructions, but it didn't come in the import, so the agent can't open it. Add those files to the Drive, or take that path out of the instructions.",
+      "other": "{{who}} point to {{label}} in their instructions, but it didn't come in the import, so the agents can't open it. Add those files to the Drive, or take that path out of the instructions."
+    }
+  },
   "onboarding.import.need.webhook": {
     "value": {
       "one": "The routine {{label}}, of {{who}}, gets a new address here: change it in the site or app that called the old one.",
@@ -3858,6 +3870,9 @@
     "value": "Pick a model"
   },
   "onboarding.import.needDo.file": {
+    "value": "Open the Drive"
+  },
+  "onboarding.import.needDo.path": {
     "value": "Open the Drive"
   },
   "onboarding.import.needDo.webhook": {
@@ -9378,7 +9393,7 @@
     "value": "For every agent in the workspace"
   },
   "approvalsLevel.follows": {
-    "value": "Follows the workspace"
+    "value": "{{level}} · from the workspace"
   },
   "approvalsLevel.edit": {
     "value": "Change"
@@ -18838,6 +18853,12 @@
   "members.invitations.resentState": {
     "value": "Sent again · works until {{date}}"
   },
+  "members.invitations.undelivered.suppressed": {
+    "value": "Not delivered: the mail provider blocked this address after an earlier bounce. Check it's right and resend, or copy the link."
+  },
+  "members.invitations.undelivered.rejected": {
+    "value": "Not delivered: the address was refused. Check it's right, or copy the link and send it another way."
+  },
   "members.invitations.copied": {
     "value": "Link to {{email}}'s invitation copied. It's the same as in the email."
   },
@@ -21026,6 +21047,21 @@
   "routines.webhookCopied": {
     "value": "Webhook URL copied."
   },
+  "routines.runCalls.show": {
+    "value": "Calls ({{n}})"
+  },
+  "routines.runCalls.hide": {
+    "value": "Hide calls"
+  },
+  "routines.runCalls.cut": {
+    "value": "Shortened"
+  },
+  "routines.runCalls.binary": {
+    "value": "Not text, not kept"
+  },
+  "routines.runCalls.copied": {
+    "value": "Call copied."
+  },
   "routines.webhook.when": {
     "value": "When its webhook is called"
   },
@@ -21099,10 +21135,19 @@
     "value": "On: only calls signed with the secret get through."
   },
   "routines.webhook.signedHelp": {
-    "value": "Send the HMAC-SHA256 of the body (of a GET call: its query string, without the ?) in X-Agentes-Signature (sha256=…). GitHub's X-Hub-Signature-256 works too."
+    "value": "Send the HMAC-SHA256 of the body (of a GET call: its query string, without the ?) in X-Agentes-Signature (sha256=…). GitHub's X-Hub-Signature-256 works too. For Linear, paste the signing secret Linear shows: its Linear-Signature is checked, and calls over a minute old are refused."
   },
   "routines.webhook.addSecret": {
     "value": "Require a signature"
+  },
+  "routines.webhook.pasteSecret": {
+    "value": "Use the service's secret"
+  },
+  "routines.webhook.pasteLabel": {
+    "value": "The service's signing secret"
+  },
+  "routines.webhook.secretPasted": {
+    "value": "Secret saved. Only calls signed with it get through."
   },
   "routines.webhook.newSecret": {
     "value": "New secret"
@@ -22289,6 +22334,9 @@
   },
   "routines.outcome.queued": {
     "value": "Queued"
+  },
+  "routines.outcome.queuedBehind": {
+    "value": "Queued: waits for the {{name}} routine to finish"
   },
   "routines.outcome.running": {
     "value": "Working now"
@@ -49794,6 +49842,15 @@
   "billing.seeOptions": {
     "value": "See options"
   },
+  "billing.plan": {
+    "value": "Plan"
+  },
+  "billing.planMonth": {
+    "value": "{{plan}}, monthly"
+  },
+  "billing.planYear": {
+    "value": "{{plan}}, yearly"
+  },
   "billing.people": {
     "value": "People"
   },
@@ -53349,6 +53406,72 @@
   },
   "teamTemplates.approvalsPersonal": {
     "value": "Anything sent, paid or booked in your name waits for your approval. You can let it go later, once you trust them."
+  },
+  "paidMoment.on": {
+    "value": "Your plan is on"
+  },
+  "paidMoment.onPlan": {
+    "value": "You're on {{plan}}"
+  },
+  "paidMoment.onMonth": {
+    "value": "You're on {{plan}}, monthly"
+  },
+  "paidMoment.onYear": {
+    "value": "You're on {{plan}}, yearly"
+  },
+  "paidMoment.room.both": {
+    "value": {
+      "one": "Room for {{people}} person and {{files}} of files.",
+      "other": "Room for {{people}} people and {{files}} of files."
+    }
+  },
+  "paidMoment.room.people": {
+    "value": {
+      "one": "Room for {{people}} person, with no limit on files.",
+      "other": "Room for {{people}} people, with no limit on files."
+    }
+  },
+  "paidMoment.room.files": {
+    "value": "Room for {{files}} of files, with no limit on people."
+  },
+  "paidMoment.room.none": {
+    "value": "No limit on people or files."
+  },
+  "paidMoment.computer.on": {
+    "value": "Your computer is on."
+  },
+  "paidMoment.computer.starting": {
+    "value": "Your computer is getting ready."
+  },
+  "paidMoment.computer.startingTold": {
+    "value": "Your computer is getting ready. We'll tell you when it's on."
+  },
+  "paidMoment.hello": {
+    "value": "Hi, {{first}}"
+  },
+  "paidMoment.hi": {
+    "value": "Hi there"
+  },
+  "paidMoment.say": {
+    "value": "We're all here. Let's get to work."
+  },
+  "paidMoment.sayOn": {
+    "value": "We're all here, and the computer is on. Let's get to work."
+  },
+  "paidMoment.sayStarting": {
+    "value": "We're all here. We'll tell you when the computer is on."
+  },
+  "paidMoment.next.ai": {
+    "value": "Connect an AI"
+  },
+  "paidMoment.next.people": {
+    "value": "Invite people"
+  },
+  "paidMoment.next.open": {
+    "value": "Go to the workspace"
+  },
+  "paidMoment.next.talk": {
+    "value": "Talk to {{name}}"
   },
   "arrival.beta.word": {
     "value": "BETA"

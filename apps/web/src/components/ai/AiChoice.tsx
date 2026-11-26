@@ -61,9 +61,9 @@ export function rowOfChoice(rows: readonly AiChoiceRow[], c: AiChoice | null | u
 
 /** A row's name: the account's, the key's, a brain's maker, "A do workspace". */
 export function rowName(t: TFunction, row: AiChoiceRow): string {
+  if (row.type === "workspace") return t("aiHub.choice.workspace");
   if (row.account) return accountShortName(t, row.account);
   if (row.apiKey) return row.apiKey.label;
-  if (row.type === "workspace") return t("aiHub.choice.workspace");
   return row.brain === "model" ? t("aiHub.apiKey") : t(`aiAccounts.connect.${row.brain}`);
 }
 
@@ -87,6 +87,8 @@ function rowMeta(t: TFunction, row: AiChoiceRow, withOwner: boolean): string {
       .filter(Boolean)
       .join(" · ");
   }
+  // "A do workspace": which key it is.
+  if (row.type === "workspace") return row.apiKey?.label ?? t("aiHub.apiKey");
   if (row.apiKey) return row.apiKey.endpoint ? row.apiKey.endpoint.baseURL : t("aiHub.apiKey");
   // A plan through its computer's own sign-in.
   if (row.type === "brain" && row.brain !== "model") return t("brain.picker.ownSignIn");

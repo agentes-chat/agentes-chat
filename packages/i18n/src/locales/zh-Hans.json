@@ -611,7 +611,11 @@
       "wrongAddress": "地址不对？更改",
       "banner": "请确认邮箱",
       "bannerSub": "打开我们发送到 {{email}} 的链接。",
-      "change": "更改地址"
+      "change": "更改地址",
+      "undelivered": {
+        "suppressed": "邮件没有送达：由于之前的退信，邮件服务商已停止向 {{email}} 发送。请确认地址无误，然后申请新链接。",
+        "rejected": "邮件没有送达：{{email}} 被拒收。请确认地址无误，或换一个地址。"
+      }
     },
     "unconfirmed": "这个邮箱已有一个账号，其密码尚未确认。请用密码登录，或通过邮件设置新密码。",
     "unconfirmedReset": "设置新密码",
@@ -1414,6 +1418,7 @@
         "secret_other": "{{who}} 使用 {{label}}。它不包含在文件中：智能体会在聊天中向你索要。",
         "model_other": "{{who}} 使用 {{label}}，但它在这里不可用。",
         "file_other": "{{who}} 使用 {{label}}。",
+        "path_other": "{{who}} 的指令提到了 {{label}}，但它没有随导入一起带来，所以智能体打不开。请把这些文件放进 Drive，或从指令中删掉这个路径。",
         "webhook_other": "{{who}} 的例行工作 {{label}} 在这里会获得新地址：请在调用旧地址的网站或应用中改成新地址。"
       },
       "say": {
@@ -1511,6 +1516,7 @@
         "app": "连接",
         "model": "选择模型",
         "file": "打开 Drive",
+        "path": "打开 Drive",
         "webhook": "打开例行工作"
       },
       "linkSkipped_other": "{{count}} 个文件超出了链接的上限",
@@ -3670,7 +3676,7 @@
     "nowEveryAgent": "所有智能体现在：{{level}}。",
     "undo": "撤销",
     "everyAgent": "应用到工作区的所有智能体",
-    "follows": "跟随工作区",
+    "follows": "{{level}} · 工作区设置",
     "edit": "更改",
     "workspaceLead": "智能体在行动前何时询问人。",
     "workspaceHelp": "每个智能体都跟随此选择，直到有人在智能体页面上更改它自己的设置。",
@@ -7464,6 +7470,10 @@
       "expires": "{{left}}后过期",
       "expired": "{{when}}已过期",
       "resentState": "已重新发送 · 有效期至 {{date}}",
+      "undelivered": {
+        "suppressed": "未送达：由于之前的退信，邮件服务商已停止向此地址发送。请确认地址无误后重新发送，或复制链接。",
+        "rejected": "未送达：此地址被拒收。请确认地址无误，或复制链接用其他方式发送。"
+      },
       "copied": "已复制 {{email}} 的邀请链接。与邮件中的链接相同。",
       "copiedNoEmail": "已复制 {{email}} 的邀请链接。",
       "resent": "已再次发送给 {{email}}。链接不变，有效期至 {{date}}。",
@@ -8400,6 +8410,13 @@
     "notFound": "这个例行工作已不存在，或你没有访问权限。",
     "copyWebhook": "复制 Webhook URL",
     "webhookCopied": "Webhook URL 已复制。",
+    "runCalls": {
+      "show": "调用（{{n}}）",
+      "hide": "隐藏调用",
+      "cut": "已缩短",
+      "binary": "非文本，未保存",
+      "copied": "已复制调用。"
+    },
     "webhook": {
       "when": "在 Webhook 被调用时",
       "waiting": "等待下一次调用",
@@ -8425,8 +8442,11 @@
       "signature": "签名",
       "signedOff": "关闭：智能体会接收发到此地址的所有调用。",
       "signedOn": "开启：只有用密钥签名的调用才能通过。",
-      "signedHelp": "在 X-Agentes-Signature 中发送请求体（GET 调用则为其查询字符串，不含 ?）的 HMAC-SHA256（sha256=…）。GitHub 的 X-Hub-Signature-256 也可以。",
+      "signedHelp": "在 X-Agentes-Signature 中发送请求体（GET 调用则为其查询字符串，不含 ?）的 HMAC-SHA256（sha256=…）。GitHub 的 X-Hub-Signature-256 也可以。对于 Linear，请粘贴 Linear 显示的签名密钥：会校验其 Linear-Signature，超过一分钟的调用会被拒绝。",
       "addSecret": "要求签名",
+      "pasteSecret": "使用该服务的密钥",
+      "pasteLabel": "该服务的签名密钥",
+      "secretPasted": "密钥已保存。只有用它签名的调用才能通过。",
       "newSecret": "新密钥",
       "newSecretTitle": "生成新密钥？",
       "newSecretBody": "当前密钥会立即失效。在你更新调用此例行工作的服务之前，用旧密钥签名的调用都会被拒绝。",
@@ -8946,6 +8966,7 @@
     "busyAnyComputer_other": "每天在电脑上运行 {{count}} 次，电脑需要保持开机。",
     "outcome": {
       "queued": "排队中",
+      "queuedBehind": "排队中：等待例行工作「{{name}}」完成",
       "running": "正在工作",
       "waiting": "等待有人回答",
       "waitingApproval": "等待你审批",
@@ -19794,6 +19815,9 @@
     "failed": "暂时无法打开，请稍后再试。",
     "adminsOnly": "只有工作区的所有者和管理员可以管理 agentes.chat 套餐。",
     "seeOptions": "查看选项",
+    "plan": "套餐",
+    "planMonth": "{{plan}}，按月付费",
+    "planYear": "{{plan}}，按年付费",
     "people": "成员",
     "files": "文件",
     "usedOf": "{{used}} / {{limit}}",
@@ -21373,6 +21397,34 @@
     },
     "approvals": "发给客户的内容需要你批准。等你信任它们后，可以再放开。",
     "approvalsPersonal": "凡是以你的名义发送、付款或预订的内容，都要等你批准。等你信任它们后，可以再放开。"
+  },
+  "paidMoment": {
+    "on": "你的套餐已生效",
+    "onPlan": "你已开通 {{plan}} 套餐",
+    "onMonth": "你已开通 {{plan}} 套餐，按月付费",
+    "onYear": "你已开通 {{plan}} 套餐，按年付费",
+    "room": {
+      "both_other": "可容纳 {{people}} 人，文件空间 {{files}}。",
+      "people_other": "可容纳 {{people}} 人，文件空间不限。",
+      "files": "文件空间 {{files}}，人数不限。",
+      "none": "人数和文件空间均不限。"
+    },
+    "computer": {
+      "on": "你的电脑已开机。",
+      "starting": "你的电脑正在准备中。",
+      "startingTold": "你的电脑正在准备中。开机后我们会通知你。"
+    },
+    "hello": "你好，{{first}}",
+    "hi": "你好",
+    "say": "我们都到齐了。开始干活吧。",
+    "sayOn": "我们都到齐了，电脑也已开机。开始干活吧。",
+    "sayStarting": "我们都到齐了。电脑开机后我们会通知你。",
+    "next": {
+      "ai": "连接 AI",
+      "people": "邀请成员",
+      "open": "进入工作区",
+      "talk": "和 {{name}} 聊聊"
+    }
   },
   "arrival": {
     "beta": {

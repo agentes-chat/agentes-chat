@@ -205,18 +205,22 @@ export const invitationExpired = (
 export function invitationLine(
   t: TFunction,
   locale: string,
-  invitation: Pick<InvitationWithStatus, "role" | "roleIds" | "expiresAt"> & {
+  invitation: Pick<InvitationWithStatus, "role" | "roleIds" | "expiresAt" | "undelivered"> & {
     status?: InvitationWithStatus["status"];
   },
   roles: readonly OrgRole[],
   extra: { resentUntil?: string | undefined; sender?: string | null | undefined } = {},
   now = new Date(),
 ) {
-  const state = extra.resentUntil
-    ? t("members.invitations.resentState", { date: formatShortDate(locale, extra.resentUntil) })
-    : invitationExpired(invitation, now)
-      ? t("members.invitations.expired", { when: whenWords(t, locale, invitation.expiresAt, now) })
-      : t("members.invitations.expires", { left: timeLeft(t, invitation.expiresAt, now) ?? "" });
+  const expired = invitationExpired(invitation, now);
+  const state =
+    invitation.undelivered && !expired
+      ? t(`members.invitations.undelivered.${invitation.undelivered}`)
+      : extra.resentUntil
+        ? t("members.invitations.resentState", { date: formatShortDate(locale, extra.resentUntil) })
+        : expired
+          ? t("members.invitations.expired", { when: whenWords(t, locale, invitation.expiresAt, now) })
+          : t("members.invitations.expires", { left: timeLeft(t, invitation.expiresAt, now) ?? "" });
   return [invitationRoles(t, invitation, roles), extra.sender, lowerFirst(state, locale)].filter(Boolean).join(" · ");
 }
 

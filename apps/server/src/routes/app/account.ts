@@ -178,6 +178,10 @@ const Me = z
         description:
           "On a server that sends email, an address never confirmed (ADR 0006, addendum 2026-11-22): `required` while the account is in no workspace, which then makes none (403 `org.create_unconfirmed`) until the link is opened, so the apps show only “check your inbox”; `reminder` for one already in a workspace, which keeps working under a line that asks for it. Null otherwise.",
       }),
+      emailUndelivered: z.enum(["suppressed", "rejected"]).nullable().openapi({
+        description:
+          "The last confirmation or reset email to the address could never be delivered: `suppressed`, the mail provider stopped mailing it after an earlier bounce (a new link asks the provider to mail it again first); `rejected`, the address was refused. Null once one goes, or when nothing says so.",
+      }),
       confirmsOnThisMac: z.boolean().openapi({
         description:
           "A sign-in in the last 10 minutes is their proof before a deletion, with no password or code: the installation's owner on the desktop app's own server (an owner key, no email), whom the app signs in again with Continue on this Mac.",
@@ -262,6 +266,7 @@ export function accountRoutes(deps: AppDeps) {
           verified,
           workspaces: memberships.length,
         }),
+        emailUndelivered: account.emailUndelivered,
         confirmsOnThisMac: onThisMac,
         locale: account.locale,
         localeAuto: account.localeAuto,
@@ -436,10 +441,10 @@ export function accountRoutes(deps: AppDeps) {
               .object({
                 name: z.string(),
                 accent: z.string().nullable().openapi({ description: "`#rrggbb`; null: the default." }),
-                logoUrl: z
-                  .string()
-                  .nullable()
-                  .openapi({ description: "Its logo (`GET /api/host-look/logo`); null: none." }),
+                logoUrl: z.string().nullable().openapi({
+                  description:
+                    "Its logo (`GET /api/host-look/logo`), ending with `#ink=light` when its ink is light; null: none.",
+                }),
                 poweredBy: z.boolean().openapi({ description: "Its pages end with the powered-by line." }),
               })
               .nullable()

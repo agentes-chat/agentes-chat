@@ -205,6 +205,7 @@ const READS = new Set([
   "list_tasks",
   "task_status",
   "get_context",
+  "read_webhook_call",
   "web_search",
   "web_fetch",
   "image_search",

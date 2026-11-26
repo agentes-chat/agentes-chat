@@ -106,6 +106,14 @@ describe("aiChoiceRows: one list for every picker", () => {
     ]);
   });
 
+  test("Lodi's A do workspace carries the workspace's default key, so its row says which it is", () => {
+    const target = { kind: "lodi", agentId: "l", scope: "mine" } as const;
+    const [withKey] = aiChoiceRows(hub([], [key("k1"), key("k2", { isDefault: true })]), ctx({ target }));
+    expect([withKey?.type, withKey?.apiKey?.id]).toEqual(["workspace", "k2"]);
+    const [noKey] = aiChoiceRows(hub([], [key("k1")]), ctx({ target }));
+    expect(noKey?.apiKey).toBeUndefined();
+  });
+
   test("the logins of one account are one row, the one thinking selected", () => {
     const h = hub([account("l1", { sameAs: "l1" }), account("l2", { sameAs: "l1" })]);
     const rows = aiChoiceRows(h, ctx({ current: { brain: "claude_code", account: "l2" } }));

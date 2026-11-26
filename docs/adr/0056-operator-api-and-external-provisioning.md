@@ -593,13 +593,15 @@ The claims and the timings are in `packages/engine/src/run-timings.ts`, the plan
 
 ## Addendum (2026-11-21): investigation reads
 
-The reveal door read one field of one record a call. Investigating a problem in a workspace (an agent that answered wrong, a run that did something nobody asked for) needs a conversation, a run or an agent's setup whole, and whoever runs the server, with the AI assistants that work with it, reads workspace content when an investigation needs it. Three reads, under `/reveal/` so behind the reveal token alone, `POST` with a JSON body:
+The reveal door read one field of one record a call. Investigating a problem in a workspace (an agent that answered wrong, a run that did something nobody asked for) needs a conversation, a run or an agent's setup whole, and whoever runs the server, with the AI assistants that work with it, reads workspace content when an investigation needs it. Five reads, under `/reveal/` so behind the reveal token alone, `POST` with a JSON body:
 
 | Route | Body beyond the common fields | Answer |
 |---|---|---|
 | `POST /reveal/orgs/{orgId}/conversations/{channelId}/messages` | `from`, `to` (at most 48 hours apart), `threadId?`, `limit` (1-200, default 100), `cursor?` | `{ channelId, direct, from, to, messages: [{ id, createdAt, threadId, authorType, authorUserId, authorAgentId, agentRunId, editedAt, withheld, text, chars, cut, after }], next }` |
 | `POST /reveal/orgs/{orgId}/runs/{runId}/transcript` | `afterSeq` (default 0), `limit` (1-200, default 100) | `{ run: { id, agentId, channelId, threadRootId, triggerMessageId, trigger, status, createdAt, finishedAt }, request: { text, chars, cut }, steps: [{ seq, kind, at, name, toolUseId, isError, withheld, text, chars, cut }], nextSeq }` |
 | `POST /reveal/orgs/{orgId}/agents/{agentId}/settings` | none | `{ id, name, handle, role, instructions, model, brain, brainModel, brainEffort, approvalsLevel, audienceMode, consultable, autonomyBrakes, mergeRepos, browserAllowedDomains, setup, updatedAt }` |
+| `POST /reveal/orgs/{orgId}/routine-runs/{routineRunId}/calls` | `offset` (default 0) | `{ id, routineId, agentRunId, status, at, calls: [{ n, at, method, headers, bytes, keptCut, binary, test, text, chars, more }] }`: a webhook routine run's calls as kept, 4,000 characters of each body from `offset` (`ref` `reveal:routine_run:<id>`, `field` `calls`, target `routine`) |
+| `POST /reveal/orgs/{orgId}/agents/{agentId}/approval-rules` | `runId?` | `{ agentId, rules: [{ id, connectionId, tool, action, createdByUserId, createdAt }], calls: [{ id, at, tool, outcome, approvalRules }] }`: the agent's "Aprovar sempre" rules, and with `runId` that run's tool calls a rule let run (`field` `approval_rules`, target `agent`) |
 
 - **Pages.** A page of messages goes on from `next`; each message's own `after` is the cursor that goes on after it, for a caller that passes on fewer than the page held. Both carry the stored time to the microsecond, so messages written within one millisecond are each read once.
 - **Common fields, strict bodies.** `reason` (20-200 characters, one line, no email or web address, as a single read's), `caseRef?` (the caller's own case id, up to 64 characters of `A-Z a-z 0-9 . _ : # -`), `operator` and `assistedByAi`. An unknown field is a 400.

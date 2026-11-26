@@ -750,7 +750,7 @@ function findTools(
     const lines = more.map((t) =>
       listed.has(t)
         ? `- ${t.name} (already in your tool list: call it directly): ${cutText(t.description, 300)}${listedInput(t)}`
-        : `- ${t.name}${sensitive(t) ? " (asks a person's approval; its input includes why)" : ""}: ${cutText(t.description, 300)}\n  input: ${compactSchema(t.inputSchema)}`,
+        : `- ${t.name}${t.alwaysApproved ? " (always approved: runs without asking)" : sensitive(t) ? " (asks a person's approval; its input includes why)" : ""}: ${cutText(t.description, 300)}\n  input: ${compactSchema(t.inputSchema)}`,
     );
     parts.push(`${label} tools for "${query}" (call one with ${useName}):\n${lines.join("\n")}`);
   }

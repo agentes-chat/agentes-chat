@@ -161,6 +161,11 @@ export interface ToolDefinition {
    */
   unasked?: boolean;
   /**
+   * Set by the gateway's listing, never by a source: a person kept "Aprovar sempre" for the whole tool, so a call opens
+   * no card (`coveringRules`, read again at the call).
+   */
+  alwaysApproved?: boolean;
+  /**
    * Set by the gateway for one call, never by a source: every action this call runs opens a pull request, so it is
    * judged as a connected app's own tool for that (`opensPullRequest`).
    */

@@ -92,7 +92,7 @@ import {
   type Viewer,
 } from "@/lib/agent-edit";
 import { fullLook, lookOf } from "@/lib/look";
-import { handleAfterRename, handleProblemText, readBudget, takenHandles } from "@/lib/new-agent";
+import { handleAfterRename, handleProblemText, readBudget, takenHandles, workspaceBudgetText } from "@/lib/new-agent";
 import { agentPanelSearch } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { AccessTab } from "./agent/AccessTab";
@@ -353,9 +353,7 @@ function AgentProfile({
     );
   const budgetText = (amount: number | null) =>
     amount === null
-      ? settings.data?.defaultAgentBudgetUsd === undefined
-        ? t("agentPage.budgetDefault")
-        : t("agentPage.budgetDefaultAmount", { amount: usd(t, i18n.language, settings.data.defaultAgentBudgetUsd) })
+      ? workspaceBudgetText(t, i18n.language, settings.data?.defaultAgentBudgetUsd)
       : t("agentPage.perMonth", { amount: usd(t, i18n.language, amount) });
   const keyText = (k: string) =>
     keyOptions(t, credentials.data ?? [], settings.data?.defaultCredentialId ?? null).find((o) => o.value === k)

@@ -207,6 +207,39 @@ export function keptCardState(s: { hold: BillingHold | null; paid: boolean; read
 export const planLineKey = (line: RightHandPlanLine, why?: string) =>
   line === "cli_failed" && why ? ("noAi.rightHand.cli_failedWhy" as const) : (`noAi.rightHand.${line}` as const);
 
+/** A missing piece's sentence (it names the agent): Connect is still the way out. */
+const MISSING_LINES = {
+  cli_missing: "noAi.cliMissing",
+  no_computer: "noAi.noComputer",
+  not_signed_in: "noAi.signedOut",
+} as const;
+
+/**
+ * Under a message one agent won't answer for want of an AI (`why`: its run's reason, the receipt's `failures` entry):
+ * what is really in the way, filled with `agentGrammar(name)` and `model`. A plan it has that can't think now (its
+ * computer, its CLI, its limit) says so, with no Connect (`connect` false): picking an account again changes nothing,
+ * and its card in the conversation has the way out. A plan that doesn't serve this person keeps Connect, for their own.
+ * A missing piece (the CLI, a computer, a sign-in) says which, and Connect stays. Null: "falta uma IA".
+ */
+export function noAiReceiptLine(why: { code: string; params?: Record<string, string> } | undefined): {
+  key: ReturnType<typeof planLineKey> | (typeof MISSING_LINES)[keyof typeof MISSING_LINES];
+  model?: string;
+  connect: boolean;
+} | null {
+  if (!why) return null;
+  if (Object.hasOwn(MISSING_LINES, why.code))
+    return { key: MISSING_LINES[why.code as keyof typeof MISSING_LINES], connect: true };
+  // Whose the plans are comes from the AI status (`plansNotYoursOf`).
+  if (!RIGHT_HAND_PLAN_LINES.has(why.code) || why.code === "plans_not_yours") return null;
+  const model = why.params?.model;
+  if (why.code.startsWith("model_") && !model) return null;
+  return {
+    key: planLineKey(why.code as RightHandPlanLine),
+    ...(model ? { model } : {}),
+    connect: why.code === "plan_not_shared",
+  };
+}
+
 /** A plan line that passes by itself: once the agent can think again, its card offers "Responder agora". */
 export const planLinePasses = (line: RightHandPlanLine | undefined) =>
   line === "computer_away" || line === "computer_failed" || line === "cli_failed" || line === "plans_not_yours";
