@@ -32,7 +32,7 @@ import {
 } from "@agenteschat/client/lib/onboarding";
 import { finishOnboarding, isRightHand, RIGHT_HAND_DEFAULT } from "@agenteschat/client/lib/right-hand";
 import { browserTimezone, timezoneName } from "@agenteschat/client/lib/routines";
-import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
+import { isPersonal, workspaceModeOf } from "@agenteschat/client/lib/workspace-mode";
 import { Avatar, Button, Field, Icon, Input, Locked, Logo, Menu, MenuItem, normalizeAppearance } from "@agenteschat/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -109,6 +109,9 @@ export function OnboardingPage() {
   // What it is for (ADR 0159), asked before the workspace exists; a team then goes on to its name.
   const [purpose, setPurpose] = useState<WorkspaceMode>("team");
   const [forTeam, setForTeam] = useState(false);
+  // Once the workspace exists, what it is for asked again (Back from a personal one's start step, or from a team's name
+  // step): its answer goes back where it was asked from, or switches the workspace's mode (ADR 0159 §4).
+  const [reasking, setReasking] = useState(false);
   const personal = purpose === "personal";
   const [org, setOrg] = useState("");
   // The zone the person picked here, if they did.
@@ -200,8 +203,10 @@ export function OnboardingPage() {
   // it is read again) counts as held: its standing is unknown, not in force.
   const paidMoment = usePaidMoment(orgId ?? "", mine ? mine.standing : { state: "hold", reason: null });
   const moment = paidMoment.moment;
-  // Made here as "For me", one being set up that is, or "For me" picked and not made yet (ADR 0159).
-  const personalNow = isPersonal(mine) || (personal && (created !== null || orgId === null));
+  // The workspace's own mode once `/me` lists it (a switch here writes it there before its next view shows); before,
+  // "For me" picked, made here or not made yet (ADR 0159). The answer picked on the question asked again is not the
+  // mode until its Continue switches it.
+  const personalNow = mine ? isPersonal(mine) : personal && (created !== null || orgId === null);
 
   // Whether the right hand and its team think, the AI step's answer: read on a hold too, so the step after the plan
   // opens as soon as it lifts.
@@ -277,8 +282,8 @@ export function OnboardingPage() {
   useEffect(() => {
     if (step !== "start") setStartView("choose");
   }, [step]);
-  // Before the workspace exists, what it is for comes first.
-  const asking = orgId === null && !forTeam;
+  // Before the workspace exists, what it is for comes first; once it does, only when the person asks it again.
+  const asking = orgId === null ? !forTeam : reasking;
   // Read from the first step, so the plan step has it when it opens.
   const plans = usePlanOffer(i18n.language, { alone: personalNow });
   const offer = plans.offer;
@@ -313,8 +318,8 @@ export function OnboardingPage() {
   const keyNow = status.data?.apiKey === true;
   const aiNamed = aiPick && (aiPick.choice === "key" ? keyNow : !keyNow || aiPick.key) ? aiPick.choice : null;
   // Nothing opens by itself while the person is on a step they chose: the AI's done screen, the import running over the
-  // start step, a step they went back to.
-  const stay = aiSeen || importing || picked !== null || awake;
+  // start step, a step they went back to, what the workspace is for asked again.
+  const stay = aiSeen || importing || picked !== null || awake || reasking;
 
   /** A step the server saved, in `/me` as it answered, where the rail reads it. */
   const remember = (id: string, saved: { step: OnboardingStepId } | null) => {
@@ -349,6 +354,35 @@ export function OnboardingPage() {
       remember(id, saved);
       setAiLeft(true);
       setPicked(null);
+    },
+  });
+  // The other answer to what the workspace is for, once it exists (ADR 0159 §4): personal → team asks only for its name
+  // (an empty field: the personal default is no team's name), team → personal takes back the personal name and goes on
+  // to how to start. `/me` and the settings say the new mode before the next view shows, never a frame in the old one's
+  // words; a refusal is the app's toast, and the question stays.
+  const switchMode = useMutation({
+    mutationFn: async ({ id, mode }: { id: string; mode: WorkspaceMode }) => {
+      const saved = await api.orgs.updateSettings(
+        id,
+        mode === "personal" ? { mode, name: t("onboarding.personal.name") } : { mode },
+      );
+      qc.setQueryData(keys.settings(id), saved);
+      const now = qc.getQueryData<Me>(keys.me);
+      if (now)
+        qc.setQueryData<Me>(keys.me, {
+          ...now,
+          organizations: now.organizations.map((o) => (o.id === id ? { ...o, mode, name: saved.name } : o)),
+        });
+      // The server's own `/me` too, before the view changes.
+      await qc.invalidateQueries({ queryKey: keys.me });
+      return mode;
+    },
+    onSuccess: (mode) => {
+      setReasking(false);
+      if (mode === "team") {
+        setOrg("");
+        setPicked("name");
+      } else setPicked(null);
     },
   });
   useEffect(() => {
@@ -497,7 +531,7 @@ export function OnboardingPage() {
     refused instanceof ApiError && refused.code === "org.create_unpaid" && typeof refused.params?.orgId === "string"
       ? refused.params.orgId
       : null;
-  const busy = save.isPending || open.isPending || aiLater.isPending || startDone.isPending;
+  const busy = save.isPending || open.isPending || aiLater.isPending || startDone.isPending || switchMode.isPending;
   const savedLogo = logoDirty ? null : mine?.logo;
   const shownLogo = logo ? `data:${logo.contentType};base64,${logo.imageBase64}` : (savedLogo ?? null);
   const lodiName = lodi?.name ?? RIGHT_HAND_DEFAULT.name;
@@ -561,6 +595,21 @@ export function OnboardingPage() {
           asking: step === "start" && startView !== "choose",
         });
   const stepLine = counted ? t("onboarding.flow.stepOf", counted) : undefined;
+  // What the workspace is for, asked again with its own mode picked (ADR 0159 §4): a view, nothing is saved until its
+  // Continue.
+  const askAgain = () => {
+    setPurpose(workspaceModeOf(mine));
+    setReasking(true);
+  };
+  // The question's Continue: before the workspace exists, "For me" makes it and "For my team" asks its name; once it
+  // exists, its own mode goes back where it was asked from (a personal one's start, a team's name), the other switches it.
+  const answerPurpose = () => {
+    if (!orgId) {
+      if (personal) save.mutate();
+      else setForTeam(true);
+    } else if (purpose === workspaceModeOf(mine)) setReasking(false);
+    else switchMode.mutate({ id: orgId, mode: purpose });
+  };
   const toStart = (view: StartView) => {
     resumed.current = true;
     setStartView(view);
@@ -636,11 +685,7 @@ export function OnboardingPage() {
             // Where the person hesitates, beside Continue: the choice isn't final. Leaving for another workspace is the
             // top bar's.
             note={<BoxNote icon="swap">{t("onboarding.flow.switchNote")}</BoxNote>}
-            acts={continueButton(
-              () => (personal ? save.mutate() : setForTeam(true)),
-              inviteOnly || busy,
-              save.isPending,
-            )}
+            acts={continueButton(answerPurpose, inviteOnly || busy, save.isPending || switchMode.isPending)}
           >
             <Locked when={busy}>
               <div className="onb__answer">
@@ -672,8 +717,9 @@ export function OnboardingPage() {
             eyebrow={stepLine}
             title={t("onboarding.workspace.title")}
             lead={t("onboarding.workspace.lead")}
-            // Back to what it is for while the workspace doesn't exist yet; once it does, that answer stays.
-            onBack={orgId === null && forTeam ? () => setForTeam(false) : null}
+            // Back to what it is for: before the workspace exists, its answer again; once it does, asked again with
+            // "For my team" picked, where "For me" switches it to personal (ADR 0159 §4).
+            onBack={orgId === null ? () => setForTeam(false) : askAgain}
             busy={busy}
             acts={continueButton(() => save.mutate(), !org.trim() || inviteOnly || busy, save.isPending)}
           >
@@ -689,8 +735,9 @@ export function OnboardingPage() {
                   >
                     {shownLogo ? (
                       <OrgMark logo={shownLogo} size={48} />
-                    ) : org.trim() || name ? (
-                      <span className="onb__logo-letter">{(org.trim() || name).charAt(0).toUpperCase()}</span>
+                    ) : org.trim() ? (
+                      // The name being typed: a personal workspace switched to a team's starts it empty.
+                      <span className="onb__logo-letter">{org.trim().charAt(0).toUpperCase()}</span>
                     ) : (
                       <Icon name="upload" />
                     )}
@@ -833,10 +880,11 @@ export function OnboardingPage() {
             eyebrow={stepLine}
             title={t("onboarding.start.title")}
             lead={lead}
-            // A personal workspace's first answer, what it is for, is never asked again once it exists.
+            // A team's goes back to its name; a personal workspace, with none to ask, to what it is for, "For me"
+            // picked (ADR 0159 §4).
             onBack={
               personalNow
-                ? null
+                ? askAgain
                 : () => {
                     setOrg(name);
                     setPicked("name");

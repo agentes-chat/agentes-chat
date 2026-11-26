@@ -323,7 +323,10 @@ agent (ADR 0253), shows that agent's first week, and hires it with the plan. Ame
   the arrival, which is now the welcome wizard (ADR 0160): `?arrival=beta` once the AI was offered, else `?arrival=1`.
 - **A personal workspace** (ADR 0159): what it is for, then how to start (1), asking its AI and the pick (2), the week
   (3) and the plan (4); from scratch, how to start and the plan. No name and no people step, and its own words: the
-  tasks "at work or outside it", "Hire <name>", "Welcome to your team".
+  tasks "at work or outside it", "Hire <name>", "Welcome to your team". Back from how to start asks what it is for
+  again, "For me" picked, saving nothing: "For me" goes back, "For my team" switches it to a team's (ADR 0159 §4) and
+  asks its name (step 1 of 4), whose Back asks the question again; a team's name step, once the workspace exists, goes
+  back to the same question too, where "For me" switches it to personal, under the personal name, on to how to start.
 - **The phone** keeps its own steps (`phoneRail`: the name, what the workspace does, a template team and the plan in
   words) until it takes the web's.
 - **Code.** Client `lib/onboarding.ts` (`railSteps`, `railStepAt`, `railState`, `stepCount`, `phoneRail`),
