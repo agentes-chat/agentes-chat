@@ -12,7 +12,10 @@ import {
   phoneLink,
   phoneSystem,
   RUNNER_UPDATE_COMMAND,
+  SPILL_USES,
   shareInternetText,
+  spillOfUse,
+  spillUseOf,
   statusLook,
   statusSentence,
   taskChoices,
@@ -493,9 +496,30 @@ function ComputerPage({ machineId }: { machineId: string }) {
               }
             />
           )}
-          {/* Its help: its owner turns it on, an admin only off, and the workspace's switch off wins. Never a server
-              install's. */}
-          {d.mayManage && d.machineKind === "connected" && !d.systemMode && (
+          {/* Its help, its owner's one choice: never, only as backup, or first for their own agents' work. The workspace's
+              switch off wins. Never a server install's. */}
+          {owner && d.machineKind === "connected" && !d.systemMode && (
+            <PrefRow
+              id="dv-pc-spill"
+              icon="bolt"
+              label={t("devices.helpUse")}
+              hint={t(d.belongsToWorkspace ? "devices.helpUseTeamHint" : "devices.helpUseHint")}
+              status={helpOff ? t("devices.spillWorkspaceOff") : undefined}
+              control={
+                <Select
+                  size="sm"
+                  align="end"
+                  aria-label={t("devices.helpUse")}
+                  disabled={helpOff}
+                  value={helpOff ? "off" : spillUseOf(d)}
+                  onValueChange={(use) => save({ id: d.id, spill: spillOfUse(use) })}
+                  options={SPILL_USES.map((use) => ({ value: use, label: t(`devices.helpUses.${use}`) }))}
+                />
+              }
+            />
+          )}
+          {/* Someone else's computer: an admin may only turn its help off. */}
+          {!owner && d.mayManage && d.machineKind === "connected" && !d.systemMode && (
             <PrefRow
               id="dv-pc-spill"
               icon="bolt"
@@ -506,26 +530,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
                 <Switch
                   id="dv-pc-spill-switch"
                   checked={d.spill.own && !helpOff}
-                  disabled={helpOff || (!owner && !d.spill.own)}
+                  disabled={helpOff || !d.spill.own}
                   onCheckedChange={(own) => save({ id: d.id, spill: { own } })}
-                />
-              }
-            />
-          )}
-          {/* Its owner's agents' work starts here first: only its owner chooses it, and only for their own agents. */}
-          {owner && d.machineKind === "connected" && !d.systemMode && (
-            <PrefRow
-              id="dv-pc-first"
-              icon="move"
-              label={t("devices.spillFirst")}
-              hint={t("devices.spillFirstHint")}
-              status={helpOff ? t("devices.spillWorkspaceOff") : undefined}
-              control={
-                <Switch
-                  id="dv-pc-first-switch"
-                  checked={(d.spill.first ?? false) && !helpOff}
-                  disabled={helpOff}
-                  onCheckedChange={(first) => save({ id: d.id, spill: { first } })}
                 />
               }
             />

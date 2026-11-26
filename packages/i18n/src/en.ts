@@ -17446,16 +17446,27 @@ export const en = {
     /** One switch per computer (`machines.spill_own`, ADR 0233): its owner's to turn on. */
     spillOwn: "Help when the team's computer is full or away",
     spillOwnHint:
-      "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in.",
+      "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer.",
     /** The same switch on a computer marked the workspace's: anyone's agents, on their owner's sign-in there. */
     spillTeamHint:
-      "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer.",
+      "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer.",
     /** Under the switch while an admin turned devices' help off for the whole workspace. */
     spillWorkspaceOff: "An admin turned this off for the workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Use this computer for my agents' work",
-    spillFirstHint:
-      "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away.",
+    /**
+     * Its owner's one choice for how the computer helps (`spillUseOf`): never, only as backup (`machines.spill_own`) or
+     * first for their own agents' work (`machines.spill_first`).
+     */
+    helpUse: "How it helps your agents",
+    helpUses: {
+      off: "Doesn't help",
+      help: "Only as backup",
+      first: "First for my agents",
+    },
+    helpUseHint:
+      "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer.",
+    /** The same choice on a computer marked the workspace's: as backup it takes anyone's agents. */
+    helpUseTeamHint:
+      "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free.",
     /** Settings › Devices, admins: the workspace's switch over every computer's own (`devicesHelp`). */
     helpWorkspace: "Computers help when the team's is full or away",
     helpWorkspaceHint: "Each computer helps only if its owner allows it. Off: none helps, whatever its owner chose.",

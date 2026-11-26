@@ -17374,14 +17374,20 @@ export const ptBR = {
     belongsHint: "Ele fica quando quem o conectou sai, e todos podem usá-lo enquanto ninguém for dono dele.",
     spillOwn: "Ajudar quando o computador da equipe estiver cheio ou fora",
     spillOwnHint:
-      "Quando o computador dos seus agentes estiver cheio ou fora, as respostas, os pedidos e as rotinas deles podem pensar aqui com o seu login.",
+      "Quando o computador da equipe estiver cheio ou fora, as respostas, os pedidos e as rotinas dos seus agentes podem pensar aqui, usando as contas de IA conectadas neste computador.",
     spillTeamHint:
-      "Quando o computador de um agente estiver cheio ou fora, as respostas, os pedidos e as rotinas dele podem pensar aqui com o login do dono dele neste computador.",
+      "Quando o computador de um agente estiver cheio ou fora, as respostas, os pedidos e as rotinas dele podem pensar aqui, usando a conta de IA que o dono dele conectou neste computador.",
     spillWorkspaceOff: "Um admin desativou isso para o workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Usar este computador para os trabalhos dos meus agentes",
-    spillFirstHint:
-      "Os pedidos, as rotinas e os trabalhos longos dos seus agentes começam aqui sempre que ele estiver livre, com a IA que você conectou nele. Respostas para pessoas só começam aqui quando o computador da equipe estiver cheio ou fora.",
+    helpUse: "Como ajuda os seus agentes",
+    helpUses: {
+      off: "Não ajuda",
+      help: "Só como reserva",
+      first: "Primeiro para os meus agentes",
+    },
+    helpUseHint:
+      "Só como reserva: seus agentes vêm para cá quando o computador da equipe estiver cheio ou fora. Primeiro para os meus agentes: os pedidos, as rotinas e os trabalhos longos deles começam aqui sempre que este estiver livre, e as respostas para pessoas só quando o da equipe estiver cheio ou fora. Os dois usam as contas de IA conectadas neste computador.",
+    helpUseTeamHint:
+      "Só como reserva: os agentes de qualquer pessoa vêm para cá quando o computador deles estiver cheio ou fora, usando a conta de IA que o dono de cada um conectou neste computador. Primeiro para os meus agentes: os pedidos, as rotinas e os trabalhos longos dos seus agentes começam aqui sempre que este estiver livre.",
     helpWorkspace: "Computadores ajudam quando o da equipe estiver cheio ou fora",
     helpWorkspaceHint:
       "Cada computador só ajuda se o dono permitir. Com isto desativado, nenhum ajuda, seja qual for a escolha do dono.",

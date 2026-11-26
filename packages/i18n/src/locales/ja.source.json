@@ -41563,19 +41563,31 @@
     "value": "Help when the team's computer is full or away"
   },
   "devices.spillOwnHint": {
-    "value": "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in."
+    "value": "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer."
   },
   "devices.spillTeamHint": {
-    "value": "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer."
+    "value": "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer."
   },
   "devices.spillWorkspaceOff": {
     "value": "An admin turned this off for the workspace."
   },
-  "devices.spillFirst": {
-    "value": "Use this computer for my agents' work"
+  "devices.helpUse": {
+    "value": "How it helps your agents"
   },
-  "devices.spillFirstHint": {
-    "value": "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away."
+  "devices.helpUses.off": {
+    "value": "Doesn't help"
+  },
+  "devices.helpUses.help": {
+    "value": "Only as backup"
+  },
+  "devices.helpUses.first": {
+    "value": "First for my agents"
+  },
+  "devices.helpUseHint": {
+    "value": "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer."
+  },
+  "devices.helpUseTeamHint": {
+    "value": "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free."
   },
   "devices.helpWorkspace": {
     "value": "Computers help when the team's is full or away"
