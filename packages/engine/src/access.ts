@@ -254,7 +254,7 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   },
   offer_install_skill: {
     label: "Offer to install a skill",
-    description: "Posts a card whose button opens the install dialog with the skill's link filled in.",
+    description: "Posts a card whose button opens the install dialog with the skill read from its link or its .zip.",
   },
   update_skill_from_source: {
     label: "Update skills from their links",

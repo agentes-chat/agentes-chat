@@ -16557,6 +16557,7 @@
       "noSkillMd": "Geen SKILL.md in {{path}} of de mappen daarin.",
       "tooManySkills": "Deze link bevat meer dan {{max}} skills. Link een van de mappen ervan.",
       "zipTooManySkills": "Deze .zip bevat meer dan {{max}} skills. Stuur ze in delen.",
+      "zipTooBig": "Deze .zip is groter dan {{maxMb}} MB, het maximum voor het installeren van een skill.",
       "invalidName": "De naam mag alleen kleine letters, cijfers en koppeltekens bevatten, tot {{max}} tekens.",
       "invalidDescription": "De beschrijving moet 1 tot {{max}} tekens hebben.",
       "tooLarge": "Deze skill heeft {{size}} MB aan tekst en scripts, en de limiet is {{max}} MB.",
@@ -19873,7 +19874,7 @@
     },
     "offer_install_skill": {
       "label": "Aanbieden een skill te installeren",
-      "description": "Plaatst een kaart waarvan de knop de installatie opent met de link van de skill ingevuld."
+      "description": "Plaatst een kaart waarvan de knop de installatie opent, met de skill al gelezen uit de link of de .zip."
     },
     "update_skill_from_source": {
       "label": "Skills bijwerken vanaf hun links",

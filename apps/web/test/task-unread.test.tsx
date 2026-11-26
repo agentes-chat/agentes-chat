@@ -104,7 +104,9 @@ test("what ships floats every side pane 10px in from the window's top, right and
       .filter(([p]) => p === property)
       .at(-1)?.[1];
   expect(last(".thread-panel", "position")).toBe("fixed");
-  for (const edge of ["top", "right", "bottom"]) expect(last(".thread-panel", edge)).toBe("10px");
+  for (const edge of ["right", "bottom"]) expect(last(".thread-panel", edge)).toBe("10px");
+  // Its top clears the Mac app's window buttons too (`--window-top`, 0 in a browser).
+  expect(last(".thread-panel", "top")).toBe("calc(10px + var(--window-top))");
   expect(last(".thread-panel", "border-radius")).toBe("var(--radius-section)");
   // The task's page has no layout of its own for its conversation any more.
   expect(css).not.toContain(".issue-page--talk");

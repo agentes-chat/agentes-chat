@@ -961,7 +961,7 @@ html:not([data-pointer]) .thread-line:focus-visible {
 .thread-panel {
   position: fixed;
   z-index: var(--z-dialog);
-  top: 10px;
+  top: calc(10px + var(--window-top));
   right: 10px;
   bottom: 10px;
   width: min(640px, calc(100vw - 20px));
@@ -1008,7 +1008,7 @@ html:not([data-pointer]) .thread-line:focus-visible {
 }
 @media (max-width: 860px) {
   .thread-panel {
-    inset: 0;
+    inset: var(--window-top) 0 0;
     width: auto;
     border-radius: 0;
     box-shadow: none;

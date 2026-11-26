@@ -602,7 +602,7 @@
     border-radius: 0;
   }
   .ac-dialog.cmp-dialog:not(.is-full) {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--window-top));
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .cmp-body > .cmp-prep,

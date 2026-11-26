@@ -182,6 +182,7 @@ export function ArtifactCard({ artifact: ref, alone = false }: { artifact: Artif
           artifactId={a.id}
           version={a.shownVersion}
           onOpen={open}
+          ratio={pictureRatio(content) ?? pictureRatio(ref)}
           tip={`${a.title} · ${meta}`}
           actions={<TileActions title={a.title} actions={actions} onDownload={save} />}
           // A video this browser can't play is a file's tile.
@@ -266,7 +267,7 @@ function LoadingTile({ title = "", ratio }: { title?: string; ratio?: number }) 
   if (kind === "video")
     return (
       <div className="artifact-tile artifact-tile--loading" data-kind="video" aria-busy="true">
-        <span className="ac-video ac-video--tile">
+        <span className="ac-video ac-video--tile" {...ratioProps(ratio)}>
           <span className="ac-video__media" />
         </span>
       </div>
@@ -292,7 +293,7 @@ function LoadingTile({ title = "", ratio }: { title?: string; ratio?: number }) 
   );
 }
 
-/** A tile in a picture's proportions: alone on its message it is that shape (CSS: `[data-ratio]`). */
+/** A tile in a picture's proportions: alone on its message it is that shape (CSS: `[data-ratio]`); a video's always. */
 const ratioProps = (ratio: number | undefined) =>
   ratio ? { "data-ratio": true, style: { "--ratio": String(ratio) } as CSSProperties } : {};
 

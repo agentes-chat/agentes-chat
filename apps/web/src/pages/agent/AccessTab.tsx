@@ -31,15 +31,14 @@ import { DatabaseAccessCard } from "./DatabaseAccess";
 import { MailAccessCard } from "./MailAccess";
 import { ReadOnlyNote } from "./pieces";
 import { MergeReposBlock, ReposBlock } from "./Repos";
-import { SkillsCard } from "./SkillsTab";
 
 type AccessFilter = "all" | "on" | "ask";
 
 /**
  * Ferramentas e acesso: one level per connector and built-in area (the skills' own too). Saved with the save bar. What
  * the agent knows has a tab of its own (`SkillsTab`). In a personal workspace (ADR 0159 §3) it comes
- * in two parts: `basic` (its apps and mailboxes, the "Can use" tab) and `advanced` (built-in areas, databases, rules
- * and skills, in the Advanced tab). Connections: the team's, then the
+ * in two parts: `basic` (its apps and mailboxes, the "Can use" tab) and `advanced` (built-in areas, databases and
+ * rules, in the Advanced tab); what it knows is its Skills tab there too. Connections: the team's, then the
  * viewer's own personal ones; another person's personal one the agent holds shows, for who may take it off, with
  * only Desligar (ADR 0099 addendum).
  */
@@ -261,7 +260,6 @@ export function AccessTab({ part = "all" }: { part?: "all" | "basic" | "advanced
         <div className="agp-col">
           {basic && <ApprovalsLevelCard />}
           {advanced && <ApprovalRulesCard />}
-          {part === "advanced" && <SkillsCard />}
         </div>
       </div>
     </>

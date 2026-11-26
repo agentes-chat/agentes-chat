@@ -101,6 +101,16 @@ refusal for collections they meant to use. What bounds the work is the archive's
 collection published, only so a small archive of thousands of one-line `SKILL.md` files can't make the server list
 and look up every one. The phone's install screen says to pick a .zip's skills on a computer, for now.
 
+*Amended 2026-11-26 (a .zip sent in a conversation):* a person who sends a skill's .zip in a conversation and asks to
+install it gets the install card, as with a GitHub link: `offer_install_skill` takes `file` (the .zip's Drive id) in
+place of `url`, read as the agent reads it, and posts a card only for a .zip with a `SKILL.md` in it, naming the skills
+those files name (`params.skills`, what the card counts as done once they are all in the library). The card opens the
+install with the .zip already read on the server (`POST …/skills/import` with `fileId`, `list` and then `paths`, read
+as the installer reads the file, never sent through the app and back), its skills listed to pick and on for the card's
+agent, on the web and the phone. It installs whole, files and scripts with it, so an agent never rewrites a skill it
+was sent with `create_skill`, which keeps only text and goes through a review a sent skill shouldn't need. A .zip
+already installed is said so, never offered again. A .zip past the install's size is `skill.zip_too_big`.
+
 ## Consequences
 
 - Skills can't do anything a prompt can't: no new permission path, and no code runs until the sandbox phase decides how scripts may execute.

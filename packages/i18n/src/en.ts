@@ -16970,6 +16970,7 @@ export const en = {
       noSkillMd: "No SKILL.md in {{path}} or the folders inside it.",
       tooManySkills: "This link holds more than {{max}} skills. Link one of its folders.",
       zipTooManySkills: "This .zip holds more than {{max}} skills. Send them in parts.",
+      zipTooBig: "This .zip is larger than {{maxMb}} MB, the most a skill install takes.",
       invalidName: "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters.",
       invalidDescription: "The description must have 1 to {{max}} characters.",
       tooLarge: "This skill has {{size}} MB of text and scripts, and the limit is {{max}} MB.",
@@ -20597,7 +20598,7 @@ export const en = {
     },
     offer_install_skill: {
       label: "Offer to install a skill",
-      description: "Posts a card whose button opens the install dialog with the skill's link filled in.",
+      description: "Posts a card whose button opens the install dialog with the skill read from its link or its .zip.",
     },
     update_skill_from_source: {
       label: "Update skills from their links",

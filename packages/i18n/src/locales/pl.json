@@ -17630,6 +17630,7 @@
       "noSkillMd": "Brak pliku SKILL.md w {{path}} ani w folderach w środku.",
       "tooManySkills": "Ten link zawiera więcej niż {{max}} umiejętności. Podaj link do jednego z jego folderów.",
       "zipTooManySkills": "Ten .zip zawiera więcej niż {{max}} umiejętności. Wyślij je w częściach.",
+      "zipTooBig": "Ten plik .zip przekracza {{maxMb}} MB, maksimum dla instalacji skilla.",
       "invalidName": "Nazwa może zawierać małe litery, cyfry i myślniki, maksymalnie {{max}} znaków.",
       "invalidDescription": "Opis musi mieć od 1 do {{max}} znaków.",
       "tooLarge": "Ta umiejętność ma {{size}} MB tekstu i skryptów, a limit to {{max}} MB.",
@@ -21050,7 +21051,7 @@
     },
     "offer_install_skill": {
       "label": "Zaproponuj instalację umiejętności",
-      "description": "Publikuje kartę, której przycisk otwiera instalację z wpisanym linkiem umiejętności."
+      "description": "Publikuje kartę, której przycisk otwiera instalację ze skillem już odczytanym z linku lub pliku .zip."
     },
     "update_skill_from_source": {
       "label": "Aktualizuj umiejętności z ich linków",

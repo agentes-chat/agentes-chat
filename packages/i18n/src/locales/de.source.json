@@ -40411,6 +40411,9 @@
   "errors.skill.zipTooManySkills": {
     "value": "This .zip holds more than {{max}} skills. Send them in parts."
   },
+  "errors.skill.zipTooBig": {
+    "value": "This .zip is larger than {{maxMb}} MB, the most a skill install takes."
+  },
   "errors.skill.invalidName": {
     "value": "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters."
   },
@@ -48618,7 +48621,7 @@
     "value": "Offer to install a skill"
   },
   "builtinTools.offer_install_skill.description": {
-    "value": "Posts a card whose button opens the install dialog with the skill's link filled in."
+    "value": "Posts a card whose button opens the install dialog with the skill read from its link or its .zip."
   },
   "builtinTools.update_skill_from_source.label": {
     "value": "Update skills from their links"

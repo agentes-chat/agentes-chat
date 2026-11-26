@@ -380,6 +380,7 @@ const KNOWN = {
   "skill.no_skill_md": "errors.skill.noSkillMd",
   "skill.too_many_skills": "errors.skill.tooManySkills",
   "skill.zip_too_many_skills": "errors.skill.zipTooManySkills",
+  "skill.zip_too_big": "errors.skill.zipTooBig",
   "skill.invalid_name": "errors.skill.invalidName",
   "skill.invalid_description": "errors.skill.invalidDescription",
   "skill.too_large": "errors.skill.tooLarge",
