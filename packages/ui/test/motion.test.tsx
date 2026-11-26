@@ -5,7 +5,7 @@ setupDom();
 
 import { act, cleanup, render } from "@testing-library/react";
 import { useRef } from "react";
-import { List, MorphRoom, useMorph } from "../src";
+import { glideHeight, List, MorphRoom, useMorph } from "../src";
 
 afterEach(() => cleanup());
 
@@ -211,6 +211,48 @@ describe("motion", () => {
       expect(await css()).toContain(".ac-morph:not([data-closing]):has(> .ac-morph__in:empty)");
     } finally {
       layout.restore();
+    }
+  });
+
+  test("a second glide to the same height goes on from where the first stood, never from a canceled one", () => {
+    // As in browsers: a canceled animation's time is unresolved (null), and setting null on a running one throws
+    // ("currentTime may not be changed from resolved to unresolved"), which took the whole page down.
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const { animate, getBoundingClientRect } = proto;
+    const made: { time: number | null }[] = [];
+    proto.animate = () => {
+      const state = { time: 0 as number | null };
+      made.push(state);
+      const anim = new EventTarget() as Animation;
+      Object.defineProperty(anim, "currentTime", {
+        get: () => state.time,
+        set: (v: number | null) => {
+          if (v === null && state.time !== null)
+            throw new TypeError("currentTime may not be changed from resolved to unresolved");
+          state.time = v;
+        },
+      });
+      Object.assign(anim, {
+        cancel: () => {
+          state.time = null;
+        },
+      });
+      return anim;
+    };
+    // Its height to glide to, then mid-glide where it stands (150) and where it goes (200, the same as before).
+    const reads = [200, 150, 200];
+    proto.getBoundingClientRect = () => ({ width: 320, height: reads.shift() ?? 200 }) as DOMRect;
+    try {
+      const el = document.createElement("div");
+      document.body.append(el);
+      glideHeight(el, 100);
+      (made[0] as { time: number | null }).time = 80;
+      // Drawn again at the same height mid-glide: the new glide picks up the first one's time.
+      expect(() => glideHeight(el, 100)).not.toThrow();
+      expect(made).toHaveLength(2);
+      expect(made[1]?.time).toBe(80);
+    } finally {
+      Object.assign(proto, { animate, getBoundingClientRect });
     }
   });
 });

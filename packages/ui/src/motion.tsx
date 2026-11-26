@@ -41,8 +41,11 @@ const sizedByCss = (el: Element) =>
 export function glideHeight(el: HTMLElement, from: number, ms: number = durations.morph): number {
   const running = glides.get(el);
   let start = from;
+  // Read before the cancel: a canceled animation's time is unresolved, and setting that on the next one throws.
+  let at: CSSNumberish | null = null;
   if (running) {
     start = el.getBoundingClientRect().height;
+    at = running.anim.currentTime;
     running.anim.cancel();
   }
   const to = el.getBoundingClientRect().height;
@@ -54,7 +57,7 @@ export function glideHeight(el: HTMLElement, from: number, ms: number = duration
   const same = running && Math.abs(running.to - to) < 0.5 ? running : null;
   const base = same ?? { from: start, ms };
   const anim = el.animate(frames(base.from, to), { duration: base.ms, easing: MOVE });
-  if (same) anim.currentTime = same.anim.currentTime;
+  if (same && at !== null) anim.currentTime = at;
   glides.set(el, { anim, from: base.from, to, ms: base.ms });
   const end = () => {
     if (glides.get(el)?.anim === anim) glides.delete(el);
