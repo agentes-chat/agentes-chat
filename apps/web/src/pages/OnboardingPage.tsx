@@ -954,8 +954,10 @@ export function OnboardingPage() {
         cast: [lodiFace, ...teamFaces],
         say: t(emails ? "onboarding.flow.lodi.people" : "onboarding.flow.lodi.peopleLink", lodiWords),
         box: (
-          <Box
-            // Right after the plan, while the team's computer gets ready: the wait goes to the people.
+          <PeopleStep
+            // Right after the plan, while the team's computer gets ready: the wait goes to the people, and says so
+            // over the title ("Meanwhile" needs its while).
+            eyebrow={hasPlanStep ? t("onboarding.flow.people.eyebrowWhile") : undefined}
             title={t(hasPlanStep ? "onboarding.flow.people.titleWhile" : "onboarding.flow.people.title")}
             // A server that sends no email invites through its link only (ADR 0090).
             lead={
@@ -963,17 +965,14 @@ export function OnboardingPage() {
                 ? t(hasPlanStep ? "onboarding.flow.people.leadWhile" : "onboarding.flow.people.leadJoin")
                 : t("members.dialog.linkStep.lead")
             }
-          >
-            <PeopleStep
-              orgId={orgId}
-              org={name}
-              email={me.data?.user.email ?? ""}
-              byLink={!emails}
-              leaving={open.isPending}
-              onSent={() => open.mutate("invited")}
-              onLater={() => open.mutate("later")}
-            />
-          </Box>
+            orgId={orgId}
+            org={name}
+            email={me.data?.user.email ?? ""}
+            byLink={!emails}
+            leaving={open.isPending}
+            onSent={() => open.mutate("invited")}
+            onLater={() => open.mutate("later")}
+          />
         ),
       };
 

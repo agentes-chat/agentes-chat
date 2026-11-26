@@ -1158,6 +1158,7 @@ export const ptBR = {
       people: {
         title: "Quem trabalha com você?",
         lead: "Convide as pessoas do time. Cada uma recebe um e-mail para entrar.",
+        eyebrowWhile: "Preparando o time",
         titleWhile: "Enquanto isso, chame quem trabalha com você",
         leadWhile: "Leva alguns minutos. Cada pessoa que você chamar cria, ao entrar, o agente para o trabalho dela.",
         leadJoin: "Cada pessoa que você chamar cria, ao entrar, o agente para o trabalho dela.",

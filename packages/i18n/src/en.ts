@@ -1229,7 +1229,8 @@ export const en = {
       people: {
         title: "Who works with you?",
         lead: "Invite your teammates. Each one gets an email to join.",
-        /** Right after the plan, while the team gets ready (`titleWhile`, `leadWhile`), and `leadJoin` with no plan. */
+        /** Right after the plan, while the team gets ready (`eyebrowWhile`, `titleWhile`, `leadWhile`), and `leadJoin` with no plan. */
+        eyebrowWhile: "Getting the team ready",
         titleWhile: "Meanwhile, invite the people you work with",
         leadWhile: "It takes a few minutes. Each person you invite creates, on joining, the agent for their own work.",
         leadJoin: "Each person you invite creates, on joining, the agent for their own work.",

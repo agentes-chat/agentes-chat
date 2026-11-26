@@ -1,20 +1,21 @@
 import type { BatchInviteResult } from "@agenteschat/client";
 import { useAllInvitations, useInviteMany, useMembers, useRoles } from "@agenteschat/client";
 import { everyoneOf, isEveryone, roleSummary, sortRoles } from "@agenteschat/client/lib/roles";
-import { Button, Icon, Locked } from "@agenteschat/ui";
-import { useState } from "react";
+import { Button, Locked } from "@agenteschat/ui";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type ChipAddress, ChipNote, ChipRole, chipsFrom, EmailChips } from "@/components/invite/EmailChips";
 import { InviteLinkPanel, LocalOnlyInvites } from "@/components/invite/InviteLinkPanel";
 import { useToast } from "@/lib/toast";
+import { Box } from "./Shell";
 import "@/components/invite/invite.css";
 
 /*
  * The last step of a team's rail (ADR 0162, amended 2026-11-11): the people who work there, invited with the invite
  * dialog's own pieces (ADR 0090): the address chips, each with its role, and the workspace's link to copy (renewing or
- * turning it off belongs to Members, not to a workspace still being set up). Its button sends the invitations and
- * finishes the onboarding; "Invite later" finishes it with none. A server that sends no email invites through the link
- * only, as the dialog does.
+ * turning it off belongs to Members, not to a workspace still being set up), a line away. Its box's footer holds the
+ * way on, as every other step's: the button sends the invitations and finishes the onboarding; "Invite later"
+ * finishes it with none. A server that sends no email invites through the link only, as the dialog does.
  */
 
 /** The role picker's value for no role: a member (the invite dialog's). */
@@ -28,7 +29,14 @@ export function PeopleStep({
   leaving,
   onSent,
   onLater,
+  eyebrow,
+  title,
+  lead,
 }: {
+  /** The box's words, the page's to say (right after the plan, the wait goes to the people). */
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  lead?: ReactNode;
   orgId: string;
   /** The workspace's name, in the chips' "already in" note. */
   org: string;
@@ -112,7 +120,16 @@ export function PeopleStep({
 
   if (byLink)
     return (
-      <>
+      <Box
+        eyebrow={eyebrow}
+        title={title}
+        lead={lead}
+        acts={
+          <Button variant="primary" kbd={["↵"]} data-enter="" loading={leaving} onClick={onLater}>
+            {t("onboarding.flow.ai.enter")}
+          </Button>
+        }
+      >
         <div className="onb__answer">
           <LocalOnlyInvites />
           <InviteLinkPanel />
@@ -127,17 +144,33 @@ export function PeopleStep({
             ))}
           </ol>
         </div>
-        <div className="onb__actions">
-          <Button variant="primary" block kbd={["↵"]} data-enter="" loading={leaving} onClick={onLater}>
-            {t("onboarding.flow.ai.enter")}
-          </Button>
-        </div>
-      </>
+      </Box>
     );
 
   const busy = invite.isPending || leaving;
   return (
-    <>
+    <Box
+      eyebrow={eyebrow}
+      title={title}
+      lead={lead}
+      acts={
+        <>
+          <Button disabled={busy} onClick={onLater}>
+            {t("onboarding.flow.people.later")}
+          </Button>
+          <Button
+            variant="primary"
+            kbd={["↵"]}
+            data-enter=""
+            disabled={ready.length === 0 || leaving}
+            loading={invite.isPending}
+            onClick={() => void send()}
+          >
+            {ready.length > 0 ? t("members.dialog.send", { count: ready.length }) : t("onboarding.flow.people.send")}
+          </Button>
+        </>
+      }
+    >
       <Locked when={busy}>
         <div className="onb__answer">
           <LocalOnlyInvites />
@@ -177,46 +210,19 @@ export function PeopleStep({
                 ? t("members.dialog.leftOut")
                 : t("members.dialog.pasteHelp")}
           </p>
+          {/* The link, for whoever prefers one: a line away, never a card inside the box. */}
           {link ? (
             <InviteLinkPanel />
           ) : (
-            <div className="invite-orlink ac-mediarow">
-              <span className="ac-mediarow__face">
-                <span className="invite-tile" aria-hidden="true">
-                  <Icon name="link" size={18} />
-                </span>
-              </span>
-              <span className="ac-mediarow__head">
-                <b>{t("members.dialog.orLink.title")}</b>
-              </span>
-              <span className="ac-mediarow__end ac-mediarow__end--wrap">
-                <Button size="sm" onClick={() => setLink(true)}>
-                  {t("members.dialog.orLink.open")}
-                </Button>
-              </span>
-              <span className="ac-mediarow__body invite-orlink__text">{t("members.dialog.orLink.text")}</span>
-            </div>
+            <p className="invite-help invite-help--note">
+              {t("members.dialog.orLink.title")}{" "}
+              <button type="button" className="ac-link onb__link" onClick={() => setLink(true)}>
+                {t("members.dialog.orLink.open")}
+              </button>
+            </p>
           )}
         </div>
       </Locked>
-      <div className="onb__actions">
-        <Button
-          variant="primary"
-          block
-          kbd={["↵"]}
-          data-enter=""
-          disabled={ready.length === 0 || leaving}
-          loading={invite.isPending}
-          onClick={() => void send()}
-        >
-          {ready.length > 0 ? t("members.dialog.send", { count: ready.length }) : t("onboarding.flow.people.send")}
-        </Button>
-        <p className="onb__skip">
-          <button type="button" className="ac-link" disabled={busy} onClick={onLater}>
-            {t("onboarding.flow.people.later")}
-          </button>
-        </p>
-      </div>
-    </>
+    </Box>
   );
 }
