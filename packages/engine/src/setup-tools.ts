@@ -1998,17 +1998,18 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
           changes.map((c) => c.agent),
         );
         if (named.missing.length > 0) return noAgents(ctx, named.missing);
-        // When an agent asks is its own confirm card (`set_agent_approvals_level`), never a reviewed settings row.
-        const leveled = await approvalsCards(deps, ctx, forUserId, changes, str(input.reason).trim());
-        if (typeof leveled !== "string") return leveled;
         const others = changes.filter((c) => Object.keys(c).some((k) => !["agent", "approvals", "reason"].includes(k)));
-        if (others.length === 0) return { content: `${leveled} Nothing has changed yet.` };
         const targets: { agentId: string; lines: WantedLine[] }[] = [];
         for (const change of others) {
           const lines = await wantedLines(ctx, change);
           if (typeof lines === "string") return { content: lines, isError: true };
           targets.push({ agentId: named.rowOf(change.agent)?.id ?? "", lines });
         }
+        // Every row is checked before any card is posted: a refused call the agent retries never leaves a card behind.
+        // When an agent asks is its own confirm card (`set_agent_approvals_level`), never a reviewed settings row.
+        const leveled = await approvalsCards(deps, ctx, forUserId, changes, str(input.reason).trim());
+        if (typeof leveled !== "string") return leveled;
+        if (others.length === 0) return { content: `${leveled} Nothing has changed yet.` };
         const at = await cardPlace(ctx);
         if (!at) return NOBODY_READS;
         const full = await cardsLeft(ctx);

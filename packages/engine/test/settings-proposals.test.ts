@@ -881,6 +881,15 @@ describe("an agent asks for its own settings on the same card (request_settings_
     f = await setup({ rightHand: true });
     await install(f, "excel");
     const ctx = await devRun(f, f.owner.id, "pode aprovar tudo daqui pra frente, e liga a skill excel");
+    // A row refused with it leaves no card behind, so the agent's retry posts the level once.
+    const wrong = await ask(f, ctx, { approvals: "never", join: ["nowhere"], reason: "Pediu" });
+    expect(wrong).toMatchObject({ isError: true });
+    expect(
+      await f.db
+        .select({ id: schema.messages.id })
+        .from(schema.messages)
+        .where(sql`${schema.messages.meta}->'actionCard'->>'kind' = 'workspace_action'`),
+    ).toEqual([]);
     const out = await ask(f, ctx, {
       approvals: "never",
       add_skills: ["excel"],
