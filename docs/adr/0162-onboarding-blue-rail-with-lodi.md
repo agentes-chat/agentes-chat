@@ -259,3 +259,66 @@ and the wide window's stage.
 - **The phone's step bar keeps its height.** Its row is `max-content`: an `auto` row let a tall step squeeze the bar,
   whose overflow is hidden, under its own items.
 
+
+## Amended 2026-11-26: one box on the sky, and the first agent asked of the person's own AI
+
+People reached a workspace with a team they had not chosen (a template) or with none, and the rail asked about the
+business and the person before anything useful happened. The web onboarding now asks the person's own AI for a first
+agent (ADR 0250), shows that agent's first week, and hires it with the plan. Amends §1 to §3 and the amendments of
+2026-11-10 to 2026-11-21 on the rail, the team step, the person's own step, the plan step and the AI step.
+
+- **The frame.** The blue rail, its progress strip and the preview are gone from the web onboarding. One box stands in
+  the middle of the page's own sky (`World`, `Box`): the logo and the way back to another workspace at the top left,
+  the account's menu at the top right, the step's agents standing on the box's top edge with the right hand's line in a
+  bubble, or a header of the box's own (the apps' wall, the team's sky at night or in daylight, its photo). "Step N of
+  M" sits over the title up to the plan, never after it. On a phone the same box fills the width, 16px from the edges.
+  `StepRail`, `OnboardingProgress` and `OnboardingHorizon` stay for New agent.
+- **The steps.** A team's: what it is for, its name (1), how to start (2), the first agent's week (3), the plan (4),
+  then connecting the AI and inviting people, past the count. Started from scratch there is no week: name, start, plan
+  (3). "What you do" and "About you" are gone; the workspace's context comes from what the AI said when an agent is
+  picked (ADR 0250). `RailStep` is `name | start | week | plan | ai | people`. No new stored step: `agents` answers both
+  the start left with no agent and the week seen, so the week is on the rail unless the start was left with none.
+- **How to start.** The box's header is a wall of the catalog's own app marks with a few agents among them, its lead the
+  catalog's count in tens ("more than 70"). Two rows: ask your AI (Claude, ChatGPT, Gemini or another finds the tasks
+  that take most of the person's time and proposes an agent for each) or start from scratch (the right hand, the agents'
+  HR, builds each agent with the person later). The ready-made team templates are gone from the onboarding.
+- **Asking the AI and picking** (ADR 0250). The assistants in a row, most used first, then "Another agent app", which
+  opens the import (ADR 0055). Connecting agentes.chat by MCP and the request to paste, numbered; the proposal is read
+  every 4 s while the step is open; with no connector, the same request asking for a JSON answer and a field to paste
+  it. The options stand as stacked job descriptions (rank, name and role, responsibilities, the apps they need) with the
+  AI's reason under them; "Create <name>" makes that one agent with its routine and its place, nothing before.
+- **The week.** A planner page for the picked agent: the next seven days from today in a plain strip, in the routine's
+  zone (today in a dark circle, the agent's days in its color), today with what it delivers at "Now", and the routine's
+  next day at its time with how it repeats (from the cron the server read in the person's zone, else the AI's own
+  words), then what the AI said about the workspace. An agent brought from another app shows its own first scheduled
+  routine. Its Continue saves `agents`.
+- **The plan, "Hire the team".** The team asleep at night beside its computer on the box's header; who is hired (the
+  first agent with its role and first task, the right hand as the agents' HR; the right hand alone from scratch); the
+  recommended plan in two lines, its name and price with "See all plans", then what it includes. The people a plan
+  includes are said only when the billing service's `plans.json` gives them (an optional `people` per plan, read by
+  `planOfferOf`); this server still names no plan or price. "Not now" leaves the plan for later as before (the
+  workspace opens in the right hand's DM); the button opens the plan's Checkout. The hint on why the Cloud is paid stays
+  beside the plan's name.
+- **Back from Checkout, the team's photo.** In the plan step's place, once per payment (ADR 0079's moment): the team
+  in daylight with the person among them and a few pixels of confetti, the right hand saying hello, "<org>'s team ·
+  since <date>", who is in it, and what is left (the plan checked, the AI, the people, then the first agent's
+  deliveries). Its one button connects the AI, or goes on when the team already thinks. It replaces the paid scene in
+  the onboarding; the arrival's paid dialog elsewhere in the app is unchanged.
+- **The AI step.** "Now, the AI you already pay for": the team awake on a daylight header (no computer drawn there: its
+  state is not this step's to say), the plan bought in this tab over the title, Connect an AI's choices as before, and
+  the ways out in the footer: "Without an AI, agents don't answer." with "Connect later", then Continue (a team's) or
+  "Go to the workspace" once connected.
+- **The people step.** After a plan, "Meanwhile, invite the people you work with": it takes a few minutes, and each
+  person invited creates, on joining, the agent for their own work. With no plan, the same lead under the old title.
+- **Where it opens.** As before: #general, or the right hand's DM for a personal workspace or a plan left for later, on
+  the arrival, which is now the welcome wizard (ADR 0160): `?arrival=beta` once the AI was offered, else `?arrival=1`.
+- **A personal workspace** (ADR 0159): what it is for, then how to start (1), asking its AI and the pick (2), the week
+  (3) and the plan (4); from scratch, how to start and the plan. No name and no people step, and its own words: the
+  tasks "at work or outside it", "Hire <name>", "Welcome to your team".
+- **The phone** keeps its own steps (`phoneRail`: the name, what the workspace does, a template team and the plan in
+  words) until it takes the web's.
+- **Code.** Client `lib/onboarding.ts` (`railSteps`, `railStepAt`, `railState`, `stepCount`, `phoneRail`),
+  `lib/billing.ts` (`planOfferOf`'s `people`); web `pages/OnboardingPage.tsx`, `pages/onboarding/Shell.tsx` (`World`,
+  `Box`, `PickRows`, `Pass`, `Photo`, `AppWall`), `AskStep.tsx` (`AskYourAi`), `PickStep.tsx` (`FirstAgentPick`),
+  `WeekStep.tsx` (`FirstWeek`), `HireStep.tsx` (`HireTeam`), `CelebrateStep.tsx` (`TeamWelcome`), `AiStep.tsx`,
+  `PeopleStep.tsx`.
