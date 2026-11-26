@@ -28,7 +28,8 @@ import "./week-step.css";
  * "<Agent>'s first week" (ADR 0162, amended for the first agent asked of the person's own AI): a planner page for the
  * agent just picked. The next seven days from today in a plain strip (today in a dark circle, the agent's working days
  * in its color), then only the days that matter: today, with what it delivers on its first day, and its routine's next
- * day, at its time and with how it repeats. Under them, what the person's AI said about the workspace. Nothing to type.
+ * day, at its time and with how it repeats (today itself when the routine still runs today). Under them, what the
+ * person's AI said about the workspace. Nothing to type.
  */
 
 /** What the week shows of an agent: what it delivers today, and its routine (`cron` read by the server). */
@@ -173,9 +174,11 @@ export function FirstWeek({
     ...(routine ? at(week.today).map((s) => ({ key: `r-${s.time}`, at: s.time, text: routine.title })) : []),
   ];
   // The days that matter, opened: today, then the routine's next day.
+  // A routine that still runs today says how it repeats there: its next day would show the same run again.
+  const runsToday = routine !== null && at(week.today).length > 0;
   const opened = [
-    ...(todayEvents.length > 0 ? [{ ymd: week.today, repeat: null, events: todayEvents }] : []),
-    ...(routine && week.next
+    ...(todayEvents.length > 0 ? [{ ymd: week.today, repeat: runsToday ? repeat : null, events: todayEvents }] : []),
+    ...(routine && week.next && !runsToday
       ? [
           {
             ymd: week.next,
