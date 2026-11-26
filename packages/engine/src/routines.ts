@@ -1777,7 +1777,9 @@ export async function updateRoutine(
     set.agentId = patch.agentId;
   }
   const agent = await getAgent(db, orgId, agentId);
-  if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
+  // Pausing needs nothing of its agent: an archived agent's routine can still be switched off.
+  const pausing = patch.active === false && Object.entries(patch).every(([k, v]) => k === "active" || v === undefined);
+  if (!agent || (agent.archivedAt && !pausing)) throw new NotFoundError("Agent not found");
   if (set.agentId && !canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId)))
     throw await audienceError(db, agent);
   if (patch.name !== undefined) {

@@ -2,7 +2,7 @@ import { type Channel, channelsQuery, type Issue, type Message, useApi, type Wor
 import { managesAgent } from "@agenteschat/client/lib/audience";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { heldBack } from "@agenteschat/client/lib/issues";
+import { handedFinished, heldBack } from "@agenteschat/client/lib/issues";
 import {
   blockedText,
   handedLine,
@@ -426,7 +426,8 @@ export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StylePro
   const c = useColors();
   const work = issue.backgroundWork;
   const blocked = blockedText(t, issue.blocked);
-  if (work?.how === "handed") return <HandedWork work={work} style={[styles.block, style]} />;
+  if (work?.how === "handed")
+    return <HandedWork work={work} finished={handedFinished(issue)} style={[styles.block, style]} />;
   if (!work && !blocked) return null;
   const progress = work ? workPlanProgress(work) : null;
   return (
@@ -471,14 +472,15 @@ export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StylePro
 
 /**
  * A handed task's work on its screen, as the web's box: its line while it works; its question with Answer (full width)
- * when it waits on the reader, which opens the card where it was asked; once done, who finished it, when, who handed it
- * and the first line of what came of it.
+ * when it waits on the reader, which opens the card where it was asked; once done with every criterion met, who finished
+ * it, when, who handed it and the first line of what came of it.
  */
-function HandedWork({ work, style }: { work: WorkView; style?: StyleProp<ViewStyle> }) {
+function HandedWork({ work, finished, style }: { work: WorkView; finished: boolean; style?: StyleProp<ViewStyle> }) {
   const { t, i18n } = useTranslation();
   const dir = useRowDirectory();
   const surface = useSurface();
   if (work.status === "done") {
+    if (!finished) return null;
     const name = dir.anyAgent(work.agentId)?.name ?? t("channel.unknownAgent");
     const by = work.handedBy ? dir.anyAgent(work.handedBy.agentId)?.name : null;
     const when = relativeTime(t, i18n.language, work.finishedAt ?? work.startedAt);

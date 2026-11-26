@@ -908,6 +908,9 @@ export async function archiveAgent(
     // It leaves every task it was on (ADR 0188): an archived agent answers no task's conversation and starts no work.
     const { unassignGone } = await import("./issues");
     await unassignGone({ db, pubsub }, orgId, { type: "agent", id: agentId }).catch(() => null);
+    // Its routines can't run: they read as paused now, and a person may still pause, edit or delete them.
+    const { pauseRoutinesOf } = await import("./routine-firing");
+    await pauseRoutinesOf({ db, pubsub }, orgId, { agentId }).catch(() => 0);
   }
   // Its channel memberships stay: what runs read of a channel's members leaves it out from now on.
   forgetAgentCaches(orgId, agentId);
