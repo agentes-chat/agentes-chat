@@ -101,9 +101,11 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  /* Their feet on the box's edge. */
-  margin-bottom: -6px;
   pointer-events: none;
+}
+/* Their feet on the box's edge: the box comes up under them. */
+.onbw__ground + .onbw__main {
+  margin-top: -6px;
 }
 .onbw__cast {
   display: flex;
@@ -134,7 +136,7 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 .onbw__cast .connect-scene__marks {
   display: flex;
 }
-.onbw__cast .team-scene__mark {
+.onbw__cast .connect-scene__marks > .team-scene__mark {
   width: 40px;
   height: 40px;
   animation: none;
@@ -275,7 +277,8 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 .onbx__back {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  /* The kit's room between a button's icon and its words. */
+  gap: var(--icon-gap);
   height: var(--control-h-md);
   margin-inline-start: -8px;
   padding: 0 10px 0 6px;
@@ -388,11 +391,12 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   bottom: 18px;
   gap: 18px;
 }
-.onb-pass .team-scene__agent .ac-avatar {
+/* One class over the arrival's own sizes for a team on its sky (arrival.css), whatever order the sheets load in. */
+.onb-pass .team-scene .team-scene__agent .ac-avatar {
   width: 44px;
   height: 44px;
 }
-.onb-pass .team-scene__agent[data-lead] .ac-avatar {
+.onb-pass .team-scene .team-scene__agent[data-lead] .ac-avatar {
   width: 58px;
   height: 58px;
 }
@@ -410,7 +414,7 @@ html:not([data-pointer]) .onbx__back:focus-visible {
 .onb-photo .team-scene__agent {
   position: relative;
 }
-.onb-photo__me .ac-avatar {
+.onb-photo .team-scene .team-scene__agent.onb-photo__me .ac-avatar {
   width: 50px;
   height: 50px;
   box-shadow:
@@ -569,11 +573,11 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-acts > .ac-btn {
     flex: 1 1 auto;
   }
-  .onb-pass .team-scene__agent .ac-avatar {
+  .onb-pass .team-scene .team-scene__agent .ac-avatar {
     width: 38px;
     height: 38px;
   }
-  .onb-pass .team-scene__agent[data-lead] .ac-avatar {
+  .onb-pass .team-scene .team-scene__agent[data-lead] .ac-avatar {
     width: 50px;
     height: 50px;
   }
