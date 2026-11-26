@@ -762,7 +762,9 @@ const DEVIN_FAST_WORD = /-(?:fast|priority|lightning)$/;
  * main model.
  */
 export function devinVariantOf(uid: string): { level?: DevinLevel; fast: boolean } {
-  const main = uid.replace(/^fusion-/, "").replace(/-sidekick-.*$/, "");
+  const bare = uid.replace(/^fusion-/, "");
+  const sidekick = bare.indexOf("-sidekick-");
+  const main = sidekick < 0 ? bare : bare.slice(0, sidekick);
   const fast = DEVIN_FAST_WORD.test(main);
   const word = /-([a-z]+)$/.exec(main.replace(DEVIN_FAST_WORD, ""))?.[1];
   const level = (DEVIN_LEVELS as readonly string[]).includes(word ?? "") ? (word as DevinLevel) : undefined;

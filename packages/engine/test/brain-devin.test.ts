@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { DEVIN_PROTOCOL } from "@agenteschat/adapters";
 import { CLI_PINS } from "@agenteschat/providers/cli-pins";
+import { devinVariantOf } from "@agenteschat/providers/plans";
 import { type BrainTurnRequest, type ComputerBrainLink, DevinBrain } from "../src/brains/codex";
 import { type BrainEvent, type BrainTurn, brainRunsOn, SYSTEM_REFUSED } from "../src/brains/types";
 
@@ -72,4 +73,13 @@ test("Devin is pinned for macOS and Linux only, so a Windows computer refuses it
   const linux = link("linux");
   await collect(brain(linux).run(turn(), io()));
   expect(linux.sent[0]).toMatchObject({ kind: "devin", account: ACCOUNT.id });
+});
+
+test("a Fusion variant reads as its main model, however its helper is named", () => {
+  expect(devinVariantOf("fusion-gpt-6-sol-high-priority-sidekick-swe-2-medium")).toEqual({ level: "high", fast: true });
+  expect(devinVariantOf(`fusion-claude-opus-5-5-max${"-sidekick-".repeat(500)}x`)).toEqual({
+    level: "max",
+    fast: false,
+  });
+  expect(devinVariantOf("claude-opus-4-6-thinking")).toEqual({ fast: false });
 });
