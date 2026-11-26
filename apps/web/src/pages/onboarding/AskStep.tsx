@@ -274,25 +274,26 @@ export function AskYourAi({
           </li>
         )}
       </ol>
-      <div className="onb-ask__wait">
-        {!byPaste && (
-          <p className="onb-ask__line" role="status">
-            <Avatar
-              kind="agent"
-              name={lodi?.name ?? RIGHT_HAND_DEFAULT.name}
-              appearance={lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance}
-              size="xs"
-              state="writing"
-            />
-            <span>{t("onboarding.ask.waiting", { app: appName })}</span>
-          </p>
-        )}
-        {!unavailable && (
+      {/* With no connector on this server there is nothing to wait for nor to switch to: no row (and no rule) at all. */}
+      {!unavailable && (
+        <div className="onb-ask__wait">
+          {!byPaste && (
+            <p className="onb-ask__line" role="status">
+              <Avatar
+                kind="agent"
+                name={lodi?.name ?? RIGHT_HAND_DEFAULT.name}
+                appearance={lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance}
+                size="xs"
+                state="writing"
+              />
+              <span>{t("onboarding.ask.waiting", { app: appName })}</span>
+            </p>
+          )}
           <button type="button" className="ac-link onb-ask__switch" onClick={() => setPasting(!pasting)}>
             {t(pasting ? "onboarding.ask.useConnector" : "onboarding.ask.noConnector")}
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {late && !byPaste && <p className="onb-ask__stuck">{t("onboarding.ask.stuck")}</p>}
     </Box>
   );
