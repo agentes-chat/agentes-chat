@@ -137,6 +137,8 @@ export interface BrainSession {
    * (`Transcript.sessionParts`; null: nothing kept), so the turn reads them again when they changed.
    */
   partsRead?: string | null;
+  /** With `partsRead`: that run's blocks of what it can do here, so the turn says only their changed lines. */
+  refreshRead?: string[];
 }
 
 export interface BrainTurn {

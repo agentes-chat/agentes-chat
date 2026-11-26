@@ -105,6 +105,7 @@ import {
   type BrainEvent,
   type BrainIO,
   type BrainKind,
+  type BrainSession,
   type BrainTool,
   type BrainTurn,
   isComputerBrain,
@@ -7063,7 +7064,7 @@ export async function warmAtClaim(
   const base = await resolveBrain(deps, agent, run, conversation, { peek: true, codeSession });
   if (gate && !(await gate(base))) return;
   if (base.kind !== "claude_code" || base.unavailable || !base.session) return;
-  const session = base.session;
+  const session = sessionSent(base.session, false);
   const brain = factory(agent, run, { mcpToken: () => "" });
   const timeZone = await zoneOf(deps.db, run.orgId, author);
   const planFor = (choice: AutoChoice) => {
@@ -7165,6 +7166,11 @@ export const CODEX_IMAGE_NOTE =
 export const COMPUTER_MEDIA_NOTE =
   "# GIFs and stickers\nWhen you call an agentes tool that sends a GIF or a sticker, it is posted at once as a message of its own: unless you have something to add, end your turn right after it with an empty final reply (no confirmation that you sent it).";
 
+/** The session as the computer gets it: what the last run read stays here, the turn already says what changed. */
+function sessionSent({ partsRead: _read, refreshRead: _blocks, ...session }: BrainSession, lost: unknown) {
+  return lost ? { ...session, ownFolder: true } : session;
+}
+
 /**
  * The turn as every brain receives it. The text view of the conversation is
  * computed only when a brain reads it (the model brain reads the exact
@@ -7199,7 +7205,7 @@ function brainTurnOf(
       t.sessionLost && !plan.session?.resume ? [{ turn: true, found: true, text: sessionLostNote(t.sessionLost) }] : [];
     // A session resumed with other tools or lines here than it last read: those again, rather than a new session.
     const read = plan.session?.resume ? plan.session.partsRead : undefined;
-    const again = read === undefined ? "" : changedForSession(t.system, read);
+    const again = read === undefined ? "" : changedForSession(t.system, read, plan.session?.refreshRead);
     const changed: ContextBlock[] = again
       ? [{ turn: true, found: true, text: isRightHand(agent) ? again : withComputerLimit(again) }]
       : [];
@@ -7247,7 +7253,7 @@ function brainTurnOf(
     },
     tools: tools.map((d) => (isStableTool(d) ? { ...brainToolOf(d), stable: true } : brainToolOf(d))),
     ...(model ? { model } : {}),
-    ...(plan.session ? { session: t.sessionLost ? { ...plan.session, ownFolder: true } : plan.session } : {}),
+    ...(plan.session ? { session: sessionSent(plan.session, t.sessionLost) } : {}),
     ...(plan.account ? { account: plan.account } : {}),
     ...(plan.effort ? { effort: plan.effort } : {}),
     ...(speed ? { speed } : {}),

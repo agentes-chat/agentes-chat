@@ -511,6 +511,18 @@ test("a resumed session reads what it can do and how it works here again only wh
   );
   // Nothing kept from the run before: everything again.
   expect(changedForSession(before, null)).toContain("### What you can do");
+  // The blocks the session read: only their lines that changed, and a block gone is said gone.
+  const wiki = { conversation: true, refresh: true, text: "# Writing to the wiki\n- Only when asked." };
+  const diff = changedForSession(
+    [lines, can("Calendar: `list_events`, `create_event`"), team("@ops")],
+    sessionPartsKey([...before, wiki]),
+    [calendar.text, wiki.text],
+  );
+  expect(diff).toContain(
+    "### What you can do (changed lines)\nNew or changed:\n- Calendar: `list_events`, `create_event`\nNo longer holds:\n- Calendar: `list_events`",
+  );
+  expect(diff).toContain("### Writing to the wiki\nNo longer holds here.");
+  expect(diff).not.toContain("Only when asked");
 });
 
 test("the devices in an agent's system text keep their order when a computer's row changes", async () => {

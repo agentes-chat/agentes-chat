@@ -500,19 +500,53 @@ const sessionParts = (system: readonly SystemBlock[]) => [
 /** Which `sessionParts` a run's conversation has, for the next run in its session to compare (`changedForSession`). */
 export const sessionPartsKey = (system: readonly SystemBlock[]) => sha256(JSON.stringify(sessionParts(system)));
 
+const headingOf = (text: string) => text.split("\n", 1)[0] ?? "";
+
+/**
+ * A refresh block against the same block the session read (`old`): only its lines that are new or gone. "What you can
+ * do" is ~15 KB and a changed one differs in ~1.4 KB at the median (production, 2026-11), so the whole block again
+ * would be ten times what the turn needs.
+ */
+function changedLines(old: string, text: string): string {
+  const was = new Set(old.split("\n"));
+  const now = new Set(text.split("\n"));
+  const added = [...now].filter((l) => l.trim() && !was.has(l));
+  const gone = [...was].filter((l) => l.trim() && !now.has(l));
+  return [
+    `${headingOf(text)} (changed lines)`,
+    ...(added.length > 0 ? ["New or changed:", ...added] : []),
+    ...(gone.length > 0 ? ["No longer holds:", ...gone] : []),
+  ].join("\n");
+}
+
 /**
  * For a computer session resumed with other tools or lines here than it last read (`read`, its last run's
  * `sessionPartsKey`; null: unknown): those parts again, as a found block of the turn. "" when they are the same. The
- * team, a brief or a summary are read once per session as before.
+ * team, a brief or a summary are read once per session as before. With `before` (the last run's refresh blocks), a
+ * block it also had says only its changed lines.
  */
-export function changedForSession(system: readonly SystemBlock[], read: string | null): string {
+export function changedForSession(
+  system: readonly SystemBlock[],
+  read: string | null,
+  before: readonly string[] | null = null,
+): string {
   if (read === sessionPartsKey(system)) return "";
   const [how = HOW_HERE, ...rest] = sessionParts(system);
+  const was = read === null ? [] : (before ?? []);
+  const parts = rest.flatMap((text) => {
+    const old = was.find((b) => headingOf(b) === headingOf(text));
+    if (old === undefined) return [text];
+    return old === text ? [] : [changedLines(old, text)];
+  });
+  const gone = was
+    .filter((b) => !rest.some((t) => headingOf(t) === headingOf(b)))
+    .map((b) => `${headingOf(b)}\nNo longer holds here.`);
   return [
     "# This conversation, now",
-    'What you can do here and how you work here changed since this session read "# This conversation": this replaces what it said of them.',
+    'What you can do here and how you work here changed since this session read "# This conversation". A part below replaces what it said of it; a part marked "(changed lines)" lists only its lines that are new or no longer hold.',
     how === HOW_HERE ? `${HOW_HERE}\nNo lines of its own now: what it listed earlier no longer holds.` : how,
-    ...rest,
+    ...parts,
+    ...gone,
   ]
     .map((t, i) => (i < 2 ? t : t.replace(/^# /, "### ")))
     .join("\n\n");

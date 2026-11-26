@@ -3365,6 +3365,9 @@ test("a resumed session reads what it can do here again when it changed, and goe
   expect(seen[2]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
   expect(prompts[2]).toContain("# This conversation, now");
   expect(prompts[2]).toContain("`check_deploy`");
+  // Only the lines of "What you can do" that changed, not the whole block again.
+  expect(prompts[2]).toContain("### What you can do (changed lines)");
+  expect(prompts[2]).not.toContain("You can:");
 
   // Read once: the turn after goes on without it.
   await reply("@dev e agora?");
