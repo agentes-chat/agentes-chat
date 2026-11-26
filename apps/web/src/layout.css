@@ -5558,6 +5558,20 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
 .cflow__title:has(> .ac-captop) > :first-child {
   translate: none;
 }
+/* A mailbox address needs the full title width on the narrowest phones. */
+@media (max-width: 360px) {
+  .cflow--mail .cflow__title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .cflow--mail .cflow__title > :first-child {
+    translate: none;
+  }
+  .cflow--mail .cflow__title > .ac-captop {
+    margin-block-start: 0;
+  }
+}
 .cflow__steps {
   display: flex;
   gap: 6px;
