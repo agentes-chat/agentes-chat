@@ -2209,6 +2209,15 @@ export const en = {
       startPersonal_other: "And your agents start their {{count}} deliveries",
       startAnyPersonal: "And your agents get to work",
       connect: "Connect the AI",
+      /** Saves the team's photo with its words as a picture, drawn in the browser. */
+      download: "Download the team photo",
+      downloadPersonal: "Download your team's photo",
+      /** The saved picture's name. `{{slug}}`: the workspace's name in lower case, words joined by dashes ("acme"). */
+      photoFile: "{{slug}}-team.png",
+      /** The same when the workspace's name has no letter a file name keeps. */
+      photoFileAny: "team-photo.png",
+      photoFilePersonal: "my-team.png",
+      photoFailed: "Couldn't make the photo. Try again.",
     },
     /**
      * The onboarding of someone who joined a workspace: the team as it is, then the one agent that solves a problem of

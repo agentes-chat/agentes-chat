@@ -301,31 +301,37 @@ export function Pass({
 /** The confetti's colors: the team's sky at its brightest. */
 const CONFETTI = ["#f472b6", "#fbbf24", "#34d399", "#2dd4bf", "#a78bfa", "#ffffff", "#60a5fa"];
 
-/** A few pixels of confetti over a sky, placed by a fixed seed so the picture is the same on every visit. */
+/**
+ * The confetti's pixels, placed by a fixed seed so the picture is the same on every visit (and in the photo the person
+ * downloads): where each sits (`left` and `top` in percent of the sky), its side in CSS pixels, its color and its turn.
+ */
+export function confettiBits() {
+  let x = 7;
+  const r = () => {
+    x = (x * 9301 + 49297) % 233280;
+    return x / 233280;
+  };
+  return Array.from({ length: 46 }, (_, i) => ({
+    key: i,
+    left: r() * 100,
+    top: r() * 62,
+    size: r() > 0.7 ? 8 : 6,
+    color: CONFETTI[i % CONFETTI.length] ?? "#ffffff",
+    turn: r() > 0.5 ? 45 : 0,
+  }));
+}
+
+/** A few pixels of confetti over a sky. */
 export function Confetti() {
-  const bits = useMemo(() => {
-    let x = 7;
-    const r = () => {
-      x = (x * 9301 + 49297) % 233280;
-      return x / 233280;
-    };
-    return Array.from({ length: 46 }, (_, i) => ({
-      key: i,
-      left: `${(r() * 100).toFixed(1)}%`,
-      top: `${(r() * 62).toFixed(1)}%`,
-      size: r() > 0.7 ? 8 : 6,
-      color: CONFETTI[i % CONFETTI.length],
-      turn: r() > 0.5 ? 45 : 0,
-    }));
-  }, []);
+  const bits = useMemo(confettiBits, []);
   return (
     <span className="onb-confetti" aria-hidden="true">
       {bits.map((b) => (
         <i
           key={b.key}
           style={{
-            left: b.left,
-            top: b.top,
+            left: `${b.left.toFixed(1)}%`,
+            top: `${b.top.toFixed(1)}%`,
             width: b.size,
             height: b.size,
             background: b.color,

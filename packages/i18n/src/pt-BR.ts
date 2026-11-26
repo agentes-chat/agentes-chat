@@ -2097,6 +2097,12 @@ export const ptBR = {
       startPersonal_other: "E os seus agentes começam as {{count}} entregas",
       startAnyPersonal: "E os seus agentes começam a trabalhar",
       connect: "Conectar a IA",
+      download: "Baixar a foto do time",
+      downloadPersonal: "Baixar a foto do seu time",
+      photoFile: "time-{{slug}}.png",
+      photoFileAny: "foto-do-time.png",
+      photoFilePersonal: "meu-time.png",
+      photoFailed: "Não deu para criar a foto. Tente de novo.",
     },
     member: {
       title: "Boas-vindas à {{org}}, {{first}}",
