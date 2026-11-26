@@ -2166,7 +2166,7 @@ const agentApprovalsAction: WorkspaceAction = {
   },
   async run(deps, actorId, orgId, input) {
     const agent = await getAgent(deps.db, orgId, str(input.agentId));
-    if (!agent) throw new NotFoundError("That agent is gone", "agent.not_found");
+    if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
     const level = APPROVALS_LEVELS.find((l) => l === input.level) ?? null;
     const before = agentLevel(agent);
     if (before === level) throw new ValidationError(`${agent.name} already is like that`);
