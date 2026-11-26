@@ -185,6 +185,20 @@ test("reading a channel or DM reads what was said to me there; it stays in the i
   expect(await unread()).toEqual(["dm", "mention"]);
 });
 
+test("reading a channel leaves a mention in one of its tasks' comments unread", async () => {
+  f = await setup();
+  const { caio } = await people();
+  const owner = { type: "person" as const, userId: f.owner.id };
+  const issue = await createIssue(deps(), owner, f.org.id, { title: "Export report as CSV", channelId: f.general.id });
+  await commentIssue(deps(), owner, f.org.id, issue.id, "@caio can you review?");
+  await drainOutbox(f.db, f.handlers);
+  const [mention] = (await inbox(caio.id)).items.filter((n) => n.kind === "mention");
+  expect(mention?.source).toMatchObject({ issueId: issue.id, channelId: f.general.id });
+
+  await markChannelRead(f.db, caio.id, f.org.id, f.general.id, new Date(), f.pubsub);
+  expect((await inbox(caio.id)).items.find((n) => n.kind === "mention")?.readAt).toBeNull();
+});
+
 test("an agent's own DM, a reminder and a routine's report are read when the DM is", async () => {
   f = await setup();
   const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });

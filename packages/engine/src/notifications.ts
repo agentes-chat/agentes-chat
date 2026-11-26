@@ -819,6 +819,8 @@ export async function readConversationNotifications(
         isNull(notifications.readAt),
         lte(notifications.updatedAt, at),
         sql`${notifications.source}->>'channelId' = ${place.channelId}`,
+        // A task's mention carries the task's home channel, not the conversation it was said in.
+        sql`${notifications.source}->>'issueId' is null`,
         place.threadId
           ? or(
               and(inArray(notifications.kind, SAID_HERE), sql`${threadId} = ${place.threadId}`),
