@@ -317,6 +317,22 @@ async function refuseUnsafeConfig(ctx: GitContext, cwd: string, deadline: number
 
 const trimOut = (r: GitRun) => r.stdout.trim();
 
+/** A `.git/config.lock` older than this was left by a git that died mid-write: no config write takes this long. */
+export const STALE_CONFIG_LOCK_MS = 60_000;
+
+/**
+ * Removes a checkout's `.git/config.lock` left by a git that was killed while writing it (a reboot, a killed turn):
+ * every later `git config` there fails with "could not lock config file" until it is gone.
+ */
+export function clearStaleConfigLock(checkout: string, now = Date.now()) {
+  const lock = path.join(checkout, ".git", "config.lock");
+  try {
+    if (now - statSync(lock).mtimeMs >= STALE_CONFIG_LOCK_MS) rmSync(lock, { force: true });
+  } catch {
+    // None there.
+  }
+}
+
 /** HEAD, the current branch and the remote's default branch of a checkout. */
 async function describeCheckout(ctx: GitContext, cwd: string, deadline: number) {
   const [head, branch, remoteHead] = await Promise.all([
@@ -428,7 +444,7 @@ export const localCloneSlot: CloneSlots = async (onWait) => {
 
 const cacheLocks = new Map<string, Promise<unknown>>();
 
-/** Runs `fn` alone for `key` (one fetch into a cached repository at a time). */
+/** Runs `fn` alone for `key`: one fetch into a cached repository, or one update of a checkout, at a time. */
 function locked<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const next = (cacheLocks.get(key) ?? Promise.resolve()).catch(() => {}).then(fn);
   cacheLocks.set(key, next);
@@ -766,25 +782,31 @@ export async function gitSync(ctx: GitContext, req: GitSyncRequest): Promise<Mac
       if (!statSync(target.abs).isDirectory() || !existsSync(path.join(target.abs, ".git"))) {
         throw new Error(`${target.rel} exists and isn't a git checkout`);
       }
-      // An existing checkout's config may have been changed since it was cloned: only safe keys (`git-guard.ts`).
-      await refuseUnsafeConfig(ctx, target.abs, deadline);
-      await configure(ctx, target.abs, { remote, author }, deadline);
-      let warning: string | undefined;
-      let failure: string | undefined;
-      try {
-        warning = await update(ctx, target.abs, remote, deadline);
-      } catch (err) {
-        failure = err instanceof Error ? err.message : String(err);
-      }
-      const d = await describeCheckout(ctx, target.abs, deadline);
-      out.push({
-        ...base,
-        status: failure ? "failed" : "updated",
-        ...(d.branch ? { branch: d.branch } : {}),
-        ...(d.defaultBranch ? { defaultBranch: d.defaultBranch } : {}),
-        ...(d.head ? { head: d.head } : {}),
-        ...((failure ?? warning) ? { message: (failure ?? warning ?? "").slice(0, GIT_SYNC_LIMITS.message) } : {}),
-      });
+      // Two syncs of one checkout at once (two turns of the agent) would fight over its `.git/config`: one at a time.
+      out.push(
+        await locked(`checkout\0${key}`, async () => {
+          clearStaleConfigLock(target.abs);
+          // An existing checkout's config may have been changed since it was cloned: only safe keys (`git-guard.ts`).
+          await refuseUnsafeConfig(ctx, target.abs, deadline);
+          await configure(ctx, target.abs, { remote, author }, deadline);
+          let warning: string | undefined;
+          let failure: string | undefined;
+          try {
+            warning = await update(ctx, target.abs, remote, deadline);
+          } catch (err) {
+            failure = err instanceof Error ? err.message : String(err);
+          }
+          const d = await describeCheckout(ctx, target.abs, deadline);
+          return {
+            ...base,
+            status: failure ? "failed" : "updated",
+            ...(d.branch ? { branch: d.branch } : {}),
+            ...(d.defaultBranch ? { defaultBranch: d.defaultBranch } : {}),
+            ...(d.head ? { head: d.head } : {}),
+            ...((failure ?? warning) ? { message: (failure ?? warning ?? "").slice(0, GIT_SYNC_LIMITS.message) } : {}),
+          } satisfies GitSyncRepo;
+        }),
+      );
     } catch (err) {
       if (err instanceof RunnerError && err.code === "bad_request") throw err;
       out.push({
