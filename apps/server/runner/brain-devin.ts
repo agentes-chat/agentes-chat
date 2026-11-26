@@ -27,7 +27,7 @@ import {
   codexThreadKey,
 } from "./brain-codex";
 import { opencodeBridge, opencodePrompt } from "./brain-opencode";
-import { prepareDevinHome, writeDevinTurnConfig } from "./devin-home";
+import { clearDevinProject, prepareDevinHome, writeDevinTurnConfig } from "./devin-home";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { DEVIN_BIN, resolveCommand } from "./executors";
@@ -232,16 +232,15 @@ function problemOf(err: unknown): string {
   return data && !message.includes(data) ? `${message}: ${data}` : message;
 }
 
-/** A tool call's name: the CLI's own (`cognition.ai/toolName`, else the one inference called), else its title. */
-function toolNameOf(update: Record<string, unknown>): string {
+/** The name the CLI gave a call (`cognition.ai/toolName`, else the one inference called); "" when it gave none. */
+function cliToolNameOf(update: Record<string, unknown>): string {
   const meta = isRecord(update._meta) ? update._meta : {};
-  return (
-    str(meta["cognition.ai/toolName"]) ||
-    str(meta["cognition.ai/inferenceToolName"]) ||
-    str(update.title) ||
-    "tool"
-  ).slice(0, 128);
+  return (str(meta["cognition.ai/toolName"]) || str(meta["cognition.ai/inferenceToolName"])).slice(0, 128);
 }
+
+/** A tool call's name: the CLI's own, else its title. */
+const toolNameOf = (update: Record<string, unknown>) =>
+  cliToolNameOf(update) || str(update.title).slice(0, 128) || "tool";
 
 /** The text of a tool call's ACP content, else its raw output. */
 function toolText(update: Record<string, unknown>, failed: boolean): string {
@@ -265,7 +264,8 @@ export class DevinTurnReader {
   readonly running = new Set<string>();
   /** A tool of the CLI's own in a `chat` turn: why the turn stops. */
   breach?: string;
-  private readonly tools = new Map<string, { name: string; input: unknown; output?: string }>();
+  /** `cliName`: what decides whether a call is our server's (never its title, which can carry the model's words). */
+  private readonly tools = new Map<string, { name: string; cliName: string; input: unknown; output?: string }>();
   private afterTool = false;
 
   constructor(private readonly opts: { chat?: boolean; redact?: (text: string) => string } = {}) {}
@@ -291,13 +291,16 @@ export class DevinTurnReader {
       case "tool_call": {
         const id = str(update.toolCallId);
         if (!id) return [];
-        const name = toolNameOf(update);
         const input = update.rawInput ?? {};
-        this.tools.set(id, { name, input });
+        this.tools.set(id, { name: toolNameOf(update), cliName: cliToolNameOf(update), input });
         this.running.add(id);
         this.answer = "";
         this.afterTool = true;
-        return [];
+        // ACP lets a call arrive already ended, with no update after it.
+        const status = str(update.status);
+        return status === "completed" || status === "failed"
+          ? this.update({ ...update, sessionUpdate: "tool_call_update" })
+          : [];
       }
       case "tool_call_update": {
         const id = str(update.toolCallId);
@@ -312,13 +315,13 @@ export class DevinTurnReader {
         if (status !== "completed" && !failed) return [];
         this.running.delete(id);
         this.tools.delete(id);
-        if (isOurDevinTool(tool.name, tool.input)) {
+        if (isOurDevinTool(tool.cliName, tool.input)) {
           this.worked = true;
           return [];
         }
         // A `chat` turn: one its rules refused did nothing; one that ran stops the turn, and says nothing of it.
         if (this.opts.chat) {
-          if (!failed && !this.breach) this.breach = devinChatBreach(tool.name, tool.input) ?? undefined;
+          if (!failed && !this.breach) this.breach = devinChatBreach(tool.cliName || "tool", tool.input) ?? undefined;
           return [];
         }
         this.worked = true;
@@ -668,10 +671,12 @@ export async function runDevinTurn(input: DevinTurnInput, opts: DevinTurnOptions
     const stopReason = str(answer.result?.stopReason);
     const text = reader.answer || reader.streamed;
     if (stopReason === "cancelled") {
+      // The rule can be a whole command line, and so carry a secret.
+      const asked = s.refused ? (redact ? redact(s.refused) : s.refused).slice(0, 120) : "";
       return fail(
         "devin_failed",
-        s.refused
-          ? `The Devin CLI asked for permission (${s.refused.slice(0, 120)}), which this agent may not do here, so the turn stopped.`
+        asked
+          ? `The Devin CLI asked for permission (${asked}), which this agent may not do here, so the turn stopped.`
           : "The Devin CLI stopped the turn by itself.",
         true,
       );
@@ -778,6 +783,7 @@ export async function handleDevinBrainTurn(
   try {
     const chat = req.permissions?.mode === "chat";
     const folder = chat ? chatFolder(ctx.runnerHome, String(req.agent.id)) : ctx.folder;
+    if (!chat) clearDevinProject(folder);
     let cwd = folder;
     if (!chat && typeof req.cwd === "string" && req.cwd.trim() !== "") {
       const resolved = await resolveForAgent(folder, ctx.grants, req.cwd);

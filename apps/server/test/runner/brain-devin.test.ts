@@ -1,11 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { devinVariant, devinVariantOf } from "@agenteschat/providers/plans";
 import { accountEnv, parseDevinLoginUrl, parseDevinStatus, parseDevinWho } from "../../runner/accounts";
 import { type CodexBrainEvent, CodexThreads } from "../../runner/brain-codex";
 import {
+  DevinTurnReader,
   devinChatBreach,
   devinMode,
   devinPermission,
@@ -14,7 +15,14 @@ import {
   isOurDevinTool,
   runDevinTurn,
 } from "../../runner/brain-devin";
-import { DEVIN_PLANTED, devinConfigFile, devinCredentialsFile, prepareDevinHome } from "../../runner/devin-home";
+import {
+  clearDevinProject,
+  DEVIN_NO_IMPORTS,
+  DEVIN_PLANTED,
+  devinConfigFile,
+  devinCredentialsFile,
+  prepareDevinHome,
+} from "../../runner/devin-home";
 import { parseDevinModels } from "../../runner/executors";
 import type { Spawn } from "../../runner/scope-gate";
 import { removeDirs, tempDir } from "./helpers";
@@ -158,10 +166,37 @@ test.skipIf(!posix)("before a turn: what could be planted goes, the settings are
     process_model: "in-process",
     skip_workspace_trust: true,
     permission_mode: "accept-edits",
+    read_config_from: DEVIN_NO_IMPORTS,
     permissions: { allow: [], deny: [], ask: [] },
   });
+  // Nothing comes in from other tools' files or the account's Devin Cloud.
+  expect(Object.values(DEVIN_NO_IMPORTS).every((on) => on === false)).toBe(true);
+  expect(Object.keys(DEVIN_NO_IMPORTS)).toEqual(expect.arrayContaining(["claude", "cursor", "cloud"]));
   expect(statSync(devinCredentialsFile(home)).mode & 0o777).toBe(0o600);
 });
+
+test.skipIf(!posix)(
+  "before a turn: the agent folder's Devin hooks, MCP servers and settings go, its skills stay",
+  () => {
+    const folder = tempDir("devin-folder-");
+    dirs.push(folder);
+    const dot = path.join(folder, ".devin");
+    mkdirSync(path.join(dot, "skills", "x"), { recursive: true });
+    for (const name of [
+      "hooks.v1.json",
+      "config.json",
+      "config.local.json",
+      "mcp_config.json",
+      "mcp_config.local.json",
+    ]) {
+      writeFileSync(path.join(dot, name), "{}");
+    }
+    clearDevinProject(folder);
+    expect(readdirSync(dot)).toEqual(["skills"]);
+    // Nothing there: nothing to do.
+    clearDevinProject(path.join(folder, "missing"));
+  },
+);
 
 // ── What the runner allows ──────────────────────────────────────────────────────
 
@@ -193,6 +228,36 @@ test("Lodi's guard: our server's tools (and listing them) only", () => {
   expect(isOurDevinTool("mcp_list_tools", { server_name: "other" })).toBe(false);
   expect(devinChatBreach("exec", {})).toContain("tool of its own (exec)");
   expect(devinChatBreach("mcp__agenteschat_agentes__ask_agent", {})).toBeNull();
+});
+
+test("Lodi's guard reads a call's name from the CLI, never its title, and a call that arrives already ended", () => {
+  const ended = (id: string, extra: Record<string, unknown>) => ({
+    sessionUpdate: "tool_call",
+    toolCallId: id,
+    status: "completed",
+    rawInput: {},
+    ...extra,
+  });
+  const chat = new DevinTurnReader({ chat: true });
+  chat.update(ended("t1", { title: "mcp__agenteschat_agentes__post_message" }));
+  expect(chat.breach).toContain("tool of its own (tool)");
+  const own = new DevinTurnReader({ chat: true });
+  own.update(ended("t2", { _meta: { "cognition.ai/toolName": "exec" } }));
+  expect(own.breach).toContain("(exec)");
+  expect(own.running.size).toBe(0);
+  const ours = new DevinTurnReader({ chat: true });
+  ours.update(ended("t3", { _meta: { "cognition.ai/toolName": "mcp__agenteschat_agentes__post_message" } }));
+  expect(ours.breach).toBeUndefined();
+  expect(ours.worked).toBe(true);
+  const work = new DevinTurnReader();
+  expect(
+    work.update(
+      ended("t4", {
+        _meta: { "cognition.ai/toolName": "exec" },
+        content: [{ type: "content", content: { type: "text", text: "ok" } }],
+      }),
+    ),
+  ).toMatchObject([{ type: "tool_call", id: "t4", name: "exec", executed: { content: "ok" } }]);
 });
 
 test("a turn that went wrong: the plan's quota is a limit, a refused sign-in signed out, anything else failed", () => {

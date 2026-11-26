@@ -27,6 +27,43 @@ export const devinConfigFile = (home: string) => path.join(home, ".config", "dev
 /** Where the CLI keeps the account's sign-in (a long-lived token, which it writes 644). */
 export const devinCredentialsFile = (home: string) => path.join(home, ".local", "share", "devin", "credentials.toml");
 
+/**
+ * What the CLI imports from other tools, and from the account's Devin Cloud (its personal plugins and MCP servers, which
+ * bring hooks): all off (`read_config_from`, keys from the CLI 3000.15.14 docs' `config-file.mdx`). Hooks and MCP servers
+ * from a `.claude/` folder, `.mcp.json` or `.cursor/mcp.json` in the turn's folder would otherwise run outside the
+ * runner's permission answers, in a `plan` turn too.
+ */
+export const DEVIN_NO_IMPORTS = {
+  agents_standard: false,
+  cursor: false,
+  windsurf: false,
+  claude: false,
+  copilot: false,
+  codex: false,
+  kiro: false,
+  opencode: false,
+  zed: false,
+  cloud: false,
+} as const;
+
+/**
+ * The project files in the agent's own folder that would run or allow commands in a later turn (hooks, MCP servers, a
+ * `read_config_from` turning the imports back on): removed before each turn, as Cursor's `hooks.json` is. A repository's
+ * own `.devin/` elsewhere is the person's and stays.
+ */
+export const DEVIN_PROJECT_PLANTED = [
+  "hooks.v1.json",
+  "config.json",
+  "config.local.json",
+  "mcp_config.json",
+  "mcp_config.local.json",
+] as const;
+
+/** `DEVIN_PROJECT_PLANTED` removed from `<folder>/.devin`. */
+export function clearDevinProject(folder: string) {
+  for (const name of DEVIN_PROJECT_PLANTED) rmSync(path.join(folder, ".devin", name), { force: true });
+}
+
 /** What the home may hold that a later turn would read: removed before each one. */
 export const DEVIN_PLANTED = [
   ".claude",
@@ -71,7 +108,8 @@ function writeIfChanged(file: string, text: string) {
  * The account's settings, the same for every turn on it: the Devin organization the CLI saved at its sign-in kept
  * (`devin.org_id`), everything else ours. No shell setup (it would write the home's `.bashrc`), no updates of its own
  * (the computer's setup pins it), the agent in this process alone (`in-process`: never a daemon shared by turns),
- * folders trusted (the turn's folder is the runner's choice), and Code mode, whose edits in the folder ask nothing.
+ * folders trusted (the turn's folder is the runner's choice), nothing imported (`DEVIN_NO_IMPORTS`), and Code mode,
+ * whose edits in the folder ask nothing.
  * Every other request for permission comes to the runner, which answers it (`devinPermission`).
  */
 export function writeDevinConfig(home: string) {
@@ -93,6 +131,7 @@ export function devinConfig(
     process_model: "in-process",
     skip_workspace_trust: true,
     permission_mode: "accept-edits",
+    read_config_from: DEVIN_NO_IMPORTS,
     permissions: turn?.permissions ?? { allow: [], deny: [], ask: [] },
     ...(turn?.subagents === false ? { subagents_enabled: false } : {}),
   };
