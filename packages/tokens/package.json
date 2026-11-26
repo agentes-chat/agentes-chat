@@ -15,6 +15,7 @@
     "./look": "./src/look.ts",
     "./message-links": "./src/message-links.ts",
     "./names": "./src/names.ts",
+    "./routines": "./src/routines.ts",
     "./skills": "./src/skills.ts"
   },
   "scripts": {

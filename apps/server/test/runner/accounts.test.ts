@@ -1674,12 +1674,13 @@ function sharedLoginSetup(ready = true, over: Partial<AccountManagerOptions> = {
   const store = tempDir("accounts-store-");
   dirs.push(store);
   const removed: string[] = [];
-  const state = { ready };
+  const state = { ready, turns: true };
   const made = setup({
     lending: { chown: async () => {} },
     authEgress: () => ["/usr/bin/env", "FAKE_AUTH_GROUP=1"],
     sharedLogin: {
       ready: () => state.ready,
+      turnsReady: () => state.ready && state.turns,
       launcher: () => ({
         // Stands in for the mount view and `setpriv`.
         prefix: ["/usr/bin/env", "FAKE_ACCOUNT_USER=1"],
@@ -1709,6 +1710,11 @@ test.if(posix)("whether a turn may run on a shared CLI login, from root's marker
   expect(m.isCliShared("claude_code", ACCOUNT_ID)).toBe(true);
   expect(m.isCliShared("claude_code", "../../etc/passwd")).toBe(false);
   expect(m.cliSharedState(ACCOUNT_ID)).toBe("ready");
+  // The self-check waits for an agent's user to try the network with: a sign-in may begin, a turn waits.
+  state.turns = false;
+  expect(m.cliSharedState(ACCOUNT_ID)).toBe("deferred");
+  expect(m.claudeLoginMethods()).toEqual(["setup_token", "cli_login"]);
+  state.turns = true;
   writeFileSync(marker("shared"), "");
   // A worker gets only the word that its task's CLI is root's: no token, no folder.
   expect(await m.grant("claude_code", ACCOUNT_ID)).toEqual({ kind: "hosted" });

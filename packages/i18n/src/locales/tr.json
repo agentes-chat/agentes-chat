@@ -626,7 +626,11 @@
       "wrongAddress": "Adres yanlış mı? Değiştirin",
       "banner": "E-postanızı onaylayın",
       "bannerSub": "{{email}} adresine gönderdiğimiz bağlantıyı açın.",
-      "change": "Adresi değiştir"
+      "change": "Adresi değiştir",
+      "undelivered": {
+        "suppressed": "E-posta ulaşmadı: e-posta sağlayıcısı önceki bir geri dönmeden sonra {{email}} adresini engelledi. Adresin doğru olduğunu kontrol edip yeni bağlantı iste.",
+        "rejected": "E-posta ulaşmadı: {{email}} reddedildi. Adresin doğru olduğunu kontrol et ya da değiştir."
+      }
     },
     "unconfirmed": "Bu e-postanın, şifresi henüz doğrulanmamış bir hesabı zaten var. Şifreyle giriş yapın veya e-postayla yeni bir şifre oluşturun.",
     "unconfirmedReset": "Yeni şifre oluştur",
@@ -1458,6 +1462,8 @@
         "model_other": "{{who}}, burada kullanılamayan {{label}} modelini kullanıyor.",
         "file_one": "{{who}}, {{label}} kullanıyor.",
         "file_other": "{{who}}, {{label}} kullanıyor.",
+        "path_one": "{{who}}, talimatlarında {{label}} yolunu gösteriyor ama bu içe aktarmayla gelmedi, bu yüzden ajan onu açamıyor. Bu dosyaları Drive'a koyun ya da bu yolu talimatlardan çıkarın.",
+        "path_other": "{{who}}, talimatlarında {{label}} yolunu gösteriyor ama bu içe aktarmayla gelmedi, bu yüzden ajanlar onu açamıyor. Bu dosyaları Drive'a koyun ya da bu yolu talimatlardan çıkarın.",
         "webhook_one": "{{label}} rutini ({{who}}) burada yeni bir adres alıyor: eski adresi çağıran site veya uygulamada bunu değiştirin.",
         "webhook_other": "{{label}} rutini ({{who}}) burada yeni bir adres alıyor: eski adresi çağıran site veya uygulamada bunu değiştirin."
       },
@@ -1565,6 +1571,7 @@
         "app": "Bağla",
         "model": "Model seç",
         "file": "Drive'ı aç",
+        "path": "Drive'ı aç",
         "webhook": "Rutinleri aç"
       },
       "linkSkipped_one": "Bağlantı sınırını aşan {{count}} dosya",
@@ -3808,7 +3815,7 @@
     "nowEveryAgent": "Tüm ajanlar artık: {{level}}.",
     "undo": "Geri al",
     "everyAgent": "Workspace’teki tüm ajanlar için",
-    "follows": "Workspace’i izler",
+    "follows": "{{level}} · workspace’ten",
     "edit": "Değiştir",
     "workspaceLead": "Ajanların harekete geçmeden önce birine ne zaman sorduğu.",
     "workspaceHelp": "Biri ajanın sayfasında kendi seçimini değiştirene kadar her ajan bu seçimi izler.",
@@ -7676,6 +7683,10 @@
       "expires": "{{left}} içinde sona eriyor",
       "expired": "Süresi doldu: {{when}}",
       "resentState": "Tekrar gönderildi · {{date}} tarihine kadar geçerli",
+      "undelivered": {
+        "suppressed": "Ulaşmadı: e-posta sağlayıcısı önceki bir geri dönmeden sonra bu adresi engelledi. Doğru olduğunu kontrol edip yeniden gönder ya da bağlantıyı kopyala.",
+        "rejected": "Ulaşmadı: adres reddedildi. Doğru olduğunu kontrol et ya da bağlantıyı kopyalayıp başka yoldan gönder."
+      },
       "copied": "{{email}} davetinin bağlantısı kopyalandı. E-postadakiyle aynı.",
       "copiedNoEmail": "{{email}} davetinin bağlantısı kopyalandı.",
       "resent": "{{email}} adresine tekrar gönderildi. Bağlantı aynı ve {{date}} tarihine kadar geçerli.",
@@ -8628,6 +8639,13 @@
     "notFound": "Bu rutin artık yok ya da erişiminiz yok.",
     "copyWebhook": "Webhook URL'sini kopyala",
     "webhookCopied": "Webhook URL'si kopyalandı.",
+    "runCalls": {
+      "show": "Çağrılar ({{n}})",
+      "hide": "Çağrıları gizle",
+      "cut": "Kısaltıldı",
+      "binary": "Metin değil, saklanmadı",
+      "copied": "Çağrı kopyalandı."
+    },
     "webhook": {
       "when": "Webhook'u çağrıldığında",
       "waiting": "Sonraki çağrıyı bekliyor",
@@ -8653,8 +8671,11 @@
       "signature": "İmza",
       "signedOff": "Kapalı: ajan, adrese yapılan her çağrıyı alır.",
       "signedOn": "Açık: yalnızca gizli anahtarla imzalanan çağrılar geçer.",
-      "signedHelp": "Gövdenin (GET çağrısında: ? olmadan sorgu dizesinin) HMAC-SHA256 değerini X-Agentes-Signature başlığında (sha256=…) gönderin. GitHub'ın X-Hub-Signature-256 başlığı da çalışır.",
+      "signedHelp": "Gövdenin (GET çağrısında: ? olmadan sorgu dizesinin) HMAC-SHA256 değerini X-Agentes-Signature başlığında (sha256=…) gönderin. GitHub'ın X-Hub-Signature-256 başlığı da çalışır. Linear için Linear'ın gösterdiği imzalama gizli anahtarını yapıştırın: Linear-Signature başlığı kontrol edilir ve bir dakikadan eski çağrılar reddedilir.",
       "addSecret": "İmza iste",
+      "pasteSecret": "Hizmetin gizli anahtarını kullan",
+      "pasteLabel": "Hizmetin imzalama gizli anahtarı",
+      "secretPasted": "Gizli anahtar kaydedildi. Yalnızca onunla imzalanan çağrılar geçer.",
       "newSecret": "Yeni gizli anahtar",
       "newSecretTitle": "Yeni bir gizli anahtar oluşturulsun mu?",
       "newSecretBody": "Mevcut gizli anahtar hemen çalışmayı bırakır. Bu rutini çağıran hizmetleri güncelleyene kadar onunla imzalanan çağrılar reddedilir.",
@@ -9185,6 +9206,7 @@
     "busyAnyComputer_other": "Günde {{count}} kez bilgisayarda çalışır, bilgisayarın açık kalması gerekir.",
     "outcome": {
       "queued": "Sırada",
+      "queuedBehind": "Sırada: {{name}} rutininin bitmesini bekliyor",
       "running": "Şu anda çalışıyor",
       "waiting": "Birinin yanıt vermesi bekleniyor",
       "waitingApproval": "Onayınız bekleniyor",
@@ -20250,6 +20272,9 @@
     "failed": "Şu anda açılamadı. Birazdan tekrar deneyin.",
     "adminsOnly": "Çalışma alanının agentes.chat planını yalnızca sahipleri ve yöneticileri yönetir.",
     "seeOptions": "Seçenekleri gör",
+    "plan": "Plan",
+    "planMonth": "{{plan}}, aylık",
+    "planYear": "{{plan}}, yıllık",
     "people": "Kişiler",
     "files": "Dosyalar",
     "usedOf": "{{used}} / {{limit}}",
@@ -21803,6 +21828,36 @@
     },
     "approvals": "Müşterilere gidenler onayını bekler. Onlara güvendiğinde daha sonra serbest bırakabilirsin.",
     "approvalsPersonal": "Senin adına gönderilen, ödenen veya rezerve edilen her şey onayını bekler. Onlara güvendiğinde daha sonra serbest bırakabilirsin."
+  },
+  "paidMoment": {
+    "on": "Planınız etkin",
+    "onPlan": "{{plan}} planındasınız",
+    "onMonth": "{{plan}} planındasınız, aylık",
+    "onYear": "{{plan}} planındasınız, yıllık",
+    "room": {
+      "both_one": "{{people}} kişi ve {{files}} dosya için yer var.",
+      "both_other": "{{people}} kişi ve {{files}} dosya için yer var.",
+      "people_one": "{{people}} kişi için yer var, dosyalarda sınır yok.",
+      "people_other": "{{people}} kişi için yer var, dosyalarda sınır yok.",
+      "files": "{{files}} dosya için yer var, kişi sayısında sınır yok.",
+      "none": "Kişi ve dosya sınırı yok."
+    },
+    "computer": {
+      "on": "Bilgisayarınız açık.",
+      "starting": "Bilgisayarınız hazırlanıyor.",
+      "startingTold": "Bilgisayarınız hazırlanıyor. Açıldığında size haber vereceğiz."
+    },
+    "hello": "Merhaba {{first}}",
+    "hi": "Merhaba",
+    "say": "Hepimiz buradayız. Haydi işe koyulalım.",
+    "sayOn": "Hepimiz buradayız ve bilgisayar açık. Haydi işe koyulalım.",
+    "sayStarting": "Hepimiz buradayız. Bilgisayar açıldığında size haber vereceğiz.",
+    "next": {
+      "ai": "Yapay zeka bağla",
+      "people": "Kişileri davet et",
+      "open": "Çalışma alanına git",
+      "talk": "{{name}} ile konuş"
+    }
   },
   "arrival": {
     "beta": {

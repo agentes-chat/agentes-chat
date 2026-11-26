@@ -282,7 +282,7 @@ const Look = z
       .optional()
       .openapi({
         description:
-          "Its logo, square (the apps show it at 512×512 at most); checked by its bytes, metadata removed. Null: back to the agent mark. Left out: left as it is.",
+          "Its logo, any shape (the apps draw it whole, at 512×512 at most, on a plate that keeps its ink legible: a PNG whose see-through background carries light ink gets a dark one); checked by its bytes, metadata removed. Null: back to the agent mark. Left out: left as it is.",
       }),
   })
   .openapi("OperatorLook");
@@ -290,10 +290,10 @@ const Look = z
 const LookState = z
   .object({
     accent: AccentColor.nullable(),
-    logo: z
-      .string()
-      .nullable()
-      .openapi({ description: "Where its members' apps load the logo; null: the agent mark." }),
+    logo: z.string().nullable().openapi({
+      description:
+        "Where its members' apps load the logo, ending with `#ink=light` when its ink is light; null: the agent mark.",
+    }),
   })
   .openapi("OperatorLookState");
 

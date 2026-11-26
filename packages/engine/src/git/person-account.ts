@@ -139,7 +139,7 @@ export async function personAccountOfPush(
 /**
  * Who a run's commits are authored as, when it isn't the agent: the person who asked in a code session, by the
  * account they connected as their own, where its host has an address for it. Sent with the session's turn and
- * commands (`AgentScope.author`); the agent still ends each commit with its own `Co-authored-by` line.
+ * commands (`AgentScope.author`); the agent still ends each commit with its own `Co-Authored-By` line.
  */
 export async function codeCommitAuthor(
   db: Database,

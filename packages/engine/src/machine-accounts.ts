@@ -1650,12 +1650,25 @@ export async function beginAccountLogin(
         ? kept
         : undefined
       : claudeAuthMethodFor(await claudeAuthPolicy(deps.db), orgId, system);
-    if (!again && method === "cli_login" && !claudeLoginMethodsOf(said, system).includes("cli_login")) {
-      throw new ConflictError(
-        "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
-        "account.method_unsupported",
-        { name: machine.name },
-      );
+    const offered = claudeLoginMethodsOf(said, system);
+    if (!again && method === "cli_login" && !offered.includes("cli_login")) {
+      if (!offered.includes("setup_token")) {
+        throw new ConflictError(
+          "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
+          "account.method_unsupported",
+          { name: machine.name },
+        );
+      }
+      // Not ready for it here yet (a self-check pending or failing, a runner from before): this one sign-in takes the
+      // token its runner makes, kept on its row, rather than stopping the person. Reported, so a computer that stays
+      // that way is seen.
+      method = "setup_token";
+      deps.log?.error("Claude sign-in used a setup token: the computer doesn't offer Claude's own login yet", {
+        orgId,
+        machineId: machine.id,
+        protocol,
+        reason: machine.executors?.claudeLoginBlocked ?? "pending",
+      });
     }
   }
   // How it signs in, where nothing else can happen: a key, or a CLI's own sign-in.

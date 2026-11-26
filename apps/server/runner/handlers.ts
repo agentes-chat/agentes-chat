@@ -749,6 +749,7 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
           agent,
           () => workers.run(req, scope),
           (final) => signedOut(ctx, req, final),
+          scope.signal,
         );
       }
     }

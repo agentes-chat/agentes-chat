@@ -318,7 +318,7 @@ export function codeStart(
 }
 
 /**
- * The turn's commits end with the agent's own `Co-authored-by` and the credit for the person behind its run, when they
+ * The turn's commits end with the agent's own `Co-Authored-By` and the credit for the person behind its run, when they
  * linked GitHub to sign in (ADR 0156), as the run's commits through GitHub's API do: the line that says so, next to
  * where the turn starts. A runner on protocol 63 adds them by itself too (its `commit-msg` hook, never twice); this
  * line covers an older one and a `--no-verify`.

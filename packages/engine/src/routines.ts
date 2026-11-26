@@ -16,6 +16,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { getAgent } from "./agents";
 import { type AiStatusDeps, rightHandWorkAi } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
@@ -80,9 +81,17 @@ import {
   routineAccessOf,
   routineReportOf,
 } from "./routine-brief";
-import { enqueueRoutineJob, queueEventRun, startGatheredRun } from "./routine-events";
-import { claimRoutineRun, haltRoutineRuns, makeWayForRun, skipRoutineRun, unclaimRoutineRun } from "./routine-firing";
+import { enqueueRoutineJob, queueEventRun, startGatheredRun, wakeHeldRuns } from "./routine-events";
 import {
+  claimRoutineRun,
+  haltRoutineRuns,
+  makeWayForRun,
+  queueBehindAgentRoutine,
+  skipRoutineRun,
+  unclaimRoutineRun,
+} from "./routine-firing";
+import {
+  callCountOf,
   DEFAULT_HOOK_METHODS,
   ensureRoutineHook,
   type HookMethod,
@@ -281,6 +290,8 @@ export interface RoutineRunView {
   link: { channelId: string; threadId: string | null; messageId: string } | null;
   /** While it waits for a person: the approval it waits on, if any (readers only). */
   approvalId?: string | null;
+  /** A webhook routine's run: how many calls it carried (readers only; who manages it reads them, `routineRunCalls`). */
+  calls?: number;
   finishedAt: string | null;
 }
 
@@ -707,6 +718,21 @@ function runView(run: RunRow, details: RunDetails, detailed: boolean): RoutineRu
   // A provider's failure says its cause and its words, for who reads the records: the code alone says only "an error".
   const failure = detailed && status === "failed" ? providerFailure(agentRun?.error) : null;
   const cause = failure?.errorParams?.provider ? failure : null;
+  const calls = callCountOf(run.event);
+  // In line behind another routine of its agent (`queueBehindAgentRoutine`): which one.
+  const behind = status === "queued" && typeof run.event?.waitingFor === "string" ? run.event.waitingFor : null;
+  if (behind !== null)
+    return {
+      id: run.id,
+      at: run.at.toISOString(),
+      status,
+      code: "waiting_routine",
+      codeParams: { routine: behind },
+      summary: "",
+      brain: run.brain,
+      link: null,
+      finishedAt: null,
+    };
   return {
     id: run.id,
     at: run.at.toISOString(),
@@ -728,6 +754,7 @@ function runView(run: RunRow, details: RunDetails, detailed: boolean): RoutineRu
     brain: run.brain,
     link: link && run.messageId ? { ...link, messageId: run.messageId } : null,
     ...(status === "waiting" ? { approvalId } : {}),
+    ...(detailed && calls !== null ? { calls } : {}),
     finishedAt: run.finishedAt?.toISOString() ?? null,
   };
 }
@@ -1453,7 +1480,7 @@ export async function createRoutine(
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   // A routine asks the agent on its creator's behalf: only people who can talk to it create one.
   if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent);
-  const prompt = input.prompt.trim().slice(0, 10_000);
+  const prompt = input.prompt.trim().slice(0, ROUTINE_PROMPT_MAX);
   if (!prompt) throw new ValidationError("Say what the agent should do", "routine.prompt_required");
   await checkTarget(db, orgId, agent.id, input.target, actorId);
   const trigger = await resolveTrigger(deps, actorId, orgId, input.trigger);
@@ -1759,7 +1786,7 @@ export async function updateRoutine(
     set.name = name;
   }
   if (patch.prompt !== undefined) {
-    const prompt = patch.prompt.trim().slice(0, 10_000);
+    const prompt = patch.prompt.trim().slice(0, ROUTINE_PROMPT_MAX);
     if (!prompt) throw new ValidationError("Say what the agent should do", "routine.prompt_required");
     set.prompt = prompt;
   }
@@ -1891,6 +1918,7 @@ export async function updateRoutine(
     await haltRoutineRuns(deps, orgId, row.id, { code: "paused", byUserId: actorId });
   } else if (patch.active === true && !current.active) {
     await resolveRoutinePaused(deps, orgId, row.id).catch(() => {});
+    await wakeHeldRuns(deps, row.id);
   }
   const before: Record<string, unknown> = {};
   const after: Record<string, unknown> = {};
@@ -2046,7 +2074,10 @@ export async function setRoutineActive(
   if (!active) {
     await haltRoutineRuns(deps, orgId, id, { code: "paused", byUserId: actorId });
     await cancelRoutineAhead(deps, orgId, id, actorId);
-  } else await resolveRoutinePaused(deps, orgId, id).catch(() => {});
+  } else {
+    await resolveRoutinePaused(deps, orgId, id).catch(() => {});
+    if (!current.active) await wakeHeldRuns(deps, id);
+  }
   const watch = row ? (await watchesOf(deps.db, [row.id])).get(row.id) : undefined;
   if (row && watch) {
     if (active && !current.active) await resetMailWatchState(deps.db, row.id);
@@ -2475,6 +2506,10 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
   if (gate) {
     await skip(gate);
     if (once) await ran();
+    return;
+  }
+  if (await queueBehindAgentRoutine(deps, routine, run)) {
+    await publishRoutineRuns(deps.pubsub, routine.orgId, routine.id);
     return;
   }
   const brief: RoutineBrief = {

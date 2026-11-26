@@ -99,6 +99,7 @@ const TODO_ICON: Record<BundleTodo["kind"], IconName> = {
   secret: "key",
   model: "settings",
   file: "file",
+  path: "file",
   webhook: "link",
 };
 /** Why the agents' files stay behind, in the order they're listed. */
@@ -1088,7 +1089,7 @@ function TodoLink({ kind, orgId }: { kind: BundleTodo["kind"]; orgId: string }) 
       </Link>
     );
   }
-  if (kind === "file") {
+  if (kind === "file" || kind === "path") {
     return (
       <Link to="/org/$orgId/drive" params={{ orgId }} className="ac-link imp-todo__link">
         {label}

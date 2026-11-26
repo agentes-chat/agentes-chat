@@ -611,7 +611,11 @@
       "wrongAddress": "주소가 틀렸나요? 변경하기",
       "banner": "이메일을 확인해 주세요",
       "bannerSub": "{{email}}(으)로 보낸 링크를 여세요.",
-      "change": "주소 변경"
+      "change": "주소 변경",
+      "undelivered": {
+        "suppressed": "이메일이 전달되지 않았어요: 이전 반송 때문에 메일 서비스가 {{email}}(으)로의 발송을 막았어요. 주소가 맞는지 확인하고 새 링크를 요청하세요.",
+        "rejected": "이메일이 전달되지 않았어요: {{email}}이(가) 거부되었어요. 주소가 맞는지 확인하거나 다른 주소로 바꾸세요."
+      }
     },
     "unconfirmed": "이 이메일에는 아직 확인되지 않은 비밀번호로 만든 계정이 있어요. 그 비밀번호로 로그인하거나 이메일로 새 비밀번호를 만드세요.",
     "unconfirmedReset": "새 비밀번호 만들기",
@@ -1414,6 +1418,7 @@
         "secret_other": "{{who}}이(가) {{label}}을(를) 사용해요. 파일에는 들어 있지 않아요. 에이전트가 채팅에서 요청해요.",
         "model_other": "{{who}}이(가) 여기서 사용할 수 없는 {{label}}을(를) 사용해요.",
         "file_other": "{{who}}이(가) {{label}}을(를) 사용해요.",
+        "path_other": "{{who}}의 지침이 {{label}}을(를) 가리키지만 가져오기에 포함되지 않아 에이전트가 열 수 없어요. 그 파일을 Drive에 넣거나 지침에서 그 경로를 빼 주세요.",
         "webhook_other": "{{who}}의 루틴 {{label}}은(는) 여기서 새 주소를 받아요. 이전 주소를 호출하던 사이트나 앱에서 주소를 바꾸세요."
       },
       "say": {
@@ -1511,6 +1516,7 @@
         "app": "연결",
         "model": "모델 고르기",
         "file": "Drive 열기",
+        "path": "Drive 열기",
         "webhook": "루틴 열기"
       },
       "linkSkipped_other": "링크 한도를 넘은 파일 {{count}}개",
@@ -3666,7 +3672,7 @@
     "nowEveryAgent": "모든 에이전트 이제: {{level}}.",
     "undo": "실행 취소",
     "everyAgent": "워크스페이스의 모든 에이전트에 적용",
-    "follows": "워크스페이스를 따름",
+    "follows": "{{level}} · 워크스페이스 설정",
     "edit": "변경",
     "workspaceLead": "에이전트가 실행 전에 사람에게 묻는 경우.",
     "workspaceHelp": "누군가 에이전트 페이지에서 따로 바꾸기 전까지 각 에이전트는 이 선택을 따릅니다.",
@@ -7424,6 +7430,10 @@
       "expires": "{{left}} 후 만료",
       "expired": "{{when}} 만료됨",
       "resentState": "다시 보냄 · {{date}}까지 유효",
+      "undelivered": {
+        "suppressed": "전달 안 됨: 이전 반송 때문에 메일 서비스가 이 주소로의 발송을 막았어요. 주소가 맞는지 확인하고 다시 보내거나 링크를 복사하세요.",
+        "rejected": "전달 안 됨: 주소가 거부되었어요. 주소가 맞는지 확인하거나 링크를 복사해 다른 방법으로 보내세요."
+      },
       "copied": "{{email}} 초대 링크를 복사했어요. 이메일에 있는 링크와 같아요.",
       "copiedNoEmail": "{{email}} 초대 링크를 복사했어요.",
       "resent": "{{email}}에게 다시 보냈어요. 링크는 같고 {{date}}까지 유효해요.",
@@ -8351,6 +8361,13 @@
     "notFound": "이 루틴이 더 이상 없거나 접근 권한이 없어요.",
     "copyWebhook": "웹훅 URL 복사",
     "webhookCopied": "웹훅 URL을 복사했어요.",
+    "runCalls": {
+      "show": "호출 ({{n}})",
+      "hide": "호출 숨기기",
+      "cut": "줄임",
+      "binary": "텍스트가 아니라 보관하지 않음",
+      "copied": "호출을 복사했어요."
+    },
     "webhook": {
       "when": "웹훅이 호출될 때",
       "waiting": "다음 호출을 기다려요",
@@ -8376,8 +8393,11 @@
       "signature": "서명",
       "signedOff": "꺼짐: 에이전트가 주소로 오는 모든 호출을 받아요.",
       "signedOn": "켜짐: 시크릿으로 서명된 호출만 통과해요.",
-      "signedHelp": "본문(GET 호출이면 ?를 뺀 쿼리 문자열)의 HMAC-SHA256을 X-Agentes-Signature(sha256=…)에 담아 보내세요. GitHub의 X-Hub-Signature-256도 쓸 수 있어요.",
+      "signedHelp": "본문(GET 호출이면 ?를 뺀 쿼리 문자열)의 HMAC-SHA256을 X-Agentes-Signature(sha256=…)에 담아 보내세요. GitHub의 X-Hub-Signature-256도 쓸 수 있어요. Linear라면 Linear가 보여주는 서명 시크릿을 붙여넣으세요. Linear-Signature를 확인하고, 1분이 넘은 호출은 거부해요.",
       "addSecret": "서명 필수",
+      "pasteSecret": "서비스의 시크릿 사용",
+      "pasteLabel": "서비스의 서명 시크릿",
+      "secretPasted": "시크릿을 저장했어요. 이걸로 서명된 호출만 통과해요.",
       "newSecret": "새 시크릿",
       "newSecretTitle": "새 시크릿을 만들까요?",
       "newSecretBody": "현재 시크릿은 바로 작동을 멈춰요. 이 루틴을 호출하는 서비스를 업데이트할 때까지 이전 시크릿으로 서명된 호출은 거부돼요.",
@@ -8900,6 +8920,7 @@
     "busyAnyComputer_other": "컴퓨터에서 하루 {{count}}번 실행되니 컴퓨터를 켜 두어야 해요.",
     "outcome": {
       "queued": "대기열에 있음",
+      "queuedBehind": "대기열에 있음: {{name}} 루틴이 끝나기를 기다려요",
       "running": "지금 작업 중",
       "waiting": "누군가의 답변 대기 중",
       "waitingApproval": "내 승인 대기 중",
@@ -19665,6 +19686,9 @@
     "failed": "지금은 열 수 없어요. 잠시 후 다시 시도하세요.",
     "adminsOnly": "워크스페이스의 agentes.chat 요금제는 소유자와 관리자만 관리할 수 있어요.",
     "seeOptions": "옵션 보기",
+    "plan": "요금제",
+    "planMonth": "{{plan}}, 월간",
+    "planYear": "{{plan}}, 연간",
     "people": "사람",
     "files": "파일",
     "usedOf": "{{limit}} 중 {{used}}",
@@ -21182,6 +21206,34 @@
     },
     "approvals": "고객에게 나가는 것은 승인을 기다려요. 믿을 수 있게 되면 나중에 맡길 수 있어요.",
     "approvalsPersonal": "내 이름으로 보내거나 결제하거나 예약하는 건 모두 승인을 기다려요. 믿을 수 있게 되면 나중에 맡길 수 있어요."
+  },
+  "paidMoment": {
+    "on": "요금제가 활성화됐어요",
+    "onPlan": "{{plan}} 요금제를 이용 중이에요",
+    "onMonth": "{{plan}} 요금제를 월간으로 이용 중이에요",
+    "onYear": "{{plan}} 요금제를 연간으로 이용 중이에요",
+    "room": {
+      "both_other": "{{people}}명이 함께하고 파일은 {{files}}까지 저장할 수 있어요.",
+      "people_other": "{{people}}명이 함께할 수 있고 파일은 제한이 없어요.",
+      "files": "파일은 {{files}}까지 저장할 수 있고 인원은 제한이 없어요.",
+      "none": "인원과 파일 모두 제한이 없어요."
+    },
+    "computer": {
+      "on": "컴퓨터가 켜져 있어요.",
+      "starting": "컴퓨터를 준비하고 있어요.",
+      "startingTold": "컴퓨터를 준비하고 있어요. 켜지면 알려 드릴게요."
+    },
+    "hello": "안녕하세요, {{first}}님",
+    "hi": "안녕하세요",
+    "say": "모두 모였어요. 이제 일해 볼까요.",
+    "sayOn": "모두 모였고 컴퓨터도 켜졌어요. 이제 일해 볼까요.",
+    "sayStarting": "모두 모였어요. 컴퓨터가 켜지면 알려 드릴게요.",
+    "next": {
+      "ai": "AI 연결",
+      "people": "사람 초대",
+      "open": "워크스페이스로 가기",
+      "talk": "{{name}}와 대화하기"
+    }
   },
   "arrival": {
     "beta": {

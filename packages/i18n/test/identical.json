@@ -644,7 +644,8 @@
       "codeTerminal.label",
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
-      "live.type.glyph"
+      "live.type.glyph",
+      "billing.plan"
     ],
     "fr": [
       "agentPage.facts.budget",
@@ -3880,7 +3881,8 @@
       "codeTerminal.label",
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
-      "live.type.glyph"
+      "live.type.glyph",
+      "billing.plan"
     ],
     "pl": [
       "drive.folder",
@@ -4222,7 +4224,8 @@
       "connectors.store.agents",
       "live.type.gradient",
       "live.type.gradients.ocean",
-      "live.type.glyph"
+      "live.type.glyph",
+      "billing.plan"
     ],
     "ru": [
       "live.canvas.sizes.short.s",

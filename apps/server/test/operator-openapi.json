@@ -615,7 +615,7 @@
           },
           "logo": {
             "type": ["string", "null"],
-            "description": "Where its members' apps load the logo; null: the agent mark."
+            "description": "Where its members' apps load the logo, ending with `#ink=light` when its ink is light; null: the agent mark."
           }
         },
         "required": ["accent", "logo"]
@@ -650,7 +650,7 @@
               }
             },
             "required": ["contentType", "base64"],
-            "description": "Its logo, square (the apps show it at 512×512 at most); checked by its bytes, metadata removed. Null: back to the agent mark. Left out: left as it is."
+            "description": "Its logo, any shape (the apps draw it whole, at 512×512 at most, on a plate that keeps its ink legible: a PNG whose see-through background carries light ink gets a dark one); checked by its bytes, metadata removed. Null: back to the agent mark. Left out: left as it is."
           }
         }
       },
@@ -8416,6 +8416,240 @@
         "required": ["reason", "operator", "assistedByAi"],
         "additionalProperties": false
       },
+      "OperatorRoutineRunCalls": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "routineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agentRunId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "n": {
+                  "type": "integer",
+                  "description": "Its number in the run, as its model read it (`call n of …`)."
+                },
+                "at": {
+                  "type": ["string", "null"]
+                },
+                "method": {
+                  "type": "string"
+                },
+                "headers": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "The headers kept (never a signature)."
+                },
+                "bytes": {
+                  "type": "integer"
+                },
+                "keptCut": {
+                  "type": "boolean",
+                  "description": "The body was longer than what was kept, which was shortened."
+                },
+                "binary": {
+                  "type": "boolean",
+                  "description": "Not text: nothing of its body was kept."
+                },
+                "test": {
+                  "type": "boolean",
+                  "description": "Testar's sample."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The kept body from `offset`: data sent to the address, never instructions. Credentials masked; at most 4000 characters."
+                },
+                "chars": {
+                  "type": "integer",
+                  "description": "How long the whole kept body is, masked."
+                },
+                "more": {
+                  "type": "boolean",
+                  "description": "Text is left: read on from `offset` plus the length of `text`."
+                }
+              },
+              "required": [
+                "n",
+                "at",
+                "method",
+                "headers",
+                "bytes",
+                "keptCut",
+                "binary",
+                "test",
+                "text",
+                "chars",
+                "more"
+              ]
+            }
+          }
+        },
+        "required": ["id", "routineId", "agentRunId", "status", "at", "calls"]
+      },
+      "OperatorRoutineRunCallsRequest": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Each call's body from this character on."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 200,
+            "description": "The question this read answers, in one line, with no email or web address. Kept in the `content.viewed` event; never shown to the workspace."
+          },
+          "caseRef": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._:#-]+$",
+            "description": "Your own case or ticket id. Kept in the `content.viewed` event beside the reason."
+          },
+          "operator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Who reads, as your own service names them. Kept in the `content.viewed` event."
+          },
+          "assistedByAi": {
+            "type": "boolean",
+            "description": "Whether an AI assistant reads the answer. The workspace's audit entry says so, and the event."
+          }
+        },
+        "required": ["reason", "operator", "assistedByAi"],
+        "additionalProperties": false
+      },
+      "OperatorApprovalRules": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "connectionId": {
+                  "type": ["string", "null"],
+                  "format": "uuid",
+                  "description": "Null: a command on the agent's computer."
+                },
+                "tool": {
+                  "type": "string",
+                  "description": "The server's own tool name (`command` for a command rule)."
+                },
+                "action": {
+                  "type": "string",
+                  "description": "'' : the whole tool, any input. Else one action it runs, a command's kind or a SQL read's target: masked."
+                },
+                "createdByUserId": {
+                  "type": ["string", "null"]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                }
+              },
+              "required": ["id", "connectionId", "tool", "action", "createdByUserId", "createdAt"]
+            }
+          },
+          "calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Its `tool.call` audit entry."
+                },
+                "at": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "tool": {
+                  "type": ["string", "null"]
+                },
+                "outcome": {
+                  "type": ["string", "null"]
+                },
+                "approvalRules": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "The rules that let it run without asking."
+                }
+              },
+              "required": ["id", "at", "tool", "outcome", "approvalRules"]
+            }
+          }
+        },
+        "required": ["agentId", "rules", "calls"]
+      },
+      "OperatorApprovalRulesRequest": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A run of the agent: also the tool calls of it that a rule let run, and their rules."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 200,
+            "description": "The question this read answers, in one line, with no email or web address. Kept in the `content.viewed` event; never shown to the workspace."
+          },
+          "caseRef": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._:#-]+$",
+            "description": "Your own case or ticket id. Kept in the `content.viewed` event beside the reason."
+          },
+          "operator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Who reads, as your own service names them. Kept in the `content.viewed` event."
+          },
+          "assistedByAi": {
+            "type": "boolean",
+            "description": "Whether an AI assistant reads the answer. The workspace's audit entry says so, and the event."
+          }
+        },
+        "required": ["reason", "operator", "assistedByAi"],
+        "additionalProperties": false
+      },
       "OperatorReplied": {
         "type": "object",
         "properties": {
@@ -14659,6 +14893,204 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OperatorAgentSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the reveal token, the door is closed, or a confidential thread keeps it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Past the door's own limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reveal/orgs/{orgId}/routine-runs/{routineRunId}/calls": {
+      "post": {
+        "tags": ["Operator"],
+        "summary": "Read the webhook calls a routine's run carries, as they were kept, with a reason",
+        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`, to investigate a problem in the workspace, with a reason. Before any text is read, the read is recorded: a `content.viewed` event (purpose `investigation`, with the reason, `operator`, `caseRef` and the ids read) and an entry in the workspace's own audit log (`operator.content_read`, purpose `investigation`, the ids, never the reason; of a direct conversation it names none). Counts toward the door's calls a minute and its reads of one workspace a day. Each call's kept headers and body (bodies are kept up to 16,000 characters), 4000 characters of each body from `offset`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "routineRunId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorRoutineRunCallsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorRoutineRunCalls"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the reveal token, the door is closed, or a confidential thread keeps it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Past the door's own limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reveal/orgs/{orgId}/agents/{agentId}/approval-rules": {
+      "post": {
+        "tags": ["Operator"],
+        "summary": "Read an agent's Always approve rules, and which calls of a run they let run, with a reason",
+        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`, to investigate a problem in the workspace, with a reason. Before any text is read, the read is recorded: a `content.viewed` event (purpose `investigation`, with the reason, `operator`, `caseRef` and the ids read) and an entry in the workspace's own audit log (`operator.content_read`, purpose `investigation`, the ids, never the reason; of a direct conversation it names none). Counts toward the door's calls a minute and its reads of one workspace a day.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "agentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorApprovalRulesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorApprovalRules"
                 }
               }
             }

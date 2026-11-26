@@ -320,6 +320,28 @@ export async function queueEventRun(
 }
 
 /**
+ * A routine turned back on: what its runs gave back held while it was off (stopped by the pause, or skipped) starts
+ * now. Left held, it waited for its line's next event, and a webhook routine that gets few calls looked stuck
+ * queued after a resume.
+ */
+export async function wakeHeldRuns(deps: { db: Database }, routineId: string): Promise<string[]> {
+  return deps.db.transaction(async (tx) => {
+    await lockRoutine(tx, routineId);
+    await tx
+      .update(routineRuns)
+      .set({ event: sql`(${routineRuns.event} - 'held') || '{"gathered": true}'::jsonb` })
+      .where(
+        and(
+          eq(routineRuns.routineId, routineId),
+          eq(routineRuns.status, "queued"),
+          sql`${routineRuns.event}->>'held' = 'true'`,
+        ),
+      );
+    return startWaiting(tx, routineId);
+  });
+}
+
+/**
  * Events a run ended without finishing go back to its line (`event.line`), ahead of what came after
  * them (`createdAt`: the ended run's place): gathered, so they start as soon as the line is free, or
  * `held` for the line's next event (a person stopped them). Returns the new run.

@@ -41,6 +41,7 @@ import {
   noAiCardOf,
   noAiCardShown,
   noAiLineKey,
+  noAiReceiptLine,
   noAiStatusKey,
   onlyOwnerReplies,
   ownSignInFor,
@@ -1166,5 +1167,36 @@ describe("a plan that doesn't run on the computer's system says so before it is 
     };
     const { gate: g } = planGateWithoutAgent({ choice: "gemini", edition: "selfhost", setup: null, computers: [pc] });
     expect(planOffSystem(enT, g)).toBe("Windows");
+  });
+});
+
+describe("noAiReceiptLine", () => {
+  const say = (why: Parameters<typeof noAiReceiptLine>[0]) => {
+    const line = noAiReceiptLine(why);
+    return line ? { text: enT(line.key, { name: "Lodi", model: line.model }), connect: line.connect } : null;
+  };
+
+  test("a plan it has that can't think there says why, with no Connect: another account wouldn't start it", () => {
+    expect(say({ code: "cli_failed" })).toEqual({
+      text: "Lodi can't answer now: the plan's AI stopped with an error.",
+      connect: false,
+    });
+    expect(say({ code: "plan_limit" })?.connect).toBe(false);
+    expect(say({ code: "model_limit", params: { model: "GPT-5.5" } })?.text).toContain("GPT-5.5");
+  });
+
+  test("a missing piece says which and keeps Connect; a plan that isn't this person's keeps Connect too", () => {
+    expect(say({ code: "cli_missing" })).toEqual({
+      text: enT("noAi.cliMissing", { name: "Lodi" }),
+      connect: true,
+    });
+    expect(say({ code: "plan_not_shared" })?.connect).toBe(true);
+  });
+
+  test("no AI at all, no reason, or one it can't word: the plain line", () => {
+    expect(noAiReceiptLine(undefined)).toBeNull();
+    expect(noAiReceiptLine({ code: "no_key" })).toBeNull();
+    expect(noAiReceiptLine({ code: "plans_not_yours" })).toBeNull();
+    expect(noAiReceiptLine({ code: "model_limit" })).toBeNull();
   });
 });

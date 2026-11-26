@@ -332,6 +332,19 @@ export function providerFailureText(kind: "provider_error" | "gave_up", error: P
 const providerNow = (label: string) => (label === "Anthropic" ? PROVIDERS.anthropic.label : label);
 
 /**
+ * With `no_ai`: why (`NoAiCardReason`, kept in its `error` step by `failNoAi`) and the model a model's own limit names,
+ * so the receipt under the message says the real cause ("a IA do plano parou com um erro"), not "no AI" for all of them.
+ */
+export const noAiDetail = (why: string | null | undefined, model?: string | null) =>
+  why ? { errorCode: why, ...(model ? { errorParams: { model } } : {}) } : undefined;
+
+/** For a select over `agent_runs`: a `no_ai` run's `error` step (`noAiDetail` reads it), else null. */
+export const noAiWhySql = sql<{ code?: string; model?: string } | null>`(case when ${agentRuns.error} = 'no_ai' then
+  (select ${agentRunSteps.data} from ${agentRunSteps} where ${agentRunSteps.runId} = agent_runs.id
+  and ${agentRunSteps.kind} = 'error' and ${agentRunSteps.data}->>'reason' = 'no_ai'
+  order by ${agentRunSteps.seq} desc limit 1) end)`;
+
+/**
  * The stable code (and params) of a run's stored `error`, for the app to
  * word it in the person's language; the stored text stays as the fallback.
  */

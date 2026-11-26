@@ -104,6 +104,13 @@ describe("Membros e convites (ADR 0090)", () => {
     expect(invitationLine(pt, "pt-BR", inv, ROLES, { sender }, NOW)).toBe("Admin · convite seu · expira em 6 dias");
     const resent = invitationLine(pt, "pt-BR", inv, ROLES, { resentUntil: later(7) }, NOW);
     expect(resent).toStartWith("Admin · mandado de novo · vale até ");
+    // An email that never arrived says why, even over a resend still waiting for its own answer.
+    const bounced = invitation({ id: "b", roleIds: [ADMIN.id], undelivered: "suppressed" });
+    expect(invitationLine(pt, "pt-BR", bounced, ROLES, { resentUntil: later(7) }, NOW)).toStartWith(
+      "Admin · não chegou: o provedor de e-mail bloqueou este endereço",
+    );
+    const refused = invitation({ id: "r", undelivered: "rejected", expiresAt: later(-1) });
+    expect(invitationLine(pt, "pt-BR", refused, ROLES, {}, NOW)).toMatch(/^Membro · expirou /);
   });
 
   test("who sent an invitation", async () => {

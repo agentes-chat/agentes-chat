@@ -73,6 +73,7 @@ export interface AiChoiceRow {
   group: AiChoiceGroup;
   brain: BrainKind;
   account?: AiHubAccount;
+  /** A key's row: the key. "A do workspace": the workspace's default key, which it thinks with. */
   apiKey?: AiHubKey;
   /** Picking it works; else it shows dimmed with `reason`. */
   usable: boolean;
@@ -151,11 +152,14 @@ export function aiChoiceRows(hub: AiHub | null | undefined, ctx: AiChoiceContext
     return rows;
   }
   if (target.kind === "lodi" && target.scope === "mine") {
+    // "A do workspace" thinks with the workspace's default key: the row names it.
+    const defaultKey = hub?.keys.find((k) => k.isDefault);
     rows.push({
       key: "workspace",
       type: "workspace",
       group: "workspace",
       brain: "model",
+      ...(defaultKey ? { apiKey: defaultKey } : {}),
       usable: true,
       selected: !current || current.brain === "model",
     });

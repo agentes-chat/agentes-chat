@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import type { EventEmitter } from "node:events";
 import { mkdirSync, realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -67,7 +69,7 @@ import {
   writeAgents,
 } from "./access";
 import { AccountBrains } from "./account-brains";
-import { accountSelfCheck, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
+import { accountSelfCheck, SELF_CHECK_DEFERRED, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
 import { AccountManager, grokSandboxFails, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
 import { ActivityLog } from "./activity";
 import {
@@ -75,11 +77,13 @@ import {
   type AgentUser,
   AgentUsers,
   agentGid,
+  agentTmpMemoryBytes,
   authEgressPrefix,
   denySchedulers,
   ensureGitCacheUser,
   GIT_CACHE_DIR,
   grantGitCache,
+  idleTmpLines,
   keepContainers,
   readAgentUsers,
   rootlessContainers,
@@ -203,6 +207,7 @@ import { XcodeFixer, type XcodeFixOptions } from "./xcode-fix";
 const MEMORY_READ = process.platform === "linux";
 /** How often the tasks' room is read for the server (sent only when it changed). */
 const TASK_ROOM_REPORT_MS = 15_000;
+const IDLE_TMP_SWEEP_MS = 60 * 60_000;
 
 /**
  * Background tasks at once, sized to the computer's memory: one per 1.5 GiB left after 4 GiB for the system and the
@@ -548,9 +553,14 @@ export class RunnerDaemon implements RequestObserver {
   readonly accounts: AccountManager;
   /** System mode: each Claude login for all agents has its own OS user. */
   private readonly accountUsers: NonNullable<DaemonOptions["accountUsers"]> | null;
-  /** The self-check's last answer: null passed, a string why not. Undefined until it ran; only with the switch on. */
+  /**
+   * The self-check's last answer: null passed, `SELF_CHECK_DEFERRED` waiting for an agent's user, a string why not.
+   * Undefined until it ran; only with the switch on.
+   */
   private sharedLoginBlocked: string | null | undefined;
   private sharedLoginRetry: ReturnType<typeof setTimeout> | null = null;
+  /** The check asked again for a turn that made the first agent's user (`recheckSharedLogin`). */
+  private sharedLoginRecheck: Promise<void> | null = null;
   /** Deleted agents cleared from the sign-ins by this process: each frame lists them all again. */
   private readonly swept = new Set<string>();
   /** The agents' desktops (ADR 0058): they outlive sessions and this process. */
@@ -680,6 +690,7 @@ export class RunnerDaemon implements RequestObserver {
         ? {
             sharedLogin: {
               ready: () => this.sharedLoginReady,
+              turnsReady: () => this.sharedLoginTurnsReady,
               launcher: (id: string) => accountUsers.launcher(id),
               remove: (id: string) => accountUsers.remove(id),
             },
@@ -745,14 +756,47 @@ export class RunnerDaemon implements RequestObserver {
     return this.agents.find((a) => a.id === agentId)?.containers === true;
   }
 
-  /** Its switch is on, and the last check made under that switch passed. */
+  /**
+   * Its switch is on, and the last check made under that switch passed, or held all it could try with no agent here:
+   * a sign-in may begin. A computer whose first step is that sign-in has no agent's user yet.
+   */
   private get sharedLoginReady() {
+    const v = this.sharedLoginBlocked;
+    return (v === null || v === SELF_CHECK_DEFERRED) && this.stored?.claudeSharedLogin !== undefined;
+  }
+
+  /** The last check also tried the agents' network: turns may run on such a sign-in. */
+  private get sharedLoginTurnsReady() {
     return this.sharedLoginBlocked === null && this.stored?.claudeSharedLogin !== undefined;
+  }
+
+  /** What `hello` says of Claude's own login for all agents. Waiting for an agent's user is no failure. */
+  private loginHello() {
+    const blocked = this.sharedLoginBlocked;
+    return {
+      claudeLoginMethods: this.accounts.claudeLoginMethods(),
+      ...(blocked && blocked !== SELF_CHECK_DEFERRED && this.stored?.claudeSharedLogin
+        ? { claudeLoginBlocked: blocked }
+        : {}),
+    };
+  }
+
+  /**
+   * A turn made the first agent's user while the check waited for one: the check again now, once however many turns
+   * ask meanwhile, so that turn waits seconds rather than for the next run.
+   */
+  private recheckSharedLogin(): Promise<void> {
+    if (this.sharedLoginBlocked === SELF_CHECK_DEFERRED) {
+      this.sharedLoginRecheck ??= this.checkSharedLogin().finally(() => {
+        this.sharedLoginRecheck = null;
+      });
+    }
+    return this.sharedLoginRecheck ?? Promise.resolve();
   }
 
   /** Who stays on which sign-in: nobody while that login may not run, so no idle CLI is left on its store. */
   private keepHosted(agents: readonly MachineAgent[]) {
-    const ready = this.sharedLoginReady;
+    const ready = this.sharedLoginTurnsReady;
     const hosted = this.session?.accountBrains?.brains;
     for (const a of agents) hosted?.keepAccount(ready ? (a.account ?? null) : null, ready ? a.accounts : [], a.id);
   }
@@ -771,12 +815,13 @@ export class RunnerDaemon implements RequestObserver {
     // A pass holds for what it checked; the config that replaced this one asked again (`applyStored`).
     if (JSON.stringify(this.stored?.claudeSharedLogin) !== JSON.stringify(config.claudeSharedLogin)) return;
     const before = this.sharedLoginBlocked;
+    const said = JSON.stringify(this.loginHello());
     this.sharedLoginBlocked = verdict;
     if (this.sharedLoginRetry) clearTimeout(this.sharedLoginRetry);
     this.sharedLoginRetry = null;
     // A failure can be the machine's own moment (a busy boot, a relay starting): waiting for the next 6-hourly run
-    // would withhold the method that long.
-    if (verdict && !this.stopped) {
+    // would withhold the method that long. Waiting for an agent is asked again by the turn that makes one.
+    if (verdict && verdict !== SELF_CHECK_DEFERRED && !this.stopped) {
       this.sharedLoginRetry = setTimeout(
         () => void this.checkSharedLogin(),
         this.opts.selfCheckRetryMs ?? SELF_CHECK_RETRY_MS,
@@ -789,7 +834,8 @@ export class RunnerDaemon implements RequestObserver {
       // A look taken before this answer couldn't ask the sign-ins' CLIs (status unknown) and would stand for the
       // list's whole TTL.
       this.accounts.invalidate();
-      this.session?.connection.reconnect();
+      // Only for a new `hello`: a pass after waiting for an agent changes nothing there, and that agent's turn waits.
+      if (JSON.stringify(this.loginHello()) !== said) this.session?.connection.reconnect();
     }
   }
 
@@ -927,6 +973,9 @@ export class RunnerDaemon implements RequestObserver {
             this.load.add(l && oomKills !== undefined ? { ...l, oomKills } : l, undefined, {
               ...diskFigures(d),
               ...(this.sharedGb === undefined ? {} : { sharedGb: this.sharedGb }),
+              ...(this.stored?.mode === "system" && process.platform === "linux"
+                ? { agentTmpRamGb: Math.round((agentTmpMemoryBytes() / 2 ** 30) * 10) / 10 }
+                : {}),
             }),
           );
         })
@@ -952,6 +1001,9 @@ export class RunnerDaemon implements RequestObserver {
     const sizes = setInterval(() => this.measureShared(), SHARED_SIZE_MS);
     sizes.unref?.();
     this.timers.push(sizes);
+    const idleTmp = setInterval(() => this.cleanIdleTmp(), IDLE_TMP_SWEEP_MS);
+    idleTmp.unref?.();
+    this.timers.push(idleTmp);
     const sharing = setInterval(() => this.shareFiles(), SHARED_FIX_MS);
     sharing.unref?.();
     this.timers.push(sharing);
@@ -1643,6 +1695,7 @@ export class RunnerDaemon implements RequestObserver {
           grants: (agentId) => realFoldersFor(this.access(), agentId),
           relay: this.self.command,
           shared: () => this.stored?.claudeSharedLogin,
+          recheck: () => this.recheckSharedLogin(),
           idleMs: (config.brainIdleMinutes ?? DEFAULT_LIMITS.brainIdleMinutes) * 60_000,
           maxProcesses: config.brainMaxProcesses ?? DEFAULT_LIMITS.brainMaxProcesses,
           log,
@@ -2146,6 +2199,21 @@ export class RunnerDaemon implements RequestObserver {
     });
   }
 
+  /** System mode, as root: what agents with nothing running but their worker left in /tmp goes (`idleTmpLines`). */
+  private cleanIdleTmp() {
+    const supervisor = this.session?.supervisor;
+    if (!supervisor || process.platform !== "linux" || process.getuid?.() !== 0 || this.opts.workers) return;
+    const procs = readNetworkProcesses();
+    const idle = readAgentUsers(this.opts.home)
+      .filter((u) => !uidHasOtherProcesses(procs, u.uid, supervisor.runningPid(u.id)))
+      .map((u) => u.uid);
+    if (idle.length === 0) return;
+    const clean = spawn("/usr/bin/systemd-tmpfiles", ["--clean", "-"], { stdio: ["pipe", "ignore", "ignore"] });
+    (clean as unknown as EventEmitter).on("error", () => undefined);
+    clean.stdin?.on("error", () => undefined);
+    clean.stdin?.end(idleTmpLines(idle));
+  }
+
   /** System mode: what agents moved or copied into the shared folder becomes the others' to change too. */
   private shareFiles() {
     const spec = this.sharedGroup;
@@ -2194,10 +2262,7 @@ export class RunnerDaemon implements RequestObserver {
       paused: this.pauseState(),
       access,
       size: { ...machineSize(workspaceReal), maxTasks: this.taskLimit(this.stored), ...this.taskRoom() },
-      claudeLoginMethods: this.accounts.claudeLoginMethods(),
-      ...(this.sharedLoginBlocked && this.stored?.claudeSharedLogin
-        ? { claudeLoginBlocked: this.sharedLoginBlocked }
-        : {}),
+      ...this.loginHello(),
       ...(this.accounts.authEgressGroup() ? { authEgressGroup: true as const } : {}),
     };
   }

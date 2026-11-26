@@ -626,7 +626,11 @@
       "wrongAddress": "Verkeerd adres? Wijzig het",
       "banner": "Bevestig je e-mail",
       "bannerSub": "Open de link die we naar {{email}} hebben gestuurd.",
-      "change": "Adres wijzigen"
+      "change": "Adres wijzigen",
+      "undelivered": {
+        "suppressed": "De e-mail kwam niet aan: de e-mailprovider heeft {{email}} geblokkeerd na een eerdere bounce. Controleer of het adres klopt en vraag een nieuwe link aan.",
+        "rejected": "De e-mail kwam niet aan: {{email}} werd geweigerd. Controleer of het adres klopt, of wijzig het."
+      }
     },
     "unconfirmed": "Dit e-mailadres heeft al een account met een wachtwoord dat nog niet is bevestigd. Log in met het wachtwoord of maak een nieuw wachtwoord via e-mail.",
     "unconfirmedReset": "Nieuw wachtwoord maken",
@@ -1458,6 +1462,8 @@
         "model_other": "{{who}} gebruiken {{label}}, dat hier niet beschikbaar is.",
         "file_one": "{{who}} gebruikt {{label}}.",
         "file_other": "{{who}} gebruiken {{label}}.",
+        "path_one": "{{who}} verwijst in de instructies naar {{label}}, maar dat kwam niet mee met de import, dus de agent kan het niet openen. Zet die bestanden in de Drive of haal dat pad uit de instructies.",
+        "path_other": "{{who}} verwijzen in hun instructies naar {{label}}, maar dat kwam niet mee met de import, dus de agents kunnen het niet openen. Zet die bestanden in de Drive of haal dat pad uit de instructies.",
         "webhook_one": "De routine {{label}} ({{who}}) krijgt hier een nieuw adres: wijzig het in de site of app die het oude aanriep.",
         "webhook_other": "De routine {{label}} ({{who}}) krijgt hier een nieuw adres: wijzig het in de site of app die het oude aanriep."
       },
@@ -1565,6 +1571,7 @@
         "app": "Koppelen",
         "model": "Kies een model",
         "file": "De Drive openen",
+        "path": "De Drive openen",
         "webhook": "Routines openen"
       },
       "linkSkipped_one": "{{count}} bestand voorbij de limiet van de link",
@@ -3827,7 +3834,7 @@
     "nowEveryAgent": "Alle agents nu: {{level}}.",
     "undo": "Ongedaan maken",
     "everyAgent": "Voor alle agents in de workspace",
-    "follows": "Volgt de workspace",
+    "follows": "{{level}} · van de workspace",
     "edit": "Wijzigen",
     "workspaceLead": "Wanneer agents iemand vragen voordat ze iets doen.",
     "workspaceHelp": "Elke agent volgt deze keuze tot iemand die van de agent wijzigt op zijn pagina.",
@@ -7759,6 +7766,10 @@
       "expires": "Verloopt over {{left}}",
       "expired": "Verlopen {{when}}",
       "resentState": "Opnieuw verstuurd · geldig tot {{date}}",
+      "undelivered": {
+        "suppressed": "Niet aangekomen: de e-mailprovider heeft dit adres geblokkeerd na een eerdere bounce. Controleer of het klopt en stuur opnieuw, of kopieer de link.",
+        "rejected": "Niet aangekomen: het adres werd geweigerd. Controleer of het klopt, of kopieer de link en stuur hem op een andere manier."
+      },
       "copied": "Link naar de uitnodiging van {{email}} gekopieerd. Het is dezelfde als in de e-mail.",
       "copiedNoEmail": "Link naar de uitnodiging van {{email}} gekopieerd.",
       "resent": "Opnieuw verstuurd naar {{email}}. De link is dezelfde en werkt tot {{date}}.",
@@ -8721,6 +8732,13 @@
     "notFound": "Deze routine bestaat niet meer of je hebt geen toegang.",
     "copyWebhook": "Webhook-URL kopiëren",
     "webhookCopied": "Webhook-URL gekopieerd.",
+    "runCalls": {
+      "show": "Aanroepen ({{n}})",
+      "hide": "Aanroepen verbergen",
+      "cut": "Ingekort",
+      "binary": "Geen tekst, niet bewaard",
+      "copied": "Aanroep gekopieerd."
+    },
     "webhook": {
       "when": "Als de webhook wordt aangeroepen",
       "waiting": "Wacht op de volgende aanroep",
@@ -8746,8 +8764,11 @@
       "signature": "Handtekening",
       "signedOff": "Uit: de agent krijgt elke aanroep naar het adres.",
       "signedOn": "Aan: alleen aanroepen die met het geheim zijn ondertekend, komen door.",
-      "signedHelp": "Stuur de HMAC-SHA256 van de body (bij een GET-aanroep: van de querystring, zonder het ?) in X-Agentes-Signature (sha256=…). X-Hub-Signature-256 van GitHub werkt ook.",
+      "signedHelp": "Stuur de HMAC-SHA256 van de body (bij een GET-aanroep: van de querystring, zonder het ?) in X-Agentes-Signature (sha256=…). X-Hub-Signature-256 van GitHub werkt ook. Voor Linear plak je het ondertekeningsgeheim dat Linear toont: de Linear-Signature wordt gecontroleerd en aanroepen ouder dan een minuut worden geweigerd.",
       "addSecret": "Handtekening vereisen",
+      "pasteSecret": "Het geheim van de dienst gebruiken",
+      "pasteLabel": "Ondertekeningsgeheim van de dienst",
+      "secretPasted": "Geheim opgeslagen. Alleen aanroepen die ermee zijn ondertekend komen door.",
       "newSecret": "Nieuw geheim",
       "newSecretTitle": "Een nieuw geheim maken?",
       "newSecretBody": "Het huidige geheim werkt meteen niet meer. Aanroepen die ermee zijn ondertekend, worden geweigerd tot je de diensten bijwerkt die deze routine aanroepen.",
@@ -9278,6 +9299,7 @@
     "busyAnyComputer_other": "Draait {{count}} keer per dag op de computer, die aan moet blijven.",
     "outcome": {
       "queued": "In de wachtrij",
+      "queuedBehind": "In de wachtrij: wacht tot de routine {{name}} klaar is",
       "running": "Nu bezig",
       "waiting": "Wacht tot iemand antwoordt",
       "waitingApproval": "Wacht op jouw goedkeuring",
@@ -20446,6 +20468,9 @@
     "failed": "Kon het nu niet openen. Probeer het zo opnieuw.",
     "adminsOnly": "Alleen de eigenaren en beheerders van de werkruimte beheren het agentes.chat-abonnement.",
     "seeOptions": "Opties bekijken",
+    "plan": "Abonnement",
+    "planMonth": "{{plan}}, maandelijks",
+    "planYear": "{{plan}}, jaarlijks",
     "people": "Mensen",
     "files": "Bestanden",
     "usedOf": "{{used}} van {{limit}}",
@@ -22061,6 +22086,36 @@
     },
     "approvals": "Wat naar klanten gaat, wacht op je goedkeuring. Je kunt het later vrijgeven, als je ze vertrouwt.",
     "approvalsPersonal": "Alles wat in jouw naam wordt verstuurd, betaald of geboekt, wacht op je goedkeuring. Je kunt het later vrijgeven, als je ze vertrouwt."
+  },
+  "paidMoment": {
+    "on": "Je abonnement is actief",
+    "onPlan": "Je zit op {{plan}}",
+    "onMonth": "Je zit op {{plan}}, maandelijks",
+    "onYear": "Je zit op {{plan}}, jaarlijks",
+    "room": {
+      "both_one": "Ruimte voor {{people}} persoon en {{files}} aan bestanden.",
+      "both_other": "Ruimte voor {{people}} mensen en {{files}} aan bestanden.",
+      "people_one": "Ruimte voor {{people}} persoon, zonder limiet op bestanden.",
+      "people_other": "Ruimte voor {{people}} mensen, zonder limiet op bestanden.",
+      "files": "Ruimte voor {{files}} aan bestanden, zonder limiet op mensen.",
+      "none": "Geen limiet op mensen of bestanden."
+    },
+    "computer": {
+      "on": "Je computer staat aan.",
+      "starting": "Je computer wordt klaargemaakt.",
+      "startingTold": "Je computer wordt klaargemaakt. We laten het je weten zodra hij aan staat."
+    },
+    "hello": "Hoi, {{first}}",
+    "hi": "Hoi",
+    "say": "We zijn er allemaal. Aan de slag.",
+    "sayOn": "We zijn er allemaal en de computer staat aan. Aan de slag.",
+    "sayStarting": "We zijn er allemaal. We laten het je weten zodra de computer aan staat.",
+    "next": {
+      "ai": "Een AI koppelen",
+      "people": "Mensen uitnodigen",
+      "open": "Naar de werkruimte",
+      "talk": "Praat met {{name}}"
+    }
   },
   "arrival": {
     "beta": {

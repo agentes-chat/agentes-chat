@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
+  CO_AUTHOR_CASE_PROTOCOL,
   createFakeErrorReporter,
   listenResumedTopic,
   MACHINE_PROTOCOL_VERSION,
@@ -1300,7 +1301,7 @@ describe("tools on a connected machine", () => {
         id: f.agent.id,
         handle: "dev",
         name: "Dev",
-        ...(r.op === "exec" ? { coAuthors: ["Co-authored-by: Dev <noreply@agentes.chat>"] } : {}),
+        ...(r.op === "exec" ? { coAuthors: ["Co-Authored-By: Dev <noreply@agentes.chat>"] } : {}),
       });
     }
     // A person asked to turn it off: the next command goes without it.
@@ -2525,6 +2526,19 @@ test("a warm start carries the agent its turn will: the same co-author line, so 
   const [turn, warm] = ["brain.turn", "brain.warm"].map(
     (op) => (runner.sent.find((s) => s.type === "request" && s.op === op) as Request | undefined)?.agent,
   );
-  expect(turn).toMatchObject({ coAuthors: [expect.stringContaining("Co-authored-by: Dev")] });
+  expect(turn).toMatchObject({ coAuthors: [expect.stringContaining("Co-Authored-By: Dev")] });
   expect(warm).toEqual(turn);
+});
+
+test("a runner older than protocol 85 gets the co-author line in the only capitals it takes", async () => {
+  f = await setup({ machines: true });
+  const hub = f.machineHub as MachineHub;
+  const paired = await pair();
+  const runner = fakeRunner(hub, { dead: true });
+  await runner.hello(paired.token, { protocol: CO_AUTHOR_CASE_PROTOCOL - 1 });
+  const agent = { id: f.agent.id, handle: "dev", name: "Dev" };
+  void hub.call(paired.machineId, { ...brainTurn(crypto.randomUUID()), agent }).catch(() => {});
+  await until(() => runner.sent.some((s) => s.type === "request"));
+  const turn = (runner.sent.find((s) => s.type === "request") as Request | undefined)?.agent;
+  expect(turn).toMatchObject({ coAuthors: ["Co-authored-by: Dev <noreply@agentes.chat>"] });
 });

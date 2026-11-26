@@ -239,28 +239,27 @@ function Settings({
     </li>
   );
 
+  // Plan and billing stands on AI and usage's page: its own address opens that page at it, so the entry the list marks
+  // is the page shown.
+  const page = current === "billing" ? "usage" : current;
   const sections = (
     <>
-      {current !== "members" &&
-        current !== "invites" &&
-        current !== "general" &&
-        current !== "roles" &&
-        current !== "vault" && (
-          <PageHeader
-            level={2}
-            title={sectionName(current)}
-            meta={
-              current !== "devices" ? (
-                t(settingsSectionTextKey(org, current))
-              ) : edition ? (
-                t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
-              ) : setup.isError ? null : (
-                // Never one edition's words before the server says which this is (the section says if it couldn't).
-                <LoadingLine width={320} />
-              )
-            }
-          />
-        )}
+      {page !== "members" && page !== "invites" && page !== "general" && page !== "roles" && page !== "vault" && (
+        <PageHeader
+          level={2}
+          title={sectionName(page)}
+          meta={
+            page !== "devices" ? (
+              t(settingsSectionTextKey(org, page))
+            ) : edition ? (
+              t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
+            ) : setup.isError ? null : (
+              // Never one edition's words before the server says which this is (the section says if it couldn't).
+              <LoadingLine width={320} />
+            )
+          }
+        />
+      )}
       {current === "account" && <AccountSection />}
       {current === "notifications" && <NoticePrefsSection />}
       {current === "download" && <AppsDownloadSection />}
@@ -287,7 +286,7 @@ function Settings({
       )}
       {current === "storage" && <StorageSection />}
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
-      {current === "usage" && (
+      {page === "usage" && (
         <>
           <UsageTabs
             person={person}
@@ -300,14 +299,13 @@ function Settings({
             summary={<UsageSection />}
           />
           {opens("billing") && (
-            <SettingsPart id="billing">
+            <SettingsPart id="billing" here={current === "billing"}>
               <BillingSection />
             </SettingsPart>
           )}
         </>
       )}
       {current === "import" && <ImportExportSection />}
-      {current === "billing" && <BillingSection />}
       {current === "about" && <AboutSection />}
     </>
   );
@@ -387,12 +385,22 @@ function Settings({
   );
 }
 
-/** A section that stands on another one's page under its own heading: Plan and billing on AI and usage. */
-function SettingsPart({ id, children }: { id: "billing"; children: ReactNode }) {
+/**
+ * A section that stands on another one's page under its own heading: Plan and billing on AI and usage. Opened by its
+ * own address (`here`), the page opens at it.
+ */
+function SettingsPart({ id, here, children }: { id: "billing"; here: boolean; children: ReactNode }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const part = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!here) return;
+    // After the router has put the page's scroll where it keeps it.
+    const frame = requestAnimationFrame(() => part.current?.scrollIntoView?.({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [here]);
   return (
-    <section className="settings__section" aria-labelledby={`settings-part-${id}`}>
+    <section ref={part} className="settings__section" aria-labelledby={`settings-part-${id}`}>
       <PageHeader
         level={2}
         titleId={`settings-part-${id}`}

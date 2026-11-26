@@ -721,9 +721,10 @@ describe("Configurações do workspace", () => {
     const state = seedState();
     state.authConfig = { ...state.authConfig, billingUrl: "https://billing.example.com" };
     await go(state, "settings/billing");
-    // Its own address opens it alone, on the entry that holds it.
+    // Its own address opens the page that holds it, at it: the entry the list marks is the page shown.
     expect(nav().queryByRole("link", { name: "Plano e cobrança" })).toBeNull();
     expect(nav().getByRole("link", { name: "IA e uso" }).getAttribute("aria-current")).toBe("page");
+    expect(screen().getByRole("heading", { level: 2, name: "IA e uso" })).toBeTruthy();
     expect(screen().getByRole("heading", { level: 2, name: "Plano e cobrança" })).toBeTruthy();
     expect(document.body.textContent).toContain("O plano, o cartão e as faturas, numa página nossa fora do app.");
     await click(screen().getByRole("button", { name: "Abrir plano e cobrança" }));

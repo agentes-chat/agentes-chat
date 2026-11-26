@@ -5,6 +5,7 @@ import {
   type BrowserHandoffInfo,
   brainTopic,
   CLAUDE_SHARED_PROTOCOL,
+  CO_AUTHOR_CASE_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
   HEARTBEAT_MS,
@@ -45,7 +46,7 @@ import { noticeComputerBack, queueDownChecks } from "./computer-down";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
 import { codeCommitAuthor } from "./git/person-account";
-import { agentCoAuthorLine } from "./git/signature";
+import { agentCoAuthorLine, oldCoAuthorCase } from "./git/signature";
 import {
   applyAccessDecided,
   storedExecutors,
@@ -695,7 +696,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     (input) => {
       const call: TaskCall = async (_machineId, request) => {
         if (conn.orgId) await assertCanWork(db, conn.orgId, input.agent.id);
-        return callLocal(conn, await outgoing(conn.orgId, request));
+        return callLocal(conn, await outgoing(conn.orgId, request, conn.protocol));
       };
       return startMachineTask({ db, pubsub, call }, input);
     };
@@ -1067,7 +1068,7 @@ export function createMachineHub(deps: MachineHubDeps) {
    * left it out, and on what runs the agent's programs the agent's own line its commits end with (`coAuthors`,
    * ADR 0156), unless the workspace turned it off.
    */
-  async function outgoing<R extends MachineRequest>(orgId: string | null, request: R): Promise<R> {
+  async function outgoing<R extends MachineRequest>(orgId: string | null, request: R, protocol: number): Promise<R> {
     const scope = request.agent;
     if (!scope || !orgId) return request;
     // A read that fails sends nothing: who the id is must be known before it goes out. An id that is no row's
@@ -1092,7 +1093,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       agent: {
         ...scope,
         name: scope.name || agent.name,
-        ...(line ? { coAuthors: [line] } : {}),
+        ...(line ? { coAuthors: [protocol < CO_AUTHOR_CASE_PROTOCOL ? oldCoAuthorCase(line) : line] } : {}),
         ...(author ? { author } : {}),
       },
     };
@@ -1779,7 +1780,7 @@ export function createMachineHub(deps: MachineHubDeps) {
             if (row) await assertNotPaused(db, row);
           }
         }
-        return callLocal(conn, await outgoing(conn.orgId, request), options);
+        return callLocal(conn, await outgoing(conn.orgId, request, conn.protocol), options);
       }
       const row = await getMachineById(db, machineId);
       if (!row || row.deletedAt) throw new MachineOfflineError(row?.name ?? "computer", row?.kind);
@@ -1794,7 +1795,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         await assertCanWork(db, row.orgId, request.agent?.id);
         await assertNotPaused(db, row);
       }
-      const named = await outgoing(row.orgId, request);
+      const named = await outgoing(row.orgId, request, row.protocol);
       return callRemote({ ...row, connectedReplica: row.connectedReplica }, named, options);
     },
 

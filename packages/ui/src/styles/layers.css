@@ -14,6 +14,8 @@
   --z-raised: 1;
   --z-lifted: 2;
   --z-sticky: 1;
+  /* Fixed to the window over the page, and under the shared layer: a dialog open before it still covers it. */
+  --z-docked: 49;
   --z-scrim: 50;
   --z-dialog: 50;
   --z-floating: 50;

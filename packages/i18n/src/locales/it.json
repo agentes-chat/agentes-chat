@@ -641,7 +641,11 @@
       "wrongAddress": "Indirizzo sbagliato? Cambialo",
       "banner": "Conferma la tua email",
       "bannerSub": "Apri il link che abbiamo inviato a {{email}}.",
-      "change": "Cambia indirizzo"
+      "change": "Cambia indirizzo",
+      "undelivered": {
+        "suppressed": "L'email non è arrivata: il provider email ha bloccato {{email}} dopo un rimbalzo. Controlla che l'indirizzo sia giusto e chiedi un nuovo link.",
+        "rejected": "L'email non è arrivata: {{email}} è stato rifiutato. Controlla che l'indirizzo sia giusto, o cambialo."
+      }
     },
     "unconfirmed": "Questa email ha già un account con una password non ancora confermata. Accedi con la password, oppure creane una nuova via email.",
     "unconfirmedReset": "Crea una nuova password",
@@ -1504,6 +1508,9 @@
         "file_one": "{{who}} usa {{label}}.",
         "file_many": "{{who}} usano {{label}}.",
         "file_other": "{{who}} usano {{label}}.",
+        "path_one": "{{who}} cita {{label}} nelle istruzioni, ma non è arrivato con l'importazione, quindi l'agente non può aprirlo. Metti quei file nel Drive o togli quel percorso dalle istruzioni.",
+        "path_many": "{{who}} citano {{label}} nelle istruzioni, ma non è arrivato con l'importazione, quindi gli agenti non possono aprirlo. Metti quei file nel Drive o togli quel percorso dalle istruzioni.",
+        "path_other": "{{who}} citano {{label}} nelle istruzioni, ma non è arrivato con l'importazione, quindi gli agenti non possono aprirlo. Metti quei file nel Drive o togli quel percorso dalle istruzioni.",
         "webhook_one": "La routine {{label}}, di {{who}}, riceve qui un nuovo indirizzo: cambialo nel sito o nell'app che chiamava quello vecchio.",
         "webhook_many": "La routine {{label}}, di {{who}}, riceve qui un nuovo indirizzo: cambialo nel sito o nell'app che chiamava quello vecchio.",
         "webhook_other": "La routine {{label}}, di {{who}}, riceve qui un nuovo indirizzo: cambialo nel sito o nell'app che chiamava quello vecchio."
@@ -1621,6 +1628,7 @@
         "app": "Collega",
         "model": "Scegli un modello",
         "file": "Apri il Drive",
+        "path": "Apri il Drive",
         "webhook": "Apri le routine"
       },
       "linkSkipped_one": "{{count}} file oltre il limite del link",
@@ -3972,7 +3980,7 @@
     "nowEveryAgent": "Tutti gli agenti ora: {{level}}.",
     "undo": "Annulla",
     "everyAgent": "Per tutti gli agenti del workspace",
-    "follows": "Segue il workspace",
+    "follows": "{{level}} · del workspace",
     "edit": "Cambia",
     "workspaceLead": "Quando gli agenti chiedono a una persona prima di agire.",
     "workspaceHelp": "Ogni agente segue questa scelta finché qualcuno non cambia la sua nella pagina dell’agente.",
@@ -8011,6 +8019,10 @@
       "expires": "Scade tra {{left}}",
       "expired": "Scaduto {{when}}",
       "resentState": "Inviato di nuovo · valido fino al {{date}}",
+      "undelivered": {
+        "suppressed": "Non arrivato: il provider email ha bloccato questo indirizzo dopo un rimbalzo. Controlla che sia giusto e invia di nuovo, o copia il link.",
+        "rejected": "Non arrivato: l'indirizzo è stato rifiutato. Controlla che sia giusto, o copia il link e mandalo in un altro modo."
+      },
       "copied": "Link dell'invito di {{email}} copiato. È lo stesso dell'email.",
       "copiedNoEmail": "Link dell'invito di {{email}} copiato.",
       "resent": "Inviato di nuovo a {{email}}. Il link è lo stesso e vale fino al {{date}}.",
@@ -8997,6 +9009,13 @@
     "notFound": "Questa routine non esiste più o non hai accesso.",
     "copyWebhook": "Copia URL del webhook",
     "webhookCopied": "URL del webhook copiato.",
+    "runCalls": {
+      "show": "Chiamate ({{n}})",
+      "hide": "Nascondi chiamate",
+      "cut": "Accorciata",
+      "binary": "Non è testo, non conservata",
+      "copied": "Chiamata copiata."
+    },
     "webhook": {
       "when": "Quando viene chiamato il suo webhook",
       "waiting": "Aspetta la prossima chiamata",
@@ -9022,8 +9041,11 @@
       "signature": "Firma",
       "signedOff": "Disattivata: l'agente riceve qualsiasi chiamata all'indirizzo.",
       "signedOn": "Attivata: passano solo le chiamate firmate con il segreto.",
-      "signedHelp": "Invia l'HMAC-SHA256 del corpo (per una chiamata GET: della sua query string, senza il ?) in X-Agentes-Signature (sha256=…). Funziona anche X-Hub-Signature-256 di GitHub.",
+      "signedHelp": "Invia l'HMAC-SHA256 del corpo (per una chiamata GET: della sua query string, senza il ?) in X-Agentes-Signature (sha256=…). Funziona anche X-Hub-Signature-256 di GitHub. Per Linear, incolla il segreto di firma che mostra Linear: viene controllata la sua Linear-Signature e le chiamate di oltre un minuto prima sono rifiutate.",
       "addSecret": "Richiedi una firma",
+      "pasteSecret": "Usa il segreto del servizio",
+      "pasteLabel": "Segreto di firma del servizio",
+      "secretPasted": "Segreto salvato. Passano solo le chiamate firmate con esso.",
       "newSecret": "Nuovo segreto",
       "newSecretTitle": "Creare un nuovo segreto?",
       "newSecretBody": "Il segreto attuale smette subito di funzionare. Le chiamate firmate con quello vengono rifiutate finché non aggiorni i servizi che chiamano questa routine.",
@@ -9565,6 +9587,7 @@
     "busyAnyComputer_other": "Parte {{count}} volte al giorno sul computer, che deve restare acceso.",
     "outcome": {
       "queued": "In coda",
+      "queuedBehind": "In coda: aspetta che finisca la routine {{name}}",
       "running": "Al lavoro ora",
       "waiting": "In attesa che qualcuno risponda",
       "waitingApproval": "In attesa della tua approvazione",
@@ -21009,6 +21032,9 @@
     "failed": "Impossibile aprirlo ora. Riprova tra un attimo.",
     "adminsOnly": "Solo i proprietari e gli admin dello spazio di lavoro gestiscono il suo piano agentes.chat.",
     "seeOptions": "Vedi le opzioni",
+    "plan": "Piano",
+    "planMonth": "{{plan}}, mensile",
+    "planYear": "{{plan}}, annuale",
     "people": "Persone",
     "files": "File",
     "usedOf": "{{used}} su {{limit}}",
@@ -22657,6 +22683,36 @@
     },
     "approvals": "Ciò che va ai clienti aspetta la tua approvazione. Puoi lasciarlo andare più avanti, quando ti fiderai di loro.",
     "approvalsPersonal": "Tutto ciò che viene inviato, pagato o prenotato a tuo nome aspetta la tua approvazione. Puoi lasciarlo andare più avanti, quando ti fiderai di loro."
+  },
+  "paidMoment": {
+    "on": "Il tuo piano è attivo",
+    "onPlan": "Hai il piano {{plan}}",
+    "onMonth": "Hai il piano {{plan}}, mensile",
+    "onYear": "Hai il piano {{plan}}, annuale",
+    "room": {
+      "both_one": "Spazio per {{people}} persona e {{files}} di file.",
+      "both_other": "Spazio per {{people}} persone e {{files}} di file.",
+      "people_one": "Spazio per {{people}} persona, senza limiti per i file.",
+      "people_other": "Spazio per {{people}} persone, senza limiti per i file.",
+      "files": "Spazio per {{files}} di file, senza limiti per le persone.",
+      "none": "Nessun limite per persone o file."
+    },
+    "computer": {
+      "on": "Il tuo computer è acceso.",
+      "starting": "Il tuo computer è in preparazione.",
+      "startingTold": "Il tuo computer è in preparazione. Ti avvisiamo quando è acceso."
+    },
+    "hello": "Ciao, {{first}}",
+    "hi": "Ciao",
+    "say": "Ci siamo tutti. Al lavoro.",
+    "sayOn": "Ci siamo tutti e il computer è acceso. Al lavoro.",
+    "sayStarting": "Ci siamo tutti. Ti avvisiamo quando il computer è acceso.",
+    "next": {
+      "ai": "Collega un'IA",
+      "people": "Invita persone",
+      "open": "Entra nello spazio di lavoro",
+      "talk": "Parla con {{name}}"
+    }
   },
   "arrival": {
     "beta": {

@@ -1397,7 +1397,8 @@ export function registerMachinePublicRoutes(api: OpenAPIHono, deps: AppDeps) {
     if (!machine) return apiError(c, 401, "machine.unauthorized", "This computer's token is not valid");
     const logo = await currentOrgLogo({ db, blobs: adapters.platformBlobs }, machine.orgId);
     if (!logo) return apiError(c, 404, "org.logo_not_found", "The organization has no logo");
-    const etag = `"${logo.file}"`;
+    // The light-ink mark rides in the ETag (the runner passes it on to the app's tile), so a mark that changes is news.
+    const etag = `"${logo.file}${logo.ink}"`;
     const headers = { etag, "cache-control": "private, max-age=300", "x-content-type-options": "nosniff" };
     const match = c.req.header("if-none-match") ?? "";
     if (match.split(",").some((tag) => tag.trim().replace(/^W\//, "") === etag)) {

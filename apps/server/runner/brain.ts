@@ -102,7 +102,7 @@ import {
   redactDeep,
   turnAsks,
 } from "./mcp";
-import { isInside, resolveForAgent } from "./paths";
+import { isInside, resolveForAgent, runTmpEnv } from "./paths";
 import { resetIso } from "./plan-usage";
 import { claudeAtLeast, REPO_PLUGIN_MIN_CLAUDE, repoPlugin, repoPluginPrint } from "./repo-plugin";
 import type { Spawn } from "./scope-gate";
@@ -2115,6 +2115,9 @@ export interface BrainManagerOptions {
   log?: (line: string) => void;
 }
 
+/** A CLI process's own temp folder (`runTmpEnv`), gone with the process. */
+const brainTmpDir = (id: string) => path.join(os.tmpdir(), `agentes-run-${id}`);
+
 interface Live {
   key: string;
   agentId: string;
@@ -3180,6 +3183,7 @@ export class BrainManager {
       // Refused on the way (the worker went, a folder root won't build): no process will clean up after it.
       this.bridge.delete(id);
       rmSync(dir, { recursive: true, force: true });
+      rmSync(brainTmpDir(id), { recursive: true, force: true });
       throw err;
     }
   }
@@ -3254,6 +3258,7 @@ export class BrainManager {
     // where that folder is (single-user mode only, `withSharedBin`).
     if (!launched) {
       applySharedBin(env, this.opts.sharedFolder?.());
+      Object.assign(env, runTmpEnv(brainTmpDir(id)));
     }
     const keyPlan = ctx.planKey ? planOf(ctx.planKey.provider) : undefined;
     const plan = keyPlan && planForTurn(keyPlan, req.model);
@@ -3626,7 +3631,10 @@ export class BrainManager {
       // nothing kept
     }
     // The process may still read its files while it exits.
-    const cleanup = () => rmSync(live.dir, { recursive: true, force: true });
+    const cleanup = () => {
+      rmSync(live.dir, { recursive: true, force: true });
+      rmSync(brainTmpDir(live.id), { recursive: true, force: true });
+    };
     if (live.proc.exited) cleanup();
     else live.proc.onExit(cleanup);
   }

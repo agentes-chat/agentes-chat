@@ -308,7 +308,7 @@ const COMPUTER_CAPABILITIES_LIMIT =
  * hooks there.
  */
 export const COMPUTER_TOOLS_NOTE =
-  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above. Your git's `core.hooksPath` is the computer's own hooks folder (it adds your Co-authored-by line, then runs each repository's own hooks): run a hook installer (pre-commit install, lefthook install, simple-git-hooks, git lfs install or update) with `GIT_CONFIG_PARAMETERS=` before it.";
+  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above. Your git's `core.hooksPath` is the computer's own hooks folder (it adds your Co-Authored-By line, then runs each repository's own hooks): run a hook installer (pre-commit install, lefthook install, simple-git-hooks, git lfs install or update) with `GIT_CONFIG_PARAMETERS=` before it.";
 
 /**
  * The system prompt as a computer brain reads it (ADR 0037): the limit line

@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 84;
+export const MACHINE_PROTOCOL_VERSION = 85;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -329,6 +329,11 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /**
+   * What the agents' temporary folders hold in memory now (GB), ADR 0243: system mode on Linux. Absent from an older
+   * runner: no protocol number, as `oomKills`.
+   */
+  agentTmpRamGb?: number;
 }
 
 /** How often a computer's load is sampled (protocol 22). */
@@ -2620,6 +2625,12 @@ export const isEgressTarget = (v: unknown): v is { host: string; port: number } 
  */
 export const ANTIGRAVITY_WINDOWS_PROTOCOL = 84;
 
+/**
+ * Protocol 85 (ADR 0156): `AgentScope.coAuthors` lines are written `Co-Authored-By`. An older runner takes only
+ * `Co-authored-by` and would drop them, so the server sends it the old capitals (git and GitHub read either).
+ */
+export const CO_AUTHOR_CASE_PROTOCOL = 85;
+
 /** About how many more background tasks fit on the computer now, and what decides it. */
 export interface TaskRoomReport {
   more: number;
@@ -2950,7 +2961,7 @@ export interface AgentScope {
   /** Protocol 9: the agent's display name, for the machine's activity log. */
   name?: string;
   /**
-   * Protocol 63 (ADR 0156): on the work the server starts (`exec`, `brain.turn`, `task.start`), the `Co-authored-by`
+   * Protocol 63 (ADR 0156): on the work the server starts (`exec`, `brain.turn`, `task.start`), the `Co-Authored-By`
    * lines its commits end with. The runner hands them to git in the agent's own processes alone (`co-authors.ts`).
    */
   coAuthors?: string[];
@@ -5038,6 +5049,7 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskFreeGb, 0, 1e6) ? { diskFreeGb: v.diskFreeGb } : {}),
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
+    ...(between(v.agentTmpRamGb, 0, 1e6) ? { agentTmpRamGb: v.agentTmpRamGb } : {}),
   };
 }
 

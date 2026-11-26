@@ -113,7 +113,7 @@ import {
 } from "./scopes";
 import type { AheadOutcome, AheadRequest, ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./types";
 
-const { approvals, agents, agentConsultations, agentRuns, agentRunSteps, messages, routines } = schema;
+const { approvals, approvalRules, agents, agentConsultations, agentRuns, agentRunSteps, messages, routines } = schema;
 type AuditOutcome = schema.AuditOutcome;
 
 /** Merge, deploy and rollback need a person whatever a connector says, unless the agent never asks (ADR 0173). */
@@ -126,8 +126,9 @@ export const ALWAYS_SENSITIVE = /(^|[^a-z])(merge|deploy|rollback|revert_deploy|
 const sensitiveByName = (name: string, scope = "") =>
   !opensPullRequestName(name) && (ALWAYS_SENSITIVE.test(name) || ALWAYS_SENSITIVE.test(scope));
 
-export const isSensitive = (tool: Pick<ToolDefinition, "name" | "scope" | "sensitive" | "unasked">) =>
-  !tool.unasked && (tool.sensitive === true || sensitiveByName(tool.name, tool.scope));
+export const isSensitive = (
+  tool: Pick<ToolDefinition, "name" | "scope" | "sensitive" | "unasked" | "alwaysApproved">,
+) => !tool.unasked && !tool.alwaysApproved && (tool.sensitive === true || sensitiveByName(tool.name, tool.scope));
 
 /**
  * Also as a noun or under another name: a deployment, a build, a dispatch or a release (they start workflows), a
@@ -404,6 +405,43 @@ const INPUT_ALIASES = new Map<string, (input: Record<string, unknown>) => Record
 const needsApproval = (tool: ToolDefinition, decision: PolicyDecision) =>
   decision.action === "approve" || isSensitive(tool);
 
+/**
+ * The rule key (`connectionId|tool`) of a tool whose every call has one kind, the tool itself (`rememberKinds`), so a
+ * whole-tool "Aprovar sempre" covers it whatever its input; null for any other (by its target, command, SQL or
+ * actions, a mailbox's, one that asks by choice, a merge or a deploy).
+ */
+const wholeToolKey = (tool: ToolDefinition) =>
+  tool.rememberTarget ||
+  tool.rememberCommand ||
+  tool.sqlReads ||
+  tool.actions ||
+  tool.scope.startsWith("mail:") ||
+  asksByChoice(tool) ||
+  sensitiveByName(tool.name, tool.scope)
+    ? null
+    : `${tool.connectionId ?? ""}|${tool.rememberAs ?? tool.name}`;
+
+/**
+ * The agent's approvals level and, with `withRules`, its whole-tool "Aprovar sempre" rules by `wholeToolKey`, in one
+ * statement: the tool list is read before every model call.
+ */
+async function levelAndWholeToolRules(
+  ctx: Pick<ToolContext, "db" | "orgId" | "agentId">,
+  withRules: boolean,
+): Promise<[ApprovalsLevel, Set<string>]> {
+  if (!withRules) return [await approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId), new Set()];
+  const [row] = await ctx.db
+    .select({
+      level: agents.approvalsLevel,
+      rules: sql<
+        string[] | null
+      >`(select json_agg(coalesce(${approvalRules.connectionId}::text, '') || '|' || ${approvalRules.tool}) from ${approvalRules} where ${approvalRules.orgId} = ${ctx.orgId} and ${approvalRules.agentId} = ${ctx.agentId} and ${approvalRules.action} = '')`,
+    })
+    .from(agents)
+    .where(and(eq(agents.orgId, ctx.orgId), eq(agents.id, ctx.agentId)));
+  return [row?.level ?? DEFAULT_APPROVALS_LEVEL, new Set(row?.rules ?? [])];
+}
+
 /** Whether a call of this tool waits for a person: an approval, or a built-in question. */
 const asksPerson = (tool: ToolDefinition, decision: PolicyDecision) =>
   needsApproval(tool, decision) || (tool.name === ASK_USER && isBuiltIn(tool));
@@ -521,9 +559,12 @@ const policyFor = (
  * "asks a person's approval" in a directory), and every tool that asks a person takes the required
  * `why` the card shows. The same list goes to the model loop and to the bridge.
  */
-function asListed(tool: ToolDefinition, decision: PolicyDecision, never = false): ToolDefinition {
+function asListed(tool: ToolDefinition, decision: PolicyDecision, never = false, ruled = false): ToolDefinition {
   // An agent that never asks sees the tool as it runs for it: no card, no `why`.
   if (never && needsApproval(tool, decision)) return { ...tool, sensitive: false, unasked: true };
+  // A rule someone kept for the whole tool runs every call without a card: listed so, or the agent tells people one
+  // opens.
+  if (ruled && needsApproval(tool, decision)) return { ...tool, sensitive: false, alwaysApproved: true };
   if (!asksPerson(tool, decision)) return tool;
   return {
     ...tool,
@@ -651,17 +692,24 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all, level, decides] = await Promise.all([
+    const [keys, all, [level, rules], decides] = await Promise.all([
       grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
       known ?? allTools(ctx),
-      approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      levelAndWholeToolRules(ctx, Boolean(authority)),
       creatorDecides(ctx, authority),
     ]);
+    // Rules are kept, and read by a call, only at "Só o que é arriscado" (`rememberKinds`).
+    const ruled = (t: ToolDefinition) => {
+      const key = level === "risky" ? wholeToolKey(t) : null;
+      return key !== null && rules.has(key);
+    };
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
         const decision = policyFor(authority, t, level, decides);
-        if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority))];
+        if (decision.action !== "refuse") {
+          return [asListed(t, decision, unaskedAtNever(level, t, authority), ruled(t))];
+        }
         heldBack?.push(t.name);
         return [];
       })

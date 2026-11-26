@@ -833,6 +833,24 @@ describe("OpenClaw", () => {
     ]);
   });
 
+  test("a file or folder the instructions point at that the import didn't bring is listed to do, never dropped quietly", () => {
+    const soul =
+      "You are Pinch. Each morning read ~/household/bills/ and notes/ideas.md, then the list in /Users/pinch/Documents/compras.md. Bills come from POST /api/v1/bills/sync. Docs: [soul](/concepts/soul), https://example.com/a/b, e/ou 24/11.";
+    const files = folder("openclaw-workspace").map((f) => (f.name === "SOUL.md" ? { ...f, text: soul } : f));
+    const b = parseImport(files, { models: MODELS, root: "workspace" });
+    expect(b.agents[0]?.instructions).toContain("~/household/bills/");
+    expect(b.todo.filter((t) => t.kind === "path")).toEqual([
+      { kind: "path", label: "~/household/bills/", agents: ["pinch"] },
+      { kind: "path", label: "/Users/pinch/Documents/compras.md", agents: ["pinch"] },
+    ]);
+    const line = en.onboarding.import.need.path_one
+      .replace("{{who}}", "Pinch")
+      .replace("{{label}}", "~/household/bills/");
+    expect(line).toBe(
+      "Pinch points to ~/household/bills/ in its instructions, but it didn't come in the import, so the agent can't open it. Add those files to the Drive, or take that path out of the instructions.",
+    );
+  });
+
   test("files left as OpenClaw seeds them are dropped; a purpose before the AGENTS.md seed is kept", () => {
     const files = [
       { name: "SOUL.md", text: seeded(fixture("openclaw-template-SOUL.md").text) },

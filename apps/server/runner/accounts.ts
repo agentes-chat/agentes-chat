@@ -1495,8 +1495,10 @@ export interface AccountManagerOptions {
 
 /** Claude's own login for all agents of a system-mode computer: what `AccountManager` needs of `AccountUsers`. */
 export interface SharedLogin {
-  /** The feature's switch is on and the self-check passed. */
+  /** The feature's switch is on and the self-check passed, or held all it could try with no agent here yet. */
   ready(): boolean;
+  /** It passed with an agent's network too: turns may run. */
+  turnsReady(): boolean;
   /** How root runs the CLI as the sign-in's user, made the first time. Throws when it can't be. */
   launcher(id: string): Launcher;
   /** The sign-in's processes, store and user go. */
@@ -1734,11 +1736,14 @@ export class AccountManager {
 
   /**
    * Whether a turn may run on such a sign-in now. `off`: the switch went off or the self-check failed, and no CLI runs
-   * on its store. `signed_out`: the provider refused it, until it signs in again.
+   * on its store. `signed_out`: the provider refused it, until it signs in again. `deferred`: the check waits for an
+   * agent's user to try the network with.
    */
-  cliSharedState(id: string): "ready" | "off" | "signed_out" {
-    if (!this.opts.sharedLogin?.ready()) return "off";
-    return existsSync(this.marker("claude_code", id, "invalid")) ? "signed_out" : "ready";
+  cliSharedState(id: string): "ready" | "deferred" | "off" | "signed_out" {
+    const shared = this.opts.sharedLogin;
+    if (!shared?.ready()) return "off";
+    if (existsSync(this.marker("claude_code", id, "invalid"))) return "signed_out";
+    return shared.turnsReady() ? "ready" : "deferred";
   }
 
   /** The argv of the Claude CLI behind `prefix`. A missing CLI must fail to start, not exit 127 behind the launcher. */

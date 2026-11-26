@@ -1271,11 +1271,11 @@ without an OAuth app) or the GitHub App.
 Connected with a person's GitHub account, agents open pull requests and comment as that person. With the
 GitHub App, they do it as the app: pull requests, issues, comments and commits come from the app's bot, each
 body ends with one line naming the agent and the person it works for, and commits credit that person
-(`Co-authored-by`) when they signed in with GitHub. Where the app isn't installed, the account connection is
+(`Co-Authored-By`) when they signed in with GitHub. Where the app isn't installed, the account connection is
 used, as before.
 
 Every commit an agent makes, through GitHub or with git on its computer, ends with its own line too:
-`Co-authored-by: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
+`Co-Authored-By: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
 and the person's, never twice. It is on by default; to turn it off for the whole workspace, ask any agent ("stop
 adding your co-author line to commits"), and ask again to turn it back on. On a computer the runner adds it with git
 hooks of its own, handed only to the agents' processes through their environment: your own git, outside them, is
@@ -1553,8 +1553,9 @@ computer (`tailscale serve`, an nginx or a Caddy outside Docker) takes
 `sudo agentes-runner services allow tcp/443` too, or agents can't push to its git. Container and VM
 networks on the computer are closed to agents, except ports published on an address other than
 loopback. Each agent also has its own `/tmp`, `/dev/shm` and `/run/lock`, in memory as the computer's
-are (a tmpfs of its own, which counts in the agents' memory), and its own `/var/tmp` on disk (in
-`/var/lib/agentes-runner-tmp`), cleared of what is 10 days old (30 in `/var/tmp`), so a socket or file
+are (its `/tmp` in one tmpfs all agents share, a fifth of the RAM, which counts in the agents' memory), and
+its own `/var/tmp` on disk (in `/var/lib/agentes-runner-tmp`), cleared of what is 10 days old (30 in
+`/var/tmp`; 6 hours in `/tmp` and `/dev/shm` for an agent with nothing running), so a socket or file
 another agent leaves there is out of its reach, and its own adb server port
 (`ANDROID_ADB_SERVER_PORT`). Agents can't schedule cron or at jobs, which would run outside their own
 folders: the runner adds their users to `/etc/cron.deny` and `/etc/at.deny` (a job one scheduled before
@@ -1583,13 +1584,17 @@ computer), plus swap for a third of that, which keeps the rest for the system, t
 the server. At that limit the kernel stops one process, usually the biggest (Chrome's pages first), and
 only that process: the command it belonged to fails, and the agent is told it was most likely memory
 (with systemd 253 or newer; a desktop or a task already running when you update gets this when it next
-starts). What agents leave in `/tmp` holds RAM until they delete it or the computer restarts. To keep
-it on disk instead, add `"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
+starts). What agents leave in `/tmp` holds RAM until they delete it, it ages out or the computer
+restarts, at most a fifth of the RAM for all of them: past that, writes there fail with "no space". An
+agent's desktop nobody used for an hour is put to rest while less than 1.5 GB is free, and one with a
+command still running in its Terminal once nobody used it for a day. To keep `/tmp` on disk instead (its
+small files stay in the page cache, which the kernel takes back when memory is short), add
+`"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
 this server's own computer too, for all its organizations): each agent takes it at its first launch
 after the next boot (until then it keeps the `/tmp` it has). The agents' `/tmp` is then a filesystem of
 their own, made anew at every boot in `/var/cache/agentes-runner-tmp` with half of what the system disk
 has free, so they can't fill that disk or take its inodes. It needs loop devices and `mkfs.ext4`
-(e2fsprogs), which an unprivileged container doesn't have.
+(e2fsprogs), which an unprivileged container doesn't have: there `/tmp` stays in memory.
 `agentes-runner computer`, which any agent (or you) can run, prints what the computer has, what is free
 for new work and which agents use the most; agents are told to run it before something heavy, to tell
 the person when another agent's work leaves no room, and to stop what a finished build left running.

@@ -226,6 +226,24 @@ const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 /** The pseudo tool name of a list request (in pending and resend bookkeeping). */
 const LIST = "tools/list";
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** The arguments a listed tool's schema requires (none for an unknown tool or a schema without `required`). */
+function requiredArgs(tool: { inputSchema: unknown } | undefined): string[] {
+  const schema = tool?.inputSchema;
+  const required = isRecord(schema) ? schema.required : undefined;
+  return Array.isArray(required) ? required.filter((r): r is string => typeof r === "string") : [];
+}
+
+/**
+ * A call that arrives with no arguments, most often a very long input (a big file write) cut off on the way: passing
+ * `{}` on would answer with a confusing "missing field" from deep inside the tool, and the agent can't tell why.
+ */
+export function noArgumentsError(tool: string, required: readonly string[]) {
+  const needs = required.length > 0 ? ` with ${required.join(", ")}` : " with its arguments";
+  return `${tool} arrived with no arguments: the input was probably cut off on the way. Nothing was done. Call it again${needs}.`;
+}
+
 /** A listed tool as the server sent it (anything else is dropped). */
 function isToolInfo(v: unknown): v is McpToolInfo {
   if (typeof v !== "object" || v === null) return false;
@@ -506,7 +524,8 @@ export class McpBridge {
     // A bridge (server token): any tool the server lists; the server decides. Else the fixed mission tools.
     const known = info.serverToken ? TOOL_NAME.test(tool) : MISSION_MCP_TOOLS.some((t) => t.name === tool);
     if (!known) return { ok: false, error: `Unknown tool ${tool}` };
-    const given = req.args && typeof req.args === "object" && !Array.isArray(req.args) ? req.args : {};
+    if (!isRecord(req.args)) return { ok: false, error: noArgumentsError(tool, []) };
+    const given = req.args;
     if (JSON.stringify(given).length > MCP_ARGS_MAX_CHARS) {
       return {
         ok: false,
@@ -919,10 +938,7 @@ export async function handleMcpMessage(
       // kept-alive one), and the server runs any tool the agent may use, or says why not and what to call instead.
       const served = Boolean(list) && !context.local;
       if (!served && !tools.some((t) => t.name === name)) return rpcError(id, -32602, `Unknown tool: ${name}`);
-      const args =
-        typeof params.arguments === "object" && params.arguments !== null && !Array.isArray(params.arguments)
-          ? (params.arguments as Record<string, unknown>)
-          : {};
+      const args = isRecord(params.arguments) ? params.arguments : {};
       // Claude Code's permission prompt: always an answer it understands (allow or deny JSON), never an error.
       if (name === PERMISSION_TOOL) {
         const answer = await permissionPrompt(args, call, { ...(scope ? { scope } : {}), profile, ...context }).catch(
@@ -932,6 +948,14 @@ export async function handleMcpMessage(
           }),
         );
         return { jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(answer) }] } };
+      }
+      const required = requiredArgs(tools.find((t) => t.name === name));
+      if (required.length > 0 && Object.keys(args).length === 0) {
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: { content: [{ type: "text", text: noArgumentsError(name, required) }], isError: true },
+        };
       }
       const reply = await call(name, args);
       return {

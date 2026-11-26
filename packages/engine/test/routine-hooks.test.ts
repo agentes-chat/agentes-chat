@@ -8,6 +8,7 @@ import {
   CALLS_PER_RUN,
   closeRoutineRun,
   createRoutine,
+  createWebhookCallToolSource,
   deleteRoutine,
   duplicateRoutine,
   executeRoutineRun,
@@ -29,10 +30,12 @@ import {
   setRoutineActive,
   sha256,
   stopRoutineRun,
+  type ToolContext,
   untrustedBlock,
   updateRoutine,
   webhookEventText,
 } from "../src";
+import { shortenJson } from "../src/format";
 import { ROUTINE_STALL_MS, releaseStalledRoutineRuns } from "../src/routine-firing";
 import { addMember, type Fixture, SECRET, setup } from "./fixtures";
 import { agentRunRow, routineDeps, routineRunRow } from "./routine-fixtures";
@@ -256,6 +259,80 @@ describe("routine webhooks", () => {
     expect(await post(d, token, body)).toMatchObject({ status: 202 });
   });
 
+  test("Linear's own secret, pasted: Linear-Signature (the hex alone) passes with a webhookTimestamp within a minute", async () => {
+    f = await setup();
+    const routine = await webhookRoutine();
+    const ref = await managedWebhookRoutine(f.db, f.owner.id, f.org.id, routine.id);
+    await expect(newRoutineHookSecret(hookDeps(), f.owner.id, ref, "has space")).rejects.toThrow();
+    const pasted = "lin_wh_fake_0000000000000000";
+    const { secret } = await newRoutineHookSecret(hookDeps(), f.owner.id, ref, ` ${pasted} `);
+    expect(secret).toBe(pasted);
+    const token = await tokenOf(routine.id);
+    const d = hookDeps();
+    const hex = (body: string) => createHmac("sha256", pasted).update(body).digest("hex");
+    const linear = (at: number | null, delivery: string) => {
+      const body = JSON.stringify({
+        action: "update",
+        type: "Issue",
+        ...(at === null ? {} : { webhookTimestamp: at }),
+      });
+      return post(d, token, body, {
+        "linear-signature": hex(body),
+        "linear-delivery": delivery,
+        "linear-event": "Issue",
+      });
+    };
+    const fresh = await linear(Date.now(), "del-1");
+    expect(fresh).toMatchObject({ status: 202, duplicate: false });
+    expect(await linear(Date.now() - 2 * 60_000, "del-2")).toEqual({ status: 401, code: "invalid_signature" });
+    expect(await linear(null, "del-3")).toEqual({ status: 401, code: "invalid_signature" });
+    // Linear-Delivery is the call's id: a repeat answers with the first run.
+    expect(await linear(Date.now(), "del-1")).toMatchObject({ status: 202, duplicate: true });
+    const runId = fresh.status === 202 ? (fresh.runId ?? "") : "";
+    const [kept] = ((await routineRunRow(f, runId)).event?.calls ?? []) as { headers: Record<string, string> }[];
+    expect(kept?.headers).toMatchObject({ "linear-delivery": "del-1", "linear-event": "Issue" });
+    expect(kept?.headers["linear-signature"]).toBeUndefined();
+  });
+
+  test("long JSON calls lose their longest strings, never their keys; read_webhook_call reads one whole", async () => {
+    f = await setup();
+    const routine = await webhookRoutine();
+    const token = await tokenOf(routine.id);
+    const d = hookDeps();
+    const issue = (n: number) =>
+      JSON.stringify({
+        action: "update",
+        data: { id: `ISS-${n}`, description: `${n}`.repeat(10_000), labels: ["Bug", "Feature"] },
+        updatedFrom: { labelIds: ["label-old"] },
+      });
+    let runId = "";
+    for (let n = 1; n <= 5; n++) {
+      const answer = await post(d, token, issue(n));
+      runId = answer.status === 202 ? (answer.runId ?? "") : "";
+    }
+    const text = webhookEventText((await routineRunRow(f, runId)).event ?? {});
+    for (let n = 1; n <= 5; n++) expect(text).toContain(`"id":"ISS-${n}"`);
+    expect(text.match(/"updatedFrom":\{"labelIds":\["label-old"\]\}/g)).toHaveLength(5);
+    expect(text.match(/"labels":\["Bug","Feature"\]/g)).toHaveLength(5);
+    expect(text).toContain("read_webhook_call with call 3 reads the call whole");
+    expect(text).not.toContain("more characters cut");
+    // An id past 2^53 would come back another number: such a body is cut at its end, never written again.
+    const big = `{"id":12345678901234567891,"pad":"${"z".repeat(30_000)}"}`;
+    expect(shortenJson(big, 1_000)).toBeNull();
+    expect(shortenJson(`{"id":123,"pad":"${"z".repeat(3_000)}"}`, 1_000)).toStartWith('{"id":123,"pad":"zz');
+
+    await executeRoutineRun(deps(), runId);
+    const run = await agentRunRow(f, (await routineRunRow(f, runId)).agentRunId);
+    const ctx = { db: f.db, orgId: f.org.id, agentId: f.agent.id, runId: run.id, background: true } as ToolContext;
+    const [tool] = await createWebhookCallToolSource().tools(ctx);
+    expect(tool?.name).toBe("read_webhook_call");
+    const read = await tool?.execute({ call: 3 }, ctx);
+    expect(read?.content).toContain(issue(3));
+    expect((await tool?.execute({ call: 9 }, ctx))?.isError).toBe(true);
+    // Any other run doesn't get it.
+    expect(await createWebhookCallToolSource().tools({ ...ctx, background: false })).toEqual([]);
+  });
+
   test("a signed GET's signature covers its query string: one seen signature can't carry other data", async () => {
     f = await setup();
     const routine = await webhookRoutine();
@@ -383,14 +460,24 @@ describe("routine webhooks", () => {
     expect(await callsOf(routine.id)).toHaveLength(1);
   });
 
-  test("a copy gets an address of its own; old calls go after a day, each routine keeps its last 20", async () => {
+  test("a copy gets an address of its own; calls go after 30 days, each routine keeps its last 20", async () => {
     f = await setup();
     const routine = await webhookRoutine();
     const copy = await duplicateRoutine(deps(), f.owner.id, f.org.id, routine.id);
     const original = await urlOf(routine.id);
     expect(copy.trigger).toMatchObject({ type: "webhook", url: expect.stringContaining("/api/hooks/") });
     expect(copy.trigger.type === "webhook" && copy.trigger.url).not.toBe(original);
-    const old = new Date(Date.now() - 2 * 86_400_000);
+    // Two days old: kept, where they used to go after a day.
+    await f.db.insert(schema.routineHookCalls).values({
+      orgId: f.org.id,
+      routineId: routine.id,
+      outcome: "accepted",
+      status: 202,
+      createdAt: new Date(Date.now() - 2 * 86_400_000),
+    });
+    expect(await pruneRoutineHookCalls(f.db)).toBe(0);
+    await f.db.delete(schema.routineHookCalls);
+    const old = new Date(Date.now() - 31 * 86_400_000);
     await f.db.insert(schema.routineHookCalls).values(
       Array.from({ length: 25 }, (_, i) => ({
         orgId: f.org.id,
@@ -424,7 +511,7 @@ describe("routine webhooks", () => {
     // Two calls share what the model reads, 12,000 characters each: the second's emoji sits across its cut.
     await post(d, token, `${"b".repeat(11_999)}😀 tail`);
     const text = webhookEventText((await routineRunRow(f, runId)).event ?? {});
-    expect(text).toContain(`${"b".repeat(11_999)}\n[… 7 more characters cut]`);
+    expect(text).toContain(`${"b".repeat(11_999)}\n[… 7 more characters cut: read_webhook_call with call 2`);
     expect(wellFormed(text)).toBe(true);
     expect(wellFormed(untrustedBlock("webhook", `${"c".repeat(9)}😀`, 10))).toBe(true);
   });
@@ -609,6 +696,28 @@ describe("routine webhooks: every call delivered, grouped calls in parallel", ()
     expect(runOf(await post(d, token, '{"n":2}'))).toBe(held?.id ?? "");
     expect(callsIn((await routineRunRow(f, held?.id ?? "")).event).map((c) => c.n)).toEqual([1, 2]);
     expect(await hasJob(held?.id ?? "")).toBe(true);
+  });
+
+  test("calls held while the routine was off start once it is turned on again, without waiting for the next call", async () => {
+    f = await setup();
+    const routine = await webhookRoutine();
+    const token = await tokenOf(routine.id);
+    const d = hookDeps();
+    const first = runOf(await post(d, token, '{"n":1}'));
+    await executeRoutineRun(deps(), first);
+    await setRoutineActive(deps(), f.owner.id, f.org.id, routine.id, false);
+    const held = (await runsOf(routine.id)).find((r) => r.id !== first);
+    expect(held?.event).toMatchObject({ held: true });
+    expect(await hasJob(held?.id ?? "")).toBe(false);
+    await setRoutineActive(deps(), f.owner.id, f.org.id, routine.id, true);
+    expect(await hasJob(held?.id ?? "")).toBe(true);
+    expect((await routineRunRow(f, held?.id ?? "")).event?.held).toBeUndefined();
+    // Turned off and on through an edit, the same.
+    await setRoutineActive(deps(), f.owner.id, f.org.id, routine.id, false);
+    const again = (await runsOf(routine.id)).find((r) => r.event?.held === true);
+    await updateRoutine(deps(), f.owner.id, f.org.id, routine.id, { active: true });
+    expect(again).toBeDefined();
+    expect(await hasJob(again?.id ?? "")).toBe(true);
   });
 
   test("grouped by a path: other conversations run side by side, one conversation's calls wait together, in order", async () => {

@@ -763,12 +763,24 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   width: 28px;
   height: 28px;
 }
-/* An uploaded workspace logo: cropped square, in the agent's shape (the cut corner). */
+/* A workspace logo, whole, in the agent's shape (the cut corner). It may arrive uncropped (a wordmark), so it is
+   contained, not covered. Its plate shows only where the surface would hide the ink (`logoPlate`,
+   @agenteschat/ui/org-logo, same colors): white behind dark ink on dark, dark behind light ink on light. A square
+   opaque logo hides the plate. */
 .org-mark {
   display: block;
   flex: none;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 30% 30% 30% 9%;
+}
+.org-mark[data-ink="light"] {
+  background: #1c1c1b;
+}
+[data-theme="dark"] .org-mark {
+  background: #ffffff;
+}
+[data-theme="dark"] .org-mark[data-ink="light"] {
+  background: none;
 }
 .sidebar__org-text {
   display: flex;
@@ -783,11 +795,6 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-/* A personal workspace's top row is you: your name wraps whole there, as at a team's foot. */
-.sidebar__org-button--me .sidebar__org-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 .sidebar__org-meta {
   font-size: 12px;
@@ -942,13 +949,16 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   display: flex;
   flex-direction: column;
 }
-/* A long name wraps whole: never cut to an ellipsis. */
+/* One line, cut to an ellipsis, as your line under it and a personal workspace's top row are: the face never stands
+   beside more than the name and your line. The button says the whole name (its label and title). */
 .sidebar__user-name {
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Page container */
@@ -9602,6 +9612,10 @@ html:not([data-pointer]) .onb__step:focus-visible {
   box-shadow: var(--card-key);
   color: var(--ok);
 }
+/* Passed but left for later: its dash in a neutral ink, never the done green. */
+.onb__steps li[data-later] .onb__n {
+  color: var(--faint);
+}
 .onb__step[aria-current="step"] .onb__n {
   background: var(--ink);
   color: var(--bg);
@@ -9708,7 +9722,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
     min-height: 0;
     padding: 4px;
   }
-  /* The setup's seven steps beside the logo at 390px: 28px steps 3px apart, and 2px around them for the current
+  /* The setup's seven steps beside the logo's mark at 390px: 28px steps 3px apart, and 2px around them for the current
      one's ring, reaching past the strip's edges. Criar agente and the landing's card keep the shared strip. */
   .onb:not(.newag) .onb__steps {
     gap: 3px;
@@ -9728,8 +9742,8 @@ html:not([data-pointer]) .onb__step:focus-visible {
     white-space: nowrap;
   }
 }
-/* Narrower, they fit beside the logo's mark alone. */
-@media (max-width: 384px) {
+/* Seven steps and the whole logo need about 430px: narrower, the steps sit beside the logo's mark alone. */
+@media (max-width: 439px) {
   .onb__brand .ac-logo > :not(.ac-logo__mark) {
     display: none;
   }
