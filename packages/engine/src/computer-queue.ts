@@ -226,14 +226,14 @@ export async function kickSignInLine(db: Executor, machineId: string, key: strin
  * at once on a computer with clear headroom, else once the spacing is over). Otherwise it is behind: `retryAt` is when
  * it may look again. Behind when a run waiting for room ranks ahead of it (by rank, then the longest wait), or, for
  * agents' work on a computer without clear headroom (`roomIsClear`), when another run asked it less than
- * `ROOM_ASK_SPACING_MS` ago. A person's turn and one on a CLI already open (`warm`: it starts no process) never wait
+ * `ROOM_ASK_SPACING_MS` ago. A person's turn and one on a CLI already open on this computer (`warmOn`: it starts no process) never wait
  * for the spacing; the runner's memory floor still decides whether each fits.
  */
 export async function roomGate(
   db: Database,
   run: { id: string; orgId: string },
   machineId: string,
-  place: { rank: RoomRank; since: number; warm?: boolean },
+  place: { rank: RoomRank; since: number; warmOn?: string | null },
   signIn?: SignInSlot,
 ): Promise<{ retryAt: number; cause: RoomWaitCause } | null> {
   const now = Date.now();
@@ -292,7 +292,7 @@ export async function roomGate(
       );
     clear = roomIsClear(last?.freeGb == null ? null : Number(last.freeGb), Number(last?.recent ?? 0));
     const at = Number(last?.at ?? 0);
-    if (rank > 0 && !place.warm && !clear && now - at < ROOM_ASK_SPACING_MS)
+    if (rank > 0 && place.warmOn !== machineId && !clear && now - at < ROOM_ASK_SPACING_MS)
       return { retryAt: at + ROOM_ASK_SPACING_MS, cause: "spacing" as const };
     await tx
       .update(agentRuns)

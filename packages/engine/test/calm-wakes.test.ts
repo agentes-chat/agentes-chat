@@ -182,11 +182,11 @@ describe("the computer's line", () => {
           },
         })
         .where(eq(schema.machines.id, machineId));
-    const ask = (warm?: boolean) =>
+    const ask = (warmOn?: string) =>
       roomGate(f.db, { id: Bun.randomUUIDv7(), orgId: f.org.id }, machineId, {
         rank: 2,
         since: Date.now(),
-        ...(warm ? { warm } : {}),
+        ...(warmOn ? { warmOn } : {}),
       });
 
     // No reading of its memory: the spacing holds.
@@ -195,7 +195,9 @@ describe("the computer's line", () => {
     // Near its floor: the spacing holds, but a turn on a CLI already open starts no process and goes.
     await freeGb(2);
     expect((await ask())?.cause).toBe("spacing");
-    expect(await ask(true)).toBeNull();
+    // Open on another computer (the run moved since it warmed): this one would start a process, so it is spaced.
+    expect((await ask(Bun.randomUUIDv7()))?.cause).toBe("spacing");
+    expect(await ask(machineId)).toBeNull();
 
     // Clear headroom: it goes at once, and whoever waits in line is asked now, not after the spacing.
     await f.db.delete(agentRuns).where(eq(agentRuns.status, "running"));
