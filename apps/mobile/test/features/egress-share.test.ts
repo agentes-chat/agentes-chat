@@ -31,3 +31,11 @@ test("letting a computer join on the phone says it will lend its internet, as th
   expect(parts).toContain("{joinFacts(t, r)} </Text> <JoinInternetLine />");
   expect(flat("features/devices/notices.tsx")).toContain("{joinFacts(t, request)} </Text> <JoinInternetLine />");
 });
+
+test("a computer whose runner is behind this server, on the phone: its owner sees why and how to update it, as the web's", () => {
+  const screen = flat("features/settings/MachineScreen.tsx");
+  expect(screen).toContain("{m.canManage && m.update ? (");
+  expect(screen).toContain("machines.runnerBehind.");
+  expect(screen).toContain("{ computer: title })");
+  expect(screen).toContain('m.update === "command" ? ( <> <Gap /> <CommandBlock command={RUNNER_UPDATE_COMMAND} />');
+});

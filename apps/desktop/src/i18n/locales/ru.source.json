@@ -353,6 +353,9 @@
   "tray.denied": {
     "value": "Declined. {{agent}} lets them know in the chat."
   },
+  "tray.answerFailed": {
+    "value": "Couldn't answer this request: {{message}}"
+  },
   "tray.notifTitle": {
     "value": "{{agent}} wants to use the folder {{folder}}"
   },

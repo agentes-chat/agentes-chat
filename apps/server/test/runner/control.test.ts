@@ -717,6 +717,33 @@ test("access requests: pending until the person answers on the machine; the answ
   expect(lines.some((l) => l.includes(`agentes-runner folders allow ${other} --agent dev`))).toBe(true);
 });
 
+test("a folder past the cap can't be allowed from a request: it says why and the request stays pending", async () => {
+  const full = Array.from({ length: 100 }, (_, i) => ({ path: `/allowed/f-${i}`, agents: [AGENT.id] }));
+  const { home } = pairedHome({ access: { folders: full, tools: { claude: false, codex: false, commands: false } } });
+  const folder = tempDir("proj-");
+  dirs.push(folder);
+  const c = control(home);
+  const s = await c.connect();
+  s.frame({ type: "agents", agents: [AGENT] });
+  s.frame({
+    type: "request",
+    id: "a1",
+    op: "access.request",
+    requestId: "req-00000001",
+    path: folder,
+    reason: "run the tests",
+    agent: AGENT,
+  });
+  await waitFor(() => c.events("access.requested").length === 1);
+
+  expect(
+    await c.request({ type: "access.answer", requestId: "req-00000001", decision: "granted", scope: "all" }),
+  ).toMatchObject({ ok: false, error: { code: "bad_request", message: expect.stringContaining("100 folders") } });
+  const pending = await c.data<{ requests: { requestId: string }[] }>({ type: "access.pending" });
+  expect(pending.requests.map((r) => r.requestId)).toEqual(["req-00000001"]);
+  expect(s.of("access.decided")).toEqual([]);
+});
+
 test("a tool turned on from the apps: the switch is written, the server and the app are told, and Undo turns it off", async () => {
   const { home } = pairedHome();
   const lines: string[] = [];
@@ -1276,3 +1303,16 @@ test.if(process.platform !== "win32")(
   },
   20_000,
 );
+
+test("hello says the agentes.chat app runs this runner, and nothing when the terminal installed it", async () => {
+  for (const [over, app] of [
+    [{}, true],
+    [{ managedBy: undefined }, undefined],
+  ] as const) {
+    const c = control(pairedHome(over).home);
+    const s = await c.connect();
+    expect(s.of("hello")[0]?.app).toBe(app);
+    c.input.end();
+    expect(await c.done).toBe(0);
+  }
+});

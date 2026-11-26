@@ -6,6 +6,7 @@ import {
   MACHINE_PROTOCOL_VERSION,
   OPENCODE_ACP_PROTOCOL,
   orgTopic,
+  SHARED_LOGIN_OFF,
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -69,6 +70,7 @@ import {
   OUTAGE_PARK,
   openDm,
   operatorRunTimings,
+  outageParkedOf,
   PERSON_ROOM_RETRY_MS,
   postPersonMessage,
   queueOnRun,
@@ -3584,16 +3586,23 @@ test("woken before its resume, a run parked on its CLI's failure keeps one resum
   expect(await resumeRunsWaitingForMachine(f.db, machineId)).toEqual([]);
 
   // One that answered before (a row from before every CLI kept `lastSuccessAt`: `lastUsedAt` alone): woken, it fails
-  // again and parks with one resume, the earlier one replaced.
+  // again and parks with one resume, the earlier one replaced at the same time and on the same rung.
   await f.db
     .update(schema.machineAccounts)
     .set({ lastUsedAt: new Date() })
     .where(eq(schema.machineAccounts.id, account));
+  const due = (await resumes())[0]?.nextAttemptAt.getTime();
   expect(await resumeRunsWaitingForMachine(f.db, machineId)).toEqual([run?.id ?? ""]);
   await f.db.update(schema.agents).set({ brainAccountId: null }).where(eq(schema.agents.id, f.agent.id));
   const tries = seen.length;
   await drainOutbox(f.db, handlers);
   expect(seen.length).toBe(tries + 1);
+  expect(await parked()).toBe(1);
+  expect((await resumes()).map((j) => j.nextAttemptAt.getTime())).toEqual([due ?? 0]);
+
+  // Its resume, when due, climbs the ladder.
+  await drainOutbox(f.db, handlers, { now: new Date((due ?? 0) + 1000) });
+  expect(seen.length).toBe(tries + 2);
   expect(await parked()).toBe(2);
   expect(await resumes()).toHaveLength(1);
 });
@@ -5542,20 +5551,15 @@ test("back from a provider outage and in line for its computer, it reads as in l
   expect(reads.line).toBe("queued_computer");
 });
 
-test("a refusal of the computer's own waits for that computer: never the provider's words, back when it is", async () => {
+test("its online computer refusing its shared Claude login: the AI isn't answering, never a wait for the computer; resumed when it reconnects", async () => {
   f = await setup();
   const machineId = await computerAgent(f);
   await f.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   let ready = false;
-  const { brain } = scriptedComputerBrain(() => [
+  const { brain, seen } = scriptedComputerBrain(() => [
     ready
       ? { type: "done", text: "Pronto." }
-      : {
-          type: "error",
-          code: "unsupported",
-          message: "This computer can't run this Claude sign-in right now. Try again later.",
-          retryable: true,
-        },
+      : { type: "error", code: "unsupported", message: SHARED_LOGIN_OFF, retryable: true },
   ]);
   const handlers = createJobHandlers({
     ...f.jobDeps,
@@ -5567,20 +5571,40 @@ test("a refusal of the computer's own waits for that computer: never the provide
   await drainOutbox(f.db, handlers);
   const reads = await readsOf(f);
   expect(reads.run.status).toBe("waiting_input");
-  expect(reads.run.waitingMachineId).toBe(machineId);
-  expect(reads.handled).toEqual([{ status: "waiting_input", computer: "away" }]);
-  expect(reads.line).toBe("waiting_computer");
-  expect(consultationWait(reads.run)).toBe("computer");
-  // A plain note in the computer's words: it names no computer, so no app shows the card that waits for one to come back.
+  expect(reads.run.waitingMachineId).toBeNull();
+  expect(reads.run.transcript).toMatchObject({ outage: { n: 1, machineId } });
+  expect(reads.handled).toEqual([{ status: "waiting_input", outage: true }]);
+  expect(reads.line).toBe("provider_down");
+  expect(consultationWait({ ...reads.run, outage: outageParkedOf(reads.run) })).toBe("outage");
+  // A plain note naming what can't run and the way out: no computer in it, so no app shows a card that waits for one.
   const notes = (await timeline(f)).filter((m) => m.author.type === "agent");
   expect(notes.map((m) => [m.body, m.meta.bodyCode, m.meta.bodyParams, m.meta.brainUnavailable])).toEqual([
     [
-      "Claude Code can't answer right now. I'll answer when it's back.",
+      "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.",
       "brain_unavailable",
       { brain: "Claude Code" },
-      { brain: "claude_code", code: "unsupported" },
+      { brain: "claude_code", code: "shared_login_off" },
     ],
   ]);
+
+  // A person's message tries it again now; refused again, it keeps its resume's time and its rung on the ladder.
+  const resumeAt = async () =>
+    (await f.db.select().from(schema.outbox))
+      .find((j) => j.status === "pending" && j.dedupeKey?.includes(":outage:"))
+      ?.nextAttemptAt.getTime();
+  const due = await resumeAt();
+  const tries = seen.length;
+  for (const body of ["e aí?", "alguém?"]) {
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body,
+      threadId: reads.run.triggerMessageId,
+    });
+    await drainOutbox(f.db, handlers);
+  }
+  expect(seen.length).toBe(tries + 2);
+  expect((await runById(f, reads.run.id))?.transcript).toMatchObject({ outage: { n: 1 } });
+  expect(await resumeAt()).toBe(due);
+  expect((await readsOf(f)).handled).toEqual([{ status: "waiting_input", outage: true }]);
 
   // Its runner reconnects with the sign-in ready: the run goes on there.
   ready = true;

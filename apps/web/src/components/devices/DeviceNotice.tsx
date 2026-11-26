@@ -1,4 +1,4 @@
-import type { AppNotification } from "@agenteschat/client";
+import { type AppNotification, useRefuseFolderRequest } from "@agenteschat/client";
 import { type DeviceNotice, deviceNoticeOf, joinFacts } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
@@ -114,7 +114,8 @@ export function deviceNoticeLine(t: TFunction, n: AppNotification): string | nul
 
 /**
  * A device notice's own decision, in the row: Let it join or Deny a computer, Stop an agent on the person's phone,
- * Allow once, Always or No to someone's agent asking for a device, Turn off a computer's internet lent to the agents.
+ * Allow once, Always or No to someone's agent asking for a device, Turn off a computer's internet lent to the agents,
+ * No to a folder an agent waits for (it is allowed only on the computer itself).
  */
 export function DeviceNoticeActions({ n, inline = false }: { n: AppNotification; inline?: boolean }) {
   const { t } = useTranslation();
@@ -125,11 +126,12 @@ export function DeviceNoticeActions({ n, inline = false }: { n: AppNotification;
   const stop = useStopPhone(org.id);
   const decide = useDecideAccess(org.id);
   const update = useUpdateComputer(org.id);
+  const refuse = useRefuseFolderRequest(org.id);
   const [joining, setJoining] = useState(false);
   const d = deviceNoticeOf(n);
   if (!d || n.doneAt) return null;
   const fail = (err: unknown) => toast.show(errorText(t, err), "error");
-  const busy = deny.isPending || stop.isPending || decide.isPending || update.isPending;
+  const busy = deny.isPending || stop.isPending || decide.isPending || update.isPending || refuse.isPending;
   const request = d.requestId ? devices.data?.requests.find((r) => r.id === d.requestId) : undefined;
   const answer = (decision: "once" | "always" | "no") =>
     d.requestId &&
@@ -217,6 +219,26 @@ export function DeviceNoticeActions({ n, inline = false }: { n: AppNotification;
           }
         >
           {t("devices.notice.internetOff")}
+        </Button>
+      </Wrap>
+    );
+  if (d.kind === "device.folder_request" && d.machineId && d.requestId)
+    return (
+      <Wrap inline={inline} onClick={keep}>
+        <Button
+          size="sm"
+          loading={refuse.isPending}
+          disabled={busy}
+          onClick={() =>
+            d.machineId &&
+            d.requestId &&
+            refuse.mutate(
+              { machineId: d.machineId, requestId: d.requestId },
+              { onSuccess: () => toast.show(t("devices.notice.decided.no")), onError: fail },
+            )
+          }
+        >
+          {t("devices.notice.no")}
         </Button>
       </Wrap>
     );

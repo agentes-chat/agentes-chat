@@ -127,6 +127,7 @@
     "allowedOne": "{{folder}} diizinkan untuk {{agent}}",
     "allowedAll": "{{folder}} diizinkan untuk semua agen",
     "denied": "Ditolak. {{agent}} memberi tahu mereka di obrolan.",
+    "answerFailed": "Tidak bisa menjawab permintaan ini: {{message}}",
     "notifTitle": "{{agent}} ingin memakai folder {{folder}}",
     "allowedTitle": "{{name}} menyalakan {{tool}} dari agentes.chat",
     "allowedBody": "Kalau bukan kamu, batalkan di sini.",

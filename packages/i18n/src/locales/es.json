@@ -599,7 +599,7 @@
       "here": "En esta computadora"
     },
     "whyPaid": "¿Por qué pago?",
-    "whyPaidText": "Cloud incluye la computadora de los agentes siempre encendida y alguien que mantiene el servidor. Ejecutarlo en tu propio servidor es gratis."
+    "whyPaidText": "Cloud incluye la computadora de los agentes siempre encendida y alguien que mantiene el servidor. Una computadora tuya conectada a un workspace de Cloud no reemplaza el plan. Ejecutar agentes.chat en tu propio servidor o computadora es gratis."
   },
   "auth": {
     "email": "Correo",
@@ -3048,9 +3048,9 @@
     "asking_one": "{{names}} está esperando una respuesta",
     "asking_many": "{{names}} están esperando una respuesta",
     "asking_other": "{{names}} están esperando una respuesta",
-    "outage_one": "{{names}}: el proveedor de IA no responde · reintenta solo",
-    "outage_many": "{{names}}: el proveedor de IA no responde · reintentan solos",
-    "outage_other": "{{names}}: el proveedor de IA no responde · reintentan solos",
+    "outage_one": "{{names}}: la IA no responde · reintenta solo",
+    "outage_many": "{{names}}: la IA no responde · reintentan solos",
+    "outage_other": "{{names}}: la IA no responde · reintentan solos",
     "queued_one": "{{names}} está en la cola",
     "queued_many": "{{names}} están en la cola",
     "queued_other": "{{names}} están en la cola",
@@ -3075,7 +3075,7 @@
       "claimed": "Respondiendo",
       "waiting": "Esperando aprobación",
       "asking": "Esperando una respuesta",
-      "outage": "El proveedor de IA no responde · reintenta solo",
+      "outage": "La IA no responde · reintenta sola",
       "queued": "En la cola",
       "away": "Esperando la computadora",
       "plan": "Esperando el plan",
@@ -3641,7 +3641,7 @@
         "ended": "Responderé aquí cuando el workspace vuelva a suscribirse a agentes.chat."
       },
       "askAdmin": "Responderé aquí cuando un admin resuelva el plan de agentes.chat.",
-      "plan": "El plan trae el ordenador de los agentes. La IA es la que ya pagas: Claude, ChatGPT y otras, o una clave de API.",
+      "plan": "El plan trae el ordenador de los agentes. La IA es la que ya pagas: Claude, ChatGPT y otras, o una clave de API. Una computadora tuya conectada aquí no reemplaza el plan. Ejecutar agentes.chat en tu propio servidor o computadora es gratis.",
       "activeTitle": "Plan activo",
       "activeLine": "Conecta una IA y {{name}} responde aquí.",
       "receipt": "Guardado",
@@ -4593,7 +4593,7 @@
       "queued_computer": "En la cola",
       "waiting_plan": "Esperando el plan",
       "waiting_budget": "Esperando a que el presupuesto se renueve",
-      "provider_down": "El proveedor de IA no responde · reintenta solo",
+      "provider_down": "La IA no responde · reintenta sola",
       "out_of_plan": "Sin límite en el plan",
       "out_of_budget": "Presupuesto del mes agotado",
       "out_of_planShort": "Sin límite",
@@ -8184,6 +8184,9 @@
     "link": "Enlace",
     "linkEmpty": "Crea el enlace para copiarlo",
     "linkFailed": "No se pudo crear el enlace. {{cause}}",
+    "localOnly": "Este servidor solo se abre en la computadora donde se ejecuta, así que las personas que invites no pueden abrir su invitación.",
+    "localOnlyHow": "En la app de agentes.chat de esa computadora, activa Accede desde tu teléfono y tu equipo en Preferencias › Servidores, o ejecuta agentes.chat en un servidor que puedan abrir. Luego invítalas.",
+    "localOnlyHere": "Activa Accede desde tu teléfono y tu equipo. Luego invítalas.",
     "never": "No vence",
     "untilDate": "Hasta el {{date}}",
     "validFor": "Vale {{ttl}} desde que se crea.",
@@ -11888,6 +11891,8 @@
       "on": "Mensajes de voz",
       "onHelp": "Las personas de este espacio de trabajo pueden enviar audios en las conversaciones.",
       "noEngine": "Los mensajes de voz todavía no están disponibles aquí.",
+      "noEngineAsk": "Los mensajes de voz todavía no están activados. Quien administra este servidor los activa en esta misma página.",
+      "noEngineHere": "Los mensajes de voz se activan en cuanto elijas abajo qué convierte la voz en texto.",
       "engineTitle": "Qué convierte la voz en texto",
       "own": "Tu propio servidor",
       "ownHelp": "Whisper o Parakeet en tu máquina. El audio se queda ahí.",
@@ -17115,6 +17120,10 @@
       "paused": "{{name}} está en pausa",
       "resumed": "{{name}} vuelve a trabajar"
     },
+    "runnerBehind": {
+      "command": "El programa de agentes.chat en {{computer}} está desactualizado, así que algunas cosas no funcionan allí. Para actualizarlo, ejecuta esto allí:",
+      "installer": "El programa de agentes.chat en {{computer}} está desactualizado, así que algunas cosas no funcionan allí. Para actualizarlo, vuelve a ejecutar allí el comando de instalación, como root."
+    },
     "seenNow": "conectada ahora",
     "seen": "vista {{when}}",
     "neverSeen": "aún no se conectó",
@@ -19429,7 +19438,7 @@
       "waitingApproval": "{{name}} está esperando una aprobación",
       "waitingInput": "{{name}} está esperando una respuesta",
       "waitingComputer": "{{name}} está esperando a la computadora",
-      "waitingProvider": "{{name}}: el proveedor de IA está caído · reintenta solo",
+      "waitingProvider": "{{name}}: la IA no responde · reintenta solo",
       "waitingAgents": "{{name}} pasó parte del trabajo y espera noticias",
       "queued": "{{name}} está en la fila"
     },
@@ -19440,7 +19449,7 @@
       "waitingApproval": "esperando aprobación",
       "waitingInput": "esperando una respuesta",
       "waitingComputer": "esperando su computadora",
-      "waitingProvider": "proveedor de IA caído",
+      "waitingProvider": "la IA no responde",
       "waitingYourApproval": "esperando tu aprobación",
       "waitingYourAnswer": "esperando tu respuesta",
       "queued": "en la fila",
@@ -19890,6 +19899,7 @@
       "brain_unavailable_commands_off": "{{brain}} está apagado en mi computadora. Responderé cuando quien la cuida lo encienda.",
       "brain_unavailable_outdated": "El programa de mi computadora necesita una actualización para que {{brain}} pueda responder. Responderé en cuanto se actualice.",
       "brain_unavailable_plan_owner": "{{brain}} pensaría con un plan que no es de mi dueño, así que no lo uso. Conecta la cuenta de mi dueño en mi página.",
+      "brain_unavailable_shared_login": "Mi computadora no puede usar el inicio de sesión de Claude para todos los agentes ahora. Responderé en cuanto pueda. Si sigue fallando, vuelve a conectar Claude en Cuentas de IA.",
       "provider_unavailable": "Mi proveedor de IA no responde ahora. Responderé en cuanto vuelva.",
       "provider_wait_rate_limit": "{{provider}} está limitando las solicitudes de esta clave ahora. Responderé en cuanto lo permita.",
       "provider_wait_down": "{{provider}} está caído o sobrecargado ahora. Responderé en cuanto vuelva.",
@@ -21764,7 +21774,7 @@
       "budgetSoon": "Esperando un momento el presupuesto de {{name}}",
       "computer": "Esperando la computadora de {{name}}",
       "busy": "Esperando lugar en la computadora de {{name}}",
-      "provider": "Esperando al proveedor de IA de {{name}}, próximo intento {{when}}"
+      "provider": "Esperando a que la IA de {{name}} responda, próximo intento {{when}}"
     },
     "menu": {
       "label": "Más",

@@ -573,7 +573,7 @@
       "here": "이 컴퓨터"
     },
     "whyPaid": "왜 유료인가요?",
-    "whyPaidText": "Cloud에는 항상 켜져 있는 에이전트의 컴퓨터와 서버를 관리하는 사람이 포함돼요. 내 서버에서 실행하면 무료예요."
+    "whyPaidText": "Cloud에는 항상 켜져 있는 에이전트의 컴퓨터와 서버를 관리하는 사람이 포함돼요. Cloud 워크스페이스에 내 컴퓨터를 연결해도 요금제를 대신하지 않아요. 내 서버나 컴퓨터에서 agentes.chat을 실행하면 무료예요."
   },
   "auth": {
     "email": "이메일",
@@ -2829,7 +2829,7 @@
     "passed_other": "아무도 답하지 않았어요",
     "failed_other": "{{names}}이(가) 답하지 못했어요",
     "asking_other": "{{names}}이(가) 답변을 기다리고 있어요",
-    "outage_other": "{{names}}: AI 제공업체 장애 · 자동으로 다시 시도해요",
+    "outage_other": "{{names}}: AI가 응답하지 않아요 · 자동으로 다시 시도해요",
     "queued_other": "{{names}} 대기 중",
     "away_other": "{{names}}이(가) 컴퓨터를 기다리는 중이에요",
     "plan_other": "{{names}}이(가) 요금제를 기다리고 있어요",
@@ -2843,7 +2843,7 @@
       "claimed": "답하는 중",
       "waiting": "승인 대기 중",
       "asking": "답변 대기 중",
-      "outage": "AI 제공업체 장애 · 자동으로 다시 시도해요",
+      "outage": "AI가 응답하지 않아요 · 자동으로 다시 시도해요",
       "queued": "대기 중",
       "away": "컴퓨터 대기 중",
       "plan": "요금제를 기다리는 중",
@@ -3361,7 +3361,7 @@
         "ended": "워크스페이스가 agentes.chat을 다시 구독하면 여기에서 답할게요."
       },
       "askAdmin": "관리자가 agentes.chat 요금제를 해결하면 여기에서 답할게요.",
-      "plan": "요금제에는 에이전트 컴퓨터가 포함돼요. AI는 이미 결제하고 있는 것을 써요. Claude, ChatGPT 등이나 API 키요.",
+      "plan": "요금제에는 에이전트 컴퓨터가 포함돼요. AI는 이미 결제하고 있는 것을 써요. Claude, ChatGPT 등이나 API 키요. 여기에 내 컴퓨터를 연결해도 요금제를 대신하지 않아요. 내 서버나 컴퓨터에서 agentes.chat을 실행하면 무료예요.",
       "activeTitle": "요금제가 활성화됐어요",
       "activeLine": "AI를 연결하면 {{name}}이(가) 여기에서 답해요.",
       "receipt": "보관됨",
@@ -4275,7 +4275,7 @@
       "queued_computer": "대기 중",
       "waiting_plan": "요금제를 기다리는 중",
       "waiting_budget": "예산 초기화 대기 중",
-      "provider_down": "AI 제공업체 장애 · 자동으로 다시 시도해요",
+      "provider_down": "AI가 응답하지 않아요 · 자동으로 다시 시도해요",
       "out_of_plan": "플랜 한도에 도달함",
       "out_of_budget": "이번 달 예산 소진",
       "out_of_planShort": "한도 도달",
@@ -7634,6 +7634,9 @@
     "link": "링크",
     "linkEmpty": "링크를 만들면 복사할 수 있어요",
     "linkFailed": "링크를 만들지 못했어요. {{cause}}",
+    "localOnly": "이 서버는 실행 중인 컴퓨터에서만 열려서 초대받은 사람은 초대를 열 수 없어요.",
+    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 환경설정 › 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켜거나, 초대받는 사람이 열 수 있는 서버에서 agentes.chat을 실행하세요. 그다음 초대하세요.",
+    "localOnlyHere": "휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 초대하세요.",
     "never": "만료 없음",
     "untilDate": "{{date}}까지",
     "validFor": "만든 뒤 {{ttl}} 동안 유효해요.",
@@ -11031,6 +11034,8 @@
       "on": "음성 메시지",
       "onHelp": "이 워크스페이스의 사람들은 대화에서 오디오를 보낼 수 있어요.",
       "noEngine": "여기서는 아직 음성 메시지를 쓸 수 없어요.",
+      "noEngineAsk": "음성 메시지가 아직 켜져 있지 않아요. 이 서버를 관리하는 사람이 바로 이 페이지에서 켤 수 있어요.",
+      "noEngineHere": "아래에서 음성을 텍스트로 바꾸는 곳을 고르면 음성 메시지가 켜져요.",
       "engineTitle": "음성을 텍스트로 바꾸는 곳",
       "own": "내 서버",
       "ownHelp": "내 컴퓨터의 Whisper 또는 Parakeet. 오디오는 그곳에 남아요.",
@@ -16013,6 +16018,10 @@
       "paused": "{{name}} 일시 중지됨",
       "resumed": "{{name}} 다시 작업 중"
     },
+    "runnerBehind": {
+      "command": "{{computer}}의 agentes.chat 프로그램이 오래되어 일부 기능이 작동하지 않습니다. 업데이트하려면 그 컴퓨터에서 다음을 실행하세요:",
+      "installer": "{{computer}}의 agentes.chat 프로그램이 오래되어 일부 기능이 작동하지 않습니다. 업데이트하려면 그 컴퓨터에서 설치 명령을 root로 다시 실행하세요."
+    },
     "seenNow": "지금 연결됨",
     "seen": "{{when}} 확인됨",
     "neverSeen": "아직 연결된 적 없음",
@@ -18243,7 +18252,7 @@
       "waitingApproval": "{{name}}이(가) 승인을 기다리는 중",
       "waitingInput": "{{name}}이(가) 답을 기다리는 중",
       "waitingComputer": "{{name}}이(가) 컴퓨터를 기다리는 중",
-      "waitingProvider": "{{name}}: AI 제공업체 장애 · 자동으로 다시 시도해요",
+      "waitingProvider": "{{name}}: AI가 응답하지 않아요 · 자동으로 다시 시도해요",
       "waitingAgents": "{{name}}이(가) 일부를 넘기고 결과를 기다리는 중",
       "queued": "{{name}}이(가) 차례를 기다리는 중"
     },
@@ -18254,7 +18263,7 @@
       "waitingApproval": "승인 대기 중",
       "waitingInput": "답변 대기 중",
       "waitingComputer": "컴퓨터 대기 중",
-      "waitingProvider": "AI 제공업체 장애",
+      "waitingProvider": "AI 응답 없음",
       "waitingYourApproval": "내 승인 대기 중",
       "waitingYourAnswer": "내 답변 대기 중",
       "queued": "차례 대기 중",
@@ -18692,6 +18701,7 @@
       "brain_unavailable_commands_off": "내 컴퓨터에서 {{brain}}이(가) 꺼져 있어요. 관리하는 사람이 켜면 답할게요.",
       "brain_unavailable_outdated": "{{brain}}이(가) 답하려면 내 컴퓨터의 프로그램을 업데이트해야 해요. 업데이트되면 바로 답할게요.",
       "brain_unavailable_plan_owner": "{{brain}}은(는) 내 소유자의 것이 아닌 요금제로 생각하게 되므로 쓰지 않아요. 내 페이지에서 소유자의 계정을 연결하세요.",
+      "brain_unavailable_shared_login": "제 컴퓨터에서 지금은 모든 에이전트용 Claude 로그인을 쓸 수 없어요. 쓸 수 있게 되면 답할게요. 계속 실패하면 AI 계정에서 Claude를 다시 연결하세요.",
       "provider_unavailable": "지금 AI 제공업체가 응답하지 않아요. 돌아오는 대로 답할게요.",
       "provider_wait_rate_limit": "지금 {{provider}}이(가) 이 키의 요청을 제한하고 있어요. 풀리는 대로 답할게요.",
       "provider_wait_down": "지금 {{provider}}이(가) 중단됐거나 과부하 상태예요. 돌아오는 대로 답할게요.",
@@ -20444,7 +20454,7 @@
       "budgetSoon": "{{name}}의 예산을 잠시 기다리고 있어요",
       "computer": "{{name}}의 컴퓨터를 기다리고 있어요",
       "busy": "{{name}}의 컴퓨터에 자리가 나기를 기다리고 있어요",
-      "provider": "{{name}}의 AI 제공업체를 기다리고 있어요. {{when}}에 다시 시도해요"
+      "provider": "{{name}}의 AI 응답을 기다리고 있어요. {{when}}에 다시 시도해요"
     },
     "menu": {
       "label": "더 보기",
