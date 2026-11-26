@@ -596,7 +596,8 @@ test("people taking turns keep one session; a repository added to the agent's ac
   await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: bia.id });
   const systems: string[] = [];
   const { brain, seen } = scriptedComputerBrain((_n, turn) => {
-    systems.push(turn.system);
+    // What the session starts with: its system text and, once, what holds for the conversation (its tools, repositories).
+    systems.push(`${turn.system}\n${turn.conversation ?? ""}`);
     return [
       { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
       { type: "done", text: "ok" },

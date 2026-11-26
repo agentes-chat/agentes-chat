@@ -127,7 +127,7 @@ import {
   unregisterRunAbort,
   unregisterTurnAbort,
 } from "./cancel";
-import { COMPUTER_SECTIONS_LINE, describeCapabilities, forComputerBrain } from "./capabilities";
+import { COMPUTER_SECTIONS_LINE, describeCapabilities, forComputerBrain, withComputerLimit } from "./capabilities";
 import { CATCH_UP_AFTER_MS, catchUpText, isCatchUp } from "./catch-up";
 import {
   askCatchUp,
@@ -186,12 +186,12 @@ import {
   onConsultedRunFinished,
 } from "./consultations";
 import {
+  agentSystemText,
   buildRunContext,
   type ContextBlock,
   conversationText,
   getChannelCached,
   isComputerTurnBlock,
-  isConversationBlock,
   lastRoutineRun,
   restatesReaction,
   stableFirst,
@@ -2898,7 +2898,9 @@ async function executeRunInner(
     }
     // Loaded, not only granted: on demand, the wiki tools' own descriptions say it (token-trim B4).
     if (tools.some((t) => t.name === "create_wiki_page" || t.name === "update_wiki_page")) {
+      // Follows the tools loaded for the run's message: for a computer brain, read once per session.
       system.push({
+        conversation: true,
         text: '# Writing to the wiki\nOnly write to the wiki (create_wiki_page, update_wiki_page, link_to_wiki) when a person asks for it in the current message ("save this to the wiki", "document…", "update page X"; in Portuguese "salva isso na wiki", "documenta…", "atualiza a página X") or your routine\'s instructions say so. Never on your own: if you think something is worth documenting, offer and wait for the person to ask. Each edit stays in the history with your name and the name of whoever asked.',
       });
     }
@@ -7198,10 +7200,7 @@ function brainTurnOf(
     get system() {
       if (plan.kind === "model") return t.system.map((b) => b.text).join("\n\n");
       // The same in every conversation of the agent: what holds for this one comes once in its session (`conversation`).
-      const text = t.system
-        .filter((b) => !isComputerTurnBlock(b) && !isConversationBlock(b))
-        .map((b) => b.text)
-        .join("\n\n");
+      const text = agentSystemText(t.system);
       // A computer brain has its own tools (read, search, shell, git) besides ours; the right hand's locked turn
       // (ADR 0137 §4) has only ours, so it is never told of a computer's.
       const computer = isRightHand(agent) ? `${text}\n\n${COMPUTER_SECTIONS_LINE}` : forComputerBrain(text);
@@ -7217,7 +7216,9 @@ function brainTurnOf(
         .join("\n\n");
     },
     get conversation() {
-      return plan.kind === "model" ? undefined : conversationText(t.system) || undefined;
+      if (plan.kind === "model") return undefined;
+      const text = conversationText(t.system);
+      return (isRightHand(agent) ? text : withComputerLimit(text)) || undefined;
     },
     get thisTurn() {
       const parts = turnParts();

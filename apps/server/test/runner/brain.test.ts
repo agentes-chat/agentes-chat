@@ -3448,6 +3448,25 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "a warm start that came to nothing says why on its turn: no launch to start it with, another launch than the turn's",
+  async () => {
+    const { m, ws, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number, model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", model }, ctx);
+    const cold = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    // Before this runner ran a turn of the agent's: no system text to start it with.
+    expect(await warm(1, "sonnet")).toEqual({ open: false, started: false });
+    const a = await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(cold(a.final)).toMatchObject({ warm: false, cold: "no_launch" });
+    // Warmed for sonnet; the turn came with opus, whose `--fallback-model` only a start sets.
+    expect(await warm(2, "sonnet")).toEqual({ open: true, started: true });
+    const b = await turn(2, "there", { system: "S1", model: "opus", session: { id: SESSION(2), resume: false } });
+    expect(cold(b.final)).toMatchObject({ warm: false, cold: "warm_settings" });
+  },
+);
+
+test.if(posix)(
   "brain.warm guesses from the agent's last kept turn, not from a background turn's own text",
   async () => {
     const { m, ws, spawns, turn } = setup();

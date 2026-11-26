@@ -3,9 +3,13 @@ import { eq, schema } from "@agenteschat/db";
 import { systemText } from "@agenteschat/providers";
 import {
   type AgentRun,
+  agentSystemText,
   buildRunContext,
+  CODE_SESSION_LINE,
   CONTINUE_THE_CONVERSATION,
+  conversationText,
   createAgent,
+  deviceRoster,
   forComputerBrain,
   type HandOff,
   handOffsBlock,
@@ -15,7 +19,9 @@ import {
   openAgentDm,
   PLAIN_WORDS_LINE,
   postPersonMessage,
+  SAY_NOW_LINE,
   toTurns,
+  WORK_IN_BACKGROUND_LINE,
   zonesElsewhere,
 } from "../src";
 import { type Fixture, setup } from "./fixtures";
@@ -441,4 +447,55 @@ test("the person's app language is a line of the turn", async () => {
   expect(rules).toContain(
     "- Reply in the language of the person you work for (their messages, else their app language, else the organization's), approvals and questions too. Other agents, notices and tools never change it.",
   );
+});
+
+test("a computer brain's system text is the agent's: what a run gets by its tools and its asker is in its conversation", async () => {
+  const trigger = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+    body: "@dev oi",
+  });
+  const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, trigger.id));
+  if (!run) throw new Error("no run");
+  // Two runs of the agent: one a person reads as it goes, with the Calendar loaded; one another agent started.
+  const asked = await buildRunContext(f.db, run, f.agent, {
+    maxMessages: 10,
+    toolsAvailable: true,
+    sayNow: true,
+    codeSessions: true,
+    work: true,
+    capabilities: Promise.resolve("# What you can do\n- Calendar: `list_events`"),
+  });
+  const handed = await buildRunContext(f.db, run, f.agent, {
+    maxMessages: 10,
+    toolsAvailable: true,
+    capabilities: Promise.resolve("# What you can do\n- Issues: `list_issues`"),
+  });
+  // The CLI a computer started with the agent's last text is the one the next conversation's turn takes.
+  expect(agentSystemText(asked.system)).toBe(agentSystemText(handed.system));
+  expect(agentSystemText(asked.system)).toContain("# How you work");
+  const conversation = conversationText(asked.system);
+  for (const line of [SAY_NOW_LINE, CODE_SESSION_LINE, WORK_IN_BACKGROUND_LINE])
+    expect(agentSystemText(asked.system)).not.toContain(line);
+  expect(conversation).toContain(
+    `## How you work here\n${SAY_NOW_LINE}\n${CODE_SESSION_LINE}\n${WORK_IN_BACKGROUND_LINE}`,
+  );
+  expect(conversation).toContain("## What you can do\n- Calendar: `list_events`");
+  expect(conversationText(handed.system)).not.toContain("## How you work here");
+  // The model brain reads every block where it always was: the lines stay in "How you work".
+  expect(systemText(asked.system)).toContain(`\n${SAY_NOW_LINE}\n${CODE_SESSION_LINE}\n${WORK_IN_BACKGROUND_LINE}`);
+});
+
+test("the devices in an agent's system text keep their order when a computer's row changes", async () => {
+  const at = (s: number) => new Date(Date.UTC(2026, 10, 1, 0, 0, s));
+  // Rows land where there is room, not in the order they were made.
+  const [laptop] = await f.db
+    .insert(schema.machines)
+    .values({ orgId: f.org.id, name: "Laptop", createdAt: at(2) })
+    .returning();
+  await f.db.insert(schema.machines).values({ orgId: f.org.id, name: "Studio", createdAt: at(1) });
+  if (!laptop) throw new Error("no machine");
+  const names = async () => (await deviceRoster(f.db, f.org.id)).computers.map((c) => c.name);
+  expect(await names()).toEqual(["Studio", "Laptop"]);
+  // A computer's row is written all the time (it was seen, it slept): the list reads the same after.
+  await f.db.update(schema.machines).set({ updatedAt: new Date() }).where(eq(schema.machines.id, laptop.id));
+  expect(await names()).toEqual(["Studio", "Laptop"]);
 });

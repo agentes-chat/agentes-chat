@@ -458,13 +458,35 @@ export interface ContextBlock extends SystemBlock {
 export const isConversationBlock = (block: SystemBlock) => (block as ContextBlock).conversation === true;
 
 /**
+ * "How you work"'s lines a run gets by where it runs and who asked (`sayNowApplies`, `codeSuggestionApplies`,
+ * `workMayStart`): a computer brain reads them in "# This conversation", not in its system text (`agentSystemText`).
+ */
+const RUN_LINES = [SAY_NOW_LINE, CODE_SESSION_LINE, WORK_IN_BACKGROUND_LINE].map((line) => `\n${line}`);
+
+const agentBlocks = (system: readonly SystemBlock[]) =>
+  system.filter((b) => !isComputerTurnBlock(b) && !isConversationBlock(b));
+
+/**
+ * A computer brain's system text: what holds for the agent, the same in each of its conversations, so the CLI a
+ * computer starts before the turn comes (`brain.warm`, with the agent's last text) is the one the turn takes, and new
+ * sessions share the cached prefix. The model brain reads every block where it is.
+ */
+export function agentSystemText(system: readonly SystemBlock[]): string {
+  return agentBlocks(system)
+    .map((b) => RUN_LINES.reduce((text, line) => text.replace(line, ""), b.text))
+    .join("\n\n");
+}
+
+/**
  * What a computer brain reads as "# This conversation" at the start of its session (and again after it compacted
  * its history), one level under it; "" when there is nothing.
  */
 export function conversationText(system: readonly SystemBlock[]): string {
-  const parts = system
-    .filter((b) => isConversationBlock(b) && !isComputerTurnBlock(b) && b.text.trim())
-    .map((b) => b.text);
+  const runLines = RUN_LINES.filter((line) => agentBlocks(system).some((b) => b.text.includes(line)));
+  const parts = [
+    ...(runLines.length > 0 ? [`# How you work here${runLines.join("")}`] : []),
+    ...system.filter((b) => isConversationBlock(b) && !isComputerTurnBlock(b) && b.text.trim()).map((b) => b.text),
+  ];
   if (parts.length === 0) return "";
   return ["# This conversation", ...parts.map((t) => t.replace(/^# /, "## "))].join("\n\n");
 }
@@ -1280,7 +1302,9 @@ export async function buildRunContext(
           .filter(Boolean)
           .join("\n\n"),
     },
-    ...(capabilities ? [{ text: capabilities }] : []),
+    // Follows the run's tools (the groups loaded for its message, what it may use there): for a computer brain, read
+    // once per session.
+    ...(capabilities ? [{ conversation: true, text: capabilities }] : []),
     // Follows the requester (whose part of the team it names).
     ...(team ? [{ conversation: true, text: team }] : []),
     ...(options.skills && options.skills.length > 0
