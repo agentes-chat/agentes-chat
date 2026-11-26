@@ -33,7 +33,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { brainTool, cliCommandWayOut, installableCli } from "@agenteschat/client/lib/machines";
+import { brainTool, cliCommandWayOut, installableCli, machineTitle } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   ALL_AGENTS,
@@ -44,6 +44,7 @@ import {
   freePlanAccount,
   gateDims,
   gateLine,
+  hostConnecting,
   kindOf,
   ownSignInFor,
   PLAN_CHOICES,
@@ -680,8 +681,6 @@ export interface PlanPanelProps {
    * the caller). Elsewhere, choosing it saves it for the agent at once.
    */
   own?: { chosen: boolean; onChoose: (own: boolean) => void };
-  /** This server's own computer, picked a step before and not connected yet. */
-  hostConnecting?: boolean;
   /** The person came because the computer just got ready (its email, its notification): said first, once it is. */
   justReady?: boolean;
   /**
@@ -763,11 +762,14 @@ function SayStage({ stage, onStage }: { stage: PlanStage; onStage: ((stage: Plan
   return null;
 }
 
-/** `usePlanGates` for a person who owns no agent yet: each plan's gate on the computer it would sign in on. */
-export function useGatesWithoutAgent(orgId: string, on: boolean) {
+/**
+ * `usePlanGates` for a person who owns no agent yet: each plan's gate on the computer it would sign in on. `poll` as
+ * `usePlanGates`'s, so a computer that connects lights its plans up without an event.
+ */
+export function useGatesWithoutAgent(orgId: string, on: boolean, poll: number | false = false) {
   const { org } = useOrg();
-  const ai = useAiAccounts(orgId, on);
-  const machines = useMachines(orgId, on);
+  const ai = useAiAccounts(orgId, on, poll);
+  const machines = useMachines(orgId, on, poll);
   const setupQ = useComputerSetup(orgId);
   const edition = computerEdition(setupQ.data);
   const setup = setupView(setupQ.data, setupQ.dataUpdatedAt);
@@ -816,8 +818,17 @@ export function PlanWithoutAgent({
   const has = added ?? freePlanAccount(gates.accounts, choice);
   const title = planTitle(t, choice);
   const cloud = gates.edition === "cloud";
-  const name = cloud ? computerName(t, org.name, managedOf(machines.data), isPersonal(org)) : (computer?.name ?? "");
-  const steps = gate.state === "ready" || gate.state === "preparing" || (gate.state === "offline" && signingIn);
+  const row = machines.data?.find((m) => m.id === computer?.machineId);
+  // The server's own computer has no name until its runner's first sync: said as that computer meanwhile.
+  const name = cloud
+    ? computerName(t, org.name, managedOf(machines.data), isPersonal(org))
+    : machineTitle(row ?? { name: computer?.name ?? "" }, t("machines.host.label"));
+  // The steps stay in view, their computer actions off, while the computer reconnects under a sign-in or connects
+  // for the first time.
+  const steps =
+    gate.state === "ready" ||
+    gate.state === "preparing" ||
+    (gate.state === "offline" && (signingIn || hostConnecting(gate, row)));
   // Only whoever connected the computers there signs a plan in on them: a computer of their own is the way on.
   const elsewhere = gate.state === "locked" && !cloud;
   const pairsOwn = elsewhere && can(org, "pair_computers");
@@ -1074,7 +1085,6 @@ function PlanSteps({
   everyAgent,
   target,
   own,
-  hostConnecting,
   justReady,
   said = false,
   replies,
@@ -1147,10 +1157,12 @@ function PlanSteps({
     if (gate.state === "preparing") markWaited();
   }, [gate.state, markWaited]);
 
+  const machineRow = machines.data?.find((m) => m.id === view?.computer?.machineId);
+  // The server's own computer has no name until its runner's first sync: said as that computer meanwhile.
   const computer =
     edition === "cloud"
       ? computerName(t, org.name, managedOf(machines.data), isPersonal(org))
-      : (view?.computer?.name ?? "");
+      : machineTitle(machineRow ?? { name: view?.computer?.name ?? "" }, t("machines.host.label"));
   const refresh = (agentIds: string[]) => {
     for (const key of [
       ...agentIds.map((id) => keys.agentBrain(org.id, id)),
@@ -1356,15 +1368,18 @@ function PlanSteps({
       coding={coding}
       edition={edition}
       said={said}
-      hostConnecting={hostConnecting}
       signingIn={signingIn}
       onKey={onKey}
       onComputer={onComputer}
     />
   );
 
-  // The steps stay in view while they wait (their computer actions off); a reason alone otherwise.
-  const steps = ready || gate.state === "preparing" || (gate.state === "offline" && (hostConnecting || signingIn));
+  // The steps stay in view while they wait (their computer actions off): the computer reconnecting under a sign-in, or
+  // the server's own connecting for the first time; a reason alone otherwise.
+  const steps =
+    ready ||
+    gate.state === "preparing" ||
+    (gate.state === "offline" && (signingIn || hostConnecting(gate, machineRow)));
   const ownable = ready && !login && ownSignInFor(choice, view, gates.row);
   // The shared sign-in's plan, where the computer says it ("Claude Max").
   const ownPlan = planWordOf(gates.row?.own?.[kind]?.plan ?? null);
@@ -1649,7 +1664,6 @@ function GateWait({
   computer,
   edition,
   said,
-  hostConnecting,
   signingIn,
   onKey,
   onComputer,
@@ -1663,7 +1677,6 @@ function GateWait({
   computer: string;
   edition: Edition | null;
   said: boolean;
-  hostConnecting?: boolean;
   signingIn: boolean;
   onKey: () => void;
   /** None on the onboarding (`PlanPanelProps.onComputer`). */
@@ -1737,7 +1750,8 @@ function GateWait({
         )}
       </div>
     );
-  } else if (gate.state === "offline" && hostConnecting && !signingIn) {
+  } else if (hostConnecting(gate, row) && !signingIn && !hold) {
+    // The server's own computer, just added with the workspace: it connects by itself, so no key is offered yet.
     wait = line(<Spinner size={14} />, t("connectAi.wait.connecting"));
   } else if (
     why &&

@@ -405,6 +405,9 @@ async function fileSearchScopes(db: Database, orgId: string, userId: string) {
 
 export type QueryEmbedding = Awaited<ReturnType<ModelGateway["embed"]>>;
 
+/** A run's memory and wiki search the first this many characters of its trigger. */
+export const RUN_QUERY_CHARS = 500;
+
 /**
  * One query embedding for several searches of the same words (a run's memory and its wiki both search the trigger
  * message): asked by the first search that needs it, for every kind they search, then shared.

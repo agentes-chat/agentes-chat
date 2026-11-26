@@ -178,10 +178,12 @@ const PinnedFace = memo(function PinnedFace({
 });
 
 const styles = StyleSheet.create({
-  // The screen's sides, and room above for a badge standing over a face's corner.
-  strip: { paddingHorizontal: SCREEN_X, gap: GAP, paddingTop: 6, paddingBottom: 4 },
+  // The screen's sides, and room above for a badge standing over a face's corner and for the orbit's tip: a ring turned
+  // upright reaches 0.24 of the face past it (13 points here), and the strip scrolls, so it clips what passes its top.
+  strip: { paddingHorizontal: SCREEN_X, gap: GAP, paddingTop: 9, paddingBottom: 4 },
   item: { width: ITEM },
-  itemIn: { alignItems: "center", gap: 6, paddingVertical: 4 },
+  // The name far enough under the face that the upright ring's tip stays above its letters.
+  itemIn: { alignItems: "center", gap: 10, paddingVertical: 4 },
   badge: { position: "absolute", top: -6, right: -8, padding: 2, borderRadius: 999 },
   name: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: ITEM },
   shrink: { flexShrink: 1 },

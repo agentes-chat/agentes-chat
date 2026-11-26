@@ -18377,6 +18377,7 @@
     "namesMore": "{{first}} dan {{count}} lainnya",
     "wait": {
       "thinking": "Berpikir…",
+      "code": "Memperbarui kode…",
       "held": "Menunggu persetujuan…",
       "said": "“{{text}}”"
     },
