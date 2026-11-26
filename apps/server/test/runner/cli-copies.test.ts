@@ -10,6 +10,7 @@ import {
   CLI_COMMAND,
   CliCopies,
   type CliCopiesOptions,
+  confinedCopy,
   holdCliSelfUpdates,
   PROGRESS_STEP,
   progressGate,
@@ -129,6 +130,21 @@ test("the person's own copy: an older one is replaced for the runner, one at the
   await newer.cli.check();
   expect(newer.fetched).toHaveLength(0);
   expect(pickedCli("agy")).toBeUndefined();
+});
+
+test("a snap's copy, however new, is never the person's own: the pinned build runs, and the log says why once", async () => {
+  const snap = async (c: PinCli) => (c === "antigravity" ? { file: "/snap/bin/agy", version: "agy 10.0.1" } : null);
+  const { cli, fetched, logs } = copies({ wanted: [], own: snap });
+  await cli.check();
+  expect(fetched).toEqual(["https://downloads.example/antigravity.tar.gz"]);
+  expect(pickedCli("agy")).toBe(cli.file("antigravity") as string);
+  expect(resolveCommand("agy")).toBe(cli.file("antigravity") as string);
+  await cli.ensure("antigravity");
+  await cli.check();
+  expect(fetched).toHaveLength(1);
+  expect(logs.filter((l) => l.includes("/snap/bin/agy is a snap"))).toHaveLength(1);
+  expect(confinedCopy("/snap/bin/agy")).toBe(true);
+  expect(confinedCopy("/usr/local/bin/agy")).toBe(false);
 });
 
 test("a download that isn't the pinned build is never used, says why, and waits before trying again", async () => {
