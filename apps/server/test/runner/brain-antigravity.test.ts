@@ -437,7 +437,13 @@ test.skipIf(!posix)(
     const log = path.join(root, "agy.log");
     process.env.FAKE_AGY_LOG = log;
     const events = await run(ctx, turn());
-    expect(events.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+    // A new process every turn: how long it took to its `init`, its first event and its first words.
+    const done = events.at(-1) as Extract<CodexBrainEvent, { type: "done" }>;
+    expect(done).toMatchObject({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+    expect(done.timings?.warm).toBe(false);
+    for (const ms of [done.timings?.initMs, done.timings?.firstEventMs, done.timings?.firstTokenMs])
+      expect(ms).toBeGreaterThanOrEqual(0);
+    expect(done.timings?.initMs ?? Infinity).toBeLessThanOrEqual(done.timings?.firstTokenMs ?? -1);
     expect(
       events
         .filter((e) => e.type === "text_delta")

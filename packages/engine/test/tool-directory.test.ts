@@ -387,6 +387,29 @@ test("a name one word away gets the exact one, and what runs it", async () => {
   expect(await call("rm_rf", {})).toEqual({ content: "Unknown tool rm_rf", ...UNKNOWN });
 });
 
+test("a use_tool written the way other harnesses name a call still runs the tool it names", async () => {
+  const executed: string[] = [];
+  const { call } = await vegaGateway(executed);
+  // The Antigravity CLI's own `call_mcp_tool` shape, other spellings of the tool and its input, the input as JSON text.
+  for (const input of [
+    { ServerName: "agenteschat_agentes", ToolName: "obter_tickets", Arguments: {} },
+    { name: "obter_tickets", arguments: {} },
+    { tool_name: "obter_tickets", input: {} },
+    { toolName: "obter_tickets", parameters: {} },
+    { ToolName: "obter_tickets", Arguments: "{}" },
+  ])
+    expect(await call("vega_crm_use_tool", input)).toMatchObject({ content: "vega_crm_obter_tickets ok" });
+  expect(executed).toEqual(Array(5).fill("vega_crm_obter_tickets"));
+  // `tool` wins over the other spellings; no name at all is still where to look.
+  expect(
+    await call("vega_crm_use_tool", { tool: "obter_contatos", name: "obter_tickets", arguments: {} }),
+  ).toMatchObject({ content: "vega_crm_obter_contatos ok" });
+  expect(await call("vega_crm_use_tool", { arguments: {} })).toEqual({
+    content: 'No Vega CRM tool named "". Find the exact name with vega_crm_find_tools.',
+    ...UNKNOWN,
+  });
+});
+
 test("a write tool with read access is refused plainly: it exists, who can change the access", async () => {
   const executed: string[] = [];
   const { call, ctx } = await vegaGateway(executed);

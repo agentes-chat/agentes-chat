@@ -763,6 +763,14 @@ export const ALWAYS_LOADED: ReadonlySet<string> = new Set([
   PERMISSION_TOOL,
 ]);
 
+/**
+ * Every tool of ours, for the Antigravity CLI: it hands the model an MCP tool marked so as a function of its own, with
+ * its schema, as Codex and an API brain get them. Unmarked, the model reaches each one only through the CLI's
+ * `call_mcp_tool` (server, tool and arguments in one call), and names and fills them wrong twice as often
+ * (`_meta` key from the CLI's 1.3.3 changelog, still read by 1.5.16).
+ */
+export const AGY_ALWAYS_LOAD = "antigravity/alwaysLoad";
+
 type JsonRpcId = string | number | null;
 export type ToolCaller = (tool: string, args: Record<string, unknown>) => Promise<IpcReply>;
 /** The run's tools as the bridge knows them now (protocol 8). */
@@ -917,7 +925,10 @@ export async function handleMcpMessage(
               .map((tool) => ({
                 ...tool,
                 ...(READ_ONLY_TOOLS.has(tool.name) ? { annotations: { readOnlyHint: true } } : {}),
-                ...(ALWAYS_LOADED.has(tool.name) ? { _meta: { "anthropic/alwaysLoad": true } } : {}),
+                _meta: {
+                  ...(ALWAYS_LOADED.has(tool.name) ? { "anthropic/alwaysLoad": true } : {}),
+                  [AGY_ALWAYS_LOAD]: true,
+                },
               })),
           ],
         },

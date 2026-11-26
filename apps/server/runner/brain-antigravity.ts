@@ -4,7 +4,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import type { CommandProfile } from "@agenteschat/adapters/command-policy";
-import type { AgentScope, BrainEffort } from "@agenteschat/adapters/machine-protocol";
+import type { AgentScope, BrainEffort, BrainTurnTimings } from "@agenteschat/adapters/machine-protocol";
 import { isAccountId } from "@agenteschat/adapters/machine-protocol";
 import { ANTIGRAVITY_LEVEL } from "@agenteschat/providers/plans";
 import {
@@ -252,6 +252,13 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
   // Windows too, one Gemini account a computer there (ADR 0143 §3).
   const platform = opts.platform ?? process.platform;
+  // How the turn started, each from its start (`done.timings`): the CLI's `init`, its first event, its first words.
+  const startedAt = Date.now();
+  const timings: Omit<BrainTurnTimings, "warm"> = {};
+  const emit = (event: CodexBrainEvent) => {
+    timings.firstEventMs ??= Date.now() - startedAt;
+    opts.emit(event);
+  };
   try {
     prepareAgyHome(input.account.home, opts.mcpCommand);
     if (input.chat) {
@@ -319,7 +326,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       tail = out.slice(at);
       if (at > 0) {
         streamed = true;
-        opts.emit({ type: "text_delta", text: out.slice(0, at) });
+        timings.firstTokenMs ??= Date.now() - startedAt;
+        emit({ type: "text_delta", text: out.slice(0, at) });
       }
     };
     let sawInit = false;
@@ -347,6 +355,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       }
       if (ev.event === "init") {
         sawInit = true;
+        timings.initMs = Date.now() - startedAt;
         const id = typeof ev.conversation_id === "string" ? ev.conversation_id : undefined;
         if (isRecord(ev.init) && typeof ev.init.model === "string") model = ev.init.model;
         // A resume the CLI didn't have comes back as a new conversation, without the context.
@@ -384,7 +393,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       flush("", true);
       const error = isRecord(info.error) ? info.error : null;
       const output = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");
-      opts.emit({
+      emit({
         type: "tool_call",
         id: `${String(step.conversation_id ?? "agy")}:${String(step.step_index ?? used.steps)}`,
         name,
@@ -448,8 +457,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     const response = typeof r.response === "string" ? r.response : "";
     if (r.status === "SUCCESS" && exit.code === 0) {
       const text = clean(response.trimEnd());
-      if (text && !streamed) opts.emit({ type: "text_delta", text });
-      opts.emit({ type: "done", text, session: { id: input.sessionId } });
+      if (text && !streamed) emit({ type: "text_delta", text });
+      opts.emit({ type: "done", text, session: { id: input.sessionId }, timings: { warm: false, ...timings } });
       return;
     }
     const agyError = parseAgyError(stderr);
