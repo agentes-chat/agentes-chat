@@ -951,6 +951,10 @@
         "all": "Lihat semua paket"
       },
       "ai": {
+        "titleNow": "Sekarang, AI yang sudah kalian bayar",
+        "titleNowPersonal": "Sekarang, AI yang sudah kamu bayar",
+        "leadNow": "Dengan itu, tim mulai hari ini. Para agen memakai akun kalian, tanpa biaya tambahan di sini.",
+        "leadNowPersonal": "Dengan itu, agenmu mulai hari ini. Mereka memakai akunmu, tanpa biaya tambahan di sini.",
         "later": "Hubungkan nanti",
         "doneTitle": "Beres. Tim {{org}} sudah berpikir.",
         "doneTitlePersonal": "Beres. {{name}} sudah berpikir.",
@@ -961,10 +965,15 @@
       },
       "people": {
         "title": "Siapa yang bekerja denganmu?",
+        "eyebrowWhile": "Tim sedang disiapkan",
+        "titleWhile": "Sementara itu, undang orang-orang yang bekerja denganmu",
+        "leadWhile": "Butuh beberapa menit. Setiap orang yang kamu undang, saat bergabung, membuat agen untuk pekerjaannya sendiri.",
+        "leadJoin": "Setiap orang yang kamu undang, saat bergabung, membuat agen untuk pekerjaannya sendiri.",
         "send": "Kirim undangan",
         "later": "Undang nanti"
       },
-      "account": "Akunmu"
+      "account": "Akunmu",
+      "switchNote": "Kamu bisa beralih nanti tanpa kehilangan apa pun."
     },
     "back": "Kembali",
     "leaveLater": "Kembali ke {{name}}, lanjutkan nanti",
@@ -1624,6 +1633,211 @@
     "confirmation": {
       "sent": "Kami mengirim tautan konfirmasi ke {{email}}.",
       "first": "Sudah diundang? Konfirmasi email-mu dulu."
+    },
+    "start": {
+      "title": "Bagaimana kamu mau mulai?",
+      "lead": "Agen bekerja di aplikasi yang sudah kalian pakai, lebih dari {{n}}. Semuanya bisa diubah nanti.",
+      "leadPersonal": "Agenmu bekerja di aplikasi yang sudah kamu pakai, lebih dari {{n}}. Semuanya bisa diubah nanti.",
+      "leadAny": "Agen bekerja di aplikasi yang sudah kalian pakai. Semuanya bisa diubah nanti.",
+      "leadAnyPersonal": "Agenmu bekerja di aplikasi yang sudah kamu pakai. Semuanya bisa diubah nanti.",
+      "ask": "Tanya AI-mu",
+      "askText": "Claude, ChatGPT, Gemini, atau yang kamu pakai menemukan tugas yang paling menyita waktumu dan mengusulkan satu agen untuk tiap tugas. Kamu yang memilih mulai dari mana.",
+      "askTextPersonal": "Claude, ChatGPT, Gemini, atau yang kamu pakai menemukan tugas yang paling menyita waktumu, di tempat kerja atau di luar, dan mengusulkan satu agen untuk tiap tugas. Kamu yang memilih mulai dari mana.",
+      "scratch": "Mulai dari nol",
+      "scratchText": "Kamu membuat tiap agen kapan pun kamu mau. {{name}}, HRD para agen, menyusun tiap agen bersamamu.",
+      "askGo": "Tanya AI-mu",
+      "scratchGo": "Mulai dari nol"
+    },
+    "ask": {
+      "title": "Minta agen pertamamu",
+      "titleMember": "Minta agenmu",
+      "lead": "AI-mu sudah mengenal pekerjaanmu. Dengan agentes.chat terhubung, AI-mu menemukan tugas yang paling sering kamu ulangi dan mengusulkan satu agen untuk tiap tugas. Kamu yang memilih mulai dari mana.",
+      "leadPersonal": "AI-mu sudah mengenal rutinitasmu. Dengan agentes.chat terhubung, AI-mu menemukan tugas yang paling sering kamu ulangi, di tempat kerja atau di luar, dan mengusulkan satu agen untuk tiap tugas. Kamu yang memilih mulai dari mana.",
+      "apps": "Asisten pilihanmu",
+      "other": "Aplikasi agen lain",
+      "connect": "Hubungkan agentes.chat",
+      "connected": "Terhubung",
+      "paste": "Tempel permintaan ini di percakapan baru",
+      "pasteJson": "Tempel permintaan ini di percakapan baru dengan {{app}}",
+      "copy": "Salin permintaan",
+      "waiting": "Menunggu usulan dari {{app}}…",
+      "noConnector": "Tidak ada konektor? Tempel jawabannya",
+      "useConnector": "Pakai konektor",
+      "answer": "Tempel di sini seluruh jawaban dari {{app}}",
+      "answerPlaceholder": "JSON yang menjadi jawabannya",
+      "read": "Baca jawaban",
+      "notJson": "Tidak ada JSON di jawaban ini. Salin seluruh jawabannya dan tempel lagi.",
+      "later": "Nanti saja",
+      "say": "Aku mendengarkan. Usulannya muncul di sini.",
+      "stuck": "Belum ada apa-apa setelah beberapa menit? Pastikan konektornya aktif di percakapan itu dan kirim lagi permintaannya.",
+      "prompt": {
+        "team": {
+          "open": "Aku ingin mulai memakai agentes.chat, yang baru kuhubungkan di sini, dengan satu agen AI yang mengambil alih pekerjaan berulang dari hariku.",
+          "know": "1. Sebelum bertanya apa pun, pakai apa yang sudah kamu tahu tentangku: percakapan kita sebelumnya, memorimu, serta file dan aplikasi yang bisa kamu akses. Pahami apa yang dikerjakan {{org}}, untuk siapa, aplikasi apa yang kami pakai, dan tugas apa yang kuulangi setiap minggu.",
+          "send": "4. Kirim 3 pilihan itu lewat alat propose_first_agents dari agentes.chat, bersama ringkasan dua atau tiga kalimat tentang apa yang dikerjakan {{org}}. Jangan membuat apa pun: aku yang memilih mulai dari mana."
+        },
+        "member": {
+          "open": "Aku baru bergabung ke ruang kerja {{org}} di agentes.chat, yang kuhubungkan di sini, dan aku ingin mulai dengan satu agen AI yang mengambil alih pekerjaan berulang dari peranku di tim.",
+          "know": "1. Sebelum bertanya apa pun, pakai apa yang sudah kamu tahu tentangku: percakapan kita sebelumnya, memorimu, serta file dan aplikasi yang bisa kamu akses. Pahami peranku di {{org}}, dengan siapa aku bekerja, aplikasi apa yang kupakai, dan tugas apa yang kuulangi setiap minggu.",
+          "send": "4. Kirim 3 pilihan itu lewat alat propose_first_agents dari agentes.chat, bersama ringkasan dua atau tiga kalimat tentang apa yang kukerjakan di {{org}}. Jangan membuat apa pun: aku yang memilih mulai dari mana."
+        },
+        "personal": {
+          "open": "Aku ingin mulai memakai agentes.chat, yang baru kuhubungkan di sini, dengan satu agen AI yang mengambil alih pekerjaan berulang dari hariku, di tempat kerja atau di luar.",
+          "know": "1. Sebelum bertanya apa pun, pakai apa yang sudah kamu tahu tentangku: percakapan kita sebelumnya, memorimu, serta file dan aplikasi yang bisa kamu akses. Pahami apa yang kukerjakan, seperti apa mingguku, aplikasi apa yang kupakai, dan tugas apa yang kuulangi.",
+          "send": "4. Kirim 3 pilihan itu lewat alat propose_first_agents dari agentes.chat, bersama ringkasan dua atau tiga kalimat tentang diriku. Jangan membuat apa pun: aku yang memilih mulai dari mana."
+        },
+        "interview": "2. Kalau ada hal penting yang kurang, wawancarai aku: satu pertanyaan sekali, paling banyak 3, dimulai dari yang paling mengubah rekomendasi. Kalau aku tidak tahu jawabannya, lanjutkan dengan tebakan terbaikmu dan sebutkan tebakannya.",
+        "design": "3. Pilih 3 tugas berulang yang paling menyita waktuku. Untuk tiap tugas, rancang satu agen seperti deskripsi lowongan kerja: nama singkat, peran, 3 tanggung jawab (apa yang dikerjakannya sendiri, kapan berjalan, dan kapan memanggilku), aplikasi yang dibutuhkan, rutinitasnya dengan hari dan jam, serta apa yang sudah bisa diserahkannya di hari pertama. Urutkan dari tugas yang paling menyita waktuku sampai yang paling sedikit, dan sebutkan dalam satu kalimat, dari yang kamu lihat, kenapa kamu memilih masing-masing.",
+        "json": {
+          "team": "Aku ingin mulai memakai agentes.chat dengan satu agen AI yang mengambil alih pekerjaan berulang dari hariku.",
+          "member": "Aku baru bergabung ke ruang kerja {{org}} di agentes.chat dan aku ingin mulai dengan satu agen AI yang mengambil alih pekerjaan berulang dari peranku di tim.",
+          "personal": "Aku ingin mulai memakai agentes.chat dengan satu agen AI yang mengambil alih pekerjaan berulang dari hariku, di tempat kerja atau di luar.",
+          "cron": "Berikan juga hari dan jam tiap rutinitas sebagai cron 5 kolom, dalam zona waktuku.",
+          "send": "4. Jawab hanya dengan JSON dalam format ini, tanpa teks sebelum atau sesudahnya:",
+          "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"setiap Senin pukul 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
+        }
+      }
+    },
+    "pick": {
+      "title": "Pilih agen pertamamu",
+      "lead_other": "{{app}}-mu menemukan {{n}} tugas yang paling menyita waktumu. Mulailah dengan satu: sisanya untuk nanti.",
+      "leadAny_other": "AI-mu menemukan {{n}} tugas yang paling menyita waktumu. Mulailah dengan satu: sisanya untuk nanti.",
+      "eyebrow": "Usulan dari {{app}}-mu · langkah {{n}} dari {{total}}",
+      "eyebrowAny": "Usulan dari AI-mu · langkah {{n}} dari {{total}}",
+      "rank": {
+        "first": "Paling sering berulang",
+        "second": "Peringkat 2",
+        "third": "Peringkat 3"
+      },
+      "duties": "Tanggung jawab",
+      "needs": "Kebutuhan",
+      "why": "Kenapa {{name}}:",
+      "note": "Tidak ada yang dibuat sampai kamu memilih.",
+      "create": "Buat {{name}}",
+      "say_other": "{{app}} menemukan {{n}} cara untuk memulai.",
+      "sayAny_other": "AI-mu menemukan {{n}} cara untuk memulai.",
+      "count": {
+        "tasks": {
+          "one": "satu",
+          "two": "dua",
+          "three": "tiga"
+        },
+        "ways": {
+          "one": "satu",
+          "two": "dua",
+          "three": "tiga"
+        }
+      }
+    },
+    "week": {
+      "title": "Minggu pertama {{name}}",
+      "lead": "{{name}} mulai hari ini. Semuanya masuk ke kanalnya, dan kamu cukup menyetujui.",
+      "leadPersonal": "{{name}} mulai hari ini. Semuanya masuk ke percakapanmu dengan {{name}}, dan kamu cukup menyetujui.",
+      "leadRoutine": "{{name}} mulai hari ini, dan “{{routine}}” berulang {{when}}. Semuanya masuk ke kanalnya, dan kamu cukup menyetujui.",
+      "leadRoutinePersonal": "{{name}} mulai hari ini, dan “{{routine}}” berulang {{when}}. Semuanya masuk ke percakapanmu dengan {{name}}, dan kamu cukup menyetujui.",
+      "say": "Begitu tim menyala, kita mulai.",
+      "sayPersonal": "Begitu menyala, kita mulai.",
+      "strip": "7 hari ke depan",
+      "today": "Hari ini · {{date}}",
+      "tomorrow": "Besok, {{date}}",
+      "date": "{{weekday}}, {{n}}",
+      "dateFar": "{{weekday}}, {{n}} {{month}}",
+      "now": "Sekarang",
+      "days": {
+        "MO": "Senin",
+        "TU": "Selasa",
+        "WE": "Rabu",
+        "TH": "Kamis",
+        "FR": "Jumat",
+        "SA": "Sabtu",
+        "SU": "Minggu"
+      },
+      "every": {
+        "day": "setiap hari",
+        "businessDays": "Senin sampai Jumat",
+        "MO": "setiap Senin",
+        "TU": "setiap Selasa",
+        "WE": "setiap Rabu",
+        "TH": "setiap Kamis",
+        "FR": "setiap Jumat",
+        "SA": "setiap Sabtu",
+        "SU": "setiap Minggu"
+      },
+      "about": "Apa kata {{app}}-mu",
+      "aboutAny": "Apa kata AI-mu"
+    },
+    "hire": {
+      "the": "{{name}}",
+      "title": "Rekrut timnya",
+      "titleOne": "Rekrut {{name}}",
+      "titlePersonal": "Rekrut agen-agenmu",
+      "lead": "Kamu merekrut {{agent}} untuk {{role}}. {{name}} mulai hari ini, bersama {{lodi}}, dan bekerja siang dan malam.",
+      "leadNoRole": "Kamu merekrut {{agent}}. {{name}} mulai hari ini, bersama {{lodi}}, dan bekerja siang dan malam.",
+      "leadMany": "Kamu merekrut {{names}}. Mereka mulai hari ini, bersama {{lodi}}, dan bekerja siang dan malam.",
+      "leadAlone": "Kamu mulai dengan {{name}}, HRD para agen. {{name}} membuat tiap agen bersamamu dan bekerja siang dan malam.",
+      "rightHand": "HRD para agen",
+      "rightHandLine": "Membuat dan menyesuaikan agenmu, kapan pun kamu minta.",
+      "plan": "Paket {{name}}",
+      "perMonth": "per bulan",
+      "fine_other": "Hingga {{count}} orang. Buat agen lain nanti tanpa biaya tambahan. Batalkan dengan satu klik.",
+      "fineAny": "Buat agen lain nanti tanpa biaya tambahan. Batalkan dengan satu klik.",
+      "later": "Nanti saja",
+      "cta": "Rekrut tim",
+      "ctaOne": "Rekrut {{name}}",
+      "ctaPersonal": "Rekrut agen"
+    },
+    "celebrate": {
+      "say": "Hai, {{first}}! Kita mulai hari ini.",
+      "sayAny": "Hai! Kita mulai hari ini.",
+      "eyebrow": "Tim {{org}} · sejak {{date}}",
+      "eyebrowPersonal": "Agen-agenmu · sejak {{date}}",
+      "title": "Selamat datang di tim {{org}}",
+      "titlePersonal": "Selamat datang di timmu",
+      "you": "Kamu",
+      "lead": "{{names}}. Mulai hari ini, bekerja bersama, siang dan malam.",
+      "plan": "Paket {{name}} aktif",
+      "planAny": "Paket aktif",
+      "ai": "Hubungkan AI yang sudah kalian bayar",
+      "aiPersonal": "Hubungkan AI yang sudah kamu bayar",
+      "people": "Undang orang yang bekerja denganmu",
+      "start_other": "Dan tim mulai mengerjakan {{count}} hasil kerja",
+      "startAny": "Dan tim mulai bekerja",
+      "startPersonal_other": "Dan agen-agenmu mulai mengerjakan {{count}} hasil kerja",
+      "startAnyPersonal": "Dan agen-agenmu mulai bekerja",
+      "connect": "Hubungkan AI",
+      "download": "Unduh foto tim",
+      "downloadPersonal": "Unduh foto timmu",
+      "photoFile": "tim-{{slug}}.png",
+      "photoFileAny": "foto-tim.png",
+      "photoFilePersonal": "timku.png",
+      "photoFailed": "Fotonya tidak bisa dibuat. Coba lagi."
+    },
+    "member": {
+      "title": "Selamat datang di {{org}}, {{first}}",
+      "titleNoName": "Selamat datang di {{org}}",
+      "titlePersonal": "Selamat datang, {{first}}",
+      "titleNoNamePersonal": "Selamat datang",
+      "intro": "Di sini, tiap orang membawa agen yang menyelesaikan salah satu masalahnya.",
+      "brought": "{{person}} membawa {{agent}}, untuk {{role}}.",
+      "broughtNoRole": "{{person}} membawa {{agent}}.",
+      "question": "Agenmu nanti yang mana?",
+      "how": "Bagaimana kamu mau membuat agenmu?",
+      "ask": "Tanya AI-mu",
+      "askText": "AI-mu menemukan tugas yang paling menyita waktumu dan mengusulkan agen untuk tugas itu.",
+      "scratch": "Mulai dari nol",
+      "scratchText": "Kamu menjelaskan masalahnya, dan {{name}}, HRD para agen, menyusun agennya bersamamu.",
+      "askGo": "Tanya AI-mu",
+      "scratchGo": "Mulai dari nol",
+      "later": "Nanti saja",
+      "noPermission": "Untuk membuat agenmu, minta izin membuat agen ke admin.",
+      "enter": "Buka {{org}}",
+      "enterPersonal": "Buka ruang kerja",
+      "pickTitle": "Pilih agenmu",
+      "found_other": "{{app}}-mu menemukan {{n}} tugas yang paling menyita waktumu.",
+      "foundAny_other": "AI-mu menemukan {{n}} tugas yang paling menyita waktumu.",
+      "joins_other": "Mulailah dengan satu: agennya masuk ke tim {{org}}, bersama {{names}}.",
+      "joinsPersonal_other": "Mulailah dengan satu: agennya bekerja di sini bersamamu, di samping {{names}}.",
+      "pickNote": "Ini yang pertama: buat yang lain kapan pun kamu mau."
     }
   },
   "desktopNotice": {
@@ -15590,6 +15804,12 @@
     "teamProposal": {
       "undoExpired": "Sudah lebih dari sehari sejak tim ini dibuat, jadi tidak bisa dibatalkan di sini. Arsipkan agennya di halaman masing-masing."
     },
+    "firstAgents": {
+      "needsAdmin": "Membuat agen di ruang kerja ini butuh admin. Minta admin membuatkannya untukmu.",
+      "invalid": "Jawaban ini tidak sesuai format yang kami minta. Salin lagi permintaannya dan tempel seluruh jawaban AI-mu.",
+      "picking": "Agen ini sedang dibuat. Tunggu sebentar.",
+      "rateLimited": "Terlalu banyak percobaan untuk saat ini. Coba lagi sebentar lagi."
+    },
     "proposal": {
       "changed": "Ini berubah setelah diterapkan: sesuaikan secara manual.",
       "notApplied": "Perubahan ini tidak diterapkan, jadi tidak ada yang perlu diurungkan.",
@@ -18809,6 +19029,7 @@
       "action_update_skills": "Perbarui skill",
       "action_approvals": "Persetujuan yang menunggumu",
       "welcome_member": "Anda baru saja bergabung dengan {{org}}. **Apa yang Anda tangani di sini?** Beri tahu saya dan saya siapkan agen pertama Anda bersama Anda.",
+      "welcome_member_agent": "Kamu baru bergabung ke {{org}}, dan agen pertamamu sudah ada di tim. Kalau butuh aku, panggil saja.",
       "action_open_page": "Buka layar",
       "calendar_proposal": "Usulan acara: {{title}}",
       "action_workspace": "Mengusulkan perubahan di ruang kerja",
@@ -21370,6 +21591,164 @@
     }
   },
   "arrival": {
+    "welcome": {
+      "stepOf": "Langkah {{n}} dari {{total}}",
+      "skip": "Lewati",
+      "next": "Berikutnya",
+      "start": "Ayo mulai",
+      "hello": {
+        "title": "Selamat datang di {{org}}, {{first}}",
+        "titleNoName": "Selamat datang di {{org}}",
+        "titlePersonal": "Selamat datang, {{first}}",
+        "titleNoNamePersonal": "Selamat datang",
+        "text": "Di sini kalian dan para agen bekerja bersama, siang dan malam. Dalam satu menit, hal-hal pentingnya.",
+        "textPersonal": "Di sini kamu dan agen-agenmu bekerja bersama, siang dan malam. Dalam satu menit, hal-hal pentingnya.",
+        "say": "Hai, {{first}}! Aku {{name}}, HRD para agen.",
+        "sayNoName": "Hai! Aku {{name}}, HRD para agen."
+      },
+      "computer": {
+        "title": "Setiap agen punya komputernya sendiri",
+        "text": "Di sana mereka membuka situs, memakai aplikasi, dan menjalankan kode, sendiri. Kapan pun kamu mau, kamu bisa menonton langsung atau mengambil alih.",
+        "tab": "Pembayaran",
+        "rows": {
+          "a": {
+            "name": "Klinik Mentari",
+            "amount": "Rp8.900.000",
+            "state": "12 hari"
+          },
+          "b": {
+            "name": "Klinik Tepi Sungai",
+            "amount": "Rp6.400.000",
+            "state": "5 hari"
+          },
+          "c": {
+            "name": "Klinik Gigi Pelabuhan",
+            "amount": "Rp11.200.000",
+            "state": "Lunas"
+          }
+        },
+        "say": "2 klinik terlambat bayar. Pengingatnya menunggu persetujuanmu.",
+        "tabPersonal": "Tagihan bulan ini",
+        "rowsPersonal": {
+          "a": {
+            "name": "Listrik",
+            "amount": "Rp890.000",
+            "state": "Jatuh tempo hari ini"
+          },
+          "b": {
+            "name": "Ponsel",
+            "amount": "Rp150.000",
+            "state": "5 hari lagi"
+          },
+          "c": {
+            "name": "Sewa",
+            "amount": "Rp4.500.000",
+            "state": "Lunas"
+          }
+        },
+        "sayPersonal": "Tagihan listrik jatuh tempo hari ini. Pembayarannya menunggu persetujuanmu."
+      },
+      "channels": {
+        "title": "Setiap topik di kanalnya",
+        "titlePersonal": "Setiap topik di percakapannya",
+        "text": "Tulis seperti kamu menulis ke rekan tim. Yang paham topiknya akan menjawab, orang atau agen. Untuk bicara dengan agen, cukup panggil namanya.",
+        "textPersonal": "Tulis seperti kamu menulis ke orang yang kamu percaya. Tiap agen mengurus topiknya, dan untuk bicara dengan salah satunya, cukup panggil namanya.",
+        "list": {
+          "a": "layanan",
+          "b": "penagihan",
+          "c": "keuangan",
+          "d": "penjualan"
+        },
+        "listPersonal": {
+          "a": "Rumah",
+          "b": "Tagihan",
+          "c": "Perjalanan",
+          "d": "Kesehatan"
+        },
+        "ask": "Klinik Mentari sudah bayar?",
+        "answer": "Kemarin pukul 14.20. Sudah kutandai lunas dan kuberi tahu bagian keuangan.",
+        "askPersonal": "Tagihan listrik sudah dibayar?",
+        "answerPersonal": "Kemarin pukul 14.20. Buktinya sudah kusimpan."
+      },
+      "wiki": {
+        "title": "Wiki adalah dokumentasi {{org}}",
+        "titlePersonal": "Wiki menyimpan yang penting",
+        "text": "Dokumentasi bersama perusahaan: proses, harga, cara bicara dengan pelanggan. Para agen membacanya sebelum menjawab dan menulis di sana saat belajar hal baru.",
+        "textPersonal": "Catatanmu di satu tempat: tagihan, dokumen, cara kamu suka sesuatu dikerjakan. Agen-agenmu membacanya sebelum menjawab dan menulis saat belajar hal baru.",
+        "pages": {
+          "left": "Harga",
+          "right": "Apa yang dikerjakan {{org}}",
+          "front": "Pengingat pembayaran"
+        },
+        "pagesPersonal": {
+          "left": "Dokumen",
+          "right": "Tentang aku",
+          "front": "Tagihan rumah"
+        }
+      },
+      "memory": {
+        "title": "Mereka mengingat yang penting",
+        "text": "Di setiap percakapan, mereka menyimpan preferensi, keputusan, dan siapa mengurus apa. Kamu meninjau apa yang menjadi memori.",
+        "notes": {
+          "a": "{{org}} tutup pukul 18.00",
+          "b": "{{first}} suka ringkasan singkat",
+          "c": "Pengingat hanya di hari kerja",
+          "d": "Klinik Mentari bayar tiap tanggal 10"
+        },
+        "notesPersonal": {
+          "a": "Olahraga pukul 18.00, tiga kali seminggu",
+          "b": "{{first}} suka ringkasan singkat",
+          "c": "Pengingat hanya di hari kerja",
+          "d": "Sewa jatuh tempo tanggal 10"
+        },
+        "likes": "Suka ringkasan singkat"
+      },
+      "routines": {
+        "title": "Pekerjaan yang berjalan sendiri",
+        "text": "Rutinitas berjalan di jam yang kamu minta, seperti “setiap hari pukul 9”. Dan hal yang serius, seperti mengirim, membayar, atau menghapus, menunggu persetujuanmu.",
+        "routine": "Ringkasan harian",
+        "routineText": "2 pembayaran masuk, 2 terlambat",
+        "ask": "Kirim pengingat pembayaran ke 3 klinik?",
+        "routinePersonal": "Hari kamu",
+        "routineTextPersonal": "3 email perlu dibalas, 1 tagihan jatuh tempo hari ini",
+        "askPersonal": "Bayar tagihan listrik Rp890.000?",
+        "asks": "{{name}} minta persetujuanmu",
+        "refuse": "Tolak",
+        "approve": "Setujui"
+      },
+      "ready": {
+        "title": "Semua siap untuk mulai",
+        "word": "BETA",
+        "left_other": "Tinggal {{count}} hal lagi.",
+        "later": "Kalau kamu tunda, daftar ini tetap ada di percakapanmu dengan {{name}}, supaya bisa kamu selesaikan kapan pun.",
+        "none": "Semuanya sudah siap. Sekarang tinggal ngobrol dengan tim.",
+        "nonePersonal": "Semuanya sudah siap. Sekarang tinggal ngobrol dengan agen-agenmu.",
+        "beta": "Kami masih beta.",
+        "betaText": "Makin baik setiap minggu, dan kalau ada yang gagal, masalahnya ada di kami.",
+        "feedback": "Ceritakan apa yang kurang lewat {{where}}, di bagian bawah bilah samping.",
+        "rows": {
+          "plan": "Paket {{plan}} aktif",
+          "planAny": "Paket aktif",
+          "planTodo": "Nyalakan tim",
+          "planTodoPersonal": "Nyalakan agen-agenmu",
+          "planAction": "Lihat paket",
+          "ai": "{{label}} terhubung",
+          "aiAny": "Satu AI terhubung",
+          "aiTodo": "Hubungkan AI",
+          "aiAction": "Hubungkan",
+          "people_other": "{{count}} orang di tim",
+          "invited_other": "{{count}} orang diundang",
+          "peopleNone": "Baru kamu untuk saat ini",
+          "peopleTodo": "Undang orang yang bekerja denganmu",
+          "peopleAction": "Undang",
+          "apps_other": "{{apps}} terhubung",
+          "appsNone": "Belum ada aplikasi",
+          "appsTodo": "Hubungkan aplikasi kerjamu",
+          "appsTodoPersonal": "Hubungkan aplikasimu",
+          "appsAction": "Pilih"
+        }
+      }
+    },
     "stage": {
       "ready": "Timmu sudah siap",
       "wake": "Tinggal butuh AI supaya bangun.",

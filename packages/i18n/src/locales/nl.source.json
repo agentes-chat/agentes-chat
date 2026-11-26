@@ -2387,6 +2387,18 @@
   "onboarding.flow.plan.all": {
     "value": "See all plans"
   },
+  "onboarding.flow.ai.titleNow": {
+    "value": "Now, the AI you already pay for"
+  },
+  "onboarding.flow.ai.titleNowPersonal": {
+    "value": "Now, the AI you already pay for"
+  },
+  "onboarding.flow.ai.leadNow": {
+    "value": "With it, the team starts today. The agents use your account, at no extra cost here."
+  },
+  "onboarding.flow.ai.leadNowPersonal": {
+    "value": "With it, your agents start today. They use your account, at no extra cost here."
+  },
   "onboarding.flow.ai.later": {
     "value": "Connect later"
   },
@@ -2411,6 +2423,18 @@
   "onboarding.flow.people.title": {
     "value": "Who works with you?"
   },
+  "onboarding.flow.people.eyebrowWhile": {
+    "value": "Getting the team ready"
+  },
+  "onboarding.flow.people.titleWhile": {
+    "value": "Meanwhile, invite the people you work with"
+  },
+  "onboarding.flow.people.leadWhile": {
+    "value": "It takes a few minutes. Each person you invite creates, on joining, the agent for their own work."
+  },
+  "onboarding.flow.people.leadJoin": {
+    "value": "Each person you invite creates, on joining, the agent for their own work."
+  },
   "onboarding.flow.people.send": {
     "value": "Send invitations"
   },
@@ -2419,6 +2443,9 @@
   },
   "onboarding.flow.account": {
     "value": "Your account"
+  },
+  "onboarding.flow.switchNote": {
+    "value": "You can switch later without losing anything."
   },
   "onboarding.back": {
     "value": "Back"
@@ -4135,6 +4162,546 @@
   },
   "onboarding.confirmation.first": {
     "value": "Already invited? Confirm your email first."
+  },
+  "onboarding.start.title": {
+    "value": "How do you want to start?"
+  },
+  "onboarding.start.lead": {
+    "value": "Agents work in the apps you already use, more than {{n}}. You can change everything later."
+  },
+  "onboarding.start.leadPersonal": {
+    "value": "Your agents work in the apps you already use, more than {{n}}. You can change everything later."
+  },
+  "onboarding.start.leadAny": {
+    "value": "Agents work in the apps you already use. You can change everything later."
+  },
+  "onboarding.start.leadAnyPersonal": {
+    "value": "Your agents work in the apps you already use. You can change everything later."
+  },
+  "onboarding.start.ask": {
+    "value": "Ask your AI"
+  },
+  "onboarding.start.askText": {
+    "value": "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time and proposes an agent for each one. You pick where to start."
+  },
+  "onboarding.start.askTextPersonal": {
+    "value": "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time, at work or outside it, and proposes an agent for each one. You pick where to start."
+  },
+  "onboarding.start.scratch": {
+    "value": "Start from scratch"
+  },
+  "onboarding.start.scratchText": {
+    "value": "You create each agent whenever you want. {{name}}, the agents' HR, builds each one with you."
+  },
+  "onboarding.start.askGo": {
+    "value": "Ask your AI"
+  },
+  "onboarding.start.scratchGo": {
+    "value": "Start from scratch"
+  },
+  "onboarding.ask.title": {
+    "value": "Ask for your first agent"
+  },
+  "onboarding.ask.titleMember": {
+    "value": "Ask for your agent"
+  },
+  "onboarding.ask.lead": {
+    "value": "Your AI already knows your work. With agentes.chat connected, it finds the tasks you repeat the most and proposes an agent for each one. You pick where to start."
+  },
+  "onboarding.ask.leadPersonal": {
+    "value": "Your AI already knows your routine. With agentes.chat connected, it finds the tasks you repeat the most, at work or outside it, and proposes an agent for each one. You pick where to start."
+  },
+  "onboarding.ask.apps": {
+    "value": "Your assistant"
+  },
+  "onboarding.ask.other": {
+    "value": "Another agent app"
+  },
+  "onboarding.ask.connect": {
+    "value": "Connect agentes.chat"
+  },
+  "onboarding.ask.connected": {
+    "value": "Connected"
+  },
+  "onboarding.ask.paste": {
+    "value": "Paste this request into a new conversation"
+  },
+  "onboarding.ask.pasteJson": {
+    "value": "Paste this request into a new conversation with {{app}}"
+  },
+  "onboarding.ask.copy": {
+    "value": "Copy the request"
+  },
+  "onboarding.ask.waiting": {
+    "value": "Waiting for {{app}}'s proposal…"
+  },
+  "onboarding.ask.noConnector": {
+    "value": "No connector? Paste the answer"
+  },
+  "onboarding.ask.useConnector": {
+    "value": "Use the connector"
+  },
+  "onboarding.ask.answer": {
+    "value": "Paste {{app}}'s whole answer here"
+  },
+  "onboarding.ask.answerPlaceholder": {
+    "value": "The JSON it answered with"
+  },
+  "onboarding.ask.read": {
+    "value": "Read the answer"
+  },
+  "onboarding.ask.notJson": {
+    "value": "There's no JSON in this answer. Copy the whole answer and paste it again."
+  },
+  "onboarding.ask.later": {
+    "value": "Not now"
+  },
+  "onboarding.ask.say": {
+    "value": "I'm listening. The proposal shows up here."
+  },
+  "onboarding.ask.stuck": {
+    "value": "Nothing after a few minutes? Check that the connector is on in that conversation and send the request again."
+  },
+  "onboarding.ask.prompt.team.open": {
+    "value": "I want to start using agentes.chat, which I just connected here, with an AI agent that takes a repetitive piece of work off my day."
+  },
+  "onboarding.ask.prompt.team.know": {
+    "value": "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand what {{org}} does, for whom, which apps we use and which tasks I repeat every week."
+  },
+  "onboarding.ask.prompt.team.send": {
+    "value": "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary of what {{org}} does. Don't create anything: I'll pick where to start."
+  },
+  "onboarding.ask.prompt.member.open": {
+    "value": "I just joined the {{org}} workspace on agentes.chat, which I connected here, and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day."
+  },
+  "onboarding.ask.prompt.member.know": {
+    "value": "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand my role at {{org}}, who I work with, which apps I use and which tasks I repeat every week."
+  },
+  "onboarding.ask.prompt.member.send": {
+    "value": "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary of what I do at {{org}}. Don't create anything: I'll pick where to start."
+  },
+  "onboarding.ask.prompt.personal.open": {
+    "value": "I want to start using agentes.chat, which I just connected here, with an AI agent that takes a repetitive piece of work off my day, at work or outside it."
+  },
+  "onboarding.ask.prompt.personal.know": {
+    "value": "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand what I do, what my week looks like, which apps I use and which tasks I repeat."
+  },
+  "onboarding.ask.prompt.personal.send": {
+    "value": "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary about me. Don't create anything: I'll pick where to start."
+  },
+  "onboarding.ask.prompt.interview": {
+    "value": "2. If something important is missing, interview me: one question at a time, at most 3, starting with the one that changes the recommendation the most. If I don't know an answer, go on with your best guess and say what it was."
+  },
+  "onboarding.ask.prompt.design": {
+    "value": "3. Pick the 3 repetitive tasks that take most of my time. For each one, design an agent like a job description: a short name, the role, 3 responsibilities (what it does on its own, when it runs and when it calls me), the apps it needs, its routine with day and time, and what it can already deliver on its first day. Order them from the task that takes most of my time to the one that takes the least, and say in one sentence, from what you saw, why you picked each one."
+  },
+  "onboarding.ask.prompt.json.team": {
+    "value": "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day."
+  },
+  "onboarding.ask.prompt.json.member": {
+    "value": "I just joined the {{org}} workspace on agentes.chat and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day."
+  },
+  "onboarding.ask.prompt.json.personal": {
+    "value": "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day, at work or outside it."
+  },
+  "onboarding.ask.prompt.json.cron": {
+    "value": "Also give each routine's day and time as a 5-field cron, in my time zone."
+  },
+  "onboarding.ask.prompt.json.send": {
+    "value": "4. Answer only with a JSON in this format, with no text before or after it:"
+  },
+  "onboarding.ask.prompt.json.example": {
+    "value": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"every Monday at 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
+  },
+  "onboarding.pick.title": {
+    "value": "Pick your first agent"
+  },
+  "onboarding.pick.lead": {
+    "value": {
+      "one": "Your {{app}} found the task that takes most of your time. Start with it.",
+      "other": "Your {{app}} found the {{n}} tasks that take most of your time. Start with one: the others are for later."
+    }
+  },
+  "onboarding.pick.leadAny": {
+    "value": {
+      "one": "Your AI found the task that takes most of your time. Start with it.",
+      "other": "Your AI found the {{n}} tasks that take most of your time. Start with one: the others are for later."
+    }
+  },
+  "onboarding.pick.eyebrow": {
+    "value": "Proposal from your {{app}} · step {{n}} of {{total}}"
+  },
+  "onboarding.pick.eyebrowAny": {
+    "value": "Your AI's proposal · step {{n}} of {{total}}"
+  },
+  "onboarding.pick.rank.first": {
+    "value": "Repeats the most"
+  },
+  "onboarding.pick.rank.second": {
+    "value": "Second"
+  },
+  "onboarding.pick.rank.third": {
+    "value": "Third"
+  },
+  "onboarding.pick.duties": {
+    "value": "Responsibilities"
+  },
+  "onboarding.pick.needs": {
+    "value": "Requirements"
+  },
+  "onboarding.pick.why": {
+    "value": "Why {{name}}:"
+  },
+  "onboarding.pick.note": {
+    "value": "Nothing is created until you pick."
+  },
+  "onboarding.pick.create": {
+    "value": "Create {{name}}"
+  },
+  "onboarding.pick.say": {
+    "value": {
+      "one": "{{app}} found one way to start.",
+      "other": "{{app}} found {{n}} ways to start."
+    }
+  },
+  "onboarding.pick.sayAny": {
+    "value": {
+      "one": "Your AI found one way to start.",
+      "other": "Your AI found {{n}} ways to start."
+    }
+  },
+  "onboarding.pick.count.tasks.one": {
+    "value": "one"
+  },
+  "onboarding.pick.count.tasks.two": {
+    "value": "two"
+  },
+  "onboarding.pick.count.tasks.three": {
+    "value": "three"
+  },
+  "onboarding.pick.count.ways.one": {
+    "value": "one"
+  },
+  "onboarding.pick.count.ways.two": {
+    "value": "two"
+  },
+  "onboarding.pick.count.ways.three": {
+    "value": "three"
+  },
+  "onboarding.week.title": {
+    "value": "{{name}}'s first week"
+  },
+  "onboarding.week.lead": {
+    "value": "{{name}} starts today. Everything arrives in its channel, and you only approve."
+  },
+  "onboarding.week.leadPersonal": {
+    "value": "{{name}} starts today. Everything arrives in your conversation with it, and you only approve."
+  },
+  "onboarding.week.leadRoutine": {
+    "value": "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in its channel, and you only approve."
+  },
+  "onboarding.week.leadRoutinePersonal": {
+    "value": "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in your conversation with it, and you only approve."
+  },
+  "onboarding.week.say": {
+    "value": "As soon as the team is on, we start."
+  },
+  "onboarding.week.sayPersonal": {
+    "value": "As soon as it's on, we start."
+  },
+  "onboarding.week.strip": {
+    "value": "The next 7 days"
+  },
+  "onboarding.week.today": {
+    "value": "Today · {{date}}"
+  },
+  "onboarding.week.tomorrow": {
+    "value": "Tomorrow, {{date}}"
+  },
+  "onboarding.week.date": {
+    "value": "{{weekday}} {{n}}"
+  },
+  "onboarding.week.dateFar": {
+    "value": "{{weekday}}, {{month}} {{n}}"
+  },
+  "onboarding.week.now": {
+    "value": "Now"
+  },
+  "onboarding.week.days.MO": {
+    "value": "Monday"
+  },
+  "onboarding.week.days.TU": {
+    "value": "Tuesday"
+  },
+  "onboarding.week.days.WE": {
+    "value": "Wednesday"
+  },
+  "onboarding.week.days.TH": {
+    "value": "Thursday"
+  },
+  "onboarding.week.days.FR": {
+    "value": "Friday"
+  },
+  "onboarding.week.days.SA": {
+    "value": "Saturday"
+  },
+  "onboarding.week.days.SU": {
+    "value": "Sunday"
+  },
+  "onboarding.week.every.day": {
+    "value": "every day"
+  },
+  "onboarding.week.every.businessDays": {
+    "value": "Monday to Friday"
+  },
+  "onboarding.week.every.MO": {
+    "value": "every Monday"
+  },
+  "onboarding.week.every.TU": {
+    "value": "every Tuesday"
+  },
+  "onboarding.week.every.WE": {
+    "value": "every Wednesday"
+  },
+  "onboarding.week.every.TH": {
+    "value": "every Thursday"
+  },
+  "onboarding.week.every.FR": {
+    "value": "every Friday"
+  },
+  "onboarding.week.every.SA": {
+    "value": "every Saturday"
+  },
+  "onboarding.week.every.SU": {
+    "value": "every Sunday"
+  },
+  "onboarding.week.about": {
+    "value": "What your {{app}} said"
+  },
+  "onboarding.week.aboutAny": {
+    "value": "What your AI said"
+  },
+  "onboarding.hire.the": {
+    "value": "{{name}}"
+  },
+  "onboarding.hire.title": {
+    "value": "Hire the team"
+  },
+  "onboarding.hire.titleOne": {
+    "value": "Hire {{name}}"
+  },
+  "onboarding.hire.titlePersonal": {
+    "value": "Hire your agents"
+  },
+  "onboarding.hire.lead": {
+    "value": "You're hiring {{agent}} for {{role}}. {{name}} starts today, with {{lodi}}, and works day and night."
+  },
+  "onboarding.hire.leadNoRole": {
+    "value": "You're hiring {{agent}}. {{name}} starts today, with {{lodi}}, and works day and night."
+  },
+  "onboarding.hire.leadMany": {
+    "value": "You're hiring {{names}}. They start today, with {{lodi}}, and work day and night."
+  },
+  "onboarding.hire.leadAlone": {
+    "value": "You start with {{name}}, the agents' HR. {{name}} creates each agent with you and works day and night."
+  },
+  "onboarding.hire.rightHand": {
+    "value": "Agents' HR"
+  },
+  "onboarding.hire.rightHandLine": {
+    "value": "Creates and adjusts your agents, whenever you ask."
+  },
+  "onboarding.hire.plan": {
+    "value": "{{name}} plan"
+  },
+  "onboarding.hire.perMonth": {
+    "value": "a month"
+  },
+  "onboarding.hire.fine": {
+    "value": {
+      "one": "Up to {{count}} person. Create more agents later at no extra cost. Cancel in one click.",
+      "other": "Up to {{count}} people. Create more agents later at no extra cost. Cancel in one click."
+    }
+  },
+  "onboarding.hire.fineAny": {
+    "value": "Create more agents later at no extra cost. Cancel in one click."
+  },
+  "onboarding.hire.later": {
+    "value": "Not now"
+  },
+  "onboarding.hire.cta": {
+    "value": "Hire the team"
+  },
+  "onboarding.hire.ctaOne": {
+    "value": "Hire {{name}}"
+  },
+  "onboarding.hire.ctaPersonal": {
+    "value": "Hire your agents"
+  },
+  "onboarding.celebrate.say": {
+    "value": "Hi, {{first}}! We start today."
+  },
+  "onboarding.celebrate.sayAny": {
+    "value": "Hi! We start today."
+  },
+  "onboarding.celebrate.eyebrow": {
+    "value": "{{org}}'s team · since {{date}}"
+  },
+  "onboarding.celebrate.eyebrowPersonal": {
+    "value": "Your agents · since {{date}}"
+  },
+  "onboarding.celebrate.title": {
+    "value": "Welcome to the {{org}} team"
+  },
+  "onboarding.celebrate.titlePersonal": {
+    "value": "Welcome to your team"
+  },
+  "onboarding.celebrate.you": {
+    "value": "You"
+  },
+  "onboarding.celebrate.lead": {
+    "value": "{{names}}. From today on, working together, day and night."
+  },
+  "onboarding.celebrate.plan": {
+    "value": "{{name}} plan on"
+  },
+  "onboarding.celebrate.planAny": {
+    "value": "Plan on"
+  },
+  "onboarding.celebrate.ai": {
+    "value": "Connect the AI you already pay for"
+  },
+  "onboarding.celebrate.aiPersonal": {
+    "value": "Connect the AI you already pay for"
+  },
+  "onboarding.celebrate.people": {
+    "value": "Invite the people you work with"
+  },
+  "onboarding.celebrate.start": {
+    "value": {
+      "one": "And the team starts its first delivery",
+      "other": "And the team starts its {{count}} deliveries"
+    }
+  },
+  "onboarding.celebrate.startAny": {
+    "value": "And the team gets to work"
+  },
+  "onboarding.celebrate.startPersonal": {
+    "value": {
+      "one": "And your agents start their first delivery",
+      "other": "And your agents start their {{count}} deliveries"
+    }
+  },
+  "onboarding.celebrate.startAnyPersonal": {
+    "value": "And your agents get to work"
+  },
+  "onboarding.celebrate.connect": {
+    "value": "Connect the AI"
+  },
+  "onboarding.celebrate.download": {
+    "value": "Download the team photo"
+  },
+  "onboarding.celebrate.downloadPersonal": {
+    "value": "Download your team's photo"
+  },
+  "onboarding.celebrate.photoFile": {
+    "value": "{{slug}}-team.png"
+  },
+  "onboarding.celebrate.photoFileAny": {
+    "value": "team-photo.png"
+  },
+  "onboarding.celebrate.photoFilePersonal": {
+    "value": "my-team.png"
+  },
+  "onboarding.celebrate.photoFailed": {
+    "value": "Couldn't make the photo. Try again."
+  },
+  "onboarding.member.title": {
+    "value": "Welcome to {{org}}, {{first}}"
+  },
+  "onboarding.member.titleNoName": {
+    "value": "Welcome to {{org}}"
+  },
+  "onboarding.member.titlePersonal": {
+    "value": "Welcome, {{first}}"
+  },
+  "onboarding.member.titleNoNamePersonal": {
+    "value": "Welcome"
+  },
+  "onboarding.member.intro": {
+    "value": "Here, each person brings the agent that solves a problem of theirs."
+  },
+  "onboarding.member.brought": {
+    "value": "{{person}} brought {{agent}}, for {{role}}."
+  },
+  "onboarding.member.broughtNoRole": {
+    "value": "{{person}} brought {{agent}}."
+  },
+  "onboarding.member.question": {
+    "value": "What will yours be?"
+  },
+  "onboarding.member.how": {
+    "value": "How do you want to create your agent?"
+  },
+  "onboarding.member.ask": {
+    "value": "Ask your AI"
+  },
+  "onboarding.member.askText": {
+    "value": "It finds the task that takes most of your time and proposes an agent for it."
+  },
+  "onboarding.member.scratch": {
+    "value": "Start from scratch"
+  },
+  "onboarding.member.scratchText": {
+    "value": "You describe the problem, and {{name}}, the agents' HR, builds the agent with you."
+  },
+  "onboarding.member.askGo": {
+    "value": "Ask your AI"
+  },
+  "onboarding.member.scratchGo": {
+    "value": "Start from scratch"
+  },
+  "onboarding.member.later": {
+    "value": "Not now"
+  },
+  "onboarding.member.noPermission": {
+    "value": "To create your agent, ask an admin for the permission to create agents."
+  },
+  "onboarding.member.enter": {
+    "value": "Open {{org}}"
+  },
+  "onboarding.member.enterPersonal": {
+    "value": "Open the workspace"
+  },
+  "onboarding.member.pickTitle": {
+    "value": "Pick your agent"
+  },
+  "onboarding.member.found": {
+    "value": {
+      "one": "Your {{app}} found the task that takes most of your time.",
+      "other": "Your {{app}} found the {{n}} tasks that take most of your time."
+    }
+  },
+  "onboarding.member.foundAny": {
+    "value": {
+      "one": "Your AI found the task that takes most of your time.",
+      "other": "Your AI found the {{n}} tasks that take most of your time."
+    }
+  },
+  "onboarding.member.joins": {
+    "value": {
+      "one": "Start with it: the agent joins the {{org}} team, with {{names}}.",
+      "other": "Start with one: the agent joins the {{org}} team, with {{names}}."
+    }
+  },
+  "onboarding.member.joinsPersonal": {
+    "value": {
+      "one": "Start with it: the agent works here with you, beside {{names}}.",
+      "other": "Start with one: the agent works here with you, beside {{names}}."
+    }
+  },
+  "onboarding.member.pickNote": {
+    "value": "It's your first: create others whenever you like."
   },
   "desktopNotice.mention": {
     "value": "You were mentioned"
@@ -39526,6 +40093,18 @@
   "errors.teamProposal.undoExpired": {
     "value": "It is more than a day since this team was created, so it can't be undone here. Archive its agents on their pages."
   },
+  "errors.firstAgents.needsAdmin": {
+    "value": "Creating agents in this workspace needs an admin. Ask one to create it for you."
+  },
+  "errors.firstAgents.invalid": {
+    "value": "This answer isn't in the format we asked for. Copy the request again and paste your AI's whole answer."
+  },
+  "errors.firstAgents.picking": {
+    "value": "This agent is already being created. Wait a moment."
+  },
+  "errors.firstAgents.rateLimited": {
+    "value": "Too many tries for now. Try again in a little while."
+  },
   "errors.proposal.changed": {
     "value": "This changed after it was applied: adjust it by hand."
   },
@@ -47825,6 +48404,9 @@
   "chat.body.welcome_member": {
     "value": "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you."
   },
+  "chat.body.welcome_member_agent": {
+    "value": "You just joined {{org}}, and your first agent is already on the team. Whenever you need me, just call."
+  },
   "chat.body.action_open_page": {
     "value": "Open a screen"
   },
@@ -53529,6 +54111,354 @@
   },
   "paidMoment.next.talk": {
     "value": "Talk to {{name}}"
+  },
+  "arrival.welcome.stepOf": {
+    "value": "Step {{n}} of {{total}}"
+  },
+  "arrival.welcome.skip": {
+    "value": "Skip"
+  },
+  "arrival.welcome.next": {
+    "value": "Next"
+  },
+  "arrival.welcome.start": {
+    "value": "Get started"
+  },
+  "arrival.welcome.hello.title": {
+    "value": "Welcome to {{org}}, {{first}}"
+  },
+  "arrival.welcome.hello.titleNoName": {
+    "value": "Welcome to {{org}}"
+  },
+  "arrival.welcome.hello.titlePersonal": {
+    "value": "Welcome, {{first}}"
+  },
+  "arrival.welcome.hello.titleNoNamePersonal": {
+    "value": "Welcome"
+  },
+  "arrival.welcome.hello.text": {
+    "value": "Here you and the agents work together, by day and by night. In a minute, the essentials."
+  },
+  "arrival.welcome.hello.textPersonal": {
+    "value": "Here you and your agents work together, by day and by night. In a minute, the essentials."
+  },
+  "arrival.welcome.hello.say": {
+    "value": "Hi, {{first}}! I'm {{name}}, HR for the agents."
+  },
+  "arrival.welcome.hello.sayNoName": {
+    "value": "Hi! I'm {{name}}, HR for the agents."
+  },
+  "arrival.welcome.computer.title": {
+    "value": "Every agent has its own computer"
+  },
+  "arrival.welcome.computer.text": {
+    "value": "On it, they open sites, use apps and run code, on their own. Whenever you like, you watch live or take control."
+  },
+  "arrival.welcome.computer.tab": {
+    "value": "Payments"
+  },
+  "arrival.welcome.computer.rows.a.name": {
+    "value": "Sunrise Clinic"
+  },
+  "arrival.welcome.computer.rows.a.amount": {
+    "value": "$890"
+  },
+  "arrival.welcome.computer.rows.a.state": {
+    "value": "12 days"
+  },
+  "arrival.welcome.computer.rows.b.name": {
+    "value": "Riverside Clinic"
+  },
+  "arrival.welcome.computer.rows.b.amount": {
+    "value": "$640"
+  },
+  "arrival.welcome.computer.rows.b.state": {
+    "value": "5 days"
+  },
+  "arrival.welcome.computer.rows.c.name": {
+    "value": "Harbor Dental"
+  },
+  "arrival.welcome.computer.rows.c.amount": {
+    "value": "$1,120"
+  },
+  "arrival.welcome.computer.rows.c.state": {
+    "value": "Paid"
+  },
+  "arrival.welcome.computer.say": {
+    "value": "2 clinics are late. The reminders are ready for your OK."
+  },
+  "arrival.welcome.computer.tabPersonal": {
+    "value": "This month's bills"
+  },
+  "arrival.welcome.computer.rowsPersonal.a.name": {
+    "value": "Power"
+  },
+  "arrival.welcome.computer.rowsPersonal.a.amount": {
+    "value": "$89"
+  },
+  "arrival.welcome.computer.rowsPersonal.a.state": {
+    "value": "Due today"
+  },
+  "arrival.welcome.computer.rowsPersonal.b.name": {
+    "value": "Phone"
+  },
+  "arrival.welcome.computer.rowsPersonal.b.amount": {
+    "value": "$45"
+  },
+  "arrival.welcome.computer.rowsPersonal.b.state": {
+    "value": "In 5 days"
+  },
+  "arrival.welcome.computer.rowsPersonal.c.name": {
+    "value": "Rent"
+  },
+  "arrival.welcome.computer.rowsPersonal.c.amount": {
+    "value": "$1,400"
+  },
+  "arrival.welcome.computer.rowsPersonal.c.state": {
+    "value": "Paid"
+  },
+  "arrival.welcome.computer.sayPersonal": {
+    "value": "The power bill is due today. The payment is ready for your OK."
+  },
+  "arrival.welcome.channels.title": {
+    "value": "Every subject in its channel"
+  },
+  "arrival.welcome.channels.titlePersonal": {
+    "value": "Every subject in its conversation"
+  },
+  "arrival.welcome.channels.text": {
+    "value": "Write as you would to someone on the team. Whoever knows the subject answers, person or agent. To talk to an agent, just call it by name."
+  },
+  "arrival.welcome.channels.textPersonal": {
+    "value": "Write as you would to someone you trust. Each agent takes care of its subject, and to talk to one, just call it by name."
+  },
+  "arrival.welcome.channels.list.a": {
+    "value": "support"
+  },
+  "arrival.welcome.channels.list.b": {
+    "value": "billing"
+  },
+  "arrival.welcome.channels.list.c": {
+    "value": "finance"
+  },
+  "arrival.welcome.channels.list.d": {
+    "value": "sales"
+  },
+  "arrival.welcome.channels.listPersonal.a": {
+    "value": "Home"
+  },
+  "arrival.welcome.channels.listPersonal.b": {
+    "value": "Bills"
+  },
+  "arrival.welcome.channels.listPersonal.c": {
+    "value": "Trips"
+  },
+  "arrival.welcome.channels.listPersonal.d": {
+    "value": "Health"
+  },
+  "arrival.welcome.channels.ask": {
+    "value": "Has Sunrise Clinic paid?"
+  },
+  "arrival.welcome.channels.answer": {
+    "value": "Yesterday at 2:20 PM. I marked it as paid and told finance."
+  },
+  "arrival.welcome.channels.askPersonal": {
+    "value": "Did the power bill get paid?"
+  },
+  "arrival.welcome.channels.answerPersonal": {
+    "value": "Yesterday at 2:20 PM. I saved the receipt."
+  },
+  "arrival.welcome.wiki.title": {
+    "value": "The wiki is {{org}}'s documentation"
+  },
+  "arrival.welcome.wiki.titlePersonal": {
+    "value": "The wiki keeps what matters"
+  },
+  "arrival.welcome.wiki.text": {
+    "value": "The company's shared documentation: processes, prices, how to talk to customers. The agents read it before they answer and write to it when they learn something new."
+  },
+  "arrival.welcome.wiki.textPersonal": {
+    "value": "Your notes in one place: bills, documents, how you like things done. Your agents read them before they answer and write when they learn something new."
+  },
+  "arrival.welcome.wiki.pages.left": {
+    "value": "Prices"
+  },
+  "arrival.welcome.wiki.pages.right": {
+    "value": "What {{org}} does"
+  },
+  "arrival.welcome.wiki.pages.front": {
+    "value": "Payment reminders"
+  },
+  "arrival.welcome.wiki.pagesPersonal.left": {
+    "value": "Documents"
+  },
+  "arrival.welcome.wiki.pagesPersonal.right": {
+    "value": "About me"
+  },
+  "arrival.welcome.wiki.pagesPersonal.front": {
+    "value": "Household bills"
+  },
+  "arrival.welcome.memory.title": {
+    "value": "They remember what matters"
+  },
+  "arrival.welcome.memory.text": {
+    "value": "With every conversation, they keep preferences, decisions and who takes care of what. You review what becomes memory."
+  },
+  "arrival.welcome.memory.notes.a": {
+    "value": "{{org}} closes at 6 PM"
+  },
+  "arrival.welcome.memory.notes.b": {
+    "value": "{{first}} likes short summaries"
+  },
+  "arrival.welcome.memory.notes.c": {
+    "value": "Reminders on weekdays only"
+  },
+  "arrival.welcome.memory.notes.d": {
+    "value": "Sunrise Clinic pays on the 10th"
+  },
+  "arrival.welcome.memory.notesPersonal.a": {
+    "value": "Workout at 6 PM, three times a week"
+  },
+  "arrival.welcome.memory.notesPersonal.b": {
+    "value": "{{first}} likes short summaries"
+  },
+  "arrival.welcome.memory.notesPersonal.c": {
+    "value": "Reminders on weekdays only"
+  },
+  "arrival.welcome.memory.notesPersonal.d": {
+    "value": "Rent is due on the 10th"
+  },
+  "arrival.welcome.memory.likes": {
+    "value": "Likes short summaries"
+  },
+  "arrival.welcome.routines.title": {
+    "value": "Work that happens on its own"
+  },
+  "arrival.welcome.routines.text": {
+    "value": "Routines run at the time you ask, like “every day at 9”. And anything serious, like sending, paying or deleting, waits for your OK."
+  },
+  "arrival.welcome.routines.routine": {
+    "value": "Daily summary"
+  },
+  "arrival.welcome.routines.routineText": {
+    "value": "2 payments came in, 2 are late"
+  },
+  "arrival.welcome.routines.ask": {
+    "value": "Send the payment reminder to 3 clinics?"
+  },
+  "arrival.welcome.routines.routinePersonal": {
+    "value": "Your day"
+  },
+  "arrival.welcome.routines.routineTextPersonal": {
+    "value": "3 emails need a reply, 1 bill is due today"
+  },
+  "arrival.welcome.routines.askPersonal": {
+    "value": "Pay the $89 power bill?"
+  },
+  "arrival.welcome.routines.asks": {
+    "value": "{{name}} asks for your OK"
+  },
+  "arrival.welcome.routines.refuse": {
+    "value": "Decline"
+  },
+  "arrival.welcome.routines.approve": {
+    "value": "Approve"
+  },
+  "arrival.welcome.ready.title": {
+    "value": "All set to begin"
+  },
+  "arrival.welcome.ready.word": {
+    "value": "BETA"
+  },
+  "arrival.welcome.ready.left": {
+    "value": {
+      "one": "Just one thing left.",
+      "other": "{{count}} things left."
+    }
+  },
+  "arrival.welcome.ready.later": {
+    "value": "If you leave it for later, this list stays in your conversation with {{name}}, for you to finish whenever you like."
+  },
+  "arrival.welcome.ready.none": {
+    "value": "Everything is in place. Now just talk to the team."
+  },
+  "arrival.welcome.ready.nonePersonal": {
+    "value": "Everything is in place. Now just talk to your agents."
+  },
+  "arrival.welcome.ready.beta": {
+    "value": "We're in beta."
+  },
+  "arrival.welcome.ready.betaText": {
+    "value": "It gets better every week, and if something fails, the problem is ours."
+  },
+  "arrival.welcome.ready.feedback": {
+    "value": "Tell us what's missing in {{where}}, at the bottom of the sidebar."
+  },
+  "arrival.welcome.ready.rows.plan": {
+    "value": "{{plan}} plan active"
+  },
+  "arrival.welcome.ready.rows.planAny": {
+    "value": "Plan active"
+  },
+  "arrival.welcome.ready.rows.planTodo": {
+    "value": "Turn the team on"
+  },
+  "arrival.welcome.ready.rows.planTodoPersonal": {
+    "value": "Turn your agents on"
+  },
+  "arrival.welcome.ready.rows.planAction": {
+    "value": "See plans"
+  },
+  "arrival.welcome.ready.rows.ai": {
+    "value": "{{label}} connected"
+  },
+  "arrival.welcome.ready.rows.aiAny": {
+    "value": "An AI is connected"
+  },
+  "arrival.welcome.ready.rows.aiTodo": {
+    "value": "Connect an AI"
+  },
+  "arrival.welcome.ready.rows.aiAction": {
+    "value": "Connect"
+  },
+  "arrival.welcome.ready.rows.people": {
+    "value": {
+      "one": "{{count}} person on the team",
+      "other": "{{count}} people on the team"
+    }
+  },
+  "arrival.welcome.ready.rows.invited": {
+    "value": {
+      "one": "{{count}} person invited",
+      "other": "{{count}} people invited"
+    }
+  },
+  "arrival.welcome.ready.rows.peopleNone": {
+    "value": "Just you for now"
+  },
+  "arrival.welcome.ready.rows.peopleTodo": {
+    "value": "Invite the people you work with"
+  },
+  "arrival.welcome.ready.rows.peopleAction": {
+    "value": "Invite"
+  },
+  "arrival.welcome.ready.rows.apps": {
+    "value": {
+      "one": "{{apps}} connected",
+      "other": "{{apps}} connected"
+    }
+  },
+  "arrival.welcome.ready.rows.appsNone": {
+    "value": "No apps for now"
+  },
+  "arrival.welcome.ready.rows.appsTodo": {
+    "value": "Connect your work apps"
+  },
+  "arrival.welcome.ready.rows.appsTodoPersonal": {
+    "value": "Connect your apps"
+  },
+  "arrival.welcome.ready.rows.appsAction": {
+    "value": "Choose"
   },
   "arrival.stage.ready": {
     "value": "Your team is ready"

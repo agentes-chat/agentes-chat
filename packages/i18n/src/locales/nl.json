@@ -970,6 +970,10 @@
         "all": "Alle abonnementen bekijken"
       },
       "ai": {
+        "titleNow": "Nu de AI waar jullie al voor betalen",
+        "titleNowPersonal": "Nu de AI waar je al voor betaalt",
+        "leadNow": "Daarmee begint het team vandaag. De agents gebruiken jullie account, zonder extra kosten hier.",
+        "leadNowPersonal": "Daarmee beginnen je agents vandaag. Ze gebruiken je account, zonder extra kosten hier.",
         "later": "Later koppelen",
         "doneTitle": "Klaar. Het team van {{org}} denkt nu mee.",
         "doneTitlePersonal": "Klaar. {{name}} denkt nu mee.",
@@ -980,10 +984,15 @@
       },
       "people": {
         "title": "Wie werkt er met je samen?",
+        "eyebrowWhile": "Het team wordt klaargezet",
+        "titleWhile": "Nodig intussen de mensen uit met wie je werkt",
+        "leadWhile": "Dat duurt een paar minuten. Iedereen die je uitnodigt, maakt bij het instappen de agent voor het eigen werk.",
+        "leadJoin": "Iedereen die je uitnodigt, maakt bij het instappen de agent voor het eigen werk.",
         "send": "Uitnodigingen sturen",
         "later": "Later uitnodigen"
       },
-      "account": "Je account"
+      "account": "Je account",
+      "switchNote": "Je kunt later wisselen zonder iets te verliezen."
     },
     "back": "Terug",
     "leaveLater": "Terug naar {{name}}, later afmaken",
@@ -1692,6 +1701,222 @@
     "confirmation": {
       "sent": "We hebben een bevestigingslink gestuurd naar {{email}}.",
       "first": "Al uitgenodigd? Bevestig eerst je e-mailadres."
+    },
+    "start": {
+      "title": "Hoe wil je beginnen?",
+      "lead": "Agents werken in de apps die jullie al gebruiken, meer dan {{n}}. Je kunt later alles aanpassen.",
+      "leadPersonal": "Je agents werken in de apps die je al gebruikt, meer dan {{n}}. Je kunt later alles aanpassen.",
+      "leadAny": "Agents werken in de apps die jullie al gebruiken. Je kunt later alles aanpassen.",
+      "leadAnyPersonal": "Je agents werken in de apps die je al gebruikt. Je kunt later alles aanpassen.",
+      "ask": "Vraag het je AI",
+      "askText": "Claude, ChatGPT, Gemini of welke je ook gebruikt vindt de taken die je de meeste tijd kosten en stelt voor elke taak een agent voor. Jij kiest waarmee je begint.",
+      "askTextPersonal": "Claude, ChatGPT, Gemini of welke je ook gebruikt vindt de taken die je de meeste tijd kosten, op het werk of daarbuiten, en stelt voor elke taak een agent voor. Jij kiest waarmee je begint.",
+      "scratch": "Vanaf nul beginnen",
+      "scratchText": "Je maakt elke agent wanneer je wilt. {{name}}, de HR van de agents, bouwt ze allemaal met je.",
+      "askGo": "Je AI vragen",
+      "scratchGo": "Vanaf nul beginnen"
+    },
+    "ask": {
+      "title": "Vraag om je eerste agent",
+      "titleMember": "Vraag om je agent",
+      "lead": "Je AI kent je werk al. Met agentes.chat gekoppeld vindt hij de taken die je het vaakst herhaalt en stelt voor elke taak een agent voor. Jij kiest waarmee je begint.",
+      "leadPersonal": "Je AI kent je dagelijkse routine al. Met agentes.chat gekoppeld vindt hij de taken die je het vaakst herhaalt, op het werk of daarbuiten, en stelt voor elke taak een agent voor. Jij kiest waarmee je begint.",
+      "apps": "Je assistent",
+      "other": "Een andere agent-app",
+      "connect": "Koppel agentes.chat",
+      "connected": "Gekoppeld",
+      "paste": "Plak dit verzoek in een nieuw gesprek",
+      "pasteJson": "Plak dit verzoek in een nieuw gesprek met {{app}}",
+      "copy": "Verzoek kopiëren",
+      "waiting": "Wachten op het voorstel van {{app}}…",
+      "noConnector": "Geen connector? Plak het antwoord",
+      "useConnector": "De connector gebruiken",
+      "answer": "Plak hier het volledige antwoord van {{app}}",
+      "answerPlaceholder": "De JSON waarmee hij antwoordde",
+      "read": "Antwoord lezen",
+      "notJson": "Er staat geen JSON in dit antwoord. Kopieer het hele antwoord en plak het opnieuw.",
+      "later": "Niet nu",
+      "say": "Ik luister. Het voorstel verschijnt hier.",
+      "stuck": "Na een paar minuten nog niets? Controleer of de connector in dat gesprek aan staat en stuur het verzoek opnieuw.",
+      "prompt": {
+        "team": {
+          "open": "Ik wil beginnen met agentes.chat, dat ik hier net heb gekoppeld, met een AI-agent die me terugkerend werk uit handen neemt.",
+          "know": "1. Gebruik, voordat je me iets vraagt, wat je al over me weet: onze eerdere gesprekken, je geheugen en de bestanden en apps waar je toegang toe hebt. Begrijp wat {{org}} doet, voor wie, welke apps we gebruiken en welke taken ik elke week herhaal.",
+          "send": "4. Stuur de 3 opties met de tool propose_first_agents van agentes.chat, samen met een samenvatting in twee of drie zinnen van wat {{org}} doet. Maak niets aan: ik kies waarmee ik begin."
+        },
+        "member": {
+          "open": "Ik ben net lid geworden van de werkruimte van {{org}} op agentes.chat, die ik hier heb gekoppeld, en ik wil beginnen met een AI-agent die me terugkerend werk uit mijn rol in het team uit handen neemt.",
+          "know": "1. Gebruik, voordat je me iets vraagt, wat je al over me weet: onze eerdere gesprekken, je geheugen en de bestanden en apps waar je toegang toe hebt. Begrijp wat mijn rol bij {{org}} is, met wie ik werk, welke apps ik gebruik en welke taken ik elke week herhaal.",
+          "send": "4. Stuur de 3 opties met de tool propose_first_agents van agentes.chat, samen met een samenvatting in twee of drie zinnen van wat ik bij {{org}} doe. Maak niets aan: ik kies waarmee ik begin."
+        },
+        "personal": {
+          "open": "Ik wil beginnen met agentes.chat, dat ik hier net heb gekoppeld, met een AI-agent die me terugkerend werk uit handen neemt, op het werk of daarbuiten.",
+          "know": "1. Gebruik, voordat je me iets vraagt, wat je al over me weet: onze eerdere gesprekken, je geheugen en de bestanden en apps waar je toegang toe hebt. Begrijp wat ik doe, hoe mijn week eruitziet, welke apps ik gebruik en welke taken ik herhaal.",
+          "send": "4. Stuur de 3 opties met de tool propose_first_agents van agentes.chat, samen met een samenvatting over mij in twee of drie zinnen. Maak niets aan: ik kies waarmee ik begin."
+        },
+        "interview": "2. Als er iets belangrijks ontbreekt, interview me dan: één vraag tegelijk, hooguit 3, te beginnen met de vraag die de aanbeveling het meest verandert. Als ik een antwoord niet weet, ga dan verder met je beste inschatting en zeg welke dat was.",
+        "design": "3. Kies de 3 terugkerende taken die me de meeste tijd kosten. Ontwerp voor elke taak een agent zoals een vacature: een korte naam, de rol, 3 verantwoordelijkheden (wat hij zelf doet, wanneer hij draait en wanneer hij me erbij haalt), de apps die hij nodig heeft, zijn routine met dag en tijd en wat hij op de eerste dag al kan opleveren. Zet ze op volgorde van de taak die me de meeste tijd kost naar die met de minste, en zeg in één zin, op basis van wat je zag, waarom je elke taak koos.",
+        "json": {
+          "team": "Ik wil beginnen met agentes.chat, met een AI-agent die me terugkerend werk uit handen neemt.",
+          "member": "Ik ben net lid geworden van de werkruimte van {{org}} op agentes.chat en ik wil beginnen met een AI-agent die me terugkerend werk uit mijn rol in het team uit handen neemt.",
+          "personal": "Ik wil beginnen met agentes.chat, met een AI-agent die me terugkerend werk uit handen neemt, op het werk of daarbuiten.",
+          "cron": "Geef ook de dag en tijd van elke routine als cron met 5 velden, in mijn tijdzone.",
+          "send": "4. Antwoord alleen met een JSON in dit formaat, zonder tekst ervoor of erna:",
+          "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"elke maandag om 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
+        }
+      }
+    },
+    "pick": {
+      "title": "Kies je eerste agent",
+      "lead_one": "Je {{app}} vond de taak die je de meeste tijd kost. Begin daarmee.",
+      "lead_other": "Je {{app}} vond de {{n}} taken die je de meeste tijd kosten. Begin met één: de rest komt later.",
+      "leadAny_one": "Je AI vond de taak die je de meeste tijd kost. Begin daarmee.",
+      "leadAny_other": "Je AI vond de {{n}} taken die je de meeste tijd kosten. Begin met één: de rest komt later.",
+      "eyebrow": "Voorstel van je {{app}} · stap {{n}} van {{total}}",
+      "eyebrowAny": "Voorstel van je AI · stap {{n}} van {{total}}",
+      "rank": {
+        "first": "Komt het vaakst terug",
+        "second": "Op plek 2",
+        "third": "Op plek 3"
+      },
+      "duties": "Verantwoordelijkheden",
+      "needs": "Vereisten",
+      "why": "Waarom {{name}}:",
+      "note": "Er wordt niets gemaakt tot je kiest.",
+      "create": "{{name}} maken",
+      "say_one": "{{app}} vond één manier om te beginnen.",
+      "say_other": "{{app}} vond {{n}} manieren om te beginnen.",
+      "sayAny_one": "Je AI vond één manier om te beginnen.",
+      "sayAny_other": "Je AI vond {{n}} manieren om te beginnen.",
+      "count": {
+        "tasks": {
+          "one": "één",
+          "two": "twee",
+          "three": "drie"
+        },
+        "ways": {
+          "one": "één",
+          "two": "twee",
+          "three": "drie"
+        }
+      }
+    },
+    "week": {
+      "title": "De eerste week van {{name}}",
+      "lead": "{{name}} begint vandaag. Alles komt binnen in het eigen kanaal, en jij keurt alleen goed.",
+      "leadPersonal": "{{name}} begint vandaag. Alles komt binnen in jullie gesprek, en jij keurt alleen goed.",
+      "leadRoutine": "{{name}} begint vandaag, en ‘{{routine}}’ herhaalt zich {{when}}. Alles komt binnen in het eigen kanaal, en jij keurt alleen goed.",
+      "leadRoutinePersonal": "{{name}} begint vandaag, en ‘{{routine}}’ herhaalt zich {{when}}. Alles komt binnen in jullie gesprek, en jij keurt alleen goed.",
+      "say": "Zodra het team aan staat, beginnen we.",
+      "sayPersonal": "Zodra alles aan staat, beginnen we.",
+      "strip": "De komende 7 dagen",
+      "today": "Vandaag · {{date}}",
+      "tomorrow": "Morgen, {{date}}",
+      "date": "{{weekday}} {{n}}",
+      "dateFar": "{{weekday}} {{n}} {{month}}",
+      "now": "Nu",
+      "days": {
+        "MO": "maandag",
+        "TU": "dinsdag",
+        "WE": "woensdag",
+        "TH": "donderdag",
+        "FR": "vrijdag",
+        "SA": "zaterdag",
+        "SU": "zondag"
+      },
+      "every": {
+        "day": "elke dag",
+        "businessDays": "van maandag tot vrijdag",
+        "MO": "elke maandag",
+        "TU": "elke dinsdag",
+        "WE": "elke woensdag",
+        "TH": "elke donderdag",
+        "FR": "elke vrijdag",
+        "SA": "elke zaterdag",
+        "SU": "elke zondag"
+      },
+      "about": "Wat je {{app}} vertelde",
+      "aboutAny": "Wat je AI vertelde"
+    },
+    "hire": {
+      "the": "{{name}}",
+      "title": "Neem het team aan",
+      "titleOne": "Neem {{name}} aan",
+      "titlePersonal": "Neem je agents aan",
+      "lead": "Je neemt {{agent}} aan voor {{role}}. {{name}} begint vandaag, met {{lodi}}, en werkt dag en nacht.",
+      "leadNoRole": "Je neemt {{agent}} aan. {{name}} begint vandaag, met {{lodi}}, en werkt dag en nacht.",
+      "leadMany": "Je neemt {{names}} aan. Ze beginnen vandaag, met {{lodi}}, en werken dag en nacht.",
+      "leadAlone": "Je begint met {{name}}, de HR van de agents. {{name}} maakt elke agent met je en werkt dag en nacht.",
+      "rightHand": "HR van de agents",
+      "rightHandLine": "Maakt en past je agents aan, wanneer je erom vraagt.",
+      "plan": "Abonnement {{name}}",
+      "perMonth": "per maand",
+      "fine_one": "Tot {{count}} persoon. Maak later meer agents zonder extra kosten. Opzeggen met één klik.",
+      "fine_other": "Tot {{count}} mensen. Maak later meer agents zonder extra kosten. Opzeggen met één klik.",
+      "fineAny": "Maak later meer agents zonder extra kosten. Opzeggen met één klik.",
+      "later": "Niet nu",
+      "cta": "Team aannemen",
+      "ctaOne": "{{name}} aannemen",
+      "ctaPersonal": "Agents aannemen"
+    },
+    "celebrate": {
+      "say": "Hoi {{first}}! We beginnen vandaag.",
+      "sayAny": "Hoi! We beginnen vandaag.",
+      "eyebrow": "Team van {{org}} · sinds {{date}}",
+      "eyebrowPersonal": "Je agents · sinds {{date}}",
+      "title": "Welkom in het team van {{org}}",
+      "titlePersonal": "Welkom in je team",
+      "you": "Jij",
+      "lead": "{{names}}. Vanaf vandaag samen aan het werk, dag en nacht.",
+      "plan": "Abonnement {{name}} actief",
+      "planAny": "Abonnement actief",
+      "ai": "De AI koppelen waar jullie al voor betalen",
+      "aiPersonal": "De AI koppelen waar je al voor betaalt",
+      "people": "De mensen uitnodigen met wie je werkt",
+      "start_one": "En het team begint aan de eerste levering",
+      "start_other": "En het team begint aan de {{count}} leveringen",
+      "startAny": "En het team gaat aan de slag",
+      "startPersonal_one": "En je agents beginnen aan de eerste levering",
+      "startPersonal_other": "En je agents beginnen aan de {{count}} leveringen",
+      "startAnyPersonal": "En je agents gaan aan de slag",
+      "connect": "De AI koppelen",
+      "download": "Teamfoto downloaden",
+      "downloadPersonal": "Foto van je team downloaden",
+      "photoFile": "team-{{slug}}.png",
+      "photoFileAny": "teamfoto.png",
+      "photoFilePersonal": "mijn-team.png",
+      "photoFailed": "De foto kon niet worden gemaakt. Probeer het opnieuw."
+    },
+    "member": {
+      "title": "Welkom bij {{org}}, {{first}}",
+      "titleNoName": "Welkom bij {{org}}",
+      "titlePersonal": "Welkom, {{first}}",
+      "titleNoNamePersonal": "Welkom",
+      "intro": "Hier brengt iedereen de agent mee die een eigen probleem oplost.",
+      "brought": "{{person}} bracht {{agent}} mee, voor {{role}}.",
+      "broughtNoRole": "{{person}} bracht {{agent}} mee.",
+      "question": "Welke wordt de jouwe?",
+      "how": "Hoe wil je je agent maken?",
+      "ask": "Vraag het je AI",
+      "askText": "Die vindt de taak die je de meeste tijd kost en stelt er een agent voor voor.",
+      "scratch": "Vanaf nul beginnen",
+      "scratchText": "Jij beschrijft het probleem, en {{name}}, de HR van de agents, bouwt de agent met je.",
+      "askGo": "Je AI vragen",
+      "scratchGo": "Vanaf nul beginnen",
+      "later": "Niet nu",
+      "noPermission": "Vraag een beheerder om toestemming om agents te maken, zodat je je agent kunt maken.",
+      "enter": "{{org}} openen",
+      "enterPersonal": "De werkruimte openen",
+      "pickTitle": "Kies je agent",
+      "found_one": "Je {{app}} vond de taak die je de meeste tijd kost.",
+      "found_other": "Je {{app}} vond de {{n}} taken die je de meeste tijd kosten.",
+      "foundAny_one": "Je AI vond de taak die je de meeste tijd kost.",
+      "foundAny_other": "Je AI vond de {{n}} taken die je de meeste tijd kosten.",
+      "joins_one": "Begin daarmee: de agent komt in het team van {{org}}, bij {{names}}.",
+      "joins_other": "Begin met één: de agent komt in het team van {{org}}, bij {{names}}.",
+      "joinsPersonal_one": "Begin daarmee: de agent werkt hier met je, naast {{names}}.",
+      "joinsPersonal_other": "Begin met één: de agent werkt hier met je, naast {{names}}.",
+      "pickNote": "Het is je eerste: maak er meer wanneer je wilt."
     }
   },
   "desktopNotice": {
@@ -16201,6 +16426,12 @@
     "teamProposal": {
       "undoExpired": "Er is meer dan een dag verstreken sinds dit team is gemaakt, dus het kan hier niet ongedaan worden gemaakt. Archiveer de agents op hun pagina's."
     },
+    "firstAgents": {
+      "needsAdmin": "Voor agents maken in deze werkruimte is een beheerder nodig. Vraag een beheerder om hem voor je te maken.",
+      "invalid": "Dit antwoord heeft niet het gevraagde formaat. Kopieer het verzoek opnieuw en plak het hele antwoord van je AI.",
+      "picking": "Deze agent wordt al gemaakt. Wacht even.",
+      "rateLimited": "Te veel pogingen voor nu. Probeer het zo opnieuw."
+    },
     "proposal": {
       "changed": "Dit is gewijzigd nadat het werd toegepast: pas het met de hand aan.",
       "notApplied": "Deze wijziging is niet toegepast, dus er valt niets ongedaan te maken.",
@@ -19475,6 +19706,7 @@
       "action_update_skills": "Skills bijwerken",
       "action_approvals": "Goedkeuringen die op jou wachten",
       "welcome_member": "Je bent net bij {{org}} gekomen. **Waar houd je je hier mee bezig?** Vertel het me en ik stel samen met jou je eerste agent in.",
+      "welcome_member_agent": "Je bent net bij {{org}} gekomen, en je eerste agent zit al in het team. Als je me nodig hebt, roep me gewoon.",
       "action_open_page": "Een scherm openen",
       "calendar_proposal": "Voorstel voor een afspraak: {{title}}",
       "action_workspace": "Stelde een wijziging in de werkruimte voor",
@@ -22145,6 +22377,168 @@
     }
   },
   "arrival": {
+    "welcome": {
+      "stepOf": "Stap {{n}} van {{total}}",
+      "skip": "Overslaan",
+      "next": "Volgende",
+      "start": "Aan de slag",
+      "hello": {
+        "title": "Welkom bij {{org}}, {{first}}",
+        "titleNoName": "Welkom bij {{org}}",
+        "titlePersonal": "Welkom, {{first}}",
+        "titleNoNamePersonal": "Welkom",
+        "text": "Hier werken jullie en de agents samen, overdag en 's nachts. In een minuut het belangrijkste.",
+        "textPersonal": "Hier werken jij en je agents samen, overdag en 's nachts. In een minuut het belangrijkste.",
+        "say": "Hoi {{first}}! Ik ben {{name}}, de HR van de agents.",
+        "sayNoName": "Hoi! Ik ben {{name}}, de HR van de agents."
+      },
+      "computer": {
+        "title": "Elke agent heeft een eigen computer",
+        "text": "Daarop openen ze sites, gebruiken ze apps en voeren ze code uit, helemaal zelf. Wanneer je wilt, kijk je live mee of neem je het over.",
+        "tab": "Betalingen",
+        "rows": {
+          "a": {
+            "name": "Kliniek Zonnehof",
+            "amount": "€ 890",
+            "state": "12 dagen"
+          },
+          "b": {
+            "name": "Kliniek aan de Rivier",
+            "amount": "€ 640",
+            "state": "5 dagen"
+          },
+          "c": {
+            "name": "Tandarts aan de Haven",
+            "amount": "€ 1.120",
+            "state": "Betaald"
+          }
+        },
+        "say": "2 klinieken zijn te laat. De herinneringen wachten op je akkoord.",
+        "tabPersonal": "Rekeningen van deze maand",
+        "rowsPersonal": {
+          "a": {
+            "name": "Stroom",
+            "amount": "€ 89",
+            "state": "Vandaag te betalen"
+          },
+          "b": {
+            "name": "Telefoon",
+            "amount": "€ 45",
+            "state": "Over 5 dagen"
+          },
+          "c": {
+            "name": "Huur",
+            "amount": "€ 1.400",
+            "state": "Betaald"
+          }
+        },
+        "sayPersonal": "De stroomrekening moet vandaag betaald worden. De betaling wacht op je akkoord."
+      },
+      "channels": {
+        "title": "Elk onderwerp in een eigen kanaal",
+        "titlePersonal": "Elk onderwerp in een eigen gesprek",
+        "text": "Schrijf zoals je iemand uit het team zou schrijven. Wie verstand heeft van het onderwerp antwoordt, mens of agent. Wil je een agent spreken, noem hem dan gewoon bij naam.",
+        "textPersonal": "Schrijf zoals je iemand zou schrijven die je vertrouwt. Elke agent zorgt voor zijn onderwerp, en wil je er een spreken, noem hem dan gewoon bij naam.",
+        "list": {
+          "a": "klantenservice",
+          "b": "incasso",
+          "c": "financiën",
+          "d": "verkoop"
+        },
+        "listPersonal": {
+          "a": "Thuis",
+          "b": "Rekeningen",
+          "c": "Reizen",
+          "d": "Gezondheid"
+        },
+        "ask": "Heeft Kliniek Zonnehof al betaald?",
+        "answer": "Gisteren om 14:20. Ik heb de betaling als ontvangen gemarkeerd en financiën ingelicht.",
+        "askPersonal": "Is de stroomrekening betaald?",
+        "answerPersonal": "Gisteren om 14:20. Ik heb het bewijs bewaard."
+      },
+      "wiki": {
+        "title": "De wiki is de documentatie van {{org}}",
+        "titlePersonal": "De wiki bewaart wat ertoe doet",
+        "text": "De gedeelde documentatie van het bedrijf: processen, prijzen, hoe je met klanten praat. De agents lezen hem voordat ze antwoorden en schrijven erin als ze iets nieuws leren.",
+        "textPersonal": "Je notities op één plek: rekeningen, documenten, hoe je dingen graag gedaan ziet. Je agents lezen ze voordat ze antwoorden en schrijven als ze iets nieuws leren.",
+        "pages": {
+          "left": "Prijzen",
+          "right": "Wat {{org}} doet",
+          "front": "Herinneringen voor betalingen"
+        },
+        "pagesPersonal": {
+          "left": "Documenten",
+          "right": "Over mij",
+          "front": "Rekeningen thuis"
+        }
+      },
+      "memory": {
+        "title": "Ze onthouden wat ertoe doet",
+        "text": "Bij elk gesprek bewaren ze voorkeuren, beslissingen en wie waarvoor zorgt. Jij bekijkt wat in het geheugen komt.",
+        "notes": {
+          "a": "{{org}} sluit om 18 uur",
+          "b": "{{first}} houdt van korte samenvattingen",
+          "c": "Herinneringen alleen op werkdagen",
+          "d": "Kliniek Zonnehof betaalt op de 10e"
+        },
+        "notesPersonal": {
+          "a": "Sporten om 18 uur, drie keer per week",
+          "b": "{{first}} houdt van korte samenvattingen",
+          "c": "Herinneringen alleen op werkdagen",
+          "d": "De huur moet op de 10e betaald zijn"
+        },
+        "likes": "Houdt van korte samenvattingen"
+      },
+      "routines": {
+        "title": "Werk dat vanzelf gebeurt",
+        "text": "Routines draaien op het tijdstip dat je vraagt, zoals ‘elke dag om 9 uur’. En alles wat ernstig is, zoals versturen, betalen of verwijderen, wacht op je akkoord.",
+        "routine": "Samenvatting van de dag",
+        "routineText": "2 betalingen binnen, 2 te laat",
+        "ask": "De betalingsherinnering naar 3 klinieken sturen?",
+        "routinePersonal": "Je dag",
+        "routineTextPersonal": "3 e-mails wachten op antwoord, 1 rekening moet vandaag betaald",
+        "askPersonal": "De stroomrekening van € 89 betalen?",
+        "asks": "{{name}} vraagt om je akkoord",
+        "refuse": "Weigeren",
+        "approve": "Goedkeuren"
+      },
+      "ready": {
+        "title": "Alles klaar om te beginnen",
+        "word": "BETA",
+        "left_one": "Nog maar één ding.",
+        "left_other": "Nog {{count}} dingen.",
+        "later": "Als je het voor later bewaart, blijft deze lijst in je gesprek met {{name}}, zodat je hem afmaakt wanneer je wilt.",
+        "none": "Alles staat klaar. Nu gewoon met het team praten.",
+        "nonePersonal": "Alles staat klaar. Nu gewoon met je agents praten.",
+        "beta": "We zijn in bèta.",
+        "betaText": "Het wordt elke week beter, en als er iets misgaat, ligt het aan ons.",
+        "feedback": "Vertel ons wat er mist via {{where}}, onderaan de zijbalk.",
+        "rows": {
+          "plan": "Abonnement {{plan}} actief",
+          "planAny": "Abonnement actief",
+          "planTodo": "Zet het team aan",
+          "planTodoPersonal": "Zet je agents aan",
+          "planAction": "Abonnementen bekijken",
+          "ai": "{{label}} gekoppeld",
+          "aiAny": "Er is een AI gekoppeld",
+          "aiTodo": "Koppel een AI",
+          "aiAction": "Koppelen",
+          "people_one": "{{count}} persoon in het team",
+          "people_other": "{{count}} mensen in het team",
+          "invited_one": "{{count}} persoon uitgenodigd",
+          "invited_other": "{{count}} mensen uitgenodigd",
+          "peopleNone": "Voorlopig alleen jij",
+          "peopleTodo": "Nodig de mensen uit met wie je werkt",
+          "peopleAction": "Uitnodigen",
+          "apps_one": "{{apps}} gekoppeld",
+          "apps_other": "{{apps}} gekoppeld",
+          "appsNone": "Voorlopig geen apps",
+          "appsTodo": "Koppel je werk-apps",
+          "appsTodoPersonal": "Koppel je apps",
+          "appsAction": "Kiezen"
+        }
+      }
+    },
     "stage": {
       "ready": "Je team staat klaar",
       "wake": "Het heeft alleen nog een AI nodig om wakker te worden.",
