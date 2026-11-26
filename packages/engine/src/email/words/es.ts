@@ -47,6 +47,8 @@ export const words: EmailWords = {
       ),
     more: (n) => `${n} más`,
     what: "agentes.chat es donde personas y agentes de IA trabajan juntos.",
+    arrive:
+      "Al unirte, creas tu propio agente: tu IA encuentra la tarea que más tiempo te quita y propone un agente para ella.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Su nota: " }, `“${note}”`],
     button: "Aceptar invitación",
     small: "La invitación es válida por 7 días. Acéptala con esta dirección de correo.",
@@ -641,6 +643,57 @@ export const words: EmailWords = {
       },
       why: () =>
         "Recibiste este correo porque este espacio de trabajo en agentes.chat es tuyo. Solo enviamos dos avisos como este.",
+    },
+    picked: {
+      first: {
+        subject: "Tu primer agente está listo y te está esperando",
+        preheader: "Tu IA encontró por dónde empezar. Solo falta contratar.",
+        headline: "Tu primer agente está listo",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `Tu ${ai} encontró por dónde empezar: ` : "Tu IA encontró por dónde empezar: ",
+          { b: agent },
+          ...(role ? [`, para ${role}`] : []),
+          ...(today > 0
+            ? [
+                plural("es", today, {
+                  one: ", con 1 entrega lista para hoy",
+                  other: `, con ${today} entregas listas para hoy`,
+                }),
+              ]
+            : []),
+          ". Solo falta contratar.",
+        ],
+        button: "Contratar al equipo",
+        personal: { subject: "Tu primer agente está listo y te está esperando", button: "Contratar a tus agentes" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `Las primeras ${today} entregas aún no empezaron`
+            : today === 1
+              ? "La primera entrega aún no empezó"
+              : "Tu primer agente aún no empezó",
+        preheader: "Si contratas hoy, el trabajo empieza hoy.",
+        headline: (today) =>
+          today > 1
+            ? `Las primeras ${today} entregas aún no empezaron`
+            : today === 1
+              ? "La primera entrega aún no empezó"
+              : "Tu primer agente aún no empezó",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? ["Lo que ", { b: agent }, " entrega el primer día en ", { b: org }, ":"]
+            : [{ b: agent }, " sigue esperando el plan de ", { b: org }, " para empezar."],
+        start: (agent) => ["Si contratas hoy, ", { b: agent }, " empieza hoy."],
+        button: "Contratar al equipo",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? ["Lo que ", { b: agent }, " entrega el primer día:"]
+              : [{ b: agent }, " sigue esperando tu plan para empezar."],
+          button: "Contratar a tus agentes",
+        },
+      },
     },
   },
   surface: {

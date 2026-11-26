@@ -52,6 +52,8 @@ export const words: EmailWords = {
       ),
     more: (n) => plural("pl", n, { one: `${n} inny`, few: `${n} inne`, many: `${n} innych`, other: `${n} innych` }),
     what: "agentes.chat to miejsce, w którym osoby i agenci AI pracują razem.",
+    arrive:
+      "Po dołączeniu tworzysz własnego agenta: twoja AI znajduje zadanie, które zabiera ci najwięcej czasu, i proponuje agenta, który się nim zajmie.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Wiadomość: " }, `„${note}”`],
     button: "Przyjmij zaproszenie",
     small: "Zaproszenie jest ważne przez 7 dni. Przyjmij je z tego adresu e-mail.",
@@ -700,6 +702,69 @@ export const words: EmailWords = {
       },
       why: () =>
         "Ten e-mail przyszedł, bo ta przestrzeń robocza w agentes.chat należy do ciebie. Wysyłamy tylko dwa takie powiadomienia.",
+    },
+    picked: {
+      first: {
+        subject: "Twój pierwszy agent jest gotowy i czeka na ciebie",
+        preheader: "Twoja AI znalazła, od czego zacząć. Zostało tylko zatrudnić.",
+        headline: "Twój pierwszy agent jest gotowy",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `Twój ${ai} znalazł, od czego zacząć: ` : "Twoja AI znalazła, od czego zacząć: ",
+          { b: agent },
+          ...(role ? [` (${role})`] : []),
+          ...(today > 0
+            ? [
+                plural("pl", today, {
+                  one: ", z 1 wynikiem gotowym na dziś",
+                  few: `, z ${today} wynikami gotowymi na dziś`,
+                  many: `, z ${today} wynikami gotowymi na dziś`,
+                  other: `, z ${today} wynikami gotowymi na dziś`,
+                }),
+              ]
+            : []),
+          ". Zostało tylko zatrudnić.",
+        ],
+        button: "Zatrudnij zespół",
+        personal: { subject: "Twój pierwszy agent jest gotowy i czeka na ciebie", button: "Zatrudnij swoich agentów" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? plural("pl", today, {
+                one: `Pierwszy ${today} wynik jeszcze nie ruszył`,
+                few: `Pierwsze ${today} wyniki jeszcze nie ruszyły`,
+                many: `Pierwszych ${today} wyników jeszcze nie ruszyło`,
+                other: `Pierwszych ${today} wyników jeszcze nie ruszyło`,
+              })
+            : today === 1
+              ? "Pierwszy wynik jeszcze nie ruszył"
+              : "Twój pierwszy agent jeszcze nie zaczął",
+        preheader: "Zatrudnij dziś, a praca ruszy dziś.",
+        headline: (today) =>
+          today > 1
+            ? plural("pl", today, {
+                one: `Pierwszy ${today} wynik jeszcze nie ruszył`,
+                few: `Pierwsze ${today} wyniki jeszcze nie ruszyły`,
+                many: `Pierwszych ${today} wyników jeszcze nie ruszyło`,
+                other: `Pierwszych ${today} wyników jeszcze nie ruszyło`,
+              })
+            : today === 1
+              ? "Pierwszy wynik jeszcze nie ruszył"
+              : "Twój pierwszy agent jeszcze nie zaczął",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? ["Co ", { b: agent }, " dostarczy pierwszego dnia w ", { b: org }, ":"]
+            : [{ b: agent }, " wciąż czeka na plan dla ", { b: org }, ", żeby zacząć."],
+        start: (agent) => ["Zatrudnij dziś, a ", { b: agent }, " zacznie dziś."],
+        button: "Zatrudnij zespół",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? ["Co ", { b: agent }, " dostarczy pierwszego dnia:"]
+              : [{ b: agent }, " wciąż czeka na twój plan, żeby zacząć."],
+          button: "Zatrudnij swoich agentów",
+        },
+      },
     },
   },
   surface: {

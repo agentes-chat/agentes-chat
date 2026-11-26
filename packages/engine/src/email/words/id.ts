@@ -45,6 +45,8 @@ export const words: EmailWords = {
       ),
     more: (n) => `${n} lainnya`,
     what: "agentes.chat adalah tempat orang dan agen AI bekerja bersama.",
+    arrive:
+      "Saat bergabung, kamu membuat agenmu sendiri: AI-mu menemukan tugas yang paling banyak menyita waktumu dan mengusulkan agen untuk mengerjakannya.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Pesannya: " }, `“${note}”`],
     button: "Terima undangan",
     small: "Undangan berlaku 7 hari. Terima dengan alamat email ini.",
@@ -618,6 +620,50 @@ export const words: EmailWords = {
       },
       why: () =>
         "Kamu menerima email ini karena ruang kerja ini di agentes.chat adalah milikmu. Kami hanya mengirim dua pemberitahuan seperti ini.",
+    },
+    picked: {
+      first: {
+        subject: "Agen pertamamu sudah siap dan menunggumu",
+        preheader: "AI-mu sudah menemukan titik awalnya. Tinggal merekrut.",
+        headline: "Agen pertamamu sudah siap",
+        body: (ai, agent, _feminine, role, today) => [
+          ai ? `${ai} sudah menemukan titik awalnya: ` : "AI-mu sudah menemukan titik awalnya: ",
+          { b: agent },
+          ...(role ? [` (${role})`] : []),
+          ...(today > 0 ? [`, dengan ${today} hasil kerja siap untuk hari ini`] : []),
+          ". Tinggal merekrut.",
+        ],
+        button: "Rekrut tim",
+        personal: { subject: "Agen pertamamu sudah siap dan menunggumu", button: "Rekrut agen-agenmu" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `${today} hasil kerja pertama belum dimulai`
+            : today === 1
+              ? "Hasil kerja pertama belum dimulai"
+              : "Agen pertamamu belum mulai bekerja",
+        preheader: "Rekrut hari ini, kerjanya mulai hari ini.",
+        headline: (today) =>
+          today > 1
+            ? `${today} hasil kerja pertama belum dimulai`
+            : today === 1
+              ? "Hasil kerja pertama belum dimulai"
+              : "Agen pertamamu belum mulai bekerja",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? ["Yang dikerjakan ", { b: agent }, " di hari pertama di ", { b: org }, ":"]
+            : [{ b: agent }, " masih menunggu paket ", { b: org }, " untuk mulai."],
+        start: (agent) => ["Rekrut hari ini, dan ", { b: agent }, " mulai hari ini."],
+        button: "Rekrut tim",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0
+              ? ["Yang dikerjakan ", { b: agent }, " di hari pertama:"]
+              : [{ b: agent }, " masih menunggu paketmu untuk mulai."],
+          button: "Rekrut agen-agenmu",
+        },
+      },
     },
   },
   surface: {
