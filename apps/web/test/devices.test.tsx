@@ -187,8 +187,7 @@ describe("Settings › Devices", () => {
       await refetch(app.services);
       return screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
     };
-    const behind =
-      "The agentes.chat program on Sam's MacBook Pro is older than this server, so some things don't work there.";
+    const behind = "The agentes.chat program on Sam's MacBook Pro is out of date, so some things don't work there.";
     let card = await page("command");
     expect(card.textContent).toContain(`${behind} To update it, run this there:`);
     expect(card.querySelector(".machine-command code")?.textContent).toBe("agentes-runner update");

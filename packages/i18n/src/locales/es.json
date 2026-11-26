@@ -17062,8 +17062,8 @@
       "resumed": "{{name}} vuelve a trabajar"
     },
     "runnerBehind": {
-      "command": "El programa de agentes.chat en {{computer}} es más antiguo que este servidor, así que algunas cosas no funcionan allí. Para actualizarlo, ejecuta esto allí:",
-      "installer": "El programa de agentes.chat en {{computer}} es más antiguo que este servidor, así que algunas cosas no funcionan allí. Para actualizarlo, vuelve a ejecutar allí el comando de instalación, como root."
+      "command": "El programa de agentes.chat en {{computer}} está desactualizado, así que algunas cosas no funcionan allí. Para actualizarlo, ejecuta esto allí:",
+      "installer": "El programa de agentes.chat en {{computer}} está desactualizado, así que algunas cosas no funcionan allí. Para actualizarlo, vuelve a ejecutar allí el comando de instalación, como root."
     },
     "seenNow": "conectada ahora",
     "seen": "vista {{when}}",

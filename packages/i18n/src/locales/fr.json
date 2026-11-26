@@ -17136,8 +17136,8 @@
       "resumed": "{{name}} reprend le travail"
     },
     "runnerBehind": {
-      "command": "Le programme agentes.chat sur {{computer}} est plus ancien que ce serveur, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, lance ceci sur cet ordinateur :",
-      "installer": "Le programme agentes.chat sur {{computer}} est plus ancien que ce serveur, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, relance la commande d'installation sur cet ordinateur, en root."
+      "command": "Le programme agentes.chat sur {{computer}} n'est pas à jour, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, lance ceci sur cet ordinateur :",
+      "installer": "Le programme agentes.chat sur {{computer}} n'est pas à jour, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, relance la commande d'installation sur cet ordinateur, en root."
     },
     "seenNow": "connecté en ce moment",
     "seen": "vu {{when}}",

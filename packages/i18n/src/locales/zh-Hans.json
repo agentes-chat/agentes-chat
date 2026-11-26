@@ -16052,8 +16052,8 @@
       "resumed": "{{name}} 已恢复工作"
     },
     "runnerBehind": {
-      "command": "{{computer}} 上的 agentes.chat 程序比这台服务器旧，所以那里有些功能用不了。要更新它，请在那台电脑上运行：",
-      "installer": "{{computer}} 上的 agentes.chat 程序比这台服务器旧，所以那里有些功能用不了。要更新它，请在那台电脑上以 root 身份重新运行安装命令。"
+      "command": "{{computer}} 上的 agentes.chat 程序已经过时，所以那里有些功能用不了。要更新它，请在那台电脑上运行：",
+      "installer": "{{computer}} 上的 agentes.chat 程序已经过时，所以那里有些功能用不了。要更新它，请在那台电脑上以 root 身份重新运行安装命令。"
     },
     "seenNow": "当前已连接",
     "seen": "上次在线 {{when}}",

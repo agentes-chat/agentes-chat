@@ -40637,10 +40637,10 @@
     "value": "{{name}} is back to work"
   },
   "machines.runnerBehind.command": {
-    "value": "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run this there:"
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run this there:"
   },
   "machines.runnerBehind.installer": {
-    "value": "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run the install command there again, as root."
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run the install command there again, as root."
   },
   "machines.seenNow": {
     "value": "connected now"

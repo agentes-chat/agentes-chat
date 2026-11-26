@@ -16042,8 +16042,8 @@
       "resumed": "{{name}} kembali bekerja"
     },
     "runnerBehind": {
-      "command": "Program agentes.chat di {{computer}} lebih lama dari server ini, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan ini di sana:",
-      "installer": "Program agentes.chat di {{computer}} lebih lama dari server ini, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan lagi perintah instalasi di sana, sebagai root."
+      "command": "Program agentes.chat di {{computer}} sudah usang, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan ini di sana:",
+      "installer": "Program agentes.chat di {{computer}} sudah usang, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan lagi perintah instalasi di sana, sebagai root."
     },
     "seenNow": "terhubung sekarang",
     "seen": "terlihat {{when}}",

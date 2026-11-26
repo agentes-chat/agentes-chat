@@ -16650,8 +16650,8 @@
       "resumed": "{{name}} werkt weer"
     },
     "runnerBehind": {
-      "command": "Het agentes.chat-programma op {{computer}} is ouder dan deze server, dus sommige dingen werken daar niet. Voer dit daar uit om het bij te werken:",
-      "installer": "Het agentes.chat-programma op {{computer}} is ouder dan deze server, dus sommige dingen werken daar niet. Voer daar de installatieopdracht opnieuw uit als root om het bij te werken."
+      "command": "Het agentes.chat-programma op {{computer}} is verouderd, dus sommige dingen werken daar niet. Voer dit daar uit om het bij te werken:",
+      "installer": "Het agentes.chat-programma op {{computer}} is verouderd, dus sommige dingen werken daar niet. Voer daar de installatieopdracht opnieuw uit als root om het bij te werken."
     },
     "seenNow": "nu verbonden",
     "seen": "gezien {{when}}",

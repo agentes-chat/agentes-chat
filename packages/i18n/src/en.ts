@@ -17079,9 +17079,9 @@ export const en = {
     },
     runnerBehind: {
       command:
-        "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run this there:",
+        "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run this there:",
       installer:
-        "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run the install command there again, as root.",
+        "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run the install command there again, as root.",
     },
     seenNow: "connected now",
     seen: "seen {{when}}",
