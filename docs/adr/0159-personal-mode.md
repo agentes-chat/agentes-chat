@@ -56,11 +56,12 @@ same shape.
 - **Settings:** six sections in one list (Your account, About you, AI and usage, Connectors, Vault, Computers) and
   the rest under Advanced, collapsed. AI and usage also holds the plan and billing. People joins the list once others are members. Every section still opens by its
   address, from ⌘K and from the right hand's cards.
-- **An agent's page:** its bar is Overview, Instructions, Memory, "Can use" (its apps and mailboxes), Settings (name,
-  look and budget) and Advanced, with no "More". Advanced holds the rest, whole: Activity, Files and Usage a click away,
-  then its owner and who it reports to, who may talk to it, its brakes, conversations, computer, archive and delete,
-  and its built-in areas, databases, rules and skills. Every tab and section keeps its address: one that points into
-  Advanced opens it there.
+- **An agent's page:** its bar is Overview, Instructions, Skills, Memory, "Can use" (its apps and mailboxes), Settings
+  (name, look and budget) and Advanced, with no "More". Advanced holds the rest, whole: Activity, Files and Usage a
+  click away, then its owner and who it reports to, who may talk to it, its brakes, conversations, computer, archive
+  and delete, and its built-in areas, databases and rules. Skills is a tab of its own since Skills became a page of its
+  own (ADR 0020, amendment of 2026-11-25): what an agent knows is something one person looks for, not a setting to dig
+  for. Every tab and section keeps its address: one that points into Advanced opens it there.
 - **On the phone:** the same, from the same shared numbers and helpers: the first question's two cards side by side
   with the same drawings (`@agenteschat/client/lib/purpose-scene`); an agent's brakes, who it reports to, its rules
   for good, its repositories and deleting it on an Advanced screen of its own, a row away from its edit screen and its

@@ -30,6 +30,7 @@ import { addPersonSpend } from "../person-usage";
 import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
 import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
+import { inPhase } from "./phase";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -433,9 +434,10 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
     // The launch the turn below sends (its folder before `prepare` moves it to a checkout), without its words.
     async warm(turn: BrainTurn) {
       const session = turn.session;
-      if (!session || deps.keepAlive === false) return;
+      if (!session || deps.keepAlive === false) return false;
       const status = await deps.hub.status(session.machineId).catch(() => null);
-      if (!status || status.protocol < BRAIN_WARM_PROTOCOL || claudeCodeAvailability(status, turn.account)) return;
+      if (!status || status.protocol < BRAIN_WARM_PROTOCOL || claudeCodeAvailability(status, turn.account))
+        return false;
       try {
         const [agent, personalMcp, asked] = await Promise.all([
           deps.agentScope(turn),
@@ -443,8 +445,8 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           deps.permissions?.(turn),
         ]);
         const permissions = askingPermissions(asked, true);
-        if (permissions?.mode === "chat") return;
-        await deps.hub.call<"brain.warm">(
+        if (permissions?.mode === "chat") return false;
+        const reply = await deps.hub.call<"brain.warm">(
           session.machineId,
           {
             op: "brain.warm",
@@ -465,8 +467,10 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           },
           { timeoutMs: WARM_CALL_MS },
         );
+        return reply.open === true;
       } catch {
         // the turn starts its CLI itself
+        return false;
       }
     },
     async *run(asked: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
@@ -520,7 +524,8 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           );
           return;
         }
-        const code = chat ? null : await (turn.code ?? deps.prepare?.(turn, io.signal))?.catch(() => null);
+        const prepared = chat ? null : (turn.code ?? deps.prepare?.(turn, io.signal))?.catch(() => null);
+        const code = prepared ? await inPhase(io, "code", prepared) : null;
         // A runner that takes the conversation apart reads it at the start of the session: the system text stays the
         // agent's, the same in each of its conversations (and its cached prefix with it).
         const apart = (status?.protocol ?? 0) >= CONVERSATION_PROTOCOL;

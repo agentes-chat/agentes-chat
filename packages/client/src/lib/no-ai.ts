@@ -291,6 +291,14 @@ export const mayConnectAi = (
 ) => (!!meId && isRightHand(agent)) || maySetAgentAi(agent, meId, org);
 
 /**
+ * Whom Connect signs a plan in for, of the agents it was opened for: the person's own, the right hand (everyone's, ADR
+ * 0137 §11) and one they manage, with a plan of their own lent to it. Someone else's agent they don't manage gets who
+ * connects it instead (`noAiLockedLine`).
+ */
+export const connectsPlanFor = (agent: ConnectingAgent | null | undefined, meId: string | null | undefined) =>
+  !!agent && ((!!meId && agent.ownerUserId === meId) || isRightHand(agent) || managesAgent(agent));
+
+/**
  * The way out of a plan line for this person: their own plan when the workspace's doesn't serve them, or when a key
  * isn't theirs to set (an API key is always the workspace's, §11), else an API key. A request no person made thinks
  * with no one's own plan: only a key helps there. Null: neither is theirs to do.
@@ -478,7 +486,10 @@ export type PlanGate =
       /** `reason` "system": the computer's system, which the picker names before a plan is picked. */
       os?: string;
     }
-  /** `owner`: the viewer doesn't own the agent; `computer`: only whoever connected it adds a sign-in there. */
+  /**
+   * `owner`: the viewer doesn't own the agent and can't sign a plan of theirs in for it there; `computer`: only whoever
+   * connected it adds a sign-in there.
+   */
   | { state: "locked"; who: "owner" | "computer" }
   /** The Cloud's workspace is on a billing hold: it has no computer to sign in on until its agentes.chat plan is active. */
   | { state: "billing"; hold: BillingHold }
@@ -549,7 +560,8 @@ export function planGate({
   if (hold) return { state: "billing", hold };
   if (edition === "cloud" && setupPending(setup)) return { state: "preparing", view: setup };
   if (!brain || !edition) return { state: "loading" };
-  if (!brain.canUsePlans) return { state: "locked", who: "owner" };
+  // Who manages someone else's agent signs a plan of their own in for it wherever they may add one (`canManageAccounts`).
+  if (!brain.canUsePlans && !brain.canManageAccounts) return { state: "locked", who: "owner" };
   if (!brain.computer)
     return edition === "cloud" && !caughtUp ? { state: "preparing", view: null } : { state: "missing" };
   if (!brain.computer.online) return { state: "offline" };
@@ -653,6 +665,27 @@ export const gateRechecks = (gate: PlanGate, edition: Edition | null) =>
   (gate.state === "unsupported" &&
     !gate.overdue &&
     (gate.reason === "not_reported" || (edition === "cloud" && gate.reason !== "tool_off")));
+
+/**
+ * How long the server's own computer may take to connect the first time: its runner asks for its token every minute
+ * (`agentes-runner host`), the desktop app at once when the site tells it of a new workspace and every five minutes
+ * otherwise. Past this, it is offline like any other computer.
+ */
+export const HOST_CONNECT_WAIT_MS = 5 * 60_000;
+
+/**
+ * The server's own computer (ADR 0060 §3), added with a new workspace and not connected yet: its row exists before the
+ * runner here gets its token, so a plan's panel says it is connecting, with its steps waiting, instead of offline.
+ */
+export const hostConnecting = (
+  gate: PlanGate,
+  machine: Pick<Machine, "kind" | "lastSeenAt" | "createdAt"> | null | undefined,
+  now = Date.now(),
+) =>
+  gate.state === "offline" &&
+  machine?.kind === "host" &&
+  machine.lastSeenAt === null &&
+  now - Date.parse(machine.createdAt) < HOST_CONNECT_WAIT_MS;
 
 /** The Cloud's line per reason a plan can't sign in on the workspace's computer (`aiAccounts.connect.needsCloud.*`). */
 const CLOUD_REASON = {

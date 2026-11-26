@@ -4,6 +4,7 @@ import { type ArtifactDeps, createFileArtifact, deleteArtifact } from "../artifa
 import { sha256 } from "../crypto";
 import { markChannelRead, openPersonAgentDm } from "../dms";
 import { ConflictError, NotFoundError, TooManyError, ValidationError } from "../errors";
+import { surfaceWordsMeta } from "../message-origin";
 import { fileIdsOf, MAX_MESSAGE_ATTACHMENTS, postPersonMessage, sentWithClientId } from "../messages";
 import { getMembership } from "../organizations";
 import { personLocale } from "../requester";
@@ -201,7 +202,7 @@ export async function postFromSurface(deps: SurfaceInboundDeps, input: SurfacePo
       replyTo: await replyInDm(db, orgId, dm.id, input.replyTo),
       clientId,
       origin: "surface",
-      meta: { via, ...(input.forwarded ? { readOutside: true } : {}) },
+      meta: { via, ...surfaceWordsMeta(via) },
     },
   ).catch(async (error: unknown) => {
     await discard();

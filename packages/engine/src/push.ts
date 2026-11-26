@@ -485,7 +485,6 @@ export async function deliverPush(
     status: latest.statusTo ?? null,
     percent: latest.percent ?? null,
     reason: typeof latest.reason === "string" ? latest.reason : null,
-    awayMs: latest.since ? row.createdAt.getTime() - Date.parse(latest.since) : null,
     // Read once for every device: only the words change (ADR 0159), never who is told or when.
     personal: await isPersonalWorkspace(db, row.orgId),
   };

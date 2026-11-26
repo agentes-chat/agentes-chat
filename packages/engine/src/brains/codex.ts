@@ -34,6 +34,7 @@ import {
   steerOnMachine,
 } from "./claude-code";
 import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
+import { inPhase } from "./phase";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -413,10 +414,11 @@ export class CodexBrain implements Brain {
     // An older runner never finds the agent's checkouts from a Codex turn: it stays in the agent's folder, and in
     // its session, instead of being refused there.
     const checkouts = status.protocol === undefined || status.protocol >= CODEX_FOLDER_PROTOCOL;
+    const prepared = checkouts && !chat ? (turn.code ?? this.deps.prepare?.(turn, io.signal))?.catch(() => null) : null;
     const [mcp, agent, code] = await Promise.all([
       this.deps.mcp(turn),
       this.deps.agent?.(turn),
-      checkouts && !chat ? (turn.code ?? this.deps.prepare?.(turn, io.signal))?.catch(() => null) : null,
+      prepared ? inPhase(io, "code", prepared) : null,
     ]);
     // A kept-alive Codex lists our tools once, as its thread opens: the runner starts it again when a name is new.
     const toolNames = turn.tools.map((t) => t.name).sort();

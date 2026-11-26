@@ -28,8 +28,8 @@ import {
   isLocalPdf,
   singleImageBox,
   VIDEO_EXT,
+  videoBox,
   videoClock,
-  videoHeight,
 } from "./logic";
 import { openFile } from "./open";
 import { LocalPdfPage } from "./pdf-preview";
@@ -329,6 +329,11 @@ function InlineVideo({
   const c = useColors();
   const link = useRemoteFile(orgId, file.id, file.version, { once: true });
   const [failed, setFailed] = useState(false);
+  // Its own shape from the first frame when the server read its size (its file's details, else its ref).
+  const box = videoBox(
+    width,
+    pictureRatio(detail?.content.kind === "file" ? detail.content : null) ?? pictureRatio(file),
+  );
   const source = useMemo(() => (link.data ? { uri: link.data.uri, headers: link.data.headers } : null), [link.data]);
   if (failed || link.isError)
     return <AttachmentTile file={file} detail={detail} width={width} single siblings={siblings} />;
@@ -344,18 +349,13 @@ function InlineVideo({
           key={`${file.id}@${file.version ?? "latest"}`}
           source={source}
           name={info?.name || file.title}
-          width={width}
+          width={box.width}
+          height={box.height}
           onOpen={detail ? open : undefined}
           onFailed={() => setFailed(true)}
         />
       ) : (
-        <View
-          style={[
-            styles.shot,
-            { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 },
-            cardCorners,
-          ]}
-        />
+        <View style={[styles.shot, { ...box, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]} />
       )}
     </View>
   );
@@ -420,12 +420,7 @@ export function LocalFiles({
         <LocalMedia file={lone} box={singleImageBox(blockWidth, localRatio(lone))} sending={sending} />
       ) : null}
       {videos.map((f) => (
-        <LocalMedia
-          key={f.uri}
-          file={f}
-          box={{ width: blockWidth, height: videoHeight(blockWidth) }}
-          sending={sending}
-        />
+        <LocalMedia key={f.uri} file={f} box={videoBox(blockWidth, localRatio(f))} sending={sending} />
       ))}
       {others.length > 0 ? (
         <View style={[styles.grid, { width: blockWidth }, align === "end" && styles.gridEnd]}>

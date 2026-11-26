@@ -2227,7 +2227,7 @@
       },
       "computers": {
         "title": "Computadoras",
-        "help": "Se sumó una computadora, está lista o dejó de responder"
+        "help": "Se sumó una computadora o está lista"
       },
       "reactions": {
         "title": "Reacciones",
@@ -8286,11 +8286,12 @@
     "noOrgBack": "Volver a tus espacios de trabajo",
     "crashTitle": "Algo salió mal",
     "crashText": "Recarga la página para seguir.",
-    "crashCode": "Si pides ayuda, indica el código {{id}}.",
+    "supportCode": "Código para el soporte",
     "unreachableTitle": "No se puede conectar con agentes.chat",
     "unreachableText": "Puede que se esté reiniciando. Esta página se abre sola en cuanto vuelva.",
     "offlineTitle": "No tienes conexión",
     "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión.",
+    "waitingConnection": "Esperando a que vuelva la conexión",
     "unknownHostTitle": "Esta dirección aún no está configurada",
     "unknownHostText": "Si se acaba de conectar, vuelve a intentarlo en unos minutos.",
     "unknownHostTab": "Dirección sin configurar · agentes.chat"
@@ -16985,6 +16986,7 @@
       "noSkillMd": "No hay SKILL.md en {{path}} ni en las carpetas que contiene.",
       "tooManySkills": "Este enlace tiene más de {{max}} habilidades. Enlaza una de sus carpetas.",
       "zipTooManySkills": "Este .zip tiene más de {{max}} habilidades. Envíalas por partes.",
+      "zipTooBig": "Este .zip supera los {{maxMb}} MB, el máximo para instalar una skill.",
       "invalidName": "El nombre debe usar minúsculas, números y guiones, hasta {{max}} caracteres.",
       "invalidDescription": "La descripción debe tener de 1 a {{max}} caracteres.",
       "tooLarge": "Esta habilidad tiene {{size}} MB de texto y scripts, y el límite es {{max}} MB.",
@@ -19372,9 +19374,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Entregado a <0/>{{name}}",
-      "working": "trabajando en ello",
-      "done": "listo en {{duration}}",
+      "lead": "Entregado a <0>{{name}}</0>",
+      "working": "trabajando",
+      "ready": "listo",
       "waitingYou": "esperando tu respuesta",
       "waiting": "esperando una respuesta",
       "waitingApprovalYou": "esperando tu aprobación",
@@ -19503,6 +19505,7 @@
     "namesMore": "{{first}} y {{count}} más",
     "wait": {
       "thinking": "Pensando…",
+      "code": "Actualizando el código…",
       "held": "Esperando aprobación…",
       "said": "«{{text}}»"
     },
@@ -19520,6 +19523,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} espera tu aprobación",
       "yourAnswer": "{{name}} espera tu respuesta",
+      "helping": "{{to}} ayudando a {{from}}",
       "done": "{{to}} terminó. {{from}} está escribiendo",
       "notDone": "{{to}} no terminó. {{from}} está escribiendo",
       "handedOff": "{{to}} trabaja en lo que {{from}} le pasó"
@@ -20344,7 +20348,7 @@
     },
     "offer_install_skill": {
       "label": "Ofrecer instalar una habilidad",
-      "description": "Publica una tarjeta cuyo botón abre la instalación con el enlace de la habilidad ya puesto."
+      "description": "Publica una tarjeta cuyo botón abre la instalación con la skill ya leída de su enlace o de su .zip."
     },
     "update_skill_from_source": {
       "label": "Actualizar habilidades desde sus enlaces",

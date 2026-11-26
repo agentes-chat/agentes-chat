@@ -1579,6 +1579,35 @@ test("the agent's account: its owner's own only, on its computer, of its brain's
   });
 });
 
+test("an admin connects a plan of their own for another member's agent; a plain member can't", async () => {
+  f = await setup();
+  const { machineId } = await sharedMachine();
+  const caio = await addMember(f.db, f.org.id, "member", "caio");
+  const admin = await addMember(f.db, f.org.id, "admin", "bia");
+  const dora = await addMember(f.db, f.org.id, "member", "dora");
+  await f.db
+    .update(schema.agents)
+    .set({ ownerUserId: caio.id, machineId, brain: "claude_code" })
+    .where(eq(schema.agents.id, f.agent.id));
+  const deps = { db: f.db };
+
+  // Caio's agent, on a computer everyone adds accounts to: the admin may sign a plan in there for it.
+  expect(await getAgentBrain(deps, admin.id, f.org.id, f.agent.id)).toMatchObject({
+    canManageAccounts: true,
+    canUsePlans: false,
+  });
+  await addAccount(machineId, CLAUDE_ID, "claude_code", { createdBy: admin.id, email: "bia@example.com" });
+  const saved = await setAgentBrain(deps, admin.id, f.org.id, f.agent.id, { brain: "claude_code", account: CLAUDE_ID });
+  expect(saved.account).toBe(CLAUDE_ID);
+  expect((await agentRow()).brainAccountLentBy).toBe(admin.id);
+
+  // Someone who neither owns nor manages it sees nothing of it and changes nothing.
+  const seen = await getAgentBrain(deps, dora.id, f.org.id, f.agent.id).catch((e) => e);
+  expect(seen).toBeInstanceOf(ForbiddenError);
+  const set = await setAgentBrain(deps, dora.id, f.org.id, f.agent.id, { account: null }).catch((e) => e);
+  expect(set).toBeInstanceOf(ForbiddenError);
+});
+
 test("a runner older than accounts: the page says accounts aren't supported", async () => {
   f = await setup();
   const { machineId } = await ownedMachine(BRAIN_PROTOCOL);

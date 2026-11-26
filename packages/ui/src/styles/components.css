@@ -2489,6 +2489,11 @@ html:not([data-pointer]) .ac-select__trigger:focus-visible,
   min-width: 200px;
   max-height: var(--radix-dropdown-menu-content-available-height);
 }
+/* An item that explains itself (a switch with its sentence under it) wraps its sentence at a menu's width, never
+   stretches the whole menu across the page. A list of people keeps its one-line descriptions. */
+.ac-menu--dropdown:has(.ac-menu__desc):not(:has(.ac-menu__leading > .ac-avatar)) {
+  max-width: min(360px, calc(100vw - 24px));
+}
 /* The right click (MenuAt): at the pointer at once, like the system's menus. */
 .ac-menu.ac-menu--at[data-state="open"] {
   animation: none;
@@ -3046,13 +3051,14 @@ html:not([data-pointer]) .ac-tab:focus-visible {
   position: fixed;
   z-index: var(--z-dialog);
   left: 50%;
-  top: 50%;
+  /* Centred in the window's room under `--window-top`. */
+  top: calc(50% + var(--window-top) / 2);
   transform: translate(-50%, -50%);
   width: min(var(--ac-dialog-width, 600px), calc(100% - 32px));
   /* Fixed head and foot; the body scrolls (viewport minus margins). */
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px - var(--window-top));
   /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px - var(--window-top));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -3921,12 +3927,13 @@ html:not([data-pointer]) .ac-back:focus-visible {
   position: fixed;
   z-index: var(--z-dialog);
   left: 50%;
-  top: 50%;
+  /* Centred in the window's room under `--window-top`, as `.ac-dialog`. */
+  top: calc(50% + var(--window-top) / 2);
   transform: translate(-50%, -50%);
   width: min(720px, calc(100% - 48px));
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px - var(--window-top));
   /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px - var(--window-top));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -3968,9 +3975,9 @@ html:not([data-pointer]) .ac-back:focus-visible {
 }
 /* Always the full height: changing tabs inside never makes it jump. */
 .ac-details--fill {
-  height: calc(100vh - 48px);
+  height: calc(100vh - 48px - var(--window-top));
   /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-  height: calc(100dvh - 48px);
+  height: calc(100dvh - 48px - var(--window-top));
 }
 .ac-details:focus {
   outline: none;
@@ -7550,6 +7557,19 @@ html:not([data-pointer]) .ac-react:focus-visible {
 .ac-composer__tools:empty {
   display: none;
 }
+/* More than one line (`data-wide`): the text takes the card's whole width, the tools a row of their own under it, at
+   its two ends, the text's edge on the attach button's. */
+.ac-composer[data-wide] .ac-composer__row {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+}
+.ac-composer[data-wide] .ac-composer__text {
+  order: -1;
+  flex: 1 0 100%;
+}
+.ac-composer[data-wide] .ac-composer__text ~ .ac-composer__tools {
+  margin-left: auto;
+}
 /* In the column the height comes from the text (Composer measures it); `flex: 1` from the row layout above would
    pin it to its minimum. */
 .ac-composer textarea {
@@ -8004,13 +8024,19 @@ button.ac-voice__play:active {
   border-radius: 16px 16px 16px 4px;
   box-shadow: 0 0 0 1px var(--line);
 }
-/* One box from the first paint, the video whole inside it: its own proportions are known only once its metadata
-   loads, and a tile that took them then would move every row under it. Full screen stretches the player itself over
-   the screen (the browser's :fullscreen rules), so there the box would leave the video small in its corner. */
+/* One box from the first paint, the video whole inside it: a tile that took the video's shape once its metadata loads
+   would move every row under it. The shape the server read (`data-ratio`) is there from the start: as wide as a 16:9
+   one, an upright one as tall as 360. Unknown, 16:9. Full screen stretches the player itself over the screen (the
+   browser's :fullscreen rules), so there the box would leave the video small in its corner. */
 .ac-video--tile:not([data-full]) .ac-video__media {
   width: 320px;
   max-width: 100%;
   height: 180px;
+}
+.ac-video--tile[data-ratio]:not([data-full]) .ac-video__media {
+  width: min(320px, calc(360px * var(--ratio)));
+  height: auto;
+  aspect-ratio: var(--ratio);
 }
 .ac-video--viewer {
   width: 100%;
@@ -9479,21 +9505,40 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 }
 
 /*
- * An agent at work (`OrbitGlyph`): rings orbit its glyph, their far halves behind it and their near halves in front,
- * in its colour (`--orbit`) and two neighbours mixed from it (`orbitColors`). The overlay is 3.6 glyphs wide and takes no room
- * (it reaches into the row's gap), but its box counts as overflow: the row holding it clips (`overflow: clip`), or a
- * scrolling list would scroll by it. Only transforms move; reduced motion draws them still, and off screen they pause.
+ * An agent at work (`OrbitGlyph`): two rings around its glyph in its own colours (`orbitColors`), whole behind it, and
+ * on each a light (a fading arc, a small dot at its head) that passes over the glyph on the near half and behind it on
+ * the far one. The overlay is 2.2 glyphs wide and takes no room (it reaches into the row's gap), but its box counts as
+ * overflow: the row holding it clips (`overflow: clip`), or a scrolling list would scroll by it. Each ring also turns
+ * slowly round the glyph (`ac-orbit__roll`), its light riding it. Only transforms move; reduced motion draws them
+ * still, and off screen they pause.
  */
 .ac-orbit {
+  --orbit-1: var(--orbit-l1);
+  --orbit-2: var(--orbit-l2);
+  --orbit-head: var(--orbit-lh);
+  /* The light's head and the rings' widths, whatever the glyph's size. */
+  --orbit-w: 2.2px;
+  --orbit-ring-w: 1.25px;
+  --orbit-ring-alpha: 0.45;
   position: relative;
   display: inline-flex;
   flex: none;
   isolation: isolate;
 }
+[data-theme="dark"] .ac-orbit {
+  --orbit-1: var(--orbit-d1);
+  --orbit-2: var(--orbit-d2);
+  --orbit-head: var(--orbit-dh);
+  --orbit-ring-alpha: 0.55;
+}
+.ac-orbit:has(> .ac-avatar--lg, > .ac-avatar--xl) {
+  --orbit-w: 2.6px;
+  --orbit-ring-w: 1.5px;
+}
 .ac-orbit > .ac-orbit__back,
 .ac-orbit > .ac-orbit__front {
   position: absolute;
-  inset: -130%;
+  inset: -60%;
   overflow: visible;
   pointer-events: none;
 }
@@ -9506,28 +9551,25 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 .ac-orbit > .ac-orbit__front {
   z-index: var(--z-raised);
 }
-.ac-orbit__ring {
-  --ring: var(--orbit);
-  color: var(--ring);
-}
-.ac-orbit__ring--2 {
-  --ring: var(--orbit-2, var(--orbit));
-}
-.ac-orbit__ring--3 {
-  --ring: var(--orbit-3, var(--orbit));
-}
 .ac-orbit__path {
   fill: none;
-  stroke: currentColor;
-  stroke-width: 1.25;
+  stroke: var(--orbit-1);
+  stroke-width: var(--orbit-ring-w);
   vector-effect: non-scaling-stroke;
-  opacity: 0.5;
+  opacity: var(--orbit-ring-alpha);
 }
-.ac-orbit__back .ac-orbit__path {
-  opacity: 0.28;
+.ac-orbit__ring--2 .ac-orbit__path {
+  stroke: var(--orbit-2);
+}
+.ac-orbit__light {
+  fill: none;
+  vector-effect: non-scaling-stroke;
 }
 .ac-orbit__dot {
-  fill: currentColor;
+  fill: var(--orbit-head);
+}
+.ac-orbit__back .ac-orbit__dot {
+  opacity: 0.7;
 }
 .ac-orbit__spin {
   transform-origin: 0 0;
@@ -9537,16 +9579,20 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
   transform-origin: 0 0;
   transform: rotate(calc(-1 * var(--start)));
 }
+.ac-orbit__roll {
+  transform-origin: 0 0;
+}
 @media (prefers-reduced-motion: no-preference) {
+  .ac-orbit__roll {
+    animation: ac-orbit-roll var(--spin) linear infinite;
+  }
   .ac-orbit__spin {
     animation: ac-orbit-turn var(--turn) linear infinite;
-    animation-direction: var(--dir, normal);
   }
   .ac-orbit__unspin {
     animation: ac-orbit-unturn var(--turn) linear infinite;
-    animation-direction: var(--dir, normal);
   }
-  .ac-orbit[data-paused="true"] :is(.ac-orbit__spin, .ac-orbit__unspin) {
+  .ac-orbit[data-paused="true"] :is(.ac-orbit__spin, .ac-orbit__unspin, .ac-orbit__roll) {
     animation-play-state: paused;
   }
 }
@@ -9556,6 +9602,14 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
   }
   to {
     transform: rotate(calc(var(--start) + 360deg));
+  }
+}
+@keyframes ac-orbit-roll {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 @keyframes ac-orbit-unturn {
@@ -11216,7 +11270,7 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     max-width: none;
   }
   .ac-palette {
-    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    top: calc(env(safe-area-inset-top, 0px) + var(--window-top) + 12px);
   }
   .ac-palette__list {
     max-height: 50vh;
@@ -11234,9 +11288,9 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     left: 0;
     transform: none;
     width: 100%;
-    max-height: calc(100vh - 12px);
+    max-height: calc(100vh - 12px - var(--window-top));
     /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-    max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - var(--window-top));
     border-radius: var(--radius-section) var(--radius-section) 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     --dialog-pad: 16px;
@@ -11258,7 +11312,7 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
     height: 100dvh;
     border-radius: 0;
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--window-top));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     --details-pad: 16px;
   }
@@ -12527,8 +12581,9 @@ html:not([data-pointer]) .ac-msg__note:focus-visible {
   margin: -6px;
 }
 /* A face there (a personal workspace's, ADR 0159) is the slot's size, as a workspace's mark is: a larger one would
-   reach into the gap before the name. */
-.ac-mo__leading > .ac-avatar {
+   reach into the gap before the name. Also when a wrapper holds it (the desktop app's list by server dims an offline
+   server's rows in one). */
+.ac-mo__leading .ac-avatar {
   width: 32px;
   height: 32px;
 }

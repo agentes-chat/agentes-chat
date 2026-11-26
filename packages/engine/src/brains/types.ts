@@ -220,7 +220,12 @@ export interface BrainIO {
    * `null` when it ends. Brains that can't never call it.
    */
   steerable?(steer: ((messages: SteerMessage[]) => Promise<SteerReply>) | null): void;
+  /** A step before the model has the turn (`inPhase`): `null` once it is over. */
+  phase?(phase: BrainPhase | null): void;
 }
+
+/** What a turn waits on before its model: `code`, the agent's checkouts being updated (`prepareAgentCode`). */
+export type BrainPhase = "code";
 
 export type BrainEvent =
   | { type: "text_delta"; text: string }
@@ -304,7 +309,8 @@ export interface Brain {
   run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent>;
   /**
    * The run was claimed: its computer starts the CLI its turn will most likely use now, while the engine builds the
-   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet.
+   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet. True: the computer said the session's CLI
+   * is open now, so the turn starts no process.
    */
-  warm?(turn: BrainTurn): Promise<void>;
+  warm?(turn: BrainTurn): Promise<boolean | undefined>;
 }

@@ -4652,6 +4652,23 @@ test("agents' turns on one computer start apart, parked in line (never handed to
   expect(kick).toBeDefined();
 });
 
+test("an agent's turn on a CLI its computer already holds open isn't spaced: it starts no process", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
+  const machineId = await computerAgent(f);
+  const { brain: scripted, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const brain: Brain = { ...scripted, warm: async () => true };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await askedJustNow(f, machineId);
+  const fromAgents = await secondRun(f, (await personMessage(f, "@dev revisa")).id, 2);
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(1);
+  expect((await runById(f, fromAgents.id))?.status).toBe("done");
+});
+
 test("only the head of the computer's line asks it: an agent's run waits behind a person's", async () => {
   f = await setup();
   const machineId = await computerAgent(f);

@@ -5313,7 +5313,7 @@
     "value": "Computers"
   },
   "noticePrefs.category.computers.help": {
-    "value": "A computer joined, is ready, or stopped answering"
+    "value": "A computer joined or is ready"
   },
   "noticePrefs.category.reactions.title": {
     "value": "Reactions"
@@ -19671,8 +19671,8 @@
   "empty.crashText": {
     "value": "Reload the page to carry on."
   },
-  "empty.crashCode": {
-    "value": "If you ask for help, give the code {{id}}."
+  "empty.supportCode": {
+    "value": "Code for support"
   },
   "empty.unreachableTitle": {
     "value": "Can't reach agentes.chat"
@@ -19685,6 +19685,9 @@
   },
   "empty.offlineText": {
     "value": "This page opens by itself when you're back online."
+  },
+  "empty.waitingConnection": {
+    "value": "Waiting for the connection to come back"
   },
   "empty.unknownHostTitle": {
     "value": "This address isn't set up yet"
@@ -40432,6 +40435,9 @@
   "errors.skill.zipTooManySkills": {
     "value": "This .zip holds more than {{max}} skills. Send them in parts."
   },
+  "errors.skill.zipTooBig": {
+    "value": "This .zip is larger than {{maxMb}} MB, the most a skill install takes."
+  },
   "errors.skill.invalidName": {
     "value": "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters."
   },
@@ -46294,13 +46300,13 @@
     "value": "tomorrow {{time}}"
   },
   "work.handed.lead": {
-    "value": "Handed to <0/>{{name}}"
+    "value": "Handed to <0>{{name}}</0>"
   },
   "work.handed.working": {
-    "value": "working on it"
+    "value": "working"
   },
-  "work.handed.done": {
-    "value": "done in {{duration}}"
+  "work.handed.ready": {
+    "value": "done"
   },
   "work.handed.waitingYou": {
     "value": "waiting for your answer"
@@ -46599,6 +46605,9 @@
   "chat.wait.thinking": {
     "value": "Thinking…"
   },
+  "chat.wait.code": {
+    "value": "Updating the code…"
+  },
   "chat.wait.held": {
     "value": "Waiting for approval…"
   },
@@ -46634,6 +46643,9 @@
   },
   "chat.consult.yourAnswer": {
     "value": "{{name}} is waiting for your answer"
+  },
+  "chat.consult.helping": {
+    "value": "{{to}} helping {{from}}"
   },
   "chat.consult.done": {
     "value": "{{to}} is done. {{from}} is writing"
@@ -48633,7 +48645,7 @@
     "value": "Offer to install a skill"
   },
   "builtinTools.offer_install_skill.description": {
-    "value": "Posts a card whose button opens the install dialog with the skill's link filled in."
+    "value": "Posts a card whose button opens the install dialog with the skill read from its link or its .zip."
   },
   "builtinTools.update_skill_from_source.label": {
     "value": "Update skills from their links"

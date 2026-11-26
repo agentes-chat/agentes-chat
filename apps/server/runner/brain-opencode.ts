@@ -16,6 +16,7 @@ import {
   codexProfileOf,
   codexThreadKey,
 } from "./brain-codex";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { cliSpawn, envValue, OPENCODE_BIN } from "./executors";
@@ -604,8 +605,10 @@ export async function runOpencodeTurn(input: OpencodeTurnInput, opts: OpencodeTu
   }
 
   let stderr = "";
+
+  const stderrText = new ConsoleDecoder();
   child.stderr?.on("data", (c: Buffer) => {
-    stderr = (stderr + c.toString("utf8")).slice(-2000);
+    stderr = (stderr + stderrText.write(c)).slice(-2000);
   });
   const reader = new OpencodeTurnReader({ ...(input.chat ? { chat: true } : {}), ...(redact ? { redact } : {}) });
   const sessionKey = opencodeSessionKey(input.sessionId, input.account?.id, input.cwd);

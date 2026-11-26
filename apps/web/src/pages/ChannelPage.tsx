@@ -38,6 +38,7 @@ import {
   MESSAGES_PAGE,
   messageLiveRef,
   OPEN_THREAD,
+  PAGE_AHEAD_SCREENS,
   runsInChannel,
   type StreamsState,
   sendHelpers,
@@ -252,7 +253,7 @@ import {
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
-import { anchorShift, anchorsScroll, type RowResize } from "@/chat/anchor";
+import { anchorShift, anchorsScroll, type RowResize, topInList } from "@/chat/anchor";
 import { tokenizeBody } from "@/chat/body";
 import { ChatMedia } from "@/chat/ChatMedia";
 import { ChatVoice } from "@/chat/ChatVoice";
@@ -1358,7 +1359,7 @@ function ChannelView({
   // pages come as the person scrolls down, until they reach it.
   const [gap, setGap] = useState(false);
   const [newerLoading, setNewerLoading] = useState(false);
-  const anchor = useRef<{ height: number; top: number } | null>(null);
+  const anchor = useRef<{ row: HTMLElement; top: number } | null>(null);
   const loadOlder = (limit = OLDER_PAGE) => {
     // A thread view loads its whole conversation at once.
     if (thread || olderState !== "idle" || !messages.data) return;
@@ -1371,16 +1372,20 @@ function ChannelView({
     api.chat
       .messages(org.id, channel.id, { before: oldest.createdAt, limit, onCards: cardsInto(qc, org.id) })
       .then((page) => {
-        // Keep what's on screen where it is: remember the distance from the bottom.
+        // Keep what's on screen where it is: the list moves down by what lands above the oldest row it holds.
         const el = scroller.current;
-        if (el) anchor.current = { height: el.scrollHeight, top: el.scrollTop };
-        setOlder((prev) => {
-          const known = new Set(prev.map((m) => m.id));
-          const next = [...page.filter((m) => !known.has(m.id)), ...prev];
-          if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
-          return next;
+        const row = el?.querySelector<HTMLElement>(".ac-msg");
+        if (el && row) anchor.current = { row, top: topInList(el, row) };
+        // Drawn in slices: fifty rows in one task would hold the page still while the person scrolls on.
+        startTransition(() => {
+          setOlder((prev) => {
+            const known = new Set(prev.map((m) => m.id));
+            const next = [...page.filter((m) => !known.has(m.id)), ...prev];
+            if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
+            return next;
+          });
+          setOlderState(page.length < limit ? "done" : "idle");
         });
-        setOlderState(page.length < limit ? "done" : "idle");
       })
       .catch(() => setOlderState("idle"));
   };
@@ -1420,7 +1425,10 @@ function ChannelView({
     const a = anchor.current;
     if (!el || !a) return;
     anchor.current = null;
-    el.scrollTop = el.scrollHeight - a.height + a.top;
+    // Scroll anchoring already moved a list that isn't at its very top (Chromium, measured: also when only read here).
+    if (anchorsScroll() && el.scrollTop > 0) return;
+    // By what came above, not back to where the list was: the person may have scrolled on since the page was asked for.
+    if (a.row.isConnected) el.scrollTop += topInList(el, a.row) - a.top;
   }, [older]);
 
   // Every thread with replies is one line under its root; its replies live in the panel.
@@ -1818,6 +1826,8 @@ function ChannelView({
         const before = heights.get(target);
         const after = target.offsetHeight;
         heights.set(target, after);
+        // Laid out whole once: it may be skipped now, at the height it remembers (layout.css).
+        if (before === undefined) target.dataset.sized = "";
         if (before !== undefined && before !== after)
           resized.push({ top: target.getBoundingClientRect().top - listTop, before, after });
       }
@@ -2850,6 +2860,7 @@ function ChannelView({
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
                             data-wallpaper={wallpaper?.wallpaper.kind}
+                            data-manual-anchor={anchorsScroll() ? undefined : ""}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
                             aria-relevant="additions"
@@ -2878,7 +2889,8 @@ function ChannelView({
                                 Date.now() - lastUpGesture.current < GESTURE_MS ||
                                 (byPerson && selectingIn(e.currentTarget));
                               if (byPerson) datePill.current?.poke();
-                              if (byPerson && e.currentTarget.scrollTop < 240) loadOlder();
+                              const ahead = e.currentTarget.clientHeight * PAGE_AHEAD_SCREENS;
+                              if (byPerson && e.currentTarget.scrollTop <= ahead) loadOlder();
                               if (upByPerson && previousTop !== null && e.currentTarget.scrollTop < previousTop) {
                                 letGo();
                                 return;
@@ -2886,7 +2898,7 @@ function ChannelView({
                               // Away from the latest page, its end is not the conversation's: newer pages, never pinned.
                               if (gap) {
                                 const below = e.currentTarget.scrollHeight - e.currentTarget.scrollTop;
-                                if (byPerson && below - e.currentTarget.clientHeight < 240) loadNewer();
+                                if (byPerson && below - e.currentTarget.clientHeight <= ahead) loadNewer();
                                 return;
                               }
                               const near = nearBottom(e.currentTarget);
@@ -4389,10 +4401,13 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
   const [codeOpenFor, setCodeOpenFor] = useState<string | null>(null);
   const codeOpen = Boolean(code) && codeOpenFor === solo?.runId;
   if (entries.length === 0) return null;
-  // The agent at work leads in the face's column, with its rings; the line's small faces are the others.
-  const orbiting = lead && !lead.consult ? lead : undefined;
-  const faces = barFaces(entries).filter((e) => e !== orbiting);
-  const agent = orbiting ? dir.agentById.get(orbiting.id) : undefined;
+  // The face's column holds whoever does the work, with its orbit while it works: the agent at work, or the one a
+  // question or hand-off went to (its own wait holds it still). The line names both and never repeats a face: its
+  // small faces are the others at it.
+  const worker = consult ? { id: consult.to, name: consult.toName } : lead;
+  const atWork = consult ? !consult.yours && !consult.wait : Boolean(lead);
+  const faces = barFaces(entries).filter((e) => e !== lead);
+  const agent = worker ? dir.agentById.get(worker.id) : undefined;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the globe button inside is the keyboard way; the row is a bigger target
     // biome-ignore lint/a11y/useKeyWithClickEvents: same
@@ -4410,12 +4425,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
       }
     >
       <div className="working-tail__face" aria-hidden="true">
-        {orbiting ? (
+        {worker && atWork ? (
           <OrbitGlyph appearance={lookOf(agent)}>
-            <AgentAvatar agentId={orbiting.id} name={orbiting.name} state="writing" />
+            <AgentAvatar agentId={worker.id} name={worker.name} state={consult ? "thinking" : "writing"} />
           </OrbitGlyph>
-        ) : lead ? (
-          <AgentAvatar agentId={lead.id} name={lead.name} state="idle" />
+        ) : worker ? (
+          <AgentAvatar agentId={worker.id} name={worker.name} state={consult?.yours ? "waiting" : "idle"} />
         ) : someoneTypes(entries) && !bothAtIt(entries) ? (
           <TypingMark />
         ) : null}
@@ -4484,9 +4499,7 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             })}
           >
             {trail.earlier > 0 && (
-              <li className="working-tail__more" aria-label={t("chat.trail.earlier", { count: trail.earlier })}>
-                +{trail.earlier}
-              </li>
+              <li className="working-tail__more">{t("chat.trail.earlier", { count: trail.earlier })}</li>
             )}
             {trail.lines.map((l) => (
               <li key={l.key}>{l.text}</li>

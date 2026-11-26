@@ -70,9 +70,13 @@ async function loadTemplate(): Promise<Blob> {
   return dump;
 }
 
-/** What the template depends on: every migration, their journal and the PGlite version this package pins. */
+/**
+ * What the template depends on: every migration, their journal, the PGlite version this package pins, and the month
+ * (its `messages` partitions are the month it was made in and the next two).
+ */
 function templateKey(): string {
   const hash = createHash("sha256");
+  hash.update(new Date().toISOString().slice(0, 7));
   const pins = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;

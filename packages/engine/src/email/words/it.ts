@@ -412,48 +412,6 @@ export const words: EmailWords = {
       why: () => "Ricevi questa email perché fai parte di questo spazio di lavoro su agentes.chat.",
     },
   },
-  computerDown: {
-    subject: "Un computer non risponde",
-    preheader: "Il lavoro dei tuoi agenti su questo computer è in attesa.",
-    headline: "Un computer non risponde",
-    body: (name, org, away) => [
-      { b: name },
-      " in ",
-      { b: org },
-      ` non risponde da ${away}. Il lavoro che ne ha bisogno resta in attesa e riprende quando torna disponibile.`,
-    ],
-    runs: "Richieste agli agenti in attesa",
-    calls: "Chiamate webhook in attesa",
-    note: "Per continuare subito, sposta i suoi agenti su un altro computer dalla sua pagina.",
-    button: "Apri il computer",
-    why: (org) => `Ricevi questa email perché gestisci i computer di ${org} su agentes.chat.`,
-    back: {
-      subject: "Un computer è di nuovo disponibile",
-      preheader: "Il lavoro in attesa riprende ora.",
-      headline: "Il computer è di nuovo disponibile",
-      runs: "Richieste agli agenti che hanno atteso",
-      calls: "Chiamate webhook che hanno atteso",
-      body: (name, org, away) => [
-        { b: name },
-        " in ",
-        { b: org },
-        ` è di nuovo disponibile dopo ${away}. Il lavoro in attesa riprende ora.`,
-      ],
-    },
-    personal: {
-      body: (name, _org, away) => [
-        { b: name },
-        ` non risponde da ${away}. Il lavoro che ne ha bisogno resta in attesa e riprende quando torna disponibile.`,
-      ],
-      why: () => "Ricevi questa email perché gestisci i computer del tuo spazio di lavoro personale su agentes.chat.",
-      back: {
-        body: (name, _org, away) => [
-          { b: name },
-          ` è di nuovo disponibile dopo ${away}. Il lavoro in attesa riprende ora.`,
-        ],
-      },
-    },
-  },
   appConnected: {
     subject: "Un’app è stata collegata al tuo account agentes.chat",
     preheader: "Può leggere e mandare attività agli agenti a nome tuo in uno spazio di lavoro.",

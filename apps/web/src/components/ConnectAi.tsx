@@ -23,6 +23,7 @@ import {
   agentPlan,
   aiStateOf,
   allAgents,
+  connectsPlanFor,
   defaultChoice,
   defaultTarget,
   type ExistingSignIn,
@@ -432,8 +433,8 @@ export function ConnectAiDialog({
   // In the order asked for: the conversation's agent leads "All agents", so its computer is the one a plan signs in on.
   const pooled = pool
     ? pool.flatMap((id) => {
-        const a = mine.find((x) => x.id === id);
-        return a ? [a] : [];
+        const a = dir.agentById.get(id);
+        return a && connectsPlanFor(a, me.user.id) ? [a] : [];
       })
     : mine;
   const agents = pooled.map((a) => ({
@@ -494,7 +495,7 @@ export function ConnectAiDialog({
   const credentials = useCredentials(org.id, mayUseKeys && forId !== undefined);
   // No agent of theirs yet, and it isn't opened for someone else's: a plan signs in for the agents they create.
   const bare = agents.length === 0 && !theirs && !named && !team;
-  const bareGates = useGatesWithoutAgent(org.id, bare);
+  const bareGates = useGatesWithoutAgent(org.id, bare, poll);
   const gateOf = (c: PlanChoice): PlanGate =>
     agents.length > 0 ? gates.gateOf(c) : bare ? bareGates.at(c).gate : { state: "loading" };
   const offSystem = (c: PlanChoice) => planOffSystem(t, gateOf(c));
@@ -663,13 +664,14 @@ export function ConnectAiDialog({
     );
   };
 
-  // Someone else's agent, or no agent of theirs among those: who connects a plan instead.
+  // Someone else's agent they don't manage, or no agent of theirs among those: who connects a plan instead.
   const owner = one?.ownerUserId ? dir.memberById.get(one.ownerUserId)?.name : undefined;
-  const locked = theirs
-    ? noAiLockedLine(t, one.name, owner)
-    : named && agents.length === 0
-      ? t("noAi.lockedAdmins")
-      : undefined;
+  const locked =
+    theirs && !mayUseKeys
+      ? noAiLockedLine(t, one.name, owner)
+      : named && agents.length === 0
+        ? t("noAi.lockedAdmins")
+        : undefined;
   // Over a draft a Settings page opens in a new tab: the draft behind this dialog stays.
   const toSettings = (section: "usage") => {
     if (request.forNewAgent || request.overDraft) {

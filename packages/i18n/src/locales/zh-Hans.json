@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "电脑",
-        "help": "有电脑加入、就绪或无响应时"
+        "help": "有电脑加入或就绪时"
       },
       "reactions": {
         "title": "表情回应",
@@ -7764,11 +7764,12 @@
     "noOrgBack": "返回你的工作区",
     "crashTitle": "出了点问题",
     "crashText": "请重新加载页面以继续。",
-    "crashCode": "如需求助，请提供代码 {{id}}。",
+    "supportCode": "支持代码",
     "unreachableTitle": "无法连接 agentes.chat",
     "unreachableText": "它可能正在重启。恢复后此页面会自动打开。",
     "offlineTitle": "你已离线",
     "offlineText": "恢复联网后此页面会自动打开。",
+    "waitingConnection": "正在等待连接恢复",
     "unknownHostTitle": "此地址尚未设置",
     "unknownHostText": "如果刚刚完成连接，请过几分钟再试。",
     "unknownHostTab": "地址未设置 · agentes.chat"
@@ -15957,6 +15958,7 @@
       "noSkillMd": "{{path}} 及其子文件夹中没有 SKILL.md。",
       "tooManySkills": "这个链接包含超过 {{max}} 个技能，请链接到其中一个文件夹。",
       "zipTooManySkills": "这个 .zip 包含超过 {{max}} 个技能，请分批发送。",
+      "zipTooBig": "这个 .zip 超过 {{maxMb}} MB，这是安装技能的上限。",
       "invalidName": "名称只能使用小写字母、数字和连字符，最多 {{max}} 个字符。",
       "invalidDescription": "描述需为 1 到 {{max}} 个字符。",
       "tooLarge": "这个技能有 {{size}} MB 的文本和脚本，上限是 {{max}} MB。",
@@ -18262,9 +18264,9 @@
   },
   "work": {
     "handed": {
-      "lead": "已移交给 <0/>{{name}}",
-      "working": "进行中",
-      "done": "用时 {{duration}} 完成",
+      "lead": "已移交给 <0>{{name}}</0>",
+      "working": "工作中",
+      "ready": "已完成",
       "waitingYou": "等待你的回答",
       "waiting": "等待回答",
       "waitingApprovalYou": "等待你的批准",
@@ -18387,6 +18389,7 @@
     "namesMore": "{{first}} 等另外 {{count}} 位",
     "wait": {
       "thinking": "思考中…",
+      "code": "正在更新代码…",
       "held": "等待审批…",
       "said": "“{{text}}”"
     },
@@ -18402,6 +18405,8 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} 正在等你批准",
       "yourAnswer": "{{name}} 正在等你回答",
+      "helping": "{{to}} 正在协助 {{from}}",
+      "helping_female": "{{to}} 正在协助 {{from}}",
       "done": "{{to}} 已完成。{{from}} 正在撰写",
       "notDone": "{{to}} 没有完成。{{from}} 正在撰写",
       "handedOff": "{{to}} 正在处理 {{from}} 交给它的工作"
@@ -19220,7 +19225,7 @@
     },
     "offer_install_skill": {
       "label": "提议安装技能",
-      "description": "发布一张卡片，按钮会打开已填好技能链接的安装窗口。"
+      "description": "发布一张卡片，其按钮打开安装界面，技能已从链接或 .zip 中读取。"
     },
     "update_skill_from_source": {
       "label": "从链接更新技能",

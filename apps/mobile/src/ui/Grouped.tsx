@@ -349,8 +349,8 @@ function Row({
   // What goes under the label goes under the lead too: the lead, the label and the end share one centred line.
   const flat = media && Boolean(icon || leading);
   const hasUnder = Boolean(sub || below || belowText);
-  // Text that can take more than one line: the tile sits at the top and what is on the right stays on the
-  // label's line (centred on the whole row it floated between lines). One-line rows keep everything centred.
+  // Text that can take more than one line: the tile and what is on the right stay on the label's first line
+  // (centred on the whole row they floated between lines). One-line rows keep everything centred.
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
@@ -360,12 +360,12 @@ function Row({
   const switchOnLine = line
     ? { marginTop: line.middle - SWITCH_H / 2, marginBottom: line.height - line.middle - SWITCH_H / 2 }
     : null;
-  // A tree row's name wraps: its tile stays centred on the first line, as on a one-line row, and takes no more than
-  // that line's height, so a one-line tree row is as tall as any other.
-  const tileOnLine =
-    depth > 0 && line
-      ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
-      : null;
+  // Words that may wrap: the icon's tile stays centred on the label's first line, as on a one-line row, and takes no
+  // more than that line's height, so a label that fits on one line looks and measures as a one-line row (from the
+  // row's top the 30-point tile's middle stood 4 points under the label's and made the row 60 tall).
+  const tileOnLine = line
+    ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
+    : null;
   const lead = (
     <>
       {/* One column for whatever leads (an icon's tile, a 24 to 36 face, a mark): the text, and the hairline above,

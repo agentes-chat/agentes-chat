@@ -25,6 +25,7 @@ import {
   type InstallSkillCard,
   type InviteCard,
   installSkillDone,
+  installSkillSource,
   inviteDone,
   type ProposalLine,
   proposalLines,
@@ -267,10 +268,10 @@ function ConnectAppCardView({ card, morphKey }: { card: ConnectAppCard; morphKey
 }
 
 /**
- * "Install a skill" (`offer_install_skill`) as a waiting pill, its why and link under it: "Install" opens Install
- * skill with the link read, its skills listed to pick; its box turns what installs on for the agent that posted the
- * card (`agentId`). Who manages agents installs it for the team or for themselves, anyone else as their own personal
- * skill. Done once the library has a skill from that link.
+ * "Install a skill" (`offer_install_skill`) as a waiting pill, its why and its link or .zip under it: "Install" opens
+ * Install skill with the link or the .zip read, its skills listed to pick; its box turns what installs on for the
+ * agent that posted the card (`agentId`). Who manages agents installs it for the team or for themselves, anyone else
+ * as their own personal skill. Done once the library has a skill from that link, or every skill the .zip names.
  */
 function InstallSkillCardView({
   card,
@@ -290,7 +291,7 @@ function InstallSkillCardView({
   if (installSkillDone(card, skills.data ?? [])) {
     return (
       <RequestDone done label={title} morphKey={morphKey}>
-        {t("actionCard.install_skill.done")}: <b>{card.url}</b>
+        {t("actionCard.install_skill.done")}: <b>{installSkillSource(card)}</b>
       </RequestDone>
     );
   }
@@ -306,7 +307,9 @@ function InstallSkillCardView({
             primary
             onClick={() => {
               // Kept for the way back from connecting GitHub on its site (SkillsSection).
-              if (agentId) sessionStore.set(STORAGE_KEYS.skillInstallFor, JSON.stringify({ url: card.url, agentId }));
+              if (agentId && card.url) {
+                sessionStore.set(STORAGE_KEYS.skillInstallFor, JSON.stringify({ url: card.url, agentId }));
+              }
               setOpen(true);
             }}
           >
@@ -317,7 +320,7 @@ function InstallSkillCardView({
           <>
             {card.why && <p>{inlineWords(card.why)}</p>}
             <p>
-              <code>{card.url}</code>
+              <code>{installSkillSource(card)}</code>
             </p>
           </>
         }
@@ -329,6 +332,7 @@ function InstallSkillCardView({
         onOpenChange={setOpen}
         onInstalled={() => {}}
         initialUrl={open ? card.url : undefined}
+        initialFile={open && card.file ? card.file : undefined}
         forAgentId={agentId ?? undefined}
         scope={admin ? undefined : "personal"}
       />

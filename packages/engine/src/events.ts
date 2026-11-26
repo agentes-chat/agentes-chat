@@ -7,6 +7,7 @@ import type { ApprovalView } from "./approvals";
 import type { ArtifactView } from "./artifacts";
 import type { BlockStateView } from "./block-state";
 import type { ChoicesView, PollView } from "./blocks";
+import type { BrainPhase } from "./brains/types";
 import type { BrowserHandoffView } from "./browser/handoff";
 import type { CalendarEventView, CalendarProposalView } from "./calendar";
 import type { CliProgress, CliToolSummary } from "./cli-tools";
@@ -311,6 +312,18 @@ export type ChannelEvent =
       runId: string;
       agentId: string;
       text: string;
+    }
+  /**
+   * A step before the model has the turn that is taking a while (`phaseTeller`): the bar says it instead of
+   * "Pensando…" (`code`: the agent's checkouts are being updated). `phase: null` once it is over. Never stored.
+   */
+  | {
+      type: "agent.phase";
+      channelId: string;
+      threadId: string | null;
+      runId: string;
+      agentId: string;
+      phase: BrainPhase | null;
     }
   /** What a computer command prints while it runs (throttled, ≤ 64 KB per call). */
   | {

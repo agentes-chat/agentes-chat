@@ -2302,7 +2302,7 @@
       },
       "computers": {
         "title": "Komputery",
-        "help": "Dołączył komputer, jest gotowy albo przestał odpowiadać"
+        "help": "Dołączył komputer albo jest gotowy"
       },
       "reactions": {
         "title": "Reakcje",
@@ -8623,11 +8623,12 @@
     "noOrgBack": "Wróć do swoich przestrzeni roboczych",
     "crashTitle": "Coś poszło nie tak",
     "crashText": "Odśwież stronę, żeby kontynuować.",
-    "crashCode": "Jeśli poprosisz o pomoc, podaj kod {{id}}.",
+    "supportCode": "Kod dla pomocy technicznej",
     "unreachableTitle": "Brak połączenia z agentes.chat",
     "unreachableText": "Może trwa ponowne uruchamianie. Ta strona otworzy się sama, gdy tylko wszystko wróci.",
     "offlineTitle": "Jesteś offline",
     "offlineText": "Ta strona otworzy się sama, gdy wrócisz do sieci.",
+    "waitingConnection": "Czekamy, aż połączenie wróci",
     "unknownHostTitle": "Ten adres nie jest jeszcze skonfigurowany",
     "unknownHostText": "Jeśli został właśnie podłączony, spróbuj ponownie za kilka minut.",
     "unknownHostTab": "Adres nieskonfigurowany · agentes.chat"
@@ -17637,6 +17638,7 @@
       "noSkillMd": "Brak pliku SKILL.md w {{path}} ani w folderach w środku.",
       "tooManySkills": "Ten link zawiera więcej niż {{max}} umiejętności. Podaj link do jednego z jego folderów.",
       "zipTooManySkills": "Ten .zip zawiera więcej niż {{max}} umiejętności. Wyślij je w częściach.",
+      "zipTooBig": "Ten plik .zip przekracza {{maxMb}} MB, maksimum dla instalacji skilla.",
       "invalidName": "Nazwa może zawierać małe litery, cyfry i myślniki, maksymalnie {{max}} znaków.",
       "invalidDescription": "Opis musi mieć od 1 do {{max}} znaków.",
       "tooLarge": "Ta umiejętność ma {{size}} MB tekstu i skryptów, a limit to {{max}} MB.",
@@ -20057,9 +20059,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Przekazane: <0/>{{name}}",
-      "working": "w toku",
-      "done": "gotowe w {{duration}}",
+      "lead": "Przekazane: <0>{{name}}</0>",
+      "working": "pracuje",
+      "ready": "gotowe",
       "waitingYou": "czeka na twoją odpowiedź",
       "waiting": "czeka na odpowiedź",
       "waitingApprovalYou": "czeka na twoją zgodę",
@@ -20191,6 +20193,7 @@
     "namesMore": "{{first}} i jeszcze {{count}}",
     "wait": {
       "thinking": "Myśli…",
+      "code": "Aktualizuje kod…",
       "held": "Czeka na zatwierdzenie…",
       "said": "„{{text}}”"
     },
@@ -20210,6 +20213,8 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} czeka na twoje zatwierdzenie",
       "yourAnswer": "{{name}} czeka na twoją odpowiedź",
+      "helping": "{{to}} pomaga agentowi {{from}}",
+      "helping_female": "{{to}} pomaga agentce {{from}}",
       "done": "{{to}} skończył. {{from}} pisze",
       "notDone": "{{to}} nie skończył. {{from}} pisze",
       "handedOff": "{{to}} pracuje nad tym, co przekazał {{from}}"
@@ -21055,7 +21060,7 @@
     },
     "offer_install_skill": {
       "label": "Zaproponuj instalację umiejętności",
-      "description": "Publikuje kartę, której przycisk otwiera instalację z wpisanym linkiem umiejętności."
+      "description": "Publikuje kartę, której przycisk otwiera instalację ze skillem już odczytanym z linku lub pliku .zip."
     },
     "update_skill_from_source": {
       "label": "Aktualizuj umiejętności z ich linków",
