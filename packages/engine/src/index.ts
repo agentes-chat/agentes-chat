@@ -32,6 +32,7 @@ export * from "./audit";
 export * from "./authority";
 export * from "./auto-model";
 export * from "./autonomy-report";
+export * from "./speed-report";
 export * from "./avatars";
 export * from "./billing-link";
 export * from "./block-state";
