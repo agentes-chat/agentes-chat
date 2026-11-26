@@ -16,6 +16,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   or,
   rowsOf,
   schema,
@@ -35,6 +36,7 @@ import { replyExcerpt } from "./messages";
 import { isQuietNotice } from "./notices";
 import { can, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
+import { rightHandId } from "./right-hand";
 import { isRoutineRoomKey } from "./routine-brief";
 import { openOrg } from "./standing";
 import { adminChannelSql, fileSeenSql, fileSharedSql, taskSeenSql } from "./task-access";
@@ -380,21 +382,47 @@ async function issueSearchScopes(db: Database, orgId: string, userId: string) {
 
 /**
  * The files a list shares with this person (ADR 0157), by id: their documents carry their conversation, which they may
- * not read, so they're found by their own id (`visibleFileScopes`).
+ * not read, so they're found by their own id (`visibleFileScopes`). So are the files of the Drive itself not shared
+ * with everyone that they read, whose documents carry their own id (amendment 2026-11-17).
  */
 async function fileSearchScopes(db: Database, orgId: string, userId: string) {
+  const user = sql`${userId}::text`;
   const rows = await db
     .select({ id: schema.artifacts.id })
     .from(schema.artifacts)
     .where(
       and(
         eq(schema.artifacts.orgId, orgId),
-        eq(schema.artifacts.share, "people"),
         isNull(schema.artifacts.deletedAt),
-        fileSharedSql(sql`${userId}::text`),
+        or(
+          and(eq(schema.artifacts.share, "people"), fileSharedSql(user)),
+          and(isNull(schema.artifacts.channelId), ne(schema.artifacts.share, "everyone"), fileSeenSql(user)),
+        ),
       ),
     );
   return rows.map((r) => r.id);
+}
+
+export type QueryEmbedding = Awaited<ReturnType<ModelGateway["embed"]>>;
+
+/** A run's memory and wiki search the first this many characters of its trigger. */
+export const RUN_QUERY_CHARS = 500;
+
+/**
+ * One query embedding for several searches of the same words (a run's memory and its wiki both search the trigger
+ * message): asked by the first search that needs it, for every kind they search, then shared.
+ */
+export function sharedQueryEmbedding(
+  deps: Pick<SearchDeps, "gateway">,
+  orgId: string,
+  text: string,
+  kinds: SearchKind[],
+) {
+  let embedded: Promise<QueryEmbedding> | null = null;
+  return () => {
+    embedded ??= deps.gateway.embed({ orgId, texts: [text], inputType: "query", kinds }).catch(() => null);
+    return embedded;
+  };
 }
 
 /** Hybrid search with the query embedded when possible (else full-text only). */
@@ -412,6 +440,8 @@ export async function searchVisible(
      * what was read there.
      */
     wordsOnly?: boolean;
+    /** The query's embedding from `sharedQueryEmbedding`, in place of its own. */
+    queryEmbedding?: () => Promise<QueryEmbedding>;
   } & Pick<
     SearchQuery,
     "after" | "before" | "messages" | "sort" | "visibleIssueScopes" | "visibleFileScopes" | "minTextRank"
@@ -420,14 +450,15 @@ export async function searchVisible(
   // A list by date ranks by no vector: no embedding to pay for. A provider that fails or is slow leaves the words.
   const embedded =
     !input.wordsOnly && input.text.trim() && (input.sort ?? "relevance") === "relevance"
-      ? await deps.gateway
-          .embed({
-            orgId: input.orgId,
-            texts: [input.text],
-            inputType: "query",
-            kinds: input.messages ? ["message"] : input.kinds,
-          })
-          .catch(() => null)
+      ? await (input.queryEmbedding?.() ??
+          deps.gateway
+            .embed({
+              orgId: input.orgId,
+              texts: [input.text],
+              inputType: "query",
+              kinds: input.messages ? ["message"] : input.kinds,
+            })
+            .catch(() => null))
       : null;
   const index = await deps.search.forOrg(input.orgId);
   return index.query({
@@ -526,7 +557,7 @@ export async function searchForUser(
   // Memory is indexed by channel only: the same rule as `listContextItems` for an agent's and a person's items.
   const items = hits.filter((h) => h.kind === "context_item").map((h) => h.sourceId);
   if (items.length > 0) {
-    const [rows, agentsSeen] = await Promise.all([
+    const [rows, agentsSeen, rightHand] = await Promise.all([
       deps.db
         .select({
           id: contextItems.id,
@@ -539,6 +570,7 @@ export async function searchForUser(
         .from(contextItems)
         .where(and(eq(contextItems.orgId, orgId), inArray(contextItems.id, items))),
       agentIdsSeen(deps.db, userId, orgId),
+      rightHandId(deps.db, orgId),
     ]);
     const reviews = can(membership, "review_memory");
     const shown = new Set(
@@ -547,7 +579,8 @@ export async function searchForUser(
           (r) =>
             (!r.agentId || agentsSeen.details.has(r.agentId)) &&
             (!isPlaybook(r) || agentsSeen.playbook.has(r.agentId ?? "")) &&
-            (reviews || r.scopeType !== "person" || r.scopeId === userId),
+            // What the right hand keeps for one person is theirs alone, reviewers included (ADR 0137).
+            (r.scopeType !== "person" || r.scopeId === userId || (reviews && r.agentId !== rightHand)),
         )
         .map((r) => r.id),
     );

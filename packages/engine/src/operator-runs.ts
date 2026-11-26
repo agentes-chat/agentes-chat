@@ -28,7 +28,7 @@ import { PLATFORM_CAP } from "./limits";
 import { machineOnline } from "./machines";
 import { type Message, parseMentionHandles, receiptsFor } from "./messages";
 import { NO_AI_CARD_REASONS } from "./no-ai";
-import { jobOf, jobsOfRun, OPERATOR_JOB_ERROR_MAX, selectJobs, spentColumns, spentOf } from "./operator-jobs";
+import { jobOf, OPERATOR_JOB_ERROR_MAX, selectJobs, spentColumns, spentOf } from "./operator-jobs";
 import {
   CODE,
   codeOf,
@@ -43,9 +43,13 @@ import {
   uuidOf,
   wordOf,
 } from "./operator-paging";
+import { jobsOfRun } from "./outbox";
+import { LEAD } from "./reply-policy";
 import { rightHandReaches } from "./right-hand";
 import { DEFAULT_CAP, UNDER_NEED_GATE } from "./router";
 import { RELEASE_REASONS } from "./run-inbox";
+import { runState } from "./run-state";
+import { runClaims } from "./run-timings";
 import {
   computerWaitSql,
   KEPT_ON_HOLD,
@@ -131,7 +135,7 @@ export const runShownSql = sql<(typeof OPERATOR_RUN_SHOWN)[number]>`(case when $
   when ${outageParkedSql} then 'waiting_outage'
   else ${agentRuns.status}::text end)`;
 
-const WAIT = sql`${agentRuns.transcript}->'waitingForBrain'`;
+const WAIT = sql`${runState}->'waitingForBrain'`;
 
 const runColumns = {
   id: agentRuns.id,
@@ -153,7 +157,7 @@ const runColumns = {
   waitCode: sql<string | null>`coalesce(${WAIT}->>'code', case when ${outageParkedSql} then 'provider_outage' end)`,
   waitSource: sql<string | null>`${WAIT}->>'source'`,
   waitResetsAt: sql<string | null>`${WAIT}->>'resetsAt'`,
-  accountId: sql<string | null>`${agentRuns.transcript}->'accountMove'->>'to'`,
+  accountId: sql<string | null>`${runState}->'accountMove'->>'to'`,
   // Which plan it waits on: only what `planOfWaitKey` reads out of it is returned.
   waitPlan: sql<string | null>`${WAIT}->>'waitKey'`,
   waitingMachineId: agentRuns.waitingMachineId,
@@ -506,6 +510,8 @@ const errorClassSql = (data: SQL) => {
 /** What a long work paused near (`usage_wait` with a `pause`). */
 const PAUSE_SOURCES = ["plan", "budget"] as const;
 const USAGE_WAIT = sql`(${KIND} = 'error' and ${DATA}->>'reason' = 'usage_wait')`;
+/** An error step of a turn whose CLI the computer stopped for its silence (`brain_stalled`). */
+const STALLED = sql`(${KIND} = 'error' and ${DATA}->>'reason' = 'brain_stalled')`;
 
 // Each fact is read only from the kind of step that writes it: on another kind the same name may hold text.
 const stepColumns = {
@@ -513,7 +519,9 @@ const stepColumns = {
   kind: KIND,
   at: agentRunSteps.createdAt,
   toolUseId: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'toolUseId' end`,
-  tool: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'name' end`,
+  // And the CLI's own tool a stalled turn hung in.
+  tool: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'name'
+    when ${STALLED} then ${DATA}->>'tool' end`,
   // Only the call's step holds the mark: a result reads it from the call it answers.
   builtIn: sql<boolean | null>`case when ${KIND} = 'tool_call' then ${builtInSql(sql`${DATA}`)}
     when ${KIND} = 'tool_result' then coalesce((select ${builtInSql(sql`c.data`)} from ${agentRunSteps} c
@@ -529,9 +537,11 @@ const stepColumns = {
     when ${KIND} = 'tool_result' then ${DATA}->'data'->>'code' end`,
   errorClass: sql<ErrorClass | null>`case when ${KIND} = 'tool_result' then ${errorClassSql(sql`${DATA}`)} end`,
   errorStatus: sql<number | null>`case when ${KIND} = 'tool_result' then ${errorStatusSql(sql`${DATA}`)} end`,
-  // A context step's: why a run's unread messages were handed on (`handOn`).
+  // A context step's: why a run's unread messages were handed on (`handOn`), how the triage said the agent takes a
+  // message sent while it works (`steerTriage`), what the fast reply decided about one (`talkerDecision`).
   reason: sql<string | null>`case when ${KIND} = 'error'
-    or (${KIND} = 'context' and ${DATA} ? 'redispatchedMessageIds') then ${DATA}->>'reason' end`,
+    or (${KIND} = 'context' and ${DATA} ?| array['redispatchedMessageIds', 'steerTriage', 'talkerDecision'])
+    then ${DATA}->>'reason' end`,
   // The run a hand-on or a closed catch-up sent its messages to.
   toRunId: sql<string | null>`case when ${KIND} = 'context'
     then coalesce(${DATA}->>'toRunId', ${DATA}->'released'->>'toRunId') end`,
@@ -545,6 +555,11 @@ const stepColumns = {
   chars: sql<number | null>`case when ${KIND} = 'tool_call' then length(${DATA}->>'input')
     when ${KIND} = 'tool_result' then length(${DATA}->>'content') end`.mapWith(Number),
   inputHash: sql<string | null>`case when ${KIND} = 'tool_call' then ${inputHashSql(sql`${DATA}`)} end`,
+  // How long nothing came from the computer's CLI before a stall.
+  keptMs: sql<number | null>`case
+    when ${STALLED} and jsonb_typeof(${DATA}->'silentMs') = 'number' then (${DATA}->>'silentMs')::float8 end`.mapWith(
+    Number,
+  ),
   messageId: sql<string | null>`case when ${KIND} = 'message' then ${DATA}->>'messageId' end`,
   records: sql<string[] | null>`case when ${KIND} = 'context'
     then (select jsonb_agg(k) from jsonb_object_keys(${DATA}) k) end`.mapWith(namesOf),
@@ -552,8 +567,9 @@ const stepColumns = {
 
 /**
  * One run, start to end: its row, its steps in order (which tool, whether it failed, how big its input and its
- * result were, never either of them), what it asked of people, the jobs that started and woke it, what it spent and
- * the computer it is tied to. `beforeSeq` pages back from the end, `limit` steps at a time. Null: no such run.
+ * result were, never either of them), what it asked of people, the jobs that started and woke it, what it spent,
+ * where each of its claims' time went and the computer it is tied to. `beforeSeq` pages back from the end, `limit`
+ * steps at a time. Null: no such run.
  */
 export async function operatorRunTrace(
   db: Database,
@@ -570,7 +586,7 @@ export async function operatorRunTrace(
     gte(usageRecords.createdAt, run.createdAt),
     eq(usageRecords.runId, runId),
   );
-  const [steps, counted, asks, jobs, usage, ranOn, agent] = await Promise.all([
+  const [steps, counted, asks, jobs, usage, ranOn, agent, kept] = await Promise.all([
     db
       .select(stepColumns)
       .from(agentRunSteps)
@@ -602,6 +618,8 @@ export async function operatorRunTrace(
       .orderBy(desc(usageRecords.createdAt))
       .limit(1),
     db.select({ machineId: agents.machineId }).from(agents).where(eq(agents.id, run.agentId)),
+    // Apart from the run's row: a list of runs never reads their profiles.
+    db.select({ profiles: agentRuns.profiles }).from(agentRuns).where(eq(agentRuns.id, runId)),
   ]);
 
   // The run's row doesn't say where it ran: the computer it waits for, else the one its plan's usage names,
@@ -628,7 +646,7 @@ export async function operatorRunTrace(
     : [];
 
   const called = new Map<string, Date>();
-  const trail = steps.reverse().map(({ toolUseId, inputHash, pauseSource, pauseUsed, pauseWindow, ...s }) => {
+  const trail = steps.reverse().map(({ toolUseId, inputHash, pauseSource, pauseUsed, pauseWindow, keptMs, ...s }) => {
     if (s.kind === "tool_call" && toolUseId) called.set(toolUseId, s.at);
     const since = s.kind === "tool_result" && toolUseId ? called.get(toolUseId) : undefined;
     const reason = s.kind === "context" ? listedOf(RELEASE_REASONS, s.reason) : codeOf(s.reason);
@@ -649,7 +667,11 @@ export async function operatorRunTrace(
       model: codeOf(s.model),
       stopReason: codeOf(s.stopReason),
       inputDigest: inputDigestOf(query.secret, run.orgId, inputHash),
-      durationMs: since ? s.at.getTime() - since.getTime() : null,
+      durationMs: since
+        ? s.at.getTime() - since.getTime()
+        : typeof keptMs === "number" && Number.isFinite(keptMs) && keptMs >= 0
+          ? Math.round(keptMs)
+          : null,
       messageId: uuidOf(s.messageId),
       records: s.records ?? [],
     };
@@ -673,6 +695,7 @@ export async function operatorRunTrace(
       }),
       byModel: usage.map(spentOf),
     },
+    claims: runClaims(kept[0]?.profiles),
     machine:
       tied && computer
         ? {
@@ -919,6 +942,7 @@ const ROUTING_MARKERS: ReadonlySet<string> = new Set([
   "alone",
   "default",
   "coordinator",
+  LEAD,
   "talking to",
   "best",
   "last talked to",

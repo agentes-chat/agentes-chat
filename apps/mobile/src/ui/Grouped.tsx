@@ -1,11 +1,17 @@
+import { upperFirst } from "@agenteschat/client/lib/format";
 import { Children, isValidElement, type ReactNode } from "react";
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
+import { CodeWords } from "./CodeWords";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
+import { IconTile } from "./IconTile";
 import { InfoHint, useInfoHint } from "./InfoHint";
 import { MEDIA_ROW } from "./media-row";
-import { PRESS_DELAY, ROW_PRESS_DELAY } from "./PressScale";
+import { PRESS_DELAY } from "./PressScale";
+import { cardEdge, withAlpha } from "./palette";
+import { CheckMark, Disclosure, MenuMark, ROW_MARK } from "./RowMarks";
+import { RowPressable } from "./RowPressable";
 import { GROUPED_ROW, TOUCH } from "./rhythm";
 import { Text, textLineOf } from "./Text";
 import { ToggleSwitch } from "./Toggle";
@@ -18,12 +24,23 @@ import { leadBox } from "./type-scale";
  * the smaller of the two framed sizes), so a face never spills into the gap before the text.
  */
 const LEAD = GROUPED_ROW.lead;
+/** An icon's tile in a row (IconTile's own size). */
+const TILE = 30;
+/** The switch's height (`ToggleSwitch`). */
+const SWITCH_H = 28;
 /** The remove ×'s glyph, inside its 44-point button. */
 const REMOVE_GLYPH = 16;
-/** A row's icon tile; its corner is 30% of it, as every tile's. */
-// 32 in the 36 column: 18 from the card's side and 10 from the row's top and bottom, so the tile sits square in its
-// corner of the card instead of hugging the top.
-const TILE = 32;
+/**
+ * A list's corner, the current iOS grouped lists' (26, continuous): rounder than before (14), so a list reads as the
+ * system's own.
+ */
+const LIST_CORNER = 26;
+
+/**
+ * The row whose page stands beside the list (`selected`, ADR 0212): the ink this faint over the row, in both themes, as
+ * the open conversation's row beside Conversations.
+ */
+const SELECTED_TINT = 0.08;
 
 /** How far a nested row (`tree`: a phone under its computer) moves in, and where its branch line runs. */
 const NEST = 24;
@@ -55,23 +72,23 @@ function leads(props: unknown, depth = 0): boolean {
 
 /** A nested row's hairline starts at its own text, moved in with it. */
 const nests = (props: unknown) => {
-  const tree = (props as { tree?: unknown } | null)?.tree;
-  return tree === "mid" || tree === "end";
+  const p = props as { tree?: unknown; depth?: unknown } | null;
+  return (p?.tree === "mid" || p?.tree === "end" ? NEST : 0) + (typeof p?.depth === "number" ? p.depth * NEST : 0);
 };
 
 /**
- * Settings as on the iPhone: grouped inset lists, radius 14, hairlines inset to
- * the text, an uppercase faint header above and a faint footer below. With no
- * rows it draws nothing, never an empty card.
+ * Settings as on the iPhone: grouped inset lists with the system's corner and the cards' light edge (no shadow), so a
+ * list and a card read as one family; the system's hairlines inset to the text, a faint semibold header above in its
+ * own case (never capitals) and a faint footer below. With no rows it draws nothing, never an empty card.
  */
 export function GroupedList({ children }: { children?: ReactNode }) {
-  const { colors: c, shadows, reducedMotion } = useTheme();
+  const { colors: c, reducedMotion, scheme } = useTheme();
   const items = Children.toArray(children).filter(isValidElement);
   if (items.length === 0) return null;
   return (
     // The rows it opens with appear with the screen, and when the whole group goes its rows go with it: neither fades.
     <LayoutAnimationConfig skipEntering skipExiting>
-      <View style={[styles.list, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
+      <View style={[styles.list, { backgroundColor: c.raised }, cardEdge(scheme)]}>
         {items.map((child, i) => (
           <Animated.View key={child.key ?? i} entering={reducedMotion ? undefined : ROW_IN}>
             {i > 0 ? (
@@ -79,11 +96,10 @@ export function GroupedList({ children }: { children?: ReactNode }) {
                 style={[
                   styles.divider,
                   {
-                    backgroundColor: c.line2,
+                    backgroundColor: c.separator,
                     // A tile and a face share one leading column, so the text and its hairline start at one place.
                     marginLeft:
-                      (leads(child.props) ? GROUPED_ROW.padX + LEAD + 12 : GROUPED_ROW.padX) +
-                      (nests(child.props) ? NEST : 0),
+                      (leads(child.props) ? GROUPED_ROW.padX + LEAD + 12 : GROUPED_ROW.padX) + nests(child.props),
                   },
                 ]}
               />
@@ -103,7 +119,16 @@ interface GroupedHeaderProps {
   hint?: { name: string; text: string };
 }
 
-/** The small uppercase header of a group, with `aside` at the end of its line: a small text action. */
+/** Whether a word has a capital after its first letter, as a name like "iPhone" or "macOS" does. */
+const mixedCase = (word: string) => [...word.slice(1)].some((ch) => ch !== ch.toLocaleLowerCase());
+
+/**
+ * A header's words as a title: a first letter in lower case becomes a capital (a long date over its day's rows, which
+ * some languages write in lower case), unless the first word already mixes cases.
+ */
+const headerWords = (words: string) => (mixedCase(words.split(/\s/, 1)[0] ?? "") ? words : upperFirst(words));
+
+/** The small header of a group, semibold in its own case, with `aside` at the end of its line: a small text action. */
 export function GroupedHeader({ children, aside, hint }: GroupedHeaderProps) {
   if (hint)
     return (
@@ -114,7 +139,7 @@ export function GroupedHeader({ children, aside, hint }: GroupedHeaderProps) {
   return (
     <View style={aside ? styles.headerRow : null}>
       <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.header, styles.shrink]}>
-        {children.toLocaleUpperCase()}
+        {headerWords(children)}
       </Text>
       {aside ? <View style={styles.headerAside}>{aside}</View> : null}
     </View>
@@ -128,8 +153,8 @@ function HintedHeader({ children, aside, hint }: GroupedHeaderProps & { hint: { 
     <View style={styles.headerRoom}>
       <View style={styles.headerLine}>
         <View style={[styles.headerWords, styles.shrink]}>
-          <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.headerCaps, styles.shrink]}>
-            {children.toLocaleUpperCase()}
+          <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.headerText, styles.shrink]}>
+            {headerWords(children)}
           </Text>
           {info.button}
         </View>
@@ -149,19 +174,20 @@ export function GroupedFooter({
   /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
   hint?: { name: string; text: string };
 }) {
+  const words = typeof children === "string" ? <CodeWords text={children} /> : children;
   if (hint)
     return (
       <View style={styles.footer}>
         <InfoHint {...hint} variant="footnote">
           <Text variant="footnote" tone="faint">
-            {children}
+            {words}
           </Text>
         </InfoHint>
       </View>
     );
   return (
     <Text variant="footnote" tone="faint" style={styles.footer}>
-      {children}
+      {words}
     </Text>
   );
 }
@@ -187,6 +213,8 @@ export interface GroupedRowProps {
   belowText?: string;
   /** A rounded tile with this icon on the left. */
   icon?: IconName;
+  /** On `icon`'s tile in its place: a brand's one-color logo at this address, in the icon's box and color. */
+  mark?: string | null;
   /** Anything else on the left (an organization's tile). */
   leading?: ReactNode;
   /** What `leading` says when it is words (an account's place in an order): VoiceOver reads it before the label. */
@@ -204,6 +232,12 @@ export interface GroupedRowProps {
   menu?: boolean;
   /** A chevron: it opens a screen. */
   chevron?: boolean;
+  /**
+   * A row of a split's list (ADR 0212: two panes on a regular-width window), whose page opens beside the list instead
+   * of over it: lit while that page shows (true), plain otherwise (false), and never a chevron or the held light of a
+   * row that opens a screen. Left out everywhere else.
+   */
+  selected?: boolean;
   /** Three dots: it opens a sheet of actions. */
   more?: boolean;
   /** A checkmark: the chosen option. */
@@ -235,6 +269,9 @@ export interface GroupedRowProps {
    * `mid` and `end` move in and branch off it (`end` closes the trunk).
    */
   tree?: "host" | "mid" | "end";
+  /** A level in a tree of any depth (a folder picker): moved in a step per level, a thin guide line per level. */
+  depth?: number;
+  onLongPress?: () => void;
 }
 
 export interface RowButton {
@@ -271,12 +308,14 @@ function Row({
   below,
   belowText,
   icon,
+  mark,
   leading,
   leadingSaid,
   value,
   valueNote,
   valueLeading,
-  chevron = false,
+  chevron: opensScreen = false,
+  selected,
   menu = false,
   more = false,
   checked,
@@ -289,11 +328,15 @@ function Row({
   buttons,
   media = false,
   tree,
+  depth = 0,
+  onLongPress,
   said,
   labelAfter,
 }: Omit<GroupedRowProps, "hint"> & { said?: string; labelAfter?: ReactNode }) {
   const { colors: c } = useTheme();
   const fontScale = useFontScale();
+  // A split's row opens its page beside the list: no chevron, it isn't a screen over this one (ADR 0212).
+  const chevron = opensScreen && selected === undefined;
   const tone = danger ? c.danger : faint ? c.faint : c.ink;
   // A switch answers the finger as it flips, as `Toggle` does.
   const press =
@@ -306,20 +349,31 @@ function Row({
   // What goes under the label goes under the lead too: the lead, the label and the end share one centred line.
   const flat = media && Boolean(icon || leading);
   const hasUnder = Boolean(sub || below || belowText);
-  // Text that can take more than one line: the tile sits at the top and what is on the right stays on the
-  // label's line (centred on the whole row it floated between lines). One-line rows keep everything centred.
+  // Text that can take more than one line: the tile and what is on the right stay on the label's first line
+  // (centred on the whole row they floated between lines). One-line rows keep everything centred.
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
+  // The switch is taller than the label's line: its middle on the line's, overhanging it into the row's padding, so it
+  // sits level with a one-line label and the row stays a one-line row's height (from the line's top it hung 3 points
+  // low and made the row 6 taller).
+  const switchOnLine = line
+    ? { marginTop: line.middle - SWITCH_H / 2, marginBottom: line.height - line.middle - SWITCH_H / 2 }
+    : null;
+  // Words that may wrap: the icon's tile stays centred on the label's first line, as on a one-line row, and takes no
+  // more than that line's height, so a label that fits on one line looks and measures as a one-line row (from the
+  // row's top the 30-point tile's middle stood 4 points under the label's and made the row 60 tall).
+  const tileOnLine = line
+    ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
+    : null;
   const lead = (
     <>
       {/* One column for whatever leads (an icon's tile, a 24 to 36 face, a mark): the text, and the hairline above,
           start at 64 in every row, so a list mixing tiles and faces reads as one column. */}
       {icon ? (
-        <View style={styles.lead}>
-          <View style={[styles.tile, { backgroundColor: danger ? c.plate : c.sunken }]}>
-            <Icon name={icon} size={16} color={danger ? c.danger : c.ink2} />
-          </View>
+        <View style={[styles.lead, tileOnLine]}>
+          {/* The system Settings' 30-point tile, in the 36 column: 11 from the row's top and bottom. */}
+          <IconTile icon={icon} danger={danger} mark={mark ?? null} />
         </View>
       ) : null}
       {leading ? <View style={styles.lead}>{leading}</View> : null}
@@ -396,46 +450,41 @@ function Row({
         >
           {valueLeading}
           {value ? (
-            <Text variant="callout" tone="faint" numberOfLines={1} style={styles.shrink}>
+            <Text variant="body" numberOfLines={1} style={[styles.shrink, { color: c.label2 }]}>
               {value}
             </Text>
           ) : null}
           {valueNote ? (
-            <Text variant="footnote" tone="faint" numberOfLines={1}>
+            <Text variant="footnote" numberOfLines={1} style={{ color: c.label2 }}>
               {valueNote}
             </Text>
           ) : null}
         </View>
       ) : value ? (
         <View style={[styles.value, line ? { minHeight: line.height, justifyContent: "center" } : null]}>
-          <Text variant="callout" tone="faint" numberOfLines={1} style={styles.shrink}>
+          <Text variant="body" numberOfLines={1} style={[styles.shrink, { color: c.label2 }]}>
             {value}
           </Text>
         </View>
       ) : null}
       {menu ? (
-        <View style={onLine(14)}>
-          <Icon name="swap" size={14} color={c.faint} />
+        <View style={onLine(ROW_MARK.menu)}>
+          <MenuMark />
         </View>
       ) : null}
       {checked ? (
-        <View style={onLine(18)}>
-          <Icon name="check" size={18} color={c.ink} />
+        <View style={onLine(ROW_MARK.check)}>
+          <CheckMark />
         </View>
       ) : null}
       {toggle !== undefined ? (
-        <View style={onLine(28)}>
+        <View style={switchOnLine}>
           <ToggleSwitch value={toggle} />
         </View>
       ) : null}
       {chevron ? (
-        <View style={onLine(15)}>
-          <Icon name="right" size={15} color={c.faint} />
-        </View>
-      ) : null}
-      {more ? (
-        <View style={onLine(18)}>
-          <Icon name="more" size={18} color={c.faint} />
+        <View style={onLine(ROW_MARK.disclosure)}>
+          <Disclosure />
         </View>
       ) : null}
       {remove ? (
@@ -472,6 +521,12 @@ function Row({
           ))}
         </View>
       ) : null}
+      {/* After the row's own buttons: the mark says what a tap on the rest of the row opens. */}
+      {more ? (
+        <View style={onLine(20)}>
+          <Icon name="more" size={20} color={c.label2} />
+        </View>
+      ) : null}
     </>
   );
   // VoiceOver reads the row as one: its × and its buttons are its actions.
@@ -480,9 +535,12 @@ function Row({
     ...(buttons ?? []).filter((b) => !b.disabled).map((b) => ({ name: b.label, label: b.label, run: b.onPress })),
   ];
   return (
-    <Pressable
+    <RowPressable
       onPress={press}
-      unstable_pressDelay={ROW_PRESS_DELAY}
+      {...(onLongPress ? { onLongPress } : {})}
+      // A row that opens a screen stays lit until that screen covers it; a switch's row answers with its switch.
+      hold={chevron}
+      light={toggle === undefined}
       // A row of buttons stays enabled with nothing to press itself: VoiceOver still offers its actions.
       disabled={disabled || (!onPress && !actions.length)}
       accessibilityRole={toggle !== undefined ? "switch" : "button"}
@@ -498,18 +556,27 @@ function Row({
       accessibilityState={{
         disabled,
         ...(toggle !== undefined ? { checked: toggle } : {}),
-        ...(checked !== undefined ? { selected: checked } : {}),
+        ...(checked !== undefined ? { selected: checked } : selected !== undefined ? { selected } : {}),
       }}
-      style={({ pressed }) => [
+      style={[
         styles.row,
         flat ? styles.media : tall ? styles.tall : null,
         tree === "mid" || tree === "end" ? styles.nested : null,
-        pressed && onPress ? { backgroundColor: c.sunken } : null,
+        depth > 0 ? { paddingLeft: GROUPED_ROW.padX + depth * NEST } : null,
+        selected ? { backgroundColor: withAlpha(c.ink, SELECTED_TINT) } : null,
         // Off, it looks off: a tap that does nothing never looks like one that should.
         disabled ? styles.off : null,
       ]}
     >
       {tree ? <TreeLines tree={tree} color={c.line2} /> : null}
+      {Array.from({ length: depth }, (_, i) => (
+        <View
+          // biome-ignore lint/suspicious/noArrayIndexKey: one guide per level, never reordered
+          key={i}
+          pointerEvents="none"
+          style={[styles.guide, { left: TREE_X + i * NEST, backgroundColor: c.line2 }]}
+        />
+      ))}
       {flat ? (
         <>
           <View style={styles.mediaHead}>
@@ -529,7 +596,7 @@ function Row({
           {end}
         </>
       )}
-    </Pressable>
+    </RowPressable>
   );
 }
 
@@ -562,7 +629,6 @@ interface GroupedFieldProps {
  * with `onPress`, the whole row opens a screen (a chevron on the right).
  */
 export function GroupedField({ label, hint, children, onPress, stacked = false }: GroupedFieldProps) {
-  const { colors: c } = useTheme();
   if (stacked)
     return (
       <StackedField label={label} {...(hint ? { hint } : {})} {...(onPress ? { onPress } : {})}>
@@ -581,60 +647,55 @@ export function GroupedField({ label, hint, children, onPress, stacked = false }
         {label}
       </Text>
       <View style={styles.grow}>{children}</View>
-      {onPress ? <Icon name="right" size={15} color={c.faint} /> : null}
+      {onPress ? <Disclosure /> : null}
     </>
   );
   if (!onPress) return <View style={styles.field}>{body}</View>;
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [styles.field, pressed ? { backgroundColor: c.sunken } : null]}
-    >
+    <RowPressable onPress={onPress} hold accessibilityRole="button" accessibilityLabel={label} style={styles.field}>
       {body}
-    </Pressable>
+    </RowPressable>
   );
 }
 
 /**
- * A field whose label has an ⓘ. With `onPress` the row's button lies under the label and the value rather than
+ * A field whose label has an ⓘ, at the row's end (after the value, before the chevron). With `onPress` the row's button lies under the label and the value rather than
  * around them: inside another button the ⓘ would be part of it to VoiceOver, never a button of its own.
  */
 function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { hint: { name: string; text: string } }) {
-  const { colors: c } = useTheme();
   const info = useInfoHint({ ...hint, variant: "callout" });
   const passive = onPress ? "none" : "auto";
   return (
     <View>
       <View style={styles.field}>
         {onPress ? (
-          <Pressable
+          <RowPressable
             onPress={onPress}
+            hold
             accessibilityRole="button"
             accessibilityLabel={label}
-            style={({ pressed }) => [StyleSheet.absoluteFill, pressed ? { backgroundColor: c.sunken } : null]}
+            style={StyleSheet.absoluteFill}
           />
         ) : null}
-        <View style={[styles.key, styles.keyLine]} pointerEvents="box-none">
-          <View
-            pointerEvents={passive}
-            style={styles.shrink}
-            accessibilityElementsHidden={Boolean(onPress)}
-            importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
-          >
-            <Text variant="callout" tone="muted">
-              {label}
-            </Text>
-          </View>
-          {info.button}
+        {/* The label has its whole column, as a field's with no ⓘ: sharing it with the ⓘ broke a two-word label in
+            two lines. The ⓘ goes after the value, before the chevron. */}
+        <View
+          pointerEvents={passive}
+          style={styles.key}
+          accessibilityElementsHidden={Boolean(onPress)}
+          importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
+        >
+          <Text variant="callout" tone="muted">
+            {label}
+          </Text>
         </View>
         <View style={styles.grow} pointerEvents={passive}>
           {children}
         </View>
+        {info.button}
         {onPress ? (
           <View pointerEvents="none">
-            <Icon name="right" size={15} color={c.faint} />
+            <Disclosure />
           </View>
         ) : null}
       </View>
@@ -648,18 +709,18 @@ function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { h
  * width; with `onPress` the row's button lies under them, as `HintedField`'s, and a chevron ends the row.
  */
 function StackedField({ label, hint, children, onPress }: Omit<GroupedFieldProps, "stacked">) {
-  const { colors: c } = useTheme();
   const info = useInfoHint({ name: hint?.name ?? "", text: hint?.text ?? "", variant: "footnote" });
   const passive = onPress ? "none" : "auto";
   return (
     <View>
       <View style={styles.stack}>
         {onPress ? (
-          <Pressable
+          <RowPressable
             onPress={onPress}
+            hold
             accessibilityRole="button"
             accessibilityLabel={label}
-            style={({ pressed }) => [StyleSheet.absoluteFill, pressed ? { backgroundColor: c.sunken } : null]}
+            style={StyleSheet.absoluteFill}
           />
         ) : null}
         <View style={styles.grow} pointerEvents="box-none">
@@ -682,7 +743,7 @@ function StackedField({ label, hint, children, onPress }: Omit<GroupedFieldProps
         </View>
         {onPress ? (
           <View pointerEvents="none">
-            <Icon name="right" size={15} color={c.faint} />
+            <Disclosure />
           </View>
         ) : null}
       </View>
@@ -694,13 +755,13 @@ function StackedField({ label, hint, children, onPress }: Omit<GroupedFieldProps
 const styles = StyleSheet.create({
   off: { opacity: 0.4 },
   marked: { fontWeight: "600" },
-  list: { borderRadius: 14, overflow: "hidden" },
+  list: { borderRadius: LIST_CORNER, borderCurve: "continuous", overflow: "hidden" },
   divider: { height: StyleSheet.hairlineWidth },
-  header: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16, letterSpacing: 0.4 },
+  header: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16, fontWeight: "600" },
   headerRoom: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16 },
   headerLine: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
   headerWords: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
-  headerCaps: { letterSpacing: 0.4 },
+  headerText: { fontWeight: "600" },
   headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   headerAside: { paddingRight: 16 },
   footer: { paddingTop: 8, paddingHorizontal: 16 },
@@ -713,6 +774,8 @@ const styles = StyleSheet.create({
     paddingVertical: GROUPED_ROW.padY,
   },
   nested: { paddingLeft: GROUPED_ROW.padX + NEST },
+  // A tree level's guide: under the middle of the parent's lead, the row's whole height, so levels read as lines.
+  guide: { position: "absolute", top: 0, bottom: 0, width: 1 },
   // From just under the drawing (a laptop's base, a tower's foot), not the bottom of its 48-point box.
   trunkHost: { position: "absolute", left: TREE_X, top: GROUPED_ROW.tallPadY + 45, bottom: 0, width: 1 },
   trunk: { position: "absolute", left: TREE_X, top: TREE_ELBOW - TREE_CURVE, bottom: 0, width: 1 },
@@ -732,13 +795,6 @@ const styles = StyleSheet.create({
   mediaHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   // A control taller than the label's line (the 28-point switch) is centred on it rather than pushed below it.
   onLine: { justifyContent: "center" },
-  tile: {
-    width: TILE,
-    height: TILE,
-    borderRadius: Math.round(TILE * 0.3),
-    alignItems: "center",
-    justifyContent: "center",
-  },
   lead: { width: LEAD, alignItems: "center", justifyContent: "center" },
   grow: { flex: 1, minWidth: 0 },
   labelLine: { flexDirection: "row", alignItems: "flex-start", gap: 6 },

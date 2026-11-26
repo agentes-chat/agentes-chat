@@ -529,6 +529,8 @@ describe("issues", () => {
           orgId: f.org.id,
           kind: "file",
           title,
+          // A Drive file is made shared with everyone (ADR 0157, amendment 2026-11-17).
+          share: "everyone",
           createdByType: "person",
           createdById: by,
           updatedByType: "person",
@@ -560,6 +562,8 @@ describe("issues", () => {
           orgId: f.org.id,
           kind: "file",
           title,
+          // A Drive file is made shared with everyone (ADR 0157, amendment 2026-11-17).
+          share: "everyone",
           createdByType: "person",
           createdById: by,
           updatedByType: "person",
@@ -634,6 +638,35 @@ describe("issues", () => {
     );
     expect(created.isError).toBeUndefined();
     expect(row?.assignees).toEqual([{ type: "agent", id: f.agent.id }]);
+  });
+
+  test("an assignee agent that sets its task back to todo keeps it there; touching it otherwise starts it", async () => {
+    f = await setup();
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const ctx = {
+      db: f.db,
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      runId: crypto.randomUUID(),
+      channelId: f.general.id,
+      threadRootId: crypto.randomUUID(),
+      triggerMessageId: crypto.randomUUID(),
+    };
+    const tools = await createIssueToolSource(f.artifactDeps).tools(ctx);
+    const run = (name: string, input: Record<string, unknown>) => {
+      const tool = tools.find((t) => t.name === name);
+      if (!tool) throw new Error(`no ${name}`);
+      return tool.execute(input, ctx);
+    };
+    const issue = await createIssue(deps, person(f.owner.id), f.org.id, {
+      title: "Trocar o cache de sessões",
+      assignees: [{ type: "agent", id: f.agent.id }],
+    });
+    const status = async () => (await getIssue(f.db, person(f.owner.id), f.org.id, { id: issue.id })).status;
+    await run("update_issue", { issue: issue.id, priority: "high" });
+    expect(await status()).toBe("in_progress");
+    await run("update_issue", { issue: issue.id, status: "todo" });
+    expect(await status()).toBe("todo");
   });
 
   test("assigning a task to another agent says it doesn't start it, and how to hand it the job", async () => {

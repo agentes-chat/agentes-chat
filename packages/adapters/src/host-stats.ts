@@ -9,12 +9,11 @@ import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
-import { type BrowserTraffic, LOAD_SAMPLE_MS, type MachineLoad, type MachineSize } from "./machine-protocol";
+import { type BrowserTraffic, halfGb, LOAD_SAMPLE_MS, type MachineLoad, type MachineSize } from "./machine-protocol";
 
 const GIB = 2 ** 30;
 const DAY_MS = 24 * 3600_000;
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const halfGb = (bytes: number) => Math.round((bytes / GIB) * 2) / 2;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 /** The hours `n` samples cover, at most a day. */
 const hoursOf = (n: number) => Math.min(24, round1((n * LOAD_SAMPLE_MS) / 3600_000));
@@ -140,7 +139,7 @@ export async function sampleLoad(): Promise<Omit<LoadSample, "at"> | null> {
   return { load: fiveMinutes / machineCpus(), memory: await memoryInUse() };
 }
 
-type DiskFigures = Pick<MachineLoad, "diskFreeGb" | "diskUse" | "sharedGb">;
+type DiskFigures = Pick<MachineLoad, "diskFreeGb" | "diskUse" | "sharedGb" | "agentTmpRamGb">;
 
 /** `diskSpace`'s bytes as `pong.load` carries them: free GB (one decimal) and the share in use. */
 export const diskFigures = (d: { sizeBytes: number; freeBytes: number } | null): DiskFigures =>
@@ -164,7 +163,7 @@ export class LoadWindow {
     return this.kept;
   }
 
-  /** `disk`: the disk's latest figures (ADR 0115), carried as they are, never averaged. */
+  /** `disk`: the latest figures (the disk's, ADR 0115; the agents' temp in memory, ADR 0243), never averaged. */
   add(sample: Omit<LoadSample, "at"> | null, at = Date.now(), disk: DiskFigures = {}) {
     if (!sample) return;
     this.kept = [...this.kept, { at, ...sample }].filter((s) => s.at > at - DAY_MS);

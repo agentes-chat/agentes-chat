@@ -8,7 +8,8 @@ import {
   useMailSuggestedAddresses,
 } from "@agenteschat/client";
 import { LEVELS, type Level } from "@agenteschat/client/lib/access-levels";
-import { canTalk } from "@agenteschat/client/lib/audience";
+import { canTalk, managesAgent } from "@agenteschat/client/lib/audience";
+import { connectRoutineAgents } from "@agenteschat/client/lib/connect-routines";
 import { errorText, knownErrorText } from "@agenteschat/client/lib/errors";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import {
@@ -23,6 +24,8 @@ import {
   mailAccessOf,
   mailActionsChanged,
   mailActionsFrom,
+  mailboxName,
+  mailChoiceName,
   mailErrorOf,
   mailReviewTools,
   normalizePolicy,
@@ -31,7 +34,6 @@ import {
   setMailLevel,
   splitEmails,
 } from "@agenteschat/client/lib/mail";
-import { can } from "@agenteschat/client/lib/permissions";
 import {
   Alert,
   Button,
@@ -50,17 +52,18 @@ import {
   useUnsavedInDialog,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AddressList } from "@/components/AddressList";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ConnectedRow } from "@/components/ConnectedRow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { offerTaken, RoutineOfferRow, useRoutineOffer, useStartRoutine } from "@/components/ConnectRoutine";
 import { FlowTitle } from "@/components/FlowTitle";
 import { LoadingList, useStepText } from "@/components/Loading";
 import { MailRulesPanel } from "@/components/MailRules";
+import { ForWhom } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";
 import { reviewNote, ToolLevelsView, ToolReview, type ToolReviewState } from "@/components/ToolReview";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -78,7 +81,7 @@ import { useToast } from "@/lib/toast";
  * addresses the mailbox has (replies go out from the one the email arrived at).
  */
 
-export const mailChoiceName = (t: TFunction, choice: MailChoice) => t(`mail.choice.${choice}.name`);
+export { mailChoiceName };
 
 /** The catalog cards this server can connect (Gmail/Outlook need Composio; the rest IMAP). */
 export function mailChoices(providers: MailProviders | undefined): MailChoice[] {
@@ -211,6 +214,7 @@ function OAuthStep({ provider, onClose }: { provider: "gmail" | "outlook"; onClo
         <p className="muted cflow__text">
           {t(`mail.choice.${provider}.text`)} {t("mail.oauthText", { company })}
         </p>
+        <MailForWhom />
       </DialogBody>
       <DialogFooter bar note={t("connectFlow.nothingYet")}>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
@@ -229,6 +233,23 @@ function OAuthStep({ provider, onClose }: { provider: "gmail" | "outlook"; onClo
         </Button>
       </DialogFooter>
     </>
+  );
+}
+
+/** "Para quem" on connecting a mailbox, where the workspace has more than one person: always its person's. */
+function MailForWhom() {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const members = useDirectory(org.id).members.length;
+  if (members <= 1) return null;
+  return (
+    <ForWhom
+      label={t("connectors.personal.forWhom")}
+      value="personal"
+      locked
+      note={t("connectors.personal.mailLocked")}
+      onValueChange={() => {}}
+    />
   );
 }
 
@@ -442,6 +463,7 @@ export function ImapStep({
               </div>
             </details>
           )}
+          <MailForWhom />
           {error && (
             <Alert>
               {t(error === "auth" && choice === "icloud" ? "mail.error.auth_icloud" : `mail.error.${error}`)}
@@ -449,7 +471,7 @@ export function ImapStep({
           )}
         </DialogBody>
       </Locked>
-      <DialogFooter bar note={testing ?? t("connectFlow.nothingYet")}>
+      <DialogFooter bar note={t("connectFlow.nothingYet")} busyNote={testing}>
         <Button type="button" onClick={onClose}>
           {t("common.cancel")}
         </Button>
@@ -731,7 +753,7 @@ function WhoStep({
     const may = mailAccessOf(account, {
       userId: me.user.id,
       talks: canTalk(a),
-      managesAgent: can(org, "manage_agents") || a.ownerUserId === me.user.id,
+      managesAgent: managesAgent(a) || a.ownerUserId === me.user.id,
     });
     if (may.gives) return LEVELS;
     return may.removes ? LEVELS.slice(0, LEVELS.indexOf(current(a.id)) + 1) : [current(a.id)];
@@ -740,6 +762,10 @@ function WhoStep({
   const levelOf = (agentId: string) => who[agentId] ?? current(agentId);
   const levelLabel = (l: Level) => t(`access.level.${l}`);
   const granted = list.filter((a) => levelOf(a.id) !== "none");
+  // The mailbox's routine (ADR 0242): one of the agents that may read it runs it; none yet, the line says so.
+  const offer = useRoutineOffer("mailbox", granted);
+  const offersRoutine = connectRoutineAgents(list).length > 0;
+  const startRoutine = useStartRoutine();
 
   const grant = useMutation({
     mutationFn: async () => {
@@ -749,6 +775,7 @@ function WhoStep({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.mail(org.id) });
       toast.show(t("connectFlow.saved", { count: granted.length, name: account.address }));
+      if (offerTaken(offer)) startRoutine(offer, account.address);
       // The rules are only for who connected the mailbox to set (anyone else's are ignored).
       if (granted.length > 0 && account.ownerUserId === me.user.id) onRules(granted.map((a) => a.id));
       else onClose();
@@ -813,6 +840,7 @@ function WhoStep({
             {t("connectFlow.asksCount", { count: MAIL_ACTIONS.approval.length })}
           </p>
           <p className="small muted cflow__text">{t("mail.whoLead")}</p>
+          {offersRoutine && <RoutineOfferRow offer={offer} waitsForAccess />}
           <OwnerOnlyNote account={account} />
           {grant.isError && <Alert>{errorText(t, grant.error)}</Alert>}
         </DialogBody>
@@ -823,8 +851,8 @@ function WhoStep({
         </Button>
         <Button
           variant="primary"
-          disabled={!agents.isSuccess || grant.isPending}
-          loading={grant.isPending}
+          disabled={!agents.isSuccess || grant.isPending || (offersRoutine && offer.loading)}
+          loading={grant.isPending || (offersRoutine && offer.loading)}
           onClick={() => grant.mutate()}
         >
           {granted.length > 0 ? t("connectFlow.next") : t("connectFlow.grant")}
@@ -1114,13 +1142,15 @@ export function MailDisconnectDialog({ account, onClose }: { account: MailAccoun
   const { org } = useOrg();
   const toast = useToast();
   const { disconnect } = useMailAction(org.id);
-  const name = account?.address ?? "";
+  // Someone else's mailbox comes without its address: its service names it, and it reads "Remover" as its row does.
+  const theirs = account !== null && !account.address;
+  const name = account ? account.address || mailboxName(t, account) : "";
   const using = account?.agents.length ?? 0;
   return (
     <Dialog
       open={account !== null}
       onOpenChange={(o) => !o && onClose()}
-      title={t("connectors.disconnectTitle", { name })}
+      title={t(theirs ? "connectors.personal.removeTitle" : "connectors.disconnectTitle", { name })}
       description={using > 0 ? t("connectors.disconnectText", { count: using }) : t("connectors.disconnectTextNone")}
       closeLabel={t("common.close")}
       width={440}
@@ -1141,7 +1171,7 @@ export function MailDisconnectDialog({ account, onClose }: { account: MailAccoun
             })
           }
         >
-          {t("connectors.disconnect")}
+          {t(theirs ? "connectors.personal.remove" : "connectors.disconnect")}
         </Button>
       </DialogFooter>
     </Dialog>

@@ -8,6 +8,7 @@ import {
   useMachines,
   useSetComputerTarget,
 } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { type NoComputer, setupView } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerState, machineTitle } from "@agenteschat/client/lib/machines";
@@ -25,8 +26,8 @@ import { openPage } from "../ai/parts";
 import { computerIcon } from "../outages/logic";
 import { AgentFace } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
-import { useMeId } from "../shared/hooks";
-import { goBack, successHaptic } from "../shared/parts";
+import { useMeId, useMyRoleIds } from "../shared/hooks";
+import { FocusLive, goBack, successHaptic } from "../shared/parts";
 import { type AgentComputerPick, agentComputerPick, NO_COMPUTER, noComputerKey } from "./logic";
 import { Gap, SettingsPage } from "./parts";
 
@@ -48,7 +49,8 @@ function choiceName(t: TFunction, org: OrgSummary | null, pick: AgentComputerPic
 
 /**
  * This server's computer (`HOST_COMPUTER_TOKEN`) when it isn't in the devices list: an admin who stopped it here can
- * use it again; with none, admins read how to make it one, but only while sign-up is closed.
+ * use it again; with none, admins read how to make it one, but only while sign-up is closed. Its portrait holds still
+ * while a screen opened from the list is over it.
  */
 export function HostComputerOff() {
   const { t, i18n } = useTranslation();
@@ -65,7 +67,7 @@ export function HostComputerOff() {
   const missing = host.isSuccess && host.data === null && admin && auth.data?.signupOpen === false;
   if (m || (!off && !missing)) return null;
   return (
-    <>
+    <FocusLive>
       <GroupedHeader>{label}</GroupedHeader>
       {off ? (
         <GroupedList>
@@ -111,19 +113,19 @@ export function HostComputerOff() {
           />
         </GroupedFooter>
       )}
-    </>
+    </FocusLive>
   );
 }
 
 /**
- * "Qual computador cada agente usa": each agent and its computer. Who manages agents picks any; an agent's owner,
- * the ones they connected (the server checks again); a row anyone else can't change only says it.
+ * "Qual computador cada agente usa": each agent and its computer. Who manages the agent (the server's `canManage`)
+ * picks any; its owner, the ones they connected (the server checks again); a row anyone else can't change only says it.
  */
 export function AgentComputers() {
   const { t } = useTranslation();
   const { orgId, org } = useOrg();
   const meId = useMeId();
-  const admin = can(org, "manage_agents");
+  const myRoleIds = useMyRoleIds();
   const agents = useAgents(orgId);
   const machines = useMachines(orgId);
   const setupQ = useComputerSetup(orgId);
@@ -141,7 +143,14 @@ export function AgentComputers() {
       ) : (
         <GroupedList>
           {list.map((a) => {
-            const pick = agentComputerPick({ agent: a, meId, admin, machines: machines.data ?? [], setup });
+            const pick = agentComputerPick({
+              agent: a,
+              meId,
+              myRoleIds,
+              admin: managesAgent(a),
+              machines: machines.data ?? [],
+              setup,
+            });
             return (
               <GroupedRow
                 key={a.id}
@@ -173,7 +182,7 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
   const toast = useToast();
   const { orgId, org } = useOrg();
   const meId = useMeId();
-  const admin = can(org, "manage_agents");
+  const myRoleIds = useMyRoleIds();
   const agents = useAgents(orgId);
   const machines = useMachines(orgId);
   const setupQ = useComputerSetup(orgId);
@@ -193,7 +202,14 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
       </SettingsPage>
     );
   }
-  const pick = agentComputerPick({ agent, meId, admin, machines: machines.data ?? [], setup });
+  const pick = agentComputerPick({
+    agent,
+    meId,
+    myRoleIds,
+    admin: managesAgent(agent),
+    machines: machines.data ?? [],
+    setup,
+  });
   const choose = (id: string) => {
     if (id === pick.value) {
       goBack();

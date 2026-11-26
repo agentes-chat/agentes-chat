@@ -40,6 +40,7 @@ import {
   providerOrgIdOf,
   providerOrgNameOf,
   type RunnerAccountInfo,
+  SHARED_LOGIN_REFUSED,
   TOKEN_RECHECK_MS,
   type WireSecretBox,
 } from "@agenteschat/adapters/machine-protocol";
@@ -60,6 +61,7 @@ import {
   AGY_SIGN_IN_FILE,
   type AgySignIn,
   agyAuthOf,
+  agyKeychain,
   agyRuntimeDir,
   agySignInFrom,
   agySignInOf,
@@ -67,6 +69,10 @@ import {
   placeAgySignIn,
   writeAgySettings,
 } from "./agy-home";
+import { withGitBash } from "./cli-install";
+import { codexLoginStatusOf } from "./codex-sign-in";
+import { ConsoleDecoder } from "./console-text";
+import { prepareDevinHome } from "./devin-home";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
@@ -76,9 +82,13 @@ import {
   claudePlan,
   claudeTier,
   cliSpawn,
+  DEVIN_BIN,
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
+  parseAgyModels,
+  parseCursorModels,
+  parseDevinModels,
   parseGrokModels,
   resolveCommand,
 } from "./executors";
@@ -88,6 +98,7 @@ import {
   checkClaudeToken,
   codexUsage,
   fetchPlanKeyUsage,
+  oldestRead,
   probeClaudeUsage,
   probeCodexUsage,
   usageCrossed,
@@ -148,6 +159,11 @@ import type { TaskSecrets } from "./tasks";
 
 /** A fresh look at every account's status happens at most this often (each one runs the CLI). */
 export const ACCOUNTS_TTL_MS = 10 * 60_000;
+/**
+ * After an inconclusive status look (`statusUnknown`), the first retry runs after this, doubling while under
+ * `ACCOUNTS_TTL_MS`: past it, the next list looks again anyway.
+ */
+export const ACCOUNTS_RETRY_MS = 30_000;
 /** An account's usage is probed at most this often. */
 export const USAGE_TTL_MS = 5 * 60_000;
 /** A provider that answered 429 isn't asked again before this. */
@@ -174,6 +190,7 @@ const LABEL: Record<AccountKind, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "The Antigravity CLI",
+  devin: "The Devin CLI",
 };
 /** Cursor's CLI keeps its config in `CURSOR_CONFIG_DIR` (cursor.com/docs/cli/reference/configuration). */
 const ENV_VAR: Record<AccountKind, string> = {
@@ -186,6 +203,9 @@ const ENV_VAR: Record<AccountKind, string> = {
   grok: "GROK_HOME",
   // `agy` documents no config folder of its own (ADR 0143): the account's folder is its whole home.
   antigravity: "HOME",
+  // The account's folder is the Devin CLI's whole home too (ADR 0253): its sign-in, settings and sessions all live
+  // under the XDG folders `accountEnv` puts in it.
+  devin: "HOME",
 };
 const LOGIN_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "login"],
@@ -197,6 +217,8 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
+  // Devin's sign-in by a pasted code (it reads it only from a terminal), the agent in this process alone.
+  devin: ["auth", "login", "--force-manual-token-flow", "--process-model", "in-process"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
@@ -207,6 +229,8 @@ const STATUS_ARGS: Record<AccountKind, string[]> = {
   grok: ["models"],
   // No status command either: `agy models` lists the account's models once it is signed in.
   antigravity: ["models"],
+  // Its models answer for its sign-in: "Not logged in." and exit 1 when signed out, the families as JSON when signed in.
+  devin: ["models", "list", "--format", "json", "--process-model", "in-process"],
 };
 const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "logout"],
@@ -216,6 +240,7 @@ const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   grok: ["logout"],
   // `/logout`, answered by the CLI itself in print mode; deleting the folder ends the sign-in anyway.
   antigravity: ["-p", "/logout"],
+  devin: ["auth", "logout", "--process-model", "in-process"],
 };
 /** Each CLI's executable (Cursor's was `cursor-agent` before it was renamed). */
 const COMMAND: Record<AccountKind, string> = {
@@ -225,6 +250,7 @@ const COMMAND: Record<AccountKind, string> = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  devin: DEVIN_BIN,
 };
 
 /** What a brain turn says when its account folder is gone (people read it). */
@@ -240,16 +266,19 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
   grok: "The Grok account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   antigravity:
     "The Gemini account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
+  devin:
+    "The Devin account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
 };
 
 /**
  * What would make a CLI think with anything but its folder's sign-in: a key, a token, another endpoint or cloud. Every
  * `GROK_` switch too (folder trust, memory, managed config, sandbox…): Grok Build gets only `GROK_QUIET_ENV`'s. And a
  * Gemini or Google AI key, another Gemini endpoint, the Antigravity CLI's enterprise gateway (`AGY_LLM_GATEWAY_*`) and
- * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s).
+ * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s). Every `DEVIN_` and `WINDSURF_` setting too: a Devin
+ * token, another API server, a model or a sandbox the runner didn't choose (ADR 0253).
  */
 const STRAY_SIGN_IN =
-  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+)$/;
+  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+|DEVIN_\w+|WINDSURF_\w+)$/;
 /**
  * Google Cloud's own sign-ins (Application Default Credentials, gcloud's config, Vertex's project): kept out of the
  * Antigravity CLI only, since an agent on another CLI may deploy to Google Cloud with them.
@@ -273,15 +302,24 @@ export function withoutContainers(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 }
 
 /** The env a CLI runs with for an account folder: `base` without any other sign-in, the folder as its home. */
-export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+export function accountEnv(
+  kind: AccountKind,
+  dir: string,
+  base: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): NodeJS.ProcessEnv {
   const env = withoutSignIns(base);
   env[ENV_VAR[kind]] = dir;
+  if (kind === "claude_code" && platform === "win32") return withGitBash(env, platform);
   if (kind === "cursor") {
     // Linux keeps the sign-in under `$XDG_CONFIG_HOME/cursor`, macOS in the Keychain unless told to use a file: both
     // in the account's folder, so two accounts never share one sign-in. The sign-in prints its link, opens nothing.
     env.XDG_CONFIG_HOME = dir;
     env.AGENT_CLI_CREDENTIAL_STORE = "file";
     env.NO_OPEN_BROWSER = "1";
+    // Windows keeps it in the Credential Manager unless told to use a file, then in `%APPDATA%\Cursor\auth.json`
+    // (its CLI's own credentials module, read off the 2026.11.22 package): the account's folder there too.
+    if (platform === "win32") env.APPDATA = dir;
   }
   if (kind === "opencode") {
     // Its config, its sessions, its caches: all in the account's folder, so two accounts never share a sign-in.
@@ -305,8 +343,33 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     delete env.DISPLAY;
     delete env.SSH_AUTH_SOCK;
     Object.assign(env, AGY_QUIET_ENV);
+    // Go reads the home from USERPROFILE on Windows, never HOME: the CLI's settings and config come from this folder.
+    if (platform === "win32") env.USERPROFILE = dir;
+    if (platform === "darwin") agyKeychain(dir);
+  }
+  if (kind === "devin") {
+    // Its sign-in (`credentials.toml`), settings, sessions and caches: all in the account's folder (ADR 0253).
+    env.XDG_CONFIG_HOME = path.join(dir, ".config");
+    env.XDG_CACHE_HOME = path.join(dir, ".cache");
+    env.XDG_DATA_HOME = path.join(dir, ".local", "share");
+    env.XDG_STATE_HOME = path.join(dir, ".local", "state");
+    // With a display to reach, its sign-in waits on it and never prints its link (CLI 3000.14.30821, 2026-11-23).
+    delete env.DISPLAY;
+    delete env.WAYLAND_DISPLAY;
   }
   return env;
+}
+
+/**
+ * Where a sign-in of `kind` must have landed in its account's folder on Windows, or null where nothing needs checking:
+ * Cursor's goes to the computer user's one Credential Manager unless it keeps its file, and there every Cursor account
+ * would be one (ADR 0228 §6). The Antigravity CLI's always goes there, so a Windows computer has one Gemini account
+ * (ADR 0143).
+ */
+export function signInFileOnWindows(kind: AccountKind, dir: string, platform: NodeJS.Platform = process.platform) {
+  if (platform !== "win32") return null;
+  if (kind === "cursor") return path.join(dir, "Cursor", "auth.json");
+  return null;
 }
 
 /**
@@ -505,6 +568,12 @@ export function codexAuthOf(text: unknown): CodexAuth | null {
   };
 }
 
+/** Root's copy of a ChatGPT sign-in is safe to read limits with: Codex won't refresh it within the next hour. */
+export function codexProbeSafe(dir: string, now: number) {
+  const auth = readCodexAuth(dir);
+  return auth !== null && now - auth.refreshedAt < CODEX_REFRESH_AFTER_MS - 3600_000;
+}
+
 /** A folder's Codex sign-in; null when it has none. Never through a link or a pipe. */
 export function readCodexAuth(dir: string): CodexAuth | null {
   const o = readSmallJson(path.join(dir, CODEX_AUTH_FILE), MAX_CODEX_AUTH_CHARS);
@@ -546,8 +615,36 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
   };
 }
 
-/** Beside the account folders: the models Grok Build lists to a signed-in account (`AccountManager.grokModels`). */
-const GROK_MODELS_FILE = "grok-models.json";
+/**
+ * The CLIs whose models are what an account signed in here lists (`AccountManager.listedModels`): the computer's own
+ * `grok models`, `agy models` and `agent models` are signed out, so its look finds none.
+ */
+export type ListingKind = "grok" | "antigravity" | "cursor" | "devin";
+
+/** Beside the account folders: what each account signed in here listed, by its id (`AccountManager.listedModels`). */
+const LISTED_MODELS_FILE: Record<ListingKind, string> = {
+  grok: "grok-models.json",
+  antigravity: "agy-models.json",
+  cursor: "cursor-models.json",
+  devin: "devin-models.json",
+};
+
+/** The CLIs whose status look is their models' listing: its output read as the models it lists to that account. */
+const LISTED_BY: Record<"grok" | "antigravity" | "devin", (stdout: string) => CursorModelInfo[]> = {
+  grok: parseGrokModels,
+  antigravity: parseAgyModels,
+  devin: parseDevinModels,
+};
+
+const listsInStatus = (kind: AccountKind): kind is "grok" | "antigravity" | "devin" =>
+  kind === "grok" || kind === "antigravity" || kind === "devin";
+
+/** Cursor's `agent status` names no model: `agent models` is asked on its own, at most this often per account. */
+const CURSOR_LISTING_EVERY_MS = 60 * 60_000;
+
+/** Only what reads as models: anything else a file holds is skipped. */
+const modelsIn = (v: unknown): CursorModelInfo[] =>
+  Array.isArray(v) ? v.filter((m): m is CursorModelInfo => typeof m?.id === "string") : [];
 
 /**
  * Grok Build keeps its sign-in in `GROK_HOME/auth.json`, an entry per issuer: the grok.com one under
@@ -560,6 +657,11 @@ const GROK_AUTH_FILE = "auth.json";
 const MAX_GROK_AUTH_CHARS = 64_000;
 /** How long an access token lasts (7 days, its docs say): a copy dated further ahead than this isn't one. */
 export const GROK_TOKEN_MAX_MS = 8 * 24 * 3600_000;
+/**
+ * Grok Build renews its OIDC token on startup when it is close to `expires_at` (`PreRequest`, a few minutes ahead):
+ * within this of `expires_at`, "not authenticated" may be that renewal still running. Its window with room to spare.
+ */
+const GROK_REFRESH_LEEWAY_MS = 15 * 60_000;
 
 export interface GrokAuth {
   /** The whole store, as JSON: another issuer's entry in it (a key's) stays. */
@@ -845,6 +947,14 @@ export const NETWORK_ENV = [
 
 /** Claude Code's switches to another company's cloud. */
 const CLOUD_ENV = ["CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"] as const;
+
+/**
+ * Claude Code's `cleanupPeriodDays` in the `--settings` of a sign-in the runner keeps (an account folder, or the one
+ * sign-in a system-mode computer lends to all its agents): transcripts of sessions idle this long go at the CLI's next
+ * start (its default is 30). Every agent on that sign-in writes there, so 30 days of 15-minute routines piled up. A
+ * session idle longer than this starts afresh. The computer owner's own sign-in keeps its own setting.
+ */
+export const ACCOUNT_TRANSCRIPT_DAYS = 14;
 
 /**
  * The `env` of a Claude Code turn's or task's own `--settings`, which outranks the project's settings (the agent
@@ -1212,21 +1322,49 @@ export function parseGrokLogin(output: string, final = false): { url: string; us
   return final || /[?&](?:user_)?code=/i.test(first.url) ? { url: first.url } : null;
 }
 
-/** `grok models`: signed in unless it says it isn't, with a sign-in file in the folder. */
+const GROK_SIGN_OUT_WORDS = /not (?:authenticated|logged in|signed in)/i;
+const GROK_REVOKED_WORDS = /\binvalid_grant\b/i;
+
+/**
+ * `grok models`: signed in when it exits 0 without saying it isn't, with a sign-in file in the folder. With a sign-in
+ * file there, a crash or timeout — or "not authenticated" while an expired OIDC session (`refreshDue`) is still kept on
+ * disk for self-healing after a transient refresh failure — says nothing for sure (`statusUnknown`). An explicit
+ * `invalid_grant` is always a conclusive sign-out even if `auth.json` is still on disk.
+ */
 export function parseGrokStatus(
   status: number | null,
   output: string,
   hasAuth: boolean,
+  refreshDue = false,
 ): Omit<RunnerAccountInfo, "id" | "kind"> {
-  return { loggedIn: hasAuth && status === 0 && !/not (?:authenticated|logged in|signed in)/i.test(stripAnsi(output)) };
+  if (!hasAuth) return { loggedIn: false };
+  const text = stripAnsi(output);
+  if (GROK_REVOKED_WORDS.test(text)) return { loggedIn: false };
+  const saidOut = GROK_SIGN_OUT_WORDS.test(text);
+  if (status === 0 && !saidOut) return { loggedIn: true };
+  if (saidOut && !refreshDue) return { loggedIn: false };
+  return { loggedIn: false, statusUnknown: true };
 }
 
 /**
  * The Antigravity CLI's sign-in (`agy acp --login`): the first https URL on Google's accounts pages. The code Google
- * shows after the sign-in is pasted back (`code`), as with Claude Code.
+ * shows after the sign-in is pasted back (`code`), as with Claude Code. It always asks which Google account
+ * (`prompt=select_account`): the CLI's link doesn't, so a browser signed in to one account took that one without a
+ * question, and a second Gemini account signed in as the first again.
  */
 export function parseAgyLoginUrl(output: string, final = false): string | null {
-  return urlsIn(stripAnsi(output), (h) => hostIs(h, "accounts.google.com"), final)[0]?.url ?? null;
+  const found = urlsIn(stripAnsi(output), (h) => hostIs(h, "accounts.google.com"), final)[0]?.url;
+  if (!found) return null;
+  const url = new URL(found);
+  const prompt = (url.searchParams.get("prompt") ?? "").split(" ").filter(Boolean);
+  if (!prompt.includes("select_account")) url.searchParams.set("prompt", [...prompt, "select_account"].join(" "));
+  return url.toString();
+}
+
+/** The Google account a finished `agy acp --login` names (`Logged in as someone@example.com.`), when it does. */
+export function parseAgyLoginEmail(output: string): string | undefined {
+  const email = /logged in as ([^\s@<>()"']+@[^\s@<>()"']+\.[a-z]{2,})/i.exec(stripAnsi(output))?.[1];
+  return email && email.length <= 254 ? email : undefined;
 }
 
 /** What the Antigravity CLI says when it has no sign-in to think with. */
@@ -1252,6 +1390,33 @@ export function parseAgyStatus(
   };
 }
 
+/** The Devin CLI's sign-in (`devin auth login --force-manual-token-flow`): its link on app.devin.ai, then a pasted code. */
+export function parseDevinLoginUrl(output: string, final = false): string | null {
+  return urlsIn(stripAnsi(output), (h) => hostIs(h, "app.devin.ai"), final)[0]?.url ?? null;
+}
+
+/** `devin auth status`: what names a Devin account (its email and its plan). */
+const DEVIN_WHO_ARGS = ["auth", "status", "--process-model", "in-process"];
+
+/**
+ * `devin auth status` (CLI 3000.14): its `Email:` line, and its `Plan:` line as a word (`Pro` → `pro`, `Max`, `Teams`,
+ * `Free`); nothing it doesn't say.
+ */
+export function parseDevinWho(output: string): { email?: string; plan?: string } {
+  const text = stripAnsi(output);
+  const email = /^\s*Email:\s*(\S+@\S+\.\S+)\s*$/im.exec(text)?.[1];
+  const plan = /^\s*Plan:\s*([A-Za-z][\w .+-]{0,30}?)\s*$/im.exec(text)?.[1]?.trim().toLowerCase().replace(/\s+/g, "_");
+  return {
+    ...(email && email.length <= 254 ? { email } : {}),
+    ...(plan && /^[\w.-]{1,40}$/.test(plan) ? { plan } : {}),
+  };
+}
+
+/** `devin models list --format json`: signed in when it exits 0 and lists model families. */
+export function parseDevinStatus(status: number | null, output: string): Omit<RunnerAccountInfo, "id" | "kind"> {
+  return { loggedIn: status === 0 && parseDevinModels(output).length > 0 };
+}
+
 /** Cursor's sign-in link (`agent login` with `NO_OPEN_BROWSER`): the first complete https URL on cursor.com. */
 export function parseCursorLoginUrl(output: string, final = false): string | null {
   return urlsIn(stripAnsi(output), (h) => hostIs(h, "cursor.com") || hostIs(h, "cursor.sh"), final)[0]?.url ?? null;
@@ -1269,10 +1434,12 @@ export function parseCursorStatus(status: number | null, output: string): Omit<R
   return { loggedIn, ...(email && email.length <= 254 ? { email } : {}) };
 }
 
-/** `codex login status` (`Logged in using ChatGPT`, on either stream): signed in when it exits 0 and says so. */
+/**
+ * `codex login status` (`Logged in using ChatGPT`, or an API key's `API key configured`, on either stream): signed in
+ * when it exits 0 and says so (`codexLoginStatusOf`).
+ */
 export function parseCodexStatus(status: number | null, output: string): Omit<RunnerAccountInfo, "id" | "kind"> {
-  const text = stripAnsi(output);
-  return { loggedIn: status === 0 && /logged in/i.test(text) && !/not logged in/i.test(text) };
+  return { loggedIn: codexLoginStatusOf(status, stripAnsi(output)).loggedIn };
 }
 
 /**
@@ -1303,7 +1470,16 @@ interface CliResult {
 }
 
 /** Runs a CLI to the end (killed after `timeoutMs`); never throws. */
-function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeoutMs: number): Promise<CliResult> {
+/** How much of `devin models list --format json` a look keeps: the whole listing (hundreds of KB on a paid plan). */
+const DEVIN_LISTING_KEEP = 4 * 1024 * 1024;
+
+function runCli(
+  command: string[],
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+  keep = OUTPUT_KEEP,
+): Promise<CliResult> {
   return new Promise((resolve) => {
     const run = cliSpawn(command, args, env.PATH);
     let child: ChildProcess;
@@ -1320,13 +1496,13 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
     }
     let stdout = "";
     let stderr = "";
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", (c: string) => {
-      stdout = (stdout + c).slice(-OUTPUT_KEEP);
+    const stdoutText = new ConsoleDecoder();
+    const stderrText = new ConsoleDecoder();
+    child.stdout?.on("data", (c: Buffer) => {
+      stdout = (stdout + stdoutText.write(c)).slice(-keep);
     });
-    child.stderr?.on("data", (c: string) => {
-      stderr = (stderr + c).slice(-OUTPUT_KEEP);
+    child.stderr?.on("data", (c: Buffer) => {
+      stderr = (stderr + stderrText.write(c)).slice(-OUTPUT_KEEP);
     });
     let settled = false;
     const finish = (status: number | null) => {
@@ -1355,6 +1531,11 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
 export interface AccountManagerOptions {
   /** `<runner home>/accounts`. */
   root: string;
+  /**
+   * Before a CLI's sign-in starts: the runner's own copy of that CLI made ready where the computer has none new enough
+   * (`CliCopies.ensure`, ADR 0228 §6); its failure is the sign-in's.
+   */
+  prepare?: (kind: AccountKind) => Promise<void>;
   /** Tests: the clock. */
   now?: () => number;
   /** The organization this machine is paired with (a sealed code's AAD names it); unknown before pairing. */
@@ -1365,6 +1546,8 @@ export interface AccountManagerOptions {
   ttlMs?: number;
   finishedKeepMs?: number;
   listTtlMs?: number;
+  /** Tests: `ACCOUNTS_RETRY_MS`, the first wait before re-checking an inconclusive status look. */
+  statusRetryMs?: number;
   /** Tests: `USAGE_TTL_MS`, `USAGE_NOTIFY_MS`, how long a probe may take, and the HTTP client of the key probes. */
   usageTtlMs?: number;
   /** Tests: `TOKEN_RECHECK_MS`. */
@@ -1386,7 +1569,7 @@ export interface AccountManagerOptions {
   grokRoot?: string;
   /** System mode: whether Grok Build's sandbox starts for an agent's user above a folder (`grokSandboxFails`). */
   grokSandbox?: (dir: string) => string | null;
-  /** Tests: the platform (the Antigravity CLI signs in only on Linux here). */
+  /** Tests: the platform (the Antigravity CLI signs in on Linux and macOS here). */
   platform?: NodeJS.Platform;
   /**
    * System mode: what goes before each Claude CLI root runs on an account folder (`authEgressPrefix`), asked once;
@@ -1399,8 +1582,10 @@ export interface AccountManagerOptions {
 
 /** Claude's own login for all agents of a system-mode computer: what `AccountManager` needs of `AccountUsers`. */
 export interface SharedLogin {
-  /** The feature's switch is on and the self-check passed. */
+  /** The feature's switch is on and the self-check passed, or held all it could try with no agent here yet. */
   ready(): boolean;
+  /** It passed with an agent's network too: turns may run. */
+  turnsReady(): boolean;
   /** How root runs the CLI as the sign-in's user, made the first time. Throws when it can't be. */
   launcher(id: string): Launcher;
   /** The sign-in's processes, store and user go. */
@@ -1481,6 +1666,8 @@ export class AccountManager {
   private readonly probing = new Set<string>();
   private usageSent = 0;
   private usageTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryWait = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   /** ChatGPT sign-ins for all agents a turn is refreshing now (`codexGrant`). */
   private readonly refreshing = new Map<string, { at: number; done: Promise<void>; resolve: () => void }>();
 
@@ -1548,6 +1735,21 @@ export class AccountManager {
     return this.authPrefix() !== null;
   }
 
+  /** A Gemini account here, or one signing in now; a sign-in left unfinished isn't one. */
+  private hasAgy(): boolean {
+    let names: string[];
+    try {
+      names = readdirSync(this.kindRoot("antigravity"));
+    } catch {
+      return false;
+    }
+    return names.some(
+      (id) =>
+        isAccountId(id) &&
+        (this.logins.get(id)?.state === "waiting" || !existsSync(path.join(this.dirOf("antigravity", id), SIGNING_IN))),
+    );
+  }
+
   /** Where a kind's account folders are. */
   private kindRoot(kind: AccountKind) {
     return kind === "grok" && this.opts.grokRoot ? this.opts.grokRoot : path.join(this.opts.root, kind);
@@ -1572,7 +1774,7 @@ export class AccountManager {
   }
 
   private env(kind: AccountKind, dir: string): NodeJS.ProcessEnv {
-    return accountEnv(kind, dir);
+    return accountEnv(kind, dir, process.env, this.opts.platform ?? process.platform);
   }
 
   /**
@@ -1621,11 +1823,14 @@ export class AccountManager {
 
   /**
    * Whether a turn may run on such a sign-in now. `off`: the switch went off or the self-check failed, and no CLI runs
-   * on its store. `signed_out`: the provider refused it, until it signs in again.
+   * on its store. `signed_out`: the provider refused it, until it signs in again. `deferred`: the check waits for an
+   * agent's user to try the network with.
    */
-  cliSharedState(id: string): "ready" | "off" | "signed_out" {
-    if (!this.opts.sharedLogin?.ready()) return "off";
-    return existsSync(this.marker("claude_code", id, "invalid")) ? "signed_out" : "ready";
+  cliSharedState(id: string): "ready" | "deferred" | "off" | "signed_out" {
+    const shared = this.opts.sharedLogin;
+    if (!shared?.ready()) return "off";
+    if (existsSync(this.marker("claude_code", id, "invalid"))) return "signed_out";
+    return shared.turnsReady() ? "ready" : "deferred";
   }
 
   /** The argv of the Claude CLI behind `prefix`. A missing CLI must fail to start, not exit 127 behind the launcher. */
@@ -1638,7 +1843,7 @@ export class AccountManager {
   /** The Claude CLI as the sign-in's own user, with the runner's proxies as root's own CLIs have them. */
   private sharedCli(id: string): { command: string[]; env: NodeJS.ProcessEnv; cwd: string } {
     const l = this.opts.sharedLogin?.launcher(id);
-    if (!l) throw new RunnerError("unsupported", "This computer can't run this Claude sign-in");
+    if (!l) throw new RunnerError("unsupported", SHARED_LOGIN_REFUSED);
     const env: NodeJS.ProcessEnv = { ...l.env };
     for (const k of NETWORK_ENV) if (process.env[k]) env[k] = process.env[k];
     return { command: this.sharedCommand(l.prefix), env, cwd: l.home };
@@ -1751,10 +1956,20 @@ export class AccountManager {
     if (kind === "opencode" && !cliKey) {
       throw new RunnerError("bad_request", "OpenCode signs in with its API key");
     }
-    // ADR 0143: elsewhere the CLI keeps every sign-in in the one keychain of the computer's user, so two accounts
-    // would be one.
-    if (kind === "antigravity" && (this.opts.platform ?? process.platform) !== "linux") {
-      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux computers only, for now.");
+    // ADR 0143: Windows keeps the CLI's sign-in in the one Credential Manager of the computer's user, so a second
+    // account would take the first one's place.
+    if (kind === "antigravity" && !again && (this.opts.platform ?? process.platform) === "win32" && this.hasAgy()) {
+      throw new RunnerError(
+        "bad_request",
+        "On Windows a computer uses one Gemini account at a time. Remove the other Gemini account here first.",
+      );
+    }
+    // ADR 0253: an account's folder as the CLI's home is read on Linux and macOS only.
+    if (kind === "devin" && (this.opts.platform ?? process.platform) === "win32") {
+      throw new RunnerError(
+        "bad_request",
+        "Devin accounts don't sign in on Windows computers yet: there the Devin CLI can't keep each account's sign-in apart.",
+      );
     }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
@@ -1796,9 +2011,14 @@ export class AccountManager {
         throw new RunnerError("bad_request", "This computer already has too many accounts. Remove one first.");
       }
     }
+    // The CLI it signs in with, before anything is written: the runner may bring the Antigravity or Devin CLI itself.
+    if (kind === "antigravity" || kind === "devin") await this.opts.prepare?.(kind);
     // Claude Code and the Antigravity CLI: the key the browser seals the pasted code (or a plan's key) to; the private
     // half stays in memory.
-    const pair = kind === "claude_code" || kind === "antigravity" || cliKey ? await generateSecretKeyPair() : undefined;
+    const pair =
+      kind === "claude_code" || kind === "antigravity" || kind === "devin" || cliKey
+        ? await generateSecretKeyPair()
+        : undefined;
     if (!again) {
       for (const [d, mode] of this.parents(kind)) {
         await mkdir(d, { recursive: true, mode });
@@ -1827,6 +2047,8 @@ export class AccountManager {
       return this.beginKey(kind, loginId, dir, provider as PlanId, pair, again, forAll);
     // Which Google sign-in the CLI asks for: a personal account's, or Gemini Enterprise's.
     if (kind === "antigravity") writeAgySettings(dir, enterprise ? "oauth-business" : "oauth-personal");
+    // No shell setup, no daemon, no updates of its own, from the sign-in on.
+    if (kind === "devin") prepareDevinHome(dir);
 
     const login: Login = {
       id: loginId,
@@ -1850,6 +2072,7 @@ export class AccountManager {
     try {
       if (forAll && kind === "claude_code" && !cliShared) this.spawnInTerminal(login, ["setup-token"]);
       else if (kind === "antigravity") this.spawnInTerminal(login, LOGIN_ARGS.antigravity);
+      else if (kind === "devin") this.spawnInTerminal(login, LOGIN_ARGS.devin);
       else this.spawnLogin(login, email);
     } catch (err) {
       if (!again) await this.discard(kind, loginId);
@@ -1873,9 +2096,11 @@ export class AccountManager {
             ? parseGrokLogin(login.output, final)
             : kind === "antigravity"
               ? toUrl(parseAgyLoginUrl(login.output, final))
-              : kind === "cursor"
-                ? toUrl(parseCursorLoginUrl(login.output, final))
-                : toUrl(parseClaudeLoginUrl(this.shown(login), final));
+              : kind === "devin"
+                ? toUrl(parseDevinLoginUrl(login.output, final))
+                : kind === "cursor"
+                  ? toUrl(parseCursorLoginUrl(login.output, final))
+                  : toUrl(parseClaudeLoginUrl(this.shown(login), final));
       let done = false;
       const finish = (v: { url: string; userCode?: string } | null) => {
         if (done) return;
@@ -1935,14 +2160,12 @@ export class AccountManager {
       windowsVerbatimArguments: run.windowsVerbatimArguments,
     });
     login.child = child;
-    const onData = (chunk: string) => {
-      login.output = (login.output + chunk).slice(-OUTPUT_KEEP);
+    const onData = (decoder: ConsoleDecoder) => (chunk: Buffer) => {
+      login.output = (login.output + decoder.write(chunk)).slice(-OUTPUT_KEEP);
       login.watch?.();
     };
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
+    child.stdout?.on("data", onData(new ConsoleDecoder()));
+    child.stderr?.on("data", onData(new ConsoleDecoder()));
     child.stdin?.on("error", () => {});
     const events = child as unknown as EventEmitter;
     events.on("error", (err: Error) => {
@@ -2071,7 +2294,10 @@ export class AccountManager {
   async code(loginId: string, aad: string, box: WireSecretBox): Promise<void> {
     const login = this.waiting(loginId);
     const cliKey = login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER;
-    if ((login.kind !== "claude_code" && login.kind !== "antigravity" && !cliKey) || !login.privateKey) {
+    if (
+      (login.kind !== "claude_code" && login.kind !== "antigravity" && login.kind !== "devin" && !cliKey) ||
+      !login.privateKey
+    ) {
       throw new RunnerError("bad_request", "This sign-in doesn't take a code");
     }
     const org = this.opts.orgId?.();
@@ -2237,6 +2463,11 @@ export class AccountManager {
         const status: { said?: string } = {};
         const info = await this.lookUp(login.kind, login.id, status);
         if (login.state !== "waiting") return;
+        // `agy models` never names the account: its sign-in's own words may, which the server then keeps.
+        if (login.kind === "antigravity" && !info.email) {
+          const email = parseAgyLoginEmail(login.output);
+          if (email) info.email = email;
+        }
         const sandbox =
           info.loggedIn && !info.statusUnknown && login.kind === "grok"
             ? (this.opts.grokSandbox?.(login.dir) ?? null)
@@ -2255,6 +2486,19 @@ export class AccountManager {
           // Signed in again, the folder now holds that sign-in, which no agent can think with: signed out for all.
           if (unshared && !unshared.unsure && login.again) await this.refused(login.kind, login.id);
           if (login.state !== "waiting") return;
+          // Windows: a sign-in that didn't keep its file in the folder went to the computer user's Credential Manager,
+          // where it would be every account's: refused, never counted (ADR 0228 §6).
+          const apart =
+            login.child || login.term ? signInFileOnWindows(login.kind, login.dir, this.opts.platform) : null;
+          if (apart && !existsSync(apart)) {
+            this.failWith(
+              login,
+              "failed",
+              "cli_exit",
+              `${LABEL[login.kind]} kept this sign-in where every account on this computer would share it, not in its own folder.`,
+            );
+            return;
+          }
           if (!unshared) {
             await rm(path.join(login.dir, SIGNING_IN), { force: true }).catch(() => undefined);
             // A ChatGPT or Gemini sign-in for all agents: root's alone from now on (`grant`).
@@ -2493,6 +2737,7 @@ export class AccountManager {
     if (plan) return { id, kind, loggedIn: !refused, provider: plan.provider, keyHint: plan.key.slice(-4), ...shared };
     const cursorKey = kind === "cursor" ? await cursorKeyOf(dir) : null;
     if (cursorKey) {
+      if (!refused) await this.listCursorModels(id, dir, cursorKey);
       return { id, kind, loggedIn: !refused, provider: CURSOR_KEY_PROVIDER, keyHint: cursorKey.slice(-4), ...shared };
     }
     if (kind === "opencode") {
@@ -2515,17 +2760,42 @@ export class AccountManager {
     // With the switch off or the self-check failing, no CLI runs on its store: it stays as last known.
     if (cliShared && !this.opts.sharedLogin?.ready())
       return { id, kind, loggedIn: false, statusUnknown: true, ...shared };
-    const r = await this.serial(
+    const { r, afterGrok } = await this.serial(
       id,
-      async () => {
+      async (): Promise<{ r: CliResult; afterGrok: GrokAuth | null }> => {
         const { command, env } = cliShared
           ? this.sharedCli(id)
           : { command: this.command(kind), env: this.env(kind, dir) };
-        return runCli(command, STATUS_ARGS[kind], env, this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS);
+        const timeout = this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS;
+        if (kind === "devin") prepareDevinHome(dir);
+        const keep = kind === "devin" ? DEVIN_LISTING_KEEP : OUTPUT_KEEP;
+        const beforeGrok = kind === "grok" ? readGrokAuth(dir) : null;
+        let res = await runCli(command, STATUS_ARGS[kind], env, timeout, keep);
+        if (kind !== "grok") return { r: res, afterGrok: null };
+        let after = readGrokAuth(dir);
+        // Grok Build 1.0.73 prints "You are not authenticated." when `auth.json` starts expired, even as its own
+        // background OIDC refresh renews `auth.json` before `grok models` exits: one more look reads the fresh token
+        // and the account's full model list.
+        const refreshed =
+          after !== null &&
+          (beforeGrok === null ||
+            after.expiresAt > beforeGrok.expiresAt ||
+            after.refreshToken !== beforeGrok.refreshToken);
+        if (refreshed && !parseGrokStatus(res.status, `${res.stdout}\n${res.stderr}`, true).loggedIn) {
+          res = await runCli(command, STATUS_ARGS[kind], env, timeout);
+          after = readGrokAuth(dir);
+        }
+        return { r: res, afterGrok: after };
       },
       this.cliOps,
-    ).catch((err: unknown): CliResult => ({ status: null, stdout: "", stderr: String(err) }));
+    ).catch((err: unknown): { r: CliResult; afterGrok: GrokAuth | null } => ({
+      r: { status: null, stdout: "", stderr: String(err) },
+      afterGrok: null,
+    }));
     if (out) out.said = saidIn(withoutTokens(stripAnsi(`${r.stdout}\n${r.stderr}`)));
+    const now = (this.opts.now ?? Date.now)();
+    const refreshDue =
+      afterGrok !== null && afterGrok.expiresAt > 0 && afterGrok.expiresAt <= now + GROK_REFRESH_LEEWAY_MS;
     // Codex says it on stderr.
     const status =
       kind === "claude_code"
@@ -2533,43 +2803,122 @@ export class AccountManager {
         : kind === "cursor"
           ? parseCursorStatus(r.status, `${r.stdout}\n${r.stderr}`)
           : kind === "grok"
-            ? parseGrokStatus(r.status, `${r.stdout}\n${r.stderr}`, existsSync(path.join(dir, "auth.json")))
+            ? parseGrokStatus(
+                r.status,
+                `${r.stdout}\n${r.stderr}`,
+                existsSync(path.join(dir, GROK_AUTH_FILE)),
+                refreshDue,
+              )
             : kind === "antigravity"
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
-              : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
-    if (kind === "grok" && status.loggedIn) this.keepGrokModels(parseGrokModels(r.stdout));
+              : kind === "devin"
+                ? parseDevinStatus(r.status, r.stdout)
+                : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
+    if (listsInStatus(kind) && status.loggedIn) this.keepListed(kind, id, LISTED_BY[kind](r.stdout));
+    if (kind === "cursor" && status.loggedIn) await this.listCursorModels(id, dir);
+    // Devin's models say nothing of whose they are: its status names the account and its plan.
+    const who =
+      kind === "devin" && status.loggedIn
+        ? parseDevinWho(
+            (
+              await this.serial(
+                id,
+                () =>
+                  runCli(
+                    this.command(kind),
+                    DEVIN_WHO_ARGS,
+                    this.env(kind, dir),
+                    this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS,
+                  ),
+                this.cliOps,
+              ).catch((): CliResult => ({ status: null, stdout: "", stderr: "" }))
+            ).stdout,
+          )
+        : {};
     // Timed out, or didn't start.
-    const unknown = r.status === null ? { statusUnknown: true as const } : {};
-    return { id, kind, ...status, ...unknown, ...shared };
+    const unknown = r.status === null && kind !== "grok" ? { statusUnknown: true as const } : {};
+    return { id, kind, ...status, ...who, ...unknown, ...shared };
   }
 
-  private grokList: CursorModelInfo[] | undefined;
-  private get grokModelsFile() {
-    return path.join(this.opts.root, GROK_MODELS_FILE);
+  /** When each Cursor account's models were last asked for (`listCursorModels`), by its id. */
+  private readonly cursorListedAt = new Map<string, number>();
+
+  /**
+   * What `agent models` lists to a Cursor account (its folder's sign-in, or its key), kept as Grok's and Gemini's
+   * are. Looked at only while root still holds the folder: one lent to an agent is never run on again.
+   */
+  private async listCursorModels(id: string, dir: string, key?: string) {
+    const now = (this.opts.now ?? Date.now)();
+    if (this.lentTo("cursor", id) !== null) return;
+    if (now - (this.cursorListedAt.get(id) ?? Number.NEGATIVE_INFINITY) < CURSOR_LISTING_EVERY_MS) return;
+    this.cursorListedAt.set(id, now);
+    const env = { ...this.env("cursor", dir), ...(key ? { CURSOR_API_KEY: key } : {}) };
+    const timeout = this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS;
+    const r = await this.serial(id, () => runCli(this.command("cursor"), ["models"], env, timeout), this.cliOps).catch(
+      () => null,
+    );
+    if (r?.status === 0) this.keepListed("cursor", id, parseCursorModels(r.stdout));
+    else this.cursorListedAt.delete(id);
+  }
+
+  /** Per CLI, what each account signed in here last listed, by its id (`""`: an older runner's single list). */
+  private readonly listed: Partial<Record<ListingKind, Map<string, CursorModelInfo[]>>> = {};
+
+  private listedBy(kind: ListingKind): Map<string, CursorModelInfo[]> {
+    let by = this.listed[kind];
+    if (!by) {
+      const kept = readSmallJson(path.join(this.opts.root, LISTED_MODELS_FILE[kind]), 1024 * 1024);
+      const entries: [string, unknown][] = Array.isArray(kept)
+        ? [["", kept]]
+        : kept && typeof kept === "object"
+          ? Object.entries(kept)
+          : [];
+      by = new Map(
+        entries
+          .filter(([id]) => id === "" || isAccountId(id))
+          .map(([id, v]) => [id, modelsIn(v)] as const)
+          .filter(([, list]) => list.length > 0),
+      );
+      this.listed[kind] = by;
+    }
+    return by;
   }
 
   /**
-   * The models Grok Build last listed for an account signed in here (its status look runs `grok models` in that
-   * account's folder), kept across restarts: a folder lent to an agent is never looked at again. Undefined before one.
+   * The models a CLI listed to the accounts signed in here (each one's status look runs `<cli> models` in its
+   * folder), kept across restarts: a folder lent to an agent is never looked at again. Every account's once, the one
+   * listing the most first: accounts of one CLI can be on different plans (a free Google account lists no Gemini 4
+   * model), and the models offered are the computer's. A removed account's go with its folder. Undefined before any.
    */
-  grokModels(): CursorModelInfo[] | undefined {
-    if (this.grokList === undefined) {
-      const kept = readSmallJson(this.grokModelsFile, 64 * 1024);
-      const list = Array.isArray(kept) ? kept.filter((m): m is CursorModelInfo => typeof m?.id === "string") : [];
-      this.grokList = list.length > 0 ? list : undefined;
-    }
-    return this.grokList;
+  listedModels(kind: ListingKind): CursorModelInfo[] | undefined {
+    const lists = [...this.listedBy(kind)]
+      .filter(([id]) => id === "" || existsSync(this.dirOf(kind, id)))
+      .map(([, list]) => list)
+      .sort((a, b) => b.length - a.length);
+    const all = new Map<string, CursorModelInfo>();
+    for (const m of lists.flat()) if (!all.has(m.id)) all.set(m.id, m);
+    return all.size > 0 ? [...all.values()] : undefined;
   }
 
-  private keepGrokModels(list: CursorModelInfo[]) {
-    if (list.length === 0 || JSON.stringify(list) === JSON.stringify(this.grokModels())) return;
-    this.grokList = list;
+  /** An account's list from its look: kept (the older runner's single list goes), and the server told if it changed. */
+  private keepListed(kind: ListingKind, id: string, list: CursorModelInfo[]) {
+    if (list.length === 0) return;
+    const before = this.listedBy(kind);
+    const next = new Map<string, CursorModelInfo[]>();
+    for (const [other, was] of before) {
+      if (other === id) next.set(id, list);
+      else if (other !== "" && existsSync(this.dirOf(kind, other))) next.set(other, was);
+    }
+    if (!next.has(id)) next.set(id, list);
+    if (JSON.stringify([...next]) === JSON.stringify([...before])) return;
+    const shown = JSON.stringify(this.listedModels(kind));
+    this.listed[kind] = next;
     try {
-      writeJson(this.grokModelsFile, list);
+      writeJson(path.join(this.opts.root, LISTED_MODELS_FILE[kind]), Object.fromEntries(next));
     } catch {
       // kept in memory until the next look
     }
-    this.changed();
+    if (JSON.stringify(this.listedModels(kind)) !== shown) this.changed();
   }
 
   private async lookAll(): Promise<RunnerAccountInfo[]> {
@@ -2613,11 +2962,31 @@ export class AccountManager {
   refresh(announce = false): Promise<RunnerAccountInfo[]> {
     if (announce) this.announce = true;
     if (this.listing) return this.listing;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
     const run = this.lookAll()
       .then((value) => {
         if (this.listing === run) {
           const changed = JSON.stringify(value) !== JSON.stringify(this.cache?.value ?? []);
           this.cache = { at: Date.now(), value };
+          const unsure = value.some(
+            (a) => a.statusUnknown && !(this.isCliShared(a.kind, a.id) && !this.opts.sharedLogin?.ready()),
+          );
+          const ttl = this.opts.listTtlMs ?? ACCOUNTS_TTL_MS;
+          const base = this.opts.statusRetryMs ?? ACCOUNTS_RETRY_MS;
+          const wait = unsure ? (this.retryWait ? this.retryWait * 2 : base) : 0;
+          this.retryWait = Math.min(wait, ttl);
+          // A wait as long as the list's TTL is no retry: the next `list` or `snapshot` looks again by itself, so an
+          // account that stays inconclusive (a CLI gone from the computer) never keeps a timer asking.
+          if (unsure && wait < ttl && !this.closed) {
+            this.retryTimer = setTimeout(() => {
+              this.retryTimer = null;
+              if (!this.closed) void this.refresh().catch(() => undefined);
+            }, wait);
+            this.retryTimer.unref?.();
+          }
           if (changed || this.announce) this.changed();
           this.announce = false;
         }
@@ -2644,6 +3013,11 @@ export class AccountManager {
    */
   invalidate() {
     if (this.cache) this.cache = { ...this.cache, at: 0 };
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    this.retryWait = 0;
     this.listing = null;
   }
 
@@ -2869,12 +3243,36 @@ export class AccountManager {
       if (now === uid) return true;
       if (now) await this.reclaimNow(kind, id);
       for (const [d, mode] of this.parents(kind)) await chmod(d, mode);
+      // The models the CLI lists to this account while root still holds the folder: a turn right after the sign-in may
+      // come before any look, and a lent folder is never run on again (Grok's and Gemini's look is their listing).
+      if (kind === "cursor" && !this.listedBy("cursor").has(id))
+        await this.listCursorModels(id, dir, (await cursorKeyOf(dir)) ?? undefined);
+      else if (listsInStatus(kind) && !this.listedBy(kind).has(id)) await this.look(kind, id).catch(() => undefined);
       // Marked before the first chown: a folder an agent's user may have written to never runs as root again.
       await writeFile(this.marker(kind, id, "lent"), String(uid), { mode: 0o600 });
       await chownTree(dir, uid, chown);
       this.log(`account ${id.slice(0, 8)} (${kind}) lent to uid ${uid}`);
       return true;
     });
+  }
+
+  /**
+   * What a terminal as the agent that thinks with this account adds to its shell (ADR 0215): the one variable that
+   * points the account's CLI at its folder, so `claude` or `codex` typed there is signed in as the agent's turns
+   * are. Only a Claude Code or Codex sign-in made for that agent: their folder is one variable of the CLI's own.
+   * The other CLIs keep theirs under the XDG folders, which a shell's other programs read too, and an account root
+   * keeps for several agents (`grant`) or a plan's key never leaves it for a shell. System mode lends the folder to
+   * `uid` first, as a turn does (`lendTo`). Nothing to add: an empty object.
+   */
+  async terminalEnv(id: string, uid?: number): Promise<Record<string, string>> {
+    for (const kind of ["claude_code", "codex"] as const) {
+      const dir = this.accountDir(kind, id);
+      if (!dir) continue;
+      if (this.isShared(kind, id) || (kind === "claude_code" && (await planKeyOf(dir)))) return {};
+      if (this.opts.lending && !(uid !== undefined && (await this.lendTo(kind, id, uid)))) return {};
+      return { [ENV_VAR[kind]]: dir };
+    }
+    return {};
   }
 
   private async reclaimNow(kind: AccountKind, id: string) {
@@ -2971,7 +3369,7 @@ export class AccountManager {
       const token = recheck.includes(id);
       // A token's check goes by its own clock: a plain look at it (which reads nothing) doesn't put it off.
       const asked = (token ? this.tokenChecked : this.probed).get(id) ?? 0;
-      const known = Math.max(Date.parse(this.usage.get(id)?.at ?? "") || 0, asked);
+      const known = Math.max(oldestRead(this.usage.get(id)), asked);
       const ttl = token ? (this.opts.tokenCheckTtlMs ?? TOKEN_RECHECK_MS) : (this.opts.usageTtlMs ?? USAGE_TTL_MS);
       if (now - known < ttl) continue;
       if (token) {
@@ -3017,7 +3415,9 @@ export class AccountManager {
     if (!target) return null;
     const limits = timeoutMs ? { timeoutMs } : {};
     if (!own && this.isCliShared(target.kind, id)) {
-      return this.opts.sharedLogin?.ready() ? probeClaudeUsage({ ...this.sharedCli(id), ...limits }) : null;
+      return this.opts.sharedLogin?.ready()
+        ? this.answered(target.kind, id, await probeClaudeUsage({ ...this.sharedCli(id), ...limits }))
+        : null;
     }
     const plan = own || target.kind !== "claude_code" ? null : await planKeyOf(target.cwd);
     if (plan) {
@@ -3044,7 +3444,12 @@ export class AccountManager {
         this.usage.get(id),
       );
     }
-    if (!own && (this.lentTo(target.kind, id) !== null || shared)) return null;
+    // A ChatGPT sign-in for all agents is root's own copy: Codex reads its limits there as long as it won't refresh it
+    // (a refresh rotates the token every agent's copy holds). Without this its numbers only came from turns, so with
+    // all long work paused nothing read them again.
+    const codexReadable =
+      shared && target.kind === "codex" && codexProbeSafe(target.cwd, (this.opts.now ?? Date.now)());
+    if (!own && (this.lentTo(target.kind, id) !== null || (shared && !codexReadable))) return null;
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
     // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.
@@ -3055,13 +3460,32 @@ export class AccountManager {
       const r = await runCli(probe.command, ["-p", "/usage"], probe.env, timeoutMs ?? STATUS_TIMEOUT_MS);
       return r.status === 0 ? antigravityUsage(r.stdout, "probe") : null;
     }
-    return target.kind === "codex" ? probeCodexUsage(probe) : probeClaudeUsage(probe);
+    const found = await (target.kind === "codex" ? probeCodexUsage(probe) : probeClaudeUsage(probe));
+    return own ? found : this.answered(target.kind, id, found);
+  }
+
+  /**
+   * A CLI login that refreshes itself answered its provider's usage call: the provider takes its sign-in, so a turn's
+   * refusal (`refused`) was passing (a refresh another process of the same login had just rotated, or a 401 the CLI
+   * then recovered from) and the account reads as signed in again. A sign-in another login really ended fails this
+   * call too and stays signed out. Never for a token or a key, whose readings don't prove the sign-in.
+   */
+  private async answered(kind: AccountKind, id: string, found: PlanUsage | null) {
+    if (found && existsSync(this.marker(kind, id, "invalid"))) {
+      await rm(this.marker(kind, id, "invalid"), { force: true }).catch(() => undefined);
+      this.knownLoggedIn.delete(id);
+      this.invalidate();
+      void this.refresh(true).catch(() => undefined);
+    }
+    return found;
   }
 
   /** The runner is exiting: sign-ins in progress stop and their folders go. */
   async close() {
     this.closed = true;
     if (this.usageTimer) clearTimeout(this.usageTimer);
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
     this.probeQueue.length = 0;
     const waiting = [...this.logins.values()].filter((l) => l.state === "waiting");
     for (const l of waiting) this.settle(l, "failed", "The runner stopped");

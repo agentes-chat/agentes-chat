@@ -29,6 +29,7 @@ import {
   isCatchUp,
   listIssues,
   loadAgentStatuses,
+  markChannelRead,
   moveRun,
   moveToBackground,
   openDm,
@@ -200,6 +201,13 @@ test("work_in_background: the anchor in the timeline, updates in its thread, the
   const notes = await f.db.select().from(schema.notifications);
   expect(notes.some((n) => n.groupKey === `work_end:${work?.id}`)).toBe(true);
   expect(notes.map((n) => n.source.messageId)).not.toContain(update?.id);
+
+  // Read where it landed, the report leaves the inbox like any answer there.
+  await markChannelRead(f.db, f.owner.id, f.org.id, f.general.id, new Date(), f.pubsub);
+  const after = await f.db.select().from(schema.notifications);
+  expect(after.filter((n) => n.groupKey === `work_end:${work?.id}`).map((n) => [n.userId, n.doneAt !== null])).toEqual([
+    [f.owner.id, true],
+  ]);
 });
 
 test("a work frees the conversation: a new message, or a reply in the anchor's thread, starts a reply turn of its own", async () => {
@@ -525,6 +533,9 @@ test("the promise: a nudge when no update came, then exactly one update of the s
     new Date(later.getTime() + 61_000),
   );
   expect(agentUpdate.ok).toBe(true);
+  // The update answers the nudge it hadn't read yet: it no longer waits for the run's next step.
+  const [read] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
+  expect(read?.pendingMessageIds).not.toContain(nudge?.id as string);
   expect(
     await checkInWork(
       deps(),
@@ -538,13 +549,26 @@ test("the promise: a nudge when no update came, then exactly one update of the s
 test("updates: 5 minutes apart unless important (then a minute), the promise clamped to 5–20", async () => {
   f = await setup();
   const run = await working("@dev roda a migração");
-  await moved(run);
+  const { work } = await moved(run);
   const t0 = new Date();
   const first = await postWorkUpdate(deps(), run.id, { text: "Começando.", nextUpdateMin: 60 }, t0);
   expect(first.ok && first.work.nextUpdateAt?.getTime()).toBe(t0.getTime() + 20 * 60_000);
   const soon = await postWorkUpdate(deps(), run.id, { text: "Mais um." }, new Date(t0.getTime() + 2 * 60_000));
   expect(soon.ok).toBe(false);
-  expect(!soon.ok && soon.reason).toStartWith("Too soon; your last update was 2 min ago.");
+  expect(!soon.ok && soon.quiet && soon.reason).toStartWith("Not posted: your last update went out 2 min ago");
+  expect(!soon.ok && soon.reason).toEndWith("send it with important.");
+  // Too soon for a line, but the plan it carried still moves the card.
+  const posted = (await messages()).filter((m) => m.meta.workUpdate).length;
+  const plan = [{ id: "s1", text: "Migrar", state: "doing" as const }];
+  const planned = await postWorkUpdate(
+    deps(),
+    run.id,
+    { text: "Migrando.", plan },
+    new Date(t0.getTime() + 2 * 60_000),
+  );
+  expect(!planned.ok && planned.quiet && planned.reason).toStartWith("Plan saved; the line was not posted");
+  expect((await workView(f.db, f.org.id, work.id))?.plan).toEqual(plan);
+  expect((await messages()).filter((m) => m.meta.workUpdate)).toHaveLength(posted);
   const important = await postWorkUpdate(
     deps(),
     run.id,
@@ -1285,6 +1309,19 @@ test("a follow-up does what the work left undone, as the person who asked, where
   const read = f.provider.calls.map((c) => lastText(c.request)).find((r) => r.includes(FOLLOW_UP_HEAD)) ?? "";
   expect(read).toContain("Do now what they asked that the work didn't do and didn't say why not");
   expect(work.requestedByUserId).toBe(f.owner.id);
+});
+
+test("a follow-up of an ask bridged in from an outside chat answers for them, never as their own words (ADR 0250)", async () => {
+  f = await setup({ workTools: true, toolSources: [createPassToolSource()] });
+  const bia = await member("bia");
+  const { run, asked } = await passedOn("depois posta o resumo no #time", bia.id);
+  await f.db.update(schema.messages).set({ origin: "surface" }).where(eq(schema.messages.id, asked));
+  await endWork(deps(), await finishRun(run.id), "done");
+  await f.db.delete(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
+  await drainOutbox(f.db, f.handlers);
+  const [notice] = await followUpNotices();
+  const followUp = (await runs()).find((r) => r.triggerMessageId === notice?.id) as AgentRun;
+  expect(await runAuthority(f.db, followUp)).toEqual({ kind: "person", personId: bia.id, relayed: true });
 });
 
 test("two people pass asks on to one work: one follow-up each, on their own authority, and no card decided for the other", async () => {

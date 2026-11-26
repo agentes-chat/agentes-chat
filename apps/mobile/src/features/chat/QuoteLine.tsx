@@ -3,10 +3,12 @@ import { quoteText } from "@agenteschat/client/lib/media";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, Text, TOUCH } from "@/ui";
+import { RADIUS } from "@/ui/radius";
 import { Face } from "../shared/Face";
-import { useColors, useDirectory } from "../shared/hooks";
-import { rowBodyInset } from "./logic";
+import { useColors } from "../shared/hooks";
+import { COMPACT_FACE, MSG_INSET, ROW_BODY_INSET, rowBodyInset } from "./logic";
 import type { RowLook } from "./look";
+import { useRowDirectory } from "./row-data";
 
 /** The quote's line (`styles.line`), and the reply bar's × glyph. */
 const LINE = 20;
@@ -24,7 +26,7 @@ export function QuoteLine({
   ink?: string;
 }) {
   const { t } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const color = ink ? { color: ink } : undefined;
   if (reply.deleted) {
     return (
@@ -56,8 +58,11 @@ export function QuoteLine({
 }
 
 /** Where each style's face and words stand in a row (`styles.msg`, `lookRows`): the curve runs from one to the other. */
-const FACE_MIDDLE = { comfortable: 31, left: 31, bubbles: 25, compact: 59 };
-const WORDS_START = { comfortable: 59, left: 59, bubbles: 48, compact: 74 };
+const FACE_MIDDLE = { comfortable: 31, left: 31, bubbles: 25, compact: MSG_INSET + COMPACT_FACE / 2 };
+const WORDS_START = { comfortable: 59, left: 59, bubbles: 48, compact: ROW_BODY_INSET.compact.left };
+
+/** Where a line above a row starts: at the row's words. */
+export const aboveInset = (look: RowLook) => (look.faces ? WORDS_START[look.style] : rowBodyInset(look).left);
 
 /** The line above a row, joined to its face by a small curve; a row with no face has it at its words, no curve. */
 export function QuoteAbove({
@@ -74,7 +79,7 @@ export function QuoteAbove({
 }) {
   const c = useColors();
   const middle = FACE_MIDDLE[look.style];
-  const start = look.faces ? WORDS_START[look.style] : rowBodyInset(look).left;
+  const start = aboveInset(look);
   return (
     <View style={[styles.above, { paddingLeft: start, marginTop: gap }]}>
       {look.faces ? (
@@ -152,5 +157,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   barName: { flex: 1, fontWeight: "600" },
-  plate: { alignSelf: "stretch", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 4 },
+  // One line on a plate: the plates' side room and the scale's item corner, as the other plates in the words.
+  plate: { alignSelf: "stretch", paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.md, marginBottom: 6 },
 });

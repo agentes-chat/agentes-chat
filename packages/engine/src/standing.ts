@@ -21,6 +21,7 @@ const {
   users,
   sessions,
   pushDevices,
+  liveActivityDevices,
   organizationMembers,
   machineProvisioning,
   rightHandSeats,
@@ -451,6 +452,7 @@ async function standingWritten(
   { notify = true }: { notify?: boolean } = {},
 ) {
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   if (seen) {
     await publishOrgEvent(deps.pubsub, {
       type: "org.broadcast",
@@ -578,6 +580,7 @@ export async function setUserBlocked(
     if (!change.blocked) return { ...row, sessionsRevoked: 0, orgIds: [] };
     const revoked = await tx.delete(sessions).where(eq(sessions.userId, userId)).returning({ id: sessions.id });
     await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+    await tx.delete(liveActivityDevices).where(eq(liveActivityDevices.userId, userId));
     await unlinkAllFor(tx, userId);
     const orgs = await tx
       .select({ orgId: organizationMembers.orgId })
@@ -587,7 +590,11 @@ export async function setUserBlocked(
   });
   if (!done) return null;
   const { orgIds, ...state } = done;
-  for (const orgId of orgIds)
+  // A block ended every session above: no process serves a kept one (`caches.sessions`).
+  if (state.sessionsRevoked > 0) caches.sessions.clear();
+  for (const orgId of orgIds) {
+    caches.membership.delete(`${orgId}:${userId}`);
     await publishOrgEvent(deps.pubsub, { type: "membership.revoked", orgId, userId, quiet: true });
+  }
   return state;
 }

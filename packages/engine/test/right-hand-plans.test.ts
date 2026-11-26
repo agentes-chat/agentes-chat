@@ -11,6 +11,7 @@ import {
   drainOutbox,
   getAgentBrain,
   insertMessage,
+  listMessages,
   type MachineStatus,
   machineAgents,
   OpencodeBrain,
@@ -91,7 +92,10 @@ async function world() {
   /** Nothing can stand in for Lodi's plan (ADR 0137 §7, amended): no API key, and Caio's plan serves only him. */
   const noStandIn = async () => {
     await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, CAIOS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, CAIOS));
   };
   return { fx, deps: { db: fx.db }, machineId, bia, caio, lodi, account, noStandIn };
 }
@@ -144,9 +148,8 @@ test("a plan given to Lodi starts with its switch off, whatever was set before i
   await setAgentBrain(deps, fx.owner.id, fx.org.id, id, { onlyOwner: false });
   await setAgentBrain(deps, caio.id, fx.org.id, id, { account: CAIOS });
   expect(await lodi()).toMatchObject({ brainAccountId: CAIOS, planForOthers: false });
-  // Its long work never spends a plan's paid extra usage, nor on the previous release, which reads the column.
+  // Its long work never spends a plan's paid extra usage.
   expect(paysExtraUsage(await lodi())).toBe(false);
-  expect((await lodi()).brainExtraUsage).toBe(false);
 });
 
 test("its turns think on the plan's computer and owner; another person's DM while a plan serves them", async () => {
@@ -395,7 +398,10 @@ test("its plan's CLI failing: its line says so, and what the CLI said stays in t
     machines: { status: async (id) => statusOf(id) },
   });
   const dm = await openPersonAgentDm(fx.db, fx.org.id, fx.owner.id, agent.id);
-  await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, dm.id, { body: "oi" });
+  const asked = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, dm.id, {
+    body: "oi",
+  });
+  const events = fx.listen(dm.id);
   const reported: { code: string; message: string }[] = [];
   await drainOutbox(fx.db, handlers, {
     onError: (_job, error, outcome) => {
@@ -419,6 +425,18 @@ test("its plan's CLI failing: its line says so, and what the CLI said stays in t
     message: words,
   });
   expect(reported).toEqual([{ code: "claude_failed", message: words }]);
+  // The receipt under the person's message says the same, live and on a reload, never only "no AI": another account
+  // of that plan wouldn't make the CLI start there.
+  const handled = {
+    agentId: agent.id,
+    runId: run?.id ?? "",
+    status: "failed",
+    reason: "no_ai",
+    errorCode: "cli_failed",
+  } as const;
+  expect(events).toContainEqual(expect.objectContaining({ type: "message.handled", messageId: asked.id, ...handled }));
+  const listed = (await listMessages(fx.db, fx.owner.id, fx.org.id, dm.id)).find((m) => m.id === asked.id);
+  expect(listed?.receipts?.handled).toEqual([handled]);
 });
 
 test("its turn goes to the runner as the locked-down chat profile, with no checkout and none of the owner's servers", async () => {

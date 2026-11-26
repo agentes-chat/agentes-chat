@@ -4,7 +4,7 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
-import { type HeaderAction, IconButton } from "@/ui";
+import type { HeaderAction } from "@/ui";
 import { openComputer } from "../computer/AgentComputerRow";
 import { useAgentComputer } from "../computer/useAgentComputer";
 import { useDirectory } from "../shared/hooks";
@@ -45,17 +45,6 @@ export function useComputerSays(agentId: string) {
     : "";
 }
 
-/**
- * "Computador" in an agent's DM header, as the web's: for whoever may watch the agent's computer (the
- * profile's entry shows to the same people) once it has one, it opens it full screen. While the agent needs
- * someone there or works on it, a screen reader hears that too.
- */
-export function DmComputerButton({ agentId, onOpen }: { agentId: string; onOpen?: () => void }) {
-  const words = useComputerWords(agentId);
-  if (words === null) return null;
-  return <IconButton icon="laptop" label={words} onPress={() => openDmComputer(agentId, onOpen)} />;
-}
-
 /** The entry's words (with what a screen reader hears of its state), null while there is no computer to open. */
 function useComputerWords(agentId: string) {
   const { t } = useTranslation();
@@ -71,8 +60,10 @@ function openDmComputer(agentId: string, onOpen?: () => void) {
 }
 
 /**
- * The same entry for a bar of the system's own buttons (iOS): the conversation builds its bar's actions, and the hooks
- * that say whether there is a computer to open need the agent, so this tells `onWords` its words, null when none.
+ * "Computador" in an agent's DM header, as the web's: for whoever may watch the agent's computer (the profile's entry
+ * shows to the same people) once it has one, it opens it full screen; while the agent needs someone there or works on
+ * it, a screen reader hears that too. The conversation builds its bar's actions, and the hooks that say whether there
+ * is a computer to open need the agent, so this tells `onWords` its words, null when none.
  */
 export function DmComputerWords({ agentId, onWords }: { agentId: string; onWords: (words: string | null) => void }) {
   const words = useComputerWords(agentId);

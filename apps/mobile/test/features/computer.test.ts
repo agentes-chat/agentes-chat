@@ -232,7 +232,7 @@ describe("the agent's computer full screen on the phone: what its stage shows", 
       "Por privacidade, a tela fica oculta até voltar para a Ada.",
     );
     const card = await Bun.file(new URL("../../src/features/browser/BrowserCard.tsx", import.meta.url).pathname).text();
-    expect(card).toContain('? t("browser.inCard.hiddenHelp", agentGrammar(name))');
+    expect(card).toContain('t("browser.inCard.hiddenHelp", grammar)');
   });
 });
 

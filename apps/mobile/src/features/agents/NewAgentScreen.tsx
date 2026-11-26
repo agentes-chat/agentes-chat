@@ -3,6 +3,7 @@ import {
   ApiError,
   useAgentProposal,
   useAiAccounts,
+  useAiHub,
   useApi,
   useBrainMachines,
   useCatalog,
@@ -21,6 +22,7 @@ import {
 import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
 import { draftLevels, draftMailLevels, suggestedAiText } from "@agenteschat/client/lib/action-cards";
 import { newAgentStart, newAgentStartText } from "@agenteschat/client/lib/agent-setup";
+import { aiChoiceRows } from "@agenteschat/client/lib/ai-choice";
 import {
   brainPickOptions,
   newPlanAccountOption,
@@ -47,7 +49,7 @@ import {
   takenHandles,
 } from "@agenteschat/client/lib/new-agent";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
-import { AUTO, modelChoices, usableModels } from "@agenteschat/client/lib/providers";
+import { modelChoices, usableModels } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { Image } from "expo-image";
 import { useNavigation } from "expo-router";
@@ -71,7 +73,6 @@ import {
   GroupedRow,
   type IconName,
   Locked,
-  ProviderLogo,
   Sky,
   Text,
   useReducedMotion,
@@ -79,7 +80,9 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
-import { newAgentAi, pickedAi } from "../ai/logic";
+import { AiChoiceFields } from "../ai/AiChoice";
+import { choiceText } from "../ai/hub";
+import { chosenAi, newAgentAi, newAgentChoice, pickedAi } from "../ai/logic";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
@@ -89,12 +92,20 @@ import { useOpenDm } from "../new/useOpenDm";
 import { RowBones } from "../roles/parts";
 import { useFailed } from "../routines/hooks";
 import { proposedRoutineWhen } from "../routines/rule";
-import { chooseAction, SettingsPage, useUnsavedGuard } from "../settings/parts";
+import { SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
-import { BottomBar, goBack, PushedHeader, successHaptic, Tile, tapHaptic, useSurface } from "../shared/parts";
+import {
+  BottomBar,
+  FocusLive,
+  goBack,
+  PushedHeader,
+  successHaptic,
+  Tile,
+  tapHaptic,
+  useSurface,
+} from "../shared/parts";
 import { overLimit, TextArea } from "../shared/TextArea";
 import { markArrived } from "./arrival";
-import { closeBrainPick, openBrainPick } from "./brain-pick";
 import { fullLook } from "./edit";
 import { ErrorLine, HandleInput } from "./HandleInput";
 import { ImportPicker, ImportPreview } from "./ImportAgents";
@@ -129,6 +140,9 @@ import { RoleInput } from "./RoleInput";
 import { agentImportNow, closeAgentImport, openAgentImport, resetAgentImport, useAgentImport } from "./useAgentImport";
 
 const INSTRUCTIONS_LIMIT = { max: FIELD_LIMITS.instructions };
+const NEW_AGENT = { kind: "newAgent" } as const;
+/** "Conectar uma IA" at the end of Quem pensa's accounts. */
+const CONNECT = "connect";
 
 /**
  * "Criar agente" on the phone, the web's steps for a thumb, each a screen of its own on the stack (the system's back,
@@ -210,7 +224,7 @@ function FlowStart({
     const proposed = from?.params.draft;
     return startNewAgent({
       what,
-      suggested: suggestAgentName(dir.agents.map((a) => a.name)),
+      suggested: suggestAgentName([...dir.agentById.values()].map((a) => a.name)),
       from,
       channelId,
       accountId,
@@ -254,7 +268,16 @@ interface StepProps {
   tried?: boolean;
 }
 
-function Step({ step, ...props }: StepProps & { step: PhoneStep }) {
+/** A step's page: what lives on it (the agent in its sky, on "who it is") holds still while a step is over it. */
+function Step(props: StepProps & { step: PhoneStep }) {
+  return (
+    <FocusLive>
+      <StepBody {...props} />
+    </FocusLive>
+  );
+}
+
+function StepBody({ step, ...props }: StepProps & { step: PhoneStep }) {
   if (step === "role") return <RoleStep {...props} />;
   if (step === "identity") return <IdentityStep {...props} />;
   if (step === "instructions") return <InstructionsStep {...props} />;
@@ -347,7 +370,7 @@ function StepPage({
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
-      <PushedHeader title={t("newAgent.title")} {...(subtitle ? { subtitle } : {})} solid={false} grouped />
+      <PushedHeader title={t("newAgent.title")} subtitle={subtitle} solid={false} grouped />
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
@@ -580,7 +603,10 @@ function IdentityStep({ d, change = false, tried: triedFirst = false }: StepProp
   };
   const changeName = (value: string) =>
     editNewAgent((now) => ({ name: value, ...(now.handleTouched ? {} : { handle: handleForName(value) }) }));
-  const taken = useMemo(() => takenHandles(dir.agents, [...dir.memberById.values()]), [dir.agents, dir.memberById]);
+  const taken = useMemo(
+    () => takenHandles([...dir.agentById.values()], [...dir.memberById.values()]),
+    [dir.agentById, dir.memberById],
+  );
   const shownName = name.trim() || t("newAgent.previewName");
   const handleIssue = handle || tried ? handleProblem(handle, taken) : null;
   const handleText =
@@ -782,8 +808,7 @@ function ReviewStep({ d }: StepProps) {
     proposedLevels,
     mailLevels,
     withRoutine,
-    picked,
-    useLast,
+    aiPick,
     optionsBefore,
   } = d;
   const proposed = from?.params.draft;
@@ -793,7 +818,7 @@ function ReviewStep({ d }: StepProps) {
   const choices = modelChoices(models.data?.models ?? [], keys, platform.data ?? false);
   const usable = usableModels(choices);
   const start = proposed ? null : newAgentStart(lastSetup.data, { ownerIsMe: true, usable, keys });
-  // Or anything else the agent's page offers ("Quem pensa", the web's model step), from its own screen.
+  // Or anything else "Quem pensa" offers (the one AI choice), picked in place.
   const aiAccounts = useAiAccounts(orgId, !proposed);
   const held = usePlanHold(orgId, org) !== null;
   const brainOptions = brainPickOptions(t, i18n.language, {
@@ -810,10 +835,18 @@ function ReviewStep({ d }: StepProps) {
   const askedPlan = d.accountId ? planAccountOptionOf(brainOptions, d.accountId) : undefined;
   const connectedHere = optionsBefore ? newPlanAccountOption(brainOptions, optionsBefore) : undefined;
   // No last setup to start from: a plan account of mine that can think for it (one connected before I had an agent).
-  const chosen = connectedHere ?? picked ?? askedPlan ?? (proposed || start ? null : (ownPlan ?? null));
-  const thinks = chosen
-    ? pickedAi(chosen.pick, aiAccounts.data?.computers)
-    : newAgentAi(start && useLast ? start : null);
+  const pick = connectedHere ? null : aiPick;
+  const chosen = connectedHere ?? (pick ? null : (askedPlan ?? (proposed || start ? null : (ownPlan ?? null))));
+  const thinks = pick
+    ? chosenAi(pick, start?.autonomy)
+    : chosen
+      ? pickedAi(chosen.pick, aiAccounts.data?.computers)
+      : newAgentAi(start);
+  const choice = pick ?? newAgentChoice(chosen?.pick, chosen ? null : start, usable.size > 0);
+  const { hub, loading: hubLoading } = useAiHub(orgId);
+  const pickRow = pick
+    ? aiChoiceRows(hub, { target: NEW_AGENT, viewerId: meId ?? "", current: pick }).find((r) => r.selected)
+    : undefined;
   const startText = start
     ? newAgentStartText(t, i18n.language, start, {
         models: models.data?.models ?? [],
@@ -821,16 +854,12 @@ function ReviewStep({ d }: StepProps) {
         provider: lastSetup.data?.account?.provider,
       })
     : "";
-  // "Quem pensa" on its own screen: the options as they are when it opens, the choice back here.
-  const pickBrain = () => {
-    openBrainPick({
-      options: brainOptions,
-      value: chosen?.value ?? (start && useLast ? undefined : AUTO),
-      apply: (o) => editNewAgent({ picked: o, useLast: false, optionsBefore: null }),
-    });
-    router.push("/agent-brain");
+  // What it thinks with unless another is picked, in words.
+  const startsOn = chosen?.title ?? (start ? startText : t("brain.auto.label"));
+  const connect = () => {
+    editNewAgent({ optionsBefore: new Set(brainOptions.map((o) => o.value)) });
+    openConnectAi({ forNew: "1" });
   };
-  useEffect(() => () => closeBrainPick(), []);
   // The person left this screen while it was made: it exists, as the toast says, and moving them now would pop or
   // cover wherever they went.
   const left = useRef(false);
@@ -854,7 +883,10 @@ function ReviewStep({ d }: StepProps) {
   const myMail = (proposed?.mail ?? []).filter((m) => m.accountId in mailLevels);
   // Revisar lists what a proposal asked for at any level, so a change can be taken back.
   const listedApps = proposed ? items.filter((i) => i.id in proposedLevels || granted.includes(i)) : granted;
-  const taken = useMemo(() => takenHandles(dir.agents, [...dir.memberById.values()]), [dir.agents, dir.memberById]);
+  const taken = useMemo(
+    () => takenHandles([...dir.agentById.values()], [...dir.memberById.values()]),
+    [dir.agentById, dir.memberById],
+  );
   const shownName = name.trim() || t("newAgent.previewName");
   const g = agentGrammar(name.trim() || t("newAgent.defaultName"));
   const roleName = role && role !== "custom" ? t(`newAgent.roles.${role}.name`) : roleText.trim();
@@ -948,7 +980,7 @@ function ReviewStep({ d }: StepProps) {
       const plan = thinks.plan;
       if (plan) {
         await savePart(failures, async () => {
-          await api.sandbox.setTarget(orgId, agent.id, plan.machineId);
+          if (plan.machineId) await api.sandbox.setTarget(orgId, agent.id, plan.machineId);
           await api.agents.setBrain(orgId, agent.id, plan.input);
         });
       } else if (thinks.contextTokens !== null) {
@@ -976,7 +1008,7 @@ function ReviewStep({ d }: StepProps) {
         markArrived(agent.id);
         // It joined (a personal workspace has no team to join: it is here, ADR 0159), and what it thinks with, under
         // its face: the one note before its conversation opens.
-        const thinksLabel = chosen?.title ?? (start && useLast ? startText : t("brain.auto.label"));
+        const thinksLabel = pickRow ? choiceText(t, pickRow, i18n.language).label : startsOn;
         toast({
           title: isPersonal(org)
             ? t("newAgent.createdTitlePersonal", { name: agent.name })
@@ -1025,7 +1057,7 @@ function ReviewStep({ d }: StepProps) {
       }
     >
       <Locked when={busy}>
-        <StepHead title={t("actionCard.agentProposal.review")} lead={t("mobile.newAgent.reviewLead")} />
+        <StepHead title={t("actionCard.agentProposal.review")} />
         {/* Who it is, first row: a tap opens its name, @ and look, pushed over Revisar. */}
         <GroupedList>
           <GroupedRow
@@ -1065,59 +1097,44 @@ function ReviewStep({ d }: StepProps) {
             </GroupedList>
           </>
         ) : (
-          <>
-            <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
-            <GroupedList>
-              <GroupedRow
-                {...(chosen?.mark
-                  ? { leading: <ProviderLogo id={chosen.mark} size="sm" /> }
-                  : { icon: "key" as const })}
-                label={
-                  chosen
-                    ? chosen.title
-                    : start && useLast
-                      ? t("newAgent.lastSetup", { setup: startText })
-                      : t("brain.auto.label")
-                }
-                labelLines={2}
-                // With a last setup to go back to, the row offers it or the rest (a short menu, its up-down mark);
-                // without, it opens the choices' screen (a chevron).
-                {...(start ? { menu: true } : { chevron: true })}
-                onPress={() =>
-                  start
-                    ? chooseAction(
-                        t("brain.title"),
-                        [
-                          {
-                            label: startText,
-                            checked: !chosen && useLast,
-                            onPress: () => editNewAgent({ picked: null, useLast: true }),
-                          },
-                          { label: t("newAgent.brainPick.other"), onPress: pickBrain },
-                        ],
-                        t("common.cancel"),
-                      )
-                    : pickBrain()
-                }
-              />
-              {held ? null : (
-                <GroupedRow
-                  icon="plus"
-                  label={t("aiAccounts.page.connect")}
-                  onPress={() => {
-                    editNewAgent({ optionsBefore: new Set(brainOptions.map((o) => o.value)) });
-                    openConnectAi({ forNew: "1" });
-                  }}
+          // On a billing hold nothing connects nor thinks before the plan: no choice to make, as on the web.
+          !held && (
+            <>
+              <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
+              {choice && !hub && !hubLoading ? (
+                // An older server has no "Contas de IA" to choose from: what it starts on, said.
+                <GroupedList>
+                  <GroupedRow icon="key" label={startsOn} labelLines={2} />
+                  <GroupedRow icon="plus" label={t("aiAccounts.page.connect")} onPress={connect} />
+                </GroupedList>
+              ) : choice ? (
+                <AiChoiceFields
+                  target={NEW_AGENT}
+                  value={choice}
+                  onChange={(next) => editNewAgent({ aiPick: next, optionsBefore: null })}
+                  extras={[
+                    {
+                      option: {
+                        key: CONNECT,
+                        label: t("aiAccounts.page.connect"),
+                        leading: { kind: "icon", name: "plus" },
+                        section: " ",
+                      },
+                      onPick: connect,
+                    },
+                  ]}
                 />
+              ) : (
+                <GroupedList>
+                  <GroupedRow icon="plus" label={t("aiAccounts.page.connect")} onPress={connect} />
+                </GroupedList>
               )}
-            </GroupedList>
-            {picked?.pick.kind === "connect" && picked.description ? (
-              <GroupedFooter>{picked.description}</GroupedFooter>
-            ) : !held && !thinks.plan ? (
-              // On a key or the workspace's model: the plan is the other way, said once.
-              <GroupedFooter>{t("mobile.newAgent.planHint", g)}</GroupedFooter>
-            ) : null}
-          </>
+              {/* On a key or the workspace's model: the plan is the other way, said once. */}
+              {!choice || choice.brain === "model" ? (
+                <GroupedFooter>{t("mobile.newAgent.planHint", g)}</GroupedFooter>
+              ) : null}
+            </>
+          )
         )}
 
         <GroupedHeader>{t("newAgent.preview.uses")}</GroupedHeader>
@@ -1173,11 +1190,7 @@ function ReviewStep({ d }: StepProps) {
             />
           ) : null}
         </GroupedList>
-        <GroupedFooter>
-          {proposed && listedApps.length + myMail.length > 0
-            ? t("common.joinSentences", { a: t("mobile.settings.access.how"), b: t("newAgent.approvalsNote") })
-            : t("newAgent.approvalsNote")}
-        </GroupedFooter>
+        <GroupedFooter>{t("newAgent.approvalsNote")}</GroupedFooter>
 
         {proposed?.routine ? (
           <>

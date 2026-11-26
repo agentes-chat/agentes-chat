@@ -17,6 +17,7 @@ import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Button,
   Chip,
+  codeAndBold,
   DetailsDialog,
   DetailsSection,
   Dialog,
@@ -269,7 +270,7 @@ export function ItemFields({
       <div className="vlt-fields">
         <Field
           label={t("vault.field.keyName")}
-          error={errors.keyName}
+          error={errors.keyName && codeAndBold(errors.keyName)}
           hint={{
             name: t("common.about", { label: t("vault.field.keyName") }),
             text: errors.keyName || readOnly ? undefined : t("vault.field.keyNameHelp"),
@@ -501,6 +502,8 @@ function ItemDialog({
   const [tried, setTried] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [moving, setMoving] = useState(false);
+  // Only Save locks the form: an access change shows at once and saves behind it.
+  const [saving, setSaving] = useState(false);
   const moveTo: VaultScope = item.scope === "team" ? "personal" : "team";
   const moveLabel = moveTo === "team" ? t(modeKey(org, "vault.move.toTeam")) : t("vault.move.toPersonal");
   const patch = patchOf(item, draft, secret, external);
@@ -511,31 +514,39 @@ function ItemDialog({
   const save = async () => {
     setTried(true);
     if (Object.keys(draftErrors(t, item.kind, draft, secret ?? undefined, secret !== null)).length > 0) return;
+    setSaving(true);
     const saved = await actions.update(item.id, patch);
+    setSaving(false);
     if (!saved) return;
     toast.show(t("vault.item.saved"));
     onClose();
   };
-  const setAccess = async (next: VaultItem["access"]) => {
-    const saved = await actions.update(item.id, { access: next });
-    if (saved) toast.show(t("vault.access.saved"));
-    return saved !== null;
+  // Who has access shows at once and its dialog closes; a refusal puts it back and says why.
+  const setAccess = (next: VaultItem["access"]) => {
+    void actions.update(item.id, { access: next }).then((saved) => {
+      if (saved) toast.show(t("vault.access.saved"));
+    });
+    return true;
   };
   const follow = async (on: boolean) => {
     const saved = await actions.update(item.id, on ? { accessFromConnection: true } : { access: item.access });
     if (saved) toast.show(t("vault.access.saved"));
   };
-  const move = async () => {
-    if (!(await actions.move(item.id, moveTo))) return;
+  // Moved or deleted at once in the list behind, and the dialog closes; a refusal puts it back and says why.
+  const move = () => {
     setMoving(false);
-    toast.show(t("vault.move.moved"));
     onClose();
+    void actions.move(item.id, moveTo).then((moved) => {
+      if (moved) toast.show(t("vault.move.moved"));
+    });
   };
-  const remove = async () => {
-    if (!(await actions.remove(item.id))) return;
+  const remove = () => {
+    const title = item.title;
     setDeleting(false);
-    toast.show(t("vault.item.deleted", { title: item.title }));
     onClose();
+    void actions.remove(item.id).then((removed) => {
+      if (removed) toast.show(t("vault.item.deleted", { title }));
+    });
   };
 
   return (
@@ -572,8 +583,8 @@ function ItemDialog({
             <Button onClick={onClose}>{t("common.cancel")}</Button>
             <Button
               variant="primary"
-              disabled={!dirty || actions.updating || fieldsPending}
-              loading={actions.updating}
+              disabled={!dirty || saving || fieldsPending}
+              loading={saving}
               onClick={() => void save()}
             >
               {t("common.save")}
@@ -585,7 +596,7 @@ function ItemDialog({
       }
     >
       <div className="vlt-layout">
-        <Locked when={actions.updating}>
+        <Locked when={saving}>
           <div className="vlt-details__main">
             {external && editable && <SettingNote icon="plug">{t("vault.item.editIn", { source })}</SettingNote>}
             {item.missing && <SettingNote icon="alert">{t("vault.item.missingText", { source })}</SettingNote>}
@@ -631,7 +642,7 @@ function ItemDialog({
                 scope={item.scope}
                 access={item.access}
                 editable={editable && !item.accessFromConnection}
-                saving={actions.updating}
+                saving={saving}
                 onChange={setAccess}
               >
                 {external && editable && (
@@ -641,11 +652,7 @@ function ItemDialog({
                         ? t("vault.access.follows", { source })
                         : t("vault.access.own", { source })}
                     </span>
-                    <Button
-                      size="sm"
-                      disabled={actions.updating}
-                      onClick={() => void follow(!item.accessFromConnection)}
-                    >
+                    <Button size="sm" disabled={saving} onClick={() => void follow(!item.accessFromConnection)}>
                       {item.accessFromConnection ? t("vault.access.changeHere") : t("vault.access.useConnection")}
                     </Button>
                   </div>
@@ -680,7 +687,7 @@ function ItemDialog({
       >
         <DialogFooter>
           <Button onClick={() => setMoving(false)}>{t("common.cancel")}</Button>
-          <Button variant="primary" loading={actions.moving} disabled={actions.moving} onClick={() => void move()}>
+          <Button variant="primary" onClick={move}>
             {moveLabel}
           </Button>
         </DialogFooter>
@@ -695,7 +702,7 @@ function ItemDialog({
       >
         <DialogFooter>
           <Button onClick={() => setDeleting(false)}>{t("common.cancel")}</Button>
-          <Button variant="danger" loading={actions.removing} disabled={actions.removing} onClick={() => void remove()}>
+          <Button variant="danger" onClick={remove}>
             {t("vault.item.delete")}
           </Button>
         </DialogFooter>

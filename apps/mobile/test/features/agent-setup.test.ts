@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { type SetupRowFacts, setupRow, setupSteps } from "@agenteschat/client/lib/setup-checklist";
 import { setupStepsInSight } from "../../src/features/agents/setup/steps";
 import { pushedByDefault } from "../main-stack";
+import { chatScreenSource } from "./chat-screen-source";
 import { agent, translator } from "./fixtures";
 
 // A new agent's setup checklist on the phone (ADR 0155 §2): the web's words and rules, its own screens.
@@ -30,16 +31,20 @@ test("its rows say what the web's say, in the agent's voice", async () => {
   expect(setupRow(en, "where", false, facts).title).toBe("Join #suporte");
 });
 
-test("who sees it on the phone: who manages agents every step, its owner theirs, the right hand none", () => {
+test("who sees it on the phone: who manages it every step, its owner theirs, the right hand none", () => {
   const leo = agent({ id: "a-leo", name: "Leo", ownerUserId: "u-owner", setup: { role: "sales", done: [] } });
   expect(setupSteps(leo, { meId: "u-admin", admin: true })).toEqual(["ai", "apps", "where", "who", "how"]);
   expect(setupSteps(leo, { meId: "u-owner", admin: false })).toEqual(["ai", "where", "who"]);
+  // How it works is its owner's while they edit it (its `canEdit`, ADR 0085 addendum of 2026-11-17); its apps never.
+  expect(setupSteps(leo, { meId: "u-owner", admin: false, edits: true })).toEqual(["ai", "where", "who", "how"]);
+  // Someone its "Who can edit" names edits it on its page: the checklist is for who sets it up.
+  expect(setupSteps(leo, { meId: "u-editor", admin: false, edits: true })).toEqual([]);
   expect(setupSteps({ ...leo, builtin: "right_hand" }, { meId: "u-admin", admin: true })).toEqual([]);
   expect(setupSteps({ ...leo, setup: null }, { meId: "u-admin", admin: true })).toEqual([]);
 });
 
 test("the DM draws the checklist on top for whoever sets it up, not the first day nor the no-AI line", () => {
-  const chat = src("chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain("const setupIntro = useSetupSteps(dmAgent).length > 0 && !rightHand && !isThread;");
   // No no-AI line over it (nor over the plan hold's).
   expect(chat).toContain("member && !rightHand && !planHeld && !setupIntro");
@@ -113,9 +118,12 @@ test("alone in a personal workspace, nothing asks who else talks to an agent (AD
   expect(setupStepsInSight(steps, { mode: "people" }, true)).toEqual([...steps]);
   expect(setupStepsInSight(steps, { mode: "everyone" }, false)).toEqual([...steps]);
   const card = src("agents/setup/SetupCard.tsx");
+  // One who holds the role that answers for it reads its steps as its owner (ADR 0085, addendum of 2026-11-21).
+  expect(card).toContain("const asOwner = owns(agent) ? { ...agent, ownerUserId: meId } : agent;");
   expect(card).toContain(
-    'setupStepsInSight(setupSteps(agent, { meId, admin: can(org, "manage_agents") }), audienceOf(agent), solo)',
+    "const steps = setupSteps(asOwner, { meId, admin: managesAgent(agent), edits: editsAgent(agent) });",
   );
+  expect(card).toContain("return setupStepsInSight(steps, audienceOf(agent), solo);");
   expect(card).toContain("personal: isPersonal(org),");
 });
 

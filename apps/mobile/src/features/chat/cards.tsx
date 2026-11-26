@@ -1,6 +1,7 @@
 import {
   type AgentQuestion,
   type Approval,
+  type FileConversation,
   type ThreadInfo,
   useApi,
   useApproval,
@@ -8,6 +9,7 @@ import {
   useCardApprovals,
   useDecideApproval,
   useDecideApprovals,
+  usePrefetchConversation,
 } from "@agenteschat/client";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import {
@@ -43,7 +45,7 @@ import {
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { formatTime, nextLabel, whenAt } from "@agenteschat/client/lib/format";
+import { joinNames, nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -56,6 +58,7 @@ import {
   ACT_LINE,
   Button,
   Count,
+  Disclosure,
   HoldButton,
   Icon,
   PixelOrbit,
@@ -79,6 +82,7 @@ import {
   ApproveAlwaysInfo,
   approvalHeadline,
   approvalTitleText,
+  HeldLine,
   hasApprovalPreview,
   useApprovalSource,
   useApproveNow,
@@ -89,14 +93,16 @@ import {
 import { WhenAsksLink } from "../approvals/when-asks";
 import { chatHref } from "../links/logic";
 import { Face } from "../shared/Face";
-import { useColors, useDirectory, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
+import { useColors, useNow, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
+import { approvalOwnerOf, ownerNameIn } from "../shared/owner";
 import { PromptForm } from "../shared/PromptForm";
 import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { type AskAnswer, AskCard, AskFoot, ExpiryLine, useAskStore } from "./asks";
 import { markName, parseInline, threadFaces } from "./logic";
 import { Spans } from "./MessageSpans";
+import { useRowDirectory, useRowMeId, useRowRoles } from "./row-data";
 import { WaitMark } from "./WaitMark";
 
 /**
@@ -149,13 +155,16 @@ function celebrationFor(a: Approval, meId: string | null, color: string): string
  */
 function useApprovalAnswer(a: Approval): AskAnswer | null {
   const { t, i18n } = useTranslation();
-  const meId = useMeId();
-  const dir = useDirectory();
+  const meId = useRowMeId();
+  const dir = useRowDirectory();
   const when = useWhen();
   const cancelAhead = useCancelAhead();
+  const known = useApprovals(useOrgId()).data;
   // Approved by me a moment ago (the card answered on screen): the check bursts once in the agent's tones.
   const celebrate = useRef<string | null>(null);
   if (a.status === "pending") return null;
+  // Approved and waiting for a request asked before it: what for, and what moves it (`HeldLine`).
+  const waitsOn = approvalLine([a], known).get(a.id)?.waitsOn;
   celebrate.current ??= celebrationFor(a, meId, agentLook(dir.anyAgent(a.agentId)).color);
   const scheduled = aheadPhase(a) === "scheduled" && a.runAt;
   const lines = [
@@ -168,16 +177,17 @@ function useApprovalAnswer(a: Approval): AskAnswer | null {
     celebrate: celebrate.current,
     time: a.decidedAt ? when.short(a.decidedAt) : undefined,
     note: lines.join("\n") || null,
-    actions:
-      scheduled && a.canCancel ? (
-        <Button
-          variant="ghost"
-          size="card"
-          label={t("approval.ahead.cancel")}
-          loading={cancelAhead.pending}
-          onPress={() => cancelAhead.cancel(a.id)}
-        />
-      ) : null,
+    actions: waitsOn ? (
+      <HeldLine approval={a} waitsOn={waitsOn} />
+    ) : scheduled && a.canCancel ? (
+      <Button
+        variant="ghost"
+        size="card"
+        label={t("approval.ahead.cancel")}
+        loading={cancelAhead.pending}
+        onPress={() => cancelAhead.cancel(a.id)}
+      />
+    ) : null,
   };
 }
 
@@ -192,12 +202,14 @@ function useApprovalAnswer(a: Approval): AskAnswer | null {
 function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
+  const roles = useRowRoles();
   const c = useColors();
   const toast = useToast();
   const asks = useAskStore();
   const one = useDecideApproval(orgId);
   const all = useDecideApprovals(orgId);
+  const known = useApprovals(orgId).data;
   // Which runs are unfolded, by `runKeys`: one stays open while its requests are decided, the card reshaping or not.
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const first = items[0];
@@ -206,15 +218,16 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const g = genderOf(name);
   const waiting = items.filter((a) => a.status === "pending");
   const { ids, waiting: count, blocked } = approveAllScope(items);
-  const ownerId = first.ownerUserId ?? dir.agentById.get(first.agentId)?.ownerUserId ?? null;
-  const owner = approvalGroupWaitsFor(items, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
+  // The owner it was asked under, else its agent's: a person, or a role by its name (ADR 0085, addendum of 2026-11-21).
+  const ownerOf = approvalOwnerOf(first, dir.agentById.get(first.agentId));
+  const owner = approvalGroupWaitsFor(items, ownerNameIn(ownerOf, dir.memberById, roles));
   const deadline = cardDeadline(items);
   const leadItem = waiting[0] ?? first;
   const decider = waiting.find((a) => a.canDecide);
   const always = approveAlwaysOn(items);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
-  const line = approvalLine(items);
+  const line = approvalLine(items, known);
   const [only] = runs;
   const single = runs.length === 1 && only && only.length > 1 ? only : null;
   const busy = one.isPending || all.isPending;
@@ -464,8 +477,9 @@ function ApprovalGroupItem({
   onAlways: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const meId = useMeId();
-  const dir = useDirectory();
+  const when = useWhen();
+  const meId = useRowMeId();
+  const dir = useRowDirectory();
   const c = useColors();
   const reduced = useReducedMotion();
   const cancelAhead = useCancelAhead();
@@ -497,7 +511,7 @@ function ApprovalGroupItem({
             <Text variant="footnote" tone="muted">
               {[
                 decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
-                a.decidedAt && formatTime(i18n.language, a.decidedAt),
+                a.decidedAt && when.time(a.decidedAt),
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -586,16 +600,12 @@ function ApprovalGroupItem({
                 {[
                   decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
                   scheduled && t("approval.ahead.scheduled", { when: nextLabel(i18n.language, scheduled) }),
-                  place?.waitsOn
-                    ? t("approval.line.after", {
-                        // With its place on the card: two requests of one kind tell apart by it ("1 de 2").
-                        title: `${approvalTitleText(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
-                      })
-                    : a.result?.notRunAfter && t("approval.line.notRun"),
+                  !place?.waitsOn && a.result?.notRunAfter && t("approval.line.notRun"),
                 ]
                   .filter(Boolean)
                   .join(" · ")}
               </Text>
+              {place?.waitsOn ? <HeldLine approval={a} waitsOn={place.waitsOn} /> : null}
               {scheduled && a.canCancel ? (
                 <View style={styles.cancelAhead}>
                   <Button
@@ -624,12 +634,16 @@ function ApprovalGroupItem({
  */
 function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const { t, i18n } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
+  const roles = useRowRoles();
   const asks = useAskStore();
   const origin = useOriginShort(a);
   const { org } = useOrg();
-  const ownerId = a.ownerUserId ?? dir.agentById.get(a.agentId)?.ownerUserId ?? null;
-  const owner = approvalWaitsFor(a, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
+  // The owner it was asked under, else its agent's: a person, or a role by its name (ADR 0085, addendum of 2026-11-21).
+  const owner = approvalWaitsFor(
+    a,
+    ownerNameIn(approvalOwnerOf(a, dir.agentById.get(a.agentId)), dir.memberById, roles),
+  );
   const requester = requesterDecidesLine(t, a);
   // The same approving as Atividade's card: the haptic, the toast saying what follows; refusing asks once, in the
   // system's alert, with the reason optional.
@@ -738,8 +752,8 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
   const { t, i18n } = useTranslation();
   const api = useApi();
   const orgId = useOrgId();
-  const meId = useMeId();
-  const dir = useDirectory();
+  const meId = useRowMeId();
+  const dir = useRowDirectory();
   const c = useColors();
   const toast = useToast();
   const sheet = useSheet();
@@ -861,7 +875,7 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
                     style={[styles.optBox, { backgroundColor: on ? c.ink : c.sunken }]}
                     contentStyle={styles.opt}
                   >
-                    <Text variant="callout" style={[styles.optText, { color: on ? c.bg : c.ink }]}>
+                    <Text variant="subhead" style={[styles.optText, { color: on ? c.bg : c.ink }]}>
                       {choice}
                     </Text>
                   </PressScale>
@@ -875,7 +889,7 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
                 style={[styles.optBox, styles.other, { borderColor: c.line2 }]}
                 contentStyle={styles.opt}
               >
-                <Text variant="callout" tone="muted">
+                <Text variant="subhead" tone="muted" style={styles.optText}>
                   {t("ask.otherAnswer")}
                 </Text>
               </PressScale>
@@ -911,7 +925,7 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
 export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const surface = useSurface();
   const when = useWhen();
   const now = useNow(WORK_TICK_MS);
@@ -921,8 +935,11 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   const tone = state ? threadWorkTone(state) : null;
   // A return says when it comes ("Retorno às 00:32"), never for how long.
   const held = state && state !== "later" ? workTime(i18n.language, thread.since, now) : null;
+  // From the touch on: its replies load while the finger is down, so it opens on them, at its end.
+  const prefetch = usePrefetchConversation(useOrgId());
   return (
     <PressScale
+      onPressIn={() => prefetch(thread.channelId, thread.id)}
       onPress={() => router.push(chatHref(thread.channelId, thread.id))}
       accessibilityRole="button"
       accessibilityLabel={t("mobile.chat.replies", { count: thread.replyCount })}
@@ -942,13 +959,13 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
       </View>
       {thread.replyCount > 0 ? (
         <>
-          <Count value={thread.replyCount} size={15} />
-          <Text variant="small" tone="ink2" style={styles.bold}>
+          <Count value={thread.replyCount} size={13} />
+          <Text variant="label" tone="ink2">
             {t("mobile.chat.repliesWord", { count: thread.replyCount })}
           </Text>
         </>
       ) : (
-        <Text variant="small" tone="ink2" style={styles.bold}>
+        <Text variant="label" tone="ink2">
           {t("mobile.chat.thread")}
         </Text>
       )}
@@ -962,7 +979,7 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
             <Icon name="clock" size={14} color={c.faint} />
           )}
           <Text
-            variant="small"
+            variant="footnote"
             numberOfLines={1}
             style={[styles.bold, { color: tone === "working" ? c.agent : tone === "you" ? c.amberInk : c.muted }]}
           >
@@ -970,7 +987,7 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
           </Text>
         </View>
       ) : null}
-      <Text variant="small" tone="faint" numberOfLines={1} style={styles.shrink}>
+      <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.shrink}>
         {thread.state === "closed"
           ? ` · ${t("mobile.chat.closed")}`
           : state
@@ -979,7 +996,104 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
               : ""
             : ` · ${when.short(thread.lastActivityAt)}`}
       </Text>
-      <Icon name="right" size={15} color={c.faint} />
+      <Disclosure />
+    </PressScale>
+  );
+}
+
+/**
+ * Under a picture, a video or a PDF posted in a conversation, once it has comments (ADR 0208): who commented,
+ * "3 comments on the image" and when, the look of a thread's link; a tap opens the file, its conversation under it.
+ */
+export function FileCommentsLink({
+  talk,
+  media,
+  onPress,
+}: {
+  talk: Pick<FileConversation, "count" | "lastAt" | "participants">;
+  media: "image" | "video" | "pdf";
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const surface = useSurface();
+  const when = useWhen();
+  const faces = threadFaces(talk.participants, 2);
+  const label = t(`files.comments.line.${media}` as "files.comments.line.image", { count: talk.count });
+  return (
+    <PressScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
+      fill={false}
+      style={[styles.tlinkBox, surface]}
+      contentStyle={styles.tlink}
+    >
+      <View style={styles.faces}>
+        {faces.map((f, i) => (
+          <View key={`${f.type}:${f.id}`} style={i > 0 ? styles.overlap : undefined}>
+            <Face who={f} size={20} live={false} />
+          </View>
+        ))}
+      </View>
+      <Text variant="label" tone="ink2" numberOfLines={1} style={styles.shrink}>
+        {label}
+      </Text>
+      {talk.lastAt ? (
+        <Text variant="footnote" tone="faint" numberOfLines={1}>
+          {` · ${when.short(talk.lastAt)}`}
+        </Text>
+      ) : null}
+      <Disclosure />
+    </PressScale>
+  );
+}
+
+/**
+ * Under a message of a channel whose agents reply in threads (ADR 0214), before its thread has a reply: "Ada is
+ * replying in the thread", opening it. The thread's own link takes its place with the first reply.
+ */
+export function ThreadReplyingLink({
+  channelId,
+  threadId,
+  agentIds,
+}: {
+  channelId: string;
+  threadId: string;
+  agentIds: string[];
+}) {
+  const { t } = useTranslation();
+  const dir = useRowDirectory();
+  const surface = useSurface();
+  const label = t("threads.line.replying", {
+    count: agentIds.length,
+    names: joinNames(
+      agentIds.map((id) => dir.agentById.get(id)?.name ?? ""),
+      t,
+    ),
+  });
+  return (
+    <PressScale
+      onPress={() => router.push(chatHref(channelId, threadId))}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
+      fill={false}
+      style={[styles.tlinkBox, surface]}
+      contentStyle={styles.tlink}
+    >
+      <View style={styles.faces}>
+        {agentIds.slice(0, 2).map((id, i) => (
+          <View key={id} style={i > 0 ? styles.overlap : undefined}>
+            <Face who={{ type: "agent", id }} size={20} live={false} />
+          </View>
+        ))}
+      </View>
+      <PixelOrbit color={agentLook(dir.agentById.get(agentIds[0] ?? "")).color} size={14} />
+      <Text variant="label" tone="ink2" numberOfLines={1} style={styles.shrink}>
+        {label}
+      </Text>
+      <Disclosure />
     </PressScale>
   );
 }
@@ -1034,7 +1148,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  optText: { flexShrink: 1 },
+  // An option's word, as every card's options: the card's text (15), medium.
+  optText: { flexShrink: 1, fontWeight: "500" },
   other: { backgroundColor: "transparent", borderWidth: 1 },
   tlinkBox: { alignSelf: "flex-start", maxWidth: "100%", borderRadius: 10 },
   tlink: {

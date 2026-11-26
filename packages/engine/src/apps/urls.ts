@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { docsUrl } from "@agenteschat/i18n/docs";
 import { isPublicHostName, publicHostAddress, type ResolveHost, resolveHostDns } from "../net-guard";
+import { withoutTrailingSlashes } from "../url-text";
 
 /**
  * AI apps (ADR 0119): the addresses, scopes and token shapes of this server as an MCP server and its own
@@ -8,7 +9,10 @@ import { isPublicHostName, publicHostAddress, type ResolveHost, resolveHostDns }
  * address shown in Settings never drift apart.
  */
 
-/** Each scope brings the ones before it: `write` sends tasks, `manage` creates agents, routines and skills. */
+/**
+ * Each scope brings the ones before it: `write` sends tasks, `manage` creates agents, routines and skills and writes
+ * wiki pages.
+ */
 export const APP_SCOPES = ["read", "write", "manage"] as const;
 export type AppScope = (typeof APP_SCOPES)[number];
 /** The access a person picks on the consent page or for a token: its widest scope. */
@@ -46,7 +50,7 @@ export const APP_LIMITS = {
 
 /** The server's base address with no trailing slash: the issuer, and the base of every other address. */
 export function appsUrls(publicUrl: string) {
-  const issuer = publicUrl.replace(/\/+$/, "");
+  const issuer = withoutTrailingSlashes(publicUrl);
   return {
     issuer,
     /** What people paste into their app, and the OAuth resource identifier. */
@@ -125,7 +129,7 @@ export async function reachableFromInternet(
   } catch {
     return false;
   }
-  const resolved = await publicHostAddress(host, resolve);
+  const resolved = await publicHostAddress(host, resolve, { internet: true });
   if (!resolved.ok && resolved.reason === "unreachable") return true;
   reachable.set(publicUrl, resolved.ok);
   return resolved.ok;

@@ -12,6 +12,7 @@ import {
   createAgentStyleToolSource,
   createCoAuthorToolSource,
   createFeedbackToolSource,
+  createSayNowToolSource,
   createSetStatusToolSource,
   createSetupToolSource,
   createUsageToolSource,
@@ -21,24 +22,27 @@ import {
   grantScopes,
   HOW_YOU_WORK,
   openDm,
+  SAY_NOW_LINE,
   type ToolSource,
   WORK_IN_BACKGROUND_LINE,
 } from "../src";
 import { setup } from "../test/fixtures";
 
 /**
- * The autonomy and proactivity rules every run with tools reads, word for word (ADR 0037, 0097, 0113, 0120, 0121).
- * A trim may move them, never change them.
+ * The autonomy and proactivity rules every run with tools reads, word for word (ADR 0037, 0097, 0113, 0120, 0121,
+ * 0207). A trim may move them, never change them.
  */
 export const AUTONOMY_PHRASES: string[] = [
   HOW_YOU_WORK,
   finishWhatYouStart(true),
+  // A person's run in a conversation people read as it goes: every scripted turn is one.
+  SAY_NOW_LINE,
   WORK_IN_BACKGROUND_LINE,
   CONTINUE_THE_CONVERSATION,
   ASK_APPROVALS_TOGETHER,
   ASK_CHOICES_LINE,
   "- Something to use rather than read (a what-if, options to see side by side, a view to filter, a short form): show it yourself with show_block, inside your reply; what the person picks comes back to you. A group deciding together: start_poll.",
-  '- When the message only acknowledges or thanks and needs no answer ("thanks", "perfect", "ok, go ahead", "I\'ll wait"; in Portuguese "valeu", "perfeito", "ok, pode seguir", "aguardo"), don\'t reply: react with one fitting emoji using `react` and end your turn with an empty reply',
+  '- When the message only acknowledges or thanks and needs no answer ("thanks", "perfect", "I\'ll wait"; in Portuguese "valeu", "perfeito", "aguardo"), don\'t reply: react with one fitting emoji using `react` and end your turn with an empty reply',
   "- When a request is still ambiguous after you have looked with your tools, or when the decision is really the person's (a product choice, a priority), ask one short clarifying question with `ask_user`",
   "- Actions marked sensitive (merge, deploy, rollback and similar) wait for a person's approval; you will be told the outcome.",
   "When you need another agent's answer for the task, ask it with `ask_agent`; to hand one work, use `tell_agent`, giving the whole job to the agent that owns it with everything it needs. Do this instead of saying you can't or sending the person to it.",
@@ -77,6 +81,19 @@ export const TURNS: ScriptedTurn[] = [
     where: "dm",
     body: "oi",
     listed: ["react", "ask_user", "search_context", "remember"],
+  },
+  {
+    id: "say-now",
+    title: "Web research that takes a while: one line first, then the work",
+    where: "channel",
+    body: "pesquisa na web quanto custa hoje lançar um satélite pequeno em órbita baixa e compara as opções",
+    listed: ["say_now", "web_search", "web_fetch"],
+    wants: ["say_now"],
+    // Only the line: a web call here would reach the real web, and the CI run of these turns has no network.
+    first: {
+      chunks: [],
+      toolUses: [{ name: "say_now", input: { text: "Bora! Vou pesquisar os preços e já te trago a comparação." } }],
+    },
   },
   {
     id: "long-work",
@@ -233,6 +250,8 @@ export async function turnsWorld(
     workTools: true,
     toolsOnDemand: true,
     toolSources: [
+      // The line before slow work (ADR 0207), listed in every person's run as in production.
+      createSayNowToolSource({}),
       createUsageToolSource(),
       createSetStatusToolSource({}),
       createAgentStyleToolSource(),

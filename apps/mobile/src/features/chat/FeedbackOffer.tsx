@@ -6,9 +6,9 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { LineIcon, ROW_CARD_INSET, RowAction, Text, useTheme, useToast } from "@/ui";
-import { useMeId } from "../shared/hooks";
 import { boldRuns } from "./actions";
-import { useCardTop } from "./look";
+import { useCardTop, useMessageCardFrame } from "./look";
+import { useRowMeId } from "./row-data";
 
 /**
  * A report about the app the agent offered on its own (`meta.feedbackOffer`, ADR 0160 §12) on the phone: under its
@@ -21,7 +21,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { orgId, org } = useOrg();
-  const meId = useMeId();
+  const meId = useRowMeId();
   const auth = useAuthConfig().data;
   // Read by the agentes.chat team: on its own servers, and from one whose operator gave no address.
   const cloud = auth?.cloud === true || auth?.feedbackRelay === true;
@@ -32,6 +32,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
   const [open, setOpen] = useState(false);
   // A card under the message's words: the body's card gap above it, as every card in a message.
   const cardTop = useCardTop();
+  const card = useMessageCardFrame();
   if (!offer) return null;
   // A refusal says why: the card otherwise stayed as it was, as if the tap had done nothing.
   const failed = (error: unknown) => toast({ title: errorText(t, error), icon: "x" });
@@ -48,10 +49,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
       : null
     : t(cloud ? "feedback.offer.goesCloud" : "feedback.offer.goesServer");
   return (
-    <View
-      accessibilityLabel={t("feedback.offer.group")}
-      style={[styles.one, cardTop, { backgroundColor: colors.raised, borderColor: colors.line2 }]}
-    >
+    <View accessibilityLabel={t("feedback.offer.group")} style={[styles.one, cardTop, card.style]}>
       <View style={styles.tx}>
         <LineIcon name={sent ? "check" : "flag"} size={15} color={colors.muted} variant="small" />
       </View>
@@ -69,7 +67,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
             )}
           </Text>
           {under ? (
-            <Text variant="caption" tone="faint" style={styles.detail}>
+            <Text variant="footnote" tone="faint" style={styles.detail}>
               {under}
             </Text>
           ) : null}
@@ -79,7 +77,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
             <Text variant="small" tone="ink2">
               {offer.text}
             </Text>
-            <Text variant="caption" tone="faint" style={styles.detail}>
+            <Text variant="footnote" tone="faint" style={styles.detail}>
               {t("feedback.offer.answer")}
             </Text>
           </View>

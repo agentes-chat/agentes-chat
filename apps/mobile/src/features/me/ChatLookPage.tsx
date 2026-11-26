@@ -57,7 +57,7 @@ import {
   MSG_INSET,
   nameInk,
 } from "../chat/logic";
-import { lookRows, RowLookContext, useRowLook } from "../chat/look";
+import { liftedEdge, lookRows, RowLookContext, useRowLook } from "../chat/look";
 import { MessageText } from "../chat/MessageText";
 import { wallpaperHrefs, wallpaperKey } from "../chat/wallpaper-logic";
 import { Face } from "../shared/Face";
@@ -86,14 +86,14 @@ interface Line {
  */
 function PreviewRow({ line, first, dm, color }: { line: Line; first: boolean; dm: boolean; color: AgentColorName }) {
   const c = useColors();
-  const { scheme, shadows } = useTheme();
+  const { scheme } = useTheme();
   const dir = useDirectory();
   const meId = useMeId();
   const look = useRowLook();
   const { style, tone } = look;
-  // Over a background, as the conversation draws it (`MessageRow`): the other side lifted, both with a light shadow.
+  // Over a background, as the conversation draws it (`MessageRow`): the other side lifted, both with its light edge.
   const lifted = look.wallpaper === true;
-  const bubbleShadow = lifted ? { boxShadow: shadows.e1 } : null;
+  const bubbleShadow = lifted ? liftedEdge(scheme) : null;
   const text = look.text ?? CHAT_TEXT[DEFAULT_TEXT_SIZE];
   const rhythm = CHAT_RHYTHM[style];
   const name = line.mine ? dir.nameOf({ type: "person", id: meId }) : SAMPLE_NAME;
@@ -155,11 +155,6 @@ function PreviewRow({ line, first, dm, color }: { line: Line; first: boolean; dm
   );
   return (
     <View style={[styles.row, bubbled && lookRows.bubblesRow, compact && lookRows.compactRow, { marginTop: top }]}>
-      {compact ? (
-        <Text variant="caption" tone="faint" style={lookRows.compactClock}>
-          {line.time}
-        </Text>
-      ) : null}
       {faced ? (
         <View style={[styles.slot, bubbled && lookRows.bubblesSlot, compact && lookRows.compactSlot]}>{face}</View>
       ) : null}
@@ -549,7 +544,7 @@ export function ChatLookPage() {
   const dm = kind === "dms";
   const prefs = org?.chatPrefs;
   // A personal workspace's channels are its group conversations, in bubbles until the person picks (ADR 0159).
-  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org));
+  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org), "phone");
   const textSize = textSizeOf(prefs);
   // While the slider moves the preview follows it; the size is saved when the thumb lands.
   const [sizeDraft, setSizeDraft] = useState<ChatTextSize | null>(null);

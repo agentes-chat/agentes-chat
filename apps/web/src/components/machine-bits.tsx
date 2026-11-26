@@ -23,9 +23,15 @@ export function MachineIcon({ machineId, size = 14 }: { machineId: string | null
   return m ? <ComputerIcon kind={computerKind(m.os)} size={size} /> : <Icon name="computer" size={size} />;
 }
 
-/** Online / Offline, with an icon (never a colored dot). */
-export function MachineChip({ online }: { online: boolean }) {
+/** Online / Offline, with an icon (never a colored dot); away moving to another server (`moving`), says so. */
+export function MachineChip({ online, moving = false }: { online: boolean; moving?: boolean }) {
   const { t } = useTranslation();
+  if (!online && moving)
+    return (
+      <Chip icon="swap" className="machine-chip">
+        {t("machines.moving.short")}
+      </Chip>
+    );
   return (
     <Chip icon={online ? "check" : "dash"} className="machine-chip">
       {online ? t("machines.online") : t("machines.offline")}

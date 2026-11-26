@@ -1,4 +1,5 @@
 import type {
+  Agent,
   AppNotification,
   Channel,
   DirectMessage,
@@ -9,7 +10,7 @@ import type {
   ThreadActor,
   ThreadInfo,
 } from "@agenteschat/client";
-import { hiddenAgentIds, hiddenDm } from "@agenteschat/client/lib/audience";
+import { hiddenAgentIds, hiddenDm, opensDm } from "@agenteschat/client/lib/audience";
 import { dmActivityAt } from "@agenteschat/client/lib/recent";
 import type { ServerCheck, ServerProblem } from "@agenteschat/client/lib/server";
 import { looksUnread, unreadTotal } from "@agenteschat/client/lib/unread";
@@ -38,8 +39,8 @@ export type ConversationRow =
       channelId: string;
       name: string;
       topic: string;
-      /** Its sidebar category (ADR 0080); null: none. */
-      categoryId: string | null;
+      /** Its sector (ADR 0240); null: none. */
+      groupId: string | null;
       last: LastLine | null;
       at: string | null;
       /** New messages (0 while I muted it: it never looks unread). */
@@ -194,7 +195,7 @@ export function buildConversations(input: {
       channelId: c.id,
       name: c.name,
       topic: c.topic,
-      categoryId: c.categoryId ?? null,
+      groupId: c.groupId ?? null,
       last: last
         ? {
             author: { type: last.authorType, id: last.authorId },
@@ -349,14 +350,16 @@ export const withoutQuietGeneral = (rows: ConversationRow[], hide: boolean) =>
 
 /**
  * The agents to start a conversation with, as rows: each a DM with no channel (`channelId: ""`), opened on press (a
- * pinned agent never talked to, on the home's strip). Agents hidden from me are left out.
+ * pinned agent never talked to, on the home's strip). Agents hidden from me are left out, and so is any whose DM the
+ * server wouldn't open for me (`opensDm`): one I only edit, or someone's private agent under a mere "Edit agents" (ADR
+ * 0085 addendum of 2026-11-17).
  */
 export function agentStarters(
-  agents: readonly { id: string; name: string; handle: string }[],
+  agents: readonly Pick<Agent, "id" | "name" | "handle" | "canTalk" | "canManage">[],
   hidden: ReadonlySet<string> = new Set(),
 ): ConversationRow[] {
   return agents
-    .filter((a) => !hidden.has(a.id))
+    .filter((a) => !hidden.has(a.id) && opensDm(a))
     .map((a) => ({
       kind: "dm" as const,
       key: `a:${a.id}`,
@@ -515,3 +518,89 @@ export function serverTrouble(input: {
   if (problem === "unreachable" && !input.tailnet) return { kind: "down" };
   return { kind: "problem", problem };
 }
+
+/** Conversas' two ways to list a team's conversations: by latest activity, or by the agents' sectors (ADR 0083). */
+export type HomeView = "recent" | "sectors";
+
+export const homeViewOf = (stored: string | null): HomeView => (stored === "sectors" ? "sectors" : "recent");
+
+/** One section of Setores: a sector's conversations, the agents in none, the direct messages, the other channels. */
+export interface HomeSectorSection {
+  /** Remembered collapsed by it: `sector:<id>`, or `agents`, `dms`, `channels`. */
+  key: string;
+  kind: "sector" | "agents" | "dms" | "channels";
+  /** The sector's own (its name, color and icon); null for the other three. */
+  group: { id: string; name: string; color?: string | undefined; icon?: string | null | undefined } | null;
+  /** A sector's agents first, then its channels (from `channelsFrom`). */
+  rows: ConversationRow[];
+  /** Where a sector's channels start in `rows`, after a hairline (ADR 0240); `rows.length` when it has none. */
+  channelsFrom: number;
+}
+
+/**
+ * Setores, as the web's sidebar (ADR 0083, ADR 0240): each sector with its agents' conversations, then its channels, in
+ * the workspace's order of sectors; then the agents in no sector, the direct messages with people and the channels in
+ * no sector. Threads and missions stay in Recentes and Threads. Each part is by latest activity (`recentRows`); an
+ * empty section is left out.
+ */
+export function sectorSections(
+  rows: readonly ConversationRow[],
+  groups: readonly { id: string; name: string; agentIds: readonly string[]; color?: string; icon?: string | null }[],
+): HomeSectorSection[] {
+  const ordered = recentRows([...rows]);
+  const agentRows = ordered.filter((r) => r.kind === "dm" && r.with.type === "agent");
+  const channelRows = ordered.filter((r) => r.kind === "channel");
+  const agentOf = (r: ConversationRow) => (r.kind === "dm" ? r.with.id : "");
+  const sectorOf = (r: ConversationRow) => (r.kind === "channel" ? r.groupId : null);
+  const known = new Set(groups.map((g) => g.id));
+  const placed = new Set<string>();
+  const sections: HomeSectorSection[] = groups.map((g) => {
+    const ids = new Set(g.agentIds);
+    const mine = agentRows.filter((r) => ids.has(agentOf(r)) && !placed.has(r.key));
+    for (const r of mine) placed.add(r.key);
+    const channels = channelRows.filter((r) => sectorOf(r) === g.id);
+    return {
+      key: `sector:${g.id}`,
+      kind: "sector",
+      group: { id: g.id, name: g.name, color: g.color, icon: g.icon ?? null },
+      rows: [...mine, ...channels],
+      channelsFrom: mine.length,
+    };
+  });
+  const rest = (kind: "agents" | "dms" | "channels", list: ConversationRow[]): HomeSectorSection => ({
+    key: kind,
+    kind,
+    group: null,
+    rows: list,
+    channelsFrom: kind === "channels" ? 0 : list.length,
+  });
+  sections.push(
+    rest(
+      "agents",
+      agentRows.filter((r) => !placed.has(r.key)),
+    ),
+    rest(
+      "dms",
+      ordered.filter((r) => r.kind === "dm" && r.with.type !== "agent"),
+    ),
+    rest(
+      "channels",
+      channelRows.filter((r) => {
+        const g = sectorOf(r);
+        return !g || !known.has(g);
+      }),
+    ),
+  );
+  return sections.filter((s) => s.rows.length > 0);
+}
+
+/**
+ * Closed, a sector stays one line but keeps in sight what calls on the person (ADR 0083 §7, ADR 0240): its agents at
+ * work or that wrote to them, its unread channels.
+ */
+export const keptWhenClosed = (r: ConversationRow) =>
+  r.unread > 0 || (r.kind === "channel" && r.mentions > 0) || (r.kind === "dm" && r.working === true);
+
+/** A closed sector's one count: the unread across its agents' DMs and its channels (a channel's mentions while muted). */
+export const closedUnread = (rows: readonly ConversationRow[]) =>
+  rows.reduce((n, r) => n + (r.unread > 0 ? r.unread : r.kind === "channel" ? r.mentions : 0), 0);

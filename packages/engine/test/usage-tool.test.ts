@@ -8,6 +8,7 @@ import {
   createUsageToolSource,
   insertMessage,
   recordPlanUsage,
+  resyncBudgetCounter,
   type ToolContext,
   USAGE_TOOL,
 } from "../src";
@@ -166,6 +167,20 @@ test("at the limit: the plan says until when; unknown windows say so instead of 
   expect(limited).toContain("- 5 hours: 100% used, resets ");
   expect(limited).toMatch(/\nAt the limit until [^\n]+\./);
 
+  // A week a turn's event didn't name for 7 hours may have reset early: its age, no renewal to plan on.
+  await f.db
+    .update(schema.machineAccounts)
+    .set({
+      usage: usage([
+        { kind: "five_hour", usedPercent: 20, resetsAt: hours(2) },
+        { kind: "seven_day", usedPercent: 73, resetsAt: hours(72), at: hours(-7) },
+      ]),
+    })
+    .where(eq(schema.machineAccounts.id, PESSOAL));
+  const stale = await check(await runFor(f.agent.id, f.owner.id));
+  expect(stale).toContain("- Week: 73% used when last read 7 h ago; it may have reset since.");
+  expect(stale).toContain("- 5 hours: 20% used, resets ");
+
   await f.db.update(schema.machineAccounts).set({ usage: null }).where(eq(schema.machineAccounts.id, PESSOAL));
   const unknown = await check(await runFor(f.agent.id, f.owner.id));
   expect(unknown).toContain("Its limits aren't known yet");
@@ -181,8 +196,8 @@ test("on the API: how much of its budget it used, for an admin and a member alik
     { name: "Atlas", handle: "atlas", role: "Ops", instructions: "Run ops.", credentialId: f.agent.credentialId },
     { model: "claude-sonnet-5-5" },
   );
-  const spend = (agentId: string, costNanoUsd: number, inputTokens: number) =>
-    f.db.insert(schema.usageRecords).values({
+  const spend = async (agentId: string, costNanoUsd: number, inputTokens: number) => {
+    await f.db.insert(schema.usageRecords).values({
       orgId: f.org.id,
       agentId,
       kind: "agent",
@@ -193,6 +208,9 @@ test("on the API: how much of its budget it used, for an admin and a member alik
       outputTokens: 0,
       costNanoUsd,
     });
+    // The gateway adds each call to the agent's month counter, which the budget is read from.
+    await resyncBudgetCounter(f.db, f.org.id, agentId);
+  };
   await spend(f.agent.id, 2_000_000_000, 1_000);
   await spend(atlas.id, 10_000_000_000, 9_000);
 

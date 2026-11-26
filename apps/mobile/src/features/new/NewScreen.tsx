@@ -1,6 +1,6 @@
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { markTerms } from "@agenteschat/client/lib/search-filters";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { type AgentPresetColor, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
 import { useTrueSheetNavigation } from "@lodev09/react-native-true-sheet/navigation/expo-router";
 import { useIsFocused } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -24,7 +24,6 @@ import {
   GroupedHeader,
   GroupedList,
   GroupedRow,
-  Icon,
   type IconName,
   PixelOrbit,
   SheetBar,
@@ -35,6 +34,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { busyAgents } from "../agents/logic";
+import { useCreateLive } from "../live-files/shared/useCreateLive";
 import { AgentFace, Face } from "../shared/Face";
 import { useDirectory, useMeId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -82,8 +82,9 @@ export function NewScreen() {
   // No words: the agents in the order you talk to them; words: the matches.
   const agents = typed ? found.agents : recent;
   const people = found.people;
-  const ownsAgent = Boolean(meId) && dir.agents.some((a) => a.ownerUserId === meId);
-  const items = createItems(org, { ownsAgent });
+  // Some agent this person may make a routine for (`createsRoutinesFor`: they set up its routines and it answers them).
+  const createsRoutines = dir.agents.some((a) => createsRoutinesFor(a));
+  const items = createItems(org, { createsRoutines });
   const invite = !typed && items.includes("invite");
 
   const talkTo = (agentId: string) => void openDm({ agentId }, { replace: true });
@@ -200,7 +201,7 @@ export function NewScreen() {
                   ))}
                   {invite ? (
                     <GroupedRow
-                      leading={<TintTile icon="members" color="teal" />}
+                      icon="members"
                       label={t("members.inviteTitle")}
                       sub={t("mobile.new.inviteHint")}
                       chevron
@@ -226,22 +227,30 @@ export function NewScreen() {
   );
 }
 
-/** Each thing to start has a color of its own, so it is found without reading. */
-const CREATE_LOOK: Record<Exclude<CreateItem, "invite">, { icon: IconName; color: AgentPresetColor }> = {
-  agent: { icon: "agent", color: "violet" },
-  channel: { icon: "hash", color: "sky" },
-  task: { icon: "checkc", color: "green" },
-  routine: { icon: "clock", color: "amber" },
-  wiki: { icon: "file", color: "graphite" },
+/**
+ * Each thing to start on the system Settings' tile (`IconTile`): its color comes with its icon (`TILE_TINTS`), so it is
+ * found without reading and reads the same on every screen.
+ */
+const CREATE_ICON: Record<Exclude<CreateItem, "invite">, IconName> = {
+  agent: "agent",
+  channel: "hash",
+  task: "checkc",
+  routine: "clock",
+  wiki: "file",
+  spreadsheet: "spreadsheet",
+  slides: "slides",
+  canvas: "canvas",
 };
 
 /**
- * What to start, as rows: a soft tile of its color, a short name and a hint under it. A personal workspace's channel
- * is a group conversation, and its wiki is for its person's agents (ADR 0159).
+ * What to start, as rows: the system Settings' tile for it, a short name and a hint under it (every row has one, so
+ * the rows line up). A personal workspace's channel is a group conversation, and its wiki is for its person's agents (ADR 0159). A
+ * spreadsheet, a presentation or a canvas is made in the Drive at once and opens on its own screen (ADR 0196 §9).
  */
 function CreateList({ items }: { items: CreateItem[] }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const maker = useCreateLive();
   // The short names reuse labels already translated in every language (a form field's or a screen's name elsewhere).
   const spec: Record<Exclude<CreateItem, "invite">, { label: string; sub: string; onPress: () => void }> = {
     agent: { label: t("missions.new.agent"), sub: t("mobile.new.agentHint"), onPress: () => router.push("/new-agent") },
@@ -261,6 +270,21 @@ function CreateList({ items }: { items: CreateItem[] }) {
       sub: t(modeKey(org, "mobile.new.wikiHint")),
       onPress: () => newWikiPage(),
     },
+    spreadsheet: {
+      label: t("live.kinds.spreadsheet"),
+      sub: t("live.kinds.spreadsheetHint"),
+      onPress: () => void maker.make("spreadsheet"),
+    },
+    slides: {
+      label: t("live.kinds.slides"),
+      sub: t("live.kinds.slidesHint"),
+      onPress: () => void maker.make("slides"),
+    },
+    canvas: {
+      label: t("live.kinds.canvas"),
+      sub: t("live.kinds.canvasHint"),
+      onPress: () => void maker.make("canvas"),
+    },
   };
   const create = items.filter((i): i is Exclude<CreateItem, "invite"> => i !== "invite");
   if (create.length === 0) return null;
@@ -269,29 +293,22 @@ function CreateList({ items }: { items: CreateItem[] }) {
       <GroupedHeader>{t("mobile.new.create")}</GroupedHeader>
       <GroupedList>
         {create.map((item) => (
-          <GroupedRow key={item} leading={<TintTile {...CREATE_LOOK[item]} />} {...spec[item]} subLines={2} chevron />
+          <GroupedRow
+            key={item}
+            icon={CREATE_ICON[item]}
+            {...spec[item]}
+            subLines={2}
+            chevron
+            disabled={maker.busy !== null}
+          />
         ))}
       </GroupedList>
     </>
   );
 }
 
-/** An icon on a soft tile of its color: the color's light tone over the row, its deep tone for the glyph. */
-function TintTile({ icon, color }: { icon: IconName; color: AgentPresetColor }) {
-  const { colors, scheme } = useTheme();
-  const [light, deep] = gradientOf(color);
-  const dark = scheme === "dark";
-  return (
-    <View style={[styles.tint, { backgroundColor: mixHex(colors.raised, light, dark ? 0.3 : 0.45) }]}>
-      <Icon name={icon} size={16} color={dark ? light : deep} />
-    </View>
-  );
-}
-
-/** The faces in the rows: framed in their skies at 36 (the list's small size); the tiles match them. */
+/** The faces in the rows: framed in their skies at 36 (the list's small size), the tiles' column. */
 const FACE = 36;
-
-const TILE = 36;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
@@ -299,12 +316,4 @@ const styles = StyleSheet.create({
   field: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44, paddingHorizontal: 14, borderRadius: 14 },
   input: { flex: 1, minWidth: 0, paddingVertical: 0 },
   lists: { paddingHorizontal: 16, paddingBottom: 24 },
-  tint: {
-    width: TILE,
-    height: TILE,
-    // Proportional, as the faces' tiles beside it.
-    borderRadius: Math.round(TILE * 0.3),
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });

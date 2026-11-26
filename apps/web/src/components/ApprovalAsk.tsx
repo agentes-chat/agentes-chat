@@ -1,4 +1,12 @@
-import { type Agent, type Approval, type Member, useApprovalsDeciding } from "@agenteschat/client";
+import {
+  type Agent,
+  type Approval,
+  type Member,
+  useApprovals,
+  useApprovalsDeciding,
+  useRoles,
+} from "@agenteschat/client";
+import { ownerNameOf } from "@agenteschat/client/lib/agent-owner";
 import {
   approvalLine,
   approvalRuns,
@@ -19,6 +27,7 @@ import {
   approvalGroupWaitsFor,
   approvalLetter,
   approvalLetterTo,
+  approvalOwnerOf,
   approvalTitle,
   approvalWaitsFor,
   decisionOutcome,
@@ -41,12 +50,27 @@ import {
   ConnectorMark,
   ExactAction,
   expiryText,
+  HeldLine,
   RefuseBox,
 } from "@/pages/ApprovalsPage";
 import { type RequestAnswer, RequestCard, RequestFuse, useExpired } from "./RequestCard";
 
 /** The whole time a request has (24 h when the row doesn't say): the fuse burns down over it. */
 const DAY_MS = 24 * 3_600_000;
+
+/**
+ * Who a request waits for by name when nobody was named: the person or the role that answers for it (ADR 0085,
+ * addendum of 2026-11-21), the request's own first, else its agent's.
+ */
+function useOwnerName(approval: Approval | undefined, agent: Agent | undefined, members: Map<string, Member>) {
+  const { org } = useOrg();
+  const roles = useRoles(org.id).data?.roles;
+  if (!approval) return undefined;
+  return ownerNameOf(approvalOwnerOf(approval, agent), {
+    person: (id) => members.get(id)?.name,
+    role: (id) => roles?.find((r) => r.id === id)?.name,
+  });
+}
 
 /**
  * An approval waiting in the conversation, as a request card: the agent's words, what will happen drawn as an
@@ -77,6 +101,7 @@ export function ApprovalAsk({
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const deciding = useApprovalsDeciding(org.id, [row.id]);
+  const known = useApprovals(org.id).data;
   // Past its deadline it has expired, even before the server's event says so.
   const expired = useExpired(row.status === "pending" ? row.expiresAt : null);
   const approval: Approval = expired && row.status === "pending" ? { ...row, status: "expired" } : row;
@@ -87,8 +112,8 @@ export function ApprovalAsk({
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
   const span = Math.max(1, new Date(approval.expiresAt).getTime() - new Date(approval.createdAt).getTime() || DAY_MS);
   const left = Math.max(0, new Date(approval.expiresAt).getTime() - Date.now()) / span;
-  const owner = agent?.ownerUserId ? members.get(agent.ownerUserId) : undefined;
-  const waits = approvalWaitsFor(approval, owner?.name);
+  const ownerName = useOwnerName(approval, agent, members);
+  const waits = approvalWaitsFor(approval, ownerName);
   const requester = requesterDecidesLine(t, approval);
   const title = approvalTitle(t, approval);
   const email = approval.email;
@@ -116,7 +141,11 @@ export function ApprovalAsk({
       )}
       mine={approval.canDecide}
       waitingFor={waits ? t("ask.waitingFor", { name: waits }) : t("approval.waitingAdmin")}
-      answer={pending ? undefined : approvalAnswer(t, i18n.language, approval, me.user.id, members)}
+      answer={
+        pending
+          ? undefined
+          : approvalAnswer(t, i18n.language, approval, me.user.id, members, approvalLine([approval], known))
+      }
       lead={why ?? (summary ? undefined : approvalAskLine(t, pending && approval.canDecide))}
       headless={summary}
       preview={previewed ? <ApprovalPreview approval={approval} /> : undefined}
@@ -161,7 +190,7 @@ export function ApprovalAsk({
         )
       }
       under={
-        !refusing && agent && changesWhenAsks(org, approval) ? (
+        !refusing && agent && changesWhenAsks(agent, approval) ? (
           <WhenAsksLink approval={approval} agent={agent} />
         ) : undefined
       }
@@ -181,8 +210,11 @@ function approvalAnswer(
   approval: Approval,
   meId: string,
   members: Map<string, Member>,
+  /** Where it stands among the requests asked before it (`approvalLine`): approved and waiting, it says for what. */
+  line: Map<string, LinePlace>,
 ): RequestAnswer {
   const ahead = aheadPhase(approval);
+  const waitsOn = line.get(approval.id)?.waitsOn;
   // No one decided one that ran out: it expired at its deadline (one approved ahead, at its time).
   const ended =
     approval.decidedAt ??
@@ -197,7 +229,7 @@ function approvalAnswer(
     done: approval.status === "approved",
     text: decisionOutcome(t, approval, meId, (id) => members.get(id)?.name),
     time: ended ? whenAt(t, locale, ended) : undefined,
-    note: note || undefined,
+    note: waitsOn ? <HeldLine approval={approval} waitsOn={waitsOn} /> : note || undefined,
     action: ahead === "scheduled" && approval.canCancel ? <CancelAhead id={approval.id} /> : undefined,
   };
 }
@@ -268,15 +300,16 @@ export function ApprovalGroupAsk({
     org.id,
     items.map((a) => a.id),
   );
+  const known = useApprovals(org.id).data;
   // Which runs are unfolded, by `runKeys`: one stays open while its requests are decided, the card reshaping or not.
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const first = items[0];
+  const ownerName = useOwnerName(first, agent, members);
   if (!first) return null;
   const waiting = items.filter((a) => a.status === "pending");
   const decider = waiting.find((a) => a.canDecide);
   const mine = Boolean(decider);
-  const owner = members.get(first.ownerUserId ?? agent?.ownerUserId ?? "");
-  const waits = approvalGroupWaitsFor(items, owner?.name);
+  const waits = approvalGroupWaitsFor(items, ownerName);
   const leadItem = waiting[0] ?? first;
   const why = approvalWords(leadItem);
   const always = approveAlwaysOn(items);
@@ -285,7 +318,7 @@ export function ApprovalGroupAsk({
   const partial = approveAllPartial(t, items, waits);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
-  const line = approvalLine(items);
+  const line = approvalLine(items, known);
   const [only] = runs;
   const one = runs.length === 1 && only && only.length > 1 ? only : null;
   const isOpen = (key = "") => opened.has(key);
@@ -371,7 +404,7 @@ export function ApprovalGroupAsk({
         ) : undefined
       }
       under={
-        decider && agent && changesWhenAsks(org, decider) ? (
+        decider && agent && changesWhenAsks(agent, decider) ? (
           <WhenAsksLink approval={decider} agent={agent} />
         ) : undefined
       }
@@ -550,14 +583,8 @@ function GroupItem({
       ) : (
         <p className="rq__item-outcome">
           {decisionOutcome(t, approval, me.user.id, (id) => members.get(id)?.name)}
-          {place?.waitsOn
-            ? ` · ${t("approval.line.after", {
-                // With its place on the card: two requests of one kind ("Criar issue") tell apart by it.
-                title: `${approvalTitle(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
-              })}`
-            : approval.result?.notRunAfter
-              ? ` · ${t("approval.line.notRun")}`
-              : null}
+          {!place?.waitsOn && approval.result?.notRunAfter ? ` · ${t("approval.line.notRun")}` : null}
+          {place?.waitsOn && <HeldLine approval={approval} waitsOn={place.waitsOn} />}
           {ahead === "scheduled" && approval.canCancel && <CancelAhead id={approval.id} />}
         </p>
       )}

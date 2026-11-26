@@ -1,11 +1,14 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, eq, isNotNull, isNull, schema, sql } from "@agenteschat/db";
+import { and, asc, eq, inArray, isNotNull, isNull, schema, sql } from "@agenteschat/db";
 import { recordAgentActions } from "./agent-actions";
 import { sniffModelImage } from "./avatars";
 import { readsOrMayJoin } from "./channels";
 import { cardPlace } from "./consultations";
 import { learnTrust, ownWords } from "./context/learn";
 import { changeSkillAsAgent, createSkillAsAgent } from "./context/learned-skills";
+import { reviewAskedSkill } from "./context/proposal-review";
+import { askedWords } from "./context/proposals";
+import type { ContextDeps } from "./context/summaries";
 import { memoryResult } from "./context/tools";
 import { publishMessageCreated } from "./events";
 import { copyToComputer, type StoredFile } from "./file-pulls";
@@ -15,8 +18,10 @@ import { insertMessage, messageView } from "./messages";
 import { can, getMembership } from "./organizations";
 import { personBehindCall } from "./requester";
 import { bodyCode } from "./run-tools";
+import { replyThreadOf } from "./runs";
 import { type SandboxDeps, withSandbox } from "./sandbox";
 import { cardsLeft, hopOf, NOBODY_READS, REQUEST_SETTINGS_TOOL, whoActs } from "./setup-tools";
+import { recordSkillUse } from "./skill-library";
 import { updateSkillFromSource } from "./skill-updates";
 import {
   agentSkillByName,
@@ -26,6 +31,9 @@ import {
   type SkillDeps,
   skillFile,
   skillFilesOf,
+  skillHolders,
+  skillPersonMayChange,
+  skillZipOfFile,
 } from "./skills";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 
@@ -39,11 +47,15 @@ export const UPDATE_SKILLS_CARD = "action_update_skills";
 /** Skills one `update_skill_from_source` reads (each a repository's archive), the least recently read first. */
 export const MAX_SKILL_UPDATES_PER_CALL = 10;
 
-/** "Instalar skill": its button opens the app's install dialog with the link filled in, to pick and install. */
+/**
+ * "Instalar skill": its button opens the app's install dialog with the skill read, from its GitHub link (`url`) or from
+ * a .zip sent in the conversation (`file`, its Drive id, its `name` and the `skills` its SKILL.md files name), to pick
+ * and install.
+ */
 export interface InstallSkillCard {
   kind: "install_skill";
   forUserId: string | null;
-  params: { url: string; why: string };
+  params: { url: string; why: string } | { file: string; name: string; skills: string[]; why: string };
 }
 
 /**
@@ -88,6 +100,18 @@ async function notYours(ctx: ToolContext, name: string): Promise<ToolOutput> {
 
 export const LOAD_SKILL_TOOL = "load_skill";
 
+/**
+ * A skill this run reads: one of the agent's own, else one the person behind the run may change (`managed`), so the
+ * agent reads and fixes other agents' skills for who manages them.
+ */
+async function skillToRead(ctx: ToolContext, name: string) {
+  const mine = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, name, ctx.runId);
+  if (mine) return { skill: mine, managed: false };
+  const person = await personBehindCall(ctx);
+  const skill = person ? await skillPersonMayChange(ctx.db, ctx.orgId, name, person) : null;
+  return skill ? { skill, managed: true } : null;
+}
+
 /** The files `load_skill` names one by one: the list goes into the conversation of every run that loads the skill. */
 const LISTED_FILES = 100;
 
@@ -124,7 +148,7 @@ function skillFileList(files: Awaited<ReturnType<typeof skillFilesOf>>) {
  * `computer`: reaching the agent's computer (none: files that aren't text are described only).
  */
 export function createSkillToolSource(
-  deps: SkillDeps & { pubsub?: PubSub; judge?: Judge; computer?: SandboxDeps },
+  deps: SkillDeps & { pubsub?: PubSub; judge?: Judge; computer?: SandboxDeps; context?: ContextDeps },
 ): ToolSource {
   /** Saves a skill's file on the agent's computer: its path there, or why it couldn't be. */
   const saveOnComputer = async (ctx: ToolContext, path: string, file: StoredFile) => {
@@ -154,11 +178,92 @@ export function createSkillToolSource(
     if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(message));
     return message;
   };
+  /** Posts the install card (`offer_install_skill`), a link's or a .zip's, where someone who may install skills reads it. */
+  const offerInstall = async (
+    ctx: ToolContext,
+    body: string,
+    params: InstallSkillCard["params"],
+  ): Promise<ToolOutput> => {
+    const at = await cardPlace(ctx);
+    if (!at) return NOBODY_READS;
+    const forUserId = await personBehindCall(ctx);
+    const acts = await whoActs(ctx, forUserId, "manage_agents", at.channelId);
+    if (!acts) {
+      return {
+        content:
+          "Nothing was posted: installing skills is for people who manage agents, and none of them can open this conversation. Tell the person, and offer to ask one (request_approval, or in a channel an admin reads).",
+        isError: true,
+      };
+    }
+    const full = await cardsLeft(ctx);
+    if (full) return full;
+    const message = await postCard(ctx, at, body, INSTALL_SKILL_CARD, { kind: "install_skill", forUserId, params });
+    return {
+      content: `Posted the card to install the skill: a person picks and installs it in the app's dialog.${acts === "person" ? "" : " The person who asked can't install skills: someone who manages agents here does it from the card. Say so."} Installed from the card, it goes on for you too. Don't install it anywhere yourself, and don't say it's installed until it shows in your skills.`,
+      data: { actionCard: { messageId: message.id } },
+    };
+  };
+  /** The install card for a .zip sent in the conversation, read as the agent reads it: only one with a skill in it. */
+  const offerFromFile = async (ctx: ToolContext, fileId: string, why: string): Promise<ToolOutput> => {
+    let zip: Awaited<ReturnType<typeof skillZipOfFile>>;
+    try {
+      zip = await skillZipOfFile(
+        { db: ctx.db, blobs: deps.blobs },
+        {
+          type: "agent",
+          agentId: ctx.agentId,
+          channelId: ctx.channelId,
+          threadId: replyThreadOf(ctx),
+          runId: ctx.runId,
+        },
+        ctx.orgId,
+        fileId,
+      );
+    } catch (error) {
+      return {
+        content: `Nothing was posted: ${error instanceof Error ? error.message : String(error)}. \`file\` is a .zip sent in this conversation, by the id read_artifact names.`,
+        isError: true,
+      };
+    }
+    if (zip.skillFiles === 0) {
+      return {
+        content: `Nothing was posted: ${zip.name} holds no SKILL.md, so no skill installs from it. Tell the person what it holds instead.`,
+        isError: true,
+      };
+    }
+    const installed =
+      zip.names.length === 0
+        ? []
+        : await ctx.db
+            .select({ name: schema.skills.name })
+            .from(schema.skills)
+            .where(
+              and(
+                eq(schema.skills.orgId, ctx.orgId),
+                inArray(schema.skills.name, zip.names),
+                isNull(schema.skills.deletedAt),
+                isNull(schema.skills.ownerUserId),
+              ),
+            );
+    if (zip.names.length > 0 && installed.length >= zip.names.length && zip.skillFiles === zip.names.length) {
+      const names = installed.map((k) => k.name).join(", ");
+      return {
+        content: `${zip.name} is already installed here (${names}). To replace it with this .zip, a person who manages skills uploads it on the Skills page; to use one that isn't on for you, ${ASK_FOR_SKILL}`,
+        isError: true,
+      };
+    }
+    return offerInstall(ctx, `Install the skill${zip.skillFiles > 1 ? "s" : ""} in ${zip.name}: ${why}`, {
+      file: fileId,
+      name: zip.name,
+      skills: zip.names,
+      why,
+    });
+  };
   const tools: ToolDefinition[] = [
     {
       name: LOAD_SKILL_TOOL,
       description:
-        "Load one of your skills (from 'Available skills') before doing a task it covers: returns its instructions and the files you can read.",
+        "Load one of your skills (from 'Available skills') before doing a task it covers: returns its instructions and the files you can read. When the person who asked manages skills, it also reads any skill of the workspace, to change it or give it to agents.",
       scope: "skills:read",
       inputSchema: {
         type: "object",
@@ -168,14 +273,25 @@ export function createSkillToolSource(
       },
       async execute(input, ctx) {
         try {
-          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name), ctx.runId);
-          if (!skill) return notYours(ctx, str(input.name));
-          // Use keeps an agent-made skill from being archived for disuse (ADR 0120).
+          const found = await skillToRead(ctx, str(input.name));
+          if (!found) return notYours(ctx, str(input.name));
+          const { skill } = found;
+          const list = skillFileList(await skillFilesOf(ctx.db, skill));
+          if (found.managed) {
+            const holders = await skillHolders(ctx.db, ctx.orgId, skill.id);
+            const on = holders.length ? holders.map((h) => `@${h}`).join(", ") : "no agent";
+            return {
+              content: `Skill "${skill.name}" (v${skill.version}) is not on for you: you read it to manage it for the person who asked, never to follow it yourself (to use it yourself, ${ASK_FOR_SKILL.slice(0, -1)}). On for: ${on}. Change it with update_skill; give it to agents or take it away with propose_settings_change (add_skills, remove_skills).\n\n${skill.body}\n\nFiles (read with read_skill_file):\n${list}`,
+              data: { skill: { id: skill.id, name: skill.name, version: skill.version } },
+            };
+          }
+          // Use keeps an agent-made skill from being archived for disuse (ADR 0120), and shows in Skills: how often
+          // and where it was used.
           await ctx.db
             .update(schema.skills)
             .set({ useCount: sql`${schema.skills.useCount} + 1`, lastUsedAt: new Date() })
             .where(eq(schema.skills.id, skill.id));
-          const list = skillFileList(await skillFilesOf(ctx.db, skill));
+          await recordSkillUse(ctx.db, ctx, skill.id);
           return {
             content: `Skill "${skill.name}" (v${skill.version}) loaded.\n\n${skill.body}\n\nFiles (read with read_skill_file):\n${list}`,
             data: { skill: { id: skill.id, name: skill.name, version: skill.version } },
@@ -201,7 +317,7 @@ export function createSkillToolSource(
       },
       async execute(input, ctx) {
         try {
-          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name), ctx.runId);
+          const skill = (await skillToRead(ctx, str(input.name)))?.skill;
           if (!skill) return notYours(ctx, str(input.name));
           const path = str(input.path);
           if (path.endsWith("/")) {
@@ -252,7 +368,7 @@ export function createSkillToolSource(
     {
       name: "update_skill",
       description:
-        "Fix a skill you loaded this turn: `body` its new body, `files` whole text files to change or add (read them first). Files that run wait for a person. No credentials.",
+        "Fix a skill you loaded this turn: `body` its new body, `files` whole text files to change or add (read them first). Also another agent's skill, when the person who asked manages skills: load it first. Files that run go through a quick review first. No credentials.",
       scope: "skills:read",
       inputSchema: {
         type: "object",
@@ -299,10 +415,10 @@ export function createSkillToolSource(
             str(input.name),
             { body: typeof input.body === "string" ? input.body : undefined, files },
             trust,
-            { person, decides },
+            { person, decides, words },
           );
           const waits = change.scripts.length
-            ? ` ${change.scripts.join(", ")} run${change.scripts.length === 1 ? "s" : ""} as code, so that change waits for a person who manages agents (a proposal).`
+            ? ` ${change.scripts.join(", ")} run${change.scripts.length === 1 ? "s" : ""} as code, so that change goes through a quick review that applies it in a moment if it makes sense; its card shows the outcome.`
             : "";
           const membership = person ? await getMembership(ctx.db, person, ctx.orgId) : null;
           /** With a person behind the run its card sits under the reply; with nobody, the deciders' inbox row is the way in. */
@@ -324,14 +440,10 @@ export function createSkillToolSource(
           if (change.action === "unchanged") return { content: "Nothing changed: it is the same." };
           const why =
             change.why === "outside"
-              ? "This turn read outside content (the web, mail or a connected app), so the change is a proposal"
-              : change.why === "person"
-                ? "Agents don't change this skill by themselves here, so the change is a proposal"
-                : change.why === "locked"
-                  ? "A person locked this skill, so the change is a proposal"
-                  : "The change is a proposal";
+              ? "This turn read outside content (the web, mail or a connected app), so the change"
+              : "The change";
           return carded(
-            `${why} (${change.proposalIds.join(", ")}): someone who manages agents accepts it on the card under your reply.${waits} Use your fix in this turn.`,
+            `${why} goes through a quick review that applies it in a moment if it makes sense; its card shows the outcome.${waits} Use your fix in this turn.`,
           );
         } catch (error) {
           return failed(error);
@@ -341,7 +453,7 @@ export function createSkillToolSource(
     {
       name: CREATE_SKILL_TOOL,
       description:
-        "Create a skill of your own when a person asks you to make one ('transforma isso numa skill', 'make a skill of how you did this'): `name` kebab-case for the kind of task, `description` when to use it, `body` Markdown with the steps first, then the pitfalls, in the person's language. It goes on for you at once and shows in the workspace's Skills, where people undo it or give it to other agents. This is the way to make a skill here: never a repository, a link or your CLI's own skills folder. No credentials or where they are kept: say which key it needs from a person. Add text files to it later with update_skill.",
+        "Create a skill of your own when a person asks you to make one ('transforma isso numa skill', 'make a skill of how you did this'): `name` kebab-case for the kind of task, `description` when to use it, `body` Markdown with the steps first, then the pitfalls, in the person's language. It goes on for you at once and shows in the workspace's Skills, where people undo it or give it to other agents. This is the way to make a skill here: never a repository, a link or your CLI's own skills folder. A skill someone sends (a .zip, a GitHub link) installs whole with offer_install_skill: never rewrite it here. No credentials or where they are kept: say which key it needs from a person. Add text files to it later with update_skill.",
       scope: "skills:read",
       inputSchema: {
         type: "object",
@@ -364,12 +476,34 @@ export function createSkillToolSource(
               isError: true,
             };
           }
+          // After outside content (the web, mail, a connected app, or a conversation that relays them) the skill is
+          // made only when the review reads it as the person's own request (ADR 0219): a skill loads as trusted
+          // instructions, so nothing the content slipped in may ride along.
           if (trust === "low") {
-            return {
-              content:
-                "This turn read outside content (the web, mail or a connected app), so it can't make a skill: a skill loads as trusted instructions. Show the person the skill's text so they add it in Settings › Skills, or ask them to ask again in a new message.",
-              isError: true,
-            };
+            const verdict = deps.context
+              ? await reviewAskedSkill(deps.context, {
+                  orgId: ctx.orgId,
+                  agentId: ctx.agentId,
+                  runId: ctx.runId,
+                  name: str(input.name),
+                  description: str(input.description),
+                  body: str(input.body),
+                  words: await askedWords(ctx.db, ctx, person),
+                })
+              : null;
+            if (!verdict)
+              return {
+                content:
+                  "This turn read outside content, and the check that lets a skill through after it couldn't run (no AI account with an API key for it, and Jev didn't answer). Don't try again in this turn: tell the person it wasn't made for that reason, and that an admin can add an AI account with an API key in Settings › AI and usage, or they can write the skill themselves on the Skills page.",
+                isError: true,
+                data: { code: "skill.outside_content" },
+              };
+            if (!verdict.apply)
+              return {
+                content: `Not made: the check after outside content left it out${verdict.why ? ` (${verdict.why})` : ""}. Don't call create_skill again with the same text: tell the person what was left out and why, and make only what they asked for.`,
+                isError: true,
+                data: { code: "skill.left_out" },
+              };
           }
           const skill = await createSkillAsAgent({ db: ctx.db, judge: deps.judge }, ctx, {
             name: str(input.name),
@@ -380,7 +514,7 @@ export function createSkillToolSource(
           return {
             content: skill.ownerUserId
               ? `Created the skill ${skill.name}, the personal skill of the person who asked: you use it only when they ask. It shows in their Skills under Personal, where they undo it. Load it with load_skill when a task matches.`
-              : `Created the skill ${skill.name}, on for you now. It shows in your skills and in Settings › Skills, where people undo it or give it to other agents. Load it with load_skill when a task matches.`,
+              : `Created the skill ${skill.name}, on for you now. It shows in your skills and on the Skills page, where people undo it or give it to other agents. Load it with load_skill when a task matches.`,
             data: { skill: { id: skill.id, name: skill.name, version: skill.version } },
           };
         } catch (error) {
@@ -391,7 +525,7 @@ export function createSkillToolSource(
     {
       name: OFFER_INSTALL_SKILL_TOOL,
       description:
-        "Offer to install a skill for the workspace with a card in this conversation: its button opens the app's install dialog (Settings › Skills) with the GitHub link filled in, where a person who manages skills picks it and installs it, since a skill adds instructions and scripts agents run. Installed from the card, it goes on for you. Use it whenever someone asks to install or add a skill that isn't installed here (one that is, but not on for you: request_settings_change). Never install one into your CLI's own skills folder on your computer (~/.claude/skills, ~/.codex/skills, .agents/skills…) for the workspace: only you would have it there, nobody reviews it and it never updates.",
+        "Offer to install a skill for the workspace with a card in this conversation: its button opens the app's install dialog (the Skills page's) with the skill already read, from its GitHub link (`url`) or from a .zip sent in the conversation (`file`: its Drive id, as read_artifact names it), where a person who manages skills picks it and installs it, since a skill adds instructions and scripts agents run. It installs whole, files and scripts with it. Installed from the card, it goes on for you. Use it whenever someone asks to install or add a skill that isn't installed here (one that is, but not on for you: request_settings_change), and for a skill someone sends as a .zip: never rewrite it with create_skill, which keeps only text. Never install one into your CLI's own skills folder on your computer (~/.claude/skills, ~/.codex/skills, .agents/skills…) for the workspace: only you would have it there, nobody reviews it and it never updates.",
       scope: "skills:read",
       inputSchema: {
         type: "object",
@@ -402,6 +536,12 @@ export function createSkillToolSource(
             maxLength: 2000,
             description: "The skill's GitHub link: a repository, a folder or its SKILL.md.",
           },
+          file: {
+            type: "string",
+            minLength: 36,
+            maxLength: 36,
+            description: "In place of `url`: the Drive id of a .zip of the skill sent in this conversation.",
+          },
           why: {
             type: "string",
             minLength: 1,
@@ -409,7 +549,7 @@ export function createSkillToolSource(
             description: "One short line on the card for the person, in their language: what the skill does.",
           },
         },
-        required: ["url", "why"],
+        required: ["why"],
         additionalProperties: false,
       },
       async execute(input, ctx) {
@@ -417,12 +557,20 @@ export function createSkillToolSource(
           const why = str(input.why).trim();
           if (!why) return { content: "Say in `why` what the skill does: one short line.", isError: true };
           const url = str(input.url).trim();
+          const fileId = str(input.file).trim();
+          if (Boolean(url) === Boolean(fileId)) {
+            return {
+              content: "Give one of `url` (the skill's GitHub link) or `file` (the Drive id of its .zip sent here).",
+              isError: true,
+            };
+          }
+          if (fileId) return await offerFromFile(ctx, fileId, why);
           try {
             parseGithubUrl(url);
           } catch {
             return {
               content:
-                "Only GitHub links install as skills (a repository, a folder in it or a SKILL.md). Ask the person for the skill's GitHub link; a .zip they upload in Settings › Skills themselves.",
+                "Only GitHub links and .zip files install as skills (a repository, a folder in it or a SKILL.md; a .zip sent in the conversation goes in `file`). Ask the person for the skill's GitHub link or its .zip.",
               isError: true,
             };
           }
@@ -444,28 +592,7 @@ export function createSkillToolSource(
               isError: true,
             };
           }
-          const at = await cardPlace(ctx);
-          if (!at) return NOBODY_READS;
-          const forUserId = await personBehindCall(ctx);
-          const acts = await whoActs(ctx, forUserId, "manage_agents", at.channelId);
-          if (!acts) {
-            return {
-              content:
-                "Nothing was posted: installing skills is for people who manage agents, and none of them can open this conversation. Tell the person, and offer to ask one (request_approval, or in a channel an admin reads).",
-              isError: true,
-            };
-          }
-          const full = await cardsLeft(ctx);
-          if (full) return full;
-          const message = await postCard(ctx, at, `Install the skill at ${url}: ${why}`, INSTALL_SKILL_CARD, {
-            kind: "install_skill",
-            forUserId,
-            params: { url, why },
-          });
-          return {
-            content: `Posted the card to install the skill: a person picks and installs it in the app's dialog.${acts === "person" ? "" : " The person who asked can't install skills: someone who manages agents here does it from the card. Say so."} Installed from the card, it goes on for you too. Don't install it anywhere yourself, and don't say it's installed until it shows in your skills.`,
-            data: { actionCard: { messageId: message.id } },
-          };
+          return await offerInstall(ctx, `Install the skill at ${url}: ${why}`, { url, why });
         } catch (error) {
           return failed(error);
         }

@@ -1,7 +1,9 @@
-import type { AgentGroup, Team, TeamAgent } from "@agenteschat/client";
+import type { AgentGroup, OrgRole, Team, TeamAgent } from "@agenteschat/client";
 import { useApprovals, useRoles } from "@agenteschat/client";
+import { seesFactsOnly } from "@agenteschat/client/lib/agent-facts";
 import { agentSections } from "@agenteschat/client/lib/agent-groups";
-import { can } from "@agenteschat/client/lib/permissions";
+import { hasAgentOwner, ownerValueOf, ownsAgentAs, roleOfOwnerValue } from "@agenteschat/client/lib/agent-owner";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { filterTeam, sortTeam, type TeamFilter, type TeamSort } from "@agenteschat/client/lib/team-views";
 import {
   Button,
@@ -61,7 +63,9 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const look = useTeamLookups(groups);
-  const manages = can(org, "manage_agents");
+  // A row's menu moves its agent between setores and sets who it reports to: only for who manages that agent (ADR 0085
+  // addendum of 2026-11-17), so the column is there while I manage one of them.
+  const manages = agents.some((a) => managesAgent(a));
   const approvals = useApprovals(org.id).data ?? [];
   const waiting = new Set(approvals.filter((a) => a.status === "pending" && a.canDecide).map((a) => a.agentId));
   const [q, setQ] = useState("");
@@ -76,18 +80,20 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
       filter,
       q,
       meId: me.user.id,
+      myRoleIds: look.myRoleIds,
       waitingIds: waiting,
       channelName: (id) => look.channelById.get(id)?.name,
     }),
     sort.by,
     sort.desc,
-    { sector: (id) => look.sectorOf(id)?.name ?? "", owner: (id) => look.personName(id) },
+    { sector: (id) => look.sectorOf(id)?.name ?? "", owner: look.ownerName },
   );
+  // Mine: its owner, or holding the role that answers for it (ADR 0085, addendum of 2026-11-21).
   const counts = {
-    mine: agents.filter((a) => a.ownerUserId === me.user.id).length,
+    mine: agents.filter((a) => ownsAgentAs(a, me.user.id, look.myRoleIds)).length,
     working: agents.filter((a) => a.busy).length,
     waiting: agents.filter((a) => waiting.has(a.id)).length,
-    noOwner: agents.filter((a) => !a.ownerUserId).length,
+    noOwner: agents.filter((a) => !hasAgentOwner(a)).length,
   };
   const head = (by: TeamSort, label: string) => (
     <th aria-sort={sort.by === by ? (sort.desc ? "descending" : "ascending") : undefined}>
@@ -126,7 +132,18 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
             <AgentAvatar agentId={a.id} name={a.name} size="sm" />
             <span className="team-who__text">
               <b>{a.name}</b>
-              <span className="muted">@{a.handle}</span>
+              <span className="muted">
+                @{a.handle}
+                {seesFactsOnly(a) && (
+                  <>
+                    {" · "}
+                    <span className="team-private ac-iconline">
+                      <Icon name="lock" size={14} />
+                      {t("agentPage.facts.private")}
+                    </span>
+                  </>
+                )}
+              </span>
             </span>
           </Link>
         </td>
@@ -144,7 +161,11 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
           </td>
         )}
         <td>
-          {a.ownerUserId ? (
+          {a.ownerRoleId ? (
+            <OwnerRoleWho role={look.dir.roleById.get(a.ownerRoleId)}>
+              {look.ownerName(null, a.ownerRoleId)}
+            </OwnerRoleWho>
+          ) : a.ownerUserId ? (
             <span className="team-who">
               <PersonAvatar id={a.ownerUserId} name={look.personName(a.ownerUserId)} size="xs" />
               {look.personName(a.ownerUserId)}
@@ -194,7 +215,7 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
         </td>
         {manages && (
           <td className="team-table__menu">
-            {directory && (
+            {directory && managesAgent(a) && (
               <AgentGroupMenu
                 agent={directory}
                 groups={groups}
@@ -241,16 +262,27 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
       ];
     }
     if (groupBy === "owner") {
-      const owners = [...new Set(rows.map((a) => a.ownerUserId))];
-      return owners.map((id) =>
-        section(
-          id ?? "none",
+      // By who answers for them: a person, a role (`role:<id>`, ADR 0085, addendum of 2026-11-21) or nobody.
+      const NONE = "none";
+      const keyOf = (a: TeamAgent) => ownerValueOf(a, NONE);
+      const owners = [...new Set(rows.map(keyOf))];
+      return owners.map((key) => {
+        const roleId = roleOfOwnerValue(key);
+        return section(
+          key,
           (count) =>
-            id ? (
-              <span className="team-who">
-                <PersonAvatar id={id} name={look.personName(id)} size="xs" />
+            roleId ? (
+              <OwnerRoleWho role={look.dir.roleById.get(roleId)}>
                 <span>
-                  <b>{look.personName(id)}</b>
+                  <b>{look.ownerName(null, roleId)}</b>
+                  {count}
+                </span>
+              </OwnerRoleWho>
+            ) : key !== NONE ? (
+              <span className="team-who">
+                <PersonAvatar id={key} name={look.personName(key)} size="xs" />
+                <span>
+                  <b>{look.personName(key)}</b>
                   {count}
                 </span>
               </span>
@@ -260,9 +292,9 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
                 {count}
               </>
             ),
-          rows.filter((a) => a.ownerUserId === id),
-        ),
-      );
+          rows.filter((a) => keyOf(a) === key),
+        );
+      });
     }
     return rows.map(row);
   };
@@ -346,6 +378,16 @@ function AgentsTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
   );
 }
 
+/** A role that answers for agents (ADR 0085, addendum of 2026-11-21): its mark where a face goes, then its name. */
+function OwnerRoleWho({ role, children }: { role: OrgRole | undefined; children: ReactNode }) {
+  return (
+    <span className="team-who">
+      {role && <RoleMark color={role.color} icon={role.icon} size={18} />}
+      {children}
+    </span>
+  );
+}
+
 function PeopleTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGroup[] }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -365,7 +407,8 @@ function PeopleTable({ agents, groups }: { agents: TeamAgent[]; groups: AgentGro
         </thead>
         <tbody>
           {people.map((m) => {
-            const mine = agents.filter((a) => a.ownerUserId === m.userId);
+            // The agents they answer for, themselves or through a role they hold (ADR 0085, addendum of 2026-11-21).
+            const mine = agents.filter((a) => ownsAgentAs(a, m.userId, m.roleIds ?? []));
             const held = roles.filter((r) => m.roleIds?.includes(r.id));
             const leads = groups.filter((g) => g.leadUserId === m.userId || g.backupUserId === m.userId);
             return (

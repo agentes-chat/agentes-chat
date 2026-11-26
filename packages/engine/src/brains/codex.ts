@@ -1,14 +1,18 @@
 import {
   type AgentScope,
   ANTIGRAVITY_PROTOCOL,
+  ANTIGRAVITY_WINDOWS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
   type BrainTurnRequest,
   brainTopic,
+  CLI_COPIES_PROTOCOL,
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
@@ -16,19 +20,22 @@ import {
   parseBrainEvent,
   STEER_PROTOCOL,
 } from "@agenteschat/adapters";
+import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
 import type { MachineCaller } from "../machine-hub";
 import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
-import { CODEX_MIN_VERSION, versionOf } from "../missions";
 import { runnerUpdateWay } from "../runner-update";
 import {
   accountFields,
   accountUnavailable,
   busyRefusal,
+  cliOutdated,
   contextFields,
   speedFields,
   steerOnMachine,
 } from "./claude-code";
+import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
+import { inPhase } from "./phase";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -36,8 +43,10 @@ import {
   type BrainEvent,
   type BrainIO,
   type BrainTurn,
+  brainRunsOn,
   type SteerMessage,
   type SteerReply,
+  SYSTEM_REFUSED,
 } from "./types";
 
 /**
@@ -86,6 +95,7 @@ export interface ComputerBrainLink {
       opencode?: { version: string };
       grok?: { version: string };
       antigravity?: { version: string };
+      devin?: { version: string };
       /** Every agent as its own user (`runnerUpdateWay`). */
       mode?: "system";
     };
@@ -105,6 +115,7 @@ export interface ComputerBrainLink {
         opencode?: boolean;
         grok?: boolean;
         antigravity?: boolean;
+        devin?: boolean;
         commands: boolean;
       };
     } | null;
@@ -141,15 +152,6 @@ export interface CodexBrainDeps {
   keepAlive?: boolean;
 }
 
-/** `codex-cli 0.163.0` is new enough (`CODEX_MIN_VERSION`). */
-export function codexVersionOk(version: string | undefined): boolean {
-  const have = versionOf(version);
-  const want = versionOf(CODEX_MIN_VERSION) as number[];
-  if (!have) return false;
-  for (let i = 0; i < 3; i++) if ((have[i] ?? 0) !== (want[i] ?? 0)) return (have[i] ?? 0) > (want[i] ?? 0);
-  return true;
-}
-
 /** Events pushed by a callback, read as an async iterable. */
 function channel<T>() {
   const queue: T[] = [];
@@ -182,7 +184,7 @@ function channel<T>() {
  * protocol 36, no version gate, no live steering). Everything else, from the request to the events, is shared.
  */
 interface CliBrainSpec {
-  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
@@ -195,6 +197,7 @@ interface CliBrainSpec {
     opencode?: { version: string };
     grok?: { version: string };
     antigravity?: { version: string };
+    devin?: { version: string };
   }): BrainEvent | null;
 }
 
@@ -212,14 +215,6 @@ const CODEX_CLI: CliBrainSpec = {
         retryable: true,
       };
     }
-    if (!codexVersionOk(codex.version)) {
-      return {
-        type: "error",
-        code: "codex_too_old",
-        message: `Codex on the computer is ${codex.version}. Agents need ${CODEX_MIN_VERSION} or newer (update it there).`,
-        retryable: true,
-      };
-    }
     return null;
   },
 };
@@ -228,6 +223,8 @@ const CURSOR_CLI: CliBrainSpec = {
   kind: "cursor",
   name: "Cursor",
   protocol: CURSOR_PROTOCOL,
+  // Windows from the runner that keeps each account's sign-in in its folder there (ADR 0228 §6).
+  windowsProtocol: CLI_COPIES_PROTOCOL,
   check: ({ cursor }) =>
     cursor
       ? null
@@ -259,6 +256,7 @@ const GROK_CLI: CliBrainSpec = {
   kind: "grok",
   name: "Grok Build",
   protocol: GROK_PROTOCOL,
+  windowsProtocol: GROK_WINDOWS_PROTOCOL,
   check: ({ grok }) =>
     grok
       ? null
@@ -274,6 +272,7 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
   kind: "antigravity",
   name: "Antigravity CLI",
   protocol: ANTIGRAVITY_PROTOCOL,
+  windowsProtocol: ANTIGRAVITY_WINDOWS_PROTOCOL,
   check: ({ antigravity }) =>
     antigravity
       ? null
@@ -285,8 +284,22 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
         },
 };
 
+const DEVIN_CLI: CliBrainSpec = {
+  kind: "devin",
+  name: "Devin CLI",
+  protocol: DEVIN_PROTOCOL,
+  check: ({ devin }) =>
+    devin
+      ? null
+      : {
+          type: "error",
+          code: "devin_missing",
+          message: "The Devin CLI, Cognition's, is not installed on the computer.",
+          retryable: true,
+        },
+};
 export class CodexBrain implements Brain {
-  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
   constructor(
     private readonly deps: CodexBrainDeps,
@@ -295,7 +308,15 @@ export class CodexBrain implements Brain {
     this.kind = cli.kind;
   }
 
+  /** A model the sign-in refused lately is left out (the CLI's default instead), and a new refusal remembered. */
   async *run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+    for await (const event of this.attempt(skipRefusedModel(this.kind, turn), io)) {
+      noteModelRefusal(this.kind, turn, event);
+      yield event;
+    }
+  }
+
+  private async *attempt(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
     const session = turn.session;
     const { name } = this.cli;
     if (!session) {
@@ -350,9 +371,28 @@ export class CodexBrain implements Brain {
       };
       return;
     }
-    const missing = this.cli.check(status.executors);
+    // Its runner would refuse every turn there in its own words; refused here, it reads in the person's language.
+    if (!brainRunsOn(this.kind, status.os)) {
+      // The Devin CLI's pin has no Windows build (ADR 0253): there it can't keep each account's sign-in apart.
+      const why =
+        this.kind === "devin" && status.os === "windows" ? " There it can't keep each account's sign-in apart." : "";
+      yield {
+        type: "error",
+        code: SYSTEM_REFUSED,
+        message: `${name} doesn't run on this computer's system yet.${why}`,
+      };
+      return;
+    }
+    // Its runner fetches the pinned CLI itself (ADR 0228 §6): not there yet is no reason to refuse the turn.
+    const missing = fetchesCli(status, this.kind) ? null : this.cli.check(status.executors);
     if (missing) {
       yield missing;
+      return;
+    }
+    // At a version agentes.chat holds back (`CLI_FLOORS`): it waits for an update there instead of failing there.
+    const old = cliOutdated(status, this.kind, name);
+    if (old) {
+      yield { type: "error", code: old.code, message: old.message, retryable: true };
       return;
     }
     const account = accountUnavailable(status, turn.account, this.kind);
@@ -399,10 +439,11 @@ export class CodexBrain implements Brain {
     // An older runner never finds the agent's checkouts from a Codex turn: it stays in the agent's folder, and in
     // its session, instead of being refused there.
     const checkouts = status.protocol === undefined || status.protocol >= CODEX_FOLDER_PROTOCOL;
+    const prepared = checkouts && !chat ? (turn.code ?? this.deps.prepare?.(turn, io.signal))?.catch(() => null) : null;
     const [mcp, agent, code] = await Promise.all([
       this.deps.mcp(turn),
       this.deps.agent?.(turn),
-      checkouts && !chat ? (turn.code ?? this.deps.prepare?.(turn, io.signal))?.catch(() => null) : null,
+      prepared ? inPhase(io, "code", prepared) : null,
     ]);
     // A kept-alive Codex lists our tools once, as its thread opens: the runner starts it again when a name is new.
     const toolNames = turn.tools.map((t) => t.name).sort();
@@ -423,6 +464,9 @@ export class CodexBrain implements Brain {
       ...(this.deps.keepAlive === false ? { keepAlive: false } : {}),
       ...(freeTier ? { freeTier } : {}),
       ...(turn.personWaiting ? { personWaiting: true } : {}),
+      ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
+      // Each answer the turn finishes before it goes on is its own message (ADR 0112).
+      answers: "each",
     };
 
     const events = channel<BrainEvent>();
@@ -451,6 +495,8 @@ export class CodexBrain implements Brain {
       for await (const event of events.read()) {
         if (ended) continue;
         if (event.type === "text_delta") text += event.text;
+        // What it streamed before an answer it finished is that answer, posted on its own: never the turn's again.
+        if (event.type === "answer") text = "";
         if (event.type === "done") {
           ended = true;
           yield { type: "done", text: event.text, session: { id: session.id } };
@@ -563,7 +609,7 @@ export function hubBrainLink(deps: {
         const event = parseBrainEvent(e.event);
         if (!event) return;
         if (event.type === "done" || event.type === "error") finalSeen = true;
-        options.onEvent(event as BrainEvent);
+        options.onEvent(withFailureCause(event as BrainEvent));
       });
       try {
         const reply = await deps.hub.call<"brain.turn">(
@@ -583,10 +629,21 @@ export function hubBrainLink(deps: {
         // The stream lost its last event: the reply carries it.
         const final = parseBrainEvent(reply?.final);
         if (!finalSeen && final && (final.type === "done" || final.type === "error"))
-          options.onEvent(final as BrainEvent);
+          options.onEvent(withFailureCause(final as BrainEvent));
       } finally {
         off();
       }
     },
   };
+}
+
+/**
+ * The Devin brain (ADR 0253): Cognition's Devin CLI (`devin acp`) on the agent's computer with a person's Devin plan,
+ * through the same `brain.turn` as Codex (`kind: "devin"`, runner protocol 89, `brain-devin.ts` there). A person's
+ * messages wait for the turn's end.
+ */
+export class DevinBrain extends CodexBrain {
+  constructor(deps: CodexBrainDeps) {
+    super(deps, DEVIN_CLI);
+  }
 }

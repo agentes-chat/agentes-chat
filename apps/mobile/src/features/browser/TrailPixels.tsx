@@ -1,26 +1,14 @@
 import type { BrowserTrailKind } from "@agenteschat/client";
 import { type AgentColorName, gradientOf } from "@agenteschat/ui/agent/engine";
 import { Canvas, createPicture, PaintStyle, Picture, Skia, type SkPaint } from "@shopify/react-native-skia";
-import { memo, useMemo, useState } from "react";
-import { type LayoutChangeEvent, View } from "react-native";
+import { memo, useMemo } from "react";
+import { View } from "react-native";
 import { useTheme } from "@/ui/theme";
 import { cellsToSvg } from "../../computer/cells";
-import {
-  type CellRun,
-  MARK_W,
-  markCells,
-  pageCells,
-  pageGrid,
-  SKY_CELL,
-  STRIP_ROWS,
-  skyEdgeCells,
-  stripCells,
-  stripWidth,
-  TRAIL_CELL,
-} from "./trail-pixels";
+import { type CellRun, MARK_W, markCells, STRIP_ROWS, stripCells, stripWidth, TRAIL_CELL } from "./trail-pixels";
 
 /**
- * The card's pixels after a run (./trail-pixels.ts, the web's drawings) on Skia canvases. Decorative: the
+ * The band's pixels after a run (./trail-pixels.ts, the web's drawings) on Skia canvases. Decorative: the
  * card's words say what they show, so screen readers skip them.
  */
 
@@ -76,8 +64,8 @@ export function CellCanvas({
 }
 
 function useTones() {
-  const { colors, scheme } = useTheme();
-  return { raised: colors.raised, danger: colors.danger, dark: scheme === "dark" };
+  const { colors } = useTheme();
+  return { raised: colors.raised, danger: colors.danger };
 }
 
 /** The steps as pixel columns, oldest left (the card's summary line). */
@@ -113,44 +101,6 @@ export const TrailMark = memo(function TrailMark({ kind, color }: { kind: Browse
   return (
     <View style={{ width: w, height: h }} {...hidden}>
       <CellCanvas runs={runs} width={w} height={h} cx={TRAIL_CELL} />
-    </View>
-  );
-});
-
-/** The thin edge of the agent's sky on top of the card: still and greyed, as on the web. */
-export function TrailSky({ color }: { color: AgentColorName }) {
-  const { raised, dark } = useTones();
-  const [width, setWidth] = useState(0);
-  const [top, bottom] = gradientOf(color);
-  const runs = useMemo(
-    () => (width ? skyEdgeCells(width, [top, bottom], raised, dark) : []),
-    [width, top, bottom, raised, dark],
-  );
-  const onLayout = (e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width));
-  return (
-    <View style={{ height: 2 * SKY_CELL }} onLayout={onLayout} {...hidden}>
-      {width ? <CellCanvas runs={runs} width={width} height={2 * SKY_CELL} cx={SKY_CELL} /> : null}
-    </View>
-  );
-}
-
-/** The drawn page in the thumbnail: the shape of a page, never the real one. */
-export const TrailPage = memo(function TrailPage({
-  color,
-  width,
-  height,
-}: {
-  color: AgentColorName;
-  width: number;
-  height: number;
-}) {
-  const { dark } = useTones();
-  const { w, h } = pageGrid(width, height);
-  const [top, bottom] = gradientOf(color);
-  const runs = useMemo(() => pageCells(w, h, [top, bottom], dark), [w, h, top, bottom, dark]);
-  return (
-    <View style={{ width, height }} {...hidden}>
-      <CellCanvas runs={runs} width={width} height={height} cx={width / w} cy={height / h} />
     </View>
   );
 });

@@ -1,11 +1,20 @@
-import { and, type Executor, eq, type SQL, schema, sql } from "@agenteschat/db";
+import { and, type Executor, eq, notInArray, type SQL, schema, sql } from "@agenteschat/db";
 import { PROVIDERS, type ProviderCause, ProviderError, providerCause } from "@agenteschat/providers";
 import { wakeLineOfRun } from "./approval-order";
-import { BRAIN_NAMES, type ComputerBrainKind, planName } from "./brains/types";
+import { emptyAnswer } from "./brains/failure-causes";
+import { BRAIN_NAMES, type ComputerBrainKind, planName, SYSTEM_REFUSED } from "./brains/types";
+import { kickSignInLine } from "./computer-queue";
+import { UNREADABLE_KEY } from "./errors";
 import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
+import { runState } from "./run-state";
 import { standingErrorDetail } from "./standing";
 import { cliErrorWords, redactCredentials } from "./tool-detail";
+import type { ToolContext } from "./tools/types";
+
+/** How often a running run's worker says it is alive; after `RUN_STALE_MS` without it, the run is recovered. */
+export const RUN_HEARTBEAT_MS = 20_000;
+export const RUN_STALE_MS = 2 * 60_000;
 
 const { agentRuns, agentRunSteps } = schema;
 
@@ -17,8 +26,8 @@ export type RunStatus = AgentRun["status"];
  * stays until a turn answers, so a run that waits on its computer or its plan since (`waitingMachineId`,
  * `waitingForBrain`) reads as that wait, never as the provider being down.
  */
-export const outageParkedSql = sql<boolean>`(${agentRuns.status} = 'waiting_input' and ${agentRuns.transcript} -> 'outage' is not null
-  and ${agentRuns.waitingMachineId} is null and ${agentRuns.transcript} -> 'waitingForBrain' is null)`;
+export const outageParkedSql = sql<boolean>`(${agentRuns.status} = 'waiting_input' and ${runState} -> 'outage' is not null
+  and ${agentRuns.waitingMachineId} is null and ${runState} -> 'waitingForBrain' is null)`;
 
 /** `outageParkedSql` for a loaded run. */
 export function outageParkedOf(run: Pick<AgentRun, "status" | "waitingMachineId" | "transcript">): boolean {
@@ -42,10 +51,10 @@ export const passedSql = sql<boolean>`((${agentRuns.status} = 'done' and ${agent
  * or long work waiting in the agent's line of work (`line`, ADR 0121): nobody is asked anything.
  */
 export const computerWaitSql = sql<"queued" | "away" | "line" | null>`(case when ${agentRuns.status} = 'waiting_input'
-  and ${agentRuns.waitingMachineId} is not null then (case when ${agentRuns.transcript}->'waitingForBrain'->>'code' = 'busy'
+  and ${agentRuns.waitingMachineId} is not null then (case when ${runState}->'waitingForBrain'->>'code' = 'busy'
   then 'queued' else 'away' end)
   when ${agentRuns.status} = 'running' and ${agentRuns.waitingMachineId} is not null then 'queued'
-  when ${agentRuns.status} = 'waiting_input' and ${agentRuns.transcript}->'waitingForBrain'->>'code' = 'work_queue' then 'line' end)`;
+  when ${agentRuns.status} = 'waiting_input' and ${runState}->'waitingForBrain'->>'code' = 'work_queue' then 'line' end)`;
 
 /**
  * `computerWaitSql` for a loaded run, for its computer only. The head of a computer's line asks for room by claiming
@@ -69,9 +78,9 @@ export const shownStatusSql = sql`(case when r.status = 'running' and r.waiting_
  * one too (`usage_pause`, by its `source`): it answers when that renews, nobody is asked.
  */
 export const usageWaitSql = sql<"plan" | "budget" | null>`(case when ${agentRuns.status} = 'waiting_input'
-  and ${agentRuns.waitingMachineId} is null then (case ${agentRuns.transcript}->'waitingForBrain'->>'code'
+  and ${agentRuns.waitingMachineId} is null then (case ${runState}->'waitingForBrain'->>'code'
   when 'plan_limit' then 'plan' when 'budget' then 'budget'
-  when 'usage_pause' then coalesce(${agentRuns.transcript}->'waitingForBrain'->>'source', 'plan') end) end)`;
+  when 'usage_pause' then coalesce(${runState}->'waitingForBrain'->>'source', 'plan') end) end)`;
 
 /** `usageWaitSql` for a loaded run. */
 export function usageWaitOf(run: Pick<AgentRun, "status" | "waitingMachineId" | "transcript">) {
@@ -89,13 +98,17 @@ export function usageWaitOf(run: Pick<AgentRun, "status" | "waitingMachineId" | 
  * that thread. The run keeps `threadRootId` (its trigger, when top-level) as
  * the conversation it belongs to. The one rule for the engine, its tools and
  * the bridge: cards and events of a run always land where its replies do.
- * `confidential`: its thread holds a confidential result (ADR 0190), so it answers under the message that asked it
- * even when that message is in the main timeline.
+ * It answers under the message that asked it even when that message is in the main timeline when `replyInThread`
+ * (its channel replies in threads, ADR 0214) or `confidential` (its thread holds a confidential result, ADR 0190).
+ * `inChannelRun` (run-scope.ts) is the same rule in SQL. A run's shape must carry `replyInThread`; a tool call's
+ * context carries it when its run's does.
  */
 export function replyThreadOf(
-  run: Pick<AgentRun, "threadRootId" | "triggerMessageId"> & { confidential?: boolean },
+  run: (Pick<AgentRun, "threadRootId" | "triggerMessageId" | "replyInThread"> | ToolContext) & {
+    confidential?: boolean;
+  },
 ): string | null {
-  return run.threadRootId === run.triggerMessageId && !run.confidential ? null : run.threadRootId;
+  return run.threadRootId === run.triggerMessageId && !run.replyInThread && !run.confidential ? null : run.threadRootId;
 }
 
 /**
@@ -126,6 +139,8 @@ export const PERSON_LIMIT = "person_limit" as const;
 export const COMPUTER_BUSY = "computer_busy" as const;
 /** A run's error when it went in circles and its kind of run can't end with Continuar (a routine's). */
 export const STUCK_ERROR = "stuck" as const;
+/** A run's error when its computer's disk is full (`saysDiskFull`): every turn there fails until someone frees space. */
+export const DISK_FULL = "disk_full" as const;
 
 /** A run's error when its server stopped in the middle of a tool call (a deploy, a crash, a reboot). */
 export const INTERRUPTED_BY_RESTART = "Interrupted by a server restart";
@@ -147,17 +162,28 @@ const CLI_CODES: Readonly<Record<string, ComputerBrainKind>> = {
   opencode_failed: "opencode",
   grok_failed: "grok",
   antigravity_failed: "antigravity",
+  devin_failed: "devin",
 };
-/** The runner's causes that are the provider's answer (runner protocol 50), never the CLI's or the computer's. */
+/**
+ * The runner's causes that are the provider's answer (runner protocol 50), never the CLI's or the computer's. A model
+ * the sign-in or its endpoint doesn't serve (`model_unavailable`, also read from the CLI's words by
+ * `withFailureCause`) reads as a key's would: "this model isn't available there, choose another".
+ */
 const PROVIDER_CAUSES: ReadonlySet<string> = new Set([
   "quota",
   "billing",
   "provider_transient",
   "auth_rejected",
   "account_disabled",
+  "model_unavailable",
 ]);
 /** The status a provider's cause stands for when the CLI gave none, so it reads as a key's would. */
-const CAUSE_STATUS: Readonly<Record<string, number>> = { quota: 429, billing: 402, provider_transient: 503 };
+const CAUSE_STATUS: Readonly<Record<string, number>> = {
+  quota: 429,
+  billing: 402,
+  provider_transient: 503,
+  model_unavailable: 404,
+};
 /** "API Error: 529 {…}": a provider's answer, as Claude Code words it. */
 const API_ERROR = /\bAPI Error:? (\d{3})\b/;
 /**
@@ -187,8 +213,11 @@ export interface CliFailure {
  * `apt install -y bubblewrap`. Refusing to start with denied paths unprotected."), outside its pinned version range.
  */
 const REFUSED_START = /\brefus(?:e|es|ing) to start\b/i;
-/** A CLI's sandbox (bubblewrap) that didn't start on its computer, before the model was asked (`bwrap: …`). */
-const SANDBOX_FAILED = /\bbwrap: /;
+/**
+ * A CLI's sandbox that didn't start on its computer, before the model was asked: bubblewrap's `bwrap: …`, or Grok
+ * Build's own "Sandbox initialization failed: …" / "Platform not supported: …" (no Landlock or Seatbelt there).
+ */
+const SANDBOX_FAILED = /\bbwrap: |\bsandbox initialization failed\b|\bplatform not supported\b/i;
 
 /**
  * A CLI that refused to start on its computer, or whose sandbox didn't: every retry fails the same way until someone
@@ -238,8 +267,8 @@ export function cliWords(failure: CliFailure): string {
 /**
  * A CLI's failure as its run stores it (`runErrorDetail` reads it back): the provider's as a key's
  * (`provider_error: cause@Claude: …`, `gave_up: …` after the outage's waits), else `cli_failed: Claude Code: what it
- * said`, `cli_sandbox: Grok Build` when its sandbox didn't start, or `cli_closed: Claude Code: exit 1` when it ended
- * without a word. Null for any other code.
+ * said`, `cli_sandbox: Grok Build` when its sandbox didn't start, `cli_empty: Codex` when it ended its turn with nothing
+ * in it, or `cli_closed: Claude Code: exit 1` when it ended without a word. Null for any other code.
  */
 export function cliFailureText(
   failure: CliFailure,
@@ -250,6 +279,8 @@ export function cliFailureText(
   if (!of) return null;
   if ("provider" in of) return providerFailureText(kind, of.provider);
   if (SANDBOX_FAILED.test(failure.message)) return `cli_sandbox: ${of.brain}`;
+  // It ended its turn with nothing in it: a CLI that answers nothing says why nowhere, so the line says what to do.
+  if (emptyAnswer({ message: failure.message, cause: failure.provider?.cause })) return `cli_empty: ${of.brain}`;
   if (of.words) return `cli_failed: ${of.brain}: ${of.words}`;
   return of.ended ? `cli_closed: ${of.brain}: ${of.ended}` : `cli_failed: ${of.brain}`;
 }
@@ -261,6 +292,7 @@ export function cliFailureText(
  * its detail), which is stored as it is.
  */
 export function brainFailureText(failure: CliFailure, kind: ComputerBrainKind): string | null {
+  if (failure.code === SYSTEM_REFUSED) return `cli_system: ${BRAIN_NAMES[kind]}`;
   const known = runErrorDetail(failure.code);
   if (known && known.errorCode !== "run.failed") return null;
   const words = cliErrorWords(failure.message);
@@ -268,7 +300,7 @@ export function brainFailureText(failure: CliFailure, kind: ComputerBrainKind): 
 }
 
 /** `cli_failed: Claude Code: what it said` (`cliFailureText`); `cli_closed` when it ended without a word. */
-const CLI_FAILURE = /^cli_(failed|closed|sandbox): ([^:]+?)(?:: ([\s\S]*))?$/;
+const CLI_FAILURE = /^cli_(failed|closed|sandbox|system|empty): ([^:]+?)(?:: ([\s\S]*))?$/;
 
 /** A run that stopped on an error of ours that kept repeating (`gave up` in the executor): its stored text's start. */
 export const OUR_ERROR = "Stopped after an error";
@@ -315,6 +347,19 @@ export function providerFailureText(kind: "provider_error" | "gave_up", error: P
 const providerNow = (label: string) => (label === "Anthropic" ? PROVIDERS.anthropic.label : label);
 
 /**
+ * With `no_ai`: why (`NoAiCardReason`, kept in its `error` step by `failNoAi`) and the model a model's own limit names,
+ * so the receipt under the message says the real cause ("a IA do plano parou com um erro"), not "no AI" for all of them.
+ */
+export const noAiDetail = (why: string | null | undefined, model?: string | null) =>
+  why ? { errorCode: why, ...(model ? { errorParams: { model } } : {}) } : undefined;
+
+/** For a select over `agent_runs`: a `no_ai` run's `error` step (`noAiDetail` reads it), else null. */
+export const noAiWhySql = sql<{ code?: string; model?: string } | null>`(case when ${agentRuns.error} = 'no_ai' then
+  (select ${agentRunSteps.data} from ${agentRunSteps} where ${agentRunSteps.runId} = agent_runs.id
+  and ${agentRunSteps.kind} = 'error' and ${agentRunSteps.data}->>'reason' = 'no_ai'
+  order by ${agentRunSteps.seq} desc limit 1) end)`;
+
+/**
  * The stable code (and params) of a run's stored `error`, for the app to
  * word it in the person's language; the stored text stays as the fallback.
  */
@@ -327,21 +372,26 @@ export function runErrorDetail(error: string | null | undefined): {
     "budget_exceeded",
     "too_many_tool_calls",
     "empty_reply",
+    "empty_reply_limit",
     "model_refused",
     "agent_archived",
     NO_AI,
     PERSON_LIMIT,
     COMPUTER_BUSY,
     STUCK_ERROR,
-    // A Codex turn on a Windows computer where MXC can't hold its commands (the runner's own words say what to do).
+    DISK_FULL,
+    // A Codex turn on a Windows computer where no sandbox holds its commands (the runner's own words say what to do).
     "windows_sandbox",
+    // A code session's worktree isn't there for its agent's computer brain (ADR 0215): still being prepared, gone, or
+    // on a computer the agent no longer uses.
+    "code_session_unavailable",
   ];
   if (simple.includes(error)) return { errorCode: `run.${error}` };
   if (error === "timeout") return { errorCode: "run.computer_timeout", errorParams: { code: error } };
   const cli = CLI_FAILURE.exec(error);
   if (cli) {
     const [, how, brain = "", detail = ""] = cli;
-    if (how === "closed" || how === "sandbox") return { errorCode: `run.cli_${how}`, errorParams: { brain } };
+    if (how !== "failed") return { errorCode: `run.cli_${how}`, errorParams: { brain } };
     return detail
       ? { errorCode: "run.cli_failed", errorParams: { brain, detail } }
       : { errorCode: "run.cli_stopped", errorParams: { brain } };
@@ -396,6 +446,7 @@ export function runErrorDetail(error: string | null | undefined): {
     error.startsWith("A chave da API deste agente foi revogada")
   )
     return { errorCode: "run.credential_revoked" };
+  if (error === UNREADABLE_KEY) return { errorCode: "run.credential_unreadable" };
   const wrong =
     // A provider's name has no comma: one way to split the sentence, never a quadratic search for it.
     /^This agent's model is from ([^,]+), but the chosen key is from (.+)$/.exec(error) ??
@@ -455,6 +506,7 @@ export const SYSTEM_STOP_REASONS = [
   "agent_archived",
   "channel_deleted",
   "consultation_expired",
+  "rerouted",
   "mission_stopped",
   "mission_closed",
   "mission_executor_changed",
@@ -585,6 +637,10 @@ export async function transitionRun(
     })
     .where(and(eq(agentRuns.id, runId), eq(agentRuns.status, from)))
     .returning();
+  // Out of work on a plan sign-in that has runs waiting for it: the first of them takes the slot now.
+  const ask = (row?.transcript as { roomAsk?: { machineId?: string; signIn?: string } } | null)?.roomAsk;
+  if (row && from === "running" && ask?.machineId && ask.signIn)
+    await kickSignInLine(db, ask.machineId, ask.signIn).catch(() => {});
   if (row && isTerminal(to)) {
     await recordRunFinished(
       db,
@@ -613,6 +669,44 @@ export type StepKind = (typeof schema.agentRunStepKindEnum.enumValues)[number];
 
 /** Tries for a free number: tool calls that run side by side each lose at most to the others. */
 const STEP_TRIES = 20;
+
+/**
+ * The tools a turn uses to talk, not to work: a reaction, a question card, the line it says before slow work, its
+ * background works' own tools (`REACT_TOOL`, `ASK_USER_TOOL`, `ASK_CHOICES_TOOL`, `SAY_NOW_TOOL` and the four of
+ * `work-tools.ts`, written out here: those modules import this one).
+ */
+const TALK_TOOLS = [
+  "react",
+  "ask_user",
+  "ask_choices",
+  "say_now",
+  // A suggested code session (ADR 0215 §11) waits for the person: the run hasn't started the change.
+  "suggest_code_session",
+  "post_update",
+  "steer_work",
+  "stop_work",
+  "work_in_background",
+];
+
+/**
+ * Whether a run is at work on something: its trail has a call of a tool other than a way of talking (`TALK_TOOLS`).
+ * One that has only talked so far ("oi", a reaction, a question) is a conversation, not a task (ADR 0112 addendum of
+ * 2026-11-19): what the person adds is part of what it answers, in one message.
+ */
+export async function runAtWork(db: Executor, runId: string): Promise<boolean> {
+  const [step] = await db
+    .select({ id: schema.agentRunSteps.id })
+    .from(schema.agentRunSteps)
+    .where(
+      and(
+        eq(schema.agentRunSteps.runId, runId),
+        eq(schema.agentRunSteps.kind, "tool_call"),
+        notInArray(sql<string>`coalesce(${schema.agentRunSteps.data}->>'name', '')`, TALK_TOOLS),
+      ),
+    )
+    .limit(1);
+  return step !== undefined;
+}
 
 /**
  * Appends a step to a run's trail (numbered in order). Two at once read the same last number, and the unique

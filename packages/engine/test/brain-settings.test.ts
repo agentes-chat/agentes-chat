@@ -1,14 +1,22 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ACCOUNTS_PROTOCOL,
+  ANTIGRAVITY_MAC_PROTOCOL,
+  ANTIGRAVITY_WINDOWS_PROTOCOL,
   BRAIN_PROTOCOL,
+  CLI_COPIES_PROTOCOL,
+  CODEX_UNELEVATED_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
+  DEVIN_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   MISSION_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
   SPEED_PROTOCOL,
 } from "@agenteschat/adapters";
-import { eq, schema } from "@agenteschat/db";
+import { eq, migrationsFolder, schema, sql } from "@agenteschat/db";
 import { MODEL_CATALOG } from "@agenteschat/providers";
 import { CODING_PLANS, learnPlanModels, planOf } from "@agenteschat/providers/plans";
 import {
@@ -29,6 +37,7 @@ import {
   updateAgent,
   ValidationError,
 } from "../src";
+import { recordAudit } from "../src/audit";
 import {
   brainModelId,
   brainModelLabel,
@@ -51,7 +60,7 @@ const mac = (patch: Record<string, unknown> = {}) => ({
   name: "mac",
   protocol: BRAIN_PROTOCOL,
   execAllowed: true,
-  executors: { claude: { version: "2.1.0" }, detectedAt: "2026-10-17" },
+  executors: { claude: { version: "2.1.300" }, detectedAt: "2026-10-17" },
   online: true,
   lastSeenAt: new Date(),
   deletedAt: null,
@@ -60,10 +69,22 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual([
+      "Fable 5.2",
+      "Opus 5.5",
+      "Sonnet 5.5",
+      "Haiku 5.5",
+    ]);
+    // Fable runs under Claude Code's own alias, and a full id is kept as its alias.
+    expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
+    expect(normalizeBrainModel("claude_code", "claude-fable-5-2")).toBe("fable");
+    expect(brainModelId("claude_code", "fable")).toBe("claude-fable-5-2");
+    expect(brainModelLabel("claude_code", "fable")).toBe("Fable 5.2");
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
-    // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
+    // Codex offers the catalog's OpenAI rows, the Astras among them; the newest Sol is its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
+      "GPT-6.2 Astra",
+      "GPT-6.2 Sol",
       "GPT-6 Astra",
       "GPT-6.1 Sol",
       "GPT-6.1 Terra",
@@ -71,11 +92,25 @@ describe("brain settings", () => {
       "GPT-6 Luna",
     ]);
     expect(brainModelOptions("codex")[0]).toMatchObject({
-      value: "gpt-6-astra",
-      modelId: "gpt-6-astra",
+      value: "gpt-6.2-astra",
+      modelId: "gpt-6.2-astra",
       contextWindow: 1_050_000,
     });
     expect(normalizeBrainModel("codex", "gpt-6-astra")).toBe("gpt-6-astra");
+    // A plan runs its maker's models alone: another maker's is refused, not stored for runs that can't use it.
+    for (const [kind, model] of [
+      ["codex", "claude-opus-5-5"],
+      ["codex", "opus"],
+      ["codex", "gemini-4-argon"],
+      ["antigravity", "gpt-6.1"],
+      ["antigravity", "claude-sonnet-5-5"],
+      ["grok", "gpt-6-luna"],
+    ] as const)
+      expect(() => normalizeBrainModel(kind, model)).toThrow("doesn't run on");
+    expect(normalizeBrainModel("antigravity", "gemini-4-argon-high")).toBe("gemini-4-argon-high");
+    expect(normalizeBrainModel("grok", "grok-4.7")).toBe("grok-4.7");
+    expect(normalizeBrainModel("cursor", "claude-opus-5-5-high")).toBe("claude-opus-5-5-high");
+    expect(normalizeBrainModel("opencode", "anthropic/claude-opus-5-5")).toBe("anthropic/claude-opus-5-5");
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
@@ -117,7 +152,7 @@ describe("brain settings", () => {
     expect(() => normalizeBrainModel("codex", "rm -rf /")).toThrow();
     expect(() => normalizeBrainModel("model", "opus")).toThrow();
     expect(defaultBrainModel("claude_code")).toBe("sonnet");
-    expect(defaultBrainModel("codex")).toBe("gpt-6.1-sol");
+    expect(defaultBrainModel("codex")).toBe("gpt-6.2-sol");
     expect(defaultBrainModel("model")).toBeNull();
     expect(brainModelId("claude_code", "opus")).toBe("claude-opus-5-5");
     expect(brainModelId("claude_code", null)).toBe("claude-sonnet-5-5");
@@ -146,6 +181,52 @@ describe("brain settings", () => {
     ]);
   });
 
+  test("options: on Windows, Codex says what holds its commands there before anyone picks it", () => {
+    const codexOf = (
+      sandbox: "mxc" | "unelevated" | "none" | undefined,
+      patch: Record<string, unknown> = {},
+      chat = false,
+    ) =>
+      brainOptions(
+        mac({
+          os: "windows",
+          protocol: CODEX_UNELEVATED_PROTOCOL,
+          executors: {
+            claude: { version: "2" },
+            codex: { version: "codex-cli 0.170.0", ...(sandbox ? { sandbox } : {}) },
+            detectedAt: "x",
+          },
+          ...patch,
+        }),
+        { chat },
+      ).find((o) => o.kind === "codex");
+    // MXC, or not known yet: nothing new to say.
+    for (const sandbox of ["mxc", undefined] as const) {
+      expect(codexOf(sandbox)).toMatchObject({ available: true });
+      expect(codexOf(sandbox)).not.toHaveProperty("reason");
+      expect(codexOf(sandbox)).not.toHaveProperty("sandbox");
+    }
+    // Codex's own sandbox: it stays a choice, with its hint.
+    expect(codexOf("unelevated")).toMatchObject({ available: true, sandbox: "partial" });
+    expect(codexOf("unelevated")).not.toHaveProperty("reason");
+    // Nothing could hold it: unavailable there, with its own reason, instead of failing in the chat.
+    expect(codexOf("none")).toMatchObject({ available: false, reason: "windows_sandbox" });
+    expect(codexOf("none")).not.toHaveProperty("sandbox");
+    // Switched off there: that first (turning it on is the way out, and its runner checks only then).
+    const off = { access: { folders: [], tools: { claude: true, codex: false, commands: true } } };
+    expect(codexOf("none", off)).toMatchObject({ available: false, reason: "tool_off" });
+    expect(codexOf("unelevated", off)).not.toHaveProperty("sandbox");
+    // Only Windows reads it, and only for Codex.
+    expect(codexOf("none", { os: "linux" })).toMatchObject({ available: true });
+    expect(brainOptions(mac({ os: "windows", protocol: CODEX_UNELEVATED_PROTOCOL }))[1]).not.toHaveProperty("sandbox");
+    // Turns that run no commands (the team's right hand): nothing for a sandbox to hold, so nothing to say either.
+    for (const sandbox of ["unelevated", "none"] as const) {
+      expect(codexOf(sandbox, {}, true)).toMatchObject({ available: true });
+      expect(codexOf(sandbox, {}, true)).not.toHaveProperty("reason");
+      expect(codexOf(sandbox, {}, true)).not.toHaveProperty("sandbox");
+    }
+  });
+
   test("options: on Windows OpenCode needs a runner that speaks ACP; a CLI that doesn't run on the computer's system says so", () => {
     const executors = {
       claude: { version: "2" },
@@ -161,26 +242,49 @@ describe("brain settings", () => {
           .slice(3)
           .map((o) => [o.kind, o.reason ?? null]),
       );
-    // An older Windows runner refuses every OpenCode turn; Cursor and Grok Build don't run on Windows; the Antigravity
-    // CLI only on Linux.
+    // An older Windows runner refuses every OpenCode turn, and runs Grok Build from `GROK_WINDOWS_PROTOCOL`, the
+    // Antigravity CLI from `ANTIGRAVITY_WINDOWS_PROTOCOL` and Cursor from `CLI_COPIES_PROTOCOL` on (ADR 0228 §7); a Mac
+    // runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses Gemini.
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
-      cursor: "system",
+      cursor: "runner_old",
       opencode: "runner_old",
-      grok: "system",
-      antigravity: "system",
+      grok: "runner_old",
+      antigravity: "runner_old",
+      devin: "runner_old",
     });
+    expect(reasons(mac({ os: "windows", protocol: CLI_COPIES_PROTOCOL, executors }))).toEqual({
+      cursor: null,
+      opencode: null,
+      grok: null,
+      antigravity: null,
+      devin: "runner_old",
+    });
+    // The Devin CLI's pin has no Windows build: there it doesn't run, installed or not (ADR 0253).
+    const withDevin = { ...executors, devin: { version: "devin 3000.15.14 (abc)" } };
+    expect(reasons(mac({ os: "windows", protocol: DEVIN_PROTOCOL, executors: withDevin })).devin).toBe("system");
+    expect(reasons(mac({ os: "linux", protocol: DEVIN_PROTOCOL, executors: withDevin })).devin).toBeNull();
+    expect(reasons(mac({ os: "windows", protocol: CLI_COPIES_PROTOCOL - 1, executors })).cursor).toBe("runner_old");
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
+    expect(reasons(mac({ os: "windows", protocol: GROK_WINDOWS_PROTOCOL - 1, executors })).grok).toBe("runner_old");
+    expect(reasons(mac({ os: "windows", protocol: GROK_WINDOWS_PROTOCOL, executors })).grok).toBeNull();
+    expect(reasons(mac({ os: "windows", protocol: ANTIGRAVITY_WINDOWS_PROTOCOL - 1, executors })).antigravity).toBe(
+      "runner_old",
+    );
+    expect(reasons(mac({ os: "windows", protocol: ANTIGRAVITY_WINDOWS_PROTOCOL, executors })).antigravity).toBeNull();
     expect(reasons(mac({ os: "darwin", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
       cursor: null,
       opencode: null,
       grok: null,
-      antigravity: "system",
+      antigravity: "runner_old",
+      devin: "runner_old",
     });
+    expect(reasons(mac({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL, executors })).antigravity).toBeNull();
     expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
       cursor: null,
       opencode: null,
       grok: null,
       antigravity: null,
+      devin: "runner_old",
     });
   });
 
@@ -195,6 +299,7 @@ describe("brain settings", () => {
       ["opencode", false, "no_computer"],
       ["grok", false, "no_computer"],
       ["antigravity", false, "no_computer"],
+      ["devin", false, "no_computer"],
     ]);
     expect(reasons(mac())).toEqual([
       ["model", true, null],
@@ -208,6 +313,8 @@ describe("brain settings", () => {
       ["grok", false, "runner_old"],
       // The Antigravity CLI needs runner protocol 44 (`ANTIGRAVITY_PROTOCOL`).
       ["antigravity", false, "runner_old"],
+      // The Devin CLI needs runner protocol 89 (`DEVIN_PROTOCOL`).
+      ["devin", false, "runner_old"],
     ]);
     expect(reasons(mac({ execAllowed: false }))[1]).toEqual(["claude_code", false, "exec_off"]);
     expect(reasons(mac({ protocol: MISSION_PROTOCOL - 1 }))[1]).toEqual(["claude_code", false, "runner_old"]);
@@ -223,14 +330,23 @@ describe("brain settings", () => {
       ["claude_code", true, null],
       ["codex", false, "not_reported"],
     ]);
-    const oldCodex = mac({ executors: { codex: { version: "codex-cli 0.100.0" }, detectedAt: "x" } });
-    expect(reasons(oldCodex).slice(1, 3)).toEqual([
-      ["claude_code", false, "not_installed"],
-      ["codex", false, "outdated"],
+    // Codex counts at its floor or newer, and when its line has no version in it; below, it needs an update.
+    for (const version of ["codex-cli 0.164.0", "codex-cli 0.170.0", ""]) {
+      expect(reasons(mac({ executors: { codex: { version }, detectedAt: "x" } })).slice(1, 3)).toEqual([
+        ["claude_code", false, "not_installed"],
+        ["codex", true, null],
+      ]);
+    }
+    expect(reasons(mac({ executors: { codex: { version: "codex-cli 0.163.0" }, detectedAt: "x" } }))[2]).toEqual([
+      "codex",
+      false,
+      "cli_outdated",
     ]);
-    expect(brainOptions(oldCodex).find((o) => o.kind === "codex")?.codexVersion).toEqual({
-      detected: "0.100.0",
-      minimum: "0.163.0",
+    const oldClaude = mac({ executors: { claude: { version: "2.1.205 (Claude Code)" }, detectedAt: "x" } });
+    expect(brainOptions(oldClaude).find((o) => o.kind === "claude_code")).toMatchObject({
+      available: false,
+      reason: "cli_outdated",
+      outdated: { version: "2.1.205", min: "2.1.206", command: "claude update" },
     });
     // There and failing to start: said as that, never "not installed".
     const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
@@ -240,7 +356,9 @@ describe("brain settings", () => {
     ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
-      brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),
+      brainOptions(both).every(
+        (o) => o.available || ["cursor", "opencode", "grok", "antigravity", "devin"].includes(o.kind),
+      ),
     ).toBe(true);
     // Installed but turned off in the app's Tools: says so (not "not installed"); turned on, available.
     const off = mac({ ...both, access: { tools: { claude: false, codex: true } } });
@@ -331,6 +449,41 @@ async function world() {
   };
   return { fx, deps: { db: fx.db }, machineId, bia, caio, account, row, audits, editor };
 }
+
+describe("a model its plan can't run, stored before the guard", () => {
+  test("goes back to the one it had before that change, else to its CLI's default", async () => {
+    const fx = await setup();
+    f = fx;
+    const migration = sql.raw(readFileSync(join(migrationsFolder, "0320_brain_model_of_its_plan.sql"), "utf8"));
+    const brainOf = async () => (await fx.db.select().from(schema.agents).where(eq(schema.agents.id, fx.agent.id)))[0];
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "codex", brainModel: "claude-opus-5-5" })
+      .where(eq(schema.agents.id, fx.agent.id));
+    await recordAudit(fx.db, {
+      orgId: fx.org.id,
+      actor: { type: "person", id: fx.owner.id },
+      action: "agent.brain",
+      target: { type: "agent", id: fx.agent.id },
+      details: { from: { brain: "codex", model: "gpt-6-luna" }, to: { brain: "codex", model: "claude-opus-5-5" } },
+    });
+    await fx.db.execute(migration);
+    expect((await brainOf())?.brainModel).toBe("gpt-6-luna");
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "antigravity", brainModel: "gpt-6.1" })
+      .where(eq(schema.agents.id, fx.agent.id));
+    await fx.db.execute(migration);
+    expect((await brainOf())?.brainModel).toBeNull();
+    // Cursor runs every maker's models: left as it is.
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "cursor", brainModel: "claude-opus-5-5-high" })
+      .where(eq(schema.agents.id, fx.agent.id));
+    await fx.db.execute(migration);
+    expect((await brainOf())?.brainModel).toBe("claude-opus-5-5-high");
+  });
+});
 
 describe("Criar agente: what a new agent could think with", () => {
   test("admins see every computer with what it offers; a member the server's own and theirs, never someone else's", async () => {
@@ -622,7 +775,10 @@ describe("a plan thinks only for its owner's agents, one account each", () => {
       .returning();
     if (!theo) throw new Error("no agent");
     // Bia keeps hers to herself ("Só eu", ADR 0059 §3): Dev's page lists Ana's account, never Bia's.
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     const dan = await editor();
     const seen = await getAgentBrain(deps, dan.id, fx.org.id, fx.agent.id);
     expect(seen.accounts.map((a) => a.id)).toEqual([ANAS]);
@@ -691,6 +847,87 @@ describe("a plan thinks only for its owner's agents, one account each", () => {
     expect(await row()).toMatchObject({ brain: "model", brainAccountId: null });
   });
 
+  test("account-only brains (antigravity, grok) reject account: null or missing account on switch", async () => {
+    const { fx, deps, machineId, row } = await world();
+    await fx.db
+      .update(schema.machines)
+      .set({
+        os: "linux",
+        protocol: ANTIGRAVITY_MAC_PROTOCOL,
+        executors: {
+          claude: { version: "2.1.0" },
+          antigravity: { version: "1.5.13" },
+          grok: { version: "1.0.89" },
+          detectedAt: "2026-11-20",
+        },
+      })
+      .where(eq(schema.machines.id, machineId));
+    const GEMINI = "0193eeee-0000-7000-8000-000000000099";
+    await fx.db.insert(schema.machineAccounts).values({
+      id: GEMINI,
+      orgId: fx.org.id,
+      machineId,
+      kind: "antigravity",
+      label: "Gemini",
+      status: "active",
+      shared: true,
+      createdBy: fx.owner.id,
+    });
+    // Explicit account: null is rejected even for the computer's pairer.
+    const explicitNull = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, {
+      brain: "antigravity",
+      account: null,
+    }).catch((e) => e);
+    expect(explicitNull).toBeInstanceOf(ValidationError);
+    expect(explicitNull.code).toBe("account.invalid");
+    // Switching onto antigravity/grok without passing an account is also rejected.
+    const omitted = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, {
+      brain: "antigravity",
+    }).catch((e) => e);
+    expect(omitted).toBeInstanceOf(ValidationError);
+    expect(omitted.code).toBe("account.invalid");
+    const grokNull = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, {
+      brain: "grok",
+      account: null,
+    }).catch((e) => e);
+    expect(grokNull).toBeInstanceOf(ValidationError);
+    expect(grokNull.code).toBe("account.invalid");
+    // With a connected account, saving succeeds; clearing back to null afterward is rejected.
+    const saved = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, {
+      brain: "antigravity",
+      account: GEMINI,
+    });
+    expect(saved).toMatchObject({ brain: "antigravity", account: GEMINI });
+    expect(await row()).toMatchObject({ brain: "antigravity", brainAccountId: GEMINI });
+    const cleared = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { account: null }).catch((e) => e);
+    expect(cleared).toBeInstanceOf(ValidationError);
+    expect(cleared.code).toBe("account.invalid");
+    // Even if an agent row already has brain='antigravity' and brainAccountId=null, saving only model/effort without
+    // an account must still be rejected instead of keeping brainAccountId=null.
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "antigravity", brainAccountId: null })
+      .where(eq(schema.agents.id, fx.agent.id));
+    const modelOnly = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, {
+      brain: "antigravity",
+      model: "gemini-4-neon-high",
+    }).catch((e) => e);
+    expect(modelOnly).toBeInstanceOf(ValidationError);
+    expect(modelOnly.code).toBe("account.invalid");
+  });
+
+  test("an account-only brain's account goes: its agent goes to the API, even on its owner's own computer", async () => {
+    const { fx, account, row } = await world();
+    await account(ANAS, fx.owner.id);
+    await fx.db.update(schema.machineAccounts).set({ kind: "grok" }).where(eq(schema.machineAccounts.id, ANAS));
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "grok", brainAccountId: ANAS })
+      .where(eq(schema.agents.id, fx.agent.id));
+    expect(await releaseAgents(fx.db, fx.org.id, [ANAS])).toEqual([fx.agent.id]);
+    expect(await row()).toMatchObject({ brain: "model", brainAccountId: null });
+  });
+
   test("a new owner who doesn't own the plan sends the agent to the API (audited); one who does answers alone", async () => {
     const { fx, bia, account, row, audits } = await world();
     await account(ANAS, fx.owner.id);
@@ -745,9 +982,15 @@ describe("Usar planos de outras pessoas (ADR 0059 §3, amended 2026-11-04)", () 
     const agent = await row();
     expect(await planIsOwners(fx.db, agent, machineId, { id: BIAS })).toBe(true);
     // Kept to Bia ("Só eu"), it thinks for nobody else's agent.
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     expect(await planIsOwners(fx.db, agent, machineId, { id: BIAS })).toBe(false);
-    await fx.db.update(schema.machineAccounts).set({ serves: "everyone" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "everyone", useMode: "everyone" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     expect((await brainAccountFor(fx.db, agent, "claude_code", machineId))?.id).toBe(BIAS);
     const usage = await recordPlanUsage(fx.db, {
       orgId: fx.org.id,
@@ -786,17 +1029,13 @@ describe("Usar planos de outras pessoas (ADR 0059 §3, amended 2026-11-04)", () 
     expect(paysExtraUsage(await row())).toBe(true);
     const lent = await setAgentBrain(deps, caio.id, fx.org.id, fx.agent.id, { brain: "claude_code", account: BIAS });
     expect(paysExtraUsage(await row())).toBe(false);
-    // Older phone builds read the view's switch; the previous release reads the column during a deploy or a rollback.
+    // Older phone builds read the view's switch.
     expect(lent.extraUsage).toBe(false);
-    expect((await row()).brainExtraUsage).toBe(false);
-    // On her plan someone let everyone talk to Dev, and the previous release's switch was turned on.
-    await fx.db
-      .update(schema.agents)
-      .set({ audienceMode: "everyone", brainExtraUsage: true })
-      .where(eq(schema.agents.id, fx.agent.id));
+    // On her plan someone let everyone talk to Dev.
+    await fx.db.update(schema.agents).set({ audienceMode: "everyone" }).where(eq(schema.agents.id, fx.agent.id));
     await takeBackPlan(deps, bia.id, fx.org.id, BIAS, fx.agent.id);
     // Back on its owner's own sign-in, which answers no one else until its owner says so.
-    expect(await row()).toMatchObject({ brain: "claude_code", audienceMode: "owner", brainExtraUsage: false });
+    expect(await row()).toMatchObject({ brain: "claude_code", audienceMode: "owner" });
     expect(paysExtraUsage(await row())).toBe(true);
   });
 
@@ -849,13 +1088,19 @@ describe("Usar planos de outras pessoas (ADR 0059 §3, amended 2026-11-04)", () 
       .returning();
     if (!lodi) throw new Error("no agent");
     const dan = await editor();
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     const refused = await setAgentBrain(deps, caio.id, fx.org.id, lodi.id, {
       brain: "claude_code",
       account: BIAS,
     }).catch((e) => e);
     expect(refused.code).toBe("account.not_owner");
-    await fx.db.update(schema.machineAccounts).set({ serves: "everyone" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "everyone", useMode: "everyone" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     expect(
       await setAgentBrain(deps, dan.id, fx.org.id, lodi.id, { brain: "claude_code", account: BIAS }),
     ).toMatchObject({ account: BIAS });
@@ -1024,5 +1269,29 @@ describe("what the agent thinks with changes: its computer waits look again", ()
     expect(await wokenNow(fx, ranTools)).toBe(false);
     expect(await wokenNow(fx, planCut)).toBe(false);
     expect(await wokenNow(fx, noTools)).toBe(true);
+  });
+});
+
+describe("the key an agent on the API thinks with (the picker's Conta)", () => {
+  test("its own key; else its provider's, though nobody made it the default; none without one or on a plan", async () => {
+    const { fx, deps } = await world();
+    const keyId = async () => (await getAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id)).keyId;
+    const agent = (patch: Partial<typeof schema.agents.$inferInsert>) =>
+      fx.db.update(schema.agents).set(patch).where(eq(schema.agents.id, fx.agent.id));
+    // The fixture's agent points at the workspace's only key, added without being made the default.
+    expect(await keyId()).toBe(fx.credential.id);
+    // With no key of its own its calls take its provider's all the same: the picker shows that one chosen.
+    await agent({ credentialId: null });
+    expect(await keyId()).toBe(fx.credential.id);
+    // On a plan it thinks with no key.
+    await agent({ brain: "claude_code" });
+    expect(await keyId()).toBeNull();
+    // With no live key, none (the server's own may serve).
+    await agent({ brain: "model" });
+    await fx.db
+      .update(schema.providerCredentials)
+      .set({ revokedAt: new Date() })
+      .where(eq(schema.providerCredentials.id, fx.credential.id));
+    expect(await keyId()).toBeNull();
   });
 });

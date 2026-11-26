@@ -1,4 +1,6 @@
-import { listsAgent } from "@agenteschat/client/lib/audience";
+import type { Agent } from "@agenteschat/client";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import { listsAgent, managesAgent } from "@agenteschat/client/lib/audience";
 import { joinsChannels } from "@agenteschat/client/lib/right-hand";
 import { Checkbox, InfoHint, SearchField, Token, TokenList } from "@agenteschat/ui";
 import { useState } from "react";
@@ -20,8 +22,9 @@ export interface PickRow {
 /**
  * People and agents of the org as pickable rows, minus `exclude`, filtered by `query`. Agents only as far as my lists
  * show them (`listsAgent`), plus the ones in `keep` (already picked), so they can still be taken out. For a channel
- * (`channel`), only the agents that join channels (`joinsChannels`). I am left out, as a channel adds who creates it
- * by itself; `me` lists me too, first (a task's assignees).
+ * (`channel`), only the agents that join channels (`joinsChannels`) and that I may place there: mine, or one I manage
+ * (the server's `requirePlacesAgent`, ADR 0085 addendum of 2026-11-17). I am left out, as a channel adds who creates
+ * it by itself; `me` lists me too, first (a task's assignees).
  */
 export function useMemberRows(
   query: string,
@@ -32,6 +35,9 @@ export function useMemberRows(
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const q = query.trim().toLowerCase();
+  // Into a channel: the agents I answer for (myself or through a role, ADR 0085, addendum of 2026-11-21) or manage.
+  const offered = (a: Agent) =>
+    channel ? ownsAgentAs(a, me.user.id, dir.rolesOf(me.user.id)) || managesAgent(a) : listsAgent(org, a);
   const rows: PickRow[] = [
     ...dir.members
       .filter((m) => withMe || m.userId !== me.user.id)
@@ -44,7 +50,7 @@ export function useMemberRows(
         sub: m.email,
       })),
     ...dir.agents
-      .filter((a) => (!channel || joinsChannels(a)) && (listsAgent(org, a) || keep?.has(`agent:${a.id}`)))
+      .filter((a) => (!channel || joinsChannels(a)) && (offered(a) || keep?.has(`agent:${a.id}`)))
       .map((a) => ({
         key: `agent:${a.id}` as PickKey,
         kind: "agent" as const,

@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { eq, schema } from "@agenteschat/db";
+import { eq, rowsOf, schema, sql } from "@agenteschat/db";
+import { conditionWords, issuedBy } from "@agenteschat/db/testing";
 import { summedCostNanoUsd } from "@agenteschat/providers";
 import {
   createAgent,
   createOrganization,
+  nextStepAt,
   operatorOrgWorkAnalytics,
   operatorWorkAnalytics,
   ValidationError,
@@ -98,23 +100,25 @@ beforeAll(async () => {
   await db
     .update(schema.agentRuns)
     .set({
+      // Read from the column only: the transcript's older copy is never decompressed for analytics.
       transcript: {
-        profiles: [
-          {
-            stages: [
-              { stage: "claim", ms: 10, queries: 1 },
-              { stage: "context", ms: 200, queries: 5 },
-              { stage: "model#1", ms: 3000, queries: 0 },
-              { stage: "model#2", ms: 1000, queries: 0 },
-            ],
-            total: { ms: 4210, queries: 6 },
-            brain: [
-              { warm: false, initMs: 4000, firstEventMs: 6000 },
-              { warm: true, firstEventMs: 800 },
-            ],
-          },
-        ],
+        profiles: [{ stages: [{ stage: "transcript", ms: 1, queries: 0 }], total: { ms: 1, queries: 0 } }],
       },
+      profiles: [
+        {
+          stages: [
+            { stage: "claim", ms: 10, queries: 1 },
+            { stage: "context", ms: 200, queries: 5 },
+            { stage: "model#1", ms: 3000, queries: 0 },
+            { stage: "model#2", ms: 1000, queries: 0 },
+          ],
+          total: { ms: 4210, queries: 6 },
+          brain: [
+            { warm: false, initMs: 4000, firstEventMs: 6000 },
+            { warm: true, firstEventMs: 800 },
+          ],
+        },
+      ],
     })
     .where(eq(schema.agentRuns.id, answered.id));
   // Agent to agent, three times: another agent's message, a reply two hops deep, and another agent's answer
@@ -297,6 +301,39 @@ test("waits by cause, how computer turns started and where a run's time went", a
   expect(theirs.totals.stages).toEqual([]);
 });
 
+test("a computer's waits and a provider's in one answer, across workspaces and in one", async () => {
+  const provider = { cause: "provider_outage", waits: 1, medianSec: 60, p90Sec: 60 };
+  expect((await operatorWorkAnalytics(f.db, range)).totals.waitsByCause).toMatchObject([
+    { cause: "brain_unavailable:busy", waits: 4 },
+    provider,
+  ]);
+  expect((await operatorOrgWorkAnalytics(f.db, f.org.id, range)).totals.waitsByCause).toMatchObject([
+    { cause: "brain_unavailable:busy", waits: 2 },
+    provider,
+  ]);
+  expect((await operatorOrgWorkAnalytics(f.db, nova.id, range)).totals.waitsByCause).toMatchObject([
+    { cause: "brain_unavailable:busy", waits: 2 },
+  ]);
+});
+
+test("each cause's waits are asked for in the words of the index that finds them, every read bounded in time", async () => {
+  const issued = await issuedBy(() => operatorWorkAnalytics(f.db, range));
+  // The planner reads a run's waits through a partial index only when the statement holds that index's condition.
+  const conditions = rowsOf<{ condition: string }>(
+    await f.db.execute(
+      sql`select pg_get_expr(indpred, indrelid) as condition from pg_index where indexrelid in
+        ('agent_run_steps_run_id_index'::regclass, 'agent_run_steps_provider_outage_idx'::regclass)`,
+    ),
+  ).map((index) => conditionWords(index.condition));
+  expect(conditions.length).toBe(2);
+  const byCause = issued.filter((statement) => statement.includes(" as cause"));
+  expect(byCause.length).toBe(1);
+  for (const condition of conditions) expect(conditionWords(byCause[0] ?? "")).toContain(condition);
+
+  const set = (setting: string) => issued.filter((statement) => statement === `set local ${setting}`).length;
+  expect([set("jit = off"), set("statement_timeout = '20s'")]).toEqual([6, 6]);
+});
+
 test("one workspace, per agent; by day past two days; at most 90 days", async () => {
   const got = await operatorOrgWorkAnalytics(f.db, f.org.id, range);
   expect(got.orgId).toBe(f.org.id);
@@ -320,4 +357,56 @@ test("one workspace, per agent; by day past two days; at most 90 days", async ()
 
   const long = { from: new Date(now - 90 * 86_400_000).toISOString().slice(0, 10), to: today };
   await expect(operatorWorkAnalytics(f.db, long)).rejects.toThrow(ValidationError);
+});
+
+test("a wait lasts until the run's next step, read as one index row however many steps follow", async () => {
+  // Years before any dates read here: no other answer counts it.
+  const at = (sec: number) => new Date(Date.UTC(2000, 0, 1, 0, 0, sec));
+  const gone = crypto.randomUUID();
+  const [r] = await f.db
+    .insert(schema.agentRuns)
+    .values({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      channelId: f.general.id,
+      threadRootId: gone,
+      triggerMessageId: gone,
+      trigger: "mention",
+      hop: 1,
+      createdAt: at(0),
+      status: "done",
+    })
+    .returning();
+  const runId = (r as { id: string }).id;
+  await f.db.insert(schema.agentRunSteps).values(
+    Array.from({ length: 40 }, (_, i) => ({
+      orgId: f.org.id,
+      runId,
+      seq: i + 1,
+      kind: "error" as const,
+      data: i === 0 ? { reason: "brain_unavailable", code: "busy" } : { reason: "other" },
+      createdAt: at(i * 10),
+    })),
+  );
+  type Node = { Alias?: string; "Actual Rows"?: number; Plans?: Node[] };
+  const plan = await f.db.transaction(async (tx) => {
+    // A table this small is read whole otherwise, which says nothing of the index read.
+    await tx.execute(sql`set local enable_seqscan = off`);
+    const until = rowsOf<{ until: Date | string }>(
+      await tx.execute(
+        sql`select ${nextStepAt} as until from agent_run_steps s where s.run_id = ${runId} and s.seq = 1`,
+      ),
+    );
+    expect(new Date(until[0]?.until ?? 0).toISOString()).toBe(at(10).toISOString());
+    const explained = rowsOf<{ "QUERY PLAN": [{ Plan: Node }] }>(
+      await tx.execute(
+        sql`explain (analyze, format json) select ${nextStepAt} from agent_run_steps s where s.run_id = ${runId} and s.seq = 1`,
+      ),
+    );
+    return explained[0]?.["QUERY PLAN"][0].Plan;
+  });
+  const nodes = (node: Node | undefined): Node[] => (node ? [node, ...(node.Plans ?? []).flatMap(nodes)] : []);
+  const next = nodes(plan).filter((node) => node.Alias === "n");
+  expect(next.length).toBe(1);
+  expect(next[0]?.["Actual Rows"]).toBe(1);
 });

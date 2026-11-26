@@ -5,6 +5,8 @@ import {
   audienceChip,
   audienceModeKey,
   audienceModeTextKey,
+  type EditorsMode,
+  type EditorsValue,
   offersConsultable,
   reachShortKey,
 } from "@agenteschat/client/lib/audience";
@@ -101,6 +103,7 @@ export function AudienceChoice({
   value,
   onChange,
   ownerUserId,
+  ownerRoleId = null,
   agentName,
   idPrefix,
   compact,
@@ -111,6 +114,8 @@ export function AudienceChoice({
   value: AgentAudience;
   onChange: (next: AgentAudience) => void;
   ownerUserId: string | null;
+  /** The role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21). */
+  ownerRoleId?: string | null;
   agentName: string;
   idPrefix: string;
   compact?: boolean;
@@ -126,12 +131,18 @@ export function AudienceChoice({
   const dir = useDirectory(org.id);
   const g = agentGrammar(agentName);
   const owner = ownerUserId ? dir.memberById.get(ownerUserId) : undefined;
+  const ownerRole = ownerRoleId ? dir.roleName(ownerRoleId) : undefined;
   const reach = agentsReach(value, onPlan, ownerUserId);
+  // "Only the owner" names the role that answers for it: "Only whoever holds Engineering".
+  const modeTitle = (mode: AudienceMode) =>
+    mode === "owner" && ownerRole ? t("audience.mode.ownerRole", { role: ownerRole }) : t(audienceModeKey(org, mode));
   const modeText = (mode: AudienceMode) =>
     mode === "owner"
-      ? owner
-        ? t("audience.modeText.owner", { ...g, owner: owner.name })
-        : t("audience.modeText.noOwner")
+      ? ownerRole
+        ? t("audience.modeText.ownerRole", { ...g, role: ownerRole })
+        : owner
+          ? t("audience.modeText.owner", { ...g, owner: owner.name })
+          : t("audience.modeText.noOwner")
       : t(audienceModeTextKey(org, mode), g);
   return (
     <div className="stack-4" style={{ gap: 12 }}>
@@ -148,7 +159,7 @@ export function AudienceChoice({
                 <Icon name={AUDIENCE_ICON[mode]} size={20} />
               </span>
             ),
-            title: t(audienceModeKey(org, mode)),
+            title: modeTitle(mode),
             description: modeText(mode),
           }))}
         />
@@ -166,8 +177,8 @@ export function AudienceChoice({
               value={mode}
               id={`${idPrefix}-${mode}`}
               checked={value.mode === mode}
-              disabled={mode === "owner" && !ownerUserId}
-              title={t(audienceModeKey(org, mode))}
+              disabled={mode === "owner" && !ownerUserId && !ownerRoleId}
+              title={modeTitle(mode)}
               description={modeText(mode)}
             />
           ))}
@@ -178,6 +189,7 @@ export function AudienceChoice({
           value={value}
           onChange={(next) => onChange({ ...value, ...next })}
           ownerUserId={ownerUserId}
+          ownerRoleId={ownerRoleId}
           idPrefix={idPrefix}
           everyRole={everyRole}
         />
@@ -209,6 +221,96 @@ export function AudienceChoice({
   );
 }
 
+/** A picture per choice of "Quem pode editar": only who looks after it, or the people and roles you pick too. */
+const EDITORS_ICON: Record<EditorsMode, IconName> = {
+  owner: "audienceOwner",
+  people: "audiencePeople",
+};
+
+const EDITORS_MODES: EditorsMode[] = ["owner", "people"];
+
+/**
+ * "Quem pode editar" (ADR 0085 addendum of 2026-11-17), shown as "Quem pode falar" shows its choices: only who looks
+ * after the agent (its owner, the administrators, and who edits agents and talks to it), or some people and roles too,
+ * picked the same way (`AudiencePeoplePicker`). Choosing "owner" keeps the picks in view; saved, it names nobody. The
+ * line under it says what editing changes and what stays with who edits agents.
+ */
+export function EditorsChoice({
+  value,
+  onChange,
+  ownerUserId,
+  ownerRoleId = null,
+  agentName,
+  idPrefix,
+  layout = "cards",
+}: {
+  value: EditorsValue;
+  onChange: (next: EditorsValue) => void;
+  ownerUserId: string | null;
+  /** The role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21). */
+  ownerRoleId?: string | null;
+  agentName: string;
+  idPrefix: string;
+  /** The choices as cards (default) or as rows (a dialog). */
+  layout?: "cards" | "rows";
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const g = agentGrammar(agentName);
+  const owner = ownerUserId ? dir.memberById.get(ownerUserId) : undefined;
+  const ownerRole = ownerRoleId ? dir.roleName(ownerRoleId) : undefined;
+  const modeText = (mode: EditorsMode) =>
+    mode === "people"
+      ? t("editors.modeText.people", g)
+      : ownerRole
+        ? t("editors.modeText.ownerRole", { ...g, role: ownerRole })
+        : owner
+          ? t("editors.modeText.owner", { ...g, owner: owner.name })
+          : t("editors.modeText.noOwner", g);
+  return (
+    <div className="stack-4" style={{ gap: 12 }}>
+      <OptionList
+        aria-label={t("editors.title", g)}
+        layout={layout}
+        value={value.mode}
+        onValueChange={(mode) => onChange({ ...value, mode })}
+        options={EDITORS_MODES.map((mode) => ({
+          value: mode,
+          leading: (
+            <span className="audience-card__icon">
+              <Icon name={EDITORS_ICON[mode]} size={20} />
+            </span>
+          ),
+          title: t(`editors.mode.${mode}`, g),
+          description: modeText(mode),
+        }))}
+      />
+      {value.mode === "people" && (
+        <AudiencePeoplePicker
+          value={value}
+          onChange={(next) => onChange({ ...value, ...next })}
+          ownerUserId={ownerUserId}
+          ownerRoleId={ownerRoleId}
+          idPrefix={idPrefix}
+          rolesHint={t("editors.rolesHint")}
+          // Never "Only you, for now": with nobody picked, the administrators and who edits agents and talks to it
+          // still edit (ADR 0085 addendum of 2026-11-17), as the "owner" choice says.
+          ownerLine={
+            ownerRole
+              ? t("audience.ownerRoleAlways", { role: ownerRole })
+              : owner
+                ? t("audience.ownerAlways", { name: owner.name })
+                : undefined
+          }
+          everyRole
+        />
+      )}
+      <span className="small muted">{t("editors.note", g)}</span>
+    </div>
+  );
+}
+
 /**
  * The people and roles under "Only some people or roles": who always can (the owner), what's picked as tokens, and a
  * search over the workspace's roles and people with a check each. `within`: only these may be picked (an admin
@@ -218,17 +320,26 @@ export function AudiencePeoplePicker({
   value,
   onChange,
   ownerUserId,
+  ownerRoleId = null,
   idPrefix,
   within,
   rolesHint,
+  ownerLine,
   everyRole = false,
 }: {
   value: { userIds: string[]; roleIds?: string[] };
   onChange: (next: { userIds: string[]; roleIds: string[] }) => void;
   ownerUserId: string | null;
+  /** The role that answers for it: it always counts, so it is never offered (ADR 0085, addendum of 2026-11-21). */
+  ownerRoleId?: string | null;
   idPrefix: string;
   within?: { userIds: string[]; roleIds: string[] };
   rolesHint?: string;
+  /**
+   * The line about the owner, in place of the audience's ("Only you, for now" while nobody is picked): for a list where
+   * others besides the owner always count too ("Who can edit").
+   */
+  ownerLine?: string;
   /** Every role to pick, in a personal workspace too (the agent page's own "Who can talk"). */
   everyRole?: boolean;
 }) {
@@ -236,6 +347,7 @@ export function AudiencePeoplePicker({
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const owner = ownerUserId ? dir.memberById.get(ownerUserId) : undefined;
+  const ownerRole = ownerRoleId ? dir.roleName(ownerRoleId) : undefined;
   const roles = useRoles(org.id);
   const [query, setQuery] = useState("");
   const picked = new Set(value.userIds);
@@ -249,7 +361,9 @@ export function AudiencePeoplePicker({
   const allRoles = roles.data?.roles ?? [];
   const roleCandidates =
     everyRole || rolePicksInSight(org, allRoles, value.roleIds ?? [])
-      ? sortRoles(allRoles.filter((r) => !isEveryone(r) && (!within || within.roleIds.includes(r.id))))
+      ? sortRoles(
+          allRoles.filter((r) => !isEveryone(r) && r.id !== ownerRoleId && (!within || within.roleIds.includes(r.id))),
+        )
       : [];
   const q = fold(query.trim());
   const rows = candidates.filter((m) => !q || fold(`${m.name} ${m.email} ${m.handle}`).includes(q));
@@ -276,14 +390,24 @@ export function AudiencePeoplePicker({
   );
   return (
     <div className="people-picker">
-      {owner && (
+      {ownerRole ? (
         <span className="small muted">
-          {picked.size > 0 || pickedRoles.size > 0
-            ? t("audience.ownerAlways", { name: owner.name })
-            : ownerUserId === me.user.id
-              ? t("audience.onlyYouForNow")
-              : t("audience.onlyOwnerForNow", { name: owner.name })}
+          {ownerLine ??
+            (picked.size > 0 || pickedRoles.size > 0
+              ? t("audience.ownerRoleAlways", { role: ownerRole })
+              : t("audience.onlyOwnerRoleForNow", { role: ownerRole }))}
         </span>
+      ) : (
+        owner && (
+          <span className="small muted">
+            {ownerLine ??
+              (picked.size > 0 || pickedRoles.size > 0
+                ? t("audience.ownerAlways", { name: owner.name })
+                : ownerUserId === me.user.id
+                  ? t("audience.onlyYouForNow")
+                  : t("audience.onlyOwnerForNow", { name: owner.name }))}
+          </span>
+        )
       )}
       {(picked.size > 0 || pickedRoles.size > 0) && (
         <TokenList label={t("audience.picked")}>
@@ -362,9 +486,10 @@ export function AudiencePeoplePicker({
   );
 }
 
-/** A "people" audience needs someone (a person or a role) besides an absent owner. */
-export const audienceValid = (a: AgentAudience, ownerUserId: string | null) =>
+/**
+ * A "people" audience needs someone (a person or a role) besides an absent owner. `owner`: anything naming one, a
+ * person's id or a role's (ADR 0085, addendum of 2026-11-21), else null.
+ */
+export const audienceValid = (a: AgentAudience, owner: string | null | undefined) =>
   a.mode === "everyone" ||
-  (a.mode === "owner"
-    ? Boolean(ownerUserId)
-    : a.userIds.length > 0 || (a.roleIds?.length ?? 0) > 0 || Boolean(ownerUserId));
+  (a.mode === "owner" ? Boolean(owner) : a.userIds.length > 0 || (a.roleIds?.length ?? 0) > 0 || Boolean(owner));

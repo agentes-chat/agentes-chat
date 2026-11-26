@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { and, eq, schema } from "@agenteschat/db";
 import { systemText } from "@agenteschat/providers";
 import {
+  AI_PLAN_ANSWER,
   addChannelMember,
   archiveAgent,
   BUILTIN_SCOPES,
@@ -189,7 +190,7 @@ test("it is in no channel and on no computer, whoever asks", async () => {
   const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { name: "MacBook" });
   await expect(
     setAgentComputerTarget({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, lodi.id, machineId),
-  ).rejects.toMatchObject(permanent);
+  ).rejects.toMatchObject({ code: "agent.right_hand_computer" });
 });
 
 test("its prompt says what the person may do, and shows only the agents they may see", async () => {
@@ -210,13 +211,21 @@ test("its prompt says what the person may do, and shows only the agents they may
   const owner = await prompt(f.owner.id);
   expect(owner).toContain("You are Lodi (@lodi)");
   expect(owner).toContain("an owner of this workspace");
-  expect(owner).toContain("They may: create agents; change any agent's settings");
+  // "Edit agents" and "Create routines" reach the agents a person talks to (ADR 0085 addendum of 2026-11-17).
+  expect(owner).toContain(
+    "They may: create agents; change the settings (model, AI account, budget, owner, who may use it) of the agents they talk to and the ones with no owner (owners and administrators: every agent), archive and delete them;",
+  );
+  expect(owner).toContain("manage the routines of the agents they talk to.");
   expect(owner).not.toContain("They can't");
+  // Asked about using their Claude plan here: the vetted answer, which leaves the terms to the person and the provider.
+  expect(owner).toContain(AI_PLAN_ANSWER);
+  expect(AI_PLAN_ANSWER).toContain("supports signing the agents in with a person's own plan");
+  expect(AI_PLAN_ANSWER).toContain("never say their use is or isn't allowed");
   expect(owner).toContain("- @cofre (Cofre)");
   expect(owner).toContain("- @dev (Dev), Developer");
   const member = await prompt(nina.id);
   expect(member).toContain("They can't: ");
-  expect(member).toMatch(/They can't: [^\n]*change any agent's settings/);
+  expect(member).toMatch(/They can't: [^\n]*change the settings \(model, [^\n]*\) of the agents they talk to/);
   expect(member).not.toContain("@cofre");
   expect(member).toContain("(1 more agent this person can't see.)");
   expect(member).toContain("Never ask for a key, password or token in the chat");

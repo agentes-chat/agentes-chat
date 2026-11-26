@@ -1,5 +1,6 @@
 import type { Agent, AgentMediaLevel, GifRating, OrgSettings } from "@agenteschat/client";
 import { useAgents, useSettings, useUpdateAgent, useUpdateSettings } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { shownMediaSettings } from "@agenteschat/client/lib/media";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -58,7 +59,6 @@ export function MediaSettingsScreen() {
   return (
     <SettingsPage title={title} frozen={settingsFrozen(org, "media")}>
       <Loaded>
-        <GroupedFooter>{t("settings.sectionText.media")}</GroupedFooter>
         {!editable ? (
           <View style={styles.note}>
             <Note icon="lock">{t("settings.readOnly")}</Note>
@@ -149,13 +149,13 @@ export function MediaSettingsScreen() {
 }
 
 /**
- * One agent's own switch: whoever edits agents changes it. It counts at any level: at Nunca the agent sends none on
- * its own, and still sends one when asked while it is on.
+ * One agent's own switch: whoever manages that agent changes it (the server's `canManage`). It counts at any level: at
+ * Nunca the agent sends none on its own, and still sends one when asked while it is on.
  */
 function AgentMediaRow({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { orgId, org } = useOrg();
+  const { orgId } = useOrg();
   const update = useUpdateAgent(orgId, agent.id);
   const saved = agent.mediaReplies ?? true;
   const on = (update.isPending ? update.variables?.mediaReplies : undefined) ?? saved;
@@ -166,7 +166,7 @@ function AgentMediaRow({ agent }: { agent: Agent }) {
       labelLines={2}
       {...(agent.role ? { sub: agent.role } : {})}
       toggle={on}
-      disabled={!can(org, "manage_agents")}
+      disabled={!managesAgent(agent)}
       onPress={() =>
         update.mutate({ mediaReplies: !on }, { onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }) })
       }

@@ -138,7 +138,7 @@ export function WallpaperPage({ target }: { target: WallpaperTarget }) {
   const ownHue: WallpaperHue | null = !dm ? null : agent ? wallpaperHueOf(color) : sampleHue;
   // For every conversation "auto" follows each one: its tile shows a band of a few agents' colors.
   const autoBands = !one;
-  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org));
+  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org), "phone");
   const mine = bubbleFill(dm ? color : "sky", tone, colors.bg, scheme === "dark");
   const others = defaultWallpaperOf(prefs);
   const own = one ? conversationWallpaperOf(prefs, one) : undefined;

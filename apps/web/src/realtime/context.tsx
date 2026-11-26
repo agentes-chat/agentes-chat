@@ -18,11 +18,13 @@ import {
   ApiError,
   applyBrowserHandoff,
   applyChannelEvent,
+  applyCodeSessionEvent,
   applyComputerEvent,
   applyConsultEvent,
   applyConversationEvent,
   applyDashboardEvent,
   applyIssueEvent,
+  applyLiveEvent,
   applyMachineEvent,
   applyMembershipEvent,
   applyNotificationEvent,
@@ -42,6 +44,7 @@ import {
   cacheAgentProposal,
   cacheApproval,
   cacheCardDelegate,
+  cacheCodeSuggestion,
   cacheDmRead,
   cacheMessage,
   cacheMessageActions,
@@ -49,6 +52,7 @@ import {
   cacheMessageWork,
   cachePinned,
   cacheReceipts,
+  cacheResolved,
   cacheTask,
   cacheTeamCard,
   catchUpChannel,
@@ -69,9 +73,11 @@ import {
   nextPointer,
   type OpenConsult,
   openConversation,
+  quietRunsByChannel,
   RealtimeConnection,
   type ReceiptsState,
   realtimeUrl,
+  recheckRuns,
   reconcileConsults,
   reconcileRuns,
   refreshMission,
@@ -113,6 +119,7 @@ import { desktopNotice, inDesktopApp, thisMac } from "@/lib/desktop";
 import { feedIsland, island } from "@/lib/island";
 import { notificationAudience } from "@/lib/sounds";
 import { useToast } from "@/lib/toast";
+import { countReconnect } from "@/lib/vitals";
 import { settleShownPushes } from "@/lib/web-push";
 
 /** Live state shared by the channel and the sidebar: runs, receipts and who is typing. */
@@ -385,8 +392,11 @@ export function createStreamsStore(
     /** "Continuar" went through (or there is nothing left to continue: `newRunId` null). */
     continued: (runId: string, newRunId: string | null) =>
       set({ ...state, continued: { ...state.continued, [runId]: newRunId } }),
-    /** "Atualizar" found the run still active. */
+    /** The server found the run still active. */
     touch: (runId: string) => set({ ...state, streams: touchRun(state.streams, runId, now()) }),
+    /** The server's active runs, asked about runs gone quiet (`recheckRuns`). */
+    recheck: (runIds: readonly string[], active: readonly ActiveRun[] | undefined) =>
+      set({ ...state, streams: recheckRuns(state.streams, runIds, active, now()) }),
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
@@ -434,6 +444,7 @@ export function RealtimeProvider({
   const fromContext = useContext(SocketFactoryContext);
   const createSocket = explicit ?? fromContext;
   const qc = useQueryClient();
+  const api = useApi();
   const toast = useToast();
   const { t, i18n } = useTranslation();
   const streams = useMemo(() => createStreamsStore(), []);
@@ -446,11 +457,28 @@ export function RealtimeProvider({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one socket per org; toast and language are read live
   useEffect(() => {
-    const conn = new RealtimeConnection({ url: realtimeUrl(window.location, orgId), createSocket });
-    // Catch up over HTTP after a reconnect: events sent while offline are gone.
+    const conn = new RealtimeConnection({
+      url: realtimeUrl(window.location, orgId),
+      createSocket,
+      // A background tab's lost socket comes back slowly (`checkAlive` on showing times it again): the old tabs a
+      // restart dropped don't all dial at once, and they still get their notifications within a minute.
+      hidden: () => document.visibilityState === "hidden",
+      // Spread out in a browser; in React's act() environment (tests), like the frames, at once: catch-ups, and
+      // reconnects within half a second.
+      ...(batchFrames() ? {} : { catchUpSpreadMs: 0, backoffMs: [500] }),
+    });
+    // A reconnect is often a deploy: is this tab still on the app the server serves?
     const offReconnect = conn.onReconnect(() => {
-      // A reconnect is often a deploy: is this tab still on the app the server serves?
       void checkAppVersion();
+      countReconnect();
+    });
+    // Catch up over HTTP after a reconnect or a server's resync: events sent meanwhile are gone.
+    const offCatchUp = conn.onCatchUp((full) => {
+      if (!full) {
+        void qc.refetchQueries({ queryKey: keys.org(orgId), type: "active" });
+        void qc.refetchQueries({ queryKey: keys.me, type: "active" });
+        return;
+      }
       // Reactions heard live may be stale now: the refetched message lists carry them again.
       qc.removeQueries({ queryKey: ["org", orgId, "reactions"] });
       // Nothing sent while the socket was down reached this tab, so everything the workspace holds may be old: what
@@ -476,13 +504,16 @@ export function RealtimeProvider({
         void qc.invalidateQueries({ queryKey: keys.overview(orgId) });
       }
       if (isAgentUnavailable(event)) streams.unavailable(event);
-      // A change I asked the right hand for was decided by someone else (ADR 0137): "Aplicado por …" on my card.
+      // A change was applied, left out or put back, by someone else or by an agent's review (ADR 0137, ADR 0219): how
+      // it ended on its card.
       if (event.type === "proposal.decided") {
         void refreshProposals(qc, orgId);
         void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
       }
-      // A proposal I may decide: the sidebar's count and Aprovações' tab.
+      // A proposal was made: Agent improvements and its cards.
       if (event.type === "proposal.created") void refreshProposals(qc, orgId);
+      // A code session I'm in changed (ADR 0215): its worktree, name or pull request.
+      applyCodeSessionEvent(qc, orgId, event);
       // Unread marks: a message where I am, and my reads and mutes from any device.
       applyUnreadEvent(qc, orgId, event);
       // My inbox: new or merged items, auto-resolved ones, and the badge's numbers.
@@ -521,11 +552,6 @@ export function RealtimeProvider({
       // A mission waits for me (a decision, a review, an approval): the lists and the sidebar's count.
       if (event.type.startsWith("mission.") && "missionId" in event && typeof event.missionId === "string") {
         refreshMission(qc, orgId, event.missionId);
-      }
-      // Someone arranged the sidebar's channel categories (ADR 0080): channels and categories refetch.
-      if (event.type === "channels.layout") {
-        void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
-        void qc.invalidateQueries({ queryKey: keys.channelCategories(orgId) });
       }
       // A channel's exceptions changed (ADR 0134): what I may do there (`can`) and its open permissions page.
       if (event.type === "channel.permissions" && "channelId" in event && typeof event.channelId === "string") {
@@ -571,7 +597,8 @@ export function RealtimeProvider({
     });
     conn.start();
     setConnection(conn);
-    // Back from a sleep or a network change, the socket may be dead while it still says open: check it now.
+    // Back from a sleep or a network change, the socket may be dead while it still says open: check it now (and a
+    // reconnect still waiting dials within the first step).
     const wake = () => {
       if (document.visibilityState === "visible") conn.checkAlive();
     };
@@ -583,6 +610,7 @@ export function RealtimeProvider({
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("online", wake);
       offReconnect();
+      offCatchUp();
       offOpen();
       offUser();
       offError();
@@ -591,15 +619,27 @@ export function RealtimeProvider({
     };
   }, [orgId, createSocket, qc]);
 
-  // Resync what the server never confirmed instead of spinning forever.
+  // Resync what the server never confirmed instead of spinning forever. A run gone quiet is asked about, unseen: its
+  // end may never have reached this tab, and its row would stay at work with the reply already posted.
   useEffect(() => {
+    const checking = new Set<string>();
     const timer = setInterval(() => {
       for (const channelId of streams.sweep()) {
         void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
       }
+      for (const [channelId, ids] of quietRunsByChannel(streams.get().streams, Date.now(), checking)) {
+        for (const id of ids) checking.add(id);
+        void reconcileChannelRuns(api, streams, orgId, channelId, ids)
+          .then((dropped) => {
+            if (dropped) void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
+          })
+          .finally(() => {
+            for (const id of ids) checking.delete(id);
+          });
+      }
     }, 5000);
     return () => clearInterval(timer);
-  }, [streams, qc, orgId]);
+  }, [streams, qc, orgId, api]);
 
   // What I sent while the connection was down (or the server restarting) goes out once it's back, whatever page
   // is open. One the server then refuses is said here, since its conversation may not be on screen.
@@ -622,7 +662,7 @@ function useRealtime() {
  * Brings the live rows of a channel in line with the server: the active-runs
  * list when the server has it, else each live run's detail. Rows of runs that
  * ended while we weren't listening go away (their message, if any, refetches).
- * `runIds` limits the check to those runs ("Atualizar" on one row).
+ * `runIds` limits the check to those runs (the ones gone quiet).
  */
 export async function reconcileChannelRuns(
   api: ApiClient,
@@ -636,13 +676,21 @@ export async function reconcileChannelRuns(
   );
   const askedAt = Date.now();
   const active = await api.agents.activeRuns(orgId, channelId).catch(() => undefined);
-  if (active === undefined) return false;
+  if (active === undefined) {
+    if (runIds)
+      store.recheck(
+        live.map((r) => r.runId),
+        undefined,
+      );
+    return false;
+  }
   if (active) {
-    if (runIds) {
-      const known = new Set(active.map((a) => a.runId));
-      for (const r of live) if (!known.has(r.runId)) store.dismiss(r.runId);
-      for (const r of live) if (known.has(r.runId)) store.touch(r.runId);
-    } else store.reconcile(channelId, active, askedAt);
+    if (runIds)
+      store.recheck(
+        live.map((r) => r.runId),
+        active,
+      );
+    else store.reconcile(channelId, active, askedAt);
     return live.some((r) => !active.some((a) => a.runId === r.runId));
   }
   // No endpoint yet: ask about each live run.
@@ -804,7 +852,9 @@ export function useChannelRealtime(orgId: string, channelId: string, enabled: bo
         cacheApproval(qc, orgId, event.approval);
       }
       // A file's cards and viewer, an agent's memory list.
-      applyConversationEvent(qc, orgId, event);
+      applyConversationEvent(qc, orgId, event, api);
+      // Who is in one of the conversation's live files changed (ADR 0196 §5): its cards ask again.
+      applyLiveEvent(qc, orgId, event);
       if (event.type === "poll.updated") qc.setQueryData(keys.poll(orgId, event.poll.id), event.poll);
       if (event.type === "block.state") {
         const { block } = event;
@@ -854,6 +904,14 @@ export function useChannelRealtime(orgId: string, channelId: string, enabled: bo
       if (event.type === "message.pinned" || event.type === "message.unpinned") {
         cachePinned(qc, orgId, channelId, event.messageId, event.type === "message.pinned");
         void qc.invalidateQueries({ queryKey: keys.pins(orgId, channelId) });
+      }
+      // A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its pin and line follow.
+      if (event.type === "message.resolved") {
+        cacheResolved(qc, orgId, event.channelId, event.messageId, event.resolved);
+      }
+      // A suggested code session was opened, kept here, or waits again (ADR 0215 §11): its card under the reply.
+      if (event.type === "code.suggestion") {
+        cacheCodeSuggestion(qc, orgId, event.channelId, event.messageId, event.suggestion);
       }
       // Act with undo: an agent message's receipts changed (made, undone, redone): replace the list.
       // A long work moved, updated or ended (ADR 0121): its anchor's line redraws; its card on the board too.
@@ -1112,6 +1170,9 @@ export function useDesktopPointer(agentId: string, enabled = true) {
   }, [connection, agentId, enabled, shared]);
   return pointer;
 }
+
+/** The workspace's live connection (null before it starts): to ask it to try again now. */
+export const useRealtimeConnection = () => useRealtime().connection;
 
 export function useConnectionStatus(): ConnectionStatus {
   const { connection } = useRealtime();

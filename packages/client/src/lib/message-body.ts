@@ -35,7 +35,8 @@ type Meta = Record<string, unknown> | undefined;
 
 /**
  * A computer brain's wait (`meta.brainUnavailable.code`) that isn't its computer gone or busy, by the words that say
- * it: paused by whoever connected it, its CLI or commands off there, a program to update, a plan not the owner's.
+ * it: paused by whoever connected it, its CLI or commands off there, a program to update, a plan not the owner's, its
+ * shared Claude login that can't run there.
  */
 const WAIT_CAUSES: Record<string, string> = {
   machine_paused: "paused",
@@ -43,7 +44,10 @@ const WAIT_CAUSES: Record<string, string> = {
   tool_off: "commands_off",
   runner_outdated: "outdated",
   codex_too_old: "outdated",
+  // Its CLI at a version agentes.chat holds back: "the program on my computer needs an update".
+  cli_outdated: "outdated",
   plan_not_owner: "plan_owner",
+  shared_login_off: "shared_login",
 };
 const waitCauseOf = (code: unknown) =>
   typeof code === "string" && Object.hasOwn(WAIT_CAUSES, code) ? WAIT_CAUSES[code] : null;
@@ -93,8 +97,7 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
     m.bodyParams && typeof m.bodyParams === "object" ? (m.bodyParams as Record<string, unknown>) : ({} as const);
   // Waiting for room on a busy computer, not for one that went away; no AI because its sign-in ended, or because the
   // computer's own sign-in of that CLI isn't there (`own`), not none at all.
-  const waitNote =
-    code === "brain_unavailable" ? (m.brainUnavailable as { code?: unknown; long?: unknown } | undefined) : undefined;
+  const waitNote = code === "brain_unavailable" ? (m.brainUnavailable as { code?: unknown } | undefined) : undefined;
   const busy = waitNote?.code === "busy";
   const noAi =
     code === "no_ai"
@@ -122,7 +125,8 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
       noAi?.own === "cursor" ||
       noAi?.own === "opencode" ||
       noAi?.own === "grok" ||
-      noAi?.own === "antigravity")
+      noAi?.own === "antigravity" ||
+      noAi?.own === "devin")
       ? noAi.own
       : null;
   if (own) {
@@ -196,11 +200,9 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
   if (waitCause) return t(`chat.body.brain_unavailable_${waitCause}`, { ...params, defaultValue: body });
   // A secret request posted before the body named its agent.
   const anon = code === "secret_request" && typeof params.agent !== "string";
-  // Still in line after a long while (the only busy note posted now); older notes keep their words.
+  // Still in line after a long while, whatever holds the turn: one wording, older notes too.
   const shown = busy
-    ? waitNote?.long
-      ? "brain_queued"
-      : "brain_busy"
+    ? "brain_queued"
     : signedOut
       ? "no_ai_signed_out"
       : planLine

@@ -12,6 +12,7 @@ import { type OutageTargetLike, targetOptions } from "@agenteschat/client/lib/ma
 import { quickReply } from "@agenteschat/client/lib/notifications";
 import { computerIcon, type MachineOutage, targetText } from "../../src/features/outages/logic";
 import { suspendedOf } from "../../src/lib/org-choice";
+import { chatScreenSource } from "./chat-screen-source";
 import { notification, translator } from "./fixtures";
 
 /** The workspace's own computer (ADR 0056 §10): the server names it ("Computador da Acme"), its system never said. */
@@ -65,7 +66,7 @@ describe("an organization being deleted on the phone", () => {
     expect(layout).not.toContain("DeletingWorkspace");
     const home = read("features/chats/ChatsScreen.tsx");
     expect(home.indexOf("<DeletingNotice />")).toBeLessThan(home.indexOf("<SetupNotice />"));
-    expect(read("features/chat/ChatScreen.tsx")).toContain('{t("deleting.composer")}');
+    expect(chatScreenSource()).toContain('{t("deleting.composer")}');
   });
 
   test("the island takes no answer: no Responder, no choices, the line in their place; Abrir stays", () => {

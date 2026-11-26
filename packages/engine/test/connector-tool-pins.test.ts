@@ -9,6 +9,7 @@ import {
   type CustomDeps,
   connectCustomServer,
   createConnectorToolSource,
+  enableCaches,
   type Judge,
   listNotifications,
   type McpConnect,
@@ -130,6 +131,32 @@ test("a changed description reaches agents at once: no notice, nothing waiting, 
   });
 });
 
+test("with caches on, a listing like the last one reads neither its pins nor its tools again", async () => {
+  const w = await connected();
+  enableCaches();
+  try {
+    expect((await w.seen()).description).toContain(V1);
+    // Kept: rows changed behind the server's back go unseen for a moment.
+    await f.db.delete(schema.connectorToolPins).where(eq(schema.connectorToolPins.connectionId, w.id));
+    await f.db.update(schema.customTools).set({ label: "Renamed" }).where(eq(schema.customTools.connectionId, w.id));
+    expect((await w.seen()).description).not.toContain("Renamed");
+    // Not read: a read would have found no pin and pinned the listing again.
+    expect(await f.db.select().from(schema.connectorToolPins)).toEqual([]);
+    // An admin's classification forgets the kept tools at once.
+    await saveCustomTools(w.deps, f.owner.id, f.org.id, w.id, {
+      label: "Notes",
+      tools: [{ name: "search_articles", access: "read", label: "Busca" }],
+    });
+    expect((await w.seen()).description).toContain("Busca");
+    // A listing unlike the last one reads its pins, and pins it.
+    w.mcp.state.description = V2;
+    expect((await w.seen()).description).toContain(V2);
+    expect((await w.pin()).description).toBe(V2);
+  } finally {
+    enableCaches(false);
+  }
+});
+
 test("an input-only change applies too, and the tool is callable with the new input", async () => {
   const w = await connected();
   expect(Object.keys((await w.seen()).inputSchema.properties as object)).toEqual(["q"]);
@@ -178,7 +205,7 @@ test("a level a person set by hand stays theirs when the tool changes", async ()
 test("a changed tool whose level can't be worked out again keeps its pinned version", async () => {
   const w = await connected();
   const listed = [{ name: "search_articles", description: V2, inputSchema: (await w.pin()).inputSchema }];
-  const connection = { id: w.id, orgId: f.org.id, label: "Notes" };
+  const connection = { id: w.id, orgId: f.org.id, label: "Notes", accountLabel: null, ownerUserId: null };
   const failing = { db: f.db, reclassify: () => Promise.reject(new Error("unreachable")) };
   expect((await applyToolPins(failing, connection, listed, () => true))[0]?.description).toBe(V1);
   expect((await w.pin()).description).toBe(V1);

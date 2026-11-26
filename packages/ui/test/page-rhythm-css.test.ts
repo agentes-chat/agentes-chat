@@ -57,6 +57,13 @@ describe("one page top and side", () => {
     expect(body(".ac-pagehead__actions")).toContain("min-height: var(--control-h-md);");
   });
 
+  test("the title stays whole: when the buttons don't fit beside it they go under it, and its line never widens it", () => {
+    // As wide as the title on one line, so the row wraps the buttons before the title (a fixed basis wrapped it first).
+    expect(body(".ac-pagehead__text")).toContain("flex: 1 1 auto;");
+    expect(body(".ac-pagehead__row")).toContain("flex-wrap: wrap;");
+    expect(body(".ac-pagehead__meta")).toContain("contain: inline-size;");
+  });
+
   test("a page's count is on the title's row, on its baseline, 12 after it, under it only without room", () => {
     const line = body(".ac-pagehead__titleline:has(> .ac-pagehead__count)");
     expect(line).toContain("flex-wrap: wrap;");
@@ -121,6 +128,8 @@ describe("one menu rhythm", () => {
     expect(body(".ac-mo__group")).toContain("--menu-pad: var(--space-2);");
     // The full-screen menu's 15px rows are the touch ones under any pointer: 20px of line and 10 above and below.
     expect(body(".ac-mo__item")).toContain("padding: 10px 14px;");
+    // A row with no shortcut keeps no room for one: its hint ends on the row's padding, not a hidden key further in.
+    expect(body(".ac-mo__kbd:empty")).toContain("display: none;");
     expect(body(".ac-suggest__item")).not.toContain("min-height");
   });
 

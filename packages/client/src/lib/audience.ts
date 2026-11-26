@@ -3,12 +3,14 @@ import type { TFunction } from "i18next";
 import type {
   Agent,
   AgentAudience,
+  AgentEditors,
   AgentSetupResult,
   AudienceMode,
   ForeignMailbox,
   OrgRole,
   OrgSummary,
 } from "../api/types";
+import { ownsAgentAs } from "./agent-owner";
 import { engineOfBrain } from "./brain";
 import { joinNames } from "./format";
 import { agentGrammar } from "./grammar";
@@ -45,11 +47,12 @@ export const modeOf = (agent: Agent): AudienceMode => agent.audience?.mode ?? ag
 
 /**
  * Whether its audience lets `userId` talk to the agent (the server's `canTalkTo`, without `talk_to_agents`): its
- * owner, everyone, one of its people, or holding one of its roles (`roleIds`: theirs, from the directory). A people
- * list the directory didn't send, or roles picked when theirs aren't known, say yes (don't warn on a guess).
+ * owner (or holding its owner role, ADR 0085, addendum of 2026-11-21), everyone, one of its people, or holding one of
+ * its roles (`roleIds`: theirs, from the directory). A people list the directory didn't send, or roles picked when
+ * theirs aren't known, say yes (don't warn on a guess).
  */
 export function audienceAdmits(agent: Agent, userId: string, roleIds?: readonly string[]): boolean {
-  if (agent.ownerUserId === userId) return true;
+  if (ownsAgentAs(agent, userId, roleIds ?? [])) return true;
   const mode = modeOf(agent);
   if (mode !== "people") return mode === "everyone";
   const a = audienceOf(agent);
@@ -106,26 +109,43 @@ export const opensDetails = (agent: { seesDetails?: boolean; former?: unknown } 
   Boolean(agent) && !agent?.former && seesDetails(agent);
 
 /**
- * Whether my lists and pickers show the agent: every agent for who manages agents, who arrange the team (the lock
- * says who it answers), only the ones that answer me for everyone else. From the server's `canTalk` (the agent's
- * audience and `talk_to_agents`), so a later limit per person reaches every list unchanged.
+ * Whether its DM opens for me (the server's `openDm`): it answers me, or I manage it (its composer then says why it
+ * won't answer and offers to let me in). A private agent's stays closed to who merely holds "Edit agents" and to who
+ * its "Who can edit" names (ADR 0085 addendum of 2026-11-17): every row, item or button that leads to its DM asks this,
+ * never `listsAgent`.
  */
-export const listsAgent = (org: OrgSummary | null | undefined, agent: Pick<Agent, "canTalk"> | undefined) =>
-  can(org, "manage_agents") || canTalk(agent);
+export const opensDm = (agent: Pick<Agent, "canTalk" | "canManage"> | undefined) =>
+  canTalk(agent) || managesAgent(agent);
 
 /**
- * Whether Equipe, its sectors and the counts name every agent for me (the server's `listsAllAgents`); without it the
- * server sends them only the agents that answer me.
+ * Whether my lists and pickers show the agent (the server's `listsAgentTo`, short of `listsAllAgents`): the ones whose
+ * DM opens for me (`opensDm`: that answer me, or that I manage, the lock saying who they answer) and the ones whose
+ * workings I edit (`canEdit`, its "Who can edit", ADR 0085 addendum of 2026-11-17). From the server's flags, so a later
+ * limit per person reaches every list unchanged. A list whose rows open the DM asks `opensDm` instead: an agent I only
+ * edit opens on its page, from Team.
+ */
+export const listsAgent = (
+  _org: OrgSummary | null | undefined,
+  agent: Pick<Agent, "canTalk" | "canManage" | "canEdit"> | undefined,
+) => opensDm(agent) || editsAgent(agent);
+
+/**
+ * Whether Equipe, its sectors and the counts name every agent for me (the server's `listsAllAgents`), but someone
+ * else's private one (`listed: false`, which the directory and `useAgents` leave out); without it the server sends them
+ * only the agents whose workings I see (`listsAgentTo`): that answer me, or that I edit.
  */
 export const listsAllAgents = (org: OrgSummary | null | undefined) =>
   can(org, "view_all_agents") || can(org, "manage_agents");
 
 /**
- * The agents my lists leave out (`listsAgent`, from the server's `canTalk`): unless I manage agents, the ones not
- * answering me.
+ * The agents whose DMs my lists leave out (`hiddenDm`): the ones whose DM wouldn't open for me (`opensDm`), as the
+ * sidebar's agents and the phone's conversations, whose rows open it, leave them out. An agent I only edit is no
+ * exception: its workings are on its page, never in a DM it won't answer (ADR 0085 addendum of 2026-11-17).
  */
-export const hiddenAgentIds = (org: OrgSummary | null | undefined, agents: readonly Pick<Agent, "id" | "canTalk">[]) =>
-  new Set(agents.filter((a) => !listsAgent(org, a)).map((a) => a.id));
+export const hiddenAgentIds = (
+  _org: OrgSummary | null | undefined,
+  agents: readonly Pick<Agent, "id" | "canTalk" | "canManage">[],
+) => new Set(agents.filter((a) => !opensDm(a)).map((a) => a.id));
 
 /** A DM with one of `hiddenAgents` (`hiddenAgentIds`): off the lists and their counts. */
 export const hiddenDm = (d: { with: { type: string; id: string } }, hiddenAgents: ReadonlySet<string> | undefined) =>
@@ -178,9 +198,36 @@ export const consultableLocked = (saved: AgentAudience, viewer: { owner: boolean
 export const answersOthers = (a: AgentAudience, ownerUserId: string | null) =>
   audienceWidens({ mode: "owner", userIds: [] }, a, ownerUserId);
 
-/** Only the agent's owner and who manages agents change who talks to it (same rule as the backend). */
-export const canEditAudience = (org: OrgSummary | undefined, agent: Agent, myUserId: string) =>
-  can(org, "manage_agents") || (agent.ownerUserId != null && agent.ownerUserId === myUserId);
+/**
+ * Whether I manage the agent: the server's `canManage` ("Editar qualquer agente" where it reaches, ADR 0085 addendum
+ * of 2026-11-17). Everything about it, its apps and their levels, budget, how much it asks, brakes and owner included.
+ */
+export const managesAgent = (agent: { canManage?: boolean } | null | undefined) => agent?.canManage === true;
+
+/** Whether I edit how the agent works (the server's `canEdit`): its instructions, role, skills and routines. */
+export const editsAgent = (agent: { canEdit?: boolean } | null | undefined) => agent?.canEdit === true;
+
+/** Whether I set up and change the agent's routines (the server's `canManageRoutines`). */
+export const managesRoutinesOf = (agent: { canManageRoutines?: boolean } | null | undefined) =>
+  agent?.canManageRoutines === true;
+
+/**
+ * Whether I may make (or copy) a routine for the agent: I set up its routines and it answers me, since a routine asks
+ * the agent on its creator's behalf (the server's `createRoutine`, ADR 0053; ADR 0085 addendum of 2026-11-17).
+ */
+export const createsRoutinesFor = (agent: { canManageRoutines?: boolean; canTalk?: boolean } | null | undefined) =>
+  managesRoutinesOf(agent) && agent?.canTalk !== false;
+
+/**
+ * Only the agent's owner (or who holds its owner role: `myRoleIds`, ADR 0085, addendum of 2026-11-21) and who manages
+ * it change who talks to it and who edits it (same rule as the backend).
+ */
+export const canEditAudience = (
+  _org: OrgSummary | undefined,
+  agent: Agent,
+  myUserId: string,
+  myRoleIds: readonly string[] = [],
+) => managesAgent(agent) || ownsAgentAs(agent, myUserId, myRoleIds);
 
 /** What a save sends: the people and roles only when it answers some people. */
 export const audiencePatch = (a: AgentAudience): AgentAudience => ({
@@ -209,8 +256,13 @@ export const opensOthersPlan = (agent: Agent, next: AgentAudience, myUserId: str
  * "Let me talk to it": its audience with me let in, when it keeps me out and I may change it (its owner or who manages
  * agents) and I talk to agents at all; null otherwise. On someone else's plan the save asks first (`opensOthersPlan`).
  */
-export function audienceWithMe(org: OrgSummary | undefined, agent: Agent, myUserId: string): AgentAudience | null {
-  if (canTalk(agent) || !can(org, "talk_to_agents") || !canEditAudience(org, agent, myUserId)) return null;
+export function audienceWithMe(
+  org: OrgSummary | undefined,
+  agent: Agent,
+  myUserId: string,
+  myRoleIds: readonly string[] = [],
+): AgentAudience | null {
+  if (canTalk(agent) || !can(org, "talk_to_agents") || !canEditAudience(org, agent, myUserId, myRoleIds)) return null;
   return audienceWith(agent, myUserId);
 }
 
@@ -295,8 +347,9 @@ export type AudienceLine<P> =
   | { kind: "person"; person: P };
 
 /**
- * Who it answers, one line each: everyone; only its owner; or its roles (top first), then its people. Its owner
- * isn't among the people (it always may); only the roles and people we know.
+ * Who it answers, one line each: everyone; only its owner (a person, or the role that answers for it, ADR 0085,
+ * addendum of 2026-11-21); or its roles (top first), then its people. Its owner isn't among them (it always may); only
+ * the roles and people we know.
  */
 export function audienceLines<P extends { userId: string }>(
   agent: Agent,
@@ -313,7 +366,10 @@ export function audienceLines<P extends { userId: string }>(
       const p = person(id);
       return p ? [{ kind: "person" as const, person: p }] : [];
     });
-  const picked = a.mode === "people" ? sortRoles(roles.filter((r) => a.roleIds.includes(r.id))) : [];
+  const picked =
+    a.mode === "people"
+      ? sortRoles(roles.filter((r) => a.roleIds.includes(r.id) && r.id !== agent.ownerRoleId))
+      : roles.filter((r) => r.id === agent.ownerRoleId);
   return [...picked.map((role) => ({ kind: "role" as const, role })), ...people];
 }
 
@@ -335,13 +391,15 @@ export function audienceChip(t: TFunction, agent: Agent, viewer?: { org: ModeOrg
 
 type NameOf = (id: string) => string | undefined;
 
-/** Who it answers: its roles, then its owner and its people (only the names we know). */
+/** Who it answers: its owner role and its roles, then its owner and its people (only the names we know). */
 function answered(agent: Agent, nameOf: NameOf, roleName: NameOf) {
   const a = audienceOf(agent);
   const people = a.mode === "people";
   const ids = [...new Set([...(agent.ownerUserId ? [agent.ownerUserId] : []), ...(people ? a.userIds : [])])];
+  // The role that answers for it always may talk to it (ADR 0085, addendum of 2026-11-21).
+  const roleIds = [...new Set([...(agent.ownerRoleId ? [agent.ownerRoleId] : []), ...(people ? a.roleIds : [])])];
   const known = (n: string | undefined): n is string => Boolean(n);
-  return { roles: (people ? a.roleIds : []).map(roleName).filter(known), people: ids.map(nameOf).filter(known) };
+  return { roles: roleIds.map(roleName).filter(known), people: ids.map(nameOf).filter(known) };
 }
 
 /** Who it answers, roles first, then the owner: ["Suporte", "Walter", "Ana"] (only the names we know). */
@@ -371,7 +429,10 @@ export interface AgentUnavailableEvent {
   messageId: string;
   /** The server's English, for agents and old clients: the app words it from `code` and `params`. */
   text: string;
-  /** `channel.agents_denied` (this channel's exceptions, ADR 0134), `audience.only` or `audience.nobody`. */
+  /**
+   * `channel.agents_denied` (this channel's exceptions, ADR 0134), `audience.no_talk` or `audience.plan_owner_only`
+   * (`refusalText`), `audience.only` or `audience.nobody`.
+   */
   code?: string;
   params?: Record<string, unknown>;
 }
@@ -380,6 +441,19 @@ export const isAgentUnavailable = (e: { type: string }): e is AgentUnavailableEv
   e.type === "agent.unavailable" &&
   typeof (e as AgentUnavailableEvent).agentId === "string" &&
   typeof (e as AgentUnavailableEvent).channelId === "string";
+
+/**
+ * The server's refusal past the agent's audience (`audienceDetail`), in my language: my roles don't talk to agents, or
+ * the plan it thinks with answers only its owner. Null for any other code.
+ */
+export function refusalText(t: TFunction, code: string | undefined, params: Record<string, unknown> | undefined) {
+  if (code === "audience.no_talk") return t("audience.notice.noTalk");
+  if (code !== "audience.plan_owner_only") return null;
+  return t(
+    "audience.notice.planOwnerOnly",
+    agentGrammar(typeof params?.agentName === "string" ? params.agentName : ""),
+  );
+}
 
 /**
  * Why the agent I named won't answer me, in my language: the channel's own exception, or whom the agent answers (from
@@ -393,6 +467,8 @@ export function unavailableNotice(
   roleName?: NameOf,
 ): string {
   if (notice.code === "channel.agents_denied") return t("channel.perms.agentsDenied");
+  const refused = refusalText(t, notice.code, { agentName: agent?.name, ...notice.params });
+  if (refused) return refused;
   const known = agent ? audienceNotice(t, agent, nameOf, roleName) : "";
   if (known) return known;
   const p = notice.params ?? {};
@@ -404,8 +480,25 @@ export function unavailableNotice(
 }
 
 /**
- * The profile summary: "Todos do workspace", "Suporte, Tecnologia e mais 2 pessoas", "Só Walter". `org`: a personal
- * workspace says "everyone" its way (ADR 0159).
+ * "Only the owner" in words: "Only" and the person's name, "Only whoever holds Engineering" for a role that answers for
+ * it (ADR 0085, addendum of 2026-11-21), or "No one for now" with neither (or one not known here).
+ */
+export function ownerOnlyText(
+  t: TFunction,
+  agent: Pick<Agent, "ownerUserId" | "ownerRoleId">,
+  nameOf: NameOf,
+  roleName: NameOf = () => undefined,
+) {
+  const role = agent.ownerRoleId ? roleName(agent.ownerRoleId) : undefined;
+  if (role) return t("audience.summary.ownerRole", { role });
+  const owner = agent.ownerUserId ? nameOf(agent.ownerUserId) : undefined;
+  return owner ? t("audience.summary.owner", { name: owner }) : t("audience.summary.nobody");
+}
+
+/**
+ * The profile summary: "Everyone in the workspace", "Support, Engineering and 2 more people", "Only" and a person's
+ * name, "Only whoever holds Engineering" (its owner role, ADR 0085, addendum of 2026-11-21). `org`: a personal workspace
+ * says "everyone" its way (ADR 0159).
  */
 export function audienceSummary(
   t: TFunction,
@@ -415,9 +508,8 @@ export function audienceSummary(
   org?: ModeOrg,
 ) {
   const a = audienceOf(agent);
-  const owner = agent.ownerUserId ? nameOf(agent.ownerUserId) : undefined;
   if (a.mode === "everyone") return t(modeKey(org, "audience.summary.everyone"));
-  if (a.mode === "owner") return owner ? t("audience.summary.owner", { name: owner }) : t("audience.summary.nobody");
+  if (a.mode === "owner") return ownerOnlyText(t, agent, nameOf, roleName);
   const { roles, people } = answered(agent, nameOf, roleName);
   const names = [...roles, ...people];
   if (names.length === 0) return t("audience.summary.someone");
@@ -426,5 +518,77 @@ export function audienceSummary(
   const count = names.length - 2;
   // Only people left over: "e mais 2 pessoas".
   if (roles.length <= 2) return t("audience.summary.manyPeople", { names: shown, count });
+  return t("audience.summary.many", { names: shown, count });
+}
+
+/*
+ * "Quem pode editar" (ADR 0085, addendum of 2026-11-17): who changes how an agent works (its instructions, role, skills
+ * and routines) besides who looks after it (its owner, and who manages it). Its owner or who manages it changes the
+ * list, as with "Quem pode falar" (`canEditAudience`).
+ */
+
+/** Its two choices: only who looks after the agent, or some people and roles too. */
+export type EditorsMode = "owner" | "people";
+
+/** "Quem pode editar" being edited: the choice, and the people and roles picked (kept while "owner" is chosen). */
+export interface EditorsValue {
+  mode: EditorsMode;
+  userIds: string[];
+  roleIds: string[];
+}
+
+/**
+ * The people and roles its "Quem pode editar" names (the server's `editors`; absent, an older server: nobody). Its
+ * owner always edits, so it is never one of them: a named editor who later became its owner stays in the server's
+ * list, and counting them would pick "Also some people or roles" with nobody shown (ADR 0085 addendum of 2026-11-17).
+ */
+export const editorsOf = (agent: Pick<Agent, "editors" | "ownerUserId" | "ownerRoleId">): AgentEditors => ({
+  userIds: (agent.editors?.userIds ?? []).filter((id) => id !== agent.ownerUserId),
+  // Nor is the role that answers for it (ADR 0085, addendum of 2026-11-21): whoever holds it edits as its owner.
+  roleIds: (agent.editors?.roleIds ?? []).filter((id) => id !== agent.ownerRoleId),
+});
+
+/** "people" once it names someone, else "owner". */
+export const editorsMode = (e: { userIds: readonly string[]; roleIds: readonly string[] }): EditorsMode =>
+  e.userIds.length > 0 || e.roleIds.length > 0 ? "people" : "owner";
+
+/** Its "Quem pode editar" as the choice shows it. */
+export function editorsValueOf(agent: Pick<Agent, "editors" | "ownerUserId" | "ownerRoleId">): EditorsValue {
+  const e = editorsOf(agent);
+  return { mode: editorsMode(e), userIds: e.userIds, roleIds: e.roleIds };
+}
+
+/** What a save sends: the people and roles under "people"; "owner" names nobody. */
+export const editorsPatch = (v: EditorsValue): AgentEditors =>
+  v.mode === "people" ? { userIds: v.userIds, roleIds: v.roleIds } : { userIds: [], roleIds: [] };
+
+/**
+ * "Quem pode editar" in one line: its owner, then the people and the roles it names, joined as the audience's summary
+ * ("Walter, Ana e Suporte", "… e mais 2 pessoas"); naming nobody, "Só quem cuida dela". Only the names we know.
+ */
+export function editorsSummary(
+  t: TFunction,
+  agent: Pick<Agent, "name" | "ownerUserId" | "ownerRoleId" | "editors">,
+  nameOf: NameOf,
+  roleName: NameOf = () => undefined,
+) {
+  // Its owner always edits: named first, never twice (`editorsOf` leaves them out of the people).
+  const e = editorsOf(agent);
+  const known = (n: string | undefined): n is string => Boolean(n);
+  const people = e.userIds.map(nameOf).filter(known);
+  const roles = e.roleIds.map(roleName).filter(known);
+  if (people.length === 0 && roles.length === 0) return t("editors.summary.owner", agentGrammar(agent.name));
+  // A role that answers for it is named first the same way (ADR 0085, addendum of 2026-11-21).
+  const owner = agent.ownerRoleId
+    ? roleName(agent.ownerRoleId)
+    : agent.ownerUserId
+      ? nameOf(agent.ownerUserId)
+      : undefined;
+  const names = [...(owner ? [owner] : []), ...people, ...roles];
+  if (names.length <= 3) return t("audience.summary.people", { names: joinNames(names, t) });
+  const shown = names.slice(0, 2).join(", ");
+  const count = names.length - 2;
+  // The roles come last: only people are left over when it names none ("e mais 2 pessoas").
+  if (roles.length === 0) return t("audience.summary.manyPeople", { names: shown, count });
   return t("audience.summary.many", { names: shown, count });
 }

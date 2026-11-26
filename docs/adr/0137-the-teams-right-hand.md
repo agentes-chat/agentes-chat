@@ -1,6 +1,6 @@
 # 0137. The team's right hand
 
-- Status: Accepted; §6 and §7 amended 2026-11-06 by ADR 0079 §7 (built: engine, server, the shared client, the web and the phone app); amended 2026-11-03 (§5, a person alone with the team; §4 and §6 written as decided); amended 2026-11-04 (§8, agents act on agentes.chat through their tools, never by signing in to it); amended 2026-11-04 (§4, it starts everything a person does in the app, as cards); amended 2026-11-04 (§1, §4 and §7: it thinks with a person's plan through Claude Code or OpenCode, locked down and checked before each turn; then through Codex and Cursor too, the owner accepting their residual risk); amended 2026-11-04 (§4: through Grok Build too, checked on its `init` like Claude Code, ADR 0142); amended 2026-11-04 (§4: through the Antigravity CLI too, as an agent with no tool of its own, checked on its `init` and every step, ADR 0143); amended 2026-11-04 (§9, "Semana da equipe": a weekly card in each admin's DM, from stored data); amended 2026-11-04 (§10: the team set up from three questions, one team card, team templates); amended 2026-11-04 (§4: the team map's drag posts its settings card, ADR 0148); amended 2026-11-05 (§11, each person's own AI); amended 2026-11-06 (§12, it reads the Drive and the wiki for the person); amended 2026-11-06 (§13, the one you talk to: it sees the team and hands work on); amended 2026-11-11 (§4: a teammate's skills on its settings card); amended 2026-11-12 (§4: every agent asks for its own settings on the same card, always a click); amended 2026-11-12 (§4, §12, §13: it has a normal agent's tools); amended 2026-11-12 (§1, §4, §13: a computer of its own, a seat per person, ADR 0175); amended 2026-11-12 (§11: a routine or widget a person set up thinks with that person's AI)
+- Status: Accepted; §6 and §7 amended 2026-11-06 by ADR 0079 §7 (built: engine, server, the shared client, the web and the phone app); amended 2026-11-03 (§5, a person alone with the team; §4 and §6 written as decided); amended 2026-11-04 (§8, agents act on agentes.chat through their tools, never by signing in to it); amended 2026-11-04 (§4, it starts everything a person does in the app, as cards); amended 2026-11-04 (§1, §4 and §7: it thinks with a person's plan through Claude Code or OpenCode, locked down and checked before each turn; then through Codex and Cursor too, the owner accepting their residual risk); amended 2026-11-04 (§4: through Grok Build too, checked on its `init` like Claude Code, ADR 0142); amended 2026-11-04 (§4: through the Antigravity CLI too, as an agent with no tool of its own, checked on its `init` and every step, ADR 0143); amended 2026-11-04 (§9, "Semana da equipe": a weekly card in each admin's DM, from stored data); amended 2026-11-04 (§10: the team set up from three questions, one team card, team templates); amended 2026-11-04 (§4: the team map's drag posts its settings card, ADR 0148); amended 2026-11-05 (§11, each person's own AI); amended 2026-11-06 (§12, it reads the Drive and the wiki for the person); amended 2026-11-06 (§13, the one you talk to: it sees the team and hands work on); amended 2026-11-11 (§4: a teammate's skills on its settings card); amended 2026-11-12 (§4: every agent asks for its own settings on the same card, always a click); amended 2026-11-12 (§4, §12, §13: it has a normal agent's tools); amended 2026-11-12 (§1, §4, §13: a computer of its own, a seat per person, ADR 0175); amended 2026-11-12 (§11: a routine or widget a person set up thinks with that person's AI); amended 2026-11-23 (§2, §5: the router may pick it in a channel); §5 amended 2026-11-23 by ADR 0095 (in a channel with a responsible agent, that agent takes the pick for a person alone with the agents)
 - Date: 2026-11-03
 - Supersedes: ADR 0093 (the team's coordinator)
 - Amends: ADR 0081 (one-click Criar and Criar e testar on the right hand's cards), ADR 0092 §5 (a teammate's settings, on the right hand's card)
@@ -59,7 +59,7 @@ Anything a person can do in the app, started as a card applied as whoever clicks
   - **Codex** (flags checked against the installed 0.165.0: `codex exec --help`, `codex features list`, and `codex debug prompt-input` with the same switches): always `codex exec`, never the app-server; `--ignore-user-config` (no `config.toml`: no MCP servers, profiles or features of the account's), `--ignore-rules`, `-c approval_policy="never"`, `-c web_search="disabled"`, `-c project_doc_max_bytes=0` (no `AGENTS.md`), `-c features.code_mode.direct_only_tool_namespaces=["mcp__agenteschat_agentes"]` (Codex's catalog makes gpt-5.6 and gpt-6 `code_mode_only`, which puts every MCP tool inside `exec`; this offers our bridge's tools to the model directly, checked on 0.164.0 against a mock of the Responses API), `-c agents.enabled=false` (the catalog turns on the `collaboration` tools for gpt-6 although `multi_agent_v2` is off, and a `spawn_agent` emits no item while the sub-agent it starts can call our bridge unseen; this removes them), `--disable` for every feature of 0.165.0 that adds a tool or reads the computer (`CODEX_CHAT_OFF`: the route's `shell_tool`, `sleep_tool`, `skill_search`, `tool_suggest`, `plugins`, `apps`, `multi_agent`, `browser_use`, `computer_use`, `image_generation`, then `unified_exec`, `unified_exec_tty`, `shell_snapshot`, `skill_mcp_dependency_install`, `remote_plugin`, `plugin_sharing`, `multi_agent_v2`, `browser_use_external`, `browser_use_full_cdp_access`, `browser_annotation_api`, `in_app_browser`, `in_app_local_automation`, `view_image`, `hooks`, `memories`, `goals`, `code_mode_host` (so `exec` fails closed: an `exec` cell and an `apply_patch` it calls emit no item for the kill to see), `workspace_dependencies`; Codex refuses an unknown name, so a renamed one fails the turn instead of staying on), `--sandbox read-only`, our bridge as its only MCP server, no writable roots, an empty folder, and an environment without any sign-in variable or the agent's secrets. The kill (`codexChatBreach`) reads every `item.started`, `item.updated` and `item.completed`: anything but `agent_message`, `reasoning` or an `mcp_tool_call` to our server (a `command_execution`, a `file_change`, a web search, a collaboration call, a new kind) kills the process at once (`item.started` comes before a command runs) and ends the turn with `tools_not_locked`, passing nothing after it on.
   - **Cursor** (flags and rules checked against cursor.com/docs/cli/reference/parameters, …/permissions and …/configuration, read 2026-11-04; no Cursor CLI on the machine that wrote this): `agent -p --output-format stream-json --stream-partial-output --workspace <empty folder> --trust --disable-auto-update --approve-mcps --mode ask --sandbox enabled`, never `--force`; that folder holds only our `.cursor/mcp.json` and a `.cursor/cli.json` denying every built-in tool the docs list (`Shell(*)`, `Shell(*:*)`, `Read(**)`, `Read(/**)`, `Read(~/**)`, the same for `Write`, `WebFetch(*)`: `CURSOR_CHAT_PERMISSIONS`; a deny wins over any allow; its one allow is `Mcp(agenteschat_agentes:*)`, so a call to our bridge never waits on an approval), so no project rules, `AGENTS.md` or hooks. MCP tools can't be denied but for ours (a deny would win over our allow), and the account's own `mcp.json` or user rules have no switch: the kill (`cursorChatBreach`) ends the turn at any `tool_call`, started or completed, that isn't an `mcpToolCall` named `agenteschat_agentes-…` (or from that `providerIdentifier`). A turn killed after it already called our bridge posts nothing of what it wrote either, only its DM's line (`executor.ts`).
   - **Grok Build** (flags read in Grok Build 1.0.34's own docs and `--help`, ADR 0142; not yet run against a signed-in plan): `grok -p --output-format streaming-messages-json --tools search_tool,use_tool` (the MCP meta-tools stay whatever `--tools` says), `--disallowed-tools` every built-in its docs name (`GROK_CHAT_DENIED`, `Agent` blocking subagents), `--no-subagents --disable-web-search --no-plan --permission-mode dontAsk --allow MCPTool(agenteschat_agentes__*) --sandbox workspace`, in an empty folder of its own, `GROK_HOME` the account's folder with our MCP server alone in its `config.toml`, and Claude Code's and Cursor's MCP servers, rules, skills, agents and hooks, managed MCP and gateway tools, telemetry and self-update all off by env. The guard (`grokChatBreach`) reads every line: an `init` without the lists or with a tool but the meta-tools, a server but ours, anything before `init`, a tool block that isn't a meta-tool (a backend web search included, as its block starts) or a `use_tool` naming a tool that isn't ours kills the process and ends the turn with `tools_not_locked`. Its own sign-in sits in `GROK_HOME`, out of reach with no shell or read tool on the list, as with Claude Code.
-  - **The Antigravity CLI** (flags and files read in antigravity.google's docs and changelog up to CLI 1.4.12, ADR 0143; not yet run against a signed-in plan): `agy -p --output-format stream-json --sandbox --disable-slash-commands --agent agenteschat-chat`, never `--dangerously-skip-permissions`; that agent, written in the account's home before each turn, has `tools: []`, `commandExecutionPolicy: off` and `subagent: false`; the home's `mcp_config.json` holds our server alone and its settings allow only `mcp(agenteschat_agentes/*)`; global agents, rules, skills, hooks and plugins are removed before every turn, and the empty folder's `.agents/` and `.gemini/` too. The guard (`antigravityChatBreach`) reads every line: an `init` without a tool list or with any tool but our server's, anything before `init`, a tool step that isn't ours or a subagent kills the process and ends the turn with `tools_not_locked`. Google's tokens, keys and client secrets join the scrub.
+  - **The Antigravity CLI** (flags and files read in antigravity.google's docs and changelog up to CLI 1.4.12, ADR 0143; not yet run against a signed-in plan): `agy -p --output-format stream-json --sandbox --disable-slash-commands --agent agenteschat-chat`, never `--dangerously-skip-permissions`; that agent, written in the account's home before each turn, has `tools: []`, `commandExecutionPolicy: off` and `subagent: false`; the home's `mcp_config.json` holds our server alone and its settings allow only `mcp(agenteschat_agentes/*)`; global agents, rules, skills, hooks and plugins are removed before every turn, and the empty folder's `.agents/` and `.gemini/` too. The guard (`antigravityChatBreach`) reads every line: an `init` without a tool list or with any tool but our server's (unless it names the locked agent, as CLI 1.5.x does while listing its built-in catalog, ADR 0143 §5), anything before `init`, a tool step that isn't ours (a `call_mcp_tool` counts as ours only when its `ServerName` is our server) or a subagent kills the process and ends the turn with `tools_not_locked`. Google's tokens, keys and client secrets join the scrub.
   - **Its prompt says so too** ("# Your tools", `RIGHT_HAND_TOOLS`, for every brain and every run, one with no person behind it too): it uses only its agentes tools, never runs commands, touches a computer's files, opens the web or writes out tokens, keys, passwords or sign-in data, and refuses and says so when asked. A model may not follow it, so it is no barrier: the kill and the scrub are.
   - **Every reply is scrubbed** before it is posted, whatever the brain (`scrubRightHandReply`, `scrubSignIns`): OpenAI and Anthropic keys and OAuth tokens (`sk-…`, `sk-ant-…`), JWTs (Codex's `id_token` and `access_token`), Cursor keys (`key_…`, `crsr_…`), OpenAI refresh tokens (`rt.…` as Codex 0.165's `auth.json` holds them, and `rt_…`), Google's OAuth tokens, API keys and client secrets (`ya29.…`, `1//…`, `AIza…`, `GOCSPX-…`), private keys, and the value of any sign-in file's field (`access_token`, `refresh_token`, `id_token`, `accessToken`, `refreshToken`, `apiKey`, `*_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`) become a note in the language of the person behind the run, a key the person pasted included (the text of a reply cut by "Parar" too), and the audit log gets `right_hand.reply_redacted` with how many (never what). Its streamed text holds back its last word until it is whole and shows the same shapes masked, so nothing of one shows live either.
 
@@ -88,7 +88,7 @@ Amended 2026-11-04: on a plan, the plan's owner pays, as for any agent on a plan
 ## Consequences
 
 - Every workspace gets one more agent row. Lists that count "the team" leave it out; its row is its entry: the first row of Agentes, where the agents' DMs live (the web sidebar and Conversas on the phone), on a soft tint of the agent blue with "seu braço direito", outside the section's sorting and pins, never dragged or hidden, and still shown while Agentes is closed (alone on top of Conversas while there is no Agentes section); never under Mensagens diretas. Amended 2026-11-09 (ADR 0162): the workspace's agent count under its name ("1 membro · 4 agentes") counts it, as it lists it right under that count; "seu braço direito" is its one role name everywhere (its panel, its card and the phone's screens too, never the stored "Workspace assistant"); and it is never away (ADR 0084 §15).
-- `agents.coordinator` and its index stay in the database, read and written by nothing, until no running version selects them (`check:migrations`); a later migration drops them. Workspaces that had a coordinator get an ordinary agent back, and nothing is posted.
+- `agents.coordinator` and its index stay in the database, read and written by nothing, until no running version selects them (`check:migrations`); a later migration drops them. *2026-11-23:* the column left the schema and the index was dropped (migration `0326_unused_agent_columns`); the column goes with the release after that one. Workspaces that had a coordinator get an ordinary agent back, and nothing is posted.
 - Stored decisions keep their strategy `rule:coordinator`, read as the default rule's line, and still count toward the per-channel cap for their hour.
 - `PATCH …/agents/{agentId}` ignores an incoming `coordinator` and answers 200, because phones without an over-the-air update still send it.
 - Every proposal made in conversation now keeps who asked for it (`requested_by_user_id`).
@@ -467,12 +467,16 @@ threw its rows away. The owner decided it has every tool an agent can have, by d
   login or pass a key (`describeCapabilities` with `noComputer`).
 - **One person's things stay that person's.** One row answers everyone, each acting as the person behind the run, so
   what is one person's is used only in that person's own DM with it (`rightHandReader`, null anywhere else). That DM
-  has one person and no agent but the right hand. A routine's own run there counts as its creator: only a routine's
-  creator sets what it does, and only they read that DM. A run a routine's report or work woke counts as nobody.
+  has one person and no agent but the right hand. A routine's own run counts as its creator where only they read what
+  it says: only a routine's creator sets what it does. It works in its agent-only room (ADR 0053 §4), so what counts
+  is where it speaks: a report to the creator's own DM with the right hand (not to the Drive), or a widget on the
+  creator's Home or on a private board of theirs (ADR 0135 §8). A widget on a board others see reads as nobody, its
+  draft's test too, since a confirmed draft keeps its tested data (ADR 0135 §16). Memory is still kept only from the DM itself. A run a routine's report or work woke counts as
+  nobody.
   - **The Vault** (`vaultPersonOfRun`): a personal item for its owner, a team item for its audience, only in that DM.
     Called in a channel, or by a routine that reports anywhere else, it reaches only team items open to everyone and
     shared with it.
-  - **A mailbox** (`mailboxUserCheck`): only for the person who connected it, in that DM. Being in its audience opens
+  - **A mailbox** (`personalUseCheck`; a person's own connection too, which no one else's run gets anywhere): only for the person who connected it, in that DM. Being in its audience opens
     no one else's mailbox, since its audience is everyone. Its routine watches a mailbox only when the routine's
     creator connected it (`watchesFor`, checked when the routine is saved and again as mail arrives, so a routine
     taken over by someone else gets none), and `create_routine` names only that person's mailboxes. The mailbox's
@@ -571,3 +575,57 @@ seat (a stored id the computer takes for an agent's), with its own Linux user, h
 - This replaces "It never stands in on an API key" in §7's 2026-11-04 amendment, and §11's "a person's plan on a computer that is away doesn't fall to the workspace's": a person whose own plan can't think is answered by what can, with the line saying so.
 - An API key may now be spent for the right hand without anyone choosing it, only while its plan can't think, and the line says so each time it starts. Its budget stops it as any agent's does.
 - `mayFallBack` still excludes it: other agents' fallback rules are unchanged.
+
+## Amendment (2026-11-18): the same AI choices and computer as any agent (§4, §11)
+
+### Context
+
+Its own AI could only be a plan signed in as an account. A person whose computer was already signed in to their plan
+(the usual self-hosted setup, where people pair their own Mac or PC) could give any agent of theirs that sign-in, but
+not their own DM with the right hand, so the only way left was an API key. Its DM also showed no computer, though it
+has one since ADR 0175.
+
+### Decision
+
+- A person's own AI for the right hand may be the plan their own computer is signed in to (`account: null` with a
+  plan's brain on `PUT …/brain`, scope `mine`), on a computer they paired, as for any agent they own.
+  `right_hand_brains` keeps the computer (`machine_id`) when there is no account. It serves that person alone.
+  `account: null` on its own, or `brain: "model"`, still goes back to the workspace's AI.
+- The workspace's AI (scope `workspace`) still takes only a plan signed in as an account: it serves everyone, and a
+  computer's own sign-in is one person's.
+- Its DM shows its computer as any agent's: the header's computer button and the side panel's Computador, Rotinas
+  and Tarefas, on web and phone. Its side panel's Como pensa stays the person's own AI. Its computer is never chosen:
+  where the workspace has none, the panel says why and gives the way to one.
+
+### Consequences
+
+Self-hosted people connect their right hand's AI the way they connect any agent's. Its plan turns stay locked down
+(§4): the same `chat` turn and runner check, now also on a computer's own sign-in.
+
+## Amendment (2026-11-23): the router may pick it in a channel (§2, §5)
+
+### Context
+
+It was in no channel and the router never picked it, so a channel's question about setting the team up or how the
+app works went to a channel agent that could not do it, or to nobody. The owner decided it answers in a channel when
+it is the best fit.
+
+### Decision
+
+- For a person's message in a channel (`rightHandReaches`: a channel, not a DM or a task) that has at least one agent
+  of its own that replies by itself, the right hand is one more candidate (`RoutingCandidate.rightHand`), described
+  to the step by `RIGHT_HAND_ROUTING_ABOUT`, under the same audience rules. An agent's message never brings it in.
+- It answers only when the step's scores pick it (`selectAgents`, at the full `minScore`, never the lower bar of a
+  channel's only agent) or the person keeps talking with it (a reply to it, a follow-up). It is never the channel's
+  only agent (R2), the failure default or the alone pick (R5, `bestPlaced`), nor counted as one of the channel's
+  agents for those rules. A message for every agent brings it in only as the top pick, never as a second voice.
+- A channel with no agent of its own is people talking: the router asks nothing there, as before, and an @mention
+  still reaches the right hand.
+- The receipts list it as having read a message only when it answers it, so channel messages don't all read "seen by
+  Lodi".
+- Its prompt's "Where you are" for a channel says it was named or found the best fit.
+
+### Consequences
+
+This replaces "the router never picks it" in §2 and in the 2026-11-12 amendment. Its channel runs work in the shared
+seat (ADR 0175) and think with the AI of the person behind the message, as a mention's do.

@@ -17,7 +17,7 @@ import { type DiffLine, diffLines } from "@agenteschat/ui/diff";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Platform, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -39,6 +39,7 @@ import {
   type IconName,
   ListRow,
   Locked,
+  padPastFold,
   Row,
   SCREEN_X,
   SearchField,
@@ -47,6 +48,7 @@ import {
   SkeletonList,
   Text,
   useFieldText,
+  useFoldRoom,
   useLargeTitleScroll,
   usePulse,
   useReducedMotion,
@@ -127,6 +129,8 @@ export function WikiScreen({ folder = "" }: { folder?: string }) {
   const [selecting, setSelecting] = useState(false);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const bulkDelete = useWikiBulkDelete();
+  // Folded like a book (ADR 0212), the choosing bar's buttons keep to the half past the fold, never across it.
+  const foldSide = useFoldRoom();
   const stopSelecting = () => {
     setSelecting(false);
     setChosen(new Set());
@@ -152,42 +156,47 @@ export function WikiScreen({ folder = "" }: { folder?: string }) {
   const fade = reduced ? {} : { entering: FadeIn.duration(160), exiting: FadeOut.duration(120) };
   // Who changed it last and when; a pinned page says what it is about instead.
   const byLine = (p: WikiPageSummary) => `${dir.nameOf(p.updatedBy)} · ${when(p.updatedAt)}`;
-  const pageRow = (p: WikiPageSummary, i: number, sub: string, icon?: "pin") => {
-    const on = chosen.has(p.id);
-    return (
-      <ListRow
-        key={p.id}
-        divider={i > 0}
-        leading={<PageTile page={p} icon={icon} />}
-        title={p.title}
-        sub={sub}
-        subLines={1}
-        {...(selecting
-          ? {
-              trailing: <Icon name={on ? "checkc" : "circle"} size={22} color={on ? c.ink : c.faint} />,
-              accessibilityState: { selected: on },
-              onPress: () => {
-                const next = new Set(chosen);
-                if (on) next.delete(p.id);
-                else next.add(p.id);
-                setChosen(next);
-              },
-            }
-          : { onPress: () => openWikiPage(p.slug) })}
-      />
-    );
-  };
+  // A page chosen or let go, by its id: one function for every row (the rows are memoized).
+  const toggle = useCallback(
+    (id: string) =>
+      setChosen((was) => {
+        const next = new Set(was);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
+  const pageRow = (p: WikiPageSummary, i: number, sub: string, icon?: "pin") => (
+    <WikiPageRow
+      key={p.id}
+      id={p.id}
+      slug={p.slug}
+      title={p.title}
+      sub={sub}
+      locked={Boolean(p.locked)}
+      pinned={icon === "pin"}
+      divider={i > 0}
+      selecting={selecting}
+      selected={chosen.has(p.id)}
+      onToggle={toggle}
+    />
+  );
   const inThisFolder = folder ? pages.filter((p) => inFolder(p, folder)).length : 0;
-  // Each page once: a pinned page is under Fixadas only, a page read lately under Continuar lendo only.
-  const pinnedIds = new Set((home?.pinned ?? []).map((p) => p.id));
-  const reading = folder
-    ? []
-    : continueReading(
-        pages.filter((p) => !pinnedIds.has(p.id)),
-        recents[orgId] ?? [],
-      );
-  const readingIds = new Set(reading.map((p) => p.id));
-  const loose = (home?.pages ?? []).filter((p) => !pinnedIds.has(p.id) && !readingIds.has(p.id));
+  // Each page once: a pinned page is under Fixadas only, a page read lately under Continuar lendo only. Worked out
+  // again only when the pages or the reading change, not at each letter typed or page chosen.
+  const { reading, loose } = useMemo(() => {
+    const pinnedIds = new Set((home?.pinned ?? []).map((p) => p.id));
+    const reading = folder
+      ? []
+      : continueReading(
+          pages.filter((p) => !pinnedIds.has(p.id)),
+          recents[orgId] ?? [],
+        );
+    const readingIds = new Set(reading.map((p) => p.id));
+    const loose = (home?.pages ?? []).filter((p) => !pinnedIds.has(p.id) && !readingIds.has(p.id));
+    return { reading, loose };
+  }, [home, folder, pages, recents, orgId]);
   const choosable = search ? found : (home?.pages ?? []);
   // Only with links: a sky of lone dots says nothing.
   const hasMap = Boolean(sky && star && !folder && sky.links.length > 0);
@@ -236,7 +245,13 @@ export function WikiScreen({ folder = "" }: { folder?: string }) {
   ];
   // Choosing pages: the bar of what to do with them stays at the screen's foot, over the list.
   const pickBar = selecting ? (
-    <View style={[styles.pickBar, { paddingBottom: insets.bottom + 12, backgroundColor: c.bg, borderColor: c.line }]}>
+    <View
+      style={[
+        styles.pickBar,
+        { paddingBottom: insets.bottom + 12, backgroundColor: c.bg, borderColor: c.line },
+        foldSide && padPastFold(foldSide, 16),
+      ]}
+    >
       {choosesAudience ? (
         <Button
           variant="secondary"
@@ -438,6 +453,52 @@ const TITLE_IN_BAR_SPAN = 36;
 const FOLDER_LINE = 22;
 
 const inFolder = (p: WikiPageSummary, folder: string) => p.folder === folder || p.folder.startsWith(`${folder}/`);
+
+/**
+ * A page in the wiki's lists: its tile, its title and its line; choosing pages, the check on the right and a tap
+ * chooses it, else a tap opens it. Drawn again only when what it shows changes.
+ */
+const WikiPageRow = memo(function WikiPageRow({
+  id,
+  slug,
+  title,
+  sub,
+  locked,
+  pinned,
+  divider,
+  selecting,
+  selected,
+  onToggle,
+}: {
+  id: string;
+  slug: string;
+  title: string;
+  sub: string;
+  locked: boolean;
+  pinned: boolean;
+  divider: boolean;
+  selecting: boolean;
+  selected: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const c = useColors();
+  return (
+    <ListRow
+      divider={divider}
+      leading={<PageTile page={{ locked }} icon={pinned ? "pin" : undefined} />}
+      title={title}
+      sub={sub}
+      subLines={1}
+      {...(selecting
+        ? {
+            trailing: <Icon name={selected ? "checkc" : "circle"} size={22} color={selected ? c.ink : c.faint} />,
+            accessibilityState: { selected },
+            onPress: () => onToggle(id),
+          }
+        : { onPress: () => openWikiPage(slug) })}
+    />
+  );
+});
 
 /** A page's tile: a lock when only admins edit it, a pin under Fixadas. */
 function PageTile({ page, icon }: { page: Pick<WikiPageSummary, "locked">; icon?: "pin" | undefined }) {

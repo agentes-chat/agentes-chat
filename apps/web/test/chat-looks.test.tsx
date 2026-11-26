@@ -262,7 +262,7 @@ describe("a row with no bubble in a DM", () => {
 });
 
 describe("a reply being written in Bolhas", () => {
-  test("no bubble while it works: the bar says it writes, and how long it has been at it", async () => {
+  test("no bubble while it works: the last row says it writes, and how long it has been at it", async () => {
     const state = seedState();
     const channelId = seedDm(state, { type: "agent", id: ADA_ID }, { body: "x" });
     const r = await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api: createFakeApi(withChatPrefs(state)) });
@@ -280,7 +280,9 @@ describe("a reply being written in Bolhas", () => {
     expect(document.querySelector('article[data-run-id="r-live"]')).toBeNull();
     const bar = document.querySelector('.ac-typing[data-active="true"]') as HTMLElement;
     expect(bar.querySelector(".ac-typing__text")?.textContent).toBe("Ada escrevendo…");
-    expect(bar.querySelector(".ac-typing__elapsed")?.textContent).toMatch(/\d s$/);
+    // Started a minute before the seed's clock: well past a minute by the real one.
+    expect(bar.querySelector(".run-tail__clock")?.textContent).not.toBe("");
+    expect(bar.closest(".working-tail")).not.toBeNull();
   });
 });
 
@@ -324,23 +326,25 @@ describe("Sua conta › Conversa", () => {
     expect(state.me?.organizations[0]?.chatPrefs).toEqual({ channelStyle: "compact", dmTone: "strong" });
   });
 
-  test("where a conversation opens: the newest message until the person picks", async () => {
+  test("where a conversation opens: the last read message until the person picks", async () => {
     const state = withChatPrefs(seedState());
     await openSettings(state);
     const open = screen().getByRole("radiogroup", { name: "Ao abrir uma conversa, me leve para" });
     const checked = (name: string) => within(open).getByRole("radio", { name }).getAttribute("aria-checked");
-    expect(checked("Mensagem mais recente")).toBe("true");
-    expect(checked("Última mensagem lida")).toBe("false");
-    await click(within(open).getByRole("radio", { name: "Última mensagem lida" }));
-    expect(state.calls).toContainEqual({ method: "orgs.setChatPrefs", args: [ORG_ID, { openAt: "read" }] });
-    expect(state.me?.organizations[0]?.chatPrefs).toEqual({ openAt: "read" });
     expect(checked("Última mensagem lida")).toBe("true");
+    expect(checked("Mensagem mais recente")).toBe("false");
+    await click(within(open).getByRole("radio", { name: "Mensagem mais recente" }));
+    expect(state.calls).toContainEqual({ method: "orgs.setChatPrefs", args: [ORG_ID, { openAt: "latest" }] });
+    expect(state.me?.organizations[0]?.chatPrefs).toEqual({ openAt: "latest" });
+    expect(checked("Mensagem mais recente")).toBe("true");
   });
 
-  test("whoever picked the last read message keeps it", async () => {
-    await openSettings(withChatPrefs(seedState(), { openAt: "read" }));
+  test("whoever picked the newest message keeps it", async () => {
+    await openSettings(withChatPrefs(seedState(), { openAt: "latest" }));
     const open = screen().getByRole("radiogroup", { name: "Ao abrir uma conversa, me leve para" });
-    expect(within(open).getByRole("radio", { name: "Última mensagem lida" }).getAttribute("aria-checked")).toBe("true");
+    expect(within(open).getByRole("radio", { name: "Mensagem mais recente" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
   });
 
   test("Tamanho do texto: five steps, Padrão until the person picks, and a pick shows at once on the page", async () => {
@@ -441,13 +445,24 @@ describe("opening at the last read message", () => {
     expect(document.querySelector(".channel__unread")?.nextElementSibling).toBe(row("a1"));
   });
 
-  test("by default it opens at the end, with no line", async () => {
+  test("by default it opens there too: the line before the first unread message", async () => {
     await openUnread({});
-    expect(document.querySelector(".channel__unread")).toBeNull();
+    expect(document.querySelector(".channel__unread")?.nextElementSibling).toBe(row("a1"));
   });
 
-  test("whoever picked the newest message opens at the end too", async () => {
+  test("whoever picked the newest message opens at the end, with no line", async () => {
     await openUnread({ openAt: "latest" });
     expect(document.querySelector(".channel__unread")).toBeNull();
   });
+});
+
+test("in bubbles, the cards under someone else's words are bubbles of that message", () => {
+  const looks = readFileSync(new URL("../src/chat/looks.css", import.meta.url), "utf8");
+  expect(looks).toMatch(
+    /\.ac-msg\[data-look="bubbles"\]:not\(\.ac-msg--own\)\s*\.ac-msg__body\s*:is\(\.ag-rc:not\(\.ag-rc--talk\), \.ag-rcg, \.rq\) \{\s*background: var\(--msg-bubble\);\s*box-shadow: none;\s*border-radius: 6px 18px 18px 6px;/,
+  );
+  expect(looks).toContain('.ac-msg[data-look="bubbles"]:not(.ac-msg--own) .rq > .ac-approval__sky {\n  display: none;');
+  expect(looks).toMatch(/\.ac-msg__body > \.ac-msg__text ~ :is\(\.ag-rcs, \.rq\) \{\s*margin-top: 3px;/);
+  // A handed work's line is no card: a quiet line on the bubble's text, so it never runs past the bubble's edge.
+  expect(looks).not.toContain(".ac-workline.handed-line");
 });

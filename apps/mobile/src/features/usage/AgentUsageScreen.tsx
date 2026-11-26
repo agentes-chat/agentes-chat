@@ -1,5 +1,6 @@
 import type { AgentPlanUsage } from "@agenteschat/client";
 import { useAgentPlanUsage, useApi } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import {
   formatMonth,
   formatPercent,
@@ -9,7 +10,6 @@ import {
   joinNames,
 } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
 import {
   brandOf,
   noWindowsText,
@@ -28,7 +28,7 @@ import { useOrg } from "@/providers/org";
 import { Button, Icon, InfoHint, ProviderLogo, SkeletonList, Text } from "@/ui";
 import { openAgentAi } from "../ai/AgentAiScreen";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useMeId, usePullRefresh } from "../shared/hooks";
+import { useColors, useDirectory, useOwnsAgent, usePullRefresh } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { Loaded, PushedHeader } from "../shared/parts";
 import { AccountHead, PlanMeter, PlanModels, Swatch, UsageCard, UsageDays } from "./parts";
@@ -41,19 +41,19 @@ import { AccountHead, PlanMeter, PlanModels, Swatch, UsageCard, UsageDays } from
 
 export function AgentUsageScreen({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
-  const { orgId, org } = useOrg();
+  const { orgId } = useOrg();
   const api = useApi();
   const c = useColors();
   const dir = useDirectory();
-  const meId = useMeId();
+  const owns = useOwnsAgent();
   const insets = useSafeAreaInsets();
   const usage = useAgentPlanUsage(orgId, agentId);
   const agent = dir.agentById.get(agentId);
   const name = agent?.name ?? "";
-  // Its owner and who manages agents change what it thinks with, as on its page (the right hand's is each person's
-  // own, on its settings). Here too: this is where they see it at its limit.
-  const changes =
-    agent && !isRightHand(agent) && (Boolean(meId && agent.ownerUserId === meId) || can(org, "manage_agents"));
+  // Its owner (or one who holds the role that answers for it, ADR 0085, addendum of 2026-11-21) and who manages it (the
+  // server's `canManage`) change what it thinks with, as on its page (the right hand's is each person's own, on its
+  // settings). Here too: this is where they see it at its limit.
+  const changes = agent && !isRightHand(agent) && (owns(agent) || managesAgent(agent));
   const switchAi = changes ? (
     <View style={styles.switch}>
       <Button

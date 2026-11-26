@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { ASK_AGAIN } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import {
   addChannelMember,
@@ -69,6 +70,7 @@ describe("run policy table", () => {
     expect(toolKind(builtIn("create_routine", "schedule:write")).kind).toBe("elsewhere");
     expect(toolKind(builtIn("post_message")).kind).toBe("elsewhere");
     expect(toolKind(builtIn("react")).kind).toBe("here");
+    expect(toolKind(builtIn("say_now")).kind).toBe("here");
     expect(toolKind(builtIn("hand_off")).kind).toBe("hand_off");
     // A tool the table doesn't know: a sensitive one asks a person, any other is only for a person's run.
     expect(toolKind({ ...builtIn("deploy_app"), sensitive: true }).kind).toBe("external");
@@ -112,6 +114,8 @@ describe("run policy table", () => {
         expect(toolPolicy(r, builtIn(name))).toEqual({ action: "refuse", reason: REFUSALS.routineElsewhere });
       expect(toolPolicy(r, builtIn("ask_user"))).toEqual({ action: "refuse", reason: REFUSALS.routineAskUser });
       expect(toolPolicy(r, builtIn("react"))).toEqual({ action: "refuse", reason: REFUSALS.routineReact });
+      // Nobody is in its room to tell what it will do (ADR 0207).
+      expect(toolPolicy(r, builtIn("say_now"))).toEqual({ action: "refuse", reason: REFUSALS.routineSayNow });
     }
   });
 
@@ -141,6 +145,7 @@ describe("run policy table", () => {
     for (const tool of [
       builtIn("react"),
       builtIn("ask_user"),
+      builtIn("say_now"),
       builtIn("create_issue", "issues:write"),
       builtIn("update_wiki_page", "wiki:write"),
       builtIn("run_code", "sandbox:run"),
@@ -171,6 +176,7 @@ describe("run policy table", () => {
           builtIn("list_issues", "issues:read"),
           builtIn("react"),
           builtIn("ask_user"),
+          builtIn("say_now"),
           builtIn("browser_open", "browser:use"),
           builtIn("web_search"),
           builtIn("create_issue", "issues:write"),
@@ -197,6 +203,34 @@ describe("run policy table", () => {
         expect(toolPolicy(who, builtIn("start_task"))).toEqual({ action: "refuse", reason: REFUSALS.fedMission });
       }
     }
+  });
+
+  test("a run an app's message started reads only the web unasked: the workspace's data asks a person (ADR 0252)", () => {
+    const fromApp: RunAuthority = { kind: "unattended", personId: null, reason: "app", appId: "app_1" };
+    const askFirst = [
+      builtIn("search_context", "memory:read"),
+      builtIn("list_issues", "issues:read"),
+      builtIn("read_file"),
+      builtIn("get_context"),
+      app("github_list_issues", "github:issues.read"),
+      builtIn("browser_open", "browser:use"),
+      builtIn("create_issue", "issues:write"),
+      builtIn("tell_agent"),
+      builtIn("ask_agent"),
+    ];
+    for (const tool of askFirst) {
+      expect(decide(fromApp, tool)).toBe("approve");
+      // What a routine read woke the same run: these stay its own.
+      expect(decide(reportWoke, tool)).not.toBe("refuse");
+    }
+    expect(decide(reportWoke, builtIn("search_context", "memory:read"))).toBe("allow");
+    for (const tool of [builtIn("web_search"), builtIn("web_fetch"), builtIn("react"), builtIn("ask_user")])
+      expect(decide(fromApp, tool)).toBe("allow");
+    expect(decide(fromApp, app("github_create_issue", "github:issues.write"))).toBe("approve");
+    expect(toolPolicy(fromApp, builtIn("create_routine", "schedule:write"))).toEqual({
+      action: "refuse",
+      reason: REFUSALS.fedElsewhere,
+    });
   });
 
   test("the computer's own permission prompt is listed for every run; a mission's tools never for a routine", () => {
@@ -382,6 +416,46 @@ const call = (ctx: ToolContext, name: string, input: Record<string, unknown>) =>
 const requiresWhy = (t: ToolDefinition | undefined) =>
   Array.isArray(t?.inputSchema.required) && ((t?.inputSchema.required ?? []) as string[]).includes("why");
 
+type Ran = { input: Record<string, unknown>; approved: boolean };
+/** A computer tool like run_code: the computer holds a push to main for a person and runs anything else. */
+function heldComputer() {
+  const ran: Ran[] = [];
+  const computer: ToolSource = {
+    name: "computer",
+    tools: async () => [
+      {
+        name: "run_code",
+        description: "Run code on the computer.",
+        inputSchema: {
+          type: "object",
+          properties: { code: { type: "string" }, why: { type: "string" } },
+          required: ["code"],
+          additionalProperties: false,
+        },
+        scope: "sandbox:run",
+        whyAsks: true,
+        describe: (input) => ({ title: "Run bash code", detail: String(input.code) }),
+        execute: async (input, c) => {
+          ran.push({ input, approved: c.approved === true });
+          if (String(input.code).includes("git push") && !c.approved) {
+            const content = `Not run: This push goes to the default branch main: a person approves it first. ${ASK_AGAIN}`;
+            return { content, isError: true, data: { code: "command.approval_needed" } };
+          }
+          return { content: "ran" };
+        },
+      },
+    ],
+  };
+  const gateway = createToolGateway({ sources: [computer] });
+  const run = (ctx: ToolContext, code: string, why?: string) =>
+    gateway.invoke(ctx, {
+      toolUseId: `tu_${crypto.randomUUID()}`,
+      name: "run_code",
+      input: { code, ...(why ? { why } : {}) },
+    });
+  return { ran, gateway, run };
+}
+
 describe("the gateway applies the run policy", () => {
   test("a connector cannot shadow a built-in with the same name", async () => {
     await gatewaySetup();
@@ -416,6 +490,38 @@ describe("the gateway applies the run policy", () => {
     expect((await gateway.list(ctx)).find((t) => t.name === "permission_prompt")?.description).toBe(
       "Computer permission prompt",
     );
+  });
+
+  test("tool sources are read at once and merged in their order", async () => {
+    await gatewaySetup();
+    const { ctx } = await runAs("person");
+    const own = (description: string): ToolDefinition => ({
+      name: "permission_prompt",
+      description,
+      inputSchema: { type: "object" },
+      scope: "",
+      connectionId: null,
+      execute: async () => ({ content: description }),
+    });
+    let fastCalled = () => {};
+    const fastStarted = new Promise<void>((resolve) => {
+      fastCalled = resolve;
+    });
+    // Read one after the other, the slow source would wait here alone and give nothing.
+    const slow: ToolSource = {
+      name: "slow",
+      tools: async () =>
+        (await Promise.race([fastStarted.then(() => true), Bun.sleep(1000).then(() => false)])) ? [own("slow")] : [],
+    };
+    const fast: ToolSource = {
+      name: "fast",
+      tools: async () => {
+        fastCalled();
+        return [own("fast")];
+      },
+    };
+    const gateway = createToolGateway({ sources: [slow, fast] });
+    expect((await gateway.list(ctx)).find((t) => t.name === "permission_prompt")?.description).toBe("slow");
   });
 
   test("a connector cannot shadow server-owned Git tools", async () => {
@@ -514,39 +620,14 @@ describe("the gateway applies the run policy", () => {
   test("a command the computer held asks in the chat the same way for a routine: with why, where it reports, with its origin", async () => {
     await gatewaySetup();
     await grantScopes(f.db, f.org.id, f.agent.id, [{ connectionId: null, scope: "sandbox:run" }]);
-    const ran: { input: Record<string, unknown>; approved: boolean }[] = [];
-    // A computer tool like run_code: a call that says why asks a person first.
-    const computer: ToolSource = {
-      name: "computer",
-      tools: async () => [
-        {
-          name: "run_code",
-          description: "Run code on the computer.",
-          inputSchema: {
-            type: "object",
-            properties: { code: { type: "string" }, why: { type: "string" } },
-            required: ["code"],
-            additionalProperties: false,
-          },
-          scope: "sandbox:run",
-          whyAsks: true,
-          describe: (input) => ({ title: "Run bash code", detail: String(input.code) }),
-          execute: async (input, c) => {
-            ran.push({ input, approved: c.approved === true });
-            return { content: "ran" };
-          },
-        },
-      ],
-    };
-    const gateway = createToolGateway({ sources: [computer] });
-    const push = (ctx: ToolContext, why?: string) =>
-      gateway.invoke(ctx, {
-        toolUseId: `tu_${crypto.randomUUID()}`,
-        name: "run_code",
-        input: { code: "git push origin main", ...(why ? { why } : {}) },
-      });
+    const { ran, gateway, run } = heldComputer();
+    const push = (ctx: ToolContext, why?: string) => run(ctx, "git push origin main", why);
     const { ctx, brief } = await runAs("act");
-    expect(await push(ctx)).toMatchObject({ type: "result", output: { content: "ran" } });
+    const unexplained = await push(ctx);
+    if (unexplained.type !== "approval") throw new Error(`expected an approval, got ${JSON.stringify(unexplained)}`);
+    expect(unexplained.approval.why).toBe(
+      "This push goes to the default branch main, so the computer waits for a person's approval before running it.",
+    );
     const result = await push(ctx, WHY);
     if (result.type !== "approval") throw new Error(`expected an approval, got ${JSON.stringify(result)}`);
     expect(result.approval).toMatchObject({
@@ -555,12 +636,43 @@ describe("the gateway applies the run policy", () => {
       channelId: f.general.id,
       origin: { kind: "routine", routineId: brief?.routineId, routineName: "Pedidos do dia" },
     });
-    expect(ran).toEqual([{ input: { code: "git push origin main" }, approved: false }]);
+    expect(ran).toEqual([
+      { input: { code: "git push origin main" }, approved: false },
+      { input: { code: "git push origin main", why: WHY }, approved: false },
+    ]);
     await gateway.executeApproved(ctx, { ...result.approval, status: "approved" });
     expect(ran.at(-1)).toEqual({ input: { code: "git push origin main", why: WHY }, approved: true });
     // A routine stored as only reading runs commands too (ADR 0109).
     const read = await runAs("read");
-    expect(await push(read.ctx)).toMatchObject({ type: "result", output: { content: "ran" } });
+    expect(await run(read.ctx, "ls -l")).toMatchObject({ type: "result", output: { content: "ran" } });
+  });
+
+  test("at the default level the command decides, never the why: the same command gets the same answer with and without it", async () => {
+    await gatewaySetup();
+    await grantScopes(f.db, f.org.id, f.agent.id, [{ connectionId: null, scope: "sandbox:run" }]);
+    const { run } = heldComputer();
+    const commands = [
+      "sha256sum /tmp/report.csv",
+      "ls -l",
+      "mkdir -p /tmp/work && echo ok > /tmp/work/note.txt",
+      "curl -s https://example.com",
+      "python3 /tmp/work/sum.py",
+      "git push origin main",
+    ];
+    for (const kind of ["person", "unattended", "act"] as const) {
+      const { ctx } = await runAs(kind);
+      for (const code of commands) {
+        const without = await run(ctx, code);
+        const withWhy = await run(ctx, code, WHY);
+        expect({ kind, code, decided: withWhy.type }).toEqual({ kind, code, decided: without.type });
+        expect({ kind, code, decided: without.type }).toEqual({
+          kind,
+          code,
+          decided: code.startsWith("git push") ? "approval" : "result",
+        });
+        if (withWhy.type === "approval") expect(withWhy.approval.why).toBe(WHY);
+      }
+    }
   });
 
   test("unattended: it lists what a person's run lists and works as the agent itself", async () => {
@@ -683,7 +795,8 @@ describe("the gateway applies the run policy", () => {
       { db: f.db, pubsub: f.pubsub, tools: gateway },
       { orgId: f.org.id, agentId: f.agent.id, runId: run.id, machineId: crypto.randomUUID() },
     );
-    expect(bridged.map((t) => t.name).sort()).toEqual(["web_fetch", "web_search"]);
+    // `image_search` is the web's too (ADR 0196 §8): pictures found for a live file.
+    expect(bridged.map((t) => t.name).sort()).toEqual(["image_search", "web_fetch", "web_search"]);
   });
 
   test("the bridge lists exactly what the model loop does, why included", async () => {

@@ -260,6 +260,8 @@ test("confirm emails the account once that the surface was linked, with a single
   expect(url.searchParams.get("kind")).toBe("surface");
   const token = url.searchParams.get("token") ?? "";
   expect(token.length).toBeGreaterThanOrEqual(40);
+  // The workspace assistant's own look, for the picture.
+  expect(sent?.template.assistant).toEqual({ color: "teal", eyes: "happy", accessory: "headset" });
 
   const events: RealtimeEvent[] = [];
   f.pubsub.subscribe(userTopic(f.org.id, f.owner.id), (e) => events.push(e));
@@ -323,6 +325,7 @@ test("an identity change emails the account and posts one line in its DM with th
     to: [f.owner.email],
     template: { surface: "Example Chat", display: "+1 555 0100", url: "https://chat.example.com/" },
   });
+  expect(sent?.template.assistant).toEqual({ color: "teal", eyes: "happy", accessory: "headset" });
   const lines = (await f.db.select().from(schema.messages)).filter((m) => m.meta.bodyCode === "surfaceUnlinked");
   expect(lines).toHaveLength(1);
   expect(lines[0]?.meta.bodyParams).toEqual({ surface: "Example Chat" });

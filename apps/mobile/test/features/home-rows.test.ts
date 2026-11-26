@@ -182,27 +182,57 @@ describe("a screen of rows", () => {
     expect(src("chats/useRows.ts")).toContain("const now = useNow(WORK_TICK_MS);");
   });
 
-  test("past the moving rows an orbit holds still, as the faces do", () => {
-    expect(src("chats/ConversationRowView.tsx")).toContain(
-      "<PixelOrbit color={facts.orbit} size={ORBIT} still={!live} />",
-    );
+  test("an orbit turns on every row at work, past the rows whose faces move too", () => {
+    expect(src("chats/ConversationRowView.tsx")).toContain("<PixelOrbit color={facts.orbit} size={ORBIT} />");
+    expect(src("chats/PinnedStrip.tsx")).toContain("<PixelOrbit color={facts.orbit} size={MARK} />");
   });
 
-  test("a finger only starting a scroll lights no row and asks for no conversation", () => {
+  test("a scroll that drifts sideways stays a scroll: a row slides only once the drag is clearly sideways", () => {
+    const swipe = readFileSync(join(import.meta.dir, "../../src/ui/SwipeRow.tsx"), "utf8");
+    expect(swipe).toContain("const SIDEWAYS = 24;");
+    expect(swipe).toContain("dragOffsetFromLeft={SIDEWAYS}");
+    expect(swipe).toContain("dragOffsetFromRight={-SIDEWAYS}");
+  });
+
+  test("the home never sways: lists glide to a new place in a set time, rows fade in where they stand, no hop", () => {
+    const section = src("chats/HomeSection.tsx");
+    expect(section).toContain(
+      "export const LIST_MOVE = LinearTransition.duration(motion.panel).easing(motion.easeInOut);",
+    );
+    expect(section).not.toContain("springify");
+    expect(section).toContain("const look = useAnimatedStyle(() => ({ opacity: shown.get() }));");
+    expect(section).not.toContain("translateY");
+    const entrance = src("chats/HomeEntrance.tsx");
+    expect(entrance).not.toContain("withSpring");
+    expect(entrance).toContain('return { mode: awake ? ("idle" as const) : ("sleep" as const) };');
+  });
+
+  test("a finger only starting a scroll lights no row; the finger landing already asks for the conversation", () => {
     const section = src("chats/HomeSection.tsx");
     const seeAll = section.slice(section.indexOf("export function SeeAllRow"));
-    expect(seeAll).toContain("unstable_pressDelay={ROW_PRESS_DELAY}");
+    // A list row: `RowPressable` holds its light back by the row press delay.
+    expect(seeAll).toContain("<RowPressable onPress={onPress} hold");
     expect(section.slice(0, section.indexOf("export function SeeAllRow"))).toContain(
       "unstable_pressDelay={ROW_PRESS_DELAY}",
     );
-    // The prefetch rides the row's press-in, which `ListRow` holds back by its press delay.
-    expect(src("chats/ConversationRowView.tsx")).toContain("onPressIn={warm}");
-    expect(readFileSync(join(import.meta.dir, "../../src/ui/ListRow.tsx"), "utf8")).toContain(
-      "unstable_pressDelay={ROW_PRESS_DELAY}",
+    // The prefetch starts on touch-down, not after the press delay (it started only a few ms before the push): the
+    // messages and what the rows wait for (`prefetchConversation`), a thread's replies too; fresh ones aren't read
+    // again.
+    const row = src("chats/ConversationRowView.tsx");
+    expect(row).toContain("onTouchStart={warm}");
+    expect(row).toContain("const prefetch = usePrefetchConversation(orgId);");
+    expect(row).toContain(
+      'if (r.channelId) prefetch(r.channelId, r.kind === "thread" || r.kind === "mission" ? r.threadId : null);',
     );
+    const ui = (file: string) => readFileSync(join(import.meta.dir, "../../src/ui", file), "utf8");
+    expect(ui("ListRow.tsx")).toContain("<RowPressable {...press} hold={opens}");
+    expect(ui("RowPressable.tsx")).toContain("unstable_pressDelay = ROW_PRESS_DELAY,");
+    expect(ui("RowPressable.tsx")).toContain("onPressIn?.(e);");
   });
 
-  test("the home's sky comes up within 300 ms of the splash leaving", () => {
-    expect(src("chats/ChatsScreen.tsx")).toContain("const SKY_ARRIVE_MS = 300;");
+  test("the home's sky is already there under the splash: the splash's ring opens on it, nothing fades in", () => {
+    const home = src("chats/ChatsScreen.tsx");
+    expect(home).toContain("<GreetingSky />");
+    expect(home).not.toContain("SKY_ARRIVE_MS");
   });
 });

@@ -16,7 +16,7 @@ import {
   watchConfig,
   writeConfig,
 } from "../../runner/config";
-import { RotatingFile, rotatedName, tailLines } from "../../runner/logfile";
+import { batchedAppend, RotatingFile, rotatedName, tailLines } from "../../runner/logfile";
 import { removeDirs, tempDir, waitFor } from "./helpers";
 
 const dirs: string[] = [];
@@ -77,6 +77,7 @@ test("config: new fields are read and checked; a home without a token isn't pair
     opencode: false,
     grok: false,
     antigravity: false,
+    devin: false,
     commands: false,
   });
 
@@ -93,7 +94,16 @@ test("config: new fields are read and checked; a home without a token isn't pair
 test("a home paired before protocol 10 keeps its behaviour: every tool follows exec", () => {
   expect(effectiveAccess({ ...base, exec: true })).toEqual({
     folders: [],
-    tools: { claude: true, codex: true, cursor: true, opencode: true, grok: true, antigravity: true, commands: true },
+    tools: {
+      claude: true,
+      codex: true,
+      cursor: true,
+      opencode: true,
+      grok: true,
+      antigravity: true,
+      devin: true,
+      commands: true,
+    },
   });
   expect(effectiveAccess({ ...base, exec: false }).tools).toEqual({
     claude: false,
@@ -102,6 +112,7 @@ test("a home paired before protocol 10 keeps its behaviour: every tool follows e
     opencode: false,
     grok: false,
     antigravity: false,
+    devin: false,
     commands: false,
   });
   expect(effectiveAccess(null).tools.commands).toBe(false);
@@ -152,6 +163,11 @@ test("services: what of the computer agents may reach, one TCP or UDP port each,
   expect(normalizeStored({ services: "tcp/11434" })).toEqual({});
 });
 
+test("Push harder survives the config being read back: a restart or an edit keeps the owner's switch", () => {
+  expect(normalizeStored({ pushHarder: true }).pushHarder).toBe(true);
+  expect(normalizeStored({ pushHarder: "yes" })).toEqual({});
+});
+
 test("pause: until null holds until resumed; an until in the past counts as resumed", () => {
   const now = Date.parse("2026-10-17T12:00:00Z");
   expect(pauseOf(null, now)).toEqual({ paused: false });
@@ -186,6 +202,23 @@ test("rotating files: 5 MB by default, three files at most, newest first", () =>
   expect(readdirSync(path.join(h, "logs")).sort()).toEqual(["runner.1.log", "runner.2.log", "runner.log"]);
   expect(f.files()).toEqual([file, rotatedName(file, 1), rotatedName(file, 2)]);
   expect(tailLines(file, 1)[0]).toStartWith("line 19");
+});
+
+test("log lines are written in batches: one write per window, at once past the size, the rest on flush", async () => {
+  const writes: string[] = [];
+  const batch = batchedAppend((text) => writes.push(text), { ms: 20, bytes: 10 });
+  batch.write("a\n");
+  batch.write("b\n");
+  expect(writes).toEqual([]);
+  // The window's timer writes both lines at once (waited for, never timed: a busy machine fires timers late).
+  await waitFor(() => writes.length > 0);
+  expect(writes).toEqual(["a\nb\n"]);
+  batch.write("0123456789\n");
+  expect(writes).toEqual(["a\nb\n", "0123456789\n"]);
+  batch.write("left\n");
+  batch.flush();
+  batch.flush();
+  expect(writes).toEqual(["a\nb\n", "0123456789\n", "left\n"]);
 });
 
 test("credentials are masked in free text", () => {

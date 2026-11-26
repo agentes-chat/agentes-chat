@@ -44,7 +44,6 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
-  GroupHeading,
   Icon,
   type IconName,
   Input,
@@ -58,14 +57,15 @@ import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NO_COMPUTER, useNoComputer } from "@/components/AgentComputer";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
-import { useConnectAi } from "@/components/ConnectAi";
+import { usePlanHold } from "@/components/ai/plan-hold";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { ToolOffWayOut, useToolOneClick } from "@/components/devices/ToolOneClick";
 import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { ReconnectThisMacButton, ThisMacButton, useAgentsHere, useIsThisMac, useThisMac } from "@/components/ThisMac";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
+import { ownsOrManages } from "@/lib/agent-edit";
 import { inDesktopApp } from "@/lib/desktop";
 import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
@@ -237,7 +237,7 @@ export function WorkCard({
   const choice = target && !machine ? noComputer.choice(true) : null;
   // No computer yet where the workspace's own is on its way: it works there once it's ready.
   const waiting = choice === "workspace" ? noComputer.setup : null;
-  const member = viewer === "member";
+  const member = !ownsOrManages(viewer);
   const reason = work.browser.data?.reason;
   const machineRow = machine ? work.machines.data?.find((m) => m.id === machine.machineId) : undefined;
   // Only a switch that is off has a step there: `not_reported` and `not_installed` are on, `outdated` has none.
@@ -247,8 +247,9 @@ export function WorkCard({
   );
   return (
     <div className="agp-work">
-      <GroupHeading id="agp-ficha-work" title={t("agentPage.work.cell.label", g)} />
-      <section className="agp-workcard agp-ficha__card" aria-labelledby="agp-ficha-work">
+      {/* No title over the card: its top meets the cards beside it ("What Theo does"), and its cells say what they
+          are; the title stays its name for screen readers. */}
+      <section className="agp-workcard agp-ficha__card" aria-label={t("agentPage.work.cell.label", g)}>
         {before}
         {/* The Cloud's agents all work on the workspace's own computer, whose state the page's computer entry says:
               nothing to pick, so no cell. */}
@@ -317,15 +318,19 @@ export function WorkCard({
       </section>
       {machine && !machine.online && kind !== "model" && (
         <SettingNote icon="pause">
-          {edition === "cloud"
-            ? t("agentPage.work.offlineCloud", {
-                ...g,
+          {machineRow?.moving
+            ? t("machines.moving.named", {
                 computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
               })
-            : t("agentPage.work.offline", {
-                ...g,
-                computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
-              })}
+            : edition === "cloud"
+              ? t("agentPage.work.offlineCloud", {
+                  ...g,
+                  computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
+                })
+              : t("agentPage.work.offline", {
+                  ...g,
+                  computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
+                })}
           <ThisMacReconnect machineId={machine.machineId} />
         </SettingNote>
       )}
@@ -491,14 +496,17 @@ export function WorkDialogs({
   open,
   brainAt,
   onClose,
+  onReopen,
 }: {
   open: WorkDialog | null;
   /** The screen "Quem pensa" opens on, from a link; its first one otherwise. */
   brainAt?: BrainScreen;
   onClose: () => void;
+  /** Opens "Quem pensa" again, on `at` (Back from the Connect it closed for). */
+  onReopen?: (at?: BrainScreen) => void;
 }) {
   // Who thinks has its own dialog, under the sky like Connect's (ADR 0032 §5, addendum 2026-11-10).
-  if (open === "brain") return <BrainDialog onClose={onClose} at={brainAt} />;
+  if (open === "brain") return <BrainDialog onClose={onClose} at={brainAt} onReopen={onReopen} />;
   if (open === "computer") return <ComputerDialog onClose={onClose} />;
   if (open === "browser") return <BrowserDialog onClose={onClose} />;
   return null;
@@ -598,11 +606,15 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
       ...(brain !== "model" && !has(id, brain)
         ? [t("agentPage.work.computer.alsoBrain", { brain: t(`brain.card.${brain}`) })]
         : []),
-      ...(m && !m.online ? [t("agentPage.work.computer.alsoOffline", g)] : []),
+      ...(m && !m.online ? [m.moving ? t("machines.moving.line") : t("agentPage.work.computer.alsoOffline", g)] : []),
     ];
   };
   const status = (m: Machine) =>
-    m.online ? t("agentPage.work.computer.online") : t("agentPage.work.computer.offline");
+    m.online
+      ? t("agentPage.work.computer.online")
+      : m.moving
+        ? t("machines.moving.short")
+        : t("agentPage.work.computer.offline");
   const chosen = pickable.find((m) => m.id === choice);
   const use = async () => {
     setBusy(true);

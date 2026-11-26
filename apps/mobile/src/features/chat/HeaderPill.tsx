@@ -1,5 +1,5 @@
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
-import { type ReactNode, useEffect, useState } from "react";
+import { memo, type ReactNode, useEffect, useState } from "react";
 import { type LayoutChangeEvent, Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, {
   cancelAnimation,
@@ -13,10 +13,16 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { LivePause } from "@/agent/live";
+import { needsHeaderBlur } from "@/lib/nav";
 import { Dither } from "@/sky/Dither";
 import { softTones } from "@/sky/math";
 import { Glass, haptics, motion, PressScale, Text, useReducedMotion, useTheme } from "@/ui";
+import { usePane } from "@/ui/pane";
+import { panePillRoom, pillRoom } from "./pill-room";
 
+/** iOS 26's bar, whose buttons are the system's glass ones; elsewhere our own 44-point buttons side by side. */
+const LIQUID = Platform.OS === "ios" && !needsHeaderBlur(Platform.OS, Platform.Version);
 /** The pill's own padding, the face's box and the gaps: the face sits in the capsule's curve. */
 const PAD_LEFT = 6;
 const PAD_RIGHT = 16;
@@ -74,8 +80,11 @@ const rollOut: EntryExitAnimationFunction = () => {
  * messages. While an agent works its quiet line says each step, many a minute: the pill then holds the room's width
  * (any step fits, cut with "…"), so a step only rolls its line in and never springs the width, and the line never
  * slides to show its end; only a new title or closing moves the width. The sky sweeps meanwhile.
+ *
+ * Memoized: the bar draws it outside the screen, and a screen that redraws often (a conversation while agents work)
+ * hands it the same props most of the time.
  */
-export function HeaderPill({
+export const HeaderPill = memo(function HeaderPill({
   lead,
   title,
   subtitle,
@@ -85,9 +94,11 @@ export function HeaderPill({
   onPress,
   label,
   extraActions = 0,
+  leadRoom = 0,
   onHold,
   holdHint,
   collapsed = false,
+  inView = true,
 }: {
   lead?: ReactNode;
   title: string;
@@ -102,17 +113,27 @@ export function HeaderPill({
   onPress?: () => void;
   /** What a screen reader says (name, state and what a tap does). */
   label: string;
-  /** Bar buttons beside "…" (an agent's computer): the pill gives up their 44 points each. */
+  /** The system's bar buttons beside "…" (an agent's computer, search): the pill makes room for each (`pillRoom`). */
   extraActions?: number;
+  /** The width of our own counted views first in the buttons' group (an agent's tasks, a computer's line), measured. */
+  leadRoom?: number;
   onHold?: () => void;
   /** What a screen reader says the hold does. */
   holdHint?: string;
+  /**
+   * Whether its screen shows: the bar draws the pill outside the screen's own pause (`FocusLive`), so its sky stops
+   * here while a screen is pushed over the conversation.
+   */
+  inView?: boolean;
 }) {
   const { colors, shadows } = useTheme();
   const reduced = useReducedMotion();
   const { width: screen } = useWindowDimensions();
-  // The bar's margins, the back and "…" circles and a gap on each side.
-  const room = Math.max(160, screen - 152 - extraActions * 44);
+  // In a pane (ADR 0212) the bar is the pane's: as wide as the pane, with no back button.
+  const pane = usePane();
+  const room = pane
+    ? panePillRoom(pane.width, extraActions, leadRoom)
+    : pillRoom(screen, extraActions, leadRoom, LIQUID);
 
   const [nameWidth, setNameWidth] = useState<number | null>(null);
   const [lineWidth, setLineWidth] = useState(0);
@@ -153,7 +174,7 @@ export function HeaderPill({
     set(Math.ceil(e.nativeEvent.layout.width));
 
   return (
-    <View style={[styles.slot, { width: room }]} pointerEvents="box-none">
+    <View style={[styles.slot, { width: room }, pane && styles.centred]} pointerEvents="box-none">
       {/* What the words measure, whole, with no room limit. */}
       <View
         style={styles.measure}
@@ -197,15 +218,17 @@ export function HeaderPill({
         {/* The same Liquid Glass as the bar's own buttons beside it (iOS 26); the blur and a hairline before. */}
         <Glass liquid intensity={70} style={[styles.pill, closed && styles.pillClosed, { borderColor: colors.line2 }]}>
           {color ? (
-            <Dither
-              kind="pill"
-              tones={softTones(color, colors.glassSolid)}
-              pixel={3}
-              clear
-              liveWidth={pillWidth}
-              liveWork={work}
-              style={[styles.sky, { width: room }]}
-            />
+            <LivePause paused={!inView}>
+              <Dither
+                kind="pill"
+                tones={softTones(color, colors.glassSolid)}
+                pixel={3}
+                clear
+                liveWidth={pillWidth}
+                liveWork={work}
+                style={[styles.sky, { width: room }]}
+              />
+            </LivePause>
           ) : null}
           {lead ? <View style={styles.lead}>{lead}</View> : null}
           <Animated.View
@@ -237,7 +260,7 @@ export function HeaderPill({
       </PressScale>
     </View>
   );
-}
+});
 
 /** The quiet line: each new one rolls in over the last. `still`: it never slides to show its end. */
 function StatusLine({
@@ -309,6 +332,8 @@ function SlidingText({ text, natural, box, still }: { text: string; natural: num
 
 const styles = StyleSheet.create({
   slot: { alignItems: Platform.OS === "ios" ? "center" : "flex-start" },
+  // In a pane (ADR 0212) the pill stands in the middle of the bar on every platform: there is no back button beside it.
+  centred: { alignItems: "center" },
   measure: { position: "absolute", top: 0, left: 0, width: 1000, alignItems: "flex-start", opacity: 0 },
   pill: {
     flexDirection: "row",

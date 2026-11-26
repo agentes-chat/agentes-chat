@@ -1,9 +1,9 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import type { EventEmitter } from "node:events";
 import { constants } from "node:os";
 import path from "node:path";
-import { StringDecoder } from "node:string_decoder";
 import type { MachineReplies } from "@agenteschat/adapters/machine-protocol";
+import { ConsoleDecoder, consoleText } from "./console-text";
 
 /** Kept per stream (head and tail when larger). */
 export const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
@@ -67,8 +67,8 @@ export class OutputBuffer {
   text(): string {
     const head = Buffer.concat(this.head);
     const tail = Buffer.concat(this.tail);
-    if (this.total <= this.limit) return Buffer.concat([head, tail]).toString("utf8");
-    return head.toString("utf8") + CUT_MARKER + tail.toString("utf8");
+    if (this.total <= this.limit) return consoleText(Buffer.concat([head, tail]));
+    return consoleText(head, { cut: true }) + CUT_MARKER + consoleText(tail, { cut: true });
   }
 }
 
@@ -140,6 +140,23 @@ export function killTree(
   }
 }
 
+/**
+ * Every process under `pid` on macOS and Linux, from `ps`, even those in a process group of their own (Claude Code
+ * starts each shell command detached); empty when `ps` can't say.
+ */
+export function descendantPids(pid: number): number[] {
+  const ps = spawnSync("ps", ["-A", "-o", "pid=,ppid="], { encoding: "utf8", timeout: 5000 });
+  const children = new Map<number, number[]>();
+  for (const row of (ps.stdout ?? "").split("\n")) {
+    const [child, parent] = row.trim().split(/\s+/).map(Number);
+    if (!child || !parent) continue;
+    children.set(parent, [...(children.get(parent) ?? []), child]);
+  }
+  const found: number[] = [];
+  for (let i = -1; i < found.length; i++) found.push(...(children.get(i < 0 ? pid : (found[i] as number)) ?? []));
+  return found;
+}
+
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 /** Milliseconds between 1601-01-01 (a Windows FILETIME's zero) and the Unix epoch. */
 const FILETIME_EPOCH_MS = 11_644_473_600_000;
@@ -199,7 +216,7 @@ export function runCommand(opts: ExecOptions): Promise<ExecReply> {
     let done = false;
     let streamed = 0;
     const pending = { stdout: "", stderr: "" };
-    const decoders = { stdout: new StringDecoder("utf8"), stderr: new StringDecoder("utf8") };
+    const decoders = { stdout: new ConsoleDecoder(), stderr: new ConsoleDecoder() };
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     const held = { stdout: "", stderr: "" };
@@ -249,7 +266,7 @@ export function runCommand(opts: ExecOptions): Promise<ExecReply> {
     // Redacted before it is kept (ADR 0144): the cut of a long output (its head and tail) can't split a value in
     // two and leave each half readable. The last `hold` characters wait for the next chunk, as live output does.
     const keptHeld = { stdout: "", stderr: "" };
-    const keepDecoders = { stdout: new StringDecoder("utf8"), stderr: new StringDecoder("utf8") };
+    const keepDecoders = { stdout: new ConsoleDecoder(), stderr: new ConsoleDecoder() };
     const keep = (stream: "stdout" | "stderr", text: string, final = false) => {
       const out = clean(keptHeld[stream] + text);
       const cut = final ? out.length : Math.max(0, out.length - hold);

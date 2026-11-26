@@ -3,6 +3,7 @@ import { and, eq, schema } from "@agenteschat/db";
 import {
   APP_MANAGE_TOOL_NAMES,
   APP_TOOL_NAMES,
+  APP_WIKI_TOOL_NAMES,
   appAccessOf,
   appScopesFor,
   isPromotable,
@@ -63,7 +64,9 @@ describe("scopes", () => {
   test("the manage tools only for a connection given manage", async () => {
     const { b, orgId } = await setup();
     const write = await connectApp(t, b, orgId, { name: "Writer", scope: "read write manage", access: "write" });
-    expect(await toolNames(write.access)).toEqual([...APP_TOOL_NAMES]);
+    // The wiki's reads come with read access; its writes are managing.
+    const reads = ["list_wiki_pages", "read_wiki_page"];
+    expect(await toolNames(write.access)).toEqual([...APP_TOOL_NAMES, ...reads]);
     const refused = (await (
       await mcp(t, write.access, {
         jsonrpc: "2.0",
@@ -74,9 +77,13 @@ describe("scopes", () => {
     ).json()) as { error?: { message: string } };
     expect(refused.error?.message).toBe("Tool create_agent not found");
     const asked = await connectApp(t, b, orgId, { name: "Asker", access: "manage" });
-    expect(await toolNames(asked.access)).toEqual([...APP_TOOL_NAMES]);
+    expect(await toolNames(asked.access)).toEqual([...APP_TOOL_NAMES, ...reads]);
     const manage = await connectApp(t, b, orgId, MANAGE);
-    expect(await toolNames(manage.access)).toEqual([...APP_TOOL_NAMES, ...APP_MANAGE_TOOL_NAMES]);
+    expect(await toolNames(manage.access)).toEqual([
+      ...APP_TOOL_NAMES,
+      ...APP_MANAGE_TOOL_NAMES,
+      ...APP_WIKI_TOOL_NAMES,
+    ]);
     const [grant] = await t.db.select().from(schema.appGrants).where(eq(schema.appGrants.displayName, "Claude"));
     expect(grant?.scopes).toEqual(["read", "write", "manage"]);
   });
@@ -480,9 +487,10 @@ describe("add_memory and create_channel", () => {
       .where(eq(schema.contextItems.id, made.id as string));
     expect(row?.evidence.map((e) => e.type)).toEqual(["app", "human"]);
     expect(row?.agentId).toBe(agentId);
-    expect(isPromotable({ ...(row as NonNullable<typeof row>), recurrence: 5, confidence: 1, relevance: 1 })).toBe(
-      true,
-    );
+    const strong = { ...(row as NonNullable<typeof row>), recurrence: 5, confidence: 1, relevance: 1 };
+    // Confirmed, it may be proposed as a rule; as an agent's fact it stays memory.
+    expect(isPromotable({ ...strong, kind: "preference" })).toBe(true);
+    expect(isPromotable(strong)).toBe(false);
   });
 
   test("a member can't write the memory of an agent they don't own", async () => {

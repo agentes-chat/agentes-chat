@@ -12,10 +12,11 @@ import {
 import { formatTime, lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { stopperName, stopperOf } from "@agenteschat/client/lib/notices";
+import { siteName } from "@agenteschat/client/lib/sites";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import { agentGradient, BrowserMark, BrowserStrip, Chip, Icon } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useOrg } from "../org-context";
@@ -23,6 +24,7 @@ import { colorOf } from "../Sky";
 import { stepText, useHeldTakeover } from "./BrowserCard";
 import { SiteIcon } from "./SiteIcon";
 import { screenIcon, screenT } from "./screen";
+import { ScreenLine, ScreenPanelContext } from "./screen-panel";
 import "./browser.css";
 
 /** A step in the person's words, from the saved trail. */
@@ -58,6 +60,7 @@ export function BrowserTrailCard({
   screen?: ScreenKind;
 }) {
   const { t, i18n } = useTranslation();
+  const panel = useContext(ScreenPanelContext);
   const tt = screenT(t, screen);
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
@@ -68,6 +71,11 @@ export function BrowserTrailCard({
   const color = colorOf(dir.agentById.get(agentId));
   const last = steps.at(-1);
   if (!last || held) return null;
+  // Where the screen has a panel of its own, the trail is its last step and the way there.
+  if (panel)
+    return (
+      <ScreenLine icon={screenIcon(screen)} text={said(t, last, screen)} detail={last.detail} onShow={panel.show} />
+    );
   const time = formatTime(i18n.language, last.at);
   const by = stopped ? stopperOf(stopped, me.user.id) : null;
   const person = stopperName(by, {
@@ -86,7 +94,7 @@ export function BrowserTrailCard({
   // A shared profile (ADR 0110): its name then, before the site; the agent's own browser has none.
   const profile = screen === "browser" ? trailProfile(steps) : null;
   // The site alone, short ("web.whatsapp.com" → "whatsapp.com"): the drawn page already says it browsed.
-  const site = screen === "browser" ? hosts[0]?.replace(/^(www|web|m)\./, "") : hosts[0];
+  const site = screen === "browser" && hosts[0] ? siteName(hosts[0]) : hosts[0];
   const title = !site
     ? tt("after.titleNoSite")
     : hosts.length > 1

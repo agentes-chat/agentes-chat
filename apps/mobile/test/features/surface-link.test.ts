@@ -10,7 +10,9 @@ import {
   linkAssistant,
   linkRanOut,
   linkStep,
+  quietHoursText,
   surfaceRowText,
+  surfaceSenderText,
   surfaceTagText,
 } from "../../src/features/me/surface";
 import { translator } from "./fixtures";
@@ -25,13 +27,15 @@ const LONG_SURFACE = "Example Chat Longunbrokenwordxyz";
 const link = (over: Partial<SurfaceLink> = {}): SurfaceLink => ({
   id: "l1",
   status: "pending",
-  display: "+1 555 0100",
+  display: "5511900000001",
   profileName: "Ana",
   orgId: "o1",
   orgName: "Acme",
   createdAt: new Date(NOW - 60_000).toISOString(),
   confirmedAt: null,
+  nudge: { on: true, afterHours: 4, quietFrom: 22, quietTo: 8 },
   expiresAt: new Date(NOW + 9 * 60_000).toISOString(),
+  pinSet: false,
   ...over,
 });
 const links = (list: SurfaceLink[], over: Partial<SurfaceLinks> = {}): SurfaceLinks => ({
@@ -52,7 +56,7 @@ describe("the row in Notificações", () => {
     const t = await translator("en");
     const none = surfaceRowOf(links([]), NOW);
     if (none.kind === "hidden") throw new Error("hidden");
-    expect(surfaceRowText(t, none, "Lodi")).toEqual({ sub: "Lodi can message you there", value: "Link" });
+    expect(surfaceRowText(t, none, "Lodi")).toEqual({ hint: "Lodi can message you there", value: "Link" });
     expect(surfaceRowText(t, none, null)).toEqual({ value: "Link" });
 
     const pending = surfaceRowOf(links([link()]), NOW);
@@ -62,7 +66,15 @@ describe("the row in Notificações", () => {
 
     const active = surfaceRowOf(links([link({ status: "active", expiresAt: null })]), NOW);
     if (active.kind === "hidden") throw new Error("hidden");
-    expect(surfaceRowText(t, active, "Lodi")).toEqual({ sub: "+1 555 0100", below: "Ana", value: "On" });
+    expect(surfaceRowText(t, active, "Lodi")).toEqual({ sub: "+55 (11) 90000-0001", below: "Ana", value: "On" });
+  });
+
+  test("the sheet's confirm step names the sender formatted, and only through the shared helper", () => {
+    expect(surfaceSenderText(link())).toEqual({ display: "+55 (11) 90000-0001", profileName: "Ana" });
+    expect(surfaceSenderText(link({ display: null }))).toEqual({ display: null, profileName: "Ana" });
+    const src = readFileSync(join(import.meta.dir, "../../src/features/me/SurfaceLink.tsx"), "utf8");
+    expect(src).toContain("surfaceSenderText(link)");
+    expect(src).not.toMatch(/\{link\.(display|profileName)\}/);
   });
 
   test("worst case: the whole display and profile name, never cut, and only one line when the other is missing", async () => {
@@ -86,6 +98,8 @@ describe("the row in Notificações", () => {
     const src = readFileSync(join(import.meta.dir, "../../src/features/me/SurfaceLink.tsx"), "utf8");
     expect(src).toContain("labelLines={0}");
     expect(src).toContain("subLines: 0");
+    // What linking does is the ⓘ's beside the name, as on the phone switch's row above it.
+    expect(src).toContain('hint: { name: t("common.about", { label: row.surface }), text: text.hint }');
     expect(src).toContain("confirmAction({");
     const page = readFileSync(join(import.meta.dir, "../../src/features/me/PreferencePages.tsx"), "utf8");
     expect(page).toContain("<SurfaceLinkRow />");
@@ -211,7 +225,12 @@ describe("the mark on messages", () => {
     expect(surfaceTagText(t, via, "Ana", data)).toEqual({
       label: "via Example Chat",
       hint: "Sent by Ana on Example Chat",
+      mark: null,
     });
+    // The logo named like the surface, for one written there; a forwarded one keeps its own glyph.
+    const named = { via: { kind: "surface", surface: "examplechat", linkId: "l1" } };
+    expect(surfaceTagText(t, named, "Ana", data)?.mark).toBe("/connectors/examplechat.svg");
+    expect(surfaceTagText(t, { via: { ...named.via, forwarded: true } }, "Ana", data)?.mark).toBeNull();
     expect(surfaceTagText(t, { via: { ...via.via, forwarded: true } }, "Ana", data)?.label).toBe(
       "forwarded via Example Chat",
     );
@@ -235,7 +254,35 @@ describe("the mark on messages", () => {
     expect(own.indexOf("<SurfaceMark")).toBeLessThan(own.indexOf("when.time(m.createdAt)"));
     expect(src).toMatch(/accessibilityLabel=\{tag\.label\} accessibilityHint=\{tag\.hint\}/);
     // Others' rows: the tag counts as one, so a bubble with no names still shows its line, and wraps a long name.
-    expect(src).toContain('<Tag icon="chat" label={surfaceTag.label} hint={surfaceTag.hint} wrap />');
+    expect(src).toMatch(/<Tag\s+icon="chat"\s+lead=\{<MarkIcon uri=\{iconUri\(serverUrl\(\), surfaceTag\.mark\)\}/);
     expect(src).toMatch(/const tagged = Boolean\([^)]*surfaceTag/);
   });
+});
+
+describe("the surface's logo beside the line icons", () => {
+  const read = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
+
+  test("the row's tile draws it in the icon's box and color, the chat icon without one", () => {
+    // The row hands the logo to its tile, which draws it where the symbol goes: same box, same color.
+    expect(read("ui/Grouped.tsx")).toContain("<IconTile icon={icon} danger={danger} mark={mark ?? null} />");
+    const tile = read("ui/IconTile.tsx");
+    expect(tile).toContain(
+      "<MarkIcon uri={mark} fallback={icon} size={Math.round(size * glyphShare(icon))} color={ON_TILE} />",
+    );
+    expect(read("features/me/SurfaceLink.tsx")).toMatch(
+      /icon="chat"\s+mark=\{iconUri\(serverUrl\(\), surfaceMarkUrl\(row\.surface\)\)\}/,
+    );
+    const mark = read("ui/MarkIcon.tsx");
+    // The box is the icon's own size; the logo sits where the icons' strokes do on their 24 grid.
+    expect(mark).toContain("style={{ width: size, height: size,");
+    expect(mark).toContain("Math.round((size * 16) / 24)");
+    expect(mark).toContain("<Icon name={fallback} size={size}");
+  });
+});
+
+test("the nudge's quiet hours on the reader's clock, in every language (ADR 0234)", async () => {
+  const nudge = { on: true, afterHours: 4, quietFrom: 22, quietTo: 8 };
+  expect(quietHoursText(await translator("en"), "en-US", nudge)).toBe("10:00 PM to 8:00 AM");
+  expect(quietHoursText(await translator("pt-BR"), "pt-BR", nudge)).toBe("22:00 às 8:00");
+  expect(quietHoursText(await translator("de"), "de", nudge)).toBe("22:00 bis 8:00");
 });

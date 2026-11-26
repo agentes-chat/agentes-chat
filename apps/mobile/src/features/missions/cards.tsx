@@ -21,8 +21,10 @@ import {
   CHROME_MAX_SCALE,
   Chip,
   Count,
+  Disclosure,
   Icon,
   LineIcon,
+  MESSAGE_CARD_X,
   PixelOrbit,
   PlanTrack,
   Text,
@@ -31,12 +33,12 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { FoldedBody } from "../chat/FoldedBody";
-import { useCardTop } from "../chat/look";
+import { useCardTop, useMessageCardFrame } from "../chat/look";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
-import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
+import { successHaptic, tapHaptic } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { missionTrack, planProgress, recommendedOption, waitingCount } from "./logic";
 
@@ -72,7 +74,7 @@ export function MissionCardView({ mission: m, pinned = false }: { mission: Missi
   const { t } = useTranslation();
   const dir = useDirectory();
   const c = useColors();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const agent = dir.agentById.get(m.agentId);
   const color = agentLook(agent).color;
   const { done, total } = planProgress(m);
@@ -83,13 +85,11 @@ export function MissionCardView({ mission: m, pinned = false }: { mission: Missi
       onPress={() => router.push(`/mission/${m.id}`)}
       accessibilityRole="button"
       accessibilityLabel={t("mobile.mission.cardLabel", { title: m.title, done, total })}
-      style={({ pressed }) => [styles.mcard, surface, ownTop, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.mcard, frame.style, ownTop, pressed && styles.pressed]}
     >
       <View style={styles.row}>
         <Icon name="target" size={15} color={c.muted} />
-        <Text variant="caption" tone="muted" style={styles.bold}>
-          {t("mobile.mission.kind")}
-        </Text>
+        <Text variant="cardKind">{t("mobile.mission.kind")}</Text>
         <View style={styles.grow} />
         {/* The chip shrinks only inside something that can: a long agent's name ran past the card's edge. */}
         <View style={styles.chip}>
@@ -109,23 +109,23 @@ export function MissionCardView({ mission: m, pinned = false }: { mission: Missi
           />
         </View>
       </View>
-      <Text variant="body" style={[styles.bold, pinned ? styles.titlePinned : styles.title]} numberOfLines={2}>
+      <Text variant="cardTitle" style={pinned ? styles.titlePinned : styles.title} numberOfLines={2}>
         {m.title}
       </Text>
       <PlanTrack color={color} items={missionTrack(m)} />
       <View style={[styles.row, styles.ft]}>
         <Count value={done} size={13} />
-        <Text variant="caption" tone="faint">
+        <Text variant="footnote" tone="faint">
           {t("mobile.mission.ofTotal", { total })}
         </Text>
         {waiting > 0 ? (
-          <Text variant="caption" tone="ink" style={styles.bold}>
+          <Text variant="footnote" tone="ink" style={styles.bold}>
             {" · "}
             {t("mobile.mission.waitingYou", { count: waiting })}
           </Text>
         ) : null}
         <View style={styles.grow} />
-        <Icon name="right" size={16} color={c.faint} />
+        <Disclosure />
       </View>
     </Pressable>
   );
@@ -156,7 +156,7 @@ export function SetupFailedCard({
   const dir = useDirectory();
   const c = useColors();
   const { colors, fonts } = useTheme();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const toast = useToast();
   const byId = useMission(orgId, missionId);
   const byThread = useThreadMission(orgId, missionId ? null : threadId);
@@ -167,14 +167,12 @@ export function SetupFailedCard({
   const state = m?.worktreeState;
   const open = m ? m.status !== "done" && m.status !== "canceled" : false;
   return (
-    <View style={[styles.askcard, surface, ownTop]}>
+    <View style={[styles.askcard, frame.style, ownTop]}>
       <View style={styles.row}>
         <Icon name="code" size={15} color={c.muted} />
-        <Text variant="caption" tone="muted" style={styles.bold}>
-          {t("mobile.mission.setup.cap")}
-        </Text>
+        <Text variant="cardKind">{t("mobile.mission.setup.cap")}</Text>
       </View>
-      <Text variant="body" style={[styles.bold, styles.title]}>
+      <Text variant="cardTitle" style={styles.title}>
         {t(lost ? "mobile.mission.setup.lostTitle" : "mobile.mission.setup.failedTitle")}
       </Text>
       {lost ? (
@@ -254,7 +252,7 @@ export function ReviewCardView({ review: r, mission }: { review: MissionReview; 
   const orgId = useOrgId();
   const dir = useDirectory();
   const c = useColors();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const toast = useToast();
   const sheet = useSheet();
   const agentId = mission?.agentId ?? null;
@@ -265,7 +263,7 @@ export function ReviewCardView({ review: r, mission }: { review: MissionReview; 
   );
   if (r.status !== "pending") {
     return (
-      <View style={[styles.done, surface]}>
+      <View style={[styles.done, frame.style]}>
         <LineIcon
           name={r.status === "approved" ? "check" : "reply"}
           size={15}
@@ -282,14 +280,12 @@ export function ReviewCardView({ review: r, mission }: { review: MissionReview; 
   }
   const canAct = mission?.canAct ?? false;
   return (
-    <View style={[styles.askcard, surface, ownTop]}>
+    <View style={[styles.askcard, frame.style, ownTop]}>
       <View style={styles.row}>
         <Icon name="sparkle" size={15} color={c.muted} />
-        <Text variant="caption" tone="muted" style={styles.bold}>
-          {t("mobile.mission.review.ready")}
-        </Text>
+        <Text variant="cardKind">{t("mobile.mission.review.ready")}</Text>
       </View>
-      <Text variant="body" style={[styles.bold, styles.title]}>
+      <Text variant="cardTitle" style={styles.title}>
         {r.title}
       </Text>
       {r.summary ? (
@@ -378,7 +374,7 @@ export function DecisionCardView({ decision: d, mission }: { decision: MissionDe
   const api = useApi();
   const orgId = useOrgId();
   const c = useColors();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const toast = useToast();
   const canAct = mission?.canAct ?? false;
   const canOpine = mission ? mission.role === "comment" : false;
@@ -406,14 +402,14 @@ export function DecisionCardView({ decision: d, mission }: { decision: MissionDe
     });
   };
   return (
-    <View style={[styles.askcard, surface, ownTop]}>
+    <View style={[styles.askcard, frame.style, ownTop]}>
       <View style={styles.row}>
         <Icon name="flag" size={15} color={c.muted} />
-        <Text variant="caption" tone="muted" style={styles.bold}>
+        <Text variant="cardKind">
           {taken ? t("mobile.mission.decision.decided") : t("mobile.mission.decision.title")}
         </Text>
       </View>
-      <Text variant="body" style={[styles.bold, styles.title]}>
+      <Text variant="cardTitle" style={styles.title}>
         {d.question}
       </Text>
       <View style={styles.opts}>
@@ -432,12 +428,12 @@ export function DecisionCardView({ decision: d, mission }: { decision: MissionDe
                 pressed && styles.pressed,
               ]}
             >
-              {on ? <LineIcon variant="body" name="check" size={16} color={c.bg} /> : null}
-              <Text variant="body" style={[styles.optText, { color: on ? c.bg : c.ink }]}>
+              {on ? <LineIcon variant="subhead" name="check" size={16} color={c.bg} /> : null}
+              <Text variant="subhead" style={[styles.optText, { color: on ? c.bg : c.ink }]}>
                 {o}
               </Text>
               {o === rec ? (
-                <LineIcon variant="body" size={16}>
+                <LineIcon variant="subhead" size={16}>
                   <Text variant="caption" style={{ color: on ? c.bg : c.faint, opacity: on ? 0.7 : 1 }}>
                     {t("mobile.mission.decision.recommended")}
                   </Text>
@@ -448,7 +444,7 @@ export function DecisionCardView({ decision: d, mission }: { decision: MissionDe
         })}
       </View>
       {d.why && !taken ? (
-        <Text variant="caption" tone="faint" style={styles.summary}>
+        <Text variant="footnote" tone="faint" style={styles.summary}>
           {d.why}
         </Text>
       ) : null}
@@ -464,7 +460,7 @@ export function PlanCard({ missionId, goal }: { missionId: string; goal: string 
   const api = useApi();
   const orgId = useOrgId();
   const c = useColors();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const toast = useToast();
   const sheet = useSheet();
   const dir = useDirectory();
@@ -480,7 +476,7 @@ export function PlanCard({ missionId, goal }: { missionId: string; goal: string 
       <Pressable
         onPress={() => router.push(`/mission/${m.id}`)}
         accessibilityRole="button"
-        style={({ pressed }) => [styles.done, surface, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.done, frame.style, pressed && styles.pressed]}
       >
         <LineIcon name="check" size={15} color={c.ok} variant="small" />
         <Text variant="small" tone="muted" style={styles.grow} numberOfLines={2}>
@@ -494,10 +490,10 @@ export function PlanCard({ missionId, goal }: { missionId: string; goal: string 
   const findings = m.findings ?? [];
   const investigated = findings.length > 0;
   return (
-    <View style={[investigated ? styles.inv : styles.askcard, surface, ownTop]}>
+    <View style={[investigated ? styles.inv : styles.askcard, frame.style, ownTop]}>
       <View style={styles.row}>
         <Icon name="target" size={15} color={c.muted} />
-        <Text variant="caption" tone="muted" style={[styles.bold, styles.shrink]}>
+        <Text variant="cardKind" style={styles.shrink}>
           {investigated
             ? t("missions.findings.proposed")
             : items.length > 0
@@ -505,15 +501,13 @@ export function PlanCard({ missionId, goal }: { missionId: string; goal: string 
               : t("mobile.mission.plan.title")}
         </Text>
       </View>
-      <Text variant="body" style={[styles.bold, styles.title]}>
+      <Text variant="cardTitle" style={styles.title}>
         {m.title || goal}
       </Text>
       {investigated ? <Findings findings={findings} /> : null}
       {investigated && items.length > 0 ? (
         <View style={[styles.plHead, { borderTopColor: c.line }]}>
-          <Text variant="caption" tone="faint" style={styles.bold}>
-            {t("missions.findings.plan", { count: items.length })}
-          </Text>
+          <Text variant="cardKind">{t("missions.findings.plan", { count: items.length })}</Text>
         </View>
       ) : null}
       {items.slice(0, 4).map((it, i) => (
@@ -529,7 +523,7 @@ export function PlanCard({ missionId, goal }: { missionId: string; goal: string 
         </View>
       ))}
       {items.length > 4 ? (
-        <Text variant="caption" tone="faint" style={styles.more}>
+        <Text variant="footnote" tone="faint" style={styles.more}>
           {t("mobile.mission.plan.more", { count: items.length - 4 })}
         </Text>
       ) : null}
@@ -600,7 +594,7 @@ export function PlanCard({ missionId, goal }: { missionId: string; goal: string 
         </View>
       ) : null}
       {m.canAct && investigated ? (
-        <Text variant="caption" tone="faint" style={styles.note}>
+        <Text variant="footnote" tone="faint" style={styles.note}>
           {t("missions.findings.note")}
         </Text>
       ) : null}
@@ -671,7 +665,7 @@ const styles = StyleSheet.create({
   title: { marginTop: 6, marginBottom: 10 },
   titlePinned: { marginTop: 4, marginBottom: 8 },
   ft: { marginTop: 8, gap: 6 },
-  askcard: { padding: 12, borderRadius: 20 },
+  askcard: { paddingVertical: 12, paddingHorizontal: MESSAGE_CARD_X, borderRadius: 20 },
   summary: { marginBottom: 10 },
   log: { fontSize: 12, lineHeight: 17, marginBottom: 10 },
   acts: { flexDirection: "row", gap: 8, marginTop: 4 },
@@ -681,7 +675,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: MESSAGE_CARD_X,
     paddingVertical: 10,
     borderRadius: 20,
   },

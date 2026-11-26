@@ -1,5 +1,12 @@
 import { isIP } from "node:net";
-import { CLI_INSTALL_CAUSES, CLI_INSTALL_STATES, INSTALLABLE_CLIS, limitIp } from "@agenteschat/adapters";
+import {
+  CLI_FETCH_FAILURES,
+  CLI_INSTALL_CAUSES,
+  CLI_INSTALL_STATES,
+  FETCH_NAMES,
+  INSTALLABLE_CLIS,
+  limitIp,
+} from "@agenteschat/adapters";
 import {
   ARTIFACT_LIMITS,
   allowMachineTool,
@@ -29,8 +36,10 @@ import {
   pollDeviceToken,
   receiveMachineUpload,
   reduceMachineAccess,
+  refuseFolderRequest,
   renameMachine,
   restoreHostComputer,
+  retryCliFetch,
   safeEqual,
   setAgentComputerTarget,
   setMachinePause,
@@ -41,7 +50,7 @@ import {
   ValidationError,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { installScript } from "../../runner/install-script";
+import { installScript, withoutTrailingSlashes } from "../../runner/install-script";
 import { requestIp, requestLimitIp } from "../http/client-ip";
 import { apiError, domainErrorResponse, errorResponse } from "../http/errors";
 import {
@@ -79,6 +88,7 @@ const MachineTool = z.enum([
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
   "browser",
   "desktop",
@@ -112,6 +122,10 @@ export const MachineAccess = z
         .boolean()
         .optional()
         .openapi({ description: "Google's Antigravity CLI (protocol 44, ADR 0143); absent = follows `codex`." }),
+      devin: z
+        .boolean()
+        .optional()
+        .openapi({ description: "Cognition's Devin CLI (protocol 89, ADR 0253); absent = follows `codex`." }),
       commands: z.boolean(),
       browser: z
         .boolean()
@@ -145,6 +159,10 @@ export const Machine = z
       description:
         "The workspace's own computer is asleep in standby (ADR 0161): it wakes when something wants it, and reads online meanwhile. False again once a wake failed to bring it back in time. A change comes as `machine.updated`.",
     }),
+    offlineCause: z.enum(["unresponsive", "stopped", "dropped"]).nullable().openapi({
+      description:
+        "Why it is offline, from its runner's last close: `unresponsive` (stopped answering: no network, or too busy), `stopped` (its runner stopped), `dropped` (the link dropped). Null: online, the workspace's own computer, or unknown.",
+    }),
     lastSeenAt: z.string().nullable(),
     hostname: z.string(),
     os: z.string().openapi({ description: "`linux`, `darwin`, `windows` or `other`." }),
@@ -155,6 +173,10 @@ export const Machine = z
     }),
     runnerVersion: z.string(),
     protocol: z.number().int().openapi({ description: "The runner's machine protocol (9+: pause; 10+: access)." }),
+    update: z.enum(["command", "installer"]).nullable().openapi({
+      description:
+        "Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the install command again, as root (system mode). Null: nothing to update from here (current, the workspace's or this server's own computer, or run by the agentes.chat app, which updates itself).",
+    }),
     browserProfiles: z.boolean().openapi({
       description:
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",
@@ -171,9 +193,33 @@ export const Machine = z
       description:
         "Its coding CLIs can be looked for again from here (`POST …/clis/check`) and installed by the person who paired it (`…/cli-install`); `false`: its app is too old, or it is the workspace's own computer.",
     }),
+    cliFetchable: z.array(z.enum(FETCH_NAMES)).openapi({
+      description:
+        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). In system mode (protocol 88 on) only for agents' users who reach no copy of it, where `cli-install` installs it for all of them. None on the workspace's own computer, in system mode before protocol 88 or from an older runner.",
+    }),
+    cliFetch: z
+      .record(
+        z.string(),
+        z.object({
+          state: z.enum(["fetching", "ready", "failed"]),
+          version: z.string(),
+          done: z.number().optional(),
+          total: z.number().nullable().optional(),
+          reason: z.enum(CLI_FETCH_FAILURES).optional(),
+        }),
+      )
+      .nullable()
+      .openapi({
+        description:
+          "Where each fetch of a coding CLI stands there, by CLI: `fetching` (bytes `done` of `total`, null while unknown), `ready`, or `failed` with `reason` (`offline`, `hash_mismatch`, `no_build`, `disk_full`, `failed`). Live as `machine.updated` with `cliFetch`.",
+      }),
     cliErrors: z.record(z.string(), z.string()).nullable().openapi({
       description:
         "The coding CLIs there that can't start (`claude`, `codex`…), each with its own last error line; `git_missing`: Claude Code on Windows without Git for Windows. Null unless admin or the person who paired it.",
+    }),
+    codexSandbox: z.enum(["mxc", "unelevated", "none"]).nullable().openapi({
+      description:
+        "Windows: what holds Codex's commands there (`mxc`; `unelevated`, Codex's own sandbox where MXC is missing; `none`, nothing could). Null elsewhere, or until its runner knows.",
     }),
     remotePause: z.boolean().openapi({
       description:
@@ -226,6 +272,18 @@ export const Machine = z
       .nullable()
       .optional(),
     egress: z.object({ ip: z.string(), country: z.string().optional(), at: z.string() }).nullable().optional(),
+    egressVia: z
+      .object({ machineId: z.string(), name: z.string(), userName: z.string().nullable() })
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "The workspace's own computer: the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
+      }),
+    moving: z.boolean().optional().openapi({
+      description:
+        "The workspace's own computer is away moving to another server: it comes back by itself in a few minutes. A change comes as `machine.updated`.",
+    }),
     egressWaiting: z.boolean().optional().openapi({
       description:
         "The workspace's own computer, online, has its agents waiting for their way out: its network sends them only through a proxy and none works now, so their connections are refused for a while. A change comes as `machine.updated`.",
@@ -247,10 +305,20 @@ export const Machine = z
   })
   .openapi("Machine");
 
+const PlanDropped = z.object({ kind: z.string(), provider: z.string().nullable() });
+
 export const ComputerTarget = z
   .union([
     z.object({ kind: z.literal("none") }),
-    z.object({ kind: z.literal("machine"), machineId: z.uuid(), name: z.string(), online: z.boolean() }),
+    z.object({
+      kind: z.literal("machine"),
+      machineId: z.uuid(),
+      name: z.string(),
+      online: z.boolean(),
+      planDropped: PlanDropped.optional().openapi({
+        description: "Set when the agent's plan is signed in only on the computer it left: sign in on this one too.",
+      }),
+    }),
   ])
   .openapi("ComputerTarget");
 
@@ -331,7 +399,7 @@ const DeviceCode = z
 
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 
-const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]);
+const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]);
 const Platform = z.string().openapi({
   description: "`mac`, `windows`, `linux`, `other` (the workspace's own computer), or the runner's `os` as reported.",
 });
@@ -345,6 +413,9 @@ const MachineOutage = z
       .boolean()
       .openapi({ description: "The workspace's own computer (ADR 0056 §10): its platform is `other`." }),
     offlineSince: z.string().openapi({ description: "ISO time of its last sign of life." }),
+    moving: z.boolean().openapi({
+      description: "The workspace's own computer is away moving to another server: it comes back by itself.",
+    }),
     agents: z.array(
       z.object({
         agentId: z.uuid(),
@@ -404,6 +475,9 @@ const ComputerQueue = z
   .object({
     machineId: z.uuid(),
     name: z.string(),
+    moving: z.boolean().optional().openapi({
+      description: "It is away moving to another server: the line waits for it, back in a few minutes.",
+    }),
     working: z.array(
       z.object({
         runId: z.uuid(),
@@ -449,6 +523,10 @@ const MoveAgentsResult = z
     resumed: z.number().int().openapi({ description: "Waiting runs queued again on the new computer." }),
     stillWaiting: z.number().int().openapi({
       description: "Waiting runs that stay with the old computer (their cut-off turn already ran tools there).",
+    }),
+    planDropped: z.array(PlanDropped.extend({ agentId: z.uuid() })).openapi({
+      description:
+        "Moved agents whose plan is signed in only on the old computer (`kind`, a coding plan's `provider`): sign in on the new one too.",
     }),
   })
   .openapi("MoveAgentsResult");
@@ -665,6 +743,25 @@ export function machineAppRoutes(deps: AppDeps) {
     },
   );
 
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/access/requests/{requestId}/refuse",
+      tags,
+      security,
+      summary:
+        "Say no to a folder an agent waits for on the computer (admins or the person who paired it), even while it is offline",
+      description:
+        "Never allows: a folder is allowed on the computer itself. The agent hears the no in its thread. An answer given first stands: `status` is the request's outcome either way.",
+      request: { params: MachineParams.extend({ requestId: z.uuid() }) },
+      responses: { 200: json(z.object({ status: z.string() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId, requestId } = c.req.valid("param");
+      return c.json(await refuseFolderRequest({ db, pubsub }, c.get("user").id, orgId, machineId, requestId), 200);
+    },
+  );
+
   const CliTool = z.enum(INSTALLABLE_CLIS).openapi({ description: "`claude` (Claude Code) or `codex` (Codex)." });
   const CliInstallView = z
     .object({
@@ -711,6 +808,44 @@ export function machineAppRoutes(deps: AppDeps) {
       const limited = await cliLimited(c, userId, "check");
       if (limited) return limited;
       return c.json(await checkMachineClis({ db, pubsub, hub: hub() }, userId, orgId, machineId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/clis/{cli}/fetch",
+      tags,
+      security,
+      summary: "Fetch a coding CLI's pinned build on the computer again now (the apps' Try again)",
+      description:
+        "Any member: it brings the version agentes.chat already chose, nothing else (ADR 0228 §6). Where it stands comes back at once and then as `machine.updated` with `cliFetch`. 400 `machine.cli_not_fetched` when that computer doesn't fetch it by itself.",
+      request: { params: MachineParams.extend({ cli: z.enum(FETCH_NAMES) }) },
+      responses: {
+        200: json(
+          z.object({
+            fetch: z
+              .object({
+                state: z.enum(["fetching", "ready", "failed"]),
+                version: z.string(),
+                done: z.number().optional(),
+                total: z.number().nullable().optional(),
+                reason: z.enum(CLI_FETCH_FAILURES).optional(),
+              })
+              .nullable(),
+          }),
+        ),
+        429: errorResponse("Too many tries"),
+        ...errors,
+        ...cliOffline,
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId, cli } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limited = await cliLimited(c, userId, "fetch");
+      if (limited) return limited;
+      return c.json(await retryCliFetch({ db, pubsub, hub: hub() }, userId, orgId, machineId, cli), 200);
     },
   );
 
@@ -1221,7 +1356,7 @@ export function registerMachinePublicRoutes(api: OpenAPIHono, deps: AppDeps) {
       const result = await pollDeviceToken({ db, pubsub: adapters.pubsub }, c.req.valid("json").deviceCode);
       if (!result.ok) return c.json({ error: result.error }, 400);
       const { ok: _ok, ...token } = result;
-      const url = `${config.PUBLIC_URL.replace(/\/+$/, "")}/org/${token.org.id}/settings/devices/${token.machineId}`;
+      const url = `${withoutTrailingSlashes(config.PUBLIC_URL)}/org/${token.org.id}/settings/devices/${token.machineId}`;
       return c.json({ ...token, url }, 200);
     },
   );
@@ -1357,7 +1492,8 @@ export function registerMachinePublicRoutes(api: OpenAPIHono, deps: AppDeps) {
     if (!machine) return apiError(c, 401, "machine.unauthorized", "This computer's token is not valid");
     const logo = await currentOrgLogo({ db, blobs: adapters.platformBlobs }, machine.orgId);
     if (!logo) return apiError(c, 404, "org.logo_not_found", "The organization has no logo");
-    const etag = `"${logo.file}"`;
+    // The light-ink mark rides in the ETag (the runner passes it on to the app's tile), so a mark that changes is news.
+    const etag = `"${logo.file}${logo.ink}"`;
     const headers = { etag, "cache-control": "private, max-age=300", "x-content-type-options": "nosniff" };
     const match = c.req.header("if-none-match") ?? "";
     if (match.split(",").some((tag) => tag.trim().replace(/^W\//, "") === etag)) {

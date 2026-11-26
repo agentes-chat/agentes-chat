@@ -112,7 +112,7 @@ export function Updates({ update }: { update: UpdateCheck }) {
             <Switch
               id="auto-update"
               aria-describedby="auto-update-hint"
-              checked={autoUpdateOn(autoPref, local.run)}
+              checked={autoUpdateOn(autoPref)}
               onCheckedChange={setAutoPref}
             />
           }

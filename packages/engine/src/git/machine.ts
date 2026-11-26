@@ -2,6 +2,7 @@ import {
   type AgentScope,
   GIT_CHECKOUTS_DIR,
   GIT_DIRECT_PROTOCOL,
+  GIT_HOST_PATH_PROTOCOL,
   GIT_PROTOCOL,
   GIT_STATELESS_TOKEN_PROTOCOL,
   GIT_SYNC_LIMITS,
@@ -24,7 +25,18 @@ import { standingRefusal } from "../standing";
 import { grantedScopeKeys } from "../tools/scopes";
 import { agentCommitEmail, GIT_TOKEN_TTL_SECONDS, gitProxyBase, issueGitToken, machineGitGen } from "./credential";
 import { appTokenForRepo, botIdentity, boundInstallations, type GitHubAppConfig, type GitHubHttp } from "./github-app";
-import { gitAccess } from "./proxy";
+import {
+  checkoutDirOf,
+  GIT_HOST_IDS,
+  GIT_HOSTS,
+  type GitHostId,
+  hostOfEntry,
+  parseRepoRef,
+  refInList,
+  repoRefName,
+  teamGitConnection,
+} from "./hosts";
+import { gitAccess, gitScopes } from "./proxy";
 import { agentRepositoryList, type CodeCheckout, codePrompt, repoInList } from "./repos";
 import { runCoAuthors } from "./signature";
 
@@ -89,11 +101,13 @@ export async function machineGitSetup(
   machineId: string,
   /** A tool's call: who the computer takes the agent for (`machineScope`), the right hand's seat included. */
   scope?: AgentScope,
+  /** The git host whose proxy this is for (ADR 0227): each host's connection has its own address there. */
+  host: GitHostId = "github",
 ): Promise<(Pick<GitSyncRequest, "proxy" | "author"> & { agent: AgentScope }) | null> {
-  const connection = (await activeConnections(deps.db, orgId)).find((c) => c.connector === "github");
+  const connection = teamGitConnection(await activeConnections(deps.db, orgId), host);
   if (!connection) return null;
   const keys = await grantedScopeKeys(deps.db, orgId, agentId);
-  if (!gitAccess(keys, connection.id).read) return null;
+  if (!gitAccess(keys, connection.id, host).read) return null;
   const agent = await getAgentCached(deps.db, orgId, agentId);
   // Without a scope (a brain's turn) the right hand has no checkout: its locked turn prepares none (ADR 0137 §4).
   if (!agent || (scope ? await toolMachineId(deps.db, agent) : agent.machineId) !== machineId) return null;
@@ -113,7 +127,9 @@ export async function machineGitSetup(
   });
   const github = deps.github;
   const bot =
-    github && (await boundInstallations(deps.db, orgId)).length > 0 ? await botIdentity(github.app, github.http) : null;
+    host === "github" && github && (await boundInstallations(deps.db, orgId)).length > 0
+      ? await botIdentity(github.app, github.http)
+      : null;
   return {
     proxy: { base: gitProxyBase(deps.git.publicUrl, orgId, connection.id), token },
     author: bot
@@ -205,20 +221,33 @@ export async function cloneOnMachine(
   const status = await deps.hub.status(target.machineId);
   const unavailable = machineGitUnavailable(status, target.orgId);
   if (unavailable || !status) throw unavailable;
-  const setup = await machineGitSetup(deps, target.orgId, target.agentId, target.machineId, target.scope);
-  if (!setup)
-    throw new Error("You have no git access to GitHub here (scope github:git.read), or GitHub isn't connected.");
+  const ref = parseRepoRef(input.repo);
+  if (!ref) throw new Error(`${input.repo} names no repository`);
+  const host = GIT_HOSTS[ref.host];
+  const setup = await machineGitSetup(deps, target.orgId, target.agentId, target.machineId, target.scope, ref.host);
+  if (!setup) {
+    throw new Error(
+      `You have no git access to ${host.label} here (scope ${gitScopes(ref.host).read}), or ${host.label} isn't connected.`,
+    );
+  }
+  // A path deeper than `owner/name` (a GitLab subgroup) is one an older runner refuses.
+  if (!isGitRepoName(ref.path) && status.protocol < GIT_HOST_PATH_PROTOCOL) {
+    throw new Error(
+      `The agentes app (runner) on the computer ${status.name} is too old to clone ${input.repo}. ${runnerUpdateWay(status)}`,
+    );
+  }
   const { agent, ...rest } = setup;
-  const github = (await directFetchTokens(deps, target, status.protocol, [input.repo])).get(input.repo);
+  const github =
+    ref.host === "github"
+      ? (await directFetchTokens(deps, target, status.protocol, [ref.path])).get(ref.path)
+      : undefined;
   const reply = await deps.hub.call(
     target.machineId,
     {
       op: "git.sync",
       agent,
       ...rest,
-      repos: [
-        { repo: input.repo, dir: input.dir || gitCheckoutDir(input.repo), clone: true, ...(github ? { github } : {}) },
-      ],
+      repos: [{ repo: ref.path, dir: input.dir || checkoutDirOf(ref), clone: true, ...(github ? { github } : {}) }],
       timeoutSeconds: status.protocol >= GIT_DIRECT_PROTOCOL ? MACHINE_CLONE_WAIT_SECONDS : MACHINE_CLONE_SECONDS,
       stream: Boolean(input.onOutput),
     },
@@ -226,7 +255,8 @@ export async function cloneOnMachine(
   );
   const result = reply.repos[0];
   if (!result) throw new Error("The computer answered without the repository.");
-  return result;
+  // The computer knows the repository by its path on the host; everything above it by its stored name.
+  return { ...result, repo: repoRefName(ref) };
 }
 
 /** The repository the conversation names (newest text first), among `repos` (`owner/name`); null when none. */
@@ -288,7 +318,7 @@ export function codeStart(
 }
 
 /**
- * The turn's commits end with the agent's own `Co-authored-by` and the credit for the person behind its run, when they
+ * The turn's commits end with the agent's own `Co-Authored-By` and the credit for the person behind its run, when they
  * linked GitHub to sign in (ADR 0156), as the run's commits through GitHub's API do: the line that says so, next to
  * where the turn starts. A runner on protocol 63 adds them by itself too (its `commit-msg` hook, never twice); this
  * line covers an older one and a `--no-verify`.
@@ -332,10 +362,25 @@ export async function prepareAgentCode(
   try {
     const status = await deps.hub.status(machineId);
     if (!status || machineGitUnavailable(status, turn.orgId)) return null;
-    const setup = await machineGitSetup(deps, turn.orgId, turn.agentId, machineId);
-    if (!setup) return null;
-    const { agent, ...rest } = setup;
-    const sync = (repos: GitSyncRequest["repos"], existing: boolean) =>
+    // Every git host the workspace connected and this agent may read (ADR 0227), GitHub first: each one's checkouts
+    // sync through that host's own proxy address.
+    const setups = (
+      await Promise.all(
+        GIT_HOST_IDS.map(async (host) => {
+          const setup = await machineGitSetup(deps, turn.orgId, turn.agentId, machineId, undefined, host);
+          return setup ? [{ host, setup }] : [];
+        }),
+      )
+    ).flat();
+    const first = setups[0];
+    if (!first) return null;
+    const { agent } = first.setup;
+    const github = setups.find((x) => x.host === "github")?.setup;
+    const syncOn = (
+      { agent: _agent, ...rest }: (typeof first)["setup"],
+      repos: GitSyncRequest["repos"],
+      existing: boolean,
+    ) =>
       deps.hub.call(
         machineId,
         {
@@ -356,15 +401,19 @@ export async function prepareAgentCode(
       !turn.session.ownFolder &&
       !(turn.threadRootId && (await missionOfRun({ db: deps.db, ...turn, threadRootId: turn.threadRootId })));
     if (!chat) {
-      await sync([], false);
+      // One credential serves every host's proxy address: refreshed once.
+      await syncOn(first.setup, [], false);
       return null;
     }
     const credit = await creditLine(deps, turn);
-    const list = await agentRepositoryList(deps.db, turn.orgId, turn.agentId);
+    const every = await agentRepositoryList(deps.db, turn.orgId, turn.agentId);
+    // GitHub's part of the list, as it always was: other hosts' entries are synced after it, by name only.
+    const list = every.filter((r) => hostOfEntry(r) === "github");
+    const others = every.filter((r) => hostOfEntry(r) !== "github" && !r.endsWith("/*"));
     const explicit = list.filter((r) => !r.endsWith("/*"));
     // An `owner/*` (or all) grant names no repository: its checkouts are found on the computer, so they fetch
     // straight from GitHub too instead of going back to the proxy.
-    const wildcard = list.length === 0 || list.length > explicit.length;
+    const wildcard = every.length === 0 || list.length > explicit.length;
     const found =
       wildcard && deps.github && status.protocol >= GIT_STATELESS_TOKEN_PROTOCOL
         ? await checkoutsOnMachine(deps.hub, machineId, agent, options.signal)
@@ -376,29 +425,47 @@ export async function prepareAgentCode(
     );
     // Fresh each turn (GitHub's tokens last an hour; cached until a few minutes before), so the agent's own
     // `git fetch` keeps working between syncs.
-    const tokens = await directFetchTokens(deps, { ...turn, machineId }, status.protocol, repos);
-    const reply = await sync(
-      repos.map((repo) => {
-        const github = tokens.get(repo);
-        return { repo, dir: gitCheckoutDir(repo), clone: false, ...(github ? { github } : {}) };
-      }),
-      true,
-    );
-    const present = reply.repos.filter((r) => {
-      const [owner = "", name = ""] = r.repo.split("/");
+    const tokens = github ? await directFetchTokens(deps, { ...turn, machineId }, status.protocol, repos) : new Map();
+    const synced: GitSyncRepo[] = github
+      ? (
+          await syncOn(
+            github,
+            repos.map((repo) => {
+              const token = tokens.get(repo);
+              return { repo, dir: gitCheckoutDir(repo), clone: false, ...(token ? { github: token } : {}) };
+            }),
+            true,
+          )
+        ).repos
+      : [];
+    for (const { host, setup } of setups) {
+      if (host === "github") continue;
+      const refs = others.flatMap((name) => {
+        const ref = parseRepoRef(name);
+        // A path an older runner refuses would fail the whole sync: it is cloned by name, with `git_clone`.
+        return ref?.host === host && (isGitRepoName(ref.path) || status.protocol >= GIT_HOST_PATH_PROTOCOL)
+          ? [ref]
+          : [];
+      });
+      if (refs.length === 0) continue;
+      const reply = await syncOn(
+        setup,
+        refs.slice(0, GIT_SYNC_LIMITS.repos).map((ref) => ({ repo: ref.path, dir: checkoutDirOf(ref), clone: false })),
+        false,
+      ).catch(() => null);
+      for (const r of reply?.repos ?? []) synced.push({ ...r, repo: repoRefName({ host, path: r.repo }) });
+    }
+    const present = synced.filter((r) => {
       const there = r.status === "cloned" || r.status === "updated" || (r.status === "failed" && Boolean(r.head));
       // Only what the agent may still use (a repository removed from its list stays on disk, unmentioned).
-      return there && repoInList(list, owner, name);
+      return there && refInList(every, r.repo);
     });
-    const downloading = reply.repos
-      .filter((r) => {
-        const [owner = "", name = ""] = r.repo.split("/");
-        return r.status === "cloning" && repoInList(list, owner, name);
-      })
-      .map((r) => r.repo);
+    const downloading = synced.filter((r) => r.status === "cloning" && refInList(every, r.repo)).map((r) => r.repo);
     const lower = new Set(present.map((r) => r.repo.toLowerCase()));
     const coming = new Set(downloading.map((r) => r.toLowerCase()));
-    const notCloned = explicit.filter((r) => !lower.has(r.toLowerCase()) && !coming.has(r.toLowerCase()));
+    const notCloned = [...explicit, ...others].filter(
+      (r) => !lower.has(r.toLowerCase()) && !coming.has(r.toLowerCase()),
+    );
     if (present.length === 0 && notCloned.length === 0 && downloading.length === 0) {
       return credit ? { cwd: "", prompt: "", start: credit, pick: { present: [], credit } } : null;
     }

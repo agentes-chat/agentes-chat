@@ -63,7 +63,7 @@ describe("a channel", () => {
       "Silenciar canal",
       "Editar canal",
       "Fixar no topo",
-      "Nova categoria com este canal",
+      "Novo setor com #eng",
       "Copiar link",
       "Sair do canal",
       "Arquivar canal",

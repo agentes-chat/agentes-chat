@@ -1,4 +1,5 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import versions from "./versions.json";
 
 /**
  * The app's Expo config. Builds: the "Android build" and "iOS build" workflows on GitHub Actions, or EAS (see
@@ -12,11 +13,19 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
  * - `APPLE_TEAM_ID`: the Apple team that signs the iOS app and its share extension (a build setting, never in the
  *   repo).
  * - `IOS_BUILD_NUMBER`: the build's number on iOS, set by the iOS workflow.
+ * - `APP_PLATFORM`: "ios" | "android", set by each build workflow (EAS says it in `EAS_BUILD_PLATFORM`): which of the
+ *   two versions in versions.json the build takes.
  *
  * The New Architecture is the only one since SDK 55, so there is no `newArchEnabled` flag any more
  * (the SDK 58 config type no longer has it). Edge-to-edge on Android is likewise always on.
  */
 const variant = process.env.APP_VARIANT ?? "production";
+/**
+ * The app's version in each store, raised on its own by that store's build workflow (ios.yml, android.yml: `release` =
+ * fix/feature/major, as the desktop app's), so a release of one never moves the other's.
+ */
+const platform = process.env.APP_PLATFORM ?? process.env.EAS_BUILD_PLATFORM;
+const version = platform === "android" ? versions.android : versions.ios;
 const suffix = variant === "production" ? "" : `.${variant}`;
 const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "https://app.agentes.chat";
 // Links to this host open the app (universal links / App Links); the server publishes the matching /.well-known
@@ -51,6 +60,7 @@ export const APP_LINK_PATTERNS = [
   "/org/*/routines",
   "/org/*/search",
   "/org/*/drive",
+  "/org/*/drive/*",
   "/org/*/wiki",
   "/org/*/wiki/*",
   "/org/*/members",
@@ -102,7 +112,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: variant === "production" ? "agentes" : `agentes ${variant}`,
   slug: "agentes",
   scheme: "agenteschat",
-  version: "0.1.0",
+  version,
   // Upright everywhere (the plugin below); only the agent's screen, in control, lies down (`useSideways`).
   orientation: "default",
   // The icon the app ships with (ADR 0179): the agent leaning in, Espiando, on the night sky (packages/client's
@@ -120,7 +130,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       dark: `${ICONS}/peekNight/ios-dark.png`,
       tinted: `${ICONS}/peekNight/ios-tinted.png`,
     },
-    supportsTablet: false,
+    // On iPad too, as a tablet app: every orientation and Split View (no full-screen requirement), the large-screen
+    // layout of ADR 0212 (two panes from 600 points, `homeOrientation` free there); also what lets it resize on a Mac.
+    supportsTablet: true,
     usesAppleSignIn: true,
     associatedDomains: [`applinks:${linkHost}`],
     config: { usesNonExemptEncryption: false },
@@ -243,13 +255,25 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         enableBackgroundPlayback: false,
       },
     ],
+    // The agents at work in the Dynamic Island and on the Lock Screen (ADR 0210): a widget extension
+    // (`<bundle id>.ExpoWidgetsTarget`, in the app group `group.<bundle id>`) for the Live Activity the server starts,
+    // updates and ends by push; `frequentUpdates` lets those pushes come as often as an agent moves on.
+    ["expo-widgets", { enablePushNotifications: true, frequentUpdates: true }],
+    // The share extension reads as the app in the share sheet. Before expo-share-intent, so it runs once the
+    // extension's files are written (a project's changes run from the last plugin to the first).
+    "./plugins/with-share-extension-name",
+    // The agents a person sends to, among the share sheet's suggestions (ADR 0213): the app declares the intent it
+    // donates, the extension the suggestions it takes and passes the one picked on to the app. Also before
+    // expo-share-intent, for the same reason.
+    "./plugins/with-share-suggestions",
     [
       // "Compartilhar com…": the app in the system's share sheet (an iOS share extension and Android's send intents),
       // for photos, videos, files, links and text; what arrives opens the agent picker (src/features/share). The
-      // extension takes the app's name and shares its URL scheme; it reaches phones only with a new native build.
+      // extension shares the app's URL scheme; it reaches phones only with a new native build. No
+      // `iosShareExtensionName`: it also names the extension's Xcode target, and the app's name there is the app's
+      // own target, so the extension was never made (plugins/with-share-extension-name.js gives it its name).
       "expo-share-intent",
       {
-        iosShareExtensionName: variant === "production" ? "agentes" : `agentes ${variant}`,
         iosActivationRules: {
           NSExtensionActivationSupportsText: true,
           NSExtensionActivationSupportsWebURLWithMaxCount: 1,

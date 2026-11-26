@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { BlobStore } from "@agenteschat/adapters";
 import { count, type Database, eq, schema, sql } from "@agenteschat/db";
 import { isAccentHex } from "@agenteschat/tokens/accent";
-import { readImage } from "./avatars";
+import { logoInk, readImage } from "./avatars";
 import { caches } from "./cache";
 import { ConflictError, ValidationError } from "./errors";
 import { normalizeHost } from "./net-guard";
@@ -58,8 +58,8 @@ function registrable(host: string, own: ReadonlySet<string>) {
 const lockHosts = (tx: Pick<Database, "execute">) => tx.execute(sql`select pg_advisory_xact_lock(hashtext('hosts'))`);
 
 /**
- * Registers a host or replaces its look (the operator's `PUT /hosts/{host}`). `accent` and `logo` left out are left as
- * they are (none on a new host); null clears them. The logo takes a workspace logo's checks (`readImage`). A new logo
+ * Registers a host or replaces its look (the operator's `PUT /hosts/{host}`). `accent`, `logo` and `poweredBy` left
+ * out are left as they are (none, none and true on a new host); null clears `accent` and `logo`. The logo takes a workspace logo's checks (`readImage`). A new logo
  * is stored under a name of its own before the row, so no other write's cleanup can remove it; a file no committed row
  * holds any more is removed only after the commit.
  */
@@ -71,11 +71,13 @@ export async function putHost(
     name: string;
     accent?: string | null;
     logo?: { contentType: string; base64: string } | null;
+    poweredBy?: boolean;
   },
 ): Promise<HostLook> {
   const h = registrable(host, own);
   if (input.accent && !isAccentHex(input.accent)) throw new ValidationError("accent must be a #rrggbb color");
   let stored: string | null = null;
+  let ink = "";
   if (input.logo) {
     const { body, type, file } = readImage(
       { imageBase64: input.logo.base64, contentType: input.logo.contentType },
@@ -83,6 +85,7 @@ export async function putHost(
     );
     stored = `host-logos/${h}/${randomBytes(4).toString("hex")}-${file}`;
     await deps.blobs.put(stored, body, { contentType: type });
+    ink = logoInk(body, type);
   }
   let saved: { row: HostLook; before?: HostLook };
   try {
@@ -93,12 +96,16 @@ export async function putHost(
         const [{ n } = { n: 0 }] = await tx.select({ n: count() }).from(hosts);
         if (n >= HOSTS_MAX) throw new ConflictError(`At most ${HOSTS_MAX} hosts`, "host.too_many", { max: HOSTS_MAX });
       }
-      const logo = input.logo === undefined ? (before?.logo ?? null) : stored;
+      const logo = input.logo === undefined ? (before?.logo ?? null) : stored && `${stored}${ink}`;
       const accent = input.accent === undefined ? (before?.accent ?? null) : (input.accent?.toLowerCase() ?? null);
+      const poweredBy = input.poweredBy ?? before?.poweredBy ?? true;
       const [row] = await tx
         .insert(hosts)
-        .values({ host: h, name: input.name, accent, logo })
-        .onConflictDoUpdate({ target: hosts.host, set: { name: input.name, accent, logo, updatedAt: sql`now()` } })
+        .values({ host: h, name: input.name, accent, logo, poweredBy })
+        .onConflictDoUpdate({
+          target: hosts.host,
+          set: { name: input.name, accent, logo, poweredBy, updatedAt: sql`now()` },
+        })
         .returning();
       if (!row) throw new Error("host not saved");
       return { row, before };
@@ -109,7 +116,7 @@ export async function putHost(
   }
   caches.hosts.delete(h);
   const old = saved.before?.logo;
-  if (old && old !== saved.row.logo) await deps.blobs.delete(old).catch(() => undefined);
+  if (old && old !== saved.row.logo) await deps.blobs.delete(fileKey(old)).catch(() => undefined);
   return saved.row;
 }
 
@@ -122,7 +129,7 @@ export async function deleteHost(deps: { db: Database; blobs: BlobStore }, host:
     return (await tx.delete(hosts).where(eq(hosts.host, h)).returning())[0];
   });
   caches.hosts.delete(h);
-  if (gone?.logo) await deps.blobs.delete(gone.logo).catch(() => undefined);
+  if (gone?.logo) await deps.blobs.delete(fileKey(gone.logo)).catch(() => undefined);
   return Boolean(gone);
 }
 
@@ -130,8 +137,11 @@ export async function deleteHost(deps: { db: Database; blobs: BlobStore }, host:
 export async function hostLogoFile(deps: { db: Database; blobs: BlobStore }, host: string | null | undefined) {
   const look = await hostLook(deps.db, host);
   if (!look?.logo) return null;
-  return deps.blobs.get(look.logo);
+  return deps.blobs.get(fileKey(look.logo));
 }
+
+/** A host's stored logo key: the column without its light-ink mark (`logoInk`). */
+const fileKey = (logo: string) => logo.split("#", 1)[0] as string;
 
 /**
  * Where a person acting on `requestHost` is sent back to (ADR 0194): that host when it is a registered one, else

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { movedOnKey, stoppedRunsKey, stoppedRunsOf } from "../../src/features/chat/stopped-runs";
+import { chatScreenSource } from "./chat-screen-source";
 import { message } from "./fixtures";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
@@ -51,7 +52,7 @@ describe("one stop, one pill", () => {
   test("a stop whose agent went on offers no Continue: the list provides which, the row reads it", () => {
     expect(movedOnKey(new Set(["r2", "r1"]))).toBe(movedOnKey(new Set(["r1", "r2"])));
     expect(movedOnKey(new Set(["r1"]))).not.toBe(movedOnKey(new Set()));
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toContain("<StopsMovedOnContext.Provider value={stopsMoved}>");
     expect(screen).toContain("stopsMovedOn(");
     // Only a stop a person made (also through the right hand) or a run at its limit picks up again: never the system's.
@@ -61,7 +62,7 @@ describe("one stop, one pill", () => {
   });
 
   test("the conversation's list provides the stops; the notice draws nothing while its reply has them", () => {
-    expect(src("features/chat/ChatScreen.tsx")).toContain("<StoppedRunsContext.Provider value={stoppedRuns}>");
+    expect(chatScreenSource()).toContain("<StoppedRunsContext.Provider value={stoppedRuns}>");
     const line = src("features/chat/StoppedLine.tsx");
     expect(line).toContain("const inReply = useStoppedRun(notice.runId);\n  if (inReply) return null;");
     expect(line).not.toContain("taskManager.stopped.told");

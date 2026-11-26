@@ -4,6 +4,8 @@ import {
   deferrableGroups,
   directoryRole,
   isCore,
+  LIVE_FILE_TOOLS,
+  LIVE_FILES_GROUP,
   ON_DEMAND_FIND,
   ON_DEMAND_USE,
   turnMeans,
@@ -29,9 +31,12 @@ const GROUPS: Record<string, string> = {
   github: "GitHub",
   sentry: "Sentry",
   linear: "Linear",
+  // Live files' tools (ADR 0196 §6): under the Drive's scopes, named apart (`LIVE_FILE_TOOLS`).
+  [LIVE_FILES_GROUP]: "Spreadsheets, presentations and canvases",
 };
 
-const groupOf = (tool: Pick<ToolDefinition, "scope">) => {
+const groupOf = (tool: Pick<ToolDefinition, "scope"> & { name?: string; connectionId?: string | null }) => {
+  if (tool.name && LIVE_FILE_TOOLS.has(tool.name) && !tool.connectionId) return GROUPS[LIVE_FILES_GROUP] as string;
   const prefix = tool.scope.split(":")[0] ?? "";
   if (prefix in GROUPS) return GROUPS[prefix] as string;
   if (prefix.startsWith("custom")) return "Organization tools";
@@ -223,6 +228,11 @@ export function describeCapabilities(
         "- A request for a file you already made (here, in a DM or in another channel): find it with `list_artifacts` and bring it with `share_artifact` instead of creating it again.",
       );
     }
+    if (loaded.has("show_image")) {
+      lines.push(
+        "- A picture you are talking about whose address you have (a photo, a product, a cover): `show_image` puts it on your reply for people to see. Never leave it as a bare link, and never write Markdown image syntax: it isn't drawn.",
+      );
+    }
     const undoable = tools.filter((t) => UNDOABLE_TOOLS.has(t.name) && !isSensitive(t)).map((t) => `\`${t.name}\``);
     if (undoable.length > 0) {
       lines.push(
@@ -298,7 +308,7 @@ const COMPUTER_CAPABILITIES_LIMIT =
  * hooks there.
  */
 export const COMPUTER_TOOLS_NOTE =
-  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above. Your git's `core.hooksPath` is the computer's own hooks folder (it adds your Co-authored-by line, then runs each repository's own hooks): run a hook installer (pre-commit install, lefthook install, simple-git-hooks, git lfs install or update) with `GIT_CONFIG_PARAMETERS=` before it.";
+  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above. Your git's `core.hooksPath` is the computer's own hooks folder (it adds your Co-Authored-By line, then runs each repository's own hooks): run a hook installer (pre-commit install, lefthook install, simple-git-hooks, git lfs install or update) with `GIT_CONFIG_PARAMETERS=` before it.";
 
 /**
  * The system prompt as a computer brain reads it (ADR 0037): the limit line
@@ -306,8 +316,11 @@ export const COMPUTER_TOOLS_NOTE =
  * The transcript keeps the model brain's text, since a run can fall back to it.
  */
 export function forComputerBrain(system: string) {
-  return `${system.replace(CAPABILITIES_LIMIT, COMPUTER_CAPABILITIES_LIMIT)}\n\n${COMPUTER_TOOLS_NOTE}\n${COMPUTER_SECTIONS_LINE}`;
+  return `${withComputerLimit(system)}\n\n${COMPUTER_TOOLS_NOTE}\n${COMPUTER_SECTIONS_LINE}`;
 }
+
+/** "What you can do" as a computer brain reads it, wherever it is (its system text, or "# This conversation"). */
+export const withComputerLimit = (text: string) => text.replace(CAPABILITIES_LIMIT, COMPUTER_CAPABILITIES_LIMIT);
 
 /** Where a computer brain reads what changes per conversation and per turn (`conversationText`, `thisTurnText`). */
 export const COMPUTER_SECTIONS_LINE =

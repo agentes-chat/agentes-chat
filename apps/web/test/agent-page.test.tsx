@@ -15,7 +15,7 @@ import {
   runMatches,
   type Saved,
 } from "@/lib/agent-edit";
-import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, NOW, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, LODI_ID, NOW, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { hintOf, shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
@@ -73,14 +73,14 @@ const updates = (state: ReturnType<typeof seedState>) =>
   state.calls.filter((c) => c.method === "agents.update").map((c) => c.args[2]);
 
 describe("agent page: tabs and the URL", () => {
-  test("four tabs and More; the chosen one goes to ?tab=; a link opens a tab; the memory tab counts the proposal", async () => {
+  test("four tabs and More; the chosen one goes to ?tab=; a link opens a tab", async () => {
     const { router } = await go();
     const tabs = screen().getByRole("tablist", { name: "Seções da Ada" });
     expect(
       within(tabs)
         .getAllByRole("tab")
         .map((t) => t.textContent),
-    ).toEqual(["Visão geral", "Instruções", "Memória1", "Atividade"]);
+    ).toEqual(["Visão geral", "Instruções", "Skills", "Memória", "Atividade"]);
     // The rest are in More; the one opened from there shows in the bar, and More keeps the others.
     await openTab(/^Uso/);
     expect(router.state.location.search).toMatchObject({ tab: "usage" });
@@ -88,7 +88,7 @@ describe("agent page: tabs and the URL", () => {
       within(screen().getByRole("tablist", { name: "Seções da Ada" }))
         .getAllByRole("tab")
         .map((t) => t.textContent),
-    ).toEqual(["Visão geral", "Instruções", "Memória1", "Atividade", "Uso"]);
+    ).toEqual(["Visão geral", "Instruções", "Skills", "Memória", "Atividade", "Uso"]);
     await act(async () =>
       fireEvent.pointerDown(
         within(screen().getByRole("tablist", { name: "Seções da Ada" })).getByRole("button", { name: /^Mais/ }),
@@ -482,23 +482,29 @@ describe("agent page: who edits what", () => {
     expect(saveBar()).toBeNull();
   });
 
-  test("the owner changes the look, audience and computer, not access; the save sends only what they may", async () => {
+  test("the owner changes the instructions, look, audience and computer, not access; the save sends only what they may", async () => {
     const { state } = await go("?tab=settings", asOwner());
     expect(screen().queryByLabelText("Nome")).toBeNull();
     expect(document.body.textContent).toContain("Você é responsável da Ada");
     // The look is right on the page: colors, then the eyes and what it wears as sliding rows.
     await click(within(screen().getByRole("group", { name: "Cor" })).getByRole("button", { name: "Rosa" }));
     expect(saveBar()?.textContent).toContain("1 alteração");
+    // Its owner edits how it works (ADR 0085 addendum of 2026-11-17): the instructions are theirs to change.
     await openTab(/^Instruções/);
-    expect(screen().queryByRole("textbox", { name: "Instruções" })).toBeNull();
-    expect(document.body.textContent).toContain("Só admins editam as instruções.");
+    await type(screen().getByRole("textbox", { name: "Instruções" }), "Instruções de Ada.\nAbre PRs pequenos.");
+    expect(saveBar()?.textContent).toContain("2 alterações");
     // Access is an admin's call, like the agent's scopes: the owner reads it.
     await openTab(/^Ferramentas/);
     expect(screen().queryByRole("radiogroup", { name: "Nível em GitHub" })).toBeNull();
     expect(document.body.textContent).toContain("Só admins dão ou tiram acessos e repositórios.");
     await click(within(saveBar() as HTMLElement).getByRole("button", { name: /^Salvar/ }));
     await settle(6);
-    expect(updates(state)).toEqual([{ appearance: { color: "rose", eyes: "round", accessory: "none" } }]);
+    expect(updates(state)).toEqual([
+      {
+        instructions: "Instruções de Ada.\nAbre PRs pequenos.",
+        appearance: { color: "rose", eyes: "round", accessory: "none" },
+      },
+    ]);
   });
 
   test("the owner puts it in and takes it out of the channels they're in; the others show as they are", async () => {
@@ -575,6 +581,7 @@ describe("agent page: inline editing and the save bar", () => {
     const row = github.closest("li") as HTMLElement;
     expect(row.textContent).toContain("Alterado");
     expect(row.textContent).toContain("Antes: Sem acesso");
+    // The skills' own level is here with every other area; the Skills tab holds the skills.
     const skills = screen().getByRole("radiogroup", { name: "Nível em Skills" });
     const other = within(skills)
       .getAllByRole("radio")
@@ -710,7 +717,7 @@ describe("agent page: inline editing and the save bar", () => {
     const { router } = await go("?tab=instructions");
     await type(screen().getByRole("textbox", { name: "Instruções" }), "Outra coisa.");
     await act(async () => {
-      router.history.push(`/org/${ORG_ID}/approvals`);
+      router.history.push(`/org/${ORG_ID}/notifications`);
     });
     await settle(4);
     const ask = screen().getByRole("dialog", { name: "Sair sem salvar?" });
@@ -719,7 +726,7 @@ describe("agent page: inline editing and the save bar", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/agents/${ADA_ID}`);
     expect(screen().getByRole("textbox", { name: "Instruções" })).toBeTruthy();
     await act(async () => {
-      router.history.push(`/org/${ORG_ID}/approvals`);
+      router.history.push(`/org/${ORG_ID}/notifications`);
     });
     await settle(4);
     await click(
@@ -728,32 +735,88 @@ describe("agent page: inline editing and the save bar", () => {
       }),
     );
     await settle(4);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/approvals`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
+  });
+});
+
+describe("the right hand's Memory tab (Q22)", () => {
+  test("its learning switch and Forget all, and its memories as Only you and Everyone in #eng", async () => {
+    const state = withRightHand(seedState());
+    const base = state.memories[0];
+    if (!base) throw new Error("no memory");
+    state.memories.push(
+      {
+        ...base,
+        id: "lodi-1",
+        agentId: LODI_ID,
+        kind: "fact",
+        text: "A máquina do Walter é a kestrel.",
+        source: "Anotado pelo agente · 12 out",
+        origin: { by: "agent", name: null, channel: null, at: base.updatedAt },
+        onlyYou: true,
+        learned: true,
+        pinned: false,
+      },
+      {
+        ...base,
+        id: "lodi-2",
+        agentId: LODI_ID,
+        kind: "fact",
+        text: "O staging fica em staging.example.com.",
+        onlyYou: false,
+        learned: true,
+        pinned: false,
+        channelId: ENG_ID,
+        origin: { by: "agent", name: null, channel: "eng", at: base.updatedAt },
+      },
+    );
+    await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=memory`, { api: createFakeApi(state) });
+    await settle(8);
+    const card = screen().getByRole("region", { name: "Como aprende" });
+    const mine = within(card).getByRole("switch", { name: "Aprende com as suas conversas" });
+    expect(mine.getAttribute("aria-checked")).toBe("true");
+    expect(screen().getByRole("list", { name: "Só você" }).textContent).toContain("kestrel");
+    expect(screen().getByRole("list", { name: "Todo mundo em #eng" }).textContent).toContain("staging");
+
+    await click(mine);
+    expect(state.calls.find((c) => c.method === "orgs.setTeamWeek")?.args[1]).toEqual({ learnOff: true });
+
+    await click(within(card).getByRole("button", { name: "Esquecer" }));
+    const dialog = screen().getByRole("dialog", { name: "Esquecer o que aprendeu com você?" });
+    await click(within(dialog).getByRole("button", { name: "Esquecer tudo" }));
+    expect(state.calls.some((c) => c.method === "memory.forgetRightHandLearned")).toBe(true);
   });
 });
 
 describe("agent page: memory and proposals", () => {
-  test("Aceitar mudança uses the proposals API", async () => {
+  /** Nobody decides a proposal any more (ADR 0219): none of the old decision's calls. */
+  const decided = (state: ReturnType<typeof seedState>) =>
+    state.calls.filter((c) => ["proposals.accept", "proposals.refuse", "proposals.ask"].includes(c.method));
+  /** No Accept, Refuse or Edit on a card. */
+  const noDecision = (card: HTMLElement) => {
+    for (const name of [/^Aceitar/, /^Recusar/, /^Editar antes/])
+      expect(within(card).queryByRole("button", { name })).toBeNull();
+  };
+
+  test("a change its review is weighing says so, with why and the change, and nothing to decide", async () => {
     const { state } = await go("?tab=memory");
     const card = screen().getByRole("article", { name: "Atualizar as instruções da Ada" });
-    expect(card.textContent).toContain("Aguardando você");
-    await click(within(card).getByRole("button", { name: "Aceitar mudança" }));
-    await settle(4);
-    expect(state.calls.find((c) => c.method === "proposals.accept")?.args).toEqual([ORG_ID, "prop-1", undefined]);
-    expect(document.body.textContent).toContain("Mudança aceita. As instruções foram atualizadas.");
+    expect(card.querySelector(".agp-mem__state")?.textContent).toBe("Avaliando…");
+    expect(card.textContent).toContain("Por quê: O João corrigiu a Ada três vezes pelo mesmo motivo.");
+    expect(card.querySelectorAll(".ac-diff__line--add").length).toBeGreaterThan(0);
+    noDecision(card);
+    expect(decided(state)).toEqual([]);
   });
 
-  test("a skill it asked to change counts on its page, and is decided there as proposed", async () => {
+  test("a skill it asked to change shows there too while its review weighs it", async () => {
     const state = seedState();
     const prop = state.proposals.find((p) => p.id === "prop-1");
     if (!prop) throw new Error("no proposal");
     prop.target = { type: "skill", agentId: prop.agentId, skillId: "sk-1", name: "relatorios" };
     await go("?tab=memory", state);
     const card = screen().getByRole("article", { name: "Corrigir a skill relatorios" });
-    expect(within(card).queryByRole("button", { name: "Editar antes" })).toBeNull();
-    await click(within(card).getByRole("button", { name: "Aceitar mudança" }));
-    await settle(4);
-    expect(state.calls.find((c) => c.method === "proposals.accept")?.args).toEqual([ORG_ID, "prop-1", undefined]);
+    expect(card.textContent).toContain("Avaliando…");
+    noDecision(card);
   });
 
   test("a reason the server wrote reads in the person's language on the agent's page too", async () => {
@@ -765,42 +828,23 @@ describe("agent page: memory and proposals", () => {
     expect(card.textContent).toContain("O agente notou isso mais de uma vez.");
   });
 
-  test("Editar antes de aceitar sends the final text; Recusar refuses", async () => {
-    const { state } = await go("?tab=memory");
-    const card = screen().getByRole("article", { name: "Atualizar as instruções da Ada" });
-    await click(within(card).getByRole("button", { name: "Editar antes de aceitar" }));
-    await type(within(card).getByLabelText("Texto final das instruções"), "Só PRs pequenos.");
-    await click(within(card).getByRole("button", { name: "Aceitar com ajustes" }));
-    await settle(4);
-    expect(state.calls.find((c) => c.method === "proposals.accept")?.args).toEqual([
-      ORG_ID,
-      "prop-1",
-      "Só PRs pequenos.",
-    ]);
-    cleanup();
-    const second = await go("?tab=memory");
-    await click(
-      within(screen().getByRole("article", { name: "Atualizar as instruções da Ada" })).getByRole("button", {
-        name: "Recusar",
-      }),
-    );
-    await settle(4);
-    expect(second.state.calls.find((c) => c.method === "proposals.refuse")?.args).toEqual([ORG_ID, "prop-1"]);
-  });
-
-  test("a proposal someone else decides names who: the person, or an admin", async () => {
+  test("once its review applied it, it leaves the list and counts among the improvements; left out, it doesn't", async () => {
+    const stat = () =>
+      [...document.querySelectorAll(".agp-memstat")]
+        .find((p) => p.textContent?.includes("Melhorias"))
+        ?.querySelector("b")?.textContent;
     const state = seedState();
     const prop = state.proposals.find((p) => p.id === "prop-1");
     if (!prop) throw new Error("no prop-1");
-    prop.canDecide = false;
+    Object.assign(prop, { status: "accepted", reviewed: true, decidedByAgent: { agentId: ADA_ID, name: "Ada" } });
     await go("?tab=memory", state);
-    const card = () => screen().getByRole("article", { name: "Atualizar as instruções da Ada" });
-    expect(within(card()).queryByRole("button", { name: "Aceitar mudança" })).toBeNull();
-    expect(within(card()).getByText("João decide.")).toBeTruthy();
+    expect(screen().queryByRole("article", { name: "Atualizar as instruções da Ada" })).toBeNull();
+    expect(stat()).toBe("1");
     cleanup();
-    prop.decider = { type: "admins" };
+    Object.assign(prop, { status: "refused" });
     await go("?tab=memory", state);
-    expect(within(card()).getByText("Um admin decide.")).toBeTruthy();
+    expect(screen().queryByRole("article", { name: "Atualizar as instruções da Ada" })).toBeNull();
+    expect(stat()).toBe("0");
   });
 
   test("one column, and under its cards one link to how memory works", async () => {
@@ -811,7 +855,7 @@ describe("agent page: memory and proposals", () => {
     expect(link.closest(".agp-cols")?.querySelectorAll(".agp-col")).toHaveLength(1);
     expect(link.closest(".page__note")?.textContent).toBe("Como a memória funciona");
     const card = screen().getByRole("article", { name: "Atualizar as instruções da Ada" });
-    expect(card.textContent).toContain("Recusar ensina a Ada a não propor isso de novo.");
+    expect(card.closest(".agp-cols")).toBe(link.closest(".agp-cols"));
   });
 
   test("what it knows: kinds and search", async () => {
@@ -844,13 +888,14 @@ describe("agent page: memory and proposals", () => {
     );
     const row = screen().getByText("GET the models with the key.").closest("li") as HTMLElement;
     expect(row.textContent).toContain("Como fazer");
-    // Not verified is the lack of a chip, with Confirmar to change it.
+    // Not verified is the lack of a chip; nobody is asked to confirm it (ADR 0219).
     expect(row.querySelector(".ac-chip")).toBeNull();
+    expect(within(row).queryByRole("button", { name: "Confirmar" })).toBeNull();
     await click(within(row).getByRole("button", { name: "Esquecer" }));
     expect(state.memories.find((m) => m.id === mine.id)?.archived).toBe(true);
   });
 
-  test("Dar a outros agentes opens that skill in Skills, only for who may open Skills", async () => {
+  test("the skills it made are on its Skills tab, with the rest it knows: one line there", async () => {
     const made: LearnedSkill = {
       id: "sk-made",
       name: "relatorio-semanal",
@@ -882,13 +927,10 @@ describe("agent page: memory and proposals", () => {
       );
     };
     await open(seedState());
-    expect(screen().getByRole("link", { name: "Dar a outros agentes" }).getAttribute("href")).toBe(
-      `/org/${ORG_ID}/settings/skills?skill=sk-made`,
+    expect(screen().getByText(/criou fica na aba Skills/)).toBeTruthy();
+    expect(screen().getByRole("link", { name: "Ver skills" }).getAttribute("href")).toBe(
+      `/org/${ORG_ID}/agents/${ADA_ID}?tab=skills`,
     );
-    cleanup();
-    // Ada's owner, a member: Travar is theirs, but Skills is for who manages agents.
-    await open(asOwner());
-    expect(screen().getByRole("button", { name: "Travar" })).toBeTruthy();
     expect(screen().queryByRole("link", { name: "Dar a outros agentes" })).toBeNull();
   });
 
@@ -999,6 +1041,7 @@ describe("agent page rules", () => {
     model: "m",
     owner: "u1",
     audience: { mode: "everyone", userIds: [] },
+    editors: { mode: "owner", userIds: [], roleIds: [] },
     levels: { "connector:gh": "none", "area:skills": "read" },
     budget: null,
     channels: ["c1"],
@@ -1011,6 +1054,13 @@ describe("agent page rules", () => {
     expect(changedKeys(saved, edits).map((c) => c.key)).toEqual(["name", "handle", "levels:connector:gh"]);
     expect(changedKeys(saved, revertKey(edits, "levels:connector:gh")).map((c) => c.key)).toEqual(["name", "handle"]);
     expect(changedKeys(saved, { budget: "40" }).map((c) => c.key)).toEqual(["budget"]);
+    // "Who can edit": whom it names counts; the second choice with nobody picked names nobody, as the first.
+    const someone = { editors: { mode: "people" as const, userIds: ["u2"], roleIds: [] } };
+    expect(changedKeys(saved, someone).map((c) => c.key)).toEqual(["editors"]);
+    expect(changedKeys(saved, revertKey(someone, "editors"))).toEqual([]);
+    expect(changedKeys(saved, { editors: { mode: "people", userIds: [], roleIds: [] } })).toEqual([]);
+    // Nothing saved to compare with (the page still loading it): no change.
+    expect(changedKeys({ ...saved, editors: undefined }, someone)).toEqual([]);
     expect(changedKeys(saved, { audience: { mode: "people", userIds: [] } }).map((c) => c.key)).toEqual(["audience"]);
   });
 

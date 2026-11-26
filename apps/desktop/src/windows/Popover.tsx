@@ -30,6 +30,7 @@ import {
   newHelpRequests,
   siteLink,
 } from "../control/browser";
+import { ControlError } from "../control/client";
 import { MENU_BAR_PREF, menuBarShown } from "../control/dock";
 import { hereBanner, hereLine, isHereServer, type LocalServerStatus } from "../control/local-server";
 import { menuLabels } from "../control/menu-labels";
@@ -197,15 +198,18 @@ export function Popover() {
   useEffect(() => {
     const night = installNight(new Date(now));
     if (!night || triedNight.current === night || !update.state.available || jobs.length > 0) return;
-    if (!autoUpdateOn(readPref<boolean | null>(AUTO_UPDATE_PREF, null), local.run)) return;
+    if (!autoUpdateOn(readPref<boolean | null>(AUTO_UPDATE_PREF, null))) return;
     triedNight.current = night;
     void host.installUpdate().catch(() => {});
-  }, [now, update.state.available, jobs.length, local.run, host]);
+  }, [now, update.state.available, jobs.length, host]);
 
+  // The menu's Quit asking here: the show it brings must not clear the question it shows for.
+  const quitOnShow = useRef(false);
   useOnShown("popover", () => {
     setPauseMenu(false);
     setPauseFor(null);
-    setConfirmQuit(false);
+    setConfirmQuit(quitOnShow.current);
+    quitOnShow.current = false;
     setNow(Date.now());
     readList();
   });
@@ -318,13 +322,27 @@ export function Popover() {
         } else if (action === "quit" && runningJobs.current === 0 && !localRuns.current) {
           // Nothing running on this Mac: quits at once, like any Mac app.
           void host.quit().catch(() => {});
+        } else if (action === "quit") {
+          // Agents working here: ask first. From the menu the popover isn't in front, and it hides as soon as another
+          // window takes focus (a window manager that focuses under the pointer hides it at once): the system's own
+          // dialog asks instead. The popover's question when the system can't ask.
+          void host
+            .askQuit({
+              title: t("desktop.tray.quitTitle"),
+              body: localRuns.current ? t("desktop.tray.quitHereBody") : t("desktop.tray.quitBody"),
+              quit: t("desktop.tray.quitConfirm"),
+              cancel: t("desktop.common.cancel"),
+            })
+            .catch(() => {
+              quitOnShow.current = true;
+              setConfirmQuit(true);
+              void host.showWindow("popover").catch(() => {});
+            });
         } else {
-          // Agents working here: ask first, as ⌘Q in the popover does.
-          if (action === "quit") setConfirmQuit(true);
           void host.showWindow("popover").catch(() => {});
         }
       }),
-    [host],
+    [host, t],
   );
 
   /** Asks first only while agents work here or agentes.chat runs here; otherwise quits at once, like any app. */
@@ -1240,8 +1258,14 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
             : t("desktop.tray.allowedOne", { folder, agent: agent.name }),
         decision === "denied" ? "close" : "check",
       );
-    } catch {
-      toast(t("desktop.common.error"), "alert");
+    } catch (err) {
+      // The computer says why (the folder is gone, is a system folder, too many folders): the person can act on it.
+      toast(
+        err instanceof ControlError && ["invalid_path", "not_found", "bad_request"].includes(err.code)
+          ? t("desktop.tray.answerFailed", { message: err.message })
+          : t("desktop.common.error"),
+        "alert",
+      );
       setBusy(false);
     }
   };

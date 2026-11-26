@@ -195,10 +195,14 @@ export function ChatLookSettings() {
           </div>
         )}
         {/* Background: the one behind every conversation, mine alone, chosen in a dialog. */}
-        <div className="settings-row ac-actrow">
+        <div className="settings-row ac-actrow settings-row--button">
           <span className="settings-row__text ac-actrow__text">
-            <span className="settings-row__label">{t("settings.account.chat.wallpaper.title")}</span>
-            <span className="settings-row__status">{t("settings.account.chat.wallpaper.rowHelp")}</span>
+            <span className="ac-hintline">
+              <span className="settings-row__label">{t("settings.account.chat.wallpaper.title")}</span>
+              <InfoHint name={t("common.about", { label: t("settings.account.chat.wallpaper.title") })}>
+                {t("settings.account.chat.wallpaper.rowHelp")}
+              </InfoHint>
+            </span>
           </span>
           <div className="settings-row__end wallpaper-row__end">
             {/* "auto" in the samples' agent's color; none shows no thumbnail (a blank one reads as a checkbox). */}

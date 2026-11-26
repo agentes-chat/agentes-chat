@@ -341,7 +341,7 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     kind: "surface_linked",
     locale: "en",
     surface: "Example Chat",
-    display: "+1 555 0100",
+    display: "12025550123",
     orgName: "Souza Bakery",
     url: `${APP}/email-undo?kind=surface&token=Hk2dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
   },
@@ -349,7 +349,7 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     kind: "surface_linked",
     locale: "pt-BR",
     surface: "Example Chat",
-    display: "+1 555 0100",
+    display: "5511900000001",
     orgName: "Padaria Souza",
     url: `${APP}/email-undo?kind=surface&token=Hk2dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
   },
@@ -358,15 +358,43 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     kind: "surface_unlinked",
     locale: "en",
     surface: "Example Chat",
-    display: "+1 555 0100",
+    display: "12025550123",
     url: APP,
   },
   "surface_unlinked.pt-BR": {
     kind: "surface_unlinked",
     locale: "pt-BR",
     surface: "Example Chat",
-    display: "+1 555 0100",
+    display: "5511900000001",
     url: APP,
+  },
+  /** "Email me a link" or "Forgot your PIN?" on the confirm page (ADR 0226). */
+  "surface_pin_reset.en": {
+    kind: "surface_pin_reset",
+    locale: "en",
+    surface: "Example Chat",
+    url: `${APP}/email-undo?kind=surface-pin&token=Pq4dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
+  },
+  "surface_pin_reset.pt-BR": {
+    kind: "surface_pin_reset",
+    locale: "pt-BR",
+    surface: "Example Chat",
+    url: `${APP}/email-undo?kind=surface-pin&token=Pq4dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
+  },
+  /** Three wrong PINs on the confirm page: the second lock, an hour (ADR 0226). */
+  "surface_pin_locked.en": {
+    kind: "surface_pin_locked",
+    locale: "en",
+    surface: "Example Chat",
+    step: 1,
+    url: `${APP}/org/${ORG}/settings/notifications`,
+  },
+  "surface_pin_locked.pt-BR": {
+    kind: "surface_pin_locked",
+    locale: "pt-BR",
+    surface: "Example Chat",
+    step: 1,
+    url: `${APP}/org/${ORG}/settings/notifications`,
   },
   /** To an owner: a button to restore it. */
   "workspace_deleting-owner.en": {
@@ -415,6 +443,19 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     was: { mode: "people", names: ["Design", "Bia Lima"] },
     now: { mode: "everyone", names: [] },
     url: `${APP}/org/${ORG}/agents/${ORG}?tab=settings&sec=audience`,
+  },
+  /** An admin let everyone be answered on a teammate's Claude account that answered only its agents' owners. */
+  "account_opened.pt-BR": {
+    kind: "account_opened",
+    locale: "pt-BR",
+    orgName: "Padaria Souza",
+    byName: "Carlos Souza",
+    account: "Trabalho",
+    plan: "Claude",
+    right: "reply",
+    was: { mode: "owner", names: [] },
+    now: { mode: "everyone", names: [] },
+    url: `${APP}/org/${ORG}/settings/usage`,
   },
   /** An admin gave an agent a teammate's Claude plan (`use_others_plans`). */
   "plan_lent.pt-BR": {
@@ -487,6 +528,33 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     orgNames: [],
     dueAt: null,
     timeZone: "UTC",
+    support: "help@agentes.chat",
+    url: APP,
+  },
+  /** One of our own sentences, written by an AI assistant, on a server with a support address. */
+  "support_reply.en": {
+    kind: "support_reply",
+    locale: "en",
+    reply: "received",
+    assistedByAi: true,
+    support: "help@agentes.chat",
+    url: APP,
+  },
+  /** Another of them, by a person; the server has no support address. */
+  "support_reply.pt-BR": {
+    kind: "support_reply",
+    locale: "pt-BR",
+    reply: "resolved",
+    assistedByAi: false,
+    support: null,
+    url: APP,
+  },
+  /** The operator's own words, in two paragraphs. */
+  "support_reply-text.en": {
+    kind: "support_reply",
+    locale: "en",
+    text: "The export stopped because the file was over the size limit.\nThe limit is higher now, so the same export works.",
+    assistedByAi: true,
     support: "help@agentes.chat",
     url: APP,
   },

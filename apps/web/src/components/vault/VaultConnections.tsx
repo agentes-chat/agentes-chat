@@ -208,10 +208,9 @@ function ConnectForm({
               <Segmented<VaultScope>
                 label={t("vault.connections.for")}
                 value={scope}
-                disabled={!canManageTeam}
                 onValueChange={setScope}
                 options={[
-                  { value: "team", label: t(modeKey(org, "vault.scope.team")) },
+                  { value: "team", label: t(modeKey(org, "vault.scope.team")), disabled: !canManageTeam },
                   { value: "personal", label: t("vault.scope.personal") },
                 ]}
               />
@@ -395,10 +394,12 @@ function ConnectionAccessDialog({ connection: c, onClose }: { connection: VaultC
           access={c.access}
           editable={c.can.edit}
           saving={actions.updating}
-          onChange={async (access) => {
-            const saved = await actions.update(c.id, { access });
-            if (saved) toast.show(t("vault.access.saved"));
-            return saved !== null;
+          // Shows at once and its dialog closes; a refusal puts it back and says why.
+          onChange={(access) => {
+            void actions.update(c.id, { access }).then((saved) => {
+              if (saved) toast.show(t("vault.access.saved"));
+            });
+            return true;
           }}
         />
       </DialogBody>
@@ -432,11 +433,13 @@ function SourceCard({
   const kinds = new Intl.ListFormat(i18n.language, { style: "long", type: "conjunction" }).format(
     source.kinds.map((k) => t(`vault.kindPlural.${k}`)),
   );
-  const disconnect = async () => {
+  // Out of the list at once and the dialog closes; a refusal puts it back and says why.
+  const disconnect = () => {
     if (!removing) return;
-    if (!(await actions.remove(removing.id))) return;
-    toast.show(t("vault.connections.removed", { name: source.name }));
     setRemoving(null);
+    void actions.remove(removing.id).then((removed) => {
+      if (removed) toast.show(t("vault.connections.removed", { name: source.name }));
+    });
   };
   return (
     <Card aria-labelledby={id}>
@@ -509,12 +512,7 @@ function SourceCard({
       >
         <DialogFooter>
           <Button onClick={() => setRemoving(null)}>{t("common.cancel")}</Button>
-          <Button
-            variant="danger"
-            loading={actions.removing}
-            disabled={actions.removing}
-            onClick={() => void disconnect()}
-          >
+          <Button variant="danger" onClick={disconnect}>
             {t("vault.connections.disconnect")}
           </Button>
         </DialogFooter>

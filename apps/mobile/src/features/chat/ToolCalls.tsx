@@ -1,6 +1,9 @@
-import { isScreenTool, type ScreenKind, useCatalog, useRun, useTaskSteps } from "@agenteschat/client";
+import { type Approval, isScreenTool, type ScreenKind, useCatalog, useRun, useTaskSteps } from "@agenteschat/client";
 import type { Activity, ActivityKind } from "@agenteschat/client/lib/activity";
+import { approvalPhase, PHASE_STATUS } from "@agenteschat/client/lib/approval-card";
+import { stepsAround } from "@agenteschat/client/lib/approval-review";
 import { formatBytes } from "@agenteschat/client/lib/files";
+import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   appKey,
@@ -10,8 +13,8 @@ import {
   oneCall,
   quietLine,
   quietWork,
+  replySteps,
   savedOneLine,
-  showsActivity,
   type ToolItem,
   type ToolLine,
   type ToolState,
@@ -27,6 +30,7 @@ import {
   workMeta,
   workSteps,
 } from "@agenteschat/client/lib/work";
+import { useShowsWork } from "@agenteschat/client/lib/work-context";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -61,8 +65,10 @@ import {
 import { ConnectorIcon, IconTile } from "../connectors/ConnectorIcon";
 import { useColors, useOrgId } from "../shared/hooks";
 import { MONO, tapHaptic } from "../shared/parts";
+import { AccountSwitchLine } from "./AccountRef";
 import { CodeCard } from "./CodeCard";
 import { keepOpen, keptOpen } from "./kept-sizes";
+import { useMessageCardFrame } from "./look";
 import { MessageText } from "./MessageText";
 import { outputTail } from "./turn";
 
@@ -70,8 +76,8 @@ import { outputTail } from "./turn";
  * The tools of one reply, as on the web (`ToolCalls.tsx`, the UI kit's `ToolBlock`): one
  * flat card that stays one line while the agent works (the apps' logos, what it does now, the pixel mark)
  * and opens on a tap into every call, each opening again into what it ran or was given and answered. What
- * the agent said between calls sits inside, muted; the messages it read stay outside, under the block, so
- * "Leu seu recado" is always in sight. The words come from the shared model (`@agenteschat/client/lib/work`).
+ * the agent said between calls sits inside, muted. The words come from the shared model
+ * (`@agenteschat/client/lib/work`).
  */
 
 /** Our own tools by what they do: their icon on the tile (a connector's call shows its mark). */
@@ -121,6 +127,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   checkingUsage: "chart",
   findingAgent: "agent",
   proposingMission: "flag",
+  suggestingCodeSession: "code",
   messagingMission: "flag",
   updatingPlan: "flag",
   reportingProgress: "flag",
@@ -136,6 +143,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   usingScreen: "laptop",
   waitingForDevice: "wait",
   cloningRepo: "code",
+  listingRepos: "code",
   openingPullRequest: "code",
   handingOff: "clock",
   recordingFindings: "flag",
@@ -148,11 +156,14 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
 /** How many logos the closed line stacks (a phone has no room for more). */
 const LOGOS_MAX = 4;
 
+/** Draws a call's logo (`useCallLogo`). */
+export type CallLogo = (a: Activity, size?: number) => ReactNode;
+
 /**
  * A call's logo: its service's mark as the connectors screens draw it (`callLogo`), or the icon of one of our tools.
  * The task manager draws what a task uses now with it too (ADR 0128).
  */
-export function useCallLogo() {
+export function useCallLogo(): CallLogo {
   const catalog = useCatalog();
   return (a: Activity, size = 20): ReactNode => {
     const logo = callLogo(a, catalog.data?.connectors ?? []);
@@ -282,6 +293,7 @@ export function ToolBlock({
   keep?: string | undefined;
 }) {
   const c = useColors();
+  const card = useMessageCardFrame();
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(() => defaultOpen || keptOpen(keep));
   const flashing = useFlash(flash, reduced ? FLASH_MS : FLASH_HOLD_MS);
@@ -309,7 +321,7 @@ export function ToolBlock({
         only.line.detail
       );
     return (
-      <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+      <View style={[styles.block, card.style]}>
         {plate}
         <View style={styles.one}>
           <Line line={{ ...only.line, detail }} color={color} onToggle={onToggle} keep={keep} />
@@ -318,7 +330,7 @@ export function ToolBlock({
     );
   }
   return (
-    <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+    <View style={[styles.block, card.style]}>
       {plate}
       <Pressable
         onPress={() => {
@@ -340,7 +352,7 @@ export function ToolBlock({
               <Animated.View
                 key={l.key}
                 entering={moving ? LOGO_IN : undefined}
-                style={[styles.stacked, i > 0 && styles.overlap, { borderColor: c.raised }]}
+                style={[styles.stacked, i > 0 && styles.overlap, { borderColor: card.fill }]}
               >
                 {l.node}
               </Animated.View>
@@ -351,7 +363,7 @@ export function ToolBlock({
         <View style={[styles.grow, styles.clip]}>
           <Animated.View key={head.textKey ?? head.text} entering={moving ? HEAD_IN : undefined}>
             <Breathing on={head.state === "run"}>
-              <Text variant="footnote" tone="ink2" numberOfLines={1} style={styles.medium}>
+              <Text variant="label" tone="ink2" numberOfLines={1}>
                 {head.text}
               </Text>
             </Breathing>
@@ -611,12 +623,11 @@ function blockLine(t: TFunction, locale: string, l: ToolLine, logo: ReactNode): 
   };
 }
 
-function useBlockItems(items: ToolItem[]): BlockItem[] {
-  const { t, i18n } = useTranslation();
-  const logo = useCallLogo();
+/** A turn's items as its block's lines, each with its logo (the caller's `useCallLogo`, read once per block). */
+function blockItemsOf(items: ToolItem[], t: TFunction, locale: string, logo: CallLogo): BlockItem[] {
   return items.flatMap((item): BlockItem[] =>
     item.kind === "call"
-      ? [{ kind: "line", line: blockLine(t, i18n.language, item.line, logo(item.line)) }]
+      ? [{ kind: "line", line: blockLine(t, locale, item.line, logo(item.line)) }]
       : item.kind === "say"
         ? [
             {
@@ -637,14 +648,13 @@ function useBlockItems(items: ToolItem[]): BlockItem[] {
 
 /**
  * The tools of an agent's turn while it works (and kept by its saved reply a moment after, `done`): the
- * block saying what it does now, opening into every call; the messages it read under it. Before its first
- * call, what it said and read are plain lines (as on the web's `LiveTools`).
+ * block saying what it does now, opening into every call. Before its first call, what it said is plain lines (as on
+ * the web's `LiveTools`). A message it read on the way shows nothing here: that message says it (its receipt).
  */
 export function TurnTools({
   items,
   agentName,
   color,
-  quoteOf,
   done = false,
   settled = false,
   keep,
@@ -652,8 +662,6 @@ export function TurnTools({
   items: ToolItem[];
   agentName: string;
   color: AgentColorName;
-  /** A message's text (the "Leu seu recado" wells quote it). */
-  quoteOf: (messageId: string) => string | undefined;
   /** The reply is done: "Usou 4 ferramentas · 6 s". */
   done?: boolean;
   /** Drawn by the saved reply (nothing comes in any more). */
@@ -663,26 +671,23 @@ export function TurnTools({
 }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
-  const blockItems = useBlockItems(items);
   const logo = useCallLogo();
+  const shows = useShowsWork(org);
+  const blockItems = blockItemsOf(items, t, i18n.language, logo);
   // A lone quick read that only fed the answer: no card, as if it called nothing. Done, its tools are the summary
-  // the person chose not to see (`showActivity`) unless they turned it on.
-  const now = quietWork(items) || (done && !showsActivity(org)) ? null : toolNow(items);
+  // the person chose not to see (`showActivity`) unless they turned it on, or in a code session (ADR 0215).
+  const now = quietWork(items) || (done && !shows) ? null : toolNow(items);
   if (!now) {
-    // Done without a call: its words are the reply now; only the messages it read stay.
-    const shown = done ? items.filter((i) => i.kind === "steer") : items;
-    if (shown.length === 0) return null;
+    // Done without a call: its words are the reply now.
+    const said = done ? [] : items.flatMap((i) => (i.kind === "say" ? [i] : []));
+    if (said.length === 0) return null;
     return (
       <View style={styles.loose}>
-        {shown.map((i) =>
-          i.kind === "say" ? (
-            <View key={i.key} style={styles.say}>
-              <MessageText body={i.text} selectable={false} />
-            </View>
-          ) : i.kind === "steer" ? (
-            <ReadWell key={i.key} now={i.now} quote={quoteOf(i.messageId) ?? ""} settled={settled} />
-          ) : null,
-        )}
+        {said.map((i) => (
+          <View key={i.key} style={styles.say}>
+            <MessageText body={i.text} selectable={false} />
+          </View>
+        ))}
       </View>
     );
   }
@@ -698,28 +703,21 @@ export function TurnTools({
         count: t("chat.work.steps", { count: calls }),
       };
   return (
-    <>
-      <ToolBlock
-        logos={toolApps(items).map((a) => ({ key: appKey(a), node: logo(a, 18) }))}
-        head={head}
-        // Its own line is closed until tapped, as the block it stands for (code that runs shows when opened).
-        items={
-          one
-            ? blockItems.map((i) => (i.kind === "line" ? { ...i, line: { ...i.line, defaultOpen: false } } : i))
-            : blockItems
-        }
-        color={color}
-        label={t("chat.work.block", agentGrammar(agentName))}
-        live={!done && !settled}
-        one={one}
-        keep={keep}
-      />
-      {items.map((i) =>
-        i.kind === "steer" ? (
-          <ReadWell key={i.key} now={i.now} quote={quoteOf(i.messageId) ?? ""} settled={settled} />
-        ) : null,
-      )}
-    </>
+    <ToolBlock
+      logos={toolApps(items).map((a) => ({ key: appKey(a), node: logo(a, 18) }))}
+      head={head}
+      // Its own line is closed until tapped, as the block it stands for (code that runs shows when opened).
+      items={
+        one
+          ? blockItems.map((i) => (i.kind === "line" ? { ...i, line: { ...i.line, defaultOpen: false } } : i))
+          : blockItems
+      }
+      color={color}
+      label={t("chat.work.block", agentGrammar(agentName))}
+      live={!done && !settled}
+      one={one}
+      keep={keep}
+    />
   );
 }
 
@@ -731,6 +729,7 @@ export function TurnTools({
  */
 export function SavedTools({
   runId,
+  messageId,
   meta,
   agentName,
   color,
@@ -738,6 +737,8 @@ export function SavedTools({
   keep,
 }: {
   runId: string;
+  /** The reply it is under: its own part of the run's steps (`replySteps`; none: the whole run). */
+  messageId?: string;
   meta: Record<string, unknown> | undefined;
   agentName: string;
   color: AgentColorName;
@@ -752,20 +753,29 @@ export function SavedTools({
   const [open, setOpen] = useState(() => keptOpen(keep));
   const run = useRun(orgId, open ? runId : null);
   const logo = useCallLogo();
+  const shows = useShowsWork(org);
   const compact = workMeta(meta);
   const onCard = (name: unknown) => skipScreens.some((screen) => isScreenTool(String(name ?? ""), screen));
-  const work = run.data
-    ? workFromSteps(
-        run.data.steps.filter((s) => !(s.kind === "tool_call" && onCard(s.data.name))),
-        run.data.run,
-      )
-    : null;
+  const mine = run.data ? replySteps(run.data.steps, messageId) : null;
+  const work =
+    run.data && mine
+      ? workFromSteps(
+          mine.steps.filter((s) => !(s.kind === "tool_call" && onCard(s.data.name))),
+          mine.whole ? run.data.run : undefined,
+          { quietChecks: mine.cli },
+        )
+      : null;
   const items = work ? toolItemsSaved(work) : [];
-  const blockItems = useBlockItems(items);
+  const switched = run.data?.run?.accountSwitch;
+  // It went on with another account: said here, never in the chat.
+  const blockItems: BlockItem[] = [
+    ...(switched ? [{ kind: "note" as const, key: "account", node: <AccountSwitchLine move={switched} /> }] : []),
+    ...blockItemsOf(items, t, i18n.language, logo),
+  ];
   // Nothing more to show than the message does: no tools (lookups and reactions aren't counted), or only the ones
   // its own cards show (where it browsed).
   const shown = compact ? workSteps(compact, onCard) : 0;
-  if (!compact || shown === 0 || !showsActivity(org)) return null;
+  if (!compact || shown === 0 || !shows) return null;
   const calls = work ? toolCalls(items) : shown;
   const lone = savedOneLine(meta, onCard);
   // Its one call (beside the screens' on their cards) only fed the answer (`quietLine`): the reply says it. Time
@@ -840,9 +850,10 @@ export function RunSteps({
   calls: number;
   live: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
+  const logo = useCallLogo();
   // The task manager's own read (ADR 0128): whoever sees the task sees its steps, without usage access.
   const run = useTaskSteps(orgId, runId);
   const { refetch } = run;
@@ -860,7 +871,7 @@ export function RunSteps({
       ? { ...item, line: { ...item.line, state: "run" as const } }
       : item,
   );
-  const blockItems = useBlockItems(items);
+  const blockItems = blockItemsOf(items, t, i18n.language, logo);
   if (!work)
     return run.isError ? (
       <Text variant="footnote" tone="muted">
@@ -896,33 +907,66 @@ export function RunSteps({
 }
 
 /**
- * A message it read while working, under its tools: "Leu seu recado · …", or "Parou para ler seu recado ·
- * …" when it was asked to stop and read (until then the message itself says "lê na próxima pausa").
+ * "Como chegou aqui" on a request's screen, as the web's review: what the agent did before it asked, the ask, the
+ * decision and what ran after it, in one block that opens on a tap. Nothing until the run's steps are in.
  */
-function ReadWell({ now, quote, settled }: { now: boolean; quote: string; settled: boolean }) {
-  const { t } = useTranslation();
-  const c = useColors();
-  const reduced = useReducedMotion();
+export function ApprovalTrail({ approval: a, color }: { approval: Approval; color: AgentColorName }) {
+  const { t, i18n } = useTranslation();
+  const orgId = useOrgId();
+  const logo = useCallLogo();
+  const run = useRun(orgId, a.runId);
+  if (!run.data) return null;
+  const around = stepsAround(run.data.steps, a);
+  const before = toolItemsSaved(workFromSteps(around.before, run.data.run));
+  const after = toolItemsSaved(workFromSteps(around.after, run.data.run));
+  const calls = (items: ToolItem[]) => items.filter((i) => i.kind === "call");
+  const beforeCalls = calls(before);
+  // The asked call itself, still waiting on its answer, is the ask below: not a step of its own.
+  const last = beforeCalls.at(-1);
+  const shownBefore = last?.kind === "call" && last.line.state === "stop" ? beforeCalls.slice(0, -1) : beforeCalls;
+  const phase = approvalPhase(a);
+  const tile = (name: IconName) => <IconTile name={name} size={20} />;
+  const milestone = (key: string, label: string, iso: string, state: ToolState, icon: IconName): BlockItem => ({
+    kind: "line",
+    line: { key, state, logo: tile(icon), label, hint: null, time: formatTime(i18n.language, iso) },
+  });
+  const items: BlockItem[] = [
+    ...blockItemsOf(shownBefore, t, i18n.language, logo),
+    milestone("asked", t("approvals.review.asked"), a.createdAt, phase === "waiting" ? "run" : "done", "clock"),
+    ...(a.decidedAt && phase !== "waiting"
+      ? [
+          milestone(
+            "decided",
+            t(`approvals.status.${PHASE_STATUS[phase]}`),
+            a.decidedAt,
+            a.status === "approved" ? "done" : "stop",
+            a.status === "approved" ? "check" : a.status === "refused" ? "x" : "clock",
+          ),
+        ]
+      : []),
+    ...blockItemsOf(calls(after), t, i18n.language, logo).map((item) =>
+      item.kind === "line" ? { ...item, line: { ...item.line, key: `after-${item.line.key}` } } : item,
+    ),
+  ];
+  const steps = items.filter((i) => i.kind === "line").length;
+  const durationMs = workFromSteps(around.before, run.data.run).durationMs;
+  const apps = toolApps([...shownBefore, ...calls(after)]);
   return (
-    <Animated.View
-      entering={reduced || settled ? undefined : FadeIn.duration(260)}
-      style={[styles.well, { backgroundColor: c.sunken }]}
-    >
-      <Icon name={now ? "bolt" : "eye"} size={15} color={c.muted} />
-      <Text variant="small" tone="ink2" style={styles.wellTitle} numberOfLines={1}>
-        {t(now ? "mobile.chat.steer.wellNow" : "mobile.chat.steer.well")}
-      </Text>
-      {quote ? (
-        <Text variant="small" tone="muted" numberOfLines={1} style={styles.shrink}>
-          {quote}
-        </Text>
-      ) : null}
-    </Animated.View>
+    <ToolBlock
+      logos={apps.map((app) => ({ key: appKey(app), node: logo(app, 18) }))}
+      head={{
+        text: [t("approvals.review.trail"), t("chat.work.steps", { count: steps })].join(" · "),
+        time: durationMs ? formatDuration(t, durationMs) : undefined,
+      }}
+      items={items}
+      color={color}
+      label={t("approvals.review.trail")}
+    />
   );
 }
 
 /** A call's row: its side padding, the logo's column (and its first line's height) and the gap to the phrase. */
-const ROW_PAD = 8;
+const ROW_PAD = 10;
 const LOGO = 20;
 const ROW_GAP = 10;
 /** Where a call's phrase starts in the block: why it failed and what it said between calls line up there. */
@@ -939,7 +983,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   // The block opens from here, 44 tall (a finger's target); its logos and words in the rows' columns (the lines'
-  // 4 of padding and a row's own 8).
+  // 4 of padding and a row's own 10: the message cards' 14).
   head: {
     flexDirection: "row",
     alignItems: "center",
@@ -994,21 +1038,4 @@ const styles = StyleSheet.create({
   loading: { flexDirection: "row", alignItems: "center", gap: 8 },
   loose: { gap: 2 },
   say: { marginVertical: 2 },
-  // "Leu seu recado": a sunken well with the "tato com canto" corner.
-  well: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-    marginVertical: 6,
-    paddingVertical: 6,
-    paddingLeft: 8,
-    paddingRight: 10,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    borderBottomLeftRadius: 3,
-  },
-  wellTitle: { fontWeight: "600", flexShrink: 0 },
 });

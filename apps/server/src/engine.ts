@@ -23,6 +23,7 @@ import {
   CursorBrain,
   composioConnectorsOf,
   connectOverHttp,
+  connectorMediaLinks,
   createAgentGifPoster,
   createAgentStyleToolSource,
   createApprovalRequestToolSource,
@@ -38,6 +39,8 @@ import {
   createChatToolSource,
   createClaudeCodeBrain,
   createCoAuthorToolSource,
+  createCodeSuggestionToolSource,
+  createCommentToolSource,
   createConnectorToolSource,
   createContextToolSource,
   createDashboardToolSource,
@@ -46,6 +49,7 @@ import {
   createDesktopPointers,
   createDesktopToolSource,
   createDeviceToolSource,
+  createEgressRelay,
   createFeedbackToolSource,
   createFindAgentToolSource,
   createFollowUpToolSource,
@@ -56,6 +60,10 @@ import {
   createJevJudge,
   createJevKey,
   createJobHandlers,
+  createLiveDocs,
+  createLiveFileToolSource,
+  createLiveImages,
+  createLlmIntentWriter,
   createLlmJudge,
   createMachineHub,
   createMailToolSource,
@@ -64,11 +72,13 @@ import {
   createMissionRunToolSource,
   createMissionToolSource,
   createModelGateway,
+  createNativeConnectorToolSource,
   createPassToolSource,
   createPermissionToolSource,
   createReactToolSource,
   createReleaseAsksToolSource,
   createSandboxToolSource,
+  createSayNowToolSource,
   createScheduleToolSource,
   createSessionScreening,
   createSetStatusToolSource,
@@ -81,14 +91,18 @@ import {
   createToolGateway,
   createUsageToolSource,
   createVaultToolSource,
+  createWebhookCallToolSource,
   createWebToolSource,
   createWikiToolSource,
   createWithdrawRequestToolSource,
   createWorkspaceToolSource,
   createWorkToolSource,
+  DevinBrain,
+  deliverToApp,
   deviceWaitHooks,
   type EmailArt,
   emailArtAt,
+  ensureCodeSessionsOn,
   envSpeechEngines,
   feedbackDestination,
   type GatewayEmbeddings,
@@ -96,16 +110,21 @@ import {
   GrokBrain,
   getAgentCached,
   hubBrainLink,
+  INTEGRATION_DELIVERY_JOB,
+  type IntentWriter,
   isAgentesCloud,
-  isRightHand,
   type JobDeps,
   type Judge,
+  type LiveDeps,
+  locksTurn,
   type MailDeps,
   type McpConnect,
   messageRouter,
   missionTurnPermissions,
   notifyOwnerOnBudget,
   OpencodeBrain,
+  officeLiveExporter,
+  outboundFetch,
   platformCapJudge,
   prepareAgentCode,
   publishUserEvent,
@@ -123,6 +142,7 @@ import {
   type ScheduleReader,
   type SkillDeps,
   type StorageDeps,
+  setLiveExporter,
   setWorkOrgCap,
   shareSavedFile,
   smallModelFor,
@@ -132,6 +152,7 @@ import {
   type VaultDeps,
   type VoiceDeps,
   warmAgentBrowser,
+  warmWhileTyping,
   withComposio,
   withJudgeFallback,
 } from "@agenteschat/engine";
@@ -139,6 +160,7 @@ import { createOpenAIEmbeddings, createVoyageEmbeddings, type ModelProvider } fr
 import { type AppleTokenRevoker, appleTokenRevoker } from "./auth";
 import { hookConfig } from "./routes/app/context";
 import { version } from "./version";
+import { WAKE_TOPIC } from "./workers";
 
 /** Why `/api/terminal` closes (with 4404) where sessions are screened (ADR 0076 §7). */
 export const NO_TERMINAL = "no_terminal";
@@ -160,12 +182,14 @@ export interface EngineOptions {
   /** Tests: fake TypeSafe transport. */
   jevFetch?: typeof fetch;
   /**
-   * Tests: how long a person's message waits for their next one before the router decides, or before the run it
-   * started makes its first model call (`ROUTER_QUIET_MS`).
+   * Tests: how close a person's messages are to be one request for the router, and the unit of how long a run holds
+   * its first model call while they type (`ROUTER_QUIET_MS`).
    */
   routerQuietMs?: number;
   /** Tests: a fake judge (no model calls for "is this a stop?" and the like). */
   judge?: Judge;
+  /** Tests: a fake writer of the working line's first words, or null for none (no model call at a run's start). */
+  intents?: IntentWriter | null;
   /** Tests: a fake schedule reader (no model calls for "toda segunda às 9h" and the like). */
   schedules?: ScheduleReader;
   /** Tests: fake S3 server and DNS for org buckets. */
@@ -186,9 +210,12 @@ export interface EngineOptions {
   log?: {
     info(message: string, data?: Record<string, unknown>): void;
     warn(message: string, data?: Record<string, unknown>): void;
+    error?(message: string, data?: Record<string, unknown>): void;
   };
   /** Error reports (ADR 0104) for failures nothing logs: learning's (`reportLearnFailure`). */
   errors?: ErrorReporter;
+  /** Tests: where integration apps' webhooks are sent (default: `outboundFetch`). */
+  integrationFetch?: typeof fetch;
 }
 
 /**
@@ -281,6 +308,10 @@ export function buildEngine(o: EngineOptions) {
       () => jevKey.usable(),
     );
   }
+  context.intents =
+    o.intents === undefined
+      ? createLlmIntentWriter({ gateway, resolveModel: (orgId) => smallModelFor({ db, gateway }, orgId, smallModels) })
+      : (o.intents ?? undefined);
   // Screenshots go only to Jev's vision model: with a fake judge (tests) nothing looks at them.
   const vision = o.judge ? undefined : () => jevKey.usable();
   // Nothing is judged for a workspace on hold or suspended: Jev bills the server, not the workspace.
@@ -318,6 +349,31 @@ export function buildEngine(o: EngineOptions) {
     replicaId: o.replicaId,
     readyEmail: adapters.email.delivers ? { publicUrl: config.PUBLIC_URL, gateway } : null,
     errors: o.errors,
+  });
+  // Live files (ADR 0196): the documents this process hosts, for people's sockets and for agents' tools, which may run
+  // in any process. A change crosses processes through the database and pub/sub, so it names this one (`replicaId`).
+  const liveDeps: LiveDeps = {
+    ...artifacts,
+    pubsub: adapters.pubsub,
+    replicaId: machineHub.replicaId,
+    // To the server's log (nowhere in tests), errors as errors where that log has them.
+    log: {
+      info: (message: string, data?: Record<string, unknown>) => o.log?.info(message, data),
+      warn: (message: string, data?: Record<string, unknown>) => o.log?.warn(message, data),
+      error: (message: string, data?: Record<string, unknown>) => (o.log?.error ?? o.log?.warn)?.(message, data),
+    },
+  };
+  const live = createLiveDocs(liveDeps);
+  // Live files' downloads as Excel, PowerPoint, CSV and PDF, versions included (ADR 0198).
+  setLiveExporter(officeLiveExporter);
+  // Pictures on canvases (ADR 0197): asked by people's routes and agents' tools, made by the `live.image` job, whose
+  // workers in any process are woken as soon as one is asked.
+  const images = createLiveImages({
+    artifacts,
+    live,
+    gateway,
+    wake: () => void adapters.pubsub.publish(WAKE_TOPIC, { type: "wake" }).catch(() => {}),
+    log: o.log,
   });
   const workspaceComputer =
     config.MACHINE_PROVISIONING === "external" ? { billing: Boolean(config.BILLING_URL) } : undefined;
@@ -416,7 +472,7 @@ export function buildEngine(o: EngineOptions) {
         judge: context.judge,
       }),
       createFindAgentToolSource({ machines: machineHub }),
-      createUsageToolSource(),
+      createUsageToolSource({ pubsub: adapters.pubsub }),
       // What people saved for the agent in the Vault, found before it asks them (ADR 0144).
       createVaultToolSource(vault),
       // What the agent says it is doing, next to its name (ADR 0084).
@@ -433,6 +489,9 @@ export function buildEngine(o: EngineOptions) {
         rateLimiter: adapters.rateLimiter,
       }),
       createReactToolSource({ pubsub: adapters.pubsub }),
+      createSayNowToolSource({ pubsub: adapters.pubsub }),
+      // An agent that programs on a computer suggests a code session for a change asked in the chat (ADR 0215 §11).
+      createCodeSuggestionToolSource(),
       // A GIF or the agent's sticker when asked (ADR 0091): listed by the workspace's switches and the agent's.
       createMediaToolSource({ pubsub: adapters.pubsub, gifs: adapters.gifs ?? null }),
       // Long work goes to the background and reports back by itself, on every brain (ADR 0121).
@@ -448,9 +507,16 @@ export function buildEngine(o: EngineOptions) {
         tools: () => tools,
         gif: createAgentGifPoster(adapters.gifs),
       }),
+      // A webhook routine's run reads one of its calls whole: its text shortens long calls to fit.
+      createWebhookCallToolSource(),
       // Runs nobody called by name may stay quiet (reply-policy.ts): listed only for them.
       createPassToolSource(),
       createArtifactToolSource(artifacts),
+      // Spreadsheets, presentations and canvases agents edit with people, and images onto a canvas (ADR 0196, 0197);
+      // pictures from the web are downloaded through the public-address guard (ADR 0196 §8).
+      createLiveFileToolSource({ artifacts, live, images, web: { resolveHost: o.resolveHost } }),
+      // Comments on a picture, a video or a PDF, seen, made and resolved by the agent there (ADR 0208).
+      createCommentToolSource({ artifacts, pubsub: adapters.pubsub, judge: context.judge }),
       // Live blocks and votes in the agent's own conversation (ADR 0113).
       createBlockToolSource(artifacts),
       createChatToolSource({ pubsub: adapters.pubsub, artifacts, gif: createAgentGifPoster(adapters.gifs) }),
@@ -470,6 +536,7 @@ export function buildEngine(o: EngineOptions) {
         ...skillDeps,
         judge: context.judge,
         computer: sandbox,
+        context,
       }),
       createCalendarToolSource({ db, pubsub: adapters.pubsub, publicUrl: config.PUBLIC_URL }),
       createScheduleToolSource({
@@ -488,6 +555,17 @@ export function buildEngine(o: EngineOptions) {
         judge: context.judge,
         githubApp: githubAppAccess,
         callerIdentity: mcpCallerIdentity(config),
+      }),
+      // Connectors of our own (ADR 0170): no MCP server, every tool served here.
+      createNativeConnectorToolSource({
+        ...connectorDeps,
+        artifacts,
+        monthlyCaps: { x: config.CONNECTOR_X_CALLS_PER_MONTH },
+        media: connectorMediaLinks({
+          secret: config.AGENTES_SECRET,
+          publicUrl: config.PUBLIC_URL,
+          resolveHost: o.resolveHost,
+        }),
       }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({
@@ -521,6 +599,7 @@ export function buildEngine(o: EngineOptions) {
         pubsub: adapters.pubsub,
         artifacts,
         publicUrl: config.PUBLIC_URL,
+        rateLimiter: adapters.rateLimiter,
       }),
       browserTools,
       // Reading the web, for every agent and run (ADR 0109): a search service when configured, else the agent's
@@ -531,6 +610,8 @@ export function buildEngine(o: EngineOptions) {
         browser: browserTools.readPage,
         resolveHost: o.resolveHost,
         usage: gateway,
+        // `show_image` (ADR 0217): pictures from the web saved where the run posts.
+        artifacts,
       }),
       // The agent's own desktop (ADR 0062): `desktop:use` with Run code, when its computer serves desktop use.
       createDesktopToolSource({
@@ -567,6 +648,10 @@ export function buildEngine(o: EngineOptions) {
     online: async (machineId: string) => {
       await missionHooks.online?.(machineId);
       await deviceWaits.online(machineId).catch(() => undefined);
+      // Code sessions whose worktree waited for this computer (ADR 0215) are prepared now.
+      await ensureCodeSessionsOn({ db, pubsub: adapters.pubsub, hub: machineHub, git: sandbox.git }, machineId).catch(
+        () => undefined,
+      );
     },
     phonesChanged: deviceWaits.phonesChanged,
   };
@@ -592,6 +677,7 @@ export function buildEngine(o: EngineOptions) {
     ...browserLive.hubHooks,
     desktopPointer: desktopPointers.report,
     desktopStopped: desktopPointers.stopped,
+    streamStarting: (machineId, streamId) => streams.starting(machineId, streamId),
     closed(machineId) {
       browserLive.hubHooks.closed(machineId);
       desktopPointers.closed(machineId);
@@ -602,6 +688,7 @@ export function buildEngine(o: EngineOptions) {
   // Agents' desktops and terminals (ADR 0058): each person's stream paired with the runner's data socket for it,
   // its access checked again while open; control changing hands closes the views it hides. Where sessions are
   // screened no terminal opens: a shell nobody screens would be the way around it.
+  const egressRelay = createEgressRelay({ db, hub: machineHub, log: o.log });
   const streams = createStreamBroker({
     db,
     hub: machineHub,
@@ -621,7 +708,9 @@ export function buildEngine(o: EngineOptions) {
     recheck: (stream) => recheckStream(db, stream),
     reauthorize: (stream, mode) => reauthorizeStream(db, stream, mode),
     // An agent browser's live view has a data socket of its own too (ADR 0040 §7.1).
-    claim: (streamId, machineId, socket) => browserLive.claimView(streamId, machineId, socket),
+    // So does a lent connection's either side (ADR 0237).
+    claim: (streamId, machineId, socket, hello) =>
+      egressRelay.claim(hello, machineId, socket) ?? browserLive.claimView(streamId, machineId, socket),
     onReady: (stream) => {
       desktopPointers.opened(stream);
       return sessions?.ready(stream);
@@ -642,8 +731,9 @@ export function buildEngine(o: EngineOptions) {
    * (ADR 0173); a mission's turn follows the mission's own setting.
    */
   const turnPermissions = async (turn: BrainTurn): Promise<BrainTurnRequest["permissions"]> =>
-    // The team's right hand on a plan: our tools and nothing else (ADR 0137 §4).
-    isRightHand(await getAgentCached(db, turn.orgId, turn.agentId))
+    // The team's right hand on a plan, and a run an app's message started: our tools and nothing else (ADR 0137 §4,
+    // ADR 0252).
+    (await locksTurn(db, await getAgentCached(db, turn.orgId, turn.agentId), turn))
       ? RIGHT_HAND_TURN
       : ((await missionTurnPermissions(db, turn)) ?? {
           mode: "work",
@@ -724,6 +814,15 @@ export function buildEngine(o: EngineOptions) {
         permissions: turnPermissions,
         prepare: prepareCode,
       }),
+    // ADR 0253: Cognition's Devin CLI over ACP, one process per turn like OpenCode's.
+    devin: (_agent, _run, setup) =>
+      new DevinBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
   };
   // Voice messages (ADR 0100): engines from the environment, and on any other server the one its owner sets.
   const speech = createSpeechSettings({
@@ -792,6 +891,8 @@ export function buildEngine(o: EngineOptions) {
     pushServer: new URL(config.PUBLIC_URL).origin,
     storage,
     artifacts,
+    // The image job places pictures on canvases through the documents this process hosts (ADR 0197).
+    live,
     sandbox,
     skills: skillDeps,
     // A workspace's deletion revokes its grants at GitHub and Composio, and leaves a line in the log.
@@ -804,10 +905,10 @@ export function buildEngine(o: EngineOptions) {
     gifs: adapters.gifs ?? null,
     log: o.log,
     maxToolTurns: config.AGENT_MAX_TOOL_TURNS,
-    // A run started on a person's message reads what they add in the next seconds with it (ADR 0112).
+    signInConcurrency: config.CLAUDE_PLAN_CONCURRENCY,
+    // A run started on a person's message holds its first model call while they are still typing (ADR 0112), and
+    // Claude's API reads the prompt into its cache meanwhile.
     quietMs: o.routerQuietMs ?? ROUTER_QUIET_MS,
-    // It ends early when the person isn't typing, and Claude's API reads the prompt into its cache meanwhile.
-    quietByTyping: true,
     prewarm: true,
     // Tools on demand (ADR 0043): each run lists what the judge expects it to need; the rest behind `find_tools`.
     toolsOnDemand: o.toolsOnDemand ?? true,
@@ -841,7 +942,6 @@ export function buildEngine(o: EngineOptions) {
       minScore: config.ROUTER_MIN_SCORE,
       mentionThreshold: config.ROUTER_MENTION_THRESHOLD,
       quietMs: o.routerQuietMs ?? ROUTER_QUIET_MS,
-      quietByTyping: true,
       // Jev first whenever the installation has its key, unless ROUTER_STRATEGY=llm.
       ...((config.ROUTER_STRATEGY ?? "jev") === "jev"
         ? { jev: { key: jevKey, timeoutMs: config.JEV_TIMEOUT_MS, fetch: o.jevFetch } }
@@ -849,6 +949,12 @@ export function buildEngine(o: EngineOptions) {
     },
   };
   const handlers = createJobHandlers(jobDeps);
+  // An agent's reply where an integration app reads, to the app's webhook (ADR 0251), through the address-checking fetch.
+  const integrationDelivery = { db, keyWrappers, fetch: o.integrationFetch ?? outboundFetch() };
+  handlers[INTEGRATION_DELIVERY_JOB] = async (job) => {
+    if (!job.orgId) return;
+    await deliverToApp(integrationDelivery, job.orgId, String(job.payload.appId), String(job.payload.messageId));
+  };
   // A failing block of one of the right hand's lanes is left out of its prompt: it shows here.
   reportLodiLaneErrors((lane, error) => {
     o.log?.warn("right hand lane failed", { lane, error: String(error) });
@@ -881,6 +987,12 @@ export function buildEngine(o: EngineOptions) {
     machineHub,
     browserLive,
     streams,
+    /** Live files (ADR 0196): the documents this process hosts (its sockets, agents' tools, the routes). */
+    live,
+    /** What live files' engine functions take (making one, its pictures, office files). */
+    liveDeps,
+    /** Pictures on canvases (ADR 0197): the image routes and the agents' `generate_image`. */
+    images,
     /** Screened sessions (ADR 0076), for the operator API's review door; null where nothing is screened. */
     sessions,
     desktops,
@@ -893,6 +1005,8 @@ export function buildEngine(o: EngineOptions) {
     /** Likewise: the speech engines, read before the first voice message. */
     speech,
     voice,
+    /** A person typing where an agent on Claude Code answers: its CLI starts now (`warmWhileTyping`). */
+    warmWhileTyping: (where: Parameters<typeof warmWhileTyping>[1]) => warmWhileTyping(jobDeps, where),
   };
 }
 

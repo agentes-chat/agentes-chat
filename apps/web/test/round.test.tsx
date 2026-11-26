@@ -61,7 +61,7 @@ describe("sidebar: no agent twice", () => {
 
 /** Canais' + → Novo canal. */
 const newChannel = async () => {
-  const plus = within(nav()).getByRole("button", { name: "Novo canal ou categoria" });
+  const plus = within(nav()).getByRole("button", { name: "Novo canal" });
   await act(async () => {
     fireEvent.keyDown(plus, { key: "Enter" });
     fireEvent.keyUp(plus, { key: "Enter" });
@@ -165,13 +165,11 @@ describe("Criar canal", () => {
       topic: "Leads e propostas",
       visibility: "private",
       audienceRoleIds: [],
+      // Who it starts with goes with it: the server decides from them whether its agents answer in threads.
+      members: [{ agentId: ADA_ID }],
     });
     const created = state.channels.find((c) => c.name === "vendas-sul");
-    expect(state.calls.find((c) => c.method === "chat.addMember")?.args).toEqual([
-      ORG_ID,
-      created?.id,
-      { agentId: ADA_ID },
-    ]);
+    expect(state.calls.some((c) => c.method === "chat.addMember")).toBe(false);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${created?.id}`);
   });
 });
@@ -338,15 +336,13 @@ describe("Detalhes do canal: membros", () => {
 });
 
 describe("agent owner is optional", () => {
-  test("Criar agente: 'Sem responsável' sends ownerUserId null, with the help text", async () => {
+  test("Criar agente: 'Admins' sends ownerUserId null, with the help text", async () => {
     const { state } = await go("agents/new");
     await startAs("QA");
     await proceed(3);
-    await pick(screen().getByRole("combobox", { name: "Responsável" }), /Sem responsável/);
-    expect(document.body.textContent).toContain(
-      "Sem responsável, os admins recebem os avisos e aprovam as ações sensíveis.",
-    );
-    expect(screen().getByRole("combobox", { name: "Responsável" }).textContent).toContain("Sem responsável");
+    await pick(screen().getByRole("combobox", { name: "Responsável" }), /Administradores/);
+    expect(document.body.textContent).toContain("Os administradores recebem os avisos e aprovam as ações sensíveis.");
+    expect(screen().getByRole("combobox", { name: "Responsável" }).textContent).toContain("Administradores");
     await proceed(2);
     await click(screen().getByRole("button", { name: "Criar Iris" }));
     await settle(6);
@@ -356,13 +352,13 @@ describe("agent owner is optional", () => {
   test("profile: Responsável is chosen in Configurações and saved with the bar", async () => {
     const state = seedState();
     const { state: s } = await go(`agents/${ADA_ID}?tab=settings&sec=owner`, state);
-    await pick(screen().getByRole("combobox", { name: "Responsável" }), /Sem responsável/);
+    await pick(screen().getByRole("combobox", { name: "Responsável" }), /Administradores/);
     await click(
       within(screen().getByRole("region", { name: "Alterações não salvas" })).getByRole("button", { name: /^Salvar/ }),
     );
     await settle(4);
     expect(s.calls.find((c) => c.method === "agents.update")?.args[2]).toEqual({ ownerUserId: null });
-    expect(screen().getByRole("combobox", { name: "Responsável" }).textContent).toContain("Sem responsável");
+    expect(screen().getByRole("combobox", { name: "Responsável" }).textContent).toContain("Administradores");
   });
 });
 

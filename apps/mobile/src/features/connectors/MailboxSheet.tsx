@@ -1,5 +1,7 @@
 import { keys, useApi, useMailAccounts, useMailAction } from "@agenteschat/client";
 import type { Level } from "@agenteschat/client/lib/access-levels";
+import { managesAgent } from "@agenteschat/client/lib/audience";
+import { connectionActs } from "@agenteschat/client/lib/connected";
 import {
   choiceOf,
   fromMailLevel,
@@ -49,7 +51,7 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
   const toast = useToast();
   const accounts = useMailAccounts(orgId);
   const { disconnect } = useMailAction(orgId);
-  const admin = can(org, "manage_connectors");
+  const me = useMeId() ?? "";
   const [error, setError] = useState<string | null>(null);
   const account = accounts.data?.find((a) => a.id === accountId);
   // The shape of what is coming, never a bare spinner; one that didn't load says so.
@@ -61,6 +63,8 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
     ) : (
       <SkeletonList rows={2} />
     );
+  // One's own mailbox is its person's to change; one left with no person, who manages connectors'.
+  const acts = connectionActs(account, me, can(org, "manage_connectors"));
   const choice = choiceOf(account);
   const fail = (text: string) => {
     errorHaptic();
@@ -99,7 +103,7 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
         }
       />
       <WhoUses accountId={account.id} />
-      {admin ? (
+      {acts.change ? (
         <GroupedList>
           {/* The row a connection's screen gives its tools: the same tile and words. */}
           <GroupedRow
@@ -112,7 +116,7 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
         </GroupedList>
       ) : null}
       <Button variant="primary" wide label={t("mobile.connectors.done")} onPress={sheet.close} />
-      {admin ? (
+      {acts.remove ? (
         // Disconnecting, alone in red after the system's confirmation, as on a connection's screen.
         <GroupedList>
           <GroupedRow
@@ -166,7 +170,6 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
   const qc = useQueryClient();
   const orgId = useOrgId();
   const toast = useToast();
-  const { org } = useOrg();
   const meId = useMeId();
   const dir = useDirectory();
   const accounts = useMailAccounts(orgId);
@@ -174,8 +177,8 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
   const [saving, setSaving] = useState<Level | null>(null);
   const account = accounts.data?.find((a) => a.id === accountId);
   const current = saving ?? fromMailLevel(account?.agents.find((a) => a.agentId === agentId)?.level);
-  // Giving an agent a mailbox is an admin's call, like its scopes (the server checks it again).
-  const mayChange = can(org, "manage_agents");
+  // Giving an agent a mailbox is for who manages that agent, like its scopes (the server checks it again).
+  const mayChange = managesAgent(agent);
   const choose = (level: Level) => {
     if (level === current) return;
     setSaving(level);

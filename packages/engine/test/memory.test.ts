@@ -51,7 +51,7 @@ import {
   updateAgent,
   ValidationError,
 } from "../src";
-import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
+import { addMember, setup as baseSetup, type Fixture, queuedReviews } from "./fixtures";
 
 /** The fake judge hears these two lines (and only them) as trying to change permissions. */
 const BENDS_PERMISSIONS = ["sem aprovação", "without approval"];
@@ -126,6 +126,19 @@ describe("guardrails", () => {
     ]) {
       expect([text, file(text)]).toEqual([text, false]);
     }
+  });
+
+  test("a long run of JWT starts is read in time, and a JWT it runs into or follows is still found", () => {
+    // Each took seconds when every `eyJ` after a `-` in a long run read the run to its end.
+    const run = "eyJ-".repeat(50_000);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl";
+    const file = (text: string) => holdsSecret(new TextEncoder().encode(text));
+    const started = performance.now();
+    expect(looksLikeSecret(run)).toBe(false);
+    expect(file(run)).toBe(false);
+    expect(looksLikeSecret(`${run} ${jwt}`)).toBe(true);
+    expect(file(`${run}${jwt}`)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   test("permission-bending text is the judge's call (any language); a failing judge never blocks memory", async () => {
@@ -519,6 +532,29 @@ describe("use (retrieval into prompts)", () => {
 });
 
 describe("context tools through the Tool Gateway", () => {
+  test("an administrator's own words: typed, never refused; an agent's text from them, held to what they say", async () => {
+    f = await setup();
+    const member = await addMember(f.db, f.org.id, "member");
+    const text = "The three logos are approved: no need to ask me again for these.";
+    // The judge reads both texts: it refuses what the administrator's message doesn't say.
+    const judge = createFakeJudge((kind, _id, state) =>
+      kind === "permission_change" && !String(state.administrators_own_message ?? "").includes("logos") ? 0.95 : 0,
+    );
+    const by = (userId: string | null, words?: string) => ({ db: f.db, userId, words });
+    await checkPermissionText(judge, f.org.id, text, by(f.owner.id));
+    await checkPermissionText(judge, f.org.id, text, by(f.owner.id, "Approved the three logos, go ahead."));
+    await expect(checkPermissionText(judge, f.org.id, text, by(f.owner.id, "Review PR 7."))).rejects.toMatchObject({
+      code: "context.changes_permissions",
+    });
+    await expect(
+      checkPermissionText(judge, f.org.id, text, by(member.id, "Approved the three logos.")),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(judge.calls.at(0)?.state).toMatchObject({
+      administrators_own_message: "Approved the three logos, go ahead.",
+    });
+    expect(judge.calls.at(-1)?.state).not.toHaveProperty("administrators_own_message");
+  });
+
   test("remember, search, expand, forget; remember refuses secrets and permission rules", async () => {
     let step = 0;
     let rememberedId = "";
@@ -700,7 +736,7 @@ describe("flow: conversation → reflect → correction → lesson → recurrenc
     );
     await decideProposal(f.db, f.owner.id, f.org.id, proposal?.id ?? "", "accept");
     const [agent] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id));
-    expect(agent?.instructions).toBe("Answer briefly.\n\n## Learned\n- Add a changelog entry to every PR.");
+    expect(agent?.instructions).toBe("Answer briefly.\n\n- Add a changelog entry to every PR.");
 
     await post(f, "@dev one more");
     await drainOutbox(f.db, f.handlers);
@@ -997,10 +1033,18 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     );
 
   /**
-   * @dev's run on a message in #general from Ana (or `userId`), or from another agent (no person behind it). The message
+   * @dev's run on a message in #general from Ana (or `userId`), or from another agent (no person behind it). The channel
    * relays outside content, so changes wait on their card; `ownWords`: they apply at once when the person may decide.
    */
   async function runOn(author: "person" | "agent", userId = f.owner.id, ownWords = false): Promise<ToolContext> {
+    if (!ownWords)
+      await insertMessage(f.db, {
+        orgId: f.org.id,
+        channelId: f.general.id,
+        author: { type: "agent", agentId: f.agent.id, runId: null, hop: 1, stretchId: null },
+        body: "The vendor page says the team changed.",
+        meta: { readOutside: true },
+      });
     const trigger = await insertMessage(f.db, {
       orgId: f.org.id,
       channelId: f.general.id,
@@ -1009,7 +1053,6 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
           ? { type: "person", userId }
           : { type: "agent", agentId: f.agent.id, runId: crypto.randomUUID(), hop: 1 },
       body: "muda o time",
-      ...(ownWords ? {} : { meta: { readOutside: true } }),
     });
     const [run] = await f.db
       .insert(schema.agentRuns)
@@ -1238,7 +1281,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     // Nothing changes until a person accepts.
     expect((await agentRow(ada.id))?.instructions).toBe("Seja breve.");
     for (const r of made) await decideProposal(f.db, f.owner.id, f.org.id, r.id, "accept");
-    expect((await agentRow(lia.id))?.instructions).toBe("Seja breve.\n\n## Learned\n- Responder sempre em português.");
+    expect((await agentRow(lia.id))?.instructions).toBe("Seja breve.\n\n- Responder sempre em português.");
     expect(await auditOf(ada.id)).toContainEqual(["proposal.accepted", f.owner.id]);
   });
 
@@ -1305,7 +1348,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     expect(await rows()).toHaveLength(1);
   });
 
-  test("the tool tells the agent who decides the rows the person who asked can't", async () => {
+  test("rows the person who asked can't make go to the review, and the tool says they are being applied", async () => {
     f = await setup();
     const bia = await addMember(f.db, f.org.id, "member", "bia");
     await teammate("ada");
@@ -1315,9 +1358,12 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
       change: "Responder em português.",
       roles: [{ agent: "@ada", role: "Revisora" }],
     });
-    expect(out.content).toContain(
-      "they wait for the agent's owner or someone who reviews memory (instructions), and an admin who manages agents (a role).",
-    );
+    expect(out.content).toContain("2 changes go through a quick review that applies each one that makes sense");
+    expect(out.content).toContain("Say it is being applied, not that it waits for anyone.");
+    const [review, ...more] = await queuedReviews(f);
+    expect(more).toEqual([]);
+    expect(review?.origin).toBe("asked_other");
+    expect([...(review?.ids ?? [])].sort()).toEqual((await rows()).map((r) => r.id).sort());
   });
 
   test("an agent named by the handle it had before a rename gets the change", async () => {
@@ -1432,7 +1478,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     f = await setup();
     const ada = await teammate("ada");
     const lia = await teammate("lia");
-    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Learned\n- Outra." });
+    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Tom\n- Outra." });
     const { proposals } = await proposeFor({
       target: "agent_instructions",
       agentIds: [ada.id, lia.id, atlas.id],
@@ -1445,7 +1491,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     ]);
   });
 
-  test("a new role: decided by who manages agents, applied as them through the agent page's editor; stale once the role changed", async () => {
+  test("a new role: decided by who edits the agent, its owner too, applied as them through the agent page's editor; stale once the role changed", async () => {
     f = await setup();
     const bia = await addMember(f.db, f.org.id, "member", "bia");
     const ada = await teammate("ada", { ownerUserId: bia.id });
@@ -1464,19 +1510,21 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
       proposedText: "Revisora de código",
     });
     expect(permissionAsks()).toBe(1);
-    // Her owner isn't an admin: on her page she can't change the role either.
-    await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toBeInstanceOf(
+    // A member who doesn't edit her: on her page they can't change the role either.
+    const caio = await addMember(f.db, f.org.id, "member", "caio");
+    await expect(decideProposal(f.db, caio.id, f.org.id, row?.id ?? "", "accept")).rejects.toBeInstanceOf(
       ForbiddenError,
     );
     await expect(
       decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept", { finalText: "Outra" }),
     ).rejects.toBeInstanceOf(ValidationError);
-    await decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept");
+    // Her owner edits how she works (ADR 0085 addendum of 2026-11-17), though not an admin.
+    await decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept");
     expect((await agentRow(ada.id))?.role).toBe("Revisora de código");
     expect(await auditOf(ada.id)).toEqual(
       expect.arrayContaining([
-        ["agent.updated", f.owner.id],
-        ["proposal.accepted", f.owner.id],
+        ["agent.updated", bia.id],
+        ["proposal.accepted", bia.id],
       ]),
     );
 
@@ -1569,6 +1617,21 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     expect(unknown).toMatchObject({
       isError: true,
       content: expect.stringContaining(`Unknown app: Jira. Apps you can name: connector:${linear?.id} (Linear),`),
+    });
+    // The asker's own connection: not given through a card, and the refusal says who gives it and where.
+    await f.db.insert(schema.connectorConnections).values({
+      orgId: f.org.id,
+      connector: "custom:crm",
+      toolPrefix: "crm",
+      label: "Acme CRM",
+      serverUrl: "https://crm.example.com/mcp",
+      authType: "none",
+      ownerUserId: f.owner.id,
+    });
+    const theirs = await propose(ctx, { target: "agents", access: [{ agent: "@ada", app: "Acme CRM", on: true }] });
+    expect(theirs).toMatchObject({
+      isError: true,
+      content: expect.stringContaining("Acme CRM: the person asking connected it as their own"),
     });
     const out = await propose(ctx, {
       target: "agents",

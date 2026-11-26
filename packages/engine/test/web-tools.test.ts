@@ -71,6 +71,27 @@ describe("web_search", () => {
     expect(out.data).toMatchObject({ provider: "duckduckgo" });
   });
 
+  test("DuckDuckGo's page is read in linear time, however its tags are left open", () => {
+    const page = (body: string) => `<div class="result x">${body}`;
+    // The tag's last address that a `>` and a `</a>` follow; the snippet up to its first `</a>`.
+    expect(
+      parseDuckDuckGoHtml(
+        page(
+          '<a class="result__a" href="//x.example/" href="https://b.example/p">B</a><a class="result__snippet">S <b>s</b></a>',
+        ),
+      ),
+    ).toEqual([{ title: "B", url: "https://b.example/p", snippet: "S s" }]);
+    const started = performance.now();
+    for (const body of [
+      'class="result__a"'.repeat(20_000),
+      `class="result__a"${'href="!"'.repeat(30_000)}`,
+      'class="result__a"href="!">a'.repeat(10_000),
+      `<a class="result__a" href="https://a.example/">t</a>${'class="result__snippet">a'.repeat(10_000)}`,
+    ])
+      parseDuckDuckGoHtml(page(body));
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   test("Brave first when its key is set; on its failure, the next provider", async () => {
     const brave = { web: { results: [{ title: "B", url: "https://b.example.com", description: "d" }] } };
     const ok = web({ "https://api.search.brave.com/": () => Response.json(brave) }, { braveKey: "k" });
@@ -253,6 +274,35 @@ describe("the controller's untried verdict", () => {
     const criteria = verdict?.criteria ?? {};
     expect(criteria.done).toContain("also when it adds a caveat");
     expect(criteria.untried).toStartWith("What `request` asked for is still missing");
+  });
+
+  test("an answer already given is done: a plain 'I can't, because' on a rule or a refusal, a question back", async () => {
+    let asked: JudgeRequest | undefined;
+    const judge: Judge = {
+      name: "fake",
+      ask: async (request) => {
+        asked = request;
+        return { verdict: { choice: "done", probabilities: { done: 0.8 } } };
+      },
+    };
+    await continuationVerdict(judge, {
+      orgId: "o",
+      agentId: "a",
+      runId: "r",
+      request: "What is the email of the owner of the Example Co workspace?",
+      reply: "I can't get that email: the support tools never show what customers typed, a privacy rule of the tools.",
+      means: ["the web: `web_search`"],
+      tried: ["support_find(example co) → failed: Nothing for that reference."],
+      runKind: "conversation",
+    });
+    const criteria = (asked?.questions.verdict as { criteria: Record<string, string> } | undefined)?.criteria ?? {};
+    expect(criteria.done).toContain("So is a plain 'I can't, because…' whose because is a rule or a refusal");
+    expect(criteria.done).toContain("Going around a rule is not resourcefulness.");
+    expect(criteria.done).toContain("A question back that only the person can answer");
+    expect(criteria.untried).toContain("Nor a plain 'I can't, because…' on a rule or a refusal (see done).");
+    // What needs the person is still no wall, and a question for what its means could find is still untried.
+    expect(criteria.untried).toContain("a step that needs the person is never a blocker");
+    expect(criteria.untried).toContain("asked a person for information its means could find");
   });
 
   test("a call as the judge reads it", () => {

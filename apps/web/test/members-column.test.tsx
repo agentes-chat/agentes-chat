@@ -6,7 +6,7 @@ setupDom();
 import type { AiStatus } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { COMPACT_QUERY, DESKTOP_QUERY } from "@/components/NavDrawer";
-import { TABLET_QUERY } from "@/components/Sidebar";
+import { TABLET_QUERY } from "@/components/sidebar-state";
 import { STORAGE_KEYS } from "@/lib/storage";
 import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, type FakeState, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
@@ -151,8 +151,10 @@ describe("the members column", () => {
     const ada = row(column() as HTMLElement, "Ada") as HTMLElement;
     // Named "Perfil de Ada", described by all it shows (presence, line, chips).
     expect(ada.getAttribute("aria-label")).toBe("Perfil de Ada");
-    // What it does here: the pixel orbit beside its name, labelled, and the row's title; the row keeps its height.
-    expect(ada.querySelector(".members-side__name .ac-pixspin")?.getAttribute("aria-label")).toBe("pensando");
+    // What it does here: its face wears the orbit, labelled, and the row's title; the row keeps its height.
+    expect(ada.querySelector(".ac-orbit > .ac-avatar")).not.toBeNull();
+    expect(ada.querySelector(".members-side__text .ac-visually-hidden")?.textContent).toBe("pensando");
+    expect(ada.querySelector(".ac-pixspin")).toBeNull();
     expect(document.getElementById(ada.getAttribute("aria-describedby") ?? "")?.getAttribute("title")).toContain(
       "pensando",
     );
@@ -162,6 +164,18 @@ describe("the members column", () => {
     rows[0]?.focus();
     await act(async () => fireEvent.keyDown(rows[0] as HTMLElement, { key: "ArrowDown" }));
     expect(document.activeElement === (rows[1] as HTMLElement)).toBe(true);
+  });
+
+  test("you, read offline before your connection counts, stay in your own group: the rows don't move when it does", async () => {
+    widthIs(DESKTOP_QUERY);
+    const state = seedState();
+    state.online.delete("u-walter");
+    await open(state);
+    const side = column() as HTMLElement;
+    const owner = within(side).getByRole("region", { name: "Dono" });
+    expect(owner.textContent).toContain("você");
+    expect(owner.querySelector(".members-side__inner")?.getAttribute("data-presence")).toBe("online");
+    expect(within(side).getByRole("region", { name: "Offline" }).textContent).not.toContain("você");
   });
 
   test("someone offline sits under Offline, drawn quieter", async () => {

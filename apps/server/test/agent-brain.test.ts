@@ -118,8 +118,10 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
     ["opencode", false, "no_computer"],
     ["grok", false, "no_computer"],
     ["antigravity", false, "no_computer"],
+    ["devin", false, "no_computer"],
   ]);
   expect(fresh.options.find((o) => o.kind === "claude_code")?.models.map((m) => m.value)).toEqual([
+    "fable",
     "opus",
     "sonnet",
     "haiku",
@@ -224,7 +226,7 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
   await t.db
     .update(schema.machines)
     .set({
-      executors: { claude: { version: "2.1.0" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
+      executors: { claude: { version: "2.1.300" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
     })
     .where(eq(schema.machines.id, mac.machineId));
   const codex = await api(`/agents/${agentId}/brain`, {
@@ -356,7 +358,7 @@ test("the agent list carries a plan agent's account and its last windows, for ev
   const week = usage("seven_day", 40);
   await t.db
     .update(schema.machines)
-    .set({ executors: { claude: { version: "2.1.0", plan: "max" }, ownUsage: { claude_code: week } } })
+    .set({ executors: { claude: { version: "2.1.300", plan: "max" }, ownUsage: { claude_code: week } } })
     .where(eq(schema.machines.id, mac.machineId));
   expect(await brainOf(api)).toMatchObject({ account: "Claude Max", usage: week });
   expect(await brainOf(asBia)).toMatchObject({ account: "Claude Max", usage: week });
@@ -413,7 +415,7 @@ test("a new agent starts on Automático on every brain; one with a fixed model k
   await t.db
     .update(schema.machines)
     .set({
-      executors: { claude: { version: "2.1.0" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
+      executors: { claude: { version: "2.1.300" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
     })
     .where(eq(schema.machines.id, mac.machineId));
   for (const id of [eva.id, fixedId]) {
@@ -460,9 +462,10 @@ test("one agent's setup on others (ADR 0094): a preview keeps nothing, each agen
   const brainOf = async (id: string) => (await (await api(`/agents/${id}/brain`)).json()) as Brain;
   const newAgentSetup = async () => ((await (await api("/agent-setup")).json()) as { setup: unknown }).setup;
   // Dev was created on Sonnet with the workspace's key, Eva on Automático: Dev's is the last pick.
+  // Its key carries over; its model starts on Automático.
   const created = {
     brain: "model",
-    model: "claude-sonnet-5-5",
+    model: "auto",
     key: credentialId,
     contextTokens: null,
     autonomy: null,
@@ -480,11 +483,11 @@ test("one agent's setup on others (ADR 0094): a preview keeps nothing, each agen
   expect(await brainOf(eva.id)).toMatchObject({ brain: "claude_code", model: "opus", effort: "high" });
   expect(await newAgentSetup()).toMatchObject({
     brain: "claude_code",
-    model: "opus",
+    model: "auto",
     computer: { machineId: mac.machineId, name: "mac" },
     account: null,
     ownSignIn: true,
-    effort: "high",
+    effort: "auto",
   });
 
   // A member changes only their own agents; creating agents (Todos' by default), she reads what new ones start with.

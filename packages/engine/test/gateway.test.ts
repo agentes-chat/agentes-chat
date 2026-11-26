@@ -7,16 +7,21 @@ import {
   agentSpendThisMonth,
   BudgetExceededError,
   createCredential,
+  createLocalKeyWrapper,
   createModelGateway,
+  drainOutbox,
   executeRun,
   listCredentials,
   MissingCredentialError,
   postPersonMessage,
   revokeCredential,
   rotateCredential,
+  runErrorDetail,
+  UNREADABLE_KEY,
   updateAgent,
   usageSummary,
 } from "../src";
+import { turnEffort } from "../src/brains/model";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -31,6 +36,31 @@ const call = (fx: Fixture, deltas: string[] = [], maxTokens = 100) =>
     maxTokens,
     onDelta: (d) => deltas.push(d),
   });
+
+test("an agent's call with no server cap gets the model's room at its effort, within the budget reserved first", async () => {
+  const ask = async (budgetNanoUsd: number | null) => {
+    f = await setup({ maxOutputTokens: null, budgetNanoUsd, reply: () => ({ chunks: ["ok"] }) });
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "claude-opus-5-5" });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
+    await drainOutbox(f.db, f.handlers);
+    const request = f.provider.calls[0]?.request;
+    await f.close();
+    return request;
+  };
+  // No effort set: high, with 64K of room (thinking included) instead of 16K.
+  expect(await ask(null)).toMatchObject({ model: "claude-opus-5-5", effort: "high", maxTokens: 64_000 });
+  // US$ 0.50 left can't pay for 64K of Opus output: the reservation shrinks the call to what it pays for.
+  const tight = await ask(500_000_000);
+  expect(tight?.maxTokens).toBeGreaterThan(1000);
+  expect(tight?.maxTokens).toBeLessThan(25_000);
+  f = undefined as unknown as Fixture;
+});
+
+test("no effort set: high only where the model's output limit is known, else the provider's default", () => {
+  expect(turnEffort("claude-opus-5-5", undefined)).toBe("high");
+  expect(turnEffort("gpt-6.2-sol", undefined)).toBeUndefined();
+  expect(turnEffort("gpt-6.2-sol", "low")).toBe("low");
+});
 
 test("decrypts the org credential, streams, and records tokens and cost with org and agent", async () => {
   f = await setup({
@@ -386,6 +416,32 @@ test("no credential: core has no platform key; a module can provide one", async 
   await call(f);
   expect(f.provider.calls[1]?.apiKey).toBe("platform-key");
   expect((await f.db.select().from(schema.usageRecords))[1]?.credentialId).toBeNull();
+});
+
+test("a key saved under another AGENTES_SECRET fails the run at once, saying to paste it again", async () => {
+  f = await setup();
+  await rotateCredential(f.db, createLocalKeyWrapper("another-install-secret"), f.owner.id, f.org.id, f.credential.id, {
+    apiKey: "sk-ant-test-key-1234",
+  });
+  await expect(call(f)).rejects.toThrow(new MissingCredentialError(UNREADABLE_KEY));
+  // The workspace's default key, when the agent has none of its own: the same words, not a crash.
+  await f.db.insert(schema.organizationSettings).values({ orgId: f.org.id, defaultCredentialId: f.credential.id });
+  await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { credentialId: null });
+  await expect(call(f)).rejects.toThrow(new MissingCredentialError(UNREADABLE_KEY));
+
+  await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { credentialId: f.credential.id });
+  const asked = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+    body: "@dev oi",
+  });
+  const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, asked.id));
+  // Not the last attempt: a retryable error would throw for the outbox to try again.
+  await executeRun(f.jobDeps, run?.id as string, { finalAttempt: false });
+  const [after] = await f.db
+    .select()
+    .from(schema.agentRuns)
+    .where(eq(schema.agentRuns.id, run?.id as string));
+  expect(after).toMatchObject({ status: "failed", error: UNREADABLE_KEY });
+  expect(runErrorDetail(after?.error)).toEqual({ errorCode: "run.credential_unreadable" });
 });
 
 test("provider errors propagate and record no usage", async () => {

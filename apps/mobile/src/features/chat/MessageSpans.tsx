@@ -13,7 +13,7 @@ import { withAlpha } from "@/ui/palette";
 import { variantStyle } from "@/ui/Text";
 import { openPage } from "../ai/parts";
 import { ownLinkHref } from "../links/app-links";
-import { useColors, useDirectory, useMyHandle } from "../shared/hooks";
+import { useColors } from "../shared/hooks";
 import { MONO } from "../shared/parts";
 import { ChannelRefText } from "./ChannelRefText";
 import { FileRefText } from "./FileRefText";
@@ -34,6 +34,7 @@ import {
 } from "./logic";
 import { useLayoutKey, useRowLook } from "./look";
 import { MessageRefText } from "./MessageRefText";
+import { useRowDirectory, useRowMyHandle } from "./row-data";
 
 /**
  * Inline marks of a message (bold, italic, `code`, links, a message's or a file's link as its pill, an internal id as
@@ -130,16 +131,17 @@ export function Spans({
  * An @mention in a text: the agent's chip in its tone, mine and everyone's in amber, a person's in ink; a handle nobody
  * here has stays as written. A piece of its own, so only a text with a mention reads the directory, the reader's handle
  * and the language: every paragraph, list item and table cell of a conversation is a `Spans`, and each paid for them.
+ * In a conversation the directory and the handle are the ones its rows share (`row-data.tsx`).
  */
 function MentionText({ text, everyone, ink }: { text: string; everyone: boolean; ink: string | undefined }) {
   const c = useColors();
-  const myHandle = useMyHandle();
+  const myHandle = useRowMyHandle();
   const { i18n } = useTranslation();
-  const { agents, memberByHandle } = useDirectory();
+  const { agentById, memberByHandle } = useRowDirectory();
   const { scheme } = useTheme();
   const handle = text.slice(1);
   const all = everyone && isEveryoneWord(handle);
-  const tint = mentionTint(handle, agents, scheme);
+  const tint = mentionTint(handle, [...agentById.values()], scheme);
   if (!all && !tint && !memberByHandle.has(handle.toLowerCase())) return <RNText>{text}</RNText>;
   return (
     <RNText
@@ -259,7 +261,7 @@ export function Table({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={styles.sideways}>
             {header.map((h, col) => (
               <View
                 // biome-ignore lint/suspicious/noArrayIndexKey: the columns of one table, in order
@@ -294,6 +296,7 @@ export function Table({
         <GestureScrollView
           ref={scroller}
           horizontal
+          style={styles.sideways}
           directionalLockEnabled
           nestedScrollEnabled
           alwaysBounceHorizontal={false}
@@ -341,6 +344,13 @@ export function Table({
 
 const styles = StyleSheet.create({
   table: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  /**
+   * A sideways scroller never grows downward. React Native's scroll view takes `flexGrow: 1`, so inside a message it
+   * grew to the height the row already had: the row then measured that plus the rest of the message, the scroller grew
+   * into it again, and so on with every layout. A long message with a table drew thousands of points of empty bubble
+   * under its words (on a phone, each layer over the words larger than the one under it by the words less the table).
+   */
+  sideways: { flexGrow: 0 },
   fade: { position: "absolute", top: 0, bottom: 0, width: 28 },
   fadeLeft: { left: 0 },
   fadeRight: { right: 0 },

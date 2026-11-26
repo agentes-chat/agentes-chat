@@ -7,11 +7,14 @@ import {
   useBrowserHandoffActions,
 } from "@agenteschat/client";
 import { cantShow, cantShowLine, liveSubLine } from "@agenteschat/client/lib/agent-computer";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { computerName, READY_FLASH_MS, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
+import { helpingDevices, withHelping } from "@agenteschat/client/lib/devices";
 import { clockAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { computerKind, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { useSeat } from "@agenteschat/client/lib/seat-context";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { Stack, useNavigation } from "expo-router";
@@ -24,11 +27,13 @@ import { useOrg } from "@/providers/org";
 import { type IconName, LineIcon, Text, useToast } from "@/ui";
 import { BrowserCard } from "../browser/BrowserCard";
 import { HeaderPill } from "../chat/HeaderPill";
+import { useDevices } from "../devices/queries";
 import { openSwitchComputer } from "../outages/OutageNotice";
 import { useMachineOutages } from "../outages/queries";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
+import { ownsIn } from "../shared/owner";
 import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { AgentScreen } from "./AgentScreen";
@@ -126,8 +131,13 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
   const g = agentGrammar(agent?.name ?? "", name);
   const machine = view.machine;
   const computer = computerName(t, org?.name ?? "", machine, isPersonal(org));
-  const manages = can(org, "manage_agents") || (Boolean(meId) && agent?.ownerUserId === meId);
+  // Who manages it (the server's `canManage`) or owns it (or holds the role that does, ADR 0085, addendum of
+  // 2026-11-21) moves it to another computer.
+  const manages = managesAgent(agent) || ownsIn(dir.memberById, meId, agent);
   const pickComputer = usePickComputer(agentId);
+  // Away, the computers that help take its new work (ADR 0233): said under the cover. Never the right hand's.
+  const devices = useDevices().data;
+  const helping = !agent || isRightHand(agent) ? [] : helpingDevices(devices, agent.ownerUserId, machine?.id ?? null);
   const person = (id: string) => dir.nameOf({ type: "person", id }) || t("channel.unknownPerson");
   // What leaving hands back: the agent's browser or screen in this person's hands.
   const mine = f?.handoff && controlledBy(f.handoff, f.userId) ? f.handoff : null;
@@ -226,7 +236,6 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
         <BrowserCard
           agentId={agentId}
           run={run}
-          busy={f.working}
           handoff={f.handoff && handoffScreen(f.handoff) === "browser" ? f.handoff : null}
           canTakeOver={!f.held && !pausedUntil}
           surface
@@ -238,12 +247,21 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
   } else if (stage === "offline" && machine) {
     const since = machine.lastSeenAt ? clockAt(i18n.language, machine.lastSeenAt) : null;
     const outage = outages.outages.find((o) => o.machineId === machine.id);
-    if (f.edition === "cloud") {
+    if (machine.moving) {
+      sub = t("machines.moving.short");
+      body = (
+        <Cover
+          art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="paused" size={96} />}
+          text={t("machines.moving.line")}
+        />
+      );
+    } else if (f.edition === "cloud") {
       sub = t("agentComputer.sub.notAnswering");
       body = (
         <Cover
           art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="offline" size={96} />}
           text={t("agentComputer.state.notAnsweringHelp")}
+          help={withHelping(t, undefined, helping)}
         />
       );
     } else {
@@ -255,7 +273,7 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
           <Cover
             art={<ComputerPortrait kind={computerKind(machine.os)} state="offline" size={96} />}
             text={t("agentComputer.state.offline", { computer })}
-            help={t("agentComputer.state.offlineHelpPlain", g)}
+            help={withHelping(t, t("agentComputer.state.offlineHelpPlain", g), helping)}
             action={
               offersSwitch(f, manages, Boolean(outage)) ? (
                 <DockText

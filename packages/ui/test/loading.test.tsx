@@ -12,7 +12,6 @@ import {
   SkeletonGroup,
   SkeletonList,
   SwapLabel,
-  TopProgress,
 } from "../src";
 
 afterEach(() => cleanup());
@@ -77,15 +76,6 @@ describe("Skeleton", () => {
     expect(
       body().getByRole("status", { name: "Carregando a lista" }).querySelectorAll(".ac-skeleton-row"),
     ).toHaveLength(3);
-  });
-
-  test("the top progress bar waits the same delay and goes away when done", async () => {
-    const { rerender } = render(<TopProgress active label="Atualizando" />);
-    expect(body().queryByRole("progressbar")).toBeNull();
-    await wait(SKELETON_DELAY_MS + 30);
-    expect(body().getByRole("progressbar", { name: "Atualizando" })).toBeTruthy();
-    rerender(<TopProgress active={false} label="Atualizando" />);
-    expect(body().queryByRole("progressbar")).toBeNull();
   });
 });
 
@@ -190,8 +180,14 @@ describe("reduced motion", () => {
     const start = css.indexOf("Loading: skeletons");
     expect(start).toBeGreaterThan(-1);
     const section = css.slice(start);
-    // Strip the allowed blocks; no `animation:` may remain outside them.
-    const outside = section.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g, "");
+    // Strip the allowed blocks; no `animation:` may remain outside them. Under reduced motion only a 120ms fade.
+    const calm = /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g;
+    for (const [block] of section.matchAll(calm))
+      for (const a of block.matchAll(/\banimation:\s*([^;]+);/g))
+        expect(a[1]?.trim()).toBe("ac-fade-in 120ms ease-out");
+    const outside = section
+      .replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g, "")
+      .replace(calm, "");
     expect(outside).not.toMatch(/\banimation:/);
   });
 });

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshControl } from "react-native";
 import { SkeletonList } from "@/ui";
 import { router } from "@/ui/navigation";
-import { useRowMenus } from "../categories/menus";
+import { useRowMenus } from "../channel-sectors/menus";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
@@ -87,7 +87,7 @@ function ConversationList() {
             facts={factsOf(r, agentStates.get(r.key))}
             divider={i > 0}
             live={i < LIVE_ROWS}
-            pinLabel={menus.rowActionsOf(r).find((a) => a.key === "pin")?.label ?? null}
+            pinLabel={menus.pinLabelOf(r)}
             onHold={menus.openRowMenu}
             holdLabel={holdLabel}
             holdActions={menus.rowActionsOf}

@@ -3,6 +3,7 @@ import { anchorsSql } from "./agent-work";
 import { replyExcerpt } from "./messages";
 import { requirePermission } from "./organizations";
 import { pendingIds } from "./recovery";
+import { replyThreadOf } from "./runs";
 
 const { agentRuns, channels, channelMembers, threads } = schema;
 
@@ -54,6 +55,7 @@ export async function listWorkingRuns(db: Database, userId: string, orgId: strin
     status: WorkingRun["status"];
     thread_root_id: string;
     trigger_message_id: string;
+    reply_in_thread: boolean | string;
     started_at: string | Date | null;
     created_at: string | Date;
     kind: "channel" | "dm";
@@ -69,9 +71,9 @@ export async function listWorkingRuns(db: Database, userId: string, orgId: strin
     anchor_message_id: string | null;
   }>(
     await db.execute(sql`with ${anchorsSql(orgId)}
-      select r.id, r.agent_id, a.channel_id, r.status, a.thread_root_id, a.trigger_message_id,
+      select r.id, r.agent_id, a.channel_id, r.status, a.thread_root_id, a.trigger_message_id, a.reply_in_thread,
         r.started_at, r.created_at, c.kind, c.name, t.title,
-        array_to_json(r.pending_message_ids) as pending, r.background,
+        array_to_json(r.pending_message_ids || r.after_message_ids) as pending, r.background,
         w.id as work_id, w.title as work_title, w.plan as work_plan, w.started_at as work_started,
         case when a.id <> r.id then an.for_agent end as for_agent,
         case when a.id <> r.id then a.reply_message_id end as anchor_message_id
@@ -97,11 +99,16 @@ export async function listWorkingRuns(db: Database, userId: string, orgId: strin
       channelKind: r.kind,
       channelName: r.kind === "dm" ? null : r.name,
       // Where it answers (`replyThreadOf`): asked in the main timeline, there.
-      threadId: r.thread_root_id === r.trigger_message_id ? null : r.thread_root_id,
+      threadId: replyThreadOf({
+        threadRootId: r.thread_root_id,
+        triggerMessageId: r.trigger_message_id,
+        replyInThread: r.reply_in_thread === true || r.reply_in_thread === "t",
+      }),
       status: r.status,
       startedAt: iso(r.started_at),
       createdAt: iso(r.created_at) as string,
       label: label || null,
+      // Unread, a separate request left for after the task (`after_message_ids`) too.
       pendingMessageIds: pendingIds(r.pending),
       background: r.background === true || r.background === "t",
       work: r.work_id

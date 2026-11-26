@@ -6,6 +6,7 @@ setupDom();
 import type { HostLook } from "@agenteschat/client";
 import { DOCS_SITE } from "@agenteschat/i18n/docs";
 import { accentPalette } from "@agenteschat/ui";
+import { LOGO_PLATES } from "@agenteschat/ui/org-logo";
 import { act, cleanup } from "@testing-library/react";
 import { brandTabTitle, createI18n, translateTabTitle } from "@/i18n";
 import { createFakeApi, ORG_ID, seedState } from "./fake-api";
@@ -13,7 +14,12 @@ import { renderApp, screen, settle } from "./render";
 
 /** ADR 0194: on a registered host, the pages before sign-in wear its look; elsewhere, nothing changes. */
 
-const NORTHWIND = { name: "Northwind Studio", accent: "#7c3aed", logoUrl: "/api/host-look/logo?v=abc.png" };
+const NORTHWIND = {
+  name: "Northwind Studio",
+  accent: "#7c3aed",
+  logoUrl: "/api/host-look/logo?v=abc.png",
+  poweredBy: true,
+};
 
 afterEach(() => {
   cleanup();
@@ -44,11 +50,32 @@ describe("the sign-in page", () => {
     expect(document.querySelector(".auth__place")).toBeNull();
   });
 
+  test("on a registered host whose logo has light ink: the lockup says so, for its plate", async () => {
+    await signInPage({ ...NORTHWIND, logoUrl: `${NORTHWIND.logoUrl}#ink=light` }, false);
+    expect(screen().getByRole("img", { name: "Northwind Studio" }).getAttribute("data-ink")).toBe("light");
+    cleanup();
+    await signInPage(NORTHWIND, false);
+    expect(screen().getByRole("img", { name: "Northwind Studio" }).hasAttribute("data-ink")).toBe(false);
+    // The plate, as a workspace's `.org-mark`: dark behind light ink on light, white behind dark ink on dark.
+    const css = await Bun.file(new URL("../src/components/auth.css", import.meta.url).pathname).text();
+    const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
+    expect(rule('.auth__host-logo[data-ink="light"]')).toContain(`background: ${LOGO_PLATES.lightInk};`);
+    expect(rule('[data-theme="dark"] .auth__host-logo')).toContain(`background: ${LOGO_PLATES.darkInk};`);
+    expect(rule('[data-theme="dark"] .auth__host-logo[data-ink="light"]')).toContain("background: none;");
+  });
+
   test("on a registered host with no logo: its name alone in the lockup's place", async () => {
     await signInPage({ ...NORTHWIND, logoUrl: null, accent: null }, false);
     expect(document.querySelector(".auth__host-name")?.textContent).toBe("Northwind Studio");
     expect(document.querySelector(".auth__host-logo")).toBeNull();
     expect(agentVar()).toBe("");
+  });
+
+  test("on a registered host whose operator turned the powered-by line off: its look without the line", async () => {
+    await signInPage({ ...NORTHWIND, poweredBy: false }, false);
+    expect(screen().getByRole("img", { name: "Northwind Studio" })).toBeTruthy();
+    expect(screen().queryByRole("link", { name: "Feito com agentes.chat" })).toBeNull();
+    expect(document.querySelector(".auth__powered")).toBeNull();
   });
 
   test("anywhere else: exactly as before", async () => {

@@ -6,7 +6,7 @@ import { useIsFocused } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Platform, Pressable, StyleSheet, View } from "react-native";
 import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LivePause } from "@/agent/live";
@@ -36,28 +36,42 @@ const ALONG_TICK_MS = 15_000;
 
 /**
  * One clock for the line and for whether there is one: the tabs' layout and the line read the same moment, so the
- * layout never holds a place for a line that isn't there yet. It ticks only while something listens.
+ * layout never holds a place for a line that isn't there yet. It ticks only while something listens and the app is in
+ * use; back in front it reads the time at once, as work may have grown long meanwhile.
  */
 const alongClock = (() => {
   let now = Date.now();
   let timer: ReturnType<typeof setInterval> | null = null;
+  let appSub: { remove(): void } | null = null;
   const listeners = new Set<() => void>();
+  const tick = () => {
+    now = Date.now();
+    for (const l of [...listeners]) l();
+  };
+  // `again`: coming back from the background, the time kept is old; on the first listener it is just read.
+  const follow = (again: boolean, app: string | null | undefined = AppState.currentState) => {
+    const run = listeners.size > 0 && app !== "background" && app !== "inactive";
+    if (run && timer === null) {
+      if (again) tick();
+      else now = Date.now();
+      timer = setInterval(tick, ALONG_TICK_MS);
+    } else if (!run && timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
   return {
     now: () => now,
     subscribe(listener: () => void) {
       listeners.add(listener);
-      if (timer === null) {
-        now = Date.now();
-        timer = setInterval(() => {
-          now = Date.now();
-          for (const l of [...listeners]) l();
-        }, ALONG_TICK_MS);
-      }
+      appSub ??= AppState.addEventListener("change", (state) => follow(true, state));
+      follow(false);
       return () => {
         listeners.delete(listener);
-        if (listeners.size === 0 && timer !== null) {
-          clearInterval(timer);
-          timer = null;
+        follow(false);
+        if (listeners.size === 0) {
+          appSub?.remove();
+          appSub = null;
         }
       };
     },

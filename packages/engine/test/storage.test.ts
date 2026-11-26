@@ -27,6 +27,7 @@ import {
   getArtifact,
   getMigration,
   getStorage,
+  instanceStoredBytes,
   isBlockedAddress,
   ORG_FILES_PURGE_JOB,
   purgeOrgFiles,
@@ -78,7 +79,7 @@ async function deleteForGood(orgId: string) {
     .where(eq(schema.organizations.id, orgId));
   expect(await purgeWorkspace({ db: f.db }, orgId)).toBe(true);
 }
-const doc = (title: string) => ({ title, content: { kind: "document" as const, markdown: `# ${title}` } });
+const doc = (title: string) => ({ title, content: { kind: "table" as const, columns: ["file"], rows: [[title]] } });
 
 describe("S3 client against the fake server", () => {
   test("put, get, list, delete and a presigned GET, path-style and virtual-hosted", async () => {
@@ -104,6 +105,29 @@ describe("S3 client against the fake server", () => {
     const error = await wrong.get("x").catch((e) => e);
     expect(error).toBeInstanceOf(StorageError);
     expect((error as StorageError).code).toBe("auth");
+  });
+
+  test("a range streams only its part; a link downloads under the name as is, as the type given; none when off", async () => {
+    f = await setup();
+    const settings = { ...bucket(), accessKeyId: "AKIATEST", secretAccessKey: SECRET };
+    const store = createS3BlobStore(settings, { fetch: f.s3.fetch });
+    await store.put("a/clip", new TextEncoder().encode("0123456789"), { contentType: "application/octet-stream" });
+    expect(await new Response(await store.stream?.("a/clip", { start: 2, end: 5 })).text()).toBe("2345");
+    const options = { expiresInSeconds: 60, filename: "relatório final.mp4", contentType: "video/mp4" };
+    const res = await f.s3.fetch((await store.signedUrl("a/clip", options)) ?? "", { method: "GET" });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("video/mp4");
+    expect(res.headers.get("content-disposition")).toBe(
+      `attachment; filename="relat_rio final.mp4"; filename*=UTF-8''relat%C3%B3rio%20final.mp4`,
+    );
+    const off = createS3BlobStore(settings, { fetch: f.s3.fetch, presign: false });
+    expect(await off.signedUrl("a/clip", options)).toBeNull();
+    // An http bucket's link can't load in a page served over https: its files go through the server.
+    const plain = createS3BlobStore({ ...settings, endpoint: "http://minio.example.com:9000" }, { fetch: f.s3.fetch });
+    expect(await plain.signedUrl("a/clip", options)).toBeNull();
+    // A store that answers a range with the whole object would play garbage: refused.
+    const whole = createS3BlobStore(settings, { fetch: async () => new Response("0123456789", { status: 200 }) });
+    await expect(whole.stream?.("a/clip", { start: 2, end: 5 })).rejects.toBeInstanceOf(StorageError);
   });
 });
 
@@ -159,7 +183,9 @@ describe("org storage", () => {
     // Downloads of bucket files are signed by the bucket (and the signature holds).
     const link = await artifactDownload(f.artifactDeps, f.owner.id, f.org.id, after.id);
     expect(link.url.startsWith(`https://s3.example.com/acme-files/agentes/artifacts/${after.id}/v1-`)).toBe(true);
-    expect(await (await f.s3.fetch(link.url, { method: "GET" })).text()).toBe("# Depois");
+    expect(await (await f.s3.fetch(link.url, { method: "GET" })).text()).toBe(
+      JSON.stringify({ columns: ["file"], rows: [["Depois"]] }),
+    );
 
     // Back to platform storage: new files go there; bucket files still read.
     await saveStorage(f.storage, f.owner.id, f.org.id, { kind: "agentes" });
@@ -628,6 +654,70 @@ describe("what a workspace's files take", () => {
     await saveStorage(f.storage, f.owner.id, f.org.id, { kind: "agentes" });
     await upload(deps, f.org.id, "de-volta.pdf", 100);
     expect(await storedBytes(f.db, f.org.id)).toEqual({ platformBytes: 100, ownBucketBytes: 8250 });
+  });
+
+  test("the whole instance: each workspace's bytes on this server summed, one with its own bucket left out", async () => {
+    f = await setup();
+    const deps = f.artifactDeps;
+    expect(await instanceStoredBytes(f.db)).toEqual({ storageBytes: 0, workspaces: 0, ownStorageWorkspaces: 0 });
+
+    // One workspace with a file of every kind counted, each beside one that is not.
+    const report = await upload(deps, f.org.id, "relatorio.pdf", 3000);
+    await addFileVersion(deps, person(f.owner.id), f.org.id, report.id, { name: "relatorio.pdf", bytes: bytes(5000) });
+    const old = await upload(deps, f.org.id, "antigo.zip", 7000);
+    await deleteArtifact(deps, f.owner.id, f.org.id, old.id);
+    await skill(deps, f.org.id, [["modelo.md", 400]]);
+    const { skillFiles, voiceClips, artifacts, liveDocs, liveAssets } = schema;
+    const [stored] = await f.db.select().from(skillFiles).where(eq(skillFiles.orgId, f.org.id));
+    if (!stored) throw new Error("no skill file");
+    // Listed only: nothing of it was stored.
+    const listed = { ...stored, id: undefined, path: "video.mp4", status: "ignored", size: 90_000, blobKey: null };
+    await f.db.insert(skillFiles).values(listed);
+    const clip = { orgId: f.org.id, channelId: f.general.id, contentType: "audio/mp4", durationMs: 1000, peaks: [] };
+    await f.db.insert(voiceClips).values([
+      { ...clip, clientId: "kept", blobKey: "voice/kept", size: 600 },
+      { ...clip, clientId: "swept", blobKey: "voice/swept", size: 800, audioDeletedAt: new Date() },
+    ]);
+    const by = { createdByType: "person", createdById: f.owner.id, updatedByType: "person", updatedById: f.owner.id };
+    const [board, trashed] = await f.db
+      .insert(artifacts)
+      .values([
+        { orgId: f.org.id, kind: "canvas", title: "Quadro", ...by },
+        { orgId: f.org.id, kind: "canvas", title: "Rascunho", ...by, deletedAt: new Date() },
+      ])
+      .returning({ id: artifacts.id });
+    if (!board || !trashed) throw new Error("no canvas");
+    await f.db.insert(liveDocs).values([
+      { artifactId: board.id, orgId: f.org.id, kind: "canvas", state: "", stateBytes: 120 },
+      { artifactId: trashed.id, orgId: f.org.id, kind: "canvas", state: "", stateBytes: 150 },
+    ]);
+    const picture = { orgId: f.org.id, contentType: "image/png", sha256: "", source: "upload" };
+    await f.db.insert(liveAssets).values([
+      { ...picture, artifactId: board.id, blobKey: "live/kept", size: 70 },
+      { ...picture, artifactId: trashed.id, blobKey: "live/trashed", size: 90 },
+    ]);
+
+    const { organization: other } = await createOrganization(f.db, f.owner.id, { name: "Outra" });
+    await upload(deps, other.id, "deles.pdf", 11_000);
+    await createOrganization(f.db, f.owner.id, { name: "Vazia" });
+    // A file from before its bucket stays on this server until it is copied.
+    const { organization: own } = await createOrganization(f.db, f.owner.id, { name: "Com bucket" });
+    await upload(deps, own.id, "antes.pdf", 2000);
+    await testStorage(f.storage, f.owner.id, own.id, bucket());
+    await saveStorage(f.storage, f.owner.id, own.id, { kind: "s3", s3: bucket() });
+    await upload(deps, own.id, "depois.pdf", 6000);
+
+    const each = await Promise.all([f.org.id, other.id, own.id].map((id) => storedBytes(f.db, id)));
+    expect(each).toEqual([
+      { platformBytes: 3000 + 5000 + 400 + 600 + 120 + 70, ownBucketBytes: 0 },
+      { platformBytes: 11_000, ownBucketBytes: 0 },
+      { platformBytes: 2000, ownBucketBytes: 6000 },
+    ]);
+    expect(await instanceStoredBytes(f.db)).toEqual({
+      storageBytes: (each[0]?.platformBytes ?? 0) + (each[1]?.platformBytes ?? 0),
+      workspaces: 2,
+      ownStorageWorkspaces: 1,
+    });
   });
 
   test("a small workspace next to a big one: summed through its own rows, never the whole table", async () => {

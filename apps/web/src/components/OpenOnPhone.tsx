@@ -1,13 +1,13 @@
 import { ApiError, keys } from "@agenteschat/client";
 import { formatTimeLeft } from "@agenteschat/client/lib/actions";
 import { connectLink, isLoopback, isTailnet } from "@agenteschat/client/lib/server";
-import { Alert, Button, Chip, Dialog, DialogBody, PixelSpinner, QrCode } from "@agenteschat/ui";
+import { Alert, Button, Chip, Dialog, DialogBody, PixelSpinner, ProviderLogo, QrCode } from "@agenteschat/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useNow } from "@/components/missions/MissionBits";
-import { OpenPrefsButton } from "@/components/ThisMac";
-import { inDesktopApp } from "@/lib/desktop";
+import { LocalOnlyNote } from "@/components/ThisMac";
+import { usePhoneStores } from "@/lib/phone-apps";
 
 /** A new code this long before the one on screen expires, so a scan never meets an expired one. */
 const RENEW_BEFORE_MS = 20_000;
@@ -40,6 +40,7 @@ export function OpenOnPhoneDialog({ open, onClose }: { open: boolean; onClose: (
 function PhoneCode() {
   const { t } = useTranslation();
   const api = useApi();
+  const stores = usePhoneStores();
   const code = useQuery({
     queryKey: keys.phoneSignIn,
     // When it runs out by this computer's clock, counted from its arrival: the server's clock may differ.
@@ -68,17 +69,11 @@ function PhoneCode() {
     (code.data !== undefined && isLoopback(code.data.server));
   if (localOnly)
     return (
-      <div className="stack-4" style={{ gap: 12 }}>
-        <Alert>{t("openOnPhone.localOnly")}</Alert>
-        {inDesktopApp() ? (
-          <div className="ac-actline">
-            <span className="small muted">{t("openOnPhone.localOnlyHere")}</span>
-            <OpenPrefsButton tab="servers">{t("machines.thisMac.openServers")}</OpenPrefsButton>
-          </div>
-        ) : (
-          <span className="small muted">{t("openOnPhone.localOnlyHow")}</span>
-        )}
-      </div>
+      <LocalOnlyNote
+        text={t("openOnPhone.localOnly")}
+        here={t("openOnPhone.localOnlyHere")}
+        how={t("openOnPhone.localOnlyHow")}
+      />
     );
 
   if (code.isError)
@@ -107,14 +102,22 @@ function PhoneCode() {
       )}
       <ol className="machine-pair__steps small">
         <li>
-          {/* The phone app is in neither store yet: each store disabled, with "Em breve". */}
+          {/* Where this server offers no iPhone app yet, the App Store stays there, disabled, with "Soon". */}
           <span className="phone-code__step">
             <span>{t("openOnPhone.stepApp")}</span>
             <span className="row">
-              {(["appStore", "googlePlay"] as const).map((store) => (
-                <Button key={store} size="sm" disabled>
-                  {t(`openOnPhone.${store}`)}
+              {!stores.some((s) => s.mark === "apple") && (
+                <Button size="sm" disabled>
+                  {t("openOnPhone.appStore")}
                   <Chip icon="lock">{t("common.soon")}</Chip>
+                </Button>
+              )}
+              {stores.map((s) => (
+                <Button key={s.id} asChild size="sm">
+                  <a href={s.href} target="_blank" rel="noopener noreferrer">
+                    <ProviderLogo id={s.mark} size="xs" />
+                    {t(`appsDownload.${s.id}`)}
+                  </a>
                 </Button>
               ))}
             </span>

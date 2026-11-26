@@ -95,8 +95,6 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // The computer step's plan offer: only where the workspace gets its own computer (`setupView`, as
     // `computerSetup.`) and waits for its first plan (ADR 0079).
     "onboarding.computer.payment.",
-    // The wall's line on what the plan brings: only on a billing hold, which only the Cloud has (`planHoldOf`).
-    "noAi.kept.plan",
   ],
   selfhost: [
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
@@ -116,6 +114,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // The way out for the right hand's plan on a computer that is away: Cloud's own computer is always on.
     "rightHand.unusable.connect",
     "aiAccounts.connect.noComputer",
+    // A connector of ours whose developer app this server lacks: the listing marks it off the Cloud only (`needsApp`).
+    "connectors.needsApp",
     "brain.reasons.no_computer",
     "browser.inCard.noComputer",
     "browser.live.noComputer",
@@ -128,6 +128,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "feedback.goesServer",
     "feedback.offer.goesServer",
     "feedback.offer.sentServer",
+    // Only a server that set PROBLEM_REPORT_URL=off, which the Cloud never does.
+    "problemReport.off",
     "machines.download.title",
     "machines.host.",
     "members.requests.copyText",
@@ -144,6 +146,10 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // A desktop app's or terminal install's server at its own computer's address (`phone.local_only`).
     "openOnPhone.localOnly",
     "openOnPhone.stepTailscale",
+    // The same server where people invite (`auth-config.localOnly`).
+    "invites.localOnly",
+    "invites.localOnlyHow",
+    "invites.localOnlyHere",
     "outage.dialog.none",
     "settings.platformAvailable",
     "settings.telemetry.",
@@ -172,6 +178,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "voice.settings.own",
     "voice.settings.sealed",
     "voice.settings.invalid",
+    // No speech engine yet: Settings › Voice, a tab only a self-hosted server shows.
+    "voice.settings.noEngineAsk",
+    "voice.settings.noEngineHere",
     // Deleting: computers people connected, and the person who set up the server, only a self-hosted server has.
     "deleteOrg.goes.computers",
     "deleteAccount.computers_one",
@@ -193,6 +202,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // the admins' line about it only where `ownerCreates` (false on agentes.chat, ADR 0156).
     "githubApp.server.",
     "githubApp.ownerHint",
+    // The same app as a line of Settings › Connectors: listed only where `setup` is there (its owner, off agentes.chat).
+    "connectors.store.appMissing",
+    "connectors.store.appLine",
   ],
   email: [
     // Said once the link to a new address went out, which only a server that sends e-mail does.
@@ -213,6 +225,14 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "errors.reauth.code",
     // An address held for an account that just left it (`changeAccountEmail`): only a server that sends e-mail holds it.
     "auth.flow.emailHeld",
+    // An address never confirmed holds anything back only where the server sends e-mail (`emailConfirmation`).
+    "auth.confirm.",
+    "errors.org.createUnconfirmed",
+    // A link to choose the PIN is emailed only where the server sends email (ADR 0226).
+    "surface.page.emailed",
+    "surface.page.emailMe",
+    "surface.page.setFirstLeadEmail",
+    "errors.surface.emailUnverified",
   ],
   apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
@@ -295,6 +315,9 @@ export const ANYWHERE: readonly string[] = [
   "shell.yourServer",
   // "Onde fica o seu workspace?": the Cloud and one's own server compared side by side, each named, whichever this is.
   "hosting.",
+  // The billing wall's ⓘ on what the plan brings, shown only on a hold: a computer connected here against one's own
+  // server, which is free, each named.
+  "noAi.kept.plan",
   // People connect their own computers and phones in every setup, the Cloud included.
   "devices.",
   "mobile.devices.",

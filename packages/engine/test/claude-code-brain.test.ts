@@ -4,11 +4,13 @@ import {
   ASKS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
+  BRAIN_WARM_PROTOCOL,
   brainTopic,
   CONTEXT_LIMIT_PROTOCOL,
   CONVERSATION_PROTOCOL,
   createMemoryPubSub,
   MACHINE_PROTOCOL_VERSION,
+  type MachineReplies,
   type MachineRequest,
   type PubSub,
   type ServerFrame,
@@ -163,6 +165,8 @@ test("a turn goes to the agent's computer as brain.turn and streams its events b
     prompt: "hi",
     keepAlive: true,
     personalMcp: false,
+    // Each answer it finishes before it goes on is its own message (ADR 0112).
+    answers: "each",
   });
   const sent = calls[0]?.request as { mcp?: { token?: string } } | undefined;
   expect(sent?.mcp?.token?.length ?? 0).toBeGreaterThan(20);
@@ -212,6 +216,35 @@ test("before a chat turn: the agent's checkouts set where it starts and add # Yo
     }).run(turn(), io()),
   );
   expect(calls[2]?.request).toMatchObject({ cwd: "", system: "You are dev." });
+});
+
+test("the checkouts' update is the turn's phase: told as it starts and as it ends, before the turn goes out", async () => {
+  const pubsub = createMemoryPubSub();
+  const { hub, calls } = fakeHub(pubsub);
+  const told: { phase: string | null; sent: number }[] = [];
+  const brain = createClaudeCodeBrain({
+    hub,
+    pubsub,
+    agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+    finalGraceMs: 20,
+    prepare: async () => ({ cwd: "repos/acme/app", prompt: "", start: "" }),
+  });
+  await collect(brain.run(turn(), { ...io(), phase: (phase) => told.push({ phase, sent: calls.length }) }));
+  expect(told).toEqual([
+    { phase: "code", sent: 0 },
+    { phase: null, sent: 0 },
+  ]);
+  // Nothing to update (a turn of the right hand, or no checkouts set up): no phase.
+  told.length = 0;
+  await collect(
+    createClaudeCodeBrain({
+      hub,
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      finalGraceMs: 20,
+    }).run(turn(), { ...io(), phase: (phase) => told.push({ phase, sent: calls.length }) }),
+  );
+  expect(told).toEqual([]);
 });
 
 test("protocol 40: what holds for the conversation, and # Your code, go apart from the system text; an older runner gets one text", async () => {
@@ -708,4 +741,49 @@ test("plan usage is stored like API usage: uncached input apart from cache reads
     costNanoUsd: 0,
   });
   expect(rows.find((r) => r.id === old)).toMatchObject({ inputTokens: 5_000, cacheReadTokens: 0 });
+});
+
+test("brain.warm: the turn's launch without its words, sent only to a runner that knows it", async () => {
+  const pubsub = createMemoryPubSub();
+  const permissions = { mode: "work" as const, branchPrefix: "agentes/dev/" };
+  const warmWith = async (over: Partial<MachineStatus>, keepAlive = true) => {
+    const { hub, calls } = fakeHub(pubsub, { status: status({ protocol: BRAIN_WARM_PROTOCOL, ...over }) });
+    const brain = createClaudeCodeBrain({
+      hub,
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      permissions: async () => permissions,
+      keepAlive,
+    });
+    await brain.warm?.(turn({ effort: "high", contextTokens: 200_000 }));
+    return calls;
+  };
+  const [call] = await warmWith({});
+  expect(call?.request).toEqual({
+    op: "brain.warm",
+    runId: RUN,
+    kind: "claude_code",
+    session: { id: SESSION, resume: false },
+    cwd: "",
+    model: "opus",
+    personalMcp: false,
+    permissions,
+    effort: "high",
+    contextTokens: 200_000,
+    agent: { id: "agent-1", handle: "dev" },
+  });
+  expect(await warmWith({ protocol: BRAIN_WARM_PROTOCOL - 1 })).toEqual([]);
+  expect(await warmWith({ online: false })).toEqual([]);
+  // A background run keeps no process: nothing to warm.
+  expect(await warmWith({}, false)).toEqual([]);
+  // What the runner answered: the session's CLI is open now (its turn starts no process), or not.
+  const answering = (reply: MachineReplies["brain.warm"]) =>
+    createClaudeCodeBrain({
+      hub: { status: async () => status({ protocol: BRAIN_WARM_PROTOCOL }), call: async () => reply as never },
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      permissions: async () => permissions,
+    }).warm?.(turn());
+  expect(await answering({ open: true, started: false })).toBe(true);
+  expect(await answering({ open: false, started: false })).toBe(false);
 });

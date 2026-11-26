@@ -1,16 +1,19 @@
 import { createHash } from "node:crypto";
-import type { BlobStore } from "@agenteschat/adapters";
+import type { BlobStore, PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, type Executor, eq, inArray, isNull, like, schema, sql } from "@agenteschat/db";
+import { releaseUnasked } from "../approvals";
 import { recordAudit } from "../audit";
 import { caches } from "../cache";
 import { type ConnectorEventId, connectorEventsOf } from "../connector-triggers";
 import { randomToken, sealSecret, sha256 } from "../crypto";
 import { ConflictError, isUniqueViolation, NotFoundError, ValidationError } from "../errors";
+import { cutText, pgSafeText, valueAtPath } from "../format";
 import type { Judge } from "../judge";
 import { oneLine } from "../mail/text";
 import { assertPublicHttpsUrl } from "../net-guard";
 import { can, requirePermission } from "../organizations";
 import { isAgentesCloud } from "../telemetry";
+import { neutralizeUntrusted } from "../untrusted";
 import {
   classifyByRules,
   classifyTools,
@@ -46,6 +49,7 @@ import {
 import type { McpCallResult, McpConnect, McpSession, McpTool } from "./mcp";
 import {
   authServerMetadata,
+  discoveryFailed,
   ensureOAuthClient,
   type McpOAuthDeps,
   oauthScope,
@@ -53,6 +57,16 @@ import {
   serverKey,
 } from "./oauth-mcp";
 import { oauthReturnTo } from "./oauth-return";
+import {
+  auditLabel,
+  connectionFor,
+  connectionsOf,
+  othersLabel,
+  othersPersonal,
+  personalAgents,
+  requireConnect,
+  seenBy,
+} from "./personal";
 import { seedToolPins } from "./pins";
 import {
   composioToolkitOf,
@@ -197,8 +211,23 @@ export interface CustomServerView {
   tools: CustomToolView[];
   /** What routines can wait on from it (ADR 0130): MillionSend's received email. */
   events: ConnectorEventId[];
+  /**
+   * What the server said in `initialize` on how to use it, as agents read it (`serverInstructionsPrompt`): neutralised
+   * and cut at `maxChars` (`cut`: it said more). Null when it said nothing, and for a reader who doesn't manage
+   * connectors.
+   */
+  instructions: { text: string; cut: boolean; maxChars: number } | null;
+  /** Agents granted its tools get `instructions`: on unless who may change the connection turned it off. */
+  useInstructions: boolean;
   reviewedAt: string | null;
   createdAt: string;
+  /**
+   * A personal connection's person (ADR 0099 addendum); null: the team's. Someone else's comes with its name, service
+   * and person only: no address, account, headers or tools.
+   */
+  ownerUserId: string | null;
+  /** A personal connection's agents (a grant of their own on it), in the list only. */
+  agentIds?: string[];
 }
 
 export type CustomConnectStart =
@@ -216,6 +245,8 @@ export interface CustomDeps extends McpOAuthDeps {
   /** Where servers' icons are kept (the platform store); none: no icons. */
   blobs?: BlobStore;
   log?: { warn(message: string, data?: Record<string, unknown>): void };
+  /** Tells the apps when a classification frees requests still waiting (`releaseUnasked`). */
+  pubsub?: PubSub;
 }
 
 const aadFor = (orgId: string, id: string) => `connector-connection|${orgId}|${id}`;
@@ -263,8 +294,66 @@ function toolView(t: ToolRow, prefix: string | null): CustomToolView {
   };
 }
 
-/** `whole`: the reader manages connectors, so sees the address as it was typed and the names of its headers. */
-function view(c: ConnectorConnection, tools: ToolRow[], whole = true): CustomServerView {
+/** The most of one server's instructions a run reads; past it the text is cut, with a note saying how much. */
+export const SERVER_INSTRUCTIONS_MAX_CHARS = 4000;
+/** The most of a server's instructions kept: enough to say how much a run leaves out, never a whole book. */
+const INSTRUCTIONS_KEPT_CHARS = 65_536;
+
+/** What a session's server said in `initialize` on how to use it, trimmed and bounded; null when it said nothing. */
+export const instructionsOf = (session: Pick<McpSession, "instructions">): string | null =>
+  cutText(pgSafeText(session.instructions?.() ?? "").trim(), INSTRUCTIONS_KEPT_CHARS) || null;
+
+/**
+ * Keeps what a listing found in a server's `instructions` when it changed, so its screen shows what agents read. The
+ * row's `updated_at` stays: it keys the tool source's listing, which already holds the new text.
+ */
+export async function keepInstructions(
+  db: Database,
+  c: Pick<ConnectorConnection, "id" | "orgId" | "instructions">,
+  said: string | null,
+) {
+  if (c.instructions === said) return;
+  await db
+    .update(connectorConnections)
+    .set({ instructions: said })
+    .where(and(eq(connectorConnections.id, c.id), eq(connectorConnections.orgId, c.orgId)));
+  caches.connections.delete(`${c.orgId}:active`);
+}
+
+/** Kept instructions as a run's prompt holds them: neutralised, then cut. */
+function instructionsShown(said: string | null): CustomServerView["instructions"] {
+  if (!said) return null;
+  const clean = neutralizeUntrusted(said);
+  const max = SERVER_INSTRUCTIONS_MAX_CHARS;
+  return { text: cutText(clean, max), cut: clean.length > max, maxChars: max };
+}
+
+/**
+ * `whole`: the reader manages connectors (or it is their own), so sees the address as it was typed and the names of
+ * its headers. `actorId`: someone else's personal connection shows its name, service and person only.
+ */
+function view(c: ConnectorConnection, tools: ToolRow[], whole = true, actorId?: string): CustomServerView {
+  if (actorId && othersPersonal(c, actorId)) {
+    return {
+      id: c.id,
+      serverUrl: "",
+      label: othersLabel(c.label, c.accountLabel),
+      accountLabel: null,
+      authType: c.authType === "oauth" ? "oauth" : "api_key",
+      headerNames: [],
+      iconUrl: c.icon,
+      ...(composioToolkitOf(c.serverUrl) ? { via: "composio" as const } : {}),
+      status: c.status === "needs_reconnect" ? "needs_reconnect" : "active",
+      toolsError: null,
+      tools: [],
+      events: [],
+      instructions: null,
+      useInstructions: c.useInstructions,
+      reviewedAt: null,
+      createdAt: c.createdAt.toISOString(),
+      ownerUserId: c.ownerUserId,
+    };
+  }
   const mine = tools.filter((t) => t.connectionId === c.id);
   const prefix = sharedPrefix(mine.map((t) => t.name));
   return {
@@ -280,8 +369,11 @@ function view(c: ConnectorConnection, tools: ToolRow[], whole = true): CustomSer
     toolsError: c.status === "needs_reconnect" ? null : c.lastError,
     tools: mine.map((t) => toolView(t, prefix)),
     events: connectorEventsOf(c.serverUrl),
+    instructions: whole ? instructionsShown(c.instructions) : null,
+    useInstructions: c.useInstructions,
     reviewedAt: c.reviewedAt ? c.reviewedAt.toISOString() : null,
     createdAt: c.createdAt.toISOString(),
+    ownerUserId: c.ownerUserId,
   };
 }
 
@@ -301,8 +393,18 @@ async function loadCustom(db: Database, orgId: string, id: string) {
   return c;
 }
 
-export async function listCustomServers(db: Database, actorId: string, orgId: string): Promise<CustomServerView[]> {
+/**
+ * The team's servers and the actor's own personal ones; with `others`, for who manages connectors, also everyone
+ * else's personal ones, as `view` shows them (name, service and person only).
+ */
+export async function listCustomServers(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  options: { others?: boolean } = {},
+): Promise<CustomServerView[]> {
   const whole = can(await requirePermission(db, actorId, orgId, "read"), "manage_connectors");
+  const others = whole && options.others === true;
   const rows = await db
     .select()
     .from(connectorConnections)
@@ -311,14 +413,19 @@ export async function listCustomServers(db: Database, actorId: string, orgId: st
         eq(connectorConnections.orgId, orgId),
         like(connectorConnections.connector, `${CUSTOM_PREFIX}%`),
         isNull(connectorConnections.revokedAt),
+        others ? undefined : seenBy(actorId),
       ),
     )
     .orderBy(asc(connectorConnections.createdAt));
   const tools = await toolRows(
     db,
-    rows.map((r) => r.id),
+    rows.filter((r) => !othersPersonal(r, actorId)).map((r) => r.id),
   );
-  return rows.map((r) => view(r, tools, whole));
+  const agents = await personalAgents(db, orgId, rows);
+  return rows.map((r) => ({
+    ...view(r, tools, whole || r.ownerUserId === actorId, actorId),
+    ...(r.ownerUserId ? { agentIds: agents.get(r.id) ?? [] } : {}),
+  }));
 }
 
 type AccountSpec = NonNullable<McpPreset["account"]>;
@@ -326,11 +433,6 @@ export interface ProviderAccount {
   id: string;
   name: string | null;
 }
-
-const at = (value: unknown, path: string) =>
-  path
-    .split(".")
-    .reduce<unknown>((v, k) => (v && typeof v === "object" ? (v as Record<string, unknown>)[k] : undefined), value);
 
 /**
  * What a preset's account tool answers (JSON), as one account: the ids of all it lists, sorted and joined, and their
@@ -345,15 +447,15 @@ export function accountFrom(spec: AccountSpec, result: McpCallResult): ProviderA
   } catch {
     return null;
   }
-  const list = spec.list ? at(data, spec.list) : [at(data, "response_data") ?? data];
+  const list = spec.list ? valueAtPath(data, spec.list) : [valueAtPath(data, "response_data") ?? data];
   if (!Array.isArray(list) || list.length === 0) return null;
   const accounts = new Map<string, string>();
   for (const entry of list) {
-    const parts = spec.id.map((path) => at(entry, path));
+    const parts = spec.id.map((path) => valueAtPath(entry, path));
     if (typeof parts[0] !== "string" || !parts[0].trim() || parts.some((v) => v === undefined || v === null)) {
       return null;
     }
-    const name = at(entry, spec.name);
+    const name = valueAtPath(entry, spec.name);
     accounts.set(parts.map((v) => String(v).trim()).join(":"), typeof name === "string" ? name.trim() : "");
   }
   const ids = [...accounts.keys()].sort();
@@ -391,10 +493,19 @@ async function providerAccount(
 const accountName = (service: string, account: string) =>
   `${service} (${oneLine(account, Math.max(8, 77 - service.length))})`;
 
-/** "Reconectar": the live connection of this workspace it names, at the same address (400 otherwise). */
-export async function reconnectTarget(db: Database, orgId: string, connectionId: string, serverUrl: string) {
+/**
+ * "Reconectar": the live connection of this workspace it names, at the same address (400 otherwise), and of the same
+ * owner (`owner`: the person reconnecting their own; null: the team's), so nobody signs in over another's account.
+ */
+export async function reconnectTarget(
+  db: Database,
+  orgId: string,
+  connectionId: string,
+  serverUrl: string,
+  owner: string | null = null,
+) {
   const c = await loadCustom(db, orgId, connectionId).catch(() => null);
-  if (!c) throw new NotFoundError("This account is no longer connected", "connector.gone");
+  if (!c || c.ownerUserId !== owner) throw new NotFoundError("This account is no longer connected", "connector.gone");
   if (serverKey(c.serverUrl) !== serverKey(serverUrl)) {
     throw new ValidationError("Reconnect the account at its own address", "connector.other_server");
   }
@@ -427,12 +538,20 @@ export async function storeCustomConnection(
     connectionId?: string | null;
     /** Through Composio: its connected account, and the name Composio keeps for it when the entry can't ask. */
     composio?: { accountId: string; name: string | null };
+    /** A personal connection's person; null or absent: the team's. Accounts are told apart within each owner's. */
+    owner?: string | null;
   },
 ): Promise<{ connection: ConnectorConnection; outcome: ConnectOutcome }> {
+  const owner = input.owner ?? null;
   const wrapper = deps.keyWrappers[0];
   if (!wrapper) throw new Error("no key wrapper");
   const preset = presetForServer(input.serverUrl);
-  const reached = { serverUrl: input.serverUrl, orgId: input.orgId, composioAccountId: input.composio?.accountId };
+  const reached = {
+    serverUrl: input.serverUrl,
+    orgId: input.orgId,
+    composioAccountId: input.composio?.accountId,
+    ownerUserId: owner,
+  };
   const account =
     input.secret || input.composio
       ? await providerAccount(
@@ -445,14 +564,14 @@ export async function storeCustomConnection(
   // Composio's name for the account when the entry's account action didn't say: a name, never an identity.
   const named = account?.name ?? input.composio?.name ?? null;
   const key = serverKey(input.serverUrl);
-  const same = await liveAccounts(deps.db, input.orgId, key);
+  const same = await liveAccounts(deps.db, input.orgId, key, owner);
   if (account) {
     // Accounts connected before their provider was asked: asked now, so the same account is recognized.
     for (const c of same.filter((c) => !c.accountId)) c.accountId = (await fillAccount(deps, c))?.id ?? null;
   }
   let target: ConnectorConnection | undefined;
   if (input.connectionId) {
-    target = await reconnectTarget(deps.db, input.orgId, input.connectionId, input.serverUrl);
+    target = await reconnectTarget(deps.db, input.orgId, input.connectionId, input.serverUrl, owner);
     // Its grants were given for the account it is: a sign-in that can't say which one it reached doesn't replace it.
     if (preset?.account && target.accountId && !account) {
       throw new ConflictError("Couldn't check which account you signed in to", "connector.account_unknown");
@@ -508,6 +627,7 @@ export async function storeCustomConnection(
         label: row.label,
         account: row.accountLabel,
         sameAccount: outcome === "same_account",
+        ...(row.ownerUserId ? { personal: true } : {}),
       },
     });
     return { connection: row, outcome };
@@ -519,7 +639,7 @@ export async function storeCustomConnection(
         // Two connects of one server at once: read under the lock, so only one of them is its first account, and
         // one that reached the same account as the other is that connection, not a second one.
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`connector-accounts:${input.orgId}:${key}`}))`);
-        const live = await liveAccounts(tx, input.orgId, key);
+        const live = await liveAccounts(tx, input.orgId, key, owner);
         const twin = account
           ? live.find((c) => c.accountId === account.id)
           : input.authType === "none"
@@ -529,7 +649,7 @@ export async function storeCustomConnection(
         // The service's name, not the account's: `stripe`, then `stripe_2`; a later account goes by the server's
         // oldest one, whatever it is called now.
         const base = live[0] ? prefixService(toolPrefixOfConnection(live[0])) : toolPrefixOf(service);
-        const label = await freeLabel(tx, input.orgId, named ? accountName(service, named) : service);
+        const label = await freeLabel(tx, input.orgId, named ? accountName(service, named) : service, owner);
         const toolPrefix = await freeToolPrefix(tx, input.orgId, base, deps.oauthApps);
         const [row] = await tx
           .insert(connectorConnections)
@@ -542,6 +662,7 @@ export async function storeCustomConnection(
             serverUrl: input.serverUrl,
             ...credentials,
             createdByUserId: input.actorId,
+            ownerUserId: owner,
           })
           .returning();
         if (!row) throw new Error("connection insert returned nothing");
@@ -555,7 +676,8 @@ export async function storeCustomConnection(
             authType: input.authType,
             label,
             account: named,
-            everyAgent: true,
+            everyAgent: !owner,
+            ...(owner ? { personal: true } : {}),
           },
         });
         await grantToEveryAgent(tx, input.orgId, input.actorId, row);
@@ -578,8 +700,8 @@ export async function storeCustomConnection(
   }
 }
 
-/** A workspace's live accounts of one server (`serverKey`), oldest first. */
-async function liveAccounts(db: Executor, orgId: string, key: string) {
+/** One owner's live accounts of one server (`serverKey`) in a workspace, oldest first: the team's, or a person's. */
+async function liveAccounts(db: Executor, orgId: string, key: string, owner: string | null) {
   const rows = await db
     .select()
     .from(connectorConnections)
@@ -588,6 +710,7 @@ async function liveAccounts(db: Executor, orgId: string, key: string) {
         eq(connectorConnections.orgId, orgId),
         like(connectorConnections.connector, `${CUSTOM_PREFIX}%`),
         isNull(connectorConnections.revokedAt),
+        connectionsOf(owner),
       ),
     )
     .orderBy(asc(connectorConnections.createdAt));
@@ -640,6 +763,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
   const preset = presetForServer(c.serverUrl);
   let listed: McpTool[];
   let info: McpServerInfo | null = null;
+  let instructions: string | null = null;
   let account: ProviderAccount | null = null;
   try {
     if (!deps.connect) throw new Error("no MCP connect configured");
@@ -647,6 +771,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     try {
       listed = await session.listTools();
       info = session.serverInfo?.() ?? null;
+      instructions = instructionsOf(session);
       if (listed.some((t) => t.name === preset?.account?.tool)) {
         account = await askAccount(session, preset?.account).catch(() => null);
       }
@@ -749,9 +874,14 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
   }
   await deps.db
     .update(connectorConnections)
-    .set({ updatedAt: new Date(), ...(c.status === "needs_reconnect" ? {} : { lastError: null }) })
+    .set({
+      updatedAt: new Date(),
+      instructions,
+      ...(c.status === "needs_reconnect" ? {} : { lastError: null }),
+    })
     .where(eq(connectorConnections.id, c.id));
   caches.connections.delete(`${c.orgId}:active`);
+  caches.connections.delete(toolsKey(c));
   await refreshServerIcon(deps, c, info).catch(() => {});
 }
 
@@ -795,20 +925,26 @@ export async function connectCustomServer(
     returnTo?: string;
     connectionId?: string;
     headers?: RequestHeader[];
+    /** The actor's own connection, which any member adds, instead of the team's (who manages connectors). */
+    personal?: boolean;
   },
 ): Promise<CustomConnectStart> {
-  await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+  const personal = input.personal === true;
+  await requireConnect(deps.db, actorId, orgId, personal);
+  const owner = personal ? actorId : null;
   const signInOnly = () => new ValidationError("This service connects by signing in", "connector.oauth_only");
   // A service through Composio signs in on Composio's page: its address is never fetched.
   if (composioToolkitOf(input.serverUrl.trim())) {
     if (input.headers?.length) throw signInOnly();
-    return beginComposioConnect(deps, actorId, orgId, input);
+    return beginComposioConnect(deps, actorId, orgId, { ...input, personal });
   }
   const url = await assertPublicHttpsUrl(input.serverUrl.trim(), deps.resolveHost);
   // Composio's address spelled another way is still Composio's: nothing is sent or kept there.
   if (composioToolkitTyped(url)) throw signInOnly();
   // Checked before anyone signs in for nothing.
-  const target = input.connectionId ? await reconnectTarget(deps.db, orgId, input.connectionId, url.toString()) : null;
+  const target = input.connectionId
+    ? await reconnectTarget(deps.db, orgId, input.connectionId, url.toString(), owner)
+    : null;
   // Reconectar asks at the account's own address, however it was typed again: what it keeps goes nowhere else.
   const serverUrl = target?.serverUrl ?? url.toString();
   const label = input.label?.trim() || presetForServer(serverUrl)?.label || url.hostname;
@@ -827,6 +963,7 @@ export async function connectCustomServer(
       authType,
       secret,
       connectionId: input.connectionId,
+      owner,
     });
     await syncCustomTools(deps, connection).catch(() => {});
     return {
@@ -852,7 +989,7 @@ export async function connectCustomServer(
       "connector.headers_with_sign_in",
     );
   }
-  return beginMcpOAuth(deps, actorId, orgId, {
+  const started = beginMcpOAuth(deps, actorId, orgId, {
     connector: "custom",
     serverUrl,
     label,
@@ -861,14 +998,22 @@ export async function connectCustomServer(
     scopes: probe.scopes,
     returnTo: input.returnTo,
     connectionId: input.connectionId,
+    personal,
   });
+  if (!probe.optional) return started;
+  // It also lets in without a sign-in: one it can't start connects it as it answered.
+  const signIn = await started.catch((error) => {
+    if (error instanceof ValidationError) return null;
+    throw error;
+  });
+  return signIn?.status === "oauth" ? signIn : stored("none", null);
 }
 
 /**
  * Starts an MCP-native OAuth authorization: authorization server metadata,
  * a registered client (DCR), state + PKCE S256 + `resource`. `needs_key` when
  * the server can't do it, with `not_approved` when it only registers clients
- * it approved.
+ * it approved; `connector.oauth_discovery` when its metadata can't be read.
  */
 export async function beginMcpOAuth(
   deps: McpOAuthDeps,
@@ -884,19 +1029,23 @@ export async function beginMcpOAuth(
     returnTo?: string;
     /** "Reconectar": the connection whose sign-in this replaces. */
     connectionId?: string;
+    /** The connection it makes is the actor's own. */
+    personal?: boolean;
   },
 ): Promise<Exclude<CustomConnectStart, { status: "connected" }>> {
   const meta = await authServerMetadata(deps, input.issuer);
-  if (!meta) return { status: "needs_key" };
+  if (!meta) throw discoveryFailed(input.issuer);
   const redirectUri = oauthRedirectUri(deps.publicUrl);
   // Worked out again each time: a client still in use keeps the scope it was registered with, maybe without
   // offline_access.
-  const scope = oauthScope(meta, input.scopes);
-  const client = await ensureOAuthClient(deps, orgId, input.issuer, meta, { redirectUri, scope });
+  const asked = oauthScope(meta, input.scopes);
+  const client = await ensureOAuthClient(deps, orgId, input.issuer, meta, { redirectUri, scope: asked });
   if (client && "notApproved" in client) {
     return { status: "needs_key", reason: "not_approved", ...(client.detail ? { detail: client.detail } : {}) };
   }
   if (!client) return { status: "needs_key" };
+  // An admin's own app asks for the scopes they typed, when they typed any.
+  const scope = (client.providedByPerson && client.scope) || asked;
   const state = randomToken(32);
   const verifier = randomToken(48);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -920,6 +1069,7 @@ export async function beginMcpOAuth(
     resource: input.resource,
     label: input.label ?? null,
     connectionId: input.connectionId ?? null,
+    personal: input.personal === true,
     expiresAt: new Date((deps.now?.() ?? new Date()).getTime() + OAUTH_STATE_TTL_MS),
   });
   const url = new URL(client.authorizationEndpoint);
@@ -936,7 +1086,7 @@ export async function beginMcpOAuth(
 
 /** Lists the tools again (admins). */
 export async function refreshCustomServer(deps: CustomDeps, actorId: string, orgId: string, id: string) {
-  await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+  await connectionFor(deps.db, actorId, orgId, id, "change");
   const c = await loadCustom(deps.db, orgId, id);
   // A server that can't be read comes back with `toolsError`, for the apps to say why and offer to try again.
   await syncCustomTools(deps, c).catch((error) => {
@@ -957,16 +1107,17 @@ export interface ToolDecisionInput {
  * Saves the label and each tool's classification (admins). Only classified
  * tools are offered to agents; `approval` tools always ask a person; `off`
  * tools are never offered and don't wait for review. Sensitive tools may
- * only ask for approval or be off.
+ * only ask for approval or be off. `useInstructions`, when given: whether
+ * agents get the server's own instructions (left as it is otherwise).
  */
 export async function saveCustomTools(
   deps: CustomDeps,
   actorId: string,
   orgId: string,
   id: string,
-  input: { label: string; tools: ToolDecisionInput[] },
+  input: { label: string; tools: ToolDecisionInput[]; useInstructions?: boolean },
 ) {
-  await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+  await connectionFor(deps.db, actorId, orgId, id, "change");
   const c = await loadCustom(deps.db, orgId, id);
   const known = new Map((await toolRows(deps.db, [c.id])).map((t) => [t.name, t]));
   for (const t of input.tools) {
@@ -982,9 +1133,11 @@ export async function saveCustomTools(
     }
   }
   const now = new Date();
+  // Only when the request says: a save that leaves it out never writes back what this one read.
+  const switched = input.useInstructions === undefined ? {} : { useInstructions: input.useInstructions };
   await deps.db.transaction(async (tx) => {
     const asked = input.label.trim();
-    const label = asked && asked !== c.label ? await checkLabel(tx, orgId, asked, c.id) : c.label;
+    const label = asked && asked !== c.label ? await checkLabel(tx, orgId, asked, c) : c.label;
     for (const t of input.tools) {
       const row = known.get(t.name);
       if (!row) continue;
@@ -999,26 +1152,45 @@ export async function saveCustomTools(
     }
     await tx
       .update(connectorConnections)
-      .set({ label, reviewedAt: now, updatedAt: now })
+      .set({ label, ...switched, reviewedAt: now, updatedAt: now })
       .where(eq(connectorConnections.id, c.id));
     await recordAudit(tx, {
       orgId,
       actor: { type: "person", id: actorId },
       action: "connector.custom_tools_classified",
       target: { type: "connector_connection", id: c.id },
-      details: { tools: input.tools.map((t) => ({ name: t.name, access: t.access })) },
+      details: {
+        tools: input.tools.map((t) => ({ name: t.name, access: t.access })),
+        ...(input.useInstructions !== undefined && input.useInstructions !== c.useInstructions ? switched : {}),
+        ...(c.ownerUserId ? { label: auditLabel({ ...c, label }), personalOf: c.ownerUserId } : {}),
+      },
     });
   });
   caches.connections.delete(`${orgId}:active`);
+  caches.connections.delete(toolsKey(c));
   caches.scopes.deletePrefix(`${orgId}:`);
+  // A tool that no longer asks frees the requests of it still waiting: their runs call it again (`releaseUnasked`).
+  const freed = input.tools
+    .filter((t) => known.get(t.name)?.access === "approval" && (t.access === "read" || t.access === "write"))
+    .map((t) => t.name);
+  // The names the agent called them by: the prefix as it was before this rename.
+  await releaseUnasked(deps, actorId, orgId, { connectionId: c.id, prefix: toolPrefixOfConnection(c), tools: freed });
   return serverView(deps.db, orgId, id);
 }
 
-/** Classified, still-listed tools of a custom connection (the tool source exposes only these). */
-export async function classifiedTools(db: Database, connectionId: string) {
-  const rows = await toolRows(db, [connectionId]);
+/**
+ * Classified, still-listed tools of a custom connection (the tool source exposes only these), read for every run's
+ * tool list: kept as `caches.connections`' `orgId:tools:id`, forgotten by a listing that stores new tools
+ * (`syncCustomTools`) and by an admin's classification (`saveCustomTools`).
+ */
+export async function classifiedTools(db: Database, connection: { id: string; orgId: string }) {
+  const rows = (await caches.connections.getOrLoad(toolsKey(connection), () =>
+    toolRows(db, [connection.id]),
+  )) as ToolRow[];
   return rows.filter((t) => ACCESS.includes(t.access as ToolAccess));
 }
+
+const toolsKey = (c: { id: string; orgId: string }) => `${c.orgId}:tools:${c.id}`;
 
 /**
  * Applies our suggestion to every tool not classified yet (admins), in one
@@ -1026,7 +1198,7 @@ export async function classifiedTools(db: Database, connectionId: string) {
  * so the app can offer to grant it.
  */
 export async function acceptCustomSuggestion(deps: CustomDeps, actorId: string, orgId: string, id: string) {
-  await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+  await connectionFor(deps.db, actorId, orgId, id, "change");
   const c = await loadCustom(deps.db, orgId, id);
   const rows = await toolRows(deps.db, [c.id]);
   const tools = rows.map((t): ToolDecisionInput => {
@@ -1048,13 +1220,25 @@ export async function acceptCustomSuggestion(deps: CustomDeps, actorId: string, 
     .where(eq(agentScopes.orgId, orgId));
   const withAccess = new Set(
     grants
-      .filter((g) => g.scope === "*" || (g.connectionId === c.id && g.scope !== "" && !g.scope.startsWith("deny:")))
+      // "All tools" never covers someone's personal connection.
+      .filter(
+        (g) =>
+          (g.scope === "*" && !c.ownerUserId) ||
+          (g.connectionId === c.id && g.scope !== "" && !g.scope.startsWith("deny:")),
+      )
       .map((g) => g.agentId),
   );
   const agentRows = await deps.db
     .select({ id: agents.id, name: agents.name, handle: agents.handle })
     .from(agents)
-    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)));
+    .where(
+      and(
+        eq(agents.orgId, orgId),
+        isNull(agents.archivedAt),
+        // A personal connection goes on for its person's own agents.
+        c.ownerUserId ? eq(agents.ownerUserId, c.ownerUserId) : undefined,
+      ),
+    );
   return {
     server,
     agentsWithoutAccess: agentRows.filter((a) => !withAccess.has(a.id)),

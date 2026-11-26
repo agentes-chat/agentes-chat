@@ -11,7 +11,9 @@ const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
 describe("the tabs of a personal workspace", () => {
   test("Threads leaves the bar the system's way, and its list is pushed from You › Work", () => {
     const tabs = read("app/(app)/(main)/(tabs)/_layout.tsx");
-    expect(tabs).toContain('{ name: "threads", glyph: "threads", label: "mobile.tabs.threads", teamOnly: true }');
+    expect(tabs).toMatch(
+      /\{\s*name: "threads",\s*glyph: "threads",\s*label: "mobile\.tabs\.threads",\s*sf: \{[^}]*\},\s*teamOnly: true,\s*\}/,
+    );
     expect(tabs).toContain("hidden={personal && tab.teamOnly === true}");
     // A hidden tab can't be opened: the pushed list lives at /conversations/threads.
     const route = read("app/(app)/(main)/conversations/[kind].tsx");
@@ -61,8 +63,11 @@ describe("You in a personal workspace", () => {
       "routines",
       "drive",
       "issues",
+      "code",
       "threads",
       "proposals",
+      "connectors",
+      "skills",
       "wiki",
       "dashboards",
       "memory",
@@ -73,6 +78,9 @@ describe("You in a personal workspace", () => {
       "issues",
       "proposals",
       "routines",
+      "connectors",
+      "skills",
+      "code",
       "wiki",
       "drive",
       "dashboards",
@@ -80,11 +88,19 @@ describe("You in a personal workspace", () => {
       "archived",
     ]);
     expect(me).toContain('onPress={() => open("/team")}');
+    // Connectors and Skills in the work too, the screens Settings opens (Skills for who may read the workspace).
+    expect(me).toContain('onPress={() => open("/connectors")}');
+    expect(me).toContain('skills: can(org.org, "read") ? (');
+    expect(me).toContain('onPress={() => open("/settings/skills")}');
+    // Código (ADR 0215): the sessions, pushed as their own screen.
+    expect(me).toContain('onPress={() => open("/coding")}');
   });
 
   test("Agents' Team row stays a team's: a personal workspace has it in You › Work", () => {
     const agents = read("src/features/agents/AgentsScreen.tsx");
-    expect(agents).toContain("{total > 0 && !isPersonal(org) ? <TeamEntry divider={showsManager} /> : null}");
+    expect(agents).toMatch(
+      /\{total > 0 && !isPersonal\(org\) \? \(\s*<LandRow[^>]*>\s*<TeamEntry divider=\{showsManager\} \/>/,
+    );
   });
 
   test("a personal workspace in the lists wears your face and says whose it is", () => {

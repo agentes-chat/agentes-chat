@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { addTargets, channelMembersHrefs } from "../../src/features/chat/members";
 import { newMissionHref } from "../../src/features/chat/new-mission";
 import { pushedByDefault } from "../main-stack";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 const route = (file: string) => readFileSync(join(import.meta.dir, "../../app/(app)/(main)", file), "utf8");
@@ -24,13 +25,14 @@ describe("managing a channel's members is screens, not sheet steps", () => {
   });
 
   test("the conversation pushes the list, keeping its place for the way back; its options' sheet goes first", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toMatch(
       /const openMembers = \(\) => \{\s*if \(!channel\) return;\s*leavePlace\(\);\s*router\.push\(channelMembersHrefs\.list\(channelId\)\);/,
     );
     expect(chat).toMatch(/\(\) => \{\s*sheet\.close\(\);\s*openMembers\(\);\s*\}/);
     // The channel's pill says what a tap does: it shows who is here (the "…" holds the options).
-    expect(chat).toMatch(/onPress=\{openMembers\}[\s\S]{0,300}label=\{t\("mobile\.chat\.headerMembers"/);
+    expect(chat).toContain("const pressMembers = useLatest(openMembers);");
+    expect(chat).toMatch(/onPress=\{pressMembers\}[\s\S]{0,300}label=\{t\("mobile\.chat\.headerMembers"/);
   });
 
   test("on the grouped page: grouped rows, the rows' shape while loading, a retry when it failed, a clear for a search", () => {
@@ -58,7 +60,7 @@ describe("a new mission is a form on its own screen", () => {
   });
 
   test("the conversation pushes it from every way in, closing whatever sheet asked", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toMatch(/const openNewMission = [^{]*\{\s*sheet\.close\(\);\s*leavePlace\(\);\s*router\.push\(/);
     expect(chat).not.toContain("NewMissionForm");
     expect(src("features/chat/sheets.tsx")).not.toContain("NewMissionForm");

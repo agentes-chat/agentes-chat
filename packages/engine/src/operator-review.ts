@@ -1,6 +1,6 @@
 import { maskSecretFields } from "@agenteschat/adapters";
-import { and, asc, type Database, eq, inArray, schema, sql } from "@agenteschat/db";
-import { CONFIDENTIAL_NOT_SHOWN, confidentialThreadSql } from "./confidential";
+import { and, asc, type Database, eq, inArray, type SQL, schema, sql } from "@agenteschat/db";
+import { CONFIDENTIAL_NOT_SHOWN, CONFIDENTIAL_STUB, confidentialThreadSql, threadIsConfidential } from "./confidential";
 import { getMessage, type Message } from "./messages";
 import { recordContentViewed } from "./operator-events";
 import { runErrorDetail } from "./runs";
@@ -78,6 +78,16 @@ export function keptText(kept: unknown) {
 const labeled = (rank: number, label: string, source: string, text: string | null | undefined, max: number): Part[] =>
   text ? [{ rank, text: `${label}:\n${quoted(source, text, max)}` }] : [];
 
+/**
+ * A message as a block carries it. Of a confidential thread (ADR 0190) it is the stub whatever its stored body: one
+ * written while the thread's mark was being committed keeps its words until `sealStragglers` seals it.
+ */
+async function messageOf(db: Database, orgId: string, id: string): Promise<Message | null> {
+  const message = await getMessage(db, orgId, id);
+  if (!message?.body || !(await threadIsConfidential(db, orgId, message.threadId ?? message.id))) return message;
+  return { ...message, body: CONFIDENTIAL_STUB };
+}
+
 /** The message that started the work: what was asked, the strongest sign of intent. */
 const request = (message: Message | null) =>
   message
@@ -128,8 +138,8 @@ async function runReview(db: Database, runId: string): Promise<OperatorReview | 
     .where(eq(agentRuns.id, runId));
   if (!run) return null;
   const [trigger, reply, steps] = await Promise.all([
-    getMessage(db, run.orgId, run.triggerMessageId),
-    run.replyMessageId ? getMessage(db, run.orgId, run.replyMessageId) : null,
+    messageOf(db, run.orgId, run.triggerMessageId),
+    run.replyMessageId ? messageOf(db, run.orgId, run.replyMessageId) : null,
     db
       .select({ kind: agentRunSteps.kind, data: agentRunSteps.data })
       .from(agentRunSteps)
@@ -144,7 +154,7 @@ async function runReview(db: Database, runId: string): Promise<OperatorReview | 
       const result = results.get(s.data.toolUseId);
       const name = `Tool call ${i + 1}: ${String(s.data.name ?? "?").slice(0, 100)}`;
       // A run of a confidential thread (ADR 0190): which tools it called and how each ended, never what went in or
-      // came back. Whoever reads this block is outside the thread. Its request and reply are stored as the stub.
+      // came back. Whoever reads this block is outside the thread. Its request and reply read as the stub.
       if (run.confidential) {
         const ended = result ? (result.isError ? "failed" : "answered") : "no result";
         return { rank: 3, text: `${name} (${ended})\n${CONFIDENTIAL_NOT_SHOWN}` };
@@ -172,16 +182,38 @@ async function runReview(db: Database, runId: string): Promise<OperatorReview | 
   return { kind: "run", id: run.id, orgId: run.orgId, agentId: run.agentId, text };
 }
 
+/**
+ * SQL: the run that started the task `taskId`. A task the server started again by itself is a new row with no run,
+ * which names the task it resumes (`resumed_from_id`): its run is the first task's, read back through those rows.
+ * The walk stops at the first row that has a run, and `union` drops a row met before, so rows that name each other
+ * end it: it is as long as the chain, which `MAX_TASK_RESUMES` keeps to a few rows.
+ */
+export const taskRunSql = (taskId: SQL): SQL => sql`(
+  with recursive chain(id, run_id, resumed_from_id) as (
+    select t.id, t.run_id, t.resumed_from_id from ${machineTasks} t where t.id = ${taskId}
+    union
+    select p.id, p.run_id, p.resumed_from_id from chain c join ${machineTasks} p on p.id = c.resumed_from_id
+    where c.run_id is null)
+  select run_id from chain where run_id is not null)`;
+
 async function taskReview(db: Database, taskId: string): Promise<OperatorReview | null> {
   const [task] = await db.select().from(machineTasks).where(eq(machineTasks.id, taskId));
   if (!task) return null;
-  const [origin] = task.runId
-    ? await db
-        .select({ triggerMessageId: agentRuns.triggerMessageId })
-        .from(agentRuns)
-        .where(eq(agentRuns.id, task.runId))
-    : [];
-  const trigger = origin ? await getMessage(db, task.orgId, origin.triggerMessageId) : null;
+  const [origin] = await db
+    .select({
+      id: agentRuns.id,
+      triggerMessageId: agentRuns.triggerMessageId,
+      confidential: sql<boolean>`${confidentialThreadSql(sql`${agentRuns.orgId}`, sql`${agentRuns.threadRootId}`)}`,
+    })
+    .from(agentRuns)
+    .where(sql`${agentRuns.id} = ${taskRunSql(sql`${task.id}::uuid`)}`);
+  // The request is shown of the task's own run: one started again has none.
+  const trigger = origin?.id === task.runId ? await messageOf(db, task.orgId, origin.triggerMessageId) : null;
+  // A task that a run of a confidential thread started (ADR 0190), or that the server started again from one, is
+  // that run's work: which texts it holds, never the texts. Its request reads as the stub.
+  const part: typeof labeled = origin?.confidential
+    ? (rank, label, _source, text) => (text ? [{ rank, text: `${label}:\n${CONFIDENTIAL_NOT_SHOWN}` }] : [])
+    : labeled;
   const header = [
     `Task ${task.id} of agent ${task.agentId}, workspace ${task.orgId}, on computer ${task.machineId}.`,
     `Executor: ${task.executor} · status: ${task.status}${task.exitCode !== null ? ` · exit code ${task.exitCode}` : ""}${task.seconds !== null ? ` · ${task.seconds} s` : ""} · created ${task.createdAt.toISOString()}${task.endedAt ? ` · ended ${task.endedAt.toISOString()}` : ""}.`,
@@ -189,13 +221,13 @@ async function taskReview(db: Database, taskId: string): Promise<OperatorReview 
   ].join("\n");
   const text = assemble([
     { rank: 0, text: header },
-    ...labeled(1, "Title", "task title", task.title, CUT.title),
+    ...part(1, "Title", "task title", task.title, CUT.title),
     ...request(trigger),
-    ...labeled(2, "Prompt", "task prompt", task.prompt, CUT.prompt),
-    ...labeled(2, "Command", "task command", task.command, CUT.command),
-    ...labeled(2, "Result", "task output", task.result, CUT.output),
-    ...labeled(3, "Last lines", "task output", task.recentLines.slice(-OUTPUT_LINES).join("\n"), CUT.output),
-    ...labeled(4, "Files touched", "task files", task.files.slice(0, FILES_SHOWN).join("\n"), CUT.output),
+    ...part(2, "Prompt", "task prompt", task.prompt, CUT.prompt),
+    ...part(2, "Command", "task command", task.command, CUT.command),
+    ...part(2, "Result", "task output", task.result, CUT.output),
+    ...part(3, "Last lines", "task output", task.recentLines.slice(-OUTPUT_LINES).join("\n"), CUT.output),
+    ...part(4, "Files touched", "task files", task.files.slice(0, FILES_SHOWN).join("\n"), CUT.output),
   ]);
   return { kind: "task", id: task.id, orgId: task.orgId, agentId: task.agentId, text };
 }

@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createFakeComposioClient, createFakeErrorReporter, createFakeMailConnector } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
-import { type McpConnect, mcpPreset } from "@agenteschat/engine";
-import { browser, createTestServer, seedOrg, signUp, type TestServer } from "./harness";
+import { desktopBackLink, type McpConnect, mcpPreset } from "@agenteschat/engine";
+import { browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
 
 let t: TestServer;
 afterEach(() => t.close());
@@ -188,7 +188,11 @@ test("connectors API: the phone app's OAuth hands the code back to the app, whic
   const toDesktop = await systemBrowser(`/api/app/connectors/oauth/callback?state=${desktop}&code=abc`, {
     origin: null,
   });
-  const desktopLink = new URL(toDesktop.headers.get("location") ?? "");
+  // Through the browser's page that says where the person went (the tab no longer stands on the provider's page).
+  const toPage = new URL(toDesktop.headers.get("location") ?? "");
+  expect(toPage.pathname).toBe("/desktop/back");
+  expect(toPage.search).toBe("");
+  const desktopLink = new URL(desktopBackLink(toPage.href));
   expect(`${desktopLink.protocol}//${desktopLink.host}${desktopLink.pathname}`).toBe(
     "agenteschat://desktop/connectors/oauth",
   );
@@ -210,7 +214,7 @@ test("connectors API: the phone app's OAuth hands the code back to the app, whic
     `/api/app/connectors/oauth/callback?state=${refusedDesktop}&error=access_denied`,
     { origin: null },
   );
-  expect(noDesktop.headers.get("location")).toBe(
+  expect(desktopBackLink(noDesktop.headers.get("location") ?? "")).toBe(
     `agenteschat://desktop/connectors/oauth?org=${orgId}&error=access_denied`,
   );
 
@@ -430,6 +434,88 @@ test("one-click servers that haven't approved agentes.chat: `soon`, refused by i
   expect(asked).toContain("https://mcp.asana.com/register");
 });
 
+test("Meta Ads without this server's Meta app: one click, refused registration, then the admin's own app (its secret never returned)", async () => {
+  const ADS = "https://mcp.facebook.com/ads";
+  const http = (async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === ADS && init?.method === "POST") {
+      return new Response("", {
+        status: 401,
+        headers: {
+          "www-authenticate":
+            'Bearer resource_metadata="https://mcp.facebook.com/.well-known/oauth-protected-resource/ads"',
+        },
+      });
+    }
+    if (url === "https://mcp.facebook.com/.well-known/oauth-protected-resource/ads") {
+      return Response.json({
+        resource: ADS,
+        authorization_servers: ["https://www.facebook.com/ads"],
+        scopes_supported: ["ads_read"],
+      });
+    }
+    if (url === "https://www.facebook.com/.well-known/oauth-authorization-server/ads") {
+      return Response.json({
+        issuer: "https://www.facebook.com/ads",
+        authorization_endpoint: "https://www.facebook.com/v27.0/dialog/oauth",
+        token_endpoint: "https://graph.facebook.com/v27.0/oauth/access_token",
+        registration_endpoint: "https://mcp.facebook.com/.well-known/register/ads",
+        code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["none"],
+      });
+    }
+    if (url === "https://mcp.facebook.com/.well-known/register/ads") {
+      return Response.json({ error: "invalid_client_metadata" }, { status: 400 });
+    }
+    return new Response("not found", { status: 404 });
+  }) as unknown as typeof fetch;
+  t = await createTestServer({ http, resolveHost: async () => ["93.184.216.34"] });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const { connectors } = (await (await owner("/api/app/connectors/catalog")).json()) as { connectors: Listed[] };
+  expect(connectors.find((c) => c.id === "meta-ads")).toMatchObject({
+    kind: "remote_mcp",
+    available: true,
+    soon: false,
+  });
+  const connect = () => owner(`/api/app/organizations/${orgId}/connectors/presets/meta-ads/connect`, { json: {} });
+  expect(await (await connect()).json()).toEqual({
+    status: "needs_key",
+    reason: "not_approved",
+    detail: "invalid_client_metadata",
+  });
+
+  const path = `/api/app/organizations/${orgId}/connector-oauth-clients`;
+  const member = await joinByInvitation(t, owner, orgId, "ada@example.com", { role: "member" });
+  const refused = await member(path, { method: "PUT", json: { serverUrl: ADS, clientId: "1234567890" } });
+  expect(refused.status).toBe(403);
+  expect((await member(`${path}?serverUrl=${encodeURIComponent(ADS)}`)).status).toBe(403);
+
+  const saved = await owner(path, {
+    method: "PUT",
+    json: { serverUrl: ADS, clientId: "1234567890", clientSecret: "fake-app-secret" },
+  });
+  expect(saved.status).toBe(200);
+  const body = await saved.text();
+  expect(body).not.toContain("fake-app-secret");
+  expect(JSON.parse(body)).toEqual({
+    redirectUri: `${t.config.PUBLIC_URL.replace(/\/$/, "")}/api/app/connectors/oauth/callback`,
+    issuer: "https://www.facebook.com/ads",
+    client: { clientId: "1234567890", hasSecret: true, scopes: null },
+  });
+  expect(await (await owner(`${path}?serverUrl=${encodeURIComponent(ADS)}`)).text()).not.toContain("fake-app-secret");
+  const started = (await (await connect()).json()) as { status: string; authorizeUrl: string };
+  expect(started.status).toBe("oauth");
+  expect(new URL(started.authorizeUrl).searchParams.get("client_id")).toBe("1234567890");
+
+  const removed = await owner(`${path}?issuer=${encodeURIComponent("https://www.facebook.com/ads")}`, {
+    method: "DELETE",
+  });
+  expect(removed.status).toBe(204);
+  expect(await (await connect()).json()).toMatchObject({ status: "needs_key", reason: "not_approved" });
+});
+
 test("catalog: with its OAuth app configured, our Linear connector replaces the one-click server", async () => {
   t = await createTestServer({
     env: { CONNECTOR_LINEAR_CLIENT_ID: "lin-id", CONNECTOR_LINEAR_CLIENT_SECRET: "lin-secret" },
@@ -531,6 +617,54 @@ test("connector tools API: classified on listing (judge for ambiguous names), se
   expect([all.status, await all.json()]).toEqual([200, { accepted: 0 }]);
   // The endpoints change nothing: the next listing by an agent settles what waited.
   expect(await waiting()).toEqual([{ pending: "v2" }]);
+});
+
+test("a server's own instructions: shown as agents read them to who may change it, turned off with the tools' save", async () => {
+  const said = "Call preview_change before apply_change.\n\nAsk the person before apply_change.";
+  const mcpConnect: McpConnect = async () => ({
+    listTools: async () => [{ name: "preview_change", inputSchema: { type: "object" }, readOnlyHint: true }],
+    callTool: async () => ({ content: "ok", isError: false }),
+    instructions: () => `  ${said}\n`,
+    close: async () => {},
+  });
+  t = await createTestServer({ mcpConnect, resolveHost: async () => ["93.184.216.34"] });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const custom = `/api/app/organizations/${orgId}/connectors/custom`;
+  const started = (await (
+    await owner(custom, { json: { serverUrl: "https://changes.example.com/mcp", apiKey: "chg_secret_12345" } })
+  ).json()) as { server: { id: string; instructions: unknown; useInstructions: boolean } };
+  // Trimmed, whole (under the limit), and on.
+  expect(started.server).toMatchObject({
+    instructions: { text: said, cut: false, maxChars: 4000 },
+    useInstructions: true,
+  });
+
+  const save = (as: typeof owner, body: Record<string, unknown>) =>
+    as(`${custom}/${started.server.id}/tools`, {
+      method: "PUT",
+      json: { label: "Changes", tools: [{ name: "preview_change", access: "read", label: "Preview" }], ...body },
+    });
+  // Who may only read the workspace's connectors neither changes it nor reads the text.
+  const member = await joinByInvitation(t, owner, orgId, "ada@example.com", { role: "member" });
+  expect((await save(member, { useInstructions: false })).status).toBe(403);
+  const theirs = (await (await member(custom)).json()) as { servers: { instructions: unknown }[] };
+  expect(theirs.servers.map((s) => s.instructions)).toEqual([null]);
+
+  const off = await save(owner, { useInstructions: false });
+  expect(off.status).toBe(200);
+  expect(await off.json()).toMatchObject({ useInstructions: false, instructions: { text: said } });
+  // Left out, the switch stays as it was.
+  expect(await (await save(owner, {})).json()).toMatchObject({ useInstructions: false });
+  const listed = (await (await owner(custom)).json()) as { servers: { useInstructions: boolean }[] };
+  expect(listed.servers.map((s) => s.useInstructions)).toEqual([false]);
+  // The change is in the audit log once, on the save that made it.
+  const audits = await t.db
+    .select({ details: schema.auditLog.details })
+    .from(schema.auditLog)
+    .where(eq(schema.auditLog.action, "connector.custom_tools_classified"));
+  expect(audits.map((a) => (a.details as { useInstructions?: boolean }).useInstructions)).toEqual([false, undefined]);
 });
 
 /**

@@ -64,7 +64,6 @@ export function StorageScreen() {
   // With the bucket's six fields open, the bar over the keyboard walks them.
   return (
     <SettingsPage title={t("storage.title")} frozen={settingsFrozen(org, "storage")} toolbar={choice === "s3"}>
-      <GroupedFooter>{t("settings.sectionText.storage")}</GroupedFooter>
       {!admin ? (
         <View style={styles.note}>
           <Note icon="lock">{t("settings.readOnly")}</Note>

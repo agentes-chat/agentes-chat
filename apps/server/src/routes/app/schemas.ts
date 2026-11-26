@@ -26,6 +26,61 @@ export const AudienceChoice = z
   ])
   .openapi("AudienceChoice");
 
+/**
+ * What a person had selected in a live file (ADR 0196 §6, ADR 0199): a sheet's range, a slide, canvas shapes, a
+ * canvas comment's pin (world units), a document's quoted words and block; on a picture, a video or a PDF (ADR 0208)
+ * the comment's mark, moment, page, the version it was made on and the app's two pictures of it.
+ */
+export const LiveSelection = z
+  .object({
+    label: z.string().min(1).max(200).openapi({ description: 'How the person sees it: "Sheet 1!B2:E9", "slide 3".' }),
+    sheet: z.string().max(100).optional(),
+    range: z.string().max(100).optional(),
+    slide: z.string().max(100).optional(),
+    shapes: z.array(z.string().max(100)).max(200).optional(),
+    point: z
+      .object({ x: z.number(), y: z.number() })
+      .optional()
+      .openapi({ description: "A comment pinned on a canvas, in its world units." }),
+    text: z
+      .string()
+      .max(400)
+      .optional()
+      .openapi({ description: "A document's quoted words (kept to 200 characters)." }),
+    block: z.string().max(64).optional().openapi({ description: "A document's block id." }),
+    mark: z
+      .object({
+        x: z.number().min(0).max(1),
+        y: z.number().min(0).max(1),
+        w: z.number().min(0).max(1).optional(),
+        h: z.number().min(0).max(1).optional(),
+      })
+      .optional()
+      .openapi({ description: "A point (no `w`, `h`) or an area of the picture, frame or page, in fractions." }),
+    time: z.number().min(0).max(86_400).optional().openapi({ description: "A video's moment, in seconds." }),
+    page: z.number().int().min(1).optional().openapi({ description: "A PDF's page, from 1." }),
+    version: z.number().int().min(1).optional().openapi({ description: "The file's version the mark was made on." }),
+    crop: z.uuid().optional().openapi({ description: "The app's picture of what was marked (`…/marks`)." }),
+    frame: z
+      .uuid()
+      .optional()
+      .openapi({ description: "The app's picture of the whole picture, frame or page with the mark drawn." }),
+  })
+  .openapi("LiveSelection");
+
+/** `meta.liveRef` as the chat reads it (ADR 0199): the live file a message is about and what was selected in it. */
+export const LiveRef = z
+  .object({
+    artifactId: z.string(),
+    kind: z.string().openapi({
+      description:
+        "What the file is: a live file's kind (`spreadsheet`, `slides`, `canvas`, `document`) or an uploaded `image`, `video` or `pdf` (ADR 0208).",
+    }),
+    title: z.string(),
+    selection: LiveSelection.optional(),
+  })
+  .openapi("LiveRef");
+
 /** How an agent's run stands for the reader (ADR 0084 addendum): an agent's line (`work`), a task manager's row. */
 export const WorkState = z.enum(["you", "working", "approval", "answer", "computer", "outage", "queued", "later"]);
 
@@ -34,7 +89,7 @@ const ReturnPlace = {
   messageId: z.uuid().openapi({ description: "The return's line (`meta.notice.kind` `follow_up`)." }),
   agentId: z.uuid(),
   channelId: z.uuid(),
-  channelKind: z.enum(["channel", "dm", "task"]),
+  channelKind: z.enum(["channel", "dm", "task", "file", "code"]),
   channelName: z.string().nullable().openapi({ description: "A channel's name; null for a DM or a task's." }),
   threadId: z.uuid().nullable().openapi({ description: "Null: the conversation's main timeline." }),
   at: z.string().openapi({ description: "When it comes (ISO)." }),
@@ -186,11 +241,10 @@ export const Organization = z
       .string()
       .optional()
       .openapi({ description: "What the agents know of it: only for who may `configure`." }),
-    logo: z
-      .string()
-      .nullable()
-      .optional()
-      .openapi({ description: "The workspace logo (`/api/app/org-logos/…`); null = the agent mark." }),
+    logo: z.string().nullable().optional().openapi({
+      description:
+        "The workspace logo (`/api/app/org-logos/…`), ending with `#ink=light` when its ink is light; null = the agent mark.",
+    }),
     accent: AccentColor.nullable()
       .optional()
       .openapi({ description: "The workspace's accent color (ADR 0193); null = the default." }),
@@ -239,6 +293,10 @@ export const Organization = z
       }),
     start: StartChoice.optional().openapi({
       description: "In `GET /me`: what opens when the app starts here (`PUT …/me/start`). Absent elsewhere.",
+    }),
+    paysPlan: z.literal(true).optional().openapi({
+      description:
+        "In `GET /me`: you pay for the workspace's plan, as the billing service said, and may move it to another workspace (`POST …/plan-move`). Absent otherwise.",
     }),
     showActivity: z.boolean().optional().openapi({
       description:
@@ -379,6 +437,14 @@ export const AgentAudience = z
   })
   .openapi("AgentAudience");
 
+/** "Quem pode editar" (ADR 0085, addendum of 2026-11-17): who edits an agent besides its owner and who manages it. */
+export const AgentEditors = z
+  .object({
+    userIds: z.array(z.string()).max(500),
+    roleIds: z.array(z.uuid()).max(100),
+  })
+  .openapi("AgentEditors");
+
 /** How much an agent asks before acting (ADR 0173). */
 export const ApprovalsLevel = z.enum(["always", "risky", "never"]).openapi("ApprovalsLevel", {
   description:
@@ -442,6 +508,10 @@ export const PlanWindow = z.object({
   label: z.string().optional().openapi({ description: "`other`: the provider's name for it." }),
   usedPercent: z.number().openapi({ description: "0–100." }),
   resetsAt: z.string().optional(),
+  at: z
+    .string()
+    .optional()
+    .openapi({ description: "When this window was last read, where that is before the reading's `at`." }),
 });
 
 export const PlanUsage = z
@@ -479,6 +549,10 @@ export const FormerAgent = z
     role: z.string(),
     appearance: AgentAppearance.nullable(),
     deleted: z.boolean().openapi({ description: "Deleted for good; false: archived (an admin may still delete it)." }),
+    canManage: z.boolean().optional().openapi({
+      description:
+        "An archived one: whether the current person manages it (ADR 0085, addendum of 2026-11-17: `manage_agents` where it reaches), so brings it back or deletes it for good. Absent once deleted.",
+    }),
   })
   .openapi("FormerAgent");
 
@@ -504,6 +578,9 @@ export const AgentSetupChecklist = z
       .openapi({
         description: "The apps it was made to use (catalog connector ids) at their levels (ADR 0164).",
       }),
+    closed: z.literal(true).optional().openapi({
+      description: "Closed on its page: the page shows it no more, whatever is left; its chat keeps its own.",
+    }),
   })
   .openapi("AgentSetupChecklist");
 
@@ -520,6 +597,9 @@ export const Agent = z
     instructions: z.string(),
     model: z.string(),
     ownerUserId: z.string().nullable(),
+    ownerRoleId: z.uuid().nullable().openapi({
+      description: "A role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21).",
+    }),
     hasCredential: z.boolean(),
     monthlyBudgetUsd: z
       .number()
@@ -534,9 +614,33 @@ export const Agent = z
     audience: AgentAudience,
     audienceMode: z.enum(["everyone", "people", "owner"]),
     canTalk: z.boolean().openapi({ description: "Whether the current person can talk to it (mentions, DMs)." }),
+    canManage: z.boolean().openapi({
+      description:
+        "Whether the current person manages it (ADR 0085, addendum of 2026-11-17): `manage_agents` where it reaches (owners and administrators every agent, anyone else the agents whose audience takes them and the ones with no owner). Everything about it, its apps, budget and owner included.",
+    }),
+    canEdit: z.boolean().openapi({
+      description:
+        "Whether the current person edits how it works: its instructions, role, skills and routines. Its owner, who manages it, and who its `editors` name.",
+    }),
+    canManageRoutines: z.boolean().openapi({
+      description:
+        "Whether the current person sets up its routines: who edits it, and `manage_routines` where it reaches.",
+    }),
+    editors: AgentEditors.openapi({
+      description:
+        '"Quem pode editar": who edits it besides its owner and who manages it. Empty for who doesn\'t see how it works.',
+    }),
     seesDetails: z.boolean().openapi({
       description:
-        "Whether the current person sees how it works: its owner, who manages agents, and whoever it answers. Without it `instructions` is empty and its tools, memory, usage and activity answer 403 `agent.details_hidden`.",
+        "Whether the current person sees how it works: who edits it (`canEdit`) and whoever it answers. Without it `instructions` is empty and its tools, memory, usage and activity answer 403 `agent.details_hidden`.",
+    }),
+    factsOnly: z.boolean().optional().openapi({
+      description:
+        "A teammate's private agent seen through \"Editar agentes\" (ADR 0085, addendum of 2026-11-24): listed on Equipe with a lock, its page shows its facts and this month's usage, never how it works, and nothing to change. Absent (older servers): false.",
+    }),
+    listed: z.boolean().optional().openapi({
+      description:
+        "Whether the current person's lists and pickers name it: every agent with `view_all_agents` or `manage_agents`, but a private one (it answers only its owner) only for who sees how it works (`seesDetails`). False: it stays out of every list; its messages and its public card still show. Absent (older servers): true.",
     }),
     appearance: AgentAppearance.nullable().openapi({ description: "Its look; null = the default." }),
     mediaReplies: z.boolean().openapi({
@@ -563,7 +667,7 @@ export const Agent = z
     }),
     brain: z
       .object({
-        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]),
+        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]),
         model: z
           .string()
           .nullable()
@@ -592,15 +696,6 @@ export const Agent = z
   })
   .openapi("Agent");
 
-/** A named group of channels in the sidebar, the same for everyone in the organization. */
-export const ChannelCategory = z
-  .object({
-    id: z.uuid(),
-    name: z.string(),
-    position: z.number().int().openapi({ description: "Order in the sidebar, from 0." }),
-  })
-  .openapi("ChannelCategory");
-
 export const Channel = z
   .object({
     id: z.uuid(),
@@ -620,12 +715,20 @@ export const Channel = z
       .optional()
       .openapi({ description: "The channel's creator: may manage its members, like admins." }),
     createdAt: z.string(),
-    categoryId: z
+    groupId: z
       .uuid()
       .nullable()
       .optional()
-      .openapi({ description: "Its sidebar category; null: on top, with none." }),
-    position: z.number().int().optional().openapi({ description: "Order inside its category, from 0." }),
+      .openapi({ description: "Its sector (`agent-groups`, ADR 0240); null: under Canais, in none." }),
+    position: z.number().int().optional().openapi({ description: "Order inside its sector, from 0." }),
+    replyInThreads: z.boolean().optional().openapi({
+      description:
+        "Agents asked in its main timeline answer in the thread under that message, which then shows as one line (ADR 0214). Regular channels only.",
+    }),
+    leadAgentId: z.uuid().nullable().optional().openapi({
+      description:
+        "The agent responsible for the channel, one of its member agents; null or absent: none. Regular channels only.",
+    }),
     unreadCount: z.number().int().optional().openapi({
       description:
         "Channel list only: messages since you last read it (since you joined, if never), not yours; a thread reply counts only in a thread you follow; an agent's sticker or GIF after its own reply never (ADR 0091). At most 100; 0 when you're not a member.",
@@ -647,7 +750,7 @@ export const Channel = z
     lastMessage: z
       .object({
         id: z.uuid(),
-        authorType: z.enum(["person", "agent"]),
+        authorType: z.enum(["person", "agent", "app"]),
         authorId: z.string().nullable(),
         authorName: z.string().nullable().openapi({ description: "Null when the author was deleted." }),
         preview: z.string().openapi({ description: "Plain text, at most 140 characters." }),
@@ -790,12 +893,17 @@ const MessageBase = z.object({
   id: z.uuid(),
   channelId: z.uuid(),
   threadId: z.uuid().nullable(),
-  author: z.object({ type: z.enum(["person", "agent"]), id: z.string().nullable() }),
+  author: z
+    .object({ type: z.enum(["person", "agent", "app"]), id: z.string().nullable() })
+    .openapi({ description: "`app`: an integration app (ADR 0251); its name, color and sender are in `meta.app`." }),
   body: z.string(),
   mentionedAgentIds: z.array(z.uuid()),
   mentionedUserIds: z.array(z.string()).openapi({ description: "People mentioned by handle who are in the channel." }),
   agentRunId: z.uuid().nullable(),
   clientId: z.string().nullable().openapi({ description: "Echo of the sender's `clientId`." }),
+  liveRef: LiveRef.optional().openapi({
+    description: "`meta.liveRef`: the live file the message is about and what was selected in it (ADR 0199).",
+  }),
   receipts: z
     .object({
       seenBy: z.array(z.uuid()),
@@ -809,10 +917,10 @@ const MessageBase = z.object({
             .literal("no_ai")
             .optional()
             .openapi({ description: "It couldn't answer: the agent has no AI connected." }),
-          outage: z
-            .literal(true)
-            .optional()
-            .openapi({ description: "`waiting_input` because its AI provider is down: it retries by itself." }),
+          outage: z.literal(true).optional().openapi({
+            description:
+              "`waiting_input` because its AI isn't answering (its provider down, or its computer refusing while online): it retries by itself.",
+          }),
           computer: z.enum(["queued", "away", "line"]).optional().openapi({
             description:
               "`waiting_input` for its computer: in line for room (`queued`) or for it to come back (`away`); long work in the agent's line of work (`line`).",
@@ -922,10 +1030,10 @@ export const Message = MessageBase.extend({
       z.object({
         agentId: z.uuid(),
         text: z.string(),
-        code: z
-          .string()
-          .optional()
-          .openapi({ description: "`audience.only` / `audience.nobody`: translate with `params`." }),
+        code: z.string().optional().openapi({
+          description:
+            "`audience.only` / `audience.nobody` (whom it answers), `audience.no_talk` (the person's roles lack `talk_to_agents`), `audience.plan_owner_only` (its plan answers only its owner), `channel.agents_denied`: translate with `params`.",
+        }),
         params: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -990,7 +1098,7 @@ export const Model = z
 
 /** ADR 0032: who thinks for an agent. */
 export const BrainKind = z
-  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"])
+  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"])
   .openapi("BrainKind");
 
 export const BrainUnavailable = z.enum([
@@ -999,22 +1107,22 @@ export const BrainUnavailable = z.enum([
   "runner_old",
   "tool_off",
   "not_installed",
-  "outdated",
   "not_reported",
   "system",
   "cant_start",
+  "cli_outdated",
+  "windows_sandbox",
 ]);
-
-export const CodexVersionRequirement = z
-  .object({ detected: z.string(), minimum: z.string() })
-  .openapi("CodexVersionRequirement");
 
 export const BrainOption = z
   .object({
     kind: BrainKind,
     available: z.boolean(),
     reason: BrainUnavailable.optional().openapi({ description: "Why it can't be chosen now (computer brains)." }),
-    codexVersion: CodexVersionRequirement.optional(),
+    sandbox: z.enum(["partial"]).optional().openapi({
+      description:
+        "`partial`: Codex on a Windows computer without MXC, in Codex's own `unelevated` sandbox (writes held to the agent's folders, the internet only partly blocked).",
+    }),
     models: z.array(
       z.object({
         value: z.string().openapi({ description: "What is stored and passed to the CLI (`opus`, `gpt-…`)." }),
@@ -1030,13 +1138,39 @@ export const BrainOption = z
           .boolean()
           .optional()
           .openapi({ description: "Cursor: its CLI said the person's plan includes it (others cost API prices)." }),
-        free: z
+        free: z.boolean().optional().openapi({
+          description:
+            "OpenCode: a model of OpenCode's free tier (no key, no cost). Devin: one its plan serves at no cost.",
+        }),
+        efforts: z
+          .array(z.enum(["low", "medium", "high", "xhigh", "max"]))
+          .optional()
+          .openapi({ description: "Devin: the effort levels its variants run at (absent: every level)." }),
+        fast: z
           .boolean()
           .optional()
-          .openapi({ description: "OpenCode: a model of OpenCode's free tier (no key, no cost)." }),
+          .openapi({ description: "Devin: it has a faster variant, which the fast speed runs." }),
       }),
     ),
     defaultModel: z.string().nullable(),
+    missing: z
+      .object({
+        modelId: z.string(),
+        label: z.string(),
+        why: z.enum(["app_old", "cli_old", "plan"]),
+      })
+      .optional()
+      .openapi({
+        description:
+          "Antigravity: the newest Gemini isn't among its models because the computer's agentes.chat is too old to bring a CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it (`cli_old`), or no account there has a plan with it (`plan`).",
+      }),
+    outdated: z
+      .object({ version: z.string(), min: z.string().optional(), command: z.string().optional() })
+      .optional()
+      .openapi({
+        description:
+          "With `cli_outdated`: the version its computer reported, the oldest one agentes.chat runs (absent: that version is blocked), and the command that updates it where its own updater is the way.",
+      }),
   })
   .openapi("BrainOption");
 
@@ -1106,11 +1240,19 @@ export const MachineAccount = z
     }),
     serves: z.enum(["everyone", "owner"]).openapi({
       description:
-        "Who it thinks for (ADR 0059 §3): everyone in the workspace (the default), or only its owner. Only its owner changes it.",
+        'Who it thinks for (ADR 0059 §3), as older apps read it: `everyone` while its "Usar em agentes" is everyone, else `owner`. `permissions.use` in `GET …/ai-accounts`\'s `hub` says it all.',
+    }),
+    usable: z.boolean().optional().openapi({
+      description:
+        'In an agent\'s "Quem pensa" (`GET …/agents/{id}/brain`): it may think for that agent, the agent\'s owner being in its "Usar em agentes".',
     }),
     useOrder: z.number().int().nullable().openapi({
       description:
         "Its place in the order of use of its computer's accounts of its kind (ADR 0041 §6), 0 first; null: after the placed ones, oldest first. A run at its plan's limit goes on with its agent's owner's next account, then the others that serve everyone.",
+    }),
+    sameAs: z.uuid().openapi({
+      description:
+        "The id of the oldest login of the same account on its computer (one account may be signed in once per agent); its own id where it is the oldest or nothing tells it apart. Logins with the same `sameAs` are one account, whoever looks: the email and key's end that tell them apart stay its owner's.",
     }),
     movable: z.boolean().openapi({
       description:
@@ -1121,6 +1263,40 @@ export const MachineAccount = z
     description:
       "An account of a computer brain on a connected computer (ADR 0041, ADR 0059). Metadata only, never a sign-in.",
   });
+
+export const AccountAudience = z
+  .object({
+    mode: z.enum(["owner", "admins", "roles", "people", "everyone"]),
+    userIds: z.array(z.string()).openapi({ description: "With `people`." }),
+    roleIds: z.array(z.uuid()).openapi({ description: "With `roles`." }),
+  })
+  .openapi("AccountAudience", {
+    description:
+      "Who besides its owner holds one of an AI account's permissions: nobody (`owner`), administrators, the holders of some roles, some people, or everyone.",
+  });
+
+export const AccountPermissions = z
+  .object({
+    manage: AccountAudience.openapi({ description: '"Gerenciar": rename it, remove it, choose `use`.' }),
+    use: AccountAudience.openapi({
+      description: '"Usar em agentes": whose agents (by the agent\'s owner) and whose right hand may think with it.',
+    }),
+    reply: AccountAudience.openapi({
+      description:
+        '"Atender todos": whom an agent on it answers besides the agent\'s own owner (`owner`: nobody else).',
+    }),
+  })
+  .openapi("AccountPermissions");
+
+export const AccountRights = z
+  .object({
+    canManage: z.boolean().openapi({ description: "Rename it, remove it and set `use`." }),
+    canSetManage: z.boolean().openapi({ description: "Set `manage`: its owner." }),
+    canUse: z.boolean().openapi({ description: "The viewer's agents and right hand may think with it." }),
+    useReason: z.enum(["signed_out", "owner_left", "owner_only", "not_allowed"]).optional(),
+    canReplyAll: z.boolean().openapi({ description: "Set `reply`: its owner or an administrator." }),
+  })
+  .openapi("AccountRights", { description: "What the viewer may do with an AI account." });
 
 /** A computer the caller may give an agent, with what it offers. */
 export const BrainMachine = z
@@ -1190,7 +1366,7 @@ export const AgentBrain = z
     }),
     canManageAccounts: z.boolean().openapi({
       description:
-        "The caller may add an account there for this agent: its owner, on a computer where they add accounts.",
+        "The caller may add an account there for this agent: its owner or who manages it, on a computer where they add accounts.",
     }),
     accountsSupported: z.boolean().openapi({ description: "The computer's runner knows accounts (protocol 13)." }),
     onlyOwner: z.boolean().openapi({ description: '"Atende outras pessoas" off: nobody but its owner talks to it.' }),
@@ -1219,6 +1395,10 @@ export const AgentBrain = z
         description:
           "The workspace's live API keys, id and provider only: the providers its owner may move it onto (only admins list the keys).",
       }),
+    keyId: z.string().nullable().optional().openapi({
+      description:
+        "On the API: the workspace's key its calls take now (its own, else its provider's), shown chosen in the picker; null with none or on a plan.",
+    }),
   })
   .openapi("AgentBrain");
 

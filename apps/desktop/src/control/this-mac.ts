@@ -234,6 +234,10 @@ export function toolsHere(homes: readonly Home[]): { tools: RunnerTools } {
 export const CLI_INSTALL = {
   claude: "npm i -g @anthropic-ai/claude-code",
   codex: "npm i -g @openai/codex",
+  // Google's installer has no Windows script, and Gemini accounts don't run on Windows yet (ADR 0143).
+  antigravity: "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+  // Cognition's installer (ADR 0253); Devin accounts don't run on Windows yet.
+  devin: "curl -fsSL https://cli.devin.ai/install.sh | bash",
 } as const;
 
 /**

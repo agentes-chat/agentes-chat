@@ -44,13 +44,14 @@ import {
   useMachines,
   wheelEvent,
 } from "@agenteschat/client";
+import { browserCardLine, hostAndPath, titleKind } from "@agenteschat/client/lib/browser-card";
 import { formatTime, lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { browserNoAnswerMessage, browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { can as canDo } from "@agenteschat/client/lib/permissions";
 import { useSeat } from "@agenteschat/client/lib/seat-context";
-import { isBlankPage } from "@agenteschat/client/lib/sites";
+import { isBlankPage, siteName } from "@agenteschat/client/lib/sites";
 import {
   agentGradient,
   Button,
@@ -75,6 +76,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -98,6 +100,7 @@ import { DesktopView } from "../desktop/DesktopView";
 import { PASTE_MAX_BYTES, pasteBytes } from "../desktop/paste";
 import { MachineToolButton } from "../devices/ToolOneClick";
 import { useOrg } from "../org-context";
+import { ReportProblem } from "../ReportProblem";
 import { colorOf } from "../Sky";
 import { useComputerEdition } from "../WorkspaceComputer";
 import { AddressBar } from "./AddressBar";
@@ -105,9 +108,12 @@ import { AgentCursor } from "./AgentCursor";
 import { Cover } from "./Cover";
 import { LivePicture } from "./LivePicture";
 import { requestBrowserCard, useBrowserCardRequest } from "./open";
-import { SiteIcon, siteName } from "./SiteIcon";
+import { SiteIcon } from "./SiteIcon";
+import { ScreenLine, ScreenPanelContext } from "./screen-panel";
 import "./browser.css";
 
+// The card's title, shared with the phone.
+export { titleKind } from "@agenteschat/client/lib/browser-card";
 // The computer dialog takes it from here too.
 export { Cover } from "./Cover";
 
@@ -200,34 +206,29 @@ function newest(a: BrowserHandoff | null, b: BrowserHandoff | null): BrowserHand
   return RANK[b.status] > RANK[a.status] ? b : a;
 }
 
-/** "https://dashboard.stripe.com/login?x=1" → ["dashboard.stripe.com", "/login"]. */
-export function hostAndPath(url: string | null | undefined): [string, string] {
-  if (!url) return ["", ""];
-  const m = /^[a-z]+:\/\/([^/?#]+)([^?#]*)/i.exec(url);
-  return m ? [m[1] ?? "", (m[2] ?? "").replace(/\/$/, "")] : [url, ""];
-}
-
-/**
- * What the card's title shows: the request while the person is in control of it, else the
- * site, "opening" only until the first frame, and the agent's browser when no site is known.
- */
-export function titleKind(v: {
-  inControl: boolean;
-  ask: string | null;
-  host: string;
-  opening: boolean;
-}): "ask" | "host" | "opening" | "agent" {
-  if (v.inControl && v.ask) return "ask";
-  if (v.host) return "host";
-  return v.opening ? "opening" : "agent";
-}
-
 /**
  * The browser card on an agent's live row, while (and after) it used its browser in this run. A
  * take over bound to this run keeps it even without steps (a reload); a run that failed or was
  * stopped keeps it only for the person still in control (they hand back from it).
  */
 export function RunBrowserCard({ run, name }: { run: LiveRun; name: string }) {
+  const panel = useContext(ScreenPanelContext);
+  return panel ? <RunScreenLine run={run} panel={panel} /> : <RunBrowser run={run} name={name} />;
+}
+
+/** Where the screen has a panel of its own: the run's last step there, as a line; the panel turns to it once. */
+function RunScreenLine({ run, panel }: { run: LiveRun; panel: { show: () => void } }) {
+  const { t } = useTranslation();
+  const last = browserSteps(run.work).at(-1);
+  const started = last !== undefined;
+  useEffect(() => {
+    if (started) panel.show();
+  }, [started, panel]);
+  if (!last) return null;
+  return <ScreenLine icon={iconOf(last.tool)} text={stepText(t, last)} detail={last.detail} onShow={panel.show} />;
+}
+
+function RunBrowser({ run, name }: { run: LiveRun; name: string }) {
   const { org, me } = useOrg();
   const steps = browserSteps(run.work);
   // In a shared profile (ADR 0110) the card shows the profile, to those who may watch it.
@@ -280,8 +281,11 @@ export function HeldBrowserCard({
   /** Ask the server (a recent message); otherwise only what the realtime events said. */
   enabled?: boolean;
 }) {
+  const panel = useContext(ScreenPanelContext);
   const held = useHeldTakeover(agentId, runId, enabled);
+  const { t } = useTranslation();
   if (!held) return null;
+  if (panel) return <ScreenLine icon="computer" text={t("codeSessions.screenLine.held")} onShow={panel.show} />;
   return <BrowserCard agentId={agentId} name={name} runId={runId} handoff={held} />;
 }
 
@@ -870,7 +874,9 @@ export function BrowserCard({
   const blocker = shows
     ? null
     : unavailable?.reason === "offline"
-      ? t(cloud ? "browser.inCard.offlineCloud" : "browser.inCard.offline", g)
+      ? machine?.moving
+        ? t("machines.moving.named", { computer: machine.name })
+        : t(cloud ? "browser.inCard.offlineCloud" : "browser.inCard.offline", g)
       : unavailable?.reason === "no_computer"
         ? t(cloud ? "browser.inCard.noComputerCloud" : "browser.inCard.noComputer", g)
         : unavailable?.reason === "forbidden" || live.error === "forbidden" || live.error === "not_found"
@@ -891,6 +897,13 @@ export function BrowserCard({
   const [attempt, setAttempt] = useState(0);
   // Never on the screen: the card watches no frames there (`watching`).
   const stuck = useBrowserStuck(watching && online && !hidden && (starting || reconnecting || opening), attempt);
+  const reportOf = (code: string) => ({
+    place: "browser" as const,
+    code,
+    step: opening ? "open" : reconnecting ? "reconnect" : "start",
+    context: { agentId, ...(machine ? { machineId: machine.id } : {}) },
+    timings: { attempts: attempt + 1 },
+  });
   const retry = () => {
     setAttempt((n) => n + 1);
     // Watching again after the restart too: this view's own watch may be what the server refused.
@@ -1016,31 +1029,21 @@ export function BrowserCard({
           ? t("browser.inCard.opening")
           : t("browser.inCard.group", g);
   // On the screen (ADR 0058 §7) no frame says the page: what the agent does now, or watching.
-  const sub = inControl
-    ? profile
-      ? profile.machine
-        ? t("browser.profiles.controlSubOn", { machine: profile.machine.name })
-        : t("browser.profiles.controlSub")
-      : ask
-        ? host
-          ? t("browser.inCard.subControl", { site: host, ...g })
-          : t("browser.inCard.subControlAsked", g)
-        : t("browser.inCard.subTakeover", g)
-    : otherInControl
-      ? hidden
-        ? t("browser.inCard.subHidden", { person: controllerName })
-        : t("browser.inCard.subOther", { person: controllerName })
-      : closed
-        ? t("browser.inCard.subClosed")
-        : stuck
-          ? t("browser.inCard.subStuck")
-          : reconnecting
-            ? t("browser.inCard.subReconnect", g)
-            : starting || (!lastStep && !pic && !shows)
-              ? t("browser.inCard.subStarting", g)
-              : lastStep
-                ? t("browser.inCard.subWorking", { name, now: lowerFirst(stepText(t, lastStep), i18n.language) })
-                : t("browser.live.watchOnly");
+  const sub = browserCardLine(t, {
+    grammar: g,
+    inControl,
+    otherInControl,
+    controllerName,
+    hidden,
+    closed,
+    stuck,
+    reconnecting,
+    starting: starting || (!lastStep && !pic && !shows),
+    ask,
+    host,
+    profile: profile ? { machineName: profile.machine?.name ?? null } : null,
+    now: lastStep ? lowerFirst(stepText(t, lastStep), i18n.language) : null,
+  });
   const live_ = working && !blocker && !closed && !stuck;
   const spinning = live_ || (reconnecting && !stuck);
   // The dialog's sub-line: the same, but live and watching is what the dialog knows (a request, a hold). Over a cover
@@ -1176,14 +1179,17 @@ export function BrowserCard({
           profile?.machine && offHere ? (
             <MachineToolButton machine={profile.machine} tool="browser" onAllowed={retry} />
           ) : (
-            <Button
-              size="sm"
-              icon="refresh"
-              loading={actions.restart.isPending || profileActions.takeover.isPending}
-              onClick={retry}
-            >
-              {t("common.retry")}
-            </Button>
+            <span className="ac-acts">
+              <Button
+                size="sm"
+                icon="refresh"
+                loading={actions.restart.isPending || profileActions.takeover.isPending}
+                onClick={retry}
+              >
+                {t("common.retry")}
+              </Button>
+              {noAnswer && <ReportProblem {...reportOf("browser.no_answer")} />}
+            </span>
           )
         }
       />
@@ -1207,9 +1213,12 @@ export function BrowserCard({
         text={t("browser.inCard.stuck", g)}
         help={mayDrive ? t("browser.inCard.stuckHelp") : undefined}
         action={
-          <Button size="sm" icon="refresh" loading={actions.restart.isPending} onClick={retry}>
-            {t("common.retry")}
-          </Button>
+          <span className="ac-acts">
+            <Button size="sm" icon="refresh" loading={actions.restart.isPending} onClick={retry}>
+              {t("common.retry")}
+            </Button>
+            <ReportProblem {...reportOf("browser.stuck")} />
+          </span>
         }
       />
     ) : opening ? (

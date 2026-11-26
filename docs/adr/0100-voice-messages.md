@@ -128,8 +128,8 @@ each verb is a group with its own mark and faces ("Marina está digitando · Rui
 the second takes a line of its own when the line is short: names give way, verbs never. Copy:
 `chat.activity.recordingVoice`.
 
-**Agents wait for it.** The quiet window counts a voice frame like typing (ADR 0112): a run started on a person's
-message waits its whole window while they record a follow-up.
+**Agents wait for it.** A voice frame counts like typing (ADR 0112): a run started on a person's message holds its
+first model call while they record a follow-up.
 
 ## Addendum (2026-11-15): typed text and files in the same message
 
@@ -174,3 +174,15 @@ take, the words and the files as one message: the phone uploads its files at sen
 one fails the take stays, paused, with the words back in the field. The offline queue keeps the typed text and the
 uploaded files with the recording and sends them with it. Holding the mic and sliding to cancel are unchanged. The
 phone has no Esc question: delete in the row removes only the take, and the words stay in the field.
+
+## Addendum (2026-11-17): the take on the phone, touch by touch
+
+- **The first words are kept.** The recorder got ready only once the hold was reached, so about 0.3 s of speech was lost. Now the audio session and the recorder get ready as the finger lands on the microphone (`warm`). The take starts with its haptic, and the permission is read ahead, so a hold that is allowed waits on nothing. A press that never reaches the hold records nothing and gives the session back (`cool`).
+- **The field is back as the take goes.** Letting go (or tapping send) puts the field back at once, with a light haptic, while the recorder closes behind it (`sending`). The message plays `send` (ADR 0070).
+- **Throwing a take away.** On the way to the cancel line, the clock gives way to a red trash. Once the line is crossed, or the trash tapped, a medium haptic lands and the wave folds into the trash in `FOLD_MS`. The `discard` sound plays once the recorder has stopped. The toast is gone, and a screen reader still hears "Gravação apagada".
+- **Each touch answers.** Locking is a light haptic, and "Travado" lands with a click. Pausing is a light haptic, unless the app paused it (a call, the background). Listening is a selection haptic. The last 15 s warn once. A take too short shakes the field, with a warning haptic and the same line as before.
+- **Entrances and exits.** The take's parts come and go with the app's entrances (`apps/mobile/src/ui/entrances.ts`): the recording fades in over the field, and the hint, the line and the bar rise 6 points in `motion.base`. Exits use `motion.fast`. With Reduce Motion, none of these entrances, exits or folds play.
+
+## Addendum (2026-11-22): the take's haptics on iOS, and its start sound
+
+While the session records, iOS mutes haptics and system sounds unless the app allows them (`allowHapticsAndSystemSoundsDuringRecording`, false by default), and `expo-audio` never does, so none of the take's haptics reached the hand on an iPhone. A local module (`apps/mobile/modules/voice-session`) allows them whenever a voice takes the session to record (`voiceAudio(true)`) and again right before the recorder starts, since preparing it sets the session up anew. The hold now lands with the medium haptic and the `record` sound (ADR 0070), and the recorder starts after `START_SOUND_MS` (90 ms), so the take doesn't hold the sound. The recorder is ready by then, having got ready while the finger was down.

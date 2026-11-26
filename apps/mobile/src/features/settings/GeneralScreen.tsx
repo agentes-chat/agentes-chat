@@ -28,6 +28,7 @@ import {
   GroupedHeader,
   GroupedList,
   GroupedRow,
+  Sheet,
   SkeletonList,
   Text,
   useToast,
@@ -39,6 +40,8 @@ import { useMemoryOriginText } from "../agents/useMemoryOriginText";
 import { Note } from "../ai/parts";
 import { ZoneList } from "../me/AccountPage";
 import { PHOTO_MAX_BASE64, photoContentType } from "../me/logic";
+import { useProblemReports } from "../report/ReportProblemButton";
+import { ReportProblemSheet } from "../report/ReportProblemSheet";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors } from "../shared/hooks";
 import { OrgAvatar } from "../shared/OrgAvatar";
@@ -49,8 +52,6 @@ import { AccentRow } from "./AccentRow";
 import { missingIdeas, nameOnLeave, withIdea, zoneLabel } from "./logic";
 import { chooseAction, Gap, SettingsPage, Uploading } from "./parts";
 
-/** How long "Salvo" stays under the title after a change saved by itself. */
-const SAVED_MS = 1800;
 /** The workspace's logo at the top of Geral (`OrgAvatar`'s corners: one cut, the other three round). */
 const LOGO = 84;
 /** The context saves this long after the last key (and when its field is left). */
@@ -102,11 +103,9 @@ export function GeneralScreen() {
   const [name, setName] = useState("");
   const [context, setContext] = useState("");
   const [timezone, setTimezone] = useState("");
-  const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const loaded = useRef<string | null>(null);
   const contextTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contextField = useRef<TextInputInstance | null>(null);
   const picked = useZonePick();
 
@@ -129,7 +128,6 @@ export function GeneralScreen() {
   useEffect(
     () => () => {
       clearTimeout(contextTimer.current);
-      clearTimeout(savedTimer.current);
       const now = latest.current;
       if (!now.editable || !now.settings) return;
       const patch: Partial<OrgSettings> = {};
@@ -151,12 +149,8 @@ export function GeneralScreen() {
   const save = (patch: Partial<OrgSettings>) => {
     if (!editable) return;
     update.mutate(patch, {
-      onSuccess: () => {
-        setSaved(true);
-        AccessibilityInfo.announceForAccessibility(t("settings.savedShort"));
-        clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSaved(false), SAVED_MS);
-      },
+      // The control already shows the change (it moves as it is tapped); a screen reader hears that it stuck.
+      onSuccess: () => AccessibilityInfo.announceForAccessibility(t("settings.savedShort")),
       onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
     });
   };
@@ -344,7 +338,8 @@ export function GeneralScreen() {
       />
     </GroupedList>
   );
-  const approvals = can(org, "manage_agents") ? (
+  // The workspace's level reaches private agents too: owners and administrators only (ADR 0085 addendum of 2026-11-17).
+  const approvals = can(org, "administrator") ? (
     <>
       <WorkspaceApprovalsRow />
       <Gap />
@@ -420,7 +415,6 @@ export function GeneralScreen() {
             ? t("mobile.settings.edit")
             : t("settings.section.general")
       }
-      subtitle={saved ? t("settings.savedShort") : undefined}
       frozen={settingsFrozen(org, "general")}
     >
       {!editable ? (
@@ -470,6 +464,7 @@ export function GeneralScreen() {
 
       <TeamMemory />
       <UsageStatistics />
+      <ProblemReport />
     </SettingsPage>
   );
 }
@@ -566,6 +561,25 @@ function UsageStatistics() {
         <GroupedRow label={t("settings.telemetry.see")} chevron onPress={() => router.push("/settings/telemetry")} />
       </GroupedList>
       {envOff ? <GroupedFooter>{envOff}</GroupedFooter> : null}
+    </>
+  );
+}
+
+/** "Send a report" for anything not tied to one screen: self-hosted servers only. */
+function ProblemReport() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  if (!useProblemReports()) return null;
+  return (
+    <>
+      <GroupedHeader>{t("problemReport.settingsTitle")}</GroupedHeader>
+      <GroupedList>
+        <GroupedRow label={t("problemReport.button")} chevron onPress={() => setOpen(true)} />
+      </GroupedList>
+      <GroupedFooter>{t("problemReport.settingsText")}</GroupedFooter>
+      <Sheet open={open} onClose={() => setOpen(false)}>
+        {open && <ReportProblemSheet place="settings" onClose={() => setOpen(false)} />}
+      </Sheet>
     </>
   );
 }

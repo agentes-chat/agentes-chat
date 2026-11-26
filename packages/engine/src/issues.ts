@@ -47,11 +47,12 @@ import { fileIdsOf, getMessage, insertMessage, type MessageView, messageView, po
 import { enqueueRunJob } from "./mission-runs";
 import { notifyIssueChanged } from "./notification-producers";
 import { can, getMembership, requireActiveMembership } from "./organizations";
+import { runReadOutsideById } from "./outside";
 import { membersWhoMaySql } from "./permissions";
 import { queueTaskCheck, queueTaskEnd, tellTaskEnd } from "./right-hand-follow";
 import { fireRoutineEvent } from "./routines";
 import { agentSearchChannels, enqueueIndex, registerDocumentBuilder } from "./search";
-import { AUDIENCE_MAX, type Audience, admitTaskAgents, taskSeenSql } from "./task-access";
+import { AUDIENCE_MAX, type Audience, admitTaskAgents, fileConversationReaderSql, taskSeenSql } from "./task-access";
 import {
   ensureTaskConversation,
   type TaskConversationRef,
@@ -291,10 +292,35 @@ async function checkAssignee(db: Database, orgId: string, a: WorkActor, scope: T
 
 /**
  * What a task made from `channelId` is limited to: the people of a DM or a private channel (`tiedTo`); from a task's
- * own conversation (`scope`), whoever sees that task. Nothing where the whole workspace may see it: a public channel,
- * and a room no person reads (a routine's), whose task would otherwise be nobody's.
+ * own conversation (`scope`), whoever sees that task; from a live file's conversation (ADR 0199), where the file lives
+ * (a file of the Drive itself, its maker: ADR 0157 amendment 2026-11-17). Nothing where the whole workspace may see
+ * it: a public channel, a file shared with everyone, and a room no person reads (a routine's), whose task would
+ * otherwise be nobody's.
  */
-async function conversationOf(db: Database, orgId: string, channelId: string) {
+async function conversationOf(
+  db: Database,
+  orgId: string,
+  channelId: string,
+  depth = 0,
+): Promise<{ tiedTo: string | null; scope: TaskScope | null }> {
+  const [file] = await db
+    .select({
+      channelId: schema.artifacts.channelId,
+      share: schema.artifacts.share,
+      createdByType: schema.artifacts.createdByType,
+      createdById: schema.artifacts.createdById,
+    })
+    .from(schema.artifacts)
+    .where(and(eq(schema.artifacts.orgId, orgId), eq(schema.artifacts.conversationChannelId, channelId)));
+  if (file) {
+    if (file.share === "everyone") return { tiedTo: null, scope: null };
+    if (!file.channelId) {
+      const maker = file.createdByType === "person" ? [file.createdById] : [];
+      return { tiedTo: null, scope: { channelId: null, restricted: true, audienceUserIds: maker } };
+    }
+    // Files made in each other's conversations go a few levels at most; past them, tied to the conversation itself.
+    return depth < 4 ? conversationOf(db, orgId, file.channelId, depth + 1) : { tiedTo: channelId, scope: null };
+  }
   const [row] = await db
     .select({
       kind: channels.kind,
@@ -425,7 +451,10 @@ async function seenByConversation(db: Database, person: string | null, channelId
         and not (c.kind = 'channel' and c.visibility = 'public')
         ${person ? sql`and ${taskSeenSql("t", sql`${person}::text`)}` : sql``}
         and not exists (select 1 from ${channelMembers} h where h.channel_id = c.id and h.user_id is not null
-          and not ${taskSeenSql("t", sql`h.user_id`)})`),
+          and not ${taskSeenSql("t", sql`h.user_id`)})
+        -- A live file's conversation has no people in it: whoever reads the file reads it (ADR 0199).
+        and not (c.kind = 'file' and exists (select 1 from organization_members fh where fh.org_id = c.org_id
+          and ${fileConversationReaderSql(sql`c.id`, sql`fh.user_id`)} and not ${taskSeenSql("t", sql`fh.user_id`)}))`),
   );
   return new Set(rows.map((r) => r.id));
 }
@@ -529,7 +558,8 @@ async function workOf(
   for (const st of steps) {
     const name = st.kind === "tool_call" && typeof st.data.name === "string" ? st.data.name : "";
     const input = st.data.input as Record<string, unknown> | undefined;
-    if (!name) continue;
+    // A call in a person's own connection is theirs alone, and one task view goes to every reader of the task.
+    if (!name || st.data.personal === true) continue;
     const answer = name === PERMISSION_TOOL ? answers.get(st.data.toolUseId) : undefined;
     if (promptPoll(name, input)) {
       for (const asked of answer?.behavior ? (waiting.get(String(input?.request_id)) ?? []) : []) {
@@ -1309,7 +1339,8 @@ export async function updateIssue(
         : null;
     return { row: updated, ended };
   });
-  await linkRun(deps, actor, row);
+  // A status or column set here is the agent's own word: starting work must not undo it (todo back to in progress).
+  await linkRun(deps, actor, row, { start: !patch.status && !patch.columnId });
   // A new agent assignee joins the task's conversation (ADR 0145): a mention there reaches it.
   if (agentsOf(joined).length > 0 && row.conversationChannelId) {
     await admitTaskAgents(db, orgId, row.conversationChannelId, { ids: agentsOf(joined) });
@@ -1353,17 +1384,24 @@ function editedCriteria(current: IssueRow["criteria"], next: { id?: string; text
  * the run is linked to it, and an issue the agent has that is still "to do"
  * moves to "in progress" on its own.
  */
-async function linkRun(deps: IssueDeps, actor: IssueActor, issue: IssueRow) {
+async function linkRun(deps: IssueDeps, actor: IssueActor, issue: IssueRow, opts?: { start: boolean }) {
   if (actor.type !== "agent" || !actor.runId) return;
-  await startedWork(deps, issue, actor.agentId, [actor.runId]);
+  await startedWork(deps, issue, actor.agentId, [actor.runId], opts);
 }
 
-async function startedWork(deps: IssueDeps, issue: IssueRow, agentId: string, runIds: string[]) {
+async function startedWork(
+  deps: IssueDeps,
+  issue: IssueRow,
+  agentId: string,
+  runIds: string[],
+  { start = true }: { start?: boolean } = {},
+) {
   if (runIds.length === 0) return;
   await deps.db
     .update(agentRuns)
     .set({ issueId: issue.id })
     .where(and(inArray(agentRuns.id, runIds), isNull(agentRuns.issueId), eq(agentRuns.orgId, issue.orgId)));
+  if (!start) return;
   const [current] = await deps.db.select().from(issues).where(eq(issues.id, issue.id));
   const isMineToStart =
     current?.status === "todo" && (await isAssigned(deps.db, current.id, { type: "agent", id: agentId }));
@@ -1468,7 +1506,9 @@ async function liveFiles(db: Executor, orgId: string, ids: string[], by: WorkAct
 
 /**
  * A limited task's files stay with it: a file its author brings that isn't in any conversation would be the whole
- * workspace's in the Drive, so it moves to the task's conversation, read by who sees the task (ADR 0151).
+ * workspace's in the Drive, so it moves to the task's conversation, read by who sees the task (ADR 0151). One shared
+ * with everyone there is then its conversation's alone; a list it was shared with stays (ADR 0157, amendment
+ * 2026-11-17).
  */
 async function keepFilesWithTask(
   deps: IssueDeps,
@@ -1482,7 +1522,10 @@ async function keepFilesWithTask(
   const by = actorOf(actor);
   const moved = await db
     .update(artifacts)
-    .set({ channelId })
+    .set({
+      channelId,
+      share: sql`(case when ${artifacts.share} = 'everyone' then 'conversation' else ${artifacts.share} end)`,
+    })
     .where(
       and(
         eq(artifacts.orgId, task.orgId),
@@ -1686,7 +1729,7 @@ export async function askAgentToImplement(
   const issue = await findVisible(db, actor, orgId, { id: issueId });
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!canTalkTo(agent, userId, await speakerFor(db, orgId, userId))) throw await audienceError(db, agent);
+  if (!canTalkTo(agent, userId, await speakerFor(db, orgId, userId))) throw await audienceError(db, agent, userId);
   // It goes first among whoever has the task, everyone else staying: the first agent is the one the task's
   // conversation answers with (ADR 0188).
   const had = await assigneesOfIssue(db, issue.id);
@@ -1708,6 +1751,7 @@ export async function askAgentToImplement(
       threadId: conversation.rootId,
       author: by ? { type: "agent", agentId: by.agentId, runId: by.runId, hop: by.hop } : { type: "person", userId },
       body: `Please implement issue #${issue.number}.`,
+      origin: by ? "agent" : "system",
       meta: {
         issueId: issue.id,
         issueWorkStart: true,
@@ -1733,6 +1777,8 @@ export async function askAgentToImplement(
         question: `Work on task #${issue.number}: ${issue.title}`.slice(0, 2_000),
         chain: [by.agentId],
         expiresAt: new Date(Date.now() + TASK_HAND_OFF_TTL_MS),
+        forUserId: (await runAuthorityById(tx, orgId, by.runId)).personId,
+        askerReadOutside: await runReadOutsideById(tx, orgId, by.runId),
       });
       // The right hand looks at it again a day later, for the person it handed it over for.
       await queueTaskCheck(tx, orgId, consultationId);
@@ -2008,8 +2054,8 @@ export async function linkIssueToWork(
 
 /**
  * A card follows its work (ADR 0121 §4): queued → A fazer, working → Em andamento, waiting on a person, paused or
- * failed → the blocked badge in its stage, done → Feito (left in review when the agent moved it there), stopped →
- * back to A fazer. An update is an activity event on it.
+ * failed → the blocked badge in its stage, done → Feito (in review when the agent moved it there or a criterion is
+ * still open), stopped → back to A fazer. An update is an activity event on it.
  */
 export async function setWorkIssueState(
   deps: IssueDeps,
@@ -2024,7 +2070,14 @@ export async function setWorkIssueState(
   let status: IssueStatus = current.status;
   let blocked: IssueRow["blocked"] = null;
   const ended = input.ended ?? (view.status === "live" || view.status === "queued" ? null : view.status);
-  if (ended === "done") status = current.status === "in_review" ? "in_review" : "done";
+  // A run ending "done" only means its turn ended: with criteria still open the work isn't finished, a person reviews it.
+  if (ended === "done")
+    status =
+      current.status === "in_review" || current.status === "done"
+        ? current.status
+        : current.criteria.some((c) => !c.done)
+          ? "in_review"
+          : "done";
   else if (ended === "canceled") status = "todo";
   else if (ended === "failed") blocked = { reason: "failed", since: now.toISOString(), text: view.errorCode ?? "" };
   else if (view.state === "queued") status = current.status === "done" ? current.status : "todo";

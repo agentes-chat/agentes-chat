@@ -8,6 +8,7 @@ import {
 } from "@agenteschat/tokens";
 import { accentPalette, accentSky, isAccentHex } from "@agenteschat/tokens/accent";
 import { setSkyColors } from "@agenteschat/ui/agent/engine";
+import type { TileTint } from "./icons.sf";
 
 /**
  * The phone app's colors (pure: no React Native import, so it is unit-tested). The design system's tokens,
@@ -32,7 +33,39 @@ export interface AppColors extends ThemeColors {
   badge: string;
   /** A sheet's grabber where we draw it (Android; iOS draws its own), the system's tone for it. */
   grabber: string;
+  /** The hairline between a list's rows, the system's own (`separator`): a step darker than `line2`. */
+  separator: string;
+  /** The system's secondary words (`secondaryLabel`): a row's value, beside the label. */
+  label2: string;
+  /** The system's tertiary marks (`tertiaryLabel`): a row's chevron and its menu's up-down mark. */
+  label3: string;
+  /** A list row under the finger, the system's own (`systemGray4`). */
+  rowLit: string;
+  /** A tonal fill a finger presses: a secondary button's, a segmented control's track (the system's gray, stronger in dark). */
+  tonal: string;
+  /** The Settings tiles' colors, one per subject (`TILE_TINTS`); the same in both themes, as the system's are. */
+  tiles: Record<TileTint, string>;
 }
+
+/**
+ * The system's Settings tiles: its named colors in their light values, kept in dark too (the system's own tiles don't
+ * change with the theme). The agent's tile is the brand's blue.
+ */
+const TILES: Record<TileTint, string> = {
+  red: "#ff3b30",
+  orange: "#ff9500",
+  yellow: "#ffcc00",
+  green: "#34c759",
+  teal: "#30b0c7",
+  cyan: "#32ade6",
+  blue: "#007aff",
+  indigo: "#5856d6",
+  purple: "#af52de",
+  pink: "#ff2d55",
+  brown: "#a2845e",
+  gray: "#8e8e93",
+  agent: lightTokens.agent,
+};
 
 /** Light, native: what changes from the tokens. */
 const NATIVE_LIGHT: Partial<ThemeColors> = {
@@ -71,6 +104,12 @@ export function appColors(scheme: Scheme): AppColors {
       chip: darkTokens.sunken,
       badge: "#ff453a",
       grabber: "rgba(235, 235, 245, 0.3)",
+      separator: "rgba(84, 84, 88, 0.65)",
+      label2: "rgba(235, 235, 245, 0.6)",
+      label3: "rgba(235, 235, 245, 0.3)",
+      rowLit: "#3a3a3c",
+      tonal: "rgba(127, 127, 127, 0.24)",
+      tiles: TILES,
     };
   }
   const base = { ...lightTokens, ...NATIVE_LIGHT };
@@ -84,6 +123,12 @@ export function appColors(scheme: Scheme): AppColors {
     chip: "rgba(120, 120, 128, 0.1)",
     badge: "#ff3b30",
     grabber: "rgba(60, 60, 67, 0.3)",
+    separator: "rgba(60, 60, 67, 0.29)",
+    label2: "rgba(60, 60, 67, 0.6)",
+    label3: "rgba(60, 60, 67, 0.3)",
+    rowLit: "#d1d1d6",
+    tonal: "rgba(120, 120, 128, 0.14)",
+    tiles: TILES,
   };
 }
 
@@ -140,6 +185,30 @@ const NATIVE_LIGHT_SHADOWS: Partial<Record<ShadowName, ShadowLayer[]>> = {
 
 export function appShadows(scheme: Scheme): Record<ShadowName, ShadowLayer[]> {
   return scheme === "dark" ? tokenShadows.dark : { ...tokenShadows.light, ...NATIVE_LIGHT_SHADOWS };
+}
+
+/** An outline drawn outside a view (React Native's `outline*`), so nothing inside it moves. */
+export interface Edge {
+  readonly outlineWidth: number;
+  readonly outlineColor: string;
+  readonly outlineStyle: "solid";
+}
+
+/** `cardEdge` per scheme, made once. */
+const cardEdges = new Map<Scheme, Edge | null>();
+
+/**
+ * The cards' light edge: the ring of their `e1` shadow (its layer with no blur), as an outline. A grouped list carries
+ * it too, so lists and cards read as one family, and so does a bubble over a background.
+ */
+export function cardEdge(scheme: Scheme): Edge | null {
+  let edge = cardEdges.get(scheme);
+  if (edge === undefined) {
+    const ring = appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0);
+    edge = ring ? { outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" } : null;
+    cardEdges.set(scheme, edge);
+  }
+  return edge;
 }
 
 /** A `#rrggbb` color at `alpha` (0–1), as `#rrggbbaa`. */

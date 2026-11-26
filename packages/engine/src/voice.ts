@@ -1,4 +1,4 @@
-import type { BlobStoreResolver, PubSub, SpeechEngine } from "@agenteschat/adapters";
+import type { BlobStore, BlobStoreResolver, PubSub, SpeechEngine } from "@agenteschat/adapters";
 import { firstWords, typingTopic } from "@agenteschat/adapters";
 import {
   and,
@@ -23,6 +23,7 @@ import { markChannelRead } from "./dms";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishTyping, publishUserEvent } from "./events";
 import type { Judge } from "./judge";
+import { surfaceWordsMeta } from "./message-origin";
 import type { MessageVoice } from "./message-preview";
 import { attachmentRefsFor, MAX_MESSAGE_LENGTH, postPersonMessage } from "./messages";
 import { can } from "./organizations";
@@ -89,7 +90,7 @@ export interface VoiceDeps {
 /** How long an engine has a recording to itself before the next one starts beside it: 19 s for 88 s of audio. */
 export const hedgeAfterMs = (durationMs: number) => 8_000 + durationMs / 8;
 
-function cleanPeaks(peaks: unknown): number[] {
+export function cleanPeaks(peaks: unknown): number[] {
   if (!Array.isArray(peaks)) return [];
   return peaks.slice(0, MAX_PEAKS).map((p) => {
     const n = Number(p);
@@ -387,9 +388,11 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
         attachments: clip.attachments ?? undefined,
         clientId: clip.clientId,
         replyTo: clip.replyTo,
+        // Only a surface hands a clip its `via` (ADR 0187): one recorded in our apps has none.
+        origin: clip.via ? "surface" : "app",
         meta: {
           voice,
-          ...(clip.via ? { via: clip.via, ...(clip.via.forwarded === true ? { readOutside: true } : {}) } : {}),
+          ...(clip.via ? { via: clip.via, ...surfaceWordsMeta(clip.via) } : {}),
         },
       },
     );
@@ -424,13 +427,13 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
   }
 }
 
-/** A recording to play, for who can read its channel: a signed link where the store has them, else the bytes. */
+/** A recording to play, for who can read its channel: a signed link where the store has them, else where it is kept. */
 export async function voiceClipAudio(
   deps: Pick<VoiceDeps, "db" | "blobs" | "retentionDays">,
   userId: string,
   orgId: string,
   clipId: string,
-): Promise<{ expired: true } | { url: string } | { body: Uint8Array; contentType: string }> {
+): Promise<{ expired: true } | { url: string } | { store: BlobStore; key: string; size: number; contentType: string }> {
   const [clip] = await deps.db
     .select()
     .from(voiceClips)
@@ -442,11 +445,9 @@ export async function voiceClipAudio(
     return { expired: true };
   }
   const store = await deps.blobs.forConfig(orgId, clip.storageConfigId);
-  const url = await store.signedUrl(clip.blobKey, { expiresInSeconds: 300 });
+  const url = await store.signedUrl(clip.blobKey, { expiresInSeconds: 300, contentType: clip.contentType });
   if (url) return { url };
-  const object = await store.get(clip.blobKey);
-  if (!object) throw new NotFoundError();
-  return { body: object.body, contentType: clip.contentType };
+  return { store, key: clip.blobKey, size: clip.size, contentType: clip.contentType };
 }
 
 const SWEEP_PAGE = 200;

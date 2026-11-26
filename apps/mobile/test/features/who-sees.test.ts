@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { audienceKind, audienceOfKind, pickedOf, wikiAudienceOf } from "@agenteschat/client/lib/who-sees";
 import { buildConversations } from "../../src/features/chats/logic";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
@@ -39,7 +40,7 @@ describe("an administrator's channels on the phone", () => {
   });
 
   test("they read it before joining, and Entrar stays where the composer goes", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("const readable = member || admin;");
     expect(chat).toContain('t("channel.adminReading")');
   });

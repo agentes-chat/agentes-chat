@@ -15,12 +15,13 @@ import {
   actionCardOf,
   connectAppDone,
   installSkillDone,
+  installSkillSource,
   inviteDone,
   skillUpdateState,
 } from "@agenteschat/client/lib/action-cards";
 import { APP_PAGES, appPagePath } from "@agenteschat/client/lib/app-pages";
 import { slotText } from "@agenteschat/client/lib/calendar";
-import { connectedItems } from "@agenteschat/client/lib/connected";
+import { connectedItems, personalServesAgents } from "@agenteschat/client/lib/connected";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { hostOf } from "@agenteschat/client/lib/import/shared";
@@ -89,7 +90,8 @@ function ConnectApp({ card }: { card: Extract<Card, { kind: "connect_app" }> }) 
       why={card.why}
       detail={card.url}
       done={done ? `${t("actionCard.connected")}: ${title}` : null}
-      action={can(org, "manage_connectors") ? t("actionCard.connect") : null}
+      // Every member connects it, as their own when they may not add the team's; GitHub only for the team.
+      action={can(org, "manage_connectors") || personalServesAgents(card.connector) ? t("actionCard.connect") : null}
       onAction={() => router.push(`/connectors?${query}` as never)}
       blocked={t("actionCard.connect_app.adminOnly")}
     />
@@ -134,13 +136,22 @@ function InstallSkill({ card, agentId }: { card: Extract<Card, { kind: "install_
       icon="brain"
       title={t("actionCard.install_skill.title")}
       why={card.why}
-      detail={card.url}
-      done={installSkillDone(card, skills.data ?? []) ? `${t("actionCard.install_skill.done")}: ${card.url}` : null}
+      detail={installSkillSource(card)}
+      done={
+        installSkillDone(card, skills.data ?? [])
+          ? `${t("actionCard.install_skill.done")}: ${installSkillSource(card)}`
+          : null
+      }
       action={t("actionCard.install_skill.open")}
       onAction={() => {
-        if (agentId) openedFromCard({ url: card.url, agentId });
+        // The card's link, or its .zip's Drive id: what the route names to keep its agent (`routeAgent`).
+        const source = card.file?.id ?? card.url ?? "";
+        if (agentId) openedFromCard({ url: source, agentId });
+        const agent = agentId ? `&agent=${encodeURIComponent(agentId)}` : "";
         router.push(
-          `/settings/skills/new?url=${encodeURIComponent(card.url)}${agentId ? `&agent=${encodeURIComponent(agentId)}` : ""}` as never,
+          (card.file
+            ? `/settings/skills/new?file=${encodeURIComponent(card.file.id)}&name=${encodeURIComponent(card.file.name)}${agent}`
+            : `/settings/skills/new?url=${encodeURIComponent(source)}${agent}`) as never,
         );
       }}
       blocked=""

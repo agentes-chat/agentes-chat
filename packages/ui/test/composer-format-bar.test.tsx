@@ -263,27 +263,30 @@ describe("where the bar goes (placeOverSelection)", () => {
     expect(at.left).toBe(640 - BAR.width / 2);
   });
 
-  test("320 wide: the wrapped bar (the column's width, two rows) starts at the column's left, inside the window", () => {
+  test("320 wide: the capped bar (the column's width, its row scrolling) starts at the column's left, inside the window", () => {
     const narrow = { left: 10, right: 310 };
-    const wrapped = { width: 300, height: 76 };
-    const at = placeOverSelection({ left: 200, right: 300, top: 500, bottom: 522 }, wrapped, narrow, 320);
+    const capped = { width: 300, height: 44 };
+    const at = placeOverSelection({ left: 200, right: 300, top: 500, bottom: 522 }, capped, narrow, 320);
     expect(at.left).toBeGreaterThanOrEqual(narrow.left);
-    expect(at.left + wrapped.width).toBeLessThanOrEqual(320 - EDGE_ROOM + 2);
-    expect(at.top + wrapped.height).toBe(500 - TIP_GAP);
+    expect(at.left + capped.width).toBeLessThanOrEqual(320 - EDGE_ROOM + 2);
+    expect(at.top + capped.height).toBe(500 - TIP_GAP);
     // One still wider than its column never leaves from the left.
     expect(placeOverSelection({ left: 200, right: 300, top: 500, bottom: 522 }, BAR, narrow, 320).left).toBe(10);
   });
 });
 
 describe("the bar's CSS", () => {
-  test("it fades in and out, still for reduced motion, wraps on a narrow composer and floats over the page", async () => {
+  test("it fades in and out, still for reduced motion, scrolls sideways on a narrow composer and floats over the page", async () => {
     const sheet = await css();
     const rule = (selector: string) => {
       const at = sheet.indexOf(`\n${selector} {`);
       expect(at).toBeGreaterThan(-1);
       return sheet.slice(at, sheet.indexOf("}", at));
     };
-    expect(rule(".ac-formatbar")).toContain("flex-wrap: wrap");
+    // One row that scrolls, its ends faded: wrapped, the last row ended short of the bar's edge.
+    expect(rule(".ac-formatbar__row")).toContain("overflow-x: auto");
+    expect(rule(".ac-formatbar__row")).not.toContain("flex-wrap");
+    expect(rule('.ac-formatbar__row[data-more="end"]')).toContain("mask-image");
     // Unplaced or closed, it stays in the text's cell: a bar as wide as its buttons would scroll a 320px page sideways.
     expect(rule(".ac-formatbar")).toContain("max-width: 100%");
     expect(rule(".ac-formatbar")).toContain("z-index: var(--z-floating)");
@@ -294,7 +297,8 @@ describe("the bar's CSS", () => {
     expect(sheet).toMatch(
       /@media \(prefers-reduced-motion: reduce\) \{\s*\.ac-formatbar,\s*\.ac-formatbar\[data-open\] \{\s*transition: none;/,
     );
-    expect(rule(".ac-formatbar__btn")).toContain("height: var(--control-h-sm)");
+    expect(rule(".ac-formatbar__btn")).toContain("height: var(--fmt-btn)");
+    expect(rule(".ac-formatbar")).toContain("--fmt-btn: 28px");
     // Long unbroken text stays in its column: the text's cell may shrink, the buttons never do.
     expect(rule(".ac-composer__text")).toContain("min-width: 0");
     expect(rule(".ac-composer__tools")).toContain("flex: none");

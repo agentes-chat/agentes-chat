@@ -26,6 +26,17 @@ test("the people card applies each row as the web does: the shared words and key
   expect(card).toContain("if (!people || !known.isSuccess) return null;");
 });
 
+test("a settings row is the agent's review's: Reviewing… until it ends, then how it did and Undo", () => {
+  // Nobody is asked to apply it, so nobody is sent it with "Ask an admin" (ADR 0219).
+  const card = src("right-hand/SettingsCard.tsx");
+  expect(card).toContain("const outcome = proposalOutcome(t, p, meId);");
+  expect(card).toContain("waitsFor={outcome.reviewing ? outcome.words : null}");
+  expect(card).toContain("p.undoable && !back ? <UndoProposal id={p.id} /> : null");
+  expect(card).not.toContain("decidersOf(");
+  expect(card).not.toContain("useAskProposal");
+  expect(card).not.toContain("useDecideProposal");
+});
+
 test("a workspace change's card says who asked, and its tap says which action this app showed", () => {
   const card = src("right-hand/SettingsCard.tsx");
   expect(card).toContain("useDecideActionCard(orgId, { ...where, action: card.params.action })");

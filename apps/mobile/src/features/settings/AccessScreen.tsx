@@ -7,6 +7,7 @@ import {
   levelOf,
   resourcesOf,
 } from "@agenteschat/client/lib/access-levels";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { addsConnectors, can } from "@agenteschat/client/lib/permissions";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,7 +30,8 @@ import { chooseAction, SettingsPage } from "./parts";
  * level. On the phone each agent is a group and each service a row: a tap lists its levels (Sem acesso, Ler, Ler e
  * escrever) in the app's short menu, the one in use checked, and a pick saves right away. The switch between services
  * and built-in areas stays on top, where the list's change never moves it. Sensitive actions keep asking at any level
- * (the row says so); fine-tuning tool by tool is the connector's Ferramentas.
+ * (the row says so); fine-tuning tool by tool is the connector's Ferramentas. Only the agents this person manages
+ * (the server's `canManage`): "Editar qualquer agente" doesn't reach someone's private agent (ADR 0085 addendum).
  */
 export function AccessScreen() {
   const { t } = useTranslation();
@@ -37,7 +39,8 @@ export function AccessScreen() {
   const { orgId, org } = useOrg();
   const admin = can(org, "manage_agents");
   const agents = useAgents(orgId);
-  const list = agents.data ?? [];
+  const all = agents.data ?? [];
+  const list = all.filter((a) => managesAgent(a));
   const access = useAgentsAccess(list, admin);
   const items = useConnectedById();
   const set = useSetLevels();
@@ -82,7 +85,7 @@ export function AccessScreen() {
       t("common.cancel"),
     );
 
-  if (!admin) {
+  if (!admin || (all.length > 0 && list.length === 0)) {
     return (
       <SettingsPage title={t("settings.section.access")}>
         <View style={styles.note}>
@@ -113,7 +116,7 @@ export function AccessScreen() {
       {access.unavailable ? <GroupedFooter>{t("access.unavailable")}</GroupedFooter> : null}
       {agents.isError && !agents.data ? <LoadFailed onRetry={() => void agents.refetch()} /> : null}
       {agents.isLoading || (list.length > 0 && access.loading) ? <SkeletonList rows={4} /> : null}
-      {agents.isSuccess && list.length === 0 ? (
+      {agents.isSuccess && all.length === 0 ? (
         <FirstUse
           place="agents"
           size="panel"
@@ -169,7 +172,6 @@ export function AccessScreen() {
             );
           })
         : null}
-      {table ? <GroupedFooter>{t("mobile.settings.access.how")}</GroupedFooter> : null}
     </SettingsPage>
   );
 }

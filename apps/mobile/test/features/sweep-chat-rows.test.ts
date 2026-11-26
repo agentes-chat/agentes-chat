@@ -41,7 +41,13 @@ describe("two agents' conversation", () => {
     // At the sides every screen and sheet keeps.
     expect(screen).toContain("pad: { paddingHorizontal: SCREEN_X },");
     expect(screen).toMatch(/foot: \{[^}]*paddingHorizontal: SCREEN_X,/);
-    expect(screen).toMatch(/head: \{ paddingHorizontal: SHEET_X, paddingTop: 24,/);
+    // The two agents' names are the sheet's own header, outside the list: a drag on them always moves the sheet.
+    // No close plate there and nothing pinned inside the list.
+    expect(screen).toContain("useRouteSheetHeader(head);");
+    expect(screen).not.toContain("stickyHeaderIndices");
+    expect(screen).not.toContain("SheetBar");
+    expect(src("ui/Sheet.tsx")).toContain("export function useRouteSheetHeader(header: ReactNode) {");
+    expect(screen).not.toContain("SheetTitle");
   });
 });
 
@@ -80,6 +86,13 @@ describe("buttons in the rows show what they do", () => {
     expect(line).toContain('blocked: { fontWeight: "600" },');
   });
 
+  test("a hand-off still out has Ver on its line under the reply, opening the two agents' talk as the working line's", () => {
+    const line = src("features/chat/WorkLine.tsx");
+    const handed = between(line, "export function HandedWorkLines(", "export function IssueWorkLine(");
+    expect(handed).toContain("talk && !workIsOver(w) ? () => router.push(consultationHref(talk, message.channelId))");
+    expect(line).toContain('if (onSee) all.push({ key: "see", rank: 1, label: t("run.strip.see"), onPress: onSee });');
+  });
+
   test("letting someone talk to an agent can't be tapped twice while it saves", () => {
     const reach = src("features/chat/ReachLines.tsx");
     const allow = between(reach, "export function AllowTalkAction(", "export function LetMeTalkButton(");
@@ -97,8 +110,10 @@ describe("voice", () => {
     expect(composer.split("hitSlop: MIC_SLOP,").length - 1).toBe(2);
   });
 
-  test("deleting a take is the person's own act, said in the neutral tone", () => {
-    expect(src("features/voice/useVoiceTake.ts")).toContain('toast({ title: t("voice.deleted"), icon: "trash" })');
+  test("deleting a take is the person's own act: a fold, a haptic and a sound, no toast; a screen reader hears it", () => {
+    const take = src("features/voice/useVoiceTake.ts");
+    expect(take).not.toContain('toast({ title: t("voice.deleted")');
+    expect(take).toContain('AccessibilityInfo.announceForAccessibility(t("voice.deleted"));');
   });
 });
 

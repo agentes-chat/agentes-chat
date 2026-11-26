@@ -47,6 +47,7 @@ import type {
   SecretBox,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
+import { orderAccounts } from "@agenteschat/client/lib/ai-accounts";
 import { isPlanId, planOf } from "@agenteschat/client/lib/plans";
 import { clone, type MockContext, MockNotFoundError } from "./context";
 
@@ -101,7 +102,7 @@ function orderGroups(ai: AiAccounts): AccountOrderGroup[] {
       groups.push(g);
     }
     // An admin may move anyone's: a fixture says so with its own `canMove`.
-    g.accounts.push({ ...a, movable: movable(a), canMove: (a as { canMove?: boolean }).canMove ?? a.mine });
+    g.accounts.push({ ...withNamed(a), movable: movable(a), canMove: (a as { canMove?: boolean }).canMove ?? a.mine });
   }
   return groups;
 }
@@ -174,6 +175,7 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
   let setup: ComputerSetup = PAIR;
   type Login = { loginId: string; kind: MachineAccountKind; box: SecretBox | null; cancelled: boolean };
   let ai: AiAccounts = { accounts: [], computers: [] };
+  let keyFallback = false;
   const logins: Login[] = [];
   const installs = new Map<string, CliInstall | null>();
   const loginStatus = new Map<string, AccountLoginStatus>();
@@ -293,6 +295,14 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
       askTool: async (orgId, machineId, tool) => {
         log("machines.askTool", orgId, machineId, tool);
       },
+      refuseFolder: async (orgId, machineId, requestId) => {
+        log("machines.refuseFolder", orgId, machineId, requestId);
+        return { status: "denied" };
+      },
+      fetchCli: async (orgId, machineId, cli) => {
+        log("machines.fetchCli", orgId, machineId, cli);
+        return { fetch: { state: "fetching", version: "1.0.0", done: 0, total: null } };
+      },
       checkClis: async (orgId, machineId) => {
         log("machines.checkClis", orgId, machineId);
         find(machineId);
@@ -399,16 +409,34 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         return { serves, agentIds: [] };
       },
       // Read whenever an order renders: not logged.
-      accountOrder: async () => ({ groups: clone(orderGroups(ai)) }),
+      accountOrder: async () => ({ groups: clone(orderGroups(ai)), keyFallback, canConfigure: true }),
+      setAccountPermissions: async (orgId, accountId, input) => {
+        log("machines.setAccountPermissions", orgId, accountId, input);
+        const nobody = { mode: "owner" as const, userIds: [], roleIds: [] };
+        return {
+          permissions: {
+            manage: input.manage ?? { ...nobody, mode: "admins" },
+            use: input.use ?? { ...nobody, mode: "everyone" },
+            reply: input.reply ?? nobody,
+          },
+          agentIds: [],
+        };
+      },
+      setKeyFallback: async (orgId, on) => {
+        log("machines.setKeyFallback", orgId, on);
+        keyFallback = on;
+        return { on };
+      },
       moveAccountInOrder: async (orgId, accountId, index) => {
         log("machines.moveAccountInOrder", orgId, accountId, index);
         const group = orderGroups(ai).find((g) => g.accounts.some((a) => a.id === accountId && a.movable));
         if (!group) throw new MockNotFoundError("Conta não encontrada.");
-        const ids = group.accounts
-          .filter((a) => a.movable)
-          .map((a) => a.id)
-          .filter((id) => id !== accountId);
-        ids.splice(Math.min(index, ids.length), 0, accountId);
+        // As the server: a place is an account's among those with one, its logins (`sameAs`) move together.
+        const accounts = orderAccounts(group.accounts.filter((a) => a.movable));
+        const moved = accounts.find((b) => b.some((a) => a.id === accountId)) ?? [];
+        const others = accounts.filter((b) => b !== moved);
+        others.splice(Math.min(index, others.length), 0, moved);
+        const ids = others.flat().map((a) => a.id);
         for (const a of ai.accounts) if (ids.includes(a.id)) a.useOrder = ids.indexOf(a.id);
         return clone(orderGroups(ai).find((g) => g.machineId === group.machineId && g.kind === group.kind) ?? group);
       },

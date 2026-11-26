@@ -221,6 +221,7 @@ type Trace = {
   jobs: Record<string, unknown>[];
   moreJobs: boolean;
   usage: Record<string, unknown> & { byModel: Record<string, unknown>[] };
+  claims: { totalMs: number; stages: { stage: string; ms: number; queries: number }[] }[];
   machine: unknown;
 };
 type Event = Record<string, unknown> & { type: string; id: string; at: string };
@@ -537,6 +538,13 @@ test("a run's trace: its steps without their contents, what it asked, its jobs a
   expect(Number(look.usage.input)).toBeGreaterThan(0);
   expect(Number(look.usage.costUsd)).toBeGreaterThan(0);
   expect(look.machine).toBeNull();
+  // Where its time went, as the worker that ran it kept it: every stage it timed is given by its own name.
+  const timed = look.claims.flatMap((c) => c.stages.map((s) => s.stage.replace(/#\d+$/, "")));
+  expect(timed).toEqual(expect.arrayContaining(["claim", "context", "model"]));
+  expect(timed).not.toContain("other");
+  expect(look.claims.every((c) => c.stages.every((s) => Number.isInteger(s.ms) && Number.isInteger(s.queries)))).toBe(
+    true,
+  );
 
   // The steps page back from the end.
   const last = await trace(sent.look, "?limit=2");

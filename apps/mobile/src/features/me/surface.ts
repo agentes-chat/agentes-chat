@@ -1,8 +1,15 @@
 import type { Agent, SurfaceLink, SurfaceLinks } from "@agenteschat/client";
 import { formatTimeLeft } from "@agenteschat/client/lib/actions";
 import { rightHandName } from "@agenteschat/client/lib/right-hand";
-import { RENEW_BEFORE_MS, type SurfaceRow, surfaceViaName } from "@agenteschat/client/lib/surface-links";
+import {
+  hourLabel,
+  RENEW_BEFORE_MS,
+  type SurfaceRow,
+  surfaceMarkUrl,
+  surfaceViaName,
+} from "@agenteschat/client/lib/surface-links";
 import { surfaceVia } from "@agenteschat/client/lib/via";
+import { formatPhone } from "@agenteschat/i18n/format";
 import type { TFunction } from "i18next";
 
 /** Linking the outside chat surface (ADR 0187) on the phone: the row in Notificações and its sheet. */
@@ -36,36 +43,56 @@ export const linkAssistant = (
 export const linkRanOut = (link: Pick<SurfaceLink, "expiresAt">, now: number) =>
   link.expiresAt !== null && Date.parse(link.expiresAt) <= now;
 
-/** What the row says beside the surface's name. */
+/** The sender the confirm step names: the number formatted, and the surface's profile name. */
+export const surfaceSenderText = (link: Pick<SurfaceLink, "display" | "profileName">) => ({
+  display: link.display ? formatPhone(link.display) : null,
+  profileName: link.profileName,
+});
+
+/**
+ * What the row says beside the surface's name: a state under it (`sub`, `below`), what linking does behind its ⓘ
+ * (`hint`).
+ */
 export function surfaceRowText(
   t: TFunction,
   row: Exclude<SurfaceRow, { kind: "hidden" }>,
   assistant: string | null,
-): { sub?: string; below?: string; value?: string } {
+): { sub?: string; below?: string; hint?: string; value?: string } {
   if (row.kind === "pending") return { sub: t("surface.row.pending") };
   if (row.kind === "active") {
     const { display, profileName } = row.link;
     return {
-      sub: display ?? profileName ?? undefined,
+      sub: display ? formatPhone(display) : (profileName ?? undefined),
       ...(display && profileName ? { below: profileName } : {}),
       value: t("mobile.surface.on"),
     };
   }
-  return { ...(assistant ? { sub: t("surface.row.none", { assistant }) } : {}), value: t("surface.row.link") };
+  return { ...(assistant ? { hint: t("surface.row.none", { assistant }) } : {}), value: t("surface.row.link") };
 }
 
-/** The tag on a person's message written on the surface, or null. `data`: the links answer, for the surface's name. */
+/**
+ * The tag on a person's message written on the surface, or null. `data`: the links answer, for the surface's name.
+ * `mark`: the surface's logo's path, for one written there (a forwarded one keeps the quote glyph).
+ */
 export function surfaceTagText(
   t: TFunction,
   meta: Record<string, unknown> | null | undefined,
   person: string,
   data: SurfaceLinks | null | undefined,
   locale?: string,
-): { label: string; hint: string } | null {
+): { label: string; hint: string; mark: string | null } | null {
   const via = surfaceVia(meta);
   if (!via) return null;
   const surface = surfaceViaName(via.surface, data?.surface?.name, locale);
   return via.forwarded
-    ? { label: t("surface.forwarded", { surface }), hint: t("surface.forwardedTip", { person, surface }) }
-    : { label: t("surface.via", { surface }), hint: t("surface.viaTip", { person, surface }) };
+    ? { label: t("surface.forwarded", { surface }), hint: t("surface.forwardedTip", { person, surface }), mark: null }
+    : {
+        label: t("surface.via", { surface }),
+        hint: t("surface.viaTip", { person, surface }),
+        mark: surfaceMarkUrl(via.surface),
+      };
 }
+
+/** The quiet hours as the nudge row shows them: "22:00 to 8:00" on the reader's clock (ADR 0234). */
+export const quietHoursText = (t: TFunction, locale: string, nudge: SurfaceLink["nudge"]) =>
+  t("surface.nudge.quietRange", { from: hourLabel(locale, nudge.quietFrom), to: hourLabel(locale, nudge.quietTo) });

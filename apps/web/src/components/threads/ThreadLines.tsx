@@ -1,5 +1,5 @@
 import type { Actor, Message, ThreadInfo, ThreadStartMeta } from "@agenteschat/client";
-import { runsInChannel, useChannelThreads } from "@agenteschat/client";
+import { repliesUnder, runsInChannel, useChannelThreads, usePrefetchConversation } from "@agenteschat/client";
 import {
   returnClock,
   type ThreadWorkState,
@@ -9,7 +9,7 @@ import {
   WORK_TICK_MS,
   workTime,
 } from "@agenteschat/client/lib/agent-work";
-import { formatTime, relativeTime } from "@agenteschat/client/lib/format";
+import { formatTime, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { threadMessageCount, threadTitle } from "@agenteschat/client/lib/threads";
 import { AvatarStack, Button, CountBadge, Icon, Popover } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -22,6 +22,7 @@ import { useNow } from "@/components/missions/MissionBits";
 import { useOrg } from "@/components/org-context";
 import { WaitMark } from "@/components/RequestCard";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useStorePart, type ValueStore } from "@/lib/value-store";
 import { useStreams } from "@/realtime/context";
 import { ThreadStatusChip } from "./ThreadBits";
 import "./threads.css";
@@ -35,14 +36,23 @@ import "./threads.css";
 export interface ChannelThreadsView {
   /** This channel's threads by root id (open and closed; archived ones aren't shown). */
   byId: Map<string, ThreadInfo>;
-  /** The thread open in the panel beside the channel (its line shows pressed). */
-  open: string | null;
   /** "Responder" threads by the message their line sits under, with how many replies went to the panel. */
   lines: Map<string, { thread: ThreadInfo; count: number }>;
 }
 
-export const ChannelThreadsContext = createContext<ChannelThreadsView | null>(null);
-export const useChannelThreadsView = () => useContext(ChannelThreadsContext);
+const NO_VIEW: ValueStore<ChannelThreadsView | null> = { get: () => null, subscribe: () => () => {} };
+/**
+ * The channel's threads (none in a thread view), as a store (`useValueStore`): each row reads its own thread
+ * (`useChannelThread`), so a reply landing in one redraws the row it is under, not every row.
+ */
+export const ChannelThreadsContext = createContext<ValueStore<ChannelThreadsView | null>>(NO_VIEW);
+/** The whole view, for what lays the rows out. */
+export const useChannelThreadsView = () => useStorePart(useContext(ChannelThreadsContext), (view) => view);
+/** The part of the view a row reads (its thread's line, whether the channel knows its thread). */
+export const useChannelThread = <P,>(pick: (view: ChannelThreadsView | null) => P) =>
+  useStorePart(useContext(ChannelThreadsContext), pick);
+/** The thread open in the panel beside the channel: its line shows pressed. */
+export const OpenThreadContext = createContext<string | null>(null);
 
 /**
  * "Abrir" for a thread: in a channel, the panel beside it; elsewhere, the
@@ -50,12 +60,14 @@ export const useChannelThreadsView = () => useContext(ChannelThreadsContext);
  */
 function OpenThread({
   threadId,
+  channelId,
   reply,
   pressed,
   className,
   children,
 }: {
   threadId: string;
+  channelId: string;
   reply?: boolean;
   /** Open in the panel right now. */
   pressed?: boolean;
@@ -64,15 +76,27 @@ function OpenThread({
 }) {
   const { org } = useOrg();
   const actions = useChannelActions();
+  // Pointed at or focused: its replies load before the click, so it opens on them, at its end, in one paint.
+  const prefetch = usePrefetchConversation(org.id);
+  const warm = () => prefetch(channelId, threadId);
   if (actions?.openThread) {
     return (
-      <button type="button" className={className} aria-pressed={pressed} onClick={() => actions.openThread?.(threadId)}>
+      <button
+        type="button"
+        className={className}
+        aria-pressed={pressed}
+        onPointerEnter={warm}
+        onFocus={warm}
+        onClick={() => actions.openThread?.(threadId)}
+      >
         {children}
       </button>
     );
   }
   return (
     <Link
+      onPointerEnter={warm}
+      onFocus={warm}
       className={className}
       to="/org/$orgId/threads/$threadId"
       params={{ orgId: org.id, threadId }}
@@ -91,18 +115,18 @@ function OpenThread({
  */
 export function ThreadReplyLine({ thread, count }: { thread: ThreadInfo; count: number }) {
   const { t } = useTranslation();
-  const view = useChannelThreadsView();
+  const openId = useContext(OpenThreadContext);
   // A run in the thread right now (the list's `working` lags until it refetches): its agent's orbit.
   const liveAgent = useStreams(
     (s) => runsInChannel(s, thread.channelId).find((r) => r.threadId === thread.id && r.status !== "failed")?.agentId,
   );
   const state = thread.state === "open" ? threadWorkState(thread, Boolean(liveAgent)) : null;
-  const people = thread.participants.flatMap((p) => (p.id ? [{ type: p.type, id: p.id }] : []));
+  const people = thread.participants.flatMap((p) => (p.id && p.type !== "app" ? [{ type: p.type, id: p.id }] : []));
   const at = thread.lastMessage?.createdAt ?? thread.lastActivityAt;
   const replies = t("threads.line.replies", { count });
-  const open = view?.open === thread.id;
+  const open = openId === thread.id;
   return (
-    <OpenThread threadId={thread.id} className="thread-line" pressed={open}>
+    <OpenThread threadId={thread.id} channelId={thread.channelId} className="thread-line" pressed={open}>
       <ThreadLineBody
         people={people}
         label={replies}
@@ -121,6 +145,41 @@ export function ThreadReplyLine({ thread, count }: { thread: ThreadInfo; count: 
             : null
         }
         at={at}
+      />
+    </OpenThread>
+  );
+}
+
+/**
+ * Under a message in a channel that replies in threads (ADR 0214), while its agents work and no reply exists yet:
+ * "Ada está respondendo na thread", opening the thread. Once a reply lands, the thread's own line takes its place.
+ */
+export function ThreadReplyingLine({ messageId, channelId }: { messageId: string; channelId: string }) {
+  const { t } = useTranslation();
+  const actors = useActors();
+  const openId = useContext(OpenThreadContext);
+  const agentIds = useStreams((s) =>
+    [
+      ...new Set(
+        runsInChannel(s, channelId)
+          .filter((r) => repliesUnder(r, messageId))
+          .map((r) => r.agentId),
+      ),
+    ].join(","),
+  );
+  if (!agentIds) return null;
+  const people = agentIds.split(",").map((id) => ({ type: "agent" as const, id }));
+  return (
+    <OpenThread threadId={messageId} channelId={channelId} className="thread-line" pressed={openId === messageId}>
+      <ThreadLineBody
+        people={people}
+        label={t("threads.line.replying", {
+          count: people.length,
+          names: joinNames(
+            people.map((p) => actors.name(p)),
+            t,
+          ),
+        })}
       />
     </OpenThread>
   );
@@ -222,7 +281,7 @@ export function ThreadStartLine({
   const moved = thread?.context?.moved ?? start.moved;
   const open = (
     <Button size="sm" variant={moved ? "default" : "ghost"} asChild>
-      <OpenThread threadId={message.id}>
+      <OpenThread threadId={message.id} channelId={message.channelId}>
         <Icon name="thread" size={16} />
         {t("threads.line.open")}
       </OpenThread>
@@ -239,7 +298,7 @@ export function ThreadStartLine({
           {t("threads.line.moved", { count, title })}
           <small>
             {t("threads.line.by", {
-              name: dir.authorName(message.author),
+              name: dir.authorName(message.author, message.meta),
               time: formatTime(i18n.language, message.createdAt),
             })}
           </small>
@@ -254,7 +313,7 @@ export function ThreadStartLine({
       <Icon name="link" size={14} />
       <span>{t("threads.line.context", { title })}</span>
       <span aria-hidden="true">·</span>
-      <OpenThread className="thread-marker__open" threadId={message.id}>
+      <OpenThread className="thread-marker__open" threadId={message.id} channelId={message.channelId}>
         {t("threads.line.open")}
       </OpenThread>
     </div>
@@ -272,10 +331,12 @@ export function ClosedThreadLine({ thread }: { thread: ThreadInfo }) {
       </span>
       <span className="thread-closed__actions">
         <Button variant="link" asChild>
-          <OpenThread threadId={thread.id}>{t("threads.line.openShort")}</OpenThread>
+          <OpenThread threadId={thread.id} channelId={thread.channelId}>
+            {t("threads.line.openShort")}
+          </OpenThread>
         </Button>
         <Button variant="link" asChild>
-          <OpenThread threadId={thread.id} reply>
+          <OpenThread threadId={thread.id} channelId={thread.channelId} reply>
             {t("threads.line.reply")}
           </OpenThread>
         </Button>

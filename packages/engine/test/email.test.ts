@@ -6,6 +6,7 @@ import { eq, schema } from "@agenteschat/db";
 import {
   createJobHandlers,
   defaultEmailFrom,
+  deliverQueuedEmail,
   drainOutbox,
   EMAIL_DARK_HEAD,
   EMAIL_PICTURES,
@@ -13,6 +14,7 @@ import {
   type EmailTemplate,
   emailArtAt,
   emailArtFor,
+  emailAssistant,
   emailCrew,
   grantScopes,
   postPersonMessage,
@@ -20,10 +22,12 @@ import {
   queueBudgetEmail,
   queueEmail,
   queueInvitationEmail,
+  RIGHT_HAND_DEFAULTS,
   renderEmail,
   sendQueuedEmail,
 } from "../src";
 import { BREAK } from "../src/email/inert";
+import { ASSISTANT_LOOK } from "../src/email/layout";
 import { EMAIL_SAMPLES } from "./email-samples";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { ALL_GITHUB_SCOPES, fakeGithub } from "./tool-fixtures";
@@ -52,6 +56,7 @@ const TYPED = [
   "byName",
   "appName",
   "display",
+  "text",
 ];
 const SENTINEL = "Zq9 evil.com";
 const withoutUrls = (s: string) => s.replace(/https?:\/\/\S+/g, "");
@@ -136,14 +141,18 @@ describe("every email, in both languages", () => {
       email_changed: true,
       surface_linked: true,
       surface_unlinked: true,
+      surface_pin_reset: true,
+      surface_pin_locked: true,
       workspace_deleting: true,
       workspace_restored: true,
       account_deleted: true,
       account_deleting: true,
       app_connected: true,
       plan_opened: true,
+      account_opened: true,
       plan_lent: true,
       plan_waiting: true,
+      support_reply: true,
       autonomy_report: true,
     };
     expect(new Set<string>(Object.values(EMAIL_SAMPLES).map((t) => t.kind))).toEqual(new Set(Object.keys(kinds)));
@@ -525,7 +534,9 @@ describe("the picture over the headline", () => {
     for (const [id, sample] of Object.entries(EMAIL_SAMPLES)) {
       const expected = id.startsWith("computer_ready")
         ? expect.arrayContaining([expect.stringMatching(/^computer\.png/)])
-        : (withCrew[id] ?? (id.startsWith("early_access") ? ONBOARDING : []));
+        : id.startsWith("surface_")
+          ? expect.arrayContaining([expect.stringMatching(/^phone/)])
+          : (withCrew[id] ?? (id.startsWith("early_access") ? ONBOARDING : []));
       expect({ id, pictures: scene(sample) }).toEqual({ id, pictures: expected });
     }
     // A row on the card itself; only the computer stands in a well.
@@ -535,6 +546,44 @@ describe("the picture over the headline", () => {
     };
     expect(top("invitation.en")).not.toContain('class="well"');
     expect(top("computer_ready-ai.en")).toContain('class="well"');
+  });
+
+  test("the surface emails: the assistant beside a phone in a well, its screen on when linked and off when unlinked", () => {
+    const linked = EMAIL_SAMPLES["surface_linked.en"] as Extract<EmailTemplate, { kind: "surface_linked" }>;
+    const unlinked = EMAIL_SAMPLES["surface_unlinked.en"] as Extract<EmailTemplate, { kind: "surface_unlinked" }>;
+    const assistant = "agent-teal-happy-headset.png 36×46";
+    const [theoWhole = "", , liaWhole = ""] = ONBOARDING;
+    expect(scene(linked)).toEqual([
+      theoWhole,
+      assistant,
+      "phone.png 58×84 Your assistant, now on your phone too",
+      liaWhole,
+    ]);
+    expect(scene(unlinked)).toEqual([
+      theoWhole,
+      assistant,
+      "phone-off.png 58×84 Your assistant, no longer on your phone",
+      liaWhole,
+    ]);
+    expect(scene({ ...linked, locale: "pt-BR" })).toContain(
+      "phone.png 58×84 Seu assistente, agora também no seu celular",
+    );
+    // A look of its own: its colour's face beside the phone.
+    expect(scene({ ...unlinked, assistant: { color: "violet", eyes: "wide" } })[1]).toBe("agent-violet.png 32×32");
+    for (const t of [linked, unlinked]) {
+      const { html, text } = renderEmail(t, art);
+      expect(html.slice(html.indexOf('<td class="card"'), html.indexOf("<h1 "))).toContain('class="well"');
+      expect(text).not.toContain(".png");
+    }
+  });
+
+  test("the assistant drawn whole is the workspace assistant's default look", () => {
+    expect(ASSISTANT_LOOK).toEqual(RIGHT_HAND_DEFAULTS.appearance);
+  });
+
+  test("the computer's stage keeps its markup now that a phone can stand there instead", () => {
+    const { html } = renderEmail({ ...ready, crew: plain("teal") }, art);
+    expect(html.slice(html.indexOf('<td class="card"'), html.indexOf("<h1 "))).toMatchSnapshot();
   });
 
   test("the plain-text part is the same words, with no picture in it", () => {
@@ -570,6 +619,12 @@ describe("the picture over the headline", () => {
         agent("Atlas", 9, atlas),
       ]);
     expect(await emailCrew(f.db, f.org.id)).toEqual([theo, ada, lia, {}]);
+  });
+
+  test("the surface emails' assistant: the workspace's own look, none without one", async () => {
+    f = await setup({ rightHand: true });
+    expect(await emailAssistant(f.db, f.org.id)).toEqual(ASSISTANT_LOOK);
+    expect(await emailAssistant(f.db, null)).toBeUndefined();
   });
 });
 
@@ -751,6 +806,52 @@ describe("outbox delivery", () => {
     await expect(sendQueuedEmail(failing, { key: "k", to: ["a@b.c"], template: input.template })).rejects.toThrow(
       "bad",
     );
+  });
+
+  test("unsuppress: lifted first and logged; a provider with no such list just sends, and the reset's account says how it went", async () => {
+    f = await setup();
+    const email = "ana.lima@example.com";
+    await f.db.update(schema.users).set({ email }).where(eq(schema.users.id, f.owner.id));
+    const job = {
+      id: crypto.randomUUID(),
+      orgId: null,
+      payload: { key: "k", to: [email], template: { kind: "password_reset", url: "u" }, unsuppress: true },
+    };
+    const undelivered = async () =>
+      (await f.db.select().from(schema.users).where(eq(schema.users.id, f.owner.id)))[0]?.emailUndelivered;
+    const sender = createFakeEmailSender();
+    sender.refused.set(email, "rejected");
+    const said: unknown[] = [];
+    const log = { info: (_: string, data?: Record<string, unknown>) => said.push(data) };
+    await expect(deliverQueuedEmail(f.db, sender, job, art, log)).rejects.toThrow("refused");
+    expect(said).toEqual([{ jobId: job.id, kind: "password_reset", lifted: false }]);
+    expect(await undelivered()).toBe("rejected");
+
+    const plain = { id: "smtp", delivers: true, send: async () => ({ id: "m1" }) };
+    await deliverQueuedEmail(f.db, plain, job, art, log);
+    expect(said.length).toBe(1);
+    expect(await undelivered()).toBeNull();
+
+    // A provider that won't lift it (403) still gets the email, whose refusal marks the account; a 5xx retries.
+    const refusing = createFakeEmailSender();
+    refusing.refused.set(email, "suppressed");
+    refusing.removeSuppression = async () => {
+      throw new EmailError("forbidden", false, 403);
+    };
+    await expect(deliverQueuedEmail(f.db, refusing, job, art, log)).rejects.toThrow("refused");
+    expect(said.at(-1)).toEqual({ jobId: job.id, kind: "password_reset", lifted: "refused 403" });
+    expect(await undelivered()).toBe("suppressed");
+    refusing.removeSuppression = async () => {
+      throw new EmailError("down", true, 503);
+    };
+    await expect(deliverQueuedEmail(f.db, refusing, job, art, log)).rejects.toThrow("down");
+  });
+
+  test("a job queued with a template since removed sends nothing", async () => {
+    const sender = createFakeEmailSender();
+    const template = { kind: "computer_down", locale: "en", name: "pc", url: "u" } as unknown as EmailTemplate;
+    await sendQueuedEmail(sender, { key: "k", to: ["a@b.c"], template }, art);
+    expect(sender.sent).toEqual([]);
   });
 
   test("attached pictures go with the message as inline parts", async () => {

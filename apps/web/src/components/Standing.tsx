@@ -7,6 +7,7 @@ import {
   useAuthConfig,
   useClosingMe,
   useComputerSetup,
+  usePlanMove,
   useRestoreAccount,
   useRestoreWorkspace,
 } from "@agenteschat/client";
@@ -30,7 +31,7 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand, leadsWithPlan, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import type { FirstRunPowers } from "@agenteschat/client/lib/setup-checklist";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
-import { Button, cx, Icon, InfoHint, Spinner } from "@agenteschat/ui";
+import { Button, cx, HintLine, Icon, InfoHint, Spinner } from "@agenteschat/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -40,6 +41,7 @@ import { AuthShell } from "@/components/AuthLayout";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { DeleteAccountEntry } from "@/components/DeleteAccount";
 import { useOrg } from "@/components/org-context";
+import { PlanMoveButtons, PlanMoveHow } from "@/components/PlanMove";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useSignOut } from "@/hooks/useSignOut";
 import { usePaidReturn } from "@/lib/paid-return";
@@ -104,7 +106,8 @@ export function useFirstRunPowers(): FirstRunPowers {
 export function HoldBanner() {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const billingUrl = useAuthConfig().data?.billingUrl;
+  const authConfig = useAuthConfig().data;
+  const billingUrl = authConfig?.billingUrl;
   const dir = useDirectory(org.id);
   const powers = useFirstRunPowers();
   const matchRoute = useMatchRoute();
@@ -145,7 +148,14 @@ export function HoldBanner() {
       <section className="outages" aria-label={t("standing.label")}>
         <div className="outage hold-banner" role="status">
           <span className="outage__text">
-            <b>{t("standing.billing.teamReady")}</b>
+            {/* Why the Cloud costs, and that a computer connected to it isn't the free way: behind the ⓘ, as on the plan step. */}
+            {authConfig?.cloud ? (
+              <HintLine name={t("hosting.whyPaid")} hint={t("hosting.whyPaidText")}>
+                <b>{t("standing.billing.teamReady")}</b>
+              </HintLine>
+            ) : (
+              <b>{t("standing.billing.teamReady")}</b>
+            )}
             {!admin && <span>{t("standing.billing.askAdmin")}</span>}
           </span>
           {fix && (
@@ -196,10 +206,12 @@ function Deleting({ org, deletion }: { org: OrgSummary; deletion: OrgDeletion })
   const { me } = useOrg();
   const toast = useToast();
   const restore = useRestoreWorkspace(org.id);
+  const plan = usePlanMove(org.id);
   useClosingMe();
   const owner = restorable(org);
   const due = !!deletion.dueAt && Date.parse(deletion.dueAt) > Date.now();
   const by = deletedByText(t, i18n.language, deletion, me.user.id);
+  const moves = due && plan.targets.length > 0 && !plan.movedTo;
   return (
     <section className="outages" aria-label={t("standing.label")}>
       <div className="outage hold-banner deleting-banner" role="status">
@@ -208,22 +220,32 @@ function Deleting({ org, deletion }: { org: OrgSummary; deletion: OrgDeletion })
           <b>{deletingText(t, i18n.language, org.name, deletion)}</b>
           {by && <span>{by}</span>}
           {due && !owner && <span>{t("deleting.membersOnly")}</span>}
+          {moves && (
+            <span className="ac-hintline">
+              {t("planMove.deleting")}
+              <PlanMoveHow label={t("planMove.deleting")} />
+            </span>
+          )}
+          {plan.movedTo && <span>{t("planMove.moving", { name: plan.movedTo })}</span>}
         </span>
-        {owner && (
+        {(owner || moves) && (
           <span className="outage__acts">
-            <Button
-              size="sm"
-              variant="primary"
-              loading={restore.isPending}
-              disabled={restore.isPending}
-              onClick={() =>
-                restore.mutate(undefined, {
-                  onSuccess: () => toast.show(t("deleting.restored", { name: org.name })),
-                })
-              }
-            >
-              {t("deleting.restore")}
-            </Button>
+            {moves && <PlanMoveButtons plan={plan} size="sm" />}
+            {owner && (
+              <Button
+                size="sm"
+                variant="primary"
+                loading={restore.isPending}
+                disabled={restore.isPending}
+                onClick={() =>
+                  restore.mutate(undefined, {
+                    onSuccess: () => toast.show(t("deleting.restored", { name: org.name })),
+                  })
+                }
+              >
+                {t("deleting.restore")}
+              </Button>
+            )}
           </span>
         )}
       </div>
@@ -236,7 +258,7 @@ function Deleting({ org, deletion }: { org: OrgSummary; deletion: OrgDeletion })
  * behind an ⓘ), then the screen's buttons at the column's width, and `foot` apart under them. Signed in: no language
  * to pick there.
  */
-function ClosedScreen({
+export function ClosedScreen({
   title,
   lead,
   hint,
@@ -347,7 +369,7 @@ export function AccountDeletingScreen({ dueAt }: { dueAt: string | null }) {
 }
 
 /** Sair, from a screen in place of the app: out of the account, to the sign-in. Working while it runs. */
-function SignOutButton({ leave, disabled }: { leave: ReturnType<typeof useSignOut>; disabled?: boolean }) {
+export function SignOutButton({ leave, disabled }: { leave: ReturnType<typeof useSignOut>; disabled?: boolean }) {
   const { t } = useTranslation();
   return (
     <Button size="lg" block loading={leave.pending} disabled={disabled} onClick={() => void leave.signOut()}>

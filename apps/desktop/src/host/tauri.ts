@@ -18,6 +18,7 @@ import { platformOf } from "../control/platform";
 import type { ServerList, ServerWorkspaces } from "../control/server";
 import type { ThisMacRequest } from "../control/this-mac";
 import type { TrayState } from "../control/tray";
+import type { ReportFacts } from "../report/report";
 import {
   type AppInfo,
   type BadgeCounts,
@@ -89,7 +90,9 @@ export function createTauriHost(): Host {
     showWindow: (w) => invoke<void>("show_window", { name: w }),
     hideWindow: (w) => invoke<void>("hide_window", { name: w }),
     quit: () => invoke<void>("quit_app"),
+    askQuit: (words) => invoke<boolean>("quit_ask", words),
     appInfo: () => invoke<AppInfo>("app_info"),
+    reportFacts: () => invoke<ReportFacts>("problem_report_facts"),
     compatMode: () => invoke<CompatMode>("compat_get"),
     setCompatMode: (on) => invoke<void>("compat_set", { on }),
     reopen: () => invoke<void>("app_reopen"),

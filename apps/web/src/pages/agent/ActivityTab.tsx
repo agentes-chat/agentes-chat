@@ -33,12 +33,13 @@ import {
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AccountSwitchLine } from "@/chat/AccountRef";
 import { usd } from "@/components/AgentFields";
 import { AskAgentButton } from "@/components/AskAgentButton";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { colorOf } from "@/components/Sky";
-import { groupByDay, isRoutineRun, type RunFilter, runMatches } from "@/lib/agent-edit";
+import { groupByDay, isRoutineRun, ownsOrManages, type RunFilter, runMatches } from "@/lib/agent-edit";
 import { lookOf } from "@/lib/look";
 import { usageShown } from "@/lib/plan-usage";
 import { BrainDialog } from "./brain/BrainDialog";
@@ -169,8 +170,8 @@ export function ActivityTab() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const { org } = useOrg();
-  const { agent, g, viewer, ownerFirst, saved, can, pickRepos } = useAgentEdit();
-  const allowed = viewer !== "member";
+  const { agent, g, viewer, ownerLabel, saved, can, pickRepos } = useAgentEdit();
+  const allowed = ownsOrManages(viewer);
   const runs = useRuns(org.id, agent.id, allowed);
   const detail = useAgentDetail(org.id, agent.id);
   const channels = useChannels(org.id);
@@ -190,7 +191,7 @@ export function ActivityTab() {
       <Card className="agp-card">
         <div className="agp-empty">
           <Icon name="lock" />
-          <b>{t("agentPage.activity.hidden", { owner: ownerFirst ?? t("roles.adminLower") })}</b>
+          <b>{t("agentPage.activity.hidden", { owner: ownerLabel ?? t("roles.adminLower") })}</b>
         </div>
       </Card>
     );
@@ -219,7 +220,9 @@ export function ActivityTab() {
   const fix = fixRun ? fixOf(fixRun) : null;
   return (
     <>
-      {brainAt && <BrainDialog at={brainAt} onClose={() => setBrainAt(null)} />}
+      {brainAt && (
+        <BrainDialog at={brainAt} onClose={() => setBrainAt(null)} onReopen={(at) => setBrainAt(at ?? brainAt)} />
+      )}
       <MonthStrip
         color={colorOf(agent)}
         month={month}
@@ -342,6 +345,11 @@ export function ActivityTab() {
                             {r.repo && <Chip icon="repo">{r.repo}</Chip>}
                             {x.routine && <Chip icon="routines">{t("agentPage.activity.routine")}</Chip>}
                           </span>
+                          {r.accountSwitch && (
+                            <span className="small muted">
+                              <AccountSwitchLine move={r.accountSwitch} />
+                            </span>
+                          )}
                           {r.status === "failed" && (
                             <span className="agp-run__fail ac-iconline">
                               <Icon name="alert" size={14} />

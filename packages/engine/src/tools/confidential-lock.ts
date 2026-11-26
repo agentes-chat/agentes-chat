@@ -34,7 +34,7 @@ export const CARD_WORDS: ReadonlySet<string> = new Set(["ask_user", "ask_choices
 const SELF = new Set(["withdraw_request", "set_reply_style", "wait_for_device", "commit_co_author"]);
 
 /** Built-in reads whose words leave the server: the web, and the wiki's search (its query is embedded). */
-const READS_OUT = new Set(["web_search", "web_fetch", "search_wiki"]);
+const READS_OUT = new Set(["web_search", "web_fetch", "image_search", "search_wiki"]);
 
 /** What a run reads when the lock refuses a call. A refusal, never a card: an agent that never asks would lift one. */
 export const CONFIDENTIAL_REFUSAL =

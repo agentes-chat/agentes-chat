@@ -1,4 +1,5 @@
-import { type AudioPlayer, type AudioSource, createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import { type AudioPlayer, type AudioSource, createAudioPlayer } from "expo-audio";
+import { releaseVoiceAudio, voiceAudio } from "@/lib/audio-mode";
 
 /**
  * One voice plays at a time, in the whole app: a single player that rows take turns on, so a list scrolling past
@@ -59,6 +60,9 @@ export const subscribePlace = (listener: (id: string) => void) => {
   };
 };
 export const placeOf = (id: string) => places.get(id) ?? 0;
+/** A sound's length (ms) as its player read it, for one whose length wasn't known before it played (an audio file). */
+const lengths = new Map<string, number>();
+export const lengthOf = (id: string) => lengths.get(id) ?? 0;
 function setPlace(id: string, at: number) {
   if (at > 0) places.set(id, at);
   else places.delete(id);
@@ -79,6 +83,8 @@ export function stopPlayback() {
   if (!now && !starting) return;
   now = null;
   starting = null;
+  // The app's own sounds get the session back (silent in silent mode, with the music), unless a voice takes it again.
+  releaseVoiceAudio();
   say();
 }
 
@@ -107,7 +113,7 @@ export async function startPlayback(request: PlayRequest) {
   const from = (request.from * request.durationMs) / 1000;
   let p: AudioPlayer;
   try {
-    await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, interruptionMode: "doNotMix" });
+    await voiceAudio(false);
     // Stopped, or another one started, while this waited: that one has the player (and the one timer).
     if (mine !== turn) return;
     p = player ?? makePlayer();
@@ -143,6 +149,10 @@ export async function startPlayback(request: PlayRequest) {
       starting = null;
       say();
     }
+    if (now.durationMs <= 0 && p.duration > 0 && !lengths.has(now.id)) {
+      lengths.set(now.id, p.duration * 1000);
+      say();
+    }
     if (seeking) return;
     setPlace(now.id, at);
     now.onProgress?.(at);
@@ -156,7 +166,8 @@ export async function startPlayback(request: PlayRequest) {
 export function seekPlayback(id: string, at: number) {
   setPlace(id, at);
   if (now?.id !== id || !player) return;
-  const seek = player.seekTo((at * now.durationMs) / 1000).catch(() => undefined);
+  const total = now.durationMs > 0 ? now.durationMs / 1000 : player.duration;
+  const seek = player.seekTo(at * total).catch(() => undefined);
   seeking = seek;
   void seek.then(() => {
     if (seeking === seek) seeking = null;
