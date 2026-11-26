@@ -64,6 +64,7 @@ import {
   isWebPage,
   jpegSize,
   launchChrome,
+  listenerUidsIn,
   NAME_CONTROLS,
   type OwnChrome,
   readableDisplay,
@@ -1398,6 +1399,19 @@ test.if(posix)("a started Chrome's browser endpoint comes from the second line o
   // A port alone, or anything else on the second line, gives no endpoint: its traffic isn't counted.
   expect(await start("45679")).not.toHaveProperty("wsPath");
   expect(await start("45680\\nws://elsewhere/devtools/browser/x")).not.toHaveProperty("wsPath");
+});
+
+test("a listener holds Chrome's 127.0.0.1 port on 127.0.0.1, any IPv4 or dual-stack IPv6, never v6-only or ::1", () => {
+  const ss = [
+    "LISTEN 0 4096 127.0.0.1:10000 0.0.0.0:* uid:20000 ino:1 sk:0",
+    "LISTEN 0 4096 0.0.0.0:10000 0.0.0.0:* ino:2 sk:0",
+    "LISTEN 0 4096 *:10000 *:* uid:1000 ino:3 sk:0",
+    "LISTEN 0 4096 [::]:10000 [::]:* uid:1001 ino:4 sk:0",
+    "LISTEN 0 4096 [::1]:10000 [::]:* uid:1002 ino:5 sk:0",
+    "LISTEN 0 4096 127.0.0.1:10001 0.0.0.0:* uid:1003 ino:6 sk:0",
+  ].join("\n");
+  expect(listenerUidsIn(ss, 10000)).toEqual([20000, 0, 1000]);
+  expect(listenerUidsIn("LISTEN 0 4096 [::]:10000 [::]:* uid:1001 ino:4 sk:0", 10000)).toEqual([]);
 });
 
 test("a fixed CDP port another program listens on fails at once, saying which port and how to free it", async () => {

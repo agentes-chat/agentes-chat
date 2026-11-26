@@ -898,24 +898,28 @@ export function missingLibrariesText(missing: string[]): string {
 }
 
 /**
- * The uids listening on `port` where Chrome's 127.0.0.1 would be (`ss -Htln -e`; ss leaves root's out, read as 0),
- * or null when ss can't say.
+ * The uids listening on `port` where Chrome's 127.0.0.1 would be, from `ss -Htln -e` (ss leaves root's uid out, read
+ * as 0). ss prints a dual-stack IPv6 wildcard as `*`, which holds 127.0.0.1, and a v6-only one as `[::]`, which doesn't.
  */
-function listenerUids(port: number): number[] | null {
-  const result = spawnSync("ss", ["-Htln", "-e"], { encoding: "utf8", timeout: 1000 });
-  if (result.status !== 0) return null;
-  return (result.stdout ?? "")
+export function listenerUidsIn(ssOutput: string, port: number): number[] {
+  return ssOutput
     .split("\n")
     .filter((line) => {
       const cols = line.trim().split(/\s+/);
       const local = cols[3] ?? "";
       return (
         cols[0] === "LISTEN" &&
-        /^(127\.0\.0\.1|0\.0\.0\.0|\*|\[::\]):\d+$/.test(local) &&
+        /^(127\.0\.0\.1|0\.0\.0\.0|\*):\d+$/.test(local) &&
         Number(local.slice(local.lastIndexOf(":") + 1)) === port
       );
     })
     .map((line) => Number(/\buid:(\d+)\b/.exec(line)?.[1] ?? 0));
+}
+
+/** `listenerUidsIn` on this computer now, or null when ss can't say. */
+function listenerUids(port: number): number[] | null {
+  const result = spawnSync("ss", ["-Htln", "-e"], { encoding: "utf8", timeout: 1000 });
+  return result.status === 0 ? listenerUidsIn(result.stdout ?? "", port) : null;
 }
 
 /** Another program holds an agent's fixed debugging port (system mode): what follows `CHROME_FAILURES.start`. */
