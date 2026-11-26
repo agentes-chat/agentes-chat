@@ -159,6 +159,52 @@ describe("the welcome wizard, right after the onboarding", () => {
     expect(wizard().querySelector(".wiz-board")).toBeNull();
   });
 
+  test("its pictures: work any business has, done by the person's own agent under its role, never one trade's", async () => {
+    const state = withList();
+    state.agents.push({
+      id: "agent-caio",
+      name: "Caio",
+      handle: "caio",
+      role: "Cobrança",
+      instructions: "",
+      model: "auto",
+      ownerUserId: "u-walter",
+      hasCredential: true,
+      createdAt: new Date().toISOString(),
+    });
+    await open(state, "?arrival=beta");
+    const art = () => wizard().querySelector(".wiz__art") as HTMLElement;
+    const seen = [art().textContent ?? ""];
+    await press(/^Próximo/);
+    // The agent's screen: its tasks under its own role, the late one said in its voice.
+    expect(art().querySelector(".wiz-win__bar span")?.textContent).toBe("Cobrança");
+    expect([...art().querySelectorAll(".wiz-win__rows li")].map((li) => li.textContent)).toEqual([
+      "Responder um clienteontematrasada",
+      "Relatório da semanahojea fazer",
+      "Atualizar os preços9hfeita",
+    ]);
+    expect(art().querySelector(".wiz-pc__say")?.textContent).toBe(
+      "Uma resposta está atrasada. O rascunho está pronto para o seu ok.",
+    );
+    seen.push(art().textContent ?? "");
+    for (let n = 3; n <= 7; n++) {
+      await press(/^Próximo/);
+      seen.push(art().textContent ?? "");
+    }
+    const words = seen.join(" ");
+    expect(words).toContain("Caio");
+    expect(words).toContain("Alguém respondeu o cliente de ontem?");
+    expect(words).toContain("Enviar a resposta para o cliente?");
+    // No trade's sample: the pictures fit any business.
+    expect(words).not.toMatch(/cl[ií]nic|odonto|dental|pacient/i);
+  });
+
+  test("its pictures, with no agent of the person's own: the right hand's screen says Tarefas", async () => {
+    await open(withList(), "?arrival=beta");
+    await press(/^Próximo/);
+    expect(wizard().querySelector(".wiz-win__bar span")?.textContent).toBe("Tarefas");
+  });
+
   test("a personal workspace's own words: the person's hello, a conversation per subject", async () => {
     const state = withList();
     for (const o of state.me?.organizations ?? []) o.mode = "personal";

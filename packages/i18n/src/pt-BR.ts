@@ -23068,7 +23068,10 @@ export const ptBR = {
   },
   /** Right after the onboarding (ADR 0160): the welcome wizard, then Connect an AI with the team beside it. */
   arrival: {
-    /** The welcome wizard (ADR 0160, addendum of 2026-11-26). The pictures' sample words are never real data. */
+    /**
+     * The welcome wizard (ADR 0160, addendum of 2026-11-26). The pictures' sample words are never real data, and a
+     * team's are work any business has, never one trade's.
+     */
     welcome: {
       stepOf: "Passo {{n}} de {{total}}",
       skip: "Pular",
@@ -23090,13 +23093,13 @@ export const ptBR = {
       computer: {
         title: "Cada agente tem o seu computador",
         text: "Nele, eles abrem sites, usam apps e rodam código, sozinhos. Quando quiser, você assiste ao vivo ou assume o controle.",
-        tab: "Pagamentos",
+        tab: "Tarefas",
         rows: {
-          a: { name: "Clínica Sol", amount: "R$ 890", state: "12 dias" },
-          b: { name: "Clínica Vida", amount: "R$ 640", state: "5 dias" },
-          c: { name: "Odonto Mar", amount: "R$ 1.120", state: "pago" },
+          a: { name: "Responder um cliente", when: "ontem", state: "atrasada" },
+          b: { name: "Relatório da semana", when: "hoje", state: "a fazer" },
+          c: { name: "Atualizar os preços", when: "9h", state: "feita" },
         },
-        say: "2 clínicas atrasadas. Os lembretes estão prontos para o seu ok.",
+        say: "Uma resposta está atrasada. O rascunho está pronto para o seu ok.",
         tabPersonal: "Contas do mês",
         rowsPersonal: {
           a: { name: "Luz", amount: "R$ 189", state: "vence hoje" },
@@ -23111,10 +23114,10 @@ export const ptBR = {
         text: "Escreva como escreveria para alguém do time. Quem entende do assunto responde, pessoa ou agente. Para falar com um agente, é só chamar pelo nome.",
         textPersonal:
           "Escreva como escreveria para alguém de confiança. Cada agente cuida do seu assunto, e para falar com um, é só chamar pelo nome.",
-        list: { a: "atendimento", b: "cobrança", c: "financeiro", d: "vendas" },
+        list: { a: "vendas", b: "atendimento", c: "financeiro", d: "projetos" },
         listPersonal: { a: "Casa", b: "Contas", c: "Viagens", d: "Saúde" },
-        ask: "A Clínica Sol já pagou?",
-        answer: "Pagou ontem, às 14:20. Já dei baixa e avisei o financeiro.",
+        ask: "Alguém respondeu o cliente de ontem?",
+        answer: "Respondi hoje às 9:10 e anotei o pedido na wiki.",
         askPersonal: "A conta de luz já foi paga?",
         answerPersonal: "Foi paga ontem, às 14:20. Guardei o comprovante.",
       },
@@ -23124,7 +23127,7 @@ export const ptBR = {
         text: "A documentação compartilhada da empresa: processos, preços, o jeito de falar com cliente. Os agentes leem antes de responder e escrevem quando aprendem algo novo.",
         textPersonal:
           "As suas anotações num lugar só: contas, documentos, o jeito como você gosta das coisas. Os seus agentes leem antes de responder e escrevem quando aprendem algo novo.",
-        pages: { left: "Preços", right: "O que a {{org}} faz", front: "Régua de cobrança" },
+        pages: { left: "Preços", right: "O que a {{org}} faz", front: "Atendimento ao cliente" },
         pagesPersonal: { left: "Documentos", right: "Sobre mim", front: "Contas da casa" },
       },
       memory: {
@@ -23134,7 +23137,7 @@ export const ptBR = {
           a: "A {{org}} fecha às 18h",
           b: "{{first}} prefere resumos curtos",
           c: "Lembrete só em dia útil",
-          d: "A Clínica Sol paga no dia 10",
+          d: "Reunião do time às segundas",
         },
         notesPersonal: {
           a: "Treino às 18h, três vezes por semana",
@@ -23148,8 +23151,8 @@ export const ptBR = {
         title: "Trabalho que acontece sozinho",
         text: "As rotinas rodam no horário que você pedir, como “todo dia às 9”. E o que é sério, como enviar, pagar ou apagar, espera o seu ok.",
         routine: "Resumo do dia",
-        routineText: "2 pagamentos chegaram, 2 atrasados",
-        ask: "Enviar a cobrança para 3 clínicas?",
+        routineText: "5 mensagens novas, 1 resposta atrasada",
+        ask: "Enviar a resposta para o cliente?",
         routinePersonal: "O seu dia",
         routineTextPersonal: "3 e-mails pedem resposta, 1 conta vence hoje",
         askPersonal: "Pagar a conta de luz de R$ 189?",

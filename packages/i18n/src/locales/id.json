@@ -21614,25 +21614,25 @@
       "computer": {
         "title": "Setiap agen punya komputernya sendiri",
         "text": "Di sana mereka membuka situs, memakai aplikasi, dan menjalankan kode, sendiri. Kapan pun kamu mau, kamu bisa menonton langsung atau mengambil alih.",
-        "tab": "Pembayaran",
+        "tab": "Tugas",
         "rows": {
           "a": {
-            "name": "Klinik Mentari",
-            "amount": "Rp8.900.000",
-            "state": "12 hari"
+            "name": "Balas pelanggan",
+            "when": "Kemarin",
+            "state": "Terlambat"
           },
           "b": {
-            "name": "Klinik Tepi Sungai",
-            "amount": "Rp6.400.000",
-            "state": "5 hari"
+            "name": "Laporan mingguan",
+            "when": "Hari ini",
+            "state": "Belum"
           },
           "c": {
-            "name": "Klinik Gigi Pelabuhan",
-            "amount": "Rp11.200.000",
-            "state": "Lunas"
+            "name": "Perbarui harga",
+            "when": "09.00",
+            "state": "Selesai"
           }
         },
-        "say": "2 klinik terlambat bayar. Pengingatnya menunggu persetujuanmu.",
+        "say": "Satu balasan terlambat. Drafnya menunggu persetujuanmu.",
         "tabPersonal": "Tagihan bulan ini",
         "rowsPersonal": {
           "a": {
@@ -21659,10 +21659,10 @@
         "text": "Tulis seperti kamu menulis ke rekan tim. Yang paham topiknya akan menjawab, orang atau agen. Untuk bicara dengan agen, cukup panggil namanya.",
         "textPersonal": "Tulis seperti kamu menulis ke orang yang kamu percaya. Tiap agen mengurus topiknya, dan untuk bicara dengan salah satunya, cukup panggil namanya.",
         "list": {
-          "a": "layanan",
-          "b": "penagihan",
+          "a": "penjualan",
+          "b": "layanan",
           "c": "keuangan",
-          "d": "penjualan"
+          "d": "proyek"
         },
         "listPersonal": {
           "a": "Rumah",
@@ -21670,8 +21670,8 @@
           "c": "Perjalanan",
           "d": "Kesehatan"
         },
-        "ask": "Klinik Mentari sudah bayar?",
-        "answer": "Kemarin pukul 14.20. Sudah kutandai lunas dan kuberi tahu bagian keuangan.",
+        "ask": "Sudah ada yang membalas pelanggan kemarin?",
+        "answer": "Sudah kubalas pagi ini pukul 09.10 dan permintaannya kucatat di wiki.",
         "askPersonal": "Tagihan listrik sudah dibayar?",
         "answerPersonal": "Kemarin pukul 14.20. Buktinya sudah kusimpan."
       },
@@ -21683,7 +21683,7 @@
         "pages": {
           "left": "Harga",
           "right": "Apa yang dikerjakan {{org}}",
-          "front": "Pengingat pembayaran"
+          "front": "Layanan pelanggan"
         },
         "pagesPersonal": {
           "left": "Dokumen",
@@ -21698,7 +21698,7 @@
           "a": "{{org}} tutup pukul 18.00",
           "b": "{{first}} suka ringkasan singkat",
           "c": "Pengingat hanya di hari kerja",
-          "d": "Klinik Mentari bayar tiap tanggal 10"
+          "d": "Rapat tim setiap Senin"
         },
         "notesPersonal": {
           "a": "Olahraga pukul 18.00, tiga kali seminggu",
@@ -21712,8 +21712,8 @@
         "title": "Pekerjaan yang berjalan sendiri",
         "text": "Rutinitas berjalan di jam yang kamu minta, seperti “setiap hari pukul 9”. Dan hal yang serius, seperti mengirim, membayar, atau menghapus, menunggu persetujuanmu.",
         "routine": "Ringkasan harian",
-        "routineText": "2 pembayaran masuk, 2 terlambat",
-        "ask": "Kirim pengingat pembayaran ke 3 klinik?",
+        "routineText": "5 pesan baru, 1 balasan terlambat",
+        "ask": "Kirim balasan ke pelanggan?",
         "routinePersonal": "Hari kamu",
         "routineTextPersonal": "3 email perlu dibalas, 1 tagihan jatuh tempo hari ini",
         "askPersonal": "Bayar tagihan listrik Rp890.000?",

@@ -22988,25 +22988,25 @@
       "computer": {
         "title": "Chaque agent a son propre ordinateur",
         "text": "Dessus, ils ouvrent des sites, utilisent des applis et exécutent du code, tout seuls. Quand vous voulez, vous regardez en direct ou prenez la main.",
-        "tab": "Paiements",
+        "tab": "Tâches",
         "rows": {
           "a": {
-            "name": "Clinique du Soleil",
-            "amount": "890 €",
-            "state": "12 jours"
+            "name": "Répondre à un client",
+            "when": "Hier",
+            "state": "En retard"
           },
           "b": {
-            "name": "Clinique de la Rive",
-            "amount": "640 €",
-            "state": "5 jours"
+            "name": "Rapport de la semaine",
+            "when": "Aujourd'hui",
+            "state": "À faire"
           },
           "c": {
-            "name": "Cabinet dentaire du Port",
-            "amount": "1 120 €",
-            "state": "Payé"
+            "name": "Mettre à jour les tarifs",
+            "when": "9 h",
+            "state": "Fait"
           }
         },
-        "say": "2 cliniques sont en retard. Les relances attendent votre accord.",
+        "say": "Une réponse est en retard. Le brouillon attend votre accord.",
         "tabPersonal": "Factures du mois",
         "rowsPersonal": {
           "a": {
@@ -23033,10 +23033,10 @@
         "text": "Écrivez comme vous écririez à quelqu'un de l'équipe. Celui qui connaît le sujet répond, personne ou agent. Pour parler à un agent, appelez-le simplement par son nom.",
         "textPersonal": "Écrivez comme vous écririez à quelqu'un de confiance. Chaque agent s'occupe de son sujet, et pour parler à l'un d'eux, appelez-le simplement par son nom.",
         "list": {
-          "a": "service-client",
-          "b": "relances",
+          "a": "ventes",
+          "b": "service-client",
           "c": "finances",
-          "d": "ventes"
+          "d": "projets"
         },
         "listPersonal": {
           "a": "Maison",
@@ -23044,8 +23044,8 @@
           "c": "Voyages",
           "d": "Santé"
         },
-        "ask": "La Clinique du Soleil a-t-elle payé ?",
-        "answer": "Hier à 14 h 20. J'ai marqué le paiement comme reçu et prévenu les finances.",
+        "ask": "Quelqu'un a répondu au client d'hier ?",
+        "answer": "J'ai répondu ce matin à 9 h 10 et noté la demande dans le wiki.",
         "askPersonal": "La facture d'électricité est-elle payée ?",
         "answerPersonal": "Hier à 14 h 20. J'ai gardé le reçu."
       },
@@ -23057,7 +23057,7 @@
         "pages": {
           "left": "Tarifs",
           "right": "Ce que fait {{org}}",
-          "front": "Relances de paiement"
+          "front": "Service client"
         },
         "pagesPersonal": {
           "left": "Documents personnels",
@@ -23072,7 +23072,7 @@
           "a": "{{org}} ferme à 18 h",
           "b": "{{first}} préfère les résumés courts",
           "c": "Relances en semaine uniquement",
-          "d": "La Clinique du Soleil paie le 10"
+          "d": "Réunion d'équipe le lundi"
         },
         "notesPersonal": {
           "a": "Sport à 18 h, trois fois par semaine",
@@ -23086,8 +23086,8 @@
         "title": "Du travail qui se fait tout seul",
         "text": "Les routines tournent à l'heure que vous choisissez, comme « tous les jours à 9 h ». Et tout ce qui est sérieux, comme envoyer, payer ou supprimer, attend votre accord.",
         "routine": "Résumé du jour",
-        "routineText": "2 paiements reçus, 2 en retard",
-        "ask": "Envoyer la relance de paiement à 3 cliniques ?",
+        "routineText": "5 nouveaux messages, 1 réponse en retard",
+        "ask": "Envoyer la réponse au client ?",
         "routinePersonal": "Votre journée",
         "routineTextPersonal": "3 e-mails attendent une réponse, 1 facture est à payer aujourd'hui",
         "askPersonal": "Payer la facture d'électricité de 89 € ?",

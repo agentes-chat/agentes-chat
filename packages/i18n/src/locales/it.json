@@ -23005,25 +23005,25 @@
       "computer": {
         "title": "Ogni agente ha il suo computer",
         "text": "Lì aprono siti, usano app ed eseguono codice, da soli. Quando vuoi, guardi in diretta o prendi il controllo.",
-        "tab": "Pagamenti",
+        "tab": "Attività",
         "rows": {
           "a": {
-            "name": "Clinica del Sole",
-            "amount": "890 €",
-            "state": "12 giorni"
+            "name": "Rispondere a un cliente",
+            "when": "Ieri",
+            "state": "In ritardo"
           },
           "b": {
-            "name": "Clinica del Fiume",
-            "amount": "640 €",
-            "state": "5 giorni"
+            "name": "Report settimanale",
+            "when": "Oggi",
+            "state": "Da fare"
           },
           "c": {
-            "name": "Studio dentistico del Porto",
-            "amount": "1.120 €",
-            "state": "Pagato"
+            "name": "Aggiornare i prezzi",
+            "when": "9:00",
+            "state": "Fatto"
           }
         },
-        "say": "2 cliniche sono in ritardo. I promemoria aspettano il tuo ok.",
+        "say": "Una risposta è in ritardo. La bozza aspetta il tuo ok.",
         "tabPersonal": "Bollette del mese",
         "rowsPersonal": {
           "a": {
@@ -23050,10 +23050,10 @@
         "text": "Scrivi come scriveresti a qualcuno del team. Risponde chi conosce l'argomento, persona o agente. Per parlare con un agente, basta chiamarlo per nome.",
         "textPersonal": "Scrivi come scriveresti a qualcuno di cui ti fidi. Ogni agente si occupa del suo argomento, e per parlare con uno, basta chiamarlo per nome.",
         "list": {
-          "a": "assistenza",
-          "b": "incassi",
+          "a": "vendite",
+          "b": "assistenza",
           "c": "finanza",
-          "d": "vendite"
+          "d": "progetti"
         },
         "listPersonal": {
           "a": "Casa",
@@ -23061,8 +23061,8 @@
           "c": "Viaggi",
           "d": "Salute"
         },
-        "ask": "La Clinica del Sole ha pagato?",
-        "answer": "Ieri alle 14:20. Ho segnato il pagamento come ricevuto e avvisato la finanza.",
+        "ask": "Qualcuno ha risposto al cliente di ieri?",
+        "answer": "Ho risposto stamattina alle 9:10 e ho annotato la richiesta nel wiki.",
         "askPersonal": "La bolletta della luce è stata pagata?",
         "answerPersonal": "Ieri alle 14:20. Ho salvato la ricevuta."
       },
@@ -23074,7 +23074,7 @@
         "pages": {
           "left": "Prezzi",
           "right": "Cosa fa {{org}}",
-          "front": "Promemoria di pagamento"
+          "front": "Assistenza clienti"
         },
         "pagesPersonal": {
           "left": "Documenti",
@@ -23089,7 +23089,7 @@
           "a": "{{org}} chiude alle 18",
           "b": "{{first}} preferisce riassunti brevi",
           "c": "Promemoria solo nei giorni feriali",
-          "d": "La Clinica del Sole paga il 10"
+          "d": "Riunione del team il lunedì"
         },
         "notesPersonal": {
           "a": "Allenamento alle 18, tre volte a settimana",
@@ -23103,8 +23103,8 @@
         "title": "Lavoro che si fa da solo",
         "text": "Le routine partono all'ora che chiedi, come “ogni giorno alle 9”. E le cose serie, come inviare, pagare o eliminare, aspettano il tuo ok.",
         "routine": "Riepilogo del giorno",
-        "routineText": "Arrivati 2 pagamenti, 2 in ritardo",
-        "ask": "Inviare il promemoria di pagamento a 3 cliniche?",
+        "routineText": "5 messaggi nuovi, 1 risposta in ritardo",
+        "ask": "Inviare la risposta al cliente?",
         "routinePersonal": "La tua giornata",
         "routineTextPersonal": "3 email aspettano risposta, 1 bolletta scade oggi",
         "askPersonal": "Pagare la bolletta della luce da 89 €?",

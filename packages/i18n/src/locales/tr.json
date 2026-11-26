@@ -22143,25 +22143,25 @@
       "computer": {
         "title": "Her ajanın kendi bilgisayarı var",
         "text": "Bilgisayarlarında siteleri açar, uygulamaları kullanır ve kod çalıştırırlar, kendi başlarına. İstediğiniz zaman canlı izler ya da kontrolü alırsınız.",
-        "tab": "Ödemeler",
+        "tab": "Görevler",
         "rows": {
           "a": {
-            "name": "Güneş Klinik",
-            "amount": "8.900 ₺",
-            "state": "12 gün gecikme"
+            "name": "Müşteriye yanıt",
+            "when": "Dün",
+            "state": "Gecikti"
           },
           "b": {
-            "name": "Nehir Klinik",
-            "amount": "6.400 ₺",
-            "state": "5 gün gecikme"
+            "name": "Haftalık rapor",
+            "when": "Bugün",
+            "state": "Yapılacak"
           },
           "c": {
-            "name": "Liman Diş",
-            "amount": "11.200 ₺",
-            "state": "Ödendi"
+            "name": "Fiyatları güncelle",
+            "when": "09.00",
+            "state": "Bitti"
           }
         },
-        "say": "2 klinik gecikmiş. Hatırlatmalar onayınızı bekliyor.",
+        "say": "Bir yanıt gecikti. Taslak onayınızı bekliyor.",
         "tabPersonal": "Bu ayın faturaları",
         "rowsPersonal": {
           "a": {
@@ -22188,10 +22188,10 @@
         "text": "Ekipten birine yazar gibi yazın. Konuyu bilen yanıtlar, insan ya da ajan. Bir ajanla konuşmak için adını söylemeniz yeterli.",
         "textPersonal": "Güvendiğiniz birine yazar gibi yazın. Her ajan kendi konusuyla ilgilenir, biriyle konuşmak için adını söylemeniz yeterli.",
         "list": {
-          "a": "destek",
-          "b": "tahsilat",
+          "a": "satış",
+          "b": "destek",
           "c": "finans",
-          "d": "satış"
+          "d": "projeler"
         },
         "listPersonal": {
           "a": "Ev",
@@ -22199,8 +22199,8 @@
           "c": "Seyahat",
           "d": "Sağlık"
         },
-        "ask": "Güneş Klinik ödedi mi?",
-        "answer": "Dün 14.20'de. Ödendi olarak işaretleyip finansa haber verdim.",
+        "ask": "Dünkü müşteriye yanıt veren oldu mu?",
+        "answer": "Bu sabah 09.10'da yanıtladım ve talebi wiki'ye not ettim.",
         "askPersonal": "Elektrik faturası ödendi mi?",
         "answerPersonal": "Dün 14.20'de ödendi. Makbuzu kaydettim."
       },
@@ -22212,7 +22212,7 @@
         "pages": {
           "left": "Fiyatlar",
           "right": "{{org}} ne yapar",
-          "front": "Ödeme hatırlatmaları"
+          "front": "Müşteri hizmetleri"
         },
         "pagesPersonal": {
           "left": "Belgeler",
@@ -22227,7 +22227,7 @@
           "a": "{{org}} 18.00'de kapanır",
           "b": "{{first}} kısa özetleri sever",
           "c": "Hatırlatmalar yalnızca hafta içi",
-          "d": "Güneş Klinik ayın 10'unda öder"
+          "d": "Ekip toplantısı pazartesileri"
         },
         "notesPersonal": {
           "a": "Haftada üç gün, 18.00'de spor",
@@ -22241,8 +22241,8 @@
         "title": "Kendiliğinden yapılan işler",
         "text": "Rutinler, “her gün 9'da” gibi istediğiniz saatte çalışır. Gönderme, ödeme ya da silme gibi ciddi işler onayınızı bekler.",
         "routine": "Günün özeti",
-        "routineText": "2 ödeme geldi, 2 gecikmede",
-        "ask": "Ödeme hatırlatması 3 kliniğe gönderilsin mi?",
+        "routineText": "5 yeni mesaj, 1 yanıt gecikti",
+        "ask": "Yanıt müşteriye gönderilsin mi?",
         "routinePersonal": "Sizin gününüz",
         "routineTextPersonal": "3 e-posta yanıt bekliyor, 1 faturanın son günü bugün",
         "askPersonal": "890 ₺ elektrik faturası ödensin mi?",

@@ -22841,25 +22841,25 @@
       "computer": {
         "title": "Cada agente tiene su propia computadora",
         "text": "En ella abren sitios, usan apps y ejecutan código, por su cuenta. Cuando quieras, miras en vivo o tomas el control.",
-        "tab": "Pagos",
+        "tab": "Tareas",
         "rows": {
           "a": {
-            "name": "Clínica Sol",
-            "amount": "$890",
-            "state": "12 días"
+            "name": "Responder a un cliente",
+            "when": "Ayer",
+            "state": "Atrasada"
           },
           "b": {
-            "name": "Clínica del Río",
-            "amount": "$640",
-            "state": "5 días"
+            "name": "Informe semanal",
+            "when": "Hoy",
+            "state": "Pendiente"
           },
           "c": {
-            "name": "Dental del Puerto",
-            "amount": "$1,120",
-            "state": "Pagado"
+            "name": "Actualizar los precios",
+            "when": "9:00",
+            "state": "Hecha"
           }
         },
-        "say": "2 clínicas están atrasadas. Los recordatorios esperan tu visto bueno.",
+        "say": "Una respuesta está atrasada. El borrador espera tu visto bueno.",
         "tabPersonal": "Cuentas del mes",
         "rowsPersonal": {
           "a": {
@@ -22886,10 +22886,10 @@
         "text": "Escribe como le escribirías a alguien del equipo. Responde quien sabe del tema, persona o agente. Para hablar con un agente, solo llámalo por su nombre.",
         "textPersonal": "Escribe como le escribirías a alguien de confianza. Cada agente se ocupa de su tema, y para hablar con uno, solo llámalo por su nombre.",
         "list": {
-          "a": "soporte",
-          "b": "cobranza",
+          "a": "ventas",
+          "b": "soporte",
           "c": "finanzas",
-          "d": "ventas"
+          "d": "proyectos"
         },
         "listPersonal": {
           "a": "Casa",
@@ -22897,8 +22897,8 @@
           "c": "Viajes",
           "d": "Salud"
         },
-        "ask": "¿Ya pagó la Clínica Sol?",
-        "answer": "Ayer a las 14:20. Marqué el pago como recibido y avisé a finanzas.",
+        "ask": "¿Alguien le respondió al cliente de ayer?",
+        "answer": "Le respondí hoy a las 9:10 y anoté el pedido en la wiki.",
         "askPersonal": "¿Ya se pagó la luz?",
         "answerPersonal": "Ayer a las 14:20. Guardé el comprobante."
       },
@@ -22910,7 +22910,7 @@
         "pages": {
           "left": "Precios",
           "right": "Qué hace {{org}}",
-          "front": "Recordatorios de pago"
+          "front": "Atención al cliente"
         },
         "pagesPersonal": {
           "left": "Documentos",
@@ -22925,7 +22925,7 @@
           "a": "{{org}} cierra a las 18 h",
           "b": "{{first}} prefiere resúmenes cortos",
           "c": "Recordatorios solo en días hábiles",
-          "d": "La Clínica Sol paga el día 10"
+          "d": "Reunión del equipo los lunes"
         },
         "notesPersonal": {
           "a": "Entreno a las 18 h, tres veces por semana",
@@ -22939,8 +22939,8 @@
         "title": "Trabajo que ocurre solo",
         "text": "Las rutinas se ejecutan a la hora que pidas, como “todos los días a las 9”. Y lo serio, como enviar, pagar o borrar, espera tu visto bueno.",
         "routine": "Resumen del día",
-        "routineText": "Llegaron 2 pagos, 2 atrasados",
-        "ask": "¿Enviar el recordatorio de pago a 3 clínicas?",
+        "routineText": "5 mensajes nuevos, 1 respuesta atrasada",
+        "ask": "¿Enviar la respuesta al cliente?",
         "routinePersonal": "Tu día",
         "routineTextPersonal": "3 correos esperan respuesta, 1 cuenta vence hoy",
         "askPersonal": "¿Pagar la luz de $89?",

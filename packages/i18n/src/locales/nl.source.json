@@ -46560,9 +46560,6 @@
   "work.handed.step": {
     "value": "step {{current}} of {{total}}"
   },
-  "work.handed.done": {
-    "value": "done in {{duration}}"
-  },
   "work.duration.minutes": {
     "value": {
       "one": "{{count}} min",
@@ -54176,37 +54173,37 @@
     "value": "On it, they open sites, use apps and run code, on their own. Whenever you like, you watch live or take control."
   },
   "arrival.welcome.computer.tab": {
-    "value": "Payments"
+    "value": "Tasks"
   },
   "arrival.welcome.computer.rows.a.name": {
-    "value": "Sunrise Clinic"
+    "value": "Reply to a customer"
   },
-  "arrival.welcome.computer.rows.a.amount": {
-    "value": "$890"
+  "arrival.welcome.computer.rows.a.when": {
+    "value": "Yesterday"
   },
   "arrival.welcome.computer.rows.a.state": {
-    "value": "12 days"
+    "value": "Late"
   },
   "arrival.welcome.computer.rows.b.name": {
-    "value": "Riverside Clinic"
+    "value": "Weekly report"
   },
-  "arrival.welcome.computer.rows.b.amount": {
-    "value": "$640"
+  "arrival.welcome.computer.rows.b.when": {
+    "value": "Today"
   },
   "arrival.welcome.computer.rows.b.state": {
-    "value": "5 days"
+    "value": "To do"
   },
   "arrival.welcome.computer.rows.c.name": {
-    "value": "Harbor Dental"
+    "value": "Update the prices"
   },
-  "arrival.welcome.computer.rows.c.amount": {
-    "value": "$1,120"
+  "arrival.welcome.computer.rows.c.when": {
+    "value": "9:00 AM"
   },
   "arrival.welcome.computer.rows.c.state": {
-    "value": "Paid"
+    "value": "Done"
   },
   "arrival.welcome.computer.say": {
-    "value": "2 clinics are late. The reminders are ready for your OK."
+    "value": "One reply is late. The draft is ready for your OK."
   },
   "arrival.welcome.computer.tabPersonal": {
     "value": "This month's bills"
@@ -54254,16 +54251,16 @@
     "value": "Write as you would to someone you trust. Each agent takes care of its subject, and to talk to one, just call it by name."
   },
   "arrival.welcome.channels.list.a": {
-    "value": "support"
+    "value": "sales"
   },
   "arrival.welcome.channels.list.b": {
-    "value": "billing"
+    "value": "support"
   },
   "arrival.welcome.channels.list.c": {
     "value": "finance"
   },
   "arrival.welcome.channels.list.d": {
-    "value": "sales"
+    "value": "projects"
   },
   "arrival.welcome.channels.listPersonal.a": {
     "value": "Home"
@@ -54278,10 +54275,10 @@
     "value": "Health"
   },
   "arrival.welcome.channels.ask": {
-    "value": "Has Sunrise Clinic paid?"
+    "value": "Did anyone get back to yesterday's customer?"
   },
   "arrival.welcome.channels.answer": {
-    "value": "Yesterday at 2:20 PM. I marked it as paid and told finance."
+    "value": "I replied this morning at 9:10 and noted the request in the wiki."
   },
   "arrival.welcome.channels.askPersonal": {
     "value": "Did the power bill get paid?"
@@ -54308,7 +54305,7 @@
     "value": "What {{org}} does"
   },
   "arrival.welcome.wiki.pages.front": {
-    "value": "Payment reminders"
+    "value": "Customer service"
   },
   "arrival.welcome.wiki.pagesPersonal.left": {
     "value": "Documents"
@@ -54335,7 +54332,7 @@
     "value": "Reminders on weekdays only"
   },
   "arrival.welcome.memory.notes.d": {
-    "value": "Sunrise Clinic pays on the 10th"
+    "value": "Team meeting on Mondays"
   },
   "arrival.welcome.memory.notesPersonal.a": {
     "value": "Workout at 6 PM, three times a week"
@@ -54362,10 +54359,10 @@
     "value": "Daily summary"
   },
   "arrival.welcome.routines.routineText": {
-    "value": "2 payments came in, 2 are late"
+    "value": "5 new messages, 1 reply is late"
   },
   "arrival.welcome.routines.ask": {
-    "value": "Send the payment reminder to 3 clinics?"
+    "value": "Send the reply to the customer?"
   },
   "arrival.welcome.routines.routinePersonal": {
     "value": "Your day"

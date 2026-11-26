@@ -23224,8 +23224,9 @@ export const en = {
   arrival: {
     /**
      * The welcome wizard (ADR 0160, addendum of 2026-11-26): seven short steps, each under a moving picture drawn with
-     * the app's own pieces. The pictures are decorative: their sample words (a list of payments, a chat, notes) are
-     * never the person's data, and each step's title and text say it in words. `*Personal` keys are a personal
+     * the app's own pieces. The pictures are decorative: their sample words (a list of tasks, a chat, notes) are
+     * never the person's data, and each step's title and text say it in words. A team's sample words are work any
+     * business has (a customer to answer, a report, its prices), never one trade's. `*Personal` keys are a personal
      * workspace's (ADR 0159).
      */
     welcome: {
@@ -23251,15 +23252,19 @@ export const en = {
       computer: {
         title: "Every agent has its own computer",
         text: "On it, they open sites, use apps and run code, on their own. Whenever you like, you watch live or take control.",
-        /** The picture: a site's payments on the agent's screen, its cursor finding the late one. Sample words. */
-        tab: "Payments",
+        /**
+         * The picture: the agent's tasks on its screen, its cursor finding the late one. Sample words. The screen's
+         * title is the agent's role; `tab` when it has none.
+         */
+        tab: "Tasks",
+        /** Each task, when it was due and how it stands: short, as the columns are narrow. */
         rows: {
-          a: { name: "Sunrise Clinic", amount: "$890", state: "12 days" },
-          b: { name: "Riverside Clinic", amount: "$640", state: "5 days" },
-          c: { name: "Harbor Dental", amount: "$1,120", state: "Paid" },
+          a: { name: "Reply to a customer", when: "Yesterday", state: "Late" },
+          b: { name: "Weekly report", when: "Today", state: "To do" },
+          c: { name: "Update the prices", when: "9:00 AM", state: "Done" },
         },
         /** The agent's line beside its screen. */
-        say: "2 clinics are late. The reminders are ready for your OK.",
+        say: "One reply is late. The draft is ready for your OK.",
         tabPersonal: "This month's bills",
         rowsPersonal: {
           a: { name: "Power", amount: "$89", state: "Due today" },
@@ -23275,11 +23280,11 @@ export const en = {
         textPersonal:
           "Write as you would to someone you trust. Each agent takes care of its subject, and to talk to one, just call it by name.",
         /** The picture's list, the second one open: channel names (no #), or a personal workspace's subjects. */
-        list: { a: "support", b: "billing", c: "finance", d: "sales" },
+        list: { a: "sales", b: "support", c: "finance", d: "projects" },
         listPersonal: { a: "Home", b: "Bills", c: "Trips", d: "Health" },
         /** The person's question in the picture, then the agent's answer. Sample words. */
-        ask: "Has Sunrise Clinic paid?",
-        answer: "Yesterday at 2:20 PM. I marked it as paid and told finance.",
+        ask: "Did anyone get back to yesterday's customer?",
+        answer: "I replied this morning at 9:10 and noted the request in the wiki.",
         askPersonal: "Did the power bill get paid?",
         answerPersonal: "Yesterday at 2:20 PM. I saved the receipt.",
       },
@@ -23290,7 +23295,7 @@ export const en = {
         textPersonal:
           "Your notes in one place: bills, documents, how you like things done. Your agents read them before they answer and write when they learn something new.",
         /** The picture's pages: one being written in front, two behind it. Sample titles. */
-        pages: { left: "Prices", right: "What {{org}} does", front: "Payment reminders" },
+        pages: { left: "Prices", right: "What {{org}} does", front: "Customer service" },
         pagesPersonal: { left: "Documents", right: "About me", front: "Household bills" },
       },
       memory: {
@@ -23301,7 +23306,7 @@ export const en = {
           a: "{{org}} closes at 6 PM",
           b: "{{first}} likes short summaries",
           c: "Reminders on weekdays only",
-          d: "Sunrise Clinic pays on the 10th",
+          d: "Team meeting on Mondays",
         },
         notesPersonal: {
           a: "Workout at 6 PM, three times a week",
@@ -23317,8 +23322,8 @@ export const en = {
         text: "Routines run at the time you ask, like “every day at 9”. And anything serious, like sending, paying or deleting, waits for your OK.",
         /** The picture: a routine's card as the clock turns 9:00, then an action waiting for the person. */
         routine: "Daily summary",
-        routineText: "2 payments came in, 2 are late",
-        ask: "Send the payment reminder to 3 clinics?",
+        routineText: "5 new messages, 1 reply is late",
+        ask: "Send the reply to the customer?",
         routinePersonal: "Your day",
         routineTextPersonal: "3 emails need a reply, 1 bill is due today",
         askPersonal: "Pay the $89 power bill?",

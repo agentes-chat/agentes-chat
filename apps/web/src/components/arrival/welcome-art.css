@@ -115,13 +115,17 @@
   border-radius: 50%;
   background: #cfd5df;
 }
+/* The title: a role, as long as its workspace wrote it, gives way with an ellipsis. */
 .wiz-win__bar span {
+  min-width: 0;
   margin-inline-start: 8px;
   padding: 1px 8px;
+  overflow: hidden;
   border-radius: 5px;
   background: #fff;
   color: #5b6475;
   font-size: 10.5px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .wiz-win__page {
@@ -173,7 +177,7 @@
 .wiz-win__rows em[data-state="late"] {
   color: #d63c3c;
 }
-.wiz-win__rows em[data-state="paid"] {
+.wiz-win__rows em[data-state="done"] {
   color: #2f8a55;
 }
 .wiz-cursor {

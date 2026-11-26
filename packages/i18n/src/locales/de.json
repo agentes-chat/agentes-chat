@@ -22221,25 +22221,25 @@
       "computer": {
         "title": "Jeder Agent hat seinen eigenen Computer",
         "text": "Darauf öffnen sie Websites, nutzen Apps und führen Code aus, ganz allein. Wann immer du willst, schaust du live zu oder übernimmst die Steuerung.",
-        "tab": "Zahlungen",
+        "tab": "Aufgaben",
         "rows": {
           "a": {
-            "name": "Praxis Sonnenhof",
-            "amount": "890 €",
-            "state": "12 Tage"
+            "name": "Einem Kunden antworten",
+            "when": "Gestern",
+            "state": "Zu spät"
           },
           "b": {
-            "name": "Praxis am Fluss",
-            "amount": "640 €",
-            "state": "5 Tage"
+            "name": "Wochenbericht",
+            "when": "Heute",
+            "state": "Offen"
           },
           "c": {
-            "name": "Zahnarzt am Hafen",
-            "amount": "1.120 €",
-            "state": "Bezahlt"
+            "name": "Preise aktualisieren",
+            "when": "9:00",
+            "state": "Erledigt"
           }
         },
-        "say": "2 Praxen sind im Verzug. Die Erinnerungen warten auf dein Okay.",
+        "say": "Eine Antwort ist überfällig. Der Entwurf wartet auf dein Okay.",
         "tabPersonal": "Rechnungen des Monats",
         "rowsPersonal": {
           "a": {
@@ -22266,10 +22266,10 @@
         "text": "Schreib, wie du jemandem aus dem Team schreiben würdest. Wer sich mit dem Thema auskennt, antwortet, Mensch oder Agent. Um mit einem Agenten zu sprechen, ruf ihn einfach beim Namen.",
         "textPersonal": "Schreib, wie du jemandem schreiben würdest, dem du vertraust. Jeder Agent kümmert sich um sein Thema, und um mit einem zu sprechen, ruf ihn einfach beim Namen.",
         "list": {
-          "a": "kundenservice",
-          "b": "mahnwesen",
+          "a": "vertrieb",
+          "b": "kundenservice",
           "c": "finanzen",
-          "d": "vertrieb"
+          "d": "projekte"
         },
         "listPersonal": {
           "a": "Zuhause",
@@ -22277,8 +22277,8 @@
           "c": "Reisen",
           "d": "Gesundheit"
         },
-        "ask": "Hat die Praxis Sonnenhof schon bezahlt?",
-        "answer": "Gestern um 14:20. Ich habe es als bezahlt markiert und der Buchhaltung Bescheid gegeben.",
+        "ask": "Hat schon jemand dem Kunden von gestern geantwortet?",
+        "answer": "Ich habe heute um 9:10 geantwortet und die Anfrage im Wiki notiert.",
         "askPersonal": "Ist die Stromrechnung bezahlt?",
         "answerPersonal": "Gestern um 14:20. Ich habe den Beleg gespeichert."
       },
@@ -22290,7 +22290,7 @@
         "pages": {
           "left": "Preise",
           "right": "Was {{org}} macht",
-          "front": "Erinnerungen an Zahlungen"
+          "front": "Kundenservice"
         },
         "pagesPersonal": {
           "left": "Dokumente",
@@ -22305,7 +22305,7 @@
           "a": "{{org}} schließt um 18 Uhr",
           "b": "{{first}} mag kurze Zusammenfassungen",
           "c": "Erinnerungen nur an Werktagen",
-          "d": "Praxis Sonnenhof zahlt am 10."
+          "d": "Teammeeting montags"
         },
         "notesPersonal": {
           "a": "Training um 18 Uhr, dreimal pro Woche",
@@ -22319,8 +22319,8 @@
         "title": "Arbeit, die von allein passiert",
         "text": "Routinen laufen zu der Zeit, die du willst, etwa „jeden Tag um 9“. Und alles Ernste, wie Senden, Zahlen oder Löschen, wartet auf dein Okay.",
         "routine": "Zusammenfassung des Tages",
-        "routineText": "2 Zahlungen eingegangen, 2 im Verzug",
-        "ask": "Die Zahlungserinnerung an 3 Praxen senden?",
+        "routineText": "5 neue Nachrichten, 1 Antwort ist überfällig",
+        "ask": "Die Antwort an den Kunden senden?",
         "routinePersonal": "Dein Tag",
         "routineTextPersonal": "3 E-Mails brauchen eine Antwort, 1 Rechnung ist heute fällig",
         "askPersonal": "Die Stromrechnung über 89 € bezahlen?",

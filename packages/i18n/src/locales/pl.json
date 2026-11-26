@@ -23638,25 +23638,25 @@
       "computer": {
         "title": "Każdy agent ma własny komputer",
         "text": "Na nim otwierają strony, korzystają z aplikacji i uruchamiają kod, samodzielnie. Kiedy chcesz, oglądasz na żywo albo przejmujesz sterowanie.",
-        "tab": "Płatności",
+        "tab": "Zadania",
         "rows": {
           "a": {
-            "name": "Klinika Słoneczna",
-            "amount": "890 zł",
-            "state": "12 dni"
+            "name": "Odpowiedź klientowi",
+            "when": "Wczoraj",
+            "state": "Spóźnione"
           },
           "b": {
-            "name": "Klinika nad Rzeką",
-            "amount": "640 zł",
-            "state": "5 dni"
+            "name": "Raport tygodniowy",
+            "when": "Dziś",
+            "state": "Czeka"
           },
           "c": {
-            "name": "Stomatologia Portowa",
-            "amount": "1120 zł",
-            "state": "Opłacone"
+            "name": "Aktualizacja cennika",
+            "when": "9:00",
+            "state": "Gotowe"
           }
         },
-        "say": "2 kliniki zalegają z płatnością. Przypomnienia czekają na twoją zgodę.",
+        "say": "Jedna odpowiedź jest spóźniona. Szkic czeka na twoją zgodę.",
         "tabPersonal": "Rachunki z tego miesiąca",
         "rowsPersonal": {
           "a": {
@@ -23683,10 +23683,10 @@
         "text": "Pisz tak, jak do kogoś z zespołu. Odpowiada ten, kto zna temat, człowiek albo agent. Żeby porozmawiać z agentem, po prostu zawołaj go po imieniu.",
         "textPersonal": "Pisz tak, jak do kogoś zaufanego. Każdy agent zajmuje się swoim tematem, a żeby porozmawiać z jednym z nich, po prostu zawołaj go po imieniu.",
         "list": {
-          "a": "obsługa",
-          "b": "windykacja",
+          "a": "sprzedaż",
+          "b": "obsługa",
           "c": "finanse",
-          "d": "sprzedaż"
+          "d": "projekty"
         },
         "listPersonal": {
           "a": "Dom",
@@ -23694,8 +23694,8 @@
           "c": "Podróże",
           "d": "Zdrowie"
         },
-        "ask": "Czy Klinika Słoneczna już zapłaciła?",
-        "answer": "Wczoraj o 14:20. Płatność jest oznaczona jako otrzymana, a finanse już wiedzą.",
+        "ask": "Czy ktoś odpisał wczorajszemu klientowi?",
+        "answer": "Odpowiedź poszła dziś o 9:10, a prośba jest zapisana w wiki.",
         "askPersonal": "Czy rachunek za prąd jest zapłacony?",
         "answerPersonal": "Tak, wczoraj o 14:20. Potwierdzenie jest zapisane."
       },
@@ -23707,7 +23707,7 @@
         "pages": {
           "left": "Cennik",
           "right": "Czym zajmuje się {{org}}",
-          "front": "Przypomnienia o płatnościach"
+          "front": "Obsługa klienta"
         },
         "pagesPersonal": {
           "left": "Dokumenty",
@@ -23722,7 +23722,7 @@
           "a": "{{org}}: zamknięte od 18:00",
           "b": "{{first}} woli krótkie podsumowania",
           "c": "Przypomnienia tylko w dni robocze",
-          "d": "Klinika Słoneczna płaci 10. dnia miesiąca"
+          "d": "Spotkanie zespołu w poniedziałki"
         },
         "notesPersonal": {
           "a": "Trening o 18:00, trzy razy w tygodniu",
@@ -23736,8 +23736,8 @@
         "title": "Praca, która dzieje się sama",
         "text": "Rutyny działają o godzinie, którą wskażesz, na przykład „codziennie o 9”. A wszystko, co poważne, jak wysyłanie, płacenie czy usuwanie, czeka na twoją zgodę.",
         "routine": "Podsumowanie dnia",
-        "routineText": "2 płatności wpłynęły, 2 zaległe",
-        "ask": "Wysłać przypomnienie o płatności do 3 klinik?",
+        "routineText": "5 nowych wiadomości, 1 odpowiedź spóźniona",
+        "ask": "Wysłać odpowiedź do klienta?",
         "routinePersonal": "Twój dzień",
         "routineTextPersonal": "3 e-maile czekają na odpowiedź, 1 rachunek ma termin dziś",
         "askPersonal": "Zapłacić 189 zł za prąd?",

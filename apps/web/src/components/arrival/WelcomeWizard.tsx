@@ -71,6 +71,7 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
     mine: mine.slice(0, 2).map(whoOf),
     me: { id: me.user.id, name: me.user.name, first },
     org: org.name,
+    role: mine[0]?.role.trim() ?? "",
     personal,
   };
   const left = board.rows.filter((r) => !r.done).length;

@@ -12,7 +12,9 @@ import "./welcome-art.css";
  * The welcome wizard's pictures (ADR 0160, addendum of 2026-11-26), one a step, drawn with the app's own pieces (the
  * team's sky, the living avatars, a message, a card, a button) and the workspace's own agents and person. Each plays
  * once as its step opens and is drawn whole and still for whoever asked for less motion (welcome-art.css). Their
- * sample words (a list of payments, a chat, notes) are never the person's data: a personal workspace has its own.
+ * sample words (a list of tasks, a chat, notes) are never the person's data, and a team's are work any business has
+ * (a customer to answer, a report, its prices), never one trade's: the workspace's own agent does it, under its own
+ * role where it has one. A personal workspace has words of its own.
  */
 
 /** The wizard's steps, in order. */
@@ -34,6 +36,8 @@ export interface Scene {
   mine: Who[];
   me: { id: string; name: string; first: string };
   org: string;
+  /** The star's role when it is the person's own agent ("Cobrança"): its screen's title. Empty otherwise. */
+  role: string;
   /** A personal workspace (ADR 0159): its own sample words (`*Personal` keys). */
   personal: boolean;
 }
@@ -133,24 +137,23 @@ function ArtHello({ s }: { s: Scene }) {
   );
 }
 
-/** How each sample row on the agent's screen reads: late, coming due, paid. */
-const ROWS: Record<"team" | "personal", readonly (readonly ["a" | "b" | "c", "late" | "due" | "paid"])[]> = {
-  team: [
-    ["a", "late"],
-    ["b", "late"],
-    ["c", "paid"],
-  ],
-  personal: [
-    ["a", "late"],
-    ["b", "due"],
-    ["c", "paid"],
-  ],
-};
+/** How each sample row on the agent's screen reads: late, coming due, done. */
+const ROWS = [
+  ["a", "late"],
+  ["b", "due"],
+  ["c", "done"],
+] as const;
 
-/** 2. The agent's own computer: a site's payments on its screen, its cursor finds the late one, it says so. */
+/**
+ * 2. The agent's own computer: its tasks on its screen (a personal workspace's bills), under its role; its cursor finds
+ * the late one, it says so.
+ */
 function ArtComputer({ s }: { s: Scene }) {
   const tx = useLoose();
   const m = s.personal ? "Personal" : "";
+  // A task's when; a bill's amount.
+  const mid = s.personal ? "amount" : "when";
+  const title = s.personal ? tx("arrival.welcome.computer.tabPersonal") : s.role || tx("arrival.welcome.computer.tab");
   return (
     <div className="wiz-pc-art">
       <div className="wiz-pc">
@@ -161,15 +164,15 @@ function ArtComputer({ s }: { s: Scene }) {
               <i />
               <i />
               <i />
-              <span>{tx(`arrival.welcome.computer.tab${m}`)}</span>
+              <span>{title}</span>
             </div>
             <div className="wiz-win__page">
               <b />
               <ul className="wiz-win__rows">
-                {ROWS[s.personal ? "personal" : "team"].map(([row, state]) => (
+                {ROWS.map(([row, state]) => (
                   <li key={row}>
                     <span>{tx(`arrival.welcome.computer.rows${m}.${row}.name`)}</span>
-                    <span>{tx(`arrival.welcome.computer.rows${m}.${row}.amount`)}</span>
+                    <span>{tx(`arrival.welcome.computer.rows${m}.${row}.${mid}`)}</span>
                     <em data-state={state}>{tx(`arrival.welcome.computer.rows${m}.${row}.state`)}</em>
                   </li>
                 ))}

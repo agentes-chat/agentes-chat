@@ -22402,25 +22402,25 @@
       "computer": {
         "title": "Elke agent heeft een eigen computer",
         "text": "Daarop openen ze sites, gebruiken ze apps en voeren ze code uit, helemaal zelf. Wanneer je wilt, kijk je live mee of neem je het over.",
-        "tab": "Betalingen",
+        "tab": "Taken",
         "rows": {
           "a": {
-            "name": "Kliniek Zonnehof",
-            "amount": "€ 890",
-            "state": "12 dagen"
+            "name": "Klant antwoorden",
+            "when": "Gisteren",
+            "state": "Te laat"
           },
           "b": {
-            "name": "Kliniek aan de Rivier",
-            "amount": "€ 640",
-            "state": "5 dagen"
+            "name": "Weekrapport",
+            "when": "Vandaag",
+            "state": "Te doen"
           },
           "c": {
-            "name": "Tandarts aan de Haven",
-            "amount": "€ 1.120",
-            "state": "Betaald"
+            "name": "Prijzen bijwerken",
+            "when": "9:00",
+            "state": "Klaar"
           }
         },
-        "say": "2 klinieken zijn te laat. De herinneringen wachten op je akkoord.",
+        "say": "Eén antwoord is te laat. Het concept wacht op je akkoord.",
         "tabPersonal": "Rekeningen van deze maand",
         "rowsPersonal": {
           "a": {
@@ -22447,10 +22447,10 @@
         "text": "Schrijf zoals je iemand uit het team zou schrijven. Wie verstand heeft van het onderwerp antwoordt, mens of agent. Wil je een agent spreken, noem hem dan gewoon bij naam.",
         "textPersonal": "Schrijf zoals je iemand zou schrijven die je vertrouwt. Elke agent zorgt voor zijn onderwerp, en wil je er een spreken, noem hem dan gewoon bij naam.",
         "list": {
-          "a": "klantenservice",
-          "b": "incasso",
+          "a": "verkoop",
+          "b": "klantenservice",
           "c": "financiën",
-          "d": "verkoop"
+          "d": "projecten"
         },
         "listPersonal": {
           "a": "Thuis",
@@ -22458,8 +22458,8 @@
           "c": "Reizen",
           "d": "Gezondheid"
         },
-        "ask": "Heeft Kliniek Zonnehof al betaald?",
-        "answer": "Gisteren om 14:20. Ik heb de betaling als ontvangen gemarkeerd en financiën ingelicht.",
+        "ask": "Heeft iemand de klant van gisteren al geantwoord?",
+        "answer": "Ik heb vanochtend om 9:10 geantwoord en de vraag in de wiki gezet.",
         "askPersonal": "Is de stroomrekening betaald?",
         "answerPersonal": "Gisteren om 14:20. Ik heb het bewijs bewaard."
       },
@@ -22471,7 +22471,7 @@
         "pages": {
           "left": "Prijzen",
           "right": "Wat {{org}} doet",
-          "front": "Herinneringen voor betalingen"
+          "front": "Klantenservice"
         },
         "pagesPersonal": {
           "left": "Documenten",
@@ -22486,7 +22486,7 @@
           "a": "{{org}} sluit om 18 uur",
           "b": "{{first}} houdt van korte samenvattingen",
           "c": "Herinneringen alleen op werkdagen",
-          "d": "Kliniek Zonnehof betaalt op de 10e"
+          "d": "Teamoverleg op maandag"
         },
         "notesPersonal": {
           "a": "Sporten om 18 uur, drie keer per week",
@@ -22500,8 +22500,8 @@
         "title": "Werk dat vanzelf gebeurt",
         "text": "Routines draaien op het tijdstip dat je vraagt, zoals ‘elke dag om 9 uur’. En alles wat ernstig is, zoals versturen, betalen of verwijderen, wacht op je akkoord.",
         "routine": "Samenvatting van de dag",
-        "routineText": "2 betalingen binnen, 2 te laat",
-        "ask": "De betalingsherinnering naar 3 klinieken sturen?",
+        "routineText": "5 nieuwe berichten, 1 antwoord te laat",
+        "ask": "Het antwoord naar de klant sturen?",
         "routinePersonal": "Je dag",
         "routineTextPersonal": "3 e-mails wachten op antwoord, 1 rekening moet vandaag betaald",
         "askPersonal": "De stroomrekening van € 89 betalen?",
