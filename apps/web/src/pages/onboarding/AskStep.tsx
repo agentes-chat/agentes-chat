@@ -68,7 +68,7 @@ export function askPrompt(t: TFunction, variant: AskVariant, org: string, json =
     ? t(`onboarding.ask.prompt.json.${variant}`, { org })
     : t(`onboarding.ask.prompt.${variant}.open`, { org });
   const design = json
-    ? `${t("onboarding.ask.prompt.design")} ${t("onboarding.ask.prompt.json.cron")}`
+    ? t("common.joinSentences", { a: t("onboarding.ask.prompt.design"), b: t("onboarding.ask.prompt.json.cron") })
     : t("onboarding.ask.prompt.design");
   const send = json
     ? `${t("onboarding.ask.prompt.json.send")}\n${t("onboarding.ask.prompt.json.example")}`

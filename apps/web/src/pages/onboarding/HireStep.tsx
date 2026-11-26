@@ -1,7 +1,7 @@
 import type { Agent, FirstAgentOption } from "@agenteschat/client";
 import { useRoutines } from "@agenteschat/client";
 import type { PlanOffer } from "@agenteschat/client/lib/billing";
-import { joinNames } from "@agenteschat/client/lib/format";
+import { joinNames, lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { firstJob } from "@agenteschat/client/lib/onboarding";
 import { Button, HintLine, Spinner } from "@agenteschat/ui";
@@ -29,14 +29,12 @@ const ROSTER_MAX = 4;
 const the = (t: TFunction, name: string) => t("onboarding.hire.the", agentGrammar(name));
 
 /**
- * A role inside a sentence ("for billing", "para o seu dia"): lower case, unless it reads as an acronym ("SEO"), its
- * second letter a capital too. A role that opens with a one-letter word ("O seu dia") is lowered as well.
+ * A role inside a sentence ("for billing", "para o seu dia"): its first letter lowered by the shared helper (ADR 0122),
+ * which keeps an acronym or a name ("SEO", "GitHub") and German's capitalized nouns as they are. A role that opens
+ * with a one-letter word ("O seu dia") is lowered as well.
  */
 export function roleWord(role: string, locale: string) {
-  const r = role.trim();
-  const second = r.charAt(1);
-  const acronym = second !== "" && second !== second.toLocaleLowerCase(locale);
-  return r === "" || acronym ? r : r.charAt(0).toLocaleLowerCase(locale) + r.slice(1);
+  return lowerFirst(role.trim(), locale);
 }
 
 export function HireTeam({
