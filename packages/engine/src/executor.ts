@@ -293,6 +293,7 @@ import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
 import { getMachine } from "./machines";
 import { MEDIA_TOOLS } from "./media";
+import { ownTypedSql } from "./message-origin";
 import { PLACE_KEPT_MS } from "./message-place";
 import {
   getMessage,
@@ -762,6 +763,8 @@ export interface Transcript {
    * behind it from then on (`authority.ts`, `steeredByOf`).
    */
   steeredBy?: string;
+  /** What `steeredBy` wrote wasn't typed in our apps (`ownTyped`, ADR 0250): they are behind it, relayed. */
+  steeredRelayed?: true;
   /**
    * Near its tool-call cap it was told once to wrap up (`WRAP_UP_NOTE`, `WRAP_UP_REPLY_NOTE`): its final
    * reply offers Continuar (`meta.stepLimit`).
@@ -3335,7 +3338,10 @@ async function executeRunInner(
     if (t.stuck?.endAt === undefined) delete t.stuck;
     if (!run.background && !t.steeredBy) {
       const authority = await runAuthority(db, { ...run, transcript: t as unknown as Record<string, unknown> });
-      if (authority.kind === "unattended") t.steeredBy = person.userId;
+      if (authority.kind === "unattended") {
+        t.steeredBy = person.userId;
+        if (!person.typed) t.steeredRelayed = true;
+      }
     }
     // A person wrote to it: what it starts from here is a new stretch of theirs (ADR 0089).
     if (!run.background) await rerootRun(db, run, person.messageId);
@@ -7920,6 +7926,7 @@ export function continuedTranscript(stopped: Transcript, line: string): Transcri
     ...(stopped.promptKey ? { promptKey: stopped.promptKey } : {}),
     // The person who wrote into the stopped run is still behind the work it goes on with (`authority.ts`).
     ...(stopped.steeredBy ? { steeredBy: stopped.steeredBy } : {}),
+    ...(stopped.steeredRelayed ? { steeredRelayed: true } : {}),
   };
   const last = t.messages.at(-1);
   const unanswered =
@@ -8044,11 +8051,11 @@ async function lastPersonAmong(
   orgId: string,
   agentId: string,
   ids: string[],
-): Promise<{ userId: string; messageId: string } | null> {
+): Promise<{ userId: string; messageId: string; typed: boolean } | null> {
   if (ids.length === 0) return null;
   const quoted = sql`${messages.meta} #>> '{replyTo,author,type}'`;
   const [row] = await db
-    .select({ userId: messages.authorUserId, messageId: messages.id })
+    .select({ userId: messages.authorUserId, messageId: messages.id, typed: ownTypedSql() })
     .from(messages)
     .where(
       and(
@@ -8063,15 +8070,19 @@ async function lastPersonAmong(
     )
     .orderBy(desc(messages.createdAt))
     .limit(1);
-  return row?.userId ? { userId: row.userId, messageId: row.messageId } : null;
+  return row?.userId ? { userId: row.userId, messageId: row.messageId, typed: row.typed === true } : null;
 }
 
 /**
  * Writes that the run owes an answer (and who wrote into it) onto its row and nothing else: mid-turn a
  * computer brain's bridge writes the same transcript (its pending calls, its side effects).
  */
-async function markAnswerOwed(db: Executor, runId: string, t: Pick<Transcript, "steeredBy">) {
-  const patch = JSON.stringify({ answerOwed: true, ...(t.steeredBy ? { steeredBy: t.steeredBy } : {}) });
+async function markAnswerOwed(db: Executor, runId: string, t: Pick<Transcript, "steeredBy" | "steeredRelayed">) {
+  const patch = JSON.stringify({
+    answerOwed: true,
+    ...(t.steeredBy ? { steeredBy: t.steeredBy } : {}),
+    ...(t.steeredRelayed ? { steeredRelayed: true } : {}),
+  });
   await db
     .update(agentRuns)
     .set({ transcript: sql`coalesce(${agentRuns.transcript}, '{}'::jsonb) || ${patch}::jsonb` })

@@ -97,5 +97,6 @@ it.)"; a bridged one the same after its surface's name.
   another agent's settings asked there are now refused or kept as the agent's own note; they ask in the app.
   Allowing a surface again is one entry in `ownTyped`.
 - Conversations from before the migration teach nothing until new typed messages arrive.
-- Open ceilings: an unattended run a person wrote into mid-run (`steeredBy`) is taken as typed; an MCP message is
-  already outside content there (`stepReadOutside`), a bridged one is not.
+- An unattended run a person wrote into mid-run (`steeredBy`) is theirs from then on, `relayed` when what they wrote
+  wasn't typed (`Transcript.steeredRelayed`, from `ownTyped` in `lastPersonAmong`): the same bounds as a run rooted in
+  such a message.
