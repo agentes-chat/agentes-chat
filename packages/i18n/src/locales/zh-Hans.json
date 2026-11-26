@@ -18282,7 +18282,7 @@
       "waitingInput_female": "{{name}} 正在等待回答",
       "waitingComputer": "{{name}} 正在等待电脑",
       "waitingComputer_female": "{{name}} 正在等待电脑",
-      "waitingProvider": "{{name}}：AI 服务商暂时不可用 · 会自动重试",
+      "waitingProvider": "{{name}}：AI 没有响应 · 会自动重试",
       "waitingAgents": "{{name}} 把部分工作交了出去，正在等待回复",
       "waitingAgents_female": "{{name}} 把部分工作交了出去，正在等待回复",
       "queued": "{{name}} 正在排队"
@@ -18294,7 +18294,7 @@
       "waitingApproval": "等待批准",
       "waitingInput": "等待回答",
       "waitingComputer": "等待电脑",
-      "waitingProvider": "AI 提供方故障",
+      "waitingProvider": "AI 没有响应",
       "waitingYourApproval": "等你批准",
       "waitingYourAnswer": "等你回答",
       "queued": "排队中",
@@ -20594,7 +20594,7 @@
       "budgetSoon": "正在短暂等待 {{name}} 的预算",
       "computer": "正在等待 {{name}} 的电脑",
       "busy": "正在等待 {{name}} 的电脑空出位置",
-      "provider": "正在等待 {{name}} 的 AI 服务商，将于 {{when}} 重试"
+      "provider": "正在等待 {{name}} 的 AI 响应，将于 {{when}} 重试"
     },
     "menu": {
       "label": "更多",

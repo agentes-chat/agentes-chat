@@ -19467,7 +19467,7 @@
       "waitingInput_female": "{{name}} aspetta una risposta",
       "waitingComputer": "{{name}} aspetta il computer",
       "waitingComputer_female": "{{name}} aspetta il computer",
-      "waitingProvider": "{{name}}: il provider di IA non funziona · riprova da solo",
+      "waitingProvider": "{{name}}: l'IA non risponde · riprova da solo",
       "waitingAgents": "{{name}} ha passato una parte ad altri e aspetta notizie",
       "waitingAgents_female": "{{name}} ha passato una parte ad altri e aspetta notizie",
       "queued": "{{name}} è in coda"
@@ -19479,7 +19479,7 @@
       "waitingApproval": "in attesa di approvazione",
       "waitingInput": "in attesa di una risposta",
       "waitingComputer": "in attesa del computer",
-      "waitingProvider": "provider IA non disponibile",
+      "waitingProvider": "l'IA non risponde",
       "waitingYourApproval": "aspetta la tua approvazione",
       "waitingYourAnswer": "aspetta la tua risposta",
       "queued": "in coda",
@@ -21865,7 +21865,7 @@
       "budgetSoon": "Breve attesa del budget di {{name}}",
       "computer": "In attesa del computer di {{name}}",
       "busy": "In attesa di spazio sul computer di {{name}}",
-      "provider": "In attesa del provider IA di {{name}}, prossimo tentativo {{when}}"
+      "provider": "In attesa che l'IA di {{name}} risponda, prossimo tentativo {{when}}"
     },
     "menu": {
       "label": "Altro",

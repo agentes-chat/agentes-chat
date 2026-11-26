@@ -19450,7 +19450,7 @@
       "waitingInput_female": "{{name}} attend une réponse",
       "waitingComputer": "{{name}} attend l'ordinateur",
       "waitingComputer_female": "{{name}} attend l'ordinateur",
-      "waitingProvider": "{{name}} : le fournisseur d'IA est en panne · réessaie tout seul",
+      "waitingProvider": "{{name}} : l'IA ne répond pas · réessaie tout seul",
       "waitingAgents": "{{name}} a confié une partie à d'autres et attend leur retour",
       "waitingAgents_female": "{{name}} a confié une partie à d'autres et attend leur retour",
       "queued": "{{name}} est dans la file"
@@ -19462,7 +19462,7 @@
       "waitingApproval": "attend une approbation",
       "waitingInput": "attend une réponse",
       "waitingComputer": "attend son ordinateur",
-      "waitingProvider": "fournisseur d’IA en panne",
+      "waitingProvider": "l’IA ne répond pas",
       "waitingYourApproval": "attend votre approbation",
       "waitingYourAnswer": "attend votre réponse",
       "queued": "dans la file",
@@ -21848,7 +21848,7 @@
       "budgetSoon": "Brève attente du budget de {{name}}",
       "computer": "En attente de l'ordinateur de {{name}}",
       "busy": "En attente de place sur l'ordinateur de {{name}}",
-      "provider": "En attente du fournisseur d'IA de {{name}}, prochain essai {{when}}"
+      "provider": "En attente d'une réponse de l'IA de {{name}}, prochain essai {{when}}"
     },
     "menu": {
       "label": "Plus",

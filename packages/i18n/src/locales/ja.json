@@ -18213,7 +18213,7 @@
       "waitingApproval": "{{name}}は承認を待っています",
       "waitingInput": "{{name}}は回答を待っています",
       "waitingComputer": "{{name}}はコンピューターを待っています",
-      "waitingProvider": "{{name}}: AIプロバイダーが停止中 · 自動で再試行します",
+      "waitingProvider": "{{name}}: AIが応答していません · 自動で再試行します",
       "waitingAgents": "{{name}}は一部を引き継ぎ、返事を待っています",
       "queued": "{{name}}は順番待ちです"
     },
@@ -18224,7 +18224,7 @@
       "waitingApproval": "承認待ち",
       "waitingInput": "回答待ち",
       "waitingComputer": "コンピューター待ち",
-      "waitingProvider": "AIプロバイダー停止中",
+      "waitingProvider": "AIが応答していません",
       "waitingYourApproval": "あなたの承認待ち",
       "waitingYourAnswer": "あなたの回答待ち",
       "queued": "順番待ち",
@@ -20411,7 +20411,7 @@
       "budgetSoon": "{{name}}の予算を少し待っています",
       "computer": "{{name}}のコンピューターを待っています",
       "busy": "{{name}}のコンピューターの空きを待っています",
-      "provider": "{{name}}のAIプロバイダーを待っています。{{when}}に再試行します"
+      "provider": "{{name}}のAIの応答を待っています。{{when}}に再試行します"
     },
     "menu": {
       "label": "その他",

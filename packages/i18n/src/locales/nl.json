@@ -18919,7 +18919,7 @@
       "waitingInput_female": "{{name}} wacht op een antwoord",
       "waitingComputer": "{{name}} wacht op de computer",
       "waitingComputer_female": "{{name}} wacht op de computer",
-      "waitingProvider": "{{name}}: de AI-aanbieder ligt eruit · probeert het vanzelf opnieuw",
+      "waitingProvider": "{{name}}: de AI antwoordt niet · probeert het vanzelf opnieuw",
       "waitingAgents": "{{name}} heeft een deel doorgegeven en wacht op antwoord",
       "waitingAgents_female": "{{name}} heeft een deel doorgegeven en wacht op antwoord",
       "queued": "{{name}} staat in de rij"
@@ -18931,7 +18931,7 @@
       "waitingApproval": "wacht op goedkeuring",
       "waitingInput": "wacht op een antwoord",
       "waitingComputer": "wacht op de computer",
-      "waitingProvider": "AI-provider ligt eruit",
+      "waitingProvider": "AI antwoordt niet",
       "waitingYourApproval": "wacht op je goedkeuring",
       "waitingYourAnswer": "wacht op je antwoord",
       "queued": "in de rij",
@@ -21274,7 +21274,7 @@
       "budgetSoon": "Wacht even op het budget van {{name}}",
       "computer": "Wacht op de computer van {{name}}",
       "busy": "Wacht op ruimte op de computer van {{name}}",
-      "provider": "Wacht op de AI-aanbieder van {{name}}, volgende poging {{when}}"
+      "provider": "Wacht op een antwoord van de AI van {{name}}, volgende poging {{when}}"
     },
     "menu": {
       "label": "Meer",

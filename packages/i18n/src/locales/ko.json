@@ -18205,7 +18205,7 @@
       "waitingApproval": "{{name}}이(가) 승인을 기다리는 중",
       "waitingInput": "{{name}}이(가) 답을 기다리는 중",
       "waitingComputer": "{{name}}이(가) 컴퓨터를 기다리는 중",
-      "waitingProvider": "{{name}}: AI 제공업체 장애 · 자동으로 다시 시도해요",
+      "waitingProvider": "{{name}}: AI가 응답하지 않아요 · 자동으로 다시 시도해요",
       "waitingAgents": "{{name}}이(가) 일부를 넘기고 결과를 기다리는 중",
       "queued": "{{name}}이(가) 차례를 기다리는 중"
     },
@@ -18216,7 +18216,7 @@
       "waitingApproval": "승인 대기 중",
       "waitingInput": "답변 대기 중",
       "waitingComputer": "컴퓨터 대기 중",
-      "waitingProvider": "AI 제공업체 장애",
+      "waitingProvider": "AI 응답 없음",
       "waitingYourApproval": "내 승인 대기 중",
       "waitingYourAnswer": "내 답변 대기 중",
       "queued": "차례 대기 중",
@@ -20403,7 +20403,7 @@
       "budgetSoon": "{{name}}의 예산을 잠시 기다리고 있어요",
       "computer": "{{name}}의 컴퓨터를 기다리고 있어요",
       "busy": "{{name}}의 컴퓨터에 자리가 나기를 기다리고 있어요",
-      "provider": "{{name}}의 AI 제공업체를 기다리고 있어요. {{when}}에 다시 시도해요"
+      "provider": "{{name}}의 AI 응답을 기다리고 있어요. {{when}}에 다시 시도해요"
     },
     "menu": {
       "label": "더 보기",

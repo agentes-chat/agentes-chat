@@ -19991,7 +19991,7 @@
       "waitingApproval": "{{name}} ждёт одобрения",
       "waitingInput": "{{name}} ждёт ответа",
       "waitingComputer": "{{name}} ждёт компьютер",
-      "waitingProvider": "{{name}}: провайдер ИИ недоступен · повторит сам",
+      "waitingProvider": "{{name}}: ИИ не отвечает · повторит сам",
       "waitingAgents": "{{name}} передал часть работы и ждёт ответа",
       "queued": "{{name}} в очереди"
     },
@@ -20002,7 +20002,7 @@
       "waitingApproval": "ждёт одобрения",
       "waitingInput": "ждёт ответа",
       "waitingComputer": "ждёт компьютер",
-      "waitingProvider": "ИИ-провайдер недоступен",
+      "waitingProvider": "ИИ не отвечает",
       "waitingYourApproval": "ждёт вашего одобрения",
       "waitingYourAnswer": "ждёт вашего ответа",
       "queued": "в очереди",
@@ -22366,7 +22366,7 @@
       "budgetSoon": "Ненадолго ждёт бюджет агента {{name}}",
       "computer": "Ждёт компьютер агента {{name}}",
       "busy": "Ждёт места на компьютере агента {{name}}",
-      "provider": "Ждёт провайдера ИИ агента {{name}}, следующая попытка {{when}}"
+      "provider": "Ждёт ответа ИИ агента {{name}}, следующая попытка {{when}}"
     },
     "menu": {
       "label": "Ещё",

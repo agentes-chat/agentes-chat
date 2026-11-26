@@ -18271,7 +18271,7 @@
       "waitingApproval": "{{name}} sedang menunggu persetujuan",
       "waitingInput": "{{name}} sedang menunggu jawaban",
       "waitingComputer": "{{name}} sedang menunggu komputernya",
-      "waitingProvider": "{{name}}: penyedia AI sedang down · mencoba lagi sendiri",
+      "waitingProvider": "{{name}}: AI tidak menjawab · mencoba lagi sendiri",
       "waitingAgents": "{{name}} menyerahkan sebagian dan sedang menunggu kabar",
       "queued": "{{name}} dalam antrean"
     },
@@ -18282,7 +18282,7 @@
       "waitingApproval": "menunggu persetujuan",
       "waitingInput": "menunggu jawaban",
       "waitingComputer": "menunggu komputernya",
-      "waitingProvider": "penyedia AI sedang gangguan",
+      "waitingProvider": "AI tidak menjawab",
       "waitingYourApproval": "menunggu persetujuanmu",
       "waitingYourAnswer": "menunggu jawabanmu",
       "queued": "dalam antrean",
@@ -20517,7 +20517,7 @@
       "budgetSoon": "Menunggu sebentar anggaran {{name}}",
       "computer": "Menunggu komputer {{name}}",
       "busy": "Menunggu tempat di komputer {{name}}",
-      "provider": "Menunggu penyedia AI {{name}}, percobaan berikutnya {{when}}"
+      "provider": "Menunggu AI {{name}} menjawab, percobaan berikutnya {{when}}"
     },
     "menu": {
       "label": "Lainnya",

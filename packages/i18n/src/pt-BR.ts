@@ -19358,7 +19358,7 @@ export const ptBR = {
       waitingComputer: "O {{name}} espera o computador voltar",
       waitingComputer_female: "A {{name}} espera o computador voltar",
       /** The consulted agent's AI provider is down: its run is parked and retries by itself. */
-      waitingProvider: "{{name}}: o provedor de IA está fora do ar · tenta de novo sozinho",
+      waitingProvider: "{{name}}: a IA não está respondendo · tenta de novo sozinho",
       /** Its part done, the agent waits on what it handed to other agents. */
       waitingAgents: "O {{name}} passou uma parte adiante e espera o retorno",
       waitingAgents_female: "A {{name}} passou uma parte adiante e espera o retorno",
@@ -19377,7 +19377,7 @@ export const ptBR = {
       waitingApproval: "esperando aprovação",
       waitingInput: "esperando uma resposta",
       waitingComputer: "esperando o computador",
-      waitingProvider: "IA fora do ar",
+      waitingProvider: "IA não responde",
       /** What it waits on is yours to give: the row turns amber. */
       waitingYourApproval: "esperando sua aprovação",
       waitingYourAnswer: "esperando sua resposta",
@@ -21905,7 +21905,7 @@ export const ptBR = {
       budgetSoon: "Esperando um instante pelo orçamento de {{name}}",
       computer: "Esperando o computador de {{name}}",
       busy: "Esperando vaga no computador de {{name}}",
-      provider: "Esperando o provedor de IA de {{name}}, próxima tentativa {{when}}",
+      provider: "Esperando a IA de {{name}} responder, próxima tentativa {{when}}",
     },
     menu: {
       label: "Mais",

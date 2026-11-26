@@ -18775,7 +18775,7 @@
       "waitingApproval": "{{name}} bir onay bekliyor",
       "waitingInput": "{{name}} bir yanıt bekliyor",
       "waitingComputer": "{{name}} bilgisayarı bekliyor",
-      "waitingProvider": "{{name}}: yapay zeka sağlayıcısı çalışmıyor · kendiliğinden yeniden dener",
+      "waitingProvider": "{{name}}: yapay zeka yanıt vermiyor · kendiliğinden yeniden dener",
       "waitingAgents": "{{name}} işin bir kısmını devretti ve yanıt bekliyor",
       "queued": "{{name}} sırada"
     },
@@ -18786,7 +18786,7 @@
       "waitingApproval": "onay bekliyor",
       "waitingInput": "yanıt bekliyor",
       "waitingComputer": "bilgisayarını bekliyor",
-      "waitingProvider": "yapay zekâ sağlayıcısı çalışmıyor",
+      "waitingProvider": "yapay zekâ yanıt vermiyor",
       "waitingYourApproval": "onayınızı bekliyor",
       "waitingYourAnswer": "yanıtınızı bekliyor",
       "queued": "sırada",
@@ -21016,7 +21016,7 @@
       "budgetSoon": "{{name}} adlı ajanın bütçesi kısa bir süre bekleniyor",
       "computer": "{{name}} adlı ajanın bilgisayarı bekleniyor",
       "busy": "{{name}} adlı ajanın bilgisayarında yer bekleniyor",
-      "provider": "{{name}} adlı ajanın yapay zeka sağlayıcısı bekleniyor, sonraki deneme {{when}}"
+      "provider": "{{name}} adlı ajanın yapay zekasının yanıtı bekleniyor, sonraki deneme {{when}}"
     },
     "menu": {
       "label": "Daha fazla",

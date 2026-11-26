@@ -18851,7 +18851,7 @@
       "waitingApproval": "{{name}} wartet auf eine Freigabe",
       "waitingInput": "{{name}} wartet auf eine Antwort",
       "waitingComputer": "{{name}} wartet auf den Computer",
-      "waitingProvider": "{{name}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "waitingProvider": "{{name}}: Die KI antwortet nicht · versucht es von selbst erneut",
       "waitingAgents": "{{name}} hat einen Teil weitergegeben und wartet auf Rückmeldung",
       "queued": "{{name}} ist in der Warteschlange"
     },
@@ -18862,7 +18862,7 @@
       "waitingApproval": "wartet auf Freigabe",
       "waitingInput": "wartet auf eine Antwort",
       "waitingComputer": "wartet auf den Computer",
-      "waitingProvider": "KI-Anbieter gestört",
+      "waitingProvider": "KI antwortet nicht",
       "waitingYourApproval": "wartet auf deine Freigabe",
       "waitingYourAnswer": "wartet auf deine Antwort",
       "queued": "in der Warteschlange",
@@ -21092,7 +21092,7 @@
       "budgetSoon": "Wartet kurz auf das Budget von {{name}}",
       "computer": "Wartet auf den Computer von {{name}}",
       "busy": "Wartet auf Platz am Computer von {{name}}",
-      "provider": "Wartet auf den KI-Anbieter von {{name}}, nächster Versuch {{when}}"
+      "provider": "Wartet auf eine Antwort der KI von {{name}}, nächster Versuch {{when}}"
     },
     "menu": {
       "label": "Mehr",

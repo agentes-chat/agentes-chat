@@ -19523,8 +19523,8 @@ export const en = {
       waitingInput: "{{name}} is waiting for an answer",
       /** The consulted agent's computer is away: paused, not on a person (as the computer screen says it). */
       waitingComputer: "{{name}} is waiting for the computer",
-      /** The consulted agent's AI provider is down: its run is parked and retries by itself. */
-      waitingProvider: "{{name}}: the AI provider is down · retries by itself",
+      /** The consulted agent's AI isn't answering (its provider down, or its computer refusing while online): its run is parked and retries by itself. */
+      waitingProvider: "{{name}}: the AI isn't answering · retries by itself",
       /** Its part done, the agent waits on what it handed to other agents. */
       waitingAgents: "{{name}} handed part of it on and is waiting to hear back",
       queued: "{{name}} is in line",
@@ -19542,7 +19542,7 @@ export const en = {
       waitingApproval: "waiting for approval",
       waitingInput: "waiting for an answer",
       waitingComputer: "waiting for its computer",
-      waitingProvider: "AI provider down",
+      waitingProvider: "AI not answering",
       /** What it waits on is yours to give: the row turns amber. */
       waitingYourApproval: "waiting for your approval",
       waitingYourAnswer: "waiting for your answer",
@@ -22015,8 +22015,8 @@ export const en = {
       computer: "Waiting for {{name}}'s computer",
       /** In line behind other work on the computer, for 10 minutes or more. */
       busy: "Waiting for room on {{name}}'s computer",
-      /** Its AI provider is down or limits the key ({{when}}: when it tries again). */
-      provider: "Waiting for {{name}}'s AI provider, next try {{when}}",
+      /** Its AI isn't answering: its provider down or limiting the key, or its computer refusing ({{when}}: when it tries again). */
+      provider: "Waiting for {{name}}'s AI to answer, next try {{when}}",
     },
     menu: {
       label: "More",

@@ -19369,7 +19369,7 @@
       "waitingApproval": "{{name}} está esperando una aprobación",
       "waitingInput": "{{name}} está esperando una respuesta",
       "waitingComputer": "{{name}} está esperando a la computadora",
-      "waitingProvider": "{{name}}: el proveedor de IA está caído · reintenta solo",
+      "waitingProvider": "{{name}}: la IA no responde · reintenta solo",
       "waitingAgents": "{{name}} pasó parte del trabajo y espera noticias",
       "queued": "{{name}} está en la fila"
     },
@@ -19380,7 +19380,7 @@
       "waitingApproval": "esperando aprobación",
       "waitingInput": "esperando una respuesta",
       "waitingComputer": "esperando su computadora",
-      "waitingProvider": "proveedor de IA caído",
+      "waitingProvider": "la IA no responde",
       "waitingYourApproval": "esperando tu aprobación",
       "waitingYourAnswer": "esperando tu respuesta",
       "queued": "en la fila",
@@ -21701,7 +21701,7 @@
       "budgetSoon": "Esperando un momento el presupuesto de {{name}}",
       "computer": "Esperando la computadora de {{name}}",
       "busy": "Esperando lugar en la computadora de {{name}}",
-      "provider": "Esperando al proveedor de IA de {{name}}, próximo intento {{when}}"
+      "provider": "Esperando a que la IA de {{name}} responda, próximo intento {{when}}"
     },
     "menu": {
       "label": "Más",
