@@ -357,7 +357,7 @@ export const deletes = (p: Pick<Proposal, "settings">) => (p.settings ?? []).som
 export const settingsGroup = (p: Pick<Proposal, "settings">) => SETTING_GROUP[p.settings?.[0]?.field ?? "model"];
 
 /** The person whose own right-hand AI the row changes (`SettingLine.person`): they alone decide it. */
-const personOf = (p: Pick<Proposal, "settings">) => p.settings?.find((l) => l.person)?.person ?? null;
+export const settingsPerson = (p: Pick<Proposal, "settings">) => p.settings?.find((l) => l.person)?.person ?? null;
 
 const accountOwner = async (db: Executor, orgId: string, lines: SettingLine[]) => {
   const id = (lines.find((l) => l.field === "ai_account")?.to as AccountValue | undefined)?.accountId;
@@ -389,7 +389,7 @@ export async function maySettle(db: Database, actorId: string, p: Proposal) {
   const group = settingsGroup(p);
   const agent = p.agentId ? await getAgent(db, p.orgId, p.agentId) : null;
   if (!agent) return false;
-  const person = personOf(p);
+  const person = settingsPerson(p);
   if (person) return person === actorId;
   const admin = managesAgent(agent, actorId, membership);
   if (group === "admin") {
@@ -411,7 +411,7 @@ export async function maySettle(db: Database, actorId: string, p: Proposal) {
  * that puts the agent under another goes only to who manages both (`supervisorOf`).
  */
 export async function settingsDeciders(db: Database, p: Proposal): Promise<string[]> {
-  const person = personOf(p);
+  const person = settingsPerson(p);
   if (person) return [person];
   const group = settingsGroup(p);
   if (group === "account") {
