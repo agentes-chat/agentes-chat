@@ -49,10 +49,19 @@ export interface MachineExecutors {
   /** `loggedIn`/`authMethod`/`plan`: from `claude auth status` (protocol 8; absent = unknown). */
   claude?: { version: string; loggedIn?: boolean; authMethod?: string; plan?: string };
   /**
-   * `path`: the copy its runner starts, the newest it found. `sandbox` (Windows, runner protocol 80): what holds its
-   * commands there, `none` where nothing could; absent until its runner knows.
+   * `path`: the copy its runner starts, the newest it found. `loggedIn`/`authMethod`/`plan`: its own sign-in as its
+   * app-server's `account/read` says (`chatgpt` with its plan, `api_key`, `provider`), else `codex login status` on a
+   * sign-in it found (absent = unknown). `sandbox` (Windows, runner protocol 80): what holds its commands there, `none`
+   * where nothing could; absent until its runner knows.
    */
-  codex?: { version: string; path?: string; sandbox?: "mxc" | "unelevated" | "none" };
+  codex?: {
+    version: string;
+    path?: string;
+    loggedIn?: boolean;
+    authMethod?: string;
+    plan?: string;
+    sandbox?: "mxc" | "unelevated" | "none";
+  };
   /** Cursor's CLI (protocol 36, ADR 0114) and the models its sign-in lists; `inPlan`: the CLI said the plan includes it. */
   cursor?: { version: string; models?: { id: string; label?: string; inPlan?: boolean }[] };
   /** OpenCode's CLI (protocol 39, ADR 0132) and the models it lists; `free`: OpenCode's free tier. */
@@ -83,6 +92,25 @@ export interface MachineExecutors {
   mode?: "system";
   /** `hello.windowsBuild` (runner protocol 80): a Windows computer's build (`10.0.19045`); absent elsewhere or older. */
   windowsBuild?: string;
+  /**
+   * `hello.clis` (ADR 0228 §6): the coding CLIs its runner fetches by itself there, and where each fetch stands
+   * (`fetching` with bytes done and total, `ready`, or `failed` with why), updated by its `cli.fetch` frames.
+   */
+  copies?: {
+    fetchable?: ("claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git")[];
+    fetch?: Partial<
+      Record<
+        "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git",
+        | { state: "fetching"; version: string; done: number; total: number | null }
+        | { state: "ready"; version: string }
+        | {
+            state: "failed";
+            version: string;
+            reason: "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
+          }
+      >
+    >;
+  };
   /** `hello.claudeLoginMethods` (protocol 50): what a new Claude sign-in for all agents can use there; absent: older. */
   claudeLoginMethods?: ("cli_login" | "setup_token" | "api_key")[];
   /** `hello.claudeLoginBlocked`: why the computer's self-check keeps `cli_login` for all agents off, kept until a check passes. */
@@ -128,6 +156,8 @@ export interface MachineLoadRecord {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** What the agents' temporary folders held in memory, GB (`MachineLoad.agentTmpRamGb`). */
+  agentTmpRamGb?: number;
   /** The server's own mark: its admins heard of this disk passing the line, and won't again until it drops under 80%. */
   diskWarned?: boolean;
   at: string;

@@ -500,10 +500,18 @@ test.skipIf(!posix)(
     const limited = await run(ctx, turn({ runId: RUN.replace(/1$/, "6"), prompt: "LIMIT" }));
     expect(limited.find((e) => e.type === "limit")).toMatchObject({ resetsAt: expect.any(String) });
     expect(limited.at(-1)).toMatchObject({ type: "error", code: "plan_limit" });
-    // Windows: the turn runs, its CLI's home (`USERPROFILE`, which Go reads there) the account's folder.
-    expect(await final({ runId: RUN.replace(/1$/, "9") }, { ...ctx, platform: "win32" })).toMatchObject({
-      type: "done",
-    });
+    // Windows: the turn runs `agy.exe` by its path, its CLI's home (`USERPROFILE`, which Go reads there) the account's
+    // folder.
+    const exe = path.join(root, "agy.exe");
+    writeFileSync(exe, "");
+    const started: string[] = [];
+    const winSpawn = ((file, args, options) => {
+      started.push(file);
+      return spawn(process.execPath, [FAKE, ...args], options);
+    }) as Spawn;
+    const win = { ...ctx, platform: "win32", bin: exe, spawn: winSpawn };
+    expect(await final({ runId: RUN.replace(/1$/, "9") }, win)).toMatchObject({ type: "done" });
+    expect(started).toEqual([exe]);
     expect(accountEnv("antigravity", accountDir, {}, "win32").USERPROFILE).toBe(accountDir);
     expect(accountEnv("antigravity", accountDir, {}, "linux").USERPROFILE).toBeUndefined();
   },

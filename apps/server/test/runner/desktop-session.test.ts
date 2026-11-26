@@ -43,6 +43,7 @@ import {
   type ProcessStat,
   procStat,
   runnerUser,
+  STALE_WORK_MS,
   systemDesktopUser,
   terminalNote,
   vncPasswordFile,
@@ -1606,6 +1607,61 @@ test("short of memory, a desktop whose apps the keeper can't vouch for, or whose
   t.fake.stats[t.fake.stats.length - 1] = { pid: 7001, ppid: 7000, name: "bash", start: 51, cpu: 0 };
   expect(await t.desktops.parkIdle()).toBe(1);
   t.desktops.close();
+});
+
+test("short of memory, the sweep parks the desktops nobody used for an hour, without waiting for another to start", async () => {
+  let free = 4 * GiB;
+  const t = setup({ memAvailable: () => (t.desktops.status(dev).running ? free : 4 * GiB) });
+  await keptNothing(t, dev, ops);
+  await t.desktops.ensure(dev);
+  t.clock.now += 2 * PARK_AFTER_MS;
+  await t.desktops.ensure(ops);
+  // Plenty free: an idle desktop stays as it was.
+  await t.desktops.sweep();
+  expect(t.desktops.status(dev).running).toBe(true);
+  // Short: the idle one goes, what was open on it kept; the one just used stays.
+  free = GiB;
+  await t.desktops.sweep();
+  await waitFor(() => !t.desktops.status(dev).running);
+  expect(t.desktops.status(ops).running).toBe(true);
+  expect(t.logs).toContainEqual("the desktop of dev was parked to make room: nobody used it for an hour");
+  t.desktops.close();
+});
+
+test("short of memory, a desktop nobody touched for a day is parked even with a command running in its Terminal", async () => {
+  const t = setup();
+  const { display } = await t.desktops.ensure(dev);
+  await keptNothing(t, dev);
+  t.fake.stats.push(
+    { pid: 7000, ppid: 1, name: "xfce4-terminal", start: 50, cpu: 1 },
+    { pid: 7001, ppid: 7000, name: "bash", start: 51, cpu: 0 },
+    { pid: 7002, ppid: 7001, name: "node", start: 52, cpu: 9 },
+  );
+  t.fake.envs.set(7000, { DISPLAY: `:${display}` });
+  // A dev server left running nobody came back to: kept for the day, then it ends with its desktop.
+  t.clock.now += STALE_WORK_MS - 60_000;
+  expect(await t.desktops.parkIdle()).toBe(0);
+  t.clock.now += 60_000;
+  expect(await t.desktops.parkIdle()).toBe(1);
+  expect(t.desktops.status(dev).running).toBe(false);
+  t.desktops.close();
+});
+
+test("a desktop the next runner takes back keeps the time since its last use: a restart doesn't make it fresh", async () => {
+  const t = setup();
+  const before = new DesktopSessions({ ...t.opts, system: gone(t.fake.system) });
+  await before.ensure(dev);
+  await keptNothing(t, dev);
+  t.clock.now += 30 * 60_000;
+  await before.sweep();
+  before.close();
+  t.clock.now += 40 * 60_000;
+  const next = new DesktopSessions(t.opts);
+  next.restore();
+  expect(next.status(dev).running).toBe(true);
+  // 70 minutes since its last use, the restart in between.
+  expect(await next.parkIdle()).toBe(1);
+  next.close();
 });
 
 test("the desktops of agents this computer no longer serves stop; the others go on", async () => {

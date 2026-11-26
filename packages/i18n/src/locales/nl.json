@@ -3536,10 +3536,22 @@
       "zen": "Koppel OpenCode",
       "api_key": "Een API-sleutel toevoegen"
     },
+    "cliFetch": {
+      "preparing": "{{program}} wordt klaargezet op {{computer}}…",
+      "preparingPct": "{{program}} wordt klaargezet op {{computer}}… {{percent}}%",
+      "failed": {
+        "offline": "{{program}} kon niet worden klaargezet op {{computer}}: de computer kan de download niet bereiken.",
+        "hash_mismatch": "{{program}} kon niet worden klaargezet op {{computer}}: de download was niet het originele bestand, dus die is niet gebruikt.",
+        "no_build": "{{program}} heeft geen versie voor het systeem van {{computer}}.",
+        "disk_full": "{{program}} kon niet worden klaargezet op {{computer}}: de schijf is vol.",
+        "failed": "{{program}} kon niet worden klaargezet op {{computer}}: de download is niet afgemaakt."
+      }
+    },
     "cli": {
       "missing": "{{program}} staat nog niet op {{computer}}.",
       "claudeApp": "De Claude-app is niet genoeg: agents gebruiken Claude Code, dat op de computer draait.",
       "install": "{{program}} voor mij installeren",
+      "update": "{{program}} voor mij bijwerken",
       "check": "Al geïnstalleerd, opnieuw controleren",
       "checked": "Net gecontroleerd: {{program}} staat nog steeds niet op {{computer}}.",
       "installing": "{{program}} wordt geïnstalleerd op {{computer}}. Dat duurt ongeveer een minuut.",
@@ -6547,6 +6559,7 @@
         "cli_failed": "Het programma {{brain}} is gestopt met een fout: {{detail}}",
         "cli_stopped": "Het programma {{brain}} is gestopt met een fout.",
         "cli_closed": "Het programma {{brain}} werd onverwacht afgesloten.",
+        "cli_empty": "Het programma {{brain}} beëindigde zijn beurt zonder antwoord. Vraag het opnieuw. Blijft het gebeuren, werk {{brain}} dan bij op de computer of kies een andere AI in de instellingen van de agent.",
         "cli_sandbox": "Het programma {{brain}} kan zijn sandbox niet starten op deze computer. Kies een andere AI in de instellingen van de agent.",
         "cli_system": "Het programma {{brain}} werkt nog niet op het systeem van deze computer. Kies een andere AI in de instellingen van de agent.",
         "account_missing": "Het account dat voor deze agent gekozen is staat niet meer op zijn computer. Kies een ander in de instellingen van de agent of voeg het opnieuw toe.",
@@ -12765,6 +12778,8 @@
       "tool_offOne": "{{program}} staat uit op {{computer}}.",
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
+      "cli_outdated": "{{program}} op {{computer}} moet worden bijgewerkt voordat agenten het kunnen gebruiken.",
+      "cli_outdatedRun": "{{program}} op {{computer}} moet worden bijgewerkt voordat agenten het kunnen gebruiken. Voer daar {{command}} uit.",
       "home_only": "{{program}} is op {{computer}} alleen voor root geïnstalleerd, waar de agents niet bij kunnen.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
@@ -16119,6 +16134,7 @@
       "privateNetwork": "Dit adres ligt op een privénetwerk. Gebruik een openbaar adres, of sta het op een zelfgehoste server toe met `OUTBOUND_ALLOW_CIDRS`.",
       "tooLong": "Dat is te lang. Maak het korter en probeer het opnieuw.",
       "updateComputerApp": "De app op de computer is hiervoor te oud. Werk hem bij en probeer het opnieuw.",
+      "cliNotFetched": "Deze computer haalt dat programma niet zelf op.",
       "computerUpdatesItself": "De computer van de werkruimte werkt zichzelf hiervoor bij. Probeer het zo opnieuw.",
       "notInvited": "Je bent niet uitgenodigd voor deze afspraak.",
       "offHere": "Dit staat hier uit.",
@@ -18960,7 +18976,8 @@
       "missing": "Dit gesprek is er niet meer.",
       "helping": "helpt {{name}}",
       "helping_female": "helpt {{name}}",
-      "see": "Gesprek bekijken"
+      "see": "Gesprek bekijken",
+      "relay": "Antwoord van {{name}}: {{excerpt}}. Gesprek bekijken"
     },
     "unshown": "Dit bericht kon niet getoond worden",
     "unshownPart": "Een deel van dit bericht kon niet getoond worden",
@@ -19133,6 +19150,7 @@
         "usingScreen": "Het scherm gebruikt",
         "cloningRepo": "Een repository gekloond",
         "listingRepos": "Heeft de repository's weergegeven",
+        "preparingCli": "{{app}} klaargezet",
         "openingPullRequest": "Een pull request geopend",
         "handingOff": "Een rapport geleverd",
         "recordingFindings": "De bevindingen genoteerd",
@@ -19256,6 +19274,8 @@
       "usingScreen": "het scherm aan het gebruiken",
       "cloningRepo": "een repository aan het klonen",
       "listingRepos": "geeft de repository's weer",
+      "preparingCli": "{{app}} aan het klaarzetten op {{computer}}",
+      "preparingCliPct": "{{app}} aan het klaarzetten op {{computer}} ({{percent}}%)",
       "openingPullRequest": "een pull request aan het openen",
       "handingOff": "een rapport aan het leveren",
       "recordingFindings": "de bevindingen aan het noteren",
