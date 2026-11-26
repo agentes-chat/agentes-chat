@@ -11,22 +11,27 @@ import { shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 /*
- * The onboarding's last step, Connect an AI (ADR 0162): on the rail once the team is made, answered by the data
- * (every agent thinking), left with Connect later, and never after a plan left for later. Wherever it ends, the
- * workspace opens on the beta notice alone (`?arrival=beta`, ADR 0160).
+ * The onboarding's Connect an AI step (ADR 0162): once the first agent's week was seen (or the start was left with the
+ * right hand alone), answered by the data (every agent thinking), left with Connect later, and never after a plan left
+ * for later. Wherever it ends, the workspace opens on the welcome wizard alone (`?arrival=beta`, ADR 0160).
  */
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();
   sessionStorage.clear();
+  // The welcome wizard shows once per person and workspace in a browser: each test is a new one.
+  localStorage.clear();
   globalThis.fetch = realFetch;
 });
 
-const CONNECT = "Conecte uma IA para o seu time pensar";
+const CONNECT = "Agora, a IA que vocês já assinam";
+/** The arrival's Connect an AI, which the wizard never leads to after this step. */
+const ARRIVAL_CONNECT = "Conecte uma IA para o seu time pensar";
 /** A team's last step, after this one (ADR 0162, amended 2026-11-11). */
 const PEOPLE = "Quem trabalha com você?";
-const BETA = "Você chegou cedo. Que bom.";
+/** The welcome wizard's first step (ADR 0160, addendum of 2026-11-26). */
+const WELCOME = "Boas-vindas à Acme, Walter";
 
 const button = (name: string | RegExp) => screen().getByRole("button", { name });
 const click = async (el: Element, rounds = 10) => {
@@ -34,9 +39,15 @@ const click = async (el: Element, rounds = 10) => {
   await settle(rounds);
 };
 const calls = (state: FakeState, method: string) => state.calls.filter((c) => c.method === method);
-const heading = () => document.querySelector(".onb__title")?.textContent;
-const eyebrow = () => document.querySelector(".onb__eyebrow")?.textContent;
-const body = () => document.querySelector(".onb__body") as HTMLElement;
+const heading = () => document.querySelector(".onbx__title")?.textContent;
+const eyebrow = () => document.querySelector(".onbx__eyebrow")?.textContent;
+const body = () => document.querySelector(".onbx__body") as HTMLElement;
+/** The welcome wizard skipped to its last step and closed with its button. */
+const throughWelcome = async () => {
+  const wizard = screen().getByRole("dialog", { name: WELCOME });
+  await click(within(wizard).getByRole("button", { name: "Pular" }), 2);
+  await click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Começar/ }), 8);
+};
 
 type Router = Awaited<ReturnType<typeof renderApp>>["router"];
 /** The `arrival` asked for by each navigation from now on (the arrival drops it from the address as it opens). */
@@ -49,7 +60,7 @@ const arrivals = (router: Router) => {
 };
 
 /**
- * Acme being set up, its name and what it does saved and its team made, none of its agents with an AI yet;
+ * Acme being set up, its first agents made and their week seen ("agents"), none of its agents with an AI yet;
  * `held`: agentes.chat Cloud, waiting for its first plan.
  */
 const madeTeam = (opts: { held?: boolean } = {}) => {
@@ -60,11 +71,10 @@ const madeTeam = (opts: { held?: boolean } = {}) => {
         id: ORG_ID,
         name: "Acme",
         role: "owner",
-        onboarding: { step: "context", generalChannelId: GENERAL_ID },
+        onboarding: { step: "agents", generalChannelId: GENERAL_ID },
         ...(opts.held ? { standing: { state: "hold" as const, reason: "payment" } } : {}),
       },
     ];
-  state.context = "Loja online";
   state.aiStatus = {
     any: false,
     agents: state.agents.map((a) => ({ agentId: a.id, state: "no_ai", reason: "no_key" })),
@@ -84,31 +94,24 @@ const allThink = async (state: FakeState, services: Awaited<ReturnType<typeof re
   await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
   await settle(10);
 };
-/** Wide enough for the column beside the step. */
-const wide = () => {
-  const native = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: query === "(min-width: 1200px)",
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as unknown as typeof window.matchMedia;
-  return () => {
-    window.matchMedia = native;
-  };
-};
-
-describe("Connect an AI, the rail's last step", () => {
+describe("Connect an AI, after the first agent", () => {
   test("the team made with no AI: the step, its choices as cards, and what leaving it means", async () => {
     const state = madeTeam();
     await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
-    expect(eyebrow()).toBe("Passo 5 de 6");
+    // Past the count: no step number over it.
+    expect(eyebrow()).toBeUndefined();
     expect(heading()).toBe(CONNECT);
-    expect(document.querySelector(".onb__steps")?.textContent).toContain("Conectar uma IA");
+    expect(document.querySelector(".onbx__lead")?.textContent).toBe(
+      "Com ela, o time começa hoje. Os agentes usam a conta de vocês, sem custo a mais aqui.",
+    );
+    // The team awake on the box's own header.
+    expect(document.querySelector(".onbx .onb-pass[data-awake]")).not.toBeNull();
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Chave de API", "Começar grátis"])
       expect(within(body()).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
-    expect(body().textContent).toContain("Sem uma IA, os agentes não respondem.");
+    expect(document.querySelector(".onbx .ac-dialog__foot-note")?.textContent).toBe(
+      "Sem uma IA, os agentes não respondem.",
+    );
     // Nothing is finished while the step waits.
     expect(calls(state, "orgs.saveOnboarding")).toEqual([]);
   });
@@ -123,7 +126,7 @@ describe("Connect an AI, the rail's last step", () => {
     expect(heading()).toBe(CONNECT);
   });
 
-  test("Connect later goes on to inviting people, whose Convidar depois opens #general on the beta notice alone", async () => {
+  test("Connect later goes on to inviting people, whose Convidar depois opens #general on the wizard alone", async () => {
     const state = madeTeam();
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
@@ -138,44 +141,32 @@ describe("Connect an AI, the rail's last step", () => {
     ]);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
     expect(asked).toContain("beta");
-    const beta = screen().getByRole("dialog", { name: BETA });
-    await click(within(beta).getByRole("button", { name: /Continuar/ }), 8);
-    expect(screen().queryByRole("dialog", { name: BETA })).toBeNull();
-    expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
-    expect(screen().queryByRole("dialog", { name: /^Conectar uma IA/ })).toBeNull();
+    await throughWelcome();
+    expect(screen().queryByRole("dialog")).toBeNull();
   });
 
-  test("once every agent thinks: the connected screen, the team awake, then on to the people and into the workspace", async () => {
-    const restore = wide();
-    try {
-      const state = madeTeam();
-      const { router, services } = await renderApp("/onboarding", { api: createFakeApi(state) });
-      await settle(16);
-      const stage = () => document.querySelector(".onb-stage") as HTMLElement;
-      expect(stage().textContent).toContain("O seu time está pronto");
-      await allThink(state, services);
-      // It stays on the step to say so, rather than opening the workspace by itself.
-      expect(router.state.location.pathname).toBe("/onboarding");
-      expect(heading()).toBe("Pronto. O time da Acme já pensa.");
-      // One step left: the people.
-      expect(document.querySelector(".onb__progress-text")?.textContent).toContain("Falta 1 etapa");
-      expect(stage().textContent).toContain("O seu time acordou");
-      expect(stage().textContent).toContain("já respondem");
-      expect(calls(state, "orgs.saveOnboarding")).toEqual([]);
-      const asked = arrivals(router);
-      await click(button("Continuar"), 12);
-      expect(heading()).toBe(PEOPLE);
-      await click(button("Convidar depois"), 16);
-      expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { finished: true }]]);
-      expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
-      expect(asked).toContain("beta");
-    } finally {
-      restore();
-    }
+  test("once every agent thinks: the connected screen, then on to the people and into the workspace", async () => {
+    const state = madeTeam();
+    const { router, services } = await renderApp("/onboarding", { api: createFakeApi(state) });
+    await settle(16);
+    expect(heading()).toBe(CONNECT);
+    await allThink(state, services);
+    // It stays on the step to say so, rather than opening the workspace by itself.
+    expect(router.state.location.pathname).toBe("/onboarding");
+    expect(heading()).toBe("Pronto. O time da Acme já pensa.");
+    expect(document.querySelector(".onbx .ac-dialog__foot-note")?.textContent).toBe("");
+    expect(calls(state, "orgs.saveOnboarding")).toEqual([]);
+    const asked = arrivals(router);
+    await click(button(/^Continuar/), 12);
+    expect(heading()).toBe(PEOPLE);
+    await click(button("Convidar depois"), 16);
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { finished: true }]]);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+    expect(asked).toContain("beta");
   });
 
   test("a card picked names nothing by itself: the dialog closed, and the AI connected some other way", async () => {
-    const lead = () => document.querySelector(".onb__lead")?.textContent;
+    const lead = () => document.querySelector(".onbx__lead")?.textContent;
     for (const keyCame of [false, true]) {
       const state = madeTeam();
       const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
@@ -221,60 +212,53 @@ describe("Connect an AI, the rail's last step", () => {
     expect(document.querySelector(".onb-ai__connected.ac-optrow .ac-chip--done")).not.toBeNull();
   });
 
-  test("on agentes.chat Cloud, a plan left for later skips the step: Lodi's DM, the beta notice alone", async () => {
+  test("on agentes.chat Cloud, a plan left for later skips the step: Lodi's DM, the wizard alone", async () => {
     const state = madeTeam({ held: true });
     // The billing service's plan list can't be read: the plan step names a plan generically.
     globalThis.fetch = (async () => new Response("", { status: 404 })) as unknown as typeof fetch;
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
-    expect(heading()).toBe("Ligue o time");
-    expect(eyebrow()).toBe("Passo 5 de 7");
+    expect(heading()).toBe("Contrate o time");
+    expect(eyebrow()).toBe("Passo 4 de 4");
     const asked = arrivals(router);
-    await click(button(/^Ligar depois/), 16);
+    await click(button("Agora não"), 16);
     await settle(8);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);
     expect(asked).toContain("beta");
-    await click(within(screen().getByRole("dialog", { name: BETA })).getByRole("button", { name: /Continuar/ }), 8);
-    expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
+    await throughWelcome();
+    expect(screen().queryByRole("dialog", { name: ARRIVAL_CONNECT })).toBeNull();
   });
 });
 
 describe("a personal workspace (ADR 0159)", () => {
-  test("its own words, never a team's: its agents beside the question, its right hand by name on the sky", async () => {
-    const restore = wide();
-    try {
-      // Being set up, the team's question next, its right hand alone and with no AI yet.
-      const state = withRightHand(seedState({ agents: [] }));
-      if (state.me)
-        state.me.organizations = [
-          {
-            id: ORG_ID,
-            name: "Pessoal",
-            role: "owner",
-            mode: "personal",
-            onboarding: { step: "context", generalChannelId: GENERAL_ID },
-          },
-        ];
-      state.aiStatus = {
-        any: false,
-        agents: state.agents.map((a) => ({ agentId: a.id, state: "no_ai", reason: "no_key" })),
-      };
-      const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
-      await settle(16);
-      expect(document.querySelector(".onb-preview__ghost")?.textContent).toBe("Os seus agentes aparecem aqui");
-      await click(screen().getByRole("radio", { name: /Ainda não uso nenhum/ }), 4);
-      await click(button("Seguir sem agentes"), 16);
-      expect(heading()).toBe("Conecte uma IA para os seus agentes pensarem");
-      const stage = () => document.querySelector(".onb-stage")?.textContent ?? "";
-      expect(stage()).toContain("O Lodi está pronto");
-      expect(stage()).toContain("Só falta uma IA para acordar.");
-      expect(stage()).not.toContain("time");
-      await allThink(state, services);
-      expect(stage()).toContain("O Lodi acordou");
-      expect(stage()).not.toContain("time");
-    } finally {
-      restore();
-    }
+  test("its own words, never a team's: the step for its right hand alone, and its done screen by its name", async () => {
+    // Being set up, how to start next, its right hand alone and with no AI yet.
+    const state = withRightHand(seedState({ agents: [] }));
+    if (state.me)
+      state.me.organizations = [
+        {
+          id: ORG_ID,
+          name: "Pessoal",
+          role: "owner",
+          mode: "personal",
+          onboarding: { step: "workspace", generalChannelId: GENERAL_ID },
+        },
+      ];
+    state.aiStatus = {
+      any: false,
+      agents: state.agents.map((a) => ({ agentId: a.id, state: "no_ai", reason: "no_key" })),
+    };
+    const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
+    await settle(16);
+    await click(screen().getByRole("radio", { name: /Começar do zero/ }), 4);
+    await click(button(/^Começar do zero/), 16);
+    expect(heading()).toBe("Agora, a IA que você já assina");
+    const box = () => document.querySelector(".onbx")?.textContent ?? "";
+    expect(box()).toContain("Com ela, os seus agentes começam hoje.");
+    expect(box()).not.toContain("time");
+    await allThink(state, services);
+    expect(heading()).toBe("Pronto. O Lodi já pensa.");
+    expect(box()).not.toContain("time");
   });
 });
 
