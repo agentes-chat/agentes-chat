@@ -596,7 +596,8 @@ test("people taking turns keep one session; a repository added to the agent's ac
   await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: bia.id });
   const systems: string[] = [];
   const { brain, seen } = scriptedComputerBrain((_n, turn) => {
-    systems.push(turn.system);
+    // What the session starts with: its system text and, once, what holds for the conversation (its tools, repositories).
+    systems.push(`${turn.system}\n${turn.conversation ?? ""}`);
     return [
       { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
       { type: "done", text: "ok" },
@@ -4650,6 +4651,23 @@ test("agents' turns on one computer start apart, parked in line (never handed to
     (j) => j.dedupeKey?.startsWith(`agent_run.execute:${fromAgents.id}:room-kick:`) && j.status === "pending",
   );
   expect(kick).toBeDefined();
+});
+
+test("an agent's turn on a CLI its computer already holds open isn't spaced: it starts no process", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
+  const machineId = await computerAgent(f);
+  const { brain: scripted, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const brain: Brain = { ...scripted, warm: async () => true };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await askedJustNow(f, machineId);
+  const fromAgents = await secondRun(f, (await personMessage(f, "@dev revisa")).id, 2);
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(1);
+  expect((await runById(f, fromAgents.id))?.status).toBe("done");
 });
 
 test("only the head of the computer's line asks it: an agent's run waits behind a person's", async () => {

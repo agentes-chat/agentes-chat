@@ -19598,6 +19598,7 @@
     "namesMore": "{{first}} et {{count}} de plus",
     "wait": {
       "thinking": "Réflexion…",
+      "code": "Mise à jour du code…",
       "held": "En attente d'approbation…",
       "said": "« {{text}} »"
     },

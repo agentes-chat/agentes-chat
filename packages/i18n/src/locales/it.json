@@ -19617,6 +19617,7 @@
     "namesMore": "{{first}} e altri {{count}}",
     "wait": {
       "thinking": "Sta pensando…",
+      "code": "Sta aggiornando il codice…",
       "held": "In attesa di approvazione…",
       "said": "«{{text}}»"
     },

@@ -19670,6 +19670,8 @@ export const en = {
     /** The waiting row's step line before its first step (`waitStep`). */
     wait: {
       thinking: "Thinking…",
+      /** Before the model has the turn: the agent's checkouts are being updated from their repositories. */
+      code: "Updating the code…",
       held: "Waiting for approval…",
       /** The agent's own words for its step (what it wrote before the call), quoted. */
       said: "“{{text}}”",

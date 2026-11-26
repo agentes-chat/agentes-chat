@@ -10,6 +10,7 @@ import {
   CONVERSATION_PROTOCOL,
   createMemoryPubSub,
   MACHINE_PROTOCOL_VERSION,
+  type MachineReplies,
   type MachineRequest,
   type PubSub,
   type ServerFrame,
@@ -215,6 +216,35 @@ test("before a chat turn: the agent's checkouts set where it starts and add # Yo
     }).run(turn(), io()),
   );
   expect(calls[2]?.request).toMatchObject({ cwd: "", system: "You are dev." });
+});
+
+test("the checkouts' update is the turn's phase: told as it starts and as it ends, before the turn goes out", async () => {
+  const pubsub = createMemoryPubSub();
+  const { hub, calls } = fakeHub(pubsub);
+  const told: { phase: string | null; sent: number }[] = [];
+  const brain = createClaudeCodeBrain({
+    hub,
+    pubsub,
+    agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+    finalGraceMs: 20,
+    prepare: async () => ({ cwd: "repos/acme/app", prompt: "", start: "" }),
+  });
+  await collect(brain.run(turn(), { ...io(), phase: (phase) => told.push({ phase, sent: calls.length }) }));
+  expect(told).toEqual([
+    { phase: "code", sent: 0 },
+    { phase: null, sent: 0 },
+  ]);
+  // Nothing to update (a turn of the right hand, or no checkouts set up): no phase.
+  told.length = 0;
+  await collect(
+    createClaudeCodeBrain({
+      hub,
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      finalGraceMs: 20,
+    }).run(turn(), { ...io(), phase: (phase) => told.push({ phase, sent: calls.length }) }),
+  );
+  expect(told).toEqual([]);
 });
 
 test("protocol 40: what holds for the conversation, and # Your code, go apart from the system text; an older runner gets one text", async () => {
@@ -746,4 +776,14 @@ test("brain.warm: the turn's launch without its words, sent only to a runner tha
   expect(await warmWith({ online: false })).toEqual([]);
   // A background run keeps no process: nothing to warm.
   expect(await warmWith({}, false)).toEqual([]);
+  // What the runner answered: the session's CLI is open now (its turn starts no process), or not.
+  const answering = (reply: MachineReplies["brain.warm"]) =>
+    createClaudeCodeBrain({
+      hub: { status: async () => status({ protocol: BRAIN_WARM_PROTOCOL }), call: async () => reply as never },
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      permissions: async () => permissions,
+    }).warm?.(turn());
+  expect(await answering({ open: true, started: false })).toBe(true);
+  expect(await answering({ open: false, started: false })).toBe(false);
 });

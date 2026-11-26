@@ -46,8 +46,11 @@ test("an install runs the vendor's installer, then looks again with ~/.local/bin
   expect(env.PATH).toBe(`/usr/bin:/bin:${path.join(root, ".local", "bin")}`);
 });
 
-test("a failing installer ends failed with its own last line; one the look can't find, still_missing", async () => {
-  const bad = make("echo 'Downloading...'; echo 'curl: (6) Could not resolve host: claude.ai' >&2; exit 6");
+test("a failing installer ends failed with its last line on stderr; one the look can't find, still_missing", async () => {
+  // Its two pipes come in no set order: stderr says why, whatever stdout says after it.
+  const bad = make(
+    "echo 'Downloading...'; echo 'curl: (6) Could not resolve host: claude.ai' >&2; sleep 0.1; echo 'Cleaning up'; exit 6",
+  );
   bad.installer.start("claude");
   await waitFor(() => bad.installer.state()?.state === "failed");
   expect(bad.installer.state()).toEqual({

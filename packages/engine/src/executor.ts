@@ -77,6 +77,7 @@ import { brainOf } from "./brain-settings";
 import { brainSessionId, missingTurnFolder, recordPlanUsage } from "./brains/claude-code";
 import { modelUnavailable } from "./brains/failure-causes";
 import { ModelBrain, turnEffort } from "./brains/model";
+import { phaseTeller } from "./brains/phase";
 import type { ComputerTurn } from "./brains/prompt";
 import {
   type BrainPlan,
@@ -127,7 +128,7 @@ import {
   unregisterRunAbort,
   unregisterTurnAbort,
 } from "./cancel";
-import { COMPUTER_SECTIONS_LINE, describeCapabilities, forComputerBrain } from "./capabilities";
+import { COMPUTER_SECTIONS_LINE, describeCapabilities, forComputerBrain, withComputerLimit } from "./capabilities";
 import { CATCH_UP_AFTER_MS, catchUpText, isCatchUp } from "./catch-up";
 import {
   askCatchUp,
@@ -186,12 +187,12 @@ import {
   onConsultedRunFinished,
 } from "./consultations";
 import {
+  agentSystemText,
   buildRunContext,
   type ContextBlock,
   conversationText,
   getChannelCached,
   isComputerTurnBlock,
-  isConversationBlock,
   lastRoutineRun,
   restatesReaction,
   stableFirst,
@@ -410,7 +411,7 @@ import {
 } from "./runs";
 import { SANDBOX_SCOPE, truncateOutput } from "./sandbox";
 import { isSayNow, linesSaid, SAY_NOW_TOOL, type SaidNow, sayNowApplies, sayNowText, withoutSaidNow } from "./say-now";
-import { sharedQueryEmbedding } from "./search";
+import { RUN_QUERY_CHARS, sharedQueryEmbedding } from "./search";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
 import {
@@ -1587,6 +1588,9 @@ async function executeRunInner(
   // another place (`adoptWork`). In a confidential thread that is under the thread's root, whatever asked.
   let replyThreadId = replyThreadOf({ ...run, confidential: sealedAtClaim });
   const where = { channelId: run.channelId, threadId: replyThreadId, agentId: run.agentId, runId: run.id };
+  const tellPhase = phaseTeller(
+    (phase) => void publishChannelEvent(deps.pubsub, { type: "agent.phase", ...where, phase }).catch(() => {}),
+  );
   // Background work (a routine's run, or long work) says so: the apps keep it out of the conversation's "working" row.
   let bg: { background?: true } = run.background || run.workId ? { background: true as const } : {};
   if (!askingForRoom) {
@@ -2055,16 +2059,44 @@ async function executeRunInner(
     ctx.loadedGroups = [EVERY_TOOL];
   }
   const every = listsEveryTool(ctx);
+  let behind: ReturnType<typeof runAuthority> | undefined;
+  const authority = () => (behind ??= runAuthority(db, run));
+  /**
+   * The trigger's query vector is asked as soon as the trigger is read, so the provider's answer comes while the reads
+   * below run; memory and the wiki search ask the same words later and share the call (`gateway.embed`). Not for a
+   * run an app's message started: nothing of memory or the wiki comes in by itself there. Memory's kind alone: with
+   * vectors for the wiki alone, a run that doesn't search it pays for none.
+   */
+  const embedEarly = <T extends { body: string; authorType: string }>(rows: T[]) => {
+    const body = rows[0]?.body.trim().slice(0, RUN_QUERY_CHARS);
+    const contextDeps = deps.context;
+    if (!body || !contextDeps?.gateway.hasEmbeddings()) return rows;
+    const viaApp = rows[0]?.authorType === "person" ? Promise.resolve(false) : authority().then(fromApp);
+    void viaApp
+      .then((app) =>
+        app
+          ? null
+          : contextDeps.gateway.embed({
+              orgId: run.orgId,
+              texts: [body],
+              inputType: "query",
+              kinds: ["context_item"],
+            }),
+      )
+      .catch(() => {});
+    return rows;
+  };
   // Independent reads together: the trigger, the tools it may use, and whether a new run's agent can think.
   const [triggerRows, granted, ai] = await Promise.all([
     !needsContext
       ? Promise.resolve([])
       : topTrigger
-        ? Promise.resolve([topTrigger])
+        ? Promise.resolve(embedEarly([topTrigger]))
         : db
             .select()
             .from(schema.messages)
-            .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId))),
+            .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId)))
+            .then(embedEarly),
     deps.tools ? deps.tools.granted(ctx, heldBack) : Promise.resolve([]),
     needsContext && agent && !agent.archivedAt
       ? agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run)
@@ -2173,6 +2205,8 @@ async function executeRunInner(
       .then(async (choice) => keptAutoChoice(choice, await previousHere()));
   };
   const autoAsked = autoEarly ? askAuto() : null;
+  /** The computer that said this run's CLI is open (`warmAtClaim`): its first turn there starts no process. */
+  let cliOpenOn: string | null = null;
   if (warmsAtClaim) {
     const guess = previousHere().then((previous) => keptAutoChoice(fallbackChoice("none"), previous));
     void warmAtClaim(
@@ -2184,7 +2218,11 @@ async function executeRunInner(
       trigger?.authorUserId ?? null,
       guess,
       autoAsked,
-    ).catch(() => {});
+    )
+      .then((open) => {
+        cliOpenOn = open;
+      })
+      .catch(() => {});
   }
   // The judge's answer is awaited where the tools are needed: the context is read meanwhile (`CONTEXT_TOOLS`).
   const judging: Promise<void> | null =
@@ -2688,8 +2726,6 @@ async function executeRunInner(
     // The tools the context names are core ones: listed whatever groups the judge loads, so it needn't wait for it.
     // A connector's tool of the same name could come with a group: then it waits.
     if (judging && !granted.every((t) => isCore(t) || !CONTEXT_TOOLS.includes(t.name))) await judging;
-    let behind: ReturnType<typeof runAuthority> | undefined;
-    const authority = () => (behind ??= runAuthority(db, run));
     // Someone outside reads what a run an app's message started replies (ADR 0252): nothing of memory or the wiki
     // comes in by itself, found by their words; each read of them asks a person. A person's message roots in them.
     const appRun = trigger?.authorType !== "person" && fromApp(await authority().catch(() => null));
@@ -2700,7 +2736,7 @@ async function executeRunInner(
       ? sharedQueryEmbedding(
           contextDeps,
           run.orgId,
-          (trigger?.body ?? "").trim().slice(0, 500),
+          (trigger?.body ?? "").trim().slice(0, RUN_QUERY_CHARS),
           searchesWiki ? ["context_item", "wiki"] : ["context_item"],
         )
       : undefined;
@@ -2898,7 +2934,9 @@ async function executeRunInner(
     }
     // Loaded, not only granted: on demand, the wiki tools' own descriptions say it (token-trim B4).
     if (tools.some((t) => t.name === "create_wiki_page" || t.name === "update_wiki_page")) {
+      // Follows the tools loaded for the run's message: for a computer brain, read once per session.
       system.push({
+        conversation: true,
         text: '# Writing to the wiki\nOnly write to the wiki (create_wiki_page, update_wiki_page, link_to_wiki) when a person asks for it in the current message ("save this to the wiki", "document…", "update page X"; in Portuguese "salva isso na wiki", "documenta…", "atualiza a página X") or your routine\'s instructions say so. Never on your own: if you think something is worth documenting, offer and wait for the person to ask. Each edit stays in the history with your name and the name of whoever asked.',
       });
     }
@@ -5452,6 +5490,7 @@ async function executeRunInner(
         const place = {
           rank: personWaiting ? 0 : transcript.roomAsked ? 1 : 2,
           since: transcript.roomOrderSince ?? transcript.roomWaitSince ?? Date.now(),
+          warmOn: cliOpenOn,
         } as const;
         // The right hand is how people find out what the line is doing: it never waits behind it. Its turn is
         // locked down, so the runner lets it in on a lower floor (`admit`).
@@ -5491,7 +5530,8 @@ async function executeRunInner(
         if (behind?.cause === "sign_in" && run.turns === 0 && !transcript.spill) {
           const full = await fullSignIns(db, run.orgId, deps.signInConcurrency ?? 0);
           const next = await moveToNextAccount("busy", (usage, id) => !full.has(id) && underTheLine(usage));
-          if (next?.plan) behind = await roomGate(db, run, askOn, place, slotOf(plan));
+          // Another sign-in starts another process: the CLI warmed on the first is not its.
+          if (next?.plan) behind = await roomGate(db, run, askOn, { ...place, warmOn: null }, slotOf(plan));
         }
         const slot = slotOf(plan);
         if (behind) {
@@ -5540,6 +5580,7 @@ async function executeRunInner(
           executeToolForRun(deps, { orgId: run.orgId, agentId: run.agentId, runId: run.id, machineId: "" }, call),
         // A computer brain's turn that can take messages mid-turn (live steering).
         steerable: (steer) => live.steerable(steer),
+        ...(run.background || run.workId ? {} : { phase: tellPhase }),
       };
       const prompt = plan.kind === "model" ? triggerText : (nextPrompt ?? triggerText);
       // A computer brain's turn: the transcript is saved (the bridge's pauses join it), and the turn's
@@ -7037,7 +7078,7 @@ async function executeRunInner(
  * (nothing kept on the run). With "Automático" it starts on `guess` (the conversation's kept choice, else the medium
  * tier) and, once the run's own choice (`chosen`) gives another model or effort, warms again with that: the runner
  * replaces a process no turn used yet, so the turn finds the one it would start. `gate`: whether to warm on the plan
- * found (`warmWhileTyping`'s, which has no run yet).
+ * found (`warmWhileTyping`'s, which has no run yet). Returns the computer that holds the CLI the turn will take open now.
  */
 export async function warmAtClaim(
   deps: EngineDeps,
@@ -7050,12 +7091,12 @@ export async function warmAtClaim(
   guess: Promise<AutoChoice>,
   chosen: Promise<AutoChoice> | null,
   gate?: (plan: BrainPlan) => Promise<boolean>,
-) {
+): Promise<string | null> {
   const factory = deps.brains?.claude_code;
-  if (!factory) return;
+  if (!factory) return null;
   const base = await resolveBrain(deps, agent, run, conversation, { peek: true, codeSession });
-  if (gate && !(await gate(base))) return;
-  if (base.kind !== "claude_code" || base.unavailable || !base.session) return;
+  if (gate && !(await gate(base))) return null;
+  if (base.kind !== "claude_code" || base.unavailable || !base.session) return null;
   const session = base.session;
   const brain = factory(agent, run, { mcpToken: () => "" });
   const timeZone = await zoneOf(deps.db, run.orgId, author);
@@ -7088,7 +7129,7 @@ export async function warmAtClaim(
   // A pinned model needs no guess: its warm doesn't wait for the conversation's previous run to be read.
   const first = auto ? planFor(await guess) : base;
   const again = auto && chosen;
-  await Promise.all([
+  const [open, reopened] = await Promise.all([
     warm(first),
     again
       ? again.then((choice) => {
@@ -7097,6 +7138,8 @@ export async function warmAtClaim(
         })
       : undefined,
   ]);
+  // Warmed again on the run's own choice: that process is the one the turn takes.
+  return (reopened ?? open) === true ? session.machineId : null;
 }
 
 /** Builds the brain of this kind (`resolveBrain` picks it): a registered factory, else the built-in model brain. */
@@ -7198,10 +7241,7 @@ function brainTurnOf(
     get system() {
       if (plan.kind === "model") return t.system.map((b) => b.text).join("\n\n");
       // The same in every conversation of the agent: what holds for this one comes once in its session (`conversation`).
-      const text = t.system
-        .filter((b) => !isComputerTurnBlock(b) && !isConversationBlock(b))
-        .map((b) => b.text)
-        .join("\n\n");
+      const text = agentSystemText(t.system);
       // A computer brain has its own tools (read, search, shell, git) besides ours; the right hand's locked turn
       // (ADR 0137 §4) has only ours, so it is never told of a computer's.
       const computer = isRightHand(agent) ? `${text}\n\n${COMPUTER_SECTIONS_LINE}` : forComputerBrain(text);
@@ -7217,7 +7257,9 @@ function brainTurnOf(
         .join("\n\n");
     },
     get conversation() {
-      return plan.kind === "model" ? undefined : conversationText(t.system) || undefined;
+      if (plan.kind === "model") return undefined;
+      const text = conversationText(t.system);
+      return (isRightHand(agent) ? text : withComputerLimit(text)) || undefined;
     },
     get thisTurn() {
       const parts = turnParts();

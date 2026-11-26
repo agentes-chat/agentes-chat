@@ -103,6 +103,9 @@ test("what ships draws the working row's rings with transforms only, still with 
   // Still everywhere: each dot at its own place on its ring, turned by a transform alone.
   expect(last(".ac-orbit__spin", "animation")).toBeUndefined();
   expect(last(".ac-orbit__spin", "transform")).toBe("rotate(var(--start))");
+  // Each ring rests at its own tilt: it turns round the face only where motion is welcome.
+  expect(last(".ac-orbit__roll", "animation")).toBeUndefined();
+  expect(last(".ac-orbit__roll", "transform-origin")).toBe("0 0");
   // The rings take no room: they reach into the row's gap, behind and in front of the face.
   expect(last(".ac-orbit>.ac-orbit__front", "position")).toBe("absolute");
   expect(last(".ac-orbit>.ac-orbit__back", "position")).toBe("absolute");
@@ -113,7 +116,7 @@ test("what ships draws the working row's rings with transforms only, still with 
   const moving = atRule(all, "@media (prefers-reduced-motion: no-preference)");
   expect(declarations(moving, ".ac-orbit__spin").find(([p]) => p === "animation")?.[1]).toContain("ac-orbit-turn");
   expect(
-    declarations(moving, ".ac-orbit[data-paused=true] :is(.ac-orbit__spin,.ac-orbit__unspin)").find(
+    declarations(moving, ".ac-orbit[data-paused=true] :is(.ac-orbit__spin,.ac-orbit__unspin,.ac-orbit__roll)").find(
       ([p]) => p === "animation-play-state",
     )?.[1],
   ).toBe("paused");
@@ -121,6 +124,11 @@ test("what ships draws the working row's rings with transforms only, still with 
   const frames = all.match(/@keyframes ac-orbit-turn\{[^}]*\{[^}]*\}[^}]*\{[^}]*\}\}/)?.[0] ?? "";
   expect(frames).toContain("transform:");
   expect(frames.replace(/transform:[^;}]*/g, "")).not.toMatch(/[a-z-]+:/);
+  // The rings themselves turn round the face too, slowly, the light riding them: transforms alone again.
+  expect(declarations(moving, ".ac-orbit__roll").find(([p]) => p === "animation")?.[1]).toContain("ac-orbit-roll");
+  const roll = all.match(/@keyframes ac-orbit-roll\{[^}]*\{[^}]*\}[^}]*\{[^}]*\}\}/)?.[0] ?? "";
+  expect(roll).toContain("rotate(360deg)");
+  expect(roll.replace(/transform:[^;}]*/g, "")).not.toMatch(/[a-z-]+:/);
   // The row's line is a row's, not the bar's: no height cap, the message's size.
   const line = ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active]";
   expect(last(line, "max-height")).toBe("none");

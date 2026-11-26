@@ -34,6 +34,8 @@ import {
   gateDims,
   gateLine,
   gateRechecks,
+  HOST_CONNECT_WAIT_MS,
+  hostConnecting,
   isStandInLine,
   keptCardState,
   kindOf,
@@ -452,6 +454,25 @@ describe("planGateWithoutAgent: a plan connected before its owner has any agent"
   test("a computer that never connected is offline, not a runner to update", () => {
     const paired = { ...MAC, online: false, canAdd: false };
     expect(at({ computers: [paired] })).toEqual({ gate: { state: "offline" }, computer: paired });
+  });
+});
+
+describe("hostConnecting: the server's own computer added with a new workspace", () => {
+  const NOW = Date.parse("2026-11-26T12:00:00Z");
+  const offline: PlanGate = { state: "offline" };
+  const host = { kind: "host" as const, lastSeenAt: null, createdAt: new Date(NOW - 10_000).toISOString() };
+
+  test("offline before its runner's first sync: connecting, not a computer to wait for or replace with a key", () => {
+    expect(hostConnecting(offline, host, NOW)).toBe(true);
+  });
+
+  test("only the server's own, never seen, and only while the runner's sync may still come", () => {
+    expect(hostConnecting({ state: "ready" }, host, NOW)).toBe(false);
+    expect(hostConnecting(offline, { ...host, kind: "connected" }, NOW)).toBe(false);
+    expect(hostConnecting(offline, { ...host, lastSeenAt: new Date(NOW - 60_000).toISOString() }, NOW)).toBe(false);
+    const old = { ...host, createdAt: new Date(NOW - HOST_CONNECT_WAIT_MS).toISOString() };
+    expect(hostConnecting(offline, old, NOW)).toBe(false);
+    expect(hostConnecting(offline, undefined, NOW)).toBe(false);
   });
 });
 

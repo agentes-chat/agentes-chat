@@ -18997,6 +18997,7 @@
     "namesMore": "{{first}} und {{count}} weitere",
     "wait": {
       "thinking": "Denkt nach…",
+      "code": "Aktualisiert den Code…",
       "held": "Wartet auf Freigabe…",
       "said": "„{{text}}“"
     },

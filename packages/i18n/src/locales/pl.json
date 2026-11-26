@@ -20212,6 +20212,7 @@
     "namesMore": "{{first}} i jeszcze {{count}}",
     "wait": {
       "thinking": "Myśli…",
+      "code": "Aktualizuje kod…",
       "held": "Czeka na zatwierdzenie…",
       "said": "„{{text}}”"
     },

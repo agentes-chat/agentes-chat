@@ -46389,9 +46389,6 @@
   "work.handed.step": {
     "value": "step {{current}} of {{total}}"
   },
-  "work.handed.done": {
-    "value": "done in {{duration}}"
-  },
   "work.duration.minutes": {
     "value": {
       "one": "{{count}} min",
@@ -46658,6 +46655,9 @@
   },
   "chat.wait.thinking": {
     "value": "Thinking…"
+  },
+  "chat.wait.code": {
+    "value": "Updating the code…"
   },
   "chat.wait.held": {
     "value": "Waiting for approval…"
