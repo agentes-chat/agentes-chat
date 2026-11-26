@@ -208,6 +208,8 @@ describe("the readable column on a large screen", () => {
     expect(read("features/shared/PushedLargeTitle.tsx")).toContain("<ReadableColumn>{children}</ReadableColumn>");
     expect(read("ui/LargeTitleScreen.tsx")).toContain("<ReadableColumn>{children}</ReadableColumn>");
     expect(read("features/settings/parts.tsx")).toContain("paddingHorizontal: BODY_SIDE + side");
+    // The screens before the app (sign-in, sign-up, invites, the first run, the server's address): the sky edge to edge.
+    expect(read("ui/auth/AuthScaffold.tsx")).toContain("paddingHorizontal: 16 + side");
     expect(read("features/agents/AgentProfileScreen.tsx")).toContain("<View style={[styles.prof, sides]}>");
   });
 });
