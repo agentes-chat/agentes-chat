@@ -35,6 +35,8 @@ export interface RunSteeredEvent {
   computer?: "queued" | "away" | "line";
   /** Into a run waiting on its plan's limit or its budget. */
   usage?: "plan" | "budget";
+  /** Into a run parked on an outage: it retries by itself. */
+  outage?: boolean;
 }
 
 /** `agent.run.read`: the run read these messages sent while it worked ("Leu seu recado"). */
@@ -520,7 +522,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
       // later. The resumed run's first event takes the guess's place (`upsert`); one still parked on its computer
       // or its plan says so here, and its guess goes.
       const live = state.runs[event.runId];
-      const settles = (live && !live.provisional) || event.computer || event.usage || event.stop;
+      const settles = (live && !live.provisional) || event.computer || event.usage || event.outage || event.stop;
       const s =
         event.agentId && settles
           ? settleAfterRun(state, { agentId: event.agentId, channelId: event.channelId, threadId: null })

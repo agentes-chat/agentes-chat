@@ -136,6 +136,7 @@
     "allowedOne": "Folder {{folder}} dozwolony dla: {{agent}}",
     "allowedAll": "Folder {{folder}} dozwolony dla wszystkich agentów",
     "denied": "Odrzucono. {{agent}} da znać na czacie.",
+    "answerFailed": "Nie udało się odpowiedzieć na tę prośbę: {{message}}",
     "notifTitle": "{{agent}} chce użyć folderu {{folder}}",
     "allowedTitle": "{{name}} włączył(a) {{tool}} przez agentes.chat",
     "allowedBody": "Jeśli to nie Ty, cofnij to tutaj.",

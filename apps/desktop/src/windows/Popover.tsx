@@ -30,6 +30,7 @@ import {
   newHelpRequests,
   siteLink,
 } from "../control/browser";
+import { ControlError } from "../control/client";
 import { MENU_BAR_PREF, menuBarShown } from "../control/dock";
 import { hereBanner, hereLine, isHereServer, type LocalServerStatus } from "../control/local-server";
 import { menuLabels } from "../control/menu-labels";
@@ -1257,8 +1258,14 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
             : t("desktop.tray.allowedOne", { folder, agent: agent.name }),
         decision === "denied" ? "close" : "check",
       );
-    } catch {
-      toast(t("desktop.common.error"), "alert");
+    } catch (err) {
+      // The computer says why (the folder is gone, is a system folder, too many folders): the person can act on it.
+      toast(
+        err instanceof ControlError && ["invalid_path", "not_found", "bad_request"].includes(err.code)
+          ? t("desktop.tray.answerFailed", { message: err.message })
+          : t("desktop.common.error"),
+        "alert",
+      );
       setBusy(false);
     }
   };

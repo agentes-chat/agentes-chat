@@ -3053,9 +3053,9 @@
     "asking_one": "{{names}} attend une réponse",
     "asking_many": "{{names}} attendent une réponse",
     "asking_other": "{{names}} attendent une réponse",
-    "outage_one": "{{names}} : le fournisseur d'IA est en panne · nouvel essai automatique",
-    "outage_many": "{{names}} : le fournisseur d'IA est en panne · nouvel essai automatique",
-    "outage_other": "{{names}} : le fournisseur d'IA est en panne · nouvel essai automatique",
+    "outage_one": "{{names}} : l'IA ne répond pas · nouvel essai automatique",
+    "outage_many": "{{names}} : l'IA ne répond pas · nouvel essai automatique",
+    "outage_other": "{{names}} : l'IA ne répond pas · nouvel essai automatique",
     "queued_one": "{{names}} est dans la file",
     "queued_many": "{{names}} sont dans la file",
     "queued_other": "{{names}} sont dans la file",
@@ -3080,7 +3080,7 @@
       "claimed": "Répond",
       "waiting": "En attente d'approbation",
       "asking": "Attend une réponse",
-      "outage": "Le fournisseur d'IA est en panne · nouvel essai automatique",
+      "outage": "L'IA ne répond pas · nouvel essai automatique",
       "queued": "Dans la file",
       "away": "En attente de l'ordinateur",
       "plan": "En attente de l'abonnement",
@@ -4598,7 +4598,7 @@
       "queued_computer": "Dans la file",
       "waiting_plan": "En attente de l'abonnement",
       "waiting_budget": "En attente du renouvellement du budget",
-      "provider_down": "Le fournisseur d'IA est en panne · nouvel essai automatique",
+      "provider_down": "L'IA ne répond pas · nouvel essai automatique",
       "out_of_plan": "Limite du forfait atteinte",
       "out_of_budget": "Budget du mois épuisé",
       "out_of_planShort": "Limite atteinte",
@@ -17155,6 +17155,10 @@
       "paused": "{{name}} est en pause",
       "resumed": "{{name}} reprend le travail"
     },
+    "runnerBehind": {
+      "command": "Le programme agentes.chat sur {{computer}} n'est pas à jour, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, lance ceci sur cet ordinateur :",
+      "installer": "Le programme agentes.chat sur {{computer}} n'est pas à jour, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, relance la commande d'installation sur cet ordinateur, en root."
+    },
     "seenNow": "connecté en ce moment",
     "seen": "vu {{when}}",
     "neverSeen": "pas encore connecté",
@@ -19470,7 +19474,7 @@
       "waitingInput_female": "{{name}} attend une réponse",
       "waitingComputer": "{{name}} attend l'ordinateur",
       "waitingComputer_female": "{{name}} attend l'ordinateur",
-      "waitingProvider": "{{name}} : le fournisseur d'IA est en panne · réessaie tout seul",
+      "waitingProvider": "{{name}} : l'IA ne répond pas · réessaie tout seul",
       "waitingAgents": "{{name}} a confié une partie à d'autres et attend leur retour",
       "waitingAgents_female": "{{name}} a confié une partie à d'autres et attend leur retour",
       "queued": "{{name}} est dans la file"
@@ -19482,7 +19486,7 @@
       "waitingApproval": "attend une approbation",
       "waitingInput": "attend une réponse",
       "waitingComputer": "attend son ordinateur",
-      "waitingProvider": "fournisseur d’IA en panne",
+      "waitingProvider": "l’IA ne répond pas",
       "waitingYourApproval": "attend votre approbation",
       "waitingYourAnswer": "attend votre réponse",
       "queued": "dans la file",
@@ -19936,6 +19940,7 @@
       "brain_unavailable_commands_off": "{{brain}} est désactivé sur mon ordinateur. Je répondrai dès que la personne qui s'en occupe l'activera.",
       "brain_unavailable_outdated": "Le programme de mon ordinateur doit être mis à jour pour que {{brain}} puisse répondre. Je répondrai dès qu'il sera à jour.",
       "brain_unavailable_plan_owner": "{{brain}} réfléchirait avec un abonnement qui n'est pas celui de mon propriétaire, donc je ne l'utilise pas. Connectez le compte de mon propriétaire sur ma page.",
+      "brain_unavailable_shared_login": "Mon ordinateur ne peut pas utiliser la connexion de Claude pour tous les agents pour l'instant. Je répondrai dès que possible. Si l'échec continue, reconnectez Claude dans Comptes IA.",
       "provider_unavailable": "Mon fournisseur d'IA ne répond pas pour le moment. Je répondrai dès son retour.",
       "provider_wait_rate_limit": "{{provider}} limite les requêtes de cette clé pour le moment. Je répondrai dès que possible.",
       "provider_wait_down": "{{provider}} est en panne ou surchargé pour le moment. Je répondrai dès son retour.",
@@ -21871,7 +21876,7 @@
       "budgetSoon": "Brève attente du budget de {{name}}",
       "computer": "En attente de l'ordinateur de {{name}}",
       "busy": "En attente de place sur l'ordinateur de {{name}}",
-      "provider": "En attente du fournisseur d'IA de {{name}}, prochain essai {{when}}"
+      "provider": "En attente d'une réponse de l'IA de {{name}}, prochain essai {{when}}"
     },
     "menu": {
       "label": "Plus",

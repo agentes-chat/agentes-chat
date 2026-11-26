@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { DeviceAudience, DeviceStatus, PhoneDevice } from "@agenteschat/client";
 import { placeOf, subtitleOf } from "../../src/features/activity/logic";
 import {
@@ -293,4 +295,13 @@ describe("notices, waits and facts", async () => {
     );
     expect(pt("mobile.devices.connect.appConnected", { name: "Mac mini da Ana" })).toBe("Conectado: Mac mini da Ana");
   });
+});
+
+test("a folder an agent waits for on my computer: its card says No from here, never a yes", () => {
+  const source = readFileSync(join(import.meta.dir, "../../src/features/devices/notices.tsx"), "utf8");
+  const card = source.slice(source.indexOf("function FolderNotice"), source.indexOf("function ToolNotice"));
+  expect(card).toContain("useRefuseFolderRequest(");
+  expect(card).toContain('label={t("devices.notice.no")}');
+  expect(card).toContain("refuse.mutate(");
+  expect(card).not.toMatch(/allow/i);
 });

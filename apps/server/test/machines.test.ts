@@ -813,3 +813,29 @@ test("a coding CLI from the apps: anyone looks again; only whoever connected it 
   expect(outdated.status).toBe(400);
   expect(((await outdated.json()) as { error: { code: string } }).error.code).toBe("machine.cli_outdated");
 }, 30_000);
+
+test("a computer whose runner is behind this server says so with its update, until the app or a current runner says hello", async () => {
+  const { api, pair } = await start();
+  const paired = await pair();
+  const hub = t.engine.machineHub;
+  const hello = (over: object) =>
+    hub.message(
+      hub.open({ send() {}, close() {} }),
+      JSON.stringify({ type: "hello", token: paired.token, ...RUNNER, exec: true, ...over }),
+    );
+  const update = async () =>
+    ((await (await api("/machines")).json()) as { machines: { id: string; update: string | null }[] }).machines.find(
+      (m) => m.id === paired.machineId,
+    )?.update;
+
+  // The same version label as a current runner, from before agents got the images they read.
+  await hello({ version: "0.13.0", protocol: 56 });
+  expect(await update()).toBe("command");
+  await hello({ version: "0.13.0", protocol: MACHINE_PROTOCOL_VERSION, app: true });
+  expect(await update()).toBeNull();
+  const [row] = await t.db
+    .select({ executors: schema.machines.executors })
+    .from(schema.machines)
+    .where(eq(schema.machines.id, paired.machineId));
+  expect(row?.executors.app).toBe(true);
+});

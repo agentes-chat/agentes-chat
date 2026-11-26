@@ -136,6 +136,7 @@
     "allowedOne": "{{folder}}: разрешено для {{agent}}",
     "allowedAll": "{{folder}}: разрешено для всех агентов",
     "denied": "Отклонено. {{agent}} сообщит об этом в чате.",
+    "answerFailed": "Не удалось ответить на этот запрос: {{message}}",
     "notifTitle": "{{agent}} хочет использовать папку {{folder}}",
     "allowedTitle": "{{name}} включил(а) {{tool}} через agentes.chat",
     "allowedBody": "Если это были не вы, отмените здесь.",

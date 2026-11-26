@@ -133,6 +133,7 @@
     "allowedOne": "{{folder}} permitida para {{agent}}",
     "allowedAll": "{{folder}} permitida para todos los agentes",
     "denied": "Rechazado. {{agent}} lo avisa en el chat.",
+    "answerFailed": "No se pudo responder a esta solicitud: {{message}}",
     "notifTitle": "{{agent}} quiere usar la carpeta {{folder}}",
     "allowedTitle": "{{name}} activó {{tool}} desde agentes.chat",
     "allowedBody": "Si no fuiste tú, deshazlo aquí.",

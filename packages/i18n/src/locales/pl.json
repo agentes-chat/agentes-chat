@@ -3164,10 +3164,10 @@
     "asking_few": "{{names}} czekają na odpowiedź",
     "asking_many": "{{names}} czekają na odpowiedź",
     "asking_other": "{{names}} czekają na odpowiedź",
-    "outage_one": "{{names}}: dostawca AI nie działa · ponowi sam",
-    "outage_few": "{{names}}: dostawca AI nie działa · ponowią sami",
-    "outage_many": "{{names}}: dostawca AI nie działa · ponowią sami",
-    "outage_other": "{{names}}: dostawca AI nie działa · ponowią sami",
+    "outage_one": "{{names}}: AI nie odpowiada · ponowi sam",
+    "outage_few": "{{names}}: AI nie odpowiada · ponowią sami",
+    "outage_many": "{{names}}: AI nie odpowiada · ponowią sami",
+    "outage_other": "{{names}}: AI nie odpowiada · ponowią sami",
     "queued_one": "{{names}} czeka w kolejce",
     "queued_few": "{{names}} czekają w kolejce",
     "queued_many": "{{names}} czekają w kolejce",
@@ -3199,7 +3199,7 @@
       "claimed": "Odpowiada",
       "waiting": "Czeka na zatwierdzenie",
       "asking": "Czeka na odpowiedź",
-      "outage": "Dostawca AI nie działa · ponowi sam",
+      "outage": "AI nie odpowiada · ponowi sama",
       "queued": "W kolejce",
       "away": "Czeka na komputer",
       "plan": "Czeka na plan",
@@ -4749,7 +4749,7 @@
       "queued_computer": "W kolejce",
       "waiting_plan": "Czeka na plan",
       "waiting_budget": "Czeka na odnowienie budżetu",
-      "provider_down": "Dostawca AI nie działa · ponowi sam",
+      "provider_down": "AI nie odpowiada · ponowi sama",
       "out_of_plan": "Limit planu wyczerpany",
       "out_of_budget": "Budżet na ten miesiąc wyczerpany",
       "out_of_planShort": "Limit wyczerpany",
@@ -17724,6 +17724,10 @@
       "paused": "{{name}} jest wstrzymany",
       "resumed": "{{name}} znów pracuje"
     },
+    "runnerBehind": {
+      "command": "Program agentes.chat na {{computer}} jest nieaktualny, więc niektóre rzeczy tam nie działają. Aby go zaktualizować, uruchom tam to:",
+      "installer": "Program agentes.chat na {{computer}} jest nieaktualny, więc niektóre rzeczy tam nie działają. Aby go zaktualizować, uruchom tam ponownie polecenie instalacji jako root."
+    },
     "seenNow": "połączony teraz",
     "seen": "widziany {{when}}",
     "neverSeen": "jeszcze się nie połączył",
@@ -20074,7 +20078,7 @@
       "waitingInput_female": "{{name}} czeka na odpowiedź",
       "waitingComputer": "{{name}} czeka na komputer",
       "waitingComputer_female": "{{name}} czeka na komputer",
-      "waitingProvider": "{{name}}: dostawca AI nie działa · ponowi próbę sam",
+      "waitingProvider": "{{name}}: AI nie odpowiada · ponowi próbę sama",
       "waitingAgents": "{{name}} przekazał część dalej i czeka na odpowiedź",
       "waitingAgents_female": "{{name}} przekazała część dalej i czeka na odpowiedź",
       "queued": "{{name}} jest w kolejce"
@@ -20086,7 +20090,7 @@
       "waitingApproval": "czeka na zgodę",
       "waitingInput": "czeka na odpowiedź",
       "waitingComputer": "czeka na komputer",
-      "waitingProvider": "dostawca AI nie działa",
+      "waitingProvider": "AI nie odpowiada",
       "waitingYourApproval": "czeka na twoje zatwierdzenie",
       "waitingYourAnswer": "czeka na twoją odpowiedź",
       "queued": "w kolejce",
@@ -20546,6 +20550,7 @@
       "brain_unavailable_commands_off": "{{brain}} jest wyłączony na moim komputerze. Odpowiem, gdy osoba, która się nim opiekuje, go włączy.",
       "brain_unavailable_outdated": "Program na moim komputerze wymaga aktualizacji, zanim {{brain}} będzie mógł odpowiedzieć. Odpowiem, gdy tylko zostanie zaktualizowany.",
       "brain_unavailable_plan_owner": "{{brain}} myślałby z planem, który nie należy do mojego właściciela, więc go nie używam. Podłącz konto mojego właściciela na mojej stronie.",
+      "brain_unavailable_shared_login": "Mój komputer nie może teraz użyć logowania Claude dla wszystkich agentów. Odpowiem, gdy tylko się da. Jeśli to dalej nie działa, połącz Claude ponownie w Kontach AI.",
       "provider_unavailable": "Mój dostawca AI teraz nie odpowiada. Odpowiem, gdy tylko wróci.",
       "provider_wait_rate_limit": "{{provider}} ogranicza teraz żądania z tego klucza. Odpowiem, gdy tylko będzie to możliwe.",
       "provider_wait_down": "{{provider}} teraz nie działa lub jest przeciążony. Odpowiem, gdy tylko wróci.",
@@ -22476,7 +22481,7 @@
       "budgetSoon": "Czeka chwilę na budżet agenta {{name}}",
       "computer": "Czeka na komputer agenta {{name}}",
       "busy": "Czeka na miejsce na komputerze agenta {{name}}",
-      "provider": "Czeka na dostawcę AI agenta {{name}}, następna próba {{when}}"
+      "provider": "Czeka na odpowiedź AI agenta {{name}}, następna próba {{when}}"
     },
     "menu": {
       "label": "Więcej",
