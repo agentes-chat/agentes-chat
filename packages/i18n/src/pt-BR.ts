@@ -1993,7 +1993,43 @@ export const ptBR = {
       lead_female: "Ela começa hoje mesmo. Tudo chega no canal dela, e você só aprova.",
       leadPersonal: "Ele começa hoje mesmo. Tudo chega na conversa com ele, e você só aprova.",
       leadPersonal_female: "Ela começa hoje mesmo. Tudo chega na conversa com ela, e você só aprova.",
+      leadRoutine:
+        "Ele começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega no canal dele, e você só aprova.",
+      leadRoutine_female:
+        "Ela começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega no canal dela, e você só aprova.",
+      leadRoutinePersonal:
+        "Ele começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ele, e você só aprova.",
+      leadRoutinePersonal_female:
+        "Ela começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ela, e você só aprova.",
       say: "Assim que o time ligar, a gente começa.",
+      strip: "Os próximos 7 dias",
+      today: "Hoje · {{date}}",
+      tomorrow: "Amanhã, {{date}}",
+      date: "{{weekday}}, {{n}}",
+      dateFar: "{{weekday}}, {{n}} de {{month}}",
+      now: "Agora",
+      days: {
+        MO: "segunda",
+        TU: "terça",
+        WE: "quarta",
+        TH: "quinta",
+        FR: "sexta",
+        SA: "sábado",
+        SU: "domingo",
+      },
+      every: {
+        day: "todo dia",
+        businessDays: "de segunda a sexta",
+        MO: "toda segunda",
+        TU: "toda terça",
+        WE: "toda quarta",
+        TH: "toda quinta",
+        FR: "toda sexta",
+        SA: "todo sábado",
+        SU: "todo domingo",
+      },
+      about: "O que o seu {{app}} contou",
+      aboutAny: "O que a sua IA contou",
     },
   },
   /** The desktop app's right click (lib/context-menu.ts). */

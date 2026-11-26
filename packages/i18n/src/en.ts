@@ -2096,11 +2096,50 @@ export const en = {
       sayAny_other: "Your AI found {{count}} ways to start.",
     },
     /** The picked agent's first week, before the plan. */
+    /**
+     * The picked agent's first week, as a planner page. `{{routine}}`: its routine's title; `{{when}}`: how it repeats
+     * (`every.*`, or the AI's own words). `days`/`every`: by weekday, as `recurrence.wd`.
+     */
     week: {
       title: "{{name}}'s first week",
       lead: "{{name}} starts today. Everything arrives in its channel, and you only approve.",
       leadPersonal: "{{name}} starts today. Everything arrives in your conversation with it, and you only approve.",
+      leadRoutine:
+        "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in its channel, and you only approve.",
+      leadRoutinePersonal:
+        "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in your conversation with it, and you only approve.",
       say: "As soon as the team is on, we start.",
+      /** The week strip, for screen readers. */
+      strip: "The next 7 days",
+      today: "Today · {{date}}",
+      tomorrow: "Tomorrow, {{date}}",
+      date: "{{weekday}} {{n}}",
+      dateFar: "{{weekday}}, {{month}} {{n}}",
+      /** The time beside what the agent delivers on its first day. */
+      now: "Now",
+      days: {
+        MO: "Monday",
+        TU: "Tuesday",
+        WE: "Wednesday",
+        TH: "Thursday",
+        FR: "Friday",
+        SA: "Saturday",
+        SU: "Sunday",
+      },
+      every: {
+        day: "every day",
+        businessDays: "Monday to Friday",
+        MO: "every Monday",
+        TU: "every Tuesday",
+        WE: "every Wednesday",
+        TH: "every Thursday",
+        FR: "every Friday",
+        SA: "every Saturday",
+        SU: "every Sunday",
+      },
+      /** What the person's AI said about the workspace (or the person), under the week. */
+      about: "What your {{app}} said",
+      aboutAny: "What your AI said",
     },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).

@@ -171,10 +171,23 @@ export function railState(f: {
 /**
  * "Step N of M" for a step: the steps up to the plan count (the name, how to start with its proposal and pick, the
  * week, the plan); what comes after the plan (the AI, the people) is past the count. Null for a step it doesn't count.
+ * A personal workspace has no name to ask (ADR 0159): its count starts at how to start, and asking its AI (`asking`:
+ * the request and the pick, on the start step) counts as a step of its own while a week follows, so a personal start
+ * is four steps too. Started from scratch, a team counts three (name, start, plan) and a personal workspace two.
  */
-export function stepCount(steps: readonly RailStep[], step: RailStep): { n: number; total: number } | null {
-  const counted = steps.filter((s) => s !== "ai" && s !== "people");
-  const i = counted.indexOf(step);
+export function stepCount(
+  steps: readonly RailStep[],
+  step: RailStep,
+  f: { personal?: boolean; asking?: boolean } = {},
+): { n: number; total: number } | null {
+  const counted = steps.flatMap((s): (RailStep | "ask")[] => {
+    if (s === "ai" || s === "people") return [];
+    if (!f.personal) return [s];
+    if (s === "name") return [];
+    return s === "start" && steps.includes("week") ? ["start", "ask"] : [s];
+  });
+  const at = f.personal && f.asking && step === "start" && counted.includes("ask") ? "ask" : step;
+  const i = counted.indexOf(at);
   return i < 0 ? null : { n: i + 1, total: counted.length };
 }
 

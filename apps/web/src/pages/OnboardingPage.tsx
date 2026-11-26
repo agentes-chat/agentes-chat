@@ -66,6 +66,7 @@ import { PeopleStep } from "./onboarding/PeopleStep";
 import { FirstAgentPick } from "./onboarding/PickStep";
 import { AppWall, Box, BoxNote, PickRows, type ShellFace, World } from "./onboarding/Shell";
 import { PlanStep } from "./onboarding/steps";
+import { FirstWeek } from "./onboarding/WeekStep";
 import "./onboarding.css";
 
 /** Back from paying, `/me` is asked again this often until the hold lifts (as the hold's banner does). */
@@ -170,6 +171,9 @@ export function OnboardingPage() {
     enabled: orgId !== null,
     refetchOnWindowFocus: "always",
   });
+  // The person's newest first-agent proposal (ADR 0250): the agent picked from it says its week, the plan's lines and
+  // the photo's in its AI's words.
+  const firstAgents = useFirstAgents(orgId ?? "");
   const agents = useQuery({
     queryKey: keys.agents(orgId ?? ""),
     queryFn: () => api.agents.list(orgId ?? ""),
@@ -286,7 +290,11 @@ export function OnboardingPage() {
   // A first visit that only the AI's answer can place (its step or opening) waits for it, as for the workspace's data.
   // The moment waits for what it says (the plan's name, what it gives, the computer as it is).
   const known =
-    loaded && !(deciding && frozen === null) && !(step === "plan" && plans.loading) && !(awake && paidFacts.loading);
+    loaded &&
+    !(deciding && frozen === null) &&
+    !(step === "plan" && plans.loading) &&
+    !(awake && paidFacts.loading) &&
+    !(step === "week" && firstAgents.isLoading);
   const name = (mine?.name ?? org).trim();
   // Back on step 1, the workspace's own zone (saved on another visit, maybe another device), never this browser's.
   const zoneNow = zone ?? settings.data?.timezone ?? browserTimezone() ?? "UTC";
@@ -530,9 +538,19 @@ export function OnboardingPage() {
   // No agents besides the right hand (the start left with none): the plan and AI steps speak of it, never of a team
   // that isn't there.
   const alone = team.length === 0;
+  // The first agent, and the option it was picked from when the newest proposal made it (null for one brought from
+  // another app): its week, its line on the plan and the photo's count say what its AI proposed.
+  const firstAgent = team[0];
+  const latest = firstAgents.data ?? null;
+  const madeFrom = latest && firstAgent && latest.agentId === firstAgent.id ? latest : null;
+  const firstOption = madeFrom && madeFrom.picked !== null ? (madeFrom.options[madeFrom.picked] ?? null) : null;
   const aiLabel = aiNamed && aiNamed !== "key" ? planLabel(t, aiNamed) : null;
-  // "Step N of M" up to the plan; none on the first question, the paid moment or past the plan.
-  const counted = asking || awake ? null : stepCount(steps, step);
+  // "Step N of M" up to the plan; none on the first question, the paid moment or past the plan. A personal workspace
+  // counts asking its AI as a step of its own.
+  const counted =
+    asking || awake
+      ? null
+      : stepCount(steps, step, { personal: personalNow, asking: step === "start" && startView !== "choose" });
   const stepLine = counted ? t("onboarding.flow.stepOf", counted) : undefined;
   const toStart = (view: StartView) => {
     resumed.current = true;
@@ -851,20 +869,29 @@ export function OnboardingPage() {
     }
 
     if (step === "week" && orgId) {
-      // The agent picked (the first one made in this workspace besides the right hand).
-      const first = team[0];
-      const grammar = agentGrammar(first?.name ?? lodiName);
+      // The agent picked (the first one made in this workspace besides the right hand). Its Continue keeps the week as
+      // seen ("agents").
+      const acts = continueButton(() => startDone.mutate(orgId), busy, startDone.isPending);
+      if (!firstAgent)
+        return {
+          cast: [lodiFace],
+          box: <Box eyebrow={stepLine} title={t("onboarding.week.title", agentGrammar(lodiName))} acts={acts} />,
+        };
+      const look = lookOf(firstAgent);
       return {
-        cast: first
-          ? [lodiFace, { id: first.id, name: first.name, look: lookOf(first), asleep: true }]
-          : [lodiFace],
+        cast: [lodiFace, { id: firstAgent.id, name: firstAgent.name, look, asleep: true }],
         say: t("onboarding.week.say"),
         box: (
-          <Box
+          <FirstWeek
+            orgId={orgId}
+            agent={{ id: firstAgent.id, name: firstAgent.name, look }}
+            option={firstOption}
+            about={madeFrom?.about ?? null}
+            app={askedOf}
+            zone={zoneNow}
+            personal={personalNow}
             eyebrow={stepLine}
-            title={t("onboarding.week.title", grammar)}
-            lead={t(personalNow ? "onboarding.week.leadPersonal" : "onboarding.week.lead", grammar)}
-            acts={continueButton(() => startDone.mutate(orgId), busy, startDone.isPending)}
+            acts={acts}
           />
         ),
       };
