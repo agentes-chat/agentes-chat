@@ -22,6 +22,7 @@ import {
   postWelcome,
   RIGHT_HAND,
   saveFirstAgents,
+  sendPlanWaitingEmail,
   setBillingHold,
   updateOrgSettings,
   WELCOME_AGENT_BODY,
@@ -639,5 +640,39 @@ describe("before the first plan", () => {
     expect(await pickIn(f.owner.id)).toBe(`https://agentes.test/org/${f.org.id}`);
     const bia = await join(f, "bia");
     expect(await pickIn(bia.id)).toBe(`https://agentes.test/welcome/${f.org.id}`);
+  });
+
+  test("the plan-waiting emails speak of the agent picked, and of the AI that proposed it", async () => {
+    f = await setup({ rightHand: true });
+    await hold(f, "payment");
+    await f.db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.id, f.owner.id));
+    // The workspace's first agent is the one picked.
+    await f.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, f.agent.id));
+    const { secret, token } = await tokenOf(f, f.owner.id);
+    const app = await serve(f, secret);
+    await app.call("propose_first_agents", proposal([billing()]));
+    await app.close();
+    // Its app's verified mark names the AI.
+    await f.db.update(schema.appGrants).set({ brand: "claude" }).where(eq(schema.appGrants.id, token.id));
+    const proposed = await latestFirstAgents(f.db, f.org.id, f.owner.id);
+    await pick(f, f.owner.id, proposed?.id ?? "", 0);
+    const emails = async () =>
+      (await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "email.send")))
+        .map((j) => (j.payload as { template: { kind: string; picked?: unknown } }).template)
+        .filter((t) => t.kind === "plan_waiting");
+    await sendPlanWaitingEmail(f.db, PUBLIC, f.org.id, 0);
+    await sendPlanWaitingEmail(f.db, PUBLIC, f.org.id, 1);
+    const picked = {
+      agentName: "Iara",
+      role: "Cobrança",
+      today: ["A lista de quem está atrasado", "Um lembrete pronto para cada um"],
+      ai: "Claude",
+    };
+    expect((await emails()).map((t) => t.picked)).toEqual([picked, { ...picked, later: true }]);
+    // A first agent made another way (the one made by hand, older): the counts, as before.
+    await f.db.update(schema.agents).set({ archivedAt: null }).where(eq(schema.agents.id, f.agent.id));
+    await f.db.delete(schema.outbox).where(eq(schema.outbox.kind, "email.send"));
+    await sendPlanWaitingEmail(f.db, PUBLIC, f.org.id, 0);
+    expect((await emails()).map((t) => t.picked)).toEqual([undefined]);
   });
 });

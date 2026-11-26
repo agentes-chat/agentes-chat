@@ -76,6 +76,8 @@ function poisoned(t: EmailTemplate, value = SENTINEL): EmailTemplate {
   for (const side of ["was", "now"]) if (o[side]) o[side] = { ...(o[side] as object), names: [value] };
   for (const list of ["topStalls", "topNoise"])
     if (Array.isArray(o[list])) o[list] = (o[list] as object[]).map((w) => ({ ...w, name: value }));
+  // A first agent as the person's AI proposed it (ADR 0253): its name, role and first day are typed words too.
+  if (o.picked) o.picked = { ...(o.picked as object), agentName: value, role: value, today: [value] };
   return o as EmailTemplate;
 }
 
@@ -282,9 +284,9 @@ describe("the look", () => {
       // With it, the table could squeeze a fact's label mid-word to make room for a long value.
       expect(html).not.toMatch(/<td class="mu[^>]*word-break/);
     }
-    // Paragraphs, facts (first row and the rest), people's names and details, a note (a denial's reason), and the
-    // footer.
-    expect(holders.size).toBe(7);
+    // Paragraphs, facts (first row and the rest), people's names and details, a note (a denial's reason), the
+    // footer, and steps (a first agent's first day, ADR 0253).
+    expect(holders.size).toBe(8);
   });
 
   test("an expired invitation link's request names nobody and still reads", () => {
@@ -531,6 +533,8 @@ describe("the picture over the headline", () => {
       "join_answer-joined.en": [...faces("graphite"), "agent-rose-dots-flower.png 36×46"],
       "join_answer-invited.en": ONBOARDING,
       "plan_waiting.pt-BR": ONBOARDING,
+      "plan_waiting-picked.en": ONBOARDING,
+      "plan_waiting-picked-later.pt-BR": ONBOARDING,
     };
     for (const [id, sample] of Object.entries(EMAIL_SAMPLES)) {
       const expected = id.startsWith("computer_ready")
@@ -956,5 +960,52 @@ describe("outbox delivery", () => {
     const payload = job?.payload as { template: EmailTemplate } | undefined;
     const text = payload ? renderEmail(payload.template, art).text : "";
     expect(text).toContain(`(${inviterEmail.replace(/([.@])/g, `$1${BREAK}`)}) convidou você para entrar na`);
+  });
+});
+
+describe("a first agent from the person's own AI (ADR 0253)", () => {
+  const sample = (id: string) => EMAIL_SAMPLES[id] as EmailTemplate;
+
+  test("a team's invitation says joining starts with their own agent; a personal one doesn't", () => {
+    expect(renderEmail(sample("invitation.en"), art).text).toContain(
+      "When you join, you create your own agent: your AI finds the task that takes most of your time and proposes an agent for it.",
+    );
+    expect(renderEmail(sample("invitation.pt-BR"), art).text).toContain(
+      "Ao entrar, você cria o seu agente: a sua IA acha a tarefa que mais toma o seu tempo e propõe um agente para ela.",
+    );
+    const personal = renderEmail({ ...sample("invitation.en"), personal: true } as EmailTemplate, art).text;
+    expect(personal).not.toContain("When you join");
+  });
+
+  test("the plan-waiting emails speak of the agent it proposed: ready first, then its first day's deliveries", () => {
+    const first = renderEmail(sample("plan_waiting-picked.en"), art);
+    expect(first.subject).toBe("Your first agent is ready and waiting for you");
+    expect(first.text).toContain(
+      "Your Claude found where to start: Iara, for billing, with 2 deliveries ready for today. All that's left is to hire.",
+    );
+    const later = renderEmail(sample("plan_waiting-picked-later.pt-BR"), art);
+    expect(later.subject).toBe("As 2 primeiras entregas ainda não começaram");
+    expect(later.text).toContain("O que o Caio entrega no primeiro dia na Padaria Souza:");
+    expect(later.text).toContain("A lista de quem está atrasado");
+    expect(later.text).toContain("Contratando hoje, o Caio começa hoje.");
+    // A name read as feminine agrees, a role that reads as a name keeps its capital, an AI nobody knows is "your AI".
+    const ada = renderEmail(
+      {
+        ...sample("plan_waiting-picked.en"),
+        locale: "pt-BR",
+        picked: { agentName: "Ada", role: "SEO", today: [] },
+      } as EmailTemplate,
+      art,
+    );
+    expect(ada.text).toContain("A sua IA achou por onde começar: a Ada, para SEO. Só falta contratar.");
+    const none = renderEmail(
+      {
+        ...sample("plan_waiting-picked-later.pt-BR"),
+        picked: { agentName: "Ada", role: "SEO", today: [], later: true },
+      } as EmailTemplate,
+      art,
+    );
+    expect(none.subject).toBe("O seu primeiro agente ainda não começou");
+    expect(none.text).toContain("A Ada ainda espera o plano da Padaria Souza para começar.");
   });
 });
