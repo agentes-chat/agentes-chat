@@ -5568,7 +5568,8 @@
       "provider_unavailable": "het model antwoordde niet",
       "gave_up": "het model antwoordde niet na meerdere pogingen",
       "missing_credential": "er ontbreekt een API-sleutel",
-      "credential_revoked": "de API-sleutel is ingetrokken"
+      "credential_revoked": "de API-sleutel is ingetrokken",
+      "credential_unreadable": "de opgeslagen API-sleutel kan niet worden geopend"
     },
     "youReplied": "Je antwoordde: {{text}}",
     "actions": "Acties",
@@ -6544,6 +6545,7 @@
         "interrupted": "Onderbroken door een herstart van de server.",
         "missing_credential": "De werkruimte heeft geen sleutel voor {{provider}}.",
         "credential_revoked": "De sleutel van deze agent is ingetrokken.",
+        "credential_unreadable": "De opgeslagen API-sleutel kan niet worden geopend, meestal omdat het geheim van de server is gewijzigd nadat de sleutel was opgeslagen. Plak de sleutel opnieuw bij AI-sleutels.",
         "credential_wrong_provider": "Het model is van {{modelProvider}}, maar de sleutel is van {{keyProvider}}.",
         "model_unlisted": "OpenRouter biedt {{model}} niet meer aan. Kies een ander model in de instellingen van de agent.",
         "no_ai": "De agent had geen AI beschikbaar.",
@@ -9361,6 +9363,7 @@
       "stuck": "Gestopt omdat hij vastliep",
       "missing_credential": "Er ontbreekt een API-sleutel",
       "credential_revoked": "De API-sleutel is ingetrokken",
+      "credential_unreadable": "De opgeslagen API-sleutel kan niet worden geopend",
       "credential_wrong_provider": "De API-sleutel is van een andere provider",
       "model_unlisted": "OpenRouter biedt het model niet meer aan",
       "agent_archived": "De agent is gearchiveerd",
