@@ -490,6 +490,10 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   width: 22px;
   height: 22px;
 }
+/* An agent's tile takes a breath of the sky behind it, so the faces read as the team among the apps. */
+.onb-wall__tile--agent {
+  background: color-mix(in srgb, #3f88f5 9%, var(--surface-raised));
+}
 .onb-wall__tile--agent .ac-avatar {
   width: 34px;
   height: 34px;
