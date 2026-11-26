@@ -17013,6 +17013,7 @@
     },
     "rightHand": {
       "permanent": "Il braccio destro fa parte dello spazio di lavoro e resta fuori dai canali. Una @menzione lo raggiunge in qualsiasi canale.",
+      "computer": "Il braccio destro usa sempre il computer proprio dello spazio di lavoro, quindi non se ne può scegliere un altro. Crea un agente per lavorare su questo.",
       "updateApp": "Questa app è troppo vecchia per applicare questa scheda. Aggiornala o fai la modifica nelle Impostazioni.",
       "nobodyNew": "Tutte le persone di questa scheda sono già qui o già invitate. Scarta la scheda o invia di nuovo un invito in Membri e inviti."
     },

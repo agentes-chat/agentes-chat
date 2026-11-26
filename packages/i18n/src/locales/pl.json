@@ -17559,6 +17559,7 @@
     },
     "rightHand": {
       "permanent": "Prawa ręka jest częścią przestrzeni roboczej i nie dołącza do kanałów. @wzmianka przywoła ją w każdym z nich.",
+      "computer": "Prawa ręka zawsze korzysta z własnego komputera przestrzeni roboczej, więc nie można wybrać dla niej innego. Utwórz agenta, aby pracować na tym.",
       "updateApp": "Ta aplikacja jest zbyt stara, żeby zastosować tę kartę. Zaktualizuj ją albo wprowadź zmianę w Ustawieniach.",
       "nobodyNew": "Wszyscy z tej karty już tu są albo mają już zaproszenie. Odrzuć kartę albo wyślij zaproszenie ponownie w sekcji Członkowie i zaproszenia."
     },

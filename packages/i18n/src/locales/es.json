@@ -16916,6 +16916,7 @@
     },
     "rightHand": {
       "permanent": "La mano derecha forma parte del espacio de trabajo y queda fuera de los canales. Una @mención la llama en cualquiera de ellos.",
+      "computer": "La mano derecha siempre usa la computadora propia del espacio de trabajo, así que no se puede elegir otra para ella. Crea un agente para trabajar en esta.",
       "updateApp": "Esta app es demasiado antigua para aplicar esta tarjeta. Actualízala o haz el cambio en Configuración.",
       "nobodyNew": "Todas las personas de esta tarjeta ya están aquí o ya tienen invitación. Descarta la tarjeta o reenvía una invitación en Miembros e invitaciones."
     },

@@ -19,6 +19,7 @@ import { clockAt, formatInt, formatPercent, relativeTime } from "@agenteschat/cl
 import { folderName, hostDescKey, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
 import { type ModeSwitchLine, personalSettingsHost, personalSettingsNav } from "@agenteschat/client/lib/personal-view";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { zoneDisplayName } from "@agenteschat/client/lib/routines";
 import { skillWaitingChip } from "@agenteschat/client/lib/skills";
 import type { TFunction } from "i18next";
@@ -365,7 +366,7 @@ export interface AgentComputerPick {
  * While the workspace's own computer is on its way, "no computer" stands for it.
  */
 export function agentComputerPick(input: {
-  agent: Pick<Agent, "id" | "ownerUserId" | "ownerRoleId">;
+  agent: Pick<Agent, "id" | "ownerUserId" | "ownerRoleId" | "builtin">;
   meId: string | null;
   myRoleIds?: readonly string[];
   admin: boolean;
@@ -381,7 +382,9 @@ export function agentComputerPick(input: {
     value,
     noComputer: noComputerChoice(input.setup, value === NO_COMPUTER),
     choices,
+    // The right hand always uses the workspace's own computer (ADR 0175): its row only says which.
     canPick:
+      !isRightHand(input.agent) &&
       (input.admin || (input.meId !== null && ownsAgentAs(input.agent, input.meId, input.myRoleIds ?? []))) &&
       choices.length > 0,
   };

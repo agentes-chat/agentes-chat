@@ -40288,6 +40288,9 @@
   "errors.rightHand.permanent": {
     "value": "The right hand is part of the workspace and stays out of channels. An @mention reaches it in any of them."
   },
+  "errors.rightHand.computer": {
+    "value": "The right hand always uses the workspace's own computer, so another can't be chosen for it. Create an agent to work on this one."
+  },
   "errors.rightHand.updateApp": {
     "value": "This app is too old to apply this card. Update it, or make the change in Settings."
   },

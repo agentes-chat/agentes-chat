@@ -16504,6 +16504,7 @@
     },
     "rightHand": {
       "permanent": "De rechterhand hoort bij de werkruimte en blijft buiten de kanalen. Een @vermelding bereikt hem in elk kanaal.",
+      "computer": "De rechterhand gebruikt altijd de eigen computer van de werkruimte, dus je kunt er geen andere voor kiezen. Maak een agent om op deze te werken.",
       "updateApp": "Deze app is te oud om deze kaart toe te passen. Werk de app bij of maak de wijziging in Instellingen.",
       "nobodyNew": "Iedereen op deze kaart is er al of is al uitgenodigd. Negeer de kaart of stuur een uitnodiging opnieuw in Leden en uitnodigingen."
     },

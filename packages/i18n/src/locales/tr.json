@@ -16367,6 +16367,7 @@
     },
     "rightHand": {
       "permanent": "Sağ kol çalışma alanının bir parçasıdır ve kanalların dışında kalır. Bir @bahsetme onu herhangi bir kanalda çağırır.",
+      "computer": "Sağ kol her zaman çalışma alanının kendi bilgisayarını kullanır, bu yüzden onun için başka bir bilgisayar seçilemez. Bu bilgisayarda çalışmak için bir ajan oluştur.",
       "updateApp": "Bu uygulama bu kartı uygulamak için çok eski. Uygulamayı güncelleyin veya değişikliği Ayarlar'dan yapın.",
       "nobodyNew": "Bu karttaki herkes zaten burada ya da zaten davet edilmiş. Karttan vazgeçin veya Üyeler ve davetler bölümünden daveti yeniden gönderin."
     },

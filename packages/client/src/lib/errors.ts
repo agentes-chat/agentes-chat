@@ -63,6 +63,7 @@ const KNOWN = {
   "channel.permission_forbidden": "channel.perms.forbidden",
   "agent.handle_taken": "newAgent.errors.handleTaken",
   "agent.right_hand_permanent": "errors.rightHand.permanent",
+  "agent.right_hand_computer": "errors.rightHand.computer",
   "agent.not_owner": "errors.agent.ownerOrAdmin",
   "usage_queue.cancel_forbidden": "errors.agent.ownerOrAdmin",
   "agent.details_hidden": "errors.agent.detailsHidden",

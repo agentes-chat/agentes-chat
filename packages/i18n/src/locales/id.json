@@ -15896,6 +15896,7 @@
     },
     "rightHand": {
       "permanent": "Tangan kanan adalah bagian dari ruang kerja dan tetap di luar kanal. Sebuah @sebutan menjangkaunya di kanal mana pun.",
+      "computer": "Tangan kanan selalu memakai komputer milik ruang kerja sendiri, jadi komputer lain tidak bisa dipilih untuknya. Buat agen untuk bekerja di komputer ini.",
       "updateApp": "Aplikasi ini terlalu lama untuk menerapkan kartu ini. Perbarui aplikasinya atau lakukan perubahan di Pengaturan.",
       "nobodyNew": "Semua orang di kartu ini sudah ada di sini atau sudah diundang. Abaikan kartunya atau kirim ulang undangan di Anggota dan undangan."
     },

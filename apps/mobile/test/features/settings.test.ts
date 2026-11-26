@@ -474,6 +474,17 @@ describe("Computadores", () => {
       expect(pick.choices.map((m) => m.id)).toEqual(["mini", "box", "own"]);
     });
 
+    test("the right hand's row only says its computer: it always uses the workspace's own", () => {
+      const lodi = agentComputerPick({
+        agent: { id: "lodi", ownerUserId: "u9", builtin: "right_hand" },
+        meId: "u9",
+        admin: true,
+        machines,
+        setup: null,
+      });
+      expect(lodi.canPick).toBe(false);
+    });
+
     test("an agent's owner, the ones they connected (and the one it uses); anyone else only reads", () => {
       const owner = agentComputerPick({
         agent: { id: "infra", ownerUserId: "u2" },

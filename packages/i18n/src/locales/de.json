@@ -16437,6 +16437,7 @@
     },
     "rightHand": {
       "permanent": "Die rechte Hand gehört zum Workspace und bleibt außerhalb der Kanäle. Eine @Erwähnung erreicht sie in jedem davon.",
+      "computer": "Die rechte Hand nutzt immer den eigenen Computer des Workspace, daher lässt sich kein anderer für sie wählen. Erstelle einen Agenten, um auf diesem zu arbeiten.",
       "updateApp": "Diese App ist zu alt, um diese Karte anzuwenden. Aktualisiere sie oder nimm die Änderung in den Einstellungen vor.",
       "nobodyNew": "Alle auf dieser Karte sind schon dabei oder schon eingeladen. Verwirf die Karte oder sende eine Einladung unter Mitglieder und Einladungen erneut."
     },

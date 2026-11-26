@@ -16865,6 +16865,8 @@ export const ptBR = {
     rightHand: {
       permanent:
         "O braço direito faz parte do workspace e fica fora dos canais. Uma @menção o chama em qualquer um deles.",
+      computer:
+        "O braço direito sempre usa o computador do próprio workspace, então não dá para escolher outro para ele. Crie um agente para trabalhar neste.",
       updateApp: "Este app é antigo demais para aplicar este card. Atualize o app ou faça a mudança nas Configurações.",
       nobodyNew:
         "Todo mundo deste card já está aqui ou já foi convidado. Descarte o card ou reenvie um convite em Membros e convites.",

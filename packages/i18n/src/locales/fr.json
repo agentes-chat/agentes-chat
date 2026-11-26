@@ -16990,6 +16990,7 @@
     },
     "rightHand": {
       "permanent": "Le bras droit fait partie de l'espace de travail et reste hors des canaux. Une @mention le joint dans n'importe lequel.",
+      "computer": "Le bras droit utilise toujours l'ordinateur propre de l'espace de travail : on ne peut pas lui en choisir un autre. Crée un agent pour travailler sur celui-ci.",
       "updateApp": "Cette application est trop ancienne pour appliquer cette carte. Mettez-la à jour ou faites le changement dans les Paramètres.",
       "nobodyNew": "Toutes les personnes de cette carte sont déjà là ou déjà invitées. Ignorez la carte ou renvoyez une invitation dans Membres et invitations."
     },

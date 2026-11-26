@@ -16912,6 +16912,9 @@ export const en = {
     rightHand: {
       permanent:
         "The right hand is part of the workspace and stays out of channels. An @mention reaches it in any of them.",
+      /** `agent.right_hand_computer`: choosing a computer for the right hand, which always uses the workspace's own (ADR 0175). */
+      computer:
+        "The right hand always uses the workspace's own computer, so another can't be chosen for it. Create an agent to work on this one.",
       /** `action_card.update_app`: a card this app shows without saying all it changes. */
       updateApp: "This app is too old to apply this card. Update it, or make the change in Settings.",
       /** `action_card.nobody_new`: an invite card whose addresses all belong to members or hold an invitation. */
