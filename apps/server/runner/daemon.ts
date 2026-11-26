@@ -2925,9 +2925,11 @@ export class RunnerDaemon implements RequestObserver {
     if (decision === "granted") {
       const real = checkFolder(r.path, this.checkOpts());
       const ids = all ? [...new Set([r.agent.id, ...this.agents.map((a) => a.id)])] : [r.agent.id];
-      // Taken out first: the access change that follows must not resolve it again as "agent".
+      // Built before the request is taken out: a folder that can't be added (the cap) leaves it pending, never "granted".
+      const next = addFolder(this.access(), real, ids);
+      // Taken out before the write: the access change that follows must not resolve it again as "agent".
       this.requests.resolve(r.requestId, "granted", all ? "all" : "agent");
-      this.writeAccess(addFolder(this.access(), real, ids));
+      this.writeAccess(next);
     } else {
       this.requests.resolve(r.requestId, "denied");
       this.record({
