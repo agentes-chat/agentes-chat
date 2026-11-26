@@ -18338,7 +18338,8 @@
       "missing": "这段对话已不在这里。",
       "helping": "正在协助 {{name}}",
       "helping_female": "正在协助 {{name}}",
-      "see": "查看对话"
+      "see": "查看对话",
+      "relay": "{{name}} 的回答：{{excerpt}}。查看对话"
     },
     "unshown": "无法显示这条消息",
     "unshownPart": "这条消息的部分内容无法显示",

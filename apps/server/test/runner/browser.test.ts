@@ -64,6 +64,7 @@ import {
   isWebPage,
   jpegSize,
   launchChrome,
+  listenerUidsIn,
   NAME_CONTROLS,
   type OwnChrome,
   readableDisplay,
@@ -1400,6 +1401,47 @@ test.if(posix)("a started Chrome's browser endpoint comes from the second line o
   expect(await start("45680\\nws://elsewhere/devtools/browser/x")).not.toHaveProperty("wsPath");
 });
 
+test("a listener holds Chrome's 127.0.0.1 port on 127.0.0.1, any IPv4 or dual-stack IPv6, never v6-only or ::1", () => {
+  const ss = [
+    "LISTEN 0 4096 127.0.0.1:10000 0.0.0.0:* uid:20000 ino:1 sk:0",
+    "LISTEN 0 4096 0.0.0.0:10000 0.0.0.0:* ino:2 sk:0",
+    "LISTEN 0 4096 *:10000 *:* uid:1000 ino:3 sk:0",
+    "LISTEN 0 4096 [::]:10000 [::]:* uid:1001 ino:4 sk:0",
+    "LISTEN 0 4096 [::1]:10000 [::]:* uid:1002 ino:5 sk:0",
+    "LISTEN 0 4096 127.0.0.1:10001 0.0.0.0:* uid:1003 ino:6 sk:0",
+  ].join("\n");
+  expect(listenerUidsIn(ss, 10000)).toEqual([20000, 0, 1000]);
+  expect(listenerUidsIn("LISTEN 0 4096 [::]:10000 [::]:* uid:1001 ino:4 sk:0", 10000)).toEqual([]);
+});
+
+test("a fixed CDP port another program listens on fails at once, saying which port and how to free it", async () => {
+  let started = 0;
+  const start = (() => {
+    started++;
+    throw new Error("Chrome must not start");
+  }) as unknown as Parameters<typeof launchChrome>[4];
+  // Root's listener (ss leaves its uid out) or another user's, beside or without the agent's own.
+  for (const uids of [[0], [1000], [20000, 1000]]) {
+    const err = await launchChrome(
+      "/chrome",
+      ["--remote-debugging-port=10000"],
+      "/p",
+      undefined,
+      start,
+      () => uids,
+      20000,
+    ).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(ChromeStartError);
+    expect((err as ChromeStartError).why).toBe(
+      "Another program on this computer listens on port 10000, which this agent's browser needs. Move that program to another port or stop it (sudo ss -tlnp 'sport = :10000' shows which), then try again.",
+    );
+  }
+  expect(started).toBe(0);
+});
+
 test.if(posix)("a fixed CDP port accepts only its owned listener and ignores a stale port file", async () => {
   const dir = tempDir("chrome-fixed-");
   dirs.push(dir);
@@ -1426,7 +1468,8 @@ test.if(posix)("a fixed CDP port accepts only its owned listener and ignores a s
       dir,
       undefined,
       undefined,
-      () => true,
+      () => [20001],
+      20001,
     );
     expect(chrome).toMatchObject({ port, wsPath: "/devtools/browser/owned" });
     chrome.kill();
