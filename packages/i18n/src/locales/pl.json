@@ -2302,7 +2302,7 @@
       },
       "computers": {
         "title": "Komputery",
-        "help": "Dołączył komputer, jest gotowy albo przestał odpowiadać"
+        "help": "Dołączył komputer albo jest gotowy"
       },
       "reactions": {
         "title": "Reakcje",
@@ -8615,11 +8615,12 @@
     "noOrgBack": "Wróć do swoich przestrzeni roboczych",
     "crashTitle": "Coś poszło nie tak",
     "crashText": "Odśwież stronę, żeby kontynuować.",
-    "crashCode": "Jeśli poprosisz o pomoc, podaj kod {{id}}.",
+    "supportCode": "Kod dla pomocy technicznej",
     "unreachableTitle": "Brak połączenia z agentes.chat",
     "unreachableText": "Może trwa ponowne uruchamianie. Ta strona otworzy się sama, gdy tylko wszystko wróci.",
     "offlineTitle": "Jesteś offline",
     "offlineText": "Ta strona otworzy się sama, gdy wrócisz do sieci.",
+    "waitingConnection": "Czekamy, aż połączenie wróci",
     "unknownHostTitle": "Ten adres nie jest jeszcze skonfigurowany",
     "unknownHostText": "Jeśli został właśnie podłączony, spróbuj ponownie za kilka minut.",
     "unknownHostTab": "Adres nieskonfigurowany · agentes.chat"
@@ -20049,9 +20050,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Przekazane: <0/>{{name}}",
-      "working": "w toku",
-      "done": "gotowe w {{duration}}",
+      "lead": "Przekazane: <0>{{name}}</0>",
+      "working": "pracuje",
+      "ready": "gotowe",
       "waitingYou": "czeka na twoją odpowiedź",
       "waiting": "czeka na odpowiedź",
       "waitingApprovalYou": "czeka na twoją zgodę",
@@ -20202,6 +20203,8 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} czeka na twoje zatwierdzenie",
       "yourAnswer": "{{name}} czeka na twoją odpowiedź",
+      "helping": "{{to}} pomaga agentowi {{from}}",
+      "helping_female": "{{to}} pomaga agentce {{from}}",
       "done": "{{to}} skończył. {{from}} pisze",
       "notDone": "{{to}} nie skończył. {{from}} pisze",
       "handedOff": "{{to}} pracuje nad tym, co przekazał {{from}}"

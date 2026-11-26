@@ -399,48 +399,6 @@ export const words: EmailWords = {
       why: () => "Kamu menerima email ini karena kamu ada di ruang kerja ini di agentes.chat.",
     },
   },
-  computerDown: {
-    subject: "Sebuah komputer tidak merespons",
-    preheader: "Pekerjaan agenmu di komputer ini sedang menunggu.",
-    headline: "Sebuah komputer tidak merespons",
-    body: (name, org, away) => [
-      { b: name },
-      " di ",
-      { b: org },
-      ` tidak merespons selama ${away}. Pekerjaan yang membutuhkannya menunggu dan berlanjut saat komputer ini kembali.`,
-    ],
-    runs: "Permintaan ke agen yang menunggu",
-    calls: "Panggilan webhook yang menunggu",
-    note: "Untuk lanjut sekarang, pindahkan agennya ke komputer lain dari halamannya.",
-    button: "Buka komputer",
-    why: (org) => `Kamu menerima email ini karena kamu mengelola komputer ${org} di agentes.chat.`,
-    back: {
-      subject: "Sebuah komputer sudah kembali",
-      preheader: "Pekerjaan yang menunggunya kini berlanjut.",
-      headline: "Komputer sudah kembali",
-      runs: "Permintaan ke agen yang sempat menunggu",
-      calls: "Panggilan webhook yang sempat menunggu",
-      body: (name, org, away) => [
-        { b: name },
-        " di ",
-        { b: org },
-        ` kembali setelah ${away}. Pekerjaan yang menunggunya kini berlanjut.`,
-      ],
-    },
-    personal: {
-      body: (name, _org, away) => [
-        { b: name },
-        ` tidak merespons selama ${away}. Pekerjaan yang membutuhkannya menunggu dan berlanjut saat komputer ini kembali.`,
-      ],
-      why: () => "Kamu menerima email ini karena kamu mengelola komputer di ruang kerja pribadimu di agentes.chat.",
-      back: {
-        body: (name, _org, away) => [
-          { b: name },
-          ` kembali setelah ${away}. Pekerjaan yang menunggunya kini berlanjut.`,
-        ],
-      },
-    },
-  },
   appConnected: {
     subject: "Sebuah aplikasi terhubung ke akun agentes.chat kamu",
     preheader: "Aplikasi ini bisa membaca dan mengirim tugas ke agen atas namamu di satu ruang kerja.",

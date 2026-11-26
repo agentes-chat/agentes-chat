@@ -2227,7 +2227,7 @@
       },
       "computers": {
         "title": "Computadoras",
-        "help": "Se sumó una computadora, está lista o dejó de responder"
+        "help": "Se sumó una computadora o está lista"
       },
       "reactions": {
         "title": "Reacciones",
@@ -8278,11 +8278,12 @@
     "noOrgBack": "Volver a tus espacios de trabajo",
     "crashTitle": "Algo salió mal",
     "crashText": "Recarga la página para seguir.",
-    "crashCode": "Si pides ayuda, indica el código {{id}}.",
+    "supportCode": "Código para el soporte",
     "unreachableTitle": "No se puede conectar con agentes.chat",
     "unreachableText": "Puede que se esté reiniciando. Esta página se abre sola en cuanto vuelva.",
     "offlineTitle": "No tienes conexión",
     "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión.",
+    "waitingConnection": "Esperando a que vuelva la conexión",
     "unknownHostTitle": "Esta dirección aún no está configurada",
     "unknownHostText": "Si se acaba de conectar, vuelve a intentarlo en unos minutos.",
     "unknownHostTab": "Dirección sin configurar · agentes.chat"
@@ -19364,9 +19365,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Entregado a <0/>{{name}}",
-      "working": "trabajando en ello",
-      "done": "listo en {{duration}}",
+      "lead": "Entregado a <0>{{name}}</0>",
+      "working": "trabajando",
+      "ready": "listo",
       "waitingYou": "esperando tu respuesta",
       "waiting": "esperando una respuesta",
       "waitingApprovalYou": "esperando tu aprobación",
@@ -19512,6 +19513,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} espera tu aprobación",
       "yourAnswer": "{{name}} espera tu respuesta",
+      "helping": "{{to}} ayudando a {{from}}",
       "done": "{{to}} terminó. {{from}} está escribiendo",
       "notDone": "{{to}} no terminó. {{from}} está escribiendo",
       "handedOff": "{{to}} trabaja en lo que {{from}} le pasó"

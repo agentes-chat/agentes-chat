@@ -122,7 +122,6 @@ describe("every email, in both languages", () => {
   test("every kind has a sample, so the preview and a send to a test inbox show them all", () => {
     const kinds: Record<EmailTemplate["kind"], true> = {
       verify_email: true,
-      computer_down: true,
       password_reset: true,
       invitation: true,
       invite_request: true,
@@ -846,6 +845,13 @@ describe("outbox delivery", () => {
       throw new EmailError("down", true, 503);
     };
     await expect(deliverQueuedEmail(f.db, refusing, job, art, log)).rejects.toThrow("down");
+  });
+
+  test("a job queued with a template since removed sends nothing", async () => {
+    const sender = createFakeEmailSender();
+    const template = { kind: "computer_down", locale: "en", name: "pc", url: "u" } as unknown as EmailTemplate;
+    await sendQueuedEmail(sender, { key: "k", to: ["a@b.c"], template }, art);
+    expect(sender.sent).toEqual([]);
   });
 
   test("attached pictures go with the message as inline parts", async () => {

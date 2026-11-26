@@ -304,10 +304,10 @@ describe("the working line while an agent asks another", () => {
     await settle();
     expect(bar()).toBe("Ada está perguntando para Atlas…");
     expect(typingBar().querySelectorAll(".ac-typing__text b")).toHaveLength(2);
-    expect(typingBar().querySelectorAll(".ac-typing__tok .ac-avatar--agent")).toHaveLength(2);
-    expect(typingBar().querySelector(".ac-typing__to svg")).not.toBeNull();
-    // The one asked is thinking.
-    expect(typingBar().querySelectorAll(".ac-typing__tok")[1]?.querySelector(".ac-avatar--thinking")).not.toBeNull();
+    // The one asked does the work: its face leads the row with its orbit, thinking; no face twice on the line.
+    const worker = document.querySelector(".working-tail__face .ac-orbit .ac-avatar--agent");
+    expect(worker?.classList.contains("ac-avatar--thinking")).toBe(true);
+    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(0);
     const clock = typingBar().querySelector(".ac-typing__clock") as HTMLElement;
     expect(clock.className).toContain("ac-num");
     expect(clock.textContent).toMatch(/^\d+:\d\d$/);

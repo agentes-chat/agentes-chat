@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "컴퓨터",
-        "help": "컴퓨터가 연결되거나 준비됐거나 응답하지 않을 때"
+        "help": "컴퓨터가 연결되거나 준비됐을 때"
       },
       "reactions": {
         "title": "반응",
@@ -7716,11 +7716,12 @@
     "noOrgBack": "내 워크스페이스로 돌아가기",
     "crashTitle": "문제가 생겼어요",
     "crashText": "계속하려면 페이지를 새로고침하세요.",
-    "crashCode": "도움을 요청할 때 코드 {{id}}을(를) 알려 주세요.",
+    "supportCode": "지원용 코드",
     "unreachableTitle": "agentes.chat에 연결할 수 없어요",
     "unreachableText": "다시 시작하는 중일 수 있어요. 돌아오는 대로 이 페이지가 자동으로 열려요.",
     "offlineTitle": "오프라인 상태예요",
     "offlineText": "다시 온라인이 되면 이 페이지가 자동으로 열려요.",
+    "waitingConnection": "연결이 돌아오기를 기다리는 중",
     "unknownHostTitle": "이 주소는 아직 설정되지 않았어요",
     "unknownHostText": "방금 연결했다면 몇 분 뒤에 다시 시도하세요.",
     "unknownHostTab": "설정되지 않은 주소 · agentes.chat"
@@ -18184,9 +18185,9 @@
   },
   "work": {
     "handed": {
-      "lead": "<0/>{{name}}에게 넘김",
+      "lead": "<0>{{name}}</0>에게 넘김",
       "working": "작업 중",
-      "done": "{{duration}} 만에 끝남",
+      "ready": "끝남",
       "waitingYou": "내 답변 대기 중",
       "waiting": "답변 대기 중",
       "waitingApprovalYou": "내 승인 대기 중",
@@ -18324,6 +18325,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}}이(가) 내 승인을 기다려요",
       "yourAnswer": "{{name}}이(가) 내 답변을 기다려요",
+      "helping": "{{to}}이(가) {{from}} 돕는 중",
       "done": "{{to}}이(가) 끝냈어요. {{from}}이(가) 작성 중",
       "notDone": "{{to}}이(가) 끝내지 못했어요. {{from}}이(가) 작성 중",
       "handedOff": "{{to}}이(가) {{from}}이(가) 넘긴 일을 하는 중"
