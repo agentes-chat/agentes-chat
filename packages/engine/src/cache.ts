@@ -111,7 +111,7 @@ export class TtlCache<V> {
     if (shared) this.loading.set(key, mine);
     try {
       const value = await mine.value;
-      if (this.generation === started && (keep?.(value) ?? true)) this.set(key, value);
+      if (enabled && this.generation === started && (keep?.(value) ?? true)) this.set(key, value);
       return value;
     } finally {
       if (this.loading.get(key) === mine) this.loading.delete(key);
