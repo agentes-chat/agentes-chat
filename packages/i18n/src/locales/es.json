@@ -14521,6 +14521,11 @@
         "2": "Crear plantillas de mensajes",
         "ask": "Enviar mensajes siempre pide tu aprobación"
       },
+      "boavoz": {
+        "1": "Ver conversaciones, contactos y leads",
+        "2": "Responder, pausar la IA y enviar campañas",
+        "ask": "Enviar, eliminar y pagar siempre pide tu aprobación"
+      },
       "database": {
         "1": "Ver las tablas",
         "2": "Consultar los datos para responder",
@@ -14698,6 +14703,7 @@
       "pinterest": "Pines, tableros y estadísticas de Pinterest.",
       "reddit": "Publicaciones, comentarios y comunidades de Reddit.",
       "whatsapp": "Mensajes y plantillas de WhatsApp Business.",
+      "boavoz": "Atención al cliente con IA en WhatsApp, Instagram y el chat del sitio web: conversaciones, leads y campañas.",
       "telegram": "Un bot tuyo de Telegram: sus chats, grupos y canales.",
       "x": "Publicaciones en tu cuenta de X: escribir, leer menciones y buscar.",
       "threads": "Publicaciones y respuestas en tu cuenta de Threads.",

@@ -15118,6 +15118,11 @@
         "2": "Tworzenie szablonów wiadomości",
         "ask": "Wysyłanie wiadomości zawsze prosi o twoje zatwierdzenie"
       },
+      "boavoz": {
+        "1": "Podgląd rozmów, kontaktów i leadów",
+        "2": "Odpowiadanie, wstrzymywanie AI i wysyłanie kampanii",
+        "ask": "Wysyłanie, usuwanie i płacenie zawsze prosi o twoje zatwierdzenie"
+      },
       "database": {
         "1": "Podgląd tabel",
         "2": "Zapytania do danych, żeby odpowiedzieć",
@@ -15300,6 +15305,7 @@
       "pinterest": "Piny, tablice i statystyki na Pintereście.",
       "reddit": "Posty, komentarze i społeczności na Reddicie.",
       "whatsapp": "Wiadomości i szablony WhatsApp Business.",
+      "boavoz": "Obsługa klienta z AI na WhatsAppie, Instagramie i w czacie na stronie: rozmowy, leady i kampanie.",
       "telegram": "Twój bot w Telegramie: jego czaty, grupy i kanały.",
       "x": "Posty na Twoim koncie X: pisanie, czytanie wzmianek i wyszukiwanie.",
       "threads": "Posty i odpowiedzi na Twoim koncie Threads.",

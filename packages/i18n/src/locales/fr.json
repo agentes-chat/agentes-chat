@@ -14595,6 +14595,11 @@
         "2": "Créer des modèles de message",
         "ask": "L'envoi de messages demande toujours votre approbation"
       },
+      "boavoz": {
+        "1": "Voir les conversations, les contacts et les leads",
+        "2": "Répondre, mettre l'IA en pause et envoyer des campagnes",
+        "ask": "L'envoi, la suppression et le paiement demandent toujours votre approbation"
+      },
       "database": {
         "1": "Voir les tables",
         "2": "Interroger les données pour répondre",
@@ -14772,6 +14777,7 @@
       "pinterest": "Épingles, tableaux et statistiques Pinterest.",
       "reddit": "Publications, commentaires et communautés Reddit.",
       "whatsapp": "Messages et modèles WhatsApp Business.",
+      "boavoz": "Service client par IA sur WhatsApp, Instagram et le chat du site : conversations, leads et campagnes.",
       "telegram": "Un bot Telegram à vous : ses discussions, groupes et canaux.",
       "x": "Les posts de votre compte X : écrire, lire les mentions et chercher.",
       "threads": "Les posts et réponses de votre compte Threads.",

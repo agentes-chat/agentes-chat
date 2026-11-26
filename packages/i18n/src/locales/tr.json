@@ -14014,6 +14014,11 @@
         "2": "Mesaj şablonları oluşturur",
         "ask": "Mesaj göndermek her zaman onayınızı ister"
       },
+      "boavoz": {
+        "1": "Konuşmaları, kişileri ve potansiyel müşterileri görür",
+        "2": "Yanıtlar, yapay zekayı duraklatır ve kampanya gönderir",
+        "ask": "Göndermek, silmek ve ödemek her zaman onayınızı ister"
+      },
       "database": {
         "1": "Tabloları görür",
         "2": "Yanıt vermek için verileri sorgular",
@@ -14186,6 +14191,7 @@
       "pinterest": "Pinterest pinleri, panoları ve analizleri.",
       "reddit": "Reddit gönderileri, yorumları ve toplulukları.",
       "whatsapp": "WhatsApp Business mesajları ve şablonları.",
+      "boavoz": "WhatsApp, Instagram ve site sohbetinde yapay zeka ile müşteri hizmetleri: konuşmalar, potansiyel müşteriler ve kampanyalar.",
       "telegram": "Size ait bir Telegram botu: sohbetleri, grupları ve kanalları.",
       "x": "X hesabınızdaki gönderiler: yazma, bahsetmeleri okuma ve arama.",
       "threads": "Threads hesabınızdaki gönderiler ve yanıtlar.",
