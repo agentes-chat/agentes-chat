@@ -17462,7 +17462,7 @@ export const en = {
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection.",
+      "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
@@ -18101,7 +18101,7 @@ export const en = {
       internetShared: "Agents now open websites through the internet of <b>{{deviceName}}</b>",
       /** Under it: what lending keeps out and what happens while the computer is offline. */
       internetSharedLine:
-        "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection.",
+        "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection.",
       /** Its one button: stops lending this computer's internet. */
       internetOff: "Turn off",
       internetOffDone: "Agents no longer use the internet of {{deviceName}}.",

@@ -2656,8 +2656,6 @@ export const EGRESS_SHARE_PROTOCOL = 81;
 export const EGRESS_SHARE = {
   /** The web only: anything else leaves the workspace's computer its usual way. */
   ports: [80, 443] as readonly number[],
-  /** Bytes both ways a day (UTC) the lending computer carries before it refuses new connections until the next. */
-  dailyBytes: 5 * 1024 ** 3,
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */

@@ -17387,7 +17387,7 @@ export const ptBR = {
       "Cada computador só ajuda se o dono permitir. Com isto desativado, nenhum ajuda, seja qual for a escolha do dono.",
     shareInternet: "Agentes usam a internet deste computador",
     shareInternetHint:
-      "Os sites que os agentes abrem passam pela conexão deste computador, então veem a sua localização. Só sites, até 5 GB por dia, e nunca nada da sua própria rede. Enquanto este computador estiver offline, os agentes usam a conexão de sempre.",
+      "Os sites que os agentes abrem passam pela conexão deste computador, então veem a sua localização. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, os agentes usam a conexão de sempre.",
     shareInternetInUse: "Em uso agora",
     shareInternetOther: "Agentes usam {{name}} agora",
     shareInternetPick: "Usar este",
@@ -17965,7 +17965,7 @@ export const ptBR = {
       folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
       internetShared: "Agora os agentes abrem sites pela internet de <b>{{deviceName}}</b>",
       internetSharedLine:
-        "Só os agentes deste workspace, só sites, até 5 GB por dia, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
+        "Só os agentes deste workspace, só sites, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
       internetOff: "Desligar",
       internetOffDone: "Os agentes não usam mais a internet de {{deviceName}}.",
       once: "Permitir uma vez",

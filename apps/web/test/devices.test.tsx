@@ -1423,7 +1423,8 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, up to 5 GB a day");
+    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);
     expect(calls(state, "devices.updateComputer").map((c) => c.args)).toEqual([

@@ -41587,7 +41587,7 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection."
+    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -42985,7 +42985,7 @@
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
   },
   "devices.notice.internetSharedLine": {
-    "value": "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection."
+    "value": "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection."
   },
   "devices.notice.internetOff": {
     "value": "Turn off"
