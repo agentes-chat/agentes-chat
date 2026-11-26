@@ -1,0 +1,563 @@
+/*
+ * The onboarding's frame (Shell.tsx): the page's sky on top, the top bar, one box in the middle with the team standing
+ * on its top edge, and the headers a box may have (the apps a team works in, the team's sky, its photo). Unlayered, so
+ * these win over the kit's base layer.
+ */
+
+/* ---------- the page: the sky fading into the page, the top bar, the column ---------- */
+.onbw {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--ink);
+}
+/* The page's header, as the agent page's cover: light tones of the sky melting into the page, behind the team. */
+.onbw__cover {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 320px;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent);
+}
+.onbw__cover > .ac-sky {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* In dark, the cover is a breath of color: the page's own dark shows through it. */
+[data-theme="dark"] .onbw__cover {
+  opacity: 0.42;
+}
+.onbw__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 56px;
+  padding: 0 20px;
+}
+.onbw__top-start {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.onbw__top .ac-logo {
+  color: inherit;
+}
+.onbw__me {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+.onbw__me:hover {
+  background: var(--plate);
+}
+html:not([data-pointer]) .onbw__me:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* The box's top stays put from step to step; the team stands on its top edge. */
+.onbw__stage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+  padding: clamp(72px, 13vh, 132px) 16px 64px;
+}
+/* A box with a header of its own and no team over it starts higher, so its button fits the screen. */
+.onbw__stage:has(.onbx[data-cover]):not(:has(.onbw__ground)) {
+  padding-top: clamp(56px, 8vh, 88px);
+}
+.onbw__col {
+  position: relative;
+  width: min(480px, 100%);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.onbw__col[data-wide] {
+  width: min(760px, 100%);
+}
+.onbw__ground {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* Their feet on the box's edge. */
+  margin-bottom: -6px;
+  pointer-events: none;
+}
+.onbw__cast {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.onbw__agent {
+  position: relative;
+  display: block;
+  flex: none;
+}
+.onbw__agent .ac-avatar {
+  width: 48px;
+  height: 48px;
+}
+.onbw__agent[data-lead] .ac-avatar {
+  width: 64px;
+  height: 64px;
+}
+.onbw__cast[data-awake] .onbw__agent {
+  animation: team-hop 0.52s var(--spring) both;
+  animation-delay: calc(var(--i) * 0.12s + 0.2s);
+}
+.onbw__cast .team-scene__trail,
+.onbw__cast .connect-scene__marks {
+  align-self: center;
+}
+.onbw__cast .connect-scene__marks {
+  display: flex;
+}
+.onbw__cast .team-scene__mark {
+  width: 40px;
+  height: 40px;
+  animation: none;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 6px 18px -8px rgb(0 0 0 / 0.35);
+}
+.onbw__cast .connect-scene__marks > .team-scene__mark + .team-scene__mark {
+  margin-inline-start: calc(-1 * var(--space-2));
+}
+/* On the page's own ground the trail and its walk take the ink, not the sky's white. */
+.onbw__cast .team-scene__trail i {
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  animation-name: onbw-walk;
+}
+.onbw__cast .team-scene__trail[data-state="done"] i {
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  animation: none;
+}
+@keyframes onbw-walk {
+  0% {
+    background: color-mix(in srgb, var(--ink) 80%, transparent);
+  }
+  14% {
+    background: color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+  28%,
+  100% {
+    background: color-mix(in srgb, var(--ink) 16%, transparent);
+  }
+}
+/* What the right hand says, over its head, the cut corner pointing down at it. */
+.onbw__say {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 58%;
+  display: block;
+  width: max-content;
+  max-width: 280px;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs);
+  background: var(--raised);
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.38;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  transition:
+    opacity 0.3s var(--out),
+    transform 0.3s var(--out);
+}
+@starting-style {
+  .onbw__say {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ---------- the box ---------- */
+.onbx {
+  --dialog-pad: 28px;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-section);
+  background: var(--surface-raised);
+  box-shadow: var(--e2);
+  font-size: 15px;
+  line-height: 22px;
+}
+/* A header of its own reaches the box's edges: the sky or the apps, the words under it. */
+.onbx[data-cover] {
+  overflow: hidden;
+}
+.onbx__lede {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px var(--dialog-pad) 0;
+}
+.onbx[data-cover] .onbx__lede {
+  padding-top: 22px;
+}
+.onbx__eyebrow {
+  margin: 0 0 2px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 550;
+  color: var(--faint);
+}
+.onbx__title {
+  margin: 0;
+  outline: none;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 30px;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.onbx__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+  text-wrap: pretty;
+}
+.onbx .ac-dialog__body.onbx__body {
+  padding-top: 20px;
+  overflow: visible;
+}
+.onbx .ac-dialog__foot {
+  padding-top: 24px;
+}
+.onbx__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-h-md);
+  margin-inline-start: -8px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.onbx__back:hover:not(:disabled) {
+  background: var(--plate);
+  color: var(--ink);
+}
+html:not([data-pointer]) .onbx__back:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.onbx__note {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.onbx__note .ac-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--faint);
+}
+/* A step that draws its own buttons (the plan, the AI, the people) inside the box: on its ground, never sticky. */
+.onbx .onb__actions {
+  position: static;
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+.onbx .onb__actions::before {
+  display: none;
+}
+.onbx .onb__skip {
+  padding-bottom: 0;
+}
+.onbx .onb__plan {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* ---------- a choice: quiet rows, a hairline between them, the round choice at the end ---------- */
+.onb-pick {
+  display: flex;
+  flex-direction: column;
+  margin-block: -10px -6px;
+}
+.onb-pick__item + .onb-pick__item {
+  border-top: 1px solid var(--line);
+}
+.onb-pick__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: 14px 0;
+  cursor: pointer;
+}
+.onb-pick__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.onb-pick__title {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.onb-pick__desc {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+/* On the title's line, never in the middle of the two. */
+.onb-pick .ac-radio {
+  flex: none;
+  margin-top: 2px;
+}
+.onb-pick__row:hover .ac-radio:not([data-state="checked"]) {
+  border-color: var(--ink);
+}
+
+/* ---------- the team's sky as a box's header ---------- */
+.onb-pass {
+  position: relative;
+  flex: none;
+  height: 172px;
+  color: #fff;
+}
+.onb-pass__sky.team-scene {
+  position: absolute;
+  inset: 0;
+}
+.onb-pass .team-scene__row {
+  bottom: 18px;
+  gap: 18px;
+}
+.onb-pass .team-scene__agent .ac-avatar {
+  width: 44px;
+  height: 44px;
+}
+.onb-pass .team-scene__agent[data-lead] .ac-avatar {
+  width: 58px;
+  height: 58px;
+}
+/* The photo: taller, the person among the agents, a few pixels of confetti. */
+.onb-pass.onb-photo {
+  height: 248px;
+}
+.onb-photo .team-scene__row {
+  bottom: 22px;
+  gap: 16px;
+}
+.onb-photo .team-scene__cast {
+  gap: 16px;
+}
+.onb-photo .team-scene__agent {
+  position: relative;
+}
+.onb-photo__me .ac-avatar {
+  width: 50px;
+  height: 50px;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 8px 18px -6px rgb(0 20 60 / 0.45);
+}
+.onbw__say.onb-photo__say {
+  left: 46%;
+  bottom: calc(100% + 8px);
+  max-width: 240px;
+  font-weight: 550;
+  box-shadow: 0 10px 30px -10px rgb(0 20 60 / 0.45);
+}
+.onb-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.onb-confetti i {
+  position: absolute;
+  display: block;
+  image-rendering: pixelated;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.08);
+}
+
+/* ---------- the apps a team works in, as a box's header ---------- */
+.onb-wall {
+  position: relative;
+  flex: none;
+  height: 178px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #3f88f5 16%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, #3f88f5 7%, var(--surface-raised)), var(--surface-raised));
+}
+.onb-wall__rows {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+}
+.onb-wall__row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.onb-wall__row:nth-child(2) {
+  transform: translateX(28px);
+}
+.onb-wall__row:nth-child(3) {
+  transform: translateX(-14px);
+}
+.onb-wall__tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--surface-raised);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 6px 14px -8px rgb(10 30 70 / 0.28);
+}
+.onb-wall__tile .connector-icon {
+  width: 24px;
+  height: 24px;
+  background: none;
+  box-shadow: none;
+}
+.onb-wall__tile .connector-icon__mark {
+  width: 22px;
+  height: 22px;
+}
+.onb-wall__tile--agent .ac-avatar {
+  width: 34px;
+  height: 34px;
+}
+
+/* ---------- a phone: the same box at full width, 16px from the edges ---------- */
+@media (max-width: 560px) {
+  .onbw__top {
+    height: 52px;
+    padding: 0 16px;
+  }
+  .onbw__stage {
+    padding: 72px 16px 32px;
+  }
+  .onbw__stage:has(.onbx[data-cover]):not(:has(.onbw__ground)) {
+    padding-top: 24px;
+  }
+  .onbw__agent .ac-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .onbw__agent[data-lead] .ac-avatar {
+    width: 52px;
+    height: 52px;
+  }
+  /* With the AI's marks after them, only the first two fit beside the trail. */
+  .onbw__cast:has(.team-scene__trail) .onbw__agent:nth-child(n + 3) {
+    display: none;
+  }
+  .onbw__cast .team-scene__trail i:nth-child(n + 4) {
+    display: none;
+  }
+  /* The team at the box's start, so the bubble has the width of the screen beside it. */
+  .onbw__ground {
+    justify-content: flex-start;
+    padding-inline: 20px;
+  }
+  .onbw__say {
+    max-width: 210px;
+    font-size: 13px;
+  }
+  .onbx {
+    --dialog-pad: 20px;
+  }
+  .onbx__lede {
+    padding-top: 24px;
+  }
+  .onbx__title {
+    font-size: 21px;
+    line-height: 27px;
+  }
+  /* The way back as a square beside the buttons, which share the rest of the row. */
+  .onbx .ac-dialog__foot:has(.onbx__back-label) {
+    flex-wrap: nowrap;
+  }
+  .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-note {
+    flex: none;
+  }
+  .onbx__back:has(.onbx__back-label) {
+    justify-content: center;
+    width: var(--control-h-md);
+    margin: 0;
+    padding: 0;
+    box-shadow: inset 0 0 0 1px var(--line2);
+  }
+  .onbx__back-label {
+    display: none;
+  }
+  .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-acts {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .onbx .ac-dialog__foot:has(.onbx__back-label) > .ac-dialog__foot-acts > .ac-btn {
+    flex: 1 1 auto;
+  }
+  .onb-pass .team-scene__agent .ac-avatar {
+    width: 38px;
+    height: 38px;
+  }
+  .onb-pass .team-scene__agent[data-lead] .ac-avatar {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onbw__cast[data-awake] .onbw__agent,
+  .onbw__cast .team-scene__trail i {
+    animation: none;
+  }
+  @starting-style {
+    .onbw__say {
+      transform: none;
+    }
+  }
+}
