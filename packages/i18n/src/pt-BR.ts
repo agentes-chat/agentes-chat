@@ -1915,13 +1915,8 @@ export const ptBR = {
       titleOne: "Contrate o {{name}}",
       titleOne_female: "Contrate a {{name}}",
       titlePersonal: "Contrate os seus agentes",
-      lead: "Você está contratando {{agent}} para {{role}}. O {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
-      lead_female:
-        "Você está contratando {{agent}} para {{role}}. A {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
-      leadNoRole:
-        "Você está contratando {{agent}}. O {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
-      leadNoRole_female:
-        "Você está contratando {{agent}}. A {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      lead: "Você está contratando {{agent}} para {{role}}. Começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      leadNoRole: "Você está contratando {{agent}}. Começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
       leadMany: "Você está contratando {{names}}. Eles começam hoje, com {{lodi}}, e trabalham de dia e de noite.",
       leadAlone:
         "Você começa com o {{name}}, o RH dos agentes. Ele cria cada agente com você e trabalha de dia e de noite.",

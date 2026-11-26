@@ -477,7 +477,7 @@ describe("a team's start, asking its own AI (ADR 0253)", () => {
     await click(button(/^Continuar/), 16);
     expect(heading()).toBe(HIRE);
     expect(lead()).toBe(
-      "Você está contratando o Caio para cobrança. O Caio começa hoje, com o Lodi, e trabalha de dia e de noite.",
+      "Você está contratando o Caio para cobrança. Começa hoje, com o Lodi, e trabalha de dia e de noite.",
     );
     // The team asleep at night on the box's own header.
     expect(box().querySelector(".onb-pass:not([data-awake])")).not.toBeNull();

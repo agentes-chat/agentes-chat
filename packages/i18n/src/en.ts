@@ -1988,8 +1988,8 @@ export const en = {
       title: "Hire the team",
       titleOne: "Hire {{name}}",
       titlePersonal: "Hire your agents",
-      lead: "You're hiring {{agent}} for {{role}}. {{name}} starts today, with {{lodi}}, and works day and night.",
-      leadNoRole: "You're hiring {{agent}}. {{name}} starts today, with {{lodi}}, and works day and night.",
+      lead: "You're hiring {{agent}} for {{role}}. It starts today, with {{lodi}}, and works day and night.",
+      leadNoRole: "You're hiring {{agent}}. It starts today, with {{lodi}}, and works day and night.",
       leadMany: "You're hiring {{names}}. They start today, with {{lodi}}, and work day and night.",
       leadAlone:
         "You start with {{name}}, the agents' HR. {{name}} creates each agent with you and works day and night.",
