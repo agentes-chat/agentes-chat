@@ -59,6 +59,7 @@ export const RESET_KEEPS = [
   "machine_accounts",
   "machine_provisioning",
   "machine_phones",
+  "agent_proxies",
   "machine_connect_links",
   "machine_device_codes",
   "machine_rpc",
