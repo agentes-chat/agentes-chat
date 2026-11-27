@@ -23,7 +23,7 @@ import {
   defaultSize,
   type ExampleWords,
   exampleWidgetSpec,
-  kpiUnit,
+  kpiText,
   phoneSpan,
   sizeToLayout,
   type WidgetSize,
@@ -210,9 +210,9 @@ export function formatWithUnit(value: number, unit: string | undefined, locale: 
  * unit ("Nov 12 · R$ 18,420"), the value alone when the point has no label.
  */
 export const pointTip =
-  (labels: readonly string[] | undefined, values: readonly number[], unit: string | undefined, locale: string) =>
+  (labels: readonly string[] | undefined, values: readonly number[], text: (value: number) => string) =>
   (i: number): string => {
-    const value = formatWithUnit(values[i] ?? 0, unit, locale);
+    const value = text(values[i] ?? 0);
     const label = labels?.[i];
     return label ? `${label} · ${value}` : value;
   };
@@ -575,8 +575,9 @@ export function bleedSeries(spec: WidgetSpec | null | undefined, big: boolean, c
 
 /** What a tapped point of the trend along a card's foot (`bleedSeries`) says: a number's or a line's; null else. */
 export function bleedTip(spec: WidgetSpec | null | undefined, locale: string): ((i: number) => string) | null {
-  if (spec?.kind === "kpi") return pointTip(spec.sparkLabels, spec.spark ?? [], kpiUnit(spec), locale);
-  if (spec?.kind === "line") return pointTip(spec.labels, spec.values, spec.unit, locale);
+  if (spec?.kind === "kpi")
+    return pointTip(spec.sparkLabels, spec.spark ?? [], (v) => kpiText(spec, formatWidgetNumber(v, locale)));
+  if (spec?.kind === "line") return pointTip(spec.labels, spec.values, (v) => formatWithUnit(v, spec.unit, locale));
   return null;
 }
 

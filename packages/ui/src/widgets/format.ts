@@ -46,9 +46,9 @@ export function formatWithUnit(value: number, unit: string | undefined, locale: 
  * value with the unit ("Nov 12: R$ 18.420"); the value alone when the point has no label.
  */
 export const seriesTip =
-  (labels: readonly string[] | undefined, values: readonly number[], unit: string | undefined, locale: string) =>
+  (labels: readonly string[] | undefined, values: readonly number[], text: (value: number) => string) =>
   (i: number): string => {
-    const value = formatWithUnit(values[i] ?? 0, unit, locale);
+    const value = text(values[i] ?? 0);
     const label = labels?.[i];
     return label ? `${label}: ${value}` : value;
   };

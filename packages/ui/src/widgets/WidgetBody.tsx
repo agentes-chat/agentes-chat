@@ -15,7 +15,7 @@ import type {
   WidgetSpec,
   WidgetStatus,
 } from "./spec";
-import { kpiUnit } from "./spec";
+import { kpiText } from "./spec";
 import { WIDGET_CELL, widgetTones } from "./tiles";
 
 export interface WidgetBodyProps {
@@ -114,7 +114,7 @@ function KpiBody({
           height={40}
           bleed
           dot
-          tip={seriesTip(spec.sparkLabels, spec.spark, kpiUnit(spec), locale)}
+          tip={seriesTip(spec.sparkLabels, spec.spark, (v) => kpiText(spec, formatWidgetNumber(v, locale)))}
           label={label}
         />
       )}
@@ -159,7 +159,9 @@ function BarsBody({ spec, size, locale }: { spec: BarsWidgetSpec; size: { w: 1 |
     setOver(bar && value ? { x: bar.offsetLeft + bar.offsetWidth / 2, y: value.offsetTop } : null);
   }, [cursor.at, box, width]);
   const tip: ChartTipAt =
-    over && cursor.at !== null ? { ...over, text: seriesTip(labels, spec.values, spec.unit, locale)(cursor.at) } : null;
+    over && cursor.at !== null
+      ? { ...over, text: seriesTip(labels, spec.values, (v) => formatWithUnit(v, spec.unit, locale))(cursor.at) }
+      : null;
   return (
     <>
       {spec.unit && <div className="wk-cap">{spec.unit}</div>}
@@ -221,7 +223,7 @@ function LineBody({
         color={color}
         height={size.h === 2 ? 210 : 96}
         dot
-        tip={seriesTip(spec.labels, spec.values, spec.unit, locale)}
+        tip={seriesTip(spec.labels, spec.values, (v) => formatWithUnit(v, spec.unit, locale))}
         label={label}
       />
       <div className="wk-axis wk-axis--line">

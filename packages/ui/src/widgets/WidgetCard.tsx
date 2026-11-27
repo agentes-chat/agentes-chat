@@ -14,8 +14,8 @@ import { cx } from "../cx";
 import { useDarkTheme } from "../hooks/useDarkTheme";
 import { Icon } from "../icons/Icon";
 import { DitherLine } from "./ChartPieces";
-import { seriesTip } from "./format";
-import { type KpiWidgetSpec, kpiUnit, type WidgetSpec, type WidgetStatus } from "./spec";
+import { formatWidgetNumber, seriesTip } from "./format";
+import { type KpiWidgetSpec, kpiText, type WidgetSpec, type WidgetStatus } from "./spec";
 import { widgetTileVars } from "./tiles";
 import { WidgetBody } from "./WidgetBody";
 
@@ -236,7 +236,7 @@ export function WidgetBleed({
         height={size.h === 2 ? 120 : 56}
         bleed
         dot
-        tip={seriesTip(kpi.sparkLabels, kpi.spark, kpiUnit(kpi), locale)}
+        tip={seriesTip(kpi.sparkLabels, kpi.spark, (v) => kpiText(kpi, formatWidgetNumber(v, locale)))}
         label={label}
       />
     </div>

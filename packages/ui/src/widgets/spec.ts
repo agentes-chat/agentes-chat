@@ -511,8 +511,9 @@ export function exampleWidgetSpec(kind: WidgetKind, words: ExampleWords): Widget
   }
 }
 
-/** The unit a number's trend reads its points with: its prefix ("R$") or else its suffix ("%", "open"). */
-export const kpiUnit = (spec: KpiWidgetSpec): string | undefined => spec.prefix ?? spec.suffix;
+/** A number's value `n` (formatted) with its prefix and its suffix, as words read it: "R$ 1.800", "7%", "$ 45.3 k". */
+export const kpiText = (spec: KpiWidgetSpec, n: string): string =>
+  `${spec.prefix ? `${spec.prefix} ` : ""}${n}${!spec.suffix ? "" : spec.suffix === "%" ? "%" : ` ${spec.suffix}`}`;
 
 /** One line for a history row or a notification: the spec's headline in plain words (numbers unformatted). */
 export function specHeadline(spec: WidgetSpec): string {

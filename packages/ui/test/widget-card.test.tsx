@@ -278,6 +278,13 @@ describe("a widget's charts answer the pointer, a tap and the keys, as the chat'
     const bare = withWidth(300, () => card({ kind: "kpi", value: 7, spark: [3, 5] }));
     fireEvent.focus(bare.container.querySelector(".wg__bleed .ac-dline") as HTMLElement);
     expect(tipOf(bare.container)).toBe("5");
+    // A prefix and a suffix both read: a value in thousands never loses its "k".
+    cleanup();
+    const both = withWidth(300, () =>
+      card({ kind: "kpi", value: 45.3, prefix: "$", suffix: "k", spark: [41.5, 45.3] }),
+    );
+    fireEvent.focus(both.container.querySelector(".wg__bleed .ac-dline") as HTMLElement);
+    expect(tipOf(both.container)).toBe("$ 45,3 k");
   });
 
   test("a line: the label and the value with its unit", () => {

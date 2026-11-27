@@ -54,6 +54,7 @@ import {
   bleedSeries,
   bleedTip,
   formatWidgetNumber,
+  formatWithUnit,
   goalShare,
   isTall,
   pointTip,
@@ -384,7 +385,7 @@ function Bars({
   const room = height - 18;
   const max = Math.max(0, ...spec.values) || 1;
   const [picked, setPicked] = useState<number | null>(null);
-  const tip = pointTip(spec.labels, spec.values, spec.unit, i18n.language);
+  const tip = pointTip(spec.labels, spec.values, (v) => formatWithUnit(v, spec.unit, i18n.language));
   return (
     <View>
       <UnitTag unit={spec.unit} />

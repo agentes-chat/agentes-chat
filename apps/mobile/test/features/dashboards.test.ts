@@ -618,6 +618,10 @@ describe("the widget card", () => {
     expect(kpi?.(1)).toBe("8 nov · R$ 1.800");
     // No labels: the value alone; a suffix reads after it.
     expect(bleedTip({ kind: "kpi", value: 3, suffix: "%", spark: [4, 5] }, "en")?.(0)).toBe("4%");
+    // A prefix and a suffix both read: a value in thousands never loses its "k".
+    expect(bleedTip({ kind: "kpi", value: 3, prefix: "$", suffix: "k", spark: [41.5, 45.3] }, "en")?.(1)).toBe(
+      "$ 45.3 k",
+    );
     expect(bleedTip({ kind: "line", labels: ["a", "b"], values: [1, 2.5], unit: "ms" }, "en")?.(1)).toBe("b · 2.5 ms");
     expect(bleedTip({ kind: "bars", labels: ["a"], values: [1] }, "en")).toBeNull();
     expect(bleedTip(null, "en")).toBeNull();
