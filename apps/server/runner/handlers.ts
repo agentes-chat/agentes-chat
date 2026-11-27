@@ -407,7 +407,7 @@ export interface HandlerContext {
   browserViews?: BrowserViews;
   /** Protocol 21: the agents' use of their own desktops (ADR 0062); without it the runner refuses `desktop.look`… */
   desktopUse?: DesktopManager;
-  /** `PERSON_APPS_PROTOCOL`: the person's apps through `agent-desktop` (ADR 0257); without it `apps.run` is refused. */
+  /** `PERSON_APPS_PROTOCOL`: the person's apps through `agent-desktop` (ADR 0258); without it `apps.run` is refused. */
   apps?: AppControl;
   /** A person takes control of the agent's desktop: what the agent's pointer and keys are doing stops. */
   desktopTaken?: (agentId: string) => void;

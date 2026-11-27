@@ -12,7 +12,7 @@ name: Desktop
 #   Windows  agentes_<v>_x64-setup.exe, agentes_<v>_arm64-setup.exe (+ .sha256, + .sig: the installer is its own
 #            updater bundle)
 #   Linux    agentes_<v>_{amd64,arm64}.deb (+ .sha256), agentes_<v>_{amd64,arm64}.AppImage (+ .sha256, + .sig)
-# Every app carries the runner, agent-browser (ADR 0040) and agent-desktop (ADR 0257), and the server's own files, built once from the
+# Every app carries the runner, agent-browser (ADR 0040) and agent-desktop (ADR 0258), and the server's own files, built once from the
 # same commit (the `server` job: JavaScript and WebAssembly, the same on every system), for "Run agentes.chat
 # on this computer" (ADR 0066; tauri.native.conf.json adds them to the resources). `none` only builds the
 # current version as artifacts. `platforms` can leave systems out, also from a release: the server gives each
@@ -312,7 +312,7 @@ jobs:
           chmod +x "$BIN_DIR"/agent-browser-*
           lipo -info "$BIN_DIR/agent-browser-universal-apple-darwin"
 
-      # agent-desktop ships next to the runner too (ADR 0257), with its macOS helper beside it: the pinned
+      # agent-desktop ships next to the runner too (ADR 0258), with its macOS helper beside it: the pinned
       # release, checked against machine-protocol.ts's SHA-256, lipo'd for the universal build. Tauri re-signs
       # both with the Developer ID, so macOS credits Accessibility to the agentes.chat app.
       - name: Fetch agent-desktop

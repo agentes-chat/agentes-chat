@@ -38,7 +38,7 @@ export function browsersOf(status: ControlStatus | null | undefined): ControlBro
 /** An app counts as in use this long after the agent's last command in it (it thinks between steps). */
 export const APP_BUSY_MS = 90_000;
 
-/** The agents using the person's apps now (ADR 0257): "<Agent> is using <App>" with Stop. */
+/** The agents using the person's apps now (ADR 0258): "<Agent> is using <App>" with Stop. */
 export function appUsesOf(status: ControlStatus | null | undefined, now = Date.now()): ControlAppUse[] {
   return (status?.apps ?? []).filter((u) => now - Date.parse(u.actedAt) < APP_BUSY_MS);
 }

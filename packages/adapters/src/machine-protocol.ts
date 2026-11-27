@@ -864,14 +864,14 @@ export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
  */
 export const FOLDER_PICK_PROTOCOL = 92;
 /**
- * From this protocol on (ADR 0257): agents use the apps on the person's own computer through the pinned
+ * From this protocol on (ADR 0258): agents use the apps on the person's own computer through the pinned
  * `agent-desktop` CLI, which reads an app's accessibility tree and acts on its elements by ref without the person's
  * pointer or keyboard. `apps.run` runs one command of `APPS_COMMANDS`; the runner adds its own flags and refuses the
  * rest. `hello.apps` says whether it can run here: a computer where agents work as the person's own user (never
  * system mode). The server never sends `apps.run` to an older runner.
  */
 export const PERSON_APPS_PROTOCOL = 93;
-/** The `agent-desktop` release the runner and the desktop app ship (ADR 0257). */
+/** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
 export const AGENT_DESKTOP_VERSION = "1.3.1";
 /** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
 export type AgentDesktopTarget =
@@ -3237,7 +3237,7 @@ export interface RunnerInfo {
   terminal?: RunnerTerminalInfo;
   /** Protocol 21: whether agents can use their own desktops here (ADR 0062). */
   desktopUse?: RunnerDesktopUseInfo;
-  /** `PERSON_APPS_PROTOCOL`: whether agents can use the person's apps here (ADR 0257). */
+  /** `PERSON_APPS_PROTOCOL`: whether agents can use the person's apps here (ADR 0258). */
   apps?: RunnerTerminalInfo;
   /**
    * Protocol 18: `system` when each agent works as its own OS user (ADR 0058 §10); absent, every agent

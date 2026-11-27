@@ -141,7 +141,7 @@ const UNLISTED_TOOLS: Record<string, string[]> = {
   "context:read": ["read_conversation"],
   "schedule:write": ["delete_routine", "run_routine_now"],
   "sandbox:run": ["review_media"],
-  // The person's own apps (ADR 0257): on with the desktop, for a computer whose runner serves them.
+  // The person's own apps (ADR 0258): on with the desktop, for a computer whose runner serves them.
   [DESKTOP_SCOPE]: [...APPS_TOOLS],
 };
 

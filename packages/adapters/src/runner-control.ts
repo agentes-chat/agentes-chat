@@ -67,7 +67,7 @@ export interface ControlBrowser {
   link?: string;
 }
 
-/** An agent using one of the person's apps here (ADR 0257): what the menu bar says, with Stop. */
+/** An agent using one of the person's apps here (ADR 0258): what the menu bar says, with Stop. */
 export interface ControlAppUse {
   agentId: string;
   /** The app as `agent-desktop` names it (`Mail`, `Finder`). */

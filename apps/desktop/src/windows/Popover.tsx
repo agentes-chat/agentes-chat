@@ -1221,7 +1221,7 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
 }
 
 /**
- * An agent using one of the person's apps here (ADR 0257): "Theo está usando Mail", through the system's
+ * An agent using one of the person's apps here (ADR 0258): "Theo está usando Mail", through the system's
  * accessibility (the person's mouse and keyboard stay theirs), with Parar: its next commands in the apps are refused.
  */
 function AppUseRow({ home, use }: { home: Home; use: ControlAppUse }) {

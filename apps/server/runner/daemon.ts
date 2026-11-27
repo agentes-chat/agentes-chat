@@ -406,7 +406,7 @@ interface Session {
   streams: DataSockets;
   /** The agents' use of their desktops (ADR 0062): its helpers end with the session, the desktops don't. */
   desktopUse: DesktopManager;
-  /** The person's apps (ADR 0257); never in system mode. */
+  /** The person's apps (ADR 0258); never in system mode. */
   apps: AppControl;
   connection: RunnerConnection;
   /** System mode: the agents' workers, where all their work runs. */
@@ -1581,7 +1581,7 @@ export class RunnerDaemon implements RequestObserver {
     void browser.closeAll();
     // Single-user: every agent works as this runner's own user, so no `uids` and desktop use stays off (ADR 0062
     // §3). System mode: each agent's worker serves it as the agent's own user.
-    // The person's apps (ADR 0257): only where agents work as the person's own user.
+    // The person's apps (ADR 0258): only where agents work as the person's own user.
     const apps = new AppControl({
       home,
       log,

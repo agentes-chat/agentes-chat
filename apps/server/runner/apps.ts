@@ -22,7 +22,7 @@ import { unpackCommand } from "./cli-copies";
 import { RunnerError } from "./errors";
 
 /**
- * The person's own apps, for agents (ADR 0257): the pinned `agent-desktop` CLI reads an app's accessibility tree
+ * The person's own apps, for agents (ADR 0258): the pinned `agent-desktop` CLI reads an app's accessibility tree
  * and acts on its elements by ref through the accessibility API, so the person's pointer and keyboard stay theirs.
  * Agents never reach the CLI: the server sends one command at a time (`apps.run`) and this adds the flags that
  * matter and refuses the rest:

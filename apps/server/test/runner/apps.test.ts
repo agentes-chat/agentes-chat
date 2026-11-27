@@ -70,7 +70,7 @@ const ok = (r: AppsRunReply) => {
   return r.data as Record<string, unknown>;
 };
 
-describe("the person's apps through agent-desktop (ADR 0257)", () => {
+describe("the person's apps through agent-desktop (ADR 0258)", () => {
   test("the protocol carries apps.run and hello.apps", () => {
     expect(MACHINE_OPS).toContain("apps.run");
     const hello = parseRunnerFrame(

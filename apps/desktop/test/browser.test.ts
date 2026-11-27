@@ -93,7 +93,7 @@ describe("notifications", () => {
   });
 });
 
-describe("an agent using the person's apps (ADR 0257)", () => {
+describe("an agent using the person's apps (ADR 0258)", () => {
   const now = Date.parse("2026-11-26T12:00:00Z");
   const use = (ago: number) => ({ agentId: "a1", app: "Mail", actedAt: new Date(now - ago).toISOString() });
   test("a row while it acts, gone once it stopped a while ago", () => {

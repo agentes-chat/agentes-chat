@@ -19,7 +19,7 @@ import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../too
 import { untrustedBlock } from "../untrusted";
 
 /**
- * The person's own apps on their connected computer (ADR 0257): `apps_list`, `apps_read` and `apps_act`, through
+ * The person's own apps on their connected computer (ADR 0258): `apps_list`, `apps_read` and `apps_act`, through
  * the runner's `apps.run` and the pinned `agent-desktop`. On by default for every agent that may use that computer
  * and run code (driving apps reaches what commands reach). The agent reads an app's accessibility tree, acts on an
  * element by its ref, and reads again; the person's pointer and keyboard are never taken. An action that sends,
