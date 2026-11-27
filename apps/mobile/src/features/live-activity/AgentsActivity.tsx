@@ -28,7 +28,8 @@ import type { IslandProps } from "./props";
  *   its short word in amber there instead ("Aprovar?"), and the end says "Pronto" in green.
  * - Open: the face, the name and where on the top's leading side; the time on its trailing side, larger; what it is
  *   doing under them across the width, in up to two lines (with several, a line per agent).
- * - Lock Screen: the app's name and how many work, then a line per agent, every time in one column at the edge.
+ * - Lock Screen: the app's name and how many work (or "+N" past the ones shown), then a line per agent, every time in
+ *   one column at the edge. No line of its own for "+N": alone under the faces it read as a stray mark.
  *
  * It runs in the widget extension's own runtime (the `widget` directive): no hooks, no state, and nothing from this
  * module's scope but the components it imports, so its colors and helpers live inside it.
@@ -114,10 +115,11 @@ function AgentsActivityLayout(props: IslandProps, _environment: LiveActivityEnvi
           <Spacer />
           {tone === "working" && several ? (
             <Text modifiers={[font({ size: 13 }), foregroundStyle(DIM), lineLimit(1)]}>{props.headline}</Text>
+          ) : props?.more ? (
+            <Text modifiers={[font({ size: 13 }), foregroundStyle(DIM)]}>{`+${props.more}`}</Text>
           ) : null}
         </HStack>
         {agents.map((agent) => line(agent, 36, 15))}
-        {props?.more ? <Text modifiers={[font({ size: 13 }), foregroundStyle(DIM)]}>{`+${props.more}`}</Text> : null}
       </VStack>
     ),
     compactLeading: face(first, 22),
