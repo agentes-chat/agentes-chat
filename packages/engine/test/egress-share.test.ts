@@ -527,10 +527,12 @@ describe("on a self-hosted server (ADR 0237): people's computers lend to this se
       .set({ executors: { app: true } })
       .where(eq(schema.machines.id, desktop));
     const box = await pair(f.owner.id, "Server room box", MACHINE_PROTOCOL_VERSION);
+    // A Linux runner from before runners said whether the app runs them: not taken for the app here.
+    const oldBox = await pair(f.owner.id, "Old VPS", EGRESS_SHARE_PROTOCOL);
     // The Cloud: newest first, as before.
-    expect((await lendingComputers(f.db, f.org.id)).map((m) => m.id)).toEqual([box, desktop]);
+    expect((await lendingComputers(f.db, f.org.id)).map((m) => m.id)).toEqual([oldBox, box, desktop]);
     setServerLending(true);
-    expect((await lendingComputers(f.db, f.org.id)).map((m) => m.id)).toEqual([desktop, box]);
+    expect((await lendingComputers(f.db, f.org.id)).map((m) => m.id)).toEqual([desktop, oldBox, box]);
   });
 
   test("the owners of computers that lend hear it once, where the server starts lending", async () => {

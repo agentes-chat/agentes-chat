@@ -27,6 +27,7 @@ import {
   iphoneRestartNext,
   iphoneRestartOf,
   iphoneSteps,
+  joinLends,
   lendingDevice,
   lendsInternet,
   linkPhase,
@@ -859,6 +860,14 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(lendsInternet({ devices: [computer({ machineKind: "managed" })] })).toBe(true);
     expect(lendsInternet({ devices: [computer({})] })).toBe(false);
     expect(lendsInternet(undefined)).toBe(false);
+  });
+
+  test("where the server lends, a Linux computer that joins is a server box and borrows; on the Cloud it lends (ADR 0237)", () => {
+    const here = { devices: [], lendsInternet: true, serverBoxesBorrow: true };
+    expect(joinLends(here, "linux")).toBe(false);
+    expect(joinLends(here, "darwin")).toBe(true);
+    expect(joinLends({ devices: [], lendsInternet: true }, "linux")).toBe(true);
+    expect(joinLends({ devices: [], lendsInternet: false, serverBoxesBorrow: true }, "darwin")).toBe(false);
   });
 });
 

@@ -50,8 +50,12 @@ export async function lendingComputers(db: Database, orgId: string) {
     )
     .orderBy(desc(sql`coalesce(${machines.egressShareAt}, ${machines.createdAt})`));
   if (!serverLending()) return rows;
-  return rows.sort((a, b) => Number(runByApp(b)) - Number(runByApp(a)));
+  return rows.sort((a, b) => Number(desktopApp(b)) - Number(desktopApp(a)));
 }
+
+/** Said by its runner, or an older one off Linux (`runByApp`): an old Linux runner that doesn't say comes after. */
+const desktopApp = (m: Parameters<typeof runByApp>[0]) =>
+  m.executors?.app === true || (m.os !== "linux" && runByApp(m));
 
 const closeCodeFor = (error: unknown) => {
   if (!(error instanceof MachineRequestError)) return STREAM_CLOSE.unreachable;

@@ -162,8 +162,11 @@ block datacenters, the person's own location).
      `device.internet_shared` notice: a newly paired one from its first hello, one paired before at its next, once
      (off, it stays as people set it). It then borrows (§2) without being marked the workspace's. Its owner may turn
      it on to lend; that sets `egress_share_at`, which keeps it. The code page (`/conectar`, which confirms Terminal
-     installs; the app confirms its own) starts the switch off for Linux and sends it only when changed there.
-   - The pick (`lendingComputers`) puts computers the app runs before Terminal installs, then the newest as before.
+     installs; the app confirms its own) starts the switch off for Linux where the server lends (`serverBoxesBorrow`
+     in the devices list, `joinLends`) and sends it only when changed there; Let it join, on the web and the phone,
+     doesn't say a Linux computer will lend there.
+   - The pick (`lendingComputers`) puts computers the app runs before Terminal installs, then the newest as before. An
+     older Linux runner that doesn't say (`hello.app`) counts as a Terminal install there.
    - People's own desktops keep the switch on by default (a Mac or PC, and Linux run by the app). A computer still
      never lends and borrows at once (the switch's two states), and the pick skips the borrower.
    - Never on the Cloud (`MACHINE_PROVISIONING=external`): the hello leaves the switch alone and the pick stays

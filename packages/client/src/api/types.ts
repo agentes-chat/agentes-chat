@@ -9320,6 +9320,8 @@ export interface DevicesList {
    * server lends). Absent from an older server: only where the workspace has its own computer (`lendsInternet`).
    */
   lendsInternet?: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead. Absent from an older server: no. */
+  serverBoxesBorrow?: boolean;
 }
 
 /** A one-line install: works once, for a few minutes, and the computer still asks to join. */
