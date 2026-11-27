@@ -181,6 +181,7 @@ export const RESET_ERASES = [
   "issue_assignees",
   "issue_columns",
   "issue_counters",
+  "issue_links",
   "issue_projects",
   "issues",
   "live_assets",
