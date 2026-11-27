@@ -8,9 +8,10 @@ import { siteApi } from "../control/devices";
 import { hintFor, PrefRow } from "../ui/settings";
 
 /**
- * "Agents use this computer's internet" (ADR 0237): the workspace's own computer opens websites through this one's
- * connection while it is on. Its owner turns it on; on, it says so in a line that stays in sight. Nothing in a
- * workspace without its own computer (`shareInternet` null).
+ * "Agents use this computer's internet" (ADR 0237): the computers that borrow (the workspace's own; on a self-hosted
+ * server, that server's computer and its reads of web pages) open websites through this one's connection while it is
+ * on. Its owner turns it on; on, it says so in a line that stays in sight. Nothing where nothing borrows
+ * (`shareInternet` null).
  */
 export function InternetRow({
   server,

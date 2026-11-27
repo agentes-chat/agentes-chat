@@ -883,7 +883,7 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
   });
 });
 
-test("whose internet the workspace's computer uses: the computer in the line, who connected it on its name's tip", () => {
+test("whose internet a borrowing computer uses: the computer in the line, who connected it on its name's tip", () => {
   const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
   const via = { machineId: "m-ana", name: "Ana's iMac", userName: "Ana" };
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: via })).toBe(
@@ -902,6 +902,11 @@ test("whose internet the workspace's computer uses: the computer in the line, wh
   ).toBeNull();
   expect(egressViaParts(words, { kind: "managed", online: false, egressVia: via })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: false, egressVia: via })).toBeNull();
-  expect(egressViaText(t, { kind: "connected", online: true, egressVia: via })).toBeNull();
+  // A self-hosted server's own computer, or one marked the workspace's, borrows too (the server sends it only then).
+  expect(egressViaText(t, { kind: "host", online: true, egressVia: via })).toBe(
+    'machines.egress.via{"name":"Ana\'s iMac"}',
+  );
+  expect(egressViaParts(words, { kind: "host", online: true, egressVia: via })?.name).toBe("Ana's iMac");
+  expect(egressViaText(t, { kind: "connected", online: true, egressVia: null })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

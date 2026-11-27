@@ -696,7 +696,7 @@ export const osName = (t: TFunction, os: string) =>
 
 /** ADR 0237: "Agents use the internet of Ana's laptop" while a person's computer lends its internet; else null. */
 export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">): string | null {
-  const via = m.kind === "managed" && m.online ? m.egressVia : null;
+  const via = m.online ? m.egressVia : null;
   return via ? t("machines.egress.via", { name: via.name }) : null;
 }
 
@@ -705,7 +705,7 @@ export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" |
  * name alone a tip: who connected it ("Connected by Ana"), or null when nobody is named.
  */
 export function egressViaParts(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">) {
-  const via = m.kind === "managed" && m.online ? m.egressVia : null;
+  const via = m.online ? m.egressVia : null;
   if (!via) return null;
   const [before = "", after = ""] = t("machines.egress.via", { name: "\u0000" }).split("\u0000");
   return { before, name: via.name, after, by: via.userName ? t("machines.pairedBy", { name: via.userName }) : null };

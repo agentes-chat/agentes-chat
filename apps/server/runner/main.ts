@@ -705,6 +705,7 @@ async function host(p: Parsed): Promise<number> {
           ...runnerEndpoints(),
           ...loopbackEndpoints([flags.server]),
         ],
+        ownServices: () => computer.egressProxies(),
         log,
       })
     : null;

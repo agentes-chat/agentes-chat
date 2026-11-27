@@ -288,7 +288,7 @@ export const Machine = z
       .optional()
       .openapi({
         description:
-          "The workspace's own computer: the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
+          "A computer that borrows (the workspace's own, or on a self-hosted server this server's own or one marked the workspace's that doesn't lend): the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
       }),
     moving: z.boolean().optional().openapi({
       description:

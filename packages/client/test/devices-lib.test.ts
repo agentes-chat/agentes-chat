@@ -28,6 +28,7 @@ import {
   iphoneRestartOf,
   iphoneSteps,
   lendingDevice,
+  lendsInternet,
   linkPhase,
   mayChangeTasks,
   mayTakePhone,
@@ -850,6 +851,14 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(shareInternetText(t, computer({ shareInternet: { on: false, inUse: false } }), lending)).toBeNull();
     expect(shareInternetText(t, computer({ shareInternet: null }), lending)).toBeNull();
     expect(lendingDevice([mine])).toBeNull();
+  });
+
+  test("a computer that joins lends where the server says computers lend; an older server: beside the workspace's own", () => {
+    expect(lendsInternet({ devices: [computer({})], lendsInternet: true })).toBe(true);
+    expect(lendsInternet({ devices: [computer({ machineKind: "managed" })], lendsInternet: false })).toBe(false);
+    expect(lendsInternet({ devices: [computer({ machineKind: "managed" })] })).toBe(true);
+    expect(lendsInternet({ devices: [computer({})] })).toBe(false);
+    expect(lendsInternet(undefined)).toBe(false);
   });
 });
 
