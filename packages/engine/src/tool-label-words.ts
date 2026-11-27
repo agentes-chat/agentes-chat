@@ -53,14 +53,18 @@ const OUTPUT_SCHEMA = {
   additionalProperties: false,
 };
 
+const LEADING = " \"'“”‘’«»「」`";
+const TRAILING = `${LEADING}.…!。`;
+
 /** The model's words for a label: one line, no quotes or closing dots; null when nothing fit. */
 export function toolLabelText(raw: unknown): string | null {
-  const text = (typeof raw === "string" ? raw : "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^["'“”‘’«»「」`]+|["'“”‘’«»「」`]+$/gu, "")
-    .replace(/[\s.…!。]+$/u, "")
-    .trim();
+  const line = (typeof raw === "string" ? raw : "").replace(/\s+/g, " ");
+  // Trimmed by index, not by a `[…]+$` pattern, which backtracks on a long run of quotes (the model's output is input).
+  let start = 0;
+  let end = line.length;
+  while (start < end && LEADING.includes(line[start] ?? "")) start++;
+  while (end > start && TRAILING.includes(line[end - 1] ?? "")) end--;
+  const text = line.slice(start, end);
   return text && text.length <= TOOL_LABEL_WORDS_MAX ? text : null;
 }
 

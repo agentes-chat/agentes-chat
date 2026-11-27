@@ -64,6 +64,8 @@ export const RESET_KEEPS = [
   "machine_rpc",
   "connector_connections",
   "connector_tool_pins",
+  // Kept connectors' tool names in a language: words, never anything made in the workspace.
+  "tool_label_words",
   "custom_tools",
   "oauth_clients",
   "oauth_states",

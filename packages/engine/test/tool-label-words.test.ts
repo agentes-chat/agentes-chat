@@ -17,6 +17,8 @@ test("a label is one short line: quotes and closing dots go, an answer too long 
   expect(toolLabelText("")).toBeNull();
   expect(toolLabelText(42)).toBeNull();
   expect(toolLabelText("x".repeat(61))).toBeNull();
+  expect(toolLabelText(`${'"'.repeat(100_000)}x`)).toBe("x");
+  expect(toolLabelText("«Criar link».")).toBe("Criar link");
 });
 
 test("the workspace's cheap model writes the missing ones through the gateway, recorded on the org, then they are kept", async () => {
