@@ -616,7 +616,7 @@ describe("Notificações", () => {
     await key(window, "j");
     await key(document.body, "Enter");
     await settle(4);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
     cleanup();
 
     // J and a click both leave the focus on the row, a button: Enter there opens it too.
@@ -625,7 +625,7 @@ describe("Notificações", () => {
     expect((document.activeElement as HTMLElement).dataset.n).toBe("n-thread");
     await key(document.activeElement as Element, "Enter");
     await settle(4);
-    expect(again.router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(again.router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
   });
 
   test("a body the server wrote reads in the person's language, in the row, open and in the snooze toast", async () => {
@@ -810,21 +810,21 @@ describe("Notificações", () => {
     const item = await open("n-thread");
     await click(within(item).getByRole("button", { name: "Abrir" }));
     await settle(4);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
     expect(state.calls.find((c) => c.method === "notifications.read")?.args).toEqual([ORG_ID, "n-thread", true]);
     cleanup();
 
     const twice = await go();
     await act(async () => fireEvent.doubleClick(row("n-thread")));
     await settle(4);
-    expect(twice.router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(twice.router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
     expect(twice.state.calls.find((c) => c.method === "notifications.read")?.args).toEqual([ORG_ID, "n-thread", true]);
     cleanup();
 
     const menu = await go();
     await open("n-thread");
     await fromMoreMenu(/^Abrir/);
-    expect(menu.router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(menu.router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
   });
 
   test("live: a new notification lands from the WebSocket; a resolved one leaves; the sidebar's entry follows", async () => {
@@ -1404,7 +1404,7 @@ describe("a click on a browser notification (ADR 0071)", () => {
     const state = seed(inbox());
     const { router } = await renderApp(`/org/${ORG_ID}/notifications?open=n-thread`, { api: createFakeApi(state) });
     await settle(8);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
     expect(state.calls.filter((c) => c.method === "notifications.read").map((c) => c.args)).toEqual([
       [ORG_ID, "n-thread", true],
     ]);

@@ -4417,6 +4417,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     },
   };
   const threads = createFakeThreads(ctx, (method, ...args) => state.calls.push({ method, args }));
+  const missions = createFakeMissions(ctx, (method, ...args) => state.calls.push({ method, args }));
   state.openThread = threads.openByReply;
   const machines = createFakeMachines(ctx, (method, ...args) => state.calls.push({ method, args }));
   const devices = createFakeDevices(
@@ -4479,8 +4480,25 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       (method, ...args) => state.calls.push({ method, args }),
     ),
     wiki: createFakeWiki(ctx, (method, ...args) => state.calls.push({ method, args })),
-    threads,
-    missions: createFakeMissions(ctx, (method, ...args) => state.calls.push({ method, args })),
+    threads: {
+      ...threads,
+      // Like the server, a thread names the mission in it.
+      get: async (orgId, threadId) => {
+        const thread = await threads.get(orgId, threadId);
+        if (thread.mission) return thread;
+        const m = await missions.ofThread(orgId, threadId).catch(() => null);
+        if (!m) return thread;
+        const mission = {
+          id: m.id,
+          agentId: m.agentId,
+          status: m.status,
+          planDone: m.plan.done,
+          planTotal: m.plan.total,
+        };
+        return { ...thread, mission: { ...mission, waitingYou: m.plan.waiting } };
+      },
+    },
+    missions,
     skills: createFakeSkills(
       ctx,
       (method, ...args) => state.calls.push({ method, args }),

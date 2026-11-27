@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { ApiError } from "@agenteschat/client";
-import { act, cleanup, fireEvent, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { ADA_ID, ATLAS_ID, comfortable, createFakeApi, ENG_ID, GENERAL_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
@@ -256,17 +256,18 @@ describe("the working row at the conversation's end (the bar above the composer 
       title: "Login com 401",
     } as Parameters<typeof api.threads.create>[1]);
     const { sockets } = await renderApp(`/org/${ORG_ID}/threads/m-1`, { api });
-    await settle(8);
+    // Its link opens it beside its channel: the thread is the panel.
+    const panel = await waitFor(() => screen().getByRole("complementary", { name: "Thread" }));
     const socket = sockets.last();
     await act(async () => socket.open());
     await settle(2);
     await push(socket, { type: "user.typing", userId: "u-joao", threadId: null, ttlMs: 6000 });
     await settle();
-    expect(typingBar().dataset.active).toBe("false");
+    expect((panel.querySelector(".ac-typing") as HTMLElement).dataset.active).toBe("false");
     await push(socket, { type: "user.typing", userId: "u-joao", threadId: "m-1", ttlMs: 6000 });
     await settle();
-    expect(bar().textContent).toBe("João está digitando…");
-    const reply = screen().getByRole("combobox", { name: /Responder na thread/ });
+    expect(panel.querySelector(".ac-typing .ac-typing__text")?.textContent).toBe("João está digitando…");
+    const reply = within(panel).getByRole("combobox", { name: /Responder na thread/ });
     await act(async () => fireEvent.change(reply, { target: { value: "vou olhar" } }));
     expect(socket.sent.filter((f) => (f as { type: string }).type === "typing")).toEqual([
       { type: "typing", channelId: ENG_ID, threadId: "m-1" },
@@ -1370,7 +1371,8 @@ describe("caught up once the server confirms the channel's subscription", () => 
       title: "Login com 401",
     } as Parameters<typeof api.threads.create>[1]);
     const { sockets } = await renderApp(`/org/${ORG_ID}/threads/m-1`, { api });
-    await settle(8);
+    // Its link opens it beside its channel: the thread is the panel.
+    const panel = await waitFor(() => screen().getByRole("complementary", { name: "Thread" }));
     const socket = sockets.last();
     await act(async () => socket.open());
     await settle(2);
@@ -1384,10 +1386,18 @@ describe("caught up once the server confirms the channel's subscription", () => 
       agentRunId: "r-reply",
       createdAt: new Date().toISOString(),
     });
-    expect(rowsWith("Corrigido: o refresh usa segundos agora.")).toHaveLength(0);
+    expect(
+      within(panel)
+        .queryAllByRole("article")
+        .filter((a) => a.textContent?.includes("Corrigido: o refresh usa segundos agora.")),
+    ).toHaveLength(0);
     await act(async () => socket.push({ type: "subscribed", channelId: ENG_ID }));
     await settle(4);
-    expect(rowsWith("Corrigido: o refresh usa segundos agora.")).toHaveLength(1);
+    expect(
+      within(panel)
+        .queryAllByRole("article")
+        .filter((a) => a.textContent?.includes("Corrigido: o refresh usa segundos agora.")),
+    ).toHaveLength(1);
   });
 
   /** João's message to Ada, read while her run was at `status`. */
