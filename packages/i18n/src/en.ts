@@ -12055,6 +12055,8 @@ export const en = {
     silent: "Didn't hear anything. Nothing was sent.",
     notSent: "Couldn't send the audio.",
     limit: "Today's audio limit is used up. Write here, or try again tomorrow.",
+    /** The workspace has no agentes.chat plan in force (a billing hold): the apps add the way to one. */
+    plan: "Voice messages come with an agentes.chat plan. You can still write here.",
     micBlocked: "The microphone is blocked",
     micBlockedHint: "Allow the microphone in your device settings to record.",
     openSettings: "Open settings",

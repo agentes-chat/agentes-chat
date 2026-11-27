@@ -28,6 +28,7 @@ import type { MessageVoice } from "./message-preview";
 import { attachmentRefsFor, MAX_MESSAGE_LENGTH, postPersonMessage } from "./messages";
 import { can } from "./organizations";
 import { enqueue } from "./outbox";
+import { billingHold } from "./standing";
 import { tellSurfaceVoiceDropped } from "./surfaces/deliveries";
 
 const { voiceClips, agents, channels, organizationMembers, organizationSettings, users } = schema;
@@ -139,6 +140,12 @@ export async function voiceOn(deps: Pick<VoiceDeps, "db" | "engines">, orgId: st
   return row?.on ?? true;
 }
 
+/**
+ * A workspace on a billing hold (ADR 0079) has no plan in force: its recordings aren't turned into words, since the
+ * engines are the server's and only a plan pays for them. Without a billing service no workspace is ever on one.
+ */
+export const voiceNeedsPlan = async (db: Database, orgId: string) => (await billingHold(db, orgId)) !== null;
+
 /** Stores a recording and queues its words. A resend with the same `clientId` finds what the first one stored. */
 export async function acceptVoiceClip(
   deps: VoiceDeps,
@@ -172,6 +179,9 @@ export async function acceptVoiceClip(
     .where(and(eq(voiceClips.orgId, orgId), eq(voiceClips.userId, userId), eq(voiceClips.clientId, clientId)));
   if (existing) return { clipId: existing.id };
   if (!(await voiceOn(deps, orgId))) throw new ValidationError("Voice messages are off here", "voice.unavailable");
+  if (await voiceNeedsPlan(deps.db, orgId)) {
+    throw new ValidationError("Voice messages come with an agentes.chat plan", "voice.plan");
+  }
   if (input.audio.length === 0 || input.audio.length > VOICE_MAX_BYTES) {
     throw new ValidationError("The recording is too large", "voice.too_large");
   }

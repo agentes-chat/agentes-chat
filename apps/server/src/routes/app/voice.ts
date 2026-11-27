@@ -12,6 +12,7 @@ import {
   type VoiceDeps,
   voiceAllowed,
   voiceClipAudio,
+  voiceNeedsPlan,
   voiceOn,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
@@ -102,7 +103,7 @@ export function voiceRoutes(deps: AppDeps) {
       responses: {
         202: json(z.object({ clipId: z.uuid() }), "Stored; its words are on the way"),
         ...errors,
-        409: errorResponse("Voice messages are off (`voice.unavailable`)"),
+        409: errorResponse("Voice messages are off (`voice.unavailable`), or come with a plan (`voice.plan`)"),
         413: errorResponse("The recording is too large (`voice.too_large`)"),
         429: errorResponse("Too many (`voice_limit`, `rate_limited`)"),
       },
@@ -150,7 +151,9 @@ export function voiceRoutes(deps: AppDeps) {
       } catch (error) {
         if (error instanceof ValidationError) {
           if (error.code === "voice.limit") return apiError(c, 429, "voice_limit", error.message);
-          if (error.code === "voice.unavailable") return apiError(c, 409, error.code, error.message);
+          if (error.code === "voice.unavailable" || error.code === "voice.plan") {
+            return apiError(c, 409, error.code, error.message);
+          }
           if (error.code === "voice.too_large") return apiError(c, 413, error.code, error.message);
         }
         throw error;
@@ -166,16 +169,28 @@ export function voiceRoutes(deps: AppDeps) {
       security,
       summary: "Whether this person may start recording now",
       request: { params: OrgParams },
-      responses: { 200: json(z.object({ allowed: z.boolean() })), ...errors },
+      responses: {
+        200: json(
+          z.object({
+            allowed: z.boolean(),
+            reason: z.enum(["plan"]).optional().openapi({
+              description: "`plan`: the workspace has no plan in force (a billing hold), and voice comes with one.",
+            }),
+          }),
+        ),
+        ...errors,
+      },
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
       const userId = c.get("user").id;
       await requirePermission(deps.db, userId, orgId, "read");
       const v = deps.extras?.voice;
-      const allowed = Boolean(v) && (await voiceOn(voice(), orgId)) && (await voiceAllowed(voice(), userId, orgId));
+      if (!v || !(await voiceOn(v, orgId))) return c.json({ allowed: false }, 200);
+      if (await voiceNeedsPlan(deps.db, orgId)) return c.json({ allowed: false, reason: "plan" as const }, 200);
+      const allowed = await voiceAllowed(v, userId, orgId);
       // The app asks just before recording: a server of one's own that loads its model on demand starts now.
-      if (allowed) for (const engine of voice().engines()) engine.warm?.(orgId);
+      if (allowed) for (const engine of v.engines()) engine.warm?.(orgId);
       return c.json({ allowed }, 200);
     },
   );

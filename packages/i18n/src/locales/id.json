@@ -11099,6 +11099,7 @@
     "silent": "Tidak terdengar apa pun. Tidak ada yang dikirim.",
     "notSent": "Audio tidak bisa dikirim.",
     "limit": "Batas audio hari ini sudah habis. Tulis di sini, atau coba lagi besok.",
+    "plan": "Pesan suara tersedia dengan paket agentes.chat. Kamu tetap bisa menulis di sini.",
     "micBlocked": "Mikrofon diblokir",
     "micBlockedHint": "Izinkan mikrofon di pengaturan perangkatmu untuk merekam.",
     "openSettings": "Buka pengaturan",
@@ -16372,6 +16373,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
+    },
     "leadCloud": "Tempat agenmu bekerja: komputer ruang kerja dan perangkat yang dihubungkan orang-orang.",
     "lead": "Tempat agenmu bekerja: komputer dan ponsel yang dihubungkan orang-orang.",
     "connect": "Hubungkan perangkat",
@@ -17012,22 +17029,6 @@
         "once": "Diizinkan sekali.",
         "always": "{{deviceName}} sekarang dibagikan dengan mereka.",
         "no": "Kamu menolak."
-      }
-    },
-    "permission": {
-      "title": "Menunggu {{permission}} di {{computer}}",
-      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
-      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
-      "asked": "Diperlukan untuk menjalankan {{trigger}}",
-      "names": {
-        "app_management": "Manajemen App",
-        "screen": "Perekaman Layar",
-        "accessibility": "Aksesibilitas",
-        "disk": "Akses Disk Penuh",
-        "network": "Jaringan Lokal",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomatisasi"
       }
     }
   },

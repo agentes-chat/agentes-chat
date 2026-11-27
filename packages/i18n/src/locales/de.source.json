@@ -27940,6 +27940,9 @@
   "voice.limit": {
     "value": "Today's audio limit is used up. Write here, or try again tomorrow."
   },
+  "voice.plan": {
+    "value": "Voice messages come with an agentes.chat plan. You can still write here."
+  },
   "voice.micBlocked": {
     "value": "The microphone is blocked"
   },
@@ -41493,9 +41496,6 @@
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
   },
-  "devices.leadCloud": {
-    "value": "Where your agents work: the workspace computer and the devices people connect."
-  },
   "devices.permission.title": {
     "value": "Waiting for {{permission}} on {{computer}}"
   },
@@ -41531,6 +41531,9 @@
   },
   "devices.permission.names.automation": {
     "value": "Automation"
+  },
+  "devices.leadCloud": {
+    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."

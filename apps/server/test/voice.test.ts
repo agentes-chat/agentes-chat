@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
-import { VOICE_MAX_BYTES } from "@agenteschat/engine";
+import { setBillingHold, VOICE_MAX_BYTES } from "@agenteschat/engine";
 import { type Browser, browser, createTestServer, signUp, type TestServer } from "./harness";
 
 /** Voice messages over HTTP (ADR 0100): sending, playing, expiry, the switch and the owner's provider. */
@@ -106,6 +106,28 @@ test("the workspace's switch and the server's engine decide the microphone", asy
   expect(await errorCode(refused)).toBe("voice.unavailable");
   const allowed = await owner(`/api/app/organizations/${orgId}/voice/allowed`);
   expect(await allowed.json()).toEqual({ allowed: false });
+});
+
+test("a workspace with no plan in force gets no words: voice comes with a plan, and nothing is stored", async () => {
+  const heard: string[] = [];
+  const counting = (async (url: string | URL | Request) => {
+    heard.push(String(url));
+    return Response.json({ text: "Ada, oi" });
+  }) as unknown as typeof fetch;
+  const { server, owner, orgId, channelId } = await start(undefined, counting);
+  for (const hold of ["payment", "unpaid", "ended"] as const) {
+    await setBillingHold({ db: server.db }, orgId, hold);
+    const refused = await send(owner, orgId, channelId);
+    expect(refused.status).toBe(409);
+    expect(await errorCode(refused)).toBe("voice.plan");
+    const allowed = await owner(`/api/app/organizations/${orgId}/voice/allowed`);
+    expect(await allowed.json()).toEqual({ allowed: false, reason: "plan" });
+  }
+  expect(await server.db.select().from(schema.voiceClips).where(eq(schema.voiceClips.orgId, orgId))).toEqual([]);
+  expect(heard).toEqual([]);
+  await setBillingHold({ db: server.db }, orgId, null);
+  expect((await send(owner, orgId, channelId)).status).toBe(202);
+  expect(await (await owner(`/api/app/organizations/${orgId}/voice/allowed`)).json()).toEqual({ allowed: true });
 });
 
 test("a server of one's own that asked for it hears when someone is about to record, with the workspace", async () => {

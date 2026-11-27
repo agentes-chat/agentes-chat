@@ -11892,6 +11892,7 @@
     "silent": "No se escuchó nada. No se envió nada.",
     "notSent": "No se pudo enviar el audio.",
     "limit": "Se acabó el límite de audios de hoy. Escribe aquí o vuelve a intentarlo mañana.",
+    "plan": "Los mensajes de voz vienen con un plan de agentes.chat. Puedes seguir escribiendo aquí.",
     "micBlocked": "El micrófono está bloqueado",
     "micBlockedHint": "Permite el micrófono en la configuración de tu dispositivo para grabar.",
     "openSettings": "Abrir configuración",
@@ -17412,6 +17413,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Esperando {{permission}} en {{computer}}",
+      "next": "Permítelo en la app agentes.chat de ese equipo.",
+      "askedBy": "Lo pidió {{agent}} para ejecutar {{trigger}}",
+      "asked": "Hace falta para ejecutar {{trigger}}",
+      "names": {
+        "app_management": "Gestión de apps",
+        "screen": "Grabación de pantalla",
+        "accessibility": "Accesibilidad",
+        "disk": "Acceso total al disco",
+        "network": "Red local",
+        "camera": "Cámara",
+        "microphone": "Micrófono",
+        "automation": "Automatización"
+      }
+    },
     "leadCloud": "Donde trabajan tus agentes: la computadora del espacio de trabajo y los dispositivos que conectan las personas.",
     "lead": "Donde trabajan tus agentes: las computadoras y los teléfonos que conectan las personas.",
     "connect": "Conectar un dispositivo",
@@ -18060,22 +18077,6 @@
         "once": "Permitido una vez.",
         "always": "{{deviceName}} ya se comparte con ellos.",
         "no": "Dijiste que no."
-      }
-    },
-    "permission": {
-      "title": "Esperando {{permission}} en {{computer}}",
-      "next": "Permítelo en la app agentes.chat de ese equipo.",
-      "askedBy": "Lo pidió {{agent}} para ejecutar {{trigger}}",
-      "asked": "Hace falta para ejecutar {{trigger}}",
-      "names": {
-        "app_management": "Gestión de apps",
-        "screen": "Grabación de pantalla",
-        "accessibility": "Accesibilidad",
-        "disk": "Acceso total al disco",
-        "network": "Red local",
-        "camera": "Cámara",
-        "microphone": "Micrófono",
-        "automation": "Automatización"
       }
     }
   },

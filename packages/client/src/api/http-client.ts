@@ -1102,7 +1102,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       exportUrl: (orgId) => `${base}${org(orgId)}/export`,
     },
     voice: {
-      allowed: (orgId) => request<{ allowed: boolean }>(`${org(orgId)}/voice/allowed`),
+      allowed: (orgId) => request<{ allowed: boolean; reason?: "plan" }>(`${org(orgId)}/voice/allowed`),
       send: (orgId, channelId, input) => {
         const form = new FormData();
         const name = input.blob.type.startsWith("audio/webm") ? "voice.webm" : "voice.m4a";

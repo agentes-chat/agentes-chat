@@ -34,6 +34,7 @@ export const surfaceClientId = (surfaceId: string, inboundId: string) =>
 /** Voice-note refusals that still let the recording through as a plain file. */
 const VOICE_AS_FILE_CODES = new Set([
   "voice.unavailable",
+  "voice.plan",
   "voice.too_large",
   "voice.bad_duration",
   "voice.limit",

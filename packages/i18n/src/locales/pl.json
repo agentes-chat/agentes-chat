@@ -12382,6 +12382,7 @@
     "silent": "Nic nie było słychać. Nic nie zostało wysłane.",
     "notSent": "Nie udało się wysłać nagrania.",
     "limit": "Dzisiejszy limit nagrań się wyczerpał. Napisz tutaj albo spróbuj ponownie jutro.",
+    "plan": "Wiadomości głosowe są dostępne w planie agentes.chat. Pisać tutaj możesz dalej.",
     "micBlocked": "Mikrofon jest zablokowany",
     "micBlockedHint": "Zezwól na mikrofon w ustawieniach urządzenia, aby nagrywać.",
     "openSettings": "Otwórz ustawienia",
@@ -18066,6 +18067,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
+      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
+      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
+      "asked": "Potrzebne do uruchomienia {{trigger}}",
+      "names": {
+        "app_management": "Zarządzanie aplikacjami",
+        "screen": "Nagrywanie ekranu",
+        "accessibility": "Dostępność",
+        "disk": "Pełny dostęp do dysku",
+        "network": "Sieć lokalna",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automatyzacja"
+      }
+    },
     "leadCloud": "Gdzie pracują twoi agenci: komputer przestrzeni roboczej i urządzenia, które podłączają osoby z zespołu.",
     "lead": "Gdzie pracują twoi agenci: komputery i telefony, które podłączają osoby z zespołu.",
     "connect": "Podłącz urządzenie",
@@ -18718,22 +18735,6 @@
         "once": "Zezwolono raz.",
         "always": "Urządzenie {{deviceName}} jest im teraz udostępnione.",
         "no": "Odmówiono."
-      }
-    },
-    "permission": {
-      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
-      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
-      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
-      "asked": "Potrzebne do uruchomienia {{trigger}}",
-      "names": {
-        "app_management": "Zarządzanie aplikacjami",
-        "screen": "Nagrywanie ekranu",
-        "accessibility": "Dostępność",
-        "disk": "Pełny dostęp do dysku",
-        "network": "Sieć lokalna",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Automatyzacja"
       }
     }
   },

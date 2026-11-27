@@ -12070,6 +12070,7 @@ export const ptBR = {
     silent: "Não ouvi nada. Nada foi enviado.",
     notSent: "Não deu para enviar o áudio.",
     limit: "O limite de áudios de hoje acabou. Escreva por aqui ou tente de novo amanhã.",
+    plan: "As mensagens de voz vêm com um plano do agentes.chat. Você ainda pode escrever aqui.",
     micBlocked: "O microfone está bloqueado",
     micBlockedHint: "Libere o microfone nos ajustes do aparelho para gravar.",
     openSettings: "Abrir ajustes",

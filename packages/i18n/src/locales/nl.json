@@ -11583,6 +11583,7 @@
     "silent": "Niets gehoord. Er is niets verstuurd.",
     "notSent": "Kon de audio niet versturen.",
     "limit": "De audiolimiet van vandaag is op. Typ hier, of probeer het morgen opnieuw.",
+    "plan": "Spraakberichten horen bij een agentes.chat-abonnement. Typen kan hier gewoon.",
     "micBlocked": "De microfoon is geblokkeerd",
     "micBlockedHint": "Sta de microfoon toe in de instellingen van je apparaat om op te nemen.",
     "openSettings": "Instellingen openen",
@@ -16991,6 +16992,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wacht op {{permission}} op {{computer}}",
+      "next": "Sta het toe in de agentes.chat-app op die computer.",
+      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
+      "asked": "Nodig om {{trigger}} uit te voeren",
+      "names": {
+        "app_management": "Appbeheer",
+        "screen": "Schermopname",
+        "accessibility": "Toegankelijkheid",
+        "disk": "Volledige schijftoegang",
+        "network": "Lokaal netwerk",
+        "camera": "Camera",
+        "microphone": "Microfoon",
+        "automation": "Automatisering"
+      }
+    },
     "leadCloud": "Waar je agents werken: de computer van de werkruimte en de apparaten die mensen koppelen.",
     "lead": "Waar je agents werken: de computers en telefoons die mensen koppelen.",
     "connect": "Apparaat koppelen",
@@ -17635,22 +17652,6 @@
         "once": "Eén keer toegestaan.",
         "always": "{{deviceName}} wordt nu met hen gedeeld.",
         "no": "Je zei nee."
-      }
-    },
-    "permission": {
-      "title": "Wacht op {{permission}} op {{computer}}",
-      "next": "Sta het toe in de agentes.chat-app op die computer.",
-      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
-      "asked": "Nodig om {{trigger}} uit te voeren",
-      "names": {
-        "app_management": "Appbeheer",
-        "screen": "Schermopname",
-        "accessibility": "Toegankelijkheid",
-        "disk": "Volledige schijftoegang",
-        "network": "Lokaal netwerk",
-        "camera": "Camera",
-        "microphone": "Microfoon",
-        "automation": "Automatisering"
       }
     }
   },

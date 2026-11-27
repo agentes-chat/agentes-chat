@@ -457,7 +457,8 @@ export interface ApiClient {
   /** Voice messages (ADR 0100). */
   voice: {
     /** Whether I may record now: fair use, on agentes.chat's own servers. */
-    allowed(orgId: string): Promise<{ allowed: boolean }>;
+    /** `reason: "plan"`: the workspace has no plan in force, and voice comes with one. */
+    allowed(orgId: string): Promise<{ allowed: boolean; reason?: "plan" }>;
     /** Stores a recording; its message arrives over the socket with this `clientId`. */
     send(
       orgId: string,

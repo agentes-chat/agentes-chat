@@ -208,7 +208,9 @@ describe("a voice note with typed text and files", () => {
     expect(take).toMatch(
       /const back = item \? takeBack\(item, targetRef\.current\) : null;\s*if \(back\) targetRef\.current\.takeBack\?\.\(back\);/,
     );
-    expect(src("features/voice/outbox.ts")).toContain('onRefused(verdict === "limit" ? "limit" : "refused", item);');
+    expect(src("features/voice/outbox.ts")).toContain(
+      'onRefused(verdict === "limit" || verdict === "plan" ? verdict : "refused", item);',
+    );
     const chat = chatScreenSource();
     expect(chat).toContain("takeBack: voiceTakeBack,");
     // The files come back from what was uploaded for the take, to wait above the field again.

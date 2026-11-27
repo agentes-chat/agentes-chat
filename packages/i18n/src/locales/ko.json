@@ -11035,6 +11035,7 @@
     "silent": "아무것도 들리지 않았어요. 아무것도 보내지 않았어요.",
     "notSent": "오디오를 보내지 못했어요.",
     "limit": "오늘의 오디오 한도를 다 썼어요. 여기에 글로 쓰거나 내일 다시 시도해 주세요.",
+    "plan": "음성 메시지는 agentes.chat 요금제에 포함돼요. 여기에 글로 쓰는 건 계속할 수 있어요.",
     "micBlocked": "마이크가 차단되어 있어요",
     "micBlockedHint": "녹음하려면 기기 설정에서 마이크를 허용해 주세요.",
     "openSettings": "설정 열기",
@@ -16304,6 +16305,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
+      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
+      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
+      "asked": "{{trigger}} 실행에 필요해요",
+      "names": {
+        "app_management": "앱 관리",
+        "screen": "화면 기록",
+        "accessibility": "손쉬운 사용",
+        "disk": "전체 디스크 접근 권한",
+        "network": "로컬 네트워크",
+        "camera": "카메라",
+        "microphone": "마이크",
+        "automation": "자동화"
+      }
+    },
     "leadCloud": "에이전트가 일하는 곳: 워크스페이스 컴퓨터와 사람들이 연결한 기기예요.",
     "lead": "에이전트가 일하는 곳: 사람들이 연결한 컴퓨터와 휴대폰이에요.",
     "connect": "기기 연결",
@@ -16944,22 +16961,6 @@
         "once": "한 번 허용했어요.",
         "always": "이제 {{deviceName}}을(를) 함께 사용해요.",
         "no": "거절했어요."
-      }
-    },
-    "permission": {
-      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
-      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
-      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
-      "asked": "{{trigger}} 실행에 필요해요",
-      "names": {
-        "app_management": "앱 관리",
-        "screen": "화면 기록",
-        "accessibility": "손쉬운 사용",
-        "disk": "전체 디스크 접근 권한",
-        "network": "로컬 네트워크",
-        "camera": "카메라",
-        "microphone": "마이크",
-        "automation": "자동화"
       }
     }
   },

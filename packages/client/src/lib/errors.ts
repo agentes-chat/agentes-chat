@@ -598,6 +598,7 @@ const KNOWN = {
   "routine.too_many_actions": "errors.said.tooMany",
   token_limit: "errors.said.tooMany",
   "voice.limit": "errors.said.tooMany",
+  "voice.plan": "voice.plan",
   "wiki.folder_depth": "errors.said.tooMany",
   "wiki.import_too_many": "errors.said.tooMany",
   "database.host_required": "errors.said.fillIn",
