@@ -1,5 +1,5 @@
 {
-  "id": "06240694-a409-46f0-b6b9-11b906f11bce",
+  "id": "a07671c0-5f29-4e1f-947a-4d8f9815a61d",
   "prevId": "2377b104-6654-4476-8ce0-a05aba79bab0",
   "version": "7",
   "dialect": "postgresql",
@@ -13719,6 +13719,12 @@
         "moving_at": {
           "name": "moving_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "maintenance": {
+          "name": "maintenance",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

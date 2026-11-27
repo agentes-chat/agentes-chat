@@ -16140,10 +16140,48 @@
       "viaBy": "智能体正在使用 {{name}}（{{person}}）的网络",
       "viaHint": "网站会看到那台电脑的位置。连接它的人可以在它的页面上关闭。"
     },
-    "moving": {
-      "short": "正在迁移服务器",
-      "line": "正在迁移到新服务器… 几分钟后回来",
-      "named": "{{computer}} 正在迁移到新服务器… 几分钟后回来"
+    "maintenance": {
+      "short": {
+        "moving": "正在迁移服务器",
+        "restarting": "正在重启",
+        "updating": "正在更新",
+        "converting": "正在升级磁盘",
+        "host_maintenance": "维护中",
+        "other": "维护中"
+      },
+      "what": {
+        "moving": "正在迁移到新服务器",
+        "copying": "正在复制到新服务器",
+        "restarting": "正在重启",
+        "updating": "正在更新软件",
+        "converting": "正在升级磁盘",
+        "host_maintenance": "所在服务器正在维护",
+        "other": "正在处理"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "约 {{time}} 后恢复",
+      "backSoon": "几分钟后恢复",
+      "late": "比预计稍久一些",
+      "slower": "期间可能会变慢",
+      "slowerFor": "约 {{time}} 内可能会变慢",
+      "why": {
+        "moving": "我们正在把它迁移到新服务器。",
+        "copying": "我们正在把它的文件复制到新服务器，它仍在工作。",
+        "handover": "我们正在把它最后的改动交接到新服务器。",
+        "restarting": "我们正在重启它。",
+        "unresponsive": "它停止了响应，所以我们自动重启了它。",
+        "updating": "我们正在更新它的软件。",
+        "converting": "我们正在把它的磁盘迁移到更快的存储。",
+        "host_maintenance": "它所在的服务器正在维护。",
+        "other": "我们正在对它进行一些处理。"
+      },
+      "since": "自 {{time}} 起",
+      "expectedBack": "预计 {{time}} 左右恢复",
+      "expectedDone": "预计 {{time}} 左右完成",
+      "meanwhile": "发给它的智能体的消息会等待，它恢复后自动继续。",
+      "working": "期间它的智能体会继续工作。",
+      "about": "发生了什么"
     },
     "online": "在线",
     "offline": "离线",
@@ -16380,6 +16418,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "正在等待 {{computer}} 上的“{{permission}}”权限",
+      "next": "请在那台电脑上的 agentes.chat 应用中允许。",
+      "askedBy": "{{agent}} 运行 {{trigger}} 时需要",
+      "asked": "运行 {{trigger}} 时需要",
+      "names": {
+        "app_management": "App 管理",
+        "screen": "屏幕录制",
+        "accessibility": "辅助功能",
+        "disk": "完全磁盘访问权限",
+        "network": "本地网络",
+        "camera": "摄像头",
+        "microphone": "麦克风",
+        "automation": "自动化"
+      }
+    },
     "leadCloud": "你的智能体工作的地方：工作区的电脑，以及成员连接的设备。",
     "lead": "你的智能体工作的地方：成员连接的电脑和手机。",
     "connect": "连接设备",
@@ -17020,22 +17074,6 @@
         "once": "已允许一次。",
         "always": "现在已与他们共享 {{deviceName}}。",
         "no": "你拒绝了。"
-      }
-    },
-    "permission": {
-      "title": "正在等待 {{computer}} 上的“{{permission}}”权限",
-      "next": "请在那台电脑上的 agentes.chat 应用中允许。",
-      "askedBy": "{{agent}} 运行 {{trigger}} 时需要",
-      "asked": "运行 {{trigger}} 时需要",
-      "names": {
-        "app_management": "App 管理",
-        "screen": "屏幕录制",
-        "accessibility": "辅助功能",
-        "disk": "完全磁盘访问权限",
-        "network": "本地网络",
-        "camera": "摄像头",
-        "microphone": "麦克风",
-        "automation": "自动化"
       }
     }
   },
@@ -18746,6 +18784,7 @@
         "usingScreen": "使用了屏幕",
         "cloningRepo": "克隆了仓库",
         "listingRepos": "已列出仓库",
+        "updatingCode": "更新了代码",
         "preparingCli": "准备了 {{app}}",
         "openingPullRequest": "创建了拉取请求",
         "handingOff": "交付了报告",
@@ -18870,6 +18909,7 @@
       "usingScreen": "使用屏幕",
       "cloningRepo": "克隆仓库",
       "listingRepos": "正在列出仓库",
+      "updatingCode": "正在更新代码",
       "preparingCli": "在 {{computer}} 上准备 {{app}}",
       "preparingCliPct": "在 {{computer}} 上准备 {{app}}（{{percent}}%）",
       "openingPullRequest": "创建拉取请求",

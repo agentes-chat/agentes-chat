@@ -194,6 +194,13 @@ const init = () =>
       ? {}
       : { tools: initTools, mcp_servers: mcpServers.map((name) => ({ name, status: "connected" })) }),
   });
+// `--debug-file`: Claude Code's debug log, its lines as it writes them (a hook's output on a line of its own after it).
+const debugFile = flag("--debug-file");
+const debugLine = (level, said) => {
+  if (debugFile) appendFileSync(debugFile, `${new Date().toISOString()} [${level}] ${said}\n`);
+};
+debugLine("DEBUG", "[STARTUP] setup() completed in 41ms");
+debugLine("DEBUG", '"Hook SessionStart:startup (SessionStart) success:\nthe words a hook said"');
 init();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let turns = 0;
@@ -444,6 +451,11 @@ async function answer(line) {
     });
   }
   if (prompt.includes("RETRYWAIT")) {
+    debugLine(
+      "DEBUG",
+      "[API REQUEST] /v1/messages x-client-request-id=0f0e5b55-7e6c-4b51-9c3c-2f1d8f5a7c01 source=sdk",
+    );
+    debugLine("ERROR", "API error (attempt 1/10): 529 overloaded_error for ana@example.com");
     out({
       type: "system",
       subtype: "api_retry",

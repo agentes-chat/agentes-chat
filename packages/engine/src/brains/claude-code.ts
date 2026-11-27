@@ -25,7 +25,13 @@ import { getAgentCached } from "../agents";
 import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
 import { type MachineCaller, MachineRequestError, type MachineStatus } from "../machine-hub";
-import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
+import {
+  MachineDroppedError,
+  MachineOfflineError,
+  MachinePausedError,
+  maintenanceWords,
+  pausedMessage,
+} from "../machines";
 import { addPersonSpend } from "../person-usage";
 import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
@@ -290,7 +296,14 @@ export function cliOutdated(
 /** Why the turn can't go to this machine now (null: it can). With an account, the account decides the sign-in. */
 export function claudeCodeAvailability(status: MachineStatus | null, account?: BrainAccount): BrainEvent | null {
   if (!status) return err("machine_offline", "The agent's computer is not connected to the organization.", true);
-  if (!status.online) return err("machine_offline", `Claude Code on ${status.name} is offline.`, true);
+  if (!status.online) {
+    const away = status.maintenance?.away ? status.maintenance : null;
+    return err(
+      "machine_offline",
+      away ? maintenanceWords(status.name, away) : `Claude Code on ${status.name} is offline.`,
+      true,
+    );
+  }
   if (status.paused) {
     return err("machine_paused", pausedMessage(status.name, status.paused.until, status.paused.timezone), true);
   }

@@ -1,4 +1,11 @@
-import type { ComputerDevice, DeviceAudience, Machine, PermissionNeed, PhoneDevice } from "@agenteschat/client";
+import type {
+  ComputerDevice,
+  ComputerMaintenance,
+  DeviceAudience,
+  Machine,
+  PermissionNeed,
+  PhoneDevice,
+} from "@agenteschat/client";
 import { useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
@@ -53,7 +60,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { MachineAccessCards, MachineAgents, MachineFactsExtra, MachinePage } from "@/components/Machines";
-import { CommandBlock } from "@/components/machine-bits";
+import { CommandBlock, MaintenanceHint } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
@@ -173,6 +180,7 @@ function StatusLine({
   action,
   ios,
   text,
+  maintenance,
 }: {
   status: PhoneDevice["status"];
   host?: string;
@@ -182,16 +190,19 @@ function StatusLine({
   ios?: string | null;
   /** In place of the status's own sentence, as typed (it carries a person's name). */
   text?: string | null;
+  /** What we do to the computer (ADR 0257): its line, with its ⓘ. */
+  maintenance?: ComputerMaintenance | null;
 }) {
   const { t, i18n } = useTranslation();
-  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios });
+  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios, maintenance });
   const label = status.kind === "in_use" && status.label ? status.label : null;
   if (!sentence && !action) return null;
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
-      <span className="dv-statusline__text">
+      <span className={maintenance ? "dv-statusline__text ac-hintline" : "dv-statusline__text"}>
         {text ?? (sentence && codeAndBold(sentence, "cb", [host]))}
         {label && <small> · {label}</small>}
+        {maintenance && <MaintenanceHint maintenance={maintenance} />}
       </span>
       {action}
     </div>
@@ -436,7 +447,10 @@ function ComputerPage({ machineId }: { machineId: string }) {
         />
         <StatusLine
           status={status}
-          text={pausedFromApps ?? (status.kind === "busy" ? taskLimitLine(t, d, tasksEditable) : null)}
+          text={
+            pausedFromApps ?? (status.kind === "busy" && !d.maintenance ? taskLimitLine(t, d, tasksEditable) : null)
+          }
+          maintenance={d.maintenance}
         />
         {(d.permissions ?? []).map((need) => (
           <PermissionWait key={need.permission} need={need} computer={d.name} />

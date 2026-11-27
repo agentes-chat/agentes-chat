@@ -2384,6 +2384,11 @@ export interface BrainTurnTimings {
   /** Not `warm`: why the turn started a new process (`BRAIN_COLD_CAUSES`). */
   cold?: BrainColdCause;
   initMs?: number;
+  /**
+   * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
+   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   */
+  sentMs?: number;
   firstEventMs?: number;
   firstRequestMs?: number;
   firstTokenMs?: number;
@@ -2392,7 +2397,30 @@ export interface BrainTurnTimings {
   retryDelayMs?: number;
   thinkingBlocks?: number;
   thinkingChars?: number;
+  /**
+   * A turn past a `SLOW_TURN_BUDGETS` budget, or one that failed: what the CLI's own debug log said during it, as lines
+   * timed from the turn's start (`+412ms [DEBUG] [API REQUEST] /v1/messages`), only lines of the kinds that explain
+   * time (API requests, retries, MCP servers, sign-in, the network, stalls), scrubbed (`scrubLogLine`). Never a hook's
+   * or a tool's output, a prompt or an answer.
+   */
+  evidence?: string[];
 }
+
+/**
+ * Where a turn is slow enough to explain (ms), the same on the runner, which keeps the CLI's evidence for such a turn,
+ * and on the server, which reports it: the run's context, the work before the turn (checkouts), a new CLI until it was
+ * ready, the first token after that, and a reply with no tool call from the run's claim to its end.
+ */
+/** When a turn's CLI could start on it (ms from the turn's start): started, and handed the turn. */
+export const cliReadyMs = (t: Pick<BrainTurnTimings, "initMs" | "sentMs">) => Math.max(t.initMs ?? 0, t.sentMs ?? 0);
+
+export const SLOW_TURN_BUDGETS = {
+  contextMs: 1500,
+  preTurnMs: 2000,
+  initMs: 8000,
+  firstByteMs: 6000,
+  replyMs: 10_000,
+} as const;
 
 /**
  * Why a turn started a new Claude Code process: a session that never ran on this runner (a new conversation, or a
@@ -2421,6 +2449,7 @@ export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
 /** The measures of `BrainTurnTimings` past `warm`, each a whole number from 0 up to a day. */
 export const BRAIN_TURN_MEASURES = [
   "initMs",
+  "sentMs",
   "firstEventMs",
   "firstRequestMs",
   "firstTokenMs",
@@ -2482,6 +2511,8 @@ export type WireBrainEvent =
       /** Protocol 50: why the provider refused or failed it, and its HTTP status when the CLI said one. */
       cause?: ProviderFailureCause;
       httpStatus?: number;
+      /** How the failed turn went until it failed, as `done` says it (an older runner leaves it out). */
+      timings?: BrainTurnTimings;
     }
   /** Protocol 15: messages handed with `brain.steer` that the turn read (their `uuid`s). */
   | { type: "steer_read"; uuids: string[] }
@@ -2704,6 +2735,8 @@ export const BRAIN_LIMITS = {
   toolName: 128,
   doneText: 100_000,
   message: 2000,
+  evidenceLines: 60,
+  evidenceLine: 300,
 } as const;
 
 /**
@@ -4326,6 +4359,34 @@ const cutJson = (v: unknown, max: number): unknown => {
   }
 };
 
+/** A turn's `timings` as a runner sent them, checked and cut; undefined when they aren't any. */
+function turnTimingsOf(v: unknown): BrainTurnTimings | undefined {
+  if (!isObject(v) || typeof v.warm !== "boolean") return undefined;
+  // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
+  // (the counts share the bound, far above any real turn's).
+  const DAY_MS = 86_400_000;
+  const ms = (x: unknown) =>
+    finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
+  const measures = BRAIN_TURN_MEASURES.flatMap((k) => {
+    const n = ms(v[k]);
+    return n === undefined ? [] : [[k, n] as const];
+  });
+  const evidence = Array.isArray(v.evidence)
+    ? v.evidence
+        .filter(isString)
+        .slice(0, BRAIN_LIMITS.evidenceLines)
+        .map((line) => line.slice(0, BRAIN_LIMITS.evidenceLine))
+    : [];
+  return {
+    warm: v.warm,
+    ...(!v.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(v.cold)
+      ? { cold: v.cold as BrainColdCause }
+      : {}),
+    ...Object.fromEntries(measures),
+    ...(evidence.length > 0 ? { evidence } : {}),
+  };
+}
+
 /** One `brain.event` event, checked and cut; null when it isn't one. */
 export function parseBrainEvent(v: unknown): WireBrainEvent | null {
   if (!isObject(v) || !isString(v.type)) return null;
@@ -4374,37 +4435,17 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
-      // (the counts share the bound, far above any real turn's).
-      const DAY_MS = 86_400_000;
-      const ms = (x: unknown) =>
-        finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
-      const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
-      const measures = t
-        ? BRAIN_TURN_MEASURES.flatMap((k) => {
-            const n = ms(t[k]);
-            return n === undefined ? [] : [[k, n] as const];
-          })
-        : [];
+      const timings = turnTimingsOf(v.timings);
       return {
         type: "done",
         text: v.text.slice(0, BRAIN_LIMITS.doneText),
         ...(session ? { session } : {}),
-        ...(t
-          ? {
-              timings: {
-                warm: t.warm as boolean,
-                ...(!t.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(t.cold)
-                  ? { cold: t.cold as BrainColdCause }
-                  : {}),
-                ...Object.fromEntries(measures),
-              },
-            }
-          : {}),
+        ...(timings ? { timings } : {}),
       };
     }
-    case "error":
+    case "error": {
       if (!isString(v.code)) return null;
+      const errorTimings = turnTimingsOf(v.timings);
       return {
         type: "error",
         code: v.code.slice(0, 64),
@@ -4415,7 +4456,9 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(Number.isInteger(v.httpStatus) && (v.httpStatus as number) >= 100 && (v.httpStatus as number) <= 599
           ? { httpStatus: v.httpStatus as number }
           : {}),
+        ...(errorTimings ? { timings: errorTimings } : {}),
       };
+    }
     case "steer_read": {
       if (!Array.isArray(v.uuids)) return null;
       const uuids = v.uuids

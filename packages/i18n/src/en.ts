@@ -17188,11 +17188,59 @@ export const en = {
       viaBy: "Agents use the internet of {{name}} ({{person}})",
       viaHint: "Websites see that computer’s location. Its owner can turn it off on its page.",
     },
-    /** The workspace's own computer, away while it moves to another server: never "offline" or "not answering". */
-    moving: {
-      short: "Moving servers",
-      line: "Moving to a new server… back in a few minutes",
-      named: "{{computer}} is moving to a new server… back in a few minutes",
+    /**
+     * What we do to the workspace's own computer (ADR 0257), said instead of "offline": a move, a restart, an update,
+     * a disk conversion, its server's maintenance. `other`: a kind this app doesn't know yet.
+     */
+    maintenance: {
+      /** The chip's and the pill's word. */
+      short: {
+        moving: "Moving servers",
+        restarting: "Restarting",
+        updating: "Updating",
+        converting: "Upgrading disk",
+        host_maintenance: "Maintenance",
+        other: "Maintenance",
+      },
+      /** The line's start, before "… back in about 2 min". */
+      what: {
+        moving: "Moving to a new server",
+        copying: "Copying to a new server",
+        restarting: "Restarting",
+        updating: "Updating its software",
+        converting: "Upgrading its disk",
+        host_maintenance: "Its server is under maintenance",
+        other: "Being worked on",
+      },
+      /** "Restarting… back in about 2 min". */
+      line: "{{what}}… {{when}}",
+      named: "{{computer}}: {{line}}",
+      /** `time`: "2 min", "1 h". */
+      back: "back in about {{time}}",
+      backSoon: "back in a few minutes",
+      late: "taking a little longer than expected",
+      /** Online while it is done (a move's copy): it works. */
+      slower: "it may be slower meanwhile",
+      slowerFor: "it may be slower for about {{time}}",
+      /** The tip's first line: why, in plain words. */
+      why: {
+        moving: "We're moving it to a new server.",
+        copying: "We're copying its files to a new server while it works.",
+        handover: "We're handing its last changes over to the new server.",
+        restarting: "We're restarting it.",
+        unresponsive: "It stopped answering, so we restarted it automatically.",
+        updating: "We're updating its software.",
+        converting: "We're moving its disk to faster storage.",
+        host_maintenance: "The server it runs on is getting maintenance.",
+        other: "We're doing some work on it.",
+      },
+      since: "Since {{time}}",
+      expectedBack: "Expected back around {{time}}",
+      expectedDone: "Expected done around {{time}}",
+      meanwhile: "Messages to its agents wait and go on by themselves when it's back.",
+      working: "Its agents keep working meanwhile.",
+      /** The ⓘ's name beside the chip. */
+      about: "What's happening",
     },
     online: "Online",
     offline: "Offline",
@@ -20084,6 +20132,7 @@ export const en = {
         usingScreen: "Used the screen",
         cloningRepo: "Cloned a repository",
         listingRepos: "Listed the repositories",
+        updatingCode: "Updated the code",
         preparingCli: "Prepared {{app}}",
         openingPullRequest: "Opened a pull request",
         handingOff: "Delivered a report",
@@ -20209,6 +20258,7 @@ export const en = {
       usingScreen: "using the screen",
       cloningRepo: "cloning a repository",
       listingRepos: "listing the repositories",
+      updatingCode: "updating the code",
       preparingCli: "preparing {{app}} on {{computer}}",
       preparingCliPct: "preparing {{app}} on {{computer}} ({{percent}}%)",
       openingPullRequest: "opening a pull request",

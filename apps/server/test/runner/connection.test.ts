@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import {
   type BrowserTraffic,
@@ -558,6 +559,44 @@ test("a locked-down turn goes past the room check down to its own floor, and a l
   expect(refused()).toEqual(["work", "lodi2", "over", "lodi5"]);
   runner.close();
   await Promise.allSettled(pending);
+});
+
+test("on Windows and macOS turns are admitted by the memory the computer reads, not 8 at once", async () => {
+  const ws = tempDir();
+  dirs.push(ws);
+  const sent: { id: string; ok: boolean; error?: { code: string } }[] = [];
+  const pending: Promise<void>[] = [];
+  const platform = Object.getOwnPropertyDescriptor(process, "platform") as PropertyDescriptor;
+  Object.defineProperty(process, "platform", { value: "win32" });
+  let free = 64e9;
+  const freemem = spyOn(os, "freemem").mockImplementation(() => free);
+  try {
+    const runner = new RequestRunner(
+      { workspaceReal: ws, exec: true, token: "agm_x" },
+      (f) => sent.push(f as unknown as (typeof sent)[number]),
+      () => {},
+      (_ctx, _req, scope) =>
+        new Promise((_, reject) => {
+          scope.signal.addEventListener("abort", () => reject(new RunnerError("internal", "Canceled")));
+        }),
+      { now: () => 1_000_000 },
+    );
+    const turn = (id: string) =>
+      pending.push(runner.start(id, { op: "brain.turn", runId: id } as unknown as MachineRequest));
+    // A 64 GB PC with most of it free runs more than the old count.
+    for (let i = 0; i < TURNS_WITHOUT_MEMORY + 4; i++) turn(`t${i}`);
+    expect(sent.filter((f) => !f.ok)).toEqual([]);
+    expect(runner.size).toBe(TURNS_WITHOUT_MEMORY + 4);
+    // Short of memory, the next one waits for room, as on Linux.
+    free = MIN_FREE_BYTES - 1;
+    turn("over");
+    expect(sent.filter((f) => !f.ok).map((f) => [f.id, f.error?.code])).toEqual([["over", "no_slot"]]);
+    runner.close();
+    await Promise.allSettled(pending);
+  } finally {
+    freemem.mockRestore();
+    Object.defineProperty(process, "platform", platform);
+  }
 });
 
 describe("the slot held for a person's turn", () => {
