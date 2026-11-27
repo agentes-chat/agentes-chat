@@ -137,7 +137,7 @@ import { secretRequestOf } from "./ask-store";
 import { useBubbleCap } from "./bubble-cap";
 import { ChatMedia } from "./ChatMedia";
 import { ClippedMessage, OpenedMessagesContext } from "./ClippedMessage";
-import { ConsultQuote, useRunConsults } from "./ConsultGroup";
+import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
 import { ApprovalInline, QuestionCard, ThreadLink, ThreadReplyingLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
@@ -393,22 +393,11 @@ function RowBody({
     (c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
   );
   const relayQuote = relay && !readOnly ? <RelayQuote relay={relay} channelId={m.channelId} /> : null;
-  const pairQuote =
-    isAgent && m.author.id && paired.length > 0 ? (
-      <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} />
-    ) : null;
-  const consultQuote =
-    relayQuote && pairQuote ? (
-      <>
-        {relayQuote}
-        {pairQuote}
-      </>
-    ) : (
-      (relayQuote ?? pairQuote)
-    );
-  const quoteAlone = consultQuote !== null && (!body || Boolean(choiceReply));
-  const quoteInWords = quoteAlone ? null : consultQuote;
-  const grouped = groupedIn && !quoteAlone;
+  // The agents it asked first: the web's slim row between hairlines, before the reply (its face and name again).
+  const pairRow = isAgent && m.author.id && paired.length > 0;
+  const quoteAlone = relayQuote !== null && (!body || Boolean(choiceReply));
+  const quoteInWords = quoteAlone ? null : relayQuote;
+  const grouped = groupedIn && !quoteAlone && !pairRow;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
   const ownWork = isAgent && Boolean(m.agentRunId) && !meta?.consultation && !mediaAfter;
   const steps = ownWork ? workStepsOf(meta) : null;
@@ -1005,10 +994,13 @@ function RowBody({
   const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;
   return (
     <>
-      {quoteAlone && m.author.id ? (
-        <View style={[plateInset(look, aboveInset(look)), { marginTop: rhythm.turn }]}>
-          <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} alone />
+      {pairRow && m.author.id ? (
+        <View style={{ marginTop: rhythm.turn }}>
+          <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
         </View>
+      ) : null}
+      {quoteAlone ? (
+        <View style={[plateInset(look, aboveInset(look)), { marginTop: rhythm.turn }]}>{relayQuote}</View>
       ) : null}
       {liveRef ? (
         <View style={[styles.aboutAbove, { paddingLeft: aboveInset(look), marginTop: rowGap }]}>
