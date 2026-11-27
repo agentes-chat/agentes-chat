@@ -257,14 +257,15 @@ export const aiChoiceEfforts = (
   options: readonly BrainOption[],
 ): readonly EffortLevel[] => (row.type === "workspace" ? [] : effortLevelsFor(row.brain, model, options));
 
-/** The choice a row makes, keeping the model and effort when the brain stays. */
+/** The choice a row makes, keeping the model and effort on the same API key or plan kind. */
 export function aiChoiceOf(row: AiChoiceRow, current: AiChoice | null): AiChoice {
   // Lodi's "A do workspace": the workspace's own AI, nothing of the person's to carry.
   if (row.type === "workspace") return { brain: "model" };
-  const keep = current?.brain === row.brain;
+  const sameKey = current?.key ? current.key === row.apiKey?.id : row.apiKey?.isDefault === true;
+  const keep = current?.brain === row.brain && (row.type !== "key" || sameKey);
   const rest = keep
     ? { model: current?.model ?? null, effort: current?.effort ?? null }
-    : { model: null, effort: null };
+    : { model: row.type === "key" ? AUTO : null, effort: null };
   if (row.type === "plan" && row.account)
     return { brain: row.brain, account: row.account.id, machineId: row.account.machineId, ...rest };
   if (row.type === "key")
