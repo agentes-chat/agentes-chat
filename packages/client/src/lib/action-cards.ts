@@ -123,7 +123,14 @@ export interface ConnectAppCard {
   forUserId: string | null;
   connector?: string;
   url?: string;
+  /** A server by address: how it signs in and the scopes it asks, when it answered as the card was posted. */
+  signIn?: "oauth" | "key" | "open";
+  scopes?: string[];
+  /** Up to three people who may connect it for the team, for a reader who may not (`AdminAsk` asks them all). */
+  deciderIds?: string[];
   why: string;
+  /** Set once a connection settled the card (and woke its agent): that connection. */
+  connectionId?: string;
 }
 
 /** "Convidar pessoas" (`offer_invites`): the invite dialog with these addresses filled in, as members. */
@@ -492,12 +499,17 @@ export function actionCardOf(meta: Record<string, unknown> | null | undefined): 
   const forUserId = typeof card.forUserId === "string" ? card.forUserId : null;
   const why = typeof p.why === "string" ? p.why : "";
   if (card.kind === "connect_app") {
+    const settled = (raw as { connectionId?: unknown }).connectionId;
     return {
       kind: "connect_app",
       forUserId,
       ...(typeof p.connector === "string" ? { connector: p.connector } : {}),
       ...(typeof p.url === "string" && isHttpsUrl(p.url) ? { url: p.url } : {}),
+      ...(p.signIn === "oauth" || p.signIn === "key" || p.signIn === "open" ? { signIn: p.signIn } : {}),
+      ...(strings(p.scopes).length ? { scopes: strings(p.scopes).slice(0, 12) } : {}),
+      ...(strings(p.deciderIds).length ? { deciderIds: strings(p.deciderIds).slice(0, 3) } : {}),
       why,
+      ...(typeof settled === "string" ? { connectionId: settled } : {}),
     };
   }
   if (card.kind === "install_skill") {
@@ -581,13 +593,34 @@ export function connectAiDone(
  */
 export const connectAppDone = (
   card: ConnectAppCard,
-  items: readonly (Pick<ConnectedItem, "def" | "server"> & Partial<Pick<ConnectedItem, "needsReconnect">>)[],
-) => {
+  items: readonly (Pick<ConnectedItem, "def" | "server"> & Partial<Pick<ConnectedItem, "needsReconnect" | "id">>)[],
+) => connectAppItem(card, items) !== undefined;
+
+/** The connection that does what the card asks, working now (the one that settled it first), or undefined. */
+export const connectAppItem = <
+  T extends Pick<ConnectedItem, "def" | "server"> & Partial<Pick<ConnectedItem, "needsReconnect" | "id">>,
+>(
+  card: ConnectAppCard,
+  items: readonly T[],
+): T | undefined => {
   const working = items.filter((i) => !i.needsReconnect);
+  const settled = card.connectionId ? working.find((i) => i.id === card.connectionId) : undefined;
+  if (settled) return settled;
   return card.connector
-    ? working.some((i) => i.def?.id === card.connector)
-    : Boolean(card.url) && working.some((i) => serverCovers(i.server?.serverUrl, card.url));
+    ? working.find((i) => i.def?.id === card.connector)
+    : card.url
+      ? working.find((i) => serverCovers(i.server?.serverUrl, card.url))
+      : undefined;
 };
+
+/** How a server by address signs in and what it asks, in one line ("Signs in with an account · Asks for: read, write"). */
+export function connectSignInLine(t: TFunction, card: Pick<ConnectAppCard, "signIn" | "scopes">) {
+  if (!card.signIn) return "";
+  const how = t(`actionCard.connect_app.signIn_${card.signIn}`);
+  return card.scopes?.length
+    ? `${how} · ${t("actionCard.connect_app.scopes", { scopes: card.scopes.join(", ") })}`
+    : how;
+}
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 

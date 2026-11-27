@@ -930,6 +930,7 @@
       "admin_ask_create_agents": "{{names}} möchte Agenten erstellen dürfen",
       "admin_ask_webhook": "{{names}} bittet dich, den {{service}}-Webhook für Routinen einzurichten",
       "admin_ask_voice": "{{names}} bittet dich, Sprachnachrichten einzuschalten",
+      "admin_ask_connector": "{{names}} bittet dich, {{service}} zu verbinden",
       "routine_paused_one": "Routine pausiert",
       "routine_paused_other": "Routinen pausiert",
       "routine_stalled_one": "Routine wartet auf den Computer",

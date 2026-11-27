@@ -3822,7 +3822,12 @@
     "connect_app": {
       "title": "{{name}} 연결",
       "mcp": "MCP 서버 추가",
-      "adminOnly": "관리자가 연결해요"
+      "adminOnly": "관리자가 연결해요",
+      "whoCan": "연결할 수 있는 사람: {{names}}",
+      "signIn_oauth": "계정으로 로그인",
+      "signIn_key": "API 키 필요",
+      "signIn_open": "로그인 필요 없음",
+      "scopes": "요청 권한: {{scopes}}"
     },
     "invite": {
       "title_other": "{{count}}명 초대",
@@ -5329,6 +5334,7 @@
       "adminAskCreate": "<b>{{name}}</b> 님이 에이전트를 만들 수 있게 해 달라고 요청합니다",
       "adminAskWebhook": "<b>{{name}}</b> 님이 루틴용 {{service}} 웹훅을 설정해 달라고 요청합니다",
       "adminAskVoice": "<b>{{name}}</b> 님이 음성 메시지를 켜 달라고 요청합니다",
+      "adminAskConnector": "<b>{{name}}</b>님이 {{service}} 연결을 요청했어요",
       "invitationAccepted": "<b>{{name}}</b> 님이 내 초대를 수락하고 {{org}}에 참여했어요",
       "invitationAcceptedAny": "<b>{{name}}</b> 님이 내 초대를 수락했어요",
       "reaction_other": "<b>{{names}}</b>이(가) 내 메시지에 반응했어요",

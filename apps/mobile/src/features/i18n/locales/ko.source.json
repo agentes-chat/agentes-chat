@@ -2234,6 +2234,9 @@
   "activity.kind.admin_ask_voice": {
     "value": "{{names}} asks you to turn on voice messages"
   },
+  "activity.kind.admin_ask_connector": {
+    "value": "{{names}} asks you to connect {{service}}"
+  },
   "activity.kind.routine_paused": {
     "value": {
       "one": "Routine paused",

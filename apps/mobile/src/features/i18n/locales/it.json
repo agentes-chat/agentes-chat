@@ -975,6 +975,7 @@
       "admin_ask_create_agents": "{{names}} chiede di poter creare agenti",
       "admin_ask_webhook": "{{names}} ti chiede di configurare il webhook di {{service}} per le routine",
       "admin_ask_voice": "{{names}} ti chiede di attivare i messaggi vocali",
+      "admin_ask_connector": "{{names}} ti chiede di collegare {{service}}",
       "routine_paused_one": "Routine in pausa",
       "routine_paused_many": "Routine in pausa",
       "routine_paused_other": "Routine in pausa",

@@ -224,6 +224,11 @@ export interface ConnectorDeps {
   composio?: ComposioConnectors | null;
   /** Between reads of a Composio account still finishing its sign-in (tests: 0). */
   composioPollMs?: number;
+  /**
+   * A connection's tools are usable now (a catalog one stored, a server's tools read or reviewed): the server settles
+   * the Connect cards waiting for it (`settleConnectCards`). Never awaited.
+   */
+  onConnected?: (connection: ConnectorConnection) => void;
 }
 
 const aadFor = (orgId: string, id: string) => `connector-connection|${orgId}|${id}`;
@@ -321,7 +326,7 @@ async function storeConnection(
   if (!wrapper) throw new Error("no key wrapper");
   const id = crypto.randomUUID();
   const sealed = input.secret ? await sealSecret(wrapper, JSON.stringify(input.secret), aadFor(input.orgId, id)) : null;
-  return deps.db.transaction(async (tx) => {
+  const stored = await deps.db.transaction(async (tx) => {
     // One active connection per connector for the team and one for each person: a new one replaces that owner's old
     // one (grants move over); a first one is every agent's (a personal one, its person's agents').
     const [previous] = await tx
@@ -389,9 +394,11 @@ async function storeConnection(
     // Over GitHub through the app alone, an account is a first connection to people: never a "Reconectar".
     return {
       connection: row,
-      outcome: previous && previous.authType !== GITHUB_APP_AUTH ? "reconnected" : "connected",
+      outcome: (previous && previous.authType !== GITHUB_APP_AUTH ? "reconnected" : "connected") as ConnectOutcome,
     };
   });
+  if (!input.connector.startsWith("custom:")) deps.onConnected?.(stored.connection);
+  return stored;
 }
 
 /**

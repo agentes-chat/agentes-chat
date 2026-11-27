@@ -3826,7 +3826,12 @@
     "connect_app": {
       "title": "连接 {{name}}",
       "mcp": "添加 MCP 服务器",
-      "adminOnly": "由管理员连接"
+      "adminOnly": "由管理员连接",
+      "whoCan": "可连接的人：{{names}}",
+      "signIn_oauth": "用账号登录",
+      "signIn_key": "需要 API 密钥",
+      "signIn_open": "无需登录",
+      "scopes": "请求权限：{{scopes}}"
     },
     "invite": {
       "title_other": "邀请 {{count}} 人",
@@ -5333,6 +5338,7 @@
       "adminAskCreate": "<b>{{name}}</b> 请求获得创建智能体的权限",
       "adminAskWebhook": "<b>{{name}}</b> 请你为例行任务设置 {{service}} Webhook",
       "adminAskVoice": "<b>{{name}}</b> 请你开启语音消息",
+      "adminAskConnector": "<b>{{name}}</b> 请你连接 {{service}}",
       "invitationAccepted": "<b>{{name}}</b> 接受了你的邀请并加入了 {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> 接受了你的邀请",
       "reaction_other": "<b>{{names}}</b> 对你的消息发了表情回应",

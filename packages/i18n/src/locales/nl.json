@@ -3994,7 +3994,12 @@
     "connect_app": {
       "title": "{{name}} koppelen",
       "mcp": "Een MCP-server toevoegen",
-      "adminOnly": "Een admin koppelt het"
+      "adminOnly": "Een admin koppelt het",
+      "whoCan": "Wie het koppelt: {{names}}",
+      "signIn_oauth": "Inloggen met een account",
+      "signIn_key": "Vraagt om een API-sleutel",
+      "signIn_open": "Geen inloggen nodig",
+      "scopes": "Vraagt om: {{scopes}}"
     },
     "invite": {
       "title_one": "{{count}} persoon uitnodigen",
@@ -5566,6 +5571,7 @@
       "adminAskCreate": "<b>{{name}}</b> vraagt om agents te mogen maken",
       "adminAskWebhook": "<b>{{name}}</b> vraagt je de {{service}}-webhook voor routines in te stellen",
       "adminAskVoice": "<b>{{name}}</b> vraagt je spraakberichten aan te zetten",
+      "adminAskConnector": "<b>{{name}}</b> vraagt je {{service}} te koppelen",
       "invitationAccepted": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd en doet mee in {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd",
       "reaction_one": "<b>{{names}}</b> heeft op je bericht gereageerd",

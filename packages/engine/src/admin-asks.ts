@@ -1,11 +1,14 @@
 import { and, eq, isNull, schema } from "@agenteschat/db";
 import { recordAudit } from "./audit";
+import { CONNECTOR_CATALOG } from "./connectors/catalog";
+import { mcpPreset } from "./connectors/presets";
 import { ConflictError, NotFoundError } from "./errors";
 import { adminsOf } from "./notification-producers";
 import { type NotificationDeps, notify, resolveNotifications } from "./notifications";
 import { can, requirePermission } from "./organizations";
 import type { RolePermission } from "./permissions";
 import { speechOwnerIn } from "./speech-settings";
+import { hostOf } from "./vault/views";
 
 /**
  * "Pedir a um admin": what a person can't do here themselves, sent to who can as an inbox row (`admin_ask`) that does
@@ -14,18 +17,22 @@ import { speechOwnerIn } from "./speech-settings";
  * `create_agents`: let the asker create agents (Members, where roles are given).
  * `webhook`: set up a service's webhook for routines (`provider`: github, sentry).
  * `voice`: choose what turns voice into text on this server (Settings › Voice): only its owner can, so only they hear it.
+ * `connector`: connect the service an agent's Connect card names (`messageId`, `offer_connect_app`); connecting it
+ * anywhere settles the card and wakes that agent (`settleConnectCards`).
  */
 export type AdminAsk =
   | { what: "channel_agent"; channelId: string; agentId: string }
   | { what: "create_agents" }
   | { what: "webhook"; provider: string }
-  | { what: "voice" };
+  | { what: "voice" }
+  | { what: "connector"; messageId: string };
 
 /** Who answers each ask, by the permission it needs; `voice` by who owns the server. */
 const DECIDES: Record<Exclude<AdminAsk["what"], "voice">, RolePermission> = {
   channel_agent: "manage_channels",
   create_agents: "manage_roles",
   webhook: "manage_connectors",
+  connector: "manage_connectors",
 };
 
 const SERVICE_NAMES: Record<string, string> = { github: "GitHub", sentry: "Sentry" };
@@ -37,7 +44,9 @@ export const adminAskKey = (orgId: string, ask: AdminAsk, askerId: string) =>
       ? `admin-ask:webhook:${orgId}:${ask.provider}`
       : ask.what === "voice"
         ? `admin-ask:voice:${orgId}`
-        : `admin-ask:create_agents:${askerId}`;
+        : ask.what === "connector"
+          ? `admin-ask:connector:${ask.messageId}`
+          : `admin-ask:create_agents:${askerId}`;
 
 /**
  * Sends the ask to everyone who may do it. Refused to someone who may do it themselves (`admin_ask.self`). Asking again
@@ -67,6 +76,7 @@ export async function askAdmins(deps: NotificationDeps, actorId: string, orgId: 
     if (!channel || !agent) throw new NotFoundError("Channel or agent not found");
     Object.assign(source, { channelId: ask.channelId, agentId: ask.agentId, label: channel.name });
   }
+  if (ask.what === "connector") Object.assign(source, await connectCardSource(deps, orgId, ask.messageId));
   const sent = await notify(deps, {
     orgId,
     userIds:
@@ -79,6 +89,7 @@ export async function askAdmins(deps: NotificationDeps, actorId: string, orgId: 
     latest: {
       reason: ask.what,
       ...(ask.what === "webhook" ? { title: SERVICE_NAMES[ask.provider] ?? ask.provider } : {}),
+      ...(ask.what === "connector" ? { title: source.label } : {}),
     },
   });
   await recordAudit(deps.db, {
@@ -89,6 +100,21 @@ export async function askAdmins(deps: NotificationDeps, actorId: string, orgId: 
     details: { ...ask },
   });
   return { sent: sent.length };
+}
+
+/** The service a Connect card names (the catalog's name, else its server's host), read from the card itself. */
+async function connectCardSource(deps: NotificationDeps, orgId: string, messageId: string) {
+  const [row] = await deps.db
+    .select({ meta: schema.messages.meta, channelId: schema.messages.channelId })
+    .from(schema.messages)
+    .where(and(eq(schema.messages.orgId, orgId), eq(schema.messages.id, messageId)));
+  const card = row?.meta.actionCard as { kind?: unknown; params?: { connector?: unknown; url?: unknown } } | undefined;
+  if (!row || card?.kind !== "connect_app") throw new NotFoundError("Connect card not found");
+  const connector = typeof card.params?.connector === "string" ? card.params.connector : null;
+  const url = typeof card.params?.url === "string" ? card.params.url : null;
+  const label =
+    (connector && (CONNECTOR_CATALOG[connector]?.label ?? mcpPreset(connector)?.label)) || (url && hostOf(url));
+  return { label: label || "MCP" };
 }
 
 /** An agent joined a channel: whoever was asked to add it there is answered. */

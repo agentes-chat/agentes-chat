@@ -3992,7 +3992,12 @@
     "connect_app": {
       "title": "{{name}} verbinden",
       "mcp": "Einen MCP-Server hinzufügen",
-      "adminOnly": "Ein Admin verbindet es"
+      "adminOnly": "Ein Admin verbindet es",
+      "whoCan": "Wer es verbindet: {{names}}",
+      "signIn_oauth": "Anmeldung mit einem Konto",
+      "signIn_key": "Fragt nach einem API-Schlüssel",
+      "signIn_open": "Keine Anmeldung nötig",
+      "scopes": "Fragt nach: {{scopes}}"
     },
     "invite": {
       "title_one": "{{count}} Person einladen",
@@ -5564,6 +5569,7 @@
       "adminAskCreate": "<b>{{name}}</b> möchte Agenten erstellen dürfen",
       "adminAskWebhook": "<b>{{name}}</b> bittet dich, den {{service}}-Webhook für Routinen einzurichten",
       "adminAskVoice": "<b>{{name}}</b> bittet dich, Sprachnachrichten einzuschalten",
+      "adminAskConnector": "<b>{{name}}</b> bittet dich, {{service}} zu verbinden",
       "invitationAccepted": "<b>{{name}}</b> hat deine Einladung angenommen und ist {{org}} beigetreten",
       "invitationAcceptedAny": "<b>{{name}}</b> hat deine Einladung angenommen",
       "reaction_one": "<b>{{names}}</b> hat auf deine Nachricht reagiert",

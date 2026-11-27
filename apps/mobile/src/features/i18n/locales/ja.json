@@ -885,6 +885,7 @@
       "admin_ask_create_agents": "{{names}} がエージェントを作成できるよう求めています",
       "admin_ask_webhook": "{{names}} がルーティン用の {{service}} Webhook の設定を求めています",
       "admin_ask_voice": "{{names}} がボイスメッセージをオンにするよう求めています",
+      "admin_ask_connector": "{{names}}さんが {{service}} の接続を依頼しています",
       "routine_paused_other": "ルーティンが一時停止しました",
       "routine_stalled_other": "ルーティンがコンピューターを待っています",
       "agent_unreached_other": "ルーティンがエージェントを呼び出せませんでした",

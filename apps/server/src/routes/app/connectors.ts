@@ -34,6 +34,7 @@ import {
   revokeAtProvider,
   revokeConnection,
   setAgentScopes,
+  settleConnectCards,
   startOAuth,
   syncCustomTools,
   takeConnectionOffAgent,
@@ -188,6 +189,7 @@ export function connectorRoutes(deps: AppDeps) {
     // A sign-in's account is asked of the server before it's stored (two accounts are told apart by it).
     connect: withComposio(deps.extras?.mcpConnect ?? connectOverHttp, composio),
     composio,
+    onConnected: (connection) => void settleConnectCards({ db, pubsub: adapters.pubsub }, connection),
   };
 
   app.openapi(

@@ -885,6 +885,7 @@
       "admin_ask_create_agents": "{{names}} 님이 에이전트를 만들 수 있게 해 달라고 요청합니다",
       "admin_ask_webhook": "{{names}} 님이 루틴용 {{service}} 웹훅을 설정해 달라고 요청합니다",
       "admin_ask_voice": "{{names}} 님이 음성 메시지를 켜 달라고 요청합니다",
+      "admin_ask_connector": "{{names}}님이 {{service}} 연결을 요청했어요",
       "routine_paused_other": "루틴 일시 중지됨",
       "routine_stalled_other": "루틴이 컴퓨터를 기다리는 중",
       "agent_unreached_other": "루틴이 에이전트를 부르지 못했어요",

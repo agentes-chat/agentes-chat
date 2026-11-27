@@ -17,7 +17,8 @@ import {
 } from "@agenteschat/client";
 import {
   actionCardOf,
-  connectAppDone,
+  connectAppItem,
+  connectSignInLine,
   installSkillDone,
   installSkillSource,
   inviteDone,
@@ -25,7 +26,7 @@ import {
 } from "@agenteschat/client/lib/action-cards";
 import { APP_PAGES, appPagePath } from "@agenteschat/client/lib/app-pages";
 import { slotText } from "@agenteschat/client/lib/calendar";
-import { connectedItems, personalServesAgents } from "@agenteschat/client/lib/connected";
+import { connectedItems, connectedSummary, itemName, personalServesAgents } from "@agenteschat/client/lib/connected";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes } from "@agenteschat/client/lib/files";
 import { joinNames } from "@agenteschat/client/lib/format";
@@ -57,7 +58,7 @@ import { OfferShell } from "./OfferShell";
 export function OfferCard({ message: m }: { message: Message }) {
   const card = actionCardOf(m.meta);
   if (m.author.type !== "agent" || !card) return null;
-  if (card.kind === "connect_app") return <ConnectApp card={card} />;
+  if (card.kind === "connect_app") return <ConnectApp card={card} messageId={m.id} />;
   if (card.kind === "invite_people") return <Invite card={card} />;
   if (card.kind === "install_skill") return <InstallSkill card={card} agentId={m.author.id} />;
   if (card.kind === "update_skills") return <UpdateSkills card={card} postedAt={m.createdAt} />;
@@ -77,9 +78,12 @@ export function OfferCard({ message: m }: { message: Message }) {
 
 type Card = NonNullable<ReturnType<typeof actionCardOf>>;
 
-function ConnectApp({ card }: { card: Extract<Card, { kind: "connect_app" }> }) {
+function ConnectApp({ card, messageId }: { card: Extract<Card, { kind: "connect_app" }>; messageId: string }) {
   const { t } = useTranslation();
   const { orgId, org } = useOrg();
+  const dir = useDirectory();
+  const toast = useToast();
+  const ask = useAskAdmins(orgId);
   const catalog = useCatalog();
   const connections = useConnections(orgId);
   const servers = useCustomServers(orgId);
@@ -87,19 +91,41 @@ function ConnectApp({ card }: { card: Extract<Card, { kind: "connect_app" }> }) 
   const def = defs.find((d) => d.id === card.connector);
   const name = def ? connectorName(t, def) : card.url ? hostOf(card.url) : "";
   const title = name ? t("actionCard.connect_app.title", { name }) : t("actionCard.connect_app.mcp");
-  const done = connectAppDone(card, connectedItems(connections.data ?? [], servers.data ?? [], defs));
+  const item = connectAppItem(card, connectedItems(connections.data ?? [], servers.data ?? [], defs));
   const query = def ? `connect=${encodeURIComponent(def.id)}` : `mcp=${encodeURIComponent(card.url ?? "")}`;
+  // Every member connects it, as their own when they may not add the team's; GitHub only for the team.
+  const may = can(org, "manage_connectors") || personalServesAgents(card.connector);
+  const deciders = joinNames(
+    (card.deciderIds ?? []).map((id) => dir.nameOf({ type: "person", id })).filter(Boolean),
+    t,
+  );
+  const signIn = connectSignInLine(t, card);
   return (
     <OfferShell
       icon="globe"
       title={title}
       why={card.why}
-      detail={card.url}
-      done={done ? `${t("actionCard.connected")}: ${title}` : null}
-      // Every member connects it, as their own when they may not add the team's; GitHub only for the team.
-      action={can(org, "manage_connectors") || personalServesAgents(card.connector) ? t("actionCard.connect") : null}
+      detail={[card.url, signIn].filter(Boolean).join("\n") || undefined}
+      done={item ? `${t("actionCard.connected")}: ${itemName(t, item)}` : null}
+      doneNote={item ? (item.ownerUserId ? t("connectors.personal.done") : connectedSummary(t, item)) : undefined}
+      action={may ? t("actionCard.connect") : null}
       onAction={() => router.push(`/connectors?${query}` as never)}
-      blocked={t("actionCard.connect_app.adminOnly")}
+      blocked={
+        deciders ? t("actionCard.connect_app.whoCan", { names: deciders }) : t("actionCard.connect_app.adminOnly")
+      }
+      ask={{
+        label: t("adminAsk.ask"),
+        disabled: ask.isPending || ask.isSuccess,
+        loading: ask.isPending,
+        onPress: () =>
+          ask.mutate(
+            { what: "connector", messageId },
+            {
+              onSuccess: () => toast({ title: t("adminAsk.sent"), icon: "check" }),
+              onError: (e) => toast({ title: errorText(t, e), icon: "x" }),
+            },
+          ),
+      }}
     />
   );
 }

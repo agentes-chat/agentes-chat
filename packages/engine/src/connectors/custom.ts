@@ -883,6 +883,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
   caches.connections.delete(`${c.orgId}:active`);
   caches.connections.delete(toolsKey(c));
   await refreshServerIcon(deps, c, info).catch(() => {});
+  deps.onConnected?.(c);
 }
 
 /** The server as stored now (a listing may have just changed its icon). */
@@ -1175,6 +1176,7 @@ export async function saveCustomTools(
     .map((t) => t.name);
   // The names the agent called them by: the prefix as it was before this rename.
   await releaseUnasked(deps, actorId, orgId, { connectionId: c.id, prefix: toolPrefixOfConnection(c), tools: freed });
+  deps.onConnected?.(c);
   return serverView(deps.db, orgId, id);
 }
 

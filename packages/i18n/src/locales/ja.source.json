@@ -9800,6 +9800,21 @@
   "actionCard.connect_app.adminOnly": {
     "value": "An admin connects it"
   },
+  "actionCard.connect_app.whoCan": {
+    "value": "Who connects it: {{names}}"
+  },
+  "actionCard.connect_app.signIn_oauth": {
+    "value": "Signs in with an account"
+  },
+  "actionCard.connect_app.signIn_key": {
+    "value": "Asks for an API key"
+  },
+  "actionCard.connect_app.signIn_open": {
+    "value": "No sign-in needed"
+  },
+  "actionCard.connect_app.scopes": {
+    "value": "Asks for: {{scopes}}"
+  },
   "actionCard.invite.title": {
     "value": {
       "one": "Invite {{count}} person",
@@ -13608,6 +13623,9 @@
   },
   "notifications.what.adminAskVoice": {
     "value": "<b>{{name}}</b> asks you to turn on voice messages"
+  },
+  "notifications.what.adminAskConnector": {
+    "value": "<b>{{name}}</b> asks you to connect {{service}}"
   },
   "notifications.what.invitationAccepted": {
     "value": "<b>{{name}}</b> accepted your invitation and joined {{org}}"
