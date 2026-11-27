@@ -1880,6 +1880,8 @@ function AgentRow({
     ? `${[a.name, a.role].filter(Boolean).join(" · ")}\n${doingTitle}`
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
   const roleTag = !locked && !out;
+  // One line has no room under the name: who it talks to, or why it is out, goes in its title.
+  const rowTitle = oneLine && under && under !== a.role ? `${title}\n${under}` : title;
   const face = (
     <AgentAvatar
       agentId={a.id}
@@ -1904,7 +1906,7 @@ function AgentRow({
         to="/org/$orgId/dm/agent/$agentId"
         params={{ orgId: org.id, agentId: a.id }}
         className="sidebar__item"
-        title={title}
+        title={rowTitle}
         onMouseEnter={onPrefetch}
         onFocus={onPrefetch}
         onClick={onOpen}
