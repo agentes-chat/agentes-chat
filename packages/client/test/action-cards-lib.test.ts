@@ -656,3 +656,33 @@ test("a people card's rows, as the web and the phone both say and gate them", ()
   const after = [{ userId: "u2", role: "owner" as const, roleIds: rolesAfter(rows[1] as never, ["r2"]) }];
   expect(rows.map((r) => memberRowDone(r, after))).toEqual([true, true]);
 });
+
+test("an approvals level card: its sentence names the level as the agent's page does, and says what it means under it", () => {
+  const card = (
+    action: string,
+    input: Record<string, unknown>,
+    words: Record<string, string>,
+  ): WorkspaceActionCard => ({
+    kind: "workspace_action",
+    forUserId: "u1",
+    params: { action, input, words, needs: "administrator", why: "" },
+    state: "pending",
+    decidedByUserId: null,
+    decidedAt: null,
+  });
+  const t = ((key: string) => key) as unknown as TFunction;
+  const workspace = card("set_approvals_level", { level: "never", every: true }, { level: "never", variant: "every" });
+  expect(actionCardKey(workspace)).toBe("rightHand.action.set_approvals_level_every");
+  expect(actionCardWords(workspace, t)).toMatchObject({ level: "approvalsLevel.never.title" });
+  expect(actionCardDetail(workspace, t)).toBe("approvalsLevel.never.text");
+  expect(actionCardMark(workspace)).toBe("shield");
+  expect(actionCardApplyKey(workspace)).toBe("rightHand.card.apply");
+  const follows = card(
+    "set_agent_approvals_level",
+    { agentId: "a1", level: null },
+    { agent: "Dev", variant: "workspace" },
+  );
+  expect(actionCardKey(follows)).toBe("rightHand.action.set_agent_approvals_level_workspace");
+  expect(actionCardDetail(follows, t)).toBe("");
+  expect(mayApplyCard(workspace, { userId: "u2", may: (k) => k === "manage_agents" })).toBe(false);
+});

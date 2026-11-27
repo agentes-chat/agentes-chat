@@ -8165,6 +8165,18 @@
   "rightHand.action.set_action_check_off": {
     "value": "Turn off the check of what the team already did"
   },
+  "rightHand.action.set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>, their own choices too"
+  },
+  "rightHand.action.set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_agent_approvals_level_workspace": {
+    "value": "Make <b>{{agent}}</b> follow the workspace's approvals"
+  },
   "rightHand.action.invite_people": {
     "value": "Invite <b>{{emails}}</b> to the workspace."
   },
@@ -10204,6 +10216,18 @@
   },
   "agentActions.workspace.changed_set_action_check_off": {
     "value": "Turned off the check of what the team already did"
+  },
+  "agentActions.workspace.changed_set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level_workspace": {
+    "value": "<b>{{agent}}</b> follows the workspace's approvals again"
   },
   "agentActions.workspace.changed_invite_people": {
     "value": "Invited <b>{{invited}}</b> to the workspace"

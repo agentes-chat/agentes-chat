@@ -3519,6 +3519,10 @@
       "update_workspace": "Изменить рабочее пространство <b>{{name}}</b>",
       "set_action_check_on": "Включить проверку того, что команда уже сделала",
       "set_action_check_off": "Выключить проверку того, что команда уже сделала",
+      "set_approvals_level": "Установить одобрения workspace: <b>{{level}}</b>",
+      "set_approvals_level_every": "Установить одобрения всех агентов: <b>{{level}}</b>, включая их собственный выбор",
+      "set_agent_approvals_level": "Установить одобрения <b>{{agent}}</b>: <b>{{level}}</b>",
+      "set_agent_approvals_level_workspace": "Пусть <b>{{agent}}</b> следует одобрениям workspace",
       "invite_people": "Пригласить <b>{{emails}}</b> в рабочее пространство.",
       "invite_roles_one": "С ролью {{roles}}.",
       "invite_roles_few": "С ролями {{roles}}.",
@@ -4467,6 +4471,10 @@
       "changed_update_workspace": "Изменено рабочее пространство <b>{{name}}</b>",
       "changed_set_action_check_on": "Включена проверка того, что команда уже сделала",
       "changed_set_action_check_off": "Выключена проверка того, что команда уже сделала",
+      "changed_set_approvals_level": "Установлены одобрения workspace: <b>{{level}}</b>",
+      "changed_set_approvals_level_every": "Установлены одобрения всех агентов: <b>{{level}}</b>",
+      "changed_set_agent_approvals_level": "Установлены одобрения <b>{{agent}}</b>: <b>{{level}}</b>",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> снова следует одобрениям workspace",
       "changed_invite_people": "Приглашены в рабочее пространство: <b>{{invited}}</b>",
       "changed_remove_ai_key": "Удалён API-ключ <b>{{name}}</b>"
     },
@@ -17820,6 +17828,11 @@
     "removed": "{{name}} удалён.",
     "name": "Имя компьютера",
     "nameHelp": "Так его видят люди и агенты.",
+    "defaultName": {
+      "model": "{{model}} ({{name}})",
+      "linux": "Компьютер Linux ({{name}})",
+      "other": "Компьютер ({{name}})"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

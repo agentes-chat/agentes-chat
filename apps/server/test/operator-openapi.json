@@ -2998,6 +2998,20 @@
                 "coldFirstEventP99Ms": {
                   "type": ["integer", "null"]
                 },
+                "firstRequestMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to the CLI's first API request (newer runners): before it, the CLI's own work."
+                },
+                "firstRequestP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "apiWaitMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "The CLI's first API request to the API's first streamed message: the network and the API."
+                },
+                "apiWaitP90Ms": {
+                  "type": ["integer", "null"]
+                },
                 "firstTokenMedianMs": {
                   "type": ["integer", "null"],
                   "description": "Turn start to the model API's first streamed message (newer runners)."
@@ -3049,6 +3063,10 @@
                 "coldFirstEventMedianMs",
                 "coldFirstEventP90Ms",
                 "coldFirstEventP99Ms",
+                "firstRequestMedianMs",
+                "firstRequestP90Ms",
+                "apiWaitMedianMs",
+                "apiWaitP90Ms",
                 "firstTokenMedianMs",
                 "firstTokenP90Ms",
                 "firstAssistantMedianMs",
@@ -5718,6 +5736,11 @@
                         "minimum": 0,
                         "description": "Turn start to its first event."
                       },
+                      "firstRequestMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to the CLI's first API request: before it, the CLI's own work."
+                      },
                       "firstTokenMs": {
                         "type": ["integer", "null"],
                         "minimum": 0,
@@ -5755,6 +5778,7 @@
                       "initMs",
                       "sentMs",
                       "firstEventMs",
+                      "firstRequestMs",
                       "firstTokenMs",
                       "firstAssistantMs",
                       "retries",

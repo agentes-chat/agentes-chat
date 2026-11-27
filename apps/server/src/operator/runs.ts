@@ -394,6 +394,9 @@ const Trace = z
                     "Turn start to when the runner handed it to its CLI: its own waits before (a turn the process ran by itself, a model switch).",
                 }),
                 firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
+                firstRequestMs: Count.nullable().openapi({
+                  description: "Turn start to the CLI's first API request: before it, the CLI's own work.",
+                }),
                 firstTokenMs: Count.nullable().openapi({
                   description: "Turn start to the model API's first streamed message (time to first token).",
                 }),

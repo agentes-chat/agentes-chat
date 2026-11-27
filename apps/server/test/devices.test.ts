@@ -60,7 +60,7 @@ test("connect link over HTTP: the one-line install, the computer asking to join,
     status: string;
     request: { id: string; name: string };
   };
-  expect(state).toMatchObject({ status: "asking", request: { name: "build-box" } });
+  expect(state).toMatchObject({ status: "asking", request: { name: "Computador Linux do sam" } });
   expect((await rui(`/devices/connect-links/${link.id}`)).status).toBe(404);
   const listed = (await (await owner("/devices")).json()) as { requests: { id: string }[] };
   expect(listed.requests.map((r) => r.id)).toEqual([state.request.id]);

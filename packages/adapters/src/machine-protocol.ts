@@ -2368,7 +2368,9 @@ export const CURSOR_MODEL_LIMITS = { models: 80, id: 80, label: 80 } as const;
  * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began. A newer
  * runner adds where the model's own time went: the API's first streamed message (`firstTokenMs`) and the first whole
  * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
- * and the thinking blocks with the characters of their text (0 when the API leaves the text out).
+ * and the thinking blocks with the characters of their text (0 when the API leaves the text out). `firstRequestMs` is
+ * when the CLI said it sent its first API request (`system/status` "requesting"): before it, the CLI's own work; from
+ * it to `firstTokenMs`, the network and the API.
  */
 export interface BrainTurnTimings {
   warm: boolean;
@@ -2381,6 +2383,7 @@ export interface BrainTurnTimings {
    */
   sentMs?: number;
   firstEventMs?: number;
+  firstRequestMs?: number;
   firstTokenMs?: number;
   firstAssistantMs?: number;
   retries?: number;
@@ -2441,6 +2444,7 @@ export const BRAIN_TURN_MEASURES = [
   "initMs",
   "sentMs",
   "firstEventMs",
+  "firstRequestMs",
   "firstTokenMs",
   "firstAssistantMs",
   "retries",

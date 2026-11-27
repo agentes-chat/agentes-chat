@@ -1198,6 +1198,11 @@ const DeviceBody = z.object({
   os: z.string().max(20).default("other"),
   arch: z.string().max(40).default(""),
   hostname: z.string().max(200).default(""),
+  model: z
+    .string()
+    .max(100)
+    .optional()
+    .openapi({ description: 'Its maker\'s model ("MacBook Pro"): it names the computer.' }),
   version: z.string().max(40).default(""),
   protocol: z.number().int().optional(),
   workspace: z.string().max(500).optional(),

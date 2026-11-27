@@ -67,6 +67,7 @@ import {
   enableOperatorEvents,
   enableSvgRasterizer,
   ensureRightHands,
+  friendlyMachineNames,
   type GifKey,
   hasFontFiles,
   isAgentesCloud,
@@ -545,6 +546,15 @@ async function boot(
       run: async () => {
         const moved = await surfaceRoomFiles(database.db);
         if (moved > 0) log.info("files moved out of agent rooms", { moved });
+      },
+    },
+    // Computers still called by their host name take their model and owner's name ("MacBook Pro do Tomás").
+    {
+      name: "friendly-machine-names",
+      once: true,
+      run: async () => {
+        const renamed = await friendlyMachineNames(database.db, adapters.pubsub);
+        if (renamed > 0) log.info("computers named after their model and owner", { renamed });
       },
     },
   ];

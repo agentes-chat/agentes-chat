@@ -2499,6 +2499,51 @@ export async function holdsInvitation(
 }
 
 /**
+ * The email invitations that wait for this account, with the link that accepts each: neither accepted nor expired,
+ * into an open workspace with room that it isn't in. Only for a confirmed address: anyone can sign up with an address that isn't
+ * theirs. An invitation whose token isn't derived from its id (made before ADR 0090) has no link to give, so none.
+ */
+export async function waitingInvitations(
+  db: Executor,
+  secret: string,
+  user: { id: string; email: string },
+  now = new Date(),
+) {
+  const rows = await db
+    .select({
+      id: organizationInvitations.id,
+      orgId: organizations.id,
+      orgName: organizations.name,
+      tokenHash: organizationInvitations.tokenHash,
+    })
+    .from(organizationInvitations)
+    .innerJoin(organizations, eq(organizations.id, organizationInvitations.orgId))
+    .leftJoin(
+      organizationMembers,
+      and(eq(organizationMembers.orgId, organizationInvitations.orgId), eq(organizationMembers.userId, user.id)),
+    )
+    .where(
+      and(
+        eq(organizationInvitations.email, user.email.trim().toLowerCase()),
+        isNull(organizationInvitations.acceptedAt),
+        gt(organizationInvitations.expiresAt, now),
+        isNull(organizationMembers.userId),
+        openOrg,
+      ),
+    )
+    .orderBy(desc(organizationInvitations.createdAt));
+  const waiting = [];
+  for (const row of rows) {
+    const token = invitationToken(secret, row.id);
+    // A full workspace takes nobody: opening its invitation would only say so, over and over.
+    if (sha256(token) === row.tokenHash && !(await seatsFull(db, row.orgId))) {
+      waiting.push({ orgId: row.orgId, orgName: row.orgName, token });
+    }
+  }
+  return waiting;
+}
+
+/**
  * A request's page key once it signs in no one (ADR 0090): kept so the page that holds the key still finds its request
  * and reads `closed`. Marked, not only hashed again: no key's hash can equal it, so even someone who saw the live hash
  * can't hand it in as a key.

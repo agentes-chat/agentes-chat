@@ -17,7 +17,7 @@
 // three after its prefix, "KEY403" is forbidden by it (a model or account switched off), "HANG…" (the API's pings
 // going on in "HANGPING", inside an open thinking block in "HANGTHINK"), "LONGTHINK", "LONGTOOL", "OURTOOLWAIT",
 // "RETRYWAIT" and "QUIETWAIT" go quiet (see below), "THOUGHT" thinks in two blocks first (one with 10 characters of text,
-// one whose text is left out), "ECHOMODEL" answers with the model and effort it runs on. Control requests:
+// one whose text is left out; its API request said 30 ms before), "ECHOMODEL" answers with the model and effort it runs on. Control requests:
 // `initialize`, `get_usage` as $FAKE_CLAUDE_USAGE says ("" a Max plan's windows, "signed_out", "error", "hang": never),
 // and `set_model` and `apply_flag_settings` (`effortLevel`), which switch what "ECHOMODEL" says (and `get_settings`
 // shows) unless $FAKE_CLAUDE_NO_SWITCH is "refuse" (an error answer), "silent" (none) or "flag_wins" (the effort says
@@ -410,6 +410,9 @@ async function answer(line) {
     ev({ type: "content_block_stop", index: 0 });
   }
   if (prompt.includes("THOUGHT")) {
+    // Claude Code says it right before it sends the API request.
+    out({ type: "system", subtype: "status", status: "requesting" });
+    await sleep(30);
     out({
       type: "stream_event",
       event: { type: "message_start", message: { id: "msg_thought" } },

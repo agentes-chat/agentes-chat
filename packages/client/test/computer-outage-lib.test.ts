@@ -40,3 +40,15 @@ test("back: how long it was away and what waited; nothing waiting says only how 
   // Any other kind: nothing.
   expect(computerOutageLine(tFor("en"), notice("computer_ready", {}), "en")).toBe("");
 });
+
+test("without Intl.ListFormat (the phone's Hermes), what waits is still a list in the language", () => {
+  const down = notice("computer_down", { runs: 3, calls: 1 });
+  const listFormat = Object.getOwnPropertyDescriptor(Intl, "ListFormat") as PropertyDescriptor;
+  Reflect.deleteProperty(Intl, "ListFormat");
+  try {
+    expect(computerOutageLine(tFor("en"), down, "en")).toBe("Waiting: 3 agent requests and 1 webhook call");
+    expect(computerOutageLine(tFor("pt-BR"), down, "pt-BR")).toMatch(/^.+: .+ e .+$/);
+  } finally {
+    Object.defineProperty(Intl, "ListFormat", listFormat);
+  }
+});

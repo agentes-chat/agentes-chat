@@ -592,9 +592,18 @@ export interface OrgOnboarding {
   generalChannelId: string;
 }
 
+/** An email invitation that waits for the signed-in person's confirmed address: `token` opens its page. */
+export interface WaitingInvitation {
+  orgId: string;
+  orgName: string;
+  token: string;
+}
+
 export interface Me {
   user: User;
   organizations: OrgSummary[];
+  /** Newest first; absent when none waits or the address isn't confirmed. */
+  invitations?: WaitingInvitation[];
 }
 
 /**
@@ -788,6 +797,8 @@ export interface JoinStatus {
   orgId?: string;
   email: string;
   request: { status: "pending" | "approved" | "denied"; reason: string | null } | null;
+  /** Approved with an email invitation that still waits: its token, which this account accepts as it is. */
+  invitation?: string;
 }
 
 /** `invites.ask`: asking is all a link does; the admins answer. `emailed`: this server sends email. */
@@ -800,12 +811,14 @@ export interface AskToJoinResult {
 }
 
 /**
- * Where the request a page made stands (ADR 0090): waiting, in (once: `signIn` for the one-time sign-in), denied,
- * or closed (run out, turned off, or approved for an address that signs in as it always did).
+ * Where the request a page made stands (ADR 0090): waiting, in (once: `signIn` for the one-time sign-in), invited
+ * (once: an address that already had an account, the invitation's `token` and its email's `mail` proof), denied,
+ * or closed (run out, turned off, or joined another way).
  */
 export type JoinClaim =
   | { status: "pending" }
   | { status: "in"; orgId: string; signIn: string }
+  | { status: "invited"; token: string; mail: string }
   | { status: "denied"; reason: string | null }
   | { status: "closed" };
 
@@ -3684,6 +3697,8 @@ export const WORKSPACE_ACTION_IDS = [
   "update_workspace",
   "set_action_check",
   "set_computer_help",
+  "set_approvals_level",
+  "set_agent_approvals_level",
   "invite_people",
   "remove_ai_key",
 ] as const;

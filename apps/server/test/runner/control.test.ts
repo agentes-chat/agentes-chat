@@ -161,6 +161,14 @@ const sharedGrant = () => ({ path: expect.stringMatching(/[\\/]shared$/), agents
 
 const stored = (home: string) => JSON.parse(readFileSync(configPath(home), "utf8")) as Record<string, unknown>;
 
+test("the name the server gives this computer is the one its app shows, and kept", async () => {
+  const { home } = pairedHome({ name: "Rui-MacBook-Pro.local" });
+  const c = control(home);
+  await c.connect();
+  await waitFor(() => stored(home).name === "box");
+  expect(await c.data({ type: "status" })).toMatchObject({ machine: { id: "m1", name: "box" } });
+});
+
 test("checking again publishes the upgraded Codex version on the same connection", async () => {
   const { home } = pairedHome();
   let version = "0.149.0";

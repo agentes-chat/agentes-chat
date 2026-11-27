@@ -82,6 +82,7 @@ import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { MCP_TOKEN_FILE, mcpSocketPath, runMcpRelay, runMcpServer } from "./mcp";
 import { runMigrate } from "./migrate";
+import { machineModel } from "./model";
 import {
   type DeviceGrant,
   devicePair,
@@ -363,7 +364,7 @@ async function pair(p: Parsed): Promise<number> {
       grant = await devicePair(
         server,
         {
-          ...deviceInfo(name, p.flags.has("new") ? undefined : previousMachineFor(prev, server)),
+          ...deviceInfo(name, p.flags.has("new") ? undefined : previousMachineFor(prev, server), await machineModel()),
           ...(link ? { link } : {}),
         },
         (code) => {

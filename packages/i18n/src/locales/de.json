@@ -3273,6 +3273,10 @@
       "update_workspace": "Workspace <b>{{name}}</b> ändern",
       "set_action_check_on": "Die Prüfung, was das Team schon getan hat, einschalten",
       "set_action_check_off": "Die Prüfung, was das Team schon getan hat, ausschalten",
+      "set_approvals_level": "Freigaben des Workspace auf <b>{{level}}</b> setzen",
+      "set_approvals_level_every": "Freigaben aller Agenten auf <b>{{level}}</b> setzen, auch ihre eigenen Einstellungen",
+      "set_agent_approvals_level": "Freigaben von <b>{{agent}}</b> auf <b>{{level}}</b> setzen",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b> wieder den Freigaben des Workspace folgen lassen",
       "invite_people": "<b>{{emails}}</b> in den Workspace einladen.",
       "invite_roles_one": "Mit der Rolle {{roles}}.",
       "invite_roles_other": "Mit den Rollen {{roles}}.",
@@ -4175,6 +4179,10 @@
       "changed_update_workspace": "Workspace <b>{{name}}</b> geändert",
       "changed_set_action_check_on": "Die Prüfung, was das Team schon getan hat, eingeschaltet",
       "changed_set_action_check_off": "Die Prüfung, was das Team schon getan hat, ausgeschaltet",
+      "changed_set_approvals_level": "Freigaben des Workspace auf <b>{{level}}</b> gesetzt",
+      "changed_set_approvals_level_every": "Freigaben aller Agenten auf <b>{{level}}</b> gesetzt",
+      "changed_set_agent_approvals_level": "Freigaben von <b>{{agent}}</b> auf <b>{{level}}</b> gesetzt",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> folgt wieder den Freigaben des Workspace",
       "changed_invite_people": "<b>{{invited}}</b> in den Workspace eingeladen",
       "changed_remove_ai_key": "API-Schlüssel <b>{{name}}</b> gelöscht"
     },
@@ -16737,6 +16745,11 @@
     "removed": "{{name}} wurde entfernt.",
     "name": "Name des Computers",
     "nameHelp": "So sehen ihn Personen und Agenten.",
+    "defaultName": {
+      "model": "{{model}} von {{name}}",
+      "linux": "Linux-Computer von {{name}}",
+      "other": "Computer von {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
