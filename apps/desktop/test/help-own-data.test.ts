@@ -13,6 +13,9 @@ const lines = (b: HelpBlock): string[] => (typeof b === "string" ? [b] : "list" 
 /** The folders the app keeps, as the code names them: a guide to deleting them names each one exactly. */
 const FOLDERS = [".agentes", ".agentes-runner", "agentes.chat erased", "chat.agentes.desktop", "agentes.chat.plist"];
 
+/** The help pages that name the app's settings as Settings › This computer (ADR 0256); the rest name Preferences. */
+const SETTINGS_HELP = new Set(["en", "pt-BR"]);
+
 describe("the help page on starting over and uninstalling", () => {
   test("the folders it names are the ones the code keeps", () => {
     const local = read("apps/desktop/src-tauri/src/local_server.rs");
@@ -42,11 +45,19 @@ describe("the help page on starting over and uninstalling", () => {
       const restore = `**${serverText(code as AppLocale, "accountDeleting.restore")}**`;
       expect(text).not.toContain(restore);
       expect(linesOf("password").join("\n")).toContain(restore);
+      // Settings › This computer › …, as the app names each section, with the help's own word for this computer on
+      // every system. A language whose help still names the old Preferences window is checked against those names
+      // until its translation names the new ones.
+      const fill = (label: string) => label.replaceAll("{{device}}", d.device.linux);
+      const at = (section: string) =>
+        `**${[d.settings.nav.title, fill(d.settings.nav.thisDevice), fill(section)].join("\u00a0›\u00a0")}**`;
       const prefs = d.windowTitle.prefs;
+      const settings = SETTINGS_HELP.has(code)
+        ? [at(d.settings.nav.server), at(d.settings.nav.app)]
+        : [`**${prefs}\u00a0›\u00a0${d.prefs.nav.servers}**`, `**${prefs}\u00a0›\u00a0${d.prefs.nav.general}**`];
       const names = [
-        `**${prefs} › ${d.prefs.nav.servers}**`,
+        ...settings,
         `**${d.server.erase}**`,
-        `**${prefs} › ${d.prefs.nav.general}**`,
         `**${d.prefs.general.launchTitle}**`,
         `**${d.tray.quit}**`,
         `**${d.tray.quitTitle}**`,

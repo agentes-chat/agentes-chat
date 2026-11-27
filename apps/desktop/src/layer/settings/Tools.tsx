@@ -9,36 +9,24 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import type { ControlStatus } from "@agenteschat/adapters/runner-control";
 import { CLI_INSTALL_POLL_MS, GIT_FOR_WINDOWS_URL } from "@agenteschat/client/lib/machines";
-import {
-  BrainPortrait,
-  type BrainPortraitState,
-  Button,
-  Chip,
-  Dialog,
-  DialogFooter,
-  Icon,
-  type IconName,
-  InfoHint,
-  ProviderLogo,
-  Switch,
-} from "@agenteschat/ui";
-import { useState } from "react";
+import { Button, Dialog, DialogFooter, Icon, type IconName, InfoHint, ProviderLogo, Switch } from "@agenteschat/ui";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
 import { type Home, orgName, pairedHomes } from "../../control/store";
 import { CLI_INSTALL, toolsHere } from "../../control/this-mac";
 import { usePending } from "../../hooks";
 import { CommandCopy, OrgTile } from "../../ui/bits";
-import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
+import { hintFor, PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { ToolAccounts } from "./Accounts";
 
 type Cli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
-/** The coding programs agents think with, each with a switch of its own; the first two have a portrait. */
-const CLIS: { tool: Cli; kind: string; portrait?: "claude_code" | "codex" }[] = [
-  { tool: "claude", kind: "claude_code", portrait: "claude_code" },
-  { tool: "codex", kind: "codex", portrait: "codex" },
+/** The coding programs agents think with, each with a switch of its own. */
+const CLIS: { tool: Cli; kind: string }[] = [
+  { tool: "claude", kind: "claude_code" },
+  { tool: "codex", kind: "codex" },
   { tool: "cursor", kind: "cursor" },
   { tool: "opencode", kind: "opencode" },
   { tool: "grok", kind: "grok" },
@@ -50,8 +38,10 @@ const CLIS: { tool: Cli; kind: string; portrait?: "claude_code" | "codex" }[] = 
 export const cliOn = (tools: RunnerTools, tool: Cli) => (tools[tool] ?? tools.codex) === true;
 
 /**
- * The coding programs and the browser are for the whole computer: every organization gets the same switch. Commands
- * are each organization's own, since they reach everything the person can on this computer.
+ * Folders and tools › Tools: the browser, Commands and the coding programs. The coding programs and the browser are
+ * for the whole computer: every organization gets the same switch. Commands are each organization's own, since they
+ * reach everything the person can on this computer, which their row says in sight. Each program's state is words in
+ * its row's line (never a pill), with the install or the check where it isn't working.
  */
 export function Tools() {
   const { t } = useTranslation();
@@ -127,34 +117,25 @@ export function Tools() {
       }
     });
 
-  const exec = (info: RunnerExecutorInfo | undefined, broken: boolean) =>
+  /** A program's state in words, in the waiting colour when it needs someone. */
+  const exec = (info: RunnerExecutorInfo | undefined, broken: boolean): ReactNode =>
     broken ? (
-      <Chip icon="alert" tone="waiting">
-        {t("desktop.tools.cantStartChip")}
-      </Chip>
+      <span className="dk-state-waiting">{t("desktop.tools.cantStartChip")}</span>
     ) : !info ? (
-      <Chip icon="dash">{t("desktop.tools.notFound")}</Chip>
+      t("desktop.settings.access.notHere")
     ) : info.loggedIn === false ? (
-      <Chip icon="alert" tone="waiting">
-        {t("desktop.tools.loggedOut")}
-      </Chip>
+      <span className="dk-state-waiting">{t("desktop.tools.loggedOut")}</span>
     ) : (
-      <Chip icon="check" tone="done">
-        {t("desktop.prefs.tools.connected")}
-      </Chip>
+      t("desktop.prefs.tools.connected")
     );
 
-  /** Found and logged in: the engine at rest; not found or logged out: off. */
-  const engineState = (info: RunnerExecutorInfo | undefined): BrainPortraitState =>
-    info && info.loggedIn !== false ? "idle" : "off";
-
   const logo = (icon: IconName) => (
-    <span className="dk-logo">
+    <span className="dk-logo dk-logo--soft">
       <Icon name={icon} size={16} />
     </span>
   );
 
-  const cliRow = ({ tool: cli, kind, portrait }: (typeof CLIS)[number]) => {
+  const cliRow = ({ tool: cli, kind }: (typeof CLIS)[number]) => {
     const info = executors[cli];
     const said = executors.broken?.[cli];
     const name = t(`desktop.tools.${cli}Name`);
@@ -185,26 +166,12 @@ export function Tools() {
     return (
       <PrefRow
         key={cli}
-        lead={
-          portrait ? (
-            <BrainPortrait kind={portrait} state={engineState(info)} />
-          ) : (
-            <ProviderLogo id={kind} off={!info} />
-          )
-        }
+        // The maker's mark in a tile the size of the rows' other icons, so every title starts on one line.
+        lead={<ProviderLogo id={kind} size="sm" off={!info} className="dk-crow__brand" />}
         htmlFor={`tool-${cli}`}
-        title={
-          portrait ? (
-            <>
-              <ProviderLogo id={kind} size="xs" />
-              {name}
-            </>
-          ) : (
-            name
-          )
-        }
+        title={name}
         hint={hintFor(t, name, t(`desktop.tools.${cli}Desc`))}
-        chip={exec(info, Boolean(said))}
+        desc={exec(info, Boolean(said))}
         end={
           // On or off whether or not its program is here yet: one installed later then works (ADR 0165).
           <Switch
@@ -283,14 +250,33 @@ export function Tools() {
 
   return (
     <>
-      <PrefHead title={t("desktop.prefs.tools.title")} lead={t("desktop.prefs.tools.lead")} />
       <PrefCard>
-        {CLIS.map(cliRow)}
+        <PrefRow
+          lead={logo("globe")}
+          htmlFor="tool-browser"
+          title={t("desktop.tools.browserName")}
+          hint={hintFor(
+            t,
+            t("desktop.tools.browserName"),
+            t("common.joinSentences", { a: t("desktop.tools.browserDesc"), b: t("desktop.tools.browserLogins") }),
+          )}
+          desc={t("desktop.settings.access.browserDesc")}
+          end={
+            <Switch
+              id="tool-browser"
+              aria-describedby="tool-browser-hint"
+              checked={tools.browser === true}
+              disabled={homes.length === 0 || pending !== null}
+              onCheckedChange={(on) => void set("browser", on)}
+            />
+          }
+        />
         <PrefRow
           lead={logo("code")}
           htmlFor="tool-commands"
           title={t("desktop.tools.commandsName")}
           hint={hintFor(t, t("desktop.tools.commandsName"), t("desktop.tools.commandsAbout"))}
+          desc={t("desktop.settings.access.commandsDesc")}
           end={only && commandsSwitch(only, "tool-commands")}
           under={
             !only &&
@@ -305,47 +291,10 @@ export function Tools() {
             ))
           }
         />
-        <PrefRow
-          lead={logo("globe")}
-          htmlFor="tool-browser"
-          title={t("desktop.tools.browserName")}
-          hint={hintFor(
-            t,
-            t("desktop.tools.browserName"),
-            t("common.joinSentences", { a: t("desktop.tools.browserDesc"), b: t("desktop.tools.browserLogins") }),
-          )}
-          end={
-            <Switch
-              id="tool-browser"
-              aria-describedby="tool-browser-hint"
-              checked={tools.browser === true}
-              disabled={homes.length === 0 || pending !== null}
-              onCheckedChange={(on) => void set("browser", on)}
-            />
-          }
-        />
+        {CLIS.map(cliRow)}
       </PrefCard>
 
       <ToolAccounts homes={homes} executors={executors} />
-
-      <CardTitle>{t("desktop.prefs.tools.protection")}</CardTitle>
-      <PrefCard>
-        <PrefRow
-          lead={logo("shield")}
-          htmlFor="protected-mode"
-          title={t("desktop.prefs.tools.protectedTitle")}
-          hint={hintFor(t, t("desktop.prefs.tools.protectedTitle"), t("desktop.prefs.tools.protectedDesc"))}
-          end={
-            <Switch
-              id="protected-mode"
-              aria-describedby="protected-mode-hint"
-              checked={false}
-              disabled
-              onCheckedChange={() => {}}
-            />
-          }
-        />
-      </PrefCard>
 
       <Dialog
         open={!!asking}

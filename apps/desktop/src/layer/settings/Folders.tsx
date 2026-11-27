@@ -1,16 +1,21 @@
 import { ALL_AGENTS, type RunnerFolderGrant } from "@agenteschat/adapters/machine-protocol";
-import { Button, Checkbox, Dialog, DialogFooter, Icon, Popover, Segmented } from "@agenteschat/ui";
+import { Button, Checkbox, Dialog, DialogFooter, Icon, Menu, MenuItem, Popover } from "@agenteschat/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
 import { ControlError } from "../../control/client";
 import { type Home, orgName, pairedHomes } from "../../control/store";
 import { usePending } from "../../hooks";
-import { AgentFace, HelpLink, OrgTile } from "../../ui/bits";
-import { PrefCard, PrefHead, PrefRow } from "../../ui/settings";
+import { AgentFace, HelpLink } from "../../ui/bits";
+import { PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { baseName, listNames, shortPath } from "../../ui/time";
 
+/**
+ * Folders and tools › Allowed folders: every workspace's folders on this computer in one list, each with its path, its
+ * workspace (when several use this computer) and the agents that use it; "Allow another folder" picks one for a
+ * workspace (asked first when several use this computer). Each workspace allows its own folders.
+ */
 export function Folders() {
   const { t } = useTranslation();
   const host = useHost();
@@ -18,26 +23,18 @@ export function Folders() {
   const snap = useSnapshot();
   const toast = useToast();
   const homes = pairedHomes(snap);
-  const [picked, setPicked] = useState<string | null>(null);
   const [openFor, setOpenFor] = useState<string | null>(null);
-  const [removing, setRemoving] = useState<RunnerFolderGrant | null>(null);
+  const [removing, setRemoving] = useState<{ home: Home; folder: RunnerFolderGrant } | null>(null);
   const [pending, run] = usePending<"add" | "remove">();
-  const home = homes.find((h) => h.homeId === picked) ?? homes[0];
+  const multi = homes.length > 1;
 
-  // Preferences shows this tab only while an organization's agents work here: no empty state of its own.
-  if (!home) return <PrefHead title={t("desktop.prefs.folders.title")} lead={t("desktop.prefs.folders.lead")} />;
-
-  // The shared folder (ADR 0115) is every agent's, always: nothing to choose here.
-  const folders = (home.access?.folders ?? []).filter((f) => !f.agents.includes(ALL_AGENTS));
-  const org = orgName(home);
-
-  const add = async () => {
+  const add = async (home: Home) => {
     const path = await host.pickFolder().catch(() => null);
     if (!path) return;
     try {
       await store.request(home.homeId, { type: "folders.add", path, agents: [] });
       toast(t("desktop.prefs.folders.added", { folder: baseName(path) }), "drive");
-      setOpenFor(path);
+      setOpenFor(`${home.homeId} ${path}`);
     } catch (err) {
       toast(
         err instanceof ControlError && err.code === "invalid_path"
@@ -51,7 +48,7 @@ export function Folders() {
   const remove = async () => {
     if (!removing) return;
     try {
-      await store.request(home.homeId, { type: "folders.remove", path: removing.path });
+      await store.request(removing.home.homeId, { type: "folders.remove", path: removing.folder.path });
       toast(t("desktop.prefs.folders.removed"));
     } catch {
       toast(t("desktop.common.error"), "alert");
@@ -59,48 +56,60 @@ export function Folders() {
     setRemoving(null);
   };
 
+  // The shared folder (ADR 0115) is every agent's, always: nothing to choose here.
+  const rows = homes.flatMap((home) =>
+    (home.access?.folders ?? []).filter((f) => !f.agents.includes(ALL_AGENTS)).map((folder) => ({ home, folder })),
+  );
+  const [only] = homes;
+  const choose = multi ? (
+    <Menu
+      align="end"
+      label={t("desktop.settings.access.addTitle")}
+      trigger={
+        <Button size="sm" loading={pending === "add"}>
+          {t("desktop.server.choose")}
+        </Button>
+      }
+    >
+      {homes.map((h) => (
+        <MenuItem key={h.homeId} onSelect={() => void run("add", () => add(h))}>
+          {t("desktop.settings.access.addFor", { org: orgName(h) })}
+        </MenuItem>
+      ))}
+    </Menu>
+  ) : only ? (
+    <Button size="sm" loading={pending === "add"} onClick={() => void run("add", () => add(only))}>
+      {t("desktop.server.choose")}
+    </Button>
+  ) : undefined;
+
   return (
     <>
-      <PrefHead
-        title={t("desktop.prefs.folders.title")}
-        lead={t("desktop.prefs.folders.lead")}
-        action={
-          <Button variant="primary" icon="plus" loading={pending === "add"} onClick={() => void run("add", add)}>
-            {t("desktop.prefs.folders.add")}
-          </Button>
-        }
-      />
-      {homes.length > 1 && (
-        <div className="dk-orgpick">
-          <Segmented
-            label={t("desktop.prefs.folders.org")}
-            value={home.homeId}
-            onValueChange={(id) => {
-              setPicked(id);
-              setOpenFor(null);
-            }}
-            options={homes.map((h) => ({
-              value: h.homeId,
-              label: orgName(h),
-              mark: <OrgTile logo={h.logo} size="sm" />,
-            }))}
-          />
-        </div>
-      )}
       <PrefCard>
-        {folders.length === 0 && (
-          <PrefRow title={t("desktop.prefs.folders.noneTitle", { org })} desc={t("desktop.prefs.folders.noneBody")} />
-        )}
-        {folders.map((f) => (
-          <FolderRow
-            key={f.path}
-            home={home}
-            folder={f}
-            open={openFor === f.path}
-            onOpenChange={(o) => setOpenFor(o ? f.path : null)}
-            onRemove={() => setRemoving(f)}
-          />
-        ))}
+        {rows.map(({ home, folder }) => {
+          const key = `${home.homeId} ${folder.path}`;
+          return (
+            <FolderRow
+              key={key}
+              home={home}
+              folder={folder}
+              org={multi ? orgName(home) : undefined}
+              open={openFor === key}
+              onOpenChange={(o) => setOpenFor(o ? key : null)}
+              onRemove={() => setRemoving({ home, folder })}
+            />
+          );
+        })}
+        <PrefRow
+          lead={
+            <span className="dk-logo dk-logo--soft">
+              <Icon name="plus" size={16} />
+            </span>
+          }
+          title={t("desktop.settings.access.addTitle")}
+          desc={t("desktop.settings.access.addDesc")}
+          end={choose}
+        />
       </PrefCard>
       <p className="dk-help dk-under-card">
         <HelpLink slug="computers" section="folders">
@@ -111,7 +120,7 @@ export function Folders() {
       <Dialog
         open={!!removing}
         onOpenChange={(o) => !o && pending !== "remove" && setRemoving(null)}
-        title={t("desktop.prefs.folders.removeTitle", { folder: removing ? baseName(removing.path) : "" })}
+        title={t("desktop.prefs.folders.removeTitle", { folder: removing ? baseName(removing.folder.path) : "" })}
         description={t("desktop.prefs.folders.removeBody")}
         closeLabel={t("desktop.common.close")}
         width={440}
@@ -132,12 +141,15 @@ export function Folders() {
 function FolderRow({
   home,
   folder,
+  org,
   open,
   onOpenChange,
   onRemove,
 }: {
   home: Home;
   folder: RunnerFolderGrant;
+  /** Its workspace, said when several use this computer. */
+  org?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRemove: () => void;
@@ -172,6 +184,7 @@ function FolderRow({
       desc={
         <>
           <span className="dk-path">{shortPath(folder.path)}</span>
+          {org && <span>{org}</span>}
           <span className="dk-crow__line">
             {using.length > 0 ? (
               <>

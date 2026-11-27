@@ -1,0 +1,245 @@
+/*
+ * Settings › This computer on the app layer (ADR 0256 §7, Settings.tsx): the section list (the desktop's `.dk-pnav`)
+ * beside the page (`.dk-pbody`), with the pieces of its own. States are words in their colour, never pills.
+ */
+.dk-sx {
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+.dk-sx .dk-pnav {
+  background: var(--side, var(--sunken));
+}
+.dk-sx .dk-pbody {
+  padding: 26px 40px 32px;
+}
+.dk-sx .dk-pbody > * {
+  max-width: 680px;
+}
+.dk-sx__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The way back to the workspace's page, over the list. */
+.dk-sx .dk-pnav .dk-sx__back {
+  height: 28px;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+/* Between the workspace's own sections and its advanced ones. */
+.dk-sx__gap {
+  height: 8px;
+  flex: none;
+}
+/* With no site: this computer's picture over its sections. */
+.dk-sx__alone {
+  padding-top: 2px;
+}
+.dk-sx__alone .ac-computer {
+  width: 40px;
+  height: auto;
+}
+/* Something on this computer needs the person: a dot in the waiting colour after Overview. */
+.dk-sx__dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+/* The workspace's page isn't there: a quiet line on top, with Try again at its end. */
+.dk-sx__away {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--sunken);
+  font-size: 13.5px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.dk-sx__away > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.dk-sx__away b {
+  color: var(--ink);
+}
+.dk-sx__away > button {
+  flex: none;
+  margin-left: auto;
+}
+
+/* Overview: the computer's picture, its name, whether it needs the person, and a line under. */
+.dk-sx__head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 6px;
+}
+.dk-sx__headtext {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-sx__headtext h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.dk-sx__headtext h2 .ac-btn {
+  opacity: 0.6;
+}
+.dk-sx__headtext h2:hover .ac-btn,
+.dk-sx__headtext h2 .ac-btn:focus-visible {
+  opacity: 1;
+}
+.dk-sx__headtext > p {
+  margin: 4px 0 2px;
+  font-size: 14px;
+}
+.dk-sx__rename .ac-input {
+  max-width: 320px;
+}
+.dk-sx__sub {
+  font-size: 13px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* A state in words: ok, or waiting on someone. */
+.dk-sx__ok,
+.dk-sx__on {
+  color: var(--ok);
+  font-weight: 600;
+}
+.dk-sx__on {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.dk-sx__warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+/* A phone's state on its title's line. */
+.dk-sx__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+/* After an ⓘ, which takes no room of its own: past its glyph, as a chip there would be. */
+.dk-crow .ac-hintline > .ac-hint ~ .dk-sx__state {
+  margin-left: 26px;
+}
+.dk-sx__state[data-tone="warn"] {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* The phone's QR code in a row's lead, on white so any camera reads it. */
+.dk-sx__qr {
+  display: block;
+  flex: none;
+  width: 92px;
+  padding: 5px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--e1);
+}
+.dk-sx__qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* What is done less often, as quiet links under the last card. */
+.dk-sx__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 18px 4px 0;
+  font-size: 13px;
+}
+.dk-sx__links .ac-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A group's own heading inside App settings (Advanced), with its action at the end. */
+.dk-sx__subhead {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 30px 0 4px;
+}
+.dk-sx__subhead > div {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.dk-sx__subhead h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 21px;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.dk-sx__subhead .dk-lead {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* The row a route asked for, marked a moment once it is in view. */
+[data-focus][data-focused] .dk-card {
+  box-shadow:
+    var(--e1),
+    0 0 0 2px var(--agent2);
+  transition: box-shadow 0.6s var(--out, ease-out);
+}
+
+@media (max-width: 760px) {
+  .dk-sx {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .dk-sx .dk-pbody {
+    padding: 20px 20px 28px;
+  }
+}
+/* A coding program's mark as a row's picture: the 32 px of the rows' other icons. */
+.dk-crow > .dk-crow__brand {
+  width: 32px;
+  height: 32px;
+}
+/* A ghost button starting a row's line of buttons ("Check again"): its words on the row's text column, as `.ac-acts`
+   does. */
+.dk-crow__under .dk-ver__acts > .ac-btn--ghost:not(.ac-btn--icon):first-child {
+  padding-inline: var(--ghost-plate);
+  margin-inline-start: calc(-1 * var(--ghost-plate));
+}
+/* A phone's portrait (narrower than it is tall) in the rows' 32 px column, so its title starts with the others. */
+.dk-crow > .dk-crow__pic {
+  flex: none;
+  width: 32px;
+  display: grid;
+  place-items: center;
+}

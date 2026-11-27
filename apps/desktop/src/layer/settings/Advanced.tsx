@@ -7,7 +7,7 @@ import { useHost, useSnapshot, useStore } from "../../app";
 import type { Platform } from "../../control/platform";
 import { orgName, pairedHomes } from "../../control/store";
 import { OrgTile, Stepper } from "../../ui/bits";
-import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
+import { CardTitle, hintFor, PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { shortPath } from "../../ui/time";
 
@@ -31,6 +31,10 @@ type Limit = keyof ReturnType<typeof defaultLimits>;
 const TASK_MAX = ["3600", "14400", "28800"] as const;
 const idleChoices = (platform: Platform) => (platform === "linux" ? ["10", "20", "30", "60"] : ["3", "5", "10", "30"]);
 
+/**
+ * App settings › Advanced: the limits every workspace's agents keep on this computer (long jobs, open conversations)
+ * and each workspace's agents' folder. One change sets every workspace.
+ */
 export function Advanced() {
   const { t } = useTranslation();
   const host = useHost();
@@ -97,21 +101,21 @@ export function Advanced() {
 
   const disabled = homes.length === 0;
   return (
-    <>
-      <PrefHead
-        title={t("desktop.prefs.advanced.title")}
-        lead={t("desktop.prefs.advanced.lead")}
-        action={
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={disabled}
-            onClick={() => void change(defaults, t("desktop.prefs.advanced.defaultsDone"))}
-          >
-            {t("desktop.prefs.advanced.defaults")}
-          </Button>
-        }
-      />
+    <section data-focus="advanced">
+      <div className="dk-sx__subhead">
+        <div>
+          <h3>{t("desktop.settings.app.advanced")}</h3>
+          <p className="dk-lead">{t("desktop.prefs.advanced.lead")}</p>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={disabled}
+          onClick={() => void change(defaults, t("desktop.prefs.advanced.defaultsDone"))}
+        >
+          {t("desktop.prefs.advanced.defaults")}
+        </Button>
+      </div>
 
       <CardTitle>{t("desktop.prefs.advanced.longJobs")}</CardTitle>
       <PrefCard>
@@ -209,6 +213,6 @@ export function Advanced() {
           />
         ))}
       </PrefCard>
-    </>
+    </section>
   );
 }

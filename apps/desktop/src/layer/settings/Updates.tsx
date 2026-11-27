@@ -1,18 +1,19 @@
 import { LICENSE_URL, PUBLIC_SOURCE_URL } from "@agenteschat/client/lib/about";
 import { DOCS_SITE } from "@agenteschat/i18n/docs";
-import { Button, Chip, InfoHint, Switch } from "@agenteschat/ui";
+import { Button, Icon, InfoHint, Switch } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHost } from "../../app";
 import { AUTO_UPDATE_PREF, autoUpdateOn, noteLines } from "../../control/version";
-import { type UpdateCheck, useAppInfo, useLocalServer, usePref } from "../../hooks";
-import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
+import { readPref, type UpdateCheck, useAppInfo, useLocalServer } from "../../hooks";
+import { CardTitle, hintFor, PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { clock } from "../../ui/time";
+import { writeAutoUpdate } from "./fixes";
 
 /**
- * Updates (ADR 0036 §9): one click downloads the signed update, with its progress and Cancel, installs it and
- * reopens the app. When that can't happen (a release without the updater bundle, a failed or stalled download, a
+ * App settings › Updates (ADR 0036 §9): one click downloads the signed update, with its progress and Cancel, installs
+ * it and reopens the app. When that can't happen (a release without the updater bundle, a failed or stalled download, a
  * Linux package) the download and, on a Mac, the manual steps come back.
  */
 export function Updates({ update }: { update: UpdateCheck }) {
@@ -24,7 +25,13 @@ export function Updates({ update }: { update: UpdateCheck }) {
   const [progress, setProgress] = useState<{ got: number; total: number | null } | null>(null);
   const [manual, setManual] = useState(false);
   const local = useLocalServer();
-  const [autoPref, setAutoPref] = usePref<boolean | null>(AUTO_UPDATE_PREF, null);
+  // Installing at night is on by default; the essentials follow a change here (`writeAutoUpdate`).
+  const [auto, setAuto] = useState(() => autoUpdateOn(readPref<boolean | null>(AUTO_UPDATE_PREF, null)));
+  useEffect(() => {
+    const reread = () => setAuto(autoUpdateOn(readPref<boolean | null>(AUTO_UPDATE_PREF, null)));
+    window.addEventListener("storage", reread);
+    return () => window.removeEventListener("storage", reread);
+  }, []);
   const details = useAppInfo()?.details;
   useEffect(() => host.onUpdateProgress((got, total) => setProgress({ got, total })), [host]);
 
@@ -64,25 +71,23 @@ export function Updates({ update }: { update: UpdateCheck }) {
   };
 
   return (
-    <>
-      <PrefHead title={t("desktop.prefs.updates.title")} />
+    <section data-focus="updates">
+      <CardTitle>{t("desktop.prefs.updates.title")}</CardTitle>
       <PrefCard>
         <div className="dk-ver">
           <span className="dk-ver__big ac-num">{update.version ?? "…"}</span>
           <span className="dk-ver__text">
             <span className="ac-hintline">
+              {/* Its state in words, in its colour (never a pill). */}
               {required ? (
-                <Chip icon="alert" tone="waiting">
-                  {t("desktop.prefs.updates.required")}
-                </Chip>
+                <span className="dk-sx__warn">{t("desktop.prefs.updates.required")}</span>
               ) : available && latest ? (
-                <Chip icon="download" tone="waiting">
-                  {t("desktop.prefs.updates.newer", { version: latest.version })}
-                </Chip>
+                <span className="dk-sx__warn">{t("desktop.prefs.updates.newer", { version: latest.version })}</span>
               ) : (
-                <Chip icon="check" tone="done">
+                <span className="dk-sx__on">
+                  <Icon name="check" size={16} />
                   {t("desktop.prefs.updates.upToDate")}
-                </Chip>
+                </span>
               )}
               {local.run && (
                 <InfoHint name={t("common.about", { label: t("desktop.prefs.updates.title") })}>
@@ -112,8 +117,11 @@ export function Updates({ update }: { update: UpdateCheck }) {
             <Switch
               id="auto-update"
               aria-describedby="auto-update-hint"
-              checked={autoUpdateOn(autoPref)}
-              onCheckedChange={setAutoPref}
+              checked={auto}
+              onCheckedChange={(on) => {
+                setAuto(on);
+                writeAutoUpdate(on);
+              }}
             />
           }
         />
@@ -202,8 +210,7 @@ export function Updates({ update }: { update: UpdateCheck }) {
           )}
         </>
       )}
-      <About />
-    </>
+    </section>
   );
 }
 
@@ -218,14 +225,40 @@ function Out({ href, children }: { href: string; children?: ReactNode }) {
 }
 
 /**
- * AGPL-3.0's Appropriate Legal Notices and the attribution the section 7(b) term in NOTICE requires, with
- * no setting that hides them.
+ * App settings › About: with the server here, its versions and the way to Jev's key (its owner sets it on the web,
+ * and the app has no session there to read it with); then AGPL-3.0's Appropriate Legal Notices and the attribution
+ * the section 7(b) term in NOTICE requires, with no setting that hides them.
  */
-function About() {
+export function About() {
   const { t } = useTranslation();
+  const host = useHost();
+  const local = useLocalServer();
+  const address = local.publicUrl ?? local.url ?? "";
+  const running = local.phase === "running";
   return (
-    <>
+    <section data-focus="about">
       <CardTitle>{t("settings.section.about")}</CardTitle>
+      {local.run && (
+        <PrefCard>
+          {local.installedVersion && (
+            <PrefRow title={t("desktop.server.installedVersion")} desc={local.installedVersion} />
+          )}
+          {local.serverVersion && <PrefRow title={t("desktop.server.internalVersion")} desc={local.serverVersion} />}
+          <PrefRow
+            title={t("desktop.server.jev")}
+            hint={hintFor(t, t("desktop.server.jev"), t("desktop.server.jevText"))}
+            end={
+              <Button
+                size="sm"
+                disabled={!running}
+                onClick={() => void host.openExternal(`${address}/?open=jev`).catch(() => {})}
+              >
+                {t("desktop.servers.open")}
+              </Button>
+            }
+          />
+        </PrefCard>
+      )}
       <PrefCard padded>
         <p className="dk-help">
           <Trans i18nKey="settings.about.basedOn" components={{ site: <Out href={DOCS_SITE} /> }} />
@@ -238,6 +271,6 @@ function About() {
         </p>
         <p className="dk-help">{t("settings.about.copyright")}</p>
       </PrefCard>
-    </>
+    </section>
   );
 }

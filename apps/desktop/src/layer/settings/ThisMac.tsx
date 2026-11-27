@@ -16,7 +16,6 @@ import {
   Avatar,
   Button,
   Checkbox,
-  Chip,
   ComputerPortrait,
   Dialog,
   DialogBody,
@@ -30,7 +29,7 @@ import {
   Select,
   Switch,
 } from "@agenteschat/ui";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useStore } from "../../app";
 import { androidStepsUrl, deviceServer, isSignedOut, siteApi, thisComputer } from "../../control/devices";
@@ -40,14 +39,13 @@ import { homeServer, serverName } from "../../control/server";
 import { type Home, orgName } from "../../control/store";
 import { agentOf, useLocalServer, usePending, useWifiIphones } from "../../hooks";
 import type { Host } from "../../host/types";
-import { AgentFace, ConnectionChip, OrgTile } from "../../ui/bits";
-import { MacPermissionCard, useMacGrants } from "../../ui/permissions";
+import { AgentFace, OrgTile } from "../../ui/bits";
 import { CardTitle, hintFor, PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
-import { InternetRow } from "../InternetRow";
+import { InternetRow } from "../../windows/InternetRow";
 
 /**
- * How often the devices are asked while Preferences shows (the runner's own phone changes ask at once): each ask is a
+ * How often the devices are asked while Settings shows (the runner's own phone changes ask at once): each ask is a
  * request to each home's server, with the window's session.
  */
 const POLL_MS = 30_000;
@@ -112,26 +110,32 @@ const AUDIENCE_ICON: Record<DeviceAudience["mode"], IconName> = {
   people: "audiencePeople",
 };
 
+/** How a workspace's link with this computer reads when it isn't simply connected: words in its colour (no pill). */
+function connectionWords(t: (key: string) => string, home: Home): { text: string; tone: "muted" | "warn" } | null {
+  const s = home.status;
+  if (!home.running || !s) return { text: t("desktop.status.starting"), tone: "muted" };
+  if (s.paused.paused) return { text: t("desktop.status.paused"), tone: "muted" };
+  switch (s.connection) {
+    case "online":
+      return null;
+    case "connecting":
+      return { text: t("desktop.status.connecting"), tone: "muted" };
+    case "refused":
+      return { text: t("desktop.status.refused"), tone: "warn" };
+    case "outdated":
+      return { text: t("desktop.status.outdated"), tone: "warn" };
+    default:
+      return { text: t("desktop.status.offline"), tone: "warn" };
+  }
+}
+
 /**
- * General's This Mac card: the name (`top`), one row per workspace the person is signed in to (a paired one pauses
- * and resumes with its switch, one this computer doesn't work for yet shows Allow, which pairs it after the system's
- * dialog), Add a workspace, and Open at login (`bottom`). Under it the phones plugged in, with their state and one
- * way out each (Stop, Show me how). Who can use it and the phones are the server's, as the web sets
- * them. On a Mac, its permissions (`Permissions`).
+ * The Overview's "Who uses this computer": one row per workspace the person is signed in to. A paired one pauses and
+ * resumes with its switch, and its ⋯ opens it, says who can use this computer there (a dialog) and disconnects it; one
+ * this computer doesn't work for yet shows Allow, which pairs it after the system's dialog. Add a workspace closes the
+ * card. Who can use it is the server's, as the web sets it.
  */
-export function ThisMacCards({
-  homes,
-  offers,
-  top,
-  bottom,
-  onLeave,
-}: {
-  homes: Home[];
-  offers: PairTarget[];
-  top?: ReactNode;
-  bottom?: ReactNode;
-  onLeave?: (home: Home) => void;
-}) {
+export function WhoUses({ homes, offers }: { homes: Home[]; offers: PairTarget[] }) {
   const { t, i18n } = useTranslation();
   const host = useHost();
   const store = useStore();
@@ -140,8 +144,9 @@ export function ThisMacCards({
   const { answers, load, targets } = useDevices(homes);
   const [pending, run] = usePending<string>();
   const [who, setWho] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState<Home | null>(null);
+  const [busy, setBusy] = useState(false);
   const user = homes.find((h) => h.status?.user)?.status?.user;
-  const multi = homes.length > 1;
 
   const setAgents = (home: Home, on: boolean) =>
     run(home.homeId, async () => {
@@ -163,6 +168,21 @@ export function ThisMacCards({
         toast(errorText(t, err, i18n.language), "alert");
       }
     });
+  const leave = async () => {
+    if (!leaving) return;
+    const org = orgName(leaving);
+    setBusy(true);
+    try {
+      await store.request(leaving.homeId, { type: "unpair" }).catch(() => {});
+      await store.removeHome(leaving.homeId);
+      toast(t("desktop.prefs.general.left", { org }));
+      setLeaving(null);
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+    } finally {
+      setBusy(false);
+    }
+  };
   const place = (server: string | null) => {
     const where = serverPlace(local, server);
     if (where === "here") return t("desktop.prefs.thisMac.placeHere");
@@ -174,22 +194,10 @@ export function ThisMacCards({
   const whoHome = homes.find((h) => h.homeId === who);
   const whoTarget = whoHome ? targets[homes.indexOf(whoHome)] : undefined;
   const whoComputer = whoHome ? thisComputer(answers[whoHome.homeId]?.list, whoHome) : null;
-  const phoneHomes = homes.flatMap((h, i) => {
-    const target = targets[i];
-    const computer = thisComputer(answers[h.homeId]?.list, h);
-    return target?.server && target.orgId && computer && !answers[h.homeId]?.error
-      ? [{ home: h, server: target.server, orgId: target.orgId, computer }]
-      : [];
-  });
-  // One line for the phones, with the first workspace's Android steps: the phone plugs into this computer either way.
-  const stepsAt = phoneHomes[0];
-  const phonesShown = homes.some((h, i) => targets[i]?.server && targets[i]?.orgId && !answers[h.homeId]?.error);
 
   return (
     <>
-      <CardTitle>{t("desktop.prefs.general.thisMac")}</CardTitle>
       <PrefCard>
-        {top}
         {homes.map((h, i) => {
           const org = orgName(h);
           const id = `mac-agents-${h.homeId}`;
@@ -197,6 +205,7 @@ export function ThisMacCards({
           const server = homeServer(h);
           const orgId = h.status?.org?.id;
           const here = serverPlace(local, server) === "here";
+          const state = connectionWords(t, h);
           return (
             <PrefRow
               key={h.homeId}
@@ -204,7 +213,6 @@ export function ThisMacCards({
               htmlFor={id}
               title={org}
               hint={hint(org)}
-              chip={<ConnectionChip status={h.status} running={h.running} />}
               desc={
                 <>
                   {agents.length > 0 && (
@@ -214,14 +222,22 @@ export function ThisMacCards({
                       ))}
                     </span>
                   )}
-                  {[
-                    place(server),
-                    agents.length
-                      ? t("desktop.prefs.general.agents", { count: agents.length })
-                      : t("desktop.prefs.general.noAgents"),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  <span>
+                    {[
+                      place(server),
+                      agents.length
+                        ? t("desktop.prefs.general.agents", { count: agents.length })
+                        : t("desktop.prefs.general.noAgents"),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    {state && (
+                      <span className={state.tone === "warn" ? "dk-state-waiting" : undefined}>
+                        {" · "}
+                        {state.text}
+                      </span>
+                    )}
+                  </span>
                 </>
               }
               end={
@@ -260,8 +276,8 @@ export function ThisMacCards({
                       </MenuItem>
                     )}
                     {/* The server here's own organizations work here by its rule (its computer, ADR 0060). */}
-                    {!here && onLeave && (
-                      <MenuItem icon="arrowRight" danger onSelect={() => onLeave(h)}>
+                    {!here && (
+                      <MenuItem icon="arrowRight" danger onSelect={() => setLeaving(h)}>
                         {t("desktop.prefs.general.leave")}
                       </MenuItem>
                     )}
@@ -294,10 +310,9 @@ export function ThisMacCards({
             />
           );
         })}
-        {bottom}
         <PrefRow
           lead={
-            <span className="dk-logo">
+            <span className="dk-logo dk-logo--soft">
               <Icon name="plus" size={16} />
             </span>
           }
@@ -310,67 +325,6 @@ export function ThisMacCards({
           }
         />
       </PrefCard>
-
-      {host.platform === "mac" && homes.length > 0 && <Permissions />}
-
-      {phonesShown && (
-        <>
-          <CardTitle>{t("desktop.prefs.thisMac.phones")}</CardTitle>
-          <PrefCard>
-            {phoneHomes.flatMap(({ home, server, orgId, computer }) =>
-              computer.phones.map((p) => (
-                <PhoneRow
-                  key={`${home.homeId} ${p.id}`}
-                  phone={p}
-                  computer={computer}
-                  home={home}
-                  server={server}
-                  orgId={orgId}
-                  org={multi ? orgName(home) : undefined}
-                  onChanged={load}
-                />
-              )),
-            )}
-            {host.platform === "mac" &&
-              phoneHomes.map(({ home, server, orgId, computer }) => (
-                <WifiIphones
-                  key={home.homeId}
-                  computer={computer}
-                  server={server}
-                  orgId={orgId}
-                  org={multi ? orgName(home) : undefined}
-                  onChanged={load}
-                />
-              ))}
-            <PrefRow
-              desc={
-                <span>
-                  {t("desktop.prefs.thisMac.plug")}{" "}
-                  {stepsAt && (
-                    <button
-                      type="button"
-                      className="ac-link dk-link"
-                      onClick={() =>
-                        void host.openExternal(androidStepsUrl(stepsAt.server, stepsAt.orgId, stepsAt.computer.id))
-                      }
-                    >
-                      {t("desktop.prefs.thisMac.androidSteps")}
-                    </button>
-                  )}
-                  {host.platform === "mac" && (
-                    <>
-                      {stepsAt && " · "}
-                      <button type="button" className="ac-link dk-link" onClick={() => openIphoneSetup(host)}>
-                        {t("desktop.prefs.thisMac.iphoneSteps")}
-                      </button>
-                    </>
-                  )}
-                </span>
-              }
-            />
-          </PrefCard>
-        </>
-      )}
 
       {whoHome && whoTarget?.server && whoTarget.orgId && (
         <Dialog
@@ -403,36 +357,105 @@ export function ThisMacCards({
           </DialogBody>
         </Dialog>
       )}
+
+      <Dialog
+        open={!!leaving}
+        onOpenChange={(open) => !open && !busy && setLeaving(null)}
+        title={t("desktop.prefs.general.leaveTitle", { org: leaving ? orgName(leaving) : "" })}
+        description={t("desktop.prefs.general.leaveBody", { org: leaving ? orgName(leaving) : "" })}
+        closeLabel={t("desktop.common.close")}
+        width={440}
+      >
+        <DialogFooter bar>
+          <Button variant="ghost" onClick={() => setLeaving(null)} disabled={busy}>
+            {t("desktop.common.cancel")}
+          </Button>
+          <Button variant="danger" loading={busy} onClick={() => void leave()}>
+            {t("desktop.prefs.general.leaveConfirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </>
   );
 }
 
 /**
- * This Mac's permissions, as Prepare this Mac asks them, and where people turn them on again: an ad-hoc signed app
- * loses them with each update. Asking for Screen Recording or Full Disk Access keeps Preferences to open again when
- * macOS reopens the app.
+ * Folders and tools › the phones plugged into this computer, from every workspace's list on its server: each with its
+ * state and one way out (Stop, Start, Show me how), the iPhones on this Mac's Wi-Fi, and the steps to add one.
  */
-function Permissions() {
+export function Phones({ homes }: { homes: Home[] }) {
   const { t } = useTranslation();
   const host = useHost();
-  const [resumed, setResumed] = useState(false);
-  useEffect(() => {
-    host
-      .setupState()
-      .then((s) => {
-        if (s?.step !== "prefs" || !s.resumed) return;
-        setResumed(true);
-        return host.setSetupState(null);
-      })
-      .catch(() => {});
-  }, [host]);
-  const mac = useMacGrants(() => host.setSetupState({ step: "prefs" }).catch(() => {}));
-  const title = t("desktop.prepare.prefsTitle");
+  const { answers, load, targets } = useDevices(homes);
+  const multi = homes.length > 1;
+  const phoneHomes = homes.flatMap((h, i) => {
+    const target = targets[i];
+    const computer = thisComputer(answers[h.homeId]?.list, h);
+    return target?.server && target.orgId && computer && !answers[h.homeId]?.error
+      ? [{ home: h, server: target.server, orgId: target.orgId, computer }]
+      : [];
+  });
+  // One line for the phones, with the first workspace's Android steps: the phone plugs into this computer either way.
+  const stepsAt = phoneHomes[0];
+  const phonesShown = homes.some((h, i) => targets[i]?.server && targets[i]?.orgId && !answers[h.homeId]?.error);
+  if (!phonesShown) return null;
   return (
-    <>
-      <CardTitle hint={hintFor(t, title, t("desktop.prepare.prefsHint"))}>{title}</CardTitle>
-      <MacPermissionCard mac={mac} resumed={resumed} hinted />
-    </>
+    <section data-focus="phone">
+      <CardTitle>{t("desktop.prefs.thisMac.phones")}</CardTitle>
+      <PrefCard>
+        {phoneHomes.flatMap(({ home, server, orgId, computer }) =>
+          computer.phones.map((p) => (
+            <PhoneRow
+              key={`${home.homeId} ${p.id}`}
+              phone={p}
+              computer={computer}
+              home={home}
+              server={server}
+              orgId={orgId}
+              org={multi ? orgName(home) : undefined}
+              onChanged={load}
+            />
+          )),
+        )}
+        {host.platform === "mac" &&
+          phoneHomes.map(({ home, server, orgId, computer }) => (
+            <WifiIphones
+              key={home.homeId}
+              computer={computer}
+              server={server}
+              orgId={orgId}
+              org={multi ? orgName(home) : undefined}
+              onChanged={load}
+            />
+          ))}
+        <PrefRow
+          desc={
+            <span>
+              {t("desktop.prefs.thisMac.plug")}{" "}
+              {stepsAt && (
+                <button
+                  type="button"
+                  className="ac-link dk-link"
+                  onClick={() =>
+                    void host.openExternal(androidStepsUrl(stepsAt.server, stepsAt.orgId, stepsAt.computer.id))
+                  }
+                >
+                  {t("desktop.prefs.thisMac.androidSteps")}
+                </button>
+              )}
+              {host.platform === "mac" && (
+                <>
+                  {stepsAt && " · "}
+                  <button type="button" className="ac-link dk-link" onClick={() => openIphoneSetup(host)}>
+                    {t("desktop.prefs.thisMac.iphoneSteps")}
+                  </button>
+                </>
+              )}
+            </span>
+          }
+        />
+      </PrefCard>
+    </section>
   );
 }
 
@@ -734,7 +757,11 @@ function WifiIphones({
   return near.available.map((p) => (
     <PrefRow
       key={p.serial}
-      lead={<ComputerPortrait kind="iphone" state="paused" size={48} />}
+      lead={
+        <span className="dk-crow__pic">
+          <ComputerPortrait kind="iphone" state="paused" size={48} />
+        </span>
+      }
       title={t("devices.iphone.wifi.also", { name: p.name ?? p.model })}
       desc={org}
       hint={hintFor(t, t("devices.iphone.wifi.use"), t("devices.iphone.wifi.hint"))}
@@ -854,12 +881,18 @@ function PhoneRow({
 
   return (
     <PrefRow
-      lead={<ComputerPortrait kind={kind} state={state} size={48} />}
+      lead={
+        <span className="dk-crow__pic">
+          <ComputerPortrait kind={kind} state={state} size={48} />
+        </span>
+      }
       title={phone.name}
       chip={
-        <Chip tone={look === "needs" ? "waiting" : "neutral"} icon={lead ? undefined : icon} lead={lead}>
+        // Its state in words, in the waiting colour when it needs someone (never a pill).
+        <span className="dk-sx__state" data-tone={look === "needs" ? "warn" : undefined}>
+          {lead ?? (icon && <Icon name={icon} size={14} />)}
           {statusPill(t, s)}
-        </Chip>
+        </span>
       }
       hint={
         phone.platform === "android"

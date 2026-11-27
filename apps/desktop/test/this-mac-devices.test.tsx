@@ -12,9 +12,9 @@ import { DesktopStore, pairedHomes } from "../src/control/store";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
 import type { LayerRoute } from "../src/host/types";
 import { createDesktopI18n } from "../src/i18n";
+import { Phones, WhoUses } from "../src/layer/settings/ThisMac";
 import { ToastProvider } from "../src/ui/Toast";
 import { WindowView } from "../src/WindowView";
-import { ThisMacCards } from "../src/windows/prefs/ThisMac";
 import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -49,10 +49,15 @@ const SETTINGS: LayerRoute = { screen: "settings" };
 const IPHONE: LayerRoute = { screen: "iphone" };
 const layer = <WindowView name="app" />;
 
-/** The first workspace's cards alone (the fake has two). */
+/** The first workspace alone (the fake has two): Overview's "Who uses this Mac" and Folders and tools' phones. */
 function OneWorkspace() {
   const homes = pairedHomes(useSnapshot()).slice(0, 1);
-  return homes.length ? <ThisMacCards homes={homes} offers={[]} /> : null;
+  return homes.length ? (
+    <>
+      <WhoUses homes={homes} offers={[]} />
+      <Phones homes={homes} />
+    </>
+  ) : null;
 }
 
 const rowOf = (el: HTMLElement, title: string) =>
@@ -75,7 +80,7 @@ async function openWho(el: HTMLElement, org: string) {
   await until(() => dialog());
 }
 
-describe("Preferences › This Mac", () => {
+describe("Settings › This Mac: who uses it, and its phones", () => {
   test("agents, who can use it, and each phone with its state and one way out", () =>
     mount(SETTINGS, <OneWorkspace />, async (el, host) => {
       await until(() => rowOf(el, "Pixel 8"));
@@ -91,15 +96,18 @@ describe("Preferences › This Mac", () => {
       await until(() => !dialog());
 
       const pixel = rowOf(el, "Pixel 8");
-      expect(pixel?.querySelector(".ac-chip")?.textContent).toBe("In use by Ada");
+      // Each phone's state in words on its title's line, never a pill.
+      expect(pixel?.querySelector(".ac-chip")).toBeNull();
+      expect(pixel?.querySelector(".dk-sx__state")?.textContent).toBe("In use by Ada");
       expect(pixel?.querySelector("small")?.textContent).toMatch(/^for Rui since .+ · Everyone can use it$/);
       const iphone = rowOf(el, "Sam's iPhone 16");
-      expect(iphone?.querySelector(".ac-chip")?.textContent).toBe("Needs you");
+      expect(iphone?.querySelector(".dk-sx__state")?.textContent).toBe("Needs you");
+      expect(iphone?.querySelector(".dk-sx__state")?.getAttribute("data-tone")).toBe("warn");
       expect(iphone?.querySelector("small")?.textContent).toBe("Developer Mode is off");
 
       // Stop: the web's own stop, on this computer's server; the phone is free once the list comes back.
       await act(async () => button(pixel, "Stop")?.click());
-      await until(() => rowOf(el, "Pixel 8")?.querySelector(".ac-chip")?.textContent === "Ready");
+      await until(() => rowOf(el, "Pixel 8")?.querySelector(".dk-sx__state")?.textContent === "Ready");
       expect(host.site.calls.filter((c) => c.method === "POST").map((c) => c.path)).toEqual([
         "/api/app/organizations/org_acme/devices/phones/0b6c5a8e-0000-4000-8000-000000000001/stop",
       ]);
@@ -112,7 +120,7 @@ describe("Preferences › This Mac", () => {
   test("a simulator on this Mac: Start when it's off, then Shut down while it starts", () =>
     mount(SETTINGS, <OneWorkspace />, async (el, host) => {
       await until(() => rowOf(el, "iPhone 17 Pro"));
-      expect(rowOf(el, "iPhone 17 Pro")?.querySelector(".ac-chip")?.textContent).toBe("Offline");
+      expect(rowOf(el, "iPhone 17 Pro")?.querySelector(".dk-sx__state")?.textContent).toBe("Offline");
       await act(async () => button(rowOf(el, "iPhone 17 Pro"), "Start")?.click());
       await until(() => button(rowOf(el, "iPhone 17 Pro"), "Shut down"));
       expect(host.site.calls.filter((c) => c.method === "POST")).toEqual([

@@ -1,38 +1,37 @@
+/**
+ * Settings › This computer › App settings (ADR 0256 §7): the app's own choices. Its notifications; the app itself
+ * (language, opening at login, the menu bar icon, the notch, Linux's compatibility mode); with the server here, whether
+ * people reach it from their devices and its usage statistics; the servers and accounts this app opens; updates and
+ * About; and, while agents work here, the advanced limits.
+ */
 import type { AppLocale } from "@agenteschat/i18n/locale";
-import { Button, Dialog, DialogFooter, Input, Select, Switch } from "@agenteschat/ui";
+import { Button, Dialog, DialogFooter, Select, Switch } from "@agenteschat/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useHost, useSnapshot, useStore } from "../../app";
+import { useHost } from "../../app";
 import { BROWSER_NOTIFY_PREF } from "../../control/browser";
 import { MENU_BAR_PREF, menuBarShown } from "../../control/dock";
 import { NOTCH_PREF } from "../../control/notch";
 import { SITE_NOTIFY_PREF } from "../../control/notify";
-import { unpairedWorkspaces } from "../../control/pair";
-import { type Home, orgName, pairedHomes } from "../../control/store";
-import { macStateOf } from "../../control/tray";
-import { useLocalServer, usePref, useWorkspaces } from "../../hooks";
+import { useLocalServer, usePending, usePref, useTailnet } from "../../hooks";
 import { detectedLocale, LOCALE_PREF, locales, switchDesktopLocale } from "../../i18n";
-import { MacPortrait } from "../../ui/bits";
+import { ReachRow } from "../../ui/here";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
-import { ThisMacCards } from "./ThisMac";
+import { Advanced } from "./Advanced";
+import { ReachRows, useReach } from "./fixes";
+import { Servers } from "./Servers";
+import type { SettingsContext } from "./Settings";
+import { About, Updates } from "./Updates";
 
-export function General() {
+export function AppSettings({ ctx }: { ctx: SettingsContext }) {
   const { t, i18n } = useTranslation();
   const host = useHost();
-  const store = useStore();
-  const snap = useSnapshot();
   const toast = useToast();
-  const homes = pairedHomes(snap);
-  const works = homes.length > 0;
-  // Every workspace the person is signed in to where agents may work here: those this computer works for, and these.
-  const offers = unpairedWorkspaces(useWorkspaces(), snap);
-  const agentsCard = works || offers.length > 0;
-  const mac = host.platform === "mac";
   const local = useLocalServer();
-  const current = homes.find((h) => h.status?.machine)?.status?.machine?.name ?? "";
-  const [name, setName] = useState(current);
-  const [saving, setSaving] = useState(false);
+  const works = ctx.homes.length > 0;
+  const mac = host.platform === "mac";
+  const linux = host.platform === "linux";
   const [launch, setLaunch] = useState<boolean | null>(null);
   const [notifySite, setNotifySite] = usePref(SITE_NOTIFY_PREF, true);
   const [notify, setNotify] = usePref("notify", true);
@@ -42,9 +41,6 @@ export function General() {
   const [notch, setNotch] = usePref(NOTCH_PREF, false);
   const [menuBar, setMenuBar] = usePref<boolean | null>(MENU_BAR_PREF, null);
   const [language, setLanguage] = usePref<AppLocale | "auto">(LOCALE_PREF, "auto");
-  const [leaving, setLeaving] = useState<Home | null>(null);
-  const [busy, setBusy] = useState(false);
-  const linux = host.platform === "linux";
   // Linux: Compatibility mode as the next opening will have it; null until read.
   const [compat, setCompat] = useState<boolean | null>(null);
   const [compatSaving, setCompatSaving] = useState(false);
@@ -56,6 +52,15 @@ export function General() {
   useEffect(() => {
     void host.setTrayVisible(iconShown).catch(() => {});
   }, [host, iconShown]);
+
+  // Pairing turns it on: read again when a workspace joins.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the count is the trigger
+  useEffect(() => {
+    host
+      .autostart()
+      .then(setLaunch)
+      .catch(() => setLaunch(false));
+  }, [host, ctx.homes.length]);
 
   // An opening that fell back to compatibility mode says so here once, with the way back to the graphics card.
   // biome-ignore lint/correctness/useExhaustiveDependencies: read once per window
@@ -110,125 +115,62 @@ export function General() {
     }
   };
 
-  // The name arrives with the first status.
-  useEffect(() => {
-    if (current) setName((n) => n || current);
-  }, [current]);
-
-  // Pairing turns it on: read again when a workspace joins.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the count is the trigger
-  useEffect(() => {
-    host
-      .autostart()
-      .then(setLaunch)
-      .catch(() => setLaunch(false));
-  }, [host, homes.length]);
-
-  const saveName = async () => {
-    const clean = name.trim();
-    if (!clean || clean === current) return;
-    setSaving(true);
-    try {
-      await store.requestAll({ type: "config.set", patch: { name: clean } });
-      await Promise.all(homes.map((h) => store.refresh(h.homeId)));
-      toast(t("desktop.prefs.general.saved"));
-    } catch {
-      toast(t("desktop.common.error"), "alert");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const leave = async () => {
-    if (!leaving) return;
-    const org = orgName(leaving);
-    setBusy(true);
-    try {
-      await store.request(leaving.homeId, { type: "unpair" }).catch(() => {});
-      await store.removeHome(leaving.homeId);
-      toast(t("desktop.prefs.general.left", { org }));
-      setLeaving(null);
-    } catch {
-      toast(t("desktop.common.error"), "alert");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // Open at login has an ⓘ only where it changes something: agentes.chat running here, or agents working here.
   const launchHint = local.run || works;
-  const launchRow = (
-    <PrefRow
-      title={t("desktop.prefs.general.launchTitle")}
-      hint={
-        launchHint
-          ? hintFor(t, t("desktop.prefs.general.launchTitle"), t("desktop.prefs.general.launchWork"))
-          : undefined
-      }
-      htmlFor="launch"
-      end={
-        <Switch
-          id="launch"
-          aria-describedby={launchHint ? "launch-hint" : undefined}
-          checked={launch === true}
-          disabled={launch === null}
-          onCheckedChange={(on) => {
-            setLaunch(on);
-            host.setAutostart(on).catch(() => {
-              setLaunch(!on);
-              toast(t("desktop.common.error"), "alert");
-            });
-          }}
-        />
-      }
-    />
-  );
 
   return (
     <>
-      <PrefHead title={t("desktop.prefs.general.title")} />
+      <PrefHead title={t("desktop.settings.app.title")} />
 
-      {agentsCard && (
-        <ThisMacCards
-          homes={homes}
-          offers={offers}
-          onLeave={setLeaving}
-          top={
-            works && (
+      <section data-focus="notifications">
+        <CardTitle>{t("desktop.settings.app.notifications")}</CardTitle>
+        <PrefCard>
+          <PrefRow
+            title={t("desktop.prefs.general.notifySiteTitle")}
+            hint={hintFor(t, t("desktop.prefs.general.notifySiteTitle"), t("desktop.prefs.general.notifySiteDesc"))}
+            htmlFor="notify-site"
+            end={
+              <Switch
+                id="notify-site"
+                aria-describedby="notify-site-hint"
+                checked={notifySite}
+                onCheckedChange={(on) => {
+                  setNotifySite(on);
+                  void host.setSiteNotify(on).catch(() => {});
+                }}
+              />
+            }
+          />
+          {works && (
+            <>
               <PrefRow
-                lead={<MacPortrait state={macStateOf(homes)} />}
-                title={t("desktop.prefs.general.name")}
-                htmlFor="machine-name"
+                title={t("desktop.prefs.general.notifyTitle")}
+                htmlFor="notify"
+                end={<Switch id="notify" checked={notify} onCheckedChange={setNotify} />}
+              />
+              <PrefRow
+                title={t("desktop.prefs.general.notifyBrowserTitle")}
+                hint={hintFor(
+                  t,
+                  t("desktop.prefs.general.notifyBrowserTitle"),
+                  t("desktop.prefs.general.notifyBrowserDesc"),
+                )}
+                htmlFor="notify-browser"
                 end={
-                  <form
-                    className="dk-inline-form"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void saveName();
-                    }}
-                  >
-                    <Input
-                      id="machine-name"
-                      value={name}
-                      maxLength={64}
-                      aria-label={t("desktop.prefs.general.nameLabel")}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                    {name.trim() && name.trim() !== current && (
-                      <Button type="submit" size="sm" loading={saving}>
-                        {t("desktop.prefs.general.save")}
-                      </Button>
-                    )}
-                  </form>
+                  <Switch
+                    id="notify-browser"
+                    aria-describedby="notify-browser-hint"
+                    checked={notifyBrowser}
+                    onCheckedChange={setNotifyBrowser}
+                  />
                 }
               />
-            )
-          }
-          bottom={launchRow}
-        />
-      )}
+            </>
+          )}
+        </PrefCard>
+      </section>
 
-      <CardTitle>{t("desktop.prefs.general.behavior")}</CardTitle>
+      <CardTitle>{t("desktop.settings.app.thisApp")}</CardTitle>
       <PrefCard>
         <PrefRow
           title={t("shell.language")}
@@ -248,49 +190,33 @@ export function General() {
             />
           }
         />
-        {!agentsCard && launchRow}
         <PrefRow
-          title={t("desktop.prefs.general.notifySiteTitle")}
-          hint={hintFor(t, t("desktop.prefs.general.notifySiteTitle"), t("desktop.prefs.general.notifySiteDesc"))}
-          htmlFor="notify-site"
+          title={t("desktop.prefs.general.launchTitle")}
+          hint={
+            launchHint
+              ? hintFor(t, t("desktop.prefs.general.launchTitle"), t("desktop.prefs.general.launchWork"))
+              : undefined
+          }
+          htmlFor="launch"
           end={
             <Switch
-              id="notify-site"
-              aria-describedby="notify-site-hint"
-              checked={notifySite}
+              id="launch"
+              aria-describedby={launchHint ? "launch-hint" : undefined}
+              checked={launch === true}
+              disabled={launch === null}
               onCheckedChange={(on) => {
-                setNotifySite(on);
-                void host.setSiteNotify(on).catch(() => {});
+                setLaunch(on);
+                host
+                  .setAutostart(on)
+                  .then(ctx.essentials.reread)
+                  .catch(() => {
+                    setLaunch(!on);
+                    toast(t("desktop.common.error"), "alert");
+                  });
               }}
             />
           }
         />
-        {works && (
-          <>
-            <PrefRow
-              title={t("desktop.prefs.general.notifyTitle")}
-              htmlFor="notify"
-              end={<Switch id="notify" checked={notify} onCheckedChange={setNotify} />}
-            />
-            <PrefRow
-              title={t("desktop.prefs.general.notifyBrowserTitle")}
-              hint={hintFor(
-                t,
-                t("desktop.prefs.general.notifyBrowserTitle"),
-                t("desktop.prefs.general.notifyBrowserDesc"),
-              )}
-              htmlFor="notify-browser"
-              end={
-                <Switch
-                  id="notify-browser"
-                  aria-describedby="notify-browser-hint"
-                  checked={notifyBrowser}
-                  onCheckedChange={setNotifyBrowser}
-                />
-              }
-            />
-          </>
-        )}
         {mac && (
           <PrefRow
             title={t("desktop.prefs.general.menuBarTitle")}
@@ -346,6 +272,17 @@ export function General() {
         )}
       </PrefCard>
 
+      {local.run && <HereChoices />}
+
+      <section data-focus="servers">
+        <CardTitle>{t("desktop.settings.app.servers")}</CardTitle>
+        <Servers />
+      </section>
+
+      <Updates update={ctx.update} />
+      <About />
+      {works && <Advanced />}
+
       <Dialog
         open={askReopen}
         onOpenChange={(open) => !open && !reopening && setAskReopen(false)}
@@ -363,24 +300,57 @@ export function General() {
           </Button>
         </DialogFooter>
       </Dialog>
-
-      <Dialog
-        open={!!leaving}
-        onOpenChange={(open) => !open && !busy && setLeaving(null)}
-        title={t("desktop.prefs.general.leaveTitle", { org: leaving ? orgName(leaving) : "" })}
-        description={t("desktop.prefs.general.leaveBody", { org: leaving ? orgName(leaving) : "" })}
-        closeLabel={t("desktop.common.close")}
-        width={440}
-      >
-        <DialogFooter bar>
-          <Button variant="ghost" onClick={() => setLeaving(null)} disabled={busy}>
-            {t("desktop.common.cancel")}
-          </Button>
-          <Button variant="danger" loading={busy} onClick={() => void leave()}>
-            {t("desktop.prefs.general.leaveConfirm")}
-          </Button>
-        </DialogFooter>
-      </Dialog>
     </>
+  );
+}
+
+/**
+ * The server here's own choices: whether people reach it from their devices (off, it is only on this computer; turning
+ * it off asks first) and its usage statistics (changing it restarts it a moment).
+ */
+function HereChoices() {
+  const { t } = useTranslation();
+  const host = useHost();
+  const toast = useToast();
+  const local = useLocalServer();
+  const tailnet = useTailnet();
+  const reach = useReach();
+  const [busy, run] = usePending<"usage">();
+  const running = local.phase === "running";
+  return (
+    <section data-focus="telemetry">
+      <CardTitle>{t("desktop.server.title")}</CardTitle>
+      <PrefCard>
+        <ReachRow
+          tailnet={tailnet}
+          own={local}
+          on={local.reach}
+          busy={reach.reaching || !running}
+          onChange={(on) => (on ? void reach.reach(true) : reach.askOff())}
+        />
+        <ReachRows control={reach} />
+        <PrefRow
+          title={t("desktop.here.usage")}
+          hint={hintFor(
+            t,
+            t("desktop.here.usage"),
+            t("common.joinSentences", { a: t("desktop.here.usageText"), b: t("desktop.server.usageRestart") }),
+          )}
+          htmlFor="here-usage-prefs"
+          end={
+            <Switch
+              id="here-usage-prefs"
+              aria-describedby="here-usage-prefs-hint"
+              checked={local.usage}
+              disabled={busy !== null}
+              onCheckedChange={(on) =>
+                void run("usage", () => host.setLocalUsage(on).catch(() => toast(t("desktop.common.error"), "alert")))
+              }
+            />
+          }
+        />
+      </PrefCard>
+      {reach.dialog}
+    </section>
   );
 }
