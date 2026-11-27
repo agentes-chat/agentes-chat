@@ -18,6 +18,7 @@ import { groupPlans, type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf }
 import { answersOthers, audienceOf, managesAgent } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
+import { maintenanceNamed, maintenanceOf } from "./computer-maintenance";
 import { firstName } from "./format";
 import { brainTool, CLI_GIT_MISSING, CLI_HOME_ONLY, osName } from "./machines";
 import { can } from "./permissions";
@@ -749,7 +750,7 @@ export function gateLine(
     edition: Edition | null;
     kind: MachineAccountKind;
     computer: string;
-    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind" | "cliErrors" | "moving">> | null;
+    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind" | "cliErrors" | "moving" | "maintenance">> | null;
     hold?: string | null;
     now?: number;
   },
@@ -761,8 +762,9 @@ export function gateLine(
   if (gate.state === "missing" && edition === "cloud")
     return { text: t("aiAccounts.connect.needsCloud.stuck", { computer, program }), rechecks };
   if (gate.state === "offline") {
-    // Away moving to another server: back by itself, never "use an API key for now".
-    if (machine?.moving) return { text: t("machines.moving.named", { computer }), rechecks };
+    // Away for what we do to it (a move, a restart…): back by itself, never "use an API key for now".
+    const away = maintenanceOf(machine);
+    if (away?.away) return { text: maintenanceNamed(t, away, computer), rechecks };
     const seen = machine?.lastSeenAt ? Date.parse(machine.lastSeenAt) : null;
     if (edition === "cloud" && seen !== null && now - seen >= CLOUD_AWAY_MS)
       return { text: t("aiAccounts.connect.needsCloud.away", { computer }), rechecks };

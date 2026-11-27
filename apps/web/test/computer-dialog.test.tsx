@@ -329,6 +329,27 @@ describe("the computer dialog, Cloud: the workspace's own computer", () => {
     expect(text).not.toContain("Já estamos cuidando");
   });
 
+  test("its computer restarted because it stopped answering: said so, why and about when it is back", async () => {
+    const maintenance = {
+      kind: "restarting",
+      since: new Date(Date.now() - 60_000).toISOString(),
+      eta: new Date(Date.now() + 2 * 60_000 + 10_000).toISOString(),
+      detail: "unresponsive",
+      away: true,
+    };
+    await dialog({
+      setup: { state: "ready" },
+      machine: { name: "Acme's computer", kind: "managed", os: "other", online: false, moving: true, maintenance },
+      desktop: { available: false, reason: "offline" },
+      browser: true,
+    });
+    expect(sub()).toBe("Reiniciando");
+    const text = box().textContent ?? "";
+    expect(text).toContain("Reiniciando… volta em cerca de 2 min");
+    expect(text).toContain("Ele parou de responder, então reiniciamos automaticamente.");
+    expect(text).not.toContain("Sem resposta");
+  });
+
   test("back while this tab was away: the reconnect asks for the computers again, and its screen opens", async () => {
     const t = await dialog({
       setup: { state: "ready" },

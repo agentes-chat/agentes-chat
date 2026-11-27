@@ -650,12 +650,13 @@ describe("the git proxy on another host", () => {
     const tools = await source.tools(ctx);
     expect(tools.map((t) => t.name)).toEqual([
       "list_repositories",
+      "wait_for_code",
       "gitlab_git_clone",
       "gitlab_open_pull_request",
       "gitlab_delete_branches",
       "gitlab_request_branch_push",
     ]);
-    expect(new Set(tools.slice(1).map((t) => t.connectionId))).toEqual(new Set([w.connection.id]));
+    expect(new Set(tools.slice(2).map((t) => t.connectionId))).toEqual(new Set([w.connection.id]));
     const open = tools.find((t) => t.name === "gitlab_open_pull_request");
     const out = await open?.execute(
       { repo: "acme/web/app", branch: "agentes/dev/fix-login", title: "Fix the login" },

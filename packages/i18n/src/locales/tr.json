@@ -16611,10 +16611,48 @@
       "viaBy": "Ajanlar {{name}} ({{person}}) bilgisayarının internetini kullanıyor",
       "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir."
     },
-    "moving": {
-      "short": "Sunucu değiştiriyor",
-      "line": "Yeni bir sunucuya taşınıyor… birkaç dakika içinde döner",
-      "named": "{{computer}} yeni bir sunucuya taşınıyor… birkaç dakika içinde döner"
+    "maintenance": {
+      "short": {
+        "moving": "Sunucu değişiyor",
+        "restarting": "Yeniden başlıyor",
+        "updating": "Güncelleniyor",
+        "converting": "Disk iyileştiriliyor",
+        "host_maintenance": "Bakım",
+        "other": "Bakım"
+      },
+      "what": {
+        "moving": "Yeni bir sunucuya taşınıyor",
+        "copying": "Yeni bir sunucuya kopyalanıyor",
+        "restarting": "Yeniden başlıyor",
+        "updating": "Yazılımı güncelleniyor",
+        "converting": "Diski iyileştiriliyor",
+        "host_maintenance": "Sunucusu bakımda",
+        "other": "Üzerinde çalışılıyor"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "yaklaşık {{time}} içinde döner",
+      "backSoon": "birkaç dakika içinde döner",
+      "late": "beklenenden biraz uzun sürüyor",
+      "slower": "bu sırada daha yavaş olabilir",
+      "slowerFor": "yaklaşık {{time}} boyunca daha yavaş olabilir",
+      "why": {
+        "moving": "Onu yeni bir sunucuya taşıyoruz.",
+        "copying": "O çalışırken dosyalarını yeni bir sunucuya kopyalıyoruz.",
+        "handover": "Son değişikliklerini yeni sunucuya aktarıyoruz.",
+        "restarting": "Onu yeniden başlatıyoruz.",
+        "unresponsive": "Yanıt vermeyi bıraktı, bu yüzden otomatik olarak yeniden başlattık.",
+        "updating": "Yazılımını güncelliyoruz.",
+        "converting": "Diskini daha hızlı bir depolamaya taşıyoruz.",
+        "host_maintenance": "Çalıştığı sunucu bakımda.",
+        "other": "Üzerinde çalışıyoruz."
+      },
+      "since": "{{time}} itibarıyla",
+      "expectedBack": "Dönüşü yaklaşık {{time}} bekleniyor",
+      "expectedDone": "Bitişi yaklaşık {{time}} bekleniyor",
+      "meanwhile": "Ajanlarına gönderilen mesajlar bekler ve o dönünce kendiliğinden devam eder.",
+      "working": "Ajanları bu sırada çalışmaya devam eder.",
+      "about": "Neler oluyor"
     },
     "online": "Çevrimiçi",
     "offline": "Çevrimdışı",
@@ -19252,6 +19290,7 @@
         "usingScreen": "Ekranı kullandı",
         "cloningRepo": "Bir depoyu klonladı",
         "listingRepos": "Depoları listeledi",
+        "updatingCode": "Kodu güncelledi",
         "preparingCli": "{{app}} hazırlandı",
         "openingPullRequest": "Bir pull request açtı",
         "handingOff": "Bir rapor teslim etti",
@@ -19376,6 +19415,7 @@
       "usingScreen": "ekranı kullanıyor",
       "cloningRepo": "depo klonluyor",
       "listingRepos": "depoları listeliyor",
+      "updatingCode": "kodu güncelliyor",
       "preparingCli": "{{app}} uygulamasını {{computer}} üzerinde hazırlıyor",
       "preparingCliPct": "{{app}} uygulamasını {{computer}} üzerinde hazırlıyor (%{{percent}})",
       "openingPullRequest": "pull request açıyor",

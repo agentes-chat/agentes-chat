@@ -16067,10 +16067,48 @@
       "viaBy": "에이전트가 {{name}}({{person}})의 인터넷을 써요",
       "viaHint": "사이트에는 그 컴퓨터의 위치가 보여요. 연결한 사람이 그 컴퓨터 페이지에서 끌 수 있어요."
     },
-    "moving": {
-      "short": "서버 이전 중",
-      "line": "새 서버로 이전 중… 몇 분 후 돌아옵니다",
-      "named": "{{computer}}이(가) 새 서버로 이전 중… 몇 분 후 돌아옵니다"
+    "maintenance": {
+      "short": {
+        "moving": "서버 이전 중",
+        "restarting": "재시작 중",
+        "updating": "업데이트 중",
+        "converting": "디스크 개선 중",
+        "host_maintenance": "점검 중",
+        "other": "점검 중"
+      },
+      "what": {
+        "moving": "새 서버로 이전 중",
+        "copying": "새 서버로 복사 중",
+        "restarting": "재시작 중",
+        "updating": "소프트웨어 업데이트 중",
+        "converting": "디스크 개선 중",
+        "host_maintenance": "서버 점검 중",
+        "other": "작업 중"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "약 {{time}} 후 돌아옵니다",
+      "backSoon": "몇 분 후 돌아옵니다",
+      "late": "예상보다 조금 더 걸리고 있습니다",
+      "slower": "그동안 느려질 수 있습니다",
+      "slowerFor": "약 {{time}} 동안 느려질 수 있습니다",
+      "why": {
+        "moving": "새 서버로 옮기고 있습니다.",
+        "copying": "작업하는 동안 파일을 새 서버로 복사하고 있습니다.",
+        "handover": "마지막 변경 사항을 새 서버로 넘기고 있습니다.",
+        "restarting": "재시작하고 있습니다.",
+        "unresponsive": "응답이 멈춰서 자동으로 재시작했습니다.",
+        "updating": "소프트웨어를 업데이트하고 있습니다.",
+        "converting": "디스크를 더 빠른 저장소로 옮기고 있습니다.",
+        "host_maintenance": "실행 중인 서버가 점검 중입니다.",
+        "other": "작업을 하고 있습니다."
+      },
+      "since": "{{time}}부터",
+      "expectedBack": "{{time}}쯤 돌아올 예정",
+      "expectedDone": "{{time}}쯤 끝날 예정",
+      "meanwhile": "에이전트에게 보낸 메시지는 기다렸다가 돌아오면 자동으로 이어집니다.",
+      "working": "그동안에도 에이전트는 계속 일합니다.",
+      "about": "무슨 일인가요"
     },
     "online": "온라인",
     "offline": "오프라인",
@@ -18665,6 +18703,7 @@
         "usingScreen": "화면을 사용했어요",
         "cloningRepo": "저장소를 클론했어요",
         "listingRepos": "저장소 목록을 확인했습니다",
+        "updatingCode": "코드를 업데이트했어요",
         "preparingCli": "{{app}}을(를) 준비했어요",
         "openingPullRequest": "pull request를 열었어요",
         "handingOff": "보고서를 전달했어요",
@@ -18789,6 +18828,7 @@
       "usingScreen": "화면을 사용하는 중",
       "cloningRepo": "저장소를 클론하는 중",
       "listingRepos": "저장소 목록 확인 중",
+      "updatingCode": "코드 업데이트 중",
       "preparingCli": "{{computer}}에서 {{app}}을(를) 준비하는 중",
       "preparingCliPct": "{{computer}}에서 {{app}}을(를) 준비하는 중 ({{percent}}%)",
       "openingPullRequest": "pull request를 여는 중",

@@ -17268,10 +17268,48 @@
       "viaBy": "Gli agenti usano la connessione internet di {{name}} ({{person}})",
       "viaHint": "I siti vedono la posizione di quel computer. Chi l’ha collegato può disattivarlo nella sua pagina."
     },
-    "moving": {
-      "short": "Cambio server",
-      "line": "Si sta spostando su un nuovo server… torna tra pochi minuti",
-      "named": "{{computer}} si sta spostando su un nuovo server… torna tra pochi minuti"
+    "maintenance": {
+      "short": {
+        "moving": "Cambio di server",
+        "restarting": "Riavvio",
+        "updating": "Aggiornamento",
+        "converting": "Potenziamento disco",
+        "host_maintenance": "Manutenzione",
+        "other": "Manutenzione"
+      },
+      "what": {
+        "moving": "Passa a un nuovo server",
+        "copying": "Copia su un nuovo server",
+        "restarting": "Riavvio",
+        "updating": "Aggiornamento del software",
+        "converting": "Potenziamento del disco",
+        "host_maintenance": "Il suo server è in manutenzione",
+        "other": "In manutenzione"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "torna tra circa {{time}}",
+      "backSoon": "torna tra pochi minuti",
+      "late": "ci vuole un po’ più del previsto",
+      "slower": "può essere più lento nel frattempo",
+      "slowerFor": "può essere più lento per circa {{time}}",
+      "why": {
+        "moving": "Lo stiamo spostando su un nuovo server.",
+        "copying": "Stiamo copiando i suoi file su un nuovo server mentre lavora.",
+        "handover": "Stiamo passando le sue ultime modifiche al nuovo server.",
+        "restarting": "Lo stiamo riavviando.",
+        "unresponsive": "Ha smesso di rispondere, quindi lo abbiamo riavviato automaticamente.",
+        "updating": "Stiamo aggiornando il suo software.",
+        "converting": "Stiamo spostando il suo disco su uno spazio più veloce.",
+        "host_maintenance": "Il server su cui gira è in manutenzione.",
+        "other": "Ci stiamo lavorando."
+      },
+      "since": "Dalle {{time}}",
+      "expectedBack": "Previsto di ritorno verso le {{time}}",
+      "expectedDone": "Previsto pronto verso le {{time}}",
+      "meanwhile": "I messaggi ai suoi agenti aspettano e ripartono da soli quando torna.",
+      "working": "I suoi agenti continuano a lavorare nel frattempo.",
+      "about": "Cosa sta succedendo"
     },
     "online": "Online",
     "offline": "Offline",
@@ -19968,6 +20006,7 @@
         "usingScreen": "Ha usato lo schermo",
         "cloningRepo": "Ha clonato un repository",
         "listingRepos": "Ha elencato i repository",
+        "updatingCode": "Ha aggiornato il codice",
         "preparingCli": "Ha preparato {{app}}",
         "openingPullRequest": "Ha aperto una pull request",
         "handingOff": "Ha consegnato un report",
@@ -20092,6 +20131,7 @@
       "usingScreen": "usando lo schermo",
       "cloningRepo": "clonando un repository",
       "listingRepos": "elenca i repository",
+      "updatingCode": "aggiorna il codice",
       "preparingCli": "preparando {{app}} su {{computer}}",
       "preparingCliPct": "preparando {{app}} su {{computer}} ({{percent}}%)",
       "openingPullRequest": "aprendo una pull request",
