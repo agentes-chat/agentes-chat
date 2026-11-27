@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { orgTopic } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import {
   confirmDeviceCode,
@@ -151,7 +152,11 @@ test("computers still called by their host name take the friendly one once, with
     },
   );
 
-  expect(await friendlyMachineNames(f.db)).toBe(2);
+  const events: Record<string, unknown>[] = [];
+  f.pubsub.subscribe(orgTopic(f.org.id), (e) => events.push((e as { event?: Record<string, unknown> }).event ?? {}));
+  expect(await friendlyMachineNames(f.db, f.pubsub)).toBe(2);
+  // Open apps show the new name at once.
+  expect(events).toContainEqual({ type: "machine.updated", machineId: vm.id, name: "Computador Linux da Ana" });
   const names = new Map(
     (await f.db.select({ id: schema.machines.id, name: schema.machines.name }).from(schema.machines)).map((m) => [
       m.id,

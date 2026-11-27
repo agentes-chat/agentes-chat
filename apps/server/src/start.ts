@@ -549,7 +549,7 @@ async function boot(
       name: "friendly-machine-names",
       once: true,
       run: async () => {
-        const renamed = await friendlyMachineNames(database.db);
+        const renamed = await friendlyMachineNames(database.db, adapters.pubsub);
         if (renamed > 0) log.info("computers named after their model and owner", { renamed });
       },
     },

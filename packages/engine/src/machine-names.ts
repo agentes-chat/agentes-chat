@@ -1,10 +1,11 @@
+import type { PubSub } from "@agenteschat/adapters";
 import { and, type Executor, eq, isNull, ne, schema, sql } from "@agenteschat/db";
 import { serverText } from "@agenteschat/i18n";
 import { isFeminineName } from "@agenteschat/i18n/format";
 import type { AppLocale } from "@agenteschat/i18n/locale";
 import { emailLocale } from "./email";
 import { firstName } from "./format";
-import { cleanMachineName } from "./machines";
+import { cleanMachineName, publishMachineUpdated } from "./machines";
 
 const { machines, notifications, users } = schema;
 
@@ -119,9 +120,9 @@ export async function distinctMachineName(db: Executor, orgId: string, name: str
 /**
  * Computers connected before names were made this way, still called by their host name: each takes the name
  * `defaultMachineName` gives it, in its owner's language, and the inbox items naming it follow. A computer someone
- * renamed keeps its name. Returns how many changed.
+ * renamed keeps its name. Open apps hear each new name (`machine.updated`). Returns how many changed.
  */
-export async function friendlyMachineNames(db: Executor) {
+export async function friendlyMachineNames(db: Executor, pubsub?: PubSub) {
   const rows = await db
     .select({
       id: machines.id,
@@ -150,6 +151,7 @@ export async function friendlyMachineNames(db: Executor) {
       .update(notifications)
       .set({ source: renamed(notifications.source, "label"), latest: renamed(notifications.latest, "title") })
       .where(and(eq(notifications.orgId, m.orgId), sql`${notifications.source}->>'machineId' = ${m.id}`));
+    await publishMachineUpdated(pubsub, m.orgId, m.id, { name: next });
     changed++;
   }
   return changed;
