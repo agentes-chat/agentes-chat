@@ -5,8 +5,10 @@
 - Builds on: ADR 0119 (the MCP server; its addendum of 2026-11-26 adds the tool and the hold exemption), ADR 0081 and
   ADR 0137 §10 (proposals a person creates; the right hand's team card), ADR 0155 §6 and ADR 0162 (the onboarding and
   the team templates' one-click team), ADR 0079 (billing holds), ADR 0164 (the new agent's checklist asks for its apps)
-- Code: `packages/db/src/schema/first-agents.ts` (`first_agent_proposals`); `packages/engine/src/first-agents.ts`
-  (`firstAgentsInput`, `saveFirstAgents`, `latestFirstAgents`, `pickFirstAgent`); `packages/engine/src/team-templates.ts`
+- Code: `packages/db/src/schema/first-agents.ts` (`first_agent_proposals`, `first_deliveries`);
+  `packages/engine/src/first-agents.ts` (`firstAgentsInput`, `saveFirstAgents`, `latestFirstAgents`, `pickFirstAgent`,
+  `startFirstAgent`); `packages/engine/src/first-delivery.ts` (`keepFirstDelivery`, `fireFirstDeliveries`,
+  `enqueueFirstDeliveryChecks`, `deliverySummary`); `packages/engine/src/team-templates.ts`
   (`createTeamNow`); `packages/engine/src/team-proposals.ts` (`TeamAgent.later`); `packages/engine/src/apps/first-agents-tool.ts`
   (`propose_first_agents`); `packages/engine/src/standing.ts` (`workRefusalBeforePlan`); routes
   `apps/server/src/routes/app/first-agents.ts`; client `packages/client/src/api/*` (`api.firstAgents`,
@@ -132,3 +134,55 @@ own words, because their AI knows their part of the work and the owner's doesn't
   newcomer block (`newcomerBlock`) is left out of the prompt, so it never proposes their first agent again. The
   greeting is queued when they join, so it usually comes before the pick and keeps its question; its block is gone
   either way once the agent exists.
+
+## Addendum (2026-11-27): the first delivery
+
+The onboarding now starts from an area of work ("Atendimento", "O meu dia", or "Outro", the person's own) and makes
+that area's agent at once, so connecting an app on the next step has an agent to give its routine to (ADR 0242). What
+the person waits for after Checkout is not the agent but the first thing it delivers: the inbox read, the payments that
+failed, the day's plan. That delivery is kept from the moment the agent is made and fires on its own once the agent can
+work.
+
+- **The agent from an area.** `POST …/first-agents/start` (`startFirstAgent` in `first-agents.ts`) makes one agent the
+  way a picked proposal does (`makeFirstAgent`, which both share: the right hand's team card through `checkTeam` and
+  `createTeamNow`, its own channel in a team's workspace, the apps every agent has for an admin's, the AI suggested for
+  the person, a checklist row for each catalog app its job needs), as the person (`create_agents`), with no routine:
+  the app the person connects brings its routine (ADR 0242), which the onboarding makes without asking for a run. Going
+  back and picking another area sends `replace` with the agent made a moment ago: it is archived when it is this
+  person's own and its delivery hasn't fired, so two first agents never wait side by side. An agent brought from
+  another app keeps its delivery with `PUT …/first-delivery` (an agent of the workspace, not archived, that answers the
+  person). A pick from the person's own AI keeps one too (area `ask`, its first day's first item).
+- **One per person and workspace.** `first_deliveries` (`packages/db/src/schema/first-agents.ts`): the person, the
+  agent, the area (null for an imported agent), the task, when it fired and the run it woke, unique on the workspace and
+  the person. A new agent takes the place of a delivery that hasn't fired; one that fired stays as it is. `GET
+  …/first-delivery` reads it (null once its agent is archived). One that never could fire goes after 30 days.
+- **When it fires.** Once, whichever comes last: Checkout returning, the AI connecting, or the workspace's computer
+  coming up for a plan's sign-in. `fireFirstDeliveries` (`first-delivery.ts`, the job `first_delivery.check`) fires a
+  waiting delivery while the workspace may work (active, no hold, read fresh rather than from the 5-second cache), the
+  person is still a member who reaches the agent, the agent is neither archived nor held, and its AI reads ready
+  (`agentAiState`, which reads a computer brain ready only once its computer is). It is claimed in the same transaction
+  that delivers its notice, so it never fires twice. The check is queued when a delivery is kept and when a billing hold
+  lifts (`setBillingHold`, beside the team's hello), and by a sweep in the process that sweeps
+  (`enqueueFirstDeliveryChecks`, every 15 seconds): one job per workspace that may work and has one waiting, keyed by a
+  window that grows with the wait (15 seconds in its first hour, a minute in its first day, 10 minutes after), so the
+  AI connecting or the computer coming up needs no hook of its own and a workspace that never connects an AI costs a
+  few jobs an hour. A workspace on a hold gets none: lifting it queues its own.
+- **The notice.** A new kind, `first_delivery`, agent-only (people never see the brief), delivered with `deliverNotice`
+  into the person's DM with the agent at hop 0 (`trigger: "dm"`), with `refs.personId` and the routine's id. Its run
+  acts for that person: `authority.ts` roots it in `refs.personId`, as it does a `github_event` or a `work_follow_up`.
+  Its words are the server's, in English: the person set the agent up a moment ago and waits in this conversation; do
+  the work now with its tools: its oldest active routine this person made (its prompt, its name and schedule), else
+  the task the onboarding kept, else its role's first piece of work; report it in one message (a short sentence of what
+  it found, with numbers when there are any, then what is ready), anything to send or change waiting on the person as
+  an approval, never sent by itself; end with when it does it again; never pass. A later turn reads only a line saying
+  what that notice was.
+- **The reply says so.** Every reply (never a note) of the run that notice woke carries `meta.firstDelivery` with
+  `summary`, the one line the onboarding's last screens and the tour show (`deliverySummary`: plain text, the first
+  paragraph past an opening greeting of at most four words, its first sentence, cut at a word under 140 characters).
+  It is set where every reply of a run is posted (`post` in `executor.ts`), so a computer brain's reply carries it too.
+- **Mailboxes on the way in.** Connecting Gmail or Outlook from the onboarding or a member's welcome page sends `back`
+  (`onboarding` or `welcome`); the sign-in returns there (`/onboarding?mail=…&account=…`, `/welcome/<orgId>?…`)
+  instead of Settings › Connectors. The desktop app's return stays the app's.
+- **Left for later.** Where the plan and an AI are already there (a member joining a paying workspace, a self-hosted
+  server with a key), the delivery fires as soon as the agent is made, before the person connects its apps on the
+  agent's step: its brief then names the task, and the agent says what it couldn't reach.
