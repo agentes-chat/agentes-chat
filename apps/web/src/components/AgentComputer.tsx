@@ -10,6 +10,7 @@ import {
   setupView,
   WORKSPACE_COMPUTER_KIND,
 } from "@agenteschat/client/lib/computer";
+import { maintenanceOf } from "@agenteschat/client/lib/computer-maintenance";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
@@ -65,7 +66,7 @@ function MachineTargetView({ target }: { target: Extract<ComputerTarget, { kind:
             {managed ? t("computerSetup.managedHint") : t("computer.machineHint")}
           </InfoHint>
         </span>
-        <MachineChip online={target.online} moving={row?.moving} />
+        <MachineChip online={target.online} maintenance={maintenanceOf(row)} />
       </span>
       {!managed && !target.online && (
         <span className="small muted">{here ? t("machines.thisMac.offline") : t("computer.machineOffline")}</span>

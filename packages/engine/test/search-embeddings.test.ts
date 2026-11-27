@@ -7,6 +7,9 @@ import {
   drainOutbox,
   EMBED_FAILURES_REPORTED,
   EMBED_QUERY_CALL_WAITS,
+  EMBED_QUERY_HEDGE_MS,
+  EMBED_QUERY_TIMEOUT_MS,
+  EMBED_SLOW_SPELL_WAIT_MS,
   indexSource,
   insertContextItem,
   postPersonMessage,
@@ -228,6 +231,49 @@ describe("a slow or failing embeddings server leaves search to its words", () =>
     expect((await f.gateway.embed(call))?.vectors).toHaveLength(1);
     expect(Date.now() - started).toBeLessThan(40);
     expect([calls, await embeddingCalls()]).toEqual([1, 1]);
+  });
+
+  test("a query's call that is slow to answer is sent again, and the first answer is its vector", async () => {
+    const fake = createFakeEmbeddings();
+    let calls = 0;
+    const provider: EmbeddingProvider = {
+      id: "one-slow",
+      model: "fake-embed",
+      // The first call hangs (one slow answer of the server's), the next is quick.
+      embed: (texts, options) =>
+        ++calls === 1
+          ? new Promise((_, reject) => options.signal?.addEventListener("abort", () => reject(new Error("aborted"))))
+          : fake.embed(texts, options),
+    };
+    f = await setup({ embeddings: { provider, kinds: ["context_item"] } });
+    const started = Date.now();
+    const got = await f.gateway.embed({ orgId: f.org.id, texts: ["northwind deploy"], inputType: "query" });
+    expect(got?.vectors).toHaveLength(1);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(EMBED_QUERY_HEDGE_MS - 20);
+    expect(Date.now() - started).toBeLessThan(EMBED_QUERY_TIMEOUT_MS);
+    expect([calls, await embeddingCalls()]).toEqual([2, 1]);
+  });
+
+  test("in a slow spell a query waits only a moment before its words, until one is answered in time again", async () => {
+    const server = flaky();
+    f = await setup({ embeddings: { provider: server.provider, kinds: ["context_item"], queryTimeoutMs: 900 } });
+    let n = 0;
+    const timed = async () => {
+      const started = Date.now();
+      await f.gateway.embed({ orgId: f.org.id, texts: [`words ${++n}`], inputType: "query" }).catch(() => null);
+      return Date.now() - started;
+    };
+    server.state.mode = "hang";
+    expect(await timed()).toBeGreaterThanOrEqual(880);
+    // The spell: the next query, other words, waits a moment, not the whole wait.
+    const inSpell = await timed();
+    expect(inSpell).toBeGreaterThanOrEqual(EMBED_SLOW_SPELL_WAIT_MS - 20);
+    expect(inSpell).toBeLessThan(800);
+    // Answered in time: the spell is over, and a slow server is waited on whole again.
+    server.state.mode = "ok";
+    expect(await timed()).toBeLessThan(400);
+    server.state.mode = "hang";
+    expect(await timed()).toBeGreaterThanOrEqual(880);
   });
 
   test("a memory whose vector fails is still found by its words, and its job tries the vector again", async () => {

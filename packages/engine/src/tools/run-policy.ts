@@ -271,6 +271,7 @@ const LOOKS_ONLY = new Set([
   "bitbucket_git_clone",
   "gitserver_git_clone",
   "list_repositories",
+  "wait_for_code",
   "team_status",
   "offer_approvals",
   "offer_open_page",

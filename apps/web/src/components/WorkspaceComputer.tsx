@@ -20,6 +20,7 @@ import {
   useEtaNow,
   WORKSPACE_COMPUTER_KIND,
 } from "@agenteschat/client/lib/computer";
+import { maintenanceOf } from "@agenteschat/client/lib/computer-maintenance";
 import { joinNames, lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { namesComputers } from "@agenteschat/client/lib/machines";
@@ -262,7 +263,7 @@ export function SetupWait({ view, reader, said }: { view: SetupView; reader: Wai
 function SetupChip({ view, machine }: { view: SetupView; machine: Machine | undefined }) {
   const { t } = useTranslation();
   if (view.phase !== "ready") return <Chip icon={PHASE_ICON[view.phase]}>{t(view.chipKey)}</Chip>;
-  return <MachineChip online={machine?.online ?? false} moving={machine?.moving} />;
+  return <MachineChip online={machine?.online ?? false} maintenance={maintenanceOf(machine)} />;
 }
 
 /** The workspace's computer row of the list, once the provisioner made it. */

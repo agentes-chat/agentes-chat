@@ -442,3 +442,12 @@ export function formatLineTime(locale: string, ms: number) {
   if (ms < 3600_000) return `${Math.round(ms / 60_000)} min`;
   return `${numberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
 }
+
+/** "3 min", "40 s", "2 h", "3 dias": how long something has gone on, or about how long until something. */
+export function durationText(t: TFunction, ms: number) {
+  if (ms < 60_000) return t("run.elapsedSeconds", { n: Math.max(1, Math.round(ms / 1000)) });
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return t("format.inMinutes", { count: minutes });
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? t("format.inHours", { count: hours }) : t("format.inDays", { count: Math.round(hours / 24) });
+}
