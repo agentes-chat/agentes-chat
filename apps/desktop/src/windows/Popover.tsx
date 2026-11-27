@@ -45,7 +45,14 @@ import { SITE_NOTIFY_PREF } from "../control/notify";
 import { nextOffer, PAIR_OFFER_PREF, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
 import { askKey, PERMISSION_ASK_PREF, PREPARE_PREF, permissionAsks } from "../control/permissions";
-import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
+import {
+  homeServer,
+  type ServerList,
+  type ServerWorkspaces,
+  serverName,
+  type VersionProblem,
+  versionProblem,
+} from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
 import { isOnline, macStateOf, trayStateOf } from "../control/tray";
@@ -107,6 +114,23 @@ export function Popover() {
       .catch(() => {});
   useEffect(readList, [host]);
   useEffect(() => host.onBadge(setCounts), [host]);
+  // The server open now, checked again each time the popover shows (the cover says it as the server opens).
+  const [tooOld, setTooOld] = useState<VersionProblem | null>(null);
+  useEffect(() => {
+    if (!current) {
+      setTooOld(null);
+      return;
+    }
+    const ask = () =>
+      void host
+        .checkServer(current)
+        .then((c) => setTooOld(versionProblem(c)))
+        .catch(() => {});
+    ask();
+    return host.onShown((name) => {
+      if (name === "popover") ask();
+    });
+  }, [host, current]);
   // The server here's address moves with reach: the list again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: when its address or whether it runs changes
   useEffect(readList, [local.publicUrl, local.run]);
@@ -613,6 +637,21 @@ export function Popover() {
                 </span>
               </header>
             )}
+            {tooOld && current && (
+              <Banner
+                icon="alert"
+                title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                  host: serverName(current),
+                })}
+                actions={
+                  tooOld === "app-too-old" && (
+                    <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
+                      {t("desktop.connect.checkUpdates")}
+                    </Button>
+                  )
+                }
+              />
+            )}
             {!update.state.required && update.state.available && update.state.latest && (
               <Banner
                 icon="download"
@@ -653,6 +692,21 @@ export function Popover() {
             </header>
           )}
 
+          {tooOld && current && (
+            <Banner
+              icon="alert"
+              title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                host: serverName(current),
+              })}
+              actions={
+                tooOld === "app-too-old" && (
+                  <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
+                    {t("desktop.connect.checkUpdates")}
+                  </Button>
+                )
+              }
+            />
+          )}
           {incompatible && (
             <Banner icon="alert" title={t("desktop.tray.incompatibleTitle")}>
               {t("desktop.tray.incompatibleBody")}

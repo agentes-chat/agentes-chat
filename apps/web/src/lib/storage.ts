@@ -87,6 +87,8 @@ export const STORAGE_KEYS = {
   liveTalk: "agentes.live.talk",
   /** Prefix (`.<user id>.<org id>`): the width (px) the person dragged a live file's conversation to there. */
   liveTalkWidth: "agentes.live.talkWidth",
+  /** The server release whose notice this browser already showed (`ServerUpdateNotice`). */
+  serverUpdateSeen: "agentes.serverUpdate.seen",
   /** Offline-computer notices the person closed (`machineId@offlineSince`), until that computer comes back. */
   outagesDismissed: "agentes.outages.dismissed",
   /** The workspace computer's notice the person closed (`setupNoticeKey`), until its state changes. */

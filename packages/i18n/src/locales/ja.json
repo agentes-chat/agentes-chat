@@ -38,6 +38,9 @@
     "wrapLines": "行を折り返す",
     "raw": "生データ",
     "table": "表",
+    "tableRows_other": "表 · {{count}}行",
+    "tableSeeAll": "全{{count}}行を表示",
+    "tableRowCount_other": "{{count}}行",
     "chartItem": "項目",
     "chartShare": "割合",
     "you": "あなた",
@@ -10263,7 +10266,6 @@
     "filter": {
       "person": "人",
       "agent": "エージェント",
-      "routine": "ルーティン",
       "reminder": "リマインダー",
       "deadline": "タスクの期日"
     },
@@ -10296,37 +10298,16 @@
         "declined": "参加しません。"
       }
     },
-    "every": {
-      "hour": "1時間ごと",
-      "hours": "{{count}}時間ごと",
-      "minutes": "{{count}}分ごと"
-    },
-    "perDay": "1日{{count}}回",
-    "runs_other": "この期間の実行 {{count}}回。",
-    "routineDetail": "ルーティン · {{target}}に届けます",
     "deadlineDetail": "タスクの期日です。",
     "reminderBy": "{{name}}が設定",
     "reminderPosted": "リマインダー · {{target}}に投稿",
     "cancelReminder": "リマインダーをキャンセル",
     "reminderCancelled": "リマインダーをキャンセルしました",
     "openIssue": "タスクを開く",
-    "openRoutines": "「ルーティン」で見る",
-    "openRoutine": "ルーティンを開く",
-    "runAria": "ルーティン{{name}}、{{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "{{time}}のルーティン",
-    "moreRuns_other": "ほか{{count}}件のルーティン",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "返信あり",
-      "silent": "新着なし",
-      "failed": "失敗",
-      "skipped": "実行されず"
-    },
-    "lastResult": "前回: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "予定はありません。ドラッグするかNキーで作成できます",
-    "agendaEmpty": "今後30日間の予定とルーティンがここに表示されます。",
+    "agendaEmpty": "今後30日間の予定とリマインダーがここに表示されます。",
     "agendaEmptyTitle": "今後30日の予定は空いています",
     "noResults": "この絞り込みに該当するものはありません。",
     "more": "ほか{{count}}件",
@@ -17967,7 +17948,21 @@
       "version": "バージョン",
       "license": "<license>GNU Affero General Public License v3</license> のもとで提供される自由ソフトウェアです。保証はありません。",
       "source": "ソースコード",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC およびコントリビューター"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC およびコントリビューター",
+      "latest": "最新のリリースです",
+      "newer": "{{version}} が公開されました",
+      "notes": "新機能",
+      "update": {
+        "title": "{{version}} に更新",
+        "docker": "Docker を使う場合",
+        "native": "Docker を使わない場合",
+        "nativeHelp": "リリースのパッケージを `~/.agentes/app` に展開してから、次を実行します。",
+        "desktop": "このコンピューターのデスクトップアプリで動かしていますか？ アプリと一緒に更新されます。",
+        "notice": "このサーバー向けに agentes.chat {{version}} が公開されました",
+        "how": "更新の方法"
+      },
+      "computers": "コンピューターのプログラム",
+      "computersAhead_other": "{{count}} 台のコンピューターがこのサーバーより新しいバージョンで動いています。そのままで動作し、新しい機能はこのサーバーの更新で使えるようになります。"
     },
     "title": "設定",
     "account": {

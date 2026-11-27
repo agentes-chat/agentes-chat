@@ -5642,6 +5642,8 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /** Its runner's machine protocol (`MACHINE_PROTOCOL_VERSION` of the runner it runs). Absent on older servers. */
+  protocol?: number;
   /**
    * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
    * install command again, as root. Null or absent (an older server): nothing to update from here.
@@ -9439,6 +9441,8 @@ export interface DevicesList {
    * server lends). Absent from an older server: only where the workspace has its own computer (`lendsInternet`).
    */
   lendsInternet?: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead. Absent from an older server: no. */
+  serverBoxesBorrow?: boolean;
 }
 
 /** A one-line install: works once, for a few minutes, and the computer still asks to join. */

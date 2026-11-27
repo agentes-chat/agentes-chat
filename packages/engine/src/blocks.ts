@@ -380,7 +380,21 @@ export function choiceReplyText(
   picks: number[],
   others: readonly (string | null | undefined)[] = [],
 ): string {
-  return questions.map((q, i) => `${q.question} ${others[i] ?? q.options[picks[i] as number]?.label ?? ""}`).join("\n");
+  return choiceReplyAnswers(questions, picks, others)
+    .map((a) => `${a.question} ${a.answer}`)
+    .join("\n");
+}
+
+/** Each question with its pick or what was written: the reply's lines, kept apart for the app to draw (`meta.choiceReply.answers`). */
+function choiceReplyAnswers(
+  questions: ChoiceQuestion[],
+  picks: number[],
+  others: readonly (string | null | undefined)[],
+): { question: string; answer: string }[] {
+  return questions.map((q, i) => ({
+    question: q.question,
+    answer: others[i] ?? q.options[picks[i] as number]?.label ?? "",
+  }));
 }
 
 /**
@@ -425,7 +439,14 @@ export async function answerChoices(
     orgId,
     a,
     choiceReplyText(questions, picks, others),
-    { choiceReply: { id: a.id, title: a.title, ...(wrote ? { others } : {}) } },
+    {
+      choiceReply: {
+        id: a.id,
+        title: a.title,
+        answers: choiceReplyAnswers(questions, picks, others),
+        ...(wrote ? { others } : {}),
+      },
+    },
     input.clientId,
   ).catch(async (error: unknown) => {
     // Not sent: the card stays open for another try.
