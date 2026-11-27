@@ -2259,11 +2259,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("orgs.updateSettings", orgId, input);
         // A switch of mode (ADR 0159), with the name it may bring: `me` says them at once, as the server's.
         const { mode, name } = input;
-        if (mode !== undefined && state.me) {
-          const named = name ? { name } : {};
+        // A new name (the onboarding's Trocar, Settings) is the workspace's everywhere, as the server's.
+        if ((mode !== undefined || name) && state.me) {
+          const changed = { ...(mode !== undefined ? { mode } : {}), ...(name ? { name } : {}) };
           state.me = {
             ...state.me,
-            organizations: state.me.organizations.map((o) => (o.id === orgId ? { ...o, mode, ...named } : o)),
+            organizations: state.me.organizations.map((o) => (o.id === orgId ? { ...o, ...changed } : o)),
           };
         }
         if (input.context !== undefined) state.context = input.context;
@@ -3484,6 +3485,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         state.channelMembers[channelId] = [me, agent];
         proposal.picked = index;
         proposal.agentId = agentId;
+        // Like the backend: the agent picked is my first delivery's, unless one already went.
+        if (!state.firstDelivery?.firedAt)
+          state.firstDelivery = {
+            agentId,
+            area: "ask",
+            task: option.today[0] ?? option.tasks[0] ?? "",
+            armedAt: null,
+            firedAt: null,
+            runId: null,
+          };
         return { agentId, handle, channelId };
       },
       // Like the backend: one agent as me, no routine, its first delivery kept disarmed; `replace` takes my pending one's

@@ -40,7 +40,8 @@ test("the computers' screens and the import load with their own pages, never wit
 });
 
 test("the onboarding's import of other agent apps loads when asked for, never with the onboarding's first screens", () => {
-  // "Another agent app" on the ask step opens the import's dialog: only the page's `lazy(() => import(…))` reaches it.
+  // "Bring from another app" on the work step opens the import's dialog: only the page's `lazy(() => import(…))` reaches
+  // it.
   const page = SOURCES.find((s) => s.path === "pages/OnboardingPage.tsx")?.code ?? "";
   expect(page).toContain('import("@/components/new-agent/ImportAgentsDialog")');
   // Types alone from the import's modules: their readers (every app's parser, the archive reader) stay behind.
@@ -50,8 +51,10 @@ test("the onboarding's import of other agent apps loads when asked for, never wi
     const code = SOURCES.find((s) => s.path === path)?.code ?? "";
     expect({ path, heavy: code.match(heavy) }).toEqual({ path, heavy: null });
   }
-  for (const step of ["AskStep", "PickStep", "WeekStep", "HireStep", "CelebrateStep", "Shell"]) {
-    const code = SOURCES.find((s) => s.path === `pages/onboarding/${step}.tsx`)?.code ?? "";
-    expect({ step, heavy: code.match(heavy) }).toEqual({ step, heavy: null });
+  for (const step of ["AreaStep", "AgentStep", "AskStep", "HireStep", "AiStep", "CelebrateStep", "Shell"]) {
+    const code = SOURCES.find((s) => s.path === `pages/onboarding/${step}.tsx`)?.code;
+    // Every step listed is there: one renamed or gone is said here, never passed over as empty.
+    expect({ step, found: code !== undefined }).toEqual({ step, found: true });
+    expect({ step, heavy: code?.match(heavy) ?? null }).toEqual({ step, heavy: null });
   }
 });

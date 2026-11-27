@@ -7,6 +7,7 @@ import { keys, type Machine } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { connectRequest } from "@/pages/onboarding/AiStep";
 import {
+  ADA_ID,
   createFakeApi,
   type FakeState,
   fakeMachinesOf,
@@ -20,9 +21,10 @@ import { shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 /*
- * The onboarding's Connect an AI step (ADR 0162): once the first agent's week was seen (or the start was left with the
- * right hand alone), answered by the data (every agent thinking), left with Connect later, and never after a plan left
- * for later. Wherever it ends, the workspace opens on the welcome wizard alone (`?arrival=beta`, ADR 0160).
+ * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): after the first agent's
+ * step (and the plan, on agentes.chat Cloud), answered by the data (every agent thinking), left with Connect later
+ * after asking, and never after a plan left for later. Then the team's photo, whose button opens the workspace on the
+ * welcome wizard alone (`?arrival=beta`, ADR 0160).
  */
 
 const realFetch = globalThis.fetch;
@@ -34,11 +36,11 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-const CONNECT = "Agora, a IA que vocês já assinam";
+const CONNECT = "Agora, a IA que você já assina";
 /** The arrival's Connect an AI, which the wizard never leads to after this step. */
 const ARRIVAL_CONNECT = "Conecte uma IA para o seu time pensar";
-/** A team's last step, after this one (ADR 0162, amended 2026-11-11). */
-const PEOPLE = "Quem trabalha com você?";
+/** The onboarding's last step, after this one: the team's photo. */
+const PHOTO = "Boas-vindas ao time da Acme";
 /** The welcome wizard's first step (ADR 0160, addendum of 2026-11-26). */
 const WELCOME = "Boas-vindas à Acme, Walter";
 
@@ -69,8 +71,8 @@ const arrivals = (router: Router) => {
 };
 
 /**
- * Acme being set up, its first agents made and their week seen ("agents"), none of its agents with an AI yet;
- * `held`: agentes.chat Cloud, waiting for its first plan.
+ * Acme being set up, its first agent (Ada) made and its step left with Continue ("agents"), none of its agents with an
+ * AI yet; `held`: agentes.chat Cloud, waiting for its first plan.
  */
 const madeTeam = (opts: { held?: boolean } = {}) => {
   const state = withRightHand(seedState());
@@ -103,19 +105,23 @@ const allThink = async (state: FakeState, services: Awaited<ReturnType<typeof re
   await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
   await settle(10);
 };
+/** The photo's list: each row's words. */
+const photoRows = () => [...document.querySelectorAll(".onbx .onb-next__row")].map((li) => li.textContent);
+
 describe("Connect an AI, after the first agent", () => {
-  test("the team made with no AI: the step, its choices as cards, and what leaving it means", async () => {
+  test("the team made with no AI: the step, its choices as flat rows, and what leaving it means", async () => {
     const state = madeTeam();
     await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
-    // Past the count: no step number over it.
+    // Past the count: no step number over it, and no plan (self-hosted) to name.
     expect(eyebrow()).toBeUndefined();
     expect(heading()).toBe(CONNECT);
     expect(document.querySelector(".onbx__lead")?.textContent).toBe(
-      "Com ela, o time começa hoje. Os agentes usam a conta de vocês, sem custo a mais aqui.",
+      "A Ada pensa com ela, sem custo a mais aqui. Assim que conectar, ela começa a primeira entrega.",
     );
-    // The team awake on the box's own header.
+    // The first agent awake on the box's own header.
     expect(document.querySelector(".onbx .onb-pass[data-awake]")).not.toBeNull();
+    expect(document.querySelector(".onbx .arrival-opts.ac-optlinks--flat")).not.toBeNull();
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Chave de API", "Começar grátis"])
       expect(within(body()).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
     expect(document.querySelector(".onbx .ac-dialog__foot-note")?.textContent).toBe(
@@ -135,47 +141,43 @@ describe("Connect an AI, after the first agent", () => {
     expect(heading()).toBe(CONNECT);
   });
 
-  test("Connect later goes on to inviting people, whose Convidar depois opens #general on the wizard alone", async () => {
+  test("Connect later asks first, then the photo, whose button opens the first agent's DM on the wizard alone", async () => {
     const state = madeTeam();
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
     const asked = arrivals(router);
-    await click(button("Conectar depois"), 16);
-    expect(heading()).toBe(PEOPLE);
-    await click(button("Convidar depois"), 16);
+    await click(button("Conectar depois"), 6);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Continuar sem IA" }), 16);
+    expect(heading()).toBe(PHOTO);
+    await click(button(/^Conhecer o workspace/), 16);
     await settle(8);
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
       [ORG_ID, { step: "ai" }],
       [ORG_ID, { finished: true }],
     ]);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${ADA_ID}`);
     expect(asked).toContain("beta");
     await throughWelcome();
     expect(screen().queryByRole("dialog")).toBeNull();
   });
 
-  test("once every agent thinks: the connected screen, then on to the people and into the workspace", async () => {
+  test("once every agent thinks: the photo, never the workspace by itself; its button opens it", async () => {
     const state = madeTeam();
     const { router, services } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
     expect(heading()).toBe(CONNECT);
     await allThink(state, services);
-    // It stays on the step to say so, rather than opening the workspace by itself.
     expect(router.state.location.pathname).toBe("/onboarding");
-    expect(heading()).toBe("Pronto. O time da Acme já pensa.");
-    expect(document.querySelector(".onbx .ac-dialog__foot-note")?.textContent).toBe("");
+    expect(heading()).toBe(PHOTO);
     expect(calls(state, "orgs.saveOnboarding")).toEqual([]);
     const asked = arrivals(router);
-    await click(button(/^Continuar/), 12);
-    expect(heading()).toBe(PEOPLE);
-    await click(button("Convidar depois"), 16);
+    await click(button(/^Conhecer o workspace/), 16);
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { finished: true }]]);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${ADA_ID}`);
     expect(asked).toContain("beta");
   });
 
   test("a card picked names nothing by itself: the dialog closed, and the AI connected some other way", async () => {
-    const lead = () => document.querySelector(".onbx__lead")?.textContent;
     for (const keyCame of [false, true]) {
       const state = madeTeam();
       const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
@@ -191,13 +193,14 @@ describe("Connect an AI, after the first agent", () => {
       };
       await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
       await settle(10);
-      expect(lead()).toBe("A IA que você conectou responde por todos os agentes. Dá para trocar depois, um por um.");
-      expect(document.querySelector(".onb-ai__connected")).toBeNull();
+      // The photo says an AI is connected, in general words: nothing was connected through the card.
+      expect(heading()).toBe(PHOTO);
+      expect(photoRows()[0]).toBe("IA conectada (concluído)");
       cleanup();
     }
   });
 
-  test("what the dialog connected is named, not the card it opened on: Back leads to every other choice", async () => {
+  test("a key connected through the dialog, never the card it opened on: Back leads to every other choice", async () => {
     const state = ownTeam();
     const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
@@ -216,9 +219,10 @@ describe("Connect an AI, after the first agent", () => {
     state.aiStatus = { any: true, apiKey: true, agents: state.agents.map((a) => ({ agentId: a.id, state: "ready" })) };
     await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
     await settle(10);
-    expect(document.querySelector(".onb-ai__connected .ac-optrow__title")?.textContent).toBe("Chave de API");
-    // The kit's row the choices had, its state in a chip.
-    expect(document.querySelector(".onb-ai__connected.ac-optrow .ac-chip--done")).not.toBeNull();
+    // The photo never names the card the dialog opened on (Claude): a key is an AI, in general words.
+    expect(heading()).toBe(PHOTO);
+    expect(photoRows()[0]).toBe("IA conectada (concluído)");
+    expect(document.querySelector(".onbx")?.textContent).not.toContain("Claude");
   });
 
   test("on agentes.chat Cloud, a plan left for later skips the step: Lodi's DM, the wizard alone", async () => {
@@ -227,7 +231,7 @@ describe("Connect an AI, after the first agent", () => {
     globalThis.fetch = (async () => new Response("", { status: 404 })) as unknown as typeof fetch;
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
-    expect(heading()).toBe("Contrate o time");
+    expect(heading()).toBe("O time da Acme começa com a Ada");
     expect(eyebrow()).toBe("Passo 4 de 4");
     const asked = arrivals(router);
     await click(button("Agora não"), 16);
@@ -240,34 +244,20 @@ describe("Connect an AI, after the first agent", () => {
 });
 
 describe("a personal workspace (ADR 0159)", () => {
-  test("its own words, never a team's: the step for its right hand alone, and its done screen by its name", async () => {
-    // Being set up, how to start next, its right hand alone and with no AI yet.
-    const state = withRightHand(seedState({ agents: [] }));
-    if (state.me)
-      state.me.organizations = [
-        {
-          id: ORG_ID,
-          name: "Pessoal",
-          role: "owner",
-          mode: "personal",
-          onboarding: { step: "workspace", generalChannelId: GENERAL_ID },
-        },
-      ];
-    state.aiStatus = {
-      any: false,
-      agents: state.agents.map((a) => ({ agentId: a.id, state: "no_ai", reason: "no_key" })),
-    };
+  test("its own words, never a team's: the step for its first agent, then its own photo", async () => {
+    const state = ownTeam();
+    for (const o of state.me?.organizations ?? []) {
+      o.mode = "personal";
+      o.name = "Walter";
+    }
     const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
-    await click(screen().getByRole("radio", { name: /Começar do zero/ }), 4);
-    await click(button(/^Começar do zero/), 16);
-    expect(heading()).toBe("Agora, a IA que você já assina");
+    expect(heading()).toBe(CONNECT);
     const box = () => document.querySelector(".onbx")?.textContent ?? "";
-    expect(box()).toContain("Com ela, os seus agentes começam hoje.");
+    expect(box()).toContain("A Ada pensa com ela, sem custo a mais aqui.");
     expect(box()).not.toContain("time");
     await allThink(state, services);
-    expect(heading()).toBe("Pronto. O Lodi já pensa.");
-    expect(box()).not.toContain("time");
+    expect(heading()).toBe("Boas-vindas ao seu time");
   });
 });
 
@@ -382,7 +372,7 @@ describe("each card opens Connect for the whole team on its own steps (ADR 0162)
     await click(within(body()).getByRole("button", { name: /^Claude/ }), 12);
     expect(screen().getByRole("dialog", { name: "Seu plano do Claude" })).toBeTruthy();
     await allThink(state, services);
-    expect(heading()).toBe("Pronto. O time da Acme já pensa.");
+    expect(heading()).toBe(PHOTO);
   });
 });
 

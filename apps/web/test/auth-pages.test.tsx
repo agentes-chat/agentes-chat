@@ -1415,7 +1415,7 @@ describe("A verificação contra robôs (agentes.chat Cloud)", () => {
   });
 });
 
-describe("Onboarding: the workspace's name", () => {
+describe("Onboarding: the first question, which makes the workspace (ADR 0159, ADR 0162 amended 2026-11-27)", () => {
   /** `billingUrl`: the Cloud's billing service, as `/api/auth/config` says it. */
   const start = async (
     patch: Partial<ReturnType<typeof seedState>> = {},
@@ -1427,20 +1427,14 @@ describe("Onboarding: the workspace's name", () => {
     state.authConfig = { workspaceComputer: false, billingUrl, ...patch.authConfig };
     const api = createFakeApi(state);
     const r = await renderApp("/onboarding", { api });
-    // First what it is for (ADR 0159): a company or team names it next. Where no workspace may be made, no question.
+    await settle(4);
+    // For a company or team: named from the work e-mail when Continuar makes it.
     const team = screen().queryByRole("radio", { name: /Para meu time/ });
-    if (team) {
-      await click(team, 8);
-      await click(button("Continuar"), 8);
-    }
+    if (team) await click(team, 8);
     return { ...r, api, state };
   };
   const button = (name: string | RegExp) => screen().getByRole("button", { name });
-  /** What it is for: a company or team, then its name (ADR 0159). */
-  const toName = async () => {
-    await click(screen().getByRole("radio", { name: /Para meu time/ }), 8);
-    await click(button("Continuar"), 8);
-  };
+  const PURPOSE = "Para que você vai usar o agentes.chat?";
   async function click(el: HTMLElement, rounds = 4) {
     await act(async () => fireEvent.click(el));
     await settle(rounds);
@@ -1448,18 +1442,18 @@ describe("Onboarding: the workspace's name", () => {
   const next = () => click(button("Continuar"), 8);
   const calls = (state: ReturnType<typeof seedState>, method: string) => state.calls.filter((c) => c.method === method);
 
-  test("the name, step 1 of its count, the right hand alone on the box, never a guide among the presets", async () => {
+  test("what it is for, step 1 of its count, the right hand alone on the box, never a guide among the presets", async () => {
     await start();
-    expect(screen().getByRole("heading", { name: "Como se chama o seu workspace?" })).toBeTruthy();
-    // The name, how to start and the first agent's week: no plan step where nothing bills (ADR 0162).
+    expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
+    // It, the work and its agent: no plan step where nothing bills (ADR 0162).
     expect(document.querySelector(".onbx__eyebrow")?.textContent).toBe("Passo 1 de 3");
     // The right hand stands on the box's edge, the one host; none of the presets.
     expect(document.querySelectorAll(".onbw__agent")).toHaveLength(1);
     expect(document.querySelector(".onbw__agent .ac-avatar")?.getAttribute("data-accessory")).toBe("headset");
     expect(document.body.textContent).not.toContain("Oi, eu sou a Ada");
-    // A name is no misspelling.
-    expect(screen().getByLabelText("Nome").getAttribute("spellcheck")).toBe("false");
-    expect(button("Continuar").hasAttribute("disabled")).toBe(true);
+    // No name to type: the workspace takes it from the work e-mail.
+    expect(screen().queryByLabelText("Nome")).toBeNull();
+    expect(button(/^Continuar/).hasAttribute("disabled")).toBe(false);
   });
 
   test("the step's actions: the box's footer, its notes above it in the step", async () => {
@@ -1474,8 +1468,8 @@ describe("Onboarding: the workspace's name", () => {
     expect(box.querySelector(".onbx__body")?.contains(note)).toBe(true);
     expect(foot.contains(note)).toBe(false);
     expect(note.compareDocumentPosition(foot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Back on the footer's start, the step's one button on its end.
-    expect(foot.querySelector(".ac-dialog__foot-note .onbx__back")?.textContent).toBe("Voltar");
+    // Its quiet note on the footer's start, the step's one button on its end.
+    expect(foot.querySelector(".ac-dialog__foot-note")?.textContent).toBe("Dá para trocar depois, sem perder nada.");
     expect([...(foot.querySelector(".ac-dialog__foot-acts")?.children ?? [])].map((b) => b.textContent)).toEqual([
       expect.stringMatching(/^Continuar/),
     ]);
@@ -1531,8 +1525,7 @@ describe("Onboarding: the workspace's name", () => {
         .getByRole("radio", { name: /Para meu time/ })
         .getAttribute("aria-checked"),
     ).toBe("true");
-    expect(button("Continuar").hasAttribute("disabled")).toBe(true);
-    expect(screen().queryByLabelText("Nome")).toBeNull();
+    expect(button(/^Continuar/).hasAttribute("disabled")).toBe(true);
     expect(calls(state, "orgs.create")).toEqual([]);
   });
 
@@ -1568,10 +1561,9 @@ describe("Onboarding: the workspace's name", () => {
           ...(cloud ? { cloud } : {}),
         });
       };
-      await type("Nome", "Acme Saúde");
       await next();
       expect(document.querySelector(".ac-toast")?.textContent).toContain(says);
-      expect(screen().getByRole("heading", { name: "Como se chama o seu workspace?" })).toBeTruthy();
+      expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
       cleanup();
     }
   });
@@ -1606,9 +1598,8 @@ describe("Onboarding: the workspace's name", () => {
         orgId: "org-unpaid",
       });
     };
-    await type("Nome", "Beta");
     await next();
-    expect(screen().getByRole("heading", { name: "Como se chama o seu workspace?" })).toBeTruthy();
+    expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
     const said =
       "Você já tem um workspace esperando um plano do agentes.chat. Escolha o plano dele antes de criar outro.";
     expect(screen().getByRole("alert").textContent).toBe(said);
@@ -1652,10 +1643,7 @@ describe("Onboarding: the workspace's name", () => {
       const note = () => document.querySelector(".onb__note")?.textContent;
       expect(note()).toBe("Mandamos um link de confirmação para walter@acme.com.br.Mandar outro link");
       // Nothing waits for it: the question, its answer picked, goes on.
-      expect(button("Continuar").hasAttribute("disabled")).toBe(false);
-      await toName();
-      await type("Nome", "Acme");
-      expect(button("Continuar").hasAttribute("disabled")).toBe(false);
+      expect(button(/^Continuar/).hasAttribute("disabled")).toBe(false);
 
       // Didn't get it, or it ran out: a new one, once.
       await click(button("Mandar outro link"), 4);
@@ -1681,19 +1669,18 @@ describe("Onboarding: the workspace's name", () => {
     state.me.user.emailVerified = false;
     await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(4);
-    expect(document.querySelector(".onb__note")).toBeNull();
-    await toName();
-    expect(screen().getByRole("heading", { name: "Como se chama o seu workspace?" })).toBeTruthy();
+    expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
     expect(document.querySelector(".onb__note")).toBeNull();
   });
 
-  test("workspace: the time zone in words, its reason behind its ⓘ, with no line under the field", async () => {
+  test("workspace: the time zone in words beside its name, its reason behind its ⓘ, with no line under the field", async () => {
     await start();
-    // Its name as people say it (the IANA id goes to the API only).
-    const zone = [...document.querySelectorAll(".onb__help")].find((p) => p.textContent?.startsWith("Fuso horário"));
-    expect(zone?.textContent).toMatch(/^Fuso horário: .+ · trocar$/);
-    expect(zone?.textContent).not.toMatch(/\w\/\w/);
-    await click(button("trocar"), 2);
+    await next();
+    // On the work step's footer, its name as people say it (the IANA id goes to the API only).
+    const place = document.querySelector(".onb-place-line")?.textContent;
+    expect(place).toMatch(/^Acme · .+ · Trocar$/);
+    expect(place).not.toMatch(/\w\/\w/);
+    await click(button("Trocar"), 4);
     const about = button("Sobre Fuso horário");
     const why = document.getElementById(about.getAttribute("aria-describedby") ?? "");
     expect(why?.textContent).toBe("Para rotinas e lembretes. Detectado pelo seu navegador.");

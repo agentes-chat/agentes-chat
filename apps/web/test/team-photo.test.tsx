@@ -12,9 +12,10 @@ import { createFakeApi, seedState } from "./fake-api";
 import { renderPage, screen, settle } from "./render";
 
 /*
- * The celebration after Checkout (ADR 0162): "Download the team photo" draws the photo with its words in the browser
- * and saves it through the app's saver, named after the workspace. The drawing itself needs a real canvas: here it is
- * swapped, and what it was asked to draw is checked.
+ * The onboarding's last step, the team's photo (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): "Download the
+ * team photo" draws the person and the first agent with the step's words in the browser and saves it through the app's
+ * saver, named after the workspace. The drawing itself needs a real canvas: here it is swapped, and what it was asked
+ * to draw is checked.
  */
 
 const realDraw = teamPhoto.draw;
@@ -27,8 +28,7 @@ afterEach(() => {
   URL.createObjectURL = realObjectUrl;
 });
 
-const LODI: ShellFace = { id: "lodi", name: "Lodi", look: { color: "teal", accessory: "headphones" } };
-const CAIO: ShellFace = { id: "caio", name: "Caio", look: { color: "amber", accessory: "hat" } };
+const IARA: ShellFace = { id: "iara", name: "Iara", look: { color: "violet", eyes: "happy", accessory: "bow" } };
 
 async function celebrate(personal = false) {
   return renderPage(
@@ -36,14 +36,12 @@ async function celebrate(personal = false) {
       org="Acme Saúde"
       person={{ name: "Ana Souza", image: null }}
       first="Ana"
-      lodi={LODI}
-      team={[CAIO]}
+      agent={IARA}
+      working="A Iara está lendo os seus e-mails"
       plan="Equipe"
       personal={personal}
-      aiDone={false}
-      toAi
-      people={personal ? null : false}
-      deliveries={3}
+      ai="Claude"
+      leaving={false}
       onNext={() => {}}
     />,
     { api: createFakeApi(seedState()) },
@@ -88,14 +86,19 @@ describe("the team's photo to download", () => {
     expect(button.disabled).toBe(true);
     expect(button.getAttribute("aria-busy")).toBe("true");
     const [input] = drawing.asked;
-    expect(input?.cast.map((a) => a.id)).toEqual(["lodi", "caio"]);
+    // The person and the first agent: never the right hand.
+    expect(input?.cast.map((a) => a.id)).toEqual(["iara"]);
     expect(input?.person).toEqual({ name: "Ana Souza", image: null });
     expect(input?.say).toBe("Oi, Ana. A gente começa hoje.");
     expect(input?.eyebrow.startsWith("Time da Acme Saúde · desde ")).toBe(true);
     expect(input?.title).toBe("Boas-vindas ao time da Acme Saúde");
     // The picture names the person, where the page says "Você".
-    expect(input?.lead).toBe("Ana, o Lodi e o Caio. A partir de hoje, trabalhando juntos, de dia e de noite.");
-    expect(document.querySelector(".onbx__lead")?.textContent?.startsWith("Você, o Lodi e o Caio.")).toBe(true);
+    expect(input?.lead).toBe(
+      "Ana e a Iara, a primeira do time. A partir de hoje, trabalhando juntos, de dia e de noite.",
+    );
+    expect(document.querySelector(".onbx__lead")?.textContent?.startsWith("Você e a Iara, a primeira do time.")).toBe(
+      true,
+    );
     expect(saved).toEqual([]);
 
     await act(async () => drawing.finish());

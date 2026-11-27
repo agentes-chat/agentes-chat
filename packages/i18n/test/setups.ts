@@ -95,12 +95,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // The computer step's plan offer: only where the workspace gets its own computer (`setupView`, as
     // `computerSetup.`) and waits for its first plan (ADR 0079).
     "onboarding.computer.payment.",
-    // Hiring the first agent with the plan, and the team's photo back from Checkout: only where the workspace waits
-    // for its first plan, so its computer is the Cloud's, always on (ADR 0256).
+    // The plan step's lead, and the team's photo after it: where the workspace waits for its first plan, so its
+    // computer is the Cloud's, always on (ADR 0256).
     "onboarding.hire.lead",
-    "onboarding.hire.leadNoRole",
-    "onboarding.hire.leadMany",
-    "onboarding.hire.leadAlone",
     "onboarding.celebrate.lead",
   ],
   selfhost: [

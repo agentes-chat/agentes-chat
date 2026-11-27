@@ -44,7 +44,7 @@ describe("route guards", () => {
 
   test("a workspace still being set up resumes in the onboarding for its owner, at its next step; never for someone invited", async () => {
     const as = (role: "owner" | "member") => {
-      // Named, and left before choosing how to start.
+      // Made, and left before picking the work its first agent does.
       const state = withRightHand(seedState({ agents: [] }));
       const onboarding = { step: "workspace" as const, generalChannelId: GENERAL_ID };
       if (state.me) state.me.organizations = [{ id: ORG_ID, name: "Acme", role, onboarding }];
@@ -54,9 +54,9 @@ describe("route guards", () => {
       const { router } = await renderApp(path, { api: as("owner") });
       await settle(10);
       expect(router.state.location.pathname).toBe("/onboarding");
-      // At how to start, its next step (ADR 0162): never the questions that would make another workspace.
-      expect(screen().getByRole("heading", { name: "Como você quer começar?" })).toBeTruthy();
-      expect(screen().queryByRole("heading", { name: "Como se chama o seu workspace?" })).toBeNull();
+      // At the work its first agent does, its next step (ADR 0162, amended 2026-11-27): never the question that would
+      // make another workspace.
+      expect(screen().getByRole("heading", { name: "O que o seu primeiro agente vai fazer?" })).toBeTruthy();
       expect(screen().queryByRole("heading", { name: "Para que você vai usar o agentes.chat?" })).toBeNull();
       cleanup();
     }
