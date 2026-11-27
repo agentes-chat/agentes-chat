@@ -17486,6 +17486,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "En attente de {{permission}} sur {{computer}}",
+      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
+      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
+      "asked": "Nécessaire pour lancer {{trigger}}",
+      "names": {
+        "app_management": "Gestion des apps",
+        "screen": "Enregistrement de l’écran",
+        "accessibility": "Accessibilité",
+        "disk": "Accès complet au disque",
+        "network": "Réseau local",
+        "camera": "Caméra",
+        "microphone": "Micro",
+        "automation": "Automatisation"
+      }
+    },
     "leadCloud": "Là où travaillent vos agents : l'ordinateur de l'espace de travail et les appareils que les personnes connectent.",
     "lead": "Là où travaillent vos agents : les ordinateurs et les téléphones que les personnes connectent.",
     "connect": "Connecter un appareil",
@@ -18134,22 +18150,6 @@
         "once": "Autorisé une fois.",
         "always": "{{deviceName}} est maintenant partagé avec eux.",
         "no": "Vous avez dit non."
-      }
-    },
-    "permission": {
-      "title": "En attente de {{permission}} sur {{computer}}",
-      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
-      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
-      "asked": "Nécessaire pour lancer {{trigger}}",
-      "names": {
-        "app_management": "Gestion des apps",
-        "screen": "Enregistrement de l’écran",
-        "accessibility": "Accessibilité",
-        "disk": "Accès complet au disque",
-        "network": "Réseau local",
-        "camera": "Caméra",
-        "microphone": "Micro",
-        "automation": "Automatisation"
       }
     }
   },
@@ -19948,6 +19948,7 @@
         "usingScreen": "A utilisé l'écran",
         "cloningRepo": "A cloné un dépôt",
         "listingRepos": "A listé les dépôts",
+        "updatingCode": "A mis à jour le code",
         "preparingCli": "A préparé {{app}}",
         "openingPullRequest": "A ouvert une pull request",
         "handingOff": "A livré un rapport",
@@ -20072,6 +20073,7 @@
       "usingScreen": "utilisation de l'écran",
       "cloningRepo": "clonage d'un dépôt",
       "listingRepos": "liste les dépôts",
+      "updatingCode": "met à jour le code",
       "preparingCli": "préparation de {{app}} sur {{computer}}",
       "preparingCliPct": "préparation de {{app}} sur {{computer}} ({{percent}} %)",
       "openingPullRequest": "ouverture d'une pull request",

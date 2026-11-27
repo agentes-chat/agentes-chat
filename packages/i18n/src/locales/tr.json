@@ -16852,6 +16852,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
+      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
+      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
+      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
+      "names": {
+        "app_management": "Uygulama Yönetimi",
+        "screen": "Ekran Kaydı",
+        "accessibility": "Erişilebilirlik",
+        "disk": "Tam Disk Erişimi",
+        "network": "Yerel Ağ",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomasyon"
+      }
+    },
     "leadCloud": "Ajanlarınızın çalıştığı yer: çalışma alanının bilgisayarı ve kişilerin bağladığı cihazlar.",
     "lead": "Ajanlarınızın çalıştığı yer: kişilerin bağladığı bilgisayarlar ve telefonlar.",
     "connect": "Cihaz bağla",
@@ -17496,22 +17512,6 @@
         "once": "Bir kez izin verildi.",
         "always": "{{deviceName}} artık onlarla paylaşılıyor.",
         "no": "Hayır dediniz."
-      }
-    },
-    "permission": {
-      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
-      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
-      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
-      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
-      "names": {
-        "app_management": "Uygulama Yönetimi",
-        "screen": "Ekran Kaydı",
-        "accessibility": "Erişilebilirlik",
-        "disk": "Tam Disk Erişimi",
-        "network": "Yerel Ağ",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomasyon"
       }
     }
   },
@@ -19251,6 +19251,7 @@
         "usingScreen": "Ekranı kullandı",
         "cloningRepo": "Bir depoyu klonladı",
         "listingRepos": "Depoları listeledi",
+        "updatingCode": "Kodu güncelledi",
         "preparingCli": "{{app}} hazırlandı",
         "openingPullRequest": "Bir pull request açtı",
         "handingOff": "Bir rapor teslim etti",
@@ -19375,6 +19376,7 @@
       "usingScreen": "ekranı kullanıyor",
       "cloningRepo": "depo klonluyor",
       "listingRepos": "depoları listeliyor",
+      "updatingCode": "kodu güncelliyor",
       "preparingCli": "{{app}} uygulamasını {{computer}} üzerinde hazırlıyor",
       "preparingCliPct": "{{app}} uygulamasını {{computer}} üzerinde hazırlıyor (%{{percent}})",
       "openingPullRequest": "pull request açıyor",

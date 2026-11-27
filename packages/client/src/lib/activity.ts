@@ -87,6 +87,7 @@ export type ActivityKind =
   | "usingScreen"
   | "cloningRepo"
   | "listingRepos"
+  | "updatingCode"
   | "preparingCli"
   | "openingPullRequest"
   | "handingOff"
@@ -293,6 +294,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   // Ours, though their first word reads like an app's name.
   git_clone: "cloningRepo",
   list_repositories: "listingRepos",
+  // The checkouts' update that runs beside the turn, waited for inside it.
+  wait_for_code: "updatingCode",
   open_pull_request: "openingPullRequest",
   hand_off: "handingOff",
   record_findings: "recordingFindings",

@@ -41493,9 +41493,6 @@
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
   },
-  "devices.leadCloud": {
-    "value": "Where your agents work: the workspace computer and the devices people connect."
-  },
   "devices.permission.title": {
     "value": "Waiting for {{permission}} on {{computer}}"
   },
@@ -41531,6 +41528,9 @@
   },
   "devices.permission.names.automation": {
     "value": "Automation"
+  },
+  "devices.leadCloud": {
+    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."
@@ -47528,6 +47528,9 @@
   "chat.work.step.listingRepos": {
     "value": "Listed the repositories"
   },
+  "chat.work.step.updatingCode": {
+    "value": "Updated the code"
+  },
   "chat.work.step.preparingCli": {
     "value": "Prepared {{app}}"
   },
@@ -47890,6 +47893,9 @@
   },
   "chat.activity.listingRepos": {
     "value": "listing the repositories"
+  },
+  "chat.activity.updatingCode": {
+    "value": "updating the code"
   },
   "chat.activity.preparingCli": {
     "value": "preparing {{app}} on {{computer}}"

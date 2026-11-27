@@ -16924,6 +16924,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wartet auf {{permission}} auf {{computer}}",
+      "next": "Erlaube es dort in der agentes.chat-App.",
+      "askedBy": "{{agent}} braucht es für {{trigger}}",
+      "asked": "Nötig für {{trigger}}",
+      "names": {
+        "app_management": "App-Verwaltung",
+        "screen": "Bildschirmaufnahme",
+        "accessibility": "Bedienungshilfen",
+        "disk": "Festplattenvollzugriff",
+        "network": "Lokales Netzwerk",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automation"
+      }
+    },
     "leadCloud": "Wo deine Agenten arbeiten: der Computer des Workspace und die Geräte, die Personen verbinden.",
     "lead": "Wo deine Agenten arbeiten: die Computer und Handys, die Personen verbinden.",
     "connect": "Gerät verbinden",
@@ -17568,22 +17584,6 @@
         "once": "Einmal erlaubt.",
         "always": "{{deviceName}} ist jetzt für sie freigegeben.",
         "no": "Du hast Nein gesagt."
-      }
-    },
-    "permission": {
-      "title": "Wartet auf {{permission}} auf {{computer}}",
-      "next": "Erlaube es dort in der agentes.chat-App.",
-      "askedBy": "{{agent}} braucht es für {{trigger}}",
-      "asked": "Nötig für {{trigger}}",
-      "names": {
-        "app_management": "App-Verwaltung",
-        "screen": "Bildschirmaufnahme",
-        "accessibility": "Bedienungshilfen",
-        "disk": "Festplattenvollzugriff",
-        "network": "Lokales Netzwerk",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Automation"
       }
     }
   },
@@ -19329,6 +19329,7 @@
         "usingScreen": "Den Bildschirm genutzt",
         "cloningRepo": "Ein Repository geklont",
         "listingRepos": "Hat die Repositorys aufgelistet",
+        "updatingCode": "Hat den Code aktualisiert",
         "preparingCli": "{{app}} vorbereitet",
         "openingPullRequest": "Einen Pull Request geöffnet",
         "handingOff": "Einen Bericht geliefert",
@@ -19453,6 +19454,7 @@
       "usingScreen": "Nutzen des Bildschirms",
       "cloningRepo": "Klonen eines Repositorys",
       "listingRepos": "listet die Repositorys auf",
+      "updatingCode": "aktualisiert den Code",
       "preparingCli": "Vorbereiten von {{app}} auf {{computer}}",
       "preparingCliPct": "Vorbereiten von {{app}} auf {{computer}} ({{percent}} %)",
       "openingPullRequest": "Öffnen eines Pull Requests",
