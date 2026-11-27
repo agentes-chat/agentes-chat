@@ -74,7 +74,11 @@ export async function issueWorkBrief(
     [
       "## How to work on it",
       here
-        ? "- This is the task's own conversation: everyone who sees the task reads it and writes here, and your replies land here. Say when you start, at each real step and when you finish, in your replies."
+        ? [
+            "- This is the task's own conversation: everyone who sees the task reads it and writes here, and your replies land here. Say when you start, at each real step and when you finish, in your replies.",
+            `- Your reply here is the task's update. Don't also post it with \`comment_issue\` on #${issue.number}: a comment on it lands in this same conversation, so the people would read it twice. Comment only when someone asks for a separate comment, or to say something your reply won't. Here the reply is the record: what you found is said once, in it.`,
+            "- Write the update as you'd tell a teammate: plain words, no report headings or dates as a title. Lead with what changed (what you checked, what works now, what is still blocked), then any doubt that matters to the next decision and who decides it. Keep the full findings (lists, inventories, sources) on the task: its description, its criteria or a file linked to it. Point to them in a line instead of repeating them.",
+          ].join("\n")
         : `- This conversation is private between you and the person who asked. ${options.personal ? "Everyone else who sees the task follows" : "The rest of the team follows"} the task's own conversation: post progress there with \`comment_issue\` when you start, at each real step and when you finish.`,
       asked
         ? `- Refer to the issue as #${issue.number} in your tools. Check each criterion you meet with \`update_issue\` (\`done_criteria\`), and link the pull request with \`update_issue\`. The issue's status follows your work on its own: don't set it yourself.`

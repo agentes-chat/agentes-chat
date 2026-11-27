@@ -1959,7 +1959,7 @@ export async function openTasksBrief(
     }),
     ...(updates
       ? [
-          `When what you're doing belongs to one of them, keep that task updated as you go: a short progress comment (\`comment_issue\`) and each criterion as you meet it (\`update_issue\`); its status moves on its own. That also ties your run to it, so ${personal ? "the person" : "the team"} sees you working on it.`,
+          `When what you're doing belongs to one of them, keep that task updated as you go: a short progress comment (\`comment_issue\`) and each criterion as you meet it (\`update_issue\`); its status moves on its own. In the task's own conversation your reply is that update: no comment besides it. That also ties your run to it, so ${personal ? "the person" : "the team"} sees you working on it.`,
         ]
       : []),
   ].join("\n");
