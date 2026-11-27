@@ -140,13 +140,13 @@ seus agentes.", before the four rows above.
 
 ## Amendment (2026-11-26): the personal onboarding asks its AI (§2)
 
-ADR 0162 (amended 2026-11-26), ADR 0260: after "For me", the personal onboarding no longer asks about the person or
+ADR 0162 (amended 2026-11-26), ADR 0264: after "For me", the personal onboarding no longer asks about the person or
 brings agents first. It asks how to start, in the person's own words: their AI (Claude, ChatGPT, Gemini or another)
 finds the tasks that take most of their time, at work or outside it, and proposes an agent for each, or they start
 from scratch with the right hand. A picked agent's first week follows, then the plan ("Hire <name>"), the team's photo
 once paid ("Welcome to your team"), and connecting an AI; there is still no name and no people step. Its count is four
 steps (how to start, asking its AI with the pick, the week, the plan), two from scratch. What the AI said about the
-person becomes the workspace's context when it has none, what the person wants help with (ADR 0260).
+person becomes the workspace's context when it has none, what the person wants help with (ADR 0264).
 
 ## Amendment (2026-11-26): group conversations by their names and their agents
 

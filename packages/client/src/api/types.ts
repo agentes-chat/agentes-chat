@@ -1483,7 +1483,7 @@ export interface FirstAgentRoutine {
   timezone: string | null;
 }
 
-/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0260). */
+/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0264). */
 export interface FirstAgentOption {
   name: string;
   /** Free when proposed; the server takes a free one again when it is picked. */
@@ -1540,7 +1540,7 @@ export interface FirstAgentPicked {
 }
 
 /**
- * An agent of one of the onboarding's areas, or of "Outro" (`POST …/first-agents/start`, ADR 0260 addendum): made with
+ * An agent of one of the onboarding's areas, or of "Outro" (`POST …/first-agents/start`, ADR 0264 addendum): made with
  * no routine (connecting an app brings it, ADR 0242); its first delivery is kept.
  */
 export interface FirstAgentStartInput {
@@ -1562,7 +1562,7 @@ export interface FirstAgentStartInput {
 }
 
 /**
- * My first delivery here (`GET …/first-delivery`, ADR 0260 addendum): what the agent I set up on the onboarding does
+ * My first delivery here (`GET …/first-delivery`, ADR 0264 addendum): what the agent I set up on the onboarding does
  * for me first, in my DM with it, once I left the agent's step (`keepDelivery` arms it), the workspace has its plan and
  * the agent its AI. Its reply carries `meta.firstDelivery` (`{ summary }`).
  */
@@ -2501,7 +2501,7 @@ export type IssueActivityEvent = {
 /** You followed or unfollowed a thread (on any of your devices). */
 export type ThreadFollowEvent = { type: "thread.follow" } & ThreadFollow;
 
-/** A first-agent proposal arrived for me (ADR 0260): `GET …/first-agents` has it. */
+/** A first-agent proposal arrived for me (ADR 0264): `GET …/first-agents` has it. */
 export interface FirstAgentsEvent {
   type: "first_agents.received";
   id: string;

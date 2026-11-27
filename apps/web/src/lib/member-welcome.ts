@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 /**
  * Where someone lands once they joined a workspace (an invitation accepted, a request approved): their own onboarding
- * (`/welcome/$orgId`, ADR 0260, addendum of 2026-11-26) when they may create agents there and have none of their own
+ * (`/welcome/$orgId`, ADR 0264, addendum of 2026-11-26) when they may create agents there and have none of their own
  * yet, else the workspace, as before. A read that fails lands in the workspace: joining never waits on it.
  */
 export async function joinedLanding(qc: QueryClient, api: ApiClient, orgId: string): Promise<"welcome" | "workspace"> {

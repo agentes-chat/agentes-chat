@@ -54,7 +54,7 @@ export const ASK_CLIENTS: readonly AppClient[] = APP_CLIENTS.filter((c) => c.id 
  * variant's words, the same interview and job descriptions for all, then how to send it: `propose_first_agents`, or,
  * with no connector (`json`), an opening that says none and a JSON answer to paste here, its example under the line.
  * The JSON answer also gives each routine as a cron: the routines read one with no model, and a workspace still
- * waiting for its plan has none to read the schedule's words (ADR 0260).
+ * waiting for its plan has none to read the schedule's words (ADR 0264).
  */
 export function askPrompt(t: TFunction, variant: AskVariant, org: string, json = false): string {
   const open = json
@@ -91,7 +91,7 @@ export function pastedProposal(text: string): unknown {
 }
 
 /**
- * Asking the person's own AI for their first agent (ADR 0260), in the work step's dialog once an AI is picked there: a
+ * Asking the person's own AI for their first agent (ADR 0264), in the work step's dialog once an AI is picked there: a
  * row of assistants that scrolls sideways (the one picked, else the most used first), then (1) connecting agentes.chat
  * in that app (its own guide, "Connected" once the person has an app connected here) and (2) the request to paste in a
  * new conversation, its start in view. Under them, the wait for the proposal, and the way without a connector: the

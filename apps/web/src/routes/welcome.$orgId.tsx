@@ -8,12 +8,12 @@ import { type ConnectReturn, connectReturnOf } from "@/lib/connect-return";
 import { MemberOnboardingPage } from "@/pages/MemberOnboardingPage";
 
 /**
- * `/welcome/$orgId`: the onboarding of someone who joined that workspace (ADR 0260, addendum of 2026-11-26), a page of
+ * `/welcome/$orgId`: the onboarding of someone who joined that workspace (ADR 0264, addendum of 2026-11-26), a page of
  * its own outside the workspace's shell, as `/onboarding` is. Someone who isn't a member gets the workspace's own
  * answer; an owner still setting it up, the onboarding.
  */
 export const Route = createFileRoute("/welcome/$orgId")({
-  // Back from an app's sign-in on the agent step (ADR 0260): `?connected=`, `?mail=`.
+  // Back from an app's sign-in on the agent step (ADR 0264): `?connected=`, `?mail=`.
   validateSearch: (search: Record<string, unknown>): ConnectReturn => connectReturnOf(search),
   beforeLoad: async ({ context, location, params }) => {
     const me = await requireUserIn(context, location.href, params.orgId);

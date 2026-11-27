@@ -34,7 +34,7 @@ export interface AppPrincipal {
   refusal: string | null;
   /**
    * Tools that still work despite `refusal`: `propose_first_agents` while the workspace only waits for its first
-   * plan, since its onboarding asks the person's AI for their first agents before Checkout (ADR 0260).
+   * plan, since its onboarding asks the person's AI for their first agents before Checkout (ADR 0264).
    */
   stillOpen?: readonly string[];
 }
@@ -247,7 +247,7 @@ export async function createPersonalToken(
   input: { name: string; access: AppAccess; expiresInDays: (typeof TOKEN_EXPIRY_DAYS)[number] | null },
 ) {
   const membership = await requireActiveMembership(db, userId, orgId);
-  // A workspace waiting for its first plan still makes one: its onboarding connects the person's AI (ADR 0260).
+  // A workspace waiting for its first plan still makes one: its onboarding connects the person's AI (ADR 0264).
   if (workRefusalBeforePlan(membership.standing))
     throw new ConflictError("This workspace is paused", "workspace_paused");
   const name = input.name

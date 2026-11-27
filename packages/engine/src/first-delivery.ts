@@ -16,7 +16,7 @@ import { FIRST_DELIVERY_JOB, openOrg, STANDING_COLUMNS, workRefusal } from "./st
 const { agents, firstDeliveries, organizations, routines, users } = schema;
 
 /**
- * A person's first delivery (ADR 0260 addendum; the onboarding of ADR 0162, the routine an app brings of ADR 0242): the
+ * A person's first delivery (ADR 0264 addendum; the onboarding of ADR 0162, the routine an app brings of ADR 0242): the
  * first piece of work the agent they set up on the onboarding does for them, in their DM with it. It is kept from the
  * moment the agent is made, one per person and workspace, armed when the person leaves the agent's step (where they
  * connect its apps: `armFirstDelivery`), and fires once, as soon as it is armed and the agent can work: the workspace

@@ -6,7 +6,7 @@ import { agentGrammar } from "../src/lib/grammar";
 test("an agent's gender is an i18next context: female for names ending in a, none for the rest", () => {
   expect(agentGrammar("Ada")).toEqual({ name: "Ada", context: "female" });
   expect(agentGrammar("Iris")).toEqual({ name: "Iris", context: "female" });
-  // The onboarding's marketing agent (ADR 0260): "a Gabi", whatever the case it is written in.
+  // The onboarding's marketing agent (ADR 0264): "a Gabi", whatever the case it is written in.
   expect(agentGrammar("Gabi")).toEqual({ name: "Gabi", context: "female" });
   expect(agentGrammar("GABI")).toEqual({ name: "GABI", context: "female" });
   expect(agentGrammar("Theo")).toEqual({ name: "Theo", context: undefined });

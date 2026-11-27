@@ -27,7 +27,7 @@ import { isPersonalWorkspace } from "./workspace-mode";
 const { agents, channelMembers, channels, connectorConnections, firstAgentProposals, organizations } = schema;
 
 /**
- * A person's first agents, proposed by their own AI (ADR 0260): the onboarding asks Claude, ChatGPT or the AI they use
+ * A person's first agents, proposed by their own AI (ADR 0264): the onboarding asks Claude, ChatGPT or the AI they use
  * for the three repetitive tasks that take most of their time, each as an agent. The AI sends them through the MCP
  * tool `propose_first_agents` (ADR 0119 addendum of 2026-11-26), or the person pastes its answer. Nothing is created
  * until the person picks one: then one agent, through the same team card the templates make (`createTeamNow`), so its
@@ -724,7 +724,7 @@ export const firstAgentStartInput = z.object({
 export type FirstAgentStartInput = z.input<typeof firstAgentStartInput>;
 
 /**
- * The person's first agent from an area of the onboarding (ADR 0260 addendum), as the person (`create_agents`;
+ * The person's first agent from an area of the onboarding (ADR 0264 addendum), as the person (`create_agents`;
  * without it, `create_agents_required`), made the way a picked option is (`makeFirstAgent`) but with no routine:
  * connecting an app brings its routine (ADR 0242), which the onboarding makes. Its first delivery is kept (`area`,
  * `task`), disarmed until the person leaves the agent's step (`armFirstDelivery`), then fires once the agent can work.

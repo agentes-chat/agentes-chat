@@ -756,7 +756,7 @@ describe("push devices (ADR 0035, ADR 0071)", () => {
   });
 });
 
-describe("the first agents my own AI proposed (ADR 0260)", () => {
+describe("the first agents my own AI proposed (ADR 0264)", () => {
   const org = "/api/app/organizations/o1";
   const proposal = {
     id: "p 1",

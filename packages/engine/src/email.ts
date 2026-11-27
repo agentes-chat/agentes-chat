@@ -80,7 +80,7 @@ export const defaultEmailFrom = (publicUrl: string) => `${SENDER_NAME} <ping@${n
 export const emailLocale = (value: unknown): EmailLocale =>
   (typeof value === "string" ? appLocale([value], true) : null) ?? "en";
 
-/** The first agent a `plan_waiting` email speaks of, picked from what a person's own AI proposed (ADR 0260). */
+/** The first agent a `plan_waiting` email speaks of, picked from what a person's own AI proposed (ADR 0264). */
 export interface PlanWaitingPick {
   /** Its name and role as the AI proposed them: typed words, inert in the body only. */
   agentName: string;
@@ -348,7 +348,7 @@ export type EmailTemplate =
     }
   /**
    * A team or a kept message waits for the workspace's first plan (ADR 0079 §6), to whoever can pay. `picked`: its
-   * first agent came from what a person's own AI proposed (ADR 0260), and the email speaks of it instead of the counts.
+   * first agent came from what a person's own AI proposed (ADR 0264), and the email speaks of it instead of the counts.
    */
   | {
       kind: "plan_waiting";
@@ -1456,7 +1456,7 @@ export async function queuePlanWaiting(db: Executor, orgId: string) {
 const AI_OF_MARK: Record<string, string> = { claude: "Claude", openai: "ChatGPT" };
 
 /**
- * The workspace's first agent, when it was picked from what a person's own AI proposed (ADR 0260): the option's name,
+ * The workspace's first agent, when it was picked from what a person's own AI proposed (ADR 0264): the option's name,
  * role and first day, and the AI that proposed it when its app is one we know. Null when the first agent came another
  * way (made by hand, imported) or there is none.
  */
@@ -1490,7 +1490,7 @@ async function pickedFirstAgent(db: Database, orgId: string): Promise<PlanWaitin
 /**
  * Job `plan.waiting`: while the workspace still waits for its first plan, what is ready for it, to whoever can pay at
  * a confirmed address. The link is the billing page, which no phone app claims: a phone opens the website, the one
- * place it can pay (ADR 0079 §6). A first agent picked from what a person's own AI proposed (ADR 0260) is what the two
+ * place it can pay (ADR 0079 §6). A first agent picked from what a person's own AI proposed (ADR 0264) is what the two
  * speak of: the first says it is ready, the one on the third day lists its first day's deliveries.
  */
 export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgId: string, step: unknown) {

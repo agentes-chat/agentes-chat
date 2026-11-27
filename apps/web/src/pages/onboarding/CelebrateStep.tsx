@@ -13,7 +13,7 @@ import { saveTeamPhoto } from "./team-photo";
 import "./celebrate-step.css";
 
 /*
- * The onboarding's last step (ADR 0162, amended by ADR 0260's addendum of 2026-11-27): the team's photo in daylight,
+ * The onboarding's last step (ADR 0162, amended by ADR 0264's addendum of 2026-11-27): the team's photo in daylight,
  * the person beside the first agent and a few pixels of confetti, the agent saying hello, the day the team began, and
  * what is in place: the plan (agentes.chat Cloud), the AI, and the first delivery on its way (the kit's working sign;
  * waiting, muted, while no AI is connected or the plan was left for later, whose row is then still to do). Its one

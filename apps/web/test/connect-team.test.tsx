@@ -357,7 +357,7 @@ describe("the team dialog's styles", () => {
   });
 
   test("the choices are flat rows: the mark, the title and the chevron on one line, its line under them", async () => {
-    // The kit's flat rows (OptionLinks `flat`, ADR 0260): a grid whose first line is the mark, the title, what ends
+    // The kit's flat rows (OptionLinks `flat`, ADR 0264): a grid whose first line is the mark, the title, what ends
     // it and the chevron, the description under the title alone, never under what ends the row; no card, no tile.
     const kit = await stylesheet("../../../packages/ui/src/styles/components.css");
     const rule = (selector: string) =>

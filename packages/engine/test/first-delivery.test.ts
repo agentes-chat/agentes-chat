@@ -25,7 +25,7 @@ import { isAgentOnlyNotice, noticeText } from "../src/notices";
 import { addUser, everyoneWithout, type Fixture, setup } from "./fixtures";
 
 /*
- * A person's first delivery (ADR 0260 addendum): kept when their first agent is made on the onboarding, fired once in
+ * A person's first delivery (ADR 0264 addendum): kept when their first agent is made on the onboarding, fired once in
  * their DM with it as soon as it can work (the plan, its AI), as a notice only the agent reads, whose run acts for them;
  * each reply of that run carries `meta.firstDelivery` with its one line.
  */

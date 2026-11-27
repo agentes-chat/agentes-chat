@@ -45,7 +45,7 @@ export const WELCOME_JOB = "right_hand.welcome";
 export const WELCOME_BODY = "welcome_member";
 
 /**
- * The greeting of someone who already picked their first agent on their own onboarding (ADR 0260): hello and the agent
+ * The greeting of someone who already picked their first agent on their own onboarding (ADR 0264): hello and the agent
  * on the team, with nothing to build (`chat.body.welcome_member_agent`).
  */
 export const WELCOME_AGENT_BODY = "welcome_member_agent";
@@ -68,7 +68,7 @@ async function pickedFirstAgent(db: Database, orgId: string, userId: string) {
 
 /**
  * Their first agent was picked after the greeting went out (it is posted as they join, while they are still on their
- * own onboarding): the greeting stops asking for an agent and its area chips go (ADR 0260). Nothing when there is no
+ * own onboarding): the greeting stops asking for an agent and its area chips go (ADR 0264). Nothing when there is no
  * such greeting.
  */
 export async function settleWelcome(db: Database, orgId: string, userId: string): Promise<void> {
@@ -149,7 +149,7 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
     ...(picked || areaOf(person.workArea) ? {} : { meta: { replyChips: chips } }),
     push: true,
     // Anything already in their conversation with it: they wrote first, or it was restored on a rejoin. Not the team
-    // card their pick made there (ADR 0260): the hello still goes out after it. The card's kind is `TEAM_PROPOSAL_CARD`,
+    // card their pick made there (ADR 0264): the hello still goes out after it. The card's kind is `TEAM_PROPOSAL_CARD`,
     // written out here since importing team-proposals from this module makes an import cycle.
     posted: async (tx, lodiId) =>
       (
@@ -173,7 +173,7 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
 /**
  * What the right hand keeps in mind with someone new: a member who is not an owner (an owner has the first-run
  * checklist), joined in the last `NEWCOMER_DAYS` days, has no agent of their own and made none from their own AI's
- * proposal on their onboarding (ADR 0260). Only this person's own data. "" with the workspace's switch off.
+ * proposal on their onboarding (ADR 0264). Only this person's own data. "" with the workspace's switch off.
  */
 export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promise<string> {
   const [person] = await db

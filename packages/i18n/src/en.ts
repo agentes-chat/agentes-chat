@@ -1002,7 +1002,7 @@ export const en = {
       atlas: "Hey, Atlas here. I look after the computers.",
     },
     /**
-     * The onboarding's steps with Lodi (ADR 0162, ADR 0260): the phone's steps and Lodi's line on each, the person's
+     * The onboarding's steps with Lodi (ADR 0162, ADR 0264): the phone's steps and Lodi's line on each, the person's
      * area, the plan, the AI step and the people step. `<key>Personal`: a personal workspace's words (ADR 0159).
      */
     flow: {
@@ -1865,7 +1865,7 @@ export const en = {
       },
     },
     /**
-     * The work the first agent does (ADR 0260, addendum of 2026-11-27): the list, the other ways in, the workspace's
+     * The work the first agent does (ADR 0264, addendum of 2026-11-27): the list, the other ways in, the workspace's
      * line (`place`: its name and time zone), and each area's words. `{{name}}`: the area's agent; `{{org}}`: the
      * workspace. `title`/`line`: the list's row; `role`: the agent's role; `heading` and `does`: its step's title and
      * line; `connect`: the label over its apps; `today`: its first delivery, in the plan step's lead; `working`: the
@@ -2059,7 +2059,7 @@ export const en = {
       },
     },
     /**
-     * Meeting the first agent (ADR 0260, addendum of 2026-11-27): its portrait, what it does and the apps it works in,
+     * Meeting the first agent (ADR 0264, addendum of 2026-11-27): its portrait, what it does and the apps it works in,
      * each with Connect. `{{step}}`: "Step 3 of 4". `account`: a connected app's account and when its routine runs.
      * `custom*`, `name`, `does`, `appsUsed`, `search`: the agent a person makes on "Other".
      */
@@ -2078,7 +2078,7 @@ export const en = {
       search: "Search apps",
     },
     /**
-     * The plan step (ADR 0162, amended by ADR 0260's addendum of 2026-11-27). `{{agent}}`: the first agent as `the`
+     * The plan step (ADR 0162, amended by ADR 0264's addendum of 2026-11-27). `{{agent}}`: the first agent as `the`
      * writes it (its name, with the article where a language has one); `{{today}}`: its first delivery
      * (`areas.list.*.today`); `fine`: the plan's people, from the billing service's list.
      */
@@ -17024,7 +17024,7 @@ export const en = {
       undoExpired:
         "It is more than a day since this team was created, so it can't be undone here. Archive its agents on their pages.",
     },
-    /** The first agents a person's own AI proposed (ADR 0260). */
+    /** The first agents a person's own AI proposed (ADR 0264). */
     firstAgents: {
       needsAdmin: "Creating agents in this workspace needs an admin. Ask one to create it for you.",
       invalid: "This answer isn't in the format we asked for. Copy the request again and paste your AI's whole answer.",

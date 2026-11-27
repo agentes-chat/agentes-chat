@@ -12,7 +12,7 @@ import { createFakeApi, seedState } from "./fake-api";
 import { renderPage, screen, settle } from "./render";
 
 /*
- * The onboarding's last step, the team's photo (ADR 0162, amended by ADR 0260's addendum of 2026-11-27): "Download the
+ * The onboarding's last step, the team's photo (ADR 0162, amended by ADR 0264's addendum of 2026-11-27): "Download the
  * team photo" draws the person and the first agent with the step's words in the browser and saves it through the app's
  * saver, named after the workspace. The drawing itself needs a real canvas: here it is swapped, and what it was asked
  * to draw is checked.

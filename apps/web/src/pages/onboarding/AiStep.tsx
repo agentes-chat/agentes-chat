@@ -10,7 +10,7 @@ import { ConnectAiProvider, type ConnectAiRequest, useConnectAi } from "@/compon
 import { OrgProvider, useOrg } from "@/components/org-context";
 
 /*
- * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0260's addendum of 2026-11-27), right after the plan:
+ * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0264's addendum of 2026-11-27), right after the plan:
  * the arrival's choices as flat rows (ADR 0160), each opening the same Connect dialog as anywhere in the app for the
  * right hand and the first agent. The step is answered by the data (every agent ready or waiting), never by the dialog
  * closing, so a connect made in another tab moves it on too.

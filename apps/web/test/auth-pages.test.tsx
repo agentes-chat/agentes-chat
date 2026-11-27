@@ -936,7 +936,7 @@ describe("Aceitar convite", () => {
     expect(state.calls.filter((c) => c.method === "orgs.acceptInvitation").map((c) => c.args)).toEqual([
       ["inv", proof],
     ]);
-    // Someone who may create agents there and has none of their own opens their own onboarding first (ADR 0260).
+    // Someone who may create agents there and has none of their own opens their own onboarding first (ADR 0264).
     expect(router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
   });
 
@@ -1059,7 +1059,7 @@ describe("Aceitar convite", () => {
     expect(back.router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
   });
 
-  test("joined, their own onboarding only where they may create agents and have none yet, else the workspace (ADR 0260)", async () => {
+  test("joined, their own onboarding only where they may create agents and have none yet, else the workspace (ADR 0264)", async () => {
     const mine = { email: "walter@acme.com.br" };
     // An agent of their own there already: the workspace, as before.
     const owner = seedState();

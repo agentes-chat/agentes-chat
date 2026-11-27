@@ -5,7 +5,7 @@ import { connectorName } from "@agenteschat/client/lib/scopes";
 import type { IconName } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
 
-/** Each area's icon: on the work step's row, the plan step's band and its "Later:" line (ADR 0260). */
+/** Each area's icon: on the work step's row, the plan step's band and its "Later:" line (ADR 0264). */
 export const AREA_ICON: Record<FirstArea, IconName> = {
   support: "inbox",
   sales: "chart",

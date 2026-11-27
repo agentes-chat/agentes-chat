@@ -8,7 +8,7 @@ import { appsUrls } from "./urls";
 const { organizations } = schema;
 
 /**
- * The onboarding's ask (ADR 0119 addendum of 2026-11-26, ADR 0260): the person's own AI, which knows their work,
+ * The onboarding's ask (ADR 0119 addendum of 2026-11-26, ADR 0264): the person's own AI, which knows their work,
  * proposes their first agents. The tool only keeps the proposal for the person who connected it, so every connection
  * gets it, whatever its access, and it is the one tool that works while the workspace waits for its first plan.
  */
@@ -47,7 +47,7 @@ export function registerFirstAgentTools(deps: AppsToolDeps, p: AppPrincipal, too
       const onboarding = membership?.role === "owner" && org !== undefined && org.onboardedAt === null;
       return {
         received: saved.options.length,
-        // An owner picks on their onboarding; anyone else on their own welcome page (ADR 0260).
+        // An owner picks on their onboarding; anyone else on their own welcome page (ADR 0264).
         pickIn: onboarding
           ? `${issuer}/onboarding`
           : membership?.role === "owner"

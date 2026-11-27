@@ -11,7 +11,7 @@ import { ADA_ID, createFakeApi, type FakeState, ORG_ID, seedState, withRightHand
 import { renderApp, screen, settle } from "./render";
 
 /*
- * The first delivery on the welcome wizard's last step (ADR 0260, addendum of 2026-11-27; ADR 0160): once it fired, its
+ * The first delivery on the welcome wizard's last step (ADR 0264, addendum of 2026-11-27; ADR 0160): once it fired, its
  * row leads the list, still being made (the working sign, where it will say it's done) or done (its one-line summary,
  * from the reply the server marked `meta.firstDelivery`); the main button then leads to its conversation. Not fired
  * yet (no plan or no AI), no row: the wizard ends as it always did.
@@ -82,7 +82,7 @@ const land = async (state: FakeState) => {
   return r;
 };
 
-describe("the first delivery on the welcome wizard's last step (ADR 0260)", () => {
+describe("the first delivery on the welcome wizard's last step (ADR 0264)", () => {
   test("still being made: the agent at work, where it will say so, and the button to its conversation", async () => {
     await land(after(true));
     expect(wizard().querySelector(".wiz__title")?.textContent).toBe("Tudo pronto para começar");

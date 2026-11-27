@@ -32,7 +32,7 @@ import { AppWall, Box, type ShellFace } from "./Shell";
 import "./area-step.css";
 
 /*
- * The work step (ADR 0260, addendum of 2026-11-27): first "Ask your AI", one button over the list, led by the marks of
+ * The work step (ADR 0264, addendum of 2026-11-27): first "Ask your AI", one button over the list, led by the marks of
  * what the person may already use (the AI makers, then agent apps); then what the first agent will do, as flat rows
  * (the area's bare icon, its title and line, the apps it works in and the chevron on the title's line), one tap going
  * on; "Other" for an agent the person makes. The button opens one dialog, "Start from what you already use": the

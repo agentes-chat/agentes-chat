@@ -325,7 +325,7 @@ const MOSAIC_COLS = 13;
 const MOSAIC_ROWS = 5;
 
 /**
- * Meeting the first agent (ADR 0260, addendum of 2026-11-27): its portrait as the box's header. An even grid of small
+ * Meeting the first agent (ADR 0264, addendum of 2026-11-27): its portrait as the box's header. An even grid of small
  * agents fills the band, faint and a little desaturated, fainter toward the edges; the middle three by three is clear,
  * and there the agent stands big, in full color, with a soft glow of its own color and the engine's idle motion. The
  * band is the box's surface with a breath of the agent's color. Decorative: its name is the title under it.

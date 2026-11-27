@@ -760,7 +760,7 @@ function WhoStep({
     if (may.gives) return LEVELS;
     return may.removes ? LEVELS.slice(0, LEVELS.indexOf(current(a.id)) + 1) : [current(a.id)];
   };
-  // Opened for one agent (the onboarding's, ADR 0260): it may write here from the start, as its work needs drafts.
+  // Opened for one agent (the onboarding's, ADR 0264): it may write here from the start, as its work needs drafts.
   const forAgent = useConnectHere().agentId;
   const [who, setWho] = useState<Record<string, Level>>(() => (forAgent ? { [forAgent]: "write" } : {}));
   const levelOf = (agentId: string) => who[agentId] ?? current(agentId);

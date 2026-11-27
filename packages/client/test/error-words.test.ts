@@ -530,7 +530,7 @@ const PLAIN_LINE = new Set([
   "endpoint.model_id",
   "endpoint.prices",
   "endpoint.style",
-  // The onboarding keeps the first delivery only of the agent it just made for the person (ADR 0260).
+  // The onboarding keeps the first delivery only of the agent it just made for the person (ADR 0264).
   "first_delivery.not_yours",
   // The GitHub App: installing is offered only where the server has it, and the manifest's failure comes back as
   // `github_app_error=failed` on the page it returns to.

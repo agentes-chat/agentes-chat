@@ -471,7 +471,7 @@ export function appsInstructions(p: AppPrincipal) {
     `Messages sent here are posted as ${p.personName} and marked as sent through ${p.app.name}.`,
     "Agents may stop to ask for approval of sensitive actions. Approvals are decided by people inside agentes.chat, and no tool here can approve, deny or change permissions.",
     "Ids come from list_agents, list_channels and earlier results.",
-    // The onboarding asks the person's AI for their first agents (ADR 0260): before its first plan, only that works.
+    // The onboarding asks the person's AI for their first agents (ADR 0264): before its first plan, only that works.
     p.stillOpen?.length
       ? "This workspace waits for its first plan: until then propose_first_agents is the one tool that works."
       : "",

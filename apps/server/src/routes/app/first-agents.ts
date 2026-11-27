@@ -105,7 +105,7 @@ const Picked = z
   })
   .openapi("FirstAgentPicked");
 
-/** An agent of one of the onboarding's areas, or of "Outro" (ADR 0260 addendum). Only its shape: the engine checks it. */
+/** An agent of one of the onboarding's areas, or of "Outro" (ADR 0264 addendum). Only its shape: the engine checks it. */
 const FirstAgentStartBody = z
   .object({
     area: z.string().openapi({
@@ -158,9 +158,9 @@ const FirstDelivery = z
   .openapi("FirstDelivery");
 
 /**
- * The first agents the person's own AI proposed (ADR 0260): the newest proposal, one pasted from an AI with no
+ * The first agents the person's own AI proposed (ADR 0264): the newest proposal, one pasted from an AI with no
  * connector, and the pick. All of it works while the workspace waits for its first plan: the onboarding runs before
- * Checkout. An agent of one of the onboarding's areas, and the person's first delivery (ADR 0260 addendum): what that
+ * Checkout. An agent of one of the onboarding's areas, and the person's first delivery (ADR 0264 addendum): what that
  * agent does for them first, in their DM with it, once the workspace has its plan and the agent its AI.
  */
 export function firstAgentRoutes(deps: AppDeps) {

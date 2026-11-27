@@ -13,7 +13,7 @@ import { OnboardingPage } from "@/pages/OnboardingPage";
 export const Route = createFileRoute("/onboarding")({
   // `?resume=<orgId>`: back from that workspace's plan (`/org/$orgId/onboarding`, ADR 0079), `paid` after paying, with
   // what was bought; `?delete=1`: its dialog that deletes the workspace; `?connected=`/`?mail=`: back from an app's
-  // sign-in on the agent step (ADR 0260).
+  // sign-in on the agent step (ADR 0264).
   validateSearch: (
     search: Record<string, unknown>,
   ): { resume?: string; paid?: true; delete?: 1 } & PaidReturn & ConnectReturn => ({

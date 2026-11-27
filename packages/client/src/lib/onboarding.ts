@@ -56,7 +56,7 @@ export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number]["id"];
 export const stepIndex = (id: OnboardingStepId) => ONBOARDING_STEPS.findIndex((s) => s.id === id);
 
 /**
- * The web onboarding's steps (ADR 0162, amended by ADR 0260's addendum of 2026-11-27), after what the workspace is for
+ * The web onboarding's steps (ADR 0162, amended by ADR 0264's addendum of 2026-11-27), after what the workspace is for
  * (ADR 0159), which makes it, named from the work e-mail: the work its first agent does (`area`), meeting that agent and
  * connecting the apps it works in (`agent`), the plan (agentes.chat Cloud, `plan`), the AI the person already pays for
  * (`ai`) and the team's photo with the first delivery on its way (`celebrate`), whose button opens the workspace in the

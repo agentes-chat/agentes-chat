@@ -1,5 +1,5 @@
 /**
- * Back from an app's sign-in on the onboarding's agent step (ADR 0260): what came in, as the server's OAuth return says
+ * Back from an app's sign-in on the onboarding's agent step (ADR 0264): what came in, as the server's OAuth return says
  * it (`?connected=…&outcome=…` for a catalog app, `?mail=…&account=…` for a mailbox). The step reopens that app's
  * connect flow on its confirmation, where the routine the app brings is made (ADR 0242).
  */

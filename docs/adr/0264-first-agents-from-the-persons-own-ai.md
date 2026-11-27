@@ -1,4 +1,4 @@
-# 0260. First agents from the person's own AI: three options, one picked
+# 0264. First agents from the person's own AI: three options, one picked
 
 - Status: Proposed
 - Date: 2026-11-26

@@ -10,7 +10,7 @@ import { createFakeApi, seedState } from "./fake-api";
 import { renderPage, screen, settle } from "./render";
 
 /*
- * Which AI (ADR 0160), as flat rows everywhere the choices show (ADR 0260, addendum of 2026-11-27): each maker's bare
+ * Which AI (ADR 0160), as flat rows everywhere the choices show (ADR 0264, addendum of 2026-11-27): each maker's bare
  * mark on the title's line, the title, its line, the chevron; no card, no chip. The other plans' row leads with three
  * of their makers and opens them here; the free way in says what it is in its line.
  */

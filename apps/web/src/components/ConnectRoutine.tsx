@@ -67,7 +67,7 @@ export function useRoutineOffer(
   const [on, setOn] = useState(true);
   const [picked, setAgent] = useState<string | null>(null);
   const [rule, setRule] = useState(0);
-  // Opened for one agent (the onboarding's, ADR 0260): that one first, while it may run it.
+  // Opened for one agent (the onboarding's, ADR 0264): that one first, while it may run it.
   const here = useConnectHere().agentId;
   const agent =
     mine.find((a) => a.id === picked) ?? (routine ? (mine.find((a) => a.id === here) ?? suggestedAgent(mine)) : null);
@@ -89,7 +89,7 @@ function useZone() {
 /**
  * Makes the routine and starts its first run at once, then says so with Undo. It outlives the dialog that asked for
  * it (the dialog closes on Done): the toast and the list are the app's, not the dialog's. Opened from the onboarding
- * (`firstRunLater`), it only makes it: the first delivery is its first run (ADR 0260).
+ * (`firstRunLater`), it only makes it: the first delivery is its first run (ADR 0264).
  */
 export function useStartRoutine() {
   const { t } = useTranslation();

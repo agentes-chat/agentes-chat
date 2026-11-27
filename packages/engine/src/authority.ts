@@ -160,7 +160,7 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
     }
     // What happened on GitHub (`git/github-events.ts`): the member whose linked account wrote it, or who asked the
     // agent to answer it; nobody for anyone else. What a person passed on to a work that ended (`followUpWork`): that
-    // person, not who asked for the work. A first delivery (`first-delivery.ts`, ADR 0260 addendum): the person who
+    // person, not who asked for the work. A first delivery (`first-delivery.ts`, ADR 0264 addendum): the person who
     // asked for it as they set the agent up on the onboarding.
     if (notice?.kind === "github_event" || notice?.kind === "work_follow_up" || notice?.kind === "first_delivery") {
       const personId = notice.refs?.personId;

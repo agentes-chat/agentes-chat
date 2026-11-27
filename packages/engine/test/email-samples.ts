@@ -478,7 +478,7 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     url: `${APP}/org/${ORG}/settings/billing`,
   },
   /**
-   * Its first agent was picked from what the person's own AI proposed (ADR 0260): that agent, ready, and what it
+   * Its first agent was picked from what the person's own AI proposed (ADR 0264): that agent, ready, and what it
    * delivers on its first day, instead of the counts.
    */
   "plan_waiting-picked.en": {

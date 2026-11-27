@@ -512,7 +512,7 @@ export function RealtimeProvider({
       }
       // A proposal was made: Agent improvements and its cards.
       if (event.type === "proposal.created") void refreshProposals(qc, orgId);
-      // My own AI sent first agents (ADR 0260): the onboarding reads them at once (it also polls while it waits).
+      // My own AI sent first agents (ADR 0264): the onboarding reads them at once (it also polls while it waits).
       if (event.type === "first_agents.received") void qc.invalidateQueries({ queryKey: keys.firstAgents(orgId) });
       // A code session I'm in changed (ADR 0215): its worktree, name or pull request.
       applyCodeSessionEvent(qc, orgId, event);

@@ -21,7 +21,7 @@ import { shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 /*
- * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0260's addendum of 2026-11-27): after the first agent's
+ * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0264's addendum of 2026-11-27): after the first agent's
  * step (and the plan, on agentes.chat Cloud), shown once even where every agent already thinks. It is answered, and
  * kept as such ("ai"), by an AI connected through it, by Continue where the agents already think, or by Connect later
  * after asking. Then the team's photo, whose button opens the workspace on the welcome wizard alone (`?arrival=beta`,

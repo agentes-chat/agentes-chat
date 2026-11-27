@@ -76,7 +76,7 @@ function poisoned(t: EmailTemplate, value = SENTINEL): EmailTemplate {
   for (const side of ["was", "now"]) if (o[side]) o[side] = { ...(o[side] as object), names: [value] };
   for (const list of ["topStalls", "topNoise"])
     if (Array.isArray(o[list])) o[list] = (o[list] as object[]).map((w) => ({ ...w, name: value }));
-  // A first agent as the person's AI proposed it (ADR 0260): its name, role and first day are typed words too.
+  // A first agent as the person's AI proposed it (ADR 0264): its name, role and first day are typed words too.
   if (o.picked) o.picked = { ...(o.picked as object), agentName: value, role: value, today: [value] };
   return o as EmailTemplate;
 }
@@ -284,7 +284,7 @@ describe("the look", () => {
       expect(html).not.toMatch(/<td class="mu[^>]*word-break/);
     }
     // Paragraphs, facts (first row and the rest), people's names and details, a note (a denial's reason), the
-    // footer, and steps (a first agent's first day, ADR 0260).
+    // footer, and steps (a first agent's first day, ADR 0264).
     expect(holders.size).toBe(8);
   });
 
@@ -969,7 +969,7 @@ describe("outbox delivery", () => {
   });
 });
 
-describe("a first agent from the person's own AI (ADR 0260)", () => {
+describe("a first agent from the person's own AI (ADR 0264)", () => {
   const sample = (id: string) => EMAIL_SAMPLES[id] as EmailTemplate;
 
   test("a team's invitation says joining starts with their own agent; a personal one doesn't", () => {

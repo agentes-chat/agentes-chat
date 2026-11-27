@@ -266,7 +266,7 @@ and the wide window's stage.
 
 People reached a workspace with a team they had not chosen (a template) or with none, and the rail asked about the
 business and the person before anything useful happened. The web onboarding now asks the person's own AI for a first
-agent (ADR 0260), shows that agent's first week, and hires it with the plan. Amends §1 to §3 and the amendments of
+agent (ADR 0264), shows that agent's first week, and hires it with the plan. Amends §1 to §3 and the amendments of
 2026-11-10 to 2026-11-21 on the rail, the team step, the person's own step, the plan step and the AI step.
 
 - **The frame.** The blue rail, its progress strip and the preview are gone from the web onboarding. One box stands in
@@ -278,13 +278,13 @@ agent (ADR 0260), shows that agent's first week, and hires it with the plan. Ame
 - **The steps.** A team's: what it is for, its name (1), how to start (2), the first agent's week (3), the plan (4),
   then connecting the AI and inviting people, past the count. Started from scratch there is no week: name, start, plan
   (3). "What you do" and "About you" are gone; the workspace's context comes from what the AI said when an agent is
-  picked (ADR 0260). `RailStep` is `name | start | week | plan | ai | people`. No new stored step: `agents` answers both
+  picked (ADR 0264). `RailStep` is `name | start | week | plan | ai | people`. No new stored step: `agents` answers both
   the start left with no agent and the week seen, so the week is on the rail unless the start was left with none.
 - **How to start.** The box's header is a wall of the catalog's own app marks with a few agents among them, its lead the
   catalog's count in tens ("more than 70"). Two rows: ask your AI (Claude, ChatGPT, Gemini or another finds the tasks
   that take most of the person's time and proposes an agent for each) or start from scratch (the right hand, the agents'
   HR, builds each agent with the person later). The ready-made team templates are gone from the onboarding.
-- **Asking the AI and picking** (ADR 0260). The assistants in a row, most used first, then "Another agent app", which
+- **Asking the AI and picking** (ADR 0264). The assistants in a row, most used first, then "Another agent app", which
   opens the import (ADR 0055). Connecting agentes.chat by MCP and the request to paste, numbered; the proposal is read
   every 4 s while the step is open; with no connector, the same request asking for a JSON answer and a field to paste
   it. The options stand as stacked job descriptions (rank, name and role, responsibilities, the apps they need) with the
@@ -341,7 +341,7 @@ agent (ADR 0260), shows that agent's first week, and hires it with the plan. Ame
 Asking the person's AI first, then a week, a plan and the AI before anything worked, kept the value far from the
 start. The web onboarding now starts from the work the first agent does, shows that agent with the apps it works in,
 and promises its first delivery, which the server makes in the person's DM as soon as the workspace has a plan and the
-agent an AI (ADR 0260, addendum of 2026-11-27). Amends the amendment of 2026-11-26 on the steps, how to start, the
+agent an AI (ADR 0264, addendum of 2026-11-27). Amends the amendment of 2026-11-26 on the steps, how to start, the
 week, the plan, the photo, the AI step and the people step.
 
 - **The steps.** What it is for (1), which now makes the workspace, named from the work e-mail's domain ("Acme"), or the
@@ -354,7 +354,7 @@ week, the plan, the photo, the AI step and the people step.
   right hand). The areas as the kit's flat rows (`OptionLinks flat`): the area's bare icon, its title and line, the
   apps it works in and the chevron on the title's line; a team's six (support, sales, finance, marketing, my day,
   engineering), a personal workspace's six (life in order, working for myself, studies, travel, home, health), then
-  "Other". One tap makes the agent. Under them, "Prefer another way?": asking the person's AI (ADR 0260's request, in a
+  "Other". One tap makes the agent. Under them, "Prefer another way?": asking the person's AI (ADR 0264's request, in a
   dialog over the step, a sheet on a phone; its top option, the task it found repeated most, is made) and bringing
   agents from another app (the import). The footer says the workspace's name and time zone with "Change", the old name
   step's two fields in a small dialog.
@@ -377,7 +377,7 @@ week, the plan, the photo, the AI step and the people step.
 - **The photo** now ends the onboarding: the person and the first agent only, the plan and the AI checked (or "Connect
   the AI" to do), and the first delivery on its way with the kit's working sign (muted while no AI is connected). Its
   button opens the person's DM with the agent, with the welcome wizard over it, whose last step leads with the delivery.
-- **A member** (ADR 0260's addendum of 2026-11-26) takes the work and agent steps, then the AI only when none answers
+- **A member** (ADR 0264's addendum of 2026-11-26) takes the work and agent steps, then the AI only when none answers
   for their agent, and lands in their DM with it.
 - **Code.** Client `lib/onboarding.ts` (`railSteps`, `railStepAt`, `railState`, `stepCount`), `lib/first-areas.ts`
   (`FIRST_AREAS`, `areaAgentInput`, `openAreaRoutine`, `workspaceNameOf`); web `pages/OnboardingPage.tsx`,
@@ -400,7 +400,7 @@ amendment above.
   opens the ask flow on it in the same dialog, with Back; an agent app (three by name, the rest as "Another app") opens
   the import on it. A member's has no apps. "Prefer another way?" and its two buttons are gone. The ask flow's row
   lists one assistant per maker, the most used first (a maker's coding tool asked the same AI again).
-- **One first agent.** Asking the AI again, or after an area's agent, takes the earlier one's place (ADR 0260's
+- **One first agent.** Asking the AI again, or after an area's agent, takes the earlier one's place (ADR 0264's
   `replace` on the pick), so the onboarding never leaves several.
 - **The agent step never holds the person.** Continue goes on with or without an app. An app signed in through its own
   MCP server is a server row with its address: the catalog's app by that address counts as connected, and its return

@@ -87,7 +87,7 @@ const KNOWN = {
   "team_proposal.decided": "errors.agentProposal.decided",
   "team_proposal.expired": "errors.agentProposal.expired",
   "team_proposal.undo_expired": "errors.teamProposal.undoExpired",
-  // The first agents a person's own AI proposed (ADR 0260).
+  // The first agents a person's own AI proposed (ADR 0264).
   create_agents_required: "errors.firstAgents.needsAdmin",
   "first_agents.invalid": "errors.firstAgents.invalid",
   "first_agents.picking": "errors.firstAgents.picking",

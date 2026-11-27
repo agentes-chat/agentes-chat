@@ -13,7 +13,7 @@ const OTHERS_SHOWN = 3;
 
 /**
  * Which AI, as the first thing a new workspace's owner is asked (ADR 0160): one row each, in words, instead of the
- * picker's two controls. Flat rows (ADR 0260, the onboarding's look everywhere the choices show): each maker's bare
+ * picker's two controls. Flat rows (ADR 0264, the onboarding's look everywhere the choices show): each maker's bare
  * mark on the title's line in a column as wide as the other plans' stack of marks, no card and no chip. A pick opens
  * that plan's own steps (`PlanPanel`, `KeyPanel`), unchanged.
  */

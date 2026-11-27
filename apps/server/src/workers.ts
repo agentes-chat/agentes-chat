@@ -290,7 +290,7 @@ export const WORKER_INTERVALS_MS = {
   /** Phones whose setup sat on one step for 10 minutes, each reported once (`claimStuckPhoneSetups`). */
   phoneSetups: 60_000,
   /**
-   * First deliveries still waiting for their plan, AI or computer (ADR 0260 addendum): each workspace's look is queued at
+   * First deliveries still waiting for their plan, AI or computer (ADR 0264 addendum): each workspace's look is queued at
    * most once per its window (`firstDeliveryWindowMs`), 15 s while a delivery is new.
    */
   firstDeliveries: 15_000,
