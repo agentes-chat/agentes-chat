@@ -218,7 +218,7 @@ export function MenuBarActions({ orgId }: { orgId: string }) {
   const { me } = useOrg();
   useDesktopOrgs(me.organizations);
 
-  // The Dock's badge: what waits on the person in this organization (a dot for unread only).
+  // The Dock's badge: how many notifications this organization has for the person (nothing at 0, 9+ from 10).
   const counts = useNotificationCount(orgId).data;
   const waiting = counts?.waiting ?? 0;
   const unread = counts?.unread ?? 0;
