@@ -1,3 +1,4 @@
+import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import type { ServerCheck } from "@agenteschat/client/lib/server";
 import type { HelloLine } from "../control/client";
 import type { Candidate } from "../control/first-run";
@@ -20,7 +21,7 @@ import type { ReportFacts } from "../report/report";
 
 /**
  * The app's screens: the menu bar's popover and the notch (windows of their own), and the app layer (`app`), the
- * main window's web view of the app's own screens (ADR 0255; its Tauri label is `main-app`).
+ * main window's web view of the app's own screens (ADR 0256; its Tauri label is `main-app`).
  */
 export type WindowName = "popover" | "app" | "notch";
 export const WINDOW_NAMES: readonly WindowName[] = ["popover", "app", "notch"];
@@ -38,7 +39,9 @@ export type LayerRoute =
   | { screen: "pairLink"; server: string; code: string }
   /** A connect link is waiting: read it with `takeLink()`. */
   | { screen: "link" }
-  | { screen: "iphone" };
+  | { screen: "iphone" }
+  /** An OS permission an agent's work waits on (ADR 0255): the sheet reads the waits from the runners. */
+  | { screen: "permissionAsk" };
 
 /** How the layer shows: not at all, the whole window, or a sheet over the site (macOS only). */
 export type LayerMode = "hidden" | "full" | "sheet";
@@ -323,7 +326,7 @@ export interface Host {
   /** macOS: a short Bonjour browse, which raises the Local Network prompt the first time. Nothing says the answer. */
   askLocalNetwork(): Promise<void>;
   /** System Settings › Privacy & Security on the permission's own list (the microphone: for voice messages). */
-  openPrivacy(pane: MacPermission | "microphone"): Promise<void>;
+  openPrivacy(pane: MacPermission | OsPermission): Promise<void>;
   /** The setup macOS may quit the app in the middle of, kept until it is finished (`prepare.rs`). */
   setupState(): Promise<SetupState | null>;
   /** Keeps it (with the main window's page, to open there again) or, null, forgets it. */

@@ -2052,7 +2052,7 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
     password: useEverTrue(account === "password"),
     delete: useEverTrue(account === "delete"),
   };
-  // The app's "Show QR code" for this server (Settings › Server on this {{device}}, ADR 0255).
+  // The app's "Show QR code" for this server (Settings › Server on this {{device}}, ADR 0256).
   useEffect(() => {
     if (takePhoneAsk()) setPhone(true);
     return onPhoneAsk(() => {

@@ -361,7 +361,7 @@ async function check() {
     say(unreachableText(server));
     const welcome: [string, () => void] = [
       words.otherServer,
-      // The first run, to pick another server (the main window's app layer, ADR 0255).
+      // The first run, to pick another server (the main window's app layer, ADR 0256).
       () => void invoke("layer_show", { route: { screen: "firstRun", mode: "servers" } }).catch(() => {}),
     ];
     // On Tailscale: connecting it here is the likely fix.

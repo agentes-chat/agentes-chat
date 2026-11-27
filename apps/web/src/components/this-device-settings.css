@@ -1,5 +1,5 @@
 /*
- * Settings › This {{device}} in the desktop app (ADR 0255 §2): a third group of the settings list, its heading in the
+ * Settings › This {{device}} in the desktop app (ADR 0256 §2): a third group of the settings list, its heading in the
  * sidebar's group-label style, lined up with the links' icons. Its rows are `.settings__link` buttons (layout.css).
  */
 .settings__group-title {

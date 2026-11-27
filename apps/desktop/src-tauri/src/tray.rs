@@ -115,7 +115,7 @@ fn menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
         menu.append(&item(action.0, action.1)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    // This computer's settings (the app layer, ADR 0255), the same as ⌘, on a Mac.
+    // This computer's settings (the app layer, ADR 0256), the same as ⌘, on a Mac.
     menu.append(&item("prefs", "trayThisMac")?)?;
     menu.append(&item("quit", "quit")?)?;
     Ok(menu)

@@ -385,7 +385,7 @@ export function createApp(options: AppOptions) {
     const h = c.res.headers;
     if (!h.has("x-frame-options")) h.set("x-frame-options", "DENY");
     if (!h.has("content-security-policy")) h.set("content-security-policy", APP_CSP);
-    // Never on a loopback address: a native server's own window opens it over http there (ADR 0255 §5).
+    // Never on a loopback address: a native server's own window opens it over http there (ADR 0256 §5).
     if (httpsPublicUrl && !h.has("strict-transport-security") && !isLoopbackHost(c.req.header("host"))) {
       h.set("strict-transport-security", "max-age=63072000");
     }

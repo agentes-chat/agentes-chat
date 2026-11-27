@@ -1,5 +1,5 @@
 {
-  "id": "222e6a69-ec1e-4bda-86bd-74a948d3b07c",
+  "id": "1532cf48-9801-4fa3-b363-add9eacce1d7",
   "prevId": "299b5571-c4af-40e7-b885-1b700f7ead14",
   "version": "7",
   "dialect": "postgresql",
@@ -6363,12 +6363,6 @@
           "notNull": true,
           "default": false
         },
-        "redirect_uris": {
-          "name": "redirect_uris",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -6523,12 +6517,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "redirect_uri": {
-          "name": "redirect_uri",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "expires_at": {
           "name": "expires_at",

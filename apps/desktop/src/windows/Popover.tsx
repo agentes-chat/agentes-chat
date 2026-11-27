@@ -38,7 +38,7 @@ import { NOTCH_PREF } from "../control/notch";
 import { SITE_NOTIFY_PREF } from "../control/notify";
 import { nextOffer, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
-import { type Asked, askedIn, MAC_ASKED_PREF, withAsked } from "../control/permissions";
+import { type Asked, askedIn, askKey, MAC_ASKED_PREF, permissionAsks, withAsked } from "../control/permissions";
 import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
@@ -184,6 +184,20 @@ export function Popover() {
       void host.notify(t("desktop.tray.browser.notifTitle", { agent: agent.name }), body).catch(() => {});
     }
   }, [helpKeys]);
+
+  // An OS permission an agent's work waits on here: the app layer asks for it, once per new wait.
+  const asks = permissionAsks(homes);
+  const askKeys = asks.map(askKey).sort().join("|");
+  const asked = useRef(new Set<string>());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the set of waits changes
+  useEffect(() => {
+    const now = new Set(asks.map(askKey));
+    const fresh = [...now].some((k) => !asked.current.has(k));
+    asked.current = now;
+    if (!fresh) return;
+    void host.showLayer({ screen: "permissionAsk" }).catch(() => {});
+  }, [askKeys]);
+  const openAsk = () => void host.showLayer({ screen: "permissionAsk" }).catch(() => {});
 
   // "há 2 min" stays true.
   useEffect(() => {
@@ -361,7 +375,7 @@ export function Popover() {
     void (current ? host.openExternal(current) : host.showLayer({ screen: "firstRun" })).catch(() => {});
     void host.hideWindow("popover").catch(() => {});
   };
-  /** This computer's settings (the app layer, ADR 0255), on the section an old Preferences tab name became. */
+  /** This computer's settings (the app layer, ADR 0256), on the section an old Preferences tab name became. */
   const openPrefs = (tab?: string) => {
     void host.showLayer(settingsRouteOf(tab)).catch(() => {});
   };
@@ -744,6 +758,23 @@ export function Popover() {
           )}
 
           {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
+
+          {asks.map((a) => (
+            <Banner
+              key={askKey(a)}
+              icon="lock"
+              title={t("desktop.permissionAsk.trayTitle", {
+                permission: t(`devices.permission.names.${a.need.permission}`),
+              })}
+              actions={
+                <Button size="sm" variant="primary" onClick={openAsk}>
+                  {t("desktop.pair.allow")}
+                </Button>
+              }
+            >
+              {t(`desktop.permissionAsk.why.${a.need.permission}`)}
+            </Banner>
+          ))}
 
           {requests.length > 0 && (
             <section className="dk-psec">

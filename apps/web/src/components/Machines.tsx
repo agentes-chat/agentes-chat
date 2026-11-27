@@ -665,7 +665,7 @@ function ToolsCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: R
 function GrantCard({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  // In the app, on this very computer: straight to its Folders and tools (ADR 0036, ADR 0255).
+  // In the app, on this very computer: straight to its Folders and tools (ADR 0036, ADR 0256).
   const here = useIsThisMac(org.id, m.id);
   const path = t("machines.access.pathPlaceholder");
   const agent = t("machines.access.agentPlaceholder");

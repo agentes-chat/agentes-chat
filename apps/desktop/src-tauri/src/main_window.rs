@@ -107,7 +107,7 @@ fn route(url: &Url, site: &Url) -> Route {
 }
 
 /// The route for `url` against the server open now; with none, only the blank page the window opens with stays in it
-/// (the window exists before any server is chosen: the app layer's first run is over it, ADR 0255).
+/// (the window exists before any server is chosen: the app layer's first run is over it, ADR 0256).
 fn route_now(app: &AppHandle, url: &Url) -> Route {
     match site(app) {
         Some(site) => route(url, &site),
@@ -280,7 +280,7 @@ fn build(app: &AppHandle, page: Option<Url>) -> Result<(), String> {
         // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
         // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
         // (`renderer`, and Linux's `system` facts: graphics.rs), and that this computer's settings are the app's own
-        // screens (`settings`, ADR 0255: the site lists them and asks for one with `this_mac` `settings`); nothing else.
+        // screens (`settings`, ADR 0256: the site lists them and asks for one with `this_mac` `settings`); nothing else.
         .initialization_script(format!(
             "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, settings: 1, renderer: {renderer:?}, system: {system} }});",
             renderer = crate::graphics::renderer(),
@@ -913,7 +913,7 @@ pub fn focus_top(app: &AppHandle, only_if_key: bool) {
 /// What the site may ask of this computer: which of its organizations this computer works for (`status`),
 /// pairing it with one (`connect`: the system's own dialog asks first, then the site confirms the runner's
 /// code with its own session), reconnecting it (`reconnect`), This computer's settings on a section (`settings`, and
-/// `prefs` on a tab from older sites: the app layer, ADR 0255), its own settings list for the layer's (`settingsNav`),
+/// `prefs` on a tab from older sites: the app layer, ADR 0256), its own settings list for the layer's (`settingsNav`),
 /// how many of this computer's essentials need the person and whether the server runs here (`thisMacHealth`), the menu
 /// bar's access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
 /// notification while the app is in the background (`notify`), System Settings on a permission it was refused
@@ -972,7 +972,7 @@ const PREF_TABS: &[&str] = &["folders", "tools", "updates", "servers"];
 /// The permissions the site may open System Settings on, where macOS refused it one (a voice message, Wi-Fi pairing).
 const PRIVACY_PANES: &[&str] = &["microphone", "network"];
 
-/// The app layer's route for an older site's `prefs{tab}` (ADR 0255): the tabs became sections of This computer's
+/// The app layer's route for an older site's `prefs{tab}` (ADR 0256): the tabs became sections of This computer's
 /// settings. `servers` is the server here's section when it runs here, else the app's own list of servers.
 fn prefs_route(tab: &str, runs_here: bool) -> crate::app_layer::Route {
     use crate::app_layer::{Route, Section};
@@ -1084,7 +1084,7 @@ fn checked(request: &Value) -> Result<Value, String> {
             Some(tab) if PREF_TABS.contains(&tab) => Ok(json!({ "kind": "prefs", "tab": tab })),
             _ => Err("unknown tab".into()),
         },
-        // This computer's settings (the app layer, ADR 0255), on one of its sections and one of its rows.
+        // This computer's settings (the app layer, ADR 0256), on one of its sections and one of its rows.
         Some("settings") => {
             let mut out = json!({ "kind": "settings" });
             if let Some(section) = text("section") {
@@ -1433,7 +1433,7 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             crate::app_layer::show(&app, route)?;
             return Ok(json!({}));
         }
-        // This computer's settings, never the site's to draw (ADR 0255).
+        // This computer's settings, never the site's to draw (ADR 0256).
         Some("settings") => {
             let route = settings_route(&request).ok_or("unknown section")?;
             crate::app_layer::open_from_site(&app, route)?;

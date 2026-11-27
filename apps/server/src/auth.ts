@@ -421,7 +421,7 @@ export function createAuth(deps: {
       before: createAuthMiddleware(async (ctx) => {
         // A provider's return comes to `PUBLIC_URL`, never to a registered host, so a social sign-in there could only
         // end on the main address (ADR 0194): refused as on a server without that provider. The same at a native
-        // server's loopback address while people use another (ADR 0255 §5): the window there signs in with the
+        // server's loopback address while people use another (ADR 0256 §5): the window there signs in with the
         // owner's key or a password.
         if (
           SOCIAL_STARTS.has(ctx.path) &&
@@ -716,7 +716,7 @@ export type SessionUser = { id: string; name: string; email: string; image?: str
 /**
  * The web app's sign-in page (`/login`), with `query` (`error`, `redirect`) when given. A path, never an address: a
  * browser sent there stays at the origin it asked (a native server's loopback origin and its `PUBLIC_URL` each keep
- * their own sign-in, ADR 0255 §5).
+ * their own sign-in, ADR 0256 §5).
  */
 export function signInPageUrl(query?: Record<string, string>) {
   return query ? `/login?${new URLSearchParams(query)}` : "/login";

@@ -291,7 +291,7 @@ export function writePref<T>(key: string, value: T) {
   }
 }
 
-/** This computer's settings (the app layer, ADR 0255), on the section an old Preferences tab name became. */
+/** This computer's settings (the app layer, ADR 0256), on the section an old Preferences tab name became. */
 export function useOpenPrefs() {
   const host = useHost();
   return useCallback(

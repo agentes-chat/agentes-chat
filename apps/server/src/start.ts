@@ -141,7 +141,7 @@ export interface StartOptions {
   edition: Edition;
   modules?: AgentesModule[];
   /**
-   * Native mode (`http/native-hosts.ts`, ADR 0255 §5): answer only requests addressed to this server's own names
+   * Native mode (`http/native-hosts.ts`, ADR 0256 §5): answer only requests addressed to this server's own names
    * (`127.0.0.1:<PORT>`, `localhost:<PORT>` and `PUBLIC_URL`'s host), with a 421 for any other: it listens on
    * loopback, where a web page that points a name of its own at 127.0.0.1 (DNS rebinding) would otherwise reach it.
    * `127.0.0.1:<PORT>` is served as its own origin, its sign-in cookies named per port (`http/loopback-cookies.ts`).
@@ -701,7 +701,7 @@ async function boot(
     live: liveSockets,
     onTyping: engine.warmWhileTyping,
   });
-  // Native mode (ADR 0255 §5): its own names only, the loopback origin served as itself, and that origin's sign-in
+  // Native mode (ADR 0256 §5): its own names only, the loopback origin served as itself, and that origin's sign-in
   // cookies named per port, for WebSocket upgrades and data sockets too.
   const addresses = { port: config.PORT, publicUrl: config.PUBLIC_URL };
   const ownHostAnswer = ownHostsOnly ? nativeHostGuard(addresses) : () => null;

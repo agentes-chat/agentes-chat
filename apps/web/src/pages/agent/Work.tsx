@@ -429,7 +429,7 @@ export function BrowserSteps({ computer, machineId }: { computer: string; machin
       </p>
     </div>
   );
-  // The app's menu item on that computer names it by its kind: "This Mac settings…", "This PC settings…" (ADR 0255).
+  // The app's menu item on that computer names it by its kind: "This Mac settings…", "This PC settings…" (ADR 0256).
   const device = row ? { device: t(`machines.thisMac.device.${computerKind(row.os)}`) } : {};
   const bar = (hit?: boolean) => (
     <div className="brw-mbar">

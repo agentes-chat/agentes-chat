@@ -157,7 +157,7 @@ export const oauthStates = pgTable(
     personal: boolean().notNull().default(false),
     /**
      * Where the provider sends the person back, when not `PUBLIC_URL`'s callback: the server's own loopback callback
-     * for an MCP sign-in started at its loopback origin (RFC 8252, ADR 0255 §5). The code is traded with the same one.
+     * for an MCP sign-in started at its loopback origin (RFC 8252, ADR 0256 §5). The code is traded with the same one.
      */
     redirectUri: text(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
@@ -202,7 +202,7 @@ export const oauthClients = pgTable(
     /**
      * The return addresses it was registered with. Null: `PUBLIC_URL`'s callback alone (registered before the
      * loopback one existed, or an admin's own client). A native server registers its loopback callback too
-     * (ADR 0255 §5), so a sign-in started there comes back there.
+     * (ADR 0256 §5), so a sign-in started there comes back there.
      */
     redirectUris: text().array(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

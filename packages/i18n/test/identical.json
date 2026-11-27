@@ -1216,7 +1216,9 @@
       "connectors.names.datadog_ap2"
     ],
     "de": [
+      "devices.permission.names.automation",
       "agentPage.facts.budget",
+      "storage.computer.part.system",
       "chat.consultPair.askedIn",
       "aiHub.detail.limits",
       "live.sheet.args.k",
@@ -2159,6 +2161,7 @@
       "connectors.names.datadog_ap2"
     ],
     "nl": [
+      "devices.permission.names.camera",
       "agentPage.facts.budget",
       "chat.consultPair.askedIn",
       "aiHub.accounts",
@@ -4006,6 +4009,7 @@
     ],
     "pl": [
       "drive.folder",
+      "storage.computer.part.system",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",

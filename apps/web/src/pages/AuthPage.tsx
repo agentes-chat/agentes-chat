@@ -90,7 +90,7 @@ const STEP_ACTIONS: Partial<Record<Step, HumanAction>> = {
 const REDEEM_EVERY_MS = 2000;
 export const REDEEM_FOR_MS = 10 * 60_000;
 
-/** The providers the desktop app's first screen starts a sign-in with (`/login?with=`, ADR 0255 §3). */
+/** The providers the desktop app's first screen starts a sign-in with (`/login?with=`, ADR 0256 §3). */
 export type BrowserStartProvider = "google" | "apple";
 export const isBrowserStartProvider = (v: unknown): v is BrowserStartProvider => v === "google" || v === "apple";
 
@@ -161,7 +161,7 @@ export function AuthPage({
   /** Opened by "Add account" (ADR 0183): someone is signed in and stays so; the page offers the way back to them. */
   adding?: boolean;
   /**
-   * `/login?with=google|apple`, from the desktop app's first screen (ADR 0255 §3): in the app, that provider's sign-in
+   * `/login?with=google|apple`, from the desktop app's first screen (ADR 0256 §3): in the app, that provider's sign-in
    * in the browser starts at once, or the e-mail step where this server doesn't offer it.
    */
   startWith?: BrowserStartProvider;

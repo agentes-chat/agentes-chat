@@ -58,7 +58,7 @@ fn window_points(window: &tauri::Window) -> tauri::Result<LogicalSize<f64>> {
 }
 
 /// Adds the cover to the freshly made main window: showing (the splash) when the window opens a server, hidden and with
-/// no size when it opens with no server chosen yet (the app layer's first run covers the window then, ADR 0255).
+/// no size when it opens with no server chosen yet (the app layer's first run covers the window then, ADR 0256).
 pub fn attach(app: &AppHandle, window: &tauri::Window, splash: bool) -> tauri::Result<()> {
     // Covering from before the cover's web view exists: making it can take seconds (WebView2's first start), and a
     // site that paints meanwhile must still find a cover to step aside from.
@@ -213,7 +213,7 @@ pub fn page_ready(app: AppHandle, webview: tauri::Webview, site: Option<bool>) -
         crate::bench::painted(&app, &webview);
     }
     hide(&app);
-    // A layer that waited for the site steps aside now (a server just chosen in the first run, ADR 0255).
+    // A layer that waited for the site steps aside now (a server just chosen in the first run, ADR 0256).
     crate::app_layer::site_painted(&app);
     Ok(())
 }

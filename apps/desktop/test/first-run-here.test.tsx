@@ -17,7 +17,7 @@ import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-/** The first run as the app layer draws it (ADR 0255): its route's mode, and each time it is shown again. */
+/** The first run as the app layer draws it (ADR 0256): its route's mode, and each time it is shown again. */
 function LayerFirstRun() {
   const host = useHost() as FakeHost;
   const [state, setState] = useState(() => ({ ...host.layer }));

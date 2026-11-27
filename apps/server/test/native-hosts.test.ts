@@ -12,7 +12,7 @@ import { allowedOrigins, requestOriginAllowed } from "../src/routes/app/context"
 import { createTestServer, GOOGLE_ENV, type TestServer } from "./harness";
 
 /**
- * A native server (agentes.chat running on this computer, ADR 0255 §5): the computer opens it at its loopback origin,
+ * A native server (agentes.chat running on this computer, ADR 0256 §5): the computer opens it at its loopback origin,
  * everyone else at `PUBLIC_URL` (the tailnet's https address once reach is on), and each origin keeps its own sign-in.
  */
 

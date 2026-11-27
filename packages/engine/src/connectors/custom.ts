@@ -1047,7 +1047,7 @@ export async function beginMcpOAuth(
     return { status: "needs_key", reason: "not_approved", ...(client.detail ? { detail: client.detail } : {}) };
   }
   if (!client) return { status: "needs_key" };
-  // Started at the server's loopback origin (ADR 0255 §5): back there when its client was registered with it, since
+  // Started at the server's loopback origin (ADR 0256 §5): back there when its client was registered with it, since
   // this computer's own browser may not reach `PUBLIC_URL`; else `PUBLIC_URL`'s, as everywhere else.
   const loopback = deps.atLoopback && deps.loopbackUrl ? oauthRedirectUri(deps.loopbackUrl) : null;
   const redirectUri = loopback && client.redirectUris?.includes(loopback) ? loopback : oauthRedirectUri(deps.publicUrl);

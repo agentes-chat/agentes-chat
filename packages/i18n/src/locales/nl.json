@@ -3272,6 +3272,10 @@
       "update_workspace": "Werkruimte <b>{{name}}</b> wijzigen",
       "set_action_check_on": "De check van wat het team al deed aanzetten",
       "set_action_check_off": "De check van wat het team al deed uitzetten",
+      "set_approvals_level": "Goedkeuringen van de workspace op <b>{{level}}</b> zetten",
+      "set_approvals_level_every": "Goedkeuringen van alle agents op <b>{{level}}</b> zetten, ook hun eigen keuzes",
+      "set_agent_approvals_level": "Goedkeuringen van <b>{{agent}}</b> op <b>{{level}}</b> zetten",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b> de goedkeuringen van de workspace laten volgen",
       "invite_people": "<b>{{emails}}</b> uitnodigen voor de werkruimte.",
       "invite_roles_one": "Met de rol {{roles}}.",
       "invite_roles_other": "Met de rollen {{roles}}.",
@@ -4175,6 +4179,10 @@
       "changed_update_workspace": "Werkruimte <b>{{name}}</b> gewijzigd",
       "changed_set_action_check_on": "De check van wat het team al deed aangezet",
       "changed_set_action_check_off": "De check van wat het team al deed uitgezet",
+      "changed_set_approvals_level": "Goedkeuringen van de workspace op <b>{{level}}</b> gezet",
+      "changed_set_approvals_level_every": "Goedkeuringen van alle agents op <b>{{level}}</b> gezet",
+      "changed_set_agent_approvals_level": "Goedkeuringen van <b>{{agent}}</b> op <b>{{level}}</b> gezet",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> volgt weer de goedkeuringen van de workspace",
       "changed_invite_people": "<b>{{invited}}</b> uitgenodigd voor de werkruimte",
       "changed_remove_ai_key": "API-sleutel <b>{{name}}</b> verwijderd"
     },
@@ -13431,6 +13439,23 @@
     "s3": "Je eigen opslag",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 of een andere S3-compatibele dienst.",
     "current": "In gebruik",
+    "computer": {
+      "title": "Computer van de werkruimte",
+      "used": "{{used}} van {{size}} in gebruik",
+      "bar": "Schijf van de computer van de werkruimte",
+      "measuring": "Meten wat de ruimte inneemt.",
+      "part": {
+        "projects": "Projecten en code",
+        "apps": "Apps en tools",
+        "agents": "Bestanden van de agents",
+        "caches": "Caches en tijdelijke bestanden",
+        "system": "Systeem",
+        "other": "Overig",
+        "free": "Vrij"
+      },
+      "full": "Bijna vol, nog {{free}} over. Een agent kan caches en tijdelijke bestanden legen en verwijderen wat niemand meer gebruikt.",
+      "ask": "Maak ruimte vrij op de computer van de werkruimte: leeg caches en tijdelijke bestanden (pakketbeheerders, browsers, buildtools) en vertel me daarna wat verder de meeste ruimte inneemt."
+    },
     "usage": {
       "files": "{{size}} aan bestanden",
       "none": "Geen bestanden",
@@ -17026,15 +17051,21 @@
     "belongs": "Hoort bij de werkruimte",
     "belongsHint": "Het blijft als de persoon die het koppelde vertrekt, en iedereen kan het gebruiken zolang niemand de eigenaar is.",
     "spillOwn": "Helpen als de computer van het team vol of weg is",
-    "spillOwnHint": "Als de computer van je agents vol of weg is, kunnen hun antwoorden, vragen en routines hier denken met jouw aanmelding.",
-    "spillTeamHint": "Als de computer van een agent vol of weg is, kunnen zijn antwoorden, vragen en routines hier denken met de aanmelding van zijn eigenaar op deze computer.",
+    "spillOwnHint": "Als de computer van het team vol of weg is, kunnen de antwoorden, vragen en routines van je agents hier denken, met de AI-accounts die op deze computer zijn aangemeld.",
+    "spillTeamHint": "Als de computer van een agent vol of weg is, kunnen zijn antwoorden, vragen en routines hier denken, met het AI-account dat zijn eigenaar op deze computer heeft aangemeld.",
     "spillWorkspaceOff": "Een admin heeft dit voor de workspace uitgezet.",
-    "spillFirst": "Deze computer gebruiken voor het werk van mijn agents",
-    "spillFirstHint": "Verzoeken, routines en lang werk van je agents starten hier zodra hij vrij is, met de AI die je hier hebt verbonden. Antwoorden aan mensen starten hier alleen als de computer van het team vol of weg is.",
+    "helpUse": "Hoe hij je agents helpt",
+    "helpUses": {
+      "off": "Helpt niet",
+      "help": "Alleen als reserve",
+      "first": "Eerst voor mijn agents"
+    },
+    "helpUseHint": "Alleen als reserve: je agents komen hierheen als de computer van het team vol of weg is. Eerst voor mijn agents: hun vragen, routines en lange taken beginnen hier zodra hij vrij is, en antwoorden aan mensen alleen als die van het team vol of weg is. Beide gebruiken de AI-accounts die op deze computer zijn aangemeld.",
+    "helpUseTeamHint": "Alleen als reserve: de agents van iedereen komen hierheen als hun computer vol of weg is, met het AI-account dat hun eigenaar op deze computer heeft aangemeld. Eerst voor mijn agents: de vragen, routines en lange taken van je agents beginnen hier zodra hij vrij is.",
     "helpWorkspace": "Computers helpen als die van het team vol of weg is",
     "helpWorkspaceHint": "Elke computer helpt alleen als zijn eigenaar het toestaat. Uit: geen enkele helpt, wat de eigenaar ook koos.",
     "shareInternet": "Agents gebruiken het internet van deze computer",
-    "shareInternetHint": "Websites die de agents openen, gaan via de verbinding van deze computer en zien dus jouw locatie. Alleen websites, tot 5 GB per dag, en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken de agents hun gewone verbinding.",
+    "shareInternetHint": "Websites die de agents openen, gaan via de verbinding van deze computer en zien dus jouw locatie. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken de agents hun gewone verbinding.",
     "shareInternetInUse": "Nu in gebruik",
     "shareInternetOther": "Agents gebruiken nu {{name}}",
     "shareInternetPick": "Deze gebruiken",
@@ -17571,7 +17602,7 @@
       "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vraagt je om de map {{path}} op je <b>{{deviceName}}</b>",
       "internetShared": "Agents openen websites nu via het internet van <b>{{deviceName}}</b>",
-      "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, tot 5 GB per dag, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
+      "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
       "internetOff": "Uitzetten",
       "internetOffDone": "Agents gebruiken het internet van {{deviceName}} niet meer.",
       "once": "Eén keer toestaan",
@@ -17581,6 +17612,22 @@
         "once": "Eén keer toegestaan.",
         "always": "{{deviceName}} wordt nu met hen gedeeld.",
         "no": "Je zei nee."
+      }
+    },
+    "permission": {
+      "title": "Wacht op {{permission}} op {{computer}}",
+      "next": "Sta het toe in de agentes.chat-app op die computer.",
+      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
+      "asked": "Nodig om {{trigger}} uit te voeren",
+      "names": {
+        "app_management": "Appbeheer",
+        "screen": "Schermopname",
+        "accessibility": "Toegankelijkheid",
+        "disk": "Volledige schijftoegang",
+        "network": "Lokaal netwerk",
+        "camera": "Camera",
+        "microphone": "Microfoon",
+        "automation": "Automatisering"
       }
     }
   },

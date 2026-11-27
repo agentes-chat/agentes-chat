@@ -464,7 +464,7 @@
     "internet": "Les agents utilisent la connexion internet de cet ordinateur",
     "internetOn": "Les sites que les agents ouvrent voient votre emplacement",
     "internetOff": "Coupé : les agents utilisent leur connexion habituelle",
-    "internetHint": "Les agents du workspace ouvrent des sites via la connexion de cet ordinateur. Uniquement des sites web, jusqu’à 5 Go par jour, et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, ils utilisent leur connexion habituelle.",
+    "internetHint": "Les agents du workspace ouvrent des sites via la connexion de cet ordinateur. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, ils utilisent leur connexion habituelle.",
     "shareOff": "Vous seul pour l'instant",
     "shareHint": "Les agents de tout le monde dans {{org}} peuvent y lancer des tâches, avec votre utilisateur.",
     "addFolders": "Ajouter des dossiers",
@@ -936,5 +936,21 @@
     "bringAllToFront": "Tout ramener au premier plan",
     "help": "Aide",
     "downloaded": "Téléchargement terminé"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat a besoin de {{permission}}",
+    "done": "Je l’ai autorisé",
+    "later": "Pas maintenant",
+    "trayTitle": "En attente de {{permission}}",
+    "why": {
+      "app_management": "Les agents en ont besoin pour modifier des apps sur ce {{device}}.",
+      "screen": "Les agents en ont besoin pour faire des captures d’écran de ce {{device}}.",
+      "accessibility": "Les agents en ont besoin pour cliquer et taper dans les apps de ce {{device}}.",
+      "disk": "Les agents en ont besoin pour ouvrir vos fichiers sans que macOS demande pour chaque dossier.",
+      "network": "Les agents en ont besoin pour joindre les téléphones et appareils de votre réseau.",
+      "camera": "Les agents en ont besoin pour utiliser la caméra de ce {{device}}.",
+      "microphone": "Les agents en ont besoin pour utiliser le micro de ce {{device}}.",
+      "automation": "Les agents en ont besoin pour piloter d’autres apps sur ce {{device}}."
+    }
   }
 }

@@ -85,7 +85,7 @@ void authConfig.then(
   (config) => startErrorReports(config.errorReports ?? null),
   () => startErrorReports(null),
 );
-// The address people open, for the links this page hands out (ADR 0255 §5: the desktop app's own server opens here at
+// The address people open, for the links this page hands out (ADR 0256 §5: the desktop app's own server opens here at
 // its loopback address).
 void authConfig.then(
   (config) => rememberPublicUrl(config.publicUrl ?? null),

@@ -7,7 +7,7 @@ import { AuthPage, type BrowserStartProvider, isBrowserStartProvider } from "@/p
 export const Route = createFileRoute("/login")({
   // `error`: a provider sign-in the server refused comes back here with its code. `add`: another account beside the
   // one signed in ("Add account", ADR 0183), so the page shows with someone signed in. `with`: the desktop app's first
-  // screen asks for that provider's sign-in in the browser at once (ADR 0255 §3).
+  // screen asks for that provider's sign-in in the browser at once (ADR 0256 §3).
   validateSearch: (
     search: Record<string, unknown>,
   ): { redirect?: string; email?: string; error?: string; add?: boolean; with?: BrowserStartProvider } => ({

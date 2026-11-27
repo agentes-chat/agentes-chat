@@ -5,7 +5,9 @@
  * disk are allowed without asking. Full Disk Access has no prompt: people turn the app on in System Settings. Local
  * Network has no state at all, only whether the app asked. An ad-hoc signed app loses every grant when it updates.
  */
+import type { OsPermission, PermissionNeed } from "@agenteschat/adapters/machine-protocol";
 import type { Host } from "../host/types";
+import type { Home } from "./store";
 
 export const MAC_PERMISSIONS = ["screen", "disk", "network"] as const;
 export type MacPermission = (typeof MAC_PERMISSIONS)[number];
@@ -61,3 +63,35 @@ export const viaSettings = (p: MacPermission, grant: Grant) => p === "disk" || g
 export type SetupState = ({ step: "prepare"; org: string; server: string } | { step: "prefs" }) & {
   resumed?: boolean;
 };
+
+/**
+ * An OS permission a runner of this app waits on (an agent's command macOS refused): the dialog asks the person, and
+ * the web, the phone and the agent see "waiting for permission" until it ends here (`permission.clear`).
+ */
+export interface PermissionAsk {
+  homeId: string;
+  need: PermissionNeed;
+  /** The asking agent's name, when the runner knows it. */
+  agent?: string;
+}
+
+/** Every wait of every paired home, in the homes' order. */
+export const permissionAsks = (homes: readonly Home[]): PermissionAsk[] =>
+  homes.flatMap((h) =>
+    (h.status?.permissions ?? []).map((need) => {
+      const agent = need.agentId ? h.status?.agents.find((a) => a.id === need.agentId)?.name : undefined;
+      return { homeId: h.homeId, need, ...(agent ? { agent } : {}) };
+    }),
+  );
+
+export const askKey = (a: PermissionAsk) => `${a.homeId}:${a.need.permission}`;
+
+/**
+ * Whether the permission is on, where macOS says so without asking (Screen Recording, Full Disk Access); null where
+ * only the person knows (App Management, Accessibility, Automation and the rest have no read the app may make).
+ */
+export async function permissionOn(host: Host, p: OsPermission): Promise<boolean | null> {
+  if (p === "screen") return host.screenAccess();
+  if (p === "disk") return host.diskAccess();
+  return null;
+}

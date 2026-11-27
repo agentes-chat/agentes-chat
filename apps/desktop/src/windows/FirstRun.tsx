@@ -1,5 +1,5 @@
 /**
- * The first run, on the main window's app layer (ADR 0255): how the app finds its server. "Onde fica o seu workspace?"
+ * The first run, on the main window's app layer (ADR 0256): how the app finds its server. "Onde fica o seu workspace?"
  * first, the Cloud chosen and one's own server beside it; one's own server leads to Connect (an address, or one found
  * on this computer or the Tailscale network, and the one-command setup for a server that has none yet) or to running
  * agentes.chat on this computer. A connect link (`agenteschat://connect`) opens here too: the server in large type,

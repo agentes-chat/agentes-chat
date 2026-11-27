@@ -14,7 +14,7 @@ import {
 import { inAppPath } from "../src/lib/web-push";
 
 /**
- * The links a page hands out name the address people open (ADR 0255 §5): the desktop app opens a server on the same
+ * The links a page hands out name the address people open (ADR 0256 §5): the desktop app opens a server on the same
  * computer at its loopback address, which opens nowhere else.
  */
 

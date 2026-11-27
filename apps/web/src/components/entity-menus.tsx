@@ -38,7 +38,7 @@ import { isStoppable, useStopRun } from "./StopRun";
  * "…": a channel, an agent, a person. Each lists only what the app does and what the viewer may do.
  */
 
-// The address people open, also from the desktop app's own server at its loopback address (ADR 0255 §5).
+// The address people open, also from the desktop app's own server at its loopback address (ADR 0256 §5).
 const linkTo = (path: string) => `${publicOrigin()}${path}`;
 
 /** An archived channel back as it was (the archive's Desfazer, Canais arquivados' Restaurar): it opens again. */

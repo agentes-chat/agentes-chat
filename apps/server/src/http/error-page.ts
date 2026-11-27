@@ -154,7 +154,7 @@ function fileAppLink(path: string): string | null {
 /**
  * After every API route: a browser's navigation answered with an API error gets the page instead, with the same
  * status. The JSON's code says the cause; the request decides the way out. Its links are paths, so the way out stays
- * at the origin the browser asked (a native server's loopback origin keeps its own sign-in, ADR 0255 §5).
+ * at the origin the browser asked (a native server's loopback origin keeps its own sign-in, ADR 0256 §5).
  */
 export function errorPages(): MiddlewareHandler {
   return async (c, next) => {

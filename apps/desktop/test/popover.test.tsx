@@ -96,6 +96,31 @@ test("the menu bar menu: what goes on here scrolls, and Open, Preferences and Qu
     }
   }));
 
+test("a new OS permission an agent's work waits on opens the app layer's ask, and stays on the menu until it ends", async () => {
+  const host = createFakeHost("popover", "here");
+  const asks = () => host.routes.filter((r) => r.screen === "permissionAsk").length;
+  await withMenu(async (el) => {
+    const runner = [...host.runners.values()][0];
+    await act(async () =>
+      runner?.setPermissions([
+        { permission: "screen", trigger: "screencapture -x a.png", since: "2026-11-26T18:00:00.000Z" },
+      ]),
+    );
+    await until(() => asks() === 1);
+    expect(banners(el)).toContainEqual({
+      title: "Waiting for Screen Recording",
+      line: "Agents need it to take screenshots of this Mac.",
+      actions: ["Allow"],
+    });
+    // Asked again from the menu after the sheet was closed.
+    const allow = [...el.querySelectorAll(".dk-banner__acts button")].find((b) => b.textContent === "Allow");
+    await act(async () => (allow as HTMLElement).click());
+    expect(asks()).toBe(2);
+    await act(async () => runner?.setPermissions([]));
+    await until(() => !banners(el).some((b) => b.title === "Waiting for Screen Recording"));
+  }, host);
+});
+
 test("a folder request the computer can't answer says why, and stays to be answered again", () =>
   withMenu(async (el, store) => {
     const real = store.request.bind(store);
@@ -390,7 +415,7 @@ test("the site's This computer: the Mac pairs with commands on, then the app lay
       });
       const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
       await until(() => norte()?.access?.tools.commands === true);
-      // Prepare this Mac, as a sheet on the main window's app layer (ADR 0255).
+      // Prepare this Mac, as a sheet on the main window's app layer (ADR 0256).
       await until(() => host.layer.route?.screen === "prepare");
       expect(host.layer.route).toEqual({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
       expect(await host.autostart()).toBe(true);

@@ -3149,6 +3149,10 @@
       "update_workspace": "更改工作区 <b>{{name}}</b>",
       "set_action_check_on": "开启对团队已做之事的检查",
       "set_action_check_off": "关闭对团队已做之事的检查",
+      "set_approvals_level": "将工作区的审批设为<b>{{level}}</b>",
+      "set_approvals_level_every": "将所有智能体的审批设为<b>{{level}}</b>，包括它们自己的选择",
+      "set_agent_approvals_level": "将 <b>{{agent}}</b> 的审批设为<b>{{level}}</b>",
+      "set_agent_approvals_level_workspace": "让 <b>{{agent}}</b> 跟随工作区的审批",
       "invite_people": "邀请 <b>{{emails}}</b> 加入工作区。",
       "invite_roles_other": "角色为 {{roles}}。",
       "invite_people_sent_other": "已向 <b>{{emails}}</b> 发送邀请。",
@@ -4006,6 +4010,10 @@
       "changed_update_workspace": "更改了工作区 <b>{{name}}</b>",
       "changed_set_action_check_on": "开启了对团队已做之事的检查",
       "changed_set_action_check_off": "关闭了对团队已做之事的检查",
+      "changed_set_approvals_level": "已将工作区的审批设为<b>{{level}}</b>",
+      "changed_set_approvals_level_every": "已将所有智能体的审批设为<b>{{level}}</b>",
+      "changed_set_agent_approvals_level": "已将 <b>{{agent}}</b> 的审批设为<b>{{level}}</b>",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> 重新跟随工作区的审批",
       "changed_invite_people": "邀请了 <b>{{invited}}</b> 加入工作区",
       "changed_remove_ai_key": "删除了 API 密钥 <b>{{name}}</b>"
     },
@@ -12874,6 +12882,23 @@
     "s3": "你自己的存储",
     "s3Text": "Cloudflare R2、Amazon S3、Backblaze B2 或其他兼容 S3 的存储。",
     "current": "使用中",
+    "computer": {
+      "title": "工作区的电脑",
+      "used": "已用 {{used}}，共 {{size}}",
+      "bar": "工作区电脑的磁盘",
+      "measuring": "正在测量占用空间的内容。",
+      "part": {
+        "projects": "项目和代码",
+        "apps": "应用和工具",
+        "agents": "智能体的文件",
+        "caches": "缓存和临时文件",
+        "system": "系统",
+        "other": "其他",
+        "free": "可用"
+      },
+      "full": "快满了，还剩 {{free}}。智能体可以清理缓存和临时文件，并删除没人再用的内容。",
+      "ask": "请释放工作区电脑上的空间：清理缓存和临时文件（包管理器、浏览器、构建工具），然后告诉我还有什么占用的空间最多。"
+    },
     "usage": {
       "files": "{{size}} 文件",
       "none": "没有文件",
@@ -16414,15 +16439,21 @@
     "belongs": "归工作区所有",
     "belongsHint": "连接它的人离开后它仍会保留，没有所有者时所有人都可以使用。",
     "spillOwn": "团队的电脑满载或不在线时帮忙",
-    "spillOwnHint": "当你的智能体的电脑满载或不在线时，它们的回复、请求和例行任务可以用你的登录在这里思考。",
-    "spillTeamHint": "当某个智能体的电脑满载或不在线时，它的回复、请求和例行任务可以用其所有者在这台电脑上的登录在这里思考。",
+    "spillOwnHint": "当团队的电脑满载或不在线时，你的智能体的回复、请求和例行任务可以在这里思考，使用这台电脑上登录的 AI 账号。",
+    "spillTeamHint": "当某个智能体的电脑满载或不在线时，它的回复、请求和例行任务可以在这里思考，使用其所有者在这台电脑上登录的 AI 账号。",
     "spillWorkspaceOff": "管理员已为整个工作区关闭此功能。",
-    "spillFirst": "把这台电脑用于我的智能体的工作",
-    "spillFirstHint": "只要这台电脑空闲，智能体的请求、例行任务和长时间工作就会在这里开始，使用你在这里连接的 AI。给人的回复只有在团队的电脑已满或不在线时才会在这里开始。",
+    "helpUse": "如何帮助你的智能体",
+    "helpUses": {
+      "off": "不帮忙",
+      "help": "只作后备",
+      "first": "优先用于我的智能体"
+    },
+    "helpUseHint": "只作后备：团队的电脑满载或不在线时，你的智能体才来这里。优先用于我的智能体：只要这台电脑空闲，它们的请求、例行任务和长时间工作就从这里开始，回复别人的消息则只在团队的电脑满载或不在线时才来这里。两种方式都使用这台电脑上登录的 AI 账号。",
+    "helpUseTeamHint": "只作后备：任何人的智能体在自己的电脑满载或不在线时来这里，使用其所有者在这台电脑上登录的 AI 账号。优先用于我的智能体：只要这台电脑空闲，你的智能体的请求、例行任务和长时间工作就从这里开始。",
     "helpWorkspace": "团队的电脑满载或不在线时，其他电脑来帮忙",
     "helpWorkspaceHint": "每台电脑只有在其所有者允许时才会帮忙。关闭：无论所有者如何选择，都不会有电脑帮忙。",
     "shareInternet": "智能体使用这台电脑的网络",
-    "shareInternetHint": "智能体打开的网站会经过这台电脑的网络连接，所以网站会看到你的位置。仅限网站，每天最多 5 GB，绝不会访问你自己网络中的任何内容。这台电脑离线时，智能体使用平常的连接。",
+    "shareInternetHint": "智能体打开的网站会经过这台电脑的网络连接，所以网站会看到你的位置。仅限网站，绝不会访问你自己网络中的任何内容。这台电脑离线时，智能体使用平常的连接。",
     "shareInternetInUse": "正在使用",
     "shareInternetOther": "智能体正在使用 {{name}}",
     "shareInternetPick": "使用这台",
@@ -16956,7 +16987,7 @@
       "cliRequest": "<b>{{who}}</b> 请你在 <b>{{deviceName}}</b> 上安装 {{tool}}",
       "folderRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上开放文件夹 {{path}}",
       "internetShared": "智能体现在通过 <b>{{deviceName}}</b> 的网络打开网站",
-      "internetSharedLine": "仅限此工作区的智能体，仅限网站，每天最多 5 GB，绝不访问它所在网络中的任何内容。它离线时，智能体会使用平常的连接。",
+      "internetSharedLine": "仅限此工作区的智能体，仅限网站，绝不访问它所在网络中的任何内容。它离线时，智能体会使用平常的连接。",
       "internetOff": "关闭",
       "internetOffDone": "智能体不再使用 {{deviceName}} 的网络。",
       "once": "允许一次",
@@ -16966,6 +16997,22 @@
         "once": "已允许一次。",
         "always": "现在已与他们共享 {{deviceName}}。",
         "no": "你拒绝了。"
+      }
+    },
+    "permission": {
+      "title": "正在等待 {{computer}} 上的“{{permission}}”权限",
+      "next": "请在那台电脑上的 agentes.chat 应用中允许。",
+      "askedBy": "{{agent}} 运行 {{trigger}} 时需要",
+      "asked": "运行 {{trigger}} 时需要",
+      "names": {
+        "app_management": "App 管理",
+        "screen": "屏幕录制",
+        "accessibility": "辅助功能",
+        "disk": "完全磁盘访问权限",
+        "network": "本地网络",
+        "camera": "摄像头",
+        "microphone": "麦克风",
+        "automation": "自动化"
       }
     }
   },

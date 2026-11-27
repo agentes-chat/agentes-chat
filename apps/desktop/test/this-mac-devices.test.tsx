@@ -19,7 +19,7 @@ import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-/** The app layer (ADR 0255) on `route`, with `view` drawn in it. */
+/** The app layer (ADR 0256) on `route`, with `view` drawn in it. */
 async function mount(route: LayerRoute, view: ReactNode, check: (el: HTMLElement, host: FakeHost) => Promise<void>) {
   const host = createFakeHost("app", "selfhost", { route });
   const store = new DesktopStore(host, {});

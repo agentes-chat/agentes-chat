@@ -14,7 +14,7 @@ export function menuLabels(t: TFunction): Record<string, string> {
     serversAdd: t("desktop.servers.add"),
     serversManage: t("desktop.servers.manage"),
     trayOpen: t("desktop.tray.open"),
-    // The tray's way to this computer's settings on Windows and Linux (tray.rs, ADR 0255).
+    // The tray's way to this computer's settings on Windows and Linux (tray.rs, ADR 0256).
     trayThisMac: t("desktop.tray.thisMac"),
     trayPause: t("desktop.tray.pause"),
     trayPause1h: t("desktop.tray.pause1h"),

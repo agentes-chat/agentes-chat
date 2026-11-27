@@ -108,7 +108,7 @@ export function useToolOneClick(machine: Machine | null | undefined) {
 /**
  * The way out where a program is off on a computer, under the line that says so (every screen that says it uses this
  * one): whoever connected it turns it on here, or waits for it to come online, anyone else asks them, an app too old
- * says to update it there, and in the app on that very computer its Folders and tools turn it on instead (ADR 0255).
+ * says to update it there, and in the app on that very computer its Folders and tools turn it on instead (ADR 0256).
  * `children`: the screen's other ways on the same line (a key). On a computer that may have no app, the command for
  * whoever turns it on there.
  */

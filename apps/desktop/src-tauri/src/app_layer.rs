@@ -1,4 +1,4 @@
-//! The app layer (ADR 0255): the app's own screens inside the main window, a local web view with the app's bundle
+//! The app layer (ADR 0256): the app's own screens inside the main window, a local web view with the app's bundle
 //! (`index.html`, the popover's) added over the site and its cover. It carries the first run, This computer's settings
 //! and the sheets that were windows of their own (the offer to let agents use this computer, Prepare, a connect or pair
 //! link, the iPhone setup). The site never gains a command from it: the layer is its own web view with its own
@@ -113,6 +113,8 @@ pub enum Route {
     /// A connect link waits: the layer takes it with `link_take`.
     Link,
     Iphone,
+    /// An OS permission an agent's work waits on (ADR 0255): the sheet reads the waits from the runners itself.
+    PermissionAsk,
 }
 
 impl Route {

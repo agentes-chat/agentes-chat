@@ -80,7 +80,7 @@ export const requestBaseUrl = (deps: Pick<AppDeps, "db" | "config">, headers: He
 
 /**
  * The server's own loopback origin when this request came to it while people use `PUBLIC_URL` (a native server,
- * ADR 0255 §5), else null: what must come back to the origin it started at (an MCP server's sign-in and the callback's
+ * ADR 0256 §5), else null: what must come back to the origin it started at (an MCP server's sign-in and the callback's
  * landing) goes there. Grants nothing: the Host only picks which of the server's own origins answers.
  */
 export function requestLoopback(config: Config, headers: Headers): string | null {

@@ -2698,7 +2698,7 @@ pub(crate) fn app_window(webview: &tauri::Webview, allowed: &[&str]) -> Result<(
     }
 }
 
-/// The app layer (ADR 0255), the popover and the main window's cover.
+/// The app layer (ADR 0256), the popover and the main window's cover.
 const ANY: &[&str] = &["main-app", "popover", "main-cover"];
 
 /// Async, as every command here that reads files or runs a program: a sync command runs on the main thread, and every

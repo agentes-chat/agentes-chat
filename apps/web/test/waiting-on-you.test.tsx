@@ -99,8 +99,8 @@ describe("Esperando você", () => {
     await settle(8);
     const title = screen().getByRole("heading", { level: 1, name: "Caixa de entrada" });
     // What waits is the line under the title.
-    expect(title.nextElementSibling?.className).toBe("ac-pagehead__meta");
-    expect(title.nextElementSibling?.textContent).toContain("2 coisas esperando você");
+    const meta = title.closest(".ib-head")?.querySelector(".ac-pagehead__metaline > .ac-pagehead__meta");
+    expect(meta?.textContent).toContain("2 coisas esperando você");
     expect(document.querySelector(".ib-filter")?.textContent).toBe("Esperando você");
     const list = screen().getByRole("region", { name: "Esperando você" });
     expect(list.querySelector(".ac-grouphead")?.textContent).toBe("Esperando você2");

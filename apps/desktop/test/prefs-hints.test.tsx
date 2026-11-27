@@ -263,7 +263,7 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
         expect(document.querySelector(".dk-toast")?.textContent).toContain(
           "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
         );
-        // The first run, on Run here's form for the new owner (the app layer, ADR 0255).
+        // The first run, on Run here's form for the new owner (the app layer, ADR 0256).
         expect(host.layer.route).toEqual({ screen: "firstRun", mode: "owner" });
         expect(await host.localServer()).toMatchObject({ installed: "none", run: false });
       },

@@ -273,7 +273,7 @@ pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String>
     crate::workspaces::trigger(&app);
     match current(&app) {
         Some(next) if showing => crate::main_window::show_url(&app, next)?,
-        // No server left: the window stays, with the first run over it (ADR 0255).
+        // No server left: the window stays, with the first run over it (ADR 0256).
         None => {
             if let Some(page) = app.get_webview(crate::main_window::LABEL) {
                 let _ = page.navigate("about:blank".parse().map_err(|_| "not a URL")?);

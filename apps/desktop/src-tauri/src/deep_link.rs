@@ -1,5 +1,5 @@
 //! `agenteschat://` links (the setup's end, a QR code's link, a teammate's): the main window's app layer shows them
-//! (ADR 0255), with the server in large type, and nothing changes before the person confirms there. Rust keeps only the
+//! (ADR 0256), with the server in large type, and nothing changes before the person confirms there. Rust keeps only the
 //! newest link until the layer takes it (`link_take`), and passes nothing it didn't check is one of ours.
 //! A connector's sign-in that the browser hands back (`agenteschat://desktop/connectors/oauth`) goes to the
 //! main window instead, which finishes it with its own session.

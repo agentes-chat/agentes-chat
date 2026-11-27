@@ -1,4 +1,4 @@
-# 0255. The desktop app in one window, with Tailscale inside it
+# 0256. The desktop app in one window, with Tailscale inside it
 
 - Status: Proposed (in progress: built in steps on one branch; this record says what is built as each part lands)
 - Date: 2026-11-26

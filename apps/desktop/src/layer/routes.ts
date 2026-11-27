@@ -1,5 +1,5 @@
 /**
- * The app layer's routes (ADR 0255) against the screens they still show today: This computer's settings sections on
+ * The app layer's routes (ADR 0256) against the screens they still show today: This computer's settings sections on
  * the tabs of the settings screen, and the old Preferences tab names (the popover's menu, older sites) as sections.
  */
 import type { LayerRoute, LayerSection } from "../host/types";

@@ -1,4 +1,4 @@
-//! agentes.chat for macOS, Windows and Linux: one window (ADR 0255), the server open now (agentes.chat or a
+//! agentes.chat for macOS, Windows and Linux: one window (ADR 0256), the server open now (agentes.chat or a
 //! server of the person's own, `servers`) with the app's own screens over it (`app_layer`: the first run that finds
 //! one, This computer's settings, the sheets), and, only while agents work on this computer for a server of the
 //! person's own, the runners it spawns (one per organization) and the menu bar popover. On every system it can also
@@ -51,7 +51,7 @@ use tauri_plugin_updater::UpdaterExt;
 use runners::{RunnerInfo, Runners};
 
 /// The app's windows besides the main one (the notch is its own, `notch.rs`): only the menu bar's popover. Everything
-/// else is the main window's app layer (ADR 0255).
+/// else is the main window's app layer (ADR 0256).
 const WINDOWS: &[&str] = &["popover"];
 
 /// When the popover last hid because it lost focus: a click on the tray icon blurs it first,
@@ -850,7 +850,7 @@ pub fn run() {
             // Started at login: in the background (the popover, the tray). Opened by hand: the main window on
             // the server open now, or the first run while there is none. Opened again by macOS in the middle of a
             // setup (the "Quit & Reopen" after a permission): the main window on the page it showed, and the setup's
-            // screen over it (the app layer, ADR 0255).
+            // screen over it (the app layer, ADR 0256).
             let at_login = started_at_login(std::env::args(), reopened);
             let resume = prepare::resume(&handle, at_login);
             if servers::current(&handle).is_none() {

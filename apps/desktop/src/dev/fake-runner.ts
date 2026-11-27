@@ -4,7 +4,13 @@
  * (two organizations, one with a logo, agents at work, a folder request), so every screen can be seen
  * without the Tauri shell. Never part of the real app's behaviour: the host picks it only outside Tauri.
  */
-import type { RunnerAccess, RunnerAccountInfo, RunnerPause, RunnerPhone } from "@agenteschat/adapters/machine-protocol";
+import type {
+  PermissionNeed,
+  RunnerAccess,
+  RunnerAccountInfo,
+  RunnerPause,
+  RunnerPhone,
+} from "@agenteschat/adapters/machine-protocol";
 import {
   type ActivityEntry,
   CONTROL_PROTOCOL_VERSION,
@@ -248,6 +254,8 @@ export class FakeRunner {
   server = FAKE_SERVER;
   /** The code of a pairing in progress, for the fake site's confirm. */
   pendingCode: string | null = null;
+  /** The OS permissions agents' work waits on here (`setPermissions`), ended by `permission.clear`. */
+  permissions: PermissionNeed[] = [];
   /** The phones plugged into this computer: a Pixel an agent uses, an iPhone that needs Developer Mode. */
   phones: RunnerPhone[] = [
     {
@@ -368,6 +376,12 @@ export class FakeRunner {
         this.paused = { paused: false };
         this.emit({ kind: "status", status: this.status() });
         return reply({ paused: this.paused });
+      case "permission.clear": {
+        const before = this.permissions.length;
+        this.permissions = this.permissions.filter((n) => n.permission !== msg.permission);
+        this.emit({ kind: "status", status: this.status() });
+        return reply({ cleared: this.permissions.length < before });
+      }
       case "reconnect":
         if (!s) return fail("not_paired", "not paired");
         this.emit({ kind: "status", status: this.status() });
@@ -617,7 +631,7 @@ export class FakeRunner {
       workspace: this.config.workspace,
       agents: s?.agents ?? [],
       access: s?.access,
-      ...(s ? { phones: this.phones, user: "sam" } : {}),
+      ...(s ? { phones: this.phones, user: "sam", permissions: this.permissions } : {}),
     };
   }
 
@@ -666,6 +680,12 @@ export class FakeRunner {
     };
     s.jobs.push(job);
     this.emit({ kind: "job.started", job });
+  }
+
+  /** An agent's command macOS refused, or one allowed: the app hears a new status, as the runner sends. */
+  setPermissions(permissions: PermissionNeed[]) {
+    this.permissions = permissions;
+    this.emit({ kind: "status", status: this.status() });
   }
 
   /** The phones change (plugged in, unplugged, a step further): the app hears a new status, as the runner sends. */

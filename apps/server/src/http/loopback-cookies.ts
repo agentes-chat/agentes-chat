@@ -1,5 +1,5 @@
 /**
- * The sign-in cookies of a native server's loopback origin (ADR 0255 §5).
+ * The sign-in cookies of a native server's loopback origin (ADR 0256 §5).
  *
  * Better Auth names its cookies from `PUBLIC_URL` once for every host: `__Secure-better-auth.<x>` with `Secure` when
  * it is https (the tailnet's address once reach is on), `better-auth.<x>` otherwise. On `http://127.0.0.1:<PORT>` that

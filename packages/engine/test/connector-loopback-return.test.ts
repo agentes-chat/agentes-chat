@@ -6,7 +6,7 @@ import { type CustomDeps, completeOAuth, connectCustomServer, type McpConnect, m
 import { type Fixture, setup } from "./fixtures";
 
 /**
- * An MCP server's sign-in started at a native server's loopback origin (ADR 0255 §5): the client registered with the
+ * An MCP server's sign-in started at a native server's loopback origin (ADR 0256 §5): the client registered with the
  * server's authorization server also lists the loopback callback (RFC 8252), and a sign-in asked there comes back
  * there, the code traded with the same address. Everything else returns to `PUBLIC_URL`.
  */

@@ -152,7 +152,7 @@ async function nativeEnv(dir: string, env: NodeJS.ProcessEnv = process.env) {
   env.PORT ??= String(NATIVE_PORTS.first);
   env.PUBLIC_URL ??= `http://127.0.0.1:${env.PORT}`;
   // The window on this computer opens the server at its loopback origin whatever `PUBLIC_URL` is (the tailnet's
-  // address once reach is on): trusted for sign-in and saving on every start, never written to `.env` (ADR 0255 §5).
+  // address once reach is on): trusted for sign-in and saving on every start, never written to `.env` (ADR 0256 §5).
   const extra = withLoopbackOrigin(env.EXTRA_TRUSTED_ORIGINS, env.PORT, env.PUBLIC_URL);
   if (extra !== undefined) env.EXTRA_TRUSTED_ORIGINS = extra;
   env.INSTALL_MODE ??= "native";

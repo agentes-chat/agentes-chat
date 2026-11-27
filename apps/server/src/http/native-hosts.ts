@@ -1,5 +1,5 @@
 /**
- * The addresses of a server that runs on this computer (native mode, `ownHostsOnly`, ADR 0255 §5). It listens on
+ * The addresses of a server that runs on this computer (native mode, `ownHostsOnly`, ADR 0256 §5). It listens on
  * 127.0.0.1 only. The computer that runs it opens it at `http://127.0.0.1:<PORT>`, its loopback origin, and everyone
  * else at `PUBLIC_URL`, which becomes the tailnet's https address once reach is on. Each origin keeps its own sign-in.
  *
@@ -34,7 +34,7 @@ const originOf = (url: string) => {
 };
 
 /**
- * `EXTRA_TRUSTED_ORIGINS` with this server's loopback origin added, as native mode starts (ADR 0255 §5): the
+ * `EXTRA_TRUSTED_ORIGINS` with this server's loopback origin added, as native mode starts (ADR 0256 §5): the
  * window on this computer signs in and saves there while `PUBLIC_URL` is the tailnet's address. Computed on every
  * start, never written to `.env`, so it follows a port move. Only the exact origin: never `localhost`, no wildcard.
  * Unchanged when `PUBLIC_URL` already is that origin or the list already holds it.
@@ -87,7 +87,7 @@ export function isLoopbackHost(host: string | null | undefined) {
 }
 
 /**
- * The guard in front of a native server (ADR 0255 §5), null where the request goes on:
+ * The guard in front of a native server (ADR 0256 §5), null where the request goes on:
  * - a Host that isn't one of its names gets a 421 (a page that points a name of its own at 127.0.0.1, DNS rebinding);
  * - `127.0.0.1:<PORT>` and `PUBLIC_URL`'s host are served as themselves, never sent to the other;
  * - a page opened at `localhost:<PORT>` (an HTML GET) goes to `127.0.0.1:<PORT>`, the one loopback cookie jar; its
