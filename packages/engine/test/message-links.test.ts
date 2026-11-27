@@ -234,6 +234,49 @@ describe("read_conversation", () => {
     expect(await read(ctx, { channel: "general", message: ask.id })).toMatchObject({ isError: true });
   });
 
+  test("a public channel the agent is not in says so; a private one stays not found", async () => {
+    f = await setup({ contextTools: true });
+    const eng = await createChannel(f.db, f.owner.id, f.org.id, { name: "eng", visibility: "public" });
+    await createChannel(f.db, f.owner.id, f.org.id, { name: "diretoria", visibility: "private" });
+    await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: eng.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "deploy feito",
+    });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const ask = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: dm.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "o que falaram no eng?",
+    });
+    const ctx = await runOn(dm.id, ask.id);
+    expect(await read(ctx, { channel: "eng" })).toEqual({
+      content: "You are not a member of #eng, so you can't read it. Ask a person to add you to it, then try again.",
+      isError: true,
+    });
+    expect((await read(ctx, { channel: "diretoria" })).content).toBe("Not found, or not a conversation you can read.");
+    expect((await read(ctx, { channel: "nada" })).content).toBe("Not found, or not a conversation you can read.");
+  });
+
+  test("thread_id takes a conversation's own id, a DM's too; one the agent can't read stays not found", async () => {
+    f = await setup({ contextTools: true });
+    const diretoria = await createChannel(f.db, f.owner.id, f.org.id, { name: "diretoria", visibility: "private" });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const ask = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: dm.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "lembra o que eu te pedi aqui?",
+    });
+    const ctx = await runOn(dm.id, ask.id);
+    expect((await read(ctx, { thread_id: dm.id })).content).toContain("lembra o que eu te pedi aqui?");
+    expect((await read(ctx, { thread_id: diretoria.id })).content).toBe(
+      "Not found, or not a conversation you can read.",
+    );
+  });
+
   test("search_context names who wrote a message, where, and its link", async () => {
     f = await setup({ contextTools: true });
     const m = await insertMessage(f.db, {
