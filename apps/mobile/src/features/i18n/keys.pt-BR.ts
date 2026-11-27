@@ -71,6 +71,17 @@ export const featureKeysPtBR = {
     more: "Ver as {{count}} linhas",
     gone: "Esse código não está mais aberto.",
   },
+  table: {
+    label_one: "Tabela · {{count}} linha",
+    label_other: "Tabela · {{count}} linhas",
+    title: "Tabela",
+    rows_one: "{{count}} linha",
+    rows_other: "{{count}} linhas",
+    copy: "Copiar a tabela",
+    copied: "Tabela copiada",
+    more: "Ver as {{count}} linhas",
+    gone: "Essa tabela não está mais aberta.",
+  },
   time: {
     today: "Hoje",
     yesterday: "Ontem",

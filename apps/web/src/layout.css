@@ -1255,6 +1255,7 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
 
 /* A table on my bubble is cut from the page's color, as its code blocks are (the kit's `--surface-sunken` there). */
 .ac-msg--own .ac-msg__text .md__table {
+  --table-card-bg: var(--bg);
   background: var(--bg);
 }
 .channel__composer {
@@ -2550,6 +2551,245 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   border-bottom: 0;
 }
 
+/*
+ * A Markdown table's card (TableCard.tsx), in a message and a document: the code card's frame (its radius, hairline
+ * and color, "Table · N rows" with Copy and Full screen on its top line), then the table, with no band behind its
+ * header. The root keeps `.md__table` for what a bubble does with a table (chat/looks.css); everything of its own is
+ * under `.table-card`, so a chart's table view and the wiki editor's tables stay on the rules above.
+ */
+.table-card {
+  --table-card-bg: var(--surface-sunken);
+  position: relative;
+  /* The standing columns' and the fade's layers stay inside the card, under whatever floats over a message. */
+  isolation: isolate;
+  margin: 2px 0;
+}
+.md__table.table-card {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--table-card-bg);
+  box-shadow: none;
+}
+/* The hairline over the cells: the standing column's own color would cover a hairline drawn under it. */
+.table-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--line);
+  pointer-events: none;
+}
+/* The code card's top line (`.code-card__top`, `.code-card__lang`), the rows' count in the language's place. */
+.table-card__top {
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+}
+.table-card__label {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The table's box, in the card and in full screen: it scrolls sideways, stopping at a column's start (after the
+   standing ones, `scroll-padding-left` from TableCard.tsx). */
+.table-card__body {
+  position: relative;
+  isolation: isolate;
+}
+.table-card__scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+/* As wide as the box, the columns sharing it by what they hold: a table fits before it scrolls. Separate borders,
+   so a standing cell keeps its own hairlines while the others pass under it. */
+.table-card__body table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+/* The `.md__table` cells' hairline under each row and their 8ch minimum stay off: each column sets its own width. */
+.table-card__body th,
+.table-card__body td {
+  min-width: 0;
+  padding: 9px 12px;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+  /* Whole words: a column narrows to its longest word, never "colu/na" (a message breaks anywhere). */
+  overflow-wrap: normal;
+  scroll-snap-align: start;
+}
+.table-card__body th {
+  padding-top: 2px;
+  padding-bottom: 8px;
+  font-size: calc(1em - 1.5px);
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--faint);
+  white-space: nowrap;
+  background: var(--table-card-bg);
+  border-bottom: 1px solid var(--line2);
+}
+.table-card__body td {
+  line-height: 20px;
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+}
+/* In a message, the person's Text size: the message's own size, on the tighter line its name takes. */
+.md--message .table-card__body td {
+  line-height: var(--msg-line-tight);
+}
+.table-card__body tbody tr:first-child td {
+  border-top: 0;
+}
+.table-card__body tbody tr:last-child td {
+  padding-bottom: 11px;
+}
+/* Each column by what it holds (`tableColumnKinds`): the rows' count as narrow as it is, faint, by its digits;
+   numbers, short words and links on one line; only longer text wraps, never narrower than a few words. */
+.table-card__body [data-kind="index"] {
+  width: 1%;
+  padding-right: 2px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.table-card__body :is([data-kind="number"], [data-kind="short"], [data-kind="link"]) {
+  white-space: nowrap;
+}
+.table-card__body td[data-kind="text"] {
+  min-width: 160px;
+}
+/* A link alone in its cell: the site's icon and its name (or the link's own words), cut with "…" past 200px. */
+.table-card__link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  min-width: 0;
+  color: var(--ink2);
+  text-decoration: none;
+}
+.table-card__site {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) {
+  .table-card__link:hover .table-card__site {
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+  }
+}
+/* The first column (the first two when the first only counts the rows) stands still while the rest scrolls under it;
+   the second stands at the first's width (`--table-card-stick`). Its edge shows a hairline only while columns pass
+   under it. */
+.table-card__body .table-card__stick {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--table-card-bg);
+  scroll-snap-align: none;
+}
+.table-card__body .table-card__stick + .table-card__stick {
+  left: var(--table-card-stick, 0px);
+}
+.table-card__body:is([data-more="start"], [data-more="both"]) .table-card__edge {
+  box-shadow: inset -1px 0 0 var(--line2);
+}
+/* The side that still hides columns fades into the card's color, drawn over the table (a mask would fade the standing
+   column too), and stops above our scrollbar (`--table-card-bar`). */
+.table-card__fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: var(--table-card-bar, 0px);
+  width: 48px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--table-card-bg));
+  opacity: 0;
+  transition: opacity 0.16s;
+}
+.table-card__body:is([data-more="end"], [data-more="both"]) > .table-card__fade {
+  opacity: 1;
+}
+/* "See all N rows" under a long table in a message: the card's whole width, under a hairline. */
+.table-card__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-top: 1px solid var(--line2);
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink2);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+@media (hover: hover) {
+  .table-card__more:hover {
+    background: var(--plate-soft);
+  }
+}
+/* Full screen, grown out of the card as the code's is: the whole table scrolling both ways under its header and its
+   standing columns, edge to edge in the dialog, the first and last columns on the dialog's own edges. */
+.table-viewer {
+  --table-card-bg: var(--surface-raised);
+  height: min(720px, calc(100dvh - 48px));
+}
+.table-viewer .ac-dialog__head {
+  border-bottom: 1px solid var(--line);
+}
+.table-viewer__body.ac-dialog__body {
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 0 0 var(--dialog-pad);
+}
+.table-viewer__body > .table-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.table-viewer .table-card__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.table-viewer .table-card__body th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-top: 10px;
+}
+.table-viewer .table-card__body th.table-card__stick {
+  z-index: 3;
+}
+.table-viewer .table-card__body :is(th, td):first-child {
+  padding-left: 20px;
+}
+.table-viewer .table-card__body :is(th, td):last-child {
+  padding-right: 20px;
+}
+
 /* Fenced code: the language, copy and full screen on top; colors from
    the shared highlighter. The full screen viewer grows out of the card (CodeBlock.tsx). */
 .code-card {
@@ -3467,8 +3707,9 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 
 /*
  * Markdown inside chat messages, styled for reading: line breaks
- * kept (white-space from .ac-msg__text), 14px between paragraphs, 8px into a list and between its items,
- * a heading opens a section, bold marks without shouting, links in the text's own color.
+ * kept (white-space from .ac-msg__text), 12px between blocks, 6px into a list and between its items,
+ * a heading a step over the words opens a section (20px above it, 4px under), a list's numbers and a quote stay
+ * quiet, bold marks without shouting, links in the text's own color. A document (`.md` alone) keeps its own.
  */
 .md--message {
   display: block;
@@ -3476,17 +3717,18 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   line-height: inherit;
 }
 .md--message > * + * {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .md-run {
   word-break: break-all;
 }
 .md--message > p + ul,
 .md--message > p + ol {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .md--message > .md__h {
-  margin: 22px 0 6px;
+  margin: 20px 0 4px;
+  font-size: calc(1em + 2px);
   font-weight: 650;
   letter-spacing: -0.005em;
 }
@@ -3494,7 +3736,7 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   margin-top: 0;
 }
 .md--message > .md__h + * {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 .md--message .md__h strong {
   font-weight: inherit;
@@ -3507,10 +3749,13 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   padding-left: 0;
 }
 .md--message ol {
-  padding-left: 22px;
+  list-style: none;
+  padding-left: 0;
+  /* From the list's own first number when it isn't 1 (`counter-reset` on the list, markdown.tsx). */
+  counter-reset: md-ol;
 }
 .md--message li + li {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .md--message ul > li:not(.md__task) {
   position: relative;
@@ -3521,11 +3766,41 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   content: "";
   position: absolute;
   left: 6px;
-  top: 0.78em;
+  top: 0.62em;
   width: 5px;
   height: 5px;
   border-radius: 1px;
   background: var(--faint);
+}
+/* In the middle of the item's first line, whatever the text size and the look's line (an engine without the line
+   unit keeps the em above). */
+@supports (top: 1lh) {
+  .md--message ul > li:not(.md__task)::before {
+    top: calc(0.5lh - 2.5px);
+  }
+}
+/* Numbers drawn as the square is: faint, by their digits, ending 15px in (a longer one reaches left, never into the
+   words), the words at 22px. */
+.md--message ol > li:not(.md__task) {
+  position: relative;
+  padding-left: 22px;
+  counter-increment: md-ol;
+}
+.md--message ol > li:not(.md__task)::before {
+  content: counter(md-ol) ".";
+  position: absolute;
+  right: calc(100% - 15px);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* A quote is a plate of its own: quieter words on the soft plate, no bar at its side. */
+.md--message blockquote {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--plate);
+  color: var(--ink-muted);
 }
 /* A message's list has no indent to pull a task back into: its box starts on the text's edge. `.md` too, so this
    outranks the wiki's `.md .md__task` pull-back further down, which a message (`md md--message`) also matches. */
@@ -3534,6 +3809,8 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 }
 .md--message a.ac-link {
   color: inherit;
+  /* A link in a sentence reads as the sentence's words, underlined; the kit's link (an action) is bold. */
+  font-weight: inherit;
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
   text-underline-offset: 3px;
@@ -4753,6 +5030,26 @@ html:not([data-pointer]) .settings__link:focus-visible {
 }
 .settings-rows > .ac-grouphead + .settings-row {
   border-top: 0;
+}
+/* Settings › About's update: each way to update (Docker, without it), its name 4 above its command, 16 between. */
+.about-update {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.about-update__way {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.about-update__name {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+.about-update__help {
+  margin: 0;
+  color: var(--ink-muted);
 }
 /* Under a card's title the rows start below it, a hairline above the first as between the others: a row's hover
    plate never reaches the title. */

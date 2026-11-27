@@ -41,6 +41,8 @@ struct Shown {
     covering: bool,
     /// Each showing gets a new one: a late hide meant for an earlier showing does nothing.
     generation: u64,
+    /// The cover's page asked to stay (`cover_hold`): the site's paint doesn't lift it, Show it anyway does.
+    held: bool,
 }
 
 /// On Linux, Tauri packs a child web view beside the site in the window's GtkBox, never over it (`add_child`'s
@@ -98,11 +100,18 @@ fn lock(app: &AppHandle) -> std::sync::MutexGuard<'_, Shown> {
 
 /// Covers the site now (it is loading a whole page again).
 pub fn show(app: &AppHandle) {
+    cover(app, false);
+}
+
+/// `held`: in the same step, so a paint that comes meanwhile can't lift it.
+fn cover(app: &AppHandle, held: bool) {
     let was_shown = {
         let mut shown = lock(app);
         let was_shown = shown.covering;
         shown.generation += 1;
         shown.covering = true;
+        // A new page: the cover's page checks it again and holds again if it must.
+        shown.held = held;
         was_shown
     };
     let Some(cover) = app.get_webview(LABEL) else { return };
@@ -132,7 +141,7 @@ fn window_is_key(app: &AppHandle) -> bool {
 pub fn hide(app: &AppHandle) {
     let generation = {
         let shown = lock(app);
-        if !shown.covering {
+        if !shown.covering || shown.held {
             return;
         }
         shown.generation
@@ -400,7 +409,20 @@ pub fn cover_hide(app: AppHandle, webview: tauri::Webview) -> Result<(), String>
         return Err("only the cover asks this".into());
     }
     crate::health::note(&app, "the page never painted: shown as it is, by hand");
+    lock(&app).held = false;
     hide(&app);
+    Ok(())
+}
+
+/// The cover: the server open now speaks an app API this app doesn't (cover/main.ts `checkVersion`). It covers the
+/// page (again, when the page painted first) and stays until Show it anyway or another page.
+#[tauri::command]
+pub fn cover_hold(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    if webview.label() != LABEL {
+        return Err("only the cover asks this".into());
+    }
+    crate::health::note(&app, "the server's app API isn't this app's: the cover stays");
+    cover(&app, true);
     Ok(())
 }
 

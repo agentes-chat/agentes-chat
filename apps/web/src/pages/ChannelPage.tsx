@@ -116,7 +116,7 @@ import {
   usageLine,
 } from "@agenteschat/client/lib/chat";
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
-import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import { choiceReplyLine, choiceReplyRows } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
 import { type ConsultPairItem, consultsForLine, type RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
@@ -4044,6 +4044,31 @@ function RunTail({ run }: { run: LiveRun }) {
 }
 
 /**
+ * The person's picks on a choice card (ADR 0124), sent as their message: the check on the first line, then a line per
+ * question, the question quiet and the answer standing out. A reply that doesn't carry them apart is one line.
+ */
+function ChoiceReply({ body, meta }: { body: string; meta: Record<string, unknown> | undefined }) {
+  const rows = choiceReplyRows(body, meta);
+  return (
+    <div className="choice-reply ac-iconline">
+      <Icon name="check" size={14} />
+      {rows ? (
+        <span className="choice-reply__rows">
+          {rows.map((r, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: the card's questions in their order, never reordered
+            <span key={i} className="choice-reply__row">
+              <span className="choice-reply__asked">{r.question}</span> <b>{r.answer}</b>
+            </span>
+          ))}
+        </span>
+      ) : (
+        <b>{choiceReplyLine(body)}</b>
+      )}
+    </div>
+  );
+}
+
+/**
  * Under a stopped answer: "Parado por você · Continuar", or "No limite de passos · Continuar" under the
  * reply of a run that reached its step limit, or just Continuar under the end of a long work its AI provider failed. Continuar starts a new run of the same agent from where it
  * stopped; it goes away for everyone once someone pressed it.
@@ -5124,12 +5149,7 @@ export const TimelineMessage = memo(function TimelineMessage({
                 </ClippedBody>
               </MessageText>
             )}
-            {choiceReply && (
-              <p className="choice-reply">
-                <Icon name="check" size={14} />
-                <b>{choiceReplyLine(body)}</b>
-              </p>
-            )}
+            {choiceReply && <ChoiceReply body={body} meta={m.meta} />}
             {media && <ChatMedia media={media} />}
             {voice && <ChatVoice message={m} voice={voice} />}
             {m.author.type === "agent" && meta.speedFallback === true && <SpeedFallbackLine agent={agent} />}

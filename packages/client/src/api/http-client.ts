@@ -6,6 +6,7 @@ import type { OnboardingStepId } from "../lib/onboarding";
 import { type LodiPrefs, lodiPrefsOf } from "../lib/right-hand-prefs";
 import { browserTimezone } from "../lib/routines";
 import { CLOUD_SERVER, withoutTrailingSlashes } from "../lib/server";
+import { fetchServerRelease } from "../lib/server-release";
 import { createLiveApi } from "../live/api";
 import { consultSeeds } from "../realtime/consults";
 import { steerStore } from "../realtime/steer";
@@ -608,6 +609,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }
       },
       instance: () => request<Instance>("/api/instance"),
+      serverRelease: () => fetchServerRelease(options.fetch ?? ((input, init) => fetch(input, init))),
       telemetry: () => nullOn(404, () => request<ServerTelemetry>("/api/app/telemetry")),
       setTelemetry: (enabled) => request<ServerTelemetry>("/api/app/telemetry", { method: "PUT", json: { enabled } }),
       reportVitals: (report) => request<void>("/api/app/client-vitals", { json: report }),

@@ -227,7 +227,7 @@ function JoinNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
         <Text variant="small" tone="muted">
           {joinFacts(t, request)}
         </Text>
-        <JoinInternetLine />
+        <JoinInternetLine os={request.os} />
       </WaitingCard>
     );
   // Answered elsewhere, or out of time: the card opens the devices.
