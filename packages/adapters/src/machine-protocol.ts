@@ -2375,6 +2375,11 @@ export interface BrainTurnTimings {
   /** Not `warm`: why the turn started a new process (`BRAIN_COLD_CAUSES`). */
   cold?: BrainColdCause;
   initMs?: number;
+  /**
+   * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
+   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   */
+  sentMs?: number;
   firstEventMs?: number;
   firstTokenMs?: number;
   firstAssistantMs?: number;
@@ -2396,6 +2401,9 @@ export interface BrainTurnTimings {
  * and on the server, which reports it: the run's context, the work before the turn (checkouts), a new CLI until it was
  * ready, the first token after that, and a reply with no tool call from the run's claim to its end.
  */
+/** When a turn's CLI could start on it (ms from the turn's start): started, and handed the turn. */
+export const cliReadyMs = (t: Pick<BrainTurnTimings, "initMs" | "sentMs">) => Math.max(t.initMs ?? 0, t.sentMs ?? 0);
+
 export const SLOW_TURN_BUDGETS = {
   contextMs: 1500,
   preTurnMs: 2000,
@@ -2431,6 +2439,7 @@ export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
 /** The measures of `BrainTurnTimings` past `warm`, each a whole number from 0 up to a day. */
 export const BRAIN_TURN_MEASURES = [
   "initMs",
+  "sentMs",
   "firstEventMs",
   "firstTokenMs",
   "firstAssistantMs",

@@ -37,6 +37,22 @@ test("a long log keeps its first lines and its last ones", () => {
   expect(kept.at(-1)).toEndWith("n=99");
 });
 
+test("a cold start's many MCP lines never crowd out the API's wait; a server's stderr never goes", () => {
+  const mcp = Array.from({ length: 80 }, (_, i) => `2026-11-26T22:35:00.100Z [DEBUG] MCP server "agentes": step ${i}`);
+  const log = [
+    ...mcp,
+    '2026-11-26T22:35:00.200Z [ERROR] "MCP server \\"agentes\\" Server stderr: the customer list she pasted"',
+    "2026-11-26T22:35:00.300Z [DEBUG] [API REQUEST] /v1/messages x-client-request-id=2d94e0f6",
+    "2026-11-26T22:35:08.300Z [DEBUG] [API:timing] first byte after 8000ms",
+    ...mcp,
+  ];
+  const kept = debugEvidence(log.join("\n"), START);
+  expect(kept).toHaveLength(60);
+  expect(kept).toContain("+8300ms [DEBUG] [API:timing] first byte after 8000ms");
+  expect(kept.some((l) => l.includes("[API REQUEST]"))).toBe(true);
+  expect(kept.join("\n")).not.toContain("pasted");
+});
+
 test("a turn reads its log from where it began, and a log past its bound is emptied as a turn starts", () => {
   const file = path.join(dir, "debug.log");
   expect(debugLogMark(file)).toBe(0);
@@ -57,4 +73,7 @@ test("a turn is slow past its CLI's start, a retry, or a late first token once r
   expect(slowTurn({ initMs: 4000, firstTokenMs: 9000 })).toBe(false);
   expect(slowTurn({ firstTokenMs: 900, retries: 1 })).toBe(true);
   expect(slowTurn({})).toBe(false);
+  // Its runner's own wait before the CLI had the turn is its own budget, and the first token counts from after it.
+  expect(slowTurn({ sentMs: 30_000, firstTokenMs: 31_000 })).toBe(true);
+  expect(slowTurn({ sentMs: 1000, firstTokenMs: 6500 })).toBe(false);
 });

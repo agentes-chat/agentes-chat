@@ -5708,6 +5708,11 @@
                         "minimum": 0,
                         "description": "A new process until it said it was ready."
                       },
+                      "sentMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to when the runner handed it to its CLI: its own waits before (a turn the process ran by itself, a model switch)."
+                      },
                       "firstEventMs": {
                         "type": ["integer", "null"],
                         "minimum": 0,
@@ -5748,6 +5753,7 @@
                       "warm",
                       "cold",
                       "initMs",
+                      "sentMs",
                       "firstEventMs",
                       "firstTokenMs",
                       "firstAssistantMs",

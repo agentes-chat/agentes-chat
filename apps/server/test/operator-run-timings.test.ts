@@ -102,6 +102,7 @@ type Claim = {
 // A turn's measures past the three every runner gives, none of them said.
 const unsaid = {
   cold: null,
+  sentMs: null,
   firstTokenMs: null,
   firstAssistantMs: null,
   retries: null,

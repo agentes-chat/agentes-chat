@@ -1,4 +1,5 @@
 import type { ErrorReporter, ReportedError } from "@agenteschat/adapters/error-reports";
+import { scrubLogLine } from "@agenteschat/adapters/error-scrub";
 import type { RunProfileReport, TurnTrace } from "@agenteschat/engine";
 
 /** A turn that ended so on purpose: nothing went wrong. */
@@ -29,7 +30,8 @@ function turnContext(turn: TurnTrace | undefined) {
       tools_ms: turn.tools?.ms,
       ...measures,
     },
-    ...(evidence?.length ? { cli_log: { lines: evidence } } : {}),
+    // Scrubbed again: a computer's runner is the workspace's, and its lines reach the error server as sent.
+    ...(evidence?.length ? { cli_log: { lines: evidence.map((line) => scrubLogLine(line)) } } : {}),
   };
 }
 

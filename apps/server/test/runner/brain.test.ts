@@ -2703,6 +2703,8 @@ test.if(posix)("a turn of its own stuck past the wait: the process is killed and
     await waitFor(() => proc?.strayTurn === true);
     const next = await turn(2, "after");
     expect(next.final).toMatchObject({ type: "done", text: "echo 1: after" });
+    // The wait for that turn is the runner's, before its CLI had this one (never the API's first token).
+    expect(next.final.type === "done" ? next.final.timings?.sentMs : 0).toBeGreaterThanOrEqual(300);
     noLeak(next);
     await waitFor(() => proc?.exited === true);
     expect(spawns()).toHaveLength(2);

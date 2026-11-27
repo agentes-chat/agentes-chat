@@ -1,4 +1,4 @@
-import { type BrainTurnTimings, SLOW_TURN_BUDGETS } from "@agenteschat/adapters";
+import { type BrainTurnTimings, cliReadyMs, SLOW_TURN_BUDGETS } from "@agenteschat/adapters";
 import type { BrainEvent, BrainPhase } from "./brains/types";
 import type { StageTiming } from "./profile";
 
@@ -118,11 +118,20 @@ export function slowMarks(
     const r = t.runner;
     if ((t.preTurnMs ?? 0) > b.preTurnMs)
       marks.push({ stage: "pre_turn", ms: t.preTurnMs ?? 0, budgetMs: b.preTurnMs, cause: "checkouts", turn });
+    // The runner's own waits before it handed the turn to its CLI (`sentMs`): ours, never the API's.
+    if (r?.sentMs !== undefined && r.sentMs > b.preTurnMs)
+      marks.push({
+        stage: "pre_turn",
+        ms: r.sentMs,
+        budgetMs: b.preTurnMs,
+        cause: r.warm ? "runner_wait" : "spawn",
+        turn,
+      });
     if (r?.initMs !== undefined && r.initMs > b.initMs)
       marks.push({ stage: "init", ms: r.initMs, budgetMs: b.initMs, cause: r.cold ?? "cold", turn });
     const firstByte =
       r?.firstTokenMs !== undefined
-        ? r.firstTokenMs - (r.initMs ?? 0)
+        ? r.firstTokenMs - cliReadyMs(r)
         : t.firstTextMs !== undefined || t.firstEventMs !== undefined
           ? (t.firstTextMs ?? t.firstEventMs ?? 0) - (t.preTurnMs ?? 0)
           : t.end === "done"

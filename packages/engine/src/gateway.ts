@@ -114,6 +114,12 @@ export const EMBED_QUERY_CALL_WAITS = 4;
  */
 export const EMBED_SLOW_SPELL_MS = 60_000;
 export const EMBED_SLOW_SPELL_WAIT_MS = 400;
+/**
+ * A query's call still unanswered after this sends the same request again, and the first answer of the two is the
+ * vector. The hosted model's slow answers are mostly one call's, not a spell's (production, 2026-11: a query after a
+ * slow one was slow 1 time in 4, after a quick one 1 in 9), so a second call is nearly always quick.
+ */
+export const EMBED_QUERY_HEDGE_MS = 500;
 /** How long a query's vector is kept for the same words, and how many are kept. */
 export const QUERY_VECTOR_TTL_MS = 10 * 60_000;
 const QUERY_VECTORS_KEPT = 256;
@@ -1243,7 +1249,32 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const askedAt = Date.now();
       const wait = askedAt < slowSpellUntil ? Math.min(waitMs, EMBED_SLOW_SPELL_WAIT_MS) : waitMs;
       if (!kept || Date.now() - kept.at > QUERY_VECTOR_TTL_MS) {
-        const result = embedCall(embeddings, call, waitMs * EMBED_QUERY_CALL_WAITS);
+        const once = () => embedCall(embeddings, call, waitMs * EMBED_QUERY_CALL_WAITS);
+        const first = once();
+        const result =
+          EMBED_QUERY_HEDGE_MS >= waitMs
+            ? first
+            : Promise.any([
+                first,
+                new Promise<EmbeddingResult>((resolve, reject) => {
+                  let sent = false;
+                  const hedge = setTimeout(() => {
+                    sent = true;
+                    once().then(resolve, reject);
+                  }, EMBED_QUERY_HEDGE_MS);
+                  // Answered, or failed before the hedge: no second call (a failure is the query's at once).
+                  first.then(
+                    () => clearTimeout(hedge),
+                    (error) => {
+                      if (sent) return;
+                      clearTimeout(hedge);
+                      reject(error);
+                    },
+                  );
+                }),
+              ]).catch((error) => {
+                throw error instanceof AggregateError ? error.errors[0] : error;
+              });
         // Answered within the whole wait: the spell, if any, is over.
         result.then(
           () => {

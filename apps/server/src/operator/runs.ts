@@ -389,6 +389,10 @@ const Trace = z
                     "Not warm: why it started a new process (`coldStarts.cause` of the run timings); null when warm or an older runner didn't say.",
                 }),
                 initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
+                sentMs: Count.nullable().openapi({
+                  description:
+                    "Turn start to when the runner handed it to its CLI: its own waits before (a turn the process ran by itself, a model switch).",
+                }),
                 firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
                 firstTokenMs: Count.nullable().openapi({
                   description: "Turn start to the model API's first streamed message (time to first token).",

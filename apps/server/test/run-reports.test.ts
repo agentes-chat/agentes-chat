@@ -75,3 +75,18 @@ test("a slow turn and a failed one are reports grouped by what they are, with th
   });
   expect(broke?.tags).toMatchObject({ code: "claude_failed", brain: "claude_code" });
 });
+
+test("a CLI log line as a runner sent it is scrubbed again before it is reported", async () => {
+  const errors = createFakeErrorReporter();
+  const line = '+5ms [ERROR] MCP server "agentes" failed for ana@example.com with sk-ant-oat01-FAKEFAKEFAKEFAKEFAKE';
+  await reportRunProfile(
+    errors,
+    profile({
+      turns: [{ brain: "claude_code", at: 0, ms: 300, end: "claude_failed", runner: { warm: true, evidence: [line] } }],
+    }),
+  );
+  expect(errors.reports[0]?.error).toMatchObject({ contexts: { cli_log: { lines: [expect.any(String)] } } });
+  const sent = JSON.stringify(errors.reports[0]?.error);
+  expect(sent).not.toContain("ana@example.com");
+  expect(sent).not.toContain("FAKEFAKEFAKE");
+});

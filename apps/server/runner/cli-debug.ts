@@ -1,6 +1,11 @@
 import { closeSync, openSync, readSync, statSync, truncateSync } from "node:fs";
 import { scrubLogLine } from "@agenteschat/adapters/error-scrub";
-import { BRAIN_LIMITS, type BrainTurnTimings, SLOW_TURN_BUDGETS } from "@agenteschat/adapters/machine-protocol";
+import {
+  BRAIN_LIMITS,
+  type BrainTurnTimings,
+  cliReadyMs,
+  SLOW_TURN_BUDGETS,
+} from "@agenteschat/adapters/machine-protocol";
 
 /**
  * Claude Code's own debug log (`--debug-file`), one per process in its folder, read for a turn that is slow or failed:
@@ -21,7 +26,9 @@ const TURN_READ_MAX_BYTES = 1024 * 1024;
  */
 const EXPLAINS =
   /\[API|\[dispatch\]|first chunk|\bMCP\b|oauth|token refresh|refresh(?:ed|ing)? (?:the )?token|retry|retrying|overloaded|rate.?limit|\b(?:401|429|5\d\d)\b|timed? ?out|ECONN|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket|TLS|DNS|proxy|event-loop-stall|\[STARTUP\]|\[engine\] turn|\[(?:ERROR|WARN)\]/i;
-const NEVER = /\bHook\b.*\bsuccess:|"content"|\bprompt\b.*:/i;
+const NEVER = /\bHook\b.*\bsuccess:|"content"|\bprompt\b.*:|Server stderr:/i;
+/** Lines that time the model's own wait: kept first when a turn has more lines than its evidence holds. */
+const KEY = /\[API|\[dispatch\]|first chunk|\[engine\] turn|retry|overloaded|\b(?:429|529)\b|rate.?limit/i;
 const LINE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) (\[[A-Z]+\]) (.*)$/;
 
 /** Where a turn's lines start: the log's size now, after emptying one past its bound. */
@@ -68,14 +75,23 @@ export function debugEvidence(text: string, startedAt: number): string[] {
     kept.push(scrubLogLine(`${at >= 0 ? "+" : ""}${at}ms ${level} ${said}`).slice(0, BRAIN_LIMITS.evidenceLine));
   }
   const max = BRAIN_LIMITS.evidenceLines;
-  return kept.length <= max ? kept : [...kept.slice(0, max - 20), ...kept.slice(-20)];
+  if (kept.length <= max) return kept;
+  // A cold start's MCP and startup lines would fill it before the API's: those go first, in order, the rest after.
+  const ends = (list: number[]) => (list.length <= max ? list : [...list.slice(0, max - 20), ...list.slice(-20)]);
+  const all = kept.map((_, i) => i);
+  const chosen = new Set(ends(all.filter((i) => KEY.test(kept[i] ?? ""))));
+  for (const i of ends(all.filter((i) => !chosen.has(i)))) if (chosen.size < max) chosen.add(i);
+  return kept.filter((_, i) => chosen.has(i));
 }
 
-/** A turn past a runner's budget (`SLOW_TURN_BUDGETS`): its CLI's start, or its first token once ready. */
-export function slowTurn(t: Pick<BrainTurnTimings, "initMs" | "firstTokenMs" | "retries">): boolean {
+/**
+ * A turn past a runner's budget (`SLOW_TURN_BUDGETS`): its CLI's start, the runner's waits before it handed the turn
+ * over, or its first token once both were done.
+ */
+export function slowTurn(t: Pick<BrainTurnTimings, "initMs" | "sentMs" | "firstTokenMs" | "retries">): boolean {
   const b = SLOW_TURN_BUDGETS;
-  if ((t.initMs ?? 0) > b.initMs || (t.retries ?? 0) > 0) return true;
-  return t.firstTokenMs !== undefined && t.firstTokenMs - (t.initMs ?? 0) > b.firstByteMs;
+  if ((t.initMs ?? 0) > b.initMs || (t.sentMs ?? 0) > b.preTurnMs || (t.retries ?? 0) > 0) return true;
+  return t.firstTokenMs !== undefined && t.firstTokenMs - cliReadyMs(t) > b.firstByteMs;
 }
 
 /** A turn's evidence from its process's log (`file`, marked at `from` as the turn began). */

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createToolGateway, SLOW_TOOL_SOURCE_MS, type ToolContext } from "../src";
+import { claimWaterfall } from "../src/run-timings";
 import { slowMarks, type TurnTrace } from "../src/turn-trace";
 import { setup } from "./fixtures";
 
@@ -31,6 +32,35 @@ test("the first token is timed from when the CLI was ready, else from the server
     { stage: "first_byte", ms: 7200, budgetMs: 6000, cause: "api_retry", turn: 1 },
     { stage: "first_byte", ms: 6500, budgetMs: 6000, cause: "wait", turn: 2 },
   ]);
+});
+
+test("a warm turn's wait on its runner before its CLI had it is the runner's, never the API's", () => {
+  const waitedOnItsOwn = turn({ runner: { warm: true, sentMs: 30_000, firstTokenMs: 31_500 } });
+  expect(slowMarks([stage("model#1", 32_000)], [waitedOnItsOwn])).toEqual([
+    { stage: "pre_turn", ms: 30_000, budgetMs: 2000, cause: "runner_wait", turn: 1 },
+    { stage: "reply", ms: 32_000, budgetMs: 10_000, cause: "model" },
+  ]);
+});
+
+test("a turn's marks sit after what was timed before its claim (the router, a wait for room)", () => {
+  const stages = [stage("router", 100), stage("room_wait", 5000), stage("claim", 20), stage("model#1", 3000)];
+  const t = {
+    brain: "claude_code",
+    model: null,
+    atMs: 20,
+    ms: 3000,
+    end: "done",
+    preTurnMs: null,
+    firstEventMs: null,
+    firstTextMs: 2000,
+    tools: null,
+    runner: null,
+    evidence: [],
+    system: {},
+  };
+  const spans = claimWaterfall(stages, [t]);
+  expect(spans.find((s) => s.span === "turn#1")).toEqual({ span: "turn#1", startMs: 5120, ms: 3000 });
+  expect(spans.find((s) => s.span === "turn#1.first_text")?.startMs).toBe(7120);
 });
 
 test("a turn that failed before any first token says its code; a quick reply of one turn past 10 s names its stage", () => {

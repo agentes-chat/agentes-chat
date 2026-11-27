@@ -2814,11 +2814,13 @@ export class BrainManager {
     const since = (at: number | null | undefined) => (at != null && at >= startedAt ? at - startedAt : undefined);
     /** Where this turn's lines of its CLI's debug log begin. */
     let debugFrom: number | undefined;
+    let sentAt: number | undefined;
     const timed = (final: WireBrainEvent, used: Live): WireBrainEvent => {
       if (final.type !== "done" && final.type !== "error") return final;
       const s = used.proc.parser.stats;
       const measures: Omit<BrainTurnTimings, "warm"> = {
         initMs: since(started?.proc.initAt),
+        sentMs: since(sentAt),
         firstEventMs,
         firstTokenMs: since(s.firstTokenAt),
         firstAssistantMs: since(s.firstAssistantAt),
@@ -2893,6 +2895,7 @@ export class BrainManager {
       live.proc.parser.resetStats();
       // A process this turn started: its log from its first line, its start included.
       if (live.debugFile) debugFrom = started === live ? 0 : debugLogMark(live.debugFile);
+      sentAt = Date.now();
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live, "closed");

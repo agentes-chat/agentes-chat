@@ -141,23 +141,29 @@ export function claimWaterfall(stages: readonly ClaimStage[], turns: readonly Cl
     }
     at += s.ms;
   }
+  // A turn's `at` counts from its claim's own start (`claim`), after what was timed before it (the router, a wait for
+  // room), which the stages list first.
+  const claimAt = stages.findIndex((s) => s.stage === "claim");
+  const origin = stages.slice(0, Math.max(0, claimAt)).reduce((n, s) => n + s.ms, 0);
   turns.forEach((t, i) => {
     const name = `turn#${i + 1}`;
     const pre = t.preTurnMs ?? 0;
-    spans.push({ span: name, startMs: t.atMs, ms: t.ms });
-    if (pre > 0) spans.push({ span: `${name}.pre_turn`, startMs: t.atMs, ms: pre });
-    const ready = t.atMs + pre;
+    const at = origin + t.atMs;
+    spans.push({ span: name, startMs: at, ms: t.ms });
+    if (pre > 0) spans.push({ span: `${name}.pre_turn`, startMs: at, ms: pre });
+    const ready = at + pre;
     if (t.runner?.initMs != null) spans.push({ span: `${name}.init`, startMs: ready, ms: t.runner.initMs });
     // `firstRequestMs` where the runner's measures have it.
     const measured = t.runner as Partial<Record<string, number | null>> | null;
     for (const [mark, ms] of [
+      ["sent", measured?.sentMs],
       ["first_request", measured?.firstRequestMs],
       ["first_token", measured?.firstTokenMs],
     ] as const) {
       if (ms != null) spans.push({ span: `${name}.${mark}`, startMs: ready + ms, ms: 0 });
     }
-    if (t.firstEventMs != null) spans.push({ span: `${name}.first_event`, startMs: t.atMs + t.firstEventMs, ms: 0 });
-    if (t.firstTextMs != null) spans.push({ span: `${name}.first_text`, startMs: t.atMs + t.firstTextMs, ms: 0 });
+    if (t.firstEventMs != null) spans.push({ span: `${name}.first_event`, startMs: at + t.firstEventMs, ms: 0 });
+    if (t.firstTextMs != null) spans.push({ span: `${name}.first_text`, startMs: at + t.firstTextMs, ms: 0 });
     if (t.tools) spans.push({ span: `${name}.own_tools`, startMs: ready, ms: t.tools.ms });
   });
   return spans.sort((a, b) => a.startMs - b.startMs).slice(0, RUN_CLAIM_STAGES_MAX);
