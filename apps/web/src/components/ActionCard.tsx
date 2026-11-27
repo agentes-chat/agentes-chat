@@ -278,7 +278,7 @@ function ConnectAppCardView({ card, messageId }: { card: ConnectAppCard; message
             )}
             {card.signIn && <p className="muted">{connectSignInLine(t, card)}</p>}
             {!may && (
-              <div className="ac-iconline">
+              <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <p>
                   {deciders
                     ? t("actionCard.connect_app.whoCan", { names: deciders })
