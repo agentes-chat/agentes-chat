@@ -1,6 +1,7 @@
 {
   "app": {
     "pt-BR": [
+      "devices.threads",
       "surface.nudge.hours",
       "live.kinds.slideCount",
       "live.shell.formats.xlsx",
@@ -275,7 +276,6 @@
       "devices.transport.usb",
       "devices.transport.wifi",
       "devices.status.offline",
-      "devices.facts.cpu",
       "devices.tools.java",
       "devices.tools.androidSdk",
       "devices.tools.adb",
@@ -671,6 +671,7 @@
       "connectors.names.datadog_ap2"
     ],
     "fr": [
+      "devices.threads",
       "agentPage.facts.budget",
       "surface.nudge.hours",
       "usage.kinds.routines",
@@ -1212,7 +1213,8 @@
       "connectors.names.datadog_ap1",
       "connectors.names.datadog_ap2",
       "machines.maintenance.short.host_maintenance",
-      "machines.maintenance.short.other"
+      "machines.maintenance.short.other",
+      "unreads.conversations"
     ],
     "de": [
       "devices.permission.names.automation",
@@ -1738,6 +1740,8 @@
       "integrations.name"
     ],
     "it": [
+      "devices.threads",
+      "devices.cores",
       "agentPage.facts.budget",
       "chat.consultPair.askedIn",
       "surface.nudge.hours",
@@ -2157,6 +2161,7 @@
       "connectors.names.datadog_ap2"
     ],
     "nl": [
+      "devices.threads",
       "devices.permission.names.camera",
       "agentPage.facts.budget",
       "chat.consultPair.askedIn",
@@ -2855,7 +2860,9 @@
       "skills.page.colSkill",
       "skills.one.inChannel",
       "skills.page.inRepo",
-      "integrations.badge"
+      "integrations.badge",
+      "sidebarColumn.label",
+      "sidebarDms.agentTag"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -2866,7 +2873,6 @@
       "devices.system.ios",
       "devices.transport.usb",
       "devices.transport.wifi",
-      "devices.facts.cpu",
       "devices.tools.java",
       "devices.tools.androidSdk",
       "devices.tools.adb",
@@ -3048,7 +3054,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "ko": [
       "live.sheet.args.k",
@@ -3059,7 +3066,6 @@
       "devices.system.ios",
       "devices.transport.usb",
       "devices.transport.wifi",
-      "devices.facts.cpu",
       "devices.tools.java",
       "devices.tools.androidSdk",
       "devices.tools.adb",
@@ -3234,7 +3240,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3242,7 +3249,6 @@
       "devices.system.ios",
       "devices.transport.usb",
       "devices.transport.wifi",
-      "devices.facts.cpu",
       "devices.tools.java",
       "devices.tools.androidSdk",
       "devices.tools.adb",
@@ -3409,7 +3415,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "id": [
       "drive.folder",
@@ -3437,7 +3444,6 @@
       "devices.transport.usb",
       "devices.transport.wifi",
       "devices.status.offline",
-      "devices.facts.cpu",
       "devices.facts.model",
       "devices.tools.java",
       "devices.tools.androidSdk",
@@ -3767,7 +3773,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -4352,7 +4359,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "ru": [
       "live.canvas.sizes.short.s",
@@ -4731,7 +4739,9 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.choice.effort",
-      "aiHub.choice.api"
+      "aiHub.choice.api",
+      "chats.view.sections",
+      "sections.title"
     ],
     "de": [
       "live.doc.styles.code",

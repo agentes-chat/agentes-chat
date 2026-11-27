@@ -4,12 +4,17 @@
     "send": "Wyślij"
   },
   "categories": {
-    "where": "Gdzie widać #{{channel}}",
-    "whereHelp": "Zmienia się dla wszystkich. Skład kanału zostaje bez zmian.",
-    "order": "Miejsce na liście",
     "up": "Przesuń w górę",
     "down": "Przesuń w dół",
     "channelPosition": "{{at}} z {{count}}."
+  },
+  "sections": {
+    "title": "Sekcja",
+    "where": "Gdzie #{{channel}} jest dla ciebie",
+    "whereHelp": "Zmienia się tylko twoja lista. Każdy układa własne sekcje.",
+    "none": "Bez sekcji",
+    "order": "Miejsce w sekcji",
+    "tooLong": "Użyj najwyżej 40 znaków."
   },
   "blocks": {
     "send": "Wyślij",
@@ -202,11 +207,11 @@
       "text": "Serwer może nie działać albo być poza twoją siecią. Czaty pojawią się same, gdy wróci.",
       "kept": "Pokazujemy to, co było już w aplikacji."
     },
-    "pinned": "Przypięte",
+    "favorites": "Ulubione",
     "recent": "Ostatnie",
     "view": {
       "title": "Pokaż rozmowy",
-      "sectors": "Działy",
+      "sections": "Sekcje",
       "dms": "Wiadomości bezpośrednie",
       "channels": "Kanały"
     },

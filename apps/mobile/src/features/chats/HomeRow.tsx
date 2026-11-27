@@ -51,7 +51,7 @@ export const HomeRow = memo(function HomeRow({
     if (pinLabel === null) return null;
     const pin: SwipeAction = {
       label: pinLabel,
-      icon: "pin",
+      icon: "star",
       color: c.agent,
       ink: c.onAgent,
       // The menu's own action, as it stands when the pane is pressed.

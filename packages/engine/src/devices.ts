@@ -21,6 +21,7 @@ import {
 import { and, type Database, type Executor, eq, gt, inArray, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
 import { AUDIENCE_MODES, type AudienceMode } from "./audience";
 import { recordAudit } from "./audit";
+import { tellBorrowersOnly } from "./egress-share";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import type { MachineCaller, MachineHub } from "./machine-hub";
@@ -121,6 +122,12 @@ export interface ComputerDevice {
   arch: string;
   hostname: string;
   cpus: number | null;
+  /** The processor's name (`Apple M4 Pro`), as its runner said it; null: an older runner. */
+  cpuModel: string | null;
+  /** Its physical cores where its runner said them (`cpus` counts threads); null: an older runner, or Windows. */
+  cores: number | null;
+  /** The system and its version (`macOS 26.1`); null: an older runner, or the workspace's own computer. */
+  system: string | null;
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
@@ -138,9 +145,10 @@ export interface ComputerDevice {
   };
   /**
    * ADR 0237, a person's computer in a workspace that has its own computer: whether its owner lends it its internet
-   * (`on`), and whether the workspace's computer goes out through it now (`inUse`). Null: nothing to lend to.
+   * (`on`), and whether the workspace's computer goes out through it now (`inUse`). `only` (amendment 2026-11-27 c):
+   * the workspace's agents use only its internet, AI calls included. Null: nothing to lend to.
    */
-  shareInternet: { on: boolean; inUse: boolean } | null;
+  shareInternet: { on: boolean; inUse: boolean; only: boolean } | null;
   /** What we do to the workspace's own computer now (`shownMaintenance`), away or working slower; null: nothing. */
   maintenance: ShownMaintenance | null;
   /** Each agent works as its own OS user there (a server install). */
@@ -314,6 +322,8 @@ export interface DevicesList {
    * the apps say so where a computer joins.
    */
   lendsInternet: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead (`serverBox`). */
+  serverBoxesBorrow: boolean;
 }
 
 /** Background tasks a computer runs at once when its runner doesn't say (before `TASK_LIMIT_PROTOCOL`): its default. */
@@ -490,12 +500,17 @@ export async function listDevices(
       arch: managed ? "" : m.arch,
       hostname: managed ? "" : m.hostname,
       cpus: m.size?.cpus ?? null,
+      cpuModel: m.size?.cpuModel ?? null,
+      cores: m.size?.cores ?? null,
+      system: managed ? null : (m.size?.system ?? null),
       memoryGb: m.size?.memoryGb ?? null,
       ownerUserId: m.pairedByUserId,
       belongsToWorkspace: m.belongsToWorkspace,
       spill: { own: m.spillOwn, first: m.spillFirst },
       shareInternet:
-        lendsInternet && m.kind === "connected" ? { on: m.egressShare, inUse: m.egressShare && lentLately(m) } : null,
+        lendsInternet && m.kind === "connected"
+          ? { on: m.egressShare, inUse: m.egressShare && lentLately(m), only: m.egressShare && m.egressOnly }
+          : null,
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
@@ -549,7 +564,13 @@ export async function listDevices(
     )
     .orderBy(machineDeviceCodes.createdAt);
   const requests = asking.filter((r) => admin || r.makerId === viewerUserId).map((r) => joinRequestOf(r.code));
-  return { devices, requests, devicesHelp: await devicesHelpOn(db, orgId), lendsInternet };
+  return {
+    devices,
+    requests,
+    devicesHelp: await devicesHelpOn(db, orgId),
+    lendsInternet,
+    serverBoxesBorrow: serverLending(),
+  };
 }
 
 /** A device code that came with a connect link, as the apps show it. */
@@ -654,6 +675,11 @@ export interface ComputerDeviceInput {
   pushHarder?: boolean;
   /** ADR 0237: lend its internet to the workspace's own computer; on again (or on once more) picks it first. */
   shareInternet?: boolean;
+  /**
+   * ADR 0237 amendment 2026-11-27 c, with `shareInternet` on: the workspace's agents use only this computer's
+   * internet, never their usual way. Its owner's to turn on; off with `shareInternet` off.
+   */
+  internetOnly?: boolean;
 }
 
 /**
@@ -712,6 +738,19 @@ export async function updateComputerDevice(
     }
     set.egressShare = input.shareInternet;
     if (input.shareInternet) set.egressShareAt = new Date();
+    else set.egressOnly = false;
+  }
+  if (input.internetOnly !== undefined) {
+    if (machine.kind !== "connected") {
+      throw new ForbiddenError("Only a person's own computer lends its internet", "device.share_connected_only");
+    }
+    if (input.internetOnly && !owner) {
+      throw new ForbiddenError("Only the device's owner can lend its internet", "device.share_owner_only");
+    }
+    if (input.internetOnly && !(set.egressShare ?? machine.egressShare)) {
+      throw new ValidationError("Turn on lending this computer's internet first", "device.share_off");
+    }
+    if (input.shareInternet !== false) set.egressOnly = input.internetOnly;
   }
   if (input.maxTasks !== undefined || input.pushHarder !== undefined) {
     if (!owner && machine.pairedByUserId !== null) {
@@ -779,6 +818,10 @@ export async function updateComputerDevice(
   if (borrows !== borrowsInternet(machine) && machine.protocol >= EGRESS_PROXY_PROTOCOL) {
     await deps.hub?.call(machine.id, { op: "egress.proxy", on: borrows }, { timeoutMs: 5_000 }).catch(() => undefined);
   }
+  // The workspace's borrowing computers hear at once whether nothing of theirs goes the usual way now, without the
+  // answer waiting for them (one that misses it hears it in its next `welcome`).
+  if ((set.egressOnly ?? machine.egressOnly) !== machine.egressOnly && deps.hub)
+    void tellBorrowersOnly({ db: deps.db, hub: deps.hub }, orgId).catch(() => undefined);
   if (input.shareInternet === false)
     await resolveNotifications(deps, orgId, { groupKey: internetSharedGroup(machine.id) });
   return deviceOf(deps.db, actorId, orgId, machine.id);

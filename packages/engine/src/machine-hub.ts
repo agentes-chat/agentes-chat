@@ -7,10 +7,12 @@ import {
   CLAUDE_SHARED_PROTOCOL,
   CLI_COPIES_PROTOCOL,
   CO_AUTHOR_CASE_PROTOCOL,
+  EGRESS_ONLY_PROTOCOL,
   EGRESS_PROXY_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
   HEARTBEAT_MS,
+  HELD_TURN_PROTOCOL,
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
   KEEP_RUNNING_PROTOCOL,
@@ -47,7 +49,7 @@ import { UUID } from "./authority";
 import { TtlCache } from "./cache";
 import { CLI_OF_KIND, storeCliFetch } from "./cli-fetch";
 import { noticeComputerBack, queueDownChecks } from "./computer-down";
-import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
+import { internetSharedGroup, type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
 import { codeCommitAuthor } from "./git/person-account";
 import { agentCoAuthorLine, oldCoAuthorCase } from "./git/signature";
@@ -88,6 +90,7 @@ import {
   deletedAgentIds,
   getMachineById,
   inStandby,
+  lendsOffAtHello,
   MACHINE_CONTROL_TOPIC,
   MachineDroppedError,
   MachineOfflineError,
@@ -104,6 +107,7 @@ import {
   type ShownMaintenance,
   shownMaintenance,
   shownStandby,
+  usesOnlyLent,
   withTaskLimit,
 } from "./machines";
 import {
@@ -112,6 +116,7 @@ import {
   notifyComputerDiskFull,
   notifyComputerNoChrome,
 } from "./notification-producers";
+import { resolveNotifications } from "./notifications";
 import { recordDesktopStarted } from "./operator-events";
 import { enqueue } from "./outbox";
 import { isRightHand } from "./right-hand";
@@ -625,6 +630,8 @@ export function createMachineHub(deps: MachineHubDeps) {
   const mcpRepeatWaitMs = deps.mcpRepeatWaitMs ?? MCP_REPEAT_WAIT_MS;
   const brainIdleMs = deps.brainIdleMs ?? BRAIN_IDLE_TIMEOUT_MS;
   const rpcLivenessMs = deps.rpcLivenessMs ?? 5000;
+  // The holder closes a silent socket by four heartbeats; its last write may be a heartbeat and a write's gap older.
+  const holderSilentMs = 5 * heartbeatMs + Math.min(40_000, heartbeatMs * 1.6);
   /** Sockets on this replica, by machine id. */
   const local = new Map<string, MachineConnection>();
   /** Cross-replica requests this replica is running, to cancel them. */
@@ -839,10 +846,19 @@ export function createMachineHub(deps: MachineHubDeps) {
       (!machine.name || (machine.hostname !== "" && machine.name === cleanMachineName(machine.hostname)))
         ? cleanMachineName(frame.hostname)
         : "";
+    // What it says now decides whether it lends (ADR 0237): a server box borrows unless its owner turned lending on.
+    const said = {
+      ...machine,
+      os: frame.os,
+      protocol: frame.protocol,
+      executors: frame.app ? { app: true as const } : {},
+    };
+    const lendOff = lendsOffAtHello(said);
     await db
       .update(machines)
       .set({
         online: true,
+        ...(lendOff ? { egressShare: false } : {}),
         egress: null,
         connectedReplica: replicaId,
         lastSeenAt: now,
@@ -929,6 +945,16 @@ export function createMachineHub(deps: MachineHubDeps) {
         connectionId: conn.connectionId,
       })
       .catch(() => undefined);
+    // ADR 0237 amendment 2026-11-27 c: a borrowing computer hears whether its workspace uses only lent internet.
+    const relays = machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL;
+    const proxies =
+      machine.kind !== "managed" &&
+      frame.protocol >= EGRESS_PROXY_PROTOCOL &&
+      borrowsInternet({ ...said, egressShare: machine.egressShare && !lendOff });
+    const egressOnly =
+      (relays || proxies) && frame.protocol >= EGRESS_ONLY_PROTOCOL
+        ? usesOnlyLent(db, machine.orgId).catch(() => false)
+        : false;
     // Protocol 13 (ADR 0041): the accounts of the computer brains on it (an older runner says nothing: kept).
     // Stored before `welcome`: what the runner found since `hello` comes once it is welcomed (`accounts.changed`)
     // and must land after this older list, never under it.
@@ -948,12 +974,16 @@ export function createMachineHub(deps: MachineHubDeps) {
       heartbeatMs,
       mcpOnce: true,
       observeEgress: machine.kind === "managed",
-      ...(machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL ? { egressRelay: true } : {}),
+      ...(relays ? { egressRelay: true } : {}),
       // Without the Cloud's guard (ADR 0237, self-hosted servers): its agents' programs use its loopback proxy.
-      ...(machine.kind !== "managed" && frame.protocol >= EGRESS_PROXY_PROTOCOL && borrowsInternet(machine)
-        ? { egressProxy: true }
-        : {}),
+      ...(proxies ? { egressProxy: true } : {}),
+      ...((await egressOnly) ? { egressOnly: true } : {}),
     });
+    if (lendOff) {
+      await resolveNotifications({ db, pubsub }, machine.orgId, { groupKey: internetSharedGroup(machine.id) }).catch(
+        (error) => deps.log?.warn("lending notice resolve failed", { machineId: machine.id, error: String(error) }),
+      );
+    }
     // Pings start with `welcome` (the runner's watchdog starts there), not after the slower work below.
     startPings(conn);
     // The pin list its runner fetches the coding CLIs by (ADR 0228 §6): this server's, so a new pin needs no new runner.
@@ -1418,6 +1448,19 @@ export function createMachineHub(deps: MachineHubDeps) {
       .catch(() => undefined);
   }
 
+  /**
+   * Whether the replica that held a machine's socket has let it go, as the caller of a `machine_rpc` reads the row.
+   * The holder writes `last_seen_at` only every 40 s and keeps a socket that stays silent up to four heartbeats
+   * (`startPings`), so a row a little past `machineOnline`'s window is a computer that was slow for a moment (a disk
+   * that makes its writes wait); only one stale for far longer than the holder would keep it says that replica died.
+   */
+  const holderGone = (row: MachineRow, replica: string) =>
+    Boolean(row.deletedAt) ||
+    !row.online ||
+    row.connectedReplica !== replica ||
+    !row.lastSeenAt ||
+    Date.now() - row.lastSeenAt.getTime() > holderSilentMs;
+
   async function callRemote<Op extends MachineOp>(
     machine: { id: string; orgId: string; name: string; kind?: string; connectedReplica: string },
     request: Extract<MachineRequest, { op: Op }>,
@@ -1464,10 +1507,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         if (Date.now() - checkedAt >= rpcLivenessMs) {
           checkedAt = Date.now();
           const now = await getMachineById(db, machine.id).catch(() => undefined);
-          if (
-            now !== undefined &&
-            (!now || now.deletedAt || !machineOnline(now) || now.connectedReplica !== machine.connectedReplica)
-          ) {
+          if (now !== undefined && (!now || holderGone(now, machine.connectedReplica))) {
             const [gone] = await db
               .update(machineRpc)
               .set({ status: "failed", repliedAt: new Date() })
@@ -1475,7 +1515,10 @@ export function createMachineHub(deps: MachineHubDeps) {
               .returning({ id: machineRpc.id });
             // No row: the answer landed meanwhile (read on the next pass).
             if (gone) {
-              onAbort();
+              // A runner that holds its turns through a drop keeps this one for the reattach that follows
+              // (`callTurnThroughDrops`): a cancel would end the very turn it is about to take back.
+              const held = request.op === "brain.turn" && (now?.protocol ?? 0) >= HELD_TURN_PROTOCOL;
+              if (!held) onAbort();
               // Already being served there when that replica went: it may have run.
               throw row?.status === "running"
                 ? new MachineDroppedError(machine.name)

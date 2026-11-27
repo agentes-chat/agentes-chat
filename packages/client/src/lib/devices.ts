@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
 import type {
   AppNotification,
+  AuthConfig,
   ComputerDevice,
   ComputerMaintenance,
   ConnectLinkState,
@@ -17,6 +18,7 @@ import type {
 } from "../api/types";
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
+import { selfHosted } from "./about";
 import { computerNameOf } from "./computer";
 import { LEGACY_MOVE, maintenanceLine, maintenanceOf, maintenanceShort, maintenanceWhen } from "./computer-maintenance";
 import { clockAt, firstName, joinNames } from "./format";
@@ -254,6 +256,29 @@ export const deviceName = (t: TFunction, d: { name: string; machineKind?: string
 
 export { osName };
 
+/** A computer's system as its page says it: "macOS 26.1" when its runner said the version, else "macOS". */
+export const systemText = (t: TFunction, d: Pick<ComputerDevice, "os" | "system">) => d.system || osName(t, d.os);
+
+/**
+ * A computer's processor as its page says it: its name ("Apple M4 Pro") with its count aside (a tooltip), or the count
+ * alone when its runner is older and names no processor. Null when neither is known. `cpus` counts logical CPUs, so
+ * without the physical cores it is said as threads: "8 cores, 16 threads" where both are known and differ, "14 cores"
+ * where they match, "16 threads" where the runner said no cores (older, or Windows).
+ */
+export function processorText(
+  t: TFunction,
+  d: Pick<ComputerDevice, "cpus" | "cpuModel" | "cores">,
+): { name: string; cores: string | null } | null {
+  const threads = d.cpus ? t("devices.threads", { count: d.cpus }) : null;
+  const cores = !d.cores
+    ? threads
+    : d.cores === d.cpus || !threads
+      ? t("devices.cores", { count: d.cores })
+      : `${t("devices.cores", { count: d.cores })}, ${threads}`;
+  if (d.cpuModel) return { name: d.cpuModel, cores };
+  return cores ? { name: cores, cores: null } : null;
+}
+
 /** "macOS 26.1 · 12 CPU · 36 GB"; the workspace computer says "Cloud" where a system would go. */
 export function computerLine(t: TFunction, d: ComputerDevice): string {
   return [
@@ -329,6 +354,16 @@ export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use =
 /** ADR 0237: people's computers here lend their internet, so a computer that joins does too (an older server: its own computer). */
 export const lendsInternet = (list: Pick<DevicesList, "devices" | "lendsInternet"> | undefined): boolean =>
   list?.lendsInternet ?? list?.devices.some((d) => d.machineKind === "managed") === true;
+
+/** The switch's hint: a self-hosted server's agents reach a lent internet only through proxy settings (ADR 0237). */
+export const shareInternetHint = (t: TFunction, server: AuthConfig | undefined) =>
+  t(selfHosted(server) ? "devices.shareInternetHintProxy" : "devices.shareInternetHint");
+
+/** ADR 0237: whether a computer of `os` that joins lends its internet: not a Linux one where server boxes borrow. */
+export const joinLends = (
+  list: Pick<DevicesList, "devices" | "lendsInternet" | "serverBoxesBorrow"> | undefined,
+  os: string,
+) => lendsInternet(list) && !(list?.serverBoxesBorrow && os === "linux");
 
 /**
  * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the

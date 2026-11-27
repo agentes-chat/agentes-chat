@@ -13,12 +13,17 @@ export const featureKeysPtBR = {
     send: "Enviar",
   },
   categories: {
-    where: "Onde #{{channel}} aparece",
-    whereHelp: "Muda para todo mundo. Quem participa do canal continua igual.",
-    order: "Lugar na lista",
     up: "Subir",
     down: "Descer",
     channelPosition: "{{at}}º de {{count}}.",
+  },
+  sections: {
+    title: "Seção",
+    where: "Onde #{{channel}} fica para você",
+    whereHelp: "Só a sua lista muda. Cada pessoa arruma as próprias seções.",
+    none: "Sem seção",
+    order: "Lugar na seção",
+    tooLong: "Use até 40 caracteres.",
   },
   blocks: {
     send: "Mandar",
@@ -200,13 +205,13 @@ export const featureKeysPtBR = {
       text: "Ele pode estar fora do ar ou fora da sua rede. Suas conversas aparecem sozinhas quando ele voltar.",
       kept: "Mostrando o que já estava no app.",
     },
-    /** Conversas' strip of what the person pinned (the web sidebar's pins), under Início's widgets. */
-    pinned: "Fixados",
+    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0260), under Início's widgets. */
+    favorites: "Favoritos",
     /** Conversas' one list: every chat by its latest activity, with no grouping. */
     recent: "Recentes",
     view: {
       title: "Ver as conversas",
-      sectors: "Setores",
+      sections: "Seções",
       dms: "Mensagens diretas",
       channels: "Canais",
     },

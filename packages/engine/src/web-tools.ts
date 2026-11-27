@@ -81,9 +81,10 @@ export interface WebToolDeps {
   /**
    * ADR 0237 on a self-hosted server: a `fetch` through the computer that lends the organization its internet now, or
    * null (`EgressFetch.lentFetch`). Web pages and the DuckDuckGo page try it first and go their usual way when it
-   * fails; a search service (Brave, SearXNG) never uses it.
+   * fails, but where the workspace uses only that computer's internet (`only`, on the Cloud too): then a failure is
+   * the tool's. A search service (Brave, SearXNG) never uses it.
    */
-  lent?: (orgId: string) => Promise<Fetch | null>;
+  lent?: (orgId: string) => Promise<{ fetch: Fetch; only: boolean } | null>;
   /** Where `show_image` saves its pictures; absent: the tool isn't offered. */
   artifacts?: ArtifactDeps | null;
   usage?: {
@@ -204,7 +205,8 @@ export function createWebToolSource(deps: WebToolDeps = {}): ToolSource {
   /** `open`, through the organization's lending computer first when one lends now. */
   const lentFirst = async (orgId: string, open: Fetch): Promise<Fetch> => {
     const lent = await deps.lent?.(orgId).catch(() => null);
-    return lent ? (url, init) => lent(url, init).catch(() => open(url, init)) : open;
+    if (!lent) return open;
+    return lent.only ? lent.fetch : (url, init) => lent.fetch(url, init).catch(() => open(url, init));
   };
 
   const getJson = async (url: string, headers: Record<string, string>, signal?: AbortSignal) => {

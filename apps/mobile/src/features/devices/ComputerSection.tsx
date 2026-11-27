@@ -1,9 +1,10 @@
-import { type ComputerDevice, useWifiIphones } from "@agenteschat/client";
+import { type ComputerDevice, useAuthConfig, useWifiIphones } from "@agenteschat/client";
 import {
   lendingDevice,
   mayChangeTasks,
   SPILL_USES,
   type SpillUse,
+  shareInternetHint,
   shareInternetText,
   spillOfUse,
   spillUseOf,
@@ -33,6 +34,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const toast = useToast();
   const { org } = useOrg();
   const meId = useMeId();
+  const auth = useAuthConfig();
   const audienceText = useAudienceText();
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
@@ -52,6 +54,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   );
   const share = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { shareInternet: on }),
+  );
+  const shareOnly = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { internetOnly: on }),
   );
   const lending = lendingDevice(useDevices().data?.devices);
   const brought = d.machineKind === "connected";
@@ -88,6 +93,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;
   const pushing = (push.isPending ? push.variables : undefined) ?? d.taskRoom?.pushHarder ?? false;
   const sharing = (share.isPending ? share.variables : undefined) ?? d.shareInternet?.on ?? false;
+  const onlyLent = (shareOnly.isPending ? shareOnly.variables : undefined) ?? d.shareInternet?.only ?? false;
   const mine = d.ownerUserId === meId;
   // Someone else's lends now: its owner may pick this one instead (on again moves it first).
   const mayPick = sharing && !share.isPending && !d.shareInternet?.inUse && lending !== null && mine;
@@ -195,7 +201,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                 labelLines={2}
                 hint={{
                   name: t("common.about", { label: t("devices.shareInternet") }),
-                  text: t("devices.shareInternetHint"),
+                  text: shareInternetHint(t, auth.data),
                 }}
                 sub={shareInternetText(t, d, lending) ?? undefined}
                 toggle={sharing}
@@ -213,6 +219,21 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                       ),
                     }
                   : {})}
+              />
+            ) : null}
+            {/* Under the switch while it lends: nothing goes the usual way, AI included. Its owner's to turn on. */}
+            {sharing && d.shareInternet?.only !== undefined && (d.mayManage || onlyLent) ? (
+              <GroupedRow
+                depth={1}
+                label={t("devices.shareInternetOnly")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.shareInternetOnly") }),
+                  text: t("devices.shareInternetOnlyHint"),
+                }}
+                toggle={onlyLent}
+                disabled={!d.mayManage || (!mine && !onlyLent)}
+                onPress={() => shareOnly.mutate(!onlyLent, { onError: shareFailed })}
               />
             ) : null}
             {brought && admin ? (

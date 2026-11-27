@@ -556,7 +556,11 @@ async function handOn(
       .from(messages)
       .where(and(eq(messages.orgId, run.orgId), inArray(messages.id, ids), isNull(messages.deletedAt)))
       .orderBy(asc(messages.createdAt))
-  ).filter((m) => !(betweenAgents && (m.meta.notice as { kind?: unknown } | undefined)?.kind === "consult_reply"));
+  ).filter((m) => {
+    const kind = (m.meta.notice as { kind?: unknown } | undefined)?.kind;
+    // A work's check-in or move note speaks to the turn it was delivered to: never a run of its own once that turn ends.
+    return kind !== "work_check_in" && !(betweenAgents && kind === "consult_reply");
+  });
   // The trigger: the last person's message, else the last notice (a routine's report, another agent's
   // answer: events the agent must act on), else another agent's call. The agent's own fast reply
   // (talker) is context only: it never starts a run by itself.

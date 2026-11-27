@@ -4,12 +4,17 @@
     "send": "Versturen"
   },
   "categories": {
-    "where": "Waar #{{channel}} staat",
-    "whereHelp": "Verandert voor iedereen. Wie er in het kanaal meedoet, blijft hetzelfde.",
-    "order": "Plek in de lijst",
     "up": "Omhoog",
     "down": "Omlaag",
     "channelPosition": "{{at}} van {{count}}."
+  },
+  "sections": {
+    "title": "Sectie",
+    "where": "Waar #{{channel}} voor jou staat",
+    "whereHelp": "Alleen jouw lijst verandert. Iedereen ordent zijn eigen secties.",
+    "none": "Geen sectie",
+    "order": "Plek in de sectie",
+    "tooLong": "Gebruik maximaal 40 tekens."
   },
   "blocks": {
     "send": "Versturen",
@@ -188,11 +193,11 @@
       "text": "Misschien is hij offline of buiten je netwerk. Je gesprekken verschijnen vanzelf zodra hij terug is.",
       "kept": "Je ziet wat al in de app stond."
     },
-    "pinned": "Vastgezet",
+    "favorites": "Favorieten",
     "recent": "Recent",
     "view": {
       "title": "Gesprekken tonen",
-      "sectors": "Afdelingen",
+      "sections": "Secties",
       "dms": "Directe berichten",
       "channels": "Kanalen"
     },

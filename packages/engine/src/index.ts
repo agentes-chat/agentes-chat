@@ -393,6 +393,7 @@ export * from "./team-week";
 export * from "./telemetry";
 export * from "./thread-assess";
 export * from "./threads";
+export * from "./tool-label-words";
 export * from "./tool-loading";
 export * from "./tools/directory";
 export * from "./tools/gateway";

@@ -69,10 +69,24 @@ function setPlace(id: string, at: number) {
   for (const listener of placeListeners) listener(id);
 }
 
+/**
+ * The message's own length first, the player's only when it has none (an audio file), as the seek and the clock do. A
+ * file a browser recorded (a fragmented MP4 or a WebM written as it records) has no full length in its header, and
+ * Android's player reads only its first part: a 17 s clip read as 1 s ended after a second.
+ */
 const fraction = (p: AudioPlayer, durationMs: number) => {
-  const total = p.duration > 0 ? p.duration : durationMs / 1000;
+  const total = durationMs > 0 ? durationMs / 1000 : p.duration;
   return total > 0 ? Math.min(1, p.currentTime / total) : 0;
 };
+
+/** The clip playing reached its end: it stops and goes back to its start. */
+function ended() {
+  if (!now) return;
+  const { onEnd, id } = now;
+  stopPlayback();
+  setPlace(id, 0);
+  onEnd?.();
+}
 
 export function stopPlayback() {
   turn++;
@@ -90,9 +104,10 @@ export function stopPlayback() {
 
 function makePlayer() {
   const p = createAudioPlayer(null, { updateInterval: 100 });
-  // A source that fails says so only in this event: `currentStatus`, which the timer reads, never carries the error
-  // (expo-audio 58). Without it a row would stay on pause with its wave still.
+  // A source that fails, and a clip that ends, say so only in this event: `currentStatus`, which the timer reads, never
+  // carries the error or `didJustFinish` (expo-audio 58). Without it a row would stay on pause with its wave still.
   p.addListener("playbackStatusUpdate", (status) => {
+    if (status.didJustFinish) ended();
     if (!status.error || !now) return;
     const { onError } = now;
     stopPlayback();
@@ -133,15 +148,12 @@ export async function startPlayback(request: PlayRequest) {
   timer = setInterval(() => {
     if (!now) return;
     const status = p.currentStatus;
-    const done = status.didJustFinish;
-    const at = fraction(p, now.durationMs);
-    if (done || at >= 0.998) {
-      const { onEnd, id } = now;
-      stopPlayback();
-      setPlace(id, 0);
-      onEnd?.();
+    // The end is the player's (the event, or Android's state), never the place: a length a little off would cut it.
+    if (status.playbackState === "ended") {
+      ended();
       return;
     }
+    const at = fraction(p, now.durationMs);
     if (
       starting === now.id &&
       (p.currentTime > from + MOVED_S || (status.isLoaded && status.playing && !status.isBuffering))

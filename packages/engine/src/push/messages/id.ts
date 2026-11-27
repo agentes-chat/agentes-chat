@@ -65,6 +65,8 @@ export const strings: Partial<PushStrings> = {
   deviceJoinRequestBody: "Ketuk untuk mengizinkan bergabung atau menolak.",
   waitingTitle: "Ada yang menunggumu",
   openBody: "Ketuk untuk membuka.",
+  cutBody: "Berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+  movedBody: "Ini akan makan waktu, jadi aku lanjutkan di latar belakang.",
   sentGif: "Mengirim GIF",
   sentSticker: "Mengirim stiker",
   sentVoice: "Mengirim pesan suara",

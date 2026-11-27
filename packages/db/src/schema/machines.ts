@@ -185,6 +185,11 @@ export interface MachineSizeRecord {
   maxTasks?: number;
   /** Protocol 78: about how many more tasks fit now, where memory is read (`TaskRoomReport` in the protocol). */
   room?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean };
+  /** The processor's and the system's names (`MachineSize.cpuModel`, `system`); absent from an older runner. */
+  cpuModel?: string;
+  system?: string;
+  /** Physical cores (`MachineSize.cores`); `cpus` counts logical CPUs. Absent from an older runner and Windows. */
+  cores?: number;
 }
 
 /** How busy a computer got over the last day (protocol 22: `MachineLoad` in the protocol), and when it said so. */
@@ -356,6 +361,12 @@ export const machines = pgTable(
     egressShare: boolean().notNull().default(true),
     /** When it was last turned on or picked: the newest online one carries the traffic. Null: since it was paired. */
     egressShareAt: timestamp({ withTimezone: true }),
+    /**
+     * With `egressShare` on: the workspace's agents use only this computer's internet (ADR 0237, amendment
+     * 2026-11-27 c), their AI calls included, and never their usual way. Offline, they have no internet until it is
+     * back. Only whoever connected it turns it on.
+     */
+    egressOnly: boolean().notNull().default(false),
     /**
      * A computer that borrows (`borrowsInternet`): the lent computer that carried its last connection, and when (written
      * at most once a minute per server process). The apps say whose internet it uses while that is recent. `since`:

@@ -453,3 +453,24 @@ export const telegramUpdates = pgTable(
     index().on(t.receivedAt),
   ],
 );
+
+/**
+ * A connector tool's name in a person's language, as the conversation's work lines show it (`list_available_accounts`
+ * → "Listar contas disponíveis"): written once per workspace and language by its cheap model when a person first sees
+ * the tool at work in a language other than English (`tool-label-words.ts` in the engine); until then, and for good
+ * when no model answers, the line shows the name's own English words. `key` is the name as the app's catalog keys it
+ * (`toolKey`). Tools with words in the app's own catalog are never asked for.
+ */
+export const toolLabelWords = pgTable(
+  "tool_label_words",
+  {
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    locale: text().notNull(),
+    key: text().notNull(),
+    words: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.locale, t.key] })],
+);

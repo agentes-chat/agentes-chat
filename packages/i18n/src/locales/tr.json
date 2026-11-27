@@ -2388,48 +2388,69 @@
     "deleteText": "Ajanları Ajanlar bölümüne geri döner.",
     "deleteChannels": "Kanalları Kanallar bölümüne geri döner.",
     "dropHere": "Ajanları buraya sürükleyin",
-    "dropHereAll": "Ajanları veya kanalları buraya sürükleyin",
     "moved": "{{name}}, {{group}} departmanına geçti",
     "movedOut": "{{name}}, {{group}} departmanından ayrıldı",
     "undo": "Geri al"
   },
   "sidebarAgents": {
-    "options": "Ajan seçenekleri",
-    "add": "Yeni ajan veya departman",
-    "order": "Sıra",
-    "sort": {
-      "workspace": "Çalışma alanı sırası",
-      "mine": "Önce benimkiler",
-      "working": "Önce çalışanlar"
-    },
     "showAll": "Benimle konuşmayan ajanları göster",
-    "collapseAll": "Tümünü daralt",
-    "expandAll": "Tümünü genişlet",
-    "organize": "Departmanları Ekip'te düzenle",
     "more_one": "Ekip'te 1 ajan daha",
     "more_other": "Ekip'te {{count}} ajan daha",
     "newAgent": "Yeni ajan",
-    "working_one": "{{count}} çalışıyor",
-    "working_other": "{{count}} çalışıyor",
     "count_one": "{{count}} ajan",
     "count_other": "{{count}} ajan",
     "workingIn": "#{{channel}} kanalında çalışıyor",
     "talksOnly": "yalnızca {{name}} ile konuşur",
     "talksOnlyMore_one": "yalnızca {{name}} ve {{count}} kişiyle daha konuşur",
-    "talksOnlyMore_other": "yalnızca {{name}} ve {{count}} kişiyle daha konuşur",
-    "changeGroup": "Departmana taşı",
-    "newGroupWith": "{{name}} ile yeni departman",
-    "dmsEmpty": "Kişilerle konuşmalarınız burada görünür."
+    "talksOnlyMore_other": "yalnızca {{name}} ve {{count}} kişiyle daha konuşur"
   },
-  "sidebarPins": {
-    "pin": "En üste sabitle",
-    "unpin": "Sabitlemeyi kaldır",
-    "pinned": "En üste sabitlendi",
-    "full": {
-      "agents": "Zaten 5 ajan sabitlediniz. Bunu sabitlemek için birini kaldırın.",
-      "channels": "Zaten 5 kanal sabitlediniz. Bunu sabitlemek için birini kaldırın.",
-      "people": "Zaten 5 kişi sabitlediniz. Bunu sabitlemek için birini kaldırın."
-    }
+  "sidebarFavorites": {
+    "title": "Favoriler",
+    "add": "Favorilere ekle",
+    "remove": "Favorilerden çıkar",
+    "marked": "Favorilerde",
+    "full": "Favorilerde zaten 50 öğe var. Bunu eklemek için birini çıkar."
+  },
+  "sidebarSections": {
+    "new": "Yeni bölüm",
+    "newName": "Yeni bölüm",
+    "moveTo": "Bölüme taşı",
+    "takeOut": "Bölümden çıkar",
+    "rename": "Bölümü yeniden adlandır",
+    "delete": "Bölümü sil",
+    "nameLabel": "Bölüm adı"
+  },
+  "sidebarDms": {
+    "options": "Doğrudan mesaj seçenekleri",
+    "show": "Göster",
+    "shows": {
+      "all": "Çalışma alanındaki herkes",
+      "recent": "Yalnızca son konuşmalar"
+    },
+    "invite": "Kişi davet et",
+    "invited": "Davet gönderildi",
+    "invitedTip": "{{email}} daveti henüz kabul etmedi",
+    "agentTag": "YZ",
+    "agentTip": "YZ ajanı"
+  },
+  "sidebarColumn": {
+    "label": "Araçlar",
+    "unread": "{{name}}, okunmamış bir şey var",
+    "you": "{{name}}, senin için bir şey var"
+  },
+  "unreads": {
+    "title": "Okunmamışlar",
+    "forYou": "Senin için",
+    "conversations": "Konuşmalar",
+    "markAll": "Tümünü okundu olarak işaretle",
+    "markRead": "Okundu olarak işaretle",
+    "open": "Aç",
+    "seeInbox": "Gelen kutusunda tümünü gör",
+    "more_one": "{{count}} mesaj daha",
+    "more_other": "{{count}} mesaj daha",
+    "emptyTitle": "Hepsi okundu",
+    "emptyText": "Yeni mesajlar ve seni bekleyenler burada görünür.",
+    "markedAll": "Tümü okundu olarak işaretlendi"
   },
   "appsDownload": {
     "computer": "Bilgisayar",
@@ -6779,6 +6800,7 @@
     "undoneBy": "{{name}} tarafından geri alındı",
     "undoneByYou": "Sizin tarafınızdan geri alındı",
     "undo": "Geri al",
+    "applyAnyway": "Yine de uygula",
     "appliedSome": "{{total}} iyileştirmeden {{done}} tanesi uygulandı",
     "waitingAdmin": "Bir yönetici bekleniyor",
     "stale": "Eskidi",
@@ -16479,6 +16501,7 @@
       "spillOwnerOnly": "Bu bilgisayarın yardımını yalnızca onu bağlayan kişi açabilir. Sen kapatabilirsin.",
       "shareOwnerOnly": "Ajanların bu bilgisayarın internetini kullanmasına yalnızca onu bağlayan kişi izin verebilir. Sen kapatabilirsin.",
       "shareConnectedOnly": "İnternetini ajanlarla yalnızca birinin bağladığı bir bilgisayar paylaşabilir.",
+      "shareOff": "Önce “Ajanlar bu bilgisayarın internetini kullanır” seçeneğini aç, sonra yalnızca onun internetini kullanmayı seç.",
       "tasksOwnerOnly": "Bu bilgisayarın aynı anda kaç görev çalıştıracağını yalnızca onu bağlayan kişi değiştirebilir.",
       "tasksCloud": "Bu bilgisayarın görevler için yerini Cloud kendisi belirler.",
       "notHome": "Ajanlar workspace bilgisayarında yaşar ve adını söylediklerinde bunu kullanır."
@@ -16644,7 +16667,8 @@
       "hint": "Ajanlar gezinirken sitelerin gördüğü adres. Bilgisayarın ağı değişince güncellenir.",
       "waiting": "Ajanların internet bağlantısı yeniden kuruluyor. Bağlantıları geri gelene kadar bekler.",
       "via": "Ajanlar {{name}} bilgisayarının internetini kullanıyor",
-      "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir."
+      "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir.",
+      "offline": "Ajanların interneti yok: {{name}} çevrimdışı"
     },
     "maintenance": {
       "short": {
@@ -16962,6 +16986,10 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} çekirdek",
+    "cores_other": "{{count}} çekirdek",
+    "threads_one": "{{count}} iş parçacığı",
+    "threads_other": "{{count}} iş parçacığı",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17037,11 +17065,14 @@
     "helpWorkspace": "Ekibin bilgisayarı dolu ya da uzaktayken bilgisayarlar yardım eder",
     "helpWorkspaceHint": "Her bilgisayar yalnızca sahibi izin verirse yardım eder. Kapalı: sahibi ne seçerse seçsin hiçbiri yardım etmez.",
     "shareInternet": "Ajanlar bu bilgisayarın internetini kullanır",
-    "shareInternetHint": "Ajanların açtığı siteler bu bilgisayarın bağlantısından geçer, bu yüzden konumunu görür. Yalnızca web siteleri açılır, kendi ağındaki hiçbir şeye asla erişilmez. Bu bilgisayar çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
+    "shareInternetHint": "Ajanların bağlantıları bu bilgisayarın internetinden çıkar, bu yüzden siteler ve sunucular konumunu görür: web siteleri, git, SSH, veritabanları ve diğer TCP bağlantıları. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Ajanların yapay zekâsı, ad sorguları, aramalar ve diğer UDP trafiği her zamanki bağlantıyı kullanır, bu bilgisayar çevrimdışıyken de her şey öyle.",
+    "shareInternetHintProxy": "Ajanların tarayıcısı ve proxy ayarlarına uyan programlar (HTTPS üzerinden git, curl, çoğu komut satırı aracı) bu bilgisayarın internetinden çıkar, bu yüzden siteler konumunu görür. SSH, veritabanı istemcileri ve proxy ayarlarını yok sayan diğer programlar her zamanki bağlantıyı kullanır, ajanların yapay zekâsı, ad sorguları ve UDP trafiği de öyle. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Bu bilgisayar çevrimdışıyken her şey her zamanki bağlantıyı kullanır.",
+    "shareInternetOnly": "Yalnızca bu bilgisayarın internetini kullan",
+    "shareInternetOnlyHint": "Ajanlar, yapay zekâları dahil yalnızca bu bilgisayarın internetini kullanır, her zamanki bağlantıyı asla kullanmaz. Bu bilgisayar çevrimdışıyken, geri gelene kadar internetleri olmaz.",
     "shareInternetInUse": "Şu an kullanılıyor",
     "shareInternetOther": "Ajanlar şu an {{name}} kullanıyor",
     "shareInternetPick": "Bunu kullan",
-    "shareInternetJoin": "Ajanlar siteleri bu bilgisayarın interneti üzerinden de açacak, bu yüzden siteler konumunu görecek. Bunu sayfasından kapatabilirsin.",
+    "shareInternetJoin": "Ajanlar bu bilgisayarın interneti üzerinden de çevrimiçi olacak, bu yüzden siteler ve sunucular konumunu görecek. Bunu sayfasından kapatabilirsin.",
     "connectedBy": "Bağlayan: {{name}}",
     "downloadFor": "{{system}} için indir",
     "downloadApp": "Uygulamayı indir",
@@ -17583,7 +17614,7 @@
       "folderOnComputer": "Bilgisayarda izin ver",
       "folderShown": "{{deviceName}} üzerinde açıldı. İzni orada ver.",
       "internetShared": "Ajanlar artık web sitelerini <b>{{deviceName}}</b> bilgisayarının internetiyle açıyor",
-      "internetSharedLine": "Yalnızca bu çalışma alanının ajanları, yalnızca web siteleri, bilgisayarın kendi ağındaki hiçbir şeye asla erişmez. Çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
+      "internetSharedLine": "Yalnızca bu çalışma alanının ajanları, bilgisayarın kendi ağındaki hiçbir şeye asla erişmez, 25 numaralı porttan asla e-posta göndermez. Çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
       "internetOff": "Kapat",
       "internetOffDone": "Ajanlar artık {{deviceName}} bilgisayarının internetini kullanmıyor.",
       "once": "Bir kez izin ver",
@@ -19594,6 +19625,7 @@
       "brain_unavailable_outdated": "{{brain}}'ın yanıt verebilmesi için bilgisayarımdaki programın güncellenmesi gerekiyor. Güncellenir güncellenmez yanıt vereceğim.",
       "brain_unavailable_plan_owner": "{{brain}}, sahibime ait olmayan bir planla düşünecekti, bu yüzden kullanmıyorum. Sayfamda sahibimin hesabını bağlayın.",
       "brain_unavailable_shared_login": "Bilgisayarım tüm ajanlar için Claude oturumunu şu anda kullanamıyor. Kullanabildiğimde yanıtlayacağım. Başarısız olmaya devam ederse Yapay zekâ hesapları bölümünde Claude'u yeniden bağlayın.",
+      "brain_unavailable_lent_offline": "Şu an internetim yok: {{computer}} çevrimdışı ve bu çalışma alanının ajanları yalnızca onun internetini kullanıyor. Geri geldiğinde ya da sayfasında “Yalnızca bu bilgisayarın internetini kullan” kapatıldığında yanıtlayacağım.",
       "provider_unavailable": "Yapay zeka sağlayıcım şu anda yanıt vermiyor. Geri gelir gelmez yanıt vereceğim.",
       "provider_wait_rate_limit": "{{provider}} şu anda bu anahtarın isteklerini sınırlıyor. İzin verir vermez yanıt vereceğim.",
       "provider_wait_down": "{{provider}} şu anda çalışmıyor veya aşırı yüklü. Geri gelir gelmez yanıt vereceğim.",
@@ -19604,7 +19636,9 @@
       "provider_back": "Yapay zekam geri döndü.",
       "confidential_removed": "Kaldırıldı: gizli metin {{days}} gün saklanır.",
       "brain_queued": "Hâlâ sıradayım. Sıram gelir gelmez yanıtlarım.",
-      "brain_interrupted": "{{brain}} bitirmeden durdu. Zaten yapılanlar tekrarlanmadı: {{tools}}.",
+      "brain_interrupted": "{{brain}} bitirmeden durdu. Devam etmek için yeniden sorun.",
+      "brain_interrupted_timeout": "{{brain}} süre sınırını aştı ve bitirmeden durdu. Devam etmek için yeniden sorun.",
+      "brain_interrupted_computer": "Bilgisayar {{brain}} işini bitirmeden onu durdurdu. Devam etmek için yeniden sorun.",
       "plan_limit_cut": "{{plan}} planının sınırında durdum. Sıfırlandığında, {{when}}, kaldığım yerden devam edeceğim.",
       "plan_limit_cut_unknown": "{{plan}} planının sınırında durdum. Sıfırlanır sıfırlanmaz kaldığım yerden devam edeceğim.",
       "plan_limit_wait": "{{plan}} planı sınırına ulaştı. Sıfırlandığında, {{when}}, yanıt vereceğim. {{plan}} tarafında daha önce açılırsa fark eder ve hemen yanıt veririm.",
