@@ -2204,6 +2204,9 @@
   "activity.kind.admin_ask_webhook": {
     "value": "{{names}} asks you to set up the {{service}} webhook for routines"
   },
+  "activity.kind.admin_ask_voice": {
+    "value": "{{names}} asks you to turn on voice messages"
+  },
   "activity.kind.routine_paused": {
     "value": {
       "one": "Routine paused",

@@ -88,6 +88,7 @@ import { skillTitle } from "@/components/skills/common";
 import { TeamPlanCardView } from "@/components/TeamPlan";
 import { TeamWeekCardView } from "@/components/TeamWeekCard";
 import { TextAction, UsagePauseCardView } from "@/components/UsagePauseCard";
+import { VoiceSetupCardView } from "@/components/VoiceSetupDialog";
 import { useDirectory } from "@/hooks/useDirectory";
 import { lookOf } from "@/lib/look";
 import { inlineWords } from "@/lib/markdown";
@@ -132,6 +133,7 @@ export function ActionCard({ message }: { message: Message }) {
   if (card.kind === "approvals") return <ApprovalsCardView message={message} card={card} />;
   if (card.kind === "member_changes") return <MemberChangesCardView message={message} card={card} />;
   if (card.kind === "open_page") return <OpenPageCardView card={card} />;
+  if (card.kind === "voice_setup") return <VoiceSetupCardView card={card} />;
   if (card.kind === "workspace_action")
     return (
       <WorkspaceActionCardView

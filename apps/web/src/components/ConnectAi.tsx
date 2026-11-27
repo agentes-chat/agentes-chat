@@ -495,7 +495,7 @@ export function ConnectAiDialog({
   const credentials = useCredentials(org.id, mayUseKeys && forId !== undefined);
   // No agent of theirs yet, and it isn't opened for someone else's: a plan signs in for the agents they create.
   const bare = agents.length === 0 && !theirs && !named && !team;
-  const bareGates = useGatesWithoutAgent(org.id, bare);
+  const bareGates = useGatesWithoutAgent(org.id, bare, poll);
   const gateOf = (c: PlanChoice): PlanGate =>
     agents.length > 0 ? gates.gateOf(c) : bare ? bareGates.at(c).gate : { state: "loading" };
   const offSystem = (c: PlanChoice) => planOffSystem(t, gateOf(c));

@@ -5,10 +5,14 @@ import { type AgentColorName, gradientOf, mixHex } from "./engine.js";
  * flatness (ry / rx), tilt in degrees, one turn's seconds, where its light starts (degrees) and whether it turns the
  * other way. Two rings at different speeds, one the other way round, so they never line up into one shape; tight
  * enough that they reach a few pixels past the face, never into the name beside it.
+ *
+ * `spin` is one slow turn of the ring itself around the face, in seconds (negative: counter-clockwise), with its light
+ * riding it: the ring's tilt is where it starts and where it rests with reduced motion. Each ring at its own pace and
+ * the other way from the other, so they keep crossing and read as two orbits in depth.
  */
 export const ORBIT_RINGS = [
-  { r: 1.36, flat: 0.3, tilt: -17, turn: 2.6, start: 30, back: false },
-  { r: 1.24, flat: 0.38, tilt: 21, turn: 3.9, start: 210, back: true },
+  { r: 1.36, flat: 0.3, tilt: -17, turn: 2.6, start: 30, back: false, spin: 16 },
+  { r: 1.24, flat: 0.38, tilt: 21, turn: 3.9, start: 210, back: true, spin: -23 },
 ] as const;
 
 /** The rings' box, in glyph sides: the wider ring and its light fit. */

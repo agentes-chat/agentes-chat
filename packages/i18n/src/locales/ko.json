@@ -2723,6 +2723,7 @@
     "details": "채널 세부 정보",
     "composerLabel": "#{{channel}}에 메시지 보내기",
     "composerDm": "{{name}}에게 메시지 보내기",
+    "groupYou": "나",
     "composerPlaceholder": "#{{channel}}에 메시지 보내기 · @로 에이전트 부르기",
     "send": "보내기",
     "attach": "파일 첨부",
@@ -2743,6 +2744,7 @@
     "sendFailed": "메시지를 보내지 못했어요. 다시 시도하세요.",
     "reconnecting": "실시간 연결을 다시 하는 중…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "사람 또는 에이전트 검색",
     "detailsEmpty": "“{{q}}”에 해당하는 사람이 없어요.",
     "topicLabel": "채널 설명",
@@ -2754,9 +2756,11 @@
     "replyInChannel": "에이전트가 채널에서 답장",
     "replyInThreadsHelp": "채널에서 부른 에이전트는 그 메시지 아래 스레드에서 답하고, 채널에는 그 스레드가 한 줄로 보여요. 이미 진행 중인 작업은 그대로예요.",
     "nameTaken": "#{{name}}이(가) 이미 있어요.",
+    "nameTakenPersonal": "“{{name}}”(이)라는 그룹 대화가 이미 있어요.",
     "generalName": "#general은 이름을 바꿀 수 없어요.",
     "archive": "채널 보관",
     "archived": "#{{channel}}을(를) 보관했어요. 대화는 유지돼요.",
+    "archivedPersonal": "“{{channel}}”을(를) 보관했어요. 대화는 유지돼요.",
     "archivedTitle": "보관된 채널",
     "archivedCount_other": "보관된 채널 {{count}}개",
     "archivedNone": "복원할 보관된 채널이 없어요",
@@ -2764,6 +2768,7 @@
     "restore": "복원",
     "restoreName": "#{{channel}} 복원",
     "restored": "#{{channel}}이(가) 돌아왔어요.",
+    "restoredPersonal": "“{{channel}}”이(가) 돌아왔어요.",
     "leave": "채널 나가기",
     "left": "#{{channel}}에서 나갔어요",
     "leaveTitle": "#{{channel}}에서 나갈까요?",
@@ -3151,6 +3156,10 @@
       "update_workspace": "워크스페이스 <b>{{name}}</b> 변경",
       "set_action_check_on": "팀이 이미 한 일 확인 켜기",
       "set_action_check_off": "팀이 이미 한 일 확인 끄기",
+      "set_approvals_level": "워크스페이스 승인을 <b>{{level}}</b>(으)로 변경",
+      "set_approvals_level_every": "모든 에이전트의 승인을 <b>{{level}}</b>(으)로 변경(개별 설정 포함)",
+      "set_agent_approvals_level": "<b>{{agent}}</b>의 승인을 <b>{{level}}</b>(으)로 변경",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b>이(가) 워크스페이스 승인을 따르게 하기",
       "invite_people": "<b>{{emails}}</b>을(를) 워크스페이스에 초대합니다.",
       "invite_roles_other": "{{roles}} 역할로 초대해요.",
       "invite_people_sent_other": "<b>{{emails}}</b>에게 초대를 보냈어요.",
@@ -3316,6 +3325,7 @@
       "cursor": "이 컴퓨터에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
       "grok": "이 컴퓨터에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
       "antigravity": "이 컴퓨터에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
+      "devin": "이 컴퓨터에서 Devin에 로그인되어 있지 않아요. {{name}}의 페이지에서 Devin 계정을 연결하세요.",
       "opencode": "이 컴퓨터에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
     },
     "notSignedInOn": {
@@ -3324,6 +3334,7 @@
       "cursor": "{{computer}}에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
       "grok": "{{computer}}에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
       "antigravity": "{{computer}}에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
+      "devin": "{{computer}}에서 Devin에 로그인되어 있지 않아요. {{name}}의 페이지에서 Devin 계정을 연결하세요.",
       "opencode": "{{computer}}에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
     },
     "card": {
@@ -3382,6 +3393,7 @@
       "cursor": "Cursor 요금제 연결",
       "grok": "Grok 요금제 연결",
       "gemini": "Gemini 요금제 연결",
+      "devin": "Devin 요금제 연결",
       "zen": "OpenCode 연결",
       "api_key": "API 키 추가"
     },
@@ -3522,6 +3534,10 @@
         "warning": "Google에 따르면 개인 Gemini 요금제를 다른 앱 안에서 사용하면 계정이 정지될 수 있어요. 이 위험을 피하려면 Gemini API 키나 Gemini Enterprise를 사용하세요.",
         "windowsOne": "Windows에서는 컴퓨터 한 대가 한 번에 Gemini 계정 하나만 써요."
       },
+      "devin": {
+        "title": "내 Devin 요금제",
+        "tiers": "Free, Pro, Max 또는 Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "무료 모델, 또는 내 OpenCode 키"
@@ -3627,6 +3643,7 @@
       "cursor": "Cursor에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Cursor 페이지에서 로그아웃하고 다시 시도하세요.",
       "grok": "Grok에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Grok 페이지에서 로그아웃하고 다시 시도하세요.",
       "antigravity": "Gemini에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Google 페이지에서 로그아웃하고 다시 시도하세요.",
+      "devin": "Devin에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Devin 페이지에서 로그아웃하고 다시 시도하세요.",
       "opencode": "OpenCode가 {{account}}이 아닌 {{email}}(으)로 로그인했어요. 올바른 키로 다시 시도하세요."
     },
     "useAnyway": "{{email}} 사용",
@@ -3997,6 +4014,10 @@
       "changed_update_workspace": "워크스페이스 <b>{{name}}</b>을(를) 변경했어요",
       "changed_set_action_check_on": "팀이 이미 한 일 확인을 켰어요",
       "changed_set_action_check_off": "팀이 이미 한 일 확인을 껐어요",
+      "changed_set_approvals_level": "워크스페이스 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_approvals_level_every": "모든 에이전트의 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_agent_approvals_level": "<b>{{agent}}</b>의 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b>이(가) 다시 워크스페이스 승인을 따라요",
       "changed_invite_people": "<b>{{invited}}</b>을(를) 워크스페이스에 초대했어요",
       "changed_remove_ai_key": "API 키 <b>{{name}}</b>을(를) 삭제했어요"
     },
@@ -4093,8 +4114,9 @@
     "namePlaceholderPersonal": "예: 여행",
     "nameHelp": "영문 소문자, 숫자, 하이픈을 사용해요. #{{name}}(으)로 표시돼요.",
     "nameInvalid": "영문 소문자, 숫자, 하이픈을 사용하고 영문자나 숫자로 시작하세요.",
+    "nameInvalidPersonal": "80자 이내로, 한 줄에 이름을 지어 주세요.",
     "nameTaken": "이미 #{{name}} 채널이 있어요.",
-    "nameTakenPersonal": "#{{name}}(이)라는 그룹 대화가 이미 있어요.",
+    "nameTakenPersonal": "“{{name}}”(이)라는 그룹 대화가 이미 있어요.",
     "topic": "설명",
     "topicPlaceholder": "여기서 나누는 이야기",
     "visibility": "참여할 수 있는 사람",
@@ -4123,7 +4145,8 @@
     "membersSearch": "사람 또는 에이전트 검색",
     "membersEmpty": "“{{q}}”에 해당하는 사람이 없어요.",
     "selected_other": "{{count}}명 선택됨",
-    "create": "#{{name}} 만들기"
+    "create": "#{{name}} 만들기",
+    "createPersonal": "대화 만들기"
   },
   "channelCategories": {
     "undo": "실행 취소",
@@ -4139,6 +4162,7 @@
     "invitePersonal": "{{email}}을(를) 내 워크스페이스와 #{{channel}}에 초대",
     "inviteOrgPersonal": "{{email}}을(를) 내 워크스페이스에 초대",
     "addTitle": "#{{channel}}에 추가",
+    "addTitlePersonal": "{{channel}}에 추가",
     "addSearch": "사람 또는 에이전트 검색",
     "addEmpty": "채널 밖에 “{{q}}”와 일치하는 사람이 없어요.",
     "addEveryone": "{{org}}의 모두가 이미 #{{channel}}에 있어요.",
@@ -4146,6 +4170,7 @@
     "actions": "{{name}} 옵션",
     "remove": "채널에서 내보내기",
     "removeTitle": "{{name}}을(를) #{{channel}}에서 내보낼까요?",
+    "removeTitlePersonal": "{{name}}을(를) {{channel}}에서 내보낼까요?",
     "removePersonBody": "더 이상 채널을 보거나 메시지를 받지 않아요. 나중에 다시 추가할 수 있어요.",
     "removeAgentBody": "더 이상 이 채널을 읽거나 답하지 않아요. 나중에 다시 추가할 수 있어요.",
     "removeAgentBody_female": "더 이상 이 채널을 읽거나 답하지 않아요. 나중에 다시 추가할 수 있어요.",
@@ -5301,6 +5326,7 @@
       "adminAskChannel": "<b>{{name}}</b> 님이 <b>{{agent}}</b>을(를) #{{label}}에 추가해 달라고 요청합니다",
       "adminAskCreate": "<b>{{name}}</b> 님이 에이전트를 만들 수 있게 해 달라고 요청합니다",
       "adminAskWebhook": "<b>{{name}}</b> 님이 루틴용 {{service}} 웹훅을 설정해 달라고 요청합니다",
+      "adminAskVoice": "<b>{{name}}</b> 님이 음성 메시지를 켜 달라고 요청합니다",
       "invitationAccepted": "<b>{{name}}</b> 님이 내 초대를 수락하고 {{org}}에 참여했어요",
       "invitationAcceptedAny": "<b>{{name}}</b> 님이 내 초대를 수락했어요",
       "reaction_other": "<b>{{names}}</b>이(가) 내 메시지에 반응했어요",
@@ -5827,6 +5853,7 @@
             "cursor": "Cursor 계정 추가",
             "grok": "Grok 계정 추가",
             "antigravity": "Gemini 계정 추가",
+            "devin": "Devin 계정 추가",
             "opencode": "OpenCode 키 추가"
           },
           "stepOne": {
@@ -5834,6 +5861,7 @@
             "codex": "요금제가 있는 계정",
             "cursor": "요금제가 있는 계정",
             "grok": "요금제가 있는 계정",
+            "devin": "요금제가 있는 계정",
             "antigravity": "요금제가 있는 Google 계정",
             "antigravityEnterprise": "내 Gemini Enterprise 계정"
           },
@@ -5843,7 +5871,8 @@
             "codex": "ChatGPT로 로그인",
             "cursor": "Cursor로 로그인",
             "grok": "Grok로 로그인",
-            "antigravity": "Google로 로그인"
+            "antigravity": "Google로 로그인",
+            "devin": "Devin로 로그인"
           },
           "opencodeFree": "OpenCode의 무료 모델은 키가 필요 없어요. OpenCode 콘솔의 키를 쓰면 유료 모델도 쓸 수 있어요.",
           "cursorFinish": "Cursor 페이지에서 로그인하면 {{computer}}에서 로그인이 자동으로 완료돼요.",
@@ -5858,6 +5887,9 @@
           "notCode": "Claude 코드가 아닌 것 같아요.",
           "stepTwoGoogle": "Google에 표시된 코드를 붙여넣으세요",
           "codeLabelGoogle": "Google 코드",
+          "stepTwoDevin": "Devin에 표시된 코드를 붙여넣으세요",
+          "codeHintDevin": "페이지 주소가 아니라 Devin 페이지에 표시된 코드를 붙여넣으세요.",
+          "codeLabelDevin": "Devin 코드",
           "codeHintGoogle": "페이지 주소가 아니라 Google 페이지에 표시된 코드를 붙여넣으세요.",
           "notCodeGoogle": "코드가 없는 주소예요. Google 페이지에 표시된 코드를 붙여넣으세요.",
           "send": "{{computer}}(으)로 보내기",
@@ -5891,6 +5923,7 @@
             "cursor": "Cursor가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Cursor 페이지에서 로그아웃하고 다시 시도하세요.",
             "grok": "Grok가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Grok 페이지에서 로그아웃하고 다시 시도하세요.",
             "antigravity": "Gemini가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Google 페이지에서 로그아웃하고 다시 시도하세요.",
+            "devin": "Devin가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Devin 페이지에서 로그아웃하고 다시 시도하세요.",
             "opencode": "이 OpenCode 키는 이미 {{account}}(으)로 연결되어 있어요."
           },
           "startFailed": "{{computer}}에서 응답이 없어요. 잠시 후 다시 시도하세요.",
@@ -9387,8 +9420,7 @@
       "machine_access_requested": "{{agent}}이(가) {{computer}}의 {{folder}} 폴더를 요청했어요. 그곳에서 답을 기다리고 있어요.",
       "machine_access_granted": "허용됨: 이제 {{agent}}이(가) {{computer}}의 {{folder}}을(를) 사용할 수 있어요",
       "machine_access_denied": "거절됨: {{agent}}은(는) {{computer}}의 {{folder}}을(를) 사용하지 않아요",
-      "machine_access_expired": "{{computer}}의 {{folder}} 폴더 요청에 응답이 없었어요",
-      "access_command": "컴퓨터에 앱이 없나요? 터미널에서 이 명령을 실행하세요:"
+      "machine_access_expired": "{{computer}}의 {{folder}} 폴더 요청에 응답이 없었어요"
     },
     "suggestion": {
       "pending": "미션 제안",
@@ -10734,6 +10766,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "요금제 키를 사용하려면 컴퓨터에서 agentes를 업데이트하세요"
@@ -11004,6 +11037,7 @@
     "silent": "아무것도 들리지 않았어요. 아무것도 보내지 않았어요.",
     "notSent": "오디오를 보내지 못했어요.",
     "limit": "오늘의 오디오 한도를 다 썼어요. 여기에 글로 쓰거나 내일 다시 시도해 주세요.",
+    "plan": "음성 메시지는 agentes.chat 요금제에 포함돼요. 여기에 글로 쓰는 건 계속할 수 있어요.",
     "micBlocked": "마이크가 차단되어 있어요",
     "micBlockedHint": "녹음하려면 기기 설정에서 마이크를 허용해 주세요.",
     "openSettings": "설정 열기",
@@ -11038,9 +11072,9 @@
       "title": "음성 메시지",
       "on": "음성 메시지",
       "onHelp": "이 워크스페이스의 사람들은 대화에서 오디오를 보낼 수 있어요.",
-      "noEngine": "여기서는 아직 음성 메시지를 쓸 수 없어요.",
-      "noEngineAsk": "음성 메시지가 아직 켜져 있지 않아요. 이 서버를 관리하는 사람이 바로 이 페이지에서 켤 수 있어요.",
-      "noEngineHere": "아래에서 음성을 텍스트로 바꾸는 곳을 고르면 음성 메시지가 켜져요.",
+      "noEngine": "지금은 음성 메시지가 오디오로 보내져서 에이전트가 아직 들을 수 없어요.",
+      "noEngineAsk": "지금은 음성 메시지가 오디오로 보내져서 에이전트가 들을 수 없어요. 음성을 텍스트로 바꾸는 곳은 이 서버를 관리하는 사람이 바로 이 페이지에서 골라요.",
+      "noEngineHere": "아래에서 음성을 텍스트로 바꾸는 곳을 고를 때까지 음성 메시지는 오디오로 보내져요.",
       "engineTitle": "음성을 텍스트로 바꾸는 곳",
       "own": "내 서버",
       "ownHelp": "내 컴퓨터의 Whisper 또는 Parakeet. 오디오는 그곳에 남아요.",
@@ -11048,10 +11082,55 @@
       "key": "{{name}} 키",
       "keyPlaceholder": "여기에 붙여넣기",
       "test": "테스트",
-      "tested": "잘 작동해요. 이제 모두에게 마이크가 보여요.",
+      "tested": "잘 작동해요. 이제 음성 메시지가 텍스트로 에이전트에게 전달돼요.",
       "sealed": "서버에 암호화되어 보관되고 다시는 표시되지 않아요.",
       "leaves": "음성 메시지의 오디오는 텍스트로 바꾸기 위해 {{name}}(으)로 보내져요.",
       "invalid": "저장된 키를 이 서버에서 열 수 없어요. 다시 붙여넣어 주세요."
+    },
+    "local": {
+      "titleHere": "이 컴퓨터에서",
+      "titleServer": "이 서버에서",
+      "titlePhone": "서버 컴퓨터에서",
+      "textHere": "Parakeet, {{size}} 다운로드. 음성은 이 컴퓨터를 벗어나지 않아요. 유럽 언어 25개.",
+      "textServer": "Parakeet, {{size}} 다운로드. 음성은 이 서버를 벗어나지 않아요. 유럽 언어 25개.",
+      "download": "다운로드하고 켜기",
+      "downloading": "음성 모델 다운로드 중",
+      "progress": "{{done}} / {{total}}",
+      "meanwhile": "지금 바로 녹음할 수 있어요. 준비될 때까지 메시지는 오디오로 보내져요.",
+      "downloadingPhone": "서버 컴퓨터에 음성 모델을 다운로드하고 있어요. 지금 바로 녹음할 수 있어요.",
+      "starting": "켜는 중…",
+      "licenses": "모델 라이선스",
+      "tooSmall": "이 컴퓨터의 메모리는 {{memory}}이고 음성 모델에는 8 GB가 필요해요. 아래에서 제공업체 키를 사용하세요.",
+      "noDisk": "이 디스크의 여유 공간은 {{free}}이고 음성 모델에는 {{need}}가 필요해요. 공간을 확보하거나 아래에서 제공업체 키를 사용하세요.",
+      "noBuild": "이 컴퓨터용 음성 모델은 아직 없어요. 아래에서 제공업체 키를 사용하세요.",
+      "stopped": "다운로드가 멈췄어요: {{detail}}",
+      "diskFull": "다운로드 중에 디스크가 가득 찼어요. 공간을 확보하고 다시 시도하세요.",
+      "didntStart": "음성 모델이 시작되지 않았어요: {{detail}}",
+      "resume": "이어서 받기",
+      "copy": "세부 정보 복사",
+      "copied": "세부 정보를 복사했어요"
+    },
+    "offer": {
+      "title": "음성 메시지",
+      "download": "{{size}} 다운로드하고 켜기",
+      "choose": "방법 고르기",
+      "askOwner": "이 서버에서 음성을 텍스트로 바꾸기",
+      "askMember": "음성 메시지를 켜 달라고 요청",
+      "on": "음성 메시지가 켜졌어요. 에이전트는 텍스트로 읽어요."
+    },
+    "setup": {
+      "memberTitle": "아직 여기서는 음성이 켜져 있지 않아요",
+      "memberText": "메시지는 누구나 재생할 수 있는 오디오로 보내져요. {{name}} 님이 음성을 텍스트로 바꾸는 곳을 고를 때까지 에이전트는 들을 수 없어요.",
+      "memberTextNoName": "메시지는 누구나 재생할 수 있는 오디오로 보내져요. 이 서버를 관리하는 사람이 음성을 텍스트로 바꾸는 곳을 고를 때까지 에이전트는 들을 수 없어요.",
+      "ask": "{{name}} 님에게 요청",
+      "asked": "{{name}} 님에게 켜 달라고 요청했어요",
+      "recordAnyway": "그래도 녹음",
+      "ownerTitle": "음성을 텍스트로 바꾸는 곳 고르기",
+      "ownerText": "고르기 전까지 음성 메시지는 누구나 재생할 수 있는 오디오로 보내지고, 에이전트는 들을 수 없어요.",
+      "readyTitle": "음성 메시지가 켜졌어요",
+      "readyText": "말한 내용이 텍스트로 에이전트에게 전달돼요.",
+      "record": "메시지 녹음",
+      "ownerPhone": "웹이나 데스크톱 앱의 설정 › 음성에서 골라 주세요. 그 전까지 음성 메시지는 누구나 재생할 수 있는 오디오로 보내지고, 에이전트는 들을 수 없어요."
     }
   },
   "media": {
@@ -12159,6 +12238,7 @@
       "cursor": "Cursor 요금제의 {{model}}",
       "grok": "Grok 요금제의 {{model}}",
       "gemini": "Gemini 요금제의 {{model}}",
+      "devin": "Devin 요금제의 {{model}}",
       "zen": "OpenCode의 {{model}}",
       "coding": "{{plan}}의 {{model}}",
       "claudeOf": "{{model}} · {{owner}}님의 Claude 요금제",
@@ -12166,6 +12246,7 @@
       "cursorOf": "{{owner}}님의 Cursor 요금제의 {{model}}",
       "grokOf": "{{owner}}님의 Grok 요금제의 {{model}}",
       "geminiOf": "{{owner}}님의 Gemini 요금제의 {{model}}",
+      "devinOf": "{{owner}}님의 Devin 요금제의 {{model}}",
       "zenOf": "{{owner}}의 OpenCode에서 {{model}}",
       "codingOf": "{{owner}}님의 {{plan}}의 {{model}}",
       "claudeAuto": "Claude 요금제",
@@ -12173,6 +12254,7 @@
       "cursorAuto": "Cursor 요금제",
       "grokAuto": "Grok 요금제",
       "geminiAuto": "Gemini 요금제",
+      "devinAuto": "Devin 요금제",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}}님의 Claude 요금제",
@@ -12180,6 +12262,7 @@
       "cursorAutoOf": "{{owner}}님의 Cursor 요금제",
       "grokAutoOf": "{{owner}}님의 Grok 요금제",
       "geminiAutoOf": "{{owner}}님의 Gemini 요금제",
+      "devinAutoOf": "{{owner}}님의 Devin 요금제",
       "zenAutoOf": "{{owner}}의 OpenCode",
       "codingAutoOf": "{{owner}}님의 {{plan}}",
       "on": "{{computer}}의 {{line}}"
@@ -12193,7 +12276,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "API 사용",
@@ -12206,6 +12290,7 @@
     "cursorText": "컴퓨터를 연결한 사람의 Cursor 요금제를 사용해요.",
     "grokText": "컴퓨터를 연결한 사람의 Grok 요금제를 사용해요.",
     "antigravityText": "컴퓨터를 연결한 사람의 Gemini 요금제를 사용해요.",
+    "devinText": "컴퓨터를 연결한 사람의 Devin 요금제를 사용해요.",
     "opencodeText": "OpenCode의 무료 모델, 또는 컴퓨터를 연결한 사람의 OpenCode 키를 사용해요.",
     "cursorModel": {
       "inPlan": "내 Cursor 요금제에 포함",
@@ -12223,6 +12308,7 @@
       "home_only": "{{computer}}의 {{program}}은(는) root 전용으로 설치되어 있어 에이전트가 닿지 못해요.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
+      "systemDevin": "{{computer}}은(는) Windows를 쓰는데, Devin은 아직 Windows에서 실행되지 않아요. Windows에서는 Devin CLI가 계정마다 로그인을 따로 보관하지 못하기 때문이에요. Mac이나 Linux 컴퓨터에서 Devin을 쓰거나 다른 AI를 선택하세요.",
       "windows_sandbox": "{{computer}}의 Windows에서는 {{program}}의 명령을 격리할 수 없어요. 대신 Claude나 API 키를 선택하거나, 그 컴퓨터를 최신 업데이트가 적용된 Windows 11 24H2 이상으로 업데이트하세요.",
       "no_computerCloud": "{{computer}}이(가) 준비되면 바로 쓸 수 있어요."
     },
@@ -12268,6 +12354,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -12773,6 +12860,23 @@
     "s3": "내 저장 공간",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 또는 기타 S3 호환 저장 공간.",
     "current": "사용 중",
+    "computer": {
+      "title": "워크스페이스 컴퓨터",
+      "used": "{{size}} 중 {{used}} 사용 중",
+      "bar": "워크스페이스 컴퓨터의 디스크",
+      "measuring": "공간을 차지하는 항목을 측정하는 중이에요.",
+      "part": {
+        "projects": "프로젝트와 코드",
+        "apps": "앱과 도구",
+        "agents": "에이전트 파일",
+        "caches": "캐시와 임시 파일",
+        "system": "시스템",
+        "other": "기타",
+        "free": "여유 공간"
+      },
+      "full": "거의 가득 찼어요. {{free}} 남았어요. 에이전트가 캐시와 임시 파일을 비우고 아무도 쓰지 않는 것을 지울 수 있어요.",
+      "ask": "워크스페이스 컴퓨터의 공간을 확보해 줘: 캐시와 임시 파일(패키지 관리자, 브라우저, 빌드 도구)을 비운 다음, 그 밖에 공간을 가장 많이 차지하는 게 무엇인지 알려 줘."
+    },
     "usage": {
       "files": "파일 {{size}}",
       "none": "파일 없음",
@@ -14490,6 +14594,9 @@
       "desktop_read": "화면 읽기",
       "desktop_screenshot": "스크린샷 찍기",
       "desktop_ask_person": "컴퓨터 넘겨받기 요청",
+      "apps_list": "열린 앱 보기",
+      "apps_read": "앱 읽기",
+      "apps_act": "앱 사용하기",
       "computer_use": "컴퓨터 사용",
       "computer_status": "컴퓨터 상태 확인",
       "left_click": "클릭",
@@ -15545,6 +15652,7 @@
       "generalStays": "모두가 #general에 남아요.",
       "leadChannelOnly": "책임 에이전트는 채널에만 둘 수 있어요.",
       "leadNotMember": "책임 에이전트는 채널에 있어야 해요.",
+      "groupNameInvalid": "80자 이내로, 한 줄에 이름을 지어 주세요.",
       "mcpUnreachable": "MCP 서버에 연결하지 못했어요. 주소를 확인하고 다시 시도해 주세요.",
       "notApproved": "이 서비스가 아직 agentes.chat을 승인하지 않았어요.",
       "alreadyInvited": "이 사람은 이미 초대를 받았어요.",
@@ -16012,10 +16120,48 @@
       "viaBy": "에이전트가 {{name}}({{person}})의 인터넷을 써요",
       "viaHint": "사이트에는 그 컴퓨터의 위치가 보여요. 연결한 사람이 그 컴퓨터 페이지에서 끌 수 있어요."
     },
-    "moving": {
-      "short": "서버 이전 중",
-      "line": "새 서버로 이전 중… 몇 분 후 돌아옵니다",
-      "named": "{{computer}}이(가) 새 서버로 이전 중… 몇 분 후 돌아옵니다"
+    "maintenance": {
+      "short": {
+        "moving": "서버 이전 중",
+        "restarting": "재시작 중",
+        "updating": "업데이트 중",
+        "converting": "디스크 개선 중",
+        "host_maintenance": "점검 중",
+        "other": "점검 중"
+      },
+      "what": {
+        "moving": "새 서버로 이전 중",
+        "copying": "새 서버로 복사 중",
+        "restarting": "재시작 중",
+        "updating": "소프트웨어 업데이트 중",
+        "converting": "디스크 개선 중",
+        "host_maintenance": "서버 점검 중",
+        "other": "작업 중"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "약 {{time}} 후 돌아옵니다",
+      "backSoon": "몇 분 후 돌아옵니다",
+      "late": "예상보다 조금 더 걸리고 있습니다",
+      "slower": "그동안 느려질 수 있습니다",
+      "slowerFor": "약 {{time}} 동안 느려질 수 있습니다",
+      "why": {
+        "moving": "새 서버로 옮기고 있습니다.",
+        "copying": "작업하는 동안 파일을 새 서버로 복사하고 있습니다.",
+        "handover": "마지막 변경 사항을 새 서버로 넘기고 있습니다.",
+        "restarting": "재시작하고 있습니다.",
+        "unresponsive": "응답이 멈춰서 자동으로 재시작했습니다.",
+        "updating": "소프트웨어를 업데이트하고 있습니다.",
+        "converting": "디스크를 더 빠른 저장소로 옮기고 있습니다.",
+        "host_maintenance": "실행 중인 서버가 점검 중입니다.",
+        "other": "작업을 하고 있습니다."
+      },
+      "since": "{{time}}부터",
+      "expectedBack": "{{time}}쯤 돌아올 예정",
+      "expectedDone": "{{time}}쯤 끝날 예정",
+      "meanwhile": "에이전트에게 보낸 메시지는 기다렸다가 돌아오면 자동으로 이어집니다.",
+      "working": "그동안에도 에이전트는 계속 일합니다.",
+      "about": "무슨 일인가요"
     },
     "online": "온라인",
     "offline": "오프라인",
@@ -16031,6 +16177,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "명령",
         "browser": "브라우저",
         "desktop": "화면",
@@ -16083,6 +16230,11 @@
     "removed": "{{name}}을(를) 삭제했어요.",
     "name": "컴퓨터 이름",
     "nameHelp": "사람과 에이전트에게 보이는 이름이에요.",
+    "defaultName": {
+      "model": "{{name}}의 {{model}}",
+      "linux": "{{name}}의 Linux 컴퓨터",
+      "other": "{{name}}의 컴퓨터"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16200,6 +16352,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "명령",
         "browser": "브라우저"
@@ -16210,6 +16363,7 @@
         "cursor": "Claude Code와 같지만 Cursor 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "grok": "Claude Code와 같지만 Grok 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "antigravity": "Claude Code와 같지만 Gemini 계정을 사용해요. 허용된 폴더에서만 작동해요.",
+        "devin": "Claude Code와 같지만 Devin 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "opencode": "Claude Code와 같지만 OpenCode의 무료 모델이나 OpenCode 키를 사용해요. 허용된 폴더에서만 작동해요.",
         "commands": "테스트나 빌드 같은 터미널 명령을 실행해요."
       },
@@ -16228,6 +16382,13 @@
       "grantTextTerminal": "허용은 컴퓨터에서 직접, 터미널에서 해요.",
       "grantTextAdmin": "허용은 컴퓨터에서 직접, 관리자 권한으로 터미널에서 해요.",
       "grantTerminal": "앱이 없나요? 컴퓨터의 터미널에서:",
+      "pickText": "agentes.chat 앱이 {{machine}}에서 폴더 선택 창을 열고, 그곳에 있는 사람이 고릅니다.",
+      "pick": "폴더 허용",
+      "picked": "{{machine}}에서 폴더 선택 창이 열렸어요. 그곳에서 폴더를 고르세요.",
+      "pickWaiting": "{{machine}}에서 폴더를 고르기를 기다리는 중",
+      "grantTerminalMore": "앱이 없나요? 터미널을 사용하세요",
+      "noApp": "이 컴퓨터에는 폴더를 고를 agentes.chat 앱이 없어요. 그 컴퓨터의 터미널에서 허용하세요.",
+      "requestDone": "이 요청은 이미 답변되었거나 만료되었어요.",
       "preferTerminal": "터미널이 더 좋아요",
       "grantOnlyOwner": "더 허용하는 건 {{name}} 님만 컴퓨터에서 직접 할 수 있어요. 필요한 게 있으면 요청하세요.",
       "pathPlaceholder": "<폴더>",
@@ -16235,6 +16396,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
+      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
+      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
+      "asked": "{{trigger}} 실행에 필요해요",
+      "names": {
+        "app_management": "앱 관리",
+        "screen": "화면 기록",
+        "accessibility": "손쉬운 사용",
+        "disk": "전체 디스크 접근 권한",
+        "network": "로컬 네트워크",
+        "camera": "카메라",
+        "microphone": "마이크",
+        "automation": "자동화"
+      }
+    },
     "leadCloud": "에이전트가 일하는 곳: 워크스페이스 컴퓨터와 사람들이 연결한 기기예요.",
     "lead": "에이전트가 일하는 곳: 사람들이 연결한 컴퓨터와 휴대폰이에요.",
     "connect": "기기 연결",
@@ -16287,6 +16464,19 @@
     "forgotten": "{{name}}을(를) 지웠어요.",
     "stop": "중지",
     "stopped": "중지했어요. 이제 {{name}}을(를) 사용할 수 있어요.",
+    "power": {
+      "start": "켜기",
+      "stop": "끄기",
+      "starting": "{{name}}을(를) 켜고 있어요. 곧 준비돼요.",
+      "stopped": "{{name}}을(를) 껐어요.",
+      "toolMissingIos": "{{computer}}에서 시뮬레이터를 실행하려면 Xcode가 필요해요. 그 Mac에서 App Store로 Xcode를 설치하세요.",
+      "toolMissingAndroid": "{{computer}}에 Android Emulator가 없어요. 그 컴퓨터의 Android Studio › SDK Manager › SDK Tools에서 설치하세요.",
+      "gone": "{{name}}이(가) 더 이상 {{computer}}에 없어요. 그곳에서 삭제됐어요. 여기서 지우거나 그곳에서 다시 만드세요.",
+      "busy": "{{name}}을(를) 지금 사용 중이에요. 사용 중인 작업을 먼저 중지하거나, 비었을 때 다시 시도하세요.",
+      "startFailed": "{{name}}이(가) 켜지지 않았어요. {{computer}}의 응답: {{why}}",
+      "stopFailed": "{{name}}이(가) 꺼지지 않았어요. {{computer}}의 응답: {{why}}",
+      "notSimulator": "여기서는 시뮬레이터와 에뮬레이터만 켜고 끌 수 있어요."
+    },
     "showMe": "방법 보기",
     "notFound": "이 기기는 더 이상 없어요",
     "notFoundText": "삭제되었거나 링크가 잘못됐어요.",
@@ -16302,15 +16492,21 @@
     "belongs": "워크스페이스 소유",
     "belongsHint": "연결한 사람이 떠나도 남아 있고, 소유자가 없는 동안에는 누구나 사용할 수 있어요.",
     "spillOwn": "팀 컴퓨터가 가득 찼거나 없을 때 돕기",
-    "spillOwnHint": "에이전트의 컴퓨터가 가득 찼거나 없을 때, 그 답장, 요청, 루틴이 내 로그인으로 여기서 생각할 수 있습니다.",
-    "spillTeamHint": "에이전트의 컴퓨터가 가득 찼거나 없을 때, 그 답장, 요청, 루틴이 이 컴퓨터에 있는 소유자의 로그인으로 여기서 생각할 수 있습니다.",
+    "spillOwnHint": "팀 컴퓨터가 가득 찼거나 없을 때, 내 에이전트의 답장, 요청, 루틴이 여기서 생각할 수 있어요. 이 컴퓨터에 로그인된 AI 계정을 써요.",
+    "spillTeamHint": "에이전트의 컴퓨터가 가득 찼거나 없을 때, 그 답장, 요청, 루틴이 여기서 생각할 수 있어요. 소유자가 이 컴퓨터에 로그인한 AI 계정을 써요.",
     "spillWorkspaceOff": "관리자가 워크스페이스 전체에서 이 기능을 껐습니다.",
-    "spillFirst": "이 컴퓨터를 내 에이전트 작업에 사용",
-    "spillFirstHint": "에이전트의 요청, 루틴, 긴 작업은 이 컴퓨터가 비어 있으면 여기서, 여기에 연결한 AI로 시작됩니다. 사람에게 보내는 답장은 팀 컴퓨터가 꽉 찼거나 없을 때만 여기서 시작됩니다.",
+    "helpUse": "에이전트를 돕는 방식",
+    "helpUses": {
+      "off": "돕지 않음",
+      "help": "예비로만",
+      "first": "내 에이전트 먼저"
+    },
+    "helpUseHint": "예비로만: 팀 컴퓨터가 가득 찼거나 없을 때 내 에이전트가 여기로 와요. 내 에이전트 먼저: 에이전트의 요청, 루틴, 긴 작업은 이 컴퓨터가 비어 있으면 언제든 여기서 시작하고, 사람에게 보내는 답장은 팀 컴퓨터가 가득 찼거나 없을 때만 여기서 시작해요. 둘 다 이 컴퓨터에 로그인된 AI 계정을 써요.",
+    "helpUseTeamHint": "예비로만: 누구의 에이전트든 자기 컴퓨터가 가득 찼거나 없을 때 여기로 와요. 그 소유자가 이 컴퓨터에 로그인한 AI 계정을 써요. 내 에이전트 먼저: 내 에이전트의 요청, 루틴, 긴 작업은 이 컴퓨터가 비어 있으면 언제든 여기서 시작해요.",
     "helpWorkspace": "팀 컴퓨터가 가득 찼거나 없을 때 다른 컴퓨터가 돕기",
     "helpWorkspaceHint": "각 컴퓨터는 소유자가 허용할 때만 돕습니다. 끔: 소유자의 선택과 상관없이 아무 컴퓨터도 돕지 않습니다.",
     "shareInternet": "에이전트가 이 컴퓨터의 인터넷을 써요",
-    "shareInternetHint": "에이전트가 여는 사이트는 이 컴퓨터의 연결을 거치므로 사이트에 내 위치가 보여요. 웹사이트만, 하루 5 GB까지이고, 내 네트워크에 있는 것에는 절대 접근하지 않아요. 이 컴퓨터가 오프라인인 동안에는 에이전트가 평소 연결을 써요.",
+    "shareInternetHint": "에이전트가 여는 사이트는 이 컴퓨터의 연결을 거치므로 사이트에 내 위치가 보여요. 웹사이트만 열고, 내 네트워크에 있는 것에는 절대 접근하지 않아요. 이 컴퓨터가 오프라인인 동안에는 에이전트가 평소 연결을 써요.",
     "shareInternetInUse": "지금 사용 중",
     "shareInternetOther": "에이전트가 지금 {{name}}을(를) 써요",
     "shareInternetPick": "이걸로 쓰기",
@@ -16843,8 +17039,10 @@
       "toolRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{tool}}을(를) 켜 달라고 요청합니다",
       "cliRequest": "<b>{{who}}</b> 님이 <b>{{deviceName}}</b>에 {{tool}}을(를) 설치해 달라고 요청합니다",
       "folderRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{path}} 폴더를 요청합니다",
+      "folderOnComputer": "컴퓨터에서 허용",
+      "folderShown": "{{deviceName}}에서 열렸어요. 그곳에서 허용하세요.",
       "internetShared": "이제 에이전트가 <b>{{deviceName}}</b>의 인터넷으로 웹사이트를 열어요",
-      "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만, 하루 최대 5GB까지 쓰고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
+      "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만 열고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
       "internetOff": "끄기",
       "internetOffDone": "에이전트가 더 이상 {{deviceName}}의 인터넷을 쓰지 않아요.",
       "once": "한 번 허용",
@@ -18315,6 +18513,7 @@
     "namesMore": "{{first}} 외 {{count}}명",
     "wait": {
       "thinking": "생각 중…",
+      "code": "코드 업데이트 중…",
       "held": "승인 대기 중…",
       "said": "“{{text}}”"
     },
@@ -18557,6 +18756,7 @@
         "usingScreen": "화면을 사용했어요",
         "cloningRepo": "저장소를 클론했어요",
         "listingRepos": "저장소 목록을 확인했습니다",
+        "updatingCode": "코드를 업데이트했어요",
         "preparingCli": "{{app}}을(를) 준비했어요",
         "openingPullRequest": "pull request를 열었어요",
         "handingOff": "보고서를 전달했어요",
@@ -18681,6 +18881,7 @@
       "usingScreen": "화면을 사용하는 중",
       "cloningRepo": "저장소를 클론하는 중",
       "listingRepos": "저장소 목록 확인 중",
+      "updatingCode": "코드 업데이트 중",
       "preparingCli": "{{computer}}에서 {{app}}을(를) 준비하는 중",
       "preparingCliPct": "{{computer}}에서 {{app}}을(를) 준비하는 중 ({{percent}}%)",
       "openingPullRequest": "pull request를 여는 중",
@@ -18876,6 +19077,7 @@
       "action_approvals": "내 승인을 기다리는 요청",
       "welcome_member": "방금 {{org}}에 들어오셨네요. **여기서 어떤 일을 맡고 있나요?** 알려주시면 첫 에이전트를 함께 만들어 드릴게요.",
       "action_open_page": "화면 열기",
+      "action_voice_setup": "음성 메시지 켜기",
       "calendar_proposal": "일정 제안: {{title}}",
       "action_workspace": "워크스페이스 변경을 제안했어요",
       "agent_proposal": "새 에이전트를 제안했어요: {{name}}",
@@ -19170,6 +19372,10 @@
     "offer_open_page": {
       "label": "화면 열기 제안",
       "description": "결제, 역할, 에이전트 페이지처럼 앱의 화면을 여는 버튼이 있는 카드를 게시해요."
+    },
+    "offer_voice_setup": {
+      "label": "음성 메시지 켜기 제안",
+      "description": "서버 관리자가 클릭 한 번으로 음성 메시지를 켤 수 있는 카드를 올려요. 다른 사람은 관리자에게 요청해요."
     },
     "set_team_week": {
       "label": "팀의 한 주 카드 바꾸기",
@@ -20087,14 +20293,13 @@
       }
     },
     "use": {
-      "title": "에이전트 화면의 앱",
-      "description": "에이전트는 사람처럼 자기 화면에서 앱을 열고 사용하고, 사람들은 각 에이전트 페이지에서 지켜봐요.",
+      "title": "에이전트마다 따로 쓰는 화면",
+      "description": "여기서는 에이전트마다 내 화면과 분리된 자기만의 화면을 갖고, 그 화면에서 브라우저나 스프레드시트처럼 창이 있는 앱을 사람처럼 사용해요. 에이전트 페이지에서 지켜볼 수 있어요. 지금은 Linux에서만 돼요. Linux는 내 화면을 건드리지 않고 에이전트마다 화면을 하나 더 열 수 있어요.",
       "ready": "준비됨",
       "off": "꺼짐",
-      "unavailable": "사용할 수 없음",
+      "unavailable": "준비 필요",
       "offHelp": "이 컴퓨터에서 화면과 명령을 켜세요:",
       "offOne": "이 컴퓨터는 화면과 명령이 모두 켜져 있어야 합니다.",
-      "linuxOnly": "에이전트는 Linux 컴퓨터에서만 자기 화면의 앱을 사용할 수 있어요.",
       "agent": "{{name}}은(는) 아직 {{computer}}에서 자기 화면의 앱을 사용할 수 없어요.",
       "agent_female": "{{name}}은(는) 아직 {{computer}}에서 자기 화면의 앱을 사용할 수 없어요."
     },

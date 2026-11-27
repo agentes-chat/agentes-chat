@@ -139,13 +139,14 @@ export async function sampleLoad(): Promise<Omit<LoadSample, "at"> | null> {
   return { load: fiveMinutes / machineCpus(), memory: await memoryInUse() };
 }
 
-type DiskFigures = Pick<MachineLoad, "diskFreeGb" | "diskUse" | "sharedGb" | "agentTmpRamGb">;
+type DiskFigures = Pick<MachineLoad, "diskFreeGb" | "diskUse" | "sharedGb" | "agentTmpRamGb" | "diskGb" | "diskParts">;
 
-/** `diskSpace`'s bytes as `pong.load` carries them: free GB (one decimal) and the share in use. */
+/** `diskSpace`'s bytes as `pong.load` carries them: free GB and the size (one decimal) and the share in use. */
 export const diskFigures = (d: { sizeBytes: number; freeBytes: number } | null): DiskFigures =>
   d && d.sizeBytes > 0
     ? {
         diskFreeGb: round1(d.freeBytes / GIB),
+        diskGb: round1(d.sizeBytes / GIB),
         diskUse: round2(Math.min(1, Math.max(0, 1 - d.freeBytes / d.sizeBytes))),
       }
     : {};

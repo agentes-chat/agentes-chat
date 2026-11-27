@@ -11,7 +11,7 @@ RUN python -I /fonts-src/build.py /fonts-src/fonts.lock.json /fonts
 FROM oven/bun:1.4.4
 WORKDIR /app
 # A named volume mounted on an empty image directory takes its owner: FILES_DIR in docker-compose.yml.
-RUN install -d -o bun -g bun /data/files
+RUN install -d -o bun -g bun /data/files /data/speech
 COPY . .
 COPY --from=fonts /fonts /app/fonts
 RUN bun install --frozen-lockfile \

@@ -220,7 +220,7 @@ export function describeCapabilities(
     } else if (make) lines.push(`- ${make}Never a repository or your CLI's own skills folder (~/.claude/skills…).`);
     if (names.has("request_settings_change")) {
       lines.push(
-        "- A skill, a channel or another setting of your own you lack: ask with `request_settings_change`, a card a person approves. Never steps by hand, never a can't.",
+        "- A skill, a channel, approvals or another setting of your own you lack: ask with `request_settings_change`, a card a person approves. Never steps by hand, never a can't.",
       );
     }
     if (loaded.has("share_artifact")) {
@@ -316,8 +316,11 @@ export const COMPUTER_TOOLS_NOTE =
  * The transcript keeps the model brain's text, since a run can fall back to it.
  */
 export function forComputerBrain(system: string) {
-  return `${system.replace(CAPABILITIES_LIMIT, COMPUTER_CAPABILITIES_LIMIT)}\n\n${COMPUTER_TOOLS_NOTE}\n${COMPUTER_SECTIONS_LINE}`;
+  return `${withComputerLimit(system)}\n\n${COMPUTER_TOOLS_NOTE}\n${COMPUTER_SECTIONS_LINE}`;
 }
+
+/** "What you can do" as a computer brain reads it, wherever it is (its system text, or "# This conversation"). */
+export const withComputerLimit = (text: string) => text.replace(CAPABILITIES_LIMIT, COMPUTER_CAPABILITIES_LIMIT);
 
 /** Where a computer brain reads what changes per conversation and per turn (`conversationText`, `thisTurnText`). */
 export const COMPUTER_SECTIONS_LINE =

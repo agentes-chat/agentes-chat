@@ -92,6 +92,8 @@ export const STORED = {
   doubleTapTaught: "double-tap-taught",
   /** `<user id>.<org id>` entries (JSON list): the right hand's DM was opened there, so its "Novo" is gone. */
   rightHandSeen: "right-hand-seen",
+  /** Who has seen the microphone's first-press sheet where voice doesn't become text yet (JSON list of user ids). */
+  voiceSetupSeen: "voice-setup-seen",
   /** The speed voice messages play at on this phone: "1", "1.5" or "2" (features/voice/speed.ts). */
   voiceSpeed: "voice-speed",
   /** The person held the send button to stop an agent and send once: the composer's hint is over ("1"). */
@@ -108,4 +110,10 @@ export async function clearStoredValues(): Promise<void> {
 export const rightHandSeen = seenList(
   () => readValueSync(STORED.rightHandSeen),
   (value) => writeValueSync(STORED.rightHandSeen, value),
+);
+
+/** The microphone's first-press sheet where voice doesn't become text yet (`VoiceSetupSheet`), by user id. */
+export const voiceSetupSeen = seenList(
+  () => readValueSync(STORED.voiceSetupSeen),
+  (value) => writeValueSync(STORED.voiceSetupSeen, value),
 );

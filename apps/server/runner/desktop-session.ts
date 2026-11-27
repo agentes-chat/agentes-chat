@@ -321,8 +321,10 @@ export function pressureLevelBytes(level: string, totalBytes: number): number | 
 
 /**
  * Free memory now, for background tasks' room: Linux `MemAvailable`, macOS its memory-pressure level (`os.freemem()`
- * reads near zero on a healthy Mac, whose free memory sits in caches it hands back), Windows its available physical
- * memory (`os.freemem()` there). Null where none can be read.
+ * reads near zero on a healthy Mac, whose free memory sits in caches it hands back; the level counts them, and reads
+ * more than vm_stat's free + inactive + speculative + purgeable), Windows its available physical memory (`os.freemem()`
+ * there is libuv's `uv_get_available_memory`, `MEMORYSTATUSEX.ullAvailPhys`, standby list included; Bun 1.4 and
+ * libuv source, 2026-11). Null where none can be read.
  */
 export function freeMemoryNow(): number | null {
   if (process.platform === "linux") return hostMemAvailable();

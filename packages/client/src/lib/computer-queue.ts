@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next";
 import type { ComputerQueue, Message, QueuePurpose, QueueWaiting, QueueWorking } from "../api/types";
 import type { MessageReceipt, ReceiptPhase, ReceiptsState } from "../realtime/receipts";
-import { joinNames, ordinalForm } from "./format";
+import { maintenanceLine, maintenanceOf } from "./computer-maintenance";
+import { durationText, joinNames, ordinalForm } from "./format";
 import { agentGrammar } from "./grammar";
 
 /**
@@ -13,14 +14,7 @@ import { agentGrammar } from "./grammar";
 /** Whole minutes until `iso`, at least 1: an estimate never reads "0 min". */
 export const etaMinutes = (iso: string, now: number) => Math.max(1, Math.round((Date.parse(iso) - now) / 60_000));
 
-/** "3 min", "40 s", "2 h", "3 dias": how long something has gone on. */
-export function durationText(t: TFunction, ms: number) {
-  if (ms < 60_000) return t("run.elapsedSeconds", { n: Math.max(1, Math.round(ms / 1000)) });
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 60) return t("format.inMinutes", { count: minutes });
-  const hours = Math.round(minutes / 60);
-  return hours < 48 ? t("format.inHours", { count: hours }) : t("format.inDays", { count: Math.round(hours / 24) });
-}
+export { durationText };
 
 /** "1st", "4º", "4." in the language's own ordinal form. */
 export function nthText(t: TFunction, locale: string, n: number) {
@@ -69,8 +63,10 @@ export const queueButtonText = (t: TFunction, queue: ComputerQueue | null | unde
   queue?.waiting.length ? t("queue.button", { count: queue.waiting.length }) : t("queue.buttonIdle");
 
 /** "In line · starts soon" whatever holds the line, or "Nobody in line". */
-export const queueStatusText = (t: TFunction, view: QueueView, queue?: Pick<ComputerQueue, "moving">) =>
-  queue?.moving ? t("machines.moving.line") : t(view.full ? "queue.waiting" : "queue.free");
+export function queueStatusText(t: TFunction, view: QueueView, queue?: Pick<ComputerQueue, "moving" | "maintenance">) {
+  const away = maintenanceOf(queue);
+  return away?.away ? maintenanceLine(t, away) : t(view.full ? "queue.waiting" : "queue.free");
+}
 
 /** "all started in ~6 min", or null with no basis or one in line (its row says it). */
 export const queueAllStartedText = (t: TFunction, view: QueueView, now: number) =>

@@ -3,6 +3,7 @@ import { getAgentCached } from "../agents";
 import { recordCodeSessionPr } from "../code-sessions";
 import { connectorScope } from "../connectors/catalog";
 import { activeConnections, type ConnectorConnection, type ConnectorDeps } from "../connectors/connections";
+import { ago } from "../context";
 import { publishChannelEvent } from "../events";
 import { computerPreparing } from "../machine-provisioning";
 import { missionOfRun } from "../mission-context";
@@ -38,7 +39,13 @@ import {
   teamGitConnections,
 } from "./hosts";
 import { hostAt } from "./hosts/reach";
-import { cloneOnMachine } from "./machine";
+import {
+  type CheckoutsWaited,
+  cloneOnMachine,
+  machineGitUnavailable,
+  WAIT_FOR_CODE_TOOL,
+  waitForCheckouts,
+} from "./machine";
 import { onSessionRepo, personAccountOfRun } from "./person-account";
 import { gitAccess } from "./proxy";
 import { orgRepositories } from "./repo-listing";
@@ -94,6 +101,29 @@ function progressPublisher(pubsub: PubSub | undefined, c: ToolContext) {
   };
 }
 
+/** What `wait_for_code` tells the agent: where each checkout is now, and whether the update ended. */
+export function checkoutsWaitedText(waited: CheckoutsWaited, now: Date): string {
+  const lines = waited.checkouts.flatMap((r) => {
+    const where = r.path ?? r.dir;
+    const at = [r.branch ?? r.defaultBranch, r.head].filter(Boolean).join(" at ");
+    if (r.status === "missing") return [];
+    if (r.status === "cloning") return [`${r.repo}: still downloading into ${where}; git_clone waits for it.`];
+    if (r.status === "failed")
+      return [
+        `${r.repo} at ${where}: its update failed (${r.message || "no answer"}); it is as it was${r.head ? ` (${r.head})` : ""}. Run git pull --ff-only there to try yourself.`,
+      ];
+    return [`${r.repo} at ${where}${at ? ` (${at})` : ""}: updated${r.message ? `; ${r.message}` : ""}.`];
+  });
+  const when = waited.syncedAt ? ago(waited.syncedAt, now.getTime()) : null;
+  const head = waited.done
+    ? `Your checkouts were updated${when ? ` (${when})` : ""}.`
+    : `The update is still running after a minute; your checkouts as the last update left them${when ? ` (${when})` : ""}: run git pull --ff-only in the one you need for its newest commits.`;
+  return [
+    head,
+    ...(lines.length > 0 ? lines : ["No checkout of yours is on this computer yet: git_clone clones one."]),
+  ].join("\n");
+}
+
 /** A branch its host keeps agents off, in the words a refusal names it with. */
 const blocked = (block: BranchBlock, host: GitHost) =>
   block === "missing" ? `not on ${host.label}` : block === "default" ? "the default branch" : "protected";
@@ -118,7 +148,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
     async tools(ctx: ToolContext): Promise<ToolDefinition[]> {
       const connected = teamGitConnections(await activeConnections(ctx.db, ctx.orgId));
       if (connected.length === 0) return [];
-      return [listTool(), ...connected.flatMap(({ host, connection }) => toolsOn(host, connection))];
+      return [listTool(), waitTool(), ...connected.flatMap(({ host, connection }) => toolsOn(host, connection))];
     },
   };
 
@@ -175,6 +205,62 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           );
           const more = all.length > shown.length || listing.truncated ? "\nThere are more: narrow it with query." : "";
           return { content: `${lines.join("\n")}${more}`, data: { repositories: shown.map((r) => r.fullName) } };
+        } catch (error) {
+          return failed(error);
+        }
+      },
+    };
+  }
+
+  /**
+   * `wait_for_code`: the turn started from the checkouts as their last update left them, with the next update beside
+   * it (`prepareAgentCode`); when the task needs the newest code, the agent waits for that update here, inside its
+   * turn, after saying so. A tool of ours with no connection of its own, like `list_repositories`.
+   */
+  function waitTool(): ToolDefinition {
+    return {
+      name: WAIT_FOR_CODE_TOOL,
+      description:
+        "Wait for the update of your checkouts on your computer (each repository fetched, its default branch fast-forwarded) that runs beside your turn, then see where each one is. Call it when the task needs the newest code and your turn said they were updating; with none running it starts one. Takes up to about a minute.",
+      scope: "",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      async execute(_input, c) {
+        try {
+          const [agent, mission] = await Promise.all([getAgentCached(c.db, c.orgId, c.agentId), missionOfRun(c)]);
+          if (mission) {
+            return {
+              content:
+                "In a mission you work in the mission's own folder: run git pull --ff-only there (or git fetch) for the newest commits.",
+            };
+          }
+          if (isRightHand(agent)) return { content: "You have no checkouts of your own to update." };
+          const machineId = await toolMachineId(c.db, agent);
+          const machines = deps.sandbox.machines;
+          const git = deps.sandbox.git;
+          if (!agent || !machineId) {
+            const preparing = await computerPreparing({ ...deps.sandbox, db: c.db }, c.orgId);
+            return { content: preparing ? PREPARING_COMPUTER_MESSAGE : NO_COMPUTER_MESSAGE, isError: true };
+          }
+          if (!machines || !git) return { content: "Connected computers are not available here.", isError: true };
+          const at = { orgId: c.orgId, agentId: c.agentId, machineId };
+          const machineDeps = {
+            db: c.db,
+            hub: machines.hub,
+            git,
+            github: deps.app ? { app: deps.app, http: github } : null,
+            ...(deps.sandbox.now ? { now: deps.sandbox.now } : {}),
+          };
+          const waited = await waitForCheckouts(machineDeps, at, c.signal);
+          if (!waited) {
+            const why = machineGitUnavailable(await machines.hub.status(machineId), c.orgId);
+            return {
+              content: why
+                ? `Your checkouts can't be updated now: ${why.message}`
+                : "You have no git access on your computer, so no checkout of yours is updated.",
+              isError: true,
+            };
+          }
+          return { content: checkoutsWaitedText(waited, deps.sandbox.now?.() ?? new Date()) };
         } catch (error) {
           return failed(error);
         }

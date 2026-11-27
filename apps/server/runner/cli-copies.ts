@@ -57,6 +57,7 @@ export const CLI_COMMAND: Readonly<Record<PinCli, string>> = {
   opencode: "opencode",
   grok: "grok",
   antigravity: "agy",
+  devin: "devin",
   git: GIT_BASH_PICK,
 };
 
@@ -71,6 +72,7 @@ export const CLI_OF_BRAIN: Readonly<Record<string, PinCli>> = {
   opencode: "opencode",
   grok: "grok",
   antigravity: "antigravity",
+  devin: "devin",
 };
 
 /** A download, its unpacking and their checks take at most this long (a slow line, a few hundred MB). */
@@ -475,6 +477,7 @@ const NAMES: Record<PinCli, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "the Antigravity CLI",
+  devin: "the Devin CLI",
   git: "Git for Windows",
 };
 const cliName = (cli: PinCli) => NAMES[cli];

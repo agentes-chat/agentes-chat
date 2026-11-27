@@ -8,11 +8,13 @@ import { previewBody } from "../src/lib/message-body";
 import { localMeta } from "../src/lib/reply";
 import {
   listedText,
+  micShown,
   voiceAudioGone,
   voiceClock,
   voiceExpired,
   voiceOf,
   voiceParts,
+  voiceSetupAsk,
   voiceSpeedOf,
   wavePeaks,
 } from "../src/lib/voice";
@@ -140,5 +142,25 @@ describe("audio files", () => {
     expect(previewKind("application/octet-stream", "faixa.flac")).toBe("audio");
     expect(previewKind("audio/mpeg")).toBe("audio");
     expect(previewKind("application/octet-stream", "video.mp4")).toBeNull();
+  });
+});
+
+describe("the microphone where voice doesn't become text yet", () => {
+  const base = { voiceMessages: true, voiceAvailable: false, speechOwner: { userId: "u-w", name: "Walter" } };
+  test("it shows with the workspace's switch alone; an older server still needs an engine", () => {
+    expect(micShown({ ...base, speechState: "none" })).toBe(true);
+    expect(micShown({ ...base, speechState: "none", voiceMessages: false })).toBe(false);
+    expect(micShown(base)).toBe(false);
+    expect(micShown({ ...base, voiceAvailable: true })).toBe(true);
+  });
+  test("the first press asks once, the owner to choose, anyone else to ask them", () => {
+    expect(voiceSetupAsk({ ...base, speechState: "none" }, "u-a", true)).toEqual({
+      isOwner: false,
+      owner: base.speechOwner,
+    });
+    expect(voiceSetupAsk({ ...base, speechState: "failed" }, "u-w", true)?.isOwner).toBe(true);
+    expect(voiceSetupAsk({ ...base, speechState: "none" }, "u-a", false)).toBeNull();
+    expect(voiceSetupAsk({ ...base, speechState: "ready" }, "u-a", true)).toBeNull();
+    expect(voiceSetupAsk(base, "u-a", true)).toBeNull();
   });
 });

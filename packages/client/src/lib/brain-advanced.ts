@@ -46,7 +46,10 @@ export function effortLevelsFor(
 ): readonly EffortLevel[] {
   const option = options.find((o) => o.kind === kind);
   const value = model ?? option?.defaultModel;
-  return effortLevelsOf(kind, option?.models.find((m) => m.value === value)?.modelId ?? value ?? null);
+  const found = option?.models.find((m) => m.value === value);
+  // A Devin family's own levels, as its account listed them (ADR 0253).
+  if (found?.efforts?.length) return EFFORT_LEVELS.filter((l) => found.efforts?.includes(l));
+  return effortLevelsOf(kind, found?.modelId ?? value ?? null);
 }
 
 /** A stored effort as one of `levels`: one the model doesn't take runs as its highest level under it. */

@@ -600,10 +600,16 @@ const KNOWN = {
   "routine.too_many_actions": "errors.said.tooMany",
   token_limit: "errors.said.tooMany",
   "voice.limit": "errors.said.tooMany",
+  "voice.plan": "voice.plan",
   "wiki.folder_depth": "errors.said.tooMany",
   "wiki.import_too_many": "errors.said.tooMany",
   "database.host_required": "errors.said.fillIn",
   "device.name_required": "errors.said.fillIn",
+  "device.power_gone": "devices.power.gone",
+  "device.power_busy": "devices.power.busy",
+  "device.power_start_failed": "devices.power.startFailed",
+  "device.power_stop_failed": "devices.power.stopFailed",
+  "device.not_simulator": "devices.power.notSimulator",
   "database.password_required": "errors.said.fillIn",
   "database.user_required": "errors.said.fillIn",
   "endpoint.no_models": "errors.said.fillIn",
@@ -636,6 +642,10 @@ const KNOWN = {
   "account.runner_old": "errors.said.updateComputerApp",
   "account.system": "brain.reasons.system",
   "machine.access_outdated": "errors.said.updateComputerApp",
+  "machine.no_app": "machines.access.noApp",
+  "machine.request_done": "machines.access.requestDone",
+  "machine.request_not_found": "machines.access.requestDone",
+  "agent.not_found": "errors.said.gone",
   "machine.cli_outdated": "errors.said.updateComputerApp",
   "machine.cli_not_fetched": "errors.said.cliNotFetched",
   "machine.outdated": "errors.said.updateComputerApp",
@@ -663,6 +673,7 @@ const KNOWN = {
   "channel.general_stays": "errors.said.generalStays",
   "channel.lead_channel_only": "errors.said.leadChannelOnly",
   "channel.lead_not_member": "errors.said.leadNotMember",
+  "channel.name_invalid": "errors.said.groupNameInvalid",
   "connector.mcp_status": "errors.said.mcpUnreachable",
   "connector.mcp_unreachable": "errors.said.mcpUnreachable",
   "connector.not_approved": "errors.said.notApproved",
@@ -935,6 +946,10 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
     return t("errors.mail.ownerOnlyUnknown", error.params);
   // Everyone else in the workspaces that keep the account is an outside collaborator, who can't own one (ADR 0191).
   if (error.code === "sole_owner" && error.params?.onlyOutside === true) return t("errors.said.soleOwnerOutside");
+  if (error.code === "device.power_tool_missing")
+    return t(error.params?.platform === "ios" ? "devices.power.toolMissingIos" : "devices.power.toolMissingAndroid", {
+      computer: error.params?.computer ?? "",
+    });
   if (error.code === "browser_profile.unavailable")
     return t("browser.profiles.notOpened", { machine: error.params?.machineName ?? "" });
   // `provider`: the provider whose key is missing, when the server could name it.

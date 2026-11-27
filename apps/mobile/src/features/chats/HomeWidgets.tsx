@@ -11,12 +11,31 @@ import { WidgetPeek } from "../dashboards/WidgetPeek";
 import { useColors } from "../shared/hooks";
 import { CollapsibleSection } from "./HomeSection";
 
-/** A widget's width on the strip: two show whole and the third peeks past the edge, so it reads as one that scrolls. */
+/** Between the cards: the lists' 12. */
+const GAP = 12;
+
+/**
+ * A widget's width on the strip (ADR 0135 §15): a small one takes a column (two show whole and the third peeks past
+ * the edge, so it reads as one that scrolls); a medium or large one takes two columns and the gap between them, as on
+ * a board, so its rows and sentences show whole.
+ */
 const STRIP_WIDGET = 162;
+const STRIP_WIDE = STRIP_WIDGET * 2 + GAP;
+const isWide = (w: Widget) => w.layout.w === 2;
+
+/** Where each card starts on the strip: its stops when a swipe lets go. */
+function stripStops(widgets: readonly Widget[]): number[] {
+  let x = 0;
+  return widgets.map((w) => {
+    const at = x;
+    x += (isWide(w) ? STRIP_WIDE : STRIP_WIDGET) + GAP;
+    return at;
+  });
+}
 
 /**
  * The home's widgets (ADR 0135 §15, §18): a head with what Início shows (My Home, or the board chosen with "Use on
- * Home") and "See all", which pushes Dashboards; then its widgets small, side by side, on a strip that scrolls
+ * Home") and "See all", which pushes Dashboards; then its widgets side by side, each one or two columns wide, on a strip that scrolls
  * sideways. Tapping one opens it. With none yet, one card asks for a widget (when the person edits that board).
  */
 export const HomeWidgets = memo(function HomeWidgets({
@@ -42,9 +61,9 @@ export const HomeWidgets = memo(function HomeWidgets({
   return (
     <CollapsibleSection title={title} count={widgets.length} collapsed={collapsed} onToggle={onToggle}>
       {widgets.length > 0 || !canAdd ? (
-        <SideScroll snapToInterval={STRIP_WIDGET + GAP} decelerationRate="fast" contentContainerStyle={styles.strip}>
+        <SideScroll snapToOffsets={stripStops(widgets)} decelerationRate="fast" contentContainerStyle={styles.strip}>
           {widgets.map((w) => (
-            <View key={w.id} style={styles.item}>
+            <View key={w.id} style={isWide(w) ? styles.wide : styles.item}>
               <WidgetPeek widget={w} canEdit={canAdd} board={where} compact />
             </View>
           ))}
@@ -111,9 +130,6 @@ function StripButton({
   );
 }
 
-/** Between the cards: the lists' 12. */
-const GAP = 12;
-
 /** The "add a widget" box's corner; its press light keeps it. */
 const EMPTY_RADIUS = 20;
 
@@ -127,6 +143,7 @@ const styles = StyleSheet.create({
   allButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   pressed: { opacity: 0.7 },
   item: { width: STRIP_WIDGET },
+  wide: { width: STRIP_WIDE },
   empty: {
     flexDirection: "row",
     alignItems: "center",

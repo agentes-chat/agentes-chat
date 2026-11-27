@@ -3,7 +3,7 @@ import { and, eq, isNull, schema, sql } from "@agenteschat/db";
 import { type ActionRecord, actWithUndo } from "./agent-actions";
 import { currentHandles } from "./agents";
 import { invalidateOrg } from "./cache";
-import { addChannelMember } from "./channels";
+import { addChannelMember, channelNameIs, typedChannelName } from "./channels";
 import { getChannelCached } from "./context";
 import { updateChannel } from "./management";
 import { personBehindCall } from "./requester";
@@ -57,7 +57,7 @@ async function channelNamed(
   raw: unknown,
   here: string,
 ): Promise<{ id: string; name: string } | string> {
-  const name = str(raw).trim().replace(/^#/, "").toLowerCase();
+  const name = typedChannelName(str(raw));
   const { channels } = schema;
   const [channel] = name
     ? await ctx.db
@@ -66,7 +66,7 @@ async function channelNamed(
         .where(
           and(
             eq(channels.orgId, ctx.orgId),
-            eq(channels.name, name),
+            channelNameIs(name),
             eq(channels.kind, "channel"),
             isNull(channels.archivedAt),
           ),

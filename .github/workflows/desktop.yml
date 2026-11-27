@@ -12,7 +12,7 @@ name: Desktop
 #   Windows  agentes_<v>_x64-setup.exe, agentes_<v>_arm64-setup.exe (+ .sha256, + .sig: the installer is its own
 #            updater bundle)
 #   Linux    agentes_<v>_{amd64,arm64}.deb (+ .sha256), agentes_<v>_{amd64,arm64}.AppImage (+ .sha256, + .sig)
-# Every app carries the runner and agent-browser (ADR 0040), and the server's own files, built once from the
+# Every app carries the runner, agent-browser (ADR 0040) and agent-desktop (ADR 0258), and the server's own files, built once from the
 # same commit (the `server` job: JavaScript and WebAssembly, the same on every system), for "Run agentes.chat
 # on this computer" (ADR 0066; tauri.native.conf.json adds them to the resources). `none` only builds the
 # current version as artifacts. `platforms` can leave systems out, also from a release: the server gives each
@@ -312,6 +312,19 @@ jobs:
           chmod +x "$BIN_DIR"/agent-browser-*
           lipo -info "$BIN_DIR/agent-browser-universal-apple-darwin"
 
+      # agent-desktop ships next to the runner too (ADR 0258), with its macOS helper beside it: the pinned
+      # release, checked against machine-protocol.ts's SHA-256, lipo'd for the universal build. Tauri re-signs
+      # both with the Developer ID, so macOS credits Accessibility to the agentes.chat app.
+      - name: Fetch agent-desktop
+        shell: bash
+        run: |
+          bun apps/desktop/scripts/fetch-agent-desktop.ts "$BIN_DIR" aarch64-apple-darwin x86_64-apple-darwin
+          for name in agent-desktop agent-desktop-macos-helper; do
+            lipo -create -output "$BIN_DIR/$name-universal-apple-darwin" \
+              "$BIN_DIR/$name-aarch64-apple-darwin" "$BIN_DIR/$name-x86_64-apple-darwin"
+            lipo -info "$BIN_DIR/$name-universal-apple-darwin"
+          done
+
       # The server's files (the `server` job), among the app's resources (tauri.native.conf.json).
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -385,6 +398,10 @@ jobs:
           codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agentes-runner"
           codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agent-browser"
           "$APP/Contents/MacOS/agent-browser" --version
+          codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agent-desktop"
+          codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agent-desktop-macos-helper"
+          "$APP/Contents/MacOS/agent-desktop" --version
+          test -s "$APP/Contents/Resources/licenses/agent-desktop/LICENSE"
           test -s "$APP/Contents/Resources/licenses/agent-browser/LICENSE"
           test -s "$APP/Contents/Resources/licenses/bun/LICENSE.md"
           test -s "$APP/Contents/Resources/LICENSE"
@@ -498,6 +515,12 @@ jobs:
           echo "$SHA  $OUT" | sha256sum -c -
           "$OUT" --version
 
+      - name: Fetch agent-desktop
+        shell: bash
+        run: |
+          bun apps/desktop/scripts/fetch-agent-desktop.ts "$BIN_DIR" ${{ matrix.triple }}
+          "$BIN_DIR/agent-desktop-${{ matrix.triple }}.exe" --version
+
       # The server's files (the `server` job), among the app's resources (tauri.native.conf.json).
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -546,6 +569,8 @@ jobs:
           RELEASE=apps/desktop/src-tauri/target/release
           test -s "$RELEASE/agentes-runner.exe"
           test -s "$RELEASE/agent-browser.exe"
+          test -s "$RELEASE/agent-desktop.exe"
+          test -s "$RELEASE/licenses/agent-desktop/LICENSE"
           test -s "$RELEASE/server/native.js"
           test -s "$RELEASE/web/index.html"
           test -s "$RELEASE/licenses/bun/LICENSE.md"
@@ -643,6 +668,10 @@ jobs:
           echo "$SHA  $OUT" | sha256sum -c -
           chmod +x "$OUT"
 
+      - name: Fetch agent-desktop
+        shell: bash
+        run: bun apps/desktop/scripts/fetch-agent-desktop.ts "$BIN_DIR" ${{ matrix.triple }}
+
       # The server's files (the `server` job), among the app's resources (tauri.native.conf.json).
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -703,7 +732,7 @@ jobs:
         shell: bash
         run: |
           dpkg-deb -c "out/agentes_${VERSION}_${{ matrix.pkg }}.deb" > deb.txt
-          for f in /agentes-runner /agent-browser /server/native.js /web/index.html /licenses/bun/LICENSE.md /licenses/agent-browser/LICENSE; do
+          for f in /agentes-runner /agent-browser /agent-desktop /server/native.js /web/index.html /licenses/bun/LICENSE.md /licenses/agent-browser/LICENSE /licenses/agent-desktop/LICENSE; do
             grep -q -- "$f\$" deb.txt || { echo "::error::$f is not in the deb"; exit 1; }
           done
 
@@ -715,7 +744,7 @@ jobs:
           APPIMAGE="$PWD/out/agentes_${VERSION}_${{ matrix.pkg }}.AppImage"
           dir=$(mktemp -d)
           (cd "$dir" && "$APPIMAGE" --appimage-extract > /dev/null)
-          for name in agentes-runner agent-browser; do
+          for name in agentes-runner agent-browser agent-desktop; do
             cmp "$BIN_DIR/$name-${{ matrix.triple }}" "$dir/squashfs-root/usr/bin/$name" \
               || { echo "::error::The AppImage's $name isn't the one built"; exit 1; }
           done
