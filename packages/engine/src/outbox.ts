@@ -107,6 +107,8 @@ export interface ClaimOptions {
    * slots. Undefined: no cap (batches, tests).
    */
   maxBackground?: number;
+  /** Of the long room, the slots background jobs leave free (`personSlotsOf`). Undefined: none. */
+  keepLong?: number;
   /** Measurements: `queue_wait_ms` for each claimed job (from when it was due to when a worker took it). */
   onTiming?(name: string, ms: number, attrs: Record<string, unknown>): void;
 }
@@ -220,7 +222,7 @@ export async function claimJobs(db: Database, options: ProcessOptions): Promise<
   const quick = quickRoom > 0 ? await claimWhere(db, options, now, lanes.quick, quickRoom) : [];
   const longRoom = Math.min(batch - quick.length, options.maxLong ?? batch);
   const long = longRoom > 0 ? await claimWhere(db, options, now, lanes.long, longRoom) : [];
-  const room = Math.min(longRoom - long.length, options.maxBackground ?? batch);
+  const room = Math.min(longRoom - long.length - (options.keepLong ?? 0), options.maxBackground ?? batch);
   const background = room > 0 ? await claimWhere(db, options, now, lanes.background, room) : [];
   const claimed: ClaimedJob[] = [
     ...quick.map((job) => ({ ...job, long: false, background: false })),
@@ -578,6 +580,13 @@ export const RUNS_MEMORY_SHARE = 0.5;
 export const backgroundSlotsOf = (longSlots: number) => Math.max(1, Math.floor(longSlots / 2));
 
 /**
+ * Of a worker's long slots, the last free ones background work never takes: a person's run that comes in while routines
+ * fill the lane (their burst at the top of each hour) starts at once, not after a slot frees or the lane grows at its
+ * next `tune`. None of a single slot, which would leave routines nothing.
+ */
+export const personSlotsOf = (longSlots: number) => (longSlots <= 1 ? 0 : Math.ceil(longSlots / 10));
+
+/**
  * The memory a process may count on (`laneLimits`' `memoryBytes`, the memory brake): its container's limit, and on a
  * computer it shares with others (the database, the speech server) no more than it holds plus what is free there as it
  * starts.
@@ -697,7 +706,8 @@ async function poolMs(db: Database) {
  * `quickSlots` of them are for quick jobs only: long jobs (`LONG_JOB_KINDS`)
  * hold the rest at most, so a message's routing never waits behind agent
  * runs. Background jobs (routines) hold at most half of the long slots
- * (`backgroundSlotsOf`), so a person's run always finds one. `tune` grows a
+ * (`backgroundSlotsOf`), and never the last few free (`personSlotsOf`), so a
+ * person's run always finds one at once. `tune` grows a
  * lane that waits, within `limits` (`laneLimits`), and shrinks it back once it
  * doesn't. Several pumps, in one process or many, share one database:
  * claims never overlap and workspaces take turns across all of them.
@@ -754,6 +764,7 @@ export function createOutboxPump(
         maxQuick: Math.max(0, limits.lanes.quick - quickRunning),
         maxLong: Math.max(0, Math.min(slots.long - longRunning, rampRoom())),
         maxBackground: Math.max(0, backgroundSlotsOf(slots.long) - backgroundRunning),
+        keepLong: personSlotsOf(slots.long),
       });
       for (const job of jobs) {
         if (job.long) {

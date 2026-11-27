@@ -506,6 +506,28 @@ test("createOutboxPump: routines hold at most half of the long slots; a person's
   await pump.idle();
 });
 
+test("createOutboxPump: routines leave the last long slots free, so a person's run that comes in during their burst starts at once", async () => {
+  let release: () => void = () => {};
+  const held = new Promise<void>((r) => {
+    release = r;
+  });
+  const pump = createOutboxPump(
+    db,
+    { "routine.run": () => held, "agent_run.execute": () => held },
+    { workerId: "w", maxInFlight: 10 },
+  );
+  for (let i = 0; i < 6; i++) await enqueue(db, job("agent_run.execute"));
+  expect(await pump.pump()).toBe(6);
+  // Ten long slots, six busy: routines may hold five, but take three of the four free.
+  for (let i = 0; i < 5; i++) await enqueue(db, job("routine.run"));
+  expect(await pump.pump()).toBe(3);
+  expect(await pump.pump()).toBe(0);
+  await enqueue(db, job("agent_run.execute"));
+  expect(await pump.pump()).toBe(1);
+  release();
+  await pump.idle();
+});
+
 test("createOutboxPump under load: 400 routines and 60 agent runs, quick jobs still go at once, every lane within its cap", async () => {
   const live = { all: 0, long: 0, background: 0, runs: 0 };
   type Lane = keyof typeof live;
