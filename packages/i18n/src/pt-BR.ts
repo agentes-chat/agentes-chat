@@ -2066,6 +2066,7 @@ export const ptBR = {
       enter: "Conhecer o workspace",
       download: "Baixar a foto do time",
       downloadPersonal: "Baixar a foto do seu time",
+      yourPhoto: "Trocar a sua foto",
       photoFile: "time-{{slug}}.png",
       photoFileAny: "foto-do-time.png",
       photoFilePersonal: "meu-time.png",
@@ -23253,7 +23254,6 @@ export const ptBR = {
      */
     welcome: {
       stepOf: "Passo {{n}} de {{total}}",
-      skip: "Pular",
       next: "Próximo",
       start: "Começar",
       hello: {

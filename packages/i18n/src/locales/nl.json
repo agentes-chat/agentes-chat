@@ -1957,6 +1957,7 @@
       "enter": "De werkruimte verkennen",
       "download": "Teamfoto downloaden",
       "downloadPersonal": "Foto van je team downloaden",
+      "yourPhoto": "Je foto wijzigen",
       "photoFile": "team-{{slug}}.png",
       "photoFileAny": "teamfoto.png",
       "photoFilePersonal": "mijn-team.png",
@@ -22528,7 +22529,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Stap {{n}} van {{total}}",
-      "skip": "Overslaan",
       "next": "Volgende",
       "start": "Aan de slag",
       "hello": {

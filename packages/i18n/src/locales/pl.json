@@ -2094,6 +2094,7 @@
       "enter": "Poznaj przestrzeń roboczą",
       "download": "Pobierz zdjęcie zespołu",
       "downloadPersonal": "Pobierz zdjęcie swojego zespołu",
+      "yourPhoto": "Zmień swoje zdjęcie",
       "photoFile": "zespol-{{slug}}.png",
       "photoFileAny": "zdjecie-zespolu.png",
       "photoFilePersonal": "moj-zespol.png",
@@ -23739,7 +23740,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Krok {{n}} z {{total}}",
-      "skip": "Pomiń",
       "next": "Dalej",
       "start": "Do dzieła",
       "hello": {

@@ -70,3 +70,11 @@
   font-size: 13.5px;
   line-height: 19px;
 }
+/* "Change your photo": a quiet way under the list, its ghost plate flush with the rows' numbers. Its 4px gives back the
+   list's own -4px, so it sits at the box's 16px rhythm like every other block in it. */
+.onb-face {
+  margin: 4px 0 0;
+}
+.onb-face .ac-btn {
+  margin-inline-start: calc(-1 * var(--ghost-plate));
+}

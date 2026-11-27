@@ -43,15 +43,17 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of
 
   test("the step comes from the workspace's own data, so a workspace left at any step resumes there", () => {
     const at = (f: Partial<Parameters<typeof railStepAt>[0]>) =>
-      railStepAt({ agent: true, agentSeen: true, waitsForPlan: false, thinks: true, ...f });
+      railStepAt({ agent: true, agentSeen: true, waitsForPlan: false, aiSeen: true, ...f });
     expect(at({})).toBe("celebrate");
     // No agent yet: the work, whatever else is stored.
     expect(at({ agent: false })).toBe("area");
-    expect(at({ agent: false, waitsForPlan: true, thinks: false })).toBe("area");
+    expect(at({ agent: false, waitsForPlan: true, aiSeen: false })).toBe("area");
     // Made, its Continue not pressed yet: its step, before any plan.
     expect(at({ agentSeen: false, waitsForPlan: true })).toBe("agent");
-    expect(at({ waitsForPlan: true, thinks: false })).toBe("plan");
-    expect(at({ thinks: false })).toBe("ai");
+    expect(at({ waitsForPlan: true, aiSeen: false })).toBe("plan");
+    expect(at({ aiSeen: false })).toBe("ai");
+    // "Not now" on the plan: the AI step all the same, the plan waiting.
+    expect(at({ waitsForPlan: true, planLater: true, aiSeen: false })).toBe("ai");
   });
 
   test("before the workspace exists only the server's billing says whether a plan step comes", () => {
@@ -89,8 +91,10 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of
       waitsForPlan: false,
       hasPlanStep: true,
     });
-    // Its agents thinking: the photo, its AI connected.
-    expect(web({ ...paid, funnel: { ...paid.funnel, thinks: true } })).toMatchObject({
+    // Its agents already thinking (a server's own key): the AI step all the same, once.
+    expect(web({ ...paid, funnel: { ...paid.funnel, thinks: true } })).toMatchObject({ at: "ai", thinks: true });
+    // Answered ("ai"), with an AI: the photo, its AI connected.
+    expect(web({ ...paid, funnel: { passed: "ai", thinks: true } })).toMatchObject({
       at: "celebrate",
       reached: 4,
       thinks: true,
@@ -106,6 +110,12 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of
     expect(web({ ...made, funnel: { passed: "ai" } })).toMatchObject({ at: "celebrate", hasPlanStep: false });
     // A step stored past the plan's lists the plan only on a server with billing, which held the workspace for it.
     expect(web({ ...made, billingUrl: BILLING, funnel: { passed: "ai" } }).hasPlanStep).toBe(true);
+  });
+
+  test('"Not now" on the plan: the AI step next, the plan still waiting', () => {
+    const atPlan = { agent: true, standing: payment, billingUrl: BILLING, funnel: { passed: "computer" as const } };
+    expect(web(atPlan)).toMatchObject({ at: "plan", waitsForPlan: true });
+    expect(web({ ...atPlan, planLater: true })).toMatchObject({ at: "ai", step: "ai", waitsForPlan: true });
   });
 
   test("an AI not known yet reads as not yet: the AI step, never the photo", () => {
@@ -162,6 +172,28 @@ describe("Step N of M (stepCount)", () => {
       ["ai", null],
       ["celebrate", null],
     ]);
+  });
+
+  test("a team names its workspace second: five with a plan, four without", () => {
+    const named = (steps: RailStep[]) =>
+      (["who", "name", ...steps] as const).map((s) => [s, stepCount(steps, s, { named: true })] as const);
+    expect(named(["area", "agent", "plan", "ai", "celebrate"])).toEqual([
+      ["who", { n: 1, total: 5 }],
+      ["name", { n: 2, total: 5 }],
+      ["area", { n: 3, total: 5 }],
+      ["agent", { n: 4, total: 5 }],
+      ["plan", { n: 5, total: 5 }],
+      ["ai", null],
+      ["celebrate", null],
+    ]);
+    expect(named(["area", "agent", "ai", "celebrate"]).slice(0, 4)).toEqual([
+      ["who", { n: 1, total: 4 }],
+      ["name", { n: 2, total: 4 }],
+      ["area", { n: 3, total: 4 }],
+      ["agent", { n: 4, total: 4 }],
+    ]);
+    // No name step for a personal workspace: its name is the person's.
+    expect(stepCount(["area", "agent", "plan"], "name")).toBeNull();
   });
 });
 

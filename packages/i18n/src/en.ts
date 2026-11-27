@@ -2109,6 +2109,8 @@ export const en = {
       /** Saves the team's photo with its words as a picture, drawn in the browser. */
       download: "Download the team photo",
       downloadPersonal: "Download your team's photo",
+      /** Opens the avatar builder (and the photo upload) for the person's own face on the photo. */
+      yourPhoto: "Change your photo",
       /** The saved picture's name. `{{slug}}`: the workspace's name in lower case, words joined by dashes ("acme"). */
       photoFile: "{{slug}}-team.png",
       /** The same when the workspace's name has no letter a file name keeps. */
@@ -23378,8 +23380,6 @@ export const en = {
     welcome: {
       /** For screen readers, where the dots show it. */
       stepOf: "Step {{n}} of {{total}}",
-      /** Goes straight to the last step, the one with what is left to do. */
-      skip: "Skip",
       next: "Next",
       /** The last step's button: the wizard closes on the workspace. */
       start: "Get started",

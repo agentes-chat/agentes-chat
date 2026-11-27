@@ -4789,6 +4789,9 @@
   "onboarding.celebrate.downloadPersonal": {
     "value": "Download your team's photo"
   },
+  "onboarding.celebrate.yourPhoto": {
+    "value": "Change your photo"
+  },
   "onboarding.celebrate.photoFile": {
     "value": "{{slug}}-team.png"
   },
@@ -54494,9 +54497,6 @@
   },
   "arrival.welcome.stepOf": {
     "value": "Step {{n}} of {{total}}"
-  },
-  "arrival.welcome.skip": {
-    "value": "Skip"
   },
   "arrival.welcome.next": {
     "value": "Next"

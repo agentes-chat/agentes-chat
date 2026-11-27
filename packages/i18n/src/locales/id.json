@@ -1883,6 +1883,7 @@
       "enter": "Jelajahi ruang kerja",
       "download": "Unduh foto tim",
       "downloadPersonal": "Unduh foto timmu",
+      "yourPhoto": "Ganti fotomu",
       "photoFile": "tim-{{slug}}.png",
       "photoFileAny": "foto-tim.png",
       "photoFilePersonal": "timku.png",
@@ -21746,7 +21747,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Langkah {{n}} dari {{total}}",
-      "skip": "Lewati",
       "next": "Berikutnya",
       "start": "Ayo mulai",
       "hello": {

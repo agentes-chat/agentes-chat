@@ -1883,6 +1883,7 @@
       "enter": "ワークスペースを見てみる",
       "download": "チームの写真をダウンロード",
       "downloadPersonal": "あなたのチームの写真をダウンロード",
+      "yourPhoto": "自分の写真を変更",
       "photoFile": "{{slug}}-チーム.png",
       "photoFileAny": "チームの写真.png",
       "photoFilePersonal": "わたしのチーム.png",
@@ -21638,7 +21639,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "ステップ {{n}}/{{total}}",
-      "skip": "スキップ",
       "next": "次へ",
       "start": "はじめる",
       "hello": {

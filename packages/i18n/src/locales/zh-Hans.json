@@ -1883,6 +1883,7 @@
       "enter": "探索工作区",
       "download": "下载团队合影",
       "downloadPersonal": "下载你的团队合影",
+      "yourPhoto": "更换你的照片",
       "photoFile": "{{slug}}-团队.png",
       "photoFileAny": "团队合影.png",
       "photoFilePersonal": "我的团队.png",
@@ -21822,7 +21823,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "第 {{n}} 步，共 {{total}} 步",
-      "skip": "跳过",
       "next": "下一步",
       "start": "开始使用",
       "hello": {

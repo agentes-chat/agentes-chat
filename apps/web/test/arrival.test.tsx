@@ -42,6 +42,10 @@ const press = async (name: string | RegExp, rounds = 2) => {
   await click(within(wizard()).getByRole("button", { name }));
   await settle(rounds);
 };
+/** Next through to the last step: the wizard has no Skip. */
+const toLast = async () => {
+  for (let n = 1; n < 7; n++) await press(/^Próximo/);
+};
 
 describe("the welcome wizard, right after the onboarding", () => {
   test("from the address once: its seven steps with Back and Next, then Connect an AI with its choices as cards", async () => {
@@ -68,7 +72,7 @@ describe("the welcome wizard, right after the onboarding", () => {
       "Trabalho que acontece sozinho",
       READY,
     ]);
-    // The last: no Skip, the beta line, and nothing about feedback where the server takes none.
+    // No Skip on any step; the last has the beta line, and nothing about feedback where the server takes none.
     expect(within(wizard()).queryByRole("button", { name: "Pular" })).toBeNull();
     expect(wizard().querySelector(".wiz-betaline")?.textContent).toBe(
       "Estamos em beta. Melhora toda semana, e se algo falhar, o problema é nosso.",
@@ -90,7 +94,7 @@ describe("the welcome wizard, right after the onboarding", () => {
 
   test("shown once per person and workspace: the same address again, or a reload, opens nothing", async () => {
     await open(withoutAi(), "?arrival=1");
-    await press("Pular");
+    await toLast();
     expect(title()).toBe(READY);
     await press(/^Começar/, 6);
     cleanup();
@@ -100,7 +104,7 @@ describe("the welcome wizard, right after the onboarding", () => {
 
   test("Skip goes to the last step; with every agent already thinking, the wizard is all there is", async () => {
     await open(seedState(), "?arrival=1");
-    await press("Pular");
+    await toLast();
     expect(title()).toBe(READY);
     await press(/^Começar/, 6);
     expect(screen().queryByRole("dialog")).toBeNull();
@@ -110,7 +114,7 @@ describe("the welcome wizard, right after the onboarding", () => {
     const { router } = await open(withoutAi(), "?arrival=beta");
     expect(screen().getByRole("dialog", { name: WELCOME })).toBeTruthy();
     expect(router.state.location.search).not.toHaveProperty("arrival");
-    await press("Pular");
+    await toLast();
     await press(/^Começar/, 6);
     expect(screen().queryByRole("dialog")).toBeNull();
   });
@@ -123,7 +127,7 @@ describe("the welcome wizard, right after the onboarding", () => {
 
   test("the last step, an owner's: the right hand's first-run rows as the data has them, each with its way there", async () => {
     await open(withoutAi(withList(seedState({ authConfig: { feedback: true } }))), "?arrival=beta");
-    await press("Pular");
+    await toLast();
     const rows = [...wizard().querySelectorAll(".wiz-board > li")].map((li) => ({
       text: li.querySelector(".wiz-board__text")?.textContent,
       done: li.hasAttribute("data-done"),
@@ -154,7 +158,7 @@ describe("the welcome wizard, right after the onboarding", () => {
     const org = state.me?.organizations[0];
     if (org) org.role = "member";
     await open(state, "?arrival=beta");
-    await press("Pular");
+    await toLast();
     expect(title()).toBe(READY);
     expect(wizard().querySelector(".wiz-board")).toBeNull();
   });

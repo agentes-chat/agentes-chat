@@ -2024,6 +2024,7 @@
       "enter": "Conocer el espacio de trabajo",
       "download": "Descargar la foto del equipo",
       "downloadPersonal": "Descargar la foto de tu equipo",
+      "yourPhoto": "Cambiar tu foto",
       "photoFile": "equipo-{{slug}}.png",
       "photoFileAny": "foto-del-equipo.png",
       "photoFilePersonal": "mi-equipo.png",
@@ -22963,7 +22964,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Paso {{n}} de {{total}}",
-      "skip": "Saltar",
       "next": "Siguiente",
       "start": "Empezar ahora",
       "hello": {

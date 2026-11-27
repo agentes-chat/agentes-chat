@@ -2095,6 +2095,7 @@
       "enter": "Познакомиться с рабочим пространством",
       "download": "Скачать фото команды",
       "downloadPersonal": "Скачать фото вашей команды",
+      "yourPhoto": "Сменить ваше фото",
       "photoFile": "команда-{{slug}}.png",
       "photoFileAny": "фото-команды.png",
       "photoFilePersonal": "моя-команда.png",
@@ -23652,7 +23653,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Шаг {{n}} из {{total}}",
-      "skip": "Пропустить",
       "next": "Далее",
       "start": "Начать работу",
       "hello": {

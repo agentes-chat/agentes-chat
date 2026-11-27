@@ -22,8 +22,8 @@ import "./agent-step.css";
  * Meeting the first agent (ADR 0256, addendum of 2026-11-27): its portrait, its name and what it does, and the apps it
  * works in as flat rows, each with Connect through the app's real connect flow (a mailbox's own), where connecting
  * brings the app's routine for this agent (ADR 0242) with its first run left for the first delivery. A connected row
- * says its account and when the routine runs. Continue once one app is connected; at once for work that starts
- * without one. "Other" (`custom`): the person names the agent and says what it does, then searches the catalog's apps.
+ * says its account and when the routine runs. Continue goes on with or without an app: the apps can come later.
+ * "Other" (`custom`): the person names the agent and says what it does, then searches the catalog's apps.
  * The agent exists before this step shows (made on the work step), except for "Other", made by its first Connect or
  * by Continue, so a connect always has an agent to bring the routine to.
  */
@@ -138,14 +138,22 @@ export function AgentStep({
   })();
   const rows = searching ? found : own;
 
-  // What is connected here, by app: a catalog connection, or the person's Gmail.
+  // Every connection here as the catalog's app it is: one signed in through the app's own MCP server is a server row
+  // with its address, the app by that address (as Settings lists it).
+  const items =
+    connections.data && servers.data && catalog.data
+      ? connectedItems(connections.data, servers.data, catalog.data.connectors)
+      : [];
+  // What is connected here, by app: its newest connection, or the person's Gmail.
   const connectedOf = (app: AreaApp): { account: string } | null => {
     if (app.mailbox) {
       const box = (mail.data ?? []).find((m: MailAccount) => m.provider === "gmail");
       return box ? { account: box.address } : null;
     }
-    const c = (connections.data ?? []).find((x) => x.connector === app.id && !x.revokedAt);
-    return c ? { account: c.accountLabel || c.label } : null;
+    const item = items.filter((i) => i.def?.id === app.id).at(-1);
+    if (!item) return null;
+    const c = item.custom ? null : (connections.data ?? []).find((x) => x.id === item.id);
+    return { account: c ? c.accountLabel || c.label : item.server?.accountLabel || item.label };
   };
   // When the routine the app brought runs, for this agent.
   const whenOf = (app: AreaApp): string | null => {
@@ -156,13 +164,8 @@ export function AgentStep({
     const rule = made?.trigger.type === "schedule" ? made.trigger.rule : null;
     return rule ? ruleSentence(t, i18n.language, fromApiRule(rule, toYmd(new Date())), new Date(), false) : null;
   };
-  // Only the rows on screen: an app connected in the workspace that this list doesn't show counts for nothing here.
-  const anyConnected =
-    own.some((a) => connectedOf(a) !== null) || (searching && found.some((a) => connectedOf(a) !== null));
-  // Continue: once one app is connected; at once where the work needs none, or where none can connect here.
-  const ready = custom
-    ? agent !== null || (name.trim() !== "" && does.trim() !== "")
-    : !def || Boolean(def.open) || own.length === 0 || anyConnected;
+  // Continue never waits for an app: the apps can come later. "Other" only needs its agent named and its work said.
+  const ready = !custom || agent !== null || (name.trim() !== "" && does.trim() !== "");
 
   /** The agent a Connect brings its routine to: "Other" makes it first. */
   const ensureAgent = async (): Promise<AgentStepAgent | null> => {
@@ -187,10 +190,15 @@ export function AgentStep({
     if (back.current || !returned || !agent) return;
     if (returned.connected && connections.data && servers.data && catalog.data) {
       back.current = true;
-      // The newest of that app's connections: its confirmation, where its routine is made (as Settings does).
-      const item = connectedItems(connections.data, servers.data, catalog.data.connectors)
-        .filter((x) => !x.custom && x.def?.id === returned.connected)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      // Its confirmation, where its routine is made (as Settings does): a server row by its id (`custom:<id>`, an app
+      // signed in through its own MCP server), else the newest of that app's connections.
+      const all = connectedItems(connections.data, servers.data, catalog.data.connectors);
+      const serverId = returned.connected.startsWith("custom:") ? returned.connected.slice("custom:".length) : null;
+      const item = serverId
+        ? all.find((x) => x.custom && x.id === serverId)
+        : all
+            .filter((x) => !x.custom && x.def?.id === returned.connected)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
       if (item && returned.outcome !== "reconnected" && returned.outcome !== "same_account")
         setFlow({ step: "done", item });
     }

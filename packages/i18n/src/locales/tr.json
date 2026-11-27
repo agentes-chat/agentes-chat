@@ -1952,6 +1952,7 @@
       "enter": "Çalışma alanını keşfet",
       "download": "Ekip fotoğrafını indir",
       "downloadPersonal": "Ekibinizin fotoğrafını indirin",
+      "yourPhoto": "Fotoğrafınızı değiştirin",
       "photoFile": "{{slug}}-ekibi.png",
       "photoFileAny": "ekip-fotografi.png",
       "photoFilePersonal": "ekibim.png",
@@ -22262,7 +22263,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Adım {{n}}/{{total}}",
-      "skip": "Atla",
       "next": "İleri",
       "start": "Hadi başlayalım",
       "hello": {

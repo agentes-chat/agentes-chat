@@ -1883,6 +1883,7 @@
       "enter": "워크스페이스 둘러보기",
       "download": "팀 사진 내려받기",
       "downloadPersonal": "내 팀 사진 내려받기",
+      "yourPhoto": "내 사진 바꾸기",
       "photoFile": "{{slug}}-팀.png",
       "photoFileAny": "팀-사진.png",
       "photoFilePersonal": "내-팀.png",
@@ -21630,7 +21631,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "{{total}}단계 중 {{n}}단계",
-      "skip": "건너뛰기",
       "next": "다음",
       "start": "시작해 볼게요",
       "hello": {

@@ -1960,6 +1960,7 @@
       "enter": "Den Workspace entdecken",
       "download": "Teamfoto herunterladen",
       "downloadPersonal": "Foto deines Teams herunterladen",
+      "yourPhoto": "Dein Foto ändern",
       "photoFile": "team-{{slug}}.png",
       "photoFileAny": "teamfoto.png",
       "photoFilePersonal": "mein-team.png",
@@ -22348,7 +22349,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Schritt {{n}} von {{total}}",
-      "skip": "Überspringen",
       "next": "Weiter",
       "start": "Los geht's",
       "hello": {

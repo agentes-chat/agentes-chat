@@ -1,8 +1,12 @@
+import { keys } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { slugify } from "@agenteschat/client/lib/text";
 import { Button, Icon, Spinner } from "@agenteschat/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AvatarBuilderDialog } from "@/components/AvatarBuilder";
+import { ProfilePhotoDialog } from "@/components/ProfilePhoto";
 import { useToast } from "@/lib/toast";
 import { Box, Photo, type ShellFace } from "./Shell";
 import { saveTeamPhoto } from "./team-photo";
@@ -14,6 +18,7 @@ import "./celebrate-step.css";
  * what is in place: the plan (agentes.chat Cloud), the AI, and the first delivery on its way (the kit's working sign;
  * waiting, muted, while no AI is connected). Its one button opens the workspace in the person's DM with the agent.
  * Beside it, "Download the team photo" saves that photo with its words as a PNG drawn in the browser (`team-photo.ts`).
+ * Under the list, "Change your photo" opens the avatar builder (and the photo upload) for the person's face on it.
  */
 
 export function TeamWelcome({
@@ -47,7 +52,12 @@ export function TeamWelcome({
 }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [building, setBuilding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  // The face on the photo is the account's: read again once a dialog closes.
+  const faceChanged = () => void qc.invalidateQueries({ queryKey: keys.me });
   const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(new Date());
   const who = agentGrammar(agent.name);
   const the = t("onboarding.hire.the", who);
@@ -163,6 +173,29 @@ export function TeamWelcome({
           </span>
         </li>
       </ol>
+      <p className="onb-face">
+        <Button variant="ghost" size="sm" icon="smile" onClick={() => setBuilding(true)}>
+          {t("onboarding.celebrate.yourPhoto")}
+        </Button>
+      </p>
+      <AvatarBuilderDialog
+        open={building}
+        onClose={() => {
+          setBuilding(false);
+          faceChanged();
+        }}
+        onUploadPhoto={() => {
+          setBuilding(false);
+          setUploading(true);
+        }}
+      />
+      <ProfilePhotoDialog
+        open={uploading}
+        onClose={() => {
+          setUploading(false);
+          faceChanged();
+        }}
+      />
     </Box>
   );
 }

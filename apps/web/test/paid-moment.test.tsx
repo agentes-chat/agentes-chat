@@ -326,8 +326,8 @@ describe("with the arrival (a workspace that opens right after its onboarding)",
     await click(within(paid).getByRole("button", { name: /Continuar/ }));
     const welcome = screen().getByRole("dialog", { name: WELCOME });
     expect(screen().getAllByRole("dialog")).toHaveLength(1);
-    // Skipped to its last step, whose button goes on.
-    await click(within(welcome).getByRole("button", { name: "Pular" }));
+    // Next to its last step (it has no Skip), whose button goes on.
+    for (let n = 1; n < 7; n++) await click(within(welcome).getByRole("button", { name: /^Próximo/ }));
     await click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Começar/ }));
     expect(screen().getByRole("dialog", { name: CONNECT })).toBeTruthy();
     expect(screen().getAllByRole("dialog")).toHaveLength(1);

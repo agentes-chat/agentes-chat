@@ -22,9 +22,10 @@ import { renderApp, screen, settle } from "./render";
 
 /*
  * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): after the first agent's
- * step (and the plan, on agentes.chat Cloud), answered by the data (every agent thinking), left with Connect later
- * after asking, and never after a plan left for later. Then the team's photo, whose button opens the workspace on the
- * welcome wizard alone (`?arrival=beta`, ADR 0160).
+ * step (and the plan, on agentes.chat Cloud), shown once even where every agent already thinks. It is answered, and
+ * kept as such ("ai"), by an AI connected through it, by Continue where the agents already think, or by Connect later
+ * after asking. Then the team's photo, whose button opens the workspace on the welcome wizard alone (`?arrival=beta`,
+ * ADR 0160); after a plan left for later ("Not now"), answering it opens the workspace instead, the plan waiting there.
  */
 
 const realFetch = globalThis.fetch;
@@ -53,10 +54,11 @@ const calls = (state: FakeState, method: string) => state.calls.filter((c) => c.
 const heading = () => document.querySelector(".onbx__title")?.textContent;
 const eyebrow = () => document.querySelector(".onbx__eyebrow")?.textContent;
 const body = () => document.querySelector(".onbx__body") as HTMLElement;
-/** The welcome wizard skipped to its last step and closed with its button. */
+/** The welcome wizard taken to its last step with Next (it has no Skip) and closed with its button. */
 const throughWelcome = async () => {
-  const wizard = screen().getByRole("dialog", { name: WELCOME });
-  await click(within(wizard).getByRole("button", { name: "Pular" }), 2);
+  screen().getByRole("dialog", { name: WELCOME });
+  for (let n = 1; n < 7; n++)
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Próximo/ }), 2);
   await click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Começar/ }), 8);
 };
 
@@ -161,18 +163,28 @@ describe("Connect an AI, after the first agent", () => {
     expect(screen().queryByRole("dialog")).toBeNull();
   });
 
-  test("once every agent thinks: the photo, never the workspace by itself; its button opens it", async () => {
+  test("once every agent thinks: the step stays, Continue in place of Connect later; Continue keeps it, then the photo, whose button opens the workspace", async () => {
     const state = madeTeam();
     const { router, services } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
     expect(heading()).toBe(CONNECT);
     await allThink(state, services);
+    // Thinking answers nothing by itself: the step stays, never the workspace by itself.
     expect(router.state.location.pathname).toBe("/onboarding");
-    expect(heading()).toBe(PHOTO);
+    expect(heading()).toBe(CONNECT);
+    // No note that agents without an AI don't answer: they have one.
+    expect(document.querySelector(".onbx")?.textContent).not.toContain("Sem uma IA, os agentes não respondem.");
+    expect(screen().queryByRole("button", { name: "Conectar depois" })).toBeNull();
     expect(calls(state, "orgs.saveOnboarding")).toEqual([]);
+    await click(button(/^Continuar/), 16);
+    expect(heading()).toBe(PHOTO);
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { step: "ai" }]]);
     const asked = arrivals(router);
     await click(button(/^Conhecer o workspace/), 16);
-    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { finished: true }]]);
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
+      [ORG_ID, { step: "ai" }],
+      [ORG_ID, { finished: true }],
+    ]);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${ADA_ID}`);
     expect(asked).toContain("beta");
   });
@@ -193,6 +205,9 @@ describe("Connect an AI, after the first agent", () => {
       };
       await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
       await settle(10);
+      // Nothing connected through the dialog: the step stays, answered with Continue.
+      expect(heading()).toBe(CONNECT);
+      await click(button(/^Continuar/), 16);
       // The photo says an AI is connected, in general words: nothing was connected through the card.
       expect(heading()).toBe(PHOTO);
       expect(photoRows()[0]).toBe("IA conectada (concluído)");
@@ -225,17 +240,31 @@ describe("Connect an AI, after the first agent", () => {
     expect(document.querySelector(".onbx")?.textContent).not.toContain("Claude");
   });
 
-  test("on agentes.chat Cloud, a plan left for later skips the step: Lodi's DM, the wizard alone", async () => {
+  test("on agentes.chat Cloud, a plan left for later: the step still, no plan over it; leaving it opens Lodi's DM, the wizard alone", async () => {
     const state = madeTeam({ held: true });
     // The billing service's plan list can't be read: the plan step names a plan generically.
     globalThis.fetch = (async () => new Response("", { status: 404 })) as unknown as typeof fetch;
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
     expect(heading()).toBe("O time da Acme começa com a Ada");
-    expect(eyebrow()).toBe("Passo 4 de 4");
-    const asked = arrivals(router);
+    expect(eyebrow()).toBe("Passo 5 de 5");
     await click(button("Agora não"), 16);
+    expect(router.state.location.pathname).toBe("/onboarding");
+    expect(heading()).toBe(CONNECT);
+    // The workspace still waits for its plan: nothing over the question says one is on.
+    expect(eyebrow()).toBeUndefined();
+    expect(document.querySelector(".onbx .ac-dialog__foot-note")?.textContent).toBe(
+      "Sem uma IA, os agentes não respondem.",
+    );
+    const asked = arrivals(router);
+    await click(button("Conectar depois"), 6);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Continuar sem IA" }), 16);
     await settle(8);
+    // Into the workspace, no photo: the photo celebrates a plan, which still waits there.
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
+      [ORG_ID, { step: "computer" }],
+      [ORG_ID, { finished: true }],
+    ]);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);
     expect(asked).toContain("beta");
     await throughWelcome();
@@ -257,6 +286,8 @@ describe("a personal workspace (ADR 0159)", () => {
     expect(box()).toContain("A Ada pensa com ela, sem custo a mais aqui.");
     expect(box()).not.toContain("time");
     await allThink(state, services);
+    expect(heading()).toBe(CONNECT);
+    await click(button(/^Continuar/), 16);
     expect(heading()).toBe("Boas-vindas ao seu time");
   });
 });
@@ -365,13 +396,38 @@ describe("each card opens Connect for the whole team on its own steps (ADR 0162)
     expect(within(screen().getByRole("dialog")).getByRole("region", { name: "Chave de API" })).toBeTruthy();
   });
 
-  test("connected while the dialog is open: the step moves on by the data", async () => {
+  test("thinking while the dialog is open, though not through it: the step stays under it, then Continue", async () => {
     const state = ownTeam();
     const { services } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
     await click(within(body()).getByRole("button", { name: /^Claude/ }), 12);
     expect(screen().getByRole("dialog", { name: "Seu plano do Claude" })).toBeTruthy();
     await allThink(state, services);
+    expect(heading()).toBe(CONNECT);
+    expect(calls(state, "orgs.saveOnboarding")).toEqual([]);
+    await act(async () => fireEvent.keyDown(screen().getByRole("dialog"), { key: "Escape" }));
+    await settle(4);
+    await click(button(/^Continuar/), 16);
+    expect(heading()).toBe(PHOTO);
+  });
+
+  test("an AI connected through the dialog where the agents already think: the step answered at once, the photo", async () => {
+    const state = ownTeam();
+    state.aiStatus = { any: true, agents: state.agents.map((a) => ({ agentId: a.id, state: "ready" })) };
+    await renderApp("/onboarding", { api: createFakeApi(state) });
+    await settle(16);
+    expect(heading()).toBe(CONNECT);
+    await click(within(body()).getByRole("button", { name: /^Chave de API/ }), 12);
+    const dialog = screen().getAllByRole("dialog").at(-1) as HTMLElement;
+    const panel = within(dialog).getByRole("region", { name: "Chave de API" });
+    await act(async () =>
+      fireEvent.change(within(panel).getByLabelText("Cole aqui"), {
+        target: { value: "sk-ant-api03-abcdefghijklmnop" },
+      }),
+    );
+    await click(within(panel).getByRole("button", { name: "Salvar chave" }), 16);
+    expect(calls(state, "agents.addCredential")).toHaveLength(1);
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { step: "ai" }]]);
     expect(heading()).toBe(PHOTO);
   });
 });

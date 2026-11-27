@@ -2029,6 +2029,7 @@
       "enter": "Découvrir l'espace de travail",
       "download": "Télécharger la photo de l'équipe",
       "downloadPersonal": "Télécharger la photo de votre équipe",
+      "yourPhoto": "Changer votre photo",
       "photoFile": "equipe-{{slug}}.png",
       "photoFileAny": "photo-equipe.png",
       "photoFilePersonal": "mon-equipe.png",
@@ -23115,7 +23116,6 @@
   "arrival": {
     "welcome": {
       "stepOf": "Étape {{n}} sur {{total}}",
-      "skip": "Passer",
       "next": "Suivant",
       "start": "C'est parti",
       "hello": {

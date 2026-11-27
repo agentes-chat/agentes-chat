@@ -74,11 +74,11 @@ const after = (fired: boolean, reply?: string) => {
     });
   return state;
 };
-/** The onboarding's landing: the DM with the first agent, on the welcome wizard alone, skipped to its last step. */
+/** The onboarding's landing: the DM with the first agent, on the welcome wizard alone, taken to its last step. */
 const land = async (state: FakeState) => {
   const r = await renderApp(`/org/${ORG_ID}/dm/agent/${IARA}?arrival=beta`, { api: createFakeApi(state) });
   await settle(10);
-  await press("Pular", 8);
+  for (let n = 1; n < 7; n++) await press(/^Próximo/, n === 6 ? 8 : 2);
   return r;
 };
 

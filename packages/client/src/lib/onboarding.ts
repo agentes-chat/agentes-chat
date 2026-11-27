@@ -73,8 +73,9 @@ export const railSteps = (f: { plan: boolean }): RailStep[] => [
 
 /**
  * The step to show, read from the workspace's data (an agent made for the onboarding, its step left with Continue, the
- * plan it waits for, the AI its agents think with or left for later), so a workspace left at any step resumes there.
- * The last step stays until its button finishes the onboarding.
+ * plan it waits for, the AI step answered), so a workspace left at any step resumes there. The AI step shows once even
+ * where the agents already think (a server's own key): it is where the person brings the AI they pay for. The last
+ * step stays until its button finishes the onboarding.
  */
 export function railStepAt(f: {
   /** An agent besides the right hand: made on the work step, asked of the person's AI, or brought from another app. */
@@ -82,13 +83,15 @@ export function railStepAt(f: {
   /** The agent step's Continue (`agents` stored). */
   agentSeen: boolean;
   waitsForPlan: boolean;
-  /** Every agent thinks, or the AI step was left for later (`ai` stored). */
-  thinks: boolean;
+  /** "Not now" on the plan step, in this visit: the AI step comes next, the plan waits. */
+  planLater?: boolean;
+  /** The AI step answered: an AI connected, Continue, or left for later (`ai` stored). */
+  aiSeen: boolean;
 }): RailStep {
   if (!f.agent) return "area";
   if (!f.agentSeen) return "agent";
-  if (f.waitsForPlan) return "plan";
-  if (!f.thinks) return "ai";
+  if (f.waitsForPlan && !f.planLater) return "plan";
+  if (!f.aiSeen) return "ai";
   return "celebrate";
 }
 
@@ -96,7 +99,7 @@ export function railStepAt(f: {
  * What the rail reads besides the workspace's data: whether every agent thinks (`thinks`; undefined while that isn't
  * known, read as not yet) and the furthest step the server stored (`onboarding.step`), which answers what has no data
  * of its own: the agent step's Continue ("agents"), a plan step once shown ("computer", so it stays on the rail,
- * answered, after paying) and the AI step left for later ("ai").
+ * answered, after paying) and the AI step answered ("ai").
  */
 export interface RailFunnel {
   thinks: boolean | undefined;
@@ -116,6 +119,8 @@ export function railState(f: {
   agent: boolean;
   picked: RailStep | null;
   funnel: RailFunnel;
+  /** "Not now" on the plan step, in this visit. */
+  planLater?: boolean;
 }) {
   const waitsForPlan = f.orgId ? billingHoldOf(f.standing) === "payment" : Boolean(f.billingUrl);
   const { funnel } = f;
@@ -129,7 +134,8 @@ export function railState(f: {
     agent: f.agent,
     agentSeen: passed >= stepIndex("agents"),
     waitsForPlan,
-    thinks: funnel.thinks === true || passed >= stepIndex("ai"),
+    planLater: f.planLater === true,
+    aiSeen: passed >= stepIndex("ai"),
   });
   const reached = steps.indexOf(at);
   const back = f.picked ? steps.indexOf(f.picked) : -1;
@@ -149,11 +155,20 @@ export function railState(f: {
 }
 
 /**
- * "Step N of M": what the workspace is for (`who`), the work, its agent and the plan count; the AI and the photo after
- * the plan are past the count. Null for a step it doesn't count. Self-hosted, with no plan, there are three.
+ * "Step N of M": what the workspace is for (`who`), a team's name (`name`, before its workspace exists), the work, its
+ * agent and the plan count; the AI and the photo after the plan are past the count. Null for a step it doesn't count.
+ * A team on agentes.chat Cloud has five; self-hosted, with no plan, four; a personal workspace has no name step.
  */
-export function stepCount(steps: readonly RailStep[], step: RailStep | "who"): { n: number; total: number } | null {
-  const counted: (RailStep | "who")[] = ["who", ...steps.filter((s) => s !== "ai" && s !== "celebrate")];
+export function stepCount(
+  steps: readonly RailStep[],
+  step: RailStep | "who" | "name",
+  f: { named?: boolean } = {},
+): { n: number; total: number } | null {
+  const counted: (RailStep | "who" | "name")[] = [
+    "who",
+    ...(f.named ? (["name"] as const) : []),
+    ...steps.filter((s) => s !== "ai" && s !== "celebrate"),
+  ];
   const i = counted.indexOf(step);
   return i < 0 ? null : { n: i + 1, total: counted.length };
 }

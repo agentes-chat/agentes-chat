@@ -33,7 +33,7 @@ import "./welcome-wizard.css";
 
 /*
  * The welcome wizard (ADR 0160, addendum of 2026-11-26): once, right after the onboarding, seven short steps on what
- * the workspace is, each under its picture (`WelcomeArt`), with its title and text, the dots, Skip, Back and Next.
+ * the workspace is, each under its picture (`WelcomeArt`), with its title and text, the dots, Back and Next (no Skip).
  * The last step is the right hand's first-run list as the data has it, and the beta line. The first agent's first
  * delivery, started in the background when the onboarding connected its AI, leads that list: ready, or still being
  * made; the main button then leads to its conversation.
@@ -164,19 +164,6 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
         </div>
       </div>
       <div className="wiz__foot">
-        {!last && (
-          <Button
-            variant="ghost"
-            className="wiz__skip"
-            onClick={() => {
-              setAt(STEPS.length - 1);
-              // Skip leaves with the step it was on: the main button takes the focus.
-              go.current?.focus();
-            }}
-          >
-            {t("arrival.welcome.skip")}
-          </Button>
-        )}
         <span className="wiz__acts">
           {at > 0 && <Button onClick={() => setAt(at - 1)}>{t("common.back")}</Button>}
           <Button
