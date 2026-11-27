@@ -29,6 +29,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { textOrMedia } from "@agenteschat/client/lib/media";
 import { messagePath } from "@agenteschat/client/lib/message-links";
 import { summaryParts } from "@agenteschat/client/lib/missions";
+import { managesChannel } from "@agenteschat/client/lib/permissions";
 import { listedText } from "@agenteschat/client/lib/voice";
 import { conversationWallpaperOf } from "@agenteschat/client/lib/wallpaper";
 import { chartBlocksOf } from "@agenteschat/ui/widgets/spec";
@@ -53,6 +54,7 @@ import { SheetTitle } from "../shared/PromptForm";
 import { type ActionItem, ActionList, copyText, successHaptic, Tile, tapHaptic, useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { useWallpaperName } from "./ChatWallpaper";
+import { channelAdminHrefs } from "./channel-admin";
 import { QUICK_REACTIONS, reactionName, reactionPills } from "./logic";
 import type { MenuSymbol } from "./MessageMenu";
 import { useRowDirectory, useRowMeId } from "./row-data";
@@ -703,6 +705,9 @@ export function ChannelOptions({
   const dm = useQuery({ ...dmsQuery(api, orgId), select: isDm }).data === true;
   const ownWallpaper = conversationWallpaperOf(org?.chatPrefs, channelId);
   const nameOf = useWallpaperName();
+  // "Editar canal" (the web's channel settings), for whoever manages it.
+  const meId = useMeId();
+  const manages = Boolean(onMembers) && managesChannel(channel, meId, org);
   return (
     <>
       <SheetTitle leading={leading} title={title} {...(subtitle ? { subtitle } : {})} />
@@ -723,6 +728,19 @@ export function ChannelOptions({
             ...(count > 0 ? { trailing: <Count value={count} max={99} /> } : {}),
             onPress: onPins,
           },
+          ...(manages
+            ? [
+                {
+                  key: "edit",
+                  icon: "pen" as const,
+                  label: t("channelCategories.editChannel"),
+                  onPress: () => {
+                    sheet.close();
+                    router.push(channelAdminHrefs.settings(channelId));
+                  },
+                },
+              ]
+            : []),
           ...(onMembers && moves
             ? [
                 {

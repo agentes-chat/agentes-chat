@@ -50,6 +50,7 @@ import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { goBack, Loaded, successHaptic, tapHaptic, useLatest } from "../shared/parts";
 import { usePresenceOf } from "../status/hooks";
 import { lineText } from "../status/logic";
+import { channelAdminHrefs } from "./channel-admin";
 import { addTargets, channelMembersHrefs } from "./members";
 
 /** Above this many members the list gets a search field (as the web's channel details). */
@@ -318,6 +319,20 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
               )}
             </Loaded>
           )}
+          {/* Its name, description, who joins, exceptions, archiving and deleting: the web's channel settings. */}
+          {editable && channel ? (
+            <>
+              <Gap />
+              <GroupedList>
+                <GroupedRow
+                  icon="pen"
+                  label={t("channelCategories.editChannel")}
+                  chevron
+                  onPress={() => router.push(channelAdminHrefs.settings(channelId))}
+                />
+              </GroupedList>
+            </>
+          ) : null}
           {channel?.isMember ? (
             <>
               <Gap />
