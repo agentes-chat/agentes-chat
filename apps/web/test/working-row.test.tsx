@@ -101,13 +101,14 @@ describe("while it works the conversation's last row says it, as a reply on its 
     expect(line().querySelector(".ac-typing__text")?.textContent).toBe("Ada mexendo nos arquivos do PC · refresh.ts…");
     const took = line().querySelector(".run-tail__clock") as HTMLElement;
     expect(took.textContent).toBe("1 min");
-    const also = took.closest(".run-tail")?.nextElementSibling as HTMLElement;
-    expect(also.classList.contains("ac-typing__also")).toBe(true);
+    // Who types has a row of its own under her line, so her step never gives way to it.
+    expect(took.closest(".run-tail")?.nextElementSibling).toBeNull();
+    const also = line().querySelector(".working-tail__also > .ac-typing__also") as HTMLElement;
     expect(also.textContent).toBe("João digitando…");
     expect(also.querySelector(".ac-typing__typers")?.textContent).toBe("João");
     // Her face leads the row; his is the line's one small face, and who types ends the line.
     expect(line().querySelectorAll(".ac-typing__tok")).toHaveLength(1);
-    expect(line().querySelector(".working-tail__words")?.lastElementChild).toBe(also);
+    expect(line().lastElementChild).toBe(also.parentElement);
   });
 
   test("what it did so far under its line: its own words quoted, the app's line for each call, older ones folded", async () => {

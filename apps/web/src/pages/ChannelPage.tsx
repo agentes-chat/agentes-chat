@@ -4499,7 +4499,7 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             <span className="ac-typing__text" title={consultTip}>
               {step !== null && lead ? <BarStep name={lead.name} step={step} /> : <BarPhrase entries={entries} />}
             </span>
-            {/* Its time and its stop right after its words; who types beside it after them. */}
+            {/* Its time and its stop right after its words. */}
             {solo && step !== null && <RunTail run={solo} />}
             {solo && code && (
               <>
@@ -4516,7 +4516,6 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             )}
             <ConsultClock entries={entries} now={now} />
             {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
-            {step !== null && <BarAlsoTyping entries={entries} />}
           </span>
           {openBrowser && (
             <Button
@@ -4537,6 +4536,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
                 {t("run.strip.see")}
               </button>
             </>
+          )}
+          {/* Who types beside its step: a row of its own, so the step keeps the line. */}
+          {step !== null && (
+            <span className="working-tail__also">
+              <BarAlsoTyping entries={entries} />
+            </span>
           )}
         </div>
         {trail.lines.length > 0 && (

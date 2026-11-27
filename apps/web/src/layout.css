@@ -7726,6 +7726,42 @@ html:not([data-pointer]) .run-continue:focus-visible {
   min-width: 0;
   white-space: nowrap;
 }
+/* No single agent's step (people typing or recording, several agents): its pieces wrap whole, as people come and go. */
+.working-tail__words:not(:has(.ac-typing__step)) {
+  flex-wrap: wrap;
+}
+.working-tail
+  > .working-tail__body
+  > .working-tail__line.ac-typing[data-active]
+  > .working-tail__words:not(:has(.ac-typing__step))
+  .ac-typing__text {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+.working-tail__words:not(:has(.ac-typing__step))
+  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers) {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+/* Who types or records beside one agent's step: a row of its own under it, so the step never gives way to them. */
+.working-tail__line:has(> .working-tail__also) {
+  flex-wrap: wrap;
+}
+.working-tail__also {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  column-gap: var(--space-1);
+  min-width: 0;
+}
+.working-tail__also:empty {
+  display: none;
+}
+.working-tail__also > .ac-typing__also:first-child::before {
+  content: none;
+}
 /* The name keeps its width whatever the step says (a share of the step's shrinking made it wrap and unwrap), up to
    half the line, past which it ends in "…". */
 .working-tail .ac-typing__agents:has(> .ac-typing__step) > b {
