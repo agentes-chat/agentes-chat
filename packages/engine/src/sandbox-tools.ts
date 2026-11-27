@@ -49,6 +49,7 @@ import { copyToComputer } from "./file-pulls";
 import { openForModel } from "./file-reader";
 import { clockOf, cutText, formatBytes, textOfBytes } from "./format";
 import { mergeReposOfCall } from "./git/repos";
+import { jsSyntaxError } from "./js-syntax";
 import { fullMachinePath, pathInOwnFolder, requestFolderAccess } from "./machine-access";
 import {
   HOLD_MAX_MS,
@@ -1081,11 +1082,17 @@ export function createSandboxToolSource(
     },
     {
       name: "write_file",
-      description: "Write a text file in your computer's workspace (creates folders; overwrites).",
+      description:
+        "Write a text file in your computer's workspace (creates folders; overwrites). Checks JavaScript syntax (.js, .gs). Write a long file in parts with append.",
       scope: SANDBOX_SCOPE,
       inputSchema: {
         type: "object",
-        properties: { path: pathProp, content: { type: "string", maxLength: 1_000_000 }, ...computerProp(devices) },
+        properties: {
+          path: pathProp,
+          content: { type: "string", maxLength: 1_000_000 },
+          append: { type: "boolean", description: "Add to the end of the file" },
+          ...computerProp(devices),
+        },
         required: ["path", "content"],
         additionalProperties: false,
       },
@@ -1099,12 +1106,23 @@ export function createSandboxToolSource(
               const at = sessionFolder(ctx, c);
               const path = toolPath(str(input.path), computerInfo, at);
               if (!path || path === at) throw new Error("path is required");
-              await c.provider.writeFile(c.id, path, data);
-              return shownPath(path, at);
+              const before = input.append === true ? await c.provider.readFile(c.id, path) : null;
+              const whole = before ? Buffer.concat([before, data]) : data;
+              await c.provider.writeFile(c.id, path, whole);
+              return { shown: shownPath(path, at), whole };
             },
             input,
           );
-          return { content: `Wrote ${wrote} (${data.byteLength} bytes).` };
+          const broken = jsSyntaxError(wrote.shown, textOfBytes(wrote.whole) ?? "");
+          const check = broken
+            ? ` It doesn't parse as JavaScript yet (${broken}). Fix it before you hand it over; while parts are still to come, check again after the last one.`
+            : "";
+          return {
+            content:
+              wrote.whole === data
+                ? `Wrote ${wrote.shown} (${data.byteLength} bytes).${check}`
+                : `Added ${data.byteLength} bytes to ${wrote.shown} (${wrote.whole.byteLength} bytes now).${check}`,
+          };
         } catch (error) {
           return failed(error, ctx.codeSession?.place?.cwd);
         }
