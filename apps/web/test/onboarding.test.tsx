@@ -789,23 +789,21 @@ describe("meeting the first agent and connecting its apps (ADR 0256, ADR 0242)",
     expect(heading()).toBe("O time da Acme começa com a Gabi");
   });
 
-  test("Other: its name, what it does and its apps suggested; Continue makes the agent, then goes on", async () => {
+  test("Other: its name, what it does and Search apps alone; Continue makes the agent, then goes on", async () => {
     const state = settingUp();
     await open(state);
     await click(area("Outro"), 10);
     expect(heading()).toBe(OTHER);
     expect(eyebrow()).toBe("Passo 4 de 4 · O seu primeiro agente");
     expect(continueOff()).toBe(true);
-    // Under "Apps it uses": the mailbox and the most used apps here, three in all, then Search apps led by marks of
-    // apps not listed. Connect and Search apps wait for the agent's name and work.
+    // Under "Apps it uses": no list to scroll past, only Search apps, led by a few apps' marks. It waits for the agent's
+    // name and work.
     const apps = box().querySelector(".onb-form .onb-apps") as HTMLElement;
     expect(apps.closest(".ac-field")?.textContent).toContain("Apps que ele usa");
-    expect(appRows().map((a) => a.name)).toEqual(["Gmail", "Notion", "Stripe"]);
-    expect(appRows().every((a) => a.end === "Conectar")).toBe(true);
-    const connect = box().querySelector<HTMLButtonElement>(".onb-rows .onb-row button");
-    expect(connect?.disabled).toBe(true);
+    expect(appRows()).toEqual([]);
+    expect(box().querySelector(".onb-rows")).toBeNull();
     expect(apps.contains(findApps())).toBe(true);
-    expect(findMarks()).toBe(2);
+    expect(findMarks()).toBe(3);
     expect(findApps().disabled).toBe(true);
     await type("Nome", "Léo");
     expect(findApps().disabled).toBe(true);
@@ -888,7 +886,7 @@ describe("Search apps on the agent step: the app's picker over the catalog", () 
     expect(calls(state, "firstAgents.start").map((c) => (c.args[1] as { name: string }).name)).toEqual(["Léo"]);
     expect(screen().getByRole("dialog", { name: "Conectar Linear" })).toBeTruthy();
     expect(heading()).toBe("Léo");
-    expect(appRows().map((a) => a.name)).toEqual(["Gmail", "Notion", "Stripe", "Linear"]);
+    expect(appRows().map((a) => a.name)).toEqual(["Linear"]);
   });
 });
 

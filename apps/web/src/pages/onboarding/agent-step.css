@@ -108,9 +108,12 @@
   font-size: 13.5px;
   font-weight: 600;
 }
-/* "Search apps", past the apps listed: the app's picker over the catalog, led by a stack of a few apps' marks. */
+/* "Search apps", past the apps listed: the app's picker over the catalog, led by a stack of a few apps' marks. Alone
+   ("Other"), it is the field's control, with no room over it. */
 .onb-find {
   gap: 10px;
+}
+.onb-rows + .onb-find {
   margin-top: 12px;
 }
 .onb-form {

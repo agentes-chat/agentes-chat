@@ -24,8 +24,9 @@ import "./agent-step.css";
  * works in as flat rows, each with Connect through the app's real connect flow (a mailbox's own), where connecting
  * brings the app's routine for this agent (ADR 0242) with its first run left for the first delivery. A connected row
  * says its account and when the routine runs. Continue goes on with or without an app: the apps can come later.
- * "Other" (`custom`): the person names the agent and says what it does, then picks its apps. Past the apps listed,
- * "Search apps" (a stack of a few apps' marks) opens the app's own picker over the catalog, as Criar agente's does.
+ * "Other" (`custom`): the person names the agent and says what it does, then adds its apps with "Search apps" alone (a
+ * stack of a few apps' marks), which opens the app's own picker over the catalog, as Criar agente's does; an area's
+ * step has the same button past its own apps.
  * The agent exists before this step shows (made on the work step), except for "Other", made by its first Connect or
  * by Continue, so a connect always has an agent to bring the routine to.
  */
@@ -43,13 +44,13 @@ const MOST_USED = [
   "drive",
   "instagram",
 ] as const;
-/** How many apps "Other" lists before the picker: Gmail and the first most used ones this server has. */
+/** How many apps an agent with none of its own lists before the picker: Gmail and the first most used ones here. */
 const SUGGESTED_MAX = 3;
 /** The marks stacked on "Search apps": a few known apps not already listed. */
 const STACK = ["notion", "slack", "hubspot", "github", "google-calendar", "stripe", "linear"] as const;
 const STACK_MAX = 3;
 
-/** Gmail through the mail flow, else the catalog's own entry: the first app "Other" suggests. */
+/** Gmail through the mail flow: the first app suggested to an agent with none of its own. */
 const MAILBOX: AreaApp = {
   id: MAILBOX_APP,
   label: "Gmail",
@@ -129,10 +130,12 @@ export function AgentStep({
     mailbox: false,
   });
   const available = defs.filter((d) => d.available);
-  // An area's own apps (or the ones the person's AI named); else ("Other", an agent brought from another app) Gmail and
-  // the most used ones; then whatever was added from the picker.
-  const suggested =
-    custom || own.length === 0
+  // An area's own apps (or the ones the person's AI named); none on "Other", whose apps all come from the picker (a
+  // short form, no list to scroll past); else (an agent brought from another app) Gmail and the most used ones. Then
+  // whatever was added from the picker.
+  const suggested = custom
+    ? []
+    : own.length === 0
       ? [MAILBOX, ...MOST_USED.flatMap((id) => available.find((d) => d.id === id) ?? []).map(asApp)].slice(
           0,
           SUGGESTED_MAX,
@@ -343,7 +346,7 @@ export function AgentStep({
               </Field>
               <Field label={t("onboarding.meet.appsUsed")} group>
                 <div className="onb-apps">
-                  {appRows(rows)}
+                  {rows.length > 0 && appRows(rows)}
                   {findApps}
                 </div>
               </Field>

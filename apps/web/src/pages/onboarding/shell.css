@@ -452,10 +452,11 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   box-shadow: 0 10px 30px -10px rgb(0 20 60 / 0.45);
 }
 /* On a phone the agent and the person stand in the sky's middle, the bubble rising from the agent towards its right
-   edge: it wraps within half the screen, never past the sky. */
+   edge: it takes the room from there to that edge (half the screen and a little, the pair being centred), never past
+   the sky. */
 @media (max-width: 560px) {
   .onbw__say.onb-photo__say {
-    max-width: min(240px, calc(50vw - 24px));
+    max-width: min(240px, calc(50vw + 8px));
   }
 }
 .onb-confetti {
