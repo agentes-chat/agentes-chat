@@ -79,6 +79,9 @@
 .onb-row--more {
   min-height: 0;
   padding: 12px 0 0;
+}
+/* Under the apps' rows, a hairline before it as between them; alone (no app connects here), none. */
+.onb-rows + .onb-row--more {
   border-top: 1px solid var(--line);
 }
 /* "Another app": its plus in the marks' column, its words where the apps' names start. */
