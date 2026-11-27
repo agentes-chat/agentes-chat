@@ -1,59 +1,74 @@
 /**
- * The macOS permissions agents need on this computer (ADR 0165 "Prepare this Mac"): Screen Recording, for the
- * screenshots their commands take, Full Disk Access, so no folder prompt stops them mid-task, and Local Network, for
- * Android phones over Wi-Fi. The app asks for them and its runners inherit them. macOS says whether the screen and the
- * disk are allowed without asking. Full Disk Access has no prompt: people turn the app on in System Settings. Local
- * Network has no state at all, only whether the app asked. An ad-hoc signed app loses every grant when it updates.
+ * The macOS permissions agents need on this computer (ADR 0165 "Prepare this Mac", ADR 0256 §7): notifications, so
+ * the app can say when agents finish or need the person and when an essential falls, Screen Recording, for the
+ * screenshots their commands take, and Full Disk Access, so no folder prompt stops them mid-task. The app asks for them
+ * and its runners inherit them. macOS says whether each is allowed without asking. Notifications and Screen Recording
+ * have a prompt the first time; Full Disk Access has none: people turn the app on in System Settings. An ad-hoc signed
+ * app loses every grant when it updates. Local Network (Android phones over Wi-Fi) is no longer one of them: it has no
+ * state to read, so it is asked just in time, when an Android phone pairs over Wi-Fi (the site's `localNetwork`).
  */
 import type { OsPermission, PermissionNeed } from "@agenteschat/adapters/machine-protocol";
 import type { Host } from "../host/types";
 import type { Home } from "./store";
 
-export const MAC_PERMISSIONS = ["screen", "disk", "network"] as const;
+export const MAC_PERMISSIONS = ["notifications", "screen", "disk"] as const;
 export type MacPermission = (typeof MAC_PERMISSIONS)[number];
 
+/** What the app remembers asking for in a version: Prepare's permissions, and Local Network (asked just in time). */
+export type AskedPermission = MacPermission | "network";
+
 /**
- * `ask`: not asked in this version yet; `off`: asked and not allowed (the way out is System Settings); `asked`: asked,
- * and macOS never says the answer (Local Network); `none`: not a permission on this macOS (Local Network before 15).
+ * `ask`: never asked (notifications), or not asked in this version yet (Screen Recording); `off`: asked and not
+ * allowed, or not allowed with no prompt to ask (Full Disk Access): the way out is System Settings.
  */
-export type Grant = "on" | "off" | "ask" | "asked" | "none";
+export type Grant = "on" | "off" | "ask";
 export type Grants = Record<MacPermission, Grant>;
 
 /** The permissions asked for in a version of the app. */
 export const MAC_ASKED_PREF = "macAsked";
 export interface Asked {
   version: string;
-  asked: MacPermission[];
+  asked: AskedPermission[];
 }
 
-export const askedIn = (saved: Asked | null, version: string): MacPermission[] =>
+export const askedIn = (saved: Asked | null, version: string): AskedPermission[] =>
   saved?.version === version ? saved.asked : [];
 
-export const withAsked = (saved: Asked | null, version: string, p: MacPermission): Asked => {
+export const withAsked = (saved: Asked | null, version: string, p: AskedPermission): Asked => {
   const asked = askedIn(saved, version);
   return { version, asked: asked.includes(p) ? asked : [...asked, p] };
 };
 
-/** Local Network is a permission from macOS 15 on (`system`: macOS's version). Unread, the row stays. */
+/** Local Network is a permission from macOS 15 on (`system`: macOS's version). Unread, it is asked. */
 export const hasLocalNetwork = (system?: string | null) => !system || Number.parseInt(system, 10) >= 15;
 
-/** Each permission's state, without raising a prompt. `localNetwork`: whether this macOS has that permission. */
-export async function readGrants(host: Host, asked: readonly MacPermission[], localNetwork = true): Promise<Grants> {
-  const [screen, disk] = await Promise.all([host.screenAccess(), host.diskAccess()]);
+/**
+ * Each permission's state, without raising a prompt. Notifications say themselves whether they were ever asked
+ * (macOS keeps that); Screen Recording is `ask` until asked in this version (`asked`), since an update may take it
+ * back; Full Disk Access is `ask` until on (its button is always System Settings).
+ */
+export async function readGrants(host: Host, asked: readonly AskedPermission[]): Promise<Grants> {
+  const [notifications, screen, disk] = await Promise.all([
+    host.notificationPermission(),
+    host.screenAccess(),
+    host.diskAccess(),
+  ]);
   const state = (p: MacPermission, on: boolean): Grant => (on ? "on" : asked.includes(p) ? "off" : "ask");
   return {
+    notifications: notifications === "granted" ? "on" : notifications === "denied" ? "off" : "ask",
     screen: state("screen", screen),
     disk: state("disk", disk),
-    network: !localNetwork ? "none" : asked.includes("network") ? "asked" : "ask",
   };
 }
 
-/** Nothing left to ask: each permission on, asked where macOS keeps the answer, or not one on this macOS. */
-export const allDone = (grants: Grants) =>
-  MAC_PERMISSIONS.every((p) => grants[p] === "on" || grants[p] === "asked" || grants[p] === "none");
+/** Nothing left to ask: each permission on. */
+export const allDone = (grants: Grants) => MAC_PERMISSIONS.every((p) => grants[p] === "on");
 
-/** Its button opens System Settings: Full Disk Access always (no prompt asks for it), the others once asked. */
-export const viaSettings = (p: MacPermission, grant: Grant) => p === "disk" || grant === "off" || grant === "asked";
+/**
+ * Its button opens System Settings: Full Disk Access always (no prompt asks for it), the others once asked (macOS
+ * prompts only once).
+ */
+export const viaSettings = (p: MacPermission, grant: Grant) => p === "disk" || grant === "off";
 
 /**
  * A setup macOS may quit the app in the middle of (the "Quit & Reopen" after Screen Recording or Full Disk Access),

@@ -9,8 +9,11 @@ import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
 import { ControlError } from "../src/control/client";
 import { siteApi } from "../src/control/devices";
+import { ESSENTIALS_NOTIFIED_PREF } from "../src/control/essentials";
+import { MAC_ASKED_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
 import { FAKE_SERVER } from "../src/dev/fake-runner";
+import { writePref } from "../src/hooks";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
@@ -423,4 +426,101 @@ test("the site's This computer: the Mac pairs with commands on, then the app lay
     host,
     (el) => el.querySelector(".dk-pop__foot"),
   );
+});
+
+describe("this computer's essentials (ADR 0256 §7)", () => {
+  const screenOff = (host: FakeHost) => host.notified.filter((n) => n.title === "Screen Recording is off").length;
+
+  test("one that falls by itself: the tray turns to attention, one notification however often it is read, the count for the site", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const host = createFakeHost("popover", "here", { macReady: true });
+    await withMenu(async () => {
+      // Everything on: the site hears nothing needs the person, and that the server runs here.
+      await until(() => host.publishedHealth !== null);
+      expect(host.publishedHealth).toEqual({ needs: 0, server: true });
+      expect(host.tray).not.toBe("attention");
+      expect(screenOff(host)).toBe(0);
+
+      // macOS takes Screen Recording back (an update): read again as the app comes to the front.
+      host.mac.screen = false;
+      await act(async () => host.sayHealth());
+      await until(() => host.publishedHealth?.needs === 1);
+      await until(() => host.tray === "attention");
+      await until(() => screenOff(host) === 1);
+      expect(host.notified.find((n) => n.title === "Screen Recording is off")?.body).toBe(
+        "macOS turned it off. Agents can't take screenshots until you allow it again.",
+      );
+
+      // Read again and again while it stays off: told once.
+      await act(async () => host.sayHealth());
+      await act(async () => host.sayHealth());
+      await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      expect(screenOff(host)).toBe(1);
+
+      // Back on: the usual icon, nothing needs the person. Taken back again later: told again.
+      host.mac.screen = true;
+      await act(async () => host.sayHealth());
+      await until(() => host.publishedHealth?.needs === 0);
+      await until(() => host.tray !== "attention");
+      host.mac.screen = false;
+      await act(async () => host.sayHealth());
+      await until(() => screenOff(host) === 2);
+    }, host);
+  });
+
+  test("one off since before (never seen on) is counted and shown, never a notification; one that fell while the app was closed is told at once", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const first = createFakeHost("popover", "here");
+    await withMenu(async () => {
+      // Notifications, Screen Recording and Full Disk Access not allowed yet: three things need the person.
+      await until(() => first.publishedHealth?.needs === 3);
+      await until(() => first.tray === "attention");
+      await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      expect(first.notified.filter((n) => n.title.endsWith(" is off"))).toEqual([]);
+    }, first);
+
+    // Seen on at the last opening, off at this one: macOS took it back while the app was closed.
+    writePref(ESSENTIALS_NOTIFIED_PREF, { on: ["notifications", "screen", "disk"] });
+    const next = createFakeHost("popover", "here", { macReady: true });
+    next.mac.disk = false;
+    await withMenu(async () => {
+      await until(() => next.notified.some((n) => n.title === "Full Disk Access is off"));
+      expect(next.notified.filter((n) => n.title === "Full Disk Access is off")).toHaveLength(1);
+      expect(screenOff(next)).toBe(0);
+      expect(next.publishedHealth).toEqual({ needs: 1, server: true });
+    }, next);
+  });
+
+  test("Local Network is asked only when the site needs it: the system's prompt once, then System Settings", async () => {
+    writePref(MAC_ASKED_PREF, null);
+    const host = createFakeHost("popover", "selfhost", { macReady: true });
+    await withMenu(
+      async () => {
+        expect(host.mac.networkAsks).toBe(0);
+        await act(() => host.askThisMac({ kind: "localNetwork" }));
+        expect(host.mac.networkAsks).toBe(1);
+        expect(host.mac.panes).toEqual([]);
+        await act(() => host.askThisMac({ kind: "localNetwork" }));
+        expect(host.mac.networkAsks).toBe(1);
+        expect(host.mac.panes).toEqual(["network"]);
+      },
+      host,
+      (el) => el.querySelector(".dk-pop__foot"),
+    );
+    writePref(MAC_ASKED_PREF, null);
+  });
+
+  test("a computer nothing uses yet: no essentials to keep, the usual icon", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const host = createFakeHost("popover", "cloud");
+    await withMenu(
+      async () => {
+        await until(() => host.publishedHealth !== null);
+        expect(host.publishedHealth).toEqual({ needs: 0, server: false });
+        expect(host.tray).not.toBe("attention");
+      },
+      host,
+      (el) => el.querySelector(".dk-pop__foot"),
+    );
+  });
 });

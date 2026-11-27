@@ -38,7 +38,15 @@ import { NOTCH_PREF } from "../control/notch";
 import { SITE_NOTIFY_PREF } from "../control/notify";
 import { nextOffer, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
-import { type Asked, askedIn, askKey, MAC_ASKED_PREF, permissionAsks, withAsked } from "../control/permissions";
+import {
+  type Asked,
+  askedIn,
+  askKey,
+  hasLocalNetwork,
+  MAC_ASKED_PREF,
+  permissionAsks,
+  withAsked,
+} from "../control/permissions";
 import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
@@ -48,6 +56,7 @@ import { agentOf, readPref, useLocalServer, useOnShown, usePending, useUpdateChe
 import type { BadgeCounts } from "../host/types";
 import { settingsRouteOf } from "../layer/routes";
 import { AgentFace, Banner, BrandFace, Count, HelpLink, MacPortrait, MenuRow, OrgTile } from "../ui/bits";
+import { useEssentials, useEssentialsWatch } from "../ui/essentials";
 import { CopyDetails } from "../ui/here";
 import { needsPrepare } from "../ui/permissions";
 import { useToast } from "../ui/Toast";
@@ -142,8 +151,13 @@ export function Popover() {
     void host.syncLocalHomes(refusedHere).catch(() => {});
   }, [host, refusedKey]);
 
+  // This computer's essentials (ADR 0256 §7): one that falls by itself is a notification, once; how many need the
+  // person goes to the site's settings list and turns the tray to `attention`.
+  const essentials = useEssentials(update.state, homes);
+  useEssentialsWatch(essentials);
+
   // The tray icon follows the aggregate state.
-  const tray = trayStateOf(homes, update.state.available || update.state.required || outdated);
+  const tray = trayStateOf(homes, update.state.available || update.state.required || outdated, essentials.needs);
   useEffect(() => {
     void host.setTrayState(tray).catch(() => {});
   }, [host, tray]);
@@ -294,9 +308,11 @@ export function Popover() {
           openPrivacy: (pane) => host.openPrivacy(pane),
           localNetwork: async () => {
             // The system's prompt the first time in this version (macOS says nothing of the answer), then the
-            // Local Network list in System Settings, as Prepare this Mac does.
+            // Local Network list in System Settings: asked just in time, never at Prepare (ADR 0256 §7). Before
+            // macOS 15 it is no permission at all.
             if (host.platform !== "mac") return;
-            const { version } = await host.appInfo();
+            const { version, system } = await host.appInfo();
+            if (!hasLocalNetwork(system)) return;
             const saved = readPref<Asked | null>(MAC_ASKED_PREF, null);
             if (askedIn(saved, version).includes("network")) return host.openPrivacy("network");
             writePref(MAC_ASKED_PREF, withAsked(saved, version, "network"));

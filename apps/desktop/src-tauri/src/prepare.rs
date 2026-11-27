@@ -194,13 +194,18 @@ fn opens_first(files: &[PathBuf]) -> bool {
 /// open is "operation not permitted", never a prompt: the user's copy, or the system's on an account without one yet.
 #[tauri::command]
 pub async fn disk_access(app: AppHandle) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || disk_allowed(&app)).await.map_err(|e| e.to_string())
+}
+
+/// `disk_access`, blocking (it opens a file): also read with this computer's other essentials (`always_on.rs`).
+pub fn disk_allowed(app: &AppHandle) -> bool {
     if !cfg!(target_os = "macos") {
-        return Ok(true);
+        return true;
     }
     let tcc = Path::new("Library/Application Support/com.apple.TCC/TCC.db");
     let files: Vec<PathBuf> =
         app.path().home_dir().ok().map(|home| home.join(tcc)).into_iter().chain([Path::new("/").join(tcc)]).collect();
-    tauri::async_runtime::spawn_blocking(move || opens_first(&files)).await.map_err(|e| e.to_string())
+    opens_first(&files)
 }
 
 /// macOS's version (`15.1`), which says whether Local Network is a permission there (15 and later).
@@ -286,8 +291,12 @@ pub async fn network_ask() -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(browse_briefly).await.map_err(|e| e.to_string())?
 }
 
-/// System Settings › Privacy & Security on one pane.
+/// System Settings › Privacy & Security on one pane; or Notifications on the app's own entry (the way back once the
+/// person turned the app's notifications off: no prompt asks twice, ADR 0256).
 fn pane_url(pane: &str) -> Option<String> {
+    if pane == "notifications" {
+        return Some("x-apple.systempreferences:com.apple.preference.notifications?id=chat.agentes.desktop".into());
+    }
     let anchor = match pane {
         "screen" => "Privacy_ScreenCapture",
         "disk" => "Privacy_AllFiles",
@@ -403,6 +412,10 @@ mod tests {
         assert_eq!(
             pane_url("microphone").as_deref(),
             Some("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+        );
+        assert_eq!(
+            pane_url("notifications").as_deref(),
+            Some("x-apple.systempreferences:com.apple.preference.notifications?id=chat.agentes.desktop")
         );
         assert_eq!(
             pane_url("app_management").as_deref(),

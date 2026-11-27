@@ -7,7 +7,6 @@ import {
   allDone,
   askedIn,
   type Grants,
-  hasLocalNetwork,
   MAC_ASKED_PREF,
   MAC_PERMISSIONS,
   type MacPermission,
@@ -22,8 +21,8 @@ import { useToast } from "./Toast";
 
 /** This Mac's permissions now, nothing asked. */
 export async function macGrants(host: Host): Promise<Grants> {
-  const { version, system } = await host.appInfo();
-  return readGrants(host, askedIn(readPref<Asked | null>(MAC_ASKED_PREF, null), version), hasLocalNetwork(system));
+  const { version } = await host.appInfo();
+  return readGrants(host, askedIn(readPref<Asked | null>(MAC_ASKED_PREF, null), version));
 }
 
 /** A pairing on a Mac goes on to Prepare this Mac while any permission is left to ask. */
@@ -36,9 +35,13 @@ export interface MacGrants {
   ask: (p: MacPermission) => Promise<void>;
 }
 
+/** While one is still off, they are read again this often: the person turns them on in System Settings beside it. */
+const LIVE_READ_MS = 3000;
+
 /**
- * The permissions, read again whenever the window comes back to the front (from System Settings). `beforeQuit`: just
- * before Screen Recording or Full Disk Access is asked, which may end with macOS quitting the app.
+ * The permissions, read again whenever the window comes back to the front (from System Settings) and, while one is
+ * still off, every few seconds (live, ADR 0256 §7). `beforeQuit`: just before Screen Recording or Full Disk Access is
+ * asked, which may end with macOS quitting the app.
  */
 export function useMacGrants(beforeQuit?: () => Promise<void>): MacGrants {
   const { t } = useTranslation();
@@ -58,16 +61,23 @@ export function useMacGrants(beforeQuit?: () => Promise<void>): MacGrants {
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
   }, [refresh]);
+  const done = grants !== null && allDone(grants);
+  useEffect(() => {
+    if (done) return;
+    const timer = setInterval(() => void refresh(), LIVE_READ_MS);
+    return () => clearInterval(timer);
+  }, [done, refresh]);
 
   const ask = (p: MacPermission) =>
     run(p, async () => {
       try {
-        if (p !== "network") await beforeQuit?.();
+        // Notifications never make macOS quit the app.
+        if (p !== "notifications") await beforeQuit?.();
         const { version } = await host.appInfo();
         writePref(MAC_ASKED_PREF, withAsked(readPref<Asked | null>(MAC_ASKED_PREF, null), version, p));
         if (viaSettings(p, grants?.[p] ?? "ask")) await host.openPrivacy(p);
         else if (p === "screen") await host.requestScreenAccess();
-        else await host.askLocalNetwork();
+        else await host.requestNotifications();
       } catch {
         toast(t("desktop.common.error"), "alert");
       }
@@ -80,9 +90,8 @@ export function useMacGrants(beforeQuit?: () => Promise<void>): MacGrants {
  * The permissions as rows: what each lets agents do, its state, one button. No picture before them: their words run to
  * three lines or more, which a picture's column would squeeze. Under them, once Screen Recording or Full Disk Access
  * was asked and is still off, what to do when macOS asks to quit and reopen the app; `resumed`: it just did, so the
- * line says it took effect. Local Network shows only whether it was asked, never a green it can't know, and only on a
- * macOS that has it (15 and later). `hinted` (Preferences): what each lets agents do goes behind its ⓘ, only the
- * Full Disk Access fix stays in sight.
+ * line says it took effect. `hinted` (Preferences): what each lets agents do goes behind its ⓘ, only the Full Disk
+ * Access fix stays in sight.
  */
 export function MacPermissionCard({
   mac,
@@ -117,33 +126,21 @@ export function MacPermissionCard({
   return (
     <>
       <PrefCard>
-        {MAC_PERMISSIONS.filter((p) => grants?.[p] !== "none").map((p) => {
+        {MAC_PERMISSIONS.map((p) => {
           const grant = grants?.[p];
           const title = t(`desktop.prepare.${p}`);
           const desc = t(`desktop.prepare.${p}Desc`);
-          const more =
-            p === "screen"
-              ? t("desktop.prepare.screenAgain")
-              : p === "network"
-                ? t("desktop.prepare.networkHint")
-                : null;
+          const more = p === "screen" ? t("desktop.prepare.screenAgain") : null;
           const fix = p === "disk" && grant !== "on" ? t("desktop.prepare.diskHow") : null;
           const under = hinted ? fix : p === "screen" ? more : fix;
           const hint = hinted
             ? hintFor(t, title, more ? t("common.joinSentences", { a: desc, b: more }) : desc)
-            : p === "network" && more
-              ? hintFor(t, title, more)
-              : undefined;
+            : undefined;
           return (
             <PrefRow
               key={p}
               title={title}
               hint={hint}
-              chip={
-                p === "network" && grant ? (
-                  <Chip>{t(grant === "asked" ? "desktop.prepare.asked" : "desktop.prepare.notAsked")}</Chip>
-                ) : undefined
-              }
               desc={hinted ? undefined : desc}
               under={under && <span className="dk-help">{under}</span>}
               end={

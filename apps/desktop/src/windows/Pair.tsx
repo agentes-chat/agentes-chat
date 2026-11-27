@@ -6,7 +6,7 @@
  * switches, and on a Mac go on to `Prepare` (its permissions) once paired.
  */
 import { errorText } from "@agenteschat/client/lib/errors";
-import { Button, Checkbox, Icon, PixelSpinner, ProviderLogo, Switch } from "@agenteschat/ui";
+import { Button, Icon, PixelSpinner, ProviderLogo, Switch } from "@agenteschat/ui";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../app";
@@ -261,13 +261,15 @@ function ShareSwitch({ target, machineId }: { target: PairTarget; machineId: str
   );
 }
 
-/** "Let Acme's agents use this Mac?": open at login, what agents can do, Not now or Allow. */
+/**
+ * "Let Acme's agents use this Mac?": what agents can do, Not now or Allow. Allowing also opens the app at login, with
+ * no checkbox: a computer made ready for a workspace stays ready (ADR 0256 §7).
+ */
 export function PairOffer({ target, onClose }: { target: PairTarget; onClose: () => void }) {
   const { t, i18n } = useTranslation();
   const host = useHost();
   const store = useStore();
   const [machineId, setMachineId] = useState<string | null>(null);
-  const [atLogin, setAtLogin] = useState(true);
   const [tools, setTools] = useState<Partial<PairTools>>({});
   const [state, setState] = useState<"ask" | "busy" | "prepare" | "done">("ask");
   const [failed, setFailed] = useState<string | null>(null);
@@ -283,7 +285,8 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
     setFailed(null);
     try {
       setMachineId(await pairWithSession(host, store, target, tools));
-      if (atLogin) await host.setAutostart(true).catch(() => {});
+      // Its agents work while the app runs.
+      await host.setAutostart(true).catch(() => {});
       setState((await needsPrepare(host).catch(() => false)) ? "prepare" : "done");
     } catch (err) {
       setFailed(errorText(t, err, i18n.language));
@@ -335,13 +338,6 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
         }
       >
         {onlyOpens && <p className="dk-lead">{t("desktop.pair.offerOnlyIf", { org })}</p>}
-        <PrefCard>
-          <PrefRow
-            lead={<Checkbox id="pair-login" checked={atLogin} disabled={busy} onCheckedChange={setAtLogin} />}
-            htmlFor="pair-login"
-            title={t("desktop.pair.keepReady")}
-          />
-        </PrefCard>
         <ToolSwitches chosen={tools} onChange={setTools} disabled={busy} />
         {failed && <Problem text={failed} />}
       </Sheet>

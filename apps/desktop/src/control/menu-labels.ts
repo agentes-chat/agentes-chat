@@ -16,6 +16,8 @@ export function menuLabels(t: TFunction): Record<string, string> {
     trayOpen: t("desktop.tray.open"),
     // The tray's way to this computer's settings on Windows and Linux (tray.rs, ADR 0256).
     trayThisMac: t("desktop.tray.thisMac"),
+    // The tray's tooltip, and its menu's first line on Windows and Linux, while an essential is off (tray.rs, ADR 0256).
+    trayAttention: t("desktop.essentials.tray"),
     trayPause: t("desktop.tray.pause"),
     trayPause1h: t("desktop.tray.pause1h"),
     trayPauseTomorrow: t("desktop.tray.pauseTomorrow"),

@@ -152,7 +152,7 @@ describe("pairing from the app", () => {
     expect(nextOffer(list, signedOut, { loaded: false, homes: [] }, [])).toBeNull();
   });
 
-  test("the card after sign-in: what agents can do, prefilled open; Allow pairs with those and turns on open at login", () => {
+  test("the card after sign-in: what agents can do, prefilled open; Allow pairs with those and always turns on open at login", () => {
     const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
     return mount({ screen: "pairOffer", target }, layer, async (el, host, store) => {
       await until(() => el.querySelector("h1")?.textContent === "Let Estúdio Norte's agents use this Mac?");
@@ -165,7 +165,9 @@ describe("pairing from the app", () => {
       // Who can use it comes once it's in, not before Allow.
       expect(rowOf(el, "Who can use it")).toBeUndefined();
       expect(el.querySelector('[role="combobox"]')).toBeNull();
-      expect(rowOf(el, "Keep it ready: open agentes.chat at login")?.querySelector('[role="checkbox"]')).toBeTruthy();
+      // Open at login comes with Allow, no checkbox to leave it off (ADR 0256 §7).
+      expect(el.querySelector('[role="checkbox"]')).toBeNull();
+      expect(el.textContent).not.toContain("open agentes.chat at login");
       expect(el.textContent).toContain("What agents can do here");
       expect(el.textContent).toContain("No folders of yours yet. Add them later in Preferences\u00a0›\u00a0Folders.");
       // Commands on; Claude Code, Codex and the browser as the other workspaces here have them.
@@ -214,7 +216,7 @@ describe("pairing from the app", () => {
     });
   });
 
-  test("Prepare this Mac: Screen Recording and Local Network asked once, Full Disk Access in Settings; kept for Quit & Reopen", () =>
+  test("Prepare this Mac: notifications and Screen Recording asked once, Full Disk Access in Settings, no Local Network; kept for Quit & Reopen", () =>
     mount(SETTINGS, layer, async (el, host) => {
       await act(async () => host.showLayer({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER }));
       await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready");
@@ -223,6 +225,13 @@ describe("pairing from the app", () => {
       expect(host.mac.setup).toMatchObject({ step: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
       const end = (title: string) => rowOf(el, title)?.querySelector(".dk-crow__end")?.textContent;
       await until(() => end("Screen Recording") === "Allow");
+      // Notifications first, then Screen Recording and Full Disk Access; Local Network is asked only when an Android
+      // phone pairs over Wi-Fi (ADR 0256 §7).
+      const asked = ["Notifications", "Screen Recording", "Full Disk Access"];
+      const titles = [...el.querySelectorAll(".dk-crow__title")].map((n) => n.textContent ?? "");
+      expect(titles.filter((title) => asked.includes(title))).toEqual(asked);
+      expect(rowOf(el, "Local network (phones over Wi-Fi)")).toBeUndefined();
+      expect(el.textContent).not.toContain("Not asked yet");
       expect(rowOf(el, "Screen Recording")?.querySelector("small")?.textContent).toBe(
         "Lets agents take screenshots of this Mac.",
       );
@@ -234,9 +243,14 @@ describe("pairing from the app", () => {
       expect(rowOf(el, "Full Disk Access")?.textContent).toContain(
         "In Settings, turn on agentes.chat in the list, or add it with +.",
       );
-      const network = "Local network (phones over Wi-Fi)";
-      expect(end(network)).toBe("Allow");
-      expect(rowOf(el, network)?.querySelector(".ac-chip")?.textContent).toBe("Not asked yet");
+      expect(el.textContent).not.toContain("When macOS asks to Quit & Reopen");
+
+      // Notifications: the system's prompt once, read back at once, and never a Quit & Reopen.
+      expect(end("Notifications")).toBe("Allow");
+      await act(async () => button(rowOf(el, "Notifications"), "Allow")?.click());
+      await until(() => end("Notifications") === "On");
+      expect(host.mac.notifyAsks).toBe(1);
+      expect(host.mac.panes).toEqual([]);
       expect(el.textContent).not.toContain("When macOS asks to Quit & Reopen");
 
       // Screen Recording applies once the app opens again: asked, it says what macOS will ask, and its way out.
@@ -255,20 +269,40 @@ describe("pairing from the app", () => {
       await act(async () => window.dispatchEvent(new Event("focus")));
       await until(() => end("Full Disk Access") === "On");
       expect(rowOf(el, "Full Disk Access")?.textContent).not.toContain("In Settings");
+      // Read live while one is still off: turned on in System Settings with the window behind it, it reads On.
+      host.mac.screen = true;
+      await until(() => end("Screen Recording") === "On", 8000);
+      expect(host.mac.networkAsks).toBe(0);
 
-      // Local Network: the prompt once, then only "Asked" and System Settings, never a green macOS can't vouch for.
-      await act(async () => button(rowOf(el, network), "Allow")?.click());
-      await until(() => end(network) === "Open Settings");
-      expect(host.mac.networkAsks).toBe(1);
-      expect(rowOf(el, network)?.querySelector(".ac-chip")?.textContent).toBe("Asked");
-      await act(async () => button(rowOf(el, network), "Open Settings")?.click());
-      expect(host.mac.panes).toEqual(["screen", "disk", "network"]);
-      expect(host.mac.networkAsks).toBe(1);
-
-      await act(async () => button(el, "Skip for now")?.click());
+      await act(async () => button(el, "Continue")?.click());
       await until(() => host.layer.route === null);
       expect(host.mac.setup).toBeNull();
     }));
+
+  test("Prepare this Mac: notifications turned off once go to System Settings, never a second prompt", () =>
+    mount(
+      SETTINGS,
+      layer,
+      async (el, host) => {
+        await act(async () => host.showLayer({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER }));
+        const end = (title: string) => rowOf(el, title)?.querySelector(".dk-crow__end")?.textContent;
+        await until(() => end("Notifications") === "Open Settings");
+        await act(async () => button(rowOf(el, "Notifications"), "Open Settings")?.click());
+        expect(host.mac.panes).toEqual(["notifications"]);
+        expect(host.mac.notifyAsks).toBe(0);
+        // Turned on there: read back live.
+        host.mac.notifications = "granted";
+        await act(async () => window.dispatchEvent(new Event("focus")));
+        await until(() => end("Notifications") === "On");
+        await act(async () => button(el, "Skip for now")?.click());
+        await until(() => host.layer.route === null);
+      },
+      {
+        host: (host) => {
+          host.mac.notifications = "denied";
+        },
+      },
+    ));
 
   test("opened again by macOS: the Prepare step comes back with fresh states and says it took effect", () =>
     mount(
@@ -298,7 +332,7 @@ describe("pairing from the app", () => {
       layer,
       async (el) => {
         await until(() => button(el, "Allow"));
-        writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen", "network"] });
+        writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen"] });
         await act(async () => button(el, "Allow")?.click());
         await until(() => el.querySelector("h1")?.textContent === "Connected to Estúdio Norte");
         expect(rowOf(el, "Let the whole workspace use it")?.querySelector('[role="switch"]')).toBeTruthy();
@@ -321,7 +355,7 @@ describe("pairing from the app", () => {
         await until(() => rowOf(el, "Commands"));
         expect(switches(el)).toMatchObject({ Commands: "true", Browser: "false" });
         await act(async () => toggle(el, "Browser"));
-        writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen", "network"] });
+        writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen"] });
 
         await act(async () => button(el, "Connect")?.click());
         await until(() => el.textContent?.includes("Waiting for Sam Rivera to let it in…"));
@@ -418,22 +452,14 @@ describe("pairing from the app", () => {
         },
       },
     );
-    // macOS 14 has no Local Network permission: no row that could only ever say "Asked".
-    await mount(
-      SETTINGS,
-      <General />,
-      async (el) => {
-        await until(() => rowOf(el, "Screen Recording")?.querySelector("button"));
-        expect(rowOf(el, "Full Disk Access")).toBeTruthy();
-        expect(rowOf(el, "Local network (phones over Wi-Fi)")).toBeUndefined();
-      },
-      {
-        host: (host) => {
-          const info = host.appInfo;
-          host.appInfo = async () => ({ ...(await info()), system: "14.7.1" });
-        },
-      },
-    );
+    // Notifications with the others, and no Local Network row on any macOS: it is asked only when an Android phone
+    // pairs over Wi-Fi (ADR 0256 §7).
+    await mount(SETTINGS, <General />, async (el) => {
+      await until(() => rowOf(el, "Screen Recording")?.querySelector("button"));
+      expect(rowOf(el, "Notifications")).toBeTruthy();
+      expect(rowOf(el, "Full Disk Access")).toBeTruthy();
+      expect(rowOf(el, "Local network (phones over Wi-Fi)")).toBeUndefined();
+    });
   });
 
   test(

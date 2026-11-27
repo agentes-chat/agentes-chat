@@ -42,6 +42,23 @@ describe("trayStateOf", () => {
   test("unpaired homes (a sign-in in progress) don't count", () => {
     expect(trayStateOf([home({ paired: false, connection: "unpaired" })], false)).toBe("idle");
   });
+  test("an essential that needs the person turns the icon to attention, over everything but an agent asking", () => {
+    expect(trayStateOf([home()], false, 1)).toBe("attention");
+    expect(trayStateOf([], false, 2)).toBe("attention");
+    expect(trayStateOf([home({}, [job])], true, 1)).toBe("attention");
+    expect(trayStateOf([home({ paused: { paused: true, until: null } })], false, 1)).toBe("attention");
+    expect(trayStateOf([home({ connection: "offline" }), home({}, [], false)], false, 1)).toBe("attention");
+    // An agent waiting for a person in its browser is more urgent: the dot stays.
+    const asking = home({
+      browsers: [
+        { agentId: "a1", open: true, host: "app.acme.example", handoff: { status: "pending", request: "Sign in" } },
+      ],
+    } as Partial<ControlStatus>);
+    expect(trayStateOf([asking], false, 1)).toBe("needs");
+    // Nothing needs the person: the usual states.
+    expect(trayStateOf([home()], false, 0)).toBe("idle");
+    expect(trayStateOf([home()], true, 0)).toBe("update");
+  });
 });
 
 describe("pause", () => {

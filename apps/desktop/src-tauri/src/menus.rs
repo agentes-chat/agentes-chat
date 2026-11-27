@@ -134,6 +134,11 @@ pub fn on_event(app: &AppHandle, id: &str) {
         "prefs" => {
             let _ = crate::app_layer::show(app, crate::app_layer::Route::settings(None, None));
         }
+        // The tray's "needs you" line (Windows, Linux): the Overview, where each essential has its fix (ADR 0256 §7).
+        "attention" => {
+            let route = crate::app_layer::Route::settings(Some(crate::app_layer::Section::Overview), None);
+            let _ = crate::app_layer::show(app, route);
+        }
         "serversAdd" => {
             let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Add));
             let _ = crate::app_layer::show(app, route);
