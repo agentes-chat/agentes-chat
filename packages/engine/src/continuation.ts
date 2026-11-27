@@ -55,6 +55,8 @@ export interface ContinuationState {
   secretNudged?: boolean;
   /** It was told once to write a reply that named its tools again (`toolNamesNudge`): the next one is posted. */
   toolsNudged?: boolean;
+  /** Its last turn hit the output cap (`max_tokens`) and it was told once to go on in smaller steps (`TRUNCATED_NUDGE`). */
+  truncatedNudged?: boolean;
   /** Its turn-end check failed once and it was told to check itself (`uncheckedNudge`): later failures end as done. */
   uncheckedNudged?: boolean;
   /**
@@ -358,6 +360,9 @@ export const UNBACKED_NUDGE =
  * What a widget's run reads, once, when it ended without `update_widget` taking its data (ADR 0135 §5): its words reach
  * nobody, so without the call the widget would only fail as `no_update`.
  */
+export const TRUNCATED_NUDGE =
+  "Not posted: your last reply was cut off by the output limit (max_tokens), so nobody got your answer and the work it announced was not done. Do not think it all through again: go on from where you stopped, in small steps, calling your tools as you go, and end with a short reply that says what you did, where, and what is still open.";
+
 export const WIDGET_NUDGE =
   "Not done: this run ends only through update_widget, and it hasn't taken your data (you didn't call it, or it refused what you sent). Nothing you write here reaches anyone. Call update_widget now with the widget's `data` (fixed as its error said, if it refused it), or with `failed` and why, in the person's words.";
 
@@ -680,6 +685,11 @@ export interface TurnEnd {
   openRequest?: string;
   /** A widget's run whose data `update_widget` hasn't taken (ADR 0135 §5): it is told once (`WIDGET_NUDGE`). */
   widgetOwed?: boolean;
+  /**
+   * The turn's model call stopped at its output cap (`max_tokens`): its reply is cut, often mid-sentence, with the
+   * work it announced never done. It is told once to go on in smaller steps instead of the run ending as done.
+   */
+  truncated?: boolean;
   /** Something durable brings it back (`wakesLater`), read only when the judgment would run. */
   wakesLater(): Promise<boolean>;
   /** Whatever run set it, something brings it back to this conversation (`comesBackHere`), read on a promise. */
@@ -719,6 +729,7 @@ export async function decideTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
  * comes, so only a reply about to be posted can be held for it.
  */
 const UNPOSTED = new Set([
+  "truncated",
   "stuck",
   "step_limit",
   "widget",
@@ -748,6 +759,9 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   const max = t.kind === "routine" ? CONTINUE.routineMaxPerRun : CONTINUE.maxPerRun;
   const canNudge = t.state.count < max;
   if (t.bound) return { outcome: "done", rule: t.bound };
+  // A reply cut at the output cap is no answer: once per run, it goes on in smaller steps instead of ending as done.
+  if (t.truncated && !t.state.truncatedNudged)
+    return { outcome: "continue", rule: "truncated", nudge: TRUNCATED_NUDGE };
   // Quiet or not, a widget's run speaks only through update_widget: without it, nobody gets anything.
   if (t.widgetOwed && canNudge) return { outcome: "continue", rule: "widget", nudge: WIDGET_NUDGE };
   if (t.quiet) return { outcome: "done", rule: "quiet" };
@@ -851,6 +865,7 @@ export function advance(state: ContinuationState, d: TurnEndDecision, executed: 
   // A reply held for its wording answers no ask: one it was told to ask still becomes the question card.
   if (d.rule === "local_paths") return { ...state, pathsNudged: true };
   if (d.rule === "tool_names") return { ...state, toolsNudged: true };
+  if (d.rule === "truncated") return { ...rest, truncatedNudged: true };
   return {
     ...rest,
     count: state.count + 1,
