@@ -1,4 +1,4 @@
-# 0256. The desktop app in one window, with Tailscale inside it
+# 0256. The desktop app in one window
 
 - Status: Proposed (in progress: built in steps on one branch; this record says what is built as each part lands)
 - Date: 2026-11-26
@@ -54,38 +54,42 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
 
 ### 3. Running agentes.chat on this computer in three steps
 
-- Who owns it (name and e-mail), where it will be used (this computer, the phone and the team, chosen; or only this
-  computer), and signing in to the private network (skipped when the system's Tailscale is already connected). Then the
-  setup's steps, and at the end the phone's QR code and its three steps.
-- Waiting on the person in another site (Tailscale's sign-in, its HTTPS approval) has no time limit: the screen says
-  what is left in plain words ("one click left") and goes on by itself.
+- Who owns it (name and e-mail), where it will be used (this computer, or the phone and the team too; the second is
+  chosen when the system's Tailscale is already connected), and how the phone and the team get here (only with the
+  second, and skipped when the system's Tailscale is already connected). Then the setup's steps, and at the end the
+  phone's QR code and its three steps.
+- Waiting on the person elsewhere (installing Tailscale and signing in to it, its HTTPS approval) has no time limit:
+  the screen says what is left in plain words ("one click left") and goes on by itself.
 
-### 4. Tailscale inside the app
+### 4. How the phone and the team reach it: the person's choice
 
-- The app carries Tailscale's open-source daemon (BSD-3-Clause), built with its command-line tool in the same binary,
-  run by the app as a child in userspace networking: no system extension, no administrator password, its state in the
-  app's own folder. It joins the person's tailnet as a device of its own named `agentes`, so the server's address is
-  `agentes.<tailnet>.ts.net`, whatever this computer is called, and it serves the server with HTTPS (`serve`, never
-  Funnel).
-- When the system's Tailscale is installed and connected, the app keeps using it, as before.
-- Its device key expires as Tailscale's do; the app says so ahead of time and signs in again with one click.
-- Built: the release and its commit are pinned in `apps/desktop/tailscale.json` (1.106.1, the first release whose
-  daemon, run by a person on Windows with `--windows-mode=dev`, answers on a pipe only that person may open), with
-  only the features the app uses (no port mapping). The app's own daemon (`tailnet_app.rs`) runs on its own socket
-  in the app's data folder, ends with the app (a pipe it watches on macOS and Linux, a Job Object on Windows), drops
-  any share left from before as it starts, and is asked with the same binary as its command-line tool. Which
-  Tailscale shares the server here is saved once with the server here (`tailnet`: `system` or `app`). "Stop running
-  it here" signs the app's own one out; "Erase and start over" keeps it signed in.
+- The app carries no network software of its own. Reach is one of two ways, chosen in the first run's third step and
+  changed any time in Settings › This Mac › Server on this Mac:
+  - **Tailscale**, installed by the person from Tailscale's own download page (on a Mac its standalone download: the
+    App Store variant can't share). The app reads the system's Tailscale; when it is missing or signed out, the step
+    says what to do there (download it, open it and sign in; on Linux and a Mac with only the command-line tool, the
+    command to copy), waits with no time limit and goes on by itself once it is connected. The server is shared with
+    `tailscale serve` over HTTPS (never Funnel), as before.
+  - **An address of the person's own**: a tunnel or proxy running on this computer that leads to
+    `http://127.0.0.1:<PORT>` (the step shows the port, with Copy). It must be `https://` and an origin only. The app
+    confirms it leads to this very server: in native mode the server answers `GET /api/native/here-id` with a random
+    id made when the process starts, for any Host (the one exemption from the 421 guard of §5, GET and HEAD only, no
+    cookies, `no-store`), and the app compares the id through the address with the id at the loopback address, before
+    and after `PUBLIC_URL` moves to it. A miss names the reason (not https, doesn't open, another server, an error).
+- Both set `PUBLIC_URL` to the address for people; the main window on this computer stays at loopback (§5). The way is
+  saved with the server here (`way`: `tailscale` or `address` with its URL). The app checks it every minute; three
+  misses in a row are "1 thing needs you" with the fix (§7).
+- Nothing third-party is bundled or redistributed for reach: no daemon, no license notices, no extra build job.
 
 ### 5. The computer that runs the server opens it directly
 
-- The main window on the computer that runs the server loads it at its loopback address, never through the tailnet. The
-  phone, the team and links use the tailnet address. Cookies are per origin, so each address keeps its own sign-in.
+- The main window on the computer that runs the server loads it at its loopback address, never through the address for
+  people. The phone, the team and links use the address for people (§4). Cookies are per origin, so each address keeps its own sign-in.
 - The server (native mode only) trusts `http://127.0.0.1:<PORT>` beside `PUBLIC_URL`, computed on every start and
   never written to `.env`; answers 421 to any other name, serves `127.0.0.1:<PORT>` as itself (no redirect, no HSTS)
   and sends a page opened at `localhost:<PORT>` there (`http/native-hosts.ts`). On that host its sign-in cookies are
   named `agentes-<PORT>.<name>` without `Secure` both ways (`http/loopback-cookies.ts`), so reach turning on or off,
-  or another server on 127.0.0.1, never signs the window out; the tailnet's host keeps Better Auth's own names.
+  or another server on 127.0.0.1, never signs the window out; the address for people keeps Better Auth's own names.
 - Redirects within one browser are paths (the sign-in page, its errors, the API's error pages), so they stay at the
   origin asked. A provider's sign-in (Google, Apple, GitHub) can't start at the loopback address while `PUBLIC_URL` is
   another: its return lands on `PUBLIC_URL`. `auth-config` names `publicUrl`, and every link the site hands out (copy
@@ -93,8 +97,9 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
 - An MCP server's sign-in started at the loopback address comes back there (RFC 8252): the client registered with its
   authorization server lists both callbacks, and the state keeps the one used. Apps configured by environment and
   Composio return to `PUBLIC_URL` alone.
-- The loopback origin gets no extra privilege: nothing trusts a loopback Host, a 127.0.0.1 peer (`tailscaled` proxies
-  tailnet requests from there, and a tailnet peer sets any Host inside TLS), `X-Forwarded-For` or `Tailscale-User-*`.
+- The loopback origin gets no extra privilege: nothing trusts a loopback Host, a 127.0.0.1 peer (Tailscale and a tunnel on this
+  computer both forward people's requests from there, and set any Host they are given), `X-Forwarded-For` or
+  `Tailscale-User-*`.
   The Host only picks which of the server's own origins answers.
 
 ### 6. Settings › This Mac
@@ -119,6 +124,6 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
 ## Consequences
 
 - One window to learn, one size, one place for settings, and a first run that never leaves it.
-- A phone and a team reach a server on someone's computer without installing anything on that computer.
-- The app grows by the daemon's size, and the desktop build compiles it for each platform.
+- A phone and a team reach a server on someone's computer through the Tailscale they already trust, or a tunnel of
+  their own; the app guides the first and checks the second, and carries neither.
 - Tests and help pages about the welcome window and Preferences move to the layer and This Mac's settings.
