@@ -496,10 +496,10 @@ async function unsentHidden(db: Database, actorId: string, p: Proposal) {
 
 /**
  * Left out by the review (ADR 0219), and so still a person's to apply: a lesson stays in memory instead, a person's
- * own refusal stands.
+ * own refusal stands, and deleting an agent can't be put back, so that stays a delete made on the agent's page.
  */
-export const leftOutByReview = (p: Pick<Proposal, "status" | "decidedByUserId" | "review" | "itemIds">) =>
-  p.status === "rejected" && !p.decidedByUserId && !!p.review && p.itemIds.length === 0;
+export const leftOutByReview = (p: Pick<Proposal, "status" | "decidedByUserId" | "review" | "itemIds" | "settings">) =>
+  p.status === "rejected" && !p.decidedByUserId && !!p.review && p.itemIds.length === 0 && !deletes(p);
 
 async function mayDecide(db: Database, actorId: string, p: Proposal, known?: Membership, byReview = false) {
   const membership = known ?? (await requirePermission(db, actorId, p.orgId, "read"));

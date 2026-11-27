@@ -16,7 +16,7 @@ import {
   undoProposal,
 } from "../src";
 import { NO_REVIEW, reviewAskedSkill, settleProposals } from "../src/context/proposal-review";
-import { askedWords, decideProposal, proposeSkillChange } from "../src/context/proposals";
+import { askedWords, decideProposal, leftOutByReview, proposeSkillChange } from "../src/context/proposals";
 import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
 
 let f: Fixture;
@@ -364,6 +364,10 @@ describe("agents apply their improvements (ADR 0219)", () => {
     expect(now?.body).toBe(after);
     // Applied, it is decided: a second tap changes nothing.
     await expect(decideProposal(f.db, f.owner.id, f.org.id, p.id, "accept")).rejects.toBeInstanceOf(ConflictError);
+    // Deleting an agent can't be put back: left out, it stays a delete made on the agent's page.
+    const left = { status: "rejected" as const, decidedByUserId: null, review: "Not asked for.", itemIds: [] };
+    expect(leftOutByReview({ ...left, settings: null })).toBe(true);
+    expect(leftOutByReview({ ...left, settings: [{ field: "delete", from: false, to: true }] as never })).toBe(false);
   });
 });
 
@@ -454,5 +458,44 @@ describe("with no model for the review (a workspace on plans, a server with no p
       words: "Turn what you just did into a skill.",
     };
     expect(await reviewAskedSkill(noKey(f), skill)).toEqual({ apply: true, why: "" });
+  });
+
+  test("a long skill rewrite reaches the judge whole too: its blocks are made for the judge's size, not cut silently", async () => {
+    f = await baseSetup({ judge: (kind) => (kind === "proposal_review" ? 0.9 : undefined) });
+    const lines = (word: string) =>
+      Array.from({ length: 700 }, (_, i) => `${i + 1}. ${word} the record number ${i + 1} and note it.`).join("\n");
+    const before = lines("Check");
+    const after = `${lines("Verify")}\nLast: send the summary to the owner.`;
+    const [skill] = await f.db
+      .insert(schema.skills)
+      .values({
+        orgId: f.org.id,
+        slug: "records",
+        name: "records",
+        description: "Records",
+        body: before,
+        source: "manual",
+      })
+      .returning();
+    if (!skill) throw new Error("no skill");
+    const words = "Rewrite the records skill to verify instead of check.";
+    const p = await proposeSkillChange(
+      { db: f.db, pubsub: f.pubsub },
+      {
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        skill: { id: skill.id, name: skill.name, body: before },
+        body: after,
+        requesterId: f.owner.id,
+        origin: "outside",
+        words,
+      },
+    );
+    if (!p) throw new Error("not proposed");
+    await settleProposals({ context: noKey(f) }, { orgId: f.org.id, ids: [p.id], origin: "outside", words });
+    const judged = (f.context.judge as unknown as { calls: { kind: string; state: Record<string, unknown> }[] }).calls;
+    const block = String(judged.find((c) => c.kind === "proposal_review")?.state.c1);
+    expect(block).toContain("Last: send the summary to the owner.");
+    expect(block.endsWith("</change>")).toBe(true);
   });
 });

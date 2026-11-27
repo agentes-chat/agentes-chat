@@ -321,10 +321,20 @@ export async function settleProposals(
     (p.target === "agent_settings" && !!p.agentId && p.agentId === p.proposedByAgentId) ||
     input.origin === "outside" ||
     input.origin === "asked_other";
-  const room = Math.floor(INPUT_CHARS / rows.length) - 100;
-  const blocks = rows.map((p, i) =>
-    changeBlock(keys[i] as string, p, input.origin, team, org?.context ?? "", lessonsOf(p), room, input.words),
-  );
+  const blocksIn = (chars: number, of: Proposal[]) =>
+    of.map((p) =>
+      changeBlock(
+        keys[rows.indexOf(p)] as string,
+        p,
+        input.origin,
+        team,
+        org?.context ?? "",
+        lessonsOf(p),
+        Math.floor(chars / of.length) - 100,
+        input.words,
+      ),
+    );
+  const blocks = blocksIn(INPUT_CHARS, rows);
   const personal = await isPersonalWorkspace(db, input.orgId);
   let verdicts: Map<string, Verdict> | null = null;
   let model: string | null = null;
@@ -354,13 +364,15 @@ export async function settleProposals(
   }
   // No model for the review: the judge weighs what can't apply without one. A lesson needs a rule written, which
   // only a model does, so it stays in memory.
+  // The judge reads less: its blocks are made for its own size, so a long change reads marked as cut, not cut silently.
+  const judgedRows = verdicts ? [] : rows.filter((p) => unreviewed(p) && p.itemIds.length === 0);
   const judged = verdicts
     ? null
     : await judgeVerdicts(deps.context, {
         orgId: input.orgId,
         agentId: rows.map(reviewer).find(Boolean) ?? null,
-        blocks: rows.flatMap((p, i) =>
-          unreviewed(p) && p.itemIds.length === 0 ? [[keys[i] as string, blocks[i] as string] as [string, string]] : [],
+        blocks: blocksIn(JUDGE_CHARS, judgedRows).map(
+          (b, i) => [keys[rows.indexOf(judgedRows[i] as Proposal)] as string, b] as [string, string],
         ),
         personal,
       });
