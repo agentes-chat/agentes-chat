@@ -229,13 +229,9 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
         typeof e.egress.at === "string" &&
         Number.isFinite(Date.parse(e.egress.at))
       ) {
-        patch.egress = {
-          ip: e.egress.ip,
-          at: e.egress.at,
-          ...(typeof e.egress.country === "string" && /^[A-Z]{2}$/.test(e.egress.country)
-            ? { country: e.egress.country }
-            : {}),
-        };
+        // Its country is the server's to say (`egressOnRoute`): only once it was seen on the route the agents take
+        // now, which the event doesn't know. Until the list comes back, no flag rather than the last route's.
+        patch.egress = { ip: e.egress.ip, at: e.egress.at };
       }
       if (typeof e.name === "string") patch.name = e.name;
       // Put in standby once it is asleep (ADR 0161): online again to people, its agents' computer too.
@@ -262,7 +258,9 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
         if (patch.online) patchTargets(qc, orgId, machineId, { online: true });
       }
       // Nothing to patch, or `access: true` (it changed, and who may see it differs per person): refetch.
-      if (Object.keys(patch).length === 0 || e.access === true) void qc.invalidateQueries({ queryKey: list });
+      if (Object.keys(patch).length === 0 || e.access === true || patch.egress) {
+        void qc.invalidateQueries({ queryKey: list });
+      }
       // Out of standby: whether it is online is the server's again.
       if (e.standby === false) {
         void qc.invalidateQueries({ queryKey: list });

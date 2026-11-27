@@ -1,6 +1,7 @@
 import type { Machine } from "@agenteschat/client";
-import { ApiError, useConfirmDevice, useDenyDevice, useMachineDevice, useMachines, useMe } from "@agenteschat/client";
+import { ApiError, useConfirmDevice, useDenyDevice, useMachineDevice, useMe } from "@agenteschat/client";
 import { workspaceLabel, workspaceNotes } from "@agenteschat/client/lib/deletion";
+import { lendsInternet } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { computerKind, formatUserCode, locationText } from "@agenteschat/client/lib/machines";
@@ -21,7 +22,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CenteredLayout } from "@/components/AuthLayout";
-import { useUpdateComputer } from "@/components/devices/queries";
+import { useDevices, useUpdateComputer } from "@/components/devices/queries";
 import { LoadingLine } from "@/components/Loading";
 import { osOf } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
@@ -56,9 +57,9 @@ export function ConnectPage({ code }: { code: string }) {
   const [name, setName] = useState("");
   /** "Help when the team's computer is full or away" (`spill.own`): on, as a new computer's is, unless turned off here. */
   const [help, setHelp] = useState(true);
-  /** Its internet for the workspace's own computer (ADR 0237): on unless the person turns it off here. */
+  /** Its internet for the computers that borrow it (ADR 0237): on unless the person turns it off here. */
   const [lend, setLend] = useState(true);
-  const lends = useMachines(orgId ?? "", !!orgId).data?.some((m) => m.kind === "managed") === true;
+  const lends = lendsInternet(useDevices(orgId ?? "", false, !!orgId).data);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);

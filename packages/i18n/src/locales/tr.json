@@ -16662,13 +16662,13 @@
       "browser_download": "Ajanların tarayıcısı indirilemedi. Bu bilgisayarın bağlantısını kontrol edin, bir sonraki kullanımda yeniden denenir.",
       "browser_checksum": "Ajanların tarayıcısının indirmesi bozuk geldi, bu yüzden kullanılmadı. Bir sonraki kullanımda yeniden denenir.",
       "desktop_use_linux": "Ajanların ekranlarındaki uygulamalar, ajan ekranları olan Linux bilgisayarlarda çalışır.",
-      "desktop_use_own_user": "Ajanların ekranlarındaki uygulamalar için her ajanın bu bilgisayarda kendi kullanıcısıyla çalışması gerekir (sistem modu). Burada tüm ajanlar runner kullanıcısıyla çalışıyor.",
+      "desktop_use_own_user": "Ajanların ekranlarındaki uygulamalar için her ajanın bu bilgisayarda kendi kullanıcısıyla çalışması gerekir (sistem modu). Burada tüm ajanlar aynı kullanıcıyla, agentes.chat'i çalıştıran kullanıcıyla çalışıyor.",
       "desktop_use_install": "Ajanların ekranlarındaki uygulamaların ihtiyaç duyduklarını bu bilgisayara kurun:",
       "desktop_unavailable": "Ajanların ekranları bu bilgisayarda çalışamaz.",
       "desktop_linux": "Ajanların ekranları yalnızca Linux bilgisayarlarda çalışır.",
       "desktop_install": "Ajanların ekranlarını bu bilgisayara kurun:",
-      "not_as_root": "Ajanların ekranları ve terminalleri asla root olarak çalışmaz. Runner'ı normal bir kullanıcıyla çalıştırın.",
-      "runner_bun_old": "Bunun için runner'ın Bun 1.3.5 veya daha yeni sürümde çalışması gerekir. Bu bilgisayardaki runner'ı güncelleyin.",
+      "not_as_root": "Ajanların ekranları ve terminalleri asla root olarak çalışmaz. agentes.chat'i normal bir kullanıcıyla çalıştırın.",
+      "runner_bun_old": "Bunun için Bun 1.3.5 veya daha yenisinde çalışan agentes.chat gerekir. Bu bilgisayardaki agentes.chat'i güncelleyin.",
       "terminal_unsupported": "Terminaller yalnızca Linux ve Mac bilgisayarlarda çalışır."
     },
     "egress": {
@@ -16678,7 +16678,6 @@
       "hint": "Ajanlar gezinirken sitelerin gördüğü adres. Bilgisayarın ağı değişince güncellenir.",
       "waiting": "Ajanların internet bağlantısı yeniden kuruluyor. Bağlantıları geri gelene kadar bekler.",
       "via": "Ajanlar {{name}} bilgisayarının internetini kullanıyor",
-      "viaBy": "Ajanlar {{name}} ({{person}}) bilgisayarının internetini kullanıyor",
       "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir."
     },
     "maintenance": {
@@ -17118,6 +17117,8 @@
       "paused": "{{host}} duraklatıldı, bu yüzden kontrol devam edene kadar bekler.",
       "held": "Bu çalışma alanı duraklatıldı, bu yüzden kontrol yeniden etkin olana kadar bekler.",
       "lost": "Kontrol sona erdi. {{name}} cihazını yeniden izliyorsunuz.",
+      "controlLate": "Kontrol zamanında başlamadı. {{host}} hâlâ {{name}} cihazını hazırlıyor: bir dakika sonra yeniden deneyin.",
+      "controlFailed": "{{name}} kontrol edilemedi. Yeniden deneyin ya da {{host}} üzerinde agentes.chat uygulamasını yeniden başlatın.",
       "typeLabel": "{{name}} üzerinde yaz"
     },
     "status": {
@@ -17139,7 +17140,7 @@
       "withHost": "{{host}} ile birlikte",
       "lastSeen": "son görülme: {{time}}",
       "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor",
-      "offlineStopped": "runner {{time}} saatinde durdu",
+      "offlineStopped": "agentes.chat {{time}} saatinde durdu",
       "offlineDropped": "bağlantı {{time}} saatinde koptu"
     },
     "line": {
@@ -17155,9 +17156,14 @@
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
       "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
-      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde `{{command}}` çalıştırın.",
-      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde `{{command}}` çalıştırın.",
-      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde `{{command}}` çalıştırın."
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, internet yok ya da aşırı yüklü olabilir. Açık ve internete bağlı olduğunu kontrol edin.",
+      "offlineStopped": "agentes.chat uygulaması bu bilgisayarda {{time}} saatinde durdu. Uygulamayı yeniden açın.",
+      "offlineStoppedCli": "agentes.chat bu bilgisayarda {{time}} saatinde durdu. Orada yeniden başlatın.",
+      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır."
+    },
+    "technical": {
+      "title": "Teknik ayrıntılar",
+      "doctor": "Nedenini görmek için bunu orada çalıştırın:"
     },
     "reason": {
       "locked": "Telefon kilitli",
@@ -20552,7 +20558,7 @@
       "people": "Herkes artık yalnızca okuyabilir ve bir e-posta alır",
       "peopleQuiet": "Herkes artık yalnızca okuyabilir",
       "computer": "Bilgisayarı hemen durur ve silinir",
-      "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, çalıştırıcı kaldırılana kadar o bilgisayarlarda kalır.",
+      "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, agentes.chat kaldırılana kadar o bilgisayarlarda kalır.",
       "connectors": "Bağlayıcıların ve posta kutularının bağlantısı kesilir"
     },
     "undo": "Herhangi bir sahip onu {{date}}, saat {{time}} öncesine kadar geri yükleyebilir. Ondan sonra geri alınamaz.",
@@ -20871,13 +20877,6 @@
       "doneBy": "{{time}} saatinde {{name}} tarafından yapıldı. {{agent}} ekrana yeniden baktı ve devam etti.",
       "doneByYou": "{{time}} saatinde sizin tarafınızdan yapıldı. {{agent}} ekrana yeniden baktı ve devam etti."
     },
-    "control": {
-      "notice": "{{name}} bilgisayarındaki programlar ekranı ve yazdığınız ya da yapıştırdığınız şeyleri görebilir."
-    },
-    "session": {
-      "check": "Güvenlik kontrolleri",
-      "screening": "Kötüye kullanıma karşı bu ekrandaki metni kontrol edebiliriz. Yalnızca sonucu saklarız. Ekranın göstermediği şeyler, örneğin bir istemdeki şifre, asla kaydedilmez."
-    },
     "after": {
       "titleNoSite": "Ekranı kullandı",
       "noSite": "Bir uygulama açmadan önce"
@@ -20886,7 +20885,6 @@
       "group": "{{name}} ekranı"
     },
     "watch": {
-      "notice": "{{name}} bilgisayarındaki programlar ekranı ve orada yazılan ya da yapıştırılan her şeyi görebilir.",
       "step": {
         "desktop_open": "{{detail}} açtı",
         "desktop_open_plain": "Bir uygulama açtı",

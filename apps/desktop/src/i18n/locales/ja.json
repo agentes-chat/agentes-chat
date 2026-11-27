@@ -24,6 +24,11 @@
     "welcome": "ようこそ",
     "prefs": "環境設定"
   },
+  "background": {
+    "title": "agentes.chatは実行中です",
+    "bodyMac": "画面上部のメニューバーにあります。そこから開くか終了できます。",
+    "bodyTray": "システムトレイにあります。そこから開くか終了できます。"
+  },
   "common": {
     "cancel": "キャンセル",
     "close": "閉じる",

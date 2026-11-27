@@ -4,8 +4,7 @@
 //! step of its opening came, from the top of `run`: its setup done, the main window built, the site's first screen
 //! painted (`page_ready`), the cover gone. Once the page settled it measures the whole app (vitals.rs `tree`) at the
 //! start and end of an idle stretch with the window shown, hides the window as closing it does, does the same after a
-//! while hidden, writes the file and quits. On Linux closing minimizes the window instead, which the bench's virtual
-//! screen can't do (it has no window manager): there hidden stands in for minimized.
+//! while hidden, writes the file and quits.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};

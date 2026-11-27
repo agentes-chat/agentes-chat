@@ -24,6 +24,11 @@
     "welcome": "Willkommen",
     "prefs": "Einstellungen"
   },
+  "background": {
+    "title": "agentes.chat läuft weiter",
+    "bodyMac": "Du findest es in der Menüleiste oben am Bildschirm. Dort kannst du es öffnen oder beenden.",
+    "bodyTray": "Du findest es im Infobereich der Taskleiste. Dort kannst du es öffnen oder beenden."
+  },
   "common": {
     "cancel": "Abbrechen",
     "close": "Schließen",

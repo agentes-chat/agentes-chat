@@ -5,7 +5,7 @@ setupDom();
 
 import { formatUserCode, locationText, normalizeUserCode } from "@agenteschat/client/lib/machines";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { createFakeApi, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
+import { createFakeApi, fakeDevicesOf, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -14,11 +14,12 @@ const click = (el: Element) => act(async () => fireEvent.click(el));
 const CODE = "K7Q4ZP";
 
 /** `/conectar?code=` with a computer waiting for that code (ADR 0036 §5). */
-async function open(path = `/conectar?code=${CODE}`, device = true) {
+async function open(path = `/conectar?code=${CODE}`, device = true, lendsInternet?: boolean) {
   const state = seedState();
   const api = createFakeApi(state);
   const machines = fakeMachinesOf.get(api) as NonNullable<ReturnType<typeof fakeMachinesOf.get>>;
   if (device) machines.addDevice(CODE);
+  if (lendsInternet !== undefined) fakeDevicesOf.get(api)?.set({ devices: [], requests: [], lendsInternet });
   const r = await renderApp(path, { api });
   await settle(6);
   return { ...r, state, api, machines };
@@ -72,6 +73,25 @@ describe("/conectar: confirm a computer's code", () => {
     await click(within(page).getByRole("button", { name: "Conectar" }));
     await settle(6);
     expect(calls(state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([{ spill: { own: false } }]);
+  });
+
+  test("on a self-hosted server that lends: its internet for the agents, on unless turned off here (ADR 0237)", async () => {
+    const label = "Agentes usam a internet deste computador";
+    await open(undefined, true, false);
+    expect(
+      within(document.querySelector(".connect-page") as HTMLElement).queryByRole("switch", { name: label }),
+    ).toBeNull();
+    cleanup();
+    const { state } = await open(undefined, true, true);
+    const page = document.querySelector(".connect-page") as HTMLElement;
+    const lend = within(page).getByRole("switch", { name: label });
+    expect(lend.getAttribute("aria-checked")).toBe("true");
+    await click(lend);
+    await click(within(page).getByRole("button", { name: "Conectar" }));
+    await settle(6);
+    expect(calls(state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([
+      { spill: { own: true }, shareInternet: false },
+    ]);
   });
 
   test("Não fui eu: the computer isn't connected", async () => {

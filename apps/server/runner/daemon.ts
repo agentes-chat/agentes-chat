@@ -135,7 +135,14 @@ import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
 import { diskLayout, keepDiskParts, keptDiskParts, measureDiskParts } from "./disk-parts";
 import { EgressObservation, probeEgress } from "./egress";
-import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
+import {
+  EGRESS_RELAY_SOCKET,
+  egressProxyState,
+  hasOwnProxy,
+  setEgressProxy,
+  startEgressProxy,
+  startEgressRelay,
+} from "./egress-relay";
 import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
@@ -518,6 +525,13 @@ export class RunnerDaemon implements RequestObserver {
   /** ADR 0237: what this computer lends (a person's), and the socket the workspace's own computer offers its guard. */
   private egressShare: EgressShare | undefined;
   private egressRelay: { close(): void } | null = null;
+  /**
+   * ADR 0237 on a self-hosted server: the loopback proxy of a computer that borrows a person's internet. Once up it
+   * stays up (processes started while it lent keep its address); `egressLent` says whether it asks the server.
+   */
+  private egressProxy: Promise<{ port: number; close(): void }> | null = null;
+  private egressPort: number | null = null;
+  private egressLent = false;
   private refusedNetworkKey: string | null = null;
   private networkWriteFailed = false;
   private egressGeneration = 0;
@@ -1322,6 +1336,7 @@ export class RunnerDaemon implements RequestObserver {
       privateNetwork: Boolean(
         (this.session?.network ?? c)?.networkLauncher || (this.session?.network ?? c)?.networkMark,
       ),
+      egressProxy: egressProxyState(),
       ...(c ? { commitHost: new URL(c.server).hostname } : {}),
       limits: {
         maxConcurrentTasks: this.taskLimit(c),
@@ -1703,6 +1718,7 @@ export class RunnerDaemon implements RequestObserver {
                 ...(readStoredConfig(home)?.services ?? []),
                 ...runnerEndpoints(),
                 ...loopbackEndpoints([config.server]),
+                ...(this.egressPort ? [`tcp/${this.egressPort}`] : []),
               ],
               log,
             });
@@ -1887,6 +1903,7 @@ export class RunnerDaemon implements RequestObserver {
       xcodeOpen: () => this.iphoneSetup().open("xcode"),
       reportParts: () => this.reportParts(),
       egressShare: this.egressShare,
+      egressProxy: (on) => this.borrowEgress(on),
       streamStarting: (streamId) => void this.send({ type: "stream.starting", streamId }),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
@@ -1959,6 +1976,7 @@ export class RunnerDaemon implements RequestObserver {
               dial: (streamId, target) => streams.dial(streamId, "egress", undefined, target),
             })
           : null;
+        void this.borrowEgress(welcome.egressProxy);
         this.sentNetworkTransition = "";
         this.observeNetwork();
         this.egressGeneration++;
@@ -2259,6 +2277,37 @@ export class RunnerDaemon implements RequestObserver {
     } catch {
       this.opts.log("Could not update the browser start page");
     }
+  }
+
+  /**
+   * ADR 0237 on a self-hosted server: this computer borrows a person's internet (`on`) or no longer does. Never where
+   * the runner itself goes out through its operator's proxy: theirs wins.
+   */
+  private async borrowEgress(on: boolean): Promise<boolean> {
+    const server = this.config?.server;
+    if (on && server && !hasOwnProxy(process.env, this.session?.network ?? this.config)) {
+      this.egressProxy ??= startEgressProxy({
+        home: this.opts.home,
+        dial: (streamId, target) =>
+          this.session
+            ? this.session.streams.dial(streamId, "egress", undefined, target)
+            : Promise.reject(new Error("offline")),
+        lent: () => this.egressLent,
+      });
+      const proxy = await this.egressProxy.catch((error: unknown) => {
+        this.opts.log(`The web proxy for agents didn't start: ${String(error)}`);
+        this.egressProxy = null;
+        return null;
+      });
+      this.egressPort = proxy?.port ?? null;
+      this.egressLent = proxy !== null;
+      setEgressProxy(proxy ? { port: proxy.port, direct: [new URL(server).hostname] } : null);
+    } else {
+      this.egressLent = false;
+      setEgressProxy(null);
+    }
+    this.session?.supervisor?.stateChanged();
+    return this.egressLent;
   }
 
   private async closeSession(s: Session) {

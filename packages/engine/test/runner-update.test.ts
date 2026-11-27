@@ -8,7 +8,7 @@ import {
 import { accountUnavailable, claudeCodeAvailability } from "../src/brains/claude-code";
 import type { MachineStatus } from "../src/machine-hub";
 import { RunnerOutdatedError } from "../src/machine-tasks";
-import { runnerUpdateOf } from "../src/runner-update";
+import { runByApp, runnerUpdateOf } from "../src/runner-update";
 
 const status = (over: Partial<MachineStatus> = {}): MachineStatus => ({
   id: "m1",
@@ -84,4 +84,14 @@ describe("a computer whose runner is behind this server says how to update it, w
     expect(runnerUpdateOf(box({ protocol: 77 }))).toBeNull();
     expect(runnerUpdateOf(box({ protocol: 76 }))).toBe("command");
   });
+});
+
+test("run by the agentes.chat app or installed from the Terminal: as the runner says, else by its system", () => {
+  const at = RUNNER_APP_PROTOCOL;
+  expect(runByApp({ os: "darwin", protocol: at, executors: { app: true } })).toBe(true);
+  expect(runByApp({ os: "linux", protocol: at, executors: {} })).toBe(false);
+  expect(runByApp({ os: "darwin", protocol: at, executors: null })).toBe(false);
+  // Too old to say: off Linux the app is the likely one.
+  expect(runByApp({ os: "windows", protocol: at - 1 })).toBe(true);
+  expect(runByApp({ os: "linux", protocol: 40 })).toBe(false);
 });

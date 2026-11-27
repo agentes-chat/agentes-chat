@@ -227,6 +227,57 @@ version too, when it installs one). On Linux the AppImage updates itself; a deb 
 </details>
 
 <details>
+<summary><b>Agents use a person's internet</b></summary>
+
+Some sites answer only visitors from their own country, or treat a datacenter address as a robot. When your
+instance runs on a VPS and you use it from the desktop app on your own computer, the agents can open websites
+through that computer's internet instead: your home address and location, as if you opened them yourself.
+
+**Who lends.** Each person's connected computer (the desktop app's **Use this Mac/PC**, or a runner they paired)
+shows **Agents use this computer's internet** on its page in Settings › Devices, in the desktop app's Preferences
+and on the phone. It is on by default; only the person who connected it turns it on, and an admin may turn it off.
+The owners of computers paired before this existed hear it once in the inbox, with **Turn off**. Among the
+computers that lend and are online, the one turned on last carries the traffic ("In use now" on its page).
+
+**Who borrows.**
+
+- This server's own computer (This server as the agents' computer, below): its agents' browsers and programs, and
+  the server's own reads of web pages for agents (`web_fetch` and the DuckDuckGo search page).
+- A computer marked the workspace's whose own switch is off: a runner on the VPS itself, or another box. A VPS
+  paired as a connected computer lends by default (and, being the newest, would be picked), so on its page mark it
+  the workspace's and turn **Agents use this computer's internet** off.
+- A person's own computer that doesn't lend doesn't borrow, and a computer that lends never goes out through
+  another, nor through itself.
+
+The borrowing computer's page then says "Agents use the internet of Ana's laptop (Ana)".
+
+**What goes through it.** Only connections to ports 80 and 443, of agents' programs (the commands they run, their
+coding CLIs and tasks) and browsers started after it began: the runner hands them `HTTPS_PROXY`, `ALL_PROXY`
+and `NODE_USE_ENV_PROXY=1` toward a proxy of its own on `127.0.0.1`, and Chrome its `--proxy-server` flag. Never
+this server's own calls (the database, email, model providers, MCP servers and connectors, updates), never the AI
+CLIs' model and sign-in services (`NO_PROXY`), never private, local or this computer's addresses, and never the
+search service you set (Brave, SearXNG). The lending computer resolves each name itself and refuses non-public
+addresses and its own networks, at most 256 connections at once, with no daily cap. With nothing lending online, a
+refusal or a lending computer that doesn't answer, connections go out the usual way (and stay that way for a
+minute before asking again). A runner that runs with a proxy of its own (`HTTPS_PROXY` in its environment), or
+whose agents run in a network of their own (a `networkLauncher` or `networkMark`), keeps it, and its agents get
+nothing from this.
+
+**Good to know.**
+
+- The lent bytes pass through your server, between the two computers' connections to it; nothing goes to
+  agentes.chat. Both computers must reach the same server process (one replica, or sticky connections).
+- The proxy settings are cooperative: a program that ignores them goes out its usual way. They are not a security
+  boundary. On a computer where agents run as the computer's own user, any local program can use the runner's
+  proxy (only for public web addresses, through this workspace's lending computer); where each agent is its own
+  user, only that workspace's agents reach it.
+- A computer needs an app new enough: a lending one the agentes.chat desktop app or runner from the version that
+  lends, a borrowing one from the version that borrows; older ones keep their usual way.
+- To stop it, turn the switch off on every computer that lends.
+
+</details>
+
+<details>
 <summary><b>Phones for agents</b></summary>
 
 Agents use a phone through a computer you connected (Connect a computer, above): **Settings › Devices
