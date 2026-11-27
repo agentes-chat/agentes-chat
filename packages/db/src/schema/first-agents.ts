@@ -49,7 +49,8 @@ export type FirstAgentProposal = typeof firstAgentProposals.$inferSelect;
  * for them, kept from the moment the agent is made and fired once in their DM with it, as soon as it can work (the
  * workspace's plan, its AI and, for a plan's sign-in, its computer). One per person and workspace: a new agent takes
  * the place of one not fired yet. `area` is the onboarding's area (null for an agent brought from another app), `task`
- * what it does first when it has no routine of theirs; `run_id` is the run its notice woke.
+ * what it does first when it has no routine of theirs; `armed_at` when the person left the agent's step, before which
+ * it never fires; `run_id` is the run its notice woke.
  */
 export const firstDeliveries = pgTable(
   "first_deliveries",
@@ -69,6 +70,11 @@ export const firstDeliveries = pgTable(
     area: text(),
     task: text().notNull().default(""),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /**
+     * When the person left the agent's step (its apps connected there): only an armed delivery fires. Null while they
+     * are still on it; a new agent taking its place disarms it.
+     */
+    armedAt: timestamp({ withTimezone: true }),
     firedAt: timestamp({ withTimezone: true }),
     runId: uuid(),
   },
