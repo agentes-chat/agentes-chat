@@ -1,3 +1,4 @@
+import { connect as tcpConnect } from "node:net";
 import type { KeyWrapper, PubSub } from "@agenteschat/adapters";
 import {
   CUSTOM_PROXY_PROTOCOL,
@@ -18,7 +19,7 @@ import { openSecret, sealSecret } from "./crypto";
 import { publishDevicesChanged } from "./devices";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { getMachine } from "./machines";
-import { assertPublicHttpsUrl, type ResolveHost } from "./net-guard";
+import { assertPublicHttpsUrl, publicHostAddress, type ResolveHost } from "./net-guard";
 import { can, requirePermission } from "./organizations";
 
 const { agentProxies, machines } = schema;
@@ -55,8 +56,8 @@ export interface AgentProxyDeps {
     ): Promise<MachineReplies["proxy.set"]>;
   };
   resolveHost?: ResolveHost;
-  /** Tests: where the proxy test's connection goes. */
-  exit?: (proxy: ProxyAddress) => Promise<{ ip: string; country: string | null }>;
+  /** Tests: where the proxy test's connection goes (`address`: the proxy host's checked address it dials). */
+  exit?: (proxy: ProxyAddress, address: string) => Promise<{ ip: string; country: string | null }>;
 }
 
 const aad = (orgId: string, id: string) => `agent-proxy|${orgId}|${id}`;
@@ -278,8 +279,13 @@ export async function testAgentProxy(
     );
   }
   const proxy = await checkProxyUrl(raw, deps.resolveHost);
+  // Dialled at the address just checked, never by its name again: a name that resolves anew could point inside.
+  const at = await publicHostAddress(proxy.host, deps.resolveHost);
+  if (!at.ok) return { ok: false, reason: "unreachable" };
+  const pinned = (p: ProxyAddress, address: string) =>
+    proxyExit(p, { connect: (_host, port) => tcpConnect({ host: address, port }) });
   try {
-    const exit = await (deps.exit ?? proxyExit)(proxy);
+    const exit = await (deps.exit ?? pinned)(proxy, at.address);
     return { ok: true, ...exit };
   } catch (error) {
     return { ok: false, reason: error instanceof ProxyDialError ? error.reason : "unreachable" };

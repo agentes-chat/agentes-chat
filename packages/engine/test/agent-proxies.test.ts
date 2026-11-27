@@ -27,6 +27,7 @@ const PUBLIC = async () => ["203.0.113.10"];
 
 function depsOf(fx: Fixture) {
   const calls: { machineId: string; url: string | null }[] = [];
+  const dialled: string[] = [];
   const deps: AgentProxyDeps = {
     db: fx.db,
     keyWrappers: [fx.keyWrapper],
@@ -38,12 +39,13 @@ function depsOf(fx: Fixture) {
         return { on: request.url !== null };
       },
     },
-    exit: async (proxy) => {
+    exit: async (proxy, address) => {
+      dialled.push(address);
       if (proxy.password === "wrong") throw Object.assign(new Error("no"), { reason: "auth" });
       return { ip: "198.51.100.7", country: "DE" };
     },
   };
-  return { deps, calls };
+  return { deps, calls, dialled };
 }
 
 const machine = async (fx: Fixture, name: string) => {
@@ -120,6 +122,13 @@ test("from the chat: the card holds no password; saving reads it from the messag
     author: { type: "person", userId: f.owner.id },
     body: "use the proxy socks5://ana:s3cret@proxy.example.com:1080 for the browser",
   });
+  await f.db.insert(schema.notifications).values({
+    orgId: f.org.id,
+    userId: f.owner.id,
+    kind: "mention",
+    groupKey: `mention:${said.id}`,
+    latest: { quote: "use the proxy socks5://ana:s3cret@proxy.example.com:1080" },
+  });
   const [run] = await f.db
     .insert(schema.agentRuns)
     .values({
@@ -135,6 +144,13 @@ test("from the chat: the card holds no password; saving reads it from the messag
     })
     .returning();
   if (!run) throw new Error("no run");
+  // An agent that repeated it, and an inbox row that quotes it.
+  const echoed = await insertMessage(f.db, {
+    orgId: f.org.id,
+    channelId: f.general.id,
+    author: { type: "agent", agentId: f.agent.id, runId: run.id, hop: 1 },
+    body: "Saving socks5://ana:s3cret@proxy.example.com:1080 now",
+  });
   const ctx: ToolContext = {
     db: f.db,
     orgId: f.org.id,
@@ -167,6 +183,13 @@ test("from the chat: the card holds no password; saving reads it from the messag
   );
   const [hidden] = await f.db.select().from(schema.messages).where(eq(schema.messages.id, said.id));
   expect(hidden?.body).toBe("use the proxy socks5://ana:•••@proxy.example.com:1080 for the browser");
+  const [echo] = await f.db.select().from(schema.messages).where(eq(schema.messages.id, echoed.id));
+  expect(echo?.body).toBe("Saving socks5://ana:•••@proxy.example.com:1080 now");
+  expect(JSON.stringify(await f.db.select().from(schema.notifications))).not.toContain("s3cret");
+  const reindexed = (await f.db.select().from(schema.outbox)).filter((j) => j.kind === "search.index");
+  expect(reindexed.map((j) => (j.payload as { sourceId: string }).sourceId)).toEqual(
+    expect.arrayContaining([said.id, echoed.id]),
+  );
   const [cleaned] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
   expect(JSON.stringify(cleaned?.transcript)).not.toContain("s3cret");
   const [after] = await f.db.select().from(schema.messages).where(eq(schema.messages.id, cardId));
@@ -186,6 +209,20 @@ test("from the chat: the card holds no password; saving reads it from the messag
     input: { host: "other.example.com", why: "x" },
   });
   expect(none.type === "result" && none.output.isError).toBe(true);
+});
+
+test("a test dials the proxy at the address it checked; a name that now points inside is never dialled", async () => {
+  f = await setup();
+  const { deps, dialled } = depsOf(f);
+  const url = "socks5://proxy.example.com:1080";
+  expect(await testAgentProxy(deps, f.owner.id, f.org.id, { machineId: null, url })).toMatchObject({ ok: true });
+  expect(dialled).toEqual(["203.0.113.10"]);
+  let asked = 0;
+  const rebinding = async () => (asked++ === 0 ? ["203.0.113.10"] : ["127.0.0.1"]);
+  expect(
+    await testAgentProxy({ ...deps, resolveHost: rebinding }, f.owner.id, f.org.id, { machineId: null, url }),
+  ).toEqual({ ok: false, reason: "unreachable" });
+  expect(dialled).toHaveLength(1);
 });
 
 test("proxies in a message: SOCKS, or HTTP with a port or a user, a sentence's punctuation left out; a plain link is none", () => {

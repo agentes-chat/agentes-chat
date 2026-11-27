@@ -34,16 +34,19 @@ company's egress), as they can lend their own computer's internet (ADR 0237).
    (`NO_PROXY`: the AI CLIs' model and sign-in services, this server) stays direct. Self-hosted servers need nothing
    more.
 5. **Test.** "Test" asks this server to make one request through the proxy to Cloudflare's trace and shows the address
-   and country agents come out at (30 tests an hour per person). The proxy is tested from the server, not from the
+   and country agents come out at (30 tests an hour per person). The proxy is dialled at the address its check just
+   resolved, never by its name again. The proxy is tested from the server, not from the
    computer.
 6. **From the chat.** "Use the proxy socks5://user:pass@host:1080 for the browser" makes the agent call `offer_proxy`
    with the host only; the card carries the address without its password and points to the person's message. Saving
-   reads it from that message again, then hides the password there (`user:•••@`) and in the transcripts of the
-   conversation's runs since an hour before it, tests it, and tells the agent where agents come out.
+   reads it from that message again, then hides the password (`user:•••@`) there and in every copy since an hour
+   before it: the conversation's messages that repeated it (re-indexed for search), its runs' transcripts and inbox
+   rows' quotes. Then it tests it and tells the agent where agents come out.
 
 ## Consequences
 
 - A proxy that is down stops its agents' websites until it is back or removed: the page says so.
 - On the Cloud, the guard sends only ports 80 and 443 to the socket, so those go through the proxy; the rest keep
   their way. A proxy set while the guard is skipping the socket (a minute after "nothing lent") starts at its next ask.
-- The model provider read the person's message before it was hidden; only stored copies are cleaned.
+- The model provider read the person's message before it was hidden; only stored copies are cleaned. A run still
+  going when it is saved writes its transcript back from memory, password included.

@@ -11,9 +11,10 @@ import type { Notice } from "./notices";
 import { personBehindCall } from "./requester";
 import { deliverNoticeToRun } from "./run-resume";
 import { bodyCode } from "./run-tools";
+import { enqueueIndex } from "./search";
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
 
-const { agentRuns, machines, messages } = schema;
+const { agentRuns, machines, messages, notifications } = schema;
 
 export const OFFER_PROXY_TOOL = "offer_proxy";
 export const PROXY_CARD = "action_proxy";
@@ -173,12 +174,6 @@ export function offerProxyTool(deps: { pubsub?: PubSub }, scope: string): ToolDe
   };
 }
 
-/** Hides a proxy's password in a text: `user:secret@` → `user:•••@`, as typed and URL-encoded. */
-export function hidePassword(text: string, proxy: ProxyAddress) {
-  if (!proxy.password) return text;
-  return [proxy.password, encodeURIComponent(proxy.password)].reduce((t, p) => t.split(`:${p}@`).join(":•••@"), text);
-}
-
 /**
  * Saves the proxy a card offers (`offer_proxy`), as whoever clicks, with their right to set it: read from the person's
  * message again, then that message and the transcripts of the conversation's runs of the last day lose its password.
@@ -202,15 +197,28 @@ export async function saveProxyFromCard(deps: AgentProxyDeps, actorId: string, o
   }
   const view = await setAgentProxy(deps, actorId, orgId, { machineId: card.params.machineId, url: proxyUrlOf(proxy) });
   if (proxy.password) {
-    const [hidden] = await deps.db
-      .update(messages)
-      .set({ body: hidePassword(source.body, proxy) })
-      .where(and(eq(messages.orgId, orgId), eq(messages.id, source.id)))
-      .returning();
-    if (hidden && deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(hidden)).catch(() => {});
-    // Inside the stored transcripts the password is a JSON string's contents.
+    const since = new Date(source.createdAt.getTime() - 3600_000);
     for (const secret of new Set([proxy.password, encodeURIComponent(proxy.password)])) {
-      const inJson = JSON.stringify(`:${secret}@`).slice(1, -1);
+      const typed = `:${secret}@`;
+      // The person's message, and any reply that repeated the address, leave the index with it.
+      const hidden = await deps.db
+        .update(messages)
+        .set({ body: sql`replace(${messages.body}, ${typed}, ':•••@')` })
+        .where(
+          and(
+            eq(messages.orgId, orgId),
+            eq(messages.channelId, source.channelId),
+            gte(messages.createdAt, since),
+            sql`strpos(${messages.body}, ${typed}) > 0`,
+          ),
+        )
+        .returning();
+      for (const m of hidden) {
+        await enqueueIndex(deps.db, { orgId, kind: "message", sourceId: m.id });
+        if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(m)).catch(() => {});
+      }
+      // In stored transcripts and an inbox row's quote the password is a JSON string's contents.
+      const inJson = JSON.stringify(typed).slice(1, -1);
       await deps.db
         .update(agentRuns)
         .set({ transcript: sql`replace(${agentRuns.transcript}::text, ${inJson}, ':•••@')::jsonb` })
@@ -218,8 +226,18 @@ export async function saveProxyFromCard(deps: AgentProxyDeps, actorId: string, o
           and(
             eq(agentRuns.orgId, orgId),
             eq(agentRuns.channelId, source.channelId),
-            gte(agentRuns.createdAt, new Date(source.createdAt.getTime() - 3600_000)),
-            sql`${agentRuns.transcript}::text like ${`%${inJson.replace(/[%_\\]/g, "\\$&")}%`}`,
+            gte(agentRuns.createdAt, since),
+            sql`strpos(${agentRuns.transcript}::text, ${inJson}) > 0`,
+          ),
+        );
+      await deps.db
+        .update(notifications)
+        .set({ latest: sql`replace(${notifications.latest}::text, ${inJson}, ':•••@')::jsonb` })
+        .where(
+          and(
+            eq(notifications.orgId, orgId),
+            gte(notifications.updatedAt, since),
+            sql`strpos(${notifications.latest}::text, ${inJson}) > 0`,
           ),
         );
     }
