@@ -155,6 +155,11 @@ export const oauthStates = pgTable(
     composioAccountId: text(),
     /** The connection it makes is its person's own (`user_id`), not the team's. */
     personal: boolean().notNull().default(false),
+    /**
+     * Where the provider sends the person back, when not `PUBLIC_URL`'s callback: the server's own loopback callback
+     * for an MCP sign-in started at its loopback origin (RFC 8252, ADR 0255 §5). The code is traded with the same one.
+     */
+    redirectUri: text(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     usedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -194,6 +199,12 @@ export const oauthClients = pgTable(
      * connection using it, and its `scope`, when set, is the one every authorization asks for.
      */
     providedByPerson: boolean().notNull().default(false),
+    /**
+     * The return addresses it was registered with. Null: `PUBLIC_URL`'s callback alone (registered before the
+     * loopback one existed, or an admin's own client). A native server registers its loopback callback too
+     * (ADR 0255 §5), so a sign-in started there comes back there.
+     */
+    redirectUris: text().array(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("oauth_clients_org_issuer").on(t.orgId, t.issuer)],

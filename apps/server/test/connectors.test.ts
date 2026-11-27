@@ -223,8 +223,10 @@ test("connectors API: the phone app's OAuth hands the code back to the app, whic
   const signedOut = await systemBrowser(`/api/app/connectors/oauth/callback?state=${webAgain}&code=abc`, {
     origin: null,
   });
-  const signIn = new URL(signedOut.headers.get("location") ?? "");
-  expect(signIn.origin + signIn.pathname).toBe("http://localhost:3000/login");
+  // A path: the sign-in page at the origin the browser asked.
+  const signedOutAt = signedOut.headers.get("location") ?? "";
+  expect(signedOutAt).toStartWith("/login?");
+  const signIn = new URL(signedOutAt, "http://localhost:3000");
   expect(signIn.searchParams.get("redirect")).toBe(`/api/app/connectors/oauth/callback?state=${webAgain}&code=abc`);
   const finished = await app(signIn.searchParams.get("redirect") ?? "", { origin: null });
   expect(finished.headers.get("location")).toBe("http://localhost:3000/settings?connected=github&outcome=reconnected");

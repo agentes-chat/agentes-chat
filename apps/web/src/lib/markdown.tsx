@@ -12,6 +12,7 @@ import { MermaidOrCode } from "@/components/artifacts/Mermaid";
 import { ChartOrCode } from "@/components/ChartBlock";
 import { CodeBlock } from "@/components/CodeBlock";
 import { TableBox } from "@/components/TableBox";
+import { ownOrigins } from "@/lib/public-origin";
 
 /**
  * A small, safe Markdown renderer for chat messages and artifact documents
@@ -105,9 +106,9 @@ function withRuns(text: string, key: string): ReactNode[] {
  * address written as it is, shown as its service's pill when its shape is known (`linkPill`).
  */
 function link(href: string, key: string, children: ReactNode, bare = false) {
-  const message = parseMessageLink(href, [window.location.origin]);
+  const message = parseMessageLink(href, ownOrigins());
   if (message) return <MessageRef key={key} link={message} />;
-  const file = parseFileLink(href, [window.location.origin]);
+  const file = parseFileLink(href, ownOrigins());
   if (file) return <FileRef key={key} link={file} />;
   const pill = bare ? linkPill(href) : null;
   if (pill) return <LinkPill key={key} href={href} pill={pill} />;

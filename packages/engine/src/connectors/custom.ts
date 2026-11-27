@@ -40,6 +40,7 @@ import {
   noteRefusedSignIn,
   OAUTH_STATE_TTL_MS,
   oauthRedirectUri,
+  oauthRedirectUris,
   openConnectionSecret,
   prefixService,
   secretHeaders,
@@ -1035,15 +1036,21 @@ export async function beginMcpOAuth(
 ): Promise<Exclude<CustomConnectStart, { status: "connected" }>> {
   const meta = await authServerMetadata(deps, input.issuer);
   if (!meta) throw discoveryFailed(input.issuer);
-  const redirectUri = oauthRedirectUri(deps.publicUrl);
   // Worked out again each time: a client still in use keeps the scope it was registered with, maybe without
   // offline_access.
   const asked = oauthScope(meta, input.scopes);
-  const client = await ensureOAuthClient(deps, orgId, input.issuer, meta, { redirectUri, scope: asked });
+  const client = await ensureOAuthClient(deps, orgId, input.issuer, meta, {
+    redirectUris: oauthRedirectUris(deps),
+    scope: asked,
+  });
   if (client && "notApproved" in client) {
     return { status: "needs_key", reason: "not_approved", ...(client.detail ? { detail: client.detail } : {}) };
   }
   if (!client) return { status: "needs_key" };
+  // Started at the server's loopback origin (ADR 0255 §5): back there when its client was registered with it, since
+  // this computer's own browser may not reach `PUBLIC_URL`; else `PUBLIC_URL`'s, as everywhere else.
+  const loopback = deps.atLoopback && deps.loopbackUrl ? oauthRedirectUri(deps.loopbackUrl) : null;
+  const redirectUri = loopback && client.redirectUris?.includes(loopback) ? loopback : oauthRedirectUri(deps.publicUrl);
   // An admin's own app asks for the scopes they typed, when they typed any.
   const scope = (client.providedByPerson && client.scope) || asked;
   const state = randomToken(32);
@@ -1070,6 +1077,7 @@ export async function beginMcpOAuth(
     label: input.label ?? null,
     connectionId: input.connectionId ?? null,
     personal: input.personal === true,
+    redirectUri: redirectUri === loopback ? loopback : null,
     expiresAt: new Date((deps.now?.() ?? new Date()).getTime() + OAUTH_STATE_TTL_MS),
   });
   const url = new URL(client.authorizationEndpoint);

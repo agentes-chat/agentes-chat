@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { ConflictError, ForbiddenError, NotFoundError } from "@agenteschat/engine";
 import { oauthFailure } from "../src/routes/app/context";
-import { createTestServer, ORIGIN, type TestServer } from "./harness";
+import { createTestServer, type TestServer } from "./harness";
 
 let t: TestServer | undefined;
 afterEach(async () => {
@@ -14,11 +14,11 @@ describe("a sign-in that didn't finish lands on the sign-in page, which says why
     t = await createTestServer();
     const res = await t.app.request("/api/auth/error?error=state_mismatch");
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe(`${ORIGIN}/login?error=state_mismatch`);
+    expect(res.headers.get("location")).toBe("/login?error=state_mismatch");
     // A provider's callback that fails before its state is read lands there straight away.
     const callback = await t.app.request("/api/auth/callback/github?state=forged&code=x");
     expect(callback.status).toBe(302);
-    expect(callback.headers.get("location")).toStartWith(`${ORIGIN}/login?error=`);
+    expect(callback.headers.get("location")).toStartWith("/login?error=");
   });
 
   test("a browser's own navigation that failed on our side lands on server_error; what the app asked keeps its 500", async () => {
@@ -27,7 +27,8 @@ describe("a sign-in that didn't finish lands on the sign-in page, which says why
     const navigate = { "sec-fetch-mode": "navigate" };
     const landed = await t.app.request("/api/auth/callback/google?state=s&code=c", { headers: navigate });
     expect(landed.status).toBe(302);
-    expect(landed.headers.get("location")).toBe(`${ORIGIN}/login?error=server_error`);
+    // A path: the browser stays at the origin it asked (a native server's loopback origin keeps its own sign-in).
+    expect(landed.headers.get("location")).toBe("/login?error=server_error");
     // The app's own requests, and a POST, read the answer themselves.
     expect((await t.app.request("/api/auth/get-session", { headers: { "sec-fetch-mode": "cors" } })).status).toBe(500);
     const posted = await t.app.request("/api/auth/sign-in/email", { method: "POST", headers: navigate });

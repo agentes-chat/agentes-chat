@@ -29,6 +29,7 @@ import { ErrorState, LoadingList } from "@/components/Loading";
 import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { publicOrigin } from "@/lib/public-origin";
 import { useToast } from "@/lib/toast";
 import "./ai-apps.css";
 
@@ -49,7 +50,7 @@ export function IntegrationAppsSection() {
   const [editing, setEditing] = useState<IntegrationApp | "new" | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [shown, setShown] = useState<Shown[]>([]);
-  const addresses = integrationAddresses(window.location.origin);
+  const addresses = integrationAddresses(publicOrigin());
   const show = (name: string, out: IntegrationAppSecrets) =>
     setShown([
       ...(out.token ? [{ kind: "token" as const, name, value: out.token }] : []),

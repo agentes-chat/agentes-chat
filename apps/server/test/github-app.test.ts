@@ -257,8 +257,10 @@ test("GitHub's return without a session in this browser: the sign-in page first,
   const callback = `/api/app/github-app/callback?state=${state}&code=c&installation_id=7&setup_action=install`;
   const signedOut = await browser(t)(callback);
   expect(signedOut.status).toBe(302);
-  const signIn = new URL(signedOut.headers.get("location") ?? "");
-  expect(signIn.origin + signIn.pathname).toBe("http://localhost:3000/login");
+  // A path: the sign-in page at the origin the browser asked.
+  const signedOutAt = signedOut.headers.get("location") ?? "";
+  expect(signedOutAt).toStartWith("/login?");
+  const signIn = new URL(signedOutAt, "http://localhost:3000");
   expect(signIn.searchParams.get("redirect")).toBe(callback);
   // Signed in, the same address finishes.
   expect((await owner(callback)).headers.get("location")).toBe("http://localhost:3000/conectores?github_app=installed");

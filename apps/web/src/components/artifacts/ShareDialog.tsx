@@ -23,6 +23,7 @@ import { artifactLink, useAuthorName } from "@/components/artifacts/viewer-conte
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { copyText } from "@/lib/context-menu";
+import { publicOrigin } from "@/lib/public-origin";
 import { useToast } from "@/lib/toast";
 
 /**
@@ -38,8 +39,7 @@ export function useFileShare() {
     open: (a: Artifact) => setTarget(a),
     copyLink: (a: Artifact, version?: number) => {
       if (onlyItsConversation(a)) setTarget(a);
-      else
-        void copyText(artifactLink(window.location.origin, org.id, a.id, version), () => toast.show(t("share.copied")));
+      else void copyText(artifactLink(publicOrigin(), org.id, a.id, version), () => toast.show(t("share.copied")));
     },
     dialog: target ? <ShareDialog key={target.id} artifact={target} onClose={() => setTarget(null)} /> : null,
   };
@@ -251,9 +251,7 @@ export function ShareDialog({ artifact, onClose }: { artifact: Artifact; onClose
         <Button
           icon="link"
           onClick={() =>
-            void copyText(artifactLink(window.location.origin, org.id, artifact.id), () =>
-              toast.show(t("share.copied")),
-            )
+            void copyText(artifactLink(publicOrigin(), org.id, artifact.id), () => toast.show(t("share.copied")))
           }
         >
           {t("share.copyLink")}

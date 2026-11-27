@@ -108,6 +108,8 @@ import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
 import { trustPeer } from "./http/client-ip";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
+import { loopbackCookies, withLoopbackCookies } from "./http/loopback-cookies";
+import { nativeHostGuard } from "./http/native-hosts";
 import { watchLoad } from "./load-shed";
 import { createLogger, type Logger } from "./logger";
 import { OPERATOR_API_PREFIX, serveOperatorApi } from "./operator/app";
@@ -139,9 +141,10 @@ export interface StartOptions {
   edition: Edition;
   modules?: AgentesModule[];
   /**
-   * Answer only requests addressed to this server's own names (`127.0.0.1:<PORT>`, `localhost:<PORT>`
-   * and `PUBLIC_URL`'s host), with a 421 for any other: native mode listens on loopback, where a web
-   * page that points a name of its own at 127.0.0.1 (DNS rebinding) would otherwise reach it.
+   * Native mode (`http/native-hosts.ts`, ADR 0255 §5): answer only requests addressed to this server's own names
+   * (`127.0.0.1:<PORT>`, `localhost:<PORT>` and `PUBLIC_URL`'s host), with a 421 for any other: it listens on
+   * loopback, where a web page that points a name of its own at 127.0.0.1 (DNS rebinding) would otherwise reach it.
+   * `127.0.0.1:<PORT>` is served as its own origin, its sign-in cookies named per port (`http/loopback-cookies.ts`).
    */
   ownHostsOnly?: boolean;
 }
@@ -698,22 +701,12 @@ async function boot(
     live: liveSockets,
     onTyping: engine.warmWhileTyping,
   });
-  const publicUrl = new URL(config.PUBLIC_URL);
-  const ownHosts = ownHostsOnly
-    ? new Set([`127.0.0.1:${config.PORT}`, `localhost:${config.PORT}`, publicUrl.host])
-    : null;
-  /**
-   * A 421 for a name not its own; and a page opened at another of its own names goes to `PUBLIC_URL`,
-   * the only origin that sign-in and saving accept. Temporary: `PUBLIC_URL` changes with Tailscale.
-   */
-  const ownHostAnswer = (req: Request) => {
-    const host = req.headers.get("host") ?? "";
-    if (!ownHosts || host === publicUrl.host) return null;
-    if (!ownHosts.has(host)) return new Response("This server answers only at its own address.\n", { status: 421 });
-    if (req.method !== "GET" || !req.headers.get("accept")?.includes("text/html")) return null;
-    const { pathname, search } = new URL(req.url);
-    return Response.redirect(new URL(pathname + search, publicUrl).href, 302);
-  };
+  // Native mode (ADR 0255 §5): its own names only, the loopback origin served as itself, and that origin's sign-in
+  // cookies named per port, for WebSocket upgrades and data sockets too.
+  const addresses = { port: config.PORT, publicUrl: config.PUBLIC_URL };
+  const ownHostAnswer = ownHostsOnly ? nativeHostGuard(addresses) : () => null;
+  const serveApp = (req: Request, srv: Bun.Server<SocketData>) => realtime.fetch(req, srv, (r) => app.fetch(r));
+  const serveHere = ownHostsOnly ? withLoopbackCookies(loopbackCookies(addresses), serveApp) : serveApp;
   // A worker answers its health check alone: the image's check reads it, and a deploy waits for it.
   const server = worker
     ? Bun.serve({
@@ -735,7 +728,7 @@ async function boot(
         idleTimeout: 120,
         fetch: (req, srv) => {
           trustPeer(req.headers, srv.requestIP(req)?.address, config.TRUSTED_PROXIES);
-          return ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r));
+          return ownHostAnswer(req) ?? serveHere(req, srv);
         },
         websocket: realtime.websocket,
         // What the HTTP app doesn't answer itself: a WebSocket upgrade that failed before the socket opened.

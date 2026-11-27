@@ -74,6 +74,21 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
 
 - The main window on the computer that runs the server loads it at its loopback address, never through the tailnet. The
   phone, the team and links use the tailnet address. Cookies are per origin, so each address keeps its own sign-in.
+- The server (native mode only) trusts `http://127.0.0.1:<PORT>` beside `PUBLIC_URL`, computed on every start and
+  never written to `.env`; answers 421 to any other name, serves `127.0.0.1:<PORT>` as itself (no redirect, no HSTS)
+  and sends a page opened at `localhost:<PORT>` there (`http/native-hosts.ts`). On that host its sign-in cookies are
+  named `agentes-<PORT>.<name>` without `Secure` both ways (`http/loopback-cookies.ts`), so reach turning on or off,
+  or another server on 127.0.0.1, never signs the window out; the tailnet's host keeps Better Auth's own names.
+- Redirects within one browser are paths (the sign-in page, its errors, the API's error pages), so they stay at the
+  origin asked. A provider's sign-in (Google, Apple, GitHub) can't start at the loopback address while `PUBLIC_URL` is
+  another: its return lands on `PUBLIC_URL`. `auth-config` names `publicUrl`, and every link the site hands out (copy
+  link, share, invitations, commands for another computer) uses it.
+- An MCP server's sign-in started at the loopback address comes back there (RFC 8252): the client registered with its
+  authorization server lists both callbacks, and the state keeps the one used. Apps configured by environment and
+  Composio return to `PUBLIC_URL` alone.
+- The loopback origin gets no extra privilege: nothing trusts a loopback Host, a 127.0.0.1 peer (`tailscaled` proxies
+  tailnet requests from there, and a tailnet peer sets any Host inside TLS), `X-Forwarded-For` or `Tailscale-User-*`.
+  The Host only picks which of the server's own origins answers.
 
 ### 6. Settings › This Mac
 

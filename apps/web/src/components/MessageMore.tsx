@@ -19,6 +19,7 @@ import {
   selectedTextAt,
   tidy,
 } from "@/lib/context-menu";
+import { publicOrigin } from "@/lib/public-origin";
 import { useToast } from "@/lib/toast";
 import { CorrectionDialog } from "./MessageFeedback";
 import { DOWN, ReactButton, reactionOf, useEmojiLabels, useMessageReactions } from "./Reactions";
@@ -145,9 +146,7 @@ export function useMessageMenu(
       label: t("messageRefs.copy"),
       icon: "link",
       run: () =>
-        void copyText(messageLink(window.location.origin, org.id, message), () =>
-          toast.show(t("contextMenu.linkCopied")),
-        ),
+        void copyText(messageLink(publicOrigin(), org.id, message), () => toast.show(t("contextMenu.linkCopied"))),
     };
     const wiki = (text: string): MenuEntry => ({
       kind: "item",

@@ -62,6 +62,7 @@ import { useFileDrop } from "@/hooks/useFileDrop";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import type { MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
+import { publicOrigin } from "@/lib/public-origin";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import "./drive.css";
@@ -340,9 +341,7 @@ export function DrivePage({
     for (const a of picked) await downloads.save(a, undefined, isLiveFileKind(a.kind) ? undefined : a.version);
   };
   const copyLinks = async () => {
-    await navigator.clipboard?.writeText(
-      picked.map((a) => artifactLink(window.location.origin, org.id, a.id)).join("\n"),
-    );
+    await navigator.clipboard?.writeText(picked.map((a) => artifactLink(publicOrigin(), org.id, a.id)).join("\n"));
     // The share dialog's rule, for many at once: say which links only their conversation opens, with the way to share.
     const closed = picked.find(onlyItsConversation);
     if (closed) {

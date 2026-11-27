@@ -27,6 +27,7 @@ import { MetaLine } from "@/components/MetaLine";
 import { NavToggle } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
+import { publicOrigin } from "@/lib/public-origin";
 import { useToast } from "@/lib/toast";
 import { ThreadStatusChip, useThreadControls, useThreadFlows } from "./ThreadBits";
 import "./threads.css";
@@ -215,7 +216,7 @@ export function ThreadHeader({
         <MenuItem
           icon="link"
           onSelect={async () => {
-            await navigator.clipboard?.writeText(`${window.location.origin}/org/${org.id}/threads/${thread.id}`);
+            await navigator.clipboard?.writeText(`${publicOrigin()}/org/${org.id}/threads/${thread.id}`);
             toast.show(t("channel.linkCopied"));
           }}
         >

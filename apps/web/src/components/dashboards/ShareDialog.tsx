@@ -7,13 +7,14 @@ import { useTranslation } from "react-i18next";
 import { PersonAvatar } from "@/components/AgentAvatar";
 import { useOrg } from "@/components/org-context";
 import { copyText } from "@/lib/context-menu";
+import { publicOrigin } from "@/lib/public-origin";
 import { useToast } from "@/lib/toast";
 import { AudienceFields, adminOf, audienceReady, type BoardAudience, roleNames, useCustomRoles } from "./parts";
 import "@/pages/dashboards.css";
 
 /** A board's own address, for "Copy link". */
 export const dashboardUrl = (orgId: string, dashboardId: string) =>
-  `${window.location.origin}/org/${orgId}/dashboards/${dashboardId}`;
+  `${publicOrigin()}/org/${orgId}/dashboards/${dashboardId}`;
 
 /**
  * Share (ADR 0135 §8, §12): who sees the board and who edits it (anyone who sees it, only you and admins, or some

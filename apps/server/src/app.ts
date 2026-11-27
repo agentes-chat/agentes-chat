@@ -20,6 +20,7 @@ import { authHandler, signInPageUrl } from "./auth";
 import { apiBodyLimit } from "./http/body-limit";
 import { errorPages, isPageRequest } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
+import { isLoopbackHost } from "./http/native-hosts";
 import { busyResponse } from "./load-shed";
 import { createLogger, type Logger, loggedPath } from "./logger";
 import { ownHosts } from "./operator/hosts";
@@ -186,9 +187,9 @@ export function createApp(options: AppOptions) {
   });
 
   if (options.services) {
-    const { auth, config, db } = options.services;
+    const { auth, db } = options.services;
     const handleAuth = authHandler(auth, db);
-    const serverError = signInPageUrl(config.PUBLIC_URL, { error: "server_error" });
+    const serverError = signInPageUrl({ error: "server_error" });
     api.on(["GET", "POST"], "/auth/*", async (c) => {
       const res = await handleAuth(c.req.raw);
       // A browser's own navigation that failed on our side (an OAuth callback): the sign-in page says so, never an
@@ -384,7 +385,10 @@ export function createApp(options: AppOptions) {
     const h = c.res.headers;
     if (!h.has("x-frame-options")) h.set("x-frame-options", "DENY");
     if (!h.has("content-security-policy")) h.set("content-security-policy", APP_CSP);
-    if (httpsPublicUrl && !h.has("strict-transport-security")) h.set("strict-transport-security", "max-age=63072000");
+    // Never on a loopback address: a native server's own window opens it over http there (ADR 0255 §5).
+    if (httpsPublicUrl && !h.has("strict-transport-security") && !isLoopbackHost(c.req.header("host"))) {
+      h.set("strict-transport-security", "max-age=63072000");
+    }
   });
   // A CDN in front may cache by the path's extension, whatever the type: without this, a private
   // answer at a path that ends like a file (a skill's `data.csv`) would be served to anyone asking.
@@ -393,7 +397,7 @@ export function createApp(options: AppOptions) {
     if (!c.res.headers.has("cache-control")) c.res.headers.set("cache-control", "no-store");
   });
   // A link a person opens in a browser that the API refuses: our page, never the JSON on screen (ADR 0157).
-  app.use("/api/*", errorPages(options.services?.config.PUBLIC_URL));
+  app.use("/api/*", errorPages());
   // A late event loop or slow database: the apps' reads wait for a calmer moment (or, behind a proxy, another
   // process); writes carry on. A full socket count turns new sockets away only.
   const overloaded = options.overloaded;

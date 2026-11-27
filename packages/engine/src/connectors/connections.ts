@@ -213,6 +213,17 @@ export interface ConnectorDeps {
   oauthApps?: OAuthApps;
   /** Public base URL, for the OAuth redirect URI. */
   publicUrl: string;
+  /**
+   * The server's own loopback origin, beside `publicUrl` (a native server, ADR 0255 §5): the clients it registers
+   * with MCP servers can also return there (RFC 8252). Null or absent: none.
+   */
+  loopbackUrl?: string | null;
+  /**
+   * The sign-in being started was asked at `loopbackUrl` (the window on the computer that runs the server, whose own
+   * browser may not reach `publicUrl`): an MCP server's client registered with it returns there. Env-configured apps
+   * (`oauthApps`) and Composio always return to `publicUrl`.
+   */
+  atLoopback?: boolean;
   /** Injected in tests; real network otherwise. */
   http?: typeof fetch;
   /** DNS for the SSRF guard (tests: fake). */
@@ -231,6 +242,15 @@ const stateAad = (orgId: string, id: string) => `oauth-state|${orgId}|${id}`;
 export const OAUTH_STATE_TTL_MS = 10 * 60_000;
 export const oauthRedirectUri = (publicUrl: string) =>
   `${publicUrl.replace(/\/$/, "")}/api/app/connectors/oauth/callback`;
+
+/**
+ * The return addresses a client registered with an MCP server's authorization server lists: `publicUrl`'s callback
+ * first, then the loopback one where the server has it (ADR 0255 §5).
+ */
+export const oauthRedirectUris = (deps: Pick<ConnectorDeps, "publicUrl" | "loopbackUrl">) => [
+  oauthRedirectUri(deps.publicUrl),
+  ...(deps.loopbackUrl ? [oauthRedirectUri(deps.loopbackUrl)] : []),
+];
 
 export function connectorDefinition(id: string): ConnectorDefinition {
   const def = CONNECTOR_CATALOG[id];
@@ -1415,7 +1435,8 @@ async function completeMcpOAuth(
     {
       grant_type: "authorization_code",
       code,
-      redirect_uri: oauthRedirectUri(deps.publicUrl),
+      // The one the authorization was asked with (RFC 6749 §4.1.3).
+      redirect_uri: row.redirectUri ?? oauthRedirectUri(deps.publicUrl),
       code_verifier: verifier,
       ...(row.resource ? { resource: row.resource } : {}),
       ...auth.form,
