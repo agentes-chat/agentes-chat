@@ -97,6 +97,10 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "onboarding.computer.payment.",
   ],
   selfhost: [
+    // Settings › About's newer release and computers ahead: self-hosted servers only (`useServerUpdate`).
+    "settings.about.update.",
+    "settings.about.computersAhead_one",
+    "settings.about.computersAhead_other",
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
     "shell.email.noMail",
     // Who read a piece of the workspace: off agentes.chat's own servers, whoever runs this one (`details.cloud`).
