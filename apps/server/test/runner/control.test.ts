@@ -631,6 +631,53 @@ test("jobs and the activity log: each request is a job while it runs and a line 
   await waitFor(() => c.events("activity").some((e) => e.kind === "activity" && e.entry.result === "refused"));
 });
 
+test("a command macOS refused: the reply names the permission, the app and the server hear the wait until it's allowed", async () => {
+  const { home } = pairedHome({
+    exec: true,
+    access: { folders: [], tools: { claude: false, codex: false, commands: true } },
+  });
+  const c = control(home, { platform: "darwin" });
+  const s = await c.connect();
+  expect(s.of("hello")[0]).toMatchObject({ permissions: [] });
+  const command = "echo 'rm: /Applications/X.app: Operation not permitted' >&2; exit 1";
+  s.frame({ type: "request", id: "x1", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
+  await waitFor(() => s.of("permissions.changed").length === 1);
+  expect(s.sent.find((f) => f.id === "x1")).toMatchObject({
+    ok: true,
+    data: { exitCode: 1, permission: "app_management" },
+  });
+  const wait = { permission: "app_management", trigger: command, agentId: AGENT.id, since: expect.any(String) };
+  expect(s.of("permissions.changed")[0]).toEqual({ type: "permissions.changed", permissions: [wait] });
+  expect((await c.data<{ permissions: unknown[] }>({ type: "status" })).permissions).toEqual([wait]);
+  // Asked again while it waits: still one wait, nothing told again.
+  s.frame({ type: "request", id: "x2", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
+  // Its wait is looked at after the reply, with its activity line: done once that line is there.
+  await waitFor(() => c.events("activity").length >= 2);
+  expect(s.of("permissions.changed")).toHaveLength(1);
+  // The person allowed it in the app's dialog.
+  expect(await c.data({ type: "permission.clear", permission: "app_management" })).toEqual({ cleared: true });
+  await waitFor(() => s.of("permissions.changed").length === 2);
+  expect(s.of("permissions.changed")[1]).toEqual({ type: "permissions.changed", permissions: [] });
+  expect((await c.request({ type: "permission.clear", permission: "bogus" })).ok).toBe(false);
+});
+
+test("a command macOS refused under a runner from the terminal: no app there to ask, so no wait", async () => {
+  const { home } = pairedHome({
+    exec: true,
+    managedBy: undefined,
+    access: { folders: [], tools: { claude: false, codex: false, commands: true } },
+  });
+  const c = control(home, { platform: "darwin" });
+  const s = await c.connect();
+  const command = "echo 'rm: /Applications/X.app: Operation not permitted' >&2; exit 1";
+  s.frame({ type: "request", id: "x1", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
+  await waitFor(() => s.sent.some((f) => f.id === "x1"));
+  const reply = s.sent.find((f) => f.id === "x1") as { data: Record<string, unknown> };
+  expect(reply.data.exitCode).toBe(1);
+  expect(reply.data.permission).toBeUndefined();
+  expect(s.of("permissions.changed")).toHaveLength(0);
+});
+
 test("access requests: pending until the person answers on the machine; the answer reaches the server", async () => {
   const { home } = pairedHome();
   const folder = tempDir("proj-");

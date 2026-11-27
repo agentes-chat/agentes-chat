@@ -3413,6 +3413,12 @@ export const ptBR = {
       update_workspace: "Mudar o workspace <b>{{name}}</b>",
       set_action_check_on: "Ligar a conferência do que o time já fez",
       set_action_check_off: "Desligar a conferência do que o time já fez",
+      /** `level`: the choice's title, as on Settings › Approvals ("Never ask"). */
+      set_approvals_level: "Mudar as aprovações do workspace para <b>{{level}}</b>",
+      set_approvals_level_every:
+        "Mudar as aprovações de todos os agentes para <b>{{level}}</b>, também as escolhas próprias",
+      set_agent_approvals_level: "Mudar as aprovações de <b>{{agent}}</b> para <b>{{level}}</b>",
+      set_agent_approvals_level_workspace: "Fazer <b>{{agent}}</b> seguir as aprovações do workspace",
       invite_people: "Convidar <b>{{emails}}</b> para o workspace.",
       /** Under it: the roles every address gets ("Vendas e Suporte"). `count`: how many roles. */
       invite_roles_one: "Com o cargo {{roles}}.",
@@ -4424,6 +4430,10 @@ export const ptBR = {
       changed_update_workspace: "Mudei o workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Liguei a conferência do que o time já fez",
       changed_set_action_check_off: "Desliguei a conferência do que o time já fez",
+      changed_set_approvals_level: "Mudei as aprovações do workspace para <b>{{level}}</b>",
+      changed_set_approvals_level_every: "Mudei as aprovações de todos os agentes para <b>{{level}}</b>",
+      changed_set_agent_approvals_level: "Mudei as aprovações de <b>{{agent}}</b> para <b>{{level}}</b>",
+      changed_set_agent_approvals_level_workspace: "<b>{{agent}}</b> voltou a seguir as aprovações do workspace",
       changed_invite_people: "Convidei <b>{{invited}}</b> para o workspace",
       changed_remove_ai_key: "Apaguei a chave de API <b>{{name}}</b>",
     },
@@ -13935,6 +13945,23 @@ export const ptBR = {
     s3: "Seu próprio armazenamento",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 ou outro compatível com S3.",
     current: "Em uso",
+    computer: {
+      title: "Computador do workspace",
+      used: "{{used}} de {{size}} em uso",
+      bar: "Disco do computador do workspace",
+      measuring: "Medindo o que ocupa o espaço.",
+      part: {
+        projects: "Projetos e código",
+        apps: "Apps e ferramentas",
+        agents: "Arquivos dos agentes",
+        caches: "Caches e temporários",
+        system: "Sistema",
+        other: "Outros",
+        free: "Livre",
+      },
+      full: "Quase cheio, restam {{free}}. Um agente pode limpar caches e arquivos temporários e apagar o que ninguém usa mais.",
+      ask: "Libere espaço no computador do workspace: limpe caches e arquivos temporários (gerenciadores de pacotes, navegadores, ferramentas de build) e me diga o que mais ocupa espaço.",
+    },
     // What the option in use holds, no-break spaces inside each part: a narrow card breaks the line after its "·".
     usage: {
       files: "{{size}}\u00a0de\u00a0arquivos",
@@ -17325,6 +17352,22 @@ export const ptBR = {
     },
   },
   devices: {
+    permission: {
+      title: "Aguardando {{permission}} em {{computer}}",
+      next: "Permita no app agentes.chat nesse computador.",
+      askedBy: "Pedido por {{agent}} para rodar {{trigger}}",
+      asked: "Necessário para rodar {{trigger}}",
+      names: {
+        app_management: "Gerenciamento de Apps",
+        screen: "Gravação de Tela",
+        accessibility: "Acessibilidade",
+        disk: "Acesso Total ao Disco",
+        network: "Rede Local",
+        camera: "Câmera",
+        microphone: "Microfone",
+        automation: "Automação",
+      },
+    },
     leadCloud: "Onde seus agentes trabalham: o computador do workspace e os dispositivos que as pessoas conectam.",
     lead: "Onde seus agentes trabalham: os computadores e celulares que as pessoas conectam.",
     connect: "Conectar um dispositivo",
@@ -17364,6 +17407,22 @@ export const ptBR = {
     forgotten: "{{name}} esquecido.",
     stop: "Parar",
     stopped: "Parado. {{name}} está livre.",
+    /** Ligar / Desligar on an iOS simulator or an Android emulator, which its computer starts or shuts down. */
+    power: {
+      start: "Ligar",
+      stop: "Desligar",
+      starting: "{{name}} está ligando. Fica pronto em instantes.",
+      stopped: "{{name}} foi desligado.",
+      toolMissingIos: "{{computer}} precisa do Xcode para rodar simuladores. Instale o Xcode pela App Store nesse Mac.",
+      toolMissingAndroid:
+        "{{computer}} não tem o Android Emulator. Instale em Android Studio › SDK Manager › SDK Tools nesse computador.",
+      gone: "{{name}} não está mais em {{computer}}: foi apagado lá. Esqueça-o aqui, ou crie de novo lá.",
+      busy: "{{name}} está em uso agora. Pare o que o usa primeiro, ou tente de novo quando estiver livre.",
+      /** `why`: the computer's own words, as its tools said them (in English). */
+      startFailed: "{{name}} não ligou. {{computer}} disse: {{why}}",
+      stopFailed: "{{name}} não desligou. {{computer}} disse: {{why}}",
+      notSimulator: "Só um simulador ou um emulador liga e desliga por aqui.",
+    },
     showMe: "Mostrar como",
     notFound: "Este dispositivo não está mais aqui",
     notFoundText: "Ele foi removido, ou este link está errado.",
@@ -17382,20 +17441,26 @@ export const ptBR = {
     belongsHint: "Ele fica quando quem o conectou sai, e todos podem usá-lo enquanto ninguém for dono dele.",
     spillOwn: "Ajudar quando o computador da equipe estiver cheio ou fora",
     spillOwnHint:
-      "Quando o computador dos seus agentes estiver cheio ou fora, as respostas, os pedidos e as rotinas deles podem pensar aqui com o seu login.",
+      "Quando o computador da equipe estiver cheio ou fora, as respostas, os pedidos e as rotinas dos seus agentes podem pensar aqui, usando as contas de IA conectadas neste computador.",
     spillTeamHint:
-      "Quando o computador de um agente estiver cheio ou fora, as respostas, os pedidos e as rotinas dele podem pensar aqui com o login do dono dele neste computador.",
+      "Quando o computador de um agente estiver cheio ou fora, as respostas, os pedidos e as rotinas dele podem pensar aqui, usando a conta de IA que o dono dele conectou neste computador.",
     spillWorkspaceOff: "Um admin desativou isso para o workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Usar este computador para os trabalhos dos meus agentes",
-    spillFirstHint:
-      "Os pedidos, as rotinas e os trabalhos longos dos seus agentes começam aqui sempre que ele estiver livre, com a IA que você conectou nele. Respostas para pessoas só começam aqui quando o computador da equipe estiver cheio ou fora.",
+    helpUse: "Como ajuda os seus agentes",
+    helpUses: {
+      off: "Não ajuda",
+      help: "Só como reserva",
+      first: "Primeiro para os meus agentes",
+    },
+    helpUseHint:
+      "Só como reserva: seus agentes vêm para cá quando o computador da equipe estiver cheio ou fora. Primeiro para os meus agentes: os pedidos, as rotinas e os trabalhos longos deles começam aqui sempre que este estiver livre, e as respostas para pessoas só quando o da equipe estiver cheio ou fora. Os dois usam as contas de IA conectadas neste computador.",
+    helpUseTeamHint:
+      "Só como reserva: os agentes de qualquer pessoa vêm para cá quando o computador deles estiver cheio ou fora, usando a conta de IA que o dono de cada um conectou neste computador. Primeiro para os meus agentes: os pedidos, as rotinas e os trabalhos longos dos seus agentes começam aqui sempre que este estiver livre.",
     helpWorkspace: "Computadores ajudam quando o da equipe estiver cheio ou fora",
     helpWorkspaceHint:
       "Cada computador só ajuda se o dono permitir. Com isto desativado, nenhum ajuda, seja qual for a escolha do dono.",
     shareInternet: "Agentes usam a internet deste computador",
     shareInternetHint:
-      "Os sites que os agentes abrem passam pela conexão deste computador, então veem a sua localização. Só sites, até 5 GB por dia, e nunca nada da sua própria rede. Enquanto este computador estiver offline, os agentes usam a conexão de sempre.",
+      "Os sites que os agentes abrem passam pela conexão deste computador, então veem a sua localização. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, os agentes usam a conexão de sempre.",
     shareInternetInUse: "Em uso agora",
     shareInternetOther: "Agentes usam {{name}} agora",
     shareInternetPick: "Usar este",
@@ -17973,7 +18038,7 @@ export const ptBR = {
       folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
       internetShared: "Agora os agentes abrem sites pela internet de <b>{{deviceName}}</b>",
       internetSharedLine:
-        "Só os agentes deste workspace, só sites, até 5 GB por dia, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
+        "Só os agentes deste workspace, só sites, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
       internetOff: "Desligar",
       internetOffDone: "Os agentes não usam mais a internet de {{deviceName}}.",
       once: "Permitir uma vez",

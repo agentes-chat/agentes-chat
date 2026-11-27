@@ -48,6 +48,7 @@ import { type CacheFill, type CloneSlots, gitSync } from "./git";
 import { isGitInternalPath, touchesGitInternals } from "./git-guard";
 import { type McpTaskInfo, redactDeep } from "./mcp";
 import { missionWorktree } from "./mission-worktree";
+import { permissionOfOutput } from "./os-permissions";
 import { agentWorkspace, hiddenIn, isInside, resolveForAgent } from "./paths";
 import type { PhoneManager, PhoneRequest } from "./phones";
 import { pullFile } from "./pull";
@@ -267,6 +268,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "xcode.open": "machine",
   // The process that sees the phones runs their helpers.
   "phone.repair": "machine",
+  "phone.power": "machine",
   // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
   "clis.check": "machine",
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
@@ -287,6 +289,13 @@ type AccessAllowOp = Extract<MachineRequest, { op: "access.allow" }>;
 export interface HandlerContext {
   /** Real path of the workspace folder. */
   workspaceReal: string;
+  /** Tests: the system a failed command's output is read for refusals (`permissionOfOutput`). */
+  platform?: string;
+  /**
+   * The agentes.chat app runs this runner and asks the person for an OS permission a command was refused; from a
+   * terminal nothing would ask, so a refusal stays the command's own output.
+   */
+  appAsks?: boolean;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -535,7 +544,11 @@ async function doExec(
     ...(env ? { env } : {}),
     ...(redact ? { redact: redact.redact, redactHold: redact.hold } : {}),
   });
-  return merge ? { ...result, merge } : result;
+  const permission =
+    result.exitCode === 0 || !ctx.appAsks
+      ? null
+      : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
+  return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 
 /**
@@ -818,6 +831,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   if (req.op === "phone.repair") {
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
     return ctx.phones.repair(req);
+  }
+  if (req.op === "phone.power") {
+    if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    return ctx.phones.power(req);
   }
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);

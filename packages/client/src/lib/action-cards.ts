@@ -829,6 +829,10 @@ export function actionCardDetail(card: WorkspaceActionCard, t: TFunction, locale
         .join("\n");
     case "remove_ai_key":
       return text(card.params.words.provider);
+    // What the level means, in the same line as its choice on the agent's page.
+    case "set_approvals_level":
+    case "set_agent_approvals_level":
+      return text(input.level) ? (t(`approvalsLevel.${text(input.level)}.text` as never) as string) : "";
     default:
       return "";
   }

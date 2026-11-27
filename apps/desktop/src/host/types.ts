@@ -1,3 +1,4 @@
+import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import type { ServerCheck } from "@agenteschat/client/lib/server";
 import type { HelloLine } from "../control/client";
 import type { Candidate } from "../control/first-run";
@@ -266,7 +267,7 @@ export interface Host {
   /** macOS: a short Bonjour browse, which raises the Local Network prompt the first time. Nothing says the answer. */
   askLocalNetwork(): Promise<void>;
   /** System Settings › Privacy & Security on the permission's own list (the microphone: for voice messages). */
-  openPrivacy(pane: MacPermission | "microphone"): Promise<void>;
+  openPrivacy(pane: MacPermission | OsPermission): Promise<void>;
   /** The setup macOS may quit the app in the middle of, kept until it is finished (`prepare.rs`). */
   setupState(): Promise<SetupState | null>;
   /** Keeps it (with the main window's page, to open there again) or, null, forgets it. */

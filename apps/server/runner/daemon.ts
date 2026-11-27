@@ -18,8 +18,11 @@ import {
   type AccountKind,
   type AgentScope,
   ALL_AGENTS,
+  DISK_PARTS_MS,
+  type DiskParts,
   isAccountId,
   isAccountKind,
+  isOsPermission,
   LOAD_SAMPLE_MS,
   MACHINE_PROTOCOL_VERSION,
   type MachineAgent,
@@ -129,9 +132,10 @@ import {
 import { type ConnectionOutcome, type Dial, RunnerConnection } from "./connection";
 import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
+import { diskLayout, keepDiskParts, keptDiskParts, measureDiskParts } from "./disk-parts";
 import { EgressObservation, probeEgress } from "./egress";
 import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
-import { EGRESS_SHARE_FILE, EgressShare } from "./egress-share";
+import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
 import { systemGitCache } from "./git";
@@ -160,6 +164,7 @@ import {
   writeNetworkState,
 } from "./network-state";
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
+import { PermissionNeeds } from "./os-permissions";
 import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
 import { ackPark, takePark } from "./park";
 import { agentId8, agentWorkspace } from "./paths";
@@ -461,6 +466,8 @@ export interface DaemonOptions {
   selfCheckRetryMs?: number;
   /** Tests: what `hello.toolchains` says instead of a look at the computer's tools. */
   toolchains?: () => RunnerToolchains | undefined;
+  /** Tests: the system whose refusals a failed command's output is read for (`permissionOfOutput`). */
+  platform?: string;
   /** Tests: the phones' tools and folders, or `false` for none (a single-user runner looks for phones). */
   phones?: Partial<PhoneManagerOptions> | false;
   /** Tests: the iPhone setup's tools and folders. */
@@ -535,6 +542,9 @@ export class RunnerDaemon implements RequestObserver {
   /** The computer's shared folder (ADR 0115) once the session made it, and its last measured size. */
   private shared: string | null = null;
   private sharedGb: number | undefined;
+  /** What takes the workspace disk by kind (`disk-parts.ts`), once measured or kept from before a restart. */
+  private diskParts: DiskParts | null = null;
+  private measuringDisk = false;
   /** System mode's folder (real path) and group, for `shareFiles`; null elsewhere. */
   private sharedGroup: Required<SharedSpec> | null = null;
   private sharing = false;
@@ -592,6 +602,11 @@ export class RunnerDaemon implements RequestObserver {
   private toolchains: { get(): RunnerToolchains | undefined; stop(): void; lookApple?(): Promise<void> } | null = null;
   /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
   private iphone: IphoneSetup | null = null;
+  /** The OS permissions agents' work waits on here: the app asks the person, the server shows the wait. */
+  private readonly permissionNeeds = new PermissionNeeds((permissions) => {
+    this.send({ type: "permissions.changed", permissions });
+    this.queueStatus();
+  });
   /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
   private holds: Holds | null = null;
   /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
@@ -1017,6 +1032,7 @@ export class RunnerDaemon implements RequestObserver {
             this.load.add(l && oomKills !== undefined ? { ...l, oomKills } : l, undefined, {
               ...diskFigures(d),
               ...(this.sharedGb === undefined ? {} : { sharedGb: this.sharedGb }),
+              ...(this.diskParts ? { diskParts: this.diskParts } : {}),
               ...(this.stored?.mode === "system" && process.platform === "linux"
                 ? { agentTmpRamGb: Math.round((agentTmpMemoryBytes() / 2 ** 30) * 10) / 10 }
                 : {}),
@@ -1045,6 +1061,9 @@ export class RunnerDaemon implements RequestObserver {
     const sizes = setInterval(() => this.measureShared(), SHARED_SIZE_MS);
     sizes.unref?.();
     this.timers.push(sizes);
+    const parts = setInterval(() => this.measureDisk(), DISK_PARTS_MS);
+    parts.unref?.();
+    this.timers.push(parts);
     const idleTmp = setInterval(() => this.cleanIdleTmp(), IDLE_TMP_SWEEP_MS);
     idleTmp.unref?.();
     this.timers.push(idleTmp);
@@ -1464,6 +1483,7 @@ export class RunnerDaemon implements RequestObserver {
     this.shared = this.prepareShared(workspaceReal, sharedSpec);
     this.sharedGroup = sharedSpec && this.shared ? { path: this.shared, group: sharedSpec.group } : null;
     this.measureShared();
+    this.measureDisk(true);
     this.shareFiles();
     const secretsDir = path.join(home, "secrets");
     // Site passwords live in memory now (ADR 0144): one an older runner kept on disk goes.
@@ -1566,7 +1586,7 @@ export class RunnerDaemon implements RequestObserver {
       numbered: this.desktopRefsGiven,
       log,
     });
-    this.egressShare ??= new EgressShare({ file: path.join(home, EGRESS_SHARE_FILE) });
+    this.egressShare ??= new EgressShare();
     const streams = new DataSockets({
       url: connectUrl(config.server, "stream"),
       token: config.token,
@@ -1778,6 +1798,8 @@ export class RunnerDaemon implements RequestObserver {
     }
     const context: HandlerContext = {
       workspaceReal,
+      ...(this.opts.platform ? { platform: this.opts.platform } : {}),
+      appAsks: config.managedBy === "desktop",
       get exec() {
         return daemon.access().tools.commands;
       },
@@ -1864,6 +1886,7 @@ export class RunnerDaemon implements RequestObserver {
         return {
           ...(phones ? { phones } : {}),
           ...(toolchains ? { toolchains } : {}),
+          permissions: this.permissionNeeds.list(),
           ...this.info(workspaceReal),
           browser: browser.info(),
           desktop: this.desktops.info(),
@@ -2251,6 +2274,29 @@ export class RunnerDaemon implements RequestObserver {
     });
   }
 
+  /**
+   * System mode on Linux, as root: what takes the workspace disk by kind, for the next load report (`du` in the
+   * background). `kept`: a measure newer than `DISK_PARTS_MS` from before a restart stands instead.
+   */
+  private measureDisk(kept = false) {
+    const workspace = this.session?.workspaceReal;
+    if (!workspace || this.measuringDisk || this.opts.workers) return;
+    if (this.stored?.mode !== "system" || process.platform !== "linux" || process.getuid?.() !== 0) return;
+    if (kept) this.diskParts ??= keptDiskParts(this.opts.home, DISK_PARTS_MS);
+    if (kept && this.diskParts) return;
+    this.measuringDisk = true;
+    void measureDiskParts(diskLayout(workspace))
+      .then((parts) => {
+        if (!parts) return;
+        this.diskParts = parts;
+        keepDiskParts(this.opts.home, parts);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.measuringDisk = false;
+      });
+  }
+
   /** System mode, as root: what agents with nothing running but their worker left in /tmp goes (`idleTmpLines`). */
   private cleanIdleTmp() {
     const supervisor = this.session?.supervisor;
@@ -2590,6 +2636,7 @@ export class RunnerDaemon implements RequestObserver {
       access: this.access(),
       browsers,
       ...(this.phones ? { phones: this.phones.list() } : {}),
+      permissions: this.permissionNeeds.list(),
       // In system mode each agent runs as a user of its own, not as the runner's.
       ...(OS_USER && c?.mode !== "system" && s?.mode !== "system" ? { user: OS_USER } : {}),
       seq: ++this.statusSeq,
@@ -2627,6 +2674,12 @@ export class RunnerDaemon implements RequestObserver {
     this.opts.log("reconnect asked by the app");
     s.connection.reconnect();
     return { reconnecting: true };
+  }
+
+  /** The app's dialog: the person allowed `permission` (or it was on already), so nothing waits on it. */
+  permissionClear(permission: unknown): { cleared: boolean } {
+    if (!isOsPermission(permission)) throw new ControlError("bad_request", "Unknown permission");
+    return { cleared: this.permissionNeeds.clear(permission) };
   }
 
   /**
@@ -3215,11 +3268,16 @@ export class RunnerDaemon implements RequestObserver {
     const d = this.describe(req);
     if (!d) return;
     const agent = this.agentRef(req.agent);
+    const permission =
+      outcome.ok && req.op === "exec" ? (outcome.data as MachineReplies["exec"]).permission : undefined;
     this.queue(async () => {
       const job = this.jobs.get(id);
       this.jobs.delete(id);
       if (job) this.emit({ kind: "job.finished", jobId: id, result });
       const redact = d.command ? await this.redactor(req.agent) : undefined;
+      if (permission) {
+        this.permissionNeeds.add(permission, redactCommon(redact ? redact(d.summary) : d.summary), agent?.id);
+      }
       const kind = d.kind === "exec" ? "command" : d.kind === "brain" ? "brain" : "file";
       this.record(
         {

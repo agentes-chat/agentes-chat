@@ -134,6 +134,11 @@ export interface MachineExecutors {
   authEgressGroup?: true;
   /** `hello.app` (protocol 87): the agentes.chat app runs its runner; absent: from the terminal, or an older runner. */
   app?: true;
+  /**
+   * `hello.permissions` and `permissions.changed`: the OS permissions its agents' work waits on there (macOS's Full
+   * Disk Access, Screen Recording…), one each, with what asked and when; absent: none reported.
+   */
+  permissions?: { permission: string; trigger: string; agentId?: string; since: string }[];
   /** `hello.toolchains` (bring your own devices): what it can build and drive phones with, by tool, its version. */
   toolchains?: Record<string, string>;
   /** The usage of the computer's own sign-ins (protocol 19), by brain; kept across reconnects. */
@@ -174,6 +179,9 @@ export interface MachineLoadRecord {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** The workspace disk's size in GB, and what takes it by kind (`MachineLoad.diskGb`, `diskParts`). */
+  diskGb?: number;
+  diskParts?: { projects: number; apps: number; agents: number; caches: number; system: number };
   /** What the agents' temporary folders held in memory, GB (`MachineLoad.agentTmpRamGb`). */
   agentTmpRamGb?: number;
   /** The server's own mark: its admins heard of this disk passing the line, and won't again until it drops under 80%. */

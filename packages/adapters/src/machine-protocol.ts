@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 89;
+export const MACHINE_PROTOCOL_VERSION = 91;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -336,12 +336,28 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** The workspace disk's size (GB, one decimal). Absent from an older runner, as `oomKills`. */
+  diskGb?: number;
+  /**
+   * What takes the workspace disk, by kind (GB, one decimal), measured every `DISK_PARTS_MS` by the runner in system
+   * mode on Linux; the rest of what is in use is everything else. Absent elsewhere and from an older runner, as
+   * `oomKills`.
+   */
+  diskParts?: DiskParts;
   /**
    * What the agents' temporary folders hold in memory now (GB), ADR 0243: system mode on Linux. Absent from an older
    * runner: no protocol number, as `oomKills`.
    */
   agentTmpRamGb?: number;
 }
+
+/** The kinds of things `MachineLoad.diskParts` splits a disk into, in the order a bar shows them. */
+export const DISK_PARTS = ["projects", "apps", "agents", "caches", "system"] as const;
+export type DiskPart = (typeof DISK_PARTS)[number];
+export type DiskParts = Record<DiskPart, number>;
+
+/** How often the runner measures `diskParts`: `du` walks the whole disk. */
+export const DISK_PARTS_MS = 6 * 3600_000;
 
 /** How often a computer's load is sampled (protocol 22). */
 export const LOAD_SAMPLE_MS = 5 * 60_000;
@@ -758,6 +774,88 @@ export const TERMINAL_KEEP_PROTOCOL = 77;
  * accounts list, and `access.tools.devin` turns it on or off. The server never sends any of these to an older runner.
  */
 export const DEVIN_PROTOCOL = 89;
+/**
+ * `phone.power`: an iOS simulator or an Android emulator this computer runs started (`on`) or shut down, from the
+ * apps or by an agent. A Mac boots a simulator with `simctl` and shows it in Simulator; an emulator starts detached
+ * from the Android SDK's `emulator`, its AVD found by the model it showed (`model`). The server asks no older runner.
+ */
+export const SIMULATOR_POWER_PROTOCOL = 90;
+/**
+ * From this protocol on: the OS permissions the computer waits on (`hello.permissions`, `permissions.changed`, whole
+ * each time), and `exec`'s `permission` when a command failed for want of one. Older servers drop both.
+ */
+export const OS_PERMISSIONS_PROTOCOL = 91;
+
+/**
+ * The OS permissions agents' work on a computer may wait on, one name for both systems where Windows has one too:
+ * macOS's App Management, Screen Recording, Accessibility, Full Disk Access, Local Network, Camera, Microphone and
+ * Automation; Windows's camera, microphone and screen capture privacy switches.
+ */
+export const OS_PERMISSIONS = [
+  "app_management",
+  "screen",
+  "accessibility",
+  "disk",
+  "network",
+  "camera",
+  "microphone",
+  "automation",
+] as const;
+export type OsPermission = (typeof OS_PERMISSIONS)[number];
+export const isOsPermission = (v: unknown): v is OsPermission =>
+  typeof v === "string" && (OS_PERMISSIONS as readonly string[]).includes(v);
+
+/** Each permission as macOS's System Settings names it, for the agent's words (the apps word their own). */
+export const OS_PERMISSION_LABELS: Record<OsPermission, string> = {
+  app_management: "App Management",
+  screen: "Screen Recording",
+  accessibility: "Accessibility",
+  disk: "Full Disk Access",
+  network: "Local Network",
+  camera: "Camera",
+  microphone: "Microphone",
+  automation: "Automation",
+};
+
+/**
+ * What the agent reads after a command that failed for want of `permission` on the computer `name`: it waits, the
+ * person was asked there, and it goes on once they allow it. Never a workaround: the permission is the person's call.
+ */
+export const permissionWaitText = (name: string, permission: OsPermission) =>
+  `Waiting for permission on ${name}: this needs ${OS_PERMISSION_LABELS[permission]}, and the agentes.chat app there is asking the person now. Tell them what it is for in one line; once they allow it, run the same command again. Don't look for a way around it.`;
+
+/** At most this many waits are kept and told; a trigger is cut to `PERMISSION_TRIGGER_CHARS`. */
+export const PERMISSION_NEEDS_MAX = OS_PERMISSIONS.length;
+export const PERMISSION_TRIGGER_CHARS = 200;
+
+/** A permission the computer waits on: one per permission, the first thing that asked for it. */
+export interface PermissionNeed {
+  permission: OsPermission;
+  /** What asked, as the person reads it: the command (redacted) or the step. */
+  trigger: string;
+  /** The agent whose work asked, when one did. */
+  agentId?: string;
+  /** When it was first seen (ISO). */
+  since: string;
+}
+
+/** `hello.permissions` and `permissions.changed`: known permissions only, one each. */
+export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
+  if (!Array.isArray(v)) return [];
+  const out: PermissionNeed[] = [];
+  for (const n of v.slice(0, PERMISSION_NEEDS_MAX)) {
+    if (!isObject(n) || !isOsPermission(n.permission) || out.some((o) => o.permission === n.permission)) continue;
+    const since = isString(n.since) && !Number.isNaN(Date.parse(n.since)) ? n.since : null;
+    if (!since) continue;
+    out.push({
+      permission: n.permission,
+      trigger: isString(n.trigger) ? n.trigger.slice(0, PERMISSION_TRIGGER_CHARS) : "",
+      ...(isString(n.agentId) && n.agentId.length <= 64 ? { agentId: n.agentId } : {}),
+      since,
+    });
+  }
+  return out;
+}
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -2656,8 +2754,6 @@ export const EGRESS_SHARE_PROTOCOL = 81;
 export const EGRESS_SHARE = {
   /** The web only: anything else leaves the workspace's computer its usual way. */
   ports: [80, 443] as readonly number[],
-  /** Bytes both ways a day (UTC) the lending computer carries before it refuses new connections until the next. */
-  dailyBytes: 5 * 1024 ** 3,
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */
@@ -3032,6 +3128,8 @@ export interface RunnerInfo {
   /** `PHONES_PROTOCOL`: the phones it reaches, and what it can build with. */
   phones?: RunnerPhone[];
   toolchains?: RunnerToolchains;
+  /** `OS_PERMISSIONS_PROTOCOL`: the OS permissions its agents' work waits on now (absent: older runner). */
+  permissions?: PermissionNeed[];
   /** Protocol 50: the methods a new Claude sign-in for all agents can use here (`claudeLoginMethodsOf`). */
   claudeLoginMethods?: AuthMethod[];
   /** Why this computer doesn't list `cli_login` for all agents though it was switched on (its self-check's answer). */
@@ -3313,6 +3411,8 @@ export type MachineRequest = (
   | { op: "xcode.open" }
   /** `PHONE_REPAIR_PROTOCOL`: repair the test helper of the iPhone `serial`; answers once its rebuild started. */
   | { op: "phone.repair"; serial: string }
+  /** `SIMULATOR_POWER_PROTOCOL`: start or shut down a simulator or emulator; answers once it is starting or off. */
+  | { op: "phone.power"; platform: PhonePlatform; serial: string; model: string; on: boolean }
   /** `PROBLEM_REPORT_PROTOCOL`: facts and the scrubbed log tail for a problem report. */
   | { op: "report.collect" }
   /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
@@ -3401,6 +3501,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "cli.fetch",
   "xcode.open",
   "phone.repair",
+  "phone.power",
   "report.collect",
   "egress.dial",
 ];
@@ -3415,6 +3516,8 @@ export interface MachineReplies {
     canceled?: { killed: boolean };
     /** It ran as one merge with no card of its own: in `mergeRepos`, or approved (a saved rule, an agent that never asks). */
     merge?: MergeDone;
+    /** `OS_PERMISSIONS_PROTOCOL`: it failed for want of this OS permission, now asked on the computer. */
+    permission?: OsPermission;
   };
   /** `base64: null`: no such file. */
   read: { base64: string | null; size: number };
@@ -3579,6 +3682,7 @@ export interface MachineReplies {
   "cli.fetch": { fetch: CliFetchState | null };
   "xcode.open": { opened: boolean };
   "phone.repair": { repairing: boolean };
+  "phone.power": { on: boolean };
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
 }
@@ -3794,6 +3898,8 @@ export type RunnerFrame =
   | { type: "executors.changed"; executors: NonNullable<RunnerInfo["executors"]> }
   /** What `hello.toolchains` said changed (an Apple team found, Xcode updated), whole. An older server drops it. */
   | { type: "toolchains.changed"; toolchains: RunnerToolchains }
+  /** `OS_PERMISSIONS_PROTOCOL`: the permissions it waits on changed (one asked, one allowed), whole. */
+  | { type: "permissions.changed"; permissions: PermissionNeed[] }
   /** `CLI_COPIES_PROTOCOL`: a fetch of `cli` moved on (throttled), ended or failed. An older server drops it. */
   | { type: "cli.fetch"; cli: FetchName; fetch: CliFetchState }
   /** `PHONES_PROTOCOL`: the phones it reaches changed (one came or went, a state or a holder changed), whole. */
@@ -4440,6 +4546,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(f.app === true ? { app: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
+        ...(Array.isArray(f.permissions) ? { permissions: parsePermissionNeeds(f.permissions) } : {}),
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
     }
@@ -4527,6 +4634,10 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
       return isObject(f.executors) ? { type: "executors.changed", executors: parseExecutors(f.executors) } : null;
     case "toolchains.changed":
       return isObject(f.toolchains) ? { type: "toolchains.changed", toolchains: parseToolchains(f.toolchains) } : null;
+    case "permissions.changed":
+      return Array.isArray(f.permissions)
+        ? { type: "permissions.changed", permissions: parsePermissionNeeds(f.permissions) }
+        : null;
     case "cli.fetch": {
       const cli = FETCH_NAMES.find((n) => n === f.cli);
       const fetch = parseCliFetchState(f.fetch);
@@ -5223,8 +5334,13 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
     ...(between(v.agentTmpRamGb, 0, 1e6) ? { agentTmpRamGb: v.agentTmpRamGb } : {}),
+    ...(between(v.diskGb, 0, 1e6) ? { diskGb: v.diskGb } : {}),
+    ...(isDiskParts(v.diskParts) ? { diskParts: pickDiskParts(v.diskParts) } : {}),
   };
 }
+
+const isDiskParts = (v: unknown): v is DiskParts => isObject(v) && DISK_PARTS.every((k) => between(v[k], 0, 1e6));
+const pickDiskParts = (v: DiskParts) => Object.fromEntries(DISK_PARTS.map((k) => [k, v[k]])) as DiskParts;
 
 /** `pong.browserTraffic` (protocol 23): whole bytes up to 1e15 and at most 24 hours, else none. */
 export function parseBrowserTraffic(v: unknown): BrowserTraffic | null {

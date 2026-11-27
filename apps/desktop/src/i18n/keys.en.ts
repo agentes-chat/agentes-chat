@@ -2,6 +2,22 @@ import type { Widen } from "@agenteschat/i18n/widen";
 
 /** The desktop app's own strings in English, the source: every other language follows this shape. */
 export const desktopEn = {
+  permissionAsk: {
+    title: "agentes.chat needs {{permission}}",
+    done: "I allowed it",
+    later: "Not now",
+    trayTitle: "Waiting for {{permission}}",
+    why: {
+      app_management: "Agents need it to change apps on this {{device}}.",
+      screen: "Agents need it to take screenshots of this {{device}}.",
+      accessibility: "Agents need it to click and type in apps on this {{device}}.",
+      disk: "Agents need it to open your files without macOS asking for each folder.",
+      network: "Agents need it to reach phones and devices on your network.",
+      camera: "Agents need it to use this {{device}}'s camera.",
+      microphone: "Agents need it to use this {{device}}'s microphone.",
+      automation: "Agents need it to control other apps on this {{device}}.",
+    },
+  },
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
   windowTitle: { welcome: "Welcome", prefs: "Preferences" },
@@ -518,7 +534,7 @@ export const desktopEn = {
     internetOn: "Websites the agents open see your location",
     internetOff: "Off: agents use their usual connection",
     internetHint:
-      "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection.",
+      "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection.",
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",

@@ -742,7 +742,7 @@ export function buildEngine(o: EngineOptions) {
         });
   // Before a chat turn on a connected machine: the agent's checkouts updated through the git proxy, the turn
   // started in the repository it is about, and the "# Your code" block (ADR 0024 addendum).
-  const prepareCode = (turn: Parameters<typeof prepareAgentCode>[1], signal: AbortSignal) => {
+  const prepareCode = (turn: Parameters<typeof prepareAgentCode>[1]) => {
     const app = githubApp.current();
     return prepareAgentCode(
       {
@@ -752,9 +752,6 @@ export function buildEngine(o: EngineOptions) {
         github: app ? { app, http: githubAppAccess.http } : null,
       },
       turn,
-      {
-        signal,
-      },
     );
   };
   // A background run (a routine's) keeps no computer process alive after its turn.

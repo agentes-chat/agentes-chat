@@ -5,7 +5,7 @@ setupDom();
 
 import { act, cleanup, render } from "@testing-library/react";
 import { useRef } from "react";
-import { List, MorphRoom, useMorph } from "../src";
+import { glideHeight, List, MorphRoom, useMorph } from "../src";
 
 afterEach(() => cleanup());
 
@@ -211,6 +211,43 @@ describe("motion", () => {
       expect(await css()).toContain(".ac-morph:not([data-closing]):has(> .ac-morph__in:empty)");
     } finally {
       layout.restore();
+    }
+  });
+
+  test("a box drawn again mid-glide to the same height goes on from where it was, instead of throwing", () => {
+    // As browsers do: a cancelled animation's time is unresolved, and setting a running one's to that throws.
+    class Glide extends EventTarget {
+      #time: number | null = 0;
+      get currentTime() {
+        return this.#time;
+      }
+      set currentTime(t: number | null) {
+        if (t === null) throw new TypeError("currentTime may not be changed from resolved to unresolved");
+        this.#time = t;
+      }
+      cancel() {
+        this.#time = null;
+      }
+    }
+    const made: Glide[] = [];
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const { animate, getBoundingClientRect } = proto;
+    proto.animate = () => {
+      const glide = new Glide();
+      made.push(glide);
+      return glide;
+    };
+    // 90 at rest; mid-glide, where the running glide holds it.
+    const gliding = () => made.length > 0 && made[made.length - 1]?.currentTime !== null;
+    proto.getBoundingClientRect = () => ({ width: 320, height: gliding() ? 150 : 90 }) as DOMRect;
+    try {
+      const box = document.createElement("div");
+      glideHeight(box, 200);
+      (made[0] as Glide).currentTime = 120;
+      expect(() => glideHeight(box, 200)).not.toThrow();
+      expect(made[1]?.currentTime).toBe(120);
+    } finally {
+      Object.assign(proto, { animate, getBoundingClientRect });
     }
   });
 });

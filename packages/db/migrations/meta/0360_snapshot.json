@@ -1,5 +1,5 @@
 {
-  "id": "bf460541-31c3-452c-b8c2-a0c4f2b7e2a4",
+  "id": "1532cf48-9801-4fa3-b363-add9eacce1d7",
   "prevId": "299b5571-c4af-40e7-b885-1b700f7ead14",
   "version": "7",
   "dialect": "postgresql",
@@ -12480,13 +12480,6 @@
         },
         "hostname": {
           "name": "hostname",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "model": {
-          "name": "model",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

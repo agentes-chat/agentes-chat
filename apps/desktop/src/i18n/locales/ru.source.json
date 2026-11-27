@@ -1260,7 +1260,7 @@
     "value": "Off: agents use their usual connection"
   },
   "pair.internetHint": {
-    "value": "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection."
+    "value": "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection."
   },
   "pair.shareOff": {
     "value": "Only you for now"
@@ -2551,5 +2551,41 @@
   },
   "menu.downloaded": {
     "value": "Download complete"
+  },
+  "permissionAsk.title": {
+    "value": "agentes.chat needs {{permission}}"
+  },
+  "permissionAsk.done": {
+    "value": "I allowed it"
+  },
+  "permissionAsk.later": {
+    "value": "Not now"
+  },
+  "permissionAsk.trayTitle": {
+    "value": "Waiting for {{permission}}"
+  },
+  "permissionAsk.why.app_management": {
+    "value": "Agents need it to change apps on this {{device}}."
+  },
+  "permissionAsk.why.screen": {
+    "value": "Agents need it to take screenshots of this {{device}}."
+  },
+  "permissionAsk.why.accessibility": {
+    "value": "Agents need it to click and type in apps on this {{device}}."
+  },
+  "permissionAsk.why.disk": {
+    "value": "Agents need it to open your files without macOS asking for each folder."
+  },
+  "permissionAsk.why.network": {
+    "value": "Agents need it to reach phones and devices on your network."
+  },
+  "permissionAsk.why.camera": {
+    "value": "Agents need it to use this {{device}}'s camera."
+  },
+  "permissionAsk.why.microphone": {
+    "value": "Agents need it to use this {{device}}'s microphone."
+  },
+  "permissionAsk.why.automation": {
+    "value": "Agents need it to control other apps on this {{device}}."
   }
 }

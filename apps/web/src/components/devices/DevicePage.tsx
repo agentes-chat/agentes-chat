@@ -1,4 +1,4 @@
-import type { ComputerDevice, DeviceAudience, Machine, PhoneDevice } from "@agenteschat/client";
+import type { ComputerDevice, DeviceAudience, Machine, PermissionNeed, PhoneDevice } from "@agenteschat/client";
 import { useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
@@ -8,11 +8,16 @@ import {
   lendingDevice,
   mayChangeTasks,
   osName,
+  permissionWaitLines,
   personInControl,
   phoneLink,
   phoneSystem,
+  powerChoice,
   RUNNER_UPDATE_COMMAND,
+  SPILL_USES,
   shareInternetText,
+  spillOfUse,
+  spillUseOf,
   statusLook,
   statusSentence,
   taskChoices,
@@ -25,6 +30,7 @@ import { isPaused, PAUSE_CHOICES, pauseChoiceText, pausedByText, pauseUntil } fr
 import { can } from "@agenteschat/client/lib/permissions";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
+  Alert,
   Avatar,
   Button,
   Card,
@@ -51,10 +57,17 @@ import { CommandBlock } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
+import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
 import { ConnectDialog, type ConnectStart } from "./ConnectDialog";
 import { WifiIphoneOffer } from "./ConnectPhone";
-import { DeviceRemoveDialog, DeviceRenameDialog, DeviceRowView, type DeviceTarget } from "./DevicesSection";
+import {
+  DeviceRemoveDialog,
+  DeviceRenameDialog,
+  DeviceRowView,
+  type DeviceTarget,
+  usePowerAction,
+} from "./DevicesSection";
 import { PhoneLive } from "./PhoneLive";
 import { DevicePortrait, Facts, StatusPill, useOwner } from "./parts";
 import { useDevices, useStopPhone, useUpdateComputer, useUpdatePhone } from "./queries";
@@ -286,6 +299,24 @@ function Toolchains({ tools }: { tools: Record<string, string> }) {
 }
 
 /**
+ * An OS permission the computer waits on: what and where, that it is allowed in the agentes.chat app there (the only
+ * place it can be), and which agent asked it for what.
+ */
+function PermissionWait({ need, computer }: { need: PermissionNeed; computer: string }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const agents = useDirectory(org.id).agentById;
+  const words = permissionWaitLines(t, need, computer, need.agentId ? agents.get(need.agentId)?.name : undefined);
+  return (
+    <Alert tone="neutral" icon="lock" className="dv-permission">
+      <strong className="dv-permission__title">{words.title}</strong>
+      {words.next}
+      {words.asked && <small className="dv-permission__asked">{words.asked}</small>}
+    </Alert>
+  );
+}
+
+/**
  * A computer someone connected: its state and one action, facts and toolchains; who can use it, how many tasks at once
  * and whether it belongs to the workspace; the phones it reaches; then its folders and tools; Remove. The workspace
  * computer keeps its own page.
@@ -407,6 +438,9 @@ function ComputerPage({ machineId }: { machineId: string }) {
           status={status}
           text={pausedFromApps ?? (status.kind === "busy" ? taskLimitLine(t, d, tasksEditable) : null)}
         />
+        {(d.permissions ?? []).map((need) => (
+          <PermissionWait key={need.permission} need={need} computer={d.name} />
+        ))}
         {pausable && !pausable.remotePause && <span className="small muted">{t("machines.remotePause.outdated")}</span>}
         {machine?.canManage && machine.update && (
           <>
@@ -493,9 +527,30 @@ function ComputerPage({ machineId }: { machineId: string }) {
               }
             />
           )}
-          {/* Its help: its owner turns it on, an admin only off, and the workspace's switch off wins. Never a server
-              install's. */}
-          {d.mayManage && d.machineKind === "connected" && !d.systemMode && (
+          {/* Its help, its owner's one choice: never, only as backup, or first for their own agents' work. The workspace's
+              switch off wins. Never a server install's. */}
+          {owner && d.machineKind === "connected" && !d.systemMode && (
+            <PrefRow
+              id="dv-pc-spill"
+              icon="bolt"
+              label={t("devices.helpUse")}
+              hint={t(d.belongsToWorkspace ? "devices.helpUseTeamHint" : "devices.helpUseHint")}
+              status={helpOff ? t("devices.spillWorkspaceOff") : undefined}
+              control={
+                <Select
+                  size="sm"
+                  align="end"
+                  aria-label={t("devices.helpUse")}
+                  disabled={helpOff}
+                  value={helpOff ? "off" : spillUseOf(d)}
+                  onValueChange={(use) => save({ id: d.id, spill: spillOfUse(use) })}
+                  options={SPILL_USES.map((use) => ({ value: use, label: t(`devices.helpUses.${use}`) }))}
+                />
+              }
+            />
+          )}
+          {/* Someone else's computer: an admin may only turn its help off. */}
+          {!owner && d.mayManage && d.machineKind === "connected" && !d.systemMode && (
             <PrefRow
               id="dv-pc-spill"
               icon="bolt"
@@ -506,26 +561,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
                 <Switch
                   id="dv-pc-spill-switch"
                   checked={d.spill.own && !helpOff}
-                  disabled={helpOff || (!owner && !d.spill.own)}
+                  disabled={helpOff || !d.spill.own}
                   onCheckedChange={(own) => save({ id: d.id, spill: { own } })}
-                />
-              }
-            />
-          )}
-          {/* Its owner's agents' work starts here first: only its owner chooses it, and only for their own agents. */}
-          {owner && d.machineKind === "connected" && !d.systemMode && (
-            <PrefRow
-              id="dv-pc-first"
-              icon="move"
-              label={t("devices.spillFirst")}
-              hint={t("devices.spillFirstHint")}
-              status={helpOff ? t("devices.spillWorkspaceOff") : undefined}
-              control={
-                <Switch
-                  id="dv-pc-first-switch"
-                  checked={(d.spill.first ?? false) && !helpOff}
-                  disabled={helpOff}
-                  onCheckedChange={(first) => save({ id: d.id, spill: { first } })}
                 />
               }
             />
@@ -651,6 +688,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
   const devices = useDevices(org.id);
   const update = useUpdatePhone(org.id);
   const stop = useStopPhone(org.id);
+  const power = usePowerAction();
   const back = useBackToList();
   const [renaming, setRenaming] = useState<DeviceTarget | null>(null);
   const [removing, setRemoving] = useState<DeviceTarget | null>(null);
@@ -663,6 +701,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
   const { phone: p, host } = found;
   const target: DeviceTarget = { kind: "phone", device: p };
   const owner = p.ownerUserId === me.user.id;
+  const powers = powerChoice(p);
   // A person in control gives it back on its screen instead.
   const canStop =
     p.status.kind === "in_use" &&
@@ -690,6 +729,16 @@ function PhonePage({ phoneId }: { phoneId: string }) {
         onClick={() => setConnect({ step: p.platform === "ios" ? "iphone" : "android", hostId: host.id })}
       >
         {t("devices.showMe")}
+      </Button>
+    ) : powers ? (
+      <Button
+        size="sm"
+        icon={powers === "start" ? "play" : "power"}
+        loading={power.pending}
+        disabled={power.pending}
+        onClick={() => power.run(p, powers === "start")}
+      >
+        {t(powers === "start" ? "devices.power.start" : "devices.power.stop")}
       </Button>
     ) : undefined;
   const link = phoneLink(t, p);
