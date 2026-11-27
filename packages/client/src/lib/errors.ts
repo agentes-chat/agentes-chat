@@ -504,6 +504,7 @@ const KNOWN = {
   "database.not_found": "errors.said.gone",
   "first_agents.no_option": "errors.said.gone",
   "first_agents.not_found": "errors.said.gone",
+  "first_delivery.no_agent": "errors.said.gone",
   "follow_up.not_found": "errors.said.gone",
   "message.not_found": "errors.said.gone",
   "mission.command_not_found": "errors.said.gone",

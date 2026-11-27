@@ -163,8 +163,8 @@
   line-height: 19px;
   font-weight: 400;
 }
-.wiz-board__delivery > .ac-spinner,
-.wiz-board__delivery > svg {
+/* At the row's end while it works: the kit's spinner (a canvas), 16px on the first line's 20px. */
+.wiz-board__delivery > .ac-pixspin {
   flex: none;
   margin-top: 2px;
 }

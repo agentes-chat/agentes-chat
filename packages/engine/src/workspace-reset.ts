@@ -173,6 +173,7 @@ export const RESET_ERASES = [
   "device_access_requests",
   "drive_folders",
   "first_agent_proposals",
+  "first_deliveries",
   "forum_participants",
   "forum_topics",
   "forum_turns",
