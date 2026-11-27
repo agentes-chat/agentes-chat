@@ -350,7 +350,7 @@ export function providerCause(error: Pick<ProviderError, "status" | "message" | 
 const OUTPUT_CAP_WORDS =
   /max(?:imum)?[_ ]?(?:completion|output|new)?[_ ]?tokens|(?:completion|output) tokens|in the completion/i;
 // A number standing alone: not a piece of a model id (`claude-opus-4-20250514`), a version or a request id.
-const LONE_NUMBER = /(?<![\w.-])\d{1,3}(?:,\d{3})+(?![\w-])|(?<![\w.-])\d+(?![\w-])/g;
+const LONE_NUMBER = /(?<![\w.-])\d{1,3}(?:,\d{3}){1,4}(?![\w-])|(?<![\w.-])\d{1,12}(?![\w-])/g;
 
 /**
  * A provider refusing the output cap asked for (`asked`), before anything streamed: the cap to send again, and the
@@ -366,7 +366,10 @@ export function outputCapRefusal(
   asked: number,
 ): { retry: number; learn: number | null } | null {
   if (error.partial || ![400, 413, 422].includes(error.status ?? 0)) return null;
-  const words = `${error.said ?? ""} ${error.message}`.replace(/(\d+)\s*\(exclusive\)/gi, (_, n) => `${Number(n) - 1}`);
+  // Bounded: a provider's words are no input to scan in quadratic time.
+  const words = `${error.said ?? ""} ${error.message}`
+    .slice(0, 2000)
+    .replace(/(?<!\d)(\d{1,12}) ?\(exclusive\)/gi, (_, n) => `${Number(n) - 1}`);
   if (!OUTPUT_CAP_WORDS.test(words)) return null;
   const numbers = new Set(
     [...words.matchAll(LONE_NUMBER)]
