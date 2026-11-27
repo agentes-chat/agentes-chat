@@ -7,6 +7,7 @@ import type {
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
+  DevicesList,
   MachineOfflineCause,
   MachineTool,
   OrgSummary,
@@ -150,6 +151,8 @@ type StatusOptions = {
   ios?: string | null;
   /** The computer's `maintenance`: while it works (a move's copy), the line says it may be slower. */
   maintenance?: ComputerMaintenance | null;
+  /** Installed from the Terminal, not run by the app (`terminalInstall`): a stopped one is started again there. */
+  cli?: boolean;
 };
 
 /** An iPhone's iOS version, for `StatusOptions.ios`. */
@@ -215,7 +218,8 @@ export function statusSentence(
       return maintenanceLine(t, maintenanceOf(s) ?? LEGACY_MOVE, now);
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
-      if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
+      if (s.cause && s.lastSeenAt)
+        return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line", options.cli);
       return s.lastSeenAt
         ? t("devices.line.offlineSeen", { time: clockAt(locale, s.lastSeenAt, now) })
         : t("devices.line.offline");
@@ -337,6 +341,10 @@ export type SpillUse = (typeof SPILL_USES)[number];
 export const spillUseOf = (d: Pick<ComputerDevice, "spill">): SpillUse =>
   d.spill.first ? "first" : d.spill.own ? "help" : "off";
 export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use === "first" });
+
+/** ADR 0237: people's computers here lend their internet, so a computer that joins does too (an older server: its own computer). */
+export const lendsInternet = (list: Pick<DevicesList, "devices" | "lendsInternet"> | undefined): boolean =>
+  list?.lendsInternet ?? list?.devices.some((d) => d.machineKind === "managed") === true;
 
 /**
  * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the
@@ -799,10 +807,29 @@ const CAUSE_KEY = { unresponsive: "Unresponsive", stopped: "Stopped", dropped: "
 
 /**
  * Why a computer someone brought went offline, at `time` (already in words): `detail`, the short words after a row's
- * pill; `line`, the sentence on its page with the one way out.
+ * pill; `line`, the sentence on its page with the one way out, in plain words (a Terminal install, `cli`, is started
+ * again there; the command that tells why waits under Technical details, `doctorShown`).
  */
-export const offlineCauseText = (t: TFunction, cause: MachineOfflineCause, time: string, form: "detail" | "line") =>
-  t(`devices.${form}.offline${CAUSE_KEY[cause]}`, { time, command: RUNNER_DOCTOR_COMMAND });
+export const offlineCauseText = (
+  t: TFunction,
+  cause: MachineOfflineCause,
+  time: string,
+  form: "detail" | "line",
+  cli = false,
+) =>
+  say(t, `devices.${form}.offline${CAUSE_KEY[cause]}${form === "line" && cause === "stopped" && cli ? "Cli" : ""}`, {
+    time,
+  });
+
+/** Installed from the Terminal, not run by the agentes.chat app: a computer someone brought, or the server's own. */
+export const terminalInstall = (m: { kind?: string; app?: boolean } | null | undefined) =>
+  m != null && m.kind !== "managed" && m.app === false;
+
+/** Offline with a known cause and installed from the Terminal: `RUNNER_DOCTOR_COMMAND` says why, folded away. */
+export const doctorShown = (
+  s: DeviceStatus | null | undefined,
+  m: { kind?: string; app?: boolean } | null | undefined,
+) => s?.kind === "offline" && !s.withHost && Boolean(s.cause) && terminalInstall(m);
 
 /** How often the iPhone guide asks where a fix of the Mac's Xcode stands while it runs. */
 export const XCODE_FIX_POLL_MS = 1500;
@@ -1117,8 +1144,11 @@ export type PhoneScreenState =
   /** It closed for good: only Try again opens it. */
   | "ended";
 
-/** Why control was refused, or ended: the screen opens again as a watcher and says so. */
-export type PhoneControlRefusal = "in_use" | "someone" | "unsupported" | "paused" | "held" | "lost";
+/**
+ * Why control was refused, or ended: the screen opens again as a watcher and says so. `late` and `failed`: control
+ * never showed a picture (its phone wasn't ready in a start's wait, or it couldn't start there).
+ */
+export type PhoneControlRefusal = "in_use" | "someone" | "unsupported" | "paused" | "held" | "lost" | "late" | "failed";
 
 /** The most text one `text` frame carries (mirror of `PHONE_VIEW.text` in `@agenteschat/adapters`). */
 export const PHONE_TEXT_MAX = 2000;
@@ -1133,16 +1163,33 @@ export function phoneScreenUrl(
   return socketUrl(base, "/api/phone-screen", params);
 }
 
-/** What a phone screen socket's close means (`reason`: the server's, or the computer's error code). */
+/**
+ * What a phone screen socket's close means (`reason`: the server's, or the computer's error code). `opening`: a
+ * control socket that showed no picture yet. Opening it again would wait the whole start again behind the same
+ * spinner, each time, so a close that would only try again goes back to watching and says why instead.
+ */
 export function phoneCloseState(
   code: number,
   reason = "",
+  o: { opening?: boolean } = {},
 ): { state: PhoneScreenState; retry: DesktopRetry; control?: PhoneControlRefusal } {
-  const watchAgain = (control: PhoneControlRefusal) => ({
-    state: "connecting" as const,
-    retry: "now" as const,
-    control,
-  });
+  const next = closeOf(code, reason);
+  if (!o.opening || next.control || (next.state !== "connecting" && next.state !== "notReady")) return next;
+  // A dropped connection (a server restarting, the network) is no answer about the phone: control opens again.
+  if (code === 1001 || code === 1006) return next;
+  return watchAgain(code === DESKTOP_CLOSE.late || reason === "phone_not_ready" ? "late" : "failed");
+}
+
+const watchAgain = (control: PhoneControlRefusal) => ({
+  state: "connecting" as const,
+  retry: "now" as const,
+  control,
+});
+
+function closeOf(
+  code: number,
+  reason: string,
+): { state: PhoneScreenState; retry: DesktopRetry; control?: PhoneControlRefusal } {
   switch (code) {
     case DESKTOP_CLOSE.controlEnded:
       return watchAgain(reason === "in_use" ? "in_use" : reason === "someone_in_control" ? "someone" : "lost");
@@ -1254,6 +1301,10 @@ export function controlRefusalText(
       return t("devices.screen.paused", { host: v.host });
     case "held":
       return t("devices.screen.held");
+    case "late":
+      return t("devices.screen.controlLate", { name: v.name, host: v.host });
+    case "failed":
+      return t("devices.screen.controlFailed", { name: v.name, host: v.host });
     default:
       return t("devices.screen.lost", { name: v.name });
   }

@@ -17298,13 +17298,13 @@
       "browser_download": "Non è stato possibile scaricare il browser degli agenti. Controlla la connessione di questo computer e riproverà al prossimo uso.",
       "browser_checksum": "Il download del browser degli agenti è arrivato danneggiato, quindi non è stato usato. Riproverà al prossimo uso.",
       "desktop_use_linux": "Le app sugli schermi degli agenti funzionano sui computer Linux con gli schermi degli agenti.",
-      "desktop_use_own_user": "Le app sugli schermi richiedono che ogni agente lavori con un proprio utente su questo computer (modalità sistema). Qui tutti gli agenti lavorano con l'utente del runner.",
+      "desktop_use_own_user": "Le app sugli schermi richiedono che ogni agente lavori con un proprio utente su questo computer (modalità sistema). Qui tutti gli agenti lavorano con lo stesso utente, quello con cui gira agentes.chat.",
       "desktop_use_install": "Installa su questo computer ciò che serve alle app sugli schermi:",
       "desktop_unavailable": "Gli schermi degli agenti non possono funzionare su questo computer.",
       "desktop_linux": "Gli schermi degli agenti funzionano solo sui computer Linux.",
       "desktop_install": "Installa su questo computer gli schermi degli agenti:",
-      "not_as_root": "Gli schermi e i terminali degli agenti non funzionano mai come root. Avvia il runner con un utente normale.",
-      "runner_bun_old": "Serve il runner su Bun 1.3.5 o più recente. Aggiorna il runner su questo computer.",
+      "not_as_root": "Gli schermi e i terminali degli agenti non girano mai come root. Avvia agentes.chat come utente normale.",
+      "runner_bun_old": "Serve agentes.chat su Bun 1.3.5 o più recente. Aggiorna agentes.chat su questo computer.",
       "terminal_unsupported": "I terminali funzionano solo sui computer Linux e Mac."
     },
     "egress": {
@@ -17314,7 +17314,6 @@
       "hint": "L’indirizzo che i siti vedono quando gli agenti navigano. Si aggiorna quando cambia la rete del computer.",
       "waiting": "Gli agenti si stanno ricollegando a internet. Le loro connessioni aspettano che torni.",
       "via": "Gli agenti usano la connessione internet di {{name}}",
-      "viaBy": "Gli agenti usano la connessione internet di {{name}} ({{person}})",
       "viaHint": "I siti vedono la posizione di quel computer. Chi l’ha collegato può disattivarlo nella sua pagina."
     },
     "maintenance": {
@@ -17760,6 +17759,8 @@
       "paused": "{{host}} è in pausa, quindi il controllo aspetta che riprenda.",
       "held": "Questo spazio di lavoro è in pausa, quindi il controllo aspetta che torni attivo.",
       "lost": "Il controllo è finito. Stai di nuovo guardando {{name}}.",
+      "controlLate": "Il controllo non è partito in tempo. {{host}} sta ancora preparando {{name}}: riprova tra un minuto.",
+      "controlFailed": "Impossibile prendere il controllo di {{name}}. Riprova, oppure riavvia l'app di agentes.chat su {{host}}.",
       "typeLabel": "Scrivi su {{name}}"
     },
     "status": {
@@ -17781,7 +17782,7 @@
       "withHost": "con {{host}}",
       "lastSeen": "visto l'ultima volta {{time}}",
       "offlineUnresponsive": "non risponde dalle {{time}}",
-      "offlineStopped": "runner fermato alle {{time}}",
+      "offlineStopped": "agentes.chat fermo dalle {{time}}",
       "offlineDropped": "connessione caduta alle {{time}}"
     },
     "line": {
@@ -17798,9 +17799,14 @@
       "offline": "Gli agenti aspettano che torni.",
       "offlineSeen": "Visto l'ultima volta {{time}}. Gli agenti aspettano che torni.",
       "offlineWithHost": "{{host}} è offline. Gli agenti aspettano che torni.",
-      "offlineUnresponsive": "Non risponde dalle {{time}}, forse senza rete o sovraccarico. Esegui `{{command}}` lì.",
-      "offlineStopped": "Il runner si è fermato alle {{time}}. Riavvialo, o esegui `{{command}}` lì per vedere perché.",
-      "offlineDropped": "La connessione è caduta alle {{time}}. Si ricollega da sola. Se non torna, esegui `{{command}}` lì."
+      "offlineUnresponsive": "Non risponde dalle {{time}}, forse senza internet o sovraccarico. Controlla che sia acceso e connesso.",
+      "offlineStopped": "L'app agentes.chat si è fermata su questo computer alle {{time}}. Apri di nuovo l'app.",
+      "offlineStoppedCli": "agentes.chat si è fermato su questo computer alle {{time}}. Avvialo di nuovo lì.",
+      "offlineDropped": "La connessione è caduta alle {{time}}. Si ricollega da sola."
+    },
+    "technical": {
+      "title": "Dettagli tecnici",
+      "doctor": "Per vedere il motivo, esegui questo lì:"
     },
     "reason": {
       "locked": "Il telefono è bloccato",
@@ -21306,7 +21312,7 @@
       "people": "Da subito tutti possono solo leggerlo e ricevono un'email",
       "peopleQuiet": "Da subito tutti possono solo leggerlo",
       "computer": "Il suo computer si ferma subito e viene cancellato",
-      "computers": "I computer collegati vengono scollegati. Le cartelle degli agenti restano lì finché il runner non viene rimosso.",
+      "computers": "I computer collegati vengono scollegati. Le cartelle degli agenti restano lì finché agentes.chat non viene rimosso.",
       "connectors": "Connettori e caselle di posta vengono scollegati"
     },
     "undo": "Qualsiasi Proprietario può ripristinarlo fino al {{date}} alle {{time}}. Dopo, non si torna indietro.",
@@ -21675,14 +21681,6 @@
       "doneByYou": "Fatto da te alle {{time}}. {{agent}} ha guardato di nuovo lo schermo ed è andato avanti.",
       "doneByYou_female": "Fatto da te alle {{time}}. {{agent}} ha guardato di nuovo lo schermo ed è andata avanti."
     },
-    "control": {
-      "notice": "I programmi sul computer di {{name}} possono vedere lo schermo e quello che scrivi o incolli.",
-      "notice_female": "I programmi sul computer di {{name}} possono vedere lo schermo e quello che scrivi o incolli."
-    },
-    "session": {
-      "check": "Controlli di sicurezza",
-      "screening": "Potremmo controllare il testo di questo schermo per prevenire abusi. Conserviamo solo il risultato. Ciò che lo schermo non mostra, come una password a un prompt, non viene mai acquisito."
-    },
     "after": {
       "titleNoSite": "Ha usato lo schermo",
       "noSite": "Prima di aprire un'app"
@@ -21692,8 +21690,6 @@
       "group_female": "Schermo di {{name}}"
     },
     "watch": {
-      "notice": "I programmi sul computer di {{name}} possono vedere lo schermo e tutto ciò che vi viene scritto o incollato.",
-      "notice_female": "I programmi sul computer di {{name}} possono vedere lo schermo e tutto ciò che vi viene scritto o incollato.",
       "step": {
         "desktop_open": "Ha aperto {{detail}}",
         "desktop_open_plain": "Ha aperto un'app",

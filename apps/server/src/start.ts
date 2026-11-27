@@ -76,6 +76,7 @@ import {
   memoryBudget,
   meterComposio,
   moveIssueComments,
+  noticeLendingComputers,
   poolNeededFor,
   publicHostAddress,
   publicHttpsFetch,
@@ -86,10 +87,12 @@ import {
   retireMillionSendMailboxes,
   STARTUP_RAMP_MS,
   SURFACE_PREFIX,
+  serverLending,
   setFontsDir,
   setMessageLinkBase,
   setRestrictionNotices,
   setScreenJudgments,
+  setServerLending,
   setSurface,
   setWorkspaceComputers,
   shareCacheInvalidations,
@@ -419,6 +422,9 @@ async function boot(
   // Addresses a workspace names (custom MCP servers, its own bucket, pages agents read) are pinned to public ones at
   // every request, except where the operator lets workspaces reach this server's network.
   allowPrivateOutbound(allowsPrivateEndpoints(config));
+  // ADR 0237: people's computers lend their internet to this server's own computer and its reads of web pages, except
+  // where a provisioner makes the workspaces' computers (the Cloud), which borrow alone.
+  setServerLending(config.MACHINE_PROVISIONING !== "external");
   // The private hosts and ranges the operator named pass every guard for typed addresses (ADR 0210). agentes.chat
   // Cloud never lets a workspace reach a private network, whatever is set.
   const outboundLists = { hosts: config.OUTBOUND_ALLOW_HOSTS, cidrs: config.OUTBOUND_ALLOW_CIDRS };
@@ -550,6 +556,19 @@ async function boot(
         if (moved > 0) log.info("files moved out of agent rooms", { moved });
       },
     },
+    // Where this server lends (ADR 0237), each lending computer's owner hears it once.
+    ...(serverLending()
+      ? [
+          {
+            name: "egress-share-notice-server",
+            once: true,
+            run: async () => {
+              const told = await noticeLendingComputers(database.db);
+              if (told > 0) log.info("lending computers' owners told", { told });
+            },
+          },
+        ]
+      : []),
     // Computers still called by their host name take their model and owner's name ("MacBook Pro do Tomás").
     {
       name: "friendly-machine-names",
@@ -812,6 +831,7 @@ async function boot(
     // The switch is the process's: a server started after this one sets its own.
     allowPrivateOutbound(false);
     allowOutbound();
+    setServerLending(false);
     // `/api/health` answers 503 from now on: the proxy's health check takes this instance out before it stops
     // listening, and holds new requests for the next one instead of failing them.
     if (config.SHUTDOWN_DELAY_MS > 0) await Bun.sleep(config.SHUTDOWN_DELAY_MS);

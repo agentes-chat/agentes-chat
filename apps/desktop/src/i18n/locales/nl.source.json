@@ -50,6 +50,15 @@
   "windowTitle.prefs": {
     "value": "Preferences"
   },
+  "background.title": {
+    "value": "agentes.chat is still running"
+  },
+  "background.bodyMac": {
+    "value": "Find it in the menu bar at the top of the screen. Open it or quit it from there."
+  },
+  "background.bodyTray": {
+    "value": "Find it in the system tray. Open it or quit it from there."
+  },
   "common.cancel": {
     "value": "Cancel"
   },

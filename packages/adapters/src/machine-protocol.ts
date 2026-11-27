@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 94;
+export const MACHINE_PROTOCOL_VERSION = 95;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -883,6 +883,29 @@ export const HELD_TURN_PROTOCOL = 93;
  * system mode). The server never sends `apps.run` to an older runner.
  */
 export const PERSON_APPS_PROTOCOL = 94;
+/**
+ * From this protocol on (ADR 0237, self-hosted servers): a computer that borrows a person's internet without the
+ * Cloud's guard (this server's own computer, or one marked the workspace's with its own switch off) runs a loopback
+ * proxy (HTTP CONNECT and SOCKS5 on one port) and hands its agents' processes and browsers the proxy settings. Its
+ * connections to ports 80 and 443 go out through a lending computer like the workspace computer's (`stream.hello`
+ * with `egress`); anything else, a refusal, or no lender online goes out the computer's usual way. `welcome.egressProxy`
+ * turns it on at connect, `egress.proxy` when the computer's role changes. The server sends neither to an older runner.
+ */
+export const EGRESS_PROXY_PROTOCOL = 95;
+/**
+ * Hosts a borrowing computer's agents always reach their own way (`NO_PROXY`): the AI CLIs' model and sign-in
+ * services, so a key or a sign-in never depends on someone's home connection.
+ */
+export const EGRESS_DIRECT_HOSTS = [
+  ".anthropic.com",
+  ".claude.ai",
+  ".claude.com",
+  ".openai.com",
+  ".chatgpt.com",
+  ".googleapis.com",
+  ".cursor.sh",
+  ".x.ai",
+] as const;
 /** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
 export const AGENT_DESKTOP_VERSION = "1.3.1";
 /** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
@@ -3567,6 +3590,8 @@ export type MachineRequest = (
   | { op: "report.collect" }
   /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
   | { op: "egress.dial"; streamId: string; host: string; port: number }
+  /** `EGRESS_PROXY_PROTOCOL`: this computer now borrows a person's internet (`on`) or no longer does. */
+  | { op: "egress.proxy"; on: boolean }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -3656,6 +3681,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "phone.power",
   "report.collect",
   "egress.dial",
+  "egress.proxy",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -3839,6 +3865,7 @@ export interface MachineReplies {
   "phone.power": { on: boolean };
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
+  "egress.proxy": { on: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -3940,6 +3967,8 @@ export type ServerFrame =
        * socket whose connections go out through a computer a person lent (ADR 0237).
        */
       egressRelay?: boolean;
+      /** `EGRESS_PROXY_PROTOCOL`: this computer borrows a person's internet through its loopback proxy (ADR 0237). */
+      egressProxy?: boolean;
       /**
        * The server runs each `mcp.call` once per `callId` and answers a copy with the first answer: a call cut by
        * a reconnect may be sent again. Absent (older servers): sent again it would run twice.

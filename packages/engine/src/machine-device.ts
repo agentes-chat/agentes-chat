@@ -133,7 +133,7 @@ export async function startDeviceCode(
   link?: { id: string; orgId: string },
 ) {
   if (input.protocol !== undefined && input.protocol < MIN_RUNNER_PROTOCOL) {
-    throw new ValidationError("This runner is too old. Download the latest one.", "machine.outdated");
+    throw new ValidationError("This version of agentes.chat is too old. Download the latest one.", "machine.outdated");
   }
   const now = nowOf(deps);
   const ip = requester.ip.slice(0, 100);

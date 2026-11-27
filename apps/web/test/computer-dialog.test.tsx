@@ -254,10 +254,8 @@ describe("the computer dialog, Cloud: the workspace's own computer", () => {
     // The cover says it; the head says nothing over it.
     expect(sub()).toBe("");
     expect(box().textContent?.match(/Pronto/g)).toHaveLength(1);
-    // The Pronto leads to the screen: the screen's line stays under it, so the screen opens where it was.
-    expect(box().querySelector(".cmp-body > .cmp-stage + .dsk-line")?.textContent).toBe(
-      "Os programas do computador da Ada veem a tela e tudo o que é digitado ou colado nele.",
-    );
+    // The Pronto leads to the screen: the screen's line keeps its room under it, so the screen opens where it was.
+    expect(box().querySelector(".cmp-body > .cmp-stage + .dsk-line")?.textContent).toBe("");
     await act(async () => new Promise((r) => setTimeout(r, 1600)));
     await settle(8);
     // Opening, then the screen: no step of the person's.

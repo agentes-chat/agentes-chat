@@ -24,6 +24,11 @@
     "welcome": "환영합니다",
     "prefs": "환경설정"
   },
+  "background": {
+    "title": "agentes.chat이 계속 실행 중입니다",
+    "bodyMac": "화면 위쪽 메뉴 막대에 있습니다. 거기에서 열거나 종료할 수 있습니다.",
+    "bodyTray": "시스템 트레이에 있습니다. 거기에서 열거나 종료할 수 있습니다."
+  },
   "common": {
     "cancel": "취소",
     "close": "닫기",

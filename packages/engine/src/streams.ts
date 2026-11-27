@@ -312,7 +312,10 @@ export function createStreamBroker(deps: StreamBrokerDeps) {
     const { machineId, agent } = target;
     const held = target.held === true;
     // A card's view never starts a stopped screen: only someone opening it does.
-    const starts = s.request.kind === "desktop" && !held && !s.preview ? { start: true } : {};
+    // A phone's control starts its driver first (an iPhone's test helper: a build and a launch, a minute or more the
+    // first time), so it gets a start's wait on both sides: `start` tells the computer to wait as long.
+    const phoneControl = s.request.kind === "phone" && s.request.mode === "control";
+    const starts = (s.request.kind === "desktop" && !held && !s.preview) || phoneControl ? { start: true } : {};
     // A computer that can't say when it starts the desktop (`stream.starting`) gets a start's wait for every such open.
     if (starts.start && !target.saysStarting) deadline(s, limits.startTimeoutMs);
     // A code session's terminal starts in its worktree (ADR 0215) on a computer that takes a folder; an older one

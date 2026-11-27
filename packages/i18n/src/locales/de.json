@@ -16713,13 +16713,13 @@
       "browser_download": "Der Browser der Agenten konnte nicht heruntergeladen werden. Prüfe die Verbindung dieses Computers, beim nächsten Mal versucht er es erneut.",
       "browser_checksum": "Der Download des Browsers der Agenten kam beschädigt an und wurde nicht verwendet. Beim nächsten Mal versucht er es erneut.",
       "desktop_use_linux": "Apps auf den Bildschirmen der Agenten laufen auf Linux-Computern mit den Bildschirmen der Agenten.",
-      "desktop_use_own_user": "Apps auf den Bildschirmen brauchen für jeden Agenten einen eigenen Benutzer auf diesem Computer (Systemmodus). Hier arbeiten alle Agenten als Benutzer des Runners.",
+      "desktop_use_own_user": "Apps auf den Bildschirmen brauchen für jeden Agenten einen eigenen Benutzer auf diesem Computer (Systemmodus). Hier arbeiten alle Agenten als derselbe Benutzer, der, mit dem agentes.chat läuft.",
       "desktop_use_install": "Installiere auf diesem Computer, was Apps auf den Bildschirmen brauchen:",
       "desktop_unavailable": "Die Bildschirme der Agenten laufen auf diesem Computer nicht.",
       "desktop_linux": "Die Bildschirme der Agenten laufen nur auf Linux-Computern.",
       "desktop_install": "Installiere auf diesem Computer die Bildschirme der Agenten:",
-      "not_as_root": "Bildschirme und Terminals der Agenten laufen nie als root. Starte den Runner als normaler Benutzer.",
-      "runner_bun_old": "Dafür braucht der Runner Bun 1.3.5 oder neuer. Aktualisiere den Runner auf diesem Computer.",
+      "not_as_root": "Bildschirme und Terminals der Agenten laufen nie als root. Starte agentes.chat als normaler Benutzer.",
+      "runner_bun_old": "Dafür braucht agentes.chat Bun 1.3.5 oder neuer. Aktualisiere agentes.chat auf diesem Computer.",
       "terminal_unsupported": "Terminals laufen nur auf Linux- und Mac-Computern."
     },
     "egress": {
@@ -16729,7 +16729,6 @@
       "hint": "Die Adresse, die Websites sehen, wenn die Agenten surfen. Sie ändert sich, wenn sich das Netzwerk des Computers ändert.",
       "waiting": "Die Internetverbindung der Agenten wird wiederhergestellt. Ihre Verbindungen warten, bis sie zurück ist.",
       "via": "Agenten nutzen die Internetverbindung von {{name}}",
-      "viaBy": "Agenten nutzen die Internetverbindung von {{name}} ({{person}})",
       "viaHint": "Websites sehen den Standort dieses Computers. Wer ihn verbunden hat, kann das auf seiner Seite ausschalten."
     },
     "maintenance": {
@@ -17171,6 +17170,8 @@
       "paused": "{{host}} ist pausiert, deshalb wartet die Steuerung, bis es weitergeht.",
       "held": "Dieser Workspace ist angehalten, daher wartet die Steuerung, bis er wieder aktiv ist.",
       "lost": "Die Steuerung ist vorbei. Du schaust {{name}} wieder zu.",
+      "controlLate": "Die Steuerung hat nicht rechtzeitig begonnen. {{host}} macht {{name}} noch bereit: versuch es in einer Minute noch mal.",
+      "controlFailed": "Die Steuerung von {{name}} hat nicht geklappt. Versuch es noch mal oder starte die agentes.chat-App auf {{host}} neu.",
       "typeLabel": "Auf {{name}} schreiben"
     },
     "status": {
@@ -17192,7 +17193,7 @@
       "withHost": "mit {{host}}",
       "lastSeen": "zuletzt gesehen {{time}}",
       "offlineUnresponsive": "antwortet nicht mehr seit {{time}}",
-      "offlineStopped": "Runner gestoppt um {{time}}",
+      "offlineStopped": "agentes.chat beendet um {{time}}",
       "offlineDropped": "Verbindung abgebrochen um {{time}}"
     },
     "line": {
@@ -17208,9 +17209,14 @@
       "offline": "Agenten warten, bis es zurück ist.",
       "offlineSeen": "Zuletzt gesehen {{time}}. Agenten warten, bis es zurück ist.",
       "offlineWithHost": "{{host}} ist offline. Agenten warten, bis es zurück ist.",
-      "offlineUnresponsive": "Antwortet seit {{time}} nicht mehr, vielleicht kein Netz oder überlastet. Führe dort `{{command}}` aus.",
-      "offlineStopped": "Der Runner wurde um {{time}} gestoppt. Starte ihn neu oder führe dort `{{command}}` aus, um den Grund zu sehen.",
-      "offlineDropped": "Die Verbindung brach um {{time}} ab. Sie verbindet sich von selbst neu. Falls nicht, führe dort `{{command}}` aus."
+      "offlineUnresponsive": "Antwortet seit {{time}} nicht mehr, vielleicht kein Internet oder überlastet. Prüfe, ob er an und online ist.",
+      "offlineStopped": "Die agentes.chat-App wurde um {{time}} auf diesem Computer beendet. Öffne die App wieder.",
+      "offlineStoppedCli": "agentes.chat wurde um {{time}} auf diesem Computer beendet. Starte es dort neu.",
+      "offlineDropped": "Die Verbindung brach um {{time}} ab. Sie verbindet sich von selbst neu."
+    },
+    "technical": {
+      "title": "Technische Details",
+      "doctor": "Um den Grund zu sehen, führe dort das aus:"
     },
     "reason": {
       "locked": "Das Handy ist gesperrt",
@@ -20611,7 +20617,7 @@
       "people": "Alle können ihn ab sofort nur noch lesen und bekommen eine E-Mail",
       "peopleQuiet": "Alle können ihn ab sofort nur noch lesen",
       "computer": "Sein Computer stoppt sofort und wird gelöscht",
-      "computers": "Verbundene Computer werden getrennt. Die Ordner der Agenten bleiben darauf, bis der Runner entfernt wird.",
+      "computers": "Verbundene Computer werden getrennt. Die Ordner der Agenten bleiben darauf, bis agentes.chat davon entfernt wird.",
       "connectors": "Konnektoren und Postfächer werden getrennt"
     },
     "undo": "Jeder Inhaber kann ihn bis {{date}} um {{time}} wiederherstellen. Danach gibt es kein Zurück.",
@@ -20930,13 +20936,6 @@
       "doneBy": "Erledigt von {{name}} um {{time}}. {{agent}} hat sich den Bildschirm noch einmal angesehen und weitergemacht.",
       "doneByYou": "Von dir erledigt um {{time}}. {{agent}} hat sich den Bildschirm noch einmal angesehen und weitergemacht."
     },
-    "control": {
-      "notice": "Programme auf dem Computer von {{name}} können den Bildschirm sehen und was du tippst oder einfügst."
-    },
-    "session": {
-      "check": "Sicherheitsprüfungen",
-      "screening": "Wir prüfen den Text auf diesem Bildschirm eventuell auf Missbrauch. Wir behalten nur das Ergebnis. Was der Bildschirm nicht zeigt, etwa ein Passwort in einer Eingabeaufforderung, wird nie erfasst."
-    },
     "after": {
       "titleNoSite": "Hat den Bildschirm genutzt",
       "noSite": "Vor dem Öffnen einer App"
@@ -20945,7 +20944,6 @@
       "group": "Bildschirm von {{name}}"
     },
     "watch": {
-      "notice": "Programme auf dem Computer von {{name}} können den Bildschirm sehen und alles, was dort getippt oder eingefügt wird.",
       "step": {
         "desktop_open": "Hat {{detail}} geöffnet",
         "desktop_open_plain": "Hat eine App geöffnet",

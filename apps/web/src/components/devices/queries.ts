@@ -17,11 +17,12 @@ import { useEffect, useState } from "react";
  * `machines`, which every computer event refreshes); `pollMs` also asks on a timer, while a dialog waits for a
  * phone or a computer to show up.
  */
-export const useDevices = (orgId: string, pollMs: number | false = false) => {
+export const useDevices = (orgId: string, pollMs: number | false = false, enabled = true) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.devices(orgId),
     queryFn: () => api.devices.list(orgId),
+    enabled,
     retry: false,
     refetchInterval: pollMs,
     meta: { quiet: true },
