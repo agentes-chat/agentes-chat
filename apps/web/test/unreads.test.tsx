@@ -131,4 +131,25 @@ describe("the page", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
     expect(router.state.location.search).toMatchObject({ approval: "ap-merge" });
   });
+
+  test("loading shows placeholders, and a list that fails says why with Tentar de novo, never an empty page", async () => {
+    const api = createFakeApi(withUnreadEng());
+    const load = api.notifications.list;
+    api.notifications.list = () => new Promise(() => {});
+    await renderApp(`/org/${ORG_ID}/unreads`, { api });
+    await settle(6);
+    expect(screen().getByRole("status", { name: "Carregando a lista" })).toBeTruthy();
+    cleanup();
+
+    api.notifications.list = () => Promise.reject(new Error("offline"));
+    await renderApp(`/org/${ORG_ID}/unreads`, { api });
+    await settle(30);
+    const retry = screen().getByRole("button", { name: "Tentar de novo" });
+    expect(screen().queryByRole("status", { name: "Carregando a lista" })).toBeNull();
+    api.notifications.list = load;
+    await act(async () => fireEvent.click(retry));
+    await settle(10);
+    expect(screen().queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    expect(screen().getByRole("region", { name: /Conversas/ })).toBeTruthy();
+  });
 });
