@@ -2,7 +2,7 @@
 
 - Status: Accepted (phase 1: the switch, the relay on both computers and the server; the workspace computer's
   routing is the Cloud's, later)
-- Date: 2026-11-24 (amended 2026-11-26: no daily cap)
+- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers)
 - Extends: ADR 0025 (connected computers), ADR 0058 §11 (data sockets), ADR 0101 (observed egress)
 - Code: protocol `packages/adapters/src/machine-protocol.ts` (`EGRESS_SHARE_PROTOCOL`, `EGRESS_SHARE`,
   `egress.dial`, `StreamHello.egress`, `welcome.egressRelay`); db `machines.egress_share`, `egress_share_at`,
@@ -12,7 +12,15 @@
   `apps/server/runner/egress-share.ts` (the lending side),
   `egress-relay.ts` (the workspace computer's SOCKS5 socket); web `DevicePage.tsx`, `computer/Egress.tsx`,
   `devices/dialogs.tsx`, `pages/ConnectPage.tsx`; phone `ComputerSection.tsx`, `MachineScreen.tsx`; desktop
-  `windows/InternetRow.tsx` (after pairing, and in Preferences › This Mac).
+  `windows/InternetRow.tsx` (after pairing, and in Preferences › This Mac). Self-hosted servers (amendment
+  2026-11-27): `EGRESS_PROXY_PROTOCOL`, `welcome.egressProxy`, `egress.proxy`, `EGRESS_DIRECT_HOSTS`; db
+  `machines.egress_lent_at` (migration 0365); engine `machines.ts` (`setServerLending`, `serverLending`,
+  `borrowsInternet`), `egress-share.ts` (`EgressRelay.connect`, `lending`), `egress-fetch.ts` (`createEgressFetch`),
+  `web-tools.ts` (`lent`), `devices.ts` (`lendsInternet`, `noticeLendingComputers`); server `start.ts` (the boot
+  setting and the once-only notice); runner `egress-relay.ts` (`startEgressProxy`, `egressProxyEnv`,
+  `egressProxyChromeArgs`), `daemon.ts` (`borrowEgress`), `secrets.ts`, `accounts.ts` (`accountSettingsEnv`),
+  `browser.ts` (`chromeLaunchArgs`), `loopback-guard.ts` (`ownServices`), `host.ts` (`egressProxies`); client
+  `lib/devices.ts` (`lendsInternet`).
 
 ## Context
 
@@ -71,7 +79,8 @@ repository's ADR and change.
 - The server carries the bytes of lent connections, with no cap on them.
 - A person sees which of their computers lends, and the workspace sees whose internet it uses; both turn it off in one
   switch.
-- Nothing changes for a self-hosted server: it has no workspace computer, so nothing shows and nothing is asked.
+- A self-hosted server lends too (amendment 2026-11-27): to its own computer, to computers marked the workspace's
+  that don't lend, and to its own reads of web pages for agents.
 
 ## Amendment 2026-11-26: no daily cap
 
@@ -82,3 +91,69 @@ the person turns lending off in one switch. The limits that keep it safe stay: o
 ports 80 and 443, only public addresses, never one on the lending computer's own network, and 256 connections at
 once. A lending computer on an older app keeps the cap until it updates; the server and the protocol are unchanged,
 and a file left in the runner's folder is no longer read.
+
+## Amendment 2026-11-27: self-hosted servers
+
+Owner decision: lending works on a self-hosted server too. The main case is a server on a VPS used from the desktop
+app on the person's own computer: the agents go out through that computer's internet (a home address, sites that
+block datacenters, the person's own location).
+
+1. **Where it is on.** Set once at boot (`setServerLending`): on for every server except one whose computers a
+   provisioner makes (`MACHINE_PROVISIONING=external`, the Cloud), where only the managed computer borrows, as
+   before. No new setting.
+2. **Who borrows** (`borrowsInternet`): the managed computer always; where the server lends, also this server's own
+   computer (`host`), a computer marked the workspace's whose own switch is off, and the server process itself for
+   its reads of web pages. A computer that lends never borrows (the two need the switch in opposite states, and the
+   pick skips the borrower), a person's own computer that doesn't lend doesn't borrow either (turning the switch off
+   never starts using a colleague's internet), and a host computer never lends. Anything else asking gets
+   `forbidden`, read as "go out your usual way". The lenders are unchanged (§1, §2), and a lending computer at
+   protocol 81 to 94 lends to the new borrowers with no change.
+3. **What the server sends through a lender, and what never.** Through it: `web_fetch` page reads and the DuckDuckGo
+   HTML search page, what sites block on datacenter addresses and what the switch's words name ("only websites").
+   They try the lender first and go their usual way once when it fails (no lender now, a refusal, a broken tunnel).
+   Never: Brave and SearXNG (keyed or the operator's own services, SearXNG maybe on the server's network), MCP and
+   HTTP connector calls, OAuth, storage, webhooks, git hosts, email, model providers, updates and the pictures of
+   `show_image`: authenticated or infrastructure calls that need an always-on, stable address (a laptop that sleeps
+   would break runs; providers may bind tokens to an address) and are not websites. The server reaches a lent
+   connection through a CONNECT proxy on 127.0.0.1 (`egress-fetch.ts`), with Bun's `fetch` `proxy` option and a key
+   only this process holds (`Proxy-Authorization: Basic <orgId>:<token>`, a fresh token each start); each tunnel is
+   one leg of the relay (`EgressRelay.connect`), paired like a data socket. The lent path doesn't pin the address:
+   the URL guard runs first, and the lending computer resolves the name and refuses non-public addresses and its own
+   networks, so this server's network is never reached through it.
+4. **Borrowing runners** (`EGRESS_PROXY_PROTOCOL`, 95). With no Cloud guard in core, a borrowing runner runs a
+   loopback proxy (`<runner home>/egress-proxy.json` keeps its port across restarts) that speaks HTTP CONNECT and
+   SOCKS5 on one port, told by `welcome.egressProxy` at connect and by `egress.proxy` when the computer's role
+   changes (`updateComputerDevice`; failures ignored, the next `welcome` says it again). Connections to ports 80 and
+   443 ask the server for a lent connection (`stream.hello` with `egress`, as the managed computer does); on
+   `unreachable`, `forbidden`, a failure here or the server away it goes direct and stays direct for 60 s unasked;
+   `refused` goes direct at once; only `notFound` fails the connection. Other ports never ask. Its own direct dial
+   reaches public addresses only (root's dial skips the agents' guard). It hands agents' processes
+   `HTTPS_PROXY`/`https_proxy` (`http://`), `ALL_PROXY`/`all_proxy` (`socks5h://`), `NODE_USE_ENV_PROXY=1` and
+   `NO_PROXY` (loopback, `.local`, `.internal`, the private, CGNAT and link-local ranges, this server's host, and
+   `EGRESS_DIRECT_HOSTS`: the AI CLIs' model and sign-in services), through `agentSecrets` (every command, CLI and
+   task, both modes; system mode's workers get it in `worker.state`) and Claude Code's `--settings` env, which also
+   keeps the turn's endpoint direct. Chrome gets `--proxy-server=socks5://…` (names resolved by the lender), the same
+   bypass list and WebRTC kept off UDP outside the proxy. No `HTTP_PROXY`: plain http goes direct but for curl via
+   `ALL_PROXY`. Nothing is handed out where the runner itself runs with a proxy of its operator's. Processes started
+   before keep their environment; a proxy turned off stays up and dials direct. The agents' container service never
+   gets it (image pulls through a home connection are no help).
+5. **Shown.** The lender's row records when it last carried a lent connection, whoever borrowed
+   (`machines.egress_lent_at`, at most once a minute per process): "In use now" while that is under five minutes (or
+   the managed computer's `egress_via` names it). `egress_via` is written on any borrower's row, so a host or marked
+   computer's page says "Agents use the internet of Ana's laptop (Ana)" on the web and the phone. `shareInternet` is
+   sent for people's computers wherever the server lends, and the devices list says `lendsInternet`, which the join
+   line reads (Let it join, the code page, the phone), with an older server's fallback to "the workspace has its
+   own computer". The switch's rules are unchanged (`device.share_owner_only`; an admin only turns it off).
+6. **The once-only notice.** A self-hosted server's computers already had the switch on (the column's default) and
+   were never told: at the first start that lends, a once-per-database boot task (`noticeLendingComputers`) runs
+   migration 0351's insert without asking for a managed computer, so each lending computer's owner hears it once.
+   Never on the Cloud.
+7. **This server's own computer.** One guard covers every organization's agents there, so each organization's
+   runner's proxy port is opened only to that organization's block of uids (`ownServices`, a `ct mark` range rule
+   before the shared services). Where agents run as the installing user (the simple mode, a Mac) organizations
+   can't be told apart, as for their folders already.
+
+Consequences: lent bytes of runner traffic cross the server twice, still with no cap; both connections must reach
+the same server process, else the borrower goes direct (§7); a VPS paired as a connected computer lends by default
+and, as the newest, may be picked over the person's computer, so its owner marks it the workspace's and turns its
+switch off (`SELF_HOSTING.md`); the env proxy is cooperative, not a security boundary.

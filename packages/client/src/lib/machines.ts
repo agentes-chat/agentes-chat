@@ -696,7 +696,7 @@ export const osName = (t: TFunction, os: string) =>
 
 /** ADR 0237: "Agents use the internet of Ana's laptop (Ana)" while a person's computer lends its internet; else null. */
 export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">): string | null {
-  const via = m.kind === "managed" && m.online ? m.egressVia : null;
+  const via = m.online ? m.egressVia : null;
   if (!via) return null;
   return via.userName
     ? t("machines.egress.viaBy", { name: via.name, person: via.userName })

@@ -1,23 +1,29 @@
-import { afterEach, expect, test } from "bun:test";
-import { EGRESS_SHARE_PROTOCOL, type MachineRequest, STREAM_CLOSE } from "@agenteschat/adapters";
+import { afterEach, describe, expect, test } from "bun:test";
+import { connect } from "node:net";
+import { EGRESS_PROXY_PROTOCOL, EGRESS_SHARE_PROTOCOL, type MachineRequest, STREAM_CLOSE } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { runMigration } from "@agenteschat/db/testing";
 import {
   type ClaimedStream,
+  createEgressFetch,
   createEgressRelay,
   issueManagedMachine,
   lendingComputers,
   listDevices,
   listMachines,
+  type MachineHub,
   MachineRequestError,
+  noticeLendingComputers,
+  setServerLending,
   updateComputerDevice,
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
-import { pairMachine, RUNNER } from "./machine-fixtures";
+import { fakeRunner, pairMachine, RUNNER } from "./machine-fixtures";
 import { fakeSocket, until } from "./stream-fixtures";
 
 let f: Fixture;
 afterEach(async () => {
+  setServerLending(false);
   await f?.close();
 });
 
@@ -219,4 +225,194 @@ test("computers paired before lend too: each one's owner hears it once, a team's
   await updateComputerDevice(deps(), sam.id, f.org.id, desk, { shareInternet: false });
   expect((await notices()).every((n) => n.done)).toBe(true);
   expect(await lendingComputers(f.db, f.org.id)).toEqual([]);
+});
+
+describe("on a self-hosted server (ADR 0237): people's computers lend to this server's computer and its reads", () => {
+  /** A relay whose lending computer `laptop` answers every dial by opening its side on a fake socket. */
+  const lendingRelay = (laptop: string, now?: () => number) => {
+    const device = fakeSocket();
+    const held: { side: ClaimedStream | null; dials: number } = { side: null, dials: 0 };
+    const relay = createEgressRelay({
+      db: f.db,
+      ...(now ? { now } : {}),
+      hub: {
+        status: async (id) => ({ online: id === laptop }) as never,
+        async call(_machineId, request: MachineRequest) {
+          if (request.op !== "egress.dial") throw new Error(`unexpected ${request.op}`);
+          held.dials++;
+          held.side = relay.claim(hello(request.streamId), laptop, device.socket);
+          return { connected: true } as never;
+        },
+      },
+    });
+    return { relay, device, held };
+  };
+  const ask = async (relay: ReturnType<typeof createEgressRelay>, machineId: string) => {
+    const s = fakeSocket();
+    relay.claim(hello("h".repeat(43), { host: "shop.example", port: 443 }), machineId, s.socket);
+    await until(() => s.sent.length > 0 || s.closed !== null, "ready or close");
+    return s;
+  };
+
+  test("this server's own computer borrows: paired with the lending computer, shown on both pages", async () => {
+    f = await setup();
+    const ana = await addMember(f.db, f.org.id, "member", "ana");
+    const laptop = await pair(ana.id, "Ana's laptop");
+    const host = await pair(f.owner.id, "VPS");
+    await f.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, host));
+    const { relay } = lendingRelay(laptop);
+
+    // Where a provisioner makes the computers (the Cloud), only its managed computer borrows.
+    expect((await ask(relay, host)).closed?.code).toBe(STREAM_CLOSE.forbidden);
+    expect((await listDevices(f.db, f.org.id, ana.id)).lendsInternet).toBe(false);
+    expect((await listDevices(f.db, f.org.id, ana.id)).devices.find((d) => d.id === laptop)?.shareInternet).toBeNull();
+
+    setServerLending(true);
+    expect((await ask(relay, host)).sent[0]).toBe(JSON.stringify({ type: "stream.ready" }));
+    await until(async () => (await row(laptop)).egressLentAt !== null, "egress_lent_at");
+    expect((await row(host)).egressVia?.machineId).toBe(laptop);
+    const computer = (await listMachines(f.db, f.owner.id, f.org.id)).find((m) => m.id === host);
+    expect(computer?.egressVia).toMatchObject({ machineId: laptop, name: "Ana's laptop", userName: "ana" });
+    const list = await listDevices(f.db, f.org.id, ana.id);
+    expect(list.lendsInternet).toBe(true);
+    expect(list.devices.find((d) => d.id === laptop)?.shareInternet).toEqual({ on: true, inUse: true });
+  });
+
+  test("a computer marked the workspace's borrows with its switch off; on, it lends and is refused as a borrower", async () => {
+    f = await setup();
+    setServerLending(true);
+    const laptop = await pair(f.owner.id, "Laptop");
+    const vps = await pair(f.owner.id, "Build VPS");
+    const { relay, held } = lendingRelay(laptop);
+    await f.db.update(schema.machines).set({ belongsToWorkspace: true }).where(eq(schema.machines.id, vps));
+
+    // Its switch on: it lends, so it never borrows (nor goes out through itself).
+    expect((await ask(relay, vps)).closed?.code).toBe(STREAM_CLOSE.forbidden);
+    expect((await ask(relay, laptop)).closed?.code).toBe(STREAM_CLOSE.forbidden);
+    expect(held.dials).toBe(0);
+
+    await f.db.update(schema.machines).set({ egressShare: false }).where(eq(schema.machines.id, vps));
+    expect((await ask(relay, vps)).sent[0]).toBe(JSON.stringify({ type: "stream.ready" }));
+    expect(held.dials).toBe(1);
+    // A person's own computer that doesn't lend doesn't borrow either.
+    await f.db.update(schema.machines).set({ belongsToWorkspace: false }).where(eq(schema.machines.id, vps));
+    expect((await ask(relay, vps)).closed?.code).toBe(STREAM_CLOSE.forbidden);
+  });
+
+  test('the lending computer\'s "in use" is written at most once a minute, whoever borrowed', async () => {
+    f = await setup();
+    setServerLending(true);
+    const laptop = await pair(f.owner.id, "Laptop");
+    const host = await pair(f.owner.id, "VPS");
+    await f.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, host));
+    let clock = 1_000_000;
+    const { relay } = lendingRelay(laptop, () => clock);
+    await ask(relay, host);
+    await until(async () => (await row(laptop)).egressLentAt !== null, "egress_lent_at");
+    await f.db.update(schema.machines).set({ egressLentAt: null }).where(eq(schema.machines.id, laptop));
+    clock += 30_000;
+    await ask(relay, host);
+    await Bun.sleep(30);
+    expect((await row(laptop)).egressLentAt).toBeNull();
+    clock += 31_000;
+    await ask(relay, host);
+    await until(async () => (await row(laptop)).egressLentAt !== null, "egress_lent_at again");
+  });
+
+  test("the server's own reads: a CONNECT with this process's key goes out through the lending computer", async () => {
+    f = await setup();
+    const laptop = await pair(f.owner.id, "Laptop");
+    // Lending off (the Cloud): none.
+    expect(await createEgressFetch(lendingRelay(laptop).relay).lentFetch(f.org.id)).toBeNull();
+    setServerLending(true);
+    await f.db.update(schema.machines).set({ egressShare: false }).where(eq(schema.machines.id, laptop));
+    // Nothing lends now: none, and the caller goes its usual way.
+    expect(await createEgressFetch(lendingRelay(laptop).relay).lentFetch(f.org.id)).toBeNull();
+    await f.db.update(schema.machines).set({ egressShare: true }).where(eq(schema.machines.id, laptop));
+    const { relay, device, held } = lendingRelay(laptop);
+    const open = await createEgressFetch(relay).lentFetch(f.org.id);
+    if (!open) throw new Error("no lent fetch");
+
+    // Bun's fetch tunnels through the proxy: the lending computer's side gets the TLS handshake.
+    const real = globalThis.fetch;
+    let proxy = "";
+    globalThis.fetch = ((url: string, init?: RequestInit & { proxy?: string }) => {
+      proxy = init?.proxy ?? "";
+      return real(url, init);
+    }) as typeof fetch;
+    const page = open("https://shop.example/", { signal: AbortSignal.timeout(3_000) }).catch(() => null);
+    globalThis.fetch = real;
+    await until(() => device.sent.length > 0, "bytes at the lending computer");
+    expect((device.sent[0] as Uint8Array)[0]).toBe(0x16);
+    expect(held.dials).toBe(1);
+    held.side?.closed();
+    expect(await page).toBeNull();
+
+    // Without this process's key the proxy answers 407; a destination off the web ports, 403.
+    const url = new URL(proxy);
+    const raw = (head: string) =>
+      new Promise<string>((resolve) => {
+        const s = connect(Number(url.port), "127.0.0.1", () => s.write(head));
+        let got = "";
+        s.on("data", (d) => {
+          got += d.toString();
+        });
+        s.on("close", () => resolve(got));
+      });
+    const basic = (user: string, key: string) => Buffer.from(`${user}:${key}`).toString("base64");
+    expect(
+      await raw(`CONNECT shop.example:443 HTTP/1.1\r\nProxy-Authorization: Basic ${basic(f.org.id, "nope")}\r\n\r\n`),
+    ).toStartWith("HTTP/1.1 407");
+    expect(
+      await raw(
+        `CONNECT shop.example:22 HTTP/1.1\r\nProxy-Authorization: Basic ${basic(f.org.id, url.password)}\r\n\r\n`,
+      ),
+    ).toStartWith("HTTP/1.1 403");
+  });
+
+  test("its role changing tells an online computer at once: marked the workspace's with its switch off, it borrows", async () => {
+    f = await setup({ machines: true });
+    setServerLending(true);
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, { name: "Build VPS", ...RUNNER });
+    const runner = fakeRunner(f.machineHub as MachineHub);
+    await runner.hello(paired.token);
+    // A computer that lends gets no proxy at connect.
+    expect(runner.sent.find((frame) => frame.type === "welcome")).not.toHaveProperty("egressProxy");
+    const asked = () =>
+      runner.sent.flatMap((frame) => (frame.type === "request" && frame.op === "egress.proxy" ? [frame.on] : []));
+    await updateComputerDevice({ ...deps(), hub: f.machineHub as MachineHub }, f.owner.id, f.org.id, paired.machineId, {
+      belongsToWorkspace: true,
+    });
+    expect(asked()).toEqual([]);
+    await updateComputerDevice({ ...deps(), hub: f.machineHub as MachineHub }, f.owner.id, f.org.id, paired.machineId, {
+      shareInternet: false,
+    });
+    await until(() => asked().length > 0, "egress.proxy");
+    expect(asked()).toEqual([true]);
+
+    // Connecting again, it is told in its welcome; an app older than the proxy never is.
+    const again = fakeRunner(f.machineHub as MachineHub);
+    await again.hello(paired.token);
+    expect(again.sent.find((frame) => frame.type === "welcome")).toMatchObject({ egressProxy: true });
+    const old = fakeRunner(f.machineHub as MachineHub);
+    await old.hello(paired.token, { protocol: EGRESS_PROXY_PROTOCOL - 1 });
+    expect(old.sent.find((frame) => frame.type === "welcome")).not.toHaveProperty("egressProxy");
+  });
+
+  test("the owners of computers that lend hear it once, where the server starts lending", async () => {
+    f = await setup();
+    const rui = await addMember(f.db, f.org.id, "member", "rui");
+    const laptop = await pair(rui.id, "Rui's laptop");
+    await pair(rui.id, "Old PC").then((id) =>
+      f.db.update(schema.machines).set({ egressShare: false }).where(eq(schema.machines.id, id)),
+    );
+    expect(await noticeLendingComputers(f.db)).toBe(1);
+    const [notice] = await f.db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.kind, "device.internet_shared"));
+    expect(notice).toMatchObject({ userId: rui.id, source: { machineId: laptop, label: "Rui's laptop" } });
+    // Run again (another start): nobody hears twice.
+    expect(await noticeLendingComputers(f.db)).toBe(0);
+  });
 });

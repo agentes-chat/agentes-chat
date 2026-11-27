@@ -603,12 +603,37 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
   return ownersDriving.length > 0 ? ownersDriving : drivers;
 }
 
-/** How long the workspace's computer is said to go out through a lent one after it last did (ADR 0237). */
+/** How long a computer is said to go out through a lent one after it last did (ADR 0237). */
 export const EGRESS_VIA_SHOWN_MS = 5 * 60_000;
 
-/** The workspace's computer's last lent connection, while recent: whose computer carries its web traffic now. */
+/** A borrowing computer's last lent connection, while recent: whose computer carries its web traffic now. */
 export function egressViaNow(via: { machineId: string; at: string } | null | undefined, now = new Date()) {
   return via && now.getTime() - Date.parse(via.at) < EGRESS_VIA_SHOWN_MS ? via.machineId : null;
+}
+
+let lendingOnThisServer = false;
+
+/**
+ * ADR 0237 on a self-hosted server (set once at boot: every server but one whose computers a provisioner makes,
+ * `MACHINE_PROVISIONING=external`): people's computers lend their internet to this server's own computer, to
+ * computers marked the workspace's that don't lend, and to the server's own reads of web pages for agents. Off, only
+ * the workspace's managed computer borrows.
+ */
+export function setServerLending(on: boolean) {
+  lendingOnThisServer = on;
+}
+
+export const serverLending = () => lendingOnThisServer;
+
+/**
+ * Whether a computer goes out through a lending one (ADR 0237): the workspace's managed computer, and, where the
+ * server lends (`serverLending`), this server's own computer and one marked the workspace's whose own switch is off.
+ * A lending computer never borrows (its switch is on), nor does a person's own one that doesn't lend.
+ */
+export function borrowsInternet(m: Pick<MachineRow, "kind" | "belongsToWorkspace" | "egressShare">): boolean {
+  if (m.kind === "managed") return true;
+  if (!lendingOnThisServer) return false;
+  return m.kind === "host" || (m.kind === "connected" && m.belongsToWorkspace && !m.egressShare);
 }
 
 /**
@@ -667,7 +692,7 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
     // The workspace's own computer (ADR 0056 §10) is a service people use, not a box they look into.
     const managed = m.kind === "managed";
     const online = shownOnline(m, now);
-    const viaId = managed ? egressViaNow(m.egressVia, now) : null;
+    const viaId = egressViaNow(m.egressVia, now);
     const via = viaId ? rows.find((r) => r.machine.id === viaId) : undefined;
     return {
       id: m.id,
@@ -686,7 +711,7 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       /** The workspace's own computer's agents wait for their way out, as the operator says: a line, never an error. */
       egressWaiting: managed && machineOnline(m, now) && m.egressWaitingAt !== null,
       egress: managed && machineOnline(m, now) && m.egress?.ip ? { ...m.egress, ip: m.egress.ip } : null,
-      /** ADR 0237: the person's computer whose internet the workspace's own computer's web traffic uses now. */
+      /** ADR 0237: the person's computer whose internet this computer's agents' web traffic uses now. */
       egressVia: via ? { machineId: via.machine.id, name: via.machine.name, userName: via.pairedByName } : null,
       lastSeenAt: m.lastSeenAt?.toISOString() ?? null,
       hostname: managed ? "" : m.hostname,

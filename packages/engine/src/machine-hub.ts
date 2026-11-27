@@ -7,6 +7,7 @@ import {
   CLAUDE_SHARED_PROTOCOL,
   CLI_COPIES_PROTOCOL,
   CO_AUTHOR_CASE_PROTOCOL,
+  EGRESS_PROXY_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
   HEARTBEAT_MS,
@@ -82,6 +83,7 @@ import { type WakeWhy, wantMachine } from "./machine-wake";
 import {
   assertNotPaused,
   authenticateMachine,
+  borrowsInternet,
   cleanMachineName,
   deletedAgentIds,
   getMachineById,
@@ -942,6 +944,10 @@ export function createMachineHub(deps: MachineHubDeps) {
       mcpOnce: true,
       observeEgress: machine.kind === "managed",
       ...(machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL ? { egressRelay: true } : {}),
+      // Without the Cloud's guard (ADR 0237, self-hosted servers): its agents' programs use its loopback proxy.
+      ...(machine.kind !== "managed" && frame.protocol >= EGRESS_PROXY_PROTOCOL && borrowsInternet(machine)
+        ? { egressProxy: true }
+        : {}),
     });
     // Pings start with `welcome` (the runner's watchdog starts there), not after the slower work below.
     startPings(conn);

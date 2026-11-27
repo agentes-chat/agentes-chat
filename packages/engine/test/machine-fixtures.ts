@@ -258,6 +258,8 @@ export function fakeRunner(hub: MachineHub, options: FakeRunnerOptions = {}) {
           contentType: "",
         });
       }
+      case "egress.proxy":
+        return ok({ on: req.on });
       case "keep.start":
       case "keep.end": {
         const refused = options.keep?.(req);

@@ -7,6 +7,7 @@ import type {
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
+  DevicesList,
   MachineOfflineCause,
   MachineTool,
   OrgSummary,
@@ -321,6 +322,10 @@ export type SpillUse = (typeof SPILL_USES)[number];
 export const spillUseOf = (d: Pick<ComputerDevice, "spill">): SpillUse =>
   d.spill.first ? "first" : d.spill.own ? "help" : "off";
 export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use === "first" });
+
+/** ADR 0237: people's computers here lend their internet, so a computer that joins does too (an older server: its own computer). */
+export const lendsInternet = (list: Pick<DevicesList, "devices" | "lendsInternet"> | undefined): boolean =>
+  list?.lendsInternet ?? list?.devices.some((d) => d.machineKind === "managed") === true;
 
 /**
  * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the
