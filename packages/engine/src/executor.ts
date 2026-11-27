@@ -692,6 +692,8 @@ export interface Transcript {
   postedCount: number;
   /** The words of the last message it posted (trimmed): saying exactly them again next adds nothing. */
   lastPosted?: string;
+  /** Its first message of its own in a channel's main timeline, which the rest of the run goes under (ADR 0261). */
+  turnLine?: string;
   /**
    * A reply judged `untried` and held back (ADR 0109): nobody saw it. It goes out with the run's next words
    * (`heldWords`), or alone when the run ends without any (a pass, an empty turn, a closing line, a failure).
@@ -1644,7 +1646,7 @@ async function executeRunInner(
   // Where it answers. Long work (ADR 0121) moves it to its anchor's thread mid-run, a move a person asked for to
   // another place (`adoptWork`). In a confidential thread that is under the thread's root, whatever asked.
   let replyThreadId = replyThreadOf({ ...run, confidential: sealedAtClaim });
-  /** It answers under its own first message (ADR 0261) since this claim: an empty thread is undone at its end. */
+  /** Its `say_now` line moved it under that line (ADR 0261) in this claim: an empty thread is undone at its end. */
   let turnThread = false;
   const where = { channelId: run.channelId, threadId: replyThreadId, agentId: run.agentId, runId: run.id };
   const tellPhase = phaseTeller(
@@ -2057,7 +2059,6 @@ async function executeRunInner(
   };
   /** Where it answers now: under `rootId` (its first message), or back in the main timeline (null). */
   const placeTurn = (rootId: string | null) => {
-    turnThread = rootId !== null;
     run.threadRootId = rootId ?? run.triggerMessageId;
     run.replyInThread = rootId !== null;
     ctx.threadRootId = run.threadRootId;
@@ -2743,6 +2744,20 @@ async function executeRunInner(
     const files = Array.isArray(shown.artifacts)
       ? await withFileFacts(tx, run.orgId, shown.artifacts as { id: string; version: number }[])
       : null;
+    // A second message of its own in a channel's main timeline goes under its first, and so does the rest of the run
+    // (ADR 0261): moved here, on the second, a run whose one message is its answer costs nothing more.
+    const opensTurn =
+      !note &&
+      threadId === null &&
+      channelRow?.kind === "channel" &&
+      !ctx.confidential &&
+      !run.workId &&
+      !run.background;
+    const line = opensTurn ? transcript?.turnLine : undefined;
+    if (line && (await openTurnThread(tx, run.id, line))) {
+      placeTurn(line);
+      threadId = line;
+    }
     const m = await postAgentMessage(
       tx,
       run,
@@ -2761,17 +2776,8 @@ async function executeRunInner(
       },
       createdAt,
     );
-    // Its first words in a channel's main timeline: what it posts after them goes in their thread (ADR 0261).
-    if (
-      !note &&
-      threadId === null &&
-      channelRow?.kind === "channel" &&
-      !ctx.confidential &&
-      !run.workId &&
-      !run.background &&
-      (await openTurnThread(tx, run.id, m.id))
-    )
-      placeTurn(m.id);
+    // Its first words in a channel's main timeline: kept, so what it posts after them goes in their thread.
+    if (opensTurn && threadId === null && transcript) transcript.turnLine = m.id;
     await linkRunChecks(
       tx,
       run.orgId,
@@ -3542,6 +3548,8 @@ async function executeRunInner(
     delete t.continuation;
     delete t.followThroughVerdict;
     delete t.addsTo;
+    // Its answer to them opens a turn of its own in the channel, not a reply under the last one's first words.
+    delete t.turnLine;
     // What they wrote may be what it lacked: its repetition so far no longer counts, unless it is already ending.
     if (t.stuck?.endAt === undefined) delete t.stuck;
     if (!run.background && !t.steeredBy) {

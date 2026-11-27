@@ -18,19 +18,23 @@ message in the channel. Long agent text fills the channel that everyone reads.
 
 1. **The first words stay; the rest goes under them.** A run a person asked in a regular channel's main timeline
    (`kind = 'channel'`, its trigger a person's message, not long work, not a routine's background run, not confidential)
-   that posts its own words there (the executor's `post` that is not a server note, or a `say_now` line) moves under
-   that message: `agent_runs.thread_root_id` becomes the message and `reply_in_thread` true, in the same transaction as
-   the post (`openTurnThread`). From then on `replyThreadOf` puts everything the run posts in that thread: its answer,
-   more lines, files, cards, notes, and its live events. DMs, task, file and code conversations are never moved; a run
-   asked in a thread already answers there.
+   moves under its first message of its own there: `agent_runs.thread_root_id` becomes that message and
+   `reply_in_thread` true (`openTurnThread`). A `say_now` line moves it at once, in the line's transaction, since work
+   always follows it. The executor's own words (its `post` that is not a server note) move it on its second message:
+   the first is kept on the transcript (`turnLine`), and the second goes under it in the same transaction as the move,
+   so a run whose one message is its answer costs no statement more. From then on `replyThreadOf` puts everything the
+   run posts in that thread: its answer, more lines, files, cards, notes, and its live events. A person's new message
+   the run reads before its second message starts over (`oweAnswer` clears `turnLine`): the answer to it is a message
+   of its own in the channel, as ADR 0112 has it. DMs, task, file and code conversations are never moved; a run asked
+   in a thread already answers there.
 2. **Who asked keeps the run.** The message carries `meta.turnThread.askedBy` (the trigger's author), and `askedBy`
    reads it when the thread's root is an agent's message, so the asker's next message in the main timeline still joins
    the run (the floor, the active-run join) instead of starting a second one. The asker follows the thread
    (`thread_follows`), so its replies count as unread for them; the answer's `agent_reply` names the thread, so the
    inbox and the push open it.
-3. **One message stays as before.** A run whose only message was its answer ends answering in the main timeline: at a
-   terminal end, a turn thread with nothing in it is undone (`closeEmptyTurnThread`), so Continuar, a retry or a
-   hand-on from it are placed as they always were.
+3. **One message stays as before.** A run whose only message was its answer never moves. One that a `say_now` line moved
+   and that posted nothing under it goes back to the main timeline at a terminal end (`closeEmptyTurnThread`), so
+   Continuar, a retry or a hand-on from it are placed as they always were.
 4. **Live rows follow.** `say_now`'s move sends `agent.idle` in the main timeline and `agent.thinking` in the thread (as
    `moveRun` does) and tells the executor holding the run on any replica (`run-work:{runId}`, read by `adoptWork`, which
    now reads `reply_in_thread` too). The apps show "Ada está respondendo na thread" under the line until the thread's
