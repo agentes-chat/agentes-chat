@@ -103,6 +103,7 @@ on expo.dev (EAS environment variables) for EAS:
 | `APPLE_TEAM_ID` | The Apple team that signs the iOS app and its share extension (the iOS workflow's secret). | none |
 | `IOS_BUILD_NUMBER` | The build's number on iOS (the iOS workflow's run). | from the config |
 | `APP_VARIANT` | `development` / `preview` / `production`: name and bundle id suffix, so all three install side by side. | `production` |
+| `APP_ID` | Bundle id (iOS) and package (Android), for a build signed under another Apple team or Play account. The share extension, the widget and the app group follow it; the server lists it in `APPLE_APP_BUNDLE_ID`, `ANDROID_APP_PACKAGE` and `APNS_APP_IDS`. | `chat.agentes.app` |
 
 Why the API URL must equal the public URL: React Native's WebSocket adds an `Origin` derived from the URL
 (`wss://host` → `https://host`). The server accepts a request without `Origin` that carries
