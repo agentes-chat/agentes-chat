@@ -128,7 +128,7 @@ export function Overview({ ctx }: { ctx: SettingsContext }) {
       </div>
 
       <CardTitle>{t("desktop.settings.overview.always")}</CardTitle>
-      <AlwaysOn essentials={essentials} />
+      <AlwaysOn essentials={essentials} chooseReach={() => ctx.show("server", "reach")} />
 
       <CardTitle>{t("desktop.settings.overview.who")}</CardTitle>
       <WhoUses homes={homes} offers={offers} />

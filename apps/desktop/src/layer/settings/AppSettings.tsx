@@ -13,13 +13,12 @@ import { BROWSER_NOTIFY_PREF } from "../../control/browser";
 import { MENU_BAR_PREF, menuBarShown } from "../../control/dock";
 import { NOTCH_PREF } from "../../control/notch";
 import { SITE_NOTIFY_PREF } from "../../control/notify";
-import { useLocalServer, usePending, usePref, useTailnet } from "../../hooks";
+import { useLocalServer, usePending, usePref } from "../../hooks";
 import { detectedLocale, LOCALE_PREF, locales, switchDesktopLocale } from "../../i18n";
-import { ReachRow } from "../../ui/here";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { Advanced } from "./Advanced";
-import { ReachRows, useReach } from "./fixes";
+import { ReachChooser, ReachRows, useReach } from "./fixes";
 import { Servers } from "./Servers";
 import type { SettingsContext } from "./Settings";
 import { About, Updates } from "./Updates";
@@ -305,30 +304,61 @@ export function AppSettings({ ctx }: { ctx: SettingsContext }) {
 }
 
 /**
- * The server here's own choices: whether people reach it from their devices (off, it is only on this computer; turning
- * it off asks first) and its usage statistics (changing it restarts it a moment).
+ * The server here's own choices: whether people reach it from their devices (off, it is only on this computer;
+ * turning it on chooses how, with the picker inline, ADR 0256 §4; turning it off asks first) and its usage statistics
+ * (changing it restarts it a moment).
  */
 function HereChoices() {
   const { t } = useTranslation();
   const host = useHost();
   const toast = useToast();
   const local = useLocalServer();
-  const tailnet = useTailnet();
   const reach = useReach();
   const [busy, run] = usePending<"usage">();
+  // How people get here, being chosen under the switch before it turns on.
+  const [choosing, setChoosing] = useState(false);
   const running = local.phase === "running";
+  // The way's words under the switch while it is on.
+  const way = local.way?.kind === "address" ? "wayAddress" : "wayTailscale";
   return (
     <section data-focus="telemetry">
       <CardTitle>{t("desktop.server.title")}</CardTitle>
       <PrefCard>
-        <ReachRow
-          tailnet={tailnet}
-          own={local}
-          on={local.reach}
-          busy={reach.reaching || !running}
-          onChange={(on) => (on ? void reach.reach(true) : reach.askOff())}
+        <PrefRow
+          top
+          title={t("desktop.here.reach")}
+          hint={hintFor(t, t("desktop.here.reach"), t("desktop.here.reachText"))}
+          htmlFor="here-reach"
+          desc={local.reach ? t(`desktop.settings.server.${way}`) : null}
+          end={
+            <Switch
+              id="here-reach"
+              aria-describedby="here-reach-hint"
+              checked={local.reach}
+              disabled={reach.reaching || !running || (choosing && !local.reach)}
+              onCheckedChange={(on) => {
+                if (!on) {
+                  reach.askOff();
+                  return;
+                }
+                reach.clear();
+                setChoosing(true);
+              }}
+            />
+          }
+          under={
+            choosing &&
+            !local.reach && (
+              <ReachChooser
+                local={local}
+                control={reach}
+                apply={t("desktop.settings.essentials.turnOn")}
+                done={() => setChoosing(false)}
+              />
+            )
+          }
         />
-        <ReachRows control={reach} />
+        <ReachRows control={reach} port={local.port} choosing={choosing && !local.reach} />
         <PrefRow
           title={t("desktop.here.usage")}
           hint={hintFor(

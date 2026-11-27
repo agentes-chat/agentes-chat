@@ -70,7 +70,7 @@ export function FirstRun({
   const [local, setLocal] = useState<LocalServerStatus | null>(null);
   // Company's server's address: it stays when a sheet about it is cancelled (the screen comes back new).
   const [address, setAddress] = useState("");
-  // Tailscale's sign-in or the setup is on screen: Esc and the window shown again leave it there.
+  // The setup is on screen: Esc and the window shown again leave it there.
   const busy = useRef(false);
   const setBusy = useCallback((on: boolean) => {
     busy.current = on;
@@ -207,7 +207,7 @@ export function FirstRun({
     return host.onLink(take);
   }, [host, openLink, linkOnly, leaveLink]);
 
-  // Shown again ("Add a workspace"): from the start, unless a link, Tailscale's sign-in or the setup is on screen.
+  // Shown again ("Add a workspace"): from the start, unless a link or the setup is on screen.
   const shownFirst = useRef(shownAt);
   const again = useRef(() => {});
   again.current = () => {

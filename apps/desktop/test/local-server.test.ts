@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ADDRESS_TEXT,
+  addressForm,
+  addressWords,
   coverHere,
   FAIL_TEXT,
   failedStep,
@@ -15,7 +18,7 @@ import {
   setupSteps,
   stepClock,
   stepStates,
-  tailnetNeedsSignIn,
+  tunnelTarget,
   UPDATE_SLOW_MS,
 } from "../src/control/local-server";
 import { menuLabels } from "../src/control/menu-labels";
@@ -23,6 +26,7 @@ import { createDesktopI18n } from "../src/i18n";
 
 const LOCAL = "http://127.0.0.1:4310";
 const TAILNET = "https://agentes.tail1234.ts.net";
+const OWN = "https://agentes.example.com";
 const running: LocalServerStatus = {
   ...NO_SERVER,
   bundled: true,
@@ -41,10 +45,12 @@ const reached: LocalServerStatus = {
   ...running,
   reach: true,
   publicUrl: TAILNET,
-  tailnet: { mode: "app", state: "on", device: "agentes.tail1234.ts.net", https: "ok" },
-  ownTailnet: true,
+  way: { kind: "tailscale" },
+  port: 4310,
   reachHealth: "on",
 };
+/** Reached through an address of the person's own (ADR 0256 §4). */
+const addressed: LocalServerStatus = { ...reached, publicUrl: OWN, way: { kind: "address", url: OWN } };
 
 describe("setting it up", () => {
   test("the steps in order, access from the phone and the team only where it will be used", () => {
@@ -83,6 +89,13 @@ describe("setting it up", () => {
       for (const key of [
         ...Object.values(REASON_TEXT),
         ...Object.values(FAIL_TEXT),
+        ...Object.values(ADDRESS_TEXT),
+        "desktop.reach.problem.errorPlain",
+        "desktop.reach.problem.unreachablePlain",
+        "desktop.reach.line.address",
+        "desktop.reach.line.addressDown",
+        "desktop.reach.stage.checking",
+        "desktop.reach.stage.done",
         "desktop.here.slow",
         "desktop.here.copyDetails",
         "desktop.here.serveFix",
@@ -193,8 +206,12 @@ describe("what the popover, the cover and Preferences say", () => {
     expect(hereLine({ ...running, phase: "stopped" })).toBe("desktop.server.stopped");
     // Starting again by itself is never "stopped"; Tailscale off here means nobody else reaches it.
     expect(hereLine({ ...running, phase: "restarting" })).toBe("desktop.server.restarting");
-    expect(hereLine({ ...reached, tailnetDown: true })).toBe("desktop.server.tailnetDown");
+    expect(hereLine({ ...reached, reachDown: true })).toBe("desktop.server.tailnetDown");
     expect(hereLine({ ...reached, reachHealth: "down" })).toBe("desktop.server.tailnetDown");
+    // Through the person's own address: its own words, up or down.
+    expect(hereLine(addressed)).toBe("desktop.reach.line.address");
+    expect(hereLine({ ...addressed, reachDown: true, reachHealth: "address" })).toBe("desktop.reach.line.addressDown");
+    expect(hereLine({ ...addressed, reachHealth: "address" })).toBe("desktop.reach.line.addressDown");
   });
 
   test("the popover's banners", () => {
@@ -223,7 +240,7 @@ describe("what the popover, the cover and Preferences say", () => {
     expect(coverHere({ ...running, phase: "failing" }, LOCAL)).toBe("failing");
     expect(coverHere(running, LOCAL)).toBeNull();
     // Reach on and Tailscale down: the window at loopback works; it is an essentials item, not a cover.
-    const down: LocalServerStatus = { ...reached, tailnetDown: true, reachHealth: "down" };
+    const down: LocalServerStatus = { ...reached, reachDown: true, reachHealth: "down" };
     expect(coverHere(down, LOCAL)).toBeNull();
     expect(coverHere(down, TAILNET)).toBeNull();
     expect(coverHere({ ...reached, phase: "stopped" }, TAILNET)).toBe("stopped");
@@ -231,14 +248,10 @@ describe("what the popover, the cover and Preferences say", () => {
     expect(coverHere({ ...running, phase: "stopped" }, "https://app.agentes.chat")).toBeNull();
   });
 
-  test("the app's own Tailscale needs a sign-in only when it is the one chosen and signed out or expired", () => {
-    expect(tailnetNeedsSignIn({ mode: "app", state: "signedOut" })).toBe(true);
-    expect(tailnetNeedsSignIn({ mode: "app", state: "expired" })).toBe(true);
-    expect(tailnetNeedsSignIn({ mode: "app", state: "on", device: "agentes.tail1234.ts.net" })).toBe(false);
-    expect(tailnetNeedsSignIn({ mode: "app", state: "needsApproval" })).toBe(false);
-    // The system's Tailscale is signed in from its own app, never from here.
-    expect(tailnetNeedsSignIn({ mode: "system", state: "signedOut" })).toBe(false);
-    expect(tailnetNeedsSignIn({ mode: "none" })).toBe(false);
+  test("the server here at its address for people: the person's own one too", () => {
+    expect(isHereServer(addressed, OWN)).toBe(true);
+    expect(isHereServer(addressed, LOCAL)).toBe(true);
+    expect(coverHere({ ...addressed, reachDown: true, reachHealth: "address" }, LOCAL)).toBeNull();
   });
 
   test("Rust's labels for the tray line and the notifications, with {version} left for Rust", () => {
@@ -259,5 +272,55 @@ describe("what the popover, the cover and Preferences say", () => {
       "A preparação do agentes.chat neste PC não terminou",
       "Abra o agentes.chat para ver o que aconteceu.",
     ]);
+  });
+});
+
+describe("an address of the person's own (ADR 0256 §4)", () => {
+  test("its form: an https origin, with a port or not, and nothing after it but a slash", () => {
+    expect(addressForm("https://agentes.example.com")).toEqual({ ok: true, url: OWN });
+    expect(addressForm("  https://agentes.example.com/  ")).toEqual({ ok: true, url: OWN });
+    expect(addressForm("https://Agentes.Example.com:8443")).toEqual({
+      ok: true,
+      url: "https://agentes.example.com:8443",
+    });
+    for (const bad of [
+      "",
+      "agentes.example.com",
+      "http://agentes.example.com",
+      "https://agentes.example.com/chat",
+      "https://agentes.example.com/?a=1",
+      "https://agentes.example.com/#top",
+      "https://agentes.example.com?",
+      "https://ana:secret@agentes.example.com",
+      "ftp://agentes.example.com",
+      "not an address",
+    ])
+      expect({ bad, form: addressForm(bad) }).toEqual({ bad, form: { ok: false, why: "notHttps" } });
+  });
+
+  test("where a tunnel points: this computer's loopback, by the server's port", () => {
+    expect(tunnelTarget(4310)).toBe("http://127.0.0.1:4310");
+    expect(tunnelTarget(null)).toBeNull();
+  });
+
+  test("each problem in plain words, with the tunnel's target and the status when there are some", () => {
+    const en = createDesktopI18n("en", "mac");
+    const say = (...args: Parameters<typeof addressWords>) => {
+      const words = addressWords(...args);
+      return en.t(words.key, words.values);
+    };
+    expect(say("notHttps", undefined, 4310)).toBe("The address must start with https://");
+    expect(say("unreachable", undefined, 4310)).toBe(
+      "We couldn't open it. Check that your tunnel is on and points to http://127.0.0.1:4310.",
+    );
+    expect(say("unreachable", undefined, null)).toBe(
+      "We couldn't open it. Check that your tunnel is on and points to this Mac.",
+    );
+    expect(say("otherServer", undefined, 4310)).toBe("It opens another server, not this Mac's.");
+    expect(say("error", 502, 4310)).toBe("It answered with an error (502).");
+    expect(say("error", undefined, 4310)).toBe("It answered with an error.");
+    const pt = createDesktopI18n("pt-BR", "windows");
+    const words = addressWords("otherServer", undefined, 4310);
+    expect(pt.t(words.key, words.values)).toBe("Ele abre outro servidor, não o deste PC.");
   });
 });

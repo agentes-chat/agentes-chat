@@ -171,12 +171,13 @@ describe("the popover's essentials banner", () => {
     expect(fixPlan({ kind: "permission", permission: "disk" })).toEqual({ kind: "privacy", pane: "disk" });
     expect(fixPlan({ kind: "autoUpdate" })).toEqual({ kind: "autoUpdate" });
     expect(fixPlan({ kind: "restartServer" })).toEqual({ kind: "restart" });
-    const reach = { kind: "layer", route: { screen: "settings", section: "overview", focus: "reach" } };
+    // Reach, either way (ADR 0256 §4): its row in Settings › Server on this computer, where its fix is.
+    const reach = { kind: "layer", route: { screen: "settings", section: "server", focus: "reach" } };
     for (const fix of [
       { kind: "reach" },
-      { kind: "tailnetSignIn" },
-      { kind: "tailnetStart" },
-      { kind: "tailnetApprove", url: null },
+      { kind: "tailscaleHttps" },
+      { kind: "tailscaleStart" },
+      { kind: "reachCheck" },
     ] as const) {
       expect(fixPlan(fix)).toEqual(reach as never);
     }
@@ -187,7 +188,7 @@ describe("the popover's essentials banner", () => {
     expect(fixLabel({ kind: "permission", permission: "screen" })).toBe("desktop.tray.essential.turnOnAgain");
     expect(fixLabel({ kind: "autostart" })).toBe("desktop.tray.essential.turnOn");
     expect(fixLabel({ kind: "backupNow" })).toBe("desktop.server.backup");
-    expect(fixLabel({ kind: "tailnetSignIn" })).toBe("desktop.tray.essential.fix");
+    expect(fixLabel({ kind: "reachCheck" })).toBe("desktop.tray.essential.fix");
     expect(fixLabel({ kind: "restartServer" })).toBe("desktop.server.restart");
   });
 
@@ -202,7 +203,7 @@ describe("the popover's essentials banner", () => {
       off({ id: "notifications" }),
       off({ id: "screen" }),
       off({ id: "disk" }),
-      ...(["signedOut", "approve", "expiring", "down"] as const).map((reason) => off({ id: "reach", reason })),
+      ...(["approve", "down", "address"] as const).map((reason) => off({ id: "reach", reason })),
       ...(["off", "backup", "copy"] as const).map((reason) => off({ id: "backup", reason })),
       off({ id: "autoUpdate" }),
       off({ id: "awake" }),
@@ -216,6 +217,11 @@ describe("the popover's essentials banner", () => {
       }
     }
     expect(essentialWords(off({ id: "powerRestart" }))).toBeNull();
+    // The person's own address down has its own words, not Tailscale's.
+    expect(essentialWords(off({ id: "reach", reason: "address" }))?.title).toBe(
+      "desktop.tray.essential.reach.address.title",
+    );
+    expect(essentialWords(off({ id: "reach", reason: "down" }))?.title).toBe("desktop.tray.essential.reach.down.title");
   });
 });
 

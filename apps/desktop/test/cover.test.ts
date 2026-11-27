@@ -24,39 +24,28 @@ test("the cover names only fonts its own page loads (it doesn't load the app's s
 });
 
 describe("a workspace on a private network this computer can't reach (ADR 0256)", () => {
-  test("the app's own Tailscale, when it is the one chosen, signs in or starts from the cover", () => {
-    const own = (state: string) => ({ mode: "app", state }) as never;
-    expect(networkFix("mac", { state: "off", app: true }, own("signedOut"))).toEqual({ act: "signIn" });
-    expect(networkFix("linux", null, own("expired"))).toEqual({ act: "signIn" });
-    expect(networkFix("windows", null, own("signingIn"))).toEqual({ act: "signingIn" });
-    expect(networkFix("mac", null, own("needsApproval"))).toEqual({ act: "approve" });
-    expect(networkFix("mac", null, own("off"))).toEqual({ act: "start" });
-    expect(networkFix("mac", null, own("failing"))).toEqual({ act: "start" });
-  });
-
-  test("the system's: its Mac app, its download page, Windows' icon by the clock, never a command to type", () => {
-    const none = { mode: "none" } as const;
-    expect(networkFix("mac", { state: "off", app: true }, none)).toEqual({ act: "openApp" });
+  test("the system's Tailscale only (ADR 0256 §4): its Mac app, its download page, Windows' icon by the clock", () => {
+    expect(networkFix("mac", { state: "off", app: true })).toEqual({ act: "openApp" });
     // Not read yet: its app.
-    expect(networkFix("mac", null, null)).toEqual({ act: "openApp" });
+    expect(networkFix("mac", null)).toEqual({ act: "openApp" });
     // Only the command-line tool: nothing to open from here.
-    expect(networkFix("mac", { state: "off", app: false }, none)).toEqual({ act: "elsewhere" });
-    expect(networkFix("windows", { state: "off", app: false }, none)).toEqual({ act: "tray" });
-    expect(networkFix("linux", { state: "off", app: false }, none)).toEqual({ act: "elsewhere" });
+    expect(networkFix("mac", { state: "off", app: false })).toEqual({ act: "elsewhere" });
+    expect(networkFix("windows", { state: "off", app: false })).toEqual({ act: "tray" });
+    expect(networkFix("linux", { state: "off", app: false })).toEqual({ act: "elsewhere" });
+    expect(networkFix("windows", null)).toEqual({ act: "tray" });
+    expect(networkFix("linux", null)).toEqual({ act: "elsewhere" });
     for (const platform of ["mac", "windows", "linux"] as const) {
-      expect(networkFix(platform, { state: "missing" }, none)).toEqual({ act: "download" });
+      expect(networkFix(platform, { state: "missing" })).toEqual({ act: "download" });
       // Tailscale on: the network isn't why, the server itself doesn't answer.
-      expect(networkFix(platform, { state: "on", device: "ana-mac.tail1234.ts.net" }, none)).toBeNull();
+      expect(networkFix(platform, { state: "on", device: "ana-mac.tail1234.ts.net" })).toBeNull();
     }
   });
 
-  test("its words: Turn the network on where the cover can, the way to it where it can't", () => {
-    expect(networkWords({ act: "openApp" })).toEqual({ line: "privateLine", button: "turnOn" });
-    expect(networkWords({ act: "signIn" })).toEqual({ line: "privateLine", button: "turnOn" });
+  test("its words: Open Tailscale or Download Tailscale where the cover can, the way to it where it can't", () => {
+    expect(networkWords({ act: "openApp" })).toEqual({ line: "privateLine", button: "openTailscale" });
     expect(networkWords({ act: "download" })).toEqual({ line: "privateMissing", button: "getTailscale" });
     expect(networkWords({ act: "tray" })).toEqual({ line: "privateTray", button: null });
     expect(networkWords({ act: "elsewhere" })).toEqual({ line: "privateElsewhere", button: null });
-    expect(networkWords({ act: "signingIn" })).toEqual({ line: "privateSigningIn", button: null });
     expect(privateTitle([{ name: "Acme" }])).toEqual({ key: "privateTitle", org: "Acme" });
     expect(privateTitle([{ name: "Acme" }, { name: "Horizonte" }])).toEqual({ key: "privateTitleAny" });
     expect(privateTitle(null)).toEqual({ key: "privateTitleAny" });
@@ -65,19 +54,19 @@ describe("a workspace on a private network this computer can't reach (ADR 0256)"
       for (const words of [
         cover.privateLine,
         cover.privateMissing,
-        cover.privateApprove,
-        cover.privateSigningIn,
         cover.privateTray,
         cover.privateElsewhere,
         cover.useOther,
-        cover.turnOn,
+        cover.openTailscale,
         cover.getTailscale,
       ]) {
         expect(words).toBeTruthy();
         expect(words).not.toMatch(/sudo|terminal|tailnet/i);
       }
     }
-    expect(desktopPtBR.cover.turnOn).toBe("Ligar a rede");
+    expect(desktopEn.cover.getTailscale).toBe("Download Tailscale");
+    expect(desktopPtBR.cover.getTailscale).toBe("Baixar o Tailscale");
+    expect(desktopPtBR.cover.openTailscale).toBe("Abrir o Tailscale");
     expect(desktopPtBR.cover.useOther).toBe("Usar outro workspace");
   });
 });
@@ -117,10 +106,15 @@ test("over the server here the cover never turns reach off: the window opens it 
     permissions: string[];
   };
   expect(capability.permissions).not.toContain("allow-local-server-reach");
-  // It names the workspace and turns the network on: the system's Tailscale opens, the app's own signs in.
-  for (const permission of ["allow-workspaces-get", "allow-tailnet-status", "allow-tailnet-sign-in"]) {
+  // It names the workspace and turns the network on through the system's Tailscale: the app carries none of its own.
+  for (const permission of ["allow-workspaces-get", "allow-tailscale-status", "allow-tailscale-open"]) {
     expect(capability.permissions).toContain(permission);
   }
+  for (const permission of ["allow-tailnet-status", "allow-tailnet-sign-in"]) {
+    expect(capability.permissions).not.toContain(permission);
+  }
+  expect(main).not.toContain("tailnet_status");
+  expect(main).not.toContain("tailnet_sign_in");
 });
 
 test("the cover's fake answers only while designing in a browser, never in the app", () => {

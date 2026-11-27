@@ -219,12 +219,15 @@ export function linkView(link: ConnectLink | null, check: ServerCheck | "checkin
   return { kind: "ask", server, question: "question", button: "connect", leave };
 }
 
-/** Run here's own steps before the setup (ADR 0256 §3): who owns it, where it will be used, the private network. */
+/**
+ * Run here's own steps before the setup (ADR 0256 §3): who owns it, where it will be used, and how the phone and the
+ * team get here (`net`: Tailscale or an address of the person's own, ADR 0256 §4).
+ */
 export type HereStep = "owner" | "where" | "net";
 
 /**
- * The steps Run here shows, in order: the owner only while there is none (`ask`), the private network only when it
- * will be used beyond this computer and no Tailscale is connected for it yet (`needsNet`).
+ * The steps Run here shows, in order: the owner only while there is none (`ask`), how people get here only when it will
+ * be used beyond this computer and the system's Tailscale isn't on already (`needsNet`).
  */
 export const hereSteps = (ask: boolean, needsNet: boolean): HereStep[] => [
   ...(ask ? (["owner"] as const) : []),
@@ -233,18 +236,18 @@ export const hereSteps = (ask: boolean, needsNet: boolean): HereStep[] => [
 ];
 
 /**
- * Whether the private network's step shows: used beyond this computer, with neither the system's Tailscale connected
- * (it is used as it is, ADR 0256 §4) nor the app's own one signed in already. `system` null: not read yet, so asked.
+ * Whether "How do the phone and the team get here?" shows: used beyond this computer, with the system's Tailscale not
+ * on (on, it is used as it is: the step is skipped, ADR 0256 §4). `system` null: not read yet, so asked.
  */
-export function needsPrivateNetwork(
-  place: "everywhere" | "here",
-  system: { state: string } | null,
-  own: { mode: string; state?: string },
-): boolean {
-  if (place !== "everywhere") return false;
-  if (system?.state === "on") return false;
-  return !(own.mode === "app" && own.state === "on");
-}
+export const needsPrivateNetwork = (place: "everywhere" | "here", system: { state: string } | null): boolean =>
+  place === "everywhere" && system?.state !== "on";
+
+/**
+ * "Where will you use it?" chosen at first: everywhere when the system's Tailscale is on already (nothing left to do
+ * for it), else only on this computer (ADR 0256 §4). `system` null: not read yet, so only here.
+ */
+export const defaultPlace = (system: { state: string } | null): "everywhere" | "here" =>
+  system?.state === "on" ? "everywhere" : "here";
 
 /**
  * The phone's code is a one-time sign-in that lasts a few minutes (`phoneLink`): asked again every 150 s while it shows,

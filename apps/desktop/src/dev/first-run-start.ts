@@ -3,15 +3,15 @@
  * its states, so each can be looked at and captured without clicking through. Not read in the app.
  *
  * - `welcome`, `company` (a company's server by its address), `install` (installing for the team on a server);
- * - Run here: `owner`, `where`, `net` (the private network), `wait` (its sign-in under way in the browser), `setup` (it
- *   starts the setup at once, as Ana Souza), `done` (the phone's code; needs the server here shared:
- *   `scenario=here&reach=1`).
+ * - Run here: `owner`, `where`, `net` (how the phone and the team get here, Tailscale's row), `address` (the same step
+ *   with an address of the person's own chosen), `setup` (it starts the setup at once, as Ana Souza), `done` (the
+ *   phone's code; needs the server here reached: `scenario=here&reach=1`).
  *
- * The fake host's own options shape what each shows (`fake.ts`): `tailnet=signedOut&tailscale=off` for the private
- * network's step, `signin=hold|approval|fail` for its sign-in, `approve=1` for the setup's "One click left",
- * `hold=<step>` and `fail=<step>` for the setup's steps.
+ * The fake host's own options shape what each shows (`fake.ts`): `tailscale=missing|off` for the last step's waiting
+ * (`install=1` turns it on about 6 s after Download or Open), `addr=unreachable|other|error` for an address that
+ * doesn't lead here, `approve=1` for the setup's "One click left", `hold=<step>` and `fail=<step>` for the setup's steps.
  */
-export type FirstStart = "welcome" | "company" | "install" | "owner" | "where" | "net" | "wait" | "setup" | "done";
+export type FirstStart = "welcome" | "company" | "install" | "owner" | "where" | "net" | "address" | "setup" | "done";
 
 const STARTS: readonly FirstStart[] = [
   "welcome",
@@ -20,7 +20,7 @@ const STARTS: readonly FirstStart[] = [
   "owner",
   "where",
   "net",
-  "wait",
+  "address",
   "setup",
   "done",
 ];

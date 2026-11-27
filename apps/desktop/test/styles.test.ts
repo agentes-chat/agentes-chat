@@ -9,14 +9,13 @@ describe("equal side padding", () => {
   test("blocks with visible edges span their column, so no cap leaves the right side wider than the left", async () => {
     const rule = ruleIn(await firstRunCss());
     // The first run: a company's server's field and found servers, the numbered steps, where it will be used, the
-    // owner's fields, Tailscale's card.
+    // owner's fields.
     for (const selector of [
       ".dk-first__address",
       ".dk-first__found",
       ".dk-first__numbered",
       ".dk-first__picks",
       ".dk-first__fields",
-      ".dk-first__tailscale",
     ]) {
       expect({ selector, rule: rule(selector) !== undefined }).toEqual({ selector, rule: true });
       expect(rule(selector)).not.toContain("max-width");
@@ -44,6 +43,18 @@ describe("Run here's frame", () => {
     expect(rule(".dk-flow")).toContain("grid-template-rows: 168px minmax(0, 1fr) auto;");
     expect(rule(".dk-flow__scroll")).toContain("overflow-y: auto;");
     expect(rule(".dk-flow__foot")).toContain("border-top: 1px solid var(--line);");
+  });
+
+  test("how the phone and the team get here: rows with a hairline, no card and no bar behind them (ADR 0256 §4)", async () => {
+    const css = await Bun.file(new URL("../src/ui/reach-way.css", import.meta.url).pathname).text();
+    const rule = ruleIn(css);
+    expect(rule(".dk-way")).toContain("border-top: 1px solid var(--line);");
+    expect(rule(".dk-way__item")).toContain("border-bottom: 1px solid var(--line);");
+    for (const selector of [".dk-way", ".dk-way__item", ".dk-way__row", ".dk-way__part"]) {
+      expect(rule(selector)).not.toContain("background");
+      expect(rule(selector)).not.toContain("border-left");
+      expect(rule(selector)).not.toContain("max-width");
+    }
   });
 
   test("where it will be used: rows with a hairline, no card behind them", async () => {

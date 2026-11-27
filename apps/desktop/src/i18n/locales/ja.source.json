@@ -233,9 +233,6 @@
   "tray.open": {
     "value": "Open agentes.chat"
   },
-  "tray.prefs": {
-    "value": "Preferences…"
-  },
   "tray.quit": {
     "value": "Quit agentes.chat"
   },
@@ -587,21 +584,6 @@
   "here.reachText": {
     "value": "With Tailscale, a private network for your devices: your phone and the people you invite join it, and nobody else can reach agentes.chat."
   },
-  "here.reachOff": {
-    "value": "Tailscale isn't connected."
-  },
-  "here.reachOffTerminal": {
-    "value": "Tailscale isn't connected. Connect it in the terminal:"
-  },
-  "here.reachTray": {
-    "value": "Tailscale isn't connected. Connect it from its icon by the clock."
-  },
-  "here.reachMissing": {
-    "value": "Needs Tailscale, which is free."
-  },
-  "here.reachChecking": {
-    "value": "Checking whether Tailscale is connected…"
-  },
   "here.reachStage.sharing": {
     "value": "Asking Tailscale to share it…"
   },
@@ -622,9 +604,6 @@
   },
   "here.openTailscale": {
     "value": "Open Tailscale"
-  },
-  "here.getTailscale": {
-    "value": "Get Tailscale"
   },
   "here.usage": {
     "value": "Send anonymous usage statistics to agentes.chat"
@@ -2267,9 +2246,6 @@
   "cover.unreachable": {
     "value": "Can't reach {{host}} · trying again…"
   },
-  "cover.tailnet": {
-    "value": "Is Tailscale connected on this {{device}}?"
-  },
   "cover.starting": {
     "value": "Starting agentes.chat on this {{device}}…"
   },
@@ -2281,18 +2257,6 @@
   },
   "cover.failing": {
     "value": "agentes.chat isn't starting on this {{device}}"
-  },
-  "cover.tailnetOff": {
-    "value": "Connect Tailscale on this {{device}} to open agentes.chat."
-  },
-  "cover.tailnetUp": {
-    "value": "In the terminal: sudo tailscale up"
-  },
-  "cover.tailnetTray": {
-    "value": "Open it from its icon by the clock."
-  },
-  "cover.onlyHere": {
-    "value": "Use only on this {{device}}"
   },
   "cover.start": {
     "value": "Start it"
@@ -2332,12 +2296,6 @@
   },
   "cover.openOther": {
     "value": "Open {{server}}"
-  },
-  "cover.onlyHereWorking": {
-    "value": "Turning off access from your devices…"
-  },
-  "cover.onlyHereFailed": {
-    "value": "Couldn't turn off access from your devices."
   },
   "report.button": {
     "value": "Send a report"

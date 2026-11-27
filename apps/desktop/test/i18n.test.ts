@@ -157,8 +157,13 @@ describe("desktop strings", () => {
   test("what the app shows in the Cloud names no computer", () => {
     const get = (tree: object, path: string) =>
       path.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], tree);
+    // The first run's offer to run on this computer and its steps are about this computer by design (as `place.here`
+    // was): its "Run free on this Mac" row, the server found running here, and the run-here steps (ADR 0256 §2, §3).
+    const aboutThisComputer = (k: string) => k.startsWith("run.") || k === "welcome.here" || k === "welcome.foundHere";
     const cloudKeys = [
-      ...leaves(desktopEn.first).map((k) => `first.${k}`),
+      ...leaves(desktopEn.first)
+        .filter((k) => !aboutThisComputer(k))
+        .map((k) => `first.${k}`),
       "servers.title",
       "servers.lead",
       "servers.cloud",

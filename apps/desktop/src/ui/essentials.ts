@@ -17,9 +17,7 @@ import {
   fallenSince,
   type Health,
   needsYou,
-  type TailnetLike,
 } from "../control/essentials";
-import type { LocalServerStatus } from "../control/local-server";
 import type { TrayInput } from "../control/tray";
 import { AUTO_UPDATE_PREF, autoUpdateOn } from "../control/version";
 import { readPref, useLocalServer, writePref } from "../hooks";
@@ -74,12 +72,6 @@ function useAutoUpdate(): boolean {
   return on;
 }
 
-/** Tailscale as the server here's status says it (ADR 0256 §5), when it says it. */
-const tailnetOf = (local: LocalServerStatus): TailnetLike | null => {
-  const said = (local as LocalServerStatus & { tailnet?: unknown }).tailnet;
-  return said && typeof said === "object" ? (said as TailnetLike) : null;
-};
-
 export interface Essentials {
   list: Essential[];
   /** Off, on by default, and counted ("N things need you"). */
@@ -119,7 +111,6 @@ export function useEssentials(
   const list = essentialsOf({
     health,
     local,
-    tailnet: tailnetOf(local),
     autoUpdate,
     update,
     homes,

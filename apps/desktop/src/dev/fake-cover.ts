@@ -5,9 +5,9 @@
  *
  * `?server=` picks what the window opens: `private` (the default: a workspace on a Tailscale address, out of reach),
  * `other` (a server on the internet, out of reach: "Can't reach…") or `here` (the server on this computer,
- * `?phase=starting|updating|stopped|failing`). For `private`: `?tailscale=off|missing|on` (the system's Tailscale, off by default; `&app=0` a Mac
- * with only its command-line tool), `?own=signedOut|expired|needsApproval|signingIn|off|on` (the app's own Tailscale
- * as the one chosen; none by default), `?org=` (the workspace's name, Acme by default; empty: several workspaces),
+ * `?phase=starting|updating|stopped|failing`). For `private`: `?tailscale=off|missing|on` (the system's Tailscale, the
+ * only one, ADR 0256 §4; off by default; `&app=0` a Mac with only its command-line tool), `?org=` (the workspace's
+ * name, Acme by default; empty: several workspaces),
  * `?platform=mac|windows|linux` (the cover reads it from the browser's user agent). Dark: the browser's own dark
  * mode (the cover follows the system).
  */
@@ -36,9 +36,6 @@ const system = (() => {
   if (state === "on") return { state: "on", device: "ana-mac.tail1234.ts.net" };
   return { state: "off", app: params.get("app") !== "0" };
 })();
-let own: Record<string, unknown> = params.get("own")
-  ? { mode: "app", state: params.get("own") }
-  : { mode: system.state === "on" ? "system" : "none" };
 
 const org = params.get("org") ?? "Acme";
 const orgs = org ? [{ id: "org_acme", name: org, logo: null, unread: 0, waiting: 0 }] : [];
@@ -56,8 +53,6 @@ const local = {
   dir: "/Users/voce/.agentes",
 };
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /** Each command the cover asks, answered as the app would in that state. */
 async function answer(command: string, args: Record<string, unknown> = {}): Promise<unknown> {
   switch (command) {
@@ -71,13 +66,6 @@ async function answer(command: string, args: Record<string, unknown> = {}): Prom
       return [{ server: PRIVATE, signedIn: true, orgs }];
     case "tailscale_status":
       return system;
-    case "tailnet_status":
-      return own;
-    case "tailnet_sign_in":
-      own = { ...own, state: "signingIn" };
-      await wait(4000);
-      own = { mode: "app", state: "on", device: "agentes.tail1234.ts.net" };
-      return { device: "agentes.tail1234.ts.net" };
     case "tailscale_open":
       console.info("[fake cover] opens Tailscale:", args.page);
       return null;

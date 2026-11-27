@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost } from "../../app";
 import type { Essential, EssentialId, EssentialState } from "../../control/essentials";
+import type { ReachWay } from "../../control/local-server";
 import { MAC_PERMISSIONS } from "../../control/permissions";
 import { useLocalServer } from "../../hooks";
 import type { Essentials } from "../../ui/essentials";
@@ -42,13 +43,18 @@ const TITLE: Record<RowId, string> = {
   autoLogin: "desktop.server.keepAutoLogin",
 };
 
-/** A row's lead: the essential's icon on a soft tile, Tailscale's own for reach. */
+/** A row's lead: the essential's icon on a soft tile. */
 export function Lead({ icon }: { icon: IconName }) {
   return (
     <span className="dk-logo dk-logo--soft">
       <Icon name={icon} size={16} />
     </span>
   );
+}
+
+/** Reach's lead by the way people get here (ADR 0256 §4): Tailscale's own tile, or a link for the person's address. */
+export function ReachLead({ way }: { way: ReachWay | null }) {
+  return way?.kind === "address" ? <Lead icon="link" /> : <ServerTile kind="tailnet" small />;
 }
 
 /** "On" in the ok colour, with its check: a state in words, never a pill. */
@@ -97,7 +103,8 @@ export function essentialRows(list: readonly Essential[]): Row[] {
 export const rowsNeedingYou = (list: readonly Essential[]) =>
   essentialRows(list).filter((r) => r.state === "off" && !r.optional).length;
 
-export function AlwaysOn({ essentials }: { essentials: Essentials }) {
+/** `chooseReach`: where turning reach on chooses how people get here (the server here's reach row). */
+export function AlwaysOn({ essentials, chooseReach }: { essentials: Essentials; chooseReach?: () => void }) {
   const { t, i18n } = useTranslation();
   const host = useHost();
   const local = useLocalServer();
@@ -117,7 +124,7 @@ export function AlwaysOn({ essentials }: { essentials: Essentials }) {
       .catch(() => {});
   }, [host, mac]);
   const grants = useMacGrants(() => host.setSetupState({ step: "prefs" }).catch(() => {}));
-  const ctx: FixContext = { local, reach, mac: mac ? grants : null, reread: essentials.reread };
+  const ctx: FixContext = { local, reach, mac: mac ? grants : null, reread: essentials.reread, chooseReach };
   const rows = essentialRows(essentials.list);
   if (rows.length === 0) return null;
   const permsOff = MAC_PERMISSIONS.filter((p) => essentials.list.find((e) => e.id === p)?.state === "off");
@@ -141,14 +148,14 @@ export function AlwaysOn({ essentials }: { essentials: Essentials }) {
           return (
             <PrefRow
               key={id}
-              lead={id === "reach" ? <ServerTile kind="tailnet" small /> : <Lead icon={ICON[id]} />}
+              lead={id === "reach" ? <ReachLead way={local.reach ? local.way : null} /> : <Lead icon={ICON[id]} />}
               title={t(TITLE[id])}
               desc={line && (off && !optional ? <span className="dk-sx__warn">{line}</span> : line)}
               end={
                 state === "checking" ? (
                   <PixelSpinner size={14} />
                 ) : off && essential.fix ? (
-                  <FixButton fix={essential.fix} ctx={ctx} essential={essential} />
+                  <FixButton fix={essential.fix} ctx={ctx} />
                 ) : state === "on" ? (
                   <OnText>
                     {id === "permissions"
@@ -163,7 +170,7 @@ export function AlwaysOn({ essentials }: { essentials: Essentials }) {
                     {reopen ? t("desktop.prepare.reopen") : t("desktop.prepare.tookEffect")}
                   </span>
                 ) : id === "reach" && (reach.reaching || reach.problem) ? (
-                  <ReachRows control={reach} />
+                  <ReachRows control={reach} port={local.port} />
                 ) : undefined
               }
             />

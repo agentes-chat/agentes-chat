@@ -83,6 +83,10 @@ export interface SettingsContext {
   siteThere: boolean;
   /** Moves the site to one of its pages and steps the layer aside (only paths the site listed, or its settings). */
   siteGo: (path: string) => void;
+  /** The row the route asked for (`focus`) while the person hasn't picked a section themselves. */
+  focus?: string;
+  /** Opens a section on one of its rows, as a route would (the Overview's way to reach's chooser). */
+  show: (section: LayerSection, focus?: string) => void;
 }
 
 /**
@@ -172,7 +176,20 @@ export function Settings({ section, focus, shownAt }: { section?: LayerSection; 
     (current && homes.find((h) => homeServer(h) === current && orgName(h))?.status?.org?.name) ||
     (current ? serverName(current) : null);
   const siteGo = (path: string) => void host.siteGo(path).catch(() => {});
-  const ctx: SettingsContext = { homes, essentials, update, org, siteThere: site.there, siteGo };
+  const show = (id: LayerSection, rowFocus?: string) => {
+    setPicked(null);
+    setAsked({ section: id, focus: rowFocus });
+  };
+  const ctx: SettingsContext = {
+    homes,
+    essentials,
+    update,
+    org,
+    siteThere: site.there,
+    siteGo,
+    focus: askedFocus,
+    show,
+  };
 
   const siteItem = (item: SiteNavItem) => (
     <button key={item.id} type="button" onClick={() => siteGo(item.path)}>

@@ -7,6 +7,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import type {
+  AddressCheck,
   KeepRunning,
   LocalServerStatus,
   PhoneLink,
@@ -14,8 +15,6 @@ import type {
   ReachStage,
   StepChange,
   Tailnet,
-  TailnetSignIn,
-  TailnetState,
 } from "../control/local-server";
 import type { LinkInfo } from "../control/pair";
 import type { SetupState } from "../control/permissions";
@@ -145,9 +144,10 @@ export function createTauriHost(): Host {
     startLocalServer: () => invoke<void>("local_server_start"),
     stopLocalServer: (forget, minutes) => invoke<void>("local_server_stop", { forget, minutes: minutes ?? null }),
     restartLocalServer: () => invoke<void>("local_server_restart"),
-    setLocalReach: (on) => invoke<ReachResult>("local_server_reach", { on }),
+    setLocalReach: (on, way) => invoke<ReachResult>("local_server_reach", { on, way: way ?? null }),
     onLocalReach: (cb) => subscribe<ReachStage>("local-server://reach", cb),
     stopLocalReach: () => invoke<void>("local_server_reach_stop"),
+    checkAddress: (url) => invoke<AddressCheck>("local_server_check_address", { url }),
     setLocalUsage: (on) => invoke<void>("local_server_usage", { on }),
     backupLocalServer: () => invoke<string>("local_server_backup"),
     setLocalBackups: (nightly, copyTo) => invoke<void>("local_server_backups_set", { nightly, copyTo }),
@@ -159,12 +159,6 @@ export function createTauriHost(): Host {
     syncLocalHomes: (rotate) => invoke<void>("local_server_sync", { rotate }),
     tailscale: () => invoke<Tailnet>("tailscale_status"),
     openTailscale: (page) => invoke<void>("tailscale_open", { page }),
-    tailnet: () => invoke<TailnetState>("tailnet_status"),
-    onTailnet: (cb) => subscribe<TailnetState>("tailnet://state", cb),
-    signInTailnet: () => invoke<{ device: string }>("tailnet_sign_in"),
-    cancelTailnetSignIn: () => invoke<void>("tailnet_sign_in_cancel"),
-    onTailnetSignIn: (cb) => subscribe<TailnetSignIn>("tailnet://sign-in", cb),
-    useTailnetSource: (mode) => invoke<void>("tailnet_use_source", { mode }),
     phoneLink: () => invoke<PhoneLink>("local_server_phone_link"),
     onNewHostHome: (cb) => subscribe<string>("host://new", cb),
     screenAccess: () => invoke<boolean>("screen_access"),

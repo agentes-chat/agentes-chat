@@ -1,14 +1,15 @@
 /**
- * "Done, take it to your phone" (ADR 0256 §3): once agentes.chat runs here and Tailscale shares it, the phone's code
- * beside its three steps, and the address people use with Copy. The code is a one-time sign-in made with this
- * window's own session (`phoneLink`), asked again before it runs out while it shows.
+ * "Done, take it to your phone" (ADR 0256 §3): once agentes.chat runs here and people reach it, the phone's code beside
+ * its steps (Tailscale on the phone too when it is the way here; an address of the person's own needs nothing more,
+ * ADR 0256 §4), and the address people use with Copy. The code is a one-time sign-in made with this window's own
+ * session (`phoneLink`), asked again before it runs out while it shows.
  */
 import { Button, Icon, PixelSpinner, QrCode } from "@agenteschat/ui";
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHost } from "../../app";
 import { phoneLinkRefreshMs } from "../../control/first-run";
-import type { PhoneLink } from "../../control/local-server";
+import type { PhoneLink, ReachWay } from "../../control/local-server";
 import { serverName } from "../../control/server";
 import { Flow } from "./Flow";
 
@@ -20,6 +21,20 @@ export function Phone({ onDone }: { onDone: () => void }) {
   // "Try again" asks for a new code from the start.
   const [round, setRound] = useState(0);
   const [copied, setCopied] = useState(false);
+  // How people get here, as the server here says: Tailscale until it says otherwise.
+  const [way, setWay] = useState<ReachWay["kind"]>("tailscale");
+  useEffect(() => {
+    let live = true;
+    void host
+      .localServer()
+      .then((s) => {
+        if (live && s.way) setWay(s.way.kind);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [host]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `round` asks for the code again
   useEffect(() => {
@@ -99,10 +114,12 @@ export function Phone({ onDone }: { onDone: () => void }) {
             <b>{t("desktop.first.run.phone1")}</b>
             <small>{t("desktop.first.run.phone1Text")}</small>
           </li>
-          <li>
-            <b>{t("desktop.first.run.phone2")}</b>
-            <small>{t("desktop.first.run.phone2Text")}</small>
-          </li>
+          {way === "tailscale" && (
+            <li>
+              <b>{t("desktop.first.run.phone2")}</b>
+              <small>{t("desktop.first.run.phone2Text")}</small>
+            </li>
+          )}
           <li>
             <b>{t("desktop.first.run.phone3")}</b>
             <small>{t("desktop.first.run.phone3Text")}</small>

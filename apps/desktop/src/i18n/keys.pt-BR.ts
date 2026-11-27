@@ -174,7 +174,7 @@ export const desktopPtBR = {
       turnOnAgain: "Ligar de novo",
       fix: "Resolver",
       launchAtLogin: {
-        title: "O agentes.chat não abre sozinho ao ligar o {{device}}",
+        title: "O agentes.chat não abre sozinho ao iniciar a sessão",
         body: "Depois de reiniciar, os agentes só usam este {{device}} quando você abrir o app.",
       },
       notifications: {
@@ -184,21 +184,17 @@ export const desktopPtBR = {
       screen: { body: "Sem ela, os agentes não veem a tela." },
       disk: { body: "Os agentes podem parar para pedir cada pasta." },
       reach: {
-        signedOut: {
-          title: "O Tailscale saiu da conta neste {{device}}",
-          body: "O seu celular e o seu time não alcançam o agentes.chat até você entrar de novo.",
-        },
         approve: {
           title: "O Tailscale espera um clique",
           body: "O seu celular e o seu time alcançam o agentes.chat assim que você permitir na página de administração do Tailscale.",
         },
-        expiring: {
-          title: "O login do Tailscale vence logo",
-          body: "Entre de novo para o seu celular e o seu time continuarem alcançando o agentes.chat.",
-        },
         down: {
           title: "O Tailscale não está conectado neste {{device}}",
           body: "O seu celular e o seu time não alcançam o agentes.chat.",
+        },
+        address: {
+          title: "O seu endereço não leva até aqui agora",
+          body: "O seu celular e o seu time não alcançam o agentes.chat até ele voltar. Veja se o seu túnel está ligado.",
         },
       },
       backup: {
@@ -251,22 +247,13 @@ export const desktopPtBR = {
       whereTitle: "Onde você vai usar?",
       whereLead: "Dá para mudar quando quiser.",
       everywhere: "No {{device}}, no celular e com a equipe",
-      everywhereText: "Por uma rede particular e grátis.",
+      everywhereText: "Pelo Tailscale ou por um endereço seu.",
       hereOnly: "Só neste {{device}}",
       hereOnlyText: "O celular fica para depois.",
-      netTitle: "Entre na sua rede particular",
-      netLead:
-        "Uma conta do Tailscale liga os seus aparelhos. Você entra com Google, Microsoft, Apple ou GitHub. Não precisa instalar nada neste {{device}}.",
-      netLeadSystem: "O Tailscale liga os seus aparelhos. Conecte ele neste {{device}} e continue.",
-      tailscaleText: "A rede particular que liga este {{device}}, o seu celular e a sua equipe. Grátis para começar.",
-      netNote: "Já usa o Tailscale neste {{device}}? Este passo some e a gente usa a mesma rede.",
+      netTitle: "Como o celular e a equipe chegam aqui?",
+      netLead: "Dá para mudar depois nas Configurações.",
       later: "Fazer depois",
-      waitTitle: "Continue no navegador",
-      waitLead: "Abrimos a página do Tailscale no seu navegador. Esta janela segue sozinha quando você terminar.",
-      waitNow: "Esperando você entrar no Tailscale",
-      waitHow: "Lá, entre com a sua conta (Google, Microsoft, Apple ou GitHub) e confirme o aparelho “agentes”.",
-      approvalNow: "Esperando o administrador da sua rede",
-      signInFailed: "A entrada no Tailscale não terminou. Tente de novo.",
+      changeAddress: "Mudar o endereço",
       ask: "<b>Falta um clique seu.</b> Na página do Tailscale que abriu, toque em <b>Enable</b>. Ela deixa o seu endereço seguro, com cadeado. A gente continua sozinho, sem pressa.",
       askOpen: "Abrir a página",
       askSkip: "Terminar sem isso",
@@ -281,6 +268,44 @@ export const desktopPtBR = {
       qrFailed: "O código não carregou.",
       address: "Seu endereço: <b>{{address}}</b>",
       open: "Abrir o agentes.chat",
+    },
+  },
+  reach: {
+    label: "Como o celular e a equipe chegam aqui",
+    tailscale: "Pelo Tailscale",
+    tailscaleText: "Grátis. Uma rede particular entre os seus aparelhos e os da sua equipe.",
+    address: "Por um endereço meu",
+    addressText: "Um túnel neste {{device}} que já leva até aqui.",
+    checking: "Vendo o Tailscale neste {{device}}…",
+    tailscaleOn: "O Tailscale está conectado neste {{device}}.",
+    download: "Baixar o Tailscale",
+    downloadNote: "Grátis, no site do próprio Tailscale.",
+    openApp: "Abrir o Tailscale e entrar",
+    tray: "Abra o Tailscale pelo ícone ao lado do relógio e entre com a sua conta.",
+    terminal: "Conecte o Tailscale no terminal:",
+    waitNow: "Esperando o Tailscale…",
+    waitInstall: "Instale, abra e entre com a sua conta. Aqui segue sozinho, sem pressa.",
+    waitSignIn: "Entre com a sua conta lá. Aqui segue sozinho, sem pressa.",
+    addressLabel: "Seu endereço",
+    pointAt: "Aponte para",
+    problem: {
+      notHttps: "O endereço precisa começar com https://",
+      unreachable: "Não conseguimos abrir. Veja se o seu túnel está ligado e aponta para {{target}}.",
+      unreachablePlain: "Não conseguimos abrir. Veja se o seu túnel está ligado e aponta para este {{device}}.",
+      otherServer: "Ele abre outro servidor, não o deste {{device}}.",
+      error: "Ele respondeu com um erro ({{status}}).",
+      errorPlain: "Ele respondeu com um erro.",
+    },
+    reason: {
+      address: "o seu endereço não leva até aqui",
+    },
+    stage: {
+      checking: "Conferindo o seu endereço…",
+      done: "Pronto: o seu celular e a sua equipe já conseguem abrir.",
+    },
+    line: {
+      address: "Rodando · no seu endereço",
+      addressDown: "Rodando · o seu endereço não leva até aqui agora",
     },
   },
   place: {
@@ -357,12 +382,7 @@ export const desktopPtBR = {
     emailNeeded: "Escreva o seu e-mail, como ana@exemplo.com.",
     reach: "Acessar pelo celular e pela equipe",
     reachText:
-      "Com o Tailscale, uma rede particular dos seus aparelhos: o seu celular e quem você convidar entram nela, e mais ninguém chega ao agentes.chat.",
-    reachOff: "O Tailscale não está conectado.",
-    reachOffTerminal: "O Tailscale não está conectado. Conecte pelo terminal:",
-    reachTray: "O Tailscale não está conectado. Conecte pelo ícone perto do relógio.",
-    reachMissing: "Precisa do Tailscale, que é grátis.",
-    reachChecking: "Vendo se o Tailscale está conectado…",
+      "Pelo Tailscale, uma rede particular e grátis dos seus aparelhos, ou por um endereço seu: o seu celular e quem você convidar abrem o agentes.chat de qualquer lugar.",
     /** What turning access on or off is doing while it takes. */
     reachStage: {
       sharing: "Pedindo ao Tailscale para compartilhar…",
@@ -374,7 +394,6 @@ export const desktopPtBR = {
     approveOpen: "Abrir a página do Tailscale",
     approveStop: "Parar de esperar",
     openTailscale: "Abrir o Tailscale",
-    getTailscale: "Baixar o Tailscale",
     usage: "Enviar estatísticas de uso anônimas ao agentes.chat",
     usageText:
       "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, o volume de dados que os navegadores dos agentes enviam e recebem e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites.",
@@ -707,7 +726,7 @@ export const desktopPtBR = {
       },
       reach: {
         title: "Seu celular e seu time não alcançam o agentes.chat",
-        body: "A rede particular neste {{device}} precisa de você. Abra o app para resolver.",
+        body: "O acesso pelos aparelhos precisa de você neste {{device}}. Abra o app para resolver.",
       },
       backup: {
         title: "O backup da noite não terminou",
@@ -1085,8 +1104,10 @@ export const desktopPtBR = {
       launchAtLogin: "Abre quando o {{device}} liga",
       reach: "Acesso de qualquer lugar",
       reachOff: "Só neste {{device}}. O seu celular e a sua equipe não abrem.",
-      reachDown: "A rede particular está desligada neste {{device}}.",
-      reachStart: "Ligar a rede",
+      reachDown: "O Tailscale não está conectado neste {{device}}.",
+      reachApprove: "O Tailscale espera o HTTPS ser ligado na sua rede.",
+      reachAddress: "O seu endereço não leva até aqui agora.",
+      checkAgain: "Ver de novo",
       backup: "Backup toda noite",
       backupOff: "Desligado",
       autoUpdate: "Atualiza sozinho de madrugada",
@@ -1100,12 +1121,19 @@ export const desktopPtBR = {
     server: {
       anywhere: "o seu celular e a sua equipe abrem",
       onlyHere: "só neste {{device}}",
-      addressDesc: "Na sua rede particular, com cadeado",
+      onlyHereDesc: "O seu celular e a sua equipe não abrem.",
+      wayTailscale: "Pelo Tailscale, com cadeado",
+      wayAddress: "Pelo seu endereço",
+      changeWay: "Trocar",
+      reachOff: "Desligar",
+      useWay: "Usar este",
       phoneDesc: "Instale o app agentes.chat e o Tailscale com a mesma conta, e aponte a câmera. Entra já logado.",
+      phoneDescAddress: "Instale o app agentes.chat e aponte a câmera. Entra já logado.",
       phoneSignedOut: "Entre no agentes.chat deste {{device}} pelo app para mostrar o código.",
       qrLabel: "QR code para entrar no celular",
       invite: "Chamar alguém da equipe",
       inviteDesc: "Convide para o workspace e depois compartilhe este {{device}} com a pessoa no Tailscale.",
+      inviteDescAddress: "Convide para o workspace. A pessoa abre pelo seu endereço.",
       inviteButton: "Convidar",
       share: "Compartilhar no Tailscale",
       everyNight: "Toda noite, às {{at}}",
@@ -1131,30 +1159,6 @@ export const desktopPtBR = {
       servers: "Servidores e contas",
       advanced: "Avançado",
       onlyHere: "Só neste {{device}}",
-    },
-  },
-  /** The Tailscale the app carries (ADR 0256 §4): what it needs, said under the reach switch and while it signs in. */
-  tailnet: {
-    rowApp: "Entre no Tailscale uma vez, aqui no app. Não precisa instalar nada neste {{device}}.",
-    signedOut: "O Tailscale não está conectado à sua conta, então o seu celular e a sua equipe não chegam a ele.",
-    expired: "A entrada do Tailscale neste {{device}} expirou, então o seu celular e a sua equipe não chegam a ele.",
-    expiring: "A entrada do Tailscale neste {{device}} expira em {{date}}.",
-    needsApproval: "O administrador da sua rede do Tailscale precisa aprovar este {{device}} (o aparelho “agentes”).",
-    starting: "Iniciando o Tailscale…",
-    failing: "O Tailscale não iniciou neste {{device}}.",
-    signIn: "Entrar no Tailscale",
-    signInAgain: "Entrar de novo",
-    openAgain: "Abrir a página de novo",
-    approve: "Abrir o admin do Tailscale",
-    stage: {
-      joining: "Esperando você entrar no Tailscale no navegador. Esta janela segue sozinha quando você terminar.",
-      done: "Pronto: o seu celular e a sua equipe já conseguem abrir.",
-    },
-    /** Why access didn't turn on, after "Access from your devices didn't turn on:". */
-    reason: {
-      signIn: "o Tailscale não está conectado à sua conta neste {{device}}",
-      expired: "a entrada do Tailscale neste {{device}} expirou",
-      needsApproval: "o administrador da sua rede do Tailscale ainda não aprovou este {{device}}",
     },
   },
   iphone: {
@@ -1213,15 +1217,10 @@ export const desktopPtBR = {
     privateLine: "E a rede está desligada neste {{device}}. Ligue e a gente abre o workspace sozinho.",
     privateMissing:
       "E o Tailscale, a rede particular, ainda não está neste {{device}}. Instale, entre, e a gente abre o workspace sozinho.",
-    privateApprove:
-      "E este {{device}} espera ser aprovado na página de administração do Tailscale. Aprovado, a gente abre o workspace sozinho.",
-    privateSigningIn: "Termine de entrar no Tailscale no navegador e a gente abre o workspace sozinho.",
     privateTray:
       "E a rede está desligada neste {{device}}. Ligue pelo ícone do Tailscale perto do relógio e a gente abre o workspace sozinho.",
     privateElsewhere: "E a rede está desligada neste {{device}}. Ligue o Tailscale e a gente abre o workspace sozinho.",
-    privateFailed: "Não deu para entrar no Tailscale. Tente de novo.",
     useOther: "Usar outro workspace",
-    turnOn: "Ligar a rede",
     getTailscale: "Baixar o Tailscale",
   },
   /** The menu bar (menus.rs) and the tray's own menu on Windows and Linux (tray.rs): one label per item id. */

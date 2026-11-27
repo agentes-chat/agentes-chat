@@ -7,7 +7,7 @@ import { act, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider, useHost } from "../src/app";
-import type { LocalChoice } from "../src/control/local-server";
+import type { LocalChoice, Tailnet } from "../src/control/local-server";
 import { DesktopStore } from "../src/control/store";
 import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
 import { type AppLocale, createDesktopI18n } from "../src/i18n";
@@ -335,7 +335,8 @@ describe("A company's server", () => {
     firstRun(
       "link",
       async ({ el, press, host, step }) => {
-        await until(() => el.querySelector(".dk-linksheet__question"));
+        // The server is checked first: its "Checking the server…" line takes the question's place until then.
+        await until(() => el.querySelector(".dk-linksheet__question:not(.dk-linksheet__checking)"));
         expect(el.querySelector(".dk-linksheet__host")?.textContent).toBe("agentes.tail1234.ts.net");
         expect(el.querySelector(".dk-linksheet__question")?.textContent).toBe("Open the workspace you installed?");
         expect([...el.querySelectorAll(".dk-linksheet__acts button")].map((b) => b.textContent)).toEqual([
@@ -365,7 +366,8 @@ describe("Run on this Mac, in three steps", () => {
         await press("Run free on this Mac");
         await until(() => step() === "owner");
         expect(el.querySelector(".dk-flow__band .ac-place")?.getAttribute("data-place")).toBe("here");
-        expect(counter()).toBe("Run on this Mac · 1 of 3");
+        // Only on this Mac at first (Tailscale isn't on): two steps until the phone and the team are chosen.
+        expect(counter()).toBe("Run on this Mac · 1 of 2");
         expect(title()).toBe("Who will be the owner?");
         expect(lead()).toBe(
           "You sign in with this email and invite whoever you want later. Everything is kept on this Mac.",
@@ -386,16 +388,16 @@ describe("Run on this Mac, in three steps", () => {
         await until(() => el.textContent?.includes("Write your email, like ana@example.com."));
         expect(step()).toBe("owner");
       },
-      { here: { tailnet: "signedOut", tailscale: "off" } },
+      { here: { tailscale: "off" } },
     ));
 
-  test("where: two rows with a hairline, a plain icon and a radio at the end, the phone and the team chosen", () =>
+  test("where: two rows with a hairline, a plain icon and a radio at the end; only this Mac chosen without Tailscale on", () =>
     firstRun(
       "first",
       async (screen) => {
         const { el, counter, title, lead } = screen;
         await toWhere(screen);
-        expect(counter()).toBe("Run on this Mac · 2 of 3");
+        expect(counter()).toBe("Run on this Mac · 2 of 2");
         expect(title()).toBe("Where will you use it?");
         expect(lead()).toBe("You can change it anytime.");
         const rows = [...el.querySelectorAll(".dk-first__picks > .dk-first__pick")];
@@ -403,113 +405,191 @@ describe("Run on this Mac, in three steps", () => {
           "On this Mac, your phone and your team",
           "Only on this Mac",
         ]);
+        expect(rows.map((r) => r.querySelector("small")?.textContent)).toEqual([
+          "Through Tailscale or an address of yours.",
+          "The phone can come later.",
+        ]);
         expect(rows.map((r) => r.querySelector('[role="radio"]')?.getAttribute("aria-checked"))).toEqual([
-          "true",
           "false",
+          "true",
         ]);
         // No cards and no tags: the rows are the list.
         expect(el.querySelector(".dk-first__picks .dk-card, .dk-first__picks .ac-chip")).toBeNull();
+        // The phone and the team chosen: a third step counts.
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        expect(counter()).toBe("Run on this Mac · 2 of 3");
       },
-      { here: { tailnet: "signedOut", tailscale: "off" } },
+      { here: { tailscale: "off" } },
     ));
 
-  test("the private network: Tailscale's tile, what it is, Do it later and Sign in to Tailscale", () =>
+  test("where, with the system's Tailscale on: the phone and the team chosen", () =>
+    firstRun("first", async (screen) => {
+      await toWhere(screen);
+      const rows = [...screen.el.querySelectorAll(".dk-first__picks > .dk-first__pick")];
+      expect(rows.map((r) => r.querySelector('[role="radio"]')?.getAttribute("aria-checked"))).toEqual([
+        "true",
+        "false",
+      ]);
+    }));
+
+  test("how the phone and the team get here: Tailscale's row chosen, Back, Do it later and Continue", () =>
     firstRun(
       "first",
       async (screen) => {
-        const { el, press, step, counter, title, foot } = screen;
+        const { el, press, step, counter, title, lead, foot, button } = screen;
         await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
         await press("Continue");
         await until(() => step() === "net");
         expect(counter()).toBe("Run on this Mac · 3 of 3");
-        expect(title()).toBe("Sign in to your private network");
-        expect(el.querySelector(".dk-first__tailscale b")?.textContent).toBe("Tailscale");
-        expect(el.querySelector(".dk-first__tailscale .dk-tailscale")).not.toBeNull();
-        expect(el.querySelector(".dk-first__note")?.textContent).toBe(
-          "Already use Tailscale on this Mac? This step goes away and we use the same network.",
-        );
-        expect(foot()).toEqual(["Back", "Do it later", "Sign in to Tailscale"]);
+        expect(title()).toBe("How do the phone and the team get here?");
+        expect(lead()).toBe("You can change it later in Settings.");
+        expect(
+          [...el.querySelectorAll(".dk-way__item")].map((row) => [
+            row.querySelector("b")?.textContent,
+            row.querySelector('[role="radio"]')?.getAttribute("aria-checked"),
+          ]),
+        ).toEqual([
+          ["Through Tailscale", "true"],
+          ["Through an address of mine", "false"],
+        ]);
+        // Tailscale off on a Mac with its app: open it, and the wait with no time limit.
+        expect(button("Open Tailscale and sign in")).toBeTruthy();
+        expect(el.querySelector(".dk-way__now")?.textContent).toBe("Waiting for Tailscale…");
+        expect(foot()).toEqual(["Back", "Do it later", "Continue"]);
+        // Continue waits for Tailscale: it goes on by itself once it is on.
+        expect(button("Continue")?.hasAttribute("disabled")).toBe(true);
         // Esc goes back a step.
         await pressEscape();
         expect(step()).toBe("where");
       },
-      { here: { tailnet: "signedOut", tailscale: "off" } },
+      { here: { tailscale: "off" } },
     ));
 
-  test("signing in: Continue in your browser, the page again, Back stops it; once in, the setup starts", async () => {
+  test("Tailscale turns on while it waits: on to the setup by itself, through Tailscale", async () => {
+    let state: Tailnet = { state: "missing" };
     await firstRun(
       "first",
       async (screen) => {
-        const { el, press, step, title, foot, tailscale } = screen;
+        const { el, press, step, tailscale, choices } = screen;
         await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
         await press("Continue");
         await until(() => step() === "net");
-        await press("Sign in to Tailscale");
-        await until(() => step() === "wait");
-        expect(title()).toBe("Continue in your browser");
-        // The app and Tailscale joined by the trail, then what it waits for, in bold with the spinner.
-        expect(el.querySelectorAll(".dk-first__hop > *")).toHaveLength(3);
-        expect(el.querySelector(".dk-first__waitnow")?.textContent).toBe("Waiting for you to sign in to Tailscale");
-        expect(el.querySelector(".dk-first__waitnow .ac-pixspin")).not.toBeNull();
-        expect(foot()).toEqual(["Back", "Open the page again"]);
-        await press("Open the page again");
-        expect(tailscale).toEqual(["signIn"]);
-        await press("Back");
-        await until(() => step() === "net");
+        await press("Download Tailscale");
+        expect(tailscale).toEqual(["download"]);
+        await until(() => el.querySelector(".dk-way__now")?.textContent === "Waiting for Tailscale…");
+        // Installed and signed in: read within 2 s, and the setup starts without a press.
+        state = { state: "on", device: "ana-mac.tail1234.ts.net" };
+        await until(() => step() === "setup" || step() === "done");
+        expect(choices).toEqual([
+          { name: "Ana Souza", email: "ana@example.com", place: "everywhere", way: { kind: "tailscale" }, usage: true },
+        ]);
       },
-      { here: { tailnet: "signedOut", tailscale: "off", signIn: "hold", pace: 10 } },
-    );
-    await firstRun(
-      "first",
-      async (screen) => {
-        const { press, step, choices } = screen;
-        await toWhere(screen);
-        await press("Continue");
-        await until(() => step() === "net");
-        await press("Sign in to Tailscale");
-        await until(() => step() === "wait");
-        // Signed in about 1.5 s later: the setup runs, shared with the phone and the team, then the phone's code.
-        await until(() => step() === "done");
-        expect(choices).toEqual([{ name: "Ana Souza", email: "ana@example.com", place: "everywhere", usage: true }]);
+      {
+        here: { tailscale: "missing", hold: "account", pace: 10 },
+        host: (host) => {
+          host.tailscale = async () => state;
+        },
       },
-      { here: { tailnet: "signedOut", tailscale: "off", pace: 10 } },
     );
   });
 
-  test("the network's admin approves new devices: it says so, with its page", () =>
-    firstRun(
+  test("an address of mine: Continue checks its form only, then the setup checks where it leads", async () => {
+    await firstRun(
       "first",
       async (screen) => {
-        const { el, press, step, tailscale } = screen;
+        const { el, press, step, choices } = screen;
         await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
         await press("Continue");
         await until(() => step() === "net");
-        await press("Sign in to Tailscale");
-        await until(() => el.querySelector(".dk-first__waitnow")?.textContent === "Waiting for your network's admin");
-        await press("Open Tailscale's admin");
-        expect(tailscale).toEqual(["approve"]);
-      },
-      { here: { tailnet: "signedOut", tailscale: "off", signIn: "approval" } },
-    ));
-
-  test("a sign-in that didn't finish says so, and Sign in to Tailscale tries again", () =>
-    firstRun(
-      "first",
-      async (screen) => {
-        const { el, press, step, button } = screen;
-        await toWhere(screen);
+        await act(async () => (el.querySelector("#way-address") as HTMLElement).click());
+        expect(el.querySelector(".dk-way__tunnel")?.textContent).toBe("Point it at http://127.0.0.1:4310Copy");
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "agentes.example.com/chat"));
         await press("Continue");
-        await until(() => step() === "net");
-        await press("Sign in to Tailscale");
-        await until(() => el.querySelector(".dk-first__problem"));
         expect(step()).toBe("net");
-        expect(el.querySelector(".dk-first__problem")?.textContent).toBe(
-          "Signing in to Tailscale didn't finish. Try again.",
-        );
-        expect(button("Sign in to Tailscale")).toBeTruthy();
+        expect(el.querySelector(".ac-field__error")?.textContent).toBe("The address must start with https://");
+        // Typing again clears it.
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://agentes.example.com/"));
+        expect(el.querySelector(".ac-field__error")).toBeNull();
+        await press("Continue");
+        await until(() => step() === "setup");
+        expect(choices).toEqual([
+          {
+            name: "Ana Souza",
+            email: "ana@example.com",
+            place: "everywhere",
+            way: { kind: "address", url: "https://agentes.example.com" },
+            usage: true,
+          },
+        ]);
+        // It leads here: the phone's code, without Tailscale's step on the phone.
+        await until(() => step() === "done");
+        expect([...el.querySelectorAll(".dk-first__numbered > li > b")].map((b) => b.textContent)).toEqual([
+          "Install the agentes.chat app",
+          "Point the camera at the code",
+        ]);
+        await until(() => el.querySelector(".dk-first__addr b")?.textContent === "agentes.example.com");
       },
-      { here: { tailnet: "signedOut", tailscale: "off", signIn: "fail" } },
-    ));
+      { here: { tailscale: "off", pace: 10 } },
+    );
+  });
+
+  test("an address that doesn't lead here: why, Try again, Change the address and Finish without it", async () => {
+    const reaches: unknown[] = [];
+    await firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, foot, host, button } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "net");
+        await act(async () => (el.querySelector("#way-address") as HTMLElement).click());
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://agentes.example.com"));
+        await press("Continue");
+        await until(() => step() === "setup" && !!el.querySelector(".dk-first__ask .dk-honest"));
+        const reach = stepOf(el, "Turning on access from anywhere") as HTMLElement;
+        expect(reach.dataset.state).toBe("warn");
+        expect(reach.querySelector(".dk-honest")?.textContent).toBe(
+          "We couldn't open it. Check that your tunnel is on and points to http://127.0.0.1:4310.",
+        );
+        // Its own ways on, under the step: nothing else in the footer.
+        expect([...reach.querySelectorAll(".dk-first__askacts button")].map((b) => b.textContent)).toEqual([
+          "Try again",
+          "Change the address",
+          "Finish without it",
+        ]);
+        expect(foot()).toEqual([]);
+        // Try again: access alone, through the same address.
+        await press("Try again");
+        await until(() => reaches.length === 1 && !!button("Change the address"));
+        expect(reaches).toEqual([{ kind: "address", url: "https://agentes.example.com" }]);
+        // Back to the last step with the address in its field; set up already, so no Back.
+        await press("Change the address");
+        await until(() => step() === "net");
+        expect((el.querySelector("#way-address-url") as HTMLInputElement).value).toBe("https://agentes.example.com");
+        expect(foot()).toEqual(["Do it later", "Continue"]);
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://chat.example.org"));
+        await press("Continue");
+        await until(() => reaches.length === 2 && !!button("Finish without it"));
+        expect(reaches[1]).toEqual({ kind: "address", url: "https://chat.example.org" });
+        await press("Finish without it");
+        await until(() => host.layer.route === null);
+      },
+      {
+        here: { tailscale: "off", addr: "unreachable", pace: 10 },
+        host: (host) => {
+          const reach = host.setLocalReach;
+          host.setLocalReach = (on, way) => {
+            reaches.push(way);
+            return reach(on, way);
+          };
+        },
+      },
+    );
+  });
 
   test("Do it later: agentes.chat only on this Mac, no access step", () =>
     firstRun(
@@ -517,17 +597,19 @@ describe("Run on this Mac, in three steps", () => {
       async (screen) => {
         const { el, press, step, choices } = screen;
         await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
         await press("Continue");
         await until(() => step() === "net");
         await press("Do it later");
         await until(() => step() === "setup");
         expect(choices[0]?.place).toBe("here");
+        expect(choices[0]?.way).toBeUndefined();
         expect(stepOf(el, "Turning on access from anywhere")).toBeUndefined();
       },
-      { here: { tailnet: "signedOut", tailscale: "off", hold: "account", pace: 10 } },
+      { here: { tailscale: "off", hold: "account", pace: 10 } },
     ));
 
-  test("the system's Tailscale connected: no network step, two steps, and Continue starts the setup", () =>
+  test("the system's Tailscale on: no last step, two steps, and Continue starts the setup through it", () =>
     firstRun(
       "first",
       async (screen) => {
@@ -541,7 +623,9 @@ describe("Run on this Mac, in three steps", () => {
         expect(counter()).toBe("Run on this Mac · 2 of 2");
         await press("Continue");
         await until(() => step() === "setup");
-        expect(choices).toEqual([{ name: "Ana Souza", email: "ana@example.com", place: "everywhere", usage: true }]);
+        expect(choices).toEqual([
+          { name: "Ana Souza", email: "ana@example.com", place: "everywhere", way: { kind: "tailscale" }, usage: true },
+        ]);
       },
       { here: { hold: "account", pace: 10 } },
     ));

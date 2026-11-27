@@ -4,6 +4,7 @@ import { LOCALES } from "@agenteschat/i18n/locale";
 import { menuBarShown } from "../src/control/dock";
 import {
   connectOutcome,
+  defaultPlace,
   escapeAction,
   foundServers,
   hereSteps,
@@ -266,24 +267,30 @@ describe("the menu bar and the labels Rust shows", () => {
 });
 
 describe("running agentes.chat here (ADR 0256 §3)", () => {
-  test("the steps: the owner only while there is none, the private network only when it is needed", () => {
+  test("the steps: the owner only while there is none, how people get here only when it is needed", () => {
     expect(hereSteps(true, true)).toEqual(["owner", "where", "net"]);
     expect(hereSteps(true, false)).toEqual(["owner", "where"]);
     expect(hereSteps(false, true)).toEqual(["where", "net"]);
     expect(hereSteps(false, false)).toEqual(["where"]);
   });
 
-  test("the private network: only beyond this computer, and never with a Tailscale connected for it already", () => {
-    const none = { mode: "none" };
-    expect(needsPrivateNetwork("everywhere", { state: "off" }, none)).toBe(true);
+  test("how people get here: only beyond this computer, and never with the system's Tailscale on (ADR 0256 §4)", () => {
+    expect(needsPrivateNetwork("everywhere", { state: "off" })).toBe(true);
+    expect(needsPrivateNetwork("everywhere", { state: "missing" })).toBe(true);
     // Not read yet: asked.
-    expect(needsPrivateNetwork("everywhere", null, none)).toBe(true);
-    expect(needsPrivateNetwork("here", { state: "off" }, none)).toBe(false);
-    // The system's, connected: used as it is.
-    expect(needsPrivateNetwork("everywhere", { state: "on" }, none)).toBe(false);
-    // The app's own, signed in already.
-    expect(needsPrivateNetwork("everywhere", { state: "missing" }, { mode: "app", state: "on" })).toBe(false);
-    expect(needsPrivateNetwork("everywhere", { state: "missing" }, { mode: "app", state: "expired" })).toBe(true);
+    expect(needsPrivateNetwork("everywhere", null)).toBe(true);
+    expect(needsPrivateNetwork("here", { state: "off" })).toBe(false);
+    expect(needsPrivateNetwork("here", null)).toBe(false);
+    // The system's, on: used as it is.
+    expect(needsPrivateNetwork("everywhere", { state: "on" })).toBe(false);
+  });
+
+  test("where it will be used, chosen at first: everywhere only with the system's Tailscale on", () => {
+    expect(defaultPlace({ state: "on" })).toBe("everywhere");
+    expect(defaultPlace({ state: "off" })).toBe("here");
+    expect(defaultPlace({ state: "missing" })).toBe("here");
+    // Not read yet: only here.
+    expect(defaultPlace(null)).toBe("here");
   });
 
   test("the phone's code: asked again every 150 s, sooner when it lasts less, at most every 10 s", () => {

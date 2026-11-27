@@ -597,6 +597,42 @@ describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
     );
   });
 
+  test("reach kept from people (ADR 0256 §4): its own words each way, and Fix it opens the server's reach row", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const address = createFakeHost("popover", "here", {
+      macReady: true,
+      here: { reach: true, way: "address", health: "address" },
+    });
+    await withMenu(
+      async (el) => {
+        expect(banners(el)[0]).toEqual({
+          title: "Your address doesn't lead here now",
+          line: "Your phone and team can't reach agentes.chat until it does. Check that your tunnel is on.",
+          actions: ["Fix it"],
+        });
+        await press(el, ".dk-banner__acts button", "Fix it");
+        await until(() => address.layer.route?.screen === "settings");
+        expect(address.layer.route).toEqual({ screen: "settings", section: "server", focus: "reach" });
+      },
+      address,
+      (el) => banners(el).some((b) => b.title === "Your address doesn't lead here now"),
+    );
+
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const down = createFakeHost("popover", "here", { macReady: true, here: { reach: true, health: "down" } });
+    await withMenu(
+      (el) => {
+        expect(banners(el)[0]).toEqual({
+          title: "Tailscale isn't connected on this Mac",
+          line: "Your phone and team can't reach agentes.chat.",
+          actions: ["Fix it"],
+        });
+      },
+      down,
+      (el) => banners(el).some((b) => b.title === "Tailscale isn't connected on this Mac"),
+    );
+  });
+
   test("notifications: the system's prompt while never asked, else This Mac settings where they are turned on", async () => {
     writePref(ESSENTIALS_NOTIFIED_PREF, null);
     const asked = createFakeHost("popover", "here", { macOn: ["screen", "disk"] });

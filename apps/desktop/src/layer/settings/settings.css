@@ -243,3 +243,28 @@
   display: grid;
   place-items: center;
 }
+
+/* Reach's quiet links under its row ("Change", "Turn off"), on the row's text column (ADR 0256 §4). */
+.dk-sx__rowlinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 13px;
+}
+.dk-sx__rowlinks .ac-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* How people get here, chosen inline under reach's row: the shared picker, then Cancel and the button that applies
+   it. */
+.dk-sx__choose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 6px;
+}
+.dk-sx__chooseacts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

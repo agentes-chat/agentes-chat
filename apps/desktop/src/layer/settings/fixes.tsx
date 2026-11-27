@@ -1,8 +1,9 @@
 /**
  * The one action that turns each of this computer's essentials on again (ADR 0256 §7), and the server here's reach
  * switched on or off, shared by the Overview's "Always ready", the server's own section and App settings: each fix as
- * a button with its words, each essential's line under its title, and reach's progress, problem and the question
- * before turning it off.
+ * a button with its words, each essential's line under its title, reach's progress, problem and the question before
+ * turning it off, and choosing how the phone and the team get here (ADR 0256 §4: the official Tailscale the person
+ * installs, or an address of their own) inline under reach's row.
  */
 import { Button, Dialog, DialogFooter } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
@@ -10,12 +11,23 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost } from "../../app";
 import type { Essential, EssentialFix } from "../../control/essentials";
-import type { LocalServerStatus, ReachStage, ServeProblem } from "../../control/local-server";
+import {
+  type AddressProblem,
+  addressForm,
+  type LocalServerStatus,
+  type ReachResult,
+  type ReachStage,
+  type ReachWay,
+  type ServeProblem,
+  type Tailnet,
+} from "../../control/local-server";
 import { viaSettings } from "../../control/permissions";
+import type { Platform } from "../../control/platform";
 import { AUTO_UPDATE_PREF } from "../../control/version";
 import { usePending, writePref } from "../../hooks";
 import { ReachProblem, ReachProgress } from "../../ui/here";
 import type { MacGrants } from "../../ui/permissions";
+import { ReachWayPicker } from "../../ui/reach-way";
 import { PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { clock, nightAt, shortPath } from "../../ui/time";
@@ -38,7 +50,13 @@ export interface ReachControl {
   reaching: boolean;
   stage: ReachStage | null;
   problem: ServeProblem | null;
-  reach: (on: boolean) => Promise<void>;
+  /**
+   * Turns reach on (through `way`, else the way saved with it) or off: its result, or null when the app didn't answer
+   * (a toast says so).
+   */
+  reach: (on: boolean, way?: ReachWay) => Promise<ReachResult | null>;
+  /** Forgets the problem said (the person changes what they chose). */
+  clear: () => void;
   /** Turning it off asks first: the phone and the team lose access (ADR 0158). */
   askOff: () => void;
   /** The question before turning it off; render it once. */
@@ -54,16 +72,18 @@ export function useReach(): ReachControl {
   const [problem, setProblem] = useState<ServeProblem | null>(null);
   const [asking, setAsking] = useState(false);
   useEffect(() => host.onLocalReach(setStage), [host]);
-  const reach = async (on: boolean) => {
+  const reach = async (on: boolean, way?: ReachWay): Promise<ReachResult | null> => {
     setReaching(true);
     setStage(null);
     setProblem(null);
     try {
-      const result = await host.setLocalReach(on);
+      const result = await host.setLocalReach(on, way);
       // Stopped waiting by the person: nothing went wrong to say.
       if (!result.ok && result.problem.reason !== "stopped") setProblem(result.problem);
+      return result;
     } catch {
       toast(t("desktop.common.error"), "alert");
+      return null;
     } finally {
       setReaching(false);
     }
@@ -96,17 +116,125 @@ export function useReach(): ReachControl {
       </DialogFooter>
     </Dialog>
   );
-  return { reaching, stage, problem, reach, askOff: () => setAsking(true), dialog };
+  return {
+    reaching,
+    stage,
+    problem,
+    reach,
+    clear: () => setProblem(null),
+    askOff: () => setAsking(true),
+    dialog,
+  };
 }
 
-/** Reach's progress while it takes and why it didn't turn on, as rows (nothing while neither). */
-export function ReachRows({ control }: { control: ReachControl }) {
+/**
+ * Reach's progress while it takes and why it didn't turn on, as rows (nothing while neither). `port`: where the
+ * person's tunnel points, for an address that doesn't lead here; `choosing`: the picker is open and says an address's
+ * problem under its field itself.
+ */
+export function ReachRows({
+  control,
+  port = null,
+  choosing = false,
+}: {
+  control: ReachControl;
+  port?: number | null;
+  choosing?: boolean;
+}) {
   const { reaching, stage, problem } = control;
+  const shown = problem && !(choosing && problem.reason === "address") ? problem : null;
   return (
     <>
       {reaching && stage && stage.stage !== "done" && <PrefRow desc={<ReachProgress stage={stage} />} />}
-      {problem && <PrefRow desc={<ReachProblem problem={problem} text="prefs" />} />}
+      {shown && <PrefRow desc={<ReachProblem problem={shown} text="prefs" port={port} />} />}
     </>
+  );
+}
+
+/**
+ * How the phone and the team get here, chosen inline under reach's row (ADR 0256 §4): the shared picker, then Cancel
+ * and the button that applies it (`setLocalReach(true, way)`). An address is checked by its form here and where it
+ * leads by the app, its problem said under its field; Tailscale applies by itself once it turns on while its row
+ * waits. `done`: it applied, or the person cancelled (what it said about the choice is forgotten then).
+ */
+export function ReachChooser({
+  local,
+  control,
+  apply: applyLabel,
+  done,
+}: {
+  local: LocalServerStatus;
+  control: ReachControl;
+  /** The button's words: "Turn on" while reach is off, else "Use this". */
+  apply: string;
+  done: () => void;
+}) {
+  const { t } = useTranslation();
+  const host = useHost();
+  const [way, setWay] = useState<ReachWay>(() => local.way ?? { kind: "tailscale" });
+  const [tailnet, setTailnet] = useState<Tailnet | null>(null);
+  // The address's form, before the app is asked (`addressForm`).
+  const [form, setForm] = useState<{ why: AddressProblem } | null>(null);
+  const last = control.problem;
+  const said = last && last.reason === "address" ? last : null;
+  const problem = form ?? (said ? { why: said.why, status: said.status } : null);
+  const apply = async (chosen: ReachWay) => {
+    let next = chosen;
+    if (chosen.kind === "address") {
+      const checked = addressForm(chosen.url);
+      if (!checked.ok) {
+        setForm({ why: checked.why });
+        return;
+      }
+      next = { kind: "address", url: checked.url };
+    }
+    setForm(null);
+    const result = await control.reach(true, next);
+    if (result?.ok) done();
+  };
+  const ready = way.kind === "address" ? way.url.trim() !== "" : tailnet?.state === "on";
+  return (
+    <div className="dk-sx__choose">
+      <ReachWayPicker
+        compact
+        value={way}
+        onChange={(next) => {
+          setWay(next);
+          setForm(null);
+          control.clear();
+        }}
+        platform={host.platform}
+        tailnet={tailnet}
+        port={local.port}
+        onTailnet={setTailnet}
+        onReady={() => void apply({ kind: "tailscale" })}
+        problem={problem}
+        onSubmit={() => void apply(way)}
+      />
+      <div className="dk-sx__chooseacts">
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={control.reaching}
+          onClick={() => {
+            // What it said about this choice goes with it.
+            control.clear();
+            done();
+          }}
+        >
+          {t("desktop.common.cancel")}
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          loading={control.reaching}
+          disabled={!ready || control.reaching}
+          onClick={() => void apply(way)}
+        >
+          {applyLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -117,10 +245,12 @@ export interface FixContext {
   mac: MacGrants | null;
   /** Read the system's side again (after a fix the system answers at once). */
   reread: () => void;
+  /** Turning reach on chooses how people get here first: where this screen shows that choice (ADR 0256 §4). */
+  chooseReach?: () => void;
 }
 
 /** The words on an essential's fix button. */
-export function fixLabel(t: TFunction, fix: EssentialFix, mac: MacGrants | null, e?: Essential): string {
+export function fixLabel(t: TFunction, fix: EssentialFix, mac: MacGrants | null, platform: Platform): string {
   switch (fix.kind) {
     case "permission": {
       const grant = mac?.grants?.[fix.permission] ?? "off";
@@ -129,12 +259,14 @@ export function fixLabel(t: TFunction, fix: EssentialFix, mac: MacGrants | null,
         ? t("desktop.settings.essentials.turnOnAgain")
         : t("desktop.pair.allow");
     }
-    case "tailnetSignIn":
-      return e?.reason === "expiring" ? t("desktop.tailnet.signInAgain") : t("desktop.tailnet.signIn");
-    case "tailnetApprove":
-      return t("desktop.tailnet.approve");
-    case "tailnetStart":
-      return t("desktop.settings.essentials.reachStart");
+    case "tailscaleHttps":
+      return t("desktop.here.approveOpen");
+    case "tailscaleStart":
+      // A Mac opens Tailscale's app; elsewhere it is connected from its icon by the clock or in the terminal, which
+      // checking again says.
+      return platform === "mac" ? t("desktop.here.openTailscale") : t("desktop.settings.essentials.checkAgain");
+    case "reachCheck":
+      return t("desktop.settings.essentials.checkAgain");
     case "backupNow":
       return t("desktop.server.backup");
     case "update":
@@ -149,7 +281,7 @@ export function fixLabel(t: TFunction, fix: EssentialFix, mac: MacGrants | null,
 }
 
 /** An essential's one fix, as a button that waits while it runs. */
-export function FixButton({ fix, ctx, essential }: { fix: EssentialFix; ctx: FixContext; essential?: Essential }) {
+export function FixButton({ fix, ctx }: { fix: EssentialFix; ctx: FixContext }) {
   const { t } = useTranslation();
   const host = useHost();
   const toast = useToast();
@@ -163,14 +295,19 @@ export function FixButton({ fix, ctx, essential }: { fix: EssentialFix; ctx: Fix
       case "permission":
         return mac ? mac.ask(fix.permission).then(reread) : host.openPrivacy(fix.permission);
       case "reach":
+        if (ctx.chooseReach) {
+          ctx.chooseReach();
+          return Promise.resolve();
+        }
         return reach.reach(true);
-      case "tailnetSignIn":
-        return host.signInTailnet().then(reread);
-      case "tailnetApprove":
-        return host.openTailscale("approve");
-      case "tailnetStart":
-        // The system's Tailscale is turned on in its own app; the app's own one starts with a sign-in.
-        return local.tailnet.mode === "system" ? host.openTailscale("app") : host.signInTailnet().then(reread);
+      case "tailscaleHttps":
+        return host.openTailscale("https");
+      case "tailscaleStart":
+        // Tailscale's Mac app connects it. A Mac with only its command line, and the other systems, learn how from
+        // reach checked again: its problem says it (the icon by the clock, or the command to copy).
+        return host.platform === "mac" ? host.openTailscale("app").catch(() => reach.reach(true)) : reach.reach(true);
+      case "reachCheck":
+        return reach.reach(true);
       case "backups":
         return host.setLocalBackups(true, local.backups.copyTo);
       case "backupNow":
@@ -189,28 +326,18 @@ export function FixButton({ fix, ctx, essential }: { fix: EssentialFix; ctx: Fix
     }
   };
   const primary = fix.kind !== "systemSettings";
+  const reachFix = fix.kind === "reach" || fix.kind === "reachCheck" || fix.kind === "tailscaleStart";
   return (
     <Button
       size="sm"
       variant={primary ? "primary" : "default"}
-      loading={pending !== null || (fix.kind === "reach" && reach.reaching)}
-      onClick={() =>
-        void run("fix", () =>
-          act().catch((e) => {
-            // A sign-in the person cancelled says nothing.
-            if (e !== "cancelled") failed();
-          }),
-        )
-      }
+      loading={pending !== null || (reachFix && reach.reaching)}
+      onClick={() => void run("fix", () => act().catch(failed))}
     >
-      {fixLabel(t, fix, mac, essential)}
+      {fixLabel(t, fix, mac, host.platform)}
     </Button>
   );
 }
-
-/** A sign-in's end as a day ("on 14 December"), in the reader's language. */
-const dayOf = (at: number, lang: string) =>
-  new Date(at < 1e12 ? at * 1000 : at).toLocaleDateString(lang, { day: "numeric", month: "long" });
 
 /**
  * The line under an essential's title: what it does while on, what holds it while off (null: nothing to add). Reach,
@@ -221,16 +348,10 @@ export function essentialLine(t: TFunction, lang: string, e: Essential, local: L
   switch (e.id) {
     case "reach": {
       if (!off) return local.publicUrl ? new URL(local.publicUrl).host : null;
-      if (e.reason === "chosen") return t("desktop.settings.essentials.reachOff");
-      if (e.reason === "approve") return t("desktop.tailnet.needsApproval");
+      if (e.reason === "approve") return t("desktop.settings.essentials.reachApprove");
       if (e.reason === "down") return t("desktop.settings.essentials.reachDown");
-      if (e.reason === "expiring") {
-        const at = local.expiresAt ?? (local.tailnet.mode !== "none" ? local.tailnet.keyExpiry : undefined);
-        return at ? t("desktop.tailnet.expiring", { date: dayOf(at, lang) }) : t("desktop.tailnet.expired");
-      }
-      return local.tailnet.mode !== "none" && local.tailnet.state === "expired"
-        ? t("desktop.tailnet.expired")
-        : t("desktop.tailnet.signedOut");
+      if (e.reason === "address") return t("desktop.settings.essentials.reachAddress");
+      return t("desktop.settings.essentials.reachOff");
     }
     case "backup": {
       if (off) {

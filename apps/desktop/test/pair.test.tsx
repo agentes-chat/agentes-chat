@@ -553,8 +553,10 @@ describe("pairing from the app", () => {
     () =>
       mount(SETTINGS, <Settings />, async (el, host, store) => {
         const norte = "Estúdio Norte";
+        // Until the pairing is read every workspace reads as not here yet ("Its agents don't use this Mac"): wait for
+        // Acme's agents.
         await until(
-          () => rowOf(el, norte) && rowOf(el, "Acme")?.querySelector("small")?.textContent?.includes("agent"),
+          () => rowOf(el, norte) && rowOf(el, "Acme")?.querySelector("small")?.textContent?.includes("can use it"),
         );
         const on = (title: string) => rowOf(el, title)?.querySelector('[role="switch"]')?.getAttribute("aria-checked");
         expect(on("Acme")).toBe("true");

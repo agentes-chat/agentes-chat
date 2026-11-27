@@ -7,7 +7,8 @@
  * update shows its time from 10 s, and Copy details once it takes longer than expected. The window opens the server
  * here at its loopback address, never through the tailnet (ADR 0256 §5), so Tailscale is never its reason. A server
  * out of reach offers another one; a workspace on a private network (a Tailscale address) while Tailscale is off here
- * shows a card that turns it on (the app's own Tailscale signs in or starts, the system's opens), never a command.
+ * shows a card that turns it on (the system's Tailscale, ADR 0256 §4: its Mac app opens, or its download page),
+ * never a command.
  */
 
 import { CLOUD_SERVER, isTailnet, serverHost } from "@agenteschat/client/lib/server";
@@ -25,7 +26,6 @@ import {
   STEP_SLOW_MS,
   stepClock,
   type Tailnet,
-  type TailnetState,
   UPDATE_SLOW_MS,
 } from "../control/local-server";
 import { platformOf } from "../control/platform";
@@ -76,8 +76,6 @@ let stuckSteps = 0;
 let overHere = false;
 /** A short word in the time's place ("Copied"), until then: the explanation above it stays as it is. */
 let aside: { text: string; until: number } | null = null;
-/** The app's own Tailscale signing in from the card: its page waits in the browser. */
-let signingIn = false;
 /** What turns the network on, as last read, and when: each read runs Tailscale's own command. */
 let network: { at: number; fix: NetworkFix | null } | null = null;
 const NETWORK_READ_MS = 10_000;
@@ -323,12 +321,8 @@ const otherWorkspace = () =>
 /** What turns the network on here, read at most every few seconds unless `fresh` (a button was just pressed). */
 async function readNetwork(fresh = false): Promise<NetworkFix | null> {
   if (!fresh && network && performance.now() - network.at < NETWORK_READ_MS) return network.fix;
-  const [system, own] = await Promise.all([
-    invoke<Tailnet>("tailscale_status").catch(() => null),
-    // The app's own Tailscale, when it is the one chosen, is started by reading it.
-    invoke<TailnetState>("tailnet_status").catch(() => null),
-  ]);
-  const fix = networkFix(platform, system, own);
+  const system = await invoke<Tailnet>("tailscale_status").catch(() => null);
+  const fix = networkFix(platform, system);
   network = { at: performance.now(), fix };
   return fix;
 }
@@ -370,7 +364,7 @@ function drawMark(tile: Element) {
   tile.append(svg);
 }
 
-/** Says `text` under the card's line for a moment ("Couldn't sign in to Tailscale"). */
+/** Says `text` under the card's line for a moment (Tailscale's page didn't open). */
 let noteTimer: ReturnType<typeof setTimeout> | undefined;
 function note(text: string) {
   if (!cardNote) return;
@@ -386,8 +380,7 @@ async function showPrivate(server: string, fix: NetworkFix) {
   if (!root || !card) return;
   const list = await invoke<ServerWorkspaces[]>("workspaces_get").catch(() => null);
   const title = privateTitle(list?.find((w) => w.server === server)?.orgs);
-  const shownFix: NetworkFix = signingIn ? { act: "signingIn" } : fix;
-  const { line: lineKey, button } = networkWords(shownFix);
+  const { line: lineKey, button } = networkWords(fix);
   const tile = card.querySelector(".cover__tile");
   if (tile) drawMark(tile);
   if (cardTitle) {
@@ -396,7 +389,7 @@ async function showPrivate(server: string, fix: NetworkFix) {
   }
   if (cardLead) cardLead.textContent = fillIn(words[lineKey], { device });
   const actions: [string, () => void, "ghost" | "primary"][] = [[words.useOther, otherWorkspace, "ghost"]];
-  if (button) actions.push([words[button], () => turnOn(shownFix), "primary"]);
+  if (button) actions.push([words[button], () => turnOn(fix), "primary"]);
   cardButtons(actions);
   say("");
   buttons([]);
@@ -410,45 +403,14 @@ function hidePrivate() {
 }
 
 /**
- * "Turn the network on": the app's own Tailscale signs in (its page in the browser) or starts; the system's opens (its
- * Mac app, its download page, its admin page where this computer is approved). Once the server answers, the page loads.
+ * The card's button: the system's Tailscale opens (its Mac app) or its official download page does. Once the network
+ * is on here and the server answers, the page loads.
  */
 function turnOn(fix: NetworkFix) {
-  const openPage = (page: "app" | "download" | "approve") =>
+  const openPage = (page: "app" | "download") =>
     void invoke("tailscale_open", { page }).catch(() => note(strings.common.error));
-  switch (fix.act) {
-    case "signIn":
-      signingIn = true;
-      void invoke("tailnet_sign_in")
-        .then(
-          () => {},
-          (err: unknown) => {
-            if (String(err) !== "cancelled") note(words.privateFailed);
-          },
-        )
-        .finally(() => {
-          signingIn = false;
-          network = null;
-          void check();
-        });
-      network = null;
-      void check();
-      return;
-    case "start":
-      void readNetwork(true).then(() => check());
-      return;
-    case "approve":
-      openPage("approve");
-      return;
-    case "openApp":
-      openPage("app");
-      return;
-    case "download":
-      openPage("download");
-      return;
-    default:
-      return;
-  }
+  if (fix.act === "openApp") openPage("app");
+  else if (fix.act === "download") openPage("download");
 }
 
 async function check() {

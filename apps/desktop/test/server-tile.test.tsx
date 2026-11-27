@@ -11,6 +11,7 @@ import { DesktopStore } from "../src/control/store";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { FirstRun } from "../src/layer/first-run/FirstRun";
+import { ReachLead } from "../src/layer/settings/AlwaysOn";
 import { Servers } from "../src/layer/settings/Servers";
 import { About } from "../src/layer/settings/Updates";
 import { ServerTile } from "../src/ui/here";
@@ -96,6 +97,26 @@ test("a server's tile: Tailscale's own icon for one on the Tailscale network, a 
   expect(rule(".dk-tailscale")).toContain("height: 32px");
   expect(rule(".dk-tailscale")).toContain("fill: #1e1e1f");
   expect(rule('[data-theme="dark"] .dk-tailscale')).toContain("fill: #fff");
+});
+
+test("reach's tile by its way (ADR 0256 §4): Tailscale's own icon, a link for the person's address", async () => {
+  const el = document.body.appendChild(document.createElement("div"));
+  const root = createRoot(el);
+  await act(async () =>
+    root.render(
+      <>
+        <ReachLead way={{ kind: "tailscale" }} />
+        <ReachLead way={{ kind: "address", url: "https://agentes.example.com" }} />
+        <ReachLead way={null} />
+      </>,
+    ),
+  );
+  const marks = [...el.children].map((tile) => tile.querySelector("svg")?.getAttribute("class"));
+  // Not chosen yet: Tailscale's, the way chosen by default.
+  expect(marks).toEqual(["dk-tailscale", "ac-icon", "dk-tailscale"]);
+  expect([...el.children].every((tile) => tile.className === "dk-logo dk-logo--soft")).toBe(true);
+  await act(async () => root.unmount());
+  el.remove();
 });
 
 test("App settings › Servers and accounts: the server on the Tailscale network by Tailscale's icon, the Cloud by its glyph", () =>

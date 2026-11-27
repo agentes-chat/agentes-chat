@@ -22,14 +22,16 @@
  * The server here: `?phase=` (starting, updating, stopped, failing), `?reach=1`, `?back=<version>` (an update
  * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
  * first run opens on Run here's form), `?usage=0` (usage statistics off),
- * `?tailscale=` (on, off, missing: the system's), `?tailnet=` (the Tailscale the app carries, ADR 0256 §4: `signedOut`
- * until it signs in, `on`, `expiring`, `expired`, `needsApproval`, `off`; without it the build carries none), `?installed=terminal` (one from
+ * `?tailscale=` (on, off, missing: the system's Tailscale, ADR 0256 §4; `&install=1` turns it on about 6 s after
+ * "Download Tailscale" or "Open Tailscale", as if the person installed it or signed in, so the waiting screens can be
+ * captured), `?way=address&addr=<https address>` (reach through an address of the person's own, saved; with
+ * `?reach=1`), `?addr=` (unreachable, other, error, nothttps: `checkAddress` fails that way), `?health=` (approve,
+ * down, address: reach on but kept from people, with `?reach=1`), `?installed=terminal` (one from
  * the terminal; `&claim=1` waits for its owner,
  * `&serving=0` isn't running), `?fail=` (database, start, account, reach: that setup step fails), `?hold=<step>`
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
  * does). `?approve=1`: the setup's access step waits for HTTPS on Tailscale's page until "Finish without it"
- * ("One click left"). `?signin=` (the app's own Tailscale signing in): `hold` stays on its page, `approval` waits for
- * the network's admin, `fail` doesn't finish. `?first=<state>` opens the first run on one of its states
+ * ("One click left"). `?first=<state>` opens the first run on one of its states
  * (`dev/first-run-start.ts`). An update downloads in about 1.5 s with its progress, and Cancel drops it.
  * Settings › This computer: `?site=0` keeps the site away (offline: This computer's sections alone, with the line
  * that says so), `?autostart=0` has opening at login off, `?backup=` (failed, copy, off) is the server here's backups'
@@ -41,19 +43,21 @@ import { CLOUD_SERVER, isLoopback, readInstance, type ServerCheck } from "@agent
 import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import {
+  type AddressCheck,
+  type AddressProblem,
+  addressForm,
   type KeepRunning,
   type LocalPhase,
   type LocalServerStatus,
   NO_SERVER,
   type PhoneLink,
   type ReachStage,
+  type ReachWay,
   type ServeProblem,
   type SetupStep,
   type StepChange,
   setupSteps,
   type Tailnet,
-  type TailnetSignIn,
-  type TailnetState,
 } from "../control/local-server";
 import type { LinkInfo } from "../control/pair";
 import type { MacPermission, SetupState } from "../control/permissions";
@@ -99,23 +103,34 @@ export interface HereOptions {
   hold?: SetupStep;
   /** Each setup step's time in ms (the tests' 10); a little over a second by default. */
   pace?: number;
-  /** The Tailscale the app carries (`?tailnet=`): its state as it starts; none carried when unset. */
-  tailnet?: "signedOut" | "on" | "expiring" | "expired" | "needsApproval" | "off";
+  /** `?install=1`: the system's Tailscale turns on about 6 s after its download page or app is opened. */
+  install?: boolean;
+  /** How reach is saved (`?way=`): Tailscale when unset. */
+  way?: ReachWay["kind"];
+  /** `?addr=`: the saved https address, or how `checkAddress` fails (unreachable, other, error, nothttps). */
+  addr?: string;
+  /** `?health=`: reach on but kept from people (HTTPS waiting for the admin, Tailscale down, the address down). */
+  health?: "approve" | "down" | "address";
   /** Its backups (`?backup=`): the last one failed, didn't reach its copy, or nightly backups are off. */
   backup?: "failed" | "copy" | "off";
   /** False (`?awake=0`): it serves without keeping this Mac awake. */
   awake?: boolean;
   /** The setup's access step waits for HTTPS to be allowed until "Finish without it" (`?approve=1`). */
   approve?: boolean;
-  /** How the app's own Tailscale's sign-in goes (`?signin=`): it signs in about 1.5 s later when unset. */
-  signIn?: "hold" | "approval" | "fail";
 }
 
 const LOCAL_URL = "http://127.0.0.1:4310";
+const LOCAL_PORT = 4310;
 const TAILNET_URL = "https://ana-mac.tail1234.ts.net";
-/** The app's own Tailscale's device: `agentes` on the person's tailnet, whatever this computer is called. */
-const OWN_TAILNET_URL = "https://agentes.tail1234.ts.net";
-const DAY_MS = 24 * 3600 * 1000;
+/** An address of the person's own, a tunnel's (`?way=address` without `?addr=`). */
+const OWN_ADDRESS = "https://agentes.example.com";
+/** How `checkAddress` fails for `?addr=` (ADR 0256 §4). */
+const ADDRESS_FAILS: Record<string, { why: AddressProblem; status?: number }> = {
+  unreachable: { why: "unreachable" },
+  other: { why: "otherServer" },
+  error: { why: "error", status: 502 },
+  nothttps: { why: "notHttps" },
+};
 const LOCAL_BUNDLE_VERSION = "0.8.5";
 const LOCAL_SERVER_VERSION = "0.1.1";
 
@@ -265,38 +280,18 @@ export function createFakeHost(
   let version = "0.6.0";
   const platform: Platform = scenario === "windows" ? "windows" : scenario === "linux" ? "linux" : "mac";
   const here = options.here ?? {};
-  const tailnet: Tailnet =
+  let tailnet: Tailnet =
     here.tailscale === "missing"
       ? { state: "missing" }
       : here.tailscale === "off"
         ? { state: "off", app: platform === "mac" }
         : { state: "on", device: "ana-mac.tail1234.ts.net" };
   const running = scenario === "here" && here.run !== false;
-  // The Tailscale the app carries (`?tailnet=`): signed in or not, its sign-in expiring or expired.
-  const ownStart = here.tailnet;
-  let ownTailnet: TailnetState =
-    ownStart === undefined
-      ? { mode: "none" }
-      : {
-          mode: "app",
-          state: ownStart === "expiring" ? "on" : ownStart,
-          ...(ownStart === "on" || ownStart === "expiring"
-            ? {
-                device: new URL(OWN_TAILNET_URL).host,
-                keyExpiry: Date.now() + (ownStart === "expiring" ? 5 : 170) * DAY_MS,
-                https: "ok" as const,
-              }
-            : {}),
-          // Waiting for the tailnet's admin to approve the new device (`?tailnet=needsApproval`).
-          ...(ownStart === "needsApproval" ? { approveUrl: "https://login.tailscale.com/admin/machines" } : {}),
-        };
-  const peopleUrl = ownStart === undefined ? TAILNET_URL : OWN_TAILNET_URL;
-  const tailnetOf = (reach: boolean): TailnetState =>
-    ownStart !== undefined
-      ? ownTailnet
-      : reach
-        ? { mode: "system", state: "on", device: new URL(TAILNET_URL).host, https: "ok" }
-        : { mode: "none" };
+  // `?addr=` names a failure, else it is the saved address itself.
+  const addrFails = here.addr ? ADDRESS_FAILS[here.addr] : undefined;
+  const savedWay: ReachWay =
+    here.way === "address" ? { kind: "address", url: (!addrFails && here.addr) || OWN_ADDRESS } : { kind: "tailscale" };
+  const peopleOf = (way: ReachWay) => (way.kind === "address" ? way.url : TAILNET_URL);
   let local: LocalServerStatus = {
     ...NO_SERVER,
     bundled: true,
@@ -310,22 +305,11 @@ export function createFakeHost(
           phase: running ? (here.phase ?? "running") : "off",
           url: LOCAL_URL,
           localUrl: running ? LOCAL_URL : null,
-          publicUrl: here.reach ? peopleUrl : null,
+          publicUrl: here.reach ? peopleOf(savedWay) : null,
           reach: !!here.reach,
-          tailnet: tailnetOf(!!here.reach),
-          ownTailnet: ownStart !== undefined,
-          reachHealth: !here.reach
-            ? ("off" as const)
-            : ownStart === "signedOut" || ownStart === "expired"
-              ? ("signIn" as const)
-              : ownStart === "expiring"
-                ? ("expiring" as const)
-                : ownStart === "needsApproval"
-                  ? ("approve" as const)
-                  : ownStart === "off"
-                    ? ("down" as const)
-                    : ("on" as const),
-          expiresAt: here.reach && ownTailnet.mode === "app" ? (ownTailnet.keyExpiry ?? null) : null,
+          way: here.reach ? savedWay : null,
+          reachHealth: here.reach ? (here.health ?? "on") : "off",
+          reachDown: !!here.reach && (here.health === "down" || here.health === "address"),
           installedVersion: LOCAL_BUNDLE_VERSION,
           serverVersion: running && (here.phase ?? "running") === "running" ? LOCAL_SERVER_VERSION : null,
           backTo: here.back ?? null,
@@ -347,19 +331,12 @@ export function createFakeHost(
             serving: here.serving !== false,
             claim: here.claim && here.serving !== false ? "b3duZXItY2xhaW0tYWJjZGVmZ2hpamtsbW5vcHFy" : null,
           }
-        : { systemName: "Ana Souza", ownTailnet: ownStart !== undefined, tailnet: tailnetOf(false) }),
+        : { systemName: "Ana Souza" }),
+    // The port the setup would pick now, and keeps (ADR 0256 §4: a tunnel points at it).
+    port: here.installed === "terminal" ? null : LOCAL_PORT,
   };
-  const tailnetListeners = new Set<(state: TailnetState) => void>();
-  const signInListeners = new Set<(stage: TailnetSignIn) => void>();
-  const saySignIn = (stage: TailnetSignIn) => {
-    for (const l of signInListeners) l(stage);
-  };
-  let signInStopped = false;
-  const setOwnTailnet = (next: TailnetState) => {
-    ownTailnet = next;
-    for (const l of tailnetListeners) l(next);
-    setLocal({ tailnet: next });
-  };
+  // `?install=1`: the person installs Tailscale (or signs in to it) about 6 s after its page or app opened.
+  let installing = false;
   const localListeners = new Set<(s: LocalServerStatus) => void>();
   const stepListeners = new Set<(c: StepChange) => void>();
   const reachListeners = new Set<(s: ReachStage) => void>();
@@ -665,7 +642,7 @@ export function createFakeHost(
       await wait(1200);
       if (options.found === false) return [];
       // With the system's Tailscale off or missing, nothing on the network can be found.
-      const onNetwork = tailnet.state === "on" || (ownTailnet.mode !== "none" && ownTailnet.state === "on");
+      const onNetwork = tailnet.state === "on";
       return [
         { server: "http://127.0.0.1:4310", where: "here" },
         ...(onNetwork ? [{ server: FAKE_SERVER, where: "tailnet" as const }] : []),
@@ -817,16 +794,26 @@ export function createFakeHost(
         cancelSetup = () => reject("cancelled");
       });
       cancelled.catch(() => {});
+      // People reach it at the end: its step went through.
+      let reached = false;
       for (const step of setupSteps(choice.place)) {
         say({ step, state: "active" });
         await Promise.race([
           cancelled,
           here.hold === step ? new Promise(() => {}) : wait(here.pace ?? (step === "database" ? 1400 : 800)),
         ]);
-        if (step === "reach" && ownStart !== undefined && ownTailnet.mode === "app" && ownTailnet.state !== "on") {
-          // The app's own Tailscale signs in first, in the browser (as `signInTailnet`).
-          sayReach({ stage: "joining" });
-          await host.signInTailnet().catch(() => {});
+        if (step === "reach" && choice.way?.kind === "address") {
+          // An address of the person's own: confirmed to lead here, then the server starts again behind it.
+          sayReach({ stage: "checking" });
+          const check = await host.checkAddress(choice.way.url);
+          if (!check.ok) {
+            say({ step, state: "warn", reason: { reason: "address", why: check.why, status: check.status } });
+            continue;
+          }
+          sayReach({ stage: "restarting" });
+          say({ step, state: "done" });
+          reached = true;
+          continue;
         }
         if (step === "reach" && here.approve) {
           // Tailscale waits for HTTPS to be allowed on its page, with no time limit: "Finish without it" ends it.
@@ -845,11 +832,15 @@ export function createFakeHost(
           say({ step, state: "warn", reason: { reason: "stopped" } });
           continue;
         }
-        if (step === "reach" && (here.fail === "reach" || (tailnet.state !== "on" && ownStart === undefined))) {
+        if (step === "reach" && (here.fail === "reach" || tailnet.state !== "on")) {
           const reason: ServeProblem =
-            here.reason === "operator" || here.reason === "serve"
-              ? { reason: here.reason }
-              : { reason: "https", url: null };
+            tailnet.state === "missing"
+              ? { reason: "serve" }
+              : tailnet.state === "off"
+                ? { reason: "notConnected", app: tailnet.app }
+                : here.reason === "operator" || here.reason === "serve"
+                  ? { reason: here.reason }
+                  : { reason: "https", url: null };
           say({ step, state: "warn", reason });
           continue;
         }
@@ -858,11 +849,10 @@ export function createFakeHost(
           throw new Error(step);
         }
         say({ step, state: "done" });
+        if (step === "reach") reached = true;
       }
-      const reach =
-        choice.place === "everywhere" &&
-        (tailnet.state === "on" || (ownTailnet.mode === "app" && ownTailnet.state === "on")) &&
-        here.fail !== "reach";
+      const way: ReachWay = choice.way ?? { kind: "tailscale" };
+      const reach = choice.place === "everywhere" && reached;
       setLocal({
         installed: "app",
         run: true,
@@ -870,9 +860,9 @@ export function createFakeHost(
         phase: "running",
         url: LOCAL_URL,
         localUrl: LOCAL_URL,
-        publicUrl: reach ? peopleUrl : null,
+        publicUrl: reach ? peopleOf(way) : null,
         reach,
-        tailnet: tailnetOf(reach),
+        way: reach ? way : null,
         reachHealth: reach ? "on" : "off",
         usage: choice.usage,
         installedVersion: LOCAL_BUNDLE_VERSION,
@@ -903,39 +893,38 @@ export function createFakeHost(
       // Started again, it keeps this Mac awake with it (`caffeinate`).
       setLocal({ phase: "running", awake: platform === "mac" });
     },
-    setLocalReach: async (on) => {
+    setLocalReach: async (on, asked) => {
       reachStopped = false;
-      const own = ownStart !== undefined;
-      if (on && own && ownTailnet.mode === "app" && ownTailnet.state !== "on") {
-        sayReach({ stage: "joining" });
-        const signedIn = await host.signInTailnet().then(
-          () => true,
-          () => false,
-        );
-        if (!signedIn)
-          return { ok: false, problem: reachStopped ? { reason: "stopped" } : { reason: "signIn", url: null } };
-      }
-      if (on) sayReach({ stage: "sharing" });
-      await wait(900);
-      if (on && !own && tailnet.state !== "on") return { ok: false, problem: { reason: "serve" } };
-      if (on && here.fail === "reach") {
-        // Tailscale asks for HTTPS to be allowed and waits: until "Stop waiting", or a few seconds as if never allowed.
-        sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
-        for (let i = 0; i < 40 && !reachStopped; i++) await wait(100);
-        return { ok: false, problem: reachStopped ? { reason: "stopped" } : { reason: "https", url: null } };
+      const way: ReachWay = asked ?? local.way ?? { kind: "tailscale" };
+      if (on && way.kind === "address") {
+        sayReach({ stage: "checking" });
+        const check = await host.checkAddress(way.url);
+        if (!check.ok) return { ok: false, problem: { reason: "address", why: check.why, status: check.status } };
+      } else if (on) {
+        sayReach({ stage: "sharing" });
+        await wait(900);
+        if (tailnet.state === "missing") return { ok: false, problem: { reason: "serve" } };
+        if (tailnet.state === "off") return { ok: false, problem: { reason: "notConnected", app: tailnet.app } };
+        if (here.fail === "reach") {
+          // Tailscale asks for HTTPS to be allowed and waits: until "Stop waiting", or a few seconds as if never allowed.
+          sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
+          for (let i = 0; i < 40 && !reachStopped; i++) await wait(100);
+          return { ok: false, problem: reachStopped ? { reason: "stopped" } : { reason: "https", url: null } };
+        }
       }
       sayReach({ stage: "restarting" });
       setLocal({ phase: "starting" });
       await wait(900);
       setLocal({ phase: "running" });
       // The window stays on the loopback address: the list never changes (ADR 0256 §5).
-      const url = on ? peopleUrl : LOCAL_URL;
+      const url = on ? peopleOf(way) : LOCAL_URL;
       setLocal({
         reach: on,
         publicUrl: on ? url : null,
-        tailnet: tailnetOf(on),
+        // Kept while it is off, for turning it on again (as the app keeps it).
+        way: on ? way : local.way,
         reachHealth: on ? "on" : "off",
-        tailnetDown: false,
+        reachDown: false,
       });
       if (on) sayReach({ stage: "done", url });
       return { ok: true, url };
@@ -985,58 +974,26 @@ export function createFakeHost(
     },
     stopLocalReach: async () => {
       reachStopped = true;
-      signInStopped = true;
+    },
+    // The form, then where it leads (`?addr=`): about half a second, as a request through a tunnel.
+    checkAddress: async (url): Promise<AddressCheck> => {
+      const form = addressForm(url);
+      if (!form.ok) return form;
+      await wait(here.pace ?? 600);
+      return addrFails ? { ok: false, ...addrFails } : { ok: true, url: form.url };
     },
     tailscale: async () => tailnet,
     openTailscale: async (page) => {
       console.info("[fake] open Tailscale:", page);
+      // `?install=1`: installed (or signed in to) about 6 s later, as the person would.
+      if (!here.install || installing || tailnet.state === "on" || (page !== "download" && page !== "app")) return;
+      installing = true;
+      setTimeout(() => {
+        tailnet = { state: "on", device: "ana-mac.tail1234.ts.net" };
+        devChanged();
+      }, 6000);
     },
-    tailnet: async () => ownTailnet,
-    onTailnet: (cb) => {
-      tailnetListeners.add(cb);
-      return () => tailnetListeners.delete(cb);
-    },
-    // Tailscale's page "opens" and the person signs in about 1.5 s later, unless Cancel or Stop waiting.
-    signInTailnet: async () => {
-      if (ownStart === undefined) return Promise.reject("start");
-      signInStopped = false;
-      setOwnTailnet({ mode: "app", state: "signingIn" });
-      saySignIn({ stage: "url", url: "https://login.tailscale.com/a/fake" });
-      if (here.signIn === "approval") {
-        setOwnTailnet({ mode: "app", state: "needsApproval" });
-        saySignIn({ stage: "approval", url: "https://login.tailscale.com/admin/machines" });
-      }
-      // `?signin=hold|approval`: on Tailscale's page until Cancel; otherwise signed in about 1.5 s later.
-      const held = here.signIn === "hold" || here.signIn === "approval";
-      for (let i = 0; (held || i < 15) && !signInStopped; i++) await wait(100);
-      if (here.signIn === "fail" && !signInStopped) {
-        setOwnTailnet({ mode: "app", state: "signedOut" });
-        saySignIn({ stage: "failed", reason: "failed" });
-        return Promise.reject("failed");
-      }
-      if (signInStopped) {
-        setOwnTailnet({ mode: "app", state: "signedOut" });
-        saySignIn({ stage: "failed", reason: "cancelled" });
-        return Promise.reject("cancelled");
-      }
-      const device = new URL(OWN_TAILNET_URL).host;
-      setOwnTailnet({ mode: "app", state: "on", device, keyExpiry: Date.now() + 180 * DAY_MS });
-      if (local.reach) setLocal({ reachHealth: "on", expiresAt: Date.now() + 180 * DAY_MS });
-      saySignIn({ stage: "done", device });
-      return { device };
-    },
-    cancelTailnetSignIn: async () => {
-      signInStopped = true;
-    },
-    onTailnetSignIn: (cb) => {
-      signInListeners.add(cb);
-      return () => signInListeners.delete(cb);
-    },
-    useTailnetSource: async (mode) => {
-      if (mode === "app") setOwnTailnet({ mode: "app", state: "signedOut" });
-      else setLocal({ tailnet: { mode: "system", state: tailnet.state === "on" ? "on" : "off" } });
-    },
-    // A one-time sign-in for the phone, only while Tailscale shares it.
+    // A one-time sign-in for the phone, only while people reach it (Tailscale or the person's address).
     phoneLink: async (): Promise<PhoneLink> => {
       if (!local.reach || !local.publicUrl) return Promise.reject("not_served");
       const token = `fake${Date.now().toString(36)}${"x".repeat(32)}`;

@@ -8,7 +8,7 @@ import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
 import type { Essential } from "../src/control/essentials";
-import type { LocalServerStatus, Tailnet } from "../src/control/local-server";
+import type { LocalServerStatus } from "../src/control/local-server";
 import { DesktopStore } from "../src/control/store";
 import type { UpdateCheck } from "../src/hooks";
 import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
@@ -102,6 +102,12 @@ const rowEl = (root: ParentNode, title: string) =>
   );
 const buttonIn = (root: ParentNode, text: string) =>
   [...root.querySelectorAll("button")].find((b) => b.textContent === text);
+/** Types into a React field: the value through the field's own setter, then the event React listens to. */
+function typeInto(field: Element | null, value: string) {
+  const input = field as HTMLInputElement;
+  Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set?.call(input, value);
+  input.dispatchEvent(new window.Event("input", { bubbles: true }));
+}
 /** What follows a card title: its card. */
 const cardUnder = (root: ParentNode, title: string) =>
   [...root.querySelectorAll(".dk-ctitle")].find((h) => h.textContent === title)?.nextElementSibling as
@@ -232,7 +238,9 @@ describe("Settings › This computer › Overview", () => {
         // The workspaces that use it, each with its switch, and the way to one more.
         const who = cardUnder(el, "Who uses this Mac") as HTMLElement;
         expect(rowEl(who, "Acme")?.querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("true");
-        expect(rowEl(who, "Another workspace")?.querySelector("button")?.textContent).toBe("Add a workspace…");
+        expect(rowEl(who, "Another workspace")?.querySelector(".dk-crow__end button")?.textContent).toBe(
+          "Add a workspace…",
+        );
       },
     ));
 
@@ -240,7 +248,10 @@ describe("Settings › This computer › Overview", () => {
     pane(
       "selfhost",
       <Settings />,
-      (el) => el.querySelector(".dk-sx__headtext .dk-sx__ok"),
+      // Until the workspaces' pairing is read this Mac isn't used yet, so its permissions' row waits for that too.
+      (el) =>
+        el.querySelector(".dk-sx__headtext .dk-sx__ok") &&
+        rowEl(cardUnder(el, "Always ready") ?? el, "macOS permissions")?.querySelector(".dk-sx__on"),
       (el) => {
         expect(el.querySelector(".dk-sx__headtext > p")?.textContent).toBe("All set");
         const always = cardUnder(el, "Always ready") as HTMLElement;
@@ -281,6 +292,21 @@ describe("Settings › This computer › Overview", () => {
       },
     ));
 
+  test("reach's Turn on in the Overview opens the server's section on its row, with the picker open", () =>
+    pane(
+      "here",
+      <Settings />,
+      (el) => rowEl(el, "Reach from anywhere")?.querySelector(".dk-crow__end button"),
+      async (el) => {
+        await act(async () => buttonIn(rowEl(el, "Reach from anywhere") as HTMLElement, "Turn on")?.click());
+        await until(() => el.querySelector(".dk-sx__choose .dk-way"));
+        expect(el.querySelector('.dk-pnav [aria-current="page"] .dk-sx__label')?.textContent).toBe(
+          "Server on this Mac",
+        );
+        expect(el.querySelector('[data-focus="reach"] .dk-sx__choose')).not.toBeNull();
+      },
+    ));
+
   test("the order: what needs the person, then what is optional and off, then what is on", () => {
     const e = (id: Essential["id"], state: Essential["state"], optional = false): Essential => ({
       id,
@@ -316,7 +342,9 @@ describe("Settings › This computer › Server on this computer", () => {
         expect(el.querySelector(".dk-phead h2")?.textContent).toBe("agentes.chat on this Mac");
         expect(el.querySelector(".dk-phead .dk-lead")?.textContent).toBe("Running · only on this Mac");
         expect(el.querySelector(".dk-phead .ac-btn")?.textContent).toBe("Restart");
-        expect(row(el, "Only on this Mac")?.line).toBe("Only on this Mac. Your phone and team can't open it.");
+        // "Only on this Mac" said once: as the row's title, its line says what it means.
+        expect(row(el, "Only on this Mac")?.line).toBe("Your phone and team can't open it.");
+        expect(buttonIn(rowEl(el, "Only on this Mac") as HTMLElement, "Turn on")).toBeTruthy();
         expect(row(el, "A copy also in")?.hint).toBe(
           "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there.",
         );
@@ -341,7 +369,10 @@ describe("Settings › This computer › Server on this computer", () => {
       <Settings section="server" />,
       (el) => el.querySelector(".dk-sx__qr svg"),
       async (el, host) => {
-        expect(row(el, "ana-mac.tail1234.ts.net")?.line).toBe("On your private network, with a lock");
+        expect(row(el, "ana-mac.tail1234.ts.net")?.line).toBe("Through Tailscale, with a lock");
+        // Choosing the way again and turning access off: quiet links under its row (ADR 0256 §4).
+        const links = [...(rowEl(el, "ana-mac.tail1234.ts.net")?.querySelectorAll(".dk-sx__rowlinks button") ?? [])];
+        expect(links.map((b) => b.textContent)).toEqual(["Change", "Turn off"]);
         expect(row(el, "On your phone")?.line).toBe(
           "Install the agentes.chat app and Tailscale with the same account, and point the camera. It signs in by itself.",
         );
@@ -353,20 +384,126 @@ describe("Settings › This computer › Server on this computer", () => {
       { here: { reach: true } },
     ));
 
-  test("the app's own Tailscale signed out: the address row says so, with its one fix", () =>
+  test("reach through the person's own address: its host, its way, and the phone and the team without Tailscale", () =>
     pane(
       "here",
       <Settings section="server" />,
-      (el) => rowEl(el, "agentes.tail1234.ts.net")?.querySelector(".dk-crow__end button"),
+      (el) => el.querySelector(".dk-sx__qr svg") && row(el, "agentes.example.com"),
       (el) => {
-        expect(row(el, "agentes.tail1234.ts.net")?.line).toBe(
-          "Tailscale isn't signed in, so your phone and team can't reach it.",
+        expect(row(el, "agentes.example.com")?.line).toBe("Through your address");
+        expect(rowEl(el, "agentes.example.com")?.querySelector(".dk-logo .ac-icon")).not.toBeNull();
+        expect(rowEl(el, "agentes.example.com")?.querySelector(".dk-tailscale")).toBeNull();
+        expect(row(el, "On your phone")?.line).toBe(
+          "Install the agentes.chat app and point the camera. It signs in by itself.",
         );
-        expect(rowEl(el, "agentes.tail1234.ts.net")?.querySelector(".dk-crow__end button")?.textContent).toBe(
-          "Sign in to Tailscale",
+        expect(row(el, "Invite someone from the team")?.line).toBe(
+          "Invite them to the workspace. They open it at your address.",
         );
+        expect(buttonIn(el, "Share in Tailscale")).toBeUndefined();
       },
-      { here: { reach: true, tailnet: "signedOut" } },
+      { here: { reach: true, way: "address" } },
+    ));
+
+  test("the address down: said on its row with Check again, which turns it back once it leads here", () =>
+    pane(
+      "here",
+      <Settings section="server" />,
+      (el) => rowEl(el, "agentes.example.com")?.querySelector(".dk-crow__end button"),
+      async (el) => {
+        expect(row(el, "agentes.example.com")?.line).toBe("Your address doesn't lead here now.");
+        const check = buttonIn(rowEl(el, "agentes.example.com") as HTMLElement, "Check again");
+        expect(check).toBeTruthy();
+        // Change is there too, under the row.
+        expect(buttonIn(el.querySelector(".dk-sx__rowlinks") as HTMLElement, "Change")).toBeTruthy();
+        await act(async () => check?.click());
+        await until(() => row(el, "agentes.example.com")?.line === "Through your address", 5000);
+        expect(buttonIn(rowEl(el, "agentes.example.com") as HTMLElement, "Copy")).toBeTruthy();
+      },
+      { here: { reach: true, way: "address", health: "address" } },
+    ));
+
+  test("HTTPS waiting in the Tailscale network: said on its row, with Tailscale's page a button away", () => {
+    const opened: string[] = [];
+    return pane(
+      "here",
+      <Settings section="server" />,
+      (el) => rowEl(el, "ana-mac.tail1234.ts.net")?.querySelector(".dk-crow__end button"),
+      async (el) => {
+        expect(row(el, "ana-mac.tail1234.ts.net")?.line).toBe(
+          "Tailscale waits for HTTPS to be turned on in your network.",
+        );
+        await act(async () => buttonIn(el, "Open Tailscale's page")?.click());
+        await until(() => opened.length > 0);
+        expect(opened).toEqual(["https"]);
+      },
+      {
+        here: { reach: true, health: "approve" },
+        host: (host) => {
+          host.openTailscale = async (page) => {
+            opened.push(page);
+          };
+        },
+      },
+    );
+  });
+
+  test("Turn on opens the picker inline: an address checked by its form, then where it leads, then reach on", () =>
+    pane(
+      "here",
+      <Settings section="server" />,
+      (el) => buttonIn(rowEl(el, "Only on this Mac") as HTMLElement, "Turn on"),
+      async (el, host) => {
+        await act(async () => buttonIn(rowEl(el, "Only on this Mac") as HTMLElement, "Turn on")?.click());
+        await until(() => el.querySelector(".dk-sx__choose .dk-way"));
+        // Under the row, with no card: the two ways, then Cancel and Turn on.
+        expect(el.querySelector(".dk-crow__under .dk-sx__choose")).not.toBeNull();
+        const acts = () => el.querySelector(".dk-sx__chooseacts") as HTMLElement;
+        expect([...acts().querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Cancel", "Turn on"]);
+        await act(async () => (el.querySelector("#way-address") as HTMLElement).click());
+        // Its form first: no app asked.
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "http://agentes.example.com"));
+        await act(async () => buttonIn(acts(), "Turn on")?.click());
+        expect(el.querySelector(".ac-field__error")?.textContent).toBe("The address must start with https://");
+        expect((await host.localServer()).reach).toBe(false);
+        // An https origin: the app checks where it leads, and turns reach on through it.
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://Agentes.Example.com/"));
+        expect(el.querySelector(".ac-field__error")).toBeNull();
+        await act(async () => buttonIn(acts(), "Turn on")?.click());
+        await until(() => row(el, "agentes.example.com")?.line === "Through your address", 5000);
+        const now = await host.localServer();
+        expect(now.reach).toBe(true);
+        expect(now.way).toEqual({ kind: "address", url: "https://agentes.example.com" });
+        expect(el.querySelector(".dk-sx__choose")).toBeNull();
+      },
+    ));
+
+  test("an address that doesn't lead here: said under its field, where the tunnel points, and reach stays off", () =>
+    pane(
+      "here",
+      <Settings section="server" />,
+      (el) => buttonIn(rowEl(el, "Only on this Mac") as HTMLElement, "Turn on"),
+      async (el, host) => {
+        await act(async () => buttonIn(rowEl(el, "Only on this Mac") as HTMLElement, "Turn on")?.click());
+        await until(() => el.querySelector("#way-address"));
+        await act(async () => (el.querySelector("#way-address") as HTMLElement).click());
+        // Where the tunnel points, with Copy.
+        expect(el.querySelector(".dk-way__tunnel")?.textContent).toContain("http://127.0.0.1:4310");
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://agentes.example.com"));
+        const acts = el.querySelector(".dk-sx__chooseacts") as HTMLElement;
+        await act(async () => buttonIn(acts, "Turn on")?.click());
+        await until(() => el.querySelector(".ac-field__error"), 5000);
+        expect(el.querySelector(".ac-field__error")?.textContent).toBe(
+          "We couldn't open it. Check that your tunnel is on and points to http://127.0.0.1:4310.",
+        );
+        // Said once, under the field: not again as a row.
+        expect(el.querySelector('.dk-sx [role="alert"].dk-fr__problem')).toBeNull();
+        expect((await host.localServer()).reach).toBe(false);
+        // Cancel closes the picker; the row is as it was.
+        await act(async () => buttonIn(acts, "Cancel")?.click());
+        expect(el.querySelector(".dk-sx__choose")).toBeNull();
+        expect(row(el, "Only on this Mac")?.line).toBe("Your phone and team can't open it.");
+      },
+      { here: { addr: "unreachable" } },
     ));
 
   test("once erased, its section leaves the list and the first run opens on Run here's form", () =>
@@ -692,30 +829,31 @@ describe("Settings › This computer › App settings", () => {
       },
     ));
 
-  test("until Tailscale answers, reach says it is checking and its switch waits", async () => {
-    // Tailscale is connected, but its read takes a moment: the line says so, never "Needs Tailscale" meanwhile.
-    const answers: ((tailnet: Tailnet) => void)[] = [];
-    await pane(
+  test("reach's switch turns on through the picker under it, and says the way once on (ADR 0256 §4)", () =>
+    pane(
       "here",
       <Settings section="app" />,
-      (el) => row(el, "Reach it from your phone and teammates"),
+      (el) => el.querySelector("#here-reach"),
       async (el) => {
         const reach = () => row(el, "Reach it from your phone and teammates");
-        expect(reach()?.line).toBe("Checking whether Tailscale is connected…");
-        expect(el.querySelector("#here-reach")?.hasAttribute("disabled")).toBe(true);
-        await act(async () => {
-          for (const answer of answers) answer({ state: "on", device: "macbook" });
-        });
-        await until(() => !el.querySelector("#here-reach")?.hasAttribute("disabled"));
-        expect(reach()?.line).toBeNull();
+        const toggle = () => el.querySelector("#here-reach") as HTMLElement;
+        expect(reach()?.hint).toBe(
+          "Through Tailscale, a free private network for your devices, or through an address of your own: your phone and the people you invite open agentes.chat from anywhere.",
+        );
+        // On: the picker opens, the switch stays off until reach is on.
+        await act(async () => toggle().click());
+        await until(() => el.querySelector(".dk-sx__choose .dk-way"));
+        expect(toggle().getAttribute("aria-checked")).toBe("false");
+        // Tailscale is connected here: its row says so, and Turn on applies it.
+        await until(() => el.querySelector(".dk-way__line--ok"));
+        const acts = el.querySelector(".dk-sx__chooseacts") as HTMLElement;
+        await until(() => !(buttonIn(acts, "Turn on") as HTMLButtonElement | undefined)?.disabled);
+        await act(async () => buttonIn(acts, "Turn on")?.click());
+        await until(() => reach()?.line === "Through Tailscale, with a lock", 5000);
+        expect(toggle().getAttribute("aria-checked")).toBe("true");
+        expect(el.querySelector(".dk-sx__choose")).toBeNull();
       },
-      {
-        host: (host) => {
-          host.tailscale = () => new Promise((resolve) => answers.push(resolve));
-        },
-      },
-    );
-  });
+    ));
 
   test("About: the installed and internal versions stay distinct through a restart, and Jev's key a button away", () =>
     pane(

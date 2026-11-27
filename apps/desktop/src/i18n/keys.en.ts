@@ -186,21 +186,18 @@ export const desktopEn = {
       screen: { body: "Without it, agents can't see the screen." },
       disk: { body: "Agents may stop to ask for each folder." },
       reach: {
-        signedOut: {
-          title: "Tailscale signed out on this {{device}}",
-          body: "Your phone and team can't reach agentes.chat until you sign in again.",
-        },
         approve: {
           title: "Tailscale waits for one click",
           body: "Your phone and team reach agentes.chat once you allow it in Tailscale's admin page.",
         },
-        expiring: {
-          title: "Tailscale's sign-in ends soon",
-          body: "Sign in again so your phone and team keep reaching agentes.chat.",
-        },
         down: {
           title: "Tailscale isn't connected on this {{device}}",
           body: "Your phone and team can't reach agentes.chat.",
+        },
+        /** The person's own address (a tunnel of theirs) doesn't lead here now (ADR 0256 §4). */
+        address: {
+          title: "Your address doesn't lead here now",
+          body: "Your phone and team can't reach agentes.chat until it does. Check that your tunnel is on.",
         },
       },
       backup: {
@@ -262,26 +259,15 @@ export const desktopEn = {
       whereTitle: "Where will you use it?",
       whereLead: "You can change it anytime.",
       everywhere: "On this {{device}}, your phone and your team",
-      everywhereText: "Through a private network, for free.",
+      everywhereText: "Through Tailscale or an address of yours.",
       hereOnly: "Only on this {{device}}",
       hereOnlyText: "The phone can come later.",
-      netTitle: "Sign in to your private network",
-      netLead:
-        "A Tailscale account connects your devices. You sign in with Google, Microsoft, Apple or GitHub. Nothing to install on this {{device}}.",
-      /** A build without Tailscale of its own: the system's, connected here, then Continue. */
-      netLeadSystem: "Tailscale connects your devices. Connect it on this {{device}}, then continue.",
-      /** Beside Tailscale's tile. */
-      tailscaleText: "The private network that connects this {{device}}, your phone and your team. Free to start.",
-      netNote: "Already use Tailscale on this {{device}}? This step goes away and we use the same network.",
+      /** How the phone and the team get here (ADR 0256 §4): Tailscale or an address of the person's own. */
+      netTitle: "How do the phone and the team get here?",
+      netLead: "You can change it later in Settings.",
       later: "Do it later",
-      waitTitle: "Continue in your browser",
-      waitLead: "We opened Tailscale's page in your browser. This window goes on by itself when you're done.",
-      waitNow: "Waiting for you to sign in to Tailscale",
-      waitHow:
-        "There, sign in with your account (Google, Microsoft, Apple or GitHub) and confirm the device named “agentes”.",
-      /** Tailscale's network approves new devices: its admin approves this one. */
-      approvalNow: "Waiting for your network's admin",
-      signInFailed: "Signing in to Tailscale didn't finish. Try again.",
+      /** The setup's access step, an address that doesn't lead here: back to the step with its field. */
+      changeAddress: "Change the address",
       /** Under the access step while Tailscale's page waits for HTTPS. "Enable" is that page's own button. */
       ask: "<b>One click left.</b> On the Tailscale page that opened, click <b>Enable</b>. It makes your address secure, with a lock. We go on by ourselves, no rush.",
       askOpen: "Open the page",
@@ -298,6 +284,55 @@ export const desktopEn = {
       /** The address people use, in bold after it. */
       address: "Your address: <b>{{address}}</b>",
       open: "Open agentes.chat",
+    },
+  },
+  /**
+   * How the phone and the team reach agentes.chat on this computer (ADR 0256 §4), shared by the first run and Settings:
+   * the official Tailscale the person installs, or an address of their own (a tunnel on this computer).
+   */
+  reach: {
+    /** The two rows' name for screen readers. */
+    label: "How the phone and the team get here",
+    tailscale: "Through Tailscale",
+    tailscaleText: "Free. A private network between your devices and your team's.",
+    address: "Through an address of mine",
+    addressText: "A tunnel on this {{device}} that already leads here.",
+    checking: "Checking Tailscale on this {{device}}…",
+    tailscaleOn: "Tailscale is connected on this {{device}}.",
+    download: "Download Tailscale",
+    downloadNote: "Free, from Tailscale's own site.",
+    openApp: "Open Tailscale and sign in",
+    tray: "Open Tailscale from its icon by the clock and sign in.",
+    /** The command to copy follows. */
+    terminal: "Connect Tailscale in the terminal:",
+    waitNow: "Waiting for Tailscale…",
+    waitInstall: "Install it, open it and sign in. This goes on by itself, no rush.",
+    waitSignIn: "Sign in there. This goes on by itself, no rush.",
+    addressLabel: "Your address",
+    /** Under the address field, before the loopback address in bold and Copy. */
+    pointAt: "Point it at",
+    /** Why the person's address doesn't lead here. */
+    problem: {
+      notHttps: "The address must start with https://",
+      unreachable: "We couldn't open it. Check that your tunnel is on and points to {{target}}.",
+      unreachablePlain: "We couldn't open it. Check that your tunnel is on and points to this {{device}}.",
+      otherServer: "It opens another server, not this {{device}}'s.",
+      error: "It answered with an error ({{status}}).",
+      errorPlain: "It answered with an error.",
+    },
+    /** After "Access from your devices didn't turn on:". */
+    reason: {
+      address: "your address doesn't lead here",
+    },
+    /** What turning access on is doing, the address's own stage and the end. */
+    stage: {
+      checking: "Checking your address…",
+      done: "Ready: your phone and team can open it.",
+    },
+    /** The server here in a few words, reached through the person's address. */
+    line: {
+      address: "Running · at your address",
+      addressDown: "Running · your address doesn't lead here now",
     },
   },
   /** The first screen ("Onde seu workspace vai ficar?", FirstRun.tsx): the three places, the drawing following the one picked. */
@@ -379,12 +414,7 @@ export const desktopEn = {
     emailNeeded: "Write your email, like ana@example.com.",
     reach: "Reach it from your phone and teammates",
     reachText:
-      "With Tailscale, a private network for your devices: your phone and the people you invite join it, and nobody else can reach agentes.chat.",
-    reachOff: "Tailscale isn't connected.",
-    reachOffTerminal: "Tailscale isn't connected. Connect it in the terminal:",
-    reachTray: "Tailscale isn't connected. Connect it from its icon by the clock.",
-    reachMissing: "Needs Tailscale, which is free.",
-    reachChecking: "Checking whether Tailscale is connected…",
+      "Through Tailscale, a free private network for your devices, or through an address of your own: your phone and the people you invite open agentes.chat from anywhere.",
     /** What turning access on or off is doing while it takes. */
     reachStage: {
       sharing: "Asking Tailscale to share it…",
@@ -396,7 +426,6 @@ export const desktopEn = {
     approveOpen: "Open Tailscale's page",
     approveStop: "Stop waiting",
     openTailscale: "Open Tailscale",
-    getTailscale: "Get Tailscale",
     usage: "Send anonymous usage statistics to agentes.chat",
     usageText:
       "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.",
@@ -768,7 +797,7 @@ export const desktopEn = {
       },
       reach: {
         title: "Your phone and team can't reach agentes.chat",
-        body: "The private network on this {{device}} needs you. Open the app to fix it.",
+        body: "Access from your devices needs you on this {{device}}. Open the app to fix it.",
       },
       backup: {
         title: "Last night's backup didn't finish",
@@ -1160,8 +1189,11 @@ export const desktopEn = {
       launchAtLogin: "Opens when the {{device}} starts",
       reach: "Reach from anywhere",
       reachOff: "Only on this {{device}}. Your phone and team can't open it.",
-      reachDown: "The private network is off on this {{device}}.",
-      reachStart: "Turn the network on",
+      reachDown: "Tailscale isn't connected on this {{device}}.",
+      reachApprove: "Tailscale waits for HTTPS to be turned on in your network.",
+      reachAddress: "Your address doesn't lead here now.",
+      /** Reach asked again (Tailscale connected elsewhere than an app, or the person's address back up). */
+      checkAgain: "Check again",
       backup: "Backup every night",
       backupOff: "Switched off",
       autoUpdate: "Updates by itself at night",
@@ -1177,13 +1209,24 @@ export const desktopEn = {
       /** After "Running ·" in the server here's heading. */
       anywhere: "your phone and team can open it",
       onlyHere: "only on this {{device}}",
-      addressDesc: "On your private network, with a lock",
+      /** Under "Only on this {{device}}" (said once, as its title). */
+      onlyHereDesc: "Your phone and team can't open it.",
+      /** Under the address for people: how they get here (ADR 0256 §4). */
+      wayTailscale: "Through Tailscale, with a lock",
+      wayAddress: "Through your address",
+      /** Quiet links under it: choose the way again, or turn access off (it asks first). */
+      changeWay: "Change",
+      reachOff: "Turn off",
+      /** The picker's button while access is on. */
+      useWay: "Use this",
       phoneDesc:
         "Install the agentes.chat app and Tailscale with the same account, and point the camera. It signs in by itself.",
+      phoneDescAddress: "Install the agentes.chat app and point the camera. It signs in by itself.",
       phoneSignedOut: "Sign in to agentes.chat on this {{device}} in the app to show the code.",
       qrLabel: "QR code to sign in on the phone",
       invite: "Invite someone from the team",
       inviteDesc: "Invite them to the workspace, then share this {{device}} with them in Tailscale.",
+      inviteDescAddress: "Invite them to the workspace. They open it at your address.",
       inviteButton: "Invite",
       share: "Share in Tailscale",
       everyNight: "Every night, at {{at}}",
@@ -1211,30 +1254,6 @@ export const desktopEn = {
       advanced: "Advanced",
       /** The server here's reach, from App settings: off, it is only on this computer. */
       onlyHere: "Only on this {{device}}",
-    },
-  },
-  /** The Tailscale the app carries (ADR 0256 §4): what it needs, said under the reach switch and while it signs in. */
-  tailnet: {
-    rowApp: "Sign in to Tailscale once, here in the app. Nothing to install on this {{device}}.",
-    signedOut: "Tailscale isn't signed in, so your phone and team can't reach it.",
-    expired: "Tailscale's sign-in on this {{device}} expired, so your phone and team can't reach it.",
-    expiring: "Tailscale's sign-in on this {{device}} expires on {{date}}.",
-    needsApproval: "Your Tailscale network's admin needs to approve this {{device}} (the device named “agentes”).",
-    starting: "Starting Tailscale…",
-    failing: "Tailscale didn't start on this {{device}}.",
-    signIn: "Sign in to Tailscale",
-    signInAgain: "Sign in again",
-    openAgain: "Open the page again",
-    approve: "Open Tailscale's admin",
-    stage: {
-      joining: "Waiting for you to sign in to Tailscale in your browser. This continues by itself when you're done.",
-      done: "Ready: your phone and team can open it.",
-    },
-    /** Why access didn't turn on, after "Access from your devices didn't turn on:". */
-    reason: {
-      signIn: "Tailscale isn't signed in on this {{device}}",
-      expired: "Tailscale's sign-in on this {{device}} expired",
-      needsApproval: "your Tailscale network's admin hasn't approved this {{device}} yet",
     },
   },
   iphone: {
@@ -1294,17 +1313,12 @@ export const desktopEn = {
     privateLine: "And the network is off on this {{device}}. Turn it on and the workspace opens by itself.",
     privateMissing:
       "And Tailscale, the private network, isn't on this {{device}} yet. Get it, sign in, and the workspace opens by itself.",
-    privateApprove:
-      "And this {{device}} waits to be approved in Tailscale's admin page. Once it is, the workspace opens by itself.",
-    privateSigningIn: "Finish signing in to Tailscale in your browser, and the workspace opens by itself.",
     privateTray:
       "And the network is off on this {{device}}. Turn it on from Tailscale's icon by the clock, and the workspace opens by itself.",
     privateElsewhere:
       "And the network is off on this {{device}}. Turn Tailscale on, and the workspace opens by itself.",
-    privateFailed: "Couldn't sign in to Tailscale. Try again.",
     useOther: "Use another workspace",
-    turnOn: "Turn the network on",
-    getTailscale: "Get Tailscale",
+    getTailscale: "Download Tailscale",
   },
   /** "Send a report" from the app (the cover over a server that won't start, Preferences › Activity). */
   report: {

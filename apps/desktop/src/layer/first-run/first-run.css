@@ -240,6 +240,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  /* A button's height even with none (a step whose ways on are under it): the footer never shrinks between steps. */
+  min-height: var(--control-h-md);
 }
 
 /* ── Run here: the owner ── */
@@ -303,97 +305,6 @@
 }
 .dk-first__picktext small {
   font-size: 13.5px;
-  color: var(--muted);
-}
-
-/* ── Run here: the private network ── */
-.dk-first__tailscale {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: var(--raised);
-  box-shadow: var(--e1), var(--top);
-}
-.dk-first__tailscaletext {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.dk-first__tailscaletext b {
-  font-size: 14px;
-  font-weight: 600;
-}
-.dk-first__tailscaletext small {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.45;
-}
-.dk-first__note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-.dk-first__note > .ac-icon {
-  flex: none;
-  margin-top: 1px;
-  color: var(--ok);
-}
-/* Waiting on Tailscale's page: the app and Tailscale joined by the pixel trail, what it waits for, what to do there. */
-.dk-first__wait {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.dk-first__hop {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  margin: 4px 0 14px;
-}
-.dk-first__hoptile,
-.dk-first__hop .dk-logo--lg {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: var(--raised);
-  box-shadow: var(--e2), var(--top);
-}
-.dk-first__trail {
-  display: inline-flex;
-  gap: 5px;
-}
-.dk-first__trail i {
-  width: 6px;
-  height: 6px;
-  background: var(--agent2);
-}
-.dk-first__trail i:nth-child(2) {
-  opacity: 0.7;
-}
-.dk-first__trail i:nth-child(3) {
-  opacity: 0.4;
-}
-.dk-first__waitnow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-.dk-first__waithow {
-  margin: 0 0 0 26px;
-  font-size: 13.5px;
-  line-height: 1.45;
   color: var(--muted);
 }
 

@@ -1,10 +1,11 @@
 /**
  * Running agentes.chat on this computer (ADR 0256 §3), in three steps in one frame: who owns it (name, e-mail and the
- * usage statistics line, until an owner exists), where it will be used (this computer, the phone and the team, chosen;
- * or only this computer), and the private network (the app's own Tailscale signed in from here, its page in the
- * browser with no time limit; skipped when the system's Tailscale is connected). Then the setup's steps and, shared
- * with the phone and the team, the phone's code. One installed from the terminal already runs here: Use it (its owner
- * page while it waits for one); installed but not running: it starts there. The app runs it already: open it.
+ * usage statistics line, until an owner exists), where it will be used (this computer, the phone and the team, chosen
+ * when the system's Tailscale is on already; or only this computer), and how the phone and the team get here (ADR 0256
+ * §4: the official Tailscale the person installs, waited for with no time limit and gone on from by itself once it is
+ * on, or an address of their own; skipped when Tailscale is on already). Then the setup's steps and, shared with the
+ * phone and the team, the phone's code. One installed from the terminal already runs here: Use it (its owner page
+ * while it waits for one); installed but not running: it starts there. The app runs it already: open it.
  */
 import { connectLink } from "@agenteschat/client/lib/server";
 import { isEmail } from "@agenteschat/client/lib/text";
@@ -15,6 +16,7 @@ import { useHost } from "../../app";
 import {
   type ConnectProblem,
   connectOutcome,
+  defaultPlace,
   type HereStep,
   hereSteps,
   needsPrivateNetwork,
@@ -22,19 +24,22 @@ import {
   terminalStartCommand,
 } from "../../control/first-run";
 import {
+  addressForm,
   hereView,
+  type LocalChoice,
   type LocalPlace,
   type LocalServerStatus,
   ownerless,
+  type ReachWay,
+  type SetupStep,
+  type StepChange,
   setupSteps,
   type Tailnet,
-  type TailnetSignIn,
-  tailscaleFrom,
 } from "../../control/local-server";
 import type { FirstStart } from "../../dev/first-run-start";
 import { useTailnet } from "../../hooks";
-import { BrandFace, CommandCopy } from "../../ui/bits";
-import { ServerTile, throughOwnTailnet } from "../../ui/here";
+import { CommandCopy } from "../../ui/bits";
+import { ReachWayPicker } from "../../ui/reach-way";
 import { shortPath } from "../../ui/time";
 import { ProblemLine } from "./discovery";
 import { Flow } from "./Flow";
@@ -44,8 +49,11 @@ import { HereSetup, type Setup } from "./Setup";
 /** The owner's form: the footer's Continue submits it. */
 const OWNER_FORM = "dk-first-owner";
 
-/** Tailscale's sign-in on screen: its page opening, open in the browser, its admin approving, or why it ended. */
-type SignIn = { stage: "opening" | "url" | "approval" } | { stage: "failed"; reason: "start" | "failed" };
+/** Every step before access, done: how the setup's list looks when only access runs again. */
+const BEFORE_REACH: StepChange[] = (["database", "start", "account", "computer"] as SetupStep[]).map((step) => ({
+  step,
+  state: "done",
+}));
 
 export function RunHere({
   onBack,
@@ -59,7 +67,7 @@ export function RunHere({
   onUse: (server: string) => Promise<void>;
   onConfirm: (server: string) => Promise<void>;
   onLink: (raw: string) => Promise<void>;
-  /** The sign-in or the setup is on screen (Esc and the window shown again leave it there). */
+  /** The setup is on screen (Esc and the window shown again leave it there). */
   onBusy: (busy: boolean) => void;
   /** Development only: the state to open on (`?first=`). */
   start?: FirstStart | null;
@@ -70,18 +78,22 @@ export function RunHere({
   // A server (a Docker install) answering on this computer when the app doesn't run one: checked once.
   const [answering, setAnswering] = useState<string | null | undefined>(undefined);
   const tailnet = useTailnet();
-  // The system's Tailscale read again by "Continue" on the network's step (`useTailnet` reads at most every 15 s).
+  // The system's Tailscale as read again by "Continue" and while the last step waits for it (every 2 s).
   const [system, setSystem] = useState<Tailnet | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [usage, setUsage] = useState(true);
-  const [place, setPlace] = useState<LocalPlace>("everywhere");
+  // Where it will be used, until chosen: everywhere when the system's Tailscale is on, else only here (ADR 0256 §4).
+  const [place, setPlace] = useState<LocalPlace>("here");
+  const placeChosen = useRef(false);
+  const [way, setWay] = useState<ReachWay>(start === "address" ? { kind: "address", url: "" } : { kind: "tailscale" });
+  // Continue found the address's form wrong: said under its field.
+  const [notHttps, setNotHttps] = useState(false);
   // Continue was pressed with a field missing: each one says what it needs.
   const [tried, setTried] = useState(false);
   const [step, setStep] = useState<HereStep>(
-    start === "where" ? "where" : start === "net" || start === "wait" ? "net" : "owner",
+    start === "where" ? "where" : start === "net" || start === "address" ? "net" : "owner",
   );
-  const [signIn, setSignIn] = useState<SignIn | null>(null);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [phone, setPhone] = useState(start === "done");
   const [problem, setProblem] = useState<{ problem: ConnectProblem; host: string } | null>(null);
@@ -90,6 +102,8 @@ export function RunHere({
   const warned = useRef(false);
   // "Finish without it" on Tailscale's page: the warning that follows was the person's own choice.
   const skipped = useRef(false);
+  // Set up already, only access left (its address changed after it didn't lead here): access alone runs again.
+  const [settled, setSettled] = useState(false);
   const started = useRef(false);
 
   const read = useCallback(() => {
@@ -100,7 +114,9 @@ export function RunHere({
         if (s.systemName) setName((n) => n || (s.systemName ?? ""));
         // One that ran here before starts again as it was.
         if (s.installed === "app" && s.owner) {
+          placeChosen.current = true;
           setPlace(s.reach ? "everywhere" : "here");
+          if (s.way) setWay(s.way);
           setUsage(s.usage);
         }
       })
@@ -112,7 +128,16 @@ export function RunHere({
   }, [host]);
   useEffect(read, [read]);
 
-  const busy = setup !== null || signIn !== null;
+  // Chosen at first by the system's Tailscale, once it is read, unless the person chose already.
+  useEffect(() => {
+    if (!placeChosen.current && tailnet) setPlace(defaultPlace(tailnet));
+  }, [tailnet]);
+  const choosePlace = (next: LocalPlace) => {
+    placeChosen.current = true;
+    setPlace(next);
+  };
+
+  const busy = setup !== null;
   useEffect(() => {
     onBusy(busy);
     return () => onBusy(false);
@@ -125,17 +150,6 @@ export function RunHere({
         setSetup((s) =>
           s ? { ...s, changes: [...s.changes, c], activeAt: c.state === "active" ? Date.now() : s.activeAt } : s,
         );
-      }),
-    [host],
-  );
-
-  // Tailscale's own stages while it signs in here: its page opened, then its admin approving the new device.
-  useEffect(
-    () =>
-      host.onTailnetSignIn((stage: TailnetSignIn) => {
-        if (stage.stage !== "url" && stage.stage !== "approval") return;
-        const next = stage.stage;
-        setSignIn((now) => (now && now.stage !== "failed" ? { stage: next } : now));
       }),
     [host],
   );
@@ -153,16 +167,22 @@ export function RunHere({
   }, [host]);
 
   const runSetup = useCallback(
-    async (where: LocalPlace, who: { name: string; email: string }) => {
-      const choice = ask
-        ? { name: who.name.trim(), email: who.email.trim(), place: where, usage }
-        : { place: where, usage };
+    async (where: LocalPlace, who: { name: string; email: string }, through?: ReachWay) => {
+      // Used beyond this computer: how people get here goes with it (Tailscale unless an address was given).
+      const reachWay: ReachWay | null = where === "everywhere" ? (through ?? { kind: "tailscale" }) : null;
+      const choice: LocalChoice = {
+        ...(ask ? { name: who.name.trim(), email: who.email.trim() } : {}),
+        place: where,
+        ...(reachWay ? { way: reachWay } : {}),
+        usage,
+      };
       setPlace(where);
-      setSetup({ steps: setupSteps(where), changes: [], activeAt: Date.now(), end: "running" });
+      setSetup({ steps: setupSteps(where), changes: [], activeAt: Date.now(), end: "running", way: reachWay });
       warned.current = false;
       skipped.current = false;
       try {
         await host.installLocalServer(choice);
+        setSettled(true);
         // Shared with the phone and the team: the phone's code is next.
         if (where === "everywhere" && !warned.current) {
           setSetup(null);
@@ -178,7 +198,38 @@ export function RunHere({
     },
     [host, ask, usage, backToSteps],
   );
-  const startSetup = (where: LocalPlace) => void runSetup(where, { name, email });
+  const startSetup = (where: LocalPlace, through?: ReachWay) => void runSetup(where, { name, email }, through);
+
+  /** Set up already: access alone runs again, through `through` (its address changed, or Try again). */
+  const reachAgain = useCallback(
+    async (through: ReachWay) => {
+      setSetup({
+        steps: setupSteps("everywhere"),
+        changes: [...BEFORE_REACH, { step: "reach", state: "active" }],
+        activeAt: Date.now(),
+        end: "running",
+        way: through,
+        reachOnly: true,
+      });
+      const result = await host
+        .setLocalReach(true, through)
+        .catch(() => ({ ok: false as const, problem: { reason: "start" as const } }));
+      if (result.ok) {
+        setSetup(null);
+        setPhone(true);
+        return;
+      }
+      const warn: StepChange = { step: "reach", state: "warn", reason: result.problem };
+      setSetup((s) => s && { ...s, changes: [...s.changes, warn], end: "done" });
+    },
+    [host],
+  );
+
+  /** On to the setup through `through`; once set up, access alone. */
+  const goOn = (through: ReachWay) => {
+    if (settled) void reachAgain(through);
+    else startSetup("everywhere", through);
+  };
 
   const cancelSetup = () => {
     // After a failure the app has put everything back already.
@@ -187,41 +238,15 @@ export function RunHere({
     void host.cancelLocalSetup().catch(() => {});
   };
 
-  const signInTailnet = useCallback(() => {
-    setSignIn({ stage: "opening" });
-    host.signInTailnet().then(
-      () => {
-        setSignIn(null);
-        void runSetup("everywhere", { name, email });
-      },
-      (reason) => {
-        if (reason === "cancelled") setSignIn(null);
-        else setSignIn({ stage: "failed", reason: reason === "start" ? "start" : "failed" });
-      },
-    );
-  }, [host, runSetup, name, email]);
-  const cancelSignIn = () => {
-    setSignIn(null);
-    void host.cancelTailnetSignIn().catch(() => {});
-  };
-
-  // Development only (`?first=`): a state that needs the app to be doing something starts it at once.
+  // Development only (`?first=setup`): the setup starts at once.
   useEffect(() => {
-    if (view?.kind !== "form" || started.current) return;
-    if (start === "wait") {
-      started.current = true;
-      signInTailnet();
-    } else if (start === "setup") {
-      started.current = true;
-      void runSetup("everywhere", { name: name || "Ana Souza", email: email || "ana@example.com" });
-    }
-  }, [view, start, signInTailnet, runSetup, name, email]);
+    if (view?.kind !== "form" || started.current || start !== "setup") return;
+    started.current = true;
+    void runSetup("everywhere", { name: name || "Ana Souza", email: email || "ana@example.com" });
+  }, [view, start, runSetup, name, email]);
 
-  // The private network's step counts while it may still show (the system's Tailscale not read yet included).
-  const flow = hereSteps(
-    ask,
-    step === "net" || (!!status && needsPrivateNetwork(place, system ?? tailnet, status.tailnet)),
-  );
+  // The last step counts while it may still show (the system's Tailscale not read yet included).
+  const flow = hereSteps(ask, step === "net" || needsPrivateNetwork(place, system ?? tailnet));
   const at: HereStep = step === "owner" && !ask ? "where" : step;
   // "Run on this Mac · 1 of 3"; a single step has no count.
   const stepLabel = (s: HereStep) =>
@@ -230,7 +255,8 @@ export function RunHere({
       : t("desktop.first.run.flow");
 
   const goBack = () => {
-    if (signIn && signIn.stage !== "failed") return cancelSignIn();
+    // Set up already: the last step has nothing to go back to.
+    if (settled) return;
     const i = flow.indexOf(at);
     const prev = i > 0 ? flow[i - 1] : undefined;
     if (prev) setStep(prev);
@@ -259,13 +285,23 @@ export function RunHere({
     return (
       <HereSetup
         {...setup}
+        port={status?.port ?? null}
         onCancel={cancelSetup}
-        onRetry={() => startSetup(place)}
+        onRetry={() => startSetup(place, way)}
         onContinue={() => void host.hideLayer().catch(() => {})}
         onSkipReach={() => {
           skipped.current = true;
           void host.stopLocalReach().catch(() => {});
         }}
+        onRetryReach={() => {
+          if (setup.way) void reachAgain(setup.way);
+        }}
+        onChangeAddress={() => {
+          setSetup(null);
+          setNotHttps(false);
+          setStep("net");
+        }}
+        onFinish={() => void host.hideLayer().catch(() => {})}
       />
     );
 
@@ -410,10 +446,11 @@ export function RunHere({
   if (at === "where") {
     const next = async () => {
       if (place !== "everywhere") return startSetup("here");
-      const now = tailnet ?? (await host.tailscale().catch((): Tailnet => ({ state: "missing" })));
+      // Read again now: Tailscale on already needs no last step (ADR 0256 §4).
+      const now = await host.tailscale().catch((): Tailnet => ({ state: "missing" }));
       setSystem(now);
-      if (needsPrivateNetwork(place, now, status.tailnet)) setStep("net");
-      else startSetup("everywhere");
+      if (needsPrivateNetwork(place, now)) setStep("net");
+      else startSetup("everywhere", { kind: "tailscale" });
     };
     const pick = (value: LocalPlace, icon: ReactNode, title: string, text: string) => (
       <label className="dk-first__pick" htmlFor={`where-${value}`}>
@@ -441,7 +478,7 @@ export function RunHere({
       >
         <RadioGroup
           value={place}
-          onValueChange={setPlace}
+          onValueChange={choosePlace}
           aria-label={t("desktop.first.run.whereTitle")}
           className="dk-first__picks"
         >
@@ -462,158 +499,53 @@ export function RunHere({
     );
   }
 
-  // The private network: the app's own Tailscale, signed in here; or the system's, where this build carries none.
-  const later = (
-    <Button variant="ghost" onClick={() => startSetup("here")}>
-      {t("desktop.first.run.later")}
-    </Button>
-  );
-  if (signIn && signIn.stage !== "failed") {
-    const approval = signIn.stage === "approval";
-    return (
-      <Flow
-        screen="wait"
-        step={stepLabel("net")}
-        title={t("desktop.first.run.waitTitle")}
-        lead={t("desktop.first.run.waitLead")}
-        onBack={goBack}
-        quiet={
-          <Button
-            variant="ghost"
-            onClick={() => void host.openTailscale(approval ? "approve" : "signIn").catch(() => {})}
-          >
-            {approval ? t("desktop.tailnet.approve") : t("desktop.tailnet.openAgain")}
-          </Button>
-        }
-      >
-        <div className="dk-first__wait">
-          <span className="dk-first__hop" aria-hidden="true">
-            <span className="dk-first__hoptile">
-              <BrandFace size="md" />
-            </span>
-            <span className="dk-first__trail">
-              <i />
-              <i />
-              <i />
-            </span>
-            <ServerTile kind="tailnet" />
-          </span>
-          <p className="dk-first__waitnow" aria-live="polite">
-            <PixelSpinner size={16} color="sky" />
-            {approval ? t("desktop.first.run.approvalNow") : t("desktop.first.run.waitNow")}
-          </p>
-          <p className="dk-first__waithow">
-            {approval ? t("desktop.tailnet.needsApproval") : t("desktop.first.run.waitHow")}
-          </p>
-        </div>
-      </Flow>
-    );
-  }
-
-  const own = throughOwnTailnet(system ?? tailnet, status);
-  if (!own) {
-    // This build carries no Tailscale of its own: the system's, connected here, then Continue.
-    const now = system ?? tailnet;
-    const from = tailscaleFrom(host.platform, now);
-    const missing = now?.state === "missing";
-    const recheck = () =>
-      void host
-        .tailscale()
-        .then((s) => {
-          setSystem(s);
-          if (s.state === "on") startSetup("everywhere");
-        })
-        .catch(() => {});
-    return (
-      <Flow
-        screen="net"
-        step={stepLabel("net")}
-        title={t("desktop.first.run.netTitle")}
-        lead={t("desktop.first.run.netLeadSystem")}
-        onBack={goBack}
-        quiet={later}
-        action={
-          <Button variant="primary" autoFocus onClick={recheck}>
-            {t("desktop.common.continue")}
-          </Button>
-        }
-      >
-        <TailscaleCard />
-        <p className="dk-first__hint">
-          {missing ? (
-            <>
-              {t("desktop.here.reachMissing")}{" "}
-              <button
-                type="button"
-                className="ac-link dk-link"
-                onClick={() => void host.openTailscale("download").catch(() => {})}
-              >
-                {t("desktop.here.getTailscale")}
-              </button>
-            </>
-          ) : from === "tray" ? (
-            t("desktop.here.reachTray")
-          ) : from === "terminal" ? (
-            <>
-              {t("desktop.here.reachOffTerminal")} <CommandCopy command="sudo tailscale up" inline />
-            </>
-          ) : (
-            <>
-              {t("desktop.here.reachOff")}{" "}
-              <button
-                type="button"
-                className="ac-link dk-link"
-                onClick={() => void host.openTailscale("app").catch(() => {})}
-              >
-                {t("desktop.here.openTailscale")}
-              </button>
-            </>
-          )}
-        </p>
-      </Flow>
-    );
-  }
-
+  // How the phone and the team get here: Tailscale (on, it goes on by itself) or an address of the person's own.
+  const now = system ?? tailnet;
+  const waitsForTailscale = way.kind === "tailscale" && now?.state !== "on";
+  const netNext = () => {
+    if (way.kind === "tailscale") {
+      if (!waitsForTailscale) goOn({ kind: "tailscale" });
+      return;
+    }
+    // Only its form here: where it leads is checked once the server runs (the setup's access step).
+    const form = addressForm(way.url);
+    if (!form.ok) return setNotHttps(true);
+    setWay({ kind: "address", url: form.url });
+    goOn({ kind: "address", url: form.url });
+  };
   return (
     <Flow
       screen="net"
-      step={stepLabel("net")}
+      step={settled ? t("desktop.first.run.flow") : stepLabel("net")}
       title={t("desktop.first.run.netTitle")}
       lead={t("desktop.first.run.netLead")}
-      onBack={goBack}
-      quiet={later}
+      onBack={settled ? undefined : goBack}
+      quiet={
+        <Button variant="ghost" onClick={() => (settled ? void host.hideLayer().catch(() => {}) : startSetup("here"))}>
+          {t("desktop.first.run.later")}
+        </Button>
+      }
       action={
-        <Button variant="primary" icon="external" autoFocus onClick={signInTailnet}>
-          {t("desktop.tailnet.signIn")}
+        <Button variant="primary" disabled={waitsForTailscale} onClick={netNext}>
+          {t("desktop.common.continue")}
         </Button>
       }
     >
-      <TailscaleCard />
-      {signIn?.stage === "failed" ? (
-        <span className="dk-honest dk-first__problem ac-iconline" role="alert">
-          <Icon name="alert" size={16} />
-          <span>{signIn.reason === "start" ? t("desktop.tailnet.failing") : t("desktop.first.run.signInFailed")}</span>
-        </span>
-      ) : (
-        <p className="dk-first__note">
-          <Icon name="check" size={16} />
-          <span>{t("desktop.first.run.netNote")}</span>
-        </p>
-      )}
+      <ReachWayPicker
+        value={way}
+        onChange={(next) => {
+          setWay(next);
+          setNotHttps(false);
+        }}
+        platform={host.platform}
+        tailnet={now}
+        port={status.port}
+        onTailnet={setSystem}
+        // Tailscale turned on while this step waited: on to the setup by itself.
+        onReady={() => goOn({ kind: "tailscale" })}
+        problem={notHttps ? { why: "notHttps" } : null}
+        onSubmit={netNext}
+      />
     </Flow>
-  );
-}
-
-/** Tailscale, named and drawn by its own tile: what it is, in one line. */
-function TailscaleCard() {
-  const { t } = useTranslation();
-  return (
-    <div className="dk-first__tailscale">
-      <ServerTile kind="tailnet" />
-      <span className="dk-first__tailscaletext">
-        <b>Tailscale</b>
-        <small>{t("desktop.first.run.tailscaleText")}</small>
-      </span>
-    </div>
   );
 }

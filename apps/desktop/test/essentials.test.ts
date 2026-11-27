@@ -5,19 +5,14 @@ import {
   type Essential,
   type EssentialId,
   type EssentialsInput,
-  type EssentialsLocal,
-  EXPIRY_WARN_MS,
   essentialsOf,
   fallenSince,
   fellByItself,
   type Health,
   needsYou,
 } from "../src/control/essentials";
-import { NO_SERVER } from "../src/control/local-server";
+import { type LocalServerStatus, NO_SERVER } from "../src/control/local-server";
 import type { TrayInput } from "../src/control/tray";
-
-const NOW = Date.UTC(2026, 10, 26, 12);
-const DAY = 24 * 60 * 60 * 1000;
 
 /** Everything the system says is on. */
 const health = (over: Partial<Health> = {}): Health => ({
@@ -36,7 +31,7 @@ const paired: TrayInput = { running: true, status: { paired: true } as ControlSt
 const signingIn: TrayInput = { running: true, status: { paired: false } as ControlStatus, jobs: [] };
 
 /** The server running here, reach on and working, backups on, this Mac kept awake. */
-const here = (over: Partial<EssentialsLocal> = {}): EssentialsLocal => ({
+const here = (over: Partial<LocalServerStatus> = {}): LocalServerStatus => ({
   ...NO_SERVER,
   installed: "app",
   run: true,
@@ -45,6 +40,7 @@ const here = (over: Partial<EssentialsLocal> = {}): EssentialsLocal => ({
   url: "http://127.0.0.1:4310",
   publicUrl: "https://agentes.tail1234.ts.net",
   reach: true,
+  way: { kind: "tailscale" },
   awake: true,
   reachHealth: "on",
   backups: { nightly: true, copyTo: null, files: [], problem: null },
@@ -54,12 +50,10 @@ const here = (over: Partial<EssentialsLocal> = {}): EssentialsLocal => ({
 const input = (over: Partial<EssentialsInput> = {}): EssentialsInput => ({
   health: health(),
   local: NO_SERVER,
-  tailnet: null,
   autoUpdate: true,
   update: { available: false, required: false },
   homes: [paired],
   platform: "mac",
-  now: NOW,
   ...over,
 });
 
@@ -180,65 +174,51 @@ describe("reach (the server here only)", () => {
   const reach = (over: Partial<EssentialsInput>) => byId(essentialsOf(input(over)), "reach");
 
   test("left off by the person (only this computer): shown with its switch, never counted", () => {
-    for (const local of [here({ reach: false, reachHealth: "off" }), here({ reach: false, reachHealth: undefined })]) {
-      const item = reach({ local });
-      expect(item).toEqual({ id: "reach", state: "off", fix: { kind: "reach" }, reason: "chosen", optional: true });
-      expect(needsYou([item])).toBe(0);
-    }
+    const item = reach({ local: here({ reach: false, reachHealth: "off", way: null }) });
+    expect(item).toEqual({ id: "reach", state: "off", fix: { kind: "reach" }, reason: "chosen", optional: true });
+    expect(needsYou([item])).toBe(0);
+    // Turned off with a way saved (kept for turning it on again): still the person's choice.
+    expect(reach({ local: here({ reach: false, reachHealth: "off" }) }).reason).toBe("chosen");
   });
 
-  test("what the status says: signed out, HTTPS waiting for one click, a sign-in that ends soon, not connected", () => {
-    const approveUrl = "https://login.tailscale.com/admin/dns";
-    expect(reach({ local: here({ reachHealth: "signIn" }) })).toMatchObject({
+  test("from what the status says (ADR 0256 §4): HTTPS waiting, Tailscale not connected, the address down", () => {
+    expect(reach({ local: here({ reachHealth: "approve" }) })).toEqual({
+      id: "reach",
       state: "off",
-      reason: "signedOut",
-      fix: { kind: "tailnetSignIn" },
+      fix: { kind: "tailscaleHttps" },
+      reason: "approve",
     });
-    const tailnet = { mode: "app", state: "on", approveUrl };
-    const approving = reach({ local: here({ reachHealth: "approve" }), tailnet });
-    expect(approving).toMatchObject({ reason: "approve", fix: { kind: "tailnetApprove", url: approveUrl } });
-    expect(reach({ local: here({ reachHealth: "approve" }) }).fix).toEqual({ kind: "tailnetApprove", url: null });
-    expect(reach({ local: here({ reachHealth: "expiring" }) })).toMatchObject({
-      reason: "expiring",
-      fix: { kind: "tailnetSignIn" },
-    });
-    expect(reach({ local: here({ reachHealth: "down" }) })).toMatchObject({
+    expect(reach({ local: here({ reachHealth: "down", reachDown: true }) })).toMatchObject({
       reason: "down",
-      fix: { kind: "tailnetStart" },
+      fix: { kind: "tailscaleStart" },
     });
-    for (const reachHealth of ["signIn", "approve", "expiring", "down"] as const) {
-      expect(needsYou([reach({ local: here({ reachHealth }) })])).toBe(1);
+    const address = here({
+      way: { kind: "address", url: "https://agentes.example.com" },
+      publicUrl: "https://agentes.example.com",
+      reachHealth: "address",
+      reachDown: true,
+    });
+    expect(reach({ local: address })).toMatchObject({ reason: "address", fix: { kind: "reachCheck" } });
+    for (const reachHealth of ["approve", "down", "address"] as const) {
+      const item = reach({ local: here({ reachHealth }) });
+      expect(needsYou([item])).toBe(1);
+      expect(fellByItself(item)).toBe(true);
     }
-    // The status says it works: on, whatever an older field says.
-    expect(reach({ local: here({ reachHealth: "on", tailnetDown: true }) }).state).toBe("on");
   });
 
-  test("a status that doesn't say it: Tailscale's own state, its key's expiry, then whether it is connected", () => {
-    const local = here({ reachHealth: undefined });
-    expect(reach({ local }).state).toBe("on");
-    expect(reach({ local, tailnet: { mode: "app", state: "expired" } }).reason).toBe("signedOut");
-    expect(reach({ local, tailnet: { mode: "app", state: "signedOut" } }).reason).toBe("signedOut");
-    expect(reach({ local, tailnet: { mode: "app", state: "needsApproval" } }).reason).toBe("approve");
-    expect(reach({ local, tailnet: { mode: "system", state: "off" } }).reason).toBe("down");
-    expect(reach({ local, tailnet: { mode: "app", state: "failing" } }).reason).toBe("down");
-    expect(reach({ local: here({ reachHealth: undefined, tailnetDown: true }) }).reason).toBe("down");
-    // Within 14 days of the key's expiry, said ahead of time; Tailscale's seconds read as well as milliseconds.
-    const soon = NOW + EXPIRY_WARN_MS - DAY;
-    expect(reach({ local, tailnet: { mode: "app", state: "on", keyExpiry: soon } }).reason).toBe("expiring");
-    expect(reach({ local: here({ reachHealth: undefined, expiresAt: soon }) }).reason).toBe("expiring");
-    const inSeconds = Math.floor(soon / 1000);
-    expect(reach({ local, tailnet: { mode: "app", state: "on", keyExpiry: inSeconds } }).reason).toBe("expiring");
-    const later = NOW + EXPIRY_WARN_MS + DAY;
-    expect(reach({ local, tailnet: { mode: "app", state: "on", keyExpiry: later } }).state).toBe("on");
+  test("on while the status says so, either way", () => {
+    expect(reach({ local: here() }).state).toBe("on");
+    const address = here({ way: { kind: "address", url: "https://agentes.example.com" } });
+    expect(reach({ local: address })).toEqual({ id: "reach", state: "on", fix: null });
   });
 
   test("no server here: not one", () => {
-    expect(reach({ tailnet: { mode: "app", state: "expired" } }).state).toBe("na");
+    expect(reach({ local: NO_SERVER }).state).toBe("na");
   });
 });
 
 describe("the nightly backup (the server here only)", () => {
-  const backup = (backups: Partial<EssentialsLocal["backups"]>) =>
+  const backup = (backups: Partial<LocalServerStatus["backups"]>) =>
     byId(essentialsOf(input({ local: here({ backups: { ...here().backups, ...backups } }) })), "backup");
 
   test("on and working, switched off, or the last one failed", () => {
@@ -349,16 +329,16 @@ describe("needsYou", () => {
 });
 
 describe("notifications for what fell", () => {
-  const listWith = (over: Partial<Health> = {}, local: EssentialsLocal = here()) =>
+  const listWith = (over: Partial<Health> = {}, local: LocalServerStatus = here()) =>
     essentialsOf(input({ local, health: health(over) }));
 
   test("only what fell by itself is told, never a switch the person turned off in the app", () => {
-    const off = (over: Partial<Health>, local?: EssentialsLocal) =>
+    const off = (over: Partial<Health>, local?: LocalServerStatus) =>
       listWith(over, local).filter((e) => e.state === "off");
     expect(off({ screen: false }).every(fellByItself)).toBe(true);
     expect(off({ disk: false }).every(fellByItself)).toBe(true);
     expect(off({ awake: false }).every(fellByItself)).toBe(true);
-    expect(off({}, here({ reachHealth: "signIn" })).every(fellByItself)).toBe(true);
+    expect(off({}, here({ reachHealth: "address" })).every(fellByItself)).toBe(true);
     expect(off({}, here({ backups: { ...here().backups, problem: "copy" } })).every(fellByItself)).toBe(true);
     // Turned off by the person: open at login, notifications, reach left off, backups switched off.
     expect(off({ autostart: false }).some(fellByItself)).toBe(false);

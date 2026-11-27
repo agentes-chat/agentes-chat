@@ -61,7 +61,8 @@ export function essentialWords(e: Essential): EssentialWords | null {
     case "disk":
       return { title: `${N}.disk.title`, body: `${E}.disk.body` };
     case "reach": {
-      const why = e.reason === "signedOut" || e.reason === "approve" || e.reason === "expiring" ? e.reason : "down";
+      // HTTPS waiting for the Tailscale network's admin, the person's own address not leading here, else Tailscale off.
+      const why = e.reason === "approve" || e.reason === "address" ? e.reason : "down";
       return { title: `${E}.reach.${why}.title`, body: `${E}.reach.${why}.body` };
     }
     case "backup":
@@ -104,7 +105,7 @@ export const bannerEssential = (list: readonly Essential[]): Essential | null =>
 /**
  * What the banner's one button does. The popover turns on what it can by itself (opening at login, the notification
  * prompt, the macOS permission's own list in System Settings, installing updates at night, restarting the server
- * here); what needs a screen of its own (reach, the private network, backups) opens This computer's settings on it.
+ * here); what needs a screen of its own (reach, backups) opens This computer's settings on it.
  */
 export type FixPlan =
   | { kind: "autostart" }
@@ -116,6 +117,8 @@ export type FixPlan =
   | { kind: "layer"; route: LayerRoute };
 
 const overview = (focus: string): LayerRoute => ({ screen: "settings", section: "overview", focus });
+/** Reach's row in Settings › Server on this computer, where its way, its problem and its fix are (ADR 0256 §4). */
+const REACH_ROUTE: LayerRoute = { screen: "settings", section: "server", focus: "reach" };
 
 export function fixPlan(fix: EssentialFix): FixPlan {
   switch (fix.kind) {
@@ -135,8 +138,8 @@ export function fixPlan(fix: EssentialFix): FixPlan {
     case "systemSettings":
       return { kind: "layer", route: { screen: "settings", section: "overview" } };
     default:
-      // Reach and the private network: their sign-in, approval and switch live on the Overview's reach row.
-      return { kind: "layer", route: overview("reach") };
+      // Reach, either way: its fix lives on the server here's reach row.
+      return { kind: "layer", route: REACH_ROUTE };
   }
 }
 

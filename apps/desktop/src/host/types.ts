@@ -4,16 +4,16 @@ import type { HelloLine } from "../control/client";
 import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import type {
+  AddressCheck,
   KeepRunning,
   LocalChoice,
   LocalServerStatus,
   PhoneLink,
   ReachResult,
   ReachStage,
+  ReachWay,
   StepChange,
   Tailnet,
-  TailnetSignIn,
-  TailnetState,
   TailscalePage,
 } from "../control/local-server";
 import type { LinkInfo, PairTarget } from "../control/pair";
@@ -299,14 +299,20 @@ export interface Host {
   stopLocalServer(forget: boolean, minutes?: number): Promise<void>;
   restartLocalServer(): Promise<void>;
   /**
-   * Reach from the person's other devices (Tailscale), on or off. The main window stays on the server here's loopback
-   * address, signed in (ADR 0256 §5); the server starts again behind it.
+   * Reach from the person's other devices, on or off (ADR 0256 §4): through the system's Tailscale or an address of the
+   * person's own (`way`; on without one: the saved way, else Tailscale). The main window stays on the server here's
+   * loopback address, signed in (ADR 0256 §5); the server starts again behind it.
    */
-  setLocalReach(on: boolean): Promise<ReachResult>;
+  setLocalReach(on: boolean, way?: ReachWay): Promise<ReachResult>;
   /** What `setLocalReach` is doing while it takes. */
   onLocalReach(cb: (stage: ReachStage) => void): () => void;
-  /** Stops waiting for HTTPS to be allowed in the tailnet (`setLocalReach` then answers `stopped`). */
+  /** Stops waiting for HTTPS to be allowed in the Tailscale network (`setLocalReach` then answers `stopped`). */
   stopLocalReach(): Promise<void>;
+  /**
+   * Whether an address of the person's own leads to the server here (`local_server_check_address`): its form, then the
+   * server's id asked through it and at loopback (ADR 0256 §4). Needs the server running.
+   */
+  checkAddress(url: string): Promise<AddressCheck>;
   /** The usage-statistics switch (`TELEMETRY` in its settings; it starts again). */
   setLocalUsage(on: boolean): Promise<void>;
   /** "Back up now": the file it wrote. */
@@ -330,32 +336,16 @@ export interface Host {
   localDiagnostics(): Promise<string>;
   /** The server here's homes again, with new tokens for the organizations in `rotate`. */
   syncLocalHomes(rotate: string[]): Promise<void>;
-  /** The system's Tailscale on this computer. */
+  /** The system's Tailscale on this computer (cheap: the first run reads it every 2 s while it waits for it). */
   tailscale(): Promise<Tailnet>;
   /**
-   * Tailscale's app (a Mac), its download page, the admin page where HTTPS is turned on, the sign-in page the app's
-   * own Tailscale waits on ("Open the page again"), the admin's devices (where a new one is approved, `approve`, and
-   * where its sign-in's expiry is turned off, `keyExpiry`), or the admin console.
+   * Tailscale's app (a Mac), its official download page for this system, the admin page where HTTPS is turned on, or
+   * its admin console.
    */
   openTailscale(page: TailscalePage): Promise<void>;
-  /** The Tailscale that shares the server here (the app's own started first when it is the one chosen). */
-  tailnet(): Promise<TailnetState>;
-  /** Its changes (`tailnet://state`). */
-  onTailnet(cb: (state: TailnetState) => void): () => void;
-  /**
-   * Signs the app's own Tailscale in to the person's tailnet: its page opens in the browser and the sign-in waits there
-   * with no time limit. Resolves with the device's address; rejects with `busy`, `start`, `cancelled` or `failed`.
-   */
-  signInTailnet(): Promise<{ device: string }>;
-  /** Cancel while it signs in (`signInTailnet` rejects with `cancelled`). */
-  cancelTailnetSignIn(): Promise<void>;
-  /** A sign-in's stages (`tailnet://sign-in`). */
-  onTailnetSignIn(cb: (stage: TailnetSignIn) => void): () => void;
-  /** Which Tailscale shares the server here from now on (its address for people moves with it). */
-  useTailnetSource(mode: "app" | "system"): Promise<void>;
   /**
    * The phone's QR code: a one-time sign-in made with the main window's own session at the server here. Rejects with
-   * `not_served` while Tailscale doesn't share it, `signed_out` when the window isn't signed in there. The token lasts
+   * `not_served` while nobody else reaches it, `signed_out` when the window isn't signed in there. The token lasts
    * a few minutes: asked again every ~150 s while the code is shown.
    */
   phoneLink(): Promise<PhoneLink>;

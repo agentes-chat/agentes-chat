@@ -1,10 +1,11 @@
 /**
- * Settings › This computer › Server on this computer (ADR 0256 §7): agentes.chat as the app runs it here. Its state and
- * Restart on top; "Reach from anywhere": its address for people with Copy, the phone's QR code (a one-time sign-in
- * made with the window's own session, asked again while it shows), inviting someone from the team, and what keeps
- * reach from working with its one fix; its backups (every night, a copy elsewhere); and a quiet line of what is done
- * less often (Back up now, Restore…, Stop, Stop running here…, Erase and start over…), each asking first as before.
- * Its versions and Jev's key live in App settings › About.
+ * Settings › This computer › Server on this computer (ADR 0256 §7): agentes.chat as the app runs it here. Its state
+ * and Restart on top; "Reach from anywhere": its address for people with Copy and the way it goes (Tailscale or the
+ * person's own address, ADR 0256 §4, changed with the picker inline), the phone's QR code (a one-time sign-in made
+ * with the window's own session, asked again while it shows), inviting someone from the team, and what keeps reach
+ * from working with its one fix; off, one row with Turn on, which opens the same picker; its backups (every night, a
+ * copy elsewhere); and a quiet line of what is done less often (Back up now, Restore…, Stop, Stop running here…, Erase
+ * and start over…), each asking first as before. Its versions and Jev's key live in App settings › About.
  */
 import { heldWhole } from "@agenteschat/client/lib/format";
 import { Alert, Button, Dialog, DialogBody, DialogFooter, QrCode, Select, Switch } from "@agenteschat/ui";
@@ -17,8 +18,8 @@ import { CopyDetails, ServerTile } from "../../ui/here";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { backupsFolder, clock, folderLabel, nightAt, shortPath } from "../../ui/time";
-import { Lead } from "./AlwaysOn";
-import { essentialLine, FixButton, type FixContext, ReachRows, useReach } from "./fixes";
+import { Lead, ReachLead } from "./AlwaysOn";
+import { essentialLine, FixButton, type FixContext, ReachChooser, ReachRows, useReach } from "./fixes";
 import type { SettingsContext } from "./Settings";
 
 /** The phone's sign-in lasts a few minutes: asked again this often while its code shows. */
@@ -62,7 +63,20 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
   const lastBackup = backups.files[0];
   const nightlyAt = clock(nightAt().toISOString(), i18n.language, nightAt());
   const reachItem = ctx.essentials.list.find((e) => e.id === "reach");
-  const fixCtx: FixContext = { local, reach, mac: null, reread: ctx.essentials.reread };
+  // How people get here, being chosen inline under reach's row (Turn on, Change).
+  const [choosing, setChoosing] = useState(false);
+  const fixCtx: FixContext = {
+    local,
+    reach,
+    mac: null,
+    reread: ctx.essentials.reread,
+    chooseReach: () => setChoosing(true),
+  };
+  // The Overview's Turn on lands here on reach's row: the picker opens with it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when a route asks for reach's row
+  useEffect(() => {
+    if (ctx.focus === "reach" && !local.reach) setChoosing(true);
+  }, [ctx.focus]);
 
   // The owner signs in on this computer without one (the app's one-time sign-in): elsewhere they need a password.
   useEffect(() => {
@@ -110,9 +124,19 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
   };
 
   const sub = !running ? null : local.reach ? (reachItem?.state === "on" ? "anywhere" : null) : "onlyHere";
-  const reachOn = local.reach && reachItem?.state !== "off";
-  const reachLine = reachItem ? essentialLine(t, i18n.language, reachItem, local) : null;
-  const addressLine = reachOn ? t("desktop.settings.server.addressDesc") : reachLine;
+  // Reach on, but what keeps people from it now (HTTPS waiting, Tailscale off here, the address down) is said instead.
+  const trouble = local.reach && reachItem?.state === "off" ? reachItem : null;
+  const throughAddress = local.way?.kind === "address";
+  // The address for people: the app's own word for it, else the one the person gave.
+  const peopleUrl = local.publicUrl ?? (local.way?.kind === "address" ? local.way.url : null);
+  const chooser = choosing && (
+    <ReachChooser
+      local={local}
+      control={reach}
+      apply={local.reach ? t("desktop.settings.server.useWay") : t("desktop.settings.essentials.turnOn")}
+      done={() => setChoosing(false)}
+    />
+  );
 
   return (
     <>
@@ -171,56 +195,92 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
       <section data-focus="reach">
         <CardTitle>{t("desktop.settings.essentials.reach")}</CardTitle>
         <PrefCard>
-          {local.reach && local.publicUrl ? (
+          {local.reach ? (
             <PrefRow
-              lead={<ServerTile kind="tailnet" small />}
-              title={new URL(local.publicUrl).host}
-              desc={<span className={reachOn ? undefined : "dk-sx__warn"}>{addressLine}</span>}
+              lead={<ReachLead way={local.way} />}
+              title={peopleUrl ? hostOf(peopleUrl) : t("desktop.reach.tailscale")}
+              desc={
+                trouble ? (
+                  <span className="dk-sx__warn">{essentialLine(t, i18n.language, trouble, local)}</span>
+                ) : (
+                  t(throughAddress ? "desktop.settings.server.wayAddress" : "desktop.settings.server.wayTailscale")
+                )
+              }
               end={
-                reachOn ? (
+                trouble ? (
+                  trouble.fix && <FixButton fix={trouble.fix} ctx={fixCtx} />
+                ) : peopleUrl ? (
                   <Button size="sm" icon="copy" onClick={() => void copyAddress()}>
                     {t("desktop.common.copy")}
                   </Button>
-                ) : (
-                  reachItem?.fix && <FixButton fix={reachItem.fix} ctx={fixCtx} essential={reachItem} />
+                ) : undefined
+              }
+              under={
+                chooser || (
+                  <span className="dk-sx__rowlinks">
+                    <button
+                      type="button"
+                      className="ac-link dk-link"
+                      disabled={!running || reach.reaching}
+                      onClick={() => {
+                        reach.clear();
+                        setChoosing(true);
+                      }}
+                    >
+                      {t("desktop.settings.server.changeWay")}
+                    </button>
+                    <button type="button" className="ac-link dk-link" disabled={reach.reaching} onClick={reach.askOff}>
+                      {t("desktop.settings.server.reachOff")}
+                    </button>
+                  </span>
                 )
               }
             />
           ) : (
             <PrefRow
-              lead={<ServerTile kind="tailnet" small />}
+              lead={<ServerTile kind="here" small />}
               title={t("desktop.settings.app.onlyHere")}
-              desc={t("desktop.settings.essentials.reachOff")}
+              desc={t("desktop.settings.server.onlyHereDesc")}
               end={
-                <Button
-                  size="sm"
-                  variant="primary"
-                  loading={reach.reaching}
-                  disabled={!running}
-                  onClick={() => void reach.reach(true)}
-                >
-                  {t("desktop.settings.essentials.turnOn")}
-                </Button>
+                !choosing && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    loading={reach.reaching}
+                    disabled={!running}
+                    onClick={() => {
+                      reach.clear();
+                      setChoosing(true);
+                    }}
+                  >
+                    {t("desktop.settings.essentials.turnOn")}
+                  </Button>
+                )
               }
+              under={chooser || undefined}
             />
           )}
-          <ReachRows control={reach} />
-          {local.reach && running && <PhoneRow />}
+          <ReachRows control={reach} port={local.port} choosing={choosing} />
+          {local.reach && running && <PhoneRow address={throughAddress} />}
           {local.reach && (
             <PrefRow
               lead={<Lead icon="personAdd" />}
               title={t("desktop.settings.server.invite")}
               desc={
-                <span>
-                  {t("desktop.settings.server.inviteDesc")}{" "}
-                  <button
-                    type="button"
-                    className="ac-link dk-link"
-                    onClick={() => void host.openTailscale("admin").catch(() => {})}
-                  >
-                    {t("desktop.settings.server.share")}
-                  </button>
-                </span>
+                throughAddress ? (
+                  t("desktop.settings.server.inviteDescAddress")
+                ) : (
+                  <span>
+                    {t("desktop.settings.server.inviteDesc")}{" "}
+                    <button
+                      type="button"
+                      className="ac-link dk-link"
+                      onClick={() => void host.openTailscale("admin").catch(() => {})}
+                    >
+                      {t("desktop.settings.server.share")}
+                    </button>
+                  </span>
+                )
               }
               end={
                 ctx.org && (
@@ -445,9 +505,10 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
 
 /**
  * The phone's QR code beside its one line of steps: a one-time sign-in the server here makes with the window's own
- * session, only while Tailscale shares it, asked again every few minutes while it shows.
+ * session, only while people reach it (Tailscale shares it, or the person's address leads here: `address`, which
+ * needs no Tailscale on the phone), asked again every few minutes while it shows.
  */
-function PhoneRow() {
+function PhoneRow({ address }: { address: boolean }) {
   const { t } = useTranslation();
   const host = useHost();
   const [link, setLink] = useState<PhoneLink | null>(null);
@@ -493,7 +554,7 @@ function PhoneRow() {
           ? t("desktop.settings.server.phoneSignedOut")
           : why === "not_served"
             ? t("desktop.server.phoneOff")
-            : t("desktop.settings.server.phoneDesc")
+            : t(address ? "desktop.settings.server.phoneDescAddress" : "desktop.settings.server.phoneDesc")
       }
     />
   );
@@ -605,6 +666,15 @@ function EraseHere({ local, disabled }: { local: LocalServerStatus; disabled: bo
       </Dialog>
     </>
   );
+}
+
+/** An address's host for its row ("agentes.tail1234.ts.net"); the address itself when it doesn't parse. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
 }
 
 /** Where the server here writes its log (`logs/server.log` in its folder), with the folder's own separator. */

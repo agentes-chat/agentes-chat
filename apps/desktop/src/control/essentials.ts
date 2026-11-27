@@ -65,14 +65,14 @@ export type EssentialFix =
   | { kind: "autostart" }
   /** Prepare's way: the system's prompt while it was never asked, else System Settings on its list. */
   | { kind: "permission"; permission: MacPermission }
-  /** Reach was left off (only this computer): turning it on is the server here's reach switch. */
+  /** Reach was left off (only this computer): turning it on chooses how people get here (ADR 0256 §4). */
   | { kind: "reach" }
-  /** The private network's sign-in ended or ends soon: sign in again. */
-  | { kind: "tailnetSignIn" }
-  /** HTTPS waits for one click in the private network's admin page (`url` when known). */
-  | { kind: "tailnetApprove"; url: string | null }
-  /** The private network isn't connected on this computer now. */
-  | { kind: "tailnetStart" }
+  /** HTTPS waits for one click in the Tailscale network's admin page: that page. */
+  | { kind: "tailscaleHttps" }
+  /** The system's Tailscale isn't connected on this computer now: what connects it here. */
+  | { kind: "tailscaleStart" }
+  /** The person's own address doesn't lead here now: check it again (`setLocalReach(true)`). */
+  | { kind: "reachCheck" }
   /** The nightly backup's switch (`setLocalBackups(true, copyTo)`). */
   | { kind: "backups" }
   /** The last backup didn't finish or didn't reach its copy: back up now. */
@@ -90,10 +90,12 @@ export type EssentialFix =
 export type EssentialReason =
   /** Reach: the person chose only this computer. */
   | "chosen"
-  | "signedOut"
+  /** Reach: HTTPS waits for the Tailscale network's admin. */
   | "approve"
-  | "expiring"
+  /** Reach: Tailscale isn't connected on this computer. */
   | "down"
+  /** Reach: the person's own address doesn't lead here now. */
+  | "address"
   /** Nightly backup switched off. */
   | "off"
   /** The last backup didn't finish. */
@@ -113,47 +115,17 @@ export interface Essential {
   optional?: boolean;
 }
 
-/**
- * Tailscale as the server here sees it (ADR 0256 §5: the app's own or the system's), read loosely: the state, the
- * device key's expiry (milliseconds since 1970) and the admin page where HTTPS waits for one click.
- */
-export interface TailnetLike {
-  mode?: string;
-  state?: string;
-  keyExpiry?: number | null;
-  approveUrl?: string | null;
-}
-
-/** The reach health the server here's status says with the app's own Tailscale (ADR 0256 §5). */
-export type ReachHealth = "on" | "off" | "signIn" | "approve" | "expiring" | "down";
-
-/** The server here's status, with the reach fields it gains with the app's own Tailscale (optional until then). */
-export type EssentialsLocal = LocalServerStatus & {
-  reachHealth?: string | null;
-  /** When the private network's sign-in ends (milliseconds since 1970). */
-  expiresAt?: number | null;
-};
-
 export interface EssentialsInput {
   /** Null until the first read answers. */
   health: Health | null;
-  local: EssentialsLocal;
-  tailnet?: TailnetLike | null;
+  local: LocalServerStatus;
   /** Installing updates at night (`autoUpdateOn(readPref(AUTO_UPDATE_PREF))`). */
   autoUpdate: boolean;
   update: { available: boolean; required: boolean };
   /** This computer's organization homes: agents work here once one is paired. */
   homes: readonly TrayInput[];
   platform: Platform;
-  /** For the sign-in that ends soon; now by default. */
-  now?: number;
 }
-
-/** A private network sign-in that ends within this is said ahead of time. */
-export const EXPIRY_WARN_MS = 14 * 24 * 60 * 60 * 1000;
-
-/** A time in milliseconds, also when it came in seconds (Tailscale's own clock). */
-const msOf = (at: number) => (at < 1e12 ? at * 1000 : at);
 
 const item = (
   id: EssentialId,
@@ -165,32 +137,28 @@ const item = (
 const onOff = (id: EssentialId, on: boolean | null | undefined, fix: EssentialFix): Essential =>
   on === undefined ? item(id, "checking") : on === null ? item(id, "na") : item(id, on ? "on" : "off", fix);
 
-/** Why reach needs the person, from what the status says, else from Tailscale's own state; null while it works. */
-function reachProblem(input: EssentialsInput, now: number): Essential | null {
-  const { local, tailnet } = input;
-  const said = local.reachHealth as ReachHealth | null | undefined;
-  const state = tailnet?.state;
-  const approve: EssentialFix = { kind: "tailnetApprove", url: tailnet?.approveUrl ?? null };
+/**
+ * Why reach needs the person, from what the server here's status says (`reachHealth`, ADR 0256 §4): HTTPS waiting for
+ * the Tailscale network's admin, Tailscale not connected here, or the person's own address not leading here now; null
+ * while it works. Each has one fix.
+ */
+function reachProblem(local: LocalServerStatus): Essential | null {
   const off = (reason: EssentialReason, fix: EssentialFix) => item("reach", "off", fix, { reason });
-  if (said === "signIn") return off("signedOut", { kind: "tailnetSignIn" });
-  if (said === "approve") return off("approve", approve);
-  if (said === "expiring") return off("expiring", { kind: "tailnetSignIn" });
-  if (said === "down") return off("down", { kind: "tailnetStart" });
-  if (said === "on") return null;
-  // Before the status says it: Tailscale's own state, then whether it is connected here at all.
-  if (state === "expired" || state === "signedOut") return off("signedOut", { kind: "tailnetSignIn" });
-  if (state === "needsApproval") return off("approve", approve);
-  const expiry = local.expiresAt ?? tailnet?.keyExpiry;
-  const expiring = typeof expiry === "number" && msOf(expiry) - now < EXPIRY_WARN_MS;
-  if (expiring) return off("expiring", { kind: "tailnetSignIn" });
-  if (local.tailnetDown || state === "off" || state === "failing") return off("down", { kind: "tailnetStart" });
-  return null;
+  switch (local.reachHealth) {
+    case "approve":
+      return off("approve", { kind: "tailscaleHttps" });
+    case "down":
+      return off("down", { kind: "tailscaleStart" });
+    case "address":
+      return off("address", { kind: "reachCheck" });
+    default:
+      return null;
+  }
 }
 
 /** Every essential, in `ESSENTIAL_IDS`' order. */
 export function essentialsOf(input: EssentialsInput): Essential[] {
   const { health, local, platform, update } = input;
-  const now = input.now ?? Date.now();
   const mac = platform === "mac";
   const here = local.run;
   // This computer was made ready for agents (a workspace paired it) or runs the server: it has to stay ready.
@@ -227,7 +195,7 @@ export function essentialsOf(input: EssentialsInput): Essential[] {
   } else if (!local.reach || local.reachHealth === "off") {
     list.push(item("reach", "off", { kind: "reach" }, { reason: "chosen", optional: true }));
   } else {
-    list.push(reachProblem(input, now) ?? item("reach", "on"));
+    list.push(reachProblem(local) ?? item("reach", "on"));
   }
 
   if (!here) {
@@ -278,9 +246,9 @@ export function essentialsOf(input: EssentialsInput): Essential[] {
 export const needsYou = (list: readonly Essential[]) => list.filter((e) => e.state === "off" && !e.optional).length;
 
 /**
- * Whether an essential that is off fell by itself (macOS took a permission back, the private network or a backup
- * failed, the server runs without keeping this Mac awake, this version can't keep working), never by a switch the
- * person turned off in the app: only those are told in a notification.
+ * Whether an essential that is off fell by itself (macOS took a permission back, reach or a backup failed, the server
+ * runs without keeping this Mac awake, this version can't keep working), never by a switch the person turned off in
+ * the app: only those are told in a notification.
  */
 export function fellByItself(e: Essential): boolean {
   if (e.id === "screen" || e.id === "disk" || e.id === "awake") return true;
