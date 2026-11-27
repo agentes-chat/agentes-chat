@@ -54,6 +54,7 @@ import { usePaidFacts } from "@/components/arrival/PaidMoment";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { DeleteAccountDialog } from "@/components/DeleteAccount";
 import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
+import { useDesktopOrgs } from "@/components/DesktopMenus";
 import { ErrorState } from "@/components/Loading";
 import { COMPACT_QUERY, DESKTOP_QUERY, useMediaQuery } from "@/components/NavDrawer";
 import { OrgProvider } from "@/components/org-context";
@@ -147,6 +148,8 @@ export function OnboardingPage() {
   const mainRef = useRef<HTMLElement>(null);
 
   const me = useQuery({ ...meQuery(api), refetchOnWindowFocus: "always" });
+  // In the desktop app, the workspace made here has this computer join it at once (its own server's computer).
+  useDesktopOrgs(me.data?.organizations);
   const config = useAuthConfig();
   const authConfig = config.data;
   const unfinished = me.data?.organizations.find(settingUp);

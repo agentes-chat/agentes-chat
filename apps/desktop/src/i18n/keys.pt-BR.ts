@@ -8,6 +8,22 @@ import type { LocaleStrings } from "@agenteschat/i18n/plurals";
  * its `›` (`\u00a0`), so a line never breaks inside it.
  */
 export const desktopPtBR = {
+  permissionAsk: {
+    title: "O agentes.chat precisa de {{permission}}",
+    done: "Já permiti",
+    later: "Agora não",
+    trayTitle: "Aguardando {{permission}}",
+    why: {
+      app_management: "Os agentes precisam disso para alterar apps neste {{device}}.",
+      screen: "Os agentes precisam disso para tirar capturas de tela deste {{device}}.",
+      accessibility: "Os agentes precisam disso para clicar e digitar em apps neste {{device}}.",
+      disk: "Os agentes precisam disso para abrir seus arquivos sem o macOS perguntar a cada pasta.",
+      network: "Os agentes precisam disso para alcançar celulares e aparelhos na sua rede.",
+      camera: "Os agentes precisam disso para usar a câmera deste {{device}}.",
+      microphone: "Os agentes precisam disso para usar o microfone deste {{device}}.",
+      automation: "Os agentes precisam disso para controlar outros apps neste {{device}}.",
+    },
+  },
   /** This computer's name in the copy: "este {{device}}", "neste {{device}}" (all masculine). */
   device: { mac: "Mac", windows: "PC", linux: "computador" },
   /** O nome das janelas do próprio app (a lista do Dock, o menu Janela, o Mission Control). */
@@ -71,6 +87,12 @@ export const desktopPtBR = {
         capturing: "tirando um print",
         tabs: "trocando de aba",
       },
+    },
+    apps: {
+      title: "{{agent}} está usando {{app}}",
+      detail: "Seu mouse e teclado continuam seus",
+      stop: "Parar",
+      stopped: "{{agent}} parou de usar seus apps",
     },
     label: "agentes.chat",
     now: "Agora",
@@ -142,6 +164,10 @@ export const desktopPtBR = {
     allowedUndo: "Desfazer",
     allowedOk: "Ok",
     allowedUndone: "Desligado de novo: {{tool}}",
+    pickTitle: "{{name}} pede uma pasta para os agentes",
+    pickTitleAgent: "{{name}} pede uma pasta para {{agent}}",
+    pickBody: "Escolha qual pasta liberar neste {{device}}.",
+    pickChoose: "Escolher pasta",
     quitTitle: "Sair do agentes.chat?",
     quitBody:
       "Os agentes não conseguem usar este {{device}} com o app fechado. O que já está rodando termina e manda o resultado quando você abrir de novo.",
@@ -500,7 +526,7 @@ export const desktopPtBR = {
     internetOn: "Os sites que os agentes abrem veem a sua localização",
     internetOff: "Desligado: os agentes usam a conexão de sempre",
     internetHint:
-      "Os agentes do workspace abrem sites pela conexão deste computador. Só sites, até 5 GB por dia, e nunca nada da sua própria rede. Enquanto este computador estiver offline, eles usam a conexão de sempre.",
+      "Os agentes do workspace abrem sites pela conexão deste computador. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, eles usam a conexão de sempre.",
     shareOff: "Só você por enquanto",
     shareHint: "Os agentes de todos em {{org}} podem rodar tarefas nele, com o seu usuário.",
     addFolders: "Adicionar pastas",
@@ -548,6 +574,10 @@ export const desktopPtBR = {
     grokDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Grok.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Gemini.",
+    devinName: "Devin CLI",
+    devinDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Devin.",
+    devinWindows:
+      "O Devin ainda não roda no Windows: aqui a CLI dele não consegue manter separado o login de cada conta. Os agentes pensam com o Devin num computador Mac ou Linux.",
     found: "Encontrado",
     notFound: "Não encontrado",
     loggedOut: "Sem login",

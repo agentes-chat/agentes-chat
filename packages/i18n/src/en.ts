@@ -3029,6 +3029,8 @@ export const en = {
     details: "Channel details",
     composerLabel: "Message #{{channel}}",
     composerDm: "Message {{name}}",
+    /** First in who a personal workspace's group conversation holds ("You, Teo and Rita"). */
+    groupYou: "You",
     composerPlaceholder: "Message #{{channel}} · use @ to call an agent",
     send: "Send",
     attach: "Attach file",
@@ -3049,6 +3051,7 @@ export const en = {
     sendFailed: "The message wasn't sent. Try again.",
     reconnecting: "Reconnecting to real time…",
     detailsTitle: "#{{channel}}",
+    detailsTitlePersonal: "{{channel}}",
     detailsSearch: "Search people or agents",
     detailsEmpty: "Nobody found for “{{q}}”.",
     topicLabel: "Channel description",
@@ -3061,9 +3064,11 @@ export const en = {
     replyInThreadsHelp:
       "An agent called in the channel answers in the thread under that message, and the channel shows one line for it. Work already going stays where it is.",
     nameTaken: "There is already #{{name}}.",
+    nameTakenPersonal: "There is already a group conversation called “{{name}}”.",
     generalName: "#general keeps its name.",
     archive: "Archive channel",
     archived: "#{{channel}} archived. The conversation is kept.",
+    archivedPersonal: "“{{channel}}” archived. The conversation is kept.",
     archivedTitle: "Archived channels",
     archivedCount_one: "{{count}} archived channel",
     archivedCount_other: "{{count}} archived channels",
@@ -3072,6 +3077,7 @@ export const en = {
     restore: "Restore",
     restoreName: "Restore #{{channel}}",
     restored: "#{{channel}} is back.",
+    restoredPersonal: "“{{channel}}” is back.",
     leave: "Leave channel",
     left: "You left #{{channel}}",
     leaveTitle: "Leave #{{channel}}?",
@@ -3550,6 +3556,11 @@ export const en = {
       update_workspace: "Change the workspace <b>{{name}}</b>",
       set_action_check_on: "Turn on the check of what the team already did",
       set_action_check_off: "Turn off the check of what the team already did",
+      /** `level`: the choice's title, as on Settings › Approvals ("Never ask"). */
+      set_approvals_level: "Set the workspace's approvals to <b>{{level}}</b>",
+      set_approvals_level_every: "Set every agent's approvals to <b>{{level}}</b>, their own choices too",
+      set_agent_approvals_level: "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>",
+      set_agent_approvals_level_workspace: "Make <b>{{agent}}</b> follow the workspace's approvals",
       /** `emails`: every address on the card, in a list ("ana@example.com, bia@example.com"). */
       invite_people: "Invite <b>{{emails}}</b> to the workspace.",
       /** Under it: the roles every address gets ("Sales and Support"). `count`: how many roles. */
@@ -3760,6 +3771,7 @@ export const en = {
       cursor: "Cursor isn't signed in on this computer. Connect a Cursor account on {{name}}'s\u00a0page.",
       grok: "Grok isn't signed in on this computer. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s\u00a0page.",
+      devin: "Devin isn't signed in on this computer. Connect a Devin account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
     /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
@@ -3769,6 +3781,7 @@ export const en = {
       cursor: "Cursor isn't signed in on {{computer}}. Connect a Cursor account on {{name}}'s\u00a0page.",
       grok: "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s\u00a0page.",
+      devin: "Devin isn't signed in on {{computer}}. Connect a Devin account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
     card: {
@@ -3848,6 +3861,7 @@ export const en = {
       cursor: "Connect your Cursor plan",
       grok: "Connect your Grok plan",
       gemini: "Connect your Gemini plan",
+      devin: "Connect your Devin plan",
       zen: "Connect OpenCode",
       api_key: "Add an API key",
     },
@@ -4028,6 +4042,8 @@ export const en = {
           "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use a Gemini API key or Gemini Enterprise.",
         windowsOne: "On Windows, a computer uses one Gemini account at a time.",
       },
+      /** A Devin plan (ADR 0253): its own sign-in, the plan its account has. */
+      devin: { title: "Your Devin plan", tiers: "Free, Pro, Max or Teams" },
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
       zai: { tiers: "Lite, Pro or Max" },
@@ -4137,6 +4153,7 @@ export const en = {
       cursor: "Cursor signed in as {{email}}, not {{account}}. Sign out on Cursor's page and try again.",
       grok: "Grok signed in as {{email}}, not {{account}}. Sign out on Grok's page and try again.",
       antigravity: "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again.",
+      devin: "Devin signed in as {{email}}, not {{account}}. Sign out on Devin's page and try again.",
       opencode: "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key.",
     },
     useAnyway: "Use {{email}}",
@@ -4556,6 +4573,10 @@ export const en = {
       changed_update_workspace: "Changed the workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Turned on the check of what the team already did",
       changed_set_action_check_off: "Turned off the check of what the team already did",
+      changed_set_approvals_level: "Set the workspace's approvals to <b>{{level}}</b>",
+      changed_set_approvals_level_every: "Set every agent's approvals to <b>{{level}}</b>",
+      changed_set_agent_approvals_level: "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>",
+      changed_set_agent_approvals_level_workspace: "<b>{{agent}}</b> follows the workspace's approvals again",
       /** `invited`: the addresses that got an invitation, in a list. */
       changed_invite_people: "Invited <b>{{invited}}</b> to the workspace",
       changed_remove_ai_key: "Deleted the API key <b>{{name}}</b>",
@@ -4660,8 +4681,9 @@ export const en = {
     namePlaceholderPersonal: "e.g. trip",
     nameHelp: "Lowercase letters, digits and hyphens. Shows as #{{name}}.",
     nameInvalid: "Use lowercase letters, digits and hyphens, starting with a letter or digit.",
+    nameInvalidPersonal: "Give it a name of up to 80 characters, on one line.",
     nameTaken: "There is already a #{{name}} channel.",
-    nameTakenPersonal: "There is already a group conversation called #{{name}}.",
+    nameTakenPersonal: "There is already a group conversation called “{{name}}”.",
     topic: "Description",
     topicPlaceholder: "What is talked about here",
     visibility: "Who can join",
@@ -4692,6 +4714,7 @@ export const en = {
     selected_one: "{{count}} selected",
     selected_other: "{{count}} selected",
     create: "Create #{{name}}",
+    createPersonal: "Create conversation",
   },
   channelCategories: {
     undo: "Undo",
@@ -4711,6 +4734,7 @@ export const en = {
     invitePersonal: "Invite {{email}} to your workspace and #{{channel}}",
     inviteOrgPersonal: "Invite {{email}} to your workspace",
     addTitle: "Add to #{{channel}}",
+    addTitlePersonal: "Add to {{channel}}",
     addSearch: "Search people or agents",
     addEmpty: "Nobody outside the channel matches “{{q}}”.",
     addEveryone: "Everyone in {{org}} is already in #{{channel}}.",
@@ -4719,6 +4743,7 @@ export const en = {
     actions: "Options for {{name}}",
     remove: "Remove from channel",
     removeTitle: "Remove {{name}} from #{{channel}}?",
+    removeTitlePersonal: "Remove {{name}} from {{channel}}?",
     removePersonBody: "They stop seeing the channel and getting its messages. You can add them back later.",
     removeAgentBody: "He stops reading and answering in this channel. You can add him back later.",
     removeAgentBody_female: "She stops reading and answering in this channel. You can add her back later.",
@@ -6014,6 +6039,7 @@ export const en = {
       adminAskChannel: "<b>{{name}}</b> asks you to add <b>{{agent}}</b> to #{{label}}",
       adminAskCreate: "<b>{{name}}</b> asks to be able to create agents",
       adminAskWebhook: "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines",
+      adminAskVoice: "<b>{{name}}</b> asks you to turn on voice messages",
       invitationAccepted: "<b>{{name}}</b> accepted your invitation and joined {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> accepted your invitation",
       reaction_one: "<b>{{names}}</b> reacted to your message",
@@ -6582,6 +6608,7 @@ export const en = {
             cursor: "Add a Cursor account",
             grok: "Add a Grok account",
             antigravity: "Add a Gemini account",
+            devin: "Add a Devin account",
             opencode: "Add an OpenCode key",
           },
           stepOne: {
@@ -6589,6 +6616,7 @@ export const en = {
             codex: "The account with your plan",
             cursor: "The account with your plan",
             grok: "The account with your plan",
+            devin: "The account with your plan",
             antigravity: "The Google account with your plan",
             antigravityEnterprise: "Your Gemini Enterprise account",
           },
@@ -6600,6 +6628,7 @@ export const en = {
             cursor: "Sign in with Cursor",
             grok: "Sign in with Grok",
             antigravity: "Sign in with Google",
+            devin: "Sign in with Devin",
           },
           /** OpenCode thinks with its free models without any key: the key is for its paid models. */
           opencodeFree: "No key needed for OpenCode's free models. A key from OpenCode's console adds its paid ones.",
@@ -6619,6 +6648,10 @@ export const en = {
           /** The Gemini sign-in's second step: Google's page shows a code and takes it out of its own address. */
           stepTwoGoogle: "Paste the code Google shows",
           codeLabelGoogle: "Google's code",
+          /** The Devin sign-in's second step: Devin's page shows a code to paste back (ADR 0253). */
+          stepTwoDevin: "Paste the code Devin shows",
+          codeHintDevin: "Paste the code Devin's page shows, not the page's address.",
+          codeLabelDevin: "Devin's code",
           codeHintGoogle: "Paste the code Google's page shows, not the page's address.",
           notCodeGoogle: "That's an address with no code in it. Paste the code Google's page shows.",
           send: "Send to {{computer}}",
@@ -6664,6 +6697,8 @@ export const en = {
             grok: "Grok signed in as {{account}}, an account you already connected. To use another, sign out on Grok's page and try again.",
             antigravity:
               "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again.",
+            devin:
+              "Devin signed in as {{account}}, an account you already connected. To use another, sign out on Devin's page and try again.",
             opencode: "That OpenCode key is already connected as {{account}}.",
           },
           startFailed: "No answer from {{computer}}. Try again in a moment.",
@@ -10351,7 +10386,6 @@ export const en = {
       machine_access_granted: "Allowed: {{agent}} can now use {{folder}} on {{computer}}",
       machine_access_denied: "Declined: {{agent}} won't use {{folder}} on {{computer}}",
       machine_access_expired: "The request for the folder {{folder}} on {{computer}} got no answer",
-      access_command: "No app on the computer? Run this in its Terminal:",
     },
     suggestion: {
       pending: "Suggestion for the mission",
@@ -11711,6 +11745,7 @@ export const en = {
       cursor: "Cursor",
       grok: "Grok",
       antigravity: "Gemini",
+      devin: "Devin",
       opencode: "OpenCode",
       needs: {
         keys: "Update agentes on the computer to use a plan's key",
@@ -12021,6 +12056,8 @@ export const en = {
     silent: "Didn't hear anything. Nothing was sent.",
     notSent: "Couldn't send the audio.",
     limit: "Today's audio limit is used up. Write here, or try again tomorrow.",
+    /** The workspace has no agentes.chat plan in force (a billing hold): the apps add the way to one. */
+    plan: "Voice messages come with an agentes.chat plan. You can still write here.",
     micBlocked: "The microphone is blocked",
     micBlockedHint: "Allow the microphone in your device settings to record.",
     openSettings: "Open settings",
@@ -12057,11 +12094,12 @@ export const en = {
       title: "Voice messages",
       on: "Voice messages",
       onHelp: "People in this workspace can send audio in conversations.",
-      noEngine: "Voice messages aren't available here yet.",
+      noEngine: "Voice messages go as audio for now, so agents can't hear them yet.",
       /** No engine, for everyone but the installation's owner, who alone sees the picker on this page. */
-      noEngineAsk: "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page.",
+      noEngineAsk:
+        "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page.",
       /** No engine, for the installation's owner, with the picker under it. */
-      noEngineHere: "Voice messages turn on once you choose below what turns voice into text.",
+      noEngineHere: "Voice messages go as audio until you choose below what turns voice into text.",
       engineTitle: "What turns voice into text",
       own: "Your own server",
       ownHelp: "Whisper or Parakeet on your machine. The audio stays there.",
@@ -12069,10 +12107,66 @@ export const en = {
       key: "{{name}} key",
       keyPlaceholder: "Paste here",
       test: "Test",
-      tested: "It works. Everyone now sees the microphone.",
+      tested: "It works. Voice messages now reach the agents as text.",
       sealed: "Kept encrypted on your server and never shown again.",
       leaves: "Audio from voice messages goes to {{name}} to become text.",
       invalid: "The saved key doesn't open on this server. Paste it again.",
+    },
+    /** "On this computer": the speech model downloaded to the server's own computer (`LocalSpeechChoice`). */
+    local: {
+      titleHere: "On this computer",
+      titleServer: "On this server",
+      /** On the phone, which never runs it. */
+      titlePhone: "On the server's computer",
+      textHere: "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages.",
+      textServer: "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages.",
+      download: "Download and turn on",
+      downloading: "Downloading the voice model",
+      /** `done` and `total`: sizes, "312 MB". */
+      progress: "{{done}} of {{total}}",
+      meanwhile: "You can record now. Notes go as audio until it's ready.",
+      downloadingPhone: "Downloading the voice model to the server's computer. You can record now.",
+      starting: "Turning it on…",
+      licenses: "Model licenses",
+      tooSmall: "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below.",
+      noDisk:
+        "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below.",
+      noBuild: "There's no voice model for this computer yet. Use a provider key below.",
+      stopped: "The download stopped: {{detail}}",
+      diskFull: "The disk filled up during the download. Free some space and try again.",
+      didntStart: "The voice model didn't start: {{detail}}",
+      resume: "Resume",
+      copy: "Copy details",
+      copied: "Details copied",
+    },
+    /** The right hand's card (`offer_voice_setup`). `size`: the download, "738 MB". */
+    offer: {
+      title: "Voice messages",
+      download: "Download {{size}} and turn on",
+      choose: "Choose how",
+      askOwner: "Turn voice into text on this server",
+      askMember: "Ask to turn on voice messages",
+      on: "Voice messages are on: agents read them as text.",
+    },
+    /** The microphone's first press where nothing turns voice into text yet (`VoiceSetupDialog`). */
+    setup: {
+      memberTitle: "Voice isn't on here yet",
+      /** `name`: who runs this server. */
+      memberText:
+        "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text.",
+      memberTextNoName:
+        "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text.",
+      ask: "Ask {{name}}",
+      asked: "{{name}} was asked to turn it on",
+      recordAnyway: "Record anyway",
+      ownerTitle: "Choose what turns voice into text",
+      ownerText: "Until you do, voice messages go as audio people can play, and agents can't hear them.",
+      readyTitle: "Voice messages are on",
+      readyText: "What you say reaches the agents as text.",
+      record: "Record a message",
+      /** On the phone, for the server's owner: the phone never runs a model, so the choice is made on a computer. */
+      ownerPhone:
+        "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them.",
     },
   },
   media: {
@@ -13225,6 +13319,7 @@ export const en = {
       cursor: "{{model}} on the Cursor plan",
       grok: "{{model}} on the Grok plan",
       gemini: "{{model}} on the Gemini plan",
+      devin: "{{model}} on the Devin plan",
       zen: "{{model}} on OpenCode",
       coding: "{{model}} on {{plan}}",
       claudeOf: "{{model}} on {{owner}}'s Claude plan",
@@ -13232,6 +13327,7 @@ export const en = {
       cursorOf: "{{model}} on {{owner}}'s Cursor plan",
       grokOf: "{{model}} on {{owner}}'s Grok plan",
       geminiOf: "{{model}} on {{owner}}'s Gemini plan",
+      devinOf: "{{model}} on {{owner}}'s Devin plan",
       zenOf: "{{model}} on {{owner}}'s OpenCode",
       codingOf: "{{model}} on {{owner}}'s {{plan}}",
       claudeAuto: "Claude plan",
@@ -13239,6 +13335,7 @@ export const en = {
       cursorAuto: "Cursor plan",
       grokAuto: "Grok plan",
       geminiAuto: "Gemini plan",
+      devinAuto: "Devin plan",
       zenAuto: "OpenCode",
       codingAuto: "{{plan}}",
       claudeAutoOf: "{{owner}}'s Claude plan",
@@ -13246,6 +13343,7 @@ export const en = {
       cursorAutoOf: "{{owner}}'s Cursor plan",
       grokAutoOf: "{{owner}}'s Grok plan",
       geminiAutoOf: "{{owner}}'s Gemini plan",
+      devinAutoOf: "{{owner}}'s Devin plan",
       zenAutoOf: "{{owner}}'s OpenCode",
       codingAutoOf: "{{owner}}'s {{plan}}",
       on: "{{line}} on {{computer}}",
@@ -13260,6 +13358,7 @@ export const en = {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
     },
     foot: {
       api: "Through the API",
@@ -13272,6 +13371,7 @@ export const en = {
     cursorText: "Uses the Cursor plan of whoever connected the computer.",
     grokText: "Uses the Grok plan of whoever connected the computer.",
     antigravityText: "Uses the Gemini plan of whoever connected the computer.",
+    devinText: "Uses the Devin plan of whoever connected the computer.",
     opencodeText: "OpenCode's free models, or the OpenCode key of whoever connected the computer.",
     /** Cursor's models (ADR 0114), where its CLI said which the plan includes. */
     cursorModel: { inPlan: "In your Cursor plan", apiPrice: "Billed by Cursor at API prices" },
@@ -13293,6 +13393,9 @@ export const en = {
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       /** Its vendor makes no build of this program for that computer's system. */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
+      /** Devin on a Windows computer (its pin has no Windows build): why, and the way out. */
+      systemDevin:
+        "{{computer}} runs Windows, where Devin doesn't run yet: there its CLI can't keep each account's sign-in apart. Use Devin on a Mac or Linux computer, or choose another AI.",
       /** Codex on a Windows computer where neither MXC nor Codex's own sandbox could start. */
       windows_sandbox:
         "{{computer}}'s Windows can't isolate {{program}}'s commands. Choose Claude or an API key instead, or update that computer to Windows\u00a011\u00a024H2 or newer, with its latest updates.",
@@ -13356,6 +13459,7 @@ export const en = {
       cursor: "Cursor · {{model}}",
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
+      devin: "Devin CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
     },
     mission: {
@@ -13907,6 +14011,25 @@ export const en = {
     s3: "Your own storage",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 or another compatible with S3.",
     current: "In use",
+    /** The workspace's own Cloud computer's disk, under the files' storage: a bar by what takes it, with a legend. */
+    computer: {
+      title: "Workspace computer",
+      used: "{{used}} of {{size}} in use",
+      bar: "The workspace computer's disk",
+      measuring: "Measuring what takes the space.",
+      part: {
+        projects: "Projects and code",
+        apps: "Apps and tools",
+        agents: "Agents' files",
+        caches: "Caches and temporary files",
+        system: "System",
+        other: "Other",
+        free: "Free",
+      },
+      full: "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore.",
+      /** The message an agent gets, already in its DM's composer, from the button under `full`. */
+      ask: "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room.",
+    },
     usage: {
       files: "{{size}}\u00a0of\u00a0files",
       none: "No\u00a0files",
@@ -15524,6 +15647,9 @@ export const en = {
       desktop_read: "Read the screen",
       desktop_screenshot: "Take a screenshot",
       desktop_ask_person: "Ask someone to take over the computer",
+      apps_list: "See the open apps",
+      apps_read: "Read an app",
+      apps_act: "Use an app",
       computer_use: "Use the computer",
       computer_status: "Check the computer",
       left_click: "Click",
@@ -16585,6 +16711,7 @@ export const en = {
       generalStays: "Everyone stays in #general.",
       leadChannelOnly: "Only channels have a responsible agent.",
       leadNotMember: "The responsible agent has to be in the channel.",
+      groupNameInvalid: "Give it a name of up to 80 characters, on one line.",
       mcpUnreachable: "Couldn't connect to the MCP server. Check its address and try again.",
       notApproved: "This service hasn't approved agentes.chat yet.",
       alreadyInvited: "This person already has an invitation.",
@@ -17124,11 +17251,59 @@ export const en = {
       viaBy: "Agents use the internet of {{name}} ({{person}})",
       viaHint: "Websites see that computer’s location. Its owner can turn it off on its page.",
     },
-    /** The workspace's own computer, away while it moves to another server: never "offline" or "not answering". */
-    moving: {
-      short: "Moving servers",
-      line: "Moving to a new server… back in a few minutes",
-      named: "{{computer}} is moving to a new server… back in a few minutes",
+    /**
+     * What we do to the workspace's own computer (ADR 0257), said instead of "offline": a move, a restart, an update,
+     * a disk conversion, its server's maintenance. `other`: a kind this app doesn't know yet.
+     */
+    maintenance: {
+      /** The chip's and the pill's word. */
+      short: {
+        moving: "Moving servers",
+        restarting: "Restarting",
+        updating: "Updating",
+        converting: "Upgrading disk",
+        host_maintenance: "Maintenance",
+        other: "Maintenance",
+      },
+      /** The line's start, before "… back in about 2 min". */
+      what: {
+        moving: "Moving to a new server",
+        copying: "Copying to a new server",
+        restarting: "Restarting",
+        updating: "Updating its software",
+        converting: "Upgrading its disk",
+        host_maintenance: "Its server is under maintenance",
+        other: "Being worked on",
+      },
+      /** "Restarting… back in about 2 min". */
+      line: "{{what}}… {{when}}",
+      named: "{{computer}}: {{line}}",
+      /** `time`: "2 min", "1 h". */
+      back: "back in about {{time}}",
+      backSoon: "back in a few minutes",
+      late: "taking a little longer than expected",
+      /** Online while it is done (a move's copy): it works. */
+      slower: "it may be slower meanwhile",
+      slowerFor: "it may be slower for about {{time}}",
+      /** The tip's first line: why, in plain words. */
+      why: {
+        moving: "We're moving it to a new server.",
+        copying: "We're copying its files to a new server while it works.",
+        handover: "We're handing its last changes over to the new server.",
+        restarting: "We're restarting it.",
+        unresponsive: "It stopped answering, so we restarted it automatically.",
+        updating: "We're updating its software.",
+        converting: "We're moving its disk to faster storage.",
+        host_maintenance: "The server it runs on is getting maintenance.",
+        other: "We're doing some work on it.",
+      },
+      since: "Since {{time}}",
+      expectedBack: "Expected back around {{time}}",
+      expectedDone: "Expected done around {{time}}",
+      meanwhile: "Messages to its agents wait and go on by themselves when it's back.",
+      working: "Its agents keep working meanwhile.",
+      /** The ⓘ's name beside the chip. */
+      about: "What's happening",
     },
     online: "Online",
     offline: "Offline",
@@ -17145,6 +17320,7 @@ export const en = {
         opencode: "OpenCode",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         commands: "commands",
         browser: "the browser",
         desktop: "the screen",
@@ -17200,6 +17376,15 @@ export const en = {
     removed: "{{name}} was removed.",
     name: "Computer name",
     nameHelp: "How people and agents see it.",
+    /**
+     * The name a computer gets when it joins, until someone renames it (`defaultMachineName` in the engine): its model
+     * and the first name of who connected it. `model` is a product name ("MacBook Pro", "Mac", "PC"), never translated.
+     */
+    defaultName: {
+      model: "{{name}}'s {{model}}",
+      linux: "{{name}}'s Linux computer",
+      other: "{{name}}'s computer",
+    },
     os: { linux: "Linux", darwin: "macOS", windows: "Windows", other: "Other system" },
     commandCopied: "Command copied. Paste it in the computer's Terminal.",
     // agentes for Mac (ADR 0036): this Mac, from the site inside the app.
@@ -17319,6 +17504,7 @@ export const en = {
         cursor: "Cursor",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         opencode: "OpenCode",
         commands: "Commands",
         browser: "Browser",
@@ -17329,6 +17515,7 @@ export const en = {
         cursor: "Like Claude Code, with a Cursor account. Only in the allowed folders.",
         grok: "Like Claude Code, with a Grok account. Only in the allowed folders.",
         antigravity: "Like Claude Code, with a Gemini account. Only in the allowed folders.",
+        devin: "Like Claude Code, with a Devin account. Only in the allowed folders.",
         opencode: "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders.",
         commands: "Runs Terminal commands, like tests and builds.",
       },
@@ -17348,6 +17535,16 @@ export const en = {
       grantTextTerminal: "Allowing happens on the computer itself, in its Terminal:",
       grantTextAdmin: "Allowing happens on the computer itself, in its Terminal, as its administrator:",
       grantTerminal: "No app? In the computer's terminal:",
+      /** "Liberar uma pasta": the agentes.chat app on that computer opens the system's folder picker for whoever is there. */
+      pickText: "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose.",
+      pick: "Allow a folder",
+      picked: "A folder picker opened on {{machine}}. Choose the folder there.",
+      /** While the person at the computer hasn't picked yet. */
+      pickWaiting: "Waiting for the folder to be chosen on {{machine}}",
+      /** A computer without the app (or one too old): the command, folded under this. */
+      grantTerminalMore: "No app there? Use the Terminal",
+      noApp: "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal.",
+      requestDone: "This request was already answered or has expired.",
       /** Under a one-click button: the same as a command to paste on that computer. */
       preferTerminal: "I'd rather use the Terminal",
       grantOnlyOwner: "Only {{name}} allows more, on the computer itself. If you need something, ask them.",
@@ -17357,6 +17554,22 @@ export const en = {
   },
   /** Bring your own devices: Settings › Devices, a device's page, the connect flows, the chat's waiting card, notices. */
   devices: {
+    permission: {
+      title: "Waiting for {{permission}} on {{computer}}",
+      next: "Allow it in the agentes.chat app there.",
+      askedBy: "Asked by {{agent}} to run {{trigger}}",
+      asked: "Needed to run {{trigger}}",
+      names: {
+        app_management: "App Management",
+        screen: "Screen Recording",
+        accessibility: "Accessibility",
+        disk: "Full Disk Access",
+        network: "Local Network",
+        camera: "Camera",
+        microphone: "Microphone",
+        automation: "Automation",
+      },
+    },
     leadCloud: "Where your agents work: the workspace computer and the devices people connect.",
     lead: "Where your agents work: the computers and phones people connect.",
     connect: "Connect a device",
@@ -17397,6 +17610,22 @@ export const en = {
     forgotten: "{{name}} forgotten.",
     stop: "Stop",
     stopped: "Stopped. {{name}} is free.",
+    /** Ligar / Desligar on an iOS simulator or an Android emulator, which its computer starts or shuts down. */
+    power: {
+      start: "Start",
+      stop: "Shut down",
+      starting: "{{name}} is starting. It's ready in a moment.",
+      stopped: "{{name}} is shut down.",
+      toolMissingIos: "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+      toolMissingAndroid:
+        "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer.",
+      gone: "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there.",
+      busy: "{{name}} is in use right now. Stop what uses it first, or try again when it's free.",
+      /** `why`: the computer's own words, as its tools said them (in English). */
+      startFailed: "{{name}} didn't start. {{computer}} said: {{why}}",
+      stopFailed: "{{name}} didn't shut down. {{computer}} said: {{why}}",
+      notSimulator: "Only a simulator or an emulator starts and shuts down from here.",
+    },
     showMe: "Show me how",
     notFound: "This device isn't here anymore",
     notFoundText: "It was removed, or this link is wrong.",
@@ -17417,23 +17646,34 @@ export const en = {
     /** One switch per computer (`machines.spill_own`, ADR 0233): its owner's to turn on. */
     spillOwn: "Help when the team's computer is full or away",
     spillOwnHint:
-      "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in.",
+      "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer.",
     /** The same switch on a computer marked the workspace's: anyone's agents, on their owner's sign-in there. */
     spillTeamHint:
-      "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer.",
+      "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer.",
     /** Under the switch while an admin turned devices' help off for the whole workspace. */
     spillWorkspaceOff: "An admin turned this off for the workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Use this computer for my agents' work",
-    spillFirstHint:
-      "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away.",
+    /**
+     * Its owner's one choice for how the computer helps (`spillUseOf`): never, only as backup (`machines.spill_own`) or
+     * first for their own agents' work (`machines.spill_first`).
+     */
+    helpUse: "How it helps your agents",
+    helpUses: {
+      off: "Doesn't help",
+      help: "Only as backup",
+      first: "First for my agents",
+    },
+    helpUseHint:
+      "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer.",
+    /** The same choice on a computer marked the workspace's: as backup it takes anyone's agents. */
+    helpUseTeamHint:
+      "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free.",
     /** Settings › Devices, admins: the workspace's switch over every computer's own (`devicesHelp`). */
     helpWorkspace: "Computers help when the team's is full or away",
     helpWorkspaceHint: "Each computer helps only if its owner allows it. Off: none helps, whatever its owner chose.",
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection.",
+      "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
@@ -18065,6 +18305,9 @@ export const en = {
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
+      /** Its button where the agentes.chat app runs that computer: the request opens there, for the person to allow. */
+      folderOnComputer: "Allow on the computer",
+      folderShown: "Opened on {{deviceName}}. Allow it there.",
       /**
        * Once, for a computer paired before agents could use a person's internet (ADR 0237): to its owner, or to admins
        * for a computer marked the workspace's. `deviceName` the computer's name.
@@ -18072,7 +18315,7 @@ export const en = {
       internetShared: "Agents now open websites through the internet of <b>{{deviceName}}</b>",
       /** Under it: what lending keeps out and what happens while the computer is offline. */
       internetSharedLine:
-        "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection.",
+        "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection.",
       /** Its one button: stops lending this computer's internet. */
       internetOff: "Turn off",
       internetOffDone: "Agents no longer use the internet of {{deviceName}}.",
@@ -19641,6 +19884,8 @@ export const en = {
     /** The waiting row's step line before its first step (`waitStep`). */
     wait: {
       thinking: "Thinking…",
+      /** Before the model has the turn: the agent's checkouts are being updated from their repositories. */
+      code: "Updating the code…",
       held: "Waiting for approval…",
       /** The agent's own words for its step (what it wrote before the call), quoted. */
       said: "“{{text}}”",
@@ -19950,6 +20195,7 @@ export const en = {
         usingScreen: "Used the screen",
         cloningRepo: "Cloned a repository",
         listingRepos: "Listed the repositories",
+        updatingCode: "Updated the code",
         preparingCli: "Prepared {{app}}",
         openingPullRequest: "Opened a pull request",
         handingOff: "Delivered a report",
@@ -20075,6 +20321,7 @@ export const en = {
       usingScreen: "using the screen",
       cloningRepo: "cloning a repository",
       listingRepos: "listing the repositories",
+      updatingCode: "updating the code",
       preparingCli: "preparing {{app}} on {{computer}}",
       preparingCliPct: "preparing {{app}} on {{computer}} ({{percent}}%)",
       openingPullRequest: "opening a pull request",
@@ -20319,6 +20566,7 @@ export const en = {
       welcome_member:
         "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you.",
       action_open_page: "Open a screen",
+      action_voice_setup: "Turn on voice messages",
       calendar_proposal: "Event proposal: {{title}}",
       action_workspace: "Proposed a change in the workspace",
       agent_proposal: "Proposed a new agent: {{name}}",
@@ -20632,6 +20880,10 @@ export const en = {
     offer_open_page: {
       label: "Offer to open a screen",
       description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+    },
+    offer_voice_setup: {
+      label: "Offer to turn on voice messages",
+      description: "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them.",
     },
     set_team_week: {
       label: "Change the Team week card",
@@ -21666,16 +21918,16 @@ export const en = {
     },
     /** Whether agents can use apps on their desktops on a computer (ADR 0062): its page and the agent's. */
     use: {
-      title: "Apps on the agents' screens",
+      title: "Each agent's own screen",
       description:
-        "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page.",
+        "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours.",
       ready: "Ready",
       off: "Off",
-      unavailable: "Not available",
+      /** A Linux computer that still lacks what the screens need: the line under it says what. */
+      unavailable: "Needs setup",
       offHelp: "Turn on the screens and commands on this computer:",
       /** Whoever connected it turns each switch on with the buttons that follow. */
       offOne: "This computer needs both the screen and commands on.",
-      linuxOnly: "Agents use apps on their own screens only on Linux computers.",
       agent: "{{name}} can't use apps on his screen on {{computer}} yet.",
       agent_female: "{{name}} can't use apps on her screen on {{computer}} yet.",
     },

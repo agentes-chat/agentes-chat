@@ -10,7 +10,7 @@ import { cliVersionOf } from "./plans";
  * beside it; `blocked` lists versions with a known problem for agentes.chat, each with its reason. A CLI with neither
  * runs at any version its runner reports.
  */
-export type FloorCli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type FloorCli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 export interface CliFloor {
   /** The oldest version turns run on (`1.2.3`). */
@@ -30,6 +30,7 @@ export const CLI_FLOORS: Readonly<Record<FloorCli, CliFloor>> = {
   opencode: {},
   grok: {},
   antigravity: {},
+  devin: {},
 };
 
 /**

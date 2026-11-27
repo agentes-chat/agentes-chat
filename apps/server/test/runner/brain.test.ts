@@ -132,13 +132,38 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
   expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
   // Where the model's time went: whole numbers from 0 up to a day, the rest left out.
   expect(
-    done({ warm: true, firstTokenMs: 300.4, firstAssistantMs: 2100, retries: 2, retryDelayMs: -1, thinkingChars: "9" }),
+    done({
+      warm: true,
+      firstRequestMs: 120.6,
+      firstTokenMs: 300.4,
+      firstAssistantMs: 2100,
+      retries: 2,
+      retryDelayMs: -1,
+      thinkingChars: "9",
+    }),
   ).toEqual({
     type: "brain.event",
     runId: RUN(1),
-    event: { type: "done", text: "ok", timings: { warm: true, firstTokenMs: 300, firstAssistantMs: 2100, retries: 2 } },
+    event: {
+      type: "done",
+      text: "ok",
+      timings: { warm: true, firstRequestMs: 121, firstTokenMs: 300, firstAssistantMs: 2100, retries: 2 },
+    },
   });
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
+  // A slow turn's evidence: lines of text, each cut, the rest dropped; a failed turn's timings travel on its error.
+  expect(done({ warm: true, evidence: ["+3ms [DEBUG] [API REQUEST]", 4, "x".repeat(400)] })).toMatchObject({
+    event: { timings: { warm: true, evidence: ["+3ms [DEBUG] [API REQUEST]", "x".repeat(300)] } },
+  });
+  expect(
+    parseRunnerFrame(
+      line({
+        type: "brain.event",
+        runId: RUN(1),
+        event: { type: "error", code: "claude_failed", message: "no", timings: { warm: false, initMs: 9100 } },
+      }),
+    ),
+  ).toMatchObject({ event: { type: "error", code: "claude_failed", timings: { warm: false, initMs: 9100 } } });
 });
 
 test("hello: Claude Code's login state travels (never anything else from auth status)", async () => {
@@ -1762,14 +1787,78 @@ test.if(posix)(
   },
 );
 
+test("parser: the first token is when the API's first message started, the first answer its first whole block", () => {
+  let now = 1_000;
+  const p = new ClaudeStreamParser(() => now);
+  p.beginTurn();
+  p.push(
+    line({ type: "stream_event", parent_tool_use_id: null, event: { type: "message_start", message: { id: "m1" } } }),
+  );
+  now += 50;
+  const block = {
+    type: "assistant",
+    message: { id: "m1", content: [{ type: "text", text: "hi" }] },
+    parent_tool_use_id: null,
+  };
+  p.push(line(block));
+  now += 50;
+  p.push(line(block));
+  expect(p.stats).toMatchObject({ firstTokenAt: 1_000, firstAssistantAt: 1_050 });
+});
+
+test.if(posix)(
+  "a slow turn carries what its CLI's debug log said of it, scrubbed; a quick one carries none",
+  async () => {
+    const { turn, spawns } = setup({ claudeVersion: () => "2.1.300" });
+    const slow = await turn(1, "RETRYWAIT");
+    expect(spawns()[0]?.args).toContain("--debug-file");
+    const evidence = slow.final.type === "done" ? (slow.final.timings?.evidence ?? []) : [];
+    expect(evidence.some((l) => /^\+?-?\d+ms \[DEBUG\] \[STARTUP\] setup\(\) completed/.test(l))).toBe(true);
+    expect(evidence.some((l) => l.includes("[API REQUEST] /v1/messages"))).toBe(true);
+    expect(evidence.some((l) => l.includes("529 overloaded_error for [email]"))).toBe(true);
+    expect(evidence.join("\n")).not.toContain("the words a hook said");
+    expect(evidence.join("\n")).not.toContain("ana@example.com");
+    // Warm, with no retry: within its budgets, so nothing of its log goes.
+    const quick = await turn(2, "second");
+    expect(quick.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(quick.final.type === "done" ? quick.final.timings?.evidence : "none").toBeUndefined();
+  },
+);
+
+test.if(posix)("an older Claude Code starts with no debug log", async () => {
+  const { turn, spawns } = setup({ claudeVersion: () => "2.1.200" });
+  await turn(1, "hi");
+  expect(spawns()[0]?.args).not.toContain("--debug-file");
+});
+
+test("parser: the first request is when the CLI first said it was asking the API, a compaction's status aside", () => {
+  let now = 1_000;
+  const p = new ClaudeStreamParser(() => now);
+  p.beginTurn();
+  p.push(line({ type: "system", subtype: "status", status: "compacting" }));
+  now += 100;
+  p.push(line({ type: "system", subtype: "status", status: "requesting" }));
+  now += 19_000;
+  // Its retry asks again: the first ask stays.
+  p.push(line({ type: "system", subtype: "status", status: "requesting" }));
+  p.push(
+    line({ type: "stream_event", parent_tool_use_id: null, event: { type: "message_start", message: { id: "m1" } } }),
+  );
+  expect(p.stats).toMatchObject({ firstRequestAt: 1_100, firstTokenAt: 20_100 });
+  // The next request of the process counts its own.
+  p.resetStats();
+  expect(p.stats.firstRequestAt).toBeUndefined();
+});
+
 test.if(posix)("a turn's timings keep its API retries, its thinking and when the model first answered", async () => {
   const { turn } = setup();
   const r = await turn(1, "RETRYWAIT THOUGHT");
   expect(r.final).toMatchObject({ type: "done" });
   const t = r.final.type === "done" ? r.final.timings : undefined;
   expect(t).toMatchObject({ warm: false, retries: 1, retryDelayMs: 800, thinkingBlocks: 2, thinkingChars: 10 });
-  // The API's first message came 50 ms before its first whole block.
-  expect((t?.firstAssistantMs ?? 0) - (t?.firstTokenMs ?? 0)).toBeGreaterThanOrEqual(40);
+  // How far apart the two lines are read is the machine's pace: the parser's test above holds the clock.
+  expect(t?.firstAssistantMs).toBeGreaterThanOrEqual(t?.firstTokenMs ?? Number.NaN);
+  expect(t?.firstTokenMs).toBeGreaterThanOrEqual(t?.firstRequestMs ?? Number.NaN);
   // The next turn on the process counts its own.
   const next = await turn(2, "second");
   expect(next.final).toMatchObject({
@@ -1777,6 +1866,33 @@ test.if(posix)("a turn's timings keep its API retries, its thinking and when the
     timings: { warm: true, retries: 0, retryDelayMs: 0, thinkingBlocks: 0, thinkingChars: 0 },
   });
 });
+
+test.if(posix)(
+  "each turn asks for its tools at its start; a new process's wait for them goes in its timings",
+  async () => {
+    const asked: { id: string; run: string | undefined }[] = [];
+    let m: BrainManager | null = null;
+    const { turn, m: made } = setup({
+      prefetchTools: (id) => {
+        asked.push({ id, run: m?.mcpTask(id)?.runId });
+        // The bridge answers the CLI's first ask 40 ms after it came, 10 ms into the turn.
+        m?.bridgeList(id, Date.now() + 10, 40);
+        m?.bridgeList(id, Date.now() + 500, 900);
+      },
+    });
+    m = made;
+    const r = await turn(1, "first");
+    expect(asked).toEqual([{ id: expect.any(String), run: RUN(1) }]);
+    const t = r.final.type === "done" ? r.final.timings : undefined;
+    expect(t).toMatchObject({ warm: false, toolsListWaitMs: 40 });
+    expect(t?.toolsListMs).toBeGreaterThanOrEqual(10);
+    // On the open process the CLI is ready already: its list asks go in no timings.
+    const next = await turn(2, "second");
+    expect(asked.map((a) => a.run)).toEqual([RUN(1), RUN(2)]);
+    expect(next.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(next.final.type === "done" ? next.final.timings : undefined).not.toHaveProperty("toolsListWaitMs");
+  },
+);
 
 test.if(posix)(
   "another model or effort switches on the open process; another fallback, or none of them, starts a new one",
@@ -2167,6 +2283,8 @@ test.if(posix)(
         retryable: true,
         cause: "auth_rejected",
         httpStatus: 401,
+        // How the failed turn went, as a `done` says it.
+        timings: expect.objectContaining({ warm: false }),
       });
       expect(Date.now() - started).toBeLessThan(10_000);
       // Nothing to sign in with on the computer: signed out, no CLI started.
@@ -2644,6 +2762,8 @@ test.if(posix)("a turn of its own stuck past the wait: the process is killed and
     await waitFor(() => proc?.strayTurn === true);
     const next = await turn(2, "after");
     expect(next.final).toMatchObject({ type: "done", text: "echo 1: after" });
+    // The wait for that turn is the runner's, before its CLI had this one (never the API's first token).
+    expect(next.final.type === "done" ? next.final.timings?.sentMs : 0).toBeGreaterThanOrEqual(300);
     noLeak(next);
     await waitFor(() => proc?.exited === true);
     expect(spawns()).toHaveLength(2);
@@ -2781,8 +2901,8 @@ const SHARED = "0193ffff-0000-7000-8000-000000000002";
 const fakeEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("FAKE_CLAUDE")));
 
 /** Root's side, faked: the CLI is the fake one, the worker a list of what it was told. */
-function delegatedSetup(over: Partial<DelegatedTurn> = {}) {
-  const s = setup({ mcp: undefined });
+function delegatedSetup(over: Partial<DelegatedTurn> = {}, opts: Partial<BrainManagerOptions> = {}) {
+  const s = setup({ mcp: undefined, ...opts });
   const room = path.join(s.home, "store", "run", "21000");
   const configDir = path.join(s.home, "store", "config");
   mkdirSync(room, { recursive: true });
@@ -2904,6 +3024,15 @@ test.if(posix)("delegated: root reads nothing of the folder; what it writes come
   expect(JSON.stringify(again.final)).not.toContain("planted");
 });
 
+test.if(posix)("delegated: the turn's tools are the worker's to ask for, never asked here too", async () => {
+  const asked: string[] = [];
+  const { turn, frames } = delegatedSetup({}, { prefetchTools: (id) => void asked.push(id) });
+  const r = await turn(1, "hi");
+  expect(r.final).toMatchObject({ type: "done" });
+  expect(frames.some((f) => f.runId === RUN(1) && f.serverToken)).toBe(true);
+  expect(asked).toEqual([]);
+});
+
 test.if(posix)("delegated: a resume needs root's record and a plain transcript, never just a file", async () => {
   const session = SESSION(1);
   const first = delegatedSetup();
@@ -2937,6 +3066,24 @@ test.if(posix)("delegated: a resume needs root's record and a plain transcript, 
   expect(await resumed({ [session]: { agent: "someone-else", account: SHARED } }, "plain")).toBe("--session-id");
   expect(await resumed({ [session]: { agent: AGENT.id, account: "another" } }, "plain")).toBe("--session-id");
 });
+
+test.if(posix)(
+  "delegated: a warm start is the sign-in's own CLI, guessed from the agent's last turn on it; the turn takes it",
+  async () => {
+    const d = delegatedSetup();
+    const ctx = { agent: AGENT, folder: "", emit: () => {}, delegated: d.delegated, grants: ["/srv/nope"] };
+    const warm = (n: number) =>
+      d.m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", account: SHARED }, ctx);
+    expect(await warm(2)).toEqual({ open: false, started: false });
+    await d.turn(1, "hi", { system: "S1" });
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    await waitFor(() => d.spawns().length === 2, 4000);
+    expect(d.spawns()[1]?.system).toBe(d.spawns()[0]?.system ?? "");
+    const b = await d.turn(2, "there", { system: "S1", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(d.spawns()).toHaveLength(2);
+  },
+);
 
 test.if(posix)("delegated: a session it doesn't own is never resumed on the CLI's word", async () => {
   process.env.FAKE_CLAUDE_SESSION_TAKEN = "1";
@@ -3441,9 +3588,133 @@ test.if(posix)(
     expect(await warm(3)).toEqual({ open: true, started: true });
     await waitFor(() => spawns().length === 3, 4000);
     const c = await turn(3, "later", { system: "S2", session: { id: SESSION(3), resume: false } });
-    expect(c.final).toMatchObject({ type: "done" });
+    // Where the two texts part, for the run's stored context to show which part changed.
+    expect(c.final).toMatchObject({ type: "done", timings: { warm: false, cold: "warm_mismatch", warmMismatchAt: 1 } });
     expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
     expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
+  },
+);
+
+test.if(posix)(
+  "a runner started again warms from the agent's last launch it kept on disk, and never with another sign-in's text",
+  async () => {
+    const accountDir = tempDir("claude-account-");
+    dirs.push(accountDir);
+    const accounts = {
+      accountDir: (kind: string, id: string) => (kind === "claude_code" && id === ACCOUNT ? accountDir : null),
+    };
+    const { m, home, ws, spawns, turn } = setup({ accounts });
+    await turn(1, "hi", { system: "S1" });
+    m.close();
+    const again = new BrainManager({
+      root: path.join(home, "brains"),
+      claudeCommand: [process.execPath, FAKE],
+      claudeHome: path.join(home, "no-claude-home"),
+      mcp: { socketPath: path.join(home, "mcp.sock"), command: ["node", "runner.mjs"] },
+      deltaMs: 5,
+      accounts,
+    });
+    managers.push(again);
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number, account?: string) =>
+      again.prewarm(
+        { kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", ...(account ? { account } : {}) },
+        ctx,
+      );
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(spawns()[1]?.system).toBe("S1");
+    const b = await again.turn(
+      {
+        runId: RUN(2),
+        kind: "claude_code",
+        session: { id: SESSION(2), resume: false },
+        cwd: "",
+        system: "S1",
+        prompt: "there",
+        mcp: { token: `agr_${"t".repeat(24)}2` },
+      },
+      ctx,
+    );
+    expect(b).toMatchObject({ type: "done", timings: { warm: true } });
+    // No turn of the agent's on that sign-in yet: nothing to start it with, not the other sign-in's text.
+    expect(await warm(3, ACCOUNT)).toEqual({ open: false, started: false });
+    expect(spawns()).toHaveLength(2);
+  },
+);
+
+test.if(posix)(
+  "a locked-down turn's warm start is that turn's own launch: the turn takes it, and a CLI tool of its own still stops it",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const chat = { permissions: { mode: "chat" as const } };
+    const warm = (n: number) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", ...chat }, ctx);
+    await turn(1, "hi", { system: "S1", ...chat });
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    const b = await turn(2, "there", { system: "S1", ...chat, session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(spawns()).toHaveLength(2);
+    process.env.FAKE_CLAUDE_EXTRA_TOOL = "Workflow";
+    try {
+      expect(await warm(3)).toEqual({ open: true, started: true });
+      const c = await turn(3, "more", { system: "S1", ...chat, session: { id: SESSION(3), resume: false } });
+      expect(c.final).toMatchObject({ type: "error", code: "tools_not_locked" });
+      expect(c.events.some((e) => e.type === "text_delta")).toBe(false);
+    } finally {
+      delete process.env.FAKE_CLAUDE_EXTRA_TOOL;
+    }
+  },
+);
+
+test.if(posix)(
+  "a warm start's guessed text that no turn took never becomes the session's: its resumed turn starts with its own",
+  async () => {
+    const { m, ws, spawns, turn } = setup({ idleMs: 300 });
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    // Another person's conversation: its text is the guess.
+    await turn(1, "hi", { system: "S-other" });
+    const warm = await m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: true }, cwd: "" }, ctx);
+    expect(warm).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(spawns()[1]?.system).toBe("S-other");
+    // Closed unused (its idle limit, or for another conversation).
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const b = await turn(2, "there", { system: "S-mine", session: { id: SESSION(2), resume: true } });
+    expect(b.final).toMatchObject({ type: "done" });
+    expect(spawns().at(-1)?.system).toBe("S-mine");
+  },
+);
+
+test.if(posix)("a ready process past its idle time gives way to a new one while the agent works lately", async () => {
+  const { spawns, turn } = setup({ maxProcesses: 3, readyRoom: () => true, idleMs: 400 });
+  await turn(1, "hi", { system: "S1" });
+  await waitFor(() => spawns().length === 2, 4000);
+  // Closed as idle, as the turn's own process: another ready one, on a session of its own.
+  await waitFor(() => spawns().length >= 3, 4000);
+  const ready = spawns().slice(1, 3);
+  expect(ready.map((r) => r.system)).toEqual(["S1", "S1"]);
+  expect(ready[1]?.args.at(-1)).not.toBe(ready[0]?.args.at(-1));
+});
+
+test.if(posix)(
+  "a warm start that came to nothing says why on its turn: no launch to start it with, another launch than the turn's",
+  async () => {
+    const { m, ws, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number, model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", model }, ctx);
+    const cold = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    // Before this runner ran a turn of the agent's: no system text to start it with.
+    expect(await warm(1, "sonnet")).toEqual({ open: false, started: false });
+    const a = await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(cold(a.final)).toMatchObject({ warm: false, cold: "no_launch" });
+    // Warmed for sonnet; the turn came with opus, whose `--fallback-model` only a start sets.
+    expect(await warm(2, "sonnet")).toEqual({ open: true, started: true });
+    const b = await turn(2, "there", { system: "S1", model: "opus", session: { id: SESSION(2), resume: false } });
+    expect(cold(b.final)).toMatchObject({ warm: false, cold: "warm_settings" });
   },
 );
 

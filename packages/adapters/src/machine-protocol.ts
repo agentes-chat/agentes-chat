@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 88;
+export const MACHINE_PROTOCOL_VERSION = 94;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -336,12 +336,28 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** The workspace disk's size (GB, one decimal). Absent from an older runner, as `oomKills`. */
+  diskGb?: number;
+  /**
+   * What takes the workspace disk, by kind (GB, one decimal), measured every `DISK_PARTS_MS` by the runner in system
+   * mode on Linux; the rest of what is in use is everything else. Absent elsewhere and from an older runner, as
+   * `oomKills`.
+   */
+  diskParts?: DiskParts;
   /**
    * What the agents' temporary folders hold in memory now (GB), ADR 0243: system mode on Linux. Absent from an older
    * runner: no protocol number, as `oomKills`.
    */
   agentTmpRamGb?: number;
 }
+
+/** The kinds of things `MachineLoad.diskParts` splits a disk into, in the order a bar shows them. */
+export const DISK_PARTS = ["projects", "apps", "agents", "caches", "system"] as const;
+export type DiskPart = (typeof DISK_PARTS)[number];
+export type DiskParts = Record<DiskPart, number>;
+
+/** How often the runner measures `diskParts`: `du` walks the whole disk. */
+export const DISK_PARTS_MS = 6 * 3600_000;
 
 /** How often a computer's load is sampled (protocol 22). */
 export const LOAD_SAMPLE_MS = 5 * 60_000;
@@ -750,6 +766,188 @@ export const TERMINAL_CWD_PROTOCOL = 76;
  * person closed it). The server sends `keep` to no older runner, where each open is a new shell.
  */
 export const TERMINAL_KEEP_PROTOCOL = 77;
+/**
+ * From this protocol on (ADR 0253): the Devin brain. `brain.turn` takes `kind: "devin"` (Cognition's Devin CLI,
+ * `devin acp` over the Agent Client Protocol, one process per turn, the model family's variant picked by the turn's
+ * effort and speed), `account` takes `kind: "devin"` (a Devin sign-in by a pasted code, `devin auth login
+ * --force-manual-token-flow`, in the account's own home), `hello.executors.devin` reports the CLI with the models its
+ * accounts list, and `access.tools.devin` turns it on or off. The server never sends any of these to an older runner.
+ */
+export const DEVIN_PROTOCOL = 89;
+/**
+ * `phone.power`: an iOS simulator or an Android emulator this computer runs started (`on`) or shut down, from the
+ * apps or by an agent. A Mac boots a simulator with `simctl` and shows it in Simulator; an emulator starts detached
+ * from the Android SDK's `emulator`, its AVD found by the model it showed (`model`). The server asks no older runner.
+ */
+export const SIMULATOR_POWER_PROTOCOL = 90;
+/**
+ * From this protocol on: the OS permissions the computer waits on (`hello.permissions`, `permissions.changed`, whole
+ * each time), and `exec`'s `permission` when a command failed for want of one. Older servers drop both.
+ */
+export const OS_PERMISSIONS_PROTOCOL = 91;
+
+/**
+ * The OS permissions agents' work on a computer may wait on, one name for both systems where Windows has one too:
+ * macOS's App Management, Screen Recording, Accessibility, Full Disk Access, Local Network, Camera, Microphone and
+ * Automation; Windows's camera, microphone and screen capture privacy switches.
+ */
+export const OS_PERMISSIONS = [
+  "app_management",
+  "screen",
+  "accessibility",
+  "disk",
+  "network",
+  "camera",
+  "microphone",
+  "automation",
+] as const;
+export type OsPermission = (typeof OS_PERMISSIONS)[number];
+export const isOsPermission = (v: unknown): v is OsPermission =>
+  typeof v === "string" && (OS_PERMISSIONS as readonly string[]).includes(v);
+
+/** Each permission as macOS's System Settings names it, for the agent's words (the apps word their own). */
+export const OS_PERMISSION_LABELS: Record<OsPermission, string> = {
+  app_management: "App Management",
+  screen: "Screen Recording",
+  accessibility: "Accessibility",
+  disk: "Full Disk Access",
+  network: "Local Network",
+  camera: "Camera",
+  microphone: "Microphone",
+  automation: "Automation",
+};
+
+/**
+ * What the agent reads after a command that failed for want of `permission` on the computer `name`: it waits, the
+ * person was asked there, and it goes on once they allow it. Never a workaround: the permission is the person's call.
+ */
+export const permissionWaitText = (name: string, permission: OsPermission) =>
+  `Waiting for permission on ${name}: this needs ${OS_PERMISSION_LABELS[permission]}, and the agentes.chat app there is asking the person now. Tell them what it is for in one line; once they allow it, run the same command again. Don't look for a way around it.`;
+
+/** At most this many waits are kept and told; a trigger is cut to `PERMISSION_TRIGGER_CHARS`. */
+export const PERMISSION_NEEDS_MAX = OS_PERMISSIONS.length;
+export const PERMISSION_TRIGGER_CHARS = 200;
+
+/** A permission the computer waits on: one per permission, the first thing that asked for it. */
+export interface PermissionNeed {
+  permission: OsPermission;
+  /** What asked, as the person reads it: the command (redacted) or the step. */
+  trigger: string;
+  /** The agent whose work asked, when one did. */
+  agentId?: string;
+  /** When it was first seen (ISO). */
+  since: string;
+}
+
+/** `hello.permissions` and `permissions.changed`: known permissions only, one each. */
+export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
+  if (!Array.isArray(v)) return [];
+  const out: PermissionNeed[] = [];
+  for (const n of v.slice(0, PERMISSION_NEEDS_MAX)) {
+    if (!isObject(n) || !isOsPermission(n.permission) || out.some((o) => o.permission === n.permission)) continue;
+    const since = isString(n.since) && !Number.isNaN(Date.parse(n.since)) ? n.since : null;
+    if (!since) continue;
+    out.push({
+      permission: n.permission,
+      trigger: isString(n.trigger) ? n.trigger.slice(0, PERMISSION_TRIGGER_CHARS) : "",
+      ...(isString(n.agentId) && n.agentId.length <= 64 ? { agentId: n.agentId } : {}),
+      since,
+    });
+  }
+  return out;
+}
+/**
+ * From this protocol on, `access.pick`: someone who manages the computer asks, from the apps, for a folder to be
+ * allowed there. The agentes.chat app on that computer shows who asks, and the person there picks the folder in the
+ * system's own folder picker (or says not now); with `requestId`, it shows an agent's pending request again instead.
+ * A runner the app doesn't run answers `bad_request` with `no_app`: the apps show the command instead.
+ */
+export const FOLDER_PICK_PROTOCOL = 92;
+/**
+ * From this protocol on, a brain turn outlives a dropped link: the runner keeps it running for `HELD_TURN_MS` (its
+ * events and its result kept), and a `brain.turn` for the same run on the next link takes it over instead of starting
+ * the turn again. One sent with `reattach` only takes a turn held there; nothing held, it is answered `not_found`.
+ * `reattach: "stop"` takes it and stops it (its run was canceled meanwhile). A turn of another run on the same CLI
+ * (agent and session) ends a held one first. A standby (before a sleep) is refused while a turn runs.
+ */
+export const HELD_TURN_PROTOCOL = 93;
+/**
+ * From this protocol on (ADR 0258): agents use the apps on the person's own computer through the pinned
+ * `agent-desktop` CLI, which reads an app's accessibility tree and acts on its elements by ref without the person's
+ * pointer or keyboard. `apps.run` runs one command of `APPS_COMMANDS`; the runner adds its own flags and refuses the
+ * rest. `hello.apps` says whether it can run here: a computer where agents work as the person's own user (never
+ * system mode). The server never sends `apps.run` to an older runner.
+ */
+export const PERSON_APPS_PROTOCOL = 94;
+/** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
+export const AGENT_DESKTOP_VERSION = "1.3.1";
+/** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
+export type AgentDesktopTarget =
+  | "aarch64-apple-darwin"
+  | "x86_64-apple-darwin"
+  | "aarch64-pc-windows-msvc"
+  | "x86_64-pc-windows-msvc"
+  | "aarch64-unknown-linux-gnu"
+  | "x86_64-unknown-linux-gnu";
+/** SHA-256 (hex) of each release archive of `AGENT_DESKTOP_VERSION` (its `checksums.txt`), checked before unpacking. */
+export const AGENT_DESKTOP_SHA256: Record<AgentDesktopTarget, string> = {
+  "aarch64-apple-darwin": "9b7b7cfc74892eab46c2c85d6cb7dc4863bf8dab0a222cfcfb8ae4604c69c86c",
+  "x86_64-apple-darwin": "469da10cfb68928c58caff88b92b30526e0ca895ac06bc86b7f533b1d9b309b3",
+  "aarch64-pc-windows-msvc": "805f1f61890f9983fceaf38cda94a37a049c379435d65607db5cedd22c8ef97b",
+  "x86_64-pc-windows-msvc": "6ee4b1e078f4e78792e79f16e32e4a78b9919464aa3c55629b7e27ed53a08c13",
+  "aarch64-unknown-linux-gnu": "438990a703fbeb19775596c341c3701435e80adbfa1b2f64b82ff17567d5573b",
+  "x86_64-unknown-linux-gnu": "ca77b6b75034eeb12e537dd8c0a4f2a3424119253f38b7e6bd79ba0d2fef1264",
+};
+/** Where the pinned release archive for `target` is downloaded from. */
+export const agentDesktopUrl = (target: AgentDesktopTarget) =>
+  `https://github.com/vercel-labs/agent-desktop/releases/download/v${AGENT_DESKTOP_VERSION}/agent-desktop-v${AGENT_DESKTOP_VERSION}-${target}.tar.gz`;
+/**
+ * The `agent-desktop` commands an `apps.run` may name: reads, and actions on a ref that go through the
+ * accessibility API. Pointer and held-key commands, the clipboard, sessions, sandboxes and the MCP server are not
+ * here: they take the person's input or reach past one app.
+ */
+export const APPS_COMMANDS = [
+  "list-apps",
+  "list-windows",
+  "snapshot",
+  "find",
+  "get",
+  "is",
+  "click",
+  "double-click",
+  "right-click",
+  "type",
+  "set-value",
+  "clear",
+  "focus",
+  "select",
+  "toggle",
+  "check",
+  "uncheck",
+  "expand",
+  "collapse",
+  "scroll",
+  "scroll-to",
+  "press",
+  "launch",
+  "close-app",
+] as const;
+export type AppsCommand = (typeof APPS_COMMANDS)[number];
+export const isAppsCommand = (v: unknown): v is AppsCommand =>
+  typeof v === "string" && (APPS_COMMANDS as readonly string[]).includes(v);
+/** The largest parts of an `apps.run`. */
+export const APPS_LIMITS = {
+  /** Arguments in one command. */
+  args: 16,
+  /** Characters of one argument. */
+  arg: 500,
+  /** Characters typed or set in one action (`agent-desktop` takes 10,000 bytes for `type`). */
+  text: 4000,
+} as const;
+/** `apps.run`'s answer: `agent-desktop`'s own result, or its failure as it said it (`retry`: whether repeating is safe). */
+export type AppsRunReply =
+  | { ok: true; data: unknown }
+  | { ok: false; error: { code: string; message: string; retry?: "safe" | "unsafe" | "unknown" } };
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -1158,7 +1356,7 @@ export interface ExecVault {
 }
 
 /** Which CLI an account signs in. */
-export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "claude_code",
   "codex",
@@ -1166,6 +1364,7 @@ export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
 ];
 export const isAccountKind = (v: unknown): v is AccountKind => ACCOUNT_KINDS.some((k) => k === v);
 /** Account and sign-in ids: UUIDs (the server makes them; the desktop app's runner too). */
@@ -1343,6 +1542,7 @@ export const OWN_USAGE_ID: Record<AccountKind, string> = {
   opencode: "own:opencode",
   grok: "own:grok",
   antigravity: "own:antigravity",
+  devin: "own:devin",
 };
 
 export const PLAN_USAGE_LIMITS = { windows: 8, label: 40 } as const;
@@ -2192,7 +2392,7 @@ export interface TaskStart {
 }
 
 /** The coding CLIs `hello.executors` reports. */
-export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "devin"] as const;
 export type CliName = (typeof CLI_NAMES)[number];
 
 /**
@@ -2226,6 +2426,7 @@ export interface RunnerExecutorInfo {
    * Protocol 36, `cursor`: the models its sign-in lists (`agent models`), and which its plan includes when the CLI
    * says. Protocol 39, `opencode`: the models `opencode models` lists (`provider/model`), `free` on OpenCode's free tier.
    * Protocol 43, `grok`: the models `grok models` lists. Protocol 44, `antigravity`: the models `agy models` lists.
+   * Protocol 89, `devin`: the model families `devin models list` lists to the accounts signed in here.
    */
   models?: CursorModelInfo[];
 }
@@ -2236,40 +2437,90 @@ export interface CursorModelInfo {
   label?: string;
   /** Cursor: the CLI said the plan includes it (absent: it didn't say; other models are billed at API prices). */
   inPlan?: boolean;
-  /** OpenCode (protocol 39): a model of OpenCode's free tier (no key, no cost). */
+  /**
+   * OpenCode (protocol 39): a model of OpenCode's free tier (no key, no cost). Devin (protocol 89): one the plan serves
+   * at no cost (`cost_tier` "Free").
+   */
   free?: boolean;
+  /** Devin (protocol 89): the levels its variants name (`DEVIN_LEVELS`), least thinking first. */
+  efforts?: string[];
+  /** Devin: it has a faster variant (Fast mode, priority, Lightning) for Velocidade. */
+  fast?: boolean;
+  /** Devin: its context window in tokens. */
+  contextWindow?: number;
+  /** Devin, on the runner only (never sent): its variants' ids, the CLI's default first (`devinVariant`). */
+  variants?: string[];
 }
 
-/** Most models kept from `agent models`, and their longest id and label. */
-export const CURSOR_MODEL_LIMITS = { models: 60, id: 80, label: 80 } as const;
+/** Most models kept from `agent models` (and a Devin account's families, ADR 0253), and their longest id and label. */
+export const CURSOR_MODEL_LIMITS = { models: 80, id: 80, label: 80 } as const;
 
 /**
  * How a brain turn started on the runner (Claude Code; an older runner leaves it out): on a process already open
  * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began. A newer
  * runner adds where the model's own time went: the API's first streamed message (`firstTokenMs`) and the first whole
  * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
- * and the thinking blocks with the characters of their text (0 when the API leaves the text out).
+ * and the thinking blocks with the characters of their text (0 when the API leaves the text out). `firstRequestMs` is
+ * when the CLI said it sent its first API request (`system/status` "requesting"): before it, the CLI's own work; from
+ * it to `firstTokenMs`, the network and the API. A new process's first ask for our tool list (`toolsListMs`, from the
+ * turn's start) and how long the bridge took to answer it (`toolsListWaitMs`): Claude Code says it is ready only after.
+ * A `warm_mismatch` turn says where the warm start's system text and its own first differ (`warmMismatchAt`, in
+ * characters of the turn's): the run's stored context shows which part it was.
  */
 export interface BrainTurnTimings {
   warm: boolean;
   /** Not `warm`: why the turn started a new process (`BRAIN_COLD_CAUSES`). */
   cold?: BrainColdCause;
   initMs?: number;
+  /**
+   * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
+   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   */
+  sentMs?: number;
   firstEventMs?: number;
+  firstRequestMs?: number;
+  toolsListMs?: number;
+  toolsListWaitMs?: number;
+  warmMismatchAt?: number;
   firstTokenMs?: number;
   firstAssistantMs?: number;
   retries?: number;
   retryDelayMs?: number;
   thinkingBlocks?: number;
   thinkingChars?: number;
+  /**
+   * A turn past a `SLOW_TURN_BUDGETS` budget, or one that failed: what the CLI's own debug log said during it, as lines
+   * timed from the turn's start (`+412ms [DEBUG] [API REQUEST] /v1/messages`), only lines of the kinds that explain
+   * time (API requests, retries, MCP servers, sign-in, the network, stalls), scrubbed (`scrubLogLine`). Never a hook's
+   * or a tool's output, a prompt or an answer.
+   */
+  evidence?: string[];
 }
+
+/**
+ * Where a turn is slow enough to explain (ms), the same on the runner, which keeps the CLI's evidence for such a turn,
+ * and on the server, which reports it: the run's context, the work before the turn (checkouts), a new CLI until it was
+ * ready, the first token after that, and a reply with no tool call from the run's claim to its end.
+ */
+/** When a turn's CLI could start on it (ms from the turn's start): started, and handed the turn. */
+export const cliReadyMs = (t: Pick<BrainTurnTimings, "initMs" | "sentMs">) => Math.max(t.initMs ?? 0, t.sentMs ?? 0);
+
+export const SLOW_TURN_BUDGETS = {
+  contextMs: 1500,
+  preTurnMs: 2000,
+  initMs: 8000,
+  firstByteMs: 6000,
+  replyMs: 10_000,
+} as const;
 
 /**
  * Why a turn started a new Claude Code process: a session that never ran on this runner (a new conversation, or a
  * fresh session the server started for an old one), or the end of the session's last process: idle past its limit,
  * closed for another conversation of the agent (its cap) or for memory, another launch asked (folder, permissions,
  * account, sign-in), a warm start with another system text, exited by itself, closed after its turn (canceled,
- * died, a background turn), or a session that ran before with no process left in this runner (it restarted).
+ * died, a background turn), or a session that ran before with no process left in this runner (it restarted). A warm
+ * start that came to nothing says why: started with another launch than its turn's (`warm_settings`), or asked before
+ * this runner ran a turn of the agent's, so with no system text to start it with (`no_launch`); `cap` too.
  */
 export const BRAIN_COLD_CAUSES = [
   "new_session",
@@ -2281,13 +2532,20 @@ export const BRAIN_COLD_CAUSES = [
   "exited",
   "closed",
   "restart",
+  "warm_settings",
+  "no_launch",
 ] as const;
 export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
 
 /** The measures of `BrainTurnTimings` past `warm`, each a whole number from 0 up to a day. */
 export const BRAIN_TURN_MEASURES = [
   "initMs",
+  "sentMs",
   "firstEventMs",
+  "firstRequestMs",
+  "toolsListMs",
+  "toolsListWaitMs",
+  "warmMismatchAt",
   "firstTokenMs",
   "firstAssistantMs",
   "retries",
@@ -2347,6 +2605,8 @@ export type WireBrainEvent =
       /** Protocol 50: why the provider refused or failed it, and its HTTP status when the CLI said one. */
       cause?: ProviderFailureCause;
       httpStatus?: number;
+      /** How the failed turn went until it failed, as `done` says it (an older runner leaves it out). */
+      timings?: BrainTurnTimings;
     }
   /** Protocol 15: messages handed with `brain.steer` that the turn read (their `uuid`s). */
   | { type: "steer_read"; uuids: string[] }
@@ -2478,9 +2738,9 @@ export interface BrainTurnRequest {
   runId: string;
   /**
    * `cursor`: protocol 36 (`CURSOR_PROTOCOL`); `opencode`: protocol 39 (`OPENCODE_PROTOCOL`); `grok`: 43
-   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`).
+   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`); `devin`: 89 (`DEVIN_PROTOCOL`).
    */
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
   /** The executor's session (a UUID, stable per thread); `resume`: the server knows it ran before (a hint). */
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder ("" = the folder). */
@@ -2554,6 +2814,8 @@ export interface BrainTurnRequest {
    * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
    */
   answers?: "each";
+  /** `HELD_TURN_PROTOCOL`: take over the turn of this run held on the computer, never start one; `stop`: and end it. */
+  reattach?: boolean | "stop";
 }
 
 /**
@@ -2569,6 +2831,8 @@ export const BRAIN_LIMITS = {
   toolName: 128,
   doneText: 100_000,
   message: 2000,
+  evidenceLines: 60,
+  evidenceLine: 300,
 } as const;
 
 /**
@@ -2630,8 +2894,6 @@ export const EGRESS_SHARE_PROTOCOL = 81;
 export const EGRESS_SHARE = {
   /** The web only: anything else leaves the workspace's computer its usual way. */
   ports: [80, 443] as readonly number[],
-  /** Bytes both ways a day (UTC) the lending computer carries before it refuses new connections until the next. */
-  dailyBytes: 5 * 1024 ** 3,
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */
@@ -2901,6 +3163,8 @@ export interface RunnerTools {
   grok?: boolean;
   /** Protocol 44: Google's Antigravity CLI (ADR 0143). Absent = off (older runners). */
   antigravity?: boolean;
+  /** Protocol 89: Cognition's Devin CLI (ADR 0253). Absent = off (older runners). */
+  devin?: boolean;
   /** Shell commands (`exec`, `shell` tasks). The same as `exec` in `hello` once protocol 10 is in use. */
   commands: boolean;
   /** Protocol 12: the agent browser (ADR 0040). Absent = off (older runners). */
@@ -2969,6 +3233,7 @@ export interface RunnerInfo {
     opencode?: RunnerExecutorInfo;
     grok?: RunnerExecutorInfo;
     antigravity?: RunnerExecutorInfo;
+    devin?: RunnerExecutorInfo;
     /**
      * `CLI_INSTALL_PROTOCOL`: a CLI that is there and whose `--version` keeps failing, with its own last line of
      * error. It is not listed above: it can't run turns, and it isn't missing either.
@@ -2991,6 +3256,8 @@ export interface RunnerInfo {
   terminal?: RunnerTerminalInfo;
   /** Protocol 21: whether agents can use their own desktops here (ADR 0062). */
   desktopUse?: RunnerDesktopUseInfo;
+  /** `PERSON_APPS_PROTOCOL`: whether agents can use the person's apps here (ADR 0258). */
+  apps?: RunnerTerminalInfo;
   /**
    * Protocol 18: `system` when each agent works as its own OS user (ADR 0058 §10); absent, every agent
    * works as the runner's own user. Who may control a desktop or open a terminal follows it (§4).
@@ -3003,6 +3270,8 @@ export interface RunnerInfo {
   /** `PHONES_PROTOCOL`: the phones it reaches, and what it can build with. */
   phones?: RunnerPhone[];
   toolchains?: RunnerToolchains;
+  /** `OS_PERMISSIONS_PROTOCOL`: the OS permissions its agents' work waits on now (absent: older runner). */
+  permissions?: PermissionNeed[];
   /** Protocol 50: the methods a new Claude sign-in for all agents can use here (`claudeLoginMethodsOf`). */
   claudeLoginMethods?: AuthMethod[];
   /** Why this computer doesn't list `cli_login` for all agents though it was switched on (its self-check's answer). */
@@ -3117,6 +3386,8 @@ export type MachineRequest = (
     }
   /** `ACCESS_ALLOW_PROTOCOL`: the computer's owner turned `tool` on from the apps (`by` their user id, `byName` shown). */
   | { op: "access.allow"; tool: keyof RunnerTools; by: string; byName: string }
+  /** `FOLDER_PICK_PROTOCOL`: `by` asks for a folder, for one agent (`agentId`) or all; or shows request `requestId`. */
+  | { op: "access.pick"; by: string; byName: string; agentId?: string; agentName?: string; requestId?: string }
   | {
       op: "push";
       path: string;
@@ -3211,6 +3482,8 @@ export type MachineRequest = (
   | { op: "desktop.apps" }
   /** Protocol 25: the text on the agent's screen, read on the computer. */
   | { op: "desktop.text" }
+  /** `PERSON_APPS_PROTOCOL`: one `agent-desktop` command on the person's apps; `text` goes in on its stdin. */
+  | { op: "apps.run"; command: AppsCommand; args: string[]; text?: string }
   /** Protocol 45: a one-use key the request's agent's Vault values are sealed to (ADR 0144). */
   | { op: "vault.key" }
   /** `requestId` and `publicKey`: what the answer is sealed to (`madePasswordAad`). */
@@ -3284,6 +3557,8 @@ export type MachineRequest = (
   | { op: "xcode.open" }
   /** `PHONE_REPAIR_PROTOCOL`: repair the test helper of the iPhone `serial`; answers once its rebuild started. */
   | { op: "phone.repair"; serial: string }
+  /** `SIMULATOR_POWER_PROTOCOL`: start or shut down a simulator or emulator; answers once it is starting or off. */
+  | { op: "phone.power"; platform: PhonePlatform; serial: string; model: string; on: boolean }
   /** `PROBLEM_REPORT_PROTOCOL`: facts and the scrubbed log tail for a problem report. */
   | { op: "report.collect" }
   /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
@@ -3327,6 +3602,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "access.request",
   "access.reduce",
   "access.allow",
+  "access.pick",
   "browser.act",
   "browser.stop",
   "browser.stream.start",
@@ -3346,6 +3622,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "desktop.capture",
   "desktop.apps",
   "desktop.text",
+  "apps.run",
   "vault.key",
   "vault.password",
   "phone.claim",
@@ -3372,6 +3649,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "cli.fetch",
   "xcode.open",
   "phone.repair",
+  "phone.power",
   "report.collect",
   "egress.dial",
 ];
@@ -3386,6 +3664,8 @@ export interface MachineReplies {
     canceled?: { killed: boolean };
     /** It ran as one merge with no card of its own: in `mergeRepos`, or approved (a saved rule, an agent that never asks). */
     merge?: MergeDone;
+    /** `OS_PERMISSIONS_PROTOCOL`: it failed for want of this OS permission, now asked on the computer. */
+    permission?: OsPermission;
   };
   /** `base64: null`: no such file. */
   read: { base64: string | null; size: number };
@@ -3445,6 +3725,7 @@ export interface MachineReplies {
   "access.request": { requestId: string; status: "pending" | "granted" };
   "access.reduce": { access: RunnerAccess };
   "access.allow": { access: RunnerAccess };
+  "access.pick": { asked: true };
   /**
    * `agent-browser`'s own JSON answer: `success: false` with its `error` is a page-level failure (stale ref, covered
    * click). Protocol 45: `code` names a Vault refusal (`VAULT_TYPE_REFUSALS`).
@@ -3519,6 +3800,7 @@ export interface MachineReplies {
   "desktop.apps": { apps: { id: string; name: string; generic?: string }[] };
   /** The screen's text (trimmed, `DESKTOP_TEXT_MAX` at most), or `same`: the capture didn't change since the last read. */
   "desktop.text": { text: string } | { same: true };
+  "apps.run": AppsRunReply;
   /** Protocol 45: the key's id, its public key (raw P-256, base64) and when it stops opening anything (ISO). */
   "vault.key": { vaultKey: { keyId: string; publicKey: string; expiresAt: string } };
   "vault.password": { box: WireSecretBox };
@@ -3550,6 +3832,7 @@ export interface MachineReplies {
   "cli.fetch": { fetch: CliFetchState | null };
   "xcode.open": { opened: boolean };
   "phone.repair": { repairing: boolean };
+  "phone.power": { on: boolean };
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
 }
@@ -3765,6 +4048,8 @@ export type RunnerFrame =
   | { type: "executors.changed"; executors: NonNullable<RunnerInfo["executors"]> }
   /** What `hello.toolchains` said changed (an Apple team found, Xcode updated), whole. An older server drops it. */
   | { type: "toolchains.changed"; toolchains: RunnerToolchains }
+  /** `OS_PERMISSIONS_PROTOCOL`: the permissions it waits on changed (one asked, one allowed), whole. */
+  | { type: "permissions.changed"; permissions: PermissionNeed[] }
   /** `CLI_COPIES_PROTOCOL`: a fetch of `cli` moved on (throttled), ended or failed. An older server drops it. */
   | { type: "cli.fetch"; cli: FetchName; fetch: CliFetchState }
   /** `PHONES_PROTOCOL`: the phones it reaches changed (one came or went, a state or a holder changed), whole. */
@@ -3980,6 +4265,19 @@ const denialList = (v: unknown): TaskDenial[] => {
   return out;
 };
 
+/** A Devin model's levels, its fast variant and its window (protocol 89), checked; its variants never travel. */
+function devinModelFields(m: Record<string, unknown>): Pick<CursorModelInfo, "efforts" | "fast" | "contextWindow"> {
+  const efforts = Array.isArray(m.efforts)
+    ? [...new Set(m.efforts.filter((e): e is string => isString(e) && /^[a-z]{1,12}$/.test(e)))].slice(0, 10)
+    : [];
+  const window = typeof m.contextWindow === "number" && Number.isInteger(m.contextWindow) ? m.contextWindow : 0;
+  return {
+    ...(efforts.length ? { efforts } : {}),
+    ...(m.fast === true ? { fast: true } : {}),
+    ...(window > 0 && window <= 100_000_000 ? { contextWindow: window } : {}),
+  };
+}
+
 /** `cursor`'s `models` (protocol 36), cut to `CURSOR_MODEL_LIMITS`; ids are short words only. */
 export function parseCursorModels(v: unknown): CursorModelInfo[] {
   if (!Array.isArray(v)) return [];
@@ -3993,6 +4291,7 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
       ...(label ? { label } : {}),
       ...(m.inPlan === true ? { inPlan: true } : {}),
       ...(m.free === true ? { free: true } : {}),
+      ...devinModelFields(m),
     });
     if (out.length >= CURSOR_MODEL_LIMITS.models) break;
   }
@@ -4000,9 +4299,9 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
 }
 
 /**
- * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
- * line (and Claude Code's login, Codex's sandbox on Windows), and `broken`: the error line of each of them that is there
- * and can't start.
+ * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity` and `devin`, each with a short
+ * version line (and Claude Code's login, Codex's sandbox on Windows), and `broken`: the error line of each of them that
+ * is there and can't start.
  */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
   const out: NonNullable<RunnerInfo["executors"]> = {};
@@ -4162,6 +4461,34 @@ const cutJson = (v: unknown, max: number): unknown => {
   }
 };
 
+/** A turn's `timings` as a runner sent them, checked and cut; undefined when they aren't any. */
+function turnTimingsOf(v: unknown): BrainTurnTimings | undefined {
+  if (!isObject(v) || typeof v.warm !== "boolean") return undefined;
+  // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
+  // (the counts share the bound, far above any real turn's).
+  const DAY_MS = 86_400_000;
+  const ms = (x: unknown) =>
+    finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
+  const measures = BRAIN_TURN_MEASURES.flatMap((k) => {
+    const n = ms(v[k]);
+    return n === undefined ? [] : [[k, n] as const];
+  });
+  const evidence = Array.isArray(v.evidence)
+    ? v.evidence
+        .filter(isString)
+        .slice(0, BRAIN_LIMITS.evidenceLines)
+        .map((line) => line.slice(0, BRAIN_LIMITS.evidenceLine))
+    : [];
+  return {
+    warm: v.warm,
+    ...(!v.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(v.cold)
+      ? { cold: v.cold as BrainColdCause }
+      : {}),
+    ...Object.fromEntries(measures),
+    ...(evidence.length > 0 ? { evidence } : {}),
+  };
+}
+
 /** One `brain.event` event, checked and cut; null when it isn't one. */
 export function parseBrainEvent(v: unknown): WireBrainEvent | null {
   if (!isObject(v) || !isString(v.type)) return null;
@@ -4210,37 +4537,17 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
-      // (the counts share the bound, far above any real turn's).
-      const DAY_MS = 86_400_000;
-      const ms = (x: unknown) =>
-        finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
-      const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
-      const measures = t
-        ? BRAIN_TURN_MEASURES.flatMap((k) => {
-            const n = ms(t[k]);
-            return n === undefined ? [] : [[k, n] as const];
-          })
-        : [];
+      const timings = turnTimingsOf(v.timings);
       return {
         type: "done",
         text: v.text.slice(0, BRAIN_LIMITS.doneText),
         ...(session ? { session } : {}),
-        ...(t
-          ? {
-              timings: {
-                warm: t.warm as boolean,
-                ...(!t.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(t.cold)
-                  ? { cold: t.cold as BrainColdCause }
-                  : {}),
-                ...Object.fromEntries(measures),
-              },
-            }
-          : {}),
+        ...(timings ? { timings } : {}),
       };
     }
-    case "error":
+    case "error": {
       if (!isString(v.code)) return null;
+      const errorTimings = turnTimingsOf(v.timings);
       return {
         type: "error",
         code: v.code.slice(0, 64),
@@ -4251,7 +4558,9 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(Number.isInteger(v.httpStatus) && (v.httpStatus as number) >= 100 && (v.httpStatus as number) <= 599
           ? { httpStatus: v.httpStatus as number }
           : {}),
+        ...(errorTimings ? { timings: errorTimings } : {}),
       };
+    }
     case "steer_read": {
       if (!Array.isArray(v.uuids)) return null;
       const uuids = v.uuids
@@ -4386,6 +4695,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(isObject(f.desktop) ? { desktop: parseDesktopInfo(f.desktop) } : {}),
         ...(isObject(f.terminal) ? { terminal: parseAvailability(f.terminal) } : {}),
         ...(isObject(f.desktopUse) ? { desktopUse: parseAvailability(f.desktopUse) } : {}),
+        ...(isObject(f.apps) ? { apps: parseAvailability(f.apps) } : {}),
         ...(f.mode === "system" ? { mode: "system" as const } : {}),
         ...(isObject(f.ownUsage) ? { ownUsage: parseOwnUsage(f.ownUsage) } : {}),
         ...(size ? { size } : {}),
@@ -4397,6 +4707,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(f.app === true ? { app: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
+        ...(Array.isArray(f.permissions) ? { permissions: parsePermissionNeeds(f.permissions) } : {}),
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
     }
@@ -4484,6 +4795,10 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
       return isObject(f.executors) ? { type: "executors.changed", executors: parseExecutors(f.executors) } : null;
     case "toolchains.changed":
       return isObject(f.toolchains) ? { type: "toolchains.changed", toolchains: parseToolchains(f.toolchains) } : null;
+    case "permissions.changed":
+      return Array.isArray(f.permissions)
+        ? { type: "permissions.changed", permissions: parsePermissionNeeds(f.permissions) }
+        : null;
     case "cli.fetch": {
       const cli = FETCH_NAMES.find((n) => n === f.cli);
       const fetch = parseCliFetchState(f.fetch);
@@ -5086,6 +5401,8 @@ export function parseAccess(v: unknown): RunnerAccess | undefined {
       ...(typeof t.grok === "boolean" ? { grok: t.grok } : {}),
       // Absent: a runner before the Antigravity CLI's switch (protocol 44), where it is off.
       ...(typeof t.antigravity === "boolean" ? { antigravity: t.antigravity } : {}),
+      // Absent: a runner before the Devin CLI's switch (protocol 89), where it is off.
+      ...(typeof t.devin === "boolean" ? { devin: t.devin } : {}),
       commands: t.commands === true,
       ...(t.browser === true ? { browser: true } : {}),
       ...(t.desktop === true ? { desktop: true } : {}),
@@ -5178,8 +5495,13 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
     ...(between(v.agentTmpRamGb, 0, 1e6) ? { agentTmpRamGb: v.agentTmpRamGb } : {}),
+    ...(between(v.diskGb, 0, 1e6) ? { diskGb: v.diskGb } : {}),
+    ...(isDiskParts(v.diskParts) ? { diskParts: pickDiskParts(v.diskParts) } : {}),
   };
 }
+
+const isDiskParts = (v: unknown): v is DiskParts => isObject(v) && DISK_PARTS.every((k) => between(v[k], 0, 1e6));
+const pickDiskParts = (v: DiskParts) => Object.fromEntries(DISK_PARTS.map((k) => [k, v[k]])) as DiskParts;
 
 /** `pong.browserTraffic` (protocol 23): whole bytes up to 1e15 and at most 24 hours, else none. */
 export function parseBrowserTraffic(v: unknown): BrowserTraffic | null {

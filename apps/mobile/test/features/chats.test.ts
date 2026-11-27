@@ -135,6 +135,25 @@ describe("the list", () => {
   });
 });
 
+describe("a personal workspace's group conversations by their agents (ADR 0159, amendment of 2026-11-26)", () => {
+  const rows = (personal: boolean, c: Partial<Channel>) =>
+    buildConversations({ channels: [{ ...channel("c1", "Viagem pra Lisboa"), ...c }], dms: [], threads: [], personal });
+  const face = (personal: boolean, c: Partial<Channel>) => {
+    const row = rows(personal, c)[0];
+    return row?.kind === "channel" ? row.face : "not a channel";
+  };
+
+  test("a server that lists the channel's agents: they are its face, with how many it has", () => {
+    expect(face(true, { agentIds: ["a1", "a2"], agentCount: 5 })).toEqual({ agentIds: ["a1", "a2"], count: 5 });
+    expect(face(true, { agentIds: [], agentCount: 0 })).toEqual({ agentIds: [], count: 0 });
+  });
+
+  test("an older server (no agentIds) or a team's workspace: a channel with its #", () => {
+    expect(face(true, {})).toBeUndefined();
+    expect(face(false, { agentIds: ["a1"], agentCount: 1 })).toBeUndefined();
+  });
+});
+
 describe("a personal workspace's #general (ADR 0159)", () => {
   const rows = (general: Partial<Channel>) =>
     buildConversations({

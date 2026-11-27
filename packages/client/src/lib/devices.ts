@@ -3,18 +3,21 @@ import { useEffect, useState } from "react";
 import type {
   AppNotification,
   ComputerDevice,
+  ComputerMaintenance,
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
   MachineOfflineCause,
   MachineTool,
   OrgSummary,
+  PermissionNeed,
   PhoneDevice,
   WifiPairing,
 } from "../api/types";
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
 import { computerNameOf } from "./computer";
+import { LEGACY_MOVE, maintenanceLine, maintenanceOf, maintenanceShort, maintenanceWhen } from "./computer-maintenance";
 import { clockAt, firstName, joinNames } from "./format";
 import { computerKind, osName } from "./machines";
 import { norm as fold } from "./tool-review";
@@ -66,7 +69,7 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
     case "paused":
       return t("devices.status.paused");
     case "moving":
-      return t("machines.moving.short");
+      return maintenanceShort(t, maintenanceOf(s) ?? LEGACY_MOVE);
     case "offline":
       return t("devices.status.offline");
     case "unsupported":
@@ -85,6 +88,16 @@ export const isIphoneWifiReason = (reason: string | null | undefined): reason is
 /** An iPhone its Mac reaches over Wi-Fi, through CoreDevice's tunnel (picked by the Mac's owner). */
 export const iphoneOverWifi = (p: { platform: string; transport: string | null }) =>
   p.platform === "ios" && p.transport === "wifi";
+
+/**
+ * Ligar or Desligar on a simulator or an emulator, for who may use or change it: start one that is offline while its
+ * computer is online, shut down one that runs and nobody holds. Null for a real phone, or nothing to do.
+ */
+export function powerChoice(p: Pick<PhoneDevice, "phoneKind" | "status" | "mayUse" | "mayManage">) {
+  if (p.phoneKind === "device" || !(p.mayUse || p.mayManage)) return null;
+  if (p.status.kind === "offline") return p.status.withHost ? null : "start";
+  return p.status.kind === "in_use" ? null : "stop";
+}
 
 /** A reason code the apps word (`devices.reason.<code>`); a code they don't know reads as a generic line. */
 const REASONS = new Set([
@@ -130,7 +143,14 @@ export const fixText = (t: TFunction, reason: string, os?: string | null) =>
  * `hostOs`: the host's system, which a phone with no driver reads by. `ios`: an iPhone's iOS version, which its
  * "too old" line names.
  */
-type StatusOptions = { host?: string | null; hostOs?: string | null; now?: Date; ios?: string | null };
+type StatusOptions = {
+  host?: string | null;
+  hostOs?: string | null;
+  now?: Date;
+  ios?: string | null;
+  /** The computer's `maintenance`: while it works (a move's copy), the line says it may be slower. */
+  maintenance?: ComputerMaintenance | null;
+};
 
 /** An iPhone's iOS version, for `StatusOptions.ios`. */
 export const iosOf = (d: ComputerDevice | PhoneDevice) =>
@@ -169,8 +189,11 @@ export function statusDetail(
       return s.reason === "os_too_old" && options.ios != null
         ? t("devices.reason.iosTooOld", { version: tooOldVersion(t, options.ios) })
         : reasonText(t, s.reason);
+    case "moving":
+      return maintenanceWhen(t, maintenanceOf(s) ?? LEGACY_MOVE, now);
+    // The row's column is narrow: the word alone, its line behind the row's ⓘ.
     default:
-      return null;
+      return options.maintenance && !options.maintenance.away ? maintenanceShort(t, options.maintenance) : null;
   }
 }
 
@@ -189,7 +212,7 @@ export function statusSentence(
     case "needs_you":
       return reasonText(t, s.reason, options.hostOs);
     case "moving":
-      return t("machines.moving.line");
+      return maintenanceLine(t, maintenanceOf(s) ?? LEGACY_MOVE, now);
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
       if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
@@ -198,7 +221,7 @@ export function statusSentence(
         : t("devices.line.offline");
     case "busy":
     case "ready":
-      return null;
+      return options.maintenance && !options.maintenance.away ? maintenanceLine(t, options.maintenance, now) : null;
     default:
       return statusDetail(t, locale, s, options);
   }
@@ -271,6 +294,25 @@ export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
   return d.taskRoom.more > 0
     ? t("devices.tasksAutoRoom", { running, more: d.taskRoom.more })
     : t("devices.tasksAutoFull", { running });
+}
+
+/**
+ * A permission a computer waits on, as the web and the phone say it: what and where, the next step (it is allowed in
+ * the agentes.chat app on that computer, nowhere else), and who asked it for what (null: nothing said what).
+ * `agent`: the asking agent's name.
+ */
+export function permissionWaitLines(t: TFunction, need: PermissionNeed, computer: string, agent?: string) {
+  const permission = say(t, `devices.permission.names.${need.permission}`);
+  const trigger = need.trigger;
+  return {
+    title: t("devices.permission.title", { permission, computer }),
+    next: t("devices.permission.next"),
+    asked: !trigger
+      ? null
+      : agent
+        ? t("devices.permission.askedBy", { agent, trigger })
+        : t("devices.permission.asked", { trigger }),
+  };
 }
 
 /** How a computer helps its owner's agents: never, while their own computer is full or away, or first for their work. */

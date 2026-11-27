@@ -2821,6 +2821,7 @@
     "details": "Kanaaldetails",
     "composerLabel": "Bericht aan #{{channel}}",
     "composerDm": "Bericht aan {{name}}",
+    "groupYou": "Jij",
     "composerPlaceholder": "Bericht aan #{{channel}} · gebruik @ om een agent te roepen",
     "send": "Versturen",
     "attach": "Bestand bijvoegen",
@@ -2841,6 +2842,7 @@
     "sendFailed": "Het bericht is niet verstuurd. Probeer het opnieuw.",
     "reconnecting": "Opnieuw verbinden met realtime…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Mensen of agents zoeken",
     "detailsEmpty": "Niemand gevonden voor “{{q}}”.",
     "topicLabel": "Kanaalbeschrijving",
@@ -2852,9 +2854,11 @@
     "replyInChannel": "Agents antwoorden in het kanaal",
     "replyInThreadsHelp": "Een agent die in het kanaal wordt aangeroepen, antwoordt in de thread onder dat bericht, en het kanaal toont er één regel voor. Werk dat al loopt, blijft waar het is.",
     "nameTaken": "Er is al een #{{name}}.",
+    "nameTakenPersonal": "Er is al een groepsgesprek met de naam ‘{{name}}’.",
     "generalName": "#general houdt zijn naam.",
     "archive": "Kanaal archiveren",
     "archived": "#{{channel}} gearchiveerd. Het gesprek blijft bewaard.",
+    "archivedPersonal": "‘{{channel}}’ gearchiveerd. Het gesprek blijft bewaard.",
     "archivedTitle": "Gearchiveerde kanalen",
     "archivedCount_one": "{{count}} gearchiveerd kanaal",
     "archivedCount_other": "{{count}} gearchiveerde kanalen",
@@ -2863,6 +2867,7 @@
     "restore": "Terugzetten",
     "restoreName": "#{{channel}} terugzetten",
     "restored": "#{{channel}} is terug.",
+    "restoredPersonal": "‘{{channel}}’ is terug.",
     "leave": "Kanaal verlaten",
     "left": "Je hebt #{{channel}} verlaten",
     "leaveTitle": "#{{channel}} verlaten?",
@@ -3272,6 +3277,10 @@
       "update_workspace": "Werkruimte <b>{{name}}</b> wijzigen",
       "set_action_check_on": "De check van wat het team al deed aanzetten",
       "set_action_check_off": "De check van wat het team al deed uitzetten",
+      "set_approvals_level": "Goedkeuringen van de workspace op <b>{{level}}</b> zetten",
+      "set_approvals_level_every": "Goedkeuringen van alle agents op <b>{{level}}</b> zetten, ook hun eigen keuzes",
+      "set_agent_approvals_level": "Goedkeuringen van <b>{{agent}}</b> op <b>{{level}}</b> zetten",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b> de goedkeuringen van de workspace laten volgen",
       "invite_people": "<b>{{emails}}</b> uitnodigen voor de werkruimte.",
       "invite_roles_one": "Met de rol {{roles}}.",
       "invite_roles_other": "Met de rollen {{roles}}.",
@@ -3460,6 +3469,8 @@
       "grok_female": "Grok is niet ingelogd op deze computer. Koppel een Grok-account op de pagina van {{name}}.",
       "antigravity": "Gemini is niet ingelogd op deze computer. Koppel een Gemini-account op de pagina van {{name}}.",
       "antigravity_female": "Gemini is niet ingelogd op deze computer. Koppel een Gemini-account op de pagina van {{name}}.",
+      "devin": "Devin is niet ingelogd op deze computer. Koppel een Devin-account op de pagina van {{name}}.",
+      "devin_female": "Devin is niet ingelogd op deze computer. Koppel een Devin-account op de pagina van {{name}}.",
       "opencode": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
       "opencode_female": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
@@ -3474,6 +3485,8 @@
       "grok_female": "Grok is niet ingelogd op {{computer}}. Koppel een Grok-account op de pagina van {{name}}.",
       "antigravity": "Gemini is niet ingelogd op {{computer}}. Koppel een Gemini-account op de pagina van {{name}}.",
       "antigravity_female": "Gemini is niet ingelogd op {{computer}}. Koppel een Gemini-account op de pagina van {{name}}.",
+      "devin": "Devin is niet ingelogd op {{computer}}. Koppel een Devin-account op de pagina van {{name}}.",
+      "devin_female": "Devin is niet ingelogd op {{computer}}. Koppel een Devin-account op de pagina van {{name}}.",
       "opencode": "OpenCode kan niet denken op {{computer}}. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
       "opencode_female": "OpenCode kan niet denken op {{computer}}. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
@@ -3533,6 +3546,7 @@
       "cursor": "Koppel je Cursor-abonnement",
       "grok": "Koppel je Grok-abonnement",
       "gemini": "Koppel je Gemini-abonnement",
+      "devin": "Koppel je Devin-abonnement",
       "zen": "Koppel OpenCode",
       "api_key": "Een API-sleutel toevoegen"
     },
@@ -3681,6 +3695,10 @@
         "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst. Gebruik een Gemini-API-sleutel of Gemini Enterprise om dat risico te vermijden.",
         "windowsOne": "Op Windows gebruikt een computer één Gemini-account tegelijk."
       },
+      "devin": {
+        "title": "Je Devin-abonnement",
+        "tiers": "Free, Pro, Max of Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Gratis modellen, of je OpenCode-sleutel"
@@ -3788,6 +3806,7 @@
       "cursor": "Cursor is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Cursor en probeer het opnieuw.",
       "grok": "Grok is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Grok en probeer het opnieuw.",
       "antigravity": "Gemini is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Google en probeer het opnieuw.",
+      "devin": "Devin is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Devin en probeer het opnieuw.",
       "opencode": "OpenCode is ingelogd als {{email}}, niet als {{account}}. Probeer het opnieuw met de juiste sleutel."
     },
     "useAnyway": "{{email}} gebruiken",
@@ -4165,6 +4184,10 @@
       "changed_update_workspace": "Werkruimte <b>{{name}}</b> gewijzigd",
       "changed_set_action_check_on": "De check van wat het team al deed aangezet",
       "changed_set_action_check_off": "De check van wat het team al deed uitgezet",
+      "changed_set_approvals_level": "Goedkeuringen van de workspace op <b>{{level}}</b> gezet",
+      "changed_set_approvals_level_every": "Goedkeuringen van alle agents op <b>{{level}}</b> gezet",
+      "changed_set_agent_approvals_level": "Goedkeuringen van <b>{{agent}}</b> op <b>{{level}}</b> gezet",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> volgt weer de goedkeuringen van de workspace",
       "changed_invite_people": "<b>{{invited}}</b> uitgenodigd voor de werkruimte",
       "changed_remove_ai_key": "API-sleutel <b>{{name}}</b> verwijderd"
     },
@@ -4262,8 +4285,9 @@
     "namePlaceholderPersonal": "bijv. reis",
     "nameHelp": "Kleine letters, cijfers en koppeltekens. Wordt getoond als #{{name}}.",
     "nameInvalid": "Gebruik kleine letters, cijfers en koppeltekens, beginnend met een letter of cijfer.",
+    "nameInvalidPersonal": "Geef het een naam van maximaal 80 tekens, op één regel.",
     "nameTaken": "Er is al een kanaal #{{name}}.",
-    "nameTakenPersonal": "Er is al een groepsgesprek met de naam #{{name}}.",
+    "nameTakenPersonal": "Er is al een groepsgesprek met de naam ‘{{name}}’.",
     "topic": "Beschrijving",
     "topicPlaceholder": "Waar het hier over gaat",
     "visibility": "Wie mag meedoen",
@@ -4293,7 +4317,8 @@
     "membersEmpty": "Niemand gevonden voor „{{q}}”.",
     "selected_one": "{{count}} geselecteerd",
     "selected_other": "{{count}} geselecteerd",
-    "create": "#{{name}} maken"
+    "create": "#{{name}} maken",
+    "createPersonal": "Gesprek maken"
   },
   "channelCategories": {
     "undo": "Ongedaan maken",
@@ -4309,6 +4334,7 @@
     "invitePersonal": "{{email}} uitnodigen voor je werkruimte en #{{channel}}",
     "inviteOrgPersonal": "{{email}} uitnodigen voor je werkruimte",
     "addTitle": "Toevoegen aan #{{channel}}",
+    "addTitlePersonal": "Toevoegen aan {{channel}}",
     "addSearch": "Mensen of agents zoeken",
     "addEmpty": "Niemand buiten het kanaal past bij “{{q}}”.",
     "addEveryone": "Iedereen in {{org}} zit al in #{{channel}}.",
@@ -4317,6 +4343,7 @@
     "actions": "Opties voor {{name}}",
     "remove": "Uit kanaal verwijderen",
     "removeTitle": "{{name}} uit #{{channel}} verwijderen?",
+    "removeTitlePersonal": "{{name}} uit {{channel}} verwijderen?",
     "removePersonBody": "Diegene ziet het kanaal en de berichten dan niet meer. Je kunt diegene later weer toevoegen.",
     "removeAgentBody": "Hij leest en antwoordt dan niet meer in dit kanaal. Je kunt hem later weer toevoegen.",
     "removeAgentBody_female": "Zij leest en antwoordt dan niet meer in dit kanaal. Je kunt haar later weer toevoegen.",
@@ -5533,6 +5560,7 @@
       "adminAskChannel": "<b>{{name}}</b> vraagt je <b>{{agent}}</b> toe te voegen aan #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> vraagt om agents te mogen maken",
       "adminAskWebhook": "<b>{{name}}</b> vraagt je de {{service}}-webhook voor routines in te stellen",
+      "adminAskVoice": "<b>{{name}}</b> vraagt je spraakberichten aan te zetten",
       "invitationAccepted": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd en doet mee in {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd",
       "reaction_one": "<b>{{names}}</b> heeft op je bericht gereageerd",
@@ -6097,6 +6125,7 @@
             "cursor": "Cursor-account toevoegen",
             "grok": "Grok-account toevoegen",
             "antigravity": "Gemini-account toevoegen",
+            "devin": "Devin-account toevoegen",
             "opencode": "Een OpenCode-sleutel toevoegen"
           },
           "stepOne": {
@@ -6104,6 +6133,7 @@
             "codex": "Het account met je abonnement",
             "cursor": "Het account met je abonnement",
             "grok": "Het account met je abonnement",
+            "devin": "Het account met je abonnement",
             "antigravity": "Het Google-account met je abonnement",
             "antigravityEnterprise": "Je Gemini Enterprise-account"
           },
@@ -6113,7 +6143,8 @@
             "codex": "Inloggen met ChatGPT",
             "cursor": "Inloggen met Cursor",
             "grok": "Inloggen met Grok",
-            "antigravity": "Inloggen met Google"
+            "antigravity": "Inloggen met Google",
+            "devin": "Inloggen met Devin"
           },
           "opencodeFree": "De gratis modellen van OpenCode hebben geen sleutel nodig. Een sleutel uit de OpenCode-console voegt de betaalde toe.",
           "cursorFinish": "Log in op de pagina van Cursor, dan rondt {{computer}} het inloggen vanzelf af.",
@@ -6128,6 +6159,9 @@
           "notCode": "Dat lijkt geen code van Claude.",
           "stepTwoGoogle": "Plak de code die Google laat zien",
           "codeLabelGoogle": "Code van Google",
+          "stepTwoDevin": "Plak de code die Devin laat zien",
+          "codeHintDevin": "Plak de code die de pagina van Devin laat zien, niet het adres van de pagina.",
+          "codeLabelDevin": "Code van Devin",
           "codeHintGoogle": "Plak de code die de pagina van Google laat zien, niet het adres van de pagina.",
           "notCodeGoogle": "Dat is een adres zonder code. Plak de code die de pagina van Google laat zien.",
           "send": "Naar {{computer}} sturen",
@@ -6161,6 +6195,7 @@
             "cursor": "Cursor is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Cursor en probeer het opnieuw.",
             "grok": "Grok is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Grok en probeer het opnieuw.",
             "antigravity": "Gemini is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Google en probeer het opnieuw.",
+            "devin": "Devin is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Devin en probeer het opnieuw.",
             "opencode": "Die OpenCode-sleutel is al gekoppeld als {{account}}."
           },
           "startFailed": "Geen antwoord van {{computer}}. Probeer het zo opnieuw.",
@@ -9816,8 +9851,7 @@
       "machine_access_requested": "{{agent}} vroeg om de map {{folder}} op {{computer}}. Wacht daar op antwoord.",
       "machine_access_granted": "Toegestaan: {{agent}} kan nu {{folder}} gebruiken op {{computer}}",
       "machine_access_denied": "Geweigerd: {{agent}} gebruikt {{folder}} niet op {{computer}}",
-      "machine_access_expired": "De aanvraag voor de map {{folder}} op {{computer}} kreeg geen antwoord",
-      "access_command": "Geen app op de computer? Voer dit uit in de Terminal:"
+      "machine_access_expired": "De aanvraag voor de map {{folder}} op {{computer}} kreeg geen antwoord"
     },
     "suggestion": {
       "pending": "Suggestie voor de missie",
@@ -11247,6 +11281,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Werk agentes bij op de computer om de sleutel van een abonnement te gebruiken"
@@ -11549,6 +11584,7 @@
     "silent": "Niets gehoord. Er is niets verstuurd.",
     "notSent": "Kon de audio niet versturen.",
     "limit": "De audiolimiet van vandaag is op. Typ hier, of probeer het morgen opnieuw.",
+    "plan": "Spraakberichten horen bij een agentes.chat-abonnement. Typen kan hier gewoon.",
     "micBlocked": "De microfoon is geblokkeerd",
     "micBlockedHint": "Sta de microfoon toe in de instellingen van je apparaat om op te nemen.",
     "openSettings": "Instellingen openen",
@@ -11583,9 +11619,9 @@
       "title": "Spraakberichten",
       "on": "Spraakberichten",
       "onHelp": "Mensen in deze werkruimte kunnen audio sturen in gesprekken.",
-      "noEngine": "Spraakberichten zijn hier nog niet beschikbaar.",
-      "noEngineAsk": "Spraakberichten staan nog niet aan. Wie deze server beheert, zet ze aan op deze pagina.",
-      "noEngineHere": "Spraakberichten gaan aan zodra je hieronder kiest wat spraak omzet in tekst.",
+      "noEngine": "Spraakberichten gaan voorlopig als audio, dus agents horen ze nog niet.",
+      "noEngineAsk": "Spraakberichten gaan voorlopig als audio, dus agents horen ze niet. Wie deze server beheert, kiest op deze pagina wat spraak omzet in tekst.",
+      "noEngineHere": "Spraakberichten gaan als audio tot je hieronder kiest wat spraak omzet in tekst.",
       "engineTitle": "Wat spraak omzet in tekst",
       "own": "Je eigen server",
       "ownHelp": "Whisper of Parakeet op je eigen machine. De audio blijft daar.",
@@ -11593,10 +11629,55 @@
       "key": "{{name}}-sleutel",
       "keyPlaceholder": "Hier plakken",
       "test": "Testen",
-      "tested": "Het werkt. Iedereen ziet nu de microfoon.",
+      "tested": "Het werkt. Spraakberichten komen nu als tekst bij de agents.",
       "sealed": "Versleuteld bewaard op je server en nooit meer getoond.",
       "leaves": "Audio van spraakberichten gaat naar {{name}} om tekst te worden.",
       "invalid": "De opgeslagen sleutel opent niet op deze server. Plak hem opnieuw."
+    },
+    "local": {
+      "titleHere": "Op deze computer",
+      "titleServer": "Op deze server",
+      "titlePhone": "Op de computer van de server",
+      "textHere": "Parakeet, een download van {{size}}. Spraak blijft op deze computer. 25 Europese talen.",
+      "textServer": "Parakeet, een download van {{size}}. Spraak blijft op deze server. 25 Europese talen.",
+      "download": "Downloaden en aanzetten",
+      "downloading": "Het spraakmodel wordt gedownload",
+      "progress": "{{done}} van {{total}}",
+      "meanwhile": "Je kunt al opnemen. Berichten gaan als audio tot het klaar is.",
+      "downloadingPhone": "Het spraakmodel wordt naar de computer van de server gedownload. Je kunt al opnemen.",
+      "starting": "Wordt aangezet…",
+      "licenses": "Licenties van de modellen",
+      "tooSmall": "Deze computer heeft {{memory}} geheugen en het spraakmodel heeft 8 GB nodig. Gebruik hieronder de sleutel van een aanbieder.",
+      "noDisk": "{{free}} vrij op deze schijf en het spraakmodel heeft {{need}} nodig. Maak ruimte vrij of gebruik hieronder de sleutel van een aanbieder.",
+      "noBuild": "Er is nog geen spraakmodel voor deze computer. Gebruik hieronder de sleutel van een aanbieder.",
+      "stopped": "De download is gestopt: {{detail}}",
+      "diskFull": "De schijf liep vol tijdens de download. Maak ruimte vrij en probeer het opnieuw.",
+      "didntStart": "Het spraakmodel is niet gestart: {{detail}}",
+      "resume": "Hervatten",
+      "copy": "Details kopiëren",
+      "copied": "Details gekopieerd"
+    },
+    "offer": {
+      "title": "Spraakberichten",
+      "download": "{{size}} downloaden en aanzetten",
+      "choose": "Kiezen hoe",
+      "askOwner": "Spraak omzetten in tekst op deze server",
+      "askMember": "Vragen om spraakberichten aan te zetten",
+      "on": "Spraakberichten staan aan: agents lezen ze als tekst."
+    },
+    "setup": {
+      "memberTitle": "Spraak staat hier nog niet aan",
+      "memberText": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als {{name}} kiest wat spraak omzet in tekst.",
+      "memberTextNoName": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als wie deze server beheert kiest wat spraak omzet in tekst.",
+      "ask": "Vraag het {{name}}",
+      "asked": "{{name}} is gevraagd het aan te zetten",
+      "recordAnyway": "Toch opnemen",
+      "ownerTitle": "Kies wat spraak omzet in tekst",
+      "ownerText": "Tot dan gaan spraakberichten als audio die iedereen kan afspelen, en horen agents ze niet.",
+      "readyTitle": "Spraakberichten staan aan",
+      "readyText": "Wat je zegt komt als tekst bij de agents.",
+      "record": "Bericht opnemen",
+      "ownerPhone": "Kies het in Instellingen › Spraak op het web of in de desktop-app. Tot dan gaan spraakberichten als audio die iedereen kan afspelen, en horen agents ze niet."
     }
   },
   "media": {
@@ -12756,6 +12837,7 @@
       "cursor": "{{model}} op het Cursor-abonnement",
       "grok": "{{model}} op het Grok-abonnement",
       "gemini": "{{model}} op het Gemini-abonnement",
+      "devin": "{{model}} op het Devin-abonnement",
       "zen": "{{model}} via OpenCode",
       "coding": "{{model}} op {{plan}}",
       "claudeOf": "{{model}} op het Claude-abonnement van {{owner}}",
@@ -12763,6 +12845,7 @@
       "cursorOf": "{{model}} op het Cursor-abonnement van {{owner}}",
       "grokOf": "{{model}} op het Grok-abonnement van {{owner}}",
       "geminiOf": "{{model}} op het Gemini-abonnement van {{owner}}",
+      "devinOf": "{{model}} op het Devin-abonnement van {{owner}}",
       "zenOf": "{{model}} via de OpenCode van {{owner}}",
       "codingOf": "{{model}} op {{plan}} van {{owner}}",
       "claudeAuto": "Claude-abonnement",
@@ -12770,6 +12853,7 @@
       "cursorAuto": "Cursor-abonnement",
       "grokAuto": "Grok-abonnement",
       "geminiAuto": "Gemini-abonnement",
+      "devinAuto": "Devin-abonnement",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Claude-abonnement van {{owner}}",
@@ -12777,6 +12861,7 @@
       "cursorAutoOf": "Cursor-abonnement van {{owner}}",
       "grokAutoOf": "Grok-abonnement van {{owner}}",
       "geminiAutoOf": "Gemini-abonnement van {{owner}}",
+      "devinAutoOf": "Devin-abonnement van {{owner}}",
       "zenAutoOf": "OpenCode van {{owner}}",
       "codingAutoOf": "{{plan}} van {{owner}}",
       "on": "{{line}} op {{computer}}"
@@ -12791,7 +12876,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Via de API",
@@ -12804,6 +12890,7 @@
     "cursorText": "Gebruikt het Cursor-abonnement van wie de computer koppelde.",
     "grokText": "Gebruikt het Grok-abonnement van wie de computer koppelde.",
     "antigravityText": "Gebruikt het Gemini-abonnement van wie de computer koppelde.",
+    "devinText": "Gebruikt het Devin-abonnement van wie de computer koppelde.",
     "opencodeText": "De gratis modellen van OpenCode, of de OpenCode-sleutel van wie de computer koppelde.",
     "cursorModel": {
       "inPlan": "In je Cursor-abonnement",
@@ -12821,6 +12908,7 @@
       "home_only": "{{program}} is op {{computer}} alleen voor root geïnstalleerd, waar de agents niet bij kunnen.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
+      "systemDevin": "{{computer}} draait Windows, waar Devin nog niet werkt: daar kan de CLI de aanmelding van elk account niet gescheiden houden. Gebruik Devin op een Mac- of Linux-computer, of kies een andere AI.",
       "windows_sandbox": "Windows op {{computer}} kan de opdrachten van {{program}} niet isoleren. Kies in plaats daarvan Claude of een API-sleutel, of werk die computer bij naar Windows 11 24H2 of nieuwer, met de nieuwste updates.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
@@ -12866,6 +12954,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -13405,6 +13494,23 @@
     "s3": "Je eigen opslag",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 of een andere S3-compatibele dienst.",
     "current": "In gebruik",
+    "computer": {
+      "title": "Computer van de werkruimte",
+      "used": "{{used}} van {{size}} in gebruik",
+      "bar": "Schijf van de computer van de werkruimte",
+      "measuring": "Meten wat de ruimte inneemt.",
+      "part": {
+        "projects": "Projecten en code",
+        "apps": "Apps en tools",
+        "agents": "Bestanden van de agents",
+        "caches": "Caches en tijdelijke bestanden",
+        "system": "Systeem",
+        "other": "Overig",
+        "free": "Vrij"
+      },
+      "full": "Bijna vol, nog {{free}} over. Een agent kan caches en tijdelijke bestanden legen en verwijderen wat niemand meer gebruikt.",
+      "ask": "Maak ruimte vrij op de computer van de werkruimte: leeg caches en tijdelijke bestanden (pakketbeheerders, browsers, buildtools) en vertel me daarna wat verder de meeste ruimte inneemt."
+    },
     "usage": {
       "files": "{{size}} aan bestanden",
       "none": "Geen bestanden",
@@ -15131,6 +15237,9 @@
       "desktop_read": "Scherm lezen",
       "desktop_screenshot": "Screenshot maken",
       "desktop_ask_person": "Vragen of iemand de computer overneemt",
+      "apps_list": "Geopende apps bekijken",
+      "apps_read": "Een app lezen",
+      "apps_act": "Een app gebruiken",
       "computer_use": "Computer gebruiken",
       "computer_status": "Computer controleren",
       "left_click": "Klikken",
@@ -16221,6 +16330,7 @@
       "generalStays": "Iedereen blijft in #general.",
       "leadChannelOnly": "Alleen kanalen hebben een verantwoordelijke agent.",
       "leadNotMember": "De verantwoordelijke agent moet in het kanaal zitten.",
+      "groupNameInvalid": "Geef het een naam van maximaal 80 tekens, op één regel.",
       "mcpUnreachable": "Kon geen verbinding maken met de MCP-server. Controleer het adres en probeer het opnieuw.",
       "notApproved": "Deze dienst heeft agentes.chat nog niet goedgekeurd.",
       "alreadyInvited": "Deze persoon heeft al een uitnodiging.",
@@ -16689,10 +16799,48 @@
       "viaBy": "Agents gebruiken het internet van {{name}} ({{person}})",
       "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten."
     },
-    "moving": {
-      "short": "Verhuist van server",
-      "line": "Verhuist naar een nieuwe server… over een paar minuten terug",
-      "named": "{{computer}} verhuist naar een nieuwe server… over een paar minuten terug"
+    "maintenance": {
+      "short": {
+        "moving": "Verhuist van server",
+        "restarting": "Herstart",
+        "updating": "Wordt bijgewerkt",
+        "converting": "Schijf wordt verbeterd",
+        "host_maintenance": "Onderhoud",
+        "other": "Onderhoud"
+      },
+      "what": {
+        "moving": "Verhuist naar een nieuwe server",
+        "copying": "Wordt naar een nieuwe server gekopieerd",
+        "restarting": "Herstart",
+        "updating": "Software wordt bijgewerkt",
+        "converting": "Schijf wordt verbeterd",
+        "host_maintenance": "Zijn server is in onderhoud",
+        "other": "Er wordt aan gewerkt"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "over ongeveer {{time}} terug",
+      "backSoon": "over een paar minuten terug",
+      "late": "duurt iets langer dan verwacht",
+      "slower": "kan intussen trager zijn",
+      "slowerFor": "kan ongeveer {{time}} trager zijn",
+      "why": {
+        "moving": "We verhuizen hem naar een nieuwe server.",
+        "copying": "We kopiëren zijn bestanden naar een nieuwe server terwijl hij werkt.",
+        "handover": "We zetten zijn laatste wijzigingen over naar de nieuwe server.",
+        "restarting": "We herstarten hem.",
+        "unresponsive": "Hij reageerde niet meer, dus we hebben hem automatisch herstart.",
+        "updating": "We werken zijn software bij.",
+        "converting": "We zetten zijn schijf over naar snellere opslag.",
+        "host_maintenance": "De server waarop hij draait krijgt onderhoud.",
+        "other": "We werken aan hem."
+      },
+      "since": "Sinds {{time}}",
+      "expectedBack": "Rond {{time}} terug verwacht",
+      "expectedDone": "Rond {{time}} klaar verwacht",
+      "meanwhile": "Berichten aan zijn agents wachten en gaan vanzelf verder als hij terug is.",
+      "working": "Zijn agents blijven intussen werken.",
+      "about": "Wat er gebeurt"
     },
     "online": "Online",
     "offline": "Offline",
@@ -16708,6 +16856,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "de commando's",
         "browser": "de browser",
         "desktop": "het scherm",
@@ -16760,6 +16909,11 @@
     "removed": "{{name}} is verwijderd.",
     "name": "Naam van de computer",
     "nameHelp": "Zo zien mensen en agents hem.",
+    "defaultName": {
+      "model": "{{model}} van {{name}}",
+      "linux": "Linux-computer van {{name}}",
+      "other": "Computer van {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16881,6 +17035,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Opdrachten",
         "browser": "Browser"
@@ -16891,6 +17046,7 @@
         "cursor": "Zoals Claude Code, met een Cursor-account. Alleen in de toegestane mappen.",
         "grok": "Zoals Claude Code, met een Grok-account. Alleen in de toegestane mappen.",
         "antigravity": "Zoals Claude Code, met een Gemini-account. Alleen in de toegestane mappen.",
+        "devin": "Zoals Claude Code, met een Devin-account. Alleen in de toegestane mappen.",
         "opencode": "Zoals Claude Code, met de gratis modellen van OpenCode of een OpenCode-sleutel. Alleen in de toegestane mappen.",
         "commands": "Voert Terminal-opdrachten uit, zoals tests en builds."
       },
@@ -16909,6 +17065,13 @@
       "grantTextTerminal": "Toestaan gebeurt op de computer zelf, in de Terminal:",
       "grantTextAdmin": "Toestaan gebeurt op de computer zelf, in de Terminal, als beheerder van die computer:",
       "grantTerminal": "Geen app? In de terminal van de computer:",
+      "pickText": "De agentes.chat-app opent een mapkiezer op {{machine}}, zodat wie daar is kiest.",
+      "pick": "Een map toestaan",
+      "picked": "Op {{machine}} is een mapkiezer geopend. Kies daar de map.",
+      "pickWaiting": "Wachten tot er op {{machine}} een map is gekozen",
+      "grantTerminalMore": "Geen app daar? Gebruik de Terminal",
+      "noApp": "Deze computer heeft geen agentes.chat-app om de map te kiezen. Sta hem toe via de Terminal ervan.",
+      "requestDone": "Dit verzoek is al beantwoord of verlopen.",
       "preferTerminal": "Liever in de Terminal",
       "grantOnlyOwner": "Alleen {{name}} kan meer toestaan, op de computer zelf. Heb je iets nodig, vraag het dan aan die persoon.",
       "pathPlaceholder": "<map>",
@@ -16916,6 +17079,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wacht op {{permission}} op {{computer}}",
+      "next": "Sta het toe in de agentes.chat-app op die computer.",
+      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
+      "asked": "Nodig om {{trigger}} uit te voeren",
+      "names": {
+        "app_management": "Appbeheer",
+        "screen": "Schermopname",
+        "accessibility": "Toegankelijkheid",
+        "disk": "Volledige schijftoegang",
+        "network": "Lokaal netwerk",
+        "camera": "Camera",
+        "microphone": "Microfoon",
+        "automation": "Automatisering"
+      }
+    },
     "leadCloud": "Waar je agents werken: de computer van de werkruimte en de apparaten die mensen koppelen.",
     "lead": "Waar je agents werken: de computers en telefoons die mensen koppelen.",
     "connect": "Apparaat koppelen",
@@ -16969,6 +17148,19 @@
     "forgotten": "{{name}} vergeten.",
     "stop": "Stoppen",
     "stopped": "Gestopt. {{name}} is vrij.",
+    "power": {
+      "start": "Starten",
+      "stop": "Afsluiten",
+      "starting": "{{name}} start op. Het is zo klaar.",
+      "stopped": "{{name}} is afgesloten.",
+      "toolMissingIos": "{{computer}} heeft Xcode nodig voor simulators. Installeer Xcode uit de App Store op die Mac.",
+      "toolMissingAndroid": "{{computer}} heeft de Android Emulator niet. Installeer die in Android Studio › SDK Manager › SDK Tools op die computer.",
+      "gone": "{{name}} staat niet meer op {{computer}}: het is daar verwijderd. Vergeet het hier, of maak het daar opnieuw.",
+      "busy": "{{name}} is nu in gebruik. Stop eerst wat het gebruikt, of probeer het opnieuw als het vrij is.",
+      "startFailed": "{{name}} is niet gestart. {{computer}} meldde: {{why}}",
+      "stopFailed": "{{name}} is niet afgesloten. {{computer}} meldde: {{why}}",
+      "notSimulator": "Alleen simulators en emulators start en sluit je hier af."
+    },
     "showMe": "Laat zien hoe",
     "notFound": "Dit apparaat is er niet meer",
     "notFoundText": "Het is verwijderd, of deze link klopt niet.",
@@ -16984,15 +17176,21 @@
     "belongs": "Hoort bij de werkruimte",
     "belongsHint": "Het blijft als de persoon die het koppelde vertrekt, en iedereen kan het gebruiken zolang niemand de eigenaar is.",
     "spillOwn": "Helpen als de computer van het team vol of weg is",
-    "spillOwnHint": "Als de computer van je agents vol of weg is, kunnen hun antwoorden, vragen en routines hier denken met jouw aanmelding.",
-    "spillTeamHint": "Als de computer van een agent vol of weg is, kunnen zijn antwoorden, vragen en routines hier denken met de aanmelding van zijn eigenaar op deze computer.",
+    "spillOwnHint": "Als de computer van het team vol of weg is, kunnen de antwoorden, vragen en routines van je agents hier denken, met de AI-accounts die op deze computer zijn aangemeld.",
+    "spillTeamHint": "Als de computer van een agent vol of weg is, kunnen zijn antwoorden, vragen en routines hier denken, met het AI-account dat zijn eigenaar op deze computer heeft aangemeld.",
     "spillWorkspaceOff": "Een admin heeft dit voor de workspace uitgezet.",
-    "spillFirst": "Deze computer gebruiken voor het werk van mijn agents",
-    "spillFirstHint": "Verzoeken, routines en lang werk van je agents starten hier zodra hij vrij is, met de AI die je hier hebt verbonden. Antwoorden aan mensen starten hier alleen als de computer van het team vol of weg is.",
+    "helpUse": "Hoe hij je agents helpt",
+    "helpUses": {
+      "off": "Helpt niet",
+      "help": "Alleen als reserve",
+      "first": "Eerst voor mijn agents"
+    },
+    "helpUseHint": "Alleen als reserve: je agents komen hierheen als de computer van het team vol of weg is. Eerst voor mijn agents: hun vragen, routines en lange taken beginnen hier zodra hij vrij is, en antwoorden aan mensen alleen als die van het team vol of weg is. Beide gebruiken de AI-accounts die op deze computer zijn aangemeld.",
+    "helpUseTeamHint": "Alleen als reserve: de agents van iedereen komen hierheen als hun computer vol of weg is, met het AI-account dat hun eigenaar op deze computer heeft aangemeld. Eerst voor mijn agents: de vragen, routines en lange taken van je agents beginnen hier zodra hij vrij is.",
     "helpWorkspace": "Computers helpen als die van het team vol of weg is",
     "helpWorkspaceHint": "Elke computer helpt alleen als zijn eigenaar het toestaat. Uit: geen enkele helpt, wat de eigenaar ook koos.",
     "shareInternet": "Agents gebruiken het internet van deze computer",
-    "shareInternetHint": "Websites die de agents openen, gaan via de verbinding van deze computer en zien dus jouw locatie. Alleen websites, tot 5 GB per dag, en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken de agents hun gewone verbinding.",
+    "shareInternetHint": "Websites die de agents openen, gaan via de verbinding van deze computer en zien dus jouw locatie. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken de agents hun gewone verbinding.",
     "shareInternetInUse": "Nu in gebruik",
     "shareInternetOther": "Agents gebruiken nu {{name}}",
     "shareInternetPick": "Deze gebruiken",
@@ -17528,8 +17726,10 @@
       "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vraagt je om de map {{path}} op je <b>{{deviceName}}</b>",
+      "folderOnComputer": "Toestaan op de computer",
+      "folderShown": "Geopend op {{deviceName}}. Sta het daar toe.",
       "internetShared": "Agents openen websites nu via het internet van <b>{{deviceName}}</b>",
-      "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, tot 5 GB per dag, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
+      "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
       "internetOff": "Uitzetten",
       "internetOffDone": "Agents gebruiken het internet van {{deviceName}} niet meer.",
       "once": "Eén keer toestaan",
@@ -19029,6 +19229,7 @@
     "namesMore": "{{first}} en nog {{count}}",
     "wait": {
       "thinking": "Denkt na…",
+      "code": "Werkt de code bij…",
       "held": "Wacht op goedkeuring…",
       "said": "‘{{text}}’"
     },
@@ -19289,6 +19490,7 @@
         "usingScreen": "Het scherm gebruikt",
         "cloningRepo": "Een repository gekloond",
         "listingRepos": "Heeft de repository's weergegeven",
+        "updatingCode": "Heeft de code bijgewerkt",
         "preparingCli": "{{app}} klaargezet",
         "openingPullRequest": "Een pull request geopend",
         "handingOff": "Een rapport geleverd",
@@ -19413,6 +19615,7 @@
       "usingScreen": "het scherm aan het gebruiken",
       "cloningRepo": "een repository aan het klonen",
       "listingRepos": "geeft de repository's weer",
+      "updatingCode": "werkt de code bij",
       "preparingCli": "{{app}} aan het klaarzetten op {{computer}}",
       "preparingCliPct": "{{app}} aan het klaarzetten op {{computer}} ({{percent}}%)",
       "openingPullRequest": "een pull request aan het openen",
@@ -19610,6 +19813,7 @@
       "action_approvals": "Goedkeuringen die op jou wachten",
       "welcome_member": "Je bent net bij {{org}} gekomen. **Waar houd je je hier mee bezig?** Vertel het me en ik stel samen met jou je eerste agent in.",
       "action_open_page": "Een scherm openen",
+      "action_voice_setup": "Spraakberichten aanzetten",
       "calendar_proposal": "Voorstel voor een afspraak: {{title}}",
       "action_workspace": "Stelde een wijziging in de werkruimte voor",
       "agent_proposal": "Nieuwe agent voorgesteld: {{name}}",
@@ -19907,6 +20111,10 @@
     "offer_open_page": {
       "label": "Aanbieden een scherm te openen",
       "description": "Plaatst een kaart met een knop die een scherm van de app opent, zoals facturering, rollen of de pagina van een agent."
+    },
+    "offer_voice_setup": {
+      "label": "Aanbieden om spraakberichten aan te zetten",
+      "description": "Plaatst een kaart die spraakberichten met één klik aanzet voor wie de server beheert, of het die persoon vraagt."
     },
     "set_team_week": {
       "label": "De kaart Teamweek wijzigen",
@@ -20928,14 +21136,13 @@
       }
     },
     "use": {
-      "title": "Apps op de schermen van de agents",
-      "description": "Agents openen en gebruiken hier apps op hun eigen scherm, zoals een mens dat zou doen, terwijl mensen meekijken vanaf de pagina van elke agent.",
+      "title": "Een eigen scherm voor elke agent",
+      "description": "Hier krijgt elke agent een eigen scherm, los van het jouwe, en gebruikt daarop apps met vensters, zoals een browser of een spreadsheet, zoals een mens dat zou doen. Je kijkt mee vanaf de pagina van de agent. Voorlopig alleen op Linux: dat kan voor elke agent een extra scherm openen zonder aan het jouwe te komen.",
       "ready": "Klaar",
       "off": "Uit",
-      "unavailable": "Niet beschikbaar",
+      "unavailable": "Moet nog ingesteld worden",
       "offHelp": "Zet de schermen en opdrachten op deze computer aan:",
       "offOne": "Deze computer heeft het scherm en de commando's aan nodig.",
-      "linuxOnly": "Agents gebruiken apps op hun eigen scherm alleen op Linux-computers.",
       "agent": "{{name}} kan nog geen apps op zijn scherm gebruiken op {{computer}}.",
       "agent_female": "{{name}} kan nog geen apps op haar scherm gebruiken op {{computer}}."
     },

@@ -67,6 +67,7 @@ import {
   enableOperatorEvents,
   enableSvgRasterizer,
   ensureRightHands,
+  friendlyMachineNames,
   type GifKey,
   hasFontFiles,
   isAgentesCloud,
@@ -120,6 +121,7 @@ import { createRealtime, type SocketData } from "./realtime/ws";
 import { takeRouteTimes } from "./route-times";
 import type { AppDeps } from "./routes/app/context";
 import { workerHealth } from "./routes/health";
+import { reportRunProfile } from "./run-reports";
 import { startTelemetry } from "./telemetry";
 import { releaseOf, version } from "./version";
 import { type BootTask, startWorkers } from "./workers";
@@ -461,7 +463,10 @@ async function boot(
     adapters,
     modelProviders,
     onTiming: (name, ms, attrs) => log.info("latency", { metric: name, ms, ...attrs }),
-    onRunProfile: (p) => log.debug("run profile", p),
+    onRunProfile: (p) => {
+      log.debug("run profile", { ...p });
+      void reportRunProfile(errors, p, async (id) => (await engine.machineHub.status(id))?.protocol).catch(() => {});
+    },
     emailArt,
     log,
     errors,
@@ -470,6 +475,8 @@ async function boot(
   await engine.jevKey.ready();
   await engine.githubApp.ready();
   await engine.speech.ready();
+  // Set up here before: the helper again, without waiting for it.
+  void engine.speechLocal?.resume();
   log.info("voice messages", { engines: engine.speech.chain().map((e) => e.id) });
   const vectors = engine.embeddings;
   if (config.EMBEDDINGS_PROVIDER !== "none" && !vectors) {
@@ -541,6 +548,15 @@ async function boot(
       run: async () => {
         const moved = await surfaceRoomFiles(database.db);
         if (moved > 0) log.info("files moved out of agent rooms", { moved });
+      },
+    },
+    // Computers still called by their host name take their model and owner's name ("MacBook Pro do Tomás").
+    {
+      name: "friendly-machine-names",
+      once: true,
+      run: async () => {
+        const renamed = await friendlyMachineNames(database.db, adapters.pubsub);
+        if (renamed > 0) log.info("computers named after their model and owner", { renamed });
       },
     },
   ];
@@ -651,6 +667,7 @@ async function boot(
       gifKey: gifKey ?? undefined,
       githubApp: engine.githubApp,
       speech: engine.speech,
+      speechLocal: engine.speechLocal,
       voice: engine.voice,
       gitProxy: engine.gitProxy,
       pushRelaySender: relayServeSender(direct),

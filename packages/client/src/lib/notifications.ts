@@ -415,7 +415,16 @@ export type OpenTarget =
   | {
       to: "/org/$orgId/settings/$section";
       params: {
-        section: "computers" | "members" | "invites" | "usage" | "connectors" | "billing" | "approvals" | "right_hand";
+        section:
+          | "computers"
+          | "members"
+          | "invites"
+          | "usage"
+          | "connectors"
+          | "billing"
+          | "approvals"
+          | "right_hand"
+          | "voice";
       };
     }
   | { to: "/org/$orgId/home"; search?: { widget: string } }
@@ -482,6 +491,8 @@ export function openTarget(n: AppNotification): OpenTarget | null {
   if (n.kind === "admin_ask" && n.latest.reason === "create_agents")
     return { to: "/org/$orgId/settings/$section", params: { section: "members" } };
   if (n.kind === "admin_ask" && n.latest.reason === "webhook") return { to: "/org/$orgId/routines" };
+  if (n.kind === "admin_ask" && n.latest.reason === "voice")
+    return { to: "/org/$orgId/settings/$section", params: { section: "voice" } };
   // Someone accepted an invitation (ADR 0090): a conversation with them, to say hi.
   if (n.kind === "invitation_accepted") {
     const who = n.actors[0];

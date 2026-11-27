@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ORBIT_LIGHT, ORBIT_RINGS } from "@agenteschat/ui/agent/orbit";
 import { keepSameRows, sameItems } from "../../src/features/chat/logic";
 import { chatScreenSource } from "./chat-screen-source";
 
@@ -283,6 +284,28 @@ describe("the working line", () => {
     expect(orbit).toContain('} from "@agenteschat/ui/agent/orbit";');
     expect(orbit).toContain("const clock = useDrawingClock(!reduced && !paused);");
     expect(orbit).not.toMatch(/requestAnimationFrame|setInterval/);
+    // The rings themselves turn round the face on that clock (the web's `ac-orbit__roll`), their light riding them.
+    // With Reduce Motion each rests at its tilt whatever the clock reached before the setting came on.
+    expect(orbit).toContain("{ rotate: still ? (ring.tilt * Math.PI) / 180 : ringAngle(ring, roll, clock.value) },");
+    expect(orbit).toContain("return ((ring.tilt + (360 * (ms / 1000 + roll)) / ring.spin) * Math.PI) / 180;");
+    expect(orbit).toContain("still={reduced}");
+    expect(orbit).not.toContain("{ rotate: (ring.tilt * Math.PI) / 180 }]");
+  });
+
+  test("a ring turned upright is never clipped or into a name: the line and the pinned strip have room", () => {
+    // How far past the face a ring stands upright, in faces: its radius and the dot at its head.
+    const reach = Math.max(...ORBIT_RINGS.map((r) => r.r / 2)) - 0.5 + ORBIT_LIGHT.dot / 100;
+    // The working line clips nothing (its 24-point face in a 28-point line).
+    const pill = between(lines, "  pill: {", "},");
+    expect(pill).not.toContain("overflow");
+    // The pinned strip scrolls (it clips at its top) and its names sit under the faces.
+    const strip = src("features/chats/PinnedStrip.tsx");
+    const num = (re: RegExp) => Number(strip.match(re)?.[1]);
+    const face = num(/const FACE = (\d+);/) - 2;
+    const above = num(/strip: \{[^}]*paddingTop: (\d+)/) + num(/itemIn: \{[^}]*paddingVertical: (\d+)/);
+    expect(above).toBeGreaterThanOrEqual(reach * face);
+    // Under the face: the gap and the footnote's room over its capitals (18-point line, 13-point text) clear the tip.
+    expect(num(/itemIn: \{[^}]*gap: (\d+)/) + 4).toBeGreaterThanOrEqual(reach * face);
   });
 
   test('"View" reaches 44 points', () => {

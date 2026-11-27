@@ -55,6 +55,7 @@ import {
   storedExecutors,
   storeMachineAccess,
   storeMachineExecutors,
+  storeMachinePermissions,
   storeMachineToolchains,
 } from "./machine-access";
 import {
@@ -98,7 +99,8 @@ import {
   publishMachineAgentsChanged,
   publishMachineStatus,
   publishMachineUpdated,
-  shownMoving,
+  type ShownMaintenance,
+  shownMaintenance,
   shownStandby,
   withTaskLimit,
 } from "./machines";
@@ -200,8 +202,9 @@ export interface MachineStatus {
   access?: RunnerAccess | null;
   /** The operator put the workspace's own computer in standby (ADR 0161): asleep, it is woken when wanted. */
   standby?: boolean;
-  /** The workspace's own computer is away moving to another server (`shownMoving`). */
+  /** The workspace's own computer is away for what we do to it (`shownMoving`): `maintenance` says what. */
   moving?: boolean;
+  maintenance?: ShownMaintenance;
   /** `system`: each agent works as its own OS user there (ADR 0058 §10); absent, all as the runner's user. */
   mode?: "system";
 }
@@ -408,6 +411,8 @@ export function requestTimeoutMs(request: MachineRequest) {
   if (request.op === "phone.flow") return (Math.min(Math.max(1, request.timeoutSeconds), 600) + 120) * 1000;
   if (request.op === "phone.record") return (Math.min(Math.max(1, request.seconds), 170) + 90) * 1000;
   if (request.op === "phone.install") return 300_000;
+  // A simulator's first boot after an Xcode update migrates its data.
+  if (request.op === "phone.power") return 180_000;
   if (request.op.startsWith("phone.")) return 60_000;
   return 120_000;
 }
@@ -468,6 +473,8 @@ export function isNewWork(request: MachineRequest) {
     case "xcode.open":
     // Repairing an iPhone's test helper (its owner from the apps; an agent's call is refused paused before it's sent).
     case "phone.repair":
+    // Starting or shutting down a simulator (a person from the apps; an agent's call is refused paused before it's sent).
+    case "phone.power":
     // Its owner looking for, or installing, a coding CLI there.
     case "clis.check":
     case "cli.install":
@@ -835,6 +842,10 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Awake: whatever put it in standby is over (ADR 0161).
         standbyAt: null,
         wakeWantedAt: null,
+        // Back from a restart or an update: it is over, whatever the operator says next (ADR 0257).
+        ...(machine.maintenance?.kind === "restarting" || machine.maintenance?.kind === "updating"
+          ? { movingAt: null, maintenance: null }
+          : {}),
         ...(nextHostName && nextHostName !== machine.name ? { name: nextHostName } : {}),
         hostname: frame.hostname,
         os: frame.os,
@@ -854,11 +865,13 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.desktop ||
         frame.terminal ||
         frame.desktopUse ||
+        frame.apps ||
         frame.claudeLoginMethods ||
         frame.toolchains ||
         frame.clis ||
         frame.windowsBuild ||
-        frame.app
+        frame.app ||
+        frame.permissions
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -869,6 +882,8 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.desktop ? { desktop: frame.desktop } : {}),
                 ...(frame.terminal ? { terminal: frame.terminal } : {}),
                 ...(frame.desktopUse ? { desktopUse: frame.desktopUse } : {}),
+                // ADR 0258: whether agents can use the person's apps there.
+                ...(frame.apps ? { apps: frame.apps } : {}),
                 // ADR 0228 §6: what its runner fetches by itself, and where each fetch stands since it started.
                 ...(frame.clis ? { copies: frame.clis } : {}),
                 ...(system ? { mode: "system" as const } : {}),
@@ -877,6 +892,8 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
                 ...(frame.app ? { app: true as const } : {}),
+                // The OS permissions its agents' work waits on: kept in memory there, so a hello says them all.
+                ...(frame.permissions ? { permissions: frame.permissions } : {}),
                 ...(Object.keys(ownUsage).length > 0 ? { ownUsage } : {}),
                 // A runner whose probe hasn't finished says none: the last ones stored stand.
                 ...((frame.toolchains ?? machine.executors?.toolchains)
@@ -1256,6 +1273,8 @@ export function createMachineHub(deps: MachineHubDeps) {
             diskUse: prev.diskUse,
             ...(prev.diskFreeGb === undefined ? {} : { diskFreeGb: prev.diskFreeGb }),
             ...(prev.sharedGb === undefined ? {} : { sharedGb: prev.sharedGb }),
+            ...(prev.diskGb === undefined ? {} : { diskGb: prev.diskGb }),
+            ...(prev.diskParts === undefined ? {} : { diskParts: prev.diskParts }),
           }
         : load;
     const wasWarned = prev?.diskWarned === true;
@@ -1763,6 +1782,10 @@ export function createMachineHub(deps: MachineHubDeps) {
         await storeMachineToolchains({ db, pubsub }, conn.machineId, frame.toolchains).catch((error) =>
           deps.log?.warn("toolchains.changed failed", { machineId: conn.machineId, error: String(error) }),
         );
+      } else if (frame.type === "permissions.changed") {
+        await storeMachinePermissions({ db, pubsub }, conn.machineId, frame.permissions).catch((error) =>
+          deps.log?.warn("permissions.changed failed", { machineId: conn.machineId, error: String(error) }),
+        );
       } else if (frame.type === "phones.changed") {
         if (conn.protocol >= PHONES_PROTOCOL && conn.orgId) {
           const row = await getMachineById(db, conn.machineId).catch(() => null);
@@ -1818,7 +1841,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Asleep by design: whatever asks for it wakes it. Who waits for that does it once, outside: a run's tool
         // (`callWhenBack`), a person's request (`awakeForPerson`); a job fails now.
         if (inStandby(row)) void wantMachine(db, machineId, "call").catch(() => {});
-        throw new MachineOfflineError(row.name, row.kind);
+        throw new MachineOfflineError(row.name, row.kind, shownMaintenance(row));
       }
       if (phoneOp && row.protocol < phonesNeed) throw phonesTooOld(row.name);
       if (isNewWork(request)) {
@@ -1838,6 +1861,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       if (!row || row.deletedAt) return null;
       const online = local.has(machineId) || (machineOnline(row) && row.connectedReplica !== replicaId);
       const pause = machinePause(row);
+      const maintenance = shownMaintenance(row);
       return {
         id: row.id,
         orgId: row.orgId,
@@ -1854,7 +1878,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         access: row.access ?? null,
         // Still starting after its standby ended counts too: what waits for it waits on (`shownStandby`).
         standby: inStandby(row) || shownStandby(row),
-        ...(shownMoving(row) ? { moving: true } : {}),
+        ...(maintenance ? { maintenance, ...(maintenance.away ? { moving: true } : {}) } : {}),
         ...(row.executors?.mode === "system" ? { mode: "system" as const } : {}),
       };
     },

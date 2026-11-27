@@ -918,6 +918,45 @@ test("the workspace's computer moving to another server: said, kept and taken ba
   expect((await moving(machineId, {})).status).toBe(400);
 });
 
+test("what is done to the workspace's computer: said with its time and step, keeps its start, ended", async () => {
+  const { orgId } = acme;
+  const issue = await createOperatorApp(deps, TOKEN).request(`/api/operator/v1/orgs/${orgId}/machines`, {
+    method: "POST",
+    headers: { authorization: BEARER, "content-type": "application/json" },
+    body: "{}",
+  });
+  const { machineId } = await body<{ machineId: string }>(issue);
+  const say = (json: unknown) => put(`/orgs/${orgId}/machines/${machineId}/maintenance`, json);
+  type Said = { maintenance: { kind: string; since: string; eta: string | null; detail: string | null } | null };
+  const eta = new Date(Date.now() + 40 * 60_000).toISOString();
+
+  const copying = await body<Said>(await say({ kind: "moving", eta, detail: "copying" }));
+  expect(copying.maintenance).toEqual({ kind: "moving", since: expect.any(String), eta, detail: "copying" });
+  const handover = await body<Said>(await say({ kind: "moving", detail: "handover" }));
+  expect(handover.maintenance).toEqual({ ...copying.maintenance, eta: null, detail: "handover" } as never);
+  // Another kind starts again.
+  const restart = await body<Said>(await say({ kind: "restarting", detail: "unresponsive" }));
+  expect(restart.maintenance?.kind).toBe("restarting");
+  expect(Date.parse(restart.maintenance?.since ?? "")).toBeGreaterThanOrEqual(
+    Date.parse(copying.maintenance?.since ?? ""),
+  );
+  expect(await body(await say({ kind: null }))).toEqual({ maintenance: null });
+  const [row] = await t.db.select().from(schema.machines).where(eq(schema.machines.id, machineId));
+  expect([row?.movingAt, row?.maintenance]).toEqual([null, null]);
+
+  for (const bad of [
+    {},
+    { kind: "sleeping" },
+    { kind: "restarting", detail: "sleep" },
+    { kind: "moving", eta: "soon" },
+  ]) {
+    expect({ bad, status: (await say(bad)).status }).toEqual({ bad, status: 400 });
+  }
+  expect(
+    (await put(`/orgs/${orgId}/machines/0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b/maintenance`, { kind: null })).status,
+  ).toBe(404);
+});
+
 test("billing holds: put on, changed and lifted, never over a hold set through /standing", async () => {
   const [org] = await t.db.insert(schema.organizations).values({ name: "Billing Co" }).returning();
   if (!org) throw new Error("no org");

@@ -1,4 +1,4 @@
-import { MACHINE_PROTOCOL_VERSION, RUNNER_APP_PROTOCOL } from "@agenteschat/adapters";
+import { FOLDER_PICK_PROTOCOL, MACHINE_PROTOCOL_VERSION, RUNNER_APP_PROTOCOL } from "@agenteschat/adapters";
 
 /**
  * The newest desktop app's protocol when runners didn't yet say whether the app ran them (`RUNNER_APP_PROTOCOL`).
@@ -53,3 +53,7 @@ export const personAtComputerWay = (
   computer.os === "darwin" || computer.os === "windows"
     ? `in the agentes.chat app there (Preferences › ${pane})`
     : `with ${commands.map((c) => `\`${computer.executors?.mode === "system" ? "sudo " : ""}agentes-runner ${c}\``).join(" and ")} there`;
+
+/** The agentes.chat app runs this computer's runner, new enough to show a folder asked for from the apps. */
+export const folderPickable = (m: { kind: string; protocol: number; executors?: { app?: true } | null }) =>
+  m.kind !== "managed" && m.protocol >= FOLDER_PICK_PROTOCOL && m.executors?.app === true;

@@ -420,6 +420,13 @@ describe("working line", () => {
     expect(lines).toContain("bar: { width: 3, height: 12, borderRadius: 1.5, opacity: 0.7 },");
   });
 
+  test("opening a DM with an agent or a thread tells the server, as the web does: its agent gets ready", async () => {
+    const data = (await source("features/chat/screen/useChatData.ts")).replace(/\s+/g, " ");
+    expect(data).toContain(
+      "if (focused && readable && (dmAgentId || isThread)) connection?.sendOpen(channelId, threadId);",
+    );
+  });
+
   test("the phone tells the conversation while it records (held or hands free, not paused) and while the take uploads", async () => {
     const take = await source("features/voice/useVoiceTake.ts");
     const tick = take.slice(take.indexOf("const tick = useCallback("), take.indexOf("const record = useCallback("));

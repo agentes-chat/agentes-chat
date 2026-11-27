@@ -10,12 +10,21 @@ import { cliVersionAtLeast } from "./plans";
  * `cli-pins` workflow, daily, as a pull request).
  */
 /**
- * The six coding CLIs, and Git for Windows' portable build (`git`), which Claude Code needs on Windows for its shell
+ * The seven coding CLIs, and Git for Windows' portable build (`git`), which Claude Code needs on Windows for its shell
  * (Git Bash) and the runner fetches like a CLI there.
  */
-export type PinCli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git";
+export type PinCli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin" | "git";
 
-export const PIN_CLIS: readonly PinCli[] = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "git"];
+export const PIN_CLIS: readonly PinCli[] = [
+  "claude",
+  "codex",
+  "cursor",
+  "opencode",
+  "grok",
+  "antigravity",
+  "devin",
+  "git",
+];
 
 /** A system the runner fetches for: `<os>-<cpu>`, `-musl` on a Linux with musl's libc. */
 export type PinPlatform =
@@ -88,9 +97,11 @@ const sha512 = (value: string) => ({ algorithm: "sha512" as const, value });
  * Sources: Claude Code's `manifest.json` per version (sha256, what its installer checks); Codex's release
  * `codex-package_SHA256SUMS` (its Linux packages are musl builds, run on any libc); OpenCode's release assets' sha256;
  * Cursor's and Grok's builds, which come with no published hash, hashed when pinned; the Antigravity CLI's manifests
- * per platform, the ones its installers read (sha512); MinGit's release assets' sha256. Every one of the six has a
- * build for Windows (ADR 0228 §6). No build: the runner can't fetch that CLI there and the apps say so
- * (`cli_outdated`, `not_installed`).
+ * per platform, the ones its installers read (sha512); the Devin CLI's `manifest.json`, the one its installer reads
+ * (sha256); MinGit's release assets' sha256. Six of the seven have a build for Windows (ADR 0228 §6); the Devin CLI's
+ * Windows builds are left out, since there it doesn't read an account's folder as its home (ADR 0253), and a computer
+ * brain with no build for a system doesn't run there (`brainRunsOn`). No build: the runner can't fetch that CLI there
+ * and the apps say so (`cli_outdated`, `not_installed`).
  */
 export const CLI_PINS: CliPins = {
   claude: {
@@ -409,6 +420,47 @@ export const CLI_PINS: CliPins = {
         ),
         archive: "file",
         executable: "agy.exe",
+      },
+    },
+  },
+  devin: {
+    version: "3000.15.14",
+    builds: {
+      "darwin-arm64": {
+        url: "https://static.devin.ai/cli/3000.15.14/devin-3000.15.14-aarch64-apple-darwin.tar.gz",
+        hash: sha256("23911fdf9b5c45ebefa382e57ff1996e762c2b30a2fe1f4b536fa633e2fcbd1f"),
+        archive: "tar.gz",
+        executable: "bin/devin",
+      },
+      "darwin-x64": {
+        url: "https://static.devin.ai/cli/3000.15.14/devin-3000.15.14-x86_64-apple-darwin.tar.gz",
+        hash: sha256("5f9197bac49d90c1c213a9405326588503d7813942f347cdcc4a21bdab6b5189"),
+        archive: "tar.gz",
+        executable: "bin/devin",
+      },
+      "linux-x64": {
+        url: "https://static.devin.ai/cli/3000.15.14/devin-3000.15.14-x86_64-unknown-linux.tar.gz",
+        hash: sha256("d219f885ed601d1424ae2ecdf5b37441cf60f15a38a4961d2a6f0b41ec913f28"),
+        archive: "tar.gz",
+        executable: "bin/devin",
+      },
+      "linux-arm64": {
+        url: "https://static.devin.ai/cli/3000.15.14/devin-3000.15.14-aarch64-unknown-linux.tar.gz",
+        hash: sha256("66a84d89ffff16bb0c4acdd8597102d752b3f4bf4ab53ff249637ac6ec698f87"),
+        archive: "tar.gz",
+        executable: "bin/devin",
+      },
+      "linux-x64-musl": {
+        url: "https://static.devin.ai/cli/3000.15.14/devin-3000.15.14-x86_64-unknown-linux.tar.gz",
+        hash: sha256("d219f885ed601d1424ae2ecdf5b37441cf60f15a38a4961d2a6f0b41ec913f28"),
+        archive: "tar.gz",
+        executable: "bin/devin",
+      },
+      "linux-arm64-musl": {
+        url: "https://static.devin.ai/cli/3000.15.14/devin-3000.15.14-aarch64-unknown-linux.tar.gz",
+        hash: sha256("66a84d89ffff16bb0c4acdd8597102d752b3f4bf4ab53ff249637ac6ec698f87"),
+        archive: "tar.gz",
+        executable: "bin/devin",
       },
     },
   },

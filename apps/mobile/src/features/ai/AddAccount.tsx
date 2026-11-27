@@ -551,6 +551,39 @@ function AddAccountFlow({
         ) : null}
       </>
     );
+  } else if (kind === "devin") {
+    // ADR 0253: Devin's page shows a code, pasted back here, as Gemini's.
+    steps = (
+      <>
+        <Step
+          n={1}
+          state={login && opened ? "done" : "now"}
+          title={t("agentPage.work.brain.add.stepOne.devin")}
+          hint={signInHint}
+          side={login ? openAgain(login.url) : startButton(t("agentPage.work.brain.add.open.devin"), !ready)}
+        >
+          {starting ? <StepText>{t("agentPage.work.brain.add.starting", { computer })}</StepText> : null}
+        </Step>
+        {login && opened ? (
+          <Step
+            n={2}
+            divider
+            title={t("agentPage.work.brain.add.stepTwoDevin")}
+            hint={t("agentPage.work.brain.add.codeHintDevin")}
+            side={read === "reconnecting" ? waiting : undefined}
+          >
+            {busy
+              ? busyLine
+              : pasteRow(
+                  t("agentPage.work.brain.add.codeLabelDevin"),
+                  t("agentPage.work.brain.add.codeLabelDevin"),
+                  false,
+                  key.length > 0 && !/^https?:\/\//i.test(key.trim()),
+                )}
+          </Step>
+        ) : null}
+      </>
+    );
   } else if (kind === "grok") {
     steps = (
       <>
