@@ -31,10 +31,13 @@ import {
   checkAppVersion,
   createVersionWatch,
   fetchIndexHtml,
+  loadedBuild,
   loadedEntry,
   reloadForNewVersion,
+  reloadWhenSafe,
   startVersionWatch,
   VERSION_CHECK_MS,
+  watchTyping,
 } from "./lib/app-version";
 import {
   applyDesktopDevice,
@@ -197,16 +200,21 @@ router.subscribe("onResolved", () => {
   });
 });
 
-// A deploy while this tab is open: say so, and the next page change loads the new app.
+// A deploy while this tab is open: say so; the next page change loads the new app, and so does the first moment
+// nothing would be lost and nobody is using the tab.
+watchTyping();
 const versionWatch = startVersionWatch(
   createVersionWatch({
     loaded: loadedEntry(),
+    built: loadedBuild(),
     fetchHtml: fetchIndexHtml,
-    onStale: () =>
+    onStale: () => {
       toasts.show(i18n.t("common.newVersion"), "info", {
         label: i18n.t("common.reload"),
         run: () => window.location.reload(),
-      }),
+      });
+      reloadWhenSafe(versionWatch);
+    },
   }),
 );
 router.subscribe("onBeforeNavigate", ({ toLocation, fromLocation }) => {

@@ -24,6 +24,7 @@ import { type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useStat
 import { useTranslation } from "react-i18next";
 import { useDirectory } from "@/hooks/useDirectory";
 import { matchesNow, TOUCH, useMatchMedia } from "@/hooks/useMatchMedia";
+import { holdReload } from "@/lib/app-version";
 import { heldPicture, holdImage, holdPicture, liveCanvas, pictureOf, showsPicture } from "@/lib/canvas";
 import { useSaid } from "@/lib/toast";
 import { SocketFactoryContext, useDesktopPointer } from "@/realtime/context";
@@ -200,7 +201,11 @@ export function DesktopView({
     if (!inControl) return;
     const ask = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", ask);
-    return () => window.removeEventListener("beforeunload", ask);
+    const release = holdReload();
+    return () => {
+      window.removeEventListener("beforeunload", ask);
+      release();
+    };
   }, [inControl]);
 
   // A changed state may let it open again (a screen switched on, a computer back).
