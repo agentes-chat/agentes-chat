@@ -648,7 +648,7 @@ export class RunnerDaemon implements RequestObserver {
   private readonly refreshPath: (() => void) | undefined;
   /** `hello.windowsBuild` (`CODEX_UNELEVATED_PROTOCOL`): a Windows computer's build; null elsewhere. */
   private readonly windowsBuild: string | null;
-  /** `hello.size.cpuModel` and `system`, read once: macOS asks `sw_vers` for its version. */
+  /** `hello.size.cpuModel`, `cores` and `system`, read once: macOS asks `sw_vers` and `sysctl`. */
   private readonly specs = cpuAndSystem();
 
   constructor(private readonly opts: DaemonOptions) {

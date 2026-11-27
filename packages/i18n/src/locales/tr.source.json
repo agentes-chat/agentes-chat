@@ -41814,6 +41814,12 @@
       "other": "{{count}} cores"
     }
   },
+  "devices.threads": {
+    "value": {
+      "one": "{{count}} thread",
+      "other": "{{count}} threads"
+    }
+  },
   "devices.memory": {
     "value": "{{gb}} GB"
   },

@@ -6,6 +6,7 @@ import {
   cgroupCounters,
   combineLoads,
   combineTraffic,
+  coresInCpuinfo,
   cpuAndSystem,
   cpuName,
   diskFigures,
@@ -255,6 +256,21 @@ describe("protocol 22 on the wire", () => {
     expect((hello({ size: odd }) as { size: object }).size).toEqual(size);
     const long = hello({ size: { ...size, cpuModel: "A".repeat(200) } }) as { size: { cpuModel: string } };
     expect(long.size.cpuModel).toHaveLength(80);
+    // Physical cores: a whole number, no more than the logical CPUs.
+    expect((hello({ size: { ...size, cores: 10 } }) as { size: object }).size).toEqual({ ...size, cores: 10 });
+    for (const cores of [0, 15, 2.5, "10"])
+      expect((hello({ size: { ...size, cores } }) as { size: object }).size).toEqual(size);
+  });
+
+  test("physical cores from /proc/cpuinfo: one per (socket, core id); none where it names no core ids", () => {
+    const cpu = (n: number, socket: number, core: number) =>
+      `processor\t: ${n}\nmodel name\t: AMD EPYC 7763\nphysical id\t: ${socket}\ncore id\t\t: ${core}\n`;
+    // Two sockets of 2 cores, 2 threads each: 8 logical CPUs, 4 cores.
+    const smt = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => cpu(n, n >> 2, (n >> 1) & 1)).join("\n");
+    expect(coresInCpuinfo(smt)).toBe(4);
+    expect(coresInCpuinfo("processor\t: 0\nBogoMIPS\t: 50.00\n\nprocessor\t: 1\nBogoMIPS\t: 50.00\n")).toBeUndefined();
+    const here = cpuAndSystem();
+    if (here.cores) expect(here.cores).toBeLessThanOrEqual(os.cpus().length);
   });
 
   test("this computer's processor and system, as the runner reports them", () => {

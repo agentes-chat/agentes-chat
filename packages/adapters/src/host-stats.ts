@@ -80,14 +80,49 @@ export function systemName(platform: NodeJS.Platform = process.platform): string
   return os.type();
 }
 
+/** `/proc/cpuinfo`'s physical cores: its distinct (physical id, core id) pairs; none where it names no core ids (ARM). */
+export function coresInCpuinfo(text: string): number | undefined {
+  const cores = new Set<string>();
+  for (const block of text.split(/\n\s*\n/)) {
+    const core = /^core id\s*:\s*(\d+)/m.exec(block)?.[1];
+    if (core !== undefined) cores.add(`${/^physical id\s*:\s*(\d+)/m.exec(block)?.[1] ?? "0"}:${core}`);
+  }
+  return cores.size || undefined;
+}
+
 /**
- * The processor's name and the system's, as `MachineSize.cpuModel` and `system` say them. Node reads the processor's
- * name where each system keeps it (macOS `machdep.cpu.brand_string`, Linux `/proc/cpuinfo`, Windows the registry's
- * `ProcessorNameString`); an ARM Linux's cpuinfo often names none, so it is left out there.
+ * The physical cores, where the system says them cheaply: macOS `hw.physicalcpu`, Linux `/proc/cpuinfo`. Windows keeps
+ * the count only behind WMI (a PowerShell start of a second or more), so none there: its page says threads.
  */
-export function cpuAndSystem(platform: NodeJS.Platform = process.platform): Pick<MachineSize, "cpuModel" | "system"> {
+function physicalCores(platform: NodeJS.Platform): number | undefined {
+  if (platform === "darwin") {
+    const n = Number(spawnSync("sysctl", ["-n", "hw.physicalcpu"], { encoding: "utf8" }).stdout?.trim());
+    return Number.isInteger(n) && n > 0 ? n : undefined;
+  }
+  if (platform !== "linux") return undefined;
+  try {
+    return coresInCpuinfo(readFileSync("/proc/cpuinfo", "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The processor's name, its physical cores and the system's, as `MachineSize.cpuModel`, `cores` and `system` say
+ * them. Node reads the processor's name where each system keeps it (macOS `machdep.cpu.brand_string`, Linux
+ * `/proc/cpuinfo`, Windows the registry's `ProcessorNameString`); an ARM Linux's cpuinfo often names none, so it is
+ * left out there.
+ */
+export function cpuAndSystem(
+  platform: NodeJS.Platform = process.platform,
+): Pick<MachineSize, "cpuModel" | "cores" | "system"> {
   const cpu = cpuName(os.cpus()[0]?.model ?? "");
-  return { ...(cpu && cpu.toLowerCase() !== "unknown" ? { cpuModel: cpu } : {}), system: systemName(platform) };
+  const cores = physicalCores(platform);
+  return {
+    ...(cpu && cpu.toLowerCase() !== "unknown" ? { cpuModel: cpu } : {}),
+    ...(cores && cores <= machineCpus() ? { cores } : {}),
+    system: systemName(platform),
+  };
 }
 
 /**

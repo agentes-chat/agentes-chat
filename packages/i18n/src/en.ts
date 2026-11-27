@@ -17586,6 +17586,8 @@ export const en = {
     cpus_other: "{{count}} CPU",
     cores_one: "{{count}} core",
     cores_other: "{{count}} cores",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulator", simulator: "Simulator" },

@@ -18140,6 +18140,10 @@
     "cores_few": "{{count}} ядра",
     "cores_many": "{{count}} ядер",
     "cores_other": "{{count}} ядра",
+    "threads_one": "{{count}} поток",
+    "threads_few": "{{count}} потока",
+    "threads_many": "{{count}} потоков",
+    "threads_other": "{{count}} потока",
     "memory": "{{gb}} ГБ",
     "system": {
       "android": "Android {{version}}",

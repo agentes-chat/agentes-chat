@@ -161,6 +161,7 @@ test("the list: the workspace's computer first, each computer's status, its phon
   expect(labBox).toMatchObject({
     cpus: 8,
     cpuModel: null,
+    cores: null,
     system: null,
     memoryGb: 16,
     status: { kind: "paused", until: null },
@@ -170,11 +171,20 @@ test("the list: the workspace's computer first, each computer's status, its phon
   await f.db
     .update(schema.machines)
     .set({
-      size: { cpus: 12, memoryGb: 32, diskGb: 1000, maxTasks: 6, cpuModel: "Apple M4 Pro", system: "macOS 26.1" },
+      size: {
+        cpus: 12,
+        memoryGb: 32,
+        diskGb: 1000,
+        maxTasks: 6,
+        cpuModel: "Apple M4 Pro",
+        cores: 12,
+        system: "macOS 26.1",
+      },
     })
     .where(eq(schema.machines.id, mac));
   expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]).toMatchObject({
     cpuModel: "Apple M4 Pro",
+    cores: 12,
     system: "macOS 26.1",
     maxTasks: 6,
     status: { kind: "busy", running: 1, max: 6 },

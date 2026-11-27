@@ -16495,6 +16495,7 @@
     "cloud": "Cloud",
     "cpus_other": "{{count}} CPU",
     "cores_other": "{{count}} inti",
+    "threads_other": "{{count}} thread",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

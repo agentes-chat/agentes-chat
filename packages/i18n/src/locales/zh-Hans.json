@@ -16503,6 +16503,7 @@
     "cloud": "Cloud",
     "cpus_other": "{{count}} 个 CPU",
     "cores_other": "{{count}} 核",
+    "threads_other": "{{count}} 线程",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

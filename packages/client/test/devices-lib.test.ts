@@ -908,13 +908,22 @@ test("Ligar on an offline simulator, Desligar on one running and free; never a r
 });
 
 describe("a computer's system and processor", () => {
-  test("the version and the processor's name its runner said, the cores aside; an older runner's family and cores", () => {
-    const said = computer({ cpus: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+  test("the version and the processor's name its runner said, the cores aside; an older runner's family and threads", () => {
+    const said = computer({ cpus: 14, cores: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
     expect(systemText(t, said)).toBe("macOS 26.1");
     expect(processorText(t, said)).toEqual({ name: "Apple M4 Pro", cores: "14 cores" });
+    // Logical CPUs are threads: cores only where the runner counted them.
+    expect(processorText(t, computer({ cpus: 16, cores: 8, cpuModel: "AMD Ryzen 7 7700X" }))).toEqual({
+      name: "AMD Ryzen 7 7700X",
+      cores: "8 cores, 16 threads",
+    });
+    expect(processorText(t, computer({ cpus: 16, cores: null, cpuModel: "Intel Core i7-12700H" }))).toEqual({
+      name: "Intel Core i7-12700H",
+      cores: "16 threads",
+    });
     const older = computer({});
     expect(systemText(t, older)).toBe("macOS");
-    expect(processorText(t, older)).toEqual({ name: "12 cores", cores: null });
+    expect(processorText(t, older)).toEqual({ name: "12 threads", cores: null });
     expect(processorText(t, computer({ cpus: null }))).toBeNull();
     expect(processorText(t, computer({ cpus: null, cpuModel: "AMD EPYC 7763" }))).toEqual({
       name: "AMD EPYC 7763",

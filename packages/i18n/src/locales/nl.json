@@ -17116,6 +17116,8 @@
     "cpus_other": "{{count}} CPU's",
     "cores_one": "{{count}} kern",
     "cores_other": "{{count}} kernen",
+    "threads_one": "{{count}} thread",
+    "threads_other": "{{count}} threads",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

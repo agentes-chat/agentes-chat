@@ -17497,6 +17497,8 @@ export const ptBR = {
     cpus_other: "{{count}} CPUs",
     cores_one: "{{count}} núcleo",
     cores_other: "{{count}} núcleos",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulador", simulator: "Simulador" },

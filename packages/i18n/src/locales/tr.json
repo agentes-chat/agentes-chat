@@ -16977,6 +16977,8 @@
     "cpus_other": "{{count}} CPU",
     "cores_one": "{{count}} çekirdek",
     "cores_other": "{{count}} çekirdek",
+    "threads_one": "{{count}} iş parçacığı",
+    "threads_other": "{{count}} iş parçacığı",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

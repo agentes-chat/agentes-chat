@@ -16435,6 +16435,7 @@
     "cloud": "Cloud",
     "cpus_other": "CPU {{count}}個",
     "cores_other": "{{count}} コア",
+    "threads_other": "{{count}} スレッド",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

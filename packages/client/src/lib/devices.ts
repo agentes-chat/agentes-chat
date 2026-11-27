@@ -258,14 +258,21 @@ export { osName };
 export const systemText = (t: TFunction, d: Pick<ComputerDevice, "os" | "system">) => d.system || osName(t, d.os);
 
 /**
- * A computer's processor as its page says it: its name ("Apple M4 Pro") with its cores aside ("14 cores", a tooltip),
- * or the cores alone when its runner is older and names no processor. Null when neither is known.
+ * A computer's processor as its page says it: its name ("Apple M4 Pro") with its count aside (a tooltip), or the count
+ * alone when its runner is older and names no processor. Null when neither is known. `cpus` counts logical CPUs, so
+ * without the physical cores it is said as threads: "8 cores, 16 threads" where both are known and differ, "14 cores"
+ * where they match, "16 threads" where the runner said no cores (older, or Windows).
  */
 export function processorText(
   t: TFunction,
-  d: Pick<ComputerDevice, "cpus" | "cpuModel">,
+  d: Pick<ComputerDevice, "cpus" | "cpuModel" | "cores">,
 ): { name: string; cores: string | null } | null {
-  const cores = d.cpus ? t("devices.cores", { count: d.cpus }) : null;
+  const threads = d.cpus ? t("devices.threads", { count: d.cpus }) : null;
+  const cores = !d.cores
+    ? threads
+    : d.cores === d.cpus || !threads
+      ? t("devices.cores", { count: d.cores })
+      : `${t("devices.cores", { count: d.cores })}, ${threads}`;
   if (d.cpuModel) return { name: d.cpuModel, cores };
   return cores ? { name: cores, cores: null } : null;
 }

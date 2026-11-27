@@ -214,7 +214,7 @@ describe("Settings › Devices", () => {
       const list = acmeDevices();
       const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
       if (!mac) throw new Error("fixture");
-      Object.assign(mac, { cpus: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+      Object.assign(mac, { cpus: 14, cores: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
       devices.set(list);
     });
     const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
@@ -235,11 +235,11 @@ describe("Settings › Devices", () => {
     expect(facts[3]?.[0]).toBe("Toolchains found");
   });
 
-  test("a computer's page from an older runner: the system's family, and the processor as its cores", async () => {
+  test("a computer's page from an older runner: the system's family, and the processor as its threads", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
     const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
     const facts = [...card.querySelectorAll("details .dv-facts > div")].map((f) => f.textContent);
-    expect(facts.slice(0, 2)).toEqual(["SystemmacOS", "Processor12 cores"]);
+    expect(facts.slice(0, 2)).toEqual(["SystemmacOS", "Processor12 threads"]);
   });
 
   test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {

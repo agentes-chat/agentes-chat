@@ -18195,6 +18195,10 @@
     "cores_few": "{{count}} rdzenie",
     "cores_many": "{{count}} rdzeni",
     "cores_other": "{{count}} rdzenia",
+    "threads_one": "{{count}} wątek",
+    "threads_few": "{{count}} wątki",
+    "threads_many": "{{count}} wątków",
+    "threads_other": "{{count}} wątku",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

@@ -188,6 +188,8 @@ export interface MachineSizeRecord {
   /** The processor's and the system's names (`MachineSize.cpuModel`, `system`); absent from an older runner. */
   cpuModel?: string;
   system?: string;
+  /** Physical cores (`MachineSize.cores`); `cpus` counts logical CPUs. Absent from an older runner and Windows. */
+  cores?: number;
 }
 
 /** How busy a computer got over the last day (protocol 22: `MachineLoad` in the protocol), and when it said so. */

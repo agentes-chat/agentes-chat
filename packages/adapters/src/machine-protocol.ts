@@ -303,6 +303,11 @@ export interface MachineSize {
   room?: TaskRoomReport;
   /** The processor's name (`Apple M4 Pro`, `AMD EPYC 7763`). Absent from an older runner: no protocol number. */
   cpuModel?: string;
+  /**
+   * Its physical cores, where the system says them (macOS, Linux on x86); `cpus` counts logical CPUs, threads on a
+   * processor with simultaneous multithreading. Absent from an older runner and from Windows.
+   */
+  cores?: number;
   /** The system and its version (`macOS 26.1`, `Ubuntu 24.04`, `Windows 11`). Absent from an older runner. */
   system?: string;
 }
@@ -5511,6 +5516,7 @@ export function parseMachineSize(v: unknown): MachineSize | null {
     ...(taskLimit(v.maxTasks) ? { maxTasks: v.maxTasks } : {}),
     ...(room ? { room } : {}),
     ...(cpuModel ? { cpuModel } : {}),
+    ...(inRange(v.cores, [1, v.cpus]) ? { cores: v.cores } : {}),
     ...(system ? { system } : {}),
   };
 }

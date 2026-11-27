@@ -123,6 +123,8 @@ export interface ComputerDevice {
   cpus: number | null;
   /** The processor's name (`Apple M4 Pro`), as its runner said it; null: an older runner. */
   cpuModel: string | null;
+  /** Its physical cores where its runner said them (`cpus` counts threads); null: an older runner, or Windows. */
+  cores: number | null;
   /** The system and its version (`macOS 26.1`); null: an older runner, or the workspace's own computer. */
   system: string | null;
   memoryGb: number | null;
@@ -495,6 +497,7 @@ export async function listDevices(
       hostname: managed ? "" : m.hostname,
       cpus: m.size?.cpus ?? null,
       cpuModel: m.size?.cpuModel ?? null,
+      cores: m.size?.cores ?? null,
       system: managed ? null : (m.size?.system ?? null),
       memoryGb: m.size?.memoryGb ?? null,
       ownerUserId: m.pairedByUserId,
