@@ -318,8 +318,8 @@ export class RunnerOutdatedError extends Error {
   ) {
     super(
       missions
-        ? `The runner on the computer ${machineName} is too old for missions. ${runnerUpdateWay(computer)}`
-        : `The runner on the computer ${machineName} is too old for background tasks (until then use run_code). ${runnerUpdateWay(computer)}`,
+        ? `The agentes.chat program on the computer ${machineName} is too old for missions. ${runnerUpdateWay(computer)}`
+        : `The agentes.chat program on the computer ${machineName} is too old for background tasks (until then use run_code). ${runnerUpdateWay(computer)}`,
     );
     this.name = "RunnerOutdatedError";
   }
@@ -366,8 +366,8 @@ export async function taskSignIn(
   if (!account && machine.pairedByUserId === null) {
     if (own) {
       throw refuse(
-        `The runner on ${machine.name} is too old to sign tasks in with your ${plan} account.`,
-        "the computer's runner needs an update before tasks can use your account, so try again later",
+        `The agentes.chat program on ${machine.name} is too old to sign tasks in with your ${plan} account.`,
+        "agentes.chat on the computer needs an update before tasks can use your account, so try again later",
       );
     }
     const other = input.executor === "codex" ? "claude" : "codex";

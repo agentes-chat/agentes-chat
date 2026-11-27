@@ -9,6 +9,7 @@ import type {
 import { useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
+  doctorShown,
   findPhone,
   iosOf,
   iphoneOverWifi,
@@ -20,6 +21,7 @@ import {
   phoneLink,
   phoneSystem,
   powerChoice,
+  RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
   SPILL_USES,
   shareInternetText,
@@ -30,6 +32,7 @@ import {
   taskChoices,
   taskLimitLine,
   tasksAutoText,
+  terminalInstall,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt } from "@agenteschat/client/lib/format";
@@ -181,6 +184,7 @@ function StatusLine({
   ios,
   text,
   maintenance,
+  cli,
 }: {
   status: PhoneDevice["status"];
   host?: string;
@@ -192,9 +196,11 @@ function StatusLine({
   text?: string | null;
   /** What we do to the computer (ADR 0257): its line, with its ⓘ. */
   maintenance?: ComputerMaintenance | null;
+  /** Installed from the Terminal (`terminalInstall`). */
+  cli?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios, maintenance });
+  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios, maintenance, cli });
   const label = status.kind === "in_use" && status.label ? status.label : null;
   if (!sentence && !action) return null;
   return (
@@ -398,8 +404,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
   const extra = Boolean(
     machine &&
       ((machine.workspace && machine.mode !== "system") ||
-        (machine.kind === "managed" &&
-          (machine.networkTransition || (machine.online && (machine.egress?.ip || machine.egressVia))))),
+        (machine.online && machine.egressVia) ||
+        (machine.kind === "managed" && (machine.networkTransition || (machine.online && machine.egress?.ip)))),
   );
   return (
     <>
@@ -451,6 +457,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
             pausedFromApps ?? (status.kind === "busy" && !d.maintenance ? taskLimitLine(t, d, tasksEditable) : null)
           }
           maintenance={d.maintenance}
+          cli={terminalInstall(machine)}
         />
         {(d.permissions ?? []).map((need) => (
           <PermissionWait key={need.permission} need={need} computer={d.name} />
@@ -461,6 +468,12 @@ function ComputerPage({ machineId }: { machineId: string }) {
             <span className="small muted">{t(`machines.runnerBehind.${machine.update}`, { computer: d.name })}</span>
             {machine.update === "command" && <CommandBlock command={RUNNER_UPDATE_COMMAND} />}
           </>
+        )}
+        {machine?.canManage && doctorShown(status, machine) && (
+          <Disclosure summary={t("devices.technical.title")}>
+            <span className="small muted">{t("devices.technical.doctor")}</span>
+            <CommandBlock command={RUNNER_DOCTOR_COMMAND} />
+          </Disclosure>
         )}
         <Facts facts={facts} />
         {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}

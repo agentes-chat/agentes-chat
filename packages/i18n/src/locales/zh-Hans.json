@@ -16217,13 +16217,13 @@
       "browser_download": "无法下载智能体浏览器。请检查这台电脑的网络连接，下次使用时会再试一次。",
       "browser_checksum": "智能体浏览器的下载文件已损坏，因此没有使用。下次使用时会再试一次。",
       "desktop_use_linux": "智能体屏幕上的应用可在带有智能体屏幕的 Linux 电脑上运行。",
-      "desktop_use_own_user": "智能体屏幕上的应用需要每个智能体在这台电脑上以自己的用户身份工作（系统模式）。这里所有智能体都以 runner 的用户身份工作。",
+      "desktop_use_own_user": "智能体屏幕上的应用需要每个智能体在这台电脑上以自己的用户身份工作（系统模式）。这里所有智能体都以同一个用户身份工作，也就是运行 agentes.chat 的用户。",
       "desktop_use_install": "请在这台电脑上安装智能体屏幕上的应用所需的组件：",
       "desktop_unavailable": "智能体屏幕无法在这台电脑上运行。",
       "desktop_linux": "智能体屏幕只能在 Linux 电脑上运行。",
       "desktop_install": "请在这台电脑上安装智能体屏幕：",
-      "not_as_root": "智能体的屏幕和终端从不以 root 身份运行。请用普通用户运行 runner。",
-      "runner_bun_old": "这需要 runner 运行在 Bun 1.3.5 或更新版本上。请更新这台电脑上的 runner。",
+      "not_as_root": "智能体的屏幕和终端从不以 root 身份运行。请以普通用户身份运行 agentes.chat。",
+      "runner_bun_old": "这需要运行在 Bun 1.3.5 或更新版本上的 agentes.chat。请更新这台电脑上的 agentes.chat。",
       "terminal_unsupported": "终端只能在 Linux 和 Mac 电脑上运行。"
     },
     "egress": {
@@ -16233,7 +16233,6 @@
       "hint": "智能体浏览网页时网站看到的地址。电脑的网络变化时会随之更新。",
       "waiting": "正在重新连接智能体的网络。网络恢复前，它们的连接会等待。",
       "via": "智能体正在使用 {{name}} 的网络",
-      "viaBy": "智能体正在使用 {{name}}（{{person}}）的网络",
       "viaHint": "网站会看到那台电脑的位置。连接它的人可以在它的页面上关闭。"
     },
     "maintenance": {
@@ -16670,6 +16669,8 @@
       "paused": "{{host}} 已暂停，控制会等到它恢复。",
       "held": "此工作区已暂停，恢复后才能控制。",
       "lost": "控制已结束。你又在观看 {{name}} 了。",
+      "controlLate": "未能及时开始控制。{{host}} 仍在准备 {{name}}，请一分钟后再试。",
+      "controlFailed": "无法控制 {{name}}。请重试，或在 {{host}} 上重新启动 agentes.chat 应用。",
       "typeLabel": "在 {{name}} 上输入"
     },
     "status": {
@@ -16691,7 +16692,7 @@
       "withHost": "与 {{host}} 一起",
       "lastSeen": "上次在线 {{time}}",
       "offlineUnresponsive": "{{time}} 起无响应",
-      "offlineStopped": "runner 于 {{time}} 停止",
+      "offlineStopped": "agentes.chat 于 {{time}} 停止",
       "offlineDropped": "连接于 {{time}} 断开"
     },
     "line": {
@@ -16706,9 +16707,14 @@
       "offline": "智能体会等它回来。",
       "offlineSeen": "上次在线 {{time}}。智能体会等它回来。",
       "offlineWithHost": "{{host}} 已离线。智能体会等它回来。",
-      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请在这台电脑上运行 `{{command}}`。",
-      "offlineStopped": "runner 于 {{time}} 停止。请重新启动它，或在这台电脑上运行 `{{command}}` 查看原因。",
-      "offlineDropped": "连接于 {{time}} 断开，会自动重连。如果没有恢复，请在这台电脑上运行 `{{command}}`。"
+      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请确认它已开机并连上网络。",
+      "offlineStopped": "这台电脑上的 agentes.chat 应用于 {{time}} 停止运行。请重新打开应用。",
+      "offlineStoppedCli": "这台电脑上的 agentes.chat 于 {{time}} 停止运行。请在这台电脑上重新启动它。",
+      "offlineDropped": "连接于 {{time}} 断开，会自动重连。"
+    },
+    "technical": {
+      "title": "技术细节",
+      "doctor": "要查看原因，请在这台电脑上运行："
     },
     "reason": {
       "locked": "手机已锁定",
@@ -20112,7 +20118,7 @@
       "people": "所有人立即只能查看，并会收到邮件",
       "peopleQuiet": "所有人立即只能查看",
       "computer": "它的电脑立即停止并被清空",
-      "computers": "已连接的电脑会断开连接。智能体的文件夹会保留在电脑上，直到移除运行程序。",
+      "computers": "已连接的电脑会断开连接。智能体的文件夹会保留在电脑上，直到从中移除 agentes.chat。",
       "connectors": "连接器和邮箱会断开连接"
     },
     "undo": "在 {{date}} {{time}} 之前，任何所有者都可以恢复它。之后将无法撤销。",
@@ -20471,14 +20477,6 @@
       "doneByYou": "你于 {{time}} 完成。{{agent}} 重新查看了屏幕并继续工作。",
       "doneByYou_female": "你于 {{time}} 完成。{{agent}} 重新查看了屏幕并继续工作。"
     },
-    "control": {
-      "notice": "{{name}} 电脑上的程序可以看到屏幕，以及你输入或粘贴的内容。",
-      "notice_female": "{{name}} 电脑上的程序可以看到屏幕，以及你输入或粘贴的内容。"
-    },
-    "session": {
-      "check": "安全检查",
-      "screening": "我们可能会检查此屏幕上的文字是否存在滥用行为，只保留检查结果。屏幕上不显示的内容（比如命令行中输入的密码）绝不会被捕获。"
-    },
     "after": {
       "titleNoSite": "使用了屏幕",
       "noSite": "打开应用之前"
@@ -20488,8 +20486,6 @@
       "group_female": "{{name}} 的屏幕"
     },
     "watch": {
-      "notice": "{{name}} 电脑上的程序可以看到屏幕，以及在那里输入或粘贴的任何内容。",
-      "notice_female": "{{name}} 电脑上的程序可以看到屏幕，以及在那里输入或粘贴的任何内容。",
       "step": {
         "desktop_open": "打开了 {{detail}}",
         "desktop_open_plain": "打开了一个应用",

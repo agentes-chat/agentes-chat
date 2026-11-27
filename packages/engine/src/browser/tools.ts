@@ -443,7 +443,7 @@ export function runnerFailureText(error: string | undefined, code?: string): str
 
 /** After a browser that stopped answering: what the agent does, and doesn't, next. */
 const NOT_RESPONDING =
-  "Don't guess why and don't try again right away: tell the person the browser on that computer isn't responding, and that the agentes app's runner log there says why.";
+  "Don't guess why and don't try again right away: tell the person the browser on that computer isn't responding, and that the agentes.chat app's log there says why.";
 
 /** Why a secret can't be typed in the browser. */
 function secretMissingText(name: string, held: { site: string | null; gone?: boolean } | null) {

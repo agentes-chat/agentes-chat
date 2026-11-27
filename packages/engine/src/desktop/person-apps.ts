@@ -113,7 +113,7 @@ export async function agentPersonAppsStatus(
   if (!status || status.orgId !== orgId) return no(REMOVED_COMPUTER_MESSAGE);
   if (status.protocol < PERSON_APPS_PROTOCOL) {
     return no(
-      `The runner on ${status.name} is too old for using its apps. Tell the person: its owner should update it.`,
+      `The agentes.chat program on ${status.name} is too old for using its apps. Tell the person: its owner should update it.`,
     );
   }
   const info = status.executors.apps;

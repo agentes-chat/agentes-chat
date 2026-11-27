@@ -140,6 +140,7 @@ export * from "./dms";
 export * from "./docx";
 export * from "./drive-folders";
 export * from "./early-access";
+export * from "./egress-fetch";
 export * from "./egress-share";
 export * from "./email";
 export * from "./email-change";

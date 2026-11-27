@@ -17214,14 +17214,15 @@ export const ptBR = {
         "O download do navegador dos agentes veio com defeito e não foi usado. Ele tenta de novo no próximo uso.",
       desktop_use_linux: "O uso da área de trabalho roda em computadores Linux com as áreas de trabalho dos agentes.",
       desktop_use_own_user:
-        "O uso da área de trabalho precisa que cada agente trabalhe como seu próprio usuário neste computador (modo sistema). Aqui todos trabalham como o usuário do runner.",
+        "O uso da área de trabalho precisa que cada agente trabalhe como seu próprio usuário neste computador (modo sistema). Aqui todos trabalham como o mesmo usuário, o que roda o agentes.chat.",
       desktop_use_install: "Instale neste computador o que o uso da área de trabalho precisa:",
       desktop_unavailable: "As áreas de trabalho dos agentes não rodam neste computador.",
       desktop_linux: "As áreas de trabalho dos agentes rodam só em computadores Linux.",
       desktop_install: "Instale neste computador as áreas de trabalho dos agentes:",
       not_as_root:
-        "As áreas de trabalho e os terminais dos agentes nunca rodam como root. Rode o runner como um usuário comum.",
-      runner_bun_old: "Isso precisa do runner no Bun 1.3.5 ou mais novo. Atualize o runner neste computador.",
+        "As áreas de trabalho e os terminais dos agentes nunca rodam como root. Rode o agentes.chat como um usuário comum.",
+      runner_bun_old:
+        "Isso precisa do agentes.chat no Bun 1.3.5 ou mais novo. Atualize o agentes.chat neste computador.",
       terminal_unsupported: "Os terminais rodam só em computadores Linux e Mac.",
     },
     egress: {
@@ -17231,7 +17232,6 @@ export const ptBR = {
       hint: "O endereço que os sites veem quando os agentes navegam. Ele acompanha as mudanças de rede do computador.",
       waiting: "Reconectando a internet dos agentes. As conexões deles esperam até ela voltar.",
       via: "Agentes usam a internet de {{name}}",
-      viaBy: "Agentes usam a internet de {{name}} ({{person}})",
       viaHint: "Os sites veem a localização desse computador. Quem o conectou pode desligar na página dele.",
     },
     maintenance: {
@@ -17673,6 +17673,12 @@ export const ptBR = {
       paused: "{{host}} está pausado, então o controle espera até ele voltar.",
       held: "Este workspace está pausado, então o controle espera até ele voltar a ficar ativo.",
       lost: "O controle acabou. Você voltou a assistir {{name}}.",
+      /** O controle não mostrou nada a tempo (o assistente de testes de um iPhone ainda compilando ou abrindo). */
+      controlLate:
+        "O controle não começou a tempo. {{host}} ainda está preparando {{name}}: tente de novo em um minuto.",
+      /** O controle não conseguiu começar no computador. */
+      controlFailed:
+        "Não deu para assumir o controle de {{name}}. Tente de novo ou reinicie o app do agentes.chat no {{host}}.",
       typeLabel: "Digitar em {{name}}",
     },
     status: {
@@ -17694,7 +17700,7 @@ export const ptBR = {
       withHost: "com {{host}}",
       lastSeen: "visto às {{time}}",
       offlineUnresponsive: "parou de responder às {{time}}",
-      offlineStopped: "o runner parou às {{time}}",
+      offlineStopped: "o agentes.chat parou às {{time}}",
       offlineDropped: "a conexão caiu às {{time}}",
     },
     line: {
@@ -17713,9 +17719,14 @@ export const ptBR = {
       offlineSeen: "Visto às {{time}}. Os agentes esperam ele voltar.",
       offlineWithHost: "{{host}} está offline. Os agentes esperam ele voltar.",
       offlineUnresponsive:
-        "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode `{{command}}` nele.",
-      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode `{{command}}` nele para ver o motivo.",
-      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode `{{command}}` nele.",
+        "Parou de responder às {{time}}, talvez sem internet ou sobrecarregado. Veja se ele está ligado e com internet.",
+      offlineStopped: "O app agentes.chat parou neste computador às {{time}}. Abra o app de novo.",
+      offlineStoppedCli: "O agentes.chat parou neste computador às {{time}}. Inicie de novo nele.",
+      offlineDropped: "A conexão caiu às {{time}}. Ela volta sozinha.",
+    },
+    technical: {
+      title: "Detalhes técnicos",
+      doctor: "Para ver o motivo, rode isto nele:",
     },
     reason: {
       locked: "O celular está bloqueado",
@@ -21373,7 +21384,7 @@ export const ptBR = {
       peopleQuiet: "Todos passam a só ler",
       computer: "O computador dele para agora e é apagado",
       computers:
-        "Os computadores conectados são desconectados. As pastas dos agentes ficam neles até o runner ser removido.",
+        "Os computadores conectados são desconectados. As pastas dos agentes ficam neles até o agentes.chat ser removido deles.",
       connectors: "Os conectores e as caixas de email são desconectados",
     },
     undo: "Qualquer dono pode restaurar até {{date}} às {{time}}. Depois disso, não tem volta.",
@@ -21796,16 +21807,6 @@ export const ptBR = {
       doneByYou: "Feito por você às {{time}}. O {{agent}} olhou a tela de novo e seguiu.",
       doneByYou_female: "Feito por você às {{time}}. A {{agent}} olhou a tela de novo e seguiu.",
     },
-    control: {
-      notice: "Os programas do computador do {{name}} veem a tela e o que você digita ou cola.",
-      notice_female: "Os programas do computador da {{name}} veem a tela e o que você digita ou cola.",
-    },
-    /** The ⓘ beside the control line, on agentes.chat Cloud only (ADR 0076). */
-    session: {
-      check: "Verificações de segurança",
-      screening:
-        "Podemos verificar o texto desta tela para impedir abuso. Guardamos só o resultado. O que a tela não mostra, como uma senha num prompt, nunca é capturado.",
-    },
     /** What the agent did on its desktop, on its message after the run (ADR 0062); the rest is the browser card's. */
     after: {
       titleNoSite: "Usou a tela",
@@ -21816,9 +21817,6 @@ export const ptBR = {
       group_female: "Tela da {{name}}",
     },
     watch: {
-      /** Under the screen while watching, where whoever watches may not be the one typing. */
-      notice: "Os programas do computador do {{name}} veem a tela e tudo o que é digitado ou colado nele.",
-      notice_female: "Os programas do computador da {{name}} veem a tela e tudo o que é digitado ou colado nele.",
       step: {
         desktop_open: "Abriu {{detail}}",
         desktop_open_plain: "Abriu um app",

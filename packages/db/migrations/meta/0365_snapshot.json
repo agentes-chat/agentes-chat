@@ -1,5 +1,5 @@
 {
-  "id": "3a509a81-6880-41d5-bdfe-b6b355bcc914",
+  "id": "0bd62be0-fa5f-4433-b3b4-c4ef826ee68d",
   "prevId": "21e30c84-adb5-4075-8d50-aac5c70811ea",
   "version": "7",
   "dialect": "postgresql",
@@ -13669,6 +13669,12 @@
         "egress_via": {
           "name": "egress_via",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "egress_lent_at": {
+          "name": "egress_lent_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },

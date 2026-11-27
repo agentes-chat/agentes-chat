@@ -17321,13 +17321,13 @@
       "browser_download": "Impossible de télécharger le navigateur des agents. Vérifiez la connexion de cet ordinateur et il réessaiera à la prochaine utilisation.",
       "browser_checksum": "Le téléchargement du navigateur des agents est arrivé abîmé, il n'a donc pas été utilisé. Il réessaiera à la prochaine utilisation.",
       "desktop_use_linux": "Les applications sur les écrans des agents fonctionnent sur les ordinateurs Linux qui ont les écrans des agents.",
-      "desktop_use_own_user": "Les applications sur les écrans demandent que chaque agent travaille avec son propre utilisateur sur cet ordinateur (mode système). Ici tous les agents travaillent avec l'utilisateur du runner.",
+      "desktop_use_own_user": "Les applications sur les écrans demandent que chaque agent travaille avec son propre utilisateur sur cet ordinateur (mode système). Ici tous les agents travaillent avec le même utilisateur, celui qui exécute agentes.chat.",
       "desktop_use_install": "Installez sur cet ordinateur ce dont les applications sur les écrans ont besoin :",
       "desktop_unavailable": "Les écrans des agents ne peuvent pas fonctionner sur cet ordinateur.",
       "desktop_linux": "Les écrans des agents fonctionnent uniquement sur les ordinateurs Linux.",
       "desktop_install": "Installez les écrans des agents sur cet ordinateur :",
-      "not_as_root": "Les écrans et les terminaux des agents ne fonctionnent jamais en root. Lancez le runner avec un utilisateur normal.",
-      "runner_bun_old": "Il faut le runner sur Bun 1.3.5 ou plus récent. Mettez à jour le runner sur cet ordinateur.",
+      "not_as_root": "Les écrans et terminaux des agents ne tournent jamais en root. Lancez agentes.chat avec un utilisateur normal.",
+      "runner_bun_old": "Il faut agentes.chat sur Bun 1.3.5 ou plus récent. Mettez à jour agentes.chat sur cet ordinateur.",
       "terminal_unsupported": "Les terminaux fonctionnent uniquement sur les ordinateurs Linux et Mac."
     },
     "egress": {
@@ -17337,7 +17337,6 @@
       "hint": "L’adresse que voient les sites quand les agents naviguent. Elle change quand le réseau de l’ordinateur change.",
       "waiting": "Les agents se reconnectent à internet. Leurs connexions attendent son retour.",
       "via": "Les agents utilisent la connexion internet de {{name}}",
-      "viaBy": "Les agents utilisent la connexion internet de {{name}} ({{person}})",
       "viaHint": "Les sites voient l’emplacement de cet ordinateur. La personne qui l’a connecté peut couper ça sur sa page."
     },
     "maintenance": {
@@ -17780,6 +17779,8 @@
       "paused": "{{host}} est en pause, le contrôle attend donc sa reprise.",
       "held": "Cet espace de travail est en pause, donc la prise de contrôle attend qu'il soit de nouveau actif.",
       "lost": "Le contrôle est terminé. Vous regardez à nouveau {{name}}.",
+      "controlLate": "La prise de contrôle n'a pas démarré à temps. {{host}} prépare encore {{name}} : réessayez dans une minute.",
+      "controlFailed": "Impossible de prendre le contrôle de {{name}}. Réessayez, ou redémarrez l'app agentes.chat sur {{host}}.",
       "typeLabel": "Écrire sur {{name}}"
     },
     "status": {
@@ -17801,7 +17802,7 @@
       "withHost": "avec {{host}}",
       "lastSeen": "vu pour la dernière fois {{time}}",
       "offlineUnresponsive": "ne répond plus depuis {{time}}",
-      "offlineStopped": "runner arrêté à {{time}}",
+      "offlineStopped": "agentes.chat arrêté à {{time}}",
       "offlineDropped": "connexion perdue à {{time}}"
     },
     "line": {
@@ -17818,9 +17819,14 @@
       "offline": "Les agents attendent son retour.",
       "offlineSeen": "Vu pour la dernière fois {{time}}. Les agents attendent son retour.",
       "offlineWithHost": "{{host}} est hors ligne. Les agents attendent son retour.",
-      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans réseau ou surchargé. Lancez `{{command}}` dessus.",
-      "offlineStopped": "Le runner s'est arrêté à {{time}}. Relancez-le, ou lancez `{{command}}` dessus pour savoir pourquoi.",
-      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même. Sinon, lancez `{{command}}` dessus."
+      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans internet ou surchargé. Vérifiez qu'il est allumé et connecté.",
+      "offlineStopped": "L'app agentes.chat s'est arrêtée sur cet ordinateur à {{time}}. Rouvrez l'app.",
+      "offlineStoppedCli": "agentes.chat s'est arrêté sur cet ordinateur à {{time}}. Relancez-le dessus.",
+      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même."
+    },
+    "technical": {
+      "title": "Détails techniques",
+      "doctor": "Pour voir pourquoi, lancez ceci dessus :"
     },
     "reason": {
       "locked": "Le téléphone est verrouillé",
@@ -21332,7 +21338,7 @@
       "people": "Dès maintenant, tout le monde peut seulement le lire et reçoit un e-mail",
       "peopleQuiet": "Dès maintenant, tout le monde peut seulement le lire",
       "computer": "Son ordinateur s'arrête dès maintenant et est effacé",
-      "computers": "Les ordinateurs connectés sont déconnectés. Les dossiers des agents y restent jusqu'à la suppression du runner.",
+      "computers": "Les ordinateurs connectés sont déconnectés. Les dossiers des agents y restent jusqu'à ce qu'agentes.chat en soit retiré.",
       "connectors": "Les connecteurs et les boîtes mail sont déconnectés"
     },
     "undo": "N'importe quel propriétaire peut le restaurer jusqu'au {{date}} à {{time}}. Ensuite, impossible de revenir en arrière.",
@@ -21701,14 +21707,6 @@
       "doneByYou": "Fait par vous à {{time}}. {{agent}} a regardé l'écran à nouveau et a continué.",
       "doneByYou_female": "Fait par vous à {{time}}. {{agent}} a regardé l'écran à nouveau et a continué."
     },
-    "control": {
-      "notice": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et ce que vous tapez ou collez.",
-      "notice_female": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et ce que vous tapez ou collez."
-    },
-    "session": {
-      "check": "Contrôles de sécurité",
-      "screening": "Nous pouvons vérifier le texte de cet écran pour détecter les abus. Nous ne gardons que le résultat. Ce que l'écran n'affiche pas, comme un mot de passe dans une invite, n'est jamais capturé."
-    },
     "after": {
       "titleNoSite": "A utilisé l'écran",
       "noSite": "Avant d'ouvrir une application"
@@ -21718,8 +21716,6 @@
       "group_female": "Écran de {{name}}"
     },
     "watch": {
-      "notice": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et tout ce qui y est tapé ou collé.",
-      "notice_female": "Les programmes de l'ordinateur de {{name}} peuvent voir l'écran et tout ce qui y est tapé ou collé.",
       "step": {
         "desktop_open": "A ouvert {{detail}}",
         "desktop_open_plain": "A ouvert une application",

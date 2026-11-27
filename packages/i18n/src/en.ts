@@ -17286,13 +17286,13 @@ export const en = {
       browser_checksum: "The agent browser's download came damaged, so it wasn't used. It tries again on its next use.",
       desktop_use_linux: "Desktop use runs on Linux computers with the agents' desktops.",
       desktop_use_own_user:
-        "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the runner's user.",
+        "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the same user, the one agentes.chat runs as.",
       desktop_use_install: "Install what desktop use needs on this computer:",
       desktop_unavailable: "The agents' desktops can't run on this computer.",
       desktop_linux: "The agents' desktops run on Linux computers only.",
       desktop_install: "Install the agents' desktops on this computer:",
-      not_as_root: "The agents' desktops and terminals never run as root. Run the runner as a normal user.",
-      runner_bun_old: "This needs the runner on Bun 1.3.5 or newer. Update the runner on this computer.",
+      not_as_root: "The agents' desktops and terminals never run as root. Run agentes.chat as a normal user.",
+      runner_bun_old: "This needs agentes.chat on Bun 1.3.5 or newer. Update agentes.chat on this computer.",
       terminal_unsupported: "Terminals run on Linux and Mac computers only.",
     },
     egress: {
@@ -17303,7 +17303,6 @@ export const en = {
       waiting: "Reconnecting the agents’ internet. Their connections wait until it’s back.",
       /** The workspace's computer opens websites through a person's computer's internet (ADR 0237). */
       via: "Agents use the internet of {{name}}",
-      viaBy: "Agents use the internet of {{name}} ({{person}})",
       viaHint: "Websites see that computer’s location. Its owner can turn it off on its page.",
     },
     /**
@@ -17778,6 +17777,10 @@ export const en = {
       paused: "{{host}} is paused, so control waits until it's resumed.",
       held: "This workspace is paused, so control waits until it's active again.",
       lost: "Control ended. You're watching {{name}} again.",
+      /** Control showed no picture in its wait (an iPhone's test helper still building or starting): watching again. */
+      controlLate: "Control didn't start in time. {{host}} is still getting {{name}} ready: try again in a minute.",
+      /** Control couldn't start on the computer: watching again. */
+      controlFailed: "Couldn't take control of {{name}}. Try again, or restart the agentes.chat app on {{host}}.",
       typeLabel: "Type on {{name}}",
     },
     status: {
@@ -17799,10 +17802,10 @@ export const en = {
       until: "until {{time}}",
       withHost: "with {{host}}",
       lastSeen: "last seen {{time}}",
-      /** A computer someone brought, by why it went offline: its runner stopped answering pings. */
+      /** A computer someone brought, by why it went offline: agentes.chat there stopped answering pings. */
       offlineUnresponsive: "stopped answering at {{time}}",
-      /** Its runner stopped (its service stopped, the app quit). */
-      offlineStopped: "runner stopped at {{time}}",
+      /** agentes.chat there stopped (its service stopped, the app quit). */
+      offlineStopped: "agentes.chat stopped at {{time}}",
       /** The connection dropped. */
       offlineDropped: "connection dropped at {{time}}",
     },
@@ -17823,11 +17826,19 @@ export const en = {
       offline: "Agents wait for it to come back.",
       offlineSeen: "Last seen {{time}}. Agents wait for it to come back.",
       offlineWithHost: "{{host}} is offline. Agents wait for it to come back.",
-      /** `command`: `agentes-runner doctor`, as code between its backticks. No network, or the computer too busy to answer. */
-      offlineUnresponsive: "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it.",
-      offlineStopped: "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why.",
-      offlineDropped:
-        "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it.",
+      /** No network, or the computer too busy to answer. */
+      offlineUnresponsive:
+        "Stopped answering at {{time}}, maybe no internet or overloaded. Check that it's on and online.",
+      /** The agentes.chat app there quit, or was closed. */
+      offlineStopped: "The agentes.chat app stopped on this computer at {{time}}. Open the app again.",
+      /** agentes.chat installed from the Terminal (no app) stopped there. */
+      offlineStoppedCli: "agentes.chat stopped on this computer at {{time}}. Start it again there.",
+      offlineDropped: "The connection dropped at {{time}}. It reconnects by itself.",
+    },
+    /** Under an offline computer installed from the Terminal, collapsed: the command that tells why. */
+    technical: {
+      title: "Technical details",
+      doctor: "To see why, run this on it:",
     },
     /** Why a device isn't ready, by the code its computer reports. */
     reason: {
@@ -21538,7 +21549,8 @@ export const en = {
       people: "Everyone can only read it from now on and gets an email",
       peopleQuiet: "Everyone can only read it from now on",
       computer: "Its computer stops now and is wiped",
-      computers: "Connected computers are disconnected. The agents' folders stay on them until the runner is removed.",
+      computers:
+        "Connected computers are disconnected. The agents' folders stay on them until agentes.chat is removed from them.",
       connectors: "Connectors and mailboxes are disconnected",
     },
     undo: "Any owner can restore it until {{date}} at {{time}}. After that, there's no undo.",
@@ -21929,15 +21941,6 @@ export const en = {
       doneBy: "Done by {{name}} at {{time}}. {{agent}} looked at the screen again and went on.",
       doneByYou: "Done by you at {{time}}. {{agent}} looked at the screen again and went on.",
     },
-    control: {
-      notice: "Programs on {{name}}'s computer can see the screen and what you type or paste.",
-    },
-    /** The ⓘ beside the control line, on agentes.chat Cloud only (ADR 0076). */
-    session: {
-      check: "Safety checks",
-      screening:
-        "We may check the text on this screen for abuse. We keep only the result. What the screen doesn't show, like a password at a prompt, is never captured.",
-    },
     /** What the agent did on its desktop, on its message after the run (ADR 0062); the rest is the browser card's. */
     after: {
       titleNoSite: "Used the screen",
@@ -21947,8 +21950,6 @@ export const en = {
       group: "{{name}}'s screen",
     },
     watch: {
-      /** Under the screen while watching, where whoever watches may not be the one typing. */
-      notice: "Programs on {{name}}'s computer can see the screen and anything typed or pasted there.",
       step: {
         desktop_open: "Opened {{detail}}",
         desktop_open_plain: "Opened an app",

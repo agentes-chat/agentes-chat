@@ -314,7 +314,7 @@ export async function withConnectedMachine<T>(
   // An old runner would ignore `agent` and put every agent in the same folder.
   if (status.protocol < AGENT_FOLDERS_PROTOCOL) {
     throw new SandboxUnavailableError(
-      `The runner on the computer ${status.name} is out of date (it can't give each agent its own folder). ${runnerUpdateWay(status)}`,
+      `The agentes.chat program on the computer ${status.name} is out of date (it can't give each agent its own folder). ${runnerUpdateWay(status)}`,
     );
   }
   // The right hand's requests go to the seat its run works in (a person's own, the shared one), or nowhere (ADR 0175).

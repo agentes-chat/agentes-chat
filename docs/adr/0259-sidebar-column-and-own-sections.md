@@ -7,7 +7,7 @@
   amendments (no Agentes part: agents sit in Mensagens diretas; "Fixar no topo" becomes Favoritos), ADR 0218 (the
   inbox's tool leaves the sidebar: what waits for the person is in Não lidas)
 - Code: engine `packages/engine/src/sidebar-items.ts` (`SidebarView.favorites`, `.sections`, `.dms`,
-  `sidebarViewOf`, `setMySidebarView`); db migration `0365_sidebar_sections`; server `routes/app/management.ts`
+  `sidebarViewOf`, `setMySidebarView`); db migration `0366_sidebar_sections`; server `routes/app/management.ts`
   (`SidebarView`); client `lib/sidebar-view.ts` (`favoritesOf`, `toggleFavorite`, `placeInSection`, `addSection`,
   `renameSection`, `removeSection`, `moveSectionBy`, `moveChannelBy`)
 
@@ -46,7 +46,7 @@ list.
    row's menu ("Mover para a seção": each section, Nova seção, Tirar da seção) and Alt+Shift+↑/↓, which moves a
    channel inside its section and a section among the others. A section opens and closes (closed, it keeps its
    unread channels and the open one in sight); its menu renames it, moves it and deletes it (its channels go back to
-   Canais). A section with no channel left goes away. Migration 0365 starts everyone in a workspace whose sectors hold
+   Canais). A section with no channel left goes away. Migration 0366 starts everyone in a workspace whose sectors hold
    channels with one section per such sector, its name and order, holding the channels the person sees.
 5. **Mensagens diretas.** People and agents together, one line each with the same 24px face and a quiet "IA" tag on
    agents: everyone in the workspace (a new member shows at once, an invitation not accepted yet as the invited
