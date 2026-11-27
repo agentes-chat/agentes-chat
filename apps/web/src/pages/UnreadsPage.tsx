@@ -15,6 +15,7 @@ import { Button, CountBadge, EmptyState, GroupHeading, Icon, PageHeader } from "
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ActorAvatar } from "@/components/AgentAvatar";
+import { ErrorState, LoadingCards } from "@/components/Loading";
 import { useNotificationOpener } from "@/components/NotificationOpen";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -104,6 +105,7 @@ export function UnreadsPage() {
   ].sort((a, b) => Number(b.forMe) - Number(a.forMe) || b.at.localeCompare(a.at));
 
   const loaded = channels.isSuccess && dms.isSuccess && notifications.isSuccess;
+  const failed = [channels, dms, notifications].find((q) => q.isError && !q.data);
   const nothing = loaded && forYou.length === 0 && conversations.length === 0;
   const markAll = () => {
     for (const c of conversations) markRead.mutate(c.channelId);
@@ -122,6 +124,8 @@ export function UnreadsPage() {
           )
         }
       />
+      {!loaded && !failed && <LoadingCards count={3} />}
+      {failed && <ErrorState error={failed.error} onRetry={() => void failed.refetch()} />}
       {nothing && (
         <EmptyState size="page" mood="wave" title={t("unreads.emptyTitle")}>
           {t("unreads.emptyText")}
