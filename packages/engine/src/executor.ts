@@ -304,6 +304,7 @@ import { PLACE_KEPT_MS } from "./message-place";
 import {
   getMessage,
   insertMessage,
+  MAX_MESSAGE_LENGTH,
   type Message,
   messageView,
   unreachedAgents,
@@ -6496,15 +6497,19 @@ async function executeRunInner(
         continue;
       }
       // A reply cut at the output limit with no call in flight goes on in the next call, within the run's steps and
-      // budget; its parts are posted as one reply.
+      // budget; its parts are posted as one reply. Not past what one message holds, nor after a second cut in a row
+      // with no text (all thinking): either only spends the budget on words that never post.
+      const cutWords = textOf(result.content);
       if (
         result.stopReason === "max_tokens" &&
         toolUses.length === 0 &&
         turnPlan.kind === "model" &&
         result.content.length > 0 &&
-        run.turns < maxTurns
+        run.turns < maxTurns &&
+        (cutWords.trim() !== "" || transcript.cutReply === undefined) &&
+        (transcript.cutReply ?? "").length + cutWords.length < MAX_MESSAGE_LENGTH
       ) {
-        transcript.cutReply = `${transcript.cutReply ?? ""}${textOf(result.content)}`;
+        transcript.cutReply = `${transcript.cutReply ?? ""}${cutWords}`;
         transcript.messages.push({ role: "user", content: CONTINUE_AFTER_CUT });
         await saveTranscript(db, transcript);
         continue;

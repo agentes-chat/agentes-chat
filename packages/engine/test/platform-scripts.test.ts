@@ -179,6 +179,23 @@ describe("a reply cut at the output limit", () => {
     const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
     expect(posted.map((m) => m.body)).toEqual(["Primeira metade, segunda metade."]);
   });
+
+  test("all thinking twice in a row: it goes on no more, so a model that only thinks never runs the run's steps out", async () => {
+    f = await setup({
+      reply: () => ({
+        chunks: [],
+        opaque: [{ type: "thinking", thinking: "", signature: "sig-1" }],
+        stopReason: "max_tokens",
+      }),
+    });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev escreve o texto todo",
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    // Two calls each time it is told to answer, as with any reply that says nothing; never the run's 200 steps.
+    expect(f.provider.calls.length).toBeLessThanOrEqual(6);
+  });
 });
 
 test("the prompt: code for a platform the agent can't run starts from the working version and is checked", () => {
