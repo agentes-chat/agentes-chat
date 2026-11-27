@@ -611,8 +611,11 @@ jobs:
   build:
     name: Image (${{ matrix.slug }})
     needs: [changes, check, test-backend, secrets, compose]
+    # Only this repository pushes to ghcr.io/agentes-chat: a fork's token can't, so a public fork's push to main
+    # would fail here on every code change while its tests pass.
     if: >-
       github.event_name == 'push' && needs.changes.outputs.image == 'true' &&
+      github.repository_owner == 'agentes-chat' &&
       (github.ref_type == 'tag' || !github.event.repository.private) &&
       !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     strategy:
