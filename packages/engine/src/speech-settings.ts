@@ -219,7 +219,7 @@ export function voiceStatusText({ state, owner }: VoiceStatus): string {
   if (state === "ready") return "";
   const who = owner ? `${owner} (who runs this server)` : "Whoever runs this server";
   if (state === "installing") {
-    return "Voice messages: on. The voice model is getting ready on this server: voice messages recorded meanwhile reach you with their words once it is.";
+    return "Voice messages: on. The voice model is getting ready on this server: one recorded meanwhile reaches you as a note that you can't hear it, and the ones after it come as text.";
   }
   const why =
     state === "failed"
