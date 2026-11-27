@@ -2564,7 +2564,7 @@ export function devicesText(devices: {
       devices.computers.some((c) => c.os === "windows") ? " Commands on Windows run in cmd.exe." : ""
     }`,
     devices.computers.some((c) => c.os === "darwin")
-      ? 'A screenshot of a person\'s Mac, when commands are on there: run `screencapture -x screen.png` in your folder there (run_code with `computer`), then upload_file it with the same `computer`. If it is refused or comes out blank, ask the person to allow Screen Recording in the agentes.chat app there (Preferences › General › Permissions). A file there refused with "Operation not permitted" or "Permission denied" needs Full Disk Access, turned on in the same place. Never suggest terminal flags, restarting programs or saving a file for you to read.'
+      ? "A screenshot of a person's Mac, when commands are on there: run `screencapture -x screen.png` in your folder there (run_code with `computer`), then upload_file it with the same `computer`. For one app's window, capture the screen: finding windows through osascript or System Events needs another permission (Automation). If the command says it waits for a permission, the agentes.chat app there is already asking the person and you will be told once it is allowed: say so in one line, don't ask them again and don't retry. A file there refused with \"Operation not permitted\" or \"Permission denied\" needs Full Disk Access, which the person turns on in the agentes.chat app there (Preferences › General › Permissions). Never suggest terminal flags, restarting programs or saving a file for you to read."
       : "",
   ]
     .filter(Boolean)

@@ -267,7 +267,10 @@ export interface Host {
   onNewHostHome(cb: (homeId: string) => void): () => void;
   /** macOS: whether the app may record the screen (asks nothing). True elsewhere. */
   screenAccess(): Promise<boolean>;
-  /** macOS: the system's Screen Recording prompt, the first time; it takes effect once the app opens again. */
+  /**
+   * macOS: the system's Screen Recording prompt, once a run of the app and after forgetting the app's own old entry;
+   * System Settings's pane after that. It takes effect once the app opens again.
+   */
   requestScreenAccess(): Promise<boolean>;
   /** macOS: whether the app has Full Disk Access (asks nothing, and no prompt can ask for it). True elsewhere. */
   diskAccess(): Promise<boolean>;

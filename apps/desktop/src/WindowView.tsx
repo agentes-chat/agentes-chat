@@ -10,7 +10,7 @@ import type { WindowName } from "./host/types";
 import { FirstRun } from "./windows/FirstRun";
 import { IphoneSetup } from "./windows/IphoneSetup";
 import { Notch } from "./windows/Notch";
-import { Framed, PairOffer, PermissionAskSheet, Prepare } from "./windows/Pair";
+import { Framed, PairOffer, PermissionAskSheet, type PermissionResumed, Prepare } from "./windows/Pair";
 import { Popover } from "./windows/Popover";
 import { Prefs } from "./windows/Prefs";
 
@@ -31,7 +31,8 @@ type PrepareFor = { org: string; server: string; resumed?: boolean };
  * Preferences asked for the iPhone setup (`IPHONE_SETUP_PREF`), the popover offers this computer to a workspace
  * (`PAIR_OFFER_PREF`), prepares this Mac after the site paired it (`PREPARE_PREF`) or asks for an OS permission an
  * agent's work waits on (`PERMISSION_ASK_PREF`), each cleared once it shows: there,
- * else the first run. A Prepare step macOS quit the app in the middle of comes back first (`resumed`).
+ * else the first run. A Prepare step or a permission's sheet macOS quit the app in the middle of comes back first
+ * (`resumed`).
  */
 function Welcome() {
   const host = useHost();
@@ -39,6 +40,7 @@ function Welcome() {
   const [offer, setOffer] = useState(() => readPref<PairTarget | null>(PAIR_OFFER_PREF, null));
   const [prepare, setPrepare] = useState(() => readPref<PrepareFor | null>(PREPARE_PREF, null));
   const [permission, setPermission] = useState(() => readPref(PERMISSION_ASK_PREF, false));
+  const [reopened, setReopened] = useState<PermissionResumed | null>(null);
   // Until the app says whether a setup waits: nothing, so the first run never flashes before it.
   const [resuming, setResuming] = useState(true);
   useEffect(() => {
@@ -46,7 +48,12 @@ function Welcome() {
     host
       .setupState()
       .then((s) => {
-        if (live && s?.step === "prepare" && s.resumed) setPrepare({ org: s.org, server: s.server, resumed: true });
+        if (!live || !s?.resumed) return;
+        if (s.step === "prepare") setPrepare({ org: s.org, server: s.server, resumed: true });
+        if (s.step === "permission") {
+          setReopened({ permission: s.permission, ...(s.agent ? { agent: s.agent } : {}) });
+          setPermission(true);
+        }
       })
       .catch(() => {})
       .finally(() => live && setResuming(false));
@@ -92,8 +99,10 @@ function Welcome() {
     return (
       <Framed>
         <PermissionAskSheet
+          {...(reopened ? { resumed: reopened } : {})}
           onClose={() => {
             setPermission(false);
+            setReopened(null);
             hide();
           }}
         />

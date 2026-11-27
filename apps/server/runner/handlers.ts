@@ -49,7 +49,7 @@ import { type CacheFill, type CloneSlots, gitSync } from "./git";
 import { isGitInternalPath, touchesGitInternals } from "./git-guard";
 import { type McpTaskInfo, redactDeep } from "./mcp";
 import { missionWorktree } from "./mission-worktree";
-import { permissionOfOutput } from "./os-permissions";
+import { permissionOfOutput, screenRefused } from "./os-permissions";
 import { agentWorkspace, hiddenIn, isInside, resolveForAgent } from "./paths";
 import type { PhoneManager, PhoneRequest } from "./phones";
 import { pullFile } from "./pull";
@@ -312,6 +312,11 @@ export interface HandlerContext {
    * terminal nothing would ask, so a refusal stays the command's own output.
    */
   appAsks?: boolean;
+  /**
+   * While macOS's Screen Recording is off for the app: a folder put first on a command's PATH, whose `screencapture`
+   * refuses at once (`screenShimDir`), so the app's own dialog asks before macOS's prompt does.
+   */
+  screenShim?: () => Promise<string | undefined>;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -557,6 +562,8 @@ async function doExec(
     env = { ...(env ?? {}), ...Object.fromEntries(keys.map((k) => [k.name, k.value])) };
     redact = await agentSecrets(ctx.secretsDir, req.agent);
   }
+  const shim = ctx.appAsks ? await ctx.screenShim?.().catch(() => undefined) : undefined;
+  if (shim) env = { ...(env ?? {}), PATH: `${shim}${path.delimiter}${env?.PATH ?? process.env.PATH ?? ""}` };
   const result = await runCommand({
     command,
     cwd,
@@ -566,10 +573,15 @@ async function doExec(
     ...(env ? { env } : {}),
     ...(redact ? { redact: redact.redact, redactHold: redact.hold } : {}),
   });
-  const permission =
-    result.exitCode === 0 || !ctx.appAsks
-      ? null
-      : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
+  const output = `${result.stderr}\n${result.stdout}`;
+  // A script may go on after a refused screenshot and end well: that refusal still asks.
+  const permission = !ctx.appAsks
+    ? null
+    : result.exitCode !== 0
+      ? permissionOfOutput(output, ctx.platform)
+      : screenRefused(output) && (ctx.platform ?? process.platform) === "darwin"
+        ? "screen"
+        : null;
   return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 

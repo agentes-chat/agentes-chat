@@ -5226,7 +5226,8 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
-      "tools.opencodeName"
+      "tools.opencodeName",
+      "permissionAsk.panes.automation"
     ],
     "it": [
       "common.hours",
@@ -5280,7 +5281,8 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
-      "tools.opencodeName"
+      "tools.opencodeName",
+      "permissionAsk.panes.camera"
     ],
     "ja": [
       "connect.placeholder",

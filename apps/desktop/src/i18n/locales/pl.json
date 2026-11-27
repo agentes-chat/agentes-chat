@@ -13,7 +13,33 @@
       "camera": "Agenci potrzebują tego, by używać kamery tego {{device}}.",
       "microphone": "Agenci potrzebują tego, by używać mikrofonu tego {{device}}.",
       "automation": "Agenci potrzebują tego, by sterować innymi aplikacjami na tym {{device}}."
-    }
+    },
+    "by": "Prośba od: {{agent}}",
+    "how": "Jak zezwolić",
+    "steps": {
+      "settings": "Otwórz Ustawienia systemowe › Prywatność i ochrona › {{pane}}.",
+      "prefs": "Otwórz Preferencje systemowe › Ochrona i prywatność › Prywatność › {{pane}} i kliknij kłódkę, aby wprowadzić zmiany.",
+      "turnOn": "Włącz agentes.chat.",
+      "turnOnAdd": "Włącz agentes.chat. Nie ma na liście? Kliknij +, a potem wybierz agentes.chat w Aplikacjach.",
+      "automation": "Pod agentes.chat włącz aplikację, którą agent chce sterować.",
+      "reopen": "Gdy macOS zapyta, wybierz Zakończ i otwórz ponownie: agentes.chat otworzy się tu znowu, a agent sam będzie kontynuować.",
+      "back": "Wróć tutaj i kliknij Zezwoliłem."
+    },
+    "panes": {
+      "screen": "Nagrywanie ekranu",
+      "screen15": "Nagrywanie ekranu i dźwięku systemowego",
+      "disk": "Pełny dostęp do dysku",
+      "accessibility": "Dostępność",
+      "automation": "Automatyzacja",
+      "app_management": "Zarządzanie aplikacjami",
+      "network": "Sieć lokalna",
+      "camera": "Kamera",
+      "microphone": "Mikrofon"
+    },
+    "onTitle": "Uprawnienie {{permission}} jest włączone",
+    "goesOn": "{{agent}} wraca do tego, co robił.",
+    "goOn": "Agenci, którzy czekali, wracają do swojej pracy.",
+    "ok": "Gotowe"
   },
   "device": {
     "mac": "Mac",

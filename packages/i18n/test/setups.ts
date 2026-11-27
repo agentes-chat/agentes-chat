@@ -262,6 +262,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "desktop.prefs.general.menuBarTitle",
     // The first close's notice on a Mac (background.rs picks it there, `bodyTray` elsewhere).
     "desktop.background.bodyMac",
+    // The steps in System Settings show only for a permission macOS refused (Pair.tsx `PermissionAskSheet`).
+    "desktop.permissionAsk.steps.",
     // The app icon's hint shows only in the Mac's desktop app (AppIconPicker.tsx): its Dock and Finder.
     "appIcon.hintMac",
     "desktop.prefs.updates.",

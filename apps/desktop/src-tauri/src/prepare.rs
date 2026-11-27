@@ -58,7 +58,7 @@ fn resume_of(state: &Value, now: u64) -> Option<Resume> {
         return None;
     }
     let window = match state.get("step")?.as_str()? {
-        "prepare" => "welcome",
+        "prepare" | "permission" => "welcome",
         "prefs" => "prefs",
         _ => return None,
     };
@@ -167,9 +167,60 @@ pub fn screen_access() -> bool {
     screen_allowed(false)
 }
 
+/// macOS's own prompt was raised in this run of the app: it comes once, so asking again opens System Settings instead.
+static SCREEN_ASKED: AtomicBool = AtomicBool::new(false);
+
+/// What the app does when the person asks for Screen Recording: nothing once on; the first time in this run, macOS's
+/// own prompt, after forgetting the app's old entry (`tccutil reset`): a grant names the build it was given to, so after
+/// an update an ad-hoc signed app's switch shows on while macOS refuses this build and prompts on every capture, and
+/// turning it off and on again doesn't help. Afterwards, the pane in System Settings. Whether it is on now.
+struct ScreenAsk<'a> {
+    asked: &'a AtomicBool,
+    allowed: &'a dyn Fn() -> bool,
+    reset: &'a dyn Fn(),
+    prompt: &'a dyn Fn() -> bool,
+    pane: &'a dyn Fn(),
+}
+
+fn screen_ask(ask: ScreenAsk) -> bool {
+    if (ask.allowed)() {
+        return true;
+    }
+    if ask.asked.swap(true, Ordering::Relaxed) {
+        (ask.pane)();
+        return false;
+    }
+    (ask.reset)();
+    (ask.prompt)()
+}
+
+#[cfg(target_os = "macos")]
+fn tcc_reset(identifier: &str) {
+    let _ = std::process::Command::new("/usr/bin/tccutil").args(["reset", "ScreenCapture", identifier]).status();
+}
+
+#[cfg(not(target_os = "macos"))]
+fn tcc_reset(_identifier: &str) {}
+
+/// Off the main thread: `tccutil` is a process.
 #[tauri::command]
-pub fn screen_request() -> bool {
-    screen_allowed(true)
+pub async fn screen_request(app: AppHandle) -> Result<bool, String> {
+    let identifier = app.config().identifier.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        screen_ask(ScreenAsk {
+            asked: &SCREEN_ASKED,
+            allowed: &|| screen_allowed(false),
+            reset: &|| tcc_reset(&identifier),
+            prompt: &|| screen_allowed(true),
+            pane: &|| {
+                if let Some(url) = pane_url("screen") {
+                    let _ = app.opener().open_url(url, None::<&str>);
+                }
+            },
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// Whether the first of `files` that is there opens.
@@ -319,6 +370,42 @@ mod tests {
         assert_eq!(resume_of(&prepare, at - 1), None);
         assert_eq!(resume_of(&json!({ "step": "other", "at": at }), at), None);
         assert_eq!(resume_of(&json!({ "step": "prepare" }), at), None);
+    }
+
+    #[test]
+    fn a_permission_setup_comes_back_in_the_welcome_window() {
+        let at = 1_000_000;
+        assert_eq!(
+            resume_of(&json!({ "step": "permission", "permission": "screen", "at": at }), at + 5),
+            Some(Resume { window: "welcome", page: None })
+        );
+    }
+
+    #[test]
+    fn screen_recording_asks_macos_once_a_run_after_forgetting_the_old_entry_then_opens_settings() {
+        use std::cell::RefCell;
+        let calls = RefCell::new(Vec::new());
+        let asked = AtomicBool::new(false);
+        let on = std::cell::Cell::new(false);
+        let ask = || {
+            screen_ask(ScreenAsk {
+                asked: &asked,
+                allowed: &|| on.get(),
+                reset: &|| calls.borrow_mut().push("reset"),
+                prompt: &|| {
+                    calls.borrow_mut().push("prompt");
+                    false
+                },
+                pane: &|| calls.borrow_mut().push("pane"),
+            })
+        };
+        assert!(!ask());
+        assert!(!ask());
+        assert!(!ask());
+        assert_eq!(*calls.borrow(), ["reset", "prompt", "pane", "pane"]);
+        on.set(true);
+        assert!(ask());
+        assert_eq!(calls.borrow().len(), 4);
     }
 
     #[test]

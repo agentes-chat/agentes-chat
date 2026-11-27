@@ -35,6 +35,72 @@
   "permissionAsk.why.automation": {
     "value": "Agents need it to control other apps on this {{device}}."
   },
+  "permissionAsk.by": {
+    "value": "Asked by {{agent}}"
+  },
+  "permissionAsk.how": {
+    "value": "How to allow it"
+  },
+  "permissionAsk.steps.settings": {
+    "value": "Open System Settings › Privacy & Security › {{pane}}."
+  },
+  "permissionAsk.steps.prefs": {
+    "value": "Open System Preferences › Security & Privacy › Privacy › {{pane}}, and click the lock to make changes."
+  },
+  "permissionAsk.steps.turnOn": {
+    "value": "Turn on agentes.chat."
+  },
+  "permissionAsk.steps.turnOnAdd": {
+    "value": "Turn on agentes.chat. Not in the list? Click +, then choose agentes.chat in Applications."
+  },
+  "permissionAsk.steps.automation": {
+    "value": "Under agentes.chat, turn on the app the agent wants to control."
+  },
+  "permissionAsk.steps.reopen": {
+    "value": "When macOS asks, choose Quit & Reopen: agentes.chat opens again here, and the agent goes on by itself."
+  },
+  "permissionAsk.steps.back": {
+    "value": "Come back here and click I allowed it."
+  },
+  "permissionAsk.panes.screen": {
+    "value": "Screen Recording"
+  },
+  "permissionAsk.panes.screen15": {
+    "value": "Screen & System Audio Recording"
+  },
+  "permissionAsk.panes.disk": {
+    "value": "Full Disk Access"
+  },
+  "permissionAsk.panes.accessibility": {
+    "value": "Accessibility"
+  },
+  "permissionAsk.panes.automation": {
+    "value": "Automation"
+  },
+  "permissionAsk.panes.app_management": {
+    "value": "App Management"
+  },
+  "permissionAsk.panes.network": {
+    "value": "Local Network"
+  },
+  "permissionAsk.panes.camera": {
+    "value": "Camera"
+  },
+  "permissionAsk.panes.microphone": {
+    "value": "Microphone"
+  },
+  "permissionAsk.onTitle": {
+    "value": "{{permission}} is on"
+  },
+  "permissionAsk.goesOn": {
+    "value": "{{agent}} goes on with what it was doing."
+  },
+  "permissionAsk.goOn": {
+    "value": "The agents that waited on it go on with what they were doing."
+  },
+  "permissionAsk.ok": {
+    "value": "Done"
+  },
   "device.mac": {
     "value": "Mac"
   },

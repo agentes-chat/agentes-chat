@@ -1812,7 +1812,7 @@ export function createMachineHub(deps: MachineHubDeps) {
           deps.log?.warn("toolchains.changed failed", { machineId: conn.machineId, error: String(error) }),
         );
       } else if (frame.type === "permissions.changed") {
-        await storeMachinePermissions({ db, pubsub }, conn.machineId, frame.permissions).catch((error) =>
+        await storeMachinePermissions({ db, pubsub }, conn.machineId, frame.permissions, frame.allowed).catch((error) =>
           deps.log?.warn("permissions.changed failed", { machineId: conn.machineId, error: String(error) }),
         );
       } else if (frame.type === "phones.changed") {

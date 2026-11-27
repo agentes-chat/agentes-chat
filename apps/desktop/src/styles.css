@@ -1019,6 +1019,30 @@ body[data-window="popover"] {
   max-width: 48ch;
   text-align: left;
 }
+/* The permission sheet (Pair.tsx `PermissionAskSheet`): who asked and the command beside it, then the steps. */
+.dk-ask-by {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  max-width: 54ch;
+}
+.dk-ask-how {
+  width: 100%;
+  max-width: 54ch;
+  text-align: left;
+}
+.dk-steps {
+  margin: 0;
+  padding-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink2);
+  font-size: 13px;
+  text-wrap: pretty;
+}
 .dk-fr__acts {
   margin-top: 18px;
   display: flex;

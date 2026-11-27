@@ -96,6 +96,8 @@ export interface FakeHost extends Host {
     screen: boolean;
     disk: boolean;
     networkAsks: number;
+    /** Screen Recording asked for (`requestScreenAccess`): macOS's prompt the first time, its pane after that. */
+    screenAsks: number;
     setup: SetupState | null;
     panes: (MacPermission | OsPermission)[];
   };
@@ -686,11 +688,17 @@ export function createFakeHost(
       screen: options.macReady === true,
       disk: options.macReady === true,
       networkAsks: 0,
+      screenAsks: 0,
       setup: null,
       panes: [],
     },
     screenAccess: async () => platform !== "mac" || host.mac.screen,
-    requestScreenAccess: async () => host.mac.screen,
+    // As the app's: macOS's prompt once a run, System Settings's pane after that.
+    requestScreenAccess: async () => {
+      if (host.mac.screen) return true;
+      if (host.mac.screenAsks++ > 0) host.mac.panes.push("screen");
+      return false;
+    },
     diskAccess: async () => platform !== "mac" || host.mac.disk,
     askLocalNetwork: async () => {
       host.mac.networkAsks++;

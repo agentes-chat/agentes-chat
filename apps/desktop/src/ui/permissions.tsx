@@ -65,8 +65,9 @@ export function useMacGrants(beforeQuit?: () => Promise<void>): MacGrants {
         if (p !== "network") await beforeQuit?.();
         const { version } = await host.appInfo();
         writePref(MAC_ASKED_PREF, withAsked(readPref<Asked | null>(MAC_ASKED_PREF, null), version, p));
-        if (viaSettings(p, grants?.[p] ?? "ask")) await host.openPrivacy(p);
-        else if (p === "screen") await host.requestScreenAccess();
+        // Screen Recording always through the app's ask: it clears a grant left by an earlier build before the pane.
+        if (p === "screen") await host.requestScreenAccess();
+        else if (viaSettings(p, grants?.[p] ?? "ask")) await host.openPrivacy(p);
         else await host.askLocalNetwork();
       } catch {
         toast(t("desktop.common.error"), "alert");

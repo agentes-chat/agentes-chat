@@ -831,7 +831,11 @@ export const OS_PERMISSION_LABELS: Record<OsPermission, string> = {
  * person was asked there, and it goes on once they allow it. Never a workaround: the permission is the person's call.
  */
 export const permissionWaitText = (name: string, permission: OsPermission) =>
-  `Waiting for permission on ${name}: this needs ${OS_PERMISSION_LABELS[permission]}, and the agentes.chat app there is asking the person now. Tell them what it is for in one line; once they allow it, run the same command again. Don't look for a way around it.`;
+  `Waiting for the person to allow ${OS_PERMISSION_LABELS[permission]} on ${name}: the agentes.chat app there is asking them now. Don't ask them in chat and don't run it again: you'll be told here once it is allowed, then run the same command again. Say in one line what it is waiting on. Don't look for a way around it.`;
+
+/** What the agent that waited is told once the person allowed `permission` on the computer `name`. */
+export const permissionAllowedText = (name: string, permission: OsPermission) =>
+  `${OS_PERMISSION_LABELS[permission]} is allowed on ${name} now: run the command that waited on it again and go on.`;
 
 /** At most this many waits are kept and told; a trigger is cut to `PERMISSION_TRIGGER_CHARS`. */
 export const PERMISSION_NEEDS_MAX = OS_PERMISSIONS.length;
@@ -4086,8 +4090,11 @@ export type RunnerFrame =
   | { type: "executors.changed"; executors: NonNullable<RunnerInfo["executors"]> }
   /** What `hello.toolchains` said changed (an Apple team found, Xcode updated), whole. An older server drops it. */
   | { type: "toolchains.changed"; toolchains: RunnerToolchains }
-  /** `OS_PERMISSIONS_PROTOCOL`: the permissions it waits on changed (one asked, one allowed), whole. */
-  | { type: "permissions.changed"; permissions: PermissionNeed[] }
+  /**
+   * `OS_PERMISSIONS_PROTOCOL`: the permissions it waits on changed (one asked, one allowed), whole. `allowed`: the
+   * ones that just ended because the person allowed them, so the agents that waited go on. An older runner omits it.
+   */
+  | { type: "permissions.changed"; permissions: PermissionNeed[]; allowed?: OsPermission[] }
   /** `CLI_COPIES_PROTOCOL`: a fetch of `cli` moved on (throttled), ended or failed. An older server drops it. */
   | { type: "cli.fetch"; cli: FetchName; fetch: CliFetchState }
   /** `PHONES_PROTOCOL`: the phones it reaches changed (one came or went, a state or a holder changed), whole. */
@@ -4835,7 +4842,11 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
       return isObject(f.toolchains) ? { type: "toolchains.changed", toolchains: parseToolchains(f.toolchains) } : null;
     case "permissions.changed":
       return Array.isArray(f.permissions)
-        ? { type: "permissions.changed", permissions: parsePermissionNeeds(f.permissions) }
+        ? {
+            type: "permissions.changed",
+            permissions: parsePermissionNeeds(f.permissions),
+            ...(Array.isArray(f.allowed) ? { allowed: [...new Set(f.allowed.filter(isOsPermission))] } : {}),
+          }
         : null;
     case "cli.fetch": {
       const cli = FETCH_NAMES.find((n) => n === f.cli);

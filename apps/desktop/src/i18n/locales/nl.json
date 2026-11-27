@@ -13,7 +13,33 @@
       "camera": "Agents hebben dit nodig om de camera van deze {{device}} te gebruiken.",
       "microphone": "Agents hebben dit nodig om de microfoon van deze {{device}} te gebruiken.",
       "automation": "Agents hebben dit nodig om andere apps op deze {{device}} te besturen."
-    }
+    },
+    "by": "Gevraagd door {{agent}}",
+    "how": "Zo sta je het toe",
+    "steps": {
+      "settings": "Open Systeeminstellingen › Privacy en beveiliging › {{pane}}.",
+      "prefs": "Open Systeemvoorkeuren › Beveiliging en privacy › Privacy › {{pane}} en klik op het slotje om wijzigingen aan te brengen.",
+      "turnOn": "Zet agentes.chat aan.",
+      "turnOnAdd": "Zet agentes.chat aan. Niet in de lijst? Klik op + en kies agentes.chat in Apps.",
+      "automation": "Zet onder agentes.chat de app aan die de agent wil bedienen.",
+      "reopen": "Kies Stop en open opnieuw als macOS erom vraagt: agentes.chat opent hier weer en de agent gaat vanzelf verder.",
+      "back": "Kom hier terug en klik op Ik heb het toegestaan."
+    },
+    "panes": {
+      "screen": "Schermopname",
+      "screen15": "Scherm- en systeemaudio-opname",
+      "disk": "Volledige schijftoegang",
+      "accessibility": "Toegankelijkheid",
+      "automation": "Automatisering",
+      "app_management": "Appbeheer",
+      "network": "Lokaal netwerk",
+      "camera": "Camera",
+      "microphone": "Microfoon"
+    },
+    "onTitle": "{{permission}} staat aan",
+    "goesOn": "{{agent}} gaat verder waar het was.",
+    "goOn": "De agents die erop wachtten gaan verder waar ze waren.",
+    "ok": "Klaar"
   },
   "device": {
     "mac": "Mac",

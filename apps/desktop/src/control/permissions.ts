@@ -60,9 +60,40 @@ export const viaSettings = (p: MacPermission, grant: Grant) => p === "disk" || g
  * kept in the app's data folder (`prepare.rs`) so the app reopens it: the pairing window's Prepare step for `org`, or
  * Preferences. `resumed`: the app reopened it at launch.
  */
-export type SetupState = ({ step: "prepare"; org: string; server: string } | { step: "prefs" }) & {
+export type SetupState = (
+  | { step: "prepare"; org: string; server: string }
+  | { step: "prefs" }
+  | { step: "permission"; permission: OsPermission; agent?: string }
+) & {
   resumed?: boolean;
 };
+
+/** What macOS applies only once the app opens again, which it offers to do ("Quit & Reopen"). */
+export const reopensApp = (p: OsPermission) => p === "screen" || p === "disk";
+
+/** One step of "How to allow", by its key under `desktop.permissionAsk.steps`, with the pane's key to name. */
+export interface AllowStep {
+  step: "settings" | "prefs" | "turnOn" | "turnOnAdd" | "automation" | "reopen" | "back";
+  pane?: string;
+}
+
+/**
+ * The three steps in System Settings for `p` on this macOS (`system`, "15.5"): where (System Preferences before macOS
+ * 13; Screen Recording is Screen & System Audio Recording from 15), what to turn on (+ for the panes that list only
+ * apps added by hand), and what comes after (Quit & Reopen, or back here). Unread, the latest macOS's.
+ */
+export function allowSteps(p: OsPermission, system?: string | null): AllowStep[] {
+  const major = Number.parseInt(system ?? "", 10);
+  const before13 = major > 0 && major < 13;
+  const pane = p === "screen" && !(major < 15) ? "screen15" : p;
+  const turn: AllowStep["step"] =
+    p === "automation"
+      ? "automation"
+      : p === "screen" || p === "disk" || p === "accessibility" || p === "app_management"
+        ? "turnOnAdd"
+        : "turnOn";
+  return [{ step: before13 ? "prefs" : "settings", pane }, { step: turn }, { step: reopensApp(p) ? "reopen" : "back" }];
+}
 
 /** The site's This computer paired it: the welcome window takes this once and shows the Prepare step. */
 export const PREPARE_PREF = "prepare";

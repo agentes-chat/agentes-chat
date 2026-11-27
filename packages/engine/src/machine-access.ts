@@ -3,8 +3,10 @@ import {
   ACCESS_LIMITS,
   ACCESS_PROTOCOL,
   grantedTo,
+  type OsPermission,
   type PermissionNeed,
   type PubSub,
+  permissionAllowedText,
   type RunnerAccess,
   type RunnerFrame,
   type RunnerInfo,
@@ -14,6 +16,7 @@ import {
 import { and, type Database, eq, isNull, lt, type SQL, schema, sql } from "@agenteschat/db";
 import { getAgentCached } from "./agents";
 import { recordAudit } from "./audit";
+import { publishDelivery } from "./delivery";
 import { createAgentRuns, eligibleChannelAgents } from "./dispatch";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishMessageCreated } from "./events";
@@ -33,6 +36,7 @@ import { insertMessage, messageView } from "./messages";
 import { type NotificationDeps, notify, resolveNotifications } from "./notifications";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
+import { deliverNoticeToRun } from "./run-resume";
 import { folderPickable } from "./runner-update";
 import { replyThreadOf } from "./runs";
 import { hopLimitReached, runStretchOf } from "./stretch";
@@ -144,7 +148,18 @@ export async function storeMachineToolchains(deps: AccessDeps, machineId: string
 }
 
 /** `permissions.changed`: the OS permissions the computer waits on, replaced whole; the rest of `executors` stays. */
-export async function storeMachinePermissions(deps: AccessDeps, machineId: string, permissions: PermissionNeed[]) {
+export async function storeMachinePermissions(
+  deps: AccessDeps,
+  machineId: string,
+  permissions: PermissionNeed[],
+  allowed: OsPermission[] = [],
+) {
+  const [before] = allowed.length
+    ? await deps.db
+        .select({ orgId: machines.orgId, name: machines.name, executors: machines.executors })
+        .from(machines)
+        .where(eq(machines.id, machineId))
+    : [];
   const [row] = await deps.db
     .update(machines)
     .set({
@@ -154,6 +169,44 @@ export async function storeMachinePermissions(deps: AccessDeps, machineId: strin
     .where(eq(machines.id, machineId))
     .returning({ orgId: machines.orgId });
   if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { permissions: true });
+  if (!before) return;
+  for (const permission of allowed) {
+    const need = before.executors?.permissions?.find((n) => n.permission === permission && n.agentId);
+    if (need?.agentId) await wakePermissionWaiter(deps, before.orgId, before.name, permission, need);
+  }
+}
+
+/**
+ * The person allowed what an agent's command waited on: that agent hears it in the conversation of the run that ran
+ * it (the latest of its runs started by then), and goes on.
+ */
+async function wakePermissionWaiter(
+  deps: AccessDeps,
+  orgId: string,
+  computer: string,
+  permission: OsPermission,
+  need: { agentId?: string; since: string },
+) {
+  const since = new Date(need.since);
+  if (!need.agentId || Number.isNaN(since.getTime())) return;
+  const [run] = await deps.db
+    .select()
+    .from(agentRuns)
+    .where(
+      and(eq(agentRuns.orgId, orgId), eq(agentRuns.agentId, need.agentId), sql`${agentRuns.createdAt} <= ${since}`),
+    )
+    .orderBy(sql`${agentRuns.createdAt} desc`)
+    .limit(1);
+  if (!run) return;
+  const delivered = await deps.db.transaction((tx) =>
+    deliverNoticeToRun(tx, run, {
+      kind: "wait_result",
+      text: permissionAllowedText(computer, permission),
+      from: `The agentes.chat app on ${computer}`,
+      refs: { runId: run.id, permission },
+    }),
+  );
+  await publishDelivery(deps.pubsub, delivered).catch(() => {});
 }
 
 export interface ReduceAccessInput {
