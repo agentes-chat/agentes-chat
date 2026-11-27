@@ -5,6 +5,7 @@ import {
   BROWSER_PROFILE_PROTOCOL,
   CLI_INSTALL_PROTOCOL,
   DESKTOP_PROTOCOL,
+  EGRESS_SHARE_PROTOCOL,
   HEARTBEAT_MS,
   MACHINE_CLOSE,
   MACHINE_TOKEN_PREFIX,
@@ -40,7 +41,7 @@ import { can, requireActiveMembership, requirePermission } from "./organizations
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND } from "./right-hand";
 import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
-import { folderPickable, runnerUpdateOf } from "./runner-update";
+import { folderPickable, runByApp, runnerUpdateOf } from "./runner-update";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -98,7 +99,7 @@ export class MachineOfflineError extends Error {
         ? maintenanceWords(machineName, maintenance)
         : kind === "managed"
           ? `The computer ${machineName} isn't answering right now. It usually comes back within minutes.`
-          : `The computer ${machineName} is offline. Ask its owner to start the runner.`,
+          : `The computer ${machineName} is offline. Ask its owner to start agentes.chat there.`,
     );
     this.name = "MachineOfflineError";
   }
@@ -637,6 +638,19 @@ export function borrowsInternet(m: Pick<MachineRow, "kind" | "belongsToWorkspace
 }
 
 /**
+ * The workspace's computer's observed way out, its country kept only when it was seen on the route its agents take
+ * now: through the lent computer since that one began carrying them, or the usual way while none is online to lend.
+ * Otherwise the flag would be the last route's (the Cloud's own exit) until the next observation comes in.
+ */
+export function egressOnRoute(m: Pick<MachineRow, "egress" | "egressVia">, lenderOnline: boolean, now = new Date()) {
+  const e = m.egress?.ip ? { ...m.egress, ip: m.egress.ip } : null;
+  if (!e?.country) return e;
+  const via = egressViaNow(m.egressVia, now) ? m.egressVia : null;
+  const onRoute = via ? !via.since || e.at >= via.since : !lenderOnline;
+  return onRoute ? e : { ip: e.ip, at: e.at };
+}
+
+/**
  * The machines of an org as one person sees them: every member sees them;
  * the workspace path and the access report only admins and the pairer.
  */
@@ -686,6 +700,15 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
     rightHand && homeRow && (can(membership, "control_computers") || rightHand.owner === actorId)
       ? { machineId: homeRow.id, agentId: rightHand.id }
       : null;
+  // A person's computer online to lend its internet (ADR 0237): the agents' next connections go out through it.
+  const lenderOnline = rows.some(
+    ({ machine: r }) =>
+      r.kind === "connected" &&
+      r.egressShare &&
+      r.protocol >= EGRESS_SHARE_PROTOCOL &&
+      machineOnline(r, now) &&
+      !machinePause(r, now),
+  );
   return rows.map(({ machine: m, pairedByName }) => {
     const mine = m.pairedByUserId === actorId;
     const pause = machinePause(m, now);
@@ -710,7 +733,7 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       networkTransition: managed ? m.networkTransition : null,
       /** The workspace's own computer's agents wait for their way out, as the operator says: a line, never an error. */
       egressWaiting: managed && machineOnline(m, now) && m.egressWaitingAt !== null,
-      egress: managed && machineOnline(m, now) && m.egress?.ip ? { ...m.egress, ip: m.egress.ip } : null,
+      egress: managed && machineOnline(m, now) ? egressOnRoute(m, lenderOnline, now) : null,
       /** ADR 0237: the person's computer whose internet this computer's agents' web traffic uses now. */
       egressVia: via ? { machineId: via.machine.id, name: via.machine.name, userName: via.pairedByName } : null,
       lastSeenAt: m.lastSeenAt?.toISOString() ?? null,
@@ -724,6 +747,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       protocol: m.protocol,
       /** Its runner is behind this server and how its owner updates it (`runnerUpdateOf`); null: nothing to do. */
       update: runnerUpdateOf(m),
+      /** The agentes.chat app runs it, not a Terminal install (`runByApp`); the workspace's own computer: neither. */
+      app: !managed && runByApp(m),
       /** Its runner can hold browser profiles (ADR 0110); a system-mode computer has none at all (`mode`). */
       browserProfiles: m.protocol >= BROWSER_PROFILE_PROTOCOL,
       execAllowed: m.execAllowed,

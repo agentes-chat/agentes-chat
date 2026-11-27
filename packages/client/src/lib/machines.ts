@@ -694,11 +694,19 @@ const OS_CODES = new Set(["linux", "darwin", "windows", "other"]);
 export const osName = (t: TFunction, os: string) =>
   OS_CODES.has(os) ? (t as unknown as (key: string) => string)(`machines.os.${os}`) : os;
 
-/** ADR 0237: "Agents use the internet of Ana's laptop (Ana)" while a person's computer lends its internet; else null. */
+/** ADR 0237: "Agents use the internet of Ana's laptop" while a person's computer lends its internet; else null. */
 export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">): string | null {
   const via = m.online ? m.egressVia : null;
+  return via ? t("machines.egress.via", { name: via.name }) : null;
+}
+
+/**
+ * `egressViaText` as the words around the lending computer's name, in the language's order, so a screen can give the
+ * name alone a tip: who connected it ("Connected by Ana"), or null when nobody is named.
+ */
+export function egressViaParts(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">) {
+  const via = m.online ? m.egressVia : null;
   if (!via) return null;
-  return via.userName
-    ? t("machines.egress.viaBy", { name: via.name, person: via.userName })
-    : t("machines.egress.via", { name: via.name });
+  const [before = "", after = ""] = t("machines.egress.via", { name: "\u0000" }).split("\u0000");
+  return { before, name: via.name, after, by: via.userName ? t("machines.pairedBy", { name: via.userName }) : null };
 }

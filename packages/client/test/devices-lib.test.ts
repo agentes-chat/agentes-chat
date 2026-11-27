@@ -15,6 +15,7 @@ import {
   deviceRows,
   deviceWaitEventOf,
   deviceWaitOf,
+  doctorShown,
   failedOnLocalNetwork,
   fixText,
   helpingDevices,
@@ -223,18 +224,29 @@ describe("status words", () => {
     expect(statusDetail(t, "en-US", { kind: "ready" })).toBeNull();
   });
 
-  test("a computer offline for a known cause: the row says why, its page adds the one way out", () => {
+  test("a computer offline for a known cause: the row says why, its page adds the one way out in plain words", () => {
     const off = (cause: "unresponsive" | "stopped" | "dropped") =>
       ({ kind: "offline", lastSeenAt: at(14, 2), cause }) as const;
     expect(statusDetail(t, "en-US", off("unresponsive"), { now: NOW })).toBe("stopped answering at 2:02 PM");
-    expect(statusDetail(t, "en-US", off("stopped"), { now: NOW })).toBe("runner stopped at 2:02 PM");
+    expect(statusDetail(t, "en-US", off("stopped"), { now: NOW })).toBe("agentes.chat stopped at 2:02 PM");
     expect(statusDetail(t, "en-US", off("dropped"), { now: NOW })).toBe("connection dropped at 2:02 PM");
     expect(statusSentence(t, "en-US", off("stopped"), { now: NOW })).toBe(
-      "The runner stopped at 2:02 PM. Start it again, or run `agentes-runner doctor` on it to see why.",
+      "The agentes.chat app stopped on this computer at 2:02 PM. Open the app again.",
     );
-    expect(statusSentence(t, "en-US", off("unresponsive"), { now: NOW })).toContain(
-      "Run `agentes-runner doctor` on it.",
+    expect(statusSentence(t, "en-US", off("stopped"), { now: NOW, cli: true })).toBe(
+      "agentes.chat stopped on this computer at 2:02 PM. Start it again there.",
     );
+    // No command in the line: a Terminal install has it under Technical details.
+    for (const cause of ["unresponsive", "stopped", "dropped"] as const)
+      for (const cli of [false, true])
+        expect(statusSentence(t, "en-US", off(cause), { now: NOW, cli })).not.toMatch(/runner|`/);
+    const app = { kind: "connected", app: true };
+    const terminal = { kind: "connected", app: false };
+    expect(doctorShown(off("stopped"), terminal)).toBe(true);
+    expect(doctorShown(off("stopped"), app)).toBe(false);
+    expect(doctorShown(off("stopped"), { kind: "connected" })).toBe(false);
+    expect(doctorShown({ kind: "offline", lastSeenAt: at(14, 2) }, terminal)).toBe(false);
+    expect(doctorShown({ kind: "ready" }, terminal)).toBe(false);
   });
 });
 

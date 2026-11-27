@@ -5528,6 +5528,8 @@ export interface Machine {
    * install command again, as root. Null or absent (an older server): nothing to update from here.
    */
   update?: "command" | "installer" | null;
+  /** The agentes.chat app runs it; `false`: installed from the Terminal. Absent from an older server. */
+  app?: boolean;
   /** ADR 0110: its runner can hold browser profiles; `false`: update the computer. */
   browserProfiles?: boolean;
   /** `false`: started with `--no-exec` (files and uploads only). */

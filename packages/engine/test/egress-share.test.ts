@@ -227,6 +227,75 @@ test("computers paired before lend too: each one's owner hears it once, a team's
   expect(await lendingComputers(f.db, f.org.id)).toEqual([]);
 });
 
+test("the flag of the computer's way out: only once it was seen on the route its agents take now", async () => {
+  f = await setup();
+  const ana = await addMember(f.db, f.org.id, "member", "ana");
+  const laptop = await pair(ana.id, "Ana's laptop");
+  const desk = await pair(ana.id, "Ana's desk");
+  const managed = await issueManagedMachine({ db: f.db }, f.org.id);
+  if (!managed) throw new Error("no managed computer");
+  let clock = Date.parse("2026-11-20T10:00:00.000Z");
+  let lender = laptop;
+  const relay = createEgressRelay({
+    db: f.db,
+    now: () => clock,
+    hub: {
+      status: async (id) => ({ online: id === lender }) as never,
+      async call(_machineId, request: MachineRequest) {
+        if (request.op !== "egress.dial") throw new Error(`unexpected ${request.op}`);
+        relay.claim(hello(request.streamId), lender, fakeSocket().socket);
+        return { connected: true } as never;
+      },
+    },
+  });
+  const lend = async () => {
+    const cloud = fakeSocket();
+    relay.claim(
+      hello(`s${clock}`.padEnd(43, "x"), { host: "gov.example", port: 443 }),
+      managed.machineId,
+      cloud.socket,
+    );
+    await until(async () => (await row(managed.machineId)).egressVia?.at === new Date(clock).toISOString(), "via");
+  };
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const started = clock;
+  await lend();
+  // A minute on, the same computer still lending: it began when it first did. Another one starts again.
+  clock += 70_000;
+  await lend();
+  expect((await row(managed.machineId)).egressVia).toEqual({ machineId: laptop, at: iso(clock), since: iso(started) });
+  clock += 70_000;
+  lender = desk;
+  await lend();
+  expect((await row(managed.machineId)).egressVia?.since).toBe(iso(clock));
+
+  const at = (value: { egress: unknown; online?: boolean }) =>
+    f.db
+      .update(schema.machines)
+      .set({ online: true, lastSeenAt: new Date(clock), ...value } as never)
+      .where(eq(schema.machines.id, managed.machineId));
+  const seen = async () =>
+    (await listMachines(f.db, f.owner.id, f.org.id, new Date(clock))).find((m) => m.id === managed.machineId)?.egress;
+  // Seen before the desk began carrying its connections (the Cloud's own exit): the address, no flag.
+  await at({ egress: { ip: "203.0.113.7", country: "ES", at: iso(clock - 5_000) } });
+  expect(await seen()).toEqual({ ip: "203.0.113.7", at: iso(clock - 5_000) });
+  // Seen through the desk: its country.
+  await at({ egress: { ip: "198.51.100.4", country: "BR", at: iso(clock + 1_000) } });
+  expect(await seen()).toEqual({ ip: "198.51.100.4", country: "BR", at: iso(clock + 1_000) });
+
+  // No lent route shown any more, yet a computer online to lend: the next connections go through it, no flag yet.
+  clock += 10 * 60_000;
+  await f.db
+    .update(schema.machines)
+    .set({ online: true, lastSeenAt: new Date(clock) })
+    .where(eq(schema.machines.id, laptop));
+  await at({ egress: { ip: "203.0.113.7", country: "ES", at: iso(clock - 1_000) } });
+  expect(await seen()).toEqual({ ip: "203.0.113.7", at: iso(clock - 1_000) });
+  // Nobody to lend: the usual way out, with its flag.
+  await f.db.update(schema.machines).set({ online: false }).where(eq(schema.machines.id, laptop));
+  expect(await seen()).toEqual({ ip: "203.0.113.7", country: "ES", at: iso(clock - 1_000) });
+});
+
 describe("on a self-hosted server (ADR 0237): people's computers lend to this server's computer and its reads", () => {
   /** A relay whose lending computer `laptop` answers every dial by opening its side on a fake socket. */
   const lendingRelay = (laptop: string, now?: () => number) => {

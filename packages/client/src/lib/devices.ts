@@ -151,6 +151,8 @@ type StatusOptions = {
   ios?: string | null;
   /** The computer's `maintenance`: while it works (a move's copy), the line says it may be slower. */
   maintenance?: ComputerMaintenance | null;
+  /** Installed from the Terminal, not run by the app (`terminalInstall`): a stopped one is started again there. */
+  cli?: boolean;
 };
 
 /** An iPhone's iOS version, for `StatusOptions.ios`. */
@@ -216,7 +218,8 @@ export function statusSentence(
       return maintenanceLine(t, maintenanceOf(s) ?? LEGACY_MOVE, now);
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
-      if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
+      if (s.cause && s.lastSeenAt)
+        return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line", options.cli);
       return s.lastSeenAt
         ? t("devices.line.offlineSeen", { time: clockAt(locale, s.lastSeenAt, now) })
         : t("devices.line.offline");
@@ -788,10 +791,29 @@ const CAUSE_KEY = { unresponsive: "Unresponsive", stopped: "Stopped", dropped: "
 
 /**
  * Why a computer someone brought went offline, at `time` (already in words): `detail`, the short words after a row's
- * pill; `line`, the sentence on its page with the one way out.
+ * pill; `line`, the sentence on its page with the one way out, in plain words (a Terminal install, `cli`, is started
+ * again there; the command that tells why waits under Technical details, `doctorShown`).
  */
-export const offlineCauseText = (t: TFunction, cause: MachineOfflineCause, time: string, form: "detail" | "line") =>
-  t(`devices.${form}.offline${CAUSE_KEY[cause]}`, { time, command: RUNNER_DOCTOR_COMMAND });
+export const offlineCauseText = (
+  t: TFunction,
+  cause: MachineOfflineCause,
+  time: string,
+  form: "detail" | "line",
+  cli = false,
+) =>
+  say(t, `devices.${form}.offline${CAUSE_KEY[cause]}${form === "line" && cause === "stopped" && cli ? "Cli" : ""}`, {
+    time,
+  });
+
+/** Installed from the Terminal, not run by the agentes.chat app: a computer someone brought, or the server's own. */
+export const terminalInstall = (m: { kind?: string; app?: boolean } | null | undefined) =>
+  m != null && m.kind !== "managed" && m.app === false;
+
+/** Offline with a known cause and installed from the Terminal: `RUNNER_DOCTOR_COMMAND` says why, folded away. */
+export const doctorShown = (
+  s: DeviceStatus | null | undefined,
+  m: { kind?: string; app?: boolean } | null | undefined,
+) => s?.kind === "offline" && !s.withHost && Boolean(s.cause) && terminalInstall(m);
 
 /** How often the iPhone guide asks where a fix of the Mac's Xcode stands while it runs. */
 export const XCODE_FIX_POLL_MS = 1500;

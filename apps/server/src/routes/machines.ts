@@ -179,6 +179,10 @@ export const Machine = z
       description:
         "Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the install command again, as root (system mode). Null: nothing to update from here (current, the workspace's or this server's own computer, or run by the agentes.chat app, which updates itself).",
     }),
+    app: z.boolean().openapi({
+      description:
+        "The agentes.chat app runs it; `false`: installed from the Terminal (or the server's own, or the workspace's own computer). A runner too old to say counts as the app off Linux.",
+    }),
     browserProfiles: z.boolean().openapi({
       description:
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",

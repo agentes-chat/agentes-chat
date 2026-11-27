@@ -467,7 +467,7 @@ export function computerBrainUnavailable(
     ) {
       return {
         code: "runner_outdated",
-        message: `The runner on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
       };
     }
     // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn, one before
@@ -476,7 +476,7 @@ export function computerBrainUnavailable(
     if (status.os === "windows" && status.protocol < windowsProtocol) {
       return {
         code: "runner_outdated",
-        message: `The runner on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
       };
     }
     if (status.executors?.detectedAt && !status.executors[kind] && !fetchesCli(status, kind)) {
@@ -493,7 +493,7 @@ export function computerBrainUnavailable(
   if (status.protocol < BRAIN_PROTOCOL || (windows && status.protocol < CODEX_WINDOWS_PROTOCOL)) {
     return {
       code: "runner_outdated",
-      message: `The runner on ${status.name} is too old for Codex agents${windows ? " on Windows" : ""}. ${runnerUpdateWay(status)}`,
+      message: `The agentes.chat program on ${status.name} is too old for Codex agents${windows ? " on Windows" : ""}. ${runnerUpdateWay(status)}`,
     };
   }
   const codex = status.executors?.codex;

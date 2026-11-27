@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { EGRESS_SHARE, EGRESS_SHARE_PROTOCOL, STREAM_CLOSE, type StreamHello } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
-import { borrowsInternet, getMachineById, serverLending } from "./machines";
+import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending } from "./machines";
 import type { ClaimedStream, StreamSocket } from "./streams";
 
 const { machines } = schema;
@@ -124,18 +124,29 @@ export function createEgressRelay(deps: {
 
   /** Who carried the last connection, on the borrower's row (the server itself has none), and when, on the lender's. */
   async function noteVia(borrowerId: string | null, deviceId: string) {
-    const at = new Date(now());
+    const at = new Date(now()).toISOString();
     const last = borrowerId ? viaWritten.get(borrowerId) : undefined;
     if (borrowerId && !(last && last.deviceId === deviceId && now() - last.at < VIA_WRITE_MS)) {
       viaWritten.set(borrowerId, { deviceId, at: now() });
+      const via = machines.egressVia;
+      // `since` stays while the same computer goes on lending (other server processes write `at` too); a new one, or
+      // one back after the apps stopped saying it, starts it again.
       await deps.db
         .update(machines)
-        .set({ egressVia: { machineId: deviceId, at: at.toISOString() } })
+        .set({
+          egressVia: sql`jsonb_build_object('machineId', ${deviceId}::text, 'at', ${at}::text, 'since',
+            case when ${via}->>'machineId' = ${deviceId}::text
+              and (${via}->>'at')::timestamptz > ${at}::timestamptz - make_interval(secs => ${EGRESS_VIA_SHOWN_MS / 1000})
+            then ${via}->'since' else to_jsonb(${at}::text) end)`,
+        })
         .where(eq(machines.id, borrowerId));
     }
     if (now() - (lentWritten.get(deviceId) ?? Number.NEGATIVE_INFINITY) < VIA_WRITE_MS) return;
     lentWritten.set(deviceId, now());
-    await deps.db.update(machines).set({ egressLentAt: at }).where(eq(machines.id, deviceId));
+    await deps.db
+      .update(machines)
+      .set({ egressLentAt: new Date(at) })
+      .where(eq(machines.id, deviceId));
   }
 
   async function open(

@@ -1434,7 +1434,7 @@ async function memberMachine(db: Database, userId: string, orgId: string, machin
 /** The workspace's own computer updates by itself (`machine.updates_itself`): nobody is told to update it. */
 const runnerOld = (machine: Pick<MachineRow, "name" | "kind" | "executors">) =>
   new ConflictError(
-    `The runner on ${machine.name} is too old for accounts. ${runnerUpdateWay(machine)}`,
+    `The agentes.chat program on ${machine.name} is too old for accounts. ${runnerUpdateWay(machine)}`,
     machine.kind === "managed" ? "machine.updates_itself" : "account.runner_old",
     { name: machine.name },
   );
