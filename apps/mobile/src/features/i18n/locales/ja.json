@@ -60,6 +60,15 @@
     "more": "全{{count}}行を表示",
     "gone": "このコードはもう開いていません。"
   },
+  "table": {
+    "label_other": "表 · {{count}}行",
+    "title": "表",
+    "rows_other": "{{count}}行",
+    "copy": "表をコピー",
+    "copied": "表をコピーしました",
+    "more": "全{{count}}行を表示",
+    "gone": "この表はもう開いていません。"
+  },
   "time": {
     "today": "今日",
     "yesterday": "昨日",

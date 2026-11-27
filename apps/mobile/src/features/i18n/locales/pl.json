@@ -63,6 +63,21 @@
     "more": "Zobacz wszystkie wiersze ({{count}})",
     "gone": "Ten kod nie jest już otwarty."
   },
+  "table": {
+    "label_one": "Tabela · {{count}} wiersz",
+    "label_few": "Tabela · {{count}} wiersze",
+    "label_many": "Tabela · {{count}} wierszy",
+    "label_other": "Tabela · {{count}} wiersza",
+    "title": "Tabela",
+    "rows_one": "{{count}} wiersz",
+    "rows_few": "{{count}} wiersze",
+    "rows_many": "{{count}} wierszy",
+    "rows_other": "{{count}} wiersza",
+    "copy": "Kopiuj tabelę",
+    "copied": "Skopiowano tabelę",
+    "more": "Zobacz wszystkie wiersze ({{count}})",
+    "gone": "Ta tabela nie jest już otwarta."
+  },
   "time": {
     "today": "Dzisiaj",
     "yesterday": "Wczoraj",

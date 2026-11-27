@@ -38,6 +38,9 @@
     "wrapLines": "自动换行",
     "raw": "原始数据",
     "table": "表格",
+    "tableRows_other": "表格 · {{count}} 行",
+    "tableSeeAll": "查看全部 {{count}} 行",
+    "tableRowCount_other": "{{count}} 行",
     "chartItem": "项目",
     "chartShare": "占比",
     "you": "你",
@@ -10146,7 +10149,6 @@
     "filter": {
       "person": "成员",
       "agent": "智能体",
-      "routine": "例行工作",
       "reminder": "提醒",
       "deadline": "任务截止日期"
     },
@@ -10179,37 +10181,16 @@
         "declined": "你不参加。"
       }
     },
-    "every": {
-      "hour": "每小时",
-      "hours": "每 {{count}} 小时",
-      "minutes": "每 {{count}} 分钟"
-    },
-    "perDay": "每天 {{count}} 次",
-    "runs_other": "这几天共运行 {{count}} 次。",
-    "routineDetail": "例行工作 · 发送到 {{target}}",
     "deadlineDetail": "任务到期了。",
     "reminderBy": "由 {{name}} 设置",
     "reminderPosted": "提醒 · 发布在 {{target}}",
     "cancelReminder": "取消提醒",
     "reminderCancelled": "提醒已取消",
     "openIssue": "打开任务",
-    "openRoutines": "在“例行工作”中查看",
-    "openRoutine": "打开例行工作",
-    "runAria": "例行工作 {{name}}，{{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "{{time}} 的例行工作",
-    "moreRuns_other": "还有 {{count}} 项例行工作",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "已回复",
-      "silent": "没有新内容",
-      "failed": "失败",
-      "skipped": "未运行"
-    },
-    "lastResult": "上次：{{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "没有安排。拖动即可创建，或按 N",
-    "agendaEmpty": "接下来 30 天的日程和例行工作会显示在这里。",
+    "agendaEmpty": "接下来 30 天的日程和提醒会显示在这里。",
     "agendaEmptyTitle": "未来 30 天日程空闲",
     "noResults": "此筛选下没有内容。",
     "more": "还有 {{count}} 项",
@@ -17869,7 +17850,21 @@
       "version": "版本",
       "license": "依据 <license>GNU Affero General Public License v3</license> 发布的自由软件，不提供任何担保。",
       "source": "源代码",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者",
+      "latest": "已是最新版本",
+      "newer": "{{version}} 已发布",
+      "notes": "新功能",
+      "update": {
+        "title": "更新到 {{version}}",
+        "docker": "使用 Docker",
+        "native": "不使用 Docker",
+        "nativeHelp": "将该版本的安装包解压到 `~/.agentes/app`，然后运行：",
+        "desktop": "在这台电脑的桌面应用中运行？它会随应用一起更新。",
+        "notice": "此服务器的 agentes.chat {{version}} 已发布",
+        "how": "如何更新"
+      },
+      "computers": "电脑上的程序",
+      "computersAhead_other": "有 {{count}} 台电脑运行的版本比此服务器更新。它们照常工作，新功能会随此服务器的更新一起到来。"
     },
     "title": "设置",
     "account": {

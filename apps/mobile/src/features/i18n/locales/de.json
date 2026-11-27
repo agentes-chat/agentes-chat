@@ -61,6 +61,17 @@
     "more": "Alle {{count}} Zeilen ansehen",
     "gone": "Dieser Code ist nicht mehr geöffnet."
   },
+  "table": {
+    "label_one": "Tabelle · {{count}} Zeile",
+    "label_other": "Tabelle · {{count}} Zeilen",
+    "title": "Tabelle",
+    "rows_one": "{{count}} Zeile",
+    "rows_other": "{{count}} Zeilen",
+    "copy": "Tabelle kopieren",
+    "copied": "Tabelle kopiert",
+    "more": "Alle {{count}} Zeilen ansehen",
+    "gone": "Diese Tabelle ist nicht mehr geöffnet."
+  },
   "time": {
     "today": "Heute",
     "yesterday": "Gestern",
