@@ -24,6 +24,11 @@
     "welcome": "Witamy",
     "prefs": "Preferencje"
   },
+  "background": {
+    "title": "agentes.chat nadal działa",
+    "bodyMac": "Znajdziesz go na pasku menu u góry ekranu. Stamtąd go otworzysz lub zakończysz.",
+    "bodyTray": "Znajdziesz go w zasobniku systemowym. Stamtąd go otworzysz lub zakończysz."
+  },
   "common": {
     "cancel": "Anuluj",
     "close": "Zamknij",

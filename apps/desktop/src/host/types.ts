@@ -150,8 +150,11 @@ export interface Host {
   revealFolder(path: string): Promise<void>;
   pickFolder(): Promise<string | null>;
   setTrayState(state: TrayState): Promise<void>;
-  /** The menu bar icon on a Mac (Windows and Linux always keep theirs, `tray.rs`). */
-  setTrayVisible(show: boolean): Promise<void>;
+  /**
+   * The menu bar icon on a Mac while a window shows (Windows and Linux always keep theirs, `tray.rs`). `off`: the
+   * person turned it off, so closing the window keeps the Dock icon instead (`background.rs`).
+   */
+  setTrayVisible(show: boolean, off: boolean): Promise<void>;
   /**
    * `keep`: the popover, raised for a request rather than by the person, stays up when it loses focus until it is
    * shown again without it or hidden.

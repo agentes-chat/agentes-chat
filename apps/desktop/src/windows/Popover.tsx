@@ -162,8 +162,8 @@ export function Popover() {
   const [menuBarPref, setMenuBarPref] = useState(() => readPref<boolean | null>(MENU_BAR_PREF, null));
   const iconShown = menuBarShown(menuBarPref, busyHere);
   useEffect(() => {
-    void host.setTrayVisible(iconShown).catch(() => {});
-  }, [host, iconShown]);
+    void host.setTrayVisible(iconShown, menuBarPref === false).catch(() => {});
+  }, [host, iconShown, menuBarPref]);
 
   // The notch window lives only while it's on (Preferências → Geral): this window starts with the app.
   useEffect(() => {
