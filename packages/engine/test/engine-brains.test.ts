@@ -715,6 +715,17 @@ test("edited instructions or org context reach a kept-alive session's next turn:
   await reply("@dev e a loja?");
   expect(seen[4]?.session?.resume).toBe(false);
   expect(systems[4]).toContain("We sell bikes.");
+  // Each new session says which part of the session's text changed, so the operator sees why it started cold.
+  const why = async (runId: string | undefined) => {
+    const [run] = await f.db
+      .select({ transcript: schema.agentRuns.transcript })
+      .from(schema.agentRuns)
+      .where(eq(schema.agentRuns.id, runId ?? ""));
+    return (run?.transcript as { notPickedUp?: string[] } | null)?.notPickedUp;
+  };
+  expect(await why(seen[2]?.runId)).toEqual(["agent"]);
+  expect(await why(seen[4]?.runId)).toEqual(["org"]);
+  expect(await why(seen[3]?.runId)).toBeUndefined();
 });
 
 test("people taking turns keep one session; a repository added to the agent's access starts a new one", async () => {

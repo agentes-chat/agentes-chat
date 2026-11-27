@@ -875,6 +875,7 @@
       "admin_ask_channel_agent": "{{names}} memintamu menambahkan {{agent}} ke #{{label}}",
       "admin_ask_create_agents": "{{names}} meminta izin membuat agen",
       "admin_ask_webhook": "{{names}} memintamu menyiapkan webhook {{service}} untuk rutinitas",
+      "admin_ask_voice": "{{names}} memintamu menyalakan pesan suara",
       "routine_paused_other": "Rutinitas dijeda",
       "routine_stalled_other": "Rutinitas menunggu komputer",
       "agent_unreached_other": "Rutinitas tidak bisa memanggil agen",

@@ -266,6 +266,8 @@ const LOOKS_ONLY = new Set([
   "browser_profile",
   "desktop_read",
   "desktop_screenshot",
+  "apps_list",
+  "apps_read",
   "git_clone",
   "gitlab_git_clone",
   "bitbucket_git_clone",
@@ -275,6 +277,7 @@ const LOOKS_ONLY = new Set([
   "team_status",
   "offer_approvals",
   "offer_open_page",
+  "offer_voice_setup",
   // Their card is the question: what the person may change applies from it, anything else waits on it.
   "propose_member_changes",
   "propose_instruction_change",

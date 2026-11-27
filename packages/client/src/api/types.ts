@@ -131,6 +131,28 @@ export interface SpeechKey {
   envProviders: SpeechProvider[];
 }
 
+/** How the speech model on this server's own computer goes (`GET /api/app/speech-local`). */
+export type LocalSpeechStatus =
+  | { state: "off" }
+  | { state: "downloading"; doneBytes: number; totalBytes: number }
+  | { state: "starting" }
+  | { state: "ready" }
+  /** `download`: the network stopped it (Resume goes on from the same byte). `start`: the helper's own words. */
+  | { state: "failed"; reason: "download" | "disk" | "start"; detail: string };
+
+/**
+ * Speech to text on this server's own computer, for its owner (ADR 0100): `fit` says whether it can run here
+ * (`memory`: under 8 GB or one CPU, `disk`: under `needDiskBytes` free, `platform`: no build for it).
+ */
+export interface LocalSpeech {
+  fit: "fits" | "memory" | "disk" | "platform";
+  memoryBytes: number;
+  freeDiskBytes: number | null;
+  needDiskBytes: number;
+  sizeBytes: number;
+  status: LocalSpeechStatus;
+}
+
 /** What `PUT /api/app/speech-key` takes: tried with the provider before it is kept. */
 export interface SpeechKeyInput {
   provider: SpeechProvider;
@@ -2874,7 +2896,7 @@ export interface OrgSettings {
   agentStickers: boolean;
   /** How often agents follow a light reply with a sticker or a GIF. */
   agentMedia: AgentMediaLevel;
-  /** People can send voice messages (ADR 0100); only with `voiceAvailable` too. On by default. */
+  /** People can send voice messages (ADR 0100): the microphone shows with it. On by default. */
   voiceMessages: boolean;
   /** The right hand watches for what stops the team and tells who can fix it. Absent from an older server: on. */
   teamWatch?: boolean;
@@ -2884,6 +2906,13 @@ export interface OrgSettings {
   rightHandLearns?: boolean;
   /** Read only: this server has a speech engine. */
   voiceAvailable: boolean;
+  /**
+   * Read only: whether voice becomes text here. Without `ready` a voice message goes as audio people play. Absent from
+   * an older server, whose microphone shows only with an engine (`voiceAvailable`).
+   */
+  speechState?: SpeechState;
+  /** Read only: who chooses what turns voice into text (the server's owner), when they are in this workspace. */
+  speechOwner?: { userId: string; name: string } | null;
   /** Read only: this server can search GIFs (it has a GIF provider). */
   gifsAvailable: boolean;
   /** Read only: this server can decide when agents send one (agents send none on their own without it). */
@@ -2895,7 +2924,16 @@ export interface OrgSettings {
 }
 
 /** `OrgSettings` the server works out itself, or sets through its own call: never in a PATCH. */
-export type ReadOnlyOrgSettings = "gifsAvailable" | "agentMediaAvailable" | "voiceAvailable" | "approvalsLevel";
+export type ReadOnlyOrgSettings =
+  | "gifsAvailable"
+  | "agentMediaAvailable"
+  | "voiceAvailable"
+  | "speechState"
+  | "speechOwner"
+  | "approvalsLevel";
+
+/** Whether voice becomes text on this server (`OrgSettings.speechState`). */
+export type SpeechState = "ready" | "installing" | "none" | "failed";
 
 /** Automático's sizes: quick tasks, everyday work, hard work. */
 export type ModelTier = "small" | "medium" | "large";
@@ -5687,7 +5725,9 @@ export interface MachineAccessReduce {
 export type AdminAsk =
   | { what: "channel_agent"; channelId: string; agentId: string }
   | { what: "create_agents" }
-  | { what: "webhook"; provider: "github" | "sentry" };
+  | { what: "webhook"; provider: "github" | "sentry" }
+  /** The server's owner, to choose what turns voice into text. */
+  | { what: "voice" };
 
 /** A switch on a computer (`RunnerTools`' keys): `POST …/access/allow` turns one on, `…/access/reduce` off. */
 export type MachineTool = MachineToolName | "browser" | "desktop" | "terminal";

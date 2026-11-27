@@ -3,9 +3,13 @@ import { ACCOUNTS_PROTOCOL, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapte
 import { and, eq, inArray, ne, schema } from "@agenteschat/db";
 import {
   askWidgetChange,
+  type Brain,
+  type BrainTurn,
   createDashboard,
+  createJobHandlers,
   createWidget,
   decideProposal,
+  drainOutbox,
   executeRoutineRun,
   getAgentBrain,
   insertMessage,
@@ -29,6 +33,7 @@ import {
   TASK_OFFLINE_GRACE_MS,
   takeBackPlan,
   updateWidget,
+  warmWhileTyping,
 } from "../src";
 import { agentAiState, backgroundAiState, orgAiStatus, orgHasAi } from "../src/ai-status";
 import { rightHandWidgetsReady, widgetAi } from "../src/dashboards/refresh-fire";
@@ -118,6 +123,55 @@ async function world() {
   };
   return { fx, deps: { db: fx.db }, machineId, bia, caio, lodi, runIn };
 }
+
+test("a person's message to Lodi warms its CLI at claim on their plan, with the session and account its turn gets", async () => {
+  const { fx, deps, bia, lodi } = await world();
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
+  const warmed: BrainTurn[] = [];
+  const seen: BrainTurn[] = [];
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn) {
+      seen.push(turn);
+      yield { type: "done", text: "ok" };
+    },
+    warm: async (turn) => void warmed.push(turn),
+  };
+  const handlers = createJobHandlers({ ...fx.jobDeps, brains: { claude_code: () => brain }, machines });
+  const dm = await openPersonAgentDm(fx.db, fx.org.id, bia.id, lodi.id);
+  await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, bia.id, fx.org.id, dm.id, { body: "oi" });
+  await drainOutbox(fx.db, handlers);
+  expect(seen).toHaveLength(1);
+  expect(warmed.map((t) => [t.account?.id, t.session?.id, t.model])).toEqual([
+    [BIAS, seen[0]?.session?.id, seen[0]?.model],
+  ]);
+});
+
+test("typing in a person's DM with Lodi warms its CLI on that person's own plan, never anyone else's", async () => {
+  const { fx, deps, machineId, bia, caio, lodi, runIn } = await world();
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
+  await setAgentBrain(deps, caio.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: CAIOS });
+  const ran = await runIn(bia.id);
+  await runIn(caio.id);
+  await fx.db
+    .update(schema.agentRuns)
+    .set({ status: "done", finishedAt: new Date() })
+    .where(eq(schema.agentRuns.agentId, lodi.id));
+  const warmed: BrainTurn[] = [];
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run() {
+      yield { type: "done", text: "ok" };
+    },
+    warm: async (turn) => void warmed.push(turn),
+  };
+  const dm = await openPersonAgentDm(fx.db, fx.org.id, bia.id, lodi.id);
+  const typing = { ...fx.jobDeps, brains: { claude_code: () => brain }, machines };
+  await warmWhileTyping(typing, { orgId: fx.org.id, channelId: dm.id, threadId: null, userId: bia.id });
+  expect(warmed.map((t) => [t.account?.id, t.session?.id, t.session?.machineId])).toEqual([
+    [BIAS, ran.session?.id, machineId],
+  ]);
+});
 
 const codeOf = (p: Promise<unknown>) => p.then(() => null).catch((e: { code?: string }) => e.code);
 

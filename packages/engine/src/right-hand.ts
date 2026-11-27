@@ -324,6 +324,16 @@ export async function soleReader(db: Executor, channelId: string, agentId?: stri
   return alone ? (people[0]?.userId ?? null) : null;
 }
 
+/** The one person who reads the right hand's DM where its run answers, when that run is theirs too (`rightHandPerson`). */
+export async function dmPersonBehind(
+  db: Executor,
+  agent: { builtin?: string | null },
+  run: Pick<AgentRun, "orgId" | "id" | "triggerMessageId" | "channelId">,
+): Promise<string | null> {
+  const reader = await soleReader(db, run.channelId);
+  return reader && (await rightHandPerson(db, agent, run)) === reader ? reader : null;
+}
+
 /** Whether `person` is the one person who reads `channelId` (`soleReader`). */
 export const readsAlone = async (db: Executor, channelId: string, person: string, agentId?: string) =>
   (await soleReader(db, channelId, agentId)) === person;
@@ -720,13 +730,12 @@ export async function rightHandPerson(
  * `thinkingAgent`'s.
  */
 export async function rightHandPlanRefusal(
-  db: Executor,
   agent: Pick<Agent, "name" | "ownerUserId" | "planForOthers">,
-  run: Pick<AgentRun, "orgId" | "id" | "triggerMessageId">,
+  /** Who the run thinks for (`rightHandPerson`). */
+  person: string | null,
   status: Pick<MachineStatus, "name" | "protocol" | "kind" | "executors"> | null,
 ): Promise<BrainUnavailability | null> {
   if (!agent.planForOthers) {
-    const person = await thinksFor(db, run);
     if (!person) {
       return {
         code: "plan_unattended",

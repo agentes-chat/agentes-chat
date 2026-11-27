@@ -167,7 +167,9 @@ export async function rightHandPrompt(
           // The team's and the person's own: someone else's personal connection isn't theirs to know of.
           or(isNull(connectorConnections.ownerUserId), eq(connectorConnections.ownerUserId, personId)),
         ),
-      ),
+      )
+      // In the session's system text: another order from one turn to the next would start a new session.
+      .orderBy(connectorConnections.createdAt, connectorConnections.id),
     db.select({ context: organizations.context }).from(organizations).where(eq(organizations.id, orgId)),
     // A deleted computer keeps its row without a token.
     db

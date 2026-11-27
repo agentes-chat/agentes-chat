@@ -90,11 +90,13 @@ export const strings: Partial<PushStrings> = {
   deviceFolderTitle: (a, f, d) => (f ? `${a} просит ${f} на вашем ${d}` : `${a} просит папку на вашем ${d}`),
   deviceFolderBody: "Разрешите её в приложении на этом компьютере.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} просит добавить агента в #${l}`
-      : what === "create_agents"
-        ? `${a} просит разрешить создавать агентов`
-        : `${a} просит настроить вебхук ${l} для рутин`,
+    what === "voice"
+      ? `${a} просит включить голосовые сообщения`
+      : what === "channel_agent"
+        ? `${a} просит добавить агента в #${l}`
+        : what === "create_agents"
+          ? `${a} просит разрешить создавать агентов`
+          : `${a} просит настроить вебхук ${l} для рутин`,
   deviceWaitingTitle: (p, d) => `Агент для ${p} ждёт ваше устройство ${d}`,
   deviceWaitingBody: "Начнёт, когда оно вернётся.",
   teamWeekReady: "Итоги недели команды готовы",

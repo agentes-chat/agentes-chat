@@ -13591,6 +13591,9 @@
   "notifications.what.adminAskWebhook": {
     "value": "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines"
   },
+  "notifications.what.adminAskVoice": {
+    "value": "<b>{{name}}</b> asks you to turn on voice messages"
+  },
   "notifications.what.invitationAccepted": {
     "value": "<b>{{name}}</b> accepted your invitation and joined {{org}}"
   },
@@ -28043,13 +28046,13 @@
     "value": "People in this workspace can send audio in conversations."
   },
   "voice.settings.noEngine": {
-    "value": "Voice messages aren't available here yet."
+    "value": "Voice messages go as audio for now, so agents can't hear them yet."
   },
   "voice.settings.noEngineAsk": {
-    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+    "value": "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page."
   },
   "voice.settings.noEngineHere": {
-    "value": "Voice messages turn on once you choose below what turns voice into text."
+    "value": "Voice messages go as audio until you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"
@@ -28073,7 +28076,7 @@
     "value": "Test"
   },
   "voice.settings.tested": {
-    "value": "It works. Everyone now sees the microphone."
+    "value": "It works. Voice messages now reach the agents as text."
   },
   "voice.settings.sealed": {
     "value": "Kept encrypted on your server and never shown again."
@@ -28083,6 +28086,123 @@
   },
   "voice.settings.invalid": {
     "value": "The saved key doesn't open on this server. Paste it again."
+  },
+  "voice.local.titleHere": {
+    "value": "On this computer"
+  },
+  "voice.local.titleServer": {
+    "value": "On this server"
+  },
+  "voice.local.titlePhone": {
+    "value": "On the server's computer"
+  },
+  "voice.local.textHere": {
+    "value": "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages."
+  },
+  "voice.local.textServer": {
+    "value": "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages."
+  },
+  "voice.local.download": {
+    "value": "Download and turn on"
+  },
+  "voice.local.downloading": {
+    "value": "Downloading the voice model"
+  },
+  "voice.local.progress": {
+    "value": "{{done}} of {{total}}"
+  },
+  "voice.local.meanwhile": {
+    "value": "You can record now. Notes go as audio until it's ready."
+  },
+  "voice.local.downloadingPhone": {
+    "value": "Downloading the voice model to the server's computer. You can record now."
+  },
+  "voice.local.starting": {
+    "value": "Turning it on…"
+  },
+  "voice.local.licenses": {
+    "value": "Model licenses"
+  },
+  "voice.local.tooSmall": {
+    "value": "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below."
+  },
+  "voice.local.noDisk": {
+    "value": "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below."
+  },
+  "voice.local.noBuild": {
+    "value": "There's no voice model for this computer yet. Use a provider key below."
+  },
+  "voice.local.stopped": {
+    "value": "The download stopped: {{detail}}"
+  },
+  "voice.local.diskFull": {
+    "value": "The disk filled up during the download. Free some space and try again."
+  },
+  "voice.local.didntStart": {
+    "value": "The voice model didn't start: {{detail}}"
+  },
+  "voice.local.resume": {
+    "value": "Resume"
+  },
+  "voice.local.copy": {
+    "value": "Copy details"
+  },
+  "voice.local.copied": {
+    "value": "Details copied"
+  },
+  "voice.offer.title": {
+    "value": "Voice messages"
+  },
+  "voice.offer.download": {
+    "value": "Download {{size}} and turn on"
+  },
+  "voice.offer.choose": {
+    "value": "Choose how"
+  },
+  "voice.offer.askOwner": {
+    "value": "Turn voice into text on this server"
+  },
+  "voice.offer.askMember": {
+    "value": "Ask to turn on voice messages"
+  },
+  "voice.offer.on": {
+    "value": "Voice messages are on: agents read them as text."
+  },
+  "voice.setup.memberTitle": {
+    "value": "Voice isn't on here yet"
+  },
+  "voice.setup.memberText": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text."
+  },
+  "voice.setup.memberTextNoName": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text."
+  },
+  "voice.setup.ask": {
+    "value": "Ask {{name}}"
+  },
+  "voice.setup.asked": {
+    "value": "{{name}} was asked to turn it on"
+  },
+  "voice.setup.recordAnyway": {
+    "value": "Record anyway"
+  },
+  "voice.setup.ownerTitle": {
+    "value": "Choose what turns voice into text"
+  },
+  "voice.setup.ownerText": {
+    "value": "Until you do, voice messages go as audio people can play, and agents can't hear them."
+  },
+  "voice.setup.readyTitle": {
+    "value": "Voice messages are on"
+  },
+  "voice.setup.readyText": {
+    "value": "What you say reaches the agents as text."
+  },
+  "voice.setup.record": {
+    "value": "Record a message"
+  },
+  "voice.setup.ownerPhone": {
+    "value": "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them."
   },
   "media.word.gif": {
     "value": "GIF"
@@ -37068,6 +37188,15 @@
   },
   "toolNames.label.desktop_ask_person": {
     "value": "Ask someone to take over the computer"
+  },
+  "toolNames.label.apps_list": {
+    "value": "See the open apps"
+  },
+  "toolNames.label.apps_read": {
+    "value": "Read an app"
+  },
+  "toolNames.label.apps_act": {
+    "value": "Use an app"
   },
   "toolNames.label.computer_use": {
     "value": "Use the computer"
@@ -48560,6 +48689,9 @@
   "chat.body.action_open_page": {
     "value": "Open a screen"
   },
+  "chat.body.action_voice_setup": {
+    "value": "Turn on voice messages"
+  },
   "chat.body.calendar_proposal": {
     "value": "Event proposal: {{title}}"
   },
@@ -49048,6 +49180,12 @@
   },
   "builtinTools.offer_open_page.description": {
     "value": "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page."
+  },
+  "builtinTools.offer_voice_setup.label": {
+    "value": "Offer to turn on voice messages"
+  },
+  "builtinTools.offer_voice_setup.description": {
+    "value": "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them."
   },
   "builtinTools.set_team_week.label": {
     "value": "Change the Team week card"

@@ -496,3 +496,47 @@ describe("a change in the workspace that names all it does", () => {
     expect(c.querySelector(".rq__wt small")?.textContent).toBe(`Com os cargos ${roleNames.join(" e ")}.`);
   });
 });
+
+describe("turning on voice messages", () => {
+  const voiceCard = { kind: "voice_setup", forUserId: "u-walter", params: { why: "Para ouvir seus áudios." } };
+  const local = {
+    fit: "fits" as const,
+    memoryBytes: 16 * 2 ** 30,
+    freeDiskBytes: 100 * 2 ** 30,
+    needDiskBytes: 2 * 2 ** 30,
+    sizeBytes: 773369957,
+    status: { state: "off" as const },
+  };
+
+  test("the server's owner downloads the model in one click, and the card then says voice is on", async () => {
+    const state = withLodiCard(
+      seedState({
+        media: { speechState: "none", speechOwner: { userId: "u-walter", name: "Walter" } },
+        speechKey: { provider: null, hint: null, state: "off", envProviders: [] },
+        speechLocal: local,
+      }),
+      voiceCard,
+    );
+    await go(state);
+    const card = screen().getByRole("group", { name: "Mensagens de voz" });
+    expect(card.textContent).toContain("Para ouvir seus áudios.");
+    await click(within(card).getByRole("button", { name: "Baixar 738 MB e ligar" }));
+    await settle(4);
+    expect(state.calls.some((c) => c.method === "system.installSpeechLocal")).toBe(true);
+    expect(screen().getByText("As mensagens de voz estão ligadas: os agentes leem como texto.")).toBeTruthy();
+  });
+
+  test("anyone else asks the owner from it", async () => {
+    const state = withLodiCard(
+      seedState({ media: { speechState: "none", speechOwner: { userId: "u-joao", name: "João" } } }),
+      voiceCard,
+    );
+    await go(state);
+    await click(
+      within(screen().getByRole("group", { name: "Mensagens de voz" })).getByRole("button", {
+        name: "Pedir para João",
+      }),
+    );
+    expect(state.calls.find((c) => c.method === "notifications.askAdmins")?.args).toEqual([ORG_ID, { what: "voice" }]);
+  });
+});

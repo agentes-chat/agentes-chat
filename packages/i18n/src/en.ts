@@ -6039,6 +6039,7 @@ export const en = {
       adminAskChannel: "<b>{{name}}</b> asks you to add <b>{{agent}}</b> to #{{label}}",
       adminAskCreate: "<b>{{name}}</b> asks to be able to create agents",
       adminAskWebhook: "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines",
+      adminAskVoice: "<b>{{name}}</b> asks you to turn on voice messages",
       invitationAccepted: "<b>{{name}}</b> accepted your invitation and joined {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> accepted your invitation",
       reaction_one: "<b>{{names}}</b> reacted to your message",
@@ -12093,11 +12094,12 @@ export const en = {
       title: "Voice messages",
       on: "Voice messages",
       onHelp: "People in this workspace can send audio in conversations.",
-      noEngine: "Voice messages aren't available here yet.",
+      noEngine: "Voice messages go as audio for now, so agents can't hear them yet.",
       /** No engine, for everyone but the installation's owner, who alone sees the picker on this page. */
-      noEngineAsk: "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page.",
+      noEngineAsk:
+        "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page.",
       /** No engine, for the installation's owner, with the picker under it. */
-      noEngineHere: "Voice messages turn on once you choose below what turns voice into text.",
+      noEngineHere: "Voice messages go as audio until you choose below what turns voice into text.",
       engineTitle: "What turns voice into text",
       own: "Your own server",
       ownHelp: "Whisper or Parakeet on your machine. The audio stays there.",
@@ -12105,10 +12107,66 @@ export const en = {
       key: "{{name}} key",
       keyPlaceholder: "Paste here",
       test: "Test",
-      tested: "It works. Everyone now sees the microphone.",
+      tested: "It works. Voice messages now reach the agents as text.",
       sealed: "Kept encrypted on your server and never shown again.",
       leaves: "Audio from voice messages goes to {{name}} to become text.",
       invalid: "The saved key doesn't open on this server. Paste it again.",
+    },
+    /** "On this computer": the speech model downloaded to the server's own computer (`LocalSpeechChoice`). */
+    local: {
+      titleHere: "On this computer",
+      titleServer: "On this server",
+      /** On the phone, which never runs it. */
+      titlePhone: "On the server's computer",
+      textHere: "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages.",
+      textServer: "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages.",
+      download: "Download and turn on",
+      downloading: "Downloading the voice model",
+      /** `done` and `total`: sizes, "312 MB". */
+      progress: "{{done}} of {{total}}",
+      meanwhile: "You can record now. Notes go as audio until it's ready.",
+      downloadingPhone: "Downloading the voice model to the server's computer. You can record now.",
+      starting: "Turning it on…",
+      licenses: "Model licenses",
+      tooSmall: "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below.",
+      noDisk:
+        "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below.",
+      noBuild: "There's no voice model for this computer yet. Use a provider key below.",
+      stopped: "The download stopped: {{detail}}",
+      diskFull: "The disk filled up during the download. Free some space and try again.",
+      didntStart: "The voice model didn't start: {{detail}}",
+      resume: "Resume",
+      copy: "Copy details",
+      copied: "Details copied",
+    },
+    /** The right hand's card (`offer_voice_setup`). `size`: the download, "738 MB". */
+    offer: {
+      title: "Voice messages",
+      download: "Download {{size}} and turn on",
+      choose: "Choose how",
+      askOwner: "Turn voice into text on this server",
+      askMember: "Ask to turn on voice messages",
+      on: "Voice messages are on: agents read them as text.",
+    },
+    /** The microphone's first press where nothing turns voice into text yet (`VoiceSetupDialog`). */
+    setup: {
+      memberTitle: "Voice isn't on here yet",
+      /** `name`: who runs this server. */
+      memberText:
+        "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text.",
+      memberTextNoName:
+        "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text.",
+      ask: "Ask {{name}}",
+      asked: "{{name}} was asked to turn it on",
+      recordAnyway: "Record anyway",
+      ownerTitle: "Choose what turns voice into text",
+      ownerText: "Until you do, voice messages go as audio people can play, and agents can't hear them.",
+      readyTitle: "Voice messages are on",
+      readyText: "What you say reaches the agents as text.",
+      record: "Record a message",
+      /** On the phone, for the server's owner: the phone never runs a model, so the choice is made on a computer. */
+      ownerPhone:
+        "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them.",
     },
   },
   media: {
@@ -15589,6 +15647,9 @@ export const en = {
       desktop_read: "Read the screen",
       desktop_screenshot: "Take a screenshot",
       desktop_ask_person: "Ask someone to take over the computer",
+      apps_list: "See the open apps",
+      apps_read: "Read an app",
+      apps_act: "Use an app",
       computer_use: "Use the computer",
       computer_status: "Check the computer",
       left_click: "Click",
@@ -20505,6 +20566,7 @@ export const en = {
       welcome_member:
         "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you.",
       action_open_page: "Open a screen",
+      action_voice_setup: "Turn on voice messages",
       calendar_proposal: "Event proposal: {{title}}",
       action_workspace: "Proposed a change in the workspace",
       agent_proposal: "Proposed a new agent: {{name}}",
@@ -20818,6 +20880,10 @@ export const en = {
     offer_open_page: {
       label: "Offer to open a screen",
       description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+    },
+    offer_voice_setup: {
+      label: "Offer to turn on voice messages",
+      description: "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them.",
     },
     set_team_week: {
       label: "Change the Team week card",

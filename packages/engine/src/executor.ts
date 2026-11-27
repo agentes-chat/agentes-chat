@@ -418,6 +418,7 @@ import { isSayNow, linesSaid, SAY_NOW_TOOL, type SaidNow, sayNowApplies, sayNowT
 import { RUN_QUERY_CHARS, sharedQueryEmbedding } from "./search";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
+import type { VoiceStatus } from "./speech-settings";
 import {
   type AccountMove,
   type AccountSwitch,
@@ -622,6 +623,8 @@ export interface EngineDeps {
   shareFile?(ctx: ToolContext, machineId: string, path: string): Promise<ToolOutput>;
   /** Each workspace gets its own computer here (`workspaceComputerText`); absent: people connect theirs. */
   workspaceComputer?: WorkspaceComputer;
+  /** Whether voice becomes text on this server, and who sets it up (`voiceStatusText`); absent: never said. */
+  voiceStatus?(orgId: string): Promise<VoiceStatus | null>;
   /** How long a run whose computer dropped mid-turn waits quietly for it (default `COMPUTER_DROP_GRACE_MS`). */
   computerDropGraceMs?: number;
   /** How long a run waits, still working, for a computer just gone (default `COMPUTER_BLIP_WAIT_MS`). */
@@ -674,6 +677,10 @@ export interface Transcript {
   notesAt?: number;
   /** Hash of what its computer session's system prompt depends on (`RunContext.sessionPrompt`, granted scopes). */
   promptKey?: string;
+  /** `promptKey`'s parts, each a short hash by name: a later run whose key differs says which (`notPickedUp`). */
+  promptParts?: Record<string, string>;
+  /** Its session is new though the conversation had a recent one: why (`BrainSession.notPickedUp`). */
+  notPickedUp?: string[];
   /** What its conversation said of the tools and lines here (`sessionPartsKey`): the next run in its session compares. */
   sessionParts?: string;
   /** "Automático": the model tier and effort chosen for this run; a resume thinks with the same. */
@@ -2188,7 +2195,6 @@ async function executeRunInner(
     needsContext &&
     fresh &&
     !run.background &&
-    !isRightHand(agent) &&
     brainOf(agent.brain) === "claude_code" &&
     !runMessageMeta(run, trigger).viaRoutine;
   if (!askingForRoom) await publishChannelEvent(deps.pubsub, event("running"));
@@ -2823,7 +2829,7 @@ async function executeRunInner(
         )
       : undefined;
     const personBehind = () => authority().then((a) => a.personId);
-    const [pending, skillList, repositories, browsers, workApplies, choicesApply, sayNowHere, codeHere] =
+    const [pending, skillList, repositories, browsers, workApplies, choicesApply, sayNowHere, codeHere, voiceNow] =
       await Promise.all([
         deps.tools
           ? pendingConnectors(db, run.orgId, new Set(granted.map((t) => t.name))).catch(() => [])
@@ -2850,6 +2856,7 @@ async function executeRunInner(
         tools.some((t) => t.name === SUGGEST_CODE_SESSION_TOOL)
           ? codeSuggestionApplies(db, run).catch(() => false)
           : false,
+        deps.voiceStatus ? deps.voiceStatus(run.orgId).catch(() => null) : null,
       ]);
     // What its servers connected by address say on using their tools: granted, like the repositories above.
     const serverNotes = serverInstructionsPrompt(granted);
@@ -2895,6 +2902,7 @@ async function executeRunInner(
         machines: deps.machines,
         ai: { gateway: deps.gateway, machines: deps.machines },
         workspaceComputer: deps.workspaceComputer,
+        voice: voiceNow,
         unseal: brainOf(agent.brain) === "model",
       }),
       contextDeps && !appRun
@@ -3052,6 +3060,30 @@ async function executeRunInner(
       ...(heldBack.length > 0 ? { heldBack } : {}),
     };
     later(() => addRunStep(db, run, "context", stats));
+    const promptNames = ["rules", "org", "agent", "team", "skills"];
+    const personal = [...new Set(granted.flatMap((t) => (t.ownerUserId ? [`personal:${t.ownerUserId}`] : [])))];
+    /** What `promptKey` hashes, by name; `true`: the value's items go in on their own. */
+    const keyParts: [string, unknown, boolean?][] = [
+      ...context.sessionPrompt.map((text, i) => [promptNames[i] ?? `part${i}`, text] as [string, unknown]),
+      ["repositories", repositories],
+      ["browsers", browsers],
+      // A resumed session keeps the text it began with. Absent when there is none, so no other session's key changes.
+      ["serverNotes", serverNotes ? [serverNotes] : [], true],
+      // Per connection (a second database shares `database:read`); the agent's grant rows too, so a tool the
+      // requester's policy held back doesn't change the key from one person to the next.
+      [
+        "grants",
+        [
+          ...new Set([
+            ...granted.map((t) => grantKey(t.connectionId, t.scope)),
+            ...(deps.tools ? await grantedScopeKeys(db, run.orgId, agent.id) : []),
+          ]),
+        ].sort(),
+      ],
+      // A session a person's own connection was offered in holds what it read: only their runs resume it
+      // (ADR 0099 addendum). Absent otherwise, so no other session's key changes.
+      ["personal", personal, true],
+    ];
     transcript = {
       // What doesn't change during the run first (prompt cache), the per-turn blocks last.
       system: stableFirst(system),
@@ -3061,25 +3093,9 @@ async function executeRunInner(
       ...(tools.some((t) => t.name === PASS_TOOL) ? { passListed: true } : {}),
       ...(serverNotes ? { readServerNotes: true as const } : {}),
       sessionParts: sessionPartsKey(system),
-      promptKey: sha256(
-        JSON.stringify([
-          ...context.sessionPrompt,
-          repositories,
-          browsers,
-          // A resumed session keeps the text it began with. Absent when there is none, so no other session's key changes.
-          ...(serverNotes ? [serverNotes] : []),
-          // Per connection (a second database shares `database:read`); the agent's grant rows too, so a tool the
-          // requester's policy held back doesn't change the key from one person to the next.
-          [
-            ...new Set([
-              ...granted.map((t) => grantKey(t.connectionId, t.scope)),
-              ...(deps.tools ? await grantedScopeKeys(db, run.orgId, agent.id) : []),
-            ]),
-          ].sort(),
-          // A session a person's own connection was offered in holds what it read: only their runs resume it
-          // (ADR 0099 addendum). Absent otherwise, so no other session's key changes.
-          ...[...new Set(granted.flatMap((t) => (t.ownerUserId ? [`personal:${t.ownerUserId}`] : [])))],
-        ]),
+      promptKey: sha256(JSON.stringify(keyParts.flatMap(([, value, spread]) => (spread ? value : [value])))),
+      promptParts: Object.fromEntries(
+        keyParts.map(([name, value]) => [name, sha256(JSON.stringify(value)).slice(0, 8)] as const),
       ),
       postedUpTo: context.messages.length,
       postedCount: 0,
@@ -3586,8 +3602,11 @@ async function executeRunInner(
     // A routine's or any background run's work never continues a conversation's session, nor the other way.
     fresh: Boolean(viaRoutine) || run.background,
     promptKey: transcript.promptKey,
+    ...(transcript.promptParts ? { promptParts: transcript.promptParts } : {}),
     codeSession: ctx.codeSession ?? null,
   });
+  if (brainPlan.kind !== "model" && brainPlan.session?.notPickedUp)
+    transcript.notPickedUp = brainPlan.session.notPickedUp;
   if (brainPlan.standIn) {
     standInUsed = brainPlan.standIn;
     const fallback = {
@@ -7230,10 +7249,16 @@ export async function warmAtClaim(
   guess: Promise<AutoChoice>,
   chosen: Promise<AutoChoice> | null,
   gate?: (plan: BrainPlan) => Promise<boolean>,
+  /** The right hand's person when `run` has no row to read them from (`warmWhileTyping`'s). */
+  person?: string | null,
 ): Promise<string | null> {
   const factory = deps.brains?.claude_code;
   if (!factory) return null;
-  const base = await resolveBrain(deps, agent, run, conversation, { peek: true, codeSession });
+  const base = await resolveBrain(deps, agent, run, conversation, {
+    peek: true,
+    codeSession,
+    ...(person !== undefined ? { person } : {}),
+  });
   if (gate && !(await gate(base))) return null;
   if (base.kind !== "claude_code" || base.unavailable || !base.session) return null;
   const session = sessionSent(base.session, false);

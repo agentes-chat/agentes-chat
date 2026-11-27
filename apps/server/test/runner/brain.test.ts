@@ -1868,6 +1868,33 @@ test.if(posix)("a turn's timings keep its API retries, its thinking and when the
 });
 
 test.if(posix)(
+  "each turn asks for its tools at its start; a new process's wait for them goes in its timings",
+  async () => {
+    const asked: { id: string; run: string | undefined }[] = [];
+    let m: BrainManager | null = null;
+    const { turn, m: made } = setup({
+      prefetchTools: (id) => {
+        asked.push({ id, run: m?.mcpTask(id)?.runId });
+        // The bridge answers the CLI's first ask 40 ms after it came, 10 ms into the turn.
+        m?.bridgeList(id, Date.now() + 10, 40);
+        m?.bridgeList(id, Date.now() + 500, 900);
+      },
+    });
+    m = made;
+    const r = await turn(1, "first");
+    expect(asked).toEqual([{ id: expect.any(String), run: RUN(1) }]);
+    const t = r.final.type === "done" ? r.final.timings : undefined;
+    expect(t).toMatchObject({ warm: false, toolsListWaitMs: 40 });
+    expect(t?.toolsListMs).toBeGreaterThanOrEqual(10);
+    // On the open process the CLI is ready already: its list asks go in no timings.
+    const next = await turn(2, "second");
+    expect(asked.map((a) => a.run)).toEqual([RUN(1), RUN(2)]);
+    expect(next.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(next.final.type === "done" ? next.final.timings : undefined).not.toHaveProperty("toolsListWaitMs");
+  },
+);
+
+test.if(posix)(
   "another model or effort switches on the open process; another fallback, or none of them, starts a new one",
   async () => {
     const { spawns, turn } = setup();
@@ -2874,8 +2901,8 @@ const SHARED = "0193ffff-0000-7000-8000-000000000002";
 const fakeEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("FAKE_CLAUDE")));
 
 /** Root's side, faked: the CLI is the fake one, the worker a list of what it was told. */
-function delegatedSetup(over: Partial<DelegatedTurn> = {}) {
-  const s = setup({ mcp: undefined });
+function delegatedSetup(over: Partial<DelegatedTurn> = {}, opts: Partial<BrainManagerOptions> = {}) {
+  const s = setup({ mcp: undefined, ...opts });
   const room = path.join(s.home, "store", "run", "21000");
   const configDir = path.join(s.home, "store", "config");
   mkdirSync(room, { recursive: true });
@@ -2997,6 +3024,15 @@ test.if(posix)("delegated: root reads nothing of the folder; what it writes come
   expect(JSON.stringify(again.final)).not.toContain("planted");
 });
 
+test.if(posix)("delegated: the turn's tools are the worker's to ask for, never asked here too", async () => {
+  const asked: string[] = [];
+  const { turn, frames } = delegatedSetup({}, { prefetchTools: (id) => void asked.push(id) });
+  const r = await turn(1, "hi");
+  expect(r.final).toMatchObject({ type: "done" });
+  expect(frames.some((f) => f.runId === RUN(1) && f.serverToken)).toBe(true);
+  expect(asked).toEqual([]);
+});
+
 test.if(posix)("delegated: a resume needs root's record and a plain transcript, never just a file", async () => {
   const session = SESSION(1);
   const first = delegatedSetup();
@@ -3030,6 +3066,24 @@ test.if(posix)("delegated: a resume needs root's record and a plain transcript, 
   expect(await resumed({ [session]: { agent: "someone-else", account: SHARED } }, "plain")).toBe("--session-id");
   expect(await resumed({ [session]: { agent: AGENT.id, account: "another" } }, "plain")).toBe("--session-id");
 });
+
+test.if(posix)(
+  "delegated: a warm start is the sign-in's own CLI, guessed from the agent's last turn on it; the turn takes it",
+  async () => {
+    const d = delegatedSetup();
+    const ctx = { agent: AGENT, folder: "", emit: () => {}, delegated: d.delegated, grants: ["/srv/nope"] };
+    const warm = (n: number) =>
+      d.m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", account: SHARED }, ctx);
+    expect(await warm(2)).toEqual({ open: false, started: false });
+    await d.turn(1, "hi", { system: "S1" });
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    await waitFor(() => d.spawns().length === 2, 4000);
+    expect(d.spawns()[1]?.system).toBe(d.spawns()[0]?.system ?? "");
+    const b = await d.turn(2, "there", { system: "S1", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(d.spawns()).toHaveLength(2);
+  },
+);
 
 test.if(posix)("delegated: a session it doesn't own is never resumed on the CLI's word", async () => {
   process.env.FAKE_CLAUDE_SESSION_TAKEN = "1";
@@ -3534,11 +3588,116 @@ test.if(posix)(
     expect(await warm(3)).toEqual({ open: true, started: true });
     await waitFor(() => spawns().length === 3, 4000);
     const c = await turn(3, "later", { system: "S2", session: { id: SESSION(3), resume: false } });
-    expect(c.final).toMatchObject({ type: "done" });
+    // Where the two texts part, for the run's stored context to show which part changed.
+    expect(c.final).toMatchObject({ type: "done", timings: { warm: false, cold: "warm_mismatch", warmMismatchAt: 1 } });
     expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
     expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
   },
 );
+
+test.if(posix)(
+  "a runner started again warms from the agent's last launch it kept on disk, and never with another sign-in's text",
+  async () => {
+    const accountDir = tempDir("claude-account-");
+    dirs.push(accountDir);
+    const accounts = {
+      accountDir: (kind: string, id: string) => (kind === "claude_code" && id === ACCOUNT ? accountDir : null),
+    };
+    const { m, home, ws, spawns, turn } = setup({ accounts });
+    await turn(1, "hi", { system: "S1" });
+    m.close();
+    const again = new BrainManager({
+      root: path.join(home, "brains"),
+      claudeCommand: [process.execPath, FAKE],
+      claudeHome: path.join(home, "no-claude-home"),
+      mcp: { socketPath: path.join(home, "mcp.sock"), command: ["node", "runner.mjs"] },
+      deltaMs: 5,
+      accounts,
+    });
+    managers.push(again);
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number, account?: string) =>
+      again.prewarm(
+        { kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", ...(account ? { account } : {}) },
+        ctx,
+      );
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(spawns()[1]?.system).toBe("S1");
+    const b = await again.turn(
+      {
+        runId: RUN(2),
+        kind: "claude_code",
+        session: { id: SESSION(2), resume: false },
+        cwd: "",
+        system: "S1",
+        prompt: "there",
+        mcp: { token: `agr_${"t".repeat(24)}2` },
+      },
+      ctx,
+    );
+    expect(b).toMatchObject({ type: "done", timings: { warm: true } });
+    // No turn of the agent's on that sign-in yet: nothing to start it with, not the other sign-in's text.
+    expect(await warm(3, ACCOUNT)).toEqual({ open: false, started: false });
+    expect(spawns()).toHaveLength(2);
+  },
+);
+
+test.if(posix)(
+  "a locked-down turn's warm start is that turn's own launch: the turn takes it, and a CLI tool of its own still stops it",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const chat = { permissions: { mode: "chat" as const } };
+    const warm = (n: number) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", ...chat }, ctx);
+    await turn(1, "hi", { system: "S1", ...chat });
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    const b = await turn(2, "there", { system: "S1", ...chat, session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(spawns()).toHaveLength(2);
+    process.env.FAKE_CLAUDE_EXTRA_TOOL = "Workflow";
+    try {
+      expect(await warm(3)).toEqual({ open: true, started: true });
+      const c = await turn(3, "more", { system: "S1", ...chat, session: { id: SESSION(3), resume: false } });
+      expect(c.final).toMatchObject({ type: "error", code: "tools_not_locked" });
+      expect(c.events.some((e) => e.type === "text_delta")).toBe(false);
+    } finally {
+      delete process.env.FAKE_CLAUDE_EXTRA_TOOL;
+    }
+  },
+);
+
+test.if(posix)(
+  "a warm start's guessed text that no turn took never becomes the session's: its resumed turn starts with its own",
+  async () => {
+    const { m, ws, spawns, turn } = setup({ idleMs: 300 });
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    // Another person's conversation: its text is the guess.
+    await turn(1, "hi", { system: "S-other" });
+    const warm = await m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: true }, cwd: "" }, ctx);
+    expect(warm).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(spawns()[1]?.system).toBe("S-other");
+    // Closed unused (its idle limit, or for another conversation).
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const b = await turn(2, "there", { system: "S-mine", session: { id: SESSION(2), resume: true } });
+    expect(b.final).toMatchObject({ type: "done" });
+    expect(spawns().at(-1)?.system).toBe("S-mine");
+  },
+);
+
+test.if(posix)("a ready process past its idle time gives way to a new one while the agent works lately", async () => {
+  const { spawns, turn } = setup({ maxProcesses: 3, readyRoom: () => true, idleMs: 400 });
+  await turn(1, "hi", { system: "S1" });
+  await waitFor(() => spawns().length === 2, 4000);
+  // Closed as idle, as the turn's own process: another ready one, on a session of its own.
+  await waitFor(() => spawns().length >= 3, 4000);
+  const ready = spawns().slice(1, 3);
+  expect(ready.map((r) => r.system)).toEqual(["S1", "S1"]);
+  expect(ready[1]?.args.at(-1)).not.toBe(ready[0]?.args.at(-1));
+});
 
 test.if(posix)(
   "a warm start that came to nothing says why on its turn: no launch to start it with, another launch than the turn's",

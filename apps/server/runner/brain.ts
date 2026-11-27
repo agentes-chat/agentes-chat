@@ -93,6 +93,7 @@ import { descendantPids, killTree } from "./exec";
 import { cliSpawn, endedNotFound, envValue } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
+import { firstDifference } from "./lines";
 import {
   CHAT_DENIED_TOOLS,
   chatToolsBreach,
@@ -202,6 +203,8 @@ export const BRAIN_MAX_PROCESSES = 1;
  */
 export const READY_MIN_FREE_BYTES = MIN_FREE_BYTES + 1.5 * 1024 ** 3;
 export const READY_IDLE_MS = 20 * 60_000;
+/** Past `READY_IDLE_MS` a new ready process takes the old one's place, while the agent's last turn is this recent. */
+export const READY_REFRESH_FOR_MS = 2 * 60 * 60_000;
 /** Sessions adopted ready processes are kept for (`adopted.json`): resumed by the id the server knows them by. */
 const ADOPTED_KEPT = 2000;
 const ADOPTED_KEEP_MS = 30 * 86_400_000;
@@ -1364,6 +1367,8 @@ export class ClaudeProcess {
   bridgeCalls = 0;
   /** When one of those started or ended: its silence counts from there too. */
   bridgeChangedAt = 0;
+  /** Its MCP server's first ask for our tool list since the turn began, and how long our answer took (`bridgeList`). */
+  toolsList: { at: number; ms: number } | null = null;
   /** Its shell timeout when a command sets none (`BASH_DEFAULT_TIMEOUT_MS` in its env, else the CLI's own). */
   readonly bashDefaultMs: number;
   /** Its API timeout (`API_TIMEOUT_MS` in its env), when set. */
@@ -2099,6 +2104,8 @@ export interface BrainManagerOptions {
   };
   /** The local MCP bridge (where the daemon listens and how to start `agentes-runner mcp`). */
   mcp?: { socketPath: string; command: string[] };
+  /** A process's run began: the bridge asks for that run's tool list now, while the CLI starts (`McpBridge.prefetch`). */
+  prefetchTools?: (processId: string) => void;
   /** The runner's home (its accounts among it): turns never read it. */
   runnerHome?: string;
   /**
@@ -2339,10 +2346,11 @@ export class BrainManager {
   private keep: ReadonlySet<string> | undefined;
   /** The same per agent, where one manager runs several agents' CLIs (root's). */
   private readonly keeps = new Map<string, ReadonlySet<string>>();
-  /** Each agent's system text as its last turn sent it (`prewarm`): the same in each of its conversations. */
-  private readonly systems = new Map<string, string>();
-  /** …and the folder its last turn ran in. */
-  private readonly cwds = new Map<string, string>();
+  /**
+   * Each agent's system text as its last turn on each account sent it, and the folder it ran in (`prewarm`): the same
+   * in each of its conversations. Kept on disk too (`lastTurnFile`), so a warm start after a restart has it.
+   */
+  private readonly lastTurns = new Map<string, { system: string; cwd: string }>();
   /** Ended background shells of sessions with no process to tell, by `brainKey`: their next turn hears of them. */
   private readonly notices = new Map<string, ToolNotice[]>();
   /** Why each session's last process ended (`brainKey`), oldest first: its next turn's cold cause. */
@@ -2350,7 +2358,10 @@ export class BrainManager {
   /** Each agent's ready process, by its session (`adoptReady`). */
   private readonly ready = new Map<string, string>();
   /** The launch each agent's last turn had, for its ready process: the request without its words, and its context. */
-  private readonly lastLaunch = new Map<string, { req: BrainTurnRequest; ctx: BrainTurnContext; cwd: string }>();
+  private readonly lastLaunch = new Map<
+    string,
+    { req: BrainTurnRequest; ctx: BrainTurnContext; cwd: string; at: number }
+  >();
   /** The server's session id → the ready process's session that answers for it (`adopted.json`); read once. */
   private adopted: Map<string, { to: string; at: number }> | null = null;
   private readonly log: (line: string) => void;
@@ -2404,6 +2415,38 @@ export class BrainManager {
     return at < 0 ? key : `${key.slice(0, at)}:${this.sessionOf(key.slice(at + 1))}`;
   }
 
+  /** Where `lastTurns` keeps an agent's last turn on an account (`""`: the computer's own sign-in). */
+  private lastTurnFile(key: string) {
+    const name = createHash("sha256").update(key).digest("hex").slice(0, 32);
+    return path.join(this.opts.root, "last-turns", `${name}.json`);
+  }
+
+  /** The agent's last turn on `account` that kept its process: its system text and folder, if any. */
+  private lastTurn(agentId: string, account: unknown) {
+    const key = JSON.stringify([agentId, typeof account === "string" ? account : ""]);
+    const known = this.lastTurns.get(key);
+    if (known) return known;
+    const kept = readJson<{ system?: unknown; cwd?: unknown }>(this.lastTurnFile(key));
+    if (typeof kept?.system !== "string" || typeof kept.cwd !== "string") return undefined;
+    const found = { system: kept.system, cwd: kept.cwd };
+    this.lastTurns.set(key, found);
+    return found;
+  }
+
+  private keepLastTurn(agentId: string, account: unknown, system: string, cwd: string) {
+    const key = JSON.stringify([agentId, typeof account === "string" ? account : ""]);
+    const known = this.lastTurns.get(key);
+    if (known?.system === system && known.cwd === cwd) return;
+    this.lastTurns.set(key, { system, cwd });
+    try {
+      const file = this.lastTurnFile(key);
+      mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+      writeJson(file, { system, cwd });
+    } catch (err) {
+      this.log(`brain: couldn't keep an agent's last launch (${err instanceof Error ? err.message : String(err)})`);
+    }
+  }
+
   /**
    * A new conversation of the agent takes its ready process instead of starting one: that process's session answers
    * for the server's from now on (`sessionOf`), here and after a restart. Only a session that never ran here, and only
@@ -2441,7 +2484,7 @@ export class BrainManager {
    */
   private startReady(agentId: string) {
     const last = this.lastLaunch.get(agentId);
-    const system = this.systems.get(agentId);
+    const system = last && this.lastTurn(agentId, last.req.account)?.system;
     if (this.closed || !last || system === undefined || this.ready.has(agentId) || this.max < 2) return;
     if (this.alive(agentId) >= this.max || !this.opts.readyRoom?.()) return;
     const session = crypto.randomUUID();
@@ -2557,6 +2600,12 @@ export class BrainManager {
     if (!proc) return;
     proc.bridgeCalls = Math.max(0, proc.bridgeCalls + delta);
     proc.bridgeChangedAt = Date.now();
+  }
+
+  /** The MCP bridge answered a tool list of the process `id` asked at `at` in `ms`: a turn's first goes in its timings. */
+  bridgeList(id: string, at: number, ms: number) {
+    const b = this.bridge.get(id);
+    if (b?.proc && b.runId !== null) b.proc.toolsList ??= { at, ms };
   }
 
   /**
@@ -2687,13 +2736,14 @@ export class BrainManager {
   /**
    * `brain.warm` (protocol 74): the session's process starts now, as its turn would start it, so the turn finds it
    * open; one already open stays (its idle time starts again). It starts with the session's kept system text, else
-   * the agent's last turn's (`guessed`). Never for a sign-in several agents share, nor before this manager ran a
-   * turn of the agent's, nor past the agent's cap with none of its processes idle.
+   * the agent's last turn's on the same account (`guessed`), never another sign-in's. Never before a turn of the
+   * agent's on that account kept its process here, nor past the agent's cap with none of its processes idle.
    */
   async prewarm(req: BrainWarmRequest, ctx: BrainTurnContext): Promise<BrainWarmReply> {
     const no: BrainWarmReply = { open: false, started: false };
-    const system = this.systems.get(ctx.agent.id);
-    if (this.closed || req.kind !== "claude_code" || ctx.delegated) return no;
+    if (this.closed || req.kind !== "claude_code") return no;
+    const lastTurn = this.lastTurn(ctx.agent.id, req.account);
+    const system = lastTurn?.system;
     const at = await this.place(req, ctx).catch(() => null);
     if (!at || "type" in at) return no;
     if (system === undefined) {
@@ -2701,10 +2751,11 @@ export class BrainManager {
       return no;
     }
     // The agent's folder asked: where its last turn ran instead (a checkout the engine moves its turns to), if still
-    // one it may use.
-    const last = this.cwds.get(ctx.agent.id);
+    // one it may use. A shared sign-in's folder is the one its worker said.
+    const last = lastTurn?.cwd;
     const allowed = (dir: string) => [at.ctx.folder, ...(at.ctx.grants ?? [])].some((root) => isInside(root, dir));
-    if (!req.cwd && req.permissions?.mode !== "chat" && last && allowed(last) && existsSync(last)) at.cwd = last;
+    const moves = !req.cwd && !ctx.delegated && req.permissions?.mode !== "chat";
+    if (moves && last && allowed(last) && existsSync(last)) at.cwd = last;
     const warmTurn = { ...req, runId: "warm", system, conversation: "", prompt: "", mcp: { token: "" } };
     const adopted = this.adoptReady(
       ctx.agent.id,
@@ -2813,6 +2864,8 @@ export class BrainManager {
     };
     let warm = false;
     let cold: BrainColdCause | undefined;
+    /** A warm start's text against this turn's: where they part (`warmMismatchAt`). */
+    let mismatchAt: number | undefined;
     let started: Live | undefined;
     const since = (at: number | null | undefined) => (at != null && at >= startedAt ? at - startedAt : undefined);
     /** Where this turn's lines of its CLI's debug log begin. */
@@ -2823,11 +2876,16 @@ export class BrainManager {
       const s = used.proc.parser.stats;
       const measures: Omit<BrainTurnTimings, "warm"> = {
         initMs: since(started?.proc.initAt),
+        // A new process's wait for our tools, which Claude Code says it is ready only after.
+        ...(started?.proc.toolsList
+          ? { toolsListMs: since(started.proc.toolsList.at), toolsListWaitMs: started.proc.toolsList.ms }
+          : {}),
         sentMs: since(sentAt),
         firstEventMs,
         firstRequestMs: since(s.firstRequestAt),
         firstTokenMs: since(s.firstTokenAt),
         firstAssistantMs: since(s.firstAssistantAt),
+        warmMismatchAt: mismatchAt,
         retries: s.retries,
         retryDelayMs: s.retryDelayMs,
         thinkingBlocks: s.thinkingBlocks,
@@ -2850,10 +2908,9 @@ export class BrainManager {
     const system = typeof req.system === "string" ? req.system : "";
     // Only a turn that keeps its process is what the next warm start copies: a background turn's (a routine's) system
     // text and folder are its own, and a warm start guessed from them is thrown away by the conversation's turn.
-    if (!ctx.delegated && req.keepAlive !== false) {
-      this.systems.set(ctx.agent.id, system);
-      this.cwds.set(ctx.agent.id, cwd);
-      this.lastLaunch.set(ctx.agent.id, { req: launchOf(req), ctx, cwd });
+    if (req.keepAlive !== false) {
+      this.keepLastTurn(ctx.agent.id, req.account, system, cwd);
+      if (!ctx.delegated) this.lastLaunch.set(ctx.agent.id, { req: launchOf(req), ctx, cwd, at: Date.now() });
     }
     let live = this.live.get(key);
     const warmed = live?.warmed === true;
@@ -2863,6 +2920,7 @@ export class BrainManager {
       const guessed = live.guessed;
       live.guessed = undefined;
       if (guessed !== system) {
+        mismatchAt = firstDifference(guessed, system);
         this.drop(live, "warm_mismatch");
         rmSync(live.keptSystem, { force: true });
         live = undefined;
@@ -3061,6 +3119,8 @@ export class BrainManager {
     if (bridge) {
       bridge.runId = req.runId;
       bridge.runToken = typeof req.mcp?.token === "string" ? req.mcp.token : null;
+      // A delegated CLI's list goes through the agent's worker's bridge: asked here it would be a second, unused ask.
+      if (!live.bridged) this.opts.prefetchTools?.(live.id);
     }
     this.running.set(req.runId, live);
     // Usage goes to the account the turn thinks with, or to the computer's own sign-in.
@@ -3592,6 +3652,9 @@ export class BrainManager {
       if (left > 0) return this.checkIdle(live, left);
       this.log(`brain process ${live.key.split(":")[1]?.slice(0, 8) ?? ""} idle; closing`);
       this.drop(live, "idle");
+      // A ready one only went stale (its start took the folder's git status): another starts, room allowing.
+      const last = live.ready ? this.lastLaunch.get(live.agentId) : undefined;
+      if (last && Date.now() - last.at < READY_REFRESH_FOR_MS) this.startReady(live.agentId);
     }, waitMs);
     live.idleTimer.unref?.();
   }
@@ -3679,12 +3742,16 @@ export class BrainManager {
     this.bridge.delete(live.id);
     if (live.bridged) void live.bridged.to.bridge({ ...live.bridged.frame, token: null }).catch(() => undefined);
     this.keepCompacted(live);
-    // Its last turn just used the cache: kept for an hour from now.
-    try {
-      const now = Date.now() / 1000;
-      utimesSync(live.keptSystem, now, now);
-    } catch {
-      // nothing kept
+    // A warm start's guess no turn took (another conversation's text, maybe another person's): never the session's.
+    if (live.guessed !== undefined) rmSync(live.keptSystem, { force: true });
+    else {
+      // Its last turn just used the cache: kept for an hour from now.
+      try {
+        const now = Date.now() / 1000;
+        utimesSync(live.keptSystem, now, now);
+      } catch {
+        // nothing kept
+      }
     }
     // The process may still read its files while it exits.
     const cleanup = () => {

@@ -321,6 +321,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   show_block: "preparingCard",
   offer_approvals: "preparingCard",
   offer_open_page: "preparingCard",
+  offer_voice_setup: "preparingCard",
   set_team_week: "preparingCard",
   start_poll: "startingPoll",
   ask_choices: "askingChoices",

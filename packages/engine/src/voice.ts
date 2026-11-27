@@ -51,6 +51,9 @@ const VOICE_ATTEMPTS = 4;
 const DAY_MS = 24 * 3600_000;
 /** What an agent reads when no engine could make out the words. */
 export const VOICE_NO_WORDS_BODY = "(voice message: the words could not be made out)";
+/** What an agent reads of a recording made while nothing on this server turns voice into text. */
+export const VOICE_NO_ENGINE_BODY =
+  "(a voice message, and this server has no speech-to-text, so you can't hear it: tell the person, and that typing it works)";
 
 /** What the apps record, and all that is ever served back from our own address. */
 /** Bun names a multipart file's type after its extension: `.webm` and `.mp4` arrive as video, and these only hold audio. */
@@ -130,9 +133,11 @@ export async function voiceAllowed(deps: Pick<VoiceDeps, "db" | "limits">, userI
   return (await minutesSince(db, eq(voiceClips.orgId, orgId), since)) < cap;
 }
 
-/** Whether this workspace's people see the microphone. */
-export async function voiceOn(deps: Pick<VoiceDeps, "db" | "engines">, orgId: string) {
-  if (deps.engines().length === 0) return false;
+/**
+ * Whether this workspace's people see the microphone: its switch alone. With no engine on the server a recording still
+ * goes, as audio people play (`noWords`).
+ */
+export async function voiceOn(deps: Pick<VoiceDeps, "db">, orgId: string) {
   const [row] = await deps.db
     .select({ on: organizationSettings.voiceMessages })
     .from(organizationSettings)
@@ -360,15 +365,18 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
   const place = await deps.blobs.forConfig(clip.orgId, clip.storageConfigId);
   const stored = await place.get(clip.blobKey);
   if (!stored) return dropClip(deps, clip, "refused");
-  let words: Awaited<ReturnType<typeof wordsOf>>;
-  const recorded = keepRecording(deps, { channelId: clip.channelId, threadId: clip.threadId, userId: clip.userId });
-  try {
-    words = await wordsOf(deps, clip, stored.body);
-  } catch (error) {
-    if (!options.finalAttempt) throw error;
-    words = null;
-  } finally {
-    await recorded();
+  let words: Awaited<ReturnType<typeof wordsOf>> = null;
+  // No engine at all: nothing to wait for, the recording goes now as audio.
+  const noEngine = deps.engines().length === 0;
+  if (!noEngine) {
+    const recorded = keepRecording(deps, { channelId: clip.channelId, threadId: clip.threadId, userId: clip.userId });
+    try {
+      words = await wordsOf(deps, clip, stored.body);
+    } catch (error) {
+      if (!options.finalAttempt) throw error;
+    } finally {
+      await recorded();
+    }
   }
   const typed = clip.text ?? "";
   if (words && !words.text && !typed && !clip.attachments?.length) return dropClip(deps, clip, "silent");
@@ -383,7 +391,7 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
   };
   // Typed first, so agents, mentions and search read both: the apps show `meta.voice.text` as text, the rest as words.
   // The typed text may use the whole length a message has: the words then keep what is left of it.
-  const spoken = words ? words.text : VOICE_NO_WORDS_BODY;
+  const spoken = words ? words.text : noEngine ? VOICE_NO_ENGINE_BODY : VOICE_NO_WORDS_BODY;
   const said = typed ? spoken.slice(0, Math.max(0, MAX_MESSAGE_LENGTH - typed.length - 2)) : spoken;
   let message: Awaited<ReturnType<typeof postPersonMessage>>;
   try {

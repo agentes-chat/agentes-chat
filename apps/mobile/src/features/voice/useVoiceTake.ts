@@ -67,6 +67,11 @@ export interface VoiceTarget {
   allowed: boolean | null;
   /** Not allowed because the workspace has no plan in force (`reason: "plan"`). */
   needsPlan?: boolean;
+  /**
+   * Asked as the hold starts, before anything records: true when the app showed something instead (the first take
+   * where voice doesn't become text yet, `VoiceSetupSheet`), and the next hold records.
+   */
+  ask?: () => boolean;
   afterSend: () => void;
   /**
    * Right before a take goes: what goes with it, the text typed beside it and the files waiting above the field, once
@@ -455,6 +460,7 @@ export function useVoiceTake(target: VoiceTarget) {
   /** The hold reached its time. A first use only asks: the next hold records. */
   const start = useCallback(async () => {
     if (phaseRef.current !== "idle" || starting.current) return;
+    if (targetRef.current.ask?.()) return;
     if (targetRef.current.allowed === false) {
       haptics.warning();
       sayRefusal(targetRef.current.needsPlan ? "plan" : "limit");
