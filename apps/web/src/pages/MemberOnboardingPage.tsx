@@ -146,14 +146,14 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
       const made = await start.mutateAsync({
         area: CUSTOM_AREA,
         name: draft.name,
-        role: draft.does.slice(0, 80),
+        // What it does is a sentence, not a role: it goes in its instructions and its first task.
         instructions: draft.does,
         appearance: CUSTOM_LOOK,
         task: draft.does.slice(0, 500),
         replace: row && !row.firedAt ? row.agentId : null,
       });
       await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
-      return { id: made.agentId, name: draft.name, role: draft.does, look: normalizeAppearance(CUSTOM_LOOK) };
+      return { id: made.agentId, name: draft.name, role: "", look: normalizeAppearance(CUSTOM_LOOK) };
     } catch (e) {
       toast.show(errorText(t, e), "error");
       return null;
@@ -234,7 +234,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
           org={org.name}
           agent={
             shown === "agent" && agent
-              ? { id: agent.id, name: agent.name, role: agent.role, look: lookOf(agent) }
+              ? { id: agent.id, name: agent.name, role: agent.role || row?.task || "", look: lookOf(agent) }
               : null
           }
           area={shown === "area" ? "custom" : area}

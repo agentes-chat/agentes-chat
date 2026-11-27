@@ -427,7 +427,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       const made = await start.mutateAsync({
         area: CUSTOM_AREA,
         name: draft.name,
-        role: draft.does.slice(0, 80),
+        // What it does is a sentence, not a role: it goes in its instructions and its first task.
         instructions: draft.does,
         appearance: CUSTOM_LOOK,
         task: draft.does.slice(0, 500),
@@ -435,7 +435,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       });
       await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
       setPicked(null);
-      return { id: made.agentId, name: draft.name, role: draft.does, look: normalizeAppearance(CUSTOM_LOOK) };
+      return { id: made.agentId, name: draft.name, role: "", look: normalizeAppearance(CUSTOM_LOOK) };
     } catch (e) {
       toast.show(errorText(t, e), "error");
       return null;
@@ -511,7 +511,8 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   const madeFrom = latest && firstAgent && latest.agentId === firstAgent.id ? latest : null;
   const option = madeFrom && madeFrom.picked !== null ? (madeFrom.options[madeFrom.picked] ?? null) : null;
   // "Step N of 4": what it is for, the work, the agent and the plan (three on a self-hosted server).
-  const counted = stepCount(steps, asking ? "who" : step);
+  // "Other" before its agent exists is the agent's step already.
+  const counted = stepCount(steps, asking ? "who" : step === "area" && custom ? "agent" : step);
   const stepLine = counted ? t("onboarding.flow.stepOf", counted) : undefined;
   const aiLabel = aiPick && aiPick !== "key" ? planLabel(t, aiPick) : null;
 
@@ -645,7 +646,13 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             org={name}
             agent={
               step === "agent" && firstAgent
-                ? { id: firstAgent.id, name: firstAgent.name, role: firstAgent.role, look: lookOf(firstAgent) }
+                ? {
+                    id: firstAgent.id,
+                    name: firstAgent.name,
+                    // One made on "Other" says what it does in the words typed (its first task).
+                    role: firstAgent.role || row?.task || "",
+                    look: lookOf(firstAgent),
+                  }
                 : null
             }
             area={step === "area" ? "custom" : area}

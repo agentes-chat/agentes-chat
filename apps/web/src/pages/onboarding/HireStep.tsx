@@ -116,7 +116,7 @@ export function HireTeam({
             {next.map((a, i) => (
               <span key={a} className="onb-next-areas__item">
                 <Icon name={AREA_ICON[a]} size={14} />
-                {t(`onboarding.areas.list.${a}.title`)}
+                {t(`onboarding.areas.list.${a}.role`)}
                 {/* The dot ends its name's piece, so a wrapped line never starts with one. */}
                 {i < next.length - 1 && <span className="onb-next-areas__sep">·</span>}
               </span>
