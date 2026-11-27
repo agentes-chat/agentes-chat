@@ -967,7 +967,10 @@
       "plan": {
         "title": "Schalte dein Team ein",
         "generic": "Ein agentes.chat-Tarif",
-        "all": "Alle Tarife ansehen"
+        "all": "Alle Tarife ansehen",
+        "skipTitle": "Ohne Tarif weitermachen?",
+        "skipText": "Ohne Tarif fängt {{agent}} nicht an zu arbeiten, und die erste Lieferung wartet. Du kannst später im Workspace abonnieren.",
+        "skipGo": "Ohne Tarif weitermachen"
       },
       "ai": {
         "title": "Jetzt die KI, für die du schon zahlst",
@@ -1951,6 +1954,8 @@
       "leadPersonal_female": "{{you}} und {{agent}}, deine erste Agentin. Ab heute kümmert ihr euch gemeinsam um deinen Alltag.",
       "plan": "Tarif {{name}} aktiv",
       "planAny": "Tarif aktiv",
+      "planLater": "Tarif {{name}} abonnieren",
+      "planLaterAny": "Einen Tarif abonnieren",
       "aiDone": "{{label}} verbunden",
       "aiDoneAny": "KI verbunden",
       "connect": "KI verbinden",

@@ -25,7 +25,8 @@ import { renderApp, screen, settle } from "./render";
  * step (and the plan, on agentes.chat Cloud), shown once even where every agent already thinks. It is answered, and
  * kept as such ("ai"), by an AI connected through it, by Continue where the agents already think, or by Connect later
  * after asking. Then the team's photo, whose button opens the workspace on the welcome wizard alone (`?arrival=beta`,
- * ADR 0160); after a plan left for later ("Not now"), answering it opens the workspace instead, the plan waiting there.
+ * ADR 0160). Never after a plan left for later ("Not now", then "Continue without a plan"): the photo comes at once,
+ * the plan still to sign, and its button opens the right hand's DM.
  */
 
 const realFetch = globalThis.fetch;
@@ -240,7 +241,7 @@ describe("Connect an AI, after the first agent", () => {
     expect(document.querySelector(".onbx")?.textContent).not.toContain("Claude");
   });
 
-  test("on agentes.chat Cloud, a plan left for later: the step still, no plan over it; leaving it opens Lodi's DM, the wizard alone", async () => {
+  test("on agentes.chat Cloud, a plan left for later skips the step: the photo, then Lodi's DM, the wizard alone", async () => {
     const state = madeTeam({ held: true });
     // The billing service's plan list can't be read: the plan step names a plan generically.
     globalThis.fetch = (async () => new Response("", { status: 404 })) as unknown as typeof fetch;
@@ -248,19 +249,21 @@ describe("Connect an AI, after the first agent", () => {
     await settle(16);
     expect(heading()).toBe("O time da Acme começa com a Ada");
     expect(eyebrow()).toBe("Passo 5 de 5");
-    await click(button("Agora não"), 16);
-    expect(router.state.location.pathname).toBe("/onboarding");
-    expect(heading()).toBe(CONNECT);
-    // The workspace still waits for its plan: nothing over the question says one is on.
-    expect(eyebrow()).toBeUndefined();
-    expect(document.querySelector(".onbx .ac-dialog__foot-note")?.textContent).toBe(
-      "Sem uma IA, os agentes não respondem.",
+    await click(button("Agora não"), 6);
+    await click(
+      within(screen().getByRole("dialog", { name: "Continuar sem um plano?" })).getByRole("button", {
+        name: "Continuar sem plano",
+      }),
+      16,
     );
+    // No AI step without a plan: the photo, its plan and AI still to do, the first delivery waiting.
+    expect(router.state.location.pathname).toBe("/onboarding");
+    expect(heading()).toBe(PHOTO);
+    expect(photoRows()).toEqual(["1Assinar um plano", "2Conectar a IA", "3A primeira entrega da Ada"]);
     const asked = arrivals(router);
-    await click(button("Conectar depois"), 6);
-    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Continuar sem IA" }), 16);
+    await click(button(/^Conhecer o workspace/), 16);
     await settle(8);
-    // Into the workspace, no photo: the photo celebrates a plan, which still waits there.
+    // The AI step was never answered: only the plan step shown, then finished.
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
       [ORG_ID, { step: "computer" }],
       [ORG_ID, { finished: true }],

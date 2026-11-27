@@ -44,7 +44,8 @@ async function celebrate(personal = false) {
       leaving={false}
       onNext={() => {}}
     />,
-    { api: createFakeApi(seedState()) },
+    // Inside the workspace, as the onboarding renders it: "Change your photo" edits the person's face there.
+    { api: createFakeApi(seedState()), org: true },
   );
 }
 

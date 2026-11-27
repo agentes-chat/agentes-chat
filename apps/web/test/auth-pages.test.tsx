@@ -1415,7 +1415,7 @@ describe("A verificação contra robôs (agentes.chat Cloud)", () => {
   });
 });
 
-describe("Onboarding: the first question, which makes the workspace (ADR 0159, ADR 0162 amended 2026-11-27)", () => {
+describe("Onboarding: the first question, then a team's name, which make the workspace (ADR 0159, ADR 0162 amended 2026-11-27)", () => {
   /** `billingUrl`: the Cloud's billing service, as `/api/auth/config` says it. */
   const start = async (
     patch: Partial<ReturnType<typeof seedState>> = {},
@@ -1435,23 +1435,30 @@ describe("Onboarding: the first question, which makes the workspace (ADR 0159, A
   };
   const button = (name: string | RegExp) => screen().getByRole("button", { name });
   const PURPOSE = "Para que você vai usar o agentes.chat?";
+  const NAME = "Como se chama o seu workspace?";
   async function click(el: HTMLElement, rounds = 4) {
     await act(async () => fireEvent.click(el));
     await settle(rounds);
   }
   const next = () => click(button("Continuar"), 8);
+  /** For my team: Continue to its name step, then Continue there makes the workspace. */
+  const make = async () => {
+    await next();
+    expect(screen().getByRole("heading", { name: NAME })).toBeTruthy();
+    await next();
+  };
   const calls = (state: ReturnType<typeof seedState>, method: string) => state.calls.filter((c) => c.method === method);
 
   test("what it is for, step 1 of its count, the right hand alone on the box, never a guide among the presets", async () => {
     await start();
     expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
-    // It, the work and its agent: no plan step where nothing bills (ADR 0162).
-    expect(document.querySelector(".onbx__eyebrow")?.textContent).toBe("Passo 1 de 3");
+    // It, a team's name, the work and its agent: no plan step where nothing bills (ADR 0162).
+    expect(document.querySelector(".onbx__eyebrow")?.textContent).toBe("Passo 1 de 4");
     // The right hand stands on the box's edge, the one host; none of the presets.
     expect(document.querySelectorAll(".onbw__agent")).toHaveLength(1);
     expect(document.querySelector(".onbw__agent .ac-avatar")?.getAttribute("data-accessory")).toBe("headset");
     expect(document.body.textContent).not.toContain("Oi, eu sou a Ada");
-    // No name to type: the workspace takes it from the work e-mail.
+    // No name to type here: a team's comes on the next step, the work e-mail's to start with.
     expect(screen().queryByLabelText("Nome")).toBeNull();
     expect(button(/^Continuar/).hasAttribute("disabled")).toBe(false);
   });
@@ -1561,9 +1568,10 @@ describe("Onboarding: the first question, which makes the workspace (ADR 0159, A
           ...(cloud ? { cloud } : {}),
         });
       };
-      await next();
+      await make();
       expect(document.querySelector(".ac-toast")?.textContent).toContain(says);
-      expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
+      // Refused where it was asked: on the name step.
+      expect(screen().getByRole("heading", { name: NAME })).toBeTruthy();
       cleanup();
     }
   });
@@ -1598,8 +1606,8 @@ describe("Onboarding: the first question, which makes the workspace (ADR 0159, A
         orgId: "org-unpaid",
       });
     };
-    await next();
-    expect(screen().getByRole("heading", { name: PURPOSE })).toBeTruthy();
+    await make();
+    expect(screen().getByRole("heading", { name: NAME })).toBeTruthy();
     const said =
       "Você já tem um workspace esperando um plano do agentes.chat. Escolha o plano dele antes de criar outro.";
     expect(screen().getByRole("alert").textContent).toBe(said);
@@ -1675,7 +1683,7 @@ describe("Onboarding: the first question, which makes the workspace (ADR 0159, A
 
   test("workspace: the time zone in words beside its name, its reason behind its ⓘ, with no line under the field", async () => {
     await start();
-    await next();
+    await make();
     // On the work step's footer, its name as people say it (the IANA id goes to the API only).
     const place = document.querySelector(".onb-place-line")?.textContent;
     expect(place).toMatch(/^Acme · .+ · Trocar$/);

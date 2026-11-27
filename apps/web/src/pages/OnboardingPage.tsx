@@ -131,7 +131,8 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   const [aiPick, setAiPick] = useState<AiChoice | null>(null);
   // "Connect later" asks first: without an AI there is no first delivery.
   const [skipAsk, setSkipAsk] = useState(false);
-  // "Not now" on the plan step, in this visit: the AI step comes next, then the workspace, the plan still waiting.
+  // "Not now" on the plan step (after its question), in this visit: the photo comes next, the plan still waiting, then
+  // the workspace. No AI step without a plan: on agentes.chat Cloud its sign-ins need the computer a plan brings.
   const [planLater, setPlanLater] = useState(false);
   // A team's workspace is named before it exists (its name from the work e-mail to start with), with its logo and
   // time zone; "For me" makes a personal one at once, named after the person.
@@ -377,12 +378,10 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
     },
   });
 
-  // The AI step answered: on to the photo; with the plan left for later, into the workspace (the photo celebrates a
-  // plan), the plan still waiting there.
+  // The AI step answered: on to the photo.
   const finishAi = () => {
     if (!orgId || aiAnswered.isPending || open.isPending) return;
-    if (planLater && held) open.mutate("skipped");
-    else aiAnswered.mutate(orgId);
+    aiAnswered.mutate(orgId);
   };
   // An AI connected on the AI step answers it: at once where the agents already thought, else once they think.
   const [aiConnected, setAiConnected] = useState(false);
@@ -841,7 +840,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             personal={personalNow}
             confirming={paid}
             skipping={open.isPending}
-            // "Not now": the AI step still comes, then the workspace, the plan waiting there.
+            // "Not now", once its question is answered: the photo, then the workspace, the plan waiting there.
             onSkip={() => {
               setPlanLater(true);
               setPicked(null);
@@ -866,10 +865,13 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
                 : t("onboarding.celebrate.working", who)
             }
             plan={hasPlanStep ? (boughtPlan.offer?.name ?? offer?.name ?? "") : null}
+            // Left for later: the plan's row still to do, the first delivery waiting for it.
+            planWaiting={planLater && held}
             personal={personalNow}
             ai={rail.thinks ? (aiLabel ?? "") : null}
             leaving={open.isPending}
-            onNext={() => open.mutate("done")}
+            // Without a plan, the right hand's DM, whose card leads with the plan; else the first agent's.
+            onNext={() => open.mutate(planLater && held ? "skipped" : "done")}
           />
         ),
       };

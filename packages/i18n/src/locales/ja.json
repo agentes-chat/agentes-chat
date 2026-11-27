@@ -948,7 +948,10 @@
       "plan": {
         "title": "チームを動かしましょう",
         "generic": "agentes.chatのプラン",
-        "all": "すべてのプランを見る"
+        "all": "すべてのプランを見る",
+        "skipTitle": "プランなしで続けますか？",
+        "skipText": "プランがないと、{{agent}}は仕事を始めず、最初の成果物も待ちになります。申し込みはあとからワークスペースでできます。",
+        "skipGo": "プランなしで続ける"
       },
       "ai": {
         "title": "次は、もう契約しているAIです",
@@ -1874,6 +1877,8 @@
       "leadPersonal": "{{you}}と、最初のエージェントの{{agent}}。今日から一緒に、毎日を整えていきます。",
       "plan": "{{name}}プラン有効",
       "planAny": "プラン有効",
+      "planLater": "{{name}}プランに申し込む",
+      "planLaterAny": "プランに申し込む",
       "aiDone": "{{label}}に接続済み",
       "aiDoneAny": "AIに接続済み",
       "connect": "AIをつなぐ",

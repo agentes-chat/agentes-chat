@@ -967,7 +967,10 @@
       "plan": {
         "title": "Zet je team aan",
         "generic": "Een agentes.chat-abonnement",
-        "all": "Alle abonnementen bekijken"
+        "all": "Alle abonnementen bekijken",
+        "skipTitle": "Doorgaan zonder abonnement?",
+        "skipText": "Zonder abonnement begint {{agent}} niet met werken en wacht de eerste levering. Je kunt later abonneren, in de workspace.",
+        "skipGo": "Doorgaan zonder abonnement"
       },
       "ai": {
         "title": "Nu de AI waar je al voor betaalt",
@@ -1948,6 +1951,8 @@
       "leadPersonal": "{{you}} en {{agent}}, je eerste agent. Vanaf vandaag zorgen jullie samen voor je dagen.",
       "plan": "Abonnement {{name}} actief",
       "planAny": "Abonnement actief",
+      "planLater": "Abonnement {{name}} nemen",
+      "planLaterAny": "Een abonnement nemen",
       "aiDone": "{{label}} gekoppeld",
       "aiDoneAny": "AI gekoppeld",
       "connect": "De AI koppelen",

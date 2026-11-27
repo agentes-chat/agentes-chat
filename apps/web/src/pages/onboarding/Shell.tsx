@@ -149,7 +149,7 @@ export function World({
  * The box: an optional header of its own (`cover`), the step's count or another line over the title (`eyebrow`), the
  * title (focused when the step changes, so it is read out), the lead, the answer, then the footer: `note` (else the
  * way back, `onBack`, labelled `backLabel` or "Back") and the step's buttons (`acts`). A step that draws its own
- * buttons passes neither: no footer.
+ * buttons passes neither: no footer. The box is never taller than the window: what is over the footer scrolls in it.
  */
 export function Box({
   cover,
@@ -201,15 +201,18 @@ export function Box({
       aria-label={label}
       data-cover={cover ? "" : undefined}
     >
-      {cover}
-      <header className="onbx__lede">
-        {eyebrow && <p className="onbx__eyebrow">{eyebrow}</p>}
-        <h1 className="onbx__title" id="onbx-title" tabIndex={-1}>
-          {title}
-        </h1>
-        {lead && <p className="onbx__lead">{lead}</p>}
-      </header>
-      {children && <DialogBody className="onbx__body">{children}</DialogBody>}
+      {/* Everything over the footer scrolls inside the box, the page stays put and the buttons in view. */}
+      <div className="onbx__scroll">
+        {cover}
+        <header className="onbx__lede">
+          {eyebrow && <p className="onbx__eyebrow">{eyebrow}</p>}
+          <h1 className="onbx__title" id="onbx-title" tabIndex={-1}>
+            {title}
+          </h1>
+          {lead && <p className="onbx__lead">{lead}</p>}
+        </header>
+        {children && <DialogBody className="onbx__body">{children}</DialogBody>}
+      </div>
       <DialogFooter note={footNote}>{acts}</DialogFooter>
     </section>
   );

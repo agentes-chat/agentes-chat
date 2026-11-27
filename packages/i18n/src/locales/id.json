@@ -948,7 +948,10 @@
       "plan": {
         "title": "Nyalakan timmu",
         "generic": "Paket agentes.chat",
-        "all": "Lihat semua paket"
+        "all": "Lihat semua paket",
+        "skipTitle": "Lanjut tanpa paket?",
+        "skipText": "Tanpa paket, {{agent}} belum mulai bekerja dan pengiriman pertama menunggu. Kamu bisa berlangganan nanti, di workspace.",
+        "skipGo": "Lanjut tanpa paket"
       },
       "ai": {
         "title": "Sekarang, AI yang sudah kamu bayar",
@@ -1874,6 +1877,8 @@
       "leadPersonal": "{{you}} dan {{agent}}, agen pertamamu. Mulai hari ini, bersama mengurus hari-harimu.",
       "plan": "Paket {{name}} aktif",
       "planAny": "Paket aktif",
+      "planLater": "Langganan paket {{name}}",
+      "planLaterAny": "Langganan paket",
       "aiDone": "{{label}} terhubung",
       "aiDoneAny": "AI terhubung",
       "connect": "Hubungkan AI",

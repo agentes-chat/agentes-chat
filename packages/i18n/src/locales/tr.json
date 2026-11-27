@@ -967,7 +967,10 @@
       "plan": {
         "title": "Ekibini başlat",
         "generic": "Bir agentes.chat planı",
-        "all": "Tüm planları gör"
+        "all": "Tüm planları gör",
+        "skipTitle": "Plan olmadan devam edilsin mi?",
+        "skipText": "Plan olmadan {{agent}} çalışmaya başlamaz ve ilk teslim bekler. Daha sonra çalışma alanından abone olabilirsiniz.",
+        "skipGo": "Plan olmadan devam et"
       },
       "ai": {
         "title": "Şimdi, zaten ödediğiniz yapay zeka",
@@ -1943,6 +1946,8 @@
       "leadPersonal": "{{you}} ve {{agent}}, ilk ajanınız. Bugünden itibaren günleriniz için birlikte.",
       "plan": "{{name}} planı etkin",
       "planAny": "Plan etkin",
+      "planLater": "{{name}} planına abone ol",
+      "planLaterAny": "Bir plana abone ol",
       "aiDone": "{{label}} bağlandı",
       "aiDoneAny": "Yapay zeka bağlandı",
       "connect": "Yapay zekayı bağla",

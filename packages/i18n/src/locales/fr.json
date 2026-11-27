@@ -986,7 +986,10 @@
       "plan": {
         "title": "Activez votre équipe",
         "generic": "Un abonnement agentes.chat",
-        "all": "Voir tous les abonnements"
+        "all": "Voir tous les abonnements",
+        "skipTitle": "Continuer sans abonnement ?",
+        "skipText": "Sans abonnement, {{agent}} ne commence pas à travailler et la première livraison attend. Vous pourrez souscrire plus tard, dans le workspace.",
+        "skipGo": "Continuer sans abonnement"
       },
       "ai": {
         "title": "Maintenant, l'IA que vous payez déjà",
@@ -2020,6 +2023,8 @@
       "leadPersonal_female": "{{you}} et {{agent}}, la première de vos agents. Dès aujourd'hui, ensemble pour prendre soin de vos journées.",
       "plan": "Abonnement {{name}} actif",
       "planAny": "Abonnement actif",
+      "planLater": "Souscrire l'abonnement {{name}}",
+      "planLaterAny": "Souscrire un abonnement",
       "aiDone": "{{label}} connecté",
       "aiDoneAny": "IA connectée",
       "connect": "Connecter l'IA",

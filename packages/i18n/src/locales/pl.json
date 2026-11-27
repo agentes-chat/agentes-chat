@@ -1005,7 +1005,10 @@
       "plan": {
         "title": "Włącz swój zespół",
         "generic": "Plan agentes.chat",
-        "all": "Zobacz wszystkie plany"
+        "all": "Zobacz wszystkie plany",
+        "skipTitle": "Kontynuować bez planu?",
+        "skipText": "Bez planu {{agent}} nie zaczyna pracy, a pierwsza dostawa czeka. Plan wykupisz później, w workspace.",
+        "skipGo": "Kontynuuj bez planu"
       },
       "ai": {
         "title": "Teraz AI, za którą już płacisz",
@@ -2084,6 +2087,8 @@
       "leadPersonal_female": "{{you}} i {{agent}}, twoja pierwsza agentka. Od dziś razem, dbając o twoje dni.",
       "plan": "Plan {{name}} aktywny",
       "planAny": "Plan aktywny",
+      "planLater": "Wykup plan {{name}}",
+      "planLaterAny": "Wykup plan",
       "aiDone": "Połączono: {{label}}",
       "aiDoneAny": "Połączono z AI",
       "connect": "Podłącz AI",

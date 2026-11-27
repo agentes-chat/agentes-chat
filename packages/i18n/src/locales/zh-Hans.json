@@ -948,7 +948,10 @@
       "plan": {
         "title": "开启你的团队",
         "generic": "一个 agentes.chat 套餐",
-        "all": "查看所有套餐"
+        "all": "查看所有套餐",
+        "skipTitle": "不订阅套餐，继续吗？",
+        "skipText": "没有套餐，{{agent}}不会开始工作，第一份成果也会等着。之后可以在工作区里订阅。",
+        "skipGo": "不订阅套餐，继续"
       },
       "ai": {
         "title": "现在，连接你已经在付费的 AI",
@@ -1874,6 +1877,8 @@
       "leadPersonal": "{{you}}和你的第一个智能体 {{agent}}。从今天起，一起照顾好每一天。",
       "plan": "{{name}} 套餐已开通",
       "planAny": "套餐已开通",
+      "planLater": "订阅 {{name}} 套餐",
+      "planLaterAny": "订阅套餐",
       "aiDone": "已连接 {{label}}",
       "aiDoneAny": "已连接 AI",
       "connect": "连接 AI",

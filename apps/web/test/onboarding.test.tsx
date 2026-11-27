@@ -43,7 +43,8 @@ import { renderApp, screen, settle, showIn } from "./render";
  * work its first agent does (flat rows, one tap), meeting that agent and connecting the apps it works in (each bringing
  * its routine, ADR 0242), the plan where the workspace waits for its first one (ADR 0079), the AI the person already
  * pays for (shown once, even where the agents already think), and the team's photo with the first delivery on its way,
- * whose button opens the person's DM with the agent on the welcome wizard alone (ADR 0160).
+ * whose button opens the person's DM with the agent on the welcome wizard alone (ADR 0160). "Not now" on the plan asks
+ * first, then skips the AI step: the photo with the plan still to sign, into the right hand's DM.
  */
 
 const realFetch = globalThis.fetch;
@@ -881,23 +882,63 @@ describe("the plan (agentes.chat Cloud, ADR 0079)", () => {
     expect(screen().queryByRole("button", { name: "Ver todos os planos" })).toBeNull();
   });
 
-  test("Not now: the AI step next, no plan named over it; answering it opens the right hand's DM on the welcome wizard alone", async () => {
+  test("Not now asks first; its Subscribe opens the same Checkout as the step's, and closing it keeps the plan step", async () => {
+    plans(PLANS);
+    const state = settingUp({ held: true, step: "agents", area: "support" });
+    await open(state);
+    await click(button("Agora não"), 6);
+    const ask = screen().getByRole("dialog", { name: "Continuar sem um plano?" });
+    expect(ask.textContent).toContain(
+      "Sem um plano, a Iara não começa a trabalhar e a primeira entrega fica esperando. Dá para assinar depois, no workspace.",
+    );
+    expect(within(ask).getByRole("button", { name: "Continuar sem plano" })).toBeTruthy();
+    // Closed: the plan step as it was, nothing left for later.
+    await act(async () => fireEvent.keyDown(ask, { key: "Escape" }));
+    await settle(4);
+    expect(screen().queryByRole("dialog")).toBeNull();
+    expect(heading()).toBe("O time da Acme começa com a Iara");
+    expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { step: "computer" }]]);
+    // Asked again, its primary is the step's own Subscribe: the plan's Checkout.
+    await click(button("Agora não"), 6);
+    await click(
+      within(screen().getByRole("dialog", { name: "Continuar sem um plano?" })).getByRole("button", {
+        name: /^Assinar o plano Equipe/,
+      }),
+      6,
+    );
+    expect(calls(state, "orgs.billingLink").map((c) => c.args)).toEqual([[ORG_ID, "onboarding", "team"]]);
+    expect(heading()).toBe("O time da Acme começa com a Iara");
+  });
+
+  test("Continue without a plan: the photo, its plan still to sign and the first delivery waiting; its button opens the right hand's DM on the welcome wizard alone", async () => {
     plans(PLANS);
     const state = settingUp({ held: true, step: "agents", area: "support" });
     const { router, landed } = await open(state);
-    await click(button("Agora não"), 20);
+    await click(button("Agora não"), 6);
+    await click(
+      within(screen().getByRole("dialog", { name: "Continuar sem um plano?" })).getByRole("button", {
+        name: "Continuar sem plano",
+      }),
+      20,
+    );
     expect(router.state.location.pathname).toBe("/onboarding");
-    expect(heading()).toBe(AI);
-    // The workspace still waits for its plan: nothing over the question says one is on.
-    expect(eyebrow()).toBeUndefined();
-    expect(box().querySelector(".onb-active")).toBeNull();
+    // No AI step without a plan: the photo, the plan still waiting.
+    expect(heading()).toBe(TEAM_PHOTO);
+    expect(lead()).toBe("Você e a Iara, a primeira do time. A partir de hoje, trabalhando juntos.");
+    expect(photoRows()).toEqual([
+      { text: "1Assinar o plano Equipe", done: false, working: false },
+      { text: "IA conectada (concluído)", done: true, working: false },
+      { text: "3A primeira entrega da Iara", done: false, working: false },
+    ]);
+    // Waiting for the plan even though the agents think.
+    expect(box().querySelector(".onb-next__delivery")?.hasAttribute("data-waiting")).toBe(true);
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([[ORG_ID, { step: "computer" }]]);
-    // Its agents already think here: Continue answers it, into the workspace (no photo), the plan waiting there.
-    await click(button(/^Continuar/), 20);
+    await click(button(/^Conhecer o workspace/), 20);
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
       [ORG_ID, { step: "computer" }],
       [ORG_ID, { finished: true }],
     ]);
+    // Into the right hand's DM, whose card leads with the plan.
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);
     expect(landed.at(-1)?.arrival).toBe("beta");
   });
@@ -1318,6 +1359,27 @@ describe("the worst case, measured by CI's geometry in German and Russian too", 
     plans(PLANS);
     const r = await open(state);
     expect(heading()).toBe("Os seus agentes começam com o Rui");
+    await languages(r.services);
+  });
+
+  test("Not now's question and the photo with the plan still to sign, with the long names and a long plan", async () => {
+    const state = long(settingUp({ held: true, step: "agents", area: "support" }));
+    plans({
+      recommended: "team",
+      plans: [{ key: "team", name: "Equipe Profissional Ilimitada Plus", price: "US$ 49,00 + impostos", people: 1284 }],
+    });
+    const r = await open(state);
+    // The plan step reads its plans again in each language: the question is asked in each one.
+    for (const lang of ["de", "ru", "pt-BR"] as const) {
+      await showIn(r.services, lang);
+      await settle(8);
+      await click(box().querySelector(".onbx__back--text") as HTMLElement, 6);
+      snapshot();
+      if (lang !== "pt-BR") await closeDialog();
+    }
+    expect(screen().getByRole("dialog", { name: "Continuar sem um plano?" })).toBeTruthy();
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Continuar sem plano" }), 20);
+    expect(heading()).toBe(`Boas-vindas ao time da ${LONG}`);
     await languages(r.services);
   });
 });

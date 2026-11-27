@@ -1014,6 +1014,10 @@ export const ptBR = {
         title: "Ligue o time",
         generic: "Um plano do agentes.chat",
         all: "Ver todos os planos",
+        skipTitle: "Continuar sem um plano?",
+        skipText:
+          "Sem um plano, {{agent}} não começa a trabalhar e a primeira entrega fica esperando. Dá para assinar depois, no workspace.",
+        skipGo: "Continuar sem plano",
       },
       ai: {
         title: "Agora, a IA que você já assina",
@@ -2055,6 +2059,8 @@ export const ptBR = {
         "{{you}} e {{agent}}, a primeira dos seus agentes. A partir de hoje, cuidando dos seus dias juntas.",
       plan: "Plano {{name}} ativo",
       planAny: "Plano ativo",
+      planLater: "Assinar o plano {{name}}",
+      planLaterAny: "Assinar um plano",
       aiDone: "{{label}} conectado",
       aiDoneAny: "IA conectada",
       connect: "Conectar a IA",

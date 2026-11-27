@@ -16,7 +16,8 @@ import "./celebrate-step.css";
  * The onboarding's last step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): the team's photo in daylight,
  * the person beside the first agent and a few pixels of confetti, the agent saying hello, the day the team began, and
  * what is in place: the plan (agentes.chat Cloud), the AI, and the first delivery on its way (the kit's working sign;
- * waiting, muted, while no AI is connected). Its one button opens the workspace in the person's DM with the agent.
+ * waiting, muted, while no AI is connected or the plan was left for later, whose row is then still to do). Its one
+ * button opens the workspace in the person's DM with the agent.
  * Beside it, "Download the team photo" saves that photo with its words as a PNG drawn in the browser (`team-photo.ts`).
  * Under the list, "Change your photo" opens the avatar builder (and the photo upload) for the person's face on it.
  */
@@ -28,6 +29,7 @@ export function TeamWelcome({
   agent,
   working,
   plan,
+  planWaiting = false,
   personal,
   ai,
   leaving,
@@ -43,6 +45,8 @@ export function TeamWelcome({
   working: string;
   /** The plan's row: its name, "" for a plan with no name known, null where there is no plan (self-hosted). */
   plan: string | null;
+  /** The plan left for later ("Not now"): its row still to do, the first delivery waiting for it. */
+  planWaiting?: boolean;
   personal: boolean;
   /** The AI's row: what was connected ("Claude"), "" for an AI with no name known, null when it was left for later. */
   ai: string | null;
@@ -65,8 +69,8 @@ export function TeamWelcome({
     t(
       personal
         ? "onboarding.celebrate.leadPersonal"
-        : // With no plan (a self-hosted server), its computers aren't ours to promise "day and night" of.
-          plan === null
+        : // With no plan (a self-hosted server, or one left for later), "day and night" isn't ours to promise.
+          plan === null || planWaiting
           ? "onboarding.celebrate.leadNoPlan"
           : "onboarding.celebrate.lead",
       { ...who, you, agent: the },
@@ -81,8 +85,14 @@ export function TeamWelcome({
       ? [
           {
             key: "plan",
-            done: true,
-            text: plan ? t("onboarding.celebrate.plan", { name: plan }) : t("onboarding.celebrate.planAny"),
+            done: !planWaiting,
+            text: planWaiting
+              ? plan
+                ? t("onboarding.celebrate.planLater", { name: plan })
+                : t("onboarding.celebrate.planLaterAny")
+              : plan
+                ? t("onboarding.celebrate.plan", { name: plan })
+                : t("onboarding.celebrate.planAny"),
           },
         ]
       : []),
@@ -97,6 +107,8 @@ export function TeamWelcome({
             : t("onboarding.celebrate.aiDoneAny"),
     },
   ];
+
+  const waiting = ai === null || planWaiting;
 
   const download = async () => {
     setSaving(true);
@@ -161,15 +173,15 @@ export function TeamWelcome({
             </span>
           </li>
         ))}
-        {/* The first delivery: on its way (the kit's working sign in the number's place) once an AI is connected;
-            muted, waiting, while none is. */}
-        <li className="onb-next__row onb-next__delivery" data-waiting={ai === null ? "" : undefined}>
+        {/* The first delivery: on its way (the kit's working sign in the number's place) once an AI is connected and
+            the plan is on; muted, waiting, while either is missing. */}
+        <li className="onb-next__row onb-next__delivery" data-waiting={waiting ? "" : undefined}>
           <span className="onb-next__n" aria-hidden="true">
-            {ai === null ? rows.length + 1 : <Spinner size={14} />}
+            {waiting ? rows.length + 1 : <Spinner size={14} />}
           </span>
           <span className="onb-next__text">
-            <span>{ai === null ? t("onboarding.celebrate.waiting", who) : working}</span>
-            {ai !== null && <span className="onb-next__sub">{t("onboarding.celebrate.workingLine")}</span>}
+            <span>{waiting ? t("onboarding.celebrate.waiting", who) : working}</span>
+            {!waiting && <span className="onb-next__sub">{t("onboarding.celebrate.workingLine")}</span>}
           </span>
         </li>
       </ol>

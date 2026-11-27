@@ -2387,6 +2387,15 @@
   "onboarding.flow.plan.all": {
     "value": "See all plans"
   },
+  "onboarding.flow.plan.skipTitle": {
+    "value": "Continue without a plan?"
+  },
+  "onboarding.flow.plan.skipText": {
+    "value": "Without a plan, {{agent}} doesn't start working and the first delivery waits. You can subscribe later, in the workspace."
+  },
+  "onboarding.flow.plan.skipGo": {
+    "value": "Continue without a plan"
+  },
   "onboarding.flow.ai.title": {
     "value": "Now, the AI you already pay for"
   },
@@ -4761,6 +4770,12 @@
   },
   "onboarding.celebrate.planAny": {
     "value": "Plan on"
+  },
+  "onboarding.celebrate.planLater": {
+    "value": "Subscribe to the {{name}} plan"
+  },
+  "onboarding.celebrate.planLaterAny": {
+    "value": "Subscribe to a plan"
   },
   "onboarding.celebrate.aiDone": {
     "value": "{{label}} connected"

@@ -52,8 +52,8 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of
     expect(at({ agentSeen: false, waitsForPlan: true })).toBe("agent");
     expect(at({ waitsForPlan: true, aiSeen: false })).toBe("plan");
     expect(at({ aiSeen: false })).toBe("ai");
-    // "Not now" on the plan: the AI step all the same, the plan waiting.
-    expect(at({ waitsForPlan: true, planLater: true, aiSeen: false })).toBe("ai");
+    // "Not now" on the plan: the photo, the plan waiting; no AI step without a plan.
+    expect(at({ waitsForPlan: true, planLater: true, aiSeen: false })).toBe("celebrate");
   });
 
   test("before the workspace exists only the server's billing says whether a plan step comes", () => {
@@ -112,10 +112,14 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of
     expect(web({ ...made, billingUrl: BILLING, funnel: { passed: "ai" } }).hasPlanStep).toBe(true);
   });
 
-  test('"Not now" on the plan: the AI step next, the plan still waiting', () => {
+  test('"Not now" on the plan: the photo next, the plan still waiting', () => {
     const atPlan = { agent: true, standing: payment, billingUrl: BILLING, funnel: { passed: "computer" as const } };
     expect(web(atPlan)).toMatchObject({ at: "plan", waitsForPlan: true });
-    expect(web({ ...atPlan, planLater: true })).toMatchObject({ at: "ai", step: "ai", waitsForPlan: true });
+    expect(web({ ...atPlan, planLater: true })).toMatchObject({
+      at: "celebrate",
+      step: "celebrate",
+      waitsForPlan: true,
+    });
   });
 
   test("an AI not known yet reads as not yet: the AI step, never the photo", () => {

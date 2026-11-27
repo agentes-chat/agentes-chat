@@ -1,8 +1,8 @@
 import type { PlanOffer } from "@agenteschat/client/lib/billing";
 import { type FirstArea, nextAreas } from "@agenteschat/client/lib/first-areas";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { Button, HintLine, Icon, PixelSky, Spinner, teamSky } from "@agenteschat/ui";
-import { type CSSProperties, type ReactNode, useMemo } from "react";
+import { Button, Dialog, DialogFooter, HintLine, Icon, PixelSky, Spinner, teamSky } from "@agenteschat/ui";
+import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenBilling } from "@/components/BillingLinkButton";
@@ -14,9 +14,10 @@ import "./hire-step.css";
  * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27) of a workspace waiting for its first plan
  * (agentes.chat Cloud, ADR 0079): the first agent asleep at night in the middle of the places the next ones can take,
  * what it delivers today and that more agents come later, then the plan the billing service recommends: its name and
- * price on one line, what it includes, and the way to every plan. "Not now" leaves the plan for later; the button opens
- * the plan's Checkout. Back from paying (`confirming`), the payment said as received until the hold lifts. The plan's
- * facts are the billing service's list, never this server's.
+ * price on one line, what it includes, and the way to every plan. "Not now" asks first (without a plan the agent
+ * doesn't start), then leaves the plan for later; the button, there and on the step, opens the plan's Checkout. Back
+ * from paying (`confirming`), the payment said as received until the hold lifts. The plan's facts are the billing
+ * service's list, never this server's.
  */
 
 /**
@@ -86,6 +87,9 @@ export function HireTeam({
   const { t } = useTranslation();
   const hire = useOpenBilling(orgId, "onboarding", offer?.key);
   const allPlans = useOpenBilling(orgId, "onboarding");
+  // "Not now" asks first: without a plan the agent doesn't start, and its first delivery waits.
+  const [skipAsk, setSkipAsk] = useState(false);
+  const subscribe = offer ? t("onboarding.hire.subscribe", { name: offer.name }) : t("onboarding.hire.subscribeAny");
   const who = agentGrammar(agent.name);
   const the = t("onboarding.hire.the", who);
   const next = nextAreas(personal, area);
@@ -136,7 +140,7 @@ export function HireTeam({
             type="button"
             className="onbx__back onbx__back--text"
             disabled={skipping || hire.isPending}
-            onClick={onSkip}
+            onClick={() => setSkipAsk(true)}
           >
             {t("onboarding.hire.later")}
           </button>
@@ -152,11 +156,35 @@ export function HireTeam({
             disabled={skipping}
             onClick={() => hire.mutate()}
           >
-            {offer ? t("onboarding.hire.subscribe", { name: offer.name }) : t("onboarding.hire.subscribeAny")}
+            {subscribe}
           </Button>
         )
       }
     >
+      <Dialog
+        open={skipAsk}
+        onOpenChange={setSkipAsk}
+        title={t("onboarding.flow.plan.skipTitle")}
+        description={t("onboarding.flow.plan.skipText", { agent: the })}
+        closeLabel={t("common.close")}
+        width={460}
+      >
+        <DialogFooter>
+          <Button
+            loading={skipping}
+            disabled={skipping || hire.isPending}
+            onClick={() => {
+              setSkipAsk(false);
+              onSkip();
+            }}
+          >
+            {t("onboarding.flow.plan.skipGo")}
+          </Button>
+          <Button variant="primary" loading={hire.isPending} disabled={skipping} onClick={() => hire.mutate()}>
+            {subscribe}
+          </Button>
+        </DialogFooter>
+      </Dialog>
       <div className="onb-offer">
         <div className="onb-offer__head">
           <span className="onb-offer__name">

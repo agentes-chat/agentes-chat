@@ -81,11 +81,12 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   --onb-top: 160px;
 }
 .onbw__stage {
+  --onb-bottom: 32px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   min-width: 0;
-  padding: var(--onb-top) 16px 64px;
+  padding: var(--onb-top) 16px var(--onb-bottom);
 }
 .onbw__col {
   position: relative;
@@ -206,12 +207,20 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 }
 
 /* ---------- the box ---------- */
+/*
+ * Never taller than the window (under the top bar and the room for who stands on it): what is over the footer scrolls
+ * inside the box, so the page itself doesn't and the step's buttons stay in view. A window too short for a useful box
+ * (480px) lets the page scroll instead.
+ */
 .onbx {
   --dialog-pad: 28px;
   width: 100%;
   min-width: 0;
+  max-height: max(480px, calc(100dvh - var(--onb-bar, 56px) - var(--onb-top) - var(--onb-bottom, 32px)));
   display: flex;
   flex-direction: column;
+  /* The scroll inside keeps to the rounded corners. */
+  overflow: hidden;
   border-radius: var(--radius-section);
   background: var(--surface-raised);
   box-shadow: var(--e2);
@@ -255,9 +264,23 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   line-height: 22px;
   text-wrap: pretty;
 }
+.onbx__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.onbx__scroll > * {
+  flex: none;
+}
 .onbx .ac-dialog__body.onbx__body {
   padding-top: 20px;
   overflow: visible;
+}
+.onbx > .ac-dialog__foot {
+  flex: none;
 }
 /* A new step's words and answer come in where they stand; the box itself stays put. Played once, on insertion. */
 .onbx__lede,
@@ -563,9 +586,10 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   }
   .onbw {
     --onb-top: 156px;
+    --onb-bar: calc(52px + env(safe-area-inset-top, 0px));
   }
   .onbw__stage {
-    padding-bottom: 32px;
+    --onb-bottom: 32px;
   }
   .onbw__agent .ac-avatar {
     width: 40px;

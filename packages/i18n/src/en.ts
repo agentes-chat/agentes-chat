@@ -1036,6 +1036,11 @@ export const en = {
         title: "Turn your team on",
         generic: "An agentes.chat plan",
         all: "See all plans",
+        /** "Not now" asks first: without a plan the agent doesn't start. `{{agent}}`: the first agent, as `hire.the`. */
+        skipTitle: "Continue without a plan?",
+        skipText:
+          "Without a plan, {{agent}} doesn't start working and the first delivery waits. You can subscribe later, in the workspace.",
+        skipGo: "Continue without a plan",
       },
       /** The rail's last step (ADR 0162): the AI the team thinks with, then the workspace. */
       ai: {
@@ -2099,6 +2104,9 @@ export const en = {
       leadPersonal: "{{you}} and {{agent}}, your first agent. From today on, looking after your days together.",
       plan: "{{name}} plan on",
       planAny: "Plan on",
+      /** The plan's row on the photo when it was left for later ("Not now"). */
+      planLater: "Subscribe to the {{name}} plan",
+      planLaterAny: "Subscribe to a plan",
       aiDone: "{{label}} connected",
       aiDoneAny: "AI connected",
       connect: "Connect the AI",

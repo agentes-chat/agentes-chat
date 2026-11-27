@@ -83,14 +83,14 @@ export function railStepAt(f: {
   /** The agent step's Continue (`agents` stored). */
   agentSeen: boolean;
   waitsForPlan: boolean;
-  /** "Not now" on the plan step, in this visit: the AI step comes next, the plan waits. */
+  /** "Not now" on the plan step, in this visit: the photo comes next, the plan waiting (no AI step without a plan). */
   planLater?: boolean;
   /** The AI step answered: an AI connected, Continue, or left for later (`ai` stored). */
   aiSeen: boolean;
 }): RailStep {
   if (!f.agent) return "area";
   if (!f.agentSeen) return "agent";
-  if (f.waitsForPlan && !f.planLater) return "plan";
+  if (f.waitsForPlan) return f.planLater ? "celebrate" : "plan";
   if (!f.aiSeen) return "ai";
   return "celebrate";
 }
