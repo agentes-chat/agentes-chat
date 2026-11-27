@@ -103,6 +103,8 @@ export interface MachineExecutors {
   terminal?: { available: boolean; reason?: string; code?: string };
   /** `hello.desktopUse` (ADR 0062): whether agents can use their desktops there; absent = not reported. */
   desktopUse?: { available: boolean; reason?: string; code?: string };
+  /** `hello.apps` (ADR 0257): whether agents can use the person's apps there; absent = not reported. */
+  apps?: { available: boolean; reason?: string; code?: string };
   /** `hello.mode` (ADR 0058 §10): each agent works as its own OS user; absent = all as the runner's user. */
   mode?: "system";
   /** `hello.windowsBuild` (runner protocol 80): a Windows computer's build (`10.0.19045`); absent elsewhere or older. */

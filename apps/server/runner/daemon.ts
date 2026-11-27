@@ -96,6 +96,7 @@ import {
   systemLauncher,
   trustedNetworkLauncher,
 } from "./agent-users";
+import { AppControl } from "./apps";
 import { BrainManager, readyRoom } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
@@ -405,6 +406,8 @@ interface Session {
   streams: DataSockets;
   /** The agents' use of their desktops (ADR 0062): its helpers end with the session, the desktops don't. */
   desktopUse: DesktopManager;
+  /** The person's apps (ADR 0257); never in system mode. */
+  apps: AppControl;
   connection: RunnerConnection;
   /** System mode: the agents' workers, where all their work runs. */
   supervisor: Supervisor | null;
@@ -1578,6 +1581,16 @@ export class RunnerDaemon implements RequestObserver {
     void browser.closeAll();
     // Single-user: every agent works as this runner's own user, so no `uids` and desktop use stays off (ADR 0062
     // §3). System mode: each agent's worker serves it as the agent's own user.
+    // The person's apps (ADR 0257): only where agents work as the person's own user.
+    const apps = new AppControl({
+      home,
+      log,
+      systemMode: config.mode === "system",
+      ...(config.managedBy === "desktop"
+        ? { needs: (p, trigger, agentId) => void this.permissionNeeds.add(p, trigger, agentId) }
+        : {}),
+      onChange: () => this.queueStatus(),
+    });
     const desktopUse = new DesktopManager({
       desktops: this.desktops,
       workers: config.mode === "system",
@@ -1846,6 +1859,7 @@ export class RunnerDaemon implements RequestObserver {
       streams,
       browserViews: views,
       desktopUse,
+      apps,
       desktopTaken: (agentId) => {
         if (supervisor) supervisor.desktopTaken(agentId);
         else {
@@ -1893,6 +1907,7 @@ export class RunnerDaemon implements RequestObserver {
           desktop: this.desktops.info(),
           terminal: this.terminals.info(),
           desktopUse: desktopUse.info(),
+          apps: apps.info(),
           ...(this.copies ? { clis: this.copies.info() } : {}),
           ...(accounts ? { accounts } : {}),
           ...usage,
@@ -1982,6 +1997,7 @@ export class RunnerDaemon implements RequestObserver {
       browser,
       streams,
       desktopUse,
+      apps,
       connection,
       supervisor,
       agentUser,
@@ -2636,6 +2652,7 @@ export class RunnerDaemon implements RequestObserver {
       agents: this.agents.map((a) => ({ ...a })),
       access: this.access(),
       browsers,
+      apps: this.session?.apps.using() ?? [],
       ...(this.phones ? { phones: this.phones.list() } : {}),
       permissions: this.permissionNeeds.list(),
       // In system mode each agent runs as a user of its own, not as the runner's.
@@ -2696,6 +2713,16 @@ export class RunnerDaemon implements RequestObserver {
     const out = await s.browser.stop({ id: agentId, handle: agent?.handle ?? "agent" });
     this.browsersChanged();
     return out;
+  }
+
+  /** The menu bar's Stop on "<Agent> is using <App>": that agent's commands in the person's apps are refused a while. */
+  appsStop(agentId: string): { stopped: boolean } {
+    this.requirePaired();
+    const s = this.session;
+    if (!s || !agentId) return { stopped: false };
+    const agent = this.agents.find((a) => a.id === agentId);
+    this.opts.log(`apps use of ${agent?.handle ?? agentId} stopped from the app`);
+    return s.apps.stop(agentId);
   }
 
   /** The desktop app's iPhone setup asking to look at the iPhone again now (`phone.look`). */

@@ -27,6 +27,7 @@ import { redactSecrets } from "@agenteschat/adapters/secret-box";
 import { realFoldersFor } from "./access";
 import type { AccountBrains } from "./account-brains";
 import type { AccountFolders, AccountGrant, AccountManager } from "./accounts";
+import type { AppControl } from "./apps";
 import { type BrainManager, brainKey } from "./brain";
 import { type AntigravityBrainTurnRequest, handleAntigravityBrainTurn } from "./brain-antigravity";
 import { type CodexBrainEvent, type CodexBrainTurnRequest, handleCodexBrainTurn } from "./brain-codex";
@@ -168,6 +169,7 @@ export const NEW_WORK_OPS: ReadonlySet<string> = new Set([
   "desktop.act",
   "desktop.capture",
   "desktop.apps",
+  "apps.run",
   "vault.key",
   "vault.password",
   "phone.claim",
@@ -236,6 +238,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "desktop.capture": "agent",
   "desktop.apps": "agent",
   "desktop.text": "agent",
+  // Never in system mode (`hello.apps`): a worker has no `apps` and refuses it.
+  "apps.run": "agent",
   // ADR 0144: the key lives in the process that opens the values (the agent's worker), so root never holds one.
   "vault.key": "agent",
   // The password is made and sealed where the Vault's values open: root relays only the box.
@@ -403,6 +407,8 @@ export interface HandlerContext {
   browserViews?: BrowserViews;
   /** Protocol 21: the agents' use of their own desktops (ADR 0062); without it the runner refuses `desktop.look`… */
   desktopUse?: DesktopManager;
+  /** `PERSON_APPS_PROTOCOL`: the person's apps through `agent-desktop` (ADR 0257); without it `apps.run` is refused. */
+  apps?: AppControl;
   /** A person takes control of the agent's desktop: what the agent's pointer and keys are doing stops. */
   desktopTaken?: (agentId: string) => void;
   /** `DESKTOP_STARTING_PROTOCOL`: tells the server a stream's open starts the desktop first (`stream.starting`). */
@@ -896,6 +902,11 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     req.op === "desktop.text"
   ) {
     return handleDesktopUse(ctx, req);
+  }
+  if (req.op === "apps.run") {
+    if (!ctx.apps) throw new RunnerError("unsupported", "Agents can't use the person's apps on this computer");
+    if (!req.agent) throw new RunnerError("bad_request", "Using apps belongs to an agent");
+    return ctx.apps.run(req.agent, req, scope.signal);
   }
   const secrets = await agentSecrets(ctx.secretsDir, req.agent);
   switch (req.op) {

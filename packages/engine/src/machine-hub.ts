@@ -859,6 +859,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.desktop ||
         frame.terminal ||
         frame.desktopUse ||
+        frame.apps ||
         frame.claudeLoginMethods ||
         frame.toolchains ||
         frame.clis ||
@@ -875,6 +876,8 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.desktop ? { desktop: frame.desktop } : {}),
                 ...(frame.terminal ? { terminal: frame.terminal } : {}),
                 ...(frame.desktopUse ? { desktopUse: frame.desktopUse } : {}),
+                // ADR 0257: whether agents can use the person's apps there.
+                ...(frame.apps ? { apps: frame.apps } : {}),
                 // ADR 0228 §6: what its runner fetches by itself, and where each fetch stands since it started.
                 ...(frame.clis ? { copies: frame.clis } : {}),
                 ...(system ? { mode: "system" as const } : {}),

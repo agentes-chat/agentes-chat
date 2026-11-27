@@ -10,6 +10,7 @@ import { classifiedTools, customScope, isCustom, type ToolAccess } from "./conne
 import { exposedToolName } from "./connectors/mcp";
 import { othersLabel, othersPersonal, seesOthersOnAgent } from "./connectors/personal";
 import { sha256 } from "./crypto";
+import { APPS_TOOLS } from "./desktop/person-apps";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { requirePermission } from "./organizations";
 import { isRightHand, isRightHandId, RIGHT_HAND_COMPUTER_GRANTS, RIGHT_HAND_GRANTS } from "./right-hand";
@@ -140,6 +141,8 @@ const UNLISTED_TOOLS: Record<string, string[]> = {
   "context:read": ["read_conversation"],
   "schedule:write": ["delete_routine", "run_routine_now"],
   "sandbox:run": ["review_media"],
+  // The person's own apps (ADR 0257): on with the desktop, for a computer whose runner serves them.
+  [DESKTOP_SCOPE]: [...APPS_TOOLS],
 };
 
 /**
