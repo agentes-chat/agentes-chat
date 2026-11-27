@@ -6773,6 +6773,7 @@
     "undoneBy": "{{name}} tarafından geri alındı",
     "undoneByYou": "Sizin tarafınızdan geri alındı",
     "undo": "Geri al",
+    "applyAnyway": "Yine de uygula",
     "appliedSome": "{{total}} iyileştirmeden {{done}} tanesi uygulandı",
     "waitingAdmin": "Bir yönetici bekleniyor",
     "stale": "Eskidi",
@@ -16956,6 +16957,10 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} çekirdek",
+    "cores_other": "{{count}} çekirdek",
+    "threads_one": "{{count}} iş parçacığı",
+    "threads_other": "{{count}} iş parçacığı",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

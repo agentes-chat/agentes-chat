@@ -6530,6 +6530,7 @@
     "undoneBy": "{{name}}님이 되돌림",
     "undoneByYou": "내가 되돌림",
     "undo": "되돌리기",
+    "applyAnyway": "그래도 적용",
     "appliedSome": "{{total}}개 중 {{done}}개 적용됨",
     "waitingAdmin": "관리자 대기 중",
     "stale": "만료됨",
@@ -16407,6 +16408,8 @@
     "workspace": "워크스페이스",
     "cloud": "Cloud",
     "cpus_other": "CPU {{count}}개",
+    "cores_other": "코어 {{count}}개",
+    "threads_other": "스레드 {{count}}개",
     "memory": "{{gb}}GB",
     "system": {
       "android": "Android {{version}}",
@@ -16634,7 +16637,7 @@
     },
     "facts": {
       "system": "시스템",
-      "cpu": "CPU",
+      "cpu": "프로세서",
       "memory": "메모리",
       "lastSeen": "마지막 확인",
       "toolchains": "찾은 도구 체인",

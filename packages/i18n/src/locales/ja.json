@@ -6532,6 +6532,7 @@
     "undoneBy": "{{name}}が元に戻しました",
     "undoneByYou": "あなたが元に戻しました",
     "undo": "元に戻す",
+    "applyAnyway": "それでも適用",
     "appliedSome": "{{total}}件中{{done}}件を適用",
     "waitingAdmin": "管理者の対応待ち",
     "stale": "古い提案",
@@ -16415,6 +16416,8 @@
     "workspace": "ワークスペース",
     "cloud": "Cloud",
     "cpus_other": "CPU {{count}}個",
+    "cores_other": "{{count}} コア",
+    "threads_other": "{{count}} スレッド",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16642,7 +16645,7 @@
     },
     "facts": {
       "system": "システム",
-      "cpu": "CPU",
+      "cpu": "プロセッサ",
       "memory": "メモリ",
       "lastSeen": "最終接続",
       "toolchains": "検出されたツールチェーン",

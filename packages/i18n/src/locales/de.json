@@ -6807,6 +6807,7 @@
     "undoneBy": "Von {{name}} rückgängig gemacht",
     "undoneByYou": "Von dir rückgängig gemacht",
     "undo": "Rückgängig",
+    "applyAnyway": "Trotzdem anwenden",
     "appliedSome": "{{done}} von {{total}} angewendet",
     "waitingAdmin": "Wartet auf einen Admin",
     "stale": "Veraltet",
@@ -17028,6 +17029,10 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPUs",
+    "cores_one": "{{count}} Kern",
+    "cores_other": "{{count}} Kerne",
+    "threads_one": "{{count}} Thread",
+    "threads_other": "{{count}} Threads",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

@@ -6557,6 +6557,7 @@
     "undoneBy": "Diurungkan oleh {{name}}",
     "undoneByYou": "Diurungkan olehmu",
     "undo": "Urungkan",
+    "applyAnyway": "Tetap terapkan",
     "appliedSome": "{{done}} dari {{total}} diterapkan",
     "waitingAdmin": "Menunggu admin",
     "stale": "Kedaluwarsa",
@@ -16475,6 +16476,8 @@
     "workspace": "Ruang kerja",
     "cloud": "Cloud",
     "cpus_other": "{{count}} CPU",
+    "cores_other": "{{count}} inti",
+    "threads_other": "{{count}} thread",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16702,7 +16705,7 @@
     },
     "facts": {
       "system": "Sistem",
-      "cpu": "CPU",
+      "cpu": "Prosesor",
       "memory": "Memori",
       "lastSeen": "Terakhir terlihat",
       "toolchains": "Toolchain yang ditemukan",

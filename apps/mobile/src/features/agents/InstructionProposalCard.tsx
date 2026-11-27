@@ -1,4 +1,11 @@
-import { keys, type Message, type Proposal, useCardProposals, useUndoProposal } from "@agenteschat/client";
+import {
+  keys,
+  type Message,
+  type Proposal,
+  useApplyProposal,
+  useCardProposals,
+  useUndoProposal,
+} from "@agenteschat/client";
 import { upperFirst } from "@agenteschat/client/lib/format";
 import {
   appLabel,
@@ -94,9 +101,9 @@ export function ProposalRowsCard({ id, rows }: { id: string; rows: Proposal[] })
                 </Text>
               ) : null}
             </View>
-            {p.undoable ? (
+            {p.undoable || p.applicable ? (
               <View style={styles.line}>
-                <UndoProposal id={p.id} row />
+                {p.undoable ? <UndoProposal id={p.id} row /> : <ApplyProposal id={p.id} row />}
               </View>
             ) : null}
           </View>
@@ -120,7 +127,11 @@ export function ProposalRowsCard({ id, rows }: { id: string; rows: Proposal[] })
           words: single.words,
           time: single.at ? when.short(single.at) : undefined,
           note: single.why,
-          actions: only.undoable ? <UndoProposal id={only.id} /> : null,
+          actions: only.undoable ? (
+            <UndoProposal id={only.id} />
+          ) : only.applicable ? (
+            <ApplyProposal id={only.id} />
+          ) : null,
         }
       : null;
   return (
@@ -180,6 +191,29 @@ export function UndoProposal({ id, row = false }: { id: string; row?: boolean })
     <RowAction strong label={t("teamWeek.undo")} disabled={undo.isPending} onPress={onPress} />
   ) : (
     <Button variant="ghost" size="card" label={t("rightHand.card.undo")} loading={undo.isPending} onPress={onPress} />
+  );
+}
+
+/**
+ * "Apply anyway" on a change the agent's review left out, by whoever may make it: applied as them, the row then reads
+ * applied by them. `row`: the word at a row's side; else the card's ghost button.
+ */
+export function ApplyProposal({ id, row = false }: { id: string; row?: boolean }) {
+  const { t } = useTranslation();
+  const { orgId } = useOrg();
+  const failed = useFailed();
+  const apply = useApplyProposal(orgId);
+  const onPress = () => apply.mutate(id, { onError: failed });
+  return row ? (
+    <RowAction strong label={t("proposals.applyAnyway")} disabled={apply.isPending} onPress={onPress} />
+  ) : (
+    <Button
+      variant="ghost"
+      size="card"
+      label={t("proposals.applyAnyway")}
+      loading={apply.isPending}
+      onPress={onPress}
+    />
   );
 }
 

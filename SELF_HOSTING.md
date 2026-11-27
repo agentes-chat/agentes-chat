@@ -237,15 +237,17 @@ through that computer's internet instead: your home address and location, as if 
 shows **Agents use this computer's internet** on its page in Settings › Devices, in the desktop app's Preferences
 and on the phone. It is on by default; only the person who connected it turns it on, and an admin may turn it off.
 The owners of computers paired before this existed hear it once in the inbox, with **Turn off**. Among the
-computers that lend and are online, the one turned on last carries the traffic ("In use now" on its page).
+computers that lend and are online, those the desktop app runs come first, then the one turned on last carries the
+traffic ("In use now" on its page).
 
 **Who borrows.**
 
 - This server's own computer (This server as the agents' computer, below): its agents' browsers and programs, and
   the server's own reads of web pages for agents (`web_fetch` and the DuckDuckGo search page).
-- A computer marked the workspace's whose own switch is off: a runner on the VPS itself, or another box. A VPS
-  paired as a connected computer lends by default (and, being the newest, would be picked), so on its page mark it
-  the workspace's and turn **Agents use this computer's internet** off.
+- A server: a runner installed from the terminal on Linux (on the VPS itself, or another box in a server room). Its
+  switch starts off, so it borrows with nothing for you to set; one paired before this turns off the next time it
+  connects, unless its owner had turned it on. Turned on, it lends like anyone's computer (after the desktop app's).
+- A computer marked the workspace's whose own switch is off.
 - A person's own computer that doesn't lend doesn't borrow, and a computer that lends never goes out through
   another, nor through itself.
 
