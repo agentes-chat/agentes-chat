@@ -143,6 +143,38 @@
   box-shadow: none;
   color: #fff;
 }
+/* The first delivery, the list's first row: its agent's face on the first line, a quiet line under it. */
+.wiz-board li.wiz-board__delivery {
+  align-items: flex-start;
+  padding: 10px 0;
+}
+.wiz-board__face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 20px;
+}
+.wiz-board__face .ac-avatar {
+  width: 20px;
+  height: 20px;
+}
+.wiz-board__delivery .wiz-board__text {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+.wiz-board__sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+  font-weight: 400;
+}
+.wiz-board__delivery > .ac-spinner,
+.wiz-board__delivery > svg {
+  flex: none;
+  margin-top: 2px;
+}
 .wiz-betaline {
   display: flex;
   align-items: flex-start;

@@ -9,11 +9,12 @@ import { isRightHand, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { connectorName } from "@agenteschat/client/lib/scopes";
 import { firstRunRowState } from "@agenteschat/client/lib/setup-checklist";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Button, Dialog, Icon } from "@agenteschat/ui";
+import { Button, Dialog, Icon, Spinner } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { useConnectAi } from "@/components/connect-ai-context";
 import { useFirstRun } from "@/components/FirstRun";
@@ -23,6 +24,7 @@ import { useFirstRunPowers } from "@/components/Standing";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { useDirectory } from "@/hooks/useDirectory";
 import { welcomeSeenKey } from "@/lib/arrival";
+import { type FirstDelivery, useFirstDelivery } from "@/lib/first-delivery";
 import { usePaidPlan } from "@/lib/paid-return";
 import { usePlanOffer } from "@/lib/plan-offer";
 import { storage } from "@/lib/storage";
@@ -32,7 +34,9 @@ import "./welcome-wizard.css";
 /*
  * The welcome wizard (ADR 0160, addendum of 2026-11-26): once, right after the onboarding, seven short steps on what
  * the workspace is, each under its picture (`WelcomeArt`), with its title and text, the dots, Skip, Back and Next.
- * The last step is the right hand's first-run list as the data has it, and the beta line.
+ * The last step is the right hand's first-run list as the data has it, and the beta line. The first agent's first
+ * delivery, started in the background when the onboarding connected its AI, leads that list: ready, or still being
+ * made; the main button then leads to its conversation.
  */
 
 const STEPS: readonly WelcomeStep[] = ["hello", "computer", "channels", "wiki", "memory", "routines", "ready"];
@@ -55,6 +59,8 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
     onDone(false);
     then();
   });
+  const delivery = useFirstDelivery();
+  const navigate = useNavigate();
   // Once it is on screen, never again for this person here: a reload or the same address asks for nothing.
   useEffect(() => {
     if (!dir.loading) storage.set(welcomeSeenKey(me.user.id, org.id), "1");
@@ -139,7 +145,7 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
           {text && <p className="wiz__text">{text}</p>}
           {last && (
             <>
-              {board.ready && board.rows.length > 0 && <Board rows={board.rows} />}
+              {board.ready && (board.rows.length > 0 || delivery) && <Board rows={board.rows} delivery={delivery} />}
               <p className="wiz-betaline ac-iconline">
                 <Icon name="bolt" size={16} />
                 <span>
@@ -173,8 +179,32 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
         )}
         <span className="wiz__acts">
           {at > 0 && <Button onClick={() => setAt(at - 1)}>{t("common.back")}</Button>}
-          <Button ref={go} variant="primary" kbd={["↵"]} onClick={() => (last ? onDone(true) : setAt(at + 1))}>
-            {last ? t("arrival.welcome.start") : t("arrival.welcome.next")}
+          <Button
+            ref={go}
+            variant="primary"
+            kbd={["↵"]}
+            onClick={() => {
+              if (!last) return setAt(at + 1);
+              // The first delivery's conversation: the wizard closes over it, no hand-off after.
+              if (delivery) {
+                void navigate({
+                  to: "/org/$orgId/dm/agent/$agentId",
+                  params: { orgId: org.id, agentId: delivery.agent.id },
+                });
+                return onDone(false);
+              }
+              onDone(true);
+            }}
+          >
+            {!last
+              ? t("arrival.welcome.next")
+              : delivery
+                ? t(
+                    delivery.state === "done"
+                      ? "arrival.welcome.ready.delivery.see"
+                      : "arrival.welcome.ready.delivery.open",
+                  )
+                : t("arrival.welcome.start")}
           </Button>
         </span>
       </div>
@@ -333,9 +363,33 @@ function aiName(t: TFunction, agent: Agent, mark: string | null | undefined): st
   return mark ? providerLabel(mark) : null;
 }
 
-function Board({ rows }: { rows: BoardRow[] }) {
+function Board({ rows, delivery }: { rows: BoardRow[]; delivery: FirstDelivery | null }) {
+  const { t } = useTranslation();
+  const who = delivery ? agentGrammar(delivery.agent.name) : null;
   return (
     <ul className="wiz-board">
+      {delivery && who && (
+        // The first delivery, first: its agent's face (live: writing while it works), what it is, then a quiet line.
+        <li className="wiz-board__delivery" data-state={delivery.state}>
+          <span className="wiz-board__face">
+            <AgentAvatar agentId={delivery.agent.id} name={delivery.agent.name} size="xs" />
+          </span>
+          <span className="wiz-board__text">
+            <span>
+              {t(
+                delivery.state === "done"
+                  ? "arrival.welcome.ready.delivery.done"
+                  : "arrival.welcome.ready.delivery.working",
+                who,
+              )}
+            </span>
+            <span className="wiz-board__sub">
+              {delivery.state === "done" ? delivery.summary : t("arrival.welcome.ready.delivery.workingLine", who)}
+            </span>
+          </span>
+          {delivery.state === "working" && <Spinner size={16} />}
+        </li>
+      )}
       {rows.map((r) => (
         <li key={r.key} data-done={r.done ? "" : undefined} data-dim={r.dim ? "" : undefined}>
           <span className="wiz-board__mark">{r.done && <Icon name="check" size={14} />}</span>
