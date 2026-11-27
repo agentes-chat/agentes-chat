@@ -12215,9 +12215,16 @@ html:not([data-pointer]) .ac-optlinks--flat > .ac-optrow--link:has(.ac-optrow__h
   opacity: 1;
   box-shadow: var(--field-ring);
 }
+/* What leads and ends a row keeps to the title's first line, however many lines the title wraps to: each in a box as
+   tall as that line, a mark or a glyph centred on it. */
+.ac-optlinks--flat > .ac-optrow--link > :is(.ac-optrow__lead, .ac-optrow__side, .ac-optrow__go) {
+  align-self: start;
+}
 .ac-optlinks--flat > .ac-optrow--link > .ac-optrow__lead {
   grid-area: lead;
   justify-self: center;
+  align-items: center;
+  min-height: 22px;
   color: var(--muted);
 }
 .ac-optlinks--flat > .ac-optrow--link > .ac-optrow__text {
@@ -12237,14 +12244,18 @@ html:not([data-pointer]) .ac-optlinks--flat > .ac-optrow--link:has(.ac-optrow__h
   font-size: 13.5px;
   line-height: 19px;
 }
+/* Its words take the room they need before the title wraps (a share of a grid's own track has no size to take). */
 .ac-optlinks--flat > .ac-optrow--link > .ac-optrow__side {
   grid-area: side;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-height: 22px;
+  max-width: none;
 }
 .ac-optlinks--flat > .ac-optrow--link > .ac-optrow__go {
   grid-area: go;
+  margin-top: 3px;
 }
 .ac-optrow__more--cards {
   padding: 6px 0 0;

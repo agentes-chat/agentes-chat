@@ -44,8 +44,16 @@
   box-shadow: none;
   color: #fff;
 }
+/* On its way: the working sign in the number's column, as tall as the first line and on it, however many lines its
+   words and the line under them wrap to. */
 .onb-next__delivery .onb-next__n {
+  height: 22px;
+  margin-top: 0;
   box-shadow: none;
+}
+.onb-next__delivery[data-waiting] .onb-next__n {
+  height: 24px;
+  margin-top: -1px;
 }
 .onb-next__delivery[data-waiting] {
   color: var(--muted);

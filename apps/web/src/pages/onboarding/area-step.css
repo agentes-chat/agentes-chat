@@ -79,9 +79,12 @@
   height: 14px;
   object-fit: contain;
 }
-/* The workspace and its time zone, as the old name step's zone line: faint, its link muted. */
-.onb-place-line {
+/* The workspace and its time zone, as the old name step's zone line: faint, its link muted (over the note's own color,
+   whatever order the sheets load in); a long name wraps, never cut. */
+.onbx__note.onb-place-line {
+  min-width: 0;
   color: var(--faint);
+  overflow-wrap: anywhere;
 }
 .onb-place-form {
   display: flex;

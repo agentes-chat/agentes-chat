@@ -726,7 +726,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
           // The plan bought, by its name, over the question it leads to.
           eyebrow={
             hasPlanStep ? (
-              <span className="onb-active">
+              <span className="onb-active ac-iconline">
                 <Icon name="check" size={14} />
                 <span>
                   {planName ? t("onboarding.celebrate.plan", { name: planName }) : t("onboarding.celebrate.planAny")}

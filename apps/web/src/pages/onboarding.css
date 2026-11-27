@@ -299,12 +299,8 @@ html:not([data-pointer]) .onb__logo:focus-visible {
     animation: none;
   }
 }
-/* The plan just bought, over the AI step's question: its check in the ok color, the words the eyebrow's. */
-.onb-active {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
+/* The plan just bought, over the AI step's question (an `.ac-iconline`, its check on the first line however long the
+   plan's name): the check in the ok color, the words the eyebrow's. */
 .onb-active .ac-icon {
   color: var(--ok);
 }

@@ -20,28 +20,63 @@
   font-weight: 600;
 }
 .onb-rows {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+/* The mark, then the name's line (what ends it on it) centred on the mark. */
 .onb-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "mark head";
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
   min-height: 60px;
   box-sizing: border-box;
   padding: 12px 0;
+}
+.onb-row > .connector-icon {
+  grid-area: mark;
 }
 .onb-rows > .onb-row + .onb-row {
   border-top: 1px solid var(--line);
 }
 .onb-row__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+  display: contents;
+}
+.onb-row__head {
+  grid-area: head;
+}
+.onb-row__sub {
+  grid-area: sub;
+}
+/* Connected, its account and when its routine runs under the name (the kit's face line): the name's capitals at the
+   mark's top, as `.ac-captop` rises, and that line under the name. */
+.onb-row:has(> .onb-row__text > .onb-row__sub) {
+  grid-template-areas:
+    "mark head"
+    "mark sub";
+  align-items: start;
+}
+.onb-row:has(> .onb-row__text > .onb-row__sub) > .onb-row__text > .onb-row__head {
+  margin-block-start: calc(var(--cap-top) - 11px);
+}
+/* On a phone that line takes the row's whole width, under the mark too (the kit's MediaRow): the mark never owns a
+   column while the words beside it wrap. */
+@container (max-width: 400px) {
+  .onb-row:has(> .onb-row__text > .onb-row__sub) {
+    grid-template-areas:
+      "mark head"
+      "sub sub";
+    align-items: center;
+    row-gap: 6px;
+  }
+  .onb-row:has(> .onb-row__text > .onb-row__sub) > .onb-row__text > .onb-row__head {
+    margin-block-start: 0;
+  }
 }
 /* The name's line holds what ends it (a button, a state in its color): never the row's middle. */
 .onb-row__head {
@@ -78,7 +113,7 @@
 }
 .onb-row--more {
   min-height: 0;
-  padding: 12px 0 0;
+  padding: 12px 0;
 }
 /* Under the apps' rows, a hairline before it as between them; alone (no app connects here), none. */
 .onb-rows + .onb-row--more {
