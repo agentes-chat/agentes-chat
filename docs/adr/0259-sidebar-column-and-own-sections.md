@@ -1,4 +1,4 @@
-# 0259. The sidebar: a tool column, Slack's list, each person's own sections
+# 0259. The sidebar: a tool column, the familiar list, each person's own sections
 
 - Status: Accepted
 - Date: 2026-11-27
@@ -19,7 +19,7 @@
 
 The sidebar had grown to seven tool rows on top, a part per sector holding its agents and its channels (ADR 0240),
 an Agentes part, pins inside each part, and Mensagens diretas for people only. Channels started about 370px down. The
-team asked for the layout people already know from Slack: the tools out of the list, then Não lidas, Threads,
+team asked for the layout people already know from team chat apps: the tools out of the list, then Não lidas, Threads,
 Favoritos, Canais and Mensagens diretas, people and agents together, with channel groups only for someone who wants
 them. Sectors grouped agents and channels for the whole workspace, so one person's arrangement reshuffled everyone's
 list.
@@ -34,7 +34,7 @@ list.
    mention, something waiting). Collapsing hides the list and keeps the column; a tablet shows the column and its
    toggle opens the list over the page; a phone's drawer holds both. A personal workspace (ADR 0159) keeps its own
    layout.
-2. **Slack's order.** The list holds the workspace's header, then Não lidas, Threads, Favoritos, Canais and Mensagens
+2. **The usual order.** The list holds the workspace's header, then Não lidas, Threads, Favoritos, Canais and Mensagens
    diretas. The inbox's tool leaves the column (Não lidas holds what waits for the person, §6) and Threads moves into
    the list. No Agentes part and no sectors: sectors keep their agents, channels, colors, lead and backup on Equipe ›
    Setores and in the sector pickers, and show nowhere in the list. No colored marks in the list.
@@ -61,7 +61,7 @@ list.
    wait for them or arrived unread today (approvals, questions, mentions, notices; each opens where the inbox opens
    it), then every channel and DM with unread messages, mentions and DMs first, each with its unread messages, an
    Abrir and a Marcar como lida, and Marcar tudo como lido. The inbox page stays (links, pushes, "Ver tudo").
-7. **Marks, as Slack's.** An unread channel is bold with no count; a red count only for mentions and DMs. A muted
+7. **The usual marks.** An unread channel is bold with no count; a red count only for mentions and DMs. A muted
    channel rests dim. An agent at work shows it in its face alone (it moves, with its orbit): no light behind its row,
    which read as the row chosen.
 8. **The phone.** Conversas' strip of pins becomes Favoritos, reading and changing the same `view.favorites` in its

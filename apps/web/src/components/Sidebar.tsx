@@ -230,7 +230,7 @@ export function channelInitials(name: string) {
 
 /**
  * The workspace sidebar. A team's (ADR 0259) is a tool column at its left edge (Ir para…, Início, the tools in sight,
- * Mais; Agora and the collapse at its foot) and Slack's list beside it: Não lidas, Threads, Favoritos, Canais with the
+ * Mais; Agora and the collapse at its foot) and the familiar list beside it: Não lidas, Threads, Favoritos, Canais with the
  * person's own sections, Mensagens diretas with people and agents together. A personal workspace (ADR 0159) has the
  * person on top (their menu, the bell and the collapse beside it), Go to… as the list's first row and no foot; what
  * sits in sight changes, never what can be reached.
@@ -670,7 +670,7 @@ export function Sidebar() {
           <Link to="/org/$orgId/unreads" params={{ orgId }} className="sidebar__item" data-unread={anyUnread}>
             <Icon name="unreads" />
             <span className="sidebar__item-label">{t("unreads.title")}</span>
-            {/* A count of things that wait, in ink: red is for mentions and DMs alone (Slack's rule). */}
+            {/* A count of things that wait, in ink: red is for mentions and DMs alone (ADR 0259). */}
             {waitingOnMe > 0 && (
               <CountBadge role="img" aria-label={t("notifications.summaryWaiting", { count: waitingOnMe })}>
                 {badgeCount(waitingOnMe)}
@@ -933,7 +933,6 @@ export function Sidebar() {
       ) : (
         <>
           {/* The tools (ADR 0259): a vertical toolbar, each tile's name in a tip on its right. */}
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: a toolbar's arrow keys move between its tiles */}
           <div
             className="sidebar__col"
             role="toolbar"
@@ -1355,7 +1354,7 @@ function useChannelSections({
   };
 
   const row = (c: Channel, opts: { top?: boolean; favorite?: HTMLAttributes<HTMLAnchorElement> } = {}) => {
-    // Slack's marks: something new makes the row bold (a pill on its left edge) with no count; only a mention of me
+    // The usual marks: something new makes the row bold (a pill on its left edge) with no count; only a mention of me
     // gets the red one. Muted, it rests dim whatever comes, but a mention still shows.
     const unread = looksUnread(c);
     const mentions = c.mentionCount ?? 0;
