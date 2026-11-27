@@ -31,7 +31,8 @@ for (const triple of triples) {
   try {
     const archive = path.join(dir, "a.tar.gz");
     writeFileSync(archive, bytes);
-    const tar = spawnSync("tar", ["-xzf", archive, "-C", dir], { stdio: "inherit" });
+    // Relative to `dir`: Git Bash's GNU tar on the Windows runners reads "C:\…" as a remote host.
+    const tar = spawnSync("tar", ["-xzf", path.basename(archive)], { cwd: dir, stdio: "inherit" });
     if (tar.status !== 0) throw new Error(`agent-desktop ${target}: tar exited with ${tar.status}`);
     const exe = target.includes("windows") ? ".exe" : "";
     const files = [`agent-desktop${exe}`, ...(target.endsWith("apple-darwin") ? ["agent-desktop-macos-helper"] : [])];
