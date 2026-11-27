@@ -454,6 +454,7 @@ import {
   useDismissRun,
   useLive,
   useLiveStore,
+  useOpenedConversation,
   useStreams,
   useTypingSender,
 } from "@/realtime/context";
@@ -945,6 +946,7 @@ function ChannelView({
   const arrival = useArrival(channel);
   const arriving = arrival.show && !thread;
   const sendTyping = useTypingSender(channel.id, thread?.id);
+  useOpenedConversation(channel.id, thread?.id, Boolean(chrome?.dmAgentId || thread));
   // ⌘K "Pedir a um agente" leaves the text for this DM's composer.
   const draftKey = chrome?.dmAgentId ? `agent:${chrome.dmAgentId}` : null;
   // What I typed and didn't send stays in this browser: switching conversations or reloading keeps it. Only the box
