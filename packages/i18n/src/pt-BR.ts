@@ -17486,6 +17486,10 @@ export const ptBR = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPUs",
+    cores_one: "{{count}} núcleo",
+    cores_other: "{{count}} núcleos",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulador", simulator: "Simulador" },
@@ -17726,7 +17730,7 @@ export const ptBR = {
     },
     facts: {
       system: "Sistema",
-      cpu: "CPU",
+      cpu: "Processador",
       memory: "Memória",
       lastSeen: "Visto por último",
       toolchains: "Ferramentas encontradas",
@@ -18934,6 +18938,23 @@ export const ptBR = {
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
       copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
+      latest: "A versão mais recente",
+      newer: "Saiu a {{version}}",
+      notes: "O que mudou",
+      update: {
+        title: "Atualize para a {{version}}",
+        docker: "Com Docker",
+        native: "Sem Docker",
+        nativeHelp: "Extraia o pacote da versão em `~/.agentes/app` e rode:",
+        desktop: "Roda no app para computador, nesta máquina? Ele se atualiza com o app.",
+        notice: "Saiu o agentes.chat {{version}} para este servidor",
+        how: "Como atualizar",
+      },
+      computers: "Programa dos computadores",
+      computersAhead_one:
+        "{{count}} computador roda uma versão mais nova que a deste servidor. Ele funciona como está, e o que há de novo nele chega com a atualização deste servidor.",
+      computersAhead_other:
+        "{{count}} computadores rodam uma versão mais nova que a deste servidor. Eles funcionam como estão, e o que há de novo neles chega com a atualização deste servidor.",
     },
     title: "Configurações",
     account: {

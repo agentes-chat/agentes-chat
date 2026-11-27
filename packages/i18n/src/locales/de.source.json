@@ -41763,6 +41763,18 @@
       "other": "{{count}} CPU"
     }
   },
+  "devices.cores": {
+    "value": {
+      "one": "{{count}} core",
+      "other": "{{count}} cores"
+    }
+  },
+  "devices.threads": {
+    "value": {
+      "one": "{{count}} thread",
+      "other": "{{count}} threads"
+    }
+  },
   "devices.memory": {
     "value": "{{gb}} GB"
   },
@@ -42373,7 +42385,7 @@
     "value": "System"
   },
   "devices.facts.cpu": {
-    "value": "CPU"
+    "value": "Processor"
   },
   "devices.facts.memory": {
     "value": "Memory"
@@ -45266,6 +45278,45 @@
   },
   "settings.about.copyright": {
     "value": "Copyright © 2026 AGENTESCHAT, LLC and contributors"
+  },
+  "settings.about.latest": {
+    "value": "The newest release"
+  },
+  "settings.about.newer": {
+    "value": "{{version}} is out"
+  },
+  "settings.about.notes": {
+    "value": "What's new"
+  },
+  "settings.about.update.title": {
+    "value": "Update to {{version}}"
+  },
+  "settings.about.update.docker": {
+    "value": "With Docker"
+  },
+  "settings.about.update.native": {
+    "value": "Without Docker"
+  },
+  "settings.about.update.nativeHelp": {
+    "value": "Extract the release's package into `~/.agentes/app`, then run:"
+  },
+  "settings.about.update.desktop": {
+    "value": "Runs in the desktop app on this computer? It updates with the app."
+  },
+  "settings.about.update.notice": {
+    "value": "agentes.chat {{version}} is out for this server"
+  },
+  "settings.about.update.how": {
+    "value": "How to update"
+  },
+  "settings.about.computers": {
+    "value": "Computers' program"
+  },
+  "settings.about.computersAhead": {
+    "value": {
+      "one": "{{count}} computer runs a newer version than this server. It works as it is, and what's new in it comes with this server's update.",
+      "other": "{{count}} computers run a newer version than this server. They work as they are, and what's new in them comes with this server's update."
+    }
   },
   "settings.title": {
     "value": "Settings"

@@ -1,8 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { cpuName } from "@agenteschat/adapters/host-stats";
 import { createTerm } from "@agenteschat/setup/src/term";
-import { connections, cpuName, type DoctorPhone, type DoctorSources, runDoctor } from "../../runner/doctor";
+import { connections, type DoctorPhone, type DoctorSources, runDoctor } from "../../runner/doctor";
 import { acquireLock } from "../../runner/lock";
 import { keepAfterLogout, lingerOn, systemdUnitPath, userUnitLinger } from "../../runner/service";
 import { removeDirs, tempDir } from "./helpers";

@@ -1,6 +1,6 @@
 import type { ComputerDevice, DeviceStatus, PhoneDevice } from "@agenteschat/client";
 import { useRoles } from "@agenteschat/client";
-import { lendsInternet, permissionWaitLines } from "@agenteschat/client/lib/devices";
+import { joinLends, permissionWaitLines } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -117,7 +117,7 @@ export function JoinRequestCard({ request: r }: { request: DeviceJoin }) {
       <Text variant="small" tone="muted">
         {joinFacts(t, r)}
       </Text>
-      <JoinInternetLine />
+      <JoinInternetLine os={r.os} />
       <View style={styles.buttons}>
         <JoinButtons request={r} />
       </View>
@@ -125,10 +125,10 @@ export function JoinRequestCard({ request: r }: { request: DeviceJoin }) {
   );
 }
 
-/** Under Let it join, where computers lend their internet: this one will too (ADR 0237). */
-export function JoinInternetLine() {
+/** Under Let it join, where computers lend their internet: this one will too, but a server box (ADR 0237). */
+export function JoinInternetLine({ os }: { os: string }) {
   const { t } = useTranslation();
-  const lends = lendsInternet(useDevices().data);
+  const lends = joinLends(useDevices().data, os);
   return lends ? (
     <Text variant="small" tone="muted">
       {t("devices.shareInternetJoin")}

@@ -2909,7 +2909,12 @@ test.if(posix)(
       t.manager.act(dev, folder, { op: "browser.act", command, args, timeoutSeconds: 30, desktop: true });
     const first = await act("open", ["https://a.example/"]);
     expect(first).toMatchObject({ success: true });
-    expect(Object.keys(first.setup ?? {}).sort()).toEqual(["desktop", "launch"]);
+    // Opening the session is "install" only past 10 ms, which a slow machine's file work can take.
+    expect(
+      Object.keys(first.setup ?? {})
+        .filter((step) => step !== "install")
+        .sort(),
+    ).toEqual(["desktop", "launch"]);
     for (const ms of Object.values(first.setup ?? {})) expect(ms).toBeGreaterThanOrEqual(10);
     expect((await act("click", ["@e1"])).setup).toBeUndefined();
     // A batch says it too; the runner's log puts it in words.

@@ -16407,6 +16407,8 @@
     "workspace": "워크스페이스",
     "cloud": "Cloud",
     "cpus_other": "CPU {{count}}개",
+    "cores_other": "코어 {{count}}개",
+    "threads_other": "스레드 {{count}}개",
     "memory": "{{gb}}GB",
     "system": {
       "android": "Android {{version}}",
@@ -16634,7 +16636,7 @@
     },
     "facts": {
       "system": "시스템",
-      "cpu": "CPU",
+      "cpu": "프로세서",
       "memory": "메모리",
       "lastSeen": "마지막 확인",
       "toolchains": "찾은 도구 체인",
@@ -17774,7 +17776,21 @@
       "version": "버전",
       "license": "<license>GNU Affero General Public License v3</license>에 따른 자유 소프트웨어이며 보증은 없습니다.",
       "source": "소스 코드",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 및 기여자"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 및 기여자",
+      "latest": "최신 릴리스입니다",
+      "newer": "{{version}} 버전이 나왔어요",
+      "notes": "새로운 기능",
+      "update": {
+        "title": "{{version}} 버전으로 업데이트",
+        "docker": "Docker 사용 시",
+        "native": "Docker 없이",
+        "nativeHelp": "릴리스 패키지를 `~/.agentes/app` 에 압축 해제한 다음 실행하세요.",
+        "desktop": "이 컴퓨터의 데스크톱 앱에서 실행 중인가요? 앱과 함께 업데이트돼요.",
+        "notice": "이 서버용 agentes.chat {{version}} 버전이 나왔어요",
+        "how": "업데이트 방법"
+      },
+      "computers": "컴퓨터 프로그램",
+      "computersAhead_other": "컴퓨터 {{count}}대가 이 서버보다 새 버전으로 실행 중이에요. 지금 그대로 작동하며, 새 기능은 이 서버를 업데이트하면 쓸 수 있어요."
     },
     "title": "설정",
     "account": {

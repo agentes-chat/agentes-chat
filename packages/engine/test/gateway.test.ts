@@ -62,6 +62,79 @@ test("no effort set: high only where the model's output limit is known, else the
   expect(turnEffort("gpt-6.2-sol", "low")).toBe("low");
 });
 
+test("a model whose limit no row knows: its provider's refusal names it, the call goes again within it, the key keeps it", async () => {
+  const said =
+    "max_tokens is too large: 64000. This model supports at most 16384 completion tokens, whereas you provided 64000.";
+  f = await setup({
+    reply: (request) =>
+      request.maxTokens > 16_384
+        ? new ProviderError(
+            `provider rejected the request (400 invalid_request_error): ${said}`,
+            false,
+            400,
+            undefined,
+            said,
+          )
+        : { chunks: ["ok"] },
+  });
+  await createCredential(f.db, f.keyWrapper, f.owner.id, f.org.id, {
+    provider: "openai",
+    label: "OpenAI",
+    apiKey: "sk-proj-test-key-12345678",
+  });
+  await f.db
+    .update(schema.agents)
+    .set({ model: "gpt-6.2-sol", credentialId: null })
+    .where(eq(schema.agents.id, f.agent.id));
+  const first = await call(f, [], 64_000);
+  expect(first.maxTokens).toBe(16_384);
+  await call(f, [], 64_000);
+  expect(f.openaiProvider.calls.map((c) => c.request.maxTokens)).toEqual([64_000, 16_384, 16_384]);
+  // The refused call billed nothing: one usage row per answer.
+  expect(await f.db.select().from(schema.usageRecords)).toHaveLength(2);
+});
+
+test("a model whose limit no row knows: the cap its provider's list tells, asked once per key and model", async () => {
+  f = await setup({ reply: () => ({ chunks: ["ok"] }) });
+  await createCredential(f.db, f.keyWrapper, f.owner.id, f.org.id, {
+    provider: "openai",
+    label: "OpenAI",
+    apiKey: "sk-proj-test-key-12345678",
+  });
+  await f.db
+    .update(schema.agents)
+    .set({ model: "gpt-6.2-sol", credentialId: null })
+    .where(eq(schema.agents.id, f.agent.id));
+  let asked = 0;
+  const gateway = createModelGateway({
+    db: f.db,
+    keyWrappers: [f.keyWrapper],
+    providers: {
+      openai: {
+        ...f.openaiProvider,
+        outputLimit: async () => {
+          asked++;
+          return 8192;
+        },
+      },
+    },
+    platformCredentials: noPlatformCredentials,
+  });
+  const agentCall = () =>
+    gateway.stream({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      system: "s",
+      messages: [{ role: "user", content: "hi" }],
+      maxTokens: 64_000,
+      onDelta: () => {},
+    });
+  await agentCall();
+  await agentCall();
+  expect(f.openaiProvider.calls.map((c) => c.request.maxTokens)).toEqual([8192, 8192]);
+  expect(asked).toBe(1);
+});
+
 test("decrypts the org credential, streams, and records tokens and cost with org and agent", async () => {
   f = await setup({
     reply: () => ({ chunks: ["Hi", " there"], usage: { inputTokens: 1000, outputTokens: 200, cacheReadTokens: 50 } }),

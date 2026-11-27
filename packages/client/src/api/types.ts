@@ -5523,6 +5523,8 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /** Its runner's machine protocol (`MACHINE_PROTOCOL_VERSION` of the runner it runs). Absent on older servers. */
+  protocol?: number;
   /**
    * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
    * install command again, as root. Null or absent (an older server): nothing to update from here.
@@ -8116,13 +8118,27 @@ export interface SidebarPins {
   channels: string[];
   people: string[];
 }
-/** How my sidebar shows the agents, and what I pinned, in one workspace (`GET …/me/sidebar/view`). */
+/** One of my own channel sections (ADR 0260): its name and its channels, in order. */
+export interface SidebarChannelSection {
+  id: string;
+  name: string;
+  channelIds: string[];
+}
+/** What Mensagens diretas lists: everyone in the workspace, or only who I talked to. */
+export type SidebarDmShow = "all" | "recent";
+/** How my sidebar shows the agents, my Favoritos and my channel sections, in one workspace (`GET …/me/sidebar/view`). */
 export interface SidebarView {
   agentSort: AgentSort;
   /** Who manages agents also lists the ones that don't talk to them. */
   showAllAgents: boolean;
-  /** Never saved: the apps pin my own agents (`dayOnePins`). */
+  /** The pins of before Favoritos: read only to start `favorites` (`favoritesOf`). */
   pins: SidebarPins | null;
+  /** Favoritos in order (`agent:<id>`, `channel:<id>`, `person:<user id>`); null or absent: never saved. */
+  favorites?: string[] | null;
+  /** My channel sections in order; null or absent: none. */
+  sections?: SidebarChannelSection[] | null;
+  /** Absent: `all`. */
+  dms?: SidebarDmShow;
 }
 
 /**
@@ -9259,6 +9275,12 @@ export interface ComputerDevice {
   arch: string;
   hostname: string;
   cpus: number | null;
+  /** The processor's name (`Apple M4 Pro`); null: an older runner. Absent from an older server. */
+  cpuModel?: string | null;
+  /** Its physical cores (`cpus` counts logical CPUs, threads); null: an older runner, or Windows. Absent: older server. */
+  cores?: number | null;
+  /** The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer. */
+  system?: string | null;
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
@@ -9320,6 +9342,8 @@ export interface DevicesList {
    * server lends). Absent from an older server: only where the workspace has its own computer (`lendsInternet`).
    */
   lendsInternet?: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead. Absent from an older server: no. */
+  serverBoxesBorrow?: boolean;
 }
 
 /** A one-line install: works once, for a few minutes, and the computer still asks to join. */
