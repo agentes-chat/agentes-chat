@@ -360,10 +360,7 @@ async function creditLine(deps: MachineGitDeps, turn: CodeTurn) {
   const http = deps.github?.http ?? { fetch, apiUrl: "https://api.github.com" };
   // GitHub's login for the person is looked up once a day: a turn waits `CREDIT_WAIT_MS` at most for it, and the
   // lookup goes on for the next one.
-  const lines = await Promise.race([
-    runCoAuthors({ db: deps.db, http }, turn).catch(() => []),
-    Bun.sleep(CREDIT_WAIT_MS).then(() => []),
-  ]);
+  const lines = await runCoAuthors({ db: deps.db, http, loginWaitMs: CREDIT_WAIT_MS }, turn).catch(() => []);
   if (lines.length === 0) return "";
   return `Commits you make this turn: end each commit message with the line${lines.length > 1 ? "s" : ""} ${lines.join(" and ")}`;
 }
@@ -670,8 +667,8 @@ export async function prepareAgentCode(deps: MachineGitDeps, turn: CodeTurn): Pr
       const age = row?.credentialAt ? now.getTime() - row.credentialAt.getTime() : Number.POSITIVE_INFINITY;
       const credentialKey = `${turn.agentId}\0${machineId}\0credential`;
       if (age < CHECKOUT_SYNC_EVERY_MS || syncing.has(credentialKey)) return null;
-      // One credential serves every host's proxy address: refreshed once, beside the turn. Its first push comes long
-      // after the computer has the new one; `wait_for_code` waits for it too.
+      // One credential serves every host's proxy address: refreshed once, beside the turn. Its first git command comes
+      // after the CLI's start and the model's first answer, long after the computer has the new one.
       const refresh = syncOn(deps, machineId, git.first.setup, [], false)
         .then(() =>
           deps.db

@@ -837,7 +837,9 @@ describe("listing a server's tools", () => {
     f = await setup();
     const mcp = fakeGithubMcp();
     let down = false;
+    let tries = 0;
     const connect: typeof mcp.connect = async (c, headers) => {
+      tries++;
       if (down) throw new Error("connect ECONNREFUSED");
       return mcp.connect(c, headers);
     };
@@ -851,7 +853,11 @@ describe("listing a server's tools", () => {
     // Before, a conversation back after ten quiet minutes waited for the server here.
     expect((await source.tools(ctxOf(f))).map((t) => t.name)).toEqual(listed);
     await Bun.sleep(50);
+    const after = tries;
     expect(await source.tools(ctxOf(f))).toEqual([]);
+    // Down is kept for the minute: no claim waits on the server again meanwhile.
+    expect(await source.tools(ctxOf(f))).toEqual([]);
+    expect(tries).toBe(after);
   });
 
   test("a restart starts from the pinned tools when the server is slow; only a first listing ever waits for it", async () => {

@@ -503,7 +503,11 @@ export function createConnectorToolSource(
           (failed: unknown) => {
             const now = Date.now();
             const prev = cache.get(key);
-            cache.set(key, prev && "tools" in prev ? { ...prev, at: now } : { at: now, failed });
+            // Down past `STALE_MAX_MS`: the failure is what claims read for the TTL, never a wait on the server each.
+            cache.set(
+              key,
+              prev && "tools" in prev && now - prev.listed < STALE_MAX_MS ? { ...prev, at: now } : { at: now, failed },
+            );
             throw failed;
           },
         )

@@ -15,6 +15,7 @@ import {
   CHECKOUT_SYNC_EVERY_MS,
   CHECKOUT_SYNC_SECONDS,
   type ConnectorDeps,
+  CREDIT_WAIT_MS,
   codePrompt,
   codeStart,
   connectorGrantValidator,
@@ -1172,6 +1173,7 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       if (url.endsWith("/users/agentes-machine-test%5Bbot%5D")) return Response.json({ id: 77 });
       if (url.endsWith("/user/583231")) return Response.json({ login: "ana-gh" });
       if (url.endsWith("/user/583232")) return Response.json({ login: "bia-gh" });
+      if (url.endsWith("/user/583233")) return Bun.sleep(3000).then(() => Response.json({ login: "caio-gh" }));
       return new Response("unexpected", { status: 500 });
     }) as typeof globalThis.fetch;
     const deps = { ...w.machineDeps, github: { app, http: { apiUrl: API, fetch } } };
@@ -1256,6 +1258,17 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
     expect((await prepareAgentCode(deps, { ...turn, runId: run?.id }))?.start).toBe(
       `You start in ${FOLDER}/repos/acme/app.\nYour checkouts were last updated 0 min ago.\nCommits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: bia <583232+bia-gh@users.noreply.github.com>`,
     );
+    // GitHub slow to name who asked: the turn waits a second at most, and keeps the agent's own line.
+    const caio = await addMember(f.db, f.org.id, "member", "caio");
+    await f.db
+      .insert(schema.accounts)
+      .values({ id: crypto.randomUUID(), accountId: "583233", providerId: "github", userId: caio.id });
+    await f.db.update(schema.agents).set({ ownerUserId: caio.id }).where(eq(schema.agents.id, f.agent.id));
+    const slowAt = performance.now();
+    expect((await prepareAgentCode(deps, turn))?.start).toBe(
+      `You start in ${FOLDER}/repos/acme/app.\nYour checkouts were last updated 0 min ago.\n${own}`,
+    );
+    expect(performance.now() - slowAt).toBeLessThan(CREDIT_WAIT_MS + 500);
     // Nobody asked and nobody answers for the agent: no person's credit, the agent's own line alone.
     await f.db.update(schema.agents).set({ ownerUserId: null }).where(eq(schema.agents.id, f.agent.id));
     expect(await prepareAgentCode(deps, turn)).toMatchObject({
