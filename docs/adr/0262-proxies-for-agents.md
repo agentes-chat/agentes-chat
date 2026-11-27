@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-27
 - Extends: ADR 0237 (agents use a person's internet), ADR 0007 (secrets sealed per org)
-- Code: db `agent_proxies` (migration 0366); adapters `proxy-dial.ts` (`parseProxyUrl`, `dialViaProxy`,
+- Code: db `agent_proxies` (migration 0367); adapters `proxy-dial.ts` (`parseProxyUrl`, `dialViaProxy`,
   `proxyExit`), protocol `CUSTOM_PROXY_PROTOCOL` (`welcome.proxy`, `proxy.set`); engine `agent-proxies.ts`
   (`setAgentProxy`, `removeAgentProxy`, `listAgentProxies`, `proxyForMachine`, `testAgentProxy`), `proxy-card.ts`
   (`offer_proxy`, `saveProxyFromCard`), `machine-hub.ts` (the welcome); server `routes/app/agent-proxies.ts`; runner

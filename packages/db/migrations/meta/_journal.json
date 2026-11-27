@@ -2532,8 +2532,15 @@
     {
       "idx": 363,
       "version": "7",
-      "when": 1795806034285,
-      "tag": "0366_agent_proxies",
+      "when": 1795792227189,
+      "tag": "0366_sidebar_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 364,
+      "version": "7",
+      "when": 1795814098308,
+      "tag": "0367_agent_proxies",
       "breakpoints": true
     }
   ]

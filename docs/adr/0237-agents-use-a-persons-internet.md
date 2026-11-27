@@ -2,7 +2,8 @@
 
 - Status: Accepted (phase 1: the switch, the relay on both computers and the server; the workspace computer's
   routing is the Cloud's, later)
-- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers)
+- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers, then servers borrow;
+  2026-11-27 b: every TCP port)
 - Extends: ADR 0025 (connected computers), ADR 0058 §11 (data sockets), ADR 0101 (observed egress)
 - Code: protocol `packages/adapters/src/machine-protocol.ts` (`EGRESS_SHARE_PROTOCOL`, `EGRESS_SHARE`,
   `egress.dial`, `StreamHello.egress`, `welcome.egressRelay`); db `machines.egress_share`, `egress_share_at`,
@@ -15,8 +16,8 @@
   `windows/InternetRow.tsx` (after pairing, and in Preferences › This Mac). Self-hosted servers (amendment
   2026-11-27): `EGRESS_PROXY_PROTOCOL`, `welcome.egressProxy`, `egress.proxy`, `EGRESS_DIRECT_HOSTS`; db
   `machines.egress_lent_at` (migration 0365); engine `machines.ts` (`setServerLending`, `serverLending`,
-  `borrowsInternet`), `egress-share.ts` (`EgressRelay.connect`, `lending`), `egress-fetch.ts` (`createEgressFetch`),
-  `web-tools.ts` (`lent`), `devices.ts` (`lendsInternet`, `noticeLendingComputers`); server `start.ts` (the boot
+  `borrowsInternet`, `serverBox`, `lendsOffAtHello`), `machine-hub.ts` (the hello's default), `egress-share.ts`
+  (`EgressRelay.connect`, `lending`, the pick), `egress-fetch.ts` (`createEgressFetch`), `web-tools.ts` (`lent`), `devices.ts` (`lendsInternet`, `noticeLendingComputers`); server `start.ts` (the boot
   setting and the once-only notice); runner `egress-relay.ts` (`startEgressProxy`, `egressProxyEnv`,
   `egressProxyChromeArgs`), `daemon.ts` (`borrowEgress`), `secrets.ts`, `accounts.ts` (`accountSettingsEnv`),
   `browser.ts` (`chromeLaunchArgs`), `loopback-guard.ts` (`ownServices`), `host.ts` (`egressProxies`); client
@@ -49,7 +50,8 @@ computers are already connected (ADR 0025) and hold a socket to the server.
    computer reaches the site, dials its own data socket, and the server joins the two, bytes passed as they come
    (16 MiB queued toward a side at most), and only then answers `stream.ready` to the first. Every hop is a socket that
    already exists, so a computer behind any router lends without opening a port.
-4. **What it carries.** Only TCP to ports 80 and 443 (`EGRESS_SHARE.ports`); SSH and the rest keep their usual way.
+4. **What it carries.** TCP to any port but 25 (amendment 2026-11-27 b; until then only ports 80 and 443); UDP keeps
+   its usual way.
    The lending computer resolves a name itself (so the site's own location answers; a guard that passes the address its
    agent already resolved gets that address) and refuses a name or address that is not public, or that is on one of
    its own interfaces' subnets (a home's global IPv6 prefix, its router, this computer), wholly; at most 256
@@ -102,8 +104,8 @@ block datacenters, the person's own location).
    provisioner makes (`MACHINE_PROVISIONING=external`, the Cloud), where only the managed computer borrows, as
    before. No new setting.
 2. **Who borrows** (`borrowsInternet`): the managed computer always; where the server lends, also this server's own
-   computer (`host`), a computer marked the workspace's whose own switch is off, and the server process itself for
-   its reads of web pages. A computer that lends never borrows (the two need the switch in opposite states, and the
+   computer (`host`), with its own switch off a computer marked the workspace's or a server box (§8), and the server
+   process itself for its reads of web pages. A computer that lends never borrows (the two need the switch in opposite states, and the
    pick skips the borrower), a person's own computer that doesn't lend doesn't borrow either (turning the switch off
    never starts using a colleague's internet), and a host computer never lends. Anything else asking gets
    `forbidden`, read as "go out your usual way". The lenders are unchanged (§1, §2), and a lending computer at
@@ -153,8 +155,60 @@ block datacenters, the person's own location).
    runner's proxy port is opened only to that organization's block of uids (`ownServices`, a `ct mark` range rule
    before the shared services). Where agents run as the installing user (the simple mode, a Mac) organizations
    can't be told apart, as for their folders already.
+8. **Servers borrow, desktops lend** (same day). The main case pairs a runner on the VPS (or another server-room box)
+   and the desktop app on the person's own computer. With the switch on by default and the newest picked, the VPS
+   lent, and could be picked over the person's computer. Without the owner marking anything:
+   - A server box (`serverBox`) is a connected Linux computer whose runner the agentes.chat app doesn't run
+     (`runByApp`: `hello.app` from protocol 87, the older rule before). Where the server lends, its hello turns its
+     switch off while its owner never turned it on (`egress_share_at` null, `lendsOffAtHello`), and resolves its
+     `device.internet_shared` notice: a newly paired one from its first hello, one paired before at its next, once
+     (off, it stays as people set it). It then borrows (§2) without being marked the workspace's. Its owner may turn
+     it on to lend; that sets `egress_share_at`, which keeps it. The code page (`/conectar`, which confirms Terminal
+     installs; the app confirms its own) starts the switch off for Linux where the server lends (`serverBoxesBorrow`
+     in the devices list, `joinLends`) and sends it only when changed there; Let it join, on the web and the phone,
+     doesn't say a Linux computer will lend there.
+   - The pick (`lendingComputers`) puts computers the app runs before Terminal installs, then the newest as before. An
+     older Linux runner that doesn't say (`hello.app`) counts as a Terminal install there.
+   - People's own desktops keep the switch on by default (a Mac or PC, and Linux run by the app). A computer still
+     never lends and borrows at once (the switch's two states), and the pick skips the borrower.
+   - Never on the Cloud (`MACHINE_PROVISIONING=external`): the hello leaves the switch alone and the pick stays
+     newest first. No protocol change: the runner already says `hello.app` and takes `welcome.egressProxy`.
 
 Consequences: lent bytes of runner traffic cross the server twice, still with no cap; both connections must reach
-the same server process, else the borrower goes direct (§7); a VPS paired as a connected computer lends by default
-and, as the newest, may be picked over the person's computer, so its owner marks it the workspace's and turns its
-switch off (`SELF_HOSTING.md`); the env proxy is cooperative, not a security boundary.
+the same server process, else the borrower goes direct (§7); a Linux person who runs the runner from the Terminal on their own desktop has
+it borrow until they turn the switch on (§8); the env proxy is cooperative, not a security boundary.
+
+## Amendment 2026-11-27 b: every TCP port
+
+Owner decision: SSH, git over SSH, databases and any other TCP go through the lending computer too, not only the web.
+
+1. **The ports** (`EGRESS_ANY_PORT_PROTOCOL`, 96). `isEgressTarget` takes any TCP port but `EGRESS_SHARE.refusedPorts`
+   (25: a home address sending mail straight to mail servers is how it lands on spam blocklists; 465 and 587, mail
+   sent through the person's own provider with a sign-in, go through if the person's network allows them). The
+   lending computer keeps every other refusal (non-public addresses, its own subnets, 256 connections at once).
+2. **Older lenders.** A lending computer before protocol 96 refuses anything but 80 and 443 (`bad_request`). The
+   server sends it nothing else (`lenderCarries`): for another port it picks the newest lender that carries it, and
+   while only older ones are online it answers `refused` ("not carried"), never `unreachable`, so the borrower keeps
+   asking for its web connections instead of going quiet for a minute.
+3. **Borrowers ahead of their server.** A server before this rejects a hello naming another port with `badRequest`.
+   The workspace computer's socket answers that "not allowed" and a self-hosted borrower's proxy goes direct for that
+   connection only, both without the minute of quiet.
+4. **The Cloud's guard** sends every agent TCP connection but port 25 to the socket first (the Cloud's ADR 0009), so
+   on the Cloud it is transparent: any program, no settings. **A self-hosted borrower** has no guard: its proxy now
+   asks for any port, but only programs that use the proxy settings reach it (browsers, `HTTPS_PROXY`/`ALL_PROXY`
+   readers: git over HTTPS, curl, most CLIs). OpenSSH, database clients and others that ignore them go out the usual
+   way. `notFound` still fails a web connection, but another port the lending computer couldn't reach (its network
+   may block SSH or a database's port) goes the borrower's own way, as it did before every port was lent. Left out:
+   an SSH `ProxyCommand` through the proxy (`GIT_SSH_COMMAND`), which would replace a person's own `core.sshCommand`
+   and their hosts' `ProxyJump`; add a connect helper when someone needs SSH lent on a self-hosted server.
+5. **The switch's words** say what goes through and what doesn't, on the web, the phone and the desktop app, in 14
+   languages: on the Cloud "websites, git, SSH, databases and other TCP connections", never the person's own network
+   or mail on port 25, while name lookups, calls and other UDP traffic keep the usual way; on a self-hosted server
+   (`selfHosted`, the desktop app's server not the Cloud's) what follows proxy settings and what ignores them
+   (`devices.shareInternetHintProxy`, `desktop.pair.internetHintProxy`). The once-only inbox notice no longer says
+   "only websites".
+
+Consequences: more of the agents' traffic crosses the server and the person's connection (still no byte cap); a
+lending computer on an older app carries the web alone until it updates; lent traffic never touches a paid proxy:
+the Cloud's guard goes the proxy way only for what the socket didn't carry (no lender, a refusal, a failure, port 25,
+root's own traffic, UDP).

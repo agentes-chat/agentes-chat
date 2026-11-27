@@ -7386,6 +7386,8 @@ export const en = {
     undoneBy: "Undone by {{name}}",
     undoneByYou: "Undone by you",
     undo: "Undo",
+    /** On a change the agent's review left out: whoever may make it applies it themselves. */
+    applyAnyway: "Apply anyway",
     /** A card whose rows ended apart. */
     appliedSome: "{{done}} of {{total}} applied",
     waitingAdmin: "Waiting for an admin",
@@ -17614,6 +17616,10 @@ export const en = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPU",
+    cores_one: "{{count}} core",
+    cores_other: "{{count}} cores",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulator", simulator: "Simulator" },
@@ -17702,13 +17708,16 @@ export const en = {
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection.",
+      "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline.",
+    /** The same on a self-hosted server, where agents reach it through proxy settings (ADR 0237). */
+    shareInternetHintProxy:
+      "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
     /** Under Let it join, in a workspace with its own computer. */
     shareInternetJoin:
-      "The agents will also open websites through this computer's internet, so sites see your location. You can turn it off on its page.",
+      "The agents will also go online through this computer's internet, so sites and servers see your location. You can turn it off on its page.",
     connectedBy: "Connected by {{name}}",
     downloadFor: "Download for {{system}}",
     downloadApp: "Download the app",
@@ -17877,7 +17886,7 @@ export const en = {
     },
     facts: {
       system: "System",
-      cpu: "CPU",
+      cpu: "Processor",
       memory: "Memory",
       lastSeen: "Last seen",
       toolchains: "Toolchains found",
@@ -18356,7 +18365,7 @@ export const en = {
       internetShared: "Agents now open websites through the internet of <b>{{deviceName}}</b>",
       /** Under it: what lending keeps out and what happens while the computer is offline. */
       internetSharedLine:
-        "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection.",
+        "Only this workspace's agents, never anything on its own network, never email on port 25. While it's offline, they use their usual connection.",
       /** Its one button: stops lending this computer's internet. */
       internetOff: "Turn off",
       internetOffDone: "Agents no longer use the internet of {{deviceName}}.",

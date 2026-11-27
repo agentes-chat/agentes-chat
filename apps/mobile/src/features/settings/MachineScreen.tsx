@@ -29,8 +29,10 @@ import {
   doctorShown,
   mayChangeTasks,
   offlineCauseText,
+  processorText,
   RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
+  systemText,
   taskLimitLine,
   terminalInstall,
 } from "@agenteschat/client/lib/devices";
@@ -256,13 +258,23 @@ function MachinePage({ machineId }: { machineId: string }) {
       ? [setup?.specs ? t("computerSetup.specs", setup.specs) : null, m.online ? null : seenText(t, i18n.language, m)]
           .filter(Boolean)
           .join(" · ")
-      : [t(`machines.os.${osOf(m.os)}`), seenText(t, i18n.language, m)].filter(Boolean).join(" · "),
+      : seenText(t, i18n.language, m),
     isPaused(m) ? (pausedByText(t, i18n.language, m.paused, meId ?? "") ?? t("machines.pausedHint")) : null,
     told && (away || m.online)
       ? [maintenanceLine(t, told), ...maintenanceDetails(t, i18n.language, told)].join(" ")
       : null,
   ].filter((x): x is string => Boolean(x));
-  // What most people never need, behind one "Detalhes" row, as the web's.
+  // What most people never need, behind one "Detalhes" row, as the web's: its system, processor and memory first.
+  const processor = device ? processorText(t, device) : null;
+  const specs = [
+    managed
+      ? null
+      : { label: t("devices.facts.system"), value: device ? systemText(t, device) : t(`machines.os.${osOf(m.os)}`) },
+    processor ? { label: t("devices.facts.cpu"), value: processor.name, note: processor.cores } : null,
+    !managed && device?.memoryGb
+      ? { label: t("devices.facts.memory"), value: t("devices.memory", { gb: device.memoryGb }) }
+      : null,
+  ].filter((x) => x !== null);
   const details = [
     m.kind === "host" ? t(`machines.host.${hostDescKey(m.os)}`) : null,
     managed ? t("computerSetup.users") : null,
@@ -347,7 +359,7 @@ function MachinePage({ machineId }: { machineId: string }) {
         </>
       ) : null}
 
-      {details.length > 0 || egressIp ? (
+      {specs.length > 0 || details.length > 0 || egressIp ? (
         <>
           <Gap />
           <GroupedList>
@@ -356,6 +368,11 @@ function MachinePage({ machineId }: { machineId: string }) {
               label={t("common.details")}
               onPress={() => setMoreOpen((o) => !o)}
             />
+            {moreOpen
+              ? specs.map((f) => (
+                  <GroupedRow key={f.label} label={f.label} value={f.value} valueNote={f.note ?? undefined} />
+                ))
+              : null}
             {moreOpen ? details.map((line) => <GroupedRow key={line} label={line} labelLines={4} />) : null}
             {moreOpen && egressIp ? (
               <GroupedRow

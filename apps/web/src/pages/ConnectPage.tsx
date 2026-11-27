@@ -1,7 +1,7 @@
 import type { Machine } from "@agenteschat/client";
-import { ApiError, useConfirmDevice, useDenyDevice, useMachineDevice, useMe } from "@agenteschat/client";
+import { ApiError, useAuthConfig, useConfirmDevice, useDenyDevice, useMachineDevice, useMe } from "@agenteschat/client";
 import { workspaceLabel, workspaceNotes } from "@agenteschat/client/lib/deletion";
-import { lendsInternet } from "@agenteschat/client/lib/devices";
+import { joinLends, lendsInternet, shareInternetHint } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { computerKind, formatUserCode, locationText } from "@agenteschat/client/lib/machines";
@@ -48,6 +48,7 @@ type Outcome =
 export function ConnectPage({ code }: { code: string }) {
   const { t, i18n } = useTranslation();
   const me = useMe();
+  const auth = useAuthConfig();
   const device = useMachineDevice(code);
   const confirm = useConfirmDevice();
   const deny = useDenyDevice();
@@ -57,13 +58,20 @@ export function ConnectPage({ code }: { code: string }) {
   const [name, setName] = useState("");
   /** "Help when the team's computer is full or away" (`spill.own`): on, as a new computer's is, unless turned off here. */
   const [help, setHelp] = useState(true);
-  /** Its internet for the computers that borrow it (ADR 0237): on unless the person turns it off here. */
-  const [lend, setLend] = useState(true);
-  const lends = lendsInternet(useDevices(orgId ?? "", false, !!orgId).data);
+  /**
+   * Its internet for the computers that borrow it (ADR 0237): as the server starts it unless changed here. This page
+   * confirms Terminal installs (the app confirms its own), and where the server lends one on Linux is a server box,
+   * which borrows instead (`joinLends`). Null: left as it starts.
+   */
+  const [lendSet, setLend] = useState<boolean | null>(null);
+  const list = useDevices(orgId ?? "", false, !!orgId).data;
+  const lends = lendsInternet(list);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = device.data;
+  const lendDefault = joinLends(list, request?.os ?? "");
+  const lend = lendSet ?? lendDefault;
   const reconnect =
     request?.reconnect && orgs.some((o) => o.id === request.reconnect?.orgId) ? request.reconnect : null;
 
@@ -216,7 +224,7 @@ export function ConnectPage({ code }: { code: string }) {
                     spill.mutate({
                       id: machine.id,
                       spill: { own: help },
-                      ...(lends && !lend ? { shareInternet: false } : {}),
+                      ...(lends && lend !== lendDefault ? { shareInternet: lend } : {}),
                     });
                   setOutcome({
                     kind: "confirmed",
@@ -294,7 +302,7 @@ export function ConnectPage({ code }: { code: string }) {
                   id="connect-internet"
                   icon="globe"
                   label={t("devices.shareInternet")}
-                  hint={t("devices.shareInternetHint")}
+                  hint={shareInternetHint(t, auth.data)}
                   control={<Switch checked={lend} onCheckedChange={setLend} />}
                 />
               )}

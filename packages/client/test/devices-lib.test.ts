@@ -27,6 +27,7 @@ import {
   iphoneRestartNext,
   iphoneRestartOf,
   iphoneSteps,
+  joinLends,
   lendingDevice,
   lendsInternet,
   linkPhase,
@@ -40,9 +41,11 @@ import {
   phoneScreenCover,
   phoneScreenUrl,
   powerChoice,
+  processorText,
   reasonText,
   SPILL_USES,
   screenGesture,
+  shareInternetHint,
   shareInternetText,
   spilledText,
   spillOfUse,
@@ -50,6 +53,7 @@ import {
   statusDetail,
   statusPill,
   statusSentence,
+  systemText,
   taskChoices,
   taskLimitLine,
   tasksAutoText,
@@ -853,12 +857,32 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(lendingDevice([mine])).toBeNull();
   });
 
+  test("the switch's hint: every TCP connection on the Cloud; on a self-hosted server, what follows proxy settings", () => {
+    const cloud = shareInternetHint(t, { cloud: true } as never);
+    expect(cloud).toContain("SSH");
+    expect(cloud).toContain("port 25");
+    expect(cloud).toContain("UDP");
+    const own = shareInternetHint(t, { cloud: false } as never);
+    expect(own).toContain("ignore proxy settings");
+    expect(own).toContain("port 25");
+    // Before the server's config arrives: the Cloud's words, as `selfHosted` reads it.
+    expect(shareInternetHint(t, undefined)).toBe(cloud);
+  });
+
   test("a computer that joins lends where the server says computers lend; an older server: beside the workspace's own", () => {
     expect(lendsInternet({ devices: [computer({})], lendsInternet: true })).toBe(true);
     expect(lendsInternet({ devices: [computer({ machineKind: "managed" })], lendsInternet: false })).toBe(false);
     expect(lendsInternet({ devices: [computer({ machineKind: "managed" })] })).toBe(true);
     expect(lendsInternet({ devices: [computer({})] })).toBe(false);
     expect(lendsInternet(undefined)).toBe(false);
+  });
+
+  test("where the server lends, a Linux computer that joins is a server box and borrows; on the Cloud it lends (ADR 0237)", () => {
+    const here = { devices: [], lendsInternet: true, serverBoxesBorrow: true };
+    expect(joinLends(here, "linux")).toBe(false);
+    expect(joinLends(here, "darwin")).toBe(true);
+    expect(joinLends({ devices: [], lendsInternet: true }, "linux")).toBe(true);
+    expect(joinLends({ devices: [], lendsInternet: false, serverBoxesBorrow: true }, "darwin")).toBe(false);
   });
 });
 
@@ -903,4 +927,29 @@ test("Ligar on an offline simulator, Desligar on one running and free; never a r
   expect(said("device.power_start_failed", { name: "Pixel 8", computer: "Build PC", why: "PANIC: no image" })).toBe(
     "Pixel 8 didn't start. Build PC said: PANIC: no image",
   );
+});
+
+describe("a computer's system and processor", () => {
+  test("the version and the processor's name its runner said, the cores aside; an older runner's family and threads", () => {
+    const said = computer({ cpus: 14, cores: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+    expect(systemText(t, said)).toBe("macOS 26.1");
+    expect(processorText(t, said)).toEqual({ name: "Apple M4 Pro", cores: "14 cores" });
+    // Logical CPUs are threads: cores only where the runner counted them.
+    expect(processorText(t, computer({ cpus: 16, cores: 8, cpuModel: "AMD Ryzen 7 7700X" }))).toEqual({
+      name: "AMD Ryzen 7 7700X",
+      cores: "8 cores, 16 threads",
+    });
+    expect(processorText(t, computer({ cpus: 16, cores: null, cpuModel: "Intel Core i7-12700H" }))).toEqual({
+      name: "Intel Core i7-12700H",
+      cores: "16 threads",
+    });
+    const older = computer({});
+    expect(systemText(t, older)).toBe("macOS");
+    expect(processorText(t, older)).toEqual({ name: "12 threads", cores: null });
+    expect(processorText(t, computer({ cpus: null }))).toBeNull();
+    expect(processorText(t, computer({ cpus: null, cpuModel: "AMD EPYC 7763" }))).toEqual({
+      name: "AMD EPYC 7763",
+      cores: null,
+    });
+  });
 });

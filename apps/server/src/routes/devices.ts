@@ -137,6 +137,16 @@ const Computer = z
     arch: z.string(),
     hostname: z.string(),
     cpus: z.number().nullable(),
+    cpuModel: z
+      .string()
+      .nullable()
+      .openapi({ description: "The processor's name (`Apple M4 Pro`); null: an older runner." }),
+    cores: z.number().nullable().openapi({
+      description: "Its physical cores (`cpus` counts logical CPUs, threads); null: an older runner, or Windows.",
+    }),
+    system: z.string().nullable().openapi({
+      description: "The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer.",
+    }),
     memoryGb: z.number().nullable(),
     ownerUserId: z.string().nullable(),
     belongsToWorkspace: z.boolean(),
@@ -317,6 +327,10 @@ export function deviceAppRoutes(deps: AppDeps) {
             lendsInternet: z.boolean().openapi({
               description:
                 "People's computers here lend their internet (ADR 0237): the workspace has its own computer, or this server lends to its own computer and its reads of web pages. The apps say so where a computer joins.",
+            }),
+            serverBoxesBorrow: z.boolean().openapi({
+              description:
+                "This server lends (ADR 0237), so a Linux computer that joins from a Terminal install borrows instead: its switch starts off.",
             }),
           }),
         ),

@@ -14,7 +14,12 @@ const listen = (server: Server) =>
   });
 
 /** A site that answers "hi " plus what it got. */
-const echo = () => listen(createServer((s) => s.on("data", (d) => s.write(Buffer.concat([Buffer.from("hi "), d])))));
+const echo = () =>
+  listen(
+    createServer((s) => {
+      s.on("data", (d: Buffer) => s.write(Buffer.concat([Buffer.from("hi "), d])));
+    }),
+  );
 
 /** Pipes a proxy's client to `port` on this computer, whatever host it named; `seen` gets the targets. */
 const tunnel = (client: Socket, port: number, rest: Buffer) => {
