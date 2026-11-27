@@ -523,7 +523,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   /** The output cap sent: the call's, within the most the model may write (its row's, else what was learned). */
   async function capOf(maxTokens: number, info: ModelInfo, provider: ModelProvider, model: string, key: Key) {
     const at = limitKey(key, model);
-    if (!info.maxOutputTokens) await loadLimit(at, key, model);
+    // Also for a model its row knows: a refusal may have said the row is wrong for this key.
+    await loadLimit(at, key, model);
     if (!info.maxOutputTokens && !learnedLimits.has(at) && provider.outputLimit) {
       const told = await provider
         .outputLimit(model, { apiKey: key.apiKey, ...(key.endpoint ? { endpoint: key.endpoint } : {}) })

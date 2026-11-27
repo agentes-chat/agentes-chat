@@ -255,6 +255,13 @@ describe("a reply longer than one message", () => {
     // The apps hear every part, in order.
     const created = events.flatMap((e) => (e.type === "message.created" ? [e.messageId] : []));
     expect(created.filter((id) => posted.some((m) => m.id === id))).toEqual(posted.map((m) => m.id));
+    // One reply: it notifies once, from its first part, and is routed once, from its last.
+    const jobs = (await f.db.select().from(schema.outbox)).filter((j) =>
+      posted.some((m) => m.id === j.payload.messageId),
+    );
+    const of = (kind: string) => jobs.filter((j) => j.kind === kind).map((j) => j.payload.messageId);
+    expect(of("notifications.message")).toEqual([posted[0]?.id]);
+    expect(of("message.posted")).toEqual([posted.at(-1)?.id]);
     const [run] = await f.db.select().from(schema.agentRuns);
     expect(run?.status).toBe("done");
   });

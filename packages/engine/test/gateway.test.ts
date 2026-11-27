@@ -172,6 +172,26 @@ test("a key's learned output limit outlives the process: the next one sends with
   expect(sent()).toEqual([64_000, 16_384, 16_384, 64_000, 16_384]);
 });
 
+test("a limit a refusal learned below its model's row outlives the process too", async () => {
+  const said = "max_tokens: 100000 > 32000, which is the maximum allowed number of output tokens";
+  f = await setup({
+    reply: (request) =>
+      request.maxTokens > 32_000
+        ? new ProviderError(`provider rejected the request (400): ${said}`, false, 400, undefined, said)
+        : { chunks: ["ok"] },
+  });
+  await f.db.update(schema.agents).set({ model: "claude-fable-5-2" }).where(eq(schema.agents.id, f.agent.id));
+  await call(f, [], 100_000);
+  const restarted = createModelGateway({
+    db: f.db,
+    keyWrappers: [f.keyWrapper],
+    providers: { anthropic: f.provider },
+    platformCredentials: noPlatformCredentials,
+  });
+  await call({ ...f, gateway: restarted }, [], 100_000);
+  expect(f.provider.calls.map((c) => c.request.maxTokens)).toEqual([100_000, 32_000, 32_000]);
+});
+
 test("decrypts the org credential, streams, and records tokens and cost with org and agent", async () => {
   f = await setup({
     reply: () => ({ chunks: ["Hi", " there"], usage: { inputTokens: 1000, outputTokens: 200, cacheReadTokens: 50 } }),

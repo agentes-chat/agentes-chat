@@ -329,7 +329,9 @@ export function splitMarkdown(text: string, max: number): string[] {
   return parts;
 }
 
-const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+// Any indent: a fence in a nested list item sits deeper than CommonMark's three spaces. A backtick fence's info string
+// holds no backtick ("```x``` and more" is inline code).
+const FENCE_OPEN = /^\s*(`{3,}(?!.*`)|~{3,})/;
 
 /** Markdown's paragraphs and fenced code blocks, in order; a fence nobody closed runs to the end. */
 function markdownBlocks(text: string) {

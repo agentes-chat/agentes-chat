@@ -32,3 +32,13 @@ test("a line longer than a part: cut at a space, else anywhere but inside an emo
   const emoji = splitMarkdown(`${"x".repeat(9)}😀${"y".repeat(5)}`, 10);
   expect(emoji).toEqual(["x".repeat(9), `😀${"y".repeat(5)}`]);
 });
+
+test("a fence in a nested list item and inline code at a line's start", () => {
+  const nested = `- one\n  - two\n\n      \`\`\`sh\n      a\n\n      b\n      \`\`\``;
+  expect(splitMarkdown(`${"x".repeat(30)}\n\n${nested}`, 40)).toEqual([
+    "x".repeat(30),
+    "- one\n  - two",
+    nested.slice(15),
+  ]);
+  expect(splitMarkdown(`\`\`\`a\`\`\` b\n\n${"c".repeat(20)}`, 20)).toEqual(["```a``` b", "c".repeat(20)]);
+});

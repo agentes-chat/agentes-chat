@@ -772,7 +772,10 @@ async function insertLongAgentMessage(
         meta: { ...(last ? meta : ahead), ...(i === 0 && replyTo !== undefined ? { replyTo } : {}) },
         createdAt: new Date(at + i),
       },
-      options,
+      {
+        ...options,
+        part: { first: i === 0 && (options.part?.first ?? true), last: last && (options.part?.last ?? true) },
+      },
     );
     before.push(...(out.message.before ?? []));
     if (last) return { ...out, message: { ...out.message, before } };
@@ -797,7 +800,11 @@ export async function insertMessageWithRuns(
    * `deliver: false`: a person's message written on their behalf (a routine's trigger) answers no open
    * question and joins no run in progress; only the runs its caller starts read it.
    */
-  options: { startRuns: boolean; deliver?: boolean },
+  /**
+   * `part`: one of an agent's long text's messages (`insertLongAgentMessage`): only the first notifies and only the
+   * last is routed and assessed, so the reply rings and routes once; a part's own mentions still do both.
+   */
+  options: { startRuns: boolean; deliver?: boolean; part?: { first: boolean; last: boolean } },
 ): Promise<{
   message: PostedMessage;
   /** `replyInThread`: it answers under the message (ADR 0214). */
@@ -826,6 +833,8 @@ export async function insertMessageWithRuns(
   // The sticker or GIF an agent adds after its own reply is silent (ADR 0091 §4): it notifies nobody, and a thread
   // waits for the reply's own assessment.
   const silent = isMediaAfterReply(input.meta);
+  const notFirst = options.part ? !options.part.first : false;
+  const notLast = options.part ? !options.part.last : false;
   if (body.length > MAX_MESSAGE_LENGTH && input.author.type === "agent")
     return insertLongAgentMessage(tx, input, body, options);
   if (body.length > MAX_MESSAGE_LENGTH)
@@ -1254,16 +1263,16 @@ export async function insertMessageWithRuns(
           -- An agent's message without a mention goes to the router too: another agent may chime in (ADR 0034).
           -- A GIF or a sticker alone goes to nobody, an agent's silent one after its reply included (ADR 0091).
           where not ${mediaOnly}::boolean and (m.author_type = 'person' or cardinality(m.mentioned_agent_ids) > 0
-            or m.hop < ${AGENT_CHIME_IN_MAX_HOP})
+            or (m.hop < ${AGENT_CHIME_IN_MAX_HOP} and not ${notLast}::boolean))
         union all
         -- In-app notifications: people mentioned, a reply in a thread, a person's DM, an agent's answer to whoever
         -- is behind its run (ADR 0071), a routine's report (it may have no mention and no run).
         select gen_random_uuid(), ${input.orgId}::uuid, 'notifications.message', jsonb_build_object('messageId', m.id),
           'notifications.message:' || m.id, 4 from m
-          where not ${silent}::boolean and (cardinality(m.mentioned_user_ids) > 0 or m.thread_id is not null
+          where not ${silent}::boolean and (cardinality(m.mentioned_user_ids) > 0 or (not ${notFirst}::boolean and (m.thread_id is not null
             or m.agent_run_id is not null or m.meta -> 'routine' is not null
             or (m.author_type = 'person' and exists (
-              select 1 from ${channels} dc where dc.id = ${input.channelId}::uuid and dc.kind = 'dm')))
+              select 1 from ${channels} dc where dc.id = ${input.channelId}::uuid and dc.kind = 'dm')))))
         union all
         -- An agent's message where an integration app reads, for the app's webhook (ADR 0251). Notices and a
         -- confidential thread's words never leave.
@@ -1284,7 +1293,7 @@ export async function insertMessageWithRuns(
         select gen_random_uuid(), ${input.orgId}::uuid, 'threads.assess',
           jsonb_build_object('threadRootId', m.thread_id, 'messageId', m.id), 'threads.assess:' || m.id, 2,
           now() + ${THREAD_ASSESS_DELAY_MS / 1000}::int * interval '1 second'
-        from m where m.thread_id is not null and not ${silent}::boolean
+        from m where m.thread_id is not null and not ${silent}::boolean and not ${notLast}::boolean
         on conflict do nothing
         returning id
       )
