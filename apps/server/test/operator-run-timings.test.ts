@@ -100,6 +100,9 @@ type Claim = {
 const unsaid = {
   cold: null,
   firstRequestMs: null,
+  toolsListMs: null,
+  toolsListWaitMs: null,
+  warmMismatchAt: null,
   firstTokenMs: null,
   firstAssistantMs: null,
   retries: null,

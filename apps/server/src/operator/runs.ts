@@ -395,6 +395,16 @@ const Trace = z
                 firstRequestMs: Count.nullable().openapi({
                   description: "Turn start to the CLI's first API request: before it, the CLI's own work.",
                 }),
+                toolsListMs: Count.nullable().openapi({
+                  description: "A new process: turn start to its first ask for agentes.chat's tools.",
+                }),
+                toolsListWaitMs: Count.nullable().openapi({
+                  description: "How long that ask waited for its answer: the CLI says it is ready only after it.",
+                }),
+                warmMismatchAt: Count.nullable().openapi({
+                  description:
+                    "A warm_mismatch turn: the character of its system text where the warm start's first differed.",
+                }),
                 firstTokenMs: Count.nullable().openapi({
                   description: "Turn start to the model API's first streamed message (time to first token).",
                 }),

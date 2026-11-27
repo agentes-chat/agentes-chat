@@ -604,9 +604,12 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     idleMs: (state.limits.codexIdleMinutes ?? state.limits.brainIdleMinutes) * 60_000,
     maxProcesses: state.limits.codexMaxProcesses ?? state.limits.brainMaxProcesses,
   });
+  // The bridge comes next: a process's run asks for its tools through it.
+  let bridge: McpBridge | null = null;
   const brains = new BrainManager({
     root: path.join(home, "brains"),
     mcp: mcpCommand,
+    prefetchTools: (id) => bridge?.prefetch(id),
     accounts,
     ...(o.claudeCommand ? { claudeCommand: o.claudeCommand } : {}),
     ...brainLimits(),
@@ -681,8 +684,10 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     // A delegated CLI's calls find no process here (root runs it): harmless, as all its tools are this bridge's
     // (`mcp__`), which the silence check never times.
     onCall: (taskId, delta) => brains.bridgeCall(taskId, delta),
+    onList: (taskId, at, ms) => brains.bridgeList(taskId, at, ms),
     log,
   });
+  bridge = mcp;
   await mcp
     .listen()
     .catch((err: unknown) => log(`mission tools unavailable: ${err instanceof Error ? err.message : String(err)}`));

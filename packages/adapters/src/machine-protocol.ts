@@ -2377,7 +2377,10 @@ export const CURSOR_MODEL_LIMITS = { models: 80, id: 80, label: 80 } as const;
  * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
  * and the thinking blocks with the characters of their text (0 when the API leaves the text out). `firstRequestMs` is
  * when the CLI said it sent its first API request (`system/status` "requesting"): before it, the CLI's own work; from
- * it to `firstTokenMs`, the network and the API.
+ * it to `firstTokenMs`, the network and the API. A new process's first ask for our tool list (`toolsListMs`, from the
+ * turn's start) and how long the bridge took to answer it (`toolsListWaitMs`): Claude Code says it is ready only after.
+ * A `warm_mismatch` turn says where the warm start's system text and its own first differ (`warmMismatchAt`, in
+ * characters of the turn's): the run's stored context shows which part it was.
  */
 export interface BrainTurnTimings {
   warm: boolean;
@@ -2386,6 +2389,9 @@ export interface BrainTurnTimings {
   initMs?: number;
   firstEventMs?: number;
   firstRequestMs?: number;
+  toolsListMs?: number;
+  toolsListWaitMs?: number;
+  warmMismatchAt?: number;
   firstTokenMs?: number;
   firstAssistantMs?: number;
   retries?: number;
@@ -2423,6 +2429,9 @@ export const BRAIN_TURN_MEASURES = [
   "initMs",
   "firstEventMs",
   "firstRequestMs",
+  "toolsListMs",
+  "toolsListWaitMs",
+  "warmMismatchAt",
   "firstTokenMs",
   "firstAssistantMs",
   "retries",

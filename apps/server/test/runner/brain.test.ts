@@ -1830,6 +1830,33 @@ test.if(posix)("a turn's timings keep its API retries, its thinking and when the
 });
 
 test.if(posix)(
+  "each turn asks for its tools at its start; a new process's wait for them goes in its timings",
+  async () => {
+    const asked: { id: string; run: string | undefined }[] = [];
+    let m: BrainManager | null = null;
+    const { turn, m: made } = setup({
+      prefetchTools: (id) => {
+        asked.push({ id, run: m?.mcpTask(id)?.runId });
+        // The bridge answers the CLI's first ask 40 ms after it came, 10 ms into the turn.
+        m?.bridgeList(id, Date.now() + 10, 40);
+        m?.bridgeList(id, Date.now() + 500, 900);
+      },
+    });
+    m = made;
+    const r = await turn(1, "first");
+    expect(asked).toEqual([{ id: expect.any(String), run: RUN(1) }]);
+    const t = r.final.type === "done" ? r.final.timings : undefined;
+    expect(t).toMatchObject({ warm: false, toolsListWaitMs: 40 });
+    expect(t?.toolsListMs).toBeGreaterThanOrEqual(10);
+    // On the open process the CLI is ready already: its list asks go in no timings.
+    const next = await turn(2, "second");
+    expect(asked.map((a) => a.run)).toEqual([RUN(1), RUN(2)]);
+    expect(next.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(next.final.type === "done" ? next.final.timings : undefined).not.toHaveProperty("toolsListWaitMs");
+  },
+);
+
+test.if(posix)(
   "another model or effort switches on the open process; another fallback, or none of them, starts a new one",
   async () => {
     const { spawns, turn } = setup();
@@ -3492,7 +3519,8 @@ test.if(posix)(
     expect(await warm(3)).toEqual({ open: true, started: true });
     await waitFor(() => spawns().length === 3, 4000);
     const c = await turn(3, "later", { system: "S2", session: { id: SESSION(3), resume: false } });
-    expect(c.final).toMatchObject({ type: "done" });
+    // Where the two texts part, for the run's stored context to show which part changed.
+    expect(c.final).toMatchObject({ type: "done", timings: { warm: false, cold: "warm_mismatch", warmMismatchAt: 1 } });
     expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
     expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
   },

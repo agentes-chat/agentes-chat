@@ -92,6 +92,7 @@ import { descendantPids, killTree } from "./exec";
 import { cliSpawn, endedNotFound, envValue } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
+import { firstDifference } from "./lines";
 import {
   CHAT_DENIED_TOOLS,
   chatToolsBreach,
@@ -1360,6 +1361,8 @@ export class ClaudeProcess {
   bridgeCalls = 0;
   /** When one of those started or ended: its silence counts from there too. */
   bridgeChangedAt = 0;
+  /** Its MCP server's first ask for our tool list since the turn began, and how long our answer took (`bridgeList`). */
+  toolsList: { at: number; ms: number } | null = null;
   /** Its shell timeout when a command sets none (`BASH_DEFAULT_TIMEOUT_MS` in its env, else the CLI's own). */
   readonly bashDefaultMs: number;
   /** Its API timeout (`API_TIMEOUT_MS` in its env), when set. */
@@ -2095,6 +2098,8 @@ export interface BrainManagerOptions {
   };
   /** The local MCP bridge (where the daemon listens and how to start `agentes-runner mcp`). */
   mcp?: { socketPath: string; command: string[] };
+  /** A process's run began: the bridge asks for that run's tool list now, while the CLI starts (`McpBridge.prefetch`). */
+  prefetchTools?: (processId: string) => void;
   /** The runner's home (its accounts among it): turns never read it. */
   runnerHome?: string;
   /**
@@ -2553,6 +2558,12 @@ export class BrainManager {
     proc.bridgeChangedAt = Date.now();
   }
 
+  /** The MCP bridge answered a tool list of the process `id` asked at `at` in `ms`: a turn's first goes in its timings. */
+  bridgeList(id: string, at: number, ms: number) {
+    const b = this.bridge.get(id);
+    if (b?.proc && b.runId !== null) b.proc.toolsList ??= { at, ms };
+  }
+
   /**
    * Protocol 15: messages for the turn of `runId` in progress, on the agent's
    * process for that session (another agent's turn is never reached).
@@ -2807,6 +2818,8 @@ export class BrainManager {
     };
     let warm = false;
     let cold: BrainColdCause | undefined;
+    /** A warm start's text against this turn's: where they part (`warmMismatchAt`). */
+    let mismatchAt: number | undefined;
     let started: Live | undefined;
     const since = (at: number | null | undefined) => (at != null && at >= startedAt ? at - startedAt : undefined);
     const timed = (final: WireBrainEvent, used: Live): WireBrainEvent => {
@@ -2814,10 +2827,15 @@ export class BrainManager {
       const s = used.proc.parser.stats;
       const measures: Omit<BrainTurnTimings, "warm"> = {
         initMs: since(started?.proc.initAt),
+        // A new process's wait for our tools, which Claude Code says it is ready only after.
+        ...(started?.proc.toolsList
+          ? { toolsListMs: since(started.proc.toolsList.at), toolsListWaitMs: started.proc.toolsList.ms }
+          : {}),
         firstEventMs,
         firstRequestMs: since(s.firstRequestAt),
         firstTokenMs: since(s.firstTokenAt),
         firstAssistantMs: since(s.firstAssistantAt),
+        warmMismatchAt: mismatchAt,
         retries: s.retries,
         retryDelayMs: s.retryDelayMs,
         thinkingBlocks: s.thinkingBlocks,
@@ -2848,6 +2866,7 @@ export class BrainManager {
       const guessed = live.guessed;
       live.guessed = undefined;
       if (guessed !== system) {
+        mismatchAt = firstDifference(guessed, system);
         this.drop(live, "warm_mismatch");
         rmSync(live.keptSystem, { force: true });
         live = undefined;
@@ -3043,6 +3062,7 @@ export class BrainManager {
     if (bridge) {
       bridge.runId = req.runId;
       bridge.runToken = typeof req.mcp?.token === "string" ? req.mcp.token : null;
+      this.opts.prefetchTools?.(live.id);
     }
     this.running.set(req.runId, live);
     // Usage goes to the account the turn thinks with, or to the computer's own sign-in.

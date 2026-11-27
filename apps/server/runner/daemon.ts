@@ -1514,9 +1514,12 @@ export class RunnerDaemon implements RequestObserver {
       ...(this.opts.caffeinate !== undefined ? { caffeinate: this.opts.caffeinate } : {}),
     });
     await tasks.init();
+    // The bridge comes next: a process's run asks for its tools through it.
+    let bridge: McpBridge | null = null;
     const brains = new BrainManager({
       root: path.join(home, "brains"),
       mcp: mcpCommand,
+      prefetchTools: (id) => bridge?.prefetch(id),
       runnerHome: home,
       idleMs: (config.brainIdleMinutes ?? DEFAULT_LIMITS.brainIdleMinutes) * 60_000,
       maxProcesses: config.brainMaxProcesses ?? DEFAULT_LIMITS.brainMaxProcesses,
@@ -1540,8 +1543,10 @@ export class RunnerDaemon implements RequestObserver {
       socketPath,
       task: (taskId) => tasks.mcpTask(taskId) ?? brains.mcpTask(taskId) ?? codexRuns.get(taskId) ?? null,
       onCall: (taskId, delta) => brains.bridgeCall(taskId, delta),
+      onList: (taskId, at, ms) => brains.bridgeList(taskId, at, ms),
       log,
     });
+    bridge = mcp;
     await mcp
       .listen()
       .catch((err: unknown) => log(`mission tools unavailable: ${err instanceof Error ? err.message : String(err)}`));

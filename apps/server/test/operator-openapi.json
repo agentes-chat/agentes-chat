@@ -6000,6 +6000,21 @@
                         "minimum": 0,
                         "description": "Turn start to the CLI's first API request: before it, the CLI's own work."
                       },
+                      "toolsListMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "A new process: turn start to its first ask for agentes.chat's tools."
+                      },
+                      "toolsListWaitMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "How long that ask waited for its answer: the CLI says it is ready only after it."
+                      },
+                      "warmMismatchAt": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "A warm_mismatch turn: the character of its system text where the warm start's first differed."
+                      },
                       "firstTokenMs": {
                         "type": ["integer", "null"],
                         "minimum": 0,
@@ -6037,6 +6052,9 @@
                       "initMs",
                       "firstEventMs",
                       "firstRequestMs",
+                      "toolsListMs",
+                      "toolsListWaitMs",
+                      "warmMismatchAt",
                       "firstTokenMs",
                       "firstAssistantMs",
                       "retries",
