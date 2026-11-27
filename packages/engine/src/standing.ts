@@ -378,8 +378,15 @@ export async function setOrgStanding(
 export const TEAM_HELLO_JOB = "team.hello";
 
 /**
+ * Looks whether a workspace's first deliveries can fire now (`fireFirstDeliveries` in first-delivery.ts, ADR 0256
+ * addendum). Kept here beside the hello so lifting a billing hold queues it without importing the onboarding.
+ */
+export const FIRST_DELIVERY_JOB = "first_delivery.check";
+
+/**
  * Puts the billing service's hold on a workspace, moves it to another code, or lifts it (`null`), through the same
- * write as `setOrgStanding`. Lifting the first plan's hold queues the team's hello. A suspension or any other hold is never replaced nor lifted from here: `applied` false,
+ * write as `setOrgStanding`. Lifting the first plan's hold queues the team's hello; lifting any of them looks at the
+ * first deliveries waiting (`FIRST_DELIVERY_JOB`). A suspension or any other hold is never replaced nor lifted from here: `applied` false,
  * as when it is already so. Null when there is no such workspace.
  */
 export async function setBillingHold(
@@ -399,6 +406,9 @@ export async function setBillingHold(
         payload: { how: "paid" },
         dedupeKey: `${TEAM_HELLO_JOB}:${orgId}`,
       });
+    // The work its people's first deliveries waited for can start now (the first plan, above all): looked at at once,
+    // not at the sweep's next turn.
+    if (written && hold === null) await enqueue(tx, { orgId, kind: FIRST_DELIVERY_JOB, payload: {}, maxAttempts: 3 });
     return { before, written };
   });
   if (!done) return null;

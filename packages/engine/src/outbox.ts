@@ -869,6 +869,8 @@ export const UNREPEATABLE_JOB_KINDS = [
   "live-activity.refresh",
   "context.consolidate",
   "team_watch.check",
+  // A first delivery's look (ADR 0256 addendum): the sweep's keys name a window of time.
+  "first_delivery.check",
 ];
 
 /** The run an `agent_run.execute` job's key names (`agent_run.execute:<run>…`); null for a key of another shape. */

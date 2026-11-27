@@ -2,8 +2,8 @@ import { type PubSub, type RateLimiter, retryInSeconds } from "@agenteschat/adap
 import { and, asc, type Database, desc, eq, isNull, lt, or, schema } from "@agenteschat/db";
 import { z } from "zod";
 import { checkRoutine, type DraftPlace } from "./agent-proposals";
-import { freeHandle, HANDLE_PATTERN, takenHandles } from "./agents";
-import { AGENT_LOOK, type AgentAppearance } from "./appearance";
+import { archiveAgent, freeHandle, HANDLE_PATTERN, takenHandles } from "./agents";
+import { AGENT_LOOK, type AgentAppearance, validateAppearance } from "./appearance";
 import { recordAudit } from "./audit";
 import { CHANNEL_NAME_PATTERN } from "./channels";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
@@ -13,6 +13,7 @@ import type { ContextDeps } from "./context/summaries";
 import { openPersonAgentDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
+import { keepFirstDelivery, pendingFirstDelivery } from "./first-delivery";
 import { handleFromName } from "./imports";
 import { can, requireActiveMembership, updateOrganization } from "./organizations";
 import { personLocale } from "./requester";
@@ -458,9 +459,13 @@ async function channelFor(db: Database, orgId: string, userId: string, role: str
   return names.find((n) => !blocked.includes(n)) ?? `${handle}-${Date.now().toString(36)}`;
 }
 
-/** The catalog apps an option needs that this workspace hasn't connected: its checklist asks for them. */
-async function appsToConnect(db: Database, orgId: string, apps: FirstAgentApp[]) {
-  const ids = [...new Set(apps.flatMap((a) => catalogIdOf(a) ?? []))];
+/**
+ * The catalog apps (by id) an agent's job needs that this workspace hasn't connected: its checklist asks for them. An id
+ * the catalog doesn't know, or one still to come, is left out.
+ */
+async function appsToConnect(db: Database, orgId: string, wanted: readonly string[]) {
+  const known = new Set(catalogApps().flatMap((c) => (c.soon ? [] : [c.id])));
+  const ids = [...new Set(wanted)].filter((id) => known.has(id));
   if (ids.length === 0) return [];
   const connected = new Set(
     (
@@ -510,8 +515,32 @@ function pickFailure(error: TeamProposalCard["error"]) {
   return new Error(reason);
 }
 
-/** The option as one agent, made through the team card a template makes: its id, or the card's failure. */
-async function makeFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: string, option: FirstAgentOption) {
+/** One first agent as the onboarding asks for it: from an option its AI proposed, or from an area of its own. */
+interface FirstAgentPlan {
+  name: string;
+  handle: string;
+  role: string;
+  /** What it does, in one line on the card. */
+  line: string;
+  /** The card's first line. */
+  lead: string;
+  instructions: string;
+  appearance: AgentAppearance;
+  /** Its routine, as an AI proposed it; none from an area (connecting an app brings that one, ADR 0242). */
+  routine: { title: string; schedule: string; prompt: string; cron?: string | null } | null;
+  /** What the receipt's "Abrir com a tarefa" types in its DM. */
+  firstTask: string;
+  /** Catalog ids of the apps its job needs: its checklist asks for those not connected yet. */
+  apps: string[];
+}
+
+/**
+ * One first agent, made through the team card a template makes (`checkTeam`, then `createTeamNow`): its id, or the
+ * card's failure. Its own channel in a team's workspace (a personal one's lives in its DM), the apps every agent has
+ * for an admin's, the AI suggested for the person, a checklist row for each app still to connect, and the right hand's
+ * weekly check with a team's first agent.
+ */
+async function makeFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: string, plan: FirstAgentPlan) {
   const { db } = deps;
   const personal = await isPersonalWorkspace(db, orgId);
   const [taken, at, locale, team, later] = await Promise.all([
@@ -523,30 +552,30 @@ async function makeFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: 
       .from(agents)
       .where(and(eq(agents.orgId, orgId), isNull(agents.builtin), isNull(agents.archivedAt)))
       .limit(1),
-    appsToConnect(db, orgId, option.apps),
+    appsToConnect(db, orgId, plan.apps),
   ]);
-  const handle = taken.has(option.handle) ? freeHandle(option.handle, taken) : option.handle;
+  const handle = taken.has(plan.handle) ? freeHandle(plan.handle, taken) : plan.handle;
   const place: DraftPlace = { orgId, channelId: at.dm.id, personId: userId };
-  const read = option.routine ? await readSchedule(deps, place, option.routine) : null;
+  const read = plan.routine ? await readSchedule(deps, place, plan.routine) : null;
   const params = await checkTeam(
     deps,
     place,
     {
-      lead: option.why,
+      lead: plan.lead,
       agents: [
         {
-          name: option.name,
+          name: plan.name,
           handle,
-          role: option.role,
-          line: option.tasks[0] ?? option.role,
-          instructions: option.instructions || option.tasks.map((t) => `- ${t}`).join("\n"),
-          look: option.appearance,
-          channel: personal ? "" : await channelFor(db, orgId, userId, option.role, handle),
+          role: plan.role,
+          line: plan.line,
+          instructions: plan.instructions,
+          look: plan.appearance,
+          channel: personal ? "" : await channelFor(db, orgId, userId, plan.role, handle),
           routines:
-            option.routine && read
-              ? [{ schedule: read.phrase, prompt: option.routine.prompt, title: option.routine.title }]
+            plan.routine && read
+              ? [{ schedule: read.phrase, prompt: plan.routine.prompt, title: plan.routine.title }]
               : [],
-          first_task: option.today[0] ?? "",
+          first_task: plan.firstTask,
         },
       ],
       // The right hand's weekly check comes with a team's first agent, as with a template's team.
@@ -561,6 +590,28 @@ async function makeFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: 
   const created = made.card.state === "created" ? made.card.created?.agentIds[0] : undefined;
   if (!created) throw pickFailure(made.card.error);
   return created;
+}
+
+/** An option the person's AI proposed, as the plan of its agent. */
+const optionPlan = (option: FirstAgentOption): FirstAgentPlan => ({
+  name: option.name,
+  handle: option.handle,
+  role: option.role,
+  line: option.tasks[0] ?? option.role,
+  lead: option.why,
+  instructions: option.instructions || option.tasks.map((t) => `- ${t}`).join("\n"),
+  appearance: option.appearance,
+  routine: option.routine,
+  firstTask: option.today[0] ?? "",
+  apps: option.apps.flatMap((a) => catalogIdOf(a) ?? []),
+});
+
+/** Only who may create agents makes a first one (`create_agents_required` without it). */
+async function requireAgentMaker(db: Database, userId: string, orgId: string) {
+  const membership = await requireActiveMembership(db, userId, orgId);
+  if (!can(membership, "create_agents"))
+    throw new ForbiddenError("Creating agents in this workspace needs an admin", "create_agents_required");
+  return membership;
 }
 
 /**
@@ -579,9 +630,7 @@ export async function pickFirstAgent(
 ): Promise<{ agentId: string; handle: string; channelId: string }> {
   const { db } = deps;
   const { orgId, userId } = who;
-  const membership = await requireActiveMembership(db, userId, orgId);
-  if (!can(membership, "create_agents"))
-    throw new ForbiddenError("Creating agents in this workspace needs an admin", "create_agents_required");
+  const membership = await requireAgentMaker(db, userId, orgId);
   const mine = and(
     eq(firstAgentProposals.id, id),
     eq(firstAgentProposals.orgId, orgId),
@@ -618,11 +667,13 @@ export async function pickFirstAgent(
       .update(firstAgentProposals)
       .set({ picked: null, pickedAt: null })
       .where(and(mine, isNull(firstAgentProposals.agentId)));
-  const agentId = await makeFirstAgent(deps, orgId, userId, option).catch(async (error: unknown) => {
+  const agentId = await makeFirstAgent(deps, orgId, userId, optionPlan(option)).catch(async (error: unknown) => {
     await release();
     throw error;
   });
   await db.update(firstAgentProposals).set({ agentId }).where(mine);
+  // Its first delivery, fired once it can work: its routine, else what the AI said it delivers on its first day.
+  await keepFirstDelivery(db, { orgId, userId, agentId, area: "ask", task: option.today[0] ?? option.tasks[0] ?? "" });
   // What the AI said of the workspace (or of the person, in a personal one) is its context while it has none.
   if (row.about && can(membership, "configure")) {
     const [org] = await db
@@ -634,4 +685,99 @@ export async function pickFirstAgent(
   // A member's greeting from the right hand went out as they joined and asks for a first agent: it stops asking.
   if (membership.role !== "owner") await settleWelcome(db, orgId, userId).catch(() => undefined);
   return homeOf(db, orgId, userId, agentId);
+}
+
+// ── From an area of the onboarding ───────────────────────────────────────────
+
+/** The area and the task as the first delivery keeps them (`FIRST_DELIVERY_AREA_MAX`, `FIRST_DELIVERY_TASK_MAX`). */
+export const FIRST_AGENT_START_LIMITS = {
+  area: 40,
+  name: 60,
+  role: 80,
+  instructions: 4000,
+  task: 500,
+  apps: 8,
+} as const;
+
+/** What the onboarding sends for an agent of one of its areas (or of "Outro", the person's own). */
+export const firstAgentStartInput = z.object({
+  area: line(FIRST_AGENT_START_LIMITS.area),
+  name: line(FIRST_AGENT_START_LIMITS.name),
+  role: z.string().trim().max(FIRST_AGENT_START_LIMITS.role).default(""),
+  instructions: z.string().trim().max(FIRST_AGENT_START_LIMITS.instructions).default(""),
+  appearance: z
+    .object({ color: z.string().max(32), eyes: z.string().max(32), accessory: z.string().max(32) })
+    .nullish(),
+  task: z.string().trim().max(FIRST_AGENT_START_LIMITS.task).default(""),
+  /** Catalog ids of the apps its job needs ("Apps to connect" on its checklist). */
+  apps: z.array(z.string().trim().min(1).max(64)).max(FIRST_AGENT_START_LIMITS.apps).default([]),
+  /** The agent this one takes the place of: the person's own first agent whose delivery hasn't fired. */
+  replace: z.uuid().nullish(),
+});
+export type FirstAgentStartInput = z.input<typeof firstAgentStartInput>;
+
+/**
+ * The person's first agent from an area of the onboarding (ADR 0256 addendum), as the person (`create_agents`;
+ * without it, `create_agents_required`), made the way a picked option is (`makeFirstAgent`) but with no routine:
+ * connecting an app brings its routine (ADR 0242), which the onboarding makes. Its first delivery is kept (`area`,
+ * `task`) and fires once the agent can work. `replace`: going back and picking another area archives the agent made a
+ * moment ago, when it is this person's own and its delivery hasn't fired, so two first agents never wait side by side.
+ */
+export async function startFirstAgent(
+  deps: FirstAgentsPickDeps,
+  who: { orgId: string; userId: string },
+  raw: unknown,
+): Promise<{ agentId: string; handle: string; channelId: string }> {
+  const { db } = deps;
+  const { orgId, userId } = who;
+  const parsed = firstAgentStartInput.safeParse(raw);
+  if (!parsed.success) throw new ValidationError(issueText(parsed.error), "first_agents.invalid");
+  const input = parsed.data;
+  const membership = await requireAgentMaker(db, userId, orgId);
+  if (input.replace) await replaceFirstAgent(deps, orgId, userId, input.replace);
+  const [taken, looks] = await Promise.all([
+    takenHandles(db, orgId),
+    db
+      .select({ appearance: agents.appearance })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt))),
+  ]);
+  let handle = handleFromName(input.name, input.role, input.instructions);
+  if (!HANDLE_PATTERN.test(handle)) handle = "agent";
+  if (taken.has(handle)) handle = freeHandle(handle, taken);
+  const worn = new Set(looks.flatMap((a) => (a.appearance?.color ? [a.appearance.color] : [])));
+  const appearance = input.appearance
+    ? validateAppearance(input.appearance)
+    : (looksFor([input.name], worn)[0] as AgentAppearance);
+  const role = input.role || input.name;
+  const agentId = await makeFirstAgent(deps, orgId, userId, {
+    name: input.name,
+    handle,
+    role: input.role,
+    line: role,
+    lead: role,
+    instructions: input.instructions || [input.role, input.task].filter(Boolean).join(": "),
+    appearance,
+    routine: null,
+    firstTask: input.task,
+    apps: input.apps,
+  });
+  await keepFirstDelivery(db, { orgId, userId, agentId, area: input.area, task: input.task });
+  // A member's greeting from the right hand went out as they joined and asks for a first agent: it stops asking.
+  if (membership.role !== "owner") await settleWelcome(db, orgId, userId).catch(() => undefined);
+  return homeOf(db, orgId, userId, agentId);
+}
+
+/** Archives the first agent `agentId` takes the place of, only while it is this person's and its delivery waits. */
+async function replaceFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: string, agentId: string) {
+  const pending = await pendingFirstDelivery(deps.db, orgId, userId);
+  // An agent brought from another app (no area) is never archived from here.
+  if (!pending || pending.agentId !== agentId || pending.area === null) return;
+  const [agent] = await deps.db
+    .select({ owner: agents.ownerUserId, archivedAt: agents.archivedAt })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
+  if (!agent || agent.archivedAt || agent.owner !== userId) return;
+  // The person made it on this onboarding a moment ago, as with the right hand's Undo of what it made for them.
+  await archiveAgent(deps.db, userId, orgId, agentId, deps.pubsub, true);
 }

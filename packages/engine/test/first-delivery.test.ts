@@ -1,0 +1,453 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { and, eq, isNull, schema } from "@agenteschat/db";
+import {
+  createRoutine,
+  deliverySummary,
+  drainOutbox,
+  enqueueFirstDeliveryChecks,
+  FIRST_DELIVERY_JOB,
+  FIRST_DELIVERY_KEPT_MS,
+  fireFirstDeliveries,
+  firstDeliveryWindowMs,
+  joinOrganization,
+  keepFirstDelivery,
+  keepImportedFirstDelivery,
+  openPersonAgentDm,
+  pickFirstAgent,
+  postPersonMessage,
+  readFirstDelivery,
+  runAuthorityById,
+  saveFirstAgents,
+  setBillingHold,
+  startFirstAgent,
+} from "../src";
+import { isAgentOnlyNotice, noticeText } from "../src/notices";
+import { addUser, everyoneWithout, type Fixture, setup } from "./fixtures";
+
+/*
+ * A person's first delivery (ADR 0256 addendum): kept when their first agent is made on the onboarding, fired once in
+ * their DM with it as soon as it can work (the plan, its AI), as a notice only the agent reads, whose run acts for them;
+ * each reply of that run carries `meta.firstDelivery` with its one line.
+ */
+
+let f: Fixture;
+afterEach(async () => {
+  const current = f;
+  f = undefined as unknown as Fixture;
+  await current?.close();
+});
+
+const pickDeps = (fx: Fixture) => ({ db: fx.db, pubsub: fx.pubsub, gateway: fx.gateway, context: fx.context });
+const fireDeps = (fx: Fixture) => ({ db: fx.db, pubsub: fx.pubsub, gateway: fx.gateway });
+
+/** The onboarding's support area, as its client sends it. */
+const support = (over: Record<string, unknown> = {}) => ({
+  area: "support",
+  name: "Iara",
+  role: "Atendimento",
+  instructions: "Você responde os e-mails e chamados dos clientes da Acme. Nada sai sem o ok de quem pediu.",
+  appearance: { color: "rose", eyes: "happy", accessory: "flower" },
+  task: "Ler os e-mails dos últimos 7 dias e dizer quais pedem resposta, com um rascunho para os de hoje.",
+  apps: ["zendesk", "gmail", "no-such-app"],
+  ...over,
+});
+
+const start = (fx: Fixture, userId: string, input: Record<string, unknown>) =>
+  startFirstAgent(pickDeps(fx), { orgId: fx.org.id, userId }, input);
+
+const failure = async (run: () => Promise<unknown>) => {
+  try {
+    await run();
+  } catch (error) {
+    const e = error as Error & { code?: string };
+    return { name: e.name, code: e.code, message: e.message };
+  }
+  throw new Error("it did not fail");
+};
+
+const agentRow = async (fx: Fixture, id: string) => {
+  const [row] = await fx.db.select().from(schema.agents).where(eq(schema.agents.id, id));
+  if (!row) throw new Error("no agent");
+  return row;
+};
+
+const deliveryRow = async (fx: Fixture, userId: string) => {
+  const [row] = await fx.db
+    .select()
+    .from(schema.firstDeliveries)
+    .where(and(eq(schema.firstDeliveries.orgId, fx.org.id), eq(schema.firstDeliveries.userId, userId)));
+  return row ?? null;
+};
+
+const checkJobs = (fx: Fixture) => fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, FIRST_DELIVERY_JOB));
+
+/** The notices of first deliveries in the person's DM with the agent. */
+const notices = async (fx: Fixture, userId: string, agentId: string) => {
+  const dm = await openPersonAgentDm(fx.db, fx.org.id, userId, agentId);
+  const rows = await fx.db.select().from(schema.messages).where(eq(schema.messages.channelId, dm.id));
+  return rows.filter((m) => (m.meta.notice as { kind?: string } | undefined)?.kind === "first_delivery");
+};
+
+const revokeKeys = (fx: Fixture) => fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
+const restoreKeys = (fx: Fixture) => fx.db.update(schema.providerCredentials).set({ revokedAt: null });
+
+describe("keeping it", () => {
+  test("an agent from an area: made with no routine, its checklist's apps from the catalog, its delivery kept", async () => {
+    f = await setup({ rightHand: true });
+    const made = await start(f, f.owner.id, support());
+    expect(made.handle).toBe("iara");
+    const agent = await agentRow(f, made.agentId);
+    expect(agent).toMatchObject({
+      name: "Iara",
+      role: "Atendimento",
+      ownerUserId: f.owner.id,
+      appearance: { color: "rose", eyes: "happy", accessory: "flower" },
+      archivedAt: null,
+    });
+    // A mailbox and an id the catalog doesn't know are left out of "Apps to connect".
+    expect(agent.setup).toMatchObject({ apps: { zendesk: "read" } });
+    expect(Object.keys((agent.setup as { apps?: object }).apps ?? {})).toEqual(["zendesk"]);
+    // Connecting an app brings its routine (ADR 0242): none is made here.
+    expect(await f.db.select().from(schema.routines).where(eq(schema.routines.agentId, made.agentId))).toEqual([]);
+    const [channel] = await f.db.select().from(schema.channels).where(eq(schema.channels.id, made.channelId));
+    expect(channel?.name).toBe("atendimento");
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toEqual({
+      agentId: made.agentId,
+      area: "support",
+      task: support().task,
+      firedAt: null,
+      runId: null,
+    });
+    expect((await checkJobs(f)).length).toBeGreaterThan(0);
+  });
+
+  test("going back to another area archives the agent made a moment ago; only that one, and only while it waits", async () => {
+    f = await setup({ rightHand: true });
+    const first = await start(f, f.owner.id, support());
+    const second = await start(
+      f,
+      f.owner.id,
+      support({ area: "finance", name: "Caio", role: "Financeiro", replace: first.agentId }),
+    );
+    expect((await agentRow(f, first.agentId)).archivedAt).not.toBeNull();
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toMatchObject({
+      agentId: second.agentId,
+      area: "finance",
+    });
+    // A `replace` that isn't this person's waiting first agent archives nothing: the workspace's own agent here.
+    const third = await start(f, f.owner.id, support({ area: "marketing", name: "Gabi", replace: f.agent.id }));
+    expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
+    expect((await agentRow(f, second.agentId)).archivedAt).toBeNull();
+    // An agent brought from another app (no area) is never archived from the onboarding.
+    await keepImportedFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id }, f.agent.id);
+    await start(f, f.owner.id, support({ area: "life", name: "Nina", replace: f.agent.id }));
+    expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
+    // One that fired stays, its agent too.
+    await f.db.update(schema.firstDeliveries).set({ firedAt: new Date() });
+    const fired = await deliveryRow(f, f.owner.id);
+    await start(f, f.owner.id, support({ area: "tech", name: "Léo", replace: fired?.agentId }));
+    expect((await agentRow(f, fired?.agentId as string)).archivedAt).toBeNull();
+    expect((await deliveryRow(f, f.owner.id))?.agentId).toBe(fired?.agentId as string);
+    expect(third.agentId).not.toBe(second.agentId);
+  });
+
+  test("keepFirstDelivery: one per person and workspace, a new agent takes a waiting one's place, a fired one stays", async () => {
+    f = await setup();
+    const ana = { orgId: f.org.id, userId: f.owner.id };
+    const kept = await keepFirstDelivery(f.db, {
+      ...ana,
+      agentId: f.agent.id,
+      area: "support",
+      task: "Ler os e-mails",
+    });
+    expect(kept).toEqual({ agentId: f.agent.id, area: "support", task: "Ler os e-mails", firedAt: null, runId: null });
+    const other = await f.db
+      .insert(schema.agents)
+      .values({ orgId: f.org.id, name: "Caio", handle: "caio", model: "claude-sonnet-5-5" })
+      .returning();
+    const caio = other[0]?.id as string;
+    expect(await keepFirstDelivery(f.db, { ...ana, agentId: caio, area: "finance", task: "" })).toMatchObject({
+      agentId: caio,
+      area: "finance",
+    });
+    expect(await f.db.select().from(schema.firstDeliveries)).toHaveLength(1);
+    const at = new Date();
+    await f.db.update(schema.firstDeliveries).set({ firedAt: at });
+    expect(await keepFirstDelivery(f.db, { ...ana, agentId: f.agent.id, area: "support", task: "x" })).toEqual({
+      agentId: caio,
+      area: "finance",
+      task: "",
+      firedAt: at.toISOString(),
+      runId: null,
+    });
+    // Its agent archived: none to read.
+    await f.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, caio));
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toBeNull();
+  });
+
+  test("an agent from another app: one of this workspace's, not archived; another person keeps their own", async () => {
+    f = await setup();
+    const ana = { orgId: f.org.id, userId: f.owner.id };
+    expect(await keepImportedFirstDelivery(f.db, ana, f.agent.id)).toMatchObject({ area: null, task: "" });
+    expect(await failure(() => keepImportedFirstDelivery(f.db, ana, crypto.randomUUID()))).toMatchObject({
+      code: "first_delivery.no_agent",
+    });
+    await f.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, f.agent.id));
+    expect(await failure(() => keepImportedFirstDelivery(f.db, ana, f.agent.id))).toMatchObject({
+      code: "first_delivery.no_agent",
+    });
+    const stranger = await addUser(f.db, "caio");
+    expect(
+      await failure(() => keepImportedFirstDelivery(f.db, { orgId: f.org.id, userId: stranger.id }, f.agent.id)),
+    ).toMatchObject({ name: "ForbiddenError" });
+  });
+
+  test("without the permission to create agents: create_agents_required; a wrong shape: first_agents.invalid", async () => {
+    f = await setup({ rightHand: true });
+    await everyoneWithout(f.db, f.org.id, "create_agents");
+    const bia = await addUser(f.db, "bia");
+    await f.db.transaction((tx) => joinOrganization(tx, f.org.id, bia.id, "member"));
+    expect(await failure(() => start(f, bia.id, support()))).toMatchObject({ code: "create_agents_required" });
+    expect(await failure(() => start(f, f.owner.id, support({ name: "" })))).toMatchObject({
+      code: "first_agents.invalid",
+    });
+    expect(await failure(() => start(f, f.owner.id, support({ task: "x".repeat(501) })))).toMatchObject({
+      code: "first_agents.invalid",
+    });
+    expect(await f.db.select().from(schema.firstDeliveries)).toEqual([]);
+  });
+
+  test("a pick from the person's own AI keeps its delivery too: area `ask`, what it delivers on its first day", async () => {
+    f = await setup({ rightHand: true });
+    const saved = await saveFirstAgents(
+      { db: f.db, pubsub: f.pubsub, context: f.context },
+      { orgId: f.org.id, userId: f.owner.id, grantId: null, source: "paste" },
+      {
+        options: [
+          {
+            name: "Caio",
+            role: "Cobrança",
+            why: "Toda segunda você vê quem atrasou.",
+            tasks: ["Lista quem atrasou"],
+            today: ["A lista de quem está atrasado"],
+          },
+        ],
+      },
+    );
+    const picked = await pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, saved.id, 0);
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toMatchObject({
+      agentId: picked.agentId,
+      area: "ask",
+      task: "A lista de quem está atrasado",
+    });
+  });
+});
+
+describe("firing it", () => {
+  test("never while the workspace waits for its plan; lifting the hold looks at once, and it fires once", async () => {
+    f = await setup();
+    await setBillingHold({ db: f.db, pubsub: f.pubsub }, f.org.id, "payment");
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id, agentId: f.agent.id, area: null, task: "" });
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(0);
+    expect((await deliveryRow(f, f.owner.id))?.firedAt).toBeNull();
+    // The sweep queues nothing for a workspace on a hold.
+    await f.db.delete(schema.outbox);
+    expect(await enqueueFirstDeliveryChecks(f.db)).toBe(0);
+    await setBillingHold({ db: f.db, pubsub: f.pubsub }, f.org.id, null);
+    expect(await checkJobs(f)).toHaveLength(1);
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(1);
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(0);
+    expect(await notices(f, f.owner.id, f.agent.id)).toHaveLength(1);
+    expect((await deliveryRow(f, f.owner.id))?.firedAt).not.toBeNull();
+  });
+
+  test("without an AI it waits, and fires once one connects", async () => {
+    f = await setup();
+    await revokeKeys(f);
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id, agentId: f.agent.id, area: null, task: "" });
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(0);
+    expect(await notices(f, f.owner.id, f.agent.id)).toEqual([]);
+    await restoreKeys(f);
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(1);
+  });
+
+  test("an archived or held agent, or a person no longer a member, waits", async () => {
+    f = await setup();
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id, agentId: f.agent.id, area: null, task: "" });
+    const agentIs = (set: Partial<typeof schema.agents.$inferInsert>) =>
+      f.db.update(schema.agents).set(set).where(eq(schema.agents.id, f.agent.id));
+    await agentIs({ archivedAt: new Date() });
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(0);
+    await agentIs({ archivedAt: null, operatorHoldAt: new Date() });
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(0);
+    await agentIs({ operatorHoldAt: null });
+    const caio = await addUser(f.db, "caio");
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: caio.id, agentId: f.agent.id, area: null, task: "" });
+    // Ana's fires; Caio is no member here.
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(1);
+    expect((await deliveryRow(f, caio.id))?.firedAt).toBeNull();
+  });
+
+  test("a notice only the agent reads in the person's DM, hop 0, whose run acts for them; the brief runs their routine", async () => {
+    f = await setup();
+    const routine = await createRoutine({ db: f.db, pubsub: f.pubsub, context: f.context }, f.owner.id, f.org.id, {
+      name: "E-mails que pedem resposta",
+      agentId: f.agent.id,
+      prompt: "Veja os e-mails novos e diga quais pedem resposta.",
+      target: { type: "dm" },
+      trigger: { type: "schedule", phrase: "dias úteis às 9h" },
+    });
+    await keepFirstDelivery(f.db, {
+      orgId: f.org.id,
+      userId: f.owner.id,
+      agentId: f.agent.id,
+      area: "support",
+      task: "Ler os e-mails",
+    });
+    expect(await fireFirstDeliveries(fireDeps(f), f.org.id)).toBe(1);
+    const [notice] = await notices(f, f.owner.id, f.agent.id);
+    if (!notice) throw new Error("no notice");
+    expect(isAgentOnlyNotice(notice.meta)).toBe(true);
+    expect(notice).toMatchObject({ authorType: "agent", authorAgentId: f.agent.id, hop: 0 });
+    const n = notice.meta.notice as { text: string; refs: Record<string, string> };
+    expect(n.refs).toEqual({ personId: f.owner.id, routineId: routine.id });
+    expect(n.text).toContain("«E-mails que pedem resposta»");
+    expect(n.text).toContain("Veja os e-mails novos e diga quais pedem resposta.");
+    expect(n.text).toContain("ONE message");
+    expect(n.text).toContain("approval");
+    expect(n.text).toContain("Don't pass");
+    // The agent reads the brief on the turn it woke; later, only a line of what it was.
+    expect(noticeText(notice.meta, true)).toStartWith("[ana is waiting for your first delivery]:\n");
+    expect(noticeText(notice.meta, false)).toBe(
+      "[When this person set you up, they asked here for your first delivery; your reply after this was it]",
+    );
+    const row = await deliveryRow(f, f.owner.id);
+    const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, notice.id));
+    // The run answers at the notice's hop + 1.
+    expect(run).toMatchObject({ id: row?.runId, agentId: f.agent.id, trigger: "dm", hop: 1 });
+    expect(await runAuthorityById(f.db, f.org.id, run?.id as string)).toEqual({
+      kind: "person",
+      personId: f.owner.id,
+    });
+  });
+
+  test("with no routine of theirs, the task the onboarding kept; with neither, its role's first piece of work", async () => {
+    f = await setup();
+    await keepFirstDelivery(f.db, {
+      orgId: f.org.id,
+      userId: f.owner.id,
+      agentId: f.agent.id,
+      area: "tech",
+      task: "Ache os PRs esperando revisão.",
+    });
+    await fireFirstDeliveries(fireDeps(f), f.org.id);
+    const [withTask] = await notices(f, f.owner.id, f.agent.id);
+    if (!withTask) throw new Error("no notice");
+    expect((withTask.meta.notice as { text: string }).text).toContain("Ache os PRs esperando revisão.");
+    const caio = await addUser(f.db, "caio");
+    await f.db.transaction((tx) => joinOrganization(tx, f.org.id, caio.id, "member"));
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: caio.id, agentId: f.agent.id, area: null, task: "" });
+    await fireFirstDeliveries(fireDeps(f), f.org.id);
+    const [generic] = await notices(f, caio.id, f.agent.id);
+    if (!generic) throw new Error("no notice");
+    expect((generic.meta.notice as { text: string }).text).toContain("your role (Developer)");
+  });
+
+  test("the sweep: drops one that waited past 30 days, queues one look per workspace and window", async () => {
+    f = await setup();
+    const now = new Date();
+    await keepFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id, agentId: f.agent.id, area: null, task: "" });
+    await f.db.delete(schema.outbox);
+    expect(await enqueueFirstDeliveryChecks(f.db, now)).toBe(1);
+    expect(await enqueueFirstDeliveryChecks(f.db, now)).toBe(0);
+    expect(await enqueueFirstDeliveryChecks(f.db, new Date(now.getTime() + 15_000))).toBe(1);
+    const [job] = await checkJobs(f);
+    expect(job).toMatchObject({ orgId: f.org.id, maxAttempts: 1 });
+    expect([
+      firstDeliveryWindowMs(0),
+      firstDeliveryWindowMs(2 * 3600_000),
+      firstDeliveryWindowMs(2 * 86_400_000),
+    ]).toEqual([15_000, 60_000, 600_000]);
+    await f.db
+      .update(schema.firstDeliveries)
+      .set({ createdAt: new Date(now.getTime() - FIRST_DELIVERY_KEPT_MS - 1000) });
+    expect(await enqueueFirstDeliveryChecks(f.db, now)).toBe(0);
+    expect(await f.db.select().from(schema.firstDeliveries)).toEqual([]);
+  });
+});
+
+describe("its reply", () => {
+  test("every reply of its run carries meta.firstDelivery with its one line; the model read the brief", async () => {
+    f = await setup({
+      reply: () => ({
+        chunks: ["Oi, Ana. Li os e-mails dos últimos 7 dias: **12** pedem resposta.\n\nOs 3 de hoje já têm rascunho."],
+      }),
+    });
+    await keepFirstDelivery(f.db, {
+      orgId: f.org.id,
+      userId: f.owner.id,
+      agentId: f.agent.id,
+      area: "support",
+      task: "Ler os e-mails",
+    });
+    await drainOutbox(f.db, f.handlers);
+    const dm = await openPersonAgentDm(f.db, f.org.id, f.owner.id, f.agent.id);
+    const replies = await f.db
+      .select()
+      .from(schema.messages)
+      .where(and(eq(schema.messages.channelId, dm.id), eq(schema.messages.authorType, "agent")));
+    const reply = replies.find((m) => !m.meta.notice);
+    expect(reply?.meta.firstDelivery).toEqual({ summary: "Li os e-mails dos últimos 7 dias: 12 pedem resposta." });
+    const asked = JSON.stringify(f.provider.calls.at(-1)?.request.messages ?? []);
+    expect(asked).toContain("waiting for your first delivery");
+    expect(asked).toContain("Ler os e-mails");
+    // A later message of the person's starts an ordinary run: its reply isn't the delivery.
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, dm.id, { body: "Obrigada!" });
+    await drainOutbox(f.db, f.handlers);
+    const after = await f.db
+      .select()
+      .from(schema.messages)
+      .where(
+        and(
+          eq(schema.messages.channelId, dm.id),
+          eq(schema.messages.authorType, "agent"),
+          isNull(schema.messages.threadId),
+        ),
+      );
+    const later = after.filter((m) => !m.meta.notice && m.id !== reply?.id);
+    expect(later.length).toBeGreaterThan(0);
+    expect(later.every((m) => m.meta.firstDelivery === undefined)).toBe(true);
+  });
+});
+
+describe("deliverySummary", () => {
+  test("past a short greeting, the first sentence of the first paragraph, as plain text", () => {
+    expect(
+      deliverySummary("Oi, Ana. Li os e-mails dos últimos 7 dias: 12 pedem resposta. Os 3 de hoje já têm rascunho."),
+    ).toBe("Li os e-mails dos últimos 7 dias: 12 pedem resposta.");
+    expect(deliverySummary("Olá, Ana! **12 e-mails** pedem resposta. [Ver](https://example.com)")).toBe(
+      "12 e-mails pedem resposta.",
+    );
+    expect(deliverySummary("Hello Ana! Found 3 new errors in checkout since 09:00.")).toBe(
+      "Found 3 new errors in checkout since 09:00.",
+    );
+    // A greeting alone in its paragraph: the next one.
+    expect(deliverySummary("Bom dia, Ana!\n\n## Hoje\n- 3 pagamentos falharam: Acme, Beta e Gama.")).toBe(
+      "3 pagamentos falharam: Acme, Beta e Gama.",
+    );
+  });
+
+  test("a short opening with the news is kept; a long one is cut at a word with an ellipsis; nothing left is null", () => {
+    expect(deliverySummary("Li 12 e-mails. 3 pedem resposta.")).toBe("Li 12 e-mails.");
+    expect(deliverySummary("Tudo certo, Ana!")).toBe("Tudo certo, Ana!");
+    const long = `Li os e-mails da semana e ${"separei os que pedem resposta ".repeat(8)}hoje.`;
+    const cut = deliverySummary(long) as string;
+    expect(cut.length).toBeLessThanOrEqual(140);
+    expect(cut.endsWith("…")).toBe(true);
+    expect(long.startsWith(cut.slice(0, -1))).toBe(true);
+    expect(cut.slice(0, -1).endsWith(" ")).toBe(false);
+    expect(deliverySummary("")).toBeNull();
+    expect(deliverySummary("```\nconst x = 1;\n```")).toBeNull();
+    expect(deliverySummary("first_delivery_job rodou.")).toBe("first_delivery_job rodou.");
+  });
+});
