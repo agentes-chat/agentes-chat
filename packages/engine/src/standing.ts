@@ -263,7 +263,7 @@ export const waitsForPlan = (s: WorkspaceStanding) => isBillingHold(s) && s.reas
 
 /**
  * `workRefusal`, sparing a workspace that only waits for its first plan: its onboarding connects the person's own AI
- * app and takes the first agents it proposes before Checkout (ADR 0119 addendum of 2026-11-26, ADR 0256). Every other
+ * app and takes the first agents it proposes before Checkout (ADR 0119 addendum of 2026-11-26, ADR 0260). Every other
  * refusal stands: a suspension, a deletion, an unpaid or ended plan, any hold that isn't billing's.
  */
 export function workRefusalBeforePlan(
@@ -378,7 +378,7 @@ export async function setOrgStanding(
 export const TEAM_HELLO_JOB = "team.hello";
 
 /**
- * Looks whether a workspace's first deliveries can fire now (`fireFirstDeliveries` in first-delivery.ts, ADR 0256
+ * Looks whether a workspace's first deliveries can fire now (`fireFirstDeliveries` in first-delivery.ts, ADR 0260
  * addendum). Kept here beside the hello so lifting a billing hold queues it without importing the onboarding.
  */
 export const FIRST_DELIVERY_JOB = "first_delivery.check";

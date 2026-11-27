@@ -1126,7 +1126,7 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [TEAM_HELLO_JOB]: async (job) => {
       await sayTeamHello(deps, orgOf(job), job.payload);
     },
-    // The first deliveries that can fire now (ADR 0256 addendum): the plan, the AI and the computer all there.
+    // The first deliveries that can fire now (ADR 0260 addendum): the plan, the AI and the computer all there.
     [FIRST_DELIVERY_JOB]: async (job) => {
       await fireFirstDeliveries(deps, orgOf(job));
     },

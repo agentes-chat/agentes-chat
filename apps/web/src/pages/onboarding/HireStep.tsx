@@ -11,7 +11,7 @@ import { Box, type ShellFace } from "./Shell";
 import "./hire-step.css";
 
 /*
- * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27) of a workspace waiting for its first plan
+ * The plan step (ADR 0162, amended by ADR 0260's addendum of 2026-11-27) of a workspace waiting for its first plan
  * (agentes.chat Cloud, ADR 0079): the first agent asleep at night in the middle of the places the next ones can take,
  * what it delivers today and that more agents come later, then the plan the billing service recommends: its name and
  * price on one line, what it includes, and the way to every plan. "Not now" asks first (without a plan the agent

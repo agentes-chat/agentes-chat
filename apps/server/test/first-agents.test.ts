@@ -14,7 +14,7 @@ import {
 } from "./harness";
 
 /*
- * The first agents a person's own AI proposes on the onboarding (ADR 0256): `GET …/first-agents` (the newest),
+ * The first agents a person's own AI proposes on the onboarding (ADR 0260): `GET …/first-agents` (the newest),
  * `POST …/first-agents` (one pasted from an AI) and `POST …/first-agents/{id}/pick`, all of it on the wait for the
  * workspace's first plan too.
  */

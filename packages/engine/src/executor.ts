@@ -2677,7 +2677,7 @@ async function executeRunInner(
         ...(files ? { artifacts: files } : {}),
         ...runMeta,
         ...tagged,
-        // The first delivery a person waits for (ADR 0256 addendum): each of its replies says so, with its one line.
+        // The first delivery a person waits for (ADR 0260 addendum): each of its replies says so, with its one line.
         ...(firstDelivery && !note ? { firstDelivery: { summary: deliverySummary(said) } } : {}),
         ...(readOutside && !note ? { readOutside: true } : {}),
         work,

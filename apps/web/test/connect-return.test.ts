@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { connectReturnOf } from "@/lib/connect-return";
 
 /*
- * Back from an app's sign-in on the onboarding's agent step (ADR 0256): what came in, as the server's OAuth return says
+ * Back from an app's sign-in on the onboarding's agent step (ADR 0260): what came in, as the server's OAuth return says
  * it, and nothing else the address may carry.
  */
 

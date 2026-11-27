@@ -34,7 +34,7 @@ const web = (f: Partial<WebRail> & { funnel?: Partial<RailFunnel> } = {}) => {
   });
 };
 
-describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of 2026-11-27)", () => {
+describe("the web onboarding's rail (ADR 0162, amended by ADR 0260's addendum of 2026-11-27)", () => {
   test("its steps: the work, its agent, the plan where there is one, the AI and the photo", () => {
     expect(railSteps({ plan: true })).toEqual(["area", "agent", "plan", "ai", "celebrate"]);
     // A self-hosted server has no plan step.

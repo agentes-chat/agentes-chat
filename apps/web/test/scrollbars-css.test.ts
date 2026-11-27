@@ -63,7 +63,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".onb__steps": "strip",
   ".newag .onb__steps": "strip",
   ".newag__tips": "strip",
-  // The onboarding's row of assistants (ADR 0256), the most used first.
+  // The onboarding's row of assistants (ADR 0260), the most used first.
   ".onb-ask__ais": "strip",
   ".threads-tabs": "strip",
   ".nt-segwrap": "strip",

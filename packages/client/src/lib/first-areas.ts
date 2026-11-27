@@ -4,7 +4,7 @@ import { firstName } from "./format";
 import { ROUTINE_TEMPLATES, type TemplateRule, templateRule } from "./routine-templates";
 
 /**
- * The onboarding's first agent by the work it does (ADR 0256, addendum of 2026-11-27): a team's areas and a personal
+ * The onboarding's first agent by the work it does (ADR 0260, addendum of 2026-11-27): a team's areas and a personal
  * workspace's (ADR 0159), each one agent with its own name and look, the apps it works in (connecting one brings its
  * routine, ADR 0242) and, for work that needs no app, the routine it starts with. Their words are
  * `onboarding.areas.list.<id>` in every language; the names are names, the same everywhere.

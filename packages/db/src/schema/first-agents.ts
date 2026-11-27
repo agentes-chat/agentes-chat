@@ -6,7 +6,7 @@ import { users } from "./auth";
 import { organizations } from "./tenancy";
 
 /**
- * A person's first agents as their own AI proposed them (ADR 0256): up to three options, one picked. Sent by the MCP
+ * A person's first agents as their own AI proposed them (ADR 0260): up to three options, one picked. Sent by the MCP
  * tool `propose_first_agents` (`mcp`, with the connection that sent it) or pasted on the onboarding (`paste`). Each
  * person reads only their own; nothing is created until they pick one, and the agent made from it is `agent_id`.
  */
@@ -45,7 +45,7 @@ export const firstAgentProposals = pgTable(
 export type FirstAgentProposal = typeof firstAgentProposals.$inferSelect;
 
 /**
- * A person's first delivery (ADR 0256 addendum): the first piece of work the agent they set up on the onboarding does
+ * A person's first delivery (ADR 0260 addendum): the first piece of work the agent they set up on the onboarding does
  * for them, kept from the moment the agent is made and fired once in their DM with it, as soon as it can work (the
  * workspace's plan, its AI and, for a plan's sign-in, its computer). One per person and workspace: a new agent takes
  * the place of one not fired yet. `area` is the onboarding's area (null for an agent brought from another app), `task`

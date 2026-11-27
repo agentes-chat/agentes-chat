@@ -17,7 +17,7 @@ import {
 import { RIGHT_HAND_DEFAULT } from "../src/lib/right-hand";
 
 /*
- * The onboarding's first agent by the work it does (ADR 0256, addendum of 2026-11-27): a team's areas and a personal
+ * The onboarding's first agent by the work it does (ADR 0260, addendum of 2026-11-27): a team's areas and a personal
  * workspace's, each one agent with its name, look and apps; the agent the work step makes; the routine of work that
  * starts with no app; and the workspace's name, read from the work e-mail (ADR 0162, the name step folded in).
  */

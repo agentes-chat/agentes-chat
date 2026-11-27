@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
 /**
- * Where a connect flow was opened from, when that changes how it ends (ADR 0256, addendum of 2026-11-27): the
+ * Where a connect flow was opened from, when that changes how it ends (ADR 0260, addendum of 2026-11-27): the
  * onboarding's agent step connects apps for one agent, before the workspace may work. The routine an app brings (ADR
  * 0242) is then made for that agent and its first run waits (the onboarding's first delivery stands for it, once the
  * workspace has a plan and an AI); the toast stays out, the agent's row says it. A mailbox's one-click sign-in comes

@@ -8,7 +8,7 @@ import { useStreams } from "@/realtime/context";
 const STARTING_MS = 10 * 60_000;
 
 /**
- * The first agent's first delivery (ADR 0256, addendum of 2026-11-27), the onboarding's last promise: kept by the
+ * The first agent's first delivery (ADR 0260, addendum of 2026-11-27), the onboarding's last promise: kept by the
  * server when the agent was made, it fires once the workspace has a plan and the agent an AI, as a run in the person's
  * DM with the agent. `working` while that run is live there (or just fired); `done` once its reply landed, marked by the
  * server as the first delivery (`meta.firstDelivery`, with its one-line summary). Null while it waits for a plan or

@@ -3,7 +3,7 @@
  * (connect, then the request to paste), the wait for the proposal and the way without a connector.
  */
 
-/* The dialog's body (ADR 0256, "Ask your AI" over the work step): its lead, then the parts, the kit's rhythm apart. */
+/* The dialog's body (ADR 0260, "Ask your AI" over the work step): its lead, then the parts, the kit's rhythm apart. */
 .onb-ask {
   display: flex;
   flex-direction: column;

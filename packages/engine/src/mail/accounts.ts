@@ -104,7 +104,7 @@ export const composioUserId = (orgId: string, personId?: string | null) =>
 const COMPOSIO_USER = /^org_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_u_[A-Za-z0-9_-]+)?$/;
 /** The organization of one of our Composio user ids (`composioUserId`), or null for anything else. */
 export const orgOfComposioUser = (userId: string) => COMPOSIO_USER.exec(userId)?.[1] ?? null;
-/** Where a mailbox connected on the way in goes back to (ADR 0256 addendum): the onboarding, or a member's welcome. */
+/** Where a mailbox connected on the way in goes back to (ADR 0260 addendum): the onboarding, or a member's welcome. */
 export type MailConnectBack = "onboarding" | "welcome";
 
 /**

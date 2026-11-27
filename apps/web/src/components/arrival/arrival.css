@@ -1271,7 +1271,7 @@ html:not([data-pointer]) .arrival-have__link:focus-visible {
   }
 }
 /*
- * The AI's choices as flat rows (ConnectChoices, ADR 0256): one mark column on every row, as wide as the other plans'
+ * The AI's choices as flat rows (ConnectChoices, ADR 0260): one mark column on every row, as wide as the other plans'
  * stack of three makers' tiles; each maker's own mark bare at a line icon's size, in ink where it is one color.
  */
 .arrival-opts.ac-optlinks--flat {

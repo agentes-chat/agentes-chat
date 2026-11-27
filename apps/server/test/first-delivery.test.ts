@@ -4,7 +4,7 @@ import { setBillingHold } from "@agenteschat/engine";
 import { type Browser, browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
 
 /*
- * A person's first agent from an area of the onboarding and their first delivery (ADR 0256 addendum):
+ * A person's first agent from an area of the onboarding and their first delivery (ADR 0260 addendum):
  * `POST …/first-agents/start`, `GET …/first-delivery` and `PUT …/first-delivery`.
  */
 

@@ -20,7 +20,7 @@ import { Box, Meet, type ShellFace } from "./Shell";
 import "./agent-step.css";
 
 /*
- * Meeting the first agent (ADR 0256, addendum of 2026-11-27): its portrait, its name and what it does, and the apps it
+ * Meeting the first agent (ADR 0260, addendum of 2026-11-27): its portrait, its name and what it does, and the apps it
  * works in as flat rows, each with Connect through the app's real connect flow (a mailbox's own), where connecting
  * brings the app's routine for this agent (ADR 0242) with its first run left for the first delivery. A connected row
  * says its account and when the routine runs. Continue goes on with or without an app: the apps can come later.

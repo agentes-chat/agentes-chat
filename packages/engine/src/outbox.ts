@@ -869,7 +869,7 @@ export const UNREPEATABLE_JOB_KINDS = [
   "live-activity.refresh",
   "context.consolidate",
   "team_watch.check",
-  // A first delivery's look (ADR 0256 addendum): the sweep's keys name a window of time.
+  // A first delivery's look (ADR 0260 addendum): the sweep's keys name a window of time.
   "first_delivery.check",
 ];
 

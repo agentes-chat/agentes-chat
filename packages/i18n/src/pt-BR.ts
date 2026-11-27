@@ -976,7 +976,7 @@ export const ptBR = {
       atlas: "E aí, Atlas aqui. Cuido dos computadores.",
     },
     /**
-     * The onboarding's steps with Lodi (ADR 0162, ADR 0256): the phone's steps and Lodi's line on each, the person's
+     * The onboarding's steps with Lodi (ADR 0162, ADR 0260): the phone's steps and Lodi's line on each, the person's
      * area, the plan, the AI step and the people step. `<key>Personal`: a personal workspace's words (ADR 0159).
      */
     flow: {
@@ -1809,7 +1809,7 @@ export const ptBR = {
       },
     },
     /**
-     * The work the first agent does (ADR 0256, addendum of 2026-11-27): the list, the other ways in, the workspace's
+     * The work the first agent does (ADR 0260, addendum of 2026-11-27): the list, the other ways in, the workspace's
      * line, and each area's words. `{{name}}`: the area's agent; `{{org}}`: the workspace. Keys ending in `_female`
      * are for an agent whose name is feminine (`agentGrammar`).
      */
@@ -2006,7 +2006,7 @@ export const ptBR = {
       },
     },
     /**
-     * Meeting the first agent (ADR 0256, addendum of 2026-11-27): its portrait, what it does and the apps it works in,
+     * Meeting the first agent (ADR 0260, addendum of 2026-11-27): its portrait, what it does and the apps it works in,
      * each with Connect. `custom*`: the agent a person makes on "Other".
      */
     meet: {
@@ -16938,7 +16938,7 @@ export const ptBR = {
       undoExpired:
         "Já passou um dia desde que este time foi criado, então não dá para desfazer aqui. Arquive os agentes nas páginas deles.",
     },
-    /** The first agents a person's own AI proposed (ADR 0256). */
+    /** The first agents a person's own AI proposed (ADR 0260). */
     firstAgents: {
       needsAdmin: "Criar agentes neste workspace precisa de um admin. Peça a um admin para criar por você.",
       invalid: "Essa resposta não está no formato pedido. Copie o pedido de novo e cole a resposta inteira da sua IA.",

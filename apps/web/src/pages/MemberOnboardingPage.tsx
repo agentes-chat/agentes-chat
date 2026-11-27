@@ -50,7 +50,7 @@ const TOTAL = 2;
 const AI_POLL_MS = 10_000;
 
 /**
- * The onboarding of someone who joined a workspace (ADR 0256, addendum of 2026-11-26, amended 2026-11-27), on the
+ * The onboarding of someone who joined a workspace (ADR 0260, addendum of 2026-11-26, amended 2026-11-27), on the
  * onboarding's frame (`World`, `Box`): the work their own first agent does (the same work step as an owner's, without
  * the workspace's name, which isn't theirs), meeting that agent and connecting the apps it works in, then the AI only
  * when the workspace has none that answers for it. There is no plan: the workspace's is in force, so the first delivery
@@ -255,7 +255,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
             return madeNow;
           }}
           onContinue={(made) => {
-            // Its first delivery may go once the agent can work (ADR 0256): the apps were connected on the step.
+            // Its first delivery may go once the agent can work (ADR 0260): the apps were connected on the step.
             const id = made?.id ?? agent?.id;
             if (!id) return;
             setLeaving(true);

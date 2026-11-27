@@ -11,7 +11,7 @@ import { createFakeApi, type FakeState, GENERAL_ID, ORG_ID, seedState, withRight
 import { renderApp, screen, settle, showIn } from "./render";
 
 /*
- * The onboarding of someone who joined a workspace (`/welcome/$orgId`, ADR 0256, addenda of 2026-11-26 and
+ * The onboarding of someone who joined a workspace (`/welcome/$orgId`, ADR 0260, addenda of 2026-11-26 and
  * 2026-11-27): the work their own first agent does (the owner's work step, without the workspace's name, which isn't
  * theirs), meeting that agent and connecting its apps, then the AI only when the workspace has none that answers for it.
  * There is no plan: the workspace's is in force. Every way out lands in the person's DM with their agent, on the welcome
@@ -107,7 +107,7 @@ const landings = (router: Rendered["router"]) => {
   return seen;
 };
 
-describe("a member's onboarding (ADR 0256)", () => {
+describe("a member's onboarding (ADR 0260)", () => {
   test("the work step, step 1 of 2: the same works, no workspace name to change, no import", async () => {
     await welcome(joined());
     expect(heading()).toBe(AREAS);

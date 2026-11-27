@@ -62,7 +62,7 @@ export const AGENT_ONLY_NOTICES: readonly NoticeKind[] = [
   "work_check_in",
   "work_follow_up",
   "member_joined",
-  // The brief of a person's first delivery (ADR 0256 addendum): the agent's reply is what they wait for.
+  // The brief of a person's first delivery (ADR 0260 addendum): the agent's reply is what they wait for.
   "first_delivery",
 ];
 
@@ -333,7 +333,7 @@ export function noticeText(
       return githubEventText(n, from, current);
     case "github_check":
       return githubCheckText(n, from, current);
-    // The person set it up on the onboarding and waits here for its first delivery (ADR 0256 addendum): the brief is
+    // The person set it up on the onboarding and waits here for its first delivery (ADR 0260 addendum): the brief is
     // the server's, with their own words of what it does first. Once answered, only a line of what it was.
     case "first_delivery":
       return current

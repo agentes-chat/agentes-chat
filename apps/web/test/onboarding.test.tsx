@@ -37,7 +37,7 @@ import { MAIL_PROVIDERS } from "./fakes/mail";
 import { renderApp, screen, settle, showIn } from "./render";
 
 /*
- * The onboarding (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): what the workspace is for first (ADR 0159);
+ * The onboarding (ADR 0162, amended by ADR 0260's addendum of 2026-11-27): what the workspace is for first (ADR 0159);
  * "For me" makes it at once, "For my team" names it first (the work e-mail's name to start with, a logo, the zone) and
  * Continue there makes it. Then one box at a time on the page's sky, each step read from the workspace's own data: the
  * work its first agent does (flat rows, one tap), meeting that agent and connecting the apps it works in (each bringing
@@ -133,7 +133,7 @@ const zones = () => {
   return { timezone: zone ?? "UTC", ...(zone ? { memberTimezone: zone } : {}) };
 };
 
-/** One agent the person's AI proposed, as the server keeps it (ADR 0256). */
+/** One agent the person's AI proposed, as the server keeps it (ADR 0260). */
 const option = (name: string, role: string, color: string): FirstAgentOption => ({
   name,
   handle: name.toLowerCase(),
@@ -471,7 +471,7 @@ describe("a team's workspace named before it exists (ADR 0162)", () => {
   });
 });
 
-describe("the work its first agent does (ADR 0256)", () => {
+describe("the work its first agent does (ADR 0260)", () => {
   test("Ask your AI first, one button led by five marks; then a team's six works as flat rows, each with its line and its apps' marks; Other last", async () => {
     await open(settingUp());
     expect(heading()).toBe(AREAS);
@@ -725,7 +725,7 @@ describe("the work its first agent does (ADR 0256)", () => {
   });
 });
 
-describe("meeting the first agent and connecting its apps (ADR 0256, ADR 0242)", () => {
+describe("meeting the first agent and connecting its apps (ADR 0260, ADR 0242)", () => {
   test("its title and line by its work, where it works, each app with Connect; Continue goes on with none connected", async () => {
     plans(PLANS);
     const state = settingUp({ held: true, area: "support" });

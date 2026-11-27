@@ -277,7 +277,7 @@ export function mailRoutes(deps: AppDeps, log: Logger) {
         return c.redirect(desktopBackPage(base, desktopMailRedirect(r?.orgId, r?.ok === true)), 302);
       const account = `account=${encodeURIComponent(accountId)}`;
       const mail = `mail=${r?.ok ? "connected" : "failed"}&${account}`;
-      // Connected on the way in (ADR 0256 addendum): back to the step it was connected from.
+      // Connected on the way in (ADR 0260 addendum): back to the step it was connected from.
       if (from === "onboarding") return c.redirect(`${base}/onboarding?${mail}`, 302);
       if (from === "welcome" && r) return c.redirect(`${base}/welcome/${r.orgId}?${mail}`, 302);
       if (!r) return c.redirect(`${base}/?mail=failed&${account}`, 302);

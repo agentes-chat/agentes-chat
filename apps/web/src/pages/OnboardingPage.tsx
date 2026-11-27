@@ -99,7 +99,7 @@ const ImportAgentsDialog = lazy(() =>
 );
 
 /**
- * The onboarding (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): one box on the page's sky, one step at a
+ * The onboarding (ADR 0162, amended by ADR 0260's addendum of 2026-11-27): one box on the page's sky, one step at a
  * time, read from the workspace's own data so a workspace left at any step resumes there. What the workspace is for
  * (ADR 0159) comes first and makes it, named from the work e-mail; then the work its first agent does, meeting that
  * agent and connecting the apps it works in (each bringing its routine, ADR 0242), the plan where the workspace waits
@@ -182,7 +182,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
     enabled: orgId !== null,
     refetchOnWindowFocus: "always",
   });
-  // The first delivery the server keeps for this person (ADR 0256): which agent the onboarding made, from which work.
+  // The first delivery the server keeps for this person (ADR 0260): which agent the onboarding made, from which work.
   const delivery = useFirstDeliveryRow(orgId ?? "", orgId !== null);
   // The person's newest first-agent proposal: an agent made from it says its first task.
   const firstAgents = useFirstAgents(orgId ?? "");
@@ -296,7 +296,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
     onSuccess: (saved, id) => remember(id, saved),
   });
   // The agent step's Continue: its first delivery may go once the agent can work (its apps were connected on the step,
-  // ADR 0256; one brought from another app gets its own here), then kept as "agents", so a reload resumes past it.
+  // ADR 0260; one brought from another app gets its own here), then kept as "agents", so a reload resumes past it.
   const agentDone = useMutation({
     mutationFn: async ({ id, agentId }: { id: string; agentId: string | null }) => {
       if (agentId) await api.firstAgents.keepDelivery(id, agentId);

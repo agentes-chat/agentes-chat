@@ -1042,7 +1042,7 @@ export interface ApiClient {
     exportUrl(orgId: string): string;
   };
   /**
-   * The first agents my own AI proposed (ADR 0256): sent through `propose_first_agents` or pasted, one picked into an
+   * The first agents my own AI proposed (ADR 0260): sent through `propose_first_agents` or pasted, one picked into an
    * agent. All of it works while the workspace waits for its first plan.
    */
   firstAgents: {
@@ -2298,7 +2298,7 @@ export interface ApiClient {
      * `desktop`: started in the desktop app's window, which opens the page in the browser and gets the return back.
      * `accountId` reconnects that mailbox (one that needs it) instead of adding one.
      */
-    /** `back`: started on the onboarding or a member's welcome page, which the sign-in returns to (ADR 0256 addendum). */
+    /** `back`: started on the onboarding or a member's welcome page, which the sign-in returns to (ADR 0260 addendum). */
     connectComposio(
       orgId: string,
       input: {

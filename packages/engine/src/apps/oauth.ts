@@ -153,7 +153,7 @@ export async function consentView(deps: OauthDeps, userId: string, requestId: st
       id: m.orgId,
       name: m.orgName,
       logo: m.orgLogo ?? null,
-      // A workspace waiting for its first plan takes the connection its onboarding asks for (ADR 0256).
+      // A workspace waiting for its first plan takes the connection its onboarding asks for (ADR 0260).
       paused: !!workRefusalBeforePlan(m.standing),
       current: i === 0,
       createdAt: m.orgCreatedAt?.toISOString(),

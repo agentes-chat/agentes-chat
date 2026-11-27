@@ -260,7 +260,7 @@ describe("an invitation link asks to join", () => {
     await act(() => new Promise((r) => setTimeout(r, 1300)));
     await settle(10);
     expect(calls.filter((c) => c.method === "signInOneTime").map((c) => c.args)).toEqual([["one-time-token"]]);
-    // Someone who may create agents there and has none of their own opens their own onboarding first (ADR 0256).
+    // Someone who may create agents there and has none of their own opens their own onboarding first (ADR 0260).
     expect(router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
   });
 

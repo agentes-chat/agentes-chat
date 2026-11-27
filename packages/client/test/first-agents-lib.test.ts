@@ -14,7 +14,7 @@ const translator = (lng: string): TFunction => {
 const en = translator("en");
 const pt = translator("pt-BR");
 
-describe("asking my own AI for the first agents (aiAppAsk, ADR 0256)", () => {
+describe("asking my own AI for the first agents (aiAppAsk, ADR 0260)", () => {
   const open = { serverUrl: "https://app.example.com/mcp", serverPublic: true };
   const firstPlan: OrgStanding = { state: "hold", reason: "payment" };
 
@@ -53,7 +53,7 @@ describe("asking my own AI for the first agents (aiAppAsk, ADR 0256)", () => {
   });
 });
 
-describe("the first agents' refusals in the person's words (ADR 0256)", () => {
+describe("the first agents' refusals in the person's words (ADR 0260)", () => {
   const refusals = [
     new ApiError(403, "create_agents_required", "Creating agents in this workspace needs an admin"),
     new ApiError(400, "first_agents.invalid", "options.0.tasks: Too big"),

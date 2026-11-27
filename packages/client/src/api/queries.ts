@@ -1277,7 +1277,7 @@ export function useApplyTeamTemplate(orgId: string) {
 }
 
 /**
- * My newest first-agent proposal (ADR 0256), null while none came. `poll`: read again every that many ms while the
+ * My newest first-agent proposal (ADR 0260), null while none came. `poll`: read again every that many ms while the
  * onboarding waits for the AI's answer (it has no socket); off by default.
  */
 export function useFirstAgents(orgId: string, opts: { poll?: number | false } = {}) {
@@ -1319,7 +1319,7 @@ export function usePickFirstAgent(orgId: string) {
 }
 
 /**
- * My first agent from an area of the onboarding (ADR 0256 addendum), its first delivery kept. Pending until the agents'
+ * My first agent from an area of the onboarding (ADR 0260 addendum), its first delivery kept. Pending until the agents'
  * list has it; channels, routines, my first delivery and my DMs are read again.
  */
 export function useStartFirstAgent(orgId: string) {
@@ -1335,7 +1335,7 @@ export function useStartFirstAgent(orgId: string) {
   });
 }
 
-/** My first delivery here (ADR 0256 addendum), null when none was kept; `enabled` false skips the read. */
+/** My first delivery here (ADR 0260 addendum), null when none was kept; `enabled` false skips the read. */
 export function useFirstDeliveryRow(orgId: string, enabled = true) {
   const api = useApi();
   return useQuery({

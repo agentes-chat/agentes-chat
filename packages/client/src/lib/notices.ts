@@ -59,7 +59,7 @@ export const AGENT_ONLY_NOTICES: ReadonlySet<string> = new Set<NoticeKind>([
   "work_check_in",
   "work_follow_up",
   "member_joined",
-  // The brief of a person's first delivery (ADR 0256 addendum): the agent's reply is what they read.
+  // The brief of a person's first delivery (ADR 0260 addendum): the agent's reply is what they read.
   "first_delivery",
 ]);
 

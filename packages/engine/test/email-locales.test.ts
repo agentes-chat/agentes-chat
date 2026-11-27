@@ -78,7 +78,7 @@ describe("every email in every language (ADR 0122)", () => {
     }
   });
 
-  test("a first agent from the person's own AI (ADR 0256): every language has these words of its own", () => {
+  test("a first agent from the person's own AI (ADR 0260): every language has these words of its own", () => {
     const keys = (group: object): string[] =>
       Object.entries(group).flatMap(([key, value]) =>
         value && typeof value === "object" ? keys(value).map((k) => `${key}.${k}`) : [key],
