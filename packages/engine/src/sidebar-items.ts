@@ -275,7 +275,7 @@ export const SIDEBAR_PIN_LIMIT = 5;
 export const SIDEBAR_PIN_KINDS = ["agents", "channels", "people"] as const;
 export type SidebarPins = Record<(typeof SIDEBAR_PIN_KINDS)[number], string[]>;
 
-/** At most this many favorites ("Favoritos", ADR 0259). */
+/** At most this many favorites ("Favoritos", ADR 0260). */
 export const SIDEBAR_FAVORITE_LIMIT = 50;
 /** What a favorite is: `agent:<id>`, `channel:<id>` or `person:<user id>`. */
 export const SIDEBAR_FAVORITE_KINDS = ["agent", "channel", "person"] as const;
@@ -288,7 +288,7 @@ export const SIDEBAR_SECTION_NAME_MAX = 40;
 export const SIDEBAR_DM_SHOWS = ["all", "recent"] as const;
 export type SidebarDmShow = (typeof SIDEBAR_DM_SHOWS)[number];
 
-/** A channel section of one person's sidebar (ADR 0259): its name and its channels, in order. */
+/** A channel section of one person's sidebar (ADR 0260): its name and its channels, in order. */
 export interface SidebarChannelSection {
   id: string;
   name: string;
@@ -321,7 +321,7 @@ const favoriteOk = (x: unknown): x is string => {
   return (SIDEBAR_FAVORITE_KINDS as readonly string[]).includes(x.slice(0, at)) && isId(x.slice(at + 1)) && at > 0;
 };
 
-/** Each section once, a name, each channel in one section only; empty sections go (ADR 0259 §2). */
+/** Each section once, a name, each channel in one section only; empty sections go (ADR 0260 §2). */
 function sectionsOf(raw: unknown): SidebarChannelSection[] | null {
   if (!Array.isArray(raw)) return null;
   const seenSections = new Set<string>();
@@ -385,7 +385,7 @@ export async function setMySidebarView(
 ): Promise<SidebarView> {
   await requirePermission(db, userId, orgId, "read");
   const items = organizationMembers.sidebarItems;
-  // A field the caller left out stays as stored: an app built before Favoritos and sections (ADR 0259) sends a view
+  // A field the caller left out stays as stored: an app built before Favoritos and sections (ADR 0260) sends a view
   // without them, and would otherwise empty them.
   const [row] = await db.select({ items }).from(organizationMembers).where(mine(orgId, userId));
   const stored = (row?.items as Record<string, unknown> | undefined)?.[VIEW_KEY];

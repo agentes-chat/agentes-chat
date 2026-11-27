@@ -330,6 +330,12 @@ export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use =
 export const lendsInternet = (list: Pick<DevicesList, "devices" | "lendsInternet"> | undefined): boolean =>
   list?.lendsInternet ?? list?.devices.some((d) => d.machineKind === "managed") === true;
 
+/** ADR 0237: whether a computer of `os` that joins lends its internet: not a Linux one where server boxes borrow. */
+export const joinLends = (
+  list: Pick<DevicesList, "devices" | "lendsInternet" | "serverBoxesBorrow"> | undefined,
+  os: string,
+) => lendsInternet(list) && !(list?.serverBoxesBorrow && os === "linux");
+
 /**
  * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the
  * computer that lends now, `lending`, from the same list). Null: nothing to say.

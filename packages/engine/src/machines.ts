@@ -626,16 +626,34 @@ export function setServerLending(on: boolean) {
 
 export const serverLending = () => lendingOnThisServer;
 
+type LendingFacts = Pick<MachineRow, "kind" | "os" | "protocol"> & { executors?: { app?: true } | null };
+
+/**
+ * ADR 0237: a connected computer that is a server rather than a person's desktop: a Linux runner the agentes.chat app
+ * doesn't run (a Terminal install on a VPS or a server-room box). Where this server lends, it borrows by default.
+ */
+export const serverBox = (m: LendingFacts) => m.kind === "connected" && m.os === "linux" && !runByApp(m);
+
 /**
  * Whether a computer goes out through a lending one (ADR 0237): the workspace's managed computer, and, where the
- * server lends (`serverLending`), this server's own computer and one marked the workspace's whose own switch is off.
- * A lending computer never borrows (its switch is on), nor does a person's own one that doesn't lend.
+ * server lends (`serverLending`), this server's own computer and, with its own switch off, one marked the workspace's
+ * or a server box (`serverBox`). A lending computer never borrows (its switch is on), nor does a person's own desktop
+ * that doesn't lend.
  */
-export function borrowsInternet(m: Pick<MachineRow, "kind" | "belongsToWorkspace" | "egressShare">): boolean {
+export function borrowsInternet(m: LendingFacts & Pick<MachineRow, "belongsToWorkspace" | "egressShare">): boolean {
   if (m.kind === "managed") return true;
   if (!lendingOnThisServer) return false;
-  return m.kind === "host" || (m.kind === "connected" && m.belongsToWorkspace && !m.egressShare);
+  if (m.kind === "host") return true;
+  return m.kind === "connected" && !m.egressShare && (m.belongsToWorkspace || serverBox(m));
 }
+
+/**
+ * ADR 0237, at a connected computer's hello where this server lends: a server box whose switch its owner never turned
+ * on (`egress_share_at` null) has it turned off, so it borrows instead of lending. A newly paired one and one paired
+ * before alike; once off it stays as the owner sets it.
+ */
+export const lendsOffAtHello = (m: LendingFacts & Pick<MachineRow, "egressShare" | "egressShareAt">) =>
+  lendingOnThisServer && m.egressShare && m.egressShareAt === null && serverBox(m);
 
 /**
  * The workspace's computer's observed way out, its country kept only when it was seen on the route its agents take
