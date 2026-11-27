@@ -141,6 +141,17 @@ test("the env: the turn's folder as PWD, gh where it was (AppData on Windows), n
   });
   expect(free.ANTHROPIC_API_KEY).toBeUndefined();
   expect(free.OPENCODE_DISABLE_CLAUDE_CODE).toBe("1");
+  const freeAccount = opencodeTurnEnv({
+    inherited: { ...base, OPENCODE_API_KEY: "machine" },
+    cwd: "/w",
+    configDir: "/c",
+    config: "{}",
+    account: { home: "/acc", key: KEY },
+    freeTier: true,
+  });
+  expect(freeAccount).toMatchObject({ XDG_DATA_HOME: "/acc", XDG_STATE_HOME: "/acc", XDG_CONFIG_HOME: "/c" });
+  expect(freeAccount.ANTHROPIC_API_KEY).toBeUndefined();
+  expect(freeAccount.OPENCODE_API_KEY).toBeUndefined();
   const account = opencodeTurnEnv({
     inherited: { ...base, OPENCODE_API_KEY: "machine" },
     cwd: "/w",
@@ -745,8 +756,25 @@ test.skipIf(!posix)(
     expect(own?.anthropicKey).toBe("sk-ant-fake-runner-key");
     expect(JSON.parse(own?.config ?? "{}").enabled_providers).toBeUndefined();
 
+    const accountDir = path.join(root, "accounts", "opencode", ACCOUNT);
+    mkdirSync(accountDir, { recursive: true });
+    writeFileSync(path.join(accountDir, "opencode-key.json"), JSON.stringify({ key: KEY }));
+    const withAccounts = {
+      ...ctx,
+      codex: { ...ctx.codex, accounts: { accountDir: (kind: string) => (kind === "opencode" ? accountDir : null) } },
+    };
+    const accountFree = await runTurn(
+      withAccounts,
+      turn({ runId: run(4), account: ACCOUNT, freeTier: true, model: "opencode/hy4-flash-free" }),
+    );
+    expect(accountFree.final).toMatchObject({ type: "done" });
+    const freeWithAccount = logOf(log).filter((l) => l.start)[2];
+    expect(freeWithAccount).toMatchObject({ dataHome: accountDir, apiKey: null, anthropicKey: null });
+    expect(JSON.parse(freeWithAccount?.config ?? "{}")).toMatchObject({ enabled_providers: ["opencode"] });
+    expect(JSON.parse(freeWithAccount?.config ?? "{}").provider).toBeUndefined();
+
     await expect(
-      handleRequest(ctx as never, turn({ runId: run(3), freeTier: true, model: "anthropic/claude-x" }), quiet as never),
+      handleRequest(ctx as never, turn({ runId: run(5), freeTier: true, model: "anthropic/claude-x" }), quiet as never),
     ).rejects.toMatchObject({ code: "bad_request" });
   },
   20_000,

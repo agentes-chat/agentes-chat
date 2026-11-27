@@ -111,6 +111,7 @@ import {
   type BrainTool,
   type BrainTurn,
   isComputerBrain,
+  isOpencodeFreeTier,
   type ToolResult,
 } from "./brains/types";
 import { agentBrowserProfiles } from "./browser/profiles";
@@ -3793,6 +3794,8 @@ async function executeRunInner(
   };
   thinksAs(brainPlan.kind);
   let plan: BrainPlan = brainPlan;
+  /** This turn's OpenCode free model ignores any API-key account's paid-plan usage and limits. */
+  const freeTier = () => isOpencodeFreeTier(plan.kind, plan.model, plan.account);
   /**
    * What the turn-end judge reads (ADR 0109), filled only when it runs: the run's general means (`turnMeans`, its
    * computer's own tools on a computer brain) and every call it tried (`triedCalls`). An `untried` nudge names them.
@@ -4951,6 +4954,7 @@ async function executeRunInner(
     machineId: string,
     error: BrainFailure,
   ): Promise<Pick<BrainUnavailability, "scope" | "resetsAt">> => {
+    if (freeTier()) return error.resetsAt ? { resetsAt: error.resetsAt } : {};
     const account = plan.account;
     const ownModel = ownLimitsModel(account?.provider, plan.model);
     if (!account || !ownModel) return error.resetsAt ? { resetsAt: error.resetsAt } : {};
@@ -5013,12 +5017,17 @@ async function executeRunInner(
     const wait = t.usageWait ?? { since: now, step: 0 };
     const key = budget
       ? usageWaitKey({ code: "budget", agentId: agent.id })
-      : usageWaitKey({ code: "plan_limit", machineId, kind: plan.kind, accountId: plan.account?.id });
+      : usageWaitKey({
+          code: "plan_limit",
+          machineId,
+          kind: plan.kind,
+          accountId: freeTier() ? undefined : plan.account?.id,
+        });
     // Its place in line: by when its conversation first paused, so parking again never moves it back.
     const line = await usageWaitPlace(db, run, key, wait.since, budget ? null : (plan.model ?? ""));
     let at = budget ? (u.soon ? Number.NaN : nextMonthStart(now)) : u.resetsAt ? Date.parse(u.resetsAt) : Number.NaN;
     // The account's windows say nothing about when a model's own limit resets.
-    if (!budget && !scope && !(at > now) && machineId) {
+    if (!budget && !freeTier() && !scope && !(at > now) && machineId) {
       const stored = await storedPlanUsage(db, run.orgId, machineId, plan.kind, plan.account?.id).catch(() => null);
       at = bindingReset(stored, now) ?? Number.NaN;
     }
@@ -5269,6 +5278,7 @@ async function executeRunInner(
       if (spent < PLAN_PAUSE && held >= PLAN_PAUSE) return { source: "budget" as const, used: held, soon: true };
       return { source: "budget" as const, used: spent, resetsAt: new Date(nextMonthStart(Date.now())).toISOString() };
     }
+    if (freeTier()) return null;
     const machineId = plan.session?.machineId ?? agent.machineId;
     const usage =
       stored !== undefined
@@ -5345,7 +5355,7 @@ async function executeRunInner(
     return now;
   };
   // From 90% the agent reads where its plan stands, every turn, so it can tell people a long task may pause.
-  if (plan.kind !== "model") {
+  if (plan.kind !== "model" && !freeTier()) {
     const reading = await usageReading(plan.usage ?? null);
     transcript.system = transcript.system.filter((b) => !(b as ContextBlock).usage);
     if (reading && reading.used >= PLAN_NOTICE) {
@@ -5880,7 +5890,12 @@ async function executeRunInner(
                   personId,
                   provider: brain.kind,
                   ...(turnPlan.session?.machineId
-                    ? { machineId: turnPlan.session.machineId, accountId: turnPlan.account?.id ?? null }
+                    ? {
+                        machineId: turnPlan.session.machineId,
+                        accountId: isOpencodeFreeTier(turnPlan.kind, turnPlan.model, turnPlan.account)
+                          ? null
+                          : (turnPlan.account?.id ?? null),
+                      }
                     : {}),
                   ...(u.model ? { model: u.model } : {}),
                   inputTokens: u.input,
@@ -5900,6 +5915,7 @@ async function executeRunInner(
               if (
                 machineId &&
                 turnPlan.kind !== "model" &&
+                !isOpencodeFreeTier(turnPlan.kind, turnPlan.model, turnPlan.account) &&
                 !ownLimitsModel(turnPlan.account?.provider, turnPlan.model)
               ) {
                 notePlanLimit(machineId, turnPlan.kind, resetsAt, Date.now(), turnPlan.account?.id);
@@ -6020,8 +6036,10 @@ async function executeRunInner(
           carried = null;
           // The fresh session answered a turn: from now on it is one to resume, its note read.
           delete transcript.freshSession;
-          // The account it ran with (ADR 0041): when it was last used and last answered, after the turn.
-          const account = turnPlan.account;
+          // The account it ran with (ADR 0041): when it was last used and last answered, after the turn. A free
+          // OpenCode model keeps the account only for its session folder; it neither spends nor clears that plan.
+          const onFreeTier = isOpencodeFreeTier(turnPlan.kind, turnPlan.model, turnPlan.account);
+          const account = onFreeTier ? undefined : turnPlan.account;
           if (account && account.id !== touchedAccount) {
             touchedAccount = account.id;
             later(() => touchMachineAccount(db, run.orgId, account.id));
@@ -6034,7 +6052,7 @@ async function executeRunInner(
           delete transcript.standbyWaitSince;
           // The plan had room for this turn: the runs parked on its limit go on now, not at their own timers.
           const planMachine = turnPlan.session?.machineId;
-          if (planMachine && !turnLimited) {
+          if (planMachine && !turnLimited && !onFreeTier) {
             forgetPlanLimit(planMachine, turnPlan.kind, account?.id);
             const ownModel = ownLimitsModel(account?.provider, turnPlan.model);
             if (account && ownModel)

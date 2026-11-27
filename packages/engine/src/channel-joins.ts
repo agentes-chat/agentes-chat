@@ -4,6 +4,7 @@ import { planBinding } from "@agenteschat/ui/plan-state";
 import { type AiStatusDeps, agentAiStates } from "./ai-status";
 import { brainOf } from "./brain-settings";
 import { storedPlanUsage } from "./brains/select";
+import { isOpencodeFreeTier } from "./brains/types";
 import { deliverNotice, publishDelivery } from "./delivery";
 import { publishMessageCreated } from "./events";
 import { BUDGET_WARNING_RATIO } from "./gateway";
@@ -279,7 +280,7 @@ export async function hasRoomToWelcome(deps: JoinsDeps, orgId: string, agentId: 
   const ai = (await agentAiStates(deps, orgId, [agentId])).get(agentId);
   if (ai?.state !== "ready") return false;
   const kind = brainOf(agent.brain);
-  if (kind !== "model") {
+  if (kind !== "model" && !isOpencodeFreeTier(kind, agent.brainModel, agent.brainAccountId)) {
     const usage = await storedPlanUsage(
       db,
       orgId,

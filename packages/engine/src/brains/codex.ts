@@ -45,6 +45,7 @@ import {
   type BrainIO,
   type BrainTurn,
   brainRunsOn,
+  isOpencodeFreeTier,
   type SteerMessage,
   type SteerReply,
   SYSTEM_REFUSED,
@@ -401,8 +402,9 @@ export class CodexBrain implements Brain {
       yield { type: "error", code: account.code, message: account.message, retryable: true };
       return;
     }
-    // OpenCode with no account on a computer nobody connected: its free tier, never a key the computer holds.
-    const freeTier = this.kind === "opencode" && !turn.account && status.pairedByUserId === null;
+    // OpenCode's free tier: no account on a computer nobody connected, or its own free model even with an account
+    // kept for other models. The runner then uses only OpenCode's provider and none of that account's paid key.
+    const freeTier = isOpencodeFreeTier(this.kind, turn.model, turn.account, status.pairedByUserId);
     if (freeTier && turn.model && !turn.model.startsWith("opencode/")) {
       yield {
         type: "error",

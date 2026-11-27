@@ -6,7 +6,7 @@ import { movableKindSql } from "./ai-accounts/chain";
 import { accountsServing } from "./ai-accounts/serves";
 import { brainOf } from "./brain-settings";
 import { planLimitOf } from "./brains/select";
-import { isComputerBrain } from "./brains/types";
+import { isComputerBrain, isOpencodeFreeTier } from "./brains/types";
 import { isRightHand } from "./right-hand";
 import { monthStartUtc, orgDefaultAgentBudget } from "./usage";
 import { nextMonthStart } from "./usage-pause";
@@ -23,7 +23,15 @@ export interface OutOfOffice {
 
 export type OutOfOfficeAgent = Pick<
   Agent,
-  "id" | "orgId" | "model" | "credentialId" | "brain" | "brainAccountId" | "machineId" | "monthlyBudgetNanoUsd"
+  | "id"
+  | "orgId"
+  | "model"
+  | "credentialId"
+  | "brain"
+  | "brainModel"
+  | "brainAccountId"
+  | "machineId"
+  | "monthlyBudgetNanoUsd"
 > &
   Pick<Agent, "ownerUserId" | "brainAccountPinned" | "builtin">;
 
@@ -69,6 +77,8 @@ export async function outOfOffice(
     // The agent's own account thinks when it has one on its computer (`brainAccountFor`), else the computer's sign-in.
     const account = a.brainAccountId ? accounts.get(a.brainAccountId) : undefined;
     const usable = account && account.machineId === a.machineId && account.kind === kind ? account : undefined;
+    // A free OpenCode model does not spend this account's plan, so its limit cannot take the agent out of office.
+    if (isOpencodeFreeTier(kind, a.brainModel, usable)) continue;
     const usage = usable ? usable.usage : (machines.get(a.machineId)?.[kind] ?? null);
     const limited = planLimitOf(a.machineId, kind, usable?.id, usage, ms);
     if (limited) out.set(a.id, { reason: "plan", until: limited.until !== null ? new Date(limited.until) : null });
@@ -220,6 +230,7 @@ export async function outOfOfficeIds(
       model: agents.model,
       credentialId: agents.credentialId,
       brain: agents.brain,
+      brainModel: agents.brainModel,
       brainAccountId: agents.brainAccountId,
       machineId: agents.machineId,
       monthlyBudgetNanoUsd: agents.monthlyBudgetNanoUsd,

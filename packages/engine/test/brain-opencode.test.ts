@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { OPENCODE_PROTOCOL } from "@agenteschat/adapters";
+import { OPENCODE_PROTOCOL, type PlanUsage } from "@agenteschat/adapters";
 import { isOpencodeFreeModel, loginPerAgent, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
 import { brainOptions, defaultBrainModel, isBrainKind, normalizeBrainModel } from "../src/brain-settings";
 import { type BrainTurnRequest, type ComputerBrainLink, OpencodeBrain } from "../src/brains/codex";
 import { computerBrainUnavailable, NO_AI_CODES, runBrainOf, UNAVAILABLE_CODES } from "../src/brains/select";
-import type { BrainEvent, BrainTurn } from "../src/brains/types";
+import { type BrainEvent, type BrainTurn, isOpencodeFreeTier } from "../src/brains/types";
 import { defaultAccountLabel } from "../src/machine-accounts";
 import type { MachineStatus } from "../src/machine-hub";
 
@@ -106,7 +106,7 @@ test("OpenCode needs runner protocol 39, its CLI and its switch (Codex's on a ru
   });
 });
 
-test("on a computer nobody connected, a turn with no account is the free tier: OpenCode's own models only", async () => {
+test("OpenCode's free tier: no account on an unpaired computer, or its own free model even with an account", async () => {
   const done: BrainEvent[] = [{ type: "done", text: "ok", session: { id: "s" } }];
   const send = async (over: Partial<BrainTurn>, pairedByUserId: string | null) => {
     const l = link({ events: done, pairedByUserId });
@@ -115,18 +115,62 @@ test("on a computer nobody connected, a turn with no account is the free tier: O
     );
     return { sent: l.sent[0], first: events[0] };
   };
-  expect((await send({ model: "opencode/big-pickle" }, null)).sent?.freeTier).toBe(true);
-  expect((await send({ model: "opencode/big-pickle" }, "u1")).sent?.freeTier).toBeUndefined();
+  expect((await send({ model: "opencode/hy4-flash-free" }, null)).sent?.freeTier).toBe(true);
+  // A paired computer's no-account behavior stays with its own sign-in, as before.
+  expect((await send({ model: "opencode/hy4-flash-free" }, "u1")).sent?.freeTier).toBeUndefined();
   const account = {
-    id: "0193eeee-0000-7000-8000-0000000000f1",
+    id: "62be492c-b272-4586-87ff-4a10c12f1819",
     label: "Zen",
     status: "active",
-  } as BrainTurn["account"];
+  } as NonNullable<BrainTurn["account"]>;
+  expect((await send({ account, model: "opencode/hy4-flash-free" }, null)).sent).toMatchObject({
+    freeTier: true,
+    account: account.id,
+  });
+  // Current main lists Big Pickle as free; GLM-5.3 is the paid counterpart.
+  expect((await send({ account, model: "opencode/big-pickle" }, null)).sent?.freeTier).toBe(true);
+  expect((await send({ account, model: "opencode/glm-5.3" }, null)).sent?.freeTier).toBeUndefined();
   expect((await send({ account }, null)).sent?.freeTier).toBeUndefined();
   const paid = await send({ model: "anthropic/claude-x" }, null);
   expect(paid.sent).toBeUndefined();
   expect(paid.first).toMatchObject({ type: "error", code: "not_logged_in" });
   expect((await send({ model: "anthropic/claude-x" }, "u1")).sent?.model).toBe("anthropic/claude-x");
+});
+
+test("an API-key account's plan limit does not gate its OpenCode free model, but still gates a paid model", () => {
+  const now = Date.now();
+  const status: MachineStatus = {
+    id: "m1",
+    orgId: "org",
+    name: "MacBook",
+    online: true,
+    execAllowed: true,
+    os: "linux",
+    protocol: OPENCODE_PROTOCOL,
+    pairedByUserId: "u1",
+    executors: { opencode: { version: "1.19.5" }, detectedAt: new Date().toISOString() },
+  };
+  const account = {
+    id: "62be492c-b272-4586-87ff-4a10c12f1819",
+    label: "Zen",
+    status: "active",
+    provider: "zen",
+  } as const;
+  const usage: PlanUsage = {
+    windows: [{ kind: "five_hour", usedPercent: 100, resetsAt: new Date(now + 3600_000).toISOString() }],
+    source: "turn",
+    at: new Date(now).toISOString(),
+  };
+  expect(
+    computerBrainUnavailable("opencode", "m1", status, now, account, true, usage, "opencode/hy4-flash-free"),
+  ).toBeNull();
+  expect(computerBrainUnavailable("opencode", "m1", status, now, account, true, usage, "opencode/glm-5.3")?.code).toBe(
+    "plan_limit",
+  );
+  // No account on a paired computer still follows its own sign-in's usage, unchanged.
+  expect(
+    computerBrainUnavailable("opencode", "m1", status, now, undefined, true, usage, "opencode/hy4-flash-free")?.code,
+  ).toBe("plan_limit");
 });
 
 test("which brain a run thinks with, and why OpenCode can't now", () => {
@@ -235,6 +279,7 @@ test("OpenCode's free tier and accounts: free ids, named OpenCode, a key thinks 
     "opencode/deepseek-v4.1-flash-free",
     "opencode/flint-40b-free",
     "opencode/glm-5.3-flash-free",
+    "opencode/hy4-flash-free",
     "opencode/jev-1.13-free",
     "opencode/mimo-v2.6-flash-free",
     "opencode/nemotron-3.5-lightning-free",
@@ -244,6 +289,10 @@ test("OpenCode's free tier and accounts: free ids, named OpenCode, a key thinks 
   }
   expect(isOpencodeFreeModel("opencode/glm-5.3")).toBe(false);
   expect(isOpencodeFreeModel("other/thing-free")).toBe(false);
+  expect(isOpencodeFreeTier("opencode", "opencode/hy4-flash-free", { id: "account" })).toBe(true);
+  expect(isOpencodeFreeTier("opencode", "opencode/glm-5.3", { id: "account" })).toBe(false);
+  expect(isOpencodeFreeTier("opencode", "opencode/hy4-flash-free", undefined, null)).toBe(true);
+  expect(isOpencodeFreeTier("opencode", "opencode/hy4-flash-free", undefined, "u1")).toBe(false);
   expect(defaultAccountLabel("opencode")).toBe("OpenCode");
   expect(loginPerAgent("opencode", "zen")).toBe(true);
 });

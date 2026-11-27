@@ -10,7 +10,7 @@ import type {
 } from "@agenteschat/adapters";
 import type { ToolImage } from "@agenteschat/providers";
 import { CLI_PINS, type PinCli } from "@agenteschat/providers/cli-pins";
-import { planOf } from "@agenteschat/providers/plans";
+import { isOpencodeFreeModel, planOf } from "@agenteschat/providers/plans";
 import type { CodeSetup } from "../git/machine";
 
 export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
@@ -115,6 +115,21 @@ export interface BrainAccount {
   /** A key account's coding plan (`zai`…), which names the models it runs. */
   provider?: string;
 }
+
+/**
+ * OpenCode's own free tier: the existing no-account case on a computer nobody connected, or a recognized free model
+ * even when the agent keeps an API-key account for its other models. A paired computer's no-account behavior stays
+ * unchanged: its own sign-in decides, as before.
+ */
+export const isOpencodeFreeTier = (
+  kind: BrainKind,
+  model: string | null | undefined,
+  account: unknown,
+  pairedByUserId?: string | null,
+): boolean =>
+  kind === "opencode" &&
+  ((!account && pairedByUserId === null) ||
+    (Boolean(account) && typeof model === "string" && isOpencodeFreeModel(model)));
 
 /** A tool as the engine offers it to a brain (same data the Tool Gateway lists for the run). */
 export interface BrainTool {
