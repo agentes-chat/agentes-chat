@@ -1,21 +1,19 @@
 import { type Agent, type Me, type OrgSummary, useComputerSetup } from "@agenteschat/client";
-import { type AiChoice, gateDims, planLabel, planMark, planOffSystem } from "@agenteschat/client/lib/no-ai";
+import { type AiChoice, gateDims, planOffSystem } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
-import { Chip, Icon, ProviderLogo } from "@agenteschat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlanGates } from "@/components/ai/ConnectAiSteps";
 import { ConnectChoices } from "@/components/arrival/ConnectChoices";
 import { ConnectAiProvider, type ConnectAiRequest, useConnectAi } from "@/components/connect-ai-context";
 import { OrgProvider, useOrg } from "@/components/org-context";
-import "./ai-step.css";
 
 /*
- * The onboarding's Connect an AI step (ADR 0162, amended), right after the plan and the last but a team's people: the
- * arrival's choices as cards (ADR 0160), each opening the same Connect dialog as anywhere in the app for the right hand
- * and the whole team. The step is answered by the data (every agent ready or waiting), never by the dialog closing, so
- * a connect made in another tab moves it on too.
+ * The onboarding's Connect an AI step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27), right after the plan:
+ * the arrival's choices as flat rows (ADR 0160), each opening the same Connect dialog as anywhere in the app for the
+ * right hand and the first agent. The step is answered by the data (every agent ready or waiting), never by the dialog
+ * closing, so a connect made in another tab moves it on too.
  */
 
 /** Asked again this often while the choices show: this page opens no socket, so no event says a plan can sign in. */
@@ -49,26 +47,20 @@ export function connectRequest(choice: AiChoice, agentIds: readonly string[]): C
 }
 
 /**
- * The step's body: the choices; once every agent thinks, the AI picked here (when one was). Its ways out (what not
- * connecting means with "Connect later", and Continue or "Go to the workspace" once connected) are the box's footer,
- * the page's. `agents`: the right hand first, then the team.
+ * The step's body: the choices (ADR 0160), each opening the same Connect dialog as anywhere in the app, for the right
+ * hand and the first agent alike. Its ways out ("Connect later", which asks first) are the box's footer, the page's;
+ * every agent thinking moves the page on to the photo. `agents`: the right hand first, then the others.
  */
 export function AiStep({
   orgId,
   agents,
-  done,
-  picked,
   onConnected,
 }: {
   orgId: string;
   agents: readonly Agent[];
-  /** Every agent thinks: the connected screen. */
-  done: boolean;
-  /** What was connected, as the page names it (the connected screen's tile), when it can. */
-  picked: AiChoice | null;
   /**
-   * What the dialog connected ("Claude"): the page names it in the heading. Not the card picked, since the dialog's
-   * Back leads to every other choice.
+   * What the dialog connected ("Claude"): the photo names it. Not the card picked, since the dialog's Back leads to
+   * every other choice.
    */
   onConnected?: (choice: AiChoice) => void;
 }) {
@@ -76,43 +68,13 @@ export function AiStep({
   const { org } = useOrg();
   const connect = useConnectAi();
   const ids = agents.map((a) => a.id);
-  // A plan's tile dims while it can't sign in (no computer yet, or the Cloud's still being prepared after paying):
+  // A plan's mark dims while it can't sign in (no computer yet, or the Cloud's still being prepared after paying):
   // read again while the choices show, the computer's setup too (the dialog reads the same), so they light up alone.
   // Read for the first agent other than the right hand, which never has a computer (ADR 0160 addendum), as the
   // dialog reads it; the right hand alone reads its own.
   const reader = agents.find((a) => !isRightHand(a)) ?? agents[0];
-  const poll = done ? false : GATES_POLL_MS;
-  const gates = usePlanGates(orgId, reader?.id, poll);
-  useComputerSetup(orgId, true, poll);
-  if (done)
-    return (
-      picked && (
-        <div className="ac-optlist">
-          <div className="ac-optrow ac-optrow--lead onb-ai__connected">
-            <span className="ac-optrow__lead">
-              {picked === "key" ? (
-                <span className="arrival-opts__tile" aria-hidden="true">
-                  <Icon name="key" />
-                </span>
-              ) : (
-                <ProviderLogo id={planMark(picked)} size="tile" />
-              )}
-            </span>
-            <span className="ac-optrow__text">
-              <span className="ac-optrow__title">
-                {picked === "key" ? t("connectAi.key.title") : planLabel(t, picked)}
-              </span>
-              <span className="ac-optrow__desc">
-                {picked === "key" ? t("connectAi.key.sub") : t(`connectAi.plan.${picked}.tiers`)}
-              </span>
-            </span>
-            <Chip tone="done" icon="check">
-              {t("onboarding.flow.ai.connected")}
-            </Chip>
-          </div>
-        </div>
-      )
-    );
+  const gates = usePlanGates(orgId, reader?.id, GATES_POLL_MS);
+  useComputerSetup(orgId, true, GATES_POLL_MS);
   return (
     <ConnectChoices
       mayAddKey={can(org, "manage_credentials")}

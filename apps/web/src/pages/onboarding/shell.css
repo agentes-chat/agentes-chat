@@ -73,17 +73,19 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-/* The box's top stays put from step to step; the team stands on its top edge. */
+/*
+ * The box's top stays in one place on every step (ADR 0256, addendum of 2026-11-27): room under the top bar for who
+ * stands on it, and who does stands over it, out of the flow, its feet on the edge.
+ */
+.onbw {
+  --onb-top: 160px;
+}
 .onbw__stage {
   display: flex;
   justify-content: center;
   align-items: flex-start;
   min-width: 0;
-  padding: clamp(72px, 13vh, 132px) 16px 64px;
-}
-/* A box with a header of its own and no team over it starts higher, so its button fits the screen. */
-.onbw__stage:has(.onbx[data-cover]):not(:has(.onbw__ground)) {
-  padding-top: clamp(56px, 8vh, 88px);
+  padding: var(--onb-top) 16px 64px;
 }
 .onbw__col {
   position: relative;
@@ -95,17 +97,16 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 .onbw__col[data-wide] {
   width: min(760px, 100%);
 }
+/* Their feet 6px into the box's edge, over it. */
 .onbw__ground {
-  position: relative;
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(100% - 6px);
   z-index: 1;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   pointer-events: none;
-}
-/* Their feet on the box's edge: the box comes up under them. */
-.onbw__ground + .onbw__main {
-  margin-top: -6px;
 }
 .onbw__cast {
   display: flex;
@@ -275,6 +276,12 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 .onbx .ac-dialog__foot {
   padding-top: 24px;
 }
+/* A footer with only a note keeps a button's height: every step's footer has the same shape. */
+.onbx .ac-dialog__foot:not(:has(.ac-btn)) > .ac-dialog__foot-note {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h-md);
+}
 .onbx__back {
   display: inline-flex;
   align-items: center;
@@ -427,6 +434,57 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   box-shadow: 0 1px 0 rgb(0 0 0 / 0.08);
 }
 
+/* ---------- meeting the first agent: its portrait, among a faint grid of others ---------- */
+.onb-meet {
+  --cell: 38px;
+  position: relative;
+  flex: none;
+  height: 200px;
+  overflow: hidden;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--tone) 7%, var(--surface-raised));
+}
+/* An even grid wider and taller than the band, centred on it: it runs off every edge. */
+.onb-meet__grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-columns: repeat(13, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: 10px;
+  transform: translate(-50%, -50%);
+}
+.onb-meet__face {
+  display: grid;
+  place-items: center;
+  filter: saturate(0.65);
+}
+.onb-meet__face .ac-avatar {
+  width: var(--cell);
+  height: var(--cell);
+}
+/* A soft glow of its own color behind it: no ring. */
+.onb-meet__glow {
+  position: absolute;
+  top: 53%;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tone) 30%, transparent), transparent);
+}
+/* A little under the middle: what it wears on its head keeps clear of the band's top. */
+.onb-meet .onb-meet__agent {
+  position: absolute;
+  top: 53%;
+  left: 50%;
+  width: 112px;
+  height: 112px;
+  transform: translate(-50%, -50%);
+}
+
 /* ---------- the apps a team works in, as a box's header ---------- */
 .onb-wall {
   position: relative;
@@ -496,12 +554,11 @@ html:not([data-pointer]) .onbx__back:focus-visible {
     height: calc(52px + env(safe-area-inset-top, 0px));
     padding: env(safe-area-inset-top, 0px) 16px 0;
   }
-  /* The speaker's bubble over its 52px face and what it wears there (`--reach`) stays under the logo's row. */
-  .onbw__stage {
-    padding: calc(72px + 52px * var(--reach, 0)) 16px 32px;
+  .onbw {
+    --onb-top: 156px;
   }
-  .onbw__stage:has(.onbx[data-cover]):not(:has(.onbw__ground)) {
-    padding-top: 24px;
+  .onbw__stage {
+    padding-bottom: 32px;
   }
   .onbw__agent .ac-avatar {
     width: 40px;
@@ -568,6 +625,17 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   .onb-pass .team-scene .team-scene__agent[data-lead] .ac-avatar {
     width: 50px;
     height: 50px;
+  }
+  .onb-meet {
+    height: 176px;
+  }
+  .onb-meet .onb-meet__agent {
+    width: 96px;
+    height: 96px;
+  }
+  .onb-meet__glow {
+    width: 180px;
+    height: 180px;
   }
 }
 

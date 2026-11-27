@@ -1,6 +1,7 @@
 /*
- * The team's photo after Checkout (CelebrateStep.tsx): what is left, as quiet rows with a hairline between them. The
- * plan checked, each next step by its number in a ring, then the team at work after a spark.
+ * The team's photo, the onboarding's last step (CelebrateStep.tsx): what is in place, as quiet rows with a hairline
+ * between them. Each done row checked, a row still to do by its number in a ring, then the first delivery on its way
+ * with the kit's working sign in the number's place, or muted while it waits for an AI.
  */
 .onb-next {
   display: flex;
@@ -43,10 +44,21 @@
   box-shadow: none;
   color: #fff;
 }
-.onb-next__end {
-  font-weight: 600;
-}
-.onb-next__end .onb-next__n {
+.onb-next__delivery .onb-next__n {
   box-shadow: none;
-  color: var(--info);
+}
+.onb-next__delivery[data-waiting] {
+  color: var(--muted);
+}
+.onb-next__delivery[data-waiting] .onb-next__n {
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+.onb-next__text {
+  display: flex;
+  flex-direction: column;
+}
+.onb-next__sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
 }

@@ -5,12 +5,11 @@ import { aiAppAsk, appMark } from "@agenteschat/client/lib/apps";
 import { RIGHT_HAND_DEFAULT, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { Button, Icon, ProviderLogo, Skeleton, SwapLabel, Textarea } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { GuideExtras, GuideInstalls, GuideWords } from "@/components/AiApps";
 import { lookOf } from "@/lib/look";
-import { Box } from "./Shell";
 import "./ask-step.css";
 
 /*
@@ -98,38 +97,30 @@ export function pastedProposal(text: string): unknown {
 }
 
 /**
- * The step: a row of assistants that scrolls sideways (the most used first, "Another agent app" last when
- * `onOther` opens the import), then (1) connecting agentes.chat in that app (its own guide, "Connected" once the person
- * has an app connected here) and (2) the request to paste in a new conversation, its start in view. Under them, the
- * wait for the proposal, and the way without a connector: the JSON request and a field for the answer. `onProposal`:
- * a proposal that arrived after the step opened, or the one pasted, with the app picked in the row. `onSkip`: "Not
- * now". `org`: the workspace's name, said in the request.
+ * Asking the person's own AI for their first agent (ADR 0256), the body of "Ask your AI"'s dialog over the work step:
+ * a row of assistants that scrolls sideways (the most used first, "Another agent app" last when `onOther` opens the
+ * import), then (1) connecting agentes.chat in that app (its own guide, "Connected" once the person has an app
+ * connected here) and (2) the request to paste in a new conversation, its start in view. Under them, the wait for the
+ * proposal, and the way without a connector: the JSON request and a field for the answer. `onProposal`: a proposal that
+ * arrived after the dialog opened, or the one pasted, with the app picked in the row. `org`: the workspace's name, said
+ * in the request.
  */
 export function AskYourAi({
   orgId,
   variant,
   onProposal,
-  onSkip,
   org = "",
-  eyebrow,
-  onBack,
   onOther,
   onClient,
-  skipping = false,
 }: {
   orgId: string;
   variant: AskVariant;
   onProposal: (proposal: FirstAgents, app: AppClient | null) => void;
-  onSkip: () => void;
   org?: string;
-  eyebrow?: ReactNode;
-  onBack?: (() => void) | null;
   /** "Another agent app": the import of other agent apps, a file or a link. */
   onOther?: () => void;
-  /** The assistant picked in the row (the page draws its mark on the sky). */
+  /** The assistant picked in the row. */
   onClient?: (client: AppClient) => void;
-  /** "Not now" is saving. */
-  skipping?: boolean;
 }) {
   const { t } = useTranslation();
   const apps = useApps(orgId, false, APPS_POLL_MS);
@@ -194,17 +185,10 @@ export function AskYourAi({
   // The parts' numbers: without a connector, the request comes first and the answer second.
   const n = { connect: 1, prompt: byPaste ? 1 : 2, answer: 2 };
   return (
-    <Box
-      eyebrow={eyebrow}
-      title={t(variant === "member" ? "onboarding.ask.titleMember" : "onboarding.ask.title")}
-      lead={t(variant === "personal" ? "onboarding.ask.leadPersonal" : "onboarding.ask.lead")}
-      onBack={onBack}
-      acts={
-        <Button onClick={onSkip} loading={skipping}>
-          {t("onboarding.ask.later")}
-        </Button>
-      }
-    >
+    <div className="onb-ask">
+      <p className="onb-ask__lead">
+        {t(variant === "personal" ? "onboarding.ask.leadPersonal" : "onboarding.ask.lead")}
+      </p>
       <fieldset className="onb-ask__ais">
         <legend className="ac-visually-hidden">{t("onboarding.ask.apps")}</legend>
         {ASK_CLIENTS.map((c) => (
@@ -289,7 +273,7 @@ export function AskYourAi({
           {late && !byPaste && <p className="onb-ask__stuck">{t("onboarding.ask.stuck")}</p>}
         </div>
       )}
-    </Box>
+    </div>
   );
 }
 

@@ -3,6 +3,20 @@
  * (connect, then the request to paste), the wait for the proposal and the way without a connector.
  */
 
+/* The dialog's body (ADR 0256, "Ask your AI" over the work step): its lead, then the parts, the kit's rhythm apart. */
+.onb-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.onb-ask__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+  text-wrap: pretty;
+}
 /* The assistants and "Outro app de agentes" in one row, the most used first; it fades where it scrolls on. */
 .onb-ask__ais {
   display: flex;

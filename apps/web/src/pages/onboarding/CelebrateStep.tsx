@@ -1,4 +1,3 @@
-import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { slugify } from "@agenteschat/client/lib/text";
 import { Button, Icon, Spinner } from "@agenteschat/ui";
@@ -10,72 +9,76 @@ import { saveTeamPhoto } from "./team-photo";
 import "./celebrate-step.css";
 
 /*
- * Back from a paid Checkout, once (ADR 0079, the moment the plan turned on): the team's photo in daylight with the
- * person among the agents and a few pixels of confetti, the right hand saying hello, the day the team began, who is in
- * it, and what is left before the work starts (the plan already checked). It stands in the plan step's place until its
- * one button, which goes on to the step the data reached: connecting the AI, else the next one. Beside it, "Download
- * the team photo" saves that photo with its words as a PNG drawn in the browser (`team-photo.ts`).
+ * The onboarding's last step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27): the team's photo in daylight,
+ * the person beside the first agent and a few pixels of confetti, the agent saying hello, the day the team began, and
+ * what is in place: the plan (agentes.chat Cloud), the AI, and the first delivery on its way (the kit's working sign;
+ * waiting, muted, while no AI is connected). Its one button opens the workspace in the person's DM with the agent.
+ * Beside it, "Download the team photo" saves that photo with its words as a PNG drawn in the browser (`team-photo.ts`).
  */
 
 export function TeamWelcome({
   org,
   person,
   first,
-  lodi,
-  team,
+  agent,
+  working,
   plan,
   personal,
-  aiDone,
-  toAi,
-  people,
-  deliveries,
+  ai,
+  leaving,
   onNext,
 }: {
   /** The workspace's name. */
   org: string;
   person: { name: string; image: string | null };
-  /** The person's first name, greeted by the right hand. */
+  /** The person's first name, greeted by the agent. */
   first: string;
-  lodi: ShellFace;
-  /** The agents besides the right hand, awake. */
-  team: readonly ShellFace[];
-  /** The plan's name, when the paid return said which. */
+  agent: ShellFace;
+  /** What the agent is doing for its first delivery ("A Iara está lendo os seus e-mails"). */
+  working: string;
+  /** The plan's row: its name, "" for a plan with no name known, null where there is no plan (self-hosted). */
   plan: string | null;
   personal: boolean;
-  /** Every agent already thinks: the AI row is checked. */
-  aiDone: boolean;
-  /** The button leads to connecting the AI ("Connect the AI"), else on ("Continue"). */
-  toAi: boolean;
-  /** A team's people row, checked once they were invited; null in a personal workspace. */
-  people: boolean | null;
-  /** What the first agent delivers on its first day, when its AI said. */
-  deliveries: number;
+  /** The AI's row: what was connected ("Claude"), "" for an AI with no name known, null when it was left for later. */
+  ai: string | null;
+  /** Its button is opening the workspace. */
+  leaving: boolean;
   onNext: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(new Date());
-  const agents = [lodi, ...team].map((a) => t("onboarding.hire.the", agentGrammar(a.name)));
-  const names = joinNames([t("onboarding.celebrate.you"), ...agents], t);
-  const rows = [
-    {
-      key: "plan",
-      done: true,
-      text: plan ? t("onboarding.celebrate.plan", { name: plan }) : t("onboarding.celebrate.planAny"),
-    },
-    { key: "ai", done: aiDone, text: t(personal ? "onboarding.celebrate.aiPersonal" : "onboarding.celebrate.ai") },
-    ...(people !== null ? [{ key: "people", done: people, text: t("onboarding.celebrate.people") }] : []),
-  ];
+  const who = agentGrammar(agent.name);
+  const the = t("onboarding.hire.the", who);
+  const leadFor = (you: string) =>
+    t(personal ? "onboarding.celebrate.leadPersonal" : "onboarding.celebrate.lead", { ...who, you, agent: the });
   const eyebrow = personal
     ? t("onboarding.celebrate.eyebrowPersonal", { date })
     : t("onboarding.celebrate.eyebrow", { org, date });
-  const start =
-    deliveries > 0
-      ? t(personal ? "onboarding.celebrate.startPersonal" : "onboarding.celebrate.start", { count: deliveries })
-      : t(personal ? "onboarding.celebrate.startAnyPersonal" : "onboarding.celebrate.startAny");
   const say = first ? t("onboarding.celebrate.say", { first }) : t("onboarding.celebrate.sayAny");
   const title = personal ? t("onboarding.celebrate.titlePersonal") : t("onboarding.celebrate.title", { org });
+  const rows = [
+    ...(plan !== null
+      ? [
+          {
+            key: "plan",
+            done: true,
+            text: plan ? t("onboarding.celebrate.plan", { name: plan }) : t("onboarding.celebrate.planAny"),
+          },
+        ]
+      : []),
+    {
+      key: "ai",
+      done: ai !== null,
+      text:
+        ai === null
+          ? t("onboarding.celebrate.connect")
+          : ai
+            ? t("onboarding.celebrate.aiDone", { label: ai })
+            : t("onboarding.celebrate.aiDoneAny"),
+    },
+  ];
 
   const download = async () => {
     setSaving(true);
@@ -83,15 +86,13 @@ export function TeamWelcome({
     try {
       await saveTeamPhoto(
         {
-          cast: [lodi, ...team],
+          cast: [agent],
           person,
           say,
           eyebrow,
           title,
           // A picture to share names the person, where "You" would be whoever looks at it.
-          lead: t("onboarding.celebrate.lead", {
-            names: joinNames([first || t("onboarding.celebrate.you"), ...agents], t),
-          }),
+          lead: leadFor(first || t("onboarding.celebrate.you")),
         },
         personal
           ? t("onboarding.celebrate.photoFilePersonal")
@@ -108,10 +109,10 @@ export function TeamWelcome({
 
   return (
     <Box
-      cover={<Photo cast={[lodi, ...team]} person={person} say={say} />}
+      cover={<Photo cast={[agent]} person={person} say={say} />}
       eyebrow={eyebrow}
       title={title}
-      lead={t("onboarding.celebrate.lead", { names })}
+      lead={leadFor(t("onboarding.celebrate.you"))}
       note={
         <button
           type="button"
@@ -125,8 +126,8 @@ export function TeamWelcome({
         </button>
       }
       acts={
-        <Button variant="primary" kbd={["↵"]} data-enter="" onClick={onNext}>
-          {t(toAi ? "onboarding.celebrate.connect" : "onboarding.actions.continue")}
+        <Button variant="primary" kbd={["↵"]} data-enter="" loading={leaving} disabled={leaving} onClick={onNext}>
+          {t("onboarding.celebrate.enter")}
         </Button>
       }
     >
@@ -142,11 +143,16 @@ export function TeamWelcome({
             </span>
           </li>
         ))}
-        <li className="onb-next__row onb-next__end">
+        {/* The first delivery: on its way (the kit's working sign in the number's place) once an AI is connected;
+            muted, waiting, while none is. */}
+        <li className="onb-next__row onb-next__delivery" data-waiting={ai === null ? "" : undefined}>
           <span className="onb-next__n" aria-hidden="true">
-            <Icon name="sparkle" size={14} />
+            {ai === null ? rows.length + 1 : <Spinner size={14} />}
           </span>
-          <span>{start}</span>
+          <span className="onb-next__text">
+            <span>{ai === null ? t("onboarding.celebrate.waiting", who) : working}</span>
+            {ai !== null && <span className="onb-next__sub">{t("onboarding.celebrate.workingLine")}</span>}
+          </span>
         </li>
       </ol>
     </Box>

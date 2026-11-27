@@ -7,6 +7,7 @@ import {
   ComputerPortrait,
   DialogBody,
   DialogFooter,
+  dotTone,
   Icon,
   type IconName,
   PixelSky,
@@ -301,6 +302,82 @@ export function Pass({
   );
 }
 
+/** The looks the portrait's faint faces take turns in: never the right hand's headset, never the agent's own look. */
+const MOSAIC_COLORS = ["sky", "indigo", "violet", "rose", "amber", "green", "teal", "graphite"] as const;
+const MOSAIC_EYES = ["round", "dots", "wide", "happy", "sleepy"] as const;
+const MOSAIC_HATS = [
+  "none",
+  "hat",
+  "cap",
+  "headphones",
+  "bow",
+  "crown",
+  "antenna",
+  "beanie",
+  "party",
+  "flower",
+  "scarf",
+] as const;
+/** The grid runs past every edge of the band: 13 columns by 5 rows of 38px faces, 10px apart. */
+const MOSAIC_COLS = 13;
+const MOSAIC_ROWS = 5;
+
+/**
+ * Meeting the first agent (ADR 0256, addendum of 2026-11-27): its portrait as the box's header. An even grid of small
+ * agents fills the band, faint and a little desaturated, fainter toward the edges; the middle three by three is clear,
+ * and there the agent stands big, in full color, with a soft glow of its own color and the engine's idle motion. The
+ * band is the box's surface with a breath of the agent's color. Decorative: its name is the title under it.
+ */
+export function Meet({ who }: { who: ShellFace }) {
+  const look = who.look;
+  const faces = useMemo(() => {
+    const same = (l: AgentAppearance) =>
+      l.color === look?.color && l.eyes === look?.eyes && l.accessory === look?.accessory;
+    const cx = (MOSAIC_COLS - 1) / 2;
+    const cy = (MOSAIC_ROWS - 1) / 2;
+    const far = Math.hypot(cx, cy * 1.2);
+    const out: { key: string; look: AgentAppearance | null; opacity: number }[] = [];
+    let n = 0;
+    for (let r = 0; r < MOSAIC_ROWS; r++)
+      for (let c = 0; c < MOSAIC_COLS; c++) {
+        if (Math.abs(c - cx) <= 1 && Math.abs(r - cy) <= 1) {
+          out.push({ key: `${r}-${c}`, look: null, opacity: 0 });
+          continue;
+        }
+        let face: AgentAppearance;
+        do {
+          face = {
+            color: MOSAIC_COLORS[(n * 3) % MOSAIC_COLORS.length],
+            eyes: MOSAIC_EYES[(n * 2 + Math.floor(n / 5)) % MOSAIC_EYES.length],
+            accessory: MOSAIC_HATS[(n * 7) % MOSAIC_HATS.length],
+          } as AgentAppearance;
+          n += 1;
+        } while (same(face));
+        const d = Math.hypot(c - cx, (r - cy) * 1.2);
+        out.push({ key: `${r}-${c}`, look: face, opacity: 0.2 - 0.09 * Math.min(1, d / far) });
+      }
+    return out;
+  }, [look]);
+  const tone = dotTone(look?.color ?? "indigo");
+  return (
+    <div className="onb-meet" aria-hidden="true" style={{ "--tone": tone } as CSSProperties}>
+      <div className="onb-meet__grid">
+        {faces.map((f) =>
+          f.look ? (
+            <span key={f.key} className="onb-meet__face" style={{ opacity: f.opacity }}>
+              <AgentAvatar name="" appearance={f.look} size="md" framed={false} />
+            </span>
+          ) : (
+            <span key={f.key} />
+          ),
+        )}
+      </div>
+      <span className="onb-meet__glow" />
+      <AgentAvatar name={who.name} appearance={look} size="xl" state="idle" className="onb-meet__agent" />
+    </div>
+  );
+}
+
 /** The confetti's colors: the team's sky at its brightest. */
 const CONFETTI = ["#f472b6", "#fbbf24", "#34d399", "#2dd4bf", "#a78bfa", "#ffffff", "#60a5fa"];
 
@@ -406,7 +483,6 @@ const WALL_FIRST = [
   "figma",
   "github",
   "google-sheets",
-  "mercadopago",
   "zendesk",
   "calendly",
   "linkedin",

@@ -1,288 +1,323 @@
-import type { Agent, FirstAgentPicked, FirstAgents } from "@agenteschat/client";
-import { useAgents, useComputerSetup, useFirstAgents, useMe, useMembers } from "@agenteschat/client";
-import type { AppClient } from "@agenteschat/client/lib/app-clients";
-import { setupView } from "@agenteschat/client/lib/computer";
-import { firstName, NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
+import {
+  keys,
+  useAgents,
+  useAiStatus,
+  useFirstAgents,
+  useFirstDeliveryRow,
+  useMe,
+  usePickFirstAgent,
+  useStartFirstAgent,
+} from "@agenteschat/client";
+import { errorText } from "@agenteschat/client/lib/errors";
+import {
+  areaAgentInput,
+  CUSTOM_AREA,
+  CUSTOM_LOOK,
+  type FirstArea,
+  isFirstArea,
+  openAreaRoutine,
+} from "@agenteschat/client/lib/first-areas";
+import { firstName, toYmd } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { isRightHand, RIGHT_HAND_DEFAULT, rightHandOf } from "@agenteschat/client/lib/right-hand";
+import { browserTimezone } from "@agenteschat/client/lib/routines";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Avatar, Button, Logo, Menu, MenuItem } from "@agenteschat/ui";
+import { Avatar, Button, Dialog, DialogFooter, Logo, Menu, MenuItem, normalizeAppearance } from "@agenteschat/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { TFunction } from "i18next";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useApi } from "@/api/context";
 import { OrgProvider } from "@/components/org-context";
 import { BootSplash } from "@/components/Sky";
 import { useSignOut } from "@/hooks/useSignOut";
 import { ARRIVAL_BETA_ONLY, ARRIVAL_PARAM } from "@/lib/arrival";
+import type { ConnectReturn } from "@/lib/connect-return";
 import { lookOf } from "@/lib/look";
-import { AskYourAi } from "./onboarding/AskStep";
-import { roleWord } from "./onboarding/HireStep";
-import { FirstAgentPick, newerProposal, optionCount } from "./onboarding/PickStep";
-import { Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
+import { useToast } from "@/lib/toast";
+import { AgentStep, type AgentStepAgent } from "./onboarding/AgentStep";
+import { AiHost, AiStep } from "./onboarding/AiStep";
+import { AreaStep } from "./onboarding/AreaStep";
+import { Box, BoxNote, Pass, type ShellFace, World } from "./onboarding/Shell";
 
-/** A member's onboarding: the hello, asking their own AI, picking from what it proposed. */
-type View = "hello" | "ask" | "pick";
+/** A member's onboarding: the work, its agent, and the AI only where the workspace has none for it. */
+type View = "area" | "agent" | "ai";
 
-/** The steps a member counts: the hello, then asking and picking as one. */
+/** The steps a member counts: the work and its agent. */
 const TOTAL = 2;
-
-/** How many of the team stand on a header's sky beside the right hand. */
-const FACES_SHOWN = 3;
+/** On the AI step, its status is read this often: a connection made in another tab moves it on. */
+const AI_POLL_MS = 10_000;
 
 /**
- * The onboarding of someone who joined a workspace (ADR 0256, addendum of 2026-11-26), on the onboarding's frame
- * (`World`, `Box`): first the team as it is, awake on its daylight sky, and the idea in a sentence (each person brings
- * the agent that solves a problem of theirs, as whoever brought one did), with the two ways to make theirs. Asking
- * their own AI is the owner's ask and pick in a member's words (`AskYourAi`, `FirstAgentPick`); starting from scratch
- * opens the right hand's DM, where its greeting asks what they look after and it builds the agent with them. Every way
- * out lands in the workspace with the welcome wizard alone (ADR 0160): the AI is the workspace's, set up already.
- * Someone who may not create agents there reads so in a line under the team, and its one button opens the workspace.
+ * The onboarding of someone who joined a workspace (ADR 0256, addendum of 2026-11-26, amended 2026-11-27), on the
+ * onboarding's frame (`World`, `Box`): the work their own first agent does (the same work step as an owner's, without
+ * the workspace's name, which isn't theirs), meeting that agent and connecting the apps it works in, then the AI only
+ * when the workspace has none that answers for it. There is no plan: the workspace's is in force, so the first delivery
+ * fires at once when there is an AI too. Every way out lands in the person's DM with their agent, with the welcome
+ * wizard over it (ADR 0160). Someone who may not create agents there reads so, and its one button opens the workspace.
  */
-export function MemberOnboardingPage({ orgId }: { orgId: string }) {
-  const { t, i18n } = useTranslation();
+export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string; returned?: ConnectReturn | null }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const qc = useQueryClient();
   const navigate = useNavigate();
+  const toast = useToast();
   const { signOut } = useSignOut();
   const me = useMe().data;
   const org = me?.organizations.find((o) => o.id === orgId);
   const agents = useAgents(orgId);
-  const members = useMembers(orgId);
-  const setup = useComputerSetup(orgId);
   const makes = makesAgents(org);
-  // An unpicked proposal from an earlier visit (a reload while picking) opens on its pick, once.
+  const delivery = useFirstDeliveryRow(orgId, makes);
   const firstAgents = useFirstAgents(makes ? orgId : "");
-  const [view, setView] = useState<View>("hello");
-  const [how, setHow] = useState<"ask" | "scratch">("ask");
-  const [proposal, setProposal] = useState<FirstAgents | null>(null);
-  const [askedOf, setAskedOf] = useState<AppClient | null>(null);
+  const [view, setView] = useState<View | null>(null);
+  // Read again while the AI step shows: a connection made in the dialog (or another tab) lets it go on.
+  const status = useAiStatus(orgId, makes, view === "ai" ? AI_POLL_MS : false);
+  const start = useStartFirstAgent(orgId);
+  const pick = usePickFirstAgent(orgId);
+  const [custom, setCustom] = useState(false);
+  const [skipAsk, setSkipAsk] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const ready = Boolean(me && org) && !agents.isPending && !members.isPending;
+  const ready = Boolean(me && org) && !agents.isPending && (!makes || !delivery.isPending);
 
-  const resumed = useRef(false);
-  useEffect(() => {
-    if (resumed.current || firstAgents.data === undefined) return;
-    resumed.current = true;
-    const found = firstAgents.data;
-    if (view === "hello" && found && found.picked === null && found.options.length > 0) {
-      setProposal(found);
-      setView("pick");
-    }
-  }, [firstAgents.data, view]);
+  const list = agents.data ?? [];
+  const row = delivery.data ?? null;
+  const agent = row ? list.find((a) => a.id === row.agentId && !isRightHand(a)) : undefined;
+  const area: FirstArea | "custom" | null =
+    row && isFirstArea(row.area) ? row.area : row?.area === CUSTOM_AREA ? "custom" : null;
+  // A reload after the agent was made comes back to it.
+  const shown: View = view ?? (agent ? "agent" : "area");
 
   // A new view replaces the pressed button under the focus: the focus goes to its heading, which is read out.
-  const shown = useRef<View | null>(null);
+  const was = useRef<string | null>(null);
+  // "Other" and the agent it makes share one view: a Connect that makes the agent keeps its flow open.
+  const key = shown === "area" && custom ? "agent" : shown;
   useEffect(() => {
-    if (!ready || shown.current === view) return;
-    if (shown.current !== null) mainRef.current?.querySelector<HTMLElement>(".onbx__title")?.focus();
-    shown.current = view;
+    if (!ready || was.current === key) return;
+    if (was.current !== null) mainRef.current?.querySelector<HTMLElement>(".onbx__title")?.focus();
+    was.current = key;
   });
 
   if (!me || !org || !ready) return <BootSplash />;
 
   const personal = isPersonal(org);
-  const list = agents.data ?? [];
   const lodi = rightHandOf(list);
   const lodiName = lodi?.name ?? RIGHT_HAND_DEFAULT.name;
-  const lodiFace: ShellFace = {
-    id: lodi?.id ?? "right-hand",
-    name: lodiName,
-    look: lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance,
-  };
-  // The team as it is, in the order its agents were made.
-  const team = list.filter((a) => !isRightHand(a));
-  const teamFaces: ShellFace[] = team.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }));
   const first = firstName(me.user.name);
-  const the = (name: string) => t("onboarding.hire.the", agentGrammar(name));
+  const zone = browserTimezone() ?? "UTC";
 
-  // Wherever it goes, on its arrival: the welcome wizard alone, with no Connect after it (the team's AI is there).
+  // Wherever it goes, on its arrival: the welcome wizard alone, with no Connect after it (it was offered here).
   const arrival = { [ARRIVAL_PARAM]: ARRIVAL_BETA_ONLY } as never;
   const leave = (go: () => Promise<void>) => {
     setLeaving(true);
     go().catch(() => setLeaving(false));
   };
   const toWorkspace = () => leave(() => navigate({ to: "/org/$orgId", params: { orgId }, search: arrival }));
-  // From scratch: the right hand's DM, where it builds the agent with them.
-  const toRightHand = () =>
-    lodi
+  const toAgent = () =>
+    agent
       ? leave(() =>
-          navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId: lodi.id }, search: arrival }),
+          navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId: agent.id }, search: arrival }),
         )
       : toWorkspace();
-  // Picked: the agent where it lives, its channel in a team's workspace, its DM in a personal one.
-  const toAgent = (made: FirstAgentPicked) =>
-    leave(() =>
-      personal
-        ? navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId: made.agentId }, search: arrival })
-        : navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: made.channelId }, search: arrival }),
+  // Whether the workspace has an AI that answers for the agent: the AI step only when it doesn't.
+  const thinks =
+    agent !== undefined && status.data !== undefined
+      ? (status.data.agents.find((a) => a.agentId === agent.id)?.state ?? "no_ai") !== "no_ai"
+      : false;
+
+  const startArea = (a: FirstArea) => {
+    if (row?.area === a && agent) return setView("agent");
+    start.mutate(
+      { ...areaAgentInput(t, a, org.name), replace: row && !row.firedAt ? row.agentId : null },
+      {
+        onSuccess: async (made) => {
+          const routine = openAreaRoutine(t, a, { agentId: made.agentId, timezone: zone, today: toYmd(new Date()) });
+          if (routine) await api.routines.create(orgId, routine).catch(() => undefined);
+          await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
+          setView("agent");
+        },
+        onError: (e) => toast.show(errorText(t, e), "error"),
+      },
     );
-
-  const stepLine = (n: number) => t("onboarding.flow.stepOf", { n, total: TOTAL });
-
-  /** The view on screen: who stands on the box (and what the right hand says), and the box. */
-  const scene = (): {
-    cast?: ShellFace[];
-    say?: string;
-    marks?: { ids: string[]; state: "walk" | "done" } | null;
-    wide?: boolean;
-    box: ReactNode;
-  } => {
-    if (view === "ask")
-      return {
-        cast: [lodiFace],
-        say: t("onboarding.ask.say"),
-        marks: { ids: [askedOf?.mark ?? "claude"], state: "walk" },
-        wide: true,
-        box: (
-          <AskYourAi
-            orgId={orgId}
-            // A personal workspace's request speaks of the person, never of a workspace named "Personal".
-            variant={personal ? "personal" : "member"}
-            org={org.name}
-            eyebrow={stepLine(2)}
-            onBack={() => setView("hello")}
-            onClient={setAskedOf}
-            skipping={leaving}
-            onSkip={toWorkspace}
-            onProposal={(p, app) => {
-              setProposal(p);
-              if (app) setAskedOf(app);
-              setView("pick");
-            }}
-          />
-        ),
-      };
-
-    if (view === "pick" && proposal) {
-      const appName = askedOf?.name ?? null;
-      // A newer proposal the AI sent while picking stands on the sky too, never the one it replaced.
-      const shownProposal = newerProposal(proposal, firstAgents.data ?? null);
-      const count = shownProposal.options.length;
-      // The agents already there, the right hand last: the new one joins them.
-      const names = namesText(t, [...team.map((a) => the(a.name)), the(lodiName)], NAMES_SHOWN);
-      return {
-        cast: [
-          lodiFace,
-          ...teamFaces.slice(0, FACES_SHOWN),
-          ...shownProposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
-        ],
-        say: appName
-          ? t("onboarding.pick.say", { app: appName, count, n: optionCount(t, count, "ways") })
-          : t("onboarding.pick.sayAny", { count, n: optionCount(t, count, "ways") }),
-        marks: askedOf?.mark ? { ids: [askedOf.mark], state: "done" } : null,
-        wide: true,
-        box: (
-          <FirstAgentPick
-            orgId={orgId}
-            proposal={shownProposal}
-            app={askedOf}
-            eyebrow={
-              appName
-                ? t("onboarding.pick.eyebrow", { app: appName, n: 2, total: TOTAL })
-                : t("onboarding.pick.eyebrowAny", { n: 2, total: TOTAL })
-            }
-            title={t("onboarding.member.pickTitle")}
-            lead={(n) =>
-              t("common.joinSentences", {
-                a: appName
-                  ? t("onboarding.member.found", { app: appName, count: n, n: optionCount(t, n, "tasks") })
-                  : t("onboarding.member.foundAny", { count: n, n: optionCount(t, n, "tasks") }),
-                b: t(personal ? "onboarding.member.joinsPersonal" : "onboarding.member.joins", {
-                  org: org.name,
-                  names,
-                  count: n,
-                }),
-              })
-            }
-            note={t("onboarding.member.pickNote")}
-            onPicked={toAgent}
-          />
-        ),
-      };
+  };
+  const startCustom = async (draft: { name: string; does: string }): Promise<AgentStepAgent | null> => {
+    try {
+      const made = await start.mutateAsync({
+        area: CUSTOM_AREA,
+        name: draft.name,
+        role: draft.does.slice(0, 80),
+        instructions: draft.does,
+        appearance: CUSTOM_LOOK,
+        task: draft.does.slice(0, 500),
+        replace: row && !row.firedAt ? row.agentId : null,
+      });
+      await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
+      return { id: made.agentId, name: draft.name, role: draft.does, look: normalizeAppearance(CUSTOM_LOOK) };
+    } catch (e) {
+      toast.show(errorText(t, e), "error");
+      return null;
     }
+  };
+  const latest = firstAgents.data ?? null;
+  const made = latest && agent && latest.agentId === agent.id ? latest : null;
+  const option = made && made.picked !== null ? (made.options[made.picked] ?? null) : null;
+  const face: ShellFace | null = agent ? { id: agent.id, name: agent.name, look: lookOf(agent) } : null;
+  const busy = start.isPending || pick.isPending || leaving;
 
-    // The hello: the team awake on its daylight sky, beside its computer once it is ready.
-    const computer = setupView(setup.data, setup.dataUpdatedAt)?.phase === "ready";
-    const cover = <Pass day={1} awake cast={[lodiFace, ...teamFaces].slice(0, FACES_SHOWN + 1)} computer={computer} />;
-    const title = first
-      ? t(modeKey(org, "onboarding.member.title"), { org: org.name, first })
-      : t(modeKey(org, "onboarding.member.titleNoName"), { org: org.name });
-    const lead = helloLead(t, i18n.language, me.user.id, team, members.data ?? [], the, makes);
-    // Without the permission to create agents: the hello says so in a line, and its one button opens the workspace.
+  /** The view on screen. */
+  const scene = (): ReactNode => {
     if (!makes)
-      return {
-        box: (
-          <Box
-            cover={cover}
-            title={title}
-            lead={lead}
-            note={<BoxNote icon="lock">{t("onboarding.member.noPermission")}</BoxNote>}
-            acts={
-              <Button
-                variant="primary"
-                kbd={["↵"]}
-                data-enter=""
-                loading={leaving}
-                disabled={leaving}
-                onClick={toWorkspace}
-              >
-                {t(modeKey(org, "onboarding.member.enter"), { org: org.name })}
-              </Button>
-            }
-          />
-        ),
-      };
-    return {
-      box: (
+      return (
         <Box
-          cover={cover}
-          eyebrow={stepLine(1)}
-          title={title}
-          lead={lead}
-          note={
-            <button type="button" className="onbx__back onbx__back--text" disabled={leaving} onClick={toWorkspace}>
-              {t("onboarding.member.later")}
-            </button>
+          cover={
+            <Pass
+              day={1}
+              awake
+              cast={list
+                .filter((a) => !isRightHand(a))
+                .slice(0, 3)
+                .map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }))}
+              computer={false}
+            />
           }
+          title={
+            first
+              ? t(modeKey(org, "onboarding.member.title"), { org: org.name, first })
+              : t(modeKey(org, "onboarding.member.titleNoName"), { org: org.name })
+          }
+          lead={t("onboarding.member.intro")}
+          note={<BoxNote icon="lock">{t("onboarding.member.noPermission")}</BoxNote>}
           acts={
             <Button
               variant="primary"
               kbd={["↵"]}
               data-enter=""
-              loading={leaving && how === "scratch"}
+              loading={leaving}
               disabled={leaving}
-              onClick={() => (how === "ask" ? setView("ask") : toRightHand())}
+              onClick={toWorkspace}
             >
-              {t(how === "ask" ? "onboarding.member.askGo" : "onboarding.member.scratchGo")}
+              {t(modeKey(org, "onboarding.member.enter"), { org: org.name })}
             </Button>
           }
-        >
-          <PickRows<"ask" | "scratch">
-            label={t("onboarding.member.how")}
-            value={how}
-            onChange={setHow}
-            options={[
-              { value: "ask", title: t("onboarding.member.ask"), text: t("onboarding.member.askText") },
+        />
+      );
+    if (shown === "area" && !custom)
+      return (
+        <AreaStep
+          orgId={orgId}
+          org={org.name}
+          personal={personal}
+          variant={personal ? "personal" : "member"}
+          eyebrow={t("onboarding.flow.stepOf", { n: 1, total: TOTAL })}
+          busy={busy}
+          onArea={startArea}
+          onCustom={() => setCustom(true)}
+          onProposal={(p) =>
+            pick.mutate(
+              { proposalId: p.id, index: 0 },
               {
-                value: "scratch",
-                title: t("onboarding.member.scratch"),
-                text: t("onboarding.member.scratchText", agentGrammar(lodiName)),
+                onSuccess: async () => {
+                  await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
+                  setView("agent");
+                },
+                onError: (e) => toast.show(errorText(t, e), "error"),
               },
-            ]}
-          />
-        </Box>
-      ),
-    };
+            )
+          }
+        />
+      );
+    if (shown === "area" || shown === "agent")
+      return (
+        <AgentStep
+          orgId={orgId}
+          org={org.name}
+          agent={
+            shown === "agent" && agent
+              ? { id: agent.id, name: agent.name, role: agent.role, look: lookOf(agent) }
+              : null
+          }
+          area={shown === "area" ? "custom" : area}
+          option={option}
+          eyebrow={t("onboarding.meet.eyebrow", { step: t("onboarding.flow.stepOf", { n: 2, total: TOTAL }) })}
+          busy={leaving}
+          mailBack="welcome"
+          returned={returned}
+          onBack={() => {
+            setCustom(false);
+            setView("area");
+          }}
+          onCreate={async (draft) => {
+            const madeNow = await startCustom(draft);
+            if (madeNow) {
+              setCustom(false);
+              setView("agent");
+            }
+            return madeNow;
+          }}
+          onContinue={() => {
+            // Its first delivery may go once the agent can work (ADR 0256): the apps were connected on the step.
+            if (!agent) return;
+            setLeaving(true);
+            api.firstAgents
+              .keepDelivery(orgId, agent.id)
+              .then(() => {
+                setLeaving(false);
+                if (thinks) toAgent();
+                else setView("ai");
+              })
+              .catch((e: unknown) => {
+                setLeaving(false);
+                toast.show(errorText(t, e), "error");
+              });
+          }}
+        />
+      );
+    // The AI, only when the workspace has none that answers for this agent.
+    const who = agentGrammar(face?.name ?? lodiName);
+    return (
+      <Box
+        cover={<Pass day={1} awake cast={face ? [face] : []} computer={false} />}
+        title={t("onboarding.flow.ai.title")}
+        lead={t("onboarding.flow.ai.lead", who)}
+        note={<BoxNote>{t("arrival.connect.without")}</BoxNote>}
+        acts={
+          thinks ? (
+            <Button variant="primary" kbd={["↵"]} data-enter="" loading={leaving} disabled={leaving} onClick={toAgent}>
+              {t("onboarding.actions.continue")}
+            </Button>
+          ) : (
+            <Button disabled={leaving} onClick={() => setSkipAsk(true)}>
+              {t("onboarding.flow.ai.later")}
+            </Button>
+          )
+        }
+      >
+        <AiStep orgId={orgId} agents={agent ? [agent] : []} />
+        <Dialog
+          open={skipAsk}
+          onOpenChange={setSkipAsk}
+          title={t("onboarding.flow.ai.skipTitle")}
+          description={t("onboarding.flow.ai.skipText", who)}
+          closeLabel={t("common.close")}
+          width={460}
+        >
+          <DialogFooter>
+            <Button loading={leaving} disabled={leaving} onClick={toAgent}>
+              {t("onboarding.flow.ai.skipGo")}
+            </Button>
+            <Button variant="primary" onClick={() => setSkipAsk(false)}>
+              {t("onboarding.flow.ai.connectNow")}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      </Box>
+    );
   };
-  const shownView = scene();
 
+  const body = <Fragment key={key}>{scene()}</Fragment>;
   return (
     <World
-      cast={shownView.cast}
-      say={shownView.say}
-      marks={shownView.marks}
-      wide={shownView.wide}
       start={<Logo size={22} />}
       end={
         <Menu
@@ -305,55 +340,29 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
         ref={mainRef}
         onKeyDown={(e) => {
           // Enter presses the view's button that shows ↵, except where Enter means something else: a button or a link
-          // of its own, a box of text (a pasted answer is a new line there), a dialog, a list.
+          // of its own, a box of text, a dialog, a list.
           const el = e.target as HTMLElement;
           if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
-          // On an answer of the question too: a radio takes no Enter of its own (it stops it, though).
-          const answer = el.matches("[role='radio']");
-          if (!answer && e.defaultPrevented) return;
-          if (!answer && el.closest("button, a, textarea, [role='dialog'], [role='listbox'], [role='combobox']"))
-            return;
+          if (e.defaultPrevented) return;
+          if (el.closest("button, a, textarea, [role='dialog'], [role='listbox'], [role='combobox']")) return;
           const go = e.currentTarget.querySelector<HTMLButtonElement>("button[data-enter]:not(:disabled)");
           if (!go) return;
           e.preventDefault();
           go.click();
         }}
       >
-        {/* The ask and the pick read the workspace through its context, as the owner's onboarding does. */}
-        <OrgProvider org={org} me={me}>
-          <Fragment key={view}>{shownView.box}</Fragment>
-        </OrgProvider>
+        {/* The steps read the workspace through its context, as the owner's onboarding does; the AI's Connect dialog
+            too. */}
+        {shown === "ai" ? (
+          <AiHost org={org} me={me}>
+            {body}
+          </AiHost>
+        ) : (
+          <OrgProvider org={org} me={me}>
+            {body}
+          </OrgProvider>
+        )}
       </main>
     </World>
   );
-}
-
-/**
- * The hello's lead: what people do here, who brought an agent (the first one someone else answers for, by their first
- * name, with its role), then the question, for whoever may answer it (`ask`). With no such agent, the sentence about
- * it is left out.
- */
-function helloLead(
-  t: TFunction,
-  locale: string,
-  meId: string,
-  team: readonly Agent[],
-  people: readonly { userId: string; name: string }[],
-  the: (name: string) => string,
-  ask: boolean,
-): string {
-  const nameOf = (userId: string) => firstName(people.find((p) => p.userId === userId)?.name ?? "");
-  const brought = team.find((a) => a.ownerUserId && a.ownerUserId !== meId && nameOf(a.ownerUserId));
-  const person = brought?.ownerUserId ? nameOf(brought.ownerUserId) : "";
-  const role = brought?.role.trim() ?? "";
-  const sentences = [
-    t("onboarding.member.intro"),
-    brought && person
-      ? role
-        ? t("onboarding.member.brought", { person, agent: the(brought.name), role: roleWord(role, locale) })
-        : t("onboarding.member.broughtNoRole", { person, agent: the(brought.name) })
-      : null,
-    ask ? t("onboarding.member.question") : null,
-  ].filter((s): s is string => Boolean(s));
-  return sentences.reduce((a, b) => t("common.joinSentences", { a, b }));
 }

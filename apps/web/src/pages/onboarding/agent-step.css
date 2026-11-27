@@ -1,0 +1,103 @@
+/*
+ * Meeting the first agent (AgentStep.tsx): the label over its apps, then the apps as flat rows (a hairline between
+ * them, no card and no tint): the app's mark, its name on the first line with what ends that line (Connect, or
+ * "Connected" in the ok color as plain text), its account and when its routine runs under it. "Other": the kit's
+ * fields, then the apps found.
+ */
+.onb-apps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.onb-apps > .ac-searchfield {
+  margin: 6px 0 2px;
+}
+.onb-apps__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.onb-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.onb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  box-sizing: border-box;
+  padding: 12px 0;
+}
+.onb-rows > .onb-row + .onb-row {
+  border-top: 1px solid var(--line);
+}
+.onb-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* The name's line holds what ends it (a button, a state in its color): never the row's middle. */
+.onb-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  font-size: 15px;
+  line-height: 22px;
+}
+.onb-row__name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.onb-row__head > .ac-btn,
+.onb-row__head > .onb-ok {
+  flex: none;
+}
+.onb-row__sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+.onb-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ok);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.onb-row--more {
+  min-height: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+}
+/* "Another app": its plus in the marks' column, its words where the apps' names start. */
+.onb-row--more .ac-link--action {
+  gap: 0;
+}
+.onb-row--more .ac-link--action > .ac-icon {
+  margin-inline: 10px 22px;
+}
+.onb-rows__none {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.onb-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-gap, 16px);
+}
+.onb-form > .onb-rows {
+  margin-top: -8px;
+}

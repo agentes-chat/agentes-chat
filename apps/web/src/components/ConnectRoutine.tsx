@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useActors } from "@/components/actors";
+import { useConnectHere } from "@/components/connect-here";
 import { useOrg } from "@/components/org-context";
 import { ruleSentence } from "@/lib/recurrence";
 import { useToast } from "@/lib/toast";
@@ -66,7 +67,10 @@ export function useRoutineOffer(
   const [on, setOn] = useState(true);
   const [picked, setAgent] = useState<string | null>(null);
   const [rule, setRule] = useState(0);
-  const agent = mine.find((a) => a.id === picked) ?? (routine ? suggestedAgent(mine) : null);
+  // Opened for one agent (the onboarding's, ADR 0256): that one first, while it may run it.
+  const here = useConnectHere().agentId;
+  const agent =
+    mine.find((a) => a.id === picked) ?? (routine ? (mine.find((a) => a.id === here) ?? suggestedAgent(mine)) : null);
   return { routine, loading, agents: mine, agent, on, rule, setOn, setAgent, setRule };
 }
 
@@ -84,7 +88,8 @@ function useZone() {
 
 /**
  * Makes the routine and starts its first run at once, then says so with Undo. It outlives the dialog that asked for
- * it (the dialog closes on Done): the toast and the list are the app's, not the dialog's.
+ * it (the dialog closes on Done): the toast and the list are the app's, not the dialog's. Opened from the onboarding
+ * (`firstRunLater`), it only makes it: the first delivery is its first run (ADR 0256).
  */
 export function useStartRoutine() {
   const { t } = useTranslation();
@@ -93,6 +98,8 @@ export function useStartRoutine() {
   const qc = useQueryClient();
   const toast = useToast();
   const timezone = useZone();
+  // The onboarding's agent step: its first run waits for the first delivery, and its row says it was made.
+  const later = useConnectHere().firstRunLater === true;
   return (offer: RoutineOffer, mailbox?: string) => {
     const { routine, agent } = offer;
     if (!routine || !agent || !offer.on) return;
@@ -108,8 +115,9 @@ export function useStartRoutine() {
     void (async () => {
       try {
         const made = await api.routines.create(org.id, input);
-        await api.routines.runNow(org.id, made.id).catch(() => undefined);
         void qc.invalidateQueries({ queryKey: keys.routines(org.id) });
+        if (later) return;
+        await api.routines.runNow(org.id, made.id).catch(() => undefined);
         toast.show(
           t("connectFlow.routine.created", { name: made.name }),
           "success",

@@ -60,6 +60,7 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 import { ConnectedRow } from "@/components/ConnectedRow";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { offerTaken, RoutineOfferRow, useRoutineOffer, useStartRoutine } from "@/components/ConnectRoutine";
+import { useConnectHere } from "@/components/connect-here";
 import { FlowTitle } from "@/components/FlowTitle";
 import { LoadingList, useStepText } from "@/components/Loading";
 import { MailRulesPanel } from "@/components/MailRules";
@@ -207,6 +208,7 @@ function OAuthStep({ provider, onClose }: { provider: "gmail" | "outlook"; onClo
   const { t } = useTranslation();
   const { org } = useOrg();
   const { connectComposio } = useMailAction(org.id);
+  const back = useConnectHere().mailBack;
   const company = t(`mail.company.${provider}`);
   return (
     <>
@@ -224,7 +226,7 @@ function OAuthStep({ provider, onClose }: { provider: "gmail" | "outlook"; onClo
           loading={connectComposio.isPending}
           onClick={() =>
             connectComposio.mutate(
-              { provider, desktop: takesConnectorReturn() },
+              { provider, desktop: takesConnectorReturn(), ...(back ? { back } : {}) },
               { onSuccess: (started) => navigateAway(started.redirectUrl) },
             )
           }
@@ -758,7 +760,9 @@ function WhoStep({
     if (may.gives) return LEVELS;
     return may.removes ? LEVELS.slice(0, LEVELS.indexOf(current(a.id)) + 1) : [current(a.id)];
   };
-  const [who, setWho] = useState<Record<string, Level>>({});
+  // Opened for one agent (the onboarding's, ADR 0256): it may write here from the start, as its work needs drafts.
+  const forAgent = useConnectHere().agentId;
+  const [who, setWho] = useState<Record<string, Level>>(() => (forAgent ? { [forAgent]: "write" } : {}));
   const levelOf = (agentId: string) => who[agentId] ?? current(agentId);
   const levelLabel = (l: Level) => t(`access.level.${l}`);
   const granted = list.filter((a) => levelOf(a.id) !== "none");

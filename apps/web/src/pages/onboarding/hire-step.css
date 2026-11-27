@@ -1,30 +1,67 @@
 /*
- * "Hire the team" (HireStep.tsx): who is hired, one row each (the face on the name's line, the role beside the name,
- * what it does under it), then the plan in two lines: its name with the way to every plan, its price at the end, and
- * what it includes under them.
+ * The plan step (HireStep.tsx): the band's empty places and the dotted pixels between them, the line of what comes
+ * later under the lead, then the plan in three lines: its name and price on one line, what it includes, and the way to
+ * every plan.
  */
-.onb-roster {
+.onb-pass .team-scene__row.onb-grow {
+  gap: 8px;
+}
+.onb-place.team-scene__mark {
+  width: 40px;
+  height: 40px;
+  opacity: 0.62;
+  animation: none;
+}
+.onb-place.team-scene__mark[data-far] {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+/* Dotted pixels between them: 2px squares, 4px apart, white on the night. */
+.onb-dots {
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 2px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.5) 2px, transparent 2px) 0 0 / 6px 2px repeat-x;
+}
+@media (max-width: 480px) {
+  .onb-pass .team-scene__row.onb-grow {
+    gap: 6px;
+  }
+  .onb-dots {
+    width: 14px;
+  }
+  .onb-place.team-scene__mark {
+    width: 34px;
+    height: 34px;
+  }
+  .onb-place.team-scene__mark[data-far] {
+    width: 28px;
+    height: 28px;
+  }
+}
+/* What the next agents could be, under the lead: muted words, each icon before its name. */
+.onb-next-areas {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-}
-/* Each one a MediaRow: a 36px face on the name's line, the role beside the name, what it does under them. */
-.onb-roster > li {
-  --mediarow-face: 36px;
-  row-gap: 2px;
-}
-.onb-roster .ac-mediarow__head {
-  font-size: 15px;
-}
-.onb-roster .ac-mediarow__body {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin-top: 8px;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 20px;
-  text-wrap: pretty;
-  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.onb-next-areas__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.onb-next-areas__item > .ac-icon {
+  color: var(--faint);
+}
+.onb-next-areas__sep {
+  margin-inline-start: 2px;
 }
 .onb-offer {
   display: flex;
@@ -33,20 +70,18 @@
   padding-top: 18px;
   border-top: 1px solid var(--line);
 }
-/* The price beside the plan's name while both fit, else under it: a long name never squeezed to a word a line. */
+/* The plan's name and its price on one line, on their baseline; the price under the name only when both don't fit. */
 .onb-offer__head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px 16px;
 }
 .onb-offer__name {
   display: flex;
-  flex: 1 1 14em;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  flex: 0 1 auto;
+  align-items: center;
   min-width: 0;
   font-size: 16px;
   line-height: 22px;
@@ -54,9 +89,6 @@
 .onb-offer__name b {
   font-weight: 650;
   overflow-wrap: anywhere;
-}
-.onb-offer__name .onb__link {
-  font-size: 13.5px;
 }
 /* A long price (taxes, another currency) wraps at its spaces, never past the box. */
 .onb-offer__price {
@@ -84,8 +116,8 @@
   line-height: 19px;
   text-wrap: pretty;
 }
-
-/* Who is hired, then the plan under a hairline: the box's own rhythm between them. */
-.onbx__body:has(> .onb-roster) {
-  row-gap: 40px;
+.onb-offer .onb-offer__all {
+  align-self: flex-start;
+  margin-top: -4px;
+  font-size: 13.5px;
 }

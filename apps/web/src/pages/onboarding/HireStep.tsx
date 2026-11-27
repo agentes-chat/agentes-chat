@@ -1,47 +1,65 @@
-import type { Agent, FirstAgentOption } from "@agenteschat/client";
-import { useRoutines } from "@agenteschat/client";
 import type { PlanOffer } from "@agenteschat/client/lib/billing";
-import { joinNames, lowerFirst } from "@agenteschat/client/lib/format";
+import { type FirstArea, nextAreas } from "@agenteschat/client/lib/first-areas";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { firstJob } from "@agenteschat/client/lib/onboarding";
-import { Button, HintLine, Spinner } from "@agenteschat/ui";
-import type { TFunction } from "i18next";
-import type { ReactNode } from "react";
+import { Button, HintLine, Icon, PixelSky, Spinner, teamSky } from "@agenteschat/ui";
+import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenBilling } from "@/components/BillingLinkButton";
-import { lookOf } from "@/lib/look";
-import { Box, Pass, type ShellFace } from "./Shell";
+import { AREA_ICON } from "./areas";
+import { Box, type ShellFace } from "./Shell";
 import "./hire-step.css";
 
 /*
- * "Hire the team" (ADR 0162, amended for the first agent asked of the person's own AI): the plan step of a workspace
- * waiting for its first plan (agentes.chat Cloud). The team asleep beside its computer at night, who is being hired (the
- * first agent with its role and what it does; the right hand as the agents' HR), and the plan the billing service
- * recommends in two lines: its name and price, then what it includes. "Not now" leaves the plan for later; the button
- * opens the plan's Checkout. Back from paying (`confirming`), the payment said as received until the hold lifts.
+ * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27) of a workspace waiting for its first plan
+ * (agentes.chat Cloud, ADR 0079): the first agent asleep at night in the middle of the places the next ones can take,
+ * what it delivers today and that more agents come later, then the plan the billing service recommends: its name and
+ * price on one line, what it includes, and the way to every plan. "Not now" leaves the plan for later; the button opens
+ * the plan's Checkout. Back from paying (`confirming`), the payment said as received until the hold lifts. The plan's
+ * facts are the billing service's list, never this server's.
  */
-
-/** How many agents the roster lists besides the right hand (an import may bring more). */
-const ROSTER_MAX = 4;
-
-/** An agent's name with the article its language gives it ("o Caio", "a Nina"; "Caio" in English). */
-const the = (t: TFunction, name: string) => t("onboarding.hire.the", agentGrammar(name));
 
 /**
- * A role inside a sentence ("for billing", "para o seu dia"): its first letter lowered by the shared helper (ADR 0122),
- * which keeps an acronym or a name ("SEO", "GitHub") and German's capitalized nouns as they are. A role that opens
- * with a one-letter word ("O seu dia") is lowered as well.
+ * The plan's band: the night sky, the first agent asleep in the middle, and four empty places around it in the kit's
+ * empty-slot look (the outer two smaller and fainter), each with another area's icon, joined to it by dotted pixels.
+ * Decorative: no words on the sky.
  */
-export function roleWord(role: string, locale: string) {
-  return lowerFirst(role.trim(), locale);
+function HireBand({ who, next }: { who: ShellFace; next: readonly FirstArea[] }) {
+  const options = useMemo(() => teamSky(0, 0), []);
+  const place = (area: FirstArea | undefined, far: boolean) =>
+    area && (
+      <span className="team-scene__mark team-scene__mark--slot onb-place" data-far={far ? "" : undefined}>
+        <Icon name={AREA_ICON[area]} size={far ? 14 : 16} />
+      </span>
+    );
+  const dots = <span className="onb-dots" />;
+  return (
+    <div className="onb-pass" aria-hidden="true">
+      <div className="team-scene team-scene--band onb-pass__sky">
+        <PixelSky options={options} />
+        <div className="team-scene__row onb-grow">
+          {place(next[0], true)}
+          {next[0] && dots}
+          {place(next[1], false)}
+          {next[1] && dots}
+          <span className="team-scene__agent" data-lead="" style={{ "--i": 0 } as CSSProperties}>
+            <AgentAvatar name={who.name} appearance={who.look} size="lg" framed={false} state="sleeping" />
+          </span>
+          {next[2] && dots}
+          {place(next[2], false)}
+          {next[3] && dots}
+          {place(next[3], true)}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function HireTeam({
   orgId,
-  lodi,
-  team,
-  option,
+  org,
+  agent,
+  area,
   offer,
   personal,
   confirming,
@@ -50,12 +68,12 @@ export function HireTeam({
   eyebrow,
 }: {
   orgId: string;
-  /** The right hand, standing first. */
-  lodi: ShellFace;
-  /** The agents besides the right hand, in the order they were made: the first agent first. */
-  team: readonly Agent[];
-  /** The option the first agent was picked from, when it was: its role and its first task say what it does. */
-  option: FirstAgentOption | null;
+  /** The workspace's name. */
+  org: string;
+  /** The first agent. */
+  agent: ShellFace;
+  /** The work it was made for, when it was made from one: its first delivery in the lead. */
+  area: FirstArea | null;
   offer: PlanOffer | null;
   personal: boolean;
   /** Back from paying: the payment is being confirmed. */
@@ -65,61 +83,47 @@ export function HireTeam({
   onSkip: () => void;
   eyebrow?: ReactNode;
 }) {
-  const { t, i18n } = useTranslation();
-  const routines = useRoutines(orgId).data;
+  const { t } = useTranslation();
   const hire = useOpenBilling(orgId, "onboarding", offer?.key);
   const allPlans = useOpenBilling(orgId, "onboarding");
-  const [first] = team;
-  const hired = team.slice(0, ROSTER_MAX);
-  const faces: ShellFace[] = [lodi, ...hired.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }))];
-
-  // Who is hired, in words: the first agent for its role, the ones an import brought by name, or the right hand alone.
-  const role = (option?.role ?? first?.role ?? "").trim();
-  const lead = !first
-    ? t("onboarding.hire.leadAlone", agentGrammar(lodi.name))
-    : team.length > 1
-      ? t("onboarding.hire.leadMany", {
-          names: joinNames(
-            hired.map((a) => the(t, a.name)),
-            t,
-          ),
-          lodi: the(t, lodi.name),
-        })
-      : t(role ? "onboarding.hire.lead" : "onboarding.hire.leadNoRole", {
-          ...agentGrammar(first.name),
-          agent: the(t, first.name),
-          lodi: the(t, lodi.name),
-          role: roleWord(role, i18n.language),
-        });
-  // A team hires its team; a personal workspace, its one agent by name (the right hand when it starts alone).
-  const one = team.length <= 1 ? (first?.name ?? lodi.name) : null;
-  const title = !personal
-    ? t("onboarding.hire.title")
-    : one
-      ? t("onboarding.hire.titleOne", agentGrammar(one))
-      : t("onboarding.hire.titlePersonal");
-  const cta = !personal
-    ? t("onboarding.hire.cta")
-    : one
-      ? t("onboarding.hire.ctaOne", agentGrammar(one))
-      : t("onboarding.hire.ctaPersonal");
-
-  /** What an agent does, in one line: the first agent's first task, else its first routine (when it isn't its role). */
-  const lineOf = (a: Agent) => {
-    if (a.id === first?.id && option?.tasks[0]) return option.tasks[0];
-    const job = firstJob(a, routines);
-    return job && job !== a.role ? job : "";
-  };
+  const who = agentGrammar(agent.name);
+  const the = t("onboarding.hire.the", who);
+  const next = nextAreas(personal, area);
+  const title = personal
+    ? t("onboarding.hire.titlePersonal", { agent: the })
+    : t("onboarding.hire.title", { org, agent: the });
+  const lead = area
+    ? t("onboarding.hire.lead", { ...who, today: t(`onboarding.areas.list.${area}.today`, { org }) })
+    : t("onboarding.hire.leadAny", who);
   // The people it includes only where people are invited: a personal workspace is its owner's alone.
-  const fine =
-    !personal && offer?.people ? t("onboarding.hire.fine", { count: offer.people }) : t("onboarding.hire.fineAny");
+  const fine = personal
+    ? t("onboarding.hire.finePersonal")
+    : offer?.people
+      ? t("onboarding.hire.fine", { count: offer.people })
+      : t("onboarding.hire.fineAny");
 
   return (
     <Box
-      cover={<Pass day={0} awake={false} cast={faces} />}
+      cover={<HireBand who={agent} next={next} />}
       eyebrow={eyebrow}
       title={title}
-      lead={lead}
+      lead={
+        <>
+          {lead}
+          {/* What the next agents could be, in words under the lead: each icon before its name. */}
+          <span className="onb-next-areas">
+            <span>{t("onboarding.hire.next")}</span>
+            {next.map((a, i) => (
+              <span key={a} className="onb-next-areas__item">
+                <Icon name={AREA_ICON[a]} size={14} />
+                {t(`onboarding.areas.list.${a}.title`)}
+                {/* The dot ends its name's piece, so a wrapped line never starts with one. */}
+                {i < next.length - 1 && <span className="onb-next-areas__sep">·</span>}
+              </span>
+            ))}
+          </span>
+        </>
+      }
       note={
         confirming ? (
           // Back from paying: the billing service lifts the hold on its next pass, and the next step opens then.
@@ -148,34 +152,11 @@ export function HireTeam({
             disabled={skipping}
             onClick={() => hire.mutate()}
           >
-            {cta}
+            {offer ? t("onboarding.hire.subscribe", { name: offer.name }) : t("onboarding.hire.subscribeAny")}
           </Button>
         )
       }
     >
-      {first && (
-        <ul className="onb-roster">
-          {[...hired, null].map((a) => {
-            // The right hand last, as what it is to the person.
-            const who = a ? { id: a.id, name: a.name, look: lookOf(a) } : lodi;
-            const job = a ? (a.id === first.id && option ? option.role : a.role) : t("onboarding.hire.rightHand");
-            const line = a ? lineOf(a) : t("onboarding.hire.rightHandLine");
-            // A MediaRow: the face on the name's line, what it does under them at the row's full width.
-            return (
-              <li key={who.id} className="ac-mediarow">
-                <span className="ac-mediarow__face">
-                  <AgentAvatar name={who.name} appearance={who.look} size="sm" framed={false} />
-                </span>
-                <span className="ac-mediarow__head">
-                  <b>{who.name}</b>
-                  {job && <span className="ac-mediarow__meta">{job}</span>}
-                </span>
-                {line && <span className="ac-mediarow__body">{line}</span>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
       <div className="onb-offer">
         <div className="onb-offer__head">
           <span className="onb-offer__name">
@@ -183,16 +164,6 @@ export function HireTeam({
             <HintLine name={t("hosting.whyPaid")} hint={t("hosting.whyPaidText")}>
               <b>{offer ? t("onboarding.hire.plan", { name: offer.name }) : t("onboarding.flow.plan.generic")}</b>
             </HintLine>
-            {offer && (
-              <button
-                type="button"
-                className="ac-link onb__link"
-                disabled={allPlans.isPending || skipping}
-                onClick={() => allPlans.mutate()}
-              >
-                {t("onboarding.flow.plan.all")}
-              </button>
-            )}
           </span>
           {offer?.price && (
             <span className="onb-offer__price">
@@ -202,6 +173,16 @@ export function HireTeam({
           )}
         </div>
         <p className="onb-offer__fine">{fine}</p>
+        {offer && (
+          <button
+            type="button"
+            className="ac-link onb__link onb-offer__all"
+            disabled={allPlans.isPending || skipping}
+            onClick={() => allPlans.mutate()}
+          >
+            {t("onboarding.flow.plan.all")}
+          </button>
+        )}
       </div>
     </Box>
   );

@@ -92,14 +92,7 @@ export function ConnectChoices({
         ...FIRST.map(plan),
         ...(others ? OTHERS.map(plan) : [more]),
         ...(mayAddKey
-          ? [
-              card(
-                "key",
-                <Icon name="key" size={20} />,
-                t("connectAi.key.title"),
-                t("connectAi.key.sub"),
-              ),
-            ]
+          ? [card("key", <Icon name="key" size={20} />, t("connectAi.key.title"), t("connectAi.key.sub"))]
           : []),
         card(
           FREE,
