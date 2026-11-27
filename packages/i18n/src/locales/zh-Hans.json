@@ -17871,7 +17871,7 @@
         "title": "更新到 {{version}}",
         "docker": "使用 Docker",
         "native": "不使用 Docker",
-        "nativeHelp": "将该版本的安装包解压到 ~/.agentes/app，然后运行：",
+        "nativeHelp": "将该版本的安装包解压到 `~/.agentes/app`，然后运行：",
         "desktop": "在这台电脑的桌面应用中运行？它会随应用一起更新。",
         "notice": "此服务器的 agentes.chat {{version}} 已发布",
         "how": "如何更新"

@@ -19624,7 +19624,7 @@
         "title": "Zaktualizuj do {{version}}",
         "docker": "Z Dockerem",
         "native": "Bez Dockera",
-        "nativeHelp": "Rozpakuj pakiet wersji do ~/.agentes/app, a potem uruchom:",
+        "nativeHelp": "Rozpakuj pakiet wersji do `~/.agentes/app`, a potem uruchom:",
         "desktop": "Działa w aplikacji na komputer na tym komputerze? Aktualizuje się razem z aplikacją.",
         "notice": "Wyszedł agentes.chat {{version}} dla tego serwera",
         "how": "Jak zaktualizować"

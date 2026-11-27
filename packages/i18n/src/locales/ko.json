@@ -17795,7 +17795,7 @@
         "title": "{{version}} 버전으로 업데이트",
         "docker": "Docker 사용 시",
         "native": "Docker 없이",
-        "nativeHelp": "릴리스 패키지를 ~/.agentes/app 에 압축 해제한 다음 실행하세요.",
+        "nativeHelp": "릴리스 패키지를 `~/.agentes/app` 에 압축 해제한 다음 실행하세요.",
         "desktop": "이 컴퓨터의 데스크톱 앱에서 실행 중인가요? 앱과 함께 업데이트돼요.",
         "notice": "이 서버용 agentes.chat {{version}} 버전이 나왔어요",
         "how": "업데이트 방법"

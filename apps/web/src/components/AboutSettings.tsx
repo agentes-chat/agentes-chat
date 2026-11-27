@@ -3,7 +3,7 @@ import { LICENSE_URL, PUBLIC_SOURCE_URL } from "@agenteschat/client/lib/about";
 import { dockerUpgrade, nativeUpgrade, type ServerRelease } from "@agenteschat/client/lib/server-release";
 import { shownAddress } from "@agenteschat/client/lib/sites";
 import { DOCS_SITE } from "@agenteschat/i18n/docs";
-import { Card, CardHeader, Icon } from "@agenteschat/ui";
+import { Card, CardHeader, codeAndBold, Icon } from "@agenteschat/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
@@ -112,7 +112,7 @@ function UpdateCard({ release }: { release: ServerRelease }) {
         </div>
         <div className="about-update__way">
           <h3 className="about-update__name">{t("settings.about.update.native")}</h3>
-          <p className="about-update__help">{t("settings.about.update.nativeHelp")}</p>
+          <p className="about-update__help">{codeAndBold(t("settings.about.update.nativeHelp"))}</p>
           <CommandBlock command={nativeUpgrade(release.version)} />
         </div>
       </div>

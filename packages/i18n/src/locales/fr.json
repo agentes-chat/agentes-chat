@@ -19021,7 +19021,7 @@
         "title": "Passer à la {{version}}",
         "docker": "Avec Docker",
         "native": "Sans Docker",
-        "nativeHelp": "Extrayez le paquet de la version dans ~/.agentes/app, puis lancez :",
+        "nativeHelp": "Extrayez le paquet de la version dans `~/.agentes/app`, puis lancez :",
         "desktop": "Il tourne dans l'app de bureau de cet ordinateur ? Il se met à jour avec l'app.",
         "notice": "agentes.chat {{version}} est sorti pour ce serveur",
         "how": "Comment mettre à jour"

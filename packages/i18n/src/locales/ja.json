@@ -17803,7 +17803,7 @@
         "title": "{{version}} に更新",
         "docker": "Docker を使う場合",
         "native": "Docker を使わない場合",
-        "nativeHelp": "リリースのパッケージを ~/.agentes/app に展開してから、次を実行します。",
+        "nativeHelp": "リリースのパッケージを `~/.agentes/app` に展開してから、次を実行します。",
         "desktop": "このコンピューターのデスクトップアプリで動かしていますか？ アプリと一緒に更新されます。",
         "notice": "このサーバー向けに agentes.chat {{version}} が公開されました",
         "how": "更新の方法"

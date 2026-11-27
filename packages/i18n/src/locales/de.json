@@ -18437,7 +18437,7 @@
         "title": "Auf {{version}} aktualisieren",
         "docker": "Mit Docker",
         "native": "Ohne Docker",
-        "nativeHelp": "Entpacke das Paket der Version in ~/.agentes/app und führe dann aus:",
+        "nativeHelp": "Entpacke das Paket der Version in `~/.agentes/app` und führe dann aus:",
         "desktop": "Läuft in der Desktop-App auf diesem Computer? Sie aktualisiert sich mit der App.",
         "notice": "agentes.chat {{version}} ist für diesen Server erschienen",
         "how": "So aktualisierst du"

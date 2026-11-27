@@ -165,7 +165,7 @@ describe("finding the settings", () => {
     await go("settings/about", state);
     expect(screen().getByRole("heading", { level: 2, name: "Atualize para a 0.1.19" })).toBeTruthy();
     expect(screen().getByRole("link", { name: "Saiu a 0.1.19" }).getAttribute("href")).toBe(release.url);
-    const commands = [...document.querySelectorAll(".about-update code")].map((c) => c.textContent);
+    const commands = [...document.querySelectorAll(".about-update .machine-command code")].map((c) => c.textContent);
     expect(commands).toEqual([
       "curl -fsSLO https://raw.githubusercontent.com/agentes-chat/agentes-chat/v0.1.19/docker-compose.yml\ndocker compose pull\ndocker compose up -d",
       "~/.agentes/app/0.1.19/bin/agentes-server service install --data ~/.agentes",

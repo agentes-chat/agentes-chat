@@ -45319,7 +45319,7 @@
     "value": "Without Docker"
   },
   "settings.about.update.nativeHelp": {
-    "value": "Extract the release's package into ~/.agentes/app, then run:"
+    "value": "Extract the release's package into `~/.agentes/app`, then run:"
   },
   "settings.about.update.desktop": {
     "value": "Runs in the desktop app on this computer? It updates with the app."

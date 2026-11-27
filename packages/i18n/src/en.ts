@@ -19135,7 +19135,7 @@ export const en = {
         title: "Update to {{version}}",
         docker: "With Docker",
         native: "Without Docker",
-        nativeHelp: "Extract the release's package into ~/.agentes/app, then run:",
+        nativeHelp: "Extract the release's package into `~/.agentes/app`, then run:",
         desktop: "Runs in the desktop app on this computer? It updates with the app.",
         /** The quiet notice, once per release, for who configures the workspace. */
         notice: "agentes.chat {{version}} is out for this server",

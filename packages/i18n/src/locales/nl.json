@@ -18504,7 +18504,7 @@
         "title": "Bijwerken naar {{version}}",
         "docker": "Met Docker",
         "native": "Zonder Docker",
-        "nativeHelp": "Pak het pakket van de versie uit in ~/.agentes/app en voer dan uit:",
+        "nativeHelp": "Pak het pakket van de versie uit in `~/.agentes/app` en voer dan uit:",
         "desktop": "Draait hij in de desktop-app op deze computer? Hij werkt zichzelf bij met de app.",
         "notice": "agentes.chat {{version}} is uit voor deze server",
         "how": "Zo werk je bij"

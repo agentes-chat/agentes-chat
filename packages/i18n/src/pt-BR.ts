@@ -18939,7 +18939,7 @@ export const ptBR = {
         title: "Atualize para a {{version}}",
         docker: "Com Docker",
         native: "Sem Docker",
-        nativeHelp: "Extraia o pacote da versão em ~/.agentes/app e rode:",
+        nativeHelp: "Extraia o pacote da versão em `~/.agentes/app` e rode:",
         desktop: "Roda no app para computador, nesta máquina? Ele se atualiza com o app.",
         notice: "Saiu o agentes.chat {{version}} para este servidor",
         how: "Como atualizar",

@@ -18365,7 +18365,7 @@
         "title": "{{version}} sürümüne güncelle",
         "docker": "Docker ile",
         "native": "Docker olmadan",
-        "nativeHelp": "Sürümün paketini ~/.agentes/app içine çıkarın, ardından çalıştırın:",
+        "nativeHelp": "Sürümün paketini `~/.agentes/app` içine çıkarın, ardından çalıştırın:",
         "desktop": "Bu bilgisayardaki masaüstü uygulamasında mı çalışıyor? Uygulamayla birlikte güncellenir.",
         "notice": "Bu sunucu için agentes.chat {{version}} çıktı",
         "how": "Nasıl güncellenir"
