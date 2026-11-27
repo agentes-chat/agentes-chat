@@ -1,8 +1,9 @@
-import type { IssueProject, IssueProjectRef, IssueProjects } from "@agenteschat/client";
+import type { IssueProject, IssueProjectDetail, IssueProjectRef, IssueProjects } from "@agenteschat/client";
 import { useIssueProjectAction, useIssueProjects } from "@agenteschat/client";
 import {
   NO_PROJECT,
   PROJECT_COLORS,
+  PROJECT_DESCRIPTION_MAX,
   PROJECT_NAME_MAX,
   pickableProjects,
   projectFilterRows,
@@ -19,6 +20,7 @@ import {
   type FilterOption,
   Input,
   Locked,
+  Textarea,
 } from "@agenteschat/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -31,8 +33,9 @@ const freeColor = (projects: IssueProjectRef[]) =>
   PROJECT_COLORS.find((c) => !projects.some((p) => p.color === c)) ?? PROJECT_COLORS[0] ?? "graphite";
 
 /**
- * "Novo projeto" and "Editar projeto": a name and one of the roles' colors. Mounted while open. `onDone` gets the
- * project as saved, so whoever opened it from a task's field can put the task in it.
+ * "Novo projeto" and "Editar projeto": a name, one of the roles' colors and, optionally, what it is for and its
+ * GitHub repository (ADR 0259). Mounted while open. `onDone` gets the project as saved, so whoever opened it from a
+ * task's field can put the task in it.
  */
 export function ProjectDialog({
   project,
@@ -40,7 +43,7 @@ export function ProjectDialog({
   onDone,
 }: {
   /** The project to edit. None: a new one. */
-  project?: IssueProjectRef;
+  project?: IssueProjectRef & Partial<Pick<IssueProjectDetail, "description" | "githubRepo">>;
   onClose: () => void;
   onDone?: (project: IssueProjectRef) => void;
 }) {
@@ -50,13 +53,28 @@ export function ProjectDialog({
   const projects = useIssueProjects(org.id).data?.projects ?? [];
   const [name, setName] = useState(project?.name ?? "");
   const [picked, setPicked] = useState<string | null>(project?.color ?? null);
+  const [description, setDescription] = useState(project?.description ?? "");
+  const [repo, setRepo] = useState(project?.githubRepo ?? "");
   const color = picked ?? freeColor(projects);
   const save = () => {
     const value = name.trim();
     if (!value || action.isPending) return;
-    if (project && value === project.name && color === project.color) return onClose();
+    // Empty is how a person clears either: the server stores null.
+    const text = description.trim();
+    const githubRepo = repo.trim();
+    if (
+      project &&
+      value === project.name &&
+      color === project.color &&
+      text === (project.description ?? "") &&
+      githubRepo === (project.githubRepo ?? "")
+    ) {
+      return onClose();
+    }
     action.mutate(
-      project ? { type: "update", projectId: project.id, name: value, color } : { type: "create", name: value, color },
+      project
+        ? { type: "update", projectId: project.id, name: value, color, description: text, githubRepo }
+        : { type: "create", name: value, color, description: text, githubRepo },
       {
         onSuccess: (saved) => {
           if (saved) onDone?.(saved);
@@ -89,6 +107,29 @@ export function ProjectDialog({
                 maxLength={PROJECT_NAME_MAX}
                 autoComplete="off"
                 autoFocus
+              />
+            </Field>
+            <Field label={t("issues.projects.description")} id="issue-project-description">
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={PROJECT_DESCRIPTION_MAX}
+                rows={3}
+                placeholder={t("issues.projects.descriptionPlaceholder")}
+              />
+            </Field>
+            <Field
+              label={t("issues.projects.repository")}
+              id="issue-project-repo"
+              example={t("issues.projects.repositoryExample")}
+              hint={{ name: t("issues.projects.repository"), text: t("issues.projects.repositoryHint") }}
+            >
+              <Input
+                value={repo}
+                onChange={(e) => setRepo(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </Field>
             <div className="roles-colors" role="radiogroup" aria-label={t("rolesPage.color")}>

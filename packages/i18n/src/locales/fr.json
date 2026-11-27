@@ -2252,6 +2252,31 @@
       "why": "Même avec l'onglet fermé. Modifiez-le quand vous voulez dans <link>Notifications</link>."
     }
   },
+  "projectsPage": {
+    "title": "Projets",
+    "subtitle": "Dépôt et avancement de chaque projet",
+    "new": "Nouveau projet",
+    "columns": {
+      "project": "Projet",
+      "repository": "Dépôt",
+      "tasks": "Tâches",
+      "done": "Terminées",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "countsHint": "Compte les tâches que vous pouvez voir. Les tâches annulées ne comptent pas.",
+    "status": {
+      "active": "Actif",
+      "done": "Terminé",
+      "archived": "Archivé"
+    },
+    "noRepo": "Aucun",
+    "openRepo": "Ouvrir {{repo}} sur GitHub",
+    "openBoard": "Ouvrir le tableau de {{name}}",
+    "rowActions": "Options pour {{name}}",
+    "emptyTitle": "Aucun projet pour l'instant",
+    "empty": "Créez-en un pour chaque client ou produit, puis mettez-y ses tâches."
+  },
   "shell": {
     "otherChannels": "Autres canaux",
     "otherChannelsPersonal": "Autres conversations de groupe",
@@ -2267,6 +2292,7 @@
       "proposals": "Ce que les agents ont changé, et pourquoi",
       "threads": "Les conversations qui partent en fil, et les missions",
       "issues": "Le travail de l'équipe, pour les personnes et les agents",
+      "projects": "Chaque client ou produit, avec son dépôt et son avancement",
       "wiki": "Ce que l'équipe sait, écrit pour tous",
       "drive": "Fichiers, rapports et tableaux",
       "routines": "Ce que les agents font seuls, à heure fixe",
@@ -2281,6 +2307,7 @@
       "proposalsPersonal": "Ce que vos agents proposent de changer",
       "threadsPersonal": "Les conversations à part, et les missions",
       "issuesPersonal": "Vos tâches et celles de vos agents",
+      "projectsPersonal": "Vos projets, avec leurs dépôts et leur avancement",
       "wikiPersonal": "Des notes que vos agents peuvent lire",
       "calendarPersonal": "Vos rendez-vous et échéances",
       "teamPersonal": "Vos agents, et qui d'autre est là",
@@ -2388,6 +2415,7 @@
     "approvals": "Approbations",
     "proposals": "Améliorations des agents",
     "issues": "Tâches",
+    "projects": "Projets",
     "missionsWaiting_one": "{{count}} mission vous attend",
     "missionsWaiting_many": "{{count}} missions vous attendent",
     "missionsWaiting_other": "{{count}} missions vous attendent",
@@ -8737,7 +8765,12 @@
       "delete": "Supprimer le projet",
       "deleteTitle": "Supprimer le projet {{name}} ?",
       "deleteBody": "Ses tâches restent, sans projet.",
-      "empty": "Aucune tâche dans ce projet pour l'instant."
+      "empty": "Aucune tâche dans ce projet pour l'instant.",
+      "description": "Description",
+      "descriptionPlaceholder": "À quoi sert ce projet ?",
+      "repository": "Dépôt GitHub",
+      "repositoryExample": "acme/clinique",
+      "repositoryHint": "Le dépôt où vit le travail de ce projet. Les agents le lisent avec le projet."
     },
     "columns": {
       "add": "Ajouter une colonne",
@@ -16870,6 +16903,8 @@
       "projectNameTaken": "Un projet porte déjà ce nom.",
       "projectArchived": "Ce projet est archivé et ne reçoit plus de nouvelles tâches.",
       "projectsFull": "Un espace de travail contient au plus {{max}} projets. Supprimez-en un d’abord.",
+      "projectBadRepo": "Écrivez le dépôt sous la forme propriétaire/nom, ou collez son adresse github.com.",
+      "projectDescriptionTooLong": "La description contient au plus {{max}} caractères.",
       "stageFull": "Une étape contient au plus {{max}} colonnes. Supprimez d'abord une de ses colonnes.",
       "deleteForbidden": "Seule la personne qui a créé cette tâche ou un administrateur peut la supprimer.",
       "audienceEmpty": "Choisissez qui le voit."
@@ -20525,6 +20560,10 @@
     "list_issues": {
       "label": "Voir les tâches",
       "description": "Liste et ouvre les tâches."
+    },
+    "list_projects": {
+      "label": "Voir les projets",
+      "description": "Liste les projets de tâches, leur utilité et leurs dépôts."
     },
     "create_issue": {
       "label": "Créer une tâche",

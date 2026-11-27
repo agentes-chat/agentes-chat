@@ -50,6 +50,7 @@ export const SIDEBAR_TOOLS = {
   proposals: { to: "/org/$orgId/proposals", icon: "bulb" },
   threads: { to: "/org/$orgId/threads", icon: "thread" },
   issues: { to: "/org/$orgId/issues", icon: "issues" },
+  projects: { to: "/org/$orgId/projects", icon: "layers" },
   wiki: { to: "/org/$orgId/wiki", icon: "book" },
   drive: { to: "/org/$orgId/drive", icon: "drive" },
   routines: { to: "/org/$orgId/routines", icon: "routines" },

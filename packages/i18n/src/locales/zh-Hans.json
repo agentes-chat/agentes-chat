@@ -2104,6 +2104,31 @@
       "why": "即使标签页已关闭也会提醒。可随时在<link>通知</link>中更改。"
     }
   },
+  "projectsPage": {
+    "title": "项目",
+    "subtitle": "每个项目的仓库和进度",
+    "new": "新建项目",
+    "columns": {
+      "project": "项目",
+      "repository": "仓库",
+      "tasks": "任务",
+      "done": "已完成",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "countsHint": "统计你能看到的任务。已取消的任务不计入。",
+    "status": {
+      "active": "进行中",
+      "done": "已完成",
+      "archived": "已归档"
+    },
+    "noRepo": "无",
+    "openRepo": "在 GitHub 上打开 {{repo}}",
+    "openBoard": "打开 {{name}} 的看板",
+    "rowActions": "{{name}} 的选项",
+    "emptyTitle": "还没有项目",
+    "empty": "为每个客户或产品创建一个，再把它的任务放进去。"
+  },
   "shell": {
     "otherChannels": "其他频道",
     "otherChannelsPersonal": "其他群组对话",
@@ -2119,6 +2144,7 @@
       "proposals": "智能体改了什么，以及原因",
       "threads": "分支出去的对话和专项任务",
       "issues": "团队的工作，成员和智能体都有",
+      "projects": "每个客户或产品，附带仓库和进度",
       "wiki": "团队知道的事，写给所有人看",
       "drive": "文件、报告和表格",
       "routines": "智能体按时自己完成的工作",
@@ -2133,6 +2159,7 @@
       "proposalsPersonal": "你的智能体提议更改的内容",
       "threadsPersonal": "另开的对话和专项任务",
       "issuesPersonal": "你和你的智能体的任务",
+      "projectsPersonal": "你的项目，附带仓库和进度",
       "wikiPersonal": "你的智能体能读的笔记",
       "calendarPersonal": "你的约会和截止日期",
       "teamPersonal": "你的智能体，以及这里的其他人",
@@ -2238,6 +2265,7 @@
     "approvals": "审批",
     "proposals": "智能体改进",
     "issues": "任务",
+    "projects": "项目",
     "missionsWaiting_other": "{{count}} 个专项任务在等你",
     "threads": "话题",
     "routines": "例行工作",
@@ -8162,7 +8190,12 @@
       "delete": "删除项目",
       "deleteTitle": "删除项目「{{name}}」？",
       "deleteBody": "其中的任务会保留，不再属于任何项目。",
-      "empty": "这个项目里还没有任务。"
+      "empty": "这个项目里还没有任务。",
+      "description": "说明",
+      "descriptionPlaceholder": "这个项目是做什么的？",
+      "repository": "GitHub 仓库",
+      "repositoryExample": "acme/clinica",
+      "repositoryHint": "这个项目的工作所在的仓库。智能体会连同项目一起读取。"
     },
     "columns": {
       "add": "添加列",
@@ -15770,6 +15803,8 @@
       "projectNameTaken": "已有同名项目。",
       "projectArchived": "这个项目已归档，不能再加入新任务。",
       "projectsFull": "一个工作区最多有 {{max}} 个项目。请先删除一个。",
+      "projectBadRepo": "请按 所有者/名称 填写仓库，或粘贴它的 github.com 地址。",
+      "projectDescriptionTooLong": "说明最多 {{max}} 个字符。",
       "stageFull": "一个阶段最多 {{max}} 列。请先删除其中一列。",
       "deleteForbidden": "只有这项任务的创建者或管理员可以删除它。",
       "audienceEmpty": "请选择谁能看到。"
@@ -19315,6 +19350,10 @@
     "list_issues": {
       "label": "查看任务",
       "description": "列出并打开任务。"
+    },
+    "list_projects": {
+      "label": "查看项目",
+      "description": "列出任务项目、用途和它们的仓库。"
     },
     "create_issue": {
       "label": "创建任务",

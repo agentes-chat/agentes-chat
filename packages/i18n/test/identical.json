@@ -359,7 +359,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "projectsPage.columns.status"
     ],
     "es": [
       "surface.nudge.hours",
@@ -1214,6 +1215,8 @@
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
       "connectors.names.datadog_ap2",
+      "issues.projects.description",
+      "projectsPage.columns.actions",
       "machines.maintenance.short.host_maintenance",
       "machines.maintenance.short.other"
     ],
@@ -1739,7 +1742,9 @@
       "skills.one.name",
       "skills.one.inChannel",
       "integrations.badge",
-      "integrations.name"
+      "integrations.name",
+      "projectsPage.columns.repository",
+      "projectsPage.columns.status"
     ],
     "it": [
       "agentPage.facts.budget",
@@ -2160,7 +2165,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "projectsPage.columns.repository"
     ],
     "nl": [
       "devices.permission.names.camera",
@@ -2864,7 +2870,10 @@
       "skills.page.colSkill",
       "skills.one.inChannel",
       "skills.page.inRepo",
-      "integrations.badge"
+      "integrations.badge",
+      "projectsPage.columns.repository",
+      "projectsPage.columns.status",
+      "projectsPage.columns.project"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -3776,7 +3785,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "projectsPage.columns.status"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -4361,7 +4371,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "projectsPage.columns.status"
     ],
     "ru": [
       "live.canvas.sizes.short.s",

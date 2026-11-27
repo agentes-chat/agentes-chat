@@ -86,6 +86,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".code-tabs": "strip",
   ".level-matrix": "content",
   ".pu-table-card": "content",
+  ".projects-card": "content",
   ".spec-block__table": "content",
   ".machine-command__code": "content",
   ".md__table-scroll": "content",

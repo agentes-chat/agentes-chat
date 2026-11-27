@@ -148,7 +148,7 @@ import type {
   IssueColumn,
   IssueConversationRef,
   IssueProject,
-  IssueProjectRef,
+  IssueProjectDetail,
   IssueProjects,
   IssuesView,
   JevKey,
@@ -1805,7 +1805,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       projects: (orgId) => request<IssueProjects>(`${org(orgId)}/issue-projects`),
       createProject: (orgId, input) => request<IssueProject>(`${org(orgId)}/issue-projects`, { json: input }),
       updateProject: (orgId, projectId, patch) =>
-        request<IssueProjectRef>(`${org(orgId)}/issue-projects/${enc(projectId)}`, { method: "PATCH", json: patch }),
+        request<IssueProjectDetail>(`${org(orgId)}/issue-projects/${enc(projectId)}`, { method: "PATCH", json: patch }),
       deleteProject: (orgId, projectId) =>
         request<void>(`${org(orgId)}/issue-projects/${enc(projectId)}`, { method: "DELETE" }),
     },

@@ -2177,6 +2177,31 @@
       "why": "Ook met het tabblad dicht. Pas het aan wanneer je wilt via <link>Meldingen</link>."
     }
   },
+  "projectsPage": {
+    "title": "Projecten",
+    "subtitle": "Repository en voortgang van elk project",
+    "new": "Nieuw project",
+    "columns": {
+      "project": "Project",
+      "repository": "Repository",
+      "tasks": "Taken",
+      "done": "Klaar",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "countsHint": "Telt de taken die je kunt zien. Geannuleerde taken tellen niet mee.",
+    "status": {
+      "active": "Actief",
+      "done": "Klaar",
+      "archived": "Gearchiveerd"
+    },
+    "noRepo": "Geen",
+    "openRepo": "{{repo}} openen op GitHub",
+    "openBoard": "Het bord van {{name}} openen",
+    "rowActions": "Opties voor {{name}}",
+    "emptyTitle": "Nog geen projecten",
+    "empty": "Maak er een voor elke klant of elk product en zet de taken erin."
+  },
   "shell": {
     "otherChannels": "Andere kanalen",
     "otherChannelsPersonal": "Andere groepsgesprekken",
@@ -2192,6 +2217,7 @@
       "proposals": "Wat agents hebben veranderd, en waarom",
       "threads": "Gesprekken die aftakken, en missies",
       "issues": "Het werk van het team, voor mensen en agents",
+      "projects": "Elke klant of elk product, met repository en voortgang",
       "wiki": "Wat het team weet, voor iedereen opgeschreven",
       "drive": "Bestanden, rapporten en tabellen",
       "routines": "Wat agents zelf doen, op tijd",
@@ -2206,6 +2232,7 @@
       "proposalsPersonal": "Wat je agents willen veranderen",
       "threadsPersonal": "Zijgesprekken, en missies",
       "issuesPersonal": "Jouw taken en die van je agents",
+      "projectsPersonal": "Je projecten, met hun repositories en voortgang",
       "wikiPersonal": "Notities die je agents kunnen lezen",
       "calendarPersonal": "Je afspraken en deadlines",
       "teamPersonal": "Je agents, en wie er verder is",
@@ -2312,6 +2339,7 @@
     "approvals": "Goedkeuringen",
     "proposals": "Verbeteringen van agents",
     "issues": "Taken",
+    "projects": "Projecten",
     "missionsWaiting_one": "{{count}} missie wacht op jou",
     "missionsWaiting_other": "{{count}} missies wachten op jou",
     "threads": "Threads",
@@ -8483,7 +8511,12 @@
       "delete": "Project verwijderen",
       "deleteTitle": "Project {{name}} verwijderen?",
       "deleteBody": "De taken blijven bestaan, zonder project.",
-      "empty": "Nog geen taken in dit project."
+      "empty": "Nog geen taken in dit project.",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Waar is dit project voor?",
+      "repository": "GitHub-repository",
+      "repositoryExample": "acme/kliniek",
+      "repositoryHint": "De repository waar het werk van dit project staat. Agenten lezen die samen met het project."
     },
     "columns": {
       "add": "Kolom toevoegen",
@@ -16378,6 +16411,8 @@
       "projectNameTaken": "Er bestaat al een project met die naam.",
       "projectArchived": "Dit project is gearchiveerd en krijgt geen nieuwe taken.",
       "projectsFull": "Een workspace heeft hoogstens {{max}} projecten. Verwijder er eerst een.",
+      "projectBadRepo": "Schrijf de repository als eigenaar/naam of plak het github.com-adres.",
+      "projectDescriptionTooLong": "De beschrijving mag hooguit {{max}} tekens bevatten.",
       "stageFull": "Een fase heeft hoogstens {{max}} kolommen. Verwijder eerst een van de kolommen.",
       "deleteForbidden": "Alleen wie deze taak heeft gemaakt of een beheerder kan hem verwijderen.",
       "audienceEmpty": "Kies wie het ziet."
@@ -19975,6 +20010,10 @@
     "list_issues": {
       "label": "Taken bekijken",
       "description": "Toont en opent taken."
+    },
+    "list_projects": {
+      "label": "Projecten bekijken",
+      "description": "Toont de taakprojecten, waarvoor ze dienen en hun repositories."
     },
     "create_issue": {
       "label": "Taak maken",

@@ -110,6 +110,7 @@ export function CommandMenu() {
       { key: "waiting", to: "/org/$orgId/notifications", icon: "inbox", label: t("shell.waiting") },
       { key: "proposals", to: "/org/$orgId/proposals", icon: "bulb", label: t("shell.proposals") },
       { key: "issues", to: "/org/$orgId/issues", icon: "issues", label: t("shell.issues") },
+      { key: "projects", to: "/org/$orgId/projects", icon: "layers", label: t("shell.projects") },
       { key: "routines", to: "/org/$orgId/routines", icon: "routines", label: t("shell.routines") },
       { key: "task-manager", to: "/org/$orgId/task-manager", icon: "stageProgress", label: t("taskManager.title") },
       { key: "code", to: "/org/$orgId/code", icon: "code", label: t("shell.code") },

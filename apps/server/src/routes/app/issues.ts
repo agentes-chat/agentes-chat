@@ -62,9 +62,18 @@ const ProjectRef = z
     archived: z.boolean().openapi({ description: "Offered to no new task. Its tasks keep it." }),
   })
   .openapi("IssueProjectRef");
-const Project = ProjectRef.extend({
+const ProjectDetail = ProjectRef.extend({
+  description: z.string().nullable().openapi({ description: "A few lines on what the project is for (ADR 0259)." }),
+  githubRepo: z.string().nullable().openapi({ description: "The repository its work lives in, as `owner/name`." }),
+}).openapi("IssueProjectDetail");
+const Project = ProjectDetail.extend({
   open: z.number().int().openapi({ description: "Open tasks in it that you see." }),
+  done: z.number().int().openapi({ description: "Finished tasks in it that you see." }),
+  total: z.number().int().openapi({ description: "`open` + `done`: a canceled task counts nowhere." }),
 }).openapi("IssueProject");
+// The engine refuses a longer text with its own coded message; these only bound what a body can carry.
+const ProjectDescription = z.string().max(2000).nullable().optional();
+const ProjectRepo = z.string().max(300).nullable().optional();
 const ProjectId = z
   .uuid()
   .nullable()
@@ -469,7 +478,7 @@ export function issueRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/issue-projects",
       tags,
       security,
-      summary: "The tasks' projects by name, archived ones last, with your open tasks in each",
+      summary: "The tasks' projects by name, archived ones last, with the tasks you see in each",
       request: { params: OrgParams },
       responses: {
         200: json(
@@ -497,7 +506,16 @@ export function issueRoutes(deps: AppDeps) {
       description: "`issue_project.name_taken`: another project has that name, whatever its capitals.",
       request: {
         params: OrgParams,
-        body: body(z.object({ name: z.string().min(1).max(PROJECT_NAME_MAX), color: ProjectColor.optional() })),
+        body: body(
+          z.object({
+            name: z.string().min(1).max(PROJECT_NAME_MAX),
+            color: ProjectColor.optional(),
+            description: ProjectDescription,
+            githubRepo: ProjectRepo.openapi({
+              description: "`owner/name`, or its github.com address. `issue_project.bad_repo` when neither.",
+            }),
+          }),
+        ),
       },
       responses: { 201: json(Project, "Created"), ...errors },
     }),
@@ -513,18 +531,22 @@ export function issueRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/issue-projects/{projectId}",
       tags,
       security,
-      summary: "Rename, recolour, archive or bring back a project",
+      summary: "Rename, recolour, describe, link to a repository, archive or bring back a project",
+      description:
+        "`description` and `githubRepo`: `null` or empty clears, left out keeps. `issue_project.bad_repo`, `issue_project.description_too_long`.",
       request: {
         params: ProjectParams,
         body: body(
           z.object({
             name: z.string().min(1).max(PROJECT_NAME_MAX).optional(),
             color: ProjectColor.optional(),
+            description: ProjectDescription,
+            githubRepo: ProjectRepo,
             archived: z.boolean().optional(),
           }),
         ),
       },
-      responses: { 200: json(ProjectRef), ...errors },
+      responses: { 200: json(ProjectDetail), ...errors },
     }),
     async (c) => {
       const { orgId, projectId } = c.req.valid("param");

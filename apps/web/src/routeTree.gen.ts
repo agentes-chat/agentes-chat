@@ -44,6 +44,7 @@ import { Route as OrgOrgIdHomeRouteImport } from './routes/org.$orgId.home'
 import { Route as OrgOrgIdMembersRouteImport } from './routes/org.$orgId.members'
 import { Route as OrgOrgIdNotificationsRouteImport } from './routes/org.$orgId.notifications'
 import { Route as OrgOrgIdOnboardingRouteImport } from './routes/org.$orgId.onboarding'
+import { Route as OrgOrgIdProjectsRouteImport } from './routes/org.$orgId.projects'
 import { Route as OrgOrgIdProposalsRouteImport } from './routes/org.$orgId.proposals'
 import { Route as OrgOrgIdRoutinesRouteImport } from './routes/org.$orgId.routines'
 import { Route as OrgOrgIdSearchRouteImport } from './routes/org.$orgId.search'
@@ -251,6 +252,11 @@ const OrgOrgIdNotificationsRoute = OrgOrgIdNotificationsRouteImport.update({
 const OrgOrgIdOnboardingRoute = OrgOrgIdOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdProjectsRoute = OrgOrgIdProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
 const OrgOrgIdProposalsRoute = OrgOrgIdProposalsRouteImport.update({
@@ -463,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
   '/org/$orgId/notifications': typeof OrgOrgIdNotificationsRoute
   '/org/$orgId/onboarding': typeof OrgOrgIdOnboardingRoute
+  '/org/$orgId/projects': typeof OrgOrgIdProjectsRoute
   '/org/$orgId/proposals': typeof OrgOrgIdProposalsRoute
   '/org/$orgId/routines': typeof OrgOrgIdRoutinesRoute
   '/org/$orgId/search': typeof OrgOrgIdSearchRoute
@@ -532,6 +539,7 @@ export interface FileRoutesByTo {
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
   '/org/$orgId/notifications': typeof OrgOrgIdNotificationsRoute
   '/org/$orgId/onboarding': typeof OrgOrgIdOnboardingRoute
+  '/org/$orgId/projects': typeof OrgOrgIdProjectsRoute
   '/org/$orgId/proposals': typeof OrgOrgIdProposalsRoute
   '/org/$orgId/routines': typeof OrgOrgIdRoutinesRoute
   '/org/$orgId/search': typeof OrgOrgIdSearchRoute
@@ -603,6 +611,7 @@ export interface FileRoutesById {
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
   '/org/$orgId/notifications': typeof OrgOrgIdNotificationsRoute
   '/org/$orgId/onboarding': typeof OrgOrgIdOnboardingRoute
+  '/org/$orgId/projects': typeof OrgOrgIdProjectsRoute
   '/org/$orgId/proposals': typeof OrgOrgIdProposalsRoute
   '/org/$orgId/routines': typeof OrgOrgIdRoutinesRoute
   '/org/$orgId/search': typeof OrgOrgIdSearchRoute
@@ -675,6 +684,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/members'
     | '/org/$orgId/notifications'
     | '/org/$orgId/onboarding'
+    | '/org/$orgId/projects'
     | '/org/$orgId/proposals'
     | '/org/$orgId/routines'
     | '/org/$orgId/search'
@@ -744,6 +754,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/members'
     | '/org/$orgId/notifications'
     | '/org/$orgId/onboarding'
+    | '/org/$orgId/projects'
     | '/org/$orgId/proposals'
     | '/org/$orgId/routines'
     | '/org/$orgId/search'
@@ -814,6 +825,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/members'
     | '/org/$orgId/notifications'
     | '/org/$orgId/onboarding'
+    | '/org/$orgId/projects'
     | '/org/$orgId/proposals'
     | '/org/$orgId/routines'
     | '/org/$orgId/search'
@@ -1126,6 +1138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdOnboardingRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/projects': {
+      id: '/org/$orgId/projects'
+      path: '/projects'
+      fullPath: '/org/$orgId/projects'
+      preLoaderRoute: typeof OrgOrgIdProjectsRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/proposals': {
       id: '/org/$orgId/proposals'
       path: '/proposals'
@@ -1369,6 +1388,7 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdMembersRoute: typeof OrgOrgIdMembersRoute
   OrgOrgIdNotificationsRoute: typeof OrgOrgIdNotificationsRoute
   OrgOrgIdOnboardingRoute: typeof OrgOrgIdOnboardingRoute
+  OrgOrgIdProjectsRoute: typeof OrgOrgIdProjectsRoute
   OrgOrgIdProposalsRoute: typeof OrgOrgIdProposalsRoute
   OrgOrgIdRoutinesRoute: typeof OrgOrgIdRoutinesRoute
   OrgOrgIdSearchRoute: typeof OrgOrgIdSearchRoute
@@ -1414,6 +1434,7 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdMembersRoute: OrgOrgIdMembersRoute,
   OrgOrgIdNotificationsRoute: OrgOrgIdNotificationsRoute,
   OrgOrgIdOnboardingRoute: OrgOrgIdOnboardingRoute,
+  OrgOrgIdProjectsRoute: OrgOrgIdProjectsRoute,
   OrgOrgIdProposalsRoute: OrgOrgIdProposalsRoute,
   OrgOrgIdRoutinesRoute: OrgOrgIdRoutinesRoute,
   OrgOrgIdSearchRoute: OrgOrgIdSearchRoute,

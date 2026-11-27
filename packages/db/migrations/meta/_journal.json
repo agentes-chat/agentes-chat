@@ -2521,6 +2521,13 @@
       "when": 1795743674220,
       "tag": "0364_outbox_wake",
       "breakpoints": true
+    },
+    {
+      "idx": 362,
+      "version": "7",
+      "when": 1795782595426,
+      "tag": "0365_task_project_details",
+      "breakpoints": true
     }
   ]
 }

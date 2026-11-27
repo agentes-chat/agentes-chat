@@ -387,6 +387,7 @@ const QUIET_TOOLS = [
   "list_artifacts",
   "read_artifact",
   "list_issues",
+  "list_projects",
   "list_events",
   "find_free_time",
   "load_skill",

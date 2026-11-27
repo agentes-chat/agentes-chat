@@ -198,6 +198,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   update_issue: "updatingIssue",
   comment_issue: "updatingIssue",
   list_issues: "readingIssues",
+  list_projects: "readingIssues",
   get_issue: "readingIssues",
   read_artifact: "readingDrive",
   list_artifacts: "readingDrive",

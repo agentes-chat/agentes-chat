@@ -2252,6 +2252,31 @@
       "why": "Anche con la scheda chiusa. Puoi cambiarlo quando vuoi in <link>Notifiche</link>."
     }
   },
+  "projectsPage": {
+    "title": "Progetti",
+    "subtitle": "Repository e avanzamento di ogni progetto",
+    "new": "Nuovo progetto",
+    "columns": {
+      "project": "Progetto",
+      "repository": "Repository",
+      "tasks": "Attività",
+      "done": "Completate",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "countsHint": "Conta le attività che puoi vedere. Le attività annullate non contano.",
+    "status": {
+      "active": "Attivo",
+      "done": "Completato",
+      "archived": "Archiviato"
+    },
+    "noRepo": "Nessuno",
+    "openRepo": "Apri {{repo}} su GitHub",
+    "openBoard": "Apri la bacheca di {{name}}",
+    "rowActions": "Opzioni per {{name}}",
+    "emptyTitle": "Ancora nessun progetto",
+    "empty": "Creane uno per ogni cliente o prodotto e mettici dentro le sue attività."
+  },
   "shell": {
     "otherChannels": "Altri canali",
     "otherChannelsPersonal": "Altre conversazioni di gruppo",
@@ -2267,6 +2292,7 @@
       "proposals": "Cosa hanno cambiato gli agenti, e perché",
       "threads": "Conversazioni che si diramano, e missioni",
       "issues": "Il lavoro del team, per persone e agenti",
+      "projects": "Ogni cliente o prodotto, con il suo repository e l'avanzamento",
       "wiki": "Ciò che sa il team, scritto per tutti",
       "drive": "File, report e tabelle",
       "routines": "Ciò che gli agenti fanno da soli, all'orario giusto",
@@ -2281,6 +2307,7 @@
       "proposalsPersonal": "Cosa propongono di cambiare i tuoi agenti",
       "threadsPersonal": "Conversazioni a parte, e missioni",
       "issuesPersonal": "Le tue attività e quelle dei tuoi agenti",
+      "projectsPersonal": "I tuoi progetti, con i loro repository e l'avanzamento",
       "wikiPersonal": "Note che i tuoi agenti possono leggere",
       "calendarPersonal": "I tuoi appuntamenti e scadenze",
       "teamPersonal": "I tuoi agenti, e chi altro c'è",
@@ -2388,6 +2415,7 @@
     "approvals": "Approvazioni",
     "proposals": "Miglioramenti degli agenti",
     "issues": "Attività",
+    "projects": "Progetti",
     "missionsWaiting_one": "{{count}} missione ti aspetta",
     "missionsWaiting_many": "{{count}} missioni ti aspettano",
     "missionsWaiting_other": "{{count}} missioni ti aspettano",
@@ -8757,7 +8785,12 @@
       "delete": "Elimina progetto",
       "deleteTitle": "Eliminare il progetto {{name}}?",
       "deleteBody": "Le sue attività restano, senza progetto.",
-      "empty": "Ancora nessuna attività in questo progetto."
+      "empty": "Ancora nessuna attività in questo progetto.",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "A cosa serve questo progetto?",
+      "repository": "Repository GitHub",
+      "repositoryExample": "acme/clinica",
+      "repositoryHint": "Il repository dove vive il lavoro di questo progetto. Gli agenti lo leggono insieme al progetto."
     },
     "columns": {
       "add": "Aggiungi colonna",
@@ -16895,6 +16928,8 @@
       "projectNameTaken": "Esiste già un progetto con questo nome.",
       "projectArchived": "Questo progetto è archiviato e non accetta nuove attività.",
       "projectsFull": "Un workspace contiene al massimo {{max}} progetti. Eliminane uno prima.",
+      "projectBadRepo": "Scrivi il repository come proprietario/nome oppure incolla il suo indirizzo github.com.",
+      "projectDescriptionTooLong": "La descrizione può avere al massimo {{max}} caratteri.",
       "stageFull": "Una fase ha al massimo {{max}} colonne. Elimina prima una delle sue colonne.",
       "deleteForbidden": "Solo chi ha creato questa attività o un amministratore può eliminarla.",
       "audienceEmpty": "Scegli chi lo vede."
@@ -20544,6 +20579,10 @@
     "list_issues": {
       "label": "Vedi attività",
       "description": "Elenca e apre le attività."
+    },
+    "list_projects": {
+      "label": "Vedi i progetti",
+      "description": "Elenca i progetti di attività, a cosa servono e i loro repository."
     },
     "create_issue": {
       "label": "Crea attività",

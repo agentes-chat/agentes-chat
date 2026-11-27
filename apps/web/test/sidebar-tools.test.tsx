@@ -135,6 +135,7 @@ describe("the tools on top", () => {
     const more = await openMore();
     expect(inMore(more)).toEqual([
       "Melhorias dos agentes",
+      "Projetos",
       "Wiki",
       "Rotinas",
       "Calendário",
@@ -311,6 +312,7 @@ describe("the tools on top", () => {
     expect(inMore(await openMore())).toEqual([
       "Caixa de entrada",
       "Melhorias dos agentes",
+      "Projetos",
       "Wiki",
       "Drive",
       "Calendário",
@@ -391,6 +393,7 @@ describe("the tools on top", () => {
           "threads",
           "drive",
           "issues",
+          "projects",
           "wiki",
           "routines",
           "calendar",
@@ -438,6 +441,7 @@ describe("the tools on top", () => {
         "threads",
         "issues",
         "drive",
+        "projects",
         "wiki",
         "routines",
         "calendar",
@@ -459,6 +463,8 @@ describe("the tools on top", () => {
         (within(dialog).getByRole("button", { name: "Mover para cima: Caixa de entrada" }) as HTMLButtonElement)
           .disabled,
       ).toBe(true);
+      // Projetos sits between Tarefas and Drive in the dialog's order (ADR 0259), so Drive goes up three.
+      await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       expect(names().slice(0, 5)).toEqual(["Caixa de entrada", "Melhorias dos agentes", "Threads", "Drive", "Tarefas"]);

@@ -2104,6 +2104,31 @@
       "why": "Bahkan saat tab ditutup. Ubah kapan saja di <link>Notifikasi</link>."
     }
   },
+  "projectsPage": {
+    "title": "Proyek",
+    "subtitle": "Repositori dan kemajuan tiap proyek",
+    "new": "Proyek baru",
+    "columns": {
+      "project": "Proyek",
+      "repository": "Repositori",
+      "tasks": "Tugas",
+      "done": "Selesai",
+      "status": "Status",
+      "actions": "Tindakan"
+    },
+    "countsHint": "Menghitung tugas yang bisa kamu lihat. Tugas yang dibatalkan tidak dihitung.",
+    "status": {
+      "active": "Aktif",
+      "done": "Selesai",
+      "archived": "Diarsipkan"
+    },
+    "noRepo": "Tidak ada",
+    "openRepo": "Buka {{repo}} di GitHub",
+    "openBoard": "Buka papan {{name}}",
+    "rowActions": "Opsi untuk {{name}}",
+    "emptyTitle": "Belum ada proyek",
+    "empty": "Buat satu untuk setiap klien atau produk, lalu masukkan tugas-tugasnya ke dalamnya."
+  },
   "shell": {
     "otherChannels": "Kanal lain",
     "otherChannelsPersonal": "Percakapan grup lain",
@@ -2119,6 +2144,7 @@
       "proposals": "Yang diubah agen, dan alasannya",
       "threads": "Percakapan yang bercabang, dan misi",
       "issues": "Pekerjaan tim, untuk orang dan agen",
+      "projects": "Setiap klien atau produk, lengkap dengan repositori dan kemajuannya",
       "wiki": "Yang diketahui tim, ditulis untuk semua orang",
       "drive": "File, laporan, dan tabel",
       "routines": "Yang dikerjakan agen sendiri, tepat waktu",
@@ -2133,6 +2159,7 @@
       "proposalsPersonal": "Yang diusulkan agenmu untuk diubah",
       "threadsPersonal": "Percakapan sampingan, dan misi",
       "issuesPersonal": "Tugasmu dan tugas agenmu",
+      "projectsPersonal": "Proyek kamu, lengkap dengan repositori dan kemajuannya",
       "wikiPersonal": "Catatan yang bisa dibaca agenmu",
       "calendarPersonal": "Janji dan tenggatmu",
       "teamPersonal": "Agenmu, dan siapa lagi yang ada di sini",
@@ -2238,6 +2265,7 @@
     "approvals": "Persetujuan",
     "proposals": "Perbaikan agen",
     "issues": "Tugas",
+    "projects": "Proyek",
     "missionsWaiting_other": "{{count}} misi menunggumu",
     "threads": "Utas",
     "routines": "Rutinitas",
@@ -8160,7 +8188,12 @@
       "delete": "Hapus proyek",
       "deleteTitle": "Hapus proyek {{name}}?",
       "deleteBody": "Tugasnya tetap ada, tanpa proyek.",
-      "empty": "Belum ada tugas di proyek ini."
+      "empty": "Belum ada tugas di proyek ini.",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Untuk apa proyek ini?",
+      "repository": "Repositori GitHub",
+      "repositoryExample": "acme/klinik",
+      "repositoryHint": "Repositori tempat pekerjaan proyek ini berada. Agen membacanya bersama proyek."
     },
     "columns": {
       "add": "Tambah kolom",
@@ -15762,6 +15795,8 @@
       "projectNameTaken": "Sudah ada proyek dengan nama itu.",
       "projectArchived": "Proyek ini diarsipkan dan tidak menerima tugas baru.",
       "projectsFull": "Satu workspace memuat paling banyak {{max}} proyek. Hapus satu dulu.",
+      "projectBadRepo": "Tulis repositori sebagai pemilik/nama, atau tempel alamat github.com-nya.",
+      "projectDescriptionTooLong": "Deskripsi maksimal {{max}} karakter.",
       "stageFull": "Satu tahap paling banyak punya {{max}} kolom. Hapus dulu salah satu kolomnya.",
       "deleteForbidden": "Hanya pembuat tugas ini atau administrator yang bisa menghapusnya.",
       "audienceEmpty": "Pilih siapa yang melihat."
@@ -19300,6 +19335,10 @@
     "list_issues": {
       "label": "Lihat tugas",
       "description": "Menampilkan daftar dan membuka tugas."
+    },
+    "list_projects": {
+      "label": "Lihat proyek",
+      "description": "Menampilkan daftar proyek tugas, kegunaannya, dan repositorinya."
     },
     "create_issue": {
       "label": "Buat tugas",

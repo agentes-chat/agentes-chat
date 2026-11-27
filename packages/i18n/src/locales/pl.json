@@ -2326,6 +2326,31 @@
       "why": "Nawet przy zamkniętej karcie. Zmienisz to w dowolnej chwili w <link>Powiadomieniach</link>."
     }
   },
+  "projectsPage": {
+    "title": "Projekty",
+    "subtitle": "Repozytorium i postęp każdego projektu",
+    "new": "Nowy projekt",
+    "columns": {
+      "project": "Projekt",
+      "repository": "Repozytorium",
+      "tasks": "Zadania",
+      "done": "Zrobione",
+      "status": "Status",
+      "actions": "Akcje"
+    },
+    "countsHint": "Liczy zadania, które widzisz. Anulowane zadania się nie liczą.",
+    "status": {
+      "active": "Aktywny",
+      "done": "Zakończony",
+      "archived": "Zarchiwizowany"
+    },
+    "noRepo": "Brak",
+    "openRepo": "Otwórz {{repo}} na GitHubie",
+    "openBoard": "Otwórz tablicę {{name}}",
+    "rowActions": "Opcje: {{name}}",
+    "emptyTitle": "Nie ma jeszcze projektów",
+    "empty": "Utwórz po jednym dla każdego klienta lub produktu, a potem umieść w nim jego zadania."
+  },
   "shell": {
     "otherChannels": "Inne kanały",
     "otherChannelsPersonal": "Inne rozmowy grupowe",
@@ -2341,6 +2366,7 @@
       "proposals": "Co zmienili agenci i dlaczego",
       "threads": "Rozmowy, które się rozgałęziają, i misje",
       "issues": "Praca zespołu, dla osób i agentów",
+      "projects": "Każdy klient lub produkt, z repozytorium i postępem",
       "wiki": "Co wie zespół, spisane dla wszystkich",
       "drive": "Pliki, raporty i tabele",
       "routines": "Co agenci robią sami, o czasie",
@@ -2355,6 +2381,7 @@
       "proposalsPersonal": "Co twoi agenci proponują zmienić",
       "threadsPersonal": "Rozmowy na boku i misje",
       "issuesPersonal": "Twoje zadania i zadania twoich agentów",
+      "projectsPersonal": "Twoje projekty, z ich repozytoriami i postępem",
       "wikiPersonal": "Notatki, które twoi agenci mogą czytać",
       "calendarPersonal": "Twoje spotkania i terminy",
       "teamPersonal": "Twoi agenci i kto jeszcze tu jest",
@@ -2463,6 +2490,7 @@
     "approvals": "Zatwierdzenia",
     "proposals": "Ulepszenia agentów",
     "issues": "Zadania",
+    "projects": "Projekty",
     "missionsWaiting_one": "{{count}} misja czeka na ciebie",
     "missionsWaiting_few": "{{count}} misje czekają na ciebie",
     "missionsWaiting_many": "{{count}} misji czeka na ciebie",
@@ -9027,7 +9055,12 @@
       "delete": "Usuń projekt",
       "deleteTitle": "Usunąć projekt {{name}}?",
       "deleteBody": "Jego zadania zostają, bez projektu.",
-      "empty": "W tym projekcie nie ma jeszcze zadań."
+      "empty": "W tym projekcie nie ma jeszcze zadań.",
+      "description": "Opis",
+      "descriptionPlaceholder": "Do czego służy ten projekt?",
+      "repository": "Repozytorium GitHub",
+      "repositoryExample": "acme/klinika",
+      "repositoryHint": "Repozytorium, w którym leży praca tego projektu. Agenci czytają je razem z projektem."
     },
     "columns": {
       "add": "Dodaj kolumnę",
@@ -17447,6 +17480,8 @@
       "projectNameTaken": "Projekt o tej nazwie już istnieje.",
       "projectArchived": "Ten projekt jest zarchiwizowany i nie przyjmuje nowych zadań.",
       "projectsFull": "Workspace mieści najwyżej {{max}} projektów. Najpierw usuń jeden.",
+      "projectBadRepo": "Wpisz repozytorium jako właściciel/nazwa albo wklej jego adres z github.com.",
+      "projectDescriptionTooLong": "Opis może mieć najwyżej {{max}} znaków.",
       "stageFull": "Etap mieści najwyżej {{max}} kolumn. Najpierw usuń jedną z jego kolumn.",
       "deleteForbidden": "Tylko osoba, która utworzyła to zadanie, lub administrator może je usunąć.",
       "audienceEmpty": "Wybierz, kto to widzi."
@@ -21150,6 +21185,10 @@
     "list_issues": {
       "label": "Zobacz zadania",
       "description": "Wyświetla i otwiera zadania."
+    },
+    "list_projects": {
+      "label": "Zobacz projekty",
+      "description": "Wyświetla projekty zadań, do czego służą i ich repozytoria."
     },
     "create_issue": {
       "label": "Utwórz zadanie",

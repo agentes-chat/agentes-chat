@@ -5351,6 +5351,63 @@
   "webPushAsk.inline.why": {
     "value": "Even with the tab closed. Change it anytime in <link>Notifications</link>."
   },
+  "projectsPage.title": {
+    "value": "Projects"
+  },
+  "projectsPage.subtitle": {
+    "value": "Each project's repository and progress"
+  },
+  "projectsPage.new": {
+    "value": "New project"
+  },
+  "projectsPage.columns.project": {
+    "value": "Project"
+  },
+  "projectsPage.columns.repository": {
+    "value": "Repository"
+  },
+  "projectsPage.columns.tasks": {
+    "value": "Tasks"
+  },
+  "projectsPage.columns.done": {
+    "value": "Done"
+  },
+  "projectsPage.columns.status": {
+    "value": "Status"
+  },
+  "projectsPage.columns.actions": {
+    "value": "Actions"
+  },
+  "projectsPage.countsHint": {
+    "value": "Counts the tasks you can see. Canceled tasks don't count."
+  },
+  "projectsPage.status.active": {
+    "value": "Active"
+  },
+  "projectsPage.status.done": {
+    "value": "Done"
+  },
+  "projectsPage.status.archived": {
+    "value": "Archived"
+  },
+  "projectsPage.noRepo": {
+    "value": "None"
+  },
+  "projectsPage.openRepo": {
+    "value": "Open {{repo}} on GitHub"
+  },
+  "projectsPage.openBoard": {
+    "value": "Open the board of {{name}}"
+  },
+  "projectsPage.rowActions": {
+    "value": "Options for {{name}}"
+  },
+  "projectsPage.emptyTitle": {
+    "value": "No projects yet"
+  },
+  "projectsPage.empty": {
+    "value": "Create one for each client or product, then put its tasks in it."
+  },
   "shell.otherChannels": {
     "value": "Other channels"
   },
@@ -5383,6 +5440,9 @@
   },
   "shell.moreWhat.issues": {
     "value": "The team's work, for people and agents"
+  },
+  "shell.moreWhat.projects": {
+    "value": "Each client or product, with its repository and progress"
   },
   "shell.moreWhat.wiki": {
     "value": "What the team knows, written for everyone"
@@ -5425,6 +5485,9 @@
   },
   "shell.moreWhat.issuesPersonal": {
     "value": "Your to-dos and your agents'"
+  },
+  "shell.moreWhat.projectsPersonal": {
+    "value": "Your projects, with their repositories and progress"
   },
   "shell.moreWhat.wikiPersonal": {
     "value": "Notes your agents can read"
@@ -5722,6 +5785,9 @@
   },
   "shell.issues": {
     "value": "Tasks"
+  },
+  "shell.projects": {
+    "value": "Projects"
   },
   "shell.missionsWaiting": {
     "value": {
@@ -20432,6 +20498,21 @@
   },
   "issues.projects.empty": {
     "value": "No tasks in this project yet."
+  },
+  "issues.projects.description": {
+    "value": "Description"
+  },
+  "issues.projects.descriptionPlaceholder": {
+    "value": "What is this project for?"
+  },
+  "issues.projects.repository": {
+    "value": "GitHub repository"
+  },
+  "issues.projects.repositoryExample": {
+    "value": "acme/clinic"
+  },
+  "issues.projects.repositoryHint": {
+    "value": "The repository this project's work lives in. Agents read it along with the project."
   },
   "issues.columns.add": {
     "value": "Add column"
@@ -40000,6 +40081,12 @@
   "errors.issue.projectsFull": {
     "value": "A workspace holds at most {{max}} projects. Delete one first."
   },
+  "errors.issue.projectBadRepo": {
+    "value": "Write the repository as owner/name, or paste its github.com address."
+  },
+  "errors.issue.projectDescriptionTooLong": {
+    "value": "The description holds at most {{max}} characters."
+  },
   "errors.issue.stageFull": {
     "value": "A stage holds at most {{max}} columns. Delete one of its columns first."
   },
@@ -48976,6 +49063,12 @@
   },
   "builtinTools.list_issues.description": {
     "value": "Lists and opens tasks."
+  },
+  "builtinTools.list_projects.label": {
+    "value": "View projects"
+  },
+  "builtinTools.list_projects.description": {
+    "value": "Lists the task projects, what they are for and their repositories."
   },
   "builtinTools.create_issue.label": {
     "value": "Create task"

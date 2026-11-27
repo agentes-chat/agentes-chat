@@ -335,6 +335,8 @@ const KNOWN = {
   "issue_project.name_taken": "errors.issue.projectNameTaken",
   "issue_project.archived": "errors.issue.projectArchived",
   "issue_project.too_many": "errors.issue.projectsFull",
+  "issue_project.bad_repo": "errors.issue.projectBadRepo",
+  "issue_project.description_too_long": "errors.issue.projectDescriptionTooLong",
   "issue.delete_forbidden": "errors.issue.deleteForbidden",
   "issue.audience_empty": "errors.issue.audienceEmpty",
   [REAUTH_PASSWORD]: "errors.reauth.password",
