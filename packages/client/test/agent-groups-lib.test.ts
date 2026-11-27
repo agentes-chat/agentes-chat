@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { ApiError } from "../src/api/http";
 import { createHttpApi } from "../src/api/http-client";
 import { keys } from "../src/api/keys";
-import type { AgentGroup } from "../src/api/types";
+import type { AgentGroup, OrgSettings } from "../src/api/types";
 import { agentSections, groupOf, moveInGroups } from "../src/lib/agent-groups";
 import { knownErrorText } from "../src/lib/errors";
 import { applyWorkspaceEvent } from "../src/realtime/machines";
@@ -72,6 +72,16 @@ describe("agent groups (ADR 0083)", () => {
     qc.setQueryData(keys.agentGroups("o1"), groups);
     expect(applyWorkspaceEvent(qc, "o1", { type: "agent.groups" })).toBe(true);
     expect(qc.getQueryState(keys.agentGroups("o1"))?.isInvalidated).toBe(true);
+  });
+
+  test("sectors.order: the settings take the new order at once, in every member's apps (ADR 0240)", () => {
+    const qc = new QueryClient();
+    qc.setQueryData<Partial<OrgSettings>>(keys.settings("o1"), { name: "Acme", sectorChannelsFirst: false });
+    expect(applyWorkspaceEvent(qc, "o1", { type: "sectors.order", orgId: "o1", channelsFirst: true } as never)).toBe(
+      true,
+    );
+    expect(qc.getQueryData<OrgSettings>(keys.settings("o1"))?.sectorChannelsFirst).toBe(true);
+    expect(qc.getQueryState(keys.settings("o1"))?.isInvalidated).toBe(true);
   });
 
   test("its refusals in the person's words: too many groups, a group gone meanwhile", () => {

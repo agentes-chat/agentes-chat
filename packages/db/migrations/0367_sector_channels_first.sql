@@ -1,0 +1,1 @@
+ALTER TABLE "organization_settings" ADD COLUMN "sector_channels_first" boolean DEFAULT false NOT NULL;

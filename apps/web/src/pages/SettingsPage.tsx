@@ -600,6 +600,31 @@ function GeneralSection() {
       </div>
     </div>
   );
+  // The order inside each sector, the same for everyone in the workspace (ADR 0240 amendment of 2026-11-26).
+  const sectorOrder = t("settings.sectorChannelsFirst");
+  const sectorOrderRow = (
+    <div className="settings-row ac-actrow">
+      <div className="settings-row__text ac-actrow__text">
+        <span className="ac-hintline">
+          <label className="settings-row__label" htmlFor="set-sector-order">
+            {sectorOrder}
+          </label>
+          <InfoHint name={t("common.about", { label: sectorOrder })} id="set-sector-order-hint">
+            {t("settings.sectorChannelsFirstHelp")}
+          </InfoHint>
+        </span>
+      </div>
+      <div className="settings-row__control">
+        <Switch
+          id="set-sector-order"
+          checked={settings.data?.sectorChannelsFirst ?? false}
+          onCheckedChange={(on) => save({ sectorChannelsFirst: on })}
+          disabled={!editable || !settings.data}
+          aria-describedby="set-sector-order-hint"
+        />
+      </div>
+    </div>
+  );
   // Who the workspace is for (ADR 0159 §4): the mode it is in now and, for who configures it, the switch to the other.
   const modeRow = (
     <div className="settings-row ac-actrow">
@@ -629,6 +654,7 @@ function GeneralSection() {
         {nameRow}
         {!personal && zoneRow}
         {checkRow}
+        {sectorOrderRow}
         <WorkspaceApprovalsRow />
         {modeRow}
       </div>

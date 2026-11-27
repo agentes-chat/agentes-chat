@@ -126,6 +126,19 @@ describe("a sector in the sidebar", () => {
     expect(section("Suporte").toggle.querySelector(".ac-rolemark")).not.toBeNull();
   });
 
+  test("with the workspace's Canais antes dos agentes: its channels, the hairline, then its agents", async () => {
+    const state = acme();
+    state.sectorChannelsFirst = true;
+    await go(state);
+    const { body } = section("Suporte");
+    const kids = [...body.children].map((el) =>
+      el.matches("hr")
+        ? el.className
+        : (el.querySelector(".sidebar__item-label") ?? el).textContent?.replace(/Atlas.*/, "Atlas"),
+    );
+    expect(kids).toEqual(["eng", "design", "alerts", "sidebar__sector-line", "Atlas"]);
+  });
+
   test("closed, it keeps the unread channels and who wrote to me, and one count adds up its DMs and channels", async () => {
     await withLayout();
     await go();

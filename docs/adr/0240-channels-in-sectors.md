@@ -1,7 +1,8 @@
 # 0240. Channels in sectors
 
-- Status: Accepted. Amended 2026-11-27 by ADR 0260: §6 to §9, sectors leave the sidebar (a channel keeps its sector, on
-  Equipe › Setores and in the pickers); channel sections are each person's own
+- Status: Accepted, amended 2026-11-26 (a workspace may put a sector's channels before its agents). Amended
+  2026-11-27 by ADR 0260: §6 to §9, sectors leave the sidebar (a channel keeps its sector, on Equipe › Setores and in
+  the pickers); channel sections are each person's own
 - Date: 2026-11-25
 - Amends: ADR 0080 (channel categories go away; their placing rules move to sectors), ADR 0083 and its 2026-11-04
   amendment (a sector holds channels as well as agents)
@@ -60,3 +61,20 @@ the sidebar, once for the agents and once for the channels, and moving a team me
 - A workspace that used categories and sectors with different names ends with more sectors. Sectors with no agents
   and no channels show only to who arranges them.
 - Equipe › Setores lists a sector's own channels before the ones its agents are in.
+
+## Amendment (2026-11-26): channels before agents
+
+§6 and §9 put a sector's agents first. A workspace that works mostly in channels wanted them on top, so the order is now
+one switch of the workspace, the same for everyone in it: "Canais antes dos agentes nos setores" in Configurações ›
+Geral, on the web and on the phone.
+
+- `organization_settings.sector_channels_first` (migration 0367), off by default and without a row: a workspace that
+  never touches it looks as before. It rides `GET …/settings` for every member (`sectorChannelsFirst`) and changes in
+  `PATCH …/settings` by who configures the workspace (`configure`), like the other switches there.
+- A change is audited (`organization.sector_order_changed`, with `channelsFirst`) and sent to the open apps as the org
+  broadcast `sectors.order`, which sets the settings at once (`applyWorkspaceEvent`).
+- On: each sector shows its channels, the hairline, then its agents; the pinned ones of each part still come first
+  (web `Sidebar.tsx`, phone `sectorSections`, whose `lineAt` is where the hairline goes). The closed rule of §7 doesn't
+  change, nor Canais, nor Equipe › Setores.
+- One switch for the workspace rather than one per person or per sector: the order is how the team reads its sectors, so
+  everyone sees the same sidebar, and a sector's look stays one thing to arrange.

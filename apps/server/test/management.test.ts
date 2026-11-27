@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { orgTopic } from "@agenteschat/adapters";
 import { type Browser, browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
 
 let t: TestServer;
@@ -227,4 +228,30 @@ test("onboarding keeps the team size and time zone; settings change them", async
     teamSize: "medium",
   });
   expect((await api("/settings", { method: "PATCH", json: { teamSize: "huge" } })).status).toBe(400);
+});
+
+test("channels before agents in sectors (ADR 0240 amendment of 2026-11-26): every member reads it, who configures sets it, apps hear it", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const settings = `/api/app/organizations/${orgId}/settings`;
+  const announced: unknown[] = [];
+  t.adapters.pubsub.subscribe(orgTopic(orgId), (e) => {
+    if (e.type === "org.broadcast") announced.push(e.event);
+  });
+  const ana = await joinByInvitation(t, owner, orgId, "ana@example.com");
+
+  expect(await (await ana(settings)).json()).toMatchObject({ sectorChannelsFirst: false });
+  expect((await ana(settings, { method: "PATCH", json: { sectorChannelsFirst: true } })).status).toBe(403);
+  expect((await owner(settings, { method: "PATCH", json: { sectorChannelsFirst: "yes" } })).status).toBe(400);
+  expect(announced).not.toContainEqual(expect.objectContaining({ type: "sectors.order" }));
+
+  const saved = await owner(settings, { method: "PATCH", json: { sectorChannelsFirst: true } });
+  expect(await saved.json()).toMatchObject({ sectorChannelsFirst: true });
+  expect(await (await ana(settings)).json()).toMatchObject({ sectorChannelsFirst: true });
+  expect(announced).toContainEqual({ type: "sectors.order", orgId, channelsFirst: true });
+  // Another setting saved says nothing about the sectors.
+  announced.length = 0;
+  await owner(settings, { method: "PATCH", json: { actionCheck: false } });
+  expect(announced).not.toContainEqual(expect.objectContaining({ type: "sectors.order" }));
 });

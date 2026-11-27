@@ -62,6 +62,8 @@ describe("a channel's sector on the phone (ADR 0240)", () => {
     const home = src("features/chats/ChatsScreen.tsx");
     expect(home).toContain("kept: section.rows.filter(keptWhenClosed).map((r, i) => rowOf(r, i, true)),");
     expect(home).toContain("count: unread,");
-    expect(home).toContain("i === section.channelsFrom ? <SectorLine /> : null");
+    expect(home).toContain("i === section.lineAt ? <SectorLine /> : null");
+    // The workspace's order inside a sector (ADR 0240 amendment of 2026-11-26).
+    expect(home).toContain("sectorSections(visible, groups ?? [], channelsFirst)");
   });
 });
