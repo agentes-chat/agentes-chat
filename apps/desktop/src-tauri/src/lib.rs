@@ -8,6 +8,7 @@
 //! native dialogs and self-update. Everything else lives in the runner and the server (TypeScript) and in the
 //! web view.
 
+mod address;
 mod always_on;
 mod app_icon;
 mod app_layer;
@@ -28,7 +29,6 @@ mod prepare;
 mod problem_report;
 mod runners;
 mod servers;
-mod tailnet_app;
 mod tailscale;
 mod tray;
 mod vitals;
@@ -716,7 +716,6 @@ pub fn run() {
         .manage(PopoverClock(Mutex::new(None)))
         .manage(servers::Servers::default())
         .manage(local_server::LocalServer::default())
-        .manage(tailnet_app::TailnetApp::default())
         .manage(host_sync::HostSync::default())
         .manage(deep_link::PendingLink::default())
         .manage(main_window::Bridge::default())
@@ -772,6 +771,7 @@ pub fn run() {
             local_server::local_server_restart,
             local_server::local_server_reach,
             local_server::local_server_reach_stop,
+            local_server::local_server_check_address,
             local_server::local_server_usage,
             local_server::local_server_backup,
             local_server::local_server_backups_set,
@@ -787,10 +787,6 @@ pub fn run() {
             local_server::local_server_sync,
             tailscale::tailscale_status,
             tailscale::tailscale_open,
-            tailnet_app::tailnet_status,
-            tailnet_app::tailnet_sign_in,
-            tailnet_app::tailnet_sign_in_cancel,
-            tailnet_app::tailnet_use_source,
             local_server::local_server_phone_link,
             tray::tray_visible,
             main_window::this_mac,

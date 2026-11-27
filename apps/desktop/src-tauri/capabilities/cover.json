@@ -1,6 +1,6 @@
 {
   "identifier": "cover",
-  "description": "The main window's cover (cover.rs): a page of the app over the server's page. It may drag the window, ask which server is open, load it again once it is reachable, or step aside; for the server here, start it, copy its details or send a report of them (with this computer's system, size, the web view's memory and the opening's time), for a workspace on a Tailscale network it can't reach, name it (the workspaces the app keeps), read the system's and the app's own Tailscale and turn the network on (sign the app's own Tailscale in, start it, or open the system's Tailscale); for a server out of reach or the server here stopped, open the first run on another server (the app layer, ADR 0256) or another server of the app's list. Nothing of the server's page, the runners or this computer.",
+  "description": "The main window's cover (cover.rs): a page of the app over the server's page. It may drag the window, ask which server is open, load it again once it is reachable, or step aside; for the server here, start it, copy its details or send a report of them (with this computer's system, size, the web view's memory and the opening's time), for a workspace on a Tailscale network it can't reach, name it (the workspaces the app keeps), read Tailscale's state (whether it is installed, on, and has its app to open) and open or download it (ADR 0256 §4); for a server out of reach or the server here stopped, open the first run on another server (the app layer, ADR 0256) or another server of the app's list. Nothing of the server's page, the runners or this computer.",
   "webviews": ["main-cover"],
   "permissions": [
     "core:window:allow-start-dragging",
@@ -20,8 +20,6 @@
     "allow-layer-show",
     "allow-tailscale-status",
     "allow-tailscale-open",
-    "allow-workspaces-get",
-    "allow-tailnet-status",
-    "allow-tailnet-sign-in"
+    "allow-workspaces-get"
   ]
 }

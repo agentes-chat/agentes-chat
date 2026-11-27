@@ -1,8 +1,7 @@
-//! Tailscale through its command-line tool: whether the system's Tailscale is connected (Connect's discovery), and
+//! Tailscale on this computer, the official one the person installs (ADR 0256 §4: the app carries none), through its
+//! own command-line tool: whether it is connected (Connect's discovery, the way people reach the server here), and
 //! sharing the server here on the person's tailnet (`tailscale serve`, HTTPS inside the tailnet only; never Funnel).
-//! Two Tailscales can do it (ADR 0256 §4), each a `Source`: the system's own (its tool is looked up at the places it
-//! installs itself, never at a path from a page), or the one the app carries (`tailnet_app.rs`), whose daemon answers
-//! only on the app's own socket and is asked with the same binary as its command-line tool (`TS_BE_CLI=1`).
+//! The tool is looked up at the places it installs itself, never at a path from a page.
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -32,78 +31,42 @@ pub enum Tailnet {
     On { device: String },
 }
 
-/// Why sharing the server here on the tailnet didn't work.
+/// Why the server here isn't reached from the person's other devices (control/local-server.ts `ServeProblem`).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(tag = "reason", rename_all = "camelCase")]
 pub enum ServeError {
     /// HTTPS (or Serve) is off for the tailnet: its admin turns it on at `url`.
     Https { url: Option<String> },
-    /// This computer's user may not change what the system's Tailscale shares (Linux, until `tailscale set --operator`).
+    /// This computer's user may not change what Tailscale shares (Linux, until `tailscale set --operator`).
     Operator,
     /// Tailscale is missing, or refused (the Mac App Store variant may never share).
     Serve,
-    /// The system's Tailscale is installed but not connected on this computer: connecting it (its app, or
-    /// `tailscale up`) fixes it.
+    /// Tailscale is installed but not connected on this computer: connecting it (its app, or `tailscale up`) fixes it.
     NotConnected { app: bool },
-    /// The app's own connection isn't signed in to the private network (yet, or the sign-in didn't finish): signing in
-    /// at `url` (Tailscale's page, in the browser) fixes it.
-    SignIn { url: Option<String> },
-    /// The app's own connection was signed in, and its key expired: signing in again fixes it.
-    Expired,
-    /// The tailnet's admin approves new devices, and hasn't approved this one yet (at `url`).
-    NeedsApproval { url: Option<String> },
-    /// The person stopped waiting for HTTPS to be allowed (or for the sign-in).
+    /// The person stopped waiting for HTTPS to be allowed.
     Stopped,
-    /// Tailscale shares it, but the server didn't answer again at its new address (not Tailscale's doing).
+    /// It is shared, but the server didn't answer again at its new address (not Tailscale's doing, nor the address's).
     Start,
     /// Reach was turned off, and the server didn't answer again at this computer's own address.
     Back,
+    /// The person's own address doesn't lead here (`address.rs`): `status` is the HTTP status of an error answer.
+    Address {
+        why: crate::address::AddressProblem,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        status: Option<u16>,
+    },
+}
+
+impl From<crate::address::AddressFail> for ServeError {
+    fn from(fail: crate::address::AddressFail) -> Self {
+        ServeError::Address { why: fail.why, status: fail.status }
+    }
 }
 
 /// Tailscale's Mac app, which "Open Tailscale" opens.
 pub const MAC_APP: &str = "/Applications/Tailscale.app";
 
-/// Which Tailscale a command goes to.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Source {
-    /// The system's Tailscale, through its own tool.
-    System(PathBuf),
-    /// The daemon the app carries (`tailnet_app.rs`): the same binary is its command-line tool, always told the app's
-    /// own socket, so it never talks to the system's Tailscale.
-    App { bin: PathBuf, socket: String },
-}
-
-impl Source {
-    pub fn is_app(&self) -> bool {
-        matches!(self, Source::App { .. })
-    }
-
-    /// The tool, set up to run as the command-line tool of this Tailscale.
-    pub fn command(&self) -> Command {
-        match self {
-            Source::System(cli) => {
-                let mut command = Command::new(cli);
-                for (key, value) in cli_env(cfg!(target_os = "macos"), std::env::var_os("TERM").is_some()) {
-                    command.env(key, value);
-                }
-                command
-            }
-            Source::App { bin, socket } => {
-                let mut command = Command::new(bin);
-                command.env("TS_BE_CLI", "1").arg(socket_flag(socket));
-                command
-            }
-        }
-    }
-}
-
-/// The CLI's root flag naming the daemon's socket (`--socket` also makes the CLI use only it, never the system
-/// Tailscale's: on a Mac the CLI would otherwise look for the Tailscale app's own local port first).
-pub fn socket_flag(socket: &str) -> String {
-    format!("--socket={socket}")
-}
-
-/// The system's tool at the places it installs itself.
+/// The tool at the places it installs itself.
 pub fn cli() -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     let fixed: &[&str] = &[
@@ -120,20 +83,20 @@ pub fn cli() -> Option<PathBuf> {
     fixed.iter().map(PathBuf::from).find(|p| p.is_file())
 }
 
-/// The system's Tailscale, when its tool is there.
-pub fn system() -> Option<Source> {
-    cli().map(Source::System)
-}
-
-/// Whether the system's Tailscale is the Mac App Store variant, which may never share the server (its sandbox).
+/// Whether the installed Tailscale is the Mac App Store variant (said in Copy details: its sandbox may refuse to share).
 pub fn mac_app_store() -> bool {
     cfg!(target_os = "macos") && Path::new(MAC_APP).join("Contents").join("_MASReceipt").exists()
 }
 
-/// The environment the system's tool is started with. On a Mac, its app binary decides between being the
-/// command-line tool and opening the app's own window by its environment: told nothing (and with no terminal), it
-/// opens the window, prints that it couldn't run the command and still ends with code 0, so `status --json` isn't
-/// JSON. `term`: whether this process has a `TERM` of its own to pass on.
+/// Whether Tailscale's Mac app is there to open.
+fn mac_app() -> bool {
+    cfg!(target_os = "macos") && Path::new(MAC_APP).is_dir()
+}
+
+/// The environment the tool is started with. On a Mac, its app binary decides between being the command-line
+/// tool and opening the app's own window by its environment: told nothing (and with no terminal), it opens the
+/// window, prints that it couldn't run the command and still ends with code 0, so `status --json` isn't JSON.
+/// `term`: whether this process has a `TERM` of its own to pass on.
 fn cli_env(macos: bool, term: bool) -> Vec<(&'static str, &'static OsStr)> {
     if !macos {
         return Vec::new();
@@ -145,29 +108,33 @@ fn cli_env(macos: bool, term: bool) -> Vec<(&'static str, &'static OsStr)> {
     env
 }
 
-/// Runs the tool with `args`: whether it ended well, and what it printed (stdout, then stderr); None when it couldn't
-/// start. Taking longer than `wait` stops it (what it printed so far is kept).
-pub fn run(source: &Source, args: &[&str], wait: Duration) -> Option<(bool, String)> {
-    let ran = crate::run_program(source.command().args(args), wait, &|| false).ok()?;
+/// The tool, set up to run as the command-line tool (see `cli_env`).
+fn command_for(cli: &Path) -> Command {
+    let mut command = Command::new(cli);
+    for (key, value) in cli_env(cfg!(target_os = "macos"), std::env::var_os("TERM").is_some()) {
+        command.env(key, value);
+    }
+    command
+}
+
+/// Runs the tool with `args`: whether it ended well, and what it printed (stdout, then stderr); None when it isn't
+/// there or couldn't start. Taking longer than `wait` stops it (what it printed so far is kept).
+fn run(args: &[&str], wait: Duration) -> Option<(bool, String)> {
+    let ran = crate::run_program(command_for(&cli()?).args(args), wait, &|| false).ok()?;
     Some((ran.code == Some(0), ran.out + &ran.err))
 }
 
-/// `tailscale status --json` of `source`, or None when it fails or takes too long.
-pub fn status_json_of(source: &Source) -> Option<Value> {
-    let (ok, out) = run(source, &["status", "--json"], STATUS_WAIT)?;
+/// `tailscale status --json`, or None when the tool isn't there, fails or takes too long.
+pub fn status_json() -> Option<Value> {
+    let (ok, out) = run(&["status", "--json"], STATUS_WAIT)?;
     if !ok {
         return None;
     }
     serde_json::from_str(&out).ok()
 }
 
-/// The system's Tailscale's `status --json` (Connect's discovery reads its peers).
-pub fn status_json() -> Option<Value> {
-    status_json_of(&system()?)
-}
-
 /// This device's name on the tailnet from `status --json` (`Self.DNSName`), when it is a plain host name.
-pub fn device_name(status: &Value) -> Option<String> {
+fn device_name(status: &Value) -> Option<String> {
     status
         .pointer("/Self/DNSName")
         .and_then(Value::as_str)
@@ -187,17 +154,16 @@ pub fn tailnet_of(status: Option<&Value>, installed: bool, app: bool) -> Tailnet
     }
 }
 
-/// The system's Tailscale.
+/// Tailscale on this computer now. Cheap enough to ask every 2 s while the first run waits for it to be installed or
+/// turned on: one `status --json`, or nothing at all while it isn't installed.
 pub fn tailnet() -> Tailnet {
-    let app = cfg!(target_os = "macos") && Path::new(MAC_APP).is_dir();
-    match system() {
-        Some(source) => tailnet_of(status_json_of(&source).as_ref(), true, app),
+    match cli() {
+        Some(_) => tailnet_of(status_json().as_ref(), true, mac_app()),
         None => Tailnet::Missing,
     }
 }
 
-/// The HTTPS port to share on: 443, unless this device already shares something else there (only the system's
-/// Tailscale may: the app's own daemon shares nothing but the server here).
+/// The HTTPS port to share on: 443, unless this device already shares something else there.
 fn https_port(serve: Option<&Value>, device: &str, target: &str) -> u16 {
     let taken =
         serve.and_then(|s| web_handlers(s, device, 443)).is_some_and(|handlers| !handlers.to_string().contains(target));
@@ -244,36 +210,31 @@ pub fn serve_error(out: &str) -> ServeError {
     }
 }
 
-/// `serve status --json` of `source`.
-fn serve_status(source: &Source) -> Option<Value> {
-    run(source, &["serve", "status", "--json"], STATUS_WAIT)
+/// `serve status --json`.
+fn serve_status() -> Option<Value> {
+    run(&["serve", "status", "--json"], STATUS_WAIT)
         .filter(|(ok, _)| *ok)
         .and_then(|(_, out)| serde_json::from_str(&out).ok())
 }
 
-/// This device's name on `source`'s tailnet, or why it can't share now.
-pub fn device_of(source: &Source) -> Result<String, ServeError> {
-    let status = status_json_of(source);
-    match tailnet_of(status.as_ref(), true, false) {
+/// This device's name on the tailnet, or why it can't share now.
+pub fn device() -> Result<String, ServeError> {
+    match tailnet() {
         Tailnet::On { device } => Ok(device),
-        _ if source.is_app() => Err(ServeError::SignIn { url: None }),
-        _ => Err(ServeError::NotConnected { app: cfg!(target_os = "macos") && Path::new(MAC_APP).is_dir() }),
+        Tailnet::Off { app } => Err(ServeError::NotConnected { app }),
+        Tailnet::Missing => Err(ServeError::Serve),
     }
 }
 
-/// Shares `http://127.0.0.1:<port>` on `source`'s tailnet over HTTPS; the address it answers at. When HTTPS isn't
-/// allowed in the tailnet yet, Tailscale names its admin page and waits there until it is: `asks` gets that page at
-/// once, and `serve` goes on by itself once the person allowed it, with no time limit of its own (ADR 0256 §3), until
-/// `stopped` says so. Its share is then read back (`served_at`) before it counts.
-pub fn serve(
-    source: &Source,
-    port: u16,
-    asks: &mut dyn FnMut(&str),
-    stopped: &dyn Fn() -> bool,
-) -> Result<String, ServeError> {
-    let device = device_of(source)?;
+/// Shares `http://127.0.0.1:<port>` on the tailnet over HTTPS; the address it answers at. When HTTPS isn't allowed in
+/// the tailnet yet, Tailscale names its admin page and waits there until it is: `asks` gets that page at once, and
+/// `serve` goes on by itself once the person allowed it, with no time limit of its own (ADR 0256 §3), until `stopped`
+/// says so. Its share is then read back (`served_at`) before it counts.
+pub fn serve(port: u16, asks: &mut dyn FnMut(&str), stopped: &dyn Fn() -> bool) -> Result<String, ServeError> {
+    let device = device()?;
+    let cli = cli().ok_or(ServeError::Serve)?;
     let target = format!("http://127.0.0.1:{port}");
-    let https = if source.is_app() { 443 } else { https_port(serve_status(source).as_ref(), &device, &target) };
+    let https = https_port(serve_status().as_ref(), &device, &target);
     let flag = format!("--https={https}");
     let mut asked: Option<String> = None;
     let mut watch = |so_far: &str| {
@@ -292,7 +253,7 @@ pub fn serve(
             Watch::Wait
         }
     };
-    let mut command = source.command();
+    let mut command = command_for(&cli);
     command.args(["serve", "--bg", flag.as_str(), target.as_str()]);
     let ran = crate::run_watched(&mut command, SERVE_WAIT, &mut watch).map_err(|_| ServeError::Serve)?;
     let printed = ran.out + &ran.err;
@@ -301,7 +262,7 @@ pub fn serve(
         _ if ran.code != Some(0) => return Err(serve_error(&printed)),
         _ => {}
     }
-    if !served_at(serve_status(source).as_ref(), &device, https, &target) {
+    if !served_at(serve_status().as_ref(), &device, https, &target) {
         // Ended well without sharing: HTTPS is still off in the tailnet.
         return Err(ServeError::Https { url: asked.or_else(|| admin_url(&printed)) });
     }
@@ -309,30 +270,9 @@ pub fn serve(
 }
 
 /// Stops sharing the address `public_url` (either HTTPS port the app may have used).
-pub fn unserve(source: &Source, public_url: &str) {
+pub fn unserve(public_url: &str) {
     let https = if public_url.rsplit_once(':').is_some_and(|(_, p)| p == "8443") { 8443 } else { 443 };
-    let _ = run(source, &["serve", &format!("--https={https}"), "off"], SERVE_WAIT);
-}
-
-/// Everything the app's own daemon shares goes (it shares only the server here, and its state keeps the last share
-/// across starts: until the server answers again, that address must lead nowhere).
-pub fn serve_reset(source: &Source) -> bool {
-    run(source, &["serve", "reset"], SERVE_WAIT).is_some_and(|(ok, _)| ok)
-}
-
-/// Whether the system's Tailscale lets this computer's user change what it shares (Linux: the person is its
-/// operator; elsewhere the system's Tailscale lets its own user).
-pub fn may_serve(source: &Source) -> bool {
-    if !cfg!(target_os = "linux") || source.is_app() {
-        return true;
-    }
-    let Some((true, out)) = run(source, &["debug", "prefs"], STATUS_WAIT) else { return false };
-    let operator = serde_json::from_str::<Value>(&out)
-        .ok()
-        .and_then(|p| p.get("OperatorUser").and_then(Value::as_str).map(str::to_string))
-        .unwrap_or_default();
-    let user = std::env::var("USER").unwrap_or_default();
-    !operator.is_empty() && operator == user
+    let _ = run(&["serve", &format!("--https={https}"), "off"], SERVE_WAIT);
 }
 
 #[tauri::command]
@@ -343,16 +283,24 @@ pub async fn tailscale_status(webview: tauri::Webview) -> Result<Tailnet, String
     tauri::async_runtime::spawn_blocking(tailnet).await.map_err(|e| e.to_string())
 }
 
-/// Tailscale's pages the app opens for the person: Get Tailscale (its download page), Turn it on (the admin page the
-/// last `serve` named, or the tailnet's DNS settings, where HTTPS is turned on), the sign-in the app's own connection
-/// waits on ("Open the page again"), the admin's list of devices (where a new one is approved, `approve`, and where its
-/// key's expiry is turned off, `keyExpiry`), and the admin console. Open Tailscale (its Mac app) is a path, not a page (`tailscale_open`).
-pub fn page_url(page: &str, https: Option<String>, sign_in: Option<String>) -> Result<String, String> {
+/// Tailscale's official download page for this system (`std::env::consts::OS`). On a Mac, the standalone app: the App
+/// Store variant's sandbox may refuse to share the server here.
+pub fn download_url(os: &str) -> &'static str {
+    match os {
+        "macos" => "https://pkgs.tailscale.com/stable/#macos",
+        "windows" => "https://tailscale.com/download/windows",
+        "linux" => "https://tailscale.com/download/linux",
+        _ => "https://tailscale.com/download",
+    }
+}
+
+/// Tailscale's pages the app opens for the person: Download Tailscale (`download`), Turn HTTPS on (`https`: the admin
+/// page the last `serve` named, or the tailnet's DNS settings, where HTTPS is turned on), and the admin console
+/// (`admin`). Open Tailscale (its Mac app, `app`) is a path, not a page (`tailscale_open`).
+pub fn page_url(page: &str, https: Option<String>, os: &str) -> Result<String, String> {
     match page {
-        "download" => Ok("https://tailscale.com/download".into()),
+        "download" => Ok(download_url(os).into()),
         "https" => Ok(https.unwrap_or_else(|| "https://login.tailscale.com/admin/dns".to_string())),
-        "signIn" => sign_in.ok_or_else(|| "no sign-in under way".into()),
-        "keyExpiry" | "approve" => Ok(crate::tailnet_app::ADMIN_MACHINES.into()),
         "admin" => Ok("https://login.tailscale.com/admin".into()),
         _ => Err("unknown page".into()),
     }
@@ -367,12 +315,12 @@ pub async fn tailscale_open(app: tauri::AppHandle, webview: tauri::Webview, page
     // Off the main thread: opening runs a program and waits for it.
     tauri::async_runtime::spawn_blocking(move || {
         if page == "app" {
-            if !cfg!(target_os = "macos") {
-                return Err("only a Mac has Tailscale's app to open".to_string());
+            if !mac_app() {
+                return Err("no Tailscale app to open on this computer".to_string());
             }
             return app.opener().open_path(MAC_APP, None::<&str>).map_err(|e| e.to_string());
         }
-        let url = page_url(&page, crate::local_server::https_admin_url(&app), crate::tailnet_app::sign_in_url(&app))?;
+        let url = page_url(&page, crate::local_server::https_admin_url(&app), std::env::consts::OS)?;
         app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
     })
     .await
@@ -391,17 +339,15 @@ mod tests {
             json!({ "reason": "notConnected", "app": true })
         );
         assert_eq!(serde_json::to_value(ServeError::Back).unwrap(), json!({ "reason": "back" }));
+        assert_eq!(serde_json::to_value(ServeError::Https { url: None }).unwrap(), json!({ "reason": "https", "url": null }));
+        use crate::address::{AddressFail, AddressProblem};
         assert_eq!(
-            serde_json::to_value(ServeError::SignIn { url: None }).unwrap(),
-            json!({ "reason": "signIn", "url": null })
+            serde_json::to_value(ServeError::from(AddressFail::new(AddressProblem::Unreachable))).unwrap(),
+            json!({ "reason": "address", "why": "unreachable" })
         );
-        assert_eq!(serde_json::to_value(ServeError::Expired).unwrap(), json!({ "reason": "expired" }));
         assert_eq!(
-            serde_json::to_value(ServeError::NeedsApproval {
-                url: Some("https://login.tailscale.com/admin/machines".into())
-            })
-            .unwrap(),
-            json!({ "reason": "needsApproval", "url": "https://login.tailscale.com/admin/machines" })
+            serde_json::to_value(ServeError::from(AddressFail { why: AddressProblem::Error, status: Some(502) })).unwrap(),
+            json!({ "reason": "address", "why": "error", "status": 502 })
         );
     }
 
@@ -418,10 +364,11 @@ mod tests {
         let odd = json!({ "BackendState": "Running", "Self": { "DNSName": "evil name/../x." } });
         assert_eq!(tailnet_of(Some(&odd), true, true), Tailnet::Off { app: true });
         assert_eq!(serde_json::to_value(Tailnet::Off { app: false }).unwrap(), json!({ "state": "off", "app": false }));
+        assert_eq!(serde_json::to_value(Tailnet::Missing).unwrap(), json!({ "state": "missing" }));
     }
 
     #[test]
-    fn the_system_tool_is_told_to_be_the_command_line_one_on_a_mac() {
+    fn the_tool_is_told_to_be_the_command_line_one_on_a_mac() {
         let env = cli_env(true, false);
         assert!(env.contains(&("TAILSCALE_BE_CLI", OsStr::new("1"))));
         // No terminal of its own: one is made up, so the Mac app doesn't take the missing `TERM` for a window.
@@ -431,20 +378,6 @@ mod tests {
         // Elsewhere the tool needs nothing told: Linux and Windows stay as they were.
         assert!(cli_env(false, false).is_empty());
         assert!(cli_env(false, true).is_empty());
-    }
-
-    #[test]
-    fn the_app_s_own_daemon_is_asked_on_its_own_socket_only() {
-        let source = Source::App {
-            bin: PathBuf::from("/Applications/agentes.chat.app/Contents/MacOS/agentes-tailscaled"),
-            socket: "/tmp/x/ts.sock".into(),
-        };
-        let command = source.command();
-        let args: Vec<_> = command.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
-        assert_eq!(args, vec!["--socket=/tmp/x/ts.sock".to_string()]);
-        assert!(command.get_envs().any(|(k, v)| k == "TS_BE_CLI" && v == Some(OsStr::new("1"))));
-        assert!(source.is_app());
-        assert!(!Source::System(PathBuf::from("/usr/bin/tailscale")).is_app());
     }
 
     #[test]
@@ -462,15 +395,15 @@ mod tests {
     #[test]
     fn a_share_counts_only_once_serve_status_shows_it() {
         let target = "http://127.0.0.1:4310";
-        let device = "agentes.tail1234.ts.net";
+        let device = "ana-mac.tail1234.ts.net";
         let shared = json!({
             "TCP": { "443": { "HTTPS": true } },
-            "Web": { "agentes.tail1234.ts.net:443": { "Handlers": { "/": { "Proxy": "http://127.0.0.1:4310" } } } }
+            "Web": { "ana-mac.tail1234.ts.net:443": { "Handlers": { "/": { "Proxy": "http://127.0.0.1:4310" } } } }
         });
         assert!(served_at(Some(&shared), device, 443, target));
         // Another port, another device, another target, or nothing shared at all.
         assert!(!served_at(Some(&shared), device, 8443, target));
-        assert!(!served_at(Some(&shared), "ana-mac.tail1234.ts.net", 443, target));
+        assert!(!served_at(Some(&shared), "bia-mac.tail1234.ts.net", 443, target));
         assert!(!served_at(Some(&shared), device, 443, "http://127.0.0.1:4311"));
         assert!(!served_at(Some(&json!({})), device, 443, target));
         assert!(!served_at(None, device, 443, target));
@@ -489,18 +422,19 @@ mod tests {
 
     #[test]
     fn tailscale_s_pages_the_app_opens() {
-        assert_eq!(page_url("https", None, None).unwrap(), "https://login.tailscale.com/admin/dns");
+        assert_eq!(page_url("https", None, "macos").unwrap(), "https://login.tailscale.com/admin/dns");
         assert_eq!(
-            page_url("https", Some("https://login.tailscale.com/f/serve?node=abc".into()), None).unwrap(),
+            page_url("https", Some("https://login.tailscale.com/f/serve?node=abc".into()), "linux").unwrap(),
             "https://login.tailscale.com/f/serve?node=abc"
         );
-        assert_eq!(
-            page_url("signIn", None, Some("https://login.tailscale.com/a/0123".into())).unwrap(),
-            "https://login.tailscale.com/a/0123"
-        );
-        assert!(page_url("signIn", None, None).is_err());
-        assert_eq!(page_url("keyExpiry", None, None).unwrap(), "https://login.tailscale.com/admin/machines");
-        assert_eq!(page_url("approve", None, None).unwrap(), "https://login.tailscale.com/admin/machines");
-        assert!(page_url("file:///etc/passwd", None, None).is_err());
+        assert_eq!(page_url("admin", None, "windows").unwrap(), "https://login.tailscale.com/admin");
+        // The official download, for this system: on a Mac the standalone app.
+        assert_eq!(page_url("download", None, "macos").unwrap(), "https://pkgs.tailscale.com/stable/#macos");
+        assert_eq!(page_url("download", None, "windows").unwrap(), "https://tailscale.com/download/windows");
+        assert_eq!(page_url("download", None, "linux").unwrap(), "https://tailscale.com/download/linux");
+        // Only these pages, never one a window names.
+        for refused in ["signIn", "keyExpiry", "approve", "file:///etc/passwd", "app"] {
+            assert!(page_url(refused, None, "macos").is_err(), "{refused}");
+        }
     }
 }

@@ -12,8 +12,7 @@ name: Desktop
 #   Windows  agentes_<v>_x64-setup.exe, agentes_<v>_arm64-setup.exe (+ .sha256, + .sig: the installer is its own
 #            updater bundle)
 #   Linux    agentes_<v>_{amd64,arm64}.deb (+ .sha256), agentes_<v>_{amd64,arm64}.AppImage (+ .sha256, + .sig)
-# Every app carries the runner and agent-browser (ADR 0040), Tailscale's daemon (`agentes-tailscaled`, ADR 0256 §4,
-# built once for every system by the `tailscaled` job), and the server's own files, built once from the
+# Every app carries the runner and agent-browser (ADR 0040), and the server's own files, built once from the
 # same commit (the `server` job: JavaScript and WebAssembly, the same on every system), for "Run agentes.chat
 # on this computer" (ADR 0066; tauri.native.conf.json adds them to the resources). `none` only builds the
 # current version as artifacts. `platforms` can leave systems out, also from a release: the server gives each
@@ -200,130 +199,8 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # The Tailscale the app carries (ADR 0256 §4): Tailscale's daemon with its command-line tool in the same binary
-  # (`ts_include_cli`), from the release and commit pinned in apps/desktop/tailscale.json, with only the features listed
-  # there (no port mapping: nothing asks the person's router for a port), stripped. Pure Go (CGO off), so one Linux
-  # runner cross-compiles it for every system; the macOS job joins its two into a universal one. Its license, patent
-  # grant and the license files of every module it is built from go into licenses/tailscale/.
-  tailscaled:
-    needs: version
-    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          ref: ${{ needs.version.outputs.ref }}
-
-      # A shallow clone of the tag, checked against the pinned commit: a moved tag never builds.
-      - name: Fetch Tailscale at the pinned release
-        shell: bash
-        run: |
-          VERSION=$(jq -r .version apps/desktop/tailscale.json)
-          COMMIT=$(jq -r .commit apps/desktop/tailscale.json)
-          SRC="$RUNNER_TEMP/tailscale"
-          git clone --quiet --depth 1 --branch "v$VERSION" https://github.com/tailscale/tailscale "$SRC"
-          if [ "$(git -C "$SRC" rev-parse HEAD)" != "$COMMIT" ]; then
-            echo "::error::Tailscale's v$VERSION is $(git -C "$SRC" rev-parse HEAD), not the pinned $COMMIT"
-            exit 1
-          fi
-          echo "TS_SRC=$SRC" >> "$GITHUB_ENV"
-          echo "TS_VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "TS_COMMIT=$COMMIT" >> "$GITHUB_ENV"
-
-      # The Go its go.mod names (standard Go: Tailscale's own toolchain is optional).
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version-file: ${{ runner.temp }}/tailscale/go.mod
-          cache: false
-
-      - name: Build agentes-tailscaled for every system
-        shell: bash
-        run: |
-          OUT="$GITHUB_WORKSPACE/tailscaled"
-          mkdir -p "$OUT/licenses"
-          FEATURES=$(jq -r '.features | join(",")' apps/desktop/tailscale.json)
-          cd "$TS_SRC"
-          TAGS=$(GOOS= GOARCH= CGO_ENABLED=0 go run ./cmd/featuretags --min --add="$FEATURES")
-          echo "Build tags: $TAGS"
-          case ",$TAGS," in *,ts_include_cli,*) ;; *) echo "::error::The command-line tool isn't built in"; exit 1 ;; esac
-          case ",$TAGS," in *,ts_omit_portmapper,*) ;; *) echo "::error::Port mapping is built in"; exit 1 ;; esac
-          # A shallow clone has no history for Tailscale's own version stamp: it is given (the release's own form).
-          export TS_VERSION_LONG="$TS_VERSION-t${TS_COMMIT:0:9}" TS_VERSION_GIT_HASH="$TS_COMMIT"
-          for target in \
-            darwin/arm64/aarch64-apple-darwin darwin/amd64/x86_64-apple-darwin \
-            windows/amd64/x86_64-pc-windows-msvc windows/arm64/aarch64-pc-windows-msvc \
-            linux/amd64/x86_64-unknown-linux-gnu linux/arm64/aarch64-unknown-linux-gnu; do
-            IFS=/ read -r GOOS GOARCH TRIPLE <<< "$target"
-            EXT=""; [ "$GOOS" = windows ] && EXT=.exe
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH TAGS="$TAGS" ./build_dist.sh --strip \
-              -o "$OUT/agentes-tailscaled-$TRIPLE$EXT" ./cmd/tailscaled
-            # Every module each one is built from, for the notices below.
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go list -tags "$TAGS" -deps \
-              -f '{{with .Module}}{{.Path}} {{.Version}} {{.Dir}}{{end}}' ./cmd/tailscaled >> "$RUNNER_TEMP/modules.txt"
-          done
-          # Linux's own build runs here: it says its version, as the daemon and as the command-line tool.
-          "$OUT/agentes-tailscaled-x86_64-unknown-linux-gnu" --version
-          TS_BE_CLI=1 "$OUT/agentes-tailscaled-x86_64-unknown-linux-gnu" version
-          ls -l "$OUT"
-
-      # Each binary stays under the pinned size: a feature that slipped back in shows here, not in the download.
-      - name: Check the size
-        shell: bash
-        run: |
-          MAX=$(( $(jq -r .maxMiB apps/desktop/tailscale.json) * 1024 * 1024 ))
-          for f in tailscaled/agentes-tailscaled-*; do
-            SIZE=$(stat -c %s "$f")
-            echo "$(basename "$f"): $(( SIZE / 1024 / 1024 )) MiB"
-            if [ "$SIZE" -gt "$MAX" ]; then
-              echo "::error::$(basename "$f") is $(( SIZE / 1024 / 1024 )) MiB, over the $(( MAX / 1024 / 1024 )) MiB in tailscale.json"
-              exit 1
-            fi
-          done
-
-      # BSD-3-Clause and its patent grant for Tailscale itself; for every other module (gVisor is Apache-2.0), the
-      # license files at its root, once each.
-      - name: Third-party notices
-        shell: bash
-        run: |
-          LICENSES=tailscaled/licenses
-          cp "$TS_SRC/LICENSE" "$TS_SRC/PATENTS" "$LICENSES/"
-          cmp "$LICENSES/LICENSE" apps/desktop/src-tauri/licenses/tailscale/LICENSE \
-            || { echo "::error::Tailscale's LICENSE changed: take it from v$TS_VERSION into licenses/tailscale/"; exit 1; }
-          sort -u "$RUNNER_TEMP/modules.txt" | grep -v '^$' > "$RUNNER_TEMP/modules-unique.txt"
-          {
-            echo "Third-party software in agentes-tailscaled (Tailscale $TS_VERSION, $TS_COMMIT), by Go module."
-            echo "Tailscale's own license is LICENSE, with PATENTS, next to this file."
-            while read -r MOD VER DIR; do
-              [ "$MOD" = tailscale.com ] && continue
-              FILES=$(find "$DIR" -maxdepth 1 -type f \( -iname 'LICENSE*' -o -iname 'LICENCE*' -o -iname 'COPYING*' \
-                -o -iname 'NOTICE*' -o -iname 'PATENTS*' \) | sort)
-              if [ -z "$FILES" ]; then
-                echo "::error::No license file at the root of $MOD $VER" >&2
-                exit 1
-              fi
-              echo
-              echo "================================================================================"
-              echo "$MOD $VER"
-              echo "================================================================================"
-              for f in $FILES; do
-                echo
-                echo "--- $(basename "$f")"
-                cat "$f"
-              done
-            done < "$RUNNER_TEMP/modules-unique.txt"
-          } > "$LICENSES/THIRD-PARTY-NOTICES.txt"
-          grep -c '^=====' "$LICENSES/THIRD-PARTY-NOTICES.txt"
-          grep -q '^gvisor.dev/gvisor ' "$LICENSES/THIRD-PARTY-NOTICES.txt"
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: desktop-tailscaled
-          path: tailscaled/
-          if-no-files-found: error
-          retention-days: 1
-
   macos:
-    needs: [version, server, tailscaled]
+    needs: [version, server]
     if: ${{ contains(fromJSON('["all", "macos+linux", "macos"]'), inputs.platforms || 'all') }}
     # GitHub's own macOS runner: the .dmg's window (its background, the icons' places) is laid out through Finder,
     # which needs a desktop session. On a runner without one Finder's AppleEvents time out (-1712) and the .dmg
@@ -435,28 +312,6 @@ jobs:
           chmod +x "$BIN_DIR"/agent-browser-*
           lipo -info "$BIN_DIR/agent-browser-universal-apple-darwin"
 
-      # Tailscale's daemon (the `tailscaled` job): both of the Mac's, and the universal one lipo'd from them. Tauri
-      # signs it with the app (Developer ID, hardened runtime: it needs no entitlement of its own).
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: desktop-tailscaled
-          path: ${{ runner.temp }}/tailscaled
-
-      - name: Place agentes-tailscaled
-        shell: bash
-        run: |
-          for triple in aarch64-apple-darwin x86_64-apple-darwin; do
-            cp "$RUNNER_TEMP/tailscaled/agentes-tailscaled-$triple" "$BIN_DIR/"
-          done
-          lipo -create -output "$BIN_DIR/agentes-tailscaled-universal-apple-darwin" \
-            "$BIN_DIR/agentes-tailscaled-aarch64-apple-darwin" "$BIN_DIR/agentes-tailscaled-x86_64-apple-darwin"
-          chmod +x "$BIN_DIR"/agentes-tailscaled-*
-          lipo -info "$BIN_DIR/agentes-tailscaled-universal-apple-darwin"
-          "$BIN_DIR/agentes-tailscaled-universal-apple-darwin" --version
-          TS_BE_CLI=1 "$BIN_DIR/agentes-tailscaled-universal-apple-darwin" version
-          mkdir -p apps/desktop/src-tauri/licenses/tailscale
-          cp "$RUNNER_TEMP"/tailscaled/licenses/* apps/desktop/src-tauri/licenses/tailscale/
-
       # The server's files (the `server` job), among the app's resources (tauri.native.conf.json).
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -529,12 +384,7 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$APP"
           codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agentes-runner"
           codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agent-browser"
-          codesign --verify --strict --verbose=2 "$APP/Contents/MacOS/agentes-tailscaled"
           "$APP/Contents/MacOS/agent-browser" --version
-          "$APP/Contents/MacOS/agentes-tailscaled" --version
-          TS_BE_CLI=1 "$APP/Contents/MacOS/agentes-tailscaled" version
-          test -s "$APP/Contents/Resources/licenses/tailscale/LICENSE"
-          test -s "$APP/Contents/Resources/licenses/tailscale/THIRD-PARTY-NOTICES.txt"
           test -s "$APP/Contents/Resources/licenses/agent-browser/LICENSE"
           test -s "$APP/Contents/Resources/licenses/bun/LICENSE.md"
           test -s "$APP/Contents/Resources/LICENSE"
@@ -585,7 +435,7 @@ jobs:
           retention-days: 14
 
   windows:
-    needs: [version, server, tailscaled]
+    needs: [version, server]
     if: ${{ contains(fromJSON('["all", "windows"]'), inputs.platforms || 'all') }}
     # GitHub's own Windows runners, one per architecture: each build runs what it makes (the runner, agent-browser,
     # the server once). agent-browser has no Windows ARM build: Windows on ARM runs the x64 one, emulated.
@@ -648,20 +498,6 @@ jobs:
           echo "$SHA  $OUT" | sha256sum -c -
           "$OUT" --version
 
-      # Tailscale's daemon for this architecture (the `tailscaled` job) and its notices.
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: desktop-tailscaled
-          path: ${{ runner.temp }}/tailscaled
-
-      - name: Place agentes-tailscaled
-        shell: bash
-        run: |
-          cp "$RUNNER_TEMP/tailscaled/agentes-tailscaled-${{ matrix.triple }}.exe" "$BIN_DIR/"
-          "$BIN_DIR/agentes-tailscaled-${{ matrix.triple }}.exe" --version
-          mkdir -p apps/desktop/src-tauri/licenses/tailscale
-          cp "$RUNNER_TEMP"/tailscaled/licenses/* apps/desktop/src-tauri/licenses/tailscale/
-
       # The server's files (the `server` job), among the app's resources (tauri.native.conf.json).
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -703,16 +539,13 @@ jobs:
           tauriScript: bun run tauri
           args: --config src-tauri/tauri.native.conf.json
 
-      # What the installer puts next to the app: the three sidecars and the server's files.
+      # What the installer puts next to the app: the two sidecars and the server's files.
       - name: Check the app's files
         shell: bash
         run: |
           RELEASE=apps/desktop/src-tauri/target/release
           test -s "$RELEASE/agentes-runner.exe"
           test -s "$RELEASE/agent-browser.exe"
-          test -s "$RELEASE/agentes-tailscaled.exe"
-          test -s "$RELEASE/licenses/tailscale/LICENSE"
-          test -s "$RELEASE/licenses/tailscale/THIRD-PARTY-NOTICES.txt"
           test -s "$RELEASE/server/native.js"
           test -s "$RELEASE/web/index.html"
           test -s "$RELEASE/licenses/bun/LICENSE.md"
@@ -741,7 +574,7 @@ jobs:
           retention-days: 14
 
   linux:
-    needs: [version, server, tailscaled]
+    needs: [version, server]
     if: ${{ contains(fromJSON('["all", "macos+linux", "linux"]'), inputs.platforms || 'all') }}
     # 22.04: an older glibc, so the app runs on more distributions. One runner per architecture: each build runs what
     # it makes. `pkg`: the architecture in the files' names (Debian's).
@@ -810,23 +643,6 @@ jobs:
           echo "$SHA  $OUT" | sha256sum -c -
           chmod +x "$OUT"
 
-      # Tailscale's daemon for this architecture (the `tailscaled` job) and its notices.
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: desktop-tailscaled
-          path: ${{ runner.temp }}/tailscaled
-
-      - name: Place agentes-tailscaled
-        shell: bash
-        run: |
-          OUT="$BIN_DIR/agentes-tailscaled-${{ matrix.triple }}"
-          cp "$RUNNER_TEMP/tailscaled/agentes-tailscaled-${{ matrix.triple }}" "$OUT"
-          chmod +x "$OUT"
-          "$OUT" --version
-          TS_BE_CLI=1 "$OUT" version
-          mkdir -p apps/desktop/src-tauri/licenses/tailscale
-          cp "$RUNNER_TEMP"/tailscaled/licenses/* apps/desktop/src-tauri/licenses/tailscale/
-
       # The server's files (the `server` job), among the app's resources (tauri.native.conf.json).
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -856,7 +672,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # linuxdeploy's patchelf, except on the sidecars: they keep their bytes in the AppImage too.
+          # linuxdeploy's patchelf, except on the two sidecars: they keep their bytes in the AppImage too.
           PATCHELF: ${{ github.workspace }}/apps/desktop/scripts/patchelf-keep-sidecars.sh
         with:
           projectPath: apps/desktop
@@ -882,29 +698,28 @@ jobs:
           (cd out && for f in "agentes_${VERSION}_$PKG.deb" "agentes_${VERSION}_$PKG.AppImage"; do sha256sum "$f" > "$f.sha256"; done)
           ls -l out
 
-      # What the deb puts on the computer: the three sidecars and the server's files (the AppImage has the same).
+      # What the deb puts on the computer: the two sidecars and the server's files (the AppImage has the same).
       - name: Check the app's files
         shell: bash
         run: |
           dpkg-deb -c "out/agentes_${VERSION}_${{ matrix.pkg }}.deb" > deb.txt
-          for f in /agentes-runner /agent-browser /agentes-tailscaled /server/native.js /web/index.html /licenses/bun/LICENSE.md /licenses/agent-browser/LICENSE /licenses/tailscale/LICENSE /licenses/tailscale/THIRD-PARTY-NOTICES.txt; do
+          for f in /agentes-runner /agent-browser /server/native.js /web/index.html /licenses/bun/LICENSE.md /licenses/agent-browser/LICENSE; do
             grep -q -- "$f\$" deb.txt || { echo "::error::$f is not in the deb"; exit 1; }
           done
 
       # The AppImage's sidecars are the ones built above, byte for byte (linuxdeploy rewrites any file it gives an
-      # rpath; patchelf-keep-sidecars.sh keeps it off these), and the runner and Tailscale's daemon still start.
+      # rpath; patchelf-keep-sidecars.sh keeps it off these two), and the runner still starts.
       - name: Check the AppImage's sidecars
         shell: bash
         run: |
           APPIMAGE="$PWD/out/agentes_${VERSION}_${{ matrix.pkg }}.AppImage"
           dir=$(mktemp -d)
           (cd "$dir" && "$APPIMAGE" --appimage-extract > /dev/null)
-          for name in agentes-runner agent-browser agentes-tailscaled; do
+          for name in agentes-runner agent-browser; do
             cmp "$BIN_DIR/$name-${{ matrix.triple }}" "$dir/squashfs-root/usr/bin/$name" \
               || { echo "::error::The AppImage's $name isn't the one built"; exit 1; }
           done
           "$dir/squashfs-root/usr/bin/agentes-runner" --version
-          "$dir/squashfs-root/usr/bin/agentes-tailscaled" --version
           echo '{"text":"git push origin main","how":"ask","code":false}' \
             | "$dir/squashfs-root/usr/bin/agentes-runner" script-check | grep -q '"pushes":\['
 
