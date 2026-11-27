@@ -1245,10 +1245,14 @@ export async function signupOpen(db: Database, config: Config, users: number) {
   return users === 0 ? !policy.ownerByLink : signupOpenToAll(db, policy);
 }
 
-/** Whether making a workspace needs an account early access allowed (ADR 0078 §4): only on agentes.chat Cloud. */
+/**
+ * Whether making a workspace needs an account early access allowed: on agentes.chat Cloud (ADR 0078 §4), and on any
+ * server whose operator keeps new workspaces to its owner (`WORKSPACE_CREATION=owner`, ADR 0263).
+ */
 export const workspacePolicy = (config: Config): WorkspacePolicy => ({
   paidMachines: config.MACHINE_PROVISIONING === "external" && isAgentesCloud(config.PUBLIC_URL),
   allowSignup: config.ALLOW_SIGNUP,
+  ownerOnly: config.WORKSPACE_CREATION === "owner",
 });
 
 /**

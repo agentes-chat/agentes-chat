@@ -584,13 +584,17 @@ export interface WorkspacePolicy {
   paidMachines: boolean;
   /** `ALLOW_SIGNUP`. */
   allowSignup: boolean;
+  /** `WORKSPACE_CREATION=owner` (ADR 0263): only the installation's owner makes workspaces, whatever sign-up says. */
+  ownerOnly?: boolean;
 }
 
 /**
- * Whether making a workspace needs the account allowed by early access (ADR 0078 §4): on agentes.chat Cloud, where
- * every workspace gets a paid computer, while sign-up is by invitation only, for everyone but the installation's owner.
+ * Whether making a workspace needs the account allowed by early access, for everyone but the installation's owner:
+ * always when the operator keeps new workspaces to the owner (ADR 0263); else on agentes.chat Cloud, where every
+ * workspace gets a paid computer, while sign-up is by invitation only (ADR 0078 §4).
  */
 export async function needsWorkspaceAllowance(db: Database, userId: string, policy: WorkspacePolicy) {
+  if (policy.ownerOnly) return userId !== (await pinnedOwner(db));
   if (!policy.paidMachines || policy.allowSignup) return false;
   if ((await signupMode(db)).mode === "open") return false;
   return userId !== (await pinnedOwner(db));

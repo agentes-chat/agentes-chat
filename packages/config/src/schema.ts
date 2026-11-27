@@ -261,6 +261,12 @@ export const envVars = {
       "Forces sign-up open: anyone can create an account. When off (default), the **first** account can sign up (it becomes owner of the installation), and after it sign-up is by invitation only until the operator API's sign-up mode is set to open, live, with no restart (ADR 0078). Keep it off on a self-hosted instance reachable from the internet.",
     section: "Sign-in",
   },
+  WORKSPACE_CREATION: {
+    schema: z.enum(["anyone", "owner"]).default("anyone"),
+    description:
+      "Who may create workspaces on this server (ADR 0263). `anyone` (default): every account. `owner`: only the installation's owner (its first account), whatever `ALLOW_SIGNUP` or the sign-up mode say; people they invite join their workspaces but make none of their own, unless the operator API's early-access invitations allow their address (which needs email). Once the owner deletes their account, nobody makes new workspaces.",
+    section: "Sign-in",
+  },
   OWNER_CLAIM_SHA256: {
     schema: z
       .string()

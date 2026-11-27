@@ -2,6 +2,7 @@
 
 - Status: Accepted (built: the server, the operator API, the email, the web's sign-up page and the shared client; an operator's console calls it)
 - Date: 2026-10-29
+- Amended by: ADR 0263 (§4: `WORKSPACE_CREATION=owner` holds a self-hosted server to the rule, for everyone but its owner)
 - Amends: ADR 0006 (the sign-up policy), ADR 0056 (the operator API gains sign-up, the waiting list and invitations), ADR 0068 (only an email invitation opens sign-up: an early-access link does too, for the address it was sent to)
 - Code: `packages/engine/src/early-access.ts`, `packages/engine/src/organizations.ts` (`signupAdmission`, `needsWorkspaceAllowance`, `canCreateWorkspace`, `createOrganization`), `packages/db/src/schema/early-access.ts`, `apps/server/src/auth.ts` (the hooks), `apps/server/src/operator/access.ts`, `apps/server/src/routes/app/account.ts`, `apps/web/src/pages/AuthPage.tsx`, `apps/web/src/routes/signup.tsx`
 

@@ -870,6 +870,7 @@ ones a self-hosted instance usually touches:
 | `TS_EXTRA_ARGS` | | More `tailscale up` flags. The setup puts `--advertise-tags` here for an OAuth client secret. |
 | `TAILSCALE_FUNNEL` | `false` | `true` opens the instance to the internet at the same address (What needs a public URL). Only `true` or `false`. |
 | `ALLOW_SIGNUP` | `false` | `true` lets anyone create an account. |
+| `WORKSPACE_CREATION` | `anyone` | `owner`: only the installation's owner (its first account) creates workspaces. People they invite join their workspaces but make none of their own, unless the operator API's early-access invitations allow their address, which needs `OPERATOR_API_TOKEN` and email. |
 | `OWNER_CLAIM_SHA256` | | While no account exists, only the owner link made with it creates the first one (Sign-up, below). `OWNER_KEY_SHA256` is the desktop app's. |
 | `TRUSTED_PROXIES` | | Public proxies in front of your proxy, or of the app, such as Cloudflare's ranges (see nginx above). `X-Forwarded-For` counts only from these, loopback and private networks. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | | "Sign in with Google", redirect URI `{PUBLIC_URL}/api/auth/callback/google`. `GITHUB_*` and `APPLE_*` work the same way. |

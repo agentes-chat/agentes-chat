@@ -339,6 +339,37 @@ test("sign-ups that don't carry the link leave the invitation alone, and a self-
   expect((await ana("/api/app/organizations", { json: { name: "Ana's" } })).status).toBe(201);
 });
 
+test("WORKSPACE_CREATION=owner: only the owner makes workspaces, an invited member none until early access allows them (ADR 0263)", async () => {
+  const t = await server({ WORKSPACE_CREATION: "owner" });
+  const owner = browser(t);
+  await signUp(owner, "owner@acme.test");
+  expect((await me(owner)).canCreateWorkspace).toBe(true);
+  const created = await owner("/api/app/organizations", { json: { name: "Acme" } });
+  expect(created.status).toBe(201);
+  const { organization } = (await created.json()) as { organization: { id: string } };
+  const asked = await owner(`/api/app/organizations/${organization.id}/invitations`, {
+    json: { email: "bia@acme.test", role: "member" },
+  });
+  expect(asked.status).toBe(201);
+  const token = ((await asked.json()) as { url: string }).url.split("/invite/")[1] ?? "";
+  const bia = browser(t);
+  expect((await signUpWith(bia, "bia@acme.test")).status).toBe(200);
+  await unconfirm(t, "bia@acme.test");
+  expect((await bia(`/api/app/invitations/${token}/accept`, { json: {} })).status).toBe(200);
+  expect((await me(bia)).canCreateWorkspace).toBe(false);
+  const refused = await bia("/api/app/organizations", { json: { name: "Bia's" } });
+  expect(refused.status).toBe(403);
+  expect(((await refused.json()) as { error: { code: string } }).error.code).toBe("org.create_invite_only");
+
+  // The operator allows her address; once it is confirmed she makes workspaces.
+  const res = await operator(t)("POST", "/early-access/invitations", { emails: ["bia@acme.test"] });
+  expect(((await res.json()) as { results: { outcome: string }[] }).results[0]?.outcome).toBe("allowed");
+  expect((await me(bia)).canCreateWorkspace).toBe(false);
+  expect((await bia(await confirmationLink(t, "bia@acme.test"))).status).toBe(302);
+  expect((await me(bia)).canCreateWorkspace).toBe(true);
+  expect((await makeWorkspace(bia, "Bia's")).status).toBe(201);
+});
+
 /** GitHub as the provider: its token and its user, with the address `email`, verified or not. */
 function fakeGithub(email: string, verified: boolean): typeof fetch {
   const answer = (body: unknown) =>

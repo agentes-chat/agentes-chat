@@ -823,3 +823,51 @@ describe("the list", () => {
     await expect(listEarlyAccess(db, { limit: 2, cursor: "nope" })).rejects.toMatchObject({ code: "invalid_cursor" });
   });
 });
+
+describe("workspaces kept to the installation's owner (WORKSPACE_CREATION=owner, ADR 0263)", () => {
+  const SELF_HOSTED = { paidMachines: false, allowSignup: false };
+  const OWNER_ONLY = { ...SELF_HOSTED, ownerOnly: true };
+
+  test("by default a self-hosted server lets every account make workspaces", async () => {
+    const owner = await account("owner@acme.com");
+    const acme = await createOrganization(db, owner, { name: "Acme" });
+    const bia = await member("bia@acme.com", acme.organization.id);
+    expect(await needsWorkspaceAllowance(db, bia, SELF_HOSTED)).toBe(false);
+    expect(await canCreateWorkspace(db, bia, SELF_HOSTED)).toBe(true);
+    expect(await canCreateWorkspace(db, bia, { ...SELF_HOSTED, ownerOnly: false })).toBe(true);
+  });
+
+  test("the owner makes workspaces; an invited member is refused, leaving nothing, until early access allows them", async () => {
+    const owner = await account("owner@acme.com");
+    expect(await needsWorkspaceAllowance(db, owner, OWNER_ONLY)).toBe(false);
+    expect(await canCreateWorkspace(db, owner, OWNER_ONLY)).toBe(true);
+    const acme = await createOrganization(db, owner, { name: "Acme" });
+    await createOrganization(db, owner, { name: "Acme Labs" });
+    const bia = await member("bia@acme.com", acme.organization.id);
+    await confirm(bia);
+    expect(await needsWorkspaceAllowance(db, bia, OWNER_ONLY)).toBe(true);
+    expect(await canCreateWorkspace(db, bia, OWNER_ONLY)).toBe(false);
+    await expect(createOrganization(db, bia, { name: "Bia" }, { needsAllowance: true })).rejects.toMatchObject({
+      code: "org.create_invite_only",
+    });
+    expect(await db.select().from(schema.organizations)).toHaveLength(2);
+
+    const { invitationId, outcome } = await invite("bia@acme.com");
+    expect(outcome).toBe("allowed");
+    expect(await canCreateWorkspace(db, bia, OWNER_ONLY)).toBe(true);
+    await createOrganization(db, bia, { name: "Bia" }, { needsAllowance: true });
+    await revokeEarlyAccess(db, invitationId ?? "");
+    expect(await canCreateWorkspace(db, bia, OWNER_ONLY)).toBe(false);
+  });
+
+  test("holds with ALLOW_SIGNUP, in open mode and on agentes.chat Cloud", async () => {
+    const owner = await account("owner@acme.com");
+    const acme = await createOrganization(db, owner, { name: "Acme" });
+    const bia = await member("bia@acme.com", acme.organization.id);
+    await setSignupMode(db, "open");
+    for (const policy of [OWNER_ONLY, { ...OWNER_ONLY, allowSignup: true }, { ...CLOUD, ownerOnly: true }]) {
+      expect(await canCreateWorkspace(db, owner, policy)).toBe(true);
+      expect(await canCreateWorkspace(db, bia, policy)).toBe(false);
+    }
+  });
+});
