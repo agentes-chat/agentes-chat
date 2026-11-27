@@ -38,6 +38,11 @@
     "wrapLines": "Regels afbreken",
     "raw": "Origineel",
     "table": "Tabel",
+    "tableRows_one": "Tabel · {{count}} rij",
+    "tableRows_other": "Tabel · {{count}} rijen",
+    "tableSeeAll": "Alle {{count}} rijen bekijken",
+    "tableRowCount_one": "{{count}} rij",
+    "tableRowCount_other": "{{count}} rijen",
     "chartItem": "Item",
     "chartShare": "Aandeel",
     "you": "jij",
@@ -6843,6 +6848,7 @@
     "undoneBy": "Door {{name}} ongedaan gemaakt",
     "undoneByYou": "Door jou ongedaan gemaakt",
     "undo": "Ongedaan maken",
+    "applyAnyway": "Toch toepassen",
     "appliedSome": "{{done}} van {{total}} toegepast",
     "waitingAdmin": "Wacht op een beheerder",
     "stale": "Verouderd",
@@ -10584,7 +10590,6 @@
     "filter": {
       "person": "Mensen",
       "agent": "Agents",
-      "routine": "Routines",
       "reminder": "Herinneringen",
       "deadline": "Deadlines van taken"
     },
@@ -10617,39 +10622,16 @@
         "declined": "Je komt niet."
       }
     },
-    "every": {
-      "hour": "elk uur",
-      "hours": "elke {{count}} u",
-      "minutes": "elke {{count}} min"
-    },
-    "perDay": "{{count}}× per dag",
-    "runs_one": "{{count}} run in deze dagen.",
-    "runs_other": "{{count}} runs in deze dagen.",
-    "routineDetail": "Routine · levert aan {{target}}",
     "deadlineDetail": "De deadline van de taak.",
     "reminderBy": "Ingesteld door {{name}}",
     "reminderPosted": "Herinnering · verschijnt in {{target}}",
     "cancelReminder": "Herinnering annuleren",
     "reminderCancelled": "Herinnering geannuleerd",
     "openIssue": "Taak openen",
-    "openRoutines": "Bekijken in Routines",
-    "openRoutine": "Routine openen",
-    "runAria": "Routine {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "Routines om {{time}}",
-    "moreRuns_one": "+{{count}} routine",
-    "moreRuns_other": "+{{count}} routines",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "geantwoord",
-      "silent": "niets nieuws",
-      "failed": "mislukt",
-      "skipped": "niet uitgevoerd"
-    },
-    "lastResult": "laatste: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Niets gepland. Sleep om te maken of druk op N",
-    "agendaEmpty": "Afspraken en routines van de komende 30 dagen verschijnen hier.",
+    "agendaEmpty": "Afspraken en herinneringen van de komende 30 dagen verschijnen hier.",
     "agendaEmptyTitle": "Agenda vrij voor de komende 30 dagen",
     "noResults": "Niets met dit filter.",
     "more": "+{{count}} meer",
@@ -16780,13 +16762,13 @@
       "browser_download": "De browser van de agents kon niet worden gedownload. Controleer de verbinding van deze computer, dan probeert hij het bij het volgende gebruik opnieuw.",
       "browser_checksum": "De download van de browser van de agents kwam beschadigd binnen en is niet gebruikt. Hij probeert het bij het volgende gebruik opnieuw.",
       "desktop_use_linux": "Apps op de schermen van de agents werken op Linux-computers met de schermen van de agents.",
-      "desktop_use_own_user": "Apps op de schermen hebben voor elke agent een eigen gebruiker op deze computer nodig (systeemmodus). Hier werken alle agents als de gebruiker van de runner.",
+      "desktop_use_own_user": "Apps op de schermen hebben voor elke agent een eigen gebruiker op deze computer nodig (systeemmodus). Hier werken alle agents als dezelfde gebruiker, die waarmee agentes.chat draait.",
       "desktop_use_install": "Installeer op deze computer wat apps op de schermen nodig hebben:",
       "desktop_unavailable": "De schermen van de agents kunnen niet op deze computer draaien.",
       "desktop_linux": "De schermen van de agents draaien alleen op Linux-computers.",
       "desktop_install": "Installeer op deze computer de schermen van de agents:",
-      "not_as_root": "De schermen en terminals van de agents draaien nooit als root. Start de runner als een gewone gebruiker.",
-      "runner_bun_old": "Hiervoor is de runner op Bun 1.3.5 of nieuwer nodig. Werk de runner op deze computer bij.",
+      "not_as_root": "De schermen en terminals van de agents draaien nooit als root. Start agentes.chat als gewone gebruiker.",
+      "runner_bun_old": "Hiervoor is agentes.chat op Bun 1.3.5 of nieuwer nodig. Werk agentes.chat op deze computer bij.",
       "terminal_unsupported": "Terminals werken alleen op Linux- en Mac-computers."
     },
     "egress": {
@@ -16796,7 +16778,6 @@
       "hint": "Het adres dat websites zien als de agents browsen. Het verandert mee met het netwerk van de computer.",
       "waiting": "Het internet van de agents wordt opnieuw verbonden. Hun verbindingen wachten tot het terug is.",
       "via": "Agents gebruiken het internet van {{name}}",
-      "viaBy": "Agents gebruiken het internet van {{name}} ({{person}})",
       "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten."
     },
     "maintenance": {
@@ -17115,6 +17096,10 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPU's",
+    "cores_one": "{{count}} kern",
+    "cores_other": "{{count}} kernen",
+    "threads_one": "{{count}} thread",
+    "threads_other": "{{count}} threads",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17190,11 +17175,12 @@
     "helpWorkspace": "Computers helpen als die van het team vol of weg is",
     "helpWorkspaceHint": "Elke computer helpt alleen als zijn eigenaar het toestaat. Uit: geen enkele helpt, wat de eigenaar ook koos.",
     "shareInternet": "Agents gebruiken het internet van deze computer",
-    "shareInternetHint": "Websites die de agents openen, gaan via de verbinding van deze computer en zien dus jouw locatie. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken de agents hun gewone verbinding.",
+    "shareInternetHint": "De verbindingen van de agents gaan via het internet van deze computer, dus websites en servers zien jouw locatie: websites, git, SSH, databases en andere TCP-verbindingen. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Naamopzoekingen, gesprekken en ander UDP-verkeer gebruiken de gewone verbinding, net als alles zolang deze computer offline is.",
+    "shareInternetHintProxy": "De browser van de agents en de programma’s die proxyinstellingen volgen (git via HTTPS, curl, de meeste commandoregeltools) gaan via het internet van deze computer, dus websites zien jouw locatie. SSH, databaseclients en andere programma’s die proxyinstellingen negeren, gebruiken de gewone verbinding, net als naamopzoekingen en UDP-verkeer. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Zolang deze computer offline is, gebruikt alles de gewone verbinding.",
     "shareInternetInUse": "Nu in gebruik",
     "shareInternetOther": "Agents gebruiken nu {{name}}",
     "shareInternetPick": "Deze gebruiken",
-    "shareInternetJoin": "De agents openen ook websites via het internet van deze computer, dus websites zien jouw locatie. Je kunt het op zijn pagina uitzetten.",
+    "shareInternetJoin": "De agents gaan ook via het internet van deze computer online, dus websites en servers zien jouw locatie. Je kunt het op zijn pagina uitzetten.",
     "connectedBy": "Gekoppeld door {{name}}",
     "downloadFor": "Downloaden voor {{system}}",
     "downloadApp": "De app downloaden",
@@ -17236,6 +17222,8 @@
       "paused": "{{host}} is gepauzeerd, dus de controle wacht tot het verdergaat.",
       "held": "Deze werkruimte is gepauzeerd, dus de bediening wacht tot hij weer actief is.",
       "lost": "De controle is voorbij. Je kijkt weer mee met {{name}}.",
+      "controlLate": "De bediening is niet op tijd begonnen. {{host}} maakt {{name}} nog klaar: probeer het over een minuut opnieuw.",
+      "controlFailed": "Kon {{name}} niet overnemen. Probeer het opnieuw, of start de agentes.chat-app op {{host}} opnieuw.",
       "typeLabel": "Typen op {{name}}"
     },
     "status": {
@@ -17257,7 +17245,7 @@
       "withHost": "met {{host}}",
       "lastSeen": "laatst gezien {{time}}",
       "offlineUnresponsive": "reageert niet meer sinds {{time}}",
-      "offlineStopped": "runner gestopt om {{time}}",
+      "offlineStopped": "agentes.chat gestopt om {{time}}",
       "offlineDropped": "verbinding verbroken om {{time}}"
     },
     "line": {
@@ -17273,9 +17261,14 @@
       "offline": "Agents wachten tot het terug is.",
       "offlineSeen": "Laatst gezien {{time}}. Agents wachten tot het terug is.",
       "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is.",
-      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen netwerk of overbelast. Voer daar `{{command}}` uit.",
-      "offlineStopped": "De runner stopte om {{time}}. Start hem opnieuw, of voer daar `{{command}}` uit om te zien waarom.",
-      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding. Zo niet, voer daar `{{command}}` uit."
+      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen internet of overbelast. Kijk of hij aan staat en online is.",
+      "offlineStopped": "De agentes.chat-app is om {{time}} op deze computer gestopt. Open de app opnieuw.",
+      "offlineStoppedCli": "agentes.chat is om {{time}} op deze computer gestopt. Start het daar opnieuw.",
+      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding."
+    },
+    "technical": {
+      "title": "Technische details",
+      "doctor": "Voer dit daar uit om te zien waarom:"
     },
     "reason": {
       "locked": "De telefoon is vergrendeld",
@@ -17336,7 +17329,7 @@
     },
     "facts": {
       "system": "Systeem",
-      "cpu": "CPU",
+      "cpu": "Processor",
       "memory": "Geheugen",
       "lastSeen": "Laatst gezien",
       "toolchains": "Gevonden toolchains",
@@ -17729,7 +17722,7 @@
       "folderOnComputer": "Toestaan op de computer",
       "folderShown": "Geopend op {{deviceName}}. Sta het daar toe.",
       "internetShared": "Agents openen websites nu via het internet van <b>{{deviceName}}</b>",
-      "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
+      "internetSharedLine": "Alleen de agents van deze workspace, nooit iets op het eigen netwerk van de computer, nooit e-mail via poort 25. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
       "internetOff": "Uitzetten",
       "internetOffDone": "Agents gebruiken het internet van {{deviceName}} niet meer.",
       "once": "Eén keer toestaan",
@@ -18496,7 +18489,22 @@
       "version": "Versie",
       "license": "Vrije software onder de <license>GNU Affero General Public License v3</license>, zonder garantie.",
       "source": "Broncode",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers",
+      "latest": "De nieuwste versie",
+      "newer": "{{version}} is uit",
+      "notes": "Wat is er nieuw",
+      "update": {
+        "title": "Bijwerken naar {{version}}",
+        "docker": "Met Docker",
+        "native": "Zonder Docker",
+        "nativeHelp": "Pak het pakket van de versie uit in `~/.agentes/app` en voer dan uit:",
+        "desktop": "Draait hij in de desktop-app op deze computer? Hij werkt zichzelf bij met de app.",
+        "notice": "agentes.chat {{version}} is uit voor deze server",
+        "how": "Zo werk je bij"
+      },
+      "computers": "Programma van de computers",
+      "computersAhead_one": "{{count}} computer draait een nieuwere versie dan deze server. Hij werkt zoals hij is, en wat er nieuw in zit komt met de update van deze server.",
+      "computersAhead_other": "{{count}} computers draaien een nieuwere versie dan deze server. Ze werken zoals ze zijn, en wat er nieuw in zit komt met de update van deze server."
     },
     "title": "Instellingen",
     "account": {
@@ -20732,7 +20740,7 @@
       "people": "Iedereen kan hem vanaf nu alleen nog lezen en krijgt een e-mail",
       "peopleQuiet": "Iedereen kan hem vanaf nu alleen nog lezen",
       "computer": "De computer stopt nu en wordt gewist",
-      "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot de runner verwijderd wordt.",
+      "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot agentes.chat ervan verwijderd wordt.",
       "connectors": "Connectors en mailboxen worden ontkoppeld"
     },
     "undo": "Elke eigenaar kan hem herstellen tot {{date}} om {{time}}. Daarna kan het niet meer ongedaan gemaakt worden.",
@@ -21096,14 +21104,6 @@
       "doneByYou": "Gedaan door jou om {{time}}. {{agent}} keek opnieuw naar het scherm en ging verder.",
       "doneByYou_female": "Gedaan door jou om {{time}}. {{agent}} keek opnieuw naar het scherm en ging verder."
     },
-    "control": {
-      "notice": "Programma's op de computer van {{name}} kunnen het scherm zien en wat je typt of plakt.",
-      "notice_female": "Programma's op de computer van {{name}} kunnen het scherm zien en wat je typt of plakt."
-    },
-    "session": {
-      "check": "Veiligheidscontroles",
-      "screening": "We kunnen de tekst op dit scherm controleren op misbruik. We bewaren alleen het resultaat. Wat het scherm niet toont, zoals een wachtwoord bij een prompt, wordt nooit vastgelegd."
-    },
     "after": {
       "titleNoSite": "Het scherm gebruikt",
       "noSite": "Voordat er een app geopend werd"
@@ -21113,8 +21113,6 @@
       "group_female": "Scherm van {{name}}"
     },
     "watch": {
-      "notice": "Programma's op de computer van {{name}} kunnen het scherm zien en alles wat daar getypt of geplakt wordt.",
-      "notice_female": "Programma's op de computer van {{name}} kunnen het scherm zien en alles wat daar getypt of geplakt wordt.",
       "step": {
         "desktop_open": "{{detail}} geopend",
         "desktop_open_plain": "Een app geopend",

@@ -45,7 +45,14 @@ import { SITE_NOTIFY_PREF } from "../control/notify";
 import { nextOffer, PAIR_OFFER_PREF, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
 import { askKey, PERMISSION_ASK_PREF, PREPARE_PREF, permissionAsks } from "../control/permissions";
-import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
+import {
+  homeServer,
+  type ServerList,
+  type ServerWorkspaces,
+  serverName,
+  type VersionProblem,
+  versionProblem,
+} from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
 import { isOnline, macStateOf, trayStateOf } from "../control/tray";
@@ -107,6 +114,23 @@ export function Popover() {
       .catch(() => {});
   useEffect(readList, [host]);
   useEffect(() => host.onBadge(setCounts), [host]);
+  // The server open now, checked again each time the popover shows (the cover says it as the server opens).
+  const [tooOld, setTooOld] = useState<VersionProblem | null>(null);
+  useEffect(() => {
+    if (!current) {
+      setTooOld(null);
+      return;
+    }
+    const ask = () =>
+      void host
+        .checkServer(current)
+        .then((c) => setTooOld(versionProblem(c)))
+        .catch(() => {});
+    ask();
+    return host.onShown((name) => {
+      if (name === "popover") ask();
+    });
+  }, [host, current]);
   // The server here's address moves with reach: the list again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: when its address or whether it runs changes
   useEffect(readList, [local.publicUrl, local.run]);
@@ -162,8 +186,8 @@ export function Popover() {
   const [menuBarPref, setMenuBarPref] = useState(() => readPref<boolean | null>(MENU_BAR_PREF, null));
   const iconShown = menuBarShown(menuBarPref, busyHere);
   useEffect(() => {
-    void host.setTrayVisible(iconShown).catch(() => {});
-  }, [host, iconShown]);
+    void host.setTrayVisible(iconShown, menuBarPref === false).catch(() => {});
+  }, [host, iconShown, menuBarPref]);
 
   // The notch window lives only while it's on (Preferências → Geral): this window starts with the app.
   useEffect(() => {
@@ -613,6 +637,21 @@ export function Popover() {
                 </span>
               </header>
             )}
+            {tooOld && current && (
+              <Banner
+                icon="alert"
+                title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                  host: serverName(current),
+                })}
+                actions={
+                  tooOld === "app-too-old" && (
+                    <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
+                      {t("desktop.connect.checkUpdates")}
+                    </Button>
+                  )
+                }
+              />
+            )}
             {!update.state.required && update.state.available && update.state.latest && (
               <Banner
                 icon="download"
@@ -653,6 +692,21 @@ export function Popover() {
             </header>
           )}
 
+          {tooOld && current && (
+            <Banner
+              icon="alert"
+              title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                host: serverName(current),
+              })}
+              actions={
+                tooOld === "app-too-old" && (
+                  <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
+                    {t("desktop.connect.checkUpdates")}
+                  </Button>
+                )
+              }
+            />
+          )}
           {incompatible && (
             <Banner icon="alert" title={t("desktop.tray.incompatibleTitle")}>
               {t("desktop.tray.incompatibleBody")}
@@ -1352,10 +1406,13 @@ function PickCard({ home, now }: { home: Home; now: number }) {
   if (!pick) return null;
   const name = pick.byName || orgName(home);
   const agent = pick.agentId ? agentOf(home, { id: pick.agentId, name: pick.agentName ?? "" }) : null;
+  // Answered (or the picker closed): the popover goes on hiding when it loses focus, as it does when opened by hand.
+  const answered = () => void host.showWindow("popover").catch(() => {});
   const choose = async () => {
     setBusy(true);
     try {
       const path = await host.pickFolder().catch(() => null);
+      answered();
       if (!path) return;
       const agents = agent ? [agent.id] : (home.status?.agents ?? []).map((a) => a.id);
       await store.request(home.homeId, { type: "folders.add", path, agents });
@@ -1397,7 +1454,15 @@ function PickCard({ home, now }: { home: Home; now: number }) {
         <Button size="sm" variant="primary" icon="drive" loading={busy} onClick={() => void choose()}>
           {t("desktop.tray.pickChoose")}
         </Button>
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => store.dismissPick(home.homeId)}>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => {
+            store.dismissPick(home.homeId);
+            answered();
+          }}
+        >
           {t("desktop.tray.deny")}
         </Button>
       </div>
@@ -1408,6 +1473,7 @@ function PickCard({ home, now }: { home: Home; now: number }) {
 /** An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. */
 function RequestCard({ home, request, now }: { home: Home; request: ControlAccessRequest; now: number }) {
   const { t } = useTranslation();
+  const host = useHost();
   const store = useStore();
   const toast = useToast();
   const [scope, setScope] = useState<"agent" | "all">("agent");
@@ -1418,6 +1484,8 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
     setBusy(true);
     try {
       await store.request(home.homeId, { type: "access.answer", requestId: request.requestId, decision, scope });
+      // Raised for this request (`raisePick`), the popover was kept up: answered, it hides on focus loss again.
+      void host.showWindow("popover").catch(() => {});
       toast(
         decision === "denied"
           ? t("desktop.tray.denied", { agent: agent.name })

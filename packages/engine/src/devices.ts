@@ -1,4 +1,5 @@
 import {
+  EGRESS_PROXY_PROTOCOL,
   IPHONE_DEV_MODE_PROTOCOL,
   IPHONE_WIFI_PROTOCOL,
   type PermissionNeed,
@@ -17,14 +18,16 @@ import {
   TASK_ROOM_PROTOCOL,
   type TaskRoomReport,
 } from "@agenteschat/adapters";
-import { and, type Database, type Executor, eq, gt, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gt, inArray, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
 import { AUDIENCE_MODES, type AudienceMode } from "./audience";
 import { recordAudit } from "./audit";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import type { MachineCaller, MachineHub } from "./machine-hub";
 import {
+  borrowsInternet,
   cleanMachineName,
+  EGRESS_VIA_SHOWN_MS,
   egressViaNow,
   getMachine,
   MachineOfflineError,
@@ -35,6 +38,7 @@ import {
   offlineCause,
   publishMachineUpdated,
   type ShownMaintenance,
+  serverLending,
   shownMaintenance,
   shownOnline,
   withTaskLimit,
@@ -117,6 +121,12 @@ export interface ComputerDevice {
   arch: string;
   hostname: string;
   cpus: number | null;
+  /** The processor's name (`Apple M4 Pro`), as its runner said it; null: an older runner. */
+  cpuModel: string | null;
+  /** Its physical cores where its runner said them (`cpus` counts threads); null: an older runner, or Windows. */
+  cores: number | null;
+  /** The system and its version (`macOS 26.1`); null: an older runner, or the workspace's own computer. */
+  system: string | null;
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
@@ -305,6 +315,13 @@ export interface DevicesList {
   requests: JoinRequest[];
   /** People's computers may help when the workspace's is full or away (`organization_settings.devices_help`). */
   devicesHelp: boolean;
+  /**
+   * ADR 0237: people's computers here lend their internet (the workspace has its own computer, or this server lends):
+   * the apps say so where a computer joins.
+   */
+  lendsInternet: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead (`serverBox`). */
+  serverBoxesBorrow: boolean;
 }
 
 /** Background tasks a computer runs at once when its runner doesn't say (before `TASK_LIMIT_PROTOCOL`): its default. */
@@ -460,6 +477,9 @@ export async function listDevices(
   const busy = new Map(running.map((r) => [r.machineId, Number(r.n)]));
   const workspaceComputer = rows.find((m) => m.kind === "managed");
   const lentNow = workspaceComputer ? egressViaNow(workspaceComputer.egressVia, now) : null;
+  const lendsInternet = Boolean(workspaceComputer) || serverLending();
+  const lentLately = (m: MachineRow) =>
+    lentNow === m.id || (m.egressLentAt !== null && now.getTime() - m.egressLentAt.getTime() < EGRESS_VIA_SHOWN_MS);
   const grantedMachines = new Set(grants.filter((g) => !g.phoneId).map((g) => g.machineId));
   const grantedPhones = new Set(grants.map((g) => g.phoneId).filter(Boolean));
 
@@ -478,14 +498,15 @@ export async function listDevices(
       arch: managed ? "" : m.arch,
       hostname: managed ? "" : m.hostname,
       cpus: m.size?.cpus ?? null,
+      cpuModel: m.size?.cpuModel ?? null,
+      cores: m.size?.cores ?? null,
+      system: managed ? null : (m.size?.system ?? null),
       memoryGb: m.size?.memoryGb ?? null,
       ownerUserId: m.pairedByUserId,
       belongsToWorkspace: m.belongsToWorkspace,
       spill: { own: m.spillOwn, first: m.spillFirst },
       shareInternet:
-        workspaceComputer && m.kind === "connected"
-          ? { on: m.egressShare, inUse: m.egressShare && lentNow === m.id }
-          : null,
+        lendsInternet && m.kind === "connected" ? { on: m.egressShare, inUse: m.egressShare && lentLately(m) } : null,
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
@@ -539,7 +560,13 @@ export async function listDevices(
     )
     .orderBy(machineDeviceCodes.createdAt);
   const requests = asking.filter((r) => admin || r.makerId === viewerUserId).map((r) => joinRequestOf(r.code));
-  return { devices, requests, devicesHelp: await devicesHelpOn(db, orgId) };
+  return {
+    devices,
+    requests,
+    devicesHelp: await devicesHelpOn(db, orgId),
+    lendsInternet,
+    serverBoxesBorrow: serverLending(),
+  };
 }
 
 /** A device code that came with a connect link, as the apps show it. */
@@ -600,6 +627,38 @@ async function deviceOf(db: Database, viewerUserId: string, orgId: string, machi
 
 /** The once-only inbox note that a computer paired before ADR 0237 lends its internet (`device.internet_shared`). */
 export const internetSharedGroup = (machineId: string) => `device-internet:${machineId}`;
+
+/**
+ * ADR 0237 on a self-hosted server, once at the start that turns lending on: the owner of each computer that lends
+ * hears it once in the inbox, as migration 0351 told those of workspaces with their own computer (it runs that
+ * insert without asking for one). A computer marked the workspace's, or whose owner left, tells who configures it.
+ */
+export async function noticeLendingComputers(db: Database): Promise<number> {
+  const rows = await db.execute(sql`
+    INSERT INTO "notifications" ("id", "org_id", "user_id", "kind", "group_key", "source", "latest")
+    SELECT gen_random_uuid(), d."org_id", m."user_id", 'device.internet_shared', 'device-internet:' || d."id",
+      jsonb_build_object('machineId', d."id", 'label', d."name"),
+      jsonb_build_object('title', d."name")
+    FROM "machines" d
+    JOIN "organization_members" m ON m."org_id" = d."org_id"
+    WHERE d."kind" = 'connected' AND d."deleted_at" IS NULL AND d."egress_share"
+      AND CASE
+        WHEN NOT d."belongs_to_workspace" AND EXISTS (
+          SELECT 1 FROM "organization_members" o WHERE o."org_id" = d."org_id" AND o."user_id" = d."paired_by_user_id"
+        ) THEN m."user_id" = d."paired_by_user_id"
+        ELSE m."role" = 'owner' OR EXISTS (
+          SELECT 1 FROM "org_roles" r
+          WHERE r."org_id" = m."org_id"
+            AND (r."kind" = 'everyone' OR r."id" IN (
+              SELECT mr."role_id" FROM "organization_member_roles" mr
+              WHERE mr."org_id" = m."org_id" AND mr."user_id" = m."user_id"))
+            AND r."permissions" && array['configure', 'administrator']::text[]
+        )
+      END
+    ON CONFLICT DO NOTHING
+    RETURNING "id"`);
+  return rowsOf(rows).length;
+}
 
 export interface ComputerDeviceInput {
   name?: string;
@@ -731,6 +790,11 @@ export async function updateComputerDevice(
     if (set.belongsToWorkspace !== undefined || set.audienceMode !== undefined)
       await deps.hub?.agentsChanged?.(orgId).catch(() => undefined);
     await publishDevicesChanged(deps.pubsub, orgId);
+  }
+  // Its role changed (it lends now, or it is marked the workspace's): its agents' proxy goes on or off at once.
+  const borrows = borrowsInternet({ ...machine, ...set });
+  if (borrows !== borrowsInternet(machine) && machine.protocol >= EGRESS_PROXY_PROTOCOL) {
+    await deps.hub?.call(machine.id, { op: "egress.proxy", on: borrows }, { timeoutMs: 5_000 }).catch(() => undefined);
   }
   if (input.shareInternet === false)
     await resolveNotifications(deps, orgId, { groupKey: internetSharedGroup(machine.id) });

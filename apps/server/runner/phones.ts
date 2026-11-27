@@ -372,6 +372,8 @@ export interface PhoneManagerOptions {
   readOnly?: boolean;
   /** How long a phone's screen may take to open (the server's wait, `STREAM_LIMITS.openTimeoutMs`). */
   openMs?: number;
+  /** The same for an open the server gives a start's wait (`start`: control): `STREAM_LIMITS.startTimeoutMs`. */
+  startMs?: number;
   /** The iPhone test helper (default: one of this OS user's, on a Mac). */
   ios?: IosHelper | null;
   /** What shows and controls an iPhone's screen (default: the test helper's, `ios`). */
@@ -520,6 +522,7 @@ export class PhoneManager {
   private readonly ios: IosHelper | null;
   private readonly iosScreen: IosScreenDriverFactory | null;
   private readonly openMs: number;
+  private readonly startMs: number;
 
   constructor(private readonly opts: PhoneManagerOptions) {
     this.env = opts.env ?? process.env;
@@ -527,6 +530,7 @@ export class PhoneManager {
     this.home = opts.home ?? os.homedir();
     this.now = opts.now ?? Date.now;
     this.openMs = opts.openMs ?? STREAM_LIMITS.openTimeoutMs;
+    this.startMs = opts.startMs ?? STREAM_LIMITS.startTimeoutMs;
     this.tunnels = new AppleTunnels({ env: this.env, log: opts.log, now: this.now });
     this.ios =
       opts.ios !== undefined
@@ -1367,9 +1371,15 @@ export class PhoneManager {
    * A phone's screen live, for one viewer on the data socket `dial` opens (`stream.open` with `kind: "phone"`):
    * pictures as binary frames, at most `PHONE_VIEW.window` the viewer hasn't acknowledged, an unchanged one not sent
    * again. In control (`takeControl`) its taps, swipes, text and keys go to the phone. Answers once the socket is
-   * ready, with the first picture already taken (a phone that can't show refuses the stream instead).
+   * ready, with the first picture already taken (a phone that can't show refuses the stream instead). `start`: the
+   * server waits a start's time for it (control, whose driver may start first), so this does too.
    */
-  async view(target: PhoneTarget | undefined, mode: DesktopMode, dial: () => Promise<DataSocket>): Promise<void> {
+  async view(
+    target: PhoneTarget | undefined,
+    mode: DesktopMode,
+    dial: () => Promise<DataSocket>,
+    o: { start?: boolean } = {},
+  ): Promise<void> {
     const platform = target?.platform === "android" || target?.platform === "ios" ? target.platform : null;
     const serial = target?.serial;
     if (!platform || typeof serial !== "string" || serial === "" || serial.length > 200) {
@@ -1396,10 +1406,13 @@ export class PhoneManager {
     // longer): the phone goes back, and the build goes on for the next try.
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => {
-        stop.abort();
-        reject(new RunnerError("phone_not_ready", OPENING_LATE));
-      }, this.openMs);
+      timer = setTimeout(
+        () => {
+          stop.abort();
+          reject(new RunnerError("phone_not_ready", OPENING_LATE));
+        },
+        o.start ? this.startMs : this.openMs,
+      );
     });
     late.catch(() => {});
     try {

@@ -59,6 +59,7 @@ import type { BrowserPorts } from "./browser-ports";
 import { type CrashedPage, countChromeTraffic, emulationCommands, type TrafficCounter } from "./browser-traffic";
 import { BROWSER_WM_CLASS } from "./desktop-look";
 import type { DesktopSessions } from "./desktop-session";
+import { egressProxyChromeArgs } from "./egress-relay";
 import { RunnerError } from "./errors";
 import { processStartedAt } from "./exec";
 import {
@@ -709,6 +710,8 @@ export function chromeLaunchArgs(
   debuggingPort = 0,
   startPage?: string,
   privateNetwork = false,
+  /** ADR 0237: a borrowing computer's proxy flags (`egressProxyChromeArgs`). */
+  proxy: readonly string[] = [],
 ): string[] {
   const ua = headed ? null : chromeUserAgent(version, platform);
   return [
@@ -719,7 +722,8 @@ export function chromeLaunchArgs(
     `--user-data-dir=${profile}`,
     ...(ua ? [`--user-agent=${ua}`] : []),
     ...(lang ? [`--lang=${lang}`] : []),
-    ...(privateNetwork ? ["--force-webrtc-ip-handling-policy=disable_non_proxied_udp"] : []),
+    ...(privateNetwork && proxy.length === 0 ? ["--force-webrtc-ip-handling-policy=disable_non_proxied_udp"] : []),
+    ...proxy,
     ...(typeof page === "string" ? [startPage && page === "about:blank" ? pathToFileURL(startPage).href : page] : page),
   ];
 }
@@ -3308,6 +3312,7 @@ export class BrowserManager {
           this.opts.fixedPorts?.cdp ?? 0,
           startPage,
           this.opts.privateNetwork?.(),
+          egressProxyChromeArgs(),
         );
         try {
           const display = on && confinedChrome(exe) ? readableDisplay(on, session.folder) : on;

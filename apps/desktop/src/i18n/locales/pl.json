@@ -24,6 +24,11 @@
     "welcome": "Witamy",
     "prefs": "Preferencje"
   },
+  "background": {
+    "title": "agentes.chat nadal działa",
+    "bodyMac": "Znajdziesz go na pasku menu u góry ekranu. Stamtąd go otworzysz lub zakończysz.",
+    "bodyTray": "Znajdziesz go w zasobniku systemowym. Stamtąd go otworzysz lub zakończysz."
+  },
   "common": {
     "cancel": "Anuluj",
     "close": "Zamknij",
@@ -492,9 +497,10 @@
     "done": "Połączono z {{org}}",
     "share": "Pozwól całej przestrzeni roboczej z niego korzystać",
     "internet": "Agenci korzystają z internetu tego komputera",
-    "internetOn": "Strony otwierane przez agentów widzą Twoją lokalizację",
+    "internetOn": "Strony i serwery, z którymi łączą się agenci, widzą Twoją lokalizację",
     "internetOff": "Wyłączone: agenci korzystają ze zwykłego połączenia",
-    "internetHint": "Agenci z workspace’u otwierają strony przez połączenie tego komputera. Tylko strony internetowe i nigdy nic w Twojej własnej sieci. Gdy ten komputer jest offline, korzystają ze zwykłego połączenia.",
+    "internetHint": "Agenci workspace’u łączą się z internetem przez połączenie tego komputera: strony internetowe, git, SSH, bazy danych i inne połączenia TCP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Wyszukiwanie nazw, rozmowy i pozostały ruch UDP korzystają z ich zwykłego połączenia, podobnie jak wszystko, gdy ten komputer jest offline.",
+    "internetHintProxy": "Przeglądarka agentów workspace’u i programy, które stosują ustawienia proxy (git przez HTTPS, curl, większość narzędzi wiersza poleceń), łączą się z internetem przez połączenie tego komputera. SSH, klienty baz danych i inne programy, które ignorują ustawienia proxy, korzystają z ich zwykłego połączenia, podobnie jak wyszukiwanie nazw i ruch UDP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Gdy ten komputer jest offline, wszystko korzysta ze zwykłego połączenia.",
     "shareOff": "Na razie tylko ty",
     "shareHint": "Agenci wszystkich w {{org}} mogą uruchamiać na nim zadania jako twój użytkownik.",
     "addFolders": "Dodaj foldery",

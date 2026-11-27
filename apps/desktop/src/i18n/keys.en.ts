@@ -21,6 +21,14 @@ export const desktopEn = {
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
   windowTitle: { welcome: "Welcome", prefs: "Preferences" },
+  /** The notification the first time someone closes the main window: the app keeps running (background.rs). */
+  background: {
+    title: "agentes.chat is still running",
+    /** A Mac: the icon at the top right of the screen. */
+    bodyMac: "Find it in the menu bar at the top of the screen. Open it or quit it from there.",
+    /** Windows and Linux. */
+    bodyTray: "Find it in the system tray. Open it or quit it from there.",
+  },
   common: {
     cancel: "Cancel",
     close: "Close",
@@ -542,10 +550,13 @@ export const desktopEn = {
     share: "Let the whole workspace use it",
     /** A workspace with its own computer opens websites through this one's internet (ADR 0237); on by default. */
     internet: "Agents use this computer's internet",
-    internetOn: "Websites the agents open see your location",
+    internetOn: "Sites and servers the agents reach see your location",
     internetOff: "Off: agents use their usual connection",
     internetHint:
-      "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection.",
+      "The workspace's agents go online through this computer's connection: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use their usual connection, and so does everything while this computer is offline.",
+    /** The same on a self-hosted server, where agents reach it through proxy settings (ADR 0237). */
+    internetHintProxy:
+      "The workspace's agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go online through this computer's connection. SSH, database clients and other programs that ignore proxy settings use their usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",

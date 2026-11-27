@@ -52,6 +52,14 @@ export const ptBR = {
     /** A formatted block (JSON) shown as it was written. */
     raw: "Original",
     table: "Tabela",
+    /** A Markdown table's card in a message or a document: its top line, beside Copy and Full screen. */
+    tableRows_one: "Tabela · {{count}} linha",
+    tableRows_other: "Tabela · {{count}} linhas",
+    /** Under a long table in a message, which shows only its first rows: opens the whole table in full screen. */
+    tableSeeAll: "Ver as {{count}} linhas",
+    /** Under the title of a table in full screen. */
+    tableRowCount_one: "{{count}} linha",
+    tableRowCount_other: "{{count}} linhas",
     chartItem: "Item",
     chartShare: "Parte",
     you: "você",
@@ -7270,6 +7278,7 @@ export const ptBR = {
     undoneBy: "Desfeito por {{name}}",
     undoneByYou: "Desfeito por você",
     undo: "Desfazer",
+    applyAnyway: "Aplicar mesmo assim",
     /** A card whose rows ended apart. */
     appliedSome: "{{done}} de {{total}} aplicadas",
     waitingAdmin: "Aguardando um admin",
@@ -11007,7 +11016,6 @@ export const ptBR = {
     filter: {
       person: "Pessoas",
       agent: "Agentes",
-      routine: "Rotinas",
       reminder: "Lembretes",
       deadline: "Prazos de tarefas",
     },
@@ -11041,12 +11049,6 @@ export const ptBR = {
         declined: "Você não vai.",
       },
     },
-    every: { hour: "a cada hora", hours: "a cada {{count}} h", minutes: "a cada {{count}} min" },
-    perDay: "{{count}}× por dia",
-    runs_one: "{{count}} execução nestes dias.",
-    runs_other: "{{count}} execuções nestes dias.",
-    /** Under a run's title in its details; the agent's name and face are the line above. */
-    routineDetail: "Rotina · entrega em {{target}}",
     deadlineDetail: "Prazo da tarefa.",
     reminderBy: "Criado por {{name}}",
     /** Under a reminder's title in its details; the agent that posts it is the line above. */
@@ -11054,21 +11056,11 @@ export const ptBR = {
     cancelReminder: "Cancelar lembrete",
     reminderCancelled: "Lembrete cancelado",
     openIssue: "Abrir tarefa",
-    openRoutines: "Ver em Rotinas",
-    openRoutine: "Abrir rotina",
-    runAria: "Rotina {{name}}, {{time}}",
     /** An item's hover: its name, whose it is, when. */
     runHint: "{{name}} · {{agent}} · {{time}}",
-    runsAt: "Rotinas às {{time}}",
-    /** Under a stack of routine runs in the week: the runs it doesn't show, which it opens. */
-    moreRuns_one: "+{{count}} rotina",
-    moreRuns_other: "+{{count}} rotinas",
-    runTimes: "×{{count}}",
-    result: { ok: "respondeu", silent: "nada novo", failed: "falhou", skipped: "não rodou" },
-    lastResult: "última: {{result}}",
     upcomingMeta: "{{day}} · {{time}}",
     emptyHint: "Nada marcado. Arraste para criar ou aperte N",
-    agendaEmpty: "Eventos e rotinas dos próximos 30 dias aparecem aqui.",
+    agendaEmpty: "Eventos e lembretes dos próximos 30 dias aparecem aqui.",
     agendaEmptyTitle: "Agenda livre nos próximos 30 dias",
     noResults: "Nada com esse filtro.",
     more: "+{{count}} mais",
@@ -17162,14 +17154,15 @@ export const ptBR = {
         "O download do navegador dos agentes veio com defeito e não foi usado. Ele tenta de novo no próximo uso.",
       desktop_use_linux: "O uso da área de trabalho roda em computadores Linux com as áreas de trabalho dos agentes.",
       desktop_use_own_user:
-        "O uso da área de trabalho precisa que cada agente trabalhe como seu próprio usuário neste computador (modo sistema). Aqui todos trabalham como o usuário do runner.",
+        "O uso da área de trabalho precisa que cada agente trabalhe como seu próprio usuário neste computador (modo sistema). Aqui todos trabalham como o mesmo usuário, o que roda o agentes.chat.",
       desktop_use_install: "Instale neste computador o que o uso da área de trabalho precisa:",
       desktop_unavailable: "As áreas de trabalho dos agentes não rodam neste computador.",
       desktop_linux: "As áreas de trabalho dos agentes rodam só em computadores Linux.",
       desktop_install: "Instale neste computador as áreas de trabalho dos agentes:",
       not_as_root:
-        "As áreas de trabalho e os terminais dos agentes nunca rodam como root. Rode o runner como um usuário comum.",
-      runner_bun_old: "Isso precisa do runner no Bun 1.3.5 ou mais novo. Atualize o runner neste computador.",
+        "As áreas de trabalho e os terminais dos agentes nunca rodam como root. Rode o agentes.chat como um usuário comum.",
+      runner_bun_old:
+        "Isso precisa do agentes.chat no Bun 1.3.5 ou mais novo. Atualize o agentes.chat neste computador.",
       terminal_unsupported: "Os terminais rodam só em computadores Linux e Mac.",
     },
     egress: {
@@ -17179,7 +17172,6 @@ export const ptBR = {
       hint: "O endereço que os sites veem quando os agentes navegam. Ele acompanha as mudanças de rede do computador.",
       waiting: "Reconectando a internet dos agentes. As conexões deles esperam até ela voltar.",
       via: "Agentes usam a internet de {{name}}",
-      viaBy: "Agentes usam a internet de {{name}} ({{person}})",
       viaHint: "Os sites veem a localização desse computador. Quem o conectou pode desligar na página dele.",
     },
     maintenance: {
@@ -17495,6 +17487,10 @@ export const ptBR = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPUs",
+    cores_one: "{{count}} núcleo",
+    cores_other: "{{count}} núcleos",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulador", simulator: "Simulador" },
@@ -17572,12 +17568,14 @@ export const ptBR = {
       "Cada computador só ajuda se o dono permitir. Com isto desativado, nenhum ajuda, seja qual for a escolha do dono.",
     shareInternet: "Agentes usam a internet deste computador",
     shareInternetHint:
-      "Os sites que os agentes abrem passam pela conexão deste computador, então veem a sua localização. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, os agentes usam a conexão de sempre.",
+      "As conexões dos agentes saem pela internet deste computador, então sites e servidores veem a sua localização: sites, git, SSH, bancos de dados e outras conexões TCP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Consultas de nome, chamadas e outro tráfego UDP usam a conexão de sempre, assim como tudo enquanto este computador estiver offline.",
+    shareInternetHintProxy:
+      "O navegador dos agentes e os programas que seguem as configurações de proxy (git por HTTPS, curl, a maioria das ferramentas de linha de comando) saem pela internet deste computador, então os sites veem a sua localização. SSH, clientes de banco de dados e outros programas que ignoram as configurações de proxy usam a conexão de sempre, assim como consultas de nome e tráfego UDP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Enquanto este computador estiver offline, tudo usa a conexão de sempre.",
     shareInternetInUse: "Em uso agora",
     shareInternetOther: "Agentes usam {{name}} agora",
     shareInternetPick: "Usar este",
     shareInternetJoin:
-      "Os agentes também vão abrir sites pela internet deste computador, então os sites veem a sua localização. Você pode desligar na página dele.",
+      "Os agentes também vão acessar a internet por este computador, então sites e servidores veem a sua localização. Você pode desligar na página dele.",
     connectedBy: "Conectado por {{name}}",
     downloadFor: "Baixar para {{system}}",
     downloadApp: "Baixar o app",
@@ -17621,6 +17619,12 @@ export const ptBR = {
       paused: "{{host}} está pausado, então o controle espera até ele voltar.",
       held: "Este workspace está pausado, então o controle espera até ele voltar a ficar ativo.",
       lost: "O controle acabou. Você voltou a assistir {{name}}.",
+      /** O controle não mostrou nada a tempo (o assistente de testes de um iPhone ainda compilando ou abrindo). */
+      controlLate:
+        "O controle não começou a tempo. {{host}} ainda está preparando {{name}}: tente de novo em um minuto.",
+      /** O controle não conseguiu começar no computador. */
+      controlFailed:
+        "Não deu para assumir o controle de {{name}}. Tente de novo ou reinicie o app do agentes.chat no {{host}}.",
       typeLabel: "Digitar em {{name}}",
     },
     status: {
@@ -17642,7 +17646,7 @@ export const ptBR = {
       withHost: "com {{host}}",
       lastSeen: "visto às {{time}}",
       offlineUnresponsive: "parou de responder às {{time}}",
-      offlineStopped: "o runner parou às {{time}}",
+      offlineStopped: "o agentes.chat parou às {{time}}",
       offlineDropped: "a conexão caiu às {{time}}",
     },
     line: {
@@ -17661,9 +17665,14 @@ export const ptBR = {
       offlineSeen: "Visto às {{time}}. Os agentes esperam ele voltar.",
       offlineWithHost: "{{host}} está offline. Os agentes esperam ele voltar.",
       offlineUnresponsive:
-        "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode `{{command}}` nele.",
-      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode `{{command}}` nele para ver o motivo.",
-      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode `{{command}}` nele.",
+        "Parou de responder às {{time}}, talvez sem internet ou sobrecarregado. Veja se ele está ligado e com internet.",
+      offlineStopped: "O app agentes.chat parou neste computador às {{time}}. Abra o app de novo.",
+      offlineStoppedCli: "O agentes.chat parou neste computador às {{time}}. Inicie de novo nele.",
+      offlineDropped: "A conexão caiu às {{time}}. Ela volta sozinha.",
+    },
+    technical: {
+      title: "Detalhes técnicos",
+      doctor: "Para ver o motivo, rode isto nele:",
     },
     reason: {
       locked: "O celular está bloqueado",
@@ -17724,7 +17733,7 @@ export const ptBR = {
     },
     facts: {
       system: "Sistema",
-      cpu: "CPU",
+      cpu: "Processador",
       memory: "Memória",
       lastSeen: "Visto por último",
       toolchains: "Ferramentas encontradas",
@@ -18152,7 +18161,7 @@ export const ptBR = {
       folderShown: "Aberto no {{deviceName}}. Libere lá.",
       internetShared: "Agora os agentes abrem sites pela internet de <b>{{deviceName}}</b>",
       internetSharedLine:
-        "Só os agentes deste workspace, só sites, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
+        "Só os agentes deste workspace, nunca nada da rede dele, nunca e-mail pela porta 25. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
       internetOff: "Desligar",
       internetOffDone: "Os agentes não usam mais a internet de {{deviceName}}.",
       once: "Permitir uma vez",
@@ -18932,6 +18941,23 @@ export const ptBR = {
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
       copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
+      latest: "A versão mais recente",
+      newer: "Saiu a {{version}}",
+      notes: "O que mudou",
+      update: {
+        title: "Atualize para a {{version}}",
+        docker: "Com Docker",
+        native: "Sem Docker",
+        nativeHelp: "Extraia o pacote da versão em `~/.agentes/app` e rode:",
+        desktop: "Roda no app para computador, nesta máquina? Ele se atualiza com o app.",
+        notice: "Saiu o agentes.chat {{version}} para este servidor",
+        how: "Como atualizar",
+      },
+      computers: "Programa dos computadores",
+      computersAhead_one:
+        "{{count}} computador roda uma versão mais nova que a deste servidor. Ele funciona como está, e o que há de novo nele chega com a atualização deste servidor.",
+      computersAhead_other:
+        "{{count}} computadores rodam uma versão mais nova que a deste servidor. Eles funcionam como estão, e o que há de novo neles chega com a atualização deste servidor.",
     },
     title: "Configurações",
     account: {
@@ -21324,7 +21350,7 @@ export const ptBR = {
       peopleQuiet: "Todos passam a só ler",
       computer: "O computador dele para agora e é apagado",
       computers:
-        "Os computadores conectados são desconectados. As pastas dos agentes ficam neles até o runner ser removido.",
+        "Os computadores conectados são desconectados. As pastas dos agentes ficam neles até o agentes.chat ser removido deles.",
       connectors: "Os conectores e as caixas de email são desconectados",
     },
     undo: "Qualquer dono pode restaurar até {{date}} às {{time}}. Depois disso, não tem volta.",
@@ -21747,16 +21773,6 @@ export const ptBR = {
       doneByYou: "Feito por você às {{time}}. O {{agent}} olhou a tela de novo e seguiu.",
       doneByYou_female: "Feito por você às {{time}}. A {{agent}} olhou a tela de novo e seguiu.",
     },
-    control: {
-      notice: "Os programas do computador do {{name}} veem a tela e o que você digita ou cola.",
-      notice_female: "Os programas do computador da {{name}} veem a tela e o que você digita ou cola.",
-    },
-    /** The ⓘ beside the control line, on agentes.chat Cloud only (ADR 0076). */
-    session: {
-      check: "Verificações de segurança",
-      screening:
-        "Podemos verificar o texto desta tela para impedir abuso. Guardamos só o resultado. O que a tela não mostra, como uma senha num prompt, nunca é capturado.",
-    },
     /** What the agent did on its desktop, on its message after the run (ADR 0062); the rest is the browser card's. */
     after: {
       titleNoSite: "Usou a tela",
@@ -21767,9 +21783,6 @@ export const ptBR = {
       group_female: "Tela da {{name}}",
     },
     watch: {
-      /** Under the screen while watching, where whoever watches may not be the one typing. */
-      notice: "Os programas do computador do {{name}} veem a tela e tudo o que é digitado ou colado nele.",
-      notice_female: "Os programas do computador da {{name}} veem a tela e tudo o que é digitado ou colado nele.",
       step: {
         desktop_open: "Abriu {{detail}}",
         desktop_open_plain: "Abriu um app",

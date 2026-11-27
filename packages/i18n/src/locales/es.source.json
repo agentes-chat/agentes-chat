@@ -107,6 +107,21 @@
   "common.table": {
     "value": "Table"
   },
+  "common.tableRows": {
+    "value": {
+      "one": "Table · {{count}} row",
+      "other": "Table · {{count}} rows"
+    }
+  },
+  "common.tableSeeAll": {
+    "value": "See all {{count}} rows"
+  },
+  "common.tableRowCount": {
+    "value": {
+      "one": "{{count}} row",
+      "other": "{{count}} rows"
+    }
+  },
   "common.chartItem": {
     "value": "Item"
   },
@@ -16770,6 +16785,9 @@
   "proposals.undo": {
     "value": "Undo"
   },
+  "proposals.applyAnyway": {
+    "value": "Apply anyway"
+  },
   "proposals.appliedSome": {
     "value": "{{done}} of {{total}} applied"
   },
@@ -25542,9 +25560,6 @@
   "calendar.filter.agent": {
     "value": "Agents"
   },
-  "calendar.filter.routine": {
-    "value": "Routines"
-  },
   "calendar.filter.reminder": {
     "value": "Reminders"
   },
@@ -25626,27 +25641,6 @@
   "calendar.rsvp.mine.declined": {
     "value": "You're not going."
   },
-  "calendar.every.hour": {
-    "value": "every hour"
-  },
-  "calendar.every.hours": {
-    "value": "every {{count}} h"
-  },
-  "calendar.every.minutes": {
-    "value": "every {{count}} min"
-  },
-  "calendar.perDay": {
-    "value": "{{count}}× a day"
-  },
-  "calendar.runs": {
-    "value": {
-      "one": "{{count}} run in these days.",
-      "other": "{{count}} runs in these days."
-    }
-  },
-  "calendar.routineDetail": {
-    "value": "Routine · delivers to {{target}}"
-  },
   "calendar.deadlineDetail": {
     "value": "The task is due."
   },
@@ -25665,44 +25659,8 @@
   "calendar.openIssue": {
     "value": "Open task"
   },
-  "calendar.openRoutines": {
-    "value": "See in Routines"
-  },
-  "calendar.openRoutine": {
-    "value": "Open routine"
-  },
-  "calendar.runAria": {
-    "value": "Routine {{name}}, {{time}}"
-  },
   "calendar.runHint": {
     "value": "{{name}} · {{agent}} · {{time}}"
-  },
-  "calendar.runsAt": {
-    "value": "Routines at {{time}}"
-  },
-  "calendar.moreRuns": {
-    "value": {
-      "one": "+{{count}} routine",
-      "other": "+{{count}} routines"
-    }
-  },
-  "calendar.runTimes": {
-    "value": "×{{count}}"
-  },
-  "calendar.result.ok": {
-    "value": "replied"
-  },
-  "calendar.result.silent": {
-    "value": "nothing new"
-  },
-  "calendar.result.failed": {
-    "value": "failed"
-  },
-  "calendar.result.skipped": {
-    "value": "didn't run"
-  },
-  "calendar.lastResult": {
-    "value": "last: {{result}}"
   },
   "calendar.upcomingMeta": {
     "value": "{{day}} · {{time}}"
@@ -25711,7 +25669,7 @@
     "value": "Nothing scheduled. Drag to create or press N"
   },
   "calendar.agendaEmpty": {
-    "value": "Events and routines in the next 30 days show up here."
+    "value": "Events and reminders in the next 30 days show up here."
   },
   "calendar.agendaEmptyTitle": {
     "value": "A clear calendar for the next 30 days"
@@ -40973,7 +40931,7 @@
     "value": "Desktop use runs on Linux computers with the agents' desktops."
   },
   "machines.reasons.desktop_use_own_user": {
-    "value": "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the runner's user."
+    "value": "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the same user, the one agentes.chat runs as."
   },
   "machines.reasons.desktop_use_install": {
     "value": "Install what desktop use needs on this computer:"
@@ -40988,10 +40946,10 @@
     "value": "Install the agents' desktops on this computer:"
   },
   "machines.reasons.not_as_root": {
-    "value": "The agents' desktops and terminals never run as root. Run the runner as a normal user."
+    "value": "The agents' desktops and terminals never run as root. Run agentes.chat as a normal user."
   },
   "machines.reasons.runner_bun_old": {
-    "value": "This needs the runner on Bun 1.3.5 or newer. Update the runner on this computer."
+    "value": "This needs agentes.chat on Bun 1.3.5 or newer. Update agentes.chat on this computer."
   },
   "machines.reasons.terminal_unsupported": {
     "value": "Terminals run on Linux and Mac computers only."
@@ -41013,9 +40971,6 @@
   },
   "machines.egress.via": {
     "value": "Agents use the internet of {{name}}"
-  },
-  "machines.egress.viaBy": {
-    "value": "Agents use the internet of {{name}} ({{person}})"
   },
   "machines.egress.viaHint": {
     "value": "Websites see that computer’s location. Its owner can turn it off on its page."
@@ -41811,6 +41766,18 @@
       "other": "{{count}} CPU"
     }
   },
+  "devices.cores": {
+    "value": {
+      "one": "{{count}} core",
+      "other": "{{count}} cores"
+    }
+  },
+  "devices.threads": {
+    "value": {
+      "one": "{{count}} thread",
+      "other": "{{count}} threads"
+    }
+  },
   "devices.memory": {
     "value": "{{gb}} GB"
   },
@@ -42007,7 +41974,10 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection."
+    "value": "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline."
+  },
+  "devices.shareInternetHintProxy": {
+    "value": "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -42019,7 +41989,7 @@
     "value": "Use this one"
   },
   "devices.shareInternetJoin": {
-    "value": "The agents will also open websites through this computer's internet, so sites see your location. You can turn it off on its page."
+    "value": "The agents will also go online through this computer's internet, so sites and servers see your location. You can turn it off on its page."
   },
   "devices.connectedBy": {
     "value": "Connected by {{name}}"
@@ -42141,6 +42111,12 @@
   "devices.screen.lost": {
     "value": "Control ended. You're watching {{name}} again."
   },
+  "devices.screen.controlLate": {
+    "value": "Control didn't start in time. {{host}} is still getting {{name}} ready: try again in a minute."
+  },
+  "devices.screen.controlFailed": {
+    "value": "Couldn't take control of {{name}}. Try again, or restart the agentes.chat app on {{host}}."
+  },
   "devices.screen.typeLabel": {
     "value": "Type on {{name}}"
   },
@@ -42193,7 +42169,7 @@
     "value": "stopped answering at {{time}}"
   },
   "devices.detail.offlineStopped": {
-    "value": "runner stopped at {{time}}"
+    "value": "agentes.chat stopped at {{time}}"
   },
   "devices.detail.offlineDropped": {
     "value": "connection dropped at {{time}}"
@@ -42235,13 +42211,22 @@
     "value": "{{host}} is offline. Agents wait for it to come back."
   },
   "devices.line.offlineUnresponsive": {
-    "value": "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it."
+    "value": "Stopped answering at {{time}}, maybe no internet or overloaded. Check that it's on and online."
   },
   "devices.line.offlineStopped": {
-    "value": "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why."
+    "value": "The agentes.chat app stopped on this computer at {{time}}. Open the app again."
+  },
+  "devices.line.offlineStoppedCli": {
+    "value": "agentes.chat stopped on this computer at {{time}}. Start it again there."
   },
   "devices.line.offlineDropped": {
-    "value": "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it."
+    "value": "The connection dropped at {{time}}. It reconnects by itself."
+  },
+  "devices.technical.title": {
+    "value": "Technical details"
+  },
+  "devices.technical.doctor": {
+    "value": "To see why, run this on it:"
   },
   "devices.reason.locked": {
     "value": "The phone is locked"
@@ -42406,7 +42391,7 @@
     "value": "System"
   },
   "devices.facts.cpu": {
-    "value": "CPU"
+    "value": "Processor"
   },
   "devices.facts.memory": {
     "value": "Memory"
@@ -43411,7 +43396,7 @@
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
   },
   "devices.notice.internetSharedLine": {
-    "value": "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection."
+    "value": "Only this workspace's agents, never anything on its own network, never email on port 25. While it's offline, they use their usual connection."
   },
   "devices.notice.internetOff": {
     "value": "Turn off"
@@ -45299,6 +45284,45 @@
   },
   "settings.about.copyright": {
     "value": "Copyright © 2026 AGENTESCHAT, LLC and contributors"
+  },
+  "settings.about.latest": {
+    "value": "The newest release"
+  },
+  "settings.about.newer": {
+    "value": "{{version}} is out"
+  },
+  "settings.about.notes": {
+    "value": "What's new"
+  },
+  "settings.about.update.title": {
+    "value": "Update to {{version}}"
+  },
+  "settings.about.update.docker": {
+    "value": "With Docker"
+  },
+  "settings.about.update.native": {
+    "value": "Without Docker"
+  },
+  "settings.about.update.nativeHelp": {
+    "value": "Extract the release's package into `~/.agentes/app`, then run:"
+  },
+  "settings.about.update.desktop": {
+    "value": "Runs in the desktop app on this computer? It updates with the app."
+  },
+  "settings.about.update.notice": {
+    "value": "agentes.chat {{version}} is out for this server"
+  },
+  "settings.about.update.how": {
+    "value": "How to update"
+  },
+  "settings.about.computers": {
+    "value": "Computers' program"
+  },
+  "settings.about.computersAhead": {
+    "value": {
+      "one": "{{count}} computer runs a newer version than this server. It works as it is, and what's new in it comes with this server's update.",
+      "other": "{{count}} computers run a newer version than this server. They work as they are, and what's new in them comes with this server's update."
+    }
   },
   "settings.title": {
     "value": "Settings"
@@ -50506,7 +50530,7 @@
     "value": "Its computer stops now and is wiped"
   },
   "deleteOrg.goes.computers": {
-    "value": "Connected computers are disconnected. The agents' folders stay on them until the runner is removed."
+    "value": "Connected computers are disconnected. The agents' folders stay on them until agentes.chat is removed from them."
   },
   "deleteOrg.goes.connectors": {
     "value": "Connectors and mailboxes are disconnected"
@@ -51213,15 +51237,6 @@
   "desktop.card.doneByYou": {
     "value": "Done by you at {{time}}. {{agent}} looked at the screen again and went on."
   },
-  "desktop.control.notice": {
-    "value": "Programs on {{name}}'s computer can see the screen and what you type or paste."
-  },
-  "desktop.session.check": {
-    "value": "Safety checks"
-  },
-  "desktop.session.screening": {
-    "value": "We may check the text on this screen for abuse. We keep only the result. What the screen doesn't show, like a password at a prompt, is never captured."
-  },
   "desktop.after.titleNoSite": {
     "value": "Used the screen"
   },
@@ -51230,9 +51245,6 @@
   },
   "desktop.inCard.group": {
     "value": "{{name}}'s screen"
-  },
-  "desktop.watch.notice": {
-    "value": "Programs on {{name}}'s computer can see the screen and anything typed or pasted there."
   },
   "desktop.watch.step.desktop_open": {
     "value": "Opened {{detail}}"

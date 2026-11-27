@@ -47,6 +47,7 @@ import { ToolOffError } from "./errors";
 import { publishChannelEvent } from "./events";
 import { copyToComputer } from "./file-pulls";
 import { openForModel } from "./file-reader";
+import { syntaxError } from "./file-syntax";
 import { clockOf, cutText, formatBytes, textOfBytes } from "./format";
 import { mergeReposOfCall } from "./git/repos";
 import { fullMachinePath, pathInOwnFolder, requestFolderAccess } from "./machine-access";
@@ -476,12 +477,12 @@ export function computerSentence(info: ComputerInfo) {
   return [
     info.managed
       ? `Runs on "${info.name}"${os ? ` (${os})` : ""}, this workspace's own computer, always on: a real machine, not an isolated sandbox. It has its own internet and installed tools; commands run in your folder there as your own user.`
-      : `Runs on the connected computer "${info.name}"${os ? ` (${os})` : ""}: a real machine people connected, not an isolated sandbox. It has its own internet and installed tools; commands run in its workspace folder as the user that runs the runner.`,
+      : `Runs on the connected computer "${info.name}"${os ? ` (${os})` : ""}: a real machine people connected, not an isolated sandbox. It has its own internet and installed tools; commands run in its workspace folder as the user agentes.chat runs as there.`,
     info.online
       ? "It is online now."
       : info.managed
         ? "It isn't answering right now: calls fail until it is back (usually within minutes); tell the people."
-        : "It is offline now: calls fail until its owner starts the runner; tell the people.",
+        : "It is offline now: calls fail until its owner starts agentes.chat there again; tell the people.",
     info.paused
       ? `${pausedMessage(info.name, info.paused.until, info.paused.timezone)} Tell the people when they ask for work there.`
       : "",
@@ -925,7 +926,7 @@ export function createSandboxToolSource(
   ): ToolDefinition[] => [
     {
       name: "run_code",
-      description: `Run Python, Node.js or bash code. ${computerSentence(computerInfo)}${computerInfo.kind === "machine" && computerInfo.execAllowed && sessionId ? ` ${claudeCodeSentence(sessionId, tasksOn(computerInfo), computerInfo.managed)}` : ""}${computerInfo.kind === "machine" && computerInfo.execAllowed && !tasksOn(computerInfo) ? ` Its runner is too old for background tasks. ${runnerUpdateWay({ kind: computerInfo.managed ? "managed" : null })}` : ""} Returns exit code, stdout and stderr. Default timeout ${execTimeout} s, at most ${maxTimeout} s.${deps.vault ? " With `keys`, saved Vault keys (their variable names, from vault_list) are set as environment variables of this one command only: use them as `$NAME` (bash) or `os.environ` / `process.env`, never print them (output shows them as [secret:NAME]). A routine's own run uses the keys its creator allowed and asks a person for any other; a run started by what a routine read gets none." : ""}`,
+      description: `Run Python, Node.js or bash code. ${computerSentence(computerInfo)}${computerInfo.kind === "machine" && computerInfo.execAllowed && sessionId ? ` ${claudeCodeSentence(sessionId, tasksOn(computerInfo), computerInfo.managed)}` : ""}${computerInfo.kind === "machine" && computerInfo.execAllowed && !tasksOn(computerInfo) ? ` Its agentes.chat program is too old for background tasks. ${runnerUpdateWay({ kind: computerInfo.managed ? "managed" : null })}` : ""} Returns exit code, stdout and stderr. Default timeout ${execTimeout} s, at most ${maxTimeout} s.${deps.vault ? " With `keys`, saved Vault keys (their variable names, from vault_list) are set as environment variables of this one command only: use them as `$NAME` (bash) or `os.environ` / `process.env`, never print them (output shows them as [secret:NAME]). A routine's own run uses the keys its creator allowed and asks a person for any other; a run started by what a routine read gets none." : ""}`,
       scope: SANDBOX_SCOPE,
       readsOutside: true,
       sensitive: requireApproval,
@@ -1055,7 +1056,7 @@ export function createSandboxToolSource(
                     : "unknown OS";
             const where = target.managed
               ? `You are on "${target.name}", this workspace's own computer (${os}), always on: ${target.maintenance ? `${target.online ? "answering, and " : ""}${maintenancePhrase(target.maintenance)} (tell the people so, never that it is offline)` : target.online ? "answering now" : "not answering right now (it usually comes back within minutes; tell the people)"}.`
-              : `You are on the connected computer "${target.name}" (${os}), ${target.online ? "online" : "offline (ask its owner to start the runner)"}.`;
+              : `You are on the connected computer "${target.name}" (${os}), ${target.online ? "online" : "offline (ask its owner to start agentes.chat there)"}.`;
             return {
               content: `${where} Paths are relative to its workspace folder. Commands: ${target.execAllowed ? "allowed" : "turned off (files and uploads only)"}. Network: the machine's own.${more}`,
               data: {
@@ -1081,11 +1082,17 @@ export function createSandboxToolSource(
     },
     {
       name: "write_file",
-      description: "Write a text file in your computer's workspace (creates folders; overwrites).",
+      description:
+        "Write a text file in your computer's workspace (creates folders; overwrites). Checks the syntax of JavaScript, TypeScript, JSON, YAML and TOML files. Write a long file in parts with append.",
       scope: SANDBOX_SCOPE,
       inputSchema: {
         type: "object",
-        properties: { path: pathProp, content: { type: "string", maxLength: 1_000_000 }, ...computerProp(devices) },
+        properties: {
+          path: pathProp,
+          content: { type: "string", maxLength: 1_000_000 },
+          append: { type: "boolean", description: "Add to the end of the file" },
+          ...computerProp(devices),
+        },
         required: ["path", "content"],
         additionalProperties: false,
       },
@@ -1099,12 +1106,28 @@ export function createSandboxToolSource(
               const at = sessionFolder(ctx, c);
               const path = toolPath(str(input.path), computerInfo, at);
               if (!path || path === at) throw new Error("path is required");
-              await c.provider.writeFile(c.id, path, data);
-              return shownPath(path, at);
+              const before = input.append === true ? await c.provider.readFile(c.id, path) : null;
+              // The runner reads a saved key's value back as its placeholder: writing that back would lose the key.
+              if (before && textOfBytes(before)?.includes("[secret:"))
+                throw new Error(
+                  `${shownPath(path, at)} holds a saved key, which reads back hidden, so adding to it this way would lose the key. Add to it with a command instead.`,
+                );
+              const whole = before ? Buffer.concat([before, data]) : data;
+              await c.provider.writeFile(c.id, path, whole);
+              return { shown: shownPath(path, at), whole };
             },
             input,
           );
-          return { content: `Wrote ${wrote} (${data.byteLength} bytes).` };
+          const broken = await syntaxError(wrote.shown, textOfBytes(wrote.whole) ?? "");
+          const check = broken
+            ? ` It doesn't parse as ${broken.format} yet (${broken.error}). Fix it before you hand it over; while parts are still to come, check again after the last one.`
+            : "";
+          return {
+            content:
+              wrote.whole === data
+                ? `Wrote ${wrote.shown} (${data.byteLength} bytes).${check}`
+                : `Added ${data.byteLength} bytes to ${wrote.shown} (${wrote.whole.byteLength} bytes now).${check}`,
+          };
         } catch (error) {
           return failed(error, ctx.codeSession?.place?.cwd);
         }

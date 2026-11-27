@@ -28,6 +28,11 @@ export const desktopPtBR = {
   device: { mac: "Mac", windows: "PC", linux: "computador" },
   /** O nome das janelas do próprio app (a lista do Dock, o menu Janela, o Mission Control). */
   windowTitle: { welcome: "Boas-vindas", prefs: "Preferências" },
+  background: {
+    title: "O agentes.chat continua aberto",
+    bodyMac: "Ele fica na barra de menus, no alto da tela. É por lá que você abre o app ou sai dele.",
+    bodyTray: "Ele fica na bandeja do sistema. É por lá que você abre o app ou sai dele.",
+  },
   common: {
     cancel: "Cancelar",
     close: "Fechar",
@@ -523,10 +528,12 @@ export const desktopPtBR = {
     done: "Conectado a {{org}}",
     share: "Deixar o workspace todo usar",
     internet: "Agentes usam a internet deste computador",
-    internetOn: "Os sites que os agentes abrem veem a sua localização",
+    internetOn: "Sites e servidores que os agentes acessam veem a sua localização",
     internetOff: "Desligado: os agentes usam a conexão de sempre",
     internetHint:
-      "Os agentes do workspace abrem sites pela conexão deste computador. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, eles usam a conexão de sempre.",
+      "Os agentes do workspace acessam a internet pela conexão deste computador: sites, git, SSH, bancos de dados e outras conexões TCP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Consultas de nome, chamadas e outro tráfego UDP usam a conexão de sempre, assim como tudo enquanto este computador estiver offline.",
+    internetHintProxy:
+      "O navegador dos agentes do workspace e os programas que seguem as configurações de proxy (git por HTTPS, curl, a maioria das ferramentas de linha de comando) acessam a internet pela conexão deste computador. SSH, clientes de banco de dados e outros programas que ignoram as configurações de proxy usam a conexão de sempre, assim como consultas de nome e tráfego UDP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Enquanto este computador estiver offline, tudo usa a conexão de sempre.",
     shareOff: "Só você por enquanto",
     shareHint: "Os agentes de todos em {{org}} podem rodar tarefas nele, com o seu usuário.",
     addFolders: "Adicionar pastas",

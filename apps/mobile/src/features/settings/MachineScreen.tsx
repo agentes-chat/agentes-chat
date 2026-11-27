@@ -26,10 +26,15 @@ import {
   maintenanceShort,
 } from "@agenteschat/client/lib/computer-maintenance";
 import {
+  doctorShown,
   mayChangeTasks,
   offlineCauseText,
+  processorText,
+  RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
+  systemText,
   taskLimitLine,
+  terminalInstall,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt, firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
@@ -162,6 +167,7 @@ function MachinePage({ machineId }: { machineId: string }) {
   });
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const [techOpen, setTechOpen] = useState(false);
   if (!m) {
     return (
       <SettingsPage title={t("machines.page.back")}>
@@ -251,13 +257,23 @@ function MachinePage({ machineId }: { machineId: string }) {
       ? [setup?.specs ? t("computerSetup.specs", setup.specs) : null, m.online ? null : seenText(t, i18n.language, m)]
           .filter(Boolean)
           .join(" · ")
-      : [t(`machines.os.${osOf(m.os)}`), seenText(t, i18n.language, m)].filter(Boolean).join(" · "),
+      : seenText(t, i18n.language, m),
     isPaused(m) ? (pausedByText(t, i18n.language, m.paused, meId ?? "") ?? t("machines.pausedHint")) : null,
     told && (away || m.online)
       ? [maintenanceLine(t, told), ...maintenanceDetails(t, i18n.language, told)].join(" ")
       : null,
   ].filter((x): x is string => Boolean(x));
-  // What most people never need, behind one "Detalhes" row, as the web's.
+  // What most people never need, behind one "Detalhes" row, as the web's: its system, processor and memory first.
+  const processor = device ? processorText(t, device) : null;
+  const specs = [
+    managed
+      ? null
+      : { label: t("devices.facts.system"), value: device ? systemText(t, device) : t(`machines.os.${osOf(m.os)}`) },
+    processor ? { label: t("devices.facts.cpu"), value: processor.name, note: processor.cores } : null,
+    !managed && device?.memoryGb
+      ? { label: t("devices.facts.memory"), value: t("devices.memory", { gb: device.memoryGb }) }
+      : null,
+  ].filter((x) => x !== null);
   const details = [
     m.kind === "host" ? t(`machines.host.${hostDescKey(m.os)}`) : null,
     managed ? t("computerSetup.users") : null,
@@ -278,7 +294,7 @@ function MachinePage({ machineId }: { machineId: string }) {
   const s = device?.status;
   const causeLine =
     s?.kind === "offline" && s.cause && s.lastSeenAt
-      ? offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line")
+      ? offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line", terminalInstall(m))
       : device
         ? taskLimitLine(t, device, mayChangeTasks(device, meId ?? "", can(org, "configure")))
         : null;
@@ -322,7 +338,27 @@ function MachinePage({ machineId }: { machineId: string }) {
         </>
       ) : null}
 
-      {details.length > 0 || egressIp ? (
+      {m.canManage && doctorShown(s, m) ? (
+        <>
+          <Gap />
+          <GroupedList>
+            <GroupedRow
+              icon={techOpen ? "up" : "down"}
+              label={t("devices.technical.title")}
+              onPress={() => setTechOpen((o) => !o)}
+            />
+          </GroupedList>
+          {techOpen ? (
+            <>
+              <GroupedFooter>{t("devices.technical.doctor")}</GroupedFooter>
+              <Gap />
+              <CommandBlock command={RUNNER_DOCTOR_COMMAND} />
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {specs.length > 0 || details.length > 0 || egressIp ? (
         <>
           <Gap />
           <GroupedList>
@@ -331,6 +367,11 @@ function MachinePage({ machineId }: { machineId: string }) {
               label={t("common.details")}
               onPress={() => setMoreOpen((o) => !o)}
             />
+            {moreOpen
+              ? specs.map((f) => (
+                  <GroupedRow key={f.label} label={f.label} value={f.value} valueNote={f.note ?? undefined} />
+                ))
+              : null}
             {moreOpen ? details.map((line) => <GroupedRow key={line} label={line} labelLines={4} />) : null}
             {moreOpen && egressIp ? (
               <GroupedRow

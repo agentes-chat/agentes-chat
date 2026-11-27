@@ -2866,6 +2866,8 @@ export interface Proposal {
   reviewed: boolean;
   /** Applied, and the viewer may put it back (`proposals.undo`). */
   undoable: boolean;
+  /** Left out by the review, and the viewer may apply it themselves (`proposals.accept`); older servers: absent. */
+  applicable?: boolean;
   undoneBy: { userId: string; name: string } | null;
   undoneAt: string | null;
   decidedAt: string | null;
@@ -5487,8 +5489,9 @@ export interface Machine {
   egress?: { ip: string; country?: string; at: string } | null;
   networkTransition?: { state: "draining" | "restart_required"; deadline: string; agents: string[] } | null;
   /**
-   * ADR 0237, the workspace's own computer: the person's computer whose internet its agents' web traffic uses now, and
-   * who connected it. Null or absent: its usual way out.
+   * ADR 0237, a computer that borrows (the workspace's own; on a self-hosted server, its own computer too): the
+   * person's computer whose internet its agents' web traffic uses now, and who connected it. Null or absent: its usual
+   * way out.
    */
   egressVia?: { machineId: string; name: string; userName: string | null } | null;
   /**
@@ -5527,11 +5530,15 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /** Its runner's machine protocol (`MACHINE_PROTOCOL_VERSION` of the runner it runs). Absent on older servers. */
+  protocol?: number;
   /**
    * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
    * install command again, as root. Null or absent (an older server): nothing to update from here.
    */
   update?: "command" | "installer" | null;
+  /** The agentes.chat app runs it; `false`: installed from the Terminal. Absent from an older server. */
+  app?: boolean;
   /** ADR 0110: its runner can hold browser profiles; `false`: update the computer. */
   browserProfiles?: boolean;
   /** `false`: started with `--no-exec` (files and uploads only). */
@@ -8118,13 +8125,27 @@ export interface SidebarPins {
   channels: string[];
   people: string[];
 }
-/** How my sidebar shows the agents, and what I pinned, in one workspace (`GET …/me/sidebar/view`). */
+/** One of my own channel sections (ADR 0260): its name and its channels, in order. */
+export interface SidebarChannelSection {
+  id: string;
+  name: string;
+  channelIds: string[];
+}
+/** What Mensagens diretas lists: everyone in the workspace, or only who I talked to. */
+export type SidebarDmShow = "all" | "recent";
+/** How my sidebar shows the agents, my Favoritos and my channel sections, in one workspace (`GET …/me/sidebar/view`). */
 export interface SidebarView {
   agentSort: AgentSort;
   /** Who manages agents also lists the ones that don't talk to them. */
   showAllAgents: boolean;
-  /** Never saved: the apps pin my own agents (`dayOnePins`). */
+  /** The pins of before Favoritos: read only to start `favorites` (`favoritesOf`). */
   pins: SidebarPins | null;
+  /** Favoritos in order (`agent:<id>`, `channel:<id>`, `person:<user id>`); null or absent: never saved. */
+  favorites?: string[] | null;
+  /** My channel sections in order; null or absent: none. */
+  sections?: SidebarChannelSection[] | null;
+  /** Absent: `all`. */
+  dms?: SidebarDmShow;
 }
 
 /**
@@ -9261,6 +9282,12 @@ export interface ComputerDevice {
   arch: string;
   hostname: string;
   cpus: number | null;
+  /** The processor's name (`Apple M4 Pro`); null: an older runner. Absent from an older server. */
+  cpuModel?: string | null;
+  /** Its physical cores (`cpus` counts logical CPUs, threads); null: an older runner, or Windows. Absent: older server. */
+  cores?: number | null;
+  /** The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer. */
+  system?: string | null;
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
@@ -9272,8 +9299,8 @@ export interface ComputerDevice {
    */
   spill: { own: boolean; first?: boolean };
   /**
-   * ADR 0237: whether its owner lends its internet to the workspace's own computer, and whether that computer goes out
-   * through it now. Null (or absent from an older server): nothing to lend to.
+   * ADR 0237: whether its owner lends its internet, and whether it carried agents' web traffic lately. Null (or absent
+   * from an older server): nothing to lend to.
    */
   shareInternet?: { on: boolean; inUse: boolean } | null;
   /** What we do to the workspace's own computer now, away (`status` says it too) or while it works, maybe slower. */
@@ -9317,6 +9344,13 @@ export interface DevicesList {
   requests: DeviceJoinRequest[];
   /** People's computers may help when the workspace's is full or away (an admin's switch). Absent from an older server: on. */
   devicesHelp?: boolean;
+  /**
+   * ADR 0237: people's computers here lend their internet (the workspace has its own computer, or a self-hosted
+   * server lends). Absent from an older server: only where the workspace has its own computer (`lendsInternet`).
+   */
+  lendsInternet?: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead. Absent from an older server: no. */
+  serverBoxesBorrow?: boolean;
 }
 
 /** A one-line install: works once, for a few minutes, and the computer still asks to join. */

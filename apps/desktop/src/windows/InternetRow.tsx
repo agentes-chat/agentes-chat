@@ -1,5 +1,6 @@
 import type { ComputerDevice } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import { Icon, Switch } from "@agenteschat/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,9 +9,10 @@ import { siteApi } from "../control/devices";
 import { hintFor, PrefRow } from "../ui/settings";
 
 /**
- * "Agents use this computer's internet" (ADR 0237): the workspace's own computer opens websites through this one's
- * connection while it is on. Its owner turns it on; on, it says so in a line that stays in sight. Nothing in a
- * workspace without its own computer (`shareInternet` null).
+ * "Agents use this computer's internet" (ADR 0237): the computers that borrow (the workspace's own; on a self-hosted
+ * server, that server's computer and its reads of web pages) open websites through this one's connection while it is
+ * on. Its owner turns it on; on, it says so in a line that stays in sight. Nothing where nothing borrows
+ * (`shareInternet` null).
  */
 export function InternetRow({
   server,
@@ -55,7 +57,12 @@ export function InternetRow({
       }
       htmlFor={id}
       title={title}
-      hint={hintFor(t, title, t("desktop.pair.internetHint"))}
+      // A self-hosted server's agents reach this computer's internet only through proxy settings.
+      hint={hintFor(
+        t,
+        title,
+        t(server === CLOUD_SERVER ? "desktop.pair.internetHint" : "desktop.pair.internetHintProxy"),
+      )}
       desc={failed ?? (on ? t("desktop.pair.internetOn") : t("desktop.pair.internetOff"))}
       end={
         <Switch

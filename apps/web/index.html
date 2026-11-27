@@ -31,6 +31,8 @@
     <meta name="theme-color" content="#131312" media="(prefers-color-scheme: dark)" />
     <!-- The name and icons for an installed web app or a home screen shortcut (ADR 0249). -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Open tabs on a build older than this (an ISO time, a build's agentes-build) run a known-bad version: they move to this one at the first short pause (lib/app-version.ts). Raise it when a fix must reach every open tab. -->
+    <meta name="agentes-oldest-good" content="" />
     <script>
       // Apply the saved or system theme before the first paint (no flash).
       try {

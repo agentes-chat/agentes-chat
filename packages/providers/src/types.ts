@@ -271,6 +271,11 @@ export interface ModelProvider {
    * own id. Optional: a provider without one makes none.
    */
   generateImage?(request: ImageRequest, options: ImageCallOptions): Promise<ImageResult>;
+  /**
+   * The most output tokens `model` takes, as the provider's model list says (a workspace endpoint's `GET /models`);
+   * null when it says nothing. Optional: the gateway then learns the limit from a refusal (`outputCapRefusal`).
+   */
+  outputLimit?(model: string, options: Pick<StreamOptions, "apiKey" | "endpoint">): Promise<number | null>;
 }
 
 /** What the provider had already reported or sent when a stream failed. */
@@ -340,6 +345,42 @@ export function providerCause(error: Pick<ProviderError, "status" | "message" | 
   if (status === 408 || status === 504 || status === 524 || /timed? ?out/i.test(words)) return "timeout";
   if (status >= 500 || /overloaded/i.test(words)) return "down";
   return /could not reach/.test(words) ? "unreachable" : null;
+}
+
+const OUTPUT_CAP_WORDS =
+  /max(?:imum)?[_ ]?(?:completion|output|new)?[_ ]?tokens|(?:completion|output) tokens|in the completion/i;
+// A number standing alone: not a piece of a model id (`claude-opus-4-20250514`), a version or a request id.
+const LONE_NUMBER = /(?<![\w.-])\d{1,3}(?:,\d{3}){1,4}(?![\w-])|(?<![\w.-])\d{1,12}(?![\w-])/g;
+
+/**
+ * A provider refusing the output cap asked for (`asked`), before anything streamed: the cap to send again, and the
+ * one to remember for that key and model (null: none). Null when the refusal is about something else. The numbers in
+ * its words below `asked` say it, across the common shapes: one is the limit ("supports at most 16384 completion
+ * tokens", "the valid range of max_tokens is [1, 8192]", "65536 > 64000, which is the maximum", "to 65537
+ * (exclusive)"); several are a window and the prompt in it ("maximum context length is 32768 tokens ... 6000 in the
+ * messages"), so the window less the rest now, and at least a quarter of the window remembered, since that limit
+ * moves with the prompt. No number: half of `asked`, remembered never.
+ */
+export function outputCapRefusal(
+  error: Pick<ProviderError, "status" | "message" | "said" | "partial">,
+  asked: number,
+): { retry: number; learn: number | null } | null {
+  if (error.partial || ![400, 413, 422].includes(error.status ?? 0)) return null;
+  // Bounded: a provider's words are no input to scan in quadratic time.
+  const words = `${error.said ?? ""} ${error.message}`
+    .slice(0, 2000)
+    .replace(/(?<!\d)(\d{1,12}) ?\(exclusive\)/gi, (_, n) => `${Number(n) - 1}`);
+  if (!OUTPUT_CAP_WORDS.test(words)) return null;
+  const numbers = new Set(
+    [...words.matchAll(LONE_NUMBER)]
+      .map((m) => Number(m[0].replaceAll(",", "")))
+      .filter((n) => n >= 64 && n < asked && n !== error.status),
+  );
+  if (numbers.size === 0) return { retry: Math.floor(asked / 2), learn: null };
+  const most = Math.max(...numbers);
+  if (numbers.size === 1) return { retry: most, learn: most };
+  const room = most - ([...numbers].reduce((sum, n) => sum + n, 0) - most);
+  return room > 0 ? { retry: room, learn: Math.max(room, Math.floor(most / 4)) } : null;
 }
 
 /** A provider's words on one line, short enough to show. */

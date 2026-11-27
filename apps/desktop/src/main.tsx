@@ -7,6 +7,7 @@ import "./styles.css";
 import { AppProvider } from "./app";
 import { toolWords } from "./control/activity";
 import type { LocalPhase, ServeProblem, SetupStep, Tailnet } from "./control/local-server";
+import { raisePick } from "./control/notify";
 import { DesktopStore, orgName } from "./control/store";
 import { DevFrame } from "./dev/DevFrame";
 import { readPref } from "./hooks";
@@ -86,16 +87,7 @@ const store = new DesktopStore(host, {
   },
   // Asked for from the apps by a person: always told, and the popover opens on the card where the person here answers.
   onPickAsked: (home, pick) => {
-    if (host.window !== "popover") return;
-    const request = pick.requestId ? home.requests.find((r) => r.requestId === pick.requestId) : undefined;
-    const name = pick.byName || orgName(home);
-    const title = request
-      ? i18n.t("desktop.tray.notifTitle", { agent: request.agent.name, folder: baseName(request.path) })
-      : pick.agentName
-        ? i18n.t("desktop.tray.pickTitleAgent", { name, agent: pick.agentName })
-        : i18n.t("desktop.tray.pickTitle", { name });
-    void host.notify(title, request ? request.reason : i18n.t("desktop.tray.pickBody")).catch(() => {});
-    void host.showWindow("popover").catch(() => {});
+    if (host.window === "popover") raisePick(host, i18n.t, home, pick);
   },
 });
 store.start();

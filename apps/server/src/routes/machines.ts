@@ -179,6 +179,10 @@ export const Machine = z
       description:
         "Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the install command again, as root (system mode). Null: nothing to update from here (current, the workspace's or this server's own computer, or run by the agentes.chat app, which updates itself).",
     }),
+    app: z.boolean().openapi({
+      description:
+        "The agentes.chat app runs it; `false`: installed from the Terminal (or the server's own, or the workspace's own computer). A runner too old to say counts as the app off Linux.",
+    }),
     browserProfiles: z.boolean().openapi({
       description:
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",
@@ -284,7 +288,7 @@ export const Machine = z
       .optional()
       .openapi({
         description:
-          "The workspace's own computer: the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
+          "A computer that borrows (the workspace's own, or on a self-hosted server this server's own or one marked the workspace's that doesn't lend): the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
       }),
     moving: z.boolean().optional().openapi({
       description:

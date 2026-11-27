@@ -38,6 +38,11 @@
     "wrapLines": "Satırları kaydır",
     "raw": "Ham",
     "table": "Tablo",
+    "tableRows_one": "Tablo · {{count}} satır",
+    "tableRows_other": "Tablo · {{count}} satır",
+    "tableSeeAll": "{{count}} satırın tümünü gör",
+    "tableRowCount_one": "{{count}} satır",
+    "tableRowCount_other": "{{count}} satır",
     "chartItem": "Öğe",
     "chartShare": "Pay",
     "you": "siz",
@@ -6768,6 +6773,7 @@
     "undoneBy": "{{name}} tarafından geri alındı",
     "undoneByYou": "Sizin tarafınızdan geri alındı",
     "undo": "Geri al",
+    "applyAnyway": "Yine de uygula",
     "appliedSome": "{{total}} iyileştirmeden {{done}} tanesi uygulandı",
     "waitingAdmin": "Bir yönetici bekleniyor",
     "stale": "Eskidi",
@@ -10477,7 +10483,6 @@
     "filter": {
       "person": "Kişiler",
       "agent": "Ajanlar",
-      "routine": "Rutinler",
       "reminder": "Hatırlatıcılar",
       "deadline": "Görev bitiş tarihleri"
     },
@@ -10510,39 +10515,16 @@
         "declined": "Katılmayacaksınız."
       }
     },
-    "every": {
-      "hour": "her saat",
-      "hours": "{{count}} saatte bir",
-      "minutes": "{{count}} dakikada bir"
-    },
-    "perDay": "günde {{count}} kez",
-    "runs_one": "Bu günlerde {{count}} çalıştırma.",
-    "runs_other": "Bu günlerde {{count}} çalıştırma.",
-    "routineDetail": "Rutin · {{target}} hedefine teslim eder",
     "deadlineDetail": "Görevin bitiş tarihi.",
     "reminderBy": "Oluşturan: {{name}}",
     "reminderPosted": "Hatırlatıcı · {{target}} içinde paylaşılır",
     "cancelReminder": "Hatırlatıcıyı iptal et",
     "reminderCancelled": "Hatırlatıcı iptal edildi",
     "openIssue": "Görevi aç",
-    "openRoutines": "Rutinlerde gör",
-    "openRoutine": "Rutini aç",
-    "runAria": "{{name}} rutini, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "{{time}} rutinleri",
-    "moreRuns_one": "+{{count}} rutin",
-    "moreRuns_other": "+{{count}} rutin",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "yanıt verdi",
-      "silent": "yeni bir şey yok",
-      "failed": "başarısız",
-      "skipped": "çalışmadı"
-    },
-    "lastResult": "son: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Planlanmış bir şey yok. Oluşturmak için sürükleyin veya N'ye basın",
-    "agendaEmpty": "Önümüzdeki 30 günün etkinlikleri ve rutinleri burada görünür.",
+    "agendaEmpty": "Önümüzdeki 30 günün etkinlikleri ve hatırlatıcıları burada görünür.",
     "agendaEmptyTitle": "Önümüzdeki 30 gün takvim boş",
     "noResults": "Bu filtreyle bir şey yok.",
     "more": "+{{count}} daha",
@@ -16641,13 +16623,13 @@
       "browser_download": "Ajanların tarayıcısı indirilemedi. Bu bilgisayarın bağlantısını kontrol edin, bir sonraki kullanımda yeniden denenir.",
       "browser_checksum": "Ajanların tarayıcısının indirmesi bozuk geldi, bu yüzden kullanılmadı. Bir sonraki kullanımda yeniden denenir.",
       "desktop_use_linux": "Ajanların ekranlarındaki uygulamalar, ajan ekranları olan Linux bilgisayarlarda çalışır.",
-      "desktop_use_own_user": "Ajanların ekranlarındaki uygulamalar için her ajanın bu bilgisayarda kendi kullanıcısıyla çalışması gerekir (sistem modu). Burada tüm ajanlar runner kullanıcısıyla çalışıyor.",
+      "desktop_use_own_user": "Ajanların ekranlarındaki uygulamalar için her ajanın bu bilgisayarda kendi kullanıcısıyla çalışması gerekir (sistem modu). Burada tüm ajanlar aynı kullanıcıyla, agentes.chat'i çalıştıran kullanıcıyla çalışıyor.",
       "desktop_use_install": "Ajanların ekranlarındaki uygulamaların ihtiyaç duyduklarını bu bilgisayara kurun:",
       "desktop_unavailable": "Ajanların ekranları bu bilgisayarda çalışamaz.",
       "desktop_linux": "Ajanların ekranları yalnızca Linux bilgisayarlarda çalışır.",
       "desktop_install": "Ajanların ekranlarını bu bilgisayara kurun:",
-      "not_as_root": "Ajanların ekranları ve terminalleri asla root olarak çalışmaz. Runner'ı normal bir kullanıcıyla çalıştırın.",
-      "runner_bun_old": "Bunun için runner'ın Bun 1.3.5 veya daha yeni sürümde çalışması gerekir. Bu bilgisayardaki runner'ı güncelleyin.",
+      "not_as_root": "Ajanların ekranları ve terminalleri asla root olarak çalışmaz. agentes.chat'i normal bir kullanıcıyla çalıştırın.",
+      "runner_bun_old": "Bunun için Bun 1.3.5 veya daha yenisinde çalışan agentes.chat gerekir. Bu bilgisayardaki agentes.chat'i güncelleyin.",
       "terminal_unsupported": "Terminaller yalnızca Linux ve Mac bilgisayarlarda çalışır."
     },
     "egress": {
@@ -16657,7 +16639,6 @@
       "hint": "Ajanlar gezinirken sitelerin gördüğü adres. Bilgisayarın ağı değişince güncellenir.",
       "waiting": "Ajanların internet bağlantısı yeniden kuruluyor. Bağlantıları geri gelene kadar bekler.",
       "via": "Ajanlar {{name}} bilgisayarının internetini kullanıyor",
-      "viaBy": "Ajanlar {{name}} ({{person}}) bilgisayarının internetini kullanıyor",
       "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir."
     },
     "maintenance": {
@@ -16976,6 +16957,10 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} çekirdek",
+    "cores_other": "{{count}} çekirdek",
+    "threads_one": "{{count}} iş parçacığı",
+    "threads_other": "{{count}} iş parçacığı",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17051,11 +17036,12 @@
     "helpWorkspace": "Ekibin bilgisayarı dolu ya da uzaktayken bilgisayarlar yardım eder",
     "helpWorkspaceHint": "Her bilgisayar yalnızca sahibi izin verirse yardım eder. Kapalı: sahibi ne seçerse seçsin hiçbiri yardım etmez.",
     "shareInternet": "Ajanlar bu bilgisayarın internetini kullanır",
-    "shareInternetHint": "Ajanların açtığı siteler bu bilgisayarın bağlantısından geçer, bu yüzden konumunu görür. Yalnızca web siteleri açılır, kendi ağındaki hiçbir şeye asla erişilmez. Bu bilgisayar çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
+    "shareInternetHint": "Ajanların bağlantıları bu bilgisayarın internetinden çıkar, bu yüzden siteler ve sunucular konumunu görür: web siteleri, git, SSH, veritabanları ve diğer TCP bağlantıları. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Ad sorguları, aramalar ve diğer UDP trafiği her zamanki bağlantıyı kullanır, bu bilgisayar çevrimdışıyken de her şey öyle.",
+    "shareInternetHintProxy": "Ajanların tarayıcısı ve proxy ayarlarına uyan programlar (HTTPS üzerinden git, curl, çoğu komut satırı aracı) bu bilgisayarın internetinden çıkar, bu yüzden siteler konumunu görür. SSH, veritabanı istemcileri ve proxy ayarlarını yok sayan diğer programlar her zamanki bağlantıyı kullanır, ad sorguları ve UDP trafiği de öyle. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Bu bilgisayar çevrimdışıyken her şey her zamanki bağlantıyı kullanır.",
     "shareInternetInUse": "Şu an kullanılıyor",
     "shareInternetOther": "Ajanlar şu an {{name}} kullanıyor",
     "shareInternetPick": "Bunu kullan",
-    "shareInternetJoin": "Ajanlar siteleri bu bilgisayarın interneti üzerinden de açacak, bu yüzden siteler konumunu görecek. Bunu sayfasından kapatabilirsin.",
+    "shareInternetJoin": "Ajanlar bu bilgisayarın interneti üzerinden de çevrimiçi olacak, bu yüzden siteler ve sunucular konumunu görecek. Bunu sayfasından kapatabilirsin.",
     "connectedBy": "Bağlayan: {{name}}",
     "downloadFor": "{{system}} için indir",
     "downloadApp": "Uygulamayı indir",
@@ -17097,6 +17083,8 @@
       "paused": "{{host}} duraklatıldı, bu yüzden kontrol devam edene kadar bekler.",
       "held": "Bu çalışma alanı duraklatıldı, bu yüzden kontrol yeniden etkin olana kadar bekler.",
       "lost": "Kontrol sona erdi. {{name}} cihazını yeniden izliyorsunuz.",
+      "controlLate": "Kontrol zamanında başlamadı. {{host}} hâlâ {{name}} cihazını hazırlıyor: bir dakika sonra yeniden deneyin.",
+      "controlFailed": "{{name}} kontrol edilemedi. Yeniden deneyin ya da {{host}} üzerinde agentes.chat uygulamasını yeniden başlatın.",
       "typeLabel": "{{name}} üzerinde yaz"
     },
     "status": {
@@ -17118,7 +17106,7 @@
       "withHost": "{{host}} ile birlikte",
       "lastSeen": "son görülme: {{time}}",
       "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor",
-      "offlineStopped": "runner {{time}} saatinde durdu",
+      "offlineStopped": "agentes.chat {{time}} saatinde durdu",
       "offlineDropped": "bağlantı {{time}} saatinde koptu"
     },
     "line": {
@@ -17134,9 +17122,14 @@
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
       "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
-      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde `{{command}}` çalıştırın.",
-      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde `{{command}}` çalıştırın.",
-      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde `{{command}}` çalıştırın."
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, internet yok ya da aşırı yüklü olabilir. Açık ve internete bağlı olduğunu kontrol edin.",
+      "offlineStopped": "agentes.chat uygulaması bu bilgisayarda {{time}} saatinde durdu. Uygulamayı yeniden açın.",
+      "offlineStoppedCli": "agentes.chat bu bilgisayarda {{time}} saatinde durdu. Orada yeniden başlatın.",
+      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır."
+    },
+    "technical": {
+      "title": "Teknik ayrıntılar",
+      "doctor": "Nedenini görmek için bunu orada çalıştırın:"
     },
     "reason": {
       "locked": "Telefon kilitli",
@@ -17590,7 +17583,7 @@
       "folderOnComputer": "Bilgisayarda izin ver",
       "folderShown": "{{deviceName}} üzerinde açıldı. İzni orada ver.",
       "internetShared": "Ajanlar artık web sitelerini <b>{{deviceName}}</b> bilgisayarının internetiyle açıyor",
-      "internetSharedLine": "Yalnızca bu çalışma alanının ajanları, yalnızca web siteleri, bilgisayarın kendi ağındaki hiçbir şeye asla erişmez. Çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
+      "internetSharedLine": "Yalnızca bu çalışma alanının ajanları, bilgisayarın kendi ağındaki hiçbir şeye asla erişmez, 25 numaralı porttan asla e-posta göndermez. Çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
       "internetOff": "Kapat",
       "internetOffDone": "Ajanlar artık {{deviceName}} bilgisayarının internetini kullanmıyor.",
       "once": "Bir kez izin ver",
@@ -18357,7 +18350,22 @@
       "version": "Sürüm",
       "license": "<license>GNU Affero General Public License v3</license> kapsamında özgür yazılım, garantisi yoktur.",
       "source": "Kaynak kodu",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC ve katkıda bulunanlar"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC ve katkıda bulunanlar",
+      "latest": "En yeni sürüm",
+      "newer": "{{version}} çıktı",
+      "notes": "Yenilikler",
+      "update": {
+        "title": "{{version}} sürümüne güncelle",
+        "docker": "Docker ile",
+        "native": "Docker olmadan",
+        "nativeHelp": "Sürümün paketini `~/.agentes/app` içine çıkarın, ardından çalıştırın:",
+        "desktop": "Bu bilgisayardaki masaüstü uygulamasında mı çalışıyor? Uygulamayla birlikte güncellenir.",
+        "notice": "Bu sunucu için agentes.chat {{version}} çıktı",
+        "how": "Nasıl güncellenir"
+      },
+      "computers": "Bilgisayarların programı",
+      "computersAhead_one": "{{count}} bilgisayar bu sunucudan daha yeni bir sürüm çalıştırıyor. Olduğu gibi çalışır ve yenilikleri bu sunucunun güncellemesiyle gelir.",
+      "computersAhead_other": "{{count}} bilgisayar bu sunucudan daha yeni bir sürüm çalıştırıyor. Oldukları gibi çalışırlar ve yenilikleri bu sunucunun güncellemesiyle gelir."
     },
     "title": "Ayarlar",
     "account": {
@@ -20533,7 +20541,7 @@
       "people": "Herkes artık yalnızca okuyabilir ve bir e-posta alır",
       "peopleQuiet": "Herkes artık yalnızca okuyabilir",
       "computer": "Bilgisayarı hemen durur ve silinir",
-      "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, çalıştırıcı kaldırılana kadar o bilgisayarlarda kalır.",
+      "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, agentes.chat kaldırılana kadar o bilgisayarlarda kalır.",
       "connectors": "Bağlayıcıların ve posta kutularının bağlantısı kesilir"
     },
     "undo": "Herhangi bir sahip onu {{date}}, saat {{time}} öncesine kadar geri yükleyebilir. Ondan sonra geri alınamaz.",
@@ -20852,13 +20860,6 @@
       "doneBy": "{{time}} saatinde {{name}} tarafından yapıldı. {{agent}} ekrana yeniden baktı ve devam etti.",
       "doneByYou": "{{time}} saatinde sizin tarafınızdan yapıldı. {{agent}} ekrana yeniden baktı ve devam etti."
     },
-    "control": {
-      "notice": "{{name}} bilgisayarındaki programlar ekranı ve yazdığınız ya da yapıştırdığınız şeyleri görebilir."
-    },
-    "session": {
-      "check": "Güvenlik kontrolleri",
-      "screening": "Kötüye kullanıma karşı bu ekrandaki metni kontrol edebiliriz. Yalnızca sonucu saklarız. Ekranın göstermediği şeyler, örneğin bir istemdeki şifre, asla kaydedilmez."
-    },
     "after": {
       "titleNoSite": "Ekranı kullandı",
       "noSite": "Bir uygulama açmadan önce"
@@ -20867,7 +20868,6 @@
       "group": "{{name}} ekranı"
     },
     "watch": {
-      "notice": "{{name}} bilgisayarındaki programlar ekranı ve orada yazılan ya da yapıştırılan her şeyi görebilir.",
       "step": {
         "desktop_open": "{{detail}} açtı",
         "desktop_open_plain": "Bir uygulama açtı",

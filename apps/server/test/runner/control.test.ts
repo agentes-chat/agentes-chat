@@ -280,6 +280,8 @@ test("paired: status and hello carry pause and access; pause/resume persist, go 
       memoryGb: expect.any(Number),
       diskGb: expect.any(Number),
       maxTasks: DEFAULT_LIMITS.maxConcurrentTasks,
+      // The system and its version ("macOS 26.1"), for the computer's page.
+      system: expect.any(String),
     },
   });
   await waitFor(() => c.events("status").some((e) => e.kind === "status" && e.status.connection === "online"));

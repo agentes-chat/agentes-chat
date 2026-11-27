@@ -209,19 +209,37 @@ describe("Settings › Devices", () => {
     ).toBeTruthy();
   });
 
-  test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
-    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+  test("a computer's page: its system, processor, size and toolchains behind Details, closed", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
+      if (!mac) throw new Error("fixture");
+      Object.assign(mac, { cpus: 14, cores: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+      devices.set(list);
+    });
     const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
-    const glance = card.querySelector(":scope > .dv-facts") as HTMLElement;
-    expect([...glance.querySelectorAll("dt")].map((d) => d.textContent)).toEqual(["System"]);
+    expect(card.querySelector(":scope > .dv-facts")).toBeNull();
     const more = card.querySelector("details.ac-disclosure") as HTMLDetailsElement;
     expect(more.open).toBe(false);
     expect(more.querySelector("summary")?.textContent).toBe("Details");
-    expect([...more.querySelectorAll(".dv-facts dt")].map((d) => d.textContent)).toEqual([
-      "CPU",
-      "Memory",
-      "Toolchains found",
+    const facts = [...more.querySelectorAll(".dv-facts > div")].map((f) => [
+      f.querySelector("dt")?.textContent,
+      f.querySelector("dd")?.textContent,
     ]);
+    expect(facts.slice(0, 3)).toEqual([
+      ["System", "macOS 26.1"],
+      // The cores in a tooltip, and for a screen reader after the name.
+      ["Processor", "Apple M4 Pro, 14 cores"],
+      ["Memory", "36 GB"],
+    ]);
+    expect(facts[3]?.[0]).toBe("Toolchains found");
+  });
+
+  test("a computer's page from an older runner: the system's family, and the processor as its threads", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    const facts = [...card.querySelectorAll("details .dv-facts > div")].map((f) => f.textContent);
+    expect(facts.slice(0, 2)).toEqual(["SystemmacOS", "Processor12 threads"]);
   });
 
   test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {
@@ -1211,28 +1229,75 @@ describe("A device's page", () => {
     }
   });
 
+  test("control that doesn't start in its wait goes back to watching, says why, and Take control is there again", async () => {
+    const drawn = globalThis.createImageBitmap;
+    globalThis.createImageBitmap = (async () => ({ width: 1080, height: 2400, close() {} })) as never;
+    try {
+      const { sockets } = await open(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
+      const screens = () => sockets.sockets.filter((s) => s.url.includes("/api/phone-screen"));
+      const card = screen().getByRole("region", { name: "Screen" });
+      const watch = screens().at(-1) as (typeof sockets.sockets)[number];
+      await act(async () => watch.open());
+      await act(async () => {
+        watch.onmessage?.({ data: new ArrayBuffer(8) });
+      });
+      await settle(4);
+      await click(within(card).getByRole("button", { name: "Take control" }));
+      const control = screens().at(-1) as (typeof sockets.sockets)[number];
+      await act(async () => control.open());
+      expect(card.textContent).toContain("Opening the screen…");
+      // The server's wait ran out before any picture: no new control socket behind the same spinner.
+      await act(async () => control.drop(4408));
+      await settle(4);
+      expect(document.body.textContent).toContain(
+        "Control didn't start in time. Sam's MacBook Pro is still getting Pixel 8 ready: try again in a minute.",
+      );
+      expect(screens().at(-1)?.url).toContain("mode=watch");
+      expect(screens().filter((s) => s.url.includes("mode=control"))).toHaveLength(1);
+    } finally {
+      globalThis.createImageBitmap = drawn;
+    }
+  });
+
   test("an iPhone follows its Mac", async () => {
     await open(`/org/${ORG_ID}/settings/devices/phones/${IPHONE}`);
     expect(document.querySelector(".settings-rows")?.textContent).toContain("Same as Sam's MacBook Pro");
   });
 
-  test("a brought computer offline for a known cause: its way out names the command as code", async () => {
-    const app = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
-      const list = acmeDevices();
-      const imac = list.devices.find((d) => d.id === IMAC);
-      if (imac?.status.kind !== "offline") throw new Error("fixture");
-      imac.status = { ...imac.status, cause: "unresponsive" };
-      devices.set(list);
-    });
-    const line = document.querySelector(".dv-statusline__text");
-    expect(line?.textContent).toContain("Run agentes-runner doctor on it.");
-    expect(line?.querySelector("code.ac-inlinecode")?.textContent).toBe("agentes-runner doctor");
-    // The longest translation keeps the command whole, with its own backticks never shown.
+  test("a brought computer offline for a known cause: plain words, the command only under Technical details", async () => {
+    const page = async (app: boolean) => {
+      cleanup();
+      const opened = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+        const list = acmeDevices();
+        const imac = list.devices.find((d) => d.id === IMAC);
+        if (imac?.status.kind !== "offline") throw new Error("fixture");
+        imac.status = { ...imac.status, cause: "stopped" };
+        devices.set(list);
+      });
+      fakeMachinesOf.get(opened.api)?.pair({ id: IMAC, name: "Ana's iMac", os: "linux", app, canManage: true });
+      await refetch(opened.services);
+      return opened;
+    };
+    const line = () => document.querySelector(".dv-statusline__text")?.textContent ?? "";
+    const tech = () =>
+      [...document.querySelectorAll("details.ac-disclosure")].find(
+        (d) => d.querySelector("summary")?.textContent === "Technical details",
+      );
+    await page(true);
+    expect(line()).toMatch(/^The agentes\.chat app stopped on this computer at .+\. Open the app again\.$/);
+    expect(tech()).toBeUndefined();
+    const app = await page(false);
+    expect(line()).toMatch(/^agentes\.chat stopped on this computer at .+\. Start it again there\.$/);
+    expect(line()).not.toContain("runner");
+    const folded = tech() as HTMLDetailsElement;
+    expect(folded.open).toBe(false);
+    expect(folded.textContent).toContain("To see why, run this on it:");
+    expect(folded.querySelector(".machine-command code")?.textContent).toBe("agentes-runner doctor");
+    // The longest translation says it in its words, with no command and no backticks in the line.
     await showIn(app.services, "ru");
     await settle(4);
-    const ru = document.querySelector(".dv-statusline__text");
-    expect(ru?.querySelector("code.ac-inlinecode")?.textContent).toBe("agentes-runner doctor");
-    expect(ru?.textContent).not.toContain("`");
+    expect(line()).not.toContain("`");
+    expect(line()).not.toContain("agentes-runner");
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
@@ -1347,6 +1412,54 @@ describe("A device's page", () => {
       { shareInternet: false },
     ]);
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
+  test("on a self-hosted server: a computer that joins hears it will lend its internet, with no workspace computer", async () => {
+    const line = "The agents will also go online through this computer's internet";
+    // No workspace computer: nothing borrows where the server lends none (the Cloud's rule).
+    const own = () => {
+      const list = acmeDevices();
+      return { ...list, devices: list.devices.filter((d) => d.machineKind !== "managed") };
+    };
+    await open(`/org/${ORG_ID}/settings/devices`, (devices) => devices.set({ ...own(), lendsInternet: false }));
+    await click(
+      within(screen().getByRole("list", { name: "Asking to join" })).getByRole("button", { name: "Let it join" }),
+    );
+    expect(screen().getByRole("dialog", { name: "ci-runner wants to join Acme" }).textContent).not.toContain(line);
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/devices`, (devices) => devices.set({ ...own(), lendsInternet: true }));
+    await click(
+      within(screen().getByRole("list", { name: "Asking to join" })).getByRole("button", { name: "Let it join" }),
+    );
+    expect(screen().getByRole("dialog", { name: "ci-runner wants to join Acme" }).textContent).toContain(line);
+  });
+
+  test("this server's own computer says, on its page, whose internet its agents use (ADR 0237)", async () => {
+    const state = acmeState();
+    const api = createFakeApi(state);
+    const host = fakeMachinesOf.get(api)?.pair({
+      name: "Rented VPS",
+      kind: "host",
+      online: true,
+      egressVia: { machineId: MAC, name: "Sam's MacBook", userName: "Sam Rivera" },
+    });
+    if (!host) throw new Error("no machines fake");
+    const list = acmeDevices();
+    const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice;
+    list.devices.push({
+      ...mac,
+      id: host.id,
+      machineKind: "host",
+      name: "Rented VPS",
+      phones: [],
+      shareInternet: null,
+    });
+    fakeDevicesOf.get(api)?.set(list);
+    const app = await renderApp(`/org/${ORG_ID}/settings/devices/${host.id}`, { api });
+    await settle(6);
+    await showIn(app.services, "en");
+    expect(domWindow().document.body.textContent).toContain("Agents use the internet of Sam's MacBook");
+    expect(domWindow().document.querySelector('[title="Connected by Sam Rivera"]')?.textContent).toBe("Sam's MacBook");
   });
 
   test("someone else's computer that lends its internet: an admin may turn it off, never on", async () => {
@@ -1547,7 +1660,7 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).toContain("never anything on its own network, never email on port 25");
     expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);

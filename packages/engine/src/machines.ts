@@ -5,6 +5,7 @@ import {
   BROWSER_PROFILE_PROTOCOL,
   CLI_INSTALL_PROTOCOL,
   DESKTOP_PROTOCOL,
+  EGRESS_SHARE_PROTOCOL,
   HEARTBEAT_MS,
   MACHINE_CLOSE,
   MACHINE_TOKEN_PREFIX,
@@ -40,7 +41,7 @@ import { can, requireActiveMembership, requirePermission } from "./organizations
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND } from "./right-hand";
 import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
-import { folderPickable, runnerUpdateOf } from "./runner-update";
+import { folderPickable, runByApp, runnerUpdateOf } from "./runner-update";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -98,7 +99,7 @@ export class MachineOfflineError extends Error {
         ? maintenanceWords(machineName, maintenance)
         : kind === "managed"
           ? `The computer ${machineName} isn't answering right now. It usually comes back within minutes.`
-          : `The computer ${machineName} is offline. Ask its owner to start the runner.`,
+          : `The computer ${machineName} is offline. Ask its owner to start agentes.chat there.`,
     );
     this.name = "MachineOfflineError";
   }
@@ -603,12 +604,68 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
   return ownersDriving.length > 0 ? ownersDriving : drivers;
 }
 
-/** How long the workspace's computer is said to go out through a lent one after it last did (ADR 0237). */
+/** How long a computer is said to go out through a lent one after it last did (ADR 0237). */
 export const EGRESS_VIA_SHOWN_MS = 5 * 60_000;
 
-/** The workspace's computer's last lent connection, while recent: whose computer carries its web traffic now. */
+/** A borrowing computer's last lent connection, while recent: whose computer carries its web traffic now. */
 export function egressViaNow(via: { machineId: string; at: string } | null | undefined, now = new Date()) {
   return via && now.getTime() - Date.parse(via.at) < EGRESS_VIA_SHOWN_MS ? via.machineId : null;
+}
+
+let lendingOnThisServer = false;
+
+/**
+ * ADR 0237 on a self-hosted server (set once at boot: every server but one whose computers a provisioner makes,
+ * `MACHINE_PROVISIONING=external`): people's computers lend their internet to this server's own computer, to
+ * computers marked the workspace's that don't lend, and to the server's own reads of web pages for agents. Off, only
+ * the workspace's managed computer borrows.
+ */
+export function setServerLending(on: boolean) {
+  lendingOnThisServer = on;
+}
+
+export const serverLending = () => lendingOnThisServer;
+
+type LendingFacts = Pick<MachineRow, "kind" | "os" | "protocol"> & { executors?: { app?: true } | null };
+
+/**
+ * ADR 0237: a connected computer that is a server rather than a person's desktop: a Linux runner the agentes.chat app
+ * doesn't run (a Terminal install on a VPS or a server-room box). Where this server lends, it borrows by default.
+ */
+export const serverBox = (m: LendingFacts) => m.kind === "connected" && m.os === "linux" && !runByApp(m);
+
+/**
+ * Whether a computer goes out through a lending one (ADR 0237): the workspace's managed computer, and, where the
+ * server lends (`serverLending`), this server's own computer and, with its own switch off, one marked the workspace's
+ * or a server box (`serverBox`). A lending computer never borrows (its switch is on), nor does a person's own desktop
+ * that doesn't lend.
+ */
+export function borrowsInternet(m: LendingFacts & Pick<MachineRow, "belongsToWorkspace" | "egressShare">): boolean {
+  if (m.kind === "managed") return true;
+  if (!lendingOnThisServer) return false;
+  if (m.kind === "host") return true;
+  return m.kind === "connected" && !m.egressShare && (m.belongsToWorkspace || serverBox(m));
+}
+
+/**
+ * ADR 0237, at a connected computer's hello where this server lends: a server box whose switch its owner never turned
+ * on (`egress_share_at` null) has it turned off, so it borrows instead of lending. A newly paired one and one paired
+ * before alike; once off it stays as the owner sets it.
+ */
+export const lendsOffAtHello = (m: LendingFacts & Pick<MachineRow, "egressShare" | "egressShareAt">) =>
+  lendingOnThisServer && m.egressShare && m.egressShareAt === null && serverBox(m);
+
+/**
+ * The workspace's computer's observed way out, its country kept only when it was seen on the route its agents take
+ * now: through the lent computer since that one began carrying them, or the usual way while none is online to lend.
+ * Otherwise the flag would be the last route's (the Cloud's own exit) until the next observation comes in.
+ */
+export function egressOnRoute(m: Pick<MachineRow, "egress" | "egressVia">, lenderOnline: boolean, now = new Date()) {
+  const e = m.egress?.ip ? { ...m.egress, ip: m.egress.ip } : null;
+  if (!e?.country) return e;
+  const via = egressViaNow(m.egressVia, now) ? m.egressVia : null;
+  const onRoute = via ? !via.since || e.at >= via.since : !lenderOnline;
+  return onRoute ? e : { ip: e.ip, at: e.at };
 }
 
 /**
@@ -661,13 +718,22 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
     rightHand && homeRow && (can(membership, "control_computers") || rightHand.owner === actorId)
       ? { machineId: homeRow.id, agentId: rightHand.id }
       : null;
+  // A person's computer online to lend its internet (ADR 0237): the agents' next connections go out through it.
+  const lenderOnline = rows.some(
+    ({ machine: r }) =>
+      r.kind === "connected" &&
+      r.egressShare &&
+      r.protocol >= EGRESS_SHARE_PROTOCOL &&
+      machineOnline(r, now) &&
+      !machinePause(r, now),
+  );
   return rows.map(({ machine: m, pairedByName }) => {
     const mine = m.pairedByUserId === actorId;
     const pause = machinePause(m, now);
     // The workspace's own computer (ADR 0056 §10) is a service people use, not a box they look into.
     const managed = m.kind === "managed";
     const online = shownOnline(m, now);
-    const viaId = managed ? egressViaNow(m.egressVia, now) : null;
+    const viaId = egressViaNow(m.egressVia, now);
     const via = viaId ? rows.find((r) => r.machine.id === viaId) : undefined;
     return {
       id: m.id,
@@ -685,8 +751,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       networkTransition: managed ? m.networkTransition : null,
       /** The workspace's own computer's agents wait for their way out, as the operator says: a line, never an error. */
       egressWaiting: managed && machineOnline(m, now) && m.egressWaitingAt !== null,
-      egress: managed && machineOnline(m, now) && m.egress?.ip ? { ...m.egress, ip: m.egress.ip } : null,
-      /** ADR 0237: the person's computer whose internet the workspace's own computer's web traffic uses now. */
+      egress: managed && machineOnline(m, now) ? egressOnRoute(m, lenderOnline, now) : null,
+      /** ADR 0237: the person's computer whose internet this computer's agents' web traffic uses now. */
       egressVia: via ? { machineId: via.machine.id, name: via.machine.name, userName: via.pairedByName } : null,
       lastSeenAt: m.lastSeenAt?.toISOString() ?? null,
       hostname: managed ? "" : m.hostname,
@@ -699,6 +765,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       protocol: m.protocol,
       /** Its runner is behind this server and how its owner updates it (`runnerUpdateOf`); null: nothing to do. */
       update: runnerUpdateOf(m),
+      /** The agentes.chat app runs it, not a Terminal install (`runByApp`); the workspace's own computer: neither. */
+      app: !managed && runByApp(m),
       /** Its runner can hold browser profiles (ADR 0110); a system-mode computer has none at all (`mode`). */
       browserProfiles: m.protocol >= BROWSER_PROFILE_PROTOCOL,
       execAllowed: m.execAllowed,

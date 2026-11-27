@@ -24,6 +24,11 @@
     "welcome": "Welkom",
     "prefs": "Voorkeuren"
   },
+  "background": {
+    "title": "agentes.chat blijft actief",
+    "bodyMac": "Je vindt het in de menubalk boven aan het scherm. Open of sluit het daar af.",
+    "bodyTray": "Je vindt het in het systeemvak. Open of sluit het daar af."
+  },
   "common": {
     "cancel": "Annuleren",
     "close": "Sluiten",
@@ -484,9 +489,10 @@
     "done": "Verbonden met {{org}}",
     "share": "Laat de hele werkruimte hem gebruiken",
     "internet": "Agents gebruiken het internet van deze computer",
-    "internetOn": "Websites die de agents openen, zien jouw locatie",
+    "internetOn": "Websites en servers die de agents bereiken, zien jouw locatie",
     "internetOff": "Uit: agents gebruiken hun gewone verbinding",
-    "internetHint": "De agents van de workspace openen websites via de verbinding van deze computer. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken ze hun gewone verbinding.",
+    "internetHint": "De agents van de workspace gaan via de verbinding van deze computer online: websites, git, SSH, databases en andere TCP-verbindingen. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Naamopzoekingen, gesprekken en ander UDP-verkeer gebruiken hun gewone verbinding, net als alles zolang deze computer offline is.",
+    "internetHintProxy": "De browser van de agents van de workspace en de programma’s die proxyinstellingen volgen (git via HTTPS, curl, de meeste commandoregeltools) gaan via de verbinding van deze computer online. SSH, databaseclients en andere programma’s die proxyinstellingen negeren, gebruiken hun gewone verbinding, net als naamopzoekingen en UDP-verkeer. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Zolang deze computer offline is, gebruikt alles de gewone verbinding.",
     "shareOff": "Voorlopig alleen jij",
     "shareHint": "De agents van iedereen in {{org}} kunnen er taken op draaien, als jouw gebruiker.",
     "addFolders": "Mappen toevoegen",

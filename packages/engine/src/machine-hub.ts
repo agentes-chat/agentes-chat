@@ -7,6 +7,7 @@ import {
   CLAUDE_SHARED_PROTOCOL,
   CLI_COPIES_PROTOCOL,
   CO_AUTHOR_CASE_PROTOCOL,
+  EGRESS_PROXY_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
   HEARTBEAT_MS,
@@ -46,7 +47,7 @@ import { UUID } from "./authority";
 import { TtlCache } from "./cache";
 import { CLI_OF_KIND, storeCliFetch } from "./cli-fetch";
 import { noticeComputerBack, queueDownChecks } from "./computer-down";
-import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
+import { internetSharedGroup, type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
 import { codeCommitAuthor } from "./git/person-account";
 import { agentCoAuthorLine, oldCoAuthorCase } from "./git/signature";
@@ -82,10 +83,12 @@ import { type WakeWhy, wantMachine } from "./machine-wake";
 import {
   assertNotPaused,
   authenticateMachine,
+  borrowsInternet,
   cleanMachineName,
   deletedAgentIds,
   getMachineById,
   inStandby,
+  lendsOffAtHello,
   MACHINE_CONTROL_TOPIC,
   MachineDroppedError,
   MachineOfflineError,
@@ -110,6 +113,7 @@ import {
   notifyComputerDiskFull,
   notifyComputerNoChrome,
 } from "./notification-producers";
+import { resolveNotifications } from "./notifications";
 import { recordDesktopStarted } from "./operator-events";
 import { enqueue } from "./outbox";
 import { isRightHand } from "./right-hand";
@@ -768,7 +772,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         machine_id: machine.id,
         os: frame.os,
         browser_failure: "missing",
-        reason: "The computer's runner found no Google Chrome when it connected.",
+        reason: "agentes.chat found no Google Chrome on this computer when it connected.",
       });
       return;
     }
@@ -780,7 +784,12 @@ export function createMachineHub(deps: MachineHubDeps) {
     if (conn.machineId || conn.authing) return;
     conn.authing = true;
     if (frame.protocol < MIN_RUNNER_PROTOCOL) {
-      return refuse(conn, "outdated", "This runner is too old. Install the latest one.", MACHINE_CLOSE.outdated);
+      return refuse(
+        conn,
+        "outdated",
+        "This version of agentes.chat is too old. Install the latest one.",
+        MACHINE_CLOSE.outdated,
+      );
     }
     const machine = await authenticateMachine(db, frame.token);
     if (!machine) {
@@ -806,7 +815,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     const old = local.get(machine.id);
     local.set(machine.id, conn);
     if (old && old !== conn) {
-      refuse(old, "replaced", "Another runner connected for this computer.", MACHINE_CLOSE.replaced);
+      refuse(old, "replaced", "Another copy of agentes.chat connected for this computer.", MACHINE_CLOSE.replaced);
       // Its requests end now, not when (if ever) the dead socket's close arrives: a runner that restarted
       // mid-request lost them all (its requests die with its session).
       await closeConn(old, { code: MACHINE_CLOSE.replaced, reason: "replaced" });
@@ -832,10 +841,19 @@ export function createMachineHub(deps: MachineHubDeps) {
       (!machine.name || (machine.hostname !== "" && machine.name === cleanMachineName(machine.hostname)))
         ? cleanMachineName(frame.hostname)
         : "";
+    // What it says now decides whether it lends (ADR 0237): a server box borrows unless its owner turned lending on.
+    const said = {
+      ...machine,
+      os: frame.os,
+      protocol: frame.protocol,
+      executors: frame.app ? { app: true as const } : {},
+    };
+    const lendOff = lendsOffAtHello(said);
     await db
       .update(machines)
       .set({
         online: true,
+        ...(lendOff ? { egressShare: false } : {}),
         egress: null,
         connectedReplica: replicaId,
         lastSeenAt: now,
@@ -942,7 +960,18 @@ export function createMachineHub(deps: MachineHubDeps) {
       mcpOnce: true,
       observeEgress: machine.kind === "managed",
       ...(machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL ? { egressRelay: true } : {}),
+      // Without the Cloud's guard (ADR 0237, self-hosted servers): its agents' programs use its loopback proxy.
+      ...(machine.kind !== "managed" &&
+      frame.protocol >= EGRESS_PROXY_PROTOCOL &&
+      borrowsInternet({ ...said, egressShare: machine.egressShare && !lendOff })
+        ? { egressProxy: true }
+        : {}),
     });
+    if (lendOff) {
+      await resolveNotifications({ db, pubsub }, machine.orgId, { groupKey: internetSharedGroup(machine.id) }).catch(
+        (error) => deps.log?.warn("lending notice resolve failed", { machineId: machine.id, error: String(error) }),
+      );
+    }
     // Pings start with `welcome` (the runner's watchdog starts there), not after the slower work below.
     startPings(conn);
     // The pin list its runner fetches the coding CLIs by (ADR 0228 §6): this server's, so a new pin needs no new runner.
@@ -1607,7 +1636,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         if (!conn || conn.connectionId === event.connectionId) return;
         // The runner came back on another replica: this socket is a stale one (outside the publisher's call stack).
         queueMicrotask(() => {
-          refuse(conn, "replaced", "Another runner connected for this computer.", MACHINE_CLOSE.replaced);
+          refuse(conn, "replaced", "Another copy of agentes.chat connected for this computer.", MACHINE_CLOSE.replaced);
           void closeConn(conn, { code: MACHINE_CLOSE.replaced, reason: "replaced" });
         });
         return;

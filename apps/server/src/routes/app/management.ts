@@ -61,9 +61,14 @@ import {
   resendInvitation,
   rotateCredential,
   runErrorDetail,
+  SIDEBAR_DM_SHOWS,
+  SIDEBAR_FAVORITE_LIMIT,
   SIDEBAR_ITEMS,
   SIDEBAR_PIN_LIMIT,
   SIDEBAR_PLACES,
+  SIDEBAR_SECTION_CHANNELS,
+  SIDEBAR_SECTION_LIMIT,
+  SIDEBAR_SECTION_NAME_MAX,
   SIDEBAR_SECTIONS,
   type SidebarItem,
   SPEECH_STATES,
@@ -1260,8 +1265,30 @@ export function managementRoutes(deps: AppDeps) {
         .object({ agents: PinIds, channels: PinIds, people: PinIds })
         .nullable()
         .openapi({
-          description: `"Fixar no topo": agent, channel and user ids on top of their own section, at most ${SIDEBAR_PIN_LIMIT} each. \`null\` until you first pin or dismiss: the apps then pin your own agents.`,
+          description: `The pins of before Favoritos (ADR 0260): agent, channel and user ids, at most ${SIDEBAR_PIN_LIMIT} each. Read only to start \`favorites\` while it is \`null\`.`,
         }),
+      favorites: z.array(z.string().min(3).max(80)).max(SIDEBAR_FAVORITE_LIMIT).nullable().optional().openapi({
+        description:
+          "Favoritos, in order: `agent:<id>`, `channel:<id>` or `person:<user id>`. `null` until you first change it: the apps start it from `pins`, else your own agents. Left out: kept as stored.",
+      }),
+      sections: z
+        .array(
+          z.object({
+            id: z.string().min(1).max(64),
+            name: z.string().max(SIDEBAR_SECTION_NAME_MAX * 2),
+            channelIds: z.array(z.string().min(1).max(64)).max(SIDEBAR_SECTION_CHANNELS),
+          }),
+        )
+        .max(SIDEBAR_SECTION_LIMIT)
+        .nullable()
+        .optional()
+        .openapi({
+          description:
+            "Your own channel sections, in order, each with its channels in order (a channel in one at most). A section with no channel or no name is dropped. Left out: kept as stored.",
+        }),
+      dms: z.enum(SIDEBAR_DM_SHOWS).optional().openapi({
+        description: "Mensagens diretas lists everyone (`all`) or only who you talked to (`recent`). Left out: kept.",
+      }),
     })
     .openapi("SidebarView");
 
@@ -1271,7 +1298,7 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/me/sidebar/view",
       tags: ["Members"],
       security,
-      summary: "How your sidebar shows the agents, and what you pinned, in this workspace",
+      summary: "How your sidebar shows the agents, your Favoritos and your channel sections, in this workspace",
       request: { params: OrgParams },
       responses: { 200: json(z.object({ view: SidebarView })), ...errors },
     }),
@@ -1287,8 +1314,9 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/me/sidebar/view",
       tags: ["Members"],
       security,
-      summary: "Keep how your sidebar shows the agents, and what you pinned, in this workspace",
-      description: "Yours alone, on every device. Replaces the view; the tools' places and the orders stay.",
+      summary: "Keep how your sidebar shows the agents, your Favoritos and your channel sections, in this workspace",
+      description:
+        "Yours alone, on every device. Replaces the fields given; a field left out, the tools' places and the orders stay.",
       request: { params: OrgParams, body: body(z.object({ view: SidebarView })) },
       responses: { 200: json(z.object({ view: SidebarView })), ...errors },
     }),

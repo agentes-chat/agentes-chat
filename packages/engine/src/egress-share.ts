@@ -1,13 +1,20 @@
 import { randomBytes } from "node:crypto";
-import { EGRESS_SHARE, EGRESS_SHARE_PROTOCOL, STREAM_CLOSE, type StreamHello } from "@agenteschat/adapters";
+import {
+  EGRESS_SHARE,
+  EGRESS_SHARE_PROTOCOL,
+  lenderCarries,
+  STREAM_CLOSE,
+  type StreamHello,
+} from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
-import { getMachineById } from "./machines";
+import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending } from "./machines";
+import { runByApp } from "./runner-update";
 import type { ClaimedStream, StreamSocket } from "./streams";
 
 const { machines } = schema;
 
-/** A lent computer's row is written at most this often per workspace computer (`machines.egress_via`). */
+/** A borrower's `machines.egress_via` and a lender's `egress_lent_at` are written at most this often. */
 const VIA_WRITE_MS = 60_000;
 /**
  * A lent computer that said it carries enough now, is paused, or didn't answer in time (asleep, its socket not yet
@@ -24,11 +31,19 @@ const CANDIDATES_MS = 5_000;
 
 /**
  * The computers of a workspace that lend it their internet now (ADR 0237): people's own (`connected`), with the
- * switch on, new enough to, newest pick first (turned on or picked last, else paired last).
+ * switch on, new enough to, newest pick first (turned on or picked last, else paired last). Where this server lends,
+ * those the agentes.chat app runs come before Terminal installs: a person's own desktop over a box in a server room.
  */
 export async function lendingComputers(db: Database, orgId: string) {
-  return db
-    .select({ id: machines.id, name: machines.name, pairedByUserId: machines.pairedByUserId })
+  const rows = await db
+    .select({
+      id: machines.id,
+      name: machines.name,
+      pairedByUserId: machines.pairedByUserId,
+      os: machines.os,
+      protocol: machines.protocol,
+      executors: sql<{ app?: true }>`jsonb_strip_nulls(jsonb_build_object('app', ${machines.executors}->'app'))`,
+    })
     .from(machines)
     .where(
       and(
@@ -40,7 +55,13 @@ export async function lendingComputers(db: Database, orgId: string) {
       ),
     )
     .orderBy(desc(sql`coalesce(${machines.egressShareAt}, ${machines.createdAt})`));
+  if (!serverLending()) return rows;
+  return rows.sort((a, b) => Number(desktopApp(b)) - Number(desktopApp(a)));
 }
+
+/** Said by its runner, or an older one off Linux (`runByApp`): an old Linux runner that doesn't say comes after. */
+const desktopApp = (m: Parameters<typeof runByApp>[0]) =>
+  m.executors?.app === true || (m.os !== "linux" && runByApp(m));
 
 const closeCodeFor = (error: unknown) => {
   if (!(error instanceof MachineRequestError)) return STREAM_CLOSE.unreachable;
@@ -64,11 +85,12 @@ interface Leg {
 }
 
 /**
- * Lent connections on this server (ADR 0237). The workspace's computer's data socket names a destination in its
- * hello (`claim` with `egress`): the server picks the computer that lends, asks it to dial (`egress.dial`), and pairs
- * the data socket it opens with the first, bytes passed as they come. Nothing lent now, or a refusal, closes the first
- * socket with a code the computer's guard reads as "go out your usual way" (`unreachable`) or "not carried"
- * (`refused`, `notFound`). Both sockets must reach this server process.
+ * Lent connections on this server (ADR 0237). A borrowing computer's data socket names a destination in its hello
+ * (`claim` with `egress`), or the server itself asks for one for an organization's agents (`connect`): the server
+ * picks the computer that lends, asks it to dial (`egress.dial`), and pairs the data socket it opens with the first,
+ * bytes passed as they come. Nothing lent now, or a refusal, closes the first socket with a code read as "go out your
+ * usual way" (`unreachable`, `forbidden`: this computer doesn't borrow) or "not carried" (`refused`, `notFound`).
+ * Both sockets must reach this server process.
  */
 export function createEgressRelay(deps: {
   db: Database;
@@ -82,6 +104,7 @@ export function createEgressRelay(deps: {
   const full = new Map<string, number>();
   const candidates = new Map<string, { at: number; rows: Promise<Awaited<ReturnType<typeof lendingComputers>>> }>();
   const viaWritten = new Map<string, { deviceId: string; at: number }>();
+  const lentWritten = new Map<string, number>();
 
   const end = (leg: Leg, code: number = STREAM_CLOSE.normal, reason = "") => {
     if (leg.closed) return;
@@ -111,32 +134,58 @@ export function createEgressRelay(deps: {
     return rows;
   };
 
-  async function pick(orgId: string) {
+  /**
+   * The lending computer for `orgId` now that carries `port` (any, when null), never `borrowerId` itself. `"older"`:
+   * only lenders on an app that carries the web alone are online.
+   */
+  async function pick(orgId: string, borrowerId: string | null, port: number | null) {
+    let older = false;
     for (const row of await lenders(orgId)) {
-      if ((full.get(row.id) ?? 0) > now()) continue;
-      if ((await deps.hub.status(row.id).catch(() => null))?.online) return row;
+      if (row.id === borrowerId || (full.get(row.id) ?? 0) > now()) continue;
+      if (!(await deps.hub.status(row.id).catch(() => null))?.online) continue;
+      if (port === null || lenderCarries(row.protocol, port)) return row;
+      older = true;
     }
-    return null;
+    return older ? "older" : null;
   }
 
-  async function noteVia(managedId: string, deviceId: string) {
-    const last = viaWritten.get(managedId);
-    if (last && last.deviceId === deviceId && now() - last.at < VIA_WRITE_MS) return;
-    viaWritten.set(managedId, { deviceId, at: now() });
+  /** Who carried the last connection, on the borrower's row (the server itself has none), and when, on the lender's. */
+  async function noteVia(borrowerId: string | null, deviceId: string) {
+    const at = new Date(now()).toISOString();
+    const last = borrowerId ? viaWritten.get(borrowerId) : undefined;
+    if (borrowerId && !(last && last.deviceId === deviceId && now() - last.at < VIA_WRITE_MS)) {
+      viaWritten.set(borrowerId, { deviceId, at: now() });
+      const via = machines.egressVia;
+      // `since` stays while the same computer goes on lending (other server processes write `at` too); a new one, or
+      // one back after the apps stopped saying it, starts it again.
+      await deps.db
+        .update(machines)
+        .set({
+          egressVia: sql`jsonb_build_object('machineId', ${deviceId}::text, 'at', ${at}::text, 'since',
+            case when ${via}->>'machineId' = ${deviceId}::text
+              and (${via}->>'at')::timestamptz > ${at}::timestamptz - make_interval(secs => ${EGRESS_VIA_SHOWN_MS / 1000})
+            then ${via}->'since' else to_jsonb(${at}::text) end)`,
+        })
+        .where(eq(machines.id, borrowerId));
+    }
+    if (now() - (lentWritten.get(deviceId) ?? Number.NEGATIVE_INFINITY) < VIA_WRITE_MS) return;
+    lentWritten.set(deviceId, now());
     await deps.db
       .update(machines)
-      .set({ egressVia: { machineId: deviceId, at: new Date(now()).toISOString() } })
-      .where(eq(machines.id, managedId));
+      .set({ egressLentAt: new Date(at) })
+      .where(eq(machines.id, deviceId));
   }
 
-  async function open(leg: Leg, machineId: string, target: { host: string; port: number }) {
-    const machine = await getMachineById(deps.db, machineId);
-    if (machine?.kind !== "managed" || machine.deletedAt) {
-      return end(leg, STREAM_CLOSE.forbidden, "only the workspace's own computer asks for a lent connection");
-    }
-    const device = await pick(machine.orgId);
+  async function open(
+    leg: Leg,
+    borrower: { orgId: string; machineId: string | null },
+    target: { host: string; port: number },
+  ) {
+    const device = await pick(borrower.orgId, borrower.machineId, target.port);
     if (leg.closed) return;
     if (!device) return end(leg, STREAM_CLOSE.unreachable, "no computer lends its internet now");
+    // Not "none lends": the borrower keeps asking for its web connections, which that computer carries.
+    if (device === "older") return end(leg, STREAM_CLOSE.refused, "the lending computer carries the web only");
     const streamId = randomBytes(32).toString("base64url");
     pending.set(streamId, { deviceId: device.id, leg });
     try {
@@ -150,9 +199,18 @@ export function createEgressRelay(deps: {
     }
     // Answered once its data socket was ready: no pair by now means none is coming.
     if (!leg.peer) return end(leg, STREAM_CLOSE.unreachable, "the lent connection didn't open");
-    await noteVia(machine.id, device.id).catch((error) =>
-      deps.log?.warn("egress via write failed", { machineId: machine.id, error: String(error) }),
+    await noteVia(borrower.machineId, device.id).catch((error) =>
+      deps.log?.warn("egress via write failed", { machineId: borrower.machineId, error: String(error) }),
     );
+  }
+
+  /** A borrowing computer's request: only one that borrows (`borrowsInternet`) gets a lent connection. */
+  async function openFor(leg: Leg, machineId: string, target: { host: string; port: number }) {
+    const machine = await getMachineById(deps.db, machineId);
+    if (!machine || machine.deletedAt || !borrowsInternet(machine)) {
+      return end(leg, STREAM_CLOSE.forbidden, "this computer doesn't borrow a lent connection");
+    }
+    await open(leg, { orgId: machine.orgId, machineId: machine.id }, target);
   }
 
   return {
@@ -163,7 +221,7 @@ export function createEgressRelay(deps: {
     claim(hello: StreamHello, machineId: string, socket: StreamSocket): ClaimedStream | null {
       if (hello.egress) {
         const leg: Leg = { socket, peer: null, closed: false };
-        void open(leg, machineId, hello.egress).catch((error) => {
+        void openFor(leg, machineId, hello.egress).catch((error) => {
           deps.log?.warn("egress relay failed", { machineId, error: String(error) });
           end(leg, STREAM_CLOSE.internal, "internal");
         });
@@ -177,6 +235,22 @@ export function createEgressRelay(deps: {
       quietly(() => wait.leg.socket.send(JSON.stringify({ type: "stream.ready" })));
       return claimed(leg);
     },
+    /**
+     * The server's own connection to `target` for an organization's agents (`egress-fetch.ts`), over `socket`: its
+     * first text frame is `stream.ready` once a lent connection carries it, or it closes as a data socket would.
+     */
+    connect(orgId: string, target: { host: string; port: number }, socket: StreamSocket): ClaimedStream {
+      const leg: Leg = { socket, peer: null, closed: false };
+      if (!serverLending()) end(leg, STREAM_CLOSE.forbidden, "this server lends no connection to itself");
+      else
+        void open(leg, { orgId, machineId: null }, target).catch((error) => {
+          deps.log?.warn("egress relay failed", { orgId, error: String(error) });
+          end(leg, STREAM_CLOSE.internal, "internal");
+        });
+      return claimed(leg);
+    },
+    /** Whether a computer lends `orgId` its internet now. */
+    lending: async (orgId: string) => (await pick(orgId, null, null)) !== null,
   };
 }
 

@@ -21,13 +21,14 @@ import {
   chartAreaTones,
   chartInk,
   lineTops,
+  nearestPoint,
   smoothPath,
 } from "@agenteschat/ui/sky/chart";
-import { Canvas, Path, Rect, Skia } from "@shopify/react-native-skia";
+import { Canvas, DashPathEffect, Path, Rect, Skia, Line as SkiaLine } from "@shopify/react-native-skia";
 import { type ComponentRef, memo, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import Animated, { Easing, useAnimatedStyle } from "react-native-reanimated";
+import { type LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
+import Animated, { Easing, FadeIn, useAnimatedStyle } from "react-native-reanimated";
 import { useLivePaused } from "@/agent/live";
 import { useDrawingClock } from "@/sky/clock";
 import {
@@ -41,7 +42,7 @@ import {
   useReducedMotion,
   useTheme,
 } from "@/ui";
-import { Line } from "../chat/ChartCard";
+import { Line, Picked } from "../chat/ChartCard";
 import { AgentFace } from "../shared/Face";
 import { useSurface } from "../shared/parts";
 import { DitherShape } from "./Dither";
@@ -51,9 +52,12 @@ import {
   barWords,
   bleedPoints,
   bleedSeries,
+  bleedTip,
   formatWidgetNumber,
+  formatWithUnit,
   goalShare,
   isTall,
+  pointTip,
   roundRectPath,
   shownWidgetTitle,
   softCardColor,
@@ -114,6 +118,7 @@ export const WidgetBody = memo(function WidgetBody({
   wide = false,
   mark,
   onLayout,
+  pickable = false,
 }: {
   spec: WidgetSpec | null;
   status: WidgetStatus;
@@ -132,6 +137,8 @@ export const WidgetBody = memo(function WidgetBody({
   mark?: ReactNode;
   /** Where the data ends: the card measures the room left under it (its horizon). */
   onLayout?: (e: LayoutChangeEvent) => void;
+  /** Not a button itself (the widget's own screen): a tapped bar says its value. */
+  pickable?: boolean;
 }) {
   const { t } = useTranslation();
   const look = useAgentLook(agentId);
@@ -161,7 +168,16 @@ export const WidgetBody = memo(function WidgetBody({
       onLayout={onLayout}
       style={[{ opacity: dim }, compact && (spec.kind === "bars" || spec.kind === "text") && styles.fill]}
     >
-      <SpecBody spec={spec} color={look.color} big={big} bleed={bleed} compact={compact} wide={wide} mark={mark} />
+      <SpecBody
+        spec={spec}
+        color={look.color}
+        big={big}
+        bleed={bleed}
+        compact={compact}
+        wide={wide}
+        mark={mark}
+        pickable={pickable}
+      />
     </View>
   );
 });
@@ -174,6 +190,7 @@ function SpecBody({
   compact,
   wide,
   mark,
+  pickable,
 }: {
   spec: WidgetSpec;
   color: AgentColorName;
@@ -182,6 +199,7 @@ function SpecBody({
   compact: boolean;
   wide: boolean;
   mark?: ReactNode;
+  pickable: boolean;
 }) {
   switch (spec.kind) {
     case "kpi":
@@ -189,7 +207,11 @@ function SpecBody({
     case "goal":
       return <Goal spec={spec} color={color} big={big} compact={compact} mark={mark} />;
     case "bars":
-      return compact ? <CompactBars spec={spec} color={color} /> : <Bars spec={spec} color={color} big={big} />;
+      return compact ? (
+        <CompactBars spec={spec} color={color} />
+      ) : (
+        <Bars spec={spec} color={color} big={big} pickable={pickable} />
+      );
     case "line":
       return compact ? (
         <CompactLine spec={spec} wide={wide} />
@@ -339,7 +361,17 @@ function Goal({
 }
 
 /** Columns with their value over them and their label under; the one an alert is about in the warning color. */
-function Bars({ spec, color, big }: { spec: BarsWidgetSpec; color: AgentColorName; big: boolean }) {
+function Bars({
+  spec,
+  color,
+  big,
+  pickable,
+}: {
+  spec: BarsWidgetSpec;
+  color: AgentColorName;
+  big: boolean;
+  pickable: boolean;
+}) {
   const { i18n } = useTranslation();
   const { colors: c, scheme } = useTheme();
   const tones = widgetTones(color, scheme === "dark");
@@ -352,6 +384,8 @@ function Bars({ spec, color, big }: { spec: BarsWidgetSpec; color: AgentColorNam
   const height = big ? 140 : 84;
   const room = height - 18;
   const max = Math.max(0, ...spec.values) || 1;
+  const [picked, setPicked] = useState<number | null>(null);
+  const tip = pointTip(spec.labels, spec.values, (v) => formatWithUnit(v, spec.unit, i18n.language));
   return (
     <View>
       <UnitTag unit={spec.unit} />
@@ -361,8 +395,16 @@ function Bars({ spec, color, big }: { spec: BarsWidgetSpec; color: AgentColorNam
               const h = Math.max(4, Math.round((Math.max(0, v) / max) * room));
               const alert = spec.alertIndex === i;
               return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: the bars of one widget, in order
-                <View key={i} style={styles.bar} accessible accessibilityLabel={`${spec.labels[i] ?? ""}: ${v}`}>
+                <Pressable
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the bars of one widget, in order
+                  key={i}
+                  disabled={!pickable}
+                  onPress={() => setPicked((p) => (p === i ? null : i))}
+                  style={[styles.bar, picked !== null && picked !== i ? styles.dim : null]}
+                  accessible
+                  accessibilityRole={pickable ? "button" : undefined}
+                  accessibilityLabel={tip(i)}
+                >
                   {words.values ? (
                     <Text
                       variant="caption"
@@ -388,7 +430,7 @@ function Bars({ spec, color, big }: { spec: BarsWidgetSpec; color: AgentColorNam
                       />
                     </Canvas>
                   ) : null}
-                </View>
+                </Pressable>
               );
             })
           : null}
@@ -401,6 +443,7 @@ function Bars({ spec, color, big }: { spec: BarsWidgetSpec; color: AgentColorNam
           </Text>
         ))}
       </View>
+      {pickable ? <Picked text={picked === null ? null : tip(picked)} /> : null}
       <Note text={spec.note} />
     </View>
   );
@@ -547,12 +590,29 @@ function Note({ text }: { text?: string | undefined }) {
 
 /**
  * A trend along the card's bottom, edge to edge (the card's rounded corners clip it): the chat's clean stroke in the
- * agent's deep tone over its dither, which fades out toward the bottom edge, and a square on the last point.
+ * agent's deep tone over its dither, which fades out toward the bottom edge, and a square on the last point. Given
+ * `tip` (the widget's own screen, where the card is no button), a tap marks the nearest point with a crosshair and
+ * its square and says its value above it; a screen reader steps through the points (swipe up or down).
  */
-function BleedLine({ values, color, height }: { values: number[]; color: AgentColorName; height: number }) {
+function BleedLine({
+  values,
+  color,
+  height,
+  tip,
+  label,
+}: {
+  values: number[];
+  color: AgentColorName;
+  height: number;
+  tip?: ((i: number) => string) | null;
+  label?: string;
+}) {
   const { colors: c, scheme } = useTheme();
   const dark = scheme === "dark";
+  const reduced = useReducedMotion();
   const [width, onLayout] = useWidth();
+  const [picked, setPicked] = useState<number | null>(null);
+  const [pill, setPill] = useState(0);
   const points = useMemo(() => (width > 10 ? bleedPoints(values, width, height) : []), [values, width, height]);
   const stroke = useMemo(() => (points.length > 1 ? Skia.Path.MakeFromSVGString(smoothPath(points)) : null), [points]);
   const area = useMemo(() => {
@@ -568,25 +628,80 @@ function BleedLine({ values, color, height }: { values: number[]; color: AgentCo
   const [near, far] = chartAreaTones(color, dark);
   const ink = chartInk(color, dark);
   const last = points[points.length - 1];
+  const on = tip && picked !== null ? points[picked] : undefined;
   // The square stands out of the line in a ring of the card's own color.
   const ring = softCardColor(c.raised, c.grouped, dark);
+  const square = (at: readonly [number, number], size: number) => (
+    <>
+      <Rect x={at[0] - size / 2 - 1.5} y={at[1] - size / 2 - 1.5} width={size + 3} height={size + 3} color={ring} />
+      <Rect x={at[0] - size / 2} y={at[1] - size / 2} width={size} height={size} color={ink} />
+    </>
+  );
+  const step = (by: number) =>
+    setPicked((p) => Math.max(0, Math.min(points.length - 1, (p ?? points.length - 1) + by)));
+  const canvas =
+    width > 0 && stroke ? (
+      <Canvas style={{ width, height }}>
+        {area.map((p) => (
+          <Path key={p.v} path={p.path} color={p.v === 1 ? near : far} />
+        ))}
+        {on ? (
+          <SkiaLine p1={{ x: on[0], y: 0 }} p2={{ x: on[0], y: height }} color={c.faint} strokeWidth={1}>
+            <DashPathEffect intervals={[2, 3]} />
+          </SkiaLine>
+        ) : null}
+        <Path path={stroke} color={ink} style="stroke" strokeWidth={2.4} strokeCap="round" strokeJoin="round" />
+        {last && last !== on ? square(last, 7) : null}
+        {on ? square(on, 9) : null}
+      </Canvas>
+    ) : null;
+  if (!tip) {
+    return (
+      <View onLayout={onLayout} style={[styles.bleed, { height }]} accessible={false}>
+        {canvas}
+      </View>
+    );
+  }
+  const text = on && picked !== null ? tip(picked) : null;
   return (
-    <View onLayout={onLayout} style={[styles.bleed, { height }]} accessible={false}>
-      {width > 0 && stroke ? (
-        <Canvas style={{ width, height }}>
-          {area.map((p) => (
-            <Path key={p.v} path={p.path} color={p.v === 1 ? near : far} />
-          ))}
-          <Path path={stroke} color={ink} style="stroke" strokeWidth={2.4} strokeCap="round" strokeJoin="round" />
-          {last ? (
-            <>
-              <Rect x={last[0] - 5} y={last[1] - 5} width={10} height={10} color={ring} />
-              <Rect x={last[0] - 3.5} y={last[1] - 3.5} width={7} height={7} color={ink} />
-            </>
-          ) : null}
-        </Canvas>
+    <Pressable
+      onLayout={onLayout}
+      style={[styles.bleed, { height }]}
+      onPress={(e) => {
+        const i = nearestPoint(points, e.nativeEvent.locationX);
+        setPicked((p) => (i < 0 || p === i ? null : i));
+      }}
+      accessible
+      accessibilityRole="adjustable"
+      {...(label ? { accessibilityLabel: label } : {})}
+      accessibilityValue={{ text: tip(picked ?? Math.max(0, points.length - 1)) }}
+      accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+      onAccessibilityAction={(e) => step(e.nativeEvent.actionName === "increment" ? 1 : -1)}
+    >
+      {canvas}
+      {on && text ? (
+        // The chat's tip: above its point, kept inside the card's sides.
+        <Animated.View
+          key={text}
+          entering={reduced ? undefined : FadeIn.duration(120)}
+          onLayout={(e) => setPill(Math.round(e.nativeEvent.layout.width))}
+          pointerEvents="none"
+          style={[
+            styles.tip,
+            {
+              backgroundColor: c.ink,
+              bottom: height - on[1] + 10,
+              left: Math.max(4, Math.min(width - pill - 4, on[0] - pill / 2)),
+              opacity: pill ? 1 : 0,
+            },
+          ]}
+        >
+          <Text variant="caption" numberOfLines={1} style={[styles.tipText, { color: c.raised }]}>
+            {text}
+          </Text>
+        </Animated.View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -798,7 +913,7 @@ export function WidgetCard({
    */
   compact?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors: c } = useTheme();
   const soft = useWidgetSurface();
   const card = useSurface();
@@ -912,6 +1027,7 @@ export function WidgetCard({
             compact={compact}
             wide={w.w === 2}
             mark={markByNumber ? mark : undefined}
+            pickable={!onPress}
             {...(horizon ? { onLayout: (e: LayoutChangeEvent) => setDataHeight(e.nativeEvent.layout.height) } : {})}
           />
         ) : (
@@ -927,7 +1043,13 @@ export function WidgetCard({
             status === "ok" || compact ? null : styles.dim,
           ]}
         >
-          <BleedLine values={bleed} color={look.color} height={bleedHeight} />
+          <BleedLine
+            values={bleed}
+            color={look.color}
+            height={bleedHeight}
+            tip={onPress ? null : bleedTip(w.spec, i18n.language)}
+            label={title}
+          />
         </View>
       ) : null}
     </>
@@ -1073,6 +1195,8 @@ const styles = StyleSheet.create({
   // Out to the card's edges and its bottom: the card's padding cancelled.
   bleedBox: { marginHorizontal: -PAD_X, marginBottom: -PAD_Y, marginTop: -4 },
   bleed: { width: "100%" },
+  tip: { position: "absolute", paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9 },
+  tipText: { fontWeight: "600", fontVariant: ["tabular-nums"] },
   dim: { opacity: 0.45 },
   // Out to the card's sides and bottom edge, under its text: the card's corners clip it.
   horizon: { left: -PAD_X, bottom: -PAD_Y },

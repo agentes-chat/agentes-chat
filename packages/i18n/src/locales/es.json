@@ -38,6 +38,13 @@
     "wrapLines": "Ajustar líneas",
     "raw": "Original",
     "table": "Tabla",
+    "tableRows_one": "Tabla · {{count}} fila",
+    "tableRows_many": "Tabla · {{count}} filas",
+    "tableRows_other": "Tabla · {{count}} filas",
+    "tableSeeAll": "Ver las {{count}} filas",
+    "tableRowCount_one": "{{count}} fila",
+    "tableRowCount_many": "{{count}} filas",
+    "tableRowCount_other": "{{count}} filas",
     "chartItem": "Elemento",
     "chartShare": "Proporción",
     "you": "tú",
@@ -7017,6 +7024,7 @@
     "undoneBy": "Deshecho por {{name}}",
     "undoneByYou": "Deshecho por ti",
     "undo": "Deshacer",
+    "applyAnyway": "Aplicar de todos modos",
     "appliedSome": "{{done}} de {{total}} aplicadas",
     "waitingAdmin": "Esperando a un admin",
     "stale": "Desactualizada",
@@ -10885,7 +10893,6 @@
     "filter": {
       "person": "Personas",
       "agent": "Agentes",
-      "routine": "Rutinas",
       "reminder": "Recordatorios",
       "deadline": "Fechas de entrega de tareas"
     },
@@ -10918,41 +10925,16 @@
         "declined": "No vas."
       }
     },
-    "every": {
-      "hour": "cada hora",
-      "hours": "cada {{count}} h",
-      "minutes": "cada {{count}} min"
-    },
-    "perDay": "{{count}}× al día",
-    "runs_one": "{{count}} ejecución en estos días.",
-    "runs_many": "{{count}} ejecuciones en estos días.",
-    "runs_other": "{{count}} ejecuciones en estos días.",
-    "routineDetail": "Rutina · entrega en {{target}}",
     "deadlineDetail": "La tarea vence.",
     "reminderBy": "Creado por {{name}}",
     "reminderPosted": "Recordatorio · se publica en {{target}}",
     "cancelReminder": "Cancelar recordatorio",
     "reminderCancelled": "Recordatorio cancelado",
     "openIssue": "Abrir tarea",
-    "openRoutines": "Ver en Rutinas",
-    "openRoutine": "Abrir rutina",
-    "runAria": "Rutina {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "Rutinas a las {{time}}",
-    "moreRuns_one": "+{{count}} rutina",
-    "moreRuns_many": "+{{count}} rutinas",
-    "moreRuns_other": "+{{count}} rutinas",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "respondió",
-      "silent": "nada nuevo",
-      "failed": "falló",
-      "skipped": "no se ejecutó"
-    },
-    "lastResult": "última: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Nada programado. Arrastra para crear o presiona N",
-    "agendaEmpty": "Los eventos y rutinas de los próximos 30 días aparecen aquí.",
+    "agendaEmpty": "Los eventos y recordatorios de los próximos 30 días aparecen aquí.",
     "agendaEmptyTitle": "Agenda libre los próximos 30 días",
     "noResults": "Nada con este filtro.",
     "more": "+{{count}} más",
@@ -17199,13 +17181,13 @@
       "browser_download": "No se pudo descargar el navegador de los agentes. Revisa la conexión de esta computadora y lo intentará de nuevo en el próximo uso.",
       "browser_checksum": "La descarga del navegador de los agentes llegó dañada, así que no se usó. Lo intentará de nuevo en el próximo uso.",
       "desktop_use_linux": "Las apps en las pantallas de los agentes funcionan en computadoras Linux con las pantallas de los agentes.",
-      "desktop_use_own_user": "Las apps en las pantallas necesitan que cada agente trabaje con su propio usuario en esta computadora (modo sistema). Aquí todos los agentes trabajan con el usuario del runner.",
+      "desktop_use_own_user": "Las apps en las pantallas necesitan que cada agente trabaje con su propio usuario en esta computadora (modo sistema). Aquí todos los agentes trabajan con el mismo usuario, el que ejecuta agentes.chat.",
       "desktop_use_install": "Instala en esta computadora lo que necesitan las apps en las pantallas:",
       "desktop_unavailable": "Las pantallas de los agentes no pueden funcionar en esta computadora.",
       "desktop_linux": "Las pantallas de los agentes funcionan solo en computadoras Linux.",
       "desktop_install": "Instala en esta computadora las pantallas de los agentes:",
-      "not_as_root": "Las pantallas y las terminales de los agentes nunca funcionan como root. Ejecuta el runner como un usuario normal.",
-      "runner_bun_old": "Esto necesita el runner en Bun 1.3.5 o más reciente. Actualiza el runner en esta computadora.",
+      "not_as_root": "Las pantallas y terminales de los agentes nunca se ejecutan como root. Ejecuta agentes.chat como un usuario normal.",
+      "runner_bun_old": "Esto necesita agentes.chat en Bun 1.3.5 o más reciente. Actualiza agentes.chat en esta computadora.",
       "terminal_unsupported": "Las terminales funcionan solo en computadoras Linux y Mac."
     },
     "egress": {
@@ -17215,7 +17197,6 @@
       "hint": "La dirección que ven los sitios web cuando los agentes navegan. Se actualiza cuando cambia la red de la computadora.",
       "waiting": "Reconectando la conexión a internet de los agentes. Sus conexiones esperan hasta que vuelva.",
       "via": "Los agentes usan el internet de {{name}}",
-      "viaBy": "Los agentes usan el internet de {{name}} ({{person}})",
       "viaHint": "Los sitios ven la ubicación de esa computadora. Quien la conectó puede desactivarlo en su página."
     },
     "maintenance": {
@@ -17537,6 +17518,12 @@
     "cpus_one": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} núcleo",
+    "cores_many": "{{count}} de núcleos",
+    "cores_other": "{{count}} núcleos",
+    "threads_one": "{{count}} hilo",
+    "threads_many": "{{count}} de hilos",
+    "threads_other": "{{count}} hilos",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17612,11 +17599,12 @@
     "helpWorkspace": "Las computadoras ayudan cuando la del equipo está llena o fuera",
     "helpWorkspaceHint": "Cada computadora ayuda solo si su dueño lo permite. Desactivado: ninguna ayuda, elija lo que elija su dueño.",
     "shareInternet": "Los agentes usan el internet de esta computadora",
-    "shareInternetHint": "Los sitios que abren los agentes pasan por la conexión de esta computadora, así que ven tu ubicación. Solo sitios web y nunca nada de tu propia red. Mientras esta computadora esté sin conexión, los agentes usan su conexión de siempre.",
+    "shareInternetHint": "Las conexiones de los agentes salen por el internet de esta computadora, así que los sitios y servidores ven tu ubicación: sitios web, git, SSH, bases de datos y otras conexiones TCP. Nunca nada de tu propia red, ni correo por el puerto 25. Las consultas de nombres, las llamadas y el resto del tráfico UDP usan la conexión de siempre, igual que todo mientras esta computadora esté sin conexión.",
+    "shareInternetHintProxy": "El navegador de los agentes y los programas que siguen la configuración de proxy (git por HTTPS, curl, la mayoría de las herramientas de línea de comandos) salen por el internet de esta computadora, así que los sitios ven tu ubicación. SSH, los clientes de bases de datos y otros programas que ignoran la configuración de proxy usan la conexión de siempre, igual que las consultas de nombres y el tráfico UDP. Nunca nada de tu propia red, ni correo por el puerto 25. Mientras esta computadora esté sin conexión, todo usa la conexión de siempre.",
     "shareInternetInUse": "En uso ahora",
     "shareInternetOther": "Los agentes usan {{name}} ahora",
     "shareInternetPick": "Usar esta",
-    "shareInternetJoin": "Los agentes también abrirán sitios por el internet de esta computadora, así que los sitios verán tu ubicación. Puedes desactivarlo en su página.",
+    "shareInternetJoin": "Los agentes también se conectarán a internet por esta computadora, así que los sitios y servidores verán tu ubicación. Puedes desactivarlo en su página.",
     "connectedBy": "Conectado por {{name}}",
     "downloadFor": "Descargar para {{system}}",
     "downloadApp": "Descargar la app",
@@ -17658,6 +17646,8 @@
       "paused": "{{host}} está en pausa, así que el control espera hasta que se reanude.",
       "held": "Este espacio de trabajo está en pausa, así que el control espera hasta que vuelva a estar activo.",
       "lost": "El control terminó. Vuelves a mirar {{name}}.",
+      "controlLate": "El control no empezó a tiempo. {{host}} todavía está preparando {{name}}: inténtalo de nuevo en un minuto.",
+      "controlFailed": "No se pudo tomar el control de {{name}}. Inténtalo de nuevo o reinicia la app de agentes.chat en {{host}}.",
       "typeLabel": "Escribir en {{name}}"
     },
     "status": {
@@ -17679,7 +17669,7 @@
       "withHost": "con {{host}}",
       "lastSeen": "visto por última vez {{time}}",
       "offlineUnresponsive": "dejó de responder a las {{time}}",
-      "offlineStopped": "el runner se detuvo a las {{time}}",
+      "offlineStopped": "agentes.chat se detuvo a las {{time}}",
       "offlineDropped": "la conexión se cayó a las {{time}}"
     },
     "line": {
@@ -17696,9 +17686,14 @@
       "offline": "Los agentes esperan a que vuelva.",
       "offlineSeen": "Visto por última vez {{time}}. Los agentes esperan a que vuelva.",
       "offlineWithHost": "{{host}} está sin conexión. Los agentes esperan a que vuelva.",
-      "offlineUnresponsive": "Dejó de responder a las {{time}}, quizá sin red o sobrecargado. Ejecuta `{{command}}` en él.",
-      "offlineStopped": "El runner se detuvo a las {{time}}. Inícialo de nuevo o ejecuta `{{command}}` en él para ver por qué.",
-      "offlineDropped": "La conexión se cayó a las {{time}}. Se reconecta sola. Si no vuelve, ejecuta `{{command}}` en él."
+      "offlineUnresponsive": "Dejó de responder a las {{time}}, quizá sin internet o sobrecargada. Revisa que esté encendida y con internet.",
+      "offlineStopped": "La app agentes.chat se detuvo en esta computadora a las {{time}}. Vuelve a abrir la app.",
+      "offlineStoppedCli": "agentes.chat se detuvo en esta computadora a las {{time}}. Vuelve a iniciarlo allí.",
+      "offlineDropped": "La conexión se cayó a las {{time}}. Se reconecta sola."
+    },
+    "technical": {
+      "title": "Detalles técnicos",
+      "doctor": "Para ver el motivo, ejecuta esto en ella:"
     },
     "reason": {
       "locked": "El teléfono está bloqueado",
@@ -18154,7 +18149,7 @@
       "folderOnComputer": "Permitir en el computador",
       "folderShown": "Abierto en {{deviceName}}. Permítelo allí.",
       "internetShared": "Los agentes ahora abren sitios web a través del internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Solo los agentes de este workspace, solo sitios web, nunca nada de su propia red. Mientras esté sin conexión, usan su conexión de siempre.",
+      "internetSharedLine": "Solo los agentes de este workspace, nunca nada de su propia red, nunca correo por el puerto 25. Mientras esté sin conexión, usan su conexión de siempre.",
       "internetOff": "Desactivar",
       "internetOffDone": "Los agentes ya no usan el internet de {{deviceName}}.",
       "once": "Permitir una vez",
@@ -18939,7 +18934,23 @@
       "version": "Versión",
       "license": "Software libre bajo la <license>GNU Affero General Public License v3</license>, sin garantía.",
       "source": "Código fuente",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC y colaboradores"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC y colaboradores",
+      "latest": "La versión más reciente",
+      "newer": "Ya salió la {{version}}",
+      "notes": "Novedades",
+      "update": {
+        "title": "Actualiza a la {{version}}",
+        "docker": "Con Docker",
+        "native": "Sin Docker",
+        "nativeHelp": "Extrae el paquete de la versión en `~/.agentes/app` y luego ejecuta:",
+        "desktop": "¿Se ejecuta en la app de escritorio de este equipo? Se actualiza con la app.",
+        "notice": "Ya salió agentes.chat {{version}} para este servidor",
+        "how": "Cómo actualizar"
+      },
+      "computers": "Programa de los equipos",
+      "computersAhead_one": "{{count}} equipo usa una versión más nueva que la de este servidor. Funciona tal como está, y lo nuevo llega con la actualización de este servidor.",
+      "computersAhead_many": "{{count}} equipos usan una versión más nueva que la de este servidor. Funcionan tal como están, y lo nuevo llega con la actualización de este servidor.",
+      "computersAhead_other": "{{count}} equipos usan una versión más nueva que la de este servidor. Funcionan tal como están, y lo nuevo llega con la actualización de este servidor."
     },
     "title": "Configuración",
     "account": {
@@ -21152,7 +21163,7 @@
       "people": "Desde ahora todos solo pueden leerlo y reciben un correo",
       "peopleQuiet": "Desde ahora todos solo pueden leerlo",
       "computer": "Su computadora se detiene ahora y se borra",
-      "computers": "Las computadoras conectadas se desconectan. Las carpetas de los agentes se quedan en ellas hasta que se quite el runner.",
+      "computers": "Las computadoras conectadas se desconectan. Las carpetas de los agentes se quedan en ellas hasta que se quite agentes.chat de ellas.",
       "connectors": "Los conectores y buzones se desconectan"
     },
     "undo": "Cualquier propietario puede restaurarlo hasta el {{date}} a las {{time}}. Después, ya no se puede deshacer.",
@@ -21521,14 +21532,6 @@
       "doneByYou": "Lo hiciste tú a las {{time}}. {{agent}} volvió a mirar la pantalla y siguió.",
       "doneByYou_female": "Lo hiciste tú a las {{time}}. {{agent}} volvió a mirar la pantalla y siguió."
     },
-    "control": {
-      "notice": "Los programas de la computadora de {{name}} pueden ver la pantalla y lo que escribes o pegas.",
-      "notice_female": "Los programas de la computadora de {{name}} pueden ver la pantalla y lo que escribes o pegas."
-    },
-    "session": {
-      "check": "Controles de seguridad",
-      "screening": "Podemos revisar el texto de esta pantalla para detectar abusos. Solo guardamos el resultado. Lo que la pantalla no muestra, como una contraseña en una terminal, nunca se captura."
-    },
     "after": {
       "titleNoSite": "Usó la pantalla",
       "noSite": "Antes de abrir una app"
@@ -21538,8 +21541,6 @@
       "group_female": "Pantalla de {{name}}"
     },
     "watch": {
-      "notice": "Los programas de la computadora de {{name}} pueden ver la pantalla y todo lo que se escribe o pega ahí.",
-      "notice_female": "Los programas de la computadora de {{name}} pueden ver la pantalla y todo lo que se escribe o pega ahí.",
       "step": {
         "desktop_open": "Abrió {{detail}}",
         "desktop_open_plain": "Abrió una app",

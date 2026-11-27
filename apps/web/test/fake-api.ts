@@ -120,6 +120,7 @@ import { stepIndex } from "@agenteschat/client/lib/onboarding";
 import type { PlanModel } from "@agenteschat/client/lib/plans";
 import { type LodiPrefs, lodiPrefsOf } from "@agenteschat/client/lib/right-hand-prefs";
 import { grants, rowMax, SUMMARY_ORDER, withRowHolders } from "@agenteschat/client/lib/roles";
+import type { ServerRelease } from "@agenteschat/client/lib/server-release";
 import { sidebarItemOrder, sidebarSections } from "@agenteschat/client/lib/sidebar-items";
 import { driveFolder, isSecretFile } from "@agenteschat/ui/names";
 import { createFakeAccess } from "./fakes/access";
@@ -409,6 +410,10 @@ export interface FakeState {
   edition?: Edition;
   /** Overrides `system.instance` (default: agentes.chat Cloud). */
   instance?: Partial<Instance>;
+  /** `system.serverRelease`: the newest server release on GitHub (default: none found). */
+  serverRelease?: ServerRelease | null;
+  /** How many times the app asked for it. */
+  serverReleaseAsked?: number;
   /** `agents.brainMachines`: the computers a new agent could think on ("Criar agente"); unset = none. */
   brainMachines?: BrainMachine[];
   /** `agents.newAgentSetup`: what a new agent starts thinking with; unset = none ("Automático"). */
@@ -1517,6 +1522,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
   return {
     system: {
       health: async () => ({ status: "ok", version: "test", edition: state.edition ?? "cloud" }),
+      serverRelease: async () => {
+        state.serverReleaseAsked = (state.serverReleaseAsked ?? 0) + 1;
+        return state.serverRelease ?? null;
+      },
       instance: async () => ({
         name: "agentes.chat",
         version: "test",
@@ -4156,6 +4165,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           decidedBy: { userId: state.me?.user.id ?? "", name: state.me?.user.name ?? "" },
           decidedAt: new Date().toISOString(),
           canDecide: false,
+          // Applied by a person now, as the server answers: no review's word on it, nothing left to apply.
+          reviewed: false,
+          decidedByAgent: null,
+          review: null,
+          applicable: false,
         });
         return structuredClone(p);
       },

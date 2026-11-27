@@ -227,6 +227,62 @@ version too, when it installs one). On Linux the AppImage updates itself; a deb 
 </details>
 
 <details>
+<summary><b>Agents use a person's internet</b></summary>
+
+Some sites answer only visitors from their own country, or treat a datacenter address as a robot. When your
+instance runs on a VPS and you use it from the desktop app on your own computer, the agents can open websites
+through that computer's internet instead: your home address and location, as if you opened them yourself.
+
+**Who lends.** Each person's connected computer (the desktop app's **Use this Mac/PC**, or a runner they paired)
+shows **Agents use this computer's internet** on its page in Settings › Devices, in the desktop app's Preferences
+and on the phone. It is on by default; only the person who connected it turns it on, and an admin may turn it off.
+The owners of computers paired before this existed hear it once in the inbox, with **Turn off**. Among the
+computers that lend and are online, those the desktop app runs come first, then the one turned on last carries the
+traffic ("In use now" on its page).
+
+**Who borrows.**
+
+- This server's own computer (This server as the agents' computer, below): its agents' browsers and programs, and
+  the server's own reads of web pages for agents (`web_fetch` and the DuckDuckGo search page).
+- A server: a runner installed from the terminal on Linux (on the VPS itself, or another box in a server room). Its
+  switch starts off, so it borrows with nothing for you to set; one paired before this turns off the next time it
+  connects, unless its owner had turned it on. Turned on, it lends like anyone's computer (after the desktop app's).
+- A computer marked the workspace's whose own switch is off.
+- A person's own computer that doesn't lend doesn't borrow, and a computer that lends never goes out through
+  another, nor through itself.
+
+The borrowing computer's page then says "Agents use the internet of Ana's laptop (Ana)".
+
+**What goes through it.** TCP connections to any port but 25 (mail servers), of agents' browsers and of their
+programs (the commands they run, their coding CLIs and tasks) that use proxy settings, started after it began: the
+runner hands them `HTTPS_PROXY`, `ALL_PROXY` and `NODE_USE_ENV_PROXY=1` toward a proxy of its own on `127.0.0.1`,
+and Chrome its `--proxy-server` flag. Browsers, git over HTTPS, curl and most CLIs follow them; OpenSSH (an SSH
+`git push`), database clients and other programs that ignore them go out the usual way, and so do name lookups and
+all UDP. A lending computer on an app older than this carries ports 80 and 443 alone. Never
+this server's own calls (the database, email, model providers, MCP servers and connectors, updates), never the AI
+CLIs' model and sign-in services (`NO_PROXY`), never private, local or this computer's addresses, and never the
+search service you set (Brave, SearXNG). The lending computer resolves each name itself and refuses non-public
+addresses and its own networks, at most 256 connections at once, with no daily cap. With nothing lending online, a
+refusal or a lending computer that doesn't answer, connections go out the usual way (and stay that way for a
+minute before asking again). A runner that runs with a proxy of its own (`HTTPS_PROXY` in its environment), or
+whose agents run in a network of their own (a `networkLauncher` or `networkMark`), keeps it, and its agents get
+nothing from this.
+
+**Good to know.**
+
+- The lent bytes pass through your server, between the two computers' connections to it; nothing goes to
+  agentes.chat. Both computers must reach the same server process (one replica, or sticky connections).
+- The proxy settings are cooperative: a program that ignores them goes out its usual way. They are not a security
+  boundary. On a computer where agents run as the computer's own user, any local program can use the runner's
+  proxy (only for public web addresses, through this workspace's lending computer); where each agent is its own
+  user, only that workspace's agents reach it.
+- A computer needs an app new enough: a lending one the agentes.chat desktop app or runner from the version that
+  lends, a borrowing one from the version that borrows; older ones keep their usual way.
+- To stop it, turn the switch off on every computer that lends.
+
+</details>
+
+<details>
 <summary><b>Phones for agents</b></summary>
 
 Agents use a phone through a computer you connected (Connect a computer, above): **Settings › Devices
@@ -1215,6 +1271,14 @@ one, `https://app.agentes.chat/api/desktop/update` (its version and package type
 `/api/desktop/download/…`. The page that offers the app asks
 for its newest version from the browser (Connect a computer, above, says what that request carries).
 The instance itself downloads nothing from agentes.chat.
+
+**Newer releases.** For whoever configures a workspace, **Settings › About** (and the phone's About screen)
+asks GitHub for this repository's releases (`https://api.github.com/repos/agentes-chat/agentes-chat/releases`)
+from the browser or the phone, never from the instance, at most every 6 hours. It carries no cookie and no
+referrer, but, like any request a page makes to another site, it carries this instance's address (its
+`Origin` header) and the browser's IP. A newer release shows there with the upgrade commands (Upgrades, below)
+and, once per release, as a notice. It also says when the program on some of the workspace's computers is
+newer than the instance: those computers keep working, and what's new in them comes with the instance's update.
 
 **Help pages.** The app's help links ("How computers work", "About this computer") open the public docs at
 `https://agentes.chat/docs`, in the reader's language (`/pt/docs`, `/zh/docs`, `/fr/docs`…), the same pages for

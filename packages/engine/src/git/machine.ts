@@ -96,7 +96,7 @@ export function machineGitUnavailable(status: MachineStatus | null, orgId: strin
   if (status.paused) return new MachinePausedError(status.name, status.paused.until, status.paused.timezone);
   if (status.protocol < GIT_PROTOCOL) {
     return new Error(
-      `The agentes app (runner) on the computer ${status.name} is too old to clone repositories. ${runnerUpdateWay(status)}`,
+      `The agentes.chat app on the computer ${status.name} is too old to clone repositories. ${runnerUpdateWay(status)}`,
     );
   }
   return null;
@@ -248,7 +248,7 @@ export async function cloneOnMachine(
   // A path deeper than `owner/name` (a GitLab subgroup) is one an older runner refuses.
   if (!isGitRepoName(ref.path) && status.protocol < GIT_HOST_PATH_PROTOCOL) {
     throw new Error(
-      `The agentes app (runner) on the computer ${status.name} is too old to clone ${input.repo}. ${runnerUpdateWay(status)}`,
+      `The agentes.chat app on the computer ${status.name} is too old to clone ${input.repo}. ${runnerUpdateWay(status)}`,
     );
   }
   const { agent, ...rest } = setup;
