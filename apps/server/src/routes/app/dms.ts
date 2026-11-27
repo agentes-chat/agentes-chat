@@ -1,4 +1,4 @@
-import { dmReads, listDms, markChannelRead, openDm, setChannelMuted } from "@agenteschat/engine";
+import { dmReads, listDms, markChannelRead, markChannelUnread, openDm, setChannelMuted } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import {
   type AppDeps,
@@ -120,6 +120,29 @@ export function dmRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       await markChannelRead(db, c.get("user").id, orgId, channelId, new Date(), adapters.pubsub);
+      return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/channels/{channelId}/unread",
+      tags,
+      security,
+      summary: "Mark a channel or DM unread, from one message on or from the newest one someone else wrote",
+      description:
+        "With `messageId`, that message of the timeline and what came after it look unread again; without it, the newest message another person or an agent wrote there. 404 for a message that isn't in the conversation; 400 `thread_reply_not_markable` for a thread's reply (a thread is read on its own); 409 `nothing_to_mark_unread` when no one else has written. The mark only moves back, and no one is told.",
+      request: {
+        params: OrgParams.extend({ channelId: z.uuid() }),
+        body: body(z.object({ messageId: z.uuid().optional() })),
+      },
+      responses: { 204: noContent[204], ...errors },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      const { messageId } = c.req.valid("json");
+      await markChannelUnread(db, c.get("user").id, orgId, channelId, messageId, adapters.pubsub);
       return c.body(null, 204);
     },
   );

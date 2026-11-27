@@ -513,6 +513,8 @@ const PLAIN_LINE = new Set([
   "channel.invalid_name",
   "channel.leave_kind",
   "channel.mute_dm",
+  // A thread's reply: the apps offer "Marcar como não lida" only on a message of the timeline.
+  "thread_reply_not_markable",
   "claude_auth.invalid",
   "claude_auth.unknown_org",
   "connector.key_too_short",

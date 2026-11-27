@@ -1817,6 +1817,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "系统",
     "markRead": "标为已读",
+    "markUnread": "标为未读",
     "muteChannel": "将频道设为静音",
     "unmuteChannel": "取消频道静音",
     "mention": "提及",
@@ -15650,6 +15651,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "这里还没有其他人发过消息，所以没有可以标为未读的内容。"
+    },
     "planMove": {
       "notPayer": "只有支付套餐的人可以移动它。",
       "same": "请选择另一个工作区来接收套餐。",

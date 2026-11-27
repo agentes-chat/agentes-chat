@@ -1890,6 +1890,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "System",
     "markRead": "Als gelesen markieren",
+    "markUnread": "Als ungelesen markieren",
     "muteChannel": "Kanal stummschalten",
     "unmuteChannel": "Stummschaltung aufheben",
     "mention": "Erwähnen",
@@ -16191,6 +16192,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Hier hat noch niemand sonst geschrieben, daher gibt es nichts als ungelesen zu markieren."
+    },
     "planMove": {
       "notPayer": "Nur die Person, die den Tarif bezahlt, kann ihn verschieben.",
       "same": "Wähle einen anderen Workspace, in den der Tarif soll.",

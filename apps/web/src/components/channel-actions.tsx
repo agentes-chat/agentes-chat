@@ -30,6 +30,12 @@ export interface ChannelActions {
    */
   reply?: (message: MessageType) => void;
   /**
+   * "Marcar como não lida" on someone else's message of the timeline: it and what came after look unread again, on
+   * every device, and the conversation open here stops marking itself read until its end is reached on purpose.
+   * Absent in a thread view.
+   */
+  markUnread?: (message: MessageType) => void;
+  /**
    * A thread's line or link: the panel beside the channel (absent in a thread view: links go to its page). With
    * `focusMessageId`, it opens at that message (a pin).
    */

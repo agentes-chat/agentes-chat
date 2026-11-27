@@ -1955,6 +1955,7 @@ export const ptBR = {
     lookOurs: "agentes.chat",
     lookSystem: "Do sistema",
     markRead: "Marcar como lida",
+    markUnread: "Marcar como não lida",
     muteChannel: "Silenciar canal",
     unmuteChannel: "Reativar canal",
     mention: "Mencionar",
@@ -16579,6 +16580,9 @@ export const ptBR = {
     },
   },
   errors: {
+    markUnread: {
+      nothing: "Ninguém mais escreveu aqui ainda, então não há o que marcar como não lida.",
+    },
     /** Moving a plan to another workspace (ADR 0079). */
     planMove: {
       notPayer: "Só quem paga o plano pode mover.",

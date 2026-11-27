@@ -100,7 +100,7 @@ export function useMessageMenu(
   options: { feedback?: boolean; agentName?: string; readOnly?: boolean } = {},
 ) {
   const { t } = useTranslation();
-  const { org } = useOrg();
+  const { org, me } = useOrg();
   const toast = useToast();
   const actions = useChannelActions();
   const reactions = useMessageReactions(message.id, message.reactions, { feedback: options.feedback });
@@ -177,6 +177,21 @@ export function useMessageMenu(
                 { onSuccess: () => toast.show(t(pinned ? "contextMenu.unpinned" : "contextMenu.pinned")) },
               ),
           };
+    // Someone else's message in the timeline (a thread's reply is read with its thread): it and what follows look
+    // unread again, and the conversation stops reading itself until the person reaches its end.
+    const mine = message.author.type === "person" && message.author.id === me.user.id;
+    const markUnread: MenuEntry[] =
+      actions?.markUnread && !message.threadId && !mine
+        ? [
+            {
+              kind: "item",
+              id: "mark-unread",
+              label: t("contextMenu.markUnread"),
+              icon: "bell",
+              run: () => actions.markUnread?.(message),
+            },
+          ]
+        : [];
     return [
       {
         kind: "reactions",
@@ -201,6 +216,7 @@ export function useMessageMenu(
       { kind: "separator" },
       ...(words ? [copy(text, "copy-text", t("contextMenu.copyText"))] : []),
       copyLink,
+      ...markUnread,
       { kind: "separator" },
       ...(pinEntry ? [pinEntry] : []),
       ...(chart

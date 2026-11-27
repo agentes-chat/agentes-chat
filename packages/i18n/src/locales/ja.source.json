@@ -4661,6 +4661,9 @@
   "contextMenu.markRead": {
     "value": "Mark as read"
   },
+  "contextMenu.markUnread": {
+    "value": "Mark as unread"
+  },
   "contextMenu.muteChannel": {
     "value": "Mute channel"
   },
@@ -39690,6 +39693,9 @@
   },
   "files.nav.place": {
     "value": "{{index}} of {{count}}"
+  },
+  "errors.markUnread.nothing": {
+    "value": "No one else has written here yet, so there's nothing to mark unread."
   },
   "errors.planMove.notPayer": {
     "value": "Only the person who pays for the plan can move it."

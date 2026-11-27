@@ -3,6 +3,7 @@ import {
   useArchiveChannel,
   useDms,
   useMarkChannelRead,
+  useMarkChannelUnread,
   useMuteChannel,
   usePeople,
   useRoles,
@@ -89,23 +90,39 @@ export function useArchiveChannelWithUndo() {
   return { run, pending: archive.isPending };
 }
 
-/** "Marcar como lida" for a channel or DM with unread messages (nothing otherwise). */
+/**
+ * "Marcar como lida" for a channel or DM with unread messages, "Marcar como não lida" for one with none (it brings
+ * its newest message from someone else back as unread). `member` false: a channel I'm not in has no mark of mine.
+ */
 function useMarkRead() {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const toast = useToast();
   const mark = useMarkChannelRead(org.id);
-  return (channelId: string | undefined, unread: number): MenuEntry[] =>
-    channelId && unread > 0
-      ? [
-          {
-            kind: "item",
-            id: "mark-read",
-            label: t("contextMenu.markRead"),
-            icon: "check",
-            run: () => mark.mutate(channelId),
-          },
-        ]
-      : [];
+  const markUnread = useMarkChannelUnread(org.id);
+  return (channelId: string | undefined, unread: number, member = true): MenuEntry[] => {
+    if (!channelId) return [];
+    if (unread > 0)
+      return [
+        {
+          kind: "item",
+          id: "mark-read",
+          label: t("contextMenu.markRead"),
+          icon: "check",
+          run: () => mark.mutate(channelId),
+        },
+      ];
+    if (!member) return [];
+    return [
+      {
+        kind: "item",
+        id: "mark-unread",
+        label: t("contextMenu.markUnread"),
+        icon: "bell",
+        run: () => markUnread.mutate({ channelId }, { onError: (e) => toast.show(errorText(t, e), "error") }),
+      },
+    ];
+  };
 }
 
 /** "Copiar @handle". */
@@ -179,7 +196,7 @@ export function useChannelMenu() {
     return [
       // A personal workspace's group conversation goes by its name as written (ADR 0159).
       { kind: "header", label: isPersonal(org) ? c.name : `#${c.name}` },
-      ...markRead(c.id, c.unreadCount ?? 0),
+      ...markRead(c.id, c.unreadCount ?? 0, c.isMember),
       // Muted, it never looks unread to me (a mention of me still counts).
       ...(c.isMember
         ? [

@@ -8173,6 +8173,26 @@ export function useMarkChannelRead(orgId: string) {
   });
 }
 
+/** The channel and DM lists read again: an unread mark moved, here or on another device. */
+function refreshConversationLists(qc: QueryClient, orgId: string) {
+  void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
+}
+
+/**
+ * Marks a channel or DM unread again, from one message on (`messageId`) or from the newest one someone else wrote
+ * (issue: "Mark as unread"). No optimistic count: the server knows how many that makes, so the lists read again.
+ */
+export function useMarkChannelUnread(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { channelId: string; messageId?: string }) =>
+      api.dms.markUnread(orgId, input.channelId, input.messageId),
+    onSettled: () => refreshConversationLists(qc, orgId),
+  });
+}
+
 /**
  * The right hand waves under its greeting on the person's first visit to its DM (ADR 0137 §6): decided once, as the
  * DM opens, and kept for the visit. That visit marks the DM read, even with nothing in it yet, so the next one, on
@@ -8592,7 +8612,8 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
     const after = clearUnread(qc, orgId, e.channelId, e.lastReadAt);
     for (const queryKey of [keys.channels(orgId), keys.dms(orgId)])
       if (after || qc.isFetching({ queryKey }) > 0) void qc.invalidateQueries({ queryKey });
-  } else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
+  } else if (e.type === "channel.unread") refreshConversationLists(qc, orgId);
+  else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
   else if (e.type === "chat.prefs") putChatPrefs(qc, orgId, e.chatPrefs);
   else if (e.type === "thread.read") {
     clearThreadUnread(qc, orgId, e.threadId);

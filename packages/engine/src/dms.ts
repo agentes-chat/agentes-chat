@@ -5,10 +5,10 @@ import { audienceError, canTalkTo, managesAgent, speakerOf } from "./audience";
 import { caches } from "./cache";
 import { wordsOf } from "./confidential";
 import { sha256 } from "./crypto";
-import { NotFoundError, ValidationError } from "./errors";
+import { ConflictError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishUserEvent } from "./events";
 import { followsThreadSql, threadReadAtSql } from "./follows";
-import { landedAfterSql } from "./message-place";
+import { landedAfterSql, unreadMarkBefore } from "./message-place";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
 import { quietNoticeSql } from "./notices";
 import { readConversationNotifications, resolveNotifications, unaskedGroup } from "./notifications";
@@ -492,6 +492,73 @@ export async function markChannelRead(
   if (member.kind === "dm") await publishChannelEvent(pubsub, read);
   // My other devices: the conversation stops looking unread there too.
   await publishUserEvent(pubsub, orgId, actorId, read);
+}
+
+/**
+ * Marks a channel or DM unread for me, from message `messageId` on (the badge comes back and stays until I read it
+ * again, on any device), or from the newest message someone else wrote in its timeline when none is named. The read
+ * mark only moves back: a message already unread stays so. Only my own devices hear it (`channel.unread`): the other
+ * person of a DM gets no event, though their next read of "Visto" shows my older mark. Only a message of the timeline:
+ * a thread's reply is read by its thread.
+ */
+export async function markChannelUnread(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  channelId: string,
+  messageId?: string,
+  pubsub?: PubSub,
+) {
+  const [member] = await db
+    .select({ id: channelMembers.id, joinedAt: channelMembers.createdAt })
+    .from(channelMembers)
+    .where(
+      and(eq(channelMembers.orgId, orgId), eq(channelMembers.channelId, channelId), eq(channelMembers.userId, actorId)),
+    );
+  if (!member) throw new NotFoundError("Channel not found");
+  const from = { id: messages.id, createdAt: messages.createdAt, threadId: messages.threadId };
+  const [target] = messageId
+    ? await db
+        .select(from)
+        .from(messages)
+        .where(and(eq(messages.orgId, orgId), eq(messages.channelId, channelId), eq(messages.id, messageId)))
+    : await db
+        .select(from)
+        .from(messages)
+        .where(
+          and(
+            eq(messages.orgId, orgId),
+            eq(messages.channelId, channelId),
+            isNull(messages.threadId),
+            sql`(${messages.authorUserId} is null or ${messages.authorUserId} <> ${actorId})`,
+            sql`not ${quietNoticeSql(sql`${messages.meta}`)}`,
+          ),
+        )
+        .orderBy(desc(messages.id))
+        .limit(1);
+  if (!target) {
+    if (messageId) throw new NotFoundError("Message not found");
+    throw new ConflictError("Nothing to mark unread: no one else has written here", "nothing_to_mark_unread");
+  }
+  if (target.threadId)
+    throw new ValidationError("A reply in a thread is read with its thread", "thread_reply_not_markable");
+  const mark = unreadMarkBefore(target);
+  // Never read yet: the mark in force is my joining (listChannels' fallback), so the first row only moves back too.
+  const firstMark = member.joinedAt < mark ? member.joinedAt : mark;
+  const [read] = await db
+    .insert(channelReads)
+    .values({ orgId, channelId, userId: actorId, lastReadAt: firstMark })
+    .onConflictDoUpdate({
+      target: [channelReads.channelId, channelReads.userId],
+      set: { lastReadAt: sql`least(${channelReads.lastReadAt}, ${mark.toISOString()}::timestamptz)` },
+    })
+    .returning({ lastReadAt: channelReads.lastReadAt });
+  // My other devices: the conversation looks unread there too.
+  await publishUserEvent(pubsub, orgId, actorId, {
+    type: "channel.unread",
+    channelId,
+    lastReadAt: (read?.lastReadAt ?? mark).toISOString(),
+  });
 }
 
 /**
