@@ -696,6 +696,8 @@ test("computers: what its runner found, its AI accounts, and how much is open on
     // A run of the workspace is queued.
     busy: true,
     lastUsedAt: TIME,
+    // The run: work, not a visit.
+    workedAt: TIME,
     executors: [
       { name: "browser", version: "0.9.1" },
       { name: "claude", version: "2.0.31 (Claude Code)" },
@@ -752,6 +754,7 @@ test("computers: what its runner found, its AI accounts, and how much is open on
     standby: false,
     busy: false,
     lastUsedAt: null,
+    workedAt: null,
     executors: [],
     accounts: [],
     accountCount: 0,
