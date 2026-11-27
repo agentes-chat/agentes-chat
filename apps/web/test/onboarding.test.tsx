@@ -492,6 +492,9 @@ describe("the work its first agent does (ADR 0256)", () => {
     expect(lead()).toBe("Cobrança: toda segunda, 8:00, lista o que atrasou");
     // Asked of the AI: nothing has to be connected first.
     expect(continueOff()).toBe(false);
+    // The apps its AI named come first, the catalog a search away.
+    expect(appRows()).toEqual([{ name: "Gmail", end: "Conectar", sub: null }]);
+    expect(button(/Outro app/)).toBeTruthy();
   });
 
   test("Bring from another app opens the import over the step", async () => {

@@ -107,8 +107,9 @@ export function AgentStep({
   const [name, setName] = useState("");
   const [does, setDoes] = useState("");
   const [q, setQ] = useState("");
-  // An area's own apps, or the catalog searched ("Other", "Another app", an agent with no area).
-  const [searching, setSearching] = useState(!def);
+  // An area's own apps (or the ones the person's AI named), else the catalog searched ("Other", "Another app", an agent
+  // brought from another app).
+  const [searching, setSearching] = useState(!def && !(option?.apps ?? []).some((a) => a.key));
   const [flow, setFlow] = useState<FlowState | null>(null);
   const [mailFlow, setMailFlow] = useState<MailFlowState | null>(null);
   const [making, setMaking] = useState(false);
