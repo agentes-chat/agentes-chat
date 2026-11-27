@@ -670,6 +670,7 @@ const KNOWN = {
   "channel.general_stays": "errors.said.generalStays",
   "channel.lead_channel_only": "errors.said.leadChannelOnly",
   "channel.lead_not_member": "errors.said.leadNotMember",
+  "channel.name_invalid": "errors.said.groupNameInvalid",
   "connector.mcp_status": "errors.said.mcpUnreachable",
   "connector.mcp_unreachable": "errors.said.mcpUnreachable",
   "connector.not_approved": "errors.said.notApproved",

@@ -7,6 +7,7 @@ import { decidesAgentApprovals } from "./approval-rules";
 import { cancelAheadApproval, cancelableAhead } from "./approvals";
 import { canTalkTo, NO_OWNER, OWNER_COLUMNS, speakerFor } from "./audience";
 import { runAuthorityById } from "./authority";
+import { channelNameIs, typedChannelName } from "./channels";
 import { cardPlace } from "./consultations";
 import { getChannelCached } from "./context";
 import { schedulesOf } from "./context/summaries";
@@ -85,7 +86,7 @@ async function conversationOf(ctx: ToolContext) {
  * the agent's part, checked when the routine is saved.
  */
 async function channelTarget(ctx: ToolContext, requester: string, raw: string) {
-  const name = raw.trim().replace(/^#/, "").toLowerCase();
+  const name = typedChannelName(raw);
   const { channels, channelMembers } = schema;
   const [channel] = await ctx.db
     .select({ id: channels.id, name: channels.name })
@@ -94,7 +95,7 @@ async function channelTarget(ctx: ToolContext, requester: string, raw: string) {
     .where(
       and(
         eq(channels.orgId, ctx.orgId),
-        eq(channels.name, name),
+        channelNameIs(name),
         eq(channels.kind, "channel"),
         isNull(channels.archivedAt),
         eq(channelMembers.userId, requester),

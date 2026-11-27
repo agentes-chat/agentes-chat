@@ -323,7 +323,7 @@ import { forgetRunReads, holdsRunReads } from "./outbound";
 import { enqueue, PermanentJobError } from "./outbox";
 import { type OutsideMemo, personWords, runReadOutside } from "./outside";
 import { assertPersonUnderLimit } from "./person-usage";
-import { createProfiler, type StageTiming } from "./profile";
+import { computerTurnParts, createProfiler, type Span, type StageTiming, spanUnionMs } from "./profile";
 import { ASK_USER_TOOL, QUESTION_MAX_CHARS, questionResult } from "./questions";
 import {
   endsWithSentinel,
@@ -820,7 +820,7 @@ export interface Transcript {
     resetsAt?: string;
     /** A usage wait's: when its conversation first paused (`usageWait.since`), its place in line (`usageWaitPlace`). */
     since?: number;
-    /** When this wait began (ms): the claim that resumes it profiles a wait for room from here (`room_wait`). */
+    /** When this wait began (ms): the claim that resumes it profiles the wait from here (`room_wait` for room, else `waits`). */
     at?: number;
     /** A usage wait's plan in words ("Claude", "ChatGPT"): Rotinas says what it waits for. */
     plan?: string;
@@ -1561,6 +1561,8 @@ async function executeRunInner(
   if (fresh && options.routerMs !== undefined) prof.before("router", options.routerMs);
   // Each refusal for room ends its claim: this one profiles the wait since the last refusal, so a run's waits add up.
   if (waitedOn === "busy" && waitedAt !== undefined) prof.before("room_wait", prof.startedAt - waitedAt);
+  // A wait for its computer for any other reason (offline, signed out, dropped): the breakdown's waits too.
+  else if (waitedOn !== undefined && waitedAt !== undefined) prof.before("waits", prof.startedAt - waitedAt);
   prof.run = { id: run.id, orgId: run.orgId, agentId: run.agentId };
   steerGate.close = answerNoTurn(deps.pubsub, run.id);
   const claimedAt = Date.now();
@@ -4802,7 +4804,7 @@ async function executeRunInner(
       ...(serverStop ? { cause: "restart" as const } : {}),
     };
     const waitId = Bun.randomUUIDv7();
-    t.waitingForBrain = { kind: from, machineId, code: "machine_dropped", waitId };
+    t.waitingForBrain = { kind: from, machineId, code: "machine_dropped", waitId, at: Date.now() };
     await addRunStep(db, run, "error", {
       reason: "brain_dropped",
       code: "machine_offline",
@@ -5415,7 +5417,16 @@ async function executeRunInner(
       if (warming && Date.now() - warmedAt >= PREWARM_MIN_LEAD_MS)
         await Promise.race([warming, Bun.sleep(PREWARM_WAIT_MS)]);
     }
+    /** The API model's turn whose tool calls run until the next turn starts (its `tools#` stage). */
+    let toolsOfTurn: number | null = null;
+    /** How long this turn waited on its checkouts' update (the brain's `code` phase), and since when it does. */
+    const turnSync = { ms: 0, since: null as number | null };
     for (;;) {
+      // The API model's calls ran since its last turn: a stage of their own, not the next turn's.
+      if (toolsOfTurn !== null) prof.mark(`tools#${toolsOfTurn}`);
+      toolsOfTurn = null;
+      turnSync.ms = 0;
+      turnSync.since = null;
       if (await isCanceled()) return stopCanceled("");
       closing = false;
       // At the cap the inbox stays as it is: a message never gets marked read and then lost (the run's end
@@ -5624,7 +5635,15 @@ async function executeRunInner(
           executeToolForRun(deps, { orgId: run.orgId, agentId: run.agentId, runId: run.id, machineId: "" }, call),
         // A computer brain's turn that can take messages mid-turn (live steering).
         steerable: (steer) => live.steerable(steer),
-        ...(run.background || run.workId ? {} : { phase: tellPhase }),
+        // Timed for every run (the breakdown's `pre_turn_sync`), told only where a person watches.
+        phase: (phase) => {
+          if (phase === "code") turnSync.since = performance.now();
+          else if (turnSync.since !== null) {
+            turnSync.ms += performance.now() - turnSync.since;
+            turnSync.since = null;
+          }
+          if (!(run.background || run.workId)) tellPhase(phase);
+        },
       };
       const prompt = plan.kind === "model" ? triggerText : (nextPrompt ?? triggerText);
       // A computer brain's turn: the transcript is saved (the bridge's pauses join it), and the turn's
@@ -5644,6 +5663,8 @@ async function executeRunInner(
       const turnPlan = plan;
       // Where this computer turn's steps start (the bridge records a step per tool it runs).
       const turnStepSeq = plan.kind !== "model" ? await lastStepSeq(db, run.id) : 0;
+      /** The brain's own calls in this turn, from their start to their end on this server's clock. */
+      const ownSpans: Span[] = [];
       /** Calls the computer brain said it ran in this turn (through the bridge or on its own). */
       const executedNow: { id: string; name: string; input: unknown; result?: ToolResult }[] = [];
       /** How many of them were its own (not ours through the bridge, which counts those itself). */
@@ -5838,6 +5859,9 @@ async function executeRunInner(
               // Its line on the way (`say_now`) is talk, not work: a turn that fails after it did nothing to keep.
               if (!isSayNow(call.name)) executedNow.push(call);
               const startedAt = stepTold.get(call.id);
+              // Ours through the bridge are timed by their steps (`bridgeToolSpans`): never twice.
+              if (startedAt !== undefined && !turnTools.some((t) => t.name === call.name))
+                ownSpans.push({ from: startedAt, to: Date.now() });
               // In a code session each call of its own is a step, where its reply's work lists it (ADR 0215). One
               // whose work goes on in the background (its progress started and not ended; a workflow always does)
               // ends, live and on the trail, when that work ends: its line runs until then.
@@ -6281,7 +6305,20 @@ async function executeRunInner(
         await saveTranscript(db, transcript);
         await kickKeyLine(db, run.orgId, passedLine);
       }
-      prof.mark(`model#${run.turns + 1}`);
+      // A computer turn in its steps (`computerTurnParts`): our tools through the bridge timed by their steps.
+      const bridgeSpans =
+        turnPlan.kind === "model" ? [] : await bridgeToolSpans(db, run.id, turnStepSeq).catch(() => []);
+      prof.mark(
+        `model#${run.turns + 1}`,
+        turnPlan.kind === "model"
+          ? undefined
+          : (ms) =>
+              computerTurnParts(ms, {
+                syncMs: turnSync.ms,
+                timings: result.timings,
+                toolsMs: spanUnionMs(ownSpans) + spanUnionMs(bridgeSpans),
+              }),
+      );
       if (result.imagesLeftOut) transcript.filesTextOnly = true;
       if (result.timings) prof.brain.push(result.timings);
       await deferred;
@@ -6358,6 +6395,7 @@ async function executeRunInner(
       }
       const toolUses = result.toolCalls;
       if (result.stopReason === "tool_use" && toolUses.length > 0 && toolScope) {
+        toolsOfTurn = run.turns;
         const calls: NonNullable<Transcript["pending"]>["calls"] = [];
         const waiting: Approval[] = [];
         const asks: PauseRequests["questions"] = [];
@@ -7599,6 +7637,35 @@ async function thinkOnce(
 /** The tools the run may use now (Tool Gateway, scopes applied). */
 function listRunTools(deps: Pick<EngineDeps, "tools">, ctx: ToolContext): Promise<ToolDefinition[]> {
   return deps.tools ? deps.tools.list(ctx) : Promise.resolve([]);
+}
+
+/**
+ * Each call of our tools after `fromSeq`, from its `tool_call` step to its `tool_result`, on the database's clock: the
+ * gateway writes the one as the call starts and the other as it ends, whoever ran it (the bridge, the model's loop).
+ */
+async function bridgeToolSpans(db: Executor, runId: string, fromSeq: number): Promise<Span[]> {
+  const steps = await db
+    .select({
+      kind: schema.agentRunSteps.kind,
+      id: sql<string | null>`${schema.agentRunSteps.data}->>'toolUseId'`,
+      at: schema.agentRunSteps.createdAt,
+    })
+    .from(schema.agentRunSteps)
+    .where(
+      and(
+        eq(schema.agentRunSteps.runId, runId),
+        inArray(schema.agentRunSteps.kind, ["tool_call", "tool_result"]),
+        sql`${schema.agentRunSteps.seq} > ${fromSeq}`,
+      ),
+    )
+    .orderBy(schema.agentRunSteps.seq);
+  const started = new Map<string, number>();
+  return steps.flatMap(({ kind, id, at }) => {
+    if (!id) return [];
+    if (kind === "tool_call") started.set(id, at.getTime());
+    const from = kind === "tool_result" ? started.get(id) : undefined;
+    return from === undefined ? [] : [{ from, to: at.getTime() }];
+  });
 }
 
 /** The run's last step number (0 without steps). */
