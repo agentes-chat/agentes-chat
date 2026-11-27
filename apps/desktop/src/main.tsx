@@ -84,6 +84,19 @@ const store = new DesktopStore(host, {
     const values = { name: allowed.byName || orgName(home), tool: toolWords(i18n.t, allowed.tool) };
     void host.notify(i18n.t("desktop.tray.allowedTitle", values), i18n.t("desktop.tray.allowedBody")).catch(() => {});
   },
+  // Asked for from the apps by a person: always told, and the popover opens on the card where the person here answers.
+  onPickAsked: (home, pick) => {
+    if (host.window !== "popover") return;
+    const request = pick.requestId ? home.requests.find((r) => r.requestId === pick.requestId) : undefined;
+    const name = pick.byName || orgName(home);
+    const title = request
+      ? i18n.t("desktop.tray.notifTitle", { agent: request.agent.name, folder: baseName(request.path) })
+      : pick.agentName
+        ? i18n.t("desktop.tray.pickTitleAgent", { name, agent: pick.agentName })
+        : i18n.t("desktop.tray.pickTitle", { name });
+    void host.notify(title, request ? request.reason : i18n.t("desktop.tray.pickBody")).catch(() => {});
+    void host.showWindow("popover").catch(() => {});
+  },
 });
 store.start();
 

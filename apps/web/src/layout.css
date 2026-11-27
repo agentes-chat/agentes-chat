@@ -8970,9 +8970,10 @@ a.machine-row__name:hover {
   min-width: 0;
 }
 /* On a phone the app's download, the card's one button, takes its width; its note goes under it. A card's form with
-   one button (a field and Salvar) puts it under the field at the form's width. */
+   one button (a field and Salvar) puts it under the field at the form's width. So does Liberar uma pasta. */
 @media (max-width: 640px) {
   .machine-connect__release > .row > .ac-btn,
+  .machine-grant__ask > .ac-btn,
   .ac-card > form.row:not(:has(> .ac-btn ~ .ac-btn)) > .ac-btn--primary {
     flex: 1 1 100%;
   }
@@ -12986,15 +12987,12 @@ html[data-menu-overlay] .shell {
 /*
  * The sidebar's faces as tokens, so New agent's empty face is always the agents' own (ADR 0164): on the rail a step up
  * from the kit's small (24px), inside the rail's 40px tile with room for its badges; in the full list an agent's row
- * has a message's face (`--name-face`), 40 in a personal workspace's plain list (ADR 0159), 12px from its words.
+ * has a message's face (`--name-face`), in a team's workspace and a personal one alike (ADR 0159), 12px from its words.
  */
 .sidebar {
   --sidebar-rail-face: 28px;
   --sidebar-agent-face: var(--name-face);
   --sidebar-agent-gap: 12px;
-}
-.sidebar[data-personal] {
-  --sidebar-agent-face: 40px;
 }
 /* Faces on the rail (an agent at work's inside its orbit). */
 .sidebar__item > .ac-avatar--sm,
@@ -13046,16 +13044,6 @@ html[data-menu-overlay] .shell {
   .sidebar__item:has(> .ac-orbit + .sidebar__item-text > .sidebar__item-role)
   > :not(.ac-orbit, .sidebar__item-text) {
   align-self: center;
-}
-/* A face larger than a name's (the personal sidebar's 40px): the name and the line under it take the face's height, as
-   they do beside a 32px face (the name's capitals on its top, the line's baseline at its foot), the room between them
-   growing by what the face grows, instead of leaving the face's lower part bare. */
-.sidebar:not([data-rail="true"])
-  :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]):has(
-    > :is(.ac-avatar, .ac-orbit) + .sidebar__item-text > .sidebar__item-role
-  )
-  > .sidebar__item-text {
-  gap: calc(2px + var(--sidebar-agent-face) - var(--name-face));
 }
 /* An agent at work: its orbit reaches a few pixels past its face, inside the row's padding; the rings' box would count
    as overflow in the scrolling list. */
@@ -13627,11 +13615,10 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
 .sidebar:not([data-rail="true"]) .sidebar__section--group {
   margin-top: 8px;
 }
-/* A setor's header on its rows' column: its mark centred over the faces, its name 8 after it, the chevron right after
-   the name. */
+/* A setor's header on the channels' column: its mark where a channel's # is (the toggle's own 8, as a row's icon; the
+   faces' left edge too), its name 8 after it, where the channels' names start, the chevron right after the name. */
 .sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-toggle {
   gap: 0;
-  padding-left: calc(10px + (var(--sidebar-agent-face) - 16px) / 2);
 }
 .sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
   flex: none;
@@ -13965,7 +13952,7 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
 }
 /*
  * A personal workspace's agents are its list (ADR 0159), with no header between them, so each row breathes as a
- * conversation's does: a face as tall as the name and its role (40, the name's capitals on its top), 4px between rows.
+ * conversation's does: a team's face (`--sidebar-agent-face`), 8 above and below it, 4px between rows.
  */
 .sidebar:not([data-rail="true"]) .sidebar__agents-plain {
   gap: 4px;
@@ -13975,13 +13962,19 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]) {
   padding-block: 8px;
 }
-.sidebar:not([data-rail="true"])
-  .sidebar__agents-plain
-  :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand])
-  > .ac-avatar--sm {
-  width: var(--sidebar-agent-face);
-  height: var(--sidebar-agent-face);
-  font-size: 15px;
+/*
+ * A personal workspace's group conversations (ADR 0159, amendment of 2026-11-26): their face (`GroupFace`) the agents'
+ * size, on the rail the rail's, their name as far from it as an agent's, the row an agent row's height.
+ */
+.sidebar__group-row {
+  --group-face: var(--sidebar-agent-face);
+}
+.sidebar[data-rail="true"] .sidebar__group-row {
+  --group-face: var(--sidebar-rail-face);
+}
+.sidebar:not([data-rail="true"]) .sidebar__item.sidebar__group-row {
+  gap: var(--sidebar-agent-gap);
+  padding-block: 8px;
 }
 /*
  * New agent under the agents (ADR 0159, ADR 0164): an empty face the exact box of the agents' faces in this sidebar

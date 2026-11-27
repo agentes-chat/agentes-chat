@@ -8,6 +8,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   or,
   rowsOf,
   type SQL,
@@ -70,6 +71,84 @@ const { channels, channelMembers, agents, organizationMembers, organizations, us
 export type Channel = typeof channels.$inferSelect;
 
 export const CHANNEL_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]{0,79}$/;
+
+/** The longest a channel's name may be, in either form. */
+export const CHANNEL_NAME_MAX = 80;
+
+/**
+ * A group conversation's name in a personal workspace (ADR 0159, amendment of 2026-11-26): what the person wrote, as
+ * written ("Viagem pra Lisboa"), its runs of spaces folded to one and a leading # dropped; null when nothing is left,
+ * it is too long, holds a control character or starts with `dm-` (the direct conversations' prefix).
+ */
+export function personalChannelName(raw: string): string | null {
+  const name = raw
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^#+\s*/, "");
+  if (!name || name.length > CHANNEL_NAME_MAX) return null;
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this refuses
+  if (/[\u0000-\u001f\u007f]/.test(name)) return null;
+  if (name.toLowerCase().startsWith("dm-")) return null;
+  return name;
+}
+
+/** A channel's name as someone typed it ("#Vendas", " viagem pra lisboa "): no leading #, no outer space. */
+export const typedChannelName = (raw: string) => raw.trim().replace(/^#/, "").trim();
+
+/** A name as it is compared, as the apps' `matchesName` does: NFKC, no format characters, spaces folded, lower case. */
+const nameForm = (value: string) =>
+  value
+    .normalize("NFKC")
+    .replace(/\p{Cf}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+/**
+ * Whether `name` is the channel `typed` names, in any case: a personal workspace's names keep the case they were
+ * written in (ADR 0159), while an agent or a person may write them in another.
+ */
+export const namesChannel = (name: string, typed: string) => nameForm(name) === nameForm(typedChannelName(typed));
+
+/** `namesChannel` in SQL, on `channels.name`. */
+export const channelNameIs = (typed: string) => sql`lower(${channels.name}) = lower(${typedChannelName(typed)})`;
+
+/**
+ * The name a channel is created or renamed to: a team's is lower case, digits, - or _ (`CHANNEL_NAME_PATTERN`); a
+ * personal workspace's group conversation keeps what the person wrote (`personalChannelName`).
+ */
+export async function channelNameFor(db: Database, orgId: string, raw: string): Promise<string> {
+  if (await isPersonalWorkspace(db, orgId)) {
+    const name = personalChannelName(raw);
+    if (!name) throw new ValidationError("name: up to 80 characters, on one line", "channel.name_invalid");
+    return name;
+  }
+  const name = raw.trim().toLowerCase();
+  if (name.startsWith("dm-")) throw new ValidationError("Channel names can't start with dm-");
+  if (!CHANNEL_NAME_PATTERN.test(name)) {
+    throw new ValidationError("channel name: lower-case letters, digits, - or _ (max 80)");
+  }
+  return name;
+}
+
+/**
+ * Refuses a name another channel of the workspace already has in any case ("Casa" beside "casa"): names that differ
+ * only in case would read as the same conversation. `except`: the channel being renamed.
+ */
+export async function requireChannelNameFree(db: Database, orgId: string, name: string, except?: string) {
+  const [taken] = await db
+    .select({ id: channels.id })
+    .from(channels)
+    .where(
+      and(
+        eq(channels.orgId, orgId),
+        sql`lower(${channels.name}) = lower(${name})`,
+        except ? ne(channels.id, except) : undefined,
+      ),
+    )
+    .limit(1);
+  if (taken) throw new ConflictError(`#${name} already exists`);
+}
 
 /** The most departments or roles a channel is limited to (ADR 0125), as for an agent's audience. */
 export const CHANNEL_ROLES_MAX = 100;
@@ -202,11 +281,8 @@ export async function createChannel(
   await requirePermission(db, actorId, orgId, "create_channels");
   const groupId = input.groupId ?? null;
   if (groupId) await requireSectorInOrg(db, orgId, groupId);
-  const name = input.name.trim().toLowerCase();
-  if (name.startsWith("dm-")) throw new ValidationError("Channel names can't start with dm-");
-  if (!CHANNEL_NAME_PATTERN.test(name)) {
-    throw new ValidationError("channel name: lower-case letters, digits, - or _ (max 80)");
-  }
+  const name = await channelNameFor(db, orgId, input.name);
+  await requireChannelNameFree(db, orgId, name);
   const visibility = input.visibility ?? "public";
   const audienceRoleIds = await channelRoleIds(db, orgId, visibility, input.audienceRoleIds);
   const members = input.members ?? [];
@@ -307,7 +383,16 @@ export interface ChannelListItem {
    * shows); null when I'm not a member (I can't read it) or it's empty.
    */
   lastMessage: ChannelLastMessage | null;
+  /**
+   * Its first agents, in the order they joined (at most `CHANNEL_FACES`), and how many it has: a personal workspace's
+   * group conversation shows them as its face (ADR 0159, amendment of 2026-11-26).
+   */
+  agentIds: string[];
+  agentCount: number;
 }
+
+/** The most agents a channel in the list names (`ChannelListItem.agentIds`): a group's face shows four at most. */
+export const CHANNEL_FACES = 4;
 
 interface ChannelListRow {
   id: string;
@@ -339,6 +424,8 @@ interface ChannelListRow {
   can_post: boolean;
   can_call: boolean;
   can_manage: boolean;
+  agent_ids: string[] | string | null;
+  agent_count: number | string | null;
 }
 
 const asDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -378,7 +465,8 @@ export async function listChannels(db: Database, userId: string, orgId: string):
         ${channelCanSql(orgId, userId, "post")} as can_post,
         ${channelCanSql(orgId, userId, "talk_to_agents")} as can_call,
         (${maySql(sql`${orgId}::uuid`, sql`${userId}::text`, "manage_channels")} or (cm.id is not null
-          and (c.created_by_user_id = ${userId} or ${channelCanSql(orgId, userId, "manage_channels")}))) as can_manage
+          and (c.created_by_user_id = ${userId} or ${channelCanSql(orgId, userId, "manage_channels")}))) as can_manage,
+        ag.ids as agent_ids, ag.n as agent_count
       from ${channels} c
       left join ${channelMembers} cm on cm.org_id = c.org_id and cm.channel_id = c.id and cm.user_id = ${userId}
       left join ${schema.channelReads} cr on cr.channel_id = c.id and cr.user_id = ${userId}
@@ -403,6 +491,15 @@ export async function listChannels(db: Database, userId: string, orgId: string):
           (select count(*)::int from (select 1 from ${schema.messages} u
             where ${unread} and ${userId} = any(u.mentioned_user_ids) limit ${MAX_CHANNEL_UNREAD}) y) as m
       ) un on true
+      left join lateral (
+        select
+          (select coalesce(array_agg(f.agent_id::text order by f.created_at, f.agent_id), '{}') from (
+            select a.agent_id, a.created_at from ${channelMembers} a
+            where a.org_id = c.org_id and a.channel_id = c.id and a.agent_id is not null
+            order by a.created_at, a.agent_id limit ${CHANNEL_FACES}) f) as ids,
+          (select count(*)::int from ${channelMembers} a
+            where a.org_id = c.org_id and a.channel_id = c.id and a.agent_id is not null) as n
+      ) ag on true
       where c.org_id = ${orgId}::uuid and c.archived_at is null and c.kind = 'channel'
         and (c.visibility = 'public' or cm.id is not null or ${channelAudienceSql("c", sql`${userId}`)}
           or ${maySql(sql`${orgId}::uuid`, sql`${userId}::text`, "administrator")})
@@ -431,6 +528,8 @@ export async function listChannels(db: Database, userId: string, orgId: string):
       lastReadAt: r.last_read_at ? asDate(r.last_read_at) : null,
       muted: r.muted === true,
       can: { post: r.can_post === true, callAgents: r.can_call === true, manage: r.can_manage === true },
+      agentIds: uuidArray(r.agent_ids),
+      agentCount: Number(r.agent_count ?? 0),
       lastMessage:
         r.last_id && r.last_at && r.last_author_type
           ? {

@@ -1,5 +1,5 @@
 {
-  "id": "ee0f453c-4e23-40df-9ff3-01b80d33a5f2",
+  "id": "2377b104-6654-4476-8ce0-a05aba79bab0",
   "prevId": "69364a6a-be33-44b0-87b5-6c5c17fb79b5",
   "version": "7",
   "dialect": "postgresql",
@@ -12591,6 +12591,13 @@
           "notNull": true,
           "default": "''"
         },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
         "runner_version": {
           "name": "runner_version",
           "type": "text",
@@ -13712,12 +13719,6 @@
         "moving_at": {
           "name": "moving_at",
           "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "maintenance": {
-          "name": "maintenance",
-          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

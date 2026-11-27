@@ -592,6 +592,8 @@ export const machineDeviceCodes = pgTable(
     os: text().notNull().default("other"),
     arch: text().notNull().default(""),
     hostname: text().notNull().default(""),
+    /** Its maker's model as the runner read it ("MacBook Pro"); empty from older runners. Names it on confirm. */
+    model: text().notNull().default(""),
     runnerVersion: text().notNull().default(""),
     /** Optional extras a runner may send (copied to the machine row). */
     protocol: integer(),

@@ -765,6 +765,11 @@ export const Channel = z
     muted: z.boolean().optional().openapi({
       description: "Channel list only: you muted it, so it never looks unread (`PUT`/`DELETE …/mute`).",
     }),
+    agentIds: z.array(z.uuid()).optional().openapi({
+      description:
+        "Channel list only: its first agents, in the order they joined (at most 4); a personal workspace's group conversation shows them as its face (ADR 0159).",
+    }),
+    agentCount: z.number().int().optional().openapi({ description: "Channel list only: how many agents it has." }),
     lastMessage: z
       .object({
         id: z.uuid(),

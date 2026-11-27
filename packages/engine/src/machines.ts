@@ -40,7 +40,7 @@ import { can, requireActiveMembership, requirePermission } from "./organizations
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND } from "./right-hand";
 import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
-import { runnerUpdateOf } from "./runner-update";
+import { folderPickable, runnerUpdateOf } from "./runner-update";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -721,6 +721,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
        * (`CLI_INSTALL_PROTOCOL`); never the workspace's own computer, which installs them itself.
        */
       cliInstall: !managed && m.protocol >= CLI_INSTALL_PROTOCOL,
+      /** A folder can be asked for from here: the agentes.chat app there shows who asks and picks it (`folderPickable`). */
+      folderPick: folderPickable(m),
       /** The coding CLIs there that can't start, with their own error line; admins and the pairer only. */
       cliErrors: (admin || mine) && !managed ? (m.executors?.broken ?? null) : null,
       /**

@@ -339,8 +339,11 @@ export function confirmAction({
   ]);
 }
 
-/** "Prefiro no Terminal" under a one-click button (the web's fold): the same switch as a command, shown on a tap. */
-export function TerminalFallback({ command }: { command: string | null }) {
+/**
+ * "Prefiro no Terminal" under a one-click button (the web's fold): the same switch as a command, shown on a tap.
+ * `label` names the fold where the command is the way without the app ("Sem o app lá? Use o Terminal").
+ */
+export function TerminalFallback({ command, label }: { command: string | null; label?: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   if (!command) return null;
@@ -348,7 +351,11 @@ export function TerminalFallback({ command }: { command: string | null }) {
     <>
       <Gap />
       <GroupedList>
-        <GroupedRow icon="code" label={t("machines.access.preferTerminal")} onPress={() => setOpen((o) => !o)} />
+        <GroupedRow
+          icon="code"
+          label={label ?? t("machines.access.preferTerminal")}
+          onPress={() => setOpen((o) => !o)}
+        />
       </GroupedList>
       {open ? (
         <>

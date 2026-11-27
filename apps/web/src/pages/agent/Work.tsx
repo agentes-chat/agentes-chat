@@ -351,8 +351,7 @@ export function WorkCard({
 
 /**
  * The agent may use apps on its desktop, and its Linux computer says what that still lacks there (ADR 0062):
- * the computer's own words, with the command in them to copy. Mac and Windows computers never have it, which
- * their own page says.
+ * the computer's own words, with the command in them to copy. Mac and Windows computers never have it.
  */
 function DesktopUseNote({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();

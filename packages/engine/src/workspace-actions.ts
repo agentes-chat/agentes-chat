@@ -17,9 +17,12 @@ import { setChannelOverride } from "./channel-permissions";
 import {
   addChannelMember,
   archiveChannel,
+  channelNameIs,
   listChannels,
+  namesChannel,
   removeChannelMember,
   requireChannelAccess,
+  typedChannelName,
   unarchiveChannel,
 } from "./channels";
 import { findMember } from "./chat-tools";
@@ -247,8 +250,8 @@ async function personNamed(ctx: Pick<ToolContext, "db" | "orgId">, who: string) 
 
 /** A channel the person sees, by name. */
 async function channelNamed(ctx: Pick<ToolContext, "db" | "orgId">, person: string, name: string) {
-  const wanted = name.trim().replace(/^#/, "").toLowerCase();
-  const channel = (await listChannels(ctx.db, person, ctx.orgId)).find((c) => c.name === wanted);
+  const wanted = typedChannelName(name);
+  const channel = (await listChannels(ctx.db, person, ctx.orgId)).find((c) => namesChannel(c.name, wanted));
   return channel ?? `They see no channel #${wanted}.`;
 }
 
@@ -1151,7 +1154,7 @@ const archiveChannelAction: WorkspaceAction = {
   mode: "now",
   needs: "manage_channels",
   async resolve(ctx, person, input) {
-    const name = str(input.channel).replace(/^#/, "").toLowerCase();
+    const name = typedChannelName(str(input.channel));
     if (input.back === true) {
       const [row] = await ctx.db
         .select({
@@ -1165,7 +1168,7 @@ const archiveChannelAction: WorkspaceAction = {
           and(
             eq(channels.orgId, ctx.orgId),
             eq(channels.kind, "channel"),
-            eq(channels.name, name),
+            channelNameIs(name),
             isNotNull(channels.archivedAt),
             isNull(channels.deletedAt),
           ),
