@@ -380,7 +380,7 @@ export function cronToRule(cron: string, timezone: string): ScheduleRule | null 
   if (!/^\d+(,\d+)*$/.test(h)) return null;
   const times = h.split(",").map((x) => `${pad(Number(x))}:${pad(minute)}`);
   if (mon !== "*") {
-    if (!/^\d+(,\d+)*$/.test(mon) || !/^\d+(,\d+)*$/.test(dom)) return null;
+    if (!/^\d+(,\d+)*$/.test(mon) || !/^\d+(,\d+)*$/.test(dom) || byWeekday) return null;
     return {
       freq: "yearly",
       byMonth: mon.split(",").map(Number),
