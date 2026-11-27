@@ -2,7 +2,7 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import { drainOutbox, HOW_YOU_WORK, postPersonMessage, type ToolContext, type ToolSource } from "../src";
-import { CUT_AT_OUTPUT_LIMIT } from "../src/executor";
+import { CONTINUE_AFTER_CUT, CUT_AT_OUTPUT_LIMIT } from "../src/executor";
 import { jsSyntaxError } from "../src/js-syntax";
 import { type Fixture, setup } from "./fixtures";
 import { connectedComputer } from "./machine-fixtures";
@@ -127,6 +127,24 @@ describe("a call cut at the output limit", () => {
     expect(JSON.stringify(second.messages.at(-1)?.content)).toContain(CUT_AT_OUTPUT_LIMIT);
     const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
     expect(posted.map((m) => m.body)).toEqual(["Salvei em partes."]);
+  });
+});
+
+describe("a reply cut at the output limit", () => {
+  test("goes on in the next call, and its parts are posted as one reply", async () => {
+    f = await setup({
+      reply: (_req, call) =>
+        call === 1 ? { chunks: ["Primeira metade, "], stopReason: "max_tokens" } : { chunks: ["segunda metade."] },
+    });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev escreve o texto todo",
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    const second = f.provider.calls[1]?.request as ModelRequest;
+    expect(second.messages.at(-1)?.content).toBe(CONTINUE_AFTER_CUT);
+    const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
+    expect(posted.map((m) => m.body)).toEqual(["Primeira metade, segunda metade."]);
   });
 });
 
