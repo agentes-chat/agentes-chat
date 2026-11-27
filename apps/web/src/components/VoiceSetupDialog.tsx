@@ -179,35 +179,39 @@ export function VoiceSetupCardView({ card }: { card: VoiceSetupCard }) {
   }
   const fits = local.data?.fit === "fits" && local.data.status.state === "off";
   const installing = settings?.speechState === "installing";
-  const action = installing ? undefined : isOwner ? (
-    fits ? (
+  // The owner's button waits for what fits here, so "Choose how" never flashes before "Download".
+  const action =
+    installing || (isOwner && local.isPending) ? undefined : isOwner ? (
+      fits ? (
+        <EventPillAction
+          primary
+          disabled={install.isPending}
+          onClick={() => install.mutate(undefined, { onError: (e) => toast.show(errorText(t, e), "error") })}
+        >
+          {t("voice.offer.download", { size: formatBytes(i18n.language, local.data?.sizeBytes ?? 0) })}
+        </EventPillAction>
+      ) : (
+        <EventPillAction primary onClick={() => setDialog(true)}>
+          {t("voice.offer.choose")}
+        </EventPillAction>
+      )
+    ) : owner ? (
       <EventPillAction
         primary
-        onClick={() => install.mutate(undefined, { onError: (e) => toast.show(errorText(t, e), "error") })}
+        disabled={ask.isPending}
+        onClick={() =>
+          ask.mutate(
+            { what: "voice" },
+            {
+              onSuccess: () => toast.show(t("voice.setup.asked", { name: owner.name })),
+              onError: (e) => toast.show(errorText(t, e), "error"),
+            },
+          )
+        }
       >
-        {t("voice.offer.download", { size: formatBytes(i18n.language, local.data?.sizeBytes ?? 0) })}
+        {t("voice.setup.ask", { name: owner.name })}
       </EventPillAction>
-    ) : (
-      <EventPillAction primary onClick={() => setDialog(true)}>
-        {t("voice.offer.choose")}
-      </EventPillAction>
-    )
-  ) : owner ? (
-    <EventPillAction
-      primary
-      onClick={() =>
-        ask.mutate(
-          { what: "voice" },
-          {
-            onSuccess: () => toast.show(t("voice.setup.asked", { name: owner.name })),
-            onError: (e) => toast.show(errorText(t, e), "error"),
-          },
-        )
-      }
-    >
-      {t("voice.setup.ask", { name: owner.name })}
-    </EventPillAction>
-  ) : undefined;
+    ) : undefined;
   return (
     <>
       <RequestOpen
