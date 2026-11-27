@@ -19,6 +19,7 @@ import {
   revokeConnection,
   saveCustomTools,
   setOwnOAuthClient,
+  settleConnectCards,
   ValidationError,
   withComposio,
 } from "@agenteschat/engine";
@@ -190,6 +191,7 @@ export function customConnectorRoutes(deps: AppDeps) {
     judge: deps.extras?.context?.judge,
     blobs: adapters.platformBlobs,
     log: deps.log,
+    onConnected: (connection) => void settleConnectCards({ db, pubsub: adapters.pubsub }, connection),
   };
 
   // A server's icon, for the org's members.

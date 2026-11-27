@@ -5739,7 +5739,9 @@ export type AdminAsk =
   | { what: "create_agents" }
   | { what: "webhook"; provider: "github" | "sentry" }
   /** The server's owner, to choose what turns voice into text. */
-  | { what: "voice" };
+  | { what: "voice" }
+  /** Who manages connectors, to connect what an agent's Connect card (its message) names. */
+  | { what: "connector"; messageId: string };
 
 /** A switch on a computer (`RunnerTools`' keys): `POST …/access/allow` turns one on, `…/access/reduce` off. */
 export type MachineTool = MachineToolName | "browser" | "desktop" | "terminal";

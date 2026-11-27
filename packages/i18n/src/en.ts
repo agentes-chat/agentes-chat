@@ -4400,6 +4400,14 @@ export const en = {
       title: "Connect {{name}}",
       mcp: "Add an MCP server",
       adminOnly: "An admin connects it",
+      /** Who may connect it for the team, for a reader who may not: one or more names. */
+      whoCan: "Who connects it: {{names}}",
+      /** How a server by address signs in, under its card. */
+      signIn_oauth: "Signs in with an account",
+      signIn_key: "Asks for an API key",
+      signIn_open: "No sign-in needed",
+      /** The OAuth scopes it asks, comma-separated as the server names them. */
+      scopes: "Asks for: {{scopes}}",
     },
     invite: {
       title_one: "Invite {{count}} person",
@@ -6080,6 +6088,7 @@ export const en = {
       adminAskCreate: "<b>{{name}}</b> asks to be able to create agents",
       adminAskWebhook: "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines",
       adminAskVoice: "<b>{{name}}</b> asks you to turn on voice messages",
+      adminAskConnector: "<b>{{name}}</b> asks you to connect {{service}}",
       invitationAccepted: "<b>{{name}}</b> accepted your invitation and joined {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> accepted your invitation",
       reaction_one: "<b>{{names}}</b> reacted to your message",

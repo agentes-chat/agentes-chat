@@ -131,6 +131,7 @@ import {
   outboundFetch,
   platformCapJudge,
   prepareAgentCode,
+  probeMcpServer,
   publishUserEvent,
   queueBudgetEmail,
   type ResolveHost,
@@ -147,6 +148,7 @@ import {
   type SkillDeps,
   type StorageDeps,
   setLiveExporter,
+  settleConnectCards,
   setWorkOrgCap,
   shareSavedFile,
   smallModelFor,
@@ -338,6 +340,8 @@ export function buildEngine(o: EngineOptions) {
     http: o.http,
     connect: withComposio(o.mcpConnect ?? connectOverHttp, composio),
     composio,
+    onConnected: (connection: Parameters<typeof settleConnectCards>[1]) =>
+      void settleConnectCards({ db, pubsub: adapters.pubsub }, connection),
   };
   const storage: StorageDeps = {
     db,
@@ -533,6 +537,7 @@ export function buildEngine(o: EngineOptions) {
         context,
         catalog: { oauthApps: connectorDeps.oauthApps, mail: adapters.mail, composio },
         server: { publicUrl: config.PUBLIC_URL, secret: config.AGENTES_SECRET },
+        probe: (url) => probeMcpServer({ ...connectorDeps, resolveHost: o.resolveHost }, url),
       }),
       createIssueToolSource(artifacts),
       // Dashboards and widgets (ADR 0135 §10): boards for the person, and a widget run's only voice (`update_widget`).

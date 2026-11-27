@@ -15,6 +15,8 @@ import {
   cardInstallAgent,
   cardInstallOf,
   connectAppDone,
+  connectAppItem,
+  connectSignInLine,
   draftLevels,
   draftMailLevels,
   installSkillDone,
@@ -258,6 +260,43 @@ test("connect-an-app and invite cards: read from the message, a plain http addre
   expect(connectAppDone(linear, [{ def: { id: "linear" } as never, server: null, needsReconnect: true }])).toBe(false);
   expect(connectAppDone(app, [{ ...server("https://mcp.acme.dev/mcp"), needsReconnect: true }])).toBe(false);
   expect(connectAppDone({ kind: "connect_app", forUserId: null, why: "" }, [server("https://x.dev")])).toBe(false);
+
+  // How it signs in, what it asks and who may connect it, read from the card; the connection that settled it wins.
+  const asked = actionCardOf({
+    actionCard: {
+      kind: "connect_app",
+      forUserId: "u1",
+      params: {
+        url: "https://mcp.acme.dev/mcp",
+        signIn: "oauth",
+        scopes: ["read", 3, "write"],
+        deciderIds: ["u2"],
+        why: "",
+      },
+      connectionId: "c2",
+    },
+  });
+  expect(asked).toEqual({
+    kind: "connect_app",
+    forUserId: "u1",
+    url: "https://mcp.acme.dev/mcp",
+    signIn: "oauth",
+    scopes: ["read", "write"],
+    deciderIds: ["u2"],
+    why: "",
+    connectionId: "c2",
+  });
+  if (asked?.kind !== "connect_app") throw new Error("not a connect card");
+  const words = ((key: string, o?: Record<string, string>) =>
+    `${key}${o ? JSON.stringify(o) : ""}`) as unknown as TFunction;
+  expect(connectSignInLine(words, asked)).toBe(
+    'actionCard.connect_app.signIn_oauth · actionCard.connect_app.scopes{"scopes":"read, write"}',
+  );
+  expect(connectSignInLine(words, app)).toBe("");
+  const first = { id: "c1", ...server("https://mcp.acme.dev/mcp") };
+  const second = { id: "c2", ...server("https://mcp.acme.dev/mcp") };
+  expect(connectAppItem(asked, [first, second])).toBe(second);
+  expect(connectAppItem(app, [first, second])).toBe(first);
 
   const invite = actionCardOf({
     actionCard: { kind: "invite_people", forUserId: "u1", params: { emails: ["ana@x.com", 3], why: "Design" } },

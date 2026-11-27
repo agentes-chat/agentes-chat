@@ -3994,7 +3994,12 @@
     "connect_app": {
       "title": "{{name}} bağla",
       "mcp": "Bir MCP sunucusu ekle",
-      "adminOnly": "Bir yönetici bağlar"
+      "adminOnly": "Bir yönetici bağlar",
+      "whoCan": "Kim bağlar: {{names}}",
+      "signIn_oauth": "Bir hesapla oturum açar",
+      "signIn_key": "Bir API anahtarı ister",
+      "signIn_open": "Oturum açma gerekmez",
+      "scopes": "İstediği izinler: {{scopes}}"
     },
     "invite": {
       "title_one": "{{count}} kişiyi davet et",
@@ -5560,6 +5565,7 @@
       "adminAskCreate": "<b>{{name}}</b>, ajan oluşturabilmek istiyor",
       "adminAskWebhook": "<b>{{name}}</b>, rutinler için {{service}} webhook'unu kurmanızı istiyor",
       "adminAskVoice": "<b>{{name}}</b>, sesli mesajları açmanızı istiyor",
+      "adminAskConnector": "<b>{{name}}</b>, {{service}} bağlamanı istiyor",
       "invitationAccepted": "<b>{{name}}</b> davetinizi kabul etti ve {{org}} çalışma alanına katıldı",
       "invitationAcceptedAny": "<b>{{name}}</b> davetinizi kabul etti",
       "reaction_one": "<b>{{names}}</b> mesajınıza tepki verdi",

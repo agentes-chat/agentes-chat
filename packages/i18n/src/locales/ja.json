@@ -3845,7 +3845,12 @@
     "connect_app": {
       "title": "{{name}}を接続",
       "mcp": "MCPサーバーを追加",
-      "adminOnly": "管理者が接続します"
+      "adminOnly": "管理者が接続します",
+      "whoCan": "接続できる人: {{names}}",
+      "signIn_oauth": "アカウントでサインイン",
+      "signIn_key": "API キーが必要",
+      "signIn_open": "サインイン不要",
+      "scopes": "求める権限: {{scopes}}"
     },
     "invite": {
       "title_other": "{{count}}人を招待",
@@ -5352,6 +5357,7 @@
       "adminAskCreate": "<b>{{name}}</b> がエージェントを作成できるよう求めています",
       "adminAskWebhook": "<b>{{name}}</b> がルーティン用の {{service}} Webhook の設定を求めています",
       "adminAskVoice": "<b>{{name}}</b> がボイスメッセージをオンにするよう求めています",
+      "adminAskConnector": "<b>{{name}}</b>さんが {{service}} の接続を依頼しています",
       "invitationAccepted": "<b>{{name}}</b>があなたの招待を受けて{{org}}に参加しました",
       "invitationAcceptedAny": "<b>{{name}}</b>があなたの招待を受けました",
       "reaction_other": "<b>{{names}}</b>があなたのメッセージにリアクションしました",

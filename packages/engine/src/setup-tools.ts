@@ -23,6 +23,7 @@ import { createChannel, listChannels, namesChannel, typedChannelName } from "./c
 import { findMember } from "./chat-tools";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorListing, type ServerCatalog } from "./connectors/listing";
+import type { ServerProbe } from "./connectors/oauth-mcp";
 import { MCP_PRESETS, presetForServer } from "./connectors/presets";
 import { CONNECTOR_NAMES } from "./connectors/sites";
 import { cardPlace, NO_PERSON_READS } from "./consultations";
@@ -38,6 +39,7 @@ import type { ContextDeps } from "./context/summaries";
 import { publishMessageCreated } from "./events";
 import { editDistance, firstOf } from "./format";
 import { insertMessage, messageView, parseMentionHandles } from "./messages";
+import { adminsOf } from "./notification-producers";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
 import { personBehindCall, relayedRefusal, relayedRequest } from "./requester";
@@ -204,12 +206,24 @@ export interface ActionCard {
 
 /**
  * "Conectar Linear" or "Adicionar MCP": its button opens the app's own connect dialog, at the catalog entry (`connector`)
- * or at "connect by address" with `url` filled in (none: the person types it). Done from live data: a connection to it.
+ * or at "connect by address" with `url` filled in (none: the person types it). A server by address says how it signs
+ * in and the scopes it asks, when it answered in time. Done from live data (a connection to it); `connectedAt` and
+ * `connectionId` once a connection settled it (`settleConnectCards`), which woke the agent.
  */
 export interface ConnectAppCard {
   kind: "connect_app";
   forUserId: string | null;
-  params: { connector?: string; url?: string; why: string };
+  params: {
+    connector?: string;
+    url?: string;
+    signIn?: "oauth" | "key" | "open";
+    scopes?: string[];
+    /** Up to three people who may connect it for the team, when the person who asked may not. */
+    deciderIds?: string[];
+    why: string;
+  };
+  connectedAt?: string;
+  connectionId?: string;
 }
 
 /** "Convidar pessoas": its button opens the app's invite dialog with the addresses filled in, as members. */
@@ -358,6 +372,23 @@ const MAILBOX_NAMES = new Set([
 ]);
 const DATABASE_NAMES = new Set(["database", "db", "postgres", "postgresql", "banco", "bancodedados"]);
 
+/** How long a Connect card waits for its server to say how it signs in. */
+export const CARD_PROBE_MS = 2_500;
+
+/**
+ * What a Connect card says of a server by address: how it signs in, and the OAuth scopes it asks (at most 12). Null
+ * when it didn't answer in `CARD_PROBE_MS` or couldn't be read: its dialog finds out.
+ */
+async function signInOf(probe: (url: string) => Promise<ServerProbe>, url: string) {
+  const answer = await Promise.race([
+    probe(url).catch(() => null),
+    new Promise<null>((done) => setTimeout(() => done(null), CARD_PROBE_MS)),
+  ]);
+  if (!answer) return null;
+  if (answer.kind === "oauth") return { signIn: "oauth" as const, scopes: answer.scopes.slice(0, 12) };
+  return { signIn: answer.kind === "open" ? ("open" as const) : ("key" as const) };
+}
+
 /** An MCP server's address as a card may carry it: https, with no user or password in it. */
 export function mcpAddress(raw: string): string | null {
   try {
@@ -465,6 +496,8 @@ export function createSetupToolSource(deps: {
   catalog?: ServerCatalog;
   /** The server's address and secret, for the invitations the right hand's actions send. */
   server?: ServerLinks;
+  /** Asks an MCP server by address how it signs in (`probeMcpServer`), for its Connect card. */
+  probe?: (url: string) => Promise<ServerProbe>;
 }): ToolSource {
   const tools: ToolDefinition[] = [
     {
@@ -996,6 +1029,8 @@ export function createSetupToolSource(deps: {
               isError: true,
             };
           }
+          // How it signs in and what it asks, read while the rest is checked: a server slow to answer only loses it.
+          const signIn = url && !preset && deps.probe ? signInOf(deps.probe, url) : Promise.resolve(null);
           const at = await cardPlace(ctx);
           if (!at) return NOBODY_READS;
           const forUserId = await personBehindCall(ctx);
@@ -1015,10 +1050,18 @@ export function createSetupToolSource(deps: {
           }
           const full = await cardsLeft(ctx, true);
           if (full) return full;
+          // Who may connect it for the team, named on the card for whoever can't (they ask them from there).
+          const deciders = acts === "person" ? [] : (await adminsOf(ctx, ctx.orgId, "manage_connectors")).slice(0, 3);
           const card: ConnectAppCard = {
             kind: "connect_app",
             forUserId,
-            params: { ...(known ? { connector: known.id } : {}), ...(url && !preset ? { url } : {}), why },
+            params: {
+              ...(known ? { connector: known.id } : {}),
+              ...(url && !preset ? { url } : {}),
+              ...((await signIn) ?? {}),
+              ...(deciders.length ? { deciderIds: deciders } : {}),
+              why,
+            },
           };
           const name = known?.label ?? (url ? new URL(url).host : null);
           const message = await insertMessage(ctx.db, {
@@ -1030,7 +1073,7 @@ export function createSetupToolSource(deps: {
           });
           if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(message));
           return {
-            content: `Posted the card to connect ${name ?? "an MCP server"}: a person signs in or adds its key in the app's dialog, then picks its tools and which agents use it.${acts === "person" ? "" : own ? " The person who asked connects it as their own: their agents use it when they ask, in their own conversation with them. Connecting it for the whole team is an admin's." : " The person who asked can't connect apps: an admin here does it from the card. Say so, and offer to ask one."} Don't ask for keys or tokens here, and don't say it's connected until you can use its tools.`,
+            content: `Posted the card to connect ${name ?? "an MCP server"}: a person signs in or adds its key in the app's dialog, then picks its tools and which agents use it. Once it is connected you get a notice here: go on then with what needs it.${acts === "person" ? "" : own ? " The person who asked connects it as their own: their agents use it when they ask, in their own conversation with them. Connecting it for the whole team is an admin's." : " The person who asked can't connect apps: an admin here does it from the card. Say so, and offer to ask one."} Don't ask for keys or tokens here, and don't say it's connected until you can use its tools.`,
             data: { actionCard: { messageId: message.id } },
           };
         } catch (error) {

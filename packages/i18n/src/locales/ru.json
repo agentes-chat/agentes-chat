@@ -4308,7 +4308,12 @@
     "connect_app": {
       "title": "Подключить {{name}}",
       "mcp": "Добавить MCP-сервер",
-      "adminOnly": "Подключает администратор"
+      "adminOnly": "Подключает администратор",
+      "whoCan": "Кто подключает: {{names}}",
+      "signIn_oauth": "Вход через аккаунт",
+      "signIn_key": "Просит ключ API",
+      "signIn_open": "Вход не нужен",
+      "scopes": "Запрашивает: {{scopes}}"
     },
     "invite": {
       "title_one": "Пригласить {{count}} человека",
@@ -6001,6 +6006,7 @@
       "adminAskCreate": "<b>{{name}}</b> просит разрешить создавать агентов",
       "adminAskWebhook": "<b>{{name}}</b> просит настроить вебхук {{service}} для рутин",
       "adminAskVoice": "<b>{{name}}</b> просит включить голосовые сообщения",
+      "adminAskConnector": "<b>{{name}}</b> просит тебя подключить {{service}}",
       "invitationAccepted": "<b>{{name}}</b> принял(а) ваше приглашение и вступил(а) в {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> принял(а) ваше приглашение",
       "reaction_one": "<b>{{names}}</b> отреагировал(а) на ваше сообщение",

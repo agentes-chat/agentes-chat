@@ -21,7 +21,8 @@ import {
   agentProposalEnd,
   type ConnectAppCard,
   connectAiDone,
-  connectAppDone,
+  connectAppItem,
+  connectSignInLine,
   type InstallSkillCard,
   type InviteCard,
   installSkillDone,
@@ -37,7 +38,7 @@ import {
 } from "@agenteschat/client/lib/action-cards";
 import { delegateUndoLine } from "@agenteschat/client/lib/approval-words";
 import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
-import { connectedItems, itemName, personalServesAgents } from "@agenteschat/client/lib/connected";
+import { connectedItems, connectedSummary, itemName, personalServesAgents } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames, whenAt } from "@agenteschat/client/lib/format";
@@ -54,6 +55,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConnectedById } from "@/components/AccessLevels";
+import { AskAdminButton } from "@/components/AdminAsk";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
@@ -146,7 +148,7 @@ export function ActionCard({ message }: { message: Message }) {
   if (card.kind === "stretch_paused") return <StretchCardView message={message} card={card} />;
   if (card.kind === "usage_paused") return <UsagePauseCardView message={message} card={card} />;
   if (card.kind === "person_limit") return <PersonLimitCardView message={message} card={card} />;
-  if (card.kind === "connect_app") return <ConnectAppCardView card={card} morphKey={`act:${message.id}`} />;
+  if (card.kind === "connect_app") return <ConnectAppCardView card={card} messageId={message.id} />;
   if (card.kind === "invite_people") return <InviteCardView card={card} morphKey={`act:${message.id}`} />;
   if (card.kind === "install_skill")
     return <InstallSkillCardView card={card} agentId={message.author.id} morphKey={`act:${message.id}`} />;
@@ -203,30 +205,48 @@ export function ActionCard({ message }: { message: Message }) {
 /**
  * "Connect Linear" / "Add MCP" (`offer_connect_app`) as a waiting pill: "Connect" opens the same connect dialog as
  * Settings, at the catalog entry or at connecting by address with the address filled in; the person signs in or types
- * the key there. Its why and address go under it. Every member connects it, as their own when they may not add the
- * team's ("Para quem" there); GitHub connects for the team only, so who may not reads who does. Done once the viewer
- * has it, theirs or the team's.
+ * the key there. Its why, address, how it signs in and the scopes it asks go under it. Every member connects it, as
+ * their own when they may not add the team's ("Para quem" there); GitHub connects for the team only, so who may not
+ * reads who does, with one tap to ask them. Done once the viewer has it, theirs or the team's: who uses it, in the
+ * dialog's own sentence (the agent that posted it was woken to go on, `settleConnectCards`).
  */
-function ConnectAppCardView({ card, morphKey }: { card: ConnectAppCard; morphKey: string }) {
+function ConnectAppCardView({ card, messageId }: { card: ConnectAppCard; messageId: string }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const dir = useDirectory(org.id);
   const catalog = useCatalog();
   const connections = useConnections(org.id);
   const servers = useCustomServers(org.id);
   const [flow, setFlow] = useState<FlowState | null>(null);
+  const morphKey = `act:${messageId}`;
   const defs = catalog.data?.connectors ?? [];
   const def = defs.find((d) => d.id === card.connector) ?? null;
   const name = def ? connectorName(t, def) : card.url ? hostOf(card.url) : "";
   const title = name ? t("actionCard.connect_app.title", { name }) : t("actionCard.connect_app.mcp");
-  if (connectAppDone(card, connectedItems(connections.data ?? [], servers.data ?? [], defs))) {
+  const item = connectAppItem(card, connectedItems(connections.data ?? [], servers.data ?? [], defs));
+  if (item) {
     return (
-      <RequestDone done label={title} morphKey={morphKey}>
-        {t("actionCard.connected")}: <b>{title}</b>
+      <RequestDone
+        done
+        label={title}
+        morphKey={morphKey}
+        note={item.ownerUserId ? t("connectors.personal.done") : connectedSummary(t, item)}
+      >
+        <span className="ac-iconline">
+          <ConnectorIcon def={item.def} label={itemName(t, item)} image={item.image} />
+          <span>
+            {t("actionCard.connected")}: <b>{itemName(t, item)}</b>
+          </span>
+        </span>
       </RequestDone>
     );
   }
   const admin = can(org, "manage_connectors");
   const may = admin || personalServesAgents(card.connector);
+  const deciders = joinNames(
+    (card.deciderIds ?? []).map((id) => dir.memberById.get(id)?.name).filter((n): n is string => !!n),
+    t,
+  );
   return (
     <>
       <RequestOpen
@@ -249,17 +269,25 @@ function ConnectAppCardView({ card, morphKey }: { card: ConnectAppCard; morphKey
           ) : undefined
         }
         below={
-          card.why || card.url || !may ? (
-            <>
-              {card.why && <p>{inlineWords(card.why)}</p>}
-              {card.url && (
+          <>
+            {card.why && <p>{inlineWords(card.why)}</p>}
+            {card.url && (
+              <p>
+                <code>{card.url}</code>
+              </p>
+            )}
+            {card.signIn && <p className="muted">{connectSignInLine(t, card)}</p>}
+            {!may && (
+              <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <p>
-                  <code>{card.url}</code>
+                  {deciders
+                    ? t("actionCard.connect_app.whoCan", { names: deciders })
+                    : t("actionCard.connect_app.adminOnly")}
                 </p>
-              )}
-              {!may && <p>{t("actionCard.connect_app.adminOnly")}</p>}
-            </>
-          ) : undefined
+                <AskAdminButton ask={{ what: "connector", messageId }} />
+              </div>
+            )}
+          </>
         }
       >
         {title}

@@ -982,6 +982,7 @@ export const featureKeysPtBR = {
       admin_ask_create_agents: "{{names}} pede para poder criar agentes",
       admin_ask_webhook: "{{names}} pede para ligar o webhook do {{service}} para rotinas",
       admin_ask_voice: "{{names}} pede para ligar as mensagens de voz",
+      admin_ask_connector: "{{names}} pede para você conectar {{service}}",
       routine_paused_one: "Rotina pausada",
       routine_paused_other: "Rotina pausada",
       routine_stalled_one: "Rotina esperando o computador",

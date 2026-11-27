@@ -935,6 +935,7 @@
       "admin_ask_create_agents": "{{names}}, ajan oluşturabilmek istiyor",
       "admin_ask_webhook": "{{names}}, rutinler için {{service}} webhook'unu kurmanızı istiyor",
       "admin_ask_voice": "{{names}}, sesli mesajları açmanızı istiyor",
+      "admin_ask_connector": "{{names}}, {{service}} bağlamanı istiyor",
       "routine_paused_one": "Rutin duraklatıldı",
       "routine_paused_other": "Rutin duraklatıldı",
       "routine_stalled_one": "Rutin bilgisayarı bekliyor",

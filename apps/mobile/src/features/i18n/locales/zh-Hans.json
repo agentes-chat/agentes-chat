@@ -890,6 +890,7 @@
       "admin_ask_create_agents": "{{names}} 请求获得创建智能体的权限",
       "admin_ask_webhook": "{{names}} 请你为例行任务设置 {{service}} Webhook",
       "admin_ask_voice": "{{names}} 请你开启语音消息",
+      "admin_ask_connector": "{{names}} 请你连接 {{service}}",
       "routine_paused_other": "例行工作已暂停",
       "routine_stalled_other": "例行工作正在等待电脑",
       "agent_unreached_other": "一项例行工作无法呼叫智能体",

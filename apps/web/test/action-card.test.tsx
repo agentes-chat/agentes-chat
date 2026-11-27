@@ -137,11 +137,17 @@ describe("an agent's card to connect an app or an MCP server, and to invite peop
   test("an MCP server's address: Conectar opens connecting by address with it filled in; once connected, one line", async () => {
     const state = seedState();
     state.messages.push(
-      offer("c-mcp", "connect_app", { url: "https://oauth.acme.example.com/mcp", why: "Você pediu o MCP da Acme." }),
+      offer("c-mcp", "connect_app", {
+        url: "https://oauth.acme.example.com/mcp",
+        signIn: "oauth",
+        scopes: ["read", "write"],
+        why: "Você pediu o MCP da Acme.",
+      }),
     );
     await open(state);
     const row = cardRow("Conectar oauth.acme.example.com");
     expect(row.textContent).toContain("Você pediu o MCP da Acme.");
+    expect(row.textContent).toContain("Entra com uma conta · Pede: read, write");
     expect(row.textContent).not.toContain("server text");
     await click(within(row).getByRole("button", { name: "Conectar" }));
     const flow = dialog("Conectar servidor MCP") as HTMLElement;
@@ -150,9 +156,10 @@ describe("an agent's card to connect an app or an MCP server, and to invite peop
     );
     await type(within(flow).getByLabelText("Nome"), "Acme");
     await click(within(flow).getByRole("button", { name: "Conectar" }), 8);
-    const done = cardRow("Conectar oauth.acme.example.com");
+    // Done: the server by the name it was connected under, and who uses it (the dialog's own sentence).
+    const done = cardRow("Conectado: Acme");
     expect(done.querySelector(".rq-open")).toBeNull();
-    expect(done.textContent).toContain("Conectado");
+    expect(done.textContent).toContain("1 ação pede aprovação no chat.");
   });
 
   test("a catalog service opens its own connect step; with no address, connecting by address asks for it", async () => {

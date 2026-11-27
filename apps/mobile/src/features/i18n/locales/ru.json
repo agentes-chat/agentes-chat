@@ -1025,6 +1025,7 @@
       "admin_ask_create_agents": "{{names}} просит разрешить создавать агентов",
       "admin_ask_webhook": "{{names}} просит настроить вебхук {{service}} для рутин",
       "admin_ask_voice": "{{names}} просит включить голосовые сообщения",
+      "admin_ask_connector": "{{names}} просит тебя подключить {{service}}",
       "routine_paused_one": "Регулярная задача на паузе",
       "routine_paused_few": "Регулярные задачи на паузе",
       "routine_paused_many": "Регулярные задачи на паузе",

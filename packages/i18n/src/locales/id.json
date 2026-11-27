@@ -3862,7 +3862,12 @@
     "connect_app": {
       "title": "Hubungkan {{name}}",
       "mcp": "Tambah server MCP",
-      "adminOnly": "Admin yang menghubungkannya"
+      "adminOnly": "Admin yang menghubungkannya",
+      "whoCan": "Yang menghubungkan: {{names}}",
+      "signIn_oauth": "Masuk dengan akun",
+      "signIn_key": "Meminta kunci API",
+      "signIn_open": "Tidak perlu masuk",
+      "scopes": "Meminta: {{scopes}}"
     },
     "invite": {
       "title_other": "Undang {{count}} orang",
@@ -5373,6 +5378,7 @@
       "adminAskCreate": "<b>{{name}}</b> meminta izin membuat agen",
       "adminAskWebhook": "<b>{{name}}</b> memintamu menyiapkan webhook {{service}} untuk rutinitas",
       "adminAskVoice": "<b>{{name}}</b> memintamu menyalakan pesan suara",
+      "adminAskConnector": "<b>{{name}}</b> memintamu menghubungkan {{service}}",
       "invitationAccepted": "<b>{{name}}</b> menerima undanganmu dan bergabung ke {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> menerima undanganmu",
       "reaction_other": "<b>{{names}}</b> bereaksi pada pesanmu",
