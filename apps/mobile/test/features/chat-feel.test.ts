@@ -405,7 +405,7 @@ describe("a voice message's row", () => {
     expect(row).toContain("if (id !== clipId || scrubbing.value) return;");
     const pan = between(row, "const pan = usePanGesture({", "const tap =");
     expect(pan).toContain("scrubbing.value = true;");
-    expect(pan).toContain("const at = width > 0 ? waveAt(e.x, width) : progress.value;");
+    expect(pan).toContain("const at = width > 0 ? waveAt(e.x, width, BAR_HANDLE) : progress.value;");
     expect(pan).toContain("scheduleOnRN(endScrub, at);");
   });
 
