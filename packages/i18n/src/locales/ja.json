@@ -23217,5 +23217,21 @@
         "YEARFRAC": "2つの日付の間の期間が1年に占める割合"
       }
     }
+  },
+  "issueLinks": {
+    "title": "関連",
+    "blocks": "ブロックする",
+    "blocksIncoming": "ブロックされる",
+    "relates_to": "関連する",
+    "duplicates": "重複する",
+    "duplicatesIncoming": "重複元",
+    "clones": "複製する",
+    "clonesIncoming": "複製元",
+    "parent": "親タスク",
+    "child": "子タスク",
+    "unavailable": "利用不可",
+    "add": "関連を追加",
+    "none": "関連なし",
+    "waiting": "待機中: {{count}}"
   }
 }

@@ -7,6 +7,22 @@ import type { LocaleStrings } from "./plurals";
  * no exclamation marks, buttons start with a verb, "agentes" in lower case.
  */
 export const ptBR = {
+  issueLinks: {
+    title: "Vínculos",
+    blocks: "bloqueia",
+    blocksIncoming: "é bloqueada por",
+    relates_to: "relaciona-se com",
+    duplicates: "duplica",
+    duplicatesIncoming: "é duplicada por",
+    clones: "clona",
+    clonesIncoming: "é clonada por",
+    parent: "tarefa principal",
+    child: "subtarefa",
+    unavailable: "Indisponível",
+    add: "Adicionar vínculo",
+    none: "Nenhum vínculo",
+    waiting: "Aguardando: {{count}}",
+  },
   app: {
     name: "agentes",
     /** The browser tab's title on every screen that doesn't set its own. */

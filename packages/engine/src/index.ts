@@ -199,6 +199,7 @@ export * from "./invite-requests";
 export * from "./issue-assignees";
 export * from "./issue-columns";
 export * from "./issue-deletion";
+export * from "./issue-links";
 export * from "./issue-projects";
 export * from "./issue-tools";
 export * from "./issue-work";

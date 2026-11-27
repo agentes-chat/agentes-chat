@@ -7,6 +7,22 @@ import type { Widen } from "./widen";
  * no exclamation marks, buttons start with a verb, "agentes" in lower case.
  */
 export const en = {
+  issueLinks: {
+    title: "Links",
+    blocks: "blocks",
+    blocksIncoming: "is blocked by",
+    relates_to: "relates to",
+    duplicates: "duplicates",
+    duplicatesIncoming: "is duplicated by",
+    clones: "clones",
+    clonesIncoming: "is cloned by",
+    parent: "parent",
+    child: "child",
+    unavailable: "Unavailable",
+    add: "Add link",
+    none: "No links",
+    waiting: "Waiting on {{count}}",
+  },
   app: {
     name: "agentes",
     /** The browser tab's title on every screen that doesn't set its own. */

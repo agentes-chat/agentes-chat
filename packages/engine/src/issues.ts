@@ -93,6 +93,7 @@ export type IssueSource =
 
 /** An issue as the app shows it. */
 export interface IssueView {
+  waitingOnLinks: number;
   id: string;
   number: number;
   title: string;
@@ -646,7 +647,28 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
       rows.map((r) => r.projectId),
     ),
   ]);
+  const waitingRows =
+    orgId && rows.length
+      ? await db
+          .select({ id: schema.issueLinks.toIssueId, count: sql<number>`count(*)::int` })
+          .from(schema.issueLinks)
+          .innerJoin(issues, eq(issues.id, schema.issueLinks.fromIssueId))
+          .where(
+            and(
+              inArray(
+                schema.issueLinks.toIssueId,
+                rows.map((r) => r.id),
+              ),
+              eq(schema.issueLinks.orgId, orgId),
+              eq(schema.issueLinks.type, "blocks"),
+              sql`${issues.status} not in ('done','canceled')`,
+            ),
+          )
+          .groupBy(schema.issueLinks.toIssueId)
+      : [];
+  const waiting = new Map(waitingRows.map((r) => [r.id, Number(r.count)]));
   return rows.map((r) => ({
+    waitingOnLinks: waiting.get(r.id) ?? 0,
     id: r.id,
     number: r.number,
     title: r.title,

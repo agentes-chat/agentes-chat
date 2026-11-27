@@ -4496,6 +4496,7 @@ export interface IssueWork {
 }
 
 export interface Issue {
+  waitingOnLinks?: number;
   id: string;
   /** Per organization: #131. */
   number: number;
@@ -9462,4 +9463,12 @@ export interface IntegrationAppSecrets {
   app: IntegrationApp;
   token?: string;
   webhookSecret?: string | null;
+}
+
+export type IssueLinkType = "blocks" | "relates_to" | "duplicates" | "clones";
+export interface IssueLink {
+  id: string;
+  type: IssueLinkType | "parent" | "child";
+  incoming: boolean;
+  task: { id: string; number: number; title: string; status: IssueStatus } | null;
 }

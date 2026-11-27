@@ -21,6 +21,8 @@ export interface SearchSelectLabels {
 export interface SearchSelectProps<V extends string = string, O extends SelectOption<V> = SelectOption<V>> {
   value: V | undefined;
   onValueChange: (value: V) => void;
+  /** Also search a remote option source without changing the local filtering or keyboard behavior. */
+  onSearchChange?: (query: string) => void;
   /** Consecutive options with the same `group` get a heading. A function is read only while the list is open. */
   options: O[] | (() => O[]);
   labels: SearchSelectLabels;
@@ -82,6 +84,7 @@ function groupsOf<O extends SelectOption>(options: O[]) {
 export function SearchSelect<V extends string = string, O extends SelectOption<V> = SelectOption<V>>({
   value,
   onValueChange,
+  onSearchChange,
   options,
   labels,
   groupLabel = (group) => group,
@@ -122,6 +125,7 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   useEffect(() => {
     if (!open) return;
     setQuery("");
+    onSearchChange?.("");
     setActive(
       Math.max(
         0,
@@ -204,6 +208,7 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
+                  onSearchChange?.(e.target.value);
                   setActive(0);
                 }}
                 onKeyDown={onKey}

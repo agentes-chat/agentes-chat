@@ -197,6 +197,8 @@ import type {
   IssueColumn,
   IssueConversationRef,
   IssueInput,
+  IssueLink,
+  IssueLinkType,
   IssuePatch,
   IssueProject,
   IssueProjectRef,
@@ -1675,6 +1677,11 @@ export interface ApiClient {
      * code), 403 `vault.team_needs_permission`. Optional so older fakes type-check.
      */
     saveToVault?(orgId: string, requestId: string, input: SecretToVaultInput): Promise<VaultItem>;
+  };
+  issueLinks: {
+    list(orgId: string, id: string): Promise<IssueLink[]>;
+    add(orgId: string, id: string, toIssueId: string, type: IssueLinkType): Promise<IssueLink[]>;
+    remove(orgId: string, id: string, linkId: string): Promise<IssueLink[]>;
   };
   issues: {
     /** `projectId`: only that project's tasks, or `none` for the ones with no project. */

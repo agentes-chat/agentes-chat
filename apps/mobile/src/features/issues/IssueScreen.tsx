@@ -19,6 +19,7 @@ import { capitalize, dueLabel, relativeTime } from "@agenteschat/client/lib/form
 import { isGithubLink } from "@agenteschat/client/lib/github-link";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { webUrl } from "@agenteschat/client/lib/guards";
+import { issueLinkLabel } from "@agenteschat/client/lib/issue-links";
 import {
   assigneeNames,
   canDeleteIssue,
@@ -30,7 +31,7 @@ import {
 } from "@agenteschat/client/lib/issues";
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import { shownSteps } from "@agenteschat/client/lib/work";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -172,7 +173,7 @@ function IssueView({ number, focusId }: { number: number; focusId: string | null
           <Description issue={i} />
           <Criteria issue={i} />
           <Linked issue={i} />
-          <SubIssues issue={i} />
+          <TaskLinks issue={i} />
           <IssueActivityFeed issue={i} />
         </ScrollView>
       </FocusLive>
@@ -808,28 +809,6 @@ function Linked({ issue: i }: { issue: Issue }) {
   );
 }
 
-function SubIssues({ issue: i }: { issue: Issue }) {
-  const { t } = useTranslation();
-  const surface = useSurface();
-  const subs = i.subIssues ?? [];
-  if (subs.length === 0) return null;
-  return (
-    <Group title={t("mobile.issues.subIssues")}>
-      <View style={[styles.card, surface]}>
-        {subs.map((s, k) => (
-          <LinkRow
-            key={s.id}
-            icon={s.status === "done" ? "checkc" : "circle"}
-            label={`#${s.number} ${s.title} · ${t(`issues.status.${s.status}`)}`}
-            onPress={() => router.push(`/issues/${s.number}`)}
-            first={k === 0}
-          />
-        ))}
-      </View>
-    </Group>
-  );
-}
-
 /**
  * The task's bar: its number, then two of the system's bar buttons (our icon buttons on Android): Concluir (Reabrir
  * once it's done), and "…" with what else changes it, the system's own menu on iOS and the same choices in the app's
@@ -1173,3 +1152,35 @@ const styles = StyleSheet.create({
   talkIn: { paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 10 },
   faces: { flexDirection: "row", gap: 2 },
 });
+
+function TaskLinks({ issue }: { issue: Issue }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const orgId = useOrgId();
+  const links = useQuery({
+    queryKey: [...keys.issues(orgId), "links", issue.id],
+    queryFn: () => api.issueLinks.list(orgId, issue.id),
+  });
+  return (
+    <Group title={t("issueLinks.title")}>
+      <View style={styles.card}>
+        {links.isError ? (
+          <Text>{t("common.unknownError")}</Text>
+        ) : (
+          links.data?.map((l, k) => (
+            <LinkRow
+              key={l.id}
+              icon="circle"
+              label={`${t(issueLinkLabel(l))} ${l.task ? `#${l.task.number} ${l.task.title}` : t("issueLinks.unavailable")}`}
+              onPress={() => {
+                if (l.task) router.push(`/issues/${l.task.number}`);
+              }}
+              first={k === 0}
+            />
+          ))
+        )}
+        {links.data?.length === 0 && <Text>{t("issueLinks.none")}</Text>}
+      </View>
+    </Group>
+  );
+}

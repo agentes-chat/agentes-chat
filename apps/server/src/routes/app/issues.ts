@@ -1,4 +1,5 @@
 import {
+  addIssueLink,
   askAgentToImplement,
   commentIssue,
   createIssue,
@@ -12,11 +13,13 @@ import {
   issueFromMessage,
   listIssueActivity,
   listIssueColumns,
+  listIssueLinks,
   listIssueProjects,
   listIssues,
   openTaskConversation,
   PROJECT_NAME_MAX,
   ROLE_COLORS,
+  removeIssueLink,
   setCriterion,
   setIssueAudience,
   updateIssue,
@@ -84,6 +87,7 @@ const Conversation = ConversationRef.extend({
 
 const Issue = z
   .object({
+    waitingOnLinks: z.number(),
     id: z.uuid(),
     number: z.number(),
     title: z.string(),
@@ -714,5 +718,76 @@ export function issueRoutes(deps: AppDeps) {
     },
   );
 
+  const LinkType = z.enum(["blocks", "relates_to", "duplicates", "clones"]);
+  const LinkView = z.object({
+    id: z.string(),
+    type: z.enum(["blocks", "relates_to", "duplicates", "clones", "parent", "child"]),
+    incoming: z.boolean(),
+    task: z.object({ id: z.uuid(), number: z.number(), title: z.string(), status: Status }).nullable(),
+  });
+  const Links = z.array(LinkView);
+  const path = "/organizations/{orgId}/issues/{issueId}/links";
+  app.openapi(
+    createRoute({
+      method: "get",
+      path,
+      tags,
+      security,
+      request: { params: IssueParams },
+      responses: { 200: json(Links), ...errors },
+    }),
+    async (c) => {
+      const { orgId, issueId } = c.req.valid("param");
+      return c.json(await listIssueLinks(db, { type: "person", userId: c.get("user").id }, orgId, issueId), 200);
+    },
+  );
+  app.openapi(
+    createRoute({
+      method: "post",
+      path,
+      tags,
+      security,
+      request: { params: IssueParams, body: body(z.object({ toIssueId: z.uuid(), type: LinkType })) },
+      responses: { 200: json(Links), ...errors },
+    }),
+    async (c) => {
+      const { orgId, issueId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      return c.json(
+        await addIssueLink(
+          { db, pubsub: deps.adapters.pubsub },
+          { type: "person", userId: c.get("user").id },
+          orgId,
+          issueId,
+          input.toIssueId,
+          input.type,
+        ),
+        200,
+      );
+    },
+  );
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path,
+      tags,
+      security,
+      request: { params: IssueParams, body: body(z.object({ id: z.uuid() })) },
+      responses: { 200: json(Links), ...errors },
+    }),
+    async (c) => {
+      const { orgId, issueId } = c.req.valid("param");
+      return c.json(
+        await removeIssueLink(
+          { db, pubsub: deps.adapters.pubsub },
+          { type: "person", userId: c.get("user").id },
+          orgId,
+          issueId,
+          c.req.valid("json").id,
+        ),
+        200,
+      );
+    },
+  );
   return app;
 }

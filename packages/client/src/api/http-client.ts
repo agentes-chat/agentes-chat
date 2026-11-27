@@ -147,6 +147,7 @@ import type {
   IssueActivity,
   IssueColumn,
   IssueConversationRef,
+  IssueLink,
   IssueProject,
   IssueProjectRef,
   IssueProjects,
@@ -1755,6 +1756,13 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       restore: (orgId, id) =>
         request<ArtifactDetail | undefined>(`${org(orgId)}/artifacts/${enc(id)}/restore`, { json: {} }),
       purge: (orgId, id) => request<void>(`${org(orgId)}/artifacts-trash/${enc(id)}`, { method: "DELETE" }),
+    },
+    issueLinks: {
+      list: (orgId, id) => request<IssueLink[]>(`${org(orgId)}/issues/${enc(id)}/links`),
+      add: (orgId, id, toIssueId, type) =>
+        request<IssueLink[]>(`${org(orgId)}/issues/${enc(id)}/links`, { json: { toIssueId, type } }),
+      remove: (orgId, id, linkId) =>
+        request<IssueLink[]>(`${org(orgId)}/issues/${enc(id)}/links`, { method: "DELETE", json: { id: linkId } }),
     },
     issues: {
       list: async (orgId, filters = {}) =>

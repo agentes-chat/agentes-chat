@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 import { setupDom } from "../testing/dom";
 
 setupDom();
@@ -131,7 +132,7 @@ describe("Select", () => {
   });
 
   test("people and agents (OptionRow): a 24px face 6 from the row's top and bottom and 8 from its start, the role on the name's line", async () => {
-    const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+    const css = await Bun.file(fileURLToPath(new URL("../src/styles/components.css", import.meta.url))).text();
     const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     const list = ":is(.ac-menu, .ac-palette__list):has(.ac-menu__leading > .ac-avatar)";
     expect(css).toContain("--option-face: 24px;");
@@ -207,7 +208,7 @@ describe("Select", () => {
     const separators = listbox.querySelectorAll(".ac-menu__separator");
     expect(separators.length).toBe(1);
     expect(separators[0]?.nextElementSibling?.textContent).toContain("Nova categoria");
-    const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+    const css = await Bun.file(fileURLToPath(new URL("../src/styles/components.css", import.meta.url))).text();
     const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     expect(rule(".ac-menu--select [data-radix-select-viewport]")).toContain("gap: 2px;");
     // A two-line row takes the one-line row's room above and below: 32 for one line, 50 with a description.
@@ -252,4 +253,31 @@ test("a value its options don't have shows the placeholder, never an empty box",
     />,
   );
   expect(trigger.textContent).toBe("Aguardando o jurídico");
+});
+
+test("a searchable select reports remote queries and resets on reopen", async () => {
+  const queries: string[] = [];
+  render(
+    <SearchSelect
+      aria-label="Task to link"
+      value={undefined}
+      onValueChange={() => {}}
+      onSearchChange={(q) => queries.push(q)}
+      options={[{ value: "a", label: "Alpha" }]}
+      labels={{ search: "Search a task", searchPlaceholder: "Find task", list: "Tasks", noResults: "No tasks" }}
+    />,
+  );
+  const trigger = body().getByRole("combobox", { name: "Task to link" });
+  trigger.focus();
+  await key(trigger, "Enter");
+  expect(queries.at(-1)).toBe("");
+  const search = body().getByPlaceholderText("Find task");
+  await act(async () => {
+    fireEvent.change(search, { target: { value: "Alpha" } });
+  });
+  expect(queries.at(-1)).toBe("Alpha");
+  await key(search, "Escape");
+  trigger.focus();
+  await key(trigger, "Enter");
+  expect(queries.at(-1)).toBe("");
 });

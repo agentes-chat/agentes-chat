@@ -58593,5 +58593,47 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "issueLinks.title": {
+    "value": "Links"
+  },
+  "issueLinks.blocks": {
+    "value": "blocks"
+  },
+  "issueLinks.blocksIncoming": {
+    "value": "is blocked by"
+  },
+  "issueLinks.relates_to": {
+    "value": "relates to"
+  },
+  "issueLinks.duplicates": {
+    "value": "duplicates"
+  },
+  "issueLinks.duplicatesIncoming": {
+    "value": "is duplicated by"
+  },
+  "issueLinks.clones": {
+    "value": "clones"
+  },
+  "issueLinks.clonesIncoming": {
+    "value": "is cloned by"
+  },
+  "issueLinks.parent": {
+    "value": "parent"
+  },
+  "issueLinks.child": {
+    "value": "child"
+  },
+  "issueLinks.unavailable": {
+    "value": "Unavailable"
+  },
+  "issueLinks.add": {
+    "value": "Add link"
+  },
+  "issueLinks.none": {
+    "value": "No links"
+  },
+  "issueLinks.waiting": {
+    "value": "Waiting on {{count}}"
   }
 }

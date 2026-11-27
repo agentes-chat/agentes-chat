@@ -1309,6 +1309,7 @@ type FakedParts =
   | "joinRequests"
   | "storage"
   | "artifacts"
+  | "issueLinks"
   | "issues"
   | "routines"
   | "threads"
@@ -4449,6 +4450,15 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   state.drive = artifacts;
   const live = createFakeLive(ctx, (method, ...args) => state.calls.push({ method, args }), artifacts);
   const client: ApiClient = {
+    issueLinks: {
+      list: async () => [],
+      add: async () => {
+        throw new Error("Set the task links fake in this test");
+      },
+      remove: async () => {
+        throw new Error("Set the task links fake in this test");
+      },
+    },
     ...http,
     apps: apps.client,
     integrationApps: integrationApps.client,
