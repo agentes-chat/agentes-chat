@@ -1800,8 +1800,6 @@ export const en = {
         "Your AI already knows your routine. With agentes.chat connected, it finds the tasks you repeat the most, at work or outside it, and proposes an agent for each one. You pick where to start.",
       /** The row of assistants, for screen readers. */
       apps: "Your assistant",
-      /** The row's last answer: the import of other agent apps, a file or a link. */
-      other: "Another agent app",
       connect: "Connect agentes.chat",
       connected: "Connected",
       paste: "Paste this request into a new conversation",
@@ -1870,10 +1868,25 @@ export const en = {
       lead: "Pick one job. You create more agents later.",
       other: "Other",
       otherLine: "Create your agent and pick its apps",
-      otherWays: "Prefer another way?",
+      /** The button over the work step's list: the way in from the AI and the agent apps the person already uses. */
       ask: "Ask your AI",
+      /** The button's line where agents can also be brought from another app (the workspace's owner). */
+      askLine: "Your AI suggests the first agent. Or bring agents from another app.",
+      /** The button's line where only the AI is offered (a member joining). */
+      askLineAlone: "Your AI suggests the first agent from what you already do.",
+      /** The ask flow's title in the dialog, once an AI is picked. */
       askTitle: "Ask your AI for your first agent",
-      import: "Bring from another app",
+      /** The button's dialog: what the person already uses, in two groups. */
+      startTitle: "Start from what you already use",
+      startAi: "Your AI",
+      startAiLine: "Suggests the first agent from what you already do",
+      startApps: "Agents from another app",
+      startAppsLine: "Brings the agents with their instructions and routines",
+      /** The last row of each group: every other AI (the ask flow's own row), every other app (the import's list). */
+      startMoreAi: "Another AI",
+      startMoreApp: "Another app",
+      /** That row's line. `{{names}}`: three of them, by their brand names ("Grok, Perplexity, Cursor"). */
+      startMore: "{{names}} and more",
       place: "{{name}} · {{zone}}",
       change: "Change",
       changeTitle: "Name and time zone",

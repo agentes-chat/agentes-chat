@@ -130,12 +130,13 @@ type ReadInput = { files: PickedFile[] | Promise<PickedFile[]> } | { url: string
  * linked or pasted into a bundle; plan it on the server (dry run); the person
  * picks; apply. Nothing is written before `apply`.
  */
-export function useImportFlow(orgId: string | null) {
+export function useImportFlow(orgId: string | null, startCard: ImportCard | null = null) {
   const api = useApi();
   const qc = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast();
-  const [card, pickCard] = useState<ImportCard | null>(null);
+  // `startCard`: the source picked before the flow opened (the onboarding's "Start from what you already use").
+  const [card, pickCard] = useState<ImportCard | null>(startCard);
   const [busy, setBusy] = useState<"reading" | "planning" | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [planned, setPlanned] = useState<{

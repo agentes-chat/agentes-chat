@@ -62,6 +62,8 @@ export interface DialogProps {
   width?: number;
   children: ReactNode;
   className?: string;
+  /** A class for the scrim behind it, for a dialog whose backdrop is its own (the welcome tour's sky). */
+  scrimClassName?: string;
   /** Esc pressed: call `preventDefault()` to keep the dialog open (e.g. close an inner pane first). */
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
   /** Before the title (an avatar). */
@@ -103,6 +105,7 @@ export function Dialog({
   width = 600,
   children,
   className,
+  scrimClassName,
   onEscapeKeyDown,
   leading,
   subtitle,
@@ -136,7 +139,7 @@ export function Dialog({
   return (
     <RDialog.Root open={open} onOpenChange={onOpenChange}>
       <RDialog.Portal>
-        <RDialog.Overlay className="ac-dialog__scrim" />
+        <RDialog.Overlay className={cx("ac-dialog__scrim", scrimClassName)} />
         <RDialog.Content
           className={cx("ac-dialog", className)}
           style={{ "--ac-dialog-width": `${width}px` } as CSSProperties}

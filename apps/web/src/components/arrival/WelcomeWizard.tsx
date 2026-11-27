@@ -125,6 +125,8 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
       // Enter goes on: the dialog starts on its main button, which stays the same one from step to step.
       initialFocus={go}
       className="arrival wiz"
+      // Its own backdrop: the page blurred under the sky's dither, so the tour is all there is to look at.
+      scrimClassName="wiz-scrim"
     >
       {/* Decorative: the words under it say the same. Keyed, so each step's picture plays from its start. */}
       <div key={step} className="wiz__art" data-step={step} aria-hidden="true" inert>

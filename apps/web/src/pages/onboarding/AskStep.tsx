@@ -97,28 +97,27 @@ export function pastedProposal(text: string): unknown {
 }
 
 /**
- * Asking the person's own AI for their first agent (ADR 0256), the body of "Ask your AI"'s dialog over the work step:
- * a row of assistants that scrolls sideways (the most used first, "Another agent app" last when `onOther` opens the
- * import), then (1) connecting agentes.chat in that app (its own guide, "Connected" once the person has an app
- * connected here) and (2) the request to paste in a new conversation, its start in view. Under them, the wait for the
- * proposal, and the way without a connector: the JSON request and a field for the answer. `onProposal`: a proposal that
- * arrived after the dialog opened, or the one pasted, with the app picked in the row. `org`: the workspace's name, said
- * in the request.
+ * Asking the person's own AI for their first agent (ADR 0256), in the work step's dialog once an AI is picked there: a
+ * row of assistants that scrolls sideways (the one picked, else the most used first), then (1) connecting agentes.chat
+ * in that app (its own guide, "Connected" once the person has an app connected here) and (2) the request to paste in a
+ * new conversation, its start in view. Under them, the wait for the proposal, and the way without a connector: the
+ * JSON request and a field for the answer. `onProposal`: a proposal that arrived after the dialog opened, or the one
+ * pasted, with the app picked in the row. `org`: the workspace's name, said in the request.
  */
 export function AskYourAi({
   orgId,
   variant,
   onProposal,
   org = "",
-  onOther,
+  client: initial = null,
   onClient,
 }: {
   orgId: string;
   variant: AskVariant;
   onProposal: (proposal: FirstAgents, app: AppClient | null) => void;
   org?: string;
-  /** "Another agent app": the import of other agent apps, a file or a link. */
-  onOther?: () => void;
+  /** The assistant picked before (`ASK_CLIENTS` id): the row starts on it. */
+  client?: string | null;
   /** The assistant picked in the row. */
   onClient?: (client: AppClient) => void;
 }) {
@@ -129,8 +128,8 @@ export function AskYourAi({
   const lodi = rightHandOf(useAgents(orgId).data ?? []);
   const mine = apps.data?.apps ?? [];
 
-  // An app already connected picks its own assistant; else Claude.
-  const [picked, setPicked] = useState<string | null>(null);
+  // The assistant picked before the row showed; else an app already connected picks its own; else Claude.
+  const [picked, setPicked] = useState<string | null>(initial);
   const connectedMakers = mine.map((a) => appMark(a)).flatMap((m) => (m.kind === "brand" ? [makerOf(m.id)] : []));
   const fallback =
     ASK_CLIENTS.find((c) => connectedMakers.includes(makerOf(c.mark))) ?? ASK_CLIENTS.find((c) => c.id === "claude");
@@ -209,14 +208,6 @@ export function AskYourAi({
             <span>{c.name}</span>
           </button>
         ))}
-        {onOther && (
-          <button type="button" className="onb-ask__ai" onClick={onOther}>
-            <span className="onb-ask__more" aria-hidden="true">
-              <Icon name="more" size={16} />
-            </span>
-            <span>{t("onboarding.ask.other")}</span>
-          </button>
-        )}
       </fieldset>
       {/* Each part as a MediaRow: its number on its title's line, what to do under them at the box's full width. */}
       <ol className="onb-ask__steps">

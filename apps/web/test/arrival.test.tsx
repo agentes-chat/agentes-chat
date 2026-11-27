@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { FeedbackInput } from "@agenteschat/client";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
@@ -55,6 +57,10 @@ describe("the welcome wizard, right after the onboarding", () => {
     expect(router.state.location.search).not.toHaveProperty("arrival");
     expect(localStorage.getItem(`agentes.welcome.seen.u-walter.${ORG_ID}`)).toBe("1");
     expect(within(wizard()).getByRole("img", { name: "Passo 1 de 7" })).toBeTruthy();
+    // Its own backdrop behind it, the sky over the blurred page; the only scrim on the page.
+    expect([...document.querySelectorAll(".ac-dialog__scrim")].map((s) => s.classList.contains("wiz-scrim"))).toEqual([
+      true,
+    ]);
     // The first step has no Back.
     expect(within(wizard()).queryByRole("button", { name: "Voltar" })).toBeNull();
     const titles = [title()];
@@ -84,12 +90,32 @@ describe("the welcome wizard, right after the onboarding", () => {
     await press(/^Começar/, 6);
     const connect = screen().getByRole("dialog", { name: CONNECT });
     expect(within(connect).getByText("O seu time está pronto")).toBeTruthy();
+    // Every other dialog keeps the kit's plain scrim.
+    expect(document.querySelector(".ac-dialog__scrim.wiz-scrim")).toBeNull();
+    expect(document.querySelector(".ac-dialog__scrim")).not.toBeNull();
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Começar grátis"])
       expect(within(connect).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
     // Not now: the dialog closes and nothing was connected.
     await click(within(connect).getByRole("button", { name: "Agora não" }));
     await settle(2);
     expect(screen().queryByRole("dialog", { name: CONNECT })).toBeNull();
+  });
+
+  test("the tour's backdrop: the page blurred under the sky's tone and a still pixel dither, a deeper tone with no blur", () => {
+    const css = readFileSync(join(import.meta.dir, "../src/components/arrival/welcome-wizard.css"), "utf8");
+    const rule = (selector: string, from = css) => from.slice(from.indexOf(`${selector} {`)).split("}")[0] ?? "";
+    const scrim = rule("\n.ac-dialog__scrim.wiz-scrim");
+    expect(scrim).toContain("backdrop-filter: blur(10px)");
+    expect(scrim).toContain("background: var(--wiz-sky)");
+    // Both themes, and a browser that blurs nothing behind.
+    expect(css).toContain('[data-theme="dark"] .ac-dialog__scrim.wiz-scrim {');
+    expect(css).toContain("@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)))");
+    // The dither is CSS pixels, never a picture or a loop: it comes in once.
+    expect(rule("\n.ac-dialog__scrim.wiz-scrim::before")).toContain(
+      "conic-gradient(var(--wiz-pixel) 0 25%, transparent 0)",
+    );
+    expect(css).not.toMatch(/wiz-scrim[^{]*\{[^}]*infinite/);
+    expect(css).not.toMatch(/wiz-scrim[^{]*\{[^}]*url\(/);
   });
 
   test("shown once per person and workspace: the same address again, or a reload, opens nothing", async () => {

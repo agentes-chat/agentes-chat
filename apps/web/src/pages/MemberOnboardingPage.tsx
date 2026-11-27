@@ -213,7 +213,8 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
           onCustom={() => setCustom(true)}
           onProposal={(p) =>
             pick.mutate(
-              { proposalId: p.id, index: 0 },
+              // As an area's agent: the first agent made a moment ago gives its place to this one.
+              { proposalId: p.id, index: 0, replace: row && !row.firedAt ? row.agentId : null },
               {
                 onSuccess: async () => {
                   await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });

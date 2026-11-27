@@ -150,7 +150,7 @@ export function World({
  * title (focused when the step changes, so it is read out), the lead, the answer, then the footer: `note` (else the
  * way back, `onBack`, labelled `backLabel` or "Back") and the step's buttons (`acts`). A step that draws its own
  * buttons passes neither: no footer. The box is never taller than the window: only the answer scrolls, inside it,
- * while the header, the title, what is `pinned` under the answer and the footer stay in view.
+ * while the header, the title and the footer stay in view.
  */
 export function Box({
   cover,
@@ -164,7 +164,6 @@ export function Box({
   busy = false,
   acts,
   label,
-  pinned,
 }: {
   cover?: ReactNode;
   eyebrow?: ReactNode;
@@ -179,8 +178,6 @@ export function Box({
   acts?: ReactNode;
   /** The section's name for screen readers when the title is not plain words. */
   label?: string;
-  /** Under the answer, out of its scroll: always in view over the footer. */
-  pinned?: ReactNode;
 }) {
   const { t } = useTranslation();
   // The kit's ghost button: beside the step's main one they are a pair, the way back a square on a phone.
@@ -213,9 +210,8 @@ export function Box({
         </h1>
         {lead && <p className="onbx__lead">{lead}</p>}
       </header>
-      {/* Only the answer scrolls, inside the box: the header, what is pinned under the answer and the footer stay. */}
+      {/* Only the answer scrolls, inside the box: the header and the footer stay. */}
       {children && <DialogBody className="onbx__body">{children}</DialogBody>}
-      {pinned && <div className="onbx__pinned">{pinned}</div>}
       <DialogFooter note={footNote}>{acts}</DialogFooter>
     </section>
   );

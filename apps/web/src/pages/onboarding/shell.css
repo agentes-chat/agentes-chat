@@ -274,15 +274,6 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* Pinned under the answer (the work step's other ways in): out of its scroll, over the footer. */
-.onbx__pinned {
-  padding: 16px var(--dialog-pad) 0;
-}
-/* With no footer under it (a member's work step), it keeps the box's own edge below, as the kit's body does there: the
-   box clips, and its buttons would touch that edge and lose their shadow to it. */
-.onbx__pinned:last-child {
-  padding-bottom: var(--dialog-pad);
-}
 /* A new step's words and answer come in where they stand; the box itself stays put. Played once, on insertion. */
 .onbx__lede,
 .onbx__body {
@@ -699,8 +690,8 @@ html:not([data-pointer]) .onbx__back:focus-visible {
     display: none;
   }
 }
-/* A few apps' marks as the kit's stack of makers (`.ac-brand-stack`), as the work step's import and the agent step's
-   "Search apps" lead with them: each on its 20px plate, ringed in the button's own surface, a little over the one
+/* A few apps' marks as the kit's stack of makers (`.ac-brand-stack`), as the work step's "Another app" and the agent
+   step's "Search apps" lead with them: each on its 20px plate, ringed in its own surface, a little over the one
    before. */
 .onb-marks {
   display: inline-flex;

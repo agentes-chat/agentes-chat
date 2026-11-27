@@ -4155,9 +4155,6 @@
   "onboarding.ask.apps": {
     "value": "Your assistant"
   },
-  "onboarding.ask.other": {
-    "value": "Another agent app"
-  },
   "onboarding.ask.connect": {
     "value": "Connect agentes.chat"
   },
@@ -4266,17 +4263,41 @@
   "onboarding.areas.otherLine": {
     "value": "Create your agent and pick its apps"
   },
-  "onboarding.areas.otherWays": {
-    "value": "Prefer another way?"
-  },
   "onboarding.areas.ask": {
     "value": "Ask your AI"
   },
+  "onboarding.areas.askLine": {
+    "value": "Your AI suggests the first agent. Or bring agents from another app."
+  },
+  "onboarding.areas.askLineAlone": {
+    "value": "Your AI suggests the first agent from what you already do."
+  },
+  "onboarding.areas.startTitle": {
+    "value": "Start from what you already use"
+  },
+  "onboarding.areas.startAi": {
+    "value": "Your AI"
+  },
+  "onboarding.areas.startAiLine": {
+    "value": "Suggests the first agent from what you already do"
+  },
+  "onboarding.areas.startApps": {
+    "value": "Agents from another app"
+  },
+  "onboarding.areas.startAppsLine": {
+    "value": "Brings the agents with their instructions and routines"
+  },
+  "onboarding.areas.startMoreAi": {
+    "value": "Another AI"
+  },
+  "onboarding.areas.startMoreApp": {
+    "value": "Another app"
+  },
+  "onboarding.areas.startMore": {
+    "value": "{{names}} and more"
+  },
   "onboarding.areas.askTitle": {
     "value": "Ask your AI for your first agent"
-  },
-  "onboarding.areas.import": {
-    "value": "Bring from another app"
   },
   "onboarding.areas.place": {
     "value": "{{name}} · {{zone}}"

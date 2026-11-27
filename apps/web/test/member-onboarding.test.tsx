@@ -123,7 +123,12 @@ describe("a member's onboarding (ADR 0256)", () => {
     ]);
     // The workspace's name and zone are its owner's.
     expect(box().querySelector(".onb-place-line")).toBeNull();
-    expect([...box().querySelectorAll(".onb-other__btn")].map((b) => b.textContent)).toEqual(["Pedir à sua IA"]);
+    // Ask your AI over the list, led by the AI makers alone and its line saying nothing of an import.
+    const ask = button("Pedir à sua IA");
+    expect(ask.querySelectorAll(".onb-start__plate")).toHaveLength(3);
+    expect(ask.querySelector(".onb-start__line")?.textContent).toBe(
+      "A sua IA sugere o primeiro agente pelo que você já faz.",
+    );
   });
 
   test("one tap makes their agent, step 2 of 2; with an AI there, Continue arms the delivery and opens their DM", async () => {
@@ -190,6 +195,10 @@ describe("a member's onboarding (ADR 0256)", () => {
     const state = joined();
     const r = await welcome(state);
     await click(button(/Pedir à sua IA/), 12);
+    // Its dialog has the AI alone: no agents of another app for a member.
+    const start = screen().getByRole("dialog", { name: "Comece pelo que você já usa" });
+    expect(within(start).queryByRole("region", { name: "Agentes de outro app" })).toBeNull();
+    await click(within(start).getByRole("button", { name: "Claude" }), 12);
     const dialog = screen().getByRole("dialog", { name: "Peça o seu primeiro agente à sua IA" });
     const request = dialog.querySelector(".onb-ask__text")?.textContent ?? "";
     expect(request).toContain("Acabei de entrar no workspace da Acme no agentes.chat");
@@ -199,6 +208,35 @@ describe("a member's onboarding (ADR 0256)", () => {
     expect(calls(state, "firstAgents.pick").map((c) => c.args)).toEqual([[ORG_ID, "fa-member", 0]]);
     expect(heading()).toBe("Caio");
     expect(lead()).toBe("Cobrança: lista o que atrasou");
+  });
+
+  test("one first agent of theirs: one asked of the AI takes the place of the work's agent, and asked again, that one's", async () => {
+    const state = joined();
+    const r = await welcome(state);
+    /** Walter's own agents, the right hand aside (Ada and Atlas are João's). */
+    const mine = () =>
+      state.agents.filter((a) => a.ownerUserId === "u-walter" && a.builtin !== "right_hand").map((a) => a.name);
+    await click(area("Marketing"), 20);
+    expect(mine()).toEqual(["Gabi"]);
+    const gabi = state.agents.find((a) => a.name === "Gabi")?.id;
+    /** Back on the work step, Ask your AI, an AI picked, and its proposal `id` arriving. */
+    const askAgain = async (id: string) => {
+      await click(button("Voltar"), 8);
+      await click(button(/Pedir à sua IA/), 8);
+      await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Claude" }), 8);
+      state.firstAgents = { ...proposal(), id };
+      await act(() => r.services.queryClient.invalidateQueries({ queryKey: keys.firstAgents(ORG_ID) }));
+      await settle(20);
+    };
+    await askAgain("fa-member");
+    expect(calls(state, "firstAgents.pick").map((c) => c.args)).toEqual([[ORG_ID, "fa-member", 0, gabi]]);
+    expect(mine()).toEqual(["Caio"]);
+    const caio = state.agents.find((a) => a.name === "Caio")?.id;
+    await askAgain("fa-member-2");
+    expect(calls(state, "firstAgents.pick").at(-1)?.args).toEqual([ORG_ID, "fa-member-2", 0, caio]);
+    expect(mine()).toEqual(["Caio"]);
+    expect(state.agents.some((a) => a.id === caio)).toBe(false);
+    expect(heading()).toBe("Caio");
   });
 
   test("a reload after their agent was made comes back to it", async () => {

@@ -27,6 +27,7 @@ import {
 import { firstName, toYmd } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { settingUp } from "@agenteschat/client/lib/guards";
+import type { ImportCard } from "@agenteschat/client/lib/import/flow";
 import { sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { type AiChoice, planLabel, teamThinks } from "@agenteschat/client/lib/no-ai";
 import {
@@ -125,8 +126,8 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   const [picked, setPicked] = useState<RailStep | null>(null);
   // "Other" on the work step: the agent step's form, before its agent exists.
   const [custom, setCustom] = useState(false);
-  // The other agent apps' import, open over the work step.
-  const [importing, setImporting] = useState(false);
+  // The other agent apps' import, open over the work step on the app picked (`card` null: its own list of apps).
+  const [importing, setImporting] = useState<{ card: ImportCard | null } | null>(null);
   // What the AI step's dialog connected last in this visit, said on the photo ("Claude").
   const [aiPick, setAiPick] = useState<AiChoice | null>(null);
   // "Connect later" asks first: without an AI there is no first delivery.
@@ -779,7 +780,9 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             onCustom={() => setCustom(true)}
             onProposal={(p) =>
               pick.mutate(
-                { proposalId: p.id, index: 0 },
+                // As an area's agent: the first agent made a moment ago (an area's, or one asked of the AI before)
+                // gives its place to this one, so there is one first agent.
+                { proposalId: p.id, index: 0, replace: replaced },
                 {
                   onSuccess: async () => {
                     await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
@@ -789,7 +792,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
                 },
               )
             }
-            onImport={() => setImporting(true)}
+            onImport={(card) => setImporting({ card })}
           />
         ),
       };
@@ -1054,8 +1057,9 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
           <Suspense fallback={null}>
             <ImportAgentsDialog
               orgId={orgId}
+              card={importing.card}
               onClose={() => {
-                setImporting(false);
+                setImporting(null);
                 setPicked(null);
               }}
             />

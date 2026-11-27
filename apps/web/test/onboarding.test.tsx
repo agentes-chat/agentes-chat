@@ -13,7 +13,7 @@ import type {
 } from "@agenteschat/client";
 import { ApiError, keys } from "@agenteschat/client";
 import { CUSTOM_LOOK, FIRST_AREAS, type FirstArea } from "@agenteschat/client/lib/first-areas";
-import { IMPORT_CARDS } from "@agenteschat/client/lib/import/flow";
+import { cardName } from "@agenteschat/client/lib/import/flow";
 import type { OnboardingStepId } from "@agenteschat/client/lib/onboarding";
 import { browserTimezone } from "@agenteschat/client/lib/routines";
 import { focusManager } from "@tanstack/react-query";
@@ -472,7 +472,7 @@ describe("a team's workspace named before it exists (ADR 0162)", () => {
 });
 
 describe("the work its first agent does (ADR 0256)", () => {
-  test("a team's six works as flat rows, each with its line and its apps' marks; Other last; the other ways under them", async () => {
+  test("Ask your AI first, one button led by five marks; then a team's six works as flat rows, each with its line and its apps' marks; Other last", async () => {
     await open(settingUp());
     expect(heading()).toBe(AREAS);
     expect(lead()).toBe("Escolha um trabalho. Depois, você cria outros agentes.");
@@ -489,19 +489,26 @@ describe("the work its first agent does (ADR 0256)", () => {
     ]);
     // Each row's bare icon in its own column, no tile around it.
     expect(document.querySelectorAll(".onb-areas__list .ac-optrow__lead")).toHaveLength(7);
-    expect(box().querySelector(".onb-other__label")?.textContent).toBe("Prefere outro jeito?");
-    expect([...box().querySelectorAll(".onb-other__btn")].map((b) => b.textContent)).toEqual([
-      "Pedir à sua IA",
-      "Trazer de outro app",
-    ]);
-    // Each led by what it means: three assistants' marks, and the import's first three apps.
-    const [ask, bring] = box().querySelectorAll(".onb-other__btn");
-    expect(ask?.querySelectorAll(".ac-brand-stack > .ac-brand").length).toBe(3);
-    expect([...(bring?.querySelectorAll(".onb-marks__plate img") ?? [])].map((i) => i.getAttribute("src"))).toEqual(
-      IMPORT_CARDS.filter((c) => c !== "other")
-        .slice(0, 3)
-        .map((c) => CARD_MARK[c].icon),
+    // Over the list, the first thing in the answer: one button, its title and line, the chevron at its end.
+    const ask = button("Pedir à sua IA");
+    expect(box().querySelector(".onb-areas")?.firstElementChild).toBe(ask);
+    expect(ask.querySelector(".onb-start__line")?.textContent).toBe(
+      "A sua IA sugere o primeiro agente. Ou traga agentes de outro app.",
     );
+    expect(document.getElementById(ask.getAttribute("aria-describedby") ?? "")).toBe(
+      ask.querySelector(".onb-start__line"),
+    );
+    expect(ask.lastElementChild?.matches(".onb-start__go")).toBe(true);
+    // Led by five marks on their plates: the three AI makers, then two agent apps the import brings from.
+    const plates = [...ask.querySelectorAll(".onb-start__marks > .onb-start__plate")];
+    expect(
+      plates.map(
+        (p) => p.querySelector(".ac-brand")?.getAttribute("data-mark") ?? p.querySelector("img")?.getAttribute("src"),
+      ),
+    ).toEqual(["openai", "claude", "gemini", CARD_MARK["grok-bot"].icon, CARD_MARK.openbotrun.icon]);
+    // Nothing else on the step points to the other ways in: no second button, nothing pinned under the list.
+    expect(screen().queryByRole("button", { name: /Trazer de outro app/ })).toBeNull();
+    expect(box().querySelector(".onb-other, .onbx__pinned")).toBeNull();
     // The faces on the cover are the works' agents, never the right hand.
     expect(box().querySelector(".onb-wall [data-accessory='headset']")).toBeNull();
     // One tap goes on: no button of the step's own.
@@ -591,12 +598,55 @@ describe("the work its first agent does (ADR 0256)", () => {
     expect(heading()).toBe(AREAS);
   });
 
-  test("Ask your AI: its dialog over the step; the proposal makes its first option and goes on to that agent", async () => {
+  test("Ask your AI opens one dialog: your AI and the agents of another app, each a group of flat rows", async () => {
+    await open(settingUp());
+    await click(button("Pedir à sua IA"), 8);
+    const dialog = screen().getByRole("dialog", { name: "Comece pelo que você já usa" });
+    expect(heading()).toBe(AREAS);
+    const rows = (group: string) =>
+      [...within(dialog).getByRole("region", { name: group }).querySelectorAll(".ac-optlinks--flat > .ac-optrow")].map(
+        (r) => ({
+          title: r.querySelector(".ac-optrow__title")?.textContent,
+          line: r.querySelector(".ac-optrow__desc")?.textContent,
+        }),
+      );
+    // The assistants people use most, by their own names; every other one is "Another AI".
+    const ai = "Sugere o primeiro agente pelo que você já faz";
+    expect(rows("A sua IA")).toEqual([
+      { title: "ChatGPT", line: ai },
+      { title: "Claude", line: ai },
+      { title: "Gemini", line: ai },
+      { title: "Outra IA", line: "Grok, Perplexity, Cursor e mais" },
+    ]);
+    // The agent apps by the import's own names, each led by its mark; every other one is "Another app".
+    const app = "Traz os agentes com as instruções e as rotinas";
+    expect(rows("Agentes de outro app")).toEqual([
+      ...(["grok-bot", "openbotrun", "openmausbot"] as const).map((c) => ({
+        title: cardName(((k: string) => k) as never, c),
+        line: app,
+      })),
+      { title: "Outro app", line: "Hermes Agent, OpenClaw, Paperclip e mais" },
+    ]);
+    const apps = within(dialog).getByRole("region", { name: "Agentes de outro app" });
+    expect(apps.querySelector(".ac-optrow__lead img")?.getAttribute("src")).toBe(CARD_MARK["grok-bot"].icon);
+  });
+
+  test("an AI picked there: the ask flow on it in the same dialog, Back to the list; the proposal makes its first option", async () => {
     const state = settingUp();
     const r = await open(state);
-    await click(button(/Pedir à sua IA/), 12);
-    const dialog = screen().getByRole("dialog", { name: "Peça o seu primeiro agente à sua IA" });
+    await click(button("Pedir à sua IA"), 8);
+    const dialog = screen().getByRole("dialog", { name: "Comece pelo que você já usa" });
+    await click(within(dialog).getByRole("button", { name: "Gemini" }), 8);
+    // The same dialog, now asking that AI: it is the one picked in the flow's row.
+    expect(screen().getByRole("dialog", { name: "Peça o seu primeiro agente à sua IA" })).toBe(dialog);
     expect(dialog.querySelector(".onb-ask")).not.toBeNull();
+    const pressed = () => dialog.querySelector(".onb-ask__ai[aria-pressed='true']")?.textContent;
+    expect(pressed()).toBe("Gemini");
+    expect(dialog.textContent).toContain("Cole este pedido numa conversa nova");
+    await click(within(dialog).getByRole("button", { name: "Voltar" }), 6);
+    expect(screen().getByRole("dialog", { name: "Comece pelo que você já usa" })).toBe(dialog);
+    await click(within(dialog).getByRole("button", { name: "Claude" }), 8);
+    expect(pressed()).toBe("Claude");
     expect(heading()).toBe(AREAS);
     // The person's AI sends its proposal: the page reads it on its next poll.
     state.firstAgents = proposal();
@@ -615,11 +665,53 @@ describe("the work its first agent does (ADR 0256)", () => {
     expect(findApps().disabled).toBe(false);
   });
 
-  test("Bring from another app opens the import over the step", async () => {
+  test("one first agent: one asked of the AI takes the place of the work's agent, and asked again, that one's", async () => {
+    const state = settingUp({ area: "support" });
+    const r = await open(state);
+    expect(heading()).toBe("Iara, do atendimento");
+    /** The person's own agents, the right hand aside. */
+    const firsts = () => state.agents.filter((a) => a.builtin !== "right_hand").map((a) => a.name);
+    expect(firsts()).toEqual(["Iara"]);
+    /** Back on the work step, Ask your AI, an AI picked, and its proposal `id` arriving. */
+    const askAgain = async (id: string) => {
+      await click(button("Voltar"), 8);
+      await click(button("Pedir à sua IA"), 8);
+      await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Claude" }), 8);
+      state.firstAgents = { ...proposal(), id };
+      await act(() => r.services.queryClient.invalidateQueries({ queryKey: keys.firstAgents(ORG_ID) }));
+      await settle(20);
+    };
+    await askAgain("fa-1");
+    expect(calls(state, "firstAgents.pick").map((c) => c.args)).toEqual([[ORG_ID, "fa-1", 0, agentIdOf("support")]]);
+    expect(firsts()).toEqual(["Caio"]);
+    expect(heading()).toBe("Caio");
+    const caio = state.agents.find((a) => a.name === "Caio")?.id;
+    await askAgain("fa-2");
+    expect(calls(state, "firstAgents.pick").at(-1)?.args).toEqual([ORG_ID, "fa-2", 0, caio]);
+    expect(firsts()).toEqual(["Caio"]);
+    expect(state.agents.some((a) => a.id === caio)).toBe(false);
+    expect(heading()).toBe("Caio");
+  });
+
+  test("an app picked there: the import over the step, open on that app; Another app, on the import's own list", async () => {
     await open(settingUp());
-    await click(button(/Trazer de outro app/), 16);
-    expect(screen().getByRole("dialog", { name: "Trazer agentes de outro app" })).toBeTruthy();
+    await click(button("Pedir à sua IA"), 8);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "OpenMausBot" }), 16);
+    expect(screen().queryByRole("dialog", { name: "Comece pelo que você já usa" })).toBeNull();
+    // That app's own steps over the import, as if picked there.
+    expect(screen().getByRole("dialog", { name: /^Trazer o time d[oa] OpenMausBot$/ })).toBeTruthy();
+    const sources = () => document.querySelector(".imp-sources") as HTMLElement;
+    expect(sources().querySelector(".imp-source[aria-pressed='true']")?.textContent).toContain("OpenMausBot");
     expect(heading()).toBe(AREAS);
+    cleanup();
+
+    await open(settingUp());
+    await click(button("Pedir à sua IA"), 8);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Outro app" }), 16);
+    // Every app of the import to pick from, none picked yet.
+    expect(screen().getByRole("dialog", { name: "Trazer agentes de outro app" })).toBeTruthy();
+    expect(sources().querySelector(".imp-source[aria-pressed='true']")).toBeNull();
+    expect(sources().querySelectorAll(".imp-source").length).toBeGreaterThan(4);
   });
 });
 
@@ -1393,7 +1485,10 @@ describe("the worst case, measured by CI's geometry in German and Russian too", 
     await click(button("Trocar"), 4);
     snapshot();
     await closeDialog();
-    await click(button(/Pedir à sua IA/), 12);
+    // Ask your AI's dialog: its two groups, then the ask flow on an AI picked there.
+    await click(button("Pedir à sua IA"), 12);
+    await languages(r.services);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "Claude" }), 8);
     await languages(r.services);
     await closeDialog();
     await click(area("Tecnologia"), 20);

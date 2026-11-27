@@ -10,43 +10,61 @@ import {
   DialogBody,
   DialogFooter,
   Field,
+  GroupHeading,
   Icon,
   Input,
   Locked,
   normalizeAppearance,
   type OptionLinkItem,
   OptionLinks,
+  ProviderLogo,
   ProviderStack,
 } from "@agenteschat/ui";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { ZonePicker } from "@/components/ZoneSelect";
 import { CARD_MARK } from "@/lib/import-marks";
 import { useTheme } from "@/lib/theme";
-import { type AskVariant, AskYourAi } from "./AskStep";
+import { ASK_CLIENTS, type AskVariant, AskYourAi } from "./AskStep";
 import { AREA_ICON, useAreaApps } from "./areas";
 import { AppWall, Box, type ShellFace } from "./Shell";
 import "./area-step.css";
 
 /*
- * The work step (ADR 0256, addendum of 2026-11-27): what the first agent will do, as flat rows (the area's bare icon,
- * its title and line, the apps it works in and the chevron on the title's line), one tap going on; "Other" for an agent
- * the person makes. Under them, the other ways in: asking the person's own AI (a dialog over the step) and bringing
- * agents from another app (the import). The footer says the workspace's name and time zone, with the way to change
- * them (the name step folded in). The cover is the apps an agent works in, with the areas' agents among them.
+ * The work step (ADR 0256, addendum of 2026-11-27): first "Ask your AI", one button over the list, led by the marks of
+ * what the person may already use (the AI makers, then agent apps); then what the first agent will do, as flat rows
+ * (the area's bare icon, its title and line, the apps it works in and the chevron on the title's line), one tap going
+ * on; "Other" for an agent the person makes. The button opens one dialog, "Start from what you already use": the
+ * person's AI, which suggests the first agent (the ask flow, in the same dialog), and the agents of another app (the
+ * import, on that app). The footer says the workspace's name and time zone, with the way to change them (the name
+ * step folded in). The cover is the apps an agent works in, with the areas' agents among them.
  */
 
-/** Asking the person's AI: the assistants it names most, as the dialog's row shows them first. */
+/** The AI makers on "Ask your AI", the assistants people use most. */
 const ASK_MARKS = ["openai", "claude", "gemini"] as const;
+/** The agent apps after them, where the import is offered. */
+const APP_MARKS = ["grok-bot", "openbotrun"] as const satisfies readonly Exclude<ImportCard, "other">[];
+/** The assistants the dialog names (`ASK_CLIENTS` ids); every other one is "Another AI", the ask flow's own row. */
+const NAMED_AIS = ["chatgpt", "claude", "gemini"] as const;
+/** "Another AI"'s marks: the next assistants in the ask flow's row. */
+const MORE_AIS = ["grok", "perplexity", "cursor"] as const;
 /**
- * Bringing agents from another app: the import's first three apps (`IMPORT_CARDS`), named here so the work step loads
- * none of the import's readers (a test holds them to the import's order).
+ * The agent apps the dialog names, by their import card, with the import's own names for them, named here so the work
+ * step loads none of the import's readers (a test holds them to the import's names); every other one is "Another app",
+ * the import's own list.
  */
-const IMPORT_MARKS = ["grok-bot", "chatgpt-dots", "openbotrun"] as const satisfies readonly Exclude<
-  ImportCard,
-  "other"
->[];
+const NAMED_APPS = [
+  { card: "grok-bot", name: "Grok Bot" },
+  { card: "openbotrun", name: "OpenBot.run" },
+  { card: "openmausbot", name: "OpenMausBot" },
+] as const satisfies readonly { card: Exclude<ImportCard, "other">; name: string }[];
+/** "Another app"'s marks and names: the import's next apps. */
+const MORE_APPS = [
+  { card: "hermes", name: "Hermes Agent" },
+  { card: "openclaw", name: "OpenClaw" },
+  { card: "paperclip", name: "Paperclip" },
+] as const satisfies readonly { card: Exclude<ImportCard, "other">; name: string }[];
 
 /** The wall's faces: the areas' agents, never the right hand. */
 export function areaFaces(personal: boolean): ShellFace[] {
@@ -100,11 +118,10 @@ export function AreaStep({
   onCustom: () => void;
   /** What the person's AI proposed: the page makes its top option, the task it found repeated most. */
   onProposal: (proposal: FirstAgents, app: AppClient | null) => void;
-  /** "Bring from another app": the import dialog, the page's. */
-  onImport?: () => void;
+  /** An agent app picked (null: "Another app"): the page's import dialog, on that app. None for a member. */
+  onImport?: (card: ImportCard | null) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const dark = useTheme().resolved === "dark";
   const [asking, setAsking] = useState(false);
   const [changing, setChanging] = useState(false);
   const title = t("onboarding.areas.title");
@@ -147,70 +164,32 @@ export function AreaStep({
           </span>
         ) : undefined
       }
-      // The other ways in, each led by the marks of what it means, always in view under the list. Nothing else on the
-      // step points to them.
-      pinned={
-        <div className="onb-other">
-          <p className="onb-other__label">{t("onboarding.areas.otherWays")}</p>
-          <div className="onb-other__acts">
-            <Button className="onb-other__btn" disabled={busy} onClick={() => setAsking(true)}>
-              <ProviderStack ids={ASK_MARKS} />
-              <span>{t("onboarding.areas.ask")}</span>
-            </Button>
-            {onImport && (
-              <Button className="onb-other__btn" disabled={busy} onClick={onImport}>
-                <span className="onb-marks" aria-hidden="true">
-                  {IMPORT_MARKS.map((c) => {
-                    const mark = CARD_MARK[c];
-                    return (
-                      <span key={c} className="onb-marks__plate">
-                        <img src={dark && mark.dark ? mark.dark : mark.icon} alt="" />
-                      </span>
-                    );
-                  })}
-                </span>
-                <span>{t("onboarding.areas.import")}</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      }
     >
       <Locked when={busy}>
         <div className="onb-areas">
+          <AskButton apps={onImport !== undefined} onClick={() => setAsking(true)} />
           <OptionLinks flat className="onb-areas__list" aria-label={title} options={rows} />
         </div>
       </Locked>
-      {/* "Ask your AI": the request and its wait in the kit's dialog, over the step (a sheet on a phone). An answer
-          closes it and goes on to the agent it proposed. */}
-      <Dialog
+      <StartDialog
         open={asking}
-        onOpenChange={setAsking}
-        title={t("onboarding.areas.askTitle")}
-        closeLabel={t("common.close")}
-        width={720}
-        className="onb-askdlg"
-      >
-        <DialogBody>
-          <AskYourAi
-            orgId={orgId}
-            variant={variant}
-            org={org}
-            onOther={
-              onImport
-                ? () => {
-                    setAsking(false);
-                    onImport();
-                  }
-                : undefined
-            }
-            onProposal={(p, app) => {
-              setAsking(false);
-              onProposal(p, app);
-            }}
-          />
-        </DialogBody>
-      </Dialog>
+        orgId={orgId}
+        variant={variant}
+        org={org}
+        onClose={() => setAsking(false)}
+        onProposal={(p, app) => {
+          setAsking(false);
+          onProposal(p, app);
+        }}
+        onApp={
+          onImport
+            ? (card) => {
+                setAsking(false);
+                onImport(card);
+              }
+            : undefined
+        }
+      />
       {place && (
         <PlaceDialog
           open={changing}
@@ -221,6 +200,188 @@ export function AreaStep({
         />
       )}
     </Box>
+  );
+}
+
+/** An import card's mark, in its maker's dark colors on a dark theme. */
+function CardMark({ card }: { card: Exclude<ImportCard, "other"> }) {
+  const dark = useTheme().resolved === "dark";
+  const mark = CARD_MARK[card];
+  return <img src={dark && mark.dark ? mark.dark : mark.icon} alt="" />;
+}
+
+/**
+ * "Ask your AI", over the list: a real button as wide as the step, led by a stack of what the person may already use
+ * (the AI makers, then the agent apps where the import is offered), its title and a line under it, the chevron on the
+ * title's line.
+ */
+function AskButton({ apps, onClick }: { apps: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
+  const id = useId();
+  return (
+    <button
+      type="button"
+      className="onb-start"
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-line`}
+      onClick={onClick}
+    >
+      <span className="onb-start__marks" aria-hidden="true">
+        {ASK_MARKS.map((m) => (
+          <span key={m} className="onb-start__plate">
+            <ProviderLogo id={m} size="xs" />
+          </span>
+        ))}
+        {apps &&
+          APP_MARKS.map((c) => (
+            <span key={c} className="onb-start__plate">
+              <CardMark card={c} />
+            </span>
+          ))}
+      </span>
+      <span className="onb-start__text">
+        <span className="onb-start__title" id={`${id}-title`}>
+          {t("onboarding.areas.ask")}
+        </span>
+        <span className="onb-start__line" id={`${id}-line`}>
+          {t(apps ? "onboarding.areas.askLine" : "onboarding.areas.askLineAlone")}
+        </span>
+      </span>
+      <Icon name="chevronRight" size={16} className="onb-start__go" />
+    </button>
+  );
+}
+
+/**
+ * "Start from what you already use", the one dialog for both ways in (a sheet on a phone): the person's AI, which
+ * suggests the first agent, and the agents of another app, each a group of flat rows. An AI picked turns the dialog into
+ * the ask flow on that AI, with Back to the list; a proposal closes it. An app picked opens the import on that app
+ * (`onApp`, none for a member: no apps group then).
+ */
+function StartDialog({
+  open,
+  orgId,
+  variant,
+  org,
+  onClose,
+  onProposal,
+  onApp,
+}: {
+  open: boolean;
+  orgId: string;
+  variant: AskVariant;
+  org: string;
+  onClose: () => void;
+  onProposal: (proposal: FirstAgents, app: AppClient | null) => void;
+  onApp?: (card: ImportCard | null) => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  // The list, or the ask flow on the AI picked there (null: "Another AI", the flow's own pick).
+  const [asking, setAsking] = useState<{ client: string | null } | null>(null);
+  const names = (list: readonly string[]) => t("onboarding.areas.startMore", { names: list.join(", ") });
+  const ais: OptionLinkItem[] = [
+    ...NAMED_AIS.flatMap((cid) => {
+      const c = ASK_CLIENTS.find((x) => x.id === cid);
+      return c
+        ? [
+            {
+              value: c.id,
+              leading: c.mark ? <ProviderLogo id={c.mark} size="xs" /> : <Icon name="plug" size={20} />,
+              title: c.name,
+              description: t("onboarding.areas.startAiLine"),
+              onSelect: () => setAsking({ client: c.id }),
+            },
+          ]
+        : [];
+    }),
+    {
+      value: "more-ai",
+      leading: <ProviderStack ids={MORE_AIS.flatMap((cid) => ASK_CLIENTS.find((x) => x.id === cid)?.mark ?? [])} />,
+      title: t("onboarding.areas.startMoreAi"),
+      description: names(MORE_AIS.flatMap((cid) => ASK_CLIENTS.find((x) => x.id === cid)?.name ?? [])),
+      onSelect: () => setAsking({ client: null }),
+    },
+  ];
+  const apps: OptionLinkItem[] = onApp
+    ? [
+        ...NAMED_APPS.map((a) => ({
+          value: a.card,
+          leading: <CardMark card={a.card} />,
+          title: a.name,
+          description: t("onboarding.areas.startAppsLine"),
+          onSelect: () => onApp(a.card),
+        })),
+        {
+          value: "more-app",
+          leading: (
+            <span className="onb-marks" aria-hidden="true">
+              {MORE_APPS.map((a) => (
+                <span key={a.card} className="onb-marks__plate">
+                  <CardMark card={a.card} />
+                </span>
+              ))}
+            </span>
+          ),
+          title: t("onboarding.areas.startMoreApp"),
+          description: names(MORE_APPS.map((a) => a.name)),
+          onSelect: () => onApp(null),
+        },
+      ]
+    : [];
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (o) return;
+        onClose();
+        setAsking(null);
+      }}
+      title={t(asking ? "onboarding.areas.askTitle" : "onboarding.areas.startTitle")}
+      leading={
+        asking ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon="chevronLeft"
+            aria-label={t("common.back")}
+            onClick={() => setAsking(null)}
+          />
+        ) : undefined
+      }
+      closeLabel={t("common.close")}
+      width={asking ? 720 : 560}
+      className="onb-askdlg"
+    >
+      <DialogBody>
+        {asking ? (
+          <AskYourAi
+            orgId={orgId}
+            variant={variant}
+            org={org}
+            client={asking.client}
+            onProposal={(p, app) => {
+              setAsking(null);
+              onProposal(p, app);
+            }}
+          />
+        ) : (
+          <div className="onb-start-list">
+            <section aria-labelledby={`${id}-ai`}>
+              <GroupHeading level={3} id={`${id}-ai`} title={t("onboarding.areas.startAi")} />
+              <OptionLinks flat className="onb-start-opts" aria-labelledby={`${id}-ai`} options={ais} />
+            </section>
+            {apps.length > 0 && (
+              <section aria-labelledby={`${id}-apps`}>
+                <GroupHeading level={3} id={`${id}-apps`} title={t("onboarding.areas.startApps")} />
+                <OptionLinks flat className="onb-start-opts" aria-labelledby={`${id}-apps`} options={apps} />
+              </section>
+            )}
+          </div>
+        )}
+      </DialogBody>
+    </Dialog>
   );
 }
 
