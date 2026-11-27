@@ -62,11 +62,14 @@ export const SPEECH_TARGETS = {
   "linux-arm64": "aarch64-unknown-linux-gnu",
 } as const;
 
-/**
- * The helper's sha256 per target. ponytail: empty until the release is built, so the release's manifest.json is
- * trusted for the helper alone (the models are pinned above); pin these from that manifest once it exists.
- */
-const HELPER_SHA256: Partial<Record<string, string>> = {};
+/** The helper's sha256 per target, from speech-helper-v0.1.0's SHA256SUMS. */
+const HELPER_SHA256: Partial<Record<string, string>> = {
+  "aarch64-apple-darwin": "8b4ed9687e2e0d5dda3d1df35ed00555bfba7fc2cd74578ea9e6611a9a02462b",
+  "x86_64-apple-darwin": "745bcda55d078498a6a4c5f09a0bdd141eb7ee18dc84df09d9229238e1d84495",
+  "x86_64-pc-windows-msvc": "899299fc4dd94618a8152f8edae06cafca8930c0aa97e72a608bd57783c438fe",
+  "x86_64-unknown-linux-gnu": "bebe620b2a8715204429f64b58ab1bd24a6f6221dfbf3a82879bd3b599ffdd77",
+  "aarch64-unknown-linux-gnu": "7d6137114978891b57b70d807abca25306732562dd77153527f5e73c2015e6af",
+};
 
 /** Above the download: the files are renamed into place, with room left over. */
 export const SPEECH_DISK_BYTES = 2 * 2 ** 30;
@@ -125,6 +128,8 @@ export interface LocalSpeechDeps {
   spawn?: typeof spawn;
   /** Tests: other files than `SPEECH_MODELS`. */
   models?: readonly { path: string; sha256: string; bytes: number }[];
+  /** Tests: other helper pins than the release's (empty: the release's manifest.json is read). */
+  helperSha256?: Partial<Record<string, string>>;
   /** Tests: the machine's size. */
   machine?: () => { memoryBytes: number; cpus: number; target: string | null };
   log?: (message: string, fields?: Record<string, unknown>) => void;
@@ -234,7 +239,7 @@ export function createLocalSpeech(deps: LocalSpeechDeps): LocalSpeech {
   }
 
   async function helperSha(target: string): Promise<string> {
-    const pinned = HELPER_SHA256[target];
+    const pinned = (deps.helperSha256 ?? HELPER_SHA256)[target];
     if (pinned) return pinned;
     const res = await http(`${RELEASE_URL}/manifest.json`, { redirect: "follow" }).catch(() => null);
     const manifest = (res?.ok ? await res.json().catch(() => null) : null) as {

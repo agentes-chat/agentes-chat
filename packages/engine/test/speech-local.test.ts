@@ -82,7 +82,7 @@ test("set up here: the helper and the models come from our release, checked, the
   const dir = folder();
   const { fetch, asked } = release();
   const { spawn, started } = helper("listens");
-  const local = createLocalSpeech({ dir, fetch, spawn, models, machine: () => BIG });
+  const local = createLocalSpeech({ dir, fetch, spawn, models, helperSha256: {}, machine: () => BIG });
   expect((await local.view()).fit).toBe("fits");
   await local.install();
   expect(await settled(local)).toEqual({ state: "ready" });
@@ -101,6 +101,7 @@ test("set up here: the helper and the models come from our release, checked, the
   const again = release();
   const after = createLocalSpeech({
     dir,
+    helperSha256: {},
     fetch: again.fetch,
     spawn: helper("listens").spawn,
     models,
@@ -126,7 +127,14 @@ test("a download stopped after its last byte, before its check, is checked as it
       ? new Response(null, { status: 416 })
       : null,
   );
-  const local = createLocalSpeech({ dir, fetch, spawn: helper("listens").spawn, models, machine: () => BIG });
+  const local = createLocalSpeech({
+    dir,
+    fetch,
+    spawn: helper("listens").spawn,
+    models,
+    helperSha256: {},
+    machine: () => BIG,
+  });
   await local.install();
   expect(await settled(local)).toEqual({ state: "ready" });
   expect(readFileSync(join(dir, "models/parakeet/encoder.int8.onnx"))).toEqual(Buffer.from(MODEL));
@@ -137,7 +145,14 @@ test("a stopped download goes on from the same byte", async () => {
   mkdirSync(join(dir, "models/parakeet"), { recursive: true });
   writeFileSync(join(dir, "models/parakeet/encoder.int8.onnx.part"), MODEL.slice(0, 5));
   const { fetch, asked } = release();
-  const local = createLocalSpeech({ dir, fetch, spawn: helper("listens").spawn, models, machine: () => BIG });
+  const local = createLocalSpeech({
+    dir,
+    fetch,
+    spawn: helper("listens").spawn,
+    models,
+    helperSha256: {},
+    machine: () => BIG,
+  });
   await local.install();
   expect(await settled(local)).toEqual({ state: "ready" });
   expect(asked).toContainEqual({ name: "parakeet-encoder.int8.onnx", range: "bytes=5-" });
@@ -149,6 +164,7 @@ test("a damaged file is fetched again once; twice is a download failure with the
   const once = release((name) => (name === "parakeet-tokens.txt" && damaged-- > 0 ? new Response("garbage") : null));
   const local = createLocalSpeech({
     dir: folder(),
+    helperSha256: {},
     fetch: once.fetch,
     spawn: helper("listens").spawn,
     models,
@@ -160,6 +176,7 @@ test("a damaged file is fetched again once; twice is a download failure with the
   const always = release((name) => (name === "parakeet-tokens.txt" ? new Response("garbage") : null));
   const broken = createLocalSpeech({
     dir: folder(),
+    helperSha256: {},
     fetch: always.fetch,
     spawn: helper("listens").spawn,
     models,
@@ -175,7 +192,14 @@ test("a damaged file is fetched again once; twice is a download failure with the
 
 test("a helper that stops is started again once, then fails with its own words", async () => {
   const { spawn, started } = helper("dies");
-  const local = createLocalSpeech({ dir: folder(), fetch: release().fetch, spawn, models, machine: () => BIG });
+  const local = createLocalSpeech({
+    dir: folder(),
+    fetch: release().fetch,
+    spawn,
+    models,
+    helperSha256: {},
+    machine: () => BIG,
+  });
   await local.install();
   expect(await settled(local)).toMatchObject({
     state: "failed",
@@ -190,6 +214,7 @@ test("a machine too small or with no build says why, and nothing downloads", asy
   const { fetch, asked } = release();
   const small = createLocalSpeech({
     dir: folder(),
+    helperSha256: {},
     fetch,
     models,
     machine: () => ({ ...BIG, memoryBytes: 4 * 2 ** 30 }),
