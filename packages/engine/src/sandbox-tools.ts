@@ -47,9 +47,9 @@ import { ToolOffError } from "./errors";
 import { publishChannelEvent } from "./events";
 import { copyToComputer } from "./file-pulls";
 import { openForModel } from "./file-reader";
+import { syntaxError } from "./file-syntax";
 import { clockOf, cutText, formatBytes, textOfBytes } from "./format";
 import { mergeReposOfCall } from "./git/repos";
-import { jsSyntaxError } from "./js-syntax";
 import { fullMachinePath, pathInOwnFolder, requestFolderAccess } from "./machine-access";
 import {
   HOLD_MAX_MS,
@@ -1083,7 +1083,7 @@ export function createSandboxToolSource(
     {
       name: "write_file",
       description:
-        "Write a text file in your computer's workspace (creates folders; overwrites). Checks JavaScript syntax (.js, .gs). Write a long file in parts with append.",
+        "Write a text file in your computer's workspace (creates folders; overwrites). Checks the syntax of JavaScript, TypeScript, JSON, YAML and TOML files. Write a long file in parts with append.",
       scope: SANDBOX_SCOPE,
       inputSchema: {
         type: "object",
@@ -1118,9 +1118,9 @@ export function createSandboxToolSource(
             },
             input,
           );
-          const broken = jsSyntaxError(wrote.shown, textOfBytes(wrote.whole) ?? "");
+          const broken = await syntaxError(wrote.shown, textOfBytes(wrote.whole) ?? "");
           const check = broken
-            ? ` It doesn't parse as JavaScript yet (${broken}). Fix it before you hand it over; while parts are still to come, check again after the last one.`
+            ? ` It doesn't parse as ${broken.format} yet (${broken.error}). Fix it before you hand it over; while parts are still to come, check again after the last one.`
             : "";
           return {
             content:
