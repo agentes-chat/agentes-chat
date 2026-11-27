@@ -183,7 +183,7 @@ import {
   systemShared,
   withShared,
 } from "./shared-folder";
-import { ackStandby, readStandby, STANDBY_POLL_MS, standbyOn, watchStandby } from "./standby";
+import { ackStandby, readStandby, refusesStandby, STANDBY_POLL_MS, standbyOn, watchStandby } from "./standby";
 import { prepareSystemStartPage } from "./start-page";
 import { DataSockets, RELAYED_FILE, RelayCount } from "./streams";
 import {
@@ -616,6 +616,8 @@ export class RunnerDaemon implements RequestObserver {
   private standby = false;
   /** The last standby ask answered (`standby-ack.json`). */
   private standbyAsk: string | null = null;
+  /** The last standby ask turned down for a running turn: it never applies, even once the turn ends. */
+  private standbyRefused: string | null = null;
   /** A park (`park.ts`) under way: the next ask waits for it. */
   private parking = false;
   /** A fix of the Mac's own Xcode (`xcode.fix`, the desktop app's iPhone window), made on its first request. */
@@ -2024,7 +2026,12 @@ export class RunnerDaemon implements RequestObserver {
   /** An operator's standby (ADR 0176), asked in `standby.json`: while it is in force, no link to the server. */
   private checkStandby() {
     const ask = readStandby(this.opts.home);
-    const on = standbyOn(ask);
+    // A standby drops the link, and a sleep after it freezes the CLI: with a turn running, the computer stays up and
+    // the one who asked (the guard, before a pause) hears why. That ask is void; the next one is asked again.
+    const turns = this.session?.connection.turns ?? 0;
+    const refuse = refusesStandby(ask, this.standbyAsk, this.standby, turns);
+    if (refuse && ask) this.standbyRefused = ask.id;
+    const on = standbyOn(ask) && ask?.id !== this.standbyRefused;
     if (on !== this.standby) {
       this.standby = on;
       const s = this.session;
@@ -2040,7 +2047,12 @@ export class RunnerDaemon implements RequestObserver {
     if (ask && ask.id !== this.standbyAsk) {
       this.standbyAsk = ask.id;
       try {
-        ackStandby(this.opts.home, ask.id);
+        if (refuse) this.opts.log(`standby refused: ${turns} agent turn${turns === 1 ? "" : "s"} running`);
+        ackStandby(
+          this.opts.home,
+          ask.id,
+          refuse ? "An agent's turn is running on this computer: no standby now." : undefined,
+        );
       } catch (err) {
         this.opts.log(`standby: ${err instanceof Error ? err.message : String(err)}`);
       }

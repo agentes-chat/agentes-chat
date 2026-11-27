@@ -43,6 +43,7 @@ import {
   InkOrbit,
   PixelOrbit,
   PressScale,
+  RADIUS,
   Text,
   TOUCH,
   useReducedMotion,
@@ -888,9 +889,10 @@ const styles = StyleSheet.create({
   // the frame's (the inner box clips it).
   framePage: { aspectRatio: 16 / 10, overflow: "hidden" },
   screenRoom: { aspectRatio: DEFAULT_DESKTOP.width / DEFAULT_DESKTOP.height },
-  // Over the page's top right, on glass: the toolbar's buttons, each a finger's 44 by its reach.
-  over: { position: "absolute", top: 8, right: 8, borderRadius: 12 },
-  overIn: { flexDirection: "row", alignItems: "center", gap: 4, padding: 4, borderRadius: 12 },
+  // Over the page's top right, on glass: the toolbar's buttons, each a finger's 44 by its reach. A capsule around the
+  // capsule buttons, 4 out from them, so its ends follow theirs (the computer's dock, `AgentScreen`'s `dockGlass`).
+  over: { position: "absolute", top: 8, right: 8, borderRadius: RADIUS.full },
+  overIn: { flexDirection: "row", alignItems: "center", gap: 4, padding: 4, borderRadius: RADIUS.full },
   histRoom: { position: "absolute", top: 8, right: 8, bottom: 8, left: 8, alignItems: "flex-end" },
   hist: { width: "100%", maxWidth: 300, maxHeight: "100%", borderRadius: 14 },
   histIn: { flexShrink: 1, borderRadius: 14 },

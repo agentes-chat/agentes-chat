@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 93;
+export const MACHINE_PROTOCOL_VERSION = 94;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -864,13 +864,21 @@ export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
  */
 export const FOLDER_PICK_PROTOCOL = 92;
 /**
+ * From this protocol on, a brain turn outlives a dropped link: the runner keeps it running for `HELD_TURN_MS` (its
+ * events and its result kept), and a `brain.turn` for the same run on the next link takes it over instead of starting
+ * the turn again. One sent with `reattach` only takes a turn held there; nothing held, it is answered `not_found`.
+ * `reattach: "stop"` takes it and stops it (its run was canceled meanwhile). A turn of another run on the same CLI
+ * (agent and session) ends a held one first. A standby (before a sleep) is refused while a turn runs.
+ */
+export const HELD_TURN_PROTOCOL = 93;
+/**
  * From this protocol on (ADR 0258): agents use the apps on the person's own computer through the pinned
  * `agent-desktop` CLI, which reads an app's accessibility tree and acts on its elements by ref without the person's
  * pointer or keyboard. `apps.run` runs one command of `APPS_COMMANDS`; the runner adds its own flags and refuses the
  * rest. `hello.apps` says whether it can run here: a computer where agents work as the person's own user (never
  * system mode). The server never sends `apps.run` to an older runner.
  */
-export const PERSON_APPS_PROTOCOL = 93;
+export const PERSON_APPS_PROTOCOL = 94;
 /** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
 export const AGENT_DESKTOP_VERSION = "1.3.1";
 /** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
@@ -2797,6 +2805,8 @@ export interface BrainTurnRequest {
    * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
    */
   answers?: "each";
+  /** `HELD_TURN_PROTOCOL`: take over the turn of this run held on the computer, never start one; `stop`: and end it. */
+  reattach?: boolean | "stop";
 }
 
 /**

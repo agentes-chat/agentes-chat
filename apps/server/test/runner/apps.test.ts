@@ -77,7 +77,7 @@ describe("the person's apps through agent-desktop (ADR 0258)", () => {
       JSON.stringify({
         type: "hello",
         token: "t",
-        protocol: 93,
+        protocol: 94,
         version: "1",
         hostname: "h",
         os: "darwin",

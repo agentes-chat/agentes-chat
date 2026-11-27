@@ -4,7 +4,7 @@
 - Date: 2026-11-26
 - Amends: ADR 0031 §7 (the owner's real desktop), §1a's `owner_desktop` and §15 for apps on a person's computer
 - Builds on: ADR 0054 (the screen layer), ADR 0062 (the agent's own desktop), ADR 0255 (OS permission waits)
-- Code: `packages/adapters/src/machine-protocol.ts` (`PERSON_APPS_PROTOCOL` 93, `apps.run`, `APPS_COMMANDS`, `AGENT_DESKTOP_VERSION`, `AGENT_DESKTOP_SHA256`, `hello.apps`), `apps/server/runner/apps.ts` (`AppControl`), `handlers.ts`, `daemon.ts` (`appsStop`), `packages/engine/src/desktop/person-apps.ts` (`apps_list`, `apps_read`, `apps_act`, `agentPersonAppsStatus`), `packages/adapters/src/runner-control.ts` (`ControlStatus.apps`, `apps.stop`), `apps/desktop/src/windows/Popover.tsx` (`AppUseRow`), `apps/desktop/scripts/fetch-agent-desktop.ts`, `.github/workflows/desktop.yml`
+- Code: `packages/adapters/src/machine-protocol.ts` (`PERSON_APPS_PROTOCOL` 94, `apps.run`, `APPS_COMMANDS`, `AGENT_DESKTOP_VERSION`, `AGENT_DESKTOP_SHA256`, `hello.apps`), `apps/server/runner/apps.ts` (`AppControl`), `handlers.ts`, `daemon.ts` (`appsStop`), `packages/engine/src/desktop/person-apps.ts` (`apps_list`, `apps_read`, `apps_act`, `agentPersonAppsStatus`), `packages/adapters/src/runner-control.ts` (`ControlStatus.apps`, `apps.stop`), `apps/desktop/src/windows/Popover.tsx` (`AppUseRow`), `apps/desktop/scripts/fetch-agent-desktop.ts`, `.github/workflows/desktop.yml`
 
 ## Context
 
