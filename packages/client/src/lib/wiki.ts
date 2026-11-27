@@ -137,7 +137,11 @@ export interface Placed {
 /**
  * A small force-directed layout (no library): nodes repel, links pull,
  * everything drifts to the center. Deterministic (starts on a circle), so
- * the same graph always lands the same way.
+ * the same graph always lands the same way. Nothing stops a node at the box's
+ * edge while it runs (pages with no link were pushed there and stayed in a
+ * row along it): the center holds them, and at the end the whole drawing is
+ * fitted into the box, shrunk when it is larger, with room under its lowest
+ * row for a title.
  */
 export function layoutGraph(
   graph: { nodes: { slug: string }[]; edges: { from: string; to: string }[] },
@@ -196,19 +200,34 @@ export function layoutGraph(
       b.vy -= dy * f;
     }
     for (const p of pos) {
-      p.vx += (width / 2 - p.x) * 0.004;
-      p.vy += (height / 2 - p.y) * 0.004;
+      p.vx += (width / 2 - p.x) * GRAPH_GRAVITY;
+      p.vy += (height / 2 - p.y) * GRAPH_GRAVITY;
       const max = 12 * cool + 1;
       p.x += Math.max(-max, Math.min(max, p.vx));
       p.y += Math.max(-max, Math.min(max, p.vy));
       p.vx *= 0.6;
       p.vy *= 0.6;
-      p.x = Math.max(24, Math.min(width - 24, p.x));
-      p.y = Math.max(24, Math.min(height - 24, p.y));
     }
   }
-  return pos.map(({ slug, x, y }) => ({ slug, x: Math.round(x), y: Math.round(y) }));
+  const xs = pos.map((p) => p.x);
+  const ys = pos.map((p) => p.y);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const room = { w: width - 2 * GRAPH_PAD, h: height - GRAPH_PAD - GRAPH_PAD_BELOW };
+  const scale = Math.min(1, room.w / Math.max(1, x1 - x0), room.h / Math.max(1, y1 - y0));
+  const [cx, cy] = [(x0 + x1) / 2, (y0 + y1) / 2];
+  const [mx, my] = [width / 2, GRAPH_PAD + room.h / 2];
+  return pos.map(({ slug, x, y }) => ({
+    slug,
+    x: Math.round(mx + (x - cx) * scale),
+    y: Math.round(my + (y - cy) * scale),
+  }));
 }
+
+/** How hard every node drifts to the center: enough to keep a page with no link near the rest. */
+const GRAPH_GRAVITY = 0.04;
+/** The room a layout keeps from the box's edges, and under its lowest row for a title (its 13 px line past a dot). */
+const GRAPH_PAD = 24;
+const GRAPH_PAD_BELOW = 40;
 
 /** What someone may do with a wiki page or folder. */
 export type WikiLevel = "none" | "view" | "edit";

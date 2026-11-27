@@ -143,6 +143,35 @@ describe("wiki rules", () => {
     expect([...neighborsOf(g, "a")].sort()).toEqual(["b", "c"]);
   });
 
+  test("pages with no link float near the rest, none pinned in a row along the edge, every title inside", () => {
+    // A hub with its pages, ten pages with no link at all, in the full graph's box of a wide window.
+    const linked = ["hub", ...Array.from({ length: 10 }, (_, i) => `p${i}`)];
+    const lone = Array.from({ length: 10 }, (_, i) => `lone${i}`);
+    const g = {
+      nodes: [...linked, ...lone].map((slug) => ({ slug })),
+      edges: linked.slice(1).map((slug) => ({ from: "hub", to: slug })),
+    };
+    const [W, H] = [1045, 560];
+    const placed = layoutGraph(g, W, H);
+    for (const p of placed) {
+      expect(p.x).toBeGreaterThanOrEqual(24);
+      expect(p.x).toBeLessThanOrEqual(W - 24);
+      expect(p.y).toBeGreaterThanOrEqual(24);
+      // The lowest row keeps room for its title.
+      expect(p.y).toBeLessThanOrEqual(H - 40);
+    }
+    // At most the outermost touch the edges: before, 17 of 21 sat on them.
+    const onEdge = placed.filter((p) => p.x <= 24 || p.x >= W - 24 || p.y <= 24 || p.y >= H - 40);
+    expect(onEdge.length).toBeLessThanOrEqual(4);
+    // No two pages on top of each other.
+    for (const [i, a] of placed.entries())
+      for (const b of placed.slice(i + 1)) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(12);
+    // The hub sits in the middle, not pushed to a side.
+    const hub = placed.find((p) => p.slug === "hub");
+    expect(Math.abs((hub?.x ?? 0) - W / 2)).toBeLessThan(W / 4);
+    expect(Math.abs((hub?.y ?? 0) - H / 2)).toBeLessThan(H / 4);
+  });
+
   test("the full graph draws in its box's shape: a wide box gets a wide drawing, not side bands", () => {
     expect(graphWidth(1516, 680)).toBe(1248);
     expect(graphWidth(2200, 1220)).toBe(1010);
