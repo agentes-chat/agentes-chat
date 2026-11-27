@@ -530,12 +530,19 @@ describe("deleting an account", () => {
     ]);
   });
 
-  test("a person makes at most 10 workspaces a day", async () => {
+  test("a person makes at most 10 workspaces a day; the one being set up, answered again, isn't one more", async () => {
     const owner = browser(t);
     await signUp(owner, "owner@example.com");
+    const create = (name: string, finished = false) =>
+      owner("/api/app/organizations", { json: { name, ...(finished ? { finished: true } : {}) } });
+    const first = await create("W0");
+    expect(first.status).toBe(201);
+    // Asked for again while it is being set up (a reload, a retry): the same workspace, never one of the ten.
+    for (let i = 0; i < 5; i++) expect((await create("W0")).status).toBe(200);
+    const { organization } = (await first.json()) as { organization: { id: string } };
+    await owner(`/api/app/organizations/${organization.id}/onboarding`, { method: "PATCH", json: { finished: true } });
     const statuses: number[] = [];
-    for (let i = 0; i < 11; i++)
-      statuses.push((await owner("/api/app/organizations", { json: { name: `W${i}` } })).status);
-    expect(statuses).toEqual([201, ...Array(9).fill(200), 429]);
+    for (let i = 1; i < 11; i++) statuses.push((await create(`W${i}`, true)).status);
+    expect(statuses).toEqual([...Array(9).fill(201), 429]);
   });
 });

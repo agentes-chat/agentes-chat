@@ -799,7 +799,7 @@ describe("meeting the first agent and connecting its apps (ADR 0260, ADR 0242)",
     // Stripe's own server by its address: a server row, the catalog's app by that address.
     const made = await api.customConnectors.connect(ORG_ID, {
       serverUrl: "https://mcp.stripe.com",
-      apiKey: "rk_test_onboarding",
+      apiKey: "made-up-key",
       label: "Stripe",
       returnTo: "/onboarding",
     });

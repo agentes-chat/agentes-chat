@@ -28,6 +28,14 @@ regexes = ['''^(abc123def456ghi789|9f8e7d6c5b4a3210|sk-ant-api03-abcdefghijklmno
 description = "Himetrica site keys (public by design)"
 regexes = ['''^hm_[0-9a-f]{48}$''']
 
+# A test's made-up key for a server row once had a restricted Stripe key's shape ("rk_test_" and ten letters), in one
+# commit of the onboarding's branch. History stays as it is, so that commit is allowed for this rule only; the test now
+# uses a key in no provider's format, and a real key in any other commit still fails the scan.
+[[allowlists]]
+description = "A made-up Stripe-shaped key in an onboarding test, in one past commit"
+targetRules = ["stripe-access-token"]
+commits = ["4ab7eabf182cbd7da2e1cf0fad078b0dcfcd87c0"]
+
 # A test's made-up private keys (a run nobody is behind must never send a credential) once sat close enough
 # that the private-key rule read them as one key, in a commit already on main. History stays as it is, so
 # that commit is allowed for this rule only; a real key in any other commit still fails the scan.
