@@ -17621,6 +17621,12 @@ export const ptBR = {
       paused: "{{host}} está pausado, então o controle espera até ele voltar.",
       held: "Este workspace está pausado, então o controle espera até ele voltar a ficar ativo.",
       lost: "O controle acabou. Você voltou a assistir {{name}}.",
+      /** O controle não mostrou nada a tempo (o assistente de testes de um iPhone ainda compilando ou abrindo). */
+      controlLate:
+        "O controle não começou a tempo. {{host}} ainda está preparando {{name}}: tente de novo em um minuto.",
+      /** O controle não conseguiu começar no computador. */
+      controlFailed:
+        "Não deu para assumir o controle de {{name}}. Tente de novo ou reinicie o app do agentes.chat no {{host}}.",
       typeLabel: "Digitar em {{name}}",
     },
     status: {

@@ -16615,6 +16615,8 @@
       "paused": "{{host}} sedang dijeda, jadi kendali menunggu sampai dilanjutkan.",
       "held": "Ruang kerja ini dijeda, jadi kontrol menunggu sampai aktif lagi.",
       "lost": "Kendali berakhir. Kamu menonton {{name}} lagi.",
+      "controlLate": "Kontrol tidak dimulai tepat waktu. {{host}} masih menyiapkan {{name}}: coba lagi dalam satu menit.",
+      "controlFailed": "Tidak bisa mengambil kontrol {{name}}. Coba lagi, atau mulai ulang aplikasi agentes.chat di {{host}}.",
       "typeLabel": "Ketik di {{name}}"
     },
     "status": {

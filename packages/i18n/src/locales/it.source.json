@@ -42138,6 +42138,12 @@
   "devices.screen.lost": {
     "value": "Control ended. You're watching {{name}} again."
   },
+  "devices.screen.controlLate": {
+    "value": "Control didn't start in time. {{host}} is still getting {{name}} ready: try again in a minute."
+  },
+  "devices.screen.controlFailed": {
+    "value": "Couldn't take control of {{name}}. Try again, or restart the agentes.chat app on {{host}}."
+  },
   "devices.screen.typeLabel": {
     "value": "Type on {{name}}"
   },

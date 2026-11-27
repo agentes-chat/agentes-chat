@@ -99,6 +99,8 @@ export interface FakeHost extends Host {
     setup: SetupState | null;
     panes: (MacPermission | OsPermission)[];
   };
+  /** Every window shown, and whether it was kept up (`showWindow`'s `keep`). */
+  readonly shown: { name: WindowName; keep: boolean }[];
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;
 }
@@ -292,6 +294,7 @@ export function createFakeHost(
 
   const host: FakeHost = {
     window: initial,
+    shown: [],
     compat: { on: true, fellBack: false, own: false },
     fake: true,
     platform,
@@ -427,7 +430,8 @@ export function createFakeHost(
       }
     },
     setTrayVisible: async () => {},
-    showWindow: async (name) => {
+    showWindow: async (name, o) => {
+      host.shown.push({ name, keep: o?.keep === true });
       host.window = name;
       devChanged();
       for (const l of shownListeners) l(name);

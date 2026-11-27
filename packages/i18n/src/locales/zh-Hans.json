@@ -16623,6 +16623,8 @@
       "paused": "{{host}} 已暂停，控制会等到它恢复。",
       "held": "此工作区已暂停，恢复后才能控制。",
       "lost": "控制已结束。你又在观看 {{name}} 了。",
+      "controlLate": "未能及时开始控制。{{host}} 仍在准备 {{name}}，请一分钟后再试。",
+      "controlFailed": "无法控制 {{name}}。请重试，或在 {{host}} 上重新启动 agentes.chat 应用。",
       "typeLabel": "在 {{name}} 上输入"
     },
     "status": {

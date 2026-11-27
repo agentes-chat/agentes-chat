@@ -600,8 +600,17 @@ export {
 } from "./timezones";
 export { installTitleTips, TITLE_TIP_GRACE_MS, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "./title-tips";
 export { dragsFiles, pastedFiles, transferFiles } from "./transfer";
-export { DitherLine, fillEnds, paintCells, paintLineArea, useElementWidth } from "./widgets/ChartPieces";
-export { formatWidgetNumber, formatWithUnit, useCountUp, widgetDigits } from "./widgets/format";
+export {
+  ChartTip,
+  type ChartTipAt,
+  DitherLine,
+  fillEnds,
+  paintCells,
+  paintLineArea,
+  useChartCursor,
+  useElementWidth,
+} from "./widgets/ChartPieces";
+export { formatWidgetNumber, formatWithUnit, seriesTip, useCountUp, widgetDigits } from "./widgets/format";
 export { ditherTile, WIDGET_CELL, widgetTileVars, widgetTones } from "./widgets/tiles";
 export { BuildingDither, WidgetBody, type WidgetBodyProps } from "./widgets/WidgetBody";
 export {

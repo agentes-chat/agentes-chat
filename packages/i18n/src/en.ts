@@ -17722,6 +17722,10 @@ export const en = {
       paused: "{{host}} is paused, so control waits until it's resumed.",
       held: "This workspace is paused, so control waits until it's active again.",
       lost: "Control ended. You're watching {{name}} again.",
+      /** Control showed no picture in its wait (an iPhone's test helper still building or starting): watching again. */
+      controlLate: "Control didn't start in time. {{host}} is still getting {{name}} ready: try again in a minute.",
+      /** Control couldn't start on the computer: watching again. */
+      controlFailed: "Couldn't take control of {{name}}. Try again, or restart the agentes.chat app on {{host}}.",
       typeLabel: "Type on {{name}}",
     },
     status: {

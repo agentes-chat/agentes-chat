@@ -155,7 +155,11 @@ export interface Host {
    * person turned it off, so closing the window keeps the Dock icon instead (`background.rs`).
    */
   setTrayVisible(show: boolean, off: boolean): Promise<void>;
-  showWindow(name: WindowName): Promise<void>;
+  /**
+   * `keep`: the popover, raised for a request rather than by the person, stays up when it loses focus until it is
+   * shown again without it or hidden.
+   */
+  showWindow(name: WindowName, o?: { keep?: boolean }): Promise<void>;
   hideWindow(name: WindowName): Promise<void>;
   quit(): Promise<void>;
   /**

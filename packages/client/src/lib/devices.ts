@@ -1128,8 +1128,11 @@ export type PhoneScreenState =
   /** It closed for good: only Try again opens it. */
   | "ended";
 
-/** Why control was refused, or ended: the screen opens again as a watcher and says so. */
-export type PhoneControlRefusal = "in_use" | "someone" | "unsupported" | "paused" | "held" | "lost";
+/**
+ * Why control was refused, or ended: the screen opens again as a watcher and says so. `late` and `failed`: control
+ * never showed a picture (its phone wasn't ready in a start's wait, or it couldn't start there).
+ */
+export type PhoneControlRefusal = "in_use" | "someone" | "unsupported" | "paused" | "held" | "lost" | "late" | "failed";
 
 /** The most text one `text` frame carries (mirror of `PHONE_VIEW.text` in `@agenteschat/adapters`). */
 export const PHONE_TEXT_MAX = 2000;
@@ -1144,16 +1147,33 @@ export function phoneScreenUrl(
   return socketUrl(base, "/api/phone-screen", params);
 }
 
-/** What a phone screen socket's close means (`reason`: the server's, or the computer's error code). */
+/**
+ * What a phone screen socket's close means (`reason`: the server's, or the computer's error code). `opening`: a
+ * control socket that showed no picture yet. Opening it again would wait the whole start again behind the same
+ * spinner, each time, so a close that would only try again goes back to watching and says why instead.
+ */
 export function phoneCloseState(
   code: number,
   reason = "",
+  o: { opening?: boolean } = {},
 ): { state: PhoneScreenState; retry: DesktopRetry; control?: PhoneControlRefusal } {
-  const watchAgain = (control: PhoneControlRefusal) => ({
-    state: "connecting" as const,
-    retry: "now" as const,
-    control,
-  });
+  const next = closeOf(code, reason);
+  if (!o.opening || next.control || (next.state !== "connecting" && next.state !== "notReady")) return next;
+  // A dropped connection (a server restarting, the network) is no answer about the phone: control opens again.
+  if (code === 1001 || code === 1006) return next;
+  return watchAgain(code === DESKTOP_CLOSE.late || reason === "phone_not_ready" ? "late" : "failed");
+}
+
+const watchAgain = (control: PhoneControlRefusal) => ({
+  state: "connecting" as const,
+  retry: "now" as const,
+  control,
+});
+
+function closeOf(
+  code: number,
+  reason: string,
+): { state: PhoneScreenState; retry: DesktopRetry; control?: PhoneControlRefusal } {
   switch (code) {
     case DESKTOP_CLOSE.controlEnded:
       return watchAgain(reason === "in_use" ? "in_use" : reason === "someone_in_control" ? "someone" : "lost");
@@ -1265,6 +1285,10 @@ export function controlRefusalText(
       return t("devices.screen.paused", { host: v.host });
     case "held":
       return t("devices.screen.held");
+    case "late":
+      return t("devices.screen.controlLate", { name: v.name, host: v.host });
+    case "failed":
+      return t("devices.screen.controlFailed", { name: v.name, host: v.host });
     default:
       return t("devices.screen.lost", { name: v.name });
   }
