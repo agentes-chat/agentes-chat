@@ -1839,14 +1839,12 @@
       "apps": "일할 때 쓰는 앱을 연결하세요",
       "connect": "연결",
       "connected": "연결됨",
-      "otherApp": "다른 앱",
       "account": "{{account}} · {{when}}",
       "customTitle": "에이전트 만들기",
       "name": "이름",
       "does": "어떤 일을 하나요?",
       "appsUsed": "쓰는 앱",
-      "search": "앱 검색",
-      "noApps": "그 이름의 앱이 없어요."
+      "search": "앱 검색"
     },
     "hire": {
       "the": "{{name}}",

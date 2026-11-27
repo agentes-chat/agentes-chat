@@ -1975,14 +1975,12 @@
       "apps": "Conecta las apps en las que trabaja",
       "connect": "Conectar",
       "connected": "Conectada",
-      "otherApp": "Otra app",
       "account": "{{account}} · {{when}}",
       "customTitle": "Crea tu agente",
       "name": "Nombre",
       "does": "¿Qué hace?",
       "appsUsed": "Apps que usa",
-      "search": "Buscar apps",
-      "noApps": "Ninguna app con ese nombre."
+      "search": "Buscar apps"
     },
     "hire": {
       "the": "{{name}}",

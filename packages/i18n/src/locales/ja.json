@@ -1839,14 +1839,12 @@
       "apps": "仕事で使うアプリを接続しましょう",
       "connect": "接続",
       "connected": "接続済み",
-      "otherApp": "ほかのアプリ",
       "account": "{{account}} · {{when}}",
       "customTitle": "エージェントを作る",
       "name": "名前",
       "does": "何をしますか？",
       "appsUsed": "使うアプリ",
-      "search": "アプリを検索",
-      "noApps": "その名前のアプリはありません。"
+      "search": "アプリを検索"
     },
     "hire": {
       "the": "{{name}}",

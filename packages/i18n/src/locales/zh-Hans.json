@@ -1839,14 +1839,12 @@
       "apps": "连接它工作用的应用",
       "connect": "连接",
       "connected": "已连接",
-      "otherApp": "其他应用",
       "account": "{{account}} · {{when}}",
       "customTitle": "创建你的智能体",
       "name": "名称",
       "does": "它做什么？",
       "appsUsed": "它用的应用",
-      "search": "搜索应用",
-      "noApps": "没有叫这个名字的应用。"
+      "search": "搜索应用"
     },
     "hire": {
       "the": "{{name}}",

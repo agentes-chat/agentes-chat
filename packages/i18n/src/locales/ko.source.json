@@ -4664,9 +4664,6 @@
   "onboarding.meet.connected": {
     "value": "Connected"
   },
-  "onboarding.meet.otherApp": {
-    "value": "Another app"
-  },
   "onboarding.meet.account": {
     "value": "{{account}} · {{when}}"
   },
@@ -4684,9 +4681,6 @@
   },
   "onboarding.meet.search": {
     "value": "Search apps"
-  },
-  "onboarding.meet.noApps": {
-    "value": "No app by that name."
   },
   "onboarding.hire.the": {
     "value": "{{name}}"

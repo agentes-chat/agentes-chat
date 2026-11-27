@@ -1839,14 +1839,12 @@
       "apps": "Hubungkan aplikasi tempat ia bekerja",
       "connect": "Hubungkan",
       "connected": "Terhubung",
-      "otherApp": "Aplikasi lain",
       "account": "{{account}} · {{when}}",
       "customTitle": "Buat agenmu",
       "name": "Nama",
       "does": "Apa yang dikerjakannya?",
       "appsUsed": "Aplikasi yang dipakai",
-      "search": "Cari aplikasi",
-      "noApps": "Tidak ada aplikasi dengan nama itu."
+      "search": "Cari aplikasi"
     },
     "hire": {
       "the": "{{name}}",

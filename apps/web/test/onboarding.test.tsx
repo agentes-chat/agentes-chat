@@ -110,6 +110,15 @@ const appRows = () =>
     sub: row.querySelector(".onb-row__sub")?.textContent ?? null,
   }));
 const continueOff = () => (button(/^Continuar/) as HTMLButtonElement).disabled;
+/** The agent step's "Search apps", past the apps listed: the app's picker over the catalog. */
+const findApps = () => button(/^Buscar apps/) as HTMLButtonElement;
+/** How many app marks lead "Search apps". */
+const findMarks = () => findApps().querySelectorAll(".onb-marks__plate").length;
+/** Which apps' marks lead "Search apps", by their catalog mark's file (read under a dialog too). */
+const findMarkApps = () =>
+  [...box().querySelectorAll(".onb-find .onb-marks__plate")].map(
+    (p) => p.innerHTML.match(/connectors\/([a-z-]+)\.svg/)?.[1],
+  );
 /** The photo's list: each row's words, done or not, and whether it shows the working sign. */
 const photoRows = () =>
   [...box().querySelectorAll(".onb-next__row")].map((li) => ({
@@ -601,9 +610,9 @@ describe("the work its first agent does (ADR 0256)", () => {
     expect(lead()).toBe("Cobrança: toda segunda, 8:00, lista o que atrasou");
     // Asked of the AI: nothing has to be connected first.
     expect(continueOff()).toBe(false);
-    // The apps its AI named come first, the catalog a search away.
+    // The apps its AI named come first, the catalog through Search apps.
     expect(appRows()).toEqual([{ name: "Gmail", end: "Conectar", sub: null }]);
-    expect(button(/Outro app/)).toBeTruthy();
+    expect(findApps().disabled).toBe(false);
   });
 
   test("Bring from another app opens the import over the step", async () => {
@@ -625,9 +634,10 @@ describe("meeting the first agent and connecting its apps (ADR 0256, ADR 0242)",
       "Responde e-mails e chamados de clientes, com um rascunho pronto em cada um. Nada sai sem o seu ok.",
     );
     expect(box().querySelector(".onb-apps__label")?.textContent).toBe("Conecte onde os clientes escrevem");
-    // The apps this catalog can connect: the mailbox (Zendesk and Intercom aren't in it).
+    // The apps this catalog can connect: the mailbox (Zendesk and Intercom aren't in it); then Search apps, led by
+    // three apps' marks.
     expect(appRows()).toEqual([{ name: "Gmail", end: "Conectar", sub: null }]);
-    expect(button(/Outro app/)).toBeTruthy();
+    expect(findMarks()).toBe(3);
     // The apps can come later: Continue never waits for one.
     expect(continueOff()).toBe(false);
     // The portrait: the agent among faint faces, none of them the right hand's.
@@ -779,24 +789,28 @@ describe("meeting the first agent and connecting its apps (ADR 0256, ADR 0242)",
     expect(heading()).toBe("O time da Acme começa com a Gabi");
   });
 
-  test("Other: its name, what it does and its apps searched; Continue makes the agent with them, then goes on", async () => {
+  test("Other: its name, what it does and its apps suggested; Continue makes the agent, then goes on", async () => {
     const state = settingUp();
     await open(state);
     await click(area("Outro"), 10);
     expect(heading()).toBe(OTHER);
     expect(eyebrow()).toBe("Passo 4 de 4 · O seu primeiro agente");
     expect(continueOff()).toBe(true);
-    // Nothing searched: the most used apps, the mailbox first; Connect waits for the agent's name and work.
-    expect(appRows().map((a) => a.name)).toEqual(["Gmail", "Notion", "Stripe", "GitHub", "Linear", "Google Drive"]);
+    // Under "Apps it uses": the mailbox and the most used apps here, three in all, then Search apps led by marks of
+    // apps not listed. Connect and Search apps wait for the agent's name and work.
+    const apps = box().querySelector(".onb-form .onb-apps") as HTMLElement;
+    expect(apps.closest(".ac-field")?.textContent).toContain("Apps que ele usa");
+    expect(appRows().map((a) => a.name)).toEqual(["Gmail", "Notion", "Stripe"]);
     expect(appRows().every((a) => a.end === "Conectar")).toBe(true);
     const connect = box().querySelector<HTMLButtonElement>(".onb-rows .onb-row button");
     expect(connect?.disabled).toBe(true);
-    await type("Buscar apps", "lin");
-    expect(appRows().map((a) => a.name)).toEqual(["Linear"]);
-    await type("Buscar apps", "zzz");
-    expect(box().querySelector(".onb-rows__none")?.textContent).toBe("Nenhum app com esse nome.");
+    expect(apps.contains(findApps())).toBe(true);
+    expect(findMarks()).toBe(2);
+    expect(findApps().disabled).toBe(true);
     await type("Nome", "Léo");
+    expect(findApps().disabled).toBe(true);
     await type("O que ele faz?", "Responde às dúvidas dos alunos no fim do dia");
+    expect(findApps().disabled).toBe(false);
     expect(continueOff()).toBe(false);
     await click(button(/^Continuar/), 24);
     expect(calls(state, "firstAgents.start").map((c) => c.args[1])).toEqual([
@@ -815,6 +829,66 @@ describe("meeting the first agent and connecting its apps (ADR 0256, ADR 0242)",
     // Self-hosted, its AI already there: the AI step all the same, answered with Continue.
     expect(heading()).toBe(AI);
     expect(footActs()).toEqual([expect.stringMatching(/^Continuar/)]);
+  });
+});
+
+describe("Search apps on the agent step: the app's picker over the catalog", () => {
+  /** The picker's row for an app, by its name. */
+  const pickerRow = (picker: HTMLElement, name: string) =>
+    [...picker.querySelectorAll<HTMLElement>(".nac-pick__row")].find(
+      (r) => r.querySelector("b")?.textContent === name,
+    ) as HTMLElement;
+
+  test("Connect on an app there: the picker closes, the app lands on the list and its connect flow opens", async () => {
+    await open(settingUp({ area: "support" }));
+    expect(heading()).toBe("Iara, do atendimento");
+    expect(findMarkApps()).toEqual(["notion", "github", "stripe"]);
+    await click(findApps(), 6);
+    const picker = screen().getByRole("dialog", { name: "Apps da Iara" });
+    expect(picker.textContent).toContain("Um app conectado entra na lista na hora.");
+    await click(within(pickerRow(picker, "Notion")).getByRole("button", { name: "Conectar" }), 10);
+    expect(screen().queryByRole("dialog", { name: "Apps da Iara" })).toBeNull();
+    expect(screen().getByRole("dialog", { name: "Conectar Notion" })).toBeTruthy();
+    expect(appRows().map((a) => a.name)).toEqual(["Gmail", "Notion"]);
+    // Listed now: no longer among the marks on Search apps, another app's in its place.
+    expect(findMarkApps()).toEqual(["github", "stripe", "linear"]);
+  });
+
+  test("Use on an app connected here: on the list at once, as connected", async () => {
+    const state = settingUp({ area: "support" });
+    state.connections = [connection("github", "acme")];
+    await open(state);
+    await click(findApps(), 6);
+    const picker = screen().getByRole("dialog", { name: "Apps da Iara" });
+    const connected = within(picker).getByRole("region", { name: "Conectados" });
+    await click(within(pickerRow(connected, "GitHub")).getByRole("button", { name: "Usar" }), 6);
+    // Said in the picker, which stays open for more.
+    expect(pickerRow(picker, "GitHub").textContent).toContain("Na lista");
+    await click(within(picker).getByRole("button", { name: "Pronto" }), 6);
+    expect(screen().queryByRole("dialog")).toBeNull();
+    expect(appRows()).toEqual([
+      { name: "Gmail", end: "Conectar", sub: null },
+      { name: "GitHub", end: "Conectado", sub: "acme" },
+    ]);
+    // Nothing connected again for it.
+    expect(calls(state, "connectors.startOAuth")).toEqual([]);
+  });
+
+  test("Other: Connect in the picker makes the agent first, then opens its connect flow, the app on the list", async () => {
+    const state = settingUp();
+    await open(state);
+    await click(area("Outro"), 10);
+    await type("Nome", "Léo");
+    await type("O que ele faz?", "Responde às dúvidas dos alunos no fim do dia");
+    await click(findApps(), 6);
+    const picker = screen().getByRole("dialog", { name: "Apps do Léo" });
+    // Looking makes nothing.
+    expect(calls(state, "firstAgents.start")).toEqual([]);
+    await click(within(pickerRow(picker, "Linear")).getByRole("button", { name: "Conectar" }), 24);
+    expect(calls(state, "firstAgents.start").map((c) => (c.args[1] as { name: string }).name)).toEqual(["Léo"]);
+    expect(screen().getByRole("dialog", { name: "Conectar Linear" })).toBeTruthy();
+    expect(heading()).toBe("Léo");
+    expect(appRows().map((a) => a.name)).toEqual(["Gmail", "Notion", "Stripe", "Linear"]);
   });
 });
 
@@ -1327,10 +1401,16 @@ describe("the worst case, measured by CI's geometry in German and Russian too", 
     await click(area("Tecnologia"), 20);
     expect(heading()).toBe("Ada, da tecnologia");
     await languages(r.services);
+    // The app's picker over the step.
+    await click(findApps(), 6);
+    expect(screen().getByRole("dialog", { name: "Apps da Ada" })).toBeTruthy();
+    await languages(r.services);
+    await closeDialog();
     await click(button("Voltar"), 8);
     await click(area("Outro"), 10);
     expect(heading()).toBe(OTHER);
     await type("Nome", "Maximiliana Bartholomew-Fitz");
+    await type("O que ele faz?", "Responde às dúvidas dos alunos no fim do dia, com um resumo do que ficou pendente");
     await languages(r.services);
   });
 

@@ -1910,14 +1910,12 @@
       "apps_female": "Verbinde die Apps, in denen sie arbeitet",
       "connect": "Verbinden",
       "connected": "Verbunden",
-      "otherApp": "Andere App",
       "account": "{{account}} · {{when}}",
       "customTitle": "Erstelle deinen Agenten",
       "name": "Name",
       "does": "Was macht dein Agent?",
       "appsUsed": "Apps, die er nutzt",
-      "search": "Apps suchen",
-      "noApps": "Keine App mit diesem Namen."
+      "search": "Apps suchen"
     },
     "hire": {
       "the": "{{name}}",

@@ -1907,14 +1907,12 @@
       "apps": "Çalıştığı uygulamaları bağlayın",
       "connect": "Bağla",
       "connected": "Bağlı",
-      "otherApp": "Başka bir uygulama",
       "account": "{{account}} · {{when}}",
       "customTitle": "Ajanınızı oluşturun",
       "name": "Ad",
       "does": "Ne yapıyor?",
       "appsUsed": "Kullandığı uygulamalar",
-      "search": "Uygulama ara",
-      "noApps": "Bu adda bir uygulama yok."
+      "search": "Uygulama ara"
     },
     "hire": {
       "the": "{{name}}",

@@ -1978,14 +1978,12 @@
       "apps_female": "Connectez les applis dans lesquelles elle travaille",
       "connect": "Connecter",
       "connected": "Connectée",
-      "otherApp": "Une autre appli",
       "account": "{{account}} · {{when}}",
       "customTitle": "Créez votre agent",
       "name": "Nom",
       "does": "Que fait cet agent ?",
       "appsUsed": "Applis utilisées",
-      "search": "Rechercher des applis",
-      "noApps": "Aucune appli ne porte ce nom."
+      "search": "Rechercher des applis"
     },
     "hire": {
       "the": "{{name}}",

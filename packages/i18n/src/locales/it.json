@@ -1975,14 +1975,12 @@
       "apps": "Collega le app in cui lavora",
       "connect": "Collega",
       "connected": "Collegata",
-      "otherApp": "Un'altra app",
       "account": "{{account}} · {{when}}",
       "customTitle": "Crea il tuo agente",
       "name": "Nome",
       "does": "Cosa fa?",
       "appsUsed": "App che usa",
-      "search": "Cerca app",
-      "noApps": "Nessuna app con questo nome."
+      "search": "Cerca app"
     },
     "hire": {
       "the": "{{name}}",

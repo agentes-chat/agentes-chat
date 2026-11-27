@@ -2049,14 +2049,12 @@ export const en = {
       apps_female: "Connect the apps she works in",
       connect: "Connect",
       connected: "Connected",
-      otherApp: "Another app",
       account: "{{account}} · {{when}}",
       customTitle: "Create your agent",
       name: "Name",
       does: "What does it do?",
       appsUsed: "Apps it uses",
       search: "Search apps",
-      noApps: "No app by that name.",
     },
     /**
      * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27). `{{agent}}`: the first agent as `the`

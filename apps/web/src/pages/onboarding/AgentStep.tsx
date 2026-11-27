@@ -1,18 +1,19 @@
 import type { ConnectorDef, FirstAgentOption, MailAccount, Routine } from "@agenteschat/client";
 import { useCatalog, useConnections, useCustomServers, useMailAccounts, useRoutines } from "@agenteschat/client";
 import { connectRoutineName, connectRoutineOf } from "@agenteschat/client/lib/connect-routines";
-import { connectedItems } from "@agenteschat/client/lib/connected";
+import { connectedIds, connectedItems } from "@agenteschat/client/lib/connected";
 import { CUSTOM_LOOK, FIRST_AREAS, type FirstArea, MAILBOX_APP } from "@agenteschat/client/lib/first-areas";
 import { toYmd } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { connectorName } from "@agenteschat/client/lib/scopes";
-import { Button, Field, Icon, Input, Locked, normalizeAppearance, SearchField, Textarea } from "@agenteschat/ui";
+import { Button, Field, Icon, Input, Locked, normalizeAppearance, Textarea } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { ConnectHereContext } from "@/components/connect-here";
 import { MailConnectFlow, type MailFlowState } from "@/components/MailConnect";
+import { AppsPickerDialog } from "@/components/new-agent/AppsPicker";
 import { fromApiRule, ruleSentence } from "@/lib/recurrence";
 import { type AreaApp, useAreaApps } from "./areas";
 import { Box, Meet, type ShellFace } from "./Shell";
@@ -23,12 +24,13 @@ import "./agent-step.css";
  * works in as flat rows, each with Connect through the app's real connect flow (a mailbox's own), where connecting
  * brings the app's routine for this agent (ADR 0242) with its first run left for the first delivery. A connected row
  * says its account and when the routine runs. Continue goes on with or without an app: the apps can come later.
- * "Other" (`custom`): the person names the agent and says what it does, then searches the catalog's apps.
+ * "Other" (`custom`): the person names the agent and says what it does, then picks its apps. Past the apps listed,
+ * "Search apps" (a stack of a few apps' marks) opens the app's own picker over the catalog, as Criar agente's does.
  * The agent exists before this step shows (made on the work step), except for "Other", made by its first Connect or
  * by Continue, so a connect always has an agent to bring the routine to.
  */
 
-/** The catalog apps "Other" lists before anything is searched: the ones most people already use. */
+/** The catalog apps "Other" suggests, and the picker's top: the ones most people already use. */
 const MOST_USED = [
   "google-calendar",
   "google-sheets",
@@ -41,10 +43,13 @@ const MOST_USED = [
   "drive",
   "instagram",
 ] as const;
-/** How many rows a search shows. */
-const FOUND_MAX = 6;
+/** How many apps "Other" lists before the picker: Gmail and the first most used ones this server has. */
+const SUGGESTED_MAX = 3;
+/** The marks stacked on "Search apps": a few known apps not already listed. */
+const STACK = ["notion", "slack", "hubspot", "github", "google-calendar", "stripe", "linear"] as const;
+const STACK_MAX = 3;
 
-/** Gmail through the mail flow, else the catalog's own entry: what the search and "Other app" list. */
+/** Gmail through the mail flow, else the catalog's own entry: the first app "Other" suggests. */
 const MAILBOX: AreaApp = {
   id: MAILBOX_APP,
   label: "Gmail",
@@ -106,10 +111,9 @@ export function AgentStep({
   const custom = area === "custom";
   const [name, setName] = useState("");
   const [does, setDoes] = useState("");
-  const [q, setQ] = useState("");
-  // An area's own apps (or the ones the person's AI named), else the catalog searched ("Other", "Another app", an agent
-  // brought from another app).
-  const [searching, setSearching] = useState(!def && !(option?.apps ?? []).some((a) => a.key));
+  // The app's picker over the catalog ("Search apps"), and the apps added from it, listed after the step's own.
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<AreaApp[]>([]);
   const [flow, setFlow] = useState<FlowState | null>(null);
   const [mailFlow, setMailFlow] = useState<MailFlowState | null>(null);
   const [making, setMaking] = useState(false);
@@ -124,19 +128,22 @@ export function AgentStep({
     catalog: d,
     mailbox: false,
   });
-  // What "Other" lists: the most used apps with nothing searched, else the catalog's apps whose name has the words.
-  const found = ((): AreaApp[] => {
-    const words = q.trim().toLowerCase();
-    const available = defs.filter((d) => d.available);
-    if (!words) {
-      const first = MOST_USED.flatMap((id) => available.find((d) => d.id === id) ?? []);
-      return [MAILBOX, ...first.map(asApp)].slice(0, FOUND_MAX);
-    }
-    const hits = available.filter((d) => connectorName(t, d).toLowerCase().includes(words) || d.id.includes(words));
-    const mailHit = MAILBOX.label.toLowerCase().includes(words) ? [MAILBOX] : [];
-    return [...mailHit, ...hits.map(asApp)].slice(0, FOUND_MAX);
-  })();
-  const rows = searching ? found : own;
+  const available = defs.filter((d) => d.available);
+  // An area's own apps (or the ones the person's AI named); else ("Other", an agent brought from another app) Gmail and
+  // the most used ones; then whatever was added from the picker.
+  const suggested =
+    custom || own.length === 0
+      ? [MAILBOX, ...MOST_USED.flatMap((id) => available.find((d) => d.id === id) ?? []).map(asApp)].slice(
+          0,
+          SUGGESTED_MAX,
+        )
+      : own;
+  const rows = [...suggested, ...picked.filter((p) => !suggested.some((r) => r.id === p.id))];
+  const add = (app: AreaApp) => setPicked((now) => (now.some((p) => p.id === app.id) ? now : [...now, app]));
+  // "Search apps" leads with a few known apps' marks, none of the ones already listed.
+  const stack = STACK.flatMap((id) => available.find((d) => d.id === id) ?? [])
+    .filter((d) => !rows.some((r) => r.id === d.id))
+    .slice(0, STACK_MAX);
 
   // Every connection here as the catalog's app it is: one signed in through the app's own MCP server is a server row
   // with its address, the app by that address (as Settings lists it).
@@ -265,6 +272,27 @@ export function AgentStep({
     </ul>
   );
 
+  // Past the apps listed: the app's picker over the whole catalog, led by a stack of a few apps' marks.
+  const findApps = (
+    <Button
+      className="onb-find"
+      block
+      disabled={busy || making || (custom && !agent && (!name.trim() || !does.trim()))}
+      onClick={() => setPicking(true)}
+    >
+      {stack.length > 0 && (
+        <span className="onb-marks" aria-hidden="true">
+          {stack.map((d) => (
+            <span key={d.id} className="onb-marks__plate">
+              <ConnectorIcon def={d} label={connectorName(t, d)} />
+            </span>
+          ))}
+        </span>
+      )}
+      <span>{t("onboarding.meet.search")}</span>
+    </Button>
+  );
+
   return (
     <ConnectHereContext.Provider value={{ agentId: agent?.id, firstRunLater: true, mailBack }}>
       <Box
@@ -313,42 +341,42 @@ export function AgentStep({
                   maxLength={500}
                 />
               </Field>
-              <Field label={t("onboarding.meet.appsUsed")} id="onb-agent-apps">
-                <SearchField
-                  id="onb-agent-apps"
-                  value={q}
-                  placeholder={t("onboarding.meet.search")}
-                  aria-label={t("onboarding.meet.search")}
-                  onChange={(e) => setQ(e.target.value)}
-                />
+              <Field label={t("onboarding.meet.appsUsed")} group>
+                <div className="onb-apps">
+                  {appRows(rows)}
+                  {findApps}
+                </div>
               </Field>
-              {found.length > 0 ? appRows(found) : <p className="onb-rows__none">{t("onboarding.meet.noApps")}</p>}
             </div>
           ) : (
             <div className="onb-apps">
               <p className="onb-apps__label">{label}</p>
-              {searching && (
-                <SearchField
-                  value={q}
-                  placeholder={t("onboarding.meet.search")}
-                  aria-label={t("onboarding.meet.search")}
-                  onChange={(e) => setQ(e.target.value)}
-                  autoFocus
-                />
-              )}
-              {rows.length > 0
-                ? appRows(rows)
-                : searching && <p className="onb-rows__none">{t("onboarding.meet.noApps")}</p>}
-              {!searching && (
-                <div className="onb-row onb-row--more">
-                  <Button variant="link" icon="plus" onClick={() => setSearching(true)}>
-                    {t("onboarding.meet.otherApp")}
-                  </Button>
-                </div>
-              )}
+              {rows.length > 0 && appRows(rows)}
+              {findApps}
             </div>
           )}
         </Locked>
+        {picking && (
+          <AppsPickerDialog
+            agentName={agent?.name ?? name.trim()}
+            connectors={defs}
+            suggested={def ? def.apps.filter((id) => id !== MAILBOX_APP) : [...MOST_USED]}
+            connected={connectedIds(items)}
+            onCard={new Set(rows.map((r) => r.id))}
+            inList
+            canConnect={() => true}
+            // Connected here already: on the list at once, as connected.
+            onUse={(d) => add(asApp(d))}
+            // Not yet: on the list, and its connect flow over the step (which brings its routine).
+            onConnect={(d) => {
+              const app = asApp(d);
+              add(app);
+              setPicking(false);
+              void connect(app);
+            }}
+            onClose={() => setPicking(false)}
+          />
+        )}
         <ConnectFlow
           flow={flow}
           onChange={setFlow}

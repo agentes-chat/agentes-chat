@@ -1910,14 +1910,12 @@
       "apps_female": "Koppel de apps waarin zij werkt",
       "connect": "Koppelen",
       "connected": "Gekoppeld",
-      "otherApp": "Andere app",
       "account": "{{account}} · {{when}}",
       "customTitle": "Maak je agent",
       "name": "Naam",
       "does": "Wat doet je agent?",
       "appsUsed": "Apps die hij gebruikt",
-      "search": "Apps zoeken",
-      "noApps": "Geen app met die naam."
+      "search": "Apps zoeken"
     },
     "hire": {
       "the": "{{name}}",
