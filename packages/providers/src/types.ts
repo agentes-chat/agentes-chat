@@ -256,6 +256,8 @@ export interface StreamOptions {
 export interface Endpoint {
   style: "openai" | "anthropic";
   baseURL: string;
+  /** Image-input overrides for this endpoint's Chat Completions models. */
+  modelInputs?: readonly { id: string; imageInput: boolean }[];
 }
 
 export interface ModelProvider {

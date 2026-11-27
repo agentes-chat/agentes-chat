@@ -14,7 +14,14 @@ export interface EndpointModelDraft {
   on: boolean;
   input: string;
   output: string;
+  imageInput?: boolean | null;
 }
+
+export const IMAGE_INPUT_MODES = ["auto", "on", "off"] as const;
+export type ImageInputMode = (typeof IMAGE_INPUT_MODES)[number];
+export const imageInputMode = (value: EndpointModel["imageInput"]): ImageInputMode =>
+  value == null ? "auto" : value ? "on" : "off";
+export const imageInputOverride = (mode: ImageInputMode): boolean | null => (mode === "auto" ? null : mode === "on");
 
 export interface EndpointDraft {
   name: string;
@@ -40,9 +47,20 @@ const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
 export const MAX_ENDPOINT_MODELS = 100;
 
 /** The models an endpoint listed, merged in: the ones already there keep their choice and prices, new ones start off. */
-export function withListedModels(draft: EndpointDraft, listed: readonly { id: string }[]): EndpointDraft {
+export function withListedModels(
+  draft: EndpointDraft,
+  listed: readonly Pick<EndpointModel, "id" | "imageInput">[],
+): EndpointDraft {
   const have = new Set(draft.models.map((m) => m.id));
-  const fresh = listed.filter((m) => !have.has(m.id)).map((m) => ({ id: m.id, on: false, input: "", output: "" }));
+  const fresh = listed
+    .filter((m) => !have.has(m.id))
+    .map((m) => ({
+      id: m.id,
+      on: false,
+      input: "",
+      output: "",
+      ...(draft.style === "openai" && m.imageInput ? { imageInput: true } : {}),
+    }));
   return { ...draft, models: [...draft.models, ...fresh] };
 }
 
@@ -83,7 +101,11 @@ export function endpointModelsOf(draft: Pick<EndpointDraft, "models">): Endpoint
   return on.map((m) => {
     const input = parsePrice(m.input);
     const output = parsePrice(m.output);
-    return { id: m.id, ...(input != null && output != null ? { prices: { input, output } } : {}) };
+    return {
+      id: m.id,
+      ...(input != null && output != null ? { prices: { input, output } } : {}),
+      ...(m.imageInput === undefined ? {} : { imageInput: m.imageInput }),
+    };
   });
 }
 
@@ -116,6 +138,7 @@ export function draftOfEndpoint(
       on: true,
       input: m.prices ? String(m.prices.input) : "",
       output: m.prices ? String(m.prices.output) : "",
+      ...(m.imageInput === undefined ? {} : { imageInput: m.imageInput }),
     })),
   };
 }

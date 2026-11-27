@@ -7,6 +7,8 @@ import {
   endpointAddressLooksValid,
   endpointModelsOf,
   endpointReady,
+  imageInputMode,
+  imageInputOverride,
   modelsShown,
   modelUnpriced,
   parsePrice,
@@ -104,6 +106,27 @@ describe("the endpoint form", () => {
         { model: "x", check: "ok" },
       ]).map((c) => c.model),
     ).toEqual(["x", "y"]);
+  });
+
+  test("image input offered by a model list can be saved and switched off", () => {
+    const listed = withListedModels(emptyEndpointDraft(), [{ id: "vision", imageInput: true }]);
+    const selected = withTypedModel(listed, "vision");
+    expect(selected && endpointModelsOf(selected)).toEqual([{ id: "vision", imageInput: true }]);
+
+    const saved = draftOfEndpoint("Gateway", {
+      style: "openai",
+      baseURL: "https://gw.example/v1",
+      models: [{ id: "vision", imageInput: true }],
+    });
+    expect(saved.models[0]?.imageInput).toBe(true);
+    const disabled = saved.models.map((model) => ({ ...model, imageInput: false }));
+    expect(endpointModelsOf({ models: disabled })).toEqual([{ id: "vision", imageInput: false }]);
+    expect(imageInputMode(undefined)).toBe("auto");
+    expect(imageInputMode(null)).toBe("auto");
+    expect(imageInputMode(true)).toBe("on");
+    expect(imageInputMode(false)).toBe("off");
+    const automatic = disabled.map((model) => ({ ...model, imageInput: imageInputOverride("auto") }));
+    expect(endpointModelsOf({ models: automatic })).toEqual([{ id: "vision", imageInput: null }]);
   });
 });
 

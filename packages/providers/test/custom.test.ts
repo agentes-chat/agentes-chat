@@ -122,12 +122,113 @@ describe("model lists", () => {
       "too large",
     );
   });
+
+  test("a model list can advertise image input next to the model or in its architecture", () => {
+    expect(
+      parseEndpointModels({
+        data: [
+          { id: "direct", input_modalities: ["text", "image"] },
+          { id: "gateway", architecture: { input_modalities: ["text", "image"] } },
+          { id: "text", input_modalities: ["text"] },
+          { id: "unknown" },
+        ],
+      }),
+    ).toEqual([
+      { id: "direct", imageInput: true },
+      { id: "gateway", imageInput: true },
+      { id: "text" },
+      { id: "unknown" },
+    ]);
+  });
 });
 
 const chat = (chunks: Record<string, unknown>[]) =>
   `${chunks.map((c) => `data: ${JSON.stringify({ id: "c1", object: "chat.completion.chunk", created: 1, ...c })}\n\n`).join("")}data: [DONE]\n\n`;
 
 describe("calls", () => {
+  test("a workspace model configured for image input receives pictures after its tool responses", async () => {
+    const completion = scripted(chat([{ choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] }]));
+    let catalogs = 0;
+    const fetcher = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).endsWith("/models")) {
+        catalogs++;
+        const rotated = new Headers(init?.headers).get("authorization") === "Bearer rotated-key";
+        return Response.json({
+          data: [{ id: "vision", input_modalities: rotated ? ["text"] : ["text", "image"] }, { id: "text" }],
+        });
+      }
+      return completion.fetcher(url, init);
+    }) as typeof fetch;
+    const provider = createCustomProvider({ fetch: fetcher, maxRetries: 0 });
+    const send = (model: string, imageInput?: boolean, credential = CRED, apiKey = "test-key") =>
+      provider.stream(
+        {
+          model: customModelId(credential, model),
+          system: "",
+          maxTokens: 100,
+          messages: [
+            { role: "user", content: "Describe this picture" },
+            {
+              role: "assistant",
+              content: [
+                { type: "tool_use", id: "photo", name: "read_artifact", input: {} },
+                { type: "tool_use", id: "notes", name: "read_artifact", input: {} },
+              ],
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "tool_result",
+                  toolUseId: "photo",
+                  content: "photo.png",
+                  images: [{ mediaType: "image/png", data: "UE5H" }],
+                },
+                { type: "tool_result", toolUseId: "notes", content: "notes.txt" },
+              ],
+            },
+          ],
+        },
+        {
+          apiKey,
+          endpoint: {
+            style: "openai",
+            baseURL: "https://gw.example/v1",
+            ...(imageInput === undefined ? {} : { modelInputs: [{ id: model, imageInput }] }),
+          },
+          onDelta() {},
+        },
+      );
+
+    expect((await send("vision", true)).imagesLeftOut).toBeUndefined();
+    expect(catalogs).toBe(0);
+    expect(completion.requests[0]?.body.messages).toEqual([
+      { role: "user", content: "Describe this picture" },
+      expect.objectContaining({ role: "assistant" }),
+      { role: "tool", tool_call_id: "photo", content: "photo.png" },
+      { role: "tool", tool_call_id: "notes", content: "notes.txt" },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Image from tool call photo" },
+          { type: "image_url", image_url: { url: "data:image/png;base64,UE5H" } },
+        ],
+      },
+    ]);
+    expect((await send("text")).imagesLeftOut).toBe(true);
+    expect(JSON.stringify(completion.requests[1]?.body.messages)).toContain("reads text only through this connection");
+    expect(JSON.stringify(completion.requests[1]?.body.messages)).not.toContain("image_url");
+    expect((await send("vision")).imagesLeftOut).toBeUndefined();
+    expect(JSON.stringify(completion.requests[2]?.body.messages)).toContain("image_url");
+    expect((await send("vision", false)).imagesLeftOut).toBe(true);
+    expect(catalogs).toBe(1);
+    await send("vision", undefined, "a0f34150-dc6b-4f93-b65d-7fb87674102b");
+    expect(catalogs).toBe(2);
+    expect((await send("vision", undefined, CRED, "rotated-key")).imagesLeftOut).toBe(true);
+    expect(catalogs).toBe(3);
+    expect(JSON.stringify(completion.requests.at(-1)?.body.messages)).not.toContain("image_url");
+  });
+
   test("Chat Completions: the endpoint's address and model id, no OpenRouter extras, usage asked, its cost ignored", async () => {
     const { fetcher, requests } = scripted(
       chat([

@@ -11106,6 +11106,7 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   margin-inline-end: calc((var(--control-h-md) - var(--control-h-sm)) / 2);
 }
 .endpoint-model__prices,
+.endpoint-model__image-input,
 .endpoint-model__error {
   grid-column: 2 / -1;
 }

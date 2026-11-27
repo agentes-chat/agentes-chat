@@ -13,6 +13,10 @@ import {
   endpointBaseExample,
   endpointModelsOf,
   endpointReady,
+  IMAGE_INPUT_MODES,
+  type ImageInputMode,
+  imageInputMode,
+  imageInputOverride,
   modelsShown,
   pricesProblem,
   withChecks,
@@ -34,6 +38,7 @@ import {
   Locked,
   SearchField,
   Segmented,
+  Select,
   SettingNote,
   Spinner,
 } from "@agenteschat/ui";
@@ -342,6 +347,20 @@ export function EndpointForm({
                           onChange={(e) => setModel(m.id, { output: e.target.value })}
                         />
                       </span>
+                    )}
+                    {m.on && draft.style === "openai" && (
+                      <div className="endpoint-model__image-input">
+                        <Field label={t("endpoint.imageInput")} id={`${ids}-image-${m.id}`}>
+                          <Select<ImageInputMode>
+                            value={imageInputMode(m.imageInput)}
+                            options={IMAGE_INPUT_MODES.map((value) => ({
+                              value,
+                              label: t(`endpoint.imageInputModes.${value}`),
+                            }))}
+                            onValueChange={(mode) => setModel(m.id, { imageInput: imageInputOverride(mode) })}
+                          />
+                        </Field>
+                      </div>
                     )}
                     {problem && (
                       <div className="ac-field__error endpoint-model__error" role="alert">

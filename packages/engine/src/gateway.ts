@@ -360,19 +360,29 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   const label = (provider: string) => (PROVIDERS as Record<string, { label: string }>)[provider]?.label ?? provider;
   const noKey = (provider: string) =>
     new MissingCredentialError(`Add an API key for ${label(provider)} in the workspace settings`);
-  const keyOf = (c: Awaited<ReturnType<typeof decryptCredential>>, credentialId: string | null): Key | null =>
-    c
-      ? {
-          apiKey: c.apiKey,
-          workspaceId: c.workspaceId,
-          organization: c.options?.organization,
-          project: c.options?.project,
-          ...(c.options?.endpoint
-            ? { endpoint: { style: c.options.endpoint.style, baseURL: c.options.endpoint.baseURL } }
-            : {}),
-          credentialId,
-        }
-      : null;
+  function keyOf(c: Awaited<ReturnType<typeof decryptCredential>>, credentialId: string | null): Key | null {
+    if (!c) return null;
+    const endpoint = c.options?.endpoint;
+    const modelInputs = endpoint?.models.flatMap(({ id, imageInput }) =>
+      imageInput == null ? [] : [{ id, imageInput }],
+    );
+    return {
+      apiKey: c.apiKey,
+      workspaceId: c.workspaceId,
+      organization: c.options?.organization,
+      project: c.options?.project,
+      ...(endpoint
+        ? {
+            endpoint: {
+              style: endpoint.style,
+              baseURL: endpoint.baseURL,
+              ...(modelInputs?.length ? { modelInputs } : {}),
+            },
+          }
+        : {}),
+      credentialId,
+    };
+  }
 
   /**
    * One resolution order for every call: the agent's own credential → the
