@@ -487,3 +487,18 @@ test("a folder asked for from the apps keeps the popover up until it is answered
     expect(host.shown).toEqual([{ name: "popover", keep: false }]);
   }, host);
 });
+
+test("an agent's folder request raised from the apps: answered, the popover is no longer kept up", async () => {
+  const host = createFakeHost("popover", "here");
+  const t = createDesktopI18n("en", host.platform).t;
+  await withMenu(async (el, store) => {
+    const home = pairedHomes(store.getSnapshot())[0];
+    const request = home?.requests[0];
+    if (!home || !request) throw new Error("no request");
+    raisePick(host, t, home, { requestId: request.requestId, byName: "Bia Rocha", at: new Date().toISOString() });
+    expect(host.shown.at(-1)).toEqual({ name: "popover", keep: true });
+    const allow = [...el.querySelectorAll(".dk-req button")].find((b) => b.textContent === "Allow") as HTMLElement;
+    await act(async () => allow.click());
+    await until(() => host.shown.at(-1)?.keep === false);
+  }, host);
+});

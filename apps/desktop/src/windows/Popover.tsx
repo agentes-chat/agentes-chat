@@ -1419,6 +1419,7 @@ function PickCard({ home, now }: { home: Home; now: number }) {
 /** An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. */
 function RequestCard({ home, request, now }: { home: Home; request: ControlAccessRequest; now: number }) {
   const { t } = useTranslation();
+  const host = useHost();
   const store = useStore();
   const toast = useToast();
   const [scope, setScope] = useState<"agent" | "all">("agent");
@@ -1429,6 +1430,8 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
     setBusy(true);
     try {
       await store.request(home.homeId, { type: "access.answer", requestId: request.requestId, decision, scope });
+      // Raised for this request (`raisePick`), the popover was kept up: answered, it hides on focus loss again.
+      void host.showWindow("popover").catch(() => {});
       toast(
         decision === "denied"
           ? t("desktop.tray.denied", { agent: agent.name })
