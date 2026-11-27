@@ -21,6 +21,14 @@ export const desktopEn = {
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
   windowTitle: { welcome: "Welcome", prefs: "Preferences" },
+  /** The notification the first time someone closes the main window: the app keeps running (background.rs). */
+  background: {
+    title: "agentes.chat is still running",
+    /** A Mac: the icon at the top right of the screen. */
+    bodyMac: "Find it in the menu bar at the top of the screen. Open it or quit it from there.",
+    /** Windows and Linux. */
+    bodyTray: "Find it in the system tray. Open it or quit it from there.",
+  },
   common: {
     cancel: "Cancel",
     close: "Close",

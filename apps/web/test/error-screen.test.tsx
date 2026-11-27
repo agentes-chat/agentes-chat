@@ -511,3 +511,25 @@ describe("a render error above the router (the app's providers)", () => {
     expect(screen().getByRole("button", { name: "fine" })).toBeTruthy();
   });
 });
+
+describe("a crash in the current version", () => {
+  test("Recarregar loads the newest version: the page from the server again, then the reload", async () => {
+    const order: string[] = [];
+    const fetched = spyOn(globalThis, "fetch").mockImplementation((async (_url: string, init?: RequestInit) => {
+      order.push(`fetch:${init?.cache}`);
+      return new Response("");
+    }) as unknown as typeof fetch);
+    const reload = spyOn(window.location, "reload").mockImplementation(() => {
+      order.push("reload");
+    });
+    try {
+      await renderPage(broken(new TypeError("x is undefined")), { api: createFakeApi() });
+      fireEvent.click(screen().getByRole("button", { name: "Recarregar" }));
+      await waitFor(() => expect(order).toContain("reload"));
+      expect(order.filter((o) => o.startsWith("fetch:reload") || o === "reload")).toEqual(["fetch:reload", "reload"]);
+    } finally {
+      fetched.mockRestore();
+      reload.mockRestore();
+    }
+  });
+});

@@ -1224,6 +1224,10 @@ const outageNote = (error: unknown, account: { provider?: string } | undefined, 
   return bodyCode(`provider_wait_${OUTAGE_CAUSES.has(cause) ? cause : "said"}`, { provider, detail });
 };
 
+/** The result of a call the output limit cut before its input was whole (a long file written in one call). */
+export const CUT_AT_OUTPUT_LIMIT =
+  "Not run: your output limit cut this call off before its input was complete, so nothing was done. Send long content in parts (write_file, then write_file with append for each next part, a few hundred lines each), and to change a file that already exists, change only the lines that change instead of writing it whole again.";
+
 /** The result of a call in a step cut by a server restart that never started. */
 const NOT_RUN_BY_RESTART =
   "Interrupted by a server restart before it ran: nothing was done. Call it again if it's still needed.";
@@ -6470,6 +6474,21 @@ async function executeRunInner(
         return stopCanceled("");
       }
       const toolUses = result.toolCalls;
+      // Cut mid-call: its input is partial, so it never runs. Left without a result, the next call is refused for the
+      // unanswered tool use, and asking again cuts it the same way: the model is told why and goes on.
+      if (result.stopReason === "max_tokens" && toolUses.length > 0 && turnPlan.kind === "model") {
+        transcript.messages.push({
+          role: "user",
+          content: toolUses.map((use) => ({
+            type: "tool_result" as const,
+            toolUseId: use.id,
+            content: CUT_AT_OUTPUT_LIMIT,
+            isError: true,
+          })),
+        });
+        await saveTranscript(db, transcript);
+        continue;
+      }
       if (result.stopReason === "tool_use" && toolUses.length > 0 && toolScope) {
         toolsOfTurn = run.turns;
         const calls: NonNullable<Transcript["pending"]>["calls"] = [];

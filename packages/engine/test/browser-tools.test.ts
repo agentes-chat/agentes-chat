@@ -529,7 +529,7 @@ test("stale numbers, covered clicks and runner refusals reach the agent as plain
   const silent = (await b.call("browser_read", {})).content;
   expect(silent).toContain("The computer MacBook didn't answer within 140 s and didn't say why.");
   expect(silent).toContain("Don't guess why and don't try again right away");
-  expect(silent).toContain("runner log");
+  expect(silent).toContain("the agentes.chat app's log there says why");
   expect(silent).not.toContain("still be loading");
   // The runner's own deadline names the step it got stuck on.
   b.s.error = null;

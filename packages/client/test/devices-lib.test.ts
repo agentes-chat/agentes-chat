@@ -15,6 +15,7 @@ import {
   deviceRows,
   deviceWaitEventOf,
   deviceWaitOf,
+  doctorShown,
   failedOnLocalNetwork,
   fixText,
   helpingDevices,
@@ -27,6 +28,7 @@ import {
   iphoneRestartOf,
   iphoneSteps,
   lendingDevice,
+  lendsInternet,
   linkPhase,
   mayChangeTasks,
   mayTakePhone,
@@ -222,18 +224,29 @@ describe("status words", () => {
     expect(statusDetail(t, "en-US", { kind: "ready" })).toBeNull();
   });
 
-  test("a computer offline for a known cause: the row says why, its page adds the one way out", () => {
+  test("a computer offline for a known cause: the row says why, its page adds the one way out in plain words", () => {
     const off = (cause: "unresponsive" | "stopped" | "dropped") =>
       ({ kind: "offline", lastSeenAt: at(14, 2), cause }) as const;
     expect(statusDetail(t, "en-US", off("unresponsive"), { now: NOW })).toBe("stopped answering at 2:02 PM");
-    expect(statusDetail(t, "en-US", off("stopped"), { now: NOW })).toBe("runner stopped at 2:02 PM");
+    expect(statusDetail(t, "en-US", off("stopped"), { now: NOW })).toBe("agentes.chat stopped at 2:02 PM");
     expect(statusDetail(t, "en-US", off("dropped"), { now: NOW })).toBe("connection dropped at 2:02 PM");
     expect(statusSentence(t, "en-US", off("stopped"), { now: NOW })).toBe(
-      "The runner stopped at 2:02 PM. Start it again, or run `agentes-runner doctor` on it to see why.",
+      "The agentes.chat app stopped on this computer at 2:02 PM. Open the app again.",
     );
-    expect(statusSentence(t, "en-US", off("unresponsive"), { now: NOW })).toContain(
-      "Run `agentes-runner doctor` on it.",
+    expect(statusSentence(t, "en-US", off("stopped"), { now: NOW, cli: true })).toBe(
+      "agentes.chat stopped on this computer at 2:02 PM. Start it again there.",
     );
+    // No command in the line: a Terminal install has it under Technical details.
+    for (const cause of ["unresponsive", "stopped", "dropped"] as const)
+      for (const cli of [false, true])
+        expect(statusSentence(t, "en-US", off(cause), { now: NOW, cli })).not.toMatch(/runner|`/);
+    const app = { kind: "connected", app: true };
+    const terminal = { kind: "connected", app: false };
+    expect(doctorShown(off("stopped"), terminal)).toBe(true);
+    expect(doctorShown(off("stopped"), app)).toBe(false);
+    expect(doctorShown(off("stopped"), { kind: "connected" })).toBe(false);
+    expect(doctorShown({ kind: "offline", lastSeenAt: at(14, 2) }, terminal)).toBe(false);
+    expect(doctorShown({ kind: "ready" }, terminal)).toBe(false);
   });
 });
 
@@ -741,6 +754,29 @@ describe("a phone's screen", () => {
     expect(phoneCloseState(1006)).toEqual({ state: "connecting", retry: "later" });
   });
 
+  test("control that never showed a picture goes back to watching with its cause, instead of opening again behind a spinner", () => {
+    const opening = { opening: true };
+    const host = "Sam's MacBook Pro";
+    // The server's wait ran out, or the computer said the phone wasn't ready (its helper still building).
+    expect(phoneCloseState(4408, "timeout", opening)).toEqual({ state: "connecting", retry: "now", control: "late" });
+    expect(phoneCloseState(4502, "phone_not_ready", opening).control).toBe("late");
+    // It couldn't start there.
+    expect(phoneCloseState(4502, "internal", opening).control).toBe("failed");
+    expect(phoneCloseState(1011, "", opening).control).toBe("failed");
+    expect(controlRefusalText(t, "late", { name: "iPhone 17", host, agent: "Lia" })).toBe(
+      "Control didn't start in time. Sam's MacBook Pro is still getting iPhone 17 ready: try again in a minute.",
+    );
+    expect(controlRefusalText(t, "failed", { name: "iPhone 17", host, agent: "Lia" })).toBe(
+      "Couldn't take control of iPhone 17. Try again, or restart the agentes.chat app on Sam's MacBook Pro.",
+    );
+    // A dropped connection, or an answer that already says what happened, keeps its own meaning.
+    expect(phoneCloseState(1006, "", opening)).toEqual({ state: "connecting", retry: "later" });
+    expect(phoneCloseState(4503, "offline", opening)).toEqual({ state: "offline", retry: "later" });
+    expect(phoneCloseState(4502, "unsupported", opening).control).toBe("unsupported");
+    // Once live, a close opens control again as before.
+    expect(phoneCloseState(4408, "timeout")).toEqual({ state: "connecting", retry: "later" });
+  });
+
   test("who may take control: free or theirs, or an agent they may stop; never another person's", () => {
     expect(mayTakePhone(phone({ mayManage: false }), "u-rui")).toBe(true);
     expect(mayTakePhone(phone({ mayUse: false }), "u-sam")).toBe(false);
@@ -815,6 +851,14 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(shareInternetText(t, computer({ shareInternet: { on: false, inUse: false } }), lending)).toBeNull();
     expect(shareInternetText(t, computer({ shareInternet: null }), lending)).toBeNull();
     expect(lendingDevice([mine])).toBeNull();
+  });
+
+  test("a computer that joins lends where the server says computers lend; an older server: beside the workspace's own", () => {
+    expect(lendsInternet({ devices: [computer({})], lendsInternet: true })).toBe(true);
+    expect(lendsInternet({ devices: [computer({ machineKind: "managed" })], lendsInternet: false })).toBe(false);
+    expect(lendsInternet({ devices: [computer({ machineKind: "managed" })] })).toBe(true);
+    expect(lendsInternet({ devices: [computer({})] })).toBe(false);
+    expect(lendsInternet(undefined)).toBe(false);
   });
 });
 

@@ -16097,13 +16097,13 @@
       "browser_download": "에이전트 브라우저를 다운로드하지 못했어요. 이 컴퓨터의 연결을 확인해 주세요. 다음에 사용할 때 다시 시도해요.",
       "browser_checksum": "에이전트 브라우저 다운로드가 손상되어 사용하지 않았어요. 다음에 사용할 때 다시 시도해요.",
       "desktop_use_linux": "에이전트 화면의 앱은 에이전트 화면이 있는 Linux 컴퓨터에서 실행돼요.",
-      "desktop_use_own_user": "에이전트 화면의 앱을 쓰려면 이 컴퓨터에서 에이전트마다 자기 사용자로 일해야 해요(시스템 모드). 여기서는 모든 에이전트가 runner의 사용자로 일해요.",
+      "desktop_use_own_user": "에이전트 화면의 앱을 쓰려면 이 컴퓨터에서 에이전트마다 자기 사용자로 일해야 해요(시스템 모드). 여기서는 모든 에이전트가 같은 사용자, 즉 agentes.chat을 실행하는 사용자로 일해요.",
       "desktop_use_install": "에이전트 화면의 앱에 필요한 것을 이 컴퓨터에 설치해 주세요:",
       "desktop_unavailable": "이 컴퓨터에서는 에이전트 화면을 실행할 수 없어요.",
       "desktop_linux": "에이전트 화면은 Linux 컴퓨터에서만 실행돼요.",
       "desktop_install": "이 컴퓨터에 에이전트 화면을 설치해 주세요:",
-      "not_as_root": "에이전트 화면과 터미널은 절대 root로 실행되지 않아요. runner를 일반 사용자로 실행해 주세요.",
-      "runner_bun_old": "Bun 1.3.5 이상에서 실행되는 runner가 필요해요. 이 컴퓨터의 runner를 업데이트해 주세요.",
+      "not_as_root": "에이전트의 화면과 터미널은 root로 실행되지 않아요. agentes.chat을 일반 사용자로 실행하세요.",
+      "runner_bun_old": "Bun 1.3.5 이상에서 실행되는 agentes.chat이 필요해요. 이 컴퓨터의 agentes.chat을 업데이트하세요.",
       "terminal_unsupported": "터미널은 Linux와 Mac 컴퓨터에서만 실행돼요."
     },
     "egress": {
@@ -16113,7 +16113,6 @@
       "hint": "에이전트가 웹을 탐색할 때 사이트에 보이는 주소예요. 컴퓨터의 네트워크가 바뀌면 함께 바뀌어요.",
       "waiting": "에이전트의 인터넷을 다시 연결하고 있어요. 돌아올 때까지 연결이 기다려요.",
       "via": "에이전트가 {{name}}의 인터넷을 써요",
-      "viaBy": "에이전트가 {{name}}({{person}})의 인터넷을 써요",
       "viaHint": "사이트에는 그 컴퓨터의 위치가 보여요. 연결한 사람이 그 컴퓨터 페이지에서 끌 수 있어요."
     },
     "maintenance": {
@@ -16548,6 +16547,8 @@
       "paused": "{{host}}이(가) 일시 중지돼서 다시 시작될 때까지 제어가 기다려요.",
       "held": "이 워크스페이스는 일시 중지되어 있어서 다시 활성화될 때까지 제어할 수 없어요.",
       "lost": "제어가 끝났어요. 다시 {{name}}을(를) 보고 있어요.",
+      "controlLate": "제시간에 제어를 시작하지 못했어요. {{host}}에서 아직 {{name}}을(를) 준비하고 있어요. 1분 후에 다시 시도하세요.",
+      "controlFailed": "{{name}}을(를) 제어하지 못했어요. 다시 시도하거나 {{host}}에서 agentes.chat 앱을 다시 시작하세요.",
       "typeLabel": "{{name}}에 입력"
     },
     "status": {
@@ -16569,7 +16570,7 @@
       "withHost": "{{host}}와(과) 함께",
       "lastSeen": "마지막 확인 {{time}}",
       "offlineUnresponsive": "{{time}}부터 응답 없음",
-      "offlineStopped": "{{time}}에 러너 중지됨",
+      "offlineStopped": "{{time}}에 agentes.chat 멈춤",
       "offlineDropped": "{{time}}에 연결 끊김"
     },
     "line": {
@@ -16584,9 +16585,14 @@
       "offline": "에이전트는 다시 연결될 때까지 기다려요.",
       "offlineSeen": "마지막 확인 {{time}}. 에이전트는 다시 연결될 때까지 기다려요.",
       "offlineWithHost": "{{host}}이(가) 오프라인이에요. 에이전트는 다시 연결될 때까지 기다려요.",
-      "offlineUnresponsive": "{{time}}부터 응답이 없습니다. 네트워크가 없거나 과부하일 수 있습니다. 그 컴퓨터에서 `{{command}}`을(를) 실행하세요.",
-      "offlineStopped": "{{time}}에 러너가 중지되었습니다. 다시 시작하거나, 그 컴퓨터에서 `{{command}}`을(를) 실행해 원인을 확인하세요.",
-      "offlineDropped": "{{time}}에 연결이 끊겼습니다. 자동으로 다시 연결됩니다. 돌아오지 않으면 그 컴퓨터에서 `{{command}}`을(를) 실행하세요."
+      "offlineUnresponsive": "{{time}}부터 응답이 없습니다. 인터넷이 없거나 과부하일 수 있습니다. 컴퓨터가 켜져 있고 인터넷에 연결되어 있는지 확인하세요.",
+      "offlineStopped": "이 컴퓨터의 agentes.chat 앱이 {{time}}에 멈췄습니다. 앱을 다시 여세요.",
+      "offlineStoppedCli": "이 컴퓨터의 agentes.chat이 {{time}}에 멈췄습니다. 그 컴퓨터에서 다시 시작하세요.",
+      "offlineDropped": "{{time}}에 연결이 끊겼습니다. 자동으로 다시 연결됩니다."
+    },
+    "technical": {
+      "title": "기술 세부 정보",
+      "doctor": "이유를 보려면 그 컴퓨터에서 이것을 실행하세요:"
     },
     "reason": {
       "locked": "휴대폰이 잠겨 있어요",
@@ -19936,7 +19942,7 @@
       "people": "모두가 지금부터 읽기만 할 수 있고 이메일을 받아요",
       "peopleQuiet": "모두가 지금부터 읽기만 할 수 있어요",
       "computer": "컴퓨터가 지금 멈추고 초기화돼요",
-      "computers": "연결된 컴퓨터는 연결이 해제돼요. 에이전트 폴더는 러너를 제거할 때까지 컴퓨터에 남아요.",
+      "computers": "연결된 컴퓨터는 연결이 해제돼요. 에이전트 폴더는 컴퓨터에서 agentes.chat을 제거할 때까지 남아요.",
       "connectors": "커넥터와 메일함의 연결이 해제돼요"
     },
     "undo": "{{date}} {{time}}까지는 소유자 누구나 복원할 수 있어요. 그 후에는 되돌릴 수 없어요.",
@@ -20250,13 +20256,6 @@
       "doneBy": "{{time}}에 {{name}}님이 완료했어요. {{agent}}이(가) 화면을 다시 보고 계속했어요.",
       "doneByYou": "{{time}}에 내가 완료했어요. {{agent}}이(가) 화면을 다시 보고 계속했어요."
     },
-    "control": {
-      "notice": "{{name}}의 컴퓨터에 있는 프로그램은 화면과 내가 입력하거나 붙여넣는 내용을 볼 수 있어요."
-    },
-    "session": {
-      "check": "안전 확인",
-      "screening": "이 화면의 텍스트를 악용 여부 확인을 위해 검사할 수 있어요. 결과만 보관해요. 프롬프트에 입력하는 비밀번호처럼 화면에 보이지 않는 내용은 절대 수집하지 않아요."
-    },
     "after": {
       "titleNoSite": "화면을 사용함",
       "noSite": "앱을 열기 전"
@@ -20265,7 +20264,6 @@
       "group": "{{name}}의 화면"
     },
     "watch": {
-      "notice": "{{name}}의 컴퓨터에 있는 프로그램은 화면과 그곳에 입력하거나 붙여넣는 모든 내용을 볼 수 있어요.",
       "step": {
         "desktop_open": "{{detail}} 열기",
         "desktop_open_plain": "앱 열기",

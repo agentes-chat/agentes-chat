@@ -12,10 +12,10 @@ afterEach(() => f.close());
 const deps = () => ({ db: f.db, pubsub: f.pubsub });
 const migration = async () =>
   f.db.execute(
-    sql.raw(await Bun.file(new URL("../../db/migrations/0365_sidebar_sections.sql", import.meta.url)).text()),
+    sql.raw(await Bun.file(new URL("../../db/migrations/0366_sidebar_sections.sql", import.meta.url)).text()),
   );
 
-test("migration 0365: everyone starts with one section per sector that holds channels, only the channels they see", async () => {
+test("migration 0366: everyone starts with one section per sector that holds channels, only the channels they see", async () => {
   const member = await addMember(f.db, f.org.id, "member");
   const launch = await createChannel(f.db, f.owner.id, f.org.id, { name: "lancamento" });
   const design = await createChannel(f.db, f.owner.id, f.org.id, { name: "design" });

@@ -207,7 +207,7 @@ export function accountUnavailable(
   if (status?.protocol !== undefined && status.protocol < ACCOUNTS_PROTOCOL) {
     return {
       code: "runner_outdated",
-      message: `The runner${where} is too old for agents with their own ${name} account. ${runnerUpdateWay(status)}`,
+      message: `The agentes.chat program${where} is too old for agents with their own ${name} account. ${runnerUpdateWay(status)}`,
     };
   }
   if (account.status === "signed_out") {
@@ -325,7 +325,7 @@ export function claudeCodeAvailability(status: MachineStatus | null, account?: B
   if (status.protocol < BRAIN_PROTOCOL) {
     return err(
       "runner_outdated",
-      `The runner on ${status.name} is too old for agents that think with Claude Code. ${runnerUpdateWay(status)}`,
+      `The agentes.chat program on ${status.name} is too old for agents that think with Claude Code. ${runnerUpdateWay(status)}`,
       true,
     );
   }
@@ -607,7 +607,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
         if (chat && (status?.protocol ?? 0) < LOCKED_BRAIN_PROTOCOL) {
           yield err(
             "runner_outdated",
-            `The runner on the computer is too old to keep Claude Code to the right hand's tools. ${runnerUpdateWay(status)}`,
+            `The agentes.chat program on the computer is too old to keep Claude Code to the right hand's tools. ${runnerUpdateWay(status)}`,
             true,
           );
           return;
@@ -617,7 +617,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
         if (permissions?.mode === "plan" && (status?.protocol ?? 0) < BRAIN_PROFILES_PROTOCOL) {
           yield err(
             "runner_outdated",
-            `The runner on the computer is too old to keep Claude Code within this agent's permissions. ${runnerUpdateWay(status)}`,
+            `The agentes.chat program on the computer is too old to keep Claude Code within this agent's permissions. ${runnerUpdateWay(status)}`,
             true,
           );
           return;
