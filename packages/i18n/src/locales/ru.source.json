@@ -2409,36 +2409,6 @@
   "onboarding.flow.ai.connectNow": {
     "value": "Connect now"
   },
-  "onboarding.flow.people.title": {
-    "value": "Who works with you?"
-  },
-  "onboarding.flow.people.eyebrowWhile": {
-    "value": "Getting the team ready"
-  },
-  "onboarding.flow.people.titleWhile": {
-    "value": "Meanwhile, invite the people you work with"
-  },
-  "onboarding.flow.people.leadWhile": {
-    "value": "It takes a few minutes. Each person you invite creates, on joining, the agent for their own work."
-  },
-  "onboarding.flow.people.leadJoin": {
-    "value": "Each person you invite creates, on joining, the agent for their own work."
-  },
-  "onboarding.flow.people.send": {
-    "value": "Send invitations"
-  },
-  "onboarding.flow.people.later": {
-    "value": "Invite later"
-  },
-  "onboarding.flow.people.sent": {
-    "value": {
-      "one": "Invitation sent",
-      "other": "{{count}} invitations sent"
-    }
-  },
-  "onboarding.flow.people.opening": {
-    "value": "Opening {{org}}…"
-  },
   "onboarding.flow.account": {
     "value": "Your account"
   },
@@ -4161,42 +4131,6 @@
   "onboarding.confirmation.first": {
     "value": "Already invited? Confirm your email first."
   },
-  "onboarding.start.title": {
-    "value": "How do you want to start?"
-  },
-  "onboarding.start.lead": {
-    "value": "Agents work in the apps you already use, more than {{n}}. You can change everything later."
-  },
-  "onboarding.start.leadPersonal": {
-    "value": "Your agents work in the apps you already use, more than {{n}}. You can change everything later."
-  },
-  "onboarding.start.leadAny": {
-    "value": "Agents work in the apps you already use. You can change everything later."
-  },
-  "onboarding.start.leadAnyPersonal": {
-    "value": "Your agents work in the apps you already use. You can change everything later."
-  },
-  "onboarding.start.ask": {
-    "value": "Ask your AI"
-  },
-  "onboarding.start.askText": {
-    "value": "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time and proposes an agent for each one. You pick where to start."
-  },
-  "onboarding.start.askTextPersonal": {
-    "value": "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time, at work or outside it, and proposes an agent for each one. You pick where to start."
-  },
-  "onboarding.start.scratch": {
-    "value": "Start from scratch"
-  },
-  "onboarding.start.scratchText": {
-    "value": "You create each agent whenever you want. {{name}}, the agents' HR, builds each one with you."
-  },
-  "onboarding.start.askGo": {
-    "value": "Ask your AI"
-  },
-  "onboarding.start.scratchGo": {
-    "value": "Start from scratch"
-  },
   "onboarding.ask.title": {
     "value": "Ask for your first agent"
   },
@@ -4310,174 +4244,6 @@
   },
   "onboarding.ask.prompt.json.example": {
     "value": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"every Monday at 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
-  },
-  "onboarding.pick.title": {
-    "value": "Pick your first agent"
-  },
-  "onboarding.pick.lead": {
-    "value": {
-      "one": "Your {{app}} found the task that takes most of your time. Start with it.",
-      "other": "Your {{app}} found the {{n}} tasks that take most of your time. Start with one: the others are for later."
-    }
-  },
-  "onboarding.pick.leadAny": {
-    "value": {
-      "one": "Your AI found the task that takes most of your time. Start with it.",
-      "other": "Your AI found the {{n}} tasks that take most of your time. Start with one: the others are for later."
-    }
-  },
-  "onboarding.pick.eyebrow": {
-    "value": "Proposal from your {{app}} · step {{n}} of {{total}}"
-  },
-  "onboarding.pick.eyebrowAny": {
-    "value": "Your AI's proposal · step {{n}} of {{total}}"
-  },
-  "onboarding.pick.rank.first": {
-    "value": "Repeats the most"
-  },
-  "onboarding.pick.rank.second": {
-    "value": "Second"
-  },
-  "onboarding.pick.rank.third": {
-    "value": "Third"
-  },
-  "onboarding.pick.duties": {
-    "value": "Responsibilities"
-  },
-  "onboarding.pick.needs": {
-    "value": "Requirements"
-  },
-  "onboarding.pick.why": {
-    "value": "Why {{name}}:"
-  },
-  "onboarding.pick.note": {
-    "value": "Nothing is created until you pick."
-  },
-  "onboarding.pick.create": {
-    "value": "Create {{name}}"
-  },
-  "onboarding.pick.say": {
-    "value": {
-      "one": "{{app}} found one way to start.",
-      "other": "{{app}} found {{n}} ways to start."
-    }
-  },
-  "onboarding.pick.sayAny": {
-    "value": {
-      "one": "Your AI found one way to start.",
-      "other": "Your AI found {{n}} ways to start."
-    }
-  },
-  "onboarding.pick.count.tasks.one": {
-    "value": "one"
-  },
-  "onboarding.pick.count.tasks.two": {
-    "value": "two"
-  },
-  "onboarding.pick.count.tasks.three": {
-    "value": "three"
-  },
-  "onboarding.pick.count.ways.one": {
-    "value": "one"
-  },
-  "onboarding.pick.count.ways.two": {
-    "value": "two"
-  },
-  "onboarding.pick.count.ways.three": {
-    "value": "three"
-  },
-  "onboarding.week.title": {
-    "value": "{{name}}'s first week"
-  },
-  "onboarding.week.lead": {
-    "value": "{{name}} starts today. Everything arrives in its channel, and you only approve."
-  },
-  "onboarding.week.leadPersonal": {
-    "value": "{{name}} starts today. Everything arrives in your conversation with it, and you only approve."
-  },
-  "onboarding.week.leadRoutine": {
-    "value": "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in its channel, and you only approve."
-  },
-  "onboarding.week.leadRoutinePersonal": {
-    "value": "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in your conversation with it, and you only approve."
-  },
-  "onboarding.week.say": {
-    "value": "As soon as the team is on, we start."
-  },
-  "onboarding.week.sayPersonal": {
-    "value": "As soon as it's on, we start."
-  },
-  "onboarding.week.strip": {
-    "value": "The next 7 days"
-  },
-  "onboarding.week.today": {
-    "value": "Today · {{date}}"
-  },
-  "onboarding.week.tomorrow": {
-    "value": "Tomorrow, {{date}}"
-  },
-  "onboarding.week.date": {
-    "value": "{{weekday}} {{n}}"
-  },
-  "onboarding.week.dateFar": {
-    "value": "{{weekday}}, {{month}} {{n}}"
-  },
-  "onboarding.week.now": {
-    "value": "Now"
-  },
-  "onboarding.week.days.MO": {
-    "value": "Monday"
-  },
-  "onboarding.week.days.TU": {
-    "value": "Tuesday"
-  },
-  "onboarding.week.days.WE": {
-    "value": "Wednesday"
-  },
-  "onboarding.week.days.TH": {
-    "value": "Thursday"
-  },
-  "onboarding.week.days.FR": {
-    "value": "Friday"
-  },
-  "onboarding.week.days.SA": {
-    "value": "Saturday"
-  },
-  "onboarding.week.days.SU": {
-    "value": "Sunday"
-  },
-  "onboarding.week.every.day": {
-    "value": "every day"
-  },
-  "onboarding.week.every.businessDays": {
-    "value": "Monday to Friday"
-  },
-  "onboarding.week.every.MO": {
-    "value": "every Monday"
-  },
-  "onboarding.week.every.TU": {
-    "value": "every Tuesday"
-  },
-  "onboarding.week.every.WE": {
-    "value": "every Wednesday"
-  },
-  "onboarding.week.every.TH": {
-    "value": "every Thursday"
-  },
-  "onboarding.week.every.FR": {
-    "value": "every Friday"
-  },
-  "onboarding.week.every.SA": {
-    "value": "every Saturday"
-  },
-  "onboarding.week.every.SU": {
-    "value": "every Sunday"
-  },
-  "onboarding.week.about": {
-    "value": "What your {{app}} said"
-  },
-  "onboarding.week.aboutAny": {
-    "value": "What your AI said"
   },
   "onboarding.areas.title": {
     "value": "What will your first agent do?"
@@ -4984,6 +4750,9 @@
   "onboarding.celebrate.lead": {
     "value": "{{you}} and {{agent}}, the team's first. From today on, working together, day and night."
   },
+  "onboarding.celebrate.leadNoPlan": {
+    "value": "{{you}} and {{agent}}, the team's first. From today on, working together."
+  },
   "onboarding.celebrate.leadPersonal": {
     "value": "{{you}} and {{agent}}, your first agent. From today on, looking after your days together."
   },
@@ -5047,39 +4816,6 @@
   "onboarding.member.intro": {
     "value": "Here, each person brings the agent that solves a problem of theirs."
   },
-  "onboarding.member.brought": {
-    "value": "{{person}} brought {{agent}}, for {{role}}."
-  },
-  "onboarding.member.broughtNoRole": {
-    "value": "{{person}} brought {{agent}}."
-  },
-  "onboarding.member.question": {
-    "value": "What will yours be?"
-  },
-  "onboarding.member.how": {
-    "value": "How do you want to create your agent?"
-  },
-  "onboarding.member.ask": {
-    "value": "Ask your AI"
-  },
-  "onboarding.member.askText": {
-    "value": "It finds the task that takes most of your time and proposes an agent for it."
-  },
-  "onboarding.member.scratch": {
-    "value": "Start from scratch"
-  },
-  "onboarding.member.scratchText": {
-    "value": "You describe the problem, and {{name}}, the agents' HR, builds the agent with you."
-  },
-  "onboarding.member.askGo": {
-    "value": "Ask your AI"
-  },
-  "onboarding.member.scratchGo": {
-    "value": "Start from scratch"
-  },
-  "onboarding.member.later": {
-    "value": "Not now"
-  },
   "onboarding.member.noPermission": {
     "value": "To create your agent, ask an admin for the permission to create agents."
   },
@@ -5088,9 +4824,6 @@
   },
   "onboarding.member.enterPersonal": {
     "value": "Open the workspace"
-  },
-  "onboarding.member.pickTitle": {
-    "value": "Pick your agent"
   },
   "onboarding.member.found": {
     "value": {
@@ -5115,9 +4848,6 @@
       "one": "Start with it: the agent works here with you, beside {{names}}.",
       "other": "Start with one: the agent works here with you, beside {{names}}."
     }
-  },
-  "onboarding.member.pickNote": {
-    "value": "It's your first: create others whenever you like."
   },
   "desktopNotice.mention": {
     "value": "You were mentioned"

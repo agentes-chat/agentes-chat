@@ -979,18 +979,6 @@
         "skipGo": "Doorgaan zonder AI",
         "connectNow": "Nu koppelen"
       },
-      "people": {
-        "title": "Wie werkt er met je samen?",
-        "eyebrowWhile": "Het team wordt klaargezet",
-        "titleWhile": "Nodig intussen de mensen uit met wie je werkt",
-        "leadWhile": "Dat duurt een paar minuten. Iedereen die je uitnodigt, maakt bij het instappen de agent voor het eigen werk.",
-        "leadJoin": "Iedereen die je uitnodigt, maakt bij het instappen de agent voor het eigen werk.",
-        "send": "Uitnodigingen sturen",
-        "later": "Later uitnodigen",
-        "sent_one": "Uitnodiging verstuurd",
-        "sent_other": "{{count}} uitnodigingen verstuurd",
-        "opening": "{{org}} wordt geopend…"
-      },
       "account": "Je account",
       "switchNote": "Je kunt later wisselen zonder iets te verliezen."
     },
@@ -1702,20 +1690,6 @@
       "sent": "We hebben een bevestigingslink gestuurd naar {{email}}.",
       "first": "Al uitgenodigd? Bevestig eerst je e-mailadres."
     },
-    "start": {
-      "title": "Hoe wil je beginnen?",
-      "lead": "Agents werken in de apps die jullie al gebruiken, meer dan {{n}}. Je kunt later alles aanpassen.",
-      "leadPersonal": "Je agents werken in de apps die je al gebruikt, meer dan {{n}}. Je kunt later alles aanpassen.",
-      "leadAny": "Agents werken in de apps die jullie al gebruiken. Je kunt later alles aanpassen.",
-      "leadAnyPersonal": "Je agents werken in de apps die je al gebruikt. Je kunt later alles aanpassen.",
-      "ask": "Vraag het je AI",
-      "askText": "Claude, ChatGPT, Gemini of welke je ook gebruikt vindt de taken die je de meeste tijd kosten en stelt voor elke taak een agent voor. Jij kiest waarmee je begint.",
-      "askTextPersonal": "Claude, ChatGPT, Gemini of welke je ook gebruikt vindt de taken die je de meeste tijd kosten, op het werk of daarbuiten, en stelt voor elke taak een agent voor. Jij kiest waarmee je begint.",
-      "scratch": "Vanaf nul beginnen",
-      "scratchText": "Je maakt elke agent wanneer je wilt. {{name}}, de HR van de agents, bouwt ze allemaal met je.",
-      "askGo": "Je AI vragen",
-      "scratchGo": "Vanaf nul beginnen"
-    },
     "ask": {
       "title": "Vraag om je eerste agent",
       "titleMember": "Vraag om je agent",
@@ -1765,78 +1739,6 @@
           "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"elke maandag om 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
         }
       }
-    },
-    "pick": {
-      "title": "Kies je eerste agent",
-      "lead_one": "Je {{app}} vond de taak die je de meeste tijd kost. Begin daarmee.",
-      "lead_other": "Je {{app}} vond de {{n}} taken die je de meeste tijd kosten. Begin met één: de rest komt later.",
-      "leadAny_one": "Je AI vond de taak die je de meeste tijd kost. Begin daarmee.",
-      "leadAny_other": "Je AI vond de {{n}} taken die je de meeste tijd kosten. Begin met één: de rest komt later.",
-      "eyebrow": "Voorstel van je {{app}} · stap {{n}} van {{total}}",
-      "eyebrowAny": "Voorstel van je AI · stap {{n}} van {{total}}",
-      "rank": {
-        "first": "Komt het vaakst terug",
-        "second": "Op plek 2",
-        "third": "Op plek 3"
-      },
-      "duties": "Verantwoordelijkheden",
-      "needs": "Vereisten",
-      "why": "Waarom {{name}}:",
-      "note": "Er wordt niets gemaakt tot je kiest.",
-      "create": "{{name}} maken",
-      "say_one": "{{app}} vond één manier om te beginnen.",
-      "say_other": "{{app}} vond {{n}} manieren om te beginnen.",
-      "sayAny_one": "Je AI vond één manier om te beginnen.",
-      "sayAny_other": "Je AI vond {{n}} manieren om te beginnen.",
-      "count": {
-        "tasks": {
-          "one": "één",
-          "two": "twee",
-          "three": "drie"
-        },
-        "ways": {
-          "one": "één",
-          "two": "twee",
-          "three": "drie"
-        }
-      }
-    },
-    "week": {
-      "title": "De eerste week van {{name}}",
-      "lead": "{{name}} begint vandaag. Alles komt binnen in het eigen kanaal, en jij keurt alleen goed.",
-      "leadPersonal": "{{name}} begint vandaag. Alles komt binnen in jullie gesprek, en jij keurt alleen goed.",
-      "leadRoutine": "{{name}} begint vandaag, en ‘{{routine}}’ herhaalt zich {{when}}. Alles komt binnen in het eigen kanaal, en jij keurt alleen goed.",
-      "leadRoutinePersonal": "{{name}} begint vandaag, en ‘{{routine}}’ herhaalt zich {{when}}. Alles komt binnen in jullie gesprek, en jij keurt alleen goed.",
-      "say": "Zodra het team aan staat, beginnen we.",
-      "sayPersonal": "Zodra alles aan staat, beginnen we.",
-      "strip": "De komende 7 dagen",
-      "today": "Vandaag · {{date}}",
-      "tomorrow": "Morgen, {{date}}",
-      "date": "{{weekday}} {{n}}",
-      "dateFar": "{{weekday}} {{n}} {{month}}",
-      "now": "Nu",
-      "days": {
-        "MO": "maandag",
-        "TU": "dinsdag",
-        "WE": "woensdag",
-        "TH": "donderdag",
-        "FR": "vrijdag",
-        "SA": "zaterdag",
-        "SU": "zondag"
-      },
-      "every": {
-        "day": "elke dag",
-        "businessDays": "van maandag tot vrijdag",
-        "MO": "elke maandag",
-        "TU": "elke dinsdag",
-        "WE": "elke woensdag",
-        "TH": "elke donderdag",
-        "FR": "elke vrijdag",
-        "SA": "elke zaterdag",
-        "SU": "elke zondag"
-      },
-      "about": "Wat je {{app}} vertelde",
-      "aboutAny": "Wat je AI vertelde"
     },
     "areas": {
       "title": "Wat gaat je eerste agent doen?",
@@ -2042,6 +1944,7 @@
       "titlePersonal": "Welkom in je team",
       "you": "Jij",
       "lead": "{{you}} en {{agent}}, de eerste van het team. Vanaf vandaag samen aan het werk, dag en nacht.",
+      "leadNoPlan": "{{you}} en {{agent}}, de eerste van het team. Vanaf vandaag samen aan het werk.",
       "leadPersonal": "{{you}} en {{agent}}, je eerste agent. Vanaf vandaag zorgen jullie samen voor je dagen.",
       "plan": "Abonnement {{name}} actief",
       "planAny": "Abonnement actief",
@@ -2065,30 +1968,9 @@
       "titlePersonal": "Welkom, {{first}}",
       "titleNoNamePersonal": "Welkom",
       "intro": "Hier brengt iedereen de agent mee die een eigen probleem oplost.",
-      "brought": "{{person}} bracht {{agent}} mee, voor {{role}}.",
-      "broughtNoRole": "{{person}} bracht {{agent}} mee.",
-      "question": "Welke wordt de jouwe?",
-      "how": "Hoe wil je je agent maken?",
-      "ask": "Vraag het je AI",
-      "askText": "Die vindt de taak die je de meeste tijd kost en stelt er een agent voor voor.",
-      "scratch": "Vanaf nul beginnen",
-      "scratchText": "Jij beschrijft het probleem, en {{name}}, de HR van de agents, bouwt de agent met je.",
-      "askGo": "Je AI vragen",
-      "scratchGo": "Vanaf nul beginnen",
-      "later": "Niet nu",
       "noPermission": "Vraag een beheerder om toestemming om agents te maken, zodat je je agent kunt maken.",
       "enter": "{{org}} openen",
-      "enterPersonal": "De werkruimte openen",
-      "pickTitle": "Kies je agent",
-      "found_one": "Je {{app}} vond de taak die je de meeste tijd kost.",
-      "found_other": "Je {{app}} vond de {{n}} taken die je de meeste tijd kosten.",
-      "foundAny_one": "Je AI vond de taak die je de meeste tijd kost.",
-      "foundAny_other": "Je AI vond de {{n}} taken die je de meeste tijd kosten.",
-      "joins_one": "Begin daarmee: de agent komt in het team van {{org}}, bij {{names}}.",
-      "joins_other": "Begin met één: de agent komt in het team van {{org}}, bij {{names}}.",
-      "joinsPersonal_one": "Begin daarmee: de agent werkt hier met je, naast {{names}}.",
-      "joinsPersonal_other": "Begin met één: de agent werkt hier met je, naast {{names}}.",
-      "pickNote": "Het is je eerste: maak er meer wanneer je wilt."
+      "enterPersonal": "De werkruimte openen"
     }
   },
   "desktopNotice": {

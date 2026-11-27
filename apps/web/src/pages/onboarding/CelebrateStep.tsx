@@ -52,7 +52,15 @@ export function TeamWelcome({
   const who = agentGrammar(agent.name);
   const the = t("onboarding.hire.the", who);
   const leadFor = (you: string) =>
-    t(personal ? "onboarding.celebrate.leadPersonal" : "onboarding.celebrate.lead", { ...who, you, agent: the });
+    t(
+      personal
+        ? "onboarding.celebrate.leadPersonal"
+        : // With no plan (a self-hosted server), its computers aren't ours to promise "day and night" of.
+          plan === null
+          ? "onboarding.celebrate.leadNoPlan"
+          : "onboarding.celebrate.lead",
+      { ...who, you, agent: the },
+    );
   const eyebrow = personal
     ? t("onboarding.celebrate.eyebrowPersonal", { date })
     : t("onboarding.celebrate.eyebrow", { org, date });

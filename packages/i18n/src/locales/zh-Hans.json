@@ -959,17 +959,6 @@
         "skipGo": "不连接 AI，继续",
         "connectNow": "立即连接"
       },
-      "people": {
-        "title": "谁和你一起工作？",
-        "eyebrowWhile": "正在准备团队",
-        "titleWhile": "这期间，邀请和你一起工作的人",
-        "leadWhile": "需要几分钟。你邀请的每个人在加入时，都会为自己的工作创建一个智能体。",
-        "leadJoin": "你邀请的每个人在加入时，都会为自己的工作创建一个智能体。",
-        "send": "发送邀请",
-        "later": "稍后邀请",
-        "sent_other": "已发送 {{count}} 份邀请",
-        "opening": "正在打开 {{org}}…"
-      },
       "account": "你的账号",
       "switchNote": "之后可以随时切换，不会丢失任何内容。"
     },
@@ -1632,20 +1621,6 @@
       "sent": "我们已向 {{email}} 发送了确认链接。",
       "first": "已经被邀请了？请先确认你的邮箱。"
     },
-    "start": {
-      "title": "你想怎么开始？",
-      "lead": "智能体在你们已经在用的应用里工作，支持超过 {{n}} 个应用。之后一切都能修改。",
-      "leadPersonal": "你的智能体在你已经在用的应用里工作，支持超过 {{n}} 个应用。之后一切都能修改。",
-      "leadAny": "智能体在你们已经在用的应用里工作。之后一切都能修改。",
-      "leadAnyPersonal": "你的智能体在你已经在用的应用里工作。之后一切都能修改。",
-      "ask": "问问你的 AI",
-      "askText": "Claude、ChatGPT、Gemini 或你在用的任何 AI，会找出最占你时间的任务，并为每项任务推荐一个智能体。从哪里开始由你决定。",
-      "askTextPersonal": "Claude、ChatGPT、Gemini 或你在用的任何 AI，会找出最占你时间的任务，工作内外都算，并为每项任务推荐一个智能体。从哪里开始由你决定。",
-      "scratch": "从零开始",
-      "scratchText": "你随时可以创建每个智能体。智能体的人事 {{name}} 会和你一起搭建每一个。",
-      "askGo": "问问 AI",
-      "scratchGo": "从零开始"
-    },
     "ask": {
       "title": "要一个你的第一个智能体",
       "titleMember": "要一个你的智能体",
@@ -1695,74 +1670,6 @@
           "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"每周一 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
         }
       }
-    },
-    "pick": {
-      "title": "选择你的第一个智能体",
-      "lead_other": "你的 {{app}} 找到了最占你时间的{{n}}任务。先从一项开始，其他的以后再说。",
-      "leadAny_other": "你的 AI 找到了最占你时间的{{n}}任务。先从一项开始，其他的以后再说。",
-      "eyebrow": "来自你的 {{app}} 的提案 · 第 {{n}} 步，共 {{total}} 步",
-      "eyebrowAny": "来自你的 AI 的提案 · 第 {{n}} 步，共 {{total}} 步",
-      "rank": {
-        "first": "重复最多",
-        "second": "第二",
-        "third": "第三"
-      },
-      "duties": "职责",
-      "needs": "要求",
-      "why": "为什么是 {{name}}：",
-      "note": "在你选择之前，什么都不会创建。",
-      "create": "创建 {{name}}",
-      "say_other": "{{app}} 找到了{{n}}开始的方式。",
-      "sayAny_other": "你的 AI 找到了{{n}}开始的方式。",
-      "count": {
-        "tasks": {
-          "one": "一项",
-          "two": "两项",
-          "three": "三项"
-        },
-        "ways": {
-          "one": "一种",
-          "two": "两种",
-          "three": "三种"
-        }
-      }
-    },
-    "week": {
-      "title": "{{name}} 的第一周",
-      "lead": "{{name}} 今天就开始。一切都会送到它的频道，你只需批准。",
-      "leadPersonal": "{{name}} 今天就开始。一切都会送到你和它的对话里，你只需批准。",
-      "leadRoutine": "{{name}} 今天就开始，“{{routine}}”会{{when}}重复。一切都会送到它的频道，你只需批准。",
-      "leadRoutinePersonal": "{{name}} 今天就开始，“{{routine}}”会{{when}}重复。一切都会送到你和它的对话里，你只需批准。",
-      "say": "团队一开启，我们就开始。",
-      "sayPersonal": "一开启，我们就开始。",
-      "strip": "接下来的 7 天",
-      "today": "今天 · {{date}}",
-      "tomorrow": "明天，{{date}}",
-      "date": "{{n}}日 {{weekday}}",
-      "dateFar": "{{month}}{{n}}日 {{weekday}}",
-      "now": "现在",
-      "days": {
-        "MO": "周一",
-        "TU": "周二",
-        "WE": "周三",
-        "TH": "周四",
-        "FR": "周五",
-        "SA": "周六",
-        "SU": "周日"
-      },
-      "every": {
-        "day": "每天",
-        "businessDays": "周一到周五",
-        "MO": "每周一",
-        "TU": "每周二",
-        "WE": "每周三",
-        "TH": "每周四",
-        "FR": "每周五",
-        "SA": "每周六",
-        "SU": "每周日"
-      },
-      "about": "你的 {{app}} 说了什么",
-      "aboutAny": "你的 AI 说了什么"
     },
     "areas": {
       "title": "你的第一个智能体要做什么？",
@@ -1963,6 +1870,7 @@
       "titlePersonal": "欢迎来到你的团队",
       "you": "你",
       "lead": "{{you}}和团队的第一个智能体 {{agent}}。从今天起，日日夜夜一起工作。",
+      "leadNoPlan": "{{you}}和团队的第一个智能体 {{agent}}。从今天起，一起工作。",
       "leadPersonal": "{{you}}和你的第一个智能体 {{agent}}。从今天起，一起照顾好每一天。",
       "plan": "{{name}} 套餐已开通",
       "planAny": "套餐已开通",
@@ -1986,26 +1894,9 @@
       "titlePersonal": "欢迎，{{first}}",
       "titleNoNamePersonal": "欢迎",
       "intro": "在这里，每个人都会带来一个解决自己问题的智能体。",
-      "brought": "{{person}} 带来了 {{agent}}，负责{{role}}。",
-      "broughtNoRole": "{{person}} 带来了 {{agent}}。",
-      "question": "你的会是哪个？",
-      "how": "你想怎么创建你的智能体？",
-      "ask": "问问你的 AI",
-      "askText": "它会找出最占你时间的任务，并为它推荐一个智能体。",
-      "scratch": "从零开始",
-      "scratchText": "你来描述问题，智能体的人事 {{name}} 会和你一起搭建这个智能体。",
-      "askGo": "问问 AI",
-      "scratchGo": "从零开始",
-      "later": "暂时不用",
       "noPermission": "要创建你的智能体，请向管理员申请创建智能体的权限。",
       "enter": "打开 {{org}}",
-      "enterPersonal": "打开工作区",
-      "pickTitle": "选择你的智能体",
-      "found_other": "你的 {{app}} 找到了最占你时间的{{n}}任务。",
-      "foundAny_other": "你的 AI 找到了最占你时间的{{n}}任务。",
-      "joins_other": "先选一项：这个智能体会加入 {{org}} 团队，和 {{names}} 一起。",
-      "joinsPersonal_other": "先选一项：这个智能体会在这里和你一起工作，就在 {{names}} 旁边。",
-      "pickNote": "这是你的第一个：之后想创建多少都可以。"
+      "enterPersonal": "打开工作区"
     }
   },
   "desktopNotice": {

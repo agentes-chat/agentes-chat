@@ -1016,20 +1016,6 @@
         "skipGo": "Kontynuuj bez AI",
         "connectNow": "Połącz teraz"
       },
-      "people": {
-        "title": "Kto z tobą pracuje?",
-        "eyebrowWhile": "Zespół się przygotowuje",
-        "titleWhile": "W międzyczasie zaproś osoby, z którymi pracujesz",
-        "leadWhile": "To potrwa kilka minut. Każda zaproszona osoba po dołączeniu tworzy agenta do swojej pracy.",
-        "leadJoin": "Każda zaproszona osoba po dołączeniu tworzy agenta do swojej pracy.",
-        "send": "Wyślij zaproszenia",
-        "later": "Zaproś później",
-        "sent_one": "Wysłano {{count}} zaproszenie",
-        "sent_few": "Wysłano {{count}} zaproszenia",
-        "sent_many": "Wysłano {{count}} zaproszeń",
-        "sent_other": "Wysłano {{count}} zaproszenia",
-        "opening": "Otwieranie {{org}}…"
-      },
       "account": "Twoje konto",
       "switchNote": "Możesz to później zmienić bez utraty czegokolwiek."
     },
@@ -1839,20 +1825,6 @@
       "sent": "Wysłaliśmy link potwierdzający na {{email}}.",
       "first": "Masz już zaproszenie? Najpierw potwierdź swój adres e-mail."
     },
-    "start": {
-      "title": "Jak chcesz zacząć?",
-      "lead": "Agenci pracują w aplikacjach, których już używacie, w ponad {{n}}. Wszystko możesz później zmienić.",
-      "leadPersonal": "Twoi agenci pracują w aplikacjach, których już używasz, w ponad {{n}}. Wszystko możesz później zmienić.",
-      "leadAny": "Agenci pracują w aplikacjach, których już używacie. Wszystko możesz później zmienić.",
-      "leadAnyPersonal": "Twoi agenci pracują w aplikacjach, których już używasz. Wszystko możesz później zmienić.",
-      "ask": "Zapytaj swoją AI",
-      "askText": "Claude, ChatGPT, Gemini albo ta, której używasz, znajdzie zadania, które zabierają ci najwięcej czasu, i zaproponuje agenta do każdego z nich. Ty wybierasz, od czego zacząć.",
-      "askTextPersonal": "Claude, ChatGPT, Gemini albo ta, której używasz, znajdzie zadania, które zabierają ci najwięcej czasu, w pracy i poza nią, i zaproponuje agenta do każdego z nich. Ty wybierasz, od czego zacząć.",
-      "scratch": "Zacznij od zera",
-      "scratchText": "Każdego agenta tworzysz, kiedy chcesz. {{name}}, czyli HR agentów, buduje każdego razem z tobą.",
-      "askGo": "Zapytaj swoją AI",
-      "scratchGo": "Zacznij od zera"
-    },
     "ask": {
       "title": "Poproś o pierwszego agenta",
       "titleMember": "Poproś o swojego agenta",
@@ -1902,86 +1874,6 @@
           "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"w każdy poniedziałek o 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
         }
       }
-    },
-    "pick": {
-      "title": "Wybierz pierwszego agenta",
-      "lead_one": "{{app}} znalazł zadanie, które zabiera ci najwięcej czasu. Zacznij od niego.",
-      "lead_few": "{{app}} znalazł {{n}} zadania, które zabierają ci najwięcej czasu. Zacznij od jednego: reszta poczeka.",
-      "lead_many": "{{app}} znalazł {{n}} zadań, które zabierają ci najwięcej czasu. Zacznij od jednego: reszta poczeka.",
-      "lead_other": "{{app}} znalazł {{n}} zadania, które zabierają ci najwięcej czasu. Zacznij od jednego: reszta poczeka.",
-      "leadAny_one": "Twoja AI znalazła zadanie, które zabiera ci najwięcej czasu. Zacznij od niego.",
-      "leadAny_few": "Twoja AI znalazła {{n}} zadania, które zabierają ci najwięcej czasu. Zacznij od jednego: reszta poczeka.",
-      "leadAny_many": "Twoja AI znalazła {{n}} zadań, które zabierają ci najwięcej czasu. Zacznij od jednego: reszta poczeka.",
-      "leadAny_other": "Twoja AI znalazła {{n}} zadania, które zabierają ci najwięcej czasu. Zacznij od jednego: reszta poczeka.",
-      "eyebrow": "Propozycja od {{app}} · krok {{n}} z {{total}}",
-      "eyebrowAny": "Propozycja twojej AI · krok {{n}} z {{total}}",
-      "rank": {
-        "first": "Powtarza się najczęściej",
-        "second": "Na 2. miejscu",
-        "third": "Na 3. miejscu"
-      },
-      "duties": "Obowiązki",
-      "needs": "Wymagania",
-      "why": "Dlaczego {{name}}:",
-      "note": "Nic nie powstanie, dopóki nie wybierzesz.",
-      "create": "Utwórz agenta {{name}}",
-      "say_one": "{{app}} znalazł jeden sposób na start.",
-      "say_few": "{{app}} znalazł {{n}} sposoby na start.",
-      "say_many": "{{app}} znalazł {{n}} sposobów na start.",
-      "say_other": "{{app}} znalazł {{n}} sposobu na start.",
-      "sayAny_one": "Twoja AI znalazła jeden sposób na start.",
-      "sayAny_few": "Twoja AI znalazła {{n}} sposoby na start.",
-      "sayAny_many": "Twoja AI znalazła {{n}} sposobów na start.",
-      "sayAny_other": "Twoja AI znalazła {{n}} sposobu na start.",
-      "count": {
-        "tasks": {
-          "one": "jedno",
-          "two": "dwa",
-          "three": "trzy"
-        },
-        "ways": {
-          "one": "jeden",
-          "two": "dwa",
-          "three": "trzy"
-        }
-      }
-    },
-    "week": {
-      "title": "Pierwszy tydzień agenta {{name}}",
-      "lead": "{{name}} zaczyna dziś. Wszystko trafia na kanał tego agenta, a ty tylko zatwierdzasz.",
-      "leadPersonal": "{{name}} zaczyna dziś. Wszystko trafia do twojej rozmowy z tym agentem, a ty tylko zatwierdzasz.",
-      "leadRoutine": "{{name}} zaczyna dziś, a „{{routine}}” powtarza się {{when}}. Wszystko trafia na kanał tego agenta, a ty tylko zatwierdzasz.",
-      "leadRoutinePersonal": "{{name}} zaczyna dziś, a „{{routine}}” powtarza się {{when}}. Wszystko trafia do twojej rozmowy z tym agentem, a ty tylko zatwierdzasz.",
-      "say": "Gdy tylko zespół się włączy, zaczynamy.",
-      "sayPersonal": "Gdy tylko się włączy, zaczynamy.",
-      "strip": "Najbliższe 7 dni",
-      "today": "Dziś · {{date}}",
-      "tomorrow": "Jutro, {{date}}",
-      "date": "{{weekday}}, {{n}}",
-      "dateFar": "{{weekday}}, {{n}} ({{month}})",
-      "now": "Teraz",
-      "days": {
-        "MO": "poniedziałek",
-        "TU": "wtorek",
-        "WE": "środa",
-        "TH": "czwartek",
-        "FR": "piątek",
-        "SA": "sobota",
-        "SU": "niedziela"
-      },
-      "every": {
-        "day": "codziennie",
-        "businessDays": "od poniedziałku do piątku",
-        "MO": "w każdy poniedziałek",
-        "TU": "w każdy wtorek",
-        "WE": "w każdą środę",
-        "TH": "w każdy czwartek",
-        "FR": "w każdy piątek",
-        "SA": "w każdą sobotę",
-        "SU": "w każdą niedzielę"
-      },
-      "about": "Co powiedział {{app}}",
-      "aboutAny": "Co powiedziała twoja AI"
     },
     "areas": {
       "title": "Czym zajmie się twój pierwszy agent?",
@@ -2186,6 +2078,8 @@
       "you": "Ty",
       "lead": "{{you}} i {{agent}}, pierwszy w zespole. Od dziś razem w pracy, dzień i noc.",
       "lead_female": "{{you}} i {{agent}}, pierwsza w zespole. Od dziś razem w pracy, dzień i noc.",
+      "leadNoPlan": "{{you}} i {{agent}}, pierwszy w zespole. Od dziś razem w pracy.",
+      "leadNoPlan_female": "{{you}} i {{agent}}, pierwsza w zespole. Od dziś razem w pracy.",
       "leadPersonal": "{{you}} i {{agent}}, twój pierwszy agent. Od dziś razem, dbając o twoje dni.",
       "leadPersonal_female": "{{you}} i {{agent}}, twoja pierwsza agentka. Od dziś razem, dbając o twoje dni.",
       "plan": "Plan {{name}} aktywny",
@@ -2211,38 +2105,9 @@
       "titlePersonal": "Witaj, {{first}}",
       "titleNoNamePersonal": "Witaj",
       "intro": "Tutaj każdy przyprowadza agenta, który rozwiązuje jeden z jego problemów.",
-      "brought": "{{person}}: agent {{agent}}, do zadań: {{role}}.",
-      "broughtNoRole": "{{person}}: agent {{agent}}.",
-      "question": "Jaki będzie twój?",
-      "how": "Jak chcesz utworzyć swojego agenta?",
-      "ask": "Zapytaj swoją AI",
-      "askText": "Znajdzie zadanie, które zabiera ci najwięcej czasu, i zaproponuje do niego agenta.",
-      "scratch": "Zacznij od zera",
-      "scratchText": "Opisujesz problem, a {{name}}, czyli HR agentów, buduje agenta razem z tobą.",
-      "askGo": "Zapytaj swoją AI",
-      "scratchGo": "Zacznij od zera",
-      "later": "Nie teraz",
       "noPermission": "Aby utworzyć agenta, poproś administratora o uprawnienie do tworzenia agentów.",
       "enter": "Otwórz {{org}}",
-      "enterPersonal": "Otwórz przestrzeń roboczą",
-      "pickTitle": "Wybierz swojego agenta",
-      "found_one": "{{app}} znalazł zadanie, które zabiera ci najwięcej czasu.",
-      "found_few": "{{app}} znalazł {{n}} zadania, które zabierają ci najwięcej czasu.",
-      "found_many": "{{app}} znalazł {{n}} zadań, które zabierają ci najwięcej czasu.",
-      "found_other": "{{app}} znalazł {{n}} zadania, które zabierają ci najwięcej czasu.",
-      "foundAny_one": "Twoja AI znalazła zadanie, które zabiera ci najwięcej czasu.",
-      "foundAny_few": "Twoja AI znalazła {{n}} zadania, które zabierają ci najwięcej czasu.",
-      "foundAny_many": "Twoja AI znalazła {{n}} zadań, które zabierają ci najwięcej czasu.",
-      "foundAny_other": "Twoja AI znalazła {{n}} zadania, które zabierają ci najwięcej czasu.",
-      "joins_one": "Zacznij od niego: agent dołącza do zespołu {{org}}, obok: {{names}}.",
-      "joins_few": "Zacznij od jednego: agent dołącza do zespołu {{org}}, obok: {{names}}.",
-      "joins_many": "Zacznij od jednego: agent dołącza do zespołu {{org}}, obok: {{names}}.",
-      "joins_other": "Zacznij od jednego: agent dołącza do zespołu {{org}}, obok: {{names}}.",
-      "joinsPersonal_one": "Zacznij od niego: agent pracuje tu z tobą, obok: {{names}}.",
-      "joinsPersonal_few": "Zacznij od jednego: agent pracuje tu z tobą, obok: {{names}}.",
-      "joinsPersonal_many": "Zacznij od jednego: agent pracuje tu z tobą, obok: {{names}}.",
-      "joinsPersonal_other": "Zacznij od jednego: agent pracuje tu z tobą, obok: {{names}}.",
-      "pickNote": "To twój pierwszy: kolejne utworzysz, kiedy zechcesz."
+      "enterPersonal": "Otwórz przestrzeń roboczą"
     }
   },
   "desktopNotice": {

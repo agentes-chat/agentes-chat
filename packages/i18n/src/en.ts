@@ -1052,24 +1052,6 @@ export const en = {
         skipGo: "Continue without AI",
         connectNow: "Connect now",
       },
-      /** A team's last step (ADR 0162, amended 2026-11-11): inviting the people who work there. */
-      people: {
-        title: "Who works with you?",
-        /** Right after the plan, while the team gets ready (`eyebrowWhile`, `titleWhile`, `leadWhile`), and `leadJoin` with no plan. */
-        eyebrowWhile: "Getting the team ready",
-        titleWhile: "Meanwhile, invite the people you work with",
-        leadWhile: "It takes a few minutes. Each person you invite creates, on joining, the agent for their own work.",
-        leadJoin: "Each person you invite creates, on joining, the agent for their own work.",
-        /** The button while no address is typed yet. */
-        send: "Send invitations",
-        /** The quiet link under the button: the workspace opens with no invitations. */
-        later: "Invite later",
-        /** The button once the invitations went, while the workspace opens. */
-        sent_one: "Invitation sent",
-        sent_other: "{{count}} invitations sent",
-        /** The line under the addresses once they went: the workspace opens next. `{{org}}`: its name. */
-        opening: "Opening {{org}}…",
-      },
       account: "Your account",
       /** Beside Continue on the first question: the workspace's mode changes later in Settings. */
       switchNote: "You can switch later without losing anything.",
@@ -1802,27 +1784,6 @@ export const en = {
       first: "Already invited? Confirm your email first.",
     },
     /**
-     * How to start (the onboarding's first agent): the person's own AI proposes agents, or from scratch with the
-     * right hand alone. Over it, the apps the agents work in; `{{n}}` is the catalog's count in tens ("more than 70").
-     */
-    start: {
-      title: "How do you want to start?",
-      lead: "Agents work in the apps you already use, more than {{n}}. You can change everything later.",
-      leadPersonal: "Your agents work in the apps you already use, more than {{n}}. You can change everything later.",
-      leadAny: "Agents work in the apps you already use. You can change everything later.",
-      leadAnyPersonal: "Your agents work in the apps you already use. You can change everything later.",
-      ask: "Ask your AI",
-      askText:
-        "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time and proposes an agent for each one. You pick where to start.",
-      askTextPersonal:
-        "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time, at work or outside it, and proposes an agent for each one. You pick where to start.",
-      scratch: "Start from scratch",
-      /** `{{name}}`: the right hand, the agent that creates and adjusts the other agents. */
-      scratchText: "You create each agent whenever you want. {{name}}, the agents' HR, builds each one with you.",
-      askGo: "Ask your AI",
-      scratchGo: "Start from scratch",
-    },
-    /**
      * Asking the person's own AI for a first agent: the assistants, connecting agentes.chat to it by MCP, the request
      * to paste, and the way without a connector (the same request asking for a JSON answer, pasted here).
      */
@@ -1891,93 +1852,6 @@ export const en = {
             '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"every Monday at 8:00","cron":"0 8 * * 1","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
         },
       },
-    },
-    /**
-     * Picking the first agent from what the person's AI proposed: each option as a job description, the task that
-     * repeats the most first. `{{app}}`: the assistant asked ("Claude").
-     */
-    pick: {
-      title: "Pick your first agent",
-      lead_one: "Your {{app}} found the task that takes most of your time. Start with it.",
-      lead_other:
-        "Your {{app}} found the {{n}} tasks that take most of your time. Start with one: the others are for later.",
-      leadAny_one: "Your AI found the task that takes most of your time. Start with it.",
-      leadAny_other:
-        "Your AI found the {{n}} tasks that take most of your time. Start with one: the others are for later.",
-      eyebrow: "Proposal from your {{app}} · step {{n}} of {{total}}",
-      eyebrowAny: "Your AI's proposal · step {{n}} of {{total}}",
-      /** Over each card's name, in the AI's order. */
-      rank: {
-        first: "Repeats the most",
-        second: "Second",
-        third: "Third",
-      },
-      /** A card's list of what the agent does, as in a job description. */
-      duties: "Responsibilities",
-      /** A card's list of the apps the agent needs. */
-      needs: "Requirements",
-      /** Before the reason the AI gave, in its words. */
-      why: "Why {{name}}:",
-      note: "Nothing is created until you pick.",
-      create: "Create {{name}}",
-      say_one: "{{app}} found one way to start.",
-      say_other: "{{app}} found {{n}} ways to start.",
-      sayAny_one: "Your AI found one way to start.",
-      sayAny_other: "Your AI found {{n}} ways to start.",
-      /**
-       * How many options the AI sent, in words, for the lead (tasks) and the bubble (ways to start). `one` is for a
-       * language whose plural has no `_one` form (ja, ko, zh-Hans, id): there one option reads `_other` too.
-       */
-      count: {
-        tasks: { one: "one", two: "two", three: "three" },
-        ways: { one: "one", two: "two", three: "three" },
-      },
-    },
-    /**
-     * The picked agent's first week, before the plan, as a planner page. `{{routine}}`: its routine's title. `{{when}}`: how it repeats
-     * (`every.*`, or the AI's own words). `days`/`every`: by weekday, as `recurrence.wd`.
-     */
-    week: {
-      title: "{{name}}'s first week",
-      lead: "{{name}} starts today. Everything arrives in its channel, and you only approve.",
-      leadPersonal: "{{name}} starts today. Everything arrives in your conversation with it, and you only approve.",
-      leadRoutine:
-        "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in its channel, and you only approve.",
-      leadRoutinePersonal:
-        "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in your conversation with it, and you only approve.",
-      say: "As soon as the team is on, we start.",
-      sayPersonal: "As soon as it's on, we start.",
-      /** The week strip, for screen readers. */
-      strip: "The next 7 days",
-      today: "Today · {{date}}",
-      tomorrow: "Tomorrow, {{date}}",
-      date: "{{weekday}} {{n}}",
-      dateFar: "{{weekday}}, {{month}} {{n}}",
-      /** The time beside what the agent delivers on its first day. */
-      now: "Now",
-      days: {
-        MO: "Monday",
-        TU: "Tuesday",
-        WE: "Wednesday",
-        TH: "Thursday",
-        FR: "Friday",
-        SA: "Saturday",
-        SU: "Sunday",
-      },
-      every: {
-        day: "every day",
-        businessDays: "Monday to Friday",
-        MO: "every Monday",
-        TU: "every Tuesday",
-        WE: "every Wednesday",
-        TH: "every Thursday",
-        FR: "every Friday",
-        SA: "every Saturday",
-        SU: "every Sunday",
-      },
-      /** What the person's AI said about the workspace (or the person), under the week. */
-      about: "What your {{app}} said",
-      aboutAny: "What your AI said",
     },
     /**
      * The work the first agent does (ADR 0256, addendum of 2026-11-27): the list, the other ways in, the workspace's
@@ -2220,6 +2094,8 @@ export const en = {
       titlePersonal: "Welcome to your team",
       you: "You",
       lead: "{{you}} and {{agent}}, the team's first. From today on, working together, day and night.",
+      /** The same where there is no plan to wait for (a self-hosted server): its computers aren't ours to keep on. */
+      leadNoPlan: "{{you}} and {{agent}}, the team's first. From today on, working together.",
       leadPersonal: "{{you}} and {{agent}}, your first agent. From today on, looking after your days together.",
       plan: "{{name}} plan on",
       planAny: "Plan on",
@@ -2241,48 +2117,20 @@ export const en = {
       photoFailed: "Couldn't make the photo. Try again.",
     },
     /**
-     * The onboarding of someone who joined a workspace: the team as it is, then the one agent that solves a problem of
-     * theirs, asked of their own AI. `{{org}}`: the workspace's name. `{{first}}`: the person's first name.
+     * The onboarding of someone who joined a workspace, where they may not create agents: the team as it is and the way
+     * in. `{{org}}`: the workspace's name. `{{first}}`: the person's first name.
      */
     member: {
       title: "Welcome to {{org}}, {{first}}",
       titleNoName: "Welcome to {{org}}",
       titlePersonal: "Welcome, {{first}}",
       titleNoNamePersonal: "Welcome",
-      /**
-       * The lead, one sentence after the other: what people do here, who brought an agent (`{{person}}`: their first
-       * name, `{{agent}}`: the agent as `hire.the` says it, `{{role}}`: its role in lower case), then the question.
-       */
+      /** What people do here, under the team. */
       intro: "Here, each person brings the agent that solves a problem of theirs.",
-      brought: "{{person}} brought {{agent}}, for {{role}}.",
-      broughtNoRole: "{{person}} brought {{agent}}.",
-      question: "What will yours be?",
-      how: "How do you want to create your agent?",
-      ask: "Ask your AI",
-      askText: "It finds the task that takes most of your time and proposes an agent for it.",
-      scratch: "Start from scratch",
-      /** `{{name}}`: the right hand, the agent that creates and adjusts the other agents. */
-      scratchText: "You describe the problem, and {{name}}, the agents' HR, builds the agent with you.",
-      askGo: "Ask your AI",
-      scratchGo: "Start from scratch",
-      /** Goes to the workspace, with no agent for now. */
-      later: "Not now",
       /** Without the permission to create agents: one line, then the way into the workspace. */
       noPermission: "To create your agent, ask an admin for the permission to create agents.",
       enter: "Open {{org}}",
       enterPersonal: "Open the workspace",
-      /** Picking from what the AI proposed. `{{app}}`: the assistant asked, "Claude". */
-      pickTitle: "Pick your agent",
-      found_one: "Your {{app}} found the task that takes most of your time.",
-      found_other: "Your {{app}} found the {{n}} tasks that take most of your time.",
-      foundAny_one: "Your AI found the task that takes most of your time.",
-      foundAny_other: "Your AI found the {{n}} tasks that take most of your time.",
-      /** `{{names}}`: the agents already there, the right hand last, as `hire.the` says each one. */
-      joins_one: "Start with it: the agent joins the {{org}} team, with {{names}}.",
-      joins_other: "Start with one: the agent joins the {{org}} team, with {{names}}.",
-      joinsPersonal_one: "Start with it: the agent works here with you, beside {{names}}.",
-      joinsPersonal_other: "Start with one: the agent works here with you, beside {{names}}.",
-      pickNote: "It's your first: create others whenever you like.",
     },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).

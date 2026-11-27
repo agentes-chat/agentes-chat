@@ -997,19 +997,6 @@
         "skipGo": "Continua senza IA",
         "connectNow": "Collega ora"
       },
-      "people": {
-        "title": "Chi lavora con te?",
-        "eyebrowWhile": "Il team si sta preparando",
-        "titleWhile": "Nel frattempo, invita le persone con cui lavori",
-        "leadWhile": "Ci vuole qualche minuto. Ogni persona che inviti crea, quando entra, l'agente per il proprio lavoro.",
-        "leadJoin": "Ogni persona che inviti crea, quando entra, l'agente per il proprio lavoro.",
-        "send": "Invia gli inviti",
-        "later": "Invita più tardi",
-        "sent_one": "Invito inviato",
-        "sent_many": "{{count}} inviti inviati",
-        "sent_other": "{{count}} inviti inviati",
-        "opening": "Apertura di {{org}}…"
-      },
       "account": "Il tuo account",
       "switchNote": "Puoi cambiare più tardi senza perdere nulla."
     },
@@ -1770,20 +1757,6 @@
       "sent": "Abbiamo inviato un link di conferma a {{email}}.",
       "first": "Hai già un invito? Prima conferma la tua email."
     },
-    "start": {
-      "title": "Come vuoi iniziare?",
-      "lead": "Gli agenti lavorano nelle app che usate già, più di {{n}}. Puoi cambiare tutto più tardi.",
-      "leadPersonal": "I tuoi agenti lavorano nelle app che usi già, più di {{n}}. Puoi cambiare tutto più tardi.",
-      "leadAny": "Gli agenti lavorano nelle app che usate già. Puoi cambiare tutto più tardi.",
-      "leadAnyPersonal": "I tuoi agenti lavorano nelle app che usi già. Puoi cambiare tutto più tardi.",
-      "ask": "Chiedi alla tua IA",
-      "askText": "Claude, ChatGPT, Gemini o quella che usi trova le attività che ti prendono più tempo e propone un agente per ciascuna. Scegli tu da dove iniziare.",
-      "askTextPersonal": "Claude, ChatGPT, Gemini o quella che usi trova le attività che ti prendono più tempo, al lavoro o fuori, e propone un agente per ciascuna. Scegli tu da dove iniziare.",
-      "scratch": "Inizia da zero",
-      "scratchText": "Crei ogni agente quando vuoi. {{name}}, l'HR degli agenti, lo costruisce con te.",
-      "askGo": "Chiedi alla tua IA",
-      "scratchGo": "Inizia da zero"
-    },
     "ask": {
       "title": "Chiedi il tuo primo agente",
       "titleMember": "Chiedi il tuo agente",
@@ -1833,78 +1806,6 @@
           "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"ogni lunedì alle 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
         }
       }
-    },
-    "pick": {
-      "title": "Scegli il tuo primo agente",
-      "lead_one": "Il tuo {{app}} ha trovato l'attività che ti prende più tempo. Inizia da questa.",
-      "lead_other": "Il tuo {{app}} ha trovato le {{n}} attività che ti prendono più tempo. Inizia da una: le altre restano per dopo.",
-      "leadAny_one": "La tua IA ha trovato l'attività che ti prende più tempo. Inizia da questa.",
-      "leadAny_other": "La tua IA ha trovato le {{n}} attività che ti prendono più tempo. Inizia da una: le altre restano per dopo.",
-      "eyebrow": "Proposta del tuo {{app}} · passo {{n}} di {{total}}",
-      "eyebrowAny": "Proposta della tua IA · passo {{n}} di {{total}}",
-      "rank": {
-        "first": "Quella che si ripete di più",
-        "second": "Al 2° posto",
-        "third": "Al 3° posto"
-      },
-      "duties": "Responsabilità",
-      "needs": "Requisiti",
-      "why": "Perché {{name}}:",
-      "note": "Non viene creato nulla finché non scegli.",
-      "create": "Crea {{name}}",
-      "say_one": "{{app}} ha trovato un modo per iniziare.",
-      "say_other": "{{app}} ha trovato {{n}} modi per iniziare.",
-      "sayAny_one": "La tua IA ha trovato un modo per iniziare.",
-      "sayAny_other": "La tua IA ha trovato {{n}} modi per iniziare.",
-      "count": {
-        "tasks": {
-          "one": "una",
-          "two": "due",
-          "three": "tre"
-        },
-        "ways": {
-          "one": "un",
-          "two": "due",
-          "three": "tre"
-        }
-      }
-    },
-    "week": {
-      "title": "La prima settimana di {{name}}",
-      "lead": "{{name}} inizia oggi. Tutto arriva nel suo canale, e tu approvi soltanto.",
-      "leadPersonal": "{{name}} inizia oggi. Tutto arriva nella tua conversazione con questo agente, e tu approvi soltanto.",
-      "leadRoutine": "{{name}} inizia oggi, e “{{routine}}” si ripete {{when}}. Tutto arriva nel suo canale, e tu approvi soltanto.",
-      "leadRoutinePersonal": "{{name}} inizia oggi, e “{{routine}}” si ripete {{when}}. Tutto arriva nella tua conversazione con questo agente, e tu approvi soltanto.",
-      "say": "Appena il team è attivo, iniziamo.",
-      "sayPersonal": "Appena è attivo, iniziamo.",
-      "strip": "I prossimi 7 giorni",
-      "today": "Oggi · {{date}}",
-      "tomorrow": "Domani, {{date}}",
-      "date": "{{weekday}} {{n}}",
-      "dateFar": "{{weekday}} {{n}} {{month}}",
-      "now": "Adesso",
-      "days": {
-        "MO": "lunedì",
-        "TU": "martedì",
-        "WE": "mercoledì",
-        "TH": "giovedì",
-        "FR": "venerdì",
-        "SA": "sabato",
-        "SU": "domenica"
-      },
-      "every": {
-        "day": "ogni giorno",
-        "businessDays": "dal lunedì al venerdì",
-        "MO": "ogni lunedì",
-        "TU": "ogni martedì",
-        "WE": "ogni mercoledì",
-        "TH": "ogni giovedì",
-        "FR": "ogni venerdì",
-        "SA": "ogni sabato",
-        "SU": "ogni domenica"
-      },
-      "about": "Cosa ha raccontato il tuo {{app}}",
-      "aboutAny": "Cosa ha raccontato la tua IA"
     },
     "areas": {
       "title": "Cosa farà il tuo primo agente?",
@@ -2108,6 +2009,8 @@
       "you": "Tu",
       "lead": "{{you}} e {{agent}}, il primo del team. Da oggi, al lavoro insieme, giorno e notte.",
       "lead_female": "{{you}} e {{agent}}, la prima del team. Da oggi, al lavoro insieme, giorno e notte.",
+      "leadNoPlan": "{{you}} e {{agent}}, il primo del team. Da oggi, al lavoro insieme.",
+      "leadNoPlan_female": "{{you}} e {{agent}}, la prima del team. Da oggi, al lavoro insieme.",
       "leadPersonal": "{{you}} e {{agent}}, il tuo primo agente. Da oggi vi occupate insieme delle tue giornate.",
       "leadPersonal_female": "{{you}} e {{agent}}, la tua prima agente. Da oggi vi occupate insieme delle tue giornate.",
       "plan": "Piano {{name}} attivo",
@@ -2132,30 +2035,9 @@
       "titlePersonal": "Ti diamo il benvenuto, {{first}}",
       "titleNoNamePersonal": "Ti diamo il benvenuto",
       "intro": "Qui ogni persona porta l'agente che risolve un suo problema.",
-      "brought": "{{person}} ha portato {{agent}}, per {{role}}.",
-      "broughtNoRole": "{{person}} ha portato {{agent}}.",
-      "question": "Quale sarà il tuo?",
-      "how": "Come vuoi creare il tuo agente?",
-      "ask": "Chiedi alla tua IA",
-      "askText": "Trova l'attività che ti prende più tempo e propone un agente per quella.",
-      "scratch": "Inizia da zero",
-      "scratchText": "Tu descrivi il problema, e {{name}}, l'HR degli agenti, costruisce l'agente con te.",
-      "askGo": "Chiedi alla tua IA",
-      "scratchGo": "Inizia da zero",
-      "later": "Non ora",
       "noPermission": "Per creare il tuo agente, chiedi a un admin il permesso di creare agenti.",
       "enter": "Apri {{org}}",
-      "enterPersonal": "Apri lo spazio di lavoro",
-      "pickTitle": "Scegli il tuo agente",
-      "found_one": "Il tuo {{app}} ha trovato l'attività che ti prende più tempo.",
-      "found_other": "Il tuo {{app}} ha trovato le {{n}} attività che ti prendono più tempo.",
-      "foundAny_one": "La tua IA ha trovato l'attività che ti prende più tempo.",
-      "foundAny_other": "La tua IA ha trovato le {{n}} attività che ti prendono più tempo.",
-      "joins_one": "Inizia da questa: l'agente entra nel team di {{org}}, con {{names}}.",
-      "joins_other": "Inizia da una: l'agente entra nel team di {{org}}, con {{names}}.",
-      "joinsPersonal_one": "Inizia da questa: l'agente lavora qui con te, accanto a {{names}}.",
-      "joinsPersonal_other": "Inizia da una: l'agente lavora qui con te, accanto a {{names}}.",
-      "pickNote": "È il tuo primo: creane altri quando vuoi."
+      "enterPersonal": "Apri lo spazio di lavoro"
     }
   },
   "desktopNotice": {

@@ -978,18 +978,6 @@
         "skipGo": "Yapay zeka olmadan devam et",
         "connectNow": "Şimdi bağla"
       },
-      "people": {
-        "title": "Seninle kim çalışıyor?",
-        "eyebrowWhile": "Ekip hazırlanıyor",
-        "titleWhile": "Bu arada birlikte çalıştığınız kişileri davet edin",
-        "leadWhile": "Birkaç dakika sürer. Davet ettiğiniz her kişi, katılırken kendi işi için ajanı oluşturur.",
-        "leadJoin": "Davet ettiğiniz her kişi, katılırken kendi işi için ajanı oluşturur.",
-        "send": "Davetleri gönder",
-        "later": "Sonra davet et",
-        "sent_one": "Davet gönderildi",
-        "sent_other": "{{count}} davet gönderildi",
-        "opening": "{{org}} açılıyor…"
-      },
       "account": "Hesabın",
       "switchNote": "Daha sonra hiçbir şey kaybetmeden değiştirebilirsiniz."
     },
@@ -1701,20 +1689,6 @@
       "sent": "{{email}} adresine bir onay bağlantısı gönderdik.",
       "first": "Zaten davet edildiniz mi? Önce e-postanızı onaylayın."
     },
-    "start": {
-      "title": "Nasıl başlamak istersiniz?",
-      "lead": "Ajanlar zaten kullandığınız {{n}} uygulamadan fazlasında çalışır. Her şeyi sonra değiştirebilirsiniz.",
-      "leadPersonal": "Ajanlarınız zaten kullandığınız {{n}} uygulamadan fazlasında çalışır. Her şeyi sonra değiştirebilirsiniz.",
-      "leadAny": "Ajanlar zaten kullandığınız uygulamalarda çalışır. Her şeyi sonra değiştirebilirsiniz.",
-      "leadAnyPersonal": "Ajanlarınız zaten kullandığınız uygulamalarda çalışır. Her şeyi sonra değiştirebilirsiniz.",
-      "ask": "Yapay zekanıza sorun",
-      "askText": "Claude, ChatGPT, Gemini ya da hangisini kullanıyorsanız, en çok vaktinizi alan görevleri bulur ve her biri için bir ajan önerir. Nereden başlayacağınızı siz seçersiniz.",
-      "askTextPersonal": "Claude, ChatGPT, Gemini ya da hangisini kullanıyorsanız, iş ya da iş dışı fark etmeden en çok vaktinizi alan görevleri bulur ve her biri için bir ajan önerir. Nereden başlayacağınızı siz seçersiniz.",
-      "scratch": "Sıfırdan başlayın",
-      "scratchText": "Her ajanı istediğiniz zaman oluşturursunuz. Ajanların İK'sı {{name}}, her birini sizinle birlikte kurar.",
-      "askGo": "Yapay zekanıza sorun",
-      "scratchGo": "Sıfırdan başlayın"
-    },
     "ask": {
       "title": "İlk ajanınızı isteyin",
       "titleMember": "Ajanınızı isteyin",
@@ -1764,78 +1738,6 @@
           "example": "{\"about\":\"…\",\"options\":[{\"name\":\"…\",\"role\":\"…\",\"why\":\"…\",\"tasks\":[\"…\",\"…\",\"…\"],\"apps\":[\"…\"],\"routine\":{\"title\":\"…\",\"schedule\":\"her pazartesi 8:00\",\"cron\":\"0 8 * * 1\",\"prompt\":\"…\"},\"today\":[\"…\",\"…\"],\"instructions\":\"…\"}]}"
         }
       }
-    },
-    "pick": {
-      "title": "İlk ajanınızı seçin",
-      "lead_one": "{{app}} en çok vaktinizi alan görevi buldu. Onunla başlayın.",
-      "lead_other": "{{app}} en çok vaktinizi alan {{n}} görevi buldu. Biriyle başlayın: diğerleri sonraya kalsın.",
-      "leadAny_one": "Yapay zekanız en çok vaktinizi alan görevi buldu. Onunla başlayın.",
-      "leadAny_other": "Yapay zekanız en çok vaktinizi alan {{n}} görevi buldu. Biriyle başlayın: diğerleri sonraya kalsın.",
-      "eyebrow": "{{app}} önerisi · adım {{n}}/{{total}}",
-      "eyebrowAny": "Yapay zekanızın önerisi · adım {{n}}/{{total}}",
-      "rank": {
-        "first": "En çok tekrar eden",
-        "second": "İkinci sırada",
-        "third": "Üçüncü sırada"
-      },
-      "duties": "Sorumluluklar",
-      "needs": "Gereksinimler",
-      "why": "Neden {{name}}:",
-      "note": "Siz seçene kadar hiçbir şey oluşturulmaz.",
-      "create": "{{name}} ajanını oluştur",
-      "say_one": "{{app}} başlamak için bir yol buldu.",
-      "say_other": "{{app}} başlamak için {{n}} yol buldu.",
-      "sayAny_one": "Yapay zekanız başlamak için bir yol buldu.",
-      "sayAny_other": "Yapay zekanız başlamak için {{n}} yol buldu.",
-      "count": {
-        "tasks": {
-          "one": "bir",
-          "two": "iki",
-          "three": "üç"
-        },
-        "ways": {
-          "one": "bir",
-          "two": "iki",
-          "three": "üç"
-        }
-      }
-    },
-    "week": {
-      "title": "{{name}} ajanının ilk haftası",
-      "lead": "{{name}} bugün başlıyor. Her şey kendi kanalına gelir, siz yalnızca onaylarsınız.",
-      "leadPersonal": "{{name}} bugün başlıyor. Her şey onunla olan sohbetinize gelir, siz yalnızca onaylarsınız.",
-      "leadRoutine": "{{name}} bugün başlıyor ve “{{routine}}” {{when}} tekrarlanıyor. Her şey kendi kanalına gelir, siz yalnızca onaylarsınız.",
-      "leadRoutinePersonal": "{{name}} bugün başlıyor ve “{{routine}}” {{when}} tekrarlanıyor. Her şey onunla olan sohbetinize gelir, siz yalnızca onaylarsınız.",
-      "say": "Ekip açılır açılmaz başlıyoruz.",
-      "sayPersonal": "Açılır açılmaz başlıyoruz.",
-      "strip": "Önümüzdeki 7 gün",
-      "today": "Bugün · {{date}}",
-      "tomorrow": "Yarın, {{date}}",
-      "date": "{{n}} {{weekday}}",
-      "dateFar": "{{n}} {{month}} {{weekday}}",
-      "now": "Şimdi",
-      "days": {
-        "MO": "Pazartesi",
-        "TU": "Salı",
-        "WE": "Çarşamba",
-        "TH": "Perşembe",
-        "FR": "Cuma",
-        "SA": "Cumartesi",
-        "SU": "Pazar"
-      },
-      "every": {
-        "day": "her gün",
-        "businessDays": "pazartesiden cumaya",
-        "MO": "her pazartesi",
-        "TU": "her salı",
-        "WE": "her çarşamba",
-        "TH": "her perşembe",
-        "FR": "her cuma",
-        "SA": "her cumartesi",
-        "SU": "her pazar"
-      },
-      "about": "{{app}} neler anlattı",
-      "aboutAny": "Yapay zekanız neler anlattı"
     },
     "areas": {
       "title": "İlk ajanınız ne yapacak?",
@@ -2037,6 +1939,7 @@
       "titlePersonal": "Ekibinize hoş geldiniz",
       "you": "Siz",
       "lead": "{{you}} ve {{agent}}, ekibin ilk ajanı. Bugünden itibaren birlikte, gece gündüz.",
+      "leadNoPlan": "{{you}} ve {{agent}}, ekibin ilk ajanı. Bugünden itibaren birlikte.",
       "leadPersonal": "{{you}} ve {{agent}}, ilk ajanınız. Bugünden itibaren günleriniz için birlikte.",
       "plan": "{{name}} planı etkin",
       "planAny": "Plan etkin",
@@ -2060,30 +1963,9 @@
       "titlePersonal": "Hoş geldiniz, {{first}}",
       "titleNoNamePersonal": "Hoş geldiniz",
       "intro": "Burada herkes, kendi sorunlarından birini çözen ajanı getirir.",
-      "brought": "{{person}}, {{role}} için {{agent}} ajanını getirdi.",
-      "broughtNoRole": "{{person}}, {{agent}} ajanını getirdi.",
-      "question": "Sizinki hangisi olacak?",
-      "how": "Ajanınızı nasıl oluşturmak istersiniz?",
-      "ask": "Yapay zekanıza sorun",
-      "askText": "En çok vaktinizi alan görevi bulur ve onun için bir ajan önerir.",
-      "scratch": "Sıfırdan başlayın",
-      "scratchText": "Siz sorunu anlatırsınız, ajanların İK'sı {{name}} de ajanı sizinle birlikte kurar.",
-      "askGo": "Yapay zekanıza sorun",
-      "scratchGo": "Sıfırdan başlayın",
-      "later": "Şimdi değil",
       "noPermission": "Ajanınızı oluşturmak için bir yöneticiden ajan oluşturma izni isteyin.",
       "enter": "{{org}} çalışma alanını aç",
-      "enterPersonal": "Çalışma alanını aç",
-      "pickTitle": "Ajanınızı seçin",
-      "found_one": "{{app}} en çok vaktinizi alan görevi buldu.",
-      "found_other": "{{app}} en çok vaktinizi alan {{n}} görevi buldu.",
-      "foundAny_one": "Yapay zekanız en çok vaktinizi alan görevi buldu.",
-      "foundAny_other": "Yapay zekanız en çok vaktinizi alan {{n}} görevi buldu.",
-      "joins_one": "Onunla başlayın: ajan {{names}} ile birlikte {{org}} ekibine katılır.",
-      "joins_other": "Biriyle başlayın: ajan {{names}} ile birlikte {{org}} ekibine katılır.",
-      "joinsPersonal_one": "Onunla başlayın: ajan burada {{names}} ile yan yana sizinle çalışır.",
-      "joinsPersonal_other": "Biriyle başlayın: ajan burada {{names}} ile yan yana sizinle çalışır.",
-      "pickNote": "Bu ilk ajanınız: diğerlerini istediğiniz zaman oluşturun."
+      "enterPersonal": "Çalışma alanını aç"
     }
   },
   "desktopNotice": {
