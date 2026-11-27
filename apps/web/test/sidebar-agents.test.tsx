@@ -354,3 +354,39 @@ describe("my own sections in Canais", () => {
     expect(within(head("Marketing")).getByRole("img", { name: "1 menção a você" })).toBeTruthy();
   });
 });
+
+describe("the worst case (break-ui, measured by CI's geometry step)", () => {
+  test("long names, a long section, a long invited address, 99+ counts: one line each, the tag and count kept", async () => {
+    const state = withChannels();
+    const ada = state.agents.find((a) => a.id === ADA_ID);
+    if (ada) ada.name = "Assistente de Atendimento ao Cliente Internacional";
+    const joao = state.members.find((m) => m.userId === "u-joao");
+    if (joao) joao.name = "Maria Eduarda Albuquerque de Vasconcelos Figueiredo";
+    for (const c of state.channels)
+      if (c.id === SEO)
+        Object.assign(c, { name: "planejamento-estrategico-de-conteudo-2027", unreadCount: 140, mentionCount: 120 });
+    seedDm(state, { type: "person", id: "u-joao" }, { ago: 1, unread: 250 });
+    state.invitations = [
+      {
+        id: "inv-1",
+        email: "pessoa.com.um.endereco.muito.longo.para.quebrar.a.linha@example.com",
+        role: "member",
+        status: "pending",
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      } as State["invitations"][number],
+    ];
+    viewWith(state, {
+      favorites: [`agent:${ADA_ID}`],
+      sections: [{ id: "s1", name: "Lançamento da versão três com parceiros", channelIds: [SEO, RANDOM] }],
+    });
+    await go(state);
+    const joaoRow = within(section("Mensagens diretas")).getByRole("link", { name: /Maria Eduarda/ });
+    expect(joaoRow.querySelector(".sidebar__unread")?.textContent).toBe("99+");
+    const adaRow = within(section("Favoritos")).getByRole("link", { name: /^Assistente/ });
+    expect(adaRow.querySelector(".sidebar__kind")?.textContent).toBe("IA");
+    expect(channel("planejamento-estrategico-de-conteudo-2027").querySelector(".sidebar__unread")?.textContent).toBe(
+      "99+",
+    );
+    expect(head("Lançamento da versão três com parceiros")).toBeTruthy();
+  });
+});
