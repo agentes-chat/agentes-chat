@@ -157,7 +157,8 @@ export async function postFromSurface(deps: SurfaceInboundDeps, input: SurfacePo
     const fits =
       voice.bytes.length <= SURFACE_VOICE_MAX_BYTES &&
       voice.bytes.length <= VOICE_BYTES_PER_SECOND * Math.ceil(voice.durationMs / 1000);
-    if (fits && deps.voice) {
+    // No engine on the server: a voice message would reach the agent as a note it can't hear, so the file goes.
+    if (fits && deps.voice && deps.voice.engines().length > 0) {
       try {
         await acceptVoiceClip(deps.voice, userId, orgId, dm.id, {
           audio: voice.bytes,
