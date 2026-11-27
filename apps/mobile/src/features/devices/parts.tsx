@@ -1,12 +1,25 @@
 import type { ComputerDevice, DeviceStatus, PhoneDevice } from "@agenteschat/client";
 import { useRoles } from "@agenteschat/client";
+import { permissionWaitLines } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, View } from "react-native";
 import { ComputerPortrait } from "@/computer/ComputerPortrait";
 import { useOrg } from "@/providers/org";
-import { Button, Chip, CodeWords, fieldText, GroupedField, GroupedList, Icon, InkOrbit, Text, useToast } from "@/ui";
+import {
+  Button,
+  Chip,
+  CodeWords,
+  fieldText,
+  GroupedField,
+  GroupedList,
+  GroupedRow,
+  Icon,
+  InkOrbit,
+  Text,
+  useToast,
+} from "@/ui";
 import { AskButtons } from "../chat/asks";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useWhen } from "../shared/hooks";
@@ -261,3 +274,33 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "600" },
   buttons: { marginTop: 12 },
 });
+
+/**
+ * The OS permissions a computer waits on, under its state: what and where, that it is allowed in the agentes.chat app
+ * there (the only place it can be), and which agent asked it for what. Nothing while none waits.
+ */
+export function PermissionWaits({ device }: { device: ComputerDevice }) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  const needs = device.permissions ?? [];
+  if (needs.length === 0) return null;
+  return (
+    <GroupedList>
+      {needs.map((need) => {
+        const agent = need.agentId ? dir.nameOf({ type: "agent", id: need.agentId }) : "";
+        const words = permissionWaitLines(t, need, device.name, agent || undefined);
+        return (
+          <GroupedRow
+            key={need.permission}
+            icon="lock"
+            label={words.title}
+            labelLines={0}
+            sub={words.asked ? `${words.next} ${words.asked}` : words.next}
+            subLines={0}
+            subTone="amber"
+          />
+        );
+      })}
+    </GroupedList>
+  );
+}

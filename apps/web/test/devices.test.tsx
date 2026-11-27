@@ -3,7 +3,7 @@ import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import type { ComputerDevice, PhoneDevice } from "@agenteschat/client";
+import { ApiError, type ComputerDevice, type PhoneDevice } from "@agenteschat/client";
 import {
   ANDROID_SLOW_MS,
   ANDROID_USB_DRIVERS,
@@ -164,6 +164,51 @@ describe("Settings › Devices", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
   });
 
+  test("a simulator's menu: Start when it's off, Shut down once it runs, and the Mac's refusal in words", async () => {
+    const sim: PhoneDevice = {
+      id: "p-sim",
+      platform: "ios",
+      phoneKind: "simulator",
+      name: "iPhone 17 Pro",
+      model: "iPhone 17 Pro",
+      osVersion: "26.2",
+      hostMachineId: MAC,
+      ownerUserId: "u-sam",
+      audience: null,
+      status: { kind: "offline", lastSeenAt: "2026-11-09T12:00:00.000Z" },
+      transport: "local",
+      lastSeenAt: "2026-11-09T12:00:00.000Z",
+      mayUse: true,
+      mayManage: false,
+    };
+    const { state, devices } = await open(`/org/${ORG_ID}/settings/devices`, (d) => {
+      const list = acmeDevices();
+      list.devices.find((c) => c.id === MAC)?.phones.push(sim);
+      d.set(list);
+    });
+    let menu = await openMenu(screen().getByRole("button", { name: "iPhone 17 Pro actions" }));
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["Settings", "Start"]);
+    await click(within(menu).getByRole("menuitem", { name: "Start" }));
+    expect(calls(state, "devices.powerPhone").map((c) => c.args)).toEqual([[ORG_ID, "p-sim", true]]);
+    expect(screen().getByText("iPhone 17 Pro is starting. It's ready in a moment.")).toBeTruthy();
+    menu = await openMenu(screen().getByRole("button", { name: "iPhone 17 Pro actions" }));
+    expect(within(menu).getByRole("menuitem", { name: "Shut down" })).toBeTruthy();
+    // The Mac without Xcode: why, and the one way out.
+    devices.client.powerPhone = async () => {
+      throw new ApiError(409, "device.power_tool_missing", "", { platform: "ios", computer: "Sam's MacBook Pro" });
+    };
+    await click(within(menu).getByRole("menuitem", { name: "Shut down" }));
+    expect(
+      screen().getByText(
+        "Sam's MacBook Pro needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+      ),
+    ).toBeTruthy();
+  });
+
   test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
     const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
@@ -176,6 +221,24 @@ describe("Settings › Devices", () => {
       "CPU",
       "Memory",
       "Toolchains found",
+    ]);
+  });
+
+  test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
+      if (!mac) throw new Error("fixture");
+      mac.permissions = [
+        { permission: "disk", trigger: "ls ~/Desktop", agentId: LIA, since: "2026-11-26T18:00:00.000Z" },
+        { permission: "screen", trigger: "screencapture -x screen.png", since: "2026-11-26T18:01:00.000Z" },
+      ];
+      devices.set(list);
+    });
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    expect([...card.querySelectorAll(".dv-permission")].map((a) => a.textContent)).toEqual([
+      "Waiting for Full Disk Access on Sam's MacBook ProAllow it in the agentes.chat app there.Asked by Lia to run ls ~/Desktop",
+      "Waiting for Screen Recording on Sam's MacBook ProAllow it in the agentes.chat app there.Needed to run screencapture -x screen.png",
     ]);
   });
 
@@ -1188,6 +1251,32 @@ describe("A device's page", () => {
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
+  test("a computer we restarted because it stopped answering: restarting, about when it is back, why behind its ⓘ", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+      const list = acmeDevices();
+      const imac = list.devices.find((d) => d.id === IMAC);
+      if (!imac) throw new Error("fixture");
+      const since = new Date(Date.now() - 60_000).toISOString();
+      const maintenance = {
+        kind: "restarting",
+        since,
+        eta: new Date(Date.now() + 2 * 60_000 + 10_000).toISOString(),
+        detail: "unresponsive",
+        away: true,
+      };
+      imac.status = { kind: "moving", since, maintenance };
+      imac.maintenance = maintenance;
+      devices.set(list);
+    });
+    const line = document.querySelector(".dv-statusline__text");
+    expect(line?.textContent).toContain("Restarting… back in about 2 min");
+    expect(document.body.textContent).toContain("Restarting");
+    expect(document.body.textContent).toContain("It stopped answering, so we restarted it automatically.");
+    expect(document.body.textContent).toContain("Messages to its agents wait and go on by themselves when it's back.");
+    expect(line?.textContent).not.toMatch(/offline/i);
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
   test("a computer's typed name in the line stays as typed: its backticks and asterisks mark nothing", async () => {
     const name = "Ana's `iMac` **<b>2</b>**";
     await open(`/org/${ORG_ID}/settings/devices/phones/p-ana-iphone`, (devices) => {
@@ -1212,19 +1301,29 @@ describe("A device's page", () => {
     expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { own: false } }]);
   });
 
-  test("its owner may use their own computer for their agents' work; someone else's computer has no such switch", async () => {
+  test("its owner makes one choice for its help: never, only as backup, or first for their own agents' work", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
-    const first = screen().getByRole("switch", { name: "Use this computer for my agents' work" });
-    expect(first.getAttribute("aria-checked")).toBe("false");
-    await click(first);
+    expect(screen().queryByRole("switch", { name: "Help when the team's computer is full or away" })).toBeNull();
+    const use = screen().getByRole("combobox", { name: "How it helps your agents" });
+    expect(use.textContent).toBe("Only as backup");
+    use.focus();
+    await act(async () => fireEvent.keyDown(use, { key: "Enter" }));
+    expect(
+      screen()
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Doesn't help", "Only as backup", "First for my agents"]);
+    await click(screen().getByRole("option", { name: "First for my agents" }));
     await settle(4);
-    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { first: true } }]);
+    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([
+      { spill: { own: true, first: true } },
+    ]);
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
-  test("someone else's computer: no switch to use it for the viewer's agents' work", async () => {
+  test("someone else's computer: no choice to use it for the viewer's agents' work", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${IMAC}`);
-    expect(screen().queryByRole("switch", { name: "Use this computer for my agents' work" })).toBeNull();
+    expect(screen().queryByRole("combobox", { name: "How it helps your agents" })).toBeNull();
   });
 
   test("agents use this computer's internet: on, says which computer they use now, picks this one, turns off", async () => {
@@ -1408,6 +1507,31 @@ describe("In the chat and the inbox", () => {
     expect(calls(state, "machines.refuseFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, "fr-1"]]);
   });
 
+  test("an agent waits for a folder on my computer with the app: Allow on the computer opens the request there", async () => {
+    const state = acmeState();
+    state.notifications = [
+      notification({
+        id: "n-folder",
+        kind: "device.folder_request" as never,
+        waiting: true,
+        actors: [{ type: "agent", id: LIA }],
+        source: { machineId: MAC, label: "Sam's MacBook Pro", agentId: LIA, requestId: "fr-1" } as never,
+        latest: { title: "/Users/sam/Contracts", text: "read the contracts" },
+      }),
+    ];
+    const api = createFakeApi(state);
+    fakeMachinesOf.get(api)?.pair({ id: MAC, name: "Sam's MacBook Pro", os: "darwin", folderPick: true });
+    const app = await renderApp(`/org/${ORG_ID}/notifications`, { api });
+    await settle(6);
+    await showIn(app.services, "en");
+    await click(document.querySelector('[data-n="n-folder"]') as HTMLElement);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    await click(within(read).getByRole("button", { name: "Allow on the computer" }));
+    await settle(4);
+    expect(calls(state, "machines.askFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, { requestId: "fr-1" }]]);
+    expect(document.body.textContent).toContain("Opened on Sam's MacBook Pro. Allow it there.");
+  });
+
   test("my computer paired before lends its internet now: the inbox says so plainly, with Turn off", async () => {
     const state = acmeState();
     state.notifications = [
@@ -1423,7 +1547,8 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, up to 5 GB a day");
+    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);
     expect(calls(state, "devices.updateComputer").map((c) => c.args)).toEqual([

@@ -376,13 +376,13 @@ export interface CodeCheckout {
   /** Where it is on the machine (absolute when the runner said, else relative to the agent's folder). */
   path: string;
   defaultBranch?: string;
-  /** Why it couldn't be updated before this turn (offline, refused…); absent when it was. */
+  /** Why its last update failed (offline, refused…); absent when it went through. */
   stale?: string;
 }
 
 /**
  * The "# Your code" prompt block for an agent whose computer is a connected
- * machine (English): its checkouts (updated before the turn), how to change
+ * machine (English): its checkouts (updated in the background between turns), how to change
  * code (its own branch, a push through our proxy, a pull request), and the
  * granted repositories not cloned yet. Empty when there is nothing to say.
  */
@@ -401,8 +401,13 @@ export function codePrompt(input: {
     const branch = c.defaultBranch ? `default branch ${c.defaultBranch}` : "default branch";
     lines.push(
       c.stale
-        ? `${c.repo} is checked out at ${c.path} (${branch}; it couldn't be updated before this turn: ${c.stale}).`
-        : `${c.repo} is checked out at ${c.path} (${branch}, updated before this turn).`,
+        ? `${c.repo} is checked out at ${c.path} (${branch}; its last update failed: ${c.stale}).`
+        : `${c.repo} is checked out at ${c.path} (${branch}).`,
+    );
+  }
+  if (input.checkouts.length > 0) {
+    lines.push(
+      "Checkouts are updated in the background, not right before each turn: when you need the newest commits of one, run git pull --ff-only there (on its default branch) or git fetch first.",
     );
   }
   // Each git host has its own tools (ADR 0227): GitHub's are the plain names, another host's carry it first.

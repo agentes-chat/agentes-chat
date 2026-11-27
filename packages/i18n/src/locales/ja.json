@@ -2722,6 +2722,7 @@
     "details": "チャンネルの詳細",
     "composerLabel": "#{{channel}}へのメッセージ",
     "composerDm": "{{name}}へのメッセージ",
+    "groupYou": "あなた",
     "composerPlaceholder": "#{{channel}}へのメッセージ · @でエージェントを呼べます",
     "send": "送信",
     "attach": "ファイルを添付",
@@ -2742,6 +2743,7 @@
     "sendFailed": "メッセージを送信できませんでした。もう一度お試しください。",
     "reconnecting": "リアルタイム接続に再接続しています…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "人またはエージェントを検索",
     "detailsEmpty": "「{{q}}」に該当する人はいません。",
     "topicLabel": "チャンネルの説明",
@@ -2753,9 +2755,11 @@
     "replyInChannel": "エージェントはチャンネルで返信",
     "replyInThreadsHelp": "チャンネルで呼ばれたエージェントは、そのメッセージの下のスレッドで答え、チャンネルにはそのスレッドが1行で表示されます。進行中の作業はそのままです。",
     "nameTaken": "#{{name}}はすでにあります。",
+    "nameTakenPersonal": "「{{name}}」というグループ会話はすでにあります。",
     "generalName": "#generalの名前は変更できません。",
     "archive": "チャンネルをアーカイブ",
     "archived": "#{{channel}}をアーカイブしました。会話は残ります。",
+    "archivedPersonal": "「{{channel}}」をアーカイブしました。会話は残ります。",
     "archivedTitle": "アーカイブしたチャンネル",
     "archivedCount_other": "アーカイブしたチャンネル {{count}} 件",
     "archivedNone": "元に戻せるアーカイブ済みのチャンネルはありません",
@@ -2763,6 +2767,7 @@
     "restore": "元に戻す",
     "restoreName": "#{{channel}}を元に戻す",
     "restored": "#{{channel}}が戻りました。",
+    "restoredPersonal": "「{{channel}}」が戻りました。",
     "leave": "チャンネルから退出",
     "left": "#{{channel}}から退出しました",
     "leaveTitle": "#{{channel}}から退出しますか？",
@@ -3150,6 +3155,10 @@
       "update_workspace": "ワークスペース<b>{{name}}</b>を変更",
       "set_action_check_on": "チームの過去の対応の確認をオンにする",
       "set_action_check_off": "チームの過去の対応の確認をオフにする",
+      "set_approvals_level": "ワークスペースの承認を<b>{{level}}</b>にする",
+      "set_approvals_level_every": "すべてのエージェントの承認を<b>{{level}}</b>にする（個別の設定も含む）",
+      "set_agent_approvals_level": "<b>{{agent}}</b>の承認を<b>{{level}}</b>にする",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b>をワークスペースの承認に従わせる",
       "invite_people": "<b>{{emails}}</b>をワークスペースに招待します。",
       "invite_roles_other": "{{roles}}のロールで招待します。",
       "invite_people_sent_other": "<b>{{emails}}</b>に招待を送信しました。",
@@ -3317,6 +3326,7 @@
       "cursor": "このコンピューターでCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
       "grok": "このコンピューターでGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
       "antigravity": "このコンピューターでGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
+      "devin": "このコンピューターでDevinにログインしていません。{{name}}のページでDevinアカウントを接続してください。",
       "opencode": "このコンピューターではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
     },
     "notSignedInOn": {
@@ -3325,6 +3335,7 @@
       "cursor": "{{computer}}でCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
       "grok": "{{computer}}でGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
       "antigravity": "{{computer}}でGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
+      "devin": "{{computer}}でDevinにログインしていません。{{name}}のページでDevinアカウントを接続してください。",
       "opencode": "{{computer}}ではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
     },
     "card": {
@@ -3383,6 +3394,7 @@
       "cursor": "Cursorのプランを接続",
       "grok": "Grokのプランを接続",
       "gemini": "Geminiのプランを接続",
+      "devin": "Devinのプランを接続",
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
@@ -3523,6 +3535,10 @@
         "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。このリスクを避けるには、Gemini APIキーまたはGemini Enterpriseを使ってください。",
         "windowsOne": "WindowsではGeminiアカウントは1台のコンピューターで一度に1つしか使えません。"
       },
+      "devin": {
+        "title": "あなたのDevinプラン",
+        "tiers": "Free、Pro、Max、Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "無料モデル、またはあなたのOpenCodeキー"
@@ -3628,6 +3644,7 @@
       "cursor": "Cursorは{{account}}ではなく{{email}}でログインしています。Cursorのページでログアウトして、もう一度お試しください。",
       "grok": "Grokは{{account}}ではなく{{email}}でログインしています。Grokのページでログアウトして、もう一度お試しください。",
       "antigravity": "Geminiは{{account}}ではなく{{email}}でログインしています。Googleのページでログアウトして、もう一度お試しください。",
+      "devin": "Devinは{{account}}ではなく{{email}}でログインしています。Devinのページでログアウトして、もう一度お試しください。",
       "opencode": "OpenCodeは{{account}}ではなく{{email}}でログインしました。正しいキーでもう一度お試しください。"
     },
     "useAnyway": "{{email}}を使う",
@@ -3998,6 +4015,10 @@
       "changed_update_workspace": "ワークスペース<b>{{name}}</b>を変更しました",
       "changed_set_action_check_on": "チームの過去の対応の確認をオンにしました",
       "changed_set_action_check_off": "チームの過去の対応の確認をオフにしました",
+      "changed_set_approvals_level": "ワークスペースの承認を<b>{{level}}</b>にしました",
+      "changed_set_approvals_level_every": "すべてのエージェントの承認を<b>{{level}}</b>にしました",
+      "changed_set_agent_approvals_level": "<b>{{agent}}</b>の承認を<b>{{level}}</b>にしました",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b>は再びワークスペースの承認に従います",
       "changed_invite_people": "<b>{{invited}}</b>をワークスペースに招待しました",
       "changed_remove_ai_key": "APIキー<b>{{name}}</b>を削除しました"
     },
@@ -4094,8 +4115,9 @@
     "namePlaceholderPersonal": "例: trip",
     "nameHelp": "小文字、数字、ハイフンを使えます。#{{name}}と表示されます。",
     "nameInvalid": "小文字、数字、ハイフンを使い、文字か数字で始めてください。",
+    "nameInvalidPersonal": "80文字以内、1行で名前を付けてください。",
     "nameTaken": "#{{name}}というチャンネルはすでにあります。",
-    "nameTakenPersonal": "#{{name}}というグループ会話はすでにあります。",
+    "nameTakenPersonal": "「{{name}}」というグループ会話はすでにあります。",
     "topic": "説明",
     "topicPlaceholder": "ここで話す内容",
     "visibility": "参加できる人",
@@ -4124,7 +4146,8 @@
     "membersSearch": "人またはエージェントを検索",
     "membersEmpty": "「{{q}}」に一致する人は見つかりませんでした。",
     "selected_other": "{{count}}件選択中",
-    "create": "#{{name}}を作成"
+    "create": "#{{name}}を作成",
+    "createPersonal": "会話を作成"
   },
   "channelCategories": {
     "undo": "元に戻す",
@@ -4140,6 +4163,7 @@
     "invitePersonal": "{{email}}をあなたのワークスペースと#{{channel}}に招待",
     "inviteOrgPersonal": "{{email}}をあなたのワークスペースに招待",
     "addTitle": "#{{channel}}に追加",
+    "addTitlePersonal": "{{channel}}に追加",
     "addSearch": "人またはエージェントを検索",
     "addEmpty": "チャンネル外に「{{q}}」に一致する人はいません。",
     "addEveryone": "{{org}} の全員がすでに #{{channel}} にいます。",
@@ -4147,6 +4171,7 @@
     "actions": "{{name}}のオプション",
     "remove": "チャンネルから外す",
     "removeTitle": "{{name}}を#{{channel}}から外しますか？",
+    "removeTitlePersonal": "{{name}}を{{channel}}から外しますか？",
     "removePersonBody": "チャンネルが表示されなくなり、メッセージも届かなくなります。後からまた追加できます。",
     "removeAgentBody": "このチャンネルでの閲覧と返信をやめます。後からまた追加できます。",
     "removeAgentBody_female": "このチャンネルでの閲覧と返信をやめます。後からまた追加できます。",
@@ -5302,6 +5327,7 @@
       "adminAskChannel": "<b>{{name}}</b> が <b>{{agent}}</b> を #{{label}} に追加するよう求めています",
       "adminAskCreate": "<b>{{name}}</b> がエージェントを作成できるよう求めています",
       "adminAskWebhook": "<b>{{name}}</b> がルーティン用の {{service}} Webhook の設定を求めています",
+      "adminAskVoice": "<b>{{name}}</b> がボイスメッセージをオンにするよう求めています",
       "invitationAccepted": "<b>{{name}}</b>があなたの招待を受けて{{org}}に参加しました",
       "invitationAcceptedAny": "<b>{{name}}</b>があなたの招待を受けました",
       "reaction_other": "<b>{{names}}</b>があなたのメッセージにリアクションしました",
@@ -5828,6 +5854,7 @@
             "cursor": "Cursorアカウントを追加",
             "grok": "Grokアカウントを追加",
             "antigravity": "Geminiアカウントを追加",
+            "devin": "Devinアカウントを追加",
             "opencode": "OpenCodeのキーを追加"
           },
           "stepOne": {
@@ -5835,6 +5862,7 @@
             "codex": "プランを契約しているアカウント",
             "cursor": "プランを契約しているアカウント",
             "grok": "プランを契約しているアカウント",
+            "devin": "プランを契約しているアカウント",
             "antigravity": "プランを契約しているGoogleアカウント",
             "antigravityEnterprise": "あなたのGemini Enterpriseアカウント"
           },
@@ -5844,7 +5872,8 @@
             "codex": "ChatGPTでログイン",
             "cursor": "Cursorでログイン",
             "grok": "Grokでログイン",
-            "antigravity": "Googleでログイン"
+            "antigravity": "Googleでログイン",
+            "devin": "Devinでログイン"
           },
           "opencodeFree": "OpenCodeの無料モデルにキーは不要です。OpenCodeのコンソールのキーで有料モデルも使えます。",
           "cursorFinish": "Cursorのページでログインすると、{{computer}}でのログインは自動で完了します。",
@@ -5859,6 +5888,9 @@
           "notCode": "Claudeのコードではないようです。",
           "stepTwoGoogle": "Google に表示されたコードを貼り付けてください",
           "codeLabelGoogle": "Googleのコード",
+          "stepTwoDevin": "Devin に表示されたコードを貼り付けてください",
+          "codeHintDevin": "ページのアドレスではなく、Devinのページに表示されたコードを貼り付けてください。",
+          "codeLabelDevin": "Devinのコード",
           "codeHintGoogle": "ページのアドレスではなく、Googleのページに表示されたコードを貼り付けてください。",
           "notCodeGoogle": "これはコードを含まないアドレスです。Googleのページに表示されたコードを貼り付けてください。",
           "send": "{{computer}}に送信",
@@ -5892,6 +5924,7 @@
             "cursor": "Cursorは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Cursorのページでログアウトしてからもう一度お試しください。",
             "grok": "Grokは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Grokのページでログアウトしてからもう一度お試しください。",
             "antigravity": "Geminiは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Googleのページでログアウトしてからもう一度お試しください。",
+            "devin": "Devinは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Devinのページでログアウトしてからもう一度お試しください。",
             "opencode": "そのOpenCodeキーは{{account}}としてすでに接続されています。"
           },
           "startFailed": "{{computer}}から応答がありません。少し待ってからもう一度お試しください。",
@@ -9390,8 +9423,7 @@
       "machine_access_requested": "{{agent}}が{{computer}}のフォルダ{{folder}}を求めました。そちらでの応答を待っています。",
       "machine_access_granted": "許可されました: {{agent}}は{{computer}}の{{folder}}を使えるようになりました",
       "machine_access_denied": "却下されました: {{agent}}は{{computer}}の{{folder}}を使いません",
-      "machine_access_expired": "{{computer}}のフォルダ{{folder}}のリクエストに応答がありませんでした",
-      "access_command": "コンピューターにアプリがない場合は、ターミナルでこれを実行してください:"
+      "machine_access_expired": "{{computer}}のフォルダ{{folder}}のリクエストに応答がありませんでした"
     },
     "suggestion": {
       "pending": "ミッションへの提案",
@@ -10739,6 +10771,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "プランのキーを使うには、コンピューターのagentesをアップデートしてください"
@@ -11009,6 +11042,7 @@
     "silent": "何も聞こえませんでした。何も送信されていません。",
     "notSent": "音声を送信できませんでした。",
     "limit": "今日の音声の上限に達しました。ここに入力するか、明日また試してください。",
+    "plan": "ボイスメッセージはagentes.chatのプランで使えます。ここに入力することはできます。",
     "micBlocked": "マイクがブロックされています",
     "micBlockedHint": "録音するには、デバイスの設定でマイクを許可してください。",
     "openSettings": "設定を開く",
@@ -11043,9 +11077,9 @@
       "title": "ボイスメッセージ",
       "on": "ボイスメッセージ",
       "onHelp": "このワークスペースの人は、会話で音声を送れます。",
-      "noEngine": "ボイスメッセージはここではまだ使えません。",
-      "noEngineAsk": "ボイスメッセージはまだオンになっていません。このサーバーを管理している人が、このページでオンにします。",
-      "noEngineHere": "下で音声をテキストにするサービスを選ぶと、ボイスメッセージがオンになります。",
+      "noEngine": "今はボイスメッセージが音声のまま送られるので、エージェントにはまだ聞こえません。",
+      "noEngineAsk": "今はボイスメッセージが音声のまま送られるので、エージェントには聞こえません。音声をテキストにするサービスは、このサーバーを管理している人がこのページで選びます。",
+      "noEngineHere": "下で音声をテキストにするサービスを選ぶまで、ボイスメッセージは音声のまま送られます。",
       "engineTitle": "音声をテキストにするサービス",
       "own": "自分のサーバー",
       "ownHelp": "自分のマシンで動く Whisper または Parakeet。音声はそこから出ません。",
@@ -11053,10 +11087,55 @@
       "key": "{{name}}のキー",
       "keyPlaceholder": "ここに貼り付け",
       "test": "テスト",
-      "tested": "動作しています。これで全員にマイクが表示されます。",
+      "tested": "動作しています。これでボイスメッセージがテキストとしてエージェントに届きます。",
       "sealed": "サーバーに暗号化して保存され、二度と表示されません。",
       "leaves": "ボイスメッセージの音声は、テキストにするために{{name}}に送られます。",
       "invalid": "保存されたキーはこのサーバーでは開けません。もう一度貼り付けてください。"
+    },
+    "local": {
+      "titleHere": "このコンピューター",
+      "titleServer": "このサーバー",
+      "titlePhone": "サーバーのコンピューター",
+      "textHere": "Parakeet、{{size}} のダウンロード。音声はこのコンピューターから出ません。ヨーロッパの 25 言語に対応。",
+      "textServer": "Parakeet、{{size}} のダウンロード。音声はこのサーバーから出ません。ヨーロッパの 25 言語に対応。",
+      "download": "ダウンロードしてオンにする",
+      "downloading": "音声モデルをダウンロード中",
+      "progress": "{{done}} / {{total}}",
+      "meanwhile": "もう録音できます。準備ができるまで、メッセージは音声のまま送られます。",
+      "downloadingPhone": "サーバーのコンピューターに音声モデルをダウンロードしています。もう録音できます。",
+      "starting": "オンにしています…",
+      "licenses": "モデルのライセンス",
+      "tooSmall": "このコンピューターのメモリは {{memory}} で、音声モデルには 8 GB 必要です。下のプロバイダーのキーを使ってください。",
+      "noDisk": "このディスクの空きは {{free}} で、音声モデルには {{need}} 必要です。空きを作るか、下のプロバイダーのキーを使ってください。",
+      "noBuild": "このコンピューター用の音声モデルはまだありません。下のプロバイダーのキーを使ってください。",
+      "stopped": "ダウンロードが止まりました: {{detail}}",
+      "diskFull": "ダウンロード中にディスクがいっぱいになりました。空きを作ってもう一度試してください。",
+      "didntStart": "音声モデルが起動しませんでした: {{detail}}",
+      "resume": "再開",
+      "copy": "詳細をコピー",
+      "copied": "詳細をコピーしました"
+    },
+    "offer": {
+      "title": "ボイスメッセージ",
+      "download": "{{size}} をダウンロードしてオンにする",
+      "choose": "方法を選ぶ",
+      "askOwner": "このサーバーで音声をテキストにする",
+      "askMember": "ボイスメッセージをオンにするよう頼む",
+      "on": "ボイスメッセージはオンです。エージェントはテキストとして読みます。"
+    },
+    "setup": {
+      "memberTitle": "ここではまだ音声がオンになっていません",
+      "memberText": "メッセージは誰でも再生できる音声として送られます。{{name}} が音声をテキストにするサービスを選ぶまで、エージェントには聞こえません。",
+      "memberTextNoName": "メッセージは誰でも再生できる音声として送られます。このサーバーを管理している人が音声をテキストにするサービスを選ぶまで、エージェントには聞こえません。",
+      "ask": "{{name}} に頼む",
+      "asked": "{{name}} にオンにするよう頼みました",
+      "recordAnyway": "このまま録音",
+      "ownerTitle": "音声をテキストにするサービスを選ぶ",
+      "ownerText": "選ぶまでは、ボイスメッセージは誰でも再生できる音声として送られ、エージェントには聞こえません。",
+      "readyTitle": "ボイスメッセージがオンになりました",
+      "readyText": "話した内容はテキストとしてエージェントに届きます。",
+      "record": "メッセージを録音",
+      "ownerPhone": "Web かデスクトップアプリの 設定 › 音声 で選んでください。それまでは、ボイスメッセージは誰でも再生できる音声として送られ、エージェントには聞こえません。"
     }
   },
   "media": {
@@ -12164,6 +12243,7 @@
       "cursor": "Cursorプランの{{model}}",
       "grok": "Grokプランの{{model}}",
       "gemini": "Geminiプランの{{model}}",
+      "devin": "Devinプランの{{model}}",
       "zen": "OpenCodeの{{model}}",
       "coding": "{{plan}}の{{model}}",
       "claudeOf": "{{owner}}のClaudeプランの{{model}}",
@@ -12171,6 +12251,7 @@
       "cursorOf": "{{owner}}のCursorプランの{{model}}",
       "grokOf": "{{owner}}のGrokプランの{{model}}",
       "geminiOf": "{{owner}}のGeminiプランの{{model}}",
+      "devinOf": "{{owner}}のDevinプランの{{model}}",
       "zenOf": "{{owner}}のOpenCodeの{{model}}",
       "codingOf": "{{owner}}の{{plan}}の{{model}}",
       "claudeAuto": "Claudeプラン",
@@ -12178,6 +12259,7 @@
       "cursorAuto": "Cursorプラン",
       "grokAuto": "Grokプラン",
       "geminiAuto": "Geminiプラン",
+      "devinAuto": "Devinプラン",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}}のClaudeプラン",
@@ -12185,6 +12267,7 @@
       "cursorAutoOf": "{{owner}}のCursorプラン",
       "grokAutoOf": "{{owner}}のGrokプラン",
       "geminiAutoOf": "{{owner}}のGeminiプラン",
+      "devinAutoOf": "{{owner}}のDevinプラン",
       "zenAutoOf": "{{owner}}のOpenCode",
       "codingAutoOf": "{{owner}}の{{plan}}",
       "on": "{{computer}}上の{{line}}"
@@ -12198,7 +12281,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "API経由",
@@ -12211,6 +12295,7 @@
     "cursorText": "コンピューターを接続した人のCursorプランを使います。",
     "grokText": "コンピューターを接続した人のGrokプランを使います。",
     "antigravityText": "コンピューターを接続した人のGeminiプランを使います。",
+    "devinText": "コンピューターを接続した人のDevinプランを使います。",
     "opencodeText": "OpenCodeの無料モデル、またはコンピューターを接続した人のOpenCodeキーを使います。",
     "cursorModel": {
       "inPlan": "Cursorプランに含まれます",
@@ -12228,6 +12313,7 @@
       "home_only": "{{computer}} の {{program}} は root 専用にインストールされていて、エージェントからは届きません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
+      "systemDevin": "{{computer}}はWindowsで動いていますが、DevinはまだWindowsでは動きません。WindowsではDevinのCLIがアカウントごとのサインインを分けて保てないためです。DevinはMacかLinuxのコンピューターで使うか、別のAIを選んでください。",
       "windows_sandbox": "{{computer}}のWindowsでは{{program}}のコマンドを隔離できません。代わりにClaudeかAPIキーを選ぶか、そのコンピューターを最新の更新プログラムを適用したWindows 11 24H2以降に更新してください。",
       "no_computerCloud": "{{computer}}の準備ができ次第使えます。"
     },
@@ -12273,6 +12359,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -12778,6 +12865,23 @@
     "s3": "独自のストレージ",
     "s3Text": "Cloudflare R2、Amazon S3、Backblaze B2、またはその他のS3互換ストレージ。",
     "current": "使用中",
+    "computer": {
+      "title": "ワークスペースのコンピューター",
+      "used": "{{size}} 中 {{used}} 使用中",
+      "bar": "ワークスペースのコンピューターのディスク",
+      "measuring": "容量の内訳を測定しています。",
+      "part": {
+        "projects": "プロジェクトとコード",
+        "apps": "アプリとツール",
+        "agents": "エージェントのファイル",
+        "caches": "キャッシュと一時ファイル",
+        "system": "システム",
+        "other": "その他",
+        "free": "空き"
+      },
+      "full": "空きが残り {{free}} です。エージェントがキャッシュと一時ファイルを消去し、使われていないものを削除できます。",
+      "ask": "ワークスペースのコンピューターの空き容量を増やしてください。キャッシュと一時ファイル（パッケージマネージャー、ブラウザー、ビルドツール）を消去してから、ほかに容量を多く使っているものを教えてください。"
+    },
     "usage": {
       "files": "ファイル{{size}}",
       "none": "ファイルなし",
@@ -14495,6 +14599,9 @@
       "desktop_read": "画面を読み取り",
       "desktop_screenshot": "スクリーンショットを撮影",
       "desktop_ask_person": "コンピューターの操作を依頼",
+      "apps_list": "開いているアプリを見る",
+      "apps_read": "アプリを読む",
+      "apps_act": "アプリを使う",
       "computer_use": "コンピューターを操作",
       "computer_status": "コンピューターを確認",
       "left_click": "クリック",
@@ -15547,6 +15654,7 @@
       "generalStays": "全員が#generalに残ります。",
       "leadChannelOnly": "責任者のエージェントを置けるのはチャンネルだけです。",
       "leadNotMember": "責任者のエージェントはチャンネルに参加している必要があります。",
+      "groupNameInvalid": "80文字以内、1行で名前を付けてください。",
       "mcpUnreachable": "MCPサーバーに接続できませんでした。アドレスを確認して、もう一度お試しください。",
       "notApproved": "このサービスはまだagentes.chatを承認していません。",
       "alreadyInvited": "この人はすでに招待を受けています。",
@@ -16014,10 +16122,48 @@
       "viaBy": "エージェントは {{name}}（{{person}}）のインターネットを使っています",
       "viaHint": "サイトからはそのコンピューターの場所が見えます。接続した人はそのページでオフにできます。"
     },
-    "moving": {
-      "short": "サーバー移行中",
-      "line": "新しいサーバーへ移行中… 数分で戻ります",
-      "named": "{{computer}} は新しいサーバーへ移行中です… 数分で戻ります"
+    "maintenance": {
+      "short": {
+        "moving": "サーバー移行中",
+        "restarting": "再起動中",
+        "updating": "アップデート中",
+        "converting": "ディスク改善中",
+        "host_maintenance": "メンテナンス中",
+        "other": "メンテナンス中"
+      },
+      "what": {
+        "moving": "新しいサーバーへ移行中",
+        "copying": "新しいサーバーへコピー中",
+        "restarting": "再起動中",
+        "updating": "ソフトウェアをアップデート中",
+        "converting": "ディスクを改善中",
+        "host_maintenance": "サーバーがメンテナンス中",
+        "other": "メンテナンス中"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "約{{time}}で戻ります",
+      "backSoon": "数分で戻ります",
+      "late": "予定より少し時間がかかっています",
+      "slower": "その間は遅くなることがあります",
+      "slowerFor": "約{{time}}のあいだ遅くなることがあります",
+      "why": {
+        "moving": "新しいサーバーへ移しています。",
+        "copying": "作業を続けたまま、ファイルを新しいサーバーへコピーしています。",
+        "handover": "最後の変更を新しいサーバーへ引き継いでいます。",
+        "restarting": "再起動しています。",
+        "unresponsive": "応答しなくなったため、自動で再起動しました。",
+        "updating": "ソフトウェアをアップデートしています。",
+        "converting": "ディスクをより高速なストレージへ移しています。",
+        "host_maintenance": "稼働しているサーバーがメンテナンス中です。",
+        "other": "作業を行っています。"
+      },
+      "since": "{{time}}から",
+      "expectedBack": "{{time}}ごろに戻る予定",
+      "expectedDone": "{{time}}ごろに完了予定",
+      "meanwhile": "エージェントへのメッセージは待機し、戻りしだい自動で再開します。",
+      "working": "その間もエージェントは作業を続けます。",
+      "about": "何が起きているか"
     },
     "online": "オンライン",
     "offline": "オフライン",
@@ -16033,6 +16179,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "コマンド",
         "browser": "ブラウザ",
         "desktop": "画面",
@@ -16085,6 +16232,11 @@
     "removed": "{{name}}を削除しました。",
     "name": "コンピューターの名前",
     "nameHelp": "人とエージェントに表示される名前です。",
+    "defaultName": {
+      "model": "{{name}}の{{model}}",
+      "linux": "{{name}}のLinuxコンピューター",
+      "other": "{{name}}のコンピューター"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16204,6 +16356,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "コマンド",
         "browser": "ブラウザ"
@@ -16214,6 +16367,7 @@
         "cursor": "Claude Codeと同様で、Cursorアカウントを使います。許可されたフォルダ内のみです。",
         "grok": "Claude Codeと同様で、Grokアカウントを使います。許可されたフォルダ内のみです。",
         "antigravity": "Claude Codeと同様で、Geminiアカウントを使います。許可されたフォルダ内のみです。",
+        "devin": "Claude Codeと同様で、Devinアカウントを使います。許可されたフォルダ内のみです。",
         "opencode": "Claude Codeと同様で、OpenCodeの無料モデルかOpenCodeキーを使います。許可されたフォルダ内のみです。",
         "commands": "テストやビルドなど、ターミナルのコマンドを実行します。"
       },
@@ -16232,6 +16386,13 @@
       "grantTextTerminal": "許可はコンピューター本体のターミナルで行います:",
       "grantTextAdmin": "許可はコンピューター本体のターミナルで、管理者として行います:",
       "grantTerminal": "アプリがない場合は、コンピューターのターミナルで:",
+      "pickText": "agentes.chatアプリが{{machine}}でフォルダの選択画面を開き、そこにいる人が選びます。",
+      "pick": "フォルダを許可",
+      "picked": "{{machine}}でフォルダの選択画面が開きました。そちらでフォルダを選んでください。",
+      "pickWaiting": "{{machine}}でフォルダが選ばれるのを待っています",
+      "grantTerminalMore": "アプリがない場合はターミナルで",
+      "noApp": "このコンピューターにはフォルダを選ぶためのagentes.chatアプリがありません。そのコンピューターのターミナルで許可してください。",
+      "requestDone": "このリクエストはすでに回答済みか、期限切れです。",
       "preferTerminal": "ターミナルで行う",
       "grantOnlyOwner": "さらに許可できるのは{{name}}だけで、コンピューター本体で行います。必要なものがあれば{{name}}に頼んでください。",
       "pathPlaceholder": "<フォルダ>",
@@ -16239,6 +16400,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}で{{permission}}の許可を待っています",
+      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
+      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
+      "asked": "{{trigger}}の実行に必要です",
+      "names": {
+        "app_management": "App管理",
+        "screen": "画面収録",
+        "accessibility": "アクセシビリティ",
+        "disk": "フルディスクアクセス",
+        "network": "ローカルネットワーク",
+        "camera": "カメラ",
+        "microphone": "マイク",
+        "automation": "オートメーション"
+      }
+    },
     "leadCloud": "エージェントが作業する場所: ワークスペースのコンピューターと、メンバーが接続したデバイス。",
     "lead": "エージェントが作業する場所: メンバーが接続したコンピューターとスマートフォン。",
     "connect": "デバイスを接続",
@@ -16291,6 +16468,19 @@
     "forgotten": "{{name}}をリストから外しました。",
     "stop": "停止",
     "stopped": "停止しました。{{name}}は空いています。",
+    "power": {
+      "start": "起動",
+      "stop": "終了",
+      "starting": "{{name}}を起動しています。まもなく使えます。",
+      "stopped": "{{name}}を終了しました。",
+      "toolMissingIos": "{{computer}}でシミュレーターを動かすにはXcodeが必要です。そのMacでApp StoreからXcodeをインストールしてください。",
+      "toolMissingAndroid": "{{computer}}にAndroid Emulatorがありません。そのコンピューターのAndroid Studio › SDK Manager › SDK Toolsでインストールしてください。",
+      "gone": "{{name}}はもう{{computer}}にありません（そちらで削除されました）。ここでリストから外すか、そちらで作り直してください。",
+      "busy": "{{name}}は今使われています。使っているものを先に止めるか、空いてからもう一度お試しください。",
+      "startFailed": "{{name}}は起動しませんでした。{{computer}}の応答：{{why}}",
+      "stopFailed": "{{name}}は終了しませんでした。{{computer}}の応答：{{why}}",
+      "notSimulator": "ここで起動・終了できるのはシミュレーターとエミュレーターだけです。"
+    },
     "showMe": "やり方を見る",
     "notFound": "このデバイスはもうありません",
     "notFoundText": "削除されたか、リンクが間違っています。",
@@ -16306,15 +16496,21 @@
     "belongs": "ワークスペースの所有",
     "belongsHint": "接続した人が抜けても残ります。所有者がいない間は全員が使えます。",
     "spillOwn": "チームのコンピューターが満杯または不在のときに手伝う",
-    "spillOwnHint": "あなたのエージェントのコンピューターが満杯または不在のとき、その返信、依頼、ルーティンはあなたのサインインでここで考えられます。",
-    "spillTeamHint": "エージェントのコンピューターが満杯または不在のとき、その返信、依頼、ルーティンはこのコンピューター上のオーナーのサインインでここで考えられます。",
+    "spillOwnHint": "チームのコンピューターが満杯または不在のとき、あなたのエージェントの返信、依頼、ルーティンはここで考えられます。このコンピューターでサインインしている AI アカウントを使います。",
+    "spillTeamHint": "エージェントのコンピューターが満杯または不在のとき、その返信、依頼、ルーティンはここで考えられます。オーナーがこのコンピューターでサインインしている AI アカウントを使います。",
     "spillWorkspaceOff": "管理者がワークスペース全体でこれをオフにしました。",
-    "spillFirst": "このコンピューターを自分のエージェントの作業に使う",
-    "spillFirstHint": "エージェントへの依頼、ルーティン、長い作業は、このコンピューターが空いていればここで、ここに接続した AI で始まります。人への返信がここで始まるのは、チームのコンピューターが満杯または不在のときだけです。",
+    "helpUse": "エージェントへの手伝い方",
+    "helpUses": {
+      "off": "手伝わない",
+      "help": "予備としてだけ",
+      "first": "自分のエージェントを優先"
+    },
+    "helpUseHint": "予備としてだけ: チームのコンピューターが満杯または不在のとき、あなたのエージェントがここに来ます。自分のエージェントを優先: エージェントの依頼、ルーティン、長い作業は、このコンピューターが空いていればいつでもここで始まります。人への返信は、チームのコンピューターが満杯または不在のときだけです。どちらもこのコンピューターでサインインしている AI アカウントを使います。",
+    "helpUseTeamHint": "予備としてだけ: だれのエージェントでも、自分のコンピューターが満杯または不在のときにここに来ます。そのオーナーがこのコンピューターでサインインしている AI アカウントを使います。自分のエージェントを優先: あなたのエージェントの依頼、ルーティン、長い作業は、このコンピューターが空いていればいつでもここで始まります。",
     "helpWorkspace": "チームのコンピューターが満杯または不在のとき、ほかのコンピューターが手伝う",
     "helpWorkspaceHint": "各コンピューターはオーナーが許可した場合だけ手伝います。オフ：オーナーの選択に関係なく、どれも手伝いません。",
     "shareInternet": "エージェントがこのコンピューターのインターネットを使う",
-    "shareInternetHint": "エージェントが開くサイトはこのコンピューターの接続を通るため、サイトからはあなたの場所が見えます。対象はウェブサイトのみ、1日5 GBまでで、あなた自身のネットワーク上のものには決してアクセスしません。このコンピューターがオフラインの間、エージェントはいつもの接続を使います。",
+    "shareInternetHint": "エージェントが開くサイトはこのコンピューターの接続を通るため、サイトからはあなたの場所が見えます。対象はウェブサイトのみで、あなた自身のネットワーク上のものには決してアクセスしません。このコンピューターがオフラインの間、エージェントはいつもの接続を使います。",
     "shareInternetInUse": "使用中",
     "shareInternetOther": "エージェントは今 {{name}} を使っています",
     "shareInternetPick": "これを使う",
@@ -16847,8 +17043,10 @@
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
       "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
       "folderRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> でフォルダ {{path}} を求めています",
+      "folderOnComputer": "コンピューターで許可",
+      "folderShown": "{{deviceName}}で開きました。そちらで許可してください。",
       "internetShared": "エージェントは今後 <b>{{deviceName}}</b> のインターネットを通じてウェブサイトを開きます",
-      "internetSharedLine": "対象はこのワークスペースのエージェントのみ、ウェブサイトのみ、1日5 GBまで。そのコンピューターのネットワーク内には一切アクセスしません。オフラインの間は、いつもの接続を使います。",
+      "internetSharedLine": "対象はこのワークスペースのエージェントのみ、ウェブサイトのみ。そのコンピューターのネットワーク内には一切アクセスしません。オフラインの間は、いつもの接続を使います。",
       "internetOff": "オフにする",
       "internetOffDone": "エージェントは {{deviceName}} のインターネットを使わなくなりました。",
       "once": "今回のみ許可",
@@ -18564,6 +18762,7 @@
         "usingScreen": "画面を使いました",
         "cloningRepo": "リポジトリをクローンしました",
         "listingRepos": "リポジトリを一覧表示しました",
+        "updatingCode": "コードを更新しました",
         "preparingCli": "{{app}}を準備しました",
         "openingPullRequest": "プルリクエストを作成しました",
         "handingOff": "レポートを届けました",
@@ -18688,6 +18887,7 @@
       "usingScreen": "画面を使用中",
       "cloningRepo": "リポジトリをクローン中",
       "listingRepos": "リポジトリを一覧表示中",
+      "updatingCode": "コードを更新中",
       "preparingCli": "{{computer}}で{{app}}を準備中",
       "preparingCliPct": "{{computer}}で{{app}}を準備中（{{percent}}%）",
       "openingPullRequest": "プルリクエストを作成中",
@@ -18883,6 +19083,7 @@
       "action_approvals": "あなたの承認待ち",
       "welcome_member": "{{org}}に参加しましたね。**ここでは何を担当していますか？** 教えてもらえれば、最初のエージェントを一緒に設定します。",
       "action_open_page": "画面を開く",
+      "action_voice_setup": "ボイスメッセージをオンにする",
       "calendar_proposal": "予定の提案: {{title}}",
       "action_workspace": "ワークスペースの変更を提案しました",
       "agent_proposal": "新しいエージェントを提案しました: {{name}}",
@@ -19177,6 +19378,10 @@
     "offer_open_page": {
       "label": "画面を開くことを提案",
       "description": "請求、ロール、エージェントのページなど、アプリの画面を開くボタン付きのカードを投稿します。"
+    },
+    "offer_voice_setup": {
+      "label": "ボイスメッセージをオンにするよう提案",
+      "description": "サーバーの管理者がワンクリックでボイスメッセージをオンにできるカードを投稿します。それ以外の人は管理者に依頼します。"
     },
     "set_team_week": {
       "label": "チームの1週間のカードを変更",
@@ -20094,14 +20299,13 @@
       }
     },
     "use": {
-      "title": "エージェントの画面のアプリ",
-      "description": "エージェントは人と同じように、ここで自分の画面のアプリを開いて使います。その様子は各エージェントのページで見られます。",
+      "title": "エージェントごとの専用画面",
+      "description": "ここでは各エージェントがあなたの画面とは別の専用画面を持ち、ブラウザやスプレッドシートなどウィンドウのあるアプリを人と同じように使います。様子はエージェントのページで見られます。今のところLinuxのみです。Linuxならあなたの画面に触れずに、エージェントごとに画面を追加できます。",
       "ready": "準備完了",
       "off": "オフ",
-      "unavailable": "利用できません",
+      "unavailable": "準備が必要",
       "offHelp": "このコンピューターで画面とコマンドを有効にしてください:",
       "offOne": "このコンピューターでは画面とコマンドの両方をオンにする必要があります。",
-      "linuxOnly": "エージェントが自分の画面でアプリを使えるのは、Linuxのコンピューターだけです。",
       "agent": "{{name}}はまだ{{computer}}の自分の画面でアプリを使えません。",
       "agent_female": "{{name}}はまだ{{computer}}の自分の画面でアプリを使えません。"
     },

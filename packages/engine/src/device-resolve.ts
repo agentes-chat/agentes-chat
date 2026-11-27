@@ -18,6 +18,7 @@ import {
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { formatDuration } from "./machine-task-text";
 import { taskRequester } from "./machine-tasks";
+import { maintenancePhrase } from "./machines";
 import { notify, resolveNotifications } from "./notifications";
 import { personAtComputerWay } from "./runner-update";
 import { replyThreadOf } from "./runs";
@@ -555,7 +556,7 @@ function statusWords(s: DeviceStatus, people: Map<string, string>) {
     case "paused":
       return `paused by its owner${s.until ? ` until ${s.until}` : ""}`;
     case "moving":
-      return "moving to another server, back in a few minutes";
+      return s.maintenance ? maintenancePhrase(s.maintenance) : "moving to another server, back in a few minutes";
     case "offline":
       return `${s.withHost ? "offline with its computer" : "offline"} (${seenAgo(s.lastSeenAt)})`;
     case "unsupported":
@@ -567,7 +568,8 @@ function phoneLine(p: PhoneDevice, people: Map<string, string>) {
   const kind = p.phoneKind === "device" ? "" : ` ${p.phoneKind}`;
   const system = `${p.platform === "ios" ? "iOS" : "Android"}${p.osVersion ? ` ${p.osVersion}` : ""}`;
   const model = p.model && p.model !== p.name ? `${p.model}, ` : "";
-  return `"${p.name}" (${model}${system}${kind}): ${statusWords(p.status, people)}`;
+  const start = kind && p.status.kind === "offline" && !p.status.withHost ? "; simulator_start starts it" : "";
+  return `"${p.name}" (${model}${system}${kind}): ${statusWords(p.status, people)}${start}`;
 }
 
 /** The switches agents' tools need on a computer, as people call them. */
@@ -634,7 +636,7 @@ function computerLine(d: ComputerDevice, people: Map<string, string>, requester:
     .join(", ");
   const phones = d.phones.map((p) => phoneLine(p, people));
   return [
-    `- "${d.name}" (${facts}; ${owner}${d.systemMode ? "; each agent its own user" : ""}): ${statusWords(d.status, people)}.`,
+    `- "${d.name}" (${facts}; ${owner}${d.systemMode ? "; each agent its own user" : ""}): ${statusWords(d.status, people)}${d.maintenance && !d.maintenance.away ? ` (${maintenancePhrase(d.maintenance)})` : ""}.`,
     tools ? `  Tools: ${tools}.` : "",
     off ? `  ${off}` : "",
     ...phones.map((line) => `  Phone ${line}.`),

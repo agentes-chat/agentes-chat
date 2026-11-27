@@ -637,6 +637,9 @@ const stubbed = (output: ToolOutput): ToolOutput => ({
   ...(output.data ? { data: output.data } : {}),
 });
 
+/** A source of tools slower than this to list is told (`ToolContext.slowSource`): a run waits on its tools. */
+export const SLOW_TOOL_SOURCE_MS = 500;
+
 export function createToolGateway(deps: {
   sources: ToolSource[];
   now?: () => Date;
@@ -655,9 +658,18 @@ export function createToolGateway(deps: {
   async function allTools(ctx: ToolContext) {
     const byName = new Map<string, ToolDefinition>();
     // Sources are independent reads: all run at once, and the merge below keeps their order.
+    const timed = async (source: ToolSource) => {
+      const started = Date.now();
+      try {
+        return await source.tools(ctx);
+      } finally {
+        const ms = Date.now() - started;
+        if (ms > SLOW_TOOL_SOURCE_MS) ctx.slowSource?.(source.name, ms);
+      }
+    };
     const [agent, lists] = await Promise.all([
       getAgentCached(ctx.db, ctx.orgId, ctx.agentId),
-      Promise.all(deps.sources.map((source) => source.tools(ctx))),
+      Promise.all(deps.sources.map(timed)),
     ]);
     const rightHand = isRightHand(agent);
     for (const list of lists) {

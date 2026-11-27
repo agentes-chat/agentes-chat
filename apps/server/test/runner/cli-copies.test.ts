@@ -72,6 +72,7 @@ function pinsFor(made: { sha256: string }, version = "9.9.9"): CliPins {
     opencode: pin("opencode"),
     grok: pin("grok"),
     antigravity: pin("antigravity"),
+    devin: pin("devin"),
     git: pin("git"),
   };
 }

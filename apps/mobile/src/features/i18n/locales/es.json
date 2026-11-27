@@ -961,6 +961,7 @@
       "admin_ask_channel_agent": "{{names}} te pide añadir a {{agent}} a #{{label}}",
       "admin_ask_create_agents": "{{names}} pide poder crear agentes",
       "admin_ask_webhook": "{{names}} te pide configurar el webhook de {{service}} para rutinas",
+      "admin_ask_voice": "{{names}} te pide activar los mensajes de voz",
       "routine_paused_one": "Rutina en pausa",
       "routine_paused_many": "Rutinas en pausa",
       "routine_paused_other": "Rutinas en pausa",

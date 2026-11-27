@@ -10,6 +10,7 @@ import {
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -28,6 +29,7 @@ import {
   accountFields,
   accountUnavailable,
   busyRefusal,
+  callTurnThroughDrops,
   cliOutdated,
   contextFields,
   speedFields,
@@ -94,6 +96,7 @@ export interface ComputerBrainLink {
       opencode?: { version: string };
       grok?: { version: string };
       antigravity?: { version: string };
+      devin?: { version: string };
       /** Every agent as its own user (`runnerUpdateWay`). */
       mode?: "system";
     };
@@ -113,6 +116,7 @@ export interface ComputerBrainLink {
         opencode?: boolean;
         grok?: boolean;
         antigravity?: boolean;
+        devin?: boolean;
         commands: boolean;
       };
     } | null;
@@ -181,7 +185,7 @@ function channel<T>() {
  * protocol 36, no version gate, no live steering). Everything else, from the request to the events, is shared.
  */
 interface CliBrainSpec {
-  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
@@ -194,6 +198,7 @@ interface CliBrainSpec {
     opencode?: { version: string };
     grok?: { version: string };
     antigravity?: { version: string };
+    devin?: { version: string };
   }): BrainEvent | null;
 }
 
@@ -280,8 +285,22 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
         },
 };
 
+const DEVIN_CLI: CliBrainSpec = {
+  kind: "devin",
+  name: "Devin CLI",
+  protocol: DEVIN_PROTOCOL,
+  check: ({ devin }) =>
+    devin
+      ? null
+      : {
+          type: "error",
+          code: "devin_missing",
+          message: "The Devin CLI, Cognition's, is not installed on the computer.",
+          retryable: true,
+        },
+};
 export class CodexBrain implements Brain {
-  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
   constructor(
     private readonly deps: CodexBrainDeps,
@@ -355,7 +374,14 @@ export class CodexBrain implements Brain {
     }
     // Its runner would refuse every turn there in its own words; refused here, it reads in the person's language.
     if (!brainRunsOn(this.kind, status.os)) {
-      yield { type: "error", code: SYSTEM_REFUSED, message: `${name} doesn't run on this computer's system yet.` };
+      // The Devin CLI's pin has no Windows build (ADR 0253): there it can't keep each account's sign-in apart.
+      const why =
+        this.kind === "devin" && status.os === "windows" ? " There it can't keep each account's sign-in apart." : "";
+      yield {
+        type: "error",
+        code: SYSTEM_REFUSED,
+        message: `${name} doesn't run on this computer's system yet.${why}`,
+      };
       return;
     }
     // Its runner fetches the pinned CLI itself (ADR 0228 §6): not there yet is no reason to refuse the turn.
@@ -560,9 +586,11 @@ export class AntigravityBrain extends CodexBrain {
  * so the turn ends even if a published event is lost.
  */
 export function hubBrainLink(deps: {
-  hub: Pick<MachineCaller, "call" | "status">;
+  hub: Pick<MachineCaller, "call" | "status" | "wake">;
   pubsub: PubSub;
   timeoutMs?: number;
+  /** Tests: `HELD_TURN_WAIT_MS`. */
+  heldTurnWaitMs?: number;
   /** After the request's result, how long to wait for the stream's last events (default 1.5 s). */
   finalGraceMs?: number;
 }): ComputerBrainLink {
@@ -587,11 +615,11 @@ export function hubBrainLink(deps: {
         options.onEvent(withFailureCause(event as BrainEvent));
       });
       try {
-        const reply = await deps.hub.call<"brain.turn">(
-          machineId,
-          { op: "brain.turn", ...request },
-          { signal: options.signal, ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}) },
-        );
+        const reply = await callTurnThroughDrops(deps.hub, machineId, request, {
+          signal: options.signal,
+          ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}),
+          ...(deps.heldTurnWaitMs !== undefined ? { waitMs: deps.heldTurnWaitMs } : {}),
+        });
         if (!streamEnded) {
           await new Promise<void>((resolve) => {
             const timer = setTimeout(resolve, deps.finalGraceMs ?? 1500);
@@ -610,4 +638,15 @@ export function hubBrainLink(deps: {
       }
     },
   };
+}
+
+/**
+ * The Devin brain (ADR 0253): Cognition's Devin CLI (`devin acp`) on the agent's computer with a person's Devin plan,
+ * through the same `brain.turn` as Codex (`kind: "devin"`, runner protocol 89, `brain-devin.ts` there). A person's
+ * messages wait for the turn's end.
+ */
+export class DevinBrain extends CodexBrain {
+  constructor(deps: CodexBrainDeps) {
+    super(deps, DEVIN_CLI);
+  }
 }

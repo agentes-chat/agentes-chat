@@ -6992,6 +6992,9 @@
   "channel.composerDm": {
     "value": "Message {{name}}"
   },
+  "channel.groupYou": {
+    "value": "You"
+  },
   "channel.composerPlaceholder": {
     "value": "Message #{{channel}} · use @ to call an agent"
   },
@@ -7052,6 +7055,9 @@
   "channel.detailsTitle": {
     "value": "#{{channel}}"
   },
+  "channel.detailsTitlePersonal": {
+    "value": "{{channel}}"
+  },
   "channel.detailsSearch": {
     "value": "Search people or agents"
   },
@@ -7085,6 +7091,9 @@
   "channel.nameTaken": {
     "value": "There is already #{{name}}."
   },
+  "channel.nameTakenPersonal": {
+    "value": "There is already a group conversation called “{{name}}”."
+  },
   "channel.generalName": {
     "value": "#general keeps its name."
   },
@@ -7093,6 +7102,9 @@
   },
   "channel.archived": {
     "value": "#{{channel}} archived. The conversation is kept."
+  },
+  "channel.archivedPersonal": {
+    "value": "“{{channel}}” archived. The conversation is kept."
   },
   "channel.archivedTitle": {
     "value": "Archived channels"
@@ -7117,6 +7129,9 @@
   },
   "channel.restored": {
     "value": "#{{channel}} is back."
+  },
+  "channel.restoredPersonal": {
+    "value": "“{{channel}}” is back."
   },
   "channel.leave": {
     "value": "Leave channel"
@@ -8165,6 +8180,18 @@
   "rightHand.action.set_action_check_off": {
     "value": "Turn off the check of what the team already did"
   },
+  "rightHand.action.set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>, their own choices too"
+  },
+  "rightHand.action.set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_agent_approvals_level_workspace": {
+    "value": "Make <b>{{agent}}</b> follow the workspace's approvals"
+  },
   "rightHand.action.invite_people": {
     "value": "Invite <b>{{emails}}</b> to the workspace."
   },
@@ -8572,6 +8599,9 @@
   "noAi.notSignedIn.antigravity": {
     "value": "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s page."
   },
+  "noAi.notSignedIn.devin": {
+    "value": "Devin isn't signed in on this computer. Connect a Devin account on {{name}}'s page."
+  },
   "noAi.notSignedIn.opencode": {
     "value": "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s page."
   },
@@ -8589,6 +8619,9 @@
   },
   "noAi.notSignedInOn.antigravity": {
     "value": "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.devin": {
+    "value": "Devin isn't signed in on {{computer}}. Connect a Devin account on {{name}}'s page."
   },
   "noAi.notSignedInOn.opencode": {
     "value": "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s page."
@@ -8721,6 +8754,9 @@
   },
   "connectAi.title.gemini": {
     "value": "Connect your Gemini plan"
+  },
+  "connectAi.title.devin": {
+    "value": "Connect your Devin plan"
   },
   "connectAi.title.zen": {
     "value": "Connect OpenCode"
@@ -9064,6 +9100,12 @@
   "connectAi.plan.gemini.windowsOne": {
     "value": "On Windows, a computer uses one Gemini account at a time."
   },
+  "connectAi.plan.devin.title": {
+    "value": "Your Devin plan"
+  },
+  "connectAi.plan.devin.tiers": {
+    "value": "Free, Pro, Max or Teams"
+  },
   "connectAi.plan.zen.title": {
     "value": "OpenCode"
   },
@@ -9286,6 +9328,9 @@
   },
   "connectAi.otherAccount.antigravity": {
     "value": "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again."
+  },
+  "connectAi.otherAccount.devin": {
+    "value": "Devin signed in as {{email}}, not {{account}}. Sign out on Devin's page and try again."
   },
   "connectAi.otherAccount.opencode": {
     "value": "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key."
@@ -10187,6 +10232,18 @@
   "agentActions.workspace.changed_set_action_check_off": {
     "value": "Turned off the check of what the team already did"
   },
+  "agentActions.workspace.changed_set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level_workspace": {
+    "value": "<b>{{agent}}</b> follows the workspace's approvals again"
+  },
   "agentActions.workspace.changed_invite_people": {
     "value": "Invited <b>{{invited}}</b> to the workspace"
   },
@@ -10391,11 +10448,14 @@
   "newChannel.nameInvalid": {
     "value": "Use lowercase letters, digits and hyphens, starting with a letter or digit."
   },
+  "newChannel.nameInvalidPersonal": {
+    "value": "Give it a name of up to 80 characters, on one line."
+  },
   "newChannel.nameTaken": {
     "value": "There is already a #{{name}} channel."
   },
   "newChannel.nameTakenPersonal": {
-    "value": "There is already a group conversation called #{{name}}."
+    "value": "There is already a group conversation called “{{name}}”."
   },
   "newChannel.topic": {
     "value": "Description"
@@ -10487,6 +10547,9 @@
   "newChannel.create": {
     "value": "Create #{{name}}"
   },
+  "newChannel.createPersonal": {
+    "value": "Create conversation"
+  },
   "channelCategories.undo": {
     "value": "Undo"
   },
@@ -10520,6 +10583,9 @@
   "channelMembers.addTitle": {
     "value": "Add to #{{channel}}"
   },
+  "channelMembers.addTitlePersonal": {
+    "value": "Add to {{channel}}"
+  },
   "channelMembers.addSearch": {
     "value": "Search people or agents"
   },
@@ -10543,6 +10609,9 @@
   },
   "channelMembers.removeTitle": {
     "value": "Remove {{name}} from #{{channel}}?"
+  },
+  "channelMembers.removeTitlePersonal": {
+    "value": "Remove {{name}} from {{channel}}?"
   },
   "channelMembers.removePersonBody": {
     "value": "They stop seeing the channel and getting its messages. You can add them back later."
@@ -13522,6 +13591,9 @@
   "notifications.what.adminAskWebhook": {
     "value": "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines"
   },
+  "notifications.what.adminAskVoice": {
+    "value": "<b>{{name}}</b> asks you to turn on voice messages"
+  },
   "notifications.what.invitationAccepted": {
     "value": "<b>{{name}}</b> accepted your invitation and joined {{org}}"
   },
@@ -14929,6 +15001,9 @@
   "agentPage.work.brain.add.title.antigravity": {
     "value": "Add a Gemini account"
   },
+  "agentPage.work.brain.add.title.devin": {
+    "value": "Add a Devin account"
+  },
   "agentPage.work.brain.add.title.opencode": {
     "value": "Add an OpenCode key"
   },
@@ -14942,6 +15017,9 @@
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.grok": {
+    "value": "The account with your plan"
+  },
+  "agentPage.work.brain.add.stepOne.devin": {
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.antigravity": {
@@ -14967,6 +15045,9 @@
   },
   "agentPage.work.brain.add.open.antigravity": {
     "value": "Sign in with Google"
+  },
+  "agentPage.work.brain.add.open.devin": {
+    "value": "Sign in with Devin"
   },
   "agentPage.work.brain.add.opencodeFree": {
     "value": "No key needed for OpenCode's free models. A key from OpenCode's console adds its paid ones."
@@ -15006,6 +15087,15 @@
   },
   "agentPage.work.brain.add.codeLabelGoogle": {
     "value": "Google's code"
+  },
+  "agentPage.work.brain.add.stepTwoDevin": {
+    "value": "Paste the code Devin shows"
+  },
+  "agentPage.work.brain.add.codeHintDevin": {
+    "value": "Paste the code Devin's page shows, not the page's address."
+  },
+  "agentPage.work.brain.add.codeLabelDevin": {
+    "value": "Devin's code"
   },
   "agentPage.work.brain.add.codeHintGoogle": {
     "value": "Paste the code Google's page shows, not the page's address."
@@ -15096,6 +15186,9 @@
   },
   "agentPage.work.brain.add.duplicate.antigravity": {
     "value": "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again."
+  },
+  "agentPage.work.brain.add.duplicate.devin": {
+    "value": "Devin signed in as {{account}}, an account you already connected. To use another, sign out on Devin's page and try again."
   },
   "agentPage.work.brain.add.duplicate.opencode": {
     "value": "That OpenCode key is already connected as {{account}}."
@@ -23683,9 +23776,6 @@
   "missions.notice.machine_access_expired": {
     "value": "The request for the folder {{folder}} on {{computer}} got no answer"
   },
-  "missions.notice.access_command": {
-    "value": "No app on the computer? Run this in its Terminal:"
-  },
   "missions.suggestion.pending": {
     "value": "Suggestion for the mission"
   },
@@ -27159,6 +27249,9 @@
   "aiAccounts.connect.antigravity": {
     "value": "Gemini"
   },
+  "aiAccounts.connect.devin": {
+    "value": "Devin"
+  },
   "aiAccounts.connect.opencode": {
     "value": "OpenCode"
   },
@@ -27850,6 +27943,9 @@
   "voice.limit": {
     "value": "Today's audio limit is used up. Write here, or try again tomorrow."
   },
+  "voice.plan": {
+    "value": "Voice messages come with an agentes.chat plan. You can still write here."
+  },
   "voice.micBlocked": {
     "value": "The microphone is blocked"
   },
@@ -27950,13 +28046,13 @@
     "value": "People in this workspace can send audio in conversations."
   },
   "voice.settings.noEngine": {
-    "value": "Voice messages aren't available here yet."
+    "value": "Voice messages go as audio for now, so agents can't hear them yet."
   },
   "voice.settings.noEngineAsk": {
-    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+    "value": "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page."
   },
   "voice.settings.noEngineHere": {
-    "value": "Voice messages turn on once you choose below what turns voice into text."
+    "value": "Voice messages go as audio until you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"
@@ -27980,7 +28076,7 @@
     "value": "Test"
   },
   "voice.settings.tested": {
-    "value": "It works. Everyone now sees the microphone."
+    "value": "It works. Voice messages now reach the agents as text."
   },
   "voice.settings.sealed": {
     "value": "Kept encrypted on your server and never shown again."
@@ -27990,6 +28086,123 @@
   },
   "voice.settings.invalid": {
     "value": "The saved key doesn't open on this server. Paste it again."
+  },
+  "voice.local.titleHere": {
+    "value": "On this computer"
+  },
+  "voice.local.titleServer": {
+    "value": "On this server"
+  },
+  "voice.local.titlePhone": {
+    "value": "On the server's computer"
+  },
+  "voice.local.textHere": {
+    "value": "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages."
+  },
+  "voice.local.textServer": {
+    "value": "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages."
+  },
+  "voice.local.download": {
+    "value": "Download and turn on"
+  },
+  "voice.local.downloading": {
+    "value": "Downloading the voice model"
+  },
+  "voice.local.progress": {
+    "value": "{{done}} of {{total}}"
+  },
+  "voice.local.meanwhile": {
+    "value": "You can record now. Notes go as audio until it's ready."
+  },
+  "voice.local.downloadingPhone": {
+    "value": "Downloading the voice model to the server's computer. You can record now."
+  },
+  "voice.local.starting": {
+    "value": "Turning it on…"
+  },
+  "voice.local.licenses": {
+    "value": "Model licenses"
+  },
+  "voice.local.tooSmall": {
+    "value": "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below."
+  },
+  "voice.local.noDisk": {
+    "value": "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below."
+  },
+  "voice.local.noBuild": {
+    "value": "There's no voice model for this computer yet. Use a provider key below."
+  },
+  "voice.local.stopped": {
+    "value": "The download stopped: {{detail}}"
+  },
+  "voice.local.diskFull": {
+    "value": "The disk filled up during the download. Free some space and try again."
+  },
+  "voice.local.didntStart": {
+    "value": "The voice model didn't start: {{detail}}"
+  },
+  "voice.local.resume": {
+    "value": "Resume"
+  },
+  "voice.local.copy": {
+    "value": "Copy details"
+  },
+  "voice.local.copied": {
+    "value": "Details copied"
+  },
+  "voice.offer.title": {
+    "value": "Voice messages"
+  },
+  "voice.offer.download": {
+    "value": "Download {{size}} and turn on"
+  },
+  "voice.offer.choose": {
+    "value": "Choose how"
+  },
+  "voice.offer.askOwner": {
+    "value": "Turn voice into text on this server"
+  },
+  "voice.offer.askMember": {
+    "value": "Ask to turn on voice messages"
+  },
+  "voice.offer.on": {
+    "value": "Voice messages are on: agents read them as text."
+  },
+  "voice.setup.memberTitle": {
+    "value": "Voice isn't on here yet"
+  },
+  "voice.setup.memberText": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text."
+  },
+  "voice.setup.memberTextNoName": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text."
+  },
+  "voice.setup.ask": {
+    "value": "Ask {{name}}"
+  },
+  "voice.setup.asked": {
+    "value": "{{name}} was asked to turn it on"
+  },
+  "voice.setup.recordAnyway": {
+    "value": "Record anyway"
+  },
+  "voice.setup.ownerTitle": {
+    "value": "Choose what turns voice into text"
+  },
+  "voice.setup.ownerText": {
+    "value": "Until you do, voice messages go as audio people can play, and agents can't hear them."
+  },
+  "voice.setup.readyTitle": {
+    "value": "Voice messages are on"
+  },
+  "voice.setup.readyText": {
+    "value": "What you say reaches the agents as text."
+  },
+  "voice.setup.record": {
+    "value": "Record a message"
+  },
+  "voice.setup.ownerPhone": {
+    "value": "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them."
   },
   "media.word.gif": {
     "value": "GIF"
@@ -30906,6 +31119,9 @@
   "brain.line.gemini": {
     "value": "{{model}} on the Gemini plan"
   },
+  "brain.line.devin": {
+    "value": "{{model}} on the Devin plan"
+  },
   "brain.line.zen": {
     "value": "{{model}} on OpenCode"
   },
@@ -30926,6 +31142,9 @@
   },
   "brain.line.geminiOf": {
     "value": "{{model}} on {{owner}}'s Gemini plan"
+  },
+  "brain.line.devinOf": {
+    "value": "{{model}} on {{owner}}'s Devin plan"
   },
   "brain.line.zenOf": {
     "value": "{{model}} on {{owner}}'s OpenCode"
@@ -30948,6 +31167,9 @@
   "brain.line.geminiAuto": {
     "value": "Gemini plan"
   },
+  "brain.line.devinAuto": {
+    "value": "Devin plan"
+  },
   "brain.line.zenAuto": {
     "value": "OpenCode"
   },
@@ -30968,6 +31190,9 @@
   },
   "brain.line.geminiAutoOf": {
     "value": "{{owner}}'s Gemini plan"
+  },
+  "brain.line.devinAutoOf": {
+    "value": "{{owner}}'s Devin plan"
   },
   "brain.line.zenAutoOf": {
     "value": "{{owner}}'s OpenCode"
@@ -31005,6 +31230,9 @@
   "brain.card.antigravity": {
     "value": "Antigravity CLI"
   },
+  "brain.card.devin": {
+    "value": "Devin CLI"
+  },
   "brain.foot.api": {
     "value": "Through the API"
   },
@@ -31031,6 +31259,9 @@
   },
   "brain.antigravityText": {
     "value": "Uses the Gemini plan of whoever connected the computer."
+  },
+  "brain.devinText": {
+    "value": "Uses the Devin plan of whoever connected the computer."
   },
   "brain.opencodeText": {
     "value": "OpenCode's free models, or the OpenCode key of whoever connected the computer."
@@ -31073,6 +31304,9 @@
   },
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."
+  },
+  "brain.reasons.systemDevin": {
+    "value": "{{computer}} runs Windows, where Devin doesn't run yet: there its CLI can't keep each account's sign-in apart. Use Devin on a Mac or Linux computer, or choose another AI."
   },
   "brain.reasons.windows_sandbox": {
     "value": "{{computer}}'s Windows can't isolate {{program}}'s commands. Choose Claude or an API key instead, or update that computer to Windows 11 24H2 or newer, with its latest updates."
@@ -31178,6 +31412,9 @@
   },
   "brain.summary.antigravity": {
     "value": "Antigravity CLI · {{model}}"
+  },
+  "brain.summary.devin": {
+    "value": "Devin CLI · {{model}}"
   },
   "brain.summary.opencode": {
     "value": "OpenCode · {{model}}"
@@ -32537,6 +32774,45 @@
   },
   "storage.current": {
     "value": "In use"
+  },
+  "storage.computer.title": {
+    "value": "Workspace computer"
+  },
+  "storage.computer.used": {
+    "value": "{{used}} of {{size}} in use"
+  },
+  "storage.computer.bar": {
+    "value": "The workspace computer's disk"
+  },
+  "storage.computer.measuring": {
+    "value": "Measuring what takes the space."
+  },
+  "storage.computer.part.projects": {
+    "value": "Projects and code"
+  },
+  "storage.computer.part.apps": {
+    "value": "Apps and tools"
+  },
+  "storage.computer.part.agents": {
+    "value": "Agents' files"
+  },
+  "storage.computer.part.caches": {
+    "value": "Caches and temporary files"
+  },
+  "storage.computer.part.system": {
+    "value": "System"
+  },
+  "storage.computer.part.other": {
+    "value": "Other"
+  },
+  "storage.computer.part.free": {
+    "value": "Free"
+  },
+  "storage.computer.full": {
+    "value": "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore."
+  },
+  "storage.computer.ask": {
+    "value": "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room."
   },
   "storage.usage.files": {
     "value": "{{size}} of files"
@@ -36913,6 +37189,15 @@
   "toolNames.label.desktop_ask_person": {
     "value": "Ask someone to take over the computer"
   },
+  "toolNames.label.apps_list": {
+    "value": "See the open apps"
+  },
+  "toolNames.label.apps_read": {
+    "value": "Read an app"
+  },
+  "toolNames.label.apps_act": {
+    "value": "Use an app"
+  },
   "toolNames.label.computer_use": {
     "value": "Use the computer"
   },
@@ -39595,6 +39880,9 @@
   "errors.said.leadNotMember": {
     "value": "The responsible agent has to be in the channel."
   },
+  "errors.said.groupNameInvalid": {
+    "value": "Give it a name of up to 80 characters, on one line."
+  },
   "errors.said.mcpUnreachable": {
     "value": "Couldn't connect to the MCP server. Check its address and try again."
   },
@@ -40732,14 +41020,110 @@
   "machines.egress.viaHint": {
     "value": "Websites see that computer’s location. Its owner can turn it off on its page."
   },
-  "machines.moving.short": {
+  "machines.maintenance.short.moving": {
     "value": "Moving servers"
   },
-  "machines.moving.line": {
-    "value": "Moving to a new server… back in a few minutes"
+  "machines.maintenance.short.restarting": {
+    "value": "Restarting"
   },
-  "machines.moving.named": {
-    "value": "{{computer}} is moving to a new server… back in a few minutes"
+  "machines.maintenance.short.updating": {
+    "value": "Updating"
+  },
+  "machines.maintenance.short.converting": {
+    "value": "Upgrading disk"
+  },
+  "machines.maintenance.short.host_maintenance": {
+    "value": "Maintenance"
+  },
+  "machines.maintenance.short.other": {
+    "value": "Maintenance"
+  },
+  "machines.maintenance.what.moving": {
+    "value": "Moving to a new server"
+  },
+  "machines.maintenance.what.copying": {
+    "value": "Copying to a new server"
+  },
+  "machines.maintenance.what.restarting": {
+    "value": "Restarting"
+  },
+  "machines.maintenance.what.updating": {
+    "value": "Updating its software"
+  },
+  "machines.maintenance.what.converting": {
+    "value": "Upgrading its disk"
+  },
+  "machines.maintenance.what.host_maintenance": {
+    "value": "Its server is under maintenance"
+  },
+  "machines.maintenance.what.other": {
+    "value": "Being worked on"
+  },
+  "machines.maintenance.line": {
+    "value": "{{what}}… {{when}}"
+  },
+  "machines.maintenance.named": {
+    "value": "{{computer}}: {{line}}"
+  },
+  "machines.maintenance.back": {
+    "value": "back in about {{time}}"
+  },
+  "machines.maintenance.backSoon": {
+    "value": "back in a few minutes"
+  },
+  "machines.maintenance.late": {
+    "value": "taking a little longer than expected"
+  },
+  "machines.maintenance.slower": {
+    "value": "it may be slower meanwhile"
+  },
+  "machines.maintenance.slowerFor": {
+    "value": "it may be slower for about {{time}}"
+  },
+  "machines.maintenance.why.moving": {
+    "value": "We're moving it to a new server."
+  },
+  "machines.maintenance.why.copying": {
+    "value": "We're copying its files to a new server while it works."
+  },
+  "machines.maintenance.why.handover": {
+    "value": "We're handing its last changes over to the new server."
+  },
+  "machines.maintenance.why.restarting": {
+    "value": "We're restarting it."
+  },
+  "machines.maintenance.why.unresponsive": {
+    "value": "It stopped answering, so we restarted it automatically."
+  },
+  "machines.maintenance.why.updating": {
+    "value": "We're updating its software."
+  },
+  "machines.maintenance.why.converting": {
+    "value": "We're moving its disk to faster storage."
+  },
+  "machines.maintenance.why.host_maintenance": {
+    "value": "The server it runs on is getting maintenance."
+  },
+  "machines.maintenance.why.other": {
+    "value": "We're doing some work on it."
+  },
+  "machines.maintenance.since": {
+    "value": "Since {{time}}"
+  },
+  "machines.maintenance.expectedBack": {
+    "value": "Expected back around {{time}}"
+  },
+  "machines.maintenance.expectedDone": {
+    "value": "Expected done around {{time}}"
+  },
+  "machines.maintenance.meanwhile": {
+    "value": "Messages to its agents wait and go on by themselves when it's back."
+  },
+  "machines.maintenance.working": {
+    "value": "Its agents keep working meanwhile."
+  },
+  "machines.maintenance.about": {
+    "value": "What's happening"
   },
   "machines.online": {
     "value": "Online"
@@ -40776,6 +41160,9 @@
   },
   "machines.oneClick.tools.antigravity": {
     "value": "Antigravity CLI"
+  },
+  "machines.oneClick.tools.devin": {
+    "value": "Devin CLI"
   },
   "machines.oneClick.tools.commands": {
     "value": "commands"
@@ -41220,6 +41607,9 @@
   "machines.access.tool.antigravity": {
     "value": "Antigravity CLI"
   },
+  "machines.access.tool.devin": {
+    "value": "Devin CLI"
+  },
   "machines.access.tool.opencode": {
     "value": "OpenCode"
   },
@@ -41243,6 +41633,9 @@
   },
   "machines.access.toolText.antigravity": {
     "value": "Like Claude Code, with a Gemini account. Only in the allowed folders."
+  },
+  "machines.access.toolText.devin": {
+    "value": "Like Claude Code, with a Devin account. Only in the allowed folders."
   },
   "machines.access.toolText.opencode": {
     "value": "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders."
@@ -41295,6 +41688,27 @@
   "machines.access.grantTerminal": {
     "value": "No app? In the computer's terminal:"
   },
+  "machines.access.pickText": {
+    "value": "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose."
+  },
+  "machines.access.pick": {
+    "value": "Allow a folder"
+  },
+  "machines.access.picked": {
+    "value": "A folder picker opened on {{machine}}. Choose the folder there."
+  },
+  "machines.access.pickWaiting": {
+    "value": "Waiting for the folder to be chosen on {{machine}}"
+  },
+  "machines.access.grantTerminalMore": {
+    "value": "No app there? Use the Terminal"
+  },
+  "machines.access.noApp": {
+    "value": "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal."
+  },
+  "machines.access.requestDone": {
+    "value": "This request was already answered or has expired."
+  },
   "machines.access.preferTerminal": {
     "value": "I'd rather use the Terminal"
   },
@@ -41306,6 +41720,42 @@
   },
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
+  },
+  "devices.permission.title": {
+    "value": "Waiting for {{permission}} on {{computer}}"
+  },
+  "devices.permission.next": {
+    "value": "Allow it in the agentes.chat app there."
+  },
+  "devices.permission.askedBy": {
+    "value": "Asked by {{agent}} to run {{trigger}}"
+  },
+  "devices.permission.asked": {
+    "value": "Needed to run {{trigger}}"
+  },
+  "devices.permission.names.app_management": {
+    "value": "App Management"
+  },
+  "devices.permission.names.screen": {
+    "value": "Screen Recording"
+  },
+  "devices.permission.names.accessibility": {
+    "value": "Accessibility"
+  },
+  "devices.permission.names.disk": {
+    "value": "Full Disk Access"
+  },
+  "devices.permission.names.network": {
+    "value": "Local Network"
+  },
+  "devices.permission.names.camera": {
+    "value": "Camera"
+  },
+  "devices.permission.names.microphone": {
+    "value": "Microphone"
+  },
+  "devices.permission.names.automation": {
+    "value": "Automation"
   },
   "devices.leadCloud": {
     "value": "Where your agents work: the workspace computer and the devices people connect."
@@ -41442,6 +41892,39 @@
   "devices.stopped": {
     "value": "Stopped. {{name}} is free."
   },
+  "devices.power.start": {
+    "value": "Start"
+  },
+  "devices.power.stop": {
+    "value": "Shut down"
+  },
+  "devices.power.starting": {
+    "value": "{{name}} is starting. It's ready in a moment."
+  },
+  "devices.power.stopped": {
+    "value": "{{name}} is shut down."
+  },
+  "devices.power.toolMissingIos": {
+    "value": "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac."
+  },
+  "devices.power.toolMissingAndroid": {
+    "value": "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer."
+  },
+  "devices.power.gone": {
+    "value": "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there."
+  },
+  "devices.power.busy": {
+    "value": "{{name}} is in use right now. Stop what uses it first, or try again when it's free."
+  },
+  "devices.power.startFailed": {
+    "value": "{{name}} didn't start. {{computer}} said: {{why}}"
+  },
+  "devices.power.stopFailed": {
+    "value": "{{name}} didn't shut down. {{computer}} said: {{why}}"
+  },
+  "devices.power.notSimulator": {
+    "value": "Only a simulator or an emulator starts and shuts down from here."
+  },
   "devices.showMe": {
     "value": "Show me how"
   },
@@ -41488,19 +41971,31 @@
     "value": "Help when the team's computer is full or away"
   },
   "devices.spillOwnHint": {
-    "value": "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in."
+    "value": "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer."
   },
   "devices.spillTeamHint": {
-    "value": "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer."
+    "value": "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer."
   },
   "devices.spillWorkspaceOff": {
     "value": "An admin turned this off for the workspace."
   },
-  "devices.spillFirst": {
-    "value": "Use this computer for my agents' work"
+  "devices.helpUse": {
+    "value": "How it helps your agents"
   },
-  "devices.spillFirstHint": {
-    "value": "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away."
+  "devices.helpUses.off": {
+    "value": "Doesn't help"
+  },
+  "devices.helpUses.help": {
+    "value": "Only as backup"
+  },
+  "devices.helpUses.first": {
+    "value": "First for my agents"
+  },
+  "devices.helpUseHint": {
+    "value": "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer."
+  },
+  "devices.helpUseTeamHint": {
+    "value": "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free."
   },
   "devices.helpWorkspace": {
     "value": "Computers help when the team's is full or away"
@@ -41512,7 +42007,7 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection."
+    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -42906,11 +43401,17 @@
   "devices.notice.folderRequest": {
     "value": "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>"
   },
+  "devices.notice.folderOnComputer": {
+    "value": "Allow on the computer"
+  },
+  "devices.notice.folderShown": {
+    "value": "Opened on {{deviceName}}. Allow it there."
+  },
   "devices.notice.internetShared": {
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
   },
   "devices.notice.internetSharedLine": {
-    "value": "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection."
+    "value": "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection."
   },
   "devices.notice.internetOff": {
     "value": "Turn off"
@@ -47261,6 +47762,9 @@
   "chat.work.step.listingRepos": {
     "value": "Listed the repositories"
   },
+  "chat.work.step.updatingCode": {
+    "value": "Updated the code"
+  },
   "chat.work.step.preparingCli": {
     "value": "Prepared {{app}}"
   },
@@ -47623,6 +48127,9 @@
   },
   "chat.activity.listingRepos": {
     "value": "listing the repositories"
+  },
+  "chat.activity.updatingCode": {
+    "value": "updating the code"
   },
   "chat.activity.preparingCli": {
     "value": "preparing {{app}} on {{computer}}"
@@ -48188,6 +48695,9 @@
   "chat.body.action_open_page": {
     "value": "Open a screen"
   },
+  "chat.body.action_voice_setup": {
+    "value": "Turn on voice messages"
+  },
   "chat.body.calendar_proposal": {
     "value": "Event proposal: {{title}}"
   },
@@ -48676,6 +49186,12 @@
   },
   "builtinTools.offer_open_page.description": {
     "value": "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page."
+  },
+  "builtinTools.offer_voice_setup.label": {
+    "value": "Offer to turn on voice messages"
+  },
+  "builtinTools.offer_voice_setup.description": {
+    "value": "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them."
   },
   "builtinTools.set_team_week.label": {
     "value": "Change the Team week card"
@@ -50776,10 +51292,10 @@
     "value": "Used the screen"
   },
   "desktop.use.title": {
-    "value": "Apps on the agents' screens"
+    "value": "Each agent's own screen"
   },
   "desktop.use.description": {
-    "value": "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page."
+    "value": "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours."
   },
   "desktop.use.ready": {
     "value": "Ready"
@@ -50788,16 +51304,13 @@
     "value": "Off"
   },
   "desktop.use.unavailable": {
-    "value": "Not available"
+    "value": "Needs setup"
   },
   "desktop.use.offHelp": {
     "value": "Turn on the screens and commands on this computer:"
   },
   "desktop.use.offOne": {
     "value": "This computer needs both the screen and commands on."
-  },
-  "desktop.use.linuxOnly": {
-    "value": "Agents use apps on their own screens only on Linux computers."
   },
   "desktop.use.agent": {
     "value": "{{name}} can't use apps on his screen on {{computer}} yet.",

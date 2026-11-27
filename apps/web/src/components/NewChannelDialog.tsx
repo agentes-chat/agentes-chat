@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { usePersonalView } from "@/hooks/usePersonalView";
+import { GroupFace } from "./GroupFace";
 import { memberOf, PeoplePicker, type PickKey } from "./MemberPicker";
 import { useOrg } from "./org-context";
 import { RoleChecklist } from "./roles/RoleChecklist";
@@ -227,9 +228,26 @@ export const toChannelName = (value: string) =>
     .replace(/[^a-z0-9_-]/g, "")
     .slice(0, 80);
 
-export function channelNameError(name: string, taken: Set<string>): "invalid" | "taken" | null {
-  if (!CHANNEL_NAME.test(name)) return "invalid";
-  if (taken.has(name)) return "taken";
+/**
+ * What people type → a personal workspace's group conversation name (ADR 0159): as written, its runs of spaces folded
+ * to one, at most 80. A trailing space stays while typing; `trim` when it is sent.
+ */
+export const toGroupName = (value: string) => value.replace(/\s+/g, " ").replace(/^ /, "").slice(0, 80);
+
+/** Same rule as the backend (`personalChannelName`): something written, never `dm-`. */
+const groupNameOk = (name: string) => {
+  const clean = name.trim().replace(/^#+\s*/, "");
+  return clean.length > 0 && clean.length <= 80 && !clean.toLowerCase().startsWith("dm-");
+};
+
+/**
+ * Why a channel can't take `name`: a team's must be lower case, digits, - or _; a personal workspace's group
+ * conversation (`personal`) any name on one line. Taken in any case, as the backend checks (`requireChannelNameFree`).
+ */
+export function channelNameError(name: string, taken: Set<string>, personal = false): "invalid" | "taken" | null {
+  if (!(personal ? groupNameOk(name) : CHANNEL_NAME.test(name))) return "invalid";
+  const wanted = name.trim().toLowerCase();
+  if ([...taken].some((n) => n.toLowerCase() === wanted)) return "taken";
   return null;
 }
 
@@ -269,7 +287,7 @@ export function NewChannelDialog({
     mutationFn: async () => {
       // Who it starts with goes along: the server decides from them whether its agents answer in threads.
       return api.chat.createChannel(org.id, {
-        name,
+        name: name.trim(),
         topic: topic.trim() || undefined,
         ...accessInput(access),
         ...(groupId ? { groupId } : {}),
@@ -299,7 +317,35 @@ export function NewChannelDialog({
     create.reset();
   }, [open, create.reset]);
   const taken = useHeldWhile(new Set((channels.data ?? []).map((c) => c.name)), create.isPending || create.isSuccess);
-  const error = channelNameError(name, taken);
+  // A personal workspace's group conversation takes its name as written and shows its agents as its face (ADR 0159).
+  const personal = isPersonal(org);
+  const error = channelNameError(name, taken, personal);
+  const pickedAgents = [...selected].filter((k) => k.startsWith("agent:")).map((k) => k.slice(6));
+
+  const nameField = (
+    <Field
+      label={t("newChannel.name")}
+      id="ch-name"
+      example={personal ? undefined : t("newChannel.nameHelp", { name: name || "canal" })}
+      error={
+        touched || (name && error === "taken")
+          ? error === "invalid"
+            ? t(modeKey(org, "newChannel.nameInvalid"))
+            : error === "taken"
+              ? t(modeKey(org, "newChannel.nameTaken"), { name: name.trim() })
+              : undefined
+          : undefined
+      }
+    >
+      <Input
+        value={name}
+        onChange={(e) => setName(personal ? toGroupName(e.target.value) : toChannelName(e.target.value))}
+        placeholder={t(modeKey(org, "newChannel.namePlaceholder"))}
+        maxLength={personal ? 80 : undefined}
+        autoFocus
+      />
+    </Field>
+  );
 
   return (
     <Dialog
@@ -318,27 +364,14 @@ export function NewChannelDialog({
       >
         <Locked when={create.isPending}>
           <DialogBody>
-            <Field
-              label={t("newChannel.name")}
-              id="ch-name"
-              example={t("newChannel.nameHelp", { name: name || "canal" })}
-              error={
-                touched || (name && error === "taken")
-                  ? error === "invalid"
-                    ? t("newChannel.nameInvalid")
-                    : error === "taken"
-                      ? t(modeKey(org, "newChannel.nameTaken"), { name })
-                      : undefined
-                  : undefined
-              }
-            >
-              <Input
-                value={name}
-                onChange={(e) => setName(toChannelName(e.target.value))}
-                placeholder={t(modeKey(org, "newChannel.namePlaceholder"))}
-                autoFocus
-              />
-            </Field>
+            {personal ? (
+              <div className="group-namerow">
+                <GroupFace agentIds={pickedAgents} size={62} />
+                {nameField}
+              </div>
+            ) : (
+              nameField
+            )}
             <Field label={t("newChannel.topic")} id="ch-topic">
               <Input
                 value={topic}
@@ -374,7 +407,7 @@ export function NewChannelDialog({
         <DialogFooter bar note={t("newChannel.selected", { count: selected.size })}>
           <Button onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button type="submit" variant="primary" disabled={create.isPending} loading={create.isPending}>
-            {t("newChannel.create", { name: name || "canal" })}
+            {personal ? t("newChannel.createPersonal") : t("newChannel.create", { name: name || "canal" })}
           </Button>
         </DialogFooter>
       </form>

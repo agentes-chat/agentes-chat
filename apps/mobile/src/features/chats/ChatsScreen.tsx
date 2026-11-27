@@ -53,6 +53,7 @@ import { HomeRow } from "./HomeRow";
 import { CollapsibleSection, LandRow, SectorLine, SeeAllRow, useCollapsedSections } from "./HomeSection";
 import { HomeServerError, HomeServerNotice } from "./HomeServerError";
 import { HomeWidgets } from "./HomeWidgets";
+import { InvitedNotice } from "./InvitedNotice";
 import {
   agentStarters,
   type ConversationRow,
@@ -394,6 +395,7 @@ function Home() {
       ) : (
         <>
           <ConfirmEmailNotice />
+          <InvitedNotice />
           <SetupNotice />
           <OutageNotices />
         </>

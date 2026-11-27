@@ -254,6 +254,18 @@ a.dv-row__detail {
   padding: var(--action-clear) var(--action-clear) var(--action-clear) var(--space-3);
   border-radius: var(--radius-lg);
 }
+/* An OS permission it waits on: who asked it for what, on its own line under the next step. */
+.dv-permission {
+  overflow-wrap: anywhere;
+}
+.dv-permission__title {
+  display: block;
+}
+.dv-permission__asked {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--muted);
+}
 .dv-statusline__text {
   flex: 1;
   min-width: 0;

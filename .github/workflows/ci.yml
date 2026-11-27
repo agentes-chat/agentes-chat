@@ -422,7 +422,7 @@ jobs:
         run: |
           mkdir -p dist src-tauri/binaries
           printf '<!doctype html>\n' > dist/index.html
-          for bin in agentes-runner agent-browser; do
+          for bin in agentes-runner agent-browser agent-desktop; do
             install -m 755 /dev/null "src-tauri/binaries/$bin-x86_64-unknown-linux-gnu"
           done
           bun scripts/icons.ts

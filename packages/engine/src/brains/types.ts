@@ -13,7 +13,7 @@ import { CLI_PINS, type PinCli } from "@agenteschat/providers/cli-pins";
 import { planOf } from "@agenteschat/providers/plans";
 import type { CodeSetup } from "../git/machine";
 
-export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** A brain that runs on the agent's computer with a person's plan (ADR 0114 adds Cursor). */
 export type ComputerBrainKind = Exclude<BrainKind, "model">;
@@ -26,6 +26,7 @@ export const BRAIN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI",
+  devin: "Devin CLI",
 };
 
 /** The pin list's name for each computer brain's CLI (`CLI_PINS`). */
@@ -36,6 +37,7 @@ const PIN_OF_BRAIN: Readonly<Record<ComputerBrainKind, PinCli>> = {
   opencode: "opencode",
   grok: "grok",
   antigravity: "antigravity",
+  devin: "devin",
 };
 
 /** `hello.os` as the pin list names systems. */
@@ -43,8 +45,10 @@ const PIN_SYSTEM: Readonly<Record<string, string>> = { darwin: "darwin-", linux:
 
 /**
  * Whether a computer brain runs on a computer's system (`hello.os`): its vendor makes a build of its CLI for that
- * system (`CLI_PINS`, ADR 0228 §6). All six do for macOS, Linux and Windows; on Windows each account's sign-in stays
- * in its own folder (`accountEnv`). A system nobody reported, or one the list doesn't name, passes: the runner says.
+ * system and the pin list carries it (`CLI_PINS`, ADR 0228 §6). Six do for macOS, Linux and Windows; on Windows each
+ * account's sign-in stays in its own folder (`accountEnv`). The Devin CLI's pin has no Windows build: there it doesn't
+ * read an account's folder as its home (ADR 0253). A system nobody reported, or one the list doesn't name, passes: the
+ * runner says.
  */
 export function brainRunsOn(kind: ComputerBrainKind, os: string | null | undefined): boolean {
   const prefix = os ? PIN_SYSTEM[os] : undefined;
@@ -63,6 +67,7 @@ export const BRAIN_PLAN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   opencode: "OpenCode",
   grok: "Grok",
   antigravity: "Gemini",
+  devin: "Devin",
 };
 
 /**
@@ -80,7 +85,13 @@ export function askingPermissions(
 
 /** Brains that run on the agent's computer with a person's plan. */
 export const isComputerBrain = (v: unknown): v is ComputerBrainKind =>
-  v === "claude_code" || v === "codex" || v === "cursor" || v === "opencode" || v === "grok" || v === "antigravity";
+  v === "claude_code" ||
+  v === "codex" ||
+  v === "cursor" ||
+  v === "opencode" ||
+  v === "grok" ||
+  v === "antigravity" ||
+  v === "devin";
 
 /**
  * Brains whose shell runs in a sandbox of the CLI's own (ADR 0053 §3, 0114, 0142, 0143), the limit of what their turns
@@ -139,6 +150,11 @@ export interface BrainSession {
   partsRead?: string | null;
   /** With `partsRead`: that run's blocks of what it can do here, so the turn says only their changed lines. */
   refreshRead?: string[];
+  /**
+   * A new session where the conversation had a recent one: why that one wasn't picked up, `size`, and the names of
+   * the parts of its prompt key that changed (`Transcript.promptParts`), else `prompt`.
+   */
+  notPickedUp?: string[];
 }
 
 export interface BrainTurn {
@@ -275,6 +291,8 @@ export type BrainEvent =
       /** Claude Code (runner protocol 50): why the provider refused or failed it, and its HTTP status. */
       cause?: ProviderFailureCause;
       httpStatus?: number;
+      /** How the turn went until it failed (`done.timings`), from a newer runner. */
+      timings?: BrainTurnTimings;
     }
   /** Messages handed mid-turn (`BrainIO.steerable`) that the turn read, by their `uuid`. */
   | { type: "steer_read"; uuids: string[] }

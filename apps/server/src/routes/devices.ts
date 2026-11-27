@@ -1,4 +1,4 @@
-import { pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
+import { OS_PERMISSIONS, pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
 import {
   approveDeviceJoin,
   cancelWifiPairing,
@@ -15,7 +15,9 @@ import {
   normalizeUserCode,
   openConnectLink,
   openXcode,
+  PHONE_POWER_LIMIT,
   pickIphoneOverWifi,
+  powerPhone,
   repairIphone,
   setDevicesHelp,
   startWifiPairing,
@@ -49,6 +51,7 @@ import {
   requireSession,
   security,
 } from "./app/context";
+import { MaintenanceView } from "./app/schemas";
 
 const tags = ["Devices"];
 
@@ -81,8 +84,9 @@ const Status = z
     z.object({ kind: z.literal("needs_you"), reason: Reason }),
     z.object({ kind: z.literal("preparing"), reason: Reason }),
     z.object({ kind: z.literal("paused"), until: z.string().nullable() }),
-    z.object({ kind: z.literal("moving"), since: z.string() }).openapi({
-      description: "The workspace's own computer, away while it moves to another server: back in a few minutes.",
+    z.object({ kind: z.literal("moving"), since: z.string(), maintenance: MaintenanceView.optional() }).openapi({
+      description:
+        "The workspace's own computer, away for what we do to it (`maintenance` says what: a move, a restart…): back by itself.",
     }),
     z.object({
       kind: z.literal("offline"),
@@ -115,6 +119,15 @@ const Phone = z
   })
   .openapi("PhoneDevice");
 
+const PermissionNeed = z
+  .object({
+    permission: z.enum(OS_PERMISSIONS),
+    trigger: z.string().openapi({ description: "What asked, as the person reads it (a command, redacted)." }),
+    agentId: z.string().optional(),
+    since: z.string(),
+  })
+  .openapi("PermissionNeed");
+
 const Computer = z
   .object({
     id: z.uuid(),
@@ -130,6 +143,9 @@ const Computer = z
     spill: z.object({ own: z.boolean(), first: z.boolean() }).openapi({
       description:
         "\"Help when the team's computer is full or away\" (`own`): while an agent's own computer is full or away, fresh turns of its owner's agents (anyone's, on a computer marked the workspace's) may think here, on a sign-in of the agent's owner. \"Use this computer for my agents' work\" (`first`, implies `own`): its owner's agents' asks, routines and long work start here whenever it is free.",
+    }),
+    maintenance: MaintenanceView.nullable().optional().openapi({
+      description: "What we do to the workspace's own computer now, away (`status` says it too) or while it works.",
     }),
     shareInternet: z.object({ on: z.boolean(), inUse: z.boolean() }).nullable().openapi({
       description:
@@ -147,6 +163,10 @@ const Computer = z
           "Tasks start on room there, not on `maxTasks`: about how many more fit now, the free memory in GB, whether the processor stays near full, and the owner's Push harder. Null: the count decides.",
       }),
     toolchains: z.record(z.string(), z.string()),
+    permissions: z.array(PermissionNeed).openapi({
+      description:
+        "The OS permissions its agents' work waits on there (macOS's Full Disk Access, Screen Recording…): what asked, which agent, since when. The agentes.chat app on it asks the person; the wait ends when they allow it there.",
+    }),
     opensXcode: z.boolean().openapi({
       description: "A Mac whose agentes.chat opens Xcode and looks at its iPhone again for the iPhone guide.",
     }),
@@ -440,6 +460,28 @@ export function deviceAppRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, phoneId } = c.req.valid("param");
       await stopPhone({ db, pubsub, hub: hub() }, c.get("user").id, orgId, phoneId);
+      return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/phones/{phoneId}/power",
+      tags,
+      security,
+      summary: "Start or shut down a simulator or an emulator (who may use it or change it)",
+      description:
+        "Its computer boots the iOS simulator (and shows it in Simulator) or starts the Android emulator, or shuts it down; the devices list then shows it starting, ready or offline. A real phone is refused (`device.not_simulator`); the computer's own refusals come back as `device.power_*` with its words in `why`.",
+      request: { params: PhoneParams, body: body(z.object({ on: z.boolean() }).strict()) },
+      responses: { 204: noContent[204], 429: errorResponse("Too many starts"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, phoneId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`phone-power:user:${userId}`, PHONE_POWER_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      await powerPhone({ db, pubsub, hub: hub() }, userId, orgId, phoneId, c.req.valid("json").on);
       return c.body(null, 204);
     },
   );

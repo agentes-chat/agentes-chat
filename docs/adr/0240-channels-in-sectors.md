@@ -66,7 +66,7 @@ the sidebar, once for the agents and once for the channels, and moving a team me
 one switch of the workspace, the same for everyone in it: "Canais antes dos agentes nos setores" in Configurações ›
 Geral, on the web and on the phone.
 
-- `organization_settings.sector_channels_first` (migration 0359), off by default and without a row: a workspace that
+- `organization_settings.sector_channels_first` (migration 0365), off by default and without a row: a workspace that
   never touches it looks as before. It rides `GET …/settings` for every member (`sectorChannelsFirst`) and changes in
   `PATCH …/settings` by who configures the workspace (`configure`), like the other switches there.
 - A change is audited (`organization.sector_order_changed`, with `channelsFirst`) and sent to the open apps as the org

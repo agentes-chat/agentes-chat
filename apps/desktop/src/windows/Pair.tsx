@@ -13,10 +13,11 @@ import { useHost, useSnapshot, useStore } from "../app";
 import { siteApi } from "../control/devices";
 import { isHereServer } from "../control/local-server";
 import { type LinkFailure, type LinkInfo, type PairTarget, pairWithLink, pairWithSession } from "../control/pair";
-import { allDone } from "../control/permissions";
+import { allDone, type PermissionAsk, permissionAsks, permissionOn } from "../control/permissions";
 import { serverKind, serverName } from "../control/server";
+import { pairedHomes } from "../control/store";
 import { type PairTools, pairTools, toolsFound } from "../control/this-mac";
-import { useLocalServer, useOpenPrefs } from "../hooks";
+import { useLocalServer, useOpenPrefs, usePending } from "../hooks";
 import { MacPortrait, OrgTile } from "../ui/bits";
 import { MacPermissionCard, needsPrepare, useMacGrants } from "../ui/permissions";
 import { CardTitle, hintFor, PrefCard, PrefRow } from "../ui/settings";
@@ -568,6 +569,104 @@ export function PairLinkSheet({ server, code, onClose }: { server: string; code:
       {facts}
       <p className="dk-lead">{t("desktop.pair.linkBody")}</p>
       <ToolSwitches chosen={tools} onChange={setTools} disabled={false} />
+    </Sheet>
+  );
+}
+
+/**
+ * An OS permission a runner here waits on (an agent's command macOS refused), the first of them: what is needed and
+ * why, who asked for what, System Settings on its own pane. Back from System Settings, what macOS says is read again
+ * where it can be (Screen Recording, Full Disk Access), and an allowed one ends its wait at once; for the others only
+ * the person knows, so "I allowed it" ends it. With none left, the window goes. Not now leaves the wait (the tray
+ * keeps it).
+ */
+/** How long the sheet waits for this window to hear of a wait the tray saw, before it goes. */
+const ASK_LATE_MS = 3000;
+
+export function PermissionAskSheet({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const host = useHost();
+  const store = useStore();
+  const asks = permissionAsks(pairedHomes(useSnapshot()));
+  const ask = asks[0];
+  const [pending, run] = usePending<"settings" | "done">();
+  useEffect(() => {
+    const clear = (a: PermissionAsk) =>
+      store.request(a.homeId, { type: "permission.clear", permission: a.need.permission }).catch(() => {});
+    const check = () => {
+      for (const a of permissionAsks(pairedHomes(store.getSnapshot()))) {
+        void permissionOn(host, a.need.permission)
+          .then((on) => (on ? clear(a) : undefined))
+          .catch(() => {});
+      }
+    };
+    check();
+    window.addEventListener("focus", check);
+    return () => window.removeEventListener("focus", check);
+  }, [host, store]);
+  // This window's runners may hear of the wait a moment after the tray's: gone means seen once, then none left.
+  const seen = useRef(false);
+  if (ask) seen.current = true;
+  const gone = !ask && seen.current;
+  useEffect(() => {
+    if (gone) onClose();
+  }, [gone, onClose]);
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    const late = setTimeout(() => {
+      if (!seen.current) close.current();
+    }, ASK_LATE_MS);
+    return () => clearTimeout(late);
+  }, []);
+  if (!ask) return null;
+  const p = ask.need.permission;
+  const permission = t(`devices.permission.names.${p}`);
+  const trigger = ask.need.trigger;
+  const asked = !trigger
+    ? null
+    : ask.agent
+      ? t("devices.permission.askedBy", { agent: ask.agent, trigger })
+      : t("devices.permission.asked", { trigger });
+  // Screen Recording and Full Disk Access: the app reads them itself, and macOS applies them once the app opens again.
+  const readable = p === "screen" || p === "disk";
+  return (
+    <Sheet
+      lead={<MacPortrait state="online" />}
+      title={t("desktop.permissionAsk.title", { permission })}
+      acts={
+        <>
+          <Button variant="ghost" disabled={pending !== null} onClick={onClose}>
+            {t("desktop.permissionAsk.later")}
+          </Button>
+          {!readable && (
+            <Button
+              loading={pending === "done"}
+              disabled={pending !== null}
+              onClick={() =>
+                void run("done", () =>
+                  store.request(ask.homeId, { type: "permission.clear", permission: p }).catch(() => {}),
+                )
+              }
+            >
+              {t("desktop.permissionAsk.done")}
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            loading={pending === "settings"}
+            disabled={pending !== null}
+            onClick={() => void run("settings", () => host.openPrivacy(p).catch(() => {}))}
+          >
+            {t("desktop.prepare.openSettings")}
+          </Button>
+        </>
+      }
+    >
+      <p className="dk-lead">{t(`desktop.permissionAsk.why.${p}`)}</p>
+      {asked && <p className="dk-help">{asked}</p>}
+      <p className="dk-help">{t("desktop.prepare.diskHow")}</p>
+      {readable && <p className="dk-help">{t("desktop.prepare.reopen")}</p>}
     </Sheet>
   );
 }

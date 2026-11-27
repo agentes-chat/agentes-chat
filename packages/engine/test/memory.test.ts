@@ -20,6 +20,7 @@ import {
   createContextToolSource,
   createFakeJudge,
   createToolGateway,
+  currentThreadSummary,
   decideApproval,
   decideProposal,
   deleteContextItem,
@@ -45,6 +46,7 @@ import {
   reflectThread,
   retrieveForRun,
   revokeConnection,
+  SUMMARY_COMING_NOTE,
   similarity,
   type ToolContext,
   undoAgentAction,
@@ -255,6 +257,44 @@ describe("summaries", () => {
       ["summary", null],
       ["summary", null],
     ]);
+  });
+});
+
+describe("a long thread's summary beside the turn", () => {
+  test("the turn starts without waiting for it: the one kept stands in, or the agent is told get_summary reads it", async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let n = 0;
+    f = await setup({
+      reply: (req) =>
+        req.system.toString().includes("short summaries")
+          ? { chunks: [`Summary v${++n}`], hold: held }
+          : { chunks: ["ok"] },
+      contextTools: true,
+    });
+    await grantScopes(f.db, f.org.id, f.agent.id, [{ connectionId: null, scope: "context:read" }]);
+    const root = await post(f, "planning the launch");
+    for (let i = 0; i < 32; i++) await post(f, `detail ${i}`, root.id);
+    await post(f, "@dev what did we decide?", root.id);
+    // Before, the turn waited for the summary's model call (6 s at p90 for Claude Code runs in production); held
+    // here until released, so a turn that waited would never end.
+    const started = performance.now();
+    await drainOutbox(f.db, f.handlers);
+    expect(performance.now() - started).toBeLessThan(5000);
+    const asked = () => f.provider.calls.filter((c) => !systemText(c.request.system).includes("short summaries"));
+    const first = systemText(asked().at(-1)?.request.system ?? "");
+    expect(first).toContain(SUMMARY_COMING_NOTE);
+    expect(first).not.toContain("# Earlier in this thread (summary)");
+    // Written beside the turn: the next one has it at once.
+    release();
+    for (let i = 0; i < 50 && !(await currentThreadSummary(f.db, f.org.id, root.id)); i++) await Bun.sleep(20);
+    await post(f, "@dev and the date?", root.id);
+    await drainOutbox(f.db, f.handlers);
+    expect(systemText(asked().at(-1)?.request.system ?? "")).toContain("# Earlier in this thread (summary)");
+    // The turn's and its own get_summary share one write: one summary per new message, never two at once.
+    expect(n).toBeLessThanOrEqual(2);
   });
 });
 

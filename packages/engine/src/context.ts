@@ -81,7 +81,7 @@ import {
 } from "./reply-policy";
 import { linePrompt } from "./reporting";
 import { wikiPersonOf } from "./requester";
-import { isRightHand } from "./right-hand";
+import { dmPersonBehind, isRightHand } from "./right-hand";
 import { rightHandPrompt, rightHandTools } from "./right-hand-prompt";
 import { seatPlace } from "./right-hand-seats";
 import { isRoutineRoomKey, type RoutineBrief, routineAccessOf, routineBriefOf, routineReportOf } from "./routine-brief";
@@ -90,6 +90,7 @@ import { heldHere } from "./run-inbox";
 import { inChannelRun } from "./run-scope";
 import { type AgentRun, replyThreadOf } from "./runs";
 import { SITE_SECRET_TTL_TEXT, secretStillHeld } from "./secrets";
+import { type VoiceStatus, voiceStatusText } from "./speech-settings";
 import { stretchCardOf } from "./stretch";
 import { type SurfaceConfig, surfaceOn } from "./surfaces/config";
 import { surfaceOfRun } from "./surfaces/deliveries";
@@ -483,6 +484,22 @@ export function agentSystemText(system: readonly SystemBlock[]): string {
     .join("\n\n");
 }
 
+/**
+ * `agentSystemText` by its blocks, each a short hash under its heading's words (`your_folders`), else its place
+ * (`block2`): two turns whose texts differ show which block did, with no word of either. A heading that names
+ * anything (a computer, a person) holds a quote and goes by its place.
+ */
+export function agentSystemParts(system: readonly SystemBlock[]): Record<string, string> {
+  const parts: Record<string, string> = {};
+  agentBlocks(system).forEach((b, i) => {
+    const text = withoutRunLines(b.text);
+    const head = /^# ([A-Za-z][A-Za-z ]{0,38})$/.exec(headingOf(text))?.[1];
+    const name = head ? head.trim().toLowerCase().replaceAll(" ", "_") : `block${i}`;
+    parts[name in parts ? `${name}_${i}` : name] = sha256(text).slice(0, 8);
+  });
+  return parts;
+}
+
 /** A block of the agent's as its computer session's system text holds it (`agentSystemText`). */
 export const withoutRunLines = (text: string) => RUN_LINES.reduce((t, line) => t.replace(line, ""), text);
 
@@ -811,6 +828,8 @@ export async function buildRunContext(
     ai?: Omit<AiStatusDeps, "db">;
     /** Each workspace gets its own computer here; absent: people connect theirs. */
     workspaceComputer?: WorkspaceComputer;
+    /** Whether voice becomes text on this server (`voiceStatusText`): said only while it doesn't. */
+    voice?: VoiceStatus | null;
     /**
      * The run thinks through the Model Gateway, so it reads the words of its own thread when that thread is
      * confidential (ADR 0190). Any other run, and every run outside that thread, reads the stub.
@@ -1281,14 +1300,17 @@ export async function buildRunContext(
   const capabilities = await options.capabilities;
   // The right hand's own block (ADR 0137), in place of instructions: read live for the person behind the run.
   const place = isRightHand(agent) ? await seatPlace(db, run) : null;
+  // In a person's own DM, a teammate's message (a reply it was asked for, a follow-up) is still for that person, as
+  // the run is: the same text as their own turns, so the conversation's session goes on.
+  const talksTo = place ? (requester ?? (await dmPersonBehind(db, agent, run))) : null;
   const rightHand =
-    place && requester
+    place && talksTo
       ? await rightHandPrompt(
           { db, ai: options.ai, workspaceComputer: options.workspaceComputer },
           {
             orgId: run.orgId,
             agent,
-            personId: requester,
+            personId: talksTo,
             inDm: channel.kind === "dm",
             computer: place.state,
             oneUser: place.oneUser,
@@ -1360,6 +1382,7 @@ export async function buildRunContext(
         org.context.trim() ? `# About ${personal ? "the person" : "the organization"}\n${org.context.trim()}` : "",
         teamMemory,
         options.workspaceComputer ? workspaceComputerText(options.workspaceComputer) : "",
+        options.voice ? voiceStatusText(options.voice) : "",
       ]
         .filter(Boolean)
         .join("\n\n"),

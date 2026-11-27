@@ -25,6 +25,7 @@ import {
 } from "@agenteschat/client/lib/ai-accounts";
 import { advancedContents, effortOf, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf, setupView } from "@agenteschat/client/lib/computer";
+import { maintenanceNamed, maintenanceOf } from "@agenteschat/client/lib/computer-maintenance";
 import { contextChoices, isContextLimit } from "@agenteschat/client/lib/context-limits";
 import { holdText } from "@agenteschat/client/lib/errors";
 import { firstName, namesText } from "@agenteschat/client/lib/format";
@@ -72,7 +73,15 @@ import { type BrainMachine, homeFor, useWork } from "./work";
  */
 
 /** The CLIs a computer's own sign-in can be, each one row where it can think for the agent. */
-const OWN_KINDS: readonly MachineAccountKind[] = ["claude_code", "codex", "cursor", "grok", "antigravity", "opencode"];
+const OWN_KINDS: readonly MachineAccountKind[] = [
+  "claude_code",
+  "codex",
+  "cursor",
+  "grok",
+  "antigravity",
+  "devin",
+  "opencode",
+];
 
 /** What picking a row does: it is the one in use, it thinks at once, it is taken from another agent, it signs in. */
 export type RowAct = "current" | "use" | "move" | "also" | "again" | "locked";
@@ -162,7 +171,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const cards: AiChoice[] = [
     "claude",
     "chatgpt",
-    ...(["cursor", "zen", "grok", "gemini"] as const).filter(
+    ...(["cursor", "zen", "grok", "gemini", "devin"] as const).filter(
       (c) =>
         savedCard === c ||
         [view.options, ...machines.map((m) => m.options)].flat().some((o) => o.kind === kindOf(c) && o.available),
@@ -175,15 +184,17 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
     if (c === "key" || hold) return null;
     const where = homeOf(c);
     if (!where) return isPlanId(c) ? null : { icon: "block", text: t("agentPage.work.brain.none") };
-    if (away(c))
+    if (away(c)) {
+      const told = maintenanceOf(work.machines.data?.find((m) => m.id === where.machineId));
       return {
         icon: "alert",
-        text: work.machines.data?.find((m) => m.id === where.machineId)?.moving
-          ? t("machines.moving.named", { computer: nameOf(where.name) })
+        text: told?.away
+          ? maintenanceNamed(t, told, nameOf(where.name))
           : edition === "cloud"
             ? t("agentPage.work.brain.offCloud", { computer: nameOf(where.name) })
             : t("agentPage.work.brain.off", { computer: nameOf(where.name) }),
       };
+    }
     if (where.machineId === work.machineId) return null;
     return { icon: "computer", text: t("agentPage.work.brain.moves", { computer: nameOf(where.name) }) };
   };

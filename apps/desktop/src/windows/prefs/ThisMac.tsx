@@ -4,6 +4,7 @@ import {
   iosOf,
   iphoneOverWifi,
   portraitOf,
+  powerChoice,
   reasonText,
   sameAudience,
   statusDetail,
@@ -832,6 +833,20 @@ function PhoneRow({
     }
   };
 
+  const powers = powerChoice(phone);
+  const power = async (on: boolean) => {
+    setStopping(true);
+    try {
+      await siteApi(host, server).devices.powerPhone(orgId, phone.id, on);
+      toast(t(on ? "devices.power.starting" : "devices.power.stopped", { name: phone.name }));
+      await onChanged();
+    } catch (err) {
+      toast(errorText(t, err, i18n.language), "alert");
+    } finally {
+      setStopping(false);
+    }
+  };
+
   const stop = async () => {
     setStopping(true);
     try {
@@ -864,6 +879,15 @@ function PhoneRow({
         s.kind === "in_use" ? (
           <Button size="sm" icon="stop" loading={stopping} onClick={() => void stop()}>
             {t("devices.stop")}
+          </Button>
+        ) : powers ? (
+          <Button
+            size="sm"
+            icon={powers === "start" ? "play" : "power"}
+            loading={stopping}
+            onClick={() => void power(powers === "start")}
+          >
+            {t(powers === "start" ? "devices.power.start" : "devices.power.stop")}
           </Button>
         ) : howTo ? (
           <Button
