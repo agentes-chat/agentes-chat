@@ -1,4 +1,4 @@
-# 0260 — Typed task links
+# 0261 — Typed task links
 
 Tasks can block, relate to, duplicate or clone another task in the same workspace.
 A single directed row supplies labels on both endpoints. Parent and child relations

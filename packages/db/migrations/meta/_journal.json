@@ -2532,8 +2532,15 @@
     {
       "idx": 363,
       "version": "7",
-      "when": 1795802318329,
-      "tag": "0366_issue_links",
+      "when": 1795792227189,
+      "tag": "0366_sidebar_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 364,
+      "version": "7",
+      "when": 1795810001021,
+      "tag": "0367_issue_links",
       "breakpoints": true
     }
   ]

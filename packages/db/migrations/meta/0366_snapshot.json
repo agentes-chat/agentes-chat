@@ -1,5 +1,5 @@
 {
-  "id": "abb153c1-fa29-4f5c-be6b-1aa33af0c13c",
+  "id": "1fee5eb7-f3ff-44d6-9156-134fb8c0ae50",
   "prevId": "0bd62be0-fa5f-4433-b3b4-c4ef826ee68d",
   "version": "7",
   "dialect": "postgresql",
@@ -31819,145 +31819,6 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
-    },
-    "public.issue_links": {
-      "name": "issue_links",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "from_issue_id": {
-          "name": "from_issue_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "to_issue_id": {
-          "name": "to_issue_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "issue_link_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "issue_links_to_issue_id_index": {
-          "name": "issue_links_to_issue_id_index",
-          "columns": [
-            {
-              "expression": "to_issue_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "issue_links_org_id_index": {
-          "name": "issue_links_org_id_index",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "issue_links_org_id_organizations_id_fk": {
-          "name": "issue_links_org_id_organizations_id_fk",
-          "tableFrom": "issue_links",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "issue_links_from_issue_id_issues_id_fk": {
-          "name": "issue_links_from_issue_id_issues_id_fk",
-          "tableFrom": "issue_links",
-          "tableTo": "issues",
-          "columnsFrom": [
-            "from_issue_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "issue_links_to_issue_id_issues_id_fk": {
-          "name": "issue_links_to_issue_id_issues_id_fk",
-          "tableFrom": "issue_links",
-          "tableTo": "issues",
-          "columnsFrom": [
-            "to_issue_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "issue_links_fromIssueId_toIssueId_type_unique": {
-          "name": "issue_links_fromIssueId_toIssueId_type_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "from_issue_id",
-            "to_issue_id",
-            "type"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -32293,16 +32154,6 @@
         "in_review",
         "done",
         "canceled"
-      ]
-    },
-    "public.issue_link_type": {
-      "name": "issue_link_type",
-      "schema": "public",
-      "values": [
-        "blocks",
-        "relates_to",
-        "duplicates",
-        "clones"
       ]
     }
   },
