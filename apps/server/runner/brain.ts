@@ -3425,7 +3425,7 @@ export class BrainManager {
             socketPath: this.opts.mcp.socketPath,
             token,
             cwd,
-            folders: [...new Set([cwd, ctx.folder])],
+            folders: [...new Set([cwd, ctx.folder, ...(ctx.grants ?? [])])],
             // Our tools behind Claude Code's ToolSearch, but those it reaches for on its own (`ALWAYS_LOADED`).
             alwaysLoad: false,
             // A plan turn's prompts are answered on the computer (reads only), never asked of anyone.
