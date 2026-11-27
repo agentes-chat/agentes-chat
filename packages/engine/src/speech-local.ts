@@ -204,20 +204,24 @@ export function createLocalSpeech(deps: LocalSpeechDeps): LocalSpeech {
     }).catch((e: unknown) => {
       throw new DownloadError(e instanceof Error ? e.message : String(e));
     });
-    if (!res.ok || !res.body) throw new DownloadError(`HTTP ${res.status} for ${url.split("/").pop()}`);
-    // A server that ignored the range sends it all again.
-    const append = had > 0 && res.status === 206;
-    if (!append) onBytes(-had);
-    const file = await open(part, append ? "a" : "w");
-    try {
-      for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
-        await file.write(chunk);
-        onBytes(chunk.byteLength);
+    // 416: the `.part` already holds the whole file (stopped before its check), so it is checked as it is.
+    const whole = had > 0 && res.status === 416;
+    if (!whole && (!res.ok || !res.body)) throw new DownloadError(`HTTP ${res.status} for ${url.split("/").pop()}`);
+    if (!whole && res.body) {
+      // A server that ignored the range sends it all again.
+      const append = had > 0 && res.status === 206;
+      if (!append) onBytes(-had);
+      const file = await open(part, append ? "a" : "w");
+      try {
+        for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+          await file.write(chunk);
+          onBytes(chunk.byteLength);
+        }
+      } catch (e) {
+        throw new DownloadError(e instanceof Error ? e.message : String(e));
+      } finally {
+        await file.close();
       }
-    } catch (e) {
-      throw new DownloadError(e instanceof Error ? e.message : String(e));
-    } finally {
-      await file.close();
     }
     if ((await sha256Of(part)) !== sha256) {
       const size = await sizeOf(part);
@@ -387,7 +391,13 @@ export function createLocalSpeech(deps: LocalSpeechDeps): LocalSpeech {
       stop();
       await working;
       status = { state: "off" };
-      if (dir) await rm(dir, { recursive: true, force: true });
+      // Only what was put here: the folder may be a volume's mount point (`/data/speech`), which can't be removed.
+      const target = machine().target;
+      if (dir) {
+        await Promise.all(
+          [models, doneMark, ...(target ? [bin(target)] : [])].map((p) => rm(p, { recursive: true, force: true })),
+        );
+      }
       return view();
     },
     async resume() {
