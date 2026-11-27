@@ -8,9 +8,11 @@ import {
   type InstallableCli,
   isInstallableCli,
 } from "@agenteschat/adapters/machine-protocol";
+import { ConsoleDecoder } from "./console-text";
 import { killTree } from "./exec";
 import { envValue, findOnWindowsPath, isFile, pickedCli } from "./executors";
 import { CLAUDE_INSTALL_PS1_URL, CLAUDE_INSTALL_URL, CODEX_RELEASES } from "./install-script";
+import { lastLine } from "./lines";
 import { mergePathWith } from "./login-path";
 
 /**
@@ -118,6 +120,11 @@ export interface CliInstallerOptions {
   platform?: NodeJS.Platform;
   uid?: number;
   env?: NodeJS.ProcessEnv;
+  /**
+   * System mode: the install is the runner's pinned build where every agent's user runs it (`CliCopies.ensure`), never
+   * the vendor's installer as root, which installs for root alone. Rejects in words for the person.
+   */
+  fetch?: (tool: InstallableCli) => Promise<void>;
   /** Tests: the installer to run in place of the vendor's. */
   installer?: typeof cliInstaller;
   gitBash?: () => string | null;
@@ -144,6 +151,7 @@ export class CliInstaller {
 
   start(tool: InstallableCli): CliInstall {
     if (this.install?.state === "running") return { ...this.install };
+    if (this.opts.fetch) return this.fetched(tool, this.opts.fetch);
     const platform = this.opts.platform ?? process.platform;
     const env = this.opts.env ?? process.env;
     const uid = this.opts.uid ?? process.getuid?.() ?? -1;
@@ -171,12 +179,13 @@ export class CliInstaller {
       return { ...this.install };
     }
     this.child = child;
-    let said = "";
-    const keep = (chunk: Buffer) => {
-      said = `${said}${chunk.toString("utf8")}`.slice(-4000);
+    // Apart: two pipes' chunks come in no set order, and why an installer failed is on its stderr.
+    const said = { out: "", err: "" };
+    const keep = (pipe: keyof typeof said, decoder: ConsoleDecoder) => (chunk: Buffer) => {
+      said[pipe] = `${said[pipe]}${decoder.write(chunk)}`.slice(-4000);
     };
-    child.stdout?.on("data", keep);
-    child.stderr?.on("data", keep);
+    child.stdout?.on("data", keep("out", new ConsoleDecoder()));
+    child.stderr?.on("data", keep("err", new ConsoleDecoder()));
     this.timer = setTimeout(() => {
       if (this.child !== child) return;
       this.install = { tool, state: "failed", message: "It took too long" };
@@ -188,15 +197,7 @@ export class CliInstaller {
       if (this.child !== child) return;
       this.end();
       if (code !== 0) {
-        const last =
-          said
-            // biome-ignore lint/suspicious/noControlCharactersInRegex: the installers' colors
-            .replace(/\u001b\[[0-9;]*[A-Za-z]/g, "")
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter(Boolean)
-            .at(-1)
-            ?.slice(0, CLI_ERROR_MAX) ?? "";
+        const last = (lastLine(said.err) ?? lastLine(said.out) ?? "").slice(0, CLI_ERROR_MAX);
         this.install = { tool, state: "failed", message: last || `exit code ${code}` };
         this.opts.log(`cli install: ${tool} failed: ${this.install.message}`);
         return;
@@ -219,7 +220,7 @@ export class CliInstaller {
     };
     const events = child as unknown as EventEmitter;
     events.on("error", (err: Error) => {
-      said = err.message;
+      said.err = err.message;
       finish(null);
     });
     events.on("close", finish);
@@ -227,13 +228,35 @@ export class CliInstaller {
     return { ...this.install };
   }
 
+  private fetched(tool: InstallableCli, fetch: (tool: InstallableCli) => Promise<void>): CliInstall {
+    const ran: CliInstall = { tool, state: "running" };
+    this.install = ran;
+    this.opts.log(`cli install: ${tool} started (for the agents)`);
+    void fetch(tool)
+      .then(() => this.opts.onDone(tool))
+      .then(
+        (found): CliInstall => (found ? { tool, state: "done" } : { tool, state: "failed", cause: "still_missing" }),
+        (err: unknown): CliInstall => ({
+          tool,
+          state: "failed",
+          message: (err instanceof Error ? err.message : String(err)).slice(0, CLI_ERROR_MAX),
+        }),
+      )
+      .then((end) => {
+        if (this.install !== ran) return;
+        this.install = end;
+        this.opts.log(`cli install: ${tool} ${end.state}`);
+      });
+    return { ...ran };
+  }
+
   cancel(): CliInstall | null {
     const child = this.child;
-    if (child && this.install?.state === "running") {
-      this.install = { ...this.install, state: "canceled" };
-      this.end();
-      killTree(child, "SIGTERM");
-    }
+    if (this.install?.state !== "running") return this.state();
+    // A fetch for the agents goes on and is kept for the next ask; only its end is no longer told here.
+    this.install = { ...this.install, state: "canceled" };
+    this.end();
+    if (child) killTree(child, "SIGTERM");
     return this.state();
   }
 

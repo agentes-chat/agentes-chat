@@ -56,11 +56,12 @@ same shape.
 - **Settings:** six sections in one list (Your account, About you, AI and usage, Connectors, Vault, Computers) and
   the rest under Advanced, collapsed. AI and usage also holds the plan and billing. People joins the list once others are members. Every section still opens by its
   address, from ⌘K and from the right hand's cards.
-- **An agent's page:** its bar is Overview, Instructions, Memory, "Can use" (its apps and mailboxes), Settings (name,
-  look and budget) and Advanced, with no "More". Advanced holds the rest, whole: Activity, Files and Usage a click away,
-  then its owner and who it reports to, who may talk to it, its brakes, conversations, computer, archive and delete,
-  and its built-in areas, databases, rules and skills. Every tab and section keeps its address: one that points into
-  Advanced opens it there.
+- **An agent's page:** its bar is Overview, Instructions, Skills, Memory, "Can use" (its apps and mailboxes), Settings
+  (name, look and budget) and Advanced, with no "More". Advanced holds the rest, whole: Activity, Files and Usage a
+  click away, then its owner and who it reports to, who may talk to it, its brakes, conversations, computer, archive
+  and delete, and its built-in areas, databases and rules. Skills is a tab of its own since Skills became a page of its
+  own (ADR 0020, amendment of 2026-11-25): what an agent knows is something one person looks for, not a setting to dig
+  for. Every tab and section keeps its address: one that points into Advanced opens it there.
 - **On the phone:** the same, from the same shared numbers and helpers: the first question's two cards side by side
   with the same drawings (`@agenteschat/client/lib/purpose-scene`); an agent's brakes, who it reports to, its rules
   for good, its repositories and deleting it on an Advanced screen of its own, a row away from its edit screen and its
@@ -139,10 +140,10 @@ seus agentes.", before the four rows above.
 
 ## Amendment (2026-11-26): the personal onboarding asks its AI (§2)
 
-ADR 0162 (amended 2026-11-26), ADR 0253: after "For me", the personal onboarding no longer asks about the person or
+ADR 0162 (amended 2026-11-26), ADR 0256: after "For me", the personal onboarding no longer asks about the person or
 brings agents first. It asks how to start, in the person's own words: their AI (Claude, ChatGPT, Gemini or another)
 finds the tasks that take most of their time, at work or outside it, and proposes an agent for each, or they start
 from scratch with the right hand. A picked agent's first week follows, then the plan ("Hire <name>"), the team's photo
 once paid ("Welcome to your team"), and connecting an AI; there is still no name and no people step. Its count is four
 steps (how to start, asking its AI with the pick, the week, the plan), two from scratch. What the AI said about the
-person becomes the workspace's context when it has none, what the person wants help with (ADR 0253).
+person becomes the workspace's context when it has none, what the person wants help with (ADR 0256).

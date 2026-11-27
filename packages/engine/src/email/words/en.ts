@@ -70,7 +70,7 @@ export const en = {
     /** The last place of a list cut short: how many more it holds (always 2 or more). */
     more: (n: number) => `${n} more`,
     what: "agentes.chat is where people and AI agents work together.",
-    /** A team's invitation only: what joining starts with (the member's own onboarding, ADR 0253). */
+    /** A team's invitation only: what joining starts with (the member's own onboarding, ADR 0256). */
     arrive:
       "When you join, you create your own agent: your AI finds the task that takes most of your time and proposes an agent for it.",
     noteFrom: (inviter: string, note: string): Text => [{ b: inviter ? `${inviter}: ` : "Their note: " }, `“${note}”`],
@@ -632,7 +632,7 @@ export const en = {
       why: () => "You got this email because this workspace on agentes.chat is yours. We send two of these, then stop.",
     },
     /**
-     * The workspace's first agent was picked from what the person's own AI proposed (ADR 0253): the two reminders
+     * The workspace's first agent was picked from what the person's own AI proposed (ADR 0256): the two reminders
      * speak of that agent and its first day instead of the counts. `first`: an hour after, `later`: on the third day.
      * `ai`: the AI that proposed it ("Claude"), null when unknown. `feminine`: the agent's name reads as feminine, for
      * the languages whose words agree with it ("a Ada", "o Caio"). `role`: inside a sentence, lower case unless it

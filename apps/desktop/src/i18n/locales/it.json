@@ -464,7 +464,7 @@
     "internet": "Gli agenti usano la connessione internet di questo computer",
     "internetOn": "I siti che gli agenti aprono vedono la tua posizione",
     "internetOff": "Disattivato: gli agenti usano la connessione abituale",
-    "internetHint": "Gli agenti del workspace aprono i siti tramite la connessione di questo computer. Solo siti web, fino a 5 GB al giorno, e mai nulla della tua rete. Finché questo computer è offline, usano la connessione abituale.",
+    "internetHint": "Gli agenti del workspace aprono i siti tramite la connessione di questo computer. Solo siti web e mai nulla della tua rete. Finché questo computer è offline, usano la connessione abituale.",
     "shareOff": "Solo tu per ora",
     "shareHint": "Gli agenti di tutti in {{org}} possono eseguirci attività, con il tuo utente.",
     "addFolders": "Aggiungi cartelle",
@@ -510,6 +510,9 @@
     "grokDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Gemini.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Devin.",
+    "devinWindows": "Devin non funziona ancora su Windows: qui la sua CLI non riesce a tenere separato l'accesso di ogni account. Gli agenti pensano con Devin su un computer Mac o Linux.",
     "found": "Trovato",
     "notFound": "Non trovato",
     "loggedOut": "Accesso non eseguito",
@@ -933,5 +936,21 @@
     "bringAllToFront": "Porta tutto in primo piano",
     "help": "Aiuto",
     "downloaded": "Download completato"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat ha bisogno di {{permission}}",
+    "done": "L’ho consentito",
+    "later": "Non ora",
+    "trayTitle": "In attesa di {{permission}}",
+    "why": {
+      "app_management": "Agli agenti serve per modificare le app su questo {{device}}.",
+      "screen": "Agli agenti serve per fare screenshot di questo {{device}}.",
+      "accessibility": "Agli agenti serve per cliccare e scrivere nelle app di questo {{device}}.",
+      "disk": "Agli agenti serve per aprire i tuoi file senza che macOS chieda per ogni cartella.",
+      "network": "Agli agenti serve per raggiungere telefoni e dispositivi sulla tua rete.",
+      "camera": "Agli agenti serve per usare la fotocamera di questo {{device}}.",
+      "microphone": "Agli agenti serve per usare il microfono di questo {{device}}.",
+      "automation": "Agli agenti serve per controllare altre app su questo {{device}}."
+    }
   }
 }

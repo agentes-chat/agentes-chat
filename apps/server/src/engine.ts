@@ -97,6 +97,7 @@ import {
   createWithdrawRequestToolSource,
   createWorkspaceToolSource,
   createWorkToolSource,
+  DevinBrain,
   deliverToApp,
   deviceWaitHooks,
   type EmailArt,
@@ -741,7 +742,7 @@ export function buildEngine(o: EngineOptions) {
         });
   // Before a chat turn on a connected machine: the agent's checkouts updated through the git proxy, the turn
   // started in the repository it is about, and the "# Your code" block (ADR 0024 addendum).
-  const prepareCode = (turn: Parameters<typeof prepareAgentCode>[1], signal: AbortSignal) => {
+  const prepareCode = (turn: Parameters<typeof prepareAgentCode>[1]) => {
     const app = githubApp.current();
     return prepareAgentCode(
       {
@@ -751,9 +752,6 @@ export function buildEngine(o: EngineOptions) {
         github: app ? { app, http: githubAppAccess.http } : null,
       },
       turn,
-      {
-        signal,
-      },
     );
   };
   // A background run (a routine's) keeps no computer process alive after its turn.
@@ -807,6 +805,15 @@ export function buildEngine(o: EngineOptions) {
     // ADR 0143: Google's Antigravity CLI, one process per turn like Grok's.
     antigravity: (_agent, _run, setup) =>
       new AntigravityBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
+    // ADR 0253: Cognition's Devin CLI over ACP, one process per turn like OpenCode's.
+    devin: (_agent, _run, setup) =>
+      new DevinBrain({
         link: brainLink,
         mcp: async () => ({ token: setup.mcpToken() }),
         agent: agentScope,

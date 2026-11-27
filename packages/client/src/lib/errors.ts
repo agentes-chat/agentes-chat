@@ -87,7 +87,7 @@ const KNOWN = {
   "team_proposal.decided": "errors.agentProposal.decided",
   "team_proposal.expired": "errors.agentProposal.expired",
   "team_proposal.undo_expired": "errors.teamProposal.undoExpired",
-  // The first agents a person's own AI proposed (ADR 0253).
+  // The first agents a person's own AI proposed (ADR 0256).
   create_agents_required: "errors.firstAgents.needsAdmin",
   "first_agents.invalid": "errors.firstAgents.invalid",
   "first_agents.picking": "errors.firstAgents.picking",
@@ -385,6 +385,7 @@ const KNOWN = {
   "skill.no_skill_md": "errors.skill.noSkillMd",
   "skill.too_many_skills": "errors.skill.tooManySkills",
   "skill.zip_too_many_skills": "errors.skill.zipTooManySkills",
+  "skill.zip_too_big": "errors.skill.zipTooBig",
   "skill.invalid_name": "errors.skill.invalidName",
   "skill.invalid_description": "errors.skill.invalidDescription",
   "skill.too_large": "errors.skill.tooLarge",
@@ -608,6 +609,11 @@ const KNOWN = {
   "wiki.import_too_many": "errors.said.tooMany",
   "database.host_required": "errors.said.fillIn",
   "device.name_required": "errors.said.fillIn",
+  "device.power_gone": "devices.power.gone",
+  "device.power_busy": "devices.power.busy",
+  "device.power_start_failed": "devices.power.startFailed",
+  "device.power_stop_failed": "devices.power.stopFailed",
+  "device.not_simulator": "devices.power.notSimulator",
   "database.password_required": "errors.said.fillIn",
   "database.user_required": "errors.said.fillIn",
   "endpoint.no_models": "errors.said.fillIn",
@@ -939,6 +945,10 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
     return t("errors.mail.ownerOnlyUnknown", error.params);
   // Everyone else in the workspaces that keep the account is an outside collaborator, who can't own one (ADR 0191).
   if (error.code === "sole_owner" && error.params?.onlyOutside === true) return t("errors.said.soleOwnerOutside");
+  if (error.code === "device.power_tool_missing")
+    return t(error.params?.platform === "ios" ? "devices.power.toolMissingIos" : "devices.power.toolMissingAndroid", {
+      computer: error.params?.computer ?? "",
+    });
   if (error.code === "browser_profile.unavailable")
     return t("browser.profiles.notOpened", { machine: error.params?.machineName ?? "" });
   // `provider`: the provider whose key is missing, when the server could name it.

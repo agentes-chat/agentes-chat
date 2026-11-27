@@ -1762,14 +1762,33 @@ test.if(posix)(
   },
 );
 
+test("parser: the first token is when the API's first message started, the first answer its first whole block", () => {
+  let now = 1_000;
+  const p = new ClaudeStreamParser(() => now);
+  p.beginTurn();
+  p.push(
+    line({ type: "stream_event", parent_tool_use_id: null, event: { type: "message_start", message: { id: "m1" } } }),
+  );
+  now += 50;
+  const block = {
+    type: "assistant",
+    message: { id: "m1", content: [{ type: "text", text: "hi" }] },
+    parent_tool_use_id: null,
+  };
+  p.push(line(block));
+  now += 50;
+  p.push(line(block));
+  expect(p.stats).toMatchObject({ firstTokenAt: 1_000, firstAssistantAt: 1_050 });
+});
+
 test.if(posix)("a turn's timings keep its API retries, its thinking and when the model first answered", async () => {
   const { turn } = setup();
   const r = await turn(1, "RETRYWAIT THOUGHT");
   expect(r.final).toMatchObject({ type: "done" });
   const t = r.final.type === "done" ? r.final.timings : undefined;
   expect(t).toMatchObject({ warm: false, retries: 1, retryDelayMs: 800, thinkingBlocks: 2, thinkingChars: 10 });
-  // The API's first message came 50 ms before its first whole block.
-  expect((t?.firstAssistantMs ?? 0) - (t?.firstTokenMs ?? 0)).toBeGreaterThanOrEqual(40);
+  // How far apart the two lines are read is the machine's pace: the parser's test above holds the clock.
+  expect(t?.firstAssistantMs).toBeGreaterThanOrEqual(t?.firstTokenMs ?? Number.NaN);
   // The next turn on the process counts its own.
   const next = await turn(2, "second");
   expect(next.final).toMatchObject({
@@ -3444,6 +3463,25 @@ test.if(posix)(
     expect(c.final).toMatchObject({ type: "done" });
     expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
     expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
+  },
+);
+
+test.if(posix)(
+  "a warm start that came to nothing says why on its turn: no launch to start it with, another launch than the turn's",
+  async () => {
+    const { m, ws, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number, model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "", model }, ctx);
+    const cold = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    // Before this runner ran a turn of the agent's: no system text to start it with.
+    expect(await warm(1, "sonnet")).toEqual({ open: false, started: false });
+    const a = await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(cold(a.final)).toMatchObject({ warm: false, cold: "no_launch" });
+    // Warmed for sonnet; the turn came with opus, whose `--fallback-model` only a start sets.
+    expect(await warm(2, "sonnet")).toEqual({ open: true, started: true });
+    const b = await turn(2, "there", { system: "S1", model: "opus", session: { id: SESSION(2), resume: false } });
+    expect(cold(b.final)).toMatchObject({ warm: false, cold: "warm_settings" });
   },
 );
 

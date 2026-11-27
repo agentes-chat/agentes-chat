@@ -96,7 +96,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // `computerSetup.`) and waits for its first plan (ADR 0079).
     "onboarding.computer.payment.",
     // Hiring the first agent with the plan, and the team's photo back from Checkout: only where the workspace waits
-    // for its first plan, so its computer is the Cloud's, always on (ADR 0253).
+    // for its first plan, so its computer is the Cloud's, always on (ADR 0256).
     "onboarding.hire.lead",
     "onboarding.hire.leadNoRole",
     "onboarding.hire.leadMany",

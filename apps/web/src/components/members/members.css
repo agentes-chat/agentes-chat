@@ -225,7 +225,7 @@ html:not([data-pointer]) .members-side__row.profile-trigger:focus-visible {
 .members-sheet {
   position: fixed;
   z-index: 40;
-  top: 0;
+  top: var(--window-top);
   right: 0;
   bottom: 0;
   width: 86%;

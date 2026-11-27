@@ -460,7 +460,7 @@
     "internet": "Agents gebruiken het internet van deze computer",
     "internetOn": "Websites die de agents openen, zien jouw locatie",
     "internetOff": "Uit: agents gebruiken hun gewone verbinding",
-    "internetHint": "De agents van de workspace openen websites via de verbinding van deze computer. Alleen websites, tot 5 GB per dag, en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken ze hun gewone verbinding.",
+    "internetHint": "De agents van de workspace openen websites via de verbinding van deze computer. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken ze hun gewone verbinding.",
     "shareOff": "Voorlopig alleen jij",
     "shareHint": "De agents van iedereen in {{org}} kunnen er taken op draaien, als jouw gebruiker.",
     "addFolders": "Mappen toevoegen",
@@ -506,6 +506,9 @@
     "grokDesc": "Schrijft en wijzigt code in de toegestane mappen, met je Grok-account.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Schrijft en wijzigt code in de toegestane mappen, met je Gemini-account.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Schrijft en wijzigt code in de toegestane mappen, met je Devin-account.",
+    "devinWindows": "Devin werkt nog niet op Windows: hier kan de CLI de aanmelding van elk account niet gescheiden houden. Agenten denken met Devin op een Mac- of Linux-computer.",
     "found": "Gevonden",
     "notFound": "Niet gevonden",
     "loggedOut": "Niet ingelogd",
@@ -928,5 +931,21 @@
     "bringAllToFront": "Alles naar voorgrond",
     "help": "Help",
     "downloaded": "Download voltooid"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat heeft {{permission}} nodig",
+    "done": "Ik heb het toegestaan",
+    "later": "Niet nu",
+    "trayTitle": "Wacht op {{permission}}",
+    "why": {
+      "app_management": "Agents hebben dit nodig om apps op deze {{device}} te wijzigen.",
+      "screen": "Agents hebben dit nodig om schermafbeeldingen van deze {{device}} te maken.",
+      "accessibility": "Agents hebben dit nodig om in apps op deze {{device}} te klikken en te typen.",
+      "disk": "Agents hebben dit nodig om je bestanden te openen zonder dat macOS per map vraagt.",
+      "network": "Agents hebben dit nodig om telefoons en apparaten op je netwerk te bereiken.",
+      "camera": "Agents hebben dit nodig om de camera van deze {{device}} te gebruiken.",
+      "microphone": "Agents hebben dit nodig om de microfoon van deze {{device}} te gebruiken.",
+      "automation": "Agents hebben dit nodig om andere apps op deze {{device}} te besturen."
+    }
   }
 }

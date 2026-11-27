@@ -48,6 +48,15 @@ html[data-desktop="windows"],
 html[data-desktop="linux"] {
   --titlebar-lights: 12px;
 }
+/* The kit's `--window-top` (layers.css): on a Mac whose window shows its buttons, dialogs, sheets and full-window
+   overlays start under the bar they are drawn over, never with their head behind them. An element the engine put in
+   full screen has the screen to itself. */
+html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) {
+  --window-top: var(--titlebar-h);
+}
+:fullscreen {
+  --window-top: 0px;
+}
 
 .titlebar {
   position: relative;

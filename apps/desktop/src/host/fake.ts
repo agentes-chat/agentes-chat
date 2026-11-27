@@ -22,6 +22,8 @@
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
  * does). An update downloads in about 1.5 s with its progress, and Cancel drops it.
  */
+
+import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import { CLOUD_SERVER, isLoopback, readInstance, type ServerCheck } from "@agenteschat/client/lib/server";
 import type { Candidate } from "../control/first-run";
 import {
@@ -95,7 +97,7 @@ export interface FakeHost extends Host {
     disk: boolean;
     networkAsks: number;
     setup: SetupState | null;
-    panes: (MacPermission | "microphone")[];
+    panes: (MacPermission | OsPermission)[];
   };
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;

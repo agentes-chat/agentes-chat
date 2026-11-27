@@ -994,7 +994,7 @@ export const en = {
       atlas: "Hey, Atlas here. I look after the computers.",
     },
     /**
-     * The onboarding's steps with Lodi (ADR 0162, ADR 0253): the phone's steps and Lodi's line on each, the person's
+     * The onboarding's steps with Lodi (ADR 0162, ADR 0256): the phone's steps and Lodi's line on each, the person's
      * area, the plan, the AI step and the people step. `<key>Personal`: a personal workspace's words (ADR 0159).
      */
     flow: {
@@ -3669,6 +3669,11 @@ export const en = {
       update_workspace: "Change the workspace <b>{{name}}</b>",
       set_action_check_on: "Turn on the check of what the team already did",
       set_action_check_off: "Turn off the check of what the team already did",
+      /** `level`: the choice's title, as on Settings › Approvals ("Never ask"). */
+      set_approvals_level: "Set the workspace's approvals to <b>{{level}}</b>",
+      set_approvals_level_every: "Set every agent's approvals to <b>{{level}}</b>, their own choices too",
+      set_agent_approvals_level: "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>",
+      set_agent_approvals_level_workspace: "Make <b>{{agent}}</b> follow the workspace's approvals",
       /** `emails`: every address on the card, in a list ("ana@example.com, bia@example.com"). */
       invite_people: "Invite <b>{{emails}}</b> to the workspace.",
       /** Under it: the roles every address gets ("Sales and Support"). `count`: how many roles. */
@@ -3879,6 +3884,7 @@ export const en = {
       cursor: "Cursor isn't signed in on this computer. Connect a Cursor account on {{name}}'s\u00a0page.",
       grok: "Grok isn't signed in on this computer. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s\u00a0page.",
+      devin: "Devin isn't signed in on this computer. Connect a Devin account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
     /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
@@ -3888,6 +3894,7 @@ export const en = {
       cursor: "Cursor isn't signed in on {{computer}}. Connect a Cursor account on {{name}}'s\u00a0page.",
       grok: "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s\u00a0page.",
+      devin: "Devin isn't signed in on {{computer}}. Connect a Devin account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
     card: {
@@ -3967,6 +3974,7 @@ export const en = {
       cursor: "Connect your Cursor plan",
       grok: "Connect your Grok plan",
       gemini: "Connect your Gemini plan",
+      devin: "Connect your Devin plan",
       zen: "Connect OpenCode",
       api_key: "Add an API key",
     },
@@ -4147,6 +4155,8 @@ export const en = {
           "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use a Gemini API key or Gemini Enterprise.",
         windowsOne: "On Windows, a computer uses one Gemini account at a time.",
       },
+      /** A Devin plan (ADR 0253): its own sign-in, the plan its account has. */
+      devin: { title: "Your Devin plan", tiers: "Free, Pro, Max or Teams" },
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
       zai: { tiers: "Lite, Pro or Max" },
@@ -4256,6 +4266,7 @@ export const en = {
       cursor: "Cursor signed in as {{email}}, not {{account}}. Sign out on Cursor's page and try again.",
       grok: "Grok signed in as {{email}}, not {{account}}. Sign out on Grok's page and try again.",
       antigravity: "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again.",
+      devin: "Devin signed in as {{email}}, not {{account}}. Sign out on Devin's page and try again.",
       opencode: "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key.",
     },
     useAnyway: "Use {{email}}",
@@ -4675,6 +4686,10 @@ export const en = {
       changed_update_workspace: "Changed the workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Turned on the check of what the team already did",
       changed_set_action_check_off: "Turned off the check of what the team already did",
+      changed_set_approvals_level: "Set the workspace's approvals to <b>{{level}}</b>",
+      changed_set_approvals_level_every: "Set every agent's approvals to <b>{{level}}</b>",
+      changed_set_agent_approvals_level: "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>",
+      changed_set_agent_approvals_level_workspace: "<b>{{agent}}</b> follows the workspace's approvals again",
       /** `invited`: the addresses that got an invitation, in a list. */
       changed_invite_people: "Invited <b>{{invited}}</b> to the workspace",
       changed_remove_ai_key: "Deleted the API key <b>{{name}}</b>",
@@ -6701,6 +6716,7 @@ export const en = {
             cursor: "Add a Cursor account",
             grok: "Add a Grok account",
             antigravity: "Add a Gemini account",
+            devin: "Add a Devin account",
             opencode: "Add an OpenCode key",
           },
           stepOne: {
@@ -6708,6 +6724,7 @@ export const en = {
             codex: "The account with your plan",
             cursor: "The account with your plan",
             grok: "The account with your plan",
+            devin: "The account with your plan",
             antigravity: "The Google account with your plan",
             antigravityEnterprise: "Your Gemini Enterprise account",
           },
@@ -6719,6 +6736,7 @@ export const en = {
             cursor: "Sign in with Cursor",
             grok: "Sign in with Grok",
             antigravity: "Sign in with Google",
+            devin: "Sign in with Devin",
           },
           /** OpenCode thinks with its free models without any key: the key is for its paid models. */
           opencodeFree: "No key needed for OpenCode's free models. A key from OpenCode's console adds its paid ones.",
@@ -6738,6 +6756,10 @@ export const en = {
           /** The Gemini sign-in's second step: Google's page shows a code and takes it out of its own address. */
           stepTwoGoogle: "Paste the code Google shows",
           codeLabelGoogle: "Google's code",
+          /** The Devin sign-in's second step: Devin's page shows a code to paste back (ADR 0253). */
+          stepTwoDevin: "Paste the code Devin shows",
+          codeHintDevin: "Paste the code Devin's page shows, not the page's address.",
+          codeLabelDevin: "Devin's code",
           codeHintGoogle: "Paste the code Google's page shows, not the page's address.",
           notCodeGoogle: "That's an address with no code in it. Paste the code Google's page shows.",
           send: "Send to {{computer}}",
@@ -6783,6 +6805,8 @@ export const en = {
             grok: "Grok signed in as {{account}}, an account you already connected. To use another, sign out on Grok's page and try again.",
             antigravity:
               "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again.",
+            devin:
+              "Devin signed in as {{account}}, an account you already connected. To use another, sign out on Devin's page and try again.",
             opencode: "That OpenCode key is already connected as {{account}}.",
           },
           startFailed: "No answer from {{computer}}. Try again in a moment.",
@@ -11832,6 +11856,7 @@ export const en = {
       cursor: "Cursor",
       grok: "Grok",
       antigravity: "Gemini",
+      devin: "Devin",
       opencode: "OpenCode",
       needs: {
         keys: "Update agentes on the computer to use a plan's key",
@@ -13346,6 +13371,7 @@ export const en = {
       cursor: "{{model}} on the Cursor plan",
       grok: "{{model}} on the Grok plan",
       gemini: "{{model}} on the Gemini plan",
+      devin: "{{model}} on the Devin plan",
       zen: "{{model}} on OpenCode",
       coding: "{{model}} on {{plan}}",
       claudeOf: "{{model}} on {{owner}}'s Claude plan",
@@ -13353,6 +13379,7 @@ export const en = {
       cursorOf: "{{model}} on {{owner}}'s Cursor plan",
       grokOf: "{{model}} on {{owner}}'s Grok plan",
       geminiOf: "{{model}} on {{owner}}'s Gemini plan",
+      devinOf: "{{model}} on {{owner}}'s Devin plan",
       zenOf: "{{model}} on {{owner}}'s OpenCode",
       codingOf: "{{model}} on {{owner}}'s {{plan}}",
       claudeAuto: "Claude plan",
@@ -13360,6 +13387,7 @@ export const en = {
       cursorAuto: "Cursor plan",
       grokAuto: "Grok plan",
       geminiAuto: "Gemini plan",
+      devinAuto: "Devin plan",
       zenAuto: "OpenCode",
       codingAuto: "{{plan}}",
       claudeAutoOf: "{{owner}}'s Claude plan",
@@ -13367,6 +13395,7 @@ export const en = {
       cursorAutoOf: "{{owner}}'s Cursor plan",
       grokAutoOf: "{{owner}}'s Grok plan",
       geminiAutoOf: "{{owner}}'s Gemini plan",
+      devinAutoOf: "{{owner}}'s Devin plan",
       zenAutoOf: "{{owner}}'s OpenCode",
       codingAutoOf: "{{owner}}'s {{plan}}",
       on: "{{line}} on {{computer}}",
@@ -13381,6 +13410,7 @@ export const en = {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
     },
     foot: {
       api: "Through the API",
@@ -13393,6 +13423,7 @@ export const en = {
     cursorText: "Uses the Cursor plan of whoever connected the computer.",
     grokText: "Uses the Grok plan of whoever connected the computer.",
     antigravityText: "Uses the Gemini plan of whoever connected the computer.",
+    devinText: "Uses the Devin plan of whoever connected the computer.",
     opencodeText: "OpenCode's free models, or the OpenCode key of whoever connected the computer.",
     /** Cursor's models (ADR 0114), where its CLI said which the plan includes. */
     cursorModel: { inPlan: "In your Cursor plan", apiPrice: "Billed by Cursor at API prices" },
@@ -13414,6 +13445,9 @@ export const en = {
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       /** Its vendor makes no build of this program for that computer's system. */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
+      /** Devin on a Windows computer (its pin has no Windows build): why, and the way out. */
+      systemDevin:
+        "{{computer}} runs Windows, where Devin doesn't run yet: there its CLI can't keep each account's sign-in apart. Use Devin on a Mac or Linux computer, or choose another AI.",
       /** Codex on a Windows computer where neither MXC nor Codex's own sandbox could start. */
       windows_sandbox:
         "{{computer}}'s Windows can't isolate {{program}}'s commands. Choose Claude or an API key instead, or update that computer to Windows\u00a011\u00a024H2 or newer, with its latest updates.",
@@ -13477,6 +13511,7 @@ export const en = {
       cursor: "Cursor · {{model}}",
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
+      devin: "Devin CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
     },
     mission: {
@@ -14028,6 +14063,25 @@ export const en = {
     s3: "Your own storage",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 or another compatible with S3.",
     current: "In use",
+    /** The workspace's own Cloud computer's disk, under the files' storage: a bar by what takes it, with a legend. */
+    computer: {
+      title: "Workspace computer",
+      used: "{{used}} of {{size}} in use",
+      bar: "The workspace computer's disk",
+      measuring: "Measuring what takes the space.",
+      part: {
+        projects: "Projects and code",
+        apps: "Apps and tools",
+        agents: "Agents' files",
+        caches: "Caches and temporary files",
+        system: "System",
+        other: "Other",
+        free: "Free",
+      },
+      full: "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore.",
+      /** The message an agent gets, already in its DM's composer, from the button under `full`. */
+      ask: "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room.",
+    },
     usage: {
       files: "{{size}}\u00a0of\u00a0files",
       none: "No\u00a0files",
@@ -16842,7 +16896,7 @@ export const en = {
       undoExpired:
         "It is more than a day since this team was created, so it can't be undone here. Archive its agents on their pages.",
     },
-    /** The first agents a person's own AI proposed (ADR 0253). */
+    /** The first agents a person's own AI proposed (ADR 0256). */
     firstAgents: {
       needsAdmin: "Creating agents in this workspace needs an admin. Ask one to create it for you.",
       invalid: "This answer isn't in the format we asked for. Copy the request again and paste your AI's whole answer.",
@@ -17098,6 +17152,7 @@ export const en = {
       noSkillMd: "No SKILL.md in {{path}} or the folders inside it.",
       tooManySkills: "This link holds more than {{max}} skills. Link one of its folders.",
       zipTooManySkills: "This .zip holds more than {{max}} skills. Send them in parts.",
+      zipTooBig: "This .zip is larger than {{maxMb}} MB, the most a skill install takes.",
       invalidName: "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters.",
       invalidDescription: "The description must have 1 to {{max}} characters.",
       tooLarge: "This skill has {{size}} MB of text and scripts, and the limit is {{max}} MB.",
@@ -17272,6 +17327,7 @@ export const en = {
         opencode: "OpenCode",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         commands: "commands",
         browser: "the browser",
         desktop: "the screen",
@@ -17446,6 +17502,7 @@ export const en = {
         cursor: "Cursor",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         opencode: "OpenCode",
         commands: "Commands",
         browser: "Browser",
@@ -17456,6 +17513,7 @@ export const en = {
         cursor: "Like Claude Code, with a Cursor account. Only in the allowed folders.",
         grok: "Like Claude Code, with a Grok account. Only in the allowed folders.",
         antigravity: "Like Claude Code, with a Gemini account. Only in the allowed folders.",
+        devin: "Like Claude Code, with a Devin account. Only in the allowed folders.",
         opencode: "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders.",
         commands: "Runs Terminal commands, like tests and builds.",
       },
@@ -17484,6 +17542,22 @@ export const en = {
   },
   /** Bring your own devices: Settings › Devices, a device's page, the connect flows, the chat's waiting card, notices. */
   devices: {
+    permission: {
+      title: "Waiting for {{permission}} on {{computer}}",
+      next: "Allow it in the agentes.chat app there.",
+      askedBy: "Asked by {{agent}} to run {{trigger}}",
+      asked: "Needed to run {{trigger}}",
+      names: {
+        app_management: "App Management",
+        screen: "Screen Recording",
+        accessibility: "Accessibility",
+        disk: "Full Disk Access",
+        network: "Local Network",
+        camera: "Camera",
+        microphone: "Microphone",
+        automation: "Automation",
+      },
+    },
     leadCloud: "Where your agents work: the workspace computer and the devices people connect.",
     lead: "Where your agents work: the computers and phones people connect.",
     connect: "Connect a device",
@@ -17524,6 +17598,22 @@ export const en = {
     forgotten: "{{name}} forgotten.",
     stop: "Stop",
     stopped: "Stopped. {{name}} is free.",
+    /** Ligar / Desligar on an iOS simulator or an Android emulator, which its computer starts or shuts down. */
+    power: {
+      start: "Start",
+      stop: "Shut down",
+      starting: "{{name}} is starting. It's ready in a moment.",
+      stopped: "{{name}} is shut down.",
+      toolMissingIos: "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+      toolMissingAndroid:
+        "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer.",
+      gone: "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there.",
+      busy: "{{name}} is in use right now. Stop what uses it first, or try again when it's free.",
+      /** `why`: the computer's own words, as its tools said them (in English). */
+      startFailed: "{{name}} didn't start. {{computer}} said: {{why}}",
+      stopFailed: "{{name}} didn't shut down. {{computer}} said: {{why}}",
+      notSimulator: "Only a simulator or an emulator starts and shuts down from here.",
+    },
     showMe: "Show me how",
     notFound: "This device isn't here anymore",
     notFoundText: "It was removed, or this link is wrong.",
@@ -17544,23 +17634,34 @@ export const en = {
     /** One switch per computer (`machines.spill_own`, ADR 0233): its owner's to turn on. */
     spillOwn: "Help when the team's computer is full or away",
     spillOwnHint:
-      "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in.",
+      "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer.",
     /** The same switch on a computer marked the workspace's: anyone's agents, on their owner's sign-in there. */
     spillTeamHint:
-      "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer.",
+      "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer.",
     /** Under the switch while an admin turned devices' help off for the whole workspace. */
     spillWorkspaceOff: "An admin turned this off for the workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Use this computer for my agents' work",
-    spillFirstHint:
-      "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away.",
+    /**
+     * Its owner's one choice for how the computer helps (`spillUseOf`): never, only as backup (`machines.spill_own`) or
+     * first for their own agents' work (`machines.spill_first`).
+     */
+    helpUse: "How it helps your agents",
+    helpUses: {
+      off: "Doesn't help",
+      help: "Only as backup",
+      first: "First for my agents",
+    },
+    helpUseHint:
+      "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer.",
+    /** The same choice on a computer marked the workspace's: as backup it takes anyone's agents. */
+    helpUseTeamHint:
+      "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free.",
     /** Settings › Devices, admins: the workspace's switch over every computer's own (`devicesHelp`). */
     helpWorkspace: "Computers help when the team's is full or away",
     helpWorkspaceHint: "Each computer helps only if its owner allows it. Off: none helps, whatever its owner chose.",
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection.",
+      "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
@@ -18199,7 +18300,7 @@ export const en = {
       internetShared: "Agents now open websites through the internet of <b>{{deviceName}}</b>",
       /** Under it: what lending keeps out and what happens while the computer is offline. */
       internetSharedLine:
-        "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection.",
+        "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection.",
       /** Its one button: stops lending this computer's internet. */
       internetOff: "Turn off",
       internetOffDone: "Agents no longer use the internet of {{deviceName}}.",
@@ -19768,6 +19869,8 @@ export const en = {
     /** The waiting row's step line before its first step (`waitStep`). */
     wait: {
       thinking: "Thinking…",
+      /** Before the model has the turn: the agent's checkouts are being updated from their repositories. */
+      code: "Updating the code…",
       held: "Waiting for approval…",
       /** The agent's own words for its step (what it wrote before the call), quoted. */
       said: "“{{text}}”",
@@ -20728,7 +20831,7 @@ export const en = {
     },
     offer_install_skill: {
       label: "Offer to install a skill",
-      description: "Posts a card whose button opens the install dialog with the skill's link filled in.",
+      description: "Posts a card whose button opens the install dialog with the skill read from its link or its .zip.",
     },
     update_skill_from_source: {
       label: "Update skills from their links",

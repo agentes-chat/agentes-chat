@@ -654,6 +654,7 @@ const ruleLines = (t: BrainTurn) =>
             l &&
             l !== "This conversation" &&
             l !== "Options to pick from" &&
+            l !== "How you work here" &&
             !l.startsWith('"# This turn" and "# This conversation"'),
         ),
     ),
@@ -703,10 +704,11 @@ test("Claude Code: two sessions of one agent list the same tools, every one it h
   // The line before slow work (ADR 0207) is in hand from the first round, never behind a computer brain's tool search.
   const upFront = (JSON.parse(dmTurn.tools) as { name: string; upFront?: boolean }[]).filter((t) => t.upFront);
   expect(upFront.map((t) => t.name)).toEqual(["say_now"]);
-  // "What you can do" names them all, and how to search them.
-  expect(dmTurn.turn.system).toContain("`list_issues`");
-  expect(dmTurn.turn.system).toContain("- Search all your tools by what you need with `find_tools`");
-  expect(dmTurn.turn.system).not.toContain("- On demand:");
+  // "What you can do" names them all, and how to search them, once per session: it follows the run's tools.
+  expect(conversationOf(dmTurn.turn)).toContain("`list_issues`");
+  expect(conversationOf(dmTurn.turn)).toContain("- Search all your tools by what you need with `find_tools`");
+  expect(conversationOf(dmTurn.turn)).not.toContain("- On demand:");
+  expect(dmTurn.turn.system).not.toContain("# What you can do");
 
   // Listed in a run nobody can answer a card in or move to the background: each says why, and what to do instead.
   const [run] = await f.db.select().from(schema.agentRuns).orderBy(asc(schema.agentRuns.createdAt)).limit(1);
@@ -746,7 +748,12 @@ test("Claude Code: the system text is the same in every conversation; what holds
   expect(channelTurn.tools.length + channelTurn.turn.system.length).toBeGreaterThan(30_000);
   for (const t of [dmTurn, channelTurn]) {
     const conversation = conversationOf(t.turn);
-    expect(conversation).toStartWith("# This conversation\n\n## Your team\n");
+    expect(conversation).toStartWith("# This conversation\n\n## How you work here\n- Before work that takes");
+    expect(conversation).toContain("\n\n## What you can do\nYou can:\n");
+    // Its limit counts the computer's own tools, there too.
+    expect(conversation).toContain("Beyond this list and your computer's own tools, you can't.");
+    expect(conversation).not.toContain("Beyond this, you can't.");
+    expect(conversation).toContain("\n\n## Your team\n");
     // Under a heading of its own, not read as part of "## Your team".
     expect(conversation).toContain("\n\n## Options to pick from\n- When you end by asking the person to pick");
     expect(t.turn.system).not.toContain("# Your team");

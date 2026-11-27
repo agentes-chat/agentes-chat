@@ -1,4 +1,4 @@
-import { pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
+import { OS_PERMISSIONS, pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
 import {
   approveDeviceJoin,
   cancelWifiPairing,
@@ -15,7 +15,9 @@ import {
   normalizeUserCode,
   openConnectLink,
   openXcode,
+  PHONE_POWER_LIMIT,
   pickIphoneOverWifi,
+  powerPhone,
   repairIphone,
   setDevicesHelp,
   startWifiPairing,
@@ -115,6 +117,15 @@ const Phone = z
   })
   .openapi("PhoneDevice");
 
+const PermissionNeed = z
+  .object({
+    permission: z.enum(OS_PERMISSIONS),
+    trigger: z.string().openapi({ description: "What asked, as the person reads it (a command, redacted)." }),
+    agentId: z.string().optional(),
+    since: z.string(),
+  })
+  .openapi("PermissionNeed");
+
 const Computer = z
   .object({
     id: z.uuid(),
@@ -147,6 +158,10 @@ const Computer = z
           "Tasks start on room there, not on `maxTasks`: about how many more fit now, the free memory in GB, whether the processor stays near full, and the owner's Push harder. Null: the count decides.",
       }),
     toolchains: z.record(z.string(), z.string()),
+    permissions: z.array(PermissionNeed).openapi({
+      description:
+        "The OS permissions its agents' work waits on there (macOS's Full Disk Access, Screen Recording…): what asked, which agent, since when. The agentes.chat app on it asks the person; the wait ends when they allow it there.",
+    }),
     opensXcode: z.boolean().openapi({
       description: "A Mac whose agentes.chat opens Xcode and looks at its iPhone again for the iPhone guide.",
     }),
@@ -440,6 +455,28 @@ export function deviceAppRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, phoneId } = c.req.valid("param");
       await stopPhone({ db, pubsub, hub: hub() }, c.get("user").id, orgId, phoneId);
+      return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/phones/{phoneId}/power",
+      tags,
+      security,
+      summary: "Start or shut down a simulator or an emulator (who may use it or change it)",
+      description:
+        "Its computer boots the iOS simulator (and shows it in Simulator) or starts the Android emulator, or shuts it down; the devices list then shows it starting, ready or offline. A real phone is refused (`device.not_simulator`); the computer's own refusals come back as `device.power_*` with its words in `why`.",
+      request: { params: PhoneParams, body: body(z.object({ on: z.boolean() }).strict()) },
+      responses: { 204: noContent[204], 429: errorResponse("Too many starts"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, phoneId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`phone-power:user:${userId}`, PHONE_POWER_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      await powerPhone({ db, pubsub, hub: hub() }, userId, orgId, phoneId, c.req.valid("json").on);
       return c.body(null, 204);
     },
   );

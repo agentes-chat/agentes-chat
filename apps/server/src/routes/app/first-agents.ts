@@ -96,7 +96,7 @@ const Picked = z
   .openapi("FirstAgentPicked");
 
 /**
- * The first agents the person's own AI proposed (ADR 0253): the newest proposal, one pasted from an AI with no
+ * The first agents the person's own AI proposed (ADR 0256): the newest proposal, one pasted from an AI with no
  * connector, and the pick. All of it works while the workspace waits for its first plan: the onboarding runs before
  * Checkout.
  */

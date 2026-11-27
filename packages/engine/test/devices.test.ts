@@ -8,6 +8,7 @@ import {
   PHONE_SCREEN_PROTOCOL,
   PHONES_PROTOCOL,
   type RunnerPhone,
+  SIMULATOR_POWER_PROTOCOL,
   STREAM_CLOSE,
   XCODE_FIX_PROTOCOL,
 } from "@agenteschat/adapters";
@@ -29,6 +30,7 @@ import {
   PHONE_SETUP_STUCK_MS,
   phoneStoppedBy,
   pickIphoneOverWifi,
+  powerPhone,
   recheckPhoneStream,
   removeMember,
   repairIphone,
@@ -761,6 +763,72 @@ test("repairing an iPhone's test helper: who manages its Mac, a real iPhone only
   fail = new MachineOfflineError("MacBook", "personal");
   await expect(repairIphone(d, f.owner.id, f.org.id, phoneId)).rejects.toThrow(MachineOfflineError);
   expect(isNewWork({ op: "phone.repair", serial: iphone.serial })).toBe(false);
+});
+
+test("Ligar and Desligar a simulator: who may use it, never a real phone, an old app, the Mac's refusal in words", async () => {
+  f = await setup();
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  const mac = await pair(f.owner.id, "MacBook");
+  await online(mac);
+  const sim: RunnerPhone = {
+    ...iphone,
+    serial: "D54B1757-01C6",
+    kind: "simulator",
+    model: "iPhone 17 Pro",
+    state: "ready",
+  };
+  await sync(mac, [sim, pixel]);
+  await sync(mac, [pixel]);
+  const calls: unknown[] = [];
+  let fail: Error | null = null;
+  const hub = {
+    call: async (machineId: string, request: unknown) => {
+      calls.push({ machineId, request });
+      if (fail) throw fail;
+      return { on: true };
+    },
+  } as unknown as Parameters<typeof powerPhone>[0]["hub"];
+  const d = { db: f.db, hub };
+  const simId = (await phoneRows()).find((p) => p.kind === "simulator")?.id ?? "";
+  const pixelId = (await phoneRowsOf("android"))?.id ?? "";
+  expect(
+    (await listDevices(f.db, f.org.id, f.owner.id)).devices[0]?.phones.find((p) => p.id === simId)?.status.kind,
+  ).toBe("offline");
+
+  await expect(powerPhone(d, f.owner.id, f.org.id, pixelId, true)).rejects.toMatchObject({
+    code: "device.not_simulator",
+  });
+  // A Mac only its owner's agents use: Rui can't start its simulators; once it's everyone's, he can.
+  await f.db.update(schema.machines).set({ audienceMode: "owner" }).where(eq(schema.machines.id, mac));
+  await expect(powerPhone(d, rui.id, f.org.id, simId, true)).rejects.toThrow(ForbiddenError);
+  await f.db.update(schema.machines).set({ audienceMode: "everyone" }).where(eq(schema.machines.id, mac));
+  await f.db
+    .update(schema.machines)
+    .set({ protocol: SIMULATOR_POWER_PROTOCOL - 1 })
+    .where(eq(schema.machines.id, mac));
+  await expect(powerPhone(d, rui.id, f.org.id, simId, true)).rejects.toMatchObject({ code: "machine.outdated" });
+  expect(calls).toEqual([]);
+  await f.db.update(schema.machines).set({ protocol: SIMULATOR_POWER_PROTOCOL }).where(eq(schema.machines.id, mac));
+  await powerPhone(d, rui.id, f.org.id, simId, true);
+  expect(calls).toEqual([
+    {
+      machineId: mac,
+      request: { op: "phone.power", platform: "ios", serial: sim.serial, model: "iPhone 17 Pro", on: true },
+    },
+  ]);
+  const audit = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "device.phone_started"));
+  expect(audit.map((a) => [a.actorType, a.actorId, a.targetId])).toEqual([["person", rui.id, simId]]);
+  // The Mac's own refusals: codes the apps word, with what it said.
+  fail = new MachineRequestError("internal", "No space left on device");
+  await expect(powerPhone(d, rui.id, f.org.id, simId, false)).rejects.toMatchObject({
+    code: "device.power_stop_failed",
+    params: { name: "Sam's iPhone", computer: "MacBook", platform: "ios", why: "No space left on device" },
+  });
+  fail = new MachineRequestError("phone_missing", "This simulator isn't on this Mac anymore.");
+  await expect(powerPhone(d, rui.id, f.org.id, simId, true)).rejects.toMatchObject({ code: "device.power_gone" });
+  fail = new MachineOfflineError("MacBook", "personal");
+  await expect(powerPhone(d, rui.id, f.org.id, simId, true)).rejects.toThrow(MachineOfflineError);
+  expect(isNewWork({ op: "phone.power", platform: "ios", serial: sim.serial, model: "", on: true })).toBe(false);
 });
 
 test("opening Xcode on a Mac: its owner or an admin, an app new enough, and the list says which Macs can", async () => {

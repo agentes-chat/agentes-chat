@@ -13,7 +13,7 @@ import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useOrgId } from "../shared/hooks";
 import { Tile } from "../shared/parts";
-import { StatusBadge } from "../shared/StatusBadge";
+import { StatusWord } from "../shared/StatusBadge";
 import type { ConversationRow } from "./logic";
 import type { AgentRowState } from "./now";
 import type { RowFacts } from "./rowFacts";
@@ -86,17 +86,19 @@ export const ConversationItem = memo(function ConversationItem({
   const chosen = useIsChosen(opener, chatOfRow(r));
   const agentDm = r.kind === "dm" && r.with.type === "agent";
   // An agent's role (its Função, "Ops") beside its name as a tag, as the web's lists show it: read once for the list
-  // with the row's other facts, never by the row itself.
+  // with the row's other facts, never by the row itself. The row's one badge: its status under it is words.
   const role = facts.role;
+  // At work, an agent's face wears the orbit (the web's lists' `OrbitGlyph`): the line's own small orbit goes.
+  const ringed = facts.face === "run" && (agentDm || (r.kind === "mission" && Boolean(r.mission)));
   const leading =
     r.kind === "dm" ? (
       agentDm ? (
-        <AgentFace agentId={r.with.id} size={AVATAR - 2} mode={facts.face} live={live} presence />
+        <AgentFace agentId={r.with.id} size={AVATAR - 2} mode={facts.face} live={live} presence orbit={ringed} />
       ) : (
         <Face who={{ type: r.with.type, id: r.with.id }} size={AVATAR} live={false} presence />
       )
     ) : r.kind === "mission" && r.mission ? (
-      <AgentFace agentId={r.mission.agentId} size={AVATAR - 2} mode={facts.face} live={live} />
+      <AgentFace agentId={r.mission.agentId} size={AVATAR - 2} mode={facts.face} live={live} orbit={ringed} />
     ) : r.kind === "thread" || r.kind === "mission" ? (
       <Face who={r.face} size={r.face.type === "agent" ? AVATAR - 2 : AVATAR} live={live} />
     ) : (
@@ -105,19 +107,15 @@ export const ConversationItem = memo(function ConversationItem({
   // A thread on a GIF or a sticker has no words of its own to title it (ADR 0091).
   const name = r.kind === "channel" ? r.name : r.kind === "dm" ? r.with.name : r.title || t("mobile.chat.thread");
   // The orbit turns on every row at work, past the moving faces too: held on one frame it read as work that hung.
-  // It turns on the UI thread, in step with the others, and stops with the screen (`PixelOrbit`).
-  const orbit = <PixelOrbit color={facts.orbit} size={ORBIT} />;
+  // It turns on the UI thread, in step with the others, and stops with the screen (`PixelOrbit`). None where the face
+  // already wears it.
+  const orbit = ringed ? null : <PixelOrbit color={facts.orbit} size={ORBIT} />;
   const l = facts.line;
   const line =
-    l.kind === "state" && l.badge ? (
-      // An agent's work: its status as a badge, then its time (the web's lists' line).
+    l.kind === "state" && l.status ? (
+      // An agent's work: its status in words, then its time (the web's lists' line).
       <View style={styles.work}>
-        <StatusBadge text={l.word} tone={l.badge} color={facts.orbit} />
-        {l.rest ? (
-          <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-            {l.rest}
-          </Text>
-        ) : null}
+        <StatusWord text={l.word} tone={l.status} rest={l.rest} />
       </View>
     ) : l.kind === "state" ? (
       <View style={styles.work}>

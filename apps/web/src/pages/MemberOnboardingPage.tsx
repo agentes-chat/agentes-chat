@@ -32,7 +32,7 @@ const TOTAL = 2;
 const FACES_SHOWN = 3;
 
 /**
- * The onboarding of someone who joined a workspace (ADR 0253, addendum of 2026-11-26), on the onboarding's frame
+ * The onboarding of someone who joined a workspace (ADR 0256, addendum of 2026-11-26), on the onboarding's frame
  * (`World`, `Box`): first the team as it is, awake on its daylight sky, and the idea in a sentence (each person brings
  * the agent that solves a problem of theirs, as whoever brought one did), with the two ways to make theirs. Asking
  * their own AI is the owner's ask and pick in a member's words (`AskYourAi`, `FirstAgentPick`); starting from scratch

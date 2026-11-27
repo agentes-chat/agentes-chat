@@ -464,7 +464,7 @@
     "internet": "Los agentes usan el internet de esta computadora",
     "internetOn": "Los sitios que abren los agentes ven tu ubicación",
     "internetOff": "Desactivado: los agentes usan su conexión de siempre",
-    "internetHint": "Los agentes del workspace abren sitios por la conexión de esta computadora. Solo sitios web, hasta 5 GB al día, y nunca nada de tu propia red. Mientras esta computadora esté sin conexión, usan su conexión de siempre.",
+    "internetHint": "Los agentes del workspace abren sitios por la conexión de esta computadora. Solo sitios web y nunca nada de tu propia red. Mientras esta computadora esté sin conexión, usan su conexión de siempre.",
     "shareOff": "Solo tú por ahora",
     "shareHint": "Los agentes de todos en {{org}} pueden ejecutar tareas ahí, con tu usuario.",
     "addFolders": "Agregar carpetas",
@@ -510,6 +510,9 @@
     "grokDesc": "Escribe y cambia código en las carpetas permitidas, con tu cuenta de Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Escribe y cambia código en las carpetas permitidas, con tu cuenta de Gemini.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Escribe y cambia código en las carpetas permitidas, con tu cuenta de Devin.",
+    "devinWindows": "Devin todavía no funciona en Windows: aquí su CLI no puede mantener separado el inicio de sesión de cada cuenta. Los agentes piensan con Devin en una computadora Mac o Linux.",
     "found": "Encontrado",
     "notFound": "No encontrado",
     "loggedOut": "Sin sesión iniciada",
@@ -933,5 +936,21 @@
     "bringAllToFront": "Traer todo al frente",
     "help": "Ayuda",
     "downloaded": "Descarga completa"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat necesita {{permission}}",
+    "done": "Ya lo permití",
+    "later": "Ahora no",
+    "trayTitle": "Esperando {{permission}}",
+    "why": {
+      "app_management": "Los agentes lo necesitan para cambiar apps en este {{device}}.",
+      "screen": "Los agentes lo necesitan para hacer capturas de este {{device}}.",
+      "accessibility": "Los agentes lo necesitan para hacer clic y escribir en apps de este {{device}}.",
+      "disk": "Los agentes lo necesitan para abrir tus archivos sin que macOS pregunte por cada carpeta.",
+      "network": "Los agentes lo necesitan para llegar a teléfonos y aparatos de tu red.",
+      "camera": "Los agentes lo necesitan para usar la cámara de este {{device}}.",
+      "microphone": "Los agentes lo necesitan para usar el micrófono de este {{device}}.",
+      "automation": "Los agentes lo necesitan para controlar otras apps en este {{device}}."
+    }
   }
 }

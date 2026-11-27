@@ -456,7 +456,7 @@
     "internet": "Agen memakai internet komputer ini",
     "internetOn": "Situs yang dibuka agen melihat lokasimu",
     "internetOff": "Mati: agen memakai koneksi biasa mereka",
-    "internetHint": "Agen di workspace membuka situs lewat koneksi komputer ini. Hanya situs web, sampai 5 GB per hari, dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, mereka memakai koneksi biasa.",
+    "internetHint": "Agen di workspace membuka situs lewat koneksi komputer ini. Hanya situs web dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, mereka memakai koneksi biasa.",
     "shareOff": "Hanya kamu untuk saat ini",
     "shareHint": "Agen semua orang di {{org}} bisa menjalankan tugas di sana sebagai penggunamu.",
     "addFolders": "Tambahkan folder",
@@ -502,6 +502,9 @@
     "grokDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Grok-mu.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Gemini-mu.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Devin-mu.",
+    "devinWindows": "Devin belum berjalan di Windows: di sini CLI-nya tidak bisa memisahkan login setiap akun. Agen berpikir dengan Devin di komputer Mac atau Linux.",
     "found": "Ditemukan",
     "notFound": "Tidak ditemukan",
     "loggedOut": "Belum masuk",
@@ -923,5 +926,21 @@
     "bringAllToFront": "Bawa semua ke depan",
     "help": "Bantuan",
     "downloaded": "Unduhan selesai"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat memerlukan {{permission}}",
+    "done": "Sudah saya izinkan",
+    "later": "Nanti saja",
+    "trayTitle": "Menunggu {{permission}}",
+    "why": {
+      "app_management": "Agen memerlukannya untuk mengubah app di {{device}} ini.",
+      "screen": "Agen memerlukannya untuk mengambil tangkapan layar {{device}} ini.",
+      "accessibility": "Agen memerlukannya untuk mengeklik dan mengetik di app pada {{device}} ini.",
+      "disk": "Agen memerlukannya untuk membuka file Anda tanpa macOS bertanya untuk setiap folder.",
+      "network": "Agen memerlukannya untuk menjangkau ponsel dan perangkat di jaringan Anda.",
+      "camera": "Agen memerlukannya untuk memakai kamera {{device}} ini.",
+      "microphone": "Agen memerlukannya untuk memakai mikrofon {{device}} ini.",
+      "automation": "Agen memerlukannya untuk mengendalikan app lain di {{device}} ini."
+    }
   }
 }

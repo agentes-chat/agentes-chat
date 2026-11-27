@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
   ACCESS_ALLOW_PROTOCOL,
+  AGENTS_CLI_PROTOCOL,
   BROWSER_PROFILE_PROTOCOL,
   CLI_INSTALL_PROTOCOL,
   DESKTOP_PROTOCOL,
@@ -648,10 +649,14 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       /** The coding CLIs there that can't start, with their own error line; admins and the pairer only. */
       cliErrors: (admin || mine) && !managed ? (m.executors?.broken ?? null) : null,
       /**
-       * ADR 0228 §6: the coding CLIs its runner fetches by itself there (none on the workspace's own computer or in
-       * system mode), and where each fetch stands (`fetching` with bytes, `ready`, `failed` with why).
+       * ADR 0228 §6: the coding CLIs its runner fetches there (none on the workspace's own computer, nor in system mode
+       * before `AGENTS_CLI_PROTOCOL`; in system mode only for agents who reach none), and where each fetch stands
+       * (`fetching` with bytes, `ready`, `failed` with why).
        */
-      cliFetchable: managed || m.executors?.mode === "system" ? [] : (m.executors?.copies?.fetchable ?? []),
+      cliFetchable:
+        managed || (m.executors?.mode === "system" && m.protocol < AGENTS_CLI_PROTOCOL)
+          ? []
+          : (m.executors?.copies?.fetchable ?? []),
       cliFetch: managed ? null : (m.executors?.copies?.fetch ?? null),
       /** What holds Codex's commands on a Windows computer (`CODEX_UNELEVATED_PROTOCOL`); null elsewhere or unknown. */
       codexSandbox: m.os === "windows" ? (m.executors?.codex?.sandbox ?? null) : null,
@@ -679,6 +684,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
               freeGb: m.load.diskFreeGb,
               use: m.load.diskUse ?? null,
               sharedGb: m.load.sharedGb ?? null,
+              sizeGb: m.load.diskGb ?? null,
+              parts: m.load.diskParts ?? null,
             }
           : null,
       /** Whether the agent browser can run there (protocol 12, ADR 0040); null when its runner doesn't say. */

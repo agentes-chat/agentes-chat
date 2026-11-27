@@ -3,6 +3,7 @@ import {
   ACCESS_LIMITS,
   ACCESS_PROTOCOL,
   grantedTo,
+  type PermissionNeed,
   type PubSub,
   type RunnerAccess,
   type RunnerFrame,
@@ -90,9 +91,9 @@ export async function storeMachineAccess(deps: AccessDeps, machineId: string, ac
 /** What `machines.executors` keeps of the coding CLIs: each one found, those that can't start, and when they were looked up. */
 export function storedExecutors(stored: schema.MachineExecutors | null | undefined): schema.MachineExecutors {
   if (!stored) return {};
-  const { claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt } = stored;
+  const { claude, codex, cursor, opencode, grok, antigravity, devin, broken, detectedAt } = stored;
   return Object.fromEntries(
-    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt }).filter(
+    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, devin, broken, detectedAt }).filter(
       ([, v]) => v !== undefined,
     ),
   );
@@ -111,7 +112,7 @@ export async function storeMachineExecutors(
   const [row] = await deps.db
     .update(machines)
     .set({
-      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity' - 'broken') || ${next}::jsonb`,
+      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity' - 'devin' - 'broken') || ${next}::jsonb`,
       updatedAt: new Date(),
     })
     .where(eq(machines.id, machineId))
@@ -139,6 +140,19 @@ export async function storeMachineToolchains(deps: AccessDeps, machineId: string
     .where(eq(machines.id, machineId))
     .returning({ orgId: machines.orgId });
   if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { toolchains: true });
+}
+
+/** `permissions.changed`: the OS permissions the computer waits on, replaced whole; the rest of `executors` stays. */
+export async function storeMachinePermissions(deps: AccessDeps, machineId: string, permissions: PermissionNeed[]) {
+  const [row] = await deps.db
+    .update(machines)
+    .set({
+      executors: sql`coalesce(${machines.executors}, '{}'::jsonb) || jsonb_build_object('permissions', ${JSON.stringify(permissions)}::jsonb)`,
+      updatedAt: new Date(),
+    })
+    .where(eq(machines.id, machineId))
+    .returning({ orgId: machines.orgId });
+  if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { permissions: true });
 }
 
 export interface ReduceAccessInput {

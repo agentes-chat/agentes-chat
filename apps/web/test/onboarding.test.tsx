@@ -25,7 +25,7 @@ import { pick } from "./new-agent-flow";
 import { renderApp, screen, settle, showIn } from "./render";
 
 /*
- * The onboarding (ADR 0162, amended for the first agent asked of the person's own AI, ADR 0253): what the workspace is
+ * The onboarding (ADR 0162, amended for the first agent asked of the person's own AI, ADR 0256): what the workspace is
  * for first (ADR 0159), then one box at a time on the page's sky, each step read from the workspace's own data: a
  * team's name, how to start (the person's own AI proposes first agents, one is picked; or from scratch), the picked
  * agent's first week, the plan where the workspace waits for its first one, the team's photo back from Checkout, an AI
@@ -91,7 +91,7 @@ const zones = () => {
   return { timezone: zone ?? "UTC", ...(zone ? { memberTimezone: zone } : {}) };
 };
 
-/** One agent the person's AI proposed, as the server keeps it (ADR 0253). */
+/** One agent the person's AI proposed, as the server keeps it (ADR 0256). */
 const option = (
   name: string,
   role: string,
@@ -283,7 +283,7 @@ async function toTheWeek(state: FakeState) {
   return r;
 }
 
-describe("a team's start, asking its own AI (ADR 0253)", () => {
+describe("a team's start, asking its own AI (ADR 0256)", () => {
   test("the name makes the workspace; how to start is the next step, nothing finished", async () => {
     const state = newcomer(true);
     plans(PLANS);
@@ -1176,7 +1176,7 @@ describe("opening a new workspace, in round trips", () => {
 describe("the worst case, measured by CI's geometry in German and Russian too", () => {
   const LONG = "Cerâmicas Pneumoultramicroscopicossilicovulcanoconióticas Artesanais Ltda";
   const PERSON = "Maximiliana Bartolomeu Constantinopla de Albuquerque";
-  /** The longest of everything a proposal may hold (ADR 0253: 30-character names, 40-character roles…). */
+  /** The longest of everything a proposal may hold (ADR 0256: 30-character names, 40-character roles…). */
   const LONGEST = [
     option("Maximiliana Bartholomew-Fitz", "Cobrança e conciliação bancária", "amber", {
       why: "Cobrar quem atrasou toma três tardes por semana, com planilha, e-mail e WhatsApp abertos ao mesmo tempo. ".repeat(

@@ -323,7 +323,7 @@ export async function useTeamTemplate(
 
 /**
  * A team made at once, as the right hand's card in the person's DM with it, which then reads created with Undo: a
- * template's (`useTeamTemplate`) and a first agent picked on the onboarding (ADR 0253). A step that fails leaves the
+ * template's (`useTeamTemplate`) and a first agent picked on the onboarding (ADR 0256). A step that fails leaves the
  * card open with its reason, as `createTeam` does for any team card. With no plan to wait for, the team says hi now; on
  * a hold, once the first plan starts.
  */

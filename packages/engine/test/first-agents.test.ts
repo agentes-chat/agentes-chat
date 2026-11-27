@@ -34,7 +34,7 @@ import {
 import { addUser, everyoneWithout, type Fixture, setup } from "./fixtures";
 
 /*
- * A person's first agents, proposed by their own AI (ADR 0253): kept as proposed (the MCP tool's or pasted), nothing
+ * A person's first agents, proposed by their own AI (ADR 0256): kept as proposed (the MCP tool's or pasted), nothing
  * made until one is picked; then one agent through the right hand's team card, as a template's team is made.
  */
 

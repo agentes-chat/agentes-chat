@@ -22,6 +22,7 @@ import {
   commandInReason,
   computerKind,
   computerState,
+  computerStorage,
   desktopTargetOf,
   downloadHref,
   egressViaText,
@@ -526,6 +527,31 @@ describe("the shared folder (ADR 0115)", () => {
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
   });
 
+  test("a computer's storage: its size, what is in use, what takes it by kind with the rest as Other, and when it fills up", () => {
+    const parts = { projects: 20, apps: 10, agents: 30, caches: 8, system: 0 };
+    const s = computerStorage({ freeGb: 20, use: 0.8, sharedGb: null, sizeGb: 100, parts });
+    expect(s).toMatchObject({ sizeGb: 100, usedGb: 80, freeGb: 20, full: false });
+    // A kind that takes nothing draws nothing; what no kind covers is Other, in its gray.
+    expect(s?.parts.map((p) => [p.key, p.gb])).toEqual([
+      ["projects", 20],
+      ["apps", 10],
+      ["agents", 30],
+      ["caches", 8],
+      ["other", 12],
+    ]);
+    expect(s?.parts.at(-1)).toMatchObject({ light: "#9a9a94", dark: "#6f6f6a" });
+    expect(new Set(s?.parts.map((p) => p.light)).size).toBe(5);
+    expect(computerStorage({ freeGb: 10, use: 0.9, sharedGb: null, sizeGb: 100, parts })?.full).toBe(true);
+    // Counted over what df says is used (rounding): no negative Other.
+    expect(computerStorage({ freeGb: 40, use: 0.6, sharedGb: null, sizeGb: 100, parts })?.parts.at(-1)?.key).toBe(
+      "caches",
+    );
+    // An older runner: the size from what is free and the share in use, no parts yet.
+    expect(computerStorage({ freeGb: 25, use: 0.75, sharedGb: null })).toMatchObject({ sizeGb: 100, parts: [] });
+    expect(computerStorage({ freeGb: 25, use: null, sharedGb: null })).toBeNull();
+    expect(computerStorage(null)).toBeNull();
+  });
+
   test("why a sign-in ended: a line per code, the CLI's words under three of them, none when canceled", () => {
     const add = "agentPage.work.brain.add";
     const worded = [
@@ -625,6 +651,11 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(cliOneClick(pc, "u-bia", "codex")).toBeNull();
     expect(cliOneClick({ ...pc, os: "darwin" }, "u-bia", "codex")).toEqual({ kind: "allow" });
     expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
+    // A system-mode runner that installs its own copy for all of its agents' users: the same button.
+    const agents = { ...pc, os: "linux", mode: "system" as const, cliFetchable: ["claude", "codex"] };
+    expect(cliOneClick(agents, "u-bia", "codex")).toEqual({ kind: "allow" });
+    expect(cliOneClick(agents, "u-caio", "claude")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(cliOneClick({ ...agents, cliFetchable: ["claude"] }, "u-bia", "codex")).toBeNull();
     expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
     expect(installableCli("claude_code")).toBe("claude");
     const words = { program: "Claude Code", computer: "PC" };
@@ -673,6 +704,26 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
         computer: "Computador da Acme",
       })?.text,
     ).toBe(t("aiAccounts.connect.needsCloud.stuck", { computer: "Computador da Acme", program: "Codex" }));
+  });
+
+  test("Devin on a Windows computer: the plan's line says why it doesn't run there, and the way out", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const line = (kind: "devin" | "grok", os: string) =>
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "system", os },
+        edition: "selfhost",
+        kind,
+        computer: "Estudio-PC",
+      })?.text;
+    expect(line("devin", "windows")).toBe(
+      "O Estudio-PC usa Windows, onde o Devin ainda não roda: lá a CLI dele não consegue manter separado o login de cada conta. Use o Devin num computador Mac ou Linux, ou escolha outra IA.",
+    );
+    // Any other plan off its system keeps the plain line.
+    expect(line("grok", "windows")).toBe(t("brain.reasons.system", { computer: "Estudio-PC", program: "Grok Build" }));
   });
 
   test("a CLI the apps don't install: the line to run there, for every agent's user in system mode", async () => {

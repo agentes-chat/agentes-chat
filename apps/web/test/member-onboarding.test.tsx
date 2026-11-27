@@ -10,7 +10,7 @@ import { createFakeApi, type FakeState, GENERAL_ID, LODI_ID, ORG_ID, seedState, 
 import { renderApp, screen, settle, showIn } from "./render";
 
 /*
- * The onboarding of someone who joined a workspace (`/welcome/$orgId`, ADR 0253, addendum of 2026-11-26): the team as
+ * The onboarding of someone who joined a workspace (`/welcome/$orgId`, ADR 0256, addendum of 2026-11-26): the team as
  * it is and who brought an agent, then the two ways to make their own: asking their own AI (the owner's ask and pick,
  * in a member's words) or from scratch with the right hand. Every way out lands in the workspace on the welcome wizard
  * alone. Without the permission to create agents, the hello says so and opens the workspace.
@@ -105,7 +105,7 @@ const arrives = async (state: FakeState, r: Rendered, sent = proposal()) => {
   await settle(12);
 };
 
-describe("a member's onboarding (ADR 0253)", () => {
+describe("a member's onboarding (ADR 0256)", () => {
   test("the hello: the team awake, who brought an agent, the question, and the two ways to make theirs", async () => {
     const state = joined();
     await welcome(state);

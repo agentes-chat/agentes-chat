@@ -21,6 +21,7 @@ import { AGY_CHAT_AGENT, prepareAgyHome } from "./agy-home";
 import { LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
 import { cursorPrompt, promptMaxOn } from "./brain-cursor";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { AGY_BIN, cliSpawn } from "./executors";
@@ -97,6 +98,16 @@ const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
 
 /**
+ * A tool step calling our MCP server: directly by name, or via Antigravity CLI 1.5.x's lazy MCP wrapper
+ * `call_mcp_tool` targeting our server alone (`parameters.ServerName === CODEX_MCP_SERVER`).
+ */
+export function isOurAgyToolCall(name: unknown, info?: Record<string, unknown> | null): boolean {
+  if (isOurAgyTool(name)) return true;
+  if (name !== "call_mcp_tool" || !info || !isRecord(info.parameters)) return false;
+  return info.parameters.ServerName === CODEX_MCP_SERVER;
+}
+
+/**
  * `--effort`: low, medium or high (`xhigh` and `max` as high: not every model has the extra level); a slug that names
  * its level (`…-high`, `…-xhigh`) takes none.
  */
@@ -131,14 +142,19 @@ export function antigravityTurnArgs(input: {
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * A `chat` turn's guard (protocol 44), line by line: `init` must list our server's tools alone, nothing may come
- * before it, and no step may be a tool that isn't ours or a subagent. Null when the line is fine.
+ * A `chat` turn's guard (protocol 44), line by line: `init` must either confirm our locked chat agent or list our
+ * server's tools alone, nothing may come before it, and no step may be a tool that isn't ours or a subagent. Null
+ * when the line is fine.
  */
 export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: boolean): string | null {
   const stop = (why: string) => `${why}, so the turn stopped.`;
   if (ev.event === "init") {
-    const tools = isRecord(ev.init) ? ev.init.tools : undefined;
+    const init = isRecord(ev.init) ? ev.init : undefined;
+    const tools = init?.tools;
     if (!Array.isArray(tools)) return "The Antigravity CLI didn't list its tools, so the turn stopped before it began.";
+    // Antigravity CLI 1.5.x lists its static built-in catalog in `init.tools` even when `--agent agenteschat-chat`
+    // strips built-in tools from the prompt; require the locked agent name and keep guarding every tool step below.
+    if (init?.agent === AGY_CHAT_AGENT) return null;
     const theirs = tools.filter((t) => !isOurAgyTool(t)).map((t) => String(t).slice(0, 64));
     if (theirs.length === 0) return null;
     return `The Antigravity CLI offers tools of its own here (${theirs.slice(0, 8).join(", ")}), so the turn stopped before it could use them.`;
@@ -147,9 +163,9 @@ export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: bool
   if (ev.event !== "step_update") return null;
   const step = isRecord(ev.step_update) ? ev.step_update : {};
   if (step.subagent_info !== undefined) return stop("The Antigravity CLI started another agent");
-  const info = isRecord(step.tool_info) ? step.tool_info : {};
-  const name = step.tool_name ?? info.name;
-  if ((step.step_type === "tool" || name !== undefined) && !isOurAgyTool(name)) {
+  const info = isRecord(step.tool_info) ? step.tool_info : null;
+  const name = step.tool_name ?? info?.name;
+  if ((step.step_type === "tool" || name !== undefined) && !isOurAgyToolCall(name, info)) {
     return stop(`The Antigravity CLI used a tool of its own (${String(name ?? "unknown").slice(0, 64)})`);
   }
   return null;
@@ -305,8 +321,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       return fail("antigravity_failed", err instanceof Error ? err.message : String(err));
     }
     let stderr = "";
+    const stderrText = new ConsoleDecoder();
     child.stderr?.on("data", (c: Buffer) => {
-      stderr = (stderr + c.toString("utf8")).slice(-4000);
+      stderr = (stderr + stderrText.write(c)).slice(-4000);
     });
     let tail = "";
     let streamed = false;
@@ -378,7 +395,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       const name = typeof step.tool_name === "string" ? step.tool_name : String(info.name ?? "tool");
       worked = true;
       // Our bridge's calls: the engine ran them.
-      if (isOurAgyTool(name)) return;
+      if (isOurAgyToolCall(name, info)) return;
       flush("", true);
       const error = isRecord(info.error) ? info.error : null;
       const output = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");

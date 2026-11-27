@@ -1834,7 +1834,7 @@ function AgentRow({
             <span className="ac-visually-hidden">{state === "idle" && doingTitle ? doingTitle : now}</span>
           )}
           {doing ? (
-            <AgentWorkLine line={doing} tone={agentGradient(color)[1]} className="sidebar__item-role" />
+            <AgentWorkLine line={doing} className="sidebar__item-role" />
           ) : (
             under && <span className={cx("sidebar__item-role", roleTag && "ac-tag")}>{under}</span>
           )}
@@ -2239,10 +2239,12 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
 /**
  * A workspace in your lists of them (ADR 0159): a personal one of yours is you, by your photo and your name, as its
  * sidebar shows you; with more than one, your photo and each one's own name (the same name on each would tell them
- * apart by nothing). Any other (a team's, or a personal one shared with you, whose face would be someone else's) by its
- * mark and its name.
+ * apart by nothing). Its line (`sub`) says it is personal where the full menu shows your role in a team's, so its row
+ * is the same two lines as theirs. Any other (a team's, or a personal one shared with you, whose face would be someone
+ * else's) by its mark and its name.
  */
 function useWorkspaceLook() {
+  const { t } = useTranslation();
   const { me } = useOrg();
   const mine = (id: string) => {
     const o = me.organizations.find((m) => m.id === id);
@@ -2258,7 +2260,7 @@ function useWorkspaceLook() {
       ? {
           leading: <Avatar kind="person" name={me.user.name} imageUrl={me.user.image} size={face} />,
           name: several ? o.name : me.user.name,
-          sub: null,
+          sub: t("settings.mode.personal"),
           personal: true,
         }
       : {
@@ -2274,8 +2276,8 @@ function useWorkspaceLook() {
  * Your workspaces in the account menu of a personal workspace (ADR 0159): the workspace menu's list, then New
  * workspace when the person may make one. In the desktop app (ADR 0154) by server, then Add workspace; New workspace
  * (it makes one here) sits under this server's workspaces only on a server of one's own, since on agentes.chat Add
- * workspace makes one (`offersNewWorkspace`). Mounted only while the menu is open: the counts load then. No role beside
- * each: one person's own workspaces.
+ * workspace makes one (`offersNewWorkspace`). Mounted only while the menu is open: the counts load then. One line a
+ * row (no role, no "Personal" under it): one person's own workspaces.
  */
 function MenuWorkspaces() {
   const { t, i18n } = useTranslation();
@@ -2321,7 +2323,7 @@ function MenuWorkspaces() {
                 <MenuItem
                   key={o.id}
                   leading={shown.leading}
-                  description={[shown.sub, g.here ? notes.get(o.id) : null].filter(Boolean).join(" · ") || undefined}
+                  description={(g.here && notes.get(o.id)) || undefined}
                   hint={
                     o.current ? t("shell.youAreHere") : o.unread > 0 ? <CountChip>{o.unread}</CountChip> : undefined
                   }
@@ -2359,7 +2361,7 @@ function MenuWorkspaces() {
           <MenuItem
             key={o.id}
             leading={shown.leading}
-            description={[shown.sub, notes.get(o.id)].filter(Boolean).join(" · ") || undefined}
+            description={notes.get(o.id)}
             hint={o.id === org.id ? t("shell.youAreHere") : undefined}
             onSelect={() => o.id !== org.id && go(o.id)}
           >

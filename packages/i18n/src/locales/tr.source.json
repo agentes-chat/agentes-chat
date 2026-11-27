@@ -8399,6 +8399,18 @@
   "rightHand.action.set_action_check_off": {
     "value": "Turn off the check of what the team already did"
   },
+  "rightHand.action.set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>, their own choices too"
+  },
+  "rightHand.action.set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_agent_approvals_level_workspace": {
+    "value": "Make <b>{{agent}}</b> follow the workspace's approvals"
+  },
   "rightHand.action.invite_people": {
     "value": "Invite <b>{{emails}}</b> to the workspace."
   },
@@ -8806,6 +8818,9 @@
   "noAi.notSignedIn.antigravity": {
     "value": "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s page."
   },
+  "noAi.notSignedIn.devin": {
+    "value": "Devin isn't signed in on this computer. Connect a Devin account on {{name}}'s page."
+  },
   "noAi.notSignedIn.opencode": {
     "value": "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s page."
   },
@@ -8823,6 +8838,9 @@
   },
   "noAi.notSignedInOn.antigravity": {
     "value": "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.devin": {
+    "value": "Devin isn't signed in on {{computer}}. Connect a Devin account on {{name}}'s page."
   },
   "noAi.notSignedInOn.opencode": {
     "value": "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s page."
@@ -8955,6 +8973,9 @@
   },
   "connectAi.title.gemini": {
     "value": "Connect your Gemini plan"
+  },
+  "connectAi.title.devin": {
+    "value": "Connect your Devin plan"
   },
   "connectAi.title.zen": {
     "value": "Connect OpenCode"
@@ -9298,6 +9319,12 @@
   "connectAi.plan.gemini.windowsOne": {
     "value": "On Windows, a computer uses one Gemini account at a time."
   },
+  "connectAi.plan.devin.title": {
+    "value": "Your Devin plan"
+  },
+  "connectAi.plan.devin.tiers": {
+    "value": "Free, Pro, Max or Teams"
+  },
   "connectAi.plan.zen.title": {
     "value": "OpenCode"
   },
@@ -9520,6 +9547,9 @@
   },
   "connectAi.otherAccount.antigravity": {
     "value": "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again."
+  },
+  "connectAi.otherAccount.devin": {
+    "value": "Devin signed in as {{email}}, not {{account}}. Sign out on Devin's page and try again."
   },
   "connectAi.otherAccount.opencode": {
     "value": "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key."
@@ -10420,6 +10450,18 @@
   },
   "agentActions.workspace.changed_set_action_check_off": {
     "value": "Turned off the check of what the team already did"
+  },
+  "agentActions.workspace.changed_set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level_workspace": {
+    "value": "<b>{{agent}}</b> follows the workspace's approvals again"
   },
   "agentActions.workspace.changed_invite_people": {
     "value": "Invited <b>{{invited}}</b> to the workspace"
@@ -15163,6 +15205,9 @@
   "agentPage.work.brain.add.title.antigravity": {
     "value": "Add a Gemini account"
   },
+  "agentPage.work.brain.add.title.devin": {
+    "value": "Add a Devin account"
+  },
   "agentPage.work.brain.add.title.opencode": {
     "value": "Add an OpenCode key"
   },
@@ -15176,6 +15221,9 @@
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.grok": {
+    "value": "The account with your plan"
+  },
+  "agentPage.work.brain.add.stepOne.devin": {
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.antigravity": {
@@ -15201,6 +15249,9 @@
   },
   "agentPage.work.brain.add.open.antigravity": {
     "value": "Sign in with Google"
+  },
+  "agentPage.work.brain.add.open.devin": {
+    "value": "Sign in with Devin"
   },
   "agentPage.work.brain.add.opencodeFree": {
     "value": "No key needed for OpenCode's free models. A key from OpenCode's console adds its paid ones."
@@ -15240,6 +15291,15 @@
   },
   "agentPage.work.brain.add.codeLabelGoogle": {
     "value": "Google's code"
+  },
+  "agentPage.work.brain.add.stepTwoDevin": {
+    "value": "Paste the code Devin shows"
+  },
+  "agentPage.work.brain.add.codeHintDevin": {
+    "value": "Paste the code Devin's page shows, not the page's address."
+  },
+  "agentPage.work.brain.add.codeLabelDevin": {
+    "value": "Devin's code"
   },
   "agentPage.work.brain.add.codeHintGoogle": {
     "value": "Paste the code Google's page shows, not the page's address."
@@ -15330,6 +15390,9 @@
   },
   "agentPage.work.brain.add.duplicate.antigravity": {
     "value": "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again."
+  },
+  "agentPage.work.brain.add.duplicate.devin": {
+    "value": "Devin signed in as {{account}}, an account you already connected. To use another, sign out on Devin's page and try again."
   },
   "agentPage.work.brain.add.duplicate.opencode": {
     "value": "That OpenCode key is already connected as {{account}}."
@@ -27396,6 +27459,9 @@
   "aiAccounts.connect.antigravity": {
     "value": "Gemini"
   },
+  "aiAccounts.connect.devin": {
+    "value": "Devin"
+  },
   "aiAccounts.connect.opencode": {
     "value": "OpenCode"
   },
@@ -31143,6 +31209,9 @@
   "brain.line.gemini": {
     "value": "{{model}} on the Gemini plan"
   },
+  "brain.line.devin": {
+    "value": "{{model}} on the Devin plan"
+  },
   "brain.line.zen": {
     "value": "{{model}} on OpenCode"
   },
@@ -31163,6 +31232,9 @@
   },
   "brain.line.geminiOf": {
     "value": "{{model}} on {{owner}}'s Gemini plan"
+  },
+  "brain.line.devinOf": {
+    "value": "{{model}} on {{owner}}'s Devin plan"
   },
   "brain.line.zenOf": {
     "value": "{{model}} on {{owner}}'s OpenCode"
@@ -31185,6 +31257,9 @@
   "brain.line.geminiAuto": {
     "value": "Gemini plan"
   },
+  "brain.line.devinAuto": {
+    "value": "Devin plan"
+  },
   "brain.line.zenAuto": {
     "value": "OpenCode"
   },
@@ -31205,6 +31280,9 @@
   },
   "brain.line.geminiAutoOf": {
     "value": "{{owner}}'s Gemini plan"
+  },
+  "brain.line.devinAutoOf": {
+    "value": "{{owner}}'s Devin plan"
   },
   "brain.line.zenAutoOf": {
     "value": "{{owner}}'s OpenCode"
@@ -31242,6 +31320,9 @@
   "brain.card.antigravity": {
     "value": "Antigravity CLI"
   },
+  "brain.card.devin": {
+    "value": "Devin CLI"
+  },
   "brain.foot.api": {
     "value": "Through the API"
   },
@@ -31268,6 +31349,9 @@
   },
   "brain.antigravityText": {
     "value": "Uses the Gemini plan of whoever connected the computer."
+  },
+  "brain.devinText": {
+    "value": "Uses the Devin plan of whoever connected the computer."
   },
   "brain.opencodeText": {
     "value": "OpenCode's free models, or the OpenCode key of whoever connected the computer."
@@ -31310,6 +31394,9 @@
   },
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."
+  },
+  "brain.reasons.systemDevin": {
+    "value": "{{computer}} runs Windows, where Devin doesn't run yet: there its CLI can't keep each account's sign-in apart. Use Devin on a Mac or Linux computer, or choose another AI."
   },
   "brain.reasons.windows_sandbox": {
     "value": "{{computer}}'s Windows can't isolate {{program}}'s commands. Choose Claude or an API key instead, or update that computer to Windows 11 24H2 or newer, with its latest updates."
@@ -31415,6 +31502,9 @@
   },
   "brain.summary.antigravity": {
     "value": "Antigravity CLI · {{model}}"
+  },
+  "brain.summary.devin": {
+    "value": "Devin CLI · {{model}}"
   },
   "brain.summary.opencode": {
     "value": "OpenCode · {{model}}"
@@ -32774,6 +32864,45 @@
   },
   "storage.current": {
     "value": "In use"
+  },
+  "storage.computer.title": {
+    "value": "Workspace computer"
+  },
+  "storage.computer.used": {
+    "value": "{{used}} of {{size}} in use"
+  },
+  "storage.computer.bar": {
+    "value": "The workspace computer's disk"
+  },
+  "storage.computer.measuring": {
+    "value": "Measuring what takes the space."
+  },
+  "storage.computer.part.projects": {
+    "value": "Projects and code"
+  },
+  "storage.computer.part.apps": {
+    "value": "Apps and tools"
+  },
+  "storage.computer.part.agents": {
+    "value": "Agents' files"
+  },
+  "storage.computer.part.caches": {
+    "value": "Caches and temporary files"
+  },
+  "storage.computer.part.system": {
+    "value": "System"
+  },
+  "storage.computer.part.other": {
+    "value": "Other"
+  },
+  "storage.computer.part.free": {
+    "value": "Free"
+  },
+  "storage.computer.full": {
+    "value": "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore."
+  },
+  "storage.computer.ask": {
+    "value": "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room."
   },
   "storage.usage.files": {
     "value": "{{size}} of files"
@@ -40660,6 +40789,9 @@
   "errors.skill.zipTooManySkills": {
     "value": "This .zip holds more than {{max}} skills. Send them in parts."
   },
+  "errors.skill.zipTooBig": {
+    "value": "This .zip is larger than {{maxMb}} MB, the most a skill install takes."
+  },
   "errors.skill.invalidName": {
     "value": "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters."
   },
@@ -41022,6 +41154,9 @@
   },
   "machines.oneClick.tools.antigravity": {
     "value": "Antigravity CLI"
+  },
+  "machines.oneClick.tools.devin": {
+    "value": "Devin CLI"
   },
   "machines.oneClick.tools.commands": {
     "value": "commands"
@@ -41466,6 +41601,9 @@
   "machines.access.tool.antigravity": {
     "value": "Antigravity CLI"
   },
+  "machines.access.tool.devin": {
+    "value": "Devin CLI"
+  },
   "machines.access.tool.opencode": {
     "value": "OpenCode"
   },
@@ -41489,6 +41627,9 @@
   },
   "machines.access.toolText.antigravity": {
     "value": "Like Claude Code, with a Gemini account. Only in the allowed folders."
+  },
+  "machines.access.toolText.devin": {
+    "value": "Like Claude Code, with a Devin account. Only in the allowed folders."
   },
   "machines.access.toolText.opencode": {
     "value": "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders."
@@ -41555,6 +41696,42 @@
   },
   "devices.leadCloud": {
     "value": "Where your agents work: the workspace computer and the devices people connect."
+  },
+  "devices.permission.title": {
+    "value": "Waiting for {{permission}} on {{computer}}"
+  },
+  "devices.permission.next": {
+    "value": "Allow it in the agentes.chat app there."
+  },
+  "devices.permission.askedBy": {
+    "value": "Asked by {{agent}} to run {{trigger}}"
+  },
+  "devices.permission.asked": {
+    "value": "Needed to run {{trigger}}"
+  },
+  "devices.permission.names.app_management": {
+    "value": "App Management"
+  },
+  "devices.permission.names.screen": {
+    "value": "Screen Recording"
+  },
+  "devices.permission.names.accessibility": {
+    "value": "Accessibility"
+  },
+  "devices.permission.names.disk": {
+    "value": "Full Disk Access"
+  },
+  "devices.permission.names.network": {
+    "value": "Local Network"
+  },
+  "devices.permission.names.camera": {
+    "value": "Camera"
+  },
+  "devices.permission.names.microphone": {
+    "value": "Microphone"
+  },
+  "devices.permission.names.automation": {
+    "value": "Automation"
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."
@@ -41688,6 +41865,39 @@
   "devices.stopped": {
     "value": "Stopped. {{name}} is free."
   },
+  "devices.power.start": {
+    "value": "Start"
+  },
+  "devices.power.stop": {
+    "value": "Shut down"
+  },
+  "devices.power.starting": {
+    "value": "{{name}} is starting. It's ready in a moment."
+  },
+  "devices.power.stopped": {
+    "value": "{{name}} is shut down."
+  },
+  "devices.power.toolMissingIos": {
+    "value": "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac."
+  },
+  "devices.power.toolMissingAndroid": {
+    "value": "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer."
+  },
+  "devices.power.gone": {
+    "value": "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there."
+  },
+  "devices.power.busy": {
+    "value": "{{name}} is in use right now. Stop what uses it first, or try again when it's free."
+  },
+  "devices.power.startFailed": {
+    "value": "{{name}} didn't start. {{computer}} said: {{why}}"
+  },
+  "devices.power.stopFailed": {
+    "value": "{{name}} didn't shut down. {{computer}} said: {{why}}"
+  },
+  "devices.power.notSimulator": {
+    "value": "Only a simulator or an emulator starts and shuts down from here."
+  },
   "devices.showMe": {
     "value": "Show me how"
   },
@@ -41734,19 +41944,31 @@
     "value": "Help when the team's computer is full or away"
   },
   "devices.spillOwnHint": {
-    "value": "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in."
+    "value": "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer."
   },
   "devices.spillTeamHint": {
-    "value": "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer."
+    "value": "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer."
   },
   "devices.spillWorkspaceOff": {
     "value": "An admin turned this off for the workspace."
   },
-  "devices.spillFirst": {
-    "value": "Use this computer for my agents' work"
+  "devices.helpUse": {
+    "value": "How it helps your agents"
   },
-  "devices.spillFirstHint": {
-    "value": "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away."
+  "devices.helpUses.off": {
+    "value": "Doesn't help"
+  },
+  "devices.helpUses.help": {
+    "value": "Only as backup"
+  },
+  "devices.helpUses.first": {
+    "value": "First for my agents"
+  },
+  "devices.helpUseHint": {
+    "value": "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer."
+  },
+  "devices.helpUseTeamHint": {
+    "value": "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free."
   },
   "devices.helpWorkspace": {
     "value": "Computers help when the team's is full or away"
@@ -41758,7 +41980,7 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection."
+    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -43156,7 +43378,7 @@
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
   },
   "devices.notice.internetSharedLine": {
-    "value": "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection."
+    "value": "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection."
   },
   "devices.notice.internetOff": {
     "value": "Turn off"
@@ -46827,6 +47049,9 @@
   "chat.wait.thinking": {
     "value": "Thinking…"
   },
+  "chat.wait.code": {
+    "value": "Updating the code…"
+  },
   "chat.wait.held": {
     "value": "Waiting for approval…"
   },
@@ -48867,7 +49092,7 @@
     "value": "Offer to install a skill"
   },
   "builtinTools.offer_install_skill.description": {
-    "value": "Posts a card whose button opens the install dialog with the skill's link filled in."
+    "value": "Posts a card whose button opens the install dialog with the skill read from its link or its .zip."
   },
   "builtinTools.update_skill_from_source.label": {
     "value": "Update skills from their links"

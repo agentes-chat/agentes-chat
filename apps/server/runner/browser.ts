@@ -122,7 +122,8 @@ import {
  *   none, the distribution's Chromium (ADR 0153). Each agent has its own profile, so the
  *   person's own Chrome profile is never touched, and our Chrome never starts
  *   Google's updater itself (`--disable-updater-scheduler`: macOS blamed our
- *   app for it, "agentes was prevented from modifying apps"). A new version on
+ *   app for it, "agentes was prevented from modifying apps"), nor clones its
+ *   own app at start (`MacAppCodeSignClone`, see `CHROME_ARGS`). A new version on
  *   disk restarts an agent's Chrome on the same page once it is idle (`sweep`).
  *   A Chrome that is missing or won't start is told to the agent in plain words
  *   (`CHROME_FAILURES`), and the server reports it. A runner outside system mode
@@ -611,7 +612,14 @@ export function chromeVersion(exe: string, platform: string = process.platform):
  * kept two of a 4-core computer's cores busy whether anyone watched or not,
  * and sent its desktop's viewers a stream of changes. The chip asking to sign
  * in to the browser, a feature of Chrome 147 (at least) to 155, stays off;
- * later versions read the profile's own switch (`prepareProfile`). The sites'
+ * later versions read the profile's own switch (`prepareProfile`). On macOS
+ * Google Chrome (158 measured) hard-links its own executable into a temporary clone of its app at
+ * every start (`MacAppCodeSignClone`, so an update under a running Chrome keeps
+ * its signature valid): macOS's App Management refuses that link to a process
+ * our app started (kernel log, 2026-11-26: "deny(1) file-link /Applications/
+ * Google Chrome.app/Contents/MacOS/Google Chrome") and shows "agentes.chat was
+ * prevented from modifying apps" at each new agent's or profile's Chrome. It
+ * is off: the runner restarts a Chrome on a new version itself (`sweep`). The sites'
  * sessions outlive Chrome stopping (idle, or moving to or from the agent's
  * desktop), as with Chrome's "Continue where you left off": a site that keeps
  * you signed in only until the browser closes (no "remember me") still has
@@ -628,7 +636,7 @@ export const CHROME_ARGS = [
   "--disable-updater-scheduler",
   "--disable-search-engine-choice-screen",
   "--force-prefers-reduced-motion",
-  "--disable-features=SigninPromoOnAvatarPill",
+  "--disable-features=SigninPromoOnAvatarPill,MacAppCodeSignClone",
   "--restore-last-session",
 ];
 /** `--screen-info`: without it a headless page's `screen` is 800x600, smaller than its own window. */

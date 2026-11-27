@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { CodexSandbox, RunnerExecutorInfo } from "@agenteschat/adapters/machine-protocol";
 import { accountEnv } from "./accounts";
+import { consoleText } from "./console-text";
 import {
   type CliRun,
   codexRefusal,
@@ -179,13 +180,14 @@ export function runSandboxCheck(
         {
           cwd: opts.cwd,
           env: run.env ? { ...opts.env, ...run.env } : opts.env,
-          encoding: "utf8",
+          encoding: "buffer",
           timeout: opts.timeoutMs ?? SANDBOX_CHECK_TIMEOUT_MS,
           maxBuffer: 256 * 1024,
           windowsHide: true,
           ...(run.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
         },
-        (err, stdout, stderr) => {
+        (err, out, errOut) => {
+          const [stdout, stderr] = [consoleText(out), consoleText(errOut)];
           if (!err) return resolve(new RegExp(`\\b${sandboxMark(sandbox)}\\b`).test(stdout));
           const failed = err as { code?: unknown; killed?: boolean };
           // It ran and said no (its exit code), against it not starting or not ending in time. A refusal of the check

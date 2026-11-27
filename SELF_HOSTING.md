@@ -389,7 +389,8 @@ COMPOSE_PROFILES=https
 and run `docker compose up -d`. The `caddy` service gets a Let's Encrypt certificate for `DOMAIN` and
 renews it, redirects http to https, and passes everything to the app, WebSockets included. Its
 certificates are kept in the `caddy-data` volume. Caddy sends the client's address as the only value
-of `X-Forwarded-For`, which the app trusts as is, so leave `TRUSTED_PROXIES` empty. While the app
+of `X-Forwarded-For`, which the app trusts since Caddy reaches it over a private network, so leave
+`TRUSTED_PROXIES` empty. While the app
 restarts or is down, Caddy answers with a page that says so and opens the app again once it's back.
 
 </details>
@@ -475,11 +476,16 @@ Then add to the `server` block:
 Sign-in rate limits count per client address, read from `X-Forwarded-For`; wrong passwords also count
 per account (10 in 15 minutes from one address, 50 from all), each count kept in one server process's
 memory, so a restart starts them again and with several processes behind a load balancer each allows
-that many. A single value, as above, is trusted as is, and the client can't
-forge it (nginx replaces whatever the client sent). With another proxy or a CDN in front of nginx,
-send the chain instead (`$proxy_add_x_forwarded_for`) and list those proxies' addresses or ranges in
-`TRUSTED_PROXIES`, comma-separated: the chain is read from the right past every trusted hop, and the
-first other address is the client.
+that many. The app reads `X-Forwarded-For` only from a connection on loopback or a private network
+(your proxy) or from an address in `TRUSTED_PROXIES`; from any other address the header is ignored and
+the connection's own address counts, so a client that reaches the app directly can't pick its own. A
+single value, as above, is trusted as is, and the client can't forge it (nginx replaces whatever the
+client sent). With another proxy or a CDN in front of nginx, send the chain instead
+(`$proxy_add_x_forwarded_for`) and list those proxies' addresses or ranges in `TRUSTED_PROXIES`,
+comma-separated: the chain is read from the right past every trusted hop, and the first other address
+is the client. The app never reads `CF-Connecting-IP`: with Cloudflare in front, list
+[Cloudflare's ranges](https://www.cloudflare.com/ips/) in `TRUSTED_PROXIES`, or have your proxy
+write `CF-Connecting-IP` into `X-Forwarded-For` for connections from those ranges only.
 
 </details>
 
@@ -518,9 +524,9 @@ The app is published on `127.0.0.1:3000` only; `HOST_PORT` changes the port. To 
 machines, use Tailscale or put it behind HTTPS, or try it through an SSH tunnel first:
 `ssh -L 3000:localhost:3000 your-server`. Don't serve it over plain http to other machines
 (`BIND_ADDRESS=0.0.0.0`), not even on a LAN. Browsers treat http as a secure context only on
-localhost, and parts of the web app need one. With no proxy in front, nothing sets
-`X-Forwarded-For`, so the sign-in rate limits can't tell clients apart. And Docker opens a published
-port past the host's firewall.
+localhost, and parts of the web app need one. With no proxy in front, the sign-in rate limits count
+each connection's address, but a machine on a private network can write its own `X-Forwarded-For`
+(the app takes such a machine for a proxy). And Docker opens a published port past the host's firewall.
 
 </details>
 
@@ -809,7 +815,7 @@ ones a self-hosted instance usually touches:
 | `TAILSCALE_FUNNEL` | `false` | `true` opens the instance to the internet at the same address (What needs a public URL). Only `true` or `false`. |
 | `ALLOW_SIGNUP` | `false` | `true` lets anyone create an account. |
 | `OWNER_CLAIM_SHA256` | | While no account exists, only the owner link made with it creates the first one (Sign-up, below). `OWNER_KEY_SHA256` is the desktop app's. |
-| `TRUSTED_PROXIES` | | Proxies in front of your proxy (see nginx above). |
+| `TRUSTED_PROXIES` | | Public proxies in front of your proxy, or of the app, such as Cloudflare's ranges (see nginx above). `X-Forwarded-For` counts only from these, loopback and private networks. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | | "Sign in with Google", redirect URI `{PUBLIC_URL}/api/auth/callback/google`. `GITHUB_*` and `APPLE_*` work the same way. |
 | `APPLE_TEAM_ID` + `APPLE_APP_BUNDLE_ID`, `ANDROID_APP_PACKAGE` + `ANDROID_APP_CERT_SHA256` | | For a phone app you build yourself with `EXPO_PUBLIC_API_URL` set to this server: links to its pages (a conversation, a message, a thread, an agent, a task, a routine, an approval, the inbox, settings, invitations, password resets) open in the app instead of the browser. The server then publishes `/.well-known/apple-app-site-association` (also at `/apple-app-site-association`) and `/.well-known/assetlinks.json`; your proxy must pass them through as they are, with no redirect. Several bundle ids or packages are comma-separated. The fingerprints are the SHA-256 of Google Play's app signing key and of your upload key. Without them, links open the website, as before. |
 | `TERMS_URL`, `PRIVACY_URL` | | Your terms and privacy policy, linked on the sign-in and sign-up screens when both are set. `/terms` and `/privacy` on this server go to them, or say it has none. |
@@ -1363,7 +1369,7 @@ no commands) and `--no-service`.
 That computer runs the commands agents execute, the browser they drive (the computer's own Google
 Chrome, which must be installed there: get it from google.com/chrome; it keeps itself up to date, and
 each agent uses a profile of its own, never yours), and Claude Code, Codex, Cursor's, OpenCode's, xAI's Grok
-Build or Google's Antigravity CLI when an agent thinks with a subscription signed in there (OpenCode's free models need no sign-in at all).
+Build, Google's Antigravity CLI or Cognition's Devin CLI when an agent thinks with a subscription signed in there (OpenCode's free models need no sign-in at all).
 Install the ones you want on that computer, as the user that runs the runner: Cursor's with
 `curl https://cursor.com/install -fsS | bash` (it lands in `~/.local/bin`, which the runner looks in
 even when its service's PATH lacks it), OpenCode's with `npm install -g opencode-ai@1.19.5`, Grok Build with
@@ -1373,7 +1379,10 @@ bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
 and macOS computers, not Windows yet, each in a folder of its own (on a Mac, with a keychain of its own there), and a personal Google plan used this way is against Google's terms for
-consumer plans: Gemini Enterprise or an API key avoids that). A runner in system mode (each agent
+consumer plans: Gemini Enterprise or an API key avoids that), and the Devin CLI with
+`curl -fsSL https://cli.devin.ai/install.sh | bash` (`devin` in `~/.local/bin`; the installer ends with Devin's own
+setup, which you may skip; Devin accounts sign in on Linux and macOS computers, each in a folder of its own, and think
+with the models of the person's Devin plan, ADR 0253). A runner in system mode (each agent
 its own system user) needs the CLI where every agent's user can run it, not in one user's home: install it
 under a shared folder and link it into `/usr/local/bin`, for example
 `sudo env HOME=/opt/cursor sh -c 'curl https://cursor.com/install -fsS | bash'`, then
@@ -1384,12 +1393,18 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 `sudo chmod -R a+rX /opt/grok` and `sudo ln -sf /opt/grok/.local/bin/grok /usr/local/bin/grok`. Grok's installer
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
-then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
-One installed in root's own `~/.local/bin` there is out of the agents' reach, and the apps say so with the line
-that installs it for all of them. Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
+then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`. The Devin CLI too:
+`sudo env HOME=/opt/devin sh -c 'curl -fsSL https://cli.devin.ai/install.sh | bash'`, then
+`sudo chmod -R a+rX /opt/devin` and `sudo ln -sf /opt/devin/.local/bin/devin /usr/local/bin/devin`; there a Devin
+account signs in once per agent.
+One installed in root's own `~/.local/bin` there, or anywhere else an agent's user can't run it, is out of the
+agents' reach: the computer checks each CLI as its agents' users and the apps say so, with the line that installs it
+for all of them or an Install button. Where no agent reaches a copy at all, the runner installs its own pinned build
+for them once an account of that CLI is on the computer (in `/opt/agentes-runner/clis`, linked from `/usr/local/bin`
+unless something is already there). Agents never use a sign-in made in a terminal: Gemini, Grok, Devin and the other plans
 sign in from the apps (Settings, AI and usage), once for all of their owner's agents.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
-`agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
+`agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity` or `devin`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.
 
 Ubuntu 24.04 and later block unprivileged user namespaces (`kernel.apparmor_restrict_unprivileged_userns = 1`),

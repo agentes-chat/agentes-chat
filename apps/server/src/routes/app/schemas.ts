@@ -667,7 +667,7 @@ export const Agent = z
     }),
     brain: z
       .object({
-        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]),
+        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]),
         model: z
           .string()
           .nullable()
@@ -1098,7 +1098,7 @@ export const Model = z
 
 /** ADR 0032: who thinks for an agent. */
 export const BrainKind = z
-  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"])
+  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"])
   .openapi("BrainKind");
 
 export const BrainUnavailable = z.enum([
@@ -1138,10 +1138,18 @@ export const BrainOption = z
           .boolean()
           .optional()
           .openapi({ description: "Cursor: its CLI said the person's plan includes it (others cost API prices)." }),
-        free: z
+        free: z.boolean().optional().openapi({
+          description:
+            "OpenCode: a model of OpenCode's free tier (no key, no cost). Devin: one its plan serves at no cost.",
+        }),
+        efforts: z
+          .array(z.enum(["low", "medium", "high", "xhigh", "max"]))
+          .optional()
+          .openapi({ description: "Devin: the effort levels its variants run at (absent: every level)." }),
+        fast: z
           .boolean()
           .optional()
-          .openapi({ description: "OpenCode: a model of OpenCode's free tier (no key, no cost)." }),
+          .openapi({ description: "Devin: it has a faster variant, which the fast speed runs." }),
       }),
     ),
     defaultModel: z.string().nullable(),
@@ -1358,7 +1366,7 @@ export const AgentBrain = z
     }),
     canManageAccounts: z.boolean().openapi({
       description:
-        "The caller may add an account there for this agent: its owner, on a computer where they add accounts.",
+        "The caller may add an account there for this agent: its owner or who manages it, on a computer where they add accounts.",
     }),
     accountsSupported: z.boolean().openapi({ description: "The computer's runner knows accounts (protocol 13)." }),
     onlyOwner: z.boolean().openapi({ description: '"Atende outras pessoas" off: nobody but its owner talks to it.' }),

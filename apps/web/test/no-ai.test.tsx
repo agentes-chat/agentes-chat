@@ -436,6 +436,29 @@ describe("no AI connected: above the composer", () => {
     expect(within(panel).queryByRole("button", { name: "Conectar meu computador" })).toBeNull();
   });
 
+  test("no agent, and the server's own computer just added: it connects, its steps waiting, never a blank name", async () => {
+    const { box } = await bareDialog((machines) => {
+      // Made with the workspace before the runner here got its token (ADR 0060 §3): no name yet, never seen.
+      const host = machines.pair({
+        name: "",
+        kind: "host",
+        online: false,
+        lastSeenAt: null,
+        pairedBy: null,
+        createdAt: new Date().toISOString(),
+      });
+      return { accounts: [], computers: [{ ...SERVER, machineId: host.id, name: "", online: false }] };
+    });
+    await chooseAi(box, "Claude");
+    await settle(4);
+    const panel = within(box).getByRole("region", { name: "Seu plano do Claude" });
+    expect(panel.textContent).toContain("O computador deste servidor conecta em até um minuto.");
+    expect(panel.textContent).not.toContain("está offline");
+    expect(within(panel).queryByRole("button", { name: "Usar uma chave de API agora" })).toBeNull();
+    // The sign-in's steps stay in view, off until it connects.
+    expect((within(panel).getByRole("button", { name: /Entrar com Claude/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   test("a DM with an agent that has none says so for that agent; an organization with AI shows nothing in channels", async () => {
     const state = seedState({ aiStatus: aiStatus(true, ADA_ID) });
     await open(state, `dm/agent/${ADA_ID}`);
@@ -1225,7 +1248,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(box.textContent).not.toContain("agora pensa com");
   });
 
-  test("someone else's agent: its owner's account isn't listed, a line says it is his alone to give; an admin may still give her a key", async () => {
+  test("someone else's agent: its owner's account isn't listed, a line says it is his alone to give; an admin may still give her a key or a plan of his own", async () => {
     const joao = acct({
       id: "acct_joao",
       label: "Claude Max",
@@ -1241,11 +1264,20 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(picker.textContent).toContain("Mais 1 conta de João que só João pode dar.");
     expect(calls(state, "agents.setBrain")).toHaveLength(0);
     expect(within(picker).getByRole("button", { name: /^Claude da Acme/ })).toBeTruthy();
-    // A plan for her is João's to connect, as his account is his to pick.
+    // Walter manages her: never told to ask an admin. On a computer where he can't add a sign-in, the plan is João's.
     await chooseAi(box, "Claude");
-    expect(box.textContent).toContain(
-      "Quem conecta a IA de Ada: um admin, com uma chave de API, ou João, com o próprio plano.",
-    );
+    expect(box.textContent).not.toContain("Quem conecta a IA de Ada");
+    expect(box.textContent).toContain("Só o dono do agente conecta um plano para ele.");
+  });
+
+  test("an admin on another member's agent signs in a plan of his own for her where he may add one", async () => {
+    // Ada is João's; Walter owns the workspace and may add accounts on her computer.
+    const state = withCard();
+    const { box } = await connectAda(state, { canUsePlans: false, canManageAccounts: true });
+    await chooseAi(box, "Claude");
+    expect(box.textContent).not.toContain("Quem conecta a IA de Ada");
+    expect(box.textContent).not.toContain("Só o dono do agente");
+    expect(within(box).getByRole("button", { name: "Entrar com Claude" })).toBeTruthy();
   });
 
   test("nothing the person can pick: no line asking for a pick, the line on whose accounts they are stays", async () => {

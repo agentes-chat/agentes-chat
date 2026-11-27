@@ -25,6 +25,7 @@ import {
   CLOUD_AWAY_MS,
   CLOUD_INSTALL_WAIT_MS,
   catchUp,
+  connectsPlanFor,
   defaultChoice,
   defaultTarget,
   dimmedLine,
@@ -33,6 +34,8 @@ import {
   gateDims,
   gateLine,
   gateRechecks,
+  HOST_CONNECT_WAIT_MS,
+  hostConnecting,
   isStandInLine,
   keptCardState,
   kindOf,
@@ -179,8 +182,15 @@ describe("planGate: what a plan's panel can do now", () => {
     expect(gate({ edition: null })).toEqual({ state: "loading" });
   });
 
-  test("an agent the viewer doesn't own, before anything about its computer", () => {
-    expect(gate({ brain: brain({ canUsePlans: false, computer: null }) })).toEqual({ state: "locked", who: "owner" });
+  test("an agent the viewer doesn't own and can't sign a plan in for, before anything about its computer", () => {
+    expect(gate({ brain: brain({ canUsePlans: false, canManageAccounts: false, computer: null }) })).toEqual({
+      state: "locked",
+      who: "owner",
+    });
+  });
+
+  test("someone else's agent that the viewer manages: a plan of their own signs in for it where they add accounts", () => {
+    expect(gate({ brain: brain({ canUsePlans: false }) })).toEqual({ state: "ready" });
   });
 
   test("self-host with no computer for the agent: missing", () => {
@@ -447,6 +457,25 @@ describe("planGateWithoutAgent: a plan connected before its owner has any agent"
   });
 });
 
+describe("hostConnecting: the server's own computer added with a new workspace", () => {
+  const NOW = Date.parse("2026-11-26T12:00:00Z");
+  const offline: PlanGate = { state: "offline" };
+  const host = { kind: "host" as const, lastSeenAt: null, createdAt: new Date(NOW - 10_000).toISOString() };
+
+  test("offline before its runner's first sync: connecting, not a computer to wait for or replace with a key", () => {
+    expect(hostConnecting(offline, host, NOW)).toBe(true);
+  });
+
+  test("only the server's own, never seen, and only while the runner's sync may still come", () => {
+    expect(hostConnecting({ state: "ready" }, host, NOW)).toBe(false);
+    expect(hostConnecting(offline, { ...host, kind: "connected" }, NOW)).toBe(false);
+    expect(hostConnecting(offline, { ...host, lastSeenAt: new Date(NOW - 60_000).toISOString() }, NOW)).toBe(false);
+    const old = { ...host, createdAt: new Date(NOW - HOST_CONNECT_WAIT_MS).toISOString() };
+    expect(hostConnecting(offline, old, NOW)).toBe(false);
+    expect(hostConnecting(offline, undefined, NOW)).toBe(false);
+  });
+});
+
 describe("freePlanAccount: a plan account of theirs that thinks for one more agent", () => {
   const account = (over: Partial<MachineAccount> = {}): MachineAccount => ({
     id: "a1",
@@ -533,13 +562,14 @@ describe("the agent a plan starts on, and the order of the plans", () => {
     expect(firstAgent([], () => false)).toBeUndefined();
   });
 
-  test("Claude, ChatGPT, Gemini, Grok, Cursor, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
+  test("Claude, ChatGPT, Gemini, Grok, Cursor, Devin, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
     expect(PLAN_CHOICES).toEqual([
       "claude",
       "chatgpt",
       "gemini",
       "grok",
       "cursor",
+      "devin",
       "zen",
       "zai",
       "kimi",
@@ -552,6 +582,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
       "antigravity",
       "grok",
       "cursor",
+      "devin",
       "opencode",
       "claude_code",
       "claude_code",
@@ -948,6 +979,19 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     noAi: { agentId: "ada", forUserId: null, reason, intent: "task", runId: "r1", ...extra },
   });
   const card = (reason: string, extra?: Record<string, unknown>) => noAiCardOf(meta(reason, extra));
+
+  test("Connect signs a plan in for the person's own agents, the right hand and the ones they manage; nobody else's", () => {
+    const joaos = { ownerUserId: "u-joao" };
+    expect(connectsPlanFor(joaos, "u-joao")).toBe(true);
+    // A workspace admin on João's agent: a plan of his own, lent to it, never "ask an admin".
+    expect(connectsPlanFor({ ...joaos, canManage: true }, "u-walter")).toBe(true);
+    // A plain member on João's agent: who connects it instead.
+    expect(connectsPlanFor({ ...joaos, canManage: false }, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, "u-bia")).toBe(false);
+    expect(connectsPlanFor({ ownerUserId: "u-joao", builtin: "right_hand" }, "u-bia")).toBe(true);
+    expect(connectsPlanFor(undefined, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, null)).toBe(false);
+  });
 
   test("Connect is for who can: the agent's owner, who manages it or keys, nobody else", () => {
     const agent = { ownerUserId: "u1" };

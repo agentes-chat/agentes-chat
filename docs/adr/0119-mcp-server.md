@@ -103,13 +103,13 @@ A team keeps its knowledge in Markdown notes elsewhere (a git repository edited 
 
 ## Addendum (2026-11-26): `propose_first_agents`, and a workspace waiting for its first plan
 
-The new onboarding asks the person's own AI for their first agents (ADR 0253): it connects here, finds the repetitive
+The new onboarding asks the person's own AI for their first agents (ADR 0256): it connects here, finds the repetitive
 tasks that take most of their time and sends three options, of which the person picks one in agentes.chat. That runs
 before Checkout, while a new Cloud workspace is on the `payment` hold (ADR 0079), which refused the sign-in and every
 tool.
 
 1. **The tool** (`packages/engine/src/apps/first-agents-tool.ts`, `APP_FIRST_AGENT_TOOL_NAMES`). `propose_first_agents`
-   takes `firstAgentsInput` (ADR 0253 §2): `about` and 1 to 3 options, each a name, role, why, tasks, apps, routine (its
+   takes `firstAgentsInput` (ADR 0256 §2): `about` and 1 to 3 options, each a name, role, why, tasks, apps, routine (its
    words and its cron), first-day deliveries and instructions. It creates nothing: it keeps the proposal for the person
    the connection acts as, through `saveFirstAgents`, audited with the app's name and limited to 10 an hour, and answers
    `{ received, pickIn, options, next }`, `pickIn` being `/onboarding` for an owner whose onboarding is open and the

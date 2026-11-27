@@ -1,7 +1,18 @@
 import { afterEach, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import type { CliFetchState } from "@agenteschat/adapters/machine-protocol";
 import { CLI_NO_SELF_UPDATE, CLI_PINS, type CliPins, type PinCli } from "@agenteschat/providers/cli-pins";
@@ -61,6 +72,7 @@ function pinsFor(made: { sha256: string }, version = "9.9.9"): CliPins {
     opencode: pin("opencode"),
     grok: pin("grok"),
     antigravity: pin("antigravity"),
+    devin: pin("devin"),
     git: pin("git"),
   };
 }
@@ -108,6 +120,76 @@ test("a CLI wanted here with no copy of the person's: the pinned build, checked,
   await cli.check();
   expect(fetched).toHaveLength(1);
   expect(changes).toHaveLength(1);
+});
+
+test("system mode: the agents' copy is root's alone to change, linked onto every agent's PATH where nothing else is", async () => {
+  // An archive whose files say anyone may write them (tar run as root keeps that).
+  const src = tempDir("cli-src-");
+  dirs.push(src);
+  writeFileSync(path.join(src, "antigravity"), '#!/bin/sh\necho "antigravity 9.9.9"\n', { mode: 0o777 });
+  mkdirSync(path.join(src, "lib"), { mode: 0o777 });
+  writeFileSync(path.join(src, "lib", "part.js"), "", { mode: 0o666 });
+  chmodSync(path.join(src, "antigravity"), 0o777);
+  chmodSync(path.join(src, "lib"), 0o777);
+  chmodSync(path.join(src, "lib", "part.js"), 0o666);
+  const file = path.join(src, "cli.tar.gz");
+  execFileSync("tar", ["-czf", file, "-C", src, "antigravity", "lib"]);
+  const bytes = readFileSync(file);
+  const bin = tempDir("bin-");
+  dirs.push(bin);
+  const { cli } = copies({ bytes, sha256: createHash("sha256").update(bytes).digest("hex"), shared: { bin } });
+  expect(cli.forAgents).toBe(true);
+  // As root's tar would, the archive's modes kept as they are.
+  const umask = process.umask(0);
+  try {
+    await cli.check();
+  } finally {
+    process.umask(umask);
+  }
+  const copy = cli.file("antigravity") as string;
+  const dir = path.dirname(copy);
+  // Nobody but its owner writes there; everyone reads, and enters its folders.
+  for (const f of [path.dirname(dir), dir, copy, path.join(dir, "lib"), path.join(dir, "lib", "part.js")]) {
+    expect({ f, write: statSync(f).mode & 0o022 }).toEqual({ f, write: 0 });
+    expect({ f, read: statSync(f).mode & 0o004 }).toEqual({ f, read: 0o004 });
+  }
+  expect(readlinkSync(path.join(bin, "agy"))).toBe(copy);
+  expect(execFileSync(path.join(bin, "agy"), { encoding: "utf8" }).trim()).toBe("antigravity 9.9.9");
+  // Someone's own `agy` there stays as it is.
+  setCliPick("agy", undefined);
+  const theirs = tempDir("bin-");
+  dirs.push(theirs);
+  writeFileSync(path.join(theirs, "agy"), "#!/bin/sh\n", { mode: 0o755 });
+  const kept = copies({ bytes, sha256: createHash("sha256").update(bytes).digest("hex"), shared: { bin: theirs } });
+  await kept.cli.check();
+  expect(lstatSync(path.join(theirs, "agy")).isSymbolicLink()).toBe(false);
+  // The runner's own link to an older copy moves to the new one.
+  setCliPick("agy", undefined);
+  const again = copies({ bytes, sha256: createHash("sha256").update(bytes).digest("hex"), shared: { bin } });
+  rmSync(path.join(bin, "agy"));
+  symlinkSync(path.join(again.home, "clis", "antigravity-1.0.0", "antigravity"), path.join(bin, "agy"));
+  await again.cli.check();
+  expect(readlinkSync(path.join(bin, "agy"))).toBe(again.cli.file("antigravity") as string);
+});
+
+test("system mode: a new pin replaces the runner's older copy the agents reach", async () => {
+  const bin = tempDir("bin-");
+  dirs.push(bin);
+  // The agents reach whatever `bin/agy` is (`agentsCopy` claims the pinned version for any copy they start).
+  const reach = async (_: PinCli, pinned: string) =>
+    existsSync(path.join(bin, "agy")) ? { file: "agy", version: pinned } : null;
+  const { cli, home, fetched } = copies({ shared: { bin }, own: reach });
+  const older = path.join(home, "clis", "antigravity-1.0.0", "antigravity");
+  mkdirSync(path.dirname(older), { recursive: true });
+  writeFileSync(older, '#!/bin/sh\necho "antigravity 1.0.0"\n', { mode: 0o755 });
+  symlinkSync(older, path.join(bin, "agy"));
+  await cli.check();
+  expect(fetched).toEqual(["https://downloads.example/antigravity.tar.gz"]);
+  expect(readlinkSync(path.join(bin, "agy"))).toBe(cli.file("antigravity") as string);
+  expect(existsSync(older)).toBe(false);
+  // At this pin now: nothing fetched again.
+  await cli.check();
+  expect(fetched).toHaveLength(1);
 });
 
 test("nothing fetched for a CLI nobody wants here and the person doesn't have", async () => {

@@ -254,6 +254,24 @@ describe("full screen", () => {
     expect(rule(".ac-video[data-full] .ac-video__acts")).toContain("display: none");
     expect(rule(".ac-video[data-full]")).toContain("box-shadow: none");
   });
+
+  test("a tile whose size the server read has the video's shape from the first paint, an upright one upright", () => {
+    player({ ratio: 9 / 16 });
+    const root = document.querySelector(".ac-video") as HTMLElement;
+    expect(root.hasAttribute("data-ratio")).toBe(true);
+    expect(root.style.getPropertyValue("--ratio")).toBe(String(9 / 16));
+    const shaped = rule(".ac-video--tile[data-ratio]:not([data-full]) .ac-video__media");
+    expect(shaped).toContain("width: min(320px, calc(360px * var(--ratio)))");
+    expect(shaped).toContain("aspect-ratio: var(--ratio)");
+    expect(shaped).toContain("height: auto");
+    cleanup();
+    // The viewer fills its box whatever the video's shape; a tile with no size read keeps the 16:9 box.
+    player({ variant: "viewer", ratio: 9 / 16 });
+    expect(document.querySelector(".ac-video")?.hasAttribute("data-ratio")).toBe(false);
+    cleanup();
+    player();
+    expect(document.querySelector(".ac-video")?.hasAttribute("data-ratio")).toBe(false);
+  });
 });
 
 describe("one thing plays at a time", () => {

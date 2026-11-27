@@ -61,7 +61,7 @@ const makerOf = (mark: string | null) => (mark ? (MAKER[mark] ?? mark) : null);
  * variant's words, the same interview and job descriptions for all, then how to send it: `propose_first_agents`, or,
  * with no connector (`json`), an opening that says none and a JSON answer to paste here, its example under the line.
  * The JSON answer also gives each routine as a cron: the routines read one with no model, and a workspace still
- * waiting for its plan has none to read the schedule's words (ADR 0253).
+ * waiting for its plan has none to read the schedule's words (ADR 0256).
  */
 export function askPrompt(t: TFunction, variant: AskVariant, org: string, json = false): string {
   const open = json

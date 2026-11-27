@@ -287,7 +287,7 @@ const AgentProposal = z
         ai: z.discriminatedUnion("kind", [
           z.object({
             kind: z.literal("account"),
-            brain: z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]),
+            brain: z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]),
             machineId: z.uuid(),
             accountId: z.uuid(),
             label: z.string(),
@@ -752,7 +752,7 @@ export function agentRoutes(deps: AppDeps) {
                     "plan_tools",
                   ])
                   .optional(),
-                own: z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]).optional(),
+                own: z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]).optional(),
                 owner: z.string().optional().openapi({
                   description:
                     "With `plans_not_yours`: whose the workspace's plans are (each serves only the person who connected it).",

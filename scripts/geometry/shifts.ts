@@ -22,6 +22,10 @@
  * (placeholders, then real sizes, measured on a phone-size DM: rows reported 24 px off, no frame showing them there) and
  * reports the unpainted first place.
  * A screen over `LIMIT` fails. Before the screens, the fixture's twins prove both measures (`shifts-fixture.html`).
+ *
+ * Then a long channel is scrolled through, a wheel's worth a frame (`SCROLL`), up to its first message and back down:
+ * what is on screen must move by the scroll alone, and never wait at the top for older messages. Once more as a browser
+ * with no scroll anchoring (Safari, the desktop app on macOS): no row may change height as it comes into view.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -160,6 +164,89 @@ export const MEASURE = String.raw`(() => {
   };
 })();`;
 
+/**
+ * Installed before the page's own scripts. `__scroll(step, frames, total)` scrolls the conversation's list `step` px a
+ * frame (up when positive; a wheel event first, as the person's), stopping at its top once it holds `total` messages,
+ * and reports, each frame read after layout and before paint:
+ * - `off`: how far rows on screen moved beyond what the scroll moved them, summed over the frames off by over 1 px.
+ * - `wall`: frames spent at the top with older messages still to come (the list stopped there, waiting).
+ * - `resized`: rows whose height changed in a frame where none came or went: drawn late, at another height.
+ */
+export const SCROLL = `(() => {
+  const frame = () => new Promise((ok) => requestAnimationFrame(() => {
+    const ro = new ResizeObserver(() => { ro.disconnect(); ok(); });
+    ro.observe(document.documentElement);
+  }));
+  window.__scroll = async (step, frames, total) => {
+    const list = document.querySelector('.channel__messages');
+    const out = { off: 0, worst: 0, wall: 0, resized: 0, frames: 0 };
+    if (!list) return out;
+    let changed = false;
+    const mo = new MutationObserver(() => { changed = true; });
+    mo.observe(list, { childList: true });
+    const count = () => list.querySelectorAll('.ac-msg').length;
+    for (let f = 0; f < frames; f++) {
+      const at = list.scrollTop;
+      if (step > 0 && at === 0 && count() >= total) break;
+      if (step > 0 && at === 0) out.wall += 1;
+      const box = list.getBoundingClientRect();
+      // A day's divider goes to the top of its day when older messages of it land above, as the jumps above say: no row moved.
+      const before = new Map([...list.children].filter((r) => !r.classList.contains('ac-divider')).map((r) => [r, r.getBoundingClientRect()]).filter(([, r]) => r.height > 0));
+      list.dispatchEvent(new WheelEvent('wheel', { deltaY: -step, bubbles: true }));
+      list.scrollTop = at - step;
+      const asked = at - list.scrollTop;
+      changed = false;
+      await frame();
+      out.frames += 1;
+      let off = 0;
+      for (const [row, was] of before) {
+        if (!row.isConnected) continue;
+        const now = row.getBoundingClientRect();
+        if (!changed && Math.abs(now.height - was.height) > 1) out.resized += 1;
+        if (was.bottom > box.top && was.top < box.bottom) off = Math.max(off, Math.abs(now.top - was.top - asked));
+      }
+      if (off > 1) { out.off += Math.round(off); out.worst = Math.max(out.worst, Math.round(off)); }
+    }
+    mo.disconnect();
+    return out;
+  };
+})();`;
+
+/** A browser with no scroll anchoring, in Chromium: the app holds the list's place itself, as in Safari. */
+const NO_ANCHORING = `(() => {
+  const supports = CSS.supports.bind(CSS);
+  CSS.supports = (...args) => (String(args[0]).includes('overflow-anchor') ? false : supports(...args));
+  const style = () => {
+    const s = document.createElement('style');
+    s.textContent = '.channel__messages { overflow-anchor: none !important; }';
+    document.head.append(s);
+  };
+  if (document.head) style(); else addEventListener('DOMContentLoaded', style);
+})();`;
+
+export interface ScrollScore {
+  /** With no anchoring, rows never skipped again after they were laid out (`scrolling`). */
+  whole?: number;
+  off: number;
+  worst: number;
+  wall: number;
+  resized: number;
+  frames: number;
+}
+
+/** What a scroll through got wrong: rows moving by themselves, a wait at the top, and (no anchoring) rows drawn late. */
+export function scrollFaults(score: ScrollScore, manualAnchor: boolean) {
+  return [
+    score.off > 0 && `rows on screen moved ${score.off} px by themselves (at most ${score.worst} px in a frame)`,
+    score.wall > 0 && `waited ${score.wall} frames at the top for older messages`,
+    manualAnchor && score.resized > 0 && `${score.resized} times a row changed height as it came into view`,
+    manualAnchor && (score.whole ?? 0) > 0 && `${score.whole} rows laid out once and never skipped again`,
+  ].filter((x): x is string => Boolean(x));
+}
+
+/** `shifts-fixture.html`'s scrolling cases, read by `SCROLL`: rows drawn late at the top edge, and a wait at the top. */
+export const SCROLL_TWINS = ["bad-scroll--edge", "good-scroll--edge", "bad-scroll--wall", "good-scroll--wall"];
+
 interface Moved {
   at: number;
   value: number;
@@ -186,7 +273,11 @@ export function scoreOf(taken: Taken) {
 type Browser = Awaited<ReturnType<typeof launch>>;
 
 /** A tab with the measure installed, a slow network, and the size given. */
-async function openTab(browser: Browser, size: (typeof SIZES)[number], options: { cookies?: string; origin?: string }) {
+async function openTab(
+  browser: Browser,
+  size: (typeof SIZES)[number],
+  options: { cookies?: string; origin?: string; manualAnchor?: boolean },
+) {
   const { send } = browser;
   const { targetId } = await send<{ targetId: string }>("Target.createTarget", { url: "about:blank" });
   const { sessionId } = await send<{ sessionId: string }>("Target.attachToTarget", { targetId, flatten: true });
@@ -210,6 +301,8 @@ async function openTab(browser: Browser, size: (typeof SIZES)[number], options: 
     uploadThroughput: -1,
   });
   await s("Page.addScriptToEvaluateOnNewDocument", { source: MEASURE });
+  await s("Page.addScriptToEvaluateOnNewDocument", { source: SCROLL });
+  if (options.manualAnchor) await s("Page.addScriptToEvaluateOnNewDocument", { source: NO_ANCHORING });
   // The app in Portuguese, as its people mostly read it, and notifications already answered (no ask over the chat).
   await s("Page.addScriptToEvaluateOnNewDocument", {
     source: "try { localStorage.setItem('agentes.locale', 'pt-BR') } catch {}",
@@ -328,6 +421,14 @@ async function selfTest(browser: Browser) {
       if (twin.startsWith("bad-") && total <= LIMIT) wrong.push(`missed ${twin} (${total.toFixed(4)})`);
       if (twin.startsWith("good-") && total > LIMIT) wrong.push(`flagged ${twin} (${total.toFixed(4)})`);
     }
+    for (const twin of SCROLL_TWINS) {
+      await tab.navigate(`file://${join(HERE, "shifts-fixture.html")}?case=${twin}`);
+      await tab.run("new Promise((ok) => setTimeout(ok, 300))");
+      const total = twin.endsWith("--wall") ? 60 : 40;
+      const faults = scrollFaults(await tab.run<ScrollScore>(`window.__scroll(40, 240, ${total})`), true);
+      if (twin.startsWith("bad-") && !faults.length) wrong.push(`missed ${twin}`);
+      if (twin.startsWith("good-") && faults.length) wrong.push(`flagged ${twin} (${faults.join(", ")})`);
+    }
   } finally {
     await tab.close();
   }
@@ -392,6 +493,36 @@ async function screens(tab: Tab, size: (typeof SIZES)[number], app: string, ids:
   return out;
 }
 
+/** Messages in the seed's long channel (`shifts-seed.ts`). */
+const LONG_CHANNEL = 260;
+
+/**
+ * The long channel opened at its end, scrolled up a wheel's worth a frame (60 px: a quick trackpad) through every older
+ * page to its first message, then back down a while.
+ */
+async function scrolling(tab: Tab, app: string, ids: Awaited<ReturnType<typeof seed>>) {
+  await tab.navigate(`${app}/org/${ids.orgId}/c/${ids.longChannelId}`);
+  await tab.settle();
+  const up = await tab.run<ScrollScore>(`window.__scroll(60, 2000, ${LONG_CHANNEL})`);
+  const down = await tab.run<ScrollScore>(`window.__scroll(-60, 300, ${LONG_CHANNEL})`);
+  // What the scroll moved is no jump: the measure of the screens above starts over.
+  await tab.take();
+  const rows = await tab.run<number>("document.querySelectorAll('.channel__messages .ac-msg').length");
+  if (rows < LONG_CHANNEL) throw new Error(`scroll: only ${rows} of ${LONG_CHANNEL} messages loaded`);
+  // Laid out once, a row may be skipped again off screen (layout.css): one never marked is drawn on every change.
+  const whole = await tab.run<number>(
+    "document.querySelectorAll('.channel__messages[data-manual-anchor] .ac-msg:not([data-sized])').length",
+  );
+  return {
+    whole,
+    off: up.off + down.off,
+    worst: Math.max(up.worst, down.worst),
+    wall: up.wall,
+    resized: up.resized + down.resized,
+    frames: up.frames + down.frames,
+  };
+}
+
 function flagValue(name: string) {
   const args = process.argv.slice(2);
   return args.includes(name) ? args[args.indexOf(name) + 1] : undefined;
@@ -441,21 +572,42 @@ async function main() {
     try {
       const ids = await seed(t, "http://localhost:3999");
       const results: Result[] = [];
-      for (const size of SIZES) {
-        const tab = await openTab(browser, size, { cookies: ids.cookie, origin: "http://localhost:3999" });
+      const scrolls: { size: string; manualAnchor: boolean; score: ScrollScore }[] = [];
+      const runs = [...SIZES.map((size) => ({ size, manualAnchor: false })), { size: SIZES[0], manualAnchor: true }];
+      for (const { size, manualAnchor } of runs) {
+        const tab = await openTab(browser, size, {
+          cookies: ids.cookie,
+          origin: "http://localhost:3999",
+          manualAnchor,
+        });
         try {
-          results.push(...(await screens(tab, size, "http://localhost:3999", ids)));
+          if (!manualAnchor) results.push(...(await screens(tab, size, "http://localhost:3999", ids)));
+          scrolls.push({ size: size.name, manualAnchor, score: await scrolling(tab, "http://localhost:3999", ids) });
         } finally {
           await tab.close();
         }
       }
-      const table = report(results);
+      const scrollTable = [
+        "| Size | Scroll anchoring | Frames | Moved by itself (px) | Waits at the top (frames) | Rows drawn late | Never skipped |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        ...scrolls.map(
+          (r) =>
+            `| ${r.size} | ${r.manualAnchor ? "none (as Safari)" : "Chromium's"} | ${r.score.frames} | ${r.score.off} | ${r.score.wall} | ${r.score.resized} | ${r.manualAnchor ? r.score.whole : "-"} |`,
+        ),
+      ].join("\n");
+      const table = `${report(results)}\n\n## Scrolling a long channel\n\n${scrollTable}`;
       console.log(table);
       const file = flagValue("--report");
       if (file) writeFileSync(file, `# Layout shifts\n\n${table}\n`);
       const over = results.filter((r) => r.score.total > LIMIT);
       for (const r of over) console.error(`OVER ${r.size} ${r.screen}: ${r.score.total.toFixed(4)} > ${LIMIT}`);
-      process.exitCode = over.length ? 1 : 0;
+      const faulty = scrolls.flatMap((r) =>
+        scrollFaults(r.score, r.manualAnchor).map(
+          (f) => `SCROLL ${r.size}${r.manualAnchor ? " (no anchoring)" : ""}: ${f}`,
+        ),
+      );
+      for (const f of faulty) console.error(f);
+      process.exitCode = over.length || faulty.length ? 1 : 0;
     } finally {
       server.stop(true);
       await t.close();

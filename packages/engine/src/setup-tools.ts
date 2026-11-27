@@ -1199,7 +1199,7 @@ const SETUP_TOOLS_PERSONAL: Record<string, string> = {
   [OFFER_INVITES_TOOL]:
     "Offer to invite someone the person trusts (family, a partner, someone who helps them) to this workspace with a card in this conversation: its button opens the app's invite dialog with these addresses filled in, as members. A person who may invite sends it there (and may change roles); you send nothing. Use it when they ask to invite or add someone by email, never on your own.",
   [PROPOSE_SETTINGS_TOOL]:
-    "Change agents' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+    "Change agents' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, archiving it, or when it asks a person before acting (approvals: its own confirm card). A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
   [OFFER_ANSWERS_TOOL]:
     "Ask the person one short question with answers to tap under it, in this conversation: each tap sends the answer as their own message (several at once with `multiple`), and they can always type instead. Use it for the questions that set their agents up (what they want help with, what takes most of their time, when they want to hear from their agents), one per turn, with `step` and `of` ('Pergunta 2 de 3'). The question shows as your message: write nothing else in this turn and end it. Their answer comes as their next message.",
   [PROPOSE_TEAM_TOOL]:
@@ -1603,6 +1603,7 @@ interface SettingsChangeInput {
   group?: unknown;
   reports_to?: unknown;
   archive?: unknown;
+  approvals?: unknown;
 }
 
 const NANO_PER_USD = 1_000_000_000;
@@ -1716,7 +1717,7 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
       installed.find((k) => k.name === n.trim().toLowerCase()) ?? installed.find((k) => slug(k.name) === slug(n));
     const unknown = wantedSkills.filter((n) => !skillOf(n));
     if (unknown.length > 0) {
-      const install = "offer to install it with offer_install_skill, by its GitHub link";
+      const install = "offer to install it with offer_install_skill, by its GitHub link or its .zip sent here";
       const here = installed.map((k) => k.name);
       return installed.length
         ? `No skill ${firstOf(unknown, NAMES_SHOWN)}. Skills here: ${firstOf(here, NAMES_SHOWN)}. One not installed yet: ${install}.`
@@ -1868,6 +1869,11 @@ const CHANGE_PROPERTIES = {
       'Its department (setor), by the name the team screen shows, or "none" to take it out of its department. It says where it sits in the workspace, never what it may do.',
   },
   archive: { type: "boolean", description: "True: archive it (it stops working; Undo brings it back)." },
+  approvals: {
+    enum: ["always", "risky", "never", "workspace"],
+    description:
+      'When it asks a person before acting ("pode aprovar tudo daqui pra frente": never): always (any change), risky (deleting, sending, paying), never, or workspace (follow the workspace\'s). Its own confirm card.',
+  },
 };
 
 const REASON = {
@@ -1899,6 +1905,31 @@ async function teammateNamed(ctx: ToolContext, self: { name: string; handle: str
 }
 
 /**
+ * The `approvals` of each change as a card of its own, which a person confirms (ADR 0173, addendum of 2026-11-26): what
+ * the posts said, or the refusal.
+ */
+async function approvalsCards(
+  deps: { pubsub?: PubSub },
+  ctx: ToolContext,
+  person: string,
+  changes: SettingsChangeInput[],
+  why: string,
+): Promise<string | ToolOutput> {
+  const action = workspaceAction("set_agent_approvals_level");
+  if (!action) return "";
+  const said: string[] = [];
+  for (const c of changes) {
+    if (typeof c.approvals !== "string") continue;
+    const resolved = await action.resolve(ctx, person, { agent: str(c.agent), level: c.approvals });
+    if (typeof resolved === "string") return { content: resolved, isError: true };
+    const out = await offerWorkspaceAction({ ...deps, cardsLeft, hopOf }, ctx, person, action, resolved, why);
+    if (out.isError) return out;
+    said.push(out.content.replace(/ Nothing has changed yet\.$/, ""));
+  }
+  return said.join(" ");
+}
+
+/**
  * `propose_settings_change` (ADR 0137, amending 0092 §5): a teammate's settings as one card in this conversation,
  * one row per agent and whoever decides it, applied by who clicks Aplicar. Rows the person who asked may decide, in
  * their own words (`ownWords`), apply as the card is posted: it shows them done with Desfazer. Never an agent's own row
@@ -1913,8 +1944,8 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
   return {
     name: own ? REQUEST_SETTINGS_TOOL : PROPOSE_SETTINGS_TOOL,
     description: own
-      ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model and its effort, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look, the department you are in or who you report to. Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
-      : "Change teammates' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+      ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model and its effort, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look, the department you are in, who you report to, or when you ask a person before acting (approvals, when the person tells you to stop asking or to always ask). Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
+      : "Change teammates' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, archiving it, or when it asks a person before acting (approvals: its own confirm card). A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
     scope: own ? "" : SETUP_SCOPE,
     inputSchema: own
       ? {
@@ -1967,12 +1998,18 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
           changes.map((c) => c.agent),
         );
         if (named.missing.length > 0) return noAgents(ctx, named.missing);
+        const others = changes.filter((c) => Object.keys(c).some((k) => !["agent", "approvals", "reason"].includes(k)));
         const targets: { agentId: string; lines: WantedLine[] }[] = [];
-        for (const change of changes) {
+        for (const change of others) {
           const lines = await wantedLines(ctx, change);
           if (typeof lines === "string") return { content: lines, isError: true };
           targets.push({ agentId: named.rowOf(change.agent)?.id ?? "", lines });
         }
+        // Every row is checked before any card is posted: a refused call the agent retries never leaves a card behind.
+        // When an agent asks is its own confirm card (`set_agent_approvals_level`), never a reviewed settings row.
+        const leveled = await approvalsCards(deps, ctx, forUserId, changes, str(input.reason).trim());
+        if (typeof leveled !== "string") return leveled;
+        if (others.length === 0) return { content: `${leveled} Nothing has changed yet.` };
         const at = await cardPlace(ctx);
         if (!at) return NOBODY_READS;
         const full = await cardsLeft(ctx);
@@ -2050,7 +2087,7 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
             ? ""
             : `${rest} through a quick review that applies each row in a moment if it makes sense; its card shows the outcome.`;
         return {
-          content: `Posted the card for ${own ? "your settings" : who}; ${applied ? "applied at once, with Undo on the card, so say it is done. " : ""}${reviewed}${skipped.length ? ` Left off the card: ${skipped.join(" ")}` : ""}`,
+          content: `${leveled ? `${leveled} ` : ""}Posted the card for ${own ? "your settings" : who}; ${applied ? "applied at once, with Undo on the card, so say it is done. " : ""}${reviewed}${skipped.length ? ` Left off the card: ${skipped.join(" ")}` : ""}`,
           data: { actionCard: { messageId: message.id } },
         };
       } catch (error) {

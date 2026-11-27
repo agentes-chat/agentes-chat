@@ -462,8 +462,8 @@ describe("the agent's AI", () => {
     // The flow is a component the tests can't render: what it wires in, as text.
     const flow = await Bun.file(new URL("../../src/features/ai/AddAccount.tsx", import.meta.url).pathname).text();
     expect(flow).toContain("const busy = (sending || sent) && !ended;");
-    // Claude's code, Gemini's and a plan's key: the line in place of the field and its button, never beside them.
-    expect(flow.match(/\{busy\s+\? busyLine\s+: pasteRow\(/g)).toHaveLength(3);
+    // Claude's code, Gemini's, Devin's and a plan's key: the line in place of the field and its button, never beside them.
+    expect(flow.match(/\{busy\s+\? busyLine\s+: pasteRow\(/g)).toHaveLength(4);
     expect(flow).toMatch(/<Note icon=\{<InkOrbit size=\{15\} \/>\} live>\s*\{busyText\}/);
     // A failed send brings the field back with what was in it: only a code that went clears it.
     expect(flow).toMatch(/setSent\(true\);\s+setCode\(""\);/);

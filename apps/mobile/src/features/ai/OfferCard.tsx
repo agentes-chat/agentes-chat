@@ -15,6 +15,7 @@ import {
   actionCardOf,
   connectAppDone,
   installSkillDone,
+  installSkillSource,
   inviteDone,
   skillUpdateState,
 } from "@agenteschat/client/lib/action-cards";
@@ -135,13 +136,22 @@ function InstallSkill({ card, agentId }: { card: Extract<Card, { kind: "install_
       icon="brain"
       title={t("actionCard.install_skill.title")}
       why={card.why}
-      detail={card.url}
-      done={installSkillDone(card, skills.data ?? []) ? `${t("actionCard.install_skill.done")}: ${card.url}` : null}
+      detail={installSkillSource(card)}
+      done={
+        installSkillDone(card, skills.data ?? [])
+          ? `${t("actionCard.install_skill.done")}: ${installSkillSource(card)}`
+          : null
+      }
       action={t("actionCard.install_skill.open")}
       onAction={() => {
-        if (agentId) openedFromCard({ url: card.url, agentId });
+        // The card's link, or its .zip's Drive id: what the route names to keep its agent (`routeAgent`).
+        const source = card.file?.id ?? card.url ?? "";
+        if (agentId) openedFromCard({ url: source, agentId });
+        const agent = agentId ? `&agent=${encodeURIComponent(agentId)}` : "";
         router.push(
-          `/settings/skills/new?url=${encodeURIComponent(card.url)}${agentId ? `&agent=${encodeURIComponent(agentId)}` : ""}` as never,
+          (card.file
+            ? `/settings/skills/new?file=${encodeURIComponent(card.file.id)}&name=${encodeURIComponent(card.file.name)}${agent}`
+            : `/settings/skills/new?url=${encodeURIComponent(source)}${agent}`) as never,
         );
       }}
       blocked=""

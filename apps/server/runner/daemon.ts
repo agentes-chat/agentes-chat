@@ -18,8 +18,11 @@ import {
   type AccountKind,
   type AgentScope,
   ALL_AGENTS,
+  DISK_PARTS_MS,
+  type DiskParts,
   isAccountId,
   isAccountKind,
+  isOsPermission,
   LOAD_SAMPLE_MS,
   MACHINE_PROTOCOL_VERSION,
   type MachineAgent,
@@ -52,6 +55,7 @@ import {
   type ControlReplies,
   type ControlStatus,
 } from "@agenteschat/adapters/runner-control";
+import type { PinCli } from "@agenteschat/providers/cli-pins";
 import {
   AccessRequests,
   addFolder,
@@ -72,6 +76,7 @@ import { AccountBrains } from "./account-brains";
 import { accountSelfCheck, SELF_CHECK_DEFERRED, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
 import { AccountManager, grokSandboxFails, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
 import { ActivityLog } from "./activity";
+import { agentsCopy, agentsReach, type RunAs } from "./agent-reach";
 import {
   AccountUsers,
   type AgentUser,
@@ -96,7 +101,14 @@ import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
 import { ensureBrowserBindPolicy, prepareAgents } from "./browser-bind-policy";
 import { BrowserViews } from "./browser-views";
-import { CLI_OF_BRAIN, CliCopies, type CliCopiesOptions, holdCliSelfUpdates, isPinCli } from "./cli-copies";
+import {
+  CLI_COMMAND,
+  CLI_OF_BRAIN,
+  CliCopies,
+  type CliCopiesOptions,
+  holdCliSelfUpdates,
+  isPinCli,
+} from "./cli-copies";
 import { CliInstaller, type CliInstallerOptions, gitBashPath } from "./cli-install";
 import { readCodexAccount } from "./codex-account";
 import { codexSandboxReport } from "./codex-windows";
@@ -120,14 +132,16 @@ import {
 import { type ConnectionOutcome, type Dial, RunnerConnection } from "./connection";
 import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
+import { diskLayout, keepDiskParts, keptDiskParts, measureDiskParts } from "./disk-parts";
 import { EgressObservation, probeEgress } from "./egress";
 import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
-import { EGRESS_SHARE_FILE, EgressShare } from "./egress-share";
+import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
-import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs } from "./executors";
+import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
 import { systemGitCache } from "./git";
 import { closeIdleUnderPressure, type HandlerContext, type RequestObserver, type RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
+import { SYSTEM_LAUNCHER, SYSTEM_RUNNER_DIR } from "./install-script";
 import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
@@ -149,6 +163,7 @@ import {
   writeNetworkState,
 } from "./network-state";
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
+import { PermissionNeeds } from "./os-permissions";
 import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
 import { ackPark, takePark } from "./park";
 import { agentId8, agentWorkspace } from "./paths";
@@ -419,6 +434,8 @@ export interface DaemonOptions {
   refreshPath?: () => void;
   /** Tests: how the coding CLIs' looks run (the background cache stays real). */
   executorRun?: ExecutorRun;
+  /** Tests (system mode): how a CLI's `--version` runs as the agents (`agentsReach`). */
+  agentsRun?: RunAs;
   /** How the accounts' CLIs start (default `claude` / `codex`). */
   accountCommands?: Partial<Record<AccountKind, string[]>>;
   now?: () => number;
@@ -447,6 +464,8 @@ export interface DaemonOptions {
   selfCheckRetryMs?: number;
   /** Tests: what `hello.toolchains` says instead of a look at the computer's tools. */
   toolchains?: () => RunnerToolchains | undefined;
+  /** Tests: the system whose refusals a failed command's output is read for (`permissionOfOutput`). */
+  platform?: string;
   /** Tests: the phones' tools and folders, or `false` for none (a single-user runner looks for phones). */
   phones?: Partial<PhoneManagerOptions> | false;
   /** Tests: the iPhone setup's tools and folders. */
@@ -521,6 +540,9 @@ export class RunnerDaemon implements RequestObserver {
   /** The computer's shared folder (ADR 0115) once the session made it, and its last measured size. */
   private shared: string | null = null;
   private sharedGb: number | undefined;
+  /** What takes the workspace disk by kind (`disk-parts.ts`), once measured or kept from before a restart. */
+  private diskParts: DiskParts | null = null;
+  private measuringDisk = false;
   /** System mode's folder (real path) and group, for `shareFiles`; null elsewhere. */
   private sharedGroup: Required<SharedSpec> | null = null;
   private sharing = false;
@@ -578,6 +600,11 @@ export class RunnerDaemon implements RequestObserver {
   private toolchains: { get(): RunnerToolchains | undefined; stop(): void; lookApple?(): Promise<void> } | null = null;
   /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
   private iphone: IphoneSetup | null = null;
+  /** The OS permissions agents' work waits on here: the app asks the person, the server shows the wait. */
+  private readonly permissionNeeds = new PermissionNeeds((permissions) => {
+    this.send({ type: "permissions.changed", permissions });
+    this.queueStatus();
+  });
   /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
   private holds: Holds | null = null;
   /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
@@ -616,6 +643,7 @@ export class RunnerDaemon implements RequestObserver {
     } catch {
       // an unreadable config starts unpaired
     }
+    setCodexForAgents(system);
     const exec =
       opts.executors ??
       cachedExecutors({
@@ -628,7 +656,16 @@ export class RunnerDaemon implements RequestObserver {
         ...(process.platform === "win32"
           ? { before: () => this.refreshPath?.(), gitMissing: () => gitBashPath() === null }
           : system
-            ? { homeOnly: (bin: string) => inHomeDirs(bin) !== null }
+            ? {
+                homeOnly: (bin: string) => inHomeDirs(bin) !== null,
+                // A fake look (tests) is checked as the agents only with a fake of that too.
+                ...(opts.executorRun && !opts.agentsRun
+                  ? {}
+                  : {
+                      reach: (found: NonNullable<RunnerInfo["executors"]>) =>
+                        agentsReach(found, opts.home, opts.agentsRun),
+                    }),
+              }
             : { before: () => addUsualDirs() }),
       });
     const windows =
@@ -641,8 +678,9 @@ export class RunnerDaemon implements RequestObserver {
         onChange: () => this.executorsChanged(),
         ...(windows.chooseCodexSandbox ? { choose: windows.chooseCodexSandbox } : {}),
       });
-    // Grok Build's, Antigravity's and Cursor's models as the accounts signed in here list them: the computer's own
-    // `grok models`, `agy models` and `agent models` are signed out.
+    // Grok Build's, Antigravity's, Cursor's and Devin's models as the accounts signed in here list them: the
+    // computer's own `grok models`, `agy models` and `agent models` are signed out, and the computer's own Devin
+    // thinks for no agent.
     this.executors = () => {
       const found: NonNullable<RunnerInfo["executors"]> = { ...exec() };
       for (const kind of ["grok", "antigravity", "cursor"] as const) {
@@ -650,6 +688,9 @@ export class RunnerDaemon implements RequestObserver {
         const entry = found[kind];
         if (entry && models) found[kind] = { ...entry, models };
       }
+      // Each family's variants stay here: the turns pick one (`devinTurnModel`).
+      const devin = this.accounts?.listedModels("devin")?.map(({ variants: _v, ...m }) => m);
+      if (found.devin && devin) found.devin = { ...found.devin, models: devin };
       if (found.codex && codexSandbox) found.codex = codexSandbox(found.codex, this.access().tools.codex);
       return found;
     };
@@ -665,22 +706,31 @@ export class RunnerDaemon implements RequestObserver {
       : null;
     // Every CLI the runner starts, the person's own or its copy, stays the version it was checked at (ADR 0228 §6).
     holdCliSelfUpdates();
-    // Outside system mode, where the person's own CLI runs: the root's are the computer's setup's (the Cloud's image).
-    this.copies =
-      opts.cliCopies && !system
-        ? new CliCopies({
-            home: opts.home,
-            log: opts.log,
-            // Git for Windows is wanted where Claude Code is, on Windows: its bash is Claude Code's shell there.
-            inUse: (cli) =>
-              this.accounts.snapshot()?.some((a) => CLI_OF_BRAIN[a.kind] === (cli === "git" ? "claude" : cli)) ?? false,
-            onChange: () => {
-              void this.clisLook().then(() => this.accounts.refresh(true).catch(() => undefined));
-            },
-            onFetch: (cli, fetch) => this.send({ type: "cli.fetch", cli, fetch }),
-            ...(typeof opts.cliCopies === "object" ? opts.cliCopies : {}),
-          })
-        : null;
+    // In system mode only where the agents reach no copy at all, whatever its version: the computer's setup installs
+    // theirs (the Cloud's image), and those update themselves.
+    this.copies = opts.cliCopies
+      ? new CliCopies({
+          home: system ? SYSTEM_RUNNER_DIR : opts.home,
+          ...(system
+            ? {
+                shared: { bin: path.dirname(SYSTEM_LAUNCHER) },
+                own: async (cli: PinCli, pinned: string) =>
+                  (await agentsCopy(CLI_COMMAND[cli], opts.home, opts.agentsRun)) === null
+                    ? null
+                    : { file: CLI_COMMAND[cli], version: pinned },
+              }
+            : {}),
+          log: opts.log,
+          // Git for Windows is wanted where Claude Code is, on Windows: its bash is Claude Code's shell there.
+          inUse: (cli) =>
+            this.accounts.snapshot()?.some((a) => CLI_OF_BRAIN[a.kind] === (cli === "git" ? "claude" : cli)) ?? false,
+          onChange: () => {
+            void this.clisLook().then(() => this.accounts.refresh(true).catch(() => undefined));
+          },
+          onFetch: (cli, fetch) => this.send({ type: "cli.fetch", cli, fetch }),
+          ...(typeof opts.cliCopies === "object" ? opts.cliCopies : {}),
+        })
+      : null;
     const accountUsers = system ? (opts.accountUsers ?? new AccountUsers({ home: opts.home, log: opts.log })) : null;
     this.accountUsers = accountUsers;
     this.accounts = new AccountManager({
@@ -980,6 +1030,7 @@ export class RunnerDaemon implements RequestObserver {
             this.load.add(l && oomKills !== undefined ? { ...l, oomKills } : l, undefined, {
               ...diskFigures(d),
               ...(this.sharedGb === undefined ? {} : { sharedGb: this.sharedGb }),
+              ...(this.diskParts ? { diskParts: this.diskParts } : {}),
               ...(this.stored?.mode === "system" && process.platform === "linux"
                 ? { agentTmpRamGb: Math.round((agentTmpMemoryBytes() / 2 ** 30) * 10) / 10 }
                 : {}),
@@ -1008,6 +1059,9 @@ export class RunnerDaemon implements RequestObserver {
     const sizes = setInterval(() => this.measureShared(), SHARED_SIZE_MS);
     sizes.unref?.();
     this.timers.push(sizes);
+    const parts = setInterval(() => this.measureDisk(), DISK_PARTS_MS);
+    parts.unref?.();
+    this.timers.push(parts);
     const idleTmp = setInterval(() => this.cleanIdleTmp(), IDLE_TMP_SWEEP_MS);
     idleTmp.unref?.();
     this.timers.push(idleTmp);
@@ -1308,6 +1362,7 @@ export class RunnerDaemon implements RequestObserver {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
       commands: "commands",
       browser: "the browser",
       desktop: "the agents' desktops",
@@ -1426,6 +1481,7 @@ export class RunnerDaemon implements RequestObserver {
     this.shared = this.prepareShared(workspaceReal, sharedSpec);
     this.sharedGroup = sharedSpec && this.shared ? { path: this.shared, group: sharedSpec.group } : null;
     this.measureShared();
+    this.measureDisk(true);
     this.shareFiles();
     const secretsDir = path.join(home, "secrets");
     // Site passwords live in memory now (ADR 0144): one an older runner kept on disk goes.
@@ -1528,7 +1584,7 @@ export class RunnerDaemon implements RequestObserver {
       numbered: this.desktopRefsGiven,
       log,
     });
-    this.egressShare ??= new EgressShare({ file: path.join(home, EGRESS_SHARE_FILE) });
+    this.egressShare ??= new EgressShare();
     const streams = new DataSockets({
       url: connectUrl(config.server, "stream"),
       token: config.token,
@@ -1740,6 +1796,8 @@ export class RunnerDaemon implements RequestObserver {
     }
     const context: HandlerContext = {
       workspaceReal,
+      ...(this.opts.platform ? { platform: this.opts.platform } : {}),
+      appAsks: config.managedBy === "desktop",
       get exec() {
         return daemon.access().tools.commands;
       },
@@ -1826,6 +1884,7 @@ export class RunnerDaemon implements RequestObserver {
         return {
           ...(phones ? { phones } : {}),
           ...(toolchains ? { toolchains } : {}),
+          permissions: this.permissionNeeds.list(),
           ...this.info(workspaceReal),
           browser: browser.info(),
           desktop: this.desktops.info(),
@@ -2210,6 +2269,29 @@ export class RunnerDaemon implements RequestObserver {
     });
   }
 
+  /**
+   * System mode on Linux, as root: what takes the workspace disk by kind, for the next load report (`du` in the
+   * background). `kept`: a measure newer than `DISK_PARTS_MS` from before a restart stands instead.
+   */
+  private measureDisk(kept = false) {
+    const workspace = this.session?.workspaceReal;
+    if (!workspace || this.measuringDisk || this.opts.workers) return;
+    if (this.stored?.mode !== "system" || process.platform !== "linux" || process.getuid?.() !== 0) return;
+    if (kept) this.diskParts ??= keptDiskParts(this.opts.home, DISK_PARTS_MS);
+    if (kept && this.diskParts) return;
+    this.measuringDisk = true;
+    void measureDiskParts(diskLayout(workspace))
+      .then((parts) => {
+        if (!parts) return;
+        this.diskParts = parts;
+        keepDiskParts(this.opts.home, parts);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.measuringDisk = false;
+      });
+  }
+
   /** System mode, as root: what agents with nothing running but their worker left in /tmp goes (`idleTmpLines`). */
   private cleanIdleTmp() {
     const supervisor = this.session?.supervisor;
@@ -2510,8 +2592,11 @@ export class RunnerDaemon implements RequestObserver {
 
   /** Installing a coding CLI from the apps; once installed, looked up again at once, so the apps move on by themselves. */
   cliInstaller(): CliInstaller {
+    const copies = this.copies;
     this.installer ??= new CliInstaller({
       log: this.opts.log,
+      // System mode: never the vendor's installer as root, which would install for root alone.
+      ...(copies?.forAgents ? { fetch: (tool) => copies.ensure(tool) } : {}),
       onDone: async (tool) => {
         await this.clisLook();
         return Boolean(this.executors()[tool]);
@@ -2546,6 +2631,7 @@ export class RunnerDaemon implements RequestObserver {
       access: this.access(),
       browsers,
       ...(this.phones ? { phones: this.phones.list() } : {}),
+      permissions: this.permissionNeeds.list(),
       // In system mode each agent runs as a user of its own, not as the runner's.
       ...(OS_USER && c?.mode !== "system" && s?.mode !== "system" ? { user: OS_USER } : {}),
       seq: ++this.statusSeq,
@@ -2583,6 +2669,12 @@ export class RunnerDaemon implements RequestObserver {
     this.opts.log("reconnect asked by the app");
     s.connection.reconnect();
     return { reconnecting: true };
+  }
+
+  /** The app's dialog: the person allowed `permission` (or it was on already), so nothing waits on it. */
+  permissionClear(permission: unknown): { cleared: boolean } {
+    if (!isOsPermission(permission)) throw new ControlError("bad_request", "Unknown permission");
+    return { cleared: this.permissionNeeds.clear(permission) };
   }
 
   /**
@@ -3162,11 +3254,16 @@ export class RunnerDaemon implements RequestObserver {
     const d = this.describe(req);
     if (!d) return;
     const agent = this.agentRef(req.agent);
+    const permission =
+      outcome.ok && req.op === "exec" ? (outcome.data as MachineReplies["exec"]).permission : undefined;
     this.queue(async () => {
       const job = this.jobs.get(id);
       this.jobs.delete(id);
       if (job) this.emit({ kind: "job.finished", jobId: id, result });
       const redact = d.command ? await this.redactor(req.agent) : undefined;
+      if (permission) {
+        this.permissionNeeds.add(permission, redactCommon(redact ? redact(d.summary) : d.summary), agent?.id);
+      }
       const kind = d.kind === "exec" ? "command" : d.kind === "brain" ? "brain" : "file";
       this.record(
         {

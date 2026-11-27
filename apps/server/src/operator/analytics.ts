@@ -7,11 +7,17 @@ import {
   ANALYTICS_LIST_MAX,
   ANALYTICS_MAX_DAYS,
   ANALYTICS_ROWS_MAX,
+  ASK_KINDS,
+  ASK_MODELS_MAX,
+  ASK_OUTCOMES,
+  ASK_TIME_BUCKETS,
+  ASK_TIMES_MAX_DAYS,
   CLI_RUNS_MAX_DAYS,
   CLI_RUNS_ROWS_MAX,
   CONNECTOR_KEY,
   operatorAiAccounts,
   operatorAnalytics,
+  operatorAskTimes,
   operatorCliRuns,
   operatorConnectorAnalytics,
   operatorListAiAccounts,
@@ -413,7 +419,8 @@ const CliRuns = z
       .array(
         z.object({
           cli: z.string().openapi({
-            description: "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`.",
+            description:
+              "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `devin`.",
           }),
           version: z.string().openapi({
             description: "Its version, as its `--version` gave it on the run's computer.",
@@ -499,7 +506,7 @@ const RunTimings = z
           ...TimingsGroup,
           cause: z.string().openapi({
             description:
-              "Why the turn started a new process: `new_session` (a session that never ran there: a new conversation, or a fresh session for an old one), `idle` (its process closed after its idle limit), `cap` (closed for another conversation of the agent), `memory` (closed to make room), `settings` (another launch: folder, permissions, account, sign-in), `warm_mismatch` (a warm start had another system text), `exited`, `closed` (after its last turn: canceled, died, a background turn), `restart` (it ran before, no process left: the runner restarted), `unsaid` (an older runner). Ignore values you don't know.",
+              "Why the turn started a new process: `new_session` (a session that never ran there: a new conversation, or a fresh session for an old one), `idle` (its process closed after its idle limit), `cap` (closed for another conversation of the agent), `memory` (closed to make room), `settings` (another launch: folder, permissions, account, sign-in), `warm_mismatch` (a warm start had another system text), `exited`, `closed` (after its last turn: canceled, died, a background turn), `restart` (it ran before, no process left: the runner restarted), `warm_settings` (a warm start had another launch than its turn), `no_launch` (a warm start came before the runner ran a turn of the agent), `unsaid` (an older runner). Ignore values you don't know.",
           }),
           turns: Count,
         }),
@@ -651,7 +658,8 @@ const AiAccounts = z
               "`anthropic`, `openai`, `xai`, `google`, `cursor`, `opencode`, a coding plan's id, or an API key's provider.",
           }),
           runtime: z.string().openapi({
-            description: "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, or `api` (an API key).",
+            description:
+              "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, `devin`, or `api` (an API key).",
           }),
           authMethod: AuthMethodOrUnknown,
           billing: z.enum(["subscription", "coding_plan", "metered_api", "unknown"]).openapi({
@@ -797,6 +805,75 @@ const AiAccountPage = z
   })
   .openapi("OperatorAiAccountPage");
 
+const AskTimesQuery = z.object({
+  from: z
+    .string()
+    .openapi({ description: "An ISO 8601 instant: asks made at or after it.", example: "2026-11-19T00:00:00Z" }),
+  to: z.string().openapi({
+    description: `An ISO 8601 instant: asks made before it, at most ${ASK_TIMES_MAX_DAYS} days after \`from\`. Else 400 \`analytics.range\`.`,
+    example: "2026-11-26T00:00:00Z",
+  }),
+  bucket: z.enum(ASK_TIME_BUCKETS).default("day").openapi({ description: "The series per UTC hour or day." }),
+  orgId: z.uuid().optional().openapi({ description: "One workspace's asks; every workspace's without it." }),
+});
+const AskQuantiles = z.object({ p50Ms: Ms, p90Ms: Ms });
+const AskMeasures = {
+  asks: Count.openapi({
+    description:
+      "People's messages that started agents' work, each with all the work it set off (ADR 0254): the hand-offs to other agents and their follow-ups, until a person wrote again.",
+  }),
+  judged: Count.openapi({
+    description: "Of them, the ones whose kind Jev read; the others' kind is what the work did.",
+  }),
+  index: z.number().int().min(0).max(100).nullable().openapi({
+    description:
+      "The speed index, 0 to 100: replies within the kind's target, plus half of those within four times it, over the asks that count. A failure, and an ask with no reply past four times its target, count against; no AI or a hold, a stop by a person, a pass by every agent and an ask still within its time don't count. Null: none counted.",
+  }),
+  satisfied: Count,
+  tolerating: Count,
+  frustrated: Count,
+  firstActivity: AskQuantiles.openapi({ description: "From the person's message to the first tool step or message." }),
+  firstReply: AskQuantiles.openapi({
+    description:
+      "To the work's first message in the conversation; the server's own notices (no AI, a limit) aren't one.",
+  }),
+  done: AskQuantiles.openapi({ description: "To when its every run ended, and its long work, of the asks done." }),
+  outcomes: z
+    .object(
+      Object.fromEntries(ASK_OUTCOMES.map((o) => [o, Count])) as Record<(typeof ASK_OUTCOMES)[number], typeof Count>,
+    )
+    .openapi({
+      description:
+        "`done` with a reply, `failed`, `setup` (no AI, a hold or a spent budget, before any reply), `canceled` by a person, `open` (a run or its long work goes on), `passed` (every agent passed).",
+    }),
+  multiAgent: Count.openapi({ description: "Asks two or more agents worked on." }),
+  runsPerAsk: z.number().nullable(),
+  toolsP50: z.number().nullable().openapi({ description: "Our tools' calls per ask, the median." }),
+};
+const AskGroup = z.object(AskMeasures).openapi("OperatorAskMeasures");
+const AskTimes = z
+  .object({
+    from: z.string(),
+    to: z.string(),
+    bucket: z.enum(ASK_TIME_BUCKETS),
+    orgId: z.uuid().nullable(),
+    totals: AskGroup,
+    kinds: z
+      .array(AskGroup.extend({ kind: z.enum(ASK_KINDS), targetMs: z.number().int() }))
+      .openapi({ description: "Every kind, in order, with its target for the first reply." }),
+    brains: z.array(AskGroup.extend({ brain: z.string() })).openapi({
+      description: "By the brain of the ask's first run (`other`: none yet), most asks first.",
+    }),
+    models: z.array(AskGroup.extend({ model: z.string() })).openapi({
+      description: `By the model of the ask's first run (\`none\`: no usage recorded), most asks first, at most ${ASK_MODELS_MAX}.`,
+    }),
+    modelsMore: z.boolean(),
+    series: z
+      .array(AskGroup.extend({ at: At, kind: z.enum(["all", ...ASK_KINDS]) }))
+      .openapi({ description: "Per bucket, oldest first: `all`, then each kind that had asks." }),
+  })
+  .openapi("OperatorAskTimes");
+
 export function registerOperatorAnalytics(api: OpenAPIHono, { db }: OperatorDeps) {
   api.openapi(
     createRoute({
@@ -892,6 +969,19 @@ export function registerOperatorAnalytics(api: OpenAPIHono, { db }: OperatorDeps
       responses: { 200: json(ReplyTimes), 400: errors[400], 401: errors[401] },
     }),
     async (c) => c.json(await operatorReplyTimes(db, c.req.valid("query")), 200),
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/analytics/asks",
+      tags,
+      summary: "Time per task: how long people's asks took, by kind, with a speed index",
+      description: `Of the asks people made in the window, ${ASK_TIMES_MAX_DAYS} days at most, across workspaces or in one: Jev's read of each one's kind (or what its work did), the time to the first activity, the first reply and done, and how they ended. Counts and times only: no message, no name.`,
+      request: { query: AskTimesQuery },
+      responses: { 200: json(AskTimes), 400: errors[400], 401: errors[401] },
+    }),
+    async (c) => c.json(await operatorAskTimes(db, c.req.valid("query")), 200),
   );
 
   api.openapi(

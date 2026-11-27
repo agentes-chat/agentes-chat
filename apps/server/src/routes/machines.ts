@@ -88,6 +88,7 @@ const MachineTool = z.enum([
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
   "browser",
   "desktop",
@@ -121,6 +122,10 @@ export const MachineAccess = z
         .boolean()
         .optional()
         .openapi({ description: "Google's Antigravity CLI (protocol 44, ADR 0143); absent = follows `codex`." }),
+      devin: z
+        .boolean()
+        .optional()
+        .openapi({ description: "Cognition's Devin CLI (protocol 89, ADR 0253); absent = follows `codex`." }),
       commands: z.boolean(),
       browser: z
         .boolean()
@@ -190,7 +195,7 @@ export const Machine = z
     }),
     cliFetchable: z.array(z.enum(FETCH_NAMES)).openapi({
       description:
-        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). None on the workspace's own computer, in system mode or from an older runner.",
+        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). In system mode (protocol 88 on) only for agents' users who reach no copy of it, where `cli-install` installs it for all of them. None on the workspace's own computer, in system mode before protocol 88 or from an older runner.",
     }),
     cliFetch: z
       .record(
@@ -289,6 +294,20 @@ export const Machine = z
         freeGb: z.number().openapi({ description: "Free GB on the workspace's disk." }),
         use: z.number().nullable().openapi({ description: "Share of that disk in use, 0 to 1." }),
         sharedGb: z.number().nullable().openapi({ description: "The shared folder's size in GB (measured hourly)." }),
+        sizeGb: z.number().nullable().openapi({ description: "The disk's size in GB; null from an older runner." }),
+        parts: z
+          .object({
+            projects: z.number(),
+            apps: z.number(),
+            agents: z.number(),
+            caches: z.number(),
+            system: z.number(),
+          })
+          .nullable()
+          .openapi({
+            description:
+              "What takes the disk by kind, in GB (projects and code, apps and tools, the agents' files, caches and temporary files, the system), measured every few hours on the workspace's own computer; the rest in use is everything else. Null elsewhere, or before the first measure.",
+          }),
       })
       .nullable()
       .openapi({
@@ -394,7 +413,7 @@ const DeviceCode = z
 
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 
-const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]);
+const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]);
 const Platform = z.string().openapi({
   description: "`mac`, `windows`, `linux`, `other` (the workspace's own computer), or the runner's `os` as reported.",
 });

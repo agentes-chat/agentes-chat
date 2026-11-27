@@ -122,6 +122,8 @@ The machine that runs agentes.chat is also a computer for its agents, "Computado
   - The server refuses to start with `HOST_COMPUTER_TOKEN` and `ALLOW_SIGNUP=true` together: with open sign-up, a stranger could be the installation's first account. Nor with `MACHINE_PROVISIONING=external` (ADR 0065 §5): every workspace there gets a computer of its own, and no other computer joins it.
   - Serving more organizations is a later, explicit choice.
 - In an organization it serves, the row is created with the organization, so onboarding's computer step lists it first (selected once it's connected: a computer that never comes up would leave agents waiting), and the runner picks up its token at the next sync (60 seconds).
+  - The row starts with no token, and with no name when it is the server's first organization (there is no other row to copy). The token and the computer's name come with that sync. The desktop app syncs at once when the site tells it about a new organization (the workspace's pages and the onboarding both do) and every five minutes otherwise.
+  - Until that first connection, for up to five minutes (`hostConnecting`), a plan's panel says the computer is connecting and keeps its steps in view, waiting. It doesn't say offline or offer an API key instead. A nameless row is called "this server's computer" (`machineTitle`).
 - When a row gets its first token (new, or turned back on), the organization's agents with no computer start using it, unless the server has cloud computers. New agents start on it.
 - Admins turn it off per organization ("Parar de usar nesta organização" soft-deletes the row) and back on.
 

@@ -32,6 +32,7 @@ import { type AntigravityBrainTurnRequest, handleAntigravityBrainTurn } from "./
 import { type CodexBrainEvent, type CodexBrainTurnRequest, handleCodexBrainTurn } from "./brain-codex";
 import type { CodexAppServers } from "./brain-codex-app";
 import { type CursorBrainTurnRequest, handleCursorBrainTurn } from "./brain-cursor";
+import { type DevinBrainTurnRequest, handleDevinBrainTurn } from "./brain-devin";
 import { type GrokBrainTurnRequest, handleGrokBrainTurn } from "./brain-grok";
 import { handleOpencodeBrainTurn, type OpencodeBrainTurnRequest, steerOpencodeTurn } from "./brain-opencode";
 import { routeWithPlan } from "./brain-route";
@@ -47,6 +48,7 @@ import { type CacheFill, type CloneSlots, gitSync } from "./git";
 import { isGitInternalPath, touchesGitInternals } from "./git-guard";
 import { type McpTaskInfo, redactDeep } from "./mcp";
 import { missionWorktree } from "./mission-worktree";
+import { permissionOfOutput } from "./os-permissions";
 import { agentWorkspace, hiddenIn, isInside, resolveForAgent } from "./paths";
 import type { PhoneManager, PhoneRequest } from "./phones";
 import { pullFile } from "./pull";
@@ -266,6 +268,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "xcode.open": "machine",
   // The process that sees the phones runs their helpers.
   "phone.repair": "machine",
+  "phone.power": "machine",
   // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
   "clis.check": "machine",
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
@@ -286,6 +289,13 @@ type AccessAllowOp = Extract<MachineRequest, { op: "access.allow" }>;
 export interface HandlerContext {
   /** Real path of the workspace folder. */
   workspaceReal: string;
+  /** Tests: the system a failed command's output is read for refusals (`permissionOfOutput`). */
+  platform?: string;
+  /**
+   * The agentes.chat app runs this runner and asks the person for an OS permission a command was refused; from a
+   * terminal nothing would ask, so a refusal stays the command's own output.
+   */
+  appAsks?: boolean;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -444,6 +454,7 @@ const TOOL_LABEL: Record<keyof RunnerTools, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI",
+  devin: "Devin CLI",
   commands: "Commands",
   browser: "Browser",
   desktop: "The desktop",
@@ -533,7 +544,11 @@ async function doExec(
     ...(env ? { env } : {}),
     ...(redact ? { redact: redact.redact, redactHold: redact.hold } : {}),
   });
-  return merge ? { ...result, merge } : result;
+  const permission =
+    result.exitCode === 0 || !ctx.appAsks
+      ? null
+      : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
+  return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 
 /**
@@ -817,6 +832,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
     return ctx.phones.repair(req);
   }
+  if (req.op === "phone.power") {
+    if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    return ctx.phones.power(req);
+  }
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
   if (req.op === "xcode.fix") {
@@ -835,15 +854,11 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     return ctx.clisCheck();
   }
   if (req.op === "cli.fetch") {
-    if (ctx.systemMode?.() || !ctx.cliFetch) return { fetch: null };
+    if (!ctx.cliFetch) return { fetch: null };
     return ctx.cliFetch(req.cli);
   }
   if (req.op === "cli.install") {
-    return (
-      (ctx.systemMode?.() ? undefined : ctx.cliInstall?.(req)) ?? {
-        install: req.tool ? { tool: req.tool, state: "unsupported" } : null,
-      }
-    );
+    return ctx.cliInstall?.(req) ?? { install: req.tool ? { tool: req.tool, state: "unsupported" } : null };
   }
   if (isPhoneOp(req)) return handlePhone(ctx, req, scope);
   // Each agent works in its own folder: that folder is its workspace.
@@ -1364,7 +1379,8 @@ async function doBrainTurn(
     req.kind === "cursor" ||
     req.kind === "opencode" ||
     req.kind === "grok" ||
-    req.kind === "antigravity"
+    req.kind === "antigravity" ||
+    req.kind === "devin"
       ? req.kind
       : null;
   requireTool(ctx, cli ?? "claude");
@@ -1410,10 +1426,10 @@ async function doHostedTurn(
 }
 
 /**
- * Cursor, Grok and Antigravity turns in progress, by run: `brain.steer` answers `unsupported` for them (`agent -p`,
- * `grok -p` and `agy -p` take nothing mid-turn).
+ * Cursor, Grok, Antigravity and Devin turns in progress, by run: `brain.steer` answers `unsupported` for them (`agent
+ * -p`, `grok -p` and `agy -p` take nothing mid-turn, and the Devin CLI's turns are read whole).
  */
-const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI">();
+const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI" | "Devin CLI">();
 
 /** OpenCode turns in progress, by run: `no_turn` until the turn can take messages (`steerOpencodeTurn`). */
 const opencodeRuns = new Set<string>();
@@ -1476,7 +1492,8 @@ function signedOut(
     req.kind === "cursor" ||
     req.kind === "opencode" ||
     req.kind === "grok" ||
-    req.kind === "antigravity"
+    req.kind === "antigravity" ||
+    req.kind === "devin"
       ? req.kind
       : "claude_code";
   void (final.code === "not_logged_in" ? accounts.refused(kind, req.account) : Promise.resolve())
@@ -1507,11 +1524,22 @@ async function doCodexTurn(
   const opencode = req.kind === "opencode";
   const grok = req.kind === "grok";
   const agy = req.kind === "antigravity";
-  const name = cursor ? "Cursor" : opencode ? "OpenCode" : grok ? "Grok Build" : agy ? "Antigravity CLI" : "Codex";
+  const devin = req.kind === "devin";
+  const name = cursor
+    ? "Cursor"
+    : opencode
+      ? "OpenCode"
+      : grok
+        ? "Grok Build"
+        : agy
+          ? "Antigravity CLI"
+          : devin
+            ? "Devin CLI"
+            : "Codex";
   if (!codex) throw new RunnerError("bad_request", `This runner runs no ${name} brain turns`);
   let final: CodexBrainEvent = {
     type: "error",
-    code: `${cursor ? "cursor" : opencode ? "opencode" : grok ? "grok" : agy ? "antigravity" : "codex"}_failed`,
+    code: `${cursor ? "cursor" : opencode ? "opencode" : grok ? "grok" : agy ? "antigravity" : devin ? "devin" : "codex"}_failed`,
     message: `${name} ended without an answer.`,
   };
   let ended = false;
@@ -1538,9 +1566,28 @@ async function doCodexTurn(
     scope.emit?.({ type: "brain.event", runId, event });
   };
   if (opencode) opencodeRuns.add(runId);
-  else if (cursor || grok || agy) turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : "Antigravity CLI");
+  else if (cursor || grok || agy || devin)
+    turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : agy ? "Antigravity CLI" : "Devin CLI");
   try {
-    if (agy) {
+    if (devin) {
+      const manager = ctx.accounts;
+      await handleDevinBrainTurn(
+        {
+          folder,
+          exec: toolOn(ctx, "devin"),
+          runnerHome: codex.runnerHome,
+          ...(ctx.secretsDir && !chat ? { secretsDir: ctx.secretsDir } : {}),
+          ...(codex.mcp ? { mcp: codex.mcp } : {}),
+          ...(ctx.grants && !chat ? { grants: ctx.grants } : {}),
+          ...(ctx.accounts || codex.accounts ? { accounts: ctx.accounts ?? codex.accounts } : {}),
+          ...(manager ? { listed: () => manager.listedModels("devin") } : {}),
+          ...(codex.spawn ? { spawn: codex.spawn } : {}),
+          ...(ctx.grant ? { grant: ctx.grant } : {}),
+        },
+        req as unknown as DevinBrainTurnRequest,
+        { signal: scope.signal, emit },
+      );
+    } else if (agy) {
       await handleAntigravityBrainTurn(
         {
           folder,

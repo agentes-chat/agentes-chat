@@ -342,6 +342,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "Gemini",
       "Grok",
       "Cursor",
+      "Devin",
       "OpenCode",
       "GLM Coding",
       "Kimi Code",
@@ -354,6 +355,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "gemini",
       "grok",
       "cursor",
+      "devin",
       "opencode",
       "zai",
       "kimi",
@@ -1109,6 +1111,31 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await click(within(panel).getByRole("button", { name: "Já instalei, verificar de novo" }));
     await settle(4);
     expect(calls(state, "machines.checkClis")).toHaveLength(1);
+  });
+
+  test("Codex only for root on a computer whose agents are users of their own: why, and the install for all of them", async () => {
+    const options = fakeAgentBrain(ADA_ID).options.map((o) =>
+      o.kind === "codex" ? { ...o, available: false, reason: "cant_start" as const } : o,
+    );
+    const name = "srv-1";
+    const { dialog, choose, state } = await connect({
+      machine: {
+        os: "linux",
+        name,
+        mode: "system",
+        cliInstall: true,
+        cliErrors: { codex: "home_only" },
+        cliFetchable: ["claude", "codex"],
+      },
+      brain: { computer: { machineId: "machine_1", name, online: true }, options },
+    });
+    await choose("ChatGPT");
+    const panel = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
+    expect(panel.textContent).toContain("O Codex está instalado só para o root no srv-1, onde os agentes não chegam.");
+    expect(panel.textContent).not.toContain("home_only");
+    await click(within(panel).getByRole("button", { name: "Instalar o Codex para mim" }));
+    await settle(4);
+    expect(calls(state, "machines.cliInstall").map((c) => c.args.at(-1))).toContain("start");
   });
 
   test("on a Windows PC: OpenCode that won't start says what it printed", async () => {

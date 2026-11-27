@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { CODEX_FOLDER_PROTOCOL, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
+import { CODEX_FOLDER_PROTOCOL, channelTopic, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
 import { asc, eq, schema } from "@agenteschat/db";
 import { createAnthropicProvider, type ModelRequest } from "@agenteschat/providers";
 import {
@@ -15,6 +15,7 @@ import {
   postPersonMessage,
   publishTyping,
 } from "../src";
+import { inPhase, PHASE_AFTER_MS, PHASE_MIN_MS } from "../src/brains/phase";
 import { type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -335,4 +336,31 @@ test("no early checkouts sync for Codex on a runner that never uses its checkout
   await drainOutbox(f.db, handlers);
   expect(ran).toBe(1);
   expect(syncs).toBe(0);
+});
+
+test("a long checkouts update before the turn is on the conversation's bar, and its end too", async () => {
+  f = await setup();
+  const status = await onComputer("claude_code", MACHINE_PROTOCOL_VERSION);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(_turn, io) {
+      await inPhase(io, "code", Bun.sleep(PHASE_AFTER_MS + 200));
+      yield { type: "done", text: "ok" };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => status(id) },
+  });
+  const seen: { phase?: unknown; runId?: unknown; threadId?: unknown }[] = [];
+  f.pubsub.subscribe(channelTopic(f.general.id), (e) => {
+    if ((e as { type?: string }).type === "agent.phase") seen.push(e as never);
+  });
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
+  await drainOutbox(f.db, handlers);
+  await Bun.sleep(PHASE_MIN_MS + 100);
+  expect(seen.map((e) => e.phase)).toEqual(["code", null]);
+  const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.agentId, f.agent.id));
+  expect(seen[0]?.runId).toBe(run?.id);
 });

@@ -1,9 +1,11 @@
+import { DATA_OTHER, DATA_SERIES } from "@agenteschat/tokens/data";
 import type { TFunction } from "i18next";
 import type {
   AccountLoginFailure,
   AccountLoginStatus,
   CliInstall,
   DeviceLocation,
+  DiskParts,
   InstallableCli,
   Machine,
   MachineAccess,
@@ -140,6 +142,7 @@ const CLI_INSTALLERS: Record<string, { script: string; bin: string; opt: string;
     windows: 'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
   },
   cursor: { script: "curl https://cursor.com/install -fsS | bash", bin: "agent", opt: "/opt/cursor", flags: "" },
+  devin: { script: "curl -fsSL https://cli.devin.ai/install.sh | bash", bin: "devin", opt: "/opt/devin", flags: "" },
 };
 
 /**
@@ -221,15 +224,15 @@ export function cliInstallFailure(
  * installs it there (they paired it), `ask` sends whoever paired it the same button, `outdated` means its app must
  * update first. Null where nobody installs from here (the workspace's own computer installs its own, or nobody is
  * behind it), and `allow` only where an installer exists there: never Codex on Windows, nor a computer whose agents
- * are users of their own (its setup installs for them).
+ * are users of their own unless its runner installs its own copy for all of them (`cliFetchable`).
  */
 export function cliOneClick(
-  m: Pick<Machine, "kind" | "pairedBy" | "cliInstall" | "os" | "mode"> | null | undefined,
+  m: Pick<Machine, "kind" | "pairedBy" | "cliInstall" | "os" | "mode" | "cliFetchable"> | null | undefined,
   meId: string | null | undefined,
   cli: InstallableCli,
 ): ToolOneClick | null {
   if (!m || m.kind === "managed" || !m.pairedBy) return null;
-  if (m.mode === "system" || (cli === "codex" && m.os === "windows")) return null;
+  if (m.mode === "system" ? !m.cliFetchable?.includes(cli) : cli === "codex" && m.os === "windows") return null;
   if (m.pairedBy.id !== meId) return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
   return m.cliInstall ? { kind: "allow" } : { kind: "outdated" };
 }
@@ -324,6 +327,7 @@ export const MACHINE_TOOLS: MachineToolName[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
 ];
 
@@ -349,6 +353,41 @@ export function sharedFolderFacts(t: TFunction, locale: string, disk: Machine["d
     disk?.sharedGb != null ? t("machines.shared.size", { size: gb(disk.sharedGb) }) : t("machines.shared.measuring"),
     ...(disk ? [t("machines.shared.free", { free: gb(disk.freeGb) })] : []),
   ].join(" · ");
+}
+
+/** The kinds a computer's disk splits into, in the bar's order; `other` is the rest of what is in use. */
+export const COMPUTER_PARTS = ["projects", "apps", "agents", "caches", "system", "other"] as const;
+export type ComputerPart = (typeof COMPUTER_PARTS)[number];
+
+/** A disk this full is filling up: the server's own line for telling admins (`DISK_WARN_USE` in notification-producers.ts). */
+export const COMPUTER_DISK_FULL = 0.85;
+
+export interface ComputerStorage {
+  sizeGb: number;
+  usedGb: number;
+  freeGb: number;
+  full: boolean;
+  /** What takes it, in the bar's order, each kind with its colors; none before the computer first measured it. */
+  parts: { key: ComputerPart; gb: number; light: string; dark: string }[];
+}
+
+/** A computer's disk as Armazenamento shows it; null when its runner doesn't say how big the disk is. */
+export function computerStorage(disk: Machine["disk"]): ComputerStorage | null {
+  if (!disk) return null;
+  const sizeGb = disk.sizeGb ?? (disk.use != null && disk.use < 1 ? disk.freeGb / (1 - disk.use) : null);
+  if (!sizeGb) return null;
+  const usedGb = Math.max(0, sizeGb - disk.freeGb);
+  const known = disk.parts ?? null;
+  const kinds = COMPUTER_PARTS.filter((k): k is keyof DiskParts => k !== "other");
+  const otherGb = known ? usedGb - kinds.reduce((n, k) => n + known[k], 0) : 0;
+  const parts = known
+    ? COMPUTER_PARTS.map((key, i) => ({
+        key,
+        gb: key === "other" ? Math.max(0, otherGb) : known[key],
+        ...(DATA_SERIES[i] ?? DATA_OTHER),
+      })).filter((p) => p.gb >= 0.05)
+    : [];
+  return { sizeGb, usedGb, freeGb: disk.freeGb, full: usedGb / sizeGb >= COMPUTER_DISK_FULL, parts };
 }
 
 /** Paused now: `until` absent or still ahead. */

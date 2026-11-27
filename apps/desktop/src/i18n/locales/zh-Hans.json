@@ -456,7 +456,7 @@
     "internet": "智能体使用这台电脑的网络",
     "internetOn": "智能体打开的网站会看到你的位置",
     "internetOff": "已关闭：智能体使用平常的连接",
-    "internetHint": "工作区的智能体通过这台电脑的连接打开网站。仅限网站，每天最多 5 GB，绝不会访问你自己网络中的任何内容。这台电脑离线时，它们使用平常的连接。",
+    "internetHint": "工作区的智能体通过这台电脑的连接打开网站。仅限网站，绝不会访问你自己网络中的任何内容。这台电脑离线时，它们使用平常的连接。",
     "shareOff": "目前只有你",
     "shareHint": "{{org}} 所有人的智能体都能以你的用户身份在上面运行任务。",
     "addFolders": "添加文件夹",
@@ -502,6 +502,9 @@
     "grokDesc": "使用你的 Grok 账号，在允许的文件夹中编写和修改代码。",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "使用你的 Gemini 账号，在允许的文件夹中编写和修改代码。",
+    "devinName": "Devin CLI",
+    "devinDesc": "使用你的 Devin 账号，在允许的文件夹中编写和修改代码。",
+    "devinWindows": "Devin 暂不支持 Windows：在这里它的 CLI 无法把每个账号的登录分开保存。智能体会在 Mac 或 Linux 电脑上用 Devin 思考。",
     "found": "已找到",
     "notFound": "未找到",
     "loggedOut": "未登录",
@@ -923,5 +926,21 @@
     "bringAllToFront": "全部置于顶层",
     "help": "帮助",
     "downloaded": "下载完成"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat 需要“{{permission}}”权限",
+    "done": "我已允许",
+    "later": "以后再说",
+    "trayTitle": "正在等待“{{permission}}”权限",
+    "why": {
+      "app_management": "代理需要它来更改这台{{device}}上的应用。",
+      "screen": "代理需要它来截取这台{{device}}的屏幕。",
+      "accessibility": "代理需要它在这台{{device}}的应用中点击和输入。",
+      "disk": "代理需要它来打开你的文件，macOS 不必为每个文件夹询问。",
+      "network": "代理需要它来连接你网络中的手机和设备。",
+      "camera": "代理需要它来使用这台{{device}}的摄像头。",
+      "microphone": "代理需要它来使用这台{{device}}的麦克风。",
+      "automation": "代理需要它来控制这台{{device}}上的其他应用。"
+    }
   }
 }

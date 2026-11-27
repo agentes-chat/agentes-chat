@@ -592,9 +592,18 @@ export interface OrgOnboarding {
   generalChannelId: string;
 }
 
+/** An email invitation that waits for the signed-in person's confirmed address: `token` opens its page. */
+export interface WaitingInvitation {
+  orgId: string;
+  orgName: string;
+  token: string;
+}
+
 export interface Me {
   user: User;
   organizations: OrgSummary[];
+  /** Newest first; absent when none waits or the address isn't confirmed. */
+  invitations?: WaitingInvitation[];
 }
 
 /**
@@ -788,6 +797,8 @@ export interface JoinStatus {
   orgId?: string;
   email: string;
   request: { status: "pending" | "approved" | "denied"; reason: string | null } | null;
+  /** Approved with an email invitation that still waits: its token, which this account accepts as it is. */
+  invitation?: string;
 }
 
 /** `invites.ask`: asking is all a link does; the admins answer. `emailed`: this server sends email. */
@@ -800,12 +811,14 @@ export interface AskToJoinResult {
 }
 
 /**
- * Where the request a page made stands (ADR 0090): waiting, in (once: `signIn` for the one-time sign-in), denied,
- * or closed (run out, turned off, or approved for an address that signs in as it always did).
+ * Where the request a page made stands (ADR 0090): waiting, in (once: `signIn` for the one-time sign-in), invited
+ * (once: an address that already had an account, the invitation's `token` and its email's `mail` proof), denied,
+ * or closed (run out, turned off, or joined another way).
  */
 export type JoinClaim =
   | { status: "pending" }
   | { status: "in"; orgId: string; signIn: string }
+  | { status: "invited"; token: string; mail: string }
   | { status: "denied"; reason: string | null }
   | { status: "closed" };
 
@@ -1310,7 +1323,7 @@ export type CostlyDecision = "go" | "not_now" | "never" | "always";
 export type SuggestedAi =
   | {
       kind: "account";
-      brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+      brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
       machineId: string;
       accountId: string;
       label: string;
@@ -1448,7 +1461,7 @@ export interface FirstAgentRoutine {
   timezone: string | null;
 }
 
-/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0253). */
+/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0256). */
 export interface FirstAgentOption {
   name: string;
   /** Free when proposed; the server takes a free one again when it is picked. */
@@ -2420,7 +2433,7 @@ export type IssueActivityEvent = {
 /** You followed or unfollowed a thread (on any of your devices). */
 export type ThreadFollowEvent = { type: "thread.follow" } & ThreadFollow;
 
-/** A first-agent proposal arrived for me (ADR 0253): `GET …/first-agents` has it. */
+/** A first-agent proposal arrived for me (ADR 0256): `GET …/first-agents` has it. */
 export interface FirstAgentsEvent {
   type: "first_agents.received";
   id: string;
@@ -3763,6 +3776,8 @@ export const WORKSPACE_ACTION_IDS = [
   "update_workspace",
   "set_action_check",
   "set_computer_help",
+  "set_approvals_level",
+  "set_agent_approvals_level",
   "invite_people",
   "remove_ai_key",
 ] as const;
@@ -5603,7 +5618,24 @@ export interface Machine {
    * ADR 0115: its workspace disk (free GB, share in use) and the shared folder's size (GB, measured hourly), as its
    * runner last said; null or absent for people who don't manage it, or when its runner doesn't say.
    */
-  disk?: { freeGb: number; use: number | null; sharedGb: number | null } | null;
+  disk?: {
+    freeGb: number;
+    use: number | null;
+    sharedGb: number | null;
+    /** The disk's size; null or absent from an older runner. */
+    sizeGb?: number | null;
+    /** What takes it by kind (GB), measured every few hours on the workspace's own computer; null elsewhere. */
+    parts?: DiskParts | null;
+  } | null;
+}
+
+/** What takes a computer's disk, by kind, in GB (`Machine.disk.parts`). */
+export interface DiskParts {
+  projects: number;
+  apps: number;
+  agents: number;
+  caches: number;
+  system: number;
 }
 
 /** Whether the organization uses the server's own computer (`GET …/machines/host`). */
@@ -5673,7 +5705,15 @@ export interface MachinePause {
 }
 
 /** A tool the person turns on or off on the machine. */
-export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commands";
+export type MachineToolName =
+  | "claude"
+  | "codex"
+  | "cursor"
+  | "opencode"
+  | "grok"
+  | "antigravity"
+  | "devin"
+  | "commands";
 
 /** A folder allowed on the machine and the agents (ids) that may use it; empty: allowed, no agent yet. */
 export interface MachineFolderGrant {
@@ -5688,7 +5728,7 @@ export interface MachineAccess {
    * `browser` (ADR 0040): the agent browser; absent on runners before protocol 12 (off). `desktop` and
    * `terminal` (ADR 0058): the agents' desktops and terminals; absent before protocol 18 (off).
    */
-  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity">, boolean> & {
+  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity" | "devin">, boolean> & {
     /** Protocol 36 (ADR 0114): Cursor's CLI; absent on older runners, where it follows Codex's. */
     cursor?: boolean;
     /** Protocol 39 (ADR 0132): OpenCode's CLI; absent on older runners, where it follows Codex's. */
@@ -5697,6 +5737,8 @@ export interface MachineAccess {
     grok?: boolean;
     /** Protocol 44 (ADR 0143): the Antigravity CLI; absent on older runners, where it follows Codex's. */
     antigravity?: boolean;
+    /** Protocol 89 (ADR 0253): the Devin CLI; absent on older runners, where it is off. */
+    devin?: boolean;
     browser?: boolean;
     desktop?: boolean;
     terminal?: boolean;
@@ -5752,7 +5794,7 @@ export interface DesktopRelease {
 }
 
 /** A computer brain that runs on a connected machine. */
-export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** An agent waiting for an offline computer, and what it has waiting. */
 export interface OutageAgent {
@@ -6733,7 +6775,7 @@ export interface MissionSettings {
 }
 
 /** "Quem pensa" (ADR 0032): the API, or Claude Code / Codex on the agent's computer with a person's plan. */
-export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** Why a computer brain can't be chosen now. */
 export type BrainUnavailable =
@@ -6763,8 +6805,12 @@ export interface BrainModelOption {
   contextWindow?: number;
   /** Cursor (ADR 0114): its CLI said the person's plan includes it; absent: it didn't say. */
   inPlan?: boolean;
-  /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). */
+  /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). Devin (ADR 0253): one the plan serves at no cost. */
   free?: boolean;
+  /** Devin (ADR 0253): the effort levels its variants run at (absent: every level the apps offer). */
+  efforts?: BrainEffort[];
+  /** Devin: it has a faster variant, which Velocidade's "Rápida" runs. */
+  fast?: boolean;
 }
 
 export interface BrainOption {
@@ -6840,7 +6886,7 @@ export interface AgentBrain {
    * computador" isn't listed. A plan thinks only for its owner's agents (ADR 0059).
    */
   accounts: MachineAccount[];
-  /** The viewer may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /** The viewer may add an account there for this agent: its owner or who manages it, on a computer where they add accounts. */
   canManageAccounts: boolean;
   /** False while the app on the computer is too old for accounts (nothing about them shows). */
   accountsSupported: boolean;
@@ -6878,7 +6924,7 @@ export type BrainEffortSetting = BrainEffort | "auto";
 
 export type BrainSpeed = "standard" | "fast";
 
-export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** ADR 0041 §3, ADR 0059: a Claude Code or Codex account signed in on a connected computer (metadata only). */
 export interface MachineAccount {
@@ -7050,6 +7096,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    devin?: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there (absent: an older server). */
@@ -7062,6 +7109,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    devin?: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the viewer connected (absent: a server
@@ -9194,6 +9242,22 @@ export interface PhoneDevice {
   mayManage: boolean;
 }
 
+/** An OS permission a computer waits on (macOS's Full Disk Access, Screen Recording…): what asked, which agent, since. */
+export interface PermissionNeed {
+  permission:
+    | "app_management"
+    | "screen"
+    | "accessibility"
+    | "disk"
+    | "network"
+    | "camera"
+    | "microphone"
+    | "automation";
+  trigger: string;
+  agentId?: string;
+  since: string;
+}
+
 export interface ComputerDevice {
   id: string;
   machineKind: "connected" | "host" | "managed";
@@ -9224,6 +9288,8 @@ export interface ComputerDevice {
   /** Tasks start on room, not on `maxTasks`; null: the count decides (an older app). Absent from an older server. */
   taskRoom?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean } | null;
   toolchains: Record<string, string>;
+  /** The OS permissions its agents' work waits on there, asked in its agentes.chat app; absent from an older server. */
+  permissions?: PermissionNeed[];
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide; absent from an older server. */
   opensXcode?: boolean;
   lastSeenAt: string | null;

@@ -316,7 +316,7 @@ export interface FakeState {
   githubFiles?: Record<string, { path: string; text: string }[]>;
   /** Each item an applied import brought, as the server keeps them (`imports.sources`). */
   imported?: { app: string; ref: string; kind: ImportItemKind }[];
-  /** My newest first-agent proposal (`firstAgents.latest`, ADR 0253): none until a test seeds one or pastes one. */
+  /** My newest first-agent proposal (`firstAgents.latest`, ADR 0256): none until a test seeds one or pastes one. */
   firstAgents?: FirstAgents | null;
   online: Set<string>;
   /** People's chosen availability and line (`orgs.setStatus`); unset = auto, nothing written. */
@@ -3380,7 +3380,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { status: "created", artifactId: created.id, title, folder };
       },
     },
-    // Like the backend (ADR 0253): my newest proposal, a pasted answer kept as one, a pick that makes one agent once.
+    // Like the backend (ADR 0256): my newest proposal, a pasted answer kept as one, a pick that makes one agent once.
     firstAgents: {
       latest: async (orgId) => {
         log("firstAgents.latest", orgId);

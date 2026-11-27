@@ -6,13 +6,21 @@ import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
   CLI_HOME_ONLY,
+  CURSOR_MODEL_LIMITS,
   type CursorModelInfo,
   parseExecutors,
   type RunnerExecutorInfo,
   type RunnerInfo,
 } from "@agenteschat/adapters/machine-protocol";
-import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
+import {
+  DEVIN_FUSION_HELPER,
+  DEVIN_LEVELS,
+  devinVariantOf,
+  isOpencodeFreeModel,
+  OPENCODE_FREE_MODELS,
+} from "@agenteschat/providers/plans";
 import { type CodexSignIn, codexLoginStatusOf } from "./codex-sign-in";
+import { consoleText } from "./console-text";
 import { readSmallJson, writeJson } from "./json-file";
 import { usualDirs } from "./login-path";
 import { SHARED_BIN_ENV } from "./shared-folder";
@@ -77,9 +85,7 @@ export function resolveCommand(
   sharedBin = process.env[SHARED_BIN_ENV],
   platform: NodeJS.Platform = process.platform,
 ): string {
-  const picked = command.includes("/")
-    ? undefined
-    : (pickedCli(command) ?? (command === "codex" ? pickedCodex() : undefined));
+  const picked = pickedCommand(command);
   if (picked) return picked;
   // On Windows a program by its full path, so a spawn never looks in the current folder first (`findOnWindowsPath`);
   // a launcher (`.cmd`) stays a bare name for `cliSpawn`'s cmd.exe.
@@ -128,6 +134,10 @@ export function setCliPick(command: string, file: string | undefined, launch: re
   if (file && launch.length) cliLaunch.set(command, [...launch]);
   else cliLaunch.delete(command);
 }
+
+/** The file the runner starts for a bare `command` whatever the PATH: its own copy, or the `codex` its look chose. */
+export const pickedCommand = (command: string): string | undefined =>
+  command.includes("/") ? undefined : (pickedCli(command) ?? (command === "codex" ? pickedCodex() : undefined));
 
 /** The runner's own copy of `command`, while it is the one to run and still there. */
 export function pickedCli(command: string): string | undefined {
@@ -356,14 +366,14 @@ const defaultRun: Run = (command, args) =>
       run.file,
       run.args,
       {
-        encoding: "utf8",
+        encoding: "buffer",
         timeout: 8000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
         env: run.env ? { ...process.env, ...run.env } : process.env,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
-      (err, stdout, stderr) => resolve(execResult(err, stdout, stderr)),
+      (err, stdout, stderr) => resolve(execResult(err, consoleText(stdout), consoleText(stderr))),
     );
   });
 
@@ -595,6 +605,97 @@ function detectAntigravity(run: Run): Promise<Probe> {
   return detectWithModels(run, AGY_BIN, AGY_VERSION, parseAgyModels);
 }
 
+/** Cognition's Devin CLI (ADR 0253). */
+export const DEVIN_BIN = "devin";
+
+/** The Devin CLI's version line (`devin 3000.14.30821 (a09cd7f323ee)`); anything else is skipped. */
+const DEVIN_VERSION = /^devin \d+\.\d+\.\d+\b/;
+
+/**
+ * Protocol 89 (ADR 0253): the Devin CLI, by its version alone. Its models are what the accounts signed in here list
+ * (`AccountManager.listedModels`): the computer's own CLI thinks for no agent.
+ */
+async function detectDevin(run: Run): Promise<Probe> {
+  const r = await run(DEVIN_BIN, ["--version"]);
+  if (r.error || r.status !== 0) return versionFailed(r);
+  const version = firstLine(r);
+  return DEVIN_VERSION.test(version) ? { entry: { version } } : {};
+}
+
+/** The most model families kept from one `devin models list` (its Fusion pairs counted as one per main model). */
+const DEVIN_MAX_FAMILIES = CURSOR_MODEL_LIMITS.models;
+/** The most variants kept for one family. */
+const DEVIN_MAX_VARIANTS = 24;
+
+/**
+ * `devin models list --format json` (`{ families: [{ family_uid, family_label, variants: [{ model_uid, label,
+ * max_context_tokens, cost_tier, … }] }] }`, CLI 3000.14) → one model per family: its levels, whether it has a faster
+ * variant, its window, its variants (kept on the runner) and `free` when every standard variant is "Free" on the plan.
+ * Fusion becomes one model per main family, each with SWE-2 Medium as its helper (`DEVIN_FUSION_HELPER`). Anything
+ * that doesn't read as that shape lists nothing.
+ */
+export function parseDevinModels(output: string): CursorModelInfo[] {
+  let o: unknown;
+  try {
+    o = JSON.parse(output);
+  } catch {
+    return [];
+  }
+  const families = (o as { families?: unknown } | null)?.families;
+  if (!Array.isArray(families)) return [];
+  type Variant = { uid: string; label: string; window: number; free: boolean };
+  type Family = { id: string; label: string; variants: Variant[] };
+  const word = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const read: Family[] = [];
+  for (const f of families) {
+    const r = f as Record<string, unknown> | null;
+    const id = word(r?.family_uid, 80);
+    if (!id || !/^[\w.:-]{1,80}$/.test(id) || !Array.isArray(r?.variants)) continue;
+    const variants: Variant[] = [];
+    for (const v of r.variants as unknown[]) {
+      const x = v as Record<string, unknown> | null;
+      const uid = word(x?.model_uid, 120);
+      if (!uid || !/^[\w.:-]{1,120}$/.test(uid)) continue;
+      const window = typeof x?.max_context_tokens === "number" ? Math.round(x.max_context_tokens) : 0;
+      variants.push({ uid, label: word(x?.label, 80), window, free: x?.cost_tier === "Free" });
+    }
+    if (variants.length) read.push({ id, label: word(r.family_label, 80) || id, variants });
+  }
+  // Fusion: one model per main family, with the free helper.
+  const familyOfUid = new Map<string, Family>();
+  for (const f of read) if (f.id !== "fusion") for (const v of f.variants) familyOfUid.set(v.uid, f);
+  const fused = new Map<string, Family>();
+  for (const v of read.find((f) => f.id === "fusion")?.variants ?? []) {
+    if (!v.uid.endsWith(DEVIN_FUSION_HELPER)) continue;
+    const main = familyOfUid.get(v.uid.slice("fusion-".length, -DEVIN_FUSION_HELPER.length));
+    if (!main) continue;
+    const id = `fusion-${main.id}`.slice(0, 80);
+    const f = fused.get(id) ?? { id, label: `Fusion · ${main.label}`, variants: [] };
+    f.variants.push({ ...v, free: false });
+    fused.set(id, f);
+  }
+  const all = [...read.filter((f) => f.id !== "fusion"), ...fused.values()];
+  const out: CursorModelInfo[] = [];
+  for (const f of all) {
+    const variants = f.variants.slice(0, DEVIN_MAX_VARIANTS);
+    const kinds = variants.map((v) => devinVariantOf(v.uid));
+    const standard = variants.filter((_, i) => !kinds[i]?.fast);
+    const efforts = DEVIN_LEVELS.filter((l) => kinds.some((k) => !k.fast && k.level === l));
+    const window = Math.max(0, ...variants.map((v) => v.window));
+    out.push({
+      id: f.id,
+      label: f.label.slice(0, CURSOR_MODEL_LIMITS.label),
+      ...(standard.length > 0 && standard.every((v) => v.free) ? { free: true } : {}),
+      ...(efforts.length ? { efforts: [...efforts] } : {}),
+      ...(kinds.some((k) => k.fast) ? { fast: true } : {}),
+      ...(window > 0 ? { contextWindow: window } : {}),
+      variants: variants.map((v) => v.uid),
+    });
+    if (out.length >= DEVIN_MAX_FAMILIES) break;
+  }
+  return out;
+}
+
 /**
  * One CLI's look: what it found, and whether it couldn't tell (then the last good look stands). `exited`: unsure
  * because `--version` failed with an exit code, counted toward `EXECUTORS_EXIT_STRIKES`.
@@ -653,14 +754,26 @@ export function codexCandidates(
   pathList = process.env.PATH ?? "",
   platform: NodeJS.Platform = process.platform,
   sharedBin = process.env[SHARED_BIN_ENV],
+  ownHome: string | null = codexForAgents ? homedir() : null,
 ): string[] {
   if (platform === "win32") return [];
-  const dirs = [...pathList.split(delimiter), ...usualDirs()].filter((d) => isAbsolute(d) && d !== sharedBin);
+  const dirs = [...pathList.split(delimiter), ...usualDirs()].filter(
+    (d) => isAbsolute(d) && d !== sharedBin && !(ownHome && d.startsWith(`${ownHome}/`)),
+  );
   // The runner's own copy (`setCliPick`) too: it is there because the person's is older, so the newest wins it.
   const copy = cliPicks.get("codex");
   return [...new Set([...dirs.map((d) => join(d, "codex")), ...(copy ? [copy] : [])])].filter(
     (f) => isFile(f) && isExecutable(f),
   );
+}
+
+/**
+ * System mode: agents' users start the `codex` the look chooses (`resolveCommand`), so one in the runner's own home,
+ * which they can't enter, is never a candidate; it is `CLI_HOME_ONLY` instead.
+ */
+let codexForAgents = false;
+export function setCodexForAgents(system: boolean) {
+  codexForAgents = system;
 }
 
 /**
@@ -752,8 +865,16 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
 }
 
-/** The CLIs whose installers put them in the home's `~/.local/bin`, by their command. */
-const HOME_INSTALLED = { cursor: CURSOR_BIN, grok: GROK_BIN, antigravity: AGY_BIN } as const;
+/** Each CLI by its command: any of them may be in the home's own install folders (`~/.local/bin`…) only. */
+const HOME_INSTALLED = {
+  claude: "claude",
+  codex: "codex",
+  cursor: CURSOR_BIN,
+  opencode: OPENCODE_BIN,
+  grok: GROK_BIN,
+  antigravity: AGY_BIN,
+  devin: DEVIN_BIN,
+} as const;
 
 /** `bin` in the install folders under `home` (`~/.local/bin`…), which other users can't reach; null: none there. */
 export function inHomeDirs(bin: string, home = homedir(), isExe: (file: string) => boolean = isExecutable) {
@@ -784,7 +905,7 @@ export async function detectExecutors(
   codexSignIn?: CodexSignInProbe,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
-  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "devin"] as const;
   const codex = async () => {
     const probe = await detectCodex(run, codexBins());
     return codexSignIn ? withCodexSignIn(run, probe, codexSignIn) : probe;
@@ -796,6 +917,7 @@ export async function detectExecutors(
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
     safe(() => detectAntigravity(run)),
+    safe(() => detectDevin(run)),
   ]);
   const found: Executors = {};
   const broken: NonNullable<Executors["broken"]> = {};
@@ -854,6 +976,8 @@ export function cachedExecutors(
     homeOnly?: (bin: string) => boolean;
     /** How the computer's own Codex is signed in (`readCodexAccount`); left out, only its version. */
     codexSignIn?: CodexSignInProbe;
+    /** System mode: each look as the agents reach it (`agentsReach`), never what root alone can start. */
+    reach?: (found: Executors) => Promise<Executors>;
   } = {},
 ): ExecutorsCache {
   const now = opts.now ?? Date.now;
@@ -872,6 +996,7 @@ export function cachedExecutors(
       .then(() =>
         detectExecutors(opts.run, value, strikes, opts.gitMissing, undefined, opts.homeOnly, opts.codexSignIn),
       )
+      .then(async (look) => (opts.reach ? { ...look, found: await opts.reach(look.found) } : look))
       .then(({ found, unsure }) => {
         at = now();
         retry = unsure ? Math.min(retry ? retry * 2 : EXECUTORS_RETRY_MS, EXECUTORS_TTL_MS) : 0;

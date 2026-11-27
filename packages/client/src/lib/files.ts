@@ -249,8 +249,9 @@ export function formatBytes(locale: string, bytes: number) {
 export const fitsUpload = (file: { size: number }) => file.size <= MAX_UPLOAD_BYTES;
 
 /**
- * A picture's width over its height, when the server read both (`width`/`height` on the file's content or on its ref
- * in a message), kept between 1:4 and 4:1: a lone picture in a conversation takes that shape before it loads.
+ * A picture's or a video's width over its height, when the server read both (`width`/`height` on the file's content or
+ * on its ref in a message), kept between 1:4 and 4:1: a lone picture and every video in a conversation take that shape
+ * before they load.
  */
 export const pictureRatio = (size: { width?: number; height?: number } | null | undefined) =>
   size?.width && size.height && size.width > 0 && size.height > 0

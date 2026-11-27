@@ -3493,6 +3493,10 @@
       "update_workspace": "Modifier l'espace de travail <b>{{name}}</b>",
       "set_action_check_on": "Activer la vérification de ce que l'équipe a déjà fait",
       "set_action_check_off": "Désactiver la vérification de ce que l'équipe a déjà fait",
+      "set_approvals_level": "Passer les approbations du workspace à <b>{{level}}</b>",
+      "set_approvals_level_every": "Passer les approbations de tous les agents à <b>{{level}}</b>, leurs propres choix aussi",
+      "set_agent_approvals_level": "Passer les approbations de <b>{{agent}}</b> à <b>{{level}}</b>",
+      "set_agent_approvals_level_workspace": "Faire suivre à <b>{{agent}}</b> les approbations du workspace",
       "invite_people": "Inviter <b>{{emails}}</b> dans l'espace de travail.",
       "invite_roles_one": "Avec le rôle {{roles}}.",
       "invite_roles_many": "Avec les rôles {{roles}}.",
@@ -3692,6 +3696,7 @@
       "cursor": "Cursor n'est pas connecté sur cet ordinateur. Connectez un compte Cursor sur la page de {{name}}.",
       "grok": "Grok n'est pas connecté sur cet ordinateur. Connectez un compte Grok sur la page de {{name}}.",
       "antigravity": "Gemini n'est pas connecté sur cet ordinateur. Connectez un compte Gemini sur la page de {{name}}.",
+      "devin": "Devin n'est pas connecté sur cet ordinateur. Connectez un compte Devin sur la page de {{name}}.",
       "opencode": "OpenCode ne peut pas réfléchir sur cet ordinateur. Connectez une clé OpenCode sur la page de {{name}}."
     },
     "notSignedInOn": {
@@ -3700,6 +3705,7 @@
       "cursor": "Cursor n'est pas connecté sur {{computer}}. Connectez un compte Cursor sur la page de {{name}}.",
       "grok": "Grok n'est pas connecté sur {{computer}}. Connectez un compte Grok sur la page de {{name}}.",
       "antigravity": "Gemini n'est pas connecté sur {{computer}}. Connectez un compte Gemini sur la page de {{name}}.",
+      "devin": "Devin n'est pas connecté sur {{computer}}. Connectez un compte Devin sur la page de {{name}}.",
       "opencode": "OpenCode ne peut pas réfléchir sur {{computer}}. Connectez une clé OpenCode sur la page de {{name}}."
     },
     "card": {
@@ -3758,6 +3764,7 @@
       "cursor": "Connecter votre abonnement Cursor",
       "grok": "Connecter votre abonnement Grok",
       "gemini": "Connecter votre abonnement Gemini",
+      "devin": "Connecter votre abonnement Devin",
       "zen": "Connecter OpenCode",
       "api_key": "Ajouter une clé API"
     },
@@ -3911,6 +3918,10 @@
         "warning": "Google indique qu'utiliser un abonnement Gemini personnel dans d'autres applications peut entraîner la suspension du compte. Pour éviter ce risque, utilisez une clé API Gemini ou Gemini Enterprise.",
         "windowsOne": "Sous Windows, un ordinateur utilise un seul compte Gemini à la fois."
       },
+      "devin": {
+        "title": "Votre abonnement Devin",
+        "tiers": "Free, Pro, Max ou Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Modèles gratuits, ou votre clé OpenCode"
@@ -4018,6 +4029,7 @@
       "cursor": "Cursor est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Cursor et réessayez.",
       "grok": "Grok est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Grok et réessayez.",
       "antigravity": "Gemini est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Google et réessayez.",
+      "devin": "Devin est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Devin et réessayez.",
       "opencode": "OpenCode est connecté en tant que {{email}}, pas {{account}}. Réessayez avec la bonne clé."
     },
     "useAnyway": "Utiliser {{email}}",
@@ -4404,6 +4416,10 @@
       "changed_update_workspace": "J'ai modifié l'espace de travail <b>{{name}}</b>",
       "changed_set_action_check_on": "J'ai activé la vérification de ce que l'équipe a déjà fait",
       "changed_set_action_check_off": "J'ai désactivé la vérification de ce que l'équipe a déjà fait",
+      "changed_set_approvals_level": "J'ai passé les approbations du workspace à <b>{{level}}</b>",
+      "changed_set_approvals_level_every": "J'ai passé les approbations de tous les agents à <b>{{level}}</b>",
+      "changed_set_agent_approvals_level": "J'ai passé les approbations de <b>{{agent}}</b> à <b>{{level}}</b>",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> suit à nouveau les approbations du workspace",
       "changed_invite_people": "J'ai invité <b>{{invited}}</b> dans l'espace de travail",
       "changed_remove_ai_key": "J'ai supprimé la clé API <b>{{name}}</b>"
     },
@@ -6395,6 +6411,7 @@
             "cursor": "Ajouter un compte Cursor",
             "grok": "Ajouter un compte Grok",
             "antigravity": "Ajouter un compte Gemini",
+            "devin": "Ajouter un compte Devin",
             "opencode": "Ajouter une clé OpenCode"
           },
           "stepOne": {
@@ -6402,6 +6419,7 @@
             "codex": "Le compte avec votre abonnement",
             "cursor": "Le compte avec votre abonnement",
             "grok": "Le compte avec votre abonnement",
+            "devin": "Le compte avec votre abonnement",
             "antigravity": "Le compte Google avec votre abonnement",
             "antigravityEnterprise": "Votre compte Gemini Enterprise"
           },
@@ -6411,7 +6429,8 @@
             "codex": "Se connecter avec ChatGPT",
             "cursor": "Se connecter avec Cursor",
             "grok": "Se connecter avec Grok",
-            "antigravity": "Se connecter avec Google"
+            "antigravity": "Se connecter avec Google",
+            "devin": "Se connecter avec Devin"
           },
           "opencodeFree": "Les modèles gratuits d'OpenCode ne demandent aucune clé. Une clé de la console OpenCode ajoute les modèles payants.",
           "cursorFinish": "Connectez-vous sur la page de Cursor, et la connexion se termine toute seule sur {{computer}}.",
@@ -6426,6 +6445,9 @@
           "notCode": "Cela ne ressemble pas à un code Claude.",
           "stepTwoGoogle": "Collez le code affiché par Google",
           "codeLabelGoogle": "Code Google",
+          "stepTwoDevin": "Collez le code affiché par Devin",
+          "codeHintDevin": "Collez le code affiché par la page Devin, pas l'adresse de la page.",
+          "codeLabelDevin": "Code Devin",
           "codeHintGoogle": "Collez le code affiché par la page Google, pas l'adresse de la page.",
           "notCodeGoogle": "C'est une adresse sans code. Collez le code affiché par la page Google.",
           "send": "Envoyer à {{computer}}",
@@ -6459,6 +6481,7 @@
             "cursor": "Cursor s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Cursor et réessayez.",
             "grok": "Grok s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Grok et réessayez.",
             "antigravity": "Gemini s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Google et réessayez.",
+            "devin": "Devin s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Devin et réessayez.",
             "opencode": "Cette clé OpenCode est déjà connectée en tant que {{account}}."
           },
           "startFailed": "Aucune réponse de {{computer}}. Réessayez dans un instant.",
@@ -11711,6 +11734,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Mettez à jour agentes sur l'ordinateur pour utiliser la clé d'un abonnement"
@@ -13263,6 +13287,7 @@
       "cursor": "{{model}} avec l'abonnement Cursor",
       "grok": "{{model}} avec l'abonnement Grok",
       "gemini": "{{model}} avec l'abonnement Gemini",
+      "devin": "{{model}} avec l'abonnement Devin",
       "zen": "{{model}} avec OpenCode",
       "coding": "{{model}} avec {{plan}}",
       "claudeOf": "{{model}} avec l'abonnement Claude de {{owner}}",
@@ -13270,6 +13295,7 @@
       "cursorOf": "{{model}} avec l'abonnement Cursor de {{owner}}",
       "grokOf": "{{model}} avec l'abonnement Grok de {{owner}}",
       "geminiOf": "{{model}} avec l'abonnement Gemini de {{owner}}",
+      "devinOf": "{{model}} avec l'abonnement Devin de {{owner}}",
       "zenOf": "{{model}} avec l'OpenCode de {{owner}}",
       "codingOf": "{{model}} avec {{plan}} de {{owner}}",
       "claudeAuto": "Abonnement Claude",
@@ -13277,6 +13303,7 @@
       "cursorAuto": "Abonnement Cursor",
       "grokAuto": "Abonnement Grok",
       "geminiAuto": "Abonnement Gemini",
+      "devinAuto": "Abonnement Devin",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Abonnement Claude de {{owner}}",
@@ -13284,6 +13311,7 @@
       "cursorAutoOf": "Abonnement Cursor de {{owner}}",
       "grokAutoOf": "Abonnement Grok de {{owner}}",
       "geminiAutoOf": "Abonnement Gemini de {{owner}}",
+      "devinAutoOf": "Abonnement Devin de {{owner}}",
       "zenAutoOf": "OpenCode de {{owner}}",
       "codingAutoOf": "{{plan}} de {{owner}}",
       "on": "{{line}} sur {{computer}}"
@@ -13298,7 +13326,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Via l'API",
@@ -13311,6 +13340,7 @@
     "cursorText": "Utilise l'abonnement Cursor de la personne qui a connecté l'ordinateur.",
     "grokText": "Utilise l'abonnement Grok de la personne qui a connecté l'ordinateur.",
     "antigravityText": "Utilise l'abonnement Gemini de la personne qui a connecté l'ordinateur.",
+    "devinText": "Utilise l'abonnement Devin de la personne qui a connecté l'ordinateur.",
     "opencodeText": "Les modèles gratuits d'OpenCode, ou la clé OpenCode de la personne qui a connecté l'ordinateur.",
     "cursorModel": {
       "inPlan": "Inclus dans votre abonnement Cursor",
@@ -13328,6 +13358,7 @@
       "home_only": "{{program}} est installé uniquement pour root sur {{computer}}, où les agents n'ont pas accès.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
       "system": "{{program}} ne fonctionne pas encore sur le système de {{computer}}.",
+      "systemDevin": "{{computer}} est sous Windows, où Devin ne fonctionne pas encore : sa CLI n'y sépare pas la connexion de chaque compte. Utilisez Devin sur un ordinateur Mac ou Linux, ou choisissez une autre IA.",
       "windows_sandbox": "Le Windows de {{computer}} ne peut pas isoler les commandes de {{program}}. Choisissez plutôt Claude ou une clé API, ou mettez cet ordinateur à jour vers Windows 11 24H2 ou plus récent, avec ses dernières mises à jour.",
       "no_computerCloud": "Prêt dès que {{computer}} l'est."
     },
@@ -13373,6 +13404,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -13939,6 +13971,23 @@
     "s3": "Votre propre stockage",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 ou un autre service compatible S3.",
     "current": "Utilisé",
+    "computer": {
+      "title": "Ordinateur de l'espace de travail",
+      "used": "{{used}} sur {{size}} utilisés",
+      "bar": "Disque de l'ordinateur de l'espace de travail",
+      "measuring": "Mesure de ce qui occupe l'espace.",
+      "part": {
+        "projects": "Projets et code",
+        "apps": "Apps et outils",
+        "agents": "Fichiers des agents",
+        "caches": "Caches et fichiers temporaires",
+        "system": "Système",
+        "other": "Autres",
+        "free": "Libre"
+      },
+      "full": "Presque plein, il reste {{free}}. Un agent peut vider les caches et les fichiers temporaires et supprimer ce que plus personne n'utilise.",
+      "ask": "Libère de l'espace sur l'ordinateur de l'espace de travail : vide les caches et les fichiers temporaires (gestionnaires de paquets, navigateurs, outils de build), puis dis-moi ce qui prend le plus de place à part ça."
+    },
     "usage": {
       "files": "{{size}} de fichiers",
       "none": "Aucun fichier",
@@ -17151,6 +17200,7 @@
       "noSkillMd": "Aucun SKILL.md dans {{path}} ni dans les dossiers qu'il contient.",
       "tooManySkills": "Ce lien contient plus de {{max}} compétences. Liez l'un de ses dossiers.",
       "zipTooManySkills": "Ce .zip contient plus de {{max}} compétences. Envoyez-les en plusieurs fois.",
+      "zipTooBig": "Ce .zip dépasse {{maxMb}} Mo, le maximum pour installer une skill.",
       "invalidName": "Le nom doit utiliser des lettres minuscules, des chiffres et des tirets, jusqu'à {{max}} caractères.",
       "invalidDescription": "La description doit compter de 1 à {{max}} caractères.",
       "tooLarge": "Cette compétence contient {{size}} Mo de texte et de scripts, et la limite est de {{max}} Mo.",
@@ -17301,6 +17351,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "les commandes",
         "browser": "le navigateur",
         "desktop": "l'écran",
@@ -17476,6 +17527,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Commandes",
         "browser": "Navigateur"
@@ -17486,6 +17538,7 @@
         "cursor": "Comme Claude Code, avec un compte Cursor. Uniquement dans les dossiers autorisés.",
         "grok": "Comme Claude Code, avec un compte Grok. Uniquement dans les dossiers autorisés.",
         "antigravity": "Comme Claude Code, avec un compte Gemini. Uniquement dans les dossiers autorisés.",
+        "devin": "Comme Claude Code, avec un compte Devin. Uniquement dans les dossiers autorisés.",
         "opencode": "Comme Claude Code, avec les modèles gratuits d'OpenCode ou une clé OpenCode. Uniquement dans les dossiers autorisés.",
         "commands": "Lance des commandes dans le Terminal, comme des tests et des builds."
       },
@@ -17565,6 +17618,19 @@
     "forgotten": "{{name}} a été oublié.",
     "stop": "Arrêter",
     "stopped": "Arrêté. {{name}} est libre.",
+    "power": {
+      "start": "Démarrer",
+      "stop": "Éteindre",
+      "starting": "{{name}} démarre. Il sera prêt dans un instant.",
+      "stopped": "{{name}} est éteint.",
+      "toolMissingIos": "{{computer}} a besoin de Xcode pour faire tourner des simulateurs. Installez Xcode depuis l'App Store sur ce Mac.",
+      "toolMissingAndroid": "{{computer}} n'a pas l'Android Emulator. Installez-le dans Android Studio › SDK Manager › SDK Tools sur cet ordinateur.",
+      "gone": "{{name}} n'est plus sur {{computer}} : il y a été supprimé. Oubliez-le ici, ou recréez-le là-bas.",
+      "busy": "{{name}} est utilisé en ce moment. Arrêtez d'abord ce qui l'utilise, ou réessayez quand il sera libre.",
+      "startFailed": "{{name}} n'a pas démarré. {{computer}} a répondu : {{why}}",
+      "stopFailed": "{{name}} ne s'est pas éteint. {{computer}} a répondu : {{why}}",
+      "notSimulator": "Seuls les simulateurs et les émulateurs se démarrent et s'éteignent ici."
+    },
     "showMe": "Montrez-moi comment",
     "notFound": "Cet appareil n'est plus là",
     "notFoundText": "Il a été retiré, ou ce lien est incorrect.",
@@ -17580,15 +17646,21 @@
     "belongs": "Appartient à l'espace de travail",
     "belongsHint": "Il reste quand la personne qui l'a connecté part, et tout le monde peut l'utiliser tant que personne n'en est propriétaire.",
     "spillOwn": "Aider quand l'ordinateur de l'équipe est plein ou absent",
-    "spillOwnHint": "Quand l'ordinateur de tes agents est plein ou absent, leurs réponses, demandes et routines peuvent réfléchir ici avec ta connexion.",
-    "spillTeamHint": "Quand l'ordinateur d'un agent est plein ou absent, ses réponses, demandes et routines peuvent réfléchir ici avec la connexion de son propriétaire sur cet ordinateur.",
+    "spillOwnHint": "Quand l'ordinateur de l'équipe est plein ou absent, les réponses, demandes et routines de vos agents peuvent réfléchir ici, avec les comptes d'IA connectés sur cet ordinateur.",
+    "spillTeamHint": "Quand l'ordinateur d'un agent est plein ou absent, ses réponses, demandes et routines peuvent réfléchir ici, avec le compte d'IA que son propriétaire a connecté sur cet ordinateur.",
     "spillWorkspaceOff": "Un admin a désactivé ceci pour le workspace.",
-    "spillFirst": "Utiliser cet ordinateur pour le travail de mes agents",
-    "spillFirstHint": "Les demandes, les routines et les longs travaux de tes agents démarrent ici dès qu'il est libre, avec l'IA que tu y as connectée. Les réponses aux personnes ne démarrent ici que quand l'ordinateur de l'équipe est plein ou absent.",
+    "helpUse": "Comment il aide vos agents",
+    "helpUses": {
+      "off": "N'aide pas",
+      "help": "Seulement en renfort",
+      "first": "D'abord pour mes agents"
+    },
+    "helpUseHint": "Seulement en renfort : vos agents viennent ici quand l'ordinateur de l'équipe est plein ou absent. D'abord pour mes agents : leurs demandes, routines et longs travaux commencent ici dès qu'il est libre, et les réponses aux personnes seulement quand celui de l'équipe est plein ou absent. Les deux utilisent les comptes d'IA connectés sur cet ordinateur.",
+    "helpUseTeamHint": "Seulement en renfort : les agents de n'importe qui viennent ici quand leur ordinateur est plein ou absent, avec le compte d'IA que leur propriétaire a connecté sur cet ordinateur. D'abord pour mes agents : les demandes, routines et longs travaux de vos agents commencent ici dès qu'il est libre.",
     "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
     "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "shareInternet": "Les agents utilisent la connexion internet de cet ordinateur",
-    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web, jusqu’à 5 Go par jour, et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
+    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
     "shareInternetInUse": "Utilisé en ce moment",
     "shareInternetOther": "Les agents utilisent {{name}} en ce moment",
     "shareInternetPick": "Utiliser celui-ci",
@@ -18128,7 +18200,7 @@
       "cliRequest": "<b>{{who}}</b> vous demande d'installer {{tool}} sur votre <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vous demande le dossier {{path}} sur votre <b>{{deviceName}}</b>",
       "internetShared": "Les agents ouvrent désormais les sites web via la connexion internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jusqu’à 5 Go par jour, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
+      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
       "internetOff": "Désactiver",
       "internetOffDone": "Les agents n’utilisent plus la connexion internet de {{deviceName}}.",
       "once": "Autoriser une fois",
@@ -18138,6 +18210,22 @@
         "once": "Autorisé une fois.",
         "always": "{{deviceName}} est maintenant partagé avec eux.",
         "no": "Vous avez dit non."
+      }
+    },
+    "permission": {
+      "title": "En attente de {{permission}} sur {{computer}}",
+      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
+      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
+      "asked": "Nécessaire pour lancer {{trigger}}",
+      "names": {
+        "app_management": "Gestion des apps",
+        "screen": "Enregistrement de l’écran",
+        "accessibility": "Accessibilité",
+        "disk": "Accès complet au disque",
+        "network": "Réseau local",
+        "camera": "Caméra",
+        "microphone": "Micro",
+        "automation": "Automatisation"
       }
     }
   },
@@ -19669,6 +19757,7 @@
     "namesMore": "{{first}} et {{count}} de plus",
     "wait": {
       "thinking": "Réflexion…",
+      "code": "Mise à jour du code…",
       "held": "En attente d'approbation…",
       "said": "« {{text}} »"
     },
@@ -20525,7 +20614,7 @@
     },
     "offer_install_skill": {
       "label": "Proposer d'installer une compétence",
-      "description": "Publie une carte dont le bouton ouvre l'installation avec le lien de la compétence déjà rempli."
+      "description": "Publie une carte dont le bouton ouvre l’installation avec la skill déjà lue depuis son lien ou son .zip."
     },
     "update_skill_from_source": {
       "label": "Mettre à jour les compétences depuis leurs liens",

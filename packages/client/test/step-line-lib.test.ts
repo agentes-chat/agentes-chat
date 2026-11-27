@@ -72,3 +72,22 @@ test("a call waiting on a person says so before any words", () => {
   const held = { type: "agent.tool", ...base, tool: null, toolUseId: "q1", held: true };
   expect(stepAfter([call("q1", "ask_user", "Vou perguntar"), held], 9000)).toBe("esperando aprovação…");
 });
+
+test("a long step before the model has the turn says what it is, then gives the line back", () => {
+  const code = { type: "agent.phase", ...base, phase: "code" };
+  const over = { type: "agent.phase", ...base, phase: null };
+  expect(stepAfter([code], 3000)).toBe("atualizando o código…");
+  // Ahead of what it is about to do: the wait is on its checkouts right now.
+  expect(stepAfter([{ type: "agent.intent", ...base, text: "Procurando o e-mail" }, code], 3000)).toBe(
+    "atualizando o código…",
+  );
+  expect(stepAfter([code, over], 3000)).toBe("pensando…");
+  // A call running says itself, and a phase this app doesn't know changes nothing.
+  expect(stepAfter([code, call("b1", "search_context")], 3000)).toBe("buscando no histórico…");
+  expect(stepAfter([{ ...code, phase: "warming" }], 3000)).toBe("pensando…");
+});
+
+test("a call means the update is over, even when its end never arrived", () => {
+  const code = { type: "agent.phase", ...base, phase: "code" };
+  expect(stepAfter([code, call("b1", "search_context"), ended("b1")], 1000)).toBe("pensando…");
+});

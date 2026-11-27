@@ -11,6 +11,7 @@ import {
   CLI_COPIES_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   isBrainEffort,
@@ -56,6 +57,7 @@ import {
   antigravityBaseModel,
   claudeCodeModel,
   cliVersionAtLeast,
+  DEVIN_MODELS,
   GROK_BUILD_MODELS,
   isAntigravityGemini,
   isPlanModelId,
@@ -126,7 +128,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
-import { paysExtraUsage, wakeAgentsBrainWaits } from "./usage-pause";
+import { agentsWaitingOn, paysExtraUsage, wakeAgentsBrainWaits, wakeAgentUsageWaits } from "./usage-pause";
 
 /*
  * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with and its model,
@@ -144,6 +146,7 @@ export const BRAIN_KINDS: readonly BrainKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
 ];
 export const isBrainKind = (v: unknown): v is BrainKind =>
   typeof v === "string" && (BRAIN_KINDS as readonly string[]).includes(v);
@@ -169,8 +172,42 @@ export interface BrainModelOption {
    * when the CLI didn't say.
    */
   inPlan?: boolean;
-  /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). */
+  /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). Devin (ADR 0253): one its plan serves at no cost. */
   free?: boolean;
+  /** Devin (ADR 0253): the effort levels its variants run at (absent: every level). */
+  efforts?: BrainEffort[];
+  /** Devin: it has a faster variant, which Velocidade's "Rápida" runs. */
+  fast?: boolean;
+}
+
+/**
+ * The Devin CLI's models (ADR 0253): the families its accounts listed on the agent's computer (`devin models list`),
+ * else `DEVIN_MODELS`; each runs at the level the agent's effort names, on the variant the runner picks. Its levels as
+ * the apps' efforts (`none` and `minimal` aren't offered: low is the least), its window, whether the plan serves it at
+ * no cost, and whether Velocidade has a faster variant to run.
+ */
+export function devinModels(
+  listed: readonly {
+    id: string;
+    label?: string;
+    free?: boolean;
+    efforts?: string[];
+    fast?: boolean;
+    contextWindow?: number;
+  }[] = [],
+): BrainModelOption[] {
+  return (listed.length ? listed : DEVIN_MODELS).map((m) => {
+    const efforts = "efforts" in m && Array.isArray(m.efforts) ? m.efforts.filter(isBrainEffort) : [];
+    const window = "contextWindow" in m && typeof m.contextWindow === "number" ? m.contextWindow : 0;
+    return {
+      value: m.id,
+      label: m.label || m.id,
+      ...(m.free ? { free: true } : {}),
+      ...(efforts.length ? { efforts } : {}),
+      ...("fast" in m && m.fast ? { fast: true } : {}),
+      ...(window > 0 ? { contextWindow: window } : {}),
+    };
+  });
 }
 
 /**
@@ -317,12 +354,20 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
   if (kind === "antigravity")
     return antigravityModels(machine?.executors?.antigravity?.models, machine?.executors?.antigravity?.version);
+  if (kind === "devin") return devinModels(machine?.executors?.devin?.models);
   return [];
 }
 
-/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
+/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity, Devin: its CLI's own default, null). */
 export function defaultBrainModel(kind: BrainKind): string | null {
-  if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
+  if (
+    kind === "model" ||
+    kind === "cursor" ||
+    kind === "opencode" ||
+    kind === "grok" ||
+    kind === "antigravity" ||
+    kind === "devin"
+  )
     return null;
   const options = brainModelOptions(kind);
   return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.2-sol" : "sonnet");
@@ -465,6 +510,7 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
       opencode?: boolean;
       grok?: boolean;
       antigravity?: boolean;
+      devin?: boolean;
     };
   } | null;
 } & Parameters<typeof machineOnline>[0];
@@ -538,6 +584,7 @@ export function brainOptions(machine: MachineLike | null, { chat = false } = {})
     cliOption(machine, "opencode"),
     cliOption(machine, "grok"),
     cliOption(machine, "antigravity"),
+    cliOption(machine, "devin"),
   ];
 }
 
@@ -545,7 +592,10 @@ export function brainOptions(machine: MachineLike | null, { chat = false } = {})
  * Cursor (ADR 0114, runner protocol 36) or OpenCode (ADR 0132, protocol 39): the runner's protocol, its switch (or
  * Codex's on a runner before it) and its CLI found there.
  */
-function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "grok" | "antigravity"): BrainOption {
+function cliOption(
+  machine: MachineLike | null,
+  kind: "cursor" | "opencode" | "grok" | "antigravity" | "devin",
+): BrainOption {
   const tools = machine?.access?.tools;
   let reason: BrainUnavailable | undefined;
   if (!machine) reason = "no_computer";
@@ -557,6 +607,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
       opencode: OPENCODE_PROTOCOL,
       grok: GROK_PROTOCOL,
       antigravity: ANTIGRAVITY_PROTOCOL,
+      devin: DEVIN_PROTOCOL,
     }[kind]
   )
     reason = "runner_old";
@@ -657,7 +708,10 @@ export interface AgentBrainView {
    * serves the whole workspace (ADR 0059 §3), and the one it thinks with; emails only of the caller's own.
    */
   accounts: MachineAccountView[];
-  /** The caller may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /**
+   * The caller may add an account there for this agent: its owner or who manages it (their own plan, lent to it), on a
+   * computer where they add accounts.
+   */
   canManageAccounts: boolean;
   /** The computer's runner knows accounts (protocol 13). */
   accountsSupported: boolean;
@@ -704,7 +758,7 @@ const NO_ACCOUNTS: BrainAccounts = { accounts: [], canManageAccounts: false, acc
 
 /**
  * The accounts on the agent's computer it may think with: its owner's, every one that serves the whole workspace
- * (ADR 0059 §3), and the one it uses; and whether the caller adds one there for it.
+ * (ADR 0059 §3), and the one it uses; and whether the caller adds one there for it (`manages`: who manages the agent).
  */
 async function brainAccounts(
   db: Database,
@@ -712,6 +766,7 @@ async function brainAccounts(
   orgId: string,
   agent: Pick<Agent, "ownerUserId" | "brainAccountId" | "builtin">,
   machine: Pick<MachineRow, "id" | "protocol" | "pairedByUserId" | "kind"> | null,
+  manages = false,
 ): Promise<BrainAccounts> {
   if (!machine) return NO_ACCOUNTS;
   const supported = machine.protocol >= ACCOUNTS_PROTOCOL;
@@ -735,7 +790,7 @@ async function brainAccounts(
     accounts: accounts
       .filter((a) => serving.has(a.id) || a.id === agent.brainAccountId)
       .map((a) => ({ ...a, usable: serving.has(a.id) })),
-    canManageAccounts: supported && agent.ownerUserId === userId && mayAddAccounts(machine, userId),
+    canManageAccounts: supported && (manages || agent.ownerUserId === userId) && mayAddAccounts(machine, userId),
     accountsSupported: supported,
   };
 }
@@ -1005,14 +1060,17 @@ async function setPersonalBrain(
   const from = current
     ? { brain: current.brain, model: current.brainModel, account: current.brainAccountId, effort: current.brainEffort }
     : null;
-  const audit = (to: unknown) =>
-    recordAudit(db, {
+  // Their DM's runs parked on a plan (its limit, its computer) go on with the new choice now, not at the old plan's reset.
+  const audit = async (to: unknown) => {
+    await recordAudit(db, {
       orgId,
       actor: { type: "person", id: userId },
       action: "agent.brain",
       target: { type: "agent", id: agent.id },
       details: { scope: "mine", from, to },
     });
+    await wakeAgentUsageWaits(db, orgId, agent.id, { person: userId }).catch(() => null);
+  };
   // A model or effort alone on the computer's own sign-in stays on it: that row has no account to keep.
   const onSignIn =
     input.account === undefined &&
@@ -1252,7 +1310,7 @@ export async function getAgentBrain(
   const [machine, machines, accounts, keys, inUse] = await Promise.all([
     machineLook,
     candidateMachines(deps.db, userId, orgId, admin, agent.machineId),
-    machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m)),
+    machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m, admin)),
     deps.db
       .select({ id: providerCredentials.id, provider: providerCredentials.provider })
       .from(providerCredentials)
@@ -1471,7 +1529,7 @@ export async function setAgentBrain(
         ),
       );
   }
-  const accounts = await brainAccounts(deps.db, userId, orgId, agent, machine);
+  const accounts = await brainAccounts(deps.db, userId, orgId, agent, machine, admin);
   const thinks =
     changed ||
     model !== agent.brainModel ||
@@ -1646,7 +1704,7 @@ export async function setAgentBrain(
   const shownMachine = shown.machineId === machine?.id ? machine : await agentMachine(deps.db, orgId, shown.machineId);
   const fresh =
     account !== agent.brainAccountId || shownMachine !== machine
-      ? await brainAccounts(deps.db, userId, orgId, shown, shownMachine)
+      ? await brainAccounts(deps.db, userId, orgId, shown, shownMachine, admin)
       : accounts;
   return view(shown, shownMachine, machines, fresh, userId);
 }
@@ -1795,8 +1853,12 @@ export async function takeBackPlan(
         )
         .returning({ userId: schema.rightHandBrains.userId })
     : [];
-  // Their right hand's user lets the sign-in go now, not at the next change (`machineAgents`).
-  if (personal.length > 0) await publishMachineAgentsChanged(deps.pubsub, orgId);
+  // Their right hand's user lets the sign-in go now, not at the next change (`machineAgents`), and what waited on
+  // the plan's limit goes on with what they think with now.
+  if (personal.length > 0) {
+    await publishMachineAgentsChanged(deps.pubsub, orgId);
+    await wakeAgentsBrainWaits(deps, orgId, await agentsWaitingOn(deps.db, orgId, [accountId]));
+  }
   for (const p of personal) {
     await recordAudit(deps.db, {
       orgId,
@@ -2168,6 +2230,7 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    devin: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there, as `brainOptions` says it. */
@@ -2180,6 +2243,7 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    devin: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the caller connected (it is theirs, and
@@ -2241,6 +2305,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: sharesSignIns(m, "opencode"),
           grok: sharesSignIns(m, "grok"),
           antigravity: sharesSignIns(m, "antigravity"),
+          devin: sharesSignIns(m, "devin"),
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
@@ -2251,6 +2316,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: can("opencode"),
           grok: can("grok"),
           antigravity: can("antigravity"),
+          devin: can("devin"),
         },
         own: m.pairedByUserId === userId ? ownSignIns(m.executors, can) : {},
       };

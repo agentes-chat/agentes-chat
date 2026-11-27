@@ -55,6 +55,7 @@ import {
   storedExecutors,
   storeMachineAccess,
   storeMachineExecutors,
+  storeMachinePermissions,
   storeMachineToolchains,
 } from "./machine-access";
 import {
@@ -408,6 +409,8 @@ export function requestTimeoutMs(request: MachineRequest) {
   if (request.op === "phone.flow") return (Math.min(Math.max(1, request.timeoutSeconds), 600) + 120) * 1000;
   if (request.op === "phone.record") return (Math.min(Math.max(1, request.seconds), 170) + 90) * 1000;
   if (request.op === "phone.install") return 300_000;
+  // A simulator's first boot after an Xcode update migrates its data.
+  if (request.op === "phone.power") return 180_000;
   if (request.op.startsWith("phone.")) return 60_000;
   return 120_000;
 }
@@ -468,6 +471,8 @@ export function isNewWork(request: MachineRequest) {
     case "xcode.open":
     // Repairing an iPhone's test helper (its owner from the apps; an agent's call is refused paused before it's sent).
     case "phone.repair":
+    // Starting or shutting down a simulator (a person from the apps; an agent's call is refused paused before it's sent).
+    case "phone.power":
     // Its owner looking for, or installing, a coding CLI there.
     case "clis.check":
     case "cli.install":
@@ -858,7 +863,8 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.toolchains ||
         frame.clis ||
         frame.windowsBuild ||
-        frame.app
+        frame.app ||
+        frame.permissions
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -877,6 +883,8 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
                 ...(frame.app ? { app: true as const } : {}),
+                // The OS permissions its agents' work waits on: kept in memory there, so a hello says them all.
+                ...(frame.permissions ? { permissions: frame.permissions } : {}),
                 ...(Object.keys(ownUsage).length > 0 ? { ownUsage } : {}),
                 // A runner whose probe hasn't finished says none: the last ones stored stand.
                 ...((frame.toolchains ?? machine.executors?.toolchains)
@@ -1256,6 +1264,8 @@ export function createMachineHub(deps: MachineHubDeps) {
             diskUse: prev.diskUse,
             ...(prev.diskFreeGb === undefined ? {} : { diskFreeGb: prev.diskFreeGb }),
             ...(prev.sharedGb === undefined ? {} : { sharedGb: prev.sharedGb }),
+            ...(prev.diskGb === undefined ? {} : { diskGb: prev.diskGb }),
+            ...(prev.diskParts === undefined ? {} : { diskParts: prev.diskParts }),
           }
         : load;
     const wasWarned = prev?.diskWarned === true;
@@ -1762,6 +1772,10 @@ export function createMachineHub(deps: MachineHubDeps) {
       } else if (frame.type === "toolchains.changed") {
         await storeMachineToolchains({ db, pubsub }, conn.machineId, frame.toolchains).catch((error) =>
           deps.log?.warn("toolchains.changed failed", { machineId: conn.machineId, error: String(error) }),
+        );
+      } else if (frame.type === "permissions.changed") {
+        await storeMachinePermissions({ db, pubsub }, conn.machineId, frame.permissions).catch((error) =>
+          deps.log?.warn("permissions.changed failed", { machineId: conn.machineId, error: String(error) }),
         );
       } else if (frame.type === "phones.changed") {
         if (conn.protocol >= PHONES_PROTOCOL && conn.orgId) {

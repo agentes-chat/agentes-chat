@@ -498,11 +498,13 @@ export interface DeviceRoster {
 
 async function loadRoster(db: Executor, orgId: string): Promise<DeviceRoster> {
   const rows = rowsOf<{ kind: string; id: string; name: string; os: string }>(
-    await db.execute(sql`select 'computer' as kind, m.id::text as id, m.name, m.os from machines m
+    // In a fixed order: the list is in the agent's system text, which a computer's warm CLI and the prompt cache match.
+    await db.execute(sql`select 'computer' as kind, m.id::text as id, m.name, m.os, m.created_at from machines m
       where m.org_id = ${orgId}::uuid and m.deleted_at is null
       union all
-      select 'phone', p.id::text, p.name, p.platform from machine_phones p
-      where p.org_id = ${orgId}::uuid and p.deleted_at is null`),
+      select 'phone', p.id::text, p.name, p.platform, p.created_at from machine_phones p
+      where p.org_id = ${orgId}::uuid and p.deleted_at is null
+      order by kind, created_at, id`),
   );
   return {
     computers: rows.filter((r) => r.kind === "computer").map(({ id, name, os }) => ({ id, name, os })),
@@ -565,7 +567,8 @@ function phoneLine(p: PhoneDevice, people: Map<string, string>) {
   const kind = p.phoneKind === "device" ? "" : ` ${p.phoneKind}`;
   const system = `${p.platform === "ios" ? "iOS" : "Android"}${p.osVersion ? ` ${p.osVersion}` : ""}`;
   const model = p.model && p.model !== p.name ? `${p.model}, ` : "";
-  return `"${p.name}" (${model}${system}${kind}): ${statusWords(p.status, people)}`;
+  const start = kind && p.status.kind === "offline" && !p.status.withHost ? "; simulator_start starts it" : "";
+  return `"${p.name}" (${model}${system}${kind}): ${statusWords(p.status, people)}${start}`;
 }
 
 /** The switches agents' tools need on a computer, as people call them. */

@@ -102,6 +102,14 @@ export interface GatewayEmbeddings {
 }
 
 export const EMBED_QUERY_TIMEOUT_MS = 1500;
+/**
+ * A query's call itself goes on this many times its wait: one past its first asker's wait is kept for the next search
+ * of the same words (`gateway.embed`). The hosted model's slow spells last seconds, and every call in one is slow.
+ */
+export const EMBED_QUERY_CALL_WAITS = 4;
+/** How long a query's vector is kept for the same words, and how many are kept. */
+export const QUERY_VECTOR_TTL_MS = 10 * 60_000;
+const QUERY_VECTORS_KEPT = 256;
 /** Only stops a hung server from holding an indexing job: a CPU server takes minutes over a long batch. */
 export const EMBED_DOCUMENT_TIMEOUT_MS = 5 * 60_000;
 /** Embedding calls failed in a row before the outage is reported, once until one succeeds again. */
@@ -270,6 +278,54 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   const now = deps.now ?? (() => new Date());
   const { db } = deps;
   let embedFailures = 0;
+  /** Query vectors by organization and words, while their call runs and for `QUERY_VECTOR_TTL_MS` after. */
+  const queryVectors = new Map<string, { at: number; result: Promise<EmbeddingResult> }>();
+  /** One call to the embeddings provider, its usage recorded; its failures in a row counted and reported. */
+  const embedCall = async (
+    embeddings: GatewayEmbeddings,
+    call: { orgId: string; texts: string[]; inputType: "document" | "query" },
+    timeoutMs: number,
+  ): Promise<EmbeddingResult> => {
+    const { provider, apiKey } = embeddings;
+    let result: EmbeddingResult;
+    try {
+      result = await provider.embed(call.texts, {
+        apiKey,
+        inputType: call.inputType,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      if (++embedFailures === EMBED_FAILURES_REPORTED) {
+        try {
+          deps.errors?.capture(error, {
+            cause: "embeddings",
+            provider: provider.id,
+            model: provider.model,
+            input_type: call.inputType,
+          });
+        } catch {
+          // A report that can't be made never fails a search.
+        }
+      }
+      throw error;
+    }
+    embedFailures = 0;
+    const cost = embeddingCostNanoUsd(result.model, result.tokens);
+    await db.insert(usageRecords).values({
+      orgId: call.orgId,
+      agentId: null,
+      kind: "embedding",
+      credentialId: null,
+      provider: provider.id,
+      model: result.model,
+      requestedModel: provider.model,
+      inputTokens: result.tokens,
+      outputTokens: 0,
+      costNanoUsd: cost,
+      createdAt: now(),
+    });
+    return result;
+  };
 
   const providerFor = (provider: string) => {
     const p = deps.providers[provider];
@@ -1154,8 +1210,9 @@ export function createModelGateway(deps: ModelGatewayDeps) {
      * Embeds texts for the organization's search index (kind `embedding`, no agent), within a timeout: a query's is
      * short, a run waits on it. Null when no embedding provider is configured, when none of `kinds` gets vectors (the
      * kinds the texts are, or that a query searches; absent: any), or on a workspace that may not work. Throws when
-     * the provider fails, and callers go on with words alone; the failure that makes `EMBED_FAILURES_REPORTED` in a
-     * row is reported.
+     * the provider fails or a query's wait ends first, and callers go on with words alone; the failure that makes
+     * `EMBED_FAILURES_REPORTED` in a row is reported. The same words of a query share one call: asked early (a run
+     * asks when it reads its trigger), its vector is often there when memory and the wiki search.
      */
     async embed(call: {
       orgId: string;
@@ -1170,47 +1227,29 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       if (embedded && !wanted?.some((k) => embedded.includes(k))) return null;
       // Null, not a refusal: people on a hold still read and search, with full text alone.
       if (await standingRefusal(db, call.orgId)) return null;
-      const { provider, apiKey } = embeddings;
-      const timeoutMs =
-        call.inputType === "query" ? (embeddings.queryTimeoutMs ?? EMBED_QUERY_TIMEOUT_MS) : EMBED_DOCUMENT_TIMEOUT_MS;
-      let result: EmbeddingResult;
-      try {
-        result = await provider.embed(call.texts, {
-          apiKey,
-          inputType: call.inputType,
-          signal: AbortSignal.timeout(timeoutMs),
+      if (call.inputType === "document") return embedCall(embeddings, call, EMBED_DOCUMENT_TIMEOUT_MS);
+      const waitMs = embeddings.queryTimeoutMs ?? EMBED_QUERY_TIMEOUT_MS;
+      const key = `${call.orgId}\0${call.texts.join("\0")}`;
+      let kept = queryVectors.get(key);
+      if (!kept || Date.now() - kept.at > QUERY_VECTOR_TTL_MS) {
+        const result = embedCall(embeddings, call, waitMs * EMBED_QUERY_CALL_WAITS);
+        const entry = { at: Date.now(), result };
+        kept = entry;
+        queryVectors.delete(key);
+        queryVectors.set(key, entry);
+        if (queryVectors.size > QUERY_VECTORS_KEPT) queryVectors.delete(queryVectors.keys().next().value as string);
+        result.catch(() => {
+          if (queryVectors.get(key) === entry) queryVectors.delete(key);
         });
-      } catch (error) {
-        if (++embedFailures === EMBED_FAILURES_REPORTED) {
-          try {
-            deps.errors?.capture(error, {
-              cause: "embeddings",
-              provider: provider.id,
-              model: provider.model,
-              input_type: call.inputType,
-            });
-          } catch {
-            // A report that can't be made never fails a search.
-          }
-        }
-        throw error;
       }
-      embedFailures = 0;
-      const cost = embeddingCostNanoUsd(result.model, result.tokens);
-      await db.insert(usageRecords).values({
-        orgId: call.orgId,
-        agentId: null,
-        kind: "embedding",
-        credentialId: null,
-        provider: provider.id,
-        model: result.model,
-        requestedModel: provider.model,
-        inputTokens: result.tokens,
-        outputTokens: 0,
-        costNanoUsd: cost,
-        createdAt: now(),
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const waited = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new ProviderError(`the embeddings server took more than ${waitMs} ms`, true)),
+          waitMs,
+        );
       });
-      return result;
+      return Promise.race([kept.result, waited]).finally(() => clearTimeout(timer));
     },
 
     /**

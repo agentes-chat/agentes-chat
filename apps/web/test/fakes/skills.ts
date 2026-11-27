@@ -294,6 +294,8 @@ export function createFakeSkills(
         return { choices: await marked(orgId, CHOICES), skipped: clone(SKIPPED), ...via };
       }
       if (url && "list" in input && input.list) return { choices: await marked(orgId, CHOICES.slice(0, 1)), ...via };
+      // A .zip sent in a conversation (an agent's card) is listed to pick, as a link is.
+      if ("fileId" in input) return { choices: await marked(orgId, CHOICES.slice(0, 1)) };
       // A .zip of several skills (its bytes say so here) lists them to pick, as a link does.
       if ("zipBase64" in input && atob(input.zipBase64).includes(SEVERAL_SKILLS)) {
         return { choices: await marked(orgId, CHOICES) };
@@ -333,6 +335,34 @@ export function createFakeSkills(
             source: "url",
             sourceUrl: `${url}/tree/HEAD/${path}`,
             ...(url.includes("/contoso/") ? { sourceVia: "github" as const } : {}),
+            defaultForNewAgents: false,
+            files: [{ path: "SKILL.md", size: 10, mime: "text/markdown", status: "stored" }],
+          }),
+        );
+      }
+      return installed;
+    },
+    importPickedFile: async (orgId, fileId, paths, forAgentId, personal) => {
+      log(
+        "skills.importPickedFile",
+        orgId,
+        fileId,
+        paths,
+        ...(forAgentId ? [forAgentId] : []),
+        ...(personal ? [personal] : []),
+      );
+      const installed: SkillDetail[] = [];
+      for (const path of paths) {
+        const choice = CHOICES.find((c) => c.path === path);
+        if (!choice) throw new MockNotFoundError("Skill não encontrada.");
+        installed.push(
+          await make(orgId, {
+            ...(await ownerOf(personal)),
+            name: choice.name,
+            description: choice.description,
+            body: `# ${choice.name}`,
+            source: "upload",
+            sourceUrl: null,
             defaultForNewAgents: false,
             files: [{ path: "SKILL.md", size: 10, mime: "text/markdown", status: "stored" }],
           }),

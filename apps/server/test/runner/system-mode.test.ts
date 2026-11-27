@@ -538,14 +538,16 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "xcode.fix",
     // Looking again for the coding CLIs only reads the computer's PATH: root answers it.
     "clis.check",
-    // Root installs nothing for the agents' users (the computer's setup does): it answers unsupported.
+    // Root installs a CLI for all the agents' users at once: its own pinned copy, where each of them runs it.
     "cli.install",
-    // Nor fetches their CLIs (ADR 0228 §6, outside system mode only): root answers it has none to fetch.
+    // And fetches it again on the apps' "Try again" (ADR 0228 §6).
     "cli.fetch",
     // Opening Xcode on the Mac, beside its fix (listed in `MACHINE_OPS` order).
     "xcode.open",
     // Repairing an iPhone's test helper is the phones' process's, beside their locks.
     "phone.repair",
+    // And starting or shutting down its simulators and emulators.
+    "phone.power",
     // A problem report reads the runner's own log and state: root's.
     "report.collect",
     // Lending the computer's internet dials a data socket, which needs the machine token only root holds (ADR 0237).
@@ -553,7 +555,8 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
   ]);
   const install = { op: "cli.install", action: "start", tool: "claude" } as unknown as MachineRequest;
   const installer = { ...ctx, cliInstall: () => ({ install: { tool: "claude" as const, state: "running" as const } }) };
-  expect(await handleRequest(installer, install, scope)).toEqual({ install: { tool: "claude", state: "unsupported" } });
+  expect(await handleRequest(installer, install, scope)).toEqual({ install: { tool: "claude", state: "running" } });
+  expect(await handleRequest(ctx, install, scope)).toEqual({ install: { tool: "claude", state: "unsupported" } });
 
   if (posix) {
     system = false;

@@ -1357,6 +1357,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       forgetPhone: (orgId, phoneId) =>
         request<void>(`${org(orgId)}/devices/phones/${enc(phoneId)}`, { method: "DELETE" }),
       stopPhone: (orgId, phoneId) => request<void>(`${org(orgId)}/devices/phones/${enc(phoneId)}/stop`, { json: {} }),
+      powerPhone: (orgId, phoneId, on) =>
+        request<void>(`${org(orgId)}/devices/phones/${enc(phoneId)}/power`, { json: { on } }),
       createLink: (orgId, kind) => request<ConnectLink>(`${org(orgId)}/devices/connect-links`, { json: { kind } }),
       link: (orgId, linkId) => request<ConnectLinkState>(`${org(orgId)}/devices/connect-links/${enc(linkId)}`),
       approveRequest: (orgId, requestId, input) =>
@@ -1561,6 +1563,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         (
           await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
             json: { url, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
+          })
+        ).skills,
+      importPickedFile: async (orgId, fileId, paths, forAgentId, personal) =>
+        (
+          await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
+            json: { fileId, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
           })
         ).skills,
       importPickedZip: async (orgId, zipBase64, paths, personal, upload) =>
