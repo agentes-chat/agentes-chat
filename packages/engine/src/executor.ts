@@ -304,6 +304,7 @@ import { PLACE_KEPT_MS } from "./message-place";
 import {
   getMessage,
   insertMessage,
+  MAX_MESSAGE_LENGTH,
   type Message,
   messageView,
   unreachedAgents,
@@ -690,6 +691,8 @@ export interface Transcript {
   postedUpTo: number;
   /** Chat messages this run posted so far. */
   postedCount: number;
+  /** The text of replies cut at the output limit with no call in flight, which the next call goes on with. */
+  cutReply?: string;
   /** The words of the last message it posted (trimmed): saying exactly them again next adds nothing. */
   lastPosted?: string;
   /** Its first message of its own in a channel's main timeline, which the rest of the run goes under (ADR 0261). */
@@ -1230,6 +1233,10 @@ const outageNote = (error: unknown, account: { provider?: string } | undefined, 
 /** The result of a call the output limit cut before its input was whole (a long file written in one call). */
 export const CUT_AT_OUTPUT_LIMIT =
   "Not run: your output limit cut this call off before its input was complete, so nothing was done. Send long content in parts (write_file, then write_file with append for each next part, a few hundred lines each), and to change a file that already exists, change only the lines that change instead of writing it whole again.";
+
+/** What a model whose reply its output limit cut is told: the reply is its words so far and the rest. */
+export const CONTINUE_AFTER_CUT =
+  "Your output limit cut your reply off. Go on exactly where it stopped, without repeating anything or starting over.";
 
 /** The result of a call in a step cut by a server restart that never started. */
 const NOT_RUN_BY_RESTART =
@@ -6458,7 +6465,7 @@ async function executeRunInner(
       // A computer brain's turn with nothing to say (its tools ran through the bridge) adds no empty message.
       if (result.content.length > 0) transcript.messages.push({ role: "assistant", content: result.content });
       // Text before tool calls is narration of the work: kept on the model call's step for its activity, never live.
-      const turnText = dropSquashedEcho(textOf(result.content).trim());
+      const turnText = dropSquashedEcho(`${transcript.cutReply ?? ""}${textOf(result.content)}`.trim());
       // Text it wrote before its calls, without the line it said on the way in the same response (`say_now`).
       const lines = result.toolCalls.filter((c) => isSayNow(c.name));
       // Notes its API kept apart (Claude's progress updates, a reasoning summary) narrate the same work.
@@ -6532,6 +6539,25 @@ async function executeRunInner(
         await saveTranscript(db, transcript);
         continue;
       }
+      // A reply cut at the output limit with no call in flight goes on in the next call, within the run's steps and
+      // budget; its parts are posted as one reply. Not past what one message holds, nor after a second cut in a row
+      // with no text (all thinking): either only spends the budget on words that never post.
+      const cutWords = textOf(result.content);
+      if (
+        result.stopReason === "max_tokens" &&
+        toolUses.length === 0 &&
+        turnPlan.kind === "model" &&
+        result.content.length > 0 &&
+        run.turns < maxTurns &&
+        (cutWords.trim() !== "" || transcript.cutReply === undefined) &&
+        (transcript.cutReply ?? "").length + cutWords.length < MAX_MESSAGE_LENGTH
+      ) {
+        transcript.cutReply = `${transcript.cutReply ?? ""}${cutWords}`;
+        transcript.messages.push({ role: "user", content: CONTINUE_AFTER_CUT });
+        await saveTranscript(db, transcript);
+        continue;
+      }
+      delete transcript.cutReply;
       if (result.stopReason === "tool_use" && toolUses.length > 0 && toolScope) {
         toolsOfTurn = run.turns;
         const calls: NonNullable<Transcript["pending"]>["calls"] = [];

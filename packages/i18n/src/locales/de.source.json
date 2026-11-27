@@ -107,6 +107,21 @@
   "common.table": {
     "value": "Table"
   },
+  "common.tableRows": {
+    "value": {
+      "one": "Table · {{count}} row",
+      "other": "Table · {{count}} rows"
+    }
+  },
+  "common.tableSeeAll": {
+    "value": "See all {{count}} rows"
+  },
+  "common.tableRowCount": {
+    "value": {
+      "one": "{{count}} row",
+      "other": "{{count}} rows"
+    }
+  },
   "common.chartItem": {
     "value": "Item"
   },
@@ -25542,9 +25557,6 @@
   "calendar.filter.agent": {
     "value": "Agents"
   },
-  "calendar.filter.routine": {
-    "value": "Routines"
-  },
   "calendar.filter.reminder": {
     "value": "Reminders"
   },
@@ -25626,27 +25638,6 @@
   "calendar.rsvp.mine.declined": {
     "value": "You're not going."
   },
-  "calendar.every.hour": {
-    "value": "every hour"
-  },
-  "calendar.every.hours": {
-    "value": "every {{count}} h"
-  },
-  "calendar.every.minutes": {
-    "value": "every {{count}} min"
-  },
-  "calendar.perDay": {
-    "value": "{{count}}× a day"
-  },
-  "calendar.runs": {
-    "value": {
-      "one": "{{count}} run in these days.",
-      "other": "{{count}} runs in these days."
-    }
-  },
-  "calendar.routineDetail": {
-    "value": "Routine · delivers to {{target}}"
-  },
   "calendar.deadlineDetail": {
     "value": "The task is due."
   },
@@ -25665,44 +25656,8 @@
   "calendar.openIssue": {
     "value": "Open task"
   },
-  "calendar.openRoutines": {
-    "value": "See in Routines"
-  },
-  "calendar.openRoutine": {
-    "value": "Open routine"
-  },
-  "calendar.runAria": {
-    "value": "Routine {{name}}, {{time}}"
-  },
   "calendar.runHint": {
     "value": "{{name}} · {{agent}} · {{time}}"
-  },
-  "calendar.runsAt": {
-    "value": "Routines at {{time}}"
-  },
-  "calendar.moreRuns": {
-    "value": {
-      "one": "+{{count}} routine",
-      "other": "+{{count}} routines"
-    }
-  },
-  "calendar.runTimes": {
-    "value": "×{{count}}"
-  },
-  "calendar.result.ok": {
-    "value": "replied"
-  },
-  "calendar.result.silent": {
-    "value": "nothing new"
-  },
-  "calendar.result.failed": {
-    "value": "failed"
-  },
-  "calendar.result.skipped": {
-    "value": "didn't run"
-  },
-  "calendar.lastResult": {
-    "value": "last: {{result}}"
   },
   "calendar.upcomingMeta": {
     "value": "{{day}} · {{time}}"
@@ -25711,7 +25666,7 @@
     "value": "Nothing scheduled. Drag to create or press N"
   },
   "calendar.agendaEmpty": {
-    "value": "Events and routines in the next 30 days show up here."
+    "value": "Events and reminders in the next 30 days show up here."
   },
   "calendar.agendaEmptyTitle": {
     "value": "A clear calendar for the next 30 days"
@@ -41808,6 +41763,18 @@
       "other": "{{count}} CPU"
     }
   },
+  "devices.cores": {
+    "value": {
+      "one": "{{count}} core",
+      "other": "{{count}} cores"
+    }
+  },
+  "devices.threads": {
+    "value": {
+      "one": "{{count}} thread",
+      "other": "{{count}} threads"
+    }
+  },
   "devices.memory": {
     "value": "{{gb}} GB"
   },
@@ -42418,7 +42385,7 @@
     "value": "System"
   },
   "devices.facts.cpu": {
-    "value": "CPU"
+    "value": "Processor"
   },
   "devices.facts.memory": {
     "value": "Memory"
@@ -45311,6 +45278,45 @@
   },
   "settings.about.copyright": {
     "value": "Copyright © 2026 AGENTESCHAT, LLC and contributors"
+  },
+  "settings.about.latest": {
+    "value": "The newest release"
+  },
+  "settings.about.newer": {
+    "value": "{{version}} is out"
+  },
+  "settings.about.notes": {
+    "value": "What's new"
+  },
+  "settings.about.update.title": {
+    "value": "Update to {{version}}"
+  },
+  "settings.about.update.docker": {
+    "value": "With Docker"
+  },
+  "settings.about.update.native": {
+    "value": "Without Docker"
+  },
+  "settings.about.update.nativeHelp": {
+    "value": "Extract the release's package into `~/.agentes/app`, then run:"
+  },
+  "settings.about.update.desktop": {
+    "value": "Runs in the desktop app on this computer? It updates with the app."
+  },
+  "settings.about.update.notice": {
+    "value": "agentes.chat {{version}} is out for this server"
+  },
+  "settings.about.update.how": {
+    "value": "How to update"
+  },
+  "settings.about.computers": {
+    "value": "Computers' program"
+  },
+  "settings.about.computersAhead": {
+    "value": {
+      "one": "{{count}} computer runs a newer version than this server. It works as it is, and what's new in it comes with this server's update.",
+      "other": "{{count}} computers run a newer version than this server. They work as they are, and what's new in them comes with this server's update."
+    }
   },
   "settings.title": {
     "value": "Settings"

@@ -22,13 +22,11 @@ const today = (h: number, m: number) => {
 };
 
 /**
- * The week of a workspace with daily `routines` (name and time) and today's `events`, each element as tall as `drawn`
- * says (0: not measured), and `change` made once it settled: today's column once it settled again, or null when the
- * page broke.
+ * The week of a workspace with today's `events`, each element as tall as `drawn` says (0: not measured), and `change`
+ * made once it settled: today's column once it settled again, or null when the page broke.
  */
 async function todaysColumn(
   drawn: (el: HTMLElement) => number,
-  routines: (readonly [name: string, time: string])[],
   events: { title: string; start: Date; end: Date }[] = [],
   change?: (app: Awaited<ReturnType<typeof renderApp>> & { api: ApiClient }) => Promise<void>,
 ) {
@@ -40,18 +38,7 @@ async function todaysColumn(
     },
   });
   try {
-    const state = seedState();
-    const api = createFakeApi(state);
-    const agentId = state.agents[0]?.id ?? "";
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    for (const [name, time] of routines)
-      await api.routines.create(ORG_ID, {
-        name,
-        agentId,
-        prompt: "Faça algo.",
-        target: { type: "dm" },
-        trigger: { type: "schedule", rule: { freq: "daily", times: [time], timezone } },
-      });
+    const api = createFakeApi(seedState());
     for (const { title, start, end } of events)
       await api.calendar.create(ORG_ID, {
         title,
@@ -73,47 +60,9 @@ async function todaysColumn(
   }
 }
 
-/**
- * A stack of runs drawn shorter when it holds more: alone a run's name wraps (44px) and the stack takes in the run 40
- * minutes later (29px under it); holding both it shows two short rows (24px), which lets that run go again. Measured
- * as drawn on every render, the week flipped between one stack and two until React stopped it as an endless loop.
- */
-test("the week's measured layout settles when what a stack holds changes how tall it is drawn", async () => {
-  const col = await todaysColumn(
-    (el) =>
-      !el.classList.contains("cal-week__runs") ? 0 : el.querySelectorAll(".cal-chip--run").length === 1 ? 44 : 24,
-    [
-      ["Bom dia", "07:00"],
-      ["Resumo", "07:40"],
-    ],
-  );
-  expect(col).not.toBeNull();
-  // One stack holds both runs, as the taller measure (the run alone, wrapping) said.
-  const runs = (stack: Element) =>
-    [...stack.querySelectorAll(".cal-chip--run")].map((chip) => chip.getAttribute("aria-label"));
-  const stacks = [...(col?.querySelectorAll(".cal-week__runs") ?? [])].map(runs);
-  expect(stacks.filter((names) => names.some((n) => /Bom dia|Resumo/.test(n ?? "")))).toEqual([
-    ["Rotina Bom dia, 07:00", "Rotina Resumo, 07:40"],
-  ]);
-});
-
-/**
- * A run beside a meeting is drawn thin, its owner's face alone on one short line (24px); wide, its name wraps (44px)
- * and reaches the meeting 40 minutes later, which then goes beside it. Measured as drawn on every render, the run went
- * thin and short, the meeting back under it, the run wide and tall, and so on: no element moved or mounted, only the
- * measure set the week's state again on every commit.
- */
-test("the week's measured layout settles when a run beside a meeting is drawn shorter than alone", async () => {
-  const col = await todaysColumn(
-    (el) => (!el.classList.contains("cal-week__runs") ? 0 : el.hasAttribute("data-thin") ? 24 : 44),
-    [["Bom dia", "07:00"]],
-    [{ title: "Café com o time", start: today(7, 40), end: today(8, 10) }],
-  );
-  expect(col).not.toBeNull();
-  // Thin beside the meeting, as the taller measure (the run wide, wrapping) said.
-  const run = col?.querySelector('[aria-label="Rotina Bom dia, 07:00"]');
-  expect(run?.closest(".cal-week__runs")?.hasAttribute("data-thin")).toBe(true);
-});
+/** A meeting's block as tall as it is drawn: its slot. */
+const blockHeight = (el: HTMLElement) =>
+  el.classList.contains("cal-chip--block") ? Number.parseFloat(el.style.minHeight) || 0 : 0;
 
 /**
  * A meeting is drawn as tall as its slot (two hours, 86px), and the one at 15:00 goes beside it. Made an hour shorter
@@ -123,8 +72,7 @@ test("the week's measured layout settles when a run beside a meeting is drawn sh
 test("a meeting made shorter keeps no height it no longer has: the one at its new end goes back under it", async () => {
   const coffee = () => screen().getByRole("button", { name: "Café com o time, 15:00–15:30" });
   const col = await todaysColumn(
-    (el) => (el.classList.contains("cal-chip--block") ? Number.parseFloat(el.style.minHeight) || 0 : 0),
-    [],
+    blockHeight,
     [
       { title: "Planejamento", start: today(14, 0), end: today(16, 0) },
       { title: "Café com o time", start: today(15, 0), end: today(15, 30) },
@@ -145,32 +93,29 @@ test("a meeting made shorter keeps no height it no longer has: the one at its ne
 });
 
 /**
- * The stack of runs of the first test, its second run's details open, and a meeting hours later renamed by someone
- * else: the page reads the calendar again. Only what met the meeting is measured again, so the stack keeps the height
- * that holds both runs, and the run's chip and details stay the same elements: they neither pop in again nor drop the
- * focus.
+ * A meeting's details open, and another meeting hours later renamed by someone else: the page reads the calendar again.
+ * Only what met the renamed meeting is measured again, so the open meeting's chip and details stay the same elements:
+ * they neither pop in again nor drop the focus.
  */
-test("an item changed elsewhere on the day leaves an open run's chip and details in place", async () => {
-  const run = () =>
+test("an item changed elsewhere on the day leaves an open item's chip and details in place", async () => {
+  const chip = () =>
     within(document.querySelector(`.cal-week__col[data-day="${toYmd(new Date())}"]`) as HTMLElement).getByRole(
       "button",
-      { name: "Rotina Resumo, 07:40" },
+      { name: "Resumo, 07:00–07:30" },
     );
   const details = () => screen().getByRole("dialog", { name: "Resumo" });
   let before: { chip: HTMLElement; details: HTMLElement; focus: Element | null } | undefined;
   await todaysColumn(
-    (el) =>
-      !el.classList.contains("cal-week__runs") ? 0 : el.querySelectorAll(".cal-chip--run").length === 1 ? 44 : 24,
+    blockHeight,
     [
-      ["Bom dia", "07:00"],
-      ["Resumo", "07:40"],
+      { title: "Resumo", start: today(7, 0), end: today(7, 30) },
+      { title: "Planejamento", start: today(14, 0), end: today(15, 0) },
     ],
-    [{ title: "Planejamento", start: today(14, 0), end: today(15, 0) }],
     async ({ api, sockets }) => {
       await act(async () => sockets.last().open());
-      await act(async () => fireEvent.click(run()));
+      await act(async () => fireEvent.click(chip()));
       await settle(2);
-      before = { chip: run(), details: details(), focus: document.activeElement };
+      before = { chip: chip(), details: details(), focus: document.activeElement };
       const { events } = await api.calendar.range(ORG_ID, today(0, 0).toISOString(), today(23, 59).toISOString());
       const meeting = events.find((e) => e.title === "Planejamento");
       await api.calendar.update(ORG_ID, meeting?.id ?? "", { title: "Planejamento do trimestre" });
@@ -178,7 +123,7 @@ test("an item changed elsewhere on the day leaves an open run's chip and details
     },
   );
   expect(screen().getByRole("button", { name: "Planejamento do trimestre, 14:00–15:00" })).toBeTruthy();
-  expect(run()).toBe(before?.chip as HTMLElement);
+  expect(chip()).toBe(before?.chip as HTMLElement);
   expect(details()).toBe(before?.details as HTMLElement);
   expect(before?.details.contains(before.focus)).toBe(true);
   expect(document.activeElement).toBe(before?.focus as Element);
