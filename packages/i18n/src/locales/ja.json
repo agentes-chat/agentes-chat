@@ -3150,6 +3150,10 @@
       "update_workspace": "ワークスペース<b>{{name}}</b>を変更",
       "set_action_check_on": "チームの過去の対応の確認をオンにする",
       "set_action_check_off": "チームの過去の対応の確認をオフにする",
+      "set_approvals_level": "ワークスペースの承認を<b>{{level}}</b>にする",
+      "set_approvals_level_every": "すべてのエージェントの承認を<b>{{level}}</b>にする（個別の設定も含む）",
+      "set_agent_approvals_level": "<b>{{agent}}</b>の承認を<b>{{level}}</b>にする",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b>をワークスペースの承認に従わせる",
       "invite_people": "<b>{{emails}}</b>をワークスペースに招待します。",
       "invite_roles_other": "{{roles}}のロールで招待します。",
       "invite_people_sent_other": "<b>{{emails}}</b>に招待を送信しました。",
@@ -4006,6 +4010,10 @@
       "changed_update_workspace": "ワークスペース<b>{{name}}</b>を変更しました",
       "changed_set_action_check_on": "チームの過去の対応の確認をオンにしました",
       "changed_set_action_check_off": "チームの過去の対応の確認をオフにしました",
+      "changed_set_approvals_level": "ワークスペースの承認を<b>{{level}}</b>にしました",
+      "changed_set_approvals_level_every": "すべてのエージェントの承認を<b>{{level}}</b>にしました",
+      "changed_set_agent_approvals_level": "<b>{{agent}}</b>の承認を<b>{{level}}</b>にしました",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b>は再びワークスペースの承認に従います",
       "changed_invite_people": "<b>{{invited}}</b>をワークスペースに招待しました",
       "changed_remove_ai_key": "APIキー<b>{{name}}</b>を削除しました"
     },
@@ -9405,8 +9413,7 @@
       "machine_access_requested": "{{agent}}が{{computer}}のフォルダ{{folder}}を求めました。そちらでの応答を待っています。",
       "machine_access_granted": "許可されました: {{agent}}は{{computer}}の{{folder}}を使えるようになりました",
       "machine_access_denied": "却下されました: {{agent}}は{{computer}}の{{folder}}を使いません",
-      "machine_access_expired": "{{computer}}のフォルダ{{folder}}のリクエストに応答がありませんでした",
-      "access_command": "コンピューターにアプリがない場合は、ターミナルでこれを実行してください:"
+      "machine_access_expired": "{{computer}}のフォルダ{{folder}}のリクエストに応答がありませんでした"
     },
     "suggestion": {
       "pending": "ミッションへの提案",
@@ -16127,6 +16134,11 @@
     "removed": "{{name}}を削除しました。",
     "name": "コンピューターの名前",
     "nameHelp": "人とエージェントに表示される名前です。",
+    "defaultName": {
+      "model": "{{name}}の{{model}}",
+      "linux": "{{name}}のLinuxコンピューター",
+      "other": "{{name}}のコンピューター"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16276,6 +16288,13 @@
       "grantTextTerminal": "許可はコンピューター本体のターミナルで行います:",
       "grantTextAdmin": "許可はコンピューター本体のターミナルで、管理者として行います:",
       "grantTerminal": "アプリがない場合は、コンピューターのターミナルで:",
+      "pickText": "agentes.chatアプリが{{machine}}でフォルダの選択画面を開き、そこにいる人が選びます。",
+      "pick": "フォルダを許可",
+      "picked": "{{machine}}でフォルダの選択画面が開きました。そちらでフォルダを選んでください。",
+      "pickWaiting": "{{machine}}でフォルダが選ばれるのを待っています",
+      "grantTerminalMore": "アプリがない場合はターミナルで",
+      "noApp": "このコンピューターにはフォルダを選ぶためのagentes.chatアプリがありません。そのコンピューターのターミナルで許可してください。",
+      "requestDone": "このリクエストはすでに回答済みか、期限切れです。",
       "preferTerminal": "ターミナルで行う",
       "grantOnlyOwner": "さらに許可できるのは{{name}}だけで、コンピューター本体で行います。必要なものがあれば{{name}}に頼んでください。",
       "pathPlaceholder": "<フォルダ>",
@@ -16926,6 +16945,8 @@
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
       "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
       "folderRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> でフォルダ {{path}} を求めています",
+      "folderOnComputer": "コンピューターで許可",
+      "folderShown": "{{deviceName}}で開きました。そちらで許可してください。",
       "internetShared": "エージェントは今後 <b>{{deviceName}}</b> のインターネットを通じてウェブサイトを開きます",
       "internetSharedLine": "対象はこのワークスペースのエージェントのみ、ウェブサイトのみ。そのコンピューターのネットワーク内には一切アクセスしません。オフラインの間は、いつもの接続を使います。",
       "internetOff": "オフにする",
@@ -20173,14 +20194,13 @@
       }
     },
     "use": {
-      "title": "エージェントの画面のアプリ",
-      "description": "エージェントは人と同じように、ここで自分の画面のアプリを開いて使います。その様子は各エージェントのページで見られます。",
+      "title": "エージェントごとの専用画面",
+      "description": "ここでは各エージェントがあなたの画面とは別の専用画面を持ち、ブラウザやスプレッドシートなどウィンドウのあるアプリを人と同じように使います。様子はエージェントのページで見られます。今のところLinuxのみです。Linuxならあなたの画面に触れずに、エージェントごとに画面を追加できます。",
       "ready": "準備完了",
       "off": "オフ",
-      "unavailable": "利用できません",
+      "unavailable": "準備が必要",
       "offHelp": "このコンピューターで画面とコマンドを有効にしてください:",
       "offOne": "このコンピューターでは画面とコマンドの両方をオンにする必要があります。",
-      "linuxOnly": "エージェントが自分の画面でアプリを使えるのは、Linuxのコンピューターだけです。",
       "agent": "{{name}}はまだ{{computer}}の自分の画面でアプリを使えません。",
       "agent_female": "{{name}}はまだ{{computer}}の自分の画面でアプリを使えません。"
     },

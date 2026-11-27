@@ -3697,6 +3697,8 @@ export const WORKSPACE_ACTION_IDS = [
   "update_workspace",
   "set_action_check",
   "set_computer_help",
+  "set_approvals_level",
+  "set_agent_approvals_level",
   "invite_people",
   "remove_ai_key",
 ] as const;
@@ -5501,6 +5503,8 @@ export interface Machine {
   remotePause?: boolean;
   /** Who paired it turns its tools on from the apps (`POST …/access/allow`); `false` or absent: its app is too old. */
   accessAllow?: boolean;
+  /** A folder can be asked for from here (`POST …/access/pick`): the agentes.chat app runs it and the person there picks it. */
+  folderPick?: boolean;
   /**
    * Its coding CLIs are looked for again from the apps (`POST …/clis/check`) and installed there by who paired it
    * (`…/cli-install`); `false` or absent: its app is too old, or it is the workspace's own computer.

@@ -11,6 +11,7 @@ import {
   ARTIFACT_LIMITS,
   allowMachineTool,
   askMachineCliInstall,
+  askMachineFolder,
   askMachineTool,
   authenticateMachine,
   checkMachineClis,
@@ -188,6 +189,10 @@ export const Machine = z
     accessAllow: z.boolean().openapi({
       description:
         "The person who paired it can turn its tools on from here (`POST …/access/allow`); `false`: its app is too old, or it is the workspace's own computer.",
+    }),
+    folderPick: z.boolean().openapi({
+      description:
+        "A folder can be asked for from here (`…/access/pick`): the agentes.chat app runs it and the person there picks it.",
     }),
     cliInstall: z.boolean().openapi({
       description:
@@ -776,6 +781,35 @@ export function machineAppRoutes(deps: AppDeps) {
     },
   );
 
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/access/pick",
+      tags,
+      security,
+      summary:
+        "Ask the agentes.chat app on the computer for a folder (admins or the person who paired it): the person there picks it",
+      description:
+        "For one agent there (`agentId`) or all of them; with `requestId`, an agent's pending folder request is shown there again. Never allows by itself. 400 `machine.no_app` where no agentes.chat app runs the computer (or it is too old): allow it there with the terminal command; 403 `machine.managed_access` on the workspace's own computer; 409 `machine.offline`.",
+      request: {
+        params: MachineParams,
+        body: body(z.object({ agentId: z.uuid().optional(), requestId: z.uuid().optional() }).strict()),
+      },
+      responses: {
+        200: json(z.object({ asked: z.literal(true) })),
+        ...errors,
+        409: errorResponse("The computer is offline (`machine.offline`)"),
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(
+        await askMachineFolder({ db, pubsub, hub: hub() }, c.get("user").id, orgId, machineId, c.req.valid("json")),
+        200,
+      );
+    },
+  );
+
   const CliTool = z.enum(INSTALLABLE_CLIS).openapi({ description: "`claude` (Claude Code) or `codex` (Codex)." });
   const CliInstallView = z
     .object({
@@ -1198,6 +1232,11 @@ const DeviceBody = z.object({
   os: z.string().max(20).default("other"),
   arch: z.string().max(40).default(""),
   hostname: z.string().max(200).default(""),
+  model: z
+    .string()
+    .max(100)
+    .optional()
+    .openapi({ description: 'Its maker\'s model ("MacBook Pro"): it names the computer.' }),
   version: z.string().max(40).default(""),
   protocol: z.number().int().optional(),
   workspace: z.string().max(500).optional(),

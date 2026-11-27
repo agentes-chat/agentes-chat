@@ -434,3 +434,23 @@ test("the site's This computer: the Mac pairs with commands on, then the welcome
     writePref(PREPARE_PREF, null);
   }
 });
+
+test("a folder asked for from agentes.chat: its card says who asks and for whom, and the folder picked here is allowed for that agent", () => {
+  const host = createFakeHost("popover", "here");
+  return withMenu(async (el, store) => {
+    const home = pairedHomes(store.getSnapshot())[0];
+    const agent = home?.status?.agents[0];
+    const runner = home ? host.runners.get(home.homeId) : undefined;
+    await act(async () => runner?.askPick(true));
+    const card = () => [...el.querySelectorAll(".dk-req")].find((c) => c.textContent?.includes("asks for a folder"));
+    await until(card);
+    expect(card()?.querySelector("b")?.textContent).toBe(`Bia Rocha asks for a folder for ${agent?.name}`);
+    expect(card()?.textContent).toContain("Choose which folder to allow on this Mac.");
+    const choose = [...(card()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === "Choose folder");
+    await act(async () => (choose as HTMLElement).click());
+    await until(() => !card());
+    const folders = pairedHomes(store.getSnapshot())[0]?.access?.folders ?? [];
+    expect(folders.some((f) => agent && f.agents.includes(agent.id))).toBe(true);
+    expect(document.querySelector(".dk-toast")?.textContent).toContain(`allowed for ${agent?.name}`);
+  }, host);
+});

@@ -3273,6 +3273,10 @@
       "update_workspace": "Workspace <b>{{name}}</b> ändern",
       "set_action_check_on": "Die Prüfung, was das Team schon getan hat, einschalten",
       "set_action_check_off": "Die Prüfung, was das Team schon getan hat, ausschalten",
+      "set_approvals_level": "Freigaben des Workspace auf <b>{{level}}</b> setzen",
+      "set_approvals_level_every": "Freigaben aller Agenten auf <b>{{level}}</b> setzen, auch ihre eigenen Einstellungen",
+      "set_agent_approvals_level": "Freigaben von <b>{{agent}}</b> auf <b>{{level}}</b> setzen",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b> wieder den Freigaben des Workspace folgen lassen",
       "invite_people": "<b>{{emails}}</b> in den Workspace einladen.",
       "invite_roles_one": "Mit der Rolle {{roles}}.",
       "invite_roles_other": "Mit den Rollen {{roles}}.",
@@ -4175,6 +4179,10 @@
       "changed_update_workspace": "Workspace <b>{{name}}</b> geändert",
       "changed_set_action_check_on": "Die Prüfung, was das Team schon getan hat, eingeschaltet",
       "changed_set_action_check_off": "Die Prüfung, was das Team schon getan hat, ausgeschaltet",
+      "changed_set_approvals_level": "Freigaben des Workspace auf <b>{{level}}</b> gesetzt",
+      "changed_set_approvals_level_every": "Freigaben aller Agenten auf <b>{{level}}</b> gesetzt",
+      "changed_set_agent_approvals_level": "Freigaben von <b>{{agent}}</b> auf <b>{{level}}</b> gesetzt",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> folgt wieder den Freigaben des Workspace",
       "changed_invite_people": "<b>{{invited}}</b> in den Workspace eingeladen",
       "changed_remove_ai_key": "API-Schlüssel <b>{{name}}</b> gelöscht"
     },
@@ -9789,8 +9797,7 @@
       "machine_access_requested": "{{agent}} hat um den Ordner {{folder}} auf {{computer}} gebeten. Die Antwort kommt dort.",
       "machine_access_granted": "Erlaubt: {{agent}} kann jetzt {{folder}} auf {{computer}} nutzen",
       "machine_access_denied": "Abgelehnt: {{agent}} nutzt {{folder}} auf {{computer}} nicht",
-      "machine_access_expired": "Die Anfrage für den Ordner {{folder}} auf {{computer}} wurde nicht beantwortet",
-      "access_command": "Keine App auf dem Computer? Führe das in seinem Terminal aus:"
+      "machine_access_expired": "Die Anfrage für den Ordner {{folder}} auf {{computer}} wurde nicht beantwortet"
     },
     "suggestion": {
       "pending": "Vorschlag für die Mission",
@@ -16737,6 +16744,11 @@
     "removed": "{{name}} wurde entfernt.",
     "name": "Name des Computers",
     "nameHelp": "So sehen ihn Personen und Agenten.",
+    "defaultName": {
+      "model": "{{model}} von {{name}}",
+      "linux": "Linux-Computer von {{name}}",
+      "other": "Computer von {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16888,6 +16900,13 @@
       "grantTextTerminal": "Erlaubt wird auf dem Computer selbst, in seinem Terminal:",
       "grantTextAdmin": "Erlaubt wird auf dem Computer selbst, in seinem Terminal, als dessen Administrator:",
       "grantTerminal": "Keine App? Im Terminal des Computers:",
+      "pickText": "Die agentes.chat-App öffnet auf {{machine}} eine Ordnerauswahl, damit die Person dort wählt.",
+      "pick": "Ordner freigeben",
+      "picked": "Auf {{machine}} hat sich eine Ordnerauswahl geöffnet. Wähle den Ordner dort.",
+      "pickWaiting": "Warte darauf, dass auf {{machine}} ein Ordner gewählt wird",
+      "grantTerminalMore": "Keine App dort? Nutze das Terminal",
+      "noApp": "Auf diesem Computer gibt es keine agentes.chat-App, um den Ordner zu wählen. Gib ihn über sein Terminal frei.",
+      "requestDone": "Diese Anfrage wurde schon beantwortet oder ist abgelaufen.",
       "preferTerminal": "Lieber im Terminal",
       "grantOnlyOwner": "Nur {{name}} erlaubt mehr, auf dem Computer selbst. Wenn du etwas brauchst, frag nach.",
       "pathPlaceholder": "<Ordner>",
@@ -17542,6 +17561,8 @@
       "toolRequest": "<b>{{who}}</b> bittet dich, {{tool}} auf deinem <b>{{deviceName}}</b> einzuschalten",
       "cliRequest": "<b>{{who}}</b> bittet dich, {{tool}} auf deinem <b>{{deviceName}}</b> zu installieren",
       "folderRequest": "<b>{{who}}</b> bittet dich um den Ordner {{path}} auf deinem <b>{{deviceName}}</b>",
+      "folderOnComputer": "Auf dem Computer erlauben",
+      "folderShown": "Auf {{deviceName}} geöffnet. Erlaube es dort.",
       "internetShared": "Agenten öffnen Websites jetzt über die Internetverbindung von <b>{{deviceName}}</b>",
       "internetSharedLine": "Nur die Agenten dieses Workspace, nur Websites, nie etwas im eigenen Netzwerk des Computers. Solange er offline ist, nutzen sie ihre übliche Verbindung.",
       "internetOff": "Ausschalten",
@@ -20843,14 +20864,13 @@
       }
     },
     "use": {
-      "title": "Apps auf den Bildschirmen der Agenten",
-      "description": "Agenten öffnen und nutzen hier Apps auf ihren eigenen Bildschirmen, so wie eine Person, während Leute auf der Seite jedes Agenten zuschauen.",
+      "title": "Ein eigener Bildschirm für jeden Agenten",
+      "description": "Hier bekommt jeder Agent einen eigenen Bildschirm, getrennt von deinem, und nutzt darauf Apps mit Fenstern, etwa einen Browser oder eine Tabelle, so wie ein Mensch. Du schaust auf der Seite des Agenten zu. Vorerst nur unter Linux: Dort lässt sich für jeden Agenten ein zusätzlicher Bildschirm öffnen, ohne deinen anzufassen.",
       "ready": "Bereit",
       "off": "Aus",
-      "unavailable": "Nicht verfügbar",
+      "unavailable": "Muss eingerichtet werden",
       "offHelp": "Aktiviere die Bildschirme und Befehle auf diesem Computer:",
       "offOne": "Dieser Computer braucht Bildschirm und Befehle eingeschaltet.",
-      "linuxOnly": "Agenten nutzen Apps auf eigenen Bildschirmen nur auf Linux-Computern.",
       "agent": "{{name}} kann auf {{computer}} noch keine Apps auf seinem Bildschirm nutzen.",
       "agent_female": "{{name}} kann auf {{computer}} noch keine Apps auf ihrem Bildschirm nutzen."
     },

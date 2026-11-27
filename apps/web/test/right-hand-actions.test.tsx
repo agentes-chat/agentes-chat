@@ -332,6 +332,31 @@ describe("a change in the workspace that names all it does", () => {
     ]);
   });
 
+  test("the workspace's approvals from the chat: the level by its name on the agent's page, what it means, Aplicar", async () => {
+    const level: WorkspaceActionCard = {
+      ...invite(),
+      params: {
+        action: "set_approvals_level",
+        input: { level: "never", every: false },
+        words: { level: "never" },
+        needs: "administrator",
+        why: "Você pediu para aprovar tudo daqui pra frente.",
+      },
+    };
+    const state = withLodiCard(seedState(), level);
+    await goWith(state, level);
+    const c = cardGroup();
+    expect(c.querySelector(".rq__wt b")?.textContent).toBe("Mudar as aprovações do workspace para Nunca perguntar");
+    expect(c.querySelector(".rq__wt small")?.textContent).toBe(
+      "Não pergunta nada, nem em merge, deploy, pagamentos e rotinas.",
+    );
+    await click(within(c).getByRole("button", { name: "Aplicar" }));
+    expect(state.calls.find((x) => x.method === "actionCards.decide")?.args.slice(2)).toEqual([
+      "apply",
+      "set_approvals_level",
+    ]);
+  });
+
   test("someone else's card says who asked; who can't apply it reads who may, with no button", async () => {
     const state = withLodiCard(seedState(), { ...invite(), forUserId: "u-joao" });
     await goWith(state, invite());

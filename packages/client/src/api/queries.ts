@@ -6871,6 +6871,16 @@ export function useRefuseFolderRequest(orgId: string) {
   });
 }
 
+/** "Liberar uma pasta": the agentes.chat app on the computer asks the person there to pick one (`askFolder`). */
+export function useAskMachineFolder(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: ({ machineId, ...input }: { machineId: string; agentId?: string; requestId?: string }) =>
+      api.machines.askFolder(orgId, machineId, input),
+    meta: { silent: true },
+  });
+}
+
 /**
  * One click where a tool is off on a computer: its owner turns it on (`allow`), anyone else asks them (`ask`). The
  * machines and devices lists refetch so every screen that waited on it moves on.

@@ -2500,6 +2500,13 @@
       "when": 1795732902830,
       "tag": "0361_agent_checkouts",
       "breakpoints": true
+    },
+    {
+      "idx": 359,
+      "version": "7",
+      "when": 1795738474115,
+      "tag": "0362_device_code_model",
+      "breakpoints": true
     }
   ]
 }

@@ -1425,6 +1425,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           `${org(orgId)}/machines/${enc(machineId)}/access/requests/${enc(requestId)}/refuse`,
           { json: {} },
         ),
+      askFolder: async (orgId, machineId, input) => {
+        await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/pick`, { json: input });
+      },
       checkClis: async (orgId, machineId) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
       },

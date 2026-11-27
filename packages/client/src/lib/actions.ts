@@ -205,6 +205,12 @@ export function workspaceActionWords(action: string, words: Record<string, strin
     const key = words.availability === "auto" ? "online" : words.availability;
     return { ...words, what: t(`presence.lower.${key}` as never, { defaultValue: words.availability }) as string };
   }
+  // `set_approvals_level`, `set_agent_approvals_level`: the level as its title on the agent's page ("Nunca perguntar").
+  if (words.level && action.endsWith("approvals_level"))
+    return {
+      ...words,
+      level: t(`approvalsLevel.${words.level}.title` as never, { defaultValue: words.level }) as string,
+    };
   if (action === "set_notifications" && words.category)
     return {
       ...words,

@@ -148,6 +148,7 @@ import { tailLines } from "./logfile";
 import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { McpBridge, type McpTaskInfo, mcpSocketPath } from "./mcp";
+import { machineModel } from "./model";
 import {
   AgentNetworks,
   desktopUsesHostNetwork,
@@ -352,13 +353,14 @@ export function previousMachineFor(
   return prev?.machineId && prev.server === server && token ? { machineId: prev.machineId, token } : undefined;
 }
 
-/** What `POST /api/machines/device` is told about this computer. */
-export function deviceInfo(name?: string, previous?: { machineId: string; token: string }) {
+/** What `POST /api/machines/device` is told about this computer; `model` (`machineModel`) names it there. */
+export function deviceInfo(name?: string, previous?: { machineId: string; token: string }, model?: string) {
   return {
     ...(name ? { name } : {}),
     os: machineOs(),
     arch: os.arch(),
     hostname: os.hostname(),
+    ...(model ? { model } : {}),
     version: RUNNER_VERSION,
     ...(previous ? { previousMachineId: previous.machineId, previousToken: previous.token } : {}),
   };
@@ -1835,6 +1837,7 @@ export class RunnerDaemon implements RequestObserver {
         request: (agent, req) => this.accessRequest(agent, req),
         reduce: (req) => this.accessReduce(req),
         allow: (req) => this.accessAllow(req),
+        pick: (req) => this.accessPick(req),
       },
       browser,
       accounts: this.accounts,
@@ -1923,6 +1926,9 @@ export class RunnerDaemon implements RequestObserver {
         this.setConnState(state);
       },
       onWelcome: (welcome) => {
+        // Renamed in the apps (or given its default name there): the app on this computer says the new one.
+        if (welcome.name && this.stored && this.stored.name !== welcome.name)
+          this.write({ ...this.stored, name: welcome.name });
         this.observeEgress = welcome.observeEgress;
         this.egressRelay?.close();
         this.egressRelay = welcome.egressRelay
@@ -2849,63 +2855,72 @@ export class RunnerDaemon implements RequestObserver {
     this.pairing?.abort();
     const ac = new AbortController();
     this.pairing = ac;
-    void devicePair(
-      url,
-      { ...deviceInfo(label, previousMachineFor(this.stored, url)), ...(link ? { link } : {}) },
-      (code) =>
-        this.emit({
-          kind: "pair.code",
-          userCode: code.userCode,
-          verificationUrl: code.verificationUrl,
-          expiresAt: new Date(this.now() + code.expiresIn * 1000).toISOString(),
-        }),
-      {
-        signal: ac.signal,
-        ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
-        ...(this.opts.pairSleep ? { sleep: this.opts.pairSleep } : {}),
-        now: this.now,
-      },
-    ).then(
-      (grant) => {
-        if (this.pairing !== ac) return;
-        this.pairing = null;
-        try {
-          const prev = this.stored;
-          const base = this.opts.workspaceBase ?? expandHome("~/agentes");
-          const workspace = prepareWorkspace(prev?.workspace ?? uniqueWorkspace(base, grant.org.name || grant.name));
-          this.write(
-            configFromGrant(prev, {
-              server: url,
-              grant,
-              workspace,
-              ...(label ? { name: label } : {}),
-              tools: { claude: tools?.claude === true, codex: tools?.codex === true, commands: false },
-              desktop: true,
+    void machineModel()
+      .then((model) =>
+        devicePair(
+          url,
+          { ...deviceInfo(label, previousMachineFor(this.stored, url), model), ...(link ? { link } : {}) },
+          (code) =>
+            this.emit({
+              kind: "pair.code",
+              userCode: code.userCode,
+              verificationUrl: code.verificationUrl,
+              expiresAt: new Date(this.now() + code.expiresIn * 1000).toISOString(),
             }),
-          );
-          const org = grant.org.name || url;
-          this.record({ kind: "pair", summary: `connected to ${org}`, said: { key: "connected", org }, result: "ok" });
-          const c = this.requirePaired();
-          this.emit({
-            kind: "pair.done",
-            org: { id: grant.org.id, name: grant.org.name },
-            machine: { id: c.machineId, name: c.name },
-          });
-        } catch (err) {
-          this.emit({
-            kind: "pair.failed",
-            code: "internal",
-            message: err instanceof Error ? err.message : String(err),
-          });
-        }
-      },
-      (err: unknown) => {
-        if (this.pairing === ac) this.pairing = null;
-        const code = err instanceof PairingError ? err.code : "internal";
-        if (code === "canceled") return;
-        this.emit({ kind: "pair.failed", code, message: err instanceof Error ? err.message : String(err) });
-      },
-    );
+          {
+            signal: ac.signal,
+            ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
+            ...(this.opts.pairSleep ? { sleep: this.opts.pairSleep } : {}),
+            now: this.now,
+          },
+        ),
+      )
+      .then(
+        (grant) => {
+          if (this.pairing !== ac) return;
+          this.pairing = null;
+          try {
+            const prev = this.stored;
+            const base = this.opts.workspaceBase ?? expandHome("~/agentes");
+            const workspace = prepareWorkspace(prev?.workspace ?? uniqueWorkspace(base, grant.org.name || grant.name));
+            this.write(
+              configFromGrant(prev, {
+                server: url,
+                grant,
+                workspace,
+                ...(label ? { name: label } : {}),
+                tools: { claude: tools?.claude === true, codex: tools?.codex === true, commands: false },
+                desktop: true,
+              }),
+            );
+            const org = grant.org.name || url;
+            this.record({
+              kind: "pair",
+              summary: `connected to ${org}`,
+              said: { key: "connected", org },
+              result: "ok",
+            });
+            const c = this.requirePaired();
+            this.emit({
+              kind: "pair.done",
+              org: { id: grant.org.id, name: grant.org.name },
+              machine: { id: c.machineId, name: c.name },
+            });
+          } catch (err) {
+            this.emit({
+              kind: "pair.failed",
+              code: "internal",
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }
+        },
+        (err: unknown) => {
+          if (this.pairing === ac) this.pairing = null;
+          const code = err instanceof PairingError ? err.code : "internal";
+          if (code === "canceled") return;
+          this.emit({ kind: "pair.failed", code, message: err instanceof Error ? err.message : String(err) });
+        },
+      );
     return { started: true };
   }
 
@@ -3105,6 +3120,35 @@ export class RunnerDaemon implements RequestObserver {
       );
     }
     return { access: this.access() };
+  }
+
+  /**
+   * `access.pick` from the apps (`FOLDER_PICK_PROTOCOL`): someone who manages this computer asks for a folder. The
+   * agentes.chat app here shows who asks, and the person here picks it (or says not now): nothing is allowed by this
+   * call itself. With `requestId`, an agent's pending request is shown again. Without the app, nobody here would see it.
+   */
+  async accessPick(req: Extract<MachineRequest, { op: "access.pick" }>): Promise<MachineReplies["access.pick"]> {
+    if (this.stored?.managedBy !== "desktop") {
+      throw new RunnerError("bad_request", "no_app: this computer has no agentes.chat app to pick a folder in");
+    }
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+    const requestId = str(req.requestId, 100);
+    if (requestId && !this.requests.get(requestId)) {
+      throw new RunnerError("not_found", "That request is gone (answered or expired)");
+    }
+    const agentId = str(req.agentId, 100);
+    const agentName = str(req.agentName, 80);
+    this.emit({
+      kind: "access.pick",
+      pick: {
+        byName: str(req.byName, 80),
+        ...(agentId ? { agentId } : {}),
+        ...(agentName ? { agentName } : {}),
+        ...(requestId ? { requestId } : {}),
+        at: new Date().toISOString(),
+      },
+    });
+    return { asked: true };
   }
 
   /** Pending requests that a new grant now covers (a terminal `folders allow`, a config edit) are granted. */

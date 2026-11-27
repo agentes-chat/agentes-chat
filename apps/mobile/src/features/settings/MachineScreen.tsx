@@ -8,6 +8,7 @@ import {
   useAllAgents,
   useAllowMachineTool,
   useApi,
+  useAskMachineFolder,
   useBrowserHandoffMutations,
   useBrowserProfileMutations,
   useBrowserProfiles,
@@ -67,6 +68,7 @@ import { SvgXml } from "react-native-svg";
 import { ComputerPortrait } from "@/computer/ComputerPortrait";
 import { useOrg } from "@/providers/org";
 import {
+  Button,
   Chip,
   EmptyState,
   GroupedFooter,
@@ -938,25 +940,19 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
 }
 
 /**
- * Apps on the agents' screens (ADR 0062): whether agents can use apps on their own screens here; when not, on Linux
- * the computer's own words on what is missing with the command in them, elsewhere that it takes a Linux computer;
- * or the two switches to turn on. Not on the workspace's own computer.
+ * Each agent's own screen, on a Linux computer (ADR 0062): whether agents can use apps on their own screens here; when
+ * not, the computer's own words on what is missing with the command in them; or the two switches to turn on. Not on a
+ * Mac or Windows computer, where it can't apply, nor on the workspace's own computer.
  */
 function DesktopUseSection({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
   const oneClick = toolOneClick(m, useMeId());
   const use = m.desktopUse;
-  if (!use) return null;
+  if (!use || m.os !== "linux") return null;
   const off = use.available && !(m.access?.tools.desktop && m.access.tools.commands);
   const desktopOff = (["desktop", "commands"] as const).filter((tool) => m.access?.tools[tool] !== true);
-  // A Mac or Windows has nothing to install for it: said in the app's words, not the runner's English.
-  const linux = m.os === "linux";
-  const reason = use.available
-    ? null
-    : linux
-      ? machineReasonText(t, use, "desktop_use_install")
-      : t("desktop.use.linuxOnly");
-  const command = linux && !use.available ? commandInReason(use.reason) : null;
+  const reason = use.available ? null : machineReasonText(t, use, "desktop_use_install");
+  const command = use.available ? null : commandInReason(use.reason);
   return (
     <>
       <GroupedHeader
@@ -1005,32 +1001,64 @@ function DesktopUseSection({ machine: m }: { machine: Machine }) {
   );
 }
 
-/** "Para liberar mais": never a button that grants; granting happens on the computer (its app, or the command). */
+/**
+ * "Para liberar mais", as the web's: granting happens on the computer. Where the agentes.chat app runs it, "Liberar
+ * uma pasta" asks the app there to open the system's folder picker for whoever is at it; elsewhere how to do it
+ * there, the command folded as the way without the app.
+ */
 function GrantSection({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
+  const toast = useToast();
+  const ask = useAskMachineFolder(useOrgId());
+  // A folder allowed there (picked, or any other way, a folder already allowed given to more agents too) ends the wait.
+  const folders = JSON.stringify(m.access?.folders ?? []);
+  const [askedAt, setAskedAt] = useState<string | null>(null);
+  const waiting = askedAt !== null && askedAt === folders;
   // In system mode the runner's settings are root's (ADR 0057): allowing takes the computer's administrator.
   const system = m.mode === "system";
   const app = allowsInApp(m.os);
   return (
     <>
       <GroupedHeader>{t("machines.access.grantTitle")}</GroupedHeader>
-      {m.canManage ? (
+      {m.canManage && m.folderPick ? (
         <>
           <GroupedFooter>
-            {[
-              app
-                ? t("machines.access.grantText")
-                : system
-                  ? t("machines.access.grantTextAdmin")
-                  : t("machines.access.grantTextTerminal"),
-              app ? t("machines.access.grantTerminal") : null,
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            {waiting
+              ? t("machines.access.pickWaiting", { machine: m.name })
+              : t("machines.access.pickText", { machine: m.name })}
           </GroupedFooter>
           <Gap />
-          <CommandBlock
+          <Button
+            variant="primary"
+            wide
+            label={t("machines.access.pick")}
+            loading={ask.isPending}
+            onPress={() =>
+              ask.mutate(
+                { machineId: m.id },
+                {
+                  onSuccess: () => {
+                    setAskedAt(folders);
+                    toast({ title: t("machines.access.picked", { machine: m.name }), icon: "check" });
+                  },
+                  onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+                },
+              )
+            }
+          />
+        </>
+      ) : m.canManage ? (
+        <>
+          <GroupedFooter>
+            {app
+              ? t("machines.access.grantText")
+              : system
+                ? t("machines.access.grantTextAdmin")
+                : t("machines.access.grantTextTerminal")}
+          </GroupedFooter>
+          <TerminalFallback
             command={grantCommand(m, t("machines.access.pathPlaceholder"), t("machines.access.agentPlaceholder"))}
+            label={t("machines.access.grantTerminalMore")}
           />
         </>
       ) : (

@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 91;
+export const MACHINE_PROTOCOL_VERSION = 92;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -856,6 +856,13 @@ export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
   }
   return out;
 }
+/**
+ * From this protocol on, `access.pick`: someone who manages the computer asks, from the apps, for a folder to be
+ * allowed there. The agentes.chat app on that computer shows who asks, and the person there picks the folder in the
+ * system's own folder picker (or says not now); with `requestId`, it shows an agent's pending request again instead.
+ * A runner the app doesn't run answers `bad_request` with `no_app`: the apps show the command instead.
+ */
+export const FOLDER_PICK_PROTOCOL = 92;
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -2368,7 +2375,9 @@ export const CURSOR_MODEL_LIMITS = { models: 80, id: 80, label: 80 } as const;
  * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began. A newer
  * runner adds where the model's own time went: the API's first streamed message (`firstTokenMs`) and the first whole
  * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
- * and the thinking blocks with the characters of their text (0 when the API leaves the text out).
+ * and the thinking blocks with the characters of their text (0 when the API leaves the text out). `firstRequestMs` is
+ * when the CLI said it sent its first API request (`system/status` "requesting"): before it, the CLI's own work; from
+ * it to `firstTokenMs`, the network and the API.
  */
 export interface BrainTurnTimings {
   warm: boolean;
@@ -2376,6 +2385,7 @@ export interface BrainTurnTimings {
   cold?: BrainColdCause;
   initMs?: number;
   firstEventMs?: number;
+  firstRequestMs?: number;
   firstTokenMs?: number;
   firstAssistantMs?: number;
   retries?: number;
@@ -2412,6 +2422,7 @@ export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
 export const BRAIN_TURN_MEASURES = [
   "initMs",
   "firstEventMs",
+  "firstRequestMs",
   "firstTokenMs",
   "firstAssistantMs",
   "retries",
@@ -3244,6 +3255,8 @@ export type MachineRequest = (
     }
   /** `ACCESS_ALLOW_PROTOCOL`: the computer's owner turned `tool` on from the apps (`by` their user id, `byName` shown). */
   | { op: "access.allow"; tool: keyof RunnerTools; by: string; byName: string }
+  /** `FOLDER_PICK_PROTOCOL`: `by` asks for a folder, for one agent (`agentId`) or all; or shows request `requestId`. */
+  | { op: "access.pick"; by: string; byName: string; agentId?: string; agentName?: string; requestId?: string }
   | {
       op: "push";
       path: string;
@@ -3456,6 +3469,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "access.request",
   "access.reduce",
   "access.allow",
+  "access.pick",
   "browser.act",
   "browser.stop",
   "browser.stream.start",
@@ -3577,6 +3591,7 @@ export interface MachineReplies {
   "access.request": { requestId: string; status: "pending" | "granted" };
   "access.reduce": { access: RunnerAccess };
   "access.allow": { access: RunnerAccess };
+  "access.pick": { asked: true };
   /**
    * `agent-browser`'s own JSON answer: `success: false` with its `error` is a page-level failure (stale ref, covered
    * click). Protocol 45: `code` names a Vault refusal (`VAULT_TYPE_REFUSALS`).

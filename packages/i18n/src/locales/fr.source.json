@@ -8165,6 +8165,18 @@
   "rightHand.action.set_action_check_off": {
     "value": "Turn off the check of what the team already did"
   },
+  "rightHand.action.set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>, their own choices too"
+  },
+  "rightHand.action.set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_agent_approvals_level_workspace": {
+    "value": "Make <b>{{agent}}</b> follow the workspace's approvals"
+  },
   "rightHand.action.invite_people": {
     "value": "Invite <b>{{emails}}</b> to the workspace."
   },
@@ -10204,6 +10216,18 @@
   },
   "agentActions.workspace.changed_set_action_check_off": {
     "value": "Turned off the check of what the team already did"
+  },
+  "agentActions.workspace.changed_set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level_workspace": {
+    "value": "<b>{{agent}}</b> follows the workspace's approvals again"
   },
   "agentActions.workspace.changed_invite_people": {
     "value": "Invited <b>{{invited}}</b> to the workspace"
@@ -23721,9 +23745,6 @@
   },
   "missions.notice.machine_access_expired": {
     "value": "The request for the folder {{folder}} on {{computer}} got no answer"
-  },
-  "missions.notice.access_command": {
-    "value": "No app on the computer? Run this in its Terminal:"
   },
   "missions.suggestion.pending": {
     "value": "Suggestion for the mission"
@@ -41409,6 +41430,27 @@
   "machines.access.grantTerminal": {
     "value": "No app? In the computer's terminal:"
   },
+  "machines.access.pickText": {
+    "value": "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose."
+  },
+  "machines.access.pick": {
+    "value": "Allow a folder"
+  },
+  "machines.access.picked": {
+    "value": "A folder picker opened on {{machine}}. Choose the folder there."
+  },
+  "machines.access.pickWaiting": {
+    "value": "Waiting for the folder to be chosen on {{machine}}"
+  },
+  "machines.access.grantTerminalMore": {
+    "value": "No app there? Use the Terminal"
+  },
+  "machines.access.noApp": {
+    "value": "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal."
+  },
+  "machines.access.requestDone": {
+    "value": "This request was already answered or has expired."
+  },
   "machines.access.preferTerminal": {
     "value": "I'd rather use the Terminal"
   },
@@ -43100,6 +43142,12 @@
   },
   "devices.notice.folderRequest": {
     "value": "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.folderOnComputer": {
+    "value": "Allow on the computer"
+  },
+  "devices.notice.folderShown": {
+    "value": "Opened on {{deviceName}}. Allow it there."
   },
   "devices.notice.internetShared": {
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
@@ -50971,10 +51019,10 @@
     "value": "Used the screen"
   },
   "desktop.use.title": {
-    "value": "Apps on the agents' screens"
+    "value": "Each agent's own screen"
   },
   "desktop.use.description": {
-    "value": "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page."
+    "value": "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours."
   },
   "desktop.use.ready": {
     "value": "Ready"
@@ -50983,16 +51031,13 @@
     "value": "Off"
   },
   "desktop.use.unavailable": {
-    "value": "Not available"
+    "value": "Needs setup"
   },
   "desktop.use.offHelp": {
     "value": "Turn on the screens and commands on this computer:"
   },
   "desktop.use.offOne": {
     "value": "This computer needs both the screen and commands on."
-  },
-  "desktop.use.linuxOnly": {
-    "value": "Agents use apps on their own screens only on Linux computers."
   },
   "desktop.use.agent": {
     "value": "{{name}} can't use apps on his screen on {{computer}} yet.",

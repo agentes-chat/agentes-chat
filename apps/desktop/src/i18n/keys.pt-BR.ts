@@ -158,6 +158,10 @@ export const desktopPtBR = {
     allowedUndo: "Desfazer",
     allowedOk: "Ok",
     allowedUndone: "Desligado de novo: {{tool}}",
+    pickTitle: "{{name}} pede uma pasta para os agentes",
+    pickTitleAgent: "{{name}} pede uma pasta para {{agent}}",
+    pickBody: "Escolha qual pasta liberar neste {{device}}.",
+    pickChoose: "Escolher pasta",
     quitTitle: "Sair do agentes.chat?",
     quitBody:
       "Os agentes não conseguem usar este {{device}} com o app fechado. O que já está rodando termina e manda o resultado quando você abrir de novo.",

@@ -132,11 +132,23 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
   expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
   // Where the model's time went: whole numbers from 0 up to a day, the rest left out.
   expect(
-    done({ warm: true, firstTokenMs: 300.4, firstAssistantMs: 2100, retries: 2, retryDelayMs: -1, thinkingChars: "9" }),
+    done({
+      warm: true,
+      firstRequestMs: 120.6,
+      firstTokenMs: 300.4,
+      firstAssistantMs: 2100,
+      retries: 2,
+      retryDelayMs: -1,
+      thinkingChars: "9",
+    }),
   ).toEqual({
     type: "brain.event",
     runId: RUN(1),
-    event: { type: "done", text: "ok", timings: { warm: true, firstTokenMs: 300, firstAssistantMs: 2100, retries: 2 } },
+    event: {
+      type: "done",
+      text: "ok",
+      timings: { warm: true, firstRequestMs: 121, firstTokenMs: 300, firstAssistantMs: 2100, retries: 2 },
+    },
   });
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
@@ -1781,6 +1793,25 @@ test("parser: the first token is when the API's first message started, the first
   expect(p.stats).toMatchObject({ firstTokenAt: 1_000, firstAssistantAt: 1_050 });
 });
 
+test("parser: the first request is when the CLI first said it was asking the API, a compaction's status aside", () => {
+  let now = 1_000;
+  const p = new ClaudeStreamParser(() => now);
+  p.beginTurn();
+  p.push(line({ type: "system", subtype: "status", status: "compacting" }));
+  now += 100;
+  p.push(line({ type: "system", subtype: "status", status: "requesting" }));
+  now += 19_000;
+  // Its retry asks again: the first ask stays.
+  p.push(line({ type: "system", subtype: "status", status: "requesting" }));
+  p.push(
+    line({ type: "stream_event", parent_tool_use_id: null, event: { type: "message_start", message: { id: "m1" } } }),
+  );
+  expect(p.stats).toMatchObject({ firstRequestAt: 1_100, firstTokenAt: 20_100 });
+  // The next request of the process counts its own.
+  p.resetStats();
+  expect(p.stats.firstRequestAt).toBeUndefined();
+});
+
 test.if(posix)("a turn's timings keep its API retries, its thinking and when the model first answered", async () => {
   const { turn } = setup();
   const r = await turn(1, "RETRYWAIT THOUGHT");
@@ -1789,6 +1820,7 @@ test.if(posix)("a turn's timings keep its API retries, its thinking and when the
   expect(t).toMatchObject({ warm: false, retries: 1, retryDelayMs: 800, thinkingBlocks: 2, thinkingChars: 10 });
   // How far apart the two lines are read is the machine's pace: the parser's test above holds the clock.
   expect(t?.firstAssistantMs).toBeGreaterThanOrEqual(t?.firstTokenMs ?? Number.NaN);
+  expect(t?.firstTokenMs).toBeGreaterThanOrEqual(t?.firstRequestMs ?? Number.NaN);
   // The next turn on the process counts its own.
   const next = await turn(2, "second");
   expect(next.final).toMatchObject({

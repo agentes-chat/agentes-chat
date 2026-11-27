@@ -1344,6 +1344,11 @@ export interface ApiClient {
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
     /** Admins or whoever paired it: no to a folder an agent waits for there (never a yes). The request's outcome. */
     refuseFolder(orgId: string, machineId: string, requestId: string): Promise<{ status: string }>;
+    /**
+     * Admins or whoever paired it: asks the agentes.chat app there for a folder, picked by the person at the computer,
+     * for one agent or all (`agentId` absent); with `requestId`, an agent's pending request is shown there again.
+     */
+    askFolder(orgId: string, machineId: string, input: { agentId?: string; requestId?: string }): Promise<void>;
     /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
     checkClis(orgId: string, machineId: string): Promise<void>;
     /** ADR 0228 §6: "Try again" on a CLI's fetch; where it stands now. */
