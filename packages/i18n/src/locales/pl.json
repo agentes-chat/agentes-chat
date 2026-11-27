@@ -12455,6 +12455,14 @@
       "copy": "Kopiuj szczegóły",
       "copied": "Skopiowano szczegóły"
     },
+    "offer": {
+      "title": "Wiadomości głosowe",
+      "download": "Pobierz {{size}} i włącz",
+      "choose": "Wybierz sposób",
+      "askOwner": "Zamieniaj głos na tekst na tym serwerze",
+      "askMember": "Poproś o włączenie wiadomości głosowych",
+      "on": "Wiadomości głosowe są włączone: agenci czytają je jako tekst."
+    },
     "setup": {
       "memberTitle": "Głos nie jest tu jeszcze włączony",
       "memberText": "Twoja wiadomość pójdzie jako nagranie, które każdy może odtworzyć. Agenci jej nie usłyszą, dopóki {{name}} nie wybierze, co zamienia głos na tekst.",
@@ -20930,6 +20938,7 @@
       "action_approvals": "Zatwierdzenia czekające na ciebie",
       "welcome_member": "Od teraz jesteś w {{org}}. **Czym się tu zajmujesz?** Napisz mi, a skonfiguruję z tobą twojego pierwszego agenta.",
       "action_open_page": "Otwórz ekran",
+      "action_voice_setup": "Włącz wiadomości głosowe",
       "calendar_proposal": "Propozycja wydarzenia: {{title}}",
       "action_workspace": "Zaproponowano zmianę w przestrzeni roboczej",
       "agent_proposal": "Propozycja nowego agenta: {{name}}",
@@ -21233,6 +21242,10 @@
     "offer_open_page": {
       "label": "Zaproponuj otwarcie ekranu",
       "description": "Publikuje kartę z przyciskiem, który otwiera ekran aplikacji, na przykład płatności, role lub stronę agenta."
+    },
+    "offer_voice_setup": {
+      "label": "Zaproponuj włączenie wiadomości głosowych",
+      "description": "Publikuje kartę, która jednym kliknięciem włącza wiadomości głosowe osobie prowadzącej serwer, albo ją o to prosi."
     },
     "set_team_week": {
       "label": "Zmień kartę Tydzień zespołu",

@@ -11108,6 +11108,14 @@
       "copy": "세부 정보 복사",
       "copied": "세부 정보를 복사했어요"
     },
+    "offer": {
+      "title": "음성 메시지",
+      "download": "{{size}} 다운로드하고 켜기",
+      "choose": "방법 고르기",
+      "askOwner": "이 서버에서 음성을 텍스트로 바꾸기",
+      "askMember": "음성 메시지를 켜 달라고 요청",
+      "on": "음성 메시지가 켜졌어요. 에이전트는 텍스트로 읽어요."
+    },
     "setup": {
       "memberTitle": "아직 여기서는 음성이 켜져 있지 않아요",
       "memberText": "메시지는 누구나 재생할 수 있는 오디오로 보내져요. {{name}} 님이 음성을 텍스트로 바꾸는 곳을 고를 때까지 에이전트는 들을 수 없어요.",
@@ -19021,6 +19029,7 @@
       "action_approvals": "내 승인을 기다리는 요청",
       "welcome_member": "방금 {{org}}에 들어오셨네요. **여기서 어떤 일을 맡고 있나요?** 알려주시면 첫 에이전트를 함께 만들어 드릴게요.",
       "action_open_page": "화면 열기",
+      "action_voice_setup": "음성 메시지 켜기",
       "calendar_proposal": "일정 제안: {{title}}",
       "action_workspace": "워크스페이스 변경을 제안했어요",
       "agent_proposal": "새 에이전트를 제안했어요: {{name}}",
@@ -19315,6 +19324,10 @@
     "offer_open_page": {
       "label": "화면 열기 제안",
       "description": "결제, 역할, 에이전트 페이지처럼 앱의 화면을 여는 버튼이 있는 카드를 게시해요."
+    },
+    "offer_voice_setup": {
+      "label": "음성 메시지 켜기 제안",
+      "description": "서버 관리자가 클릭 한 번으로 음성 메시지를 켤 수 있는 카드를 올려요. 다른 사람은 관리자에게 요청해요."
     },
     "set_team_week": {
       "label": "팀의 한 주 카드 바꾸기",

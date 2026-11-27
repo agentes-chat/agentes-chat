@@ -12037,6 +12037,14 @@
       "copy": "Copier les détails",
       "copied": "Détails copiés"
     },
+    "offer": {
+      "title": "Messages vocaux",
+      "download": "Télécharger {{size}} et activer",
+      "choose": "Choisir comment",
+      "askOwner": "Transformer la voix en texte sur ce serveur",
+      "askMember": "Demander d'activer les messages vocaux",
+      "on": "Les messages vocaux sont activés : les agents les lisent en texte."
+    },
     "setup": {
       "memberTitle": "La voix n'est pas encore activée ici",
       "memberText": "Votre message part en audio que chacun peut écouter. Les agents ne l'entendent pas tant que {{name}} n'a pas choisi ce qui transforme la voix en texte.",
@@ -20308,6 +20316,7 @@
       "action_approvals": "Approbations qui vous attendent",
       "welcome_member": "Vous venez de rejoindre {{org}}. **De quoi vous occupez-vous ici ?** Dites-le-moi et je crée votre premier agent avec vous.",
       "action_open_page": "Ouvrir un écran",
+      "action_voice_setup": "Activer les messages vocaux",
       "calendar_proposal": "Proposition d'événement : {{title}}",
       "action_workspace": "A proposé une modification dans l'espace de travail",
       "agent_proposal": "A proposé un nouvel agent : {{name}}",
@@ -20608,6 +20617,10 @@
     "offer_open_page": {
       "label": "Proposer d'ouvrir un écran",
       "description": "Publie une carte dont le bouton ouvre un écran de l'app, comme la facturation, les rôles ou la page d'un agent."
+    },
+    "offer_voice_setup": {
+      "label": "Proposer d'activer les messages vocaux",
+      "description": "Publie une carte qui active les messages vocaux en un clic pour la personne qui gère le serveur, ou le lui demande."
     },
     "set_team_week": {
       "label": "Modifier la carte Semaine de l’équipe",

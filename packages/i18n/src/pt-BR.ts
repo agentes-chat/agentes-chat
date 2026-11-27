@@ -12146,6 +12146,14 @@ export const ptBR = {
       copy: "Copiar detalhes",
       copied: "Detalhes copiados",
     },
+    offer: {
+      title: "Mensagens de voz",
+      download: "Baixar {{size}} e ligar",
+      choose: "Escolher como",
+      askOwner: "Transformar voz em texto neste servidor",
+      askMember: "Pedir para ligar as mensagens de voz",
+      on: "As mensagens de voz estão ligadas: os agentes leem como texto.",
+    },
     setup: {
       memberTitle: "A voz ainda não está ligada aqui",
       memberText:
@@ -20307,6 +20315,7 @@ export const ptBR = {
       welcome_member:
         "Você acabou de entrar na {{org}}. **Do que você cuida por aqui?** Me conta e eu monto seu primeiro agente com você.",
       action_open_page: "Abrir uma tela",
+      action_voice_setup: "Ligar as mensagens de voz",
       calendar_proposal: "Proposta de evento: {{title}}",
       action_workspace: "Propôs uma mudança no workspace",
       agent_proposal: "Propôs um novo agente: {{name}}",
@@ -20618,6 +20627,11 @@ export const ptBR = {
     offer_open_page: {
       label: "Oferecer abrir uma tela",
       description: "Posta um card cujo botão abre uma tela do app, como cobrança, cargos ou a página de um agente.",
+    },
+    offer_voice_setup: {
+      label: "Oferecer ligar as mensagens de voz",
+      description:
+        "Posta um card que liga as mensagens de voz num clique para quem cuida do servidor, ou pede para essa pessoa.",
     },
     set_team_week: {
       label: "Mudar o card da Semana da equipe",

@@ -11586,6 +11586,14 @@
       "copy": "Details kopieren",
       "copied": "Details kopiert"
     },
+    "offer": {
+      "title": "Sprachnachrichten",
+      "download": "{{size}} herunterladen und einschalten",
+      "choose": "Auswählen, wie",
+      "askOwner": "Sprache auf diesem Server in Text umwandeln",
+      "askMember": "Bitten, Sprachnachrichten einzuschalten",
+      "on": "Sprachnachrichten sind eingeschaltet: Agenten lesen sie als Text."
+    },
     "setup": {
       "memberTitle": "Sprache ist hier noch nicht eingeschaltet",
       "memberText": "Deine Nachricht geht als Audio, das alle abspielen können. Agenten hören sie erst, wenn {{name}} wählt, was Sprache in Text umwandelt.",
@@ -19687,6 +19695,7 @@
       "action_approvals": "Freigaben, die auf dich warten",
       "welcome_member": "Du bist gerade {{org}} beigetreten. **Worum kümmerst du dich hier?** Sag es mir und ich richte deinen ersten Agenten mit dir ein.",
       "action_open_page": "Eine Seite öffnen",
+      "action_voice_setup": "Sprachnachrichten einschalten",
       "calendar_proposal": "Terminvorschlag: {{title}}",
       "action_workspace": "Hat eine Änderung im Workspace vorgeschlagen",
       "agent_proposal": "Hat einen neuen Agenten vorgeschlagen: {{name}}",
@@ -19984,6 +19993,10 @@
     "offer_open_page": {
       "label": "Anbieten, einen Bildschirm zu öffnen",
       "description": "Postet eine Karte, deren Taste einen Bildschirm der App öffnet, etwa Abrechnung, Rollen oder die Seite eines Agenten."
+    },
+    "offer_voice_setup": {
+      "label": "Anbieten, Sprachnachrichten einzuschalten",
+      "description": "Postet eine Karte, die Sprachnachrichten mit einem Klick einschaltet, für die Person, die den Server betreibt, oder sie darum bittet."
     },
     "set_team_week": {
       "label": "Die Karte Teamwoche ändern",

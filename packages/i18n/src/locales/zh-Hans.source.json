@@ -28147,6 +28147,24 @@
   "voice.local.copied": {
     "value": "Details copied"
   },
+  "voice.offer.title": {
+    "value": "Voice messages"
+  },
+  "voice.offer.download": {
+    "value": "Download {{size}} and turn on"
+  },
+  "voice.offer.choose": {
+    "value": "Choose how"
+  },
+  "voice.offer.askOwner": {
+    "value": "Turn voice into text on this server"
+  },
+  "voice.offer.askMember": {
+    "value": "Ask to turn on voice messages"
+  },
+  "voice.offer.on": {
+    "value": "Voice messages are on: agents read them as text."
+  },
   "voice.setup.memberTitle": {
     "value": "Voice isn't on here yet"
   },
@@ -48557,6 +48575,9 @@
   "chat.body.action_open_page": {
     "value": "Open a screen"
   },
+  "chat.body.action_voice_setup": {
+    "value": "Turn on voice messages"
+  },
   "chat.body.calendar_proposal": {
     "value": "Event proposal: {{title}}"
   },
@@ -49045,6 +49066,12 @@
   },
   "builtinTools.offer_open_page.description": {
     "value": "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page."
+  },
+  "builtinTools.offer_voice_setup.label": {
+    "value": "Offer to turn on voice messages"
+  },
+  "builtinTools.offer_voice_setup.description": {
+    "value": "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them."
   },
   "builtinTools.set_team_week.label": {
     "value": "Change the Team week card"

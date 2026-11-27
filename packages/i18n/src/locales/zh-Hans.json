@@ -11185,6 +11185,14 @@
       "copy": "复制详情",
       "copied": "已复制详情"
     },
+    "offer": {
+      "title": "语音消息",
+      "download": "下载 {{size}} 并开启",
+      "choose": "选择方式",
+      "askOwner": "在这台服务器上把语音转成文字",
+      "askMember": "请求开启语音消息",
+      "on": "语音消息已开启：智能体会以文字形式读取。"
+    },
     "setup": {
       "memberTitle": "这里还没有开启语音",
       "memberText": "你的消息会以所有人都能播放的音频发送。在 {{name}} 选好把语音转成文字的服务之前，智能体听不到它。",
@@ -19104,6 +19112,7 @@
       "action_approvals": "等你处理的审批",
       "welcome_member": "你刚加入了{{org}}。**你在这里负责什么？**告诉我，我和你一起设置你的第一个智能体。",
       "action_open_page": "打开页面",
+      "action_voice_setup": "开启语音消息",
       "calendar_proposal": "日程提议：{{title}}",
       "action_workspace": "提议了一项工作区更改",
       "agent_proposal": "提议了一个新智能体：{{name}}",
@@ -19398,6 +19407,10 @@
     "offer_open_page": {
       "label": "提议打开一个页面",
       "description": "发布一张卡片，点击按钮即可打开应用中的页面，例如账单、角色或某个智能体的页面。"
+    },
+    "offer_voice_setup": {
+      "label": "提议开启语音消息",
+      "description": "发布一张卡片，服务器管理者一键即可开启语音消息，其他人可以请管理者开启。"
     },
     "set_team_week": {
       "label": "更改团队周报卡片",

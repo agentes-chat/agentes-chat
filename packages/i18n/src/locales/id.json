@@ -11172,6 +11172,14 @@
       "copy": "Salin detail",
       "copied": "Detail disalin"
     },
+    "offer": {
+      "title": "Pesan suara",
+      "download": "Unduh {{size}} dan nyalakan",
+      "choose": "Pilih caranya",
+      "askOwner": "Ubah suara menjadi teks di server ini",
+      "askMember": "Minta pesan suara dinyalakan",
+      "on": "Pesan suara sudah menyala: agen membacanya sebagai teks."
+    },
     "setup": {
       "memberTitle": "Suara belum menyala di sini",
       "memberText": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai {{name}} memilih apa yang mengubah suara menjadi teks.",
@@ -19089,6 +19097,7 @@
       "action_approvals": "Persetujuan yang menunggumu",
       "welcome_member": "Anda baru saja bergabung dengan {{org}}. **Apa yang Anda tangani di sini?** Beri tahu saya dan saya siapkan agen pertama Anda bersama Anda.",
       "action_open_page": "Buka layar",
+      "action_voice_setup": "Nyalakan pesan suara",
       "calendar_proposal": "Usulan acara: {{title}}",
       "action_workspace": "Mengusulkan perubahan di ruang kerja",
       "agent_proposal": "Mengusulkan agen baru: {{name}}",
@@ -19383,6 +19392,10 @@
     "offer_open_page": {
       "label": "Tawarkan membuka sebuah layar",
       "description": "Memposting kartu yang tombolnya membuka layar aplikasi, seperti tagihan, peran, atau halaman agen."
+    },
+    "offer_voice_setup": {
+      "label": "Tawarkan menyalakan pesan suara",
+      "description": "Memposting kartu yang menyalakan pesan suara dengan satu klik untuk pengelola server, atau memintanya kepada pengelola."
     },
     "set_team_week": {
       "label": "Ubah kartu Minggu tim",

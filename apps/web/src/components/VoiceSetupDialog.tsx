@@ -1,11 +1,23 @@
-import { type OrgSettings, useAskAdmins, useMe, useSpeechKey, useSpeechLocal } from "@agenteschat/client";
+import {
+  type OrgSettings,
+  useAskAdmins,
+  useInstallSpeechLocal,
+  useMe,
+  useSettings,
+  useSpeechKey,
+  useSpeechLocal,
+} from "@agenteschat/client";
+import type { VoiceSetupCard } from "@agenteschat/client/lib/action-cards";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { formatBytes } from "@agenteschat/client/lib/files";
 import { voiceSetupAsk } from "@agenteschat/client/lib/voice";
-import { Button, Dialog, DialogBody, DialogFooter } from "@agenteschat/ui";
+import { Button, Dialog, DialogBody, DialogFooter, EventPillAction } from "@agenteschat/ui";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
+import { RequestDone, RequestOpen } from "@/components/RequestCard";
 import { LocalSpeechChoice, SpeechProviderPicker } from "@/components/VoiceSettings";
+import { inlineWords } from "@/lib/markdown";
 import { voiceSetupSeen } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 
@@ -138,5 +150,90 @@ export function VoiceSetupDialog({
         </Button>
       </DialogFooter>
     </Dialog>
+  );
+}
+
+/**
+ * The right hand's "Ligar mensagens de voz" (`offer_voice_setup`): for the server's owner one click downloads the
+ * speech model to the server's computer when it fits there, else opens the setup's dialog; anyone else asks the owner.
+ * Done from live data: once voice becomes text here it says so.
+ */
+export function VoiceSetupCardView({ card }: { card: VoiceSetupCard }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const me = useMe().data?.user.id ?? null;
+  const settings = useSettings(org.id).data;
+  const owner = settings?.speechOwner ?? null;
+  const isOwner = owner !== null && owner.userId === me;
+  const local = useSpeechLocal(isOwner);
+  const install = useInstallSpeechLocal();
+  const ask = useAskAdmins(org.id);
+  const [dialog, setDialog] = useState(false);
+  if (settings?.speechState === "ready") {
+    return (
+      <RequestDone done label={t("voice.offer.title")}>
+        {t("voice.offer.on")}
+      </RequestDone>
+    );
+  }
+  const fits = local.data?.fit === "fits" && local.data.status.state === "off";
+  const installing = settings?.speechState === "installing";
+  const action = installing ? undefined : isOwner ? (
+    fits ? (
+      <EventPillAction
+        primary
+        onClick={() => install.mutate(undefined, { onError: (e) => toast.show(errorText(t, e), "error") })}
+      >
+        {t("voice.offer.download", { size: formatBytes(i18n.language, local.data?.sizeBytes ?? 0) })}
+      </EventPillAction>
+    ) : (
+      <EventPillAction primary onClick={() => setDialog(true)}>
+        {t("voice.offer.choose")}
+      </EventPillAction>
+    )
+  ) : owner ? (
+    <EventPillAction
+      primary
+      onClick={() =>
+        ask.mutate(
+          { what: "voice" },
+          {
+            onSuccess: () => toast.show(t("voice.setup.asked", { name: owner.name })),
+            onError: (e) => toast.show(errorText(t, e), "error"),
+          },
+        )
+      }
+    >
+      {t("voice.setup.ask", { name: owner.name })}
+    </EventPillAction>
+  ) : undefined;
+  return (
+    <>
+      <RequestOpen
+        mine={false}
+        icon="mic"
+        label={t("voice.offer.title")}
+        action={action}
+        below={
+          <>
+            {card.why && <p>{inlineWords(card.why)}</p>}
+            {installing && <p>{t("voice.local.downloading")}</p>}
+          </>
+        }
+      >
+        {t(isOwner ? "voice.offer.askOwner" : "voice.offer.askMember")}
+      </RequestOpen>
+      {dialog && (
+        <VoiceSetupDialog
+          open
+          owner={owner}
+          isOwner
+          onRecord={() => setDialog(false)}
+          onDone={() => setDialog(false)}
+          onClose={() => setDialog(false)}
+        />
+      )}
+    </>
   );
 }

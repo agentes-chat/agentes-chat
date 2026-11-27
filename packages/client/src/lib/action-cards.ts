@@ -206,6 +206,13 @@ export interface OpenPageCard {
   why: string;
 }
 
+/** "Ligar mensagens de voz" (`offer_voice_setup`): one click for the server's owner, an ask for anyone else. */
+export interface VoiceSetupCard {
+  kind: "voice_setup";
+  forUserId: string | null;
+  why: string;
+}
+
 /** An agent's event proposal (`propose_event`): the person who asked confirms it, which creates the event. */
 export interface CalendarProposalCard {
   kind: "calendar_proposal";
@@ -229,6 +236,7 @@ export type ActionCard =
   | ApprovalsCard
   | MemberChangesCard
   | OpenPageCard
+  | VoiceSetupCard
   | ConnectAiCard
   | ConnectAppCard
   | InviteCard
@@ -524,6 +532,7 @@ export function actionCardOf(meta: Record<string, unknown> | null | undefined): 
     });
     return rows.length > 0 ? { kind: "member_changes", forUserId, rows, why } : null;
   }
+  if (card.kind === "voice_setup") return { kind: "voice_setup", forUserId, why };
   if (card.kind === "open_page") {
     if (!isAppPage(p.page)) return null;
     return {

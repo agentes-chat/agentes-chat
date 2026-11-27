@@ -11521,6 +11521,14 @@
       "copy": "Ayrıntıları kopyala",
       "copied": "Ayrıntılar kopyalandı"
     },
+    "offer": {
+      "title": "Sesli mesajlar",
+      "download": "{{size}} indir ve aç",
+      "choose": "Nasıl olacağını seç",
+      "askOwner": "Bu sunucuda sesi metne dönüştür",
+      "askMember": "Sesli mesajların açılmasını iste",
+      "on": "Sesli mesajlar açık: ajanlar onları metin olarak okur."
+    },
     "setup": {
       "memberTitle": "Ses burada henüz açık değil",
       "memberText": "Mesajın herkesin dinleyebileceği bir ses olarak gider. {{name}} sesi metne dönüştüreni seçene kadar ajanlar onu duyamaz.",
@@ -19609,6 +19617,7 @@
       "action_approvals": "Sizi bekleyen onaylar",
       "welcome_member": "{{org}} çalışma alanına az önce katıldın. **Burada nelerle ilgileniyorsun?** Bana anlat, ilk ajanını birlikte kuralım.",
       "action_open_page": "Bir ekran aç",
+      "action_voice_setup": "Sesli mesajları aç",
       "calendar_proposal": "Etkinlik önerisi: {{title}}",
       "action_workspace": "Çalışma alanında bir değişiklik önerdi",
       "agent_proposal": "Yeni bir ajan önerdi: {{name}}",
@@ -19906,6 +19915,10 @@
     "offer_open_page": {
       "label": "Bir ekran açmayı öner",
       "description": "Düğmesi faturalandırma, roller veya bir ajanın sayfası gibi uygulamanın bir ekranını açan bir kart paylaşır."
+    },
+    "offer_voice_setup": {
+      "label": "Sesli mesajları açmayı öner",
+      "description": "Sunucuyu yöneten kişi için sesli mesajları tek tıkla açan bir kart paylaşır ya da bunu ondan ister."
     },
     "set_team_week": {
       "label": "Ekibin haftası kartını değiştir",

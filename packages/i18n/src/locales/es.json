@@ -11965,6 +11965,14 @@
       "copy": "Copiar detalles",
       "copied": "Detalles copiados"
     },
+    "offer": {
+      "title": "Mensajes de voz",
+      "download": "Descargar {{size}} y activar",
+      "choose": "Elegir cómo",
+      "askOwner": "Convertir la voz en texto en este servidor",
+      "askMember": "Pedir que activen los mensajes de voz",
+      "on": "Los mensajes de voz están activados: los agentes los leen como texto."
+    },
     "setup": {
       "memberTitle": "La voz todavía no está activada aquí",
       "memberText": "Tu mensaje va como audio que todos pueden escuchar. Los agentes no lo oyen hasta que {{name}} elija qué convierte la voz en texto.",
@@ -20221,6 +20229,7 @@
       "action_approvals": "Aprobaciones esperándote",
       "welcome_member": "Acabas de entrar en {{org}}. **¿De qué te encargas aquí?** Cuéntame y creo tu primer agente contigo.",
       "action_open_page": "Abrir una pantalla",
+      "action_voice_setup": "Activar los mensajes de voz",
       "calendar_proposal": "Propuesta de evento: {{title}}",
       "action_workspace": "Propuso un cambio en el espacio de trabajo",
       "agent_proposal": "Propuso un nuevo agente: {{name}}",
@@ -20521,6 +20530,10 @@
     "offer_open_page": {
       "label": "Ofrecer abrir una pantalla",
       "description": "Publica una tarjeta cuyo botón abre una pantalla de la app, como facturación, roles o la página de un agente."
+    },
+    "offer_voice_setup": {
+      "label": "Ofrecer activar los mensajes de voz",
+      "description": "Publica una tarjeta que activa los mensajes de voz con un clic para quien administra el servidor, o se lo pide."
     },
     "set_team_week": {
       "label": "Cambiar la tarjeta Semana del equipo",

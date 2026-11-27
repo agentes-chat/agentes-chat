@@ -11656,6 +11656,14 @@
       "copy": "Details kopiëren",
       "copied": "Details gekopieerd"
     },
+    "offer": {
+      "title": "Spraakberichten",
+      "download": "{{size}} downloaden en aanzetten",
+      "choose": "Kiezen hoe",
+      "askOwner": "Spraak omzetten in tekst op deze server",
+      "askMember": "Vragen om spraakberichten aan te zetten",
+      "on": "Spraakberichten staan aan: agents lezen ze als tekst."
+    },
     "setup": {
       "memberTitle": "Spraak staat hier nog niet aan",
       "memberText": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als {{name}} kiest wat spraak omzet in tekst.",
@@ -19761,6 +19769,7 @@
       "action_approvals": "Goedkeuringen die op jou wachten",
       "welcome_member": "Je bent net bij {{org}} gekomen. **Waar houd je je hier mee bezig?** Vertel het me en ik stel samen met jou je eerste agent in.",
       "action_open_page": "Een scherm openen",
+      "action_voice_setup": "Spraakberichten aanzetten",
       "calendar_proposal": "Voorstel voor een afspraak: {{title}}",
       "action_workspace": "Stelde een wijziging in de werkruimte voor",
       "agent_proposal": "Nieuwe agent voorgesteld: {{name}}",
@@ -20058,6 +20067,10 @@
     "offer_open_page": {
       "label": "Aanbieden een scherm te openen",
       "description": "Plaatst een kaart met een knop die een scherm van de app opent, zoals facturering, rollen of de pagina van een agent."
+    },
+    "offer_voice_setup": {
+      "label": "Aanbieden om spraakberichten aan te zetten",
+      "description": "Plaatst een kaart die spraakberichten met één klik aanzet voor wie de server beheert, of het die persoon vraagt."
     },
     "set_team_week": {
       "label": "De kaart Teamweek wijzigen",

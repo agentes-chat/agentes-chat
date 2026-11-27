@@ -12137,6 +12137,15 @@ export const en = {
       copy: "Copy details",
       copied: "Details copied",
     },
+    /** The right hand's card (`offer_voice_setup`). `size`: the download, "738 MB". */
+    offer: {
+      title: "Voice messages",
+      download: "Download {{size}} and turn on",
+      choose: "Choose how",
+      askOwner: "Turn voice into text on this server",
+      askMember: "Ask to turn on voice messages",
+      on: "Voice messages are on: agents read them as text.",
+    },
     /** The microphone's first press where nothing turns voice into text yet (`VoiceSetupDialog`). */
     setup: {
       memberTitle: "Voice isn't on here yet",
@@ -20502,6 +20511,7 @@ export const en = {
       welcome_member:
         "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you.",
       action_open_page: "Open a screen",
+      action_voice_setup: "Turn on voice messages",
       calendar_proposal: "Event proposal: {{title}}",
       action_workspace: "Proposed a change in the workspace",
       agent_proposal: "Proposed a new agent: {{name}}",
@@ -20815,6 +20825,10 @@ export const en = {
     offer_open_page: {
       label: "Offer to open a screen",
       description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+    },
+    offer_voice_setup: {
+      label: "Offer to turn on voice messages",
+      description: "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them.",
     },
     set_team_week: {
       label: "Change the Team week card",
