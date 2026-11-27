@@ -1,5 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { EGRESS_SHARE, EGRESS_SHARE_PROTOCOL, STREAM_CLOSE, type StreamHello } from "@agenteschat/adapters";
+import {
+  EGRESS_SHARE,
+  EGRESS_SHARE_PROTOCOL,
+  parseStreamControl,
+  STREAM_CLOSE,
+  type StreamHello,
+} from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
 import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending } from "./machines";
@@ -16,8 +22,22 @@ const VIA_WRITE_MS = 60_000;
  */
 const FULL_MS = 60_000;
 const PASS_OVER = new Set(["no_slot", "paused", "timeout"]);
-/** Bytes queued toward one side before the connection ends as too slow. */
+/**
+ * Bytes queued toward one side before the connection ends as too slow: Bun drops what a socket is sent past 16 MiB
+ * queued. A computer that hears `pause` never gets there.
+ */
 const BUFFERED_MAX = 16 * 1024 * 1024;
+/**
+ * Queued toward one side past `HOLD_AT`, or that side's computer saying it can't write what reaches it fast enough
+ * (`pause`): the other computer is told to stop reading (`pause`) until it is back under `RELEASE_AT` (`resume`).
+ * Bun's server socket can't stop reading, so the computer that produces the bytes does.
+ */
+const HOLD_AT = 2 * 1024 * 1024;
+const RELEASE_AT = 512 * 1024;
+/** Bun says nothing when a socket drains: a held side is looked at this often. */
+const HOLD_POLL_MS = 10;
+const PAUSE = JSON.stringify({ type: "pause" });
+const RESUME = JSON.stringify({ type: "resume" });
 /** How long the server waits for the lent computer to reach the site and dial its data socket. */
 const DIAL_MS = EGRESS_SHARE.connectMs + 5_000;
 /** Who may lend in a workspace, read again at most this often. */
@@ -76,7 +96,19 @@ interface Leg {
   socket: StreamSocket;
   peer: Leg | null;
   closed: boolean;
+  /** Its computer said `pause`: what reaches it backs up on its side. */
+  full: boolean;
+  /** Its computer was told `pause`, until `resume`. */
+  held: ReturnType<typeof setInterval> | null;
 }
+
+const newLeg = (socket: StreamSocket, peer: Leg | null = null): Leg => ({
+  socket,
+  peer,
+  closed: false,
+  full: false,
+  held: null,
+});
 
 /**
  * Lent connections on this server (ADR 0237). A borrowing computer's data socket names a destination in its hello
@@ -103,15 +135,37 @@ export function createEgressRelay(deps: {
   const end = (leg: Leg, code: number = STREAM_CLOSE.normal, reason = "") => {
     if (leg.closed) return;
     leg.closed = true;
+    clearInterval(leg.held ?? undefined);
     quietly(() => leg.socket.close(code, reason));
     if (leg.peer) end(leg.peer);
   };
 
+  /** Tells `producer`'s computer to stop or go on reading, by what waits toward its peer. */
+  const settle = (producer: Leg) => {
+    const to = producer.peer;
+    if (producer.closed || !to) return;
+    const hold = to.full || to.socket.buffered() > (producer.held ? RELEASE_AT : HOLD_AT);
+    if (hold === (producer.held !== null)) return;
+    quietly(() => producer.socket.send(hold ? PAUSE : RESUME));
+    if (hold) producer.held = setInterval(() => settle(producer), HOLD_POLL_MS);
+    else {
+      clearInterval(producer.held ?? undefined);
+      producer.held = null;
+    }
+  };
+
   const pass = (from: Leg, data: string | Uint8Array) => {
     const to = from.peer;
-    if (!to || to.closed || typeof data === "string") return;
+    if (!to || to.closed) return;
+    if (typeof data === "string") {
+      const control = parseStreamControl(data);
+      if (control?.type !== "pause" && control?.type !== "resume") return;
+      from.full = control.type === "pause";
+      return settle(to);
+    }
     if (to.socket.buffered() > BUFFERED_MAX) return end(from, STREAM_CLOSE.tooSlow, "too slow");
     quietly(() => to.socket.send(data));
+    settle(from);
   };
 
   const claimed = (leg: Leg): ClaimedStream => ({
@@ -206,7 +260,7 @@ export function createEgressRelay(deps: {
      */
     claim(hello: StreamHello, machineId: string, socket: StreamSocket): ClaimedStream | null {
       if (hello.egress) {
-        const leg: Leg = { socket, peer: null, closed: false };
+        const leg = newLeg(socket);
         void openFor(leg, machineId, hello.egress).catch((error) => {
           deps.log?.warn("egress relay failed", { machineId, error: String(error) });
           end(leg, STREAM_CLOSE.internal, "internal");
@@ -216,7 +270,7 @@ export function createEgressRelay(deps: {
       const wait = pending.get(hello.streamId);
       if (!wait || wait.deviceId !== machineId || wait.leg.closed) return null;
       pending.delete(hello.streamId);
-      const leg: Leg = { socket, peer: wait.leg, closed: false };
+      const leg = newLeg(socket, wait.leg);
       wait.leg.peer = leg;
       quietly(() => wait.leg.socket.send(JSON.stringify({ type: "stream.ready" })));
       return claimed(leg);
@@ -226,7 +280,7 @@ export function createEgressRelay(deps: {
      * first text frame is `stream.ready` once a lent connection carries it, or it closes as a data socket would.
      */
     connect(orgId: string, target: { host: string; port: number }, socket: StreamSocket): ClaimedStream {
-      const leg: Leg = { socket, peer: null, closed: false };
+      const leg = newLeg(socket);
       if (!serverLending()) end(leg, STREAM_CLOSE.forbidden, "this server lends no connection to itself");
       else
         void open(leg, { orgId, machineId: null }, target).catch((error) => {
