@@ -47,6 +47,11 @@ test("a pushed screen's large title is the system's on iOS, over a scroll view t
   // Android's bar has no large title: the bar's own title there, beside the back button, as every pushed screen's.
   expect(pushed).toContain("return <SystemLargeTitle {...props} />;");
   expect(pushed).not.toContain("DrawnLargeTitle");
+  // The back button is each system's own: Android's toolbar arrow (with its room before the title), never a view of
+  // ours in its place.
+  const nav = src("ui/navigation.tsx");
+  expect(nav).not.toContain("headerBackVisible: false");
+  expect(nav).not.toContain("headerLeft:");
   expect(pushed).toContain('contentInsetAdjustmentBehavior="automatic"');
   const header = src("features/shared/parts.tsx");
   expect(header).toContain("...(IOS ? { headerLargeTitleEnabled: largeTitle } : null),");
