@@ -7,6 +7,7 @@ import {
   CLAUDE_SHARED_PROTOCOL,
   CLI_COPIES_PROTOCOL,
   CO_AUTHOR_CASE_PROTOCOL,
+  CUSTOM_PROXY_PROTOCOL,
   EGRESS_PROXY_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
@@ -14,6 +15,7 @@ import {
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
   KEEP_RUNNING_PROTOCOL,
+  type KeyWrapper,
   listenResumedTopic,
   MACHINE_CLOSE,
   MAX_FRAME_BYTES,
@@ -42,6 +44,7 @@ import {
 import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
 import { CLI_PINS } from "@agenteschat/providers/cli-pins";
+import { proxyForMachine } from "./agent-proxies";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
 import { TtlCache } from "./cache";
@@ -382,6 +385,8 @@ export interface MachineHubDeps {
   readyEmail?: Omit<ReadyEmailDeps, "machines"> | null;
   /** Error reports (ADR 0104): a Cloud computer without Google Chrome goes there. */
   errors?: ErrorReporter;
+  /** Opens the proxy a workspace chose for its agents (ADR 0262), sent in `welcome`; none: no proxy is sent. */
+  keyWrappers?: KeyWrapper[];
   log?: { warn(message: string, data?: Record<string, unknown>): void };
 }
 
@@ -941,6 +946,11 @@ export function createMachineHub(deps: MachineHubDeps) {
         : [];
     conn.lastSeenWrite = Date.now();
     conn.lastPong = Date.now();
+    // The workspace's (or this computer's own) proxy for its agents (ADR 0262): before a lent internet.
+    const proxy =
+      frame.protocol >= CUSTOM_PROXY_PROTOCOL && deps.keyWrappers
+        ? await proxyForMachine({ db, keyWrappers: deps.keyWrappers }, machine).catch(() => null)
+        : null;
     send(conn, {
       type: "welcome",
       machineId: machine.id,
@@ -953,6 +963,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       ...(machine.kind !== "managed" && frame.protocol >= EGRESS_PROXY_PROTOCOL && borrowsInternet(machine)
         ? { egressProxy: true }
         : {}),
+      ...(proxy ? { proxy } : {}),
     });
     // Pings start with `welcome` (the runner's watchdog starts there), not after the slower work below.
     startPings(conn);

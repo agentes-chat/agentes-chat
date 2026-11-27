@@ -354,6 +354,7 @@ export function buildEngine(o: EngineOptions) {
     replicaId: o.replicaId,
     readyEmail: adapters.email.delivers ? { publicUrl: config.PUBLIC_URL, gateway } : null,
     errors: o.errors,
+    keyWrappers,
   });
   // Live files (ADR 0196): the documents this process hosts, for people's sockets and for agents' tools, which may run
   // in any process. A change crosses processes through the database and pub/sub, so it names this one (`replicaId`).

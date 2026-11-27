@@ -3830,6 +3830,14 @@
     "switchAi": "Ganti AI {{name}}"
   },
   "actionCard": {
+    "proxy": {
+      "title": "Pakai proxy {{proxy}}",
+      "save": "Simpan",
+      "for": "Untuk {{where}}",
+      "everyComputer": "semua komputer workspace",
+      "saved": "{{proxy}} disimpan untuk {{where}}",
+      "adminOnly": "Admin yang menyimpannya"
+    },
     "connect_ai": {
       "title": "Hubungkan AI untuk {{agents}}",
       "title_claude": "Hubungkan paket Claude untuk {{agents}}",
@@ -16014,6 +16022,9 @@
       "notOwner": "Hanya orang yang menghubungkan komputer ini yang menyalakan alatnya. Minta kepada orang itu.",
       "askSelf": "Ini komputermu: nyalakan dengan tombolnya.",
       "adminAskSelf": "Kamu bisa melakukannya sendiri di sini.",
+      "proxyInvalid": "Gunakan alamat proxy seperti socks5://user:password@host:1080 atau http://host:3128.",
+      "proxyForbidden": "Hanya orang yang menghubungkan komputer ini, atau admin, yang mengatur proxy-nya.",
+      "proxySourceGone": "Pesan berisi alamat proxy sudah tidak ada. Kirim lagi.",
       "accountMethodUnsupported": "Komputer ini belum bisa menghubungkan Claude dengan cara ini. Perbarui program agentes.chat di komputer ini, atau pakai kunci API.",
       "windowsOneGemini": "Di Windows, satu komputer memakai satu akun Gemini dalam satu waktu. Hapus akun Gemini yang lain dari komputer ini untuk masuk dengan akun ini.",
       "brainUnavailable": "AI ini belum disiapkan di {{computer}}. Siapkan di sana, atau pilih yang lain.",
@@ -16136,6 +16147,28 @@
     "feedback": {
       "filesGone": "File yang ditambahkan sudah hilang. Tambahkan lagi.",
       "filesPending": "Terlalu banyak file menunggu dikirim. Kirim atau hapus beberapa, lalu coba lagi."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy untuk agen",
+    "uses": "Agen keluar lewat {{proxy}}",
+    "usesWorkspace": "Agen keluar lewat proxy workspace, {{proxy}}",
+    "none": "Tanpa proxy: agen keluar lewat internet yang dipinjamkan seseorang jika ada, kalau tidak lewat jalur biasa.",
+    "noneWorkspace": "Tidak ada proxy untuk semua komputer. Setiap komputer juga bisa punya sendiri, di halamannya.",
+    "withSignIn": "dengan nama pengguna dan kata sandi",
+    "order": "Urutannya: proxy komputer ini, kalau tidak proxy workspace, lalu internet yang dipinjamkan seseorang, lalu jalur biasa. Selama proxy disetel, browser dan situs agen hanya lewat proxy itu: kalau proxy mati, situs-situs itu gagal sampai proxy kembali atau dihapus.",
+    "address": "Alamat proxy",
+    "replace": "Alamat proxy baru",
+    "addressHint": "HTTP, HTTPS, atau SOCKS5, dengan nama pengguna dan kata sandi di dalamnya jika perlu. Disimpan terenkripsi: hanya host dan port yang tampil lagi.",
+    "save": "Simpan",
+    "test": "Uji",
+    "remove": "Hapus",
+    "exit": "Agen keluar di {{ip}}",
+    "exitIn": "Agen keluar di {{ip}}, di {{country}}",
+    "failed": {
+      "unreachable": "Proxy tidak bisa dijangkau. Periksa host dan port.",
+      "auth": "Proxy menolak nama pengguna atau kata sandi.",
+      "refused": "Proxy menjawab tetapi tidak sampai ke situs uji."
     }
   },
   "machines": {
@@ -19135,6 +19168,7 @@
       "redacted": "[dihapus: tampak seperti data masuk atau kunci]",
       "action_connect_ai": "Hubungkan AI",
       "action_connect_app": "Hubungkan {{name}}",
+      "action_proxy": "Pakai proxy {{name}}",
       "action_add_mcp": "Tambah server MCP",
       "action_invite_people": "Undang orang",
       "action_install_skill": "Pasang skill",
@@ -19437,6 +19471,10 @@
     "offer_open_page": {
       "label": "Tawarkan membuka sebuah layar",
       "description": "Memposting kartu yang tombolnya membuka layar aplikasi, seperti tagihan, peran, atau halaman agen."
+    },
+    "offer_proxy": {
+      "label": "Tawarkan memakai proxy",
+      "description": "Memposting kartu yang menyimpan proxy yang diketik seseorang, untuk agen workspace atau satu komputer."
     },
     "offer_voice_setup": {
       "label": "Tawarkan menyalakan pesan suara",

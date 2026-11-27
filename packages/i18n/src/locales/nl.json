@@ -3983,6 +3983,14 @@
     "switchAi": "AI van {{name}} wijzigen"
   },
   "actionCard": {
+    "proxy": {
+      "title": "De proxy {{proxy}} gebruiken",
+      "save": "Opslaan",
+      "for": "Voor {{where}}",
+      "everyComputer": "alle computers van de workspace",
+      "saved": "{{proxy}} opgeslagen voor {{where}}",
+      "adminOnly": "Een admin slaat het op"
+    },
     "connect_ai": {
       "title": "Koppel een AI voor {{agents}}",
       "title_claude": "Koppel een Claude-abonnement voor {{agents}}",
@@ -16630,6 +16638,9 @@
       "notOwner": "Alleen wie deze computer heeft gekoppeld zet de tools aan. Vraag het die persoon.",
       "askSelf": "Het is jouw computer: zet het aan met de knop.",
       "adminAskSelf": "Dat kun je hier zelf doen.",
+      "proxyInvalid": "Gebruik een proxyadres zoals socks5://gebruiker:wachtwoord@host:1080 of http://host:3128.",
+      "proxyForbidden": "Alleen wie deze computer heeft gekoppeld, of een admin, stelt de proxy in.",
+      "proxySourceGone": "Het bericht met het proxyadres is weg. Stuur het opnieuw.",
       "accountMethodUnsupported": "Deze computer kan Claude nog niet op deze manier koppelen. Werk het agentes.chat-programma erop bij, of gebruik een API-sleutel.",
       "windowsOneGemini": "Op Windows gebruikt een computer één Gemini-account tegelijk. Verwijder het andere Gemini-account van deze computer om met dit account in te loggen.",
       "brainUnavailable": "Deze AI is nog niet ingesteld op {{computer}}. Stel hem daar in, of kies een andere.",
@@ -16753,6 +16764,28 @@
     "feedback": {
       "filesGone": "Een bestand dat je hebt toegevoegd is weg. Voeg het opnieuw toe.",
       "filesPending": "Er wachten te veel bestanden om verstuurd te worden. Verstuur of verwijder er een paar en probeer het opnieuw."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy voor agents",
+    "uses": "Agents gaan naar buiten via {{proxy}}",
+    "usesWorkspace": "Agents gaan naar buiten via de proxy van de workspace, {{proxy}}",
+    "none": "Geen proxy: agents gaan via het geleende internet van iemand naar buiten als dat er is, anders via de gewone weg.",
+    "noneWorkspace": "Geen proxy voor alle computers. Elke computer kan op zijn eigen pagina ook een eigen hebben.",
+    "withSignIn": "met gebruiker en wachtwoord",
+    "order": "De volgorde: de proxy van deze computer, anders die van de workspace, dan het geleende internet van iemand, dan de gewone weg. Zolang er een proxy is ingesteld, gaan browsers en websites van agents alleen daarlangs: valt hij uit, dan mislukken die sites tot hij terug is of verwijderd.",
+    "address": "Proxyadres",
+    "replace": "Nieuw proxyadres",
+    "addressHint": "HTTP, HTTPS of SOCKS5, met gebruiker en wachtwoord erin als dat nodig is. Versleuteld bewaard: alleen host en poort worden weer getoond.",
+    "save": "Opslaan",
+    "test": "Testen",
+    "remove": "Verwijderen",
+    "exit": "Agents komen naar buiten op {{ip}}",
+    "exitIn": "Agents komen naar buiten op {{ip}}, in {{country}}",
+    "failed": {
+      "unreachable": "De proxy was niet bereikbaar. Controleer host en poort.",
+      "auth": "De proxy weigerde de gebruiker of het wachtwoord.",
+      "refused": "De proxy antwoordde maar bereikte de testsite niet."
     }
   },
   "machines": {
@@ -19808,6 +19841,7 @@
       "redacted": "[verwijderd: leek op inloggegevens of een sleutel]",
       "action_connect_ai": "AI koppelen",
       "action_connect_app": "{{name}} koppelen",
+      "action_proxy": "De proxy {{name}} gebruiken",
       "action_add_mcp": "Een MCP-server toevoegen",
       "action_invite_people": "Mensen uitnodigen",
       "action_install_skill": "Een skill installeren",
@@ -20113,6 +20147,10 @@
     "offer_open_page": {
       "label": "Aanbieden een scherm te openen",
       "description": "Plaatst een kaart met een knop die een scherm van de app opent, zoals facturering, rollen of de pagina van een agent."
+    },
+    "offer_proxy": {
+      "label": "Aanbieden een proxy te gebruiken",
+      "description": "Plaatst een kaart die een door iemand getypte proxy opslaat, voor de agents van de workspace of van één computer."
     },
     "offer_voice_setup": {
       "label": "Aanbieden om spraakberichten aan te zetten",

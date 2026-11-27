@@ -4229,6 +4229,14 @@ export const ptBR = {
   },
 
   actionCard: {
+    proxy: {
+      title: "Usar o proxy {{proxy}}",
+      save: "Salvar",
+      for: "Para {{where}}",
+      everyComputer: "todos os computadores do workspace",
+      saved: "{{proxy}} salvo para {{where}}",
+      adminOnly: "Um admin salva",
+    },
     connect_ai: {
       title: "Conectar uma IA para {{agents}}",
       title_claude: "Conectar o plano do Claude para {{agents}}",
@@ -17007,6 +17015,9 @@ export const ptBR = {
       askSelf: "O computador é seu: ligue com o botão.",
       /** "Pedir a um admin" from someone who may do it themselves. */
       adminAskSelf: "Você mesmo pode fazer isso aqui.",
+      proxyInvalid: "Use um endereço de proxy como socks5://usuario:senha@host:1080 ou http://host:3128.",
+      proxyForbidden: "Só quem conectou este computador, ou um admin, define o proxy dele.",
+      proxySourceGone: "A mensagem com o endereço do proxy sumiu. Mande de novo.",
       accountMethodUnsupported:
         "Este computador ainda não conecta o Claude desse jeito. Atualize o programa do agentes.chat nele, ou use uma chave de API.",
       windowsOneGemini:
@@ -17142,6 +17153,30 @@ export const ptBR = {
     feedback: {
       filesGone: "Um arquivo que você anexou sumiu. Anexe de novo.",
       filesPending: "Há arquivos demais esperando para ser enviados. Envie ou tire alguns e tente de novo.",
+    },
+  },
+  agentProxy: {
+    title: "Proxy dos agentes",
+    uses: "Os agentes saem por {{proxy}}",
+    usesWorkspace: "Os agentes saem pelo proxy do workspace, {{proxy}}",
+    none: "Sem proxy: os agentes saem pela internet emprestada de uma pessoa, quando há, senão pelo caminho de sempre.",
+    noneWorkspace: "Sem proxy para todos os computadores. Cada computador também pode ter o seu, na página dele.",
+    withSignIn: "com usuário e senha",
+    order:
+      "A ordem: o proxy deste computador, senão o do workspace, depois a internet emprestada de uma pessoa, depois o caminho de sempre. Com um proxy salvo, os navegadores e sites dos agentes passam só por ele: se ele cair, esses sites falham até ele voltar ou ser removido.",
+    address: "Endereço do proxy",
+    replace: "Novo endereço do proxy",
+    addressHint:
+      "HTTP, HTTPS ou SOCKS5, com usuário e senha nele se precisar. Fica criptografado: só o host e a porta aparecem de novo.",
+    save: "Salvar",
+    test: "Testar",
+    remove: "Remover",
+    exit: "Os agentes saem em {{ip}}",
+    exitIn: "Os agentes saem em {{ip}}, em {{country}}",
+    failed: {
+      unreachable: "Não deu para chegar ao proxy. Confira o host e a porta.",
+      auth: "O proxy recusou o usuário ou a senha.",
+      refused: "O proxy respondeu, mas não chegou ao site de teste.",
     },
   },
   machines: {
@@ -20370,6 +20405,7 @@ export const ptBR = {
       redacted: "[removido: parecia um login ou uma chave]",
       action_connect_ai: "Conectar uma IA",
       action_connect_app: "Conectar {{name}}",
+      action_proxy: "Usar o proxy {{name}}",
       action_add_mcp: "Adicionar um servidor MCP",
       action_invite_people: "Convidar pessoas",
       action_install_skill: "Instalar uma skill",
@@ -20690,6 +20726,11 @@ export const ptBR = {
     offer_open_page: {
       label: "Oferecer abrir uma tela",
       description: "Posta um card cujo botão abre uma tela do app, como cobrança, cargos ou a página de um agente.",
+    },
+    offer_proxy: {
+      label: "Oferecer usar um proxy",
+      description:
+        "Posta um card que salva um proxy que a pessoa digitou, para os agentes do workspace ou de um computador.",
     },
     offer_voice_setup: {
       label: "Oferecer ligar as mensagens de voz",

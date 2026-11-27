@@ -32,6 +32,7 @@ const CARD_TOOLS = new Set([
   "propose_member_changes",
   "offer_open_page",
   "offer_voice_setup",
+  "offer_proxy",
   "offer_answers",
   "offer_feedback",
   "offer_install_skill",

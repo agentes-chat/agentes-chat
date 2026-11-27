@@ -115,6 +115,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
     "propose_member_changes",
     "offer_open_page",
     "offer_voice_setup",
+    "offer_proxy",
     "set_team_week",
     "offer_answers",
     "propose_team",
@@ -352,6 +353,10 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   offer_open_page: {
     label: "Offer to open a screen",
     description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+  },
+  offer_proxy: {
+    label: "Offer to use a proxy",
+    description: "Posts a card that saves a proxy a person typed, for the workspace's agents or one computer's.",
   },
   offer_voice_setup: {
     label: "Offer to turn on voice messages",

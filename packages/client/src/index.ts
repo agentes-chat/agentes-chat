@@ -8,6 +8,7 @@ import type { ApiClient } from "./api/client";
 import type { FetchLike } from "./api/http";
 import { createHttpApi } from "./api/http-client";
 
+export * from "./api/agent-proxies";
 export * from "./api/ai-hub";
 export * from "./api/client";
 export * from "./api/context";

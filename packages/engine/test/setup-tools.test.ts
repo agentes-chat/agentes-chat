@@ -114,6 +114,7 @@ describe("the setup group", () => {
       "offer_connect_ai",
       "offer_connect_app",
       "offer_invites",
+      "offer_proxy",
       "propose_agent",
       "propose_remove_agents",
       "propose_settings_change",
@@ -121,7 +122,7 @@ describe("the setup group", () => {
     ]);
     // An agent's own settings go with the conversation's rarer tools, whatever its setup grant (ADR 0137).
     expect(deferrableGroups(granted).map((g) => [g.key, g.tools.length])).toEqual([
-      ["setup", 7],
+      ["setup", 8],
       ["more", 1],
     ]);
     expect(deferrableGroups(granted)[0]?.label).toBe(
@@ -134,6 +135,7 @@ describe("the setup group", () => {
       "offer_connect_ai",
       "offer_connect_app",
       "offer_invites",
+      "offer_proxy",
       "propose_agent",
       "propose_remove_agents",
       "propose_settings_change",

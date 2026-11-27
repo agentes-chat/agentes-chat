@@ -63,6 +63,9 @@ import type {
   AgentMailboxInput,
   AgentPlanUsage,
   AgentProposal,
+  AgentProxies,
+  AgentProxyTest,
+  AgentProxyView,
   AgentQuestion,
   AgentSecret,
   AgentSetup,
@@ -2358,6 +2361,20 @@ export interface ApiClient {
      * stay), and every live view gets it again. Resolves once it closed. Only who may drive it (403 otherwise).
      */
     restart(orgId: string, agentId: string): Promise<void>;
+  };
+  /**
+   * Proxies for agents (ADR 0262): the workspace's and each computer's own, never with their user or password. A
+   * computer's own wins there; either comes before a person's lent internet and the usual way.
+   */
+  agentProxies?: {
+    list(orgId: string): Promise<AgentProxies>;
+    /** 400 `proxy.invalid`, `url.internal`; 403 `proxy.forbidden`. */
+    set(orgId: string, input: { machineId: string | null; url: string }): Promise<AgentProxyView>;
+    remove(orgId: string, machineId: string | null): Promise<void>;
+    /** The typed `url`, or the saved one. 429 past 30 an hour. */
+    test(orgId: string, input: { machineId: string | null; url?: string }): Promise<AgentProxyTest>;
+    /** Saves the proxy an agent's card offers, then tests it. */
+    fromCard(orgId: string, messageId: string): Promise<{ proxy: AgentProxyView; test: AgentProxyTest }>;
   };
   /**
    * Browser profiles (ADR 0110): named, shared logins on one computer. Everyone sees the list; creating, choosing

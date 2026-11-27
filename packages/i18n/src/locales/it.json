@@ -4137,6 +4137,14 @@
     "switchAi": "Cambia l'IA di {{name}}"
   },
   "actionCard": {
+    "proxy": {
+      "title": "Usa il proxy {{proxy}}",
+      "save": "Salva",
+      "for": "Per {{where}}",
+      "everyComputer": "tutti i computer del workspace",
+      "saved": "{{proxy}} salvato per {{where}}",
+      "adminOnly": "Lo salva un admin"
+    },
     "connect_ai": {
       "title": "Collega un'IA per {{agents}}",
       "title_claude": "Collega un piano Claude per {{agents}}",
@@ -17147,6 +17155,9 @@
       "notOwner": "Solo chi ha collegato questo computer attiva i suoi strumenti. Chiedi a questa persona.",
       "askSelf": "È il tuo computer: attivalo con il pulsante.",
       "adminAskSelf": "Puoi farlo tu stesso qui.",
+      "proxyInvalid": "Usa un indirizzo proxy come socks5://utente:password@host:1080 o http://host:3128.",
+      "proxyForbidden": "Solo chi ha collegato questo computer, o un admin, imposta il suo proxy.",
+      "proxySourceGone": "Il messaggio con l’indirizzo del proxy non c’è più. Invialo di nuovo.",
       "accountMethodUnsupported": "Questo computer non può ancora collegare Claude in questo modo. Aggiorna il programma agentes.chat che ha installato, oppure usa una chiave API.",
       "windowsOneGemini": "Su Windows, un computer usa un solo account Gemini alla volta. Rimuovi l'altro account Gemini da questo computer per accedere con questo.",
       "brainUnavailable": "Questa IA non è ancora configurata su {{computer}}. Configurala lì, oppure scegline un'altra.",
@@ -17271,6 +17282,28 @@
     "feedback": {
       "filesGone": "Un file che hai aggiunto non c'è più. Aggiungilo di nuovo.",
       "filesPending": "Troppi file aspettano di essere inviati. Inviane o togline alcuni e riprova."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy degli agenti",
+    "uses": "Gli agenti escono da {{proxy}}",
+    "usesWorkspace": "Gli agenti escono dal proxy del workspace, {{proxy}}",
+    "none": "Nessun proxy: gli agenti escono dall’internet prestato di una persona, se c’è, altrimenti dalla solita strada.",
+    "noneWorkspace": "Nessun proxy per tutti i computer. Ogni computer può anche averne uno suo, nella sua pagina.",
+    "withSignIn": "con utente e password",
+    "order": "L’ordine: il proxy di questo computer, altrimenti quello del workspace, poi l’internet prestato di una persona, poi la solita strada. Con un proxy impostato, browser e siti degli agenti passano solo da lì: se cade, quei siti falliscono finché non torna o viene rimosso.",
+    "address": "Indirizzo del proxy",
+    "replace": "Nuovo indirizzo del proxy",
+    "addressHint": "HTTP, HTTPS o SOCKS5, con utente e password se servono. Salvato cifrato: si rivedono solo host e porta.",
+    "save": "Salva",
+    "test": "Prova",
+    "remove": "Rimuovi",
+    "exit": "Gli agenti escono da {{ip}}",
+    "exitIn": "Gli agenti escono da {{ip}}, in {{country}}",
+    "failed": {
+      "unreachable": "Il proxy non è raggiungibile. Controlla host e porta.",
+      "auth": "Il proxy ha rifiutato utente o password.",
+      "refused": "Il proxy ha risposto ma non ha raggiunto il sito di prova."
     }
   },
   "machines": {
@@ -20375,6 +20408,7 @@
       "redacted": "[rimosso: sembrava un accesso o una chiave]",
       "action_connect_ai": "Collega un'IA",
       "action_connect_app": "Collega {{name}}",
+      "action_proxy": "Usa il proxy {{name}}",
       "action_add_mcp": "Aggiungi un server MCP",
       "action_invite_people": "Invita persone",
       "action_install_skill": "Installa una skill",
@@ -20683,6 +20717,10 @@
     "offer_open_page": {
       "label": "Proponi di aprire una schermata",
       "description": "Pubblica una scheda il cui pulsante apre una schermata dell'app, come fatturazione, ruoli o la pagina di un agente."
+    },
+    "offer_proxy": {
+      "label": "Offrire di usare un proxy",
+      "description": "Pubblica una scheda che salva un proxy scritto da una persona, per gli agenti del workspace o di un computer."
     },
     "offer_voice_setup": {
       "label": "Offri di attivare i messaggi vocali",

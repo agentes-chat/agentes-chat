@@ -10,6 +10,7 @@ import {
   isEgressTarget,
   STREAM_CLOSE,
 } from "@agenteschat/adapters/machine-protocol";
+import { dialViaProxy, type ProxyAddress, ProxyDialError } from "@agenteschat/adapters/proxy-dial";
 import { publicAddress } from "./egress";
 import { pipeSocket } from "./egress-share";
 import type { NetworkConfig } from "./network-state";
@@ -28,8 +29,25 @@ export const SOCKS_REPLY = {
   notAllowed: 2,
   networkUnreachable: 3,
   hostUnreachable: 4,
+  /** The proxy the workspace chose (ADR 0262) didn't carry it: the guard must not send it another way. */
+  connectionRefused: 5,
   notSupported: 7,
 } as const;
+
+/**
+ * One connection through the proxy the workspace chose for its agents (ADR 0262), or a rejection the SOCKS and HTTP
+ * replies read as "refused here": never another way out, so a proxy chosen for its address never leaks this one.
+ */
+async function viaChosenProxy(proxy: ProxyAddress, target: Target): Promise<Opened> {
+  try {
+    return { tcp: await dialViaProxy(proxy, target.host, target.port) };
+  } catch (error) {
+    throw {
+      socksReply: SOCKS_REPLY.connectionRefused,
+      reason: error instanceof ProxyDialError ? error.reason : "unreachable",
+    };
+  }
+}
 
 /** The SOCKS reply for a data socket the server closed before `stream.ready`. */
 export function replyFor(closeCode: number | undefined): number {
@@ -82,12 +100,16 @@ type Open = (target: Target) => Promise<Opened>;
 export function startEgressRelay(o: {
   path: string;
   dial: (streamId: string, target: Target) => Promise<DataSocket>;
+  /** The proxy the workspace chose for its agents now (ADR 0262): every connection goes through it alone. */
+  upstream?: () => ProxyAddress | null;
 }): {
   close(): void;
 } {
   rmSync(o.path, { force: true });
   const open: Open = async (target) => {
     if (!isEgressTarget(target)) throw { closeCode: STREAM_CLOSE.refused };
+    const chosen = o.upstream?.();
+    if (chosen) return viaChosenProxy(chosen, target);
     return { data: await o.dial(randomBytes(32).toString("base64url"), target) };
   };
   const server = createServer((client) => serve(client, open));
@@ -171,6 +193,8 @@ export async function startEgressProxy(o: {
   home: string;
   dial: (streamId: string, target: Target) => Promise<DataSocket>;
   lent: () => boolean;
+  /** The proxy the workspace chose for its agents now (ADR 0262): before lending and the usual way, never after. */
+  upstream?: () => ProxyAddress | null;
   now?: () => number;
   resolve?: (host: string) => Promise<string[]>;
   /** Tests: where a direct connection goes. */
@@ -180,6 +204,8 @@ export async function startEgressProxy(o: {
   const resolve = o.resolve ?? (async (h: string) => (await lookup(h, { all: true })).map((a) => a.address));
   let quietUntil = 0;
   const open: Open = async (target) => {
+    const chosen = o.upstream?.();
+    if (chosen) return viaChosenProxy(chosen, target);
     if (o.lent() && isEgressTarget(target) && now() >= quietUntil) {
       try {
         return { data: await o.dial(randomBytes(32).toString("base64url"), target) };
@@ -287,6 +313,7 @@ const HTTP_REPLY: Record<number, string> = {
   [SOCKS_REPLY.notAllowed]: "403 Forbidden",
   [SOCKS_REPLY.networkUnreachable]: "502 Bad Gateway",
   [SOCKS_REPLY.hostUnreachable]: "504 Gateway Timeout",
+  [SOCKS_REPLY.connectionRefused]: "502 Bad Gateway",
   [SOCKS_REPLY.notSupported]: "405 Method Not Allowed",
 };
 const httpReply = (code: number) => Buffer.from(`HTTP/1.1 ${HTTP_REPLY[code] ?? "502 Bad Gateway"}\r\n\r\n`);
@@ -364,9 +391,9 @@ function serve(client: Socket, open: Open) {
         if (early.length > 0) data.send(new Uint8Array(early));
         pipeSocket(client, data);
       },
-      (error: { closeCode?: number }) => {
+      (error: { closeCode?: number; socksReply?: number }) => {
         clearTimeout(timer);
-        client.end(reply(replyFor(error?.closeCode)));
+        client.end(reply(error?.socksReply ?? replyFor(error?.closeCode)));
       },
     );
   };

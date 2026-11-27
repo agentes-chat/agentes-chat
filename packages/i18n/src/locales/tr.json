@@ -3962,6 +3962,14 @@
     "switchAi": "{{name}} için yapay zekayı değiştir"
   },
   "actionCard": {
+    "proxy": {
+      "title": "{{proxy}} proxy'sini kullan",
+      "save": "Kaydet",
+      "for": "{{where}} için",
+      "everyComputer": "workspace'in tüm bilgisayarları",
+      "saved": "{{proxy}}, {{where}} için kaydedildi",
+      "adminOnly": "Bir admin kaydeder"
+    },
     "connect_ai": {
       "title": "{{agents}} için bir yapay zeka bağlayın",
       "title_claude": "{{agents}} için bir Claude planı bağlayın",
@@ -16491,6 +16499,9 @@
       "notOwner": "Bu bilgisayarın araçlarını yalnızca onu bağlayan kişi açar. O kişiden isteyin.",
       "askSelf": "Bu sizin bilgisayarınız: düğmeyle açın.",
       "adminAskSelf": "Bunu burada kendiniz yapabilirsiniz.",
+      "proxyInvalid": "socks5://kullanici:sifre@host:1080 ya da http://host:3128 gibi bir proxy adresi kullan.",
+      "proxyForbidden": "Bu bilgisayarın proxy'sini yalnızca onu bağlayan kişi ya da bir admin ayarlar.",
+      "proxySourceGone": "Proxy adresinin olduğu mesaj artık yok. Yeniden gönder.",
       "accountMethodUnsupported": "Bu bilgisayar Claude'u henüz bu şekilde bağlayamıyor. Üzerindeki agentes.chat programını güncelleyin ya da bir API anahtarı kullanın.",
       "windowsOneGemini": "Windows'ta bir bilgisayar aynı anda tek bir Gemini hesabı kullanır. Bu hesapla giriş yapmak için diğer Gemini hesabını bu bilgisayardan kaldırın.",
       "brainUnavailable": "Bu yapay zekâ {{computer}} üzerinde henüz kurulmadı. Orada kurun ya da başka birini seçin.",
@@ -16614,6 +16625,28 @@
     "feedback": {
       "filesGone": "Eklediğiniz bir dosya artık yok. Yeniden ekleyin.",
       "filesPending": "Gönderilmeyi bekleyen çok fazla dosya var. Bazılarını gönderip ya da kaldırıp tekrar deneyin."
+    }
+  },
+  "agentProxy": {
+    "title": "Ajanlar için proxy",
+    "uses": "Ajanlar {{proxy}} üzerinden çıkıyor",
+    "usesWorkspace": "Ajanlar workspace'in proxy'si üzerinden çıkıyor, {{proxy}}",
+    "none": "Proxy yok: ajanlar, varsa bir kişinin ödünç verdiği internetten, yoksa her zamanki yoldan çıkar.",
+    "noneWorkspace": "Tüm bilgisayarlar için proxy yok. Her bilgisayarın kendi sayfasında kendi proxy'si de olabilir.",
+    "withSignIn": "kullanıcı adı ve şifreyle",
+    "order": "Sıra: bu bilgisayarın proxy'si, yoksa workspace'inki, sonra bir kişinin ödünç verdiği internet, sonra her zamanki yol. Bir proxy ayarlıyken ajanların tarayıcıları ve siteleri yalnızca onun üzerinden gider: çökerse, o siteler geri gelene ya da kaldırılana kadar açılmaz.",
+    "address": "Proxy adresi",
+    "replace": "Yeni proxy adresi",
+    "addressHint": "HTTP, HTTPS ya da SOCKS5. Gerekiyorsa kullanıcı adı ve şifre içinde olsun. Şifreli saklanır: yalnızca host ve port yeniden görünür.",
+    "save": "Kaydet",
+    "test": "Test et",
+    "remove": "Kaldır",
+    "exit": "Ajanlar {{ip}} adresinden çıkıyor",
+    "exitIn": "Ajanlar {{ip}} adresinden çıkıyor, {{country}}",
+    "failed": {
+      "unreachable": "Proxy'ye ulaşılamadı. Host ve portu kontrol et.",
+      "auth": "Proxy kullanıcı adını ya da şifreyi reddetti.",
+      "refused": "Proxy yanıt verdi ama test sitesine ulaşamadı."
     }
   },
   "machines": {
@@ -19656,6 +19689,7 @@
       "redacted": "[kaldırıldı: bir oturum açma bilgisi ya da anahtar gibi görünüyordu]",
       "action_connect_ai": "Yapay zeka bağla",
       "action_connect_app": "{{name}} bağla",
+      "action_proxy": "{{name}} proxy'sini kullan",
       "action_add_mcp": "Bir MCP sunucusu ekle",
       "action_invite_people": "Kişileri davet et",
       "action_install_skill": "Beceri yükle",
@@ -19961,6 +19995,10 @@
     "offer_open_page": {
       "label": "Bir ekran açmayı öner",
       "description": "Düğmesi faturalandırma, roller veya bir ajanın sayfası gibi uygulamanın bir ekranını açan bir kart paylaşır."
+    },
+    "offer_proxy": {
+      "label": "Proxy kullanmayı öner",
+      "description": "Bir kişinin yazdığı proxy'yi workspace'in ya da bir bilgisayarın ajanları için kaydeden bir kart paylaşır."
     },
     "offer_voice_setup": {
       "label": "Sesli mesajları açmayı öner",

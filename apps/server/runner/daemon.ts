@@ -42,6 +42,7 @@ import {
   TASK_LIMIT_BOUNDS,
   type TaskRoomReport,
 } from "@agenteschat/adapters/machine-protocol";
+import { type ProxyAddress, parseProxyUrl } from "@agenteschat/adapters/proxy-dial";
 import { redactCommon } from "@agenteschat/adapters/redact";
 import {
   type ActivityEntry,
@@ -532,6 +533,10 @@ export class RunnerDaemon implements RequestObserver {
   private egressProxy: Promise<{ port: number; close(): void }> | null = null;
   private egressPort: number | null = null;
   private egressLent = false;
+  /** The server says this computer borrows a person's internet (ADR 0237). */
+  private borrowsLent = false;
+  /** The proxy the workspace chose for its agents (ADR 0262): user and password in memory only. */
+  private customProxy: ProxyAddress | null = null;
   private refusedNetworkKey: string | null = null;
   private networkWriteFailed = false;
   private egressGeneration = 0;
@@ -1904,6 +1909,7 @@ export class RunnerDaemon implements RequestObserver {
       reportParts: () => this.reportParts(),
       egressShare: this.egressShare,
       egressProxy: (on) => this.borrowEgress(on),
+      chooseProxy: (url) => this.chooseProxy(url),
       streamStarting: (streamId) => void this.send({ type: "stream.starting", streamId }),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
@@ -1974,9 +1980,11 @@ export class RunnerDaemon implements RequestObserver {
           ? startEgressRelay({
               path: path.join(home, EGRESS_RELAY_SOCKET),
               dial: (streamId, target) => streams.dial(streamId, "egress", undefined, target),
+              upstream: () => this.customProxy,
             })
           : null;
-        void this.borrowEgress(welcome.egressProxy);
+        this.borrowsLent = welcome.egressProxy;
+        void this.chooseProxy(welcome.proxy);
         this.sentNetworkTransition = "";
         this.observeNetwork();
         this.egressGeneration++;
@@ -2284,15 +2292,18 @@ export class RunnerDaemon implements RequestObserver {
    * the runner itself goes out through its operator's proxy: theirs wins.
    */
   private async borrowEgress(on: boolean): Promise<boolean> {
+    this.borrowsLent = on;
     const server = this.config?.server;
-    if (on && server && !hasOwnProxy(process.env, this.session?.network ?? this.config)) {
+    // A proxy the workspace chose (ADR 0262) runs the loopback proxy on any computer, borrowing or not.
+    if ((on || this.customProxy) && server && !hasOwnProxy(process.env, this.session?.network ?? this.config)) {
       this.egressProxy ??= startEgressProxy({
         home: this.opts.home,
         dial: (streamId, target) =>
           this.session
             ? this.session.streams.dial(streamId, "egress", undefined, target)
             : Promise.reject(new Error("offline")),
-        lent: () => this.egressLent,
+        lent: () => this.borrowsLent,
+        upstream: () => this.customProxy,
       });
       const proxy = await this.egressProxy.catch((error: unknown) => {
         this.opts.log(`The web proxy for agents didn't start: ${String(error)}`);
@@ -2308,6 +2319,12 @@ export class RunnerDaemon implements RequestObserver {
     }
     this.session?.supervisor?.stateChanged();
     return this.egressLent;
+  }
+
+  /** ADR 0262: the proxy its agents use now (`welcome.proxy`, `proxy.set`); null: none. */
+  private async chooseProxy(url: string | null): Promise<boolean> {
+    this.customProxy = url ? parseProxyUrl(url) : null;
+    return this.borrowEgress(this.borrowsLent);
   }
 
   private async closeSession(s: Session) {

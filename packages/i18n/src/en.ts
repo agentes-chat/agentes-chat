@@ -4356,6 +4356,16 @@ export const en = {
   },
 
   actionCard: {
+    /** "Use this proxy" (`offer_proxy`): a proxy a person typed, saved for agents in one click. */
+    proxy: {
+      title: "Use the proxy {{proxy}}",
+      save: "Save",
+      /** `where`: a computer's name, or `everyComputer`. */
+      for: "For {{where}}",
+      everyComputer: "every computer of the workspace",
+      saved: "Saved {{proxy}} for {{where}}",
+      adminOnly: "An admin saves it",
+    },
     connect_ai: {
       title: "Connect an AI for {{agents}}",
       title_claude: "Connect a Claude plan for {{agents}}",
@@ -17068,6 +17078,9 @@ export const en = {
       askSelf: "It's your computer: turn it on with the button.",
       /** "Pedir a um admin" from someone who may do it themselves. */
       adminAskSelf: "You can do this here yourself.",
+      proxyInvalid: "Use a proxy address like socks5://user:password@host:1080 or http://host:3128.",
+      proxyForbidden: "Only whoever connected this computer, or an admin, sets its proxy.",
+      proxySourceGone: "The message with the proxy's address is gone. Send it again.",
       accountMethodUnsupported:
         "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
       windowsOneGemini:
@@ -17211,6 +17224,32 @@ export const en = {
     feedback: {
       filesGone: "A file you added is gone. Add it again.",
       filesPending: "Too many files are waiting to be sent. Send or remove some, then try again.",
+    },
+  },
+  /** A proxy for agents (ADR 0262): the workspace's (Settings › Computers) or one computer's (its page). */
+  agentProxy: {
+    title: "Proxy for agents",
+    /** `proxy`: `socks5://host:1080`, never its user or password. */
+    uses: "Agents go out through {{proxy}}",
+    usesWorkspace: "Agents go out through the workspace's proxy, {{proxy}}",
+    none: "No proxy: agents go out through a person's lent internet when there is one, else the usual way.",
+    noneWorkspace: "No proxy for every computer. A computer can also have its own, on its page.",
+    withSignIn: "with a user and password",
+    order:
+      "The order: this computer's proxy, else the workspace's, then a person's lent internet, then the usual way. While a proxy is set, agents' browsers and websites go through it alone: if it's down, those sites fail until it's back or removed.",
+    address: "Proxy address",
+    replace: "New proxy address",
+    addressHint:
+      "HTTP, HTTPS or SOCKS5, with the user and password in it if it needs them. Kept encrypted: only its host and port show again.",
+    save: "Save",
+    test: "Test",
+    remove: "Remove",
+    exit: "Agents come out at {{ip}}",
+    exitIn: "Agents come out at {{ip}}, in {{country}}",
+    failed: {
+      unreachable: "The proxy couldn't be reached. Check its host and port.",
+      auth: "The proxy refused the user or password.",
+      refused: "The proxy answered but didn't reach the test site.",
     },
   },
   machines: {
@@ -20580,6 +20619,7 @@ export const en = {
       redacted: "[removed: it looked like a sign-in or a key]",
       action_connect_ai: "Connect an AI",
       action_connect_app: "Connect {{name}}",
+      action_proxy: "Use the proxy {{name}}",
       action_add_mcp: "Add an MCP server",
       action_invite_people: "Invite people",
       action_install_skill: "Install a skill",
@@ -20903,6 +20943,10 @@ export const en = {
     offer_open_page: {
       label: "Offer to open a screen",
       description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+    },
+    offer_proxy: {
+      label: "Offer to use a proxy",
+      description: "Posts a card that saves a proxy a person typed, for the workspace's agents or one computer's.",
     },
     offer_voice_setup: {
       label: "Offer to turn on voice messages",

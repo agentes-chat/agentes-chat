@@ -5726,6 +5726,28 @@ export interface MachineAccessReduce {
   disableTool?: MachineToolName | "browser" | "desktop" | "terminal";
 }
 
+/** A proxy for agents as the apps see it (ADR 0262): never its user or password. */
+export interface AgentProxyView {
+  /** `socks5://host:1080`. */
+  label: string;
+  scheme: "http" | "https" | "socks5";
+  host: string;
+  port: number;
+  hasAuth: boolean;
+  updatedAt: string;
+}
+
+/** The workspace's proxy for agents and each computer's own, by its id. */
+export interface AgentProxies {
+  workspace: AgentProxyView | null;
+  computers: Record<string, AgentProxyView>;
+}
+
+/** Where agents come out through a proxy, or why the test didn't get through. */
+export type AgentProxyTest =
+  | { ok: true; ip: string; country: string | null }
+  | { ok: false; reason: "unreachable" | "auth" | "refused" };
+
 /** "Pedir a um admin" (`POST …/admin-asks`): what the asker can't do here themselves. */
 export type AdminAsk =
   | { what: "channel_agent"; channelId: string; agentId: string }

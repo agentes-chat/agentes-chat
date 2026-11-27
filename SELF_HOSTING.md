@@ -278,6 +278,22 @@ nothing from this.
 </details>
 
 <details>
+<summary><b>A proxy of your own for agents</b></summary>
+
+Settings › Devices has **Proxy for agents**: an HTTP, HTTPS or SOCKS5 address (`socks5://user:password@host:1080`)
+that every computer's agents use, and each computer's page can set its own, which wins there. It comes first: a
+computer's proxy, else the workspace's, then a person's lent internet, then the usual way. While one is set, agents'
+browsers and programs go through it alone, so a proxy that is down makes their websites fail until it is back or
+removed; nothing falls back to your server's address. **Test** makes one request through it from your server and
+shows the address and country agents come out at. The address is stored encrypted and never shown again (only its
+host and port); the runner keeps it in memory and tells agents' programs only its own `127.0.0.1` proxy, as above,
+with the same `NO_PROXY` list. Agents can also save one from the chat ("use the proxy socks5://… for the browser"):
+their card saves it with one click, and the password is then hidden in that message. The proxy's host must be a
+public address, unless you allowed its range for outbound connections.
+
+</details>
+
+<details>
 <summary><b>Phones for agents</b></summary>
 
 Agents use a phone through a computer you connected (Connect a computer, above): **Settings › Devices

@@ -4277,6 +4277,14 @@
     "switchAi": "Zmień AI agenta {{name}}"
   },
   "actionCard": {
+    "proxy": {
+      "title": "Użyj proxy {{proxy}}",
+      "save": "Zapisz",
+      "for": "Dla: {{where}}",
+      "everyComputer": "wszystkie komputery workspace’u",
+      "saved": "Zapisano {{proxy}} dla: {{where}}",
+      "adminOnly": "Zapisuje to admin"
+    },
     "connect_ai": {
       "title": "Połącz AI dla: {{agents}}",
       "title_claude": "Połącz plan Claude dla: {{agents}}",
@@ -17699,6 +17707,9 @@
       "notOwner": "Narzędzia tego komputera włącza tylko osoba, która go podłączyła. Poproś ją.",
       "askSelf": "To Twój komputer: włącz to przyciskiem.",
       "adminAskSelf": "Możesz to zrobić tutaj sam.",
+      "proxyInvalid": "Użyj adresu proxy w stylu socks5://uzytkownik:haslo@host:1080 albo http://host:3128.",
+      "proxyForbidden": "Proxy tego komputera ustawia tylko osoba, która go połączyła, albo admin.",
+      "proxySourceGone": "Wiadomości z adresem proxy już nie ma. Wyślij go ponownie.",
       "accountMethodUnsupported": "Ten komputer nie może jeszcze połączyć Claude w ten sposób. Zaktualizuj na nim program agentes.chat albo użyj klucza API.",
       "windowsOneGemini": "W systemie Windows komputer używa jednego konta Gemini naraz. Usuń drugie konto Gemini z tego komputera, aby zalogować się tym.",
       "brainUnavailable": "Ta AI nie jest jeszcze skonfigurowana na {{computer}}. Skonfiguruj ją tam albo wybierz inną.",
@@ -17824,6 +17835,28 @@
     "feedback": {
       "filesGone": "Dodany plik zniknął. Dodaj go ponownie.",
       "filesPending": "Zbyt wiele plików czeka na wysłanie. Wyślij lub usuń część i spróbuj ponownie."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy dla agentów",
+    "uses": "Agenci wychodzą przez {{proxy}}",
+    "usesWorkspace": "Agenci wychodzą przez proxy workspace’u, {{proxy}}",
+    "none": "Brak proxy: agenci wychodzą przez pożyczony internet jakiejś osoby, jeśli jest, a w przeciwnym razie zwykłą drogą.",
+    "noneWorkspace": "Brak proxy dla wszystkich komputerów. Każdy komputer może też mieć własne, na swojej stronie.",
+    "withSignIn": "z użytkownikiem i hasłem",
+    "order": "Kolejność: proxy tego komputera, w przeciwnym razie proxy workspace’u, potem pożyczony internet jakiejś osoby, potem zwykła droga. Gdy proxy jest ustawione, przeglądarki i strony agentów idą tylko przez nie: jeśli padnie, te strony nie działają, dopóki nie wróci albo nie zostanie usunięte.",
+    "address": "Adres proxy",
+    "replace": "Nowy adres proxy",
+    "addressHint": "HTTP, HTTPS albo SOCKS5, z użytkownikiem i hasłem w środku, jeśli są potrzebne. Przechowywane w postaci zaszyfrowanej: ponownie widać tylko host i port.",
+    "save": "Zapisz",
+    "test": "Testuj",
+    "remove": "Usuń",
+    "exit": "Agenci wychodzą pod adresem {{ip}}",
+    "exitIn": "Agenci wychodzą pod adresem {{ip}}, kraj: {{country}}",
+    "failed": {
+      "unreachable": "Nie udało się połączyć z proxy. Sprawdź host i port.",
+      "auth": "Proxy odrzuciło użytkownika lub hasło.",
+      "refused": "Proxy odpowiedziało, ale nie dotarło do strony testowej."
     }
   },
   "machines": {
@@ -20979,6 +21012,7 @@
       "redacted": "[usunięto: wyglądało na dane logowania lub klucz]",
       "action_connect_ai": "Połącz AI",
       "action_connect_app": "Połącz {{name}}",
+      "action_proxy": "Użyj proxy {{name}}",
       "action_add_mcp": "Dodaj serwer MCP",
       "action_invite_people": "Zaproś osoby",
       "action_install_skill": "Zainstaluj umiejętność",
@@ -21290,6 +21324,10 @@
     "offer_open_page": {
       "label": "Zaproponuj otwarcie ekranu",
       "description": "Publikuje kartę z przyciskiem, który otwiera ekran aplikacji, na przykład płatności, role lub stronę agenta."
+    },
+    "offer_proxy": {
+      "label": "Zaproponuj użycie proxy",
+      "description": "Publikuje kartę, która zapisuje proxy wpisane przez osobę, dla agentów workspace’u albo jednego komputera."
     },
     "offer_voice_setup": {
       "label": "Zaproponuj włączenie wiadomości głosowych",

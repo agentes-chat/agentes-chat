@@ -145,6 +145,8 @@ export interface ConnectionOptions {
     egressRelay: boolean;
     /** `EGRESS_PROXY_PROTOCOL`: this computer borrows a person's internet through its loopback proxy. */
     egressProxy: boolean;
+    /** `CUSTOM_PROXY_PROTOCOL`: the proxy the workspace chose for its agents, user and password included; null: none. */
+    proxy: string | null;
   }) => void;
   /** Protocol 9: the server's `agents` frame (the agents that use this machine). */
   onAgents?: (agents: unknown, deleted: unknown) => void;
@@ -395,6 +397,7 @@ export class RunnerConnection {
               observeEgress,
               egressRelay: frame.egressRelay === true,
               egressProxy: frame.egressProxy === true,
+              proxy: typeof frame.proxy === "string" ? frame.proxy : null,
             });
             // First: a supervisor passes what this server does with a repeated call on to its workers' welcome.
             opts.mcp?.attach(send, { mcpOnce: frame.mcpOnce === true });

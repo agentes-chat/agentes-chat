@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./machine-protocol": "./src/machine-protocol.ts",
     "./runner-control": "./src/runner-control.ts",
+    "./proxy-dial": "./src/proxy-dial.ts",
     "./command-policy": "./src/command-policy.ts",
     "./secret-box": "./src/secret-box.ts",
     "./redact": "./src/redact.ts",
