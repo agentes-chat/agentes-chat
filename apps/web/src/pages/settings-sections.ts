@@ -1,10 +1,11 @@
 import type { AuthConfig, OrgSummary } from "@agenteschat/client";
 import { selfHosted, showsAbout } from "@agenteschat/client/lib/about";
 import { can } from "@agenteschat/client/lib/permissions";
-import { personalSettingsShort } from "@agenteschat/client/lib/personal-view";
-import { settingsEntry, teamSettings } from "@agenteschat/client/lib/settings-nav";
+import { personalSettingsShort, settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
+import { settingsEntry, settingsNav, teamSettings } from "@agenteschat/client/lib/settings-nav";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { IconName } from "@agenteschat/ui";
+import type { TFunction } from "i18next";
 
 // Apart from the settings page so the shell (⌘K, the sidebar) and the settings routes' guards can read
 // the sections without loading the page itself.
@@ -121,6 +122,45 @@ export function settingsNavEntry(
 ): SettingsSection {
   const entry = settingsEntry(current, new Set(open), short);
   return isSettingsSection(entry) ? entry : current;
+}
+
+/** One line of the settings list: its section, words, icon and address. */
+export interface SettingsNavItem {
+  id: SettingsSection;
+  label: string;
+  icon: IconName;
+  path: string;
+}
+
+/**
+ * The settings list as the page shows it, and as the desktop app's layer shows it above This {{device}} (ADR 0255 §2):
+ * the short list, then Advanced, each line with its words (a team's Workspace, People and Connectors hold more than the
+ * section they open on), icon and address. Pure: the same model in both places.
+ */
+export function settingsNavModel(
+  t: TFunction,
+  org: OrgSummary,
+  server: AuthConfig | undefined,
+  others?: number,
+): { main: SettingsNavItem[]; advanced: SettingsNavItem[] } {
+  const visible = SETTINGS_SECTIONS.filter((s) => s.allowed(org, server));
+  const nav = settingsNav(visible, settingsShort(org, server, others));
+  const personal = isPersonal(org);
+  const label = (id: SettingsSection) =>
+    !personal && id === "general"
+      ? t("settings.group.org")
+      : !personal && id === "members"
+        ? t("settings.section.membersPersonal")
+        : !personal && id === "connectors"
+          ? t("access.kind.connectors")
+          : t(settingsSectionNameKey(org, id));
+  const item = (s: (typeof SETTINGS_SECTIONS)[number]): SettingsNavItem => ({
+    id: s.id,
+    label: label(s.id),
+    icon: s.icon,
+    path: `/org/${org.id}/settings/${s.id}`,
+  });
+  return { main: nav.main.map(item), advanced: nav.advanced.map(item) };
 }
 
 /**

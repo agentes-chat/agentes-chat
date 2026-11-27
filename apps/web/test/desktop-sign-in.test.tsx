@@ -8,6 +8,7 @@ setupDom();
 import type { SignInOptions } from "@agenteschat/client";
 import { act, cleanup, fireEvent } from "@testing-library/react";
 import { ASK_BLUR_MS } from "@/components/BackToApp";
+import { REDEEM_FOR_MS } from "@/pages/AuthPage";
 import { createFakeApi, seedState } from "./fake-api";
 import { createFakeAuth } from "./fake-auth";
 import { renderApp, screen, settle } from "./render";
@@ -131,6 +132,108 @@ describe("in the Mac app's window", () => {
     expect(rule(".auth__code")).toContain("flex-direction: column;");
     expect(rule(".auth__code")).toContain("align-items: center;");
     expect(rule(".auth__codeValue")).toContain("white-space: nowrap;");
+  });
+
+  test("from the app's first screen (`?with=google`): the address drops it, then Google opens in the browser", async () => {
+    app().__agentesDesktop = { version: "0.20.0", settings: 1 };
+    const assign = recordAssign();
+    const { auth, calls } = createFakeAuth();
+    const state = seedState({ me: null });
+    state.authConfig = { socialProviders: { google: true, github: true } };
+    try {
+      const { router } = await renderApp("/login?with=google", { api: createFakeApi(state), auth });
+      await settle(6);
+      // A reload never opens the browser again.
+      expect((router.state.location.search as Record<string, unknown>).with).toBeUndefined();
+      expect(calls.filter((c) => c.method === "desktopOpen")).toHaveLength(1);
+      expect(calls.some((c) => c.method === "signInSocial")).toBe(false);
+      expect(heading()).toBe("Continue no navegador");
+      const url = new URL(assign.urls[0] ?? "", "https://app.agentes.chat");
+      expect(url.pathname).toBe("/desktop/sign-in");
+      expect(url.searchParams.get("provider")).toBe("google");
+      expect(assign.urls).toHaveLength(1);
+    } finally {
+      assign.restore();
+    }
+  });
+
+  test("`?with=` for a provider this server doesn't offer: the e-mail step, nothing opened", async () => {
+    app().__agentesDesktop = { version: "0.20.0", settings: 1 };
+    const assign = recordAssign();
+    const { auth, calls } = createFakeAuth();
+    try {
+      const { router } = await renderApp("/login?with=apple", {
+        api: createFakeApi(seedState({ me: null })),
+        auth,
+      });
+      await settle(6);
+      expect((router.state.location.search as Record<string, unknown>).with).toBeUndefined();
+      expect(calls.some((c) => c.method === "desktopOpen")).toBe(false);
+      expect(assign.urls).toEqual([]);
+      expect(screen().getByRole("textbox", { name: "E-mail" })).toBeTruthy();
+    } finally {
+      assign.restore();
+    }
+  });
+
+  test("`?with=` outside the app, or one the page doesn't know: nothing starts by itself", async () => {
+    const { auth, calls } = createFakeAuth();
+    const state = seedState({ me: null });
+    state.authConfig = { socialProviders: { google: true, github: true } };
+    await renderApp("/login?with=google", { api: createFakeApi(state), auth });
+    await settle(6);
+    expect(calls).toEqual([]);
+    cleanup();
+    app().__agentesDesktop = { version: "0.20.0", settings: 1 };
+    const other = createFakeAuth();
+    const { router } = await renderApp("/login?with=github", { api: createFakeApi(state), auth: other.auth });
+    await settle(6);
+    expect(other.calls).toEqual([]);
+    expect((router.state.location.search as Record<string, unknown>).with).toBeUndefined();
+  });
+
+  test("the browser never came back: after the wait, the window says the sign-in expired, with Start again", async () => {
+    app().__agentesDesktop = { version: "0.20.0", settings: 1 };
+    const assign = recordAssign();
+    // The ten minutes' timer is held, and run by hand.
+    const held: (() => void)[] = [];
+    const original = globalThis.setTimeout;
+    const timers = spyOn(globalThis, "setTimeout").mockImplementation(((fn: () => void, ms?: number, ...rest: []) => {
+      if (ms === REDEEM_FOR_MS) {
+        held.push(fn);
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }
+      return original(fn, ms, ...rest);
+    }) as unknown as typeof setTimeout);
+    const { auth, calls } = createFakeAuth();
+    const api = createFakeApi(seedState({ me: null }));
+    api.account.signInOptions = async () => ACCOUNT;
+    try {
+      await renderApp("/login", { api, auth });
+      await act(async () => fireEvent.click(screen().getByRole("button", { name: /Continuar com GitHub/ })));
+      await settle(6);
+      expect(heading()).toBe("Continue no navegador");
+      expect(held).toHaveLength(1);
+      await act(async () => held.shift()?.());
+      await settle(3);
+      expect(heading()).toBe("O login expirou");
+      expect(document.querySelector(".auth__codeValue")).toBeNull();
+      // Stopped asking: back in front, nothing is redeemed any more.
+      const redeems = calls.filter((c) => c.method === "desktopRedeem").length;
+      await act(async () => window.dispatchEvent(new Event("focus")));
+      await settle(3);
+      expect(calls.filter((c) => c.method === "desktopRedeem")).toHaveLength(redeems);
+      // Start again: a new request, the browser again, the code again.
+      await act(async () => fireEvent.click(screen().getByRole("button", { name: "Começar de novo" })));
+      await settle(6);
+      expect(calls.filter((c) => c.method === "desktopOpen")).toHaveLength(2);
+      expect(heading()).toBe("Continue no navegador");
+      expect(document.querySelector(".auth__codeValue")?.textContent).toBe("KQ7M-3XPF");
+      expect(assign.urls).toHaveLength(2);
+    } finally {
+      timers.mockRestore();
+      assign.restore();
+    }
   });
 
   test("outside the app, GitHub signs in right here as before", async () => {

@@ -1,0 +1,38 @@
+/*
+ * Settings › This {{device}} in the desktop app (ADR 0255 §2): a third group of the settings list, its heading in the
+ * sidebar's group-label style, lined up with the links' icons. Its rows are `.settings__link` buttons (layout.css).
+ */
+.settings__group-title {
+  margin: 0;
+  padding: 0 10px 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+/* Something on this computer needs the person: a dot in the warning colour at the row's end, never a pill. */
+.settings__needs {
+  flex: none;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--warn);
+}
+/* Over the strip (a narrow window), the group's rows go on in the same line; its name stays for screen readers. */
+@media (max-width: 940px) {
+  .settings__group-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .settings__needs {
+    margin-left: 0;
+  }
+}

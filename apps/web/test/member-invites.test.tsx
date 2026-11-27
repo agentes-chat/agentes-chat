@@ -196,7 +196,7 @@ describe("the invite dialog, one screen", () => {
     const invite = await openInvite();
     expect(within(invite).getByRole("alert").textContent).toBe(NOTE);
     expect(invite.textContent).toContain(
-      "ligue Acessar pelo celular e pela equipe em Preferências\u00a0›\u00a0Servidores",
+      "ligue Acessar pelo celular e pela equipe em Configurações\u00a0›\u00a0Servidor neste Mac",
     );
     cleanup();
     await members(state, "invites");

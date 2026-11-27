@@ -215,9 +215,9 @@ export const browserSignInUrl = (provider: SignInProvider, requestId: string, ac
 /**
  * What the site may ask of this computer (ADR 0036, `this_mac` in main_window.rs): which of this server's
  * organizations it works for, pairing it with one (the app asks the person in its own dialog first; the site
- * then confirms the runner's code with its own session), reconnecting it, the app's Preferences on a tab, its
- * access requests, the badge, notifications, the app's icon (ADR 0179) and the app's own speed numbers. Nothing else
- * reaches the computer.
+ * then confirms the runner's code with its own session), reconnecting it, the app's settings for this computer on a
+ * section (ADR 0255 §6), its access requests, the badge, notifications, the app's icon (ADR 0179) and the app's own
+ * speed numbers. Nothing else reaches the computer.
  */
 export interface ThisMacStatus {
   orgs: { orgId: string; machineId: string | null; connection: string }[];
@@ -287,8 +287,66 @@ export function routeNewWindowLinks(): () => void {
   return () => document.removeEventListener("click", onClick, true);
 }
 
-/** The app's Preferences tabs a page may open (`answerThisMac` in apps/desktop control/this-mac.ts). */
+/**
+ * The sections of This {{device}}'s settings in the app's own layer (ADR 0255 §6): Overview, Folders and tools, Server
+ * on this {{device}} (only while the server runs here), Activity and App settings.
+ */
+export type ThisDeviceSection = "overview" | "folders" | "server" | "activity" | "app";
+export const THIS_DEVICE_SECTIONS: readonly ThisDeviceSection[] = ["overview", "folders", "server", "activity", "app"];
+
+/** What a section opens scrolled to (the app's allowlist, `checked()` in main_window.rs). */
+export type ThisDeviceFocus =
+  | "tools"
+  | "updates"
+  | "reach"
+  | "telemetry"
+  | "phone"
+  | "backups"
+  | "notifications"
+  | "servers";
+
+/**
+ * This computer's health as the app keeps it (`thisMacHealth`, ADR 0255 §2): how many of the things that keep agents
+ * working need the person now, and whether the server runs on this computer.
+ */
+export interface ThisDeviceHealth {
+  needs: number;
+  server: boolean;
+}
+
+/** One line of the workspace's settings list, as the app's layer shows it above This {{device}} (ADR 0255 §2). */
+export interface DesktopSettingsNavItem {
+  id: string;
+  label: string;
+  icon: string;
+  path: string;
+}
+/** The workspace's settings list the app's layer shows; `org: null` takes it away (the workspace's pages left). */
+export interface DesktopSettingsNav {
+  org: { id: string; name: string } | null;
+  main: DesktopSettingsNavItem[];
+  advanced: DesktopSettingsNavItem[];
+}
+
+/** The app has This {{device}}'s settings in its own layer (`settings` in `window.__agentesDesktop`, ADR 0255). */
+export const desktopHasSettingsLayer = () => {
+  if (!inDesktopApp()) return false;
+  const flag = (window as { __agentesDesktop?: { settings?: unknown } }).__agentesDesktop?.settings;
+  return flag === 1 || flag === true;
+};
+
+/**
+ * The Preferences tab of an app from before the layer (ADR 0036), for a section and focus of the layer's: only the ones
+ * it had (`folders`, `tools`, `updates`, `servers`); null where it had none.
+ */
 export type PrefsTab = "folders" | "tools" | "updates" | "servers";
+export function prefsTabFor(section?: ThisDeviceSection, focus?: ThisDeviceFocus): PrefsTab | null {
+  if (section === "folders") return focus === "tools" ? "tools" : "folders";
+  if (section === "overview") return focus === "updates" ? "updates" : null;
+  if (section === "server") return "servers";
+  if (section === "app") return focus === "servers" ? "servers" : null;
+  return null;
+}
 
 export const thisMac = {
   status: () => invoke<ThisMacStatus>({ kind: "status" }),
@@ -300,13 +358,33 @@ export const thisMac = {
     invoke<{ userCode: string | null }>({ kind: "connect", orgId, ...(orgName ? { orgName } : {}) }),
   /** The socket again (this Mac went offline for `orgId`). */
   reconnect: (orgId: string) => invoke<unknown>({ kind: "reconnect", orgId }),
+  /**
+   * This {{device}}'s settings in the app's layer, on `section` (Overview when none) and scrolled to `focus` (ADR 0255
+   * §2). Only apps with the layer (`desktopHasSettingsLayer`); `openThisDeviceSettings` falls back for older ones.
+   */
+  openSettings: (section?: ThisDeviceSection, focus?: ThisDeviceFocus) =>
+    invoke<unknown>({ kind: "settings", ...(section ? { section } : {}), ...(focus ? { focus } : {}) }),
+  /** The Preferences window of an app from before the layer (ADR 0036): only as the fallback for those apps. */
   openPrefs: (tab: PrefsTab) => invoke<unknown>({ kind: "prefs", tab }),
+  /** How many things need the person on this computer, and whether the server runs here (ADR 0255 §2). */
+  health: () =>
+    invoke<Partial<ThisDeviceHealth>>({ kind: "thisMacHealth" }).then(
+      (h): ThisDeviceHealth => ({
+        needs: typeof h?.needs === "number" && Number.isFinite(h.needs) && h.needs > 0 ? Math.floor(h.needs) : 0,
+        server: h?.server === true,
+      }),
+    ),
+  /**
+   * The Local Network permission, asked just in time (an Android phone pairing over Wi-Fi): the system's own question
+   * the first time, System Settings on that list after (ADR 0255 §7).
+   */
+  localNetwork: () => invoke<unknown>({ kind: "localNetwork" }),
+  /** The workspace's settings list, for the app's layer to show above This {{device}} (ADR 0255 §2). */
+  settingsNav: (nav: DesktopSettingsNav) => invoke<unknown>({ kind: "settingsNav", ...nav }),
   /** The menu bar's popover, where access requests are answered. */
   showRequests: () => invoke<unknown>({ kind: "requests" }),
   /** System Settings on the microphone's list (a voice message macOS refused); an older app refuses it. */
   openMicrophoneSettings: () => invoke<unknown>({ kind: "privacy", pane: "microphone" }),
-  /** System Settings on the Local Network list (Wi-Fi pairing found no phone); an older app refuses it. */
-  openLocalNetworkSettings: () => invoke<unknown>({ kind: "privacy", pane: "network" }),
   /**
    * The app icon on this computer (ADR 0179): one of the app's ids, or an agent with the Dock's and the windows'
    * pictures drawn here (PNG in base64); the app keeps and shows it, and answers the one kept (nothing asked: reads it).
@@ -354,6 +432,15 @@ export const thisMac = {
   openServer: (server: string) => invoke<unknown>({ kind: "openServer", server }),
 };
 
+/**
+ * This {{device}}'s settings on `section`: the app's layer where it has one (ADR 0255), else the old Preferences on the
+ * matching tab (`prefsTabFor`); an old app with no such tab opens Preferences on Folders, the closest it had.
+ */
+export function openThisDeviceSettings(section?: ThisDeviceSection, focus?: ThisDeviceFocus): Promise<unknown> {
+  if (desktopHasSettingsLayer()) return thisMac.openSettings(section, focus);
+  return thisMac.openPrefs(prefsTabFor(section, focus) ?? "folders");
+}
+
 /** The app lists every server's workspaces (`workspaces` in `window.__agentesDesktop`, ADR 0154); older apps don't. */
 export const desktopListsWorkspaces = () =>
   inDesktopApp() && (window as { __agentesDesktop?: { workspaces?: unknown } }).__agentesDesktop?.workspaces === true;
@@ -371,7 +458,7 @@ export const desktopRevealsFiles = () =>
   inDesktopApp() && (window as { __agentesDesktop?: { files?: unknown } }).__agentesDesktop?.files === true;
 
 /**
- * The app's "Show QR code" (Preferences › Servers) opens the site with `?open=phone`: "Open on your phone"
+ * The app's "Show QR code" (Server on this {{device}}) opens the site with `?open=phone`: "Open on your phone"
  * opens once the account button is on screen.
  */
 const phone = { asked: false, listeners: new Set<() => void>() };

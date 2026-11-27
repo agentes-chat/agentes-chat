@@ -727,6 +727,10 @@ export const ptBR = {
       browserLead: "A gente volta para cá quando você entrar com {{provider}}.",
       codeHint: "O navegador vai mostrar este código. Confira se é o mesmo antes de continuar.",
       reopen: "Abrir o navegador de novo",
+      // The browser's sign-in ran out of time (ADR 0255 §3).
+      timedOut: "O login expirou",
+      timedOutLead: "O navegador não voltou em 10 minutos. Comece de novo quando quiser.",
+      startAgain: "Começar de novo",
       otherWay: "Usar outro jeito de entrar",
       otherServer: "Usar outro servidor",
       opening: "Abrindo {{provider}}…",
@@ -2515,7 +2519,7 @@ export const ptBR = {
     failed: "Não deu para gerar o código.",
     localOnly: "Este servidor só abre no computador onde ele roda, então o celular não chega a ele.",
     localOnlyHow:
-      "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Preferências › Servidores. Depois volte aqui.",
+      "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Configurações › Servidor neste {{device}}. Depois volte aqui.",
     localOnlyHere: "Ligue Acessar pelo celular e pela equipe. Depois volte aqui.",
   },
   surface: {
@@ -6642,14 +6646,14 @@ export const ptBR = {
         title: "Falta 1 passo, no próprio {{computer}}",
         waiting: "Esperando",
         one: "Clique no ícone do agentes.chat perto do relógio",
-        two: "Preferências",
+        two: "Configurações deste {{device}}",
         three: "Ligue o Navegador",
         done: "Pronto. Esta página percebe sozinha, não precisa recarregar.",
         menuOpen: "Abrir agentes",
-        menuPrefs: "Preferências…",
+        menuPrefs: "Configurações deste {{device}}…",
         menuPause: "Pausar",
         menuQuit: "Sair",
-        tools: "Ferramentas",
+        tools: "Pastas e ferramentas",
         commands: "Comandos",
       },
       offlineCloud:
@@ -8523,7 +8527,7 @@ export const ptBR = {
     localOnly:
       "Este servidor só abre no computador onde ele roda, então quem você convidar não consegue abrir o convite.",
     localOnlyHow:
-      "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Preferências › Servidores, ou rode o agentes.chat num servidor que essas pessoas consigam abrir. Depois convide.",
+      "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Configurações › Servidor neste {{device}}, ou rode o agentes.chat num servidor que essas pessoas consigam abrir. Depois convide.",
     localOnlyHere: "Ligue Acessar pelo celular e pela equipe. Depois convide.",
     never: "Não expira",
     untilDate: "Até {{date}}",
@@ -17175,16 +17179,18 @@ export const ptBR = {
       folders: "Pastas deste {{device}}",
       // `{{device}}` in these strings, inside the desktop app (lib/desktop.ts).
       device: { mac: "Mac", windows: "PC", linux: "computador" },
-      grantHere: "É este {{device}}: libere pastas nas Preferências do app.",
-      openFolders: "Abrir Pastas",
-      openServers: "Abrir Servidores",
+      grantHere:
+        "É este {{device}}: libere pastas em Configurações\u00a0›\u00a0Este {{device}}, em Pastas e ferramentas.",
+      openFolders: "Abrir Pastas e ferramentas",
+      openServers: "Abrir Servidor neste {{device}}",
       openTools: "Abrir Ferramentas",
       reconnect: "Reconectar",
       reconnecting: "Reconectando este {{device}}…",
       seeRequest: "Ver no app",
       offline: "Este {{device}} está sem conexão agora.",
       outageTitle: "Este {{device}} perdeu a conexão {{ago}}",
-      toolsOff: "Desligado neste {{device}}. Ligue nas Preferências do app, em Ferramentas.",
+      toolsOff:
+        "Desligado neste {{device}}. Ligue em Configurações\u00a0›\u00a0Este {{device}}, em Pastas e ferramentas.",
       noReport: "Este {{device}} ainda não informou o que libera. Atualize o app.",
       update: "Atualizar o app",
     },
@@ -17305,7 +17311,8 @@ export const ptBR = {
         "Os agentes deixam de usar {{tool}} neste computador. Para ligar de novo: no próprio computador, ou aqui por quem o conectou.",
       disabled: "{{tool}} desligado.",
       grantTitle: "Para liberar mais",
-      grantText: "Liberar é no próprio computador: abra o app do agentes.chat nele (Preferências → Pastas).",
+      grantText:
+        "Liberar é no próprio computador: abra o app do agentes.chat nele (Configurações\u00a0›\u00a0Este {{device}}\u00a0›\u00a0Pastas e ferramentas).",
       grantTextTerminal: "Liberar é no próprio computador, no Terminal dele:",
       grantTextAdmin: "Liberar é no próprio computador, no Terminal dele, como administrador:",
       grantTerminal: "Sem o app? No terminal do computador:",
@@ -18690,6 +18697,19 @@ export const ptBR = {
   settings: {
     notOpen: "{{section}} não abre com o seu cargo neste workspace. Quem gerencia os cargos pode liberar para você.",
     nav: "Seções das configurações",
+    // In the desktop app: this computer's own settings, opened in the app (ADR 0255 §2).
+    thisDevice: {
+      title: "Este {{device}}",
+      section: {
+        overview: "Visão geral",
+        folders: "Pastas e ferramentas",
+        server: "Servidor neste {{device}}",
+        activity: "Atividade",
+        app: "Ajustes do app",
+      },
+      needs_one: "{{count}} coisa precisa de você",
+      needs_other: "{{count}} coisas precisam de você",
+    },
     group: {
       org: "Workspace",
     },
@@ -18915,7 +18935,7 @@ export const ptBR = {
       help: "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, o volume de dados que os navegadores dos agentes enviam e recebem e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites.",
       envOff: "Desligado nas configurações deste servidor (TELEMETRY=off).",
       envOffDesktop:
-        "Desligado no app do agentes.chat no computador deste servidor (Preferências\u00a0›\u00a0Servidores).",
+        "Desligado no app do agentes.chat no computador deste servidor (Configurações\u00a0›\u00a0Servidor neste {{device}}).",
       envOffHere: "Desligado no app do agentes.chat deste computador.",
       see: "Ver o que é enviado",
       dialogTitle: "O que é enviado",
@@ -20748,7 +20768,8 @@ export const ptBR = {
     machine: {
       ready: "Pronto",
       off: "Desligado",
-      offHelp: "Quem conectou o computador liga aqui ou no app do agentes.chat nele: Preferências → Ferramentas.",
+      offHelp:
+        "Quem conectou o computador liga aqui ou no app do agentes.chat nele: Configurações\u00a0›\u00a0Este {{device}}\u00a0›\u00a0Pastas e ferramentas.",
       needsCommand: "Precisa de um comando",
       notReady: "Ainda não pronto",
       turnOff: "Desligar",

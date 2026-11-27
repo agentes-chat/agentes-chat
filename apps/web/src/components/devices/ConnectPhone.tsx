@@ -69,7 +69,9 @@ import { useTranslation } from "react-i18next";
 import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { useIsThisMac } from "@/components/ThisMac";
-import { thisMac } from "@/lib/desktop";
+import { desktopHasSettingsLayer, thisMac } from "@/lib/desktop";
+import { publicOrigin } from "@/lib/public-origin";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { FlowFooter, type FlowProps } from "./flow";
 import { DevicePortrait } from "./parts";
@@ -322,8 +324,15 @@ function WifiSteps({ pair, host, mac }: { pair: WifiPair; host: ComputerDevice; 
   const { t } = useTranslation();
   const { org } = useOrg();
   const computer = host.name;
-  // In the app on that very Mac, System Settings opens on the Local Network list from here.
+  // In the app on that very Mac, the Local Network permission is asked here, just in time (ADR 0255 §7): as the first
+  // pairing starts (once: after that the app opens System Settings, which a pairing shouldn't do by itself), and again
+  // from the failure it causes.
   const here = useIsThisMac(org.id, host.id);
+  useEffect(() => {
+    if (!mac || !here || !desktopHasSettingsLayer() || storage.get(STORAGE_KEYS.localNetworkAsked) === "1") return;
+    storage.set(STORAGE_KEYS.localNetworkAsked, "1");
+    void thisMac.localNetwork().catch(() => {});
+  }, [mac, here]);
   const p = pair.pairing;
   const localNetwork = mac && here && failedOnLocalNetwork(p);
   const found = p !== undefined && (p.state === "pairing" || p.state === "connecting" || p.state === "connected");
@@ -377,7 +386,7 @@ function WifiSteps({ pair, host, mac }: { pair: WifiPair; host: ComputerDevice; 
         {failed && (!code || localNetwork) && (
           <span className="dv-step__acts">
             {localNetwork && (
-              <Button size="sm" onClick={() => void thisMac.openLocalNetworkSettings().catch(() => {})}>
+              <Button size="sm" onClick={() => void thisMac.localNetwork().catch(() => {})}>
                 {t("devices.wifiPair.openLocalNetwork")}
               </Button>
             )}
@@ -563,7 +572,9 @@ export function AndroidFlow({
   );
   if (paired && host) return <PhoneConnected phone={paired} host={host} onClose={onClose} />;
   if (stage.kind === "ready" && host) return <PhoneConnected phone={stage.phone} host={host} onClose={onClose} />;
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  // The address the phone opens: this server's public one, never the loopback address of the computer that runs it
+  // (ADR 0255 §5).
+  const origin = typeof window === "undefined" ? "" : publicOrigin();
   const guide =
     host && PHONE_APP_IN_STORE.android
       ? `${origin}/org/${org.id}/settings/devices/android-setup?computer=${encodeURIComponent(host.id)}`

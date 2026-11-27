@@ -429,6 +429,8 @@ export function BrowserSteps({ computer, machineId }: { computer: string; machin
       </p>
     </div>
   );
+  // The app's menu item on that computer names it by its kind: "This Mac settings…", "This PC settings…" (ADR 0255).
+  const device = row ? { device: t(`machines.thisMac.device.${computerKind(row.os)}`) } : {};
   const bar = (hit?: boolean) => (
     <div className="brw-mbar">
       <span />
@@ -457,13 +459,13 @@ export function BrowserSteps({ computer, machineId }: { computer: string; machin
               <div className="brw-mmenu">
                 <span>{t("agentPage.work.steps.menuOpen")}</span>
                 <hr />
-                <span data-hl>{t("agentPage.work.steps.menuPrefs")}</span>
+                <span data-hl>{t("agentPage.work.steps.menuPrefs", device)}</span>
                 <span>{t("agentPage.work.steps.menuPause")}</span>
                 <hr />
                 <span>{t("agentPage.work.steps.menuQuit")}</span>
               </div>
             </>,
-            t("agentPage.work.steps.two"),
+            t("agentPage.work.steps.two", device),
           )}
           {step(
             3,

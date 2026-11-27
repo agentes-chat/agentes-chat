@@ -14,7 +14,7 @@ import { Button, type ButtonProps, SettingNote } from "@agenteschat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { TerminalFallback } from "@/components/machine-bits";
-import { OpenPrefsButton, useIsThisMac } from "@/components/ThisMac";
+import { OpenThisMacButton, useIsThisMac } from "@/components/ThisMac";
 import { useToast } from "@/lib/toast";
 import { useOrg } from "../org-context";
 
@@ -108,7 +108,7 @@ export function useToolOneClick(machine: Machine | null | undefined) {
 /**
  * The way out where a program is off on a computer, under the line that says so (every screen that says it uses this
  * one): whoever connected it turns it on here, or waits for it to come online, anyone else asks them, an app too old
- * says to update it there, and in the app on that very computer its Preferences → Ferramentas turn it on instead.
+ * says to update it there, and in the app on that very computer its Folders and tools turn it on instead (ADR 0255).
  * `children`: the screen's other ways on the same line (a key). On a computer that may have no app, the command for
  * whoever turns it on there.
  */
@@ -131,12 +131,14 @@ export function ToolOffWayOut({
     : oneClick?.kind === "outdated" && !here
       ? t("machines.oneClick.outdated", { machine: machine.name })
       : null;
-  // In the app on that very computer its Preferences turn the program on at any app version: no update needed.
+  // In the app on that very computer its Folders and tools turn the program on at any app version: no update needed.
   const button =
     oneClick?.kind === "allow" || oneClick?.kind === "ask" ? (
       <MachineToolButton machine={machine} tool={tool} disabled={offline} />
     ) : here ? (
-      <OpenPrefsButton tab="tools">{t("machines.thisMac.openTools")}</OpenPrefsButton>
+      <OpenThisMacButton section="folders" focus="tools">
+        {t("machines.thisMac.openTools")}
+      </OpenThisMacButton>
     ) : null;
   const command =
     machine.kind === "managed" || oneClick?.kind === "ask" || allowsInApp(machine.os)

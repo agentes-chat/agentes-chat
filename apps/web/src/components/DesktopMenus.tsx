@@ -1,10 +1,11 @@
-import { useNotificationCount } from "@agenteschat/client";
+import { type OrgSummary, useAuthConfig, useNotificationCount } from "@agenteschat/client";
 import { workspaceLabel, workspaceNotes } from "@agenteschat/client/lib/deletion";
 import { MenuAt, MenuHeading, MenuItem, MenuReactions, MenuSeparator } from "@agenteschat/ui";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NEW_AGENT_EVENT } from "@/components/new-agent/events";
+import { usePersonalView } from "@/hooks/usePersonalView";
 import {
   copyText,
   keepsSystemMenu,
@@ -14,8 +15,15 @@ import {
   selectedTextAt,
   setMenuHost,
 } from "@/lib/context-menu";
-import { inDesktopApp, thisMac } from "@/lib/desktop";
+import {
+  type DesktopSettingsNav,
+  type DesktopSettingsNavItem,
+  desktopHasSettingsLayer,
+  inDesktopApp,
+  thisMac,
+} from "@/lib/desktop";
 import { useToast } from "@/lib/toast";
+import { type SettingsNavItem, settingsNavModel } from "@/pages/settings-sections";
 import { useNavDrawer } from "./NavDrawer";
 import { useOrg } from "./org-context";
 import { openPalette } from "./palette";
@@ -168,6 +176,41 @@ export function useDesktopOrgs(organizations: Parameters<typeof workspaceNotes>[
   }, [key]);
 }
 
+/** The app shows at most this many characters of a line of the list (`settingsNav` in main_window.rs). */
+const NAV_LABEL_MAX = 48;
+const navLabel = (label: string) => {
+  const one = label.replace(/[\p{Cc}\s]+/gu, " ").trim();
+  return one.length > NAV_LABEL_MAX ? `${one.slice(0, NAV_LABEL_MAX - 1).trimEnd()}…` : one;
+};
+const navItems = (items: SettingsNavItem[]): DesktopSettingsNavItem[] =>
+  items.map((s) => ({ id: s.id, label: navLabel(s.label), icon: s.icon, path: s.path }));
+
+/**
+ * This workspace's settings list, for the app's own settings layer to show above This {{device}} (ADR 0255 §2): sent
+ * whenever it changes (the workspace, the person's role, the language, what the server offers), and taken away
+ * (`org: null`) when the workspace's pages leave. Only to an app with the layer.
+ */
+export function useDesktopSettingsNav(org: OrgSummary) {
+  const { t, i18n } = useTranslation();
+  const server = useAuthConfig().data;
+  const { others } = usePersonalView();
+  const nav = server ? settingsNavModel(t, org, server, others) : null;
+  const message: DesktopSettingsNav | null = nav
+    ? { org: { id: org.id, name: org.name }, main: navItems(nav.main), advanced: navItems(nav.advanced) }
+    : null;
+  const key = message ? `${i18n.language}:${JSON.stringify(message)}` : null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the list is sent when its content changes
+  useEffect(() => {
+    if (message && desktopHasSettingsLayer()) void thisMac.settingsNav(message).catch(() => {});
+  }, [key]);
+  useEffect(
+    () => () => {
+      if (desktopHasSettingsLayer()) void thisMac.settingsNav({ org: null, main: [], advanced: [] }).catch(() => {});
+    },
+    [],
+  );
+}
+
 /**
  * The Mac's menu bar choices that are the site's (menus.rs `SITE_ACTIONS`): the app calls
  * `window.__agentesMenu(action)`. Mounted in the workspace, where they make sense.
@@ -215,8 +258,9 @@ export function MenuBarActions({ orgId }: { orgId: string }) {
     };
   }, [router, orgId]);
 
-  const { me } = useOrg();
+  const { me, org } = useOrg();
   useDesktopOrgs(me.organizations);
+  useDesktopSettingsNav(org);
 
   // The Dock's badge: what waits on the person in this organization (a dot for unread only).
   const counts = useNotificationCount(orgId).data;
