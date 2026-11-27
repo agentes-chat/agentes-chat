@@ -138,6 +138,7 @@ import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
 import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
+import { type GateCredentials, type GateKind, onSignInWanted, originOf, setGate, setStoredGate } from "./gate";
 import { systemGitCache } from "./git";
 import { closeIdleUnderPressure, type HandlerContext, type RequestObserver, type RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
@@ -528,6 +529,8 @@ export class RunnerDaemon implements RequestObserver {
   readonly activity: ActivityLog;
   private readonly requests: AccessRequests;
   private pairing: AbortController | null = null;
+  /** `gate.required` was said and no credentials came since (ADR 0195). */
+  private gateWanted = false;
   private stopWatch: (() => void) | null = null;
   private stopStandbyWatch: (() => void) | null = null;
   private readonly timers: ReturnType<typeof setInterval>[] = [];
@@ -631,6 +634,7 @@ export class RunnerDaemon implements RequestObserver {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
     this.networkDrain = new NetworkDrain(readNetworkTransitions(opts.home));
     this.activity = new ActivityLog(opts.home);
+    onSignInWanted((server, kind) => this.signInWanted(server, kind));
     this.now = opts.now ?? Date.now;
     this.requests = new AccessRequests(opts.home, this.now);
     const proc = currentProcess();
@@ -1198,6 +1202,9 @@ export class RunnerDaemon implements RequestObserver {
       this.opts.log(err instanceof Error ? err.message : String(err));
     }
     this.config = paired;
+    // ADR 0195: a service token kept for the server's gate, shown to that server only.
+    if (prev?.gate && prev.gate.server !== next?.gate?.server) setStoredGate(prev.gate.server, null);
+    if (next?.gate) setStoredGate(next.gate.server, next.gate);
     if (!paired && this.connState !== "unpaired") this.connState = "unpaired";
     if (paired && this.connState === "unpaired") this.connState = "connecting";
 
@@ -2675,6 +2682,35 @@ export class RunnerDaemon implements RequestObserver {
   permissionClear(permission: unknown): { cleared: boolean } {
     if (!isOsPermission(permission)) throw new ControlError("bad_request", "Unknown permission");
     return { cleared: this.permissionNeeds.clear(permission) };
+  }
+
+  /**
+   * ADR 0195: what the gate in front of `server` takes (the person's session the app's window holds), or nothing any
+   * longer. Only for the server this runner is paired with, or any while it isn't paired yet (pairing asks that
+   * server). A connection waiting for its next try dials at once with it.
+   */
+  gateSet(server: string, credentials: GateCredentials | null): { applied: boolean } {
+    const origin = originOf(server);
+    const paired = this.config?.server ? originOf(this.config.server) : null;
+    if (!origin || (paired && paired !== origin)) return { applied: false };
+    setGate(origin, credentials);
+    if (!credentials) this.opts.log(`the app took back its gate session for ${origin}`);
+    this.gateWanted = false;
+    const s = this.session;
+    if (credentials && s && this.connState !== "online") {
+      this.opts.log(`${credentials.kind} credentials from the app: connecting again`);
+      s.connection.reconnect();
+    }
+    return { applied: true };
+  }
+
+  /** The gate turned a request away: the app hears it once until it sends credentials again. */
+  private signInWanted(server: string, kind: GateKind) {
+    const paired = this.config?.server ? originOf(this.config.server) : null;
+    if (this.gateWanted || (paired && paired !== server)) return;
+    this.gateWanted = true;
+    this.opts.log(`${kind} in front of ${server} wants a sign-in`);
+    this.emit({ kind: "gate.required", server, gate: kind });
   }
 
   /**

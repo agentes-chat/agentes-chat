@@ -407,6 +407,7 @@ export function createFakeHost(
       await wait(700);
       return fakeCheck(server, waits);
     },
+    serverBehindGate: async () => false,
     takeLink: async () => {
       const taken = link;
       link = null;

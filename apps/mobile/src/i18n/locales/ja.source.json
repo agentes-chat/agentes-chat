@@ -128,6 +128,15 @@
   "auth.server.appTooOld": {
     "value": "Update the agentes app to use {{host}}."
   },
+  "auth.server.gate.on": {
+    "value": "Sign-in for {{host}}"
+  },
+  "auth.server.gate.loading": {
+    "value": "Opening the sign-in of {{host}}"
+  },
+  "auth.server.gate.failed": {
+    "value": "Couldn't open the sign-in of {{host}}. Check your connection and try again."
+  },
   "auth.server.down.line": {
     "value": "{{host}} didn't answer."
   },

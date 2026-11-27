@@ -11,7 +11,29 @@ import {
   type ServerProblem,
   serverHost,
 } from "@agenteschat/client/lib/server";
+import type { Host } from "../host/types";
 import { appServer, serverName } from "./server";
+
+/**
+ * What the app learns of a server before using it: its own check, or that a gate (Cloudflare Access) stands in front
+ * of it (`server_behind_gate`, gate.rs). The gate answers nothing of the server before its sign-in, which the main
+ * window shows; the server is checked again from there, signed in.
+ */
+export type AppServerCheck = ServerCheck | { ok: false; server: string; problem: "behind-gate" };
+
+const behindGate = (check: AppServerCheck): check is { ok: false; server: string; problem: "behind-gate" } =>
+  !check.ok && check.problem === "behind-gate";
+
+/** `host.checkServer`, and when it found nothing there, whether a gate stands in front of the server instead. */
+export async function checkServerOrGate(
+  host: Pick<Host, "checkServer" | "serverBehindGate">,
+  server: string,
+): Promise<AppServerCheck> {
+  const check = await host.checkServer(server);
+  if (check.ok || check.problem !== "unreachable") return check;
+  const behind = await host.serverBehindGate(server).catch(() => false);
+  return behind ? { ok: false, server: check.server, problem: "behind-gate" } : check;
+}
 
 export type FirstScreen = "choose" | "install" | "connect" | "here" | "link" | "pair";
 
@@ -52,12 +74,14 @@ const LISTED_PROBLEMS: ReadonlySet<ServerProblem> = new Set(["server-too-old", "
  * keeps them from being used (an update on either side, a certificate, no owner yet). Those that didn't answer, or
  * aren't agentes.chat, aren't listed.
  */
-export function foundServers(candidates: readonly Candidate[], checks: readonly (ServerCheck | null)[]): Found[] {
+export function foundServers(candidates: readonly Candidate[], checks: readonly (AppServerCheck | null)[]): Found[] {
   const out: Found[] = [];
   candidates.forEach((c, i) => {
     const check = checks[i];
     if (!check || out.some((f) => f.server === check.server)) return;
-    if (check.ok) {
+    if (behindGate(check)) {
+      out.push({ server: check.server, where: c.where });
+    } else if (check.ok) {
       out.push({ server: check.server, where: c.where, ...(check.instance.ownerClaim ? { problem: "no-owner" } : {}) });
     } else if (LISTED_PROBLEMS.has(check.problem)) {
       out.push({ server: check.server, where: c.where, problem: check.problem });
@@ -128,7 +152,8 @@ const problemOf = (check: Extract<ServerCheck, { ok: false }>): ConnectProblem =
  * `own`: the addresses of the agentes.chat this computer runs (its loopback and, with reach on, its Tailscale one).
  * Picked there, it opens at once at the address people use: no sheet about another host, which is still this one.
  */
-export function connectOutcome(asked: string, check: ServerCheck, own: readonly string[] = []): ConnectOutcome {
+export function connectOutcome(asked: string, check: AppServerCheck, own: readonly string[] = []): ConnectOutcome {
+  if (behindGate(check)) return { kind: "use", server: check.server };
   if (!check.ok) return { kind: "problem", problem: problemOf(check), host: serverHost(check.server) };
   if (check.instance.ownerClaim) return { kind: "problem", problem: "no-owner", host: serverHost(check.server) };
   if (own.includes(asked) || own.includes(check.server)) return { kind: "use", server: check.server };
@@ -172,9 +197,31 @@ export type LinkView =
       leave: string | null;
     };
 
-export function linkView(link: ConnectLink | null, check: ServerCheck | "checking", current: string | null): LinkView {
+export function linkView(
+  link: ConnectLink | null,
+  check: AppServerCheck | "checking",
+  current: string | null,
+): LinkView {
   if (!link) return { kind: "notALink" };
   if (check === "checking") return { kind: "checking", server: link.server };
+  if (behindGate(check)) {
+    // Nothing of the server is known before the gate's sign-in: the link's own page says the rest once there.
+    const server = check.server;
+    const leave = current && current !== server ? serverName(current) : null;
+    if (link.claim)
+      return { kind: "ask", server, question: "questionClaim", button: "continue", page: ownerPath(link.claim), leave };
+    if (link.token)
+      return {
+        kind: "ask",
+        server,
+        question: "questionSignIn",
+        button: "connect",
+        page: handoverPath(link.token),
+        leave,
+      };
+    if (server === current) return { kind: "front", server };
+    return { kind: "ask", server, question: "question", button: "connect", leave };
+  }
   if (!check.ok) return { kind: "problem", server: check.server, problem: problemOf(check) };
   const server = check.server;
   const leave = current && current !== server ? serverName(current) : null;

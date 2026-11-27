@@ -52,6 +52,11 @@
       "notAgentes": "{{host}} 不是 agentes.chat 服务器。请检查地址。",
       "serverTooOld": "{{host}} 需要更新才能配合此应用使用。",
       "appTooOld": "请更新 agentes 应用以使用 {{host}}。",
+      "gate": {
+        "on": "登录 {{host}}",
+        "loading": "正在打开 {{host}} 的登录页",
+        "failed": "无法打开 {{host}} 的登录页。请检查网络连接后重试。"
+      },
       "down": {
         "line": "{{host}} 没有响应。",
         "text": "它可能已停机，或不在你的网络中。恢复后应用会自动打开。",

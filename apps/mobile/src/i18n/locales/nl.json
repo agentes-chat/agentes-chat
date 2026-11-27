@@ -52,6 +52,11 @@
       "notAgentes": "{{host}} is geen agentes.chat-server. Controleer het adres.",
       "serverTooOld": "{{host}} heeft een update nodig om met deze app te werken.",
       "appTooOld": "Werk de agentes-app bij om {{host}} te gebruiken.",
+      "gate": {
+        "on": "Inloggen bij {{host}}",
+        "loading": "Inloggen bij {{host}} wordt geopend",
+        "failed": "Inloggen bij {{host}} kon niet worden geopend. Controleer je verbinding en probeer het opnieuw."
+      },
       "down": {
         "line": "{{host}} reageerde niet.",
         "text": "Misschien is hij offline of buiten je netwerk. De app opent vanzelf zodra hij terug is.",

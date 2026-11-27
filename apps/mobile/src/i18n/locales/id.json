@@ -52,6 +52,11 @@
       "notAgentes": "{{host}} bukan server agentes.chat. Periksa alamatnya.",
       "serverTooOld": "{{host}} perlu diperbarui agar bisa dipakai dengan aplikasi ini.",
       "appTooOld": "Perbarui aplikasi agentes untuk memakai {{host}}.",
+      "gate": {
+        "on": "Masuk ke {{host}}",
+        "loading": "Membuka halaman masuk {{host}}",
+        "failed": "Tidak bisa membuka halaman masuk {{host}}. Periksa koneksi Anda dan coba lagi."
+      },
       "down": {
         "line": "{{host}} tidak menjawab.",
         "text": "Mungkin sedang mati atau di luar jaringanmu. Aplikasi akan terbuka sendiri begitu server kembali.",

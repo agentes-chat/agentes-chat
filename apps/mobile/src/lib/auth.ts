@@ -5,6 +5,8 @@ import { getRandomBytes } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import i18n from "i18next";
 import { SCHEME } from "@/config";
+import { gateCookie, gateSession, watchGate } from "./gate";
+import { joinCookies } from "./gate-cloudflare";
 import { placeKey, prefixOf } from "./server";
 import { cookieTo, serverOf } from "./server-choice";
 import { challengeOf, newVerifier } from "./sign-in-proof";
@@ -13,6 +15,8 @@ import { challengeOf, newVerifier } from "./sign-in-proof";
  * Better Auth for the app (ADR 0035 §3): the session cookie lives in SecureStore (Expo plugin), social
  * sign-in goes through the system browser and comes back on `agenteschat://`. Every request says the app's
  * language in `Accept-Language`, as the web's does: an account made here keeps it, and its first emails come in it.
+ * Behind a gate (ADR 0195 §10), its session goes as `cf-access-token` (the plugin writes `Cookie` itself), and an
+ * answer from the gate shows its sign-in.
  */
 const createClient = (server: string, storagePrefix: string) =>
   createAuthClient({
@@ -20,8 +24,11 @@ const createClient = (server: string, storagePrefix: string) =>
     basePath: "/api/auth",
     fetchOptions: {
       headers: { "X-Agentes-Client": "mobile" },
+      customFetchImpl: watchGate(server),
       onRequest: (request) => {
         if (i18n.language) request.headers.set("accept-language", i18n.language);
+        const gate = gateSession(server);
+        if (gate) request.headers.set("cf-access-token", gate);
       },
     },
     plugins: [expoClient({ scheme: SCHEME, storagePrefix, storage: SecureStore })],
@@ -95,7 +102,11 @@ export async function signInWithBrowser(
 
 const cookies = new Map<string, string>();
 
-/** A server's session cookie (the current one's by default), read fresh from SecureStore and kept for the synchronous callers. */
+/**
+ * A server's session cookie (the current one's by default), read fresh from SecureStore and kept for the synchronous
+ * callers; with the server's gate session beside it (ADR 0195 §10), so every request, picture and socket the cookie goes
+ * with gets through the gate.
+ */
 export async function readCookie(place: string = placeKey()): Promise<string> {
   let cookie = "";
   try {
@@ -103,6 +114,7 @@ export async function readCookie(place: string = placeKey()): Promise<string> {
   } catch {
     cookie = "";
   }
+  cookie = joinCookies(cookie, gateCookie(serverOf(place)));
   cookies.set(place, cookie);
   return cookie;
 }
@@ -130,5 +142,5 @@ export async function authedFetch(
   const headers = new Headers(init.headers);
   const cookie = cookieTo(input, serverOf(place), await readCookie(place));
   for (const [name, value] of Object.entries(appHeaders(cookie))) headers.set(name, value);
-  return fetch(input, { ...init, headers, credentials: "omit" });
+  return watchGate(serverOf(place))(input, { ...init, headers, credentials: "omit" });
 }

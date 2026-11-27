@@ -63,6 +63,12 @@ export const mobileEn = {
       notAgentes: "{{host}} isn't an agentes.chat server. Check the address.",
       serverTooOld: "{{host}} needs an update to work with this app.",
       appTooOld: "Update the agentes app to use {{host}}.",
+      gate: {
+        /** Over the sign-in of the gate in front of the server (Cloudflare Access, ADR 0195). */
+        on: "Sign-in for {{host}}",
+        loading: "Opening the sign-in of {{host}}",
+        failed: "Couldn't open the sign-in of {{host}}. Check your connection and try again.",
+      },
       down: {
         line: "{{host}} didn't answer.",
         text: "It may be down or outside your network. The app opens on its own once it's back.",

@@ -27,6 +27,7 @@
     "allow-runner-add",
     "allow-autostart-set",
     "allow-site-fetch",
+    "allow-server-behind-gate",
     "allow-pair-link-info",
     "allow-screen-access",
     "allow-screen-request",

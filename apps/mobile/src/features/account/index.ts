@@ -2,6 +2,7 @@ import type { DeletionProofInput } from "@agenteschat/client";
 import { liveActivitySignOut } from "@/features/live-activity/sign-out";
 import { forgetSuggestions } from "@/features/share/suggestions";
 import { authClient, authedFetch } from "@/lib/auth";
+import { forgetGateSession } from "@/lib/gate";
 import { outboxStoreFor } from "@/lib/outbox";
 import { SIGN_OUT_WAIT_MS, unregisterPush, unregisterPushOn } from "@/lib/push";
 import {
@@ -13,7 +14,7 @@ import {
   setServer,
   signedInServers,
 } from "@/lib/server";
-import { serverAfter } from "@/lib/server-choice";
+import { serverAfter, serverOf } from "@/lib/server-choice";
 import { snapshotStoreFor } from "@/lib/snapshot";
 import { clearStoredValues, writeValue } from "@/lib/storage";
 import { type DeleteAccountResult, readDeleteResponse } from "./result";
@@ -52,6 +53,9 @@ export async function signOutOf(server: string, last = false): Promise<void> {
 async function forgetServer(server: string, last: boolean) {
   markSignedOut(server);
   forgetAccount(server);
+  // Its last account out: the gate in front of it asks for its sign-in again (ADR 0195 §10), as on the desktop.
+  const host = serverOf(server);
+  if (!signedInServers().some((place) => serverOf(place) === host)) await forgetGateSession(host);
   await writeValue(orgValueName(server), null);
   await snapshotStoreFor(server).remove();
   outboxStoreFor(server).write("[]");
