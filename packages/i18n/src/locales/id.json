@@ -38,6 +38,9 @@
     "wrapLines": "Bungkus baris",
     "raw": "Asli",
     "table": "Tabel",
+    "tableRows_other": "Tabel · {{count}} baris",
+    "tableSeeAll": "Lihat semua {{count}} baris",
+    "tableRowCount_other": "{{count}} baris",
     "chartItem": "Item",
     "chartShare": "Porsi",
     "you": "kamu",
@@ -10159,7 +10162,6 @@
     "filter": {
       "person": "Orang",
       "agent": "Agen",
-      "routine": "Rutinitas",
       "reminder": "Pengingat",
       "deadline": "Tenggat tugas"
     },
@@ -10192,37 +10194,16 @@
         "declined": "Kamu tidak hadir."
       }
     },
-    "every": {
-      "hour": "setiap jam",
-      "hours": "setiap {{count}} jam",
-      "minutes": "setiap {{count}} menit"
-    },
-    "perDay": "{{count}}× sehari",
-    "runs_other": "{{count}} proses di hari-hari ini.",
-    "routineDetail": "Rutinitas · dikirim ke {{target}}",
     "deadlineDetail": "Tugas ini jatuh tempo.",
     "reminderBy": "Dibuat oleh {{name}}",
     "reminderPosted": "Pengingat · diposting di {{target}}",
     "cancelReminder": "Batalkan pengingat",
     "reminderCancelled": "Pengingat dibatalkan",
     "openIssue": "Buka tugas",
-    "openRoutines": "Lihat di Rutinitas",
-    "openRoutine": "Buka rutinitas",
-    "runAria": "Rutinitas {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "Rutinitas pukul {{time}}",
-    "moreRuns_other": "+{{count}} rutinitas",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "membalas",
-      "silent": "tidak ada yang baru",
-      "failed": "gagal",
-      "skipped": "tidak berjalan"
-    },
-    "lastResult": "terakhir: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Tidak ada jadwal. Seret untuk membuat atau tekan N",
-    "agendaEmpty": "Acara dan rutinitas 30 hari ke depan muncul di sini.",
+    "agendaEmpty": "Acara dan pengingat 30 hari ke depan muncul di sini.",
     "agendaEmptyTitle": "Agenda kosong 30 hari ke depan",
     "noResults": "Tidak ada apa pun dengan filter ini.",
     "more": "+{{count}} lainnya",
@@ -16494,6 +16475,8 @@
     "workspace": "Ruang kerja",
     "cloud": "Cloud",
     "cpus_other": "{{count}} CPU",
+    "cores_other": "{{count}} inti",
+    "threads_other": "{{count}} thread",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16722,7 +16705,7 @@
     },
     "facts": {
       "system": "Sistem",
-      "cpu": "CPU",
+      "cpu": "Prosesor",
       "memory": "Memori",
       "lastSeen": "Terakhir terlihat",
       "toolchains": "Toolchain yang ditemukan",
@@ -17862,7 +17845,21 @@
       "version": "Versi",
       "license": "Perangkat lunak bebas di bawah <license>GNU Affero General Public License v3</license>, tanpa jaminan.",
       "source": "Kode sumber",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor",
+      "latest": "Rilis terbaru",
+      "newer": "{{version}} sudah keluar",
+      "notes": "Yang baru",
+      "update": {
+        "title": "Perbarui ke {{version}}",
+        "docker": "Dengan Docker",
+        "native": "Tanpa Docker",
+        "nativeHelp": "Ekstrak paket rilis ke `~/.agentes/app`, lalu jalankan:",
+        "desktop": "Berjalan di aplikasi desktop komputer ini? Server itu ikut diperbarui bersama aplikasinya.",
+        "notice": "agentes.chat {{version}} sudah keluar untuk server ini",
+        "how": "Cara memperbarui"
+      },
+      "computers": "Program komputer",
+      "computersAhead_other": "{{count}} komputer menjalankan versi yang lebih baru dari server ini. Komputer itu tetap berfungsi, dan fitur barunya datang bersama pembaruan server ini."
     },
     "title": "Pengaturan",
     "account": {

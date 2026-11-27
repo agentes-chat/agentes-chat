@@ -29,7 +29,6 @@ import {
 } from "@agenteschat/client";
 import { approvalTitle, ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
 import { createsRoutinesFor, managesAgent } from "@agenteschat/client/lib/audience";
-import type { RunStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { formatBytes } from "@agenteschat/client/lib/files";
@@ -62,6 +61,7 @@ import {
   isStoppable,
   pausedFix,
   type RoutineFix,
+  type RunStatus,
   routineChannelOf,
   routineStateTime,
   routineStateWords,

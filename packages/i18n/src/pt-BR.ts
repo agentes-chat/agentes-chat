@@ -52,6 +52,14 @@ export const ptBR = {
     /** A formatted block (JSON) shown as it was written. */
     raw: "Original",
     table: "Tabela",
+    /** A Markdown table's card in a message or a document: its top line, beside Copy and Full screen. */
+    tableRows_one: "Tabela · {{count}} linha",
+    tableRows_other: "Tabela · {{count}} linhas",
+    /** Under a long table in a message, which shows only its first rows: opens the whole table in full screen. */
+    tableSeeAll: "Ver as {{count}} linhas",
+    /** Under the title of a table in full screen. */
+    tableRowCount_one: "{{count}} linha",
+    tableRowCount_other: "{{count}} linhas",
     chartItem: "Item",
     chartShare: "Parte",
     you: "você",
@@ -11007,7 +11015,6 @@ export const ptBR = {
     filter: {
       person: "Pessoas",
       agent: "Agentes",
-      routine: "Rotinas",
       reminder: "Lembretes",
       deadline: "Prazos de tarefas",
     },
@@ -11041,12 +11048,6 @@ export const ptBR = {
         declined: "Você não vai.",
       },
     },
-    every: { hour: "a cada hora", hours: "a cada {{count}} h", minutes: "a cada {{count}} min" },
-    perDay: "{{count}}× por dia",
-    runs_one: "{{count}} execução nestes dias.",
-    runs_other: "{{count}} execuções nestes dias.",
-    /** Under a run's title in its details; the agent's name and face are the line above. */
-    routineDetail: "Rotina · entrega em {{target}}",
     deadlineDetail: "Prazo da tarefa.",
     reminderBy: "Criado por {{name}}",
     /** Under a reminder's title in its details; the agent that posts it is the line above. */
@@ -11054,21 +11055,11 @@ export const ptBR = {
     cancelReminder: "Cancelar lembrete",
     reminderCancelled: "Lembrete cancelado",
     openIssue: "Abrir tarefa",
-    openRoutines: "Ver em Rotinas",
-    openRoutine: "Abrir rotina",
-    runAria: "Rotina {{name}}, {{time}}",
     /** An item's hover: its name, whose it is, when. */
     runHint: "{{name}} · {{agent}} · {{time}}",
-    runsAt: "Rotinas às {{time}}",
-    /** Under a stack of routine runs in the week: the runs it doesn't show, which it opens. */
-    moreRuns_one: "+{{count}} rotina",
-    moreRuns_other: "+{{count}} rotinas",
-    runTimes: "×{{count}}",
-    result: { ok: "respondeu", silent: "nada novo", failed: "falhou", skipped: "não rodou" },
-    lastResult: "última: {{result}}",
     upcomingMeta: "{{day}} · {{time}}",
     emptyHint: "Nada marcado. Arraste para criar ou aperte N",
-    agendaEmpty: "Eventos e rotinas dos próximos 30 dias aparecem aqui.",
+    agendaEmpty: "Eventos e lembretes dos próximos 30 dias aparecem aqui.",
     agendaEmptyTitle: "Agenda livre nos próximos 30 dias",
     noResults: "Nada com esse filtro.",
     more: "+{{count}} mais",
@@ -17495,6 +17486,10 @@ export const ptBR = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPUs",
+    cores_one: "{{count}} núcleo",
+    cores_other: "{{count}} núcleos",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulador", simulator: "Simulador" },
@@ -17737,7 +17732,7 @@ export const ptBR = {
     },
     facts: {
       system: "Sistema",
-      cpu: "CPU",
+      cpu: "Processador",
       memory: "Memória",
       lastSeen: "Visto por último",
       toolchains: "Ferramentas encontradas",
@@ -18945,6 +18940,23 @@ export const ptBR = {
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
       copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
+      latest: "A versão mais recente",
+      newer: "Saiu a {{version}}",
+      notes: "O que mudou",
+      update: {
+        title: "Atualize para a {{version}}",
+        docker: "Com Docker",
+        native: "Sem Docker",
+        nativeHelp: "Extraia o pacote da versão em `~/.agentes/app` e rode:",
+        desktop: "Roda no app para computador, nesta máquina? Ele se atualiza com o app.",
+        notice: "Saiu o agentes.chat {{version}} para este servidor",
+        how: "Como atualizar",
+      },
+      computers: "Programa dos computadores",
+      computersAhead_one:
+        "{{count}} computador roda uma versão mais nova que a deste servidor. Ele funciona como está, e o que há de novo nele chega com a atualização deste servidor.",
+      computersAhead_other:
+        "{{count}} computadores rodam uma versão mais nova que a deste servidor. Eles funcionam como estão, e o que há de novo neles chega com a atualização deste servidor.",
     },
     title: "Configurações",
     account: {

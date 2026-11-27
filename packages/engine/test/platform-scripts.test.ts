@@ -2,8 +2,8 @@ import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import { drainOutbox, HOW_YOU_WORK, postPersonMessage, type ToolContext, type ToolSource } from "../src";
-import { CUT_AT_OUTPUT_LIMIT } from "../src/executor";
-import { jsSyntaxError } from "../src/js-syntax";
+import { CONTINUE_AFTER_CUT, CUT_AT_OUTPUT_LIMIT } from "../src/executor";
+import { syntaxError } from "../src/file-syntax";
 import { type Fixture, setup } from "./fixtures";
 import { connectedComputer } from "./machine-fixtures";
 
@@ -18,18 +18,48 @@ afterEach(async () => {
   await current?.close();
 });
 
-describe("jsSyntaxError", () => {
-  test("names the line and column of a script that doesn't parse", () => {
-    expect(jsSyntaxError("campaign.gs", "function main() {\n  if (a {\n  }\n}")).toStartWith("line 2, column 9: ");
-    expect(jsSyntaxError("run.js", "function main() {\n  return `x ${")).toContain("Unexpected end of file");
+describe("syntaxError", () => {
+  const error = async (path: string, text: string) => (await syntaxError(path, text))?.error ?? null;
+
+  test("names the line and column of a script that doesn't parse", async () => {
+    expect(await error("campaign.gs", "function main() {\n  if (a {\n  }\n}")).toStartWith("line 2, column 9: ");
+    expect(await error("run.js", "function main() {\n  return `x ${")).toContain("Unexpected end of file");
+    expect(await syntaxError("index.ts", "const a: number = (\n")).toEqual({
+      format: "TypeScript",
+      error: "line 1, column 20: Unexpected end of file",
+    });
   });
 
-  test("passes modern and sloppy-mode scripts, and leaves other files alone", () => {
+  test("names the line and column of JSON, YAML and TOML that don't parse", async () => {
+    expect(await syntaxError("data/config.json", '{\n  "a": 1,\n}')).toEqual({
+      format: "JSON",
+      error: "line 2, column 9: JSON does not support trailing commas",
+    });
+    expect(await syntaxError(".github/workflows/ci.yml", "jobs:\n\tbuild: 1\n")).toEqual({
+      format: "YAML",
+      error: "line 2, column 2: Tab characters cannot be used as indentation",
+    });
+    expect(await error("pyproject.toml", "[project]\nname = \n")).toStartWith("line 2, column 8: ");
+    expect(await error("C:\\work\\.vscode\\launch.json", "{\n  // run\n  ]")).toStartWith("line 3, column 3: ");
+    expect(await error("settings.jsonc", '{\n  // note\n  "a": 1\n  "b": 2\n}')).toStartWith("line 4, column 3: ");
+    expect(await error("app/package.json", '{\n  "name": "app",\n}')).toStartWith("line 2, column 16: ");
+    expect(await error("ci.yml", "env:\n  T: $" + "{{ secrets.T }}\n\tx: 1\n")).toStartWith("line 3, column 2: ");
+  });
+
+  test("passes modern and sloppy-mode scripts, typed code and data that parse, and leaves other files alone", async () => {
     const script =
       "function main() {\n  const ids = [...new Set([1, 2])];\n  return ids?.length ?? 0;\n}\nwith (o) { p(); }";
-    expect(jsSyntaxError("campaign.gs", script)).toBeNull();
-    expect(jsSyntaxError("App.jsx", "const v = <div />;")).toBeNull();
-    expect(jsSyntaxError("notes.md", "if (a {")).toBeNull();
+    expect(await syntaxError("campaign.gs", script)).toBeNull();
+    expect(await syntaxError("App.jsx", "const v = <div />;")).toBeNull();
+    expect(await syntaxError("id.ts", "const id = <T,>(x: T): T => x;\nenum E { A }")).toBeNull();
+    expect(await syntaxError("App.tsx", "const v = <div title={String(1 as number)} />;")).toBeNull();
+    expect(await syntaxError("tsconfig.json", '{\n  // strict\n  "compilerOptions": {},\n}')).toBeNull();
+    expect(await syntaxError(".vscode/settings.json", '{\n  // tabs\n  "editor.tabSize": 2,\n}')).toBeNull();
+    expect(await syntaxError("stack.yaml", "Name: !Ref Bucket\nbase: &b\n  k: 1\nother:\n  <<: *b\n")).toBeNull();
+    expect(await syntaxError("Cargo.toml", '[package]\nname = "app"\n')).toBeNull();
+    expect(await syntaxError("chart/templates/app.yaml", "metadata:\n  {{- if .Values.on }}\n  a: 1\n")).toBeNull();
+    for (const path of ["notes.md", "job.py", "query.sql", "run.sh"])
+      expect(await syntaxError(path, "if (a {")).toBeNull();
   });
 });
 
@@ -72,6 +102,9 @@ describe("write_file", () => {
     expect(new TextDecoder().decode(runner.files.get(key))).toBe("function main() {\n  const a = 1;\n  return a;\n}\n");
 
     expect((await call(ctx, { path: "notes.md", content: "if (a {" })).content).toBe("Wrote notes.md (7 bytes).");
+    expect((await call(ctx, { path: "deploy.yml", content: "a: [1\n" })).content).toStartWith(
+      "Wrote deploy.yml (6 bytes). It doesn't parse as YAML yet (line 1, column 6: ",
+    );
   });
 
   test("append leaves a file holding a saved key as it is: the key reads back hidden", async () => {
@@ -127,6 +160,41 @@ describe("a call cut at the output limit", () => {
     expect(JSON.stringify(second.messages.at(-1)?.content)).toContain(CUT_AT_OUTPUT_LIMIT);
     const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
     expect(posted.map((m) => m.body)).toEqual(["Salvei em partes."]);
+  });
+});
+
+describe("a reply cut at the output limit", () => {
+  test("goes on in the next call, and its parts are posted as one reply", async () => {
+    f = await setup({
+      reply: (_req, call) =>
+        call === 1 ? { chunks: ["Primeira metade, "], stopReason: "max_tokens" } : { chunks: ["segunda metade."] },
+    });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev escreve o texto todo",
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    const second = f.provider.calls[1]?.request as ModelRequest;
+    expect(second.messages.at(-1)?.content).toBe(CONTINUE_AFTER_CUT);
+    const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
+    expect(posted.map((m) => m.body)).toEqual(["Primeira metade, segunda metade."]);
+  });
+
+  test("all thinking twice in a row: it goes on no more, so a model that only thinks never runs the run's steps out", async () => {
+    f = await setup({
+      reply: () => ({
+        chunks: [],
+        opaque: [{ type: "thinking", thinking: "", signature: "sig-1" }],
+        stopReason: "max_tokens",
+      }),
+    });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev escreve o texto todo",
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    // Two calls each time it is told to answer, as with any reply that says nothing; never the run's 200 steps.
+    expect(f.provider.calls.length).toBeLessThanOrEqual(6);
   });
 });
 

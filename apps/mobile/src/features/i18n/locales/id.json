@@ -60,6 +60,15 @@
     "more": "Lihat semua {{count}} baris",
     "gone": "Kode ini sudah tidak terbuka."
   },
+  "table": {
+    "label_other": "Tabel · {{count}} baris",
+    "title": "Tabel",
+    "rows_other": "{{count}} baris",
+    "copy": "Salin tabel",
+    "copied": "Tabel disalin",
+    "more": "Lihat semua {{count}} baris",
+    "gone": "Tabel ini sudah tidak terbuka."
+  },
   "time": {
     "today": "Hari ini",
     "yesterday": "Kemarin",

@@ -237,15 +237,17 @@ through that computer's internet instead: your home address and location, as if 
 shows **Agents use this computer's internet** on its page in Settings › Devices, in the desktop app's Preferences
 and on the phone. It is on by default; only the person who connected it turns it on, and an admin may turn it off.
 The owners of computers paired before this existed hear it once in the inbox, with **Turn off**. Among the
-computers that lend and are online, the one turned on last carries the traffic ("In use now" on its page).
+computers that lend and are online, those the desktop app runs come first, then the one turned on last carries the
+traffic ("In use now" on its page).
 
 **Who borrows.**
 
 - This server's own computer (This server as the agents' computer, below): its agents' browsers and programs, and
   the server's own reads of web pages for agents (`web_fetch` and the DuckDuckGo search page).
-- A computer marked the workspace's whose own switch is off: a runner on the VPS itself, or another box. A VPS
-  paired as a connected computer lends by default (and, being the newest, would be picked), so on its page mark it
-  the workspace's and turn **Agents use this computer's internet** off.
+- A server: a runner installed from the terminal on Linux (on the VPS itself, or another box in a server room). Its
+  switch starts off, so it borrows with nothing for you to set; one paired before this turns off the next time it
+  connects, unless its owner had turned it on. Turned on, it lends like anyone's computer (after the desktop app's).
+- A computer marked the workspace's whose own switch is off.
 - A person's own computer that doesn't lend doesn't borrow, and a computer that lends never goes out through
   another, nor through itself.
 
@@ -1269,6 +1271,14 @@ one, `https://app.agentes.chat/api/desktop/update` (its version and package type
 `/api/desktop/download/…`. The page that offers the app asks
 for its newest version from the browser (Connect a computer, above, says what that request carries).
 The instance itself downloads nothing from agentes.chat.
+
+**Newer releases.** For whoever configures a workspace, **Settings › About** (and the phone's About screen)
+asks GitHub for this repository's releases (`https://api.github.com/repos/agentes-chat/agentes-chat/releases`)
+from the browser or the phone, never from the instance, at most every 6 hours. It carries no cookie and no
+referrer, but, like any request a page makes to another site, it carries this instance's address (its
+`Origin` header) and the browser's IP. A newer release shows there with the upgrade commands (Upgrades, below)
+and, once per release, as a notice. It also says when the program on some of the workspace's computers is
+newer than the instance: those computers keep working, and what's new in them comes with the instance's update.
 
 **Help pages.** The app's help links ("How computers work", "About this computer") open the public docs at
 `https://agentes.chat/docs`, in the reader's language (`/pt/docs`, `/zh/docs`, `/fr/docs`…), the same pages for

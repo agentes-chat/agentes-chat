@@ -519,7 +519,7 @@
   "viewport@390 html in p.ac-media__foot",
   "viewport@390 p.nac__group",
   "wordwrap@1280 button.cal-chip.cal-chip--line in div.cal-month__cell",
-  "wordwrap@1280 button.cal-chip.cal-chip--run in div.cal-week__runs",
+  "wordwrap@1280 button.cal-chip.cal-chip--moment in div.cal-week__moment",
   "wordwrap@1280 span in div.isc-row",
   "wordwrap@1280 span.ac-hint__bubble.ac-glass.ac-menu__tip in body",
   "wordwrap@1280 span.cal-chip__title in button.cal-chip.cal-chip--bar",

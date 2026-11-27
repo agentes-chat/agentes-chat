@@ -301,6 +301,15 @@ export interface MachineSize {
   maxTasks?: number;
   /** `TASK_ROOM_PROTOCOL`: tasks start on room here. */
   room?: TaskRoomReport;
+  /** The processor's name (`Apple M4 Pro`, `AMD EPYC 7763`). Absent from an older runner: no protocol number. */
+  cpuModel?: string;
+  /**
+   * Its physical cores, where the system says them (macOS, Linux on x86); `cpus` counts logical CPUs, threads on a
+   * processor with simultaneous multithreading. Absent from an older runner and from Windows.
+   */
+  cores?: number;
+  /** The system and its version (`macOS 26.1`, `Ubuntu 24.04`, `Windows 11`). Absent from an older runner. */
+  system?: string;
 }
 
 /** A memory size as `MachineSize` says it: in GB (2^30 bytes), to 0.5. */
@@ -5515,6 +5524,8 @@ export function parseMachineSize(v: unknown): MachineSize | null {
       ? { limit: { cpus: l.cpus, memoryGb: l.memoryGb } }
       : {};
   const room = parseTaskRoom(v.room);
+  const cpuModel = sizeName(v.cpuModel);
+  const system = sizeName(v.system);
   return {
     cpus: v.cpus,
     memoryGb: v.memoryGb,
@@ -5522,8 +5533,17 @@ export function parseMachineSize(v: unknown): MachineSize | null {
     ...limit,
     ...(taskLimit(v.maxTasks) ? { maxTasks: v.maxTasks } : {}),
     ...(room ? { room } : {}),
+    ...(cpuModel ? { cpuModel } : {}),
+    ...(inRange(v.cores, [1, v.cpus]) ? { cores: v.cores } : {}),
+    ...(system ? { system } : {}),
   };
 }
+
+/** `MachineSize.cpuModel` and `system`: one printable line of at most 80 characters, else none. */
+const sizeName = (v: unknown) => {
+  const s = typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+  return s && /^[\p{L}\p{N}\p{P}\p{Zs}+]+$/u.test(s) ? s : undefined;
+};
 
 const taskLimit = (v: unknown): v is number => inRange(v, TASK_LIMIT_BOUNDS);
 

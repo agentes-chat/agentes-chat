@@ -121,6 +121,12 @@ export interface ComputerDevice {
   arch: string;
   hostname: string;
   cpus: number | null;
+  /** The processor's name (`Apple M4 Pro`), as its runner said it; null: an older runner. */
+  cpuModel: string | null;
+  /** Its physical cores where its runner said them (`cpus` counts threads); null: an older runner, or Windows. */
+  cores: number | null;
+  /** The system and its version (`macOS 26.1`); null: an older runner, or the workspace's own computer. */
+  system: string | null;
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
@@ -314,6 +320,8 @@ export interface DevicesList {
    * the apps say so where a computer joins.
    */
   lendsInternet: boolean;
+  /** ADR 0237: this server lends, so a Linux Terminal install that joins borrows instead (`serverBox`). */
+  serverBoxesBorrow: boolean;
 }
 
 /** Background tasks a computer runs at once when its runner doesn't say (before `TASK_LIMIT_PROTOCOL`): its default. */
@@ -490,6 +498,9 @@ export async function listDevices(
       arch: managed ? "" : m.arch,
       hostname: managed ? "" : m.hostname,
       cpus: m.size?.cpus ?? null,
+      cpuModel: m.size?.cpuModel ?? null,
+      cores: m.size?.cores ?? null,
+      system: managed ? null : (m.size?.system ?? null),
       memoryGb: m.size?.memoryGb ?? null,
       ownerUserId: m.pairedByUserId,
       belongsToWorkspace: m.belongsToWorkspace,
@@ -549,7 +560,13 @@ export async function listDevices(
     )
     .orderBy(machineDeviceCodes.createdAt);
   const requests = asking.filter((r) => admin || r.makerId === viewerUserId).map((r) => joinRequestOf(r.code));
-  return { devices, requests, devicesHelp: await devicesHelpOn(db, orgId), lendsInternet };
+  return {
+    devices,
+    requests,
+    devicesHelp: await devicesHelpOn(db, orgId),
+    lendsInternet,
+    serverBoxesBorrow: serverLending(),
+  };
 }
 
 /** A device code that came with a connect link, as the apps show it. */

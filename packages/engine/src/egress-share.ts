@@ -9,6 +9,7 @@ import {
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
 import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending } from "./machines";
+import { runByApp } from "./runner-update";
 import type { ClaimedStream, StreamSocket } from "./streams";
 
 const { machines } = schema;
@@ -30,15 +31,18 @@ const CANDIDATES_MS = 5_000;
 
 /**
  * The computers of a workspace that lend it their internet now (ADR 0237): people's own (`connected`), with the
- * switch on, new enough to, newest pick first (turned on or picked last, else paired last).
+ * switch on, new enough to, newest pick first (turned on or picked last, else paired last). Where this server lends,
+ * those the agentes.chat app runs come before Terminal installs: a person's own desktop over a box in a server room.
  */
 export async function lendingComputers(db: Database, orgId: string) {
-  return db
+  const rows = await db
     .select({
       id: machines.id,
       name: machines.name,
       pairedByUserId: machines.pairedByUserId,
+      os: machines.os,
       protocol: machines.protocol,
+      executors: sql<{ app?: true }>`jsonb_strip_nulls(jsonb_build_object('app', ${machines.executors}->'app'))`,
     })
     .from(machines)
     .where(
@@ -51,7 +55,13 @@ export async function lendingComputers(db: Database, orgId: string) {
       ),
     )
     .orderBy(desc(sql`coalesce(${machines.egressShareAt}, ${machines.createdAt})`));
+  if (!serverLending()) return rows;
+  return rows.sort((a, b) => Number(desktopApp(b)) - Number(desktopApp(a)));
 }
+
+/** Said by its runner, or an older one off Linux (`runByApp`): an old Linux runner that doesn't say comes after. */
+const desktopApp = (m: Parameters<typeof runByApp>[0]) =>
+  m.executors?.app === true || (m.os !== "linux" && runByApp(m));
 
 const closeCodeFor = (error: unknown) => {
   if (!(error instanceof MachineRequestError)) return STREAM_CLOSE.unreachable;

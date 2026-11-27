@@ -209,19 +209,37 @@ describe("Settings › Devices", () => {
     ).toBeTruthy();
   });
 
-  test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
-    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+  test("a computer's page: its system, processor, size and toolchains behind Details, closed", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
+      if (!mac) throw new Error("fixture");
+      Object.assign(mac, { cpus: 14, cores: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+      devices.set(list);
+    });
     const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
-    const glance = card.querySelector(":scope > .dv-facts") as HTMLElement;
-    expect([...glance.querySelectorAll("dt")].map((d) => d.textContent)).toEqual(["System"]);
+    expect(card.querySelector(":scope > .dv-facts")).toBeNull();
     const more = card.querySelector("details.ac-disclosure") as HTMLDetailsElement;
     expect(more.open).toBe(false);
     expect(more.querySelector("summary")?.textContent).toBe("Details");
-    expect([...more.querySelectorAll(".dv-facts dt")].map((d) => d.textContent)).toEqual([
-      "CPU",
-      "Memory",
-      "Toolchains found",
+    const facts = [...more.querySelectorAll(".dv-facts > div")].map((f) => [
+      f.querySelector("dt")?.textContent,
+      f.querySelector("dd")?.textContent,
     ]);
+    expect(facts.slice(0, 3)).toEqual([
+      ["System", "macOS 26.1"],
+      // The cores in a tooltip, and for a screen reader after the name.
+      ["Processor", "Apple M4 Pro, 14 cores"],
+      ["Memory", "36 GB"],
+    ]);
+    expect(facts[3]?.[0]).toBe("Toolchains found");
+  });
+
+  test("a computer's page from an older runner: the system's family, and the processor as its threads", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    const facts = [...card.querySelectorAll("details .dv-facts > div")].map((f) => f.textContent);
+    expect(facts.slice(0, 2)).toEqual(["SystemmacOS", "Processor12 threads"]);
   });
 
   test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {

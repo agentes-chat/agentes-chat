@@ -44,12 +44,15 @@ test("the agent's screen on the phone says nothing about what programs there see
 
 test("letting a computer join on the phone says it will lend its internet, as the web's Let it join does", () => {
   const parts = flat("features/devices/parts.tsx");
-  // Where the server says computers lend (a self-hosted server too), not only beside the workspace's own computer.
-  expect(parts).toContain("const lends = lendsInternet(useDevices().data);");
+  // Where the server says computers lend (a self-hosted server too), not only beside the workspace's own computer,
+  // and not for a server box, which borrows (ADR 0237).
+  expect(parts).toContain("const lends = joinLends(useDevices().data, os);");
   expect(parts).toContain('t("devices.shareInternetJoin")');
   // The devices list's card and the notice's card both show it.
-  expect(parts).toContain("{joinFacts(t, r)} </Text> <JoinInternetLine />");
-  expect(flat("features/devices/notices.tsx")).toContain("{joinFacts(t, request)} </Text> <JoinInternetLine />");
+  expect(parts).toContain("{joinFacts(t, r)} </Text> <JoinInternetLine os={r.os} />");
+  expect(flat("features/devices/notices.tsx")).toContain(
+    "{joinFacts(t, request)} </Text> <JoinInternetLine os={request.os} />",
+  );
 });
 
 test("a computer whose runner is behind this server, on the phone: its owner sees why and how to update it, as the web's", () => {

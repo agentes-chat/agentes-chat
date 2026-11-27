@@ -3,6 +3,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
+import { readInstance } from "@agenteschat/client/lib/server";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
@@ -203,6 +204,31 @@ describe("the menu's banners say only what matters there", () => {
         (el) => banners(el).length > 0,
       );
     }));
+
+  test("a saved server whose app API this app no longer speaks, or doesn't yet: the welcome window's words", async () => {
+    const tooNew = createFakeHost("popover", "cloud");
+    tooNew.checkServer = async (server) =>
+      readInstance(server, { name: "agentes.chat", version: "9.0.0", api: 3, minApi: 2, url: server });
+    await withMenu(
+      (el) =>
+        expect(banners(el)).toEqual([
+          { title: "Update the app to use agentes.chat.", line: null, actions: ["Check for updates"] },
+        ]),
+      tooNew,
+      (el) => banners(el).length > 0,
+    );
+    const tooOld = createFakeHost("popover", "cloud");
+    tooOld.checkServer = async (server) =>
+      readInstance(server, { name: "agentes.chat", version: "0.0.1", api: 0, minApi: 0, url: server });
+    await withMenu(
+      (el) =>
+        expect(banners(el)).toEqual([
+          { title: "agentes.chat needs an update to work with this app.", line: null, actions: [] },
+        ]),
+      tooOld,
+      (el) => banners(el).length > 0,
+    );
+  });
 
   test("agentes.chat not starting here: its title, why and where to look, Copy details, the logs and Try again", () =>
     withMenu(
