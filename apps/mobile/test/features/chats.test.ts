@@ -769,7 +769,11 @@ describe("Conversas by my own sections (a team's Seções, ADR 0259)", () => {
   });
 
   test("closed, a section keeps its unread channels in sight and counts them as one", () => {
-    const rows = [channel("seo", "2", { unread: 3 }), channel("ads", "1"), dm("clara", "agent", "3", { working: true })];
+    const rows = [
+      channel("seo", "2", { unread: 3 }),
+      channel("ads", "1"),
+      dm("clara", "agent", "3", { working: true }),
+    ];
     const [section] = sectorSections(rows, [{ id: "s1", name: "Marketing", channelIds: ["seo", "ads"] }]);
     expect(section?.rows.filter(keptWhenClosed).map((r) => r.key)).toEqual(["ch:seo"]);
     expect(closedUnread(section?.rows ?? [])).toBe(3);
