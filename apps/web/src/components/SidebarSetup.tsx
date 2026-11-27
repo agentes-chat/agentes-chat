@@ -242,7 +242,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
             </li>
           ))}
         </ul>
-        {/* A team's list keeps Slack's order (ADR 0259): only a personal workspace orders its parts. */}
+        {/* A team's list keeps its fixed order (ADR 0259): only a personal workspace orders its parts. */}
         {personal && (
           <>
             <div className="ac-field__label-row">

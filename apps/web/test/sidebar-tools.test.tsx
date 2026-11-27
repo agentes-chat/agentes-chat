@@ -77,7 +77,7 @@ describe("the tools on top", () => {
     expect(router.state.location.pathname).toBe(before);
     const home = within(column).getByRole("link", { name: "Início" });
     expect(home.getAttribute("draggable")).toBeNull();
-    // No grip of a part: a team's list keeps Slack's order (ADR 0259).
+    // No grip of a part: a team's list keeps its fixed order (ADR 0259).
     expect(within(nav()).queryByRole("button", { name: /seção Ferramentas/ })).toBeNull();
   });
 
@@ -455,7 +455,7 @@ describe("the tools on top", () => {
 });
 
 describe("the sidebar's parts", () => {
-  test("Slack's order, each part in a block of its own; sectors show nowhere in the list (ADR 0259)", async () => {
+  test("the fixed order, each part in a block of its own; sectors show nowhere in the list (ADR 0259)", async () => {
     const state = seedState();
     const engineering = "00000000-0000-4000-8000-0000000000f1";
     state.agentGroups = [...(state.agentGroups ?? []), { id: engineering, name: "Engenharia", agentIds: [] }];

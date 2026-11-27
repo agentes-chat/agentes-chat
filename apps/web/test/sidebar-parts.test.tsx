@@ -326,7 +326,7 @@ describe("a row's buttons on hover or focus", () => {
   });
 });
 
-describe("unread marks, Slack's way", () => {
+describe("unread marks: bold, red counts for mentions alone", () => {
   const RANDOM = "00000000-0000-4000-8000-0000000000c9";
   const withRandom = (state: State = seedState()) => {
     state.channels.push({
