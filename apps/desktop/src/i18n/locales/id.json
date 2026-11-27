@@ -24,6 +24,11 @@
     "welcome": "Selamat datang",
     "prefs": "Preferensi"
   },
+  "background": {
+    "title": "agentes.chat masih berjalan",
+    "bodyMac": "Temukan di bar menu di bagian atas layar. Buka atau keluar dari sana.",
+    "bodyTray": "Temukan di baki sistem. Buka atau keluar dari sana."
+  },
   "common": {
     "cancel": "Batal",
     "close": "Tutup",
