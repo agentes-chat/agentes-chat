@@ -87,6 +87,10 @@ html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) {
   html[data-desktop] .shell .sidebar {
     padding-top: 0;
   }
+  /* A team's sidebar has no padding of its own: its tool column and its list carry it (ADR 0259). */
+  html[data-desktop] .shell .sidebar :is(.sidebar__col, .sidebar__main) {
+    padding-top: 0;
+  }
 }
 /* The workspace's sky over the sidebar's width, its hairline included: one sky with the header below. */
 .workspace-sky--bar {
