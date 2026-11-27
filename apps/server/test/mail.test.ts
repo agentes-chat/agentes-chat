@@ -333,6 +333,52 @@ test("Gmail started in the desktop app: the browser without our session hands th
   expect(statuses.at(-1)).toBe(429);
 });
 
+test("Gmail connected on the way in: back to the onboarding or the member's welcome, not Settings", async () => {
+  const fake = fakeMail();
+  t = await createTestServer({ mail: fake.mail });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const start = async (input: Record<string, unknown>) => {
+    const r = await owner(`/api/app/organizations/${orgId}/mail/accounts/composio`, {
+      json: { provider: "gmail", ...input },
+    });
+    expect(r.status).toBe(200);
+    const { accountId } = (await r.json()) as { accountId: string };
+    const link = fake.composio.state.links.at(-1);
+    if (!link) throw new Error("no connect link");
+    return { accountId, ca: link.connectedAccountId, callbackUrl: link.callbackUrl };
+  };
+  const back = async (accountId: string, from: string) =>
+    (await owner(`/api/app/mail/composio/callback?account=${accountId}&from=${from}`)).headers.get("location");
+
+  const onboarding = await start({ back: "onboarding" });
+  expect(new URL(onboarding.callbackUrl).searchParams.get("from")).toBe("onboarding");
+  fake.composio.activate(onboarding.ca, "owner@gmail.com");
+  expect(await back(onboarding.accountId, "onboarding")).toBe(
+    `${t.config.PUBLIC_URL}/onboarding?mail=connected&account=${onboarding.accountId}`,
+  );
+  const welcome = await start({ back: "welcome" });
+  expect(new URL(welcome.callbackUrl).searchParams.get("from")).toBe("welcome");
+  const remote = fake.composio.state.accounts.get(welcome.ca);
+  if (remote) remote.status = "failed";
+  expect(await back(welcome.accountId, "welcome")).toBe(
+    `${t.config.PUBLIC_URL}/welcome/${orgId}?mail=failed&account=${welcome.accountId}`,
+  );
+  // A mailbox that isn't there: the onboarding hears it failed; a welcome page with no workspace to name, the home.
+  const nobody = crypto.randomUUID();
+  expect(await back(nobody, "onboarding")).toBe(`${t.config.PUBLIC_URL}/onboarding?mail=failed&account=${nobody}`);
+  expect(await back(nobody, "welcome")).toBe(`${t.config.PUBLIC_URL}/?mail=failed&account=${nobody}`);
+  // From the desktop app's window, its return stays the app's.
+  const desktop = await start({ back: "onboarding", desktop: true });
+  expect(new URL(desktop.callbackUrl).searchParams.get("from")).toBe("desktop");
+  // Anything else is refused.
+  const wrong = await owner(`/api/app/organizations/${orgId}/mail/accounts/composio`, {
+    json: { provider: "gmail", back: "settings" },
+  });
+  expect(wrong.status).toBe(400);
+});
+
 test("Reconectar on a Gmail that needs it: the same mailbox signs in again and comes back connected", async () => {
   const fake = fakeMail();
   t = await createTestServer({ mail: fake.mail });

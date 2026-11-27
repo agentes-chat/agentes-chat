@@ -1,4 +1,14 @@
-import { FIRST_AGENT_LIMITS, latestFirstAgents, pickFirstAgent, saveFirstAgents } from "@agenteschat/engine";
+import {
+  FIRST_AGENT_LIMITS,
+  FIRST_AGENT_START_LIMITS,
+  keepImportedFirstDelivery,
+  latestFirstAgents,
+  pickFirstAgent,
+  readFirstDelivery,
+  requireActiveMembership,
+  saveFirstAgents,
+  startFirstAgent,
+} from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { type AppDeps, body, createAppRouter, errors, json, OrgParams, requireSession, security } from "./context";
 import { AgentAppearance } from "./schemas";
@@ -95,10 +105,59 @@ const Picked = z
   })
   .openapi("FirstAgentPicked");
 
+/** An agent of one of the onboarding's areas, or of "Outro" (ADR 0256 addendum). Only its shape: the engine checks it. */
+const FirstAgentStartBody = z
+  .object({
+    area: z.string().openapi({
+      description: `The onboarding's area (\`support\`, \`life\`, \`custom\`), 1 to ${FIRST_AGENT_START_LIMITS.area} characters.`,
+    }),
+    name: z.string().openapi({ description: `1 to ${FIRST_AGENT_START_LIMITS.name} characters.` }),
+    role: z
+      .string()
+      .optional()
+      .openapi({ description: `Up to ${FIRST_AGENT_START_LIMITS.role} characters.` }),
+    instructions: z
+      .string()
+      .optional()
+      .openapi({ description: `Up to ${FIRST_AGENT_START_LIMITS.instructions} characters.` }),
+    appearance: z.object({ color: z.string(), eyes: z.string(), accessory: z.string() }).nullish(),
+    task: z
+      .string()
+      .optional()
+      .openapi({
+        description: `What it delivers first when it has no routine of yours, up to ${FIRST_AGENT_START_LIMITS.task} characters.`,
+      }),
+    apps: z
+      .array(z.string())
+      .optional()
+      .openapi({
+        description: `Catalog ids of the apps its job needs, up to ${FIRST_AGENT_START_LIMITS.apps}: its checklist asks to connect those not connected yet.`,
+      }),
+    replace: z.uuid().nullish().openapi({
+      description:
+        "The agent this one takes the place of: your first agent made a moment ago, archived when its delivery hasn't fired.",
+    }),
+  })
+  .openapi("FirstAgentStartInput");
+
+const FirstDelivery = z
+  .object({
+    agentId: z.uuid(),
+    area: z.string().nullable().openapi({ description: "The onboarding's area; null for an agent from another app." }),
+    task: z.string(),
+    firedAt: z
+      .string()
+      .nullable()
+      .openapi({ description: "When it went out; null while it waits for the plan or the AI." }),
+    runId: z.uuid().nullable().openapi({ description: "The run it woke in your DM with the agent, once fired." }),
+  })
+  .openapi("FirstDelivery");
+
 /**
  * The first agents the person's own AI proposed (ADR 0256): the newest proposal, one pasted from an AI with no
  * connector, and the pick. All of it works while the workspace waits for its first plan: the onboarding runs before
- * Checkout.
+ * Checkout. An agent of one of the onboarding's areas, and the person's first delivery (ADR 0256 addendum): what that
+ * agent does for them first, in their DM with it, once the workspace has its plan and the agent its AI.
  */
 export function firstAgentRoutes(deps: AppDeps) {
   const { db, adapters } = deps;
@@ -178,6 +237,72 @@ export function firstAgentRoutes(deps: AppDeps) {
         c.req.valid("json").index,
       );
       return c.json(picked, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/first-agents/start",
+      tags,
+      security,
+      summary: "Create my first agent from an area of the onboarding",
+      description:
+        "One agent, as you, made as a picked proposal is (its own channel in a team's workspace, its AI, a checklist row for each app to connect) but with no routine: connecting an app brings its routine. Its first delivery is kept and fires in your DM with it once the workspace has its plan and the agent its AI. `replace`: your first agent made a moment ago, archived. 400 `first_agents.invalid` with what is wrong; 403 `create_agents_required` without the permission to create agents.",
+      request: { params: OrgParams, body: body(FirstAgentStartBody) },
+      responses: { 201: json(Picked), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const made = await startFirstAgent(
+        { db, pubsub: adapters.pubsub, gateway: deps.extras?.context?.gateway, context: deps.extras?.context },
+        { orgId, userId: c.get("user").id },
+        c.req.valid("json"),
+      );
+      return c.json(made, 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/first-delivery",
+      tags,
+      security,
+      summary: "My first delivery here, or null",
+      description:
+        "What the agent I set up on the onboarding does for me first, and whether it went out. Null when none was kept, or its agent was archived.",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({ delivery: FirstDelivery.nullable() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      await requireActiveMembership(db, userId, orgId);
+      return c.json({ delivery: await readFirstDelivery(db, orgId, userId) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/first-delivery",
+      tags,
+      security,
+      summary: "Keep my first delivery for an agent of this workspace (one brought from another app)",
+      description:
+        "No area and no task: its brief is its routine of yours, else its role. One already fired stays as it is. 404 `first_delivery.no_agent` for an agent not here or archived; 403 `first_delivery.not_yours` for one that doesn't answer you.",
+      request: { params: OrgParams, body: body(z.object({ agentId: z.uuid() })) },
+      responses: { 200: json(z.object({ delivery: FirstDelivery })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const delivery = await keepImportedFirstDelivery(
+        db,
+        { orgId, userId: c.get("user").id },
+        c.req.valid("json").agentId,
+      );
+      return c.json({ delivery }, 200);
     },
   );
 

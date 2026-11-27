@@ -13,6 +13,7 @@ import {
   enqueueAccountContacts,
   enqueueAutonomyReport,
   enqueueConsolidations,
+  enqueueFirstDeliveryChecks,
   enqueueIdleReflections,
   enqueueOverdueAccountDeletions,
   enqueueOverdueDeletions,
@@ -288,6 +289,11 @@ export const WORKER_INTERVALS_MS = {
   planRechecks: 60_000,
   /** Phones whose setup sat on one step for 10 minutes, each reported once (`claimStuckPhoneSetups`). */
   phoneSetups: 60_000,
+  /**
+   * First deliveries still waiting for their plan, AI or computer (ADR 0256 addendum): each workspace's look is queued at
+   * most once per its window (`firstDeliveryWindowMs`), 15 s while a delivery is new.
+   */
+  firstDeliveries: 15_000,
 };
 
 /**
@@ -588,6 +594,11 @@ export function startWorkers(deps: WorkerDeps) {
 
   every("rightHand", WORKER_INTERVALS_MS.rightHand, async () => {
     if ((await enqueueRightHandChecks(db)) > 0) void ticks.get("outbox")?.();
+  });
+
+  every("firstDeliveries", WORKER_INTERVALS_MS.firstDeliveries, async () => {
+    if (!(await sweepsHere(db, deps.role))) return;
+    if ((await enqueueFirstDeliveryChecks(db)) > 0) void ticks.get("outbox")?.();
   });
 
   every("routines", WORKER_INTERVALS_MS.routines, async () => {

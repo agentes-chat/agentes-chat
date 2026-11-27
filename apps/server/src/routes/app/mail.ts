@@ -230,6 +230,10 @@ export function mailRoutes(deps: AppDeps, log: Logger) {
             desktop: z.boolean().optional().openapi({
               description: "Started in the desktop app's window: the callback hands the return back to the app.",
             }),
+            back: z.enum(["onboarding", "welcome"]).optional().openapi({
+              description:
+                "Started on the onboarding or on a member's welcome page: the callback returns there instead of Settings › Connectors (not from the desktop app's window, whose return stays the app's).",
+            }),
           }),
         ),
       },
@@ -248,8 +252,10 @@ export function mailRoutes(deps: AppDeps, log: Logger) {
       tags,
       summary: "Where Composio sends the person back (browser navigation, no session needed)",
       description:
-        "Reads the connected account, then redirects to the connectors screen with `mail=connected` or `mail=failed`, and `account=<id>`. Started in the desktop app (`from=desktop`): to the browser page `/desktop/back` instead, carrying in its fragment the app's link (`agenteschat://desktop/connectors/oauth?org=…&state=mail&code=connected|failed`), which opens the connectors screen in the app's window.",
-      request: { query: z.object({ account: z.uuid(), from: z.enum(["desktop"]).optional() }) },
+        "Reads the connected account, then redirects to the connectors screen with `mail=connected` or `mail=failed`, and `account=<id>`. Started on the onboarding (`from=onboarding`): to `/onboarding` with the same query; on a member's welcome page (`from=welcome`): to `/welcome/<orgId>`. Started in the desktop app (`from=desktop`): to the browser page `/desktop/back` instead, carrying in its fragment the app's link (`agenteschat://desktop/connectors/oauth?org=…&state=mail&code=connected|failed`), which opens the connectors screen in the app's window.",
+      request: {
+        query: z.object({ account: z.uuid(), from: z.enum(["desktop", "onboarding", "welcome"]).optional() }),
+      },
       responses: {
         302: { description: "Back to the web app, or to the desktop app" },
         429: errorResponse("Too many attempts (`rate_limited`)"),
@@ -270,6 +276,10 @@ export function mailRoutes(deps: AppDeps, log: Logger) {
       if (from === "desktop")
         return c.redirect(desktopBackPage(base, desktopMailRedirect(r?.orgId, r?.ok === true)), 302);
       const account = `account=${encodeURIComponent(accountId)}`;
+      const mail = `mail=${r?.ok ? "connected" : "failed"}&${account}`;
+      // Connected on the way in (ADR 0256 addendum): back to the step it was connected from.
+      if (from === "onboarding") return c.redirect(`${base}/onboarding?${mail}`, 302);
+      if (from === "welcome" && r) return c.redirect(`${base}/welcome/${r.orgId}?${mail}`, 302);
       if (!r) return c.redirect(`${base}/?mail=failed&${account}`, 302);
       return c.redirect(
         `${base}/org/${r.orgId}/settings/connectors?mail=${r.ok ? "connected" : "failed"}&${account}`,
