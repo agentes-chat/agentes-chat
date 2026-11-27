@@ -1,4 +1,5 @@
 import {
+  scheduleText,
   useAskWidgetChange,
   useBuildOnceAi,
   useDesktopStatus,
@@ -18,7 +19,7 @@ import {
 import { managesAgent } from "@agenteschat/client/lib/audience";
 import { upcomingAt, whenAt } from "@agenteschat/client/lib/format";
 import { plainInline } from "@agenteschat/client/lib/markdown";
-import { WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
+import { everyHoursOf, WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,6 +29,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import {
   Button,
+  GROUPED_ROW,
   GroupedHeader,
   GroupedList,
   GroupedRow,
@@ -51,9 +53,9 @@ import { useFailed } from "../routines/hooks";
 import { useDirectory, useOrgId, useOwnsAgent, usePullRefresh } from "../shared/hooks";
 import { FocusLive, goBack, PushedHeader, successHaptic } from "../shared/parts";
 import { useAgentLook, useWidgetAiWay, useWidgetWords } from "./hooks";
-import { HOME, shownWidgetTitle } from "./logic";
-import { usePickMenu } from "./menu";
-import { MissingScreen } from "./parts";
+import { EVERY_HOURS, HOME, scheduleChoiceOf, schedulePicked, shownWidgetTitle } from "./logic";
+import { type PickItem, usePickMenu } from "./menu";
+import { EveryHoursInput, MissingScreen } from "./parts";
 import { widgetEditHref } from "./WidgetEditScreen";
 import { WidgetCard } from "./WidgetView";
 
@@ -121,20 +123,29 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
       {
         onSuccess: () => {
           successHaptic();
-          const when = t(`widgets.schedulesInline.${schedule}`);
+          const when = scheduleText(t, schedule, "inline");
           toast({ title: t("mobile.dashboards.widget.scheduleSaved", { schedule: when }) });
         },
         onError: failed,
       },
     );
   };
-  // How often: five schedules, the app's picker (as New widget's), the one in use checked.
+  // How often: five schedules and every N hours, the app's picker (as New widget's), the one in use checked; every N
+  // hours' number shows under the row.
   const pickSchedule = () =>
     pick(
       t("dashboards.newWidget.updates"),
-      WIDGET_SCHEDULES.map((s) => ({ key: s, label: t(`widgets.schedules.${s}`) })),
-      w.schedule,
-      setSchedule,
+      [
+        ...WIDGET_SCHEDULES.map(
+          (s): PickItem<WidgetSchedule | typeof EVERY_HOURS> => ({
+            key: s,
+            label: scheduleText(t, s),
+          }),
+        ),
+        { key: EVERY_HOURS, label: t("widgets.everyHoursPick") },
+      ],
+      scheduleChoiceOf(w.schedule),
+      (k) => setSchedule(schedulePicked(w.schedule, k)),
     );
   // The same words as the web's confirmation (ADR 0135): its routine stops and its history goes.
   const confirmRemove = () =>
@@ -305,12 +316,18 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
             <GroupedList>
               <GroupedRow
                 icon="clock"
-                label={t(`widgets.schedules.${w.schedule}`)}
+                label={scheduleText(t, w.schedule)}
                 sub={next}
                 subLines={2}
                 menu={w.canEdit}
                 {...(w.canEdit ? { onPress: pickSchedule } : {})}
               />
+              {/* Every N hours: its number under its row, saved on Done or when left. */}
+              {w.canEdit && everyHoursOf(w.schedule) !== null ? (
+                <View style={styles.everyHours}>
+                  <EveryHoursInput value={w.schedule} onChange={setSchedule} />
+                </View>
+              ) : null}
               <GroupedRow
                 icon="bell"
                 label={alertLine}
@@ -488,6 +505,8 @@ function AskChange({ widget: w, name }: { widget: WidgetDetail; name: string }) 
 }
 
 const styles = StyleSheet.create({
+  // Every N hours' number, inside the group under its choice, on the rows' leading edge.
+  everyHours: { paddingHorizontal: GROUPED_ROW.padX, paddingBottom: 12 },
   screen: { flex: 1 },
   in: { paddingHorizontal: 16 },
   cares: { paddingHorizontal: 4, paddingTop: 8, marginBottom: 10 },

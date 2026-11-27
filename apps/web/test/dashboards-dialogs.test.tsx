@@ -354,9 +354,30 @@ describe("New widget (ADR 0135 §3)", () => {
       screen()
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toEqual(["A cada 30 min", "A cada hora", "Todo dia às 8h", "Toda segunda às 8h", "Só quando eu pedir"]);
+    ).toEqual([
+      "A cada 30 min",
+      "A cada hora",
+      "Todo dia às 8h",
+      "Toda segunda às 8h",
+      "Só quando eu pedir",
+      "A cada … horas",
+    ]);
+    // Every N hours: a number beside the select, the chosen value in words.
+    await click(screen().getByRole("option", { name: "A cada … horas" }));
+    await settle(2);
+    const hours = within(dialog).getByRole("spinbutton", { name: "A cada quantas horas" }) as HTMLInputElement;
+    expect(hours.value).toBe("6");
+    expect(combo(dialog, "Atualiza").textContent).toContain("a cada 6 horas");
+    await act(async () => fireEvent.change(hours, { target: { value: "12" } }));
+    await act(async () => fireEvent.blur(hours));
+    await settle(2);
+    expect(combo(dialog, "Atualiza").textContent).toContain("a cada 12 horas");
+    // Back to a preset: the number goes.
+    schedule.focus();
+    await act(async () => fireEvent.keyDown(combo(dialog, "Atualiza"), { key: "Enter" }));
     await click(screen().getByRole("option", { name: "A cada hora" }));
     await settle(2);
+    expect(within(dialog).queryByRole("spinbutton", { name: "A cada quantas horas" })).toBeNull();
     expect(dialog.textContent).not.toMatch(/US\$|orçamento/);
     expect((button(dialog, "Testar") as HTMLButtonElement).disabled).toBe(false);
   });

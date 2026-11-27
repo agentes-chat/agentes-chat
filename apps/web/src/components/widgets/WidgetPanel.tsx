@@ -1,5 +1,6 @@
 import type { WidgetDetail, WidgetSchedule, WidgetUpdate } from "@agenteschat/client";
 import {
+  scheduleText,
   useAskWidgetChange,
   useBuildOnceAi,
   useRefreshWidget,
@@ -19,12 +20,11 @@ import {
   InlineName,
   Input,
   Locked,
-  Select,
   Spinner,
   Switch,
   WidgetCard,
 } from "@agenteschat/ui";
-import { WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
+import { everyHoursOf } from "@agenteschat/ui/widgets/spec";
 import type { TFunction } from "i18next";
 import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -35,6 +35,7 @@ import { useNow } from "@/hooks/useNow";
 import { useToast } from "@/lib/toast";
 import { failureText, useWidgetAgent, WidgetFace, WidgetFoot, widgetBodyText, widgetTitle } from "./parts";
 import { RemoveWidgetDialog } from "./RemoveWidgetDialog";
+import { EveryHoursField, WidgetScheduleSelect } from "./WidgetScheduleSelect";
 import "./widgets.css";
 
 /**
@@ -252,13 +253,15 @@ function HowItUpdates({
   const say = (e: unknown) => toast.show(errorText(t, e, i18n.language), "error");
   const next = widget.nextRunAt ? upcomingAt(t, i18n.language, widget.nextRunAt, new Date(now)) : null;
   const alert = widget.alert;
+  const setSchedule = (schedule: WidgetSchedule) =>
+    schedule !== widget.schedule && update.mutate({ widgetId: widget.id, schedule }, { onError: say });
   return (
     <section className="wd__sec" aria-label={t("widgets.panel.how")}>
       <h3>{t("widgets.panel.how")}</h3>
       <ul className="wd__rows">
         <PanelRow
           icon="routines"
-          title={t(`widgets.schedules.${widget.schedule}`)}
+          title={scheduleText(t, widget.schedule)}
           sub={
             widget.schedule === "manual"
               ? t("widgets.panel.askAnytime")
@@ -268,19 +271,23 @@ function HowItUpdates({
           }
           action={
             widget.canEdit ? (
-              <Select<WidgetSchedule>
-                size="sm"
+              <WidgetScheduleSelect
                 align="end"
-                aria-label={t("widgets.menu.schedule")}
+                field="apart"
+                label={t("widgets.menu.schedule")}
                 value={widget.schedule}
-                options={WIDGET_SCHEDULES.map((s) => ({ value: s, label: t(`widgets.schedulesShort.${s}`) }))}
-                onValueChange={(schedule) =>
-                  schedule !== widget.schedule && update.mutate({ widgetId: widget.id, schedule }, { onError: say })
-                }
+                onChange={setSchedule}
               />
             ) : null
           }
-        />
+        >
+          {/* Every N hours: its number under the row, so the row's words keep their width on a phone. */}
+          {widget.canEdit && everyHoursOf(widget.schedule) !== null && (
+            <div className="wd__every">
+              <EveryHoursField value={widget.schedule} onChange={setSchedule} />
+            </div>
+          )}
+        </PanelRow>
         <PanelRow
           icon="bell"
           title={

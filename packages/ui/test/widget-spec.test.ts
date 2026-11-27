@@ -5,11 +5,15 @@ import {
   clipText,
   defaultSize,
   type ExampleWords,
+  everyHours,
+  everyHoursOf,
   exampleWidgetSpec,
+  isWidgetSchedule,
   layoutToSize,
   nextSize,
   phoneSpan,
   scheduleRunsPerDay,
+  scheduleWordsEn,
   sizeToLayout,
   specHeadline,
   splitDelta,
@@ -183,6 +187,30 @@ describe("schedules and sizes", () => {
     expect(scheduleRunsPerDay("day")).toBe(1);
     expect(scheduleRunsPerDay("week")).toBeCloseTo(1 / 7);
     expect(scheduleRunsPerDay("manual")).toBe(0);
+  });
+
+  test("every N hours: h:N with N whole from 1 to 720, read only in its one spelling", () => {
+    expect(everyHoursOf("h:6")).toBe(6);
+    expect(everyHoursOf("h:1")).toBe(1);
+    expect(everyHoursOf("h:720")).toBe(720);
+    for (const odd of ["h:0", "h:721", "h:06", "h:1.5", "h:-2", "h:", "h:6h", "6", 6, null, "hour"]) {
+      expect(everyHoursOf(odd)).toBeNull();
+    }
+    expect(isWidgetSchedule("h:12")).toBe(true);
+    expect(isWidgetSchedule("h:0")).toBe(false);
+    expect(isWidgetSchedule("week")).toBe(true);
+    expect(isWidgetSchedule("every_5_minutes")).toBe(false);
+    // Made from a typed number: rounded and kept within the range.
+    expect(everyHours(6)).toBe("h:6");
+    expect(everyHours(2.4)).toBe("h:2");
+    expect(everyHours(0)).toBe("h:1");
+    expect(everyHours(5000)).toBe("h:720");
+    // What it costs a day, and how the tools say it.
+    expect(scheduleRunsPerDay("h:6")).toBe(4);
+    expect(scheduleRunsPerDay("h:48")).toBe(0.5);
+    expect(scheduleWordsEn("h:6")).toBe("every 6 hours");
+    expect(scheduleWordsEn("h:1")).toBe("every hour");
+    expect(scheduleWordsEn("day")).toBe("every day at 08:00");
   });
 
   test("every schedule but manual has a cron, never more often than every 30 minutes", () => {

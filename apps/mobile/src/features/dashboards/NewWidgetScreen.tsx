@@ -1,4 +1,5 @@
 import {
+  scheduleText,
   useAiStatusSince,
   useConfirmWidget,
   useDashboards,
@@ -19,6 +20,7 @@ import {
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { taskClock } from "@agenteschat/client/lib/task-manager";
 import {
+  everyHoursOf,
   sizeToLayout,
   WIDGET_FORMATS,
   WIDGET_LIMITS,
@@ -62,17 +64,20 @@ import {
   asksInCard,
   confirmTitle,
   destinationsOf,
+  EVERY_HOURS,
   HOME,
   newWidgetBarLabel as newWidgetAction,
   previewKind,
   realBoardId,
+  scheduleChoiceOf,
+  schedulePicked,
   sizeFor,
   testKeyOf,
   testPhase,
 } from "./logic";
 import { type PickItem, usePickMenu } from "./menu";
 import { closeOptionPick, openOptionPick } from "./option-pick";
-import { KindGlyph } from "./parts";
+import { EveryHoursInput, KindGlyph } from "./parts";
 import { BuildingSweep, WidgetBody, WidgetCard } from "./WidgetView";
 
 /** The longest ask and alert condition the server takes (ADR 0135). */
@@ -337,19 +342,27 @@ export function NewWidgetScreen({ dashboardId }: { dashboardId: string }) {
       format,
       setFormat,
     );
-  // How often: the schedules' words only (what it spends is not this menu's business).
+  // How often: the schedules' words only (what it spends is not this menu's business), and every N hours, whose
+  // number has its own row under this one.
   const openSchedules = () =>
     pick(
       t("dashboards.newWidget.updates"),
-      WIDGET_SCHEDULES.map(
-        (s): PickItem<WidgetSchedule> => ({
-          key: s,
-          label: t(`widgets.schedules.${s}`),
+      [
+        ...WIDGET_SCHEDULES.map(
+          (s): PickItem<WidgetSchedule | typeof EVERY_HOURS> => ({
+            key: s,
+            label: scheduleText(t, s),
+            leading: <Icon name="clock" size={18} color={c.muted} />,
+          }),
+        ),
+        {
+          key: EVERY_HOURS,
+          label: t("widgets.everyHoursPick"),
           leading: <Icon name="clock" size={18} color={c.muted} />,
-        }),
-      ),
-      schedule,
-      setSchedule,
+        },
+      ],
+      scheduleChoiceOf(schedule),
+      (k) => setSchedule(schedulePicked(schedule, k)),
     );
 
   const suggestionList = suggestions.data?.suggestions ?? [];
@@ -581,10 +594,15 @@ export function NewWidgetScreen({ dashboardId }: { dashboardId: string }) {
           <GroupedRow
             key="updates"
             label={t("dashboards.newWidget.updates")}
-            value={t(`widgets.schedules.${schedule}`)}
+            value={scheduleText(t, schedule)}
             menu
             onPress={openSchedules}
           />
+          {everyHoursOf(schedule) !== null ? (
+            <GroupedField key="every" label={t("widgets.everyHoursField")}>
+              <EveryHoursInput value={schedule} onChange={setSchedule} />
+            </GroupedField>
+          ) : null}
           <GroupedRow
             key="alert"
             label={t("widgets.alert.label")}
