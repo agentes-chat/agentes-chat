@@ -1,9 +1,18 @@
 import { randomBytes } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import type { EventEmitter } from "node:events";
-import { chmodSync, rmSync } from "node:fs";
-import { createServer, isIPv6, type Socket } from "node:net";
-import { isEgressTarget, STREAM_CLOSE } from "@agenteschat/adapters/machine-protocol";
+import { chmodSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer, isIP, isIPv6, type Server, type Socket, connect as tcpConnect } from "node:net";
+import path from "node:path";
+import {
+  EGRESS_DIRECT_HOSTS,
+  isEgressHost,
+  isEgressTarget,
+  STREAM_CLOSE,
+} from "@agenteschat/adapters/machine-protocol";
+import { publicAddress } from "./egress";
 import { pipeSocket } from "./egress-share";
+import type { NetworkConfig } from "./network-state";
 import type { DataSocket } from "./streams";
 
 /**
@@ -29,7 +38,7 @@ export function replyFor(closeCode: number | undefined): number {
   return SOCKS_REPLY.networkUnreachable;
 }
 
-const reply = (code: number) => Buffer.from([5, code, 0, 1, 0, 0, 0, 0, 0, 0]);
+const socksReply = (code: number) => Buffer.from([5, code, 0, 1, 0, 0, 0, 0, 0, 0]);
 
 /** A CONNECT request's target, its length in `buf`, or null while more bytes are needed; `false`: not one we take. */
 export function parseConnect(buf: Buffer): { host: string; port: number; length: number } | null | false {
@@ -59,16 +68,29 @@ export function parseConnect(buf: Buffer): { host: string; port: number; length:
   return { host, port: buf.readUInt16BE(at), length: at + 2 };
 }
 
+type Target = { host: string; port: number };
+/** Where a connection went: a lent one's data socket, or this computer's own TCP connection. */
+type Opened = { data: DataSocket } | { tcp: Socket };
+/** Opens `target`, or rejects with the server's `closeCode` (none: it failed here). */
+type Open = (target: Target) => Promise<Opened>;
+
 /**
- * Serves the socket at `path` until `close`. `dial` opens the data socket that asks for `target` (`stream.hello`
- * with `egress`); a rejection carrying the server's `closeCode` becomes its SOCKS reply.
+ * Serves the socket at `path` until `close`: the workspace's own computer's, for its network guard. `dial` opens the
+ * data socket that asks for `target` (`stream.hello` with `egress`); a rejection carrying the server's `closeCode`
+ * becomes its SOCKS reply.
  */
 export function startEgressRelay(o: {
   path: string;
-  dial: (streamId: string, target: { host: string; port: number }) => Promise<DataSocket>;
-}): { close(): void } {
+  dial: (streamId: string, target: Target) => Promise<DataSocket>;
+}): {
+  close(): void;
+} {
   rmSync(o.path, { force: true });
-  const server = createServer((client) => serve(client, o.dial));
+  const open: Open = async (target) => {
+    if (!isEgressTarget(target)) throw { closeCode: STREAM_CLOSE.refused };
+    return { data: await o.dial(randomBytes(32).toString("base64url"), target) };
+  };
+  const server = createServer((client) => serve(client, open));
   server.listen(o.path, () => {
     try {
       chmodSync(o.path, 0o600);
@@ -86,44 +108,257 @@ export function startEgressRelay(o: {
   };
 }
 
-function serve(
-  client: Socket,
-  dial: (streamId: string, target: { host: string; port: number }) => Promise<DataSocket>,
-) {
+/** The borrowing computer's loopback proxy keeps its port here, so processes started earlier keep reaching it. */
+export const EGRESS_PROXY_FILE = "egress-proxy.json";
+/** After nothing lent, or the server saying this computer doesn't borrow, connections go direct this long unasked. */
+export const EGRESS_QUIET_MS = 60_000;
+
+/** The port a runner home's loopback proxy last listened on, or null. */
+export function storedEgressPort(home: string): number | null {
+  try {
+    const port = (JSON.parse(readFileSync(path.join(home, EGRESS_PROXY_FILE), "utf8")) as { port?: unknown }).port;
+    return Number.isSafeInteger(port) && (port as number) > 0 && (port as number) < 65536 ? (port as number) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** This computer's own way to `target`: every address it resolves to must be public, or nothing is dialed. */
+async function directDial(
+  target: Target,
+  resolve: (host: string) => Promise<string[]>,
+  connect: (host: string, port: number) => Socket,
+): Promise<Opened> {
+  let addresses: string[];
+  try {
+    addresses = isIP(target.host) ? [target.host] : await resolve(target.host);
+  } catch {
+    throw { closeCode: STREAM_CLOSE.notFound };
+  }
+  const address = addresses[0];
+  if (!address) throw { closeCode: STREAM_CLOSE.notFound };
+  // Root's dial skips the agents' guard: never this computer, its networks or its containers.
+  if (!addresses.every(publicAddress)) throw { closeCode: STREAM_CLOSE.refused };
+  return new Promise((resolve, reject) => {
+    const tcp = connect(address, target.port);
+    const timer = setTimeout(() => {
+      tcp.destroy();
+      reject({ closeCode: STREAM_CLOSE.notFound });
+    }, 10_000);
+    tcp.once("connect", () => {
+      clearTimeout(timer);
+      resolve({ tcp });
+    });
+    tcp.once("error", () => {
+      clearTimeout(timer);
+      reject({ closeCode: STREAM_CLOSE.notFound });
+    });
+  });
+}
+
+/**
+ * ADR 0237 on a self-hosted server: a computer that borrows a person's internet without the Cloud's guard. Its agents'
+ * programs and browsers are told to use `127.0.0.1:<port>` (HTTP CONNECT or SOCKS5, no authentication). While `lent()`,
+ * a connection to port 80 or 443 asks the server for a lending computer (`dial`); anything else, nothing lent now, a
+ * refusal or the server away, goes out this computer's own way, to public addresses only. After nothing lent or a
+ * "doesn't borrow", it stays direct for `EGRESS_QUIET_MS` without asking. Only `notFound` (the lending computer found no
+ * such site) fails the connection.
+ *
+ * ponytail: any local process may use the port (a single-user computer has no guard): it only reaches public web
+ * addresses, through this workspace's own lending computer. Per-process auth if that ever matters.
+ */
+export async function startEgressProxy(o: {
+  home: string;
+  dial: (streamId: string, target: Target) => Promise<DataSocket>;
+  lent: () => boolean;
+  now?: () => number;
+  resolve?: (host: string) => Promise<string[]>;
+  /** Tests: where a direct connection goes. */
+  connect?: (host: string, port: number) => Socket;
+}): Promise<{ port: number; close(): void }> {
+  const now = o.now ?? Date.now;
+  const resolve = o.resolve ?? (async (h: string) => (await lookup(h, { all: true })).map((a) => a.address));
+  let quietUntil = 0;
+  const open: Open = async (target) => {
+    if (o.lent() && isEgressTarget(target) && now() >= quietUntil) {
+      try {
+        return { data: await o.dial(randomBytes(32).toString("base64url"), target) };
+      } catch (error) {
+        const code = (error as { closeCode?: number } | null)?.closeCode;
+        if (code === STREAM_CLOSE.notFound) throw error;
+        if (code !== STREAM_CLOSE.refused) quietUntil = now() + EGRESS_QUIET_MS;
+      }
+    }
+    return directDial(target, resolve, o.connect ?? ((host, port) => tcpConnect({ host, port })));
+  };
+  const listen = (port: number) =>
+    new Promise<Server>((done, fail) => {
+      const server = createServer((client) => serve(client, open));
+      (server as unknown as EventEmitter).once("error", fail);
+      server.listen(port, "127.0.0.1", () => {
+        (server as unknown as EventEmitter).on("error", () => undefined);
+        done(server);
+      });
+    });
+  const stored = storedEgressPort(o.home);
+  const server = await (stored ? listen(stored).catch(() => listen(0)) : listen(0));
+  const port = (server.address() as { port: number }).port;
+  if (port !== stored) writeFileSync(path.join(o.home, EGRESS_PROXY_FILE), `${JSON.stringify({ port })}\n`);
+  return { port, close: () => server.close() };
+}
+
+/** What a borrowing computer's agents are handed now (`setEgressProxy`); null: they go their usual way. */
+let lentProxy: { port: number; direct: string[] } | null = null;
+
+/** The daemon (or, in system mode, each agent's worker from `worker.state`) says whether agents use the proxy. */
+export function setEgressProxy(next: { port: number; direct: string[] } | null) {
+  lentProxy = next;
+}
+
+/** What `setEgressProxy` holds: the workers' state carries it. */
+export const egressProxyState = () => lentProxy;
+
+/**
+ * The runner itself goes out through a proxy its operator set, or its agents through a network of their own (a
+ * `networkLauncher` namespace, whose 127.0.0.1 never reaches this proxy, or a `networkMark` route root's dial would
+ * skip): theirs wins, and agents get nothing from us.
+ */
+export const hasOwnProxy = (env: NodeJS.ProcessEnv = process.env, network?: NetworkConfig | null) =>
+  Boolean(network?.networkLauncher || network?.networkMark) ||
+  ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"].some((k) => env[k]);
+
+/** Never through the proxy: this computer, the private and local ranges, the AI CLIs' services, and `direct`. */
+const noProxyList = (direct: readonly string[]) => [
+  "localhost",
+  "127.0.0.0/8",
+  "::1",
+  ".local",
+  ".internal",
+  "10.0.0.0/8",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+  "100.64.0.0/10",
+  "169.254.0.0/16",
+  "fc00::/7",
+  "fe80::/10",
+  ...EGRESS_DIRECT_HOSTS,
+  ...direct,
+];
+
+/**
+ * The proxy settings an agent's processes get while this computer borrows (`{}` otherwise): HTTPS and SOCKS (names
+ * resolved by the lending computer), Node's own fetch included, and `NO_PROXY`. `extraDirect`: more hosts that keep
+ * their own way (a Claude Code turn's endpoint).
+ *
+ * ponytail: no `HTTP_PROXY`, so plain http goes direct (curl still takes `ALL_PROXY`); the proxy forwards CONNECT
+ * only. Add an absolute-URI forwarder if plain-http sites ever need the lender.
+ */
+export function egressProxyEnv(extraDirect: readonly string[] = []): Record<string, string> {
+  if (!lentProxy) return {};
+  const at = `127.0.0.1:${lentProxy.port}`;
+  const none = noProxyList([...lentProxy.direct, ...extraDirect]).join(",");
+  return {
+    HTTPS_PROXY: `http://${at}`,
+    https_proxy: `http://${at}`,
+    ALL_PROXY: `socks5h://${at}`,
+    all_proxy: `socks5h://${at}`,
+    NODE_USE_ENV_PROXY: "1",
+    NO_PROXY: none,
+    no_proxy: none,
+  };
+}
+
+/**
+ * Chrome's flags while this computer borrows: its proxy (names resolved by the lending computer), the same hosts kept
+ * direct, and WebRTC kept off UDP outside the proxy so a page never learns this computer's own address.
+ */
+export function egressProxyChromeArgs(): string[] {
+  if (!lentProxy) return [];
+  const bypass = noProxyList(lentProxy.direct).map((h) => (h.startsWith(".") ? `*${h}` : h === "::1" ? "[::1]" : h));
+  return [
+    `--proxy-server=socks5://127.0.0.1:${lentProxy.port}`,
+    `--proxy-bypass-list=${["<local>", ...bypass].join(";")}`,
+    "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+  ];
+}
+
+const HTTP_REPLY: Record<number, string> = {
+  [SOCKS_REPLY.ok]: "200 Connection Established",
+  [SOCKS_REPLY.notAllowed]: "403 Forbidden",
+  [SOCKS_REPLY.networkUnreachable]: "502 Bad Gateway",
+  [SOCKS_REPLY.hostUnreachable]: "504 Gateway Timeout",
+  [SOCKS_REPLY.notSupported]: "405 Method Not Allowed",
+};
+const httpReply = (code: number) => Buffer.from(`HTTP/1.1 ${HTTP_REPLY[code] ?? "502 Bad Gateway"}\r\n\r\n`);
+
+/** An HTTP `CONNECT host:port` request's target and its length, null while more is needed, `false`: not one. */
+export function parseHttpConnect(buf: Buffer): { host: string; port: number; length: number } | null | false {
+  const end = buf.indexOf("\r\n\r\n");
+  if (end < 0) return buf.length > 8192 ? false : null;
+  const m = /^CONNECT (\[[0-9A-Fa-f:.]+\]|[^\s:]+):(\d{1,5}) HTTP\/1\.[01]\r\n/.exec(
+    buf.toString("latin1", 0, end + 2),
+  );
+  if (!m) return false;
+  const host = (m[1] as string).replace(/^\[|\]$/g, "");
+  const port = Number(m[2]);
+  if (!isEgressHost(host) || port < 1 || port > 65535) return false;
+  return { host, port, length: end + 4 };
+}
+
+function serve(client: Socket, open: Open) {
   let buf = Buffer.alloc(0);
-  let stage: "greeting" | "request" | "dialing" = "greeting";
+  let stage: "first" | "greeting" | "request" | "http" | "dialing" = "first";
   client.on("error", () => undefined);
   const timer = setTimeout(() => client.destroy(), 30_000);
   const onData = (chunk: Buffer) => {
     buf = Buffer.concat([buf, chunk]);
-    if (buf.length > 600) return client.destroy();
-    if (stage === "greeting") {
-      if (buf.length < 2) return;
-      if (buf[0] !== 5) return client.destroy();
-      const n = buf[1] as number;
-      if (buf.length < 2 + n) return;
-      if (!buf.subarray(2, 2 + n).includes(0)) {
-        client.end(Buffer.from([5, 0xff]));
-        return;
+    if (stage === "first") stage = buf[0] === 5 ? "greeting" : "http";
+    if (buf.length > (stage === "http" ? 8192 + 4 : 600)) return client.destroy();
+    let target: { host: string; port: number; length: number } | null | false;
+    let reply: (code: number) => Buffer;
+    if (stage === "http") {
+      target = parseHttpConnect(buf);
+      reply = httpReply;
+    } else {
+      if (stage === "greeting") {
+        if (buf.length < 2) return;
+        const n = buf[1] as number;
+        if (buf.length < 2 + n) return;
+        if (!buf.subarray(2, 2 + n).includes(0)) {
+          client.end(Buffer.from([5, 0xff]));
+          return;
+        }
+        client.write(Buffer.from([5, 0]));
+        buf = buf.subarray(2 + n);
+        stage = "request";
       }
-      client.write(Buffer.from([5, 0]));
-      buf = buf.subarray(2 + n);
-      stage = "request";
+      target = parseConnect(buf);
+      reply = socksReply;
     }
-    if (stage !== "request") return;
-    const target = parseConnect(buf);
     if (target === null) return;
-    if (target === false || !isEgressTarget(target)) {
-      client.end(reply(target === false ? SOCKS_REPLY.notSupported : SOCKS_REPLY.notAllowed));
+    if (target === false) {
+      client.end(reply(SOCKS_REPLY.notSupported));
       return;
     }
     stage = "dialing";
     client.pause();
     client.off("data", onData);
     const early = buf.subarray(target.length);
-    void dial(randomBytes(32).toString("base64url"), { host: target.host, port: target.port }).then(
-      (data) => {
+    void open({ host: target.host, port: target.port }).then(
+      (opened) => {
         clearTimeout(timer);
+        if ("tcp" in opened) {
+          if (client.destroyed) return opened.tcp.destroy();
+          client.write(reply(SOCKS_REPLY.ok));
+          if (early.length > 0) opened.tcp.write(early);
+          opened.tcp.on("error", () => client.destroy());
+          client.on("close", () => opened.tcp.destroy());
+          opened.tcp.pipe(client);
+          client.pipe(opened.tcp);
+          client.resume();
+          return;
+        }
+        const data = opened.data;
         if (client.destroyed) return data.close(STREAM_CLOSE.normal, "");
         client.write(reply(SOCKS_REPLY.ok));
         if (early.length > 0) data.send(new Uint8Array(early));

@@ -10,6 +10,7 @@ import {
 } from "@agenteschat/adapters/secret-box";
 import { originOf } from "./browser";
 import { coAuthorEnv, coAuthorHooks, coAuthorLines, commitAuthorEnv } from "./co-authors";
+import { egressProxyEnv } from "./egress-relay";
 import { errnoCode, RunnerError } from "./errors";
 import { touchesGitInternals } from "./git-guard";
 import { agentFolderName, isInside, normalizeRequestPath, resolveInWorkspace } from "./paths";
@@ -574,8 +575,10 @@ export async function agentSecrets(root: string | undefined, agent: AgentScope |
   const lines = coAuthorLines(agent);
   const hooks = root && lines.length > 0 ? coAuthorHooks(path.join(path.dirname(root), "git-hooks")) : null;
   const author = commitAuthorEnv(agent);
-  if (values.length === 0 && !hooks && Object.keys(author).length === 0) return null;
-  const env: Record<string, string> = {};
+  // ADR 0237: while this computer borrows a person's internet, the agent's programs go out through its proxy.
+  const proxy = egressProxyEnv();
+  if (values.length === 0 && !hooks && Object.keys(author).length === 0 && Object.keys(proxy).length === 0) return null;
+  const env: Record<string, string> = { ...proxy };
   // One kept before its name was reserved still never reaches the env.
   for (const s of secrets) if (s.target.kind === "env" && !isReservedSecretName(s.name)) env[s.name] = s.value;
   if (hooks) Object.assign(env, coAuthorEnv(lines, hooks, { ...process.env, ...env }));

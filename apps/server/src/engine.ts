@@ -50,6 +50,7 @@ import {
   createDesktopPointers,
   createDesktopToolSource,
   createDeviceToolSource,
+  createEgressFetch,
   createEgressRelay,
   createFeedbackToolSource,
   createFindAgentToolSource,
@@ -613,6 +614,8 @@ export function buildEngine(o: EngineOptions) {
         searxngUrl: config.SEARXNG_URL,
         browser: browserTools.readPage,
         resolveHost: o.resolveHost,
+        // ADR 0237 on a self-hosted server: pages through the computer that lends the workspace its internet.
+        lent: (orgId) => egressFetch.lentFetch(orgId),
         usage: gateway,
         // `show_image` (ADR 0217): pictures from the web saved where the run posts.
         artifacts,
@@ -695,6 +698,7 @@ export function buildEngine(o: EngineOptions) {
   // its access checked again while open; control changing hands closes the views it hides. Where sessions are
   // screened no terminal opens: a shell nobody screens would be the way around it.
   const egressRelay = createEgressRelay({ db, hub: machineHub, log: o.log });
+  const egressFetch = createEgressFetch(egressRelay);
   const streams = createStreamBroker({
     db,
     hub: machineHub,

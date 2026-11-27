@@ -1396,6 +1396,54 @@ describe("A device's page", () => {
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
+  test("on a self-hosted server: a computer that joins hears it will lend its internet, with no workspace computer", async () => {
+    const line = "The agents will also open websites through this computer's internet";
+    // No workspace computer: nothing borrows where the server lends none (the Cloud's rule).
+    const own = () => {
+      const list = acmeDevices();
+      return { ...list, devices: list.devices.filter((d) => d.machineKind !== "managed") };
+    };
+    await open(`/org/${ORG_ID}/settings/devices`, (devices) => devices.set({ ...own(), lendsInternet: false }));
+    await click(
+      within(screen().getByRole("list", { name: "Asking to join" })).getByRole("button", { name: "Let it join" }),
+    );
+    expect(screen().getByRole("dialog", { name: "ci-runner wants to join Acme" }).textContent).not.toContain(line);
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/devices`, (devices) => devices.set({ ...own(), lendsInternet: true }));
+    await click(
+      within(screen().getByRole("list", { name: "Asking to join" })).getByRole("button", { name: "Let it join" }),
+    );
+    expect(screen().getByRole("dialog", { name: "ci-runner wants to join Acme" }).textContent).toContain(line);
+  });
+
+  test("this server's own computer says, on its page, whose internet its agents use (ADR 0237)", async () => {
+    const state = acmeState();
+    const api = createFakeApi(state);
+    const host = fakeMachinesOf.get(api)?.pair({
+      name: "Rented VPS",
+      kind: "host",
+      online: true,
+      egressVia: { machineId: MAC, name: "Sam's MacBook", userName: "Sam Rivera" },
+    });
+    if (!host) throw new Error("no machines fake");
+    const list = acmeDevices();
+    const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice;
+    list.devices.push({
+      ...mac,
+      id: host.id,
+      machineKind: "host",
+      name: "Rented VPS",
+      phones: [],
+      shareInternet: null,
+    });
+    fakeDevicesOf.get(api)?.set(list);
+    const app = await renderApp(`/org/${ORG_ID}/settings/devices/${host.id}`, { api });
+    await settle(6);
+    await showIn(app.services, "en");
+    expect(domWindow().document.body.textContent).toContain("Agents use the internet of Sam's MacBook");
+    expect(domWindow().document.querySelector('[title="Connected by Sam Rivera"]')?.textContent).toBe("Sam's MacBook");
+  });
+
   test("someone else's computer that lends its internet: an admin may turn it off, never on", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
       const list = acmeDevices();

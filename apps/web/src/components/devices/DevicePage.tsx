@@ -404,8 +404,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
   const extra = Boolean(
     machine &&
       ((machine.workspace && machine.mode !== "system") ||
-        (machine.kind === "managed" &&
-          (machine.networkTransition || (machine.online && (machine.egress?.ip || machine.egressVia))))),
+        (machine.online && machine.egressVia) ||
+        (machine.kind === "managed" && (machine.networkTransition || (machine.online && machine.egress?.ip)))),
   );
   return (
     <>
