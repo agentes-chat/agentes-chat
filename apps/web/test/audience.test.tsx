@@ -153,9 +153,9 @@ describe("Quem pode falar com a Ada", () => {
     await go(`c/${ENG_ID}`, withDm);
     const nav = screen().getByRole("navigation", { name: "Navegação do workspace" });
     const sidebarAda = within(nav).getByRole("link", { name: /^Ada/ });
-    // In the sidebar: who she talks to in place of her role, and a lock that says it whole. The chip is in the DM's
+    // In the sidebar: one line, who she talks to in its title and a lock that says it whole. The chip is in the DM's
     // header.
-    expect(sidebarAda.textContent).toContain("só fala com João");
+    expect(sidebarAda.getAttribute("title")).toContain("só fala com João");
     expect(within(sidebarAda).getByRole("img", { name: "Pessoal" }).getAttribute("title")).toBe(
       "A Ada só responde a João.",
     );
