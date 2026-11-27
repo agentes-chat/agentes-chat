@@ -1,9 +1,13 @@
 # agentes.chat (desktop app)
 
-Tauri 2 app for macOS, Windows and Linux (ADR 0036). Rust in `src-tauri/` keeps to windows, the tray, the server list,
-links, the children it runs (the runners and, for "Run agentes.chat on this computer", the server), notifications and
-self-update; the app's own windows (the popover, Preferences, the welcome window, the cover) are the TypeScript in `src/`;
-the main window loads the server's own pages.
+Tauri 2 app for macOS, Windows and Linux (ADR 0036, ADR 0256). Rust in `src-tauri/` keeps to the window, the tray, the
+server list, links, the children it runs (the runners and, for "Run agentes.chat on this computer", the server),
+notifications and self-update. The main window is the app's only window: it loads the server's own pages, with the
+app's own TypeScript in `src/` over them (the cover, and the app layer: the first run, the sheets over the site and
+Settings › This Mac); the tray popover and the notch are the TypeScript in `src/` too. The app carries no network
+software of its own: the phone and the team reach a server on this computer through the Tailscale the person installed,
+or through an address of their own (a tunnel or proxy on this computer), chosen in the first run and in
+Settings › This Mac › Server on this Mac (ADR 0256 §4).
 
 CI runs the Rust tests on Linux (`cargo test` in `src-tauri`, with stand-ins for what the app bundles: see the
 `test-desktop-rust` job in `.github/workflows/ci.yml`) and the TypeScript tests in `test/`. Code behind
@@ -43,8 +47,8 @@ with the bench, below).
    is its event loop blocked, not the app.
 6. **Windows**: WebView2's DevTools (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`, then
    `chrome://inspect` in Edge) and Windows Performance Recorder's CPU sampling. **Linux**: `perf top -p <pid>`; `pixman`
-   or `cairo` near the top means the page is painted in software (Compatibility mode, Preferences › General; the line
-   in Preferences › Updates says how this computer draws).
+   or `cairo` near the top means the page is painted in software (Compatibility mode, Settings › This computer › App
+   settings; the System details line in its Updates says how this computer draws).
 
 Done when `window.log` shows no stall over a second for a week, the WebContent process's memory stays flat over 8 hours
 with the window hidden, and no new freeze is reported.
