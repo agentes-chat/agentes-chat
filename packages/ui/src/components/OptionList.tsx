@@ -172,16 +172,23 @@ export interface OptionLinkItem {
 export function OptionLinks({
   options,
   className,
+  flat = false,
   ...rest
 }: {
   options: readonly OptionLinkItem[];
   className?: string;
+  /**
+   * Flat rows, as a box's list: no card per row, a hairline between them, flush with the text around. The leading
+   * picture bare in its column (`--optlinks-lead` wide, 20 px by default), and what ends the row (`side`, the chevron)
+   * on the title's line, the description under them.
+   */
+  flat?: boolean;
   "aria-label"?: string;
   "aria-labelledby"?: string;
 }) {
   const id = useId();
   return (
-    <ul className={cx("ac-optlist ac-optlinks", className)} {...rest}>
+    <ul className={cx("ac-optlist ac-optlinks", flat && "ac-optlinks--flat", className)} {...rest}>
       {options.map((o) => {
         const desc = o.description ? `${id}-${o.value}` : undefined;
         // The chip sits outside the button: read with its line, so "Recomendado" is heard on the button too.

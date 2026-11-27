@@ -12154,6 +12154,98 @@ html:not([data-pointer]) .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
     text-align: start;
   }
 }
+/*
+ * Flat rows (`OptionLinks flat`): a box's list of ways on, no card per row and no tint, a hairline between rows, flush
+ * with the text column. The leading picture bare in its own column, centred on the title's line; what ends the row
+ * (`side`, the chevron) on that line too; the description under the title, as wide as the row's text and what ends it.
+ * The pointer's plate and the focus ring reach a little past the column, behind the row.
+ */
+.ac-optlinks--flat {
+  --optlinks-lead: 20px;
+  gap: 0;
+}
+.ac-optlinks--flat > .ac-optrow--link {
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "title side go"
+    "desc desc desc";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 1px;
+  min-height: 0;
+  padding: 12px 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+.ac-optlinks--flat > .ac-optrow--link.ac-optrow--lead {
+  grid-template-columns: var(--optlinks-lead) minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "lead title side go"
+    ". desc desc desc";
+  padding-left: 0;
+}
+.ac-optlinks--flat > .ac-optrow--link + .ac-optrow--link {
+  border-top: 1px solid var(--line);
+}
+.ac-optlinks--flat > .ac-optrow--link::before {
+  content: "";
+  position: absolute;
+  inset: 2px -10px;
+  z-index: -1;
+  border-radius: var(--radius-md);
+  background: var(--plate);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.ac-optlinks--flat > .ac-optrow--link:hover,
+.ac-optlinks--flat > .ac-optrow--link[data-disabled]:hover {
+  box-shadow: none;
+}
+.ac-optlinks--flat > .ac-optrow--link:not([data-disabled]):hover::before {
+  opacity: 1;
+}
+html:not([data-pointer]) .ac-optlinks--flat > .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
+  box-shadow: none;
+}
+html:not([data-pointer]) .ac-optlinks--flat > .ac-optrow--link:has(.ac-optrow__hit:focus-visible)::before {
+  opacity: 1;
+  box-shadow: var(--field-ring);
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__lead {
+  grid-area: lead;
+  justify-self: center;
+  color: var(--muted);
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__text {
+  display: contents;
+}
+.ac-optlinks--flat > .ac-optrow--link .ac-optrow__title {
+  grid-area: title;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: 0;
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__text > .ac-optrow__desc {
+  grid-area: desc;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__side {
+  grid-area: side;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ac-optlinks--flat > .ac-optrow--link > .ac-optrow__go {
+  grid-area: go;
+}
 .ac-optrow__more--cards {
   padding: 6px 0 0;
 }
