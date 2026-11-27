@@ -249,12 +249,14 @@ export function createStreamsStore(
     consults: {},
   };
   // Runs whose message came too big for its event: its body is being read (`seed`). Their cards wait for it instead of
-  // leaving when the run ends, else they would go and come back with the message. `true` once the run ended.
-  const awaitingBody = new Map<string, boolean>();
+  // leaving when the run ends, else they would go and come back with the message. Per run: the messages announced
+  // without a body (only their read ends the wait, not another message of the run) and whether the run ended.
+  const awaitingBody = new Map<string, { ids: Set<string>; over: boolean }>();
   /** A run is over: its cards go, unless its message is still on its way (they go with it, in `seed`). */
   const endRunCards = (memory: LiveState["memory"], runId: string) => {
-    if (awaitingBody.has(runId)) {
-      awaitingBody.set(runId, true);
+    const waiting = awaitingBody.get(runId);
+    if (waiting) {
+      waiting.over = true;
       return memory;
     }
     return dropMemoryCardsWhere(memory, (c) => c.runId === runId);
@@ -299,8 +301,11 @@ export function createStreamsStore(
     apply: (event: ChannelEvent) => {
       const typing = applyTypingEvent(state.typing, event, now());
       const ended = endedRun(event);
-      if (event.type === "message.created" && !event.message && event.agentRunId)
-        awaitingBody.set(event.agentRunId, awaitingBody.get(event.agentRunId) ?? false);
+      if (event.type === "message.created" && !event.message && event.agentRunId) {
+        const waiting = awaitingBody.get(event.agentRunId) ?? { ids: new Set<string>(), over: false };
+        waiting.ids.add(event.messageId);
+        awaitingBody.set(event.agentRunId, waiting);
+      }
       const memory =
         event.type === "memory.updated"
           ? {
@@ -384,10 +389,10 @@ export function createStreamsStore(
         memory = dropMemoryCards(memory, m.channelId, m);
         // The message its run's cards waited for is here: an ended run's other cards go now.
         const runId = m.agentRunId;
-        if (runId && awaitingBody.has(runId)) {
-          const over = awaitingBody.get(runId);
+        const waiting = runId ? awaitingBody.get(runId) : undefined;
+        if (runId && waiting?.ids.delete(m.id) && waiting.ids.size === 0) {
           awaitingBody.delete(runId);
-          if (over) memory = endRunCards(memory, runId);
+          if (waiting.over) memory = endRunCards(memory, runId);
         }
       }
       set({ ...state, receipts, memory });
@@ -448,8 +453,13 @@ export function createStreamsStore(
       set({ ...state, questions: { ...state.questions, [question.id]: question } }),
     /** Our own delivery or refusal of a secret request, before the server's event. */
     secretAnswered: (request: SecretRequest) => set({ ...state, secrets: { ...state.secrets, [request.id]: request } }),
-    dismiss: (runId: string) =>
-      set({ ...state, streams: dismissRun(state.streams, runId), memory: endRunCards(state.memory, runId) }),
+    /** The run's row goes; its cards too when it `ended` (done, failed, stopped, gone), not while it waits on someone. */
+    dismiss: (runId: string, ended = true) =>
+      set({
+        ...state,
+        streams: dismissRun(state.streams, runId),
+        memory: ended ? endRunCards(state.memory, runId) : state.memory,
+      }),
     /** "Parar" pressed (optimistic) / the cancel failed. */
     stopping: (runId: string, byUserId: string) =>
       set({ ...state, streams: markStopping(state.streams, runId, byUserId) }),
@@ -462,8 +472,9 @@ export function createStreamsStore(
         // A missed end (a reconnect): the cards of runs no longer active go too, unless they came after the ask.
         memory: dropMemoryCardsWhere(state.memory, (c, at) => {
           if (at !== channelId || c.at >= askedAt || active.some((a) => a.runId === c.runId)) return false;
-          if (!awaitingBody.has(c.runId)) return true;
-          awaitingBody.set(c.runId, true);
+          const waiting = awaitingBody.get(c.runId);
+          if (!waiting) return true;
+          waiting.over = true;
           return false;
         }),
       }),
@@ -791,7 +802,8 @@ export async function reconcileChannelRuns(
         const { run } = await api.agents.run(orgId, r.runId);
         if (isActiveStatus(run.status)) store.touch(r.runId);
         else {
-          store.dismiss(r.runId);
+          // Waiting on a person (an answer, an approval) leaves the activity line, but the run's cards stay.
+          store.dismiss(r.runId, ENDED_RUN_STATUSES.has(run.status));
           dropped = true;
         }
       } catch (err) {
@@ -804,6 +816,8 @@ export async function reconcileChannelRuns(
   );
   return dropped;
 }
+
+const ENDED_RUN_STATUSES = new Set(["done", "failed", "canceled"]);
 
 let quiet: StreamsStore | null = null;
 const quietStore = () => {

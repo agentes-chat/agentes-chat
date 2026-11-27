@@ -1097,7 +1097,7 @@ describe("live memory cards", () => {
 
   test("without the endpoint, a run found over (or gone) takes its cards along", async () => {
     const store = createStreamsStore();
-    for (const runId of ["done", "gone", "busy"]) {
+    for (const runId of ["done", "gone", "busy", "asking"]) {
       running(store, runId);
       announce(store, runId, `i-${runId}`);
     }
@@ -1106,12 +1106,14 @@ describe("live memory cards", () => {
         activeRuns: async () => null,
         run: async (_o: string, runId: string) => {
           if (runId === "gone") throw new ApiError(404, "not_found", "nope");
-          return { run: { id: runId, status: runId === "busy" ? "running" : "failed" }, steps: [] };
+          const status = runId === "busy" ? "running" : runId === "asking" ? "waiting_input" : "failed";
+          return { run: { id: runId, status }, steps: [] };
         },
       },
     } as unknown as ApiClient;
     expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
-    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["busy:i-busy"]);
+    // Waiting on a person is not over: its card stays.
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["busy:i-busy", "asking:i-asking"]);
   });
 
   test("a message too big for its event: the card waits for it, then leaves with it, never twice", () => {
@@ -1130,6 +1132,44 @@ describe("live memory cards", () => {
     expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i1", "r1:i2"]);
     // Its body read: the change it shows leaves with it, and the run's other card too (it ended).
     store.seed([{ ...reply, agentRunId: "r1" }]);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  test("a big message's run ended: another message of the run read first keeps its cards; the announced one ends them", () => {
+    const store = createStreamsStore();
+    announce(store, "r1", "i9");
+    store.apply({ type: "message.created", channelId: "c1", messageId: "a1", agentRunId: "r1" } as ChannelEvent);
+    store.apply({
+      type: "agent.run",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r1",
+      status: "done",
+    } as unknown as ChannelEvent);
+    const earlier = { ...reply, id: "a0", meta: {} } as unknown as Message;
+    store.seed([earlier]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i9"]);
+    store.seed([{ ...reply, meta: {} } as unknown as Message]);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  test("a big message's first read fails: the cards wait, and the retry that brings it ends them", () => {
+    const store = createStreamsStore();
+    announce(store, "r1", "i9");
+    store.apply({ type: "message.created", channelId: "c1", messageId: "a1", agentRunId: "r1" } as ChannelEvent);
+    store.apply({
+      type: "agent.run",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r1",
+      status: "done",
+    } as unknown as ChannelEvent);
+    // The failed read seeds nothing; the retry (catchUpChannel reads again) has the message.
+    store.seed([]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i9"]);
+    store.seed([{ ...reply, meta: {} } as unknown as Message]);
     expect(store.get().memory.c1).toEqual([]);
   });
 });
