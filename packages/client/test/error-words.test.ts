@@ -409,6 +409,8 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // A proxy card saved twice (ADR 0262): once saved, the card shows it and has no Save left.
+  "proxy.card_saved",
   // Integration apps (ADR 0251): refusals of the app's own public API and `/mcp`, read by a program, never by the
   // apps (a color comes from the swatches, a new webhook secret is offered only with a webhook); a rate limit says
   // `common.tooMany` by its status.
