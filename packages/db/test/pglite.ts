@@ -101,6 +101,19 @@ export async function runMigration(db: Database, name: string) {
   for (const statement of statements) await db.execute(sql.raw(statement));
 }
 
+/** LISTEN/NOTIFY on a PGlite database, shaped as the Postgres pub/sub's notifier (`PgNotifier` in the adapters). */
+export function pgliteNotifier(pg: PGlite) {
+  return {
+    async listen(channel: string, onPayload: (payload: string) => void) {
+      const unsub = await pg.listen(channel, onPayload);
+      return async () => unsub();
+    },
+    async notify(channel: string, payload: string) {
+      await pg.query("select pg_notify($1, $2)", [channel, payload]);
+    },
+  };
+}
+
 /** The statements `read` sent to the database, each on one line. */
 export async function issuedBy(read: () => Promise<unknown>) {
   const issued: string[] = [];

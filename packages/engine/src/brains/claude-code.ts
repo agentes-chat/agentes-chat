@@ -11,7 +11,9 @@ import {
   CLI_GIT_MISSING,
   CONTEXT_LIMIT_PROTOCOL,
   CONVERSATION_PROTOCOL,
+  HELD_TURN_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
+  type MachineReplies,
   type PubSub,
   parseBrainEvent,
   SPEED_PROTOCOL,
@@ -22,10 +24,23 @@ import { type Database, schema } from "@agenteschat/db";
 import { CLI_FLOORS, CLI_UPDATE_COMMAND, cliVersionProblem, type FloorCli } from "@agenteschat/providers/cli-floors";
 import { autoContextFor } from "@agenteschat/providers/context-limits";
 import { getAgentCached } from "../agents";
+import { isShutdown } from "../cancel";
 import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
-import { type MachineCaller, MachineRequestError, type MachineStatus } from "../machine-hub";
-import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
+import {
+  computerBackSoon,
+  type MachineCaller,
+  type MachineCallOptions,
+  MachineRequestError,
+  type MachineStatus,
+} from "../machine-hub";
+import {
+  MachineDroppedError,
+  MachineOfflineError,
+  MachinePausedError,
+  maintenanceWords,
+  pausedMessage,
+} from "../machines";
 import { addPersonSpend } from "../person-usage";
 import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
@@ -77,7 +92,7 @@ import {
  */
 
 export interface ClaudeCodeBrainDeps {
-  hub: Pick<MachineCaller, "call" | "status">;
+  hub: Pick<MachineCaller, "call" | "status" | "wake">;
   pubsub: PubSub;
   /** The agent as the runner names its folder (`agentScopeFromDb`). */
   agentScope: (turn: BrainTurn) => Promise<AgentScope>;
@@ -107,6 +122,8 @@ export interface ClaudeCodeBrainDeps {
   finalGraceMs?: number;
   /** How long a `brain.steer` may take (default `STEER_CALL_MS`). */
   steerTimeoutMs?: number;
+  /** Tests: `HELD_TURN_WAIT_MS`. */
+  heldTurnWaitMs?: number;
 }
 
 /** A `brain.warm` answers once the CLI started, or a cold worker came up first; past this nobody waits on it. */
@@ -290,7 +307,14 @@ export function cliOutdated(
 /** Why the turn can't go to this machine now (null: it can). With an account, the account decides the sign-in. */
 export function claudeCodeAvailability(status: MachineStatus | null, account?: BrainAccount): BrainEvent | null {
   if (!status) return err("machine_offline", "The agent's computer is not connected to the organization.", true);
-  if (!status.online) return err("machine_offline", `Claude Code on ${status.name} is offline.`, true);
+  if (!status.online) {
+    const away = status.maintenance?.away ? status.maintenance : null;
+    return err(
+      "machine_offline",
+      away ? maintenanceWords(status.name, away) : `Claude Code on ${status.name} is offline.`,
+      true,
+    );
+  }
   if (status.paused) {
     return err("machine_paused", pausedMessage(status.name, status.paused.until, status.paused.timezone), true);
   }
@@ -361,6 +385,78 @@ export function busyRefusal(error: unknown): BrainEvent | null {
     return err("busy", "The computer is busy with other requests.", true);
   }
   return null;
+}
+
+/**
+ * How long a turn whose computer dropped waits for it, still running, before the drop stands. Under the runner's
+ * `HELD_TURN_MS`, so the turn is still held there when the computer is back in time.
+ */
+export const HELD_TURN_WAIT_MS = 90_000;
+/** Drops one turn rides through: a computer that keeps dropping is left to the engine's own wait. */
+const HELD_TURN_DROPS = 3;
+
+/**
+ * `brain.turn` through short drops (`HELD_TURN_PROTOCOL`): the runner keeps the turn running when the link drops, so
+ * the turn waits for the computer (`computerBackSoon`; the run stays `running`) and takes the rest of the same turn
+ * over (`reattach`) instead of failing it and starting it again. A runner that no longer has it (it restarted) answers
+ * `not_found`, and the first drop stands: the engine's wait for the computer goes on from there.
+ */
+export async function callTurnThroughDrops(
+  hub: Pick<MachineCaller, "call" | "status" | "wake">,
+  machineId: string,
+  request: BrainTurnRequest & { agent?: AgentScope },
+  options: MachineCallOptions & { waitMs?: number } = {},
+): Promise<MachineReplies["brain.turn"]> {
+  const { waitMs = HELD_TURN_WAIT_MS, ...call } = options;
+  let dropped: unknown = null;
+  for (let drops = 0; ; drops++) {
+    try {
+      return await hub.call<"brain.turn">(
+        machineId,
+        { op: "brain.turn", ...request, ...(dropped ? { reattach: true } : {}) },
+        call,
+      );
+    } catch (error) {
+      if (!(error instanceof MachineDroppedError) || drops >= HELD_TURN_DROPS) throw dropped ?? error;
+      dropped ??= error;
+      const canceled = () => call.signal?.aborted === true;
+      const back = canceled()
+        ? null
+        : await computerBackSoon(hub, machineId, { waitMs, signal: call.signal, canceled });
+      if (back === null) {
+        // The runner holds the turn still, running on, and no cancel can reach it. Not on our own restart: the next
+        // server takes the turn over.
+        if (!isShutdown(call.signal?.reason)) void stopHeldTurn(hub, machineId, request, waitMs);
+        throw new MachineRequestError("canceled", "canceled");
+      }
+      if (!back) throw dropped;
+      const status = await hub.status(machineId).catch(() => null);
+      if ((status?.protocol ?? 0) < HELD_TURN_PROTOCOL) throw dropped;
+    }
+  }
+}
+
+/**
+ * Once the computer is back within `waitMs`, it ends the canceled run's turn it may still hold (`reattach: "stop"`).
+ * Never wakes it: a computer that sleeps holds no turn.
+ */
+async function stopHeldTurn(
+  hub: Pick<MachineCaller, "call" | "status">,
+  machineId: string,
+  request: BrainTurnRequest & { agent?: AgentScope },
+  waitMs: number,
+) {
+  for (const until = Date.now() + waitMs; ; await Bun.sleep(1_000)) {
+    const status = await hub.status(machineId).catch(() => null);
+    if (status?.online) {
+      if ((status.protocol ?? 0) < HELD_TURN_PROTOCOL) return;
+      await hub
+        .call<"brain.turn">(machineId, { op: "brain.turn", ...request, reattach: "stop" }, { timeoutMs: 30_000 })
+        .catch(() => {});
+      return;
+    }
+    if (Date.now() >= until) return;
+  }
 }
 
 /** A failed `brain.turn` request as the turn's error. */
@@ -550,25 +646,28 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           // Each answer the turn finishes before it goes on is its own message (ADR 0112).
           answers: "each",
         };
-        deps.hub
-          .call<"brain.turn">(
-            session.machineId,
-            { op: "brain.turn", ...request, agent },
-            { signal: io.signal, ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}) },
-          )
-          .then(
-            (reply) => {
-              const final = parseBrainEvent(reply?.final);
-              queue.push({
-                kind: "reply",
-                final:
-                  final && isFinal(toBrainEvent(final))
-                    ? toBrainEvent(final)
-                    : err("runner_error", "The computer answered without an end to the turn.", false),
-              });
-            },
-            (error: unknown) => queue.push({ kind: "reply", final: claudeCodeCallError(error) }),
-          );
+        callTurnThroughDrops(
+          deps.hub,
+          session.machineId,
+          { ...request, agent },
+          {
+            signal: io.signal,
+            ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}),
+            ...(deps.heldTurnWaitMs !== undefined ? { waitMs: deps.heldTurnWaitMs } : {}),
+          },
+        ).then(
+          (reply) => {
+            const final = parseBrainEvent(reply?.final);
+            queue.push({
+              kind: "reply",
+              final:
+                final && isFinal(toBrainEvent(final))
+                  ? toBrainEvent(final)
+                  : err("runner_error", "The computer answered without an end to the turn.", false),
+            });
+          },
+          (error: unknown) => queue.push({ kind: "reply", final: claudeCodeCallError(error) }),
+        );
         // The turn is on its way: a person's messages can reach it mid-turn (an older runner reads them at the end).
         if (io.steerable && (status?.protocol ?? 0) >= STEER_PROTOCOL) {
           const target = {

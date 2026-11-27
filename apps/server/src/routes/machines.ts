@@ -65,6 +65,7 @@ import {
   requireSession,
   security,
 } from "./app/context";
+import { MaintenanceView } from "./app/schemas";
 
 const tags = ["Connected computers"];
 
@@ -287,8 +288,9 @@ export const Machine = z
       }),
     moving: z.boolean().optional().openapi({
       description:
-        "The workspace's own computer is away moving to another server: it comes back by itself in a few minutes. A change comes as `machine.updated`.",
+        "The workspace's own computer is away for what we do to it (`maintenance` says what; a move for apps from before it): it comes back by itself. A change comes as `machine.updated`.",
     }),
+    maintenance: MaintenanceView.nullable().optional(),
     egressWaiting: z.boolean().optional().openapi({
       description:
         "The workspace's own computer, online, has its agents waiting for their way out: its network sends them only through a proxy and none works now, so their connections are refused for a while. A change comes as `machine.updated`.",
@@ -433,8 +435,10 @@ const MachineOutage = z
       .openapi({ description: "The workspace's own computer (ADR 0056 §10): its platform is `other`." }),
     offlineSince: z.string().openapi({ description: "ISO time of its last sign of life." }),
     moving: z.boolean().openapi({
-      description: "The workspace's own computer is away moving to another server: it comes back by itself.",
+      description:
+        "The workspace's own computer is away for what we do to it (`maintenance`): it comes back by itself.",
     }),
+    maintenance: MaintenanceView.nullable().optional(),
     agents: z.array(
       z.object({
         agentId: z.uuid(),
@@ -495,8 +499,9 @@ const ComputerQueue = z
     machineId: z.uuid(),
     name: z.string(),
     moving: z.boolean().optional().openapi({
-      description: "It is away moving to another server: the line waits for it, back in a few minutes.",
+      description: "It is away for what we do to it (`maintenance`): the line waits for it, back by itself.",
     }),
+    maintenance: MaintenanceView.nullable().optional(),
     working: z.array(
       z.object({
         runId: z.uuid(),

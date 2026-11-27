@@ -80,6 +80,7 @@ test("outages and move-agents over HTTP: the contract the apps read", async () =
       managed: false,
       offlineSince: expect.any(String),
       moving: false,
+      maintenance: null,
       agents: [{ agentId, name: "Dev", brain: "claude_code", waiting: { routines: 0, conversations: 1 } }],
       waitingRuns: 1,
     },
@@ -167,6 +168,7 @@ test("a computer's queue over HTTP: every member reads it, only the org's own co
     machineId: pro,
     name: "MacBook Pro",
     moving: false,
+    maintenance: null,
     working: [],
     waiting: [
       {

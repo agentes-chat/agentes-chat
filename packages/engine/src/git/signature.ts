@@ -137,14 +137,19 @@ async function githubLogin(http: GitHubHttp, id: string, token?: string | null) 
   return login;
 }
 
+interface CoAuthorDeps {
+  db: Database;
+  http: GitHubHttp;
+  token?: string | null;
+  /** The most GitHub's login lookup is waited for; past it the person goes uncredited and the lookup is cached on. */
+  loginWaitMs?: number;
+}
+
 /**
  * `Co-Authored-By: Ana <123+ana@users.noreply.github.com>` for a person who linked GitHub to sign in (their GitHub id
  * from that sign-in, the login GitHub has for it now). Null otherwise: no address is guessed.
  */
-export async function coAuthorOf(
-  deps: { db: Database; http: GitHubHttp; token?: string | null },
-  personId: string,
-): Promise<string | null> {
+export async function coAuthorOf(deps: CoAuthorDeps, personId: string): Promise<string | null> {
   const [row] = await deps.db
     .select({ githubId: accounts.accountId, name: users.name })
     .from(accounts)
@@ -152,7 +157,10 @@ export async function coAuthorOf(
     .where(and(eq(accounts.userId, personId), eq(accounts.providerId, "github")))
     .limit(1);
   if (!row || !/^\d{1,20}$/.test(row.githubId)) return null;
-  const login = await githubLogin(deps.http, row.githubId, deps.token);
+  const lookup = githubLogin(deps.http, row.githubId, deps.token);
+  const login = await (deps.loginWaitMs === undefined
+    ? lookup
+    : Promise.race([lookup, Bun.sleep(deps.loginWaitMs).then(() => null)]));
   if (!login) return null;
   return `Co-Authored-By: ${trailerName(row.name) || login} <${row.githubId}+${login}@users.noreply.github.com>`;
 }
@@ -172,7 +180,7 @@ export async function signatureLine(db: Database, ctx: { orgId: string; agentId:
  * person behind the run (as `signatureLine` names them).
  */
 export async function runCoAuthors(
-  deps: { db: Database; http: GitHubHttp; token?: string | null },
+  deps: CoAuthorDeps,
   ctx: { orgId: string; agentId: string; runId?: string },
 ): Promise<string[]> {
   const agent = await getAgentCached(deps.db, ctx.orgId, ctx.agentId);

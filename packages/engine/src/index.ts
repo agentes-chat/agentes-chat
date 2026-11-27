@@ -400,6 +400,7 @@ export * from "./tools/schema-compat";
 export * from "./tools/scopes";
 export * from "./tools/types";
 export * from "./ttf";
+export * from "./turn-trace";
 export * from "./typing-warm";
 export * from "./untrusted";
 export * from "./uploads";

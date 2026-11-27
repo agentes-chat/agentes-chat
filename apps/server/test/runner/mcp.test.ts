@@ -643,6 +643,65 @@ test("with a server token the bridge asks the server for the list and relays any
   });
 });
 
+test("a brain run's list is asked when its turn starts: the CLI's own ask joins it, the server asked once", async () => {
+  const { b, frames } = bridge({ token: "secret-token-1", missionId: "", running: true, serverToken: SERVER_TOKEN });
+  b.attach((f) => frames.push(f));
+  b.prefetch(TASK);
+  expect(frames).toMatchObject([{ type: "mcp.list", taskId: TASK, token: SERVER_TOKEN }]);
+  const listing = b.handle({ taskId: TASK, token: "secret-token-1", tool: "", args: {}, kind: "list" });
+  const tool = { name: "react", description: "React", inputSchema: { type: "object" } };
+  b.tools({ type: "mcp.tools", callId: (frames[0] as { callId: string }).callId, ok: true, tools: [tool] });
+  expect(await listing).toEqual({ ok: true, text: "", tools: [tool], memo: true });
+  expect(frames).toHaveLength(1);
+});
+
+test("a slow server: a brain process starts with its agent's last list, and the run's own replaces it once it lands", async () => {
+  const frames: RunnerFrame[] = [];
+  const info: McpTaskInfo = {
+    token: "secret-token-1",
+    missionId: "",
+    running: true,
+    agentId: "0193aaaa-0000-7000-8000-0000000000a1",
+    runId: "0193aaaa-0000-7000-8000-0000000000b1",
+    serverToken: SERVER_TOKEN,
+  };
+  const timed: number[] = [];
+  const b = new McpBridge({
+    socketPath: "unused",
+    task: (id) => (id === TASK ? info : null),
+    callTimeoutMs: 5000,
+    lastListAfterMs: 30,
+    onList: (_id, _at, ms) => timed.push(ms),
+  });
+  closers.push(() => b.close());
+  b.attach((f) => frames.push(f));
+  const ask = () => b.handle({ taskId: TASK, token: "secret-token-1", tool: "", args: {}, kind: "list" });
+  const names = (r: Awaited<ReturnType<typeof ask>>) => (r.ok ? (r.tools ?? []).map((t) => t.name) : r.error);
+  const answer = (i: number, name: string) =>
+    b.tools({
+      type: "mcp.tools",
+      callId: (frames[i] as { callId: string }).callId,
+      ok: true,
+      tools: [{ name, description: name, inputSchema: { type: "object" } }],
+    });
+  // The agent's first run: nothing kept yet, so its list waits for the server.
+  const first = ask();
+  await waitFor(() => frames.length === 1);
+  answer(0, "old_tool");
+  expect(names(await first)).toEqual(["old_tool"]);
+  // Its next run, on a new process: the server is slow, the agent's last list answers within the wait.
+  Object.assign(info, { runId: "0193aaaa-0000-7000-8000-0000000000b2" });
+  const started = Date.now();
+  expect(names(await ask())).toEqual(["old_tool"]);
+  expect(Date.now() - started).toBeLessThan(1000);
+  expect(frames).toHaveLength(2);
+  // The run's own lands: the next ask (the MCP process asks every second meanwhile) gets it, from here.
+  answer(1, "new_tool");
+  expect(names(await ask())).toEqual(["new_tool"]);
+  expect(frames).toHaveLength(2);
+  expect(timed.length).toBeGreaterThanOrEqual(3);
+});
+
 test("the bridge relays a whole source file; past the limit it says the way out", async () => {
   const { b, frames } = bridge({ token: "secret-token-1", missionId: "m1", running: true, serverToken: SERVER_TOKEN });
   b.attach((f) => frames.push(f));

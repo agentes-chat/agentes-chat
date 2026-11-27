@@ -29,6 +29,7 @@ import {
   accountFields,
   accountUnavailable,
   busyRefusal,
+  callTurnThroughDrops,
   cliOutdated,
   contextFields,
   speedFields,
@@ -585,9 +586,11 @@ export class AntigravityBrain extends CodexBrain {
  * so the turn ends even if a published event is lost.
  */
 export function hubBrainLink(deps: {
-  hub: Pick<MachineCaller, "call" | "status">;
+  hub: Pick<MachineCaller, "call" | "status" | "wake">;
   pubsub: PubSub;
   timeoutMs?: number;
+  /** Tests: `HELD_TURN_WAIT_MS`. */
+  heldTurnWaitMs?: number;
   /** After the request's result, how long to wait for the stream's last events (default 1.5 s). */
   finalGraceMs?: number;
 }): ComputerBrainLink {
@@ -612,11 +615,11 @@ export function hubBrainLink(deps: {
         options.onEvent(withFailureCause(event as BrainEvent));
       });
       try {
-        const reply = await deps.hub.call<"brain.turn">(
-          machineId,
-          { op: "brain.turn", ...request },
-          { signal: options.signal, ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}) },
-        );
+        const reply = await callTurnThroughDrops(deps.hub, machineId, request, {
+          signal: options.signal,
+          ...(deps.timeoutMs ? { timeoutMs: deps.timeoutMs } : {}),
+          ...(deps.heldTurnWaitMs !== undefined ? { waitMs: deps.heldTurnWaitMs } : {}),
+        });
         if (!streamEnded) {
           await new Promise<void>((resolve) => {
             const timer = setTimeout(resolve, deps.finalGraceMs ?? 1500);

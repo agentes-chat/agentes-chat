@@ -189,6 +189,7 @@ import {
   onConsultedRunFinished,
 } from "./consultations";
 import {
+  agentSystemParts,
   agentSystemText,
   buildRunContext,
   type ContextBlock,
@@ -209,8 +210,8 @@ import { recordContextUse } from "./context/feedback";
 import { afterTurnDone, learnTags, reportLearnFailure } from "./context/learn";
 import { rulesForRun } from "./context/rules";
 import { memoryArmOf } from "./context/scorecard";
-import { type ContextDeps, ensureThreadSummary } from "./context/summaries";
-import { EXPAND_TOOL, itemLabel, retrieveForRun } from "./context/tools";
+import { type ContextDeps, currentThreadSummary, ensureThreadSummary } from "./context/summaries";
+import { EXPAND_TOOL, GET_SUMMARY_TOOL, itemLabel, retrieveForRun } from "./context/tools";
 import {
   compactToolResults,
   cutOldToolSteps,
@@ -463,6 +464,7 @@ import {
 import { type Approval, type InvokeResult, isSensitive, type ToolGateway } from "./tools/gateway";
 import { grantedScopeKeys, grantKey } from "./tools/scopes";
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
+import { slowMarks, type TurnTrace, turnRecorder } from "./turn-trace";
 import {
   budgetUsedPercent,
   continuesPastPlan,
@@ -594,8 +596,11 @@ export interface EngineDeps {
   context?: ContextDeps;
   /** Latency measurements (`trigger_to_claim_ms`, `claim_to_first_delta_ms`, `run_ms`), for logs. */
   onTiming?(name: string, ms: number, attrs: Record<string, unknown>): void;
-  /** Per-run breakdown: time and SQL statements per stage (logged at debug level). */
-  onRunProfile?(profile: { runId: string; stages: StageTiming[]; total: { ms: number; queries: number } }): void;
+  /**
+   * Per-run breakdown: time and SQL statements per stage (logged at debug level), each brain turn's trace, and the
+   * budgets the claim broke (`slowMarks`, reported where errors are).
+   */
+  onRunProfile?(profile: RunProfileReport): void;
   /**
    * Brain factories by kind (`resolveBrain` picks the kind). Without one the
    * engine uses the built-in `ModelBrain` for "model". The server registers
@@ -1261,6 +1266,21 @@ export const OUTAGE_PARK = { ladderMinutes: [2, 15, 30, 60], maxMs: 24 * 60 * 60
 /** The job that resumes a run parked on an outage, once per park (`parkOutage`). */
 export const outageJobKey = (runId: string, waitId: string) => `agent_run.execute:${runId}:outage:${waitId}`;
 
+/** What `onRunProfile` is told when a claim ends. */
+export interface RunProfileReport {
+  runId: string;
+  orgId?: string;
+  agentId?: string;
+  machineId?: string;
+  stages: StageTiming[];
+  total: { ms: number; queries: number };
+  turns: TurnTrace[];
+  slow: ReturnType<typeof slowMarks>;
+}
+
+/** The most turn traces a claim keeps (`TurnTrace`): a long tool loop's later turns are left out. */
+const RUN_TURNS_KEPT = 50;
+
 type RunJobOptions = {
   finalAttempt: boolean;
   wait?: string;
@@ -1317,15 +1337,33 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
       if (!row || !(ACTIVE_RUN_STATUSES as readonly string[]).includes(row.status)) forgetRunReads(runId);
     }
     if (prof.stages.length > 0) {
-      deps.onRunProfile?.({ runId, stages: prof.stages, total: prof.total() });
+      const slow = slowMarks(prof.stages, prof.turns, prof.slowSources);
+      deps.onRunProfile?.({
+        runId,
+        ...(prof.run ? { orgId: prof.run.orgId, agentId: prof.run.agentId } : {}),
+        ...(prof.machineId ? { machineId: prof.machineId } : {}),
+        stages: prof.stages,
+        total: prof.total(),
+        turns: prof.turns,
+        slow,
+      });
       // Kept with the run, so the operator's work analytics can say where time went (`work-analytics.ts`). In its own
       // column, not as a step (steps are the run's trail, and its last one marks where a pause began, `whileHeld`) and
       // not in the transcript (appending there would rewrite the whole TOASTed conversation on every claim).
       if (prof.run) {
         const brain = prof.brain.length > 0 ? { brain: prof.brain } : {};
         const machine = prof.machineId ? { machineId: prof.machineId } : {};
+        const turns = prof.turns.length > 0 ? { turns: prof.turns.slice(0, RUN_TURNS_KEPT) } : {};
         const kept = JSON.stringify([
-          { stages: prof.stages, total: prof.total(), endedAt: new Date().toISOString(), ...brain, ...machine },
+          {
+            stages: prof.stages,
+            total: prof.total(),
+            endedAt: new Date().toISOString(),
+            ...brain,
+            ...machine,
+            ...turns,
+            ...(slow.length > 0 ? { slow } : {}),
+          },
         ]);
         const capped = (list: SQL) =>
           sql`case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 1 else ${list} end`;
@@ -2095,6 +2133,11 @@ async function executeRunInner(
       )
       .catch(() => {});
     return rows;
+  };
+  // The run's context is kept by identity (its authority, its loaded groups): the hook goes on it, not on a copy.
+  ctx.slowSource = (source, ms) => {
+    prof.slowSources.push({ source, ms });
+    deps.onTiming?.("tool_source_ms", ms, { source, runId: run.id, orgId: run.orgId });
   };
   // Independent reads together: the trigger, the tools it may use, and whether a new run's agent can think.
   const [triggerRows, granted, ai] = await Promise.all([
@@ -2911,10 +2954,14 @@ async function executeRunInner(
     if (issueId) later(() => linkRunToIssue({ db, pubsub: deps.pubsub }, run, issueId));
     const system: ContextBlock[] = [...context.system];
     if (contextDeps && context.stats.truncated) {
-      // Long thread: the summary stands in for what didn't fit.
-      const found = await ensureThreadSummary(contextDeps, run.orgId, run.threadRootId, { force: true }).catch(
-        () => null,
-      );
+      // Long thread: the summary kept stands in for what didn't fit, at once; one covering the newest messages is
+      // written beside the turn, for the next (`get_summary` waits for it when this turn needs it). An agent that
+      // can't call it still waits for the summary: it would otherwise not know what was said before.
+      const asks = granted.some((t) => t.name === GET_SUMMARY_TOOL);
+      const writing = ensureThreadSummary(contextDeps, run.orgId, run.threadRootId, { force: true }).catch(() => null);
+      const found = asks
+        ? await currentThreadSummary(db, run.orgId, run.threadRootId).catch(() => null)
+        : await writing;
       const dm = found
         ? await agentsDmReads(db, run.orgId, run.channelId, () => readerOfRun(db, run.orgId, run.id))
         : null;
@@ -2924,6 +2971,7 @@ async function executeRunInner(
           conversation: true,
           text: `# Earlier in this thread (summary)\n${itemLabel(summary)} ${summary.content}`,
         });
+      else if (asks) system.push({ conversation: true, text: SUMMARY_COMING_NOTE });
       prof.part("summary");
     }
     // Per turn like memory: who the run acts for picks the rules, so they never move the cached prompt.
@@ -5626,6 +5674,8 @@ async function executeRunInner(
         unregisterTurnAbort(run.id, turnAbort);
         continue;
       }
+      /** This turn's trace, from its start (`thinkOnce`) to its end. */
+      let trace: ReturnType<typeof turnRecorder> | undefined;
       const io: BrainIO = {
         signal: turnAbort ? AbortSignal.any([signal, turnAbort.signal]) : signal,
         // Brains that run a tool inline (not by yielding `tool_call`). The model brain doesn't; computer
@@ -5635,8 +5685,9 @@ async function executeRunInner(
           executeToolForRun(deps, { orgId: run.orgId, agentId: run.agentId, runId: run.id, machineId: "" }, call),
         // A computer brain's turn that can take messages mid-turn (live steering).
         steerable: (steer) => live.steerable(steer),
-        // Timed for every run (the breakdown's `pre_turn_sync`), told only where a person watches.
+        // Timed for every run (the breakdown's `pre_turn_sync`, the turn's trace), told only where a person watches.
         phase: (phase) => {
+          trace?.phase(phase);
           if (phase === "code") turnSync.since = performance.now();
           else if (turnSync.since !== null) {
             turnSync.ms += performance.now() - turnSync.since;
@@ -5767,6 +5818,8 @@ async function executeRunInner(
       brainFailure = undefined;
       /** The computer turned the turn away for want of room: nothing ended there that frees room. */
       let refused = false;
+      /** How the turn ended, for its trace: `done`, or the code it failed with. */
+      let traceEnd = "thrown";
       // Whose month this turn counts for (ADR 0141): the person behind the run, else a routine's creator. The
       // team's right hand helping someone set up counts for nobody.
       const personId =
@@ -5778,6 +5831,7 @@ async function executeRunInner(
       try {
         // A plan brain's turn costs nothing through the gateway: its person's limit is checked here.
         if (personId && turnPlan.kind !== "model") await assertPersonUnderLimit(db, run.orgId, personId);
+        trace = turnRecorder(brain.kind, prof.startedAt);
         result = await thinkOnce(
           brain,
           // Memory and wiki once per run: its first turn, or a session started afresh.
@@ -5821,6 +5875,7 @@ async function executeRunInner(
                   cacheWriteTokens: u.cacheWrite ?? 0,
                 }),
               ),
+            onEvent: (event) => trace?.event(event),
             refusedByPlan: (message) =>
               regionRefusal(turnPlan.account?.provider, turnPlan.model, message) ||
               offRefusal(turnPlan.account?.provider, turnPlan.model, message),
@@ -5934,6 +5989,7 @@ async function executeRunInner(
           live.endTurn();
           flushBackground();
         });
+        traceEnd = "done";
         const ownExecuted = turnPlan.kind === "model" ? result.executedCount : ownExecutedNow();
         // Its line on the way (`say_now`) is talk: never counted as progress (a nudged run must do the work).
         const worked = result.toolCalls.filter((c) => !isSayNow(c.name)).length;
@@ -5986,6 +6042,7 @@ async function executeRunInner(
           if (plan.session) plan = { ...plan, session: { ...plan.session, resume: true } };
         }
       } catch (error) {
+        traceEnd = error instanceof BrainFailure ? error.code : "thrown";
         await deltas.flush();
         await deferred;
         // Canceled mid-stream: the gateway recorded the usage so far; keep the text so far.
@@ -6286,6 +6343,11 @@ async function executeRunInner(
         throw error;
       } finally {
         if (turnAbort) unregisterTurnAbort(run.id, turnAbort);
+        if (trace) {
+          const system = turnPlan.kind !== "model" ? agentSystemParts(transcript.system) : undefined;
+          prof.turns.push(trace.finish(traceEnd, { model: turnPlan.model, system }));
+          trace = undefined;
+        }
         // A turn ended on the computer and its memory is free: the next in its line asks now.
         const ranOn = turnPlan.kind !== "model" ? (turnPlan.session?.machineId ?? agent.machineId) : null;
         if (ranOn) prof.machineId = ranOn;
@@ -7383,6 +7445,9 @@ function brainTurnOf(
   };
 }
 
+/** A long thread with no summary kept yet: the turn starts without one, and the agent reads it when it needs it. */
+export const SUMMARY_COMING_NOTE = `# Earlier in this thread\nThis thread is longer than what is shown here, and its summary is being written now: call ${GET_SUMMARY_TOOL} when you need what was said before.`;
+
 /** An early checkouts sync for a turn whose words may have changed since: where it starts picked again from them. */
 const startAgain = (code: Promise<CodeSetup | null>, turn: Parameters<typeof codeStart>[1]) =>
   code.then((c) => (c?.pick ? { ...c, ...codeStart(c.pick, turn) } : c));
@@ -7490,6 +7555,8 @@ async function thinkOnce(
     onStalled?(stall: Extract<BrainEvent, { type: "stalled" }>): void;
     /** A failed turn that is the plan's refusal, though the CLI didn't call it a limit. */
     refusedByPlan?(message: string): boolean;
+    /** Every event as it comes, before it is read (`turnRecorder`). */
+    onEvent?(event: BrainEvent): void;
   } = {},
 ): Promise<BrainStep> {
   let text: string | null = null;
@@ -7528,6 +7595,7 @@ async function thinkOnce(
       break;
     }
     const event: BrainEvent = next.value;
+    hooks.onEvent?.(event);
     if (!taken && event.type !== "error") {
       taken = true;
       await hooks.onTaken?.();
