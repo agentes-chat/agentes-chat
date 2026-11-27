@@ -547,24 +547,53 @@ export function sameValue(x: CellValue, y: CellValue): boolean {
 
 const wildcardRes = new Map<string, RegExp>();
 
-/** Excel's wildcards: `*` any text, `?` one character, `~` before either (or itself) for the character. */
-export function wildcardRegExp(pattern: string): RegExp {
-  const hit = wildcardRes.get(pattern);
+/** Compile fixed pieces separated by stars, committing each interior piece at its earliest match. */
+function compileWildcard(pattern: string, search: boolean): RegExp {
+  const key = `${search ? "search" : "cell"}:${pattern}`;
+  const hit = wildcardRes.get(key);
   if (hit) return hit;
-  let src = "";
+  const parts = [""];
+  let star = false;
   for (let i = 0; i < pattern.length; i++) {
     const c = pattern.charAt(i);
+    if (c === "*") {
+      if (!star) parts.push("");
+      star = true;
+      continue;
+    }
+    star = false;
     if (c === "~" && i + 1 < pattern.length && "*?~".includes(pattern.charAt(i + 1))) {
-      src += escapeRe(pattern.charAt(i + 1));
+      parts[parts.length - 1] += escapeRe(pattern.charAt(i + 1));
       i++;
-    } else if (c === "*") src += "[\\s\\S]*";
-    else if (c === "?") src += "[\\s\\S]";
-    else src += escapeRe(c);
+    } else parts[parts.length - 1] += c === "?" ? "[\\s\\S]" : escapeRe(c);
   }
-  const re = new RegExp(`^${src}$`, "i");
+  // A later star can absorb the gap after an earlier fixed-piece match. A successful lookahead cannot be
+  // backtracked into; consuming its capture prevents trying every allocation of text among preceding stars.
+  // SEARCH also commits its first piece, retaining the skipped prefix so it need not restart at every position.
+  let src = search ? `(?=([\\s\\S]*?(${parts[0]})))(?:\\1)` : (parts[0] as string);
+  let group = search ? 2 : 0;
+  for (let i = 1; i < parts.length; i++) {
+    const fixed = parts[i] as string;
+    if (i === parts.length - 1) src += `[\\s\\S]*${search ? "?" : ""}${fixed}`;
+    else src += `(?=([\\s\\S]*?${fixed}))(?:\\${++group})`;
+  }
+  const re = new RegExp(search ? src : `^${src}$`, search ? "iy" : "i");
   if (wildcardRes.size > 500) wildcardRes.clear();
-  wildcardRes.set(pattern, re);
+  wildcardRes.set(key, re);
   return re;
+}
+
+/** Excel's wildcards: `*` any text, `?` one character, `~` before either (or itself) for the character. */
+export function wildcardRegExp(pattern: string): RegExp {
+  return compileWildcard(pattern, false);
+}
+
+/** The first wildcard match at or after the UTF-16 position `start`, or -1 when none. */
+export function wildcardIndex(pattern: string, text: string, start: number): number {
+  const re = compileWildcard(pattern, true);
+  re.lastIndex = start;
+  const match = re.exec(text);
+  return match ? match.index + (match[1] as string).length - (match[2] as string).length : -1;
 }
 
 export function hasWildcards(pattern: string): boolean {
