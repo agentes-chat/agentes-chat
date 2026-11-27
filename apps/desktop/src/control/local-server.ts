@@ -20,11 +20,21 @@ export interface LocalServerStatus {
   /** Its owner's account exists. */
   owner: boolean;
   phase: LocalPhase;
-  /** Its loopback address. */
+  /** Its loopback address (a terminal install's too). */
   url: string | null;
-  /** Its address for people: the Tailscale one with reach on. */
+  /** The address the main window on this computer opens: the app's own server's loopback one (ADR 0256 §5). */
+  localUrl: string | null;
+  /** Its address for people (the phone, the team, links): the Tailscale one with reach on, else null. */
   publicUrl: string | null;
   reach: boolean;
+  /** The Tailscale that shares it (the system's or the app's own, ADR 0256 §4) and what it is doing. */
+  tailnet: TailnetState;
+  /** This build carries its own Tailscale: reach needs nothing installed (only a sign-in). */
+  ownTailnet: boolean;
+  /** Reach in one word, for this computer's essentials. */
+  reachHealth: ReachHealth;
+  /** When its device's sign-in on the tailnet expires (milliseconds since 1970), with reach on. */
+  expiresAt: number | null;
   /** Usage statistics on (`TELEMETRY`). */
   usage: boolean;
   /** The installed bundle's version, even while the server is stopped or restarting. */
@@ -72,8 +82,61 @@ export interface KeepRunning {
   autoRestart: boolean | null;
 }
 
-/** `app`: Tailscale's Mac app is there to open, not only its command-line tool (Homebrew's). */
+/** `app`: Tailscale's Mac app is there to open, not only its command-line tool (Homebrew's). The system's Tailscale. */
 export type Tailnet = { state: "missing" } | { state: "off"; app: boolean } | { state: "on"; device: string };
+
+/** What a Tailscale that shares the server here is doing (`tailnet_app.rs`). */
+export type TailnetPhase =
+  | "starting"
+  | "signedOut"
+  | "signingIn"
+  | "needsApproval"
+  | "on"
+  | "expired"
+  | "off"
+  | "failing";
+/**
+ * The Tailscale that shares the server here (`tailnet://state`): none chosen yet, the system's, or the app's own, with
+ * its device's address, its sign-in's expiry (milliseconds since 1970), whether the tailnet lets it share with HTTPS,
+ * and the admin page that allows it while that is awaited.
+ */
+export type TailnetState =
+  | { mode: "none" }
+  | {
+      mode: "app" | "system";
+      state: TailnetPhase;
+      device?: string;
+      keyExpiry?: number;
+      https?: "ok" | "needsApproval" | "unknown";
+      approveUrl?: string;
+    };
+/**
+ * Reach in one word (`reachHealth`): off, on, or what keeps the phone and the team from it now: the app's own
+ * Tailscale signed out (`signIn`), HTTPS or the device waiting for the tailnet's admin (`approve`), its sign-in
+ * expiring within 14 days (`expiring`), Tailscale not connected (`down`).
+ */
+export type ReachHealth = "on" | "off" | "signIn" | "approve" | "expiring" | "down";
+/**
+ * A sign-in of the app's own Tailscale (`tailnet://sign-in`): Tailscale's page opened in the browser, the tailnet's
+ * admin approving the new device, done (its address), or why it ended.
+ */
+export type TailnetSignIn =
+  | { stage: "url"; url: string }
+  | { stage: "approval"; url: string }
+  | { stage: "done"; device: string }
+  | { stage: "failed"; reason: "busy" | "start" | "cancelled" | "failed" };
+/** Tailscale's pages the app opens (its Mac app is `app`). */
+export type TailscalePage = "app" | "download" | "https" | "signIn" | "keyExpiry" | "approve" | "admin";
+/** The phone's QR code: the link it opens, its server (the address for people), and seconds left. */
+export interface PhoneLink {
+  link: string;
+  server: string;
+  expiresIn: number;
+}
+
+/** The app's own Tailscale needs a sign-in (never signed in, its sign-in expired, or it signed out). */
+export const tailnetNeedsSignIn = (tailnet: TailnetState) =>
+  tailnet.mode === "app" && (tailnet.state === "signedOut" || tailnet.state === "expired");
 /**
  * Where Tailscale gets connected on this system: its app, which the app opens (a Mac with that app), its icon by the
  * clock (Windows: tailscale.com/kb/1022/install-windows), or `sudo tailscale up` in the terminal (Linux, and a Mac
@@ -99,20 +162,34 @@ export type ServeProblem =
   | { reason: "operator" }
   | { reason: "serve" }
   | { reason: "notConnected"; app: boolean }
+  /** The app's own Tailscale isn't signed in (the sign-in didn't finish). */
+  | { reason: "signIn"; url: string | null }
+  /** The app's own Tailscale's sign-in expired. */
+  | { reason: "expired" }
+  /** The tailnet's admin approves new devices and hasn't approved this one yet. */
+  | { reason: "needsApproval"; url: string | null }
   | { reason: "stopped" }
   | { reason: "start" }
   | { reason: "back" };
 /**
- * What turning reach on or off is doing now (`local-server://reach`): Tailscale sharing it, Tailscale waiting for
- * HTTPS to be allowed at `url`, the server starting again at its new address, the window signing in there.
+ * What turning reach on or off is doing now (`local-server://reach`): the app's own Tailscale signing in (its page in
+ * the browser; its own stages at `onTailnetSignIn`), Tailscale sharing it, Tailscale waiting for HTTPS to be allowed at
+ * `url`, the server starting again behind the window with its address for people, and done (that address). The window
+ * stays on this computer's own address throughout (ADR 0256 §5).
  */
-export type ReachStage = { stage: "sharing" | "restarting" | "signingIn" } | { stage: "approve"; url: string };
+export type ReachStage =
+  | { stage: "joining" | "sharing" | "restarting" }
+  | { stage: "approve"; url: string }
+  | { stage: "done"; url: string };
 export type ReachResult = { ok: true; url: string } | { ok: false; problem: ServeProblem };
+
+/** Where agentes.chat on this computer will be used: here, the phone and the team (through Tailscale), or here only. */
+export type LocalPlace = "everywhere" | "here";
 
 export interface LocalChoice {
   name?: string;
   email?: string;
-  reach: boolean;
+  place: LocalPlace;
   usage: boolean;
 }
 
@@ -132,8 +209,13 @@ export const NO_SERVER: LocalServerStatus = {
   owner: false,
   phase: "off",
   url: null,
+  localUrl: null,
   publicUrl: null,
   reach: false,
+  tailnet: { mode: "none" },
+  ownTailnet: false,
+  reachHealth: "off",
+  expiresAt: null,
   usage: true,
   installedVersion: null,
   serverVersion: null,
@@ -151,13 +233,16 @@ export const NO_SERVER: LocalServerStatus = {
   erased: null,
 };
 
-/** "Setting it up", in order; access from other devices only when it was asked for. */
-export const setupSteps = (reach: boolean): SetupStep[] => [
+/**
+ * "Setting it up", in order; access from the phone and the team only when it will be used there. The window is signed
+ * in right after `account`, before `computer` and `reach` (ADR 0256 §3).
+ */
+export const setupSteps = (place: LocalPlace): SetupStep[] => [
   "database",
   "start",
   "account",
   "computer",
-  ...(reach ? (["reach"] as const) : []),
+  ...(place === "everywhere" ? (["reach"] as const) : []),
 ];
 
 /** Each step's state from the changes that arrived; a step not heard of yet is still to do. */
@@ -202,7 +287,7 @@ export const FAIL_TEXT: Record<SetupStep, string> = {
 export type HereView =
   /** The form; `ask`: the owner's name and email (no owner yet). */
   | { kind: "form"; ask: boolean }
-  /** The app runs it already: open it. */
+  /** The app runs it already: open it (at its loopback address, the one this computer opens). */
   | { kind: "running"; server: string }
   /** One already runs on this computer, installed from the terminal: use it (its owner page while it waits). */
   | { kind: "already"; server: string; claim: string | null }
@@ -221,7 +306,7 @@ export const ownerless = (status: LocalServerStatus) => status.installed === "ap
  */
 export function hereView(status: LocalServerStatus, answering: string | null): HereView {
   if (ownerless(status)) return { kind: "form", ask: true };
-  if (status.run) return { kind: "running", server: status.publicUrl ?? status.url ?? "" };
+  if (status.run) return { kind: "running", server: status.localUrl ?? status.url ?? "" };
   if (status.installed === "terminal")
     return status.serving && status.url
       ? { kind: "already", server: status.url, claim: status.claim }
@@ -236,6 +321,9 @@ export const REASON_TEXT: Record<ServeProblem["reason"], string> = {
   operator: "desktop.here.reason.operator",
   serve: "desktop.here.reason.serve",
   notConnected: "desktop.here.reason.notConnected",
+  signIn: "desktop.tailnet.reason.signIn",
+  expired: "desktop.tailnet.reason.expired",
+  needsApproval: "desktop.tailnet.reason.needsApproval",
   stopped: "desktop.here.reason.stopped",
   start: "desktop.here.reason.start",
   back: "desktop.here.reason.back",
@@ -246,7 +334,9 @@ export function hereLine(status: LocalServerStatus): string {
   switch (status.phase) {
     case "running":
       if (!status.reach) return "desktop.server.onlyHere";
-      return status.tailnetDown ? "desktop.server.tailnetDown" : "desktop.server.onTailnet";
+      return status.tailnetDown || status.reachHealth === "down"
+        ? "desktop.server.tailnetDown"
+        : "desktop.server.onTailnet";
     case "starting":
       return "desktop.server.starting";
     case "restarting":
@@ -274,28 +364,28 @@ export function hereBanner(status: LocalServerStatus): "stopped" | "failing" | "
  */
 export const filesFolder = (dir: string) => `${dir}${dir.includes("\\") ? "\\" : "/"}files`;
 
-/** Whether `server` is the server here, at either of its addresses. */
+/** Whether `server` is the server here, at any of its addresses. */
 export const isHereServer = (status: LocalServerStatus, server: string | null) =>
-  status.run && !!server && (server === status.url || server === status.publicUrl);
+  status.run && !!server && (server === status.url || server === status.localUrl || server === status.publicUrl);
 
 /** Where a workspace's server runs: on this computer, on agentes.chat's Cloud, or elsewhere. */
 export const serverPlace = (status: LocalServerStatus, server: string | null): "here" | "cloud" | "other" =>
   isHereServer(status, server) ? "here" : server === CLOUD_SERVER ? "cloud" : "other";
 
 /**
- * The main window's cover over the server here: starting, updating, stopped, not starting, or running at its
- * Tailscale address while Tailscale isn't connected on this computer (`reachable`: that address answered).
+ * The main window's cover over the server here: starting, updating, stopped or not starting. The window opens it at
+ * its loopback address, never through the tailnet (ADR 0256 §5), so Tailscale being off is no reason for a cover: it is
+ * an item of this computer's essentials instead.
  */
 export function coverHere(
   status: LocalServerStatus,
   current: string | null,
-  reachable: boolean,
-): "starting" | "migrating" | "stopped" | "failing" | "tailnetOff" | null {
+): "starting" | "migrating" | "stopped" | "failing" | null {
   if (!isHereServer(status, current)) return null;
   // Starting again by itself: the same wait as a start, never "stopped".
   if (status.phase === "starting" || status.phase === "restarting") return "starting";
   if (status.phase === "updating") return "migrating";
   if (status.phase === "failing") return "failing";
   if (status.phase !== "running") return "stopped";
-  return status.reach && current === status.publicUrl && !reachable ? "tailnetOff" : null;
+  return null;
 }

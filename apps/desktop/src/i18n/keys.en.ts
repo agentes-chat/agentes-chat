@@ -559,6 +559,9 @@ export const desktopEn = {
     /** macOS's own name for the permission (System Settings › Privacy & Security). */
     disk: "Full Disk Access",
     diskDesc: "Lets agents open your files without macOS asking for each folder.",
+    /** macOS's name for the app's notifications (System Settings › Notifications). */
+    notifications: "Notifications",
+    notificationsDesc: "Tells you when agents need you, and when something on this {{device}} stops working.",
     /** No prompt can ask for Full Disk Access: the person turns the app on in its list, or adds it with the + button. */
     diskHow: "In Settings, turn on agentes.chat in the list, or add it with +.",
     /** macOS's Local Network permission, which Android phones paired over Wi-Fi need. */
@@ -578,6 +581,38 @@ export const desktopEn = {
     skip: "Skip for now",
     prefsTitle: "Permissions",
     prefsHint: "macOS may turn these off when the app updates. Turn them on again here.",
+  },
+  /** What keeps agents working here and the server here reachable, when one of them falls (ADR 0256). */
+  essentials: {
+    /** The menu bar icon's tooltip (and, on Windows and Linux, its menu's first line) while one is off. */
+    tray: "Something on this {{device}} needs you",
+    /** A system notification when one falls by itself, once each time. */
+    notify: {
+      screen: {
+        title: "Screen Recording is off",
+        body: "macOS turned it off. Agents can't take screenshots until you allow it again.",
+      },
+      disk: {
+        title: "Full Disk Access is off",
+        body: "Agents may stop to ask for folders until you turn it on again.",
+      },
+      reach: {
+        title: "Your phone and team can't reach agentes.chat",
+        body: "The private network on this {{device}} needs you. Open the app to fix it.",
+      },
+      backup: {
+        title: "Last night's backup didn't finish",
+        body: "Open the app to back up again.",
+      },
+      autoUpdate: {
+        title: "agentes.chat needs an update",
+        body: "This version can't keep working. Open the app to install the new one.",
+      },
+      awake: {
+        title: "This {{device}} may sleep while it serves",
+        body: "Restart agentes.chat here so it stays awake for your phone and team.",
+      },
+    },
   },
   tools: {
     claudeName: "Claude Code",
@@ -908,6 +943,30 @@ export const desktopEn = {
       mixed: "Not the same everywhere: {{values}}. A change here sets all of them.",
       folder: "Agents' folder",
       folderDesc: "One folder per workspace, with a folder for each agent.",
+    },
+  },
+  /** The Tailscale the app carries (ADR 0256 §4): what it needs, said under the reach switch and while it signs in. */
+  tailnet: {
+    rowApp: "Sign in to Tailscale once, here in the app. Nothing to install on this {{device}}.",
+    signedOut: "Tailscale isn't signed in, so your phone and team can't reach it.",
+    expired: "Tailscale's sign-in on this {{device}} expired, so your phone and team can't reach it.",
+    expiring: "Tailscale's sign-in on this {{device}} expires on {{date}}.",
+    needsApproval: "Your Tailscale network's admin needs to approve this {{device}} (the device named “agentes”).",
+    starting: "Starting Tailscale…",
+    failing: "Tailscale didn't start on this {{device}}.",
+    signIn: "Sign in to Tailscale",
+    signInAgain: "Sign in again",
+    openAgain: "Open the page again",
+    approve: "Open Tailscale's admin",
+    stage: {
+      joining: "Waiting for you to sign in to Tailscale in your browser. This continues by itself when you're done.",
+      done: "Ready: your phone and team can open it.",
+    },
+    /** Why access didn't turn on, after "Access from your devices didn't turn on:". */
+    reason: {
+      signIn: "Tailscale isn't signed in on this {{device}}",
+      expired: "Tailscale's sign-in on this {{device}} expired",
+      needsApproval: "your Tailscale network's admin hasn't approved this {{device}} yet",
     },
   },
   iphone: {

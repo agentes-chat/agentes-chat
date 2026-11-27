@@ -65,3 +65,15 @@ test("the cover never steps aside on its own while the page hasn't painted", () 
   expect(main.match(/invoke\("cover_hide"\)/g)).toHaveLength(1);
   expect(main).toContain('words.showAnyway, () => void invoke("cover_hide")');
 });
+
+test("over the server here the cover never turns reach off: the window opens it at loopback (ADR 0256 §5)", () => {
+  const main = read(join(COVER, "main.ts"));
+  expect(main).not.toContain("local_server_reach");
+  expect(main).not.toContain("tailnetOff");
+  // Tailscale is still named for a server on a Tailscale network the cover can't reach.
+  expect(main).toContain('invoke<Tailnet>("tailscale_status")');
+  const capability = JSON.parse(read(join(import.meta.dir, "../src-tauri/capabilities/cover.json"))) as {
+    permissions: string[];
+  };
+  expect(capability.permissions).not.toContain("allow-local-server-reach");
+});

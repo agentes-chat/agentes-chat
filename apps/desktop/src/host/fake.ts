@@ -11,15 +11,16 @@
  * computer, its organization's agents too); `?link=` makes any scenario start with that link waiting. A pair link
  * (`agenteschat://pair?server=…&link=ABCDEFGH`) joins Estúdio Norte once its maker lets it in, `HGFEDCBA`'s maker
  * says no, and any other code expired.
- * `?mac=ready`: Screen Recording and Full Disk Access allowed already (with Local Network asked, Prepare this Mac
- * is skipped).
+ * `?mac=ready`: notifications, Screen Recording and Full Disk Access allowed already (Prepare this Mac is skipped).
  * Servers answer by host: agentes.tail1234.ts.net, agentes.chat and http://127.0.0.1:4310 are servers;
  * noowner.tail1234.ts.net waits for its owner; old.example.com is too old; chat.example.com doesn't answer;
  * anything else isn't agentes.chat. `?found=0` makes discovery find nothing.
  * The server here: `?phase=` (starting, updating, stopped, failing), `?reach=1`, `?back=<version>` (an update
  * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
  * first run opens on Run here's form), `?usage=0` (usage statistics off),
- * `?tailscale=` (on, off, missing), `?installed=terminal` (one from the terminal; `&claim=1` waits for its owner,
+ * `?tailscale=` (on, off, missing: the system's), `?tailnet=` (the Tailscale the app carries, ADR 0256 §4: `signedOut`
+ * until it signs in, `on`, `expiring`, `expired`; without it the build carries none), `?installed=terminal` (one from
+ * the terminal; `&claim=1` waits for its owner,
  * `&serving=0` isn't running), `?fail=` (database, start, account, reach: that setup step fails), `?hold=<step>`
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
  * does). An update downloads in about 1.5 s with its progress, and Cancel drops it.
@@ -27,17 +28,22 @@
 
 import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import { CLOUD_SERVER, isLoopback, readInstance, type ServerCheck } from "@agenteschat/client/lib/server";
+import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import {
+  type KeepRunning,
   type LocalPhase,
   type LocalServerStatus,
   NO_SERVER,
+  type PhoneLink,
   type ReachStage,
   type ServeProblem,
   type SetupStep,
   type StepChange,
   setupSteps,
   type Tailnet,
+  type TailnetSignIn,
+  type TailnetState,
 } from "../control/local-server";
 import type { LinkInfo } from "../control/pair";
 import type { MacPermission, SetupState } from "../control/permissions";
@@ -83,10 +89,15 @@ export interface HereOptions {
   hold?: SetupStep;
   /** Each setup step's time in ms (the tests' 10); a little over a second by default. */
   pace?: number;
+  /** The Tailscale the app carries (`?tailnet=`): its state as it starts; none carried when unset. */
+  tailnet?: "signedOut" | "on" | "expiring" | "expired";
 }
 
 const LOCAL_URL = "http://127.0.0.1:4310";
 const TAILNET_URL = "https://ana-mac.tail1234.ts.net";
+/** The app's own Tailscale's device: `agentes` on the person's tailnet, whatever this computer is called. */
+const OWN_TAILNET_URL = "https://agentes.tail1234.ts.net";
+const DAY_MS = 24 * 3600 * 1000;
 const LOCAL_BUNDLE_VERSION = "0.8.5";
 const LOCAL_SERVER_VERSION = "0.1.1";
 
@@ -102,16 +113,24 @@ export interface FakeHost extends Host {
   onDev(cb: () => void): () => void;
   setVersion(version: string): void;
   /**
-   * This Mac's permissions: Screen Recording, Full Disk Access, the Local Network prompts raised, the setup kept, the
-   * panes opened.
+   * This Mac's permissions: Screen Recording, Full Disk Access, the app's notifications (`?mac=ready`: all three on),
+   * the notification and Local Network prompts raised, the setup kept, the panes opened.
    */
   readonly mac: {
     screen: boolean;
     disk: boolean;
+    notifications: NotifyPermission;
+    notifyAsks: number;
     networkAsks: number;
     setup: SetupState | null;
     panes: (MacPermission | OsPermission)[];
   };
+  /** What keeps the server here up after a restart or a power cut (`keepRunning`, `health`): tests turn them. */
+  readonly keep: KeepRunning;
+  /** The system notifications raised (`notify`), in order. */
+  readonly notified: { title: string; body: string }[];
+  /** This computer's essentials read again and sent, as Rust does when the app comes to the front (`onHealth`). */
+  sayHealth(): void;
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;
   /** The app layer as Rust would keep it (`app_layer.rs`), and the routes shown, in order. */
@@ -120,7 +139,7 @@ export interface FakeHost extends Host {
   /** The site's paths the layer moved it to (`siteGo`). */
   readonly sitePaths: string[];
   /** What the popover last published about this computer's essentials (`publishHealth`). */
-  readonly health: { needs: number; server: boolean } | null;
+  readonly publishedHealth: { needs: number; server: boolean } | null;
 }
 
 /** The stand-in site's settings list (the layer's settings show it above This computer's sections). */
@@ -215,6 +234,29 @@ export function createFakeHost(
         ? { state: "off", app: platform === "mac" }
         : { state: "on", device: "ana-mac.tail1234.ts.net" };
   const running = scenario === "here" && here.run !== false;
+  // The Tailscale the app carries (`?tailnet=`): signed in or not, its sign-in expiring or expired.
+  const ownStart = here.tailnet;
+  let ownTailnet: TailnetState =
+    ownStart === undefined
+      ? { mode: "none" }
+      : {
+          mode: "app",
+          state: ownStart === "expiring" ? "on" : ownStart,
+          ...(ownStart === "on" || ownStart === "expiring"
+            ? {
+                device: new URL(OWN_TAILNET_URL).host,
+                keyExpiry: Date.now() + (ownStart === "expiring" ? 5 : 170) * DAY_MS,
+                https: "ok" as const,
+              }
+            : {}),
+        };
+  const peopleUrl = ownStart === undefined ? TAILNET_URL : OWN_TAILNET_URL;
+  const tailnetOf = (reach: boolean): TailnetState =>
+    ownStart !== undefined
+      ? ownTailnet
+      : reach
+        ? { mode: "system", state: "on", device: new URL(TAILNET_URL).host, https: "ok" }
+        : { mode: "none" };
   let local: LocalServerStatus = {
     ...NO_SERVER,
     bundled: true,
@@ -227,8 +269,19 @@ export function createFakeHost(
           owner: here.owner !== false,
           phase: running ? (here.phase ?? "running") : "off",
           url: LOCAL_URL,
-          publicUrl: here.reach ? TAILNET_URL : LOCAL_URL,
+          localUrl: running ? LOCAL_URL : null,
+          publicUrl: here.reach ? peopleUrl : null,
           reach: !!here.reach,
+          tailnet: tailnetOf(!!here.reach),
+          ownTailnet: ownStart !== undefined,
+          reachHealth: !here.reach
+            ? ("off" as const)
+            : ownStart === "signedOut" || ownStart === "expired"
+              ? ("signIn" as const)
+              : ownStart === "expiring"
+                ? ("expiring" as const)
+                : ("on" as const),
+          expiresAt: here.reach && ownTailnet.mode === "app" ? (ownTailnet.keyExpiry ?? null) : null,
           installedVersion: LOCAL_BUNDLE_VERSION,
           serverVersion: running && (here.phase ?? "running") === "running" ? LOCAL_SERVER_VERSION : null,
           backTo: here.back ?? null,
@@ -250,7 +303,18 @@ export function createFakeHost(
             serving: here.serving !== false,
             claim: here.claim && here.serving !== false ? "b3duZXItY2xhaW0tYWJjZGVmZ2hpamtsbW5vcHFy" : null,
           }
-        : { systemName: "Ana Souza" }),
+        : { systemName: "Ana Souza", ownTailnet: ownStart !== undefined, tailnet: tailnetOf(false) }),
+  };
+  const tailnetListeners = new Set<(state: TailnetState) => void>();
+  const signInListeners = new Set<(stage: TailnetSignIn) => void>();
+  const saySignIn = (stage: TailnetSignIn) => {
+    for (const l of signInListeners) l(stage);
+  };
+  let signInStopped = false;
+  const setOwnTailnet = (next: TailnetState) => {
+    ownTailnet = next;
+    for (const l of tailnetListeners) l(next);
+    setLocal({ tailnet: next });
   };
   const localListeners = new Set<(s: LocalServerStatus) => void>();
   const stepListeners = new Set<(c: StepChange) => void>();
@@ -274,7 +338,8 @@ export function createFakeHost(
       : scenario === "selfhost"
         ? { current: FAKE_SERVER, servers: [FAKE_SERVER, CLOUD_SERVER] }
         : running
-          ? { current: local.publicUrl, servers: [local.publicUrl ?? LOCAL_URL] }
+          ? // The window opens the server here at its loopback address (ADR 0256 §5).
+            { current: LOCAL_URL, servers: [LOCAL_URL] }
           : { current: null, servers: [] };
   let link: string | null = options.link ?? (scenario === "link" ? CLAIM_LINK : null);
   const waits = link?.includes("claim=") ?? false;
@@ -284,7 +349,19 @@ export function createFakeHost(
   const layerListeners = new Set<(state: LayerState) => void>();
   const routes: LayerRoute[] = [];
   const sitePaths: string[] = [];
-  let health: { needs: number; server: boolean } | null = null;
+  let published: { needs: number; server: boolean } | null = null;
+  const healthListeners = new Set<(health: Health) => void>();
+  const notified: { title: string; body: string }[] = [];
+  const keep: KeepRunning = { autoLogin: false, autoRestart: false };
+  // What Rust's `health_get` reads (always_on.rs): only a Mac has the permissions, the settings and `caffeinate`.
+  const healthNow = (): Health => ({
+    autostart,
+    screen: platform !== "mac" || host.mac.screen,
+    disk: platform !== "mac" || host.mac.disk,
+    notifications: platform === "mac" ? host.mac.notifications : "granted",
+    keepRunning: platform === "mac" ? { ...keep } : { autoLogin: null, autoRestart: null },
+    awake: platform === "mac" ? local.awake : null,
+  });
   // The stand-in site is there once a server is chosen (a design tool: no cover, no sign-in).
   const siteThere = () => list.current !== null;
   const firstRoute: LayerRoute | null =
@@ -461,8 +538,29 @@ export function createFakeHost(
     layer,
     routes,
     sitePaths,
-    get health() {
-      return health;
+    get publishedHealth() {
+      return published;
+    },
+    keep,
+    notified,
+    health: async () => healthNow(),
+    onHealth: (cb) => {
+      healthListeners.add(cb);
+      return () => healthListeners.delete(cb);
+    },
+    sayHealth: () => {
+      const now = healthNow();
+      for (const l of healthListeners) l(now);
+    },
+    notificationPermission: async () => (platform === "mac" ? host.mac.notifications : "granted"),
+    requestNotifications: async () => {
+      if (platform !== "mac") return "granted";
+      // macOS asks once: after that the person changes it in System Settings.
+      if (host.mac.notifications === "notDetermined") {
+        host.mac.notifyAsks++;
+        host.mac.notifications = "granted";
+      }
+      return host.mac.notifications;
     },
     showLayer: async (route) => putLayer(route),
     hideLayer: async () => dropLayer(),
@@ -482,7 +580,7 @@ export function createFakeHost(
       dropLayer();
     },
     publishHealth: async (next) => {
-      health = next;
+      published = next;
     },
     siteFetch: async (server, method, path, body) => {
       if (!list.servers.includes(server)) throw "not a server of this app";
@@ -601,6 +699,7 @@ export function createFakeHost(
       return () => clearTimeout(timer);
     },
     notify: async (title, body) => {
+      notified.push({ title, body });
       console.info("[fake] notification:", title, "—", body);
     },
     // Nothing installs in a browser: once downloaded, the manual way.
@@ -650,13 +749,18 @@ export function createFakeHost(
         cancelSetup = () => reject("cancelled");
       });
       cancelled.catch(() => {});
-      for (const step of setupSteps(choice.reach)) {
+      for (const step of setupSteps(choice.place)) {
         say({ step, state: "active" });
         await Promise.race([
           cancelled,
           here.hold === step ? new Promise(() => {}) : wait(here.pace ?? (step === "database" ? 1400 : 800)),
         ]);
-        if (step === "reach" && (here.fail === "reach" || tailnet.state !== "on")) {
+        if (step === "reach" && ownStart !== undefined && ownTailnet.mode === "app" && ownTailnet.state !== "on") {
+          // The app's own Tailscale signs in first, in the browser (as `signInTailnet`).
+          sayReach({ stage: "joining" });
+          await host.signInTailnet().catch(() => {});
+        }
+        if (step === "reach" && (here.fail === "reach" || (tailnet.state !== "on" && ownStart === undefined))) {
           const reason: ServeProblem =
             here.reason === "operator" || here.reason === "serve"
               ? { reason: here.reason }
@@ -670,20 +774,27 @@ export function createFakeHost(
         }
         say({ step, state: "done" });
       }
-      const reach = choice.reach && tailnet.state === "on" && here.fail !== "reach";
+      const reach =
+        choice.place === "everywhere" &&
+        (tailnet.state === "on" || (ownTailnet.mode === "app" && ownTailnet.state === "on")) &&
+        here.fail !== "reach";
       setLocal({
         installed: "app",
         run: true,
         owner: true,
         phase: "running",
         url: LOCAL_URL,
-        publicUrl: reach ? TAILNET_URL : LOCAL_URL,
+        localUrl: LOCAL_URL,
+        publicUrl: reach ? peopleUrl : null,
         reach,
+        tailnet: tailnetOf(reach),
+        reachHealth: reach ? "on" : "off",
         usage: choice.usage,
         installedVersion: LOCAL_BUNDLE_VERSION,
       });
       cancelSetup = null;
-      await host.chooseServer(local.publicUrl ?? LOCAL_URL, "/desktop/handover#token=fake");
+      // At its loopback address, always (the app signs the window in there after the account step).
+      await host.chooseServer(LOCAL_URL, "/desktop/handover#token=fake");
     },
     cancelLocalSetup: async () => cancelSetup?.(),
     startLocalServer: async () => {
@@ -699,7 +810,7 @@ export function createFakeHost(
         held: !forget,
         heldUntil: !forget && minutes ? Date.now() + minutes * 60_000 : null,
       });
-      if (forget) await host.removeServer(local.publicUrl ?? LOCAL_URL);
+      if (forget) await host.removeServer(LOCAL_URL);
     },
     restartLocalServer: async () => {
       setLocal({ phase: "starting" });
@@ -708,9 +819,19 @@ export function createFakeHost(
     },
     setLocalReach: async (on) => {
       reachStopped = false;
+      const own = ownStart !== undefined;
+      if (on && own && ownTailnet.mode === "app" && ownTailnet.state !== "on") {
+        sayReach({ stage: "joining" });
+        const signedIn = await host.signInTailnet().then(
+          () => true,
+          () => false,
+        );
+        if (!signedIn)
+          return { ok: false, problem: reachStopped ? { reason: "stopped" } : { reason: "signIn", url: null } };
+      }
       if (on) sayReach({ stage: "sharing" });
       await wait(900);
-      if (on && tailnet.state !== "on") return { ok: false, problem: { reason: "serve" } };
+      if (on && !own && tailnet.state !== "on") return { ok: false, problem: { reason: "serve" } };
       if (on && here.fail === "reach") {
         // Tailscale asks for HTTPS to be allowed and waits: until "Stop waiting", or a few seconds as if never allowed.
         sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
@@ -721,10 +842,16 @@ export function createFakeHost(
       setLocal({ phase: "starting" });
       await wait(900);
       setLocal({ phase: "running" });
-      const url = on ? TAILNET_URL : LOCAL_URL;
-      list.servers = list.servers.map((s) => (s === local.publicUrl ? url : s));
-      if (list.current === local.publicUrl) list.current = url;
-      setLocal({ reach: on, publicUrl: url });
+      // The window stays on the loopback address: the list never changes (ADR 0256 §5).
+      const url = on ? peopleUrl : LOCAL_URL;
+      setLocal({
+        reach: on,
+        publicUrl: on ? url : null,
+        tailnet: tailnetOf(on),
+        reachHealth: on ? "on" : "off",
+        tailnetDown: false,
+      });
+      if (on) sayReach({ stage: "done", url });
       return { ok: true, url };
     },
     setLocalUsage: async (on) => {
@@ -755,12 +882,12 @@ export function createFakeHost(
       const to = local.eraseTo ?? "";
       // Its agents' homes on this computer go with it.
       for (const [homeId, runner] of runners) if (runner.server === LOCAL_URL) await host.removeRunner(homeId);
-      for (const server of new Set([local.publicUrl, local.url])) if (server) await host.removeServer(server);
+      for (const server of new Set([local.localUrl, local.url])) if (server) await host.removeServer(server);
       setLocal({ ...NO_SERVER, bundled: true, dir: local.dir, systemName: "Ana Souza", erased: to });
       putLayer({ screen: "firstRun", mode: "owner" });
       return to;
     },
-    keepRunning: async () => ({ autoLogin: false, autoRestart: false }),
+    keepRunning: async () => (platform === "mac" ? { ...keep } : { autoLogin: null, autoRestart: null }),
     openSystemSettings: async (page) => {
       console.info("[fake] open System Settings:", page);
     },
@@ -772,16 +899,60 @@ export function createFakeHost(
     },
     stopLocalReach: async () => {
       reachStopped = true;
+      signInStopped = true;
     },
     tailscale: async () => tailnet,
     openTailscale: async (page) => {
       console.info("[fake] open Tailscale:", page);
+    },
+    tailnet: async () => ownTailnet,
+    onTailnet: (cb) => {
+      tailnetListeners.add(cb);
+      return () => tailnetListeners.delete(cb);
+    },
+    // Tailscale's page "opens" and the person signs in about 1.5 s later, unless Cancel or Stop waiting.
+    signInTailnet: async () => {
+      if (ownStart === undefined) return Promise.reject("start");
+      signInStopped = false;
+      setOwnTailnet({ mode: "app", state: "signingIn" });
+      saySignIn({ stage: "url", url: "https://login.tailscale.com/a/fake" });
+      for (let i = 0; i < 15 && !signInStopped; i++) await wait(100);
+      if (signInStopped) {
+        setOwnTailnet({ mode: "app", state: "signedOut" });
+        saySignIn({ stage: "failed", reason: "cancelled" });
+        return Promise.reject("cancelled");
+      }
+      const device = new URL(OWN_TAILNET_URL).host;
+      setOwnTailnet({ mode: "app", state: "on", device, keyExpiry: Date.now() + 180 * DAY_MS });
+      if (local.reach) setLocal({ reachHealth: "on", expiresAt: Date.now() + 180 * DAY_MS });
+      saySignIn({ stage: "done", device });
+      return { device };
+    },
+    cancelTailnetSignIn: async () => {
+      signInStopped = true;
+    },
+    onTailnetSignIn: (cb) => {
+      signInListeners.add(cb);
+      return () => signInListeners.delete(cb);
+    },
+    useTailnetSource: async (mode) => {
+      if (mode === "app") setOwnTailnet({ mode: "app", state: "signedOut" });
+      else setLocal({ tailnet: { mode: "system", state: tailnet.state === "on" ? "on" : "off" } });
+    },
+    // A one-time sign-in for the phone, only while Tailscale shares it.
+    phoneLink: async (): Promise<PhoneLink> => {
+      if (!local.reach || !local.publicUrl) return Promise.reject("not_served");
+      const token = `fake${Date.now().toString(36)}${"x".repeat(32)}`;
+      const query = new URLSearchParams({ server: local.publicUrl, token });
+      return { link: `agenteschat://connect?${query}`, server: local.publicUrl, expiresIn: 180 };
     },
     onNewHostHome: () => () => {},
     // Screen Recording and Full Disk Access take effect once the app opens again, as on a Mac.
     mac: {
       screen: options.macReady === true,
       disk: options.macReady === true,
+      notifications: options.macReady === true ? "granted" : "notDetermined",
+      notifyAsks: 0,
       networkAsks: 0,
       setup: null,
       panes: [],

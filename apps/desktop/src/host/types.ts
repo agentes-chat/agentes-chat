@@ -1,15 +1,20 @@
 import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import type { ServerCheck } from "@agenteschat/client/lib/server";
 import type { HelloLine } from "../control/client";
+import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import type {
   KeepRunning,
   LocalChoice,
   LocalServerStatus,
+  PhoneLink,
   ReachResult,
   ReachStage,
   StepChange,
   Tailnet,
+  TailnetSignIn,
+  TailnetState,
+  TailscalePage,
 } from "../control/local-server";
 import type { LinkInfo, PairTarget } from "../control/pair";
 import type { MacPermission, SetupState } from "../control/permissions";
@@ -164,6 +169,17 @@ export interface Host {
   /** The popover's count of this computer's essentials that need the person, for the site (`thisMacHealth`). */
   publishHealth(health: { needs: number; server: boolean }): Promise<void>;
   /**
+   * What only the system says about this computer's essentials (ADR 0256 §7): open at login, the macOS permissions,
+   * what keeps the server here up and awake (the popover and the layer).
+   */
+  health(): Promise<Health>;
+  /** The essentials read again: the main window gained focus or the app came to the front (at most every 15 s). */
+  onHealth(cb: (health: Health) => void): () => void;
+  /** macOS: the app's notifications, asking nothing; `granted` elsewhere. */
+  notificationPermission(): Promise<NotifyPermission>;
+  /** macOS: the system's prompt for the app's notifications while never asked (it asks once); the answer after. */
+  requestNotifications(): Promise<NotifyPermission>;
+  /**
    * A page of a server this app opens goes to the main window (switching to that server); a provider's
    * sign-in page opens in the person's browser. Nothing else opens.
    */
@@ -282,7 +298,10 @@ export interface Host {
    */
   stopLocalServer(forget: boolean, minutes?: number): Promise<void>;
   restartLocalServer(): Promise<void>;
-  /** Reach from the person's other devices (Tailscale), on or off; the main window follows the address. */
+  /**
+   * Reach from the person's other devices (Tailscale), on or off. The main window stays on the server here's loopback
+   * address, signed in (ADR 0256 §5); the server starts again behind it.
+   */
   setLocalReach(on: boolean): Promise<ReachResult>;
   /** What `setLocalReach` is doing while it takes. */
   onLocalReach(cb: (stage: ReachStage) => void): () => void;
@@ -311,10 +330,35 @@ export interface Host {
   localDiagnostics(): Promise<string>;
   /** The server here's homes again, with new tokens for the organizations in `rotate`. */
   syncLocalHomes(rotate: string[]): Promise<void>;
-  /** Tailscale on this computer. */
+  /** The system's Tailscale on this computer. */
   tailscale(): Promise<Tailnet>;
-  /** Tailscale's app (a Mac), its download page, or the admin page where HTTPS is turned on. */
-  openTailscale(page: "app" | "download" | "https"): Promise<void>;
+  /**
+   * Tailscale's app (a Mac), its download page, the admin page where HTTPS is turned on, the sign-in page the app's
+   * own Tailscale waits on ("Open the page again"), the admin's devices (where a new one is approved, `approve`, and
+   * where its sign-in's expiry is turned off, `keyExpiry`), or the admin console.
+   */
+  openTailscale(page: TailscalePage): Promise<void>;
+  /** The Tailscale that shares the server here (the app's own started first when it is the one chosen). */
+  tailnet(): Promise<TailnetState>;
+  /** Its changes (`tailnet://state`). */
+  onTailnet(cb: (state: TailnetState) => void): () => void;
+  /**
+   * Signs the app's own Tailscale in to the person's tailnet: its page opens in the browser and the sign-in waits there
+   * with no time limit. Resolves with the device's address; rejects with `busy`, `start`, `cancelled` or `failed`.
+   */
+  signInTailnet(): Promise<{ device: string }>;
+  /** Cancel while it signs in (`signInTailnet` rejects with `cancelled`). */
+  cancelTailnetSignIn(): Promise<void>;
+  /** A sign-in's stages (`tailnet://sign-in`). */
+  onTailnetSignIn(cb: (stage: TailnetSignIn) => void): () => void;
+  /** Which Tailscale shares the server here from now on (its address for people moves with it). */
+  useTailnetSource(mode: "app" | "system"): Promise<void>;
+  /**
+   * The phone's QR code: a one-time sign-in made with the main window's own session at the server here. Rejects with
+   * `not_served` while Tailscale doesn't share it, `signed_out` when the window isn't signed in there. The token lasts
+   * a few minutes: asked again every ~150 s while the code is shown.
+   */
+  phoneLink(): Promise<PhoneLink>;
   /** A home the server here's sync just made (its first tools go on, `firstTools`). */
   onNewHostHome(cb: (homeId: string) => void): () => void;
   /** macOS: whether the app may record the screen (asks nothing). True elsewhere. */

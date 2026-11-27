@@ -1,13 +1,24 @@
 /**
  * The server here's own controls, shared by the first run, Preferences and the popover: reach through
  * Tailscale by what Tailscale is doing on this computer, why reach didn't turn on, and "Copy details";
- * and a server's tile by where it runs.
+ * and a server's tile by where it runs. The Tailscale the app carries (ADR 0256 §4) needs no terminal and nothing
+ * installed: its states offer a sign-in, or the tailnet's admin page, from here.
  */
 import { Button, Icon, type IconName, PixelSpinner, Switch } from "@agenteschat/ui";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost } from "../app";
-import { REASON_TEXT, type ReachStage, type ServeProblem, type Tailnet, tailscaleFrom } from "../control/local-server";
+import {
+  type LocalServerStatus,
+  REASON_TEXT,
+  type ReachStage,
+  type ServeProblem,
+  type Tailnet,
+  type TailnetSignIn,
+  type TailnetState,
+  tailnetNeedsSignIn,
+  tailscaleFrom,
+} from "../control/local-server";
 import type { ServerKind } from "../control/server";
 import { useOpenPrefs } from "../hooks";
 import { CommandCopy } from "./bits";
@@ -47,24 +58,108 @@ export function ServerTile({ kind }: { kind: ServerKind }) {
 }
 
 /**
- * "Reach it from your phone and teammates", what it does behind its ⓘ. While Tailscale is missing or not
- * connected the switch can't be used, and one line under the label says why, with what fixes it. `tailnet` null:
- * not read yet (it can take a couple of seconds), so the line says it is checking, and the switch waits unless
- * reach is on already (turning it off needs no Tailscale).
+ * Whether reach goes through the Tailscale the app carries: it is the one chosen, or nothing is chosen yet, this build
+ * carries it and the system's Tailscale isn't connected (the system's, connected, is used as it is: ADR 0256 §4).
+ */
+export const throughOwnTailnet = (tailnet: Tailnet | null, own: LocalServerStatus | null | undefined) =>
+  !!own && (own.tailnet.mode === "app" || (own.tailnet.mode === "none" && own.ownTailnet && tailnet?.state !== "on"));
+
+/** "Sign in to Tailscale" for the app's own Tailscale; its stages arrive at `onTailnetSignIn`. */
+function SignInButton({ again }: { again?: boolean }) {
+  const { t } = useTranslation();
+  const host = useHost();
+  return (
+    <button type="button" className="ac-link dk-link" onClick={() => void host.signInTailnet().catch(() => {})}>
+      {again ? t("desktop.tailnet.signInAgain") : t("desktop.tailnet.signIn")}
+    </button>
+  );
+}
+
+/** The device's sign-in expiring within this long is said ahead of time (`tailnet_app.rs` `EXPIRY_WARN_MS`). */
+const EXPIRY_WARN_MS = 14 * 24 * 3600 * 1000;
+
+/** The line under the reach switch for the app's own Tailscale: what keeps it from sharing, and its fix. */
+function OwnTailnetLine({ tailnet, on }: { tailnet: TailnetState; on: boolean }) {
+  const { t, i18n } = useTranslation();
+  const host = useHost();
+  if (!on) return <span>{t("desktop.tailnet.rowApp")}</span>;
+  if (tailnet.mode !== "app") return null;
+  if (tailnetNeedsSignIn(tailnet))
+    return (
+      <span>
+        {tailnet.state === "expired" ? t("desktop.tailnet.expired") : t("desktop.tailnet.signedOut")}{" "}
+        <SignInButton again />
+      </span>
+    );
+  if (tailnet.state === "needsApproval")
+    return (
+      <span>
+        {t("desktop.tailnet.needsApproval")}{" "}
+        <button
+          type="button"
+          className="ac-link dk-link"
+          onClick={() => void host.openTailscale("approve").catch(() => {})}
+        >
+          {t("desktop.tailnet.approve")}
+        </button>
+      </span>
+    );
+  if (tailnet.state === "starting") return <span>{t("desktop.tailnet.starting")}</span>;
+  if (tailnet.state === "failing" || tailnet.state === "off") return <span>{t("desktop.tailnet.failing")}</span>;
+  if (tailnet.state === "on" && tailnet.keyExpiry && tailnet.keyExpiry - Date.now() < EXPIRY_WARN_MS)
+    return (
+      <span>
+        {t("desktop.tailnet.expiring", {
+          date: new Date(tailnet.keyExpiry).toLocaleDateString(i18n.language, { day: "numeric", month: "long" }),
+        })}{" "}
+        <SignInButton again />
+      </span>
+    );
+  return null;
+}
+
+/**
+ * "Reach it from your phone and teammates", what it does behind its ⓘ. Through the Tailscale the app carries
+ * (`own`: the server here's status), the switch is always there (turning it on signs in when needed) and the line says
+ * what its Tailscale needs. Through the system's: while it is missing or not connected the switch can't be used, and
+ * one line under the label says why, with what fixes it. `tailnet` null: not read yet (it can take a couple of
+ * seconds), so the line says it is checking, and the switch waits unless reach is on already (turning it off needs no
+ * Tailscale).
  */
 export function ReachRow({
   tailnet,
+  own,
   on,
   onChange,
   busy,
 }: {
   tailnet: Tailnet | null;
+  own?: LocalServerStatus | null;
   on: boolean;
   onChange: (on: boolean) => void;
   busy?: boolean;
 }) {
   const { t } = useTranslation();
   const host = useHost();
+  if (own && throughOwnTailnet(tailnet, own))
+    return (
+      <PrefRow
+        top
+        title={t("desktop.here.reach")}
+        hint={hintFor(t, t("desktop.here.reach"), t("desktop.here.reachText"))}
+        htmlFor="here-reach"
+        desc={<OwnTailnetLine tailnet={own.tailnet} on={on} />}
+        end={
+          <Switch
+            id="here-reach"
+            aria-describedby="here-reach-hint"
+            checked={on}
+            disabled={busy}
+            onCheckedChange={onChange}
+          />
+        }
+      />
+    );
   const usable = tailnet?.state === "on" || on;
   const missing = tailnet?.state === "missing";
   const from = tailscaleFrom(host.platform, tailnet);
@@ -119,26 +214,53 @@ export function ReachRow({
   );
 }
 
+/** What each stage of turning reach on says. */
+const STAGE_TEXT: Record<ReachStage["stage"], string> = {
+  joining: "desktop.tailnet.stage.joining",
+  sharing: "desktop.here.reachStage.sharing",
+  approve: "desktop.here.reachStage.approve",
+  restarting: "desktop.here.reachStage.restarting",
+  done: "desktop.tailnet.stage.done",
+};
+
 /**
- * What turning reach on or off is doing while it takes, a line with the spinner. When Tailscale waits for HTTPS
- * to be allowed in the tailnet, its page is a button away, and "Stop waiting" ends it there.
+ * What turning reach on or off is doing while it takes, a line with the spinner. Signing the app's own Tailscale in,
+ * its page is in the browser ("Open the page again"), or the tailnet's admin approves the new device; when Tailscale
+ * waits for HTTPS to be allowed in the tailnet, its page is a button away. Waiting on the person has no time limit:
+ * "Stop waiting" ends it.
  */
 export function ReachProgress({ stage }: { stage: ReachStage }) {
   const { t } = useTranslation();
   const host = useHost();
+  const [signIn, setSignIn] = useState<TailnetSignIn | null>(null);
+  const joining = stage.stage === "joining";
+  useEffect(() => (joining ? host.onTailnetSignIn(setSignIn) : undefined), [host, joining]);
+  const approval = joining && signIn?.stage === "approval";
+  const waits = stage.stage === "approve" || joining;
   return (
     <span className="dk-reach-stage" aria-live="polite">
       <span className="dk-reach-stage__line">
         <PixelSpinner size={14} color="sky" />
-        <span className={stage.stage === "approve" ? undefined : "dk-shimmer"}>
-          {t(`desktop.here.reachStage.${stage.stage}`)}
+        <span className={waits ? undefined : "dk-shimmer"}>
+          {approval ? t("desktop.tailnet.needsApproval") : t(STAGE_TEXT[stage.stage])}
         </span>
       </span>
-      {stage.stage === "approve" && (
+      {waits && (
         <span className="dk-reach-stage__acts">
-          <Button size="sm" variant="primary" onClick={() => void host.openTailscale("https").catch(() => {})}>
-            {t("desktop.here.approveOpen")}
-          </Button>
+          {stage.stage === "approve" && (
+            <Button size="sm" variant="primary" onClick={() => void host.openTailscale("https").catch(() => {})}>
+              {t("desktop.here.approveOpen")}
+            </Button>
+          )}
+          {joining && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => void host.openTailscale(approval ? "approve" : "signIn").catch(() => {})}
+            >
+              {approval ? t("desktop.tailnet.approve") : t("desktop.tailnet.openAgain")}
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => void host.stopLocalReach().catch(() => {})}>
             {t("desktop.here.approveStop")}
           </Button>
@@ -199,6 +321,24 @@ export function ReachProblem({ problem, text }: { problem: ServeProblem; text: "
               onClick={() => void host.openTailscale("https").catch(() => {})}
             >
               {t("desktop.here.turnOn")}
+            </button>
+          </>
+        )}
+        {(problem.reason === "signIn" || problem.reason === "expired") && (
+          <>
+            {" "}
+            <SignInButton again={problem.reason === "expired"} />
+          </>
+        )}
+        {problem.reason === "needsApproval" && (
+          <>
+            {" "}
+            <button
+              type="button"
+              className="ac-link dk-link"
+              onClick={() => void host.openTailscale("approve").catch(() => {})}
+            >
+              {t("desktop.tailnet.approve")}
             </button>
           </>
         )}

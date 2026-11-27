@@ -515,11 +515,12 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
         )}
         <ReachRow
           tailnet={tailnet}
+          own={local}
           on={local.reach}
           busy={reaching || !running}
           onChange={(on) => (on ? void reach(true) : setReachOffAsk(true))}
         />
-        {reaching && stage && <PrefRow desc={<ReachProgress stage={stage} />} />}
+        {reaching && stage && stage.stage !== "done" && <PrefRow desc={<ReachProgress stage={stage} />} />}
         {reachProblem && <PrefRow desc={<ReachProblem problem={reachProblem} text="prefs" />} />}
         <PrefRow
           title={t("desktop.server.phone")}

@@ -1,0 +1,17 @@
+{
+  "$comment": "The Tailscale the app carries (ADR 0256 §4): its release and that release's commit, checked by the desktop workflow's tailscaled job before it builds; and the features built in (cmd/featuretags --min --add), never portmapper (no port mapping traffic on the person's network). Newer than docker-compose.yml's image (1.102.5): 1.106 is the first release whose daemon runs on Windows for one person only (--windows-mode=dev, a pipe only that person may open). Bump it with docker-compose.yml's tailscale image.",
+  "version": "1.106.1",
+  "commit": "ca97d565daae99bf53b1f45f28c36ee081a14f04",
+  "features": [
+    "cli",
+    "netstack",
+    "serve",
+    "acme",
+    "ipnbus",
+    "nattraversal",
+    "health",
+    "unixsocketidentity",
+    "bakedroots"
+  ],
+  "maxMiB": 40
+}

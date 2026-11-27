@@ -123,6 +123,17 @@ fn open_outside(app: &AppHandle, url: &Url) {
     if url.as_str().len() > 8192 || outside_or_drop(url) == Route::Drop {
         return;
     }
+    // A page of the server here at its address for people (a link the site hands out): this computer opens it at its
+    // loopback address, in the window (ADR 0256 §5), never in a browser that may not reach the tailnet. What goes to the
+    // browser by design (a provider's sign-in, GitHub's, help) still does.
+    let by_design = matches!(url.path(), BROWSER_SIGN_IN | GITHUB_APP_MANIFEST) || url.path().starts_with(HELP);
+    if !by_design && crate::local_server::is_people_page(app, url) {
+        let (app, url) = (app.clone(), url.clone());
+        std::thread::spawn(move || {
+            let _ = show_url(&app, url);
+        });
+        return;
+    }
     let _ = app.opener().open_url(url.as_str(), None::<&str>);
 }
 
@@ -158,7 +169,7 @@ fn go_in_page(url: &Url) -> Option<String> {
 /// the page shows, or a page whose fragment carries a one-time secret (the router keeps fragments in its
 /// history), loads as a whole page.
 pub fn show_url(app: &AppHandle, url: Url) -> Result<(), String> {
-    let url = crate::local_server::page_for_people(app, url);
+    let url = crate::local_server::page_here(app, url);
     let origin = url.origin().ascii_serialization();
     if !servers::get(app).servers.contains(&origin) {
         return Err("not a server of this app".into());

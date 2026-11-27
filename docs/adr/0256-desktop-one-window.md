@@ -69,6 +69,13 @@ cover, General, Servers and Updates, and some of it can be skipped once and neve
   Funnel).
 - When the system's Tailscale is installed and connected, the app keeps using it, as before.
 - Its device key expires as Tailscale's do; the app says so ahead of time and signs in again with one click.
+- Built: the release and its commit are pinned in `apps/desktop/tailscale.json` (1.106.1, the first release whose
+  daemon, run by a person on Windows with `--windows-mode=dev`, answers on a pipe only that person may open), with
+  only the features the app uses (no port mapping). The app's own daemon (`tailnet_app.rs`) runs on its own socket
+  in the app's data folder, ends with the app (a pipe it watches on macOS and Linux, a Job Object on Windows), drops
+  any share left from before as it starts, and is asked with the same binary as its command-line tool. Which
+  Tailscale shares the server here is saved once with the server here (`tailnet`: `system` or `app`). "Stop running
+  it here" signs the app's own one out; "Erase and start over" keeps it signed in.
 
 ### 5. The computer that runs the server opens it directly
 

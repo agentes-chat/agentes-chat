@@ -4,7 +4,7 @@ import { WIFI_IPHONES_POLL_MS } from "@agenteschat/client/lib/devices";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHost } from "./app";
 import { siteApi } from "./control/devices";
-import { type LocalServerStatus, NO_SERVER, type Tailnet } from "./control/local-server";
+import { type LocalServerStatus, NO_SERVER, type Tailnet, type TailnetState } from "./control/local-server";
 import type { ServerWorkspaces } from "./control/server";
 import type { Home } from "./control/store";
 import {
@@ -204,6 +204,35 @@ export function useTailnet(): Tailnet | null {
 }
 
 const TAILNET_READ_GAP_MS = 15_000;
+
+/**
+ * The Tailscale that shares the server here (the system's or the app's own, ADR 0256 §4): read as the window opens and
+ * when it comes to the front again (at most every 15 s, as `useTailnet`), and kept up to date by its changes (a
+ * sign-in, its sign-in expiring, the app's own one ending). Null until the first read answers.
+ */
+export function useTailnetState(): TailnetState | null {
+  const host = useHost();
+  const [state, setState] = useState<TailnetState | null>(null);
+  useEffect(() => {
+    let readAt = 0;
+    const read = () => {
+      if (Date.now() - readAt < TAILNET_READ_GAP_MS) return;
+      readAt = Date.now();
+      void host
+        .tailnet()
+        .then(setState)
+        .catch(() => setState({ mode: "none" }));
+    };
+    read();
+    const stop = host.onTailnet(setState);
+    window.addEventListener("focus", read);
+    return () => {
+      stop();
+      window.removeEventListener("focus", read);
+    };
+  }, [host]);
+  return state;
+}
 
 /** Runs `fn` whenever the shell brings this window up (the popover, the notch; the app layer has `useLayerShown`). */
 export function useOnShown(name: WindowName, fn: () => void) {

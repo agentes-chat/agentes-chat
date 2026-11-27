@@ -3,9 +3,10 @@
  * loads, so the window is never blank. Rust shows it and hides it (the page says when it painted); this page
  * only tells, while it shows, whether the server open now can be reached ("No internet connection…" or
  * "Can't reach {{host}}…"), and when it is back it asks to load the page again. Over the server here it says
- * that one's state instead (starting, updating, stopped, not starting, or Tailscale not connected), with the
- * buttons that fix it: a start or an update shows its time from 10 s, and Copy details once it takes longer than
- * expected. A server out of reach offers another one.
+ * that one's state instead (starting, updating, stopped, not starting), with the buttons that fix it: a start or an
+ * update shows its time from 10 s, and Copy details once it takes longer than expected. The window opens the server
+ * here at its loopback address, never through the tailnet (ADR 0256 §5), so Tailscale is never its reason. A server
+ * out of reach offers another one; one on a Tailscale network says how to connect Tailscale here.
  */
 
 import { CLOUD_SERVER, isTailnet, serverHost } from "@agenteschat/client/lib/server";
@@ -263,32 +264,8 @@ async function otherServer(status: LocalServerStatus | null): Promise<string | n
 const serverName = (server: string) => (server === CLOUD_SERVER ? "agentes.chat" : serverHost(server));
 const openServer = (server: string) => void invoke("server_choose", { server }).catch(() => {});
 
-/** "Use only on this Mac": reach off, said while it takes and when it didn't work. */
-function useOnlyHere() {
-  say(fillIn(words.onlyHereWorking, { device }));
-  buttons([]);
-  void invoke<{ ok: boolean }>("local_server_reach", { on: false })
-    .then(
-      (r) => r.ok,
-      () => false,
-    )
-    .then((ok) => {
-      if (ok) return;
-      say(fillIn(words.onlyHereFailed, { device }));
-      buttons([
-        [words.retry, useOnlyHere],
-        [words.copy, copyDiagnostics],
-      ]);
-    });
-}
-
 /** The server here's state on the cover, with what fixes it. */
-function showHere(
-  state: NonNullable<ReturnType<typeof coverHere>>,
-  tailnet: Tailnet | null,
-  status: LocalServerStatus,
-  other: string | null,
-) {
+function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: LocalServerStatus, other: string | null) {
   const start = () => void invoke("local_server_start").catch(() => {});
   const fill = (text: string) => fillIn(text, { device });
   if (state === "starting" || state === "migrating") {
@@ -314,19 +291,9 @@ function showHere(
           ][])
         : []),
     ]);
-  } else if (state === "failing") {
+  } else {
     say(fill(words.failing));
     buttons([[words.retry, start], [words.copy, copyDiagnostics], report]);
-  } else {
-    const onlyHere: [string, () => void] = [fill(words.onlyHere), useOnlyHere];
-    const next = coverTailnet(platform, tailnet);
-    if (next === "openTailscale") {
-      say(fill(words.tailnetOff));
-      buttons([[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], onlyHere]);
-    } else {
-      say(`${fill(words.tailnetOff)} ${words[next]}`);
-      buttons([onlyHere]);
-    }
   }
 }
 
@@ -337,14 +304,12 @@ async function check() {
   const here = await localStatus();
   overHere = !!here && isHereServer(here, server);
   if (here && overHere) {
-    const answered = here.phase === "running" && (await reachable(server));
-    const state = coverHere(here, server, answered);
+    const state = coverHere(here, server);
     if (state) {
       hereWaiting = true;
-      unreachable = state === "stopped" || state === "failing" || state === "tailnetOff";
-      const tailnet = state === "tailnetOff" ? await invoke<Tailnet>("tailscale_status").catch(() => null) : null;
+      unreachable = state === "stopped" || state === "failing";
       const other = state === "stopped" ? await otherServer(here) : null;
-      showHere(state, tailnet, here, other);
+      showHere(state, here, other);
       return;
     }
     if (hereWaiting) {
@@ -364,12 +329,19 @@ async function check() {
       // The first run, to pick another server (the main window's app layer, ADR 0256).
       () => void invoke("layer_show", { route: { screen: "firstRun", mode: "servers" } }).catch(() => {}),
     ];
-    // On Tailscale: connecting it here is the likely fix.
-    buttons(
-      isTailnet(server)
-        ? [[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], welcome]
-        : [welcome],
-    );
+    // On Tailscale: connecting it here is the likely fix (its Mac app, its icon by the clock, or the terminal).
+    if (!isTailnet(server)) {
+      buttons([welcome]);
+      return;
+    }
+    const tailnet = await invoke<Tailnet>("tailscale_status").catch(() => null);
+    const next = coverTailnet(platform, tailnet);
+    if (next === "openTailscale") {
+      buttons([[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], welcome]);
+    } else {
+      say(`${unreachableText(server)} ${words[next]}`);
+      buttons([welcome]);
+    }
     return;
   }
   if (unreachable) {

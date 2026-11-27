@@ -45,6 +45,7 @@ import {
   type LinkView,
   LOOK_MS,
   linkView,
+  type OwnAddresses,
   ownAddresses,
   PROBLEM_TEXT,
   terminalStartCommand,
@@ -532,7 +533,7 @@ function Connect({
   /** The agentes.chat this computer runs or has from the terminal (its owner claim, while it waits for one). */
   local: LocalServerStatus | null;
   /** Its addresses (`ownAddresses`). */
-  own: readonly string[];
+  own: OwnAddresses;
   address: string;
   onAddress: (address: string) => void;
   onUse: (server: string) => Promise<void>;
@@ -583,7 +584,7 @@ function Connect({
 
   // A server on this computer still waiting for its owner: the app knows its owner link, so its page opens.
   const claimHere = (server: string) =>
-    local?.claim && (isLoopback(server) || own.includes(server))
+    local?.claim && (isLoopback(server) || own.all.includes(server))
       ? connectLink(local.url ?? server, { claim: local.claim })
       : null;
 
@@ -651,7 +652,7 @@ function Connect({
         <section className="dk-fr__found" aria-label={t("desktop.connect.found")}>
           <h2 className="dk-ctitle">{t("desktop.connect.found")}</h2>
           {found.map((f) => {
-            const mine = f.where === "here" || own.includes(f.server);
+            const mine = f.where === "here" || own.all.includes(f.server);
             const claim = f.problem === "no-owner" ? claimHere(f.server) : null;
             // Used as is; one with a problem only when the app can take it from there (its owner page here).
             const usable = !f.problem || claim !== null;
@@ -886,8 +887,10 @@ function RunHere({
       .catch(() => {});
   };
   const start = async () => {
-    const choice = view.ask ? { name: name.trim(), email: email.trim(), reach, usage } : { reach, usage };
-    setSetup({ steps: setupSteps(reach), changes: [], activeAt: Date.now(), end: "running" });
+    // Until the new first run's three steps replace this form: its reach switch says where it will be used.
+    const place = reach ? ("everywhere" as const) : ("here" as const);
+    const choice = view.ask ? { name: name.trim(), email: email.trim(), place, usage } : { place, usage };
+    setSetup({ steps: setupSteps(place), changes: [], activeAt: Date.now(), end: "running" });
     warned.current = false;
     try {
       await host.installLocalServer(choice);
@@ -965,7 +968,7 @@ function RunHere({
           </div>
         )}
         <div className="dk-card">
-          <ReachRow tailnet={tailnet} on={reach} onChange={setReach} />
+          <ReachRow tailnet={tailnet} own={status} on={reach} onChange={setReach} />
           <PrefRow
             title={t("desktop.here.usage")}
             hint={hintFor(t, t("desktop.here.usage"), t("desktop.here.usageText"))}
@@ -1125,7 +1128,7 @@ function HereSetup({
                       {t(FAIL_TEXT[step])} <CopyDetails as="link" />
                     </span>
                   )}
-                  {step === "reach" && state === "active" && stage && stage.stage !== "signingIn" && (
+                  {step === "reach" && state === "active" && stage && stage.stage !== "done" && (
                     <ReachProgress stage={stage} />
                   )}
                   {step === "reach" && reachProblem && <ReachProblem problem={reachProblem} text="fail" />}
@@ -1179,14 +1182,14 @@ function LinkSheet({
   onCancel,
 }: {
   view: LinkView;
-  own: readonly string[];
+  own: OwnAddresses;
   onRetry: () => void;
   onAccept: (server: string, page?: string) => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
   const server = view.kind === "notALink" ? null : view.server;
-  const mine = server !== null && (own.includes(server) || serverKind(server) === "here");
+  const mine = server !== null && (own.all.includes(server) || serverKind(server) === "here");
   const kind = server ? serverKind(server) : null;
   const name = server ? (mine ? t("desktop.link.thisServer") : serverName(server)) : "";
   let body: ReactNode;
@@ -1235,7 +1238,7 @@ function LinkSheet({
         {view.leave && (
           <p className="dk-help">
             {t("desktop.link.leave", {
-              current: own.some((o) => serverName(o) === view.leave) ? t("desktop.link.thisServer") : view.leave,
+              current: own.all.some((o) => serverName(o) === view.leave) ? t("desktop.link.thisServer") : view.leave,
             })}
           </p>
         )}

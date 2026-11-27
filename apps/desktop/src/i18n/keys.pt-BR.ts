@@ -536,6 +536,8 @@ export const desktopPtBR = {
     screenAgain: "O macOS pergunta de novo mais ou menos uma vez por mês. Escolha Permitir.",
     disk: "Acesso Total ao Disco",
     diskDesc: "Deixa os agentes abrirem seus arquivos sem o macOS pedir pasta por pasta.",
+    notifications: "Notificações",
+    notificationsDesc: "Avisa quando os agentes precisam de você e quando algo neste {{device}} para de funcionar.",
     diskHow: "Nos Ajustes, ligue o agentes.chat na lista, ou adicione com +.",
     network: "Rede local (celulares pelo Wi-Fi)",
     networkDesc: "Deixa os agentes acharem e usarem celulares Android no seu Wi-Fi.",
@@ -549,6 +551,35 @@ export const desktopPtBR = {
     skip: "Pular por enquanto",
     prefsTitle: "Permissões",
     prefsHint: "O macOS pode desligar isto quando o app atualiza. Ligue de novo aqui.",
+  },
+  essentials: {
+    tray: "Algo neste {{device}} precisa de você",
+    notify: {
+      screen: {
+        title: "A Gravação de Tela está desligada",
+        body: "O macOS desligou. Os agentes não tiram capturas de tela até você permitir de novo.",
+      },
+      disk: {
+        title: "O Acesso Total ao Disco está desligado",
+        body: "Os agentes podem parar para pedir pastas até você ligar de novo.",
+      },
+      reach: {
+        title: "Seu celular e seu time não alcançam o agentes.chat",
+        body: "A rede particular neste {{device}} precisa de você. Abra o app para resolver.",
+      },
+      backup: {
+        title: "O backup da noite não terminou",
+        body: "Abra o app para fazer o backup de novo.",
+      },
+      autoUpdate: {
+        title: "O agentes.chat precisa de uma atualização",
+        body: "Esta versão não pode continuar funcionando. Abra o app para instalar a nova.",
+      },
+      awake: {
+        title: "Este {{device}} pode dormir enquanto serve",
+        body: "Reinicie o agentes.chat aqui para ele ficar acordado para o seu celular e o seu time.",
+      },
+    },
   },
   tools: {
     claudeName: "Claude Code",
@@ -873,6 +904,30 @@ export const desktopPtBR = {
       mixed: "Diferente em cada workspace: {{values}}. Uma mudança aqui vale para todos.",
       folder: "Pasta dos agentes",
       folderDesc: "Uma pasta por workspace, com uma pasta para cada agente.",
+    },
+  },
+  /** The Tailscale the app carries (ADR 0256 §4): what it needs, said under the reach switch and while it signs in. */
+  tailnet: {
+    rowApp: "Entre no Tailscale uma vez, aqui no app. Não precisa instalar nada neste {{device}}.",
+    signedOut: "O Tailscale não está conectado à sua conta, então o seu celular e a sua equipe não chegam a ele.",
+    expired: "A entrada do Tailscale neste {{device}} expirou, então o seu celular e a sua equipe não chegam a ele.",
+    expiring: "A entrada do Tailscale neste {{device}} expira em {{date}}.",
+    needsApproval: "O administrador da sua rede do Tailscale precisa aprovar este {{device}} (o aparelho “agentes”).",
+    starting: "Iniciando o Tailscale…",
+    failing: "O Tailscale não iniciou neste {{device}}.",
+    signIn: "Entrar no Tailscale",
+    signInAgain: "Entrar de novo",
+    openAgain: "Abrir a página de novo",
+    approve: "Abrir o admin do Tailscale",
+    stage: {
+      joining: "Esperando você entrar no Tailscale no navegador. Esta janela segue sozinha quando você terminar.",
+      done: "Pronto: o seu celular e a sua equipe já conseguem abrir.",
+    },
+    /** Why access didn't turn on, after "Access from your devices didn't turn on:". */
+    reason: {
+      signIn: "o Tailscale não está conectado à sua conta neste {{device}}",
+      expired: "a entrada do Tailscale neste {{device}} expirou",
+      needsApproval: "o administrador da sua rede do Tailscale ainda não aprovou este {{device}}",
     },
   },
   iphone: {

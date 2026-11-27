@@ -8,6 +8,7 @@
 //! native dialogs and self-update. Everything else lives in the runner and the server (TypeScript) and in the
 //! web view.
 
+mod always_on;
 mod app_icon;
 mod app_layer;
 mod bench;
@@ -27,6 +28,7 @@ mod prepare;
 mod problem_report;
 mod runners;
 mod servers;
+mod tailnet_app;
 mod tailscale;
 mod tray;
 mod vitals;
@@ -714,6 +716,7 @@ pub fn run() {
         .manage(PopoverClock(Mutex::new(None)))
         .manage(servers::Servers::default())
         .manage(local_server::LocalServer::default())
+        .manage(tailnet_app::TailnetApp::default())
         .manage(host_sync::HostSync::default())
         .manage(deep_link::PendingLink::default())
         .manage(main_window::Bridge::default())
@@ -784,6 +787,11 @@ pub fn run() {
             local_server::local_server_sync,
             tailscale::tailscale_status,
             tailscale::tailscale_open,
+            tailnet_app::tailnet_status,
+            tailnet_app::tailnet_sign_in,
+            tailnet_app::tailnet_sign_in_cancel,
+            tailnet_app::tailnet_use_source,
+            local_server::local_server_phone_link,
             tray::tray_visible,
             main_window::this_mac,
             main_window::this_mac_reply,
@@ -791,6 +799,9 @@ pub fn run() {
             main_window::notify_site_set,
             main_window::pair_ask,
             main_window::health_publish,
+            always_on::health_get,
+            always_on::notify_permission,
+            always_on::notify_request,
             app_layer::layer_show,
             app_layer::layer_hide,
             app_layer::layer_state,
@@ -898,6 +909,8 @@ pub fn run() {
         // A click on the Dock icon: bring the app's window back.
         #[cfg(target_os = "macos")]
         RunEvent::Reopen { .. } => {
+            // Back to the front: this computer's essentials are read again (ADR 0256 §7).
+            always_on::on_front(app);
             // A click on a notification of the server here brings the app forward: the popover, which says why.
             if local_server::take_notice_click() {
                 let _ = present(app, "popover");
@@ -933,6 +946,8 @@ fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
         }
         WindowEvent::Focused(true) if window.label() == main_window::LABEL => {
             main_window::focused(window.app_handle());
+            // The window came back (maybe from System Settings): this computer's essentials again (ADR 0256 §7).
+            always_on::on_front(window.app_handle());
         }
         WindowEvent::Focused(false) if window.label() == main_window::LABEL => {
             main_window::keep_lights(window.app_handle());

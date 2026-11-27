@@ -125,21 +125,39 @@ const problemOf = (check: Extract<ServerCheck, { ok: false }>): ConnectProblem =
 };
 
 /**
- * `own`: the addresses of the agentes.chat this computer runs (its loopback and, with reach on, its Tailscale one).
- * Picked there, it opens at once at the address people use: no sheet about another host, which is still this one.
+ * The agentes.chat this computer runs: the address the window opens it at (`open`, its loopback one, ADR 0256 §5), and
+ * every address it answers at (`all`: that one and, with reach on, its Tailscale one).
  */
-export function connectOutcome(asked: string, check: ServerCheck, own: readonly string[] = []): ConnectOutcome {
+export interface OwnAddresses {
+  open: string | null;
+  all: string[];
+}
+const NOT_OWN: OwnAddresses = { open: null, all: [] };
+
+/**
+ * `own`: the agentes.chat this computer runs. Typed or picked at any of its addresses (the Tailscale one too, which
+ * the server's own check names), it opens at once at its loopback address: no sheet about another host, which is
+ * still this one, and never through the tailnet.
+ */
+export function connectOutcome(asked: string, check: ServerCheck, own: OwnAddresses = NOT_OWN): ConnectOutcome {
   if (!check.ok) return { kind: "problem", problem: problemOf(check), host: serverHost(check.server) };
   if (check.instance.ownerClaim) return { kind: "problem", problem: "no-owner", host: serverHost(check.server) };
-  if (own.includes(asked) || own.includes(check.server)) return { kind: "use", server: check.server };
+  if (own.all.includes(asked) || own.all.includes(check.server))
+    return { kind: "use", server: own.open ?? check.server };
   return serverHost(check.server) === serverHost(asked)
     ? { kind: "use", server: check.server }
     : { kind: "confirm", server: check.server };
 }
 
-/** The addresses of the agentes.chat this computer runs, from its status (`connectOutcome`'s `own`). */
-export const ownAddresses = (status: { url: string | null; publicUrl: string | null } | null): string[] =>
-  status ? [status.url, status.publicUrl].filter((u): u is string => !!u) : [];
+/** The agentes.chat this computer runs, from its status (`connectOutcome`'s `own`). */
+export function ownAddresses(
+  status: { url: string | null; localUrl?: string | null; publicUrl: string | null } | null,
+): OwnAddresses {
+  if (!status) return NOT_OWN;
+  const open = status.localUrl ?? status.url;
+  const all = [...new Set([open, status.url, status.publicUrl].filter((u): u is string => !!u))];
+  return { open, all };
+}
 
 /**
  * How to start the agentes.chat installed from the terminal in `dir`, for a person to copy: the default folder in

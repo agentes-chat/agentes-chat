@@ -55,9 +55,17 @@ webkit2gtk = { version = "2", features = ["v2_40"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 # The main window's page loaded again when its renderer ends (main_window.rs `reload_when_renderer_ends`): the copies
-# Tauri already builds with. The local clock (local_server.rs `local_stamp`): the nightly backup's hour.
+# Tauri already builds with. The local clock (local_server.rs `local_stamp`): the nightly backup's hour. The Tailscale
+# the app carries (tailnet_app.rs, ADR 0256 §4): a Job Object that ends it with the app, and who answers on its pipe.
 webview2-com = "0.39"
-windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_JobObjects",
+  "Win32_System_Pipes",
+  "Win32_System_SystemInformation",
+  "Win32_System_Threading",
+] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # The notch window (src/notch.rs): its level, Spaces and frame, and finding the notch.

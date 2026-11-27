@@ -141,10 +141,19 @@ describe("this computer on its server", () => {
     );
   });
 
-  test("the server here's homes are asked at its address in the window", () => {
+  test("the server here's homes are asked at its loopback address, where the window signs in (ADR 0256 §5)", () => {
     const home = { status: { server: "http://127.0.0.1:4310" } } as Home;
-    const local = { run: true, url: "http://127.0.0.1:4310", publicUrl: "https://ana-mac.tail1234.ts.net" };
-    expect(deviceServer(home, local)).toBe("https://ana-mac.tail1234.ts.net");
+    const local = {
+      run: true,
+      url: "http://127.0.0.1:4310",
+      localUrl: "http://127.0.0.1:4310",
+      publicUrl: "https://ana-mac.tail1234.ts.net",
+    };
+    expect(deviceServer(home, local)).toBe("http://127.0.0.1:4310");
+    // A home that points at its Tailscale address (made by an older app): still asked at loopback.
+    expect(deviceServer({ status: { server: "https://ana-mac.tail1234.ts.net" } } as Home, local)).toBe(
+      "http://127.0.0.1:4310",
+    );
     expect(deviceServer(home, { ...local, run: false })).toBe("http://127.0.0.1:4310");
     expect(deviceServer({ status: { server: "https://agentes.example.com" } } as Home, local)).toBe(
       "https://agentes.example.com",

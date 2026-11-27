@@ -57,6 +57,7 @@ const fakeHost = inTauri()
           fail: (params.get("fail") as SetupStep | null) ?? undefined,
           reason: (params.get("reason") as ServeProblem["reason"] | null) ?? undefined,
           hold: (params.get("hold") as SetupStep | null) ?? undefined,
+          tailnet: (params.get("tailnet") as "signedOut" | "on" | "expiring" | "expired" | null) ?? undefined,
         },
       },
     );

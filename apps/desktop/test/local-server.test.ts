@@ -15,13 +15,14 @@ import {
   setupSteps,
   stepClock,
   stepStates,
+  tailnetNeedsSignIn,
   UPDATE_SLOW_MS,
 } from "../src/control/local-server";
 import { menuLabels } from "../src/control/menu-labels";
 import { createDesktopI18n } from "../src/i18n";
 
 const LOCAL = "http://127.0.0.1:4310";
-const TAILNET = "https://ana-mac.tail1234.ts.net";
+const TAILNET = "https://agentes.tail1234.ts.net";
 const running: LocalServerStatus = {
   ...NO_SERVER,
   bundled: true,
@@ -30,21 +31,29 @@ const running: LocalServerStatus = {
   owner: true,
   phase: "running",
   url: LOCAL,
-  publicUrl: LOCAL,
+  localUrl: LOCAL,
+  publicUrl: null,
   installedVersion: "0.8.5",
   serverVersion: "0.1.1",
   dir: "/Users/ana/.agentes",
 };
-const reached: LocalServerStatus = { ...running, reach: true, publicUrl: TAILNET };
+const reached: LocalServerStatus = {
+  ...running,
+  reach: true,
+  publicUrl: TAILNET,
+  tailnet: { mode: "app", state: "on", device: "agentes.tail1234.ts.net", https: "ok" },
+  ownTailnet: true,
+  reachHealth: "on",
+};
 
 describe("setting it up", () => {
-  test("the steps in order, access from other devices only when asked", () => {
-    expect(setupSteps(false)).toEqual(["database", "start", "account", "computer"]);
-    expect(setupSteps(true)).toEqual(["database", "start", "account", "computer", "reach"]);
+  test("the steps in order, access from the phone and the team only where it will be used", () => {
+    expect(setupSteps("here")).toEqual(["database", "start", "account", "computer"]);
+    expect(setupSteps("everywhere")).toEqual(["database", "start", "account", "computer", "reach"]);
   });
 
   test("each step's state from what arrived; a failure stays on its step", () => {
-    const steps = setupSteps(true);
+    const steps = setupSteps("everywhere");
     expect(stepStates(steps, [])).toEqual({
       database: "todo",
       start: "todo",
@@ -69,7 +78,7 @@ describe("setting it up", () => {
     for (const lng of ["en", "pt-BR"] as const) {
       const i18n = createDesktopI18n(lng, "mac");
       const has = (key: string) => i18n.exists(key);
-      for (const step of setupSteps(true))
+      for (const step of setupSteps("everywhere"))
         expect({ step, ok: has(`desktop.here.step.${step}`) }).toEqual({ step, ok: true });
       for (const key of [
         ...Object.values(REASON_TEXT),
@@ -100,7 +109,7 @@ describe("setting it up", () => {
   });
 
   test("a setup that ended in an error always stops on a step", () => {
-    const steps = setupSteps(false);
+    const steps = setupSteps("here");
     const at = (...changes: Parameters<typeof stepStates>[1]) => failedStep(steps, stepStates(steps, changes));
     const done = (step: (typeof steps)[number]) => [
       { step, state: "active" as const },
@@ -154,10 +163,13 @@ describe("which screen", () => {
     });
   });
 
-  test("the app runs it already: open it, never set it up again", () => {
+  test("the app runs it already: open it at its loopback address, never set it up again", () => {
     expect(hereView(running, null)).toEqual({ kind: "running", server: LOCAL });
-    expect(hereView(reached, null)).toEqual({ kind: "running", server: TAILNET });
+    // With reach on too: the window on this computer never opens it through the tailnet (ADR 0256 §5).
+    expect(hereView(reached, null)).toEqual({ kind: "running", server: LOCAL });
     expect(hereView({ ...running, phase: "failing" }, null).kind).toBe("running");
+    // An older app's status without `localUrl`: its loopback `url`.
+    expect(hereView({ ...reached, localUrl: null }, null)).toEqual({ kind: "running", server: LOCAL });
   });
 
   test("running with no account left (its owner deleted theirs): the form asks who the new owner is", () => {
@@ -182,6 +194,7 @@ describe("what the popover, the cover and Preferences say", () => {
     // Starting again by itself is never "stopped"; Tailscale off here means nobody else reaches it.
     expect(hereLine({ ...running, phase: "restarting" })).toBe("desktop.server.restarting");
     expect(hereLine({ ...reached, tailnetDown: true })).toBe("desktop.server.tailnetDown");
+    expect(hereLine({ ...reached, reachHealth: "down" })).toBe("desktop.server.tailnetDown");
   });
 
   test("the popover's banners", () => {
@@ -197,21 +210,35 @@ describe("what the popover, the cover and Preferences say", () => {
     expect(isHereServer(running, LOCAL)).toBe(true);
     expect(isHereServer(reached, TAILNET)).toBe(true);
     expect(isHereServer(reached, LOCAL)).toBe(true);
+    expect(isHereServer({ ...running, url: null }, LOCAL)).toBe(true);
     expect(isHereServer(running, "https://app.agentes.chat")).toBe(false);
     expect(isHereServer({ ...running, run: false }, LOCAL)).toBe(false);
   });
 
-  test("the cover: each state over the server here, and Tailscale not connected at its Tailscale address", () => {
-    expect(coverHere({ ...running, phase: "starting" }, LOCAL, false)).toBe("starting");
-    expect(coverHere({ ...running, phase: "restarting" }, LOCAL, false)).toBe("starting");
-    expect(coverHere({ ...running, phase: "updating" }, LOCAL, false)).toBe("migrating");
-    expect(coverHere({ ...running, phase: "stopped" }, LOCAL, false)).toBe("stopped");
-    expect(coverHere({ ...running, phase: "failing" }, LOCAL, false)).toBe("failing");
-    expect(coverHere(running, LOCAL, true)).toBeNull();
-    expect(coverHere(reached, TAILNET, false)).toBe("tailnetOff");
-    expect(coverHere(reached, TAILNET, true)).toBeNull();
+  test("the cover: each state over the server here, and Tailscale is never one of them", () => {
+    expect(coverHere({ ...running, phase: "starting" }, LOCAL)).toBe("starting");
+    expect(coverHere({ ...running, phase: "restarting" }, LOCAL)).toBe("starting");
+    expect(coverHere({ ...running, phase: "updating" }, LOCAL)).toBe("migrating");
+    expect(coverHere({ ...running, phase: "stopped" }, LOCAL)).toBe("stopped");
+    expect(coverHere({ ...running, phase: "failing" }, LOCAL)).toBe("failing");
+    expect(coverHere(running, LOCAL)).toBeNull();
+    // Reach on and Tailscale down: the window at loopback works; it is an essentials item, not a cover.
+    const down: LocalServerStatus = { ...reached, tailnetDown: true, reachHealth: "down" };
+    expect(coverHere(down, LOCAL)).toBeNull();
+    expect(coverHere(down, TAILNET)).toBeNull();
+    expect(coverHere({ ...reached, phase: "stopped" }, TAILNET)).toBe("stopped");
     // Another server: the cover's own reachability words, not these.
-    expect(coverHere({ ...running, phase: "stopped" }, "https://app.agentes.chat", false)).toBeNull();
+    expect(coverHere({ ...running, phase: "stopped" }, "https://app.agentes.chat")).toBeNull();
+  });
+
+  test("the app's own Tailscale needs a sign-in only when it is the one chosen and signed out or expired", () => {
+    expect(tailnetNeedsSignIn({ mode: "app", state: "signedOut" })).toBe(true);
+    expect(tailnetNeedsSignIn({ mode: "app", state: "expired" })).toBe(true);
+    expect(tailnetNeedsSignIn({ mode: "app", state: "on", device: "agentes.tail1234.ts.net" })).toBe(false);
+    expect(tailnetNeedsSignIn({ mode: "app", state: "needsApproval" })).toBe(false);
+    // The system's Tailscale is signed in from its own app, never from here.
+    expect(tailnetNeedsSignIn({ mode: "system", state: "signedOut" })).toBe(false);
+    expect(tailnetNeedsSignIn({ mode: "none" })).toBe(false);
   });
 
   test("Rust's labels for the tray line and the notifications, with {version} left for Rust", () => {

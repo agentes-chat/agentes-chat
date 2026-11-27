@@ -4,14 +4,18 @@ import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import type {
   KeepRunning,
   LocalServerStatus,
+  PhoneLink,
   ReachResult,
   ReachStage,
   StepChange,
   Tailnet,
+  TailnetSignIn,
+  TailnetState,
 } from "../control/local-server";
 import type { LinkInfo } from "../control/pair";
 import type { SetupState } from "../control/permissions";
@@ -80,6 +84,10 @@ export function createTauriHost(): Host {
     siteGo: (path) => invoke<void>("layer_site_go", { path }),
     firstRunSignIn: (method) => invoke<void>("first_run_sign_in", { method }),
     publishHealth: (health) => invoke<void>("health_publish", health),
+    health: () => invoke<Health>("health_get"),
+    onHealth: (cb) => subscribe<Health>("health://changed", cb),
+    notificationPermission: () => invoke<NotifyPermission>("notify_permission"),
+    requestNotifications: () => invoke<NotifyPermission>("notify_request"),
     openExternal: (url) => invoke<void>("open_external", { url }),
     servers: () => invoke<ServerList>("servers_get"),
     chooseServer: (server, page) => invoke<void>("server_choose", { server, page: page ?? null }),
@@ -151,6 +159,13 @@ export function createTauriHost(): Host {
     syncLocalHomes: (rotate) => invoke<void>("local_server_sync", { rotate }),
     tailscale: () => invoke<Tailnet>("tailscale_status"),
     openTailscale: (page) => invoke<void>("tailscale_open", { page }),
+    tailnet: () => invoke<TailnetState>("tailnet_status"),
+    onTailnet: (cb) => subscribe<TailnetState>("tailnet://state", cb),
+    signInTailnet: () => invoke<{ device: string }>("tailnet_sign_in"),
+    cancelTailnetSignIn: () => invoke<void>("tailnet_sign_in_cancel"),
+    onTailnetSignIn: (cb) => subscribe<TailnetSignIn>("tailnet://sign-in", cb),
+    useTailnetSource: (mode) => invoke<void>("tailnet_use_source", { mode }),
+    phoneLink: () => invoke<PhoneLink>("local_server_phone_link"),
     onNewHostHome: (cb) => subscribe<string>("host://new", cb),
     screenAccess: () => invoke<boolean>("screen_access"),
     requestScreenAccess: () => invoke<boolean>("screen_request"),

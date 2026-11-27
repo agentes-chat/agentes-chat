@@ -110,12 +110,28 @@ describe("a typed address", () => {
     });
   });
 
-  test("this computer's own agentes.chat opens at once at the address people use, never a sheet about another host", () => {
-    const own = ownAddresses({ url: "http://127.0.0.1:4310", publicUrl: BOX });
-    expect(own).toEqual(["http://127.0.0.1:4310", BOX]);
-    expect(connectOutcome("http://127.0.0.1:4310", ok(BOX), own)).toEqual({ kind: "use", server: BOX });
-    expect(connectOutcome("http://127.0.0.1:4310", ok(BOX))).toEqual({ kind: "confirm", server: BOX });
-    expect(ownAddresses(null)).toEqual([]);
+  test("this computer's own agentes.chat opens at once at its loopback address, never a sheet about another host", () => {
+    const here = "http://127.0.0.1:4310";
+    const own = ownAddresses({ url: here, localUrl: here, publicUrl: BOX });
+    expect(own).toEqual({ open: here, all: [here, BOX] });
+    // Typed at loopback: its own check names the Tailscale address, and it still opens at loopback.
+    expect(connectOutcome(here, ok(BOX), own)).toEqual({ kind: "use", server: here });
+    // Typed (or found by discovery) at its Tailscale address: on this computer, at loopback too (ADR 0256 §5).
+    expect(connectOutcome(BOX, ok(BOX), own)).toEqual({ kind: "use", server: here });
+    expect(connectOutcome(here, ok(BOX))).toEqual({ kind: "confirm", server: BOX });
+    // Reach off: only its loopback address.
+    expect(ownAddresses({ url: here, localUrl: here, publicUrl: null })).toEqual({ open: here, all: [here] });
+    // A terminal install (no `localUrl`): its own loopback address.
+    expect(ownAddresses({ url: "http://127.0.0.1:4311", publicUrl: null })).toEqual({
+      open: "http://127.0.0.1:4311",
+      all: ["http://127.0.0.1:4311"],
+    });
+    expect(ownAddresses(null)).toEqual({ open: null, all: [] });
+    // Another server is never taken for this one.
+    expect(connectOutcome("https://chat.example.com", ok("https://chat.example.com"), own)).toEqual({
+      kind: "use",
+      server: "https://chat.example.com",
+    });
   });
 
   test("Tailscale is named only for a server on a Tailscale network", () => {
