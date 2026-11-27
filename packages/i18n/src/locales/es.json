@@ -17658,6 +17658,8 @@
       "paused": "{{host}} está en pausa, así que el control espera hasta que se reanude.",
       "held": "Este espacio de trabajo está en pausa, así que el control espera hasta que vuelva a estar activo.",
       "lost": "El control terminó. Vuelves a mirar {{name}}.",
+      "controlLate": "El control no empezó a tiempo. {{host}} todavía está preparando {{name}}: inténtalo de nuevo en un minuto.",
+      "controlFailed": "No se pudo tomar el control de {{name}}. Inténtalo de nuevo o reinicia la app de agentes.chat en {{host}}.",
       "typeLabel": "Escribir en {{name}}"
     },
     "status": {

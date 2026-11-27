@@ -1211,6 +1211,36 @@ describe("A device's page", () => {
     }
   });
 
+  test("control that doesn't start in its wait goes back to watching, says why, and Take control is there again", async () => {
+    const drawn = globalThis.createImageBitmap;
+    globalThis.createImageBitmap = (async () => ({ width: 1080, height: 2400, close() {} })) as never;
+    try {
+      const { sockets } = await open(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
+      const screens = () => sockets.sockets.filter((s) => s.url.includes("/api/phone-screen"));
+      const card = screen().getByRole("region", { name: "Screen" });
+      const watch = screens().at(-1) as (typeof sockets.sockets)[number];
+      await act(async () => watch.open());
+      await act(async () => {
+        watch.onmessage?.({ data: new ArrayBuffer(8) });
+      });
+      await settle(4);
+      await click(within(card).getByRole("button", { name: "Take control" }));
+      const control = screens().at(-1) as (typeof sockets.sockets)[number];
+      await act(async () => control.open());
+      expect(card.textContent).toContain("Opening the screen…");
+      // The server's wait ran out before any picture: no new control socket behind the same spinner.
+      await act(async () => control.drop(4408));
+      await settle(4);
+      expect(document.body.textContent).toContain(
+        "Control didn't start in time. Sam's MacBook Pro is still getting Pixel 8 ready: try again in a minute.",
+      );
+      expect(screens().at(-1)?.url).toContain("mode=watch");
+      expect(screens().filter((s) => s.url.includes("mode=control"))).toHaveLength(1);
+    } finally {
+      globalThis.createImageBitmap = drawn;
+    }
+  });
+
   test("an iPhone follows its Mac", async () => {
     await open(`/org/${ORG_ID}/settings/devices/phones/${IPHONE}`);
     expect(document.querySelector(".settings-rows")?.textContent).toContain("Same as Sam's MacBook Pro");

@@ -17732,6 +17732,8 @@
       "paused": "{{host}} est en pause, le contrôle attend donc sa reprise.",
       "held": "Cet espace de travail est en pause, donc la prise de contrôle attend qu'il soit de nouveau actif.",
       "lost": "Le contrôle est terminé. Vous regardez à nouveau {{name}}.",
+      "controlLate": "La prise de contrôle n'a pas démarré à temps. {{host}} prépare encore {{name}} : réessayez dans une minute.",
+      "controlFailed": "Impossible de prendre le contrôle de {{name}}. Réessayez, ou redémarrez l'app agentes.chat sur {{host}}.",
       "typeLabel": "Écrire sur {{name}}"
     },
     "status": {

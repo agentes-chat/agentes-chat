@@ -152,7 +152,11 @@ export interface Host {
   setTrayState(state: TrayState): Promise<void>;
   /** The menu bar icon on a Mac (Windows and Linux always keep theirs, `tray.rs`). */
   setTrayVisible(show: boolean): Promise<void>;
-  showWindow(name: WindowName): Promise<void>;
+  /**
+   * `keep`: the popover, raised for a request rather than by the person, stays up when it loses focus until it is
+   * shown again without it or hidden.
+   */
+  showWindow(name: WindowName, o?: { keep?: boolean }): Promise<void>;
   hideWindow(name: WindowName): Promise<void>;
   quit(): Promise<void>;
   /**

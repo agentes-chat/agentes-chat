@@ -9,6 +9,7 @@ import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
 import { ControlError } from "../src/control/client";
 import { siteApi } from "../src/control/devices";
+import { raisePick } from "../src/control/notify";
 import { PERMISSION_ASK_PREF, PREPARE_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
 import { FAKE_SERVER } from "../src/dev/fake-runner";
@@ -452,5 +453,37 @@ test("a folder asked for from agentes.chat: its card says who asks and for whom,
     const folders = pairedHomes(store.getSnapshot())[0]?.access?.folders ?? [];
     expect(folders.some((f) => agent && f.agents.includes(agent.id))).toBe(true);
     expect(document.querySelector(".dk-toast")?.textContent).toContain(`allowed for ${agent?.name}`);
+  }, host);
+});
+
+test("a folder asked for from the apps keeps the popover up until it is answered, then it hides on focus loss again", () => {
+  const host = createFakeHost("popover", "here");
+  const t = createDesktopI18n("en", host.platform).t;
+  return withMenu(async (el, store) => {
+    const home = pairedHomes(store.getSnapshot())[0];
+    if (!home) throw new Error("no home");
+    raisePick(host, t, home, { byName: "Bia Rocha", at: new Date().toISOString() });
+    expect(host.shown.at(-1)).toEqual({ name: "popover", keep: true });
+    const runner = host.runners.get(home.homeId);
+    await act(async () => runner?.askPick());
+    const card = () => [...el.querySelectorAll(".dk-req")].find((c) => c.textContent?.includes("asks for a folder"));
+    await until(card);
+    const button = (name: string) =>
+      [...(card()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === name) as HTMLElement;
+    // The picker closed without a folder: one picker, and the popover no longer kept.
+    let picks = 0;
+    host.pickFolder = async () => {
+      picks++;
+      return null;
+    };
+    await act(async () => button("Choose folder").click());
+    await until(() => host.shown.at(-1)?.keep === false);
+    expect(picks).toBe(1);
+    expect(card()).toBeTruthy();
+    // Not now: the card goes, the popover is no longer kept either.
+    host.shown.length = 0;
+    await act(async () => button("Not now").click());
+    await until(() => !card());
+    expect(host.shown).toEqual([{ name: "popover", keep: false }]);
   }, host);
 });

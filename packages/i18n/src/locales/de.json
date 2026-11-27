@@ -17169,6 +17169,8 @@
       "paused": "{{host}} ist pausiert, deshalb wartet die Steuerung, bis es weitergeht.",
       "held": "Dieser Workspace ist angehalten, daher wartet die Steuerung, bis er wieder aktiv ist.",
       "lost": "Die Steuerung ist vorbei. Du schaust {{name}} wieder zu.",
+      "controlLate": "Die Steuerung hat nicht rechtzeitig begonnen. {{host}} macht {{name}} noch bereit: versuch es in einer Minute noch mal.",
+      "controlFailed": "Die Steuerung von {{name}} hat nicht geklappt. Versuch es noch mal oder starte die agentes.chat-App auf {{host}} neu.",
       "typeLabel": "Auf {{name}} schreiben"
     },
     "status": {

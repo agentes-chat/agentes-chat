@@ -18313,6 +18313,8 @@
       "paused": "Urządzenie {{host}} jest wstrzymane, więc kontrola czeka na wznowienie.",
       "held": "Ta przestrzeń robocza jest wstrzymana, więc sterowanie czeka, aż znów będzie aktywna.",
       "lost": "Kontrola się skończyła. Znów oglądasz urządzenie {{name}}.",
+      "controlLate": "Sterowanie nie zaczęło się na czas. {{host}} wciąż przygotowuje {{name}}: spróbuj ponownie za minutę.",
+      "controlFailed": "Nie udało się przejąć sterowania {{name}}. Spróbuj ponownie albo uruchom ponownie aplikację agentes.chat na {{host}}.",
       "typeLabel": "Pisz na urządzeniu {{name}}"
     },
     "status": {

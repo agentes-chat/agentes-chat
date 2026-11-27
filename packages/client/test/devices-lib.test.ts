@@ -741,6 +741,29 @@ describe("a phone's screen", () => {
     expect(phoneCloseState(1006)).toEqual({ state: "connecting", retry: "later" });
   });
 
+  test("control that never showed a picture goes back to watching with its cause, instead of opening again behind a spinner", () => {
+    const opening = { opening: true };
+    const host = "Sam's MacBook Pro";
+    // The server's wait ran out, or the computer said the phone wasn't ready (its helper still building).
+    expect(phoneCloseState(4408, "timeout", opening)).toEqual({ state: "connecting", retry: "now", control: "late" });
+    expect(phoneCloseState(4502, "phone_not_ready", opening).control).toBe("late");
+    // It couldn't start there.
+    expect(phoneCloseState(4502, "internal", opening).control).toBe("failed");
+    expect(phoneCloseState(1011, "", opening).control).toBe("failed");
+    expect(controlRefusalText(t, "late", { name: "iPhone 17", host, agent: "Lia" })).toBe(
+      "Control didn't start in time. Sam's MacBook Pro is still getting iPhone 17 ready: try again in a minute.",
+    );
+    expect(controlRefusalText(t, "failed", { name: "iPhone 17", host, agent: "Lia" })).toBe(
+      "Couldn't take control of iPhone 17. Try again, or restart the agentes.chat app on Sam's MacBook Pro.",
+    );
+    // A dropped connection, or an answer that already says what happened, keeps its own meaning.
+    expect(phoneCloseState(1006, "", opening)).toEqual({ state: "connecting", retry: "later" });
+    expect(phoneCloseState(4503, "offline", opening)).toEqual({ state: "offline", retry: "later" });
+    expect(phoneCloseState(4502, "unsupported", opening).control).toBe("unsupported");
+    // Once live, a close opens control again as before.
+    expect(phoneCloseState(4408, "timeout")).toEqual({ state: "connecting", retry: "later" });
+  });
+
   test("who may take control: free or theirs, or an agent they may stop; never another person's", () => {
     expect(mayTakePhone(phone({ mayManage: false }), "u-rui")).toBe(true);
     expect(mayTakePhone(phone({ mayUse: false }), "u-sam")).toBe(false);

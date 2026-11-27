@@ -17097,6 +17097,8 @@
       "paused": "{{host}} duraklatıldı, bu yüzden kontrol devam edene kadar bekler.",
       "held": "Bu çalışma alanı duraklatıldı, bu yüzden kontrol yeniden etkin olana kadar bekler.",
       "lost": "Kontrol sona erdi. {{name}} cihazını yeniden izliyorsunuz.",
+      "controlLate": "Kontrol zamanında başlamadı. {{host}} hâlâ {{name}} cihazını hazırlıyor: bir dakika sonra yeniden deneyin.",
+      "controlFailed": "{{name}} kontrol edilemedi. Yeniden deneyin ya da {{host}} üzerinde agentes.chat uygulamasını yeniden başlatın.",
       "typeLabel": "{{name}} üzerinde yaz"
     },
     "status": {

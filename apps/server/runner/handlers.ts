@@ -1114,7 +1114,7 @@ async function handleStream(
   // A phone's screen (bring your own devices) is no agent's: it goes with the phone, commands on or off.
   if (req.kind === "phone") {
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
-    await ctx.phones.view(req.phone, req.mode, dial);
+    await ctx.phones.view(req.phone, req.mode, dial, { start: req.start === true });
     return { opened: true };
   }
   if (!agent) throw new RunnerError("bad_request", "A stream needs an agent");

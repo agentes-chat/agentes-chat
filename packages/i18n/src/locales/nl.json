@@ -17236,6 +17236,8 @@
       "paused": "{{host}} is gepauzeerd, dus de controle wacht tot het verdergaat.",
       "held": "Deze werkruimte is gepauzeerd, dus de bediening wacht tot hij weer actief is.",
       "lost": "De controle is voorbij. Je kijkt weer mee met {{name}}.",
+      "controlLate": "De bediening is niet op tijd begonnen. {{host}} maakt {{name}} nog klaar: probeer het over een minuut opnieuw.",
+      "controlFailed": "Kon {{name}} niet overnemen. Probeer het opnieuw, of start de agentes.chat-app op {{host}} opnieuw.",
       "typeLabel": "Typen op {{name}}"
     },
     "status": {

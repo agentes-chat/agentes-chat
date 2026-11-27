@@ -87,7 +87,7 @@ export function createTauriHost(): Host {
     pickFolder: () => invoke<string | null>("pick_folder"),
     setTrayState: (state: TrayState) => invoke<void>("set_tray_state", { state }),
     setTrayVisible: (show) => invoke<void>("tray_visible", { show }),
-    showWindow: (w) => invoke<void>("show_window", { name: w }),
+    showWindow: (w, o) => invoke<void>("show_window", { name: w, keep: o?.keep === true }),
     hideWindow: (w) => invoke<void>("hide_window", { name: w }),
     quit: () => invoke<void>("quit_app"),
     askQuit: (words) => invoke<boolean>("quit_ask", words),
