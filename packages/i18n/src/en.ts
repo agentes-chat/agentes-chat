@@ -1039,22 +1039,17 @@ export const en = {
       },
       /** The rail's last step (ADR 0162): the AI the team thinks with, then the workspace. */
       ai: {
-        /** The step's heading, right after the plan (`titleNowPersonal`: a personal workspace's), and its lead. */
-        titleNow: "Now, the AI you already pay for",
-        titleNowPersonal: "Now, the AI you already pay for",
-        leadNow: "With it, the team starts today. The agents use your account, at no extra cost here.",
-        leadNowPersonal: "With it, your agents start today. They use your account, at no extra cost here.",
+        /** Right after the plan: the AI the first agent thinks with. `{{name}}`: that agent. */
+        title: "Now, the AI you already pay for",
+        lead: "{{name}} thinks with it, at no extra cost here. As soon as you connect it, the first delivery starts.",
         later: "Connect later",
-        /** `{{org}}`: the workspace's name. */
-        doneTitle: "Done. The {{org}} team is thinking now.",
-        /** `{{name}}`: the right hand, alone in a personal workspace. */
-        doneTitlePersonal: "Done. {{name}} is thinking now.",
-        /** `{{label}}`: the AI picked ("Claude"). */
-        doneLead: "Your {{label}} answers for every agent. You can change it later, one by one.",
-        doneLeadAny: "The AI you connected answers for every agent. You can change it later, one by one.",
-        /** The tag on the card of the AI just connected ("Claude"). */
-        connected: "Connected",
-        enter: "Go to the workspace",
+        /** "Connect later" asks first: without an AI the first delivery doesn't happen. */
+        skipTitle: "Continue without an AI?",
+        skipText: "Without an AI, {{name}} doesn't make the first delivery or answer. He waits until you connect one.",
+        skipText_female:
+          "Without an AI, {{name}} doesn't make the first delivery or answer. She waits until you connect one.",
+        skipGo: "Continue without AI",
+        connectNow: "Connect now",
       },
       /** A team's last step (ADR 0162, amended 2026-11-11): inviting the people who work there. */
       people: {
@@ -1984,35 +1979,236 @@ export const en = {
       aboutAny: "What your AI said",
     },
     /**
-     * "Hire the team", the plan step of a workspace waiting for its first plan. `the`: an agent's name with the article
-     * a language gives it ("o Caio" in Portuguese). `{{role}}`: the first agent's role, in lower case. `fine`: what the
-     * plan includes, `{{count}}` the people it includes when the billing service says so.
+     * The work the first agent does (ADR 0256, addendum of 2026-11-27): the list, the other ways in, the workspace's
+     * line (`place`: its name and time zone), and each area's words. `{{name}}`: the area's agent; `{{org}}`: the
+     * workspace. `title`/`line`: the list's row; `role`: the agent's role; `heading` and `does`: its step's title and
+     * line; `connect`: the label over its apps; `today`: its first delivery, in the plan step's lead; `working`: the
+     * photo's row while it works; `instructions` and `task`: what the agent is made with and does first (it reads them).
+     */
+    areas: {
+      title: "What will your first agent do?",
+      lead: "Pick one job. You create more agents later.",
+      other: "Other",
+      otherLine: "Create your agent and pick its apps",
+      otherWays: "Prefer another way?",
+      ask: "Ask your AI",
+      askTitle: "Ask your AI for your first agent",
+      import: "Bring from another app",
+      place: "{{name}} · {{zone}}",
+      change: "Change",
+      changeTitle: "Name and time zone",
+      list: {
+        support: {
+          title: "Support",
+          line: "Answers customer emails and tickets",
+          role: "Support",
+          heading: "{{name}}, for support",
+          does: "Answers customer emails and tickets, with a draft ready for each one. Nothing goes out without your OK.",
+          connect: "Connect where customers write",
+          today: "the emails that need a reply",
+          working: "{{name}} is reading your emails",
+          instructions:
+            "You look after support: you read customer emails and tickets, sort out what needs a reply and leave a draft ready for each one. Nothing is sent without the OK of whoever asked.",
+          task: "Read the last 7 days of email, say how many need a reply and leave a draft ready for today's.",
+        },
+        sales: {
+          title: "Sales",
+          line: "Follows up new leads and stalled deals",
+          role: "Sales",
+          heading: "{{name}}, for sales",
+          does: "Follows up new leads and stalled deals, with the next message ready for each one. Nothing goes out without your OK.",
+          connect: "Connect where your customers are",
+          today: "the deals that need attention",
+          working: "{{name}} is looking at your deals",
+          instructions:
+            "You look after sales: you follow up new leads and stalled deals and leave the next message ready for each one. Nothing is sent without the OK of whoever asked.",
+          task: "Look at new leads and deals stalled for over 7 days, say how many need attention and leave the next message ready for the most important ones.",
+        },
+        finance: {
+          title: "Finance",
+          line: "Flags payments with a problem",
+          role: "Finance",
+          heading: "{{name}}, for finance",
+          does: "Finds payments with a problem and leaves the reminder to the customer ready. Nothing goes out without your OK.",
+          connect: "Connect where you get paid",
+          today: "the payments with a problem",
+          working: "{{name}} is looking at your payments",
+          instructions:
+            "You look after finance: you find payments that failed or are late and leave the reminder ready for each customer. Nothing is sent without the OK of whoever asked.",
+          task: "Look at the last 7 days of payments, say how many failed or are late and leave the reminder ready for each customer.",
+        },
+        marketing: {
+          title: "Marketing",
+          line: "Finds what people say about the company, and content ideas",
+          role: "Marketing",
+          heading: "{{name}}, for marketing",
+          does: "Finds what people say about {{org}} online and brings what needs an answer.",
+          connect: "He starts with the web already. Connect to go further",
+          connect_female: "She starts with the web already. Connect to go further",
+          today: "what people say about {{org}} online",
+          working: "{{name}} is looking for what people say about {{org}}",
+          instructions:
+            "You look after marketing: you find what people say about {{org}} online and on social media, bring what needs an answer and suggest content ideas. Nothing is published without the OK of whoever asked.",
+          task: "Look for what people said about {{org}} online in the last 7 days, say what needs an answer and bring 3 content ideas.",
+        },
+        day: {
+          title: "My day",
+          line: "Today's emails, meetings and tasks",
+          role: "Your day",
+          heading: "{{name}}, for your day",
+          does: "Puts today's emails, meetings and tasks in one summary, every morning.",
+          connect: "Connect where your days are",
+          today: "your day's summary",
+          working: "{{name}} is putting your day together",
+          instructions:
+            "You look after the day of whoever asked: every morning, you put the emails that need a reply, the meetings and today's tasks in one short summary.",
+          task: "Put together today's summary: the meetings, the tasks due and the emails that need a reply.",
+        },
+        tech: {
+          title: "Engineering",
+          line: "Finds PRs waiting for review and new errors",
+          role: "Engineering",
+          heading: "{{name}}, for engineering",
+          does: "Finds the PRs waiting for review and the new errors, and says what to look at first.",
+          connect: "Connect where the team works",
+          today: "the PRs and errors that need attention",
+          working: "{{name}} is looking at the PRs and errors",
+          instructions:
+            "You look after engineering: you find the PRs waiting for review and the new errors, and say what the team should look at first. Nothing is changed without the OK of whoever asked.",
+          task: "List the PRs waiting for review and the new errors from the last 7 days, and say what to look at first.",
+        },
+        life: {
+          title: "Life in order",
+          line: "Calendar, reminders and bills",
+          role: "Life in order",
+          heading: "{{name}}, for your life in order",
+          does: "Puts today's meetings, tasks and emails in one summary.",
+          connect: "Connect where your days are",
+          today: "your day's summary",
+          working: "{{name}} is putting your day together",
+          instructions:
+            "You keep the life of whoever asked in order: calendar, reminders and bills. Every morning, you put today's meetings, tasks and emails in one summary.",
+          task: "Put together today's summary: the meetings, the tasks, the emails that need a reply and the bills due this week.",
+        },
+        freelance: {
+          title: "Working for myself",
+          line: "Clients, invoices and calendar",
+          role: "Work",
+          heading: "{{name}}, for your work",
+          does: "Keeps up with your clients, invoices and calendar, and tells you what needs you today.",
+          connect: "Connect where you work",
+          today: "what needs you today",
+          working: "{{name}} is looking at your clients",
+          instructions:
+            "You look after the work of whoever asked, who works for themselves: clients, invoices and calendar. You flag what needs attention and get ready what can be. Nothing is sent without the OK of whoever asked.",
+          task: "Look at client emails, open invoices and this week's calendar, and say what needs attention today.",
+        },
+        study: {
+          title: "Studies and ideas",
+          line: "Study plan, reviews and writing",
+          role: "Studies",
+          heading: "{{name}}, for your studies",
+          does: "Makes your study plan, reminds you of reviews and helps you organize your ideas.",
+          connect: "Connect where your notes are",
+          today: "the week's study plan",
+          working: "{{name}} is making your plan",
+          instructions:
+            "You look after the studies and ideas of whoever asked: you make the study plan, remind them of reviews and help organize what they write.",
+          task: "Read the recent notes, make this week's study plan and say what to review first.",
+        },
+        travel: {
+          title: "Travel",
+          line: "Trips planned to the last detail",
+          role: "Travel",
+          heading: "{{name}}, for your trips",
+          does: "Keeps bookings, times and what's missing for each trip in one place.",
+          connect: "Connect where your bookings arrive",
+          today: "what's missing for your next trips",
+          working: "{{name}} is looking at your trips",
+          instructions:
+            "You look after the trips of whoever asked: you gather bookings, flights and times, and flag what's missing for each trip.",
+          task: "Look for the bookings and trips in the next 60 days and say what's missing for each one.",
+        },
+        home: {
+          title: "Home",
+          line: "Shopping, chores and bills",
+          role: "Home",
+          heading: "{{name}}, for your home",
+          does: "Looks after the shopping list, the chores and the month's bills.",
+          connect: "Connect where your lists are",
+          today: "what the house needs this week",
+          working: "{{name}} is looking at your home",
+          instructions:
+            "You look after the home of whoever asked: shopping list, chores and the month's bills. You remind them of what's due and what's missing.",
+          task: "Look at the lists and the calendar and say what the house needs this week: shopping, chores and bills due.",
+        },
+        health: {
+          title: "Health",
+          line: "Workouts and meals",
+          role: "Health",
+          heading: "{{name}}, for your health",
+          does: "Plans the week's workouts and meals in your calendar and reminds you at the right time.",
+          connect: "Connect where your calendar is",
+          today: "your week of workouts",
+          working: "{{name}} is planning your week",
+          instructions:
+            "You look after the health of whoever asked: workouts and meals. You plan the week in their calendar and remind them at the right time.",
+          task: "Look at this week's calendar and suggest times for workouts and meals.",
+        },
+      },
+    },
+    /**
+     * Meeting the first agent (ADR 0256, addendum of 2026-11-27): its portrait, what it does and the apps it works in,
+     * each with Connect. `{{step}}`: "Step 3 of 4". `account`: a connected app's account and when its routine runs.
+     * `custom*`, `name`, `does`, `appsUsed`, `search`: the agent a person makes on "Other".
+     */
+    meet: {
+      eyebrow: "{{step}} · Your first agent",
+      eyebrowAlone: "Your first agent",
+      apps: "Connect the apps he works in",
+      apps_female: "Connect the apps she works in",
+      connect: "Connect",
+      connected: "Connected",
+      otherApp: "Another app",
+      account: "{{account}} · {{when}}",
+      customTitle: "Create your agent",
+      name: "Name",
+      does: "What does it do?",
+      appsUsed: "Apps it uses",
+      search: "Search apps",
+      noApps: "No app by that name.",
+    },
+    /**
+     * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27). `{{agent}}`: the first agent with its
+     * article (`the`); `{{today}}`: its first delivery (`areas.list.*.today`); `fine`: the plan's people, from the
+     * billing service's list.
      */
     hire: {
       the: "{{name}}",
-      title: "Hire the team",
-      titleOne: "Hire {{name}}",
-      titlePersonal: "Hire your agents",
-      lead: "You're hiring {{agent}} for {{role}}. It starts today, with {{lodi}}, and works day and night.",
-      leadNoRole: "You're hiring {{agent}}. It starts today, with {{lodi}}, and works day and night.",
-      leadMany: "You're hiring {{names}}. They start today, with {{lodi}}, and work day and night.",
-      leadAlone:
-        "You start with {{name}}, the agents' HR. {{name}} creates each agent with you and works day and night.",
-      rightHand: "Agents' HR",
-      rightHandLine: "Creates and adjusts your agents, whenever you ask.",
+      title: "{{org}}'s team starts with {{agent}}",
+      titlePersonal: "Your agents start with {{agent}}",
+      lead: "He delivers {{today}} today. Then create as many agents as you like, and they hand work to each other.",
+      lead_female:
+        "She delivers {{today}} today. Then create as many agents as you like, and they hand work to each other.",
+      leadAny:
+        "He starts his first delivery today. Then create as many agents as you like, and they hand work to each other.",
+      leadAny_female:
+        "She starts her first delivery today. Then create as many agents as you like, and they hand work to each other.",
+      next: "Later:",
       plan: "{{name}} plan",
       perMonth: "a month",
-      fine_one: "Up to {{count}} person. Create more agents later at no extra cost. Cancel in one click.",
-      fine_other: "Up to {{count}} people. Create more agents later at no extra cost. Cancel in one click.",
-      fineAny: "Create more agents later at no extra cost. Cancel in one click.",
+      fine_one: "Unlimited agents and up to {{count}} person. Cancel in one click.",
+      fine_other: "Unlimited agents and up to {{count}} people. Cancel in one click.",
+      finePersonal: "Unlimited agents, just for you. Cancel in one click.",
+      fineAny: "Unlimited agents. Cancel in one click.",
       later: "Not now",
-      cta: "Hire the team",
-      ctaOne: "Hire {{name}}",
-      ctaPersonal: "Hire your agents",
+      subscribe: "Subscribe to the {{name}} plan",
+      subscribeAny: "Subscribe to the plan",
     },
     /**
-     * Back from a paid Checkout: the team's photo and what is left. `{{names}}`: "You", the right hand and the agents,
-     * each with its article (`hire.the`). `start`: the first agent's deliveries on its first day, when its AI said them.
+     * The team's photo, the onboarding's last step: who is in it and what is left. `{{you}}`: "You" (or the person's
+     * first name on the downloaded photo); `{{agent}}`: the first agent with its article. `working`: its first delivery
+     * on its way; `waiting`: the same while no AI is connected.
      */
     celebrate: {
       say: "Hi, {{first}}. We start today.",
@@ -2022,19 +2218,17 @@ export const en = {
       title: "Welcome to the {{org}} team",
       titlePersonal: "Welcome to your team",
       you: "You",
-      lead: "{{names}}. From today on, working together, day and night.",
+      lead: "{{you}} and {{agent}}, the team's first. From today on, working together, day and night.",
+      leadPersonal: "{{you}} and {{agent}}, your first agent. From today on, looking after your days together.",
       plan: "{{name}} plan on",
       planAny: "Plan on",
-      ai: "Connect the AI you already pay for",
-      aiPersonal: "Connect the AI you already pay for",
-      people: "Invite the people you work with",
-      start_one: "And the team starts its first delivery",
-      start_other: "And the team starts its {{count}} deliveries",
-      startAny: "And the team gets to work",
-      startPersonal_one: "And your agents start their first delivery",
-      startPersonal_other: "And your agents start their {{count}} deliveries",
-      startAnyPersonal: "And your agents get to work",
+      aiDone: "{{label}} connected",
+      aiDoneAny: "AI connected",
       connect: "Connect the AI",
+      working: "{{name}} is making the first delivery",
+      workingLine: "The first delivery arrives in a few minutes.",
+      waiting: "{{name}}'s first delivery",
+      enter: "Explore the workspace",
       /** Saves the team's photo with its words as a picture, drawn in the browser. */
       download: "Download the team photo",
       downloadPersonal: "Download your team's photo",
@@ -23452,6 +23646,15 @@ export const en = {
         betaText: "It gets better every week, and if something fails, the problem is ours.",
         /** `{{where}}`: the sidebar row's own words (`feedback.open`). Only where the server takes feedback. */
         feedback: "Tell us what's missing in {{where}}, at the bottom of the sidebar.",
+        /** The first agent's first delivery, the list's first row (`useFirstDelivery`). */
+        delivery: {
+          done: "{{name}}'s first delivery is ready",
+          working: "{{name}} is still working",
+          workingLine: "He says so in this conversation when he's done.",
+          workingLine_female: "She says so in this conversation when she's done.",
+          see: "See the delivery",
+          open: "Go to the conversation",
+        },
         /** The list's rows: done, or still to do with their button. */
         rows: {
           /** `{{plan}}`: the plan's name, as the billing service writes it ("Team"). */
@@ -23495,9 +23698,7 @@ export const en = {
       text: "Use a subscription you already have. Nothing changes in your plan.",
       others: "Another plan",
       free: "Start free",
-      freeText: "With OpenCode's free models",
-      /** A short label at the end of the free option's card. */
-      noPlan: "No subscription",
+      freeText: "No subscription, with OpenCode's free models",
       without: "Without an AI, agents don't answer.",
       later: "Not now",
     },
