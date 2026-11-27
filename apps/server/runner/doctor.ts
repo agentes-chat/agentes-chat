@@ -250,13 +250,59 @@ export interface DoctorOptions {
 }
 
 /** 0 when nothing needs the person, 1 otherwise. */
+/**
+ * What the desktops' helper and keeper need beyond the desktop itself (ADR 0168): the commands on PATH and Python's
+ * own modules, which a `which` can't see. Their absence fails silently: the keeper never writes a window list, so
+ * every park judges the desktop unknowable and skips it — it idles for days (DESKGUSI9, 2026-11-25). Probed only
+ * where the desktop stack itself is installed; elsewhere desktops don't run and there's nothing to check.
+ */
+function desktopChecks(platform: NodeJS.Platform): Check[] {
+  if (platform !== "linux") return [];
+  // Probed with the session's own PATH, not the operator's: a desktop starts `python3` as the display manager
+  // finds it, and an operator's shell may carry another Python entirely (an Anaconda without the modules shadowed
+  // the system's on DESKGUSI9 — the check accused nothing while every keeper was fine, and would have missed the
+  // inverse too).
+  const env = { PATH: "/usr/local/bin:/usr/bin:/bin" };
+  const has = (c: string) => spawnSync("sh", ["-c", `command -v ${c}`], { timeout: 5000, env }).status === 0;
+  if (!has("Xtigervnc") && !has("xfce4-session")) return [];
+  const missing: string[] = [];
+  for (const c of ["xdotool", "scrot"]) if (!has(c)) missing.push(c);
+  if (!has("python3")) missing.push("python3");
+  else
+    for (const [mod, pkg] of [
+      ["gi", "python3-gi"],
+      ["Xlib", "python3-xlib"],
+    ] as const)
+      if (spawnSync("python3", ["-I", "-c", `import ${mod}`], { timeout: 10_000, env }).status !== 0) missing.push(pkg);
+  if (missing.length === 0)
+    return [
+      { key: "desktops", status: "ok", title: "The desktops' helper and keeper have what they need", detail: [] },
+    ];
+  return [
+    {
+      key: "desktops",
+      status: "needs",
+      title: `The desktops' helper and keeper miss: ${missing.join(", ")}`,
+      detail: [
+        "Without them no window list is ever written: every park skips the desktop silently, and it idles for days.",
+      ],
+      fix: "Install them:",
+      command: "sudo apt install --no-install-recommends python3-gi python3-xlib xdotool scrot at-spi2-core",
+    },
+  ];
+}
+
 export async function runDoctor(o: DoctorOptions): Promise<number> {
   const { term, sources } = o;
   const print = o.json ? () => undefined : (c: Check) => show(term, c);
   if (!o.json) term.intro(`check this ${deviceWord(sources.platform)}`, false);
   const [apps, toolchains, firstPhones] = await Promise.all([sources.apps(), sources.toolchains(), sources.phones()]);
   let phones = firstPhones;
-  const fixed = [...appChecks(apps), ...toolchainChecks(toolchains, sources.platform)];
+  const fixed = [
+    ...appChecks(apps),
+    ...toolchainChecks(toolchains, sources.platform),
+    ...desktopChecks(sources.platform),
+  ];
   // What a wait looks at again: the connections and the phones.
   let live = [...connectionChecks(sources), ...phoneChecks(phones)];
   const all = () => [
