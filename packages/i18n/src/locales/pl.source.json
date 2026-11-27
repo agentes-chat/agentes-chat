@@ -6992,6 +6992,9 @@
   "channel.composerDm": {
     "value": "Message {{name}}"
   },
+  "channel.groupYou": {
+    "value": "You"
+  },
   "channel.composerPlaceholder": {
     "value": "Message #{{channel}} · use @ to call an agent"
   },
@@ -7052,6 +7055,9 @@
   "channel.detailsTitle": {
     "value": "#{{channel}}"
   },
+  "channel.detailsTitlePersonal": {
+    "value": "{{channel}}"
+  },
   "channel.detailsSearch": {
     "value": "Search people or agents"
   },
@@ -7085,6 +7091,9 @@
   "channel.nameTaken": {
     "value": "There is already #{{name}}."
   },
+  "channel.nameTakenPersonal": {
+    "value": "There is already a group conversation called “{{name}}”."
+  },
   "channel.generalName": {
     "value": "#general keeps its name."
   },
@@ -7093,6 +7102,9 @@
   },
   "channel.archived": {
     "value": "#{{channel}} archived. The conversation is kept."
+  },
+  "channel.archivedPersonal": {
+    "value": "“{{channel}}” archived. The conversation is kept."
   },
   "channel.archivedTitle": {
     "value": "Archived channels"
@@ -7117,6 +7129,9 @@
   },
   "channel.restored": {
     "value": "#{{channel}} is back."
+  },
+  "channel.restoredPersonal": {
+    "value": "“{{channel}}” is back."
   },
   "channel.leave": {
     "value": "Leave channel"
@@ -10433,11 +10448,14 @@
   "newChannel.nameInvalid": {
     "value": "Use lowercase letters, digits and hyphens, starting with a letter or digit."
   },
+  "newChannel.nameInvalidPersonal": {
+    "value": "Give it a name of up to 80 characters, on one line."
+  },
   "newChannel.nameTaken": {
     "value": "There is already a #{{name}} channel."
   },
   "newChannel.nameTakenPersonal": {
-    "value": "There is already a group conversation called #{{name}}."
+    "value": "There is already a group conversation called “{{name}}”."
   },
   "newChannel.topic": {
     "value": "Description"
@@ -10529,6 +10547,9 @@
   "newChannel.create": {
     "value": "Create #{{name}}"
   },
+  "newChannel.createPersonal": {
+    "value": "Create conversation"
+  },
   "channelCategories.undo": {
     "value": "Undo"
   },
@@ -10562,6 +10583,9 @@
   "channelMembers.addTitle": {
     "value": "Add to #{{channel}}"
   },
+  "channelMembers.addTitlePersonal": {
+    "value": "Add to {{channel}}"
+  },
   "channelMembers.addSearch": {
     "value": "Search people or agents"
   },
@@ -10585,6 +10609,9 @@
   },
   "channelMembers.removeTitle": {
     "value": "Remove {{name}} from #{{channel}}?"
+  },
+  "channelMembers.removeTitlePersonal": {
+    "value": "Remove {{name}} from {{channel}}?"
   },
   "channelMembers.removePersonBody": {
     "value": "They stop seeing the channel and getting its messages. You can add them back later."
@@ -23745,9 +23772,6 @@
   },
   "missions.notice.machine_access_expired": {
     "value": "The request for the folder {{folder}} on {{computer}} got no answer"
-  },
-  "missions.notice.access_command": {
-    "value": "No app on the computer? Run this in its Terminal:"
   },
   "missions.suggestion.pending": {
     "value": "Suggestion for the mission"
@@ -39724,6 +39748,9 @@
   "errors.said.leadNotMember": {
     "value": "The responsible agent has to be in the channel."
   },
+  "errors.said.groupNameInvalid": {
+    "value": "Give it a name of up to 80 characters, on one line."
+  },
   "errors.said.mcpUnreachable": {
     "value": "Couldn't connect to the MCP server. Check its address and try again."
   },
@@ -41433,6 +41460,27 @@
   "machines.access.grantTerminal": {
     "value": "No app? In the computer's terminal:"
   },
+  "machines.access.pickText": {
+    "value": "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose."
+  },
+  "machines.access.pick": {
+    "value": "Allow a folder"
+  },
+  "machines.access.picked": {
+    "value": "A folder picker opened on {{machine}}. Choose the folder there."
+  },
+  "machines.access.pickWaiting": {
+    "value": "Waiting for the folder to be chosen on {{machine}}"
+  },
+  "machines.access.grantTerminalMore": {
+    "value": "No app there? Use the Terminal"
+  },
+  "machines.access.noApp": {
+    "value": "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal."
+  },
+  "machines.access.requestDone": {
+    "value": "This request was already answered or has expired."
+  },
   "machines.access.preferTerminal": {
     "value": "I'd rather use the Terminal"
   },
@@ -43124,6 +43172,12 @@
   },
   "devices.notice.folderRequest": {
     "value": "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.folderOnComputer": {
+    "value": "Allow on the computer"
+  },
+  "devices.notice.folderShown": {
+    "value": "Opened on {{deviceName}}. Allow it there."
   },
   "devices.notice.internetShared": {
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
@@ -50989,10 +51043,10 @@
     "value": "Used the screen"
   },
   "desktop.use.title": {
-    "value": "Apps on the agents' screens"
+    "value": "Each agent's own screen"
   },
   "desktop.use.description": {
-    "value": "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page."
+    "value": "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours."
   },
   "desktop.use.ready": {
     "value": "Ready"
@@ -51001,16 +51055,13 @@
     "value": "Off"
   },
   "desktop.use.unavailable": {
-    "value": "Not available"
+    "value": "Needs setup"
   },
   "desktop.use.offHelp": {
     "value": "Turn on the screens and commands on this computer:"
   },
   "desktop.use.offOne": {
     "value": "This computer needs both the screen and commands on."
-  },
-  "desktop.use.linuxOnly": {
-    "value": "Agents use apps on their own screens only on Linux computers."
   },
   "desktop.use.agent": {
     "value": "{{name}} can't use apps on his screen on {{computer}} yet.",

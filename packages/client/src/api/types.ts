@@ -1565,6 +1565,12 @@ export interface Channel {
    * Absent (an older server): the workspace's keys decide.
    */
   can?: { post: boolean; callAgents: boolean; manage: boolean };
+  /**
+   * Channel list only: its first agents, in the order they joined (at most 4), and how many it has. A personal
+   * workspace's group conversation shows them as its face (ADR 0159, amendment of 2026-11-26).
+   */
+  agentIds?: string[];
+  agentCount?: number;
 }
 
 /** A key a channel may change for a role or a person (ADR 0134). */
@@ -5503,6 +5509,8 @@ export interface Machine {
   remotePause?: boolean;
   /** Who paired it turns its tools on from the apps (`POST …/access/allow`); `false` or absent: its app is too old. */
   accessAllow?: boolean;
+  /** A folder can be asked for from here (`POST …/access/pick`): the agentes.chat app runs it and the person there picks it. */
+  folderPick?: boolean;
   /**
    * Its coding CLIs are looked for again from the apps (`POST …/clis/check`) and installed there by who paired it
    * (`…/cli-install`); `false` or absent: its app is too old, or it is the workspace's own computer.

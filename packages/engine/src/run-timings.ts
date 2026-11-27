@@ -212,6 +212,93 @@ export function runClaims(profiles: unknown) {
     });
 }
 
+/**
+ * Where a reply's time went, in the groups the operator's breakdown charts (one color each, so eight at most), in the
+ * order a turn reaches them: waits for a computer, the claim and its context (the router's pick before it), the
+ * agent's checkouts updated before its turn, a new CLI process until ready, ready to the model's first byte, the model
+ * writing, tools, then the turn's checks and saving.
+ */
+export const STAGE_GROUPS = [
+  "waits",
+  "context",
+  "pre_turn_sync",
+  "cli_init",
+  "cli_first_byte",
+  "model_write",
+  "tools",
+  "finish",
+] as const;
+export type StageGroup = (typeof STAGE_GROUPS)[number];
+
+/** The group of a stage as the profiler names it, without its turn, or of a step of a computer turn's `model`. */
+export function stageGroupOf(stage: string): StageGroup {
+  switch (stage) {
+    case "room_wait":
+    case "waits":
+      return "waits";
+    case "router":
+    case "claim":
+    case "context":
+      return "context";
+    case "pre_turn_sync":
+    case "cli_init":
+    case "cli_first_byte":
+    case "model_write":
+    case "tools":
+      return stage;
+    // An API model's turn, or a computer's from before its steps were kept.
+    case "model":
+      return "model_write";
+    default:
+      return "finish";
+  }
+}
+
+/** The most segments a run's waterfall gives. */
+export const RUN_WATERFALL_MAX = 500;
+
+/**
+ * A run's claims as one timeline, the breakdown's table drawn in time: each stage (a computer turn's `model` in its
+ * steps, which are its shares, drawn one after the other) from the first claim's start. A claim starts where its end
+ * and its time put it, or, kept without its end, right after the one before; the gap between two claims is in neither.
+ */
+export function runWaterfall(claims: ReturnType<typeof runClaims>) {
+  const first = claims.find((c) => c.endedAt);
+  const base = first?.endedAt ? Date.parse(first.endedAt) - first.totalMs : 0;
+  const segments: {
+    claim: number;
+    stage: string;
+    turn: number | null;
+    part: string | null;
+    group: StageGroup;
+    startMs: number;
+    ms: number;
+  }[] = [];
+  let at = 0;
+  claims.forEach((claim, i) => {
+    at = claim.endedAt && first?.endedAt ? Math.max(at, Date.parse(claim.endedAt) - claim.totalMs - base) : at;
+    for (const s of claim.stages) {
+      const cut = s.stage.search(/#\d+$/);
+      const stage = cut < 0 ? s.stage : s.stage.slice(0, cut);
+      const turn = cut < 0 ? null : Number(s.stage.slice(cut + 1));
+      const steps = stage === "model" && s.parts ? s.parts : [{ stage: null, ms: s.ms }];
+      for (const p of steps) {
+        segments.push({
+          claim: i,
+          stage,
+          turn,
+          part: p.stage,
+          group: stageGroupOf(p.stage ?? stage),
+          startMs: Math.round(at),
+          ms: Math.round(p.ms),
+        });
+        at += p.ms;
+      }
+    }
+  });
+  return { segments: segments.slice(0, RUN_WATERFALL_MAX), cut: segments.length > RUN_WATERFALL_MAX };
+}
+
 export interface RunTimingsQuery {
   /** ISO 8601 instants: runs created at or after `from` and before `to`. */
   from: string;
@@ -224,12 +311,13 @@ export interface RunTimingsQuery {
 
 // Postgres promises no order between the two sides of an `and`, so each cast sits inside the `case` that checked it.
 // Through numeric, which holds any number JSON can: a float8 would refuse the largest.
-const msSql = (value: string) =>
+export const msSql = (value: string) =>
   `case when jsonb_typeof(${value}) = 'number' then case when (${value})::numeric between 0 and ${TIMING_MAX_MS}
       then (${value})::numeric::float8 end end`;
-const stageSql = (value: string) =>
+export const stageSql = (value: string) =>
   `case when ${value}->>'stage' ~ '${STAGE.source}' then regexp_replace(${value}->>'stage', '#[0-9]+$', '') else 'other' end`;
-const listSql = (value: string) => `case when jsonb_typeof(${value}) = 'array' then ${value} else '[]'::jsonb end`;
+export const listSql = (value: string) =>
+  `case when jsonb_typeof(${value}) = 'array' then ${value} else '[]'::jsonb end`;
 const pct = (q: number, column: string, filter = "") =>
   `percentile_cont(${q}) within group (order by ${column})${filter ? ` filter (where ${filter})` : ""}`;
 

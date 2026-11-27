@@ -35,6 +35,8 @@ import {
   RUN_CLAIM_STAGES_MAX,
   RUN_CLAIM_TURNS_MAX,
   RUN_CLAIMS_MAX,
+  RUN_WATERFALL_MAX,
+  STAGE_GROUPS,
   STOPPED_BY,
   SYSTEM_STOP_REASONS,
 } from "@agenteschat/engine";
@@ -469,6 +471,28 @@ const Trace = z
       )
       .openapi({
         description: `Where the time went each time a worker took the run up (a claim), oldest first: the last ${RUN_CLAIMS_MAX} the run kept, none on a run that kept none. A wait between two claims is in neither.`,
+      }),
+    waterfall: z
+      .object({
+        segments: z.array(
+          z.object({
+            claim: Count.openapi({ description: "Its claim's place in `claims`." }),
+            stage: z.string().openapi({ description: "The stage's name without its turn (`model`, `context`…)." }),
+            turn: Count.nullable().openapi({ description: "The turn it is of (`model#2`: 2), null for none." }),
+            part: z.string().nullable().openapi({
+              description:
+                "A computer turn's step of its `model` stage (`pre_turn_sync`, `cli_init`, `cli_first_byte`, `tools`, `model_write`); null for the stage whole.",
+            }),
+            group: z.enum(STAGE_GROUPS).openapi({ description: "Its group in `/analytics/stage-breakdown`." }),
+            startMs: Count.openapi({ description: "From the first claim's start." }),
+            ms: Count,
+          }),
+        ),
+        cut: z.boolean().openapi({ description: `It had more than ${RUN_WATERFALL_MAX} segments.` }),
+      })
+      .openapi({
+        description:
+          "The claims as one timeline, in the order they ran: a computer turn's steps are its shares, drawn one after the other (tools run while the model's turn goes on).",
       }),
     machine: z
       .object({

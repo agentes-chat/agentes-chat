@@ -3029,6 +3029,8 @@ export const en = {
     details: "Channel details",
     composerLabel: "Message #{{channel}}",
     composerDm: "Message {{name}}",
+    /** First in who a personal workspace's group conversation holds ("You, Teo and Rita"). */
+    groupYou: "You",
     composerPlaceholder: "Message #{{channel}} · use @ to call an agent",
     send: "Send",
     attach: "Attach file",
@@ -3049,6 +3051,7 @@ export const en = {
     sendFailed: "The message wasn't sent. Try again.",
     reconnecting: "Reconnecting to real time…",
     detailsTitle: "#{{channel}}",
+    detailsTitlePersonal: "{{channel}}",
     detailsSearch: "Search people or agents",
     detailsEmpty: "Nobody found for “{{q}}”.",
     topicLabel: "Channel description",
@@ -3061,9 +3064,11 @@ export const en = {
     replyInThreadsHelp:
       "An agent called in the channel answers in the thread under that message, and the channel shows one line for it. Work already going stays where it is.",
     nameTaken: "There is already #{{name}}.",
+    nameTakenPersonal: "There is already a group conversation called “{{name}}”.",
     generalName: "#general keeps its name.",
     archive: "Archive channel",
     archived: "#{{channel}} archived. The conversation is kept.",
+    archivedPersonal: "“{{channel}}” archived. The conversation is kept.",
     archivedTitle: "Archived channels",
     archivedCount_one: "{{count}} archived channel",
     archivedCount_other: "{{count}} archived channels",
@@ -3072,6 +3077,7 @@ export const en = {
     restore: "Restore",
     restoreName: "Restore #{{channel}}",
     restored: "#{{channel}} is back.",
+    restoredPersonal: "“{{channel}}” is back.",
     leave: "Leave channel",
     left: "You left #{{channel}}",
     leaveTitle: "Leave #{{channel}}?",
@@ -4675,8 +4681,9 @@ export const en = {
     namePlaceholderPersonal: "e.g. trip",
     nameHelp: "Lowercase letters, digits and hyphens. Shows as #{{name}}.",
     nameInvalid: "Use lowercase letters, digits and hyphens, starting with a letter or digit.",
+    nameInvalidPersonal: "Give it a name of up to 80 characters, on one line.",
     nameTaken: "There is already a #{{name}} channel.",
-    nameTakenPersonal: "There is already a group conversation called #{{name}}.",
+    nameTakenPersonal: "There is already a group conversation called “{{name}}”.",
     topic: "Description",
     topicPlaceholder: "What is talked about here",
     visibility: "Who can join",
@@ -4707,6 +4714,7 @@ export const en = {
     selected_one: "{{count}} selected",
     selected_other: "{{count}} selected",
     create: "Create #{{name}}",
+    createPersonal: "Create conversation",
   },
   channelCategories: {
     undo: "Undo",
@@ -4726,6 +4734,7 @@ export const en = {
     invitePersonal: "Invite {{email}} to your workspace and #{{channel}}",
     inviteOrgPersonal: "Invite {{email}} to your workspace",
     addTitle: "Add to #{{channel}}",
+    addTitlePersonal: "Add to {{channel}}",
     addSearch: "Search people or agents",
     addEmpty: "Nobody outside the channel matches “{{q}}”.",
     addEveryone: "Everyone in {{org}} is already in #{{channel}}.",
@@ -4734,6 +4743,7 @@ export const en = {
     actions: "Options for {{name}}",
     remove: "Remove from channel",
     removeTitle: "Remove {{name}} from #{{channel}}?",
+    removeTitlePersonal: "Remove {{name}} from {{channel}}?",
     removePersonBody: "They stop seeing the channel and getting its messages. You can add them back later.",
     removeAgentBody: "He stops reading and answering in this channel. You can add him back later.",
     removeAgentBody_female: "She stops reading and answering in this channel. You can add her back later.",
@@ -10375,7 +10385,6 @@ export const en = {
       machine_access_granted: "Allowed: {{agent}} can now use {{folder}} on {{computer}}",
       machine_access_denied: "Declined: {{agent}} won't use {{folder}} on {{computer}}",
       machine_access_expired: "The request for the folder {{folder}} on {{computer}} got no answer",
-      access_command: "No app on the computer? Run this in its Terminal:",
     },
     suggestion: {
       pending: "Suggestion for the mission",
@@ -16639,6 +16648,7 @@ export const en = {
       generalStays: "Everyone stays in #general.",
       leadChannelOnly: "Only channels have a responsible agent.",
       leadNotMember: "The responsible agent has to be in the channel.",
+      groupNameInvalid: "Give it a name of up to 80 characters, on one line.",
       mcpUnreachable: "Couldn't connect to the MCP server. Check its address and try again.",
       notApproved: "This service hasn't approved agentes.chat yet.",
       alreadyInvited: "This person already has an invitation.",
@@ -17414,6 +17424,16 @@ export const en = {
       grantTextTerminal: "Allowing happens on the computer itself, in its Terminal:",
       grantTextAdmin: "Allowing happens on the computer itself, in its Terminal, as its administrator:",
       grantTerminal: "No app? In the computer's terminal:",
+      /** "Liberar uma pasta": the agentes.chat app on that computer opens the system's folder picker for whoever is there. */
+      pickText: "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose.",
+      pick: "Allow a folder",
+      picked: "A folder picker opened on {{machine}}. Choose the folder there.",
+      /** While the person at the computer hasn't picked yet. */
+      pickWaiting: "Waiting for the folder to be chosen on {{machine}}",
+      /** A computer without the app (or one too old): the command, folded under this. */
+      grantTerminalMore: "No app there? Use the Terminal",
+      noApp: "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal.",
+      requestDone: "This request was already answered or has expired.",
       /** Under a one-click button: the same as a command to paste on that computer. */
       preferTerminal: "I'd rather use the Terminal",
       grantOnlyOwner: "Only {{name}} allows more, on the computer itself. If you need something, ask them.",
@@ -18174,6 +18194,9 @@ export const en = {
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
+      /** Its button where the agentes.chat app runs that computer: the request opens there, for the person to allow. */
+      folderOnComputer: "Allow on the computer",
+      folderShown: "Opened on {{deviceName}}. Allow it there.",
       /**
        * Once, for a computer paired before agents could use a person's internet (ADR 0237): to its owner, or to admins
        * for a computer marked the workspace's. `deviceName` the computer's name.
@@ -21777,16 +21800,16 @@ export const en = {
     },
     /** Whether agents can use apps on their desktops on a computer (ADR 0062): its page and the agent's. */
     use: {
-      title: "Apps on the agents' screens",
+      title: "Each agent's own screen",
       description:
-        "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page.",
+        "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours.",
       ready: "Ready",
       off: "Off",
-      unavailable: "Not available",
+      /** A Linux computer that still lacks what the screens need: the line under it says what. */
+      unavailable: "Needs setup",
       offHelp: "Turn on the screens and commands on this computer:",
       /** Whoever connected it turns each switch on with the buttons that follow. */
       offOne: "This computer needs both the screen and commands on.",
-      linuxOnly: "Agents use apps on their own screens only on Linux computers.",
       agent: "{{name}} can't use apps on his screen on {{computer}} yet.",
       agent_female: "{{name}} can't use apps on her screen on {{computer}} yet.",
     },

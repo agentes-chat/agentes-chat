@@ -1837,6 +1837,7 @@ export class RunnerDaemon implements RequestObserver {
         request: (agent, req) => this.accessRequest(agent, req),
         reduce: (req) => this.accessReduce(req),
         allow: (req) => this.accessAllow(req),
+        pick: (req) => this.accessPick(req),
       },
       browser,
       accounts: this.accounts,
@@ -3119,6 +3120,35 @@ export class RunnerDaemon implements RequestObserver {
       );
     }
     return { access: this.access() };
+  }
+
+  /**
+   * `access.pick` from the apps (`FOLDER_PICK_PROTOCOL`): someone who manages this computer asks for a folder. The
+   * agentes.chat app here shows who asks, and the person here picks it (or says not now): nothing is allowed by this
+   * call itself. With `requestId`, an agent's pending request is shown again. Without the app, nobody here would see it.
+   */
+  async accessPick(req: Extract<MachineRequest, { op: "access.pick" }>): Promise<MachineReplies["access.pick"]> {
+    if (this.stored?.managedBy !== "desktop") {
+      throw new RunnerError("bad_request", "no_app: this computer has no agentes.chat app to pick a folder in");
+    }
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+    const requestId = str(req.requestId, 100);
+    if (requestId && !this.requests.get(requestId)) {
+      throw new RunnerError("not_found", "That request is gone (answered or expired)");
+    }
+    const agentId = str(req.agentId, 100);
+    const agentName = str(req.agentName, 80);
+    this.emit({
+      kind: "access.pick",
+      pick: {
+        byName: str(req.byName, 80),
+        ...(agentId ? { agentId } : {}),
+        ...(agentName ? { agentName } : {}),
+        ...(requestId ? { requestId } : {}),
+        at: new Date().toISOString(),
+      },
+    });
+    return { asked: true };
   }
 
   /** Pending requests that a new grant now covers (a terminal `folders allow`, a config edit) are granted. */

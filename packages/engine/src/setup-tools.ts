@@ -19,7 +19,7 @@ import { agentsByHandle, getAgentCached } from "./agents";
 import type { AiStatusDeps } from "./ai-status";
 import { AGENT_LOOK } from "./appearance";
 import { listApprovals } from "./approvals";
-import { createChannel, listChannels } from "./channels";
+import { createChannel, listChannels, namesChannel, typedChannelName } from "./channels";
 import { findMember } from "./chat-tools";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorListing, type ServerCatalog } from "./connectors/listing";
@@ -1444,9 +1444,9 @@ function rightHandCards(deps: { pubsub?: PubSub }): ToolDefinition[] {
           }
           if (page === "channel") {
             const forUserId = await personBehindCall(ctx);
-            const name = str(input.channel).trim().replace(/^#/, "").toLowerCase();
+            const name = typedChannelName(str(input.channel));
             const seen = forUserId ? await listChannels(ctx.db, forUserId, ctx.orgId) : [];
-            const channel = seen.find((c) => c.name === name);
+            const channel = seen.find((c) => namesChannel(c.name, name));
             if (!channel) return { content: `They see no channel #${name}.`, isError: true };
             params.channelId = channel.id;
           }

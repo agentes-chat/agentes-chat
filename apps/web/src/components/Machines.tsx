@@ -2,6 +2,7 @@ import type { Machine, MachineAccessReduce, MachinePause, MachineToolName } from
 import {
   profilesApply,
   useAllAgents,
+  useAskMachineFolder,
   useAuthConfig,
   useDesktopStatus,
   useHostComputer,
@@ -70,7 +71,7 @@ import { BrowserProfilesCard } from "./browser/BrowserProfiles";
 import { MachineBrowserCard } from "./browser/MachineBrowserCard";
 import { Egress } from "./computer/Egress";
 import { MachineDesktopUseCard } from "./desktop/MachineDesktopUseCard";
-import { CommandBlock, MachineChip, osOf } from "./machine-bits";
+import { MachineChip, osOf, TerminalFallback } from "./machine-bits";
 import { ComputerTitle, SetupFacts, useSetupView } from "./WorkspaceComputer";
 
 /** "Pausado até 16:24" (another day: "Pausado até 18 out 09:00"), "Pausado"; null when not paused now. */
@@ -659,7 +660,11 @@ function ToolsCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: R
   );
 }
 
-/** Never a grant button: granting happens on the machine (the app, or the command as a fallback). */
+/**
+ * Granting happens on the machine: where the agentes.chat app runs it, "Liberar uma pasta" asks the app there to open
+ * the system's folder picker for whoever is at it; elsewhere how to do it there, the command folded as the way without
+ * the app.
+ */
 function GrantCard({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -681,6 +686,8 @@ function GrantCard({ machine: m }: { machine: Machine }) {
           </p>
           <OpenPrefsButton tab="folders">{t("machines.thisMac.openFolders")}</OpenPrefsButton>
         </div>
+      ) : m.canManage && m.folderPick ? (
+        <AskFolder machine={m} />
       ) : m.canManage ? (
         <>
           <p className="small" style={{ margin: 0 }}>
@@ -690,8 +697,7 @@ function GrantCard({ machine: m }: { machine: Machine }) {
                 ? t("machines.access.grantTextAdmin")
                 : t("machines.access.grantTextTerminal")}
           </p>
-          {app && <span className="small muted">{t("machines.access.grantTerminal")}</span>}
-          <CommandBlock command={allowExample} />
+          <TerminalFallback command={allowExample} label={t("machines.access.grantTerminalMore")} />
         </>
       ) : (
         <p className="small muted" style={{ margin: 0 }}>
@@ -701,6 +707,54 @@ function GrantCard({ machine: m }: { machine: Machine }) {
         </p>
       )}
     </Card>
+  );
+}
+
+/**
+ * "Liberar uma pasta": the app on the computer opens its folder picker there; until a folder comes back from it, a
+ * line says it waits for the person there.
+ */
+function AskFolder({ machine: m }: { machine: Machine }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const ask = useAskMachineFolder(org.id);
+  // A folder allowed there (picked, or any other way, a folder already allowed given to more agents too) ends the wait.
+  const folders = JSON.stringify(m.access?.folders ?? []);
+  const [askedAt, setAskedAt] = useState<string | null>(null);
+  const asked = askedAt !== null && askedAt === folders;
+  return (
+    <div className="row machine-grant__ask" style={{ gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+      <p className="small" style={{ margin: 0, flex: 1, minWidth: 200 }}>
+        {asked ? (
+          <span className="ac-iconline" role="status">
+            <Icon name="spinner" size={14} />
+            {t("machines.access.pickWaiting", { machine: m.name })}
+          </span>
+        ) : (
+          t("machines.access.pickText", { machine: m.name })
+        )}
+      </p>
+      <Button
+        variant="primary"
+        icon="drive"
+        loading={ask.isPending}
+        onClick={() =>
+          ask.mutate(
+            { machineId: m.id },
+            {
+              onSuccess: () => {
+                setAskedAt(folders);
+                toast.show(t("machines.access.picked", { machine: m.name }));
+              },
+              onError: (err) => toast.show(errorText(t, err), "error"),
+            },
+          )
+        }
+      >
+        {t("machines.access.pick")}
+      </Button>
+    </div>
   );
 }
 

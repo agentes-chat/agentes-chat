@@ -16,6 +16,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { leavesChannel, managesChannel } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { leaves, removes } from "@agenteschat/client/lib/roles";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -53,7 +54,7 @@ export function useRestoreChannel() {
     onDone?.();
     void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: org.id, channelId: channel.id } });
     void unarchive.mutateAsync(channel.id).then(
-      () => toast.show(t("channel.restored", { channel: channel.name })),
+      () => toast.show(t(modeKey(org, "channel.restored"), { channel: channel.name })),
       () => undefined,
     );
   };
@@ -77,7 +78,7 @@ export function useArchiveChannelWithUndo() {
       void navigate({ to: "/org/$orgId", params: { orgId: org.id } });
     void archive.mutateAsync(channel.id).then(
       () =>
-        toast.show(t("channel.archived", { channel: channel.name }), "info", {
+        toast.show(t(modeKey(org, "channel.archived"), { channel: channel.name }), "info", {
           label: t("channelCategories.undo"),
           run: () => restore.run(channel),
         }),
@@ -176,7 +177,8 @@ export function useChannelMenu() {
   return (c: Channel, extra: MenuEntry[] = []): MenuEntry[] => {
     const manages = managesChannel(c, me.user.id, org);
     return [
-      { kind: "header", label: `#${c.name}` },
+      // A personal workspace's group conversation goes by its name as written (ADR 0159).
+      { kind: "header", label: isPersonal(org) ? c.name : `#${c.name}` },
       ...markRead(c.id, c.unreadCount ?? 0),
       // Muted, it never looks unread to me (a mention of me still counts).
       ...(c.isMember

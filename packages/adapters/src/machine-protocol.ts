@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 91;
+export const MACHINE_PROTOCOL_VERSION = 92;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -856,6 +856,13 @@ export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
   }
   return out;
 }
+/**
+ * From this protocol on, `access.pick`: someone who manages the computer asks, from the apps, for a folder to be
+ * allowed there. The agentes.chat app on that computer shows who asks, and the person there picks the folder in the
+ * system's own folder picker (or says not now); with `requestId`, it shows an agent's pending request again instead.
+ * A runner the app doesn't run answers `bad_request` with `no_app`: the apps show the command instead.
+ */
+export const FOLDER_PICK_PROTOCOL = 92;
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -3281,6 +3288,8 @@ export type MachineRequest = (
     }
   /** `ACCESS_ALLOW_PROTOCOL`: the computer's owner turned `tool` on from the apps (`by` their user id, `byName` shown). */
   | { op: "access.allow"; tool: keyof RunnerTools; by: string; byName: string }
+  /** `FOLDER_PICK_PROTOCOL`: `by` asks for a folder, for one agent (`agentId`) or all; or shows request `requestId`. */
+  | { op: "access.pick"; by: string; byName: string; agentId?: string; agentName?: string; requestId?: string }
   | {
       op: "push";
       path: string;
@@ -3493,6 +3502,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "access.request",
   "access.reduce",
   "access.allow",
+  "access.pick",
   "browser.act",
   "browser.stop",
   "browser.stream.start",
@@ -3614,6 +3624,7 @@ export interface MachineReplies {
   "access.request": { requestId: string; status: "pending" | "granted" };
   "access.reduce": { access: RunnerAccess };
   "access.allow": { access: RunnerAccess };
+  "access.pick": { asked: true };
   /**
    * `agent-browser`'s own JSON answer: `success: false` with its `error` is a page-level failure (stale ref, covered
    * click). Protocol 45: `code` names a Vault refusal (`VAULT_TYPE_REFUSALS`).
