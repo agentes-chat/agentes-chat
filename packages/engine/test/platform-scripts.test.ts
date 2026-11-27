@@ -73,6 +73,19 @@ describe("write_file", () => {
 
     expect((await call(ctx, { path: "notes.md", content: "if (a {" })).content).toBe("Wrote notes.md (7 bytes).");
   });
+
+  test("append leaves a file holding a saved key as it is: the key reads back hidden", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["ok"] }) });
+    const { runner } = await connectedComputer(f);
+    const ctx = await ctxOf();
+    await call(ctx, { path: "config.ini", content: "token=[secret:API_KEY]\n" });
+
+    const added = await call(ctx, { path: "config.ini", content: "region=eu\n", append: true });
+    expect(added.isError).toBe(true);
+    expect(added.content).toContain("holds a saved key");
+    const key = [...runner.files.keys()].find((k) => k.endsWith("config.ini")) as string;
+    expect(new TextDecoder().decode(runner.files.get(key))).toBe("token=[secret:API_KEY]\n");
+  });
 });
 
 describe("a call cut at the output limit", () => {

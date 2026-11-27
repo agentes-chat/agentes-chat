@@ -1107,6 +1107,11 @@ export function createSandboxToolSource(
               const path = toolPath(str(input.path), computerInfo, at);
               if (!path || path === at) throw new Error("path is required");
               const before = input.append === true ? await c.provider.readFile(c.id, path) : null;
+              // The runner reads a saved key's value back as its placeholder: writing that back would lose the key.
+              if (before && textOfBytes(before)?.includes("[secret:"))
+                throw new Error(
+                  `${shownPath(path, at)} holds a saved key, which reads back hidden, so adding to it this way would lose the key. Add to it with a command instead.`,
+                );
               const whole = before ? Buffer.concat([before, data]) : data;
               await c.provider.writeFile(c.id, path, whole);
               return { shown: shownPath(path, at), whole };
