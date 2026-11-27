@@ -394,6 +394,8 @@ export const TEXT: Record<string, FnSpec> = {
         percents++;
         body = body.slice(0, -1);
       }
+      const decimalAt = body.indexOf(dec);
+      if (grp !== "" && decimalAt >= 0 && body.indexOf(grp, decimalAt + 1) >= 0) return ERR["#VALUE!"];
       if (grp !== "") body = body.split(grp).join("");
       const parts = body.split(dec);
       if (parts.length > 2) return ERR["#VALUE!"];
