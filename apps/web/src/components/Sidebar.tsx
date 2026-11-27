@@ -164,6 +164,7 @@ import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
 import { MenuEntries } from "./DesktopMenus";
 import { useAgentMenu, useChannelMenu, usePersonMenu } from "./entity-menus";
+import { GroupFace } from "./GroupFace";
 import { useInviteDialog } from "./invite/InviteDialog";
 import { arrivalProps, useArrivals } from "./lodi-cursor/arrivals";
 import { useRowsDrawIn } from "./lodi-cursor/runner";
@@ -924,8 +925,6 @@ export function Sidebar() {
       data-rail={rail}
       data-float={float || undefined}
       ref={sideRef}
-      // Its faces' sizes follow the mode (the agents' and New agent's, ADR 0164).
-      data-personal={personal || undefined}
       {...drawer?.navProps}
     >
       <div className="sidebar__top">
@@ -1230,6 +1229,8 @@ function useSidebarChannels({
   );
   useArrivals();
   const mayChange = (c: Channel) => managesChannel(c, me.user.id, org);
+  // A personal workspace's group conversations (ADR 0159): their agents as their face, their names as written.
+  const personal = isPersonal(org);
   const drag = useRef<string | null>(null);
   const [mark, setMark] = useState<DropMark>(null);
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
@@ -1388,8 +1389,8 @@ function useSidebarChannels({
         key={c.id}
         to="/org/$orgId/c/$channelId"
         params={{ orgId, channelId: c.id }}
-        className="sidebar__item"
-        title={`#${c.name}`}
+        className={personal ? "sidebar__item sidebar__group-row" : "sidebar__item"}
+        title={personal ? c.name : `#${c.name}`}
         {...(plain ? outer : {})}
         data-kind="channel"
         data-unread={unread}
@@ -1414,10 +1415,16 @@ function useSidebarChannels({
         onClick={() => markOpen(c.id)}
         {...entityMenu(() => channelEntries(c, sectorEntries(c)))}
       >
-        <Icon name="channel" className="sidebar__channel-icon" />
-        <span className="sidebar__channel-abbr" aria-hidden="true">
-          {channelInitials(c.name)}
-        </span>
+        {personal ? (
+          <GroupFace agentIds={c.agentIds ?? []} count={c.agentCount} />
+        ) : (
+          <>
+            <Icon name="channel" className="sidebar__channel-icon" />
+            <span className="sidebar__channel-abbr" aria-hidden="true">
+              {channelInitials(c.name)}
+            </span>
+          </>
+        )}
         <span className="sidebar__item-label">{c.name}</span>
         {mentions > 0 ? (
           <UnreadCount count={mentions} mentions />

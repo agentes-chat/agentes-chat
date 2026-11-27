@@ -3384,10 +3384,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       },
     },
     chat: {
-      channels: async () => state.channels,
+      // Each with its first agents and how many it has, as the server lists them (a group conversation's face).
+      channels: async () =>
+        state.channels.map((c) => {
+          const agents = (state.channelMembers[c.id] ?? []).filter((m) => m.type === "agent").map((m) => m.id);
+          return { ...c, agentIds: agents.slice(0, 4), agentCount: agents.length };
+        }),
       createChannel: async (orgId, input) => {
         log("chat.createChannel", orgId, input);
-        if (state.channels.some((c) => c.name === input.name))
+        if (state.channels.some((c) => c.name.toLowerCase() === input.name.toLowerCase()))
           throw new ApiError(409, "conflict", `#${input.name} already exists`);
         const channel: Channel = {
           id: id("chan"),

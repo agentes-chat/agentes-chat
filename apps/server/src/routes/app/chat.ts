@@ -121,6 +121,8 @@ export function chatRoutes(deps: AppDeps) {
             lastReadAt: iso(r.lastReadAt),
             muted: r.muted,
             can: r.can,
+            agentIds: r.agentIds,
+            agentCount: r.agentCount,
             lastMessage: r.lastMessage ? { ...r.lastMessage, createdAt: r.lastMessage.createdAt.toISOString() } : null,
           })),
         },

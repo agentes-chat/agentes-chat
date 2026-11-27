@@ -1565,6 +1565,12 @@ export interface Channel {
    * Absent (an older server): the workspace's keys decide.
    */
   can?: { post: boolean; callAgents: boolean; manage: boolean };
+  /**
+   * Channel list only: its first agents, in the order they joined (at most 4), and how many it has. A personal
+   * workspace's group conversation shows them as its face (ADR 0159, amendment of 2026-11-26).
+   */
+  agentIds?: string[];
+  agentCount?: number;
 }
 
 /** A key a channel may change for a role or a person (ADR 0134). */

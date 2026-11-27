@@ -34,6 +34,7 @@ import { ChatWallpaper, WallpaperBand } from "./ChatWallpaper";
 import { takeComposerRequest, useComposerRequest } from "./composer-request";
 import { openingDockHeight, rememberDockHeight } from "./dock-height";
 import { FirstDay } from "./FirstDay";
+import { GroupCover, useGroupConversation } from "./GroupCover";
 import { useListEnd } from "./list-end";
 import { endsOnNoAiCard, noAiBanner } from "./no-ai-banner";
 import { placeKey, placeMessage, takeHandedPlace, useReadingPlace } from "./reading-place";
@@ -294,6 +295,13 @@ function Chat({
     leavePlace,
     data,
   });
+  // A personal workspace's group conversation (ADR 0159), from a server that lists its agents: its cover at its start,
+  // in its greeting while it is empty.
+  const group = useGroupConversation(dm || isThread ? null : channel, roster.data);
+  const startCover = useMemo(
+    () => (group && channel ? <GroupCover name={channel.name} group={group} /> : null),
+    [group, channel],
+  );
   const { codeId, info, personDm, rootFile, rootTask, subtitle, title } = useChatTitle({
     threadId,
     orgId,
@@ -702,6 +710,7 @@ function Chat({
                   receiptId={receiptId}
                   receipts={receipts}
                   atStart={atStart}
+                  startCover={startCover}
                   headerHeight={headerHeight}
                   keyboardDragSettled={keyboardDragSettled}
                   keyboardDragStarted={keyboardDragStarted}
@@ -794,6 +803,7 @@ function Chat({
                               bottomInset={dockHeight}
                               keyboardLift={lift}
                               onAsk={onSend}
+                              group={group}
                             />
                           ) : (
                             <View style={[styles.center, { paddingBottom: dockHeight }]}>

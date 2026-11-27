@@ -12,12 +12,13 @@ import { caches } from "./cache";
 import { noteJoined, writeLeftLine } from "./channel-joins";
 import {
   announceChannelLeavers,
-  CHANNEL_NAME_PATTERN,
+  channelNameFor,
   channelRoleIds,
   dropRoleLeavers,
   managesChannel,
   placesAgentsIn,
   readableChannelIds,
+  requireChannelNameFree,
 } from "./channels";
 import { hasCodeWork } from "./code-sessions";
 import { proposalsWaitingFor } from "./context/proposals";
@@ -660,9 +661,10 @@ export async function updateChannel(
   if (!(await managesChannel(db, membership, actorId, channel))) {
     throw new ForbiddenError("Only the channel's creator or an admin can change it");
   }
-  const name = input.name?.trim().toLowerCase();
-  if (name !== undefined && !CHANNEL_NAME_PATTERN.test(name))
-    throw new ValidationError("channel name: lower-case letters, digits, - or _ (max 80)");
+  // A team's channel takes a lower-case name; a personal workspace's group conversation keeps what was written (ADR
+  // 0159).
+  const name = input.name === undefined ? undefined : await channelNameFor(db, orgId, input.name);
+  if (name !== undefined && name !== channel.name) await requireChannelNameFree(db, orgId, name, channelId);
   if (channel.name === "general" && name !== undefined && name !== "general")
     throw new ValidationError("#general can't be renamed");
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");

@@ -11,6 +11,7 @@ import type {
   ThreadInfo,
 } from "@agenteschat/client";
 import { hiddenAgentIds, hiddenDm, opensDm } from "@agenteschat/client/lib/audience";
+import { groupFaceOf } from "@agenteschat/client/lib/group-conversations";
 import { dmActivityAt } from "@agenteschat/client/lib/recent";
 import type { ServerCheck, ServerProblem } from "@agenteschat/client/lib/server";
 import { looksUnread, unreadTotal } from "@agenteschat/client/lib/unread";
@@ -49,6 +50,12 @@ export type ConversationRow =
       mentions: number;
       /** I muted it (it never looks unread): the swipe offers to turn it back on. Only set when true. */
       muted?: boolean;
+      /**
+       * A personal workspace's group conversation, from a server that lists its agents (ADR 0159, amendment of
+       * 2026-11-26): they are its face, in place of the channel's #. Absent in a team's workspace or from an older
+       * server.
+       */
+      face?: { agentIds: string[]; count: number };
     }
   | {
       kind: "dm";
@@ -121,6 +128,8 @@ export function buildConversations(input: {
   threads: ThreadInfo[];
   workingChannels?: ReadonlySet<string>;
   hiddenAgents?: ReadonlySet<string>;
+  /** A personal workspace (ADR 0159): its channels are group conversations, shown by their agents. */
+  personal?: boolean;
 }): ConversationRow[] {
   const rows: ConversationRow[] = [];
   const dmWith = new Map(input.dms.map((d) => [d.channelId, d.with]));
@@ -189,6 +198,7 @@ export function buildConversations(input: {
   for (const c of input.channels) {
     if (!c.isMember) continue;
     const last = c.lastMessage ?? null;
+    const face = input.personal ? groupFaceOf(c) : null;
     rows.push({
       kind: "channel",
       key: `c:${c.id}`,
@@ -209,6 +219,7 @@ export function buildConversations(input: {
       unread: looksUnread(c) ? Math.max(0, c.unreadCount ?? 0) : 0,
       mentions: Math.max(0, c.mentionCount ?? 0),
       ...(c.muted ? { muted: true } : {}),
+      ...(face ? { face } : {}),
     });
   }
   return rows.sort((a, b) => {
