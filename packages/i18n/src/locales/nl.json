@@ -5551,6 +5551,7 @@
       "adminAskChannel": "<b>{{name}}</b> vraagt je <b>{{agent}}</b> toe te voegen aan #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> vraagt om agents te mogen maken",
       "adminAskWebhook": "<b>{{name}}</b> vraagt je de {{service}}-webhook voor routines in te stellen",
+      "adminAskVoice": "<b>{{name}}</b> vraagt je spraakberichten aan te zetten",
       "invitationAccepted": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd en doet mee in {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd",
       "reaction_one": "<b>{{names}}</b> heeft op je bericht gereageerd",
@@ -11608,9 +11609,9 @@
       "title": "Spraakberichten",
       "on": "Spraakberichten",
       "onHelp": "Mensen in deze werkruimte kunnen audio sturen in gesprekken.",
-      "noEngine": "Spraakberichten zijn hier nog niet beschikbaar.",
-      "noEngineAsk": "Spraakberichten staan nog niet aan. Wie deze server beheert, zet ze aan op deze pagina.",
-      "noEngineHere": "Spraakberichten gaan aan zodra je hieronder kiest wat spraak omzet in tekst.",
+      "noEngine": "Spraakberichten gaan voorlopig als audio, dus agents horen ze nog niet.",
+      "noEngineAsk": "Spraakberichten gaan voorlopig als audio, dus agents horen ze niet. Wie deze server beheert, kiest op deze pagina wat spraak omzet in tekst.",
+      "noEngineHere": "Spraakberichten gaan als audio tot je hieronder kiest wat spraak omzet in tekst.",
       "engineTitle": "Wat spraak omzet in tekst",
       "own": "Je eigen server",
       "ownHelp": "Whisper of Parakeet op je eigen machine. De audio blijft daar.",
@@ -11618,10 +11619,24 @@
       "key": "{{name}}-sleutel",
       "keyPlaceholder": "Hier plakken",
       "test": "Testen",
-      "tested": "Het werkt. Iedereen ziet nu de microfoon.",
+      "tested": "Het werkt. Spraakberichten komen nu als tekst bij de agents.",
       "sealed": "Versleuteld bewaard op je server en nooit meer getoond.",
       "leaves": "Audio van spraakberichten gaat naar {{name}} om tekst te worden.",
       "invalid": "De opgeslagen sleutel opent niet op deze server. Plak hem opnieuw."
+    },
+    "setup": {
+      "memberTitle": "Spraak staat hier nog niet aan",
+      "memberText": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als {{name}} kiest wat spraak omzet in tekst.",
+      "memberTextNoName": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als wie deze server beheert kiest wat spraak omzet in tekst.",
+      "ask": "Vraag het {{name}}",
+      "asked": "{{name}} is gevraagd het aan te zetten",
+      "recordAnyway": "Toch opnemen",
+      "ownerTitle": "Kies wat spraak omzet in tekst",
+      "ownerText": "Tot dan gaan spraakberichten als audio die iedereen kan afspelen, en horen agents ze niet.",
+      "readyTitle": "Spraakberichten staan aan",
+      "readyText": "Wat je zegt komt als tekst bij de agents.",
+      "record": "Bericht opnemen",
+      "ownerPhone": "Kies het in Instellingen › Spraak op het web of in de desktop-app. Tot dan gaan spraakberichten als audio die iedereen kan afspelen, en horen agents ze niet."
     }
   },
   "media": {
@@ -16981,6 +16996,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wacht op {{permission}} op {{computer}}",
+      "next": "Sta het toe in de agentes.chat-app op die computer.",
+      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
+      "asked": "Nodig om {{trigger}} uit te voeren",
+      "names": {
+        "app_management": "Appbeheer",
+        "screen": "Schermopname",
+        "accessibility": "Toegankelijkheid",
+        "disk": "Volledige schijftoegang",
+        "network": "Lokaal netwerk",
+        "camera": "Camera",
+        "microphone": "Microfoon",
+        "automation": "Automatisering"
+      }
+    },
     "leadCloud": "Waar je agents werken: de computer van de werkruimte en de apparaten die mensen koppelen.",
     "lead": "Waar je agents werken: de computers en telefoons die mensen koppelen.",
     "connect": "Apparaat koppelen",
@@ -17625,22 +17656,6 @@
         "once": "Eén keer toegestaan.",
         "always": "{{deviceName}} wordt nu met hen gedeeld.",
         "no": "Je zei nee."
-      }
-    },
-    "permission": {
-      "title": "Wacht op {{permission}} op {{computer}}",
-      "next": "Sta het toe in de agentes.chat-app op die computer.",
-      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
-      "asked": "Nodig om {{trigger}} uit te voeren",
-      "names": {
-        "app_management": "Appbeheer",
-        "screen": "Schermopname",
-        "accessibility": "Toegankelijkheid",
-        "disk": "Volledige schijftoegang",
-        "network": "Lokaal netwerk",
-        "camera": "Camera",
-        "microphone": "Microfoon",
-        "automation": "Automatisering"
       }
     }
   },

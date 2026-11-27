@@ -5961,6 +5961,7 @@
       "adminAskChannel": "<b>{{name}}</b> prosi o dodanie <b>{{agent}}</b> do #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> prosi o możliwość tworzenia agentów",
       "adminAskWebhook": "<b>{{name}}</b> prosi o skonfigurowanie webhooka {{service}} dla rutyn",
+      "adminAskVoice": "<b>{{name}}</b> prosi o włączenie wiadomości głosowych",
       "invitationAccepted": "Zaproszenie przyjęte: <b>{{name}}</b> jest teraz w {{org}}",
       "invitationAcceptedAny": "Zaproszenie przyjęte: <b>{{name}}</b>",
       "reaction_one": "Reakcja od <b>{{names}}</b> na twoją wiadomość",
@@ -12407,9 +12408,9 @@
       "title": "Wiadomości głosowe",
       "on": "Wiadomości głosowe",
       "onHelp": "Osoby w tej przestrzeni roboczej mogą wysyłać nagrania w rozmowach.",
-      "noEngine": "Wiadomości głosowe nie są tu jeszcze dostępne.",
-      "noEngineAsk": "Wiadomości głosowe nie są jeszcze włączone. Osoba, która prowadzi ten serwer, włącza je na tej samej stronie.",
-      "noEngineHere": "Wiadomości głosowe włączą się, gdy wybierzesz poniżej, co zamienia głos na tekst.",
+      "noEngine": "Na razie wiadomości głosowe idą jako nagrania, więc agenci jeszcze ich nie słyszą.",
+      "noEngineAsk": "Na razie wiadomości głosowe idą jako nagrania, więc agenci ich nie słyszą. Osoba, która prowadzi ten serwer, wybiera na tej stronie, co zamienia głos na tekst.",
+      "noEngineHere": "Wiadomości głosowe idą jako nagrania, dopóki nie wybierzesz poniżej, co zamienia głos na tekst.",
       "engineTitle": "Co zamienia głos na tekst",
       "own": "Twój własny serwer",
       "ownHelp": "Whisper lub Parakeet na twoim komputerze. Dźwięk tam zostaje.",
@@ -12417,10 +12418,24 @@
       "key": "Klucz {{name}}",
       "keyPlaceholder": "Wklej tutaj",
       "test": "Sprawdź",
-      "tested": "Działa. Teraz wszyscy widzą mikrofon.",
+      "tested": "Działa. Teraz wiadomości głosowe trafiają do agentów jako tekst.",
       "sealed": "Przechowywany w postaci zaszyfrowanej na twoim serwerze i nigdy więcej nie pokazywany.",
       "leaves": "Dźwięk z wiadomości głosowych trafia do {{name}}, aby stać się tekstem.",
       "invalid": "Zapisany klucz nie otwiera się na tym serwerze. Wklej go ponownie."
+    },
+    "setup": {
+      "memberTitle": "Głos nie jest tu jeszcze włączony",
+      "memberText": "Twoja wiadomość pójdzie jako nagranie, które każdy może odtworzyć. Agenci jej nie usłyszą, dopóki {{name}} nie wybierze, co zamienia głos na tekst.",
+      "memberTextNoName": "Twoja wiadomość pójdzie jako nagranie, które każdy może odtworzyć. Agenci jej nie usłyszą, dopóki osoba, która prowadzi ten serwer, nie wybierze, co zamienia głos na tekst.",
+      "ask": "Poproś: {{name}}",
+      "asked": "Wysłano prośbę o włączenie: {{name}}",
+      "recordAnyway": "Nagraj mimo to",
+      "ownerTitle": "Wybierz, co zamienia głos na tekst",
+      "ownerText": "Do tego czasu wiadomości głosowe idą jako nagrania, które każdy może odtworzyć, a agenci ich nie słyszą.",
+      "readyTitle": "Wiadomości głosowe są włączone",
+      "readyText": "To, co mówisz, trafia do agentów jako tekst.",
+      "record": "Nagraj wiadomość",
+      "ownerPhone": "Wybierz to w Ustawienia › Głos w przeglądarce albo w aplikacji na komputer. Do tego czasu wiadomości głosowe idą jako nagrania, które każdy może odtworzyć, a agenci ich nie słyszą."
     }
   },
   "media": {
@@ -18056,6 +18071,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
+      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
+      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
+      "asked": "Potrzebne do uruchomienia {{trigger}}",
+      "names": {
+        "app_management": "Zarządzanie aplikacjami",
+        "screen": "Nagrywanie ekranu",
+        "accessibility": "Dostępność",
+        "disk": "Pełny dostęp do dysku",
+        "network": "Sieć lokalna",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automatyzacja"
+      }
+    },
     "leadCloud": "Gdzie pracują twoi agenci: komputer przestrzeni roboczej i urządzenia, które podłączają osoby z zespołu.",
     "lead": "Gdzie pracują twoi agenci: komputery i telefony, które podłączają osoby z zespołu.",
     "connect": "Podłącz urządzenie",
@@ -18708,22 +18739,6 @@
         "once": "Zezwolono raz.",
         "always": "Urządzenie {{deviceName}} jest im teraz udostępnione.",
         "no": "Odmówiono."
-      }
-    },
-    "permission": {
-      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
-      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
-      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
-      "asked": "Potrzebne do uruchomienia {{trigger}}",
-      "names": {
-        "app_management": "Zarządzanie aplikacjami",
-        "screen": "Nagrywanie ekranu",
-        "accessibility": "Dostępność",
-        "disk": "Pełny dostęp do dysku",
-        "network": "Sieć lokalna",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Automatyzacja"
       }
     }
   },

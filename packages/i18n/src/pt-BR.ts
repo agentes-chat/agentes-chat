@@ -5878,6 +5878,7 @@ export const ptBR = {
       adminAskChannel: "<b>{{name}}</b> pede para adicionar <b>{{agent}}</b> a #{{label}}",
       adminAskCreate: "<b>{{name}}</b> pede para poder criar agentes",
       adminAskWebhook: "<b>{{name}}</b> pede para ligar o webhook do {{service}} para rotinas",
+      adminAskVoice: "<b>{{name}}</b> pede para ligar as mensagens de voz",
       invitationAccepted: "<b>{{name}}</b> aceitou seu convite e entrou na {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> aceitou seu convite",
       reaction_one: "<b>{{names}}</b> reagiu à sua mensagem",
@@ -12094,9 +12095,10 @@ export const ptBR = {
       title: "Mensagens de voz",
       on: "Mensagens de voz",
       onHelp: "Quem está no workspace pode mandar áudio nas conversas.",
-      noEngine: "As mensagens de voz ainda não estão disponíveis aqui.",
-      noEngineAsk: "As mensagens de voz ainda não estão ligadas. Quem cuida deste servidor liga, nesta mesma página.",
-      noEngineHere: "As mensagens de voz ligam quando você escolher abaixo quem transforma a voz em texto.",
+      noEngine: "Por enquanto as mensagens de voz vão como áudio, e os agentes ainda não conseguem ouvi-las.",
+      noEngineAsk:
+        "Por enquanto as mensagens de voz vão como áudio, e os agentes não conseguem ouvi-las. Quem cuida deste servidor escolhe o que transforma a voz em texto, nesta mesma página.",
+      noEngineHere: "As mensagens de voz vão como áudio até você escolher abaixo o que transforma a voz em texto.",
       engineTitle: "Quem transforma a voz em texto",
       own: "Servidor próprio",
       ownHelp: "Whisper ou Parakeet na sua máquina. O áudio não sai dela.",
@@ -12104,10 +12106,28 @@ export const ptBR = {
       key: "Chave da {{name}}",
       keyPlaceholder: "Cole aqui",
       test: "Testar",
-      tested: "Funcionou. O microfone já aparece para todo mundo.",
+      tested: "Funcionou. Agora as mensagens de voz chegam aos agentes como texto.",
       sealed: "Fica cifrada no seu servidor e nunca volta para a tela.",
       leaves: "O áudio das mensagens de voz vai para a {{name}} para virar texto.",
       invalid: "A chave salva não abre neste servidor. Cole de novo.",
+    },
+    setup: {
+      memberTitle: "A voz ainda não está ligada aqui",
+      memberText:
+        "Sua mensagem vai como áudio que as pessoas podem ouvir. Os agentes só vão ouvir quando {{name}} escolher o que transforma a voz em texto.",
+      memberTextNoName:
+        "Sua mensagem vai como áudio que as pessoas podem ouvir. Os agentes só vão ouvir quando quem cuida deste servidor escolher o que transforma a voz em texto.",
+      ask: "Pedir para {{name}}",
+      asked: "Pedimos para {{name}} ligar",
+      recordAnyway: "Gravar mesmo assim",
+      ownerTitle: "Escolha o que transforma a voz em texto",
+      ownerText:
+        "Até lá, as mensagens de voz vão como áudio que as pessoas podem ouvir, e os agentes não conseguem ouvi-las.",
+      readyTitle: "As mensagens de voz estão ligadas",
+      readyText: "O que você fala chega aos agentes como texto.",
+      record: "Gravar uma mensagem",
+      ownerPhone:
+        "Escolha em Configurações › Voz na web ou no app para computador. Até lá, as mensagens de voz vão como áudio que as pessoas podem ouvir, e os agentes não conseguem ouvi-las.",
     },
   },
   /** GIFs and the agents' stickers in chat (ADR 0091). */

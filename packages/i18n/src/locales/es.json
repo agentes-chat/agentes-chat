@@ -5732,6 +5732,7 @@
       "adminAskChannel": "<b>{{name}}</b> te pide añadir a <b>{{agent}}</b> a #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> pide poder crear agentes",
       "adminAskWebhook": "<b>{{name}}</b> te pide configurar el webhook de {{service}} para rutinas",
+      "adminAskVoice": "<b>{{name}}</b> te pide activar los mensajes de voz",
       "invitationAccepted": "<b>{{name}}</b> aceptó tu invitación y se unió a {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> aceptó tu invitación",
       "reaction_one": "<b>{{names}}</b> reaccionó a tu mensaje",
@@ -11917,9 +11918,9 @@
       "title": "Mensajes de voz",
       "on": "Mensajes de voz",
       "onHelp": "Las personas de este espacio de trabajo pueden enviar audios en las conversaciones.",
-      "noEngine": "Los mensajes de voz todavía no están disponibles aquí.",
-      "noEngineAsk": "Los mensajes de voz todavía no están activados. Quien administra este servidor los activa en esta misma página.",
-      "noEngineHere": "Los mensajes de voz se activan en cuanto elijas abajo qué convierte la voz en texto.",
+      "noEngine": "Por ahora los mensajes de voz van como audio, así que los agentes todavía no los oyen.",
+      "noEngineAsk": "Por ahora los mensajes de voz van como audio, así que los agentes no los oyen. Quien administra este servidor elige qué convierte la voz en texto, en esta misma página.",
+      "noEngineHere": "Los mensajes de voz van como audio hasta que elijas abajo qué convierte la voz en texto.",
       "engineTitle": "Qué convierte la voz en texto",
       "own": "Tu propio servidor",
       "ownHelp": "Whisper o Parakeet en tu máquina. El audio se queda ahí.",
@@ -11927,10 +11928,24 @@
       "key": "Clave de {{name}}",
       "keyPlaceholder": "Pega aquí",
       "test": "Probar",
-      "tested": "Funciona. Ahora todos ven el micrófono.",
+      "tested": "Funciona. Ahora los mensajes de voz llegan a los agentes como texto.",
       "sealed": "Se guarda cifrada en tu servidor y no se vuelve a mostrar.",
       "leaves": "El audio de los mensajes de voz va a {{name}} para convertirse en texto.",
       "invalid": "La clave guardada no se puede abrir en este servidor. Pégala de nuevo."
+    },
+    "setup": {
+      "memberTitle": "La voz todavía no está activada aquí",
+      "memberText": "Tu mensaje va como audio que todos pueden escuchar. Los agentes no lo oyen hasta que {{name}} elija qué convierte la voz en texto.",
+      "memberTextNoName": "Tu mensaje va como audio que todos pueden escuchar. Los agentes no lo oyen hasta que quien administra este servidor elija qué convierte la voz en texto.",
+      "ask": "Pedir a {{name}}",
+      "asked": "Le pedimos a {{name}} que la active",
+      "recordAnyway": "Grabar igualmente",
+      "ownerTitle": "Elige qué convierte la voz en texto",
+      "ownerText": "Hasta entonces, los mensajes de voz van como audio que todos pueden escuchar, y los agentes no los oyen.",
+      "readyTitle": "Los mensajes de voz están activados",
+      "readyText": "Lo que dices llega a los agentes como texto.",
+      "record": "Grabar un mensaje",
+      "ownerPhone": "Elígelo en Configuración › Voz en la web o en la app de escritorio. Hasta entonces, los mensajes de voz van como audio que todos pueden escuchar, y los agentes no los oyen."
     }
   },
   "media": {
@@ -17402,6 +17417,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Esperando {{permission}} en {{computer}}",
+      "next": "Permítelo en la app agentes.chat de ese equipo.",
+      "askedBy": "Lo pidió {{agent}} para ejecutar {{trigger}}",
+      "asked": "Hace falta para ejecutar {{trigger}}",
+      "names": {
+        "app_management": "Gestión de apps",
+        "screen": "Grabación de pantalla",
+        "accessibility": "Accesibilidad",
+        "disk": "Acceso total al disco",
+        "network": "Red local",
+        "camera": "Cámara",
+        "microphone": "Micrófono",
+        "automation": "Automatización"
+      }
+    },
     "leadCloud": "Donde trabajan tus agentes: la computadora del espacio de trabajo y los dispositivos que conectan las personas.",
     "lead": "Donde trabajan tus agentes: las computadoras y los teléfonos que conectan las personas.",
     "connect": "Conectar un dispositivo",
@@ -18050,22 +18081,6 @@
         "once": "Permitido una vez.",
         "always": "{{deviceName}} ya se comparte con ellos.",
         "no": "Dijiste que no."
-      }
-    },
-    "permission": {
-      "title": "Esperando {{permission}} en {{computer}}",
-      "next": "Permítelo en la app agentes.chat de ese equipo.",
-      "askedBy": "Lo pidió {{agent}} para ejecutar {{trigger}}",
-      "asked": "Hace falta para ejecutar {{trigger}}",
-      "names": {
-        "app_management": "Gestión de apps",
-        "screen": "Grabación de pantalla",
-        "accessibility": "Accesibilidad",
-        "disk": "Acceso total al disco",
-        "network": "Red local",
-        "camera": "Cámara",
-        "microphone": "Micrófono",
-        "automation": "Automatización"
       }
     }
   },

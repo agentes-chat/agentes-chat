@@ -5339,6 +5339,7 @@
       "adminAskChannel": "<b>{{name}}</b> memintamu menambahkan <b>{{agent}}</b> ke #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> meminta izin membuat agen",
       "adminAskWebhook": "<b>{{name}}</b> memintamu menyiapkan webhook {{service}} untuk rutinitas",
+      "adminAskVoice": "<b>{{name}}</b> memintamu menyalakan pesan suara",
       "invitationAccepted": "<b>{{name}}</b> menerima undanganmu dan bergabung ke {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> menerima undanganmu",
       "reaction_other": "<b>{{names}}</b> bereaksi pada pesanmu",
@@ -11124,9 +11125,9 @@
       "title": "Pesan suara",
       "on": "Pesan suara",
       "onHelp": "Orang di ruang kerja ini bisa mengirim audio di percakapan.",
-      "noEngine": "Pesan suara belum tersedia di sini.",
-      "noEngineAsk": "Pesan suara belum menyala. Yang mengelola server ini menyalakannya, di halaman ini juga.",
-      "noEngineHere": "Pesan suara menyala setelah kamu memilih di bawah apa yang mengubah suara menjadi teks.",
+      "noEngine": "Untuk sementara pesan suara terkirim sebagai audio, jadi agen belum bisa mendengarnya.",
+      "noEngineAsk": "Untuk sementara pesan suara terkirim sebagai audio, jadi agen tidak bisa mendengarnya. Pengelola server ini memilih apa yang mengubah suara menjadi teks, di halaman ini juga.",
+      "noEngineHere": "Pesan suara terkirim sebagai audio sampai kamu memilih di bawah apa yang mengubah suara menjadi teks.",
       "engineTitle": "Yang mengubah suara menjadi teks",
       "own": "Server milikmu sendiri",
       "ownHelp": "Whisper atau Parakeet di mesinmu. Audionya tetap di sana.",
@@ -11134,10 +11135,24 @@
       "key": "Kunci {{name}}",
       "keyPlaceholder": "Tempel di sini",
       "test": "Uji",
-      "tested": "Berhasil. Sekarang semua orang melihat mikrofon.",
+      "tested": "Berhasil. Sekarang pesan suara sampai ke agen sebagai teks.",
       "sealed": "Disimpan terenkripsi di servermu dan tidak akan ditampilkan lagi.",
       "leaves": "Audio dari pesan suara dikirim ke {{name}} untuk diubah menjadi teks.",
       "invalid": "Kunci yang tersimpan tidak bisa dibuka di server ini. Tempel lagi."
+    },
+    "setup": {
+      "memberTitle": "Suara belum menyala di sini",
+      "memberText": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai {{name}} memilih apa yang mengubah suara menjadi teks.",
+      "memberTextNoName": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai pengelola server ini memilih apa yang mengubah suara menjadi teks.",
+      "ask": "Minta ke {{name}}",
+      "asked": "Permintaan sudah dikirim ke {{name}}",
+      "recordAnyway": "Tetap rekam",
+      "ownerTitle": "Pilih apa yang mengubah suara menjadi teks",
+      "ownerText": "Sampai saat itu, pesan suara terkirim sebagai audio yang bisa diputar semua orang, dan agen tidak bisa mendengarnya.",
+      "readyTitle": "Pesan suara sudah menyala",
+      "readyText": "Yang kamu ucapkan sampai ke agen sebagai teks.",
+      "record": "Rekam pesan",
+      "ownerPhone": "Pilih di Pengaturan › Suara di web atau di aplikasi desktop. Sampai saat itu, pesan suara terkirim sebagai audio yang bisa diputar semua orang, dan agen tidak bisa mendengarnya."
     }
   },
   "media": {
@@ -16362,6 +16377,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
+    },
     "leadCloud": "Tempat agenmu bekerja: komputer ruang kerja dan perangkat yang dihubungkan orang-orang.",
     "lead": "Tempat agenmu bekerja: komputer dan ponsel yang dihubungkan orang-orang.",
     "connect": "Hubungkan perangkat",
@@ -17002,22 +17033,6 @@
         "once": "Diizinkan sekali.",
         "always": "{{deviceName}} sekarang dibagikan dengan mereka.",
         "no": "Kamu menolak."
-      }
-    },
-    "permission": {
-      "title": "Menunggu {{permission}} di {{computer}}",
-      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
-      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
-      "asked": "Diperlukan untuk menjalankan {{trigger}}",
-      "names": {
-        "app_management": "Manajemen App",
-        "screen": "Perekaman Layar",
-        "accessibility": "Aksesibilitas",
-        "disk": "Akses Disk Penuh",
-        "network": "Jaringan Lokal",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomatisasi"
       }
     }
   },

@@ -55,6 +55,7 @@ export function VoiceSettingsSection() {
     <VoiceSettingsCard
       on={on}
       available={settings.data.voiceAvailable}
+      micAlways={settings.data.speechState !== undefined}
       editable={editable}
       onChange={(voiceMessages) => {
         if (editable) update.mutate({ voiceMessages });
@@ -71,11 +72,14 @@ export function VoiceSettingsSection() {
 export function VoiceSettingsCard({
   on,
   available,
+  micAlways = false,
   editable,
   onChange,
 }: {
   on: boolean;
   available: boolean;
+  /** The server records with no engine too (`speechState`): the switch works, notes go as audio meanwhile. */
+  micAlways?: boolean;
   editable: boolean;
   onChange: (next: boolean) => void;
 }) {
@@ -99,9 +103,9 @@ export function VoiceSettingsCard({
           status={!available && t(noEngine)}
           control={
             <Switch
-              checked={available && on}
+              checked={(micAlways || available) && on}
               onCheckedChange={onChange}
-              disabled={!editable || !available}
+              disabled={!editable || !(micAlways || available)}
               aria-label={t("voice.settings.on")}
             />
           }
@@ -112,7 +116,8 @@ export function VoiceSettingsCard({
   );
 }
 
-function SpeechProviderPicker({ view }: { view: SpeechKey }) {
+/** What turns voice into text, for the installation's owner: here and in the first press's dialog (`VoiceSetupDialog`). */
+export function SpeechProviderPicker({ view, onSaved }: { view: SpeechKey; onSaved?: () => void }) {
   const { t } = useTranslation();
   const save = useSaveSpeechKey();
   const remove = useRemoveSpeechKey();
@@ -137,6 +142,7 @@ function SpeechProviderPicker({ view }: { view: SpeechKey }) {
       onSuccess: () => {
         setValue("");
         setTested(true);
+        onSaved?.();
       },
       onError: (e) => setError(errorText(t, e)),
     });

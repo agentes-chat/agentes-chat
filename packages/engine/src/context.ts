@@ -90,6 +90,7 @@ import { heldHere } from "./run-inbox";
 import { inChannelRun } from "./run-scope";
 import { type AgentRun, replyThreadOf } from "./runs";
 import { SITE_SECRET_TTL_TEXT, secretStillHeld } from "./secrets";
+import { type VoiceStatus, voiceStatusText } from "./speech-settings";
 import { stretchCardOf } from "./stretch";
 import { type SurfaceConfig, surfaceOn } from "./surfaces/config";
 import { surfaceOfRun } from "./surfaces/deliveries";
@@ -811,6 +812,8 @@ export async function buildRunContext(
     ai?: Omit<AiStatusDeps, "db">;
     /** Each workspace gets its own computer here; absent: people connect theirs. */
     workspaceComputer?: WorkspaceComputer;
+    /** Whether voice becomes text on this server (`voiceStatusText`): said only while it doesn't. */
+    voice?: VoiceStatus | null;
     /**
      * The run thinks through the Model Gateway, so it reads the words of its own thread when that thread is
      * confidential (ADR 0190). Any other run, and every run outside that thread, reads the stub.
@@ -1360,6 +1363,7 @@ export async function buildRunContext(
         org.context.trim() ? `# About ${personal ? "the person" : "the organization"}\n${org.context.trim()}` : "",
         teamMemory,
         options.workspaceComputer ? workspaceComputerText(options.workspaceComputer) : "",
+        options.voice ? voiceStatusText(options.voice) : "",
       ]
         .filter(Boolean)
         .join("\n\n"),

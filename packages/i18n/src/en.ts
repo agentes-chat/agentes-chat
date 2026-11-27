@@ -6029,6 +6029,7 @@ export const en = {
       adminAskChannel: "<b>{{name}}</b> asks you to add <b>{{agent}}</b> to #{{label}}",
       adminAskCreate: "<b>{{name}}</b> asks to be able to create agents",
       adminAskWebhook: "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines",
+      adminAskVoice: "<b>{{name}}</b> asks you to turn on voice messages",
       invitationAccepted: "<b>{{name}}</b> accepted your invitation and joined {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> accepted your invitation",
       reaction_one: "<b>{{names}}</b> reacted to your message",
@@ -12081,11 +12082,12 @@ export const en = {
       title: "Voice messages",
       on: "Voice messages",
       onHelp: "People in this workspace can send audio in conversations.",
-      noEngine: "Voice messages aren't available here yet.",
+      noEngine: "Voice messages go as audio for now, so agents can't hear them yet.",
       /** No engine, for everyone but the installation's owner, who alone sees the picker on this page. */
-      noEngineAsk: "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page.",
+      noEngineAsk:
+        "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page.",
       /** No engine, for the installation's owner, with the picker under it. */
-      noEngineHere: "Voice messages turn on once you choose below what turns voice into text.",
+      noEngineHere: "Voice messages go as audio until you choose below what turns voice into text.",
       engineTitle: "What turns voice into text",
       own: "Your own server",
       ownHelp: "Whisper or Parakeet on your machine. The audio stays there.",
@@ -12093,10 +12095,30 @@ export const en = {
       key: "{{name}} key",
       keyPlaceholder: "Paste here",
       test: "Test",
-      tested: "It works. Everyone now sees the microphone.",
+      tested: "It works. Voice messages now reach the agents as text.",
       sealed: "Kept encrypted on your server and never shown again.",
       leaves: "Audio from voice messages goes to {{name}} to become text.",
       invalid: "The saved key doesn't open on this server. Paste it again.",
+    },
+    /** The microphone's first press where nothing turns voice into text yet (`VoiceSetupDialog`). */
+    setup: {
+      memberTitle: "Voice isn't on here yet",
+      /** `name`: who runs this server. */
+      memberText:
+        "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text.",
+      memberTextNoName:
+        "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text.",
+      ask: "Ask {{name}}",
+      asked: "{{name}} was asked to turn it on",
+      recordAnyway: "Record anyway",
+      ownerTitle: "Choose what turns voice into text",
+      ownerText: "Until you do, voice messages go as audio people can play, and agents can't hear them.",
+      readyTitle: "Voice messages are on",
+      readyText: "What you say reaches the agents as text.",
+      record: "Record a message",
+      /** On the phone, for the server's owner: the phone never runs a model, so the choice is made on a computer. */
+      ownerPhone:
+        "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them.",
     },
   },
   media: {

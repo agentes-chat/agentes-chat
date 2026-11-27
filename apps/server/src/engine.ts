@@ -146,6 +146,7 @@ import {
   setWorkOrgCap,
   shareSavedFile,
   smallModelFor,
+  speechOwnerIn,
   standingJudge,
   streamClosed,
   type ToolSource,
@@ -923,6 +924,15 @@ export function buildEngine(o: EngineOptions) {
       ),
     machines: machineHub,
     workspaceComputer,
+    // agentes.chat's servers always have their engines: nothing to say there.
+    ...(isAgentesCloud(config.PUBLIC_URL)
+      ? {}
+      : {
+          voiceStatus: async (orgId: string) => ({
+            state: speech.state(),
+            owner: (await speechOwnerIn(db, orgId))?.name ?? null,
+          }),
+        }),
     releaseRunPhones: (run) => releaseRunPhones({ db, hub: machineHub }, run),
     maxOutputTokens: config.AGENT_MAX_OUTPUT_TOKENS,
     contextMessages: config.AGENT_CONTEXT_MESSAGES,

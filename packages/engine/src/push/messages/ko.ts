@@ -91,11 +91,13 @@ export const strings: Partial<PushStrings> = {
     f ? `${a}님이 회원님의 ${d}에서 ${f}을(를) 요청합니다` : `${a}님이 회원님의 ${d}에서 폴더를 요청합니다`,
   deviceFolderBody: "그 컴퓨터의 앱에서 허용하세요.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} 님이 #${l}에 에이전트를 추가해 달라고 요청합니다`
-      : what === "create_agents"
-        ? `${a} 님이 에이전트를 만들 수 있게 해 달라고 요청합니다`
-        : `${a} 님이 루틴용 ${l} 웹훅을 설정해 달라고 요청합니다`,
+    what === "voice"
+      ? `${a} 님이 음성 메시지를 켜 달라고 요청합니다`
+      : what === "channel_agent"
+        ? `${a} 님이 #${l}에 에이전트를 추가해 달라고 요청합니다`
+        : what === "create_agents"
+          ? `${a} 님이 에이전트를 만들 수 있게 해 달라고 요청합니다`
+          : `${a} 님이 루틴용 ${l} 웹훅을 설정해 달라고 요청합니다`,
   deviceWaitingTitle: (p, d) => `${p} 님의 에이전트가 내 ${d}을(를) 기다리고 있어요`,
   deviceWaitingBody: "돌아오면 시작해요.",
   teamWeekReady: "팀의 한 주 정리가 준비됐어요",

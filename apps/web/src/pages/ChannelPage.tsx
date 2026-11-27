@@ -176,7 +176,7 @@ import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@
 import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appAuthor, appVia, surfaceVia } from "@agenteschat/client/lib/via";
-import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, micShown, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, splitCanceled } from "@agenteschat/client/lib/work";
 import { CodeConversation, useShowsWork } from "@agenteschat/client/lib/work-context";
@@ -422,6 +422,7 @@ import {
   useChannelThreadsView,
 } from "@/components/threads/ThreadLines";
 import { UsageWaitCancel, UsageWaitClosed } from "@/components/UsagePauseCard";
+import { useVoiceSetup } from "@/components/VoiceSetupDialog";
 import { PushAskContext, PushAskInline, usePushAsk } from "@/components/WebPush";
 import { useWikiLinkRenderer } from "@/components/WikiLinks";
 import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, TypingMark, WorkingStack } from "@/components/WorkingLine";
@@ -2390,16 +2391,21 @@ function ChannelView({
   // Voice messages (ADR 0100), where this person can write and the workspace has them; a reply to a mission goes in
   // text, to the mission. The recording goes in the box's thread with what was typed and the finished files, in one
   // message. A key pasted in the text stays in the box for the person to choose (`KeyGuardDialog`).
+  // The microphone follows the workspace's switch; where voice doesn't become text yet, the first press asks first
+  // (`useVoiceSetup`). A server older than `speechState` shows it only with an engine.
   const voiceSettings = useSettings(org.id);
-  const voiceOn = Boolean(voiceSettings.data?.voiceAvailable && voiceSettings.data.voiceMessages);
+  const voiceOn = micShown(voiceSettings.data);
+  const voiceSetup = useVoiceSetup(voiceSettings.data);
   const voice: ComposerVoice | undefined =
     voiceOn && !chrome?.locked && !missionReply
       ? {
           scope: `${channel.id}:${thread?.id ?? ""}`,
           allowed: async () => {
+            const asked = await voiceSetup.ask();
+            if (!asked) return false;
             const { allowed } = await api.voice.allowed(org.id).catch(() => ({ allowed: true }));
             if (!allowed) toast.show(t("voice.limit"));
-            return allowed;
+            return allowed && asked;
           },
           // "gravando áudio…" for the others while it records and while it uploads (then the server keeps it until the
           // message comes); the throttle makes it one frame every 3 s, and holds the upload's while they write.
@@ -3239,6 +3245,7 @@ function ChannelView({
                                   onDone={() => setOffer(null)}
                                 />
                               )}
+                              {voiceSetup.dialog}
                               <KeyGuardDialog
                                 ask={keyAsk}
                                 onClose={() => setKeyAsk(null)}

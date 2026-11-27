@@ -121,8 +121,11 @@ export interface ComposerWorking {
 export interface ComposerVoice {
   /** Where this recording would go: when it changes, one under way is dropped. */
   scope: string;
-  /** Asked before the microphone opens: false stops there (the app says why). */
-  allowed?: () => Promise<boolean>;
+  /**
+   * Asked before the microphone opens: false stops there (the app says why). `"tap"`: the app asked the person first
+   * (a dialog), so a press held meanwhile records hands free instead of ending with its release.
+   */
+  allowed?: () => Promise<boolean | "tap">;
   onTake: (take: VoiceTake) => void;
   onNotice: (notice: VoiceNotice) => void;
   /** Each second it records, never while starting or paused: the others see "gravando áudio…". */

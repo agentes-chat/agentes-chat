@@ -9,11 +9,12 @@ import {
   type SpeechProviderId,
   silentWav,
 } from "@agenteschat/adapters";
-import { type Database, eq, schema } from "@agenteschat/db";
+import { and, type Database, eq, schema } from "@agenteschat/db";
 import { openSecret, sealSecret } from "./crypto";
 import { ValidationError } from "./errors";
+import { pinnedOwner } from "./organizations";
 
-const { instanceSecrets } = schema;
+const { instanceSecrets, organizationMembers, users } = schema;
 
 /**
  * Which engines turn voice into text on this server (ADR 0100). The environment sets them on agentes.chat's servers
@@ -31,11 +32,20 @@ export interface SpeechKeyView {
   envProviders: SpeechProviderId[];
 }
 
+/**
+ * Whether voice becomes text on this server: `ready` (an engine answers), `installing` (one is on its way here),
+ * `failed` (the one set up here stopped and needs its owner) or `none`. Recording works in every state; without
+ * `ready` a note goes as audio people play.
+ */
+export const SPEECH_STATES = ["ready", "installing", "none", "failed"] as const;
+export type SpeechState = (typeof SPEECH_STATES)[number];
+
 export interface SpeechSettings {
   ready(): Promise<void>;
   /** The engines to try, in order. */
   chain(): SpeechEngine[];
   available(): boolean;
+  state(): SpeechState;
   view(): Promise<SpeechKeyView>;
   save(input: { provider: SpeechProviderId } & SpeechCredentials, userId: string): Promise<SpeechKeyView>;
   remove(): Promise<SpeechKeyView>;
@@ -123,6 +133,7 @@ export function createSpeechSettings(deps: {
     ready: () => initial,
     chain,
     available: () => chain().length > 0,
+    state: () => (chain().length > 0 ? "ready" : "none"),
     async view() {
       await refresh();
       return snapshot();
@@ -162,4 +173,44 @@ export function createSpeechSettings(deps: {
       return snapshot();
     },
   };
+}
+
+/**
+ * Who turns voice into text for this workspace: the installation's pinned owner (ADR 0073), when they are one of its
+ * members, so a person can ask them by name. Null on agentes.chat's servers (their engines are set) and when the owner
+ * isn't here.
+ */
+export async function speechOwnerIn(db: Database, orgId: string): Promise<{ userId: string; name: string } | null> {
+  const owner = await pinnedOwner(db);
+  if (!owner) return null;
+  const [row] = await db
+    .select({ name: users.name })
+    .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, owner)));
+  return row ? { userId: owner, name: row.name } : null;
+}
+
+/** What the agents know of voice on this server (`voiceStatusText`). */
+export interface VoiceStatus {
+  state: SpeechState;
+  /** Who chooses what turns voice into text here (`speechOwnerIn`), by name. */
+  owner: string | null;
+}
+
+/**
+ * One line of the workspace's facts while voice doesn't become text here, so an agent (the right hand above all)
+ * answers from it instead of guessing; nothing once it does.
+ */
+export function voiceStatusText({ state, owner }: VoiceStatus): string {
+  if (state === "ready") return "";
+  const who = owner ? `${owner} (who runs this server)` : "Whoever runs this server";
+  if (state === "installing") {
+    return "Voice messages: on. The voice model is getting ready on this server: voice messages recorded meanwhile reach you with their words once it is.";
+  }
+  const why =
+    state === "failed"
+      ? "what turned voice into text on this server stopped"
+      : "nothing on this server turns voice into text yet";
+  return `Voice messages: people can record them, but ${why}, so one reaches you as a note that you can't hear it. ${who} turns it on in Settings › Voice.`;
 }

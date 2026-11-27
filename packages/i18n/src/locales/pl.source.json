@@ -13564,6 +13564,9 @@
   "notifications.what.adminAskWebhook": {
     "value": "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines"
   },
+  "notifications.what.adminAskVoice": {
+    "value": "<b>{{name}}</b> asks you to turn on voice messages"
+  },
   "notifications.what.invitationAccepted": {
     "value": "<b>{{name}}</b> accepted your invitation and joined {{org}}"
   },
@@ -28013,13 +28016,13 @@
     "value": "People in this workspace can send audio in conversations."
   },
   "voice.settings.noEngine": {
-    "value": "Voice messages aren't available here yet."
+    "value": "Voice messages go as audio for now, so agents can't hear them yet."
   },
   "voice.settings.noEngineAsk": {
-    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+    "value": "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page."
   },
   "voice.settings.noEngineHere": {
-    "value": "Voice messages turn on once you choose below what turns voice into text."
+    "value": "Voice messages go as audio until you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"
@@ -28043,7 +28046,7 @@
     "value": "Test"
   },
   "voice.settings.tested": {
-    "value": "It works. Everyone now sees the microphone."
+    "value": "It works. Voice messages now reach the agents as text."
   },
   "voice.settings.sealed": {
     "value": "Kept encrypted on your server and never shown again."
@@ -28053,6 +28056,42 @@
   },
   "voice.settings.invalid": {
     "value": "The saved key doesn't open on this server. Paste it again."
+  },
+  "voice.setup.memberTitle": {
+    "value": "Voice isn't on here yet"
+  },
+  "voice.setup.memberText": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text."
+  },
+  "voice.setup.memberTextNoName": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text."
+  },
+  "voice.setup.ask": {
+    "value": "Ask {{name}}"
+  },
+  "voice.setup.asked": {
+    "value": "{{name}} was asked to turn it on"
+  },
+  "voice.setup.recordAnyway": {
+    "value": "Record anyway"
+  },
+  "voice.setup.ownerTitle": {
+    "value": "Choose what turns voice into text"
+  },
+  "voice.setup.ownerText": {
+    "value": "Until you do, voice messages go as audio people can play, and agents can't hear them."
+  },
+  "voice.setup.readyTitle": {
+    "value": "Voice messages are on"
+  },
+  "voice.setup.readyText": {
+    "value": "What you say reaches the agents as text."
+  },
+  "voice.setup.record": {
+    "value": "Record a message"
+  },
+  "voice.setup.ownerPhone": {
+    "value": "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them."
   },
   "media.word.gif": {
     "value": "GIF"
@@ -41463,9 +41502,6 @@
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
   },
-  "devices.leadCloud": {
-    "value": "Where your agents work: the workspace computer and the devices people connect."
-  },
   "devices.permission.title": {
     "value": "Waiting for {{permission}} on {{computer}}"
   },
@@ -41501,6 +41537,9 @@
   },
   "devices.permission.names.automation": {
     "value": "Automation"
+  },
+  "devices.leadCloud": {
+    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."

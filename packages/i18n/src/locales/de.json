@@ -5549,6 +5549,7 @@
       "adminAskChannel": "<b>{{name}}</b> bittet dich, <b>{{agent}}</b> zu #{{label}} hinzuzufügen",
       "adminAskCreate": "<b>{{name}}</b> möchte Agenten erstellen dürfen",
       "adminAskWebhook": "<b>{{name}}</b> bittet dich, den {{service}}-Webhook für Routinen einzurichten",
+      "adminAskVoice": "<b>{{name}}</b> bittet dich, Sprachnachrichten einzuschalten",
       "invitationAccepted": "<b>{{name}}</b> hat deine Einladung angenommen und ist {{org}} beigetreten",
       "invitationAcceptedAny": "<b>{{name}}</b> hat deine Einladung angenommen",
       "reaction_one": "<b>{{names}}</b> hat auf deine Nachricht reagiert",
@@ -11538,9 +11539,9 @@
       "title": "Sprachnachrichten",
       "on": "Sprachnachrichten",
       "onHelp": "Personen in diesem Workspace können in Unterhaltungen Audio senden.",
-      "noEngine": "Sprachnachrichten sind hier noch nicht verfügbar.",
-      "noEngineAsk": "Sprachnachrichten sind noch nicht eingeschaltet. Wer diesen Server betreibt, schaltet sie auf dieser Seite ein.",
-      "noEngineHere": "Sprachnachrichten werden eingeschaltet, sobald du unten wählst, was Sprache in Text umwandelt.",
+      "noEngine": "Sprachnachrichten gehen vorerst als Audio, Agenten hören sie also noch nicht.",
+      "noEngineAsk": "Sprachnachrichten gehen vorerst als Audio, Agenten hören sie also nicht. Wer diesen Server betreibt, wählt auf dieser Seite, was Sprache in Text umwandelt.",
+      "noEngineHere": "Sprachnachrichten gehen als Audio, bis du unten wählst, was Sprache in Text umwandelt.",
       "engineTitle": "Was Sprache in Text umwandelt",
       "own": "Dein eigener Server",
       "ownHelp": "Whisper oder Parakeet auf deinem Rechner. Das Audio bleibt dort.",
@@ -11548,10 +11549,24 @@
       "key": "{{name}}-Schlüssel",
       "keyPlaceholder": "Hier einfügen",
       "test": "Testen",
-      "tested": "Es funktioniert. Jetzt sehen alle das Mikrofon.",
+      "tested": "Es funktioniert. Sprachnachrichten erreichen die Agenten jetzt als Text.",
       "sealed": "Verschlüsselt auf deinem Server gespeichert und nie wieder angezeigt.",
       "leaves": "Audio aus Sprachnachrichten geht an {{name}}, um zu Text zu werden.",
       "invalid": "Der gespeicherte Schlüssel lässt sich auf diesem Server nicht öffnen. Füge ihn noch mal ein."
+    },
+    "setup": {
+      "memberTitle": "Sprache ist hier noch nicht eingeschaltet",
+      "memberText": "Deine Nachricht geht als Audio, das alle abspielen können. Agenten hören sie erst, wenn {{name}} wählt, was Sprache in Text umwandelt.",
+      "memberTextNoName": "Deine Nachricht geht als Audio, das alle abspielen können. Agenten hören sie erst, wenn die Person, die diesen Server betreibt, wählt, was Sprache in Text umwandelt.",
+      "ask": "{{name}} fragen",
+      "asked": "{{name}} wurde gebeten, sie einzuschalten",
+      "recordAnyway": "Trotzdem aufnehmen",
+      "ownerTitle": "Wähle, was Sprache in Text umwandelt",
+      "ownerText": "Bis dahin gehen Sprachnachrichten als Audio, das alle abspielen können, und Agenten hören sie nicht.",
+      "readyTitle": "Sprachnachrichten sind eingeschaltet",
+      "readyText": "Was du sagst, erreicht die Agenten als Text.",
+      "record": "Nachricht aufnehmen",
+      "ownerPhone": "Wähle es unter Einstellungen › Sprachnachrichten im Web oder in der Desktop-App. Bis dahin gehen Sprachnachrichten als Audio, das alle abspielen können, und Agenten hören sie nicht."
     }
   },
   "media": {
@@ -16914,6 +16929,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wartet auf {{permission}} auf {{computer}}",
+      "next": "Erlaube es dort in der agentes.chat-App.",
+      "askedBy": "{{agent}} braucht es für {{trigger}}",
+      "asked": "Nötig für {{trigger}}",
+      "names": {
+        "app_management": "App-Verwaltung",
+        "screen": "Bildschirmaufnahme",
+        "accessibility": "Bedienungshilfen",
+        "disk": "Festplattenvollzugriff",
+        "network": "Lokales Netzwerk",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automation"
+      }
+    },
     "leadCloud": "Wo deine Agenten arbeiten: der Computer des Workspace und die Geräte, die Personen verbinden.",
     "lead": "Wo deine Agenten arbeiten: die Computer und Handys, die Personen verbinden.",
     "connect": "Gerät verbinden",
@@ -17558,22 +17589,6 @@
         "once": "Einmal erlaubt.",
         "always": "{{deviceName}} ist jetzt für sie freigegeben.",
         "no": "Du hast Nein gesagt."
-      }
-    },
-    "permission": {
-      "title": "Wartet auf {{permission}} auf {{computer}}",
-      "next": "Erlaube es dort in der agentes.chat-App.",
-      "askedBy": "{{agent}} braucht es für {{trigger}}",
-      "asked": "Nötig für {{trigger}}",
-      "names": {
-        "app_management": "App-Verwaltung",
-        "screen": "Bildschirmaufnahme",
-        "accessibility": "Bedienungshilfen",
-        "disk": "Festplattenvollzugriff",
-        "network": "Lokales Netzwerk",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Automation"
       }
     }
   },

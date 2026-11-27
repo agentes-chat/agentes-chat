@@ -5524,6 +5524,7 @@
       "adminAskChannel": "<b>{{name}}</b>, <b>{{agent}}</b> ajanını #{{label}} kanalına eklemenizi istiyor",
       "adminAskCreate": "<b>{{name}}</b>, ajan oluşturabilmek istiyor",
       "adminAskWebhook": "<b>{{name}}</b>, rutinler için {{service}} webhook'unu kurmanızı istiyor",
+      "adminAskVoice": "<b>{{name}}</b>, sesli mesajları açmanızı istiyor",
       "invitationAccepted": "<b>{{name}}</b> davetinizi kabul etti ve {{org}} çalışma alanına katıldı",
       "invitationAcceptedAny": "<b>{{name}}</b> davetinizi kabul etti",
       "reaction_one": "<b>{{names}}</b> mesajınıza tepki verdi",
@@ -11473,9 +11474,9 @@
       "title": "Sesli mesajlar",
       "on": "Sesli mesajlar",
       "onHelp": "Bu çalışma alanındaki kişiler konuşmalarda ses gönderebilir.",
-      "noEngine": "Sesli mesajlar burada henüz kullanılamıyor.",
-      "noEngineAsk": "Sesli mesajlar henüz açık değil. Bu sunucuyu yöneten kişi onları bu sayfada açar.",
-      "noEngineHere": "Aşağıda sesi metne dönüştüreni seçtiğinizde sesli mesajlar açılır.",
+      "noEngine": "Şimdilik sesli mesajlar ses olarak gidiyor, yani ajanlar onları henüz duyamıyor.",
+      "noEngineAsk": "Şimdilik sesli mesajlar ses olarak gidiyor, yani ajanlar onları duyamıyor. Sesi metne dönüştüreni bu sunucuyu yöneten kişi bu sayfada seçer.",
+      "noEngineHere": "Aşağıda sesi metne dönüştüreni seçene kadar sesli mesajlar ses olarak gider.",
       "engineTitle": "Sesi metne dönüştüren",
       "own": "Kendi sunucunuz",
       "ownHelp": "Makinenizdeki Whisper veya Parakeet. Ses orada kalır.",
@@ -11483,10 +11484,24 @@
       "key": "{{name}} anahtarı",
       "keyPlaceholder": "Buraya yapıştırın",
       "test": "Test et",
-      "tested": "Çalışıyor. Artık herkes mikrofonu görüyor.",
+      "tested": "Çalışıyor. Sesli mesajlar artık ajanlara metin olarak ulaşıyor.",
       "sealed": "Sunucunuzda şifreli olarak saklanır ve bir daha gösterilmez.",
       "leaves": "Sesli mesajların sesi metne dönüşmek için {{name}} hizmetine gider.",
       "invalid": "Kayıtlı anahtar bu sunucuda açılmıyor. Tekrar yapıştırın."
+    },
+    "setup": {
+      "memberTitle": "Ses burada henüz açık değil",
+      "memberText": "Mesajın herkesin dinleyebileceği bir ses olarak gider. {{name}} sesi metne dönüştüreni seçene kadar ajanlar onu duyamaz.",
+      "memberTextNoName": "Mesajın herkesin dinleyebileceği bir ses olarak gider. Bu sunucuyu yöneten kişi sesi metne dönüştüreni seçene kadar ajanlar onu duyamaz.",
+      "ask": "{{name}} kişisinden iste",
+      "asked": "{{name}} kişisinden açması istendi",
+      "recordAnyway": "Yine de kaydet",
+      "ownerTitle": "Sesi metne dönüştüreni seçin",
+      "ownerText": "Seçene kadar sesli mesajlar herkesin dinleyebileceği ses olarak gider ve ajanlar onları duyamaz.",
+      "readyTitle": "Sesli mesajlar açık",
+      "readyText": "Söyledikleriniz ajanlara metin olarak ulaşır.",
+      "record": "Mesaj kaydet",
+      "ownerPhone": "Bunu web'de ya da masaüstü uygulamasında Ayarlar › Ses bölümünden seçin. O zamana kadar sesli mesajlar herkesin dinleyebileceği ses olarak gider ve ajanlar onları duyamaz."
     }
   },
   "media": {
@@ -16842,6 +16857,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
+      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
+      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
+      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
+      "names": {
+        "app_management": "Uygulama Yönetimi",
+        "screen": "Ekran Kaydı",
+        "accessibility": "Erişilebilirlik",
+        "disk": "Tam Disk Erişimi",
+        "network": "Yerel Ağ",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomasyon"
+      }
+    },
     "leadCloud": "Ajanlarınızın çalıştığı yer: çalışma alanının bilgisayarı ve kişilerin bağladığı cihazlar.",
     "lead": "Ajanlarınızın çalıştığı yer: kişilerin bağladığı bilgisayarlar ve telefonlar.",
     "connect": "Cihaz bağla",
@@ -17486,22 +17517,6 @@
         "once": "Bir kez izin verildi.",
         "always": "{{deviceName}} artık onlarla paylaşılıyor.",
         "no": "Hayır dediniz."
-      }
-    },
-    "permission": {
-      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
-      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
-      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
-      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
-      "names": {
-        "app_management": "Uygulama Yönetimi",
-        "screen": "Ekran Kaydı",
-        "accessibility": "Erişilebilirlik",
-        "disk": "Tam Disk Erişimi",
-        "network": "Yerel Ağ",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomasyon"
       }
     }
   },

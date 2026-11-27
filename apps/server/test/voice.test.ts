@@ -108,6 +108,15 @@ test("the workspace's switch and the server's engine decide the microphone", asy
   expect(await allowed.json()).toEqual({ allowed: false });
 });
 
+test("with no engine the microphone stays: notes go as audio, and the settings say so and name the owner", async () => {
+  const { owner, orgId, channelId } = await start({ SPEECH_ENGINES: "" });
+  const settings = (await (await owner(`/api/app/organizations/${orgId}/settings`)).json()) as Record<string, unknown>;
+  expect(settings).toMatchObject({ voiceMessages: true, voiceAvailable: false, speechState: "none" });
+  expect(settings.speechOwner).toMatchObject({ name: expect.any(String) });
+  expect((await send(owner, orgId, channelId)).status).toBe(202);
+  expect(await (await owner(`/api/app/organizations/${orgId}/voice/allowed`)).json()).toEqual({ allowed: true });
+});
+
 test("a server of one's own that asked for it hears when someone is about to record, with the workspace", async () => {
   const calls: { url: string; method?: string; headers?: RequestInit["headers"] }[] = [];
   const own = (async (url: string | URL | Request, init?: RequestInit) => {

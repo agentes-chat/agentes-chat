@@ -5738,6 +5738,7 @@
       "adminAskChannel": "<b>{{name}}</b> vous demande d'ajouter <b>{{agent}}</b> à #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> demande à pouvoir créer des agents",
       "adminAskWebhook": "<b>{{name}}</b> vous demande de configurer le webhook {{service}} pour les routines",
+      "adminAskVoice": "<b>{{name}}</b> vous demande d'activer les messages vocaux",
       "invitationAccepted": "<b>{{name}}</b> a accepté votre invitation et a rejoint {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> a accepté votre invitation",
       "reaction_one": "<b>{{names}}</b> a réagi à votre message",
@@ -11989,9 +11990,9 @@
       "title": "Messages vocaux",
       "on": "Messages vocaux",
       "onHelp": "Les personnes de cet espace de travail peuvent envoyer des audios dans les conversations.",
-      "noEngine": "Les messages vocaux ne sont pas encore disponibles ici.",
-      "noEngineAsk": "Les messages vocaux ne sont pas encore activés. La personne qui gère ce serveur les active, sur cette même page.",
-      "noEngineHere": "Les messages vocaux s'activent dès que vous choisissez ci-dessous ce qui transforme la voix en texte.",
+      "noEngine": "Pour l'instant, les messages vocaux partent en audio, donc les agents ne les entendent pas encore.",
+      "noEngineAsk": "Pour l'instant, les messages vocaux partent en audio, donc les agents ne les entendent pas. La personne qui gère ce serveur choisit ce qui transforme la voix en texte, sur cette même page.",
+      "noEngineHere": "Les messages vocaux partent en audio jusqu'à ce que vous choisissiez ci-dessous ce qui transforme la voix en texte.",
       "engineTitle": "Ce qui transforme la voix en texte",
       "own": "Votre propre serveur",
       "ownHelp": "Whisper ou Parakeet sur votre machine. L'audio y reste.",
@@ -11999,10 +12000,24 @@
       "key": "Clé {{name}}",
       "keyPlaceholder": "Collez ici",
       "test": "Tester",
-      "tested": "Ça marche. Tout le monde voit maintenant le microphone.",
+      "tested": "Ça marche. Les messages vocaux arrivent maintenant aux agents sous forme de texte.",
       "sealed": "Conservée chiffrée sur votre serveur et plus jamais affichée.",
       "leaves": "L'audio des messages vocaux est envoyé à {{name}} pour devenir du texte.",
       "invalid": "La clé enregistrée ne s'ouvre pas sur ce serveur. Collez-la à nouveau."
+    },
+    "setup": {
+      "memberTitle": "La voix n'est pas encore activée ici",
+      "memberText": "Votre message part en audio que chacun peut écouter. Les agents ne l'entendent pas tant que {{name}} n'a pas choisi ce qui transforme la voix en texte.",
+      "memberTextNoName": "Votre message part en audio que chacun peut écouter. Les agents ne l'entendent pas tant que la personne qui gère ce serveur n'a pas choisi ce qui transforme la voix en texte.",
+      "ask": "Demander à {{name}}",
+      "asked": "{{name}} a reçu votre demande",
+      "recordAnyway": "Enregistrer quand même",
+      "ownerTitle": "Choisissez ce qui transforme la voix en texte",
+      "ownerText": "D'ici là, les messages vocaux partent en audio que chacun peut écouter, et les agents ne les entendent pas.",
+      "readyTitle": "Les messages vocaux sont activés",
+      "readyText": "Ce que vous dites arrive aux agents sous forme de texte.",
+      "record": "Enregistrer un message",
+      "ownerPhone": "Choisissez-le dans Paramètres › Voix sur le web ou dans l'app de bureau. D'ici là, les messages vocaux partent en audio que chacun peut écouter, et les agents ne les entendent pas."
     }
   },
   "media": {
@@ -17476,6 +17491,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "En attente de {{permission}} sur {{computer}}",
+      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
+      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
+      "asked": "Nécessaire pour lancer {{trigger}}",
+      "names": {
+        "app_management": "Gestion des apps",
+        "screen": "Enregistrement de l’écran",
+        "accessibility": "Accessibilité",
+        "disk": "Accès complet au disque",
+        "network": "Réseau local",
+        "camera": "Caméra",
+        "microphone": "Micro",
+        "automation": "Automatisation"
+      }
+    },
     "leadCloud": "Là où travaillent vos agents : l'ordinateur de l'espace de travail et les appareils que les personnes connectent.",
     "lead": "Là où travaillent vos agents : les ordinateurs et les téléphones que les personnes connectent.",
     "connect": "Connecter un appareil",
@@ -18124,22 +18155,6 @@
         "once": "Autorisé une fois.",
         "always": "{{deviceName}} est maintenant partagé avec eux.",
         "no": "Vous avez dit non."
-      }
-    },
-    "permission": {
-      "title": "En attente de {{permission}} sur {{computer}}",
-      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
-      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
-      "asked": "Nécessaire pour lancer {{trigger}}",
-      "names": {
-        "app_management": "Gestion des apps",
-        "screen": "Enregistrement de l’écran",
-        "accessibility": "Accessibilité",
-        "disk": "Accès complet au disque",
-        "network": "Réseau local",
-        "camera": "Caméra",
-        "microphone": "Micro",
-        "automation": "Automatisation"
       }
     }
   },

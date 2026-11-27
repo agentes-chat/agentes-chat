@@ -706,6 +706,8 @@ export const OPENROUTER_KEY: Credential = {
 type MediaSetting =
   | "voiceMessages"
   | "voiceAvailable"
+  | "speechState"
+  | "speechOwner"
   | "gifs"
   | "gifRating"
   | "agentStickers"
@@ -733,6 +735,10 @@ function mediaSettings(state: FakeState): Pick<OrgSettings, MediaSetting> {
     agentMedia: state.media?.agentMedia ?? "sometimes",
     voiceMessages: state.media?.voiceMessages ?? true,
     voiceAvailable: state.media?.voiceAvailable ?? false,
+    // Unset: a server older than `speechState`, whose microphone shows only with an engine.
+    ...(state.media?.speechState
+      ? { speechState: state.media.speechState, speechOwner: state.media.speechOwner ?? null }
+      : {}),
     gifsAvailable: state.media?.gifsAvailable ?? true,
     agentMediaAvailable: state.media?.agentMediaAvailable ?? true,
   };
