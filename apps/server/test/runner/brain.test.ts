@@ -2901,8 +2901,8 @@ const SHARED = "0193ffff-0000-7000-8000-000000000002";
 const fakeEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("FAKE_CLAUDE")));
 
 /** Root's side, faked: the CLI is the fake one, the worker a list of what it was told. */
-function delegatedSetup(over: Partial<DelegatedTurn> = {}) {
-  const s = setup({ mcp: undefined });
+function delegatedSetup(over: Partial<DelegatedTurn> = {}, opts: Partial<BrainManagerOptions> = {}) {
+  const s = setup({ mcp: undefined, ...opts });
   const room = path.join(s.home, "store", "run", "21000");
   const configDir = path.join(s.home, "store", "config");
   mkdirSync(room, { recursive: true });
@@ -3022,6 +3022,15 @@ test.if(posix)("delegated: root reads nothing of the folder; what it writes come
   );
   const again = await resumed.turn(1, "hi", { conversation: "# This conversation\nsomething" });
   expect(JSON.stringify(again.final)).not.toContain("planted");
+});
+
+test.if(posix)("delegated: the turn's tools are the worker's to ask for, never asked here too", async () => {
+  const asked: string[] = [];
+  const { turn, frames } = delegatedSetup({}, { prefetchTools: (id) => void asked.push(id) });
+  const r = await turn(1, "hi");
+  expect(r.final).toMatchObject({ type: "done" });
+  expect(frames.some((f) => f.runId === RUN(1) && f.serverToken)).toBe(true);
+  expect(asked).toEqual([]);
 });
 
 test.if(posix)("delegated: a resume needs root's record and a plain transcript, never just a file", async () => {

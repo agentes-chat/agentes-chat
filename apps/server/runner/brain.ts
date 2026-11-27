@@ -3080,7 +3080,8 @@ export class BrainManager {
     if (bridge) {
       bridge.runId = req.runId;
       bridge.runToken = typeof req.mcp?.token === "string" ? req.mcp.token : null;
-      this.opts.prefetchTools?.(live.id);
+      // A delegated CLI's list goes through the agent's worker's bridge: asked here it would be a second, unused ask.
+      if (!live.bridged) this.opts.prefetchTools?.(live.id);
     }
     this.running.set(req.runId, live);
     // Usage goes to the account the turn thinks with, or to the computer's own sign-in.
