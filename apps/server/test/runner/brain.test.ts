@@ -151,6 +151,19 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
     },
   });
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
+  // A slow turn's evidence: lines of text, each cut, the rest dropped; a failed turn's timings travel on its error.
+  expect(done({ warm: true, evidence: ["+3ms [DEBUG] [API REQUEST]", 4, "x".repeat(400)] })).toMatchObject({
+    event: { timings: { warm: true, evidence: ["+3ms [DEBUG] [API REQUEST]", "x".repeat(300)] } },
+  });
+  expect(
+    parseRunnerFrame(
+      line({
+        type: "brain.event",
+        runId: RUN(1),
+        event: { type: "error", code: "claude_failed", message: "no", timings: { warm: false, initMs: 9100 } },
+      }),
+    ),
+  ).toMatchObject({ event: { type: "error", code: "claude_failed", timings: { warm: false, initMs: 9100 } } });
 });
 
 test("hello: Claude Code's login state travels (never anything else from auth status)", async () => {
@@ -1793,6 +1806,31 @@ test("parser: the first token is when the API's first message started, the first
   expect(p.stats).toMatchObject({ firstTokenAt: 1_000, firstAssistantAt: 1_050 });
 });
 
+test.if(posix)(
+  "a slow turn carries what its CLI's debug log said of it, scrubbed; a quick one carries none",
+  async () => {
+    const { turn, spawns } = setup({ claudeVersion: () => "2.1.300" });
+    const slow = await turn(1, "RETRYWAIT");
+    expect(spawns()[0]?.args).toContain("--debug-file");
+    const evidence = slow.final.type === "done" ? (slow.final.timings?.evidence ?? []) : [];
+    expect(evidence.some((l) => /^\+?-?\d+ms \[DEBUG\] \[STARTUP\] setup\(\) completed/.test(l))).toBe(true);
+    expect(evidence.some((l) => l.includes("[API REQUEST] /v1/messages"))).toBe(true);
+    expect(evidence.some((l) => l.includes("529 overloaded_error for [email]"))).toBe(true);
+    expect(evidence.join("\n")).not.toContain("the words a hook said");
+    expect(evidence.join("\n")).not.toContain("ana@example.com");
+    // Warm, with no retry: within its budgets, so nothing of its log goes.
+    const quick = await turn(2, "second");
+    expect(quick.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(quick.final.type === "done" ? quick.final.timings?.evidence : "none").toBeUndefined();
+  },
+);
+
+test.if(posix)("an older Claude Code starts with no debug log", async () => {
+  const { turn, spawns } = setup({ claudeVersion: () => "2.1.200" });
+  await turn(1, "hi");
+  expect(spawns()[0]?.args).not.toContain("--debug-file");
+});
+
 test("parser: the first request is when the CLI first said it was asking the API, a compaction's status aside", () => {
   let now = 1_000;
   const p = new ClaudeStreamParser(() => now);
@@ -2218,6 +2256,8 @@ test.if(posix)(
         retryable: true,
         cause: "auth_rejected",
         httpStatus: 401,
+        // How the failed turn went, as a `done` says it.
+        timings: expect.objectContaining({ warm: false }),
       });
       expect(Date.now() - started).toBeLessThan(10_000);
       // Nothing to sign in with on the computer: signed out, no CLI started.
@@ -2695,6 +2735,8 @@ test.if(posix)("a turn of its own stuck past the wait: the process is killed and
     await waitFor(() => proc?.strayTurn === true);
     const next = await turn(2, "after");
     expect(next.final).toMatchObject({ type: "done", text: "echo 1: after" });
+    // The wait for that turn is the runner's, before its CLI had this one (never the API's first token).
+    expect(next.final.type === "done" ? next.final.timings?.sentMs : 0).toBeGreaterThanOrEqual(300);
     noLeak(next);
     await waitFor(() => proc?.exited === true);
     expect(spawns()).toHaveLength(2);

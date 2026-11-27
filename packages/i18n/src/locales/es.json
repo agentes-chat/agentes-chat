@@ -17171,10 +17171,48 @@
       "viaBy": "Los agentes usan el internet de {{name}} ({{person}})",
       "viaHint": "Los sitios ven la ubicación de esa computadora. Quien la conectó puede desactivarlo en su página."
     },
-    "moving": {
-      "short": "Cambiando de servidor",
-      "line": "Cambiando a un servidor nuevo… vuelve en unos minutos",
-      "named": "{{computer}} se está cambiando a un servidor nuevo… vuelve en unos minutos"
+    "maintenance": {
+      "short": {
+        "moving": "Cambiando de servidor",
+        "restarting": "Reiniciando",
+        "updating": "Actualizando",
+        "converting": "Mejorando el disco",
+        "host_maintenance": "Mantenimiento",
+        "other": "Mantenimiento"
+      },
+      "what": {
+        "moving": "Pasando a un servidor nuevo",
+        "copying": "Copiando a un servidor nuevo",
+        "restarting": "Reiniciando",
+        "updating": "Actualizando su software",
+        "converting": "Mejorando su disco",
+        "host_maintenance": "Su servidor está en mantenimiento",
+        "other": "En mantenimiento"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "vuelve en unos {{time}}",
+      "backSoon": "vuelve en unos minutos",
+      "late": "está tardando un poco más de lo previsto",
+      "slower": "puede ir más lento mientras tanto",
+      "slowerFor": "puede ir más lento durante unos {{time}}",
+      "why": {
+        "moving": "Lo estamos pasando a un servidor nuevo.",
+        "copying": "Estamos copiando sus archivos a un servidor nuevo mientras trabaja.",
+        "handover": "Estamos pasando sus últimos cambios al servidor nuevo.",
+        "restarting": "Lo estamos reiniciando.",
+        "unresponsive": "Dejó de responder, así que lo reiniciamos automáticamente.",
+        "updating": "Estamos actualizando su software.",
+        "converting": "Estamos pasando su disco a un almacenamiento más rápido.",
+        "host_maintenance": "El servidor donde funciona está en mantenimiento.",
+        "other": "Estamos haciendo un mantenimiento en él."
+      },
+      "since": "Desde las {{time}}",
+      "expectedBack": "Vuelve hacia las {{time}}",
+      "expectedDone": "Termina hacia las {{time}}",
+      "meanwhile": "Los mensajes a sus agentes esperan y siguen solos cuando vuelva.",
+      "working": "Sus agentes siguen trabajando mientras tanto.",
+      "about": "Qué está pasando"
     },
     "online": "En línea",
     "offline": "Sin conexión",
@@ -19865,6 +19903,7 @@
         "usingScreen": "Usó la pantalla",
         "cloningRepo": "Clonó un repositorio",
         "listingRepos": "Listó los repositorios",
+        "updatingCode": "Actualizó el código",
         "preparingCli": "Preparó {{app}}",
         "openingPullRequest": "Abrió un pull request",
         "handingOff": "Entregó un informe",
@@ -19989,6 +20028,7 @@
       "usingScreen": "usando la pantalla",
       "cloningRepo": "clonando un repositorio",
       "listingRepos": "listando los repositorios",
+      "updatingCode": "actualizando el código",
       "preparingCli": "preparando {{app}} en {{computer}}",
       "preparingCliPct": "preparando {{app}} en {{computer}} ({{percent}} %)",
       "openingPullRequest": "abriendo un pull request",

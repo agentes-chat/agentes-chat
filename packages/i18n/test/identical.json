@@ -1213,7 +1213,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "machines.maintenance.short.host_maintenance",
+      "machines.maintenance.short.other"
     ],
     "de": [
       "devices.permission.names.automation",

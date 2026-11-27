@@ -18,6 +18,7 @@ import {
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { formatDuration } from "./machine-task-text";
 import { taskRequester } from "./machine-tasks";
+import { maintenancePhrase } from "./machines";
 import { notify, resolveNotifications } from "./notifications";
 import { personAtComputerWay } from "./runner-update";
 import { replyThreadOf } from "./runs";
@@ -555,7 +556,7 @@ function statusWords(s: DeviceStatus, people: Map<string, string>) {
     case "paused":
       return `paused by its owner${s.until ? ` until ${s.until}` : ""}`;
     case "moving":
-      return "moving to another server, back in a few minutes";
+      return s.maintenance ? maintenancePhrase(s.maintenance) : "moving to another server, back in a few minutes";
     case "offline":
       return `${s.withHost ? "offline with its computer" : "offline"} (${seenAgo(s.lastSeenAt)})`;
     case "unsupported":
@@ -635,7 +636,7 @@ function computerLine(d: ComputerDevice, people: Map<string, string>, requester:
     .join(", ");
   const phones = d.phones.map((p) => phoneLine(p, people));
   return [
-    `- "${d.name}" (${facts}; ${owner}${d.systemMode ? "; each agent its own user" : ""}): ${statusWords(d.status, people)}.`,
+    `- "${d.name}" (${facts}; ${owner}${d.systemMode ? "; each agent its own user" : ""}): ${statusWords(d.status, people)}${d.maintenance && !d.maintenance.away ? ` (${maintenancePhrase(d.maintenance)})` : ""}.`,
     tools ? `  Tools: ${tools}.` : "",
     off ? `  ${off}` : "",
     ...phones.map((line) => `  Phone ${line}.`),

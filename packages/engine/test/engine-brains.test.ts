@@ -75,6 +75,7 @@ import {
   PERSON_ROOM_RETRY_MS,
   postPersonMessage,
   queueOnRun,
+  type RunProfileReport,
   receiptsFor,
   recoverStaleRuns,
   resetAccountFailures,
@@ -82,6 +83,7 @@ import {
   resumeRunsWaitingForMachine,
   roomGate,
   roomHead,
+  runClaims,
   runWhere,
   SESSION_IDLE_MS,
   SESSION_MAX_INPUT_TOKENS,
@@ -354,6 +356,70 @@ test("a computer-brain turn ends after the tools it ran through the bridge (neve
     .where(eq(schema.runToolTokens.runId, run?.id ?? ""));
   expect(tokens.length).toBe(1);
   expect(tokens[0]?.revokedAt).not.toBeNull();
+});
+
+test("each turn keeps its trace with the claim: the server's marks, its runner's, its system by blocks, broken budgets", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(_turn, io) {
+      io.phase?.("code");
+      await Bun.sleep(30);
+      io.phase?.(null);
+      yield { type: "tool_started", id: "t1", name: "Bash" };
+      await Bun.sleep(20);
+      yield { type: "tool_call", id: "t1", name: "Bash", input: {}, executed: { content: "ok" } };
+      yield { type: "text_delta", text: "Pronto." };
+      yield {
+        type: "done",
+        text: "Pronto.",
+        timings: {
+          warm: false,
+          cold: "new_session",
+          initMs: 9100,
+          firstTokenMs: 9600,
+          evidence: ["+412ms [DEBUG] [API REQUEST] /v1/messages"],
+        },
+      };
+    },
+  };
+  const told: RunProfileReport[] = [];
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+    onRunProfile: (p) => told.push(p),
+  });
+  await post(f, "@dev roda os testes");
+  await drainOutbox(f.db, handlers);
+
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { turns: Record<string, unknown>[]; slow: unknown[] }[];
+  const [turn] = claim?.turns ?? [];
+  expect(turn).toMatchObject({ brain: "claude_code", end: "done", tools: { count: 1 } });
+  expect(turn?.preTurnMs as number).toBeGreaterThanOrEqual(25);
+  expect(turn?.firstTextMs as number).toBeGreaterThanOrEqual(turn?.firstEventMs as number);
+  expect((turn?.tools as { ms: number } | undefined)?.ms ?? 0).toBeGreaterThanOrEqual(15);
+  expect(turn?.runner).toMatchObject({ initMs: 9100, evidence: ["+412ms [DEBUG] [API REQUEST] /v1/messages"] });
+  // Its system text by blocks, a short hash each: which block changed between two turns, with no word of it.
+  const system = Object.values(turn?.system as Record<string, string>);
+  expect(system.length).toBeGreaterThan(1);
+  for (const hash of system) expect(hash).toMatch(/^[0-9a-f]{8}$/);
+  // A new CLI past its budget; its first token 500 ms after it was ready is within its own.
+  expect(claim?.slow).toEqual([{ stage: "init", ms: 9100, budgetMs: 8000, cause: "new_session", turn: 1 }]);
+  expect(told.at(-1)?.slow).toEqual(claim?.slow as RunProfileReport["slow"]);
+  // The operator reads it as a waterfall: the claim's stages and the turn's marks on one time line.
+  const [read] = runClaims(run?.profiles);
+  expect(read?.turns[0]).toMatchObject({
+    brain: "claude_code",
+    runner: { initMs: 9100 },
+    evidence: [expect.any(String)],
+  });
+  const spans = read?.waterfall.map((w) => w.span) ?? [];
+  expect(spans).toEqual(expect.arrayContaining(["turn#1", "turn#1.pre_turn", "turn#1.init", "turn#1.first_token"]));
+  expect(spans.some((s) => s.startsWith("model#1"))).toBe(true);
 });
 
 test("a computer turn keeps where its time went: its checkouts' update, the CLI's start and first byte, tools, the model", async () => {
@@ -1991,6 +2057,20 @@ test("its computer moving to another server: the run's wait says so, for the app
   const waitOfTask = async () => (await taskManager(f.db, f.owner.id, f.org.id)).tasks[0]?.wait;
   await f.db.update(schema.machines).set({ movingAt: new Date() }).where(eq(schema.machines.id, machineId));
   expect((await waitOfTask())?.moving).toBe(true);
+  // What is done to it, with when it should be back (ADR 0257).
+  const eta = new Date(Date.now() + 2 * 60_000).toISOString();
+  const since = new Date().toISOString();
+  await f.db
+    .update(schema.machines)
+    .set({ maintenance: { kind: "restarting", since, eta, detail: "unresponsive" } })
+    .where(eq(schema.machines.id, machineId));
+  expect((await waitOfTask())?.maintenance).toEqual({
+    kind: "restarting",
+    since,
+    eta,
+    detail: "unresponsive",
+    away: true,
+  });
   await f.db.update(schema.machines).set({ movingAt: null }).where(eq(schema.machines.id, machineId));
   expect((await waitOfTask())?.moving).toBeUndefined();
 });

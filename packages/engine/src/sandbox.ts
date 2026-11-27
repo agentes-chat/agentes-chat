@@ -17,6 +17,7 @@ import {
   MachineOfflineError,
   MachinePausedError,
   REMOVED_COMPUTER_MESSAGE,
+  type ShownMaintenance,
 } from "./machines";
 import { missionOfRun } from "./mission-context";
 import { requirePermission } from "./organizations";
@@ -306,7 +307,7 @@ export async function withConnectedMachine<T>(
   if (!status || status.orgId !== ctx.orgId) {
     throw new SandboxUnavailableError(REMOVED_COMPUTER_MESSAGE);
   }
-  if (!status.online) throw new MachineOfflineError(status.name, status.kind);
+  if (!status.online) throw new MachineOfflineError(status.name, status.kind, status.maintenance);
   // Paused by its owner (ADR 0036 §6): nothing new starts there; the agent relays why and until when.
   if (status.paused && !options.allowPaused)
     throw new MachinePausedError(status.name, status.paused.until, status.paused.timezone);
@@ -352,6 +353,8 @@ export async function agentComputerInfo(
       paused: { until: string | null; timezone: string | null } | null;
       /** The folders the machine allows this agent beyond its own folder (protocol 10; empty when none or unknown). */
       folders: string[];
+      /** What we do to the workspace's own computer now (`shownMaintenance`). */
+      maintenance: ShownMaintenance | null;
     }
   | { kind: "removed" }
 > {
@@ -373,6 +376,7 @@ export async function agentComputerInfo(
     protocol: status.protocol,
     paused: status.paused ?? null,
     folders: status.access ? status.access.folders.filter((f) => f.agents.includes(agentId)).map((f) => f.path) : [],
+    maintenance: status.maintenance ?? null,
   };
 }
 

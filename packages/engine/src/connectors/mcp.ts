@@ -1,4 +1,5 @@
 import { type ComposioClient, composioFile, FileTooLargeError } from "@agenteschat/adapters";
+import { and, eq, schema } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -370,7 +371,12 @@ export function serverInstructionsPrompt(
 }
 
 const LIST_TTL_MS = 60_000;
-/** How old a listed set may get and still be served while a refresh runs: a server's tool changes reach the pins check by then. */
+/**
+ * A process's first listing of a connection (after a restart) waits this long for the server before it starts from
+ * the pinned tools: a server's change still reaches agents with the listing that found it, a slow server holds nobody.
+ */
+const COLD_LIST_WAIT_MS = 500;
+/** A server whose refresh failed this long after its last listing that worked is taken as down: its tools are hidden. */
 const STALE_MAX_MS = 10 * LIST_TTL_MS;
 
 /** Where a tool call's signed caller statement goes in the request's `params._meta` (ADR 0181). */
@@ -406,6 +412,8 @@ export function createConnectorToolSource(
   /** `at` is the last try, `listed` the last listing that worked. */
   const cache = new Map<string, ({ at: number; listed: number } & ServerListing) | { at: number; failed: unknown }>();
   const listing = new Map<string, Promise<ServerListing>>();
+  /** Connections this process listed, whatever their key: a changed one lists again instead of reading its pins. */
+  const listedHere = new Set<string>();
   /** How many times a listing found changed tools and worked out a custom server's levels again. */
   let reclassified = 0;
   const github = { fetch: deps.http ?? fetch, apiUrl: "https://api.github.com", ...deps.githubApp?.http };
@@ -433,9 +441,12 @@ export function createConnectorToolSource(
 
   /**
    * The server's tools (and its instructions), stale-while-revalidate: a list past its TTL is returned at once while
-   * one refresh per connection runs behind it. A connection with no list yet, or one older than `STALE_MAX_MS`, waits
-   * on the network. A failed refresh keeps the last list; a failure with no usable list is kept for the TTL, so a
-   * server that is down isn't asked again on every claim.
+   * one refresh per connection runs behind it, so a server's changes reach the pins check on its next use; once a
+   * refresh failed more than `STALE_MAX_MS` after the last listing that worked, the server is down and its tools are
+   * hidden. A connection this process never listed (it restarted) gets its listing when the server answers within
+   * `COLD_LIST_WAIT_MS`, else its pinned tools, the version agents last read (`connector_tool_pins`), and its kept
+   * instructions while the listing goes on; only one with no pin (its first listing ever) waits on the network. A failed refresh keeps the last list; a failure with no
+   * usable list is kept for the TTL, so a server that is down isn't asked again on every claim.
    */
   async function serverTools(connection: ConnectorConnection): Promise<ServerListing> {
     // A change to the connection lists again at once; a token refresh isn't one (it leaves `updatedAt` as it was).
@@ -443,16 +454,44 @@ export function createConnectorToolSource(
     const hit = cache.get(key);
     const now = Date.now();
     const fresh = hit !== undefined && now - hit.at < LIST_TTL_MS;
-    if (hit && "tools" in hit && now - hit.listed < STALE_MAX_MS) {
+    if (hit && "tools" in hit && (hit.at === hit.listed || now - hit.listed < STALE_MAX_MS)) {
       if (!fresh) refreshTools(connection, key).catch(() => {});
       return hit;
     }
     if (hit && "failed" in hit && fresh) throw hit.failed;
-    return refreshTools(connection, key);
+    // A connection that changed in this process is listed again before it is used: only a restart starts from pins.
+    if (hit || listedHere.has(connection.id)) return refreshTools(connection, key);
+    const pinned = pinnedListing(connection).catch(() => null);
+    const listed = refreshTools(connection, key);
+    const quick = await Promise.race([listed.catch(() => null), Bun.sleep(COLD_LIST_WAIT_MS).then(() => undefined)]);
+    if (quick) return quick;
+    // Slow: the pinned version now, the listing for the next claim. A server that refused has no tools this turn.
+    return (quick === undefined && (await pinned)) || listed;
+  }
+
+  /** The tools agents last read from this connection (its pins) and its kept instructions; null with no pin. */
+  async function pinnedListing(connection: ConnectorConnection): Promise<ServerListing | null> {
+    const pinned = pinnedTool(connection);
+    const rows = await deps.db
+      .select({
+        name: schema.connectorToolPins.toolName,
+        description: schema.connectorToolPins.description,
+        inputSchema: schema.connectorToolPins.inputSchema,
+      })
+      .from(schema.connectorToolPins)
+      .where(
+        and(
+          eq(schema.connectorToolPins.orgId, connection.orgId),
+          eq(schema.connectorToolPins.connectionId, connection.id),
+        ),
+      );
+    const tools = rows.filter((r) => pinned(r.name));
+    return tools.length > 0 ? { tools, instructions: connection.instructions ?? null } : null;
   }
 
   function refreshTools(connection: ConnectorConnection, key: string): Promise<ServerListing> {
     let pending = listing.get(key);
+    listedHere.add(connection.id);
     if (!pending) {
       pending = listNow(connection)
         .then(
@@ -464,6 +503,7 @@ export function createConnectorToolSource(
           (failed: unknown) => {
             const now = Date.now();
             const prev = cache.get(key);
+            // Down past `STALE_MAX_MS`: the failure is what claims read for the TTL, never a wait on the server each.
             cache.set(
               key,
               prev && "tools" in prev && now - prev.listed < STALE_MAX_MS ? { ...prev, at: now } : { at: now, failed },

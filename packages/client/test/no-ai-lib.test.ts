@@ -377,7 +377,7 @@ describe("the Cloud's plan gate tells the truth", () => {
   test("a computer away moving to another server says so, never to use an API key for now", () => {
     const moving = { lastSeenAt: new Date(NOW - CLOUD_AWAY_MS - 60_000).toISOString(), moving: true };
     const line = cloudLine({ state: "offline" }, "claude_code", moving);
-    expect(line?.text).toBe("Acme is moving to a new server… back in a few minutes");
+    expect(line?.text).toBe("Acme: Moving to a new server… back in a few minutes");
   });
 
   function cloudLine(

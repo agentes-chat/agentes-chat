@@ -99,7 +99,8 @@ import {
   publishMachineAgentsChanged,
   publishMachineStatus,
   publishMachineUpdated,
-  shownMoving,
+  type ShownMaintenance,
+  shownMaintenance,
   shownStandby,
   withTaskLimit,
 } from "./machines";
@@ -201,8 +202,9 @@ export interface MachineStatus {
   access?: RunnerAccess | null;
   /** The operator put the workspace's own computer in standby (ADR 0161): asleep, it is woken when wanted. */
   standby?: boolean;
-  /** The workspace's own computer is away moving to another server (`shownMoving`). */
+  /** The workspace's own computer is away for what we do to it (`shownMoving`): `maintenance` says what. */
   moving?: boolean;
+  maintenance?: ShownMaintenance;
   /** `system`: each agent works as its own OS user there (ADR 0058 §10); absent, all as the runner's user. */
   mode?: "system";
 }
@@ -840,6 +842,10 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Awake: whatever put it in standby is over (ADR 0161).
         standbyAt: null,
         wakeWantedAt: null,
+        // Back from a restart or an update: it is over, whatever the operator says next (ADR 0257).
+        ...(machine.maintenance?.kind === "restarting" || machine.maintenance?.kind === "updating"
+          ? { movingAt: null, maintenance: null }
+          : {}),
         ...(nextHostName && nextHostName !== machine.name ? { name: nextHostName } : {}),
         hostname: frame.hostname,
         os: frame.os,
@@ -1835,7 +1841,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Asleep by design: whatever asks for it wakes it. Who waits for that does it once, outside: a run's tool
         // (`callWhenBack`), a person's request (`awakeForPerson`); a job fails now.
         if (inStandby(row)) void wantMachine(db, machineId, "call").catch(() => {});
-        throw new MachineOfflineError(row.name, row.kind);
+        throw new MachineOfflineError(row.name, row.kind, shownMaintenance(row));
       }
       if (phoneOp && row.protocol < phonesNeed) throw phonesTooOld(row.name);
       if (isNewWork(request)) {
@@ -1855,6 +1861,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       if (!row || row.deletedAt) return null;
       const online = local.has(machineId) || (machineOnline(row) && row.connectedReplica !== replicaId);
       const pause = machinePause(row);
+      const maintenance = shownMaintenance(row);
       return {
         id: row.id,
         orgId: row.orgId,
@@ -1871,7 +1878,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         access: row.access ?? null,
         // Still starting after its standby ended counts too: what waits for it waits on (`shownStandby`).
         standby: inStandby(row) || shownStandby(row),
-        ...(shownMoving(row) ? { moving: true } : {}),
+        ...(maintenance ? { maintenance, ...(maintenance.away ? { moving: true } : {}) } : {}),
         ...(row.executors?.mode === "system" ? { mode: "system" as const } : {}),
       };
     },
