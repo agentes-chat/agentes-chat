@@ -1406,6 +1406,26 @@
       "lastDay": "Hari terakhir"
     }
   },
+  "calendar": {
+    "nothing": "{{days}} · tidak ada jadwal",
+    "nothingToday": "Tidak ada jadwal hari ini.",
+    "routine": "Rutinitas · {{agent}}",
+    "reminder": "Pengingat · {{agent}}",
+    "reminderIn": "Pengingat · {{agent}} · di {{place}}",
+    "deadline": "Tenggat tugas",
+    "deadlineOf": "Tenggat tugas · {{name}}",
+    "timeRange": "{{from}} sampai {{to}}",
+    "dayRange": "{{from}} sampai {{to}}",
+    "noAnswer": "belum menjawab",
+    "you": "{{name}} (Anda)",
+    "agentPrepares": "Menerima agenda dan menyiapkan ringkasan sebelumnya",
+    "openChannel": "Buka #{{name}}",
+    "openConversation": "Buka percakapan",
+    "deleteEvent": "Hapus acara",
+    "deleteAsk": "Hapus acara ini?",
+    "noRepeat": "Tidak berulang",
+    "add": "Tambah"
+  },
   "coding": {
     "pill": "{{who}}. Lihat kodenya",
     "seeChanges": "Lihat perubahannya",

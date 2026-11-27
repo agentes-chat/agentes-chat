@@ -172,14 +172,14 @@ const styles = StyleSheet.create({
   over: { position: "absolute", top: 0, left: 0, right: 0 },
   // Over the kept list's top edge, taking no room: the list doesn't move when it comes or goes.
   bar: { position: "absolute", top: 0, left: SCREEN_X, right: SCREEN_X, height: 2, borderRadius: 1 },
-  // The same box as `ListRow`: 16 at the sides, the 52 avatar, 12 to the text, 76 tall.
+  // The same box as `ListRow`: 16 at the sides, the 48 avatar, 12 to the text, 72 tall.
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    minHeight: 76,
+    minHeight: 72,
   },
   avatar: { width: LIST_AVATAR, height: LIST_AVATAR, borderRadius: Math.round(LIST_AVATAR * 0.3) },
   tx: { flex: 1, minWidth: 0, gap: 8 },

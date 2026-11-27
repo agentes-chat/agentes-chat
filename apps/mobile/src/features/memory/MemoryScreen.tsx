@@ -88,7 +88,7 @@ export function MemoryScreen({ agent: initialAgent }: { agent?: string } = {}) {
     <ListRow
       key={m.id}
       divider={i > 0}
-      leading={<Face who={{ type: "agent", id: m.agentId }} size={LIST_AVATAR - 2} live={false} />}
+      leading={<Face who={{ type: "agent", id: m.agentId }} size={LIST_AVATAR} live={false} />}
       title={m.summary ?? memoryLine(t, m)}
       titleLines={2}
       sub={`${dir.nameOf({ type: "agent", id: m.agentId })} · ${when(m.updatedAt)}`}

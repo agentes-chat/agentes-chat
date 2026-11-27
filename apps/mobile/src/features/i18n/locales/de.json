@@ -1495,6 +1495,26 @@
       "lastDay": "Letzter Tag"
     }
   },
+  "calendar": {
+    "nothing": "{{days}} · nichts geplant",
+    "nothingToday": "Heute ist nichts geplant.",
+    "routine": "Routine · {{agent}}",
+    "reminder": "Erinnerung · {{agent}}",
+    "reminderIn": "Erinnerung · {{agent}} · in {{place}}",
+    "deadline": "Fällige Aufgabe",
+    "deadlineOf": "Fällige Aufgabe · {{name}}",
+    "timeRange": "{{from}} bis {{to}}",
+    "dayRange": "{{from}} bis {{to}}",
+    "noAnswer": "noch keine Antwort",
+    "you": "{{name}} (du)",
+    "agentPrepares": "Bekommt die Agenda und bereitet vorher eine Zusammenfassung vor",
+    "openChannel": "#{{name}} öffnen",
+    "openConversation": "Unterhaltung öffnen",
+    "deleteEvent": "Termin löschen",
+    "deleteAsk": "Diesen Termin löschen?",
+    "noRepeat": "Wiederholt sich nicht",
+    "add": "Hinzufügen"
+  },
   "coding": {
     "pill": "{{who}}. Code ansehen",
     "seeChanges": "Änderungen ansehen",

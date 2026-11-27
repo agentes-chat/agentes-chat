@@ -89,6 +89,8 @@ export default function MainStack() {
     const own: Record<string, NativeStackNavigationOptions> = {
       "(tabs)": base,
       "chat/[channelId]": solid,
+      // Calendário: the month and the week strip stay put under an opaque bar, the days scroll below them.
+      "calendar/index": solid,
       // Writing a wiki page: its text and the tools over the keys lay out below an opaque bar (nothing under it).
       "wiki-write": solid,
       "block/[id]": solid,

@@ -128,7 +128,8 @@ describe("lists that load from the server refresh on a pull", () => {
   test("Memória's rows are the list's own, as the wiki's beside it", () => {
     const memory = src("features/memory/MemoryScreen.tsx");
     expect(memory).toContain("<ListRow");
-    expect(memory).toContain("size={LIST_AVATAR - 2}");
+    // Every face fills the row's avatar box (an agent's too).
+    expect(memory).toContain("size={LIST_AVATAR}");
     expect(memory).not.toContain("<Row\n");
   });
 });

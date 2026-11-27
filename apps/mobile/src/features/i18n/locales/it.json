@@ -1580,6 +1580,26 @@
       "lastDay": "Ultimo giorno"
     }
   },
+  "calendar": {
+    "nothing": "{{days}} · niente in programma",
+    "nothingToday": "Niente in programma per oggi.",
+    "routine": "Routine · {{agent}}",
+    "reminder": "Promemoria · {{agent}}",
+    "reminderIn": "Promemoria · {{agent}} · in {{place}}",
+    "deadline": "Scadenza attività",
+    "deadlineOf": "Scadenza attività · {{name}}",
+    "timeRange": "Dalle {{from}} alle {{to}}",
+    "dayRange": "Dal {{from}} al {{to}}",
+    "noAnswer": "non ha ancora risposto",
+    "you": "{{name}} (tu)",
+    "agentPrepares": "Riceve l’ordine del giorno e prepara un riassunto prima",
+    "openChannel": "Apri #{{name}}",
+    "openConversation": "Apri la conversazione",
+    "deleteEvent": "Elimina evento",
+    "deleteAsk": "Eliminare questo evento?",
+    "noRepeat": "Non si ripete",
+    "add": "Aggiungi"
+  },
   "coding": {
     "pill": "{{who}}. Vedi il codice",
     "seeChanges": "Vedi le modifiche",

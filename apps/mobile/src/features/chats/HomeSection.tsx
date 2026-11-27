@@ -111,8 +111,9 @@ export function LandRow({
 }
 
 /**
- * A section of Conversas: the title, its count (medium, faint) and a chevron that
- * turns when collapsed; tapping the header collapses or opens it. No `count` while its rows load: a "0" that turns
+ * A section of Conversas: the title (20, semibold: a step over the rows' 17-point names, so a section reads above its
+ * rows), its count beside it in the same size, regular and faint, and a chevron that turns when collapsed; tapping the
+ * header collapses or opens it. No `count` while its rows load: a "0" that turns
  * into the real count a moment later is a number that lied.
  */
 export function CollapsibleSection({
@@ -171,7 +172,7 @@ export function CollapsibleSection({
         style={({ pressed }) => [styles.head, pressed && styles.pressed]}
       >
         {mark}
-        <Text variant="small" tone="ink" style={styles.title} accessibilityRole="header" numberOfLines={1}>
+        <Text variant="title3" tone="ink" style={styles.title} accessibilityRole="header" numberOfLines={1}>
           {title}
         </Text>
         {collapsed && unread && unread.count > 0 ? (
@@ -182,7 +183,7 @@ export function CollapsibleSection({
             {...(unread.hot ? { fill: TAB_BADGE.background, color: TAB_BADGE.text } : {})}
           />
         ) : count === undefined ? null : (
-          <Count value={count} size={15} weight={weights.medium} color={c.faint} />
+          <Count value={count} size={20} weight={weights.regular} color={c.faint} />
         )}
         <View style={styles.grow} />
         {menu ? (
@@ -191,7 +192,7 @@ export function CollapsibleSection({
           </View>
         ) : null}
         <Animated.View style={chevron}>
-          <Icon name="chev" size={15} color={c.faint} />
+          <Icon name="chev" size={14} color={c.faint} />
         </Animated.View>
       </Pressable>
       {/* Opened while the list shows, its rows fade in; open when the list mounts, they just show. Closed, they fade
@@ -235,19 +236,20 @@ export function SeeAllRow({ label, onPress }: { label: string; onPress: () => vo
 }
 
 const styles = StyleSheet.create({
-  // The kit's `SectionHeader` box: the screen's sides (SCREEN_X), 24 above and 8 below (the rhythm in eights).
+  // The screen's sides (SCREEN_X), 28 above (one step between the home's blocks, from the right hand's field on) and 10
+  // below, over what the section holds.
   head: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingTop: 24,
+    paddingTop: 28,
     paddingHorizontal: SCREEN_X,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   pressed: { opacity: 0.6 },
   title: { fontWeight: "600", flexShrink: 1 },
-  // The toolbar's 32 over the title's 20-point line: the header keeps its height.
-  menu: { marginVertical: -6 },
+  // The toolbar's 32 over the title's 25-point line: the header keeps its height.
+  menu: { marginVertical: -4 },
   grow: { flex: 1 },
   more: {
     flexDirection: "row",

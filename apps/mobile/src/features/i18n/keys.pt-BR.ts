@@ -1548,6 +1548,27 @@ export const featureKeysPtBR = {
       lastDay: "Último dia",
     },
   },
+  // Calendário (the web's words are `calendar.*`; these are the phone's own).
+  calendar: {
+    nothing: "{{days}} · nada marcado",
+    nothingToday: "Nada marcado para hoje.",
+    routine: "Rotina · {{agent}}",
+    reminder: "Lembrete · {{agent}}",
+    reminderIn: "Lembrete · {{agent}} · em {{place}}",
+    deadline: "Prazo da tarefa",
+    deadlineOf: "Prazo da tarefa · {{name}}",
+    timeRange: "{{from}} às {{to}}",
+    dayRange: "{{from}} a {{to}}",
+    noAnswer: "não respondeu",
+    you: "{{name}} (você)",
+    agentPrepares: "Recebe a pauta e prepara um resumo antes",
+    openChannel: "Abrir #{{name}}",
+    openConversation: "Abrir a conversa",
+    deleteEvent: "Apagar evento",
+    deleteAsk: "Apagar este evento?",
+    noRepeat: "Não repete",
+    add: "Adicionar",
+  },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
     pill: "{{who}}. Ver o código",

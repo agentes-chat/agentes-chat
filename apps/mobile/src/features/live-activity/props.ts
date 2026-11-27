@@ -8,7 +8,7 @@ export interface IslandProps {
   tone: "working" | "waiting" | "done";
   /** The first line: an agent's name, "Iris pede aprovação", "2 trabalhando", "Pronto". */
   headline: string;
-  /** What stands at the closed island's end instead of the first agent's timer; null: the timer. */
+  /** A request's or the end's short word at the closed island's end ("Aprovar?", "Pronto"); null: the first agent's timer. */
   trailing: string | null;
   /** Up to three, a request waiting first, then the most recent. */
   agents: {

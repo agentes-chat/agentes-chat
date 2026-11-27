@@ -17,6 +17,7 @@ export type TextVariant =
   | "display"
   | "display2"
   | "title2"
+  | "title3"
   | "title"
   | "body"
   | "callout"
@@ -39,6 +40,7 @@ const DEFAULT_TONE: Record<TextVariant, TextTone> = {
   display: "ink",
   display2: "ink",
   title2: "ink",
+  title3: "ink",
   title: "ink",
   body: "ink",
   callout: "ink",
@@ -91,6 +93,7 @@ const VARIANT_STYLE: Record<TextVariant, [TypeStyle, Weight?]> = {
   display: ["largeTitle", TITLE_WEIGHT],
   display2: ["title1", TITLE_WEIGHT],
   title2: ["title2", weights.semibold],
+  title3: ["title3", weights.semibold],
   title: ["headline"],
   body: ["body"],
   callout: ["callout"],
@@ -105,7 +108,8 @@ const VARIANT_STYLE: Record<TextVariant, [TypeStyle, Weight?]> = {
 
 /**
  * Variants: display 34 bold (the large titles), display2 28 bold (a question or a heading inside a screen:
- * "O que você precisa?", an empty state), title2 22 semibold, title 17 semibold (headline), body 17/22,
+ * "O que você precisa?", an empty state), title2 22 semibold, title3 20 semibold (a list's section, a day's heading),
+ * title 17 semibold (headline), body 17/22,
  * callout 16/21, subhead/small 15/20, footnote 13/18, label 13 semibold, caption 12/16 (iOS HIG sizes;
  * Material 3 on Android). All in the system font, so titles sit with the rest of the OS.
  *

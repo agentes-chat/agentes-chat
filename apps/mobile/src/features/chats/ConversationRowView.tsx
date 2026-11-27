@@ -13,7 +13,7 @@ import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
 import { GroupFace } from "../shared/GroupFace";
 import { useColors, useOrgId } from "../shared/hooks";
-import { Tile } from "../shared/parts";
+import { ChannelTile } from "../shared/parts";
 import { StatusWord } from "../shared/StatusBadge";
 import type { ConversationRow } from "./logic";
 import type { AgentRowState } from "./now";
@@ -21,7 +21,7 @@ import type { RowFacts } from "./rowFacts";
 import { chatOfRow, useChatOpener, useIsChosen } from "./split";
 import { useRowFacts } from "./useRows";
 
-/** The avatar column. */
+/** The avatar column, which every face fills: an agent, a person, a channel. */
 const AVATAR = LIST_AVATAR;
 /** The open conversation's row beside the list (ADR 0212): the ink this faint over the page, in both themes. */
 const CHOSEN_TINT = 0.08;
@@ -94,19 +94,19 @@ export const ConversationItem = memo(function ConversationItem({
   const leading =
     r.kind === "dm" ? (
       agentDm ? (
-        <AgentFace agentId={r.with.id} size={AVATAR - 2} mode={facts.face} live={live} presence orbit={ringed} />
+        <AgentFace agentId={r.with.id} size={AVATAR} mode={facts.face} live={live} presence orbit={ringed} />
       ) : (
         <Face who={{ type: r.with.type, id: r.with.id }} size={AVATAR} live={false} presence />
       )
     ) : r.kind === "mission" && r.mission ? (
-      <AgentFace agentId={r.mission.agentId} size={AVATAR - 2} mode={facts.face} live={live} orbit={ringed} />
+      <AgentFace agentId={r.mission.agentId} size={AVATAR} mode={facts.face} live={live} orbit={ringed} />
     ) : r.kind === "thread" || r.kind === "mission" ? (
-      <Face who={r.face} size={r.face.type === "agent" ? AVATAR - 2 : AVATAR} live={live} />
+      <Face who={r.face} size={AVATAR} live={live} />
     ) : r.kind === "channel" && r.face ? (
       // A personal workspace's group conversation: its agents as its face (ADR 0159).
       <GroupFace agentIds={r.face.agentIds} count={r.face.count} size={AVATAR} />
     ) : (
-      <Tile icon="hash" size={AVATAR} />
+      <ChannelTile size={AVATAR} />
     );
   // A thread on a GIF or a sticker has no words of its own to title it (ADR 0091).
   const name = r.kind === "channel" ? r.name : r.kind === "dm" ? r.with.name : r.title || t("mobile.chat.thread");

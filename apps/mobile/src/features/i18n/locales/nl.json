@@ -1495,6 +1495,26 @@
       "lastDay": "Laatste dag"
     }
   },
+  "calendar": {
+    "nothing": "{{days}} · niets gepland",
+    "nothingToday": "Vandaag niets gepland.",
+    "routine": "Routine · {{agent}}",
+    "reminder": "Herinnering · {{agent}}",
+    "reminderIn": "Herinnering · {{agent}} · in {{place}}",
+    "deadline": "Taak met deadline",
+    "deadlineOf": "Taak met deadline · {{name}}",
+    "timeRange": "{{from}} tot {{to}}",
+    "dayRange": "{{from}} t/m {{to}}",
+    "noAnswer": "nog geen antwoord",
+    "you": "{{name}} (jij)",
+    "agentPrepares": "Krijgt de agenda en maakt vooraf een samenvatting",
+    "openChannel": "#{{name}} openen",
+    "openConversation": "Gesprek openen",
+    "deleteEvent": "Afspraak verwijderen",
+    "deleteAsk": "Deze afspraak verwijderen?",
+    "noRepeat": "Herhaalt niet",
+    "add": "Toevoegen"
+  },
   "coding": {
     "pill": "{{who}}. Bekijk de code",
     "seeChanges": "Bekijk de wijzigingen",

@@ -1673,6 +1673,26 @@
       "lastDay": "Последний день"
     }
   },
+  "calendar": {
+    "nothing": "{{days}} · ничего не запланировано",
+    "nothingToday": "На сегодня ничего не запланировано.",
+    "routine": "Рутина · {{agent}}",
+    "reminder": "Напоминание · {{agent}}",
+    "reminderIn": "Напоминание · {{agent}} · в {{place}}",
+    "deadline": "Срок задачи",
+    "deadlineOf": "Срок задачи · {{name}}",
+    "timeRange": "С {{from}} до {{to}}",
+    "dayRange": "С {{from}} по {{to}}",
+    "noAnswer": "ещё не ответил(а)",
+    "you": "{{name}} (вы)",
+    "agentPrepares": "Получает повестку и заранее готовит сводку",
+    "openChannel": "Открыть #{{name}}",
+    "openConversation": "Открыть разговор",
+    "deleteEvent": "Удалить событие",
+    "deleteAsk": "Удалить это событие?",
+    "noRepeat": "Не повторяется",
+    "add": "Добавить"
+  },
   "coding": {
     "pill": "{{who}}. Посмотреть код",
     "seeChanges": "Посмотреть изменения",

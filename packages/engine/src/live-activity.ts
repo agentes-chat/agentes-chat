@@ -396,8 +396,8 @@ function stepWords(locale: PushLocale, item: LiveActivityItem): string {
 
 /**
  * The content state's props (ADR 0210 §5) for what `state` holds, in `locale`, with faces in the phone's widgets
- * directory. A request waiting leads ("Iris pede aprovação", "Aprovar?"); otherwise one agent's name and its timer, or
- * how many work. Null when nothing is left (`liveActivityDoneProps` says "done").
+ * directory. A request waiting leads ("Iris pede aprovação", "Aprovar?"); otherwise one agent's name, or how many work,
+ * with the first agent's timer at the closed island's end (a word there stretched the island). Null when nothing is left (`liveActivityDoneProps` says "done").
  */
 export function liveActivityProps(
   state: LiveActivityState,
@@ -415,11 +415,7 @@ export function liveActivityProps(
   } as const;
   const count = state.items.length;
   const [headline, trailing] =
-    first.kind === "working"
-      ? count > 1
-        ? [s.liveActivityWorking(count), s.liveActivityWorking(count)]
-        : [name, null]
-      : asks[first.kind];
+    first.kind === "working" ? (count > 1 ? [s.liveActivityWorking(count), null] : [name, null]) : asks[first.kind];
   return {
     v: 1,
     tone: first.kind === "working" ? "working" : "waiting",

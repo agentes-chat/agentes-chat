@@ -38,7 +38,7 @@ import { teamArrivals } from "../right-hand/team-arrivals";
 import { FirstUse } from "../shared/FirstUse";
 import { useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
-import { Tile } from "../shared/parts";
+import { ChannelTile } from "../shared/parts";
 import { useActiveWork, useHiddenAgents, useWorkingNow } from "../shared/queries";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
@@ -555,7 +555,7 @@ function Home() {
             <ListRow
               key={o.id}
               divider={i > 0}
-              leading={<Tile icon="lock" size={LIST_AVATAR} />}
+              leading={<ChannelTile icon="lock" size={LIST_AVATAR} />}
               title={`#${o.name}`}
               {...(o.topic ? { sub: o.topic, subLines: 1 } : {})}
               chevron

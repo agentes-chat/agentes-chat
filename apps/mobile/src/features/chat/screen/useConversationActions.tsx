@@ -18,7 +18,7 @@ import { chatHref, consultationHref } from "../../links/logic";
 import { ConversationSearch } from "../../search/ConversationSearch";
 import { hitTarget } from "../../search/logic";
 import { Face, OpensAgent } from "../../shared/Face";
-import { Tile } from "../../shared/parts";
+import { ChannelTile } from "../../shared/parts";
 import type { useSheet } from "../../shared/SheetHost";
 import { usePresenceWord } from "../../status/hooks";
 import { PersonStatusCard } from "../../status/StatusCard";
@@ -327,7 +327,7 @@ export function useConversationActions({
                   <Face who={{ type: dm.with.type, id: dm.with.id }} size={36} live={false} />
                 </OpensAgent>
               ) : (
-                <Tile icon="hash" />
+                <ChannelTile />
               )
             }
             agentId={dmAgentId}

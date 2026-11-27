@@ -7,7 +7,7 @@ import type { ConversationRow } from "../chats/logic";
 import { usePins } from "../chats/pins";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
-import { ActionList, Tile } from "../shared/parts";
+import { ActionList, ChannelTile } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { movesChannel, sectorHref } from "./logic";
 
@@ -82,7 +82,7 @@ export function useRowMenus() {
     sheet.open(
       <>
         <SheetTitle
-          {...(channel ? { leading: <Tile icon="hash" size={40} /> } : {})}
+          {...(channel ? { leading: <ChannelTile size={40} /> } : {})}
           title={channel ? `#${channel.name}` : r.kind === "dm" ? dir.nameOf(r.with) : ""}
         />
         <ActionList

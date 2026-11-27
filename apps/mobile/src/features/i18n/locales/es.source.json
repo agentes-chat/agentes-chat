@@ -3705,6 +3705,60 @@
   "routines.when.lastDay": {
     "value": "Last day"
   },
+  "calendar.nothing": {
+    "value": "{{days}} · nothing planned"
+  },
+  "calendar.nothingToday": {
+    "value": "Nothing planned for today."
+  },
+  "calendar.routine": {
+    "value": "Routine · {{agent}}"
+  },
+  "calendar.reminder": {
+    "value": "Reminder · {{agent}}"
+  },
+  "calendar.reminderIn": {
+    "value": "Reminder · {{agent}} · in {{place}}"
+  },
+  "calendar.deadline": {
+    "value": "Task due"
+  },
+  "calendar.deadlineOf": {
+    "value": "Task due · {{name}}"
+  },
+  "calendar.timeRange": {
+    "value": "{{from}} to {{to}}"
+  },
+  "calendar.dayRange": {
+    "value": "{{from}} to {{to}}"
+  },
+  "calendar.noAnswer": {
+    "value": "no answer yet"
+  },
+  "calendar.you": {
+    "value": "{{name}} (you)"
+  },
+  "calendar.agentPrepares": {
+    "value": "Gets the agenda and prepares a summary before"
+  },
+  "calendar.openChannel": {
+    "value": "Open #{{name}}"
+  },
+  "calendar.openConversation": {
+    "value": "Open the conversation"
+  },
+  "calendar.deleteEvent": {
+    "value": "Delete event"
+  },
+  "calendar.deleteAsk": {
+    "value": "Delete this event?"
+  },
+  "calendar.noRepeat": {
+    "value": "Doesn't repeat"
+  },
+  "calendar.add": {
+    "value": "Add"
+  },
   "coding.pill": {
     "value": "{{who}}. See the code"
   },

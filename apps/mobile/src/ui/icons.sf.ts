@@ -184,6 +184,8 @@ export const TILE_TINTS: Partial<Record<IconName, TileTint>> = {
   trash: "red",
   stop: "red",
   mute: "red",
+  // The calendar, as the system's own Calendar app.
+  calendar: "red",
   // What asks for attention or moves things along.
   flag: "orange",
   bolt: "orange",
@@ -236,7 +238,6 @@ export const TILE_TINTS: Partial<Record<IconName, TileTint>> = {
   pullRequest: "blue",
   // Time and night.
   clock: "indigo",
-  calendar: "indigo",
   moon: "indigo",
   // Thinking.
   brain: "purple",

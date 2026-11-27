@@ -11,7 +11,7 @@ import { AgentFace, Face } from "../shared/Face";
 import { GroupFace } from "../shared/GroupFace";
 import { useDirectory } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
-import { Tile } from "../shared/parts";
+import { ChannelTile } from "../shared/parts";
 import { useConversations } from "../shared/queries";
 
 type Conversation = Extract<ConversationRow, { kind: "dm" | "channel" }>;
@@ -55,7 +55,7 @@ export function ConversationSwitcher({
       r.face ? (
         <GroupFace agentIds={r.face.agentIds} count={r.face.count} size={30} />
       ) : (
-        <Tile icon="hash" size={30} />
+        <ChannelTile size={30} />
       )
     ) : r.with.type === "agent" ? (
       <AgentFace agentId={r.with.id} size={30} mode={r.working ? "run" : "idle"} live={false} />

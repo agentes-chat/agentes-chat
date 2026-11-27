@@ -102,7 +102,7 @@ describe("the kit's own parts, not look-alikes", () => {
   test("the channels an administrator isn't in are list rows on the home's plain list", () => {
     const home = src("chats/ChatsScreen.tsx");
     expect(home).not.toContain("<GroupedRow");
-    expect(home).toContain('leading={<Tile icon="lock" size={LIST_AVATAR} />}');
+    expect(home).toContain('leading={<ChannelTile icon="lock" size={LIST_AVATAR} />}');
   });
 
   test("the first agent's examples are grouped rows", () => {

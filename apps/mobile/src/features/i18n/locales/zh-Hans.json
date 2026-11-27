@@ -1406,6 +1406,26 @@
       "lastDay": "最后一天"
     }
   },
+  "calendar": {
+    "nothing": "{{days}} · 没有安排",
+    "nothingToday": "今天没有安排。",
+    "routine": "例行任务 · {{agent}}",
+    "reminder": "提醒 · {{agent}}",
+    "reminderIn": "提醒 · {{agent}} · 在 {{place}}",
+    "deadline": "任务截止",
+    "deadlineOf": "任务截止 · {{name}}",
+    "timeRange": "{{from}} 至 {{to}}",
+    "dayRange": "{{from}} 至 {{to}}",
+    "noAnswer": "尚未回复",
+    "you": "{{name}}（你）",
+    "agentPrepares": "会收到议程并提前准备摘要",
+    "openChannel": "打开 #{{name}}",
+    "openConversation": "打开对话",
+    "deleteEvent": "删除活动",
+    "deleteAsk": "删除此活动？",
+    "noRepeat": "不重复",
+    "add": "添加"
+  },
   "coding": {
     "pill": "{{who}}。查看代码",
     "seeChanges": "查看改动",

@@ -71,6 +71,7 @@ type WorkRow =
   | "issues"
   | "proposals"
   | "routines"
+  | "calendar"
   | "connectors"
   | "skills"
   | "code"
@@ -90,6 +91,7 @@ const TEAM_WORK: WorkRow[] = [
   "issues",
   "proposals",
   "routines",
+  "calendar",
   "connectors",
   "skills",
   "code",
@@ -105,6 +107,7 @@ const TEAM_WORK: WorkRow[] = [
  */
 const PERSONAL_WORK: WorkRow[] = [
   "routines",
+  "calendar",
   "drive",
   "issues",
   "code",
@@ -299,6 +302,16 @@ function MePage() {
     ),
     routines: (
       <GroupedRow key="routines" icon="clock" label={t("routines.title")} chevron onPress={() => open("/routines")} />
+    ),
+    // The agents' routines, reminders, the tasks due and the events, day by day (the web's Calendário).
+    calendar: (
+      <GroupedRow
+        key="calendar"
+        icon="calendar"
+        label={t("calendar.title")}
+        chevron
+        onPress={() => open("/calendar")}
+      />
     ),
     // The same screens Settings opens, with Settings' icons.
     connectors: (

@@ -1622,6 +1622,38 @@ export const featureKeysEn = {
       lastDay: "Last day",
     },
   },
+  // Calendário (the web's words are `calendar.*`; these are the phone's own).
+  calendar: {
+    /** Days in a row with nothing on them, in one line: "Sunday, Nov 29 · nothing planned". */
+    nothing: "{{days}} · nothing planned",
+    nothingToday: "Nothing planned for today.",
+    /** A routine's run, under its name: the agent whose routine it is. */
+    routine: "Routine · {{agent}}",
+    /** A reminder, under its words: the agent that posts it, and where. */
+    reminder: "Reminder · {{agent}}",
+    reminderIn: "Reminder · {{agent}} · in {{place}}",
+    /** A task due that day, under its title, and who has it. */
+    deadline: "Task due",
+    deadlineOf: "Task due · {{name}}",
+    /** An event's times on its page: "2:00 PM to 3:00 PM". */
+    timeRange: "{{from}} to {{to}}",
+    /** An all-day event over several days, on its page. */
+    dayRange: "{{from}} to {{to}}",
+    /** An invited person who hasn't answered yet. */
+    noAnswer: "no answer yet",
+    /** The reader among an event's participants. */
+    you: "{{name}} (you)",
+    /** An agent among an event's participants: what it does with it. */
+    agentPrepares: "Gets the agenda and prepares a summary before",
+    openChannel: "Open #{{name}}",
+    openConversation: "Open the conversation",
+    deleteEvent: "Delete event",
+    deleteAsk: "Delete this event?",
+    /** Repetição's value for an event that happens once. */
+    noRepeat: "Doesn't repeat",
+    /** The participants' last row: opens the picker of people and agents. */
+    add: "Add",
+  },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
     /** A session's pill in its conversation, which opens its code. */

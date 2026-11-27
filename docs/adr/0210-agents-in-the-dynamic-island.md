@@ -25,6 +25,10 @@ Lock Screen, which the system draws from the app's layout and which a server can
 2. **The layout is the app's, in iOS's own components** (`expo-widgets`, Expo's package; `@expo/ui`'s SwiftUI
    views). The faces are PNGs the app writes to the app group's widgets directory (`faces/<agentId>.png`); the
    layout reads them by path. No animation of ours runs there: a face, words and the system's own timer.
+   The system's timer takes all the width it is offered, so every timer stands in a box of its own size against the
+   trailing edge, and the words keep to the leading edge: the closed island stays as small as the system's others
+   (face | camera | time), the open one has the face, the name and where on top with the time across from them and
+   what it does under them, and the Lock Screen keeps every agent's time in one column.
 3. **The server is the one that knows, and it sends everything.** A job (`live-activity.refresh`, coalesced, by
    person or by run: a run's hooks enqueue its id and the job finds its person) computes what the island shows
    whenever a run of theirs starts, waits, moves on or ends and whenever their inbox changes (`publishCounts`), only
@@ -55,7 +59,7 @@ Lock Screen, which the system draws from the app's layout and which a server can
      tone: "working" | "waiting" | "done";
      /** The first line: an agent's name, "Iris pede aprovação", "2 trabalhando", "Pronto". */
      headline: string;
-     /** What stands at the closed island's end instead of the first agent's timer ("Aprovar?", "2 trabalhando"); null: the timer. */
+     /** What stands at the closed island's end instead of the first agent's timer ("Aprovar?", "Pronto"); null: the timer, also with several at work. */
      trailing: string | null;
      /** Up to three, a request waiting first, then the most recent. */
      agents: {
