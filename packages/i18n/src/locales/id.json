@@ -2465,44 +2465,65 @@
     "deleteText": "Agen di dalamnya kembali ke Agen.",
     "deleteChannels": "Kanal di dalamnya kembali ke Kanal.",
     "dropHere": "Seret agen ke sini",
-    "dropHereAll": "Seret agen atau kanal ke sini",
     "moved": "{{name}} pindah ke {{group}}",
     "movedOut": "{{name}} keluar dari {{group}}",
     "undo": "Urungkan"
   },
   "sidebarAgents": {
-    "options": "Opsi agen",
-    "add": "Agen atau departemen baru",
-    "order": "Urutan",
-    "sort": {
-      "workspace": "Urutan ruang kerja",
-      "mine": "Milik saya dulu",
-      "working": "Yang bekerja dulu"
-    },
     "showAll": "Tampilkan agen yang tidak berbicara dengan saya",
-    "collapseAll": "Ciutkan semua",
-    "expandAll": "Bentangkan semua",
-    "organize": "Tata departemen di Tim",
     "more_other": "{{count}} agen lagi di Tim",
     "newAgent": "Agen baru",
-    "working_other": "{{count}} sedang bekerja",
     "count_other": "{{count}} agen",
     "workingIn": "bekerja di #{{channel}}",
     "talksOnly": "hanya berbicara dengan {{name}}",
-    "talksOnlyMore_other": "hanya berbicara dengan {{name}} dan {{count}} lainnya",
-    "changeGroup": "Pindahkan ke departemen",
-    "newGroupWith": "Departemen baru dengan {{name}}",
-    "dmsEmpty": "Percakapanmu dengan orang muncul di sini."
+    "talksOnlyMore_other": "hanya berbicara dengan {{name}} dan {{count}} lainnya"
   },
-  "sidebarPins": {
-    "pin": "Sematkan di atas",
-    "unpin": "Lepas sematan",
-    "pinned": "Disematkan di atas",
-    "full": {
-      "agents": "Kamu sudah menyematkan 5 agen. Lepaskan satu untuk menyematkan yang ini.",
-      "channels": "Kamu sudah menyematkan 5 kanal. Lepaskan satu untuk menyematkan yang ini.",
-      "people": "Kamu sudah menyematkan 5 orang. Lepaskan satu untuk menyematkan yang ini."
-    }
+  "sidebarFavorites": {
+    "title": "Favorit",
+    "add": "Tambahkan ke favorit",
+    "remove": "Hapus dari favorit",
+    "marked": "Di favorit",
+    "full": "Favorit sudah berisi 50. Hapus satu untuk menambahkan yang ini."
+  },
+  "sidebarSections": {
+    "new": "Bagian baru",
+    "newName": "Bagian baru",
+    "moveTo": "Pindahkan ke bagian",
+    "takeOut": "Keluarkan dari bagian",
+    "rename": "Ganti nama bagian",
+    "delete": "Hapus bagian",
+    "nameLabel": "Nama bagian"
+  },
+  "sidebarDms": {
+    "options": "Opsi pesan langsung",
+    "show": "Tampilkan",
+    "shows": {
+      "all": "Semua orang di workspace",
+      "recent": "Hanya percakapan terbaru"
+    },
+    "invite": "Undang orang",
+    "invited": "Undangan terkirim",
+    "invitedTip": "{{email}} belum menerima undangan",
+    "agentTag": "AI",
+    "agentTip": "Agen AI"
+  },
+  "sidebarColumn": {
+    "label": "Alat",
+    "unread": "{{name}}, ada yang belum dibaca",
+    "you": "{{name}}, ada sesuatu untuk Anda"
+  },
+  "unreads": {
+    "title": "Belum dibaca",
+    "forYou": "Untuk Anda",
+    "conversations": "Percakapan",
+    "markAll": "Tandai semua sudah dibaca",
+    "markRead": "Tandai sudah dibaca",
+    "open": "Buka",
+    "seeInbox": "Lihat semuanya di kotak masuk",
+    "more_other": "{{count}} pesan lagi",
+    "emptyTitle": "Semua sudah dibaca",
+    "emptyText": "Pesan baru dan yang menunggu Anda muncul di sini.",
+    "markedAll": "Semua ditandai sudah dibaca"
   },
   "appsDownload": {
     "computer": "Komputer",
@@ -6716,6 +6737,7 @@
     "undoneBy": "Diurungkan oleh {{name}}",
     "undoneByYou": "Diurungkan olehmu",
     "undo": "Urungkan",
+    "applyAnyway": "Tetap terapkan",
     "appliedSome": "{{done}} dari {{total}} diterapkan",
     "waitingAdmin": "Menunggu admin",
     "stale": "Kedaluwarsa",
@@ -16641,6 +16663,8 @@
     "workspace": "Ruang kerja",
     "cloud": "Cloud",
     "cpus_other": "{{count}} CPU",
+    "cores_other": "{{count}} inti",
+    "threads_other": "{{count}} thread",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16716,11 +16740,12 @@
     "helpWorkspace": "Komputer membantu saat komputer tim penuh atau tidak ada",
     "helpWorkspaceHint": "Setiap komputer hanya membantu jika pemiliknya mengizinkan. Mati: tidak ada yang membantu, apa pun pilihan pemiliknya.",
     "shareInternet": "Agen memakai internet komputer ini",
-    "shareInternetHint": "Situs yang dibuka agen lewat koneksi komputer ini, jadi situs melihat lokasimu. Hanya situs web dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, agen memakai koneksi biasa mereka.",
+    "shareInternetHint": "Koneksi agen keluar lewat internet komputer ini, jadi situs dan server melihat lokasimu: situs web, git, SSH, database, dan koneksi TCP lainnya. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Pencarian nama, panggilan, dan lalu lintas UDP lainnya memakai koneksi biasa, begitu juga semuanya selama komputer ini offline.",
+    "shareInternetHintProxy": "Browser agen dan program yang mengikuti pengaturan proxy (git lewat HTTPS, curl, sebagian besar alat baris perintah) keluar lewat internet komputer ini, jadi situs melihat lokasimu. SSH, klien database, dan program lain yang mengabaikan pengaturan proxy memakai koneksi biasa, begitu juga pencarian nama dan lalu lintas UDP. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Selama komputer ini offline, semuanya memakai koneksi biasa.",
     "shareInternetInUse": "Sedang dipakai",
     "shareInternetOther": "Agen sedang memakai {{name}}",
     "shareInternetPick": "Pakai yang ini",
-    "shareInternetJoin": "Agen juga akan membuka situs lewat internet komputer ini, jadi situs melihat lokasimu. Kamu bisa mematikannya di halamannya.",
+    "shareInternetJoin": "Agen juga akan terhubung ke internet lewat komputer ini, jadi situs dan server melihat lokasimu. Kamu bisa mematikannya di halamannya.",
     "connectedBy": "Dihubungkan oleh {{name}}",
     "downloadFor": "Unduh untuk {{system}}",
     "downloadApp": "Unduh aplikasinya",
@@ -16868,7 +16893,7 @@
     },
     "facts": {
       "system": "Sistem",
-      "cpu": "CPU",
+      "cpu": "Prosesor",
       "memory": "Memori",
       "lastSeen": "Terakhir terlihat",
       "toolchains": "Toolchain yang ditemukan",
@@ -17259,7 +17284,7 @@
       "folderOnComputer": "Izinkan di komputer",
       "folderShown": "Terbuka di {{deviceName}}. Izinkan di sana.",
       "internetShared": "Agen kini membuka situs web lewat internet <b>{{deviceName}}</b>",
-      "internetSharedLine": "Hanya agen workspace ini, hanya situs web, tidak pernah apa pun di jaringannya sendiri. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
+      "internetSharedLine": "Hanya agen workspace ini, tidak pernah apa pun di jaringannya sendiri, tidak pernah email lewat port 25. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
       "internetOff": "Matikan",
       "internetOffDone": "Agen tidak lagi memakai internet {{deviceName}}.",
       "once": "Izinkan sekali",
@@ -19243,7 +19268,9 @@
       "provider_back": "AI-ku sudah kembali.",
       "confidential_removed": "Dihapus: teks rahasia disimpan selama {{days}} hari.",
       "brain_queued": "Masih dalam antrean. Saya akan menjawab begitu giliran saya tiba.",
-      "brain_interrupted": "{{brain}} berhenti sebelum selesai. Sudah dikerjakan, tidak diulang: {{tools}}.",
+      "brain_interrupted": "{{brain}} berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+      "brain_interrupted_timeout": "{{brain}} melewati batas waktunya dan berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+      "brain_interrupted_computer": "Komputer menghentikan {{brain}} sebelum selesai. Minta lagi untuk melanjutkan.",
       "plan_limit_cut": "Aku berhenti di batas paket {{plan}}. Aku akan melanjutkan dari titik terakhir {{when}}, saat batasnya direset.",
       "plan_limit_cut_unknown": "Aku berhenti di batas paket {{plan}}. Aku akan melanjutkan dari titik terakhir begitu batasnya direset.",
       "plan_limit_wait": "Paket {{plan}} mencapai batasnya. Aku akan menjawab {{when}}, saat batasnya direset. Kalau dibuka lebih awal di {{plan}}, aku akan tahu dan langsung menjawab.",

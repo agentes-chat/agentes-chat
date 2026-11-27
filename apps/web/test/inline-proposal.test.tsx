@@ -157,6 +157,22 @@ describe("a skill proposed in the chat", () => {
     expect(back.querySelector(".rq-done__mark[data-done]")).toBeNull();
     expect(within(back).queryByRole("button", { name: "Desfazer" })).toBeNull();
   });
+
+  test("left out by the review, whoever may make it applies it in one tap", async () => {
+    const state = await openCard([skill("p-skill", { ...leftOut(), applicable: true })]);
+    const card = one();
+    expect(ending(card)).toBe("Não aplicado pelo Atlas");
+    await click(within(card).getByRole("button", { name: "Aplicar mesmo assim" }));
+    await settle(4);
+    expect(state.calls.filter((c) => c.method === "proposals.accept").map((c) => c.args[1])).toEqual(["p-skill"]);
+    expect(ending(one())).toBe("Aplicado por você");
+    expect(within(one()).queryByRole("button", { name: "Aplicar mesmo assim" })).toBeNull();
+  });
+
+  test("left out, and the viewer can't make it: nothing to apply", async () => {
+    await openCard([skill("p-skill", leftOut())]);
+    expect(within(one()).queryByRole("button", { name: "Aplicar mesmo assim" })).toBeNull();
+  });
 });
 
 describe("a change proposed in the chat, one row", () => {

@@ -5178,6 +5178,21 @@ export function useUndoProposal(orgId: string) {
   });
 }
 
+/** "Apply anyway" on a change the agent's review left out: applied as the viewer, the row then reads applied by them. */
+export function useApplyProposal(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.proposals.accept(orgId, id),
+    onSuccess: (row) => {
+      editProposals(qc, orgId, patchIn<Proposal>(row.id, row));
+      refreshAccepted(qc, orgId, [row]);
+      if (row.target.type === "skill") void qc.invalidateQueries({ queryKey: keys.skills(orgId) });
+    },
+    onSettled: () => void refreshProposals(qc, orgId),
+  });
+}
+
 /** People, files and today's uploads against the workspace's limits (ADR 0079): any member. */
 export const useWorkspaceLimits = (orgId: string, enabled = true) => {
   const api = useApi();

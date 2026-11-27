@@ -64,6 +64,8 @@ export const ptBR: PushStrings = {
   deviceJoinRequestBody: "Toque para deixar entrar ou recusar.",
   waitingTitle: "Tem algo esperando você",
   openBody: "Toque para abrir.",
+  cutBody: "Parou antes de terminar. Peça de novo para continuar.",
+  movedBody: "Isso vai levar um tempo, então sigo em segundo plano.",
   sentGif: "Mandou um GIF",
   sentSticker: "Mandou uma figurinha",
   sentVoice: "Mandou uma mensagem de voz",

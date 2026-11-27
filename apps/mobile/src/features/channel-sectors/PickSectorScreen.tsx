@@ -1,147 +1,120 @@
-import { type Channel, useAgentGroups, useChannels, usePlaceChannel } from "@agenteschat/client";
-import { errorText } from "@agenteschat/client/lib/errors";
-import { can } from "@agenteschat/client/lib/permissions";
+import { type Channel, useChannels, useSetSidebarView, useSidebarView } from "@agenteschat/client";
+import {
+  addSection,
+  moveChannelBy,
+  placeInSection,
+  SIDEBAR_SECTION_NAME_MAX,
+  sectionOfChannel,
+} from "@agenteschat/client/lib/sidebar-view";
 import { useTranslation } from "react-i18next";
-import { useOrg } from "@/providers/org";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, SkeletonList, useToast } from "@/ui";
+import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, SkeletonList } from "@/ui";
 import { router } from "@/ui/navigation";
 import { Gap, SettingsPage } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
-import { useMeId, useOrgId } from "../shared/hooks";
-import { successHaptic } from "../shared/parts";
-import { channelSteps, movesChannel } from "./logic";
+import { useOrgId } from "../shared/hooks";
+import { PromptForm } from "../shared/PromptForm";
+import { successHaptic, Tile } from "../shared/parts";
+import { useSheet } from "../shared/SheetHost";
 
-/** The other channels of a sector, for the line under it ("bugs, tech, deploys"). */
-function channelLine(channels: Channel[], groupId: string | null, except?: string) {
-  return channels
-    .filter((c) => (c.groupId ?? null) === groupId && c.id !== except)
+/** A section's channels, for the line under it ("#bugs, #tech, #deploys"). */
+function channelLine(channels: readonly Channel[], ids: readonly string[], except: string) {
+  return ids
+    .filter((id) => id !== except)
+    .flatMap((id) => channels.find((c) => c.id === id) ?? [])
     .map((c) => `#${c.name}`)
     .join(", ");
 }
 
 /**
- * "Setor" of a channel (ADR 0240), from its ⋯ sheet or a long press on the home, as the web's "Mudar de setor": "Sem
- * setor" and the sectors, each with its channels, the current one checked; a tap moves it and goes back. Who makes
- * sectors gets "Novo setor com #canal", which takes the channel along. Below, its place among the channels next to it,
- * one step up or down.
+ * "Seção" of a channel (ADR 0260), from its ⋯ sheet or a long press on the home, as the web's "Mover para a seção":
+ * the person's own sections, each with its channels, and "Sem seção", the current one checked; a tap moves it and
+ * goes back. "Nova seção" names one in a sheet and takes the channel along. Below, its place in its section, one step
+ * up or down. Each person's own: nobody else's list changes.
  */
 export function PickSectorScreen({ channelId }: { channelId: string }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const { org } = useOrg();
-  const toast = useToast();
+  const sheet = useSheet();
   const channels = useChannels(orgId);
-  const sectors = useAgentGroups(orgId);
-  const place = usePlaceChannel(orgId);
+  const view = useSidebarView(orgId);
+  const setView = useSetSidebarView(orgId);
+  const sections = view.sections ?? [];
   const channel = channels.data?.find((c) => c.id === channelId);
-  const current = channel?.groupId ?? null;
   const all = channels.data ?? [];
-  const order = channelSteps(all, channelId);
-  const failed = (e: unknown) => toast({ title: errorText(t, e), icon: "x" });
-  const step = (move: typeof order.up) => {
-    if (move) place.mutate(move, { onError: failed });
+  const current = sectionOfChannel(sections, channelId);
+  const mine = sections.find((s) => s.id === current)?.channelIds ?? [];
+  const at = mine.indexOf(channelId);
+  const pick = (sectionId: string | null) => {
+    if (sectionId !== current) {
+      setView((now) => ({ ...now, sections: placeInSection(now.sections ?? [], channelId, sectionId) }));
+      successHaptic();
+    }
+    router.back();
   };
-  const pick = (groupId: string | null) => {
-    if (!channel || groupId === current) return router.back();
-    const name = `#${channel.name}`;
-    const to = sectors.data?.find((g) => g.id === groupId)?.name;
-    const from = sectors.data?.find((g) => g.id === current)?.name ?? "";
-    place.mutate(
-      { channelId, groupId },
-      {
-        onSuccess: () => {
+  const step = (delta: -1 | 1) =>
+    setView((now) => ({ ...now, sections: moveChannelBy(now.sections ?? [], channelId, delta) }));
+  const create = () =>
+    sheet.open(
+      <PromptForm
+        leading={<Tile icon="list" size={40} />}
+        title={t("sidebarSections.new")}
+        placeholder={t("sidebarSections.nameLabel")}
+        submitLabel={t("sidebarSections.new")}
+        limit={{ max: SIDEBAR_SECTION_NAME_MAX, fix: t("mobile.sections.tooLong") }}
+        onSubmit={(name) => {
+          setView((now) => ({ ...now, sections: addSection(now.sections ?? [], name, [channelId]).sections }));
           successHaptic();
-          toast({
-            title: to ? t("agentGroups.moved", { name, group: to }) : t("agentGroups.movedOut", { name, group: from }),
-          });
+          sheet.close();
           router.back();
-        },
-        onError: failed,
-      },
+        }}
+      />,
     );
-  };
   return (
-    <SettingsPage title={t("agentGroups.group")} {...(channel ? { subtitle: `#${channel.name}` } : {})}>
+    <SettingsPage title={t("mobile.sections.title")} {...(channel ? { subtitle: `#${channel.name}` } : {})}>
       <GroupedHeader
         hint={{
-          name: t("common.about", { label: t("mobile.categories.where", { channel: channel?.name ?? "" }) }),
-          text: t("mobile.categories.whereHelp"),
+          name: t("common.about", { label: t("mobile.sections.where", { channel: channel?.name ?? "" }) }),
+          text: t("mobile.sections.whereHelp"),
         }}
       >
-        {t("mobile.categories.where", { channel: channel?.name ?? "" })}
+        {t("mobile.sections.where", { channel: channel?.name ?? "" })}
       </GroupedHeader>
-      {/* The choices once the sectors are in: before, their rows' shape (never "Sem setor" alone, checked). */}
-      {sectors.data && channels.data ? (
+      {channels.data ? (
         <GroupedList>
-          <GroupedRow
-            label={t("agentGroups.none")}
-            checked={current === null}
-            disabled={place.isPending}
-            onPress={() => pick(null)}
-          />
-          {sectors.data.map((g) => (
+          <GroupedRow label={t("mobile.sections.none")} checked={current === null} onPress={() => pick(null)} />
+          {sections.map((s) => (
             <GroupedRow
-              key={g.id}
-              label={g.name}
-              {...(channelLine(all, g.id, channelId) ? { sub: channelLine(all, g.id, channelId) } : {})}
-              checked={current === g.id}
-              disabled={place.isPending}
-              onPress={() => pick(g.id)}
+              key={s.id}
+              label={s.name}
+              {...(channelLine(all, s.channelIds, channelId) ? { sub: channelLine(all, s.channelIds, channelId) } : {})}
+              checked={current === s.id}
+              onPress={() => pick(s.id)}
             />
           ))}
         </GroupedList>
-      ) : sectors.isError || channels.isError ? (
-        <LoadFailed
-          onRetry={() => {
-            void sectors.refetch();
-            void channels.refetch();
-          }}
-        />
+      ) : channels.isError ? (
+        <LoadFailed onRetry={() => void channels.refetch()} />
       ) : (
         <SkeletonList rows={3} />
       )}
-      {can(org, "manage_agents") && channel ? (
+      {channel ? (
         <>
           <Gap />
           <GroupedList>
-            <GroupedRow
-              icon="plus"
-              label={t("sidebarAgents.newGroupWith", { name: `#${channel.name}` })}
-              chevron
-              onPress={() => router.push(`/sector-new?channelId=${encodeURIComponent(channelId)}`)}
-            />
+            <GroupedRow icon="plus" label={t("sidebarSections.new")} chevron onPress={create} />
           </GroupedList>
         </>
       ) : null}
-      {channel ? (
+      {channel && current ? (
         <>
-          <GroupedHeader>{t("mobile.categories.order")}</GroupedHeader>
+          <GroupedHeader>{t("mobile.sections.order")}</GroupedHeader>
           <GroupedList>
-            <GroupedRow
-              label={t("mobile.categories.up")}
-              disabled={!order.up || place.isPending}
-              onPress={() => step(order.up)}
-            />
-            <GroupedRow
-              label={t("mobile.categories.down")}
-              disabled={!order.down || place.isPending}
-              onPress={() => step(order.down)}
-            />
+            <GroupedRow label={t("mobile.categories.up")} disabled={at <= 0} onPress={() => step(-1)} />
+            <GroupedRow label={t("mobile.categories.down")} disabled={at >= mine.length - 1} onPress={() => step(1)} />
           </GroupedList>
-          <GroupedFooter>
-            {t("mobile.categories.channelPosition", { at: order.at + 1, count: order.count })}
-          </GroupedFooter>
+          <GroupedFooter>{t("mobile.categories.channelPosition", { at: at + 1, count: mine.length })}</GroupedFooter>
         </>
       ) : null}
     </SettingsPage>
   );
-}
-
-/** Whether I may move this channel between sectors (its ⋯ sheet shows "Setor" then). */
-export function useMovesChannel(channelId: string) {
-  const orgId = useOrgId();
-  const { org } = useOrg();
-  const meId = useMeId();
-  const channel = useChannels(orgId).data?.find((c) => c.id === channelId);
-  return channel ? movesChannel(channel, meId, org) : false;
 }

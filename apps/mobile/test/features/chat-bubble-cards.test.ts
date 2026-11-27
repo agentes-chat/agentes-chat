@@ -109,7 +109,7 @@ test("one hierarchy for the words of every card in a message", () => {
   // Handed work: its title over its state as a status badge (the lists' and the web's), then its facts.
   const work = src("features/chat/WorkLine.tsx");
   expect(work).toContain("<StatusBadge text={h.state} tone={badgeTone} color={agentColor} />");
-  const quote = src("features/chat/ConsultGroup.tsx");
+  const quote = src("features/chat/RelayQuote.tsx");
   expect(quote).toContain('<Text variant="small" numberOfLines={1} style={[quote.name, { color: ink }]}>');
   // The waiting card, a thread's link, the tool block's head and the name line's words take the same roles.
   expect(src("features/shared/WaitingCard.tsx")).toContain('<Text variant="cardTitle" numberOfLines={3}>');

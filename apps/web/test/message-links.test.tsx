@@ -223,3 +223,43 @@ describe("a link to a message far back", () => {
     expect(row("far-299")).not.toBeNull();
   });
 });
+
+describe("a message of the conversation asked for inside one of its threads", () => {
+  const OUTSIDE = "00000000-0000-4000-8000-0000000000e5";
+  const GONE = "00000000-0000-4000-8000-0000000000ef";
+  const missing = "Essa mensagem não está disponível. Ela pode ter sido apagada ou não estar visível para você.";
+  /** #eng's thread, and a long work's report at #eng's top level, outside it. */
+  function withReport() {
+    const state = withLinks("oi");
+    state.messages.push({
+      id: OUTSIDE,
+      channelId: ENG_ID,
+      threadId: null,
+      author: { type: "person" as const, id: "u-joao" },
+      body: "o relatório da migração",
+      mentionedAgentIds: [],
+      agentRunId: null,
+      createdAt: new Date().toISOString(),
+    });
+    return state;
+  }
+
+  test("it opens in the conversation, at it, never a toast saying it's gone", async () => {
+    const { router } = await renderApp(`/org/${ORG_ID}/threads/${TARGET}?m=${OUTSIDE}`, {
+      api: createFakeApi(withReport()),
+    });
+    await settle(12);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
+    expect(document.querySelector(`[data-message-id="${OUTSIDE}"]`)?.classList.contains("ac-msg--focus")).toBe(true);
+    expect(document.body.textContent).not.toContain(missing);
+  });
+
+  test("one that is nowhere still says so, and the thread stays open", async () => {
+    const { router } = await renderApp(`/org/${ORG_ID}/threads/${TARGET}?m=${GONE}`, {
+      api: createFakeApi(withReport()),
+    });
+    await settle(12);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/${TARGET}`);
+    expect(document.body.textContent).toContain(missing);
+  });
+});

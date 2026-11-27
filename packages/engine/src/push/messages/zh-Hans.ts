@@ -65,6 +65,8 @@ export const strings: Partial<PushStrings> = {
   deviceJoinRequestBody: "点按允许它加入或拒绝。",
   waitingTitle: "有事等你处理",
   openBody: "点按打开。",
+  cutBody: "在完成前停止了。请再问一次以继续。",
+  movedBody: "这需要一些时间，所以我会在后台继续。",
   sentGif: "发送了一个 GIF",
   sentSticker: "发送了一个贴纸",
   sentVoice: "发送了一条语音消息",

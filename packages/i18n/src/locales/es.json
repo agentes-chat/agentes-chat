@@ -2624,31 +2624,16 @@
     "deleteText": "Sus agentes vuelven a Agentes.",
     "deleteChannels": "Sus canales vuelven a Canales.",
     "dropHere": "Arrastra agentes aquí",
-    "dropHereAll": "Arrastra agentes o canales aquí",
     "moved": "{{name}} pasó a {{group}}",
     "movedOut": "{{name}} salió de {{group}}",
     "undo": "Deshacer"
   },
   "sidebarAgents": {
-    "options": "Opciones de Agentes",
-    "add": "Nuevo agente o departamento",
-    "order": "Orden",
-    "sort": {
-      "workspace": "El del espacio de trabajo",
-      "mine": "Los míos primero",
-      "working": "Trabajando primero"
-    },
     "showAll": "Mostrar agentes que no hablan conmigo",
-    "collapseAll": "Contraer todos",
-    "expandAll": "Expandir todos",
-    "organize": "Organizar departamentos en Equipo",
     "more_one": "1 agente más en Equipo",
     "more_many": "{{count}} agentes más en Equipo",
     "more_other": "{{count}} agentes más en Equipo",
     "newAgent": "Nuevo agente",
-    "working_one": "{{count}} trabajando",
-    "working_many": "{{count}} trabajando",
-    "working_other": "{{count}} trabajando",
     "count_one": "{{count}} agente",
     "count_many": "{{count}} agentes",
     "count_other": "{{count}} agentes",
@@ -2656,20 +2641,56 @@
     "talksOnly": "solo habla con {{name}}",
     "talksOnlyMore_one": "solo habla con {{name}} y {{count}} más",
     "talksOnlyMore_many": "solo habla con {{name}} y {{count}} más",
-    "talksOnlyMore_other": "solo habla con {{name}} y {{count}} más",
-    "changeGroup": "Mover a departamento",
-    "newGroupWith": "Nuevo departamento con {{name}}",
-    "dmsEmpty": "Tus conversaciones con personas aparecen aquí."
+    "talksOnlyMore_other": "solo habla con {{name}} y {{count}} más"
   },
-  "sidebarPins": {
-    "pin": "Fijar arriba",
-    "unpin": "Quitar de arriba",
-    "pinned": "Fijado arriba",
-    "full": {
-      "agents": "Ya fijaste 5 agentes. Quita uno para fijar este.",
-      "channels": "Ya fijaste 5 canales. Quita uno para fijar este.",
-      "people": "Ya fijaste 5 personas. Quita una para fijar esta."
-    }
+  "sidebarFavorites": {
+    "title": "Favoritos",
+    "add": "Añadir a favoritos",
+    "remove": "Quitar de favoritos",
+    "marked": "En favoritos",
+    "full": "Favoritos ya tiene 50. Quita uno para añadir este."
+  },
+  "sidebarSections": {
+    "new": "Nueva sección",
+    "newName": "Nueva sección",
+    "moveTo": "Mover a la sección",
+    "takeOut": "Quitar de la sección",
+    "rename": "Renombrar sección",
+    "delete": "Eliminar sección",
+    "nameLabel": "Nombre de la sección"
+  },
+  "sidebarDms": {
+    "options": "Opciones de mensajes directos",
+    "show": "Mostrar",
+    "shows": {
+      "all": "Todos en el workspace",
+      "recent": "Solo conversaciones recientes"
+    },
+    "invite": "Invitar personas",
+    "invited": "Invitación enviada",
+    "invitedTip": "{{email}} todavía no aceptó la invitación",
+    "agentTag": "IA",
+    "agentTip": "Agente de IA"
+  },
+  "sidebarColumn": {
+    "label": "Herramientas",
+    "unread": "{{name}}, algo sin leer",
+    "you": "{{name}}, algo para ti"
+  },
+  "unreads": {
+    "title": "No leídos",
+    "forYou": "Para ti",
+    "conversations": "Conversaciones",
+    "markAll": "Marcar todo como leído",
+    "markRead": "Marcar como leído",
+    "open": "Abrir",
+    "seeInbox": "Ver todo en la bandeja de entrada",
+    "more_one": "{{count}} mensaje más",
+    "more_many": "{{count}} mensajes más",
+    "more_other": "{{count}} mensajes más",
+    "emptyTitle": "Todo al día",
+    "emptyText": "Los mensajes nuevos y lo que te espera aparecen aquí.",
+    "markedAll": "Todo marcado como leído"
   },
   "appsDownload": {
     "computer": "Computadora",
@@ -7177,6 +7198,7 @@
     "undoneBy": "Deshecho por {{name}}",
     "undoneByYou": "Deshecho por ti",
     "undo": "Deshacer",
+    "applyAnyway": "Aplicar de todos modos",
     "appliedSome": "{{done}} de {{total}} aplicadas",
     "waitingAdmin": "Esperando a un admin",
     "stale": "Desactualizada",
@@ -17677,6 +17699,12 @@
     "cpus_one": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} núcleo",
+    "cores_many": "{{count}} de núcleos",
+    "cores_other": "{{count}} núcleos",
+    "threads_one": "{{count}} hilo",
+    "threads_many": "{{count}} de hilos",
+    "threads_other": "{{count}} hilos",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17752,11 +17780,12 @@
     "helpWorkspace": "Las computadoras ayudan cuando la del equipo está llena o fuera",
     "helpWorkspaceHint": "Cada computadora ayuda solo si su dueño lo permite. Desactivado: ninguna ayuda, elija lo que elija su dueño.",
     "shareInternet": "Los agentes usan el internet de esta computadora",
-    "shareInternetHint": "Los sitios que abren los agentes pasan por la conexión de esta computadora, así que ven tu ubicación. Solo sitios web y nunca nada de tu propia red. Mientras esta computadora esté sin conexión, los agentes usan su conexión de siempre.",
+    "shareInternetHint": "Las conexiones de los agentes salen por el internet de esta computadora, así que los sitios y servidores ven tu ubicación: sitios web, git, SSH, bases de datos y otras conexiones TCP. Nunca nada de tu propia red, ni correo por el puerto 25. Las consultas de nombres, las llamadas y el resto del tráfico UDP usan la conexión de siempre, igual que todo mientras esta computadora esté sin conexión.",
+    "shareInternetHintProxy": "El navegador de los agentes y los programas que siguen la configuración de proxy (git por HTTPS, curl, la mayoría de las herramientas de línea de comandos) salen por el internet de esta computadora, así que los sitios ven tu ubicación. SSH, los clientes de bases de datos y otros programas que ignoran la configuración de proxy usan la conexión de siempre, igual que las consultas de nombres y el tráfico UDP. Nunca nada de tu propia red, ni correo por el puerto 25. Mientras esta computadora esté sin conexión, todo usa la conexión de siempre.",
     "shareInternetInUse": "En uso ahora",
     "shareInternetOther": "Los agentes usan {{name}} ahora",
     "shareInternetPick": "Usar esta",
-    "shareInternetJoin": "Los agentes también abrirán sitios por el internet de esta computadora, así que los sitios verán tu ubicación. Puedes desactivarlo en su página.",
+    "shareInternetJoin": "Los agentes también se conectarán a internet por esta computadora, así que los sitios y servidores verán tu ubicación. Puedes desactivarlo en su página.",
     "connectedBy": "Conectado por {{name}}",
     "downloadFor": "Descargar para {{system}}",
     "downloadApp": "Descargar la app",
@@ -18301,7 +18330,7 @@
       "folderOnComputer": "Permitir en el computador",
       "folderShown": "Abierto en {{deviceName}}. Permítelo allí.",
       "internetShared": "Los agentes ahora abren sitios web a través del internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Solo los agentes de este workspace, solo sitios web, nunca nada de su propia red. Mientras esté sin conexión, usan su conexión de siempre.",
+      "internetSharedLine": "Solo los agentes de este workspace, nunca nada de su propia red, nunca correo por el puerto 25. Mientras esté sin conexión, usan su conexión de siempre.",
       "internetOff": "Desactivar",
       "internetOffDone": "Los agentes ya no usan el internet de {{deviceName}}.",
       "once": "Permitir una vez",
@@ -20371,7 +20400,9 @@
       "provider_back": "Mi IA ha vuelto.",
       "confidential_removed": "Eliminado: el texto confidencial se guarda durante {{days}} días.",
       "brain_queued": "Sigo en la cola. Respondo en cuanto llegue mi turno.",
-      "brain_interrupted": "{{brain}} se detuvo antes de terminar. Ya hecho, no se repite: {{tools}}.",
+      "brain_interrupted": "{{brain}} se detuvo antes de terminar. Vuelve a pedirlo para continuar.",
+      "brain_interrupted_timeout": "{{brain}} superó su tiempo límite y se detuvo antes de terminar. Vuelve a pedirlo para continuar.",
+      "brain_interrupted_computer": "La computadora detuvo {{brain}} antes de que terminara. Vuelve a pedirlo para continuar.",
       "plan_limit_cut": "Me detuve en el límite del plan {{plan}}. Retomaré donde lo dejé {{when}}, cuando se renueve.",
       "plan_limit_cut_unknown": "Me detuve en el límite del plan {{plan}}. Retomaré donde lo dejé en cuanto se renueve.",
       "plan_limit_wait": "El plan {{plan}} llegó a su límite. Responderé {{when}}, cuando se renueve. Si se libera antes en {{plan}}, lo noto y respondo enseguida.",

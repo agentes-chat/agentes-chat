@@ -234,6 +234,10 @@ const Proposal = z
     undoable: z.boolean().openapi({
       description: "Applied, and the viewer may put it back (`POST …/proposals/{id}/undo`).",
     }),
+    applicable: z.boolean().openapi({
+      description:
+        "Left out by the review, and the viewer may make that change: they apply it themselves (`POST …/proposals/{id}/accept`, 409 when what it was made against changed since).",
+    }),
     undoneBy: z.object({ userId: z.string(), name: z.string() }).nullable(),
     undoneAt: z.string().nullable(),
     decidedAt: z.string().nullable(),
@@ -419,7 +423,10 @@ const beforeOf = (diff: string) =>
     .map((l) => l.slice(1))
     .join("\n");
 
-async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boolean; undoable: boolean })[]) {
+async function proposalViews(
+  db: Database,
+  rows: (ProposalRow & { canDecide: boolean; undoable: boolean; applicable: boolean })[],
+) {
   const agentIds = [
     ...new Set(rows.flatMap((r) => [r.agentId, r.decidedByAgentId].filter((id): id is string => !!id))),
   ];
@@ -536,6 +543,7 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
       review: r.review,
       reviewed: !r.decidedByUserId && !!r.decidedAt,
       undoable: r.undoable,
+      applicable: r.applicable,
       undoneBy: r.undoneByUserId ? { userId: r.undoneByUserId, name: users.get(r.undoneByUserId) ?? "" } : null,
       undoneAt: r.undoneAt ? r.undoneAt.toISOString() : null,
       decidedAt: r.decidedAt ? r.decidedAt.toISOString() : null,

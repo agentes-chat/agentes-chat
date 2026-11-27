@@ -87,6 +87,10 @@ html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) {
   html[data-desktop] .shell .sidebar {
     padding-top: 0;
   }
+  /* A team's sidebar has no padding of its own: its tool column and its list carry it (ADR 0260). */
+  html[data-desktop] .shell .sidebar :is(.sidebar__col, .sidebar__main) {
+    padding-top: 0;
+  }
 }
 /* The workspace's sky over the sidebar's width, its hairline included: one sky with the header below. */
 .workspace-sky--bar {
@@ -98,6 +102,13 @@ html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) {
 /* Over the icon rail (68px, its hairline left free). */
 .workspace-sky--bar.workspace-sky--rail {
   width: 67px;
+}
+/* A team's sidebar is its tool column and its list (ADR 0260): 320px, the column's 64 alone when collapsed. */
+:root:has(.sidebar[data-layout="column"]) .workspace-sky--bar {
+  width: 320px;
+}
+:root:has(.sidebar[data-layout="column"]) .workspace-sky--bar.workspace-sky--rail {
+  width: 63px;
 }
 .titlebar__nav {
   display: flex;
