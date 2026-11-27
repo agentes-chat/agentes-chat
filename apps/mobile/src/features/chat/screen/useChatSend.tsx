@@ -120,11 +120,25 @@ export function useChatSend({
     | "org"
     | "planHeld"
     | "roster"
+    | "sendIntent"
     | "sendTyping"
   >;
 }) {
-  const { channel, dm, dmAgentId, isThread, list, live, mentionMembers, mission, org, planHeld, roster, sendTyping } =
-    data;
+  const {
+    channel,
+    dm,
+    dmAgentId,
+    isThread,
+    list,
+    live,
+    mentionMembers,
+    mission,
+    org,
+    planHeld,
+    roster,
+    sendIntent,
+    sendTyping,
+  } = data;
   // ── Sending ──
   // Without a connection (no internet, or the server restarting) a message isn't "failed": it waits with a
   // clock and goes by itself when the connection is back, from whatever screen is open (`useSendWaiting`).
@@ -839,11 +853,13 @@ export function useChatSend({
           channelId={channelId}
           members={mentionMembers}
           everyone={everyoneOffered}
+          onAgent={(agentId) => sendIntent("mention", agentId)}
         />
       ),
-    [channelId, mentionMembers, everyoneOffered],
+    [channelId, mentionMembers, everyoneOffered, sendIntent],
   );
   const onType = useCallback((text: string) => sendTyping(threadId, text), [sendTyping, threadId]);
+  const onFocusField = useCallback(() => sendIntent("focus"), [sendIntent]);
   return {
     afterVoice,
     canAttach,
@@ -861,6 +877,7 @@ export function useChatSend({
     onRetry,
     onSend,
     onType,
+    onFocusField,
     openNewMission,
     openRemind,
     pending,

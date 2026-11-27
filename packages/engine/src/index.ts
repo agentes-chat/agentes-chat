@@ -415,6 +415,7 @@ export * from "./vault/tools";
 export * from "./voice";
 export * from "./waiting";
 export * from "./waitlist";
+export * from "./wake-intent";
 export * from "./wallpaper-photos";
 export * from "./web-push";
 export * from "./web-tools";

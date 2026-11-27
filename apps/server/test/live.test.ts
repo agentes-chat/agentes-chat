@@ -119,6 +119,51 @@ test("opening a DM or a thread warms the agent that will answer there, once subs
   a.ws.close();
 });
 
+test("the signs that wake the agents' computer on a guess: the app, an open conversation, typing, focus, `@` and an agent", async () => {
+  const channelId = "0193a2b4-0000-7000-8000-000000000000";
+  const agentId = "0193a2b4-0000-7000-8000-0000000000bb";
+  expect(parseClientFrame(JSON.stringify({ type: "intent", channelId, signal: "mention", agentId }))).toEqual({
+    type: "intent",
+    channelId,
+    threadId: null,
+    signal: "mention",
+    agentId,
+  });
+  // A sign this server doesn't know: no frame.
+  expect(parseClientFrame(JSON.stringify({ type: "intent", channelId, signal: "hover" }))).toBeNull();
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const seeded = await seedOrg(owner);
+  const intents = spyOn(t.engine, "noteWakeIntent");
+  const url = `ws://127.0.0.1:${server.port}/api/ws?orgId=${seeded.orgId}`;
+  const a = connect(url, { origin: ORIGIN, cookie: owner.cookie() });
+  await a.opened;
+  await a.until((f) => f.type === "ready");
+  const userId = expect.any(String);
+  expect(intents.mock.calls).toEqual([["app", { orgId: seeded.orgId, userId }]]);
+  // Not a channel this connection reads yet: nothing.
+  a.send({ type: "intent", channelId: seeded.channelId, signal: "focus" });
+  a.send({ type: "subscribe", channelId: seeded.channelId });
+  await a.until((f) => f.type === "subscribed");
+  a.send({ type: "open", channelId: seeded.channelId });
+  a.send({ type: "intent", channelId: seeded.channelId, signal: "focus" });
+  a.send({ type: "intent", channelId: seeded.channelId, signal: "mention", agentId });
+  a.send({ type: "typing", channelId: seeded.channelId, kind: "voice" });
+  await Bun.sleep(150);
+  const where = { orgId: seeded.orgId, channelId: seeded.channelId, threadId: null, userId };
+  expect(intents.mock.calls.slice(1)).toEqual([
+    ["open", where],
+    ["focus", { ...where, agentId: null }],
+    ["mention", { ...where, agentId }],
+    ["voice", where],
+  ]);
+  // At most five a connection every 10 s.
+  for (let i = 0; i < 5; i++) a.send({ type: "intent", channelId: seeded.channelId, signal: "focus" });
+  await Bun.sleep(150);
+  expect(intents.mock.calls.filter(([s]) => s === "focus" || s === "mention")).toHaveLength(5);
+  a.ws.close();
+});
+
 test("a voice frame (“gravando áudio…”) goes on with its kind, through the same limit; another kind reads as typing", async () => {
   const channelId = "0193a2b4-0000-7000-8000-000000000000";
   expect(parseClientFrame(JSON.stringify({ type: "typing", channelId, kind: "voice" }))).toEqual({

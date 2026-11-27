@@ -289,6 +289,7 @@ export async function createTestServer(
     overloaded: options.overloaded,
     // Read at each frame, so a test can spy on it.
     onTyping: (where) => engine.warmWhileTyping(where),
+    onIntent: (signal, where) => engine.noteWakeIntent(signal, where),
   });
   return {
     db,

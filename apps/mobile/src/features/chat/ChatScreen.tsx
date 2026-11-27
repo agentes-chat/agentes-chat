@@ -268,6 +268,7 @@ function Chat({
     onRetry,
     onSend,
     onType,
+    onFocusField,
     openNewMission,
     openRemind,
     pending,
@@ -924,6 +925,7 @@ function Chat({
                 longFromField={longFromField}
                 mentionCard={mentionCard}
                 onType={onType}
+                onFocusField={onFocusField}
                 orgId={orgId}
                 dmAgentId={dmAgentId}
                 quote={quote}

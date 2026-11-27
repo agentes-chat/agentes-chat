@@ -173,11 +173,16 @@ export function useChatData({
   const focused = useIsFocused();
   const peeking = useIsPreview();
   const live = useChatLive(orgId, channelId, readable, focused || peeking);
-  // Opened, or back on top: the agent that answers in this DM or thread gets ready before anything is typed.
+  // Opened, or back on top: the agent that answers here gets ready before anything is typed.
   const connection = useConnection();
   useEffect(() => {
-    if (focused && readable && (dmAgentId || isThread)) connection?.sendOpen(channelId, threadId);
-  }, [connection, focused, readable, dmAgentId, isThread, channelId, threadId]);
+    if (focused && readable) connection?.sendOpen(channelId, threadId);
+  }, [connection, focused, readable, channelId, threadId]);
+  // The field focused, or an agent picked after "@": the agents' computer may wake before the message is sent.
+  const sendIntent = useCallback(
+    (signal: "focus" | "mention", agentId?: string) => connection?.sendIntent(channelId, threadId, signal, agentId),
+    [connection, channelId, threadId],
+  );
   // Agents my message here named that won't answer me: in this conversation or this thread only.
   const notices = useMemo(
     () => live.notices.filter((n) => (isThread ? n.threadId === threadId : n.threadId === null)),
@@ -414,6 +419,7 @@ export function useChatData({
     runs,
     seenBy,
     seenId,
+    sendIntent,
     sendTyping,
     setGap,
     setOlder,

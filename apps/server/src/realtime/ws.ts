@@ -29,6 +29,8 @@ import {
   ForbiddenError,
   fileConversationReaderSql,
   getMembership,
+  type IntentSignal,
+  type IntentWhere,
   isConnected,
   type LiveWatch,
   NotFoundError,
@@ -84,6 +86,11 @@ const DB_RETRY_AFTER_S = 5;
  *   client; the server keeps at most two every 2 s) fans out `user.typing` to
  *   the channel, valid for `ttlMs` (5 s); `kind: "voice"` while recording a
  *   voice message ("gravando áudio…"), absent while typing.
+ * - `{"type":"open","channelId","threadId"?}`: a conversation open on screen;
+ *   `{"type":"intent","channelId","threadId"?,"signal","agentId"?}`: the
+ *   composer focused (`focus`) or an agent picked after `@` (`mention`). Both
+ *   only in a subscribed channel, both rate-limited; with typing they are the
+ *   signs that wake the agents' computer on a guess (`noteWakeIntent`).
  * - Server → client frames: `ready`, `subscribed`, `unsubscribed` (with a
  *   `reason` when the server dropped it: `revoked`, `archived`), `error`, and
  *   channel events (`message.created`, `agent.run`, `agent.typing`,
@@ -120,6 +127,8 @@ export interface RealtimeDeps {
    * ready (`warmWhileTyping`). Never awaited, its failure is nobody's.
    */
   onTyping?: (where: { orgId: string; channelId: string; threadId: string | null; userId: string }) => Promise<void>;
+  /** A sign that a message to an agent comes soon (`noteWakeIntent`). Never awaited, its failure is nobody's. */
+  onIntent?: (signal: IntentSignal, where: IntentWhere) => Promise<unknown>;
 }
 
 /** A browser tab of the web app. */
@@ -192,6 +201,7 @@ export type ClientFrame =
   | { type: "subscribe" | "unsubscribe"; channelId: string }
   | { type: "typing"; channelId: string; threadId: string | null; kind?: "voice" }
   | { type: "open"; channelId: string; threadId: string | null }
+  | { type: "intent"; channelId: string; threadId: string | null; signal: "focus" | "mention"; agentId: string | null }
   | { type: "ping" };
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -250,6 +260,8 @@ export function parseClientFrame(raw: string | Buffer): ClientFrame | null {
       channelId?: unknown;
       threadId?: unknown;
       kind?: unknown;
+      signal?: unknown;
+      agentId?: unknown;
     };
     if (frame.type === "ping") return { type: "ping" };
     if (frame.type === "typing" && typeof frame.channelId === "string" && UUID.test(frame.channelId)) {
@@ -265,6 +277,16 @@ export function parseClientFrame(raw: string | Buffer): ClientFrame | null {
     if (frame.type === "open" && typeof frame.channelId === "string" && UUID.test(frame.channelId)) {
       const threadId = typeof frame.threadId === "string" && UUID.test(frame.threadId) ? frame.threadId : null;
       return { type: "open", channelId: frame.channelId, threadId };
+    }
+    if (
+      frame.type === "intent" &&
+      typeof frame.channelId === "string" &&
+      UUID.test(frame.channelId) &&
+      (frame.signal === "focus" || frame.signal === "mention")
+    ) {
+      const threadId = typeof frame.threadId === "string" && UUID.test(frame.threadId) ? frame.threadId : null;
+      const agentId = typeof frame.agentId === "string" && UUID.test(frame.agentId) ? frame.agentId : null;
+      return { type: "intent", channelId: frame.channelId, threadId, signal: frame.signal, agentId };
     }
     if (
       (frame.type === "subscribe" || frame.type === "unsubscribe") &&
@@ -974,6 +996,7 @@ export function createRealtime(deps: RealtimeDeps) {
         // Closed while it connected: `close` found nothing to disconnect, so nobody stays online for this socket.
         if (ws.readyState !== 1) return void (await deps.presence.disconnect(orgId, user.id, ws.data.connectionId));
         await touchLastSeen(deps.db, orgId, user.id).catch(() => {});
+        deps.onIntent?.("app", { orgId, userId: user.id }).catch(() => {});
         if (!wasConnected) await announcePresence(deps, orgId, user.id).catch(() => {});
         send(ws, { type: "ready", orgId: ws.data.orgId, userId: ws.data.user.id });
       },
@@ -1026,6 +1049,7 @@ export function createRealtime(deps: RealtimeDeps) {
           });
           const where = { orgId: ws.data.orgId, channelId, threadId: frame.threadId, userId: ws.data.user.id };
           deps.onTyping?.(where).catch(() => {});
+          deps.onIntent?.(frame.kind === "voice" ? "voice" : "typing", where).catch(() => {});
           return;
         }
         if (frame.type === "open") {
@@ -1036,6 +1060,16 @@ export function createRealtime(deps: RealtimeDeps) {
           if (!t.allowed) return;
           const where = { orgId: ws.data.orgId, channelId, threadId: frame.threadId, userId: ws.data.user.id };
           deps.onTyping?.(where).catch(() => {});
+          deps.onIntent?.("open", where).catch(() => {});
+          return;
+        }
+        if (frame.type === "intent") {
+          if (!ws.data.subscriptions.has(channelId)) return;
+          const t = await deps.rateLimiter.consume(`intent:${ws.data.connectionId}`, { limit: 5, windowMs: 10_000 });
+          if (!t.allowed) return;
+          const { threadId, signal, agentId } = frame;
+          const where = { orgId: ws.data.orgId, userId: ws.data.user.id, channelId, threadId, agentId };
+          deps.onIntent?.(signal, where).catch(() => {});
           return;
         }
         if (frame.type === "unsubscribe") {

@@ -8,6 +8,8 @@ import {
   computerQueue,
   createMachineHub,
   enableOperatorEvents,
+  INTENT_WAKE_EVERY_MS,
+  INTENT_WAKES_PER_HOUR,
   issueManagedMachine,
   listDevices,
   listMachines,
@@ -21,6 +23,7 @@ import {
   maintenancePhrase,
   operatorMachines,
   pollDeviceToken,
+  resetIntentWakes,
   revokeManagedMachine,
   setMachineEgressWaiting,
   setMachineMaintenance,
@@ -51,6 +54,7 @@ let f: Fixture;
 let hub: MachineHub | null = null;
 afterEach(async () => {
   enableOperatorEvents(false);
+  resetIntentWakes();
   await hub?.stop();
   hub = null;
   const current = f;
@@ -386,6 +390,50 @@ describe("what wants it", () => {
     expect(await wakeEvents()).toHaveLength(2);
   });
 
+  test("a guess (intent): asked back in standby only, never while it wakes; no use, no wake's clock; its own count", async () => {
+    f = await setup();
+    enableOperatorEvents();
+    const { machineId } = await managedComputer();
+    const t = Date.now();
+    // Awake: nothing to ask.
+    await wantMachine(f.db, machineId, "intent", t);
+    expect(await wakeEvents()).toEqual([]);
+
+    await setMachineStandby(deps(), f.org.id, machineId, true);
+    await wantMachine(f.db, machineId, "intent", t);
+    expect(await wakeEvents()).toEqual([{ orgId: f.org.id, data: { machineId, why: "intent" } }]);
+    // A guess is no use of it, and one that fails never shows it down.
+    const row = await machineRow(machineId);
+    expect(row.wantedAt).toBeNull();
+    expect(row.wakeWantedAt).toBeNull();
+    // A run's ask right after it is still told: control wakes harder for it than for a guess.
+    await wantMachine(f.db, machineId, "run", t + 1);
+    expect((await wakeEvents()).map((e) => e.data)).toEqual([
+      { machineId, why: "intent" },
+      { machineId, why: "run" },
+    ]);
+    // Waking for that run now (its clock running): no guess on top of it.
+    await wantMachine(f.db, machineId, "intent", t + INTENT_WAKE_EVERY_MS);
+    expect(await wakeEvents()).toHaveLength(2);
+  });
+
+  test("guesses: at most one per computer every 2 minutes, and so many an hour", async () => {
+    f = await setup();
+    enableOperatorEvents();
+    const { machineId } = await managedComputer();
+    await setMachineStandby(deps(), f.org.id, machineId, true);
+    const t = Date.now();
+    await wantMachine(f.db, machineId, "intent", t);
+    await wantMachine(f.db, machineId, "intent", t + INTENT_WAKE_EVERY_MS - 1);
+    expect(await wakeEvents()).toHaveLength(1);
+    for (let i = 1; i <= INTENT_WAKES_PER_HOUR; i++)
+      await wantMachine(f.db, machineId, "intent", t + i * INTENT_WAKE_EVERY_MS);
+    expect(await wakeEvents()).toHaveLength(INTENT_WAKES_PER_HOUR);
+    // An hour after the first, it may be asked again.
+    await wantMachine(f.db, machineId, "intent", t + 60 * 60_000 + INTENT_WAKE_EVERY_MS);
+    expect(await wakeEvents()).toHaveLength(INTENT_WAKES_PER_HOUR + 1);
+  });
+
   test("the hub: its status says standby, and a request to it asleep asks for a wake and fails at once", async () => {
     f = await setup();
     enableOperatorEvents();
@@ -507,7 +555,7 @@ describe("what the operator decides with", () => {
     const { machineId } = await managedComputer();
     const m = { id: machineId, orgId: f.org.id };
     const busy = async () => (await machineActivity(f.db, m)).busy;
-    expect(await machineActivity(f.db, m)).toEqual({ busy: false, lastUsedAt: null });
+    expect(await machineActivity(f.db, m)).toEqual({ busy: false, lastUsedAt: null, workedAt: null });
 
     const [run] = await f.db
       .insert(schema.agentRuns)
@@ -612,6 +660,7 @@ describe("what the operator decides with", () => {
     const now = Date.now();
     const ago = (minutes: number) => new Date(now - minutes * 60_000);
     const lastUsed = async () => (await machineActivity(f.db, m, new Date(now))).lastUsedAt?.getTime() ?? null;
+    const worked = async () => (await machineActivity(f.db, m, new Date(now))).workedAt?.getTime() ?? null;
     const run = (values: Partial<typeof schema.agentRuns.$inferInsert>) =>
       f.db.insert(schema.agentRuns).values({
         orgId: f.org.id,
@@ -639,6 +688,8 @@ describe("what the operator decides with", () => {
       .set({ lastSeenAt: ago(40) })
       .where(eq(schema.organizationMembers.userId, f.owner.id));
     expect(await lastUsed()).toBe(ago(40).getTime());
+    // A visit is no work: what a wake on a guess is judged by.
+    expect(await worked()).toBe(ago(50).getTime());
 
     await f.db.insert(schema.machineTasks).values({
       orgId: f.org.id,
@@ -667,6 +718,7 @@ describe("what the operator decides with", () => {
       standby: false,
       busy: false,
       lastUsedAt: ago(5),
+      workedAt: ago(5),
     });
     expect(listed?.find((x) => x.id === paired.machineId)).toMatchObject({
       managed: false,

@@ -902,6 +902,26 @@ describe("RealtimeConnection", () => {
     conn.stop();
   });
 
+  test("a sign of a message to come (focus, `@` and an agent) goes only in a confirmed channel, never queued", () => {
+    const { factory, last } = fakeSockets();
+    const conn = new RealtimeConnection({ url: "ws://x", createSocket: factory, pingMs: 0 });
+    const off = conn.subscribe("c1", () => {});
+    conn.start();
+    const socket = last();
+    socket.open();
+    conn.sendIntent("c1", null, "focus");
+    socket.push({ type: "subscribed", channelId: "c1" });
+    expect(socket.sent).toEqual([{ type: "subscribe", channelId: "c1" }]);
+    conn.sendIntent("c1", "t1", "focus");
+    conn.sendIntent("c1", null, "mention", "a1");
+    expect(socket.sent.slice(1)).toEqual([
+      { type: "intent", channelId: "c1", threadId: "t1", signal: "focus" },
+      { type: "intent", channelId: "c1", signal: "mention", agentId: "a1" },
+    ]);
+    off();
+    conn.stop();
+  });
+
   test("a socket that stops answering (asleep, a network change) is replaced, re-subscribes and catches up", () => {
     const { factory, sockets } = fakeSockets();
     const clock = manualTimers();

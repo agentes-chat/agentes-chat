@@ -115,6 +115,8 @@ import {
   getAgentCached,
   hubBrainLink,
   INTEGRATION_DELIVERY_JOB,
+  type IntentSignal,
+  type IntentWhere,
   type IntentWriter,
   isAgentesCloud,
   type JobDeps,
@@ -125,6 +127,7 @@ import {
   type McpConnect,
   messageRouter,
   missionTurnPermissions,
+  noteWakeIntent,
   notifyOwnerOnBudget,
   OpencodeBrain,
   officeLiveExporter,
@@ -1034,6 +1037,8 @@ export function buildEngine(o: EngineOptions) {
     voice,
     /** A person typing where an agent on Claude Code answers: its CLI starts now (`warmWhileTyping`). */
     warmWhileTyping: (where: Parameters<typeof warmWhileTyping>[1]) => warmWhileTyping(jobDeps, where),
+    /** A sign from a person's app that a message to an agent comes soon: its computer wakes on a guess. */
+    noteWakeIntent: (signal: IntentSignal, where: IntentWhere) => noteWakeIntent(jobDeps, signal, where),
   };
 }
 

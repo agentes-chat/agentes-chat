@@ -103,6 +103,7 @@ export function ChatDock({
   longFromField,
   mentionCard,
   onType,
+  onFocusField,
   orgId,
   dmAgentId,
   quote,
@@ -155,6 +156,7 @@ export function ChatDock({
     | "longFromField"
     | "mentionCard"
     | "onType"
+    | "onFocusField"
     | "quote"
     | "voiceOn"
     | "afterVoice"
@@ -312,6 +314,7 @@ export function ChatDock({
               {...(canAttach ? { onLongAsFile: longFromField } : {})}
               mention={mentionCard}
               onType={onType}
+              onFocusField={onFocusField}
               orgId={orgId}
               channelId={channelId}
               threadId={threadId}
