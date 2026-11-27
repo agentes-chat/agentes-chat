@@ -94,6 +94,7 @@ export * from "./connectors/oauth-return";
 export * from "./connectors/own-client";
 export * from "./connectors/personal";
 export * from "./connectors/pins";
+export * from "./connectors/posthog";
 export * from "./connectors/presets";
 export * from "./connectors/request-headers";
 export * from "./connectors/server-icon";

@@ -15691,6 +15691,8 @@ export const ptBR = {
       list_dashboards: "Listar painéis",
       share_dashboard: "Compartilhar painel",
       create_widget: "Criar widget",
+      change_widget: "Editar widget",
+      remove_widget: "Remover widget",
       update_widget: "Alterar widget",
       load_skill: "Abrir skill",
       read_skill_file: "Ler arquivo da skill",

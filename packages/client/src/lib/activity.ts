@@ -340,6 +340,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   create_dashboard: "updatingDashboard",
   create_widget: "updatingDashboard",
   update_widget: "updatingDashboard",
+  change_widget: "updatingDashboard",
+  remove_widget: "updatingDashboard",
   share_dashboard: "updatingDashboard",
   list_dashboards: "readingDashboards",
   request_branch_push: "pushingBranch",

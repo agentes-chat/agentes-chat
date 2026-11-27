@@ -546,6 +546,20 @@ async function costOf(ctx: ToolContext, name: string, input: Record<string, unkn
 const authorityOf = (ctx: ToolContext): Promise<RunAuthority | null> =>
   ctx.runId ? runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : Promise.resolve(null);
 
+/**
+ * Whether a call only reads its connection: every action it runs only reads (Composio's executor), or the tool says
+ * this input only reads (PostHog's `exec`). Only a tool with a `readScope` runs such a call as a read.
+ */
+function callReads(tool: ToolDefinition, input: Record<string, unknown>): boolean {
+  if (tool.readsOnly) return tool.readsOnly(input);
+  const actions = tool.actions?.(input);
+  return Boolean(actions?.length && actions.every((a) => actionLevel(a) === "read"));
+}
+
+/** The connection's read a tool's reading calls run as (`callReads`), or null for a tool without any. */
+const readForm = (tool: ToolDefinition): ToolDefinition | null =>
+  tool.readScope && (tool.readsOnly || tool.actions) ? { ...tool, scope: tool.readScope, sensitive: false } : null;
+
 const ALLOWED: PolicyDecision = { action: "allow" };
 const policyFor = (
   authority: RunAuthority | null,
@@ -722,6 +736,13 @@ export function createToolGateway(deps: {
         if (decision.action !== "refuse") {
           return [asListed(t, decision, unaskedAtNever(level, t, authority), ruled(t))];
         }
+        // A run that may only read (a widget's refresh) still lists a tool some of whose calls only read: each call
+        // is judged as it comes, a read as the connection's read and anything else refused with why.
+        const read = readForm(t);
+        if (read && isAllowed(accessWithNeeds(keys, read).state)) {
+          const asRead = policyFor(authority, read, level, decides);
+          if (asRead.action !== "refuse") return [asListed({ ...t, sensitive: false }, asRead)];
+        }
         heldBack?.push(t.name);
         return [];
       })
@@ -874,8 +895,7 @@ export function createToolGateway(deps: {
     const input = takeWhy(tool.inputSchema, request.input).input;
     const refusal = aheadRefusal(tool, input);
     if (refusal) return no(refusal);
-    const actions = tool.actions?.(input) ?? [];
-    if (toolKind(tool).kind !== "external" || (actions.length > 0 && actions.every((a) => actionLevel(a) === "read"))) {
+    if (toolKind(tool).kind !== "external" || callReads(tool, input)) {
       return no("This doesn't ask a person at its time: there is nothing to approve ahead.");
     }
     const access = accessWithNeeds(await freshGrantedKeys(ctx.db, ctx.orgId, ctx.agentId), tool);
@@ -1513,13 +1533,12 @@ export function createToolGateway(deps: {
         if (lost) return finish({ content: lost, isError: true, data: { code: "tool.personal_lost" } });
         return finish({ content: unknownInDirectory ?? `Unknown tool ${call.name}`, isError: true, data: unknown });
       }
-      // A tool that runs other actions (Composio's executor): a call whose actions all only read is the
-      // connection's read, when the agent may read the connection. Everything below then sees a read.
-      if (tool.actions && tool.readScope) {
+      // A tool that runs other actions (Composio's executor) or what its input says (PostHog's `exec`): a call that
+      // only reads is the connection's read, when the agent may read the connection. Everything below then sees a read.
+      const read = readForm(tool);
+      if (read) {
         const bare = takeWhy(tool.inputSchema, call.input).input;
-        const actions = tool.actions(bare);
-        if (actions?.length && actions.every((a) => actionLevel(a) === "read")) {
-          const read: ToolDefinition = { ...tool, scope: tool.readScope, sensitive: false };
+        if (callReads(tool, bare)) {
           const keys = await freshGrantedKeys(ctx.db, ctx.orgId, ctx.agentId);
           if (isAllowed(accessWithNeeds(keys, read).state)) {
             tool = read;

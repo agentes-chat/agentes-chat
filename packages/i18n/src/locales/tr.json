@@ -15174,6 +15174,8 @@
       "list_dashboards": "Panoları listele",
       "share_dashboard": "Panoyu paylaş",
       "create_widget": "Widget oluştur",
+      "change_widget": "Widget'ı düzenle",
+      "remove_widget": "Widget'ı kaldır",
       "update_widget": "Widget'ı güncelle",
       "load_skill": "Beceriyi aç",
       "read_skill_file": "Beceri dosyasını oku",

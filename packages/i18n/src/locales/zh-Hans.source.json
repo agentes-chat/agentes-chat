@@ -37417,6 +37417,12 @@
   "toolNames.label.create_widget": {
     "value": "Create widget"
   },
+  "toolNames.label.change_widget": {
+    "value": "Edit widget"
+  },
+  "toolNames.label.remove_widget": {
+    "value": "Remove widget"
+  },
   "toolNames.label.update_widget": {
     "value": "Change widget"
   },
