@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { ActiveRun, ChannelEvent, Message } from "@agenteschat/client";
+import type { ActiveRun, ApiClient, ChannelEvent, Message } from "@agenteschat/client";
 import {
+  ApiError,
   applyChannelEvent,
   applyReceiptEvent,
   applyTyping,
@@ -19,7 +20,7 @@ import {
   typingIn,
   typingThrottle,
 } from "@agenteschat/client";
-import { createStreamsStore } from "@/realtime/context";
+import { createStreamsStore, reconcileChannelRuns } from "@/realtime/context";
 
 const base = { channelId: "c1", threadId: "m1", runId: "r1", agentId: "ada" };
 
@@ -1071,6 +1072,65 @@ describe("live memory cards", () => {
       askedAt,
     );
     expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i2", "r3:i3"]);
+  });
+  const running = (store: ReturnType<typeof createStreamsStore>, runId: string) =>
+    store.apply({ type: "agent.delta", channelId: "c1", threadId: "m1", agentId: "nova", runId, seq: 0, text: "…" });
+  const listed = (runId: string): ActiveRun => ({
+    runId,
+    agentId: "nova",
+    channelId: "c1",
+    threadId: "m1",
+    status: "running",
+    startedAt: null,
+  });
+
+  test("a quiet run the server says is over takes its cards along, as an open tab checks it", async () => {
+    const store = createStreamsStore();
+    for (const runId of ["r1", "r2"]) {
+      running(store, runId);
+      announce(store, runId, `i-${runId}`);
+    }
+    const api = { agents: { activeRuns: async () => [listed("r2")] } } as unknown as ApiClient;
+    expect(await reconcileChannelRuns(api, store, "o", "c1", ["r1", "r2"])).toBe(true);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i-r2"]);
+  });
+
+  test("without the endpoint, a run found over (or gone) takes its cards along", async () => {
+    const store = createStreamsStore();
+    for (const runId of ["done", "gone", "busy"]) {
+      running(store, runId);
+      announce(store, runId, `i-${runId}`);
+    }
+    const api = {
+      agents: {
+        activeRuns: async () => null,
+        run: async (_o: string, runId: string) => {
+          if (runId === "gone") throw new ApiError(404, "not_found", "nope");
+          return { run: { id: runId, status: runId === "busy" ? "running" : "failed" }, steps: [] };
+        },
+      },
+    } as unknown as ApiClient;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["busy:i-busy"]);
+  });
+
+  test("a message too big for its event: the card waits for it, then leaves with it, never twice", () => {
+    const store = createStreamsStore();
+    announce(store, "r1");
+    announce(store, "r1", "i2");
+    store.apply({ type: "message.created", channelId: "c1", messageId: "a1", agentRunId: "r1" } as ChannelEvent);
+    store.apply({
+      type: "agent.run",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r1",
+      status: "done",
+    } as unknown as ChannelEvent);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i1", "r1:i2"]);
+    // Its body read: the change it shows leaves with it, and the run's other card too (it ended).
+    store.seed([{ ...reply, agentRunId: "r1" }]);
+    expect(store.get().memory.c1).toEqual([]);
   });
 });
 

@@ -248,6 +248,17 @@ export function createStreamsStore(
     continued: {},
     consults: {},
   };
+  // Runs whose message came too big for its event: its body is being read (`seed`). Their cards wait for it instead of
+  // leaving when the run ends, else they would go and come back with the message. `true` once the run ended.
+  const awaitingBody = new Map<string, boolean>();
+  /** A run is over: its cards go, unless its message is still on its way (they go with it, in `seed`). */
+  const endRunCards = (memory: LiveState["memory"], runId: string) => {
+    if (awaitingBody.has(runId)) {
+      awaitingBody.set(runId, true);
+      return memory;
+    }
+    return dropMemoryCardsWhere(memory, (c) => c.runId === runId);
+  };
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const l of listeners) l();
@@ -288,6 +299,8 @@ export function createStreamsStore(
     apply: (event: ChannelEvent) => {
       const typing = applyTypingEvent(state.typing, event, now());
       const ended = endedRun(event);
+      if (event.type === "message.created" && !event.message && event.agentRunId)
+        awaitingBody.set(event.agentRunId, awaitingBody.get(event.agentRunId) ?? false);
       const memory =
         event.type === "memory.updated"
           ? {
@@ -311,7 +324,7 @@ export function createStreamsStore(
             : // The run ended (done, failed, stopped): its message holds what it changed, or it never got one. A live
               // card is only for a run still going: kept, it stayed at the bottom saying "agora" until a reload.
               ended !== null
-              ? dropMemoryCardsWhere(state.memory, (c) => c.runId === ended)
+              ? endRunCards(state.memory, ended)
               : state.memory;
       const questions =
         event.type === "question.asked" || event.type === "question.answered"
@@ -369,6 +382,13 @@ export function createStreamsStore(
       for (const m of messages) {
         receipts = seedReceipt(receipts, m, before !== undefined && receipts[m.id] === before[m.id]);
         memory = dropMemoryCards(memory, m.channelId, m);
+        // The message its run's cards waited for is here: an ended run's other cards go now.
+        const runId = m.agentRunId;
+        if (runId && awaitingBody.has(runId)) {
+          const over = awaitingBody.get(runId);
+          awaitingBody.delete(runId);
+          if (over) memory = endRunCards(memory, runId);
+        }
       }
       set({ ...state, receipts, memory });
     },
@@ -428,7 +448,8 @@ export function createStreamsStore(
       set({ ...state, questions: { ...state.questions, [question.id]: question } }),
     /** Our own delivery or refusal of a secret request, before the server's event. */
     secretAnswered: (request: SecretRequest) => set({ ...state, secrets: { ...state.secrets, [request.id]: request } }),
-    dismiss: (runId: string) => set({ ...state, streams: dismissRun(state.streams, runId) }),
+    dismiss: (runId: string) =>
+      set({ ...state, streams: dismissRun(state.streams, runId), memory: endRunCards(state.memory, runId) }),
     /** "Parar" pressed (optimistic) / the cancel failed. */
     stopping: (runId: string, byUserId: string) =>
       set({ ...state, streams: markStopping(state.streams, runId, byUserId) }),
@@ -439,10 +460,12 @@ export function createStreamsStore(
         ...state,
         streams: reconcileRuns(state.streams, channelId, active, now(), askedAt),
         // A missed end (a reconnect): the cards of runs no longer active go too, unless they came after the ask.
-        memory: dropMemoryCardsWhere(
-          state.memory,
-          (c, at) => at === channelId && c.at < askedAt && !active.some((a) => a.runId === c.runId),
-        ),
+        memory: dropMemoryCardsWhere(state.memory, (c, at) => {
+          if (at !== channelId || c.at >= askedAt || active.some((a) => a.runId === c.runId)) return false;
+          if (!awaitingBody.has(c.runId)) return true;
+          awaitingBody.set(c.runId, true);
+          return false;
+        }),
       }),
     /** The server's questions still out in a channel (load, reconnect): the "asking…" line. */
     reconcileConsults: (channelId: string, open: OpenConsult[], askedAt = now()) =>
@@ -454,7 +477,16 @@ export function createStreamsStore(
     touch: (runId: string) => set({ ...state, streams: touchRun(state.streams, runId, now()) }),
     /** The server's active runs, asked about runs gone quiet (`recheckRuns`). */
     recheck: (runIds: readonly string[], active: readonly ActiveRun[] | undefined) =>
-      set({ ...state, streams: recheckRuns(state.streams, runIds, active, now()) }),
+      set({
+        ...state,
+        streams: recheckRuns(state.streams, runIds, active, now()),
+        // The server says these runs are over (their end never reached this tab): their cards go with their rows.
+        memory: active
+          ? runIds
+              .filter((id) => !active.some((a) => a.runId === id))
+              .reduce((memory, id) => endRunCards(memory, id), state.memory)
+          : state.memory,
+      }),
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
