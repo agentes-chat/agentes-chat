@@ -1509,7 +1509,6 @@
   "calendar": {
     "nothing": "{{days}} · niets gepland",
     "nothingToday": "Vandaag niets gepland.",
-    "routine": "Routine · {{agent}}",
     "reminder": "Herinnering · {{agent}}",
     "reminderIn": "Herinnering · {{agent}} · in {{place}}",
     "deadline": "Taak met deadline",

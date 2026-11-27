@@ -1,8 +1,7 @@
-import type { Actor, CalendarEvent, CalendarProposal, CalendarRange, Routine, SeriesScope } from "@agenteschat/client";
+import type { Actor, CalendarEvent, CalendarProposal, CalendarRange, SeriesScope } from "@agenteschat/client";
 import {
   addDays,
   type CalItem,
-  collapseRoutines,
   type DayEntry,
   dayEntries,
   sameDay,
@@ -10,12 +9,12 @@ import {
   toItems,
 } from "@agenteschat/client/lib/calendar";
 import { dateFormat, toYmd } from "@agenteschat/client/lib/format";
-import { runPixelStatus, runPixels } from "@agenteschat/client/lib/routine-view";
 
 /**
  * Calendário on the phone (agenda, the approved direction): the week as a strip and, under it, the days that have
- * something, as a list. Everything here is pure (no React Native), so `bun test` runs it; the item model itself is the
- * web's (`@agenteschat/client/lib/calendar`: `toItems`, `collapseRoutines`, `dayEntries`).
+ * something, as a list: events, reminders, tasks due and the times agents propose (routines stay on their own page,
+ * ADR 0053's 2026-11-27 addendum). Everything here is pure (no React Native), so `bun test` runs it; the item model
+ * itself is the web's (`@agenteschat/client/lib/calendar`: `toItems`, `dayEntries`).
  */
 
 /** The days a week strip shows: Sunday first, as the system's calendar in the languages the app speaks. */
@@ -64,33 +63,14 @@ export const weekdayName = (locale: string, d: Date) => dateFormat(locale, { wee
 /** "novembro": a month's name. */
 export const monthName = (locale: string, d: Date) => dateFormat(locale, { month: "long" }).format(d);
 
-/** The items of a range, a routine that runs often folded into one row a day (the web's own rule). */
-export function agendaItems(range: CalendarRange | undefined, days: Date[], routines: readonly Routine[]): CalItem[] {
-  return withRunResults(collapseRoutines(toItems(range), days), routines);
-}
+/** The items of a range: events, reminders and tasks due (the range's routine runs stay out, as on the web). */
+export const agendaItems = (range: CalendarRange | undefined): CalItem[] => toItems(range);
 
-/**
- * A routine's single run, already past, says how it went (a run of the routine within 5 minutes of it); one still
- * ahead says nothing. The web reads it the same way (`CalendarPage`).
- */
-export function withRunResults(items: CalItem[], routines: readonly Routine[]): CalItem[] {
-  if (routines.length === 0) return items;
-  const byId = new Map(routines.map((r) => [r.id, r]));
-  return items.map((it) => {
-    const r = it.routineId && !it.runs ? byId.get(it.routineId) : undefined;
-    if (!r) return it;
-    const own = runPixels(r.recentRuns).find((x) => Math.abs(new Date(x.at).getTime() - it.start.getTime()) < 300_000);
-    const last = r.lastRun ? (runPixelStatus(r.lastRun.status) ?? undefined) : undefined;
-    return { ...it, result: own?.status, lastResult: last };
-  });
-}
-
-/** A moment (a routine's run, a reminder) is over once its time came; anything else once it ended. */
-export const isOver = (item: CalItem, now: Date) =>
-  (item.kind === "routine" && !item.runs) || item.kind === "reminder" ? item.start <= now : item.end <= now;
+/** A reminder (a moment) is over once its time came; anything else once it ended. */
+export const isOver = (item: CalItem, now: Date) => (item.kind === "reminder" ? item.start <= now : item.end <= now);
 
 /** An all-day row of a day (a task due, an all-day event): first in its day, with no time of its own. */
-export const isAllDayEntry = (e: DayEntry) => e.item.allDay && !e.item.runs;
+export const isAllDayEntry = (e: DayEntry) => e.item.allDay;
 
 /** One block of the list: a day with its rows (and the times agents proposed on it), or a run of days with nothing. */
 export type AgendaSection =

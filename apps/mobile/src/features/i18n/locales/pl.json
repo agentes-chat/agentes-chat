@@ -1691,7 +1691,6 @@
   "calendar": {
     "nothing": "{{days}} · nic nie zaplanowano",
     "nothingToday": "Na dziś nic nie zaplanowano.",
-    "routine": "Rutyna · {{agent}}",
     "reminder": "Przypomnienie · {{agent}}",
     "reminderIn": "Przypomnienie · {{agent}} · w {{place}}",
     "deadline": "Termin zadania",

@@ -3738,9 +3738,6 @@
   "calendar.nothingToday": {
     "value": "Nothing planned for today."
   },
-  "calendar.routine": {
-    "value": "Routine · {{agent}}"
-  },
   "calendar.reminder": {
     "value": "Reminder · {{agent}}"
   },

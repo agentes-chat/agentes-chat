@@ -1596,7 +1596,6 @@
   "calendar": {
     "nothing": "{{days}} · niente in programma",
     "nothingToday": "Niente in programma per oggi.",
-    "routine": "Routine · {{agent}}",
     "reminder": "Promemoria · {{agent}}",
     "reminderIn": "Promemoria · {{agent}} · in {{place}}",
     "deadline": "Scadenza attività",

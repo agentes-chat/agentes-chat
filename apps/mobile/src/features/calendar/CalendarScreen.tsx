@@ -1,4 +1,4 @@
-import { type CalendarProposal, useCalendar, useCalendarAction, useChannels, useRoutines } from "@agenteschat/client";
+import { type CalendarProposal, useCalendar, useCalendarAction, useChannels } from "@agenteschat/client";
 import { type CalItem, sameDay, startOfDay } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { toYmd, upperFirst } from "@agenteschat/client/lib/format";
@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import { Button, EmptyState, SCREEN_X, SkeletonList, Text, useReducedMotion, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
-import { chatHref, routineHref } from "../links/logic";
+import { chatHref } from "../links/logic";
 import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useMeId, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -58,8 +58,8 @@ interface Landing {
  * its heading and its rows, all day first, then by time, past ones faint, today's now line in red among them, an
  * agent's proposed time as a card with its answers; days in a row with nothing fold into one quiet line. It opens on
  * today (or the day of a link, `?day=`); a tap on a day of the strip takes the list to it, a swipe pages to another
- * week and the list reads from that week on. A row opens what it stands for: an event its page, a routine's run the
- * routine, a reminder its conversation, a task due the task.
+ * week and the list reads from that week on. A row opens what it stands for: an event its page, a reminder its
+ * conversation, a task due the task. Routines stay on their own page (ADR 0053's 2026-11-27 addendum).
  */
 export function CalendarScreen() {
   const { t, i18n } = useTranslation();
@@ -87,8 +87,7 @@ export function CalendarScreen() {
   const days = useMemo(() => agendaDays(week), [week]);
   const { from, to } = useMemo(() => agendaRange(week), [week]);
   const range = useCalendar(orgId, from, to);
-  const routines = useRoutines(orgId);
-  const items = useMemo(() => agendaItems(range.data, days, routines.data ?? []), [range.data, days, routines.data]);
+  const items = useMemo(() => agendaItems(range.data), [range.data]);
   const sections = useMemo(
     () => agendaSections(items, range.data?.proposals ?? [], days, today),
     [items, range.data?.proposals, days, today],
@@ -168,7 +167,6 @@ export function CalendarScreen() {
   const onOpen = useCallback(
     (it: CalItem) => {
       if (it.kind === "event") router.push(`/calendar/event?key=${encodeURIComponent(it.key)}&w=${weekYmd}` as never);
-      else if (it.kind === "routine" && it.routineId) router.push(routineHref(it.routineId) as never);
       else if (it.kind === "reminder" && it.target && "channelId" in it.target)
         router.push(chatHref(it.target.channelId, "threadId" in it.target ? it.target.threadId : null) as never);
       else if (it.kind === "deadline" && it.issueNumber) router.push(`/issues/${it.issueNumber}` as never);

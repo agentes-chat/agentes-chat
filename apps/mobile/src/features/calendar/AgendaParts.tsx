@@ -92,9 +92,9 @@ export interface AgendaRowProps {
 }
 
 /**
- * One row of a day: its time (start in bold, end faint; "Dia todo"), what leads it (the agent's face for a routine's
- * run or a reminder, a soft blue tile for an event, a quiet tile for a task due), its title on one line and one line of
- * facts (where and with whom; whose routine and how its run went; who reminds and where; whose task). A row is the
+ * One row of a day: its time (start in bold, end faint; "Dia todo"), what leads it (the agent's face for a reminder,
+ * a soft blue tile for an event, a quiet tile for a task due), its title on one line and one line of facts (where and
+ * with whom; who reminds and where; whose task). A row is the
  * system's list row: it lights a beat after the finger lands and opens what it stands for. Memoized on plain values.
  */
 export const AgendaRow = memo(function AgendaRow({
@@ -111,12 +111,10 @@ export const AgendaRow = memo(function AgendaRow({
   const locale = i18n.language;
   const it = entry.item;
   const allDay = isAllDayEntry(entry);
-  // A routine that runs often that day: its first run, and how many.
-  const times = entry.day;
-  const start = formatTime(locale, atOf(times ? times.at : entry.at));
+  const start = formatTime(locale, atOf(entry.at));
   const end = it.kind === "event" && !allDay ? formatTime(locale, atOf(it.end)) : null;
   const title = it.kind === "deadline" ? t("calendar.deadline", { number: it.issueNumber, title: it.title }) : it.title;
-  const agentId = it.kind === "routine" || it.kind === "reminder" ? (it.agentId ?? null) : null;
+  const agentId = it.kind === "reminder" ? (it.agentId ?? null) : null;
   const lead: ReactNode = agentId ? (
     <AgentFace agentId={agentId} size={LEAD} live={false} />
   ) : it.kind === "event" ? (
@@ -124,7 +122,7 @@ export const AgendaRow = memo(function AgendaRow({
   ) : (
     <LeadTile icon="issue" />
   );
-  const facts = lineOf(it, { t, nameOf, placeOf, meId, over, count: times?.count });
+  const facts = lineOf(it, { t, nameOf, placeOf, meId });
   const said = [allDay ? t("calendar.allDay") : end ? `${start}–${end}` : start, title, facts.text]
     .filter(Boolean)
     .join(", ");
@@ -151,10 +149,6 @@ export const AgendaRow = memo(function AgendaRow({
               <Text variant="footnote" tone="faint" style={styles.tabular}>
                 {end}
               </Text>
-            ) : times && times.count > 1 ? (
-              <Text variant="footnote" tone="faint">
-                {t("calendar.runTimes", { count: times.count })}
-              </Text>
             ) : null}
           </>
         )}
@@ -169,17 +163,6 @@ export const AgendaRow = memo(function AgendaRow({
             {facts.icon ? <Icon name={facts.icon} size={14} color={c.faint} /> : null}
             <Text variant="small" tone={over ? "faint" : "muted"} numberOfLines={1} style={styles.shrink}>
               {facts.text}
-              {facts.result ? (
-                <Text
-                  variant="small"
-                  style={[
-                    styles.result,
-                    { color: facts.result === "ok" ? c.ok : facts.result === "failed" ? c.danger : c.faint },
-                  ]}
-                >
-                  {` · ${t(`calendar.result.${facts.result}`)}`}
-                </Text>
-              ) : null}
             </Text>
           </View>
         ) : null}
@@ -188,7 +171,7 @@ export const AgendaRow = memo(function AgendaRow({
   );
 });
 
-/** A row's line of facts, the icon before it (a repeat, a bell) and how a run that already came went. */
+/** A row's line of facts and the icon before it (a repeat, a bell). */
 function lineOf(
   it: CalItem,
   {
@@ -196,33 +179,19 @@ function lineOf(
     nameOf,
     placeOf,
     meId,
-    over,
-    count,
   }: {
     t: ReturnType<typeof useTranslation>["t"];
     nameOf: AgendaRowProps["nameOf"];
     placeOf: AgendaRowProps["placeOf"];
     meId: string | null;
-    over: boolean;
-    count: number | undefined;
   },
-): { text: string; icon: IconName | null; result: CalItem["result"] | null } {
-  if (it.kind === "routine") {
-    const agent = it.agentId ? nameOf({ type: "agent", id: it.agentId }) : "";
-    return {
-      text: t("mobile.calendar.routine", { agent }),
-      icon: null,
-      // How it went, once it came (a run that runs often that day says how many instead).
-      result: over && !count ? (it.result ?? null) : null,
-    };
-  }
+): { text: string; icon: IconName | null } {
   if (it.kind === "reminder") {
     const agent = it.agentId ? nameOf({ type: "agent", id: it.agentId }) : "";
     const place = it.target && "channelId" in it.target ? placeOf(it.target.channelId) : null;
     return {
       text: place ? t("mobile.calendar.reminderIn", { agent, place }) : t("mobile.calendar.reminder", { agent }),
       icon: "bell",
-      result: null,
     };
   }
   if (it.kind === "deadline") {
@@ -232,7 +201,6 @@ function lineOf(
         ? t("mobile.calendar.deadlineOf", { name: joinNames(owners, t) })
         : t("mobile.calendar.deadline"),
       icon: null,
-      result: null,
     };
   }
   const people = othersIn(it.people, meId).map(nameOf).filter(Boolean);
@@ -240,7 +208,6 @@ function lineOf(
   return {
     text: text || (it.recurring ? t("calendar.recurring") : ""),
     icon: it.recurring ? "replay" : null,
-    result: null,
   };
 }
 
@@ -353,7 +320,6 @@ const styles = StyleSheet.create({
   text: { flex: 1, minWidth: 0, gap: 1 },
   titleOver: { fontWeight: weights.medium },
   facts: { flexDirection: "row", alignItems: "center", gap: 5, minWidth: 0 },
-  result: { fontWeight: weights.semibold },
   tile: {
     width: LEAD,
     height: LEAD,

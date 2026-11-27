@@ -1638,8 +1638,6 @@ export const featureKeysEn = {
     /** Days in a row with nothing on them, in one line: "Sunday, Nov 29 · nothing planned". */
     nothing: "{{days}} · nothing planned",
     nothingToday: "Nothing planned for today.",
-    /** A routine's run, under its name: the agent whose routine it is. */
-    routine: "Routine · {{agent}}",
     /** A reminder, under its words: the agent that posts it, and where. */
     reminder: "Reminder · {{agent}}",
     reminderIn: "Reminder · {{agent}} · in {{place}}",

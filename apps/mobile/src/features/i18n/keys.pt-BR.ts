@@ -1563,7 +1563,6 @@ export const featureKeysPtBR = {
   calendar: {
     nothing: "{{days}} · nada marcado",
     nothingToday: "Nada marcado para hoje.",
-    routine: "Rotina · {{agent}}",
     reminder: "Lembrete · {{agent}}",
     reminderIn: "Lembrete · {{agent}} · em {{place}}",
     deadline: "Prazo da tarefa",

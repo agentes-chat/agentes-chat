@@ -4731,8 +4731,7 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.choice.effort",
-      "aiHub.choice.api",
-      "calendar.routine"
+      "aiHub.choice.api"
     ],
     "de": [
       "live.doc.styles.code",
@@ -4814,8 +4813,7 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.limits",
-      "aiHub.choice.api",
-      "calendar.routine"
+      "aiHub.choice.api"
     ],
     "it": [
       "devices.status.offline",
@@ -4873,8 +4871,7 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.choice.account",
-      "aiHub.choice.api",
-      "calendar.routine"
+      "aiHub.choice.api"
     ],
     "nl": [
       "devices.status.offline",
@@ -4970,8 +4967,7 @@
       "aiHub.choice.account",
       "aiHub.choice.model",
       "aiHub.choice.api",
-      "aiHub.missionAi",
-      "calendar.routine"
+      "aiHub.missionAi"
     ],
     "ja": [
       "devices.os.android",

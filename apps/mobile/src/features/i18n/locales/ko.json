@@ -1418,7 +1418,6 @@
   "calendar": {
     "nothing": "{{days}} · 일정 없음",
     "nothingToday": "오늘은 일정이 없어요.",
-    "routine": "루틴 · {{agent}}",
     "reminder": "리마인더 · {{agent}}",
     "reminderIn": "리마인더 · {{agent}} · {{place}}",
     "deadline": "작업 마감",

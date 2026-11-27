@@ -1509,7 +1509,6 @@
   "calendar": {
     "nothing": "{{days}} · plan yok",
     "nothingToday": "Bugün için plan yok.",
-    "routine": "Rutin · {{agent}}",
     "reminder": "Hatırlatıcı · {{agent}}",
     "reminderIn": "Hatırlatıcı · {{agent}} · {{place}} içinde",
     "deadline": "Görev bitiş tarihi",

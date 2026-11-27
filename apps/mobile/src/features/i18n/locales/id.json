@@ -1418,7 +1418,6 @@
   "calendar": {
     "nothing": "{{days}} · tidak ada jadwal",
     "nothingToday": "Tidak ada jadwal hari ini.",
-    "routine": "Rutinitas · {{agent}}",
     "reminder": "Pengingat · {{agent}}",
     "reminderIn": "Pengingat · {{agent}} · di {{place}}",
     "deadline": "Tenggat tugas",

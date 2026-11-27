@@ -1509,7 +1509,6 @@
   "calendar": {
     "nothing": "{{days}} · nichts geplant",
     "nothingToday": "Heute ist nichts geplant.",
-    "routine": "Routine · {{agent}}",
     "reminder": "Erinnerung · {{agent}}",
     "reminderIn": "Erinnerung · {{agent}} · in {{place}}",
     "deadline": "Fällige Aufgabe",
