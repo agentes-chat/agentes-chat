@@ -29,7 +29,7 @@ afterEach(async () => {
   await current?.close();
 });
 
-const LINE = "Bom dia! Vou puxar os números agora.";
+const LINE = "Certo, vou levantar os números do mês.";
 const ANSWER = "Receita de novembro: 42 assinaturas novas, 3 cancelamentos.";
 
 const say = (body: string, channelId = f.general.id, threadId?: string) =>
@@ -214,4 +214,34 @@ test("move_here still takes a run that answers under its line to another channel
     ["Sigo aqui.", null],
     [ANSWER, null],
   ]);
+});
+
+test("its own words: the second goes under the first, and its live row moves into that thread", async () => {
+  const NEXT = "Achei os números; vou comparar com outubro.";
+  f = await setup({
+    judge: (kind, _id, state) =>
+      kind === "follow_through"
+        ? String(state.reply).toLowerCase().includes("vou ")
+          ? "continue"
+          : "done"
+        : undefined,
+    reply: (_req, call) => ({ chunks: [call === 1 ? LINE : call === 2 ? NEXT : ANSWER] }),
+  });
+  const events = f.listen(f.general.id);
+  await say("@dev puxa os números do mês");
+  await drainOutbox(f.db, f.handlers);
+
+  const [line, ...under] = await posts();
+  if (!line) throw new Error("no line");
+  expect(line).toMatchObject({ body: LINE, threadId: null });
+  expect(under.map((m) => [m.body, m.threadId])).toEqual([
+    [NEXT, line.id],
+    [ANSWER, line.id],
+  ]);
+  // From its second message on it works in the thread: the channel's row ends, the thread's starts.
+  const [run] = await runs();
+  const live = events.map(fields).filter((e) => e.runId === run?.id);
+  const moved = live.findIndex((e) => e.type === "agent.thinking" && e.threadId === line.id);
+  expect(moved).toBeGreaterThan(0);
+  expect(live.slice(0, moved).some((e) => e.type === "agent.idle" && e.threadId === null)).toBe(true);
 });

@@ -2764,6 +2764,9 @@ async function executeRunInner(
     if (line && (await openTurnThread(tx, run.id, line))) {
       placeTurn(line);
       threadId = line;
+      // The apps keep a live row where it started: it ends in the main timeline and starts over in the thread.
+      await publishChannelEvent(deps.pubsub, { type: "agent.idle", ...where, threadId: null, ...bg });
+      await publishChannelEvent(deps.pubsub, { type: "agent.thinking", ...where, ...bg });
     }
     const m = await postAgentMessage(
       tx,

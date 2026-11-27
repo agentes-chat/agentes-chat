@@ -2,7 +2,7 @@ import { type Executor, rowsOf, sql } from "@agenteschat/db";
 import { inChannelRun } from "./run-scope";
 
 /**
- * A run a person asked in a regular channel's main timeline posts its first words there ("Vou puxar os números
+ * A run a person asked in a regular channel's main timeline posts its first words there ("Vou levantar os números
  * agora."); everything it posts after them goes in the thread under that message (ADR 0261). From the post on, the
  * message is the run's thread root and the run answers under it (`reply_in_thread`, ADR 0214), so its later messages,
  * cards, files and live events land there by `replyThreadOf`. The message keeps who asked (`meta.turnThread.askedBy`,

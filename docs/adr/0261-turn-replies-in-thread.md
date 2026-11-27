@@ -11,7 +11,7 @@
 ## Context
 
 In a channel whose agents answer in the main timeline (the setting off, ADR 0214), one turn often posts a short line
-first ("Bom dia! Vou puxar os números agora.", `say_now` or text between steps) and later its long answer as a second
+first ("Certo, vou levantar os números do mês.", `say_now` or text between steps) and later its long answer as a second
 message in the channel. Long agent text fills the channel that everyone reads.
 
 ## Decision

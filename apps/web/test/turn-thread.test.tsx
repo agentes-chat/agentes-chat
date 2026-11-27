@@ -21,7 +21,7 @@ const rowOf = (text: string) =>
     .queryAllByRole("article")
     .find((a) => a.textContent?.includes(text));
 
-const LINE = "Bom dia, João! Vou puxar os números do Stripe agora.";
+const LINE = "Certo, vou levantar os números do mês.";
 const ANSWER = "Novembro até hoje: 42 assinaturas novas, 3 cancelamentos e receita recorrente de R$ 18.400.";
 
 test("its line in the channel, then its work and its answer in the line's thread", async () => {
@@ -32,7 +32,7 @@ test("its line in the channel, then its work and its answer in the line's thread
   await act(async () => socket.open());
   await settle(2);
 
-  const run = { runId: "r-stripe", agentId: ADA_ID };
+  const run = { runId: "r-numbers", agentId: ADA_ID };
   await push(socket, { type: "agent.thinking", ...run, threadId: null });
   const line = {
     id: "m-line",
