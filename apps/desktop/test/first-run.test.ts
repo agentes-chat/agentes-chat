@@ -6,11 +6,15 @@ import {
   connectOutcome,
   escapeAction,
   foundServers,
+  hereSteps,
   INSTALL_COMMAND,
   linkView,
+  needsPrivateNetwork,
   ownAddresses,
   PROBLEM_TEXT,
+  phoneLinkRefreshMs,
   terminalStartCommand,
+  topFound,
   typedServer,
 } from "../src/control/first-run";
 import { MAX_MENU_LABEL, menuLabels } from "../src/control/menu-labels";
@@ -258,5 +262,45 @@ describe("the menu bar and the labels Rust shows", () => {
         expect(labels.serversCloud).toBe("agentes.chat");
       }
     }
+  });
+});
+
+describe("running agentes.chat here (ADR 0256 §3)", () => {
+  test("the steps: the owner only while there is none, the private network only when it is needed", () => {
+    expect(hereSteps(true, true)).toEqual(["owner", "where", "net"]);
+    expect(hereSteps(true, false)).toEqual(["owner", "where"]);
+    expect(hereSteps(false, true)).toEqual(["where", "net"]);
+    expect(hereSteps(false, false)).toEqual(["where"]);
+  });
+
+  test("the private network: only beyond this computer, and never with a Tailscale connected for it already", () => {
+    const none = { mode: "none" };
+    expect(needsPrivateNetwork("everywhere", { state: "off" }, none)).toBe(true);
+    // Not read yet: asked.
+    expect(needsPrivateNetwork("everywhere", null, none)).toBe(true);
+    expect(needsPrivateNetwork("here", { state: "off" }, none)).toBe(false);
+    // The system's, connected: used as it is.
+    expect(needsPrivateNetwork("everywhere", { state: "on" }, none)).toBe(false);
+    // The app's own, signed in already.
+    expect(needsPrivateNetwork("everywhere", { state: "missing" }, { mode: "app", state: "on" })).toBe(false);
+    expect(needsPrivateNetwork("everywhere", { state: "missing" }, { mode: "app", state: "expired" })).toBe(true);
+  });
+
+  test("the phone's code: asked again every 150 s, sooner when it lasts less, at most every 10 s", () => {
+    expect(phoneLinkRefreshMs(180)).toBe(150_000);
+    expect(phoneLinkRefreshMs(600)).toBe(150_000);
+    expect(phoneLinkRefreshMs(60)).toBe(30_000);
+    expect(phoneLinkRefreshMs(20)).toBe(10_000);
+  });
+
+  test("the server on top: usable, this computer's first, one waiting for its owner only when claimable", () => {
+    const tailnet = { server: BOX, where: "tailnet" as const };
+    const here = { server: "http://127.0.0.1:4310", where: "here" as const };
+    expect(topFound([tailnet, here], () => false)).toEqual(here);
+    expect(topFound([tailnet], () => false)).toEqual(tailnet);
+    expect(topFound([{ ...here, problem: "no-owner" }], () => false)).toBeNull();
+    expect(topFound([{ ...here, problem: "no-owner" }], () => true)).toEqual({ ...here, problem: "no-owner" });
+    expect(topFound([{ ...tailnet, problem: "server-too-old" }], () => true)).toBeNull();
+    expect(topFound([], () => true)).toBeNull();
   });
 });

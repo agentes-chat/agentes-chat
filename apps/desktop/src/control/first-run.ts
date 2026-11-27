@@ -1,5 +1,5 @@
 /**
- * The first run's decisions as pure state (FirstRun.tsx draws them): which screen comes next, what
+ * The first run's decisions as pure state (`layer/first-run/` draws them): which screen comes next, what
  * discovery found, what a typed address or a connect link leads to. Nothing here changes the server
  * the app opens; the window does that only after the person confirmed (`chooseServer`).
  */
@@ -13,7 +13,11 @@ import {
 } from "@agenteschat/client/lib/server";
 import { appServer, serverName } from "./server";
 
-export type FirstScreen = "choose" | "install" | "connect" | "here" | "link" | "pair";
+/**
+ * The first run's screens (ADR 0256 §2): sign in first (`welcome`), a company's server by its address (`company`) and
+ * how to install one (`install`), running agentes.chat here in three steps (`here`), and a connect link in large type.
+ */
+export type FirstScreen = "welcome" | "company" | "install" | "here" | "link";
 
 /**
  * Esc in the first run: back a screen, or the window closes (when a server is open already); never while
@@ -213,4 +217,48 @@ export function linkView(link: ConnectLink | null, check: ServerCheck | "checkin
   }
   if (server === current) return { kind: "front", server };
   return { kind: "ask", server, question: "question", button: "connect", leave };
+}
+
+/** Run here's own steps before the setup (ADR 0256 §3): who owns it, where it will be used, the private network. */
+export type HereStep = "owner" | "where" | "net";
+
+/**
+ * The steps Run here shows, in order: the owner only while there is none (`ask`), the private network only when it
+ * will be used beyond this computer and no Tailscale is connected for it yet (`needsNet`).
+ */
+export const hereSteps = (ask: boolean, needsNet: boolean): HereStep[] => [
+  ...(ask ? (["owner"] as const) : []),
+  "where",
+  ...(needsNet ? (["net"] as const) : []),
+];
+
+/**
+ * Whether the private network's step shows: used beyond this computer, with neither the system's Tailscale connected
+ * (it is used as it is, ADR 0256 §4) nor the app's own one signed in already. `system` null: not read yet, so asked.
+ */
+export function needsPrivateNetwork(
+  place: "everywhere" | "here",
+  system: { state: string } | null,
+  own: { mode: string; state?: string },
+): boolean {
+  if (place !== "everywhere") return false;
+  if (system?.state === "on") return false;
+  return !(own.mode === "app" && own.state === "on");
+}
+
+/**
+ * The phone's code is a one-time sign-in that lasts a few minutes (`phoneLink`): asked again every 150 s while it shows,
+ * sooner when it lasts less, and never more often than every 10 s.
+ */
+export const PHONE_LINK_EVERY_S = 150;
+export const phoneLinkRefreshMs = (expiresIn: number) =>
+  Math.max(10, Math.min(PHONE_LINK_EVERY_S, expiresIn - 30)) * 1000;
+
+/**
+ * The server the first screen offers on top (ADR 0256 §2): the first one discovery found that can be used as it is,
+ * or whose owner page this app can open (`claimable`), this computer's before the Tailscale network's.
+ */
+export function topFound(found: readonly Found[], claimable: (server: string) => boolean): Found | null {
+  const usable = found.filter((f) => !f.problem || (f.problem === "no-owner" && claimable(f.server)));
+  return usable.find((f) => f.where === "here") ?? usable[0] ?? null;
 }

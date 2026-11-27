@@ -89,7 +89,7 @@ export function HelpLink({ slug, section, children }: { slug: HelpSlug; section?
   );
 }
 
-const ORG_TILE_PX = { sm: 16, md: 20, lg: 30 };
+const ORG_TILE_PX = { sm: 16, md: 20, lg: 32 };
 
 /**
  * An organization's tile: its logo when it has one (a `data:` URL from the runner), otherwise the pixel mark, as the

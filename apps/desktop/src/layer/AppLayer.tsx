@@ -10,11 +10,15 @@
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useHost } from "../app";
 import type { LayerMode, LayerRoute, LayerState } from "../host/types";
-import { FirstRun } from "../windows/FirstRun";
-import { IphoneSetup } from "../windows/IphoneSetup";
-import { Framed, PairLinkSheet, PairOffer, PermissionAskSheet, Prepare } from "../windows/Pair";
-import { Prefs } from "../windows/Prefs";
-import { isSheet, prefsTabOf, routeKey } from "./routes";
+import { FirstRun } from "./first-run/FirstRun";
+import { isSheet, routeKey } from "./routes";
+import { Settings } from "./settings/Settings";
+import { IphoneSheet } from "./sheets/IphoneSheet";
+import { PairLinkSheet } from "./sheets/PairLinkSheet";
+import { PermissionAskSheet } from "./sheets/PermissionAskSheet";
+import { PrepareSheet } from "./sheets/PrepareSheet";
+import { ReadySheet } from "./sheets/ReadySheet";
+import { SheetFrame } from "./sheets/SheetFrame";
 import "./layer.css";
 
 /** How long after a route renders the layer says it painted it (a frame). */
@@ -78,44 +82,28 @@ export function AppLayer() {
   }, [screen, hide]);
 
   if (!route || !state) return <div className="dk-layer" data-mode="hidden" />;
-  return (
-    <LayerFrame mode={mode} sheet={isSheet(route)} mac={host.platform === "mac"}>
-      <RouteScreen key={routeKey(route)} route={route} seq={state.seq} onClose={hide} />
-    </LayerFrame>
-  );
+  const mac = host.platform === "mac";
+  const shown = <RouteScreen key={routeKey(route)} route={route} seq={state.seq} onClose={hide} />;
+  // A sheet: a card over the site (a Mac with the site there), else the same card on the app's background. A connect
+  // link from the first run fills a card of its own size.
+  if (isSheet(route))
+    return (
+      <SheetFrame mode={mode === "sheet" ? "sheet" : "full"} mac={mac} fill={route.screen === "link"}>
+        {shown}
+      </SheetFrame>
+    );
+  return <LayerFrame mac={mac}>{shown}</LayerFrame>;
 }
 
 /**
- * The layer's frame. Full: the whole window, with the Mac's 48pt bar on top (it drags the window and keeps the room for
- * its buttons, as the site's own title bar does). Sheet: a scrim over the site, its top 48pt dragging the window, and
- * the screen in a card. A sheet's screen shown full (Windows, Linux, no site behind it) keeps its card.
+ * The layer's frame for a screen of the whole window, with the Mac's 48pt bar on top (it drags the window and keeps
+ * the room for its buttons, as the site's own title bar does). Sheets have theirs (`SheetFrame`).
  */
-function LayerFrame({
-  mode,
-  sheet,
-  mac,
-  children,
-}: {
-  mode: LayerMode;
-  sheet: boolean;
-  mac: boolean;
-  children: ReactNode;
-}) {
-  if (mode === "sheet") {
-    return (
-      <div className="dk-layer" data-mode="sheet">
-        <div className="dk-layer__scrim" />
-        <div className="dk-layer__drag" data-tauri-drag-region />
-        <div className="dk-layer__card" role="dialog" aria-modal="true">
-          {children}
-        </div>
-      </div>
-    );
-  }
+function LayerFrame({ mac, children }: { mac: boolean; children: ReactNode }) {
   return (
-    <div className="dk-layer" data-mode="full" data-sheet={sheet || undefined}>
+    <div className="dk-layer" data-mode="full">
       {mac && <div className="dk-layer__bar" data-tauri-drag-region />}
-      <div className="dk-layer__page">{sheet ? <div className="dk-layer__card">{children}</div> : children}</div>
+      <div className="dk-layer__page">{children}</div>
     </div>
   );
 }
@@ -125,32 +113,20 @@ function RouteScreen({ route, seq, onClose }: { route: LayerRoute; seq: number; 
   switch (route.screen) {
     case "firstRun":
       return <FirstRun mode={route.mode} shownAt={seq} />;
-    // The first run takes the waiting link itself (`takeLink`) and shows it in large type.
+    // The first run takes the waiting link itself (`takeLink`) and shows it in large type, alone in its sheet.
     case "link":
-      return <FirstRun shownAt={seq} />;
+      return <FirstRun shownAt={seq} linkOnly />;
     case "settings":
-      return <Prefs tab={prefsTabOf(route)} shownAt={seq} />;
+      return <Settings section={route.section} focus={route.focus} shownAt={seq} />;
     case "pairOffer":
-      return <PairOffer target={route.target} onClose={onClose} />;
+      return <ReadySheet target={route.target} onClose={onClose} />;
     case "prepare":
-      return (
-        <Framed>
-          <Prepare org={route.org} server={route.server} resumed={route.resumed} onClose={onClose} />
-        </Framed>
-      );
+      return <PrepareSheet org={route.org} server={route.server} resumed={route.resumed} onClose={onClose} />;
     case "pairLink":
-      return (
-        <Framed>
-          <PairLinkSheet server={route.server} code={route.code} onClose={onClose} />
-        </Framed>
-      );
+      return <PairLinkSheet server={route.server} code={route.code} onClose={onClose} />;
     case "iphone":
-      return <IphoneSetup onClose={onClose} />;
+      return <IphoneSheet onClose={onClose} />;
     case "permissionAsk":
-      return (
-        <Framed>
-          <PermissionAskSheet onClose={onClose} />
-        </Framed>
-      );
+      return <PermissionAskSheet onClose={onClose} />;
   }
 }

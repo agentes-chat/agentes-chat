@@ -105,7 +105,6 @@ export const desktopEn = {
     pauseHintServer: "What is already running finishes normally. The server stays up.",
     resume: "Resume the agents",
     open: "Open agentes.chat",
-    prefs: "Preferences…",
     /** The tray's item on Windows and Linux: this computer's settings in the app's window (ADR 0256). */
     thisMac: "This {{device}} settings…",
     quit: "Quit agentes.chat",
@@ -163,6 +162,63 @@ export const desktopEn = {
     quitHereBody:
       "agentes.chat stops on this {{device}}: nobody can use it, here, on your phone or your teammates', until you open the app again.",
     quitConfirm: "Quit",
+    /** The popover's head under this computer's name (ADR 0256 §7): essentials off, requests, permissions. */
+    needsYou_one: "{{count}} thing needs you",
+    needsYou_other: "{{count}} things need you",
+    allSet: "All set",
+    /** This computer's name before a workspace named it. */
+    thisDevice: "This {{device}}",
+    /** The popover's menu: this computer's settings in the main window (ADR 0256). */
+    settings: "This {{device}} settings",
+    /** The banner for the first of this computer's essentials that needs the person, with its one fix. */
+    essential: {
+      turnOn: "Turn on",
+      turnOnAgain: "Turn on again",
+      fix: "Fix it",
+      launchAtLogin: {
+        title: "agentes.chat doesn't open at login",
+        body: "After a restart, agents can't use this {{device}} until you open the app.",
+      },
+      notifications: {
+        title: "Notifications are off",
+        body: "You won't know when an agent needs you here.",
+      },
+      screen: { body: "Without it, agents can't see the screen." },
+      disk: { body: "Agents may stop to ask for each folder." },
+      reach: {
+        signedOut: {
+          title: "Tailscale signed out on this {{device}}",
+          body: "Your phone and team can't reach agentes.chat until you sign in again.",
+        },
+        approve: {
+          title: "Tailscale waits for one click",
+          body: "Your phone and team reach agentes.chat once you allow it in Tailscale's admin page.",
+        },
+        expiring: {
+          title: "Tailscale's sign-in ends soon",
+          body: "Sign in again so your phone and team keep reaching agentes.chat.",
+        },
+        down: {
+          title: "Tailscale isn't connected on this {{device}}",
+          body: "Your phone and team can't reach agentes.chat.",
+        },
+      },
+      backup: {
+        off: {
+          title: "The nightly backup is off",
+          body: "Turn it on so agentes.chat keeps a copy every night.",
+        },
+        backup: { body: "Back up now so today's work has a copy." },
+        copy: {
+          title: "Last night's backup didn't reach its copy",
+          body: "The folder it copies to may be unplugged or full.",
+        },
+      },
+      autoUpdate: {
+        title: "Updates don't install by themselves",
+        body: "Turn it on so this {{device}} stays on a version that keeps working.",
+      },
+    },
   },
   first: {
     /** The welcome window opened by the site's "Add workspace" (ADR 0154). */
@@ -172,6 +228,77 @@ export const desktopEn = {
     /** Adding a workspace, under "Sign in to agentes.chat": a new one instead. */
     addNew: "Want a new workspace?",
     addNewLink: "Create one",
+    /** The first screen (ADR 0256 §2): sign in first, the other ways under it, a server found on top. */
+    welcome: {
+      title: "Welcome to agentes.chat",
+      lead: "Your team of AI agents, working with you in the chat.",
+      google: "Continue with Google",
+      apple: "Continue with Apple",
+      email: "Continue with email",
+      /** Over the two rows under the sign-in. */
+      others: "Other ways to use it",
+      here: "Run free on this {{device}}",
+      hereText: "Your data stays here. No cloud account.",
+      company: "Sign in to my company's server",
+      companyText: "By its address, like agentes.yourcompany.com.",
+      /** The last line, before its link ("See how"). */
+      install: "Installing it for the team on a server?",
+      installLink: "See how",
+      /** A server found on the person's Tailscale network, on top (its address under it). */
+      foundTailnet: "agentes.chat is on your network",
+      foundHere: "agentes.chat is running on this {{device}}",
+    },
+    /** Running agentes.chat on this computer in three steps (ADR 0256 §3), then the setup and the phone's code. */
+    run: {
+      /** Over each step's title: "Run on this Mac · 1 of 3". */
+      step: "Run on this {{device}} · {{n}} of {{total}}",
+      /** Over the setup's and the phone's titles. */
+      flow: "Run on this {{device}}",
+      ownerTitle: "Who will be the owner?",
+      ownerLead:
+        "You sign in with this email and invite whoever you want later. Everything is kept on this {{device}}.",
+      usage: "Send anonymous usage statistics",
+      usageText: "Counts, never messages, files or names.",
+      whereTitle: "Where will you use it?",
+      whereLead: "You can change it anytime.",
+      everywhere: "On this {{device}}, your phone and your team",
+      everywhereText: "Through a private network, for free.",
+      hereOnly: "Only on this {{device}}",
+      hereOnlyText: "The phone can come later.",
+      netTitle: "Sign in to your private network",
+      netLead:
+        "A Tailscale account connects your devices. You sign in with Google, Microsoft, Apple or GitHub. Nothing to install on this {{device}}.",
+      /** A build without Tailscale of its own: the system's, connected here, then Continue. */
+      netLeadSystem: "Tailscale connects your devices. Connect it on this {{device}}, then continue.",
+      /** Beside Tailscale's tile. */
+      tailscaleText: "The private network that connects this {{device}}, your phone and your team. Free to start.",
+      netNote: "Already use Tailscale on this {{device}}? This step goes away and we use the same network.",
+      later: "Do it later",
+      waitTitle: "Continue in your browser",
+      waitLead: "We opened Tailscale's page in your browser. This window goes on by itself when you're done.",
+      waitNow: "Waiting for you to sign in to Tailscale",
+      waitHow:
+        "There, sign in with your account (Google, Microsoft, Apple or GitHub) and confirm the device named “agentes”.",
+      /** Tailscale's network approves new devices: its admin approves this one. */
+      approvalNow: "Waiting for your network's admin",
+      signInFailed: "Signing in to Tailscale didn't finish. Try again.",
+      /** Under the access step while Tailscale's page waits for HTTPS. "Enable" is that page's own button. */
+      ask: "<b>One click left.</b> On the Tailscale page that opened, click <b>Enable</b>. It makes your address secure, with a lock. We go on by ourselves, no rush.",
+      askOpen: "Open the page",
+      askSkip: "Finish without it",
+      doneTitle: "Done. Take it to your phone",
+      phone1: "Install the agentes.chat app",
+      phone1Text: "From the App Store or Google Play.",
+      phone2: "Install Tailscale and sign in with the same account",
+      phone2Text: "It's what takes your phone to this {{device}}, from anywhere.",
+      phone3: "Point the camera at the code",
+      phone3Text: "You're signed in right away. The code renews by itself.",
+      qrLabel: "QR code to sign in on your phone",
+      qrFailed: "The code didn't load.",
+      /** The address people use, in bold after it. */
+      address: "Your address: <b>{{address}}</b>",
+      open: "Open agentes.chat",
+    },
   },
   /** The first screen ("Onde seu workspace vai ficar?", FirstRun.tsx): the three places, the drawing following the one picked. */
   place: {
@@ -283,7 +410,7 @@ export const desktopEn = {
       start: "Turning agentes.chat on",
       account: "Creating your account",
       computer: "Calling your agents",
-      reach: "Turning on access from your phone",
+      reach: "Turning on access from anywhere",
     },
     /** Each step's state in words, for screen readers (the marks are drawn). */
     stepState: {
@@ -296,7 +423,7 @@ export const desktopEn = {
       start: "agentes.chat didn't start on this {{device}}.",
       database: "The database wasn't prepared.",
       account: "Your account wasn't created.",
-      retry: "Try again in Preferences",
+      retry: "Try again in Settings",
     },
     reason: {
       https: "HTTPS is off on your Tailscale network",
@@ -510,7 +637,7 @@ export const desktopEn = {
      * The system's dialog before the site pairs this computer: no switches there, so it says what they get. At most 120
      * characters in every language: Rust refuses the app's labels past that.
      */
-    body: "{{host}} asked. Agents get commands, the browser and coding tools here. Folders come later, in Preferences.",
+    body: "{{host}} asked. Agents get commands, the browser and coding tools here. Folders come later, in Settings.",
     allow: "Allow",
     notNow: "Not now",
     /** Shown once after sign-in, for a workspace this computer doesn't work for yet. */
@@ -521,7 +648,7 @@ export const desktopEn = {
       "Only if you want this {{device}} to do agents' work too. With Not now you still use {{org}} here as usual.",
     /** Over the pairing's switches (Commands, Claude Code, Codex, Browser), on as they start. */
     canDo: "What agents can do here",
-    foldersLater: "No folders of yours yet. Add them later in Preferences\u00a0›\u00a0Folders.",
+    foldersLater: "No folders of yours yet. Add them later in Settings\u00a0›\u00a0Folders and tools.",
     /** A link from the web asks to connect this computer: who asked, from which server. */
     linkTitle: "Connect this {{device}} to {{org}}?",
     askedBy: "Asked by",
@@ -547,6 +674,49 @@ export const desktopEn = {
     letOrg: "Let {{org}}'s agents use this {{device}}",
     canUse: "Agents can use it",
     notUsing: "Its agents don't use this {{device}}",
+  },
+  /** The sheets over the site (ADR 0256): getting this computer ready for a workspace, then macOS's permissions. */
+  sheets: {
+    /** Over a sheet of this computer's setup: where it is in it ("This Mac · 1 of 2"). */
+    step: "This {{device}} · {{at}} of {{total}}",
+    /** The same, when the setup has one step here (every permission already on, or not a Mac). */
+    stepOnly: "This {{device}}",
+    /** Shown once after sign-in, for a workspace this computer doesn't work for yet: what agents get here. */
+    ready: {
+      title: "Get this {{device}} ready for {{org}}'s agents?",
+      lead: "With it, they do more from here, while the {{device}} is on.",
+      browser: "The agents' own browser",
+      browserDesc: "Without your logins and passwords.",
+      code: "Commands and coding tools",
+      /** `tool`, `a`, `b`: the coding tools found on this computer (Claude Code, Codex). */
+      codeOne: "{{tool}}, already here. They run as your user.",
+      codeTwo: "{{a}} and {{b}}, already here. They run as your user.",
+      codeNone: "They run as your user.",
+      folders: "Your folders only with your OK",
+      /** Windows and Linux: the app's icon by the clock. */
+      foldersDesc: "Each request shows in the chat and on the app's icon.",
+      foldersDescMac: "Each request shows in the chat and in the menu bar.",
+      login: "Opens by itself when the {{device}} starts",
+      loginDesc: "So agents come back without you having to remember.",
+      help: "Change it any time in Settings › This {{device}}.",
+      allow: "Get it ready",
+    },
+    /** Right after, on a Mac: the three permissions agents need, one row each. */
+    prepare: {
+      title: "macOS asks three things, once",
+      lead: "Without them, agents stop in the middle of their work to ask.",
+      /** macOS's notifications, as a row's title. */
+      notifications: "Notifications",
+      notificationsDesc: "When an agent needs you.",
+      screenDesc: "So agents can see what they do on the screen.",
+      diskDesc: "To open the folders you allow without macOS asking again.",
+      /** Under the row the person is turning on in System Settings, while the app waits for it. */
+      waitList: "In the System Settings that opened, turn on agentes.chat in the list. We'll notice by ourselves.",
+      waitNotifications:
+        "In the System Settings that opened, allow notifications for agentes.chat. We'll notice by ourselves.",
+      help: "If an update turns one off, we'll tell you right away.",
+      later: "Do it later",
+    },
   },
   /** A Mac's permissions, asked right after pairing ("Prepare this Mac") and listed in Preferences › General. */
   prepare: {
@@ -945,6 +1115,104 @@ export const desktopEn = {
       folderDesc: "One folder per workspace, with a folder for each agent.",
     },
   },
+  /** Settings › This computer, on the main window's app layer (ADR 0256): its sections, under the workspace's own. */
+  settings: {
+    nav: {
+      /** The list of sections (for screen readers). */
+      label: "Settings",
+      /** Over the list, beside the workspace's tile or this computer's picture. */
+      title: "Settings",
+      thisDevice: "This {{device}}",
+      overview: "Overview",
+      folders: "Folders and tools",
+      server: "Server on this {{device}}",
+      activity: "Activity",
+      app: "App settings",
+      /** The way back to the workspace's own page, over the list. */
+      back: "Back to {{name}}",
+      needs_one: "{{count}} thing needs you",
+      needs_other: "{{count}} things need you",
+    },
+    /** The line on top while the workspace's page isn't there (offline, its server down, signed out). */
+    away: {
+      title: "No connection with {{name}}.",
+      body: "What belongs to this {{device}} works the same. Who can use it and the agents' names come back with the connection.",
+    },
+    overview: {
+      rename: "Rename",
+      allSet: "All set",
+      /** Under the state: "Agents of Acme and Horizonte use this Mac · version 0.8.19, up to date". */
+      used: "Agents of {{orgs}} use this {{device}}",
+      version: "version {{version}}, up to date",
+      versionNewer: "version {{version}}, {{latest}} is available",
+      always: "Always ready",
+      who: "Who uses this {{device}}",
+    },
+    /** One row each in Overview's "Always ready", with its state or its one fix. */
+    essentials: {
+      on: "On",
+      allOn: "All on",
+      turnOn: "Turn on",
+      turnOnAgain: "Turn on again",
+      permissions: "macOS permissions",
+      /** `names`: the permissions still off, as macOS names them ("Screen Recording and Full Disk Access"). */
+      permissionsOff: "Still off: {{names}}.",
+      launchAtLogin: "Opens when the {{device}} starts",
+      reach: "Reach from anywhere",
+      reachOff: "Only on this {{device}}. Your phone and team can't open it.",
+      reachDown: "The private network is off on this {{device}}.",
+      reachStart: "Turn the network on",
+      backup: "Backup every night",
+      backupOff: "Switched off",
+      autoUpdate: "Updates by itself at night",
+      autoUpdateDesc: "Goes back by itself if the new version doesn't open",
+      updateRequired: "This version can't keep working.",
+      awake: "Doesn't sleep while agents work",
+      awakeOff: "Restart agentes.chat here so it stays awake.",
+      powerRestart: "Starts by itself after a power cut",
+      /** Under starting after a power cut and signing in by itself: the app can't change them. */
+      systemOnly: "Only macOS's settings turn this on.",
+    },
+    server: {
+      /** After "Running ·" in the server here's heading. */
+      anywhere: "your phone and team can open it",
+      onlyHere: "only on this {{device}}",
+      addressDesc: "On your private network, with a lock",
+      phoneDesc:
+        "Install the agentes.chat app and Tailscale with the same account, and point the camera. It signs in by itself.",
+      phoneSignedOut: "Sign in to agentes.chat on this {{device}} in the app to show the code.",
+      qrLabel: "QR code to sign in on the phone",
+      invite: "Invite someone from the team",
+      inviteDesc: "Invite them to the workspace, then share this {{device}} with them in Tailscale.",
+      inviteButton: "Invite",
+      share: "Share in Tailscale",
+      everyNight: "Every night, at {{at}}",
+      copyAlso: "A copy also in",
+      backupsOff: "Nightly backups are off",
+    },
+    access: {
+      title: "Folders and tools",
+      lead: "What agents use on this {{device}}, in every workspace.",
+      tools: "Tools",
+      browserDesc: "Only the agents', without your logins",
+      commandsDesc: "Run as you and reach the rest of this {{device}}",
+      notHere: "Not on this {{device}} yet",
+      folders: "Allowed folders",
+      addTitle: "Allow another folder",
+      addDesc: "When an agent needs one, it asks in the chat and here.",
+      /** The workspace to allow a folder for, when several use this computer. */
+      addFor: "For {{org}}",
+    },
+    app: {
+      title: "App settings",
+      notifications: "Notifications",
+      thisApp: "This app",
+      servers: "Servers and accounts",
+      advanced: "Advanced",
+      /** The server here's reach, from App settings: off, it is only on this computer. */
+      onlyHere: "Only on this {{device}}",
+    },
+  },
   /** The Tailscale the app carries (ADR 0256 §4): what it needs, said under the reach switch and while it signs in. */
   tailnet: {
     rowApp: "Sign in to Tailscale once, here in the app. Nothing to install on this {{device}}.",
@@ -1001,15 +1269,10 @@ export const desktopEn = {
   cover: {
     offline: "No internet connection · trying again…",
     unreachable: "Can't reach {{host}} · trying again…",
-    tailnet: "Is Tailscale connected on this {{device}}?",
     starting: "Starting agentes.chat on this {{device}}…",
     migrating: "Updating agentes.chat on this {{device}}. This can take a minute.",
     stopped: "agentes.chat stopped on this {{device}}",
     failing: "agentes.chat isn't starting on this {{device}}",
-    tailnetOff: "Connect Tailscale on this {{device}} to open agentes.chat.",
-    tailnetUp: "In the terminal: sudo tailscale up",
-    tailnetTray: "Open it from its icon by the clock.",
-    onlyHere: "Use only on this {{device}}",
     start: "Start it",
     copy: "Copy details",
     copied: "Copied",
@@ -1025,8 +1288,23 @@ export const desktopEn = {
     startNow: "Start now",
     /** Another server of the app's list, by its name. */
     openOther: "Open {{server}}",
-    onlyHereWorking: "Turning off access from your devices…",
-    onlyHereFailed: "Couldn't turn off access from your devices.",
+    /** A workspace on someone's private network (Tailscale) that this computer can't reach now (ADR 0256). */
+    privateTitle: "{{org}} is on the private network",
+    privateTitleAny: "This workspace is on the private network",
+    privateLine: "And the network is off on this {{device}}. Turn it on and the workspace opens by itself.",
+    privateMissing:
+      "And Tailscale, the private network, isn't on this {{device}} yet. Get it, sign in, and the workspace opens by itself.",
+    privateApprove:
+      "And this {{device}} waits to be approved in Tailscale's admin page. Once it is, the workspace opens by itself.",
+    privateSigningIn: "Finish signing in to Tailscale in your browser, and the workspace opens by itself.",
+    privateTray:
+      "And the network is off on this {{device}}. Turn it on from Tailscale's icon by the clock, and the workspace opens by itself.",
+    privateElsewhere:
+      "And the network is off on this {{device}}. Turn Tailscale on, and the workspace opens by itself.",
+    privateFailed: "Couldn't sign in to Tailscale. Try again.",
+    useOther: "Use another workspace",
+    turnOn: "Turn the network on",
+    getTailscale: "Get Tailscale",
   },
   /** "Send a report" from the app (the cover over a server that won't start, Preferences › Activity). */
   report: {

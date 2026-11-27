@@ -288,6 +288,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "mobile.devices.iphone.wifi.",
     // The iPhone setup window opens only on a Mac.
     "desktop.iphone.checkingStall",
+    // "Get this computer ready" names the menu bar only on a Mac (ReadySheet.tsx); Windows and Linux say the app's icon.
+    "desktop.sheets.ready.foldersDescMac",
   ],
 };
 

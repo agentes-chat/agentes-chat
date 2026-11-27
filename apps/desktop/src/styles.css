@@ -171,6 +171,11 @@ p {
   height: 32px;
   fill: #1e1e1f;
 }
+/* In a 32 px tile (a settings row): the same proportions. */
+.dk-logo:not(.dk-logo--lg) > .dk-tailscale {
+  width: 21px;
+  height: 21px;
+}
 [data-theme="dark"] .dk-tailscale {
   fill: #fff;
 }
@@ -193,9 +198,10 @@ p {
   font-size: 9px;
   border-radius: 5px 5px 5px 2px;
 }
+/* A settings row's picture: the 32 px of the rows' other icons. */
 .dk-org[data-size="lg"] {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   font-size: 13px;
   border-radius: 9px 9px 9px 3px;
 }
@@ -1185,7 +1191,7 @@ body[data-window="popover"] {
 .dk-fr__steps .dk-fr__problem {
   margin: 0;
 }
-/* The iPhone setup (IphoneSetup.tsx): the steps, and beside them the QR, the tip and the way out. */
+/* The iPhone setup (layer/sheets/IphoneSheet.tsx): the steps, and beside them the QR. */
 .dk-ip {
   flex: 1;
   margin-top: var(--space-6);

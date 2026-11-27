@@ -1,29 +1,10 @@
 /**
- * The app layer's routes (ADR 0256) against the screens they still show today: This computer's settings sections on
- * the tabs of the settings screen, and the old Preferences tab names (the popover's menu, older sites) as sections.
+ * The app layer's routes (ADR 0256): the old Preferences tab names (the popover's menu, older sites) as This
+ * computer's settings sections, which sheets show over the site, and when a route names something new to show.
  */
-import type { LayerRoute, LayerSection } from "../host/types";
-import type { PrefTab } from "../windows/Prefs";
+import type { LayerRoute } from "../host/types";
 
 type SettingsRoute = Extract<LayerRoute, { screen: "settings" }>;
-
-/** The settings screen's tab for a settings route: its row (`focus`) first, else its section. */
-export function prefsTabOf(route: Pick<SettingsRoute, "section" | "focus">): PrefTab {
-  if (route.focus === "updates") return "updates";
-  if (route.focus === "tools") return "tools";
-  // The phones are with this computer's workspaces on today's General tab.
-  if (route.focus === "phone") return "general";
-  if (route.focus === "servers" || route.focus === "reach" || route.focus === "backups" || route.focus === "telemetry")
-    return "servers";
-  const bySection: Record<LayerSection, PrefTab> = {
-    overview: "general",
-    folders: "folders",
-    server: "servers",
-    activity: "activity",
-    app: "general",
-  };
-  return route.section ? bySection[route.section] : "general";
-}
 
 /** The settings route for an old Preferences tab name (the popover's menu actions, `useOpenPrefs`, older sites). */
 export function settingsRouteOf(tab?: string | null): SettingsRoute {

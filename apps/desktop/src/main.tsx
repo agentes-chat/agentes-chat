@@ -1,3 +1,4 @@
+import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { installTitleTips, switchTheme } from "@agenteschat/ui";
 import { StrictMode } from "react";
@@ -7,10 +8,11 @@ import "./styles.css";
 import { AppProvider } from "./app";
 import { toolWords } from "./control/activity";
 import type { LocalPhase, ServeProblem, SetupStep, Tailnet } from "./control/local-server";
+import { MAC_PERMISSIONS, type MacPermission } from "./control/permissions";
 import { DesktopStore, orgName } from "./control/store";
 import { DevFrame } from "./dev/DevFrame";
 import { readPref } from "./hooks";
-import { createFakeHost, SCENARIOS, type Scenario } from "./host/fake";
+import { createFakeHost, type HereOptions, SCENARIOS, type Scenario } from "./host/fake";
 import { createTauriHost, inTauri } from "./host/tauri";
 import { type Host, type LayerRoute, WINDOW_NAMES, type WindowName } from "./host/types";
 import { LOCALE_PREF, loadDesktopI18n, pickLocale, switchDesktopLocale, systemLocale } from "./i18n";
@@ -32,6 +34,9 @@ const askedRoute = (() => {
     return undefined;
   }
 })();
+const isMacPermission = (p: string): p is MacPermission => (MAC_PERMISSIONS as readonly string[]).includes(p);
+/** `?mac=notifications,screen`, `?asked=disk`: some of the Mac's permissions, while designing the sheets. */
+const macList = (name: string) => (params.get(name) ?? "").split(",").filter(isMacPermission);
 const fakeHost = inTauri()
   ? null
   : createFakeHost(
@@ -42,6 +47,12 @@ const fakeHost = inTauri()
         found: params.get("found") !== "0",
         someCommands: params.get("commands") === "some",
         macReady: params.get("mac") === "ready",
+        macOn: macList("mac"),
+        macAsked: macList("asked"),
+        tools: (params.get("tools") as "claude" | "none" | null) ?? undefined,
+        ask: (params.get("ask") as OsPermission | null) ?? undefined,
+        site: params.get("site") !== "0",
+        autostart: params.get("autostart") !== "0",
         route: askedRoute,
         here: {
           phase: (params.get("phase") as LocalPhase | null) ?? undefined,
@@ -57,7 +68,11 @@ const fakeHost = inTauri()
           fail: (params.get("fail") as SetupStep | null) ?? undefined,
           reason: (params.get("reason") as ServeProblem["reason"] | null) ?? undefined,
           hold: (params.get("hold") as SetupStep | null) ?? undefined,
-          tailnet: (params.get("tailnet") as "signedOut" | "on" | "expiring" | "expired" | null) ?? undefined,
+          tailnet: (params.get("tailnet") as HereOptions["tailnet"] | null) ?? undefined,
+          backup: (params.get("backup") as "failed" | "copy" | "off" | null) ?? undefined,
+          awake: params.get("awake") !== "0",
+          approve: params.get("approve") === "1",
+          signIn: (params.get("signin") as "hold" | "approval" | "fail" | null) ?? undefined,
         },
       },
     );

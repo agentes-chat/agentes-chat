@@ -1,0 +1,627 @@
+/*
+ * The first run (ADR 0256 §2, §3; `layer/first-run/`): sign in first beside the team's sky, and one frame for every
+ * step after it (a band of the sky, the step's column, a footer with Back and the actions).
+ */
+
+/* The Mac's title bar floats over the first run: its sky and its band reach the window's top edge, as the site's own
+   pages do, and the bar still drags the window (the window's buttons sit on the sky). */
+.dk-layer[data-mode="full"]:has(> .dk-layer__page > .dk-first) {
+  position: relative;
+}
+.dk-layer[data-mode="full"]:has(> .dk-layer__page > .dk-first) > .dk-layer__bar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 5;
+}
+
+.dk-first {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  animation: dk-first-in 0.3s var(--out, ease-out) both;
+}
+
+/* ── type ── */
+.dk-first__h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 36px;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+.dk-first__h1--sm {
+  font-size: 30px;
+}
+/* Focused for screen readers where a step starts something, never by the keyboard (tabIndex -1). */
+.dk-first__h1:focus {
+  outline: none;
+}
+.dk-first__lead {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.dk-first__foot {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dk-first__hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.dk-first__label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+.dk-first__problem {
+  margin: 0;
+}
+.dk-first__looking {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── the first screen: the sky on the left, sign in on the right ── */
+.dk-welcome {
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+}
+.dk-welcome__sky {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+.dk-welcome__sky .ac-hosting {
+  height: 100%;
+}
+.dk-welcome__brand {
+  position: absolute;
+  top: 56px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+}
+.dk-welcome__main {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  padding: 40px 56px;
+}
+.dk-welcome__col {
+  width: 100%;
+  max-width: 404px;
+  /* Centered by auto margins: a column taller than the window scrolls from its top. */
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+.dk-welcome__found {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--raised);
+  box-shadow: var(--e1), var(--top);
+}
+.dk-welcome__found .dk-logo--lg {
+  width: 40px;
+  height: 40px;
+}
+.dk-welcome__found .dk-tailscale {
+  width: 26px;
+  height: 26px;
+}
+.dk-welcome__foundtext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.dk-welcome__foundtext b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.dk-welcome__foundtext small {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.dk-welcome__problem {
+  margin: -16px 0 24px;
+}
+.dk-welcome__signin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+.dk-welcome__provider {
+  gap: 10px;
+  justify-content: center;
+}
+.dk-welcome__mark {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.dk-welcome__or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 26px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+.dk-welcome__or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ── the frame of every step after it ── */
+.dk-flow {
+  display: grid;
+  grid-template-rows: 168px minmax(0, 1fr) auto;
+}
+.dk-flow__band {
+  position: relative;
+  overflow: hidden;
+}
+.dk-flow__band .ac-hosting {
+  height: 100%;
+  border-radius: 0;
+}
+.dk-flow__scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+.dk-flow__col {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dk-flow__col > .dk-first__lead {
+  margin-top: 2px;
+}
+.dk-flow__step {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+.dk-flow__body {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dk-flow__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--line);
+}
+.dk-flow__acts {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Run here: the owner ── */
+.dk-first__owner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dk-first__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.dk-first__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.dk-first__check > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dk-first__check small {
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* ── Run here: where it will be used, two rows with a hairline, the radio at the end ── */
+.dk-first__picks {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+.dk-first__pick {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 2px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.dk-first__pick > .ac-icon {
+  flex: none;
+  color: var(--muted);
+}
+.dk-first__picktext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dk-first__picktext b {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.dk-first__picktext small {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* ── Run here: the private network ── */
+.dk-first__tailscale {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--raised);
+  box-shadow: var(--e1), var(--top);
+}
+.dk-first__tailscaletext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dk-first__tailscaletext b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.dk-first__tailscaletext small {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.dk-first__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dk-first__note > .ac-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--ok);
+}
+/* Waiting on Tailscale's page: the app and Tailscale joined by the pixel trail, what it waits for, what to do there. */
+.dk-first__wait {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dk-first__hop {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 14px;
+}
+.dk-first__hoptile,
+.dk-first__hop .dk-logo--lg {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--raised);
+  box-shadow: var(--e2), var(--top);
+}
+.dk-first__trail {
+  display: inline-flex;
+  gap: 5px;
+}
+.dk-first__trail i {
+  width: 6px;
+  height: 6px;
+  background: var(--agent2);
+}
+.dk-first__trail i:nth-child(2) {
+  opacity: 0.7;
+}
+.dk-first__trail i:nth-child(3) {
+  opacity: 0.4;
+}
+.dk-first__waitnow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.dk-first__waithow {
+  margin: 0 0 0 26px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* ── the setup's steps ── */
+.dk-first__steps {
+  margin: 0;
+}
+/* "One click left": what is left on Tailscale's page, in plain words, with that page a button away. */
+.dk-first__ask {
+  display: block;
+  margin-top: 6px;
+  max-width: 520px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.dk-first__ask b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.dk-first__askacts {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+/* ── the phone's code ── */
+.dk-first__phone {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 26px;
+  align-items: center;
+}
+.dk-first__qr {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 8px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1e1e1f;
+  box-shadow: var(--e1);
+}
+.dk-first__qr svg[role="img"] {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.dk-first__addr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dk-first__addr b {
+  color: var(--ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Numbered steps (the phone's, the install's): a ring with the number beside each, the words in two lines. */
+.dk-first__numbered {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: dk-first-step;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dk-first__numbered li {
+  counter-increment: dk-first-step;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.dk-first__numbered li::before {
+  content: counter(dk-first-step);
+  grid-row: span 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 600 12px var(--font-sans);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line2);
+}
+.dk-first__numbered li > * {
+  grid-column: 2;
+}
+.dk-first__numbered b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.dk-first__numbered small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ── a company's server: the address, then what was found ── */
+.dk-first__address {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dk-first__found {
+  display: flex;
+  flex-direction: column;
+}
+.dk-first__foundrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+.dk-first__foundrow + .dk-first__foundrow {
+  border-top: 1px solid var(--line);
+}
+.dk-first__foundtext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-first__foundtext b {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dk-first__foundtext small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ── a connect link: the server in large type, the question under it, the buttons at the end ── */
+.dk-linksheet {
+  display: flex;
+  flex-direction: column;
+}
+.dk-linksheet__main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  text-align: center;
+}
+.dk-linksheet__art {
+  margin-bottom: 8px;
+}
+.dk-linksheet__server {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.dk-linksheet__host {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 34px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.dk-linksheet__question {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  max-width: 44ch;
+}
+.dk-linksheet__checking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dk-linksheet__main .dk-first__problem {
+  max-width: 48ch;
+  text-align: start;
+}
+.dk-linksheet__main .dk-first__hint {
+  max-width: 52ch;
+}
+.dk-linksheet__acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--line);
+}
+
+@keyframes dk-first-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-first {
+    animation: none;
+  }
+}
+
+/* A narrow window: the sky gives way, and two fields stack. */
+@media (max-width: 860px) {
+  .dk-welcome {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  .dk-welcome__main {
+    padding: 32px;
+  }
+}
+@media (max-width: 640px) {
+  .dk-first__fields,
+  .dk-first__phone {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

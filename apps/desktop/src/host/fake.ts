@@ -11,7 +11,11 @@
  * computer, its organization's agents too); `?link=` makes any scenario start with that link waiting. A pair link
  * (`agenteschat://pair?server=…&link=ABCDEFGH`) joins Estúdio Norte once its maker lets it in, `HGFEDCBA`'s maker
  * says no, and any other code expired.
- * `?mac=ready`: notifications, Screen Recording and Full Disk Access allowed already (Prepare this Mac is skipped).
+ * `?mac=ready`: notifications, Screen Recording and Full Disk Access allowed already (Prepare this Mac is skipped);
+ * `?mac=notifications,screen` allows only those, and `?asked=disk` (or `screen`) says it was asked in this version
+ * and is still off (Prepare waits on it in System Settings). The sheets: `?tools=` (`claude`, `none`) is which coding
+ * tools this computer has (both by default), `?ask=<permission>` (`disk`, `automation`…) makes an agent's work here
+ * wait on that permission, and a pair link from chat.example.com can't be read (its server doesn't answer).
  * Servers answer by host: agentes.tail1234.ts.net, agentes.chat and http://127.0.0.1:4310 are servers;
  * noowner.tail1234.ts.net waits for its owner; old.example.com is too old; chat.example.com doesn't answer;
  * anything else isn't agentes.chat. `?found=0` makes discovery find nothing.
@@ -19,11 +23,17 @@
  * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
  * first run opens on Run here's form), `?usage=0` (usage statistics off),
  * `?tailscale=` (on, off, missing: the system's), `?tailnet=` (the Tailscale the app carries, ADR 0256 §4: `signedOut`
- * until it signs in, `on`, `expiring`, `expired`; without it the build carries none), `?installed=terminal` (one from
+ * until it signs in, `on`, `expiring`, `expired`, `needsApproval`, `off`; without it the build carries none), `?installed=terminal` (one from
  * the terminal; `&claim=1` waits for its owner,
  * `&serving=0` isn't running), `?fail=` (database, start, account, reach: that setup step fails), `?hold=<step>`
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
- * does). An update downloads in about 1.5 s with its progress, and Cancel drops it.
+ * does). `?approve=1`: the setup's access step waits for HTTPS on Tailscale's page until "Finish without it"
+ * ("One click left"). `?signin=` (the app's own Tailscale signing in): `hold` stays on its page, `approval` waits for
+ * the network's admin, `fail` doesn't finish. `?first=<state>` opens the first run on one of its states
+ * (`dev/first-run-start.ts`). An update downloads in about 1.5 s with its progress, and Cancel drops it.
+ * Settings › This computer: `?site=0` keeps the site away (offline: This computer's sections alone, with the line
+ * that says so), `?autostart=0` has opening at login off, `?backup=` (failed, copy, off) is the server here's backups'
+ * state, `?awake=0` lets this Mac sleep while it serves.
  */
 
 import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
@@ -90,7 +100,15 @@ export interface HereOptions {
   /** Each setup step's time in ms (the tests' 10); a little over a second by default. */
   pace?: number;
   /** The Tailscale the app carries (`?tailnet=`): its state as it starts; none carried when unset. */
-  tailnet?: "signedOut" | "on" | "expiring" | "expired";
+  tailnet?: "signedOut" | "on" | "expiring" | "expired" | "needsApproval" | "off";
+  /** Its backups (`?backup=`): the last one failed, didn't reach its copy, or nightly backups are off. */
+  backup?: "failed" | "copy" | "off";
+  /** False (`?awake=0`): it serves without keeping this Mac awake. */
+  awake?: boolean;
+  /** The setup's access step waits for HTTPS to be allowed until "Finish without it" (`?approve=1`). */
+  approve?: boolean;
+  /** How the app's own Tailscale's sign-in goes (`?signin=`): it signs in about 1.5 s later when unset. */
+  signIn?: "hold" | "approval" | "fail";
 }
 
 const LOCAL_URL = "http://127.0.0.1:4310";
@@ -142,16 +160,24 @@ export interface FakeHost extends Host {
   readonly publishedHealth: { needs: number; server: boolean } | null;
 }
 
-/** The stand-in site's settings list (the layer's settings show it above This computer's sections). */
+/** The stand-in site's settings list (the layer's settings show it above This computer's sections), in the language
+ * the site would send it in (`?lang=`). */
+const SITE_PT =
+  typeof location !== "undefined" && (new URLSearchParams(location.search).get("lang") ?? "").startsWith("pt");
 const FAKE_NAV: SiteNav = {
   org: { id: "org_acme", name: "Acme" },
   main: [
-    { id: "general", label: "General", icon: "settings", path: "/org/org_acme/settings" },
-    { id: "people", label: "People", icon: "users", path: "/org/org_acme/settings/people" },
-    { id: "agents", label: "Agents", icon: "bot", path: "/org/org_acme/settings/agents" },
-    { id: "connectors", label: "Connectors", icon: "plug", path: "/org/org_acme/settings/connectors" },
+    { id: "general", label: SITE_PT ? "Geral" : "General", icon: "settings", path: "/org/org_acme/settings" },
+    { id: "members", label: SITE_PT ? "Pessoas" : "People", icon: "members", path: "/org/org_acme/settings/members" },
+    { id: "agents", label: SITE_PT ? "Agentes" : "Agents", icon: "brainAgent", path: "/org/org_acme/settings/agents" },
+    {
+      id: "connectors",
+      label: SITE_PT ? "Conectores" : "Connectors",
+      icon: "plug",
+      path: "/org/org_acme/settings/connectors",
+    },
   ],
-  advanced: [{ id: "usage", label: "Usage", icon: "chart", path: "/org/org_acme/settings/usage" }],
+  advanced: [{ id: "usage", label: SITE_PT ? "Uso" : "Usage", icon: "chart", path: "/org/org_acme/settings/usage" }],
 };
 
 /** How a route shows (app_layer.rs `mode_for`): sheets over a site only on a Mac. */
@@ -209,6 +235,18 @@ export function createFakeHost(
     route?: LayerRoute | null;
     /** Screen Recording and Full Disk Access allowed already (`?mac=ready`). */
     macReady?: boolean;
+    /** Only these of the Mac's permissions allowed already (`?mac=notifications,screen`). */
+    macOn?: readonly MacPermission[];
+    /** Asked in this version and still off (`?asked=disk`): kept as the app keeps it (`MAC_ASKED_PREF`). */
+    macAsked?: readonly MacPermission[];
+    /** The coding tools this computer has (`?tools=`): both by default. */
+    tools?: "claude" | "none";
+    /** An agent's work on the first runner waits on this OS permission (`?ask=`). */
+    ask?: OsPermission;
+    /** False (`?site=0`): the site never shows behind the layer (offline, its server down). */
+    site?: boolean;
+    /** False (`?autostart=0`): the app doesn't open at login. */
+    autostart?: boolean;
   } = {},
 ): FakeHost {
   const runners = new Map<string, FakeRunner>();
@@ -223,7 +261,7 @@ export function createFakeHost(
   /** Servers the app signed out of (`signOutServer`): listed with no workspaces. */
   const signedOut = new Set<string>();
   let tray: TrayState = "idle";
-  let autostart = true;
+  let autostart = options.autostart !== false;
   let version = "0.6.0";
   const platform: Platform = scenario === "windows" ? "windows" : scenario === "linux" ? "linux" : "mac";
   const here = options.here ?? {};
@@ -249,6 +287,8 @@ export function createFakeHost(
                 https: "ok" as const,
               }
             : {}),
+          // Waiting for the tailnet's admin to approve the new device (`?tailnet=needsApproval`).
+          ...(ownStart === "needsApproval" ? { approveUrl: "https://login.tailscale.com/admin/machines" } : {}),
         };
   const peopleUrl = ownStart === undefined ? TAILNET_URL : OWN_TAILNET_URL;
   const tailnetOf = (reach: boolean): TailnetState =>
@@ -280,20 +320,24 @@ export function createFakeHost(
               ? ("signIn" as const)
               : ownStart === "expiring"
                 ? ("expiring" as const)
-                : ("on" as const),
+                : ownStart === "needsApproval"
+                  ? ("approve" as const)
+                  : ownStart === "off"
+                    ? ("down" as const)
+                    : ("on" as const),
           expiresAt: here.reach && ownTailnet.mode === "app" ? (ownTailnet.keyExpiry ?? null) : null,
           installedVersion: LOCAL_BUNDLE_VERSION,
           serverVersion: running && (here.phase ?? "running") === "running" ? LOCAL_SERVER_VERSION : null,
           backTo: here.back ?? null,
-          awake: running,
+          awake: running && here.awake !== false,
           eraseTo: "/Users/voce/agentes.chat erased 2026-11-14",
           backups: {
-            nightly: true,
+            nightly: here.backup !== "off",
             copyTo: null,
             files: [
               { path: "/Users/voce/.agentes/backups/agentes-2026-10-25-030000.tar.gz", at: Date.UTC(2026, 9, 25, 6) },
             ],
-            problem: null,
+            problem: here.backup === "failed" ? "backup" : here.backup === "copy" ? "copy" : null,
           },
         }
       : here.installed === "terminal"
@@ -363,7 +407,7 @@ export function createFakeHost(
     awake: platform === "mac" ? local.awake : null,
   });
   // The stand-in site is there once a server is chosen (a design tool: no cover, no sign-in).
-  const siteThere = () => list.current !== null;
+  const siteThere = () => list.current !== null && options.site !== false;
   const firstRoute: LayerRoute | null =
     options.route !== undefined
       ? options.route
@@ -437,6 +481,27 @@ export function createFakeHost(
     spawn("0e7c1d2a-0000-4000-8000-000000000001", acmeSeed());
     for (const r of runners.values()) r.server = LOCAL_URL;
     signIns = 1;
+  }
+  // The sheets' states: the coding tools found here (`?tools=`), a permission an agent's work waits on (`?ask=`).
+  for (const r of runners.values()) {
+    if (options.tools === "none") r.executors = {};
+    if (options.tools === "claude") r.executors = { claude: r.executors.claude };
+  }
+  if (options.ask) {
+    const since = new Date().toISOString();
+    [...runners.values()][0]?.setPermissions([
+      { permission: options.ask, trigger: "ls ~/Desktop", agentId: "ag_dev", since },
+    ]);
+  }
+  // This Mac's permissions allowed already (`?mac=`); asked in this version and still off, as the app keeps it
+  // (`MAC_ASKED_PREF`, under `agentes.desktop.`).
+  const macOn = (p: MacPermission) => options.macReady === true || !!options.macOn?.includes(p);
+  if (options.macAsked?.length) {
+    try {
+      localStorage.setItem("agentes.desktop.macAsked", JSON.stringify({ version, asked: options.macAsked }));
+    } catch {
+      // Not kept: Prepare shows them as never asked.
+    }
   }
 
   const orgsOf = (i: number): ServerWorkspace[] =>
@@ -523,8 +588,9 @@ export function createFakeHost(
       })),
     // The fake reads nothing again by itself: an offer never takes the one window over while designing.
     onWorkspaces: () => () => {},
-    pairLinkInfo: async (_server, code): Promise<LinkInfo> => {
+    pairLinkInfo: async (server, code): Promise<LinkInfo> => {
       await wait(300);
+      if (new URL(server).host === "chat.example.com") throw "unreachable";
       if (code !== FAKE_LINKS.live && code !== FAKE_LINKS.denied) throw "link_expired";
       return {
         org: "Estúdio Norte",
@@ -598,9 +664,11 @@ export function createFakeHost(
     discover: async (): Promise<Candidate[]> => {
       await wait(1200);
       if (options.found === false) return [];
+      // With the system's Tailscale off or missing, nothing on the network can be found.
+      const onNetwork = tailnet.state === "on" || (ownTailnet.mode !== "none" && ownTailnet.state === "on");
       return [
         { server: "http://127.0.0.1:4310", where: "here" },
-        { server: FAKE_SERVER, where: "tailnet" },
+        ...(onNetwork ? [{ server: FAKE_SERVER, where: "tailnet" as const }] : []),
       ];
     },
     checkServer: async (server) => {
@@ -760,6 +828,23 @@ export function createFakeHost(
           sayReach({ stage: "joining" });
           await host.signInTailnet().catch(() => {});
         }
+        if (step === "reach" && here.approve) {
+          // Tailscale waits for HTTPS to be allowed on its page, with no time limit: "Finish without it" ends it.
+          reachStopped = false;
+          let over = false;
+          cancelled.catch(() => {
+            over = true;
+          });
+          sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
+          await Promise.race([
+            cancelled,
+            (async () => {
+              while (!reachStopped && !over) await wait(50);
+            })(),
+          ]);
+          say({ step, state: "warn", reason: { reason: "stopped" } });
+          continue;
+        }
         if (step === "reach" && (here.fail === "reach" || (tailnet.state !== "on" && ownStart === undefined))) {
           const reason: ServeProblem =
             here.reason === "operator" || here.reason === "serve"
@@ -815,7 +900,8 @@ export function createFakeHost(
     restartLocalServer: async () => {
       setLocal({ phase: "starting" });
       await wait(1200);
-      setLocal({ phase: "running" });
+      // Started again, it keeps this Mac awake with it (`caffeinate`).
+      setLocal({ phase: "running", awake: platform === "mac" });
     },
     setLocalReach: async (on) => {
       reachStopped = false;
@@ -916,7 +1002,18 @@ export function createFakeHost(
       signInStopped = false;
       setOwnTailnet({ mode: "app", state: "signingIn" });
       saySignIn({ stage: "url", url: "https://login.tailscale.com/a/fake" });
-      for (let i = 0; i < 15 && !signInStopped; i++) await wait(100);
+      if (here.signIn === "approval") {
+        setOwnTailnet({ mode: "app", state: "needsApproval" });
+        saySignIn({ stage: "approval", url: "https://login.tailscale.com/admin/machines" });
+      }
+      // `?signin=hold|approval`: on Tailscale's page until Cancel; otherwise signed in about 1.5 s later.
+      const held = here.signIn === "hold" || here.signIn === "approval";
+      for (let i = 0; (held || i < 15) && !signInStopped; i++) await wait(100);
+      if (here.signIn === "fail" && !signInStopped) {
+        setOwnTailnet({ mode: "app", state: "signedOut" });
+        saySignIn({ stage: "failed", reason: "failed" });
+        return Promise.reject("failed");
+      }
       if (signInStopped) {
         setOwnTailnet({ mode: "app", state: "signedOut" });
         saySignIn({ stage: "failed", reason: "cancelled" });
@@ -949,9 +1046,9 @@ export function createFakeHost(
     onNewHostHome: () => () => {},
     // Screen Recording and Full Disk Access take effect once the app opens again, as on a Mac.
     mac: {
-      screen: options.macReady === true,
-      disk: options.macReady === true,
-      notifications: options.macReady === true ? "granted" : "notDetermined",
+      screen: macOn("screen"),
+      disk: macOn("disk"),
+      notifications: macOn("notifications") ? "granted" : "notDetermined",
       notifyAsks: 0,
       networkAsks: 0,
       setup: null,

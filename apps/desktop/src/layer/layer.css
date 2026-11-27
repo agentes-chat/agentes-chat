@@ -1,6 +1,6 @@
 /*
  * The app layer (ADR 0256, AppLayer.tsx): a web view of its own over the site in the main window. Full: the whole
- * window, opaque. Sheet (macOS only): transparent, a scrim over the site and the screen in a card. Hidden: nothing.
+ * window, opaque. Sheet (macOS only): transparent, with the scrim and the card of `sheets/sheets.css`. Hidden: nothing.
  */
 :root {
   /* The Mac's title bar, as the site's (apps/web desktop.css): 48pt, and the room for the window's buttons. */
@@ -49,67 +49,4 @@ body[data-window="app"][data-mode="hidden"] {
 .dk-layer__page > * {
   flex: 1;
   min-height: 0;
-}
-/* A sheet's screen shown full (Windows, Linux, no site behind it): its card in the middle of the window. */
-.dk-layer[data-mode="full"][data-sheet] .dk-layer__page {
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6, 24px);
-  background: var(--sunken);
-}
-
-/* Sheet: the site shows through the scrim; its top strip still drags the window. */
-.dk-layer[data-mode="sheet"] {
-  align-items: center;
-  justify-content: center;
-  padding: calc(var(--layer-bar) + 8px) 24px 24px;
-}
-.dk-layer__scrim {
-  position: absolute;
-  inset: 0;
-  background: var(--scrim);
-  animation: dk-layer-in 0.2s var(--out, ease-out) both;
-}
-.dk-layer__drag {
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--layer-bar);
-  z-index: 1;
-}
-
-.dk-layer__card {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  width: min(720px, 100%);
-  height: min(600px, 100%);
-  flex: none;
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--bg);
-  box-shadow: var(--e3);
-  animation: dk-layer-card-in 0.24s var(--out, ease-out) both;
-}
-.dk-layer__card > * {
-  flex: 1;
-  min-height: 0;
-}
-
-@keyframes dk-layer-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes dk-layer-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.99);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .dk-layer__scrim,
-  .dk-layer__card {
-    animation: none;
-  }
 }

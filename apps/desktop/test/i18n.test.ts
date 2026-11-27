@@ -171,7 +171,6 @@ describe("desktop strings", () => {
       "servers.removeTitle",
       "servers.removeBody",
       "tray.open",
-      "tray.prefs",
       "tray.quit",
       "tray.label",
       "tray.waiting_one",
@@ -199,6 +198,13 @@ describe("desktop strings", () => {
       "prefs.general.notifySiteDesc",
       "prefs.general.menuBarTitle",
       ...leaves(desktopEn.prefs.updates).map((k) => `prefs.updates.${k}`),
+      // Settings with no computer of this app's own: App settings and its parts.
+      "settings.nav.title",
+      "settings.nav.app",
+      "settings.app.title",
+      "settings.app.notifications",
+      "settings.app.thisApp",
+      "settings.app.servers",
     ];
     for (const tree of [desktopEn, desktopPtBR]) {
       for (const key of cloudKeys) {

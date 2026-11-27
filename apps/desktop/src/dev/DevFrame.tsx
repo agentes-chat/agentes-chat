@@ -12,7 +12,8 @@ import { WindowView } from "../WindowView";
 import "./dev-frame.css";
 
 const SIZES: Record<WindowName, { width: number; height: number | "auto" }> = {
-  popover: { width: 380, height: "auto" },
+  // The card (380) and its transparent margin (POP_PAD in Popover.tsx), as the real window.
+  popover: { width: 424, height: "auto" },
   app: { width: 1240, height: 800 },
   notch: { width: 480, height: 420 },
 };
@@ -21,7 +22,16 @@ const SIZES: Record<WindowName, { width: number; height: number | "auto" }> = {
 const ROUTES: { name: string; route: LayerRoute }[] = [
   { name: "first run", route: { screen: "firstRun" } },
   { name: "settings", route: { screen: "settings" } },
+  {
+    name: "ready",
+    route: {
+      screen: "pairOffer",
+      target: { server: "https://agentes.tail1234.ts.net", orgId: "o-norte", name: "Estúdio Norte", logo: null },
+    },
+  },
   { name: "prepare", route: { screen: "prepare", org: "Acme", server: "https://agentes.tail1234.ts.net" } },
+  { name: "pair link", route: { screen: "pairLink", server: "https://agentes.tail1234.ts.net", code: "ABCDEFGH" } },
+  { name: "permission", route: { screen: "permissionAsk" } },
   { name: "iphone", route: { screen: "iphone" } },
 ];
 
@@ -46,6 +56,22 @@ function SiteStandIn({ there }: { there: boolean }) {
 export function DevFrame({ host }: { host: FakeHost }) {
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   useEffect(() => host.onDev(rerender), [host]);
+  // The popover's states by address: `?paused=1` (every workspace paused), `?offline=1` (every one out of reach),
+  // `?requests=0` (no folder request waiting), once the fake runners started.
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search);
+    const timer = setTimeout(() => {
+      for (const runner of host.runners.values()) {
+        if (asked.get("offline") === "1") runner.setOnline(false);
+        if (asked.get("paused") === "1") runner.handle(JSON.stringify({ id: "dev-pause", type: "pause", until: null }));
+        if (asked.get("requests") === "0") {
+          const answer = { type: "access.answer", requestId: "req_1", decision: "denied", scope: "agent" };
+          runner.handle(JSON.stringify({ id: "dev-answer", ...answer }));
+        }
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [host]);
   const name = host.window;
   const size = SIZES[name];
   const first = [...host.runners.values()][0];
