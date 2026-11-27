@@ -3742,12 +3742,16 @@ export class BrainManager {
     this.bridge.delete(live.id);
     if (live.bridged) void live.bridged.to.bridge({ ...live.bridged.frame, token: null }).catch(() => undefined);
     this.keepCompacted(live);
-    // Its last turn just used the cache: kept for an hour from now.
-    try {
-      const now = Date.now() / 1000;
-      utimesSync(live.keptSystem, now, now);
-    } catch {
-      // nothing kept
+    // A warm start's guess no turn took (another conversation's text, maybe another person's): never the session's.
+    if (live.guessed !== undefined) rmSync(live.keptSystem, { force: true });
+    else {
+      // Its last turn just used the cache: kept for an hour from now.
+      try {
+        const now = Date.now() / 1000;
+        utimesSync(live.keptSystem, now, now);
+      } catch {
+        // nothing kept
+      }
     }
     // The process may still read its files while it exits.
     const cleanup = () => {

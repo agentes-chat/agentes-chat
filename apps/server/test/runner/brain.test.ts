@@ -3669,6 +3669,25 @@ test.if(posix)(
   },
 );
 
+test.if(posix)(
+  "a warm start's guessed text that no turn took never becomes the session's: its resumed turn starts with its own",
+  async () => {
+    const { m, ws, spawns, turn } = setup({ idleMs: 300 });
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    // Another person's conversation: its text is the guess.
+    await turn(1, "hi", { system: "S-other" });
+    const warm = await m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: true }, cwd: "" }, ctx);
+    expect(warm).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(spawns()[1]?.system).toBe("S-other");
+    // Closed unused (its idle limit, or for another conversation).
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const b = await turn(2, "there", { system: "S-mine", session: { id: SESSION(2), resume: true } });
+    expect(b.final).toMatchObject({ type: "done" });
+    expect(spawns().at(-1)?.system).toBe("S-mine");
+  },
+);
+
 test.if(posix)("a ready process past its idle time gives way to a new one while the agent works lately", async () => {
   const { spawns, turn } = setup({ maxProcesses: 3, readyRoom: () => true, idleMs: 400 });
   await turn(1, "hi", { system: "S1" });
