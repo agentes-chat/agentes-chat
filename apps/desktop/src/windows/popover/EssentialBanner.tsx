@@ -12,7 +12,7 @@ import { AUTO_UPDATE_PREF } from "../../control/version";
 import { writePref } from "../../hooks";
 import { Banner } from "../../ui/bits";
 import { useToast } from "../../ui/Toast";
-import { ESSENTIAL_ICON, essentialWords, fixLabel, fixPlan } from "./state";
+import { essentialIcon, essentialWords, fixLabel, fixPlan } from "./state";
 
 /** `reread`: the system's side read again once the fix ran (the list then says it's on). */
 export function EssentialBanner({ essential, reread }: { essential: Essential; reread: () => void }) {
@@ -63,7 +63,7 @@ export function EssentialBanner({ essential, reread }: { essential: Essential; r
   };
   return (
     <Banner
-      icon={ESSENTIAL_ICON[essential.id]}
+      icon={essentialIcon(essential)}
       title={t(words.title)}
       actions={
         <Button size="sm" variant="primary" loading={busy} disabled={busy} onClick={() => void run()}>

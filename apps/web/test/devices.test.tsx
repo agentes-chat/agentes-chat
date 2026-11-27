@@ -730,7 +730,8 @@ describe("Connect a device", () => {
       await settle(4);
       expect(localNetwork()).toEqual([{ kind: "localNetwork" }]);
       // The next start asks no more: after the system's question, the app would open System Settings.
-      await click(within(dialog).getByRole("radio", { name: "With a cable" }));
+      // The cable's option carries its "Recommended" note in its name.
+      await click(within(dialog).getByRole("radio", { name: /^With a cable/ }));
       await click(within(dialog).getByRole("radio", { name: "Over Wi-Fi" }));
       await settle(4);
       expect(localNetwork()).toHaveLength(1);

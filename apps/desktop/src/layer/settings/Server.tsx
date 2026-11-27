@@ -2,8 +2,8 @@
  * Settings › This computer › Server on this computer (ADR 0256 §7): agentes.chat as the app runs it here. Its state
  * and Restart on top; "Reach from anywhere": its address for people with Copy and the way it goes (Tailscale or the
  * person's own address, ADR 0256 §4, changed with the picker inline), the phone's QR code (a one-time sign-in made
- * with the window's own session, asked again while it shows), inviting someone from the team, and what keeps reach
- * from working with its one fix; off, one row with Turn on, which opens the same picker; its backups (every night, a
+ * with the window's own session, asked again while it shows) and inviting someone from the team; while something keeps
+ * reach from working, only that with its one fix (the phone and the invite would lead nowhere); off, one row with Turn on, which opens the same picker; its backups (every night, a
  * copy elsewhere); and a quiet line of what is done less often (Back up now, Restore…, Stop, Stop running here…, Erase
  * and start over…), each asking first as before. Its versions and Jev's key live in App settings › About.
  */
@@ -126,6 +126,14 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
   const sub = !running ? null : local.reach ? (reachItem?.state === "on" ? "anywhere" : null) : "onlyHere";
   // Reach on, but what keeps people from it now (HTTPS waiting, Tailscale off here, the address down) is said instead.
   const trouble = local.reach && reachItem?.state === "off" ? reachItem : null;
+  // While reach is on but kept from people, the phone's code and inviting lead nowhere: only the row with its fix stays.
+  const reachStuck =
+    !!trouble ||
+    (local.reach &&
+      (local.reachDown ||
+        local.reachHealth === "down" ||
+        local.reachHealth === "address" ||
+        local.reachHealth === "approve"));
   const throughAddress = local.way?.kind === "address";
   // The address for people: the app's own word for it, else the one the person gave.
   const peopleUrl = local.publicUrl ?? (local.way?.kind === "address" ? local.way.url : null);
@@ -261,8 +269,8 @@ function Running({ local, ctx }: { local: LocalServerStatus; ctx: SettingsContex
             />
           )}
           <ReachRows control={reach} port={local.port} choosing={choosing} />
-          {local.reach && running && <PhoneRow address={throughAddress} />}
-          {local.reach && (
+          {local.reach && running && !reachStuck && <PhoneRow address={throughAddress} />}
+          {local.reach && !reachStuck && (
             <PrefRow
               lead={<Lead icon="personAdd" />}
               title={t("desktop.settings.server.invite")}

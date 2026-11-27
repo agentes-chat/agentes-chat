@@ -93,6 +93,10 @@ export const ESSENTIAL_ICON: Record<EssentialId, IconName> = {
   autoLogin: "power",
 };
 
+/** The banner's icon for this essential: reach through the person's own address shows a link, as its row does. */
+export const essentialIcon = (e: Essential): IconName =>
+  e.id === "reach" && e.reason === "address" ? "link" : ESSENTIAL_ICON[e.id];
+
 /**
  * The essential the popover's banner shows: the first one off that counts ("N things need you"), in the Overview's
  * order. A version that can't keep working has its own banner ("Update to keep going"), so it isn't said twice.

@@ -3,8 +3,10 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
+import { Icon, type IconName } from "@agenteschat/ui";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
 import { ControlError } from "../src/control/client";
@@ -86,6 +88,13 @@ const banners = (el: HTMLElement) =>
     line: banner.querySelector(".dk-banner__text small")?.textContent ?? null,
     actions: [...banner.querySelectorAll(".dk-banner__acts button")].map((b) => b.textContent),
   }));
+/** The first banner's icon, by its shapes, to compare with an icon drawn by name. */
+const bannerIcon = (el: HTMLElement) => el.querySelector(".dk-banner .dk-logo svg")?.innerHTML;
+const iconMarkup = (name: IconName) => {
+  const box = document.createElement("div");
+  box.innerHTML = renderToStaticMarkup(<Icon name={name} size={16} />);
+  return box.querySelector("svg")?.innerHTML;
+};
 
 test("the menu bar menu: what goes on here scrolls, and Pause, Open, This Mac settings and Quit stay below it", () =>
   withMenu((el) => {
@@ -610,6 +619,8 @@ describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
           line: "Your phone and team can't reach agentes.chat until it does. Check that your tunnel is on.",
           actions: ["Fix it"],
         });
+        // A link for the person's own address, as its row in Settings shows (the globe is Tailscale's).
+        expect(bannerIcon(el)).toBe(iconMarkup("link"));
         await press(el, ".dk-banner__acts button", "Fix it");
         await until(() => address.layer.route?.screen === "settings");
         expect(address.layer.route).toEqual({ screen: "settings", section: "server", focus: "reach" });
@@ -627,6 +638,7 @@ describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
           line: "Your phone and team can't reach agentes.chat.",
           actions: ["Fix it"],
         });
+        expect(bannerIcon(el)).toBe(iconMarkup("globe"));
       },
       down,
       (el) => banners(el).some((b) => b.title === "Tailscale isn't connected on this Mac"),

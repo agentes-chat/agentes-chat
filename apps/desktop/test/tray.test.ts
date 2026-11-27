@@ -9,6 +9,7 @@ import { desktopPtBR } from "../src/i18n/keys.pt-BR";
 import {
   agentRows,
   bannerEssential,
+  essentialIcon,
   essentialWords,
   fixLabel,
   fixPlan,
@@ -222,6 +223,13 @@ describe("the popover's essentials banner", () => {
       "desktop.tray.essential.reach.address.title",
     );
     expect(essentialWords(off({ id: "reach", reason: "down" }))?.title).toBe("desktop.tray.essential.reach.down.title");
+  });
+
+  test("its icon: a link for the person's own address, as its row shows; the globe for Tailscale's problems", () => {
+    expect(essentialIcon(off({ id: "reach", reason: "address", fix: { kind: "reachCheck" } }))).toBe("link");
+    expect(essentialIcon(off({ id: "reach", reason: "down", fix: { kind: "tailscaleStart" } }))).toBe("globe");
+    expect(essentialIcon(off({ id: "reach", reason: "approve", fix: { kind: "tailscaleHttps" } }))).toBe("globe");
+    expect(essentialIcon(off({ id: "screen", fix: { kind: "permission", permission: "screen" } }))).toBe("eye");
   });
 });
 

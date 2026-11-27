@@ -413,11 +413,17 @@ describe("Settings › This computer › Server on this computer", () => {
         expect(row(el, "agentes.example.com")?.line).toBe("Your address doesn't lead here now.");
         const check = buttonIn(rowEl(el, "agentes.example.com") as HTMLElement, "Check again");
         expect(check).toBeTruthy();
-        // Change is there too, under the row.
-        expect(buttonIn(el.querySelector(".dk-sx__rowlinks") as HTMLElement, "Change")).toBeTruthy();
+        // Change and Turn off are there too, under the row.
+        const links = [...(rowEl(el, "agentes.example.com")?.querySelectorAll(".dk-sx__rowlinks button") ?? [])];
+        expect(links.map((b) => b.textContent)).toEqual(["Change", "Turn off"]);
+        // The phone's code and inviting would lead nowhere while it's down: only the row with its fix.
+        expect(rowEl(el, "On your phone")).toBeUndefined();
+        expect(rowEl(el, "Invite someone from the team")).toBeUndefined();
         await act(async () => check?.click());
         await until(() => row(el, "agentes.example.com")?.line === "Through your address", 5000);
         expect(buttonIn(rowEl(el, "agentes.example.com") as HTMLElement, "Copy")).toBeTruthy();
+        // Back: the phone and the team with it.
+        await until(() => rowEl(el, "On your phone") && rowEl(el, "Invite someone from the team"));
       },
       { here: { reach: true, way: "address", health: "address" } },
     ));
@@ -432,6 +438,9 @@ describe("Settings › This computer › Server on this computer", () => {
         expect(row(el, "ana-mac.tail1234.ts.net")?.line).toBe(
           "Tailscale waits for HTTPS to be turned on in your network.",
         );
+        // Nothing that leads nowhere until then: no phone code, no invite.
+        expect(rowEl(el, "On your phone")).toBeUndefined();
+        expect(rowEl(el, "Invite someone from the team")).toBeUndefined();
         await act(async () => buttonIn(el, "Open Tailscale's page")?.click());
         await until(() => opened.length > 0);
         expect(opened).toEqual(["https"]);
@@ -446,6 +455,22 @@ describe("Settings › This computer › Server on this computer", () => {
       },
     );
   });
+
+  test("Tailscale not connected here: only reach's row with its fix and its links, no phone code or invite", () =>
+    pane(
+      "here",
+      <Settings section="server" />,
+      (el) => rowEl(el, "ana-mac.tail1234.ts.net")?.querySelector(".dk-crow__end button"),
+      (el) => {
+        expect(row(el, "ana-mac.tail1234.ts.net")?.line).toBe("Tailscale isn't connected on this Mac.");
+        const links = [...(rowEl(el, "ana-mac.tail1234.ts.net")?.querySelectorAll(".dk-sx__rowlinks button") ?? [])];
+        expect(links.map((b) => b.textContent)).toEqual(["Change", "Turn off"]);
+        expect(rowEl(el, "On your phone")).toBeUndefined();
+        expect(rowEl(el, "Invite someone from the team")).toBeUndefined();
+        expect(el.querySelector(".dk-sx__qr")).toBeNull();
+      },
+      { here: { reach: true, health: "down" } },
+    ));
 
   test("Turn on opens the picker inline: an address checked by its form, then where it leads, then reach on", () =>
     pane(

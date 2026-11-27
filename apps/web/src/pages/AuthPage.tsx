@@ -462,13 +462,14 @@ export function AuthPage({
 
   // From the app's first screen (`/login?with=`): once the app said where this is and the providers are known, the
   // address drops the provider (a reload never opens the browser again), then its sign-in starts in the browser. A
-  // provider this server doesn't offer leaves the e-mail step.
+  // provider this server doesn't offer leaves the e-mail step. The router keeps search keys the route didn't validate
+  // next to the ones it did, so `?with=github` arrives as it is: only Google and Apple start by themselves.
   const startedWith = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, as soon as the place is known
   useEffect(() => {
     if (!startWith || !desktop || !placeKnown || startedWith.current) return;
     startedWith.current = true;
-    const offered = offeredProviders.includes(startWith);
+    const offered = isBrowserStartProvider(startWith) && offeredProviders.includes(startWith);
     void navigate({
       to: ".",
       replace: true,
