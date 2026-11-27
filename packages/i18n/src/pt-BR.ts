@@ -2035,7 +2035,7 @@ export const ptBR = {
           heading: "{{name}}, do seu trabalho",
           does: "Acompanha os clientes, as cobranças e a agenda, e avisa do que precisa de você hoje.",
           connect: "Conecte onde você trabalha",
-          today: "o que precisa de você hoje",
+          today: "o que precisa de você",
           working: "O {{name}} está olhando os seus clientes",
           working_female: "A {{name}} está olhando os seus clientes",
           instructions:

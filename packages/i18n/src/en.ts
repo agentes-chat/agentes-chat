@@ -1039,8 +1039,9 @@ export const en = {
       },
       /** The rail's last step (ADR 0162): the AI the team thinks with, then the workspace. */
       ai: {
-        /** Right after the plan: the AI the first agent thinks with. `{{name}}`: that agent. */
+        /** Right after the plan: the AI the first agent thinks with. */
         title: "Now, the AI you already pay for",
+        /** `{{name}}`: the first agent. */
         lead: "{{name}} thinks with it, at no extra cost here. As soon as you connect it, the first delivery starts.",
         later: "Connect later",
         /** "Connect later" asks first: without an AI the first delivery doesn't happen. */
@@ -2097,7 +2098,7 @@ export const en = {
           heading: "{{name}}, for your work",
           does: "Keeps up with your clients, invoices and calendar, and tells you what needs you today.",
           connect: "Connect where you work",
-          today: "what needs you today",
+          today: "what needs you",
           working: "{{name}} is looking at your clients",
           instructions:
             "You look after the work of whoever asked, who works for themselves: clients, invoices and calendar. You flag what needs attention and get ready what can be. Nothing is sent without the OK of whoever asked.",
@@ -2179,9 +2180,9 @@ export const en = {
       noApps: "No app by that name.",
     },
     /**
-     * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27). `{{agent}}`: the first agent with its
-     * article (`the`); `{{today}}`: its first delivery (`areas.list.*.today`); `fine`: the plan's people, from the
-     * billing service's list.
+     * The plan step (ADR 0162, amended by ADR 0256's addendum of 2026-11-27). `{{agent}}`: the first agent as `the`
+     * writes it (its name, with the article where a language has one); `{{today}}`: its first delivery
+     * (`areas.list.*.today`); `fine`: the plan's people, from the billing service's list.
      */
     hire: {
       the: "{{name}}",
