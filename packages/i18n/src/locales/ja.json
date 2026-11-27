@@ -16072,10 +16072,48 @@
       "viaBy": "エージェントは {{name}}（{{person}}）のインターネットを使っています",
       "viaHint": "サイトからはそのコンピューターの場所が見えます。接続した人はそのページでオフにできます。"
     },
-    "moving": {
-      "short": "サーバー移行中",
-      "line": "新しいサーバーへ移行中… 数分で戻ります",
-      "named": "{{computer}} は新しいサーバーへ移行中です… 数分で戻ります"
+    "maintenance": {
+      "short": {
+        "moving": "サーバー移行中",
+        "restarting": "再起動中",
+        "updating": "アップデート中",
+        "converting": "ディスク改善中",
+        "host_maintenance": "メンテナンス中",
+        "other": "メンテナンス中"
+      },
+      "what": {
+        "moving": "新しいサーバーへ移行中",
+        "copying": "新しいサーバーへコピー中",
+        "restarting": "再起動中",
+        "updating": "ソフトウェアをアップデート中",
+        "converting": "ディスクを改善中",
+        "host_maintenance": "サーバーがメンテナンス中",
+        "other": "メンテナンス中"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "約{{time}}で戻ります",
+      "backSoon": "数分で戻ります",
+      "late": "予定より少し時間がかかっています",
+      "slower": "その間は遅くなることがあります",
+      "slowerFor": "約{{time}}のあいだ遅くなることがあります",
+      "why": {
+        "moving": "新しいサーバーへ移しています。",
+        "copying": "作業を続けたまま、ファイルを新しいサーバーへコピーしています。",
+        "handover": "最後の変更を新しいサーバーへ引き継いでいます。",
+        "restarting": "再起動しています。",
+        "unresponsive": "応答しなくなったため、自動で再起動しました。",
+        "updating": "ソフトウェアをアップデートしています。",
+        "converting": "ディスクをより高速なストレージへ移しています。",
+        "host_maintenance": "稼働しているサーバーがメンテナンス中です。",
+        "other": "作業を行っています。"
+      },
+      "since": "{{time}}から",
+      "expectedBack": "{{time}}ごろに戻る予定",
+      "expectedDone": "{{time}}ごろに完了予定",
+      "meanwhile": "エージェントへのメッセージは待機し、戻りしだい自動で再開します。",
+      "working": "その間もエージェントは作業を続けます。",
+      "about": "何が起きているか"
     },
     "online": "オンライン",
     "offline": "オフライン",

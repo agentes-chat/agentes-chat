@@ -23,7 +23,7 @@ stage. Where a reply's time went could be told for one run, by hand, and not cha
 
 1. **Every stage that matters is kept per run, by name.** A computer turn's `model#N` keeps its steps as `parts`, its
    shares of the stage in the order a turn reaches them: `pre_turn_sync` (the brain's `code` phase, timed for every run),
-   `cli_init` (a cold start's `initMs`), `cli_first_byte` (the first streamed message, else the first event, less the
+   `cli_init` (a cold start's `initMs`, or the runner's own wait before it handed an open process the turn, `sentMs`, whichever is longer), `cli_first_byte` (the first streamed message, else the first event, less the
    start), `tools` (ours from their `tool_call` to their `tool_result` steps on the database's clock, the brain's own
    from `tool_started` to their end on the server's, each set's overlaps counted once) and `model_write`, the rest. Each
    share is cut to what the stage has left, so they add up to it. An API model's calls are a stage of their own,

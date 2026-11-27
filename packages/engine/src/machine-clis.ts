@@ -47,7 +47,7 @@ async function installable(db: Database, actorId: string, orgId: string, machine
 export async function checkMachineClis(deps: Deps, actorId: string, orgId: string, machineId: string) {
   const machine = await installable(deps.db, actorId, orgId, machineId);
   const status = await deps.hub.status(machine.id);
-  if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind);
+  if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind, status?.maintenance);
   const reply: { executors?: unknown } = await deps.hub.call(machine.id, { op: "clis.check" });
   // Checked like `hello.executors`: the row's other fields (`mode`, `ownUsage`…) are never the runner's to set here.
   const executors = parseExecutors(
@@ -98,7 +98,7 @@ export async function machineCliInstall(
   }
   if (action === "start") {
     const status = await deps.hub.status(machine.id);
-    if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind);
+    if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind, status?.maintenance);
   }
   let reply: { install?: unknown };
   try {

@@ -1267,6 +1267,53 @@
         },
         "required": ["waiting"]
       },
+      "OperatorMaintenance": {
+        "type": "object",
+        "properties": {
+          "maintenance": {
+            "type": ["object", "null"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["moving", "restarting", "updating", "converting", "host_maintenance"]
+              },
+              "since": {
+                "type": "string"
+              },
+              "eta": {
+                "type": ["string", "null"]
+              },
+              "detail": {
+                "type": ["string", "null"],
+                "enum": ["copying", "handover", "unresponsive", null]
+              }
+            },
+            "required": ["kind", "since", "eta", "detail"]
+          }
+        },
+        "required": ["maintenance"]
+      },
+      "OperatorMaintenanceInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": ["string", "null"],
+            "enum": ["moving", "restarting", "updating", "converting", "host_maintenance", null],
+            "description": "What is done to it: `moving` to another server, `restarting`, `updating` its software, `converting` its disk, `host_maintenance` of the server it runs on. Null: done."
+          },
+          "eta": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When it should be back (away) or done (a move's copy, a conversion). Its people read it as about how long; null or absent: unknown."
+          },
+          "detail": {
+            "type": ["string", "null"],
+            "enum": ["copying", "handover", "unresponsive", null],
+            "description": "Which step, or why: a move's `copying` (it works, maybe slower) or `handover` (away a minute or two), a restart's `unresponsive` (it stopped answering)."
+          }
+        },
+        "required": ["kind"]
+      },
       "OperatorMoving": {
         "type": "object",
         "properties": {
@@ -5990,6 +6037,11 @@
                         "minimum": 0,
                         "description": "A new process until it said it was ready."
                       },
+                      "sentMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to when the runner handed it to its CLI: its own waits before (a turn the process ran by itself, a model switch)."
+                      },
                       "firstEventMs": {
                         "type": ["integer", "null"],
                         "minimum": 0,
@@ -6035,6 +6087,7 @@
                       "warm",
                       "cold",
                       "initMs",
+                      "sentMs",
                       "firstEventMs",
                       "firstRequestMs",
                       "firstTokenMs",
@@ -6046,9 +6099,182 @@
                     ]
                   },
                   "description": "How each of its turns on a computer started, as the computer said, at most 50."
+                },
+                "turns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "brain": {
+                        "type": "string",
+                        "description": "`model` (a provider's API), a coding CLI's kind, or `other`."
+                      },
+                      "model": {
+                        "type": ["string", "null"],
+                        "description": "The model it asked for; null: its default."
+                      },
+                      "atMs": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "From the claim's start to the turn's."
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "end": {
+                        "type": "string",
+                        "description": "`done`, the code it failed with, or `thrown`."
+                      },
+                      "preTurnMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "The work before its model (the checkouts)."
+                      },
+                      "firstEventMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to its first event, on the server."
+                      },
+                      "firstTextMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to its first text, on the server."
+                      },
+                      "tools": {
+                        "type": ["object", "null"],
+                        "properties": {
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "ms": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "maxMs": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": ["count", "ms", "maxMs"],
+                        "description": "The calls it ran itself; `ms`: those it said it started, summed."
+                      },
+                      "runner": {
+                        "type": ["object", "null"],
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": "Its computer's measures, as in `computerTurns`."
+                      },
+                      "evidence": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "A slow or failed turn: what the CLI's debug log said during it, timed from the turn's start, scrubbed."
+                      },
+                      "system": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "A computer brain's system text by its blocks, each a short hash: two turns whose hashes differ show which block changed."
+                      }
+                    },
+                    "required": [
+                      "brain",
+                      "model",
+                      "atMs",
+                      "ms",
+                      "end",
+                      "preTurnMs",
+                      "firstEventMs",
+                      "firstTextMs",
+                      "tools",
+                      "runner",
+                      "evidence",
+                      "system"
+                    ]
+                  },
+                  "description": "Each brain turn as the server saw it, at most 50."
+                },
+                "slow": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "enum": ["context", "pre_turn", "init", "first_byte", "reply"]
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "budgetMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cause": {
+                        "type": "string",
+                        "description": "What took the time: a context step, `checkouts`, a cold start's cause, `api_retry`, `wait`, a failure's code, or a reply's largest stage."
+                      },
+                      "turn": {
+                        "type": ["integer", "null"],
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["stage", "ms", "budgetMs", "cause", "turn"]
+                  },
+                  "description": "The budgets it broke (`SLOW_TURN_BUDGETS`)."
+                },
+                "waterfall": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "span": {
+                        "type": "string"
+                      },
+                      "startMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["span", "startMs", "ms"]
+                  },
+                  "description": "Its stages and its turns' marks on one time line from its start; a mark is 0 ms."
                 }
               },
-              "required": ["endedAt", "totalMs", "queries", "stages", "stagesCut", "computerTurns"]
+              "required": [
+                "endedAt",
+                "totalMs",
+                "queries",
+                "stages",
+                "stagesCut",
+                "computerTurns",
+                "turns",
+                "slow",
+                "waterfall"
+              ]
             },
             "description": "Where the time went each time a worker took the run up (a claim), oldest first: the last 10 the run kept, none on a run that kept none. A wait between two claims is in neither."
           },
@@ -11174,11 +11400,90 @@
         }
       }
     },
+    "/orgs/{orgId}/machines/{machineId}/maintenance": {
+      "put": {
+        "tags": ["Operator"],
+        "summary": "Say what is done to the workspace's computer, or that it is done",
+        "description": "Say it when a move, a restart, an update, a disk conversion or its host's maintenance begins, again at each step (the same kind keeps its start), and `kind: null` once it is done or called off. While the computer is away its people see what is done, why and about when it is back, never that it is offline, and agents waiting for it say the same; online, only a move's copy and a conversion show (it may be slower). Shown until 30 minutes past `eta` (at most a day after the latest word), or two hours after the latest word with no `eta`. Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "machineId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorMaintenanceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorMaintenance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/orgs/{orgId}/machines/{machineId}/moving": {
       "put": {
         "tags": ["Operator"],
         "summary": "Say the workspace's computer is moving to another server, or no longer",
-        "description": "Say it (`true`) when its move starts, and `false` once its runner paired on the new server, or the move was cancelled or failed. While it is away its people see that it is moving and comes back in a few minutes, never that it is offline or not answering, for at most two hours after the latest `true` (say it again at each step of a long move). Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
+        "description": "From before `PUT …/maintenance`, which says it with a time and a step: `true` is `kind: moving`, `false` ends a move (another kind said meanwhile, such as a restart, stays). Say it (`true`) when its move starts, and `false` once its runner paired on the new server, or the move was cancelled or failed. While it is away its people see that it is moving and comes back in a few minutes, never that it is offline or not answering, for at most two hours after the latest `true` (say it again at each step of a long move). Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
         "parameters": [
           {
             "schema": {

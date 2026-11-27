@@ -40,6 +40,7 @@ import { AgentComputersCard } from "@/components/AgentComputer";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { HostComputerCard } from "@/components/Machines";
+import { MaintenanceHint } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { useComputerEdition, WorkspaceComputerCard } from "@/components/WorkspaceComputer";
@@ -275,7 +276,13 @@ export function DeviceRowView({
   const navigate = useNavigate();
   const d = row.device;
   const host = row.kind === "phone" ? row.host : null;
-  const detail = statusDetail(t, i18n.language, d.status, { host: host?.name, hostOs: host?.os, ios: iosOf(d) });
+  const maintenance = row.kind === "computer" ? (row.device.maintenance ?? null) : null;
+  const detail = statusDetail(t, i18n.language, d.status, {
+    host: host?.name,
+    hostOs: host?.os,
+    ios: iosOf(d),
+    maintenance,
+  });
   const target: Target =
     row.kind === "computer" ? { kind: "computer", device: row.device } : { kind: "phone", device: row.device };
   const label = t("devices.menu", { name: d.name });
@@ -335,7 +342,10 @@ export function DeviceRowView({
                   {detail}
                 </button>
               ) : (
-                <span className="dv-row__detail">{detail}</span>
+                <span className={maintenance ? "dv-row__detail ac-hintline" : "dv-row__detail"}>
+                  {detail}
+                  {maintenance && <MaintenanceHint maintenance={maintenance} />}
+                </span>
               ))}
           </>
         )}

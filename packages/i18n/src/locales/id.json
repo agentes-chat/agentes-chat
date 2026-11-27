@@ -16132,10 +16132,48 @@
       "viaBy": "Agen memakai internet {{name}} ({{person}})",
       "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya."
     },
-    "moving": {
-      "short": "Pindah server",
-      "line": "Pindah ke server baru… kembali dalam beberapa menit",
-      "named": "{{computer}} sedang pindah ke server baru… kembali dalam beberapa menit"
+    "maintenance": {
+      "short": {
+        "moving": "Pindah server",
+        "restarting": "Memulai ulang",
+        "updating": "Memperbarui",
+        "converting": "Meningkatkan disk",
+        "host_maintenance": "Pemeliharaan",
+        "other": "Pemeliharaan"
+      },
+      "what": {
+        "moving": "Pindah ke server baru",
+        "copying": "Menyalin ke server baru",
+        "restarting": "Memulai ulang",
+        "updating": "Memperbarui perangkat lunaknya",
+        "converting": "Meningkatkan disknya",
+        "host_maintenance": "Servernya sedang dalam pemeliharaan",
+        "other": "Sedang dikerjakan"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "kembali dalam sekitar {{time}}",
+      "backSoon": "kembali dalam beberapa menit",
+      "late": "sedikit lebih lama dari perkiraan",
+      "slower": "mungkin lebih lambat untuk sementara",
+      "slowerFor": "mungkin lebih lambat selama sekitar {{time}}",
+      "why": {
+        "moving": "Kami sedang memindahkannya ke server baru.",
+        "copying": "Kami sedang menyalin filenya ke server baru sambil ia bekerja.",
+        "handover": "Kami sedang menyerahkan perubahan terakhirnya ke server baru.",
+        "restarting": "Kami sedang memulai ulangnya.",
+        "unresponsive": "Ia berhenti merespons, jadi kami memulai ulangnya secara otomatis.",
+        "updating": "Kami sedang memperbarui perangkat lunaknya.",
+        "converting": "Kami sedang memindahkan disknya ke penyimpanan yang lebih cepat.",
+        "host_maintenance": "Server tempat ia berjalan sedang dalam pemeliharaan.",
+        "other": "Kami sedang melakukan pekerjaan padanya."
+      },
+      "since": "Sejak {{time}}",
+      "expectedBack": "Diperkirakan kembali sekitar {{time}}",
+      "expectedDone": "Diperkirakan selesai sekitar {{time}}",
+      "meanwhile": "Pesan untuk agennya menunggu dan berlanjut sendiri saat ia kembali.",
+      "working": "Agennya tetap bekerja sementara itu.",
+      "about": "Apa yang terjadi"
     },
     "online": "Online",
     "offline": "Offline",

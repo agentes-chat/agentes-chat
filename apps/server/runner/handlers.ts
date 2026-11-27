@@ -40,7 +40,7 @@ import { type BrowserManager, browserSetupText } from "./browser";
 import type { BrowserViews } from "./browser-views";
 import { allowedMerge, commandApproval, mergeOf, ownBranches } from "./command-gate";
 import type { DesktopManager } from "./desktop";
-import { type DesktopSessions, freeMemoryNow, hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
+import { type DesktopSessions, freeMemoryNow, MIN_FREE_BYTES } from "./desktop-session";
 import type { EgressShare } from "./egress-share";
 import { RunnerError, toMachineError } from "./errors";
 import { runCommand } from "./exec";
@@ -68,7 +68,7 @@ import type { PairRequest } from "./wifi-pair";
  */
 export const MAX_IN_FLIGHT = 128;
 /**
- * Where the memory isn't known (not Linux): brain turns at once, the count the runner always had. Background
+ * Where no memory can be read (`freeMemoryNow` null): brain turns at once, the count the runner always had. Background
  * tasks keep their own count (`maxConcurrentTasks`): a mission item refused for room would sit in its queue,
  * which moves when a task ends or the computer comes back, never when room frees.
  */
@@ -1843,7 +1843,7 @@ export interface RequestObserver {
 
 /** Tests: what admission reads. */
 export interface Admission {
-  /** The memory available now (default: `/proc/meminfo`, as desktops read it; null: not known). */
+  /** The memory available now (default: `freeMemoryNow`, Linux, macOS and Windows; null: not known). */
   memAvailable?: () => number | null;
   now?: () => number;
   /** Tests: `RECLAIM_MS`. */
@@ -2051,7 +2051,7 @@ export class RequestRunner {
   }
 
   private memAvailable() {
-    return (this.admission.memAvailable ?? hostMemAvailable)();
+    return (this.admission.memAvailable ?? freeMemoryNow)();
   }
 
   /**

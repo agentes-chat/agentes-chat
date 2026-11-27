@@ -16749,10 +16749,48 @@
       "viaBy": "Agents gebruiken het internet van {{name}} ({{person}})",
       "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten."
     },
-    "moving": {
-      "short": "Verhuist van server",
-      "line": "Verhuist naar een nieuwe server… over een paar minuten terug",
-      "named": "{{computer}} verhuist naar een nieuwe server… over een paar minuten terug"
+    "maintenance": {
+      "short": {
+        "moving": "Verhuist van server",
+        "restarting": "Herstart",
+        "updating": "Wordt bijgewerkt",
+        "converting": "Schijf wordt verbeterd",
+        "host_maintenance": "Onderhoud",
+        "other": "Onderhoud"
+      },
+      "what": {
+        "moving": "Verhuist naar een nieuwe server",
+        "copying": "Wordt naar een nieuwe server gekopieerd",
+        "restarting": "Herstart",
+        "updating": "Software wordt bijgewerkt",
+        "converting": "Schijf wordt verbeterd",
+        "host_maintenance": "Zijn server is in onderhoud",
+        "other": "Er wordt aan gewerkt"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "over ongeveer {{time}} terug",
+      "backSoon": "over een paar minuten terug",
+      "late": "duurt iets langer dan verwacht",
+      "slower": "kan intussen trager zijn",
+      "slowerFor": "kan ongeveer {{time}} trager zijn",
+      "why": {
+        "moving": "We verhuizen hem naar een nieuwe server.",
+        "copying": "We kopiëren zijn bestanden naar een nieuwe server terwijl hij werkt.",
+        "handover": "We zetten zijn laatste wijzigingen over naar de nieuwe server.",
+        "restarting": "We herstarten hem.",
+        "unresponsive": "Hij reageerde niet meer, dus we hebben hem automatisch herstart.",
+        "updating": "We werken zijn software bij.",
+        "converting": "We zetten zijn schijf over naar snellere opslag.",
+        "host_maintenance": "De server waarop hij draait krijgt onderhoud.",
+        "other": "We werken aan hem."
+      },
+      "since": "Sinds {{time}}",
+      "expectedBack": "Rond {{time}} terug verwacht",
+      "expectedDone": "Rond {{time}} klaar verwacht",
+      "meanwhile": "Berichten aan zijn agents wachten en gaan vanzelf verder als hij terug is.",
+      "working": "Zijn agents blijven intussen werken.",
+      "about": "Wat er gebeurt"
     },
     "online": "Online",
     "offline": "Offline",

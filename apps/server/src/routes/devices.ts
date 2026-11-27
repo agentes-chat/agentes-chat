@@ -51,6 +51,7 @@ import {
   requireSession,
   security,
 } from "./app/context";
+import { MaintenanceView } from "./app/schemas";
 
 const tags = ["Devices"];
 
@@ -83,8 +84,9 @@ const Status = z
     z.object({ kind: z.literal("needs_you"), reason: Reason }),
     z.object({ kind: z.literal("preparing"), reason: Reason }),
     z.object({ kind: z.literal("paused"), until: z.string().nullable() }),
-    z.object({ kind: z.literal("moving"), since: z.string() }).openapi({
-      description: "The workspace's own computer, away while it moves to another server: back in a few minutes.",
+    z.object({ kind: z.literal("moving"), since: z.string(), maintenance: MaintenanceView.optional() }).openapi({
+      description:
+        "The workspace's own computer, away for what we do to it (`maintenance` says what: a move, a restart…): back by itself.",
     }),
     z.object({
       kind: z.literal("offline"),
@@ -141,6 +143,9 @@ const Computer = z
     spill: z.object({ own: z.boolean(), first: z.boolean() }).openapi({
       description:
         "\"Help when the team's computer is full or away\" (`own`): while an agent's own computer is full or away, fresh turns of its owner's agents (anyone's, on a computer marked the workspace's) may think here, on a sign-in of the agent's owner. \"Use this computer for my agents' work\" (`first`, implies `own`): its owner's agents' asks, routines and long work start here whenever it is free.",
+    }),
+    maintenance: MaintenanceView.nullable().optional().openapi({
+      description: "What we do to the workspace's own computer now, away (`status` says it too) or while it works.",
     }),
     shareInternet: z.object({ on: z.boolean(), inUse: z.boolean() }).nullable().openapi({
       description:
