@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { DRAFT_TTL_MS, draftKeyOf, MAX_DRAFTS, readDraftBook, withDraft } from "../src/lib/composer-drafts";
+import {
+  DRAFT_TTL_MS,
+  type DraftFile,
+  draftKeyOf,
+  MAX_DRAFTS,
+  readDraftBook,
+  withDraft,
+  withDraftFiles,
+} from "../src/lib/composer-drafts";
 
 const NOW = Date.parse("2026-11-02T12:00:00.000Z");
 
@@ -46,4 +54,27 @@ test("the book keeps only the most recent drafts", () => {
   expect(keys).toHaveLength(MAX_DRAFTS);
   expect(keys).not.toContain("channel:0");
   expect(keys).toContain(`channel:${MAX_DRAFTS + 4}`);
+});
+
+const PRINT: DraftFile = { id: "f-1", version: 1, title: "print.png", name: "print.png", size: 4, type: "image/png" };
+
+test("files waiting in a composer are kept with its text, each kept when the other changes", () => {
+  let book = withDraftFiles({}, "channel:c1", [PRINT], NOW);
+  // Files alone keep the entry, with a blank text.
+  expect(readDraftBook(JSON.stringify(book), NOW)["channel:c1"]).toEqual({ text: "", files: [PRINT], at: NOW });
+  book = withDraft(book, "channel:c1", "look", NOW + 1);
+  expect(book["channel:c1"]).toEqual({ text: "look", files: [PRINT], at: NOW + 1 });
+  book = withDraftFiles(book, "channel:c1", [], NOW + 2);
+  expect(book["channel:c1"]).toEqual({ text: "look", at: NOW + 2 });
+  // No text and no files: the entry goes.
+  expect(withDraft(withDraftFiles(book, "channel:c1", [], NOW), "channel:c1", "", NOW)["channel:c1"]).toBeUndefined();
+});
+
+test("a stored file of the wrong shape is skipped; an entry left with nothing goes", () => {
+  const raw = JSON.stringify({
+    a: { text: "", files: [PRINT, { id: "f-2", name: "x" }], at: NOW },
+    b: { text: "", files: [{ id: 3 }], at: NOW },
+    c: { text: "", files: "print.png", at: NOW },
+  });
+  expect(readDraftBook(raw, NOW)).toEqual({ a: { text: "", files: [PRINT], at: NOW } });
 });
