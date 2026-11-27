@@ -20,185 +20,109 @@ const BILLING = "https://billing.example.com";
 
 type WebRail = Omit<Parameters<typeof railState>[0], "funnel">;
 
-/** A web onboarding's state: a team's workspace that exists, nothing stored, no plan to wait for, no AI yet. */
+/** A web onboarding's state: a workspace that exists, no agent yet, nothing stored, no plan to wait for, no AI yet. */
 const web = (f: Partial<WebRail> & { funnel?: Partial<RailFunnel> } = {}) => {
   const { funnel, ...rest } = f;
   return railState({
     orgId: "o1",
     standing: undefined,
     billingUrl: null,
-    team: 0,
+    agent: false,
     picked: null,
     ...rest,
     funnel: { thinks: false, passed: undefined, ...funnel },
   });
 };
 
-describe("the web onboarding's rail (ADR 0162, amended for the first agents of ADR 0256)", () => {
-  test("its steps: the name, how to start, the picked agent's week, the plan, the AI, a team's people", () => {
-    expect(railSteps({ plan: true, personal: false, week: true })).toEqual([
-      "name",
-      "start",
-      "week",
-      "plan",
-      "ai",
-      "people",
-    ]);
-    expect(railSteps({ plan: false, personal: false, week: true })).toEqual(["name", "start", "week", "ai", "people"]);
-    // Started from scratch: no week to show.
-    expect(railSteps({ plan: true, personal: false, week: false })).toEqual(["name", "start", "plan", "ai", "people"]);
-    // A personal workspace (ADR 0159) never ends on inviting people.
-    expect(railSteps({ plan: true, personal: true, week: true })).toEqual(["name", "start", "week", "plan", "ai"]);
-    expect(railSteps({ plan: false, personal: true, week: false })).toEqual(["name", "start", "ai"]);
+describe("the web onboarding's rail (ADR 0162, amended by ADR 0256's addendum of 2026-11-27)", () => {
+  test("its steps: the work, its agent, the plan where there is one, the AI and the photo", () => {
+    expect(railSteps({ plan: true })).toEqual(["area", "agent", "plan", "ai", "celebrate"]);
+    // A self-hosted server has no plan step.
+    expect(railSteps({ plan: false })).toEqual(["area", "agent", "ai", "celebrate"]);
   });
 
   test("the step comes from the workspace's own data, so a workspace left at any step resumes there", () => {
     const at = (f: Partial<Parameters<typeof railStepAt>[0]>) =>
-      railStepAt({
-        created: true,
-        started: true,
-        week: true,
-        weekSeen: true,
-        waitsForPlan: false,
-        thinks: true,
-        people: true,
-        invited: true,
-        ...f,
-      });
-    expect(at({})).toBe("open");
-    expect(at({ created: false, started: false, weekSeen: false })).toBe("name");
-    expect(at({ started: false, weekSeen: false })).toBe("start");
-    expect(at({ weekSeen: false, waitsForPlan: true })).toBe("week");
-    // No week on the rail (started from scratch): on to the plan, never back to a week.
-    expect(at({ week: false, weekSeen: false, waitsForPlan: true })).toBe("plan");
+      railStepAt({ agent: true, agentSeen: true, waitsForPlan: false, thinks: true, ...f });
+    expect(at({})).toBe("celebrate");
+    // No agent yet: the work, whatever else is stored.
+    expect(at({ agent: false })).toBe("area");
+    expect(at({ agent: false, waitsForPlan: true, thinks: false })).toBe("area");
+    // Made, its Continue not pressed yet: its step, before any plan.
+    expect(at({ agentSeen: false, waitsForPlan: true })).toBe("agent");
     expect(at({ waitsForPlan: true, thinks: false })).toBe("plan");
-    expect(at({ thinks: false, invited: false })).toBe("ai");
-    expect(at({ invited: false })).toBe("people");
-    // With no people step (a personal workspace), every agent thinking opens it.
-    expect(at({ people: false, invited: false })).toBe("open");
+    expect(at({ thinks: false })).toBe("ai");
   });
 
   test("before the workspace exists only the server's billing says whether a plan step comes", () => {
     expect(web({ orgId: null, billingUrl: BILLING })).toMatchObject({
-      steps: ["name", "start", "week", "plan", "ai", "people"],
-      at: "name",
-      step: "name",
-      index: 0,
+      steps: ["area", "agent", "plan", "ai", "celebrate"],
+      at: "area",
+      step: "area",
       reached: 0,
       waitsForPlan: true,
       hasPlanStep: true,
     });
     expect(web({ orgId: null })).toMatchObject({
-      steps: ["name", "start", "week", "ai", "people"],
-      at: "name",
+      steps: ["area", "agent", "ai", "celebrate"],
+      at: "area",
       hasPlanStep: false,
     });
-    expect(web({ orgId: null, personal: true, billingUrl: BILLING }).steps).toEqual([
-      "name",
-      "start",
-      "week",
-      "plan",
-      "ai",
-    ]);
   });
 
-  test("an agent picked: its week, then the plan it waits for, then the AI and the people", () => {
-    const held = { standing: payment };
-    // Made, nothing picked yet: how to start.
-    expect(web(held)).toMatchObject({ at: "start", step: "start", index: 1, reached: 1 });
-    // Picked (the agent exists): its week, until its Continue stores "agents".
-    expect(web({ ...held, team: 1 })).toMatchObject({
-      steps: ["name", "start", "week", "plan", "ai", "people"],
-      at: "week",
-      step: "week",
-      index: 2,
-      reached: 2,
+  test("on agentes.chat Cloud: the agent until its Continue, the plan it waits for, then the AI and the photo", () => {
+    const held = { standing: payment, billingUrl: BILLING };
+    expect(web(held)).toMatchObject({ at: "area", step: "area", reached: 0, waitsForPlan: true });
+    // Made on the work step: its own step, until its Continue stores "agents".
+    expect(web({ ...held, agent: true })).toMatchObject({
+      steps: ["area", "agent", "plan", "ai", "celebrate"],
+      at: "agent",
+      reached: 1,
     });
-    expect(web({ ...held, team: 1, funnel: { passed: "agents" } })).toMatchObject({
-      at: "plan",
-      index: 3,
-      reached: 3,
-      waitsForPlan: true,
-    });
+    expect(web({ ...held, agent: true, funnel: { passed: "agents" } })).toMatchObject({ at: "plan", reached: 2 });
     // Paid once the plan step was shown ("computer"): it stays on the rail, answered, and the AI step is next.
-    expect(web({ team: 1, funnel: { passed: "computer" } })).toMatchObject({
-      steps: ["name", "start", "week", "plan", "ai", "people"],
+    const paid = { agent: true, billingUrl: BILLING, funnel: { passed: "computer" as const } };
+    expect(web(paid)).toMatchObject({
+      steps: ["area", "agent", "plan", "ai", "celebrate"],
       at: "ai",
-      reached: 4,
+      reached: 3,
       waitsForPlan: false,
       hasPlanStep: true,
     });
-    // A self-hosted server never held it: no plan step.
-    expect(web({ team: 1, funnel: { passed: "agents" } })).toMatchObject({
-      steps: ["name", "start", "week", "ai", "people"],
-      at: "ai",
-      hasPlanStep: false,
+    // Its agents thinking: the photo, its AI connected.
+    expect(web({ ...paid, funnel: { ...paid.funnel, thinks: true } })).toMatchObject({
+      at: "celebrate",
+      reached: 4,
+      thinks: true,
+      aiLater: false,
     });
+    // "Continue without an AI" ("ai"): the photo all the same, the AI left for later.
+    expect(web({ ...paid, funnel: { passed: "ai" } })).toMatchObject({ at: "celebrate", thinks: false, aiLater: true });
   });
 
-  test("started from scratch (the start left with no agent): no week, the plan next", () => {
-    const scratch = { funnel: { passed: "agents" as const } };
-    expect(web({ ...scratch, standing: payment })).toMatchObject({
-      steps: ["name", "start", "plan", "ai", "people"],
-      at: "plan",
-      index: 2,
-      reached: 2,
-    });
-    // With no plan to wait for, the AI step with the right hand alone.
-    expect(web(scratch)).toMatchObject({ steps: ["name", "start", "ai", "people"], at: "ai", reached: 2 });
-    // The start may be gone back to, to ask the AI after all.
-    expect(web({ ...scratch, picked: "start" })).toMatchObject({ step: "start", index: 1, reached: 2 });
-    // A personal workspace from scratch: its AI step ends the rail.
-    expect(web({ ...scratch, personal: true })).toMatchObject({ steps: ["name", "start", "ai"], at: "ai" });
+  test("self-hosted: no plan step, before or after the AI", () => {
+    const made = { agent: true, funnel: { passed: "agents" as const } };
+    expect(web(made)).toMatchObject({ steps: ["area", "agent", "ai", "celebrate"], at: "ai", hasPlanStep: false });
+    expect(web({ ...made, funnel: { passed: "ai" } })).toMatchObject({ at: "celebrate", hasPlanStep: false });
+    // A step stored past the plan's lists the plan only on a server with billing, which held the workspace for it.
+    expect(web({ ...made, billingUrl: BILLING, funnel: { passed: "ai" } }).hasPlanStep).toBe(true);
+  });
+
+  test("an AI not known yet reads as not yet: the AI step, never the photo", () => {
+    const made = { agent: true, funnel: { passed: "agents" as const, thinks: undefined } };
+    expect(web(made)).toMatchObject({ at: "ai", thinks: false, aiLater: false });
   });
 
   test("a step gone back to is shown only while it stays answered", () => {
-    const week = { standing: payment, team: 1 };
-    expect(web({ ...week, picked: "start" })).toMatchObject({ step: "start", index: 1, reached: 2 });
-    expect(web({ ...week, picked: "name" })).toMatchObject({ step: "name", index: 0 });
-    // Not answered yet: the plan while the week waits, the AI step while the plan waits.
-    expect(web({ ...week, picked: "plan" }).step).toBe("week");
-    expect(web({ ...week, funnel: { passed: "agents" }, picked: "ai" }).step).toBe("plan");
+    const atPlan = { agent: true, standing: payment, billingUrl: BILLING, funnel: { passed: "agents" as const } };
+    // Back to the work from its agent, or from the plan.
+    expect(web({ agent: true, picked: "area" })).toMatchObject({ step: "area", at: "agent", reached: 1 });
+    expect(web({ ...atPlan, picked: "agent" })).toMatchObject({ step: "agent", at: "plan" });
+    // Not answered yet: the step reached.
+    expect(web({ agent: true, standing: payment, billingUrl: BILLING, picked: "plan" }).step).toBe("agent");
+    expect(web({ ...atPlan, picked: "ai" }).step).toBe("plan");
     // A step the rail doesn't have: the one reached.
-    expect(web({ team: 1, funnel: { passed: "agents" }, picked: "plan" }).step).toBe("ai");
-  });
-
-  test("a team's AI step is answered by every agent thinking or by Connect later; its people end the rail", () => {
-    const past = { team: 2, funnel: { passed: "agents" as const } };
-    // Not known yet reads as not yet.
-    expect(web({ ...past, funnel: { ...past.funnel, thinks: undefined } }).at).toBe("ai");
-    expect(web({ ...past, funnel: { ...past.funnel, thinks: true } })).toMatchObject({
-      at: "people",
-      step: "people",
-      index: 4,
-      reached: 4,
-      thinks: true,
-    });
-    // "Connect later" ("ai"): the people step, the AI not thinking.
-    expect(web({ ...past, funnel: { passed: "ai" } })).toMatchObject({ at: "people", thinks: false });
-    // The invitations sent ("team"): it opens, the last step on screen.
-    expect(web({ ...past, funnel: { passed: "team" } })).toMatchObject({ at: "open", step: "people", reached: 5 });
-    // Gone back from the people step: the AI step, answered.
-    expect(web({ ...past, funnel: { ...past.funnel, thinks: true }, picked: "ai" })).toMatchObject({
-      step: "ai",
-      index: 3,
-      reached: 4,
-    });
-    // A step stored past the plan's lists the plan only on a server with billing, which held the workspace for it.
-    expect(web({ ...past, billingUrl: BILLING, funnel: { passed: "ai" } })).toMatchObject({
-      steps: ["name", "start", "week", "plan", "ai", "people"],
-      at: "people",
-      hasPlanStep: true,
-    });
-    expect(web({ ...past, funnel: { passed: "ai" } }).hasPlanStep).toBe(false);
-  });
-
-  test("a personal workspace's AI step is answered only by its agents thinking, then it opens", () => {
-    const mine = { personal: true, team: 1, funnel: { passed: "agents" as const } };
-    expect(web(mine)).toMatchObject({ steps: ["name", "start", "week", "ai"], at: "ai" });
-    // "ai" stored is a team's Connect later: a personal workspace has no people step to go on to.
-    expect(web({ ...mine, funnel: { passed: "ai" } }).at).toBe("ai");
-    expect(web({ ...mine, funnel: { passed: "agents", thinks: true } })).toMatchObject({ at: "open", step: "ai" });
+    expect(web({ agent: true, funnel: { passed: "agents" }, picked: "plan" }).step).toBe("ai");
   });
 
   test("the AI step's answer: every agent thinks, read only from a status that lists them all", () => {
@@ -207,53 +131,37 @@ describe("the web onboarding's rail (ADR 0162, amended for the first agents of A
       agents: Object.entries(states).map(([agentId, state]) => ({ agentId, state })),
     });
     // Waiting for its computer still thinks.
-    expect(teamThinks(["lodi", "nina"], status({ lodi: "ready", nina: "waiting" }))).toBe(true);
-    expect(teamThinks(["lodi", "nina"], status({ lodi: "ready", nina: "no_ai" }))).toBe(false);
+    expect(teamThinks(["lodi", "iara"], status({ lodi: "ready", iara: "waiting" }))).toBe(true);
+    expect(teamThinks(["lodi", "iara"], status({ lodi: "ready", iara: "no_ai" }))).toBe(false);
     // Not read yet, or read before an agent was made: no answer, so the page waits for a fresh read.
     expect(teamThinks(["lodi"], undefined)).toBeUndefined();
-    expect(teamThinks(["lodi", "nina"], status({ lodi: "ready" }))).toBeUndefined();
+    expect(teamThinks(["lodi", "iara"], status({ lodi: "ready" }))).toBeUndefined();
     expect(teamThinks([], status({}))).toBe(false);
   });
 });
 
 describe("Step N of M (stepCount)", () => {
-  const count = (steps: RailStep[], f?: Parameters<typeof stepCount>[2]) =>
-    steps.map((s) => [s, stepCount(steps, s, f)] as const);
+  const count = (steps: RailStep[]) => (["who", ...steps] as const).map((s) => [s, stepCount(steps, s)] as const);
 
-  test("a team's: the steps up to the plan, the AI and the people past the count", () => {
-    const team: RailStep[] = ["name", "start", "week", "plan", "ai", "people"];
-    expect(count(team)).toEqual([
-      ["name", { n: 1, total: 4 }],
-      ["start", { n: 2, total: 4 }],
-      ["week", { n: 3, total: 4 }],
+  test("on agentes.chat Cloud: what it is for, the work, its agent and the plan; the AI and the photo past the count", () => {
+    expect(count(["area", "agent", "plan", "ai", "celebrate"])).toEqual([
+      ["who", { n: 1, total: 4 }],
+      ["area", { n: 2, total: 4 }],
+      ["agent", { n: 3, total: 4 }],
       ["plan", { n: 4, total: 4 }],
       ["ai", null],
-      ["people", null],
+      ["celebrate", null],
     ]);
-    // Asking the AI is part of a team's start step.
-    expect(stepCount(team, "start", { asking: true })).toEqual({ n: 2, total: 4 });
-    // From scratch: the name, how to start, the plan.
-    expect(stepCount(["name", "start", "plan", "ai", "people"], "plan")).toEqual({ n: 3, total: 3 });
-    // No plan (a self-hosted server): the name, how to start, the week.
-    expect(stepCount(["name", "start", "week", "ai", "people"], "week")).toEqual({ n: 3, total: 3 });
   });
 
-  test("a personal workspace's: no name to count, asking its AI a step of its own while a week follows", () => {
-    const mine: RailStep[] = ["name", "start", "week", "plan", "ai"];
-    expect(count(mine, { personal: true })).toEqual([
-      ["name", null],
-      ["start", { n: 1, total: 4 }],
-      ["week", { n: 3, total: 4 }],
-      ["plan", { n: 4, total: 4 }],
+  test("self-hosted, with no plan: three", () => {
+    expect(count(["area", "agent", "ai", "celebrate"])).toEqual([
+      ["who", { n: 1, total: 3 }],
+      ["area", { n: 2, total: 3 }],
+      ["agent", { n: 3, total: 3 }],
       ["ai", null],
+      ["celebrate", null],
     ]);
-    expect(stepCount(mine, "start", { personal: true, asking: true })).toEqual({ n: 2, total: 4 });
-    // From scratch: how to start and the plan, asking no step of its own.
-    const scratch: RailStep[] = ["name", "start", "plan", "ai"];
-    expect(stepCount(scratch, "start", { personal: true, asking: true })).toEqual({ n: 1, total: 2 });
-    expect(stepCount(scratch, "plan", { personal: true })).toEqual({ n: 2, total: 2 });
-    // No plan either: how to start alone.
-    expect(stepCount(["name", "start", "ai"], "start", { personal: true })).toEqual({ n: 1, total: 1 });
   });
 });
 
