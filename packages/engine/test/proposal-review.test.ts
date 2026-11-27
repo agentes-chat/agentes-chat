@@ -16,7 +16,7 @@ import {
   undoProposal,
 } from "../src";
 import { NO_REVIEW, reviewAskedSkill, settleProposals } from "../src/context/proposal-review";
-import { askedWords } from "../src/context/proposals";
+import { askedWords, proposeSkillChange } from "../src/context/proposals";
 import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
 
 let f: Fixture;
@@ -303,6 +303,71 @@ describe("agents apply their improvements (ADR 0219)", () => {
     expect(asked).toContain("(Attached: kit-main.zip)");
     // Its role and its subject are the person's to choose: only what a rule names leaves it out.
     expect(systemText(review?.request.system ?? "")).toContain("fits their agent whatever its role says");
+  });
+
+  test("a large skill rewrite shows both removed and added lines to the review", async () => {
+    f = await setup();
+    const oldBody = Array.from({ length: 120 }, (_, i) => `Old step ${i + 1}: ${"x".repeat(55)}`).join("\n");
+    const newBody = Array.from({ length: 120 }, (_, i) => `New step ${i + 1}: ${"y".repeat(55)}`).join("\n");
+    const [skill] = await f.db
+      .insert(schema.skills)
+      .values({
+        orgId: f.org.id,
+        slug: "contracts",
+        name: "contracts",
+        description: "Generate contracts.",
+        body: oldBody,
+        source: "manual",
+        createdByUserId: f.owner.id,
+      })
+      .returning();
+    if (!skill) throw new Error("no skill");
+    const p = await proposeSkillChange(
+      { db: f.db, pubsub: f.pubsub },
+      { orgId: f.org.id, agentId: f.agent.id, skill, body: newBody, requesterId: f.owner.id, origin: "outside" },
+    );
+    if (!p) throw new Error("not proposed");
+    verdicts = [{ apply: true, why: "Rewrote the skill for v2." }];
+    expect(await settle([p.id], "outside")).toEqual({ applied: [p.id], left: [] });
+    const review = f.provider.calls.find((c) => isReview(systemText(c.request.system)));
+    const prompt = (review?.request.messages ?? [])
+      .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+      .join("\n");
+    expect(prompt).toContain("- Old step 1:");
+    expect(prompt).toContain("+ New step 1:");
+    expect(prompt).toContain("+ New step 120:");
+  });
+
+  test("an oversized rewrite splits the diff budget so deletions never hide additions", async () => {
+    f = await setup();
+    const oldBody = Array.from({ length: 220 }, (_, i) => `Old rule ${i + 1}: ${"a".repeat(60)}`).join("\n");
+    const newBody = Array.from({ length: 220 }, (_, i) => `New rule ${i + 1}: ${"b".repeat(60)}`).join("\n");
+    const [skill] = await f.db
+      .insert(schema.skills)
+      .values({
+        orgId: f.org.id,
+        slug: "large-skill",
+        name: "large-skill",
+        description: "Very long skill.",
+        body: oldBody,
+        source: "manual",
+        createdByUserId: f.owner.id,
+      })
+      .returning();
+    if (!skill) throw new Error("no skill");
+    const p = await proposeSkillChange(
+      { db: f.db, pubsub: f.pubsub },
+      { orgId: f.org.id, agentId: f.agent.id, skill, body: newBody, requesterId: f.owner.id, origin: "outside" },
+    );
+    if (!p) throw new Error("not proposed");
+    verdicts = [{ apply: true, why: "Updated the long skill." }];
+    expect(await settle([p.id], "outside")).toEqual({ applied: [p.id], left: [] });
+    const review = f.provider.calls.find((c) => isReview(systemText(c.request.system)));
+    const prompt = (review?.request.messages ?? [])
+      .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+      .join("\n");
+    expect(prompt).toContain("- Old rule 1:");
+    expect(prompt).toContain("+ New rule 1:");
   });
 });
 
