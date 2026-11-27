@@ -21,8 +21,15 @@ type Row = ComposerSuggestion & { inChannel: boolean; rank: number; hay: string 
  * Without `members` (an issue) or in a DM (no channel to be in), everyone is one list with no note.
  * `kind`: a channel's or a DM's (`mentionReaches`).
  * `everyone`: the person may mention everyone here (`offersEveryone`), so `@todos`, in their language, comes first.
+ * `peopleOnly`: a DM between people, where no agent is offered: the server counts an agent's mention only from a member
+ * of the conversation, and the right hand's only in a channel (`rightHandReaches`, ADR 0137), so it would reach no one.
  */
-export function useMentionSearch(members?: ChannelMember[], kind: "channel" | "dm" = "channel", everyone = false) {
+export function useMentionSearch(
+  members?: ChannelMember[],
+  kind: "channel" | "dm" = "channel",
+  everyone = false,
+  peopleOnly = false,
+) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
@@ -34,7 +41,7 @@ export function useMentionSearch(members?: ChannelMember[], kind: "channel" | "d
         !members || members.some((m) => m.type === type && m.id === id);
       const rows: Row[] = [
         // Agents that don't answer me aren't offered (the server would skip them anyway).
-        ...dir.agents.filter(canTalk).map((a) => {
+        ...(peopleOnly ? [] : dir.agents.filter(canTalk)).map((a) => {
           const here = inChannel("agent", a.id) || mentionReaches(a, kind);
           return {
             key: `agent:${a.id}`,
@@ -88,6 +95,6 @@ export function useMentionSearch(members?: ChannelMember[], kind: "channel" | "d
       };
       return [everyoneRow, ...listed];
     },
-    [dir, members, kind, me.user.id, t, everyone, i18n.language],
+    [dir, members, kind, me.user.id, t, everyone, i18n.language, peopleOnly],
   );
 }

@@ -828,6 +828,7 @@ export function useChatSend({
     [pending, preparing, removeFromStrip],
   );
   const everyoneOffered = offersEveryone(org, Boolean(dm));
+  const peopleDm = dm?.with.type === "person";
   const mentionCard = useCallback<NonNullable<ComposerProps["mention"]>>(
     ({ query, sigil, pick }) =>
       sigil === "#" ? (
@@ -839,9 +840,10 @@ export function useChatSend({
           channelId={channelId}
           members={mentionMembers}
           everyone={everyoneOffered}
+          peopleOnly={peopleDm}
         />
       ),
-    [channelId, mentionMembers, everyoneOffered],
+    [channelId, mentionMembers, everyoneOffered, peopleDm],
   );
   const onType = useCallback((text: string) => sendTyping(threadId, text), [sendTyping, threadId]);
   return {
