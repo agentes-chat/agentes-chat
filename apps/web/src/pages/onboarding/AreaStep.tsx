@@ -147,35 +147,38 @@ export function AreaStep({
           </span>
         ) : undefined
       }
+      // The other ways in, each led by the marks of what it means, always in view under the list. Nothing else on the
+      // step points to them.
+      pinned={
+        <div className="onb-other">
+          <p className="onb-other__label">{t("onboarding.areas.otherWays")}</p>
+          <div className="onb-other__acts">
+            <Button className="onb-other__btn" disabled={busy} onClick={() => setAsking(true)}>
+              <ProviderStack ids={ASK_MARKS} />
+              <span>{t("onboarding.areas.ask")}</span>
+            </Button>
+            {onImport && (
+              <Button className="onb-other__btn" disabled={busy} onClick={onImport}>
+                <span className="onb-marks" aria-hidden="true">
+                  {IMPORT_MARKS.map((c) => {
+                    const mark = CARD_MARK[c];
+                    return (
+                      <span key={c} className="onb-marks__plate">
+                        <img src={dark && mark.dark ? mark.dark : mark.icon} alt="" />
+                      </span>
+                    );
+                  })}
+                </span>
+                <span>{t("onboarding.areas.import")}</span>
+              </Button>
+            )}
+          </div>
+        </div>
+      }
     >
       <Locked when={busy}>
         <div className="onb-areas">
           <OptionLinks flat className="onb-areas__list" aria-label={title} options={rows} />
-          {/* The other ways in, each led by the marks of what it means. Nothing else on the step points to them. */}
-          <div className="onb-other">
-            <p className="onb-other__label">{t("onboarding.areas.otherWays")}</p>
-            <div className="onb-other__acts">
-              <Button className="onb-other__btn" disabled={busy} onClick={() => setAsking(true)}>
-                <ProviderStack ids={ASK_MARKS} />
-                <span>{t("onboarding.areas.ask")}</span>
-              </Button>
-              {onImport && (
-                <Button className="onb-other__btn" disabled={busy} onClick={onImport}>
-                  <span className="onb-marks" aria-hidden="true">
-                    {IMPORT_MARKS.map((c) => {
-                      const mark = CARD_MARK[c];
-                      return (
-                        <span key={c} className="onb-marks__plate">
-                          <img src={dark && mark.dark ? mark.dark : mark.icon} alt="" />
-                        </span>
-                      );
-                    })}
-                  </span>
-                  <span>{t("onboarding.areas.import")}</span>
-                </Button>
-              )}
-            </div>
-          </div>
         </div>
       </Locked>
       {/* "Ask your AI": the request and its wait in the kit's dialog, over the step (a sheet on a phone). An answer

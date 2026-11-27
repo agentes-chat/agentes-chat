@@ -12157,7 +12157,7 @@ html:not([data-pointer]) .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
 /*
  * Flat rows (`OptionLinks flat`): a box's list of ways on, no card per row and no tint, a hairline between rows, flush
  * with the text column. The leading picture bare in its own column, centred on the title's line; what ends the row
- * (`side`, the chevron) on that line too; the description under the title, as wide as the row's text and what ends it.
+ * (`side`, the chevron) on that line too; the description under the title only, never under what ends the row.
  * The pointer's plate and the focus ring reach a little past the column, behind the row.
  */
 .ac-optlinks--flat {
@@ -12170,7 +12170,7 @@ html:not([data-pointer]) .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
   grid-template-columns: minmax(0, 1fr) auto auto;
   grid-template-areas:
     "title side go"
-    "desc desc desc";
+    "desc . .";
   align-items: center;
   column-gap: 12px;
   row-gap: 1px;
@@ -12185,7 +12185,7 @@ html:not([data-pointer]) .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
   grid-template-columns: var(--optlinks-lead) minmax(0, 1fr) auto auto;
   grid-template-areas:
     "lead title side go"
-    ". desc desc desc";
+    ". desc . .";
   padding-left: 0;
 }
 .ac-optlinks--flat > .ac-optrow--link + .ac-optrow--link {

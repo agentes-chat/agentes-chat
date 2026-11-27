@@ -78,7 +78,7 @@ html:not([data-pointer]) .onbw__me:focus-visible {
  * stands on it, and who does stands over it, out of the flow, its feet on the edge.
  */
 .onbw {
-  --onb-top: 160px;
+  --onb-top: 104px;
 }
 .onbw__stage {
   --onb-bottom: 32px;
@@ -208,9 +208,9 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 
 /* ---------- the box ---------- */
 /*
- * Never taller than the window (under the top bar and the room for who stands on it): what is over the footer scrolls
- * inside the box, so the page itself doesn't and the step's buttons stay in view. A window too short for a useful box
- * (480px) lets the page scroll instead.
+ * Never taller than the window (under the top bar and the room for who stands on it): only the answer scrolls, inside
+ * the box, so the page itself doesn't, and the header, the title, what is pinned under the answer and the step's
+ * buttons stay in view. A window too short for a useful box (480px) lets the page scroll instead.
  */
 .onbx {
   --dialog-pad: 28px;
@@ -264,23 +264,24 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   line-height: 22px;
   text-wrap: pretty;
 }
-.onbx__scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.onbx__scroll > * {
+.onbx > * {
   flex: none;
 }
 .onbx .ac-dialog__body.onbx__body {
+  flex: 0 1 auto;
+  min-height: 0;
   padding-top: 20px;
-  overflow: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
-.onbx > .ac-dialog__foot {
-  flex: none;
+/* Pinned under the answer (the work step's other ways in): out of its scroll, over the footer. */
+.onbx__pinned {
+  padding: 16px var(--dialog-pad) 0;
+}
+/* With no footer under it (a member's work step), it keeps the box's own edge below, as the kit's body does there: the
+   box clips, and its buttons would touch that edge and lose their shadow to it. */
+.onbx__pinned:last-child {
+  padding-bottom: var(--dialog-pad);
 }
 /* A new step's words and answer come in where they stand; the box itself stays put. Played once, on insertion. */
 .onbx__lede,
@@ -354,10 +355,15 @@ html:not([data-pointer]) .onbx__back:focus-visible {
 .onb-pick {
   display: flex;
   flex-direction: column;
-  margin-block: -10px -6px;
+  margin-top: -10px;
 }
 .onb-pick__item + .onb-pick__item {
   border-top: 1px solid var(--line);
+}
+/* The last row's padding shorter, not the list pulled past its end: inside the answer's scroll a negative margin
+   there would scroll a sliver of empty row. */
+.onb-pick__item:last-child > .onb-pick__row {
+  padding-bottom: 8px;
 }
 .onb-pick__row {
   display: flex;
@@ -585,7 +591,7 @@ html:not([data-pointer]) .onbx__back:focus-visible {
     padding: env(safe-area-inset-top, 0px) 16px 0;
   }
   .onbw {
-    --onb-top: 156px;
+    --onb-top: 92px;
     --onb-bar: calc(52px + env(safe-area-inset-top, 0px));
   }
   .onbw__stage {
@@ -681,5 +687,14 @@ html:not([data-pointer]) .onbx__back:focus-visible {
     .onbx__body {
       transform: none;
     }
+  }
+}
+/* A short window keeps the work step's list in view: the apps' header with two rows. */
+@media (max-height: 860px) {
+  .onb-wall {
+    height: 122px;
+  }
+  .onb-wall__row:nth-child(3) {
+    display: none;
   }
 }

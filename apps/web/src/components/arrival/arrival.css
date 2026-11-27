@@ -1286,3 +1286,12 @@ html:not([data-pointer]) .arrival-have__link:focus-visible {
   width: 20px;
   height: 20px;
 }
+/* On a phone, beside the wide mark column, a plan's "One sign-in per agent" at the end of its title's line would leave
+   its tiers a column of a few words: there they run under those words too, still never under the chevron. */
+@media (max-width: 640px) {
+  .arrival-opts.ac-optlinks--flat > .ac-optrow--link.ac-optrow--lead {
+    grid-template-areas:
+      "lead title side go"
+      ". desc desc .";
+  }
+}
