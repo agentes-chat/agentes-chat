@@ -351,6 +351,12 @@ async function answer(line) {
     await sleep(20);
     process.exit(3);
   }
+  // "NOTICED": the process writes Claude Code's notice for a model outside its catalog, then dies saying nothing more.
+  if (prompt.includes("NOTICED")) {
+    process.stderr.write('[claude-code:unrecognized_model] {"model":"deepseek-v4.1-flash","query_source":"sdk"}\n');
+    await sleep(20);
+    process.exit(3);
+  }
   // Silence: "HANGMODEL" starts the model's answer and goes quiet, once (its resumed process answers); "HANGPING" the
   // same while the API's pings go on every 40 ms (as Claude Code passes them on over an answer that stopped coming);
   // "HANGTHINK" the same inside an open thinking block (a think whose text is omitted, that never ends); "LONGTHINK"
