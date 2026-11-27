@@ -158,6 +158,23 @@ describe("keeping it", () => {
     expect(third.agentId).not.toBe(second.agentId);
   });
 
+  test("the right hand's weekly check comes once with the team's first agent, however many areas are picked", async () => {
+    f = await setup({ rightHand: true });
+    // Only the right hand, as a new workspace has: the onboarding's pick is the team's first agent.
+    await f.db.delete(schema.agents).where(eq(schema.agents.id, f.agent.id));
+    const first = await start(f, f.owner.id, support());
+    await start(f, f.owner.id, support({ area: "finance", name: "Caio", role: "Financeiro", replace: first.agentId }));
+    const [lodi] = await f.db
+      .select({ id: schema.agents.id })
+      .from(schema.agents)
+      .where(and(eq(schema.agents.orgId, f.org.id), eq(schema.agents.builtin, "right_hand")));
+    const weekly = await f.db
+      .select({ name: schema.routines.name })
+      .from(schema.routines)
+      .where(eq(schema.routines.agentId, lodi?.id as string));
+    expect(weekly).toHaveLength(1);
+  });
+
   test("keepFirstDelivery: one per person and workspace, a new agent takes a waiting one's place, a fired one stays", async () => {
     f = await setup();
     const ana = { orgId: f.org.id, userId: f.owner.id };

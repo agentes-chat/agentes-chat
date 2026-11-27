@@ -547,10 +547,12 @@ async function makeFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: 
     takenHandles(db, orgId),
     rightHandDm(db, orgId, userId),
     personLocale(db, userId),
+    // Any agent of the team ever made, archived ones included: picking another work archives the earlier pick, and
+    // the right hand's weekly check made with that one stays (one weekly check, however many picks).
     db
       .select({ id: agents.id })
       .from(agents)
-      .where(and(eq(agents.orgId, orgId), isNull(agents.builtin), isNull(agents.archivedAt)))
+      .where(and(eq(agents.orgId, orgId), isNull(agents.builtin)))
       .limit(1),
     appsToConnect(db, orgId, plan.apps),
   ]);
