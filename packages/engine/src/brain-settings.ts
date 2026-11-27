@@ -81,7 +81,14 @@ import {
   planOpened,
 } from "./audience";
 import { recordAudit } from "./audit";
-import { BRAIN_NAMES, type BrainKind, brainRunsOn, type ComputerBrainKind, isComputerBrain } from "./brains/types";
+import {
+  BRAIN_NAMES,
+  type BrainKind,
+  brainRunsOn,
+  type ComputerBrainKind,
+  isComputerBrain,
+  isOpencodeFreeTier,
+} from "./brains/types";
 import { caches } from "./cache";
 import { fetchesCli } from "./cli-fetch";
 import { defaultCredentials, providerKeyOf } from "./credentials";
@@ -2173,7 +2180,10 @@ export async function agentBrainSummaries(
     const manages = reads && managesAgent(a, viewerId, membership);
     const computer =
       machine && (manages || ownsAgent(a, viewerId, membership?.roleIds ?? [])) ? machine.name : undefined;
-    const row = kind !== "model" && a.brainAccountId ? accountById.get(a.brainAccountId) : undefined;
+    const row =
+      kind !== "model" && a.brainAccountId && !isOpencodeFreeTier(kind, a.brainModel, a.brainAccountId)
+        ? accountById.get(a.brainAccountId)
+        : undefined;
     const provider = kind === "claude_code" ? (row?.provider ?? undefined) : undefined;
     const ownPlan = kind === "claude_code" ? machine?.executors?.claude?.plan : undefined;
     // With no account, the computer's own sign-in thinks only for its pairer's agents (ADR 0059 §3).

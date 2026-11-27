@@ -53,7 +53,14 @@ import {
   cliOutdated,
   toolOff,
 } from "./claude-code";
-import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
+import {
+  BRAIN_NAMES,
+  BRAIN_PLAN_NAMES,
+  type BrainAccount,
+  type BrainKind,
+  type BrainSession,
+  isOpencodeFreeTier,
+} from "./types";
 
 const KINDS: readonly BrainKind[] = [
   "model",
@@ -385,8 +392,9 @@ export function computerBrainUnavailable(
   if (kind === "model") return null;
   const name = BRAIN_NAMES[kind];
   if (!machineId) return { code: "no_computer", message: `The agent has no computer for ${name}.` };
-  // OpenCode's free tier on a computer nobody connected (ADR 0132): no sign-in, nobody's plan, any agent's.
-  const freeTier = kind === "opencode" && !account && status?.pairedByUserId === null;
+  // OpenCode's free tier: no sign-in on a computer nobody connected, or its own free model even with an account
+  // kept for other models. Neither case may be held by that account's paid-plan usage.
+  const freeTier = isOpencodeFreeTier(kind, model, account, status?.pairedByUserId);
   // The computer's own sign-in thinks only for agents of whoever connected the computer (ADR 0059 §3): on one
   // nobody connected, no person signs in at its terminal, so for its agents it isn't signed in.
   if (!account && status?.pairedByUserId === null && !freeTier) {
@@ -402,7 +410,7 @@ export function computerBrainUnavailable(
       message: `${name}${status ? ` on ${status.name}` : ""} would think with a plan that isn't the agent's owner's.`,
     };
   }
-  const limited = planLimitNow(limitKey(machineId, kind, account?.id), usage, now);
+  const limited = freeTier ? null : planLimitNow(limitKey(machineId, kind, account?.id), usage, now);
   if (limited) {
     return {
       code: "plan_limit",
@@ -412,7 +420,7 @@ export function computerBrainUnavailable(
       ...(limited.until !== null ? { resetsAt: new Date(limited.until).toISOString() } : {}),
     };
   }
-  const own = ownLimitsModel(account?.provider, model);
+  const own = freeTier ? null : ownLimitsModel(account?.provider, model);
   const modelLimit = own ? modelLimitOf(usage?.models, own.id, now) : null;
   if (own && modelLimit) {
     return {
@@ -886,8 +894,9 @@ export async function resolveBrain(
     machineId && deps.machines ? deps.machines.status(machineId).catch(() => null) : null,
     brainAccountFor(deps.db, agent, kind, machineId),
   ]);
+  const freeTier = isOpencodeFreeTier(kind, model, account, status?.pairedByUserId);
   const usage =
-    machineId && deps.machines
+    !freeTier && machineId && deps.machines
       ? await storedPlanUsage(deps.db, agent.orgId, machineId, kind, account?.id).catch(() => null)
       : null;
   // A plan's model kept while another account thinks (or none): what that one runs instead, so no turn asks a
@@ -896,10 +905,10 @@ export async function resolveBrain(
     kind === "claude_code" && model && !isAutoModel(model) ? claudeCodeModel(planOf(account?.provider), model) : model;
   const effort = brainEffortFor(agent, kind);
   const unavailable =
-    (isRightHand(agent) && (agent.brainAccountId || agent.machineId)
+    (!freeTier && isRightHand(agent) && (agent.brainAccountId || agent.machineId)
       ? await rightHandPlanRefusal(agent, person, status)
       : null) ??
-    (account && !isRightHand(agent) ? await replyRefusal(deps.db, agent, account.id, run) : null) ??
+    (!freeTier && account && !isRightHand(agent) ? await replyRefusal(deps.db, agent, account.id, run) : null) ??
     (machineId && !deps.machines
       ? null
       : computerBrainUnavailable(
@@ -908,7 +917,7 @@ export async function resolveBrain(
           status,
           Date.now(),
           account,
-          machineId ? await planIsOwners(deps.db, agent, machineId, account) : true,
+          freeTier || !machineId ? true : await planIsOwners(deps.db, agent, machineId, account),
           usage,
           // "Automático" runs another model where the one it maps to is held (`autoPlanModel`).
           isAutoModel(runs) ? autoPlanModel(account?.provider, runs, usage) : runs,

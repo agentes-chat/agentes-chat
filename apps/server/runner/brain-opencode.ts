@@ -50,8 +50,9 @@ import { turnZoneEnv } from "./turn-zone";
  * - Permissions never ask: every rule allows or denies, since OpenCode 2.x ends the whole turn when a request is
  *   refused over ACP. One that asks anyway (a rule a computer's managed config adds) is refused, and the turn says so.
  *   `execute` is denied so our bridge's tools are called by name, not through OpenCode 2's code mode.
- * - The free tier (`freeTier`: no account, a computer nobody connected): no stray key in the env and
- *   `enabled_providers: ["opencode"]`, so no key the runner or the computer holds thinks for anyone's agent.
+ * - The free tier (`freeTier`: OpenCode's own free model, with or without an account kept for other models): no stray
+ *   key or account key in the env and `enabled_providers: ["opencode"]`, so no paid key thinks for the turn. An
+ *   account still names the session folder, keeping its sessions apart without spending its plan.
  * - Events: `agent_message_chunk` streams the text; a tool call of OpenCode's own, once it ended, is an executed
  *   `tool_call` (transcript only; our bridge's are left out: the engine ran them); the prompt's answer carries the
  *   tokens. A `chat` turn stops at the first tool call that isn't our bridge's, before OpenCode runs it.
@@ -94,7 +95,7 @@ export interface OpencodeBrainTurnRequest {
   account?: string;
   permissions?: { mode?: "plan" | "work" | "chat" };
   keepAlive?: boolean;
-  /** No account on a computer nobody connected: OpenCode's own free tier and nothing else (ADR 0132). */
+  /** OpenCode's own free tier and nothing else; an account may still name the isolated session folder (ADR 0132). */
   freeTier?: boolean;
 }
 
@@ -490,14 +491,14 @@ export function opencodeTurnEnv(input: {
   ]);
   for (const k of Object.keys(inherited)) if (unwanted.has(k.toUpperCase())) delete inherited[k];
   const home = envValue(inherited, "HOME", platform) || envValue(inherited, "USERPROFILE", platform) || os.homedir();
-  const base = input.freeTier && !input.account ? withoutSignIns(inherited) : inherited;
+  const base = input.freeTier ? withoutSignIns(inherited) : inherited;
   const env = input.account ? accountEnv("opencode", input.account.home, base) : { ...base };
   // The agent's commands inherit XDG_CONFIG_HOME: gh keeps finding its sign-in where it was.
   env.GH_CONFIG_DIR = githubConfigDir(inherited, home, platform);
   env.XDG_CONFIG_HOME = input.configDir;
   env.OPENCODE_CONFIG_DIR = input.configDir;
   env.OPENCODE_CONFIG_CONTENT = input.config;
-  if (input.account?.key) env[OPENCODE_KEY_ENV] = input.account.key;
+  if (input.account?.key && !input.freeTier) env[OPENCODE_KEY_ENV] = input.account.key;
   env.OPENCODE_DISABLE_PROJECT_CONFIG = "1";
   env.OPENCODE_DISABLE_AUTOUPDATE = "1";
   // Language servers would be downloaded, unpinned, into each agent's home.
@@ -560,7 +561,7 @@ export async function runOpencodeTurn(input: OpencodeTurnInput, opts: OpencodeTu
     return fail("opencode_failed", err instanceof Error ? err.message : String(err), true);
   }
   const key = input.account?.key;
-  const freeTier = Boolean(input.freeTier && !input.account);
+  const freeTier = Boolean(input.freeTier);
   const env = opencodeTurnEnv({
     inherited,
     cwd: input.cwd,
@@ -569,7 +570,7 @@ export async function runOpencodeTurn(input: OpencodeTurnInput, opts: OpencodeTu
       profile: input.profile ?? "work",
       ...(input.chat ? { chat: true } : {}),
       ...(input.model ? { model: input.model } : {}),
-      key: Boolean(key),
+      key: Boolean(key) && !freeTier,
       freeTier,
     }),
     ...(input.account ? { account: input.account } : {}),
@@ -911,7 +912,7 @@ export async function handleOpencodeBrainTurn(
   if (typeof req.model === "string" && req.model && !/^[\w.-]{1,40}\/[\w.:-]{1,79}$/.test(req.model)) {
     throw new RunnerError("bad_request", "model is provider/model");
   }
-  const freeTier = req.freeTier === true && !req.account;
+  const freeTier = req.freeTier === true;
   if (freeTier && typeof req.model === "string" && req.model && !req.model.startsWith("opencode/")) {
     throw new RunnerError("bad_request", "OpenCode's free tier thinks only with OpenCode's own models");
   }

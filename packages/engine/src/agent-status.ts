@@ -214,6 +214,7 @@ export async function loadAgentStatuses(
         model: agents.model,
         credentialId: agents.credentialId,
         brain: agents.brain,
+        brainModel: agents.brainModel,
         brainAccountId: agents.brainAccountId,
         brainAccountPinned: agents.brainAccountPinned,
         ownerUserId: agents.ownerUserId,

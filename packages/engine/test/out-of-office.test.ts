@@ -92,6 +92,33 @@ test("a plan at its limit: out, though the workspace has a key (the API never st
   expect((await statusOf(f, f.agent.id))?.presence).toBe("online");
 });
 
+test("an OpenCode free model is not out of office at its attached API-key account's limit", async () => {
+  f = await setup();
+  const machineId = await onPlan(f, f.agent.id);
+  const accountId = "62be492c-b272-4586-87ff-4a10c12f1819";
+  await f.db.insert(schema.machineAccounts).values({
+    id: accountId,
+    orgId: f.org.id,
+    machineId,
+    kind: "opencode",
+    label: "Zen",
+    status: "active",
+    createdBy: f.owner.id,
+  });
+  await f.db
+    .update(schema.agents)
+    .set({ brain: "opencode", brainModel: "opencode/hy4-flash-free", brainAccountId: accountId })
+    .where(eq(schema.agents.id, f.agent.id));
+  notePlanLimit(machineId, "opencode", new Date(Date.now() + 3600_000).toISOString(), Date.now(), accountId);
+
+  expect((await statusOf(f, f.agent.id))?.presence).toBe("online");
+  expect([...(await outOfOfficeIds(f.db, f.org.id, [f.agent.id]))]).toEqual([]);
+
+  await f.db.update(schema.agents).set({ brainModel: "opencode/glm-5.3" }).where(eq(schema.agents.id, f.agent.id));
+  expect(await statusOf(f, f.agent.id)).toMatchObject({ presence: "out", status: { kind: "out_of_plan" } });
+  expect([...(await outOfOfficeIds(f.db, f.org.id, [f.agent.id]))]).toEqual([f.agent.id]);
+});
+
 test("at its account's limit, an agent with another account of the order that has room is not out", async () => {
   f = await setup();
   const fx = f;

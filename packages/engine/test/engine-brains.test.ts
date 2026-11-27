@@ -5,6 +5,7 @@ import {
   channelTopic,
   MACHINE_PROTOCOL_VERSION,
   OPENCODE_ACP_PROTOCOL,
+  OPENCODE_PROTOCOL,
   orgTopic,
   SHARED_LOGIN_OFF,
 } from "@agenteschat/adapters";
@@ -356,6 +357,71 @@ test("a computer-brain turn ends after the tools it ran through the bridge (neve
     .where(eq(schema.runToolTokens.runId, run?.id ?? ""));
   expect(tokens.length).toBe(1);
   expect(tokens[0]?.revokedAt).not.toBeNull();
+});
+
+test("an OpenCode free model runs past its attached API-key account's plan limit without spending that account", async () => {
+  f = await setup({ reply: () => ({ chunks: ["The API must not stand in."] }) });
+  const accountId = "62be492c-b272-4586-87ff-4a10c12f1819";
+  const machineId = await computerAgent(f, { brain: "opencode", brainModel: "opencode/hy4-flash-free" });
+  await f.db.insert(schema.machineAccounts).values({
+    id: accountId,
+    orgId: f.org.id,
+    machineId,
+    kind: "opencode",
+    label: "Zen",
+    status: "active",
+    createdBy: f.owner.id,
+  });
+  await f.db.update(schema.agents).set({ brainAccountId: accountId }).where(eq(schema.agents.id, f.agent.id));
+  const reset = new Date(Date.now() + 2 * 3600_000).toISOString();
+  notePlanLimit(machineId, "opencode", reset, Date.now(), accountId);
+  const status = statusOf(machineId, {
+    protocol: OPENCODE_PROTOCOL,
+    executors: { opencode: { version: "1.19.5" }, detectedAt: new Date().toISOString() },
+  });
+  const account = { id: accountId, label: "Zen", status: "active" } as const;
+  expect(
+    computerBrainUnavailable("opencode", machineId, status, Date.now(), account, true, null, "opencode/hy4-flash-free"),
+  ).toBeNull();
+
+  const { brain, seen } = scriptedComputerBrain(() => [
+    { type: "usage", input: 40, output: 9, source: "plan", model: "opencode/hy4-flash-free" },
+    { type: "done", text: "The free model answered." },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { opencode: () => ({ ...brain, kind: "opencode" }) },
+    machines: { status: async () => status },
+  });
+  await post(f, "@dev answer with the free OpenCode model");
+  await drainOutbox(f.db, handlers);
+
+  expect(seen).toHaveLength(1);
+  expect(seen[0]?.account?.id).toBe(accountId);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const kept = run?.transcript as { usageWait?: unknown; waitingForBrain?: unknown } | undefined;
+  expect(kept?.usageWait).toBeUndefined();
+  expect(kept?.waitingForBrain).toBeUndefined();
+  expect((await timeline(f)).at(-1)?.body).toBe("The free model answered.");
+  const usage = await f.db
+    .select()
+    .from(schema.usageRecords)
+    .where(eq(schema.usageRecords.runId, run?.id ?? ""));
+  expect(usage).toMatchObject([
+    {
+      provider: "opencode",
+      model: "opencode/hy4-flash-free",
+      billedTo: "plan",
+      costNanoUsd: 0,
+      machineId,
+      brainAccountId: null,
+    },
+  ]);
+  // The free turn must not clear the paid account's limit: a paid model on that account is still parked.
+  expect(
+    computerBrainUnavailable("opencode", machineId, status, Date.now(), account, true, null, "opencode/glm-5.3")?.code,
+  ).toBe("plan_limit");
 });
 
 test("each turn keeps its trace with the claim: the server's marks, its runner's, its system by blocks, broken budgets", async () => {

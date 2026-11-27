@@ -2814,8 +2814,8 @@ export interface BrainTurnRequest {
   /** Protocol 46: `fast` asks for the provider's Fast mode on this turn; absent: standard speed. */
   speed?: BrainSpeed;
   /**
-   * `opencode`: no account on a computer nobody connected, so OpenCode's own free tier alone (`opencode/*` models,
-   * no key from the runner's env); ADR 0132.
+   * `opencode`: OpenCode's own free tier alone (`opencode/*` models, no key from the runner's env). An account may
+   * still name the isolated session folder, but its paid key is not used; ADR 0132.
    */
   freeTier?: boolean;
   /** Protocol 28: the most context it reads, in tokens; absent: the model's own window. */

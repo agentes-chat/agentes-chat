@@ -3,7 +3,7 @@ import { ensureOpenRouterModels, isAutoModel, routerModelOf } from "@agenteschat
 import type { Agent } from "./agents";
 import { type AutoLine, autoLine, autoModelFor, autoProvider } from "./auto-model";
 import { brainOf } from "./brain-settings";
-import { brainAccountFor, computerBrainUnavailable, NO_AI_CODES } from "./brains/select";
+import { brainAccountFor, brainModelFor, computerBrainUnavailable, NO_AI_CODES } from "./brains/select";
 import { BRAIN_PLAN_NAMES, type BrainKind, type ComputerBrainKind, isComputerBrain } from "./brains/types";
 import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
@@ -90,7 +90,10 @@ export interface AiStatusDeps {
   machines?: { status(machineId: string): Promise<MachineStatus | null> } | null;
 }
 
-type AiAgent = Pick<Agent, "orgId" | "model" | "credentialId" | "brain" | "brainAccountId" | "machineId"> &
+type AiAgent = Pick<
+  Agent,
+  "orgId" | "model" | "credentialId" | "brain" | "brainModel" | "brainAccountId" | "machineId"
+> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "planForOthers">>;
 
 /** The run being checked: a mission's turn thinks with the mission's brain. */
@@ -169,7 +172,18 @@ export async function agentAiState(
     brainAccountFor(deps.db, agent, kind, machineId),
   ]);
   const unavailable =
-    machineId && !deps.machines ? null : computerBrainUnavailable(kind, machineId, status, Date.now(), account);
+    machineId && !deps.machines
+      ? null
+      : computerBrainUnavailable(
+          kind,
+          machineId,
+          status,
+          Date.now(),
+          account,
+          true,
+          null,
+          brainModelFor(kind, agent, mission),
+        );
   if (!unavailable) return READY;
   if (NO_AI_CODES.has(unavailable.code))
     return (
@@ -259,6 +273,7 @@ const agentFields = {
   model: schema.agents.model,
   credentialId: schema.agents.credentialId,
   brain: schema.agents.brain,
+  brainModel: schema.agents.brainModel,
   brainAccountId: schema.agents.brainAccountId,
   machineId: schema.agents.machineId,
   builtin: schema.agents.builtin,
