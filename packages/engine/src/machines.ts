@@ -201,6 +201,8 @@ export const shownOnline = (
 export const MOVING_SHOWN_MS = 2 * 60 * 60_000;
 /** How long past its expected end what we do is still said ("taking longer than expected"), then its real state. */
 export const MAINTENANCE_OVERRUN_MS = 30 * 60_000;
+/** The longest what we do is said after the operator's latest word, whatever its `eta`: a far one can't stick. */
+export const MAINTENANCE_LONGEST_MS = 24 * 60 * 60_000;
 
 /** What we do to the workspace's own computer as people see it (`shownMaintenance`). */
 export interface ShownMaintenance {
@@ -225,7 +227,10 @@ export function shownMaintenance(
 ): ShownMaintenance | null {
   if (row.kind !== "managed" || row.deletedAt || !row.movingAt) return null;
   const m = row.maintenance;
-  const until = m?.eta ? Date.parse(m.eta) + MAINTENANCE_OVERRUN_MS : row.movingAt.getTime() + MOVING_SHOWN_MS;
+  const said = row.movingAt.getTime();
+  const until = m?.eta
+    ? Math.min(Date.parse(m.eta) + MAINTENANCE_OVERRUN_MS, said + MAINTENANCE_LONGEST_MS)
+    : said + MOVING_SHOWN_MS;
   if (!(now.getTime() < until)) return null;
   const kind = m?.kind ?? "moving";
   const detail = m?.detail ?? null;
@@ -256,7 +261,7 @@ export function maintenancePhrase(m: ShownMaintenance, now = new Date()) {
   const why =
     m.detail === "unresponsive"
       ? ": it stopped answering, so it was restarted automatically"
-      : m.detail === "copying"
+      : m.detail === "copying" && !m.away
         ? ": its files are being copied, so it may be slower"
         : m.detail === "handover"
           ? ": its last changes are being handed over"
@@ -899,16 +904,26 @@ export async function setMachineMaintenance(
   return { maintenance: record };
 }
 
-/** `PUT …/machines/{machineId}/moving` (from before kinds): a move said, or nothing done any more. */
-export const setMachineMoving = async (
+/**
+ * `PUT …/machines/{machineId}/moving` (from before kinds): a move said, or that the move ended. Ended, it leaves any
+ * other kind in place: a restart said during the move still shows until the computer's hello.
+ */
+export async function setMachineMoving(
   deps: { db: Database; pubsub?: PubSub },
   orgId: string,
   machineId: string,
   moving: boolean,
-) => {
+) {
+  if (!moving) {
+    const [row] = await deps.db
+      .select({ maintenance: machines.maintenance })
+      .from(machines)
+      .where(and(eq(machines.orgId, orgId), eq(machines.id, machineId)));
+    if (row?.maintenance && row.maintenance.kind !== "moving") return { moving };
+  }
   const set = await setMachineMaintenance(deps, orgId, machineId, moving ? { kind: "moving" } : null);
   return set && { moving };
-};
+}
 
 /** How many `deletedAgentIds` lists: a computer that misses one only keeps that agent's transcripts. */
 const DELETED_AGENTS_LISTED = 500;

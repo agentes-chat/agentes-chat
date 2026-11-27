@@ -139,6 +139,8 @@ test("a move's copy while it works: it may be slower, never away; other kinds an
     "Copying to a new server… it may be slower for about 40 min",
   );
   expect(maintenanceDetails(t, "en", copying, NOW).at(-1)).toBe("Its agents keep working meanwhile.");
+  // Gone mid-copy: its tip says a move, never "while it works".
+  expect(maintenanceDetails(t, "en", { ...copying, away: true }, NOW)[0]).toBe("We're moving it to a new server.");
   for (const [kind, short] of [
     ["updating", "Updating"],
     ["converting", "Upgrading disk"],

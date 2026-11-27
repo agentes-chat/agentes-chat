@@ -338,7 +338,7 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
       tags,
       summary: "Say what is done to the workspace's computer, or that it is done",
       description:
-        "Say it when a move, a restart, an update, a disk conversion or its host's maintenance begins, again at each step (the same kind keeps its start), and `kind: null` once it is done or called off. While the computer is away its people see what is done, why and about when it is back, never that it is offline, and agents waiting for it say the same; online, only a move's copy and a conversion show (it may be slower). Shown until 30 minutes past `eta`, or two hours after the latest word with no `eta`. Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
+        "Say it when a move, a restart, an update, a disk conversion or its host's maintenance begins, again at each step (the same kind keeps its start), and `kind: null` once it is done or called off. While the computer is away its people see what is done, why and about when it is back, never that it is offline, and agents waiting for it say the same; online, only a move's copy and a conversion show (it may be slower). Shown until 30 minutes past `eta` (at most a day after the latest word), or two hours after the latest word with no `eta`. Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
       request: { params: MachineParams, body: body(Maintenance) },
       responses: {
         200: json(
@@ -379,7 +379,7 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
       tags,
       summary: "Say the workspace's computer is moving to another server, or no longer",
       description:
-        "From before `PUT …/maintenance`, which says it with a time and a step: `true` is `kind: moving`, `false` ends whatever is done. Say it (`true`) when its move starts, and `false` once its runner paired on the new server, or the move was cancelled or failed. While it is away its people see that it is moving and comes back in a few minutes, never that it is offline or not answering, for at most two hours after the latest `true` (say it again at each step of a long move). Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
+        "From before `PUT …/maintenance`, which says it with a time and a step: `true` is `kind: moving`, `false` ends a move (another kind said meanwhile, such as a restart, stays). Say it (`true`) when its move starts, and `false` once its runner paired on the new server, or the move was cancelled or failed. While it is away its people see that it is moving and comes back in a few minutes, never that it is offline or not answering, for at most two hours after the latest `true` (say it again at each step of a long move). Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
       request: { params: MachineParams, body: body(z.object({ moving: z.boolean() })) },
       responses: { 200: json(z.object({ moving: z.boolean() }).openapi("OperatorMoving")), ...errors },
     }),

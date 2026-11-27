@@ -55,7 +55,9 @@ export function maintenanceWhen(t: TFunction, m: ComputerMaintenance, now = new 
  * The tip's lines: why (in plain words), since when, expected back or done, and what still works meanwhile.
  */
 export function maintenanceDetails(t: TFunction, locale: string, m: ComputerMaintenance, now = new Date()) {
-  const why = m.detail === "unresponsive" || m.detail === "copying" || m.detail === "handover" ? m.detail : kindOf(m);
+  // Away mid-copy, it doesn't work meanwhile: a move, not "copying while it works".
+  const step = m.detail === "copying" && m.away ? null : m.detail;
+  const why = step === "unresponsive" || step === "copying" || step === "handover" ? step : kindOf(m);
   const eta = m.eta && Date.parse(m.eta) > now.getTime() ? m.eta : null;
   return [
     say(t, `machines.maintenance.why.${why}`),

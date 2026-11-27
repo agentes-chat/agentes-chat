@@ -24,8 +24,10 @@ an operator never said it ended, so the same computer could later read "Moving" 
 1. **One signal.** `PUT /api/operator/v1/orgs/{orgId}/machines/{machineId}/maintenance` takes `kind` (`moving`,
    `restarting`, `updating`, `converting`, `host_maintenance`; null: done), `eta` (when it should be back, or done)
    and `detail` (`copying`, `handover`, `unresponsive`). The same kind said again keeps its start. `PUT …/moving`
-   stays for a Cloud from before it, as `kind: moving`.
-2. **Shown.** Until 30 minutes past `eta` (`MAINTENANCE_OVERRUN_MS`), or two hours after the latest word with none.
+   stays for a Cloud from before it, as `kind: moving`; its `false` ends a move only, so a restart said during a move
+   still shows after the move ends.
+2. **Shown.** Until 30 minutes past `eta` (`MAINTENANCE_OVERRUN_MS`), or two hours after the latest word with none, and never
+   more than a day after the latest word (`MAINTENANCE_LONGEST_MS`), so a far `eta` can't stick.
    Away, it is said instead of offline everywhere a computer's state shows (chips, the device list and page, the
    computer dialog, the outage banner, the chat's waiting card, the task manager, the agent's page, the browser card)
    with about when it is back, and an ⓘ (the phone: the line under it) says why, since when, expected back and that

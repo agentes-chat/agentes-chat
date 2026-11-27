@@ -11,6 +11,7 @@ import {
   issueManagedMachine,
   listDevices,
   listMachines,
+  MAINTENANCE_LONGEST_MS,
   MAINTENANCE_OVERRUN_MS,
   type MachineHub,
   MachineOfflineError,
@@ -313,6 +314,37 @@ describe("what we do to it (ADR 0256)", () => {
 
     await setMachineMaintenance(deps(), f.org.id, machineId, null);
     expect((await machineRow(machineId)).maintenance).toBeNull();
+  });
+
+  test("a far eta never sticks; a move's end leaves a restart said meanwhile; away mid-copy, no 'slower'", async () => {
+    f = await setup();
+    const { machineId } = await managedComputer();
+    const device = async (now?: Date) =>
+      (await listDevices(f.db, f.org.id, f.owner.id, now)).devices.find((d) => d.id === machineId);
+
+    // An eta a year out: shown no longer than a day after the latest word.
+    const year = new Date(Date.now() + 365 * 24 * 60 * 60_000);
+    await setMachineMaintenance(deps(), f.org.id, machineId, { kind: "converting", eta: year });
+    expect((await device(new Date(Date.now() + 60 * 60_000)))?.status.kind).toBe("moving");
+    expect((await device(new Date(Date.now() + MAINTENANCE_LONGEST_MS + 1_000)))?.status.kind).toBe("offline");
+
+    // Away mid-copy: a move, back soon, not "it may be slower".
+    await setMachineMaintenance(deps(), f.org.id, machineId, { kind: "moving", detail: "copying" });
+    const copying = shownMaintenance(await machineRow(machineId));
+    expect(copying).toMatchObject({ away: true, detail: "copying" });
+    if (!copying) throw new Error("not shown");
+    expect(maintenancePhrase(copying)).toBe("moving to a new server, back in a few minutes");
+
+    // Restarted during the move, then the move ends: the restart still shows.
+    const eta = new Date(Date.now() + 3 * 60_000);
+    await setMachineMaintenance(deps(), f.org.id, machineId, { kind: "restarting", eta, detail: "unresponsive" });
+    expect(await setMachineMoving(deps(), f.org.id, machineId, false)).toEqual({ moving: false });
+    expect((await machineRow(machineId)).maintenance?.kind).toBe("restarting");
+    expect((await device())?.status.kind).toBe("moving");
+    // A move's own end clears it.
+    await setMachineMaintenance(deps(), f.org.id, machineId, { kind: "moving" });
+    await setMachineMoving(deps(), f.org.id, machineId, false);
+    expect((await machineRow(machineId)).movingAt).toBeNull();
   });
 });
 
