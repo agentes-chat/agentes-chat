@@ -313,10 +313,11 @@ export interface HandlerContext {
    */
   appAsks?: boolean;
   /**
-   * While macOS's Screen Recording is off for the app: a folder put first on a command's PATH, whose `screencapture`
-   * refuses at once (`screenShimDir`), so the app's own dialog asks before macOS's prompt does.
+   * Whether macOS's Screen Recording is on for the app (null: unread), and while it is off a folder put first on a
+   * command's PATH, whose `screencapture` refuses at once (`screenShimDir`), so the app's own dialog asks before
+   * macOS's prompt does.
    */
-  screenShim?: () => Promise<string | undefined>;
+  screen?: () => Promise<{ on: boolean | null; shim?: string }>;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -562,8 +563,10 @@ async function doExec(
     env = { ...(env ?? {}), ...Object.fromEntries(keys.map((k) => [k.name, k.value])) };
     redact = await agentSecrets(ctx.secretsDir, req.agent);
   }
-  const shim = ctx.appAsks ? await ctx.screenShim?.().catch(() => undefined) : undefined;
-  if (shim) env = { ...(env ?? {}), PATH: `${shim}${path.delimiter}${env?.PATH ?? process.env.PATH ?? ""}` };
+  const screen = ctx.appAsks ? await ctx.screen?.().catch(() => undefined) : undefined;
+  if (screen?.shim) {
+    env = { ...(env ?? {}), PATH: `${screen.shim}${path.delimiter}${env?.PATH ?? process.env.PATH ?? ""}` };
+  }
   const result = await runCommand({
     command,
     cwd,
@@ -575,13 +578,16 @@ async function doExec(
   });
   const output = `${result.stderr}\n${result.stdout}`;
   // A script may go on after a refused screenshot and end well: that refusal still asks.
-  const permission = !ctx.appAsks
+  const refused = !ctx.appAsks
     ? null
     : result.exitCode !== 0
       ? permissionOfOutput(output, ctx.platform)
       : screenRefused(output) && (ctx.platform ?? process.platform) === "darwin"
         ? "screen"
         : null;
+  // Screen Recording already on: the capture failed for another reason, and a wait would end at once and wake the
+  // agent to retry the same failure.
+  const permission = refused === "screen" && screen?.on === true ? null : refused;
   return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 

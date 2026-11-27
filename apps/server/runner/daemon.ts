@@ -1855,7 +1855,10 @@ export class RunnerDaemon implements RequestObserver {
       appAsks: config.managedBy === "desktop",
       ...(config.managedBy === "desktop"
         ? {
-            screenShim: async () => ((await this.screenOn()) === false ? screenShimDir(home) : undefined),
+            screen: async () => {
+              const on = await this.screenOn();
+              return on === false ? { on, shim: screenShimDir(home) } : { on };
+            },
           }
         : {}),
       get exec() {

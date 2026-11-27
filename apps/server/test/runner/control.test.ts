@@ -701,6 +701,22 @@ test("Screen Recording off: the command's screencapture refuses without macOS's 
   });
 });
 
+test("Screen Recording on: a capture that fails for another reason starts no wait", async () => {
+  const { home } = pairedHome({
+    exec: true,
+    access: { folders: [], tools: { claude: false, codex: false, commands: true } },
+  });
+  const c = control(home, { platform: "darwin", screenAllowed: async () => true, permissionReadEveryMs: 20 });
+  const s = await c.connect();
+  const command = "echo 'screencapture: could not create image from display' >&2; exit 1";
+  s.frame({ type: "request", id: "x1", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
+  await waitFor(() => s.sent.some((f) => f.id === "x1"));
+  const reply = s.sent.find((f) => f.id === "x1") as { data: { exitCode: number; permission?: string } };
+  expect(reply.data.exitCode).toBe(1);
+  expect(reply.data.permission).toBeUndefined();
+  expect(s.of("permissions.changed")).toEqual([]);
+});
+
 test("a command macOS refused under a runner from the terminal: no app there to ask, so no wait", async () => {
   const { home } = pairedHome({
     exec: true,
