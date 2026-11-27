@@ -749,7 +749,7 @@ export async function rightHandPlanRefusal(
   if (status && status.protocol < LOCKED_BRAIN_PROTOCOL) {
     return {
       code: "runner_outdated",
-      message: `The runner on ${status.name} is too old for ${agent.name} to think there. ${runnerUpdateWay(status)}`,
+      message: `The agentes.chat program on ${status.name} is too old for ${agent.name} to think there. ${runnerUpdateWay(status)}`,
     };
   }
   return null;

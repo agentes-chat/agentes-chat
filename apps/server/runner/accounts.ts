@@ -3488,7 +3488,7 @@ export class AccountManager {
     this.retryTimer = null;
     this.probeQueue.length = 0;
     const waiting = [...this.logins.values()].filter((l) => l.state === "waiting");
-    for (const l of waiting) this.settle(l, "failed", "The runner stopped");
+    for (const l of waiting) this.settle(l, "failed", "agentes.chat stopped on the computer");
     await Promise.all(waiting.map((l) => this.drop(l)));
     for (const l of this.logins.values()) if (l.timer) clearTimeout(l.timer);
     this.logins.clear();

@@ -1348,7 +1348,7 @@ describe("tools on a connected machine", () => {
     await runner.disconnect();
     const offline = await call(ctx, "run_code", { language: "bash", code: "ls" });
     expect(offline).toMatchObject({ isError: true });
-    expect(offline.content).toContain("The computer Build box is offline. Ask its owner to start the runner.");
+    expect(offline.content).toContain("The computer Build box is offline. Ask its owner to start agentes.chat there.");
     // The workspace's own computer has no runner for anyone to start: it comes back by itself.
     await kind("managed");
     const away = await call(ctx, "run_code", { language: "bash", code: "ls" });

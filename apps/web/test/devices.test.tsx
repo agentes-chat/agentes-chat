@@ -1216,23 +1216,40 @@ describe("A device's page", () => {
     expect(document.querySelector(".settings-rows")?.textContent).toContain("Same as Sam's MacBook Pro");
   });
 
-  test("a brought computer offline for a known cause: its way out names the command as code", async () => {
-    const app = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
-      const list = acmeDevices();
-      const imac = list.devices.find((d) => d.id === IMAC);
-      if (imac?.status.kind !== "offline") throw new Error("fixture");
-      imac.status = { ...imac.status, cause: "unresponsive" };
-      devices.set(list);
-    });
-    const line = document.querySelector(".dv-statusline__text");
-    expect(line?.textContent).toContain("Run agentes-runner doctor on it.");
-    expect(line?.querySelector("code.ac-inlinecode")?.textContent).toBe("agentes-runner doctor");
-    // The longest translation keeps the command whole, with its own backticks never shown.
+  test("a brought computer offline for a known cause: plain words, the command only under Technical details", async () => {
+    const page = async (app: boolean) => {
+      cleanup();
+      const opened = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+        const list = acmeDevices();
+        const imac = list.devices.find((d) => d.id === IMAC);
+        if (imac?.status.kind !== "offline") throw new Error("fixture");
+        imac.status = { ...imac.status, cause: "stopped" };
+        devices.set(list);
+      });
+      fakeMachinesOf.get(opened.api)?.pair({ id: IMAC, name: "Ana's iMac", os: "linux", app, canManage: true });
+      await refetch(opened.services);
+      return opened;
+    };
+    const line = () => document.querySelector(".dv-statusline__text")?.textContent ?? "";
+    const tech = () =>
+      [...document.querySelectorAll("details.ac-disclosure")].find(
+        (d) => d.querySelector("summary")?.textContent === "Technical details",
+      );
+    await page(true);
+    expect(line()).toMatch(/^The agentes\.chat app stopped on this computer at .+\. Open the app again\.$/);
+    expect(tech()).toBeUndefined();
+    const app = await page(false);
+    expect(line()).toMatch(/^agentes\.chat stopped on this computer at .+\. Start it again there\.$/);
+    expect(line()).not.toContain("runner");
+    const folded = tech() as HTMLDetailsElement;
+    expect(folded.open).toBe(false);
+    expect(folded.textContent).toContain("To see why, run this on it:");
+    expect(folded.querySelector(".machine-command code")?.textContent).toBe("agentes-runner doctor");
+    // The longest translation says it in its words, with no command and no backticks in the line.
     await showIn(app.services, "ru");
     await settle(4);
-    const ru = document.querySelector(".dv-statusline__text");
-    expect(ru?.querySelector("code.ac-inlinecode")?.textContent).toBe("agentes-runner doctor");
-    expect(ru?.textContent).not.toContain("`");
+    expect(line()).not.toContain("`");
+    expect(line()).not.toContain("agentes-runner");
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 

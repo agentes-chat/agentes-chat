@@ -28,6 +28,11 @@ export const desktopPtBR = {
   device: { mac: "Mac", windows: "PC", linux: "computador" },
   /** O nome das janelas do próprio app (a lista do Dock, o menu Janela, o Mission Control). */
   windowTitle: { welcome: "Boas-vindas", prefs: "Preferências" },
+  background: {
+    title: "O agentes.chat continua aberto",
+    bodyMac: "Ele fica na barra de menus, no alto da tela. É por lá que você abre o app ou sai dele.",
+    bodyTray: "Ele fica na bandeja do sistema. É por lá que você abre o app ou sai dele.",
+  },
   common: {
     cancel: "Cancelar",
     close: "Fechar",

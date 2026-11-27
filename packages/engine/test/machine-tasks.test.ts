@@ -1157,7 +1157,7 @@ describe("tasks sign in with their agent's own account (ADR 0041 §5.1, protocol
     await machine({ protocol: TASK_ACCOUNTS_PROTOCOL - 1 });
     // Nobody connected it, so nobody there can run an update command: the agent hears to try again later.
     expect(await refused(dev, "claude")).toBe(
-      "The runner on MacBook is too old to sign tasks in with your Claude account. Tell the person: the computer's runner needs an update before tasks can use your account, so try again later (until then do this work with run_code or a shell task).",
+      "The agentes.chat program on MacBook is too old to sign tasks in with your Claude account. Tell the person: agentes.chat on the computer needs an update before tasks can use your account, so try again later (until then do this work with run_code or a shell task).",
     );
     await machine({ protocol: MACHINE_PROTOCOL_VERSION });
     // His account signed out.
