@@ -151,6 +151,8 @@ test("lent: any port but 25 through the lending computer; 25, nothing lent or a 
   // No such site: no other way finds it either.
   answer = STREAM_CLOSE.notFound;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 504");
+  // Another port the lending computer couldn't reach (its network blocks it): the computer's own way, as before.
+  expect((await ask(proxy.port, CONNECT("db.example:5432"))).got()).toStartWith("HTTP/1.1 200");
   // Nothing lent now: direct, and the server isn't asked again for a minute.
   answer = STREAM_CLOSE.unreachable;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 200");

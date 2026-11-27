@@ -179,7 +179,8 @@ Owner decision: SSH, git over SSH, databases and any other TCP go through the le
    on the Cloud it is transparent: any program, no settings. **A self-hosted borrower** has no guard: its proxy now
    asks for any port, but only programs that use the proxy settings reach it (browsers, `HTTPS_PROXY`/`ALL_PROXY`
    readers: git over HTTPS, curl, most CLIs). OpenSSH, database clients and others that ignore them go out the usual
-   way. Left out: an SSH `ProxyCommand` through the proxy (`GIT_SSH_COMMAND`) was left out: it would replace a
+   way. `notFound` still fails a web connection, but another port the lending computer couldn't reach (its network
+   may block SSH or a database's port) goes the borrower's own way, as it did before every port was lent. Left out: an SSH `ProxyCommand` through the proxy (`GIT_SSH_COMMAND`) was left out: it would replace a
    person's own `core.sshCommand` and their hosts' `ProxyJump`; add a connect helper when someone needs SSH lent on a
    self-hosted server.
 5. **The switch's words** say what goes through and what doesn't, on the web, the phone and the desktop app, in 14

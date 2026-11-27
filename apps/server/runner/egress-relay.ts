@@ -6,6 +6,7 @@ import { createServer, isIP, isIPv6, type Server, type Socket, connect as tcpCon
 import path from "node:path";
 import {
   EGRESS_DIRECT_HOSTS,
+  EGRESS_SHARE,
   isEgressHost,
   isEgressTarget,
   STREAM_CLOSE,
@@ -167,8 +168,8 @@ async function directDial(
  * programs and browsers are told to use `127.0.0.1:<port>` (HTTP CONNECT or SOCKS5, no authentication). While `lent()`,
  * a connection to any `isEgressTarget` asks the server for a lending computer (`dial`); port 25, nothing lent now, a
  * refusal or the server away, goes out this computer's own way, to public addresses only. After nothing lent or a
- * "doesn't borrow", it stays direct for `EGRESS_QUIET_MS` without asking. Only `notFound` (the lending computer found no
- * such site) fails the connection.
+ * "doesn't borrow", it stays direct for `EGRESS_QUIET_MS` without asking. Only `notFound` on a web port (the lending
+ * computer found no such site) fails the connection.
  *
  * ponytail: any local process may use the port (a single-user computer has no guard): it only reaches public
  * addresses, through this workspace's own lending computer. Per-process auth if that ever matters.
@@ -191,8 +192,11 @@ export async function startEgressProxy(o: {
         return { data: await o.dial(randomBytes(32).toString("base64url"), target) };
       } catch (error) {
         const code = (error as { closeCode?: number } | null)?.closeCode;
-        if (code === STREAM_CLOSE.notFound) throw error;
-        if (!notCarried(code)) quietUntil = now() + EGRESS_QUIET_MS;
+        if (code === STREAM_CLOSE.notFound) {
+          // Another port the lending computer couldn't reach (its network may block SSH or a database's port) went
+          // this computer's own way before every port was lent, and still does.
+          if (EGRESS_SHARE.webPorts.includes(target.port)) throw error;
+        } else if (!notCarried(code)) quietUntil = now() + EGRESS_QUIET_MS;
       }
     }
     return directDial(target, resolve, o.connect ?? ((host, port) => tcpConnect({ host, port })));
