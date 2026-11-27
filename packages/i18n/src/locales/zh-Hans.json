@@ -2335,6 +2335,52 @@
     "newGroupWith": "包含 {{name}} 的新部门",
     "dmsEmpty": "你与成员的对话会显示在这里。"
   },
+  "sidebarFavorites": {
+    "title": "收藏",
+    "add": "加入收藏",
+    "remove": "移出收藏",
+    "full": "收藏已有 50 项。移除一项后才能添加这一项。"
+  },
+  "sidebarSections": {
+    "new": "新建分区",
+    "newName": "新分区",
+    "moveTo": "移到分区",
+    "takeOut": "移出分区",
+    "rename": "重命名分区",
+    "delete": "删除分区",
+    "nameLabel": "分区名称"
+  },
+  "sidebarDms": {
+    "options": "私信选项",
+    "show": "显示",
+    "shows": {
+      "all": "工作区所有人",
+      "recent": "仅最近的对话"
+    },
+    "invite": "邀请成员",
+    "invited": "已发送邀请",
+    "invitedTip": "{{email}} 尚未接受邀请",
+    "agentTag": "AI",
+    "agentTip": "AI 智能体"
+  },
+  "sidebarColumn": {
+    "label": "工具",
+    "unread": "{{name}}，有未读内容",
+    "you": "{{name}}，有你的事项"
+  },
+  "unreads": {
+    "title": "未读",
+    "forYou": "给你的",
+    "conversations": "对话",
+    "markAll": "全部标为已读",
+    "markRead": "标为已读",
+    "open": "打开",
+    "seeInbox": "在收件箱中查看全部",
+    "more_other": "还有 {{count}} 条消息",
+    "emptyTitle": "全部看完了",
+    "emptyText": "新消息和等你处理的事项会显示在这里。",
+    "markedAll": "已全部标为已读"
+  },
   "sidebarPins": {
     "pin": "置顶",
     "unpin": "取消置顶",
@@ -16561,11 +16607,12 @@
     "helpWorkspace": "团队的电脑满载或不在线时，其他电脑来帮忙",
     "helpWorkspaceHint": "每台电脑只有在其所有者允许时才会帮忙。关闭：无论所有者如何选择，都不会有电脑帮忙。",
     "shareInternet": "智能体使用这台电脑的网络",
-    "shareInternetHint": "智能体打开的网站会经过这台电脑的网络连接，所以网站会看到你的位置。仅限网站，绝不会访问你自己网络中的任何内容。这台电脑离线时，智能体使用平常的连接。",
+    "shareInternetHint": "智能体的连接会经过这台电脑的网络，所以网站和服务器会看到你的位置：网站、git、SSH、数据库及其他 TCP 连接。绝不会访问你自己网络中的任何内容，也不会通过 25 端口发送邮件。域名解析、通话等 UDP 流量使用平常的连接。这台电脑离线时，所有流量都使用平常的连接。",
+    "shareInternetHintProxy": "智能体的浏览器和遵循代理设置的程序（通过 HTTPS 的 git、curl、大多数命令行工具）会经过这台电脑的网络，所以网站会看到你的位置。SSH、数据库客户端等忽略代理设置的程序使用平常的连接，域名解析和 UDP 流量也一样。绝不会访问你自己网络中的任何内容，也不会通过 25 端口发送邮件。这台电脑离线时，所有流量都使用平常的连接。",
     "shareInternetInUse": "正在使用",
     "shareInternetOther": "智能体正在使用 {{name}}",
     "shareInternetPick": "使用这台",
-    "shareInternetJoin": "智能体也会通过这台电脑的网络打开网站，所以网站会看到你的位置。你可以在它的页面上关闭。",
+    "shareInternetJoin": "智能体也会通过这台电脑上网，所以网站和服务器会看到你的位置。你可以在它的页面上关闭。",
     "connectedBy": "由 {{name}} 连接",
     "downloadFor": "下载 {{system}} 版",
     "downloadApp": "下载应用",
@@ -17104,7 +17151,7 @@
       "folderOnComputer": "在电脑上允许",
       "folderShown": "已在 {{deviceName}} 上打开。请在那里允许。",
       "internetShared": "智能体现在通过 <b>{{deviceName}}</b> 的网络打开网站",
-      "internetSharedLine": "仅限此工作区的智能体，仅限网站，绝不访问它所在网络中的任何内容。它离线时，智能体会使用平常的连接。",
+      "internetSharedLine": "仅限此工作区的智能体，绝不访问它所在网络中的任何内容，绝不通过 25 端口发送邮件。它离线时，智能体会使用平常的连接。",
       "internetOff": "关闭",
       "internetOffDone": "智能体不再使用 {{deviceName}} 的网络。",
       "once": "允许一次",

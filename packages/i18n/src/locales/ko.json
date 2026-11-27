@@ -2335,6 +2335,52 @@
     "newGroupWith": "{{name}}이(가) 있는 새 부서",
     "dmsEmpty": "사람과의 대화가 여기에 표시돼요."
   },
+  "sidebarFavorites": {
+    "title": "즐겨찾기",
+    "add": "즐겨찾기에 추가",
+    "remove": "즐겨찾기에서 제거",
+    "full": "즐겨찾기가 이미 50개입니다. 이 항목을 추가하려면 하나를 제거하세요."
+  },
+  "sidebarSections": {
+    "new": "새 섹션",
+    "newName": "새 섹션",
+    "moveTo": "섹션으로 이동",
+    "takeOut": "섹션에서 빼기",
+    "rename": "섹션 이름 바꾸기",
+    "delete": "섹션 삭제",
+    "nameLabel": "섹션 이름"
+  },
+  "sidebarDms": {
+    "options": "다이렉트 메시지 옵션",
+    "show": "표시",
+    "shows": {
+      "all": "워크스페이스의 모든 사람",
+      "recent": "최근 대화만"
+    },
+    "invite": "사람 초대",
+    "invited": "초대 보냄",
+    "invitedTip": "{{email}} 님이 아직 초대를 수락하지 않았습니다",
+    "agentTag": "AI",
+    "agentTip": "AI 에이전트"
+  },
+  "sidebarColumn": {
+    "label": "도구",
+    "unread": "{{name}}, 읽지 않은 항목 있음",
+    "you": "{{name}}, 나를 위한 항목 있음"
+  },
+  "unreads": {
+    "title": "읽지 않음",
+    "forYou": "나에게",
+    "conversations": "대화",
+    "markAll": "모두 읽음으로 표시",
+    "markRead": "읽음으로 표시",
+    "open": "열기",
+    "seeInbox": "받은편지함에서 모두 보기",
+    "more_other": "메시지 {{count}}개 더",
+    "emptyTitle": "모두 확인했습니다",
+    "emptyText": "새 메시지와 나를 기다리는 일이 여기에 표시됩니다.",
+    "markedAll": "모두 읽음으로 표시했습니다"
+  },
   "sidebarPins": {
     "pin": "맨 위에 고정",
     "unpin": "고정 해제",
@@ -16485,11 +16531,12 @@
     "helpWorkspace": "팀 컴퓨터가 가득 찼거나 없을 때 다른 컴퓨터가 돕기",
     "helpWorkspaceHint": "각 컴퓨터는 소유자가 허용할 때만 돕습니다. 끔: 소유자의 선택과 상관없이 아무 컴퓨터도 돕지 않습니다.",
     "shareInternet": "에이전트가 이 컴퓨터의 인터넷을 써요",
-    "shareInternetHint": "에이전트가 여는 사이트는 이 컴퓨터의 연결을 거치므로 사이트에 내 위치가 보여요. 웹사이트만 열고, 내 네트워크에 있는 것에는 절대 접근하지 않아요. 이 컴퓨터가 오프라인인 동안에는 에이전트가 평소 연결을 써요.",
+    "shareInternetHint": "에이전트의 연결은 이 컴퓨터의 인터넷을 거치므로 사이트와 서버에 내 위치가 보여요. 웹사이트, git, SSH, 데이터베이스 등 TCP 연결이 해당돼요. 내 네트워크에 있는 것에는 절대 접근하지 않고, 포트 25로 이메일을 보내지도 않아요. 이름 조회, 통화 등 UDP 트래픽은 평소 연결을 쓰고, 이 컴퓨터가 오프라인인 동안에는 모두 평소 연결을 써요.",
+    "shareInternetHintProxy": "에이전트의 브라우저와 프록시 설정을 따르는 프로그램(HTTPS를 통한 git, curl, 대부분의 명령줄 도구)은 이 컴퓨터의 인터넷을 거치므로 사이트에 내 위치가 보여요. SSH, 데이터베이스 클라이언트 등 프록시 설정을 무시하는 프로그램은 평소 연결을 쓰고, 이름 조회와 UDP 트래픽도 마찬가지예요. 내 네트워크에 있는 것에는 절대 접근하지 않고, 포트 25로 이메일을 보내지도 않아요. 이 컴퓨터가 오프라인인 동안에는 모두 평소 연결을 써요.",
     "shareInternetInUse": "지금 사용 중",
     "shareInternetOther": "에이전트가 지금 {{name}}을(를) 써요",
     "shareInternetPick": "이걸로 쓰기",
-    "shareInternetJoin": "에이전트가 이 컴퓨터의 인터넷으로도 사이트를 열기 때문에 사이트에 내 위치가 보여요. 컴퓨터 페이지에서 끌 수 있어요.",
+    "shareInternetJoin": "에이전트가 이 컴퓨터의 인터넷으로도 접속하기 때문에 사이트와 서버에 내 위치가 보여요. 컴퓨터 페이지에서 끌 수 있어요.",
     "connectedBy": "{{name}} 님이 연결함",
     "downloadFor": "{{system}}용 다운로드",
     "downloadApp": "앱 다운로드",
@@ -17028,7 +17075,7 @@
       "folderOnComputer": "컴퓨터에서 허용",
       "folderShown": "{{deviceName}}에서 열렸어요. 그곳에서 허용하세요.",
       "internetShared": "이제 에이전트가 <b>{{deviceName}}</b>의 인터넷으로 웹사이트를 열어요",
-      "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만 열고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
+      "internetSharedLine": "이 워크스페이스의 에이전트만 쓰고, 그 컴퓨터의 네트워크에는 절대 접근하지 않으며, 포트 25로 이메일을 보내지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
       "internetOff": "끄기",
       "internetOffDone": "에이전트가 더 이상 {{deviceName}}의 인터넷을 쓰지 않아요.",
       "once": "한 번 허용",

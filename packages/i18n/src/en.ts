@@ -2587,6 +2587,61 @@ export const en = {
     newGroupWith: "New department with {{name}}",
     dmsEmpty: "Your conversations with people show up here.",
   },
+  /** Favoritos (ADR 0260): people, agents and channels the person keeps on top of the sidebar, by name. */
+  sidebarFavorites: {
+    title: "Favorites",
+    add: "Add to favorites",
+    remove: "Remove from favorites",
+    full: "Favorites already holds 50. Remove one to add this one.",
+  },
+  /** Each person's own channel sections (ADR 0260): made by dragging a channel onto another, or from a channel's menu. */
+  sidebarSections: {
+    new: "New section",
+    /** The name a new section starts with, selected in its field. */
+    newName: "New section",
+    moveTo: "Move to section",
+    takeOut: "Remove from section",
+    rename: "Rename section",
+    delete: "Delete section",
+    nameLabel: "Section name",
+  },
+  /** Direct messages with people and agents together (ADR 0260). */
+  sidebarDms: {
+    options: "Direct messages options",
+    show: "Show",
+    shows: {
+      all: "Everyone in the workspace",
+      recent: "Recent conversations only",
+    },
+    invite: "Invite people",
+    /** After an invited address that hasn't joined yet. */
+    invited: "Invite sent",
+    invitedTip: "{{email}} hasn't accepted the invitation yet",
+    /** The quiet tag after an agent's name: it is an AI, not a person. */
+    agentTag: "AI",
+    agentTip: "AI agent",
+  },
+  /** The sidebar's tool column (ADR 0260): what a tile's dot says to a screen reader. */
+  sidebarColumn: {
+    label: "Tools",
+    unread: "{{name}}, something unread",
+    you: "{{name}}, something for you",
+  },
+  /** Unreads (`/unreads`, ADR 0260): everything waiting for the person, the inbox's items and the unread conversations. */
+  unreads: {
+    title: "Unreads",
+    forYou: "For you",
+    conversations: "Conversations",
+    markAll: "Mark all as read",
+    markRead: "Mark as read",
+    open: "Open",
+    seeInbox: "See everything in the inbox",
+    more_one: "{{count}} more message",
+    more_other: "{{count}} more messages",
+    emptyTitle: "All caught up",
+    emptyText: "New messages and what waits for you show up here.",
+    markedAll: "Everything marked as read",
+  },
   /** "Pin to top": a row kept on top of its own sidebar section, above a thin line. */
   sidebarPins: {
     pin: "Pin to top",
@@ -17669,13 +17724,16 @@ export const en = {
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection.",
+      "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline.",
+    /** The same on a self-hosted server, where agents reach it through proxy settings (ADR 0237). */
+    shareInternetHintProxy:
+      "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
     /** Under Let it join, in a workspace with its own computer. */
     shareInternetJoin:
-      "The agents will also open websites through this computer's internet, so sites see your location. You can turn it off on its page.",
+      "The agents will also go online through this computer's internet, so sites and servers see your location. You can turn it off on its page.",
     connectedBy: "Connected by {{name}}",
     downloadFor: "Download for {{system}}",
     downloadApp: "Download the app",
@@ -18323,7 +18381,7 @@ export const en = {
       internetShared: "Agents now open websites through the internet of <b>{{deviceName}}</b>",
       /** Under it: what lending keeps out and what happens while the computer is offline. */
       internetSharedLine:
-        "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection.",
+        "Only this workspace's agents, never anything on its own network, never email on port 25. While it's offline, they use their usual connection.",
       /** Its one button: stops lending this computer's internet. */
       internetOff: "Turn off",
       internetOffDone: "Agents no longer use the internet of {{deviceName}}.",

@@ -24,7 +24,6 @@ import { useOrg } from "@/components/org-context";
 import { StatusLine } from "@/components/Presence";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { unshownRow } from "@/components/Sidebar";
-import { AgentTrail, colorOf } from "@/components/Sky";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { useArrived } from "@/hooks/useArrived";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -425,7 +424,6 @@ function AgentRow({
         data-busy={busy || undefined}
         title={[doing ?? workWords ?? full ?? word, agent.role].filter(Boolean).join(" · ") || undefined}
       >
-        {busy && <AgentTrail color={colorOf(agent)} />}
         {atWork ? <OrbitGlyph appearance={lookOf(agent)}>{face}</OrbitGlyph> : face}
         <span className="members-side__text">
           <span className="members-side__name">
