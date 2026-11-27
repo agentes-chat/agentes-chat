@@ -13,18 +13,21 @@ const SCRIPTS: [RegExp, string, Bun.Transpiler][] = [
 ];
 
 // Bun's bundler parses these from memory and, unlike `Bun.YAML.parse` and `JSON.parse`, says where it stopped.
-// It already reads tsconfig/jsconfig files and package.json leniently; editor and dev-container settings are JSONC too.
+// It picks the parser by extension and reads some names (package.json) leniently, so the copy gets a neutral name:
+// `.jsonc` for the files whose tools take comments and trailing commas, the file's own extension otherwise.
 const DATA: [RegExp, string][] = [
   [/\.jsonc?$/i, "JSON"],
   [/\.ya?ml$/i, "YAML"],
   [/\.toml$/i, "TOML"],
 ];
-const JSONC_BY_NAME = /(?:^|[\\/])(?:\.vscode[\\/].*|[^\\/]*devcontainer[^\\/]*)\.json$/i;
+const JSONC = /(?:^|[\\/])(?:\.vscode[\\/].*\.json|[^\\/]*(?:devcontainer|[jt]sconfig)[^\\/]*\.json|[^\\/]*\.jsonc)$/i;
+// Helm charts and Jinja files hold `{{ }}` or `{% %}` that only parses once filled in; GitHub's `${{ }}` is plain YAML.
+const TEMPLATE = /(?<!\$)\{\{|\{%/;
 
 /**
  * The first syntax error of a file in a format this server can parse (JavaScript, TypeScript, JSON, YAML, TOML) as
  * the format's name and "line L, column C: message", or null when it parses or the format isn't one of those (Python,
- * SQL, shell and the rest are left alone). Syntax only: a method the platform doesn't have still passes.
+ * SQL, shell, templated data and the rest are left alone). Syntax only: a method the platform doesn't have still passes.
  */
 export async function syntaxError(path: string, text: string): Promise<{ format: string; error: string } | null> {
   for (const [ext, format, parser] of SCRIPTS) {
@@ -38,13 +41,11 @@ export async function syntaxError(path: string, text: string): Promise<{ format:
   }
   const data = DATA.find(([ext]) => ext.test(path));
   if (!data) return null;
-  // The name is kept: Bun reads `tsconfig.json` by its name, and a JSONC file by its extension.
-  const name = path.split(/[\\/]/).pop();
-  const file = `/check/${JSONC_BY_NAME.test(path) ? `${name}c` : name}`;
+  const file = `/check/file.${JSONC.test(path) ? "jsonc" : path.slice(path.lastIndexOf(".") + 1).toLowerCase()}`;
   const built = await Bun.build({ entrypoints: [file], files: { [file]: text }, target: "bun", throw: false }).catch(
     () => null,
   );
-  if (!built || built.success) return null;
+  if (!built || built.success || TEMPLATE.test(text)) return null;
   const first = built.logs.find((log) => log.level === "error") ?? built.logs[0];
   return { format: data[1], error: at(first as ParseMessage | undefined, "it doesn't parse") };
 }

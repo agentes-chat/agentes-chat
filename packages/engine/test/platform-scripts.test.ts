@@ -42,6 +42,8 @@ describe("syntaxError", () => {
     expect(await error("pyproject.toml", "[project]\nname = \n")).toStartWith("line 2, column 8: ");
     expect(await error("C:\\work\\.vscode\\launch.json", "{\n  // run\n  ]")).toStartWith("line 3, column 3: ");
     expect(await error("settings.jsonc", '{\n  // note\n  "a": 1\n  "b": 2\n}')).toStartWith("line 4, column 3: ");
+    expect(await error("app/package.json", '{\n  "name": "app",\n}')).toStartWith("line 2, column 16: ");
+    expect(await error("ci.yml", "env:\n  T: $" + "{{ secrets.T }}\n\tx: 1\n")).toStartWith("line 3, column 2: ");
   });
 
   test("passes modern and sloppy-mode scripts, typed code and data that parse, and leaves other files alone", async () => {
@@ -55,6 +57,7 @@ describe("syntaxError", () => {
     expect(await syntaxError(".vscode/settings.json", '{\n  // tabs\n  "editor.tabSize": 2,\n}')).toBeNull();
     expect(await syntaxError("stack.yaml", "Name: !Ref Bucket\nbase: &b\n  k: 1\nother:\n  <<: *b\n")).toBeNull();
     expect(await syntaxError("Cargo.toml", '[package]\nname = "app"\n')).toBeNull();
+    expect(await syntaxError("chart/templates/app.yaml", "metadata:\n  {{- if .Values.on }}\n  a: 1\n")).toBeNull();
     for (const path of ["notes.md", "job.py", "query.sql", "run.sh"])
       expect(await syntaxError(path, "if (a {")).toBeNull();
   });
