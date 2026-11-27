@@ -4143,6 +4143,14 @@
     "switchAi": "Cambiar la IA de {{name}}"
   },
   "actionCard": {
+    "proxy": {
+      "title": "Usar el proxy {{proxy}}",
+      "save": "Guardar",
+      "for": "Para {{where}}",
+      "everyComputer": "todos los ordenadores del workspace",
+      "saved": "{{proxy}} guardado para {{where}}",
+      "adminOnly": "Lo guarda un admin"
+    },
     "connect_ai": {
       "title": "Conecta una IA para {{agents}}",
       "title_claude": "Conecta un plan de Claude para {{agents}}",
@@ -17071,6 +17079,9 @@
       "notOwner": "Solo quien conectó este ordenador activa sus herramientas. Pídeselo.",
       "askSelf": "Es tu ordenador: actívalo con el botón.",
       "adminAskSelf": "Puedes hacerlo aquí tú mismo.",
+      "proxyInvalid": "Usa una dirección de proxy como socks5://usuario:contraseña@host:1080 o http://host:3128.",
+      "proxyForbidden": "Solo quien conectó este ordenador, o un admin, define su proxy.",
+      "proxySourceGone": "El mensaje con la dirección del proxy ya no está. Envíalo de nuevo.",
       "accountMethodUnsupported": "Esta computadora todavía no puede conectar Claude de esta forma. Actualiza el programa de agentes.chat en ella o usa una clave de API.",
       "windowsOneGemini": "En Windows, una computadora usa una sola cuenta de Gemini a la vez. Quita la otra cuenta de Gemini de esta computadora para iniciar sesión con esta.",
       "brainUnavailable": "Esta IA todavía no está configurada en {{computer}}. Configúrala allí o elige otra.",
@@ -17195,6 +17206,29 @@
     "feedback": {
       "filesGone": "Un archivo que añadiste ya no está. Añádelo de nuevo.",
       "filesPending": "Hay demasiados archivos esperando para enviarse. Envía o quita algunos e inténtalo de nuevo."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy de los agentes",
+    "uses": "Los agentes salen por {{proxy}}",
+    "usesWorkspace": "Los agentes salen por el proxy del workspace, {{proxy}}",
+    "none": "Sin proxy: los agentes salen por el internet prestado de una persona cuando lo hay, y si no, por el camino de siempre.",
+    "noneWorkspace": "Sin proxy para todos los ordenadores. Cada ordenador también puede tener el suyo, en su página.",
+    "withSignIn": "con usuario y contraseña",
+    "order": "El orden: el proxy de este ordenador, si no el del workspace, luego el internet prestado de una persona, luego el camino de siempre. Con un proxy guardado, los navegadores y sitios de los agentes pasan solo por él: si se cae, esos sitios fallan hasta que vuelva o se quite.",
+    "address": "Dirección del proxy",
+    "example": "socks5://usuario:contraseña@host:1080",
+    "replace": "Nueva dirección del proxy",
+    "addressHint": "HTTP, HTTPS o SOCKS5, con usuario y contraseña si los necesita. Se guarda cifrado: solo vuelven a mostrarse el host y el puerto.",
+    "save": "Guardar",
+    "test": "Probar",
+    "remove": "Quitar",
+    "exit": "Los agentes salen en {{ip}}",
+    "exitIn": "Los agentes salen en {{ip}}, en {{country}}",
+    "failed": {
+      "unreachable": "No se pudo llegar al proxy. Revisa el host y el puerto.",
+      "auth": "El proxy rechazó el usuario o la contraseña.",
+      "refused": "El proxy respondió, pero no llegó al sitio de prueba."
     }
   },
   "machines": {
@@ -20305,6 +20339,7 @@
       "redacted": "[eliminado: parecía un inicio de sesión o una clave]",
       "action_connect_ai": "Conectar una IA",
       "action_connect_app": "Conectar {{name}}",
+      "action_proxy": "Usar el proxy {{name}}",
       "action_add_mcp": "Agregar un servidor MCP",
       "action_invite_people": "Invitar a personas",
       "action_install_skill": "Instalar una habilidad",
@@ -20613,6 +20648,10 @@
     "offer_open_page": {
       "label": "Ofrecer abrir una pantalla",
       "description": "Publica una tarjeta cuyo botón abre una pantalla de la app, como facturación, roles o la página de un agente."
+    },
+    "offer_proxy": {
+      "label": "Ofrecer usar un proxy",
+      "description": "Publica una tarjeta que guarda un proxy que escribió una persona, para los agentes del workspace o de un ordenador."
     },
     "offer_voice_setup": {
       "label": "Ofrecer activar los mensajes de voz",

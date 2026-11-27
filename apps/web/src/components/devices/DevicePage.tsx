@@ -64,6 +64,7 @@ import {
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentProxyCard } from "@/components/computer/AgentProxy";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { MachineAccessCards, MachineAgents, MachineFactsExtra, MachinePage } from "@/components/Machines";
 import { CommandBlock, MaintenanceHint } from "@/components/machine-bits";
@@ -698,6 +699,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
         <WifiIphoneOffer host={d} card />
       )}
       {machine && <MachineAccessCards machine={machine} />}
+      {machine && <AgentProxyCard machineId={machine.id} canChange={d.mayManage} />}
       {d.mayManage && (
         <div>
           <Button size="sm" variant="danger" icon={host ? "block" : "trash"} onClick={() => setRemoving(target)}>

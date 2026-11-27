@@ -99,6 +99,7 @@ import { openPage } from "../ai/parts";
 import { openComputer } from "../computer/AgentComputerRow";
 import { ComputerSection } from "../devices/ComputerSection";
 import { findDevice } from "../devices/logic";
+import { ProxySection } from "../devices/ProxySection";
 import { PermissionWaits, StatusLine } from "../devices/parts";
 import { useDevices } from "../devices/queries";
 import { MachineToolButton } from "../devices/ToolOneClick";
@@ -405,6 +406,7 @@ function MachinePage({ machineId }: { machineId: string }) {
       ) : null}
 
       {device ? <ComputerSection device={device} name={title} /> : null}
+      <ProxySection machineId={m.id} canChange={m.canManage} />
 
       {m.agents.length > 0 ? (
         <>

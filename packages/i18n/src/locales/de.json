@@ -4002,6 +4002,14 @@
     "switchAi": "KI von {{name}} wechseln"
   },
   "actionCard": {
+    "proxy": {
+      "title": "Proxy {{proxy}} verwenden",
+      "save": "Speichern",
+      "for": "Für {{where}}",
+      "everyComputer": "alle Computer des Workspace",
+      "saved": "{{proxy}} für {{where}} gespeichert",
+      "adminOnly": "Ein Admin speichert ihn"
+    },
     "connect_ai": {
       "title": "Verbinde eine KI für {{agents}}",
       "title_claude": "Verbinde ein Claude-Abo für {{agents}}",
@@ -16586,6 +16594,9 @@
       "notOwner": "Nur wer diesen Computer verbunden hat, schaltet seine Werkzeuge ein. Frag diese Person.",
       "askSelf": "Es ist dein Computer: schalte es mit dem Button ein.",
       "adminAskSelf": "Das kannst du hier selbst tun.",
+      "proxyInvalid": "Verwende eine Proxy-Adresse wie socks5://user:passwort@host:1080 oder http://host:3128.",
+      "proxyForbidden": "Nur wer diesen Computer verbunden hat oder ein Admin legt seinen Proxy fest.",
+      "proxySourceGone": "Die Nachricht mit der Adresse des Proxys ist weg. Sende sie noch einmal.",
       "accountMethodUnsupported": "Dieser Computer kann Claude noch nicht auf diese Weise verbinden. Aktualisiere das agentes.chat-Programm darauf oder verwende einen API-Schlüssel.",
       "windowsOneGemini": "Unter Windows nutzt ein Computer jeweils nur ein Gemini-Konto. Entferne das andere Gemini-Konto von diesem Computer, um dich mit diesem anzumelden.",
       "brainUnavailable": "Diese KI ist auf {{computer}} noch nicht eingerichtet. Richte sie dort ein oder wähle eine andere.",
@@ -16709,6 +16720,29 @@
     "feedback": {
       "filesGone": "Eine Datei, die du hinzugefügt hast, ist weg. Füg sie noch einmal hinzu.",
       "filesPending": "Zu viele Dateien warten darauf, gesendet zu werden. Sende oder entferne einige und versuch es noch einmal."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy für Agenten",
+    "uses": "Agenten gehen über {{proxy}} ins Netz",
+    "usesWorkspace": "Agenten gehen über den Proxy des Workspace ins Netz, {{proxy}}",
+    "none": "Kein Proxy: Agenten gehen über das geliehene Internet einer Person ins Netz, wenn es eins gibt, sonst wie gewohnt.",
+    "noneWorkspace": "Kein Proxy für alle Computer. Jeder Computer kann auf seiner Seite auch einen eigenen haben.",
+    "withSignIn": "mit Benutzer und Passwort",
+    "order": "Die Reihenfolge: der Proxy dieses Computers, sonst der des Workspace, dann das geliehene Internet einer Person, dann der gewohnte Weg. Solange ein Proxy gesetzt ist, gehen Browser und Websites der Agenten nur über ihn: Fällt er aus, schlagen diese Seiten fehl, bis er wieder da ist oder entfernt wird.",
+    "address": "Proxy-Adresse",
+    "example": "socks5://benutzer:passwort@host:1080",
+    "replace": "Neue Proxy-Adresse",
+    "addressHint": "HTTP, HTTPS oder SOCKS5, mit Benutzer und Passwort darin, falls nötig. Verschlüsselt gespeichert: Nur Host und Port werden wieder angezeigt.",
+    "save": "Speichern",
+    "test": "Testen",
+    "remove": "Entfernen",
+    "exit": "Agenten kommen bei {{ip}} heraus",
+    "exitIn": "Agenten kommen bei {{ip}} heraus, in {{country}}",
+    "failed": {
+      "unreachable": "Der Proxy war nicht erreichbar. Prüfe Host und Port.",
+      "auth": "Der Proxy hat Benutzer oder Passwort abgelehnt.",
+      "refused": "Der Proxy hat geantwortet, die Testseite aber nicht erreicht."
     }
   },
   "machines": {
@@ -19768,6 +19802,7 @@
       "redacted": "[entfernt: sah aus wie eine Anmeldung oder ein Schlüssel]",
       "action_connect_ai": "KI verbinden",
       "action_connect_app": "{{name}} verbinden",
+      "action_proxy": "Proxy {{name}} verwenden",
       "action_add_mcp": "Einen MCP-Server hinzufügen",
       "action_invite_people": "Personen einladen",
       "action_install_skill": "Skill installieren",
@@ -20073,6 +20108,10 @@
     "offer_open_page": {
       "label": "Anbieten, einen Bildschirm zu öffnen",
       "description": "Postet eine Karte, deren Taste einen Bildschirm der App öffnet, etwa Abrechnung, Rollen oder die Seite eines Agenten."
+    },
+    "offer_proxy": {
+      "label": "Anbieten, einen Proxy zu verwenden",
+      "description": "Postet eine Karte, die einen von einer Person eingegebenen Proxy speichert, für die Agenten des Workspace oder eines Computers."
     },
     "offer_voice_setup": {
       "label": "Anbieten, Sprachnachrichten einzuschalten",

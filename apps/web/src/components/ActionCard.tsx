@@ -1,5 +1,7 @@
 import type { AgentDraft, AgentProposalCard, Message, SkillSourceUpdate } from "@agenteschat/client";
 import {
+  proxyTestLine,
+  useAgentProxyMutations,
   useAiStatus,
   useAllInvitations,
   useAskAgentProposal,
@@ -28,6 +30,7 @@ import {
   installSkillSource,
   inviteDone,
   type ProposalLine,
+  type ProxyCard,
   proposalLines,
   proposalStatus,
   routineLeft,
@@ -147,6 +150,7 @@ export function ActionCard({ message }: { message: Message }) {
   if (card.kind === "usage_paused") return <UsagePauseCardView message={message} card={card} />;
   if (card.kind === "person_limit") return <PersonLimitCardView message={message} card={card} />;
   if (card.kind === "connect_app") return <ConnectAppCardView card={card} morphKey={`act:${message.id}`} />;
+  if (card.kind === "proxy_setup") return <ProxyCardView card={card} messageId={message.id} />;
   if (card.kind === "invite_people") return <InviteCardView card={card} morphKey={`act:${message.id}`} />;
   if (card.kind === "install_skill")
     return <InstallSkillCardView card={card} agentId={message.author.id} morphKey={`act:${message.id}`} />;
@@ -266,6 +270,67 @@ function ConnectAppCardView({ card, morphKey }: { card: ConnectAppCard; morphKey
       </RequestOpen>
       <ConnectFlow flow={flow} onChange={setFlow} onClose={() => setFlow(null)} />
     </>
+  );
+}
+
+/**
+ * "Use this proxy" (`offer_proxy`, ADR 0262) as a waiting pill: who may set it saves it in one click (the server reads
+ * the address from the person's message and hides its password there), then the card says where agents come out.
+ * Who may not reads that an admin does.
+ */
+function ProxyCardView({ card, messageId }: { card: ProxyCard; messageId: string }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const act = useAgentProxyMutations(org.id);
+  const morphKey = `act:${messageId}`;
+  const title = t("actionCard.proxy.title", { proxy: card.label });
+  const where = card.machineName ?? t("actionCard.proxy.everyComputer");
+  if (card.savedAt) {
+    const exit = card.exit
+      ? proxyTestLine(
+          t,
+          "ip" in card.exit ? { ok: true, ...card.exit } : { ok: false, reason: card.exit.failed },
+          i18n.language,
+        )
+      : undefined;
+    return (
+      <RequestDone done label={title} morphKey={morphKey} note={exit}>
+        {t("actionCard.proxy.saved", { proxy: card.label, where })}
+      </RequestDone>
+    );
+  }
+  const may = card.machineId === null ? can(org, "configure") : true;
+  return (
+    <RequestOpen
+      morphKey={morphKey}
+      mine={may}
+      icon="globe"
+      label={title}
+      action={
+        may ? (
+          <EventPillAction
+            primary
+            disabled={act.fromCard.isPending}
+            onClick={() => act.fromCard.mutate(messageId, { onError: (e) => toast.show(errorText(t, e), "error") })}
+          >
+            {t("actionCard.proxy.save")}
+          </EventPillAction>
+        ) : undefined
+      }
+      below={
+        <>
+          {card.why && <p>{inlineWords(card.why)}</p>}
+          <p className="muted">
+            {t("actionCard.proxy.for", { where })}
+            {card.hasAuth ? ` · ${t("agentProxy.withSignIn")}` : ""}
+          </p>
+          {!may && <p>{t("actionCard.proxy.adminOnly")}</p>}
+        </>
+      }
+    >
+      {title}
+    </RequestOpen>
   );
 }
 

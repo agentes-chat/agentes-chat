@@ -43,6 +43,9 @@ import type {
   AgentMailbox,
   AgentPlanUsage,
   AgentProposal,
+  AgentProxies,
+  AgentProxyTest,
+  AgentProxyView,
   AgentQuestion,
   AgentSecret,
   AgentSetupResult,
@@ -520,6 +523,17 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       stop: (orgId, agentId, seat) =>
         request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser/stop`, { json: {}, query: seat ? { seat } : {} }),
       restart: (orgId, agentId) => request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser/restart`, { json: {} }),
+    },
+    agentProxies: {
+      list: (orgId) => request<AgentProxies>(`${org(orgId)}/agent-proxies`),
+      set: (orgId, input) => request<AgentProxyView>(`${org(orgId)}/agent-proxies`, { method: "PUT", json: input }),
+      remove: (orgId, machineId) =>
+        request<void>(`${org(orgId)}/agent-proxies`, { method: "DELETE", json: { machineId } }),
+      test: (orgId, input) => request<AgentProxyTest>(`${org(orgId)}/agent-proxies/test`, { json: input }),
+      fromCard: (orgId, messageId) =>
+        request<{ proxy: AgentProxyView; test: AgentProxyTest }>(`${org(orgId)}/agent-proxies/from-card`, {
+          json: { messageId },
+        }),
     },
     browserProfiles: {
       list: async (orgId, machineId) =>

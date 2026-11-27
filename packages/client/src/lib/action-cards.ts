@@ -126,6 +126,23 @@ export interface ConnectAppCard {
   why: string;
 }
 
+/**
+ * "Usar este proxy" (`offer_proxy`, ADR 0262): a proxy a person typed, saved with one click for the workspace's agents
+ * (`machineId` null) or one computer's. The card never holds its password. `savedAt` and where agents come out
+ * (`exit`) once saved.
+ */
+export interface ProxyCard {
+  kind: "proxy_setup";
+  forUserId: string | null;
+  label: string;
+  hasAuth: boolean;
+  machineId: string | null;
+  machineName: string | null;
+  why: string;
+  savedAt?: string;
+  exit?: { ip: string; country: string | null } | { failed: "unreachable" | "auth" | "refused" };
+}
+
 /** "Convidar pessoas" (`offer_invites`): the invite dialog with these addresses filled in, as members. */
 export interface InviteCard {
   kind: "invite_people";
@@ -239,6 +256,7 @@ export type ActionCard =
   | VoiceSetupCard
   | ConnectAiCard
   | ConnectAppCard
+  | ProxyCard
   | InviteCard
   | InstallSkillCard
   | UpdateSkillsCard
@@ -498,6 +516,26 @@ export function actionCardOf(meta: Record<string, unknown> | null | undefined): 
       ...(typeof p.connector === "string" ? { connector: p.connector } : {}),
       ...(typeof p.url === "string" && isHttpsUrl(p.url) ? { url: p.url } : {}),
       why,
+    };
+  }
+  if (card.kind === "proxy_setup") {
+    const r = raw as { savedAt?: unknown; exit?: { ip?: unknown; country?: unknown; failed?: unknown } };
+    if (typeof p.label !== "string") return null;
+    const failed = r.exit?.failed;
+    return {
+      kind: "proxy_setup",
+      forUserId,
+      label: p.label,
+      hasAuth: p.hasAuth === true,
+      machineId: typeof p.machineId === "string" ? p.machineId : null,
+      machineName: typeof p.machineName === "string" ? p.machineName : null,
+      why,
+      ...(typeof r.savedAt === "string" ? { savedAt: r.savedAt } : {}),
+      ...(typeof r.exit?.ip === "string"
+        ? { exit: { ip: r.exit.ip, country: typeof r.exit.country === "string" ? r.exit.country : null } }
+        : failed === "unreachable" || failed === "auth" || failed === "refused"
+          ? { exit: { failed } }
+          : {}),
     };
   }
   if (card.kind === "install_skill") {

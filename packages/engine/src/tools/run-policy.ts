@@ -278,6 +278,7 @@ const LOOKS_ONLY = new Set([
   "offer_approvals",
   "offer_open_page",
   "offer_voice_setup",
+  "offer_proxy",
   // Their card is the question: what the person may change applies from it, anything else waits on it.
   "propose_member_changes",
   "propose_instruction_change",

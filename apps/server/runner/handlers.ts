@@ -295,6 +295,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "egress.dial": "machine",
   // Root's: its loopback proxy is the computer's, and root hands its agents the proxy settings.
   "egress.proxy": "machine",
+  // Root's: the proxy's user and password stay in root's memory, and root hands its agents the loopback address.
+  "proxy.set": "machine",
   // Root's: the guard's policy file and the loopback proxy are the computer's.
   "egress.only": "machine",
 };
@@ -449,6 +451,8 @@ export interface HandlerContext {
   egressShare?: EgressShare;
   /** `EGRESS_PROXY_PROTOCOL`: this computer borrows a person's internet now, or no longer (ADR 0237). */
   egressProxy?: (on: boolean) => Promise<boolean>;
+  /** `CUSTOM_PROXY_PROTOCOL`: the proxy the workspace chose for its agents now, or none (ADR 0262). */
+  chooseProxy?: (url: string | null) => Promise<boolean>;
   /** `EGRESS_ONLY_PROTOCOL`: the workspace uses only the lending computer's internet now, or no longer. */
   egressOnly?: (on: boolean) => Promise<boolean>;
 }
@@ -833,6 +837,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     const { egressShare, streams } = ctx;
     if (!egressShare || !streams) throw new RunnerError("bad_request", "This runner lends no connection");
     return egressShare.dial(req, (streamId) => streams.dial(streamId, "egress", scope.signal));
+  }
+  if (req.op === "proxy.set") {
+    if (!ctx.chooseProxy) throw new RunnerError("bad_request", "This runner takes no proxy");
+    return { on: await ctx.chooseProxy(typeof req.url === "string" ? req.url : null) };
   }
   if (req.op === "egress.proxy") {
     if (!ctx.egressProxy) throw new RunnerError("bad_request", "This runner borrows no connection");

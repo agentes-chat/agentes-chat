@@ -29,6 +29,7 @@ import { accessRoutes } from "./routes/app/access";
 import { accountRoutes } from "./routes/app/account";
 import { actionRoutes } from "./routes/app/actions";
 import { agentImportRoutes } from "./routes/app/agent-imports";
+import { agentProxyRoutes } from "./routes/app/agent-proxies";
 import { agentRoutes } from "./routes/app/agents";
 import { approvalRoutes } from "./routes/app/approvals";
 import { appRoutes } from "./routes/app/apps";
@@ -226,6 +227,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", questionRoutes(deps));
     api.route("/app", browserRoutes(deps));
     api.route("/app", browserProfileRoutes(deps));
+    api.route("/app", agentProxyRoutes(deps));
     api.route("/app", desktopRoutes(deps));
     api.route("/app", notificationRoutes(deps));
     api.route("/app", waitingRoutes(deps));

@@ -19,6 +19,7 @@ import { Gap, SettingsPage } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
 import { firstUseCopy } from "../shared/first-use";
 import { Loaded } from "../shared/parts";
+import { ProxySection } from "./ProxySection";
 import { DevicePortrait, JoinRequestCard, StatusLine } from "./parts";
 import { useDeviceMutation, useDevices } from "./queries";
 
@@ -132,6 +133,12 @@ export function DevicesScreen() {
           </>
         ) : null}
       </Locked>
+      {admin ? (
+        <>
+          <Gap />
+          <ProxySection machineId={null} />
+        </>
+      ) : null}
       <Gap />
       <GroupedList>
         <GroupedRow

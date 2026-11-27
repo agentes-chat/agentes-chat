@@ -9818,6 +9818,24 @@
   "usageQueue.switchAi": {
     "value": "Change {{name}}'s AI"
   },
+  "actionCard.proxy.title": {
+    "value": "Use the proxy {{proxy}}"
+  },
+  "actionCard.proxy.save": {
+    "value": "Save"
+  },
+  "actionCard.proxy.for": {
+    "value": "For {{where}}"
+  },
+  "actionCard.proxy.everyComputer": {
+    "value": "every computer of the workspace"
+  },
+  "actionCard.proxy.saved": {
+    "value": "Saved {{proxy}} for {{where}}"
+  },
+  "actionCard.proxy.adminOnly": {
+    "value": "An admin saves it"
+  },
   "actionCard.connect_ai.title": {
     "value": "Connect an AI for {{agents}}"
   },
@@ -40663,6 +40681,15 @@
   "errors.machine.adminAskSelf": {
     "value": "You can do this here yourself."
   },
+  "errors.machine.proxyInvalid": {
+    "value": "Use a proxy address like socks5://user:password@host:1080 or http://host:3128."
+  },
+  "errors.machine.proxyForbidden": {
+    "value": "Only whoever connected this computer, or an admin, sets its proxy."
+  },
+  "errors.machine.proxySourceGone": {
+    "value": "The message with the proxy's address is gone. Send it again."
+  },
   "errors.machine.accountMethodUnsupported": {
     "value": "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key."
   },
@@ -40965,6 +40992,63 @@
   },
   "errors.feedback.filesPending": {
     "value": "Too many files are waiting to be sent. Send or remove some, then try again."
+  },
+  "agentProxy.title": {
+    "value": "Proxy for agents"
+  },
+  "agentProxy.uses": {
+    "value": "Agents go out through {{proxy}}"
+  },
+  "agentProxy.usesWorkspace": {
+    "value": "Agents go out through the workspace's proxy, {{proxy}}"
+  },
+  "agentProxy.none": {
+    "value": "No proxy: agents go out through a person's lent internet when there is one, else the usual way."
+  },
+  "agentProxy.noneWorkspace": {
+    "value": "No proxy for every computer. A computer can also have its own, on its page."
+  },
+  "agentProxy.withSignIn": {
+    "value": "with a user and password"
+  },
+  "agentProxy.order": {
+    "value": "The order: this computer's proxy, else the workspace's, then a person's lent internet, then the usual way. While a proxy is set, agents' browsers and websites go through it alone: if it's down, those sites fail until it's back or removed."
+  },
+  "agentProxy.address": {
+    "value": "Proxy address"
+  },
+  "agentProxy.example": {
+    "value": "socks5://user:password@host:1080"
+  },
+  "agentProxy.replace": {
+    "value": "New proxy address"
+  },
+  "agentProxy.addressHint": {
+    "value": "HTTP, HTTPS or SOCKS5, with the user and password in it if it needs them. Kept encrypted: only its host and port show again."
+  },
+  "agentProxy.save": {
+    "value": "Save"
+  },
+  "agentProxy.test": {
+    "value": "Test"
+  },
+  "agentProxy.remove": {
+    "value": "Remove"
+  },
+  "agentProxy.exit": {
+    "value": "Agents come out at {{ip}}"
+  },
+  "agentProxy.exitIn": {
+    "value": "Agents come out at {{ip}}, in {{country}}"
+  },
+  "agentProxy.failed.unreachable": {
+    "value": "The proxy couldn't be reached. Check its host and port."
+  },
+  "agentProxy.failed.auth": {
+    "value": "The proxy refused the user or password."
+  },
+  "agentProxy.failed.refused": {
+    "value": "The proxy answered but didn't reach the test site."
   },
   "machines.reasons.browser_unsupported": {
     "value": "The agent browser doesn't run on this computer's system."
@@ -48758,6 +48842,9 @@
   "chat.body.action_connect_app": {
     "value": "Connect {{name}}"
   },
+  "chat.body.action_proxy": {
+    "value": "Use the proxy {{name}}"
+  },
   "chat.body.action_add_mcp": {
     "value": "Add an MCP server"
   },
@@ -49270,6 +49357,12 @@
   },
   "builtinTools.offer_open_page.description": {
     "value": "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page."
+  },
+  "builtinTools.offer_proxy.label": {
+    "value": "Offer to use a proxy"
+  },
+  "builtinTools.offer_proxy.description": {
+    "value": "Posts a card that saves a proxy a person typed, for the workspace's agents or one computer's."
   },
   "builtinTools.offer_voice_setup.label": {
     "value": "Offer to turn on voice messages"

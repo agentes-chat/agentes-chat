@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 97;
+export const MACHINE_PROTOCOL_VERSION = 98;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -898,6 +898,14 @@ export const PERSON_APPS_PROTOCOL = 94;
  * turns it on at connect, `egress.proxy` when the computer's role changes. The server sends neither to an older runner.
  */
 export const EGRESS_PROXY_PROTOCOL = 95;
+/**
+ * From this protocol on (ADR 0262): a proxy the workspace chose for its agents (the computer's own, else the
+ * workspace's) comes in `welcome.proxy` and again in `proxy.set` when it changes. Its agents' web connections go through
+ * it before a lent internet and the usual way, and never fall back to them: the managed computer's guard socket and a
+ * borrowing computer's loopback proxy alike, which then runs on any computer. Its user and password stay in the
+ * runner's memory; agents' processes are told the loopback address only.
+ */
+export const CUSTOM_PROXY_PROTOCOL = 98;
 /**
  * Hosts a borrowing computer's agents reach their own way, never through a lent connection: the AI CLIs' and model
  * providers' services. A lent hop adds latency and gains nothing there, and a key or a sign-in never depends on
@@ -3653,6 +3661,8 @@ export type MachineRequest = (
   | { op: "egress.dial"; streamId: string; host: string; port: number }
   /** `EGRESS_PROXY_PROTOCOL`: this computer now borrows a person's internet (`on`) or no longer does. */
   | { op: "egress.proxy"; on: boolean }
+  /** `CUSTOM_PROXY_PROTOCOL`: the proxy its agents use now (`url`, user and password included), or none. */
+  | { op: "proxy.set"; url: string | null }
   | { op: "egress.only"; on: boolean }
 ) & {
   agent?: AgentScope;
@@ -3744,6 +3754,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "report.collect",
   "egress.dial",
   "egress.proxy",
+  "proxy.set",
   "egress.only",
 ];
 
@@ -3929,6 +3940,7 @@ export interface MachineReplies {
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
   "egress.proxy": { on: boolean };
+  "proxy.set": { on: boolean };
   "egress.only": { on: boolean };
 }
 
@@ -4033,6 +4045,8 @@ export type ServerFrame =
       egressRelay?: boolean;
       /** `EGRESS_PROXY_PROTOCOL`: this computer borrows a person's internet through its loopback proxy (ADR 0237). */
       egressProxy?: boolean;
+      /** `CUSTOM_PROXY_PROTOCOL`: the proxy its agents use (ADR 0262), user and password included. */
+      proxy?: string;
       /** `EGRESS_ONLY_PROTOCOL`, a borrowing computer: its workspace uses only the lending computer's internet. */
       egressOnly?: boolean;
       /**

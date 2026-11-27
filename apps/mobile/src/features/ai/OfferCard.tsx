@@ -1,6 +1,8 @@
 import {
   CardVia,
   type Message,
+  proxyTestLine,
+  useAgentProxyMutations,
   useAgents,
   useAllInvitations,
   useAskAdmins,
@@ -59,6 +61,7 @@ export function OfferCard({ message: m }: { message: Message }) {
   if (m.author.type !== "agent" || !card) return null;
   if (card.kind === "connect_app") return <ConnectApp card={card} />;
   if (card.kind === "invite_people") return <Invite card={card} />;
+  if (card.kind === "proxy_setup") return <ProxyOffer card={card} messageId={m.id} />;
   if (card.kind === "install_skill") return <InstallSkill card={card} agentId={m.author.id} />;
   if (card.kind === "update_skills") return <UpdateSkills card={card} postedAt={m.createdAt} />;
   if (card.kind === "approvals")
@@ -100,6 +103,39 @@ function ConnectApp({ card }: { card: Extract<Card, { kind: "connect_app" }> }) 
       action={can(org, "manage_connectors") || personalServesAgents(card.connector) ? t("actionCard.connect") : null}
       onAction={() => router.push(`/connectors?${query}` as never)}
       blocked={t("actionCard.connect_app.adminOnly")}
+    />
+  );
+}
+
+/** The web's "Use this proxy" (`offer_proxy`): Save for who may set it; saved, where agents come out. */
+function ProxyOffer({ card, messageId }: { card: Extract<Card, { kind: "proxy_setup" }>; messageId: string }) {
+  const { t, i18n } = useTranslation();
+  const { orgId, org } = useOrg();
+  const toast = useToast();
+  const act = useAgentProxyMutations(orgId);
+  const where = card.machineName ?? t("actionCard.proxy.everyComputer");
+  const exit = card.exit
+    ? proxyTestLine(
+        t,
+        "ip" in card.exit ? { ok: true, ...card.exit } : { ok: false, reason: card.exit.failed },
+        i18n.language,
+      )
+    : "";
+  const may = card.machineId === null ? can(org, "configure") : true;
+  return (
+    <OfferShell
+      icon="globe"
+      title={t("actionCard.proxy.title", { proxy: card.label })}
+      why={card.why}
+      detail={`${t("actionCard.proxy.for", { where })}${card.hasAuth ? ` · ${t("agentProxy.withSignIn")}` : ""}`}
+      done={
+        card.savedAt
+          ? [t("actionCard.proxy.saved", { proxy: card.label, where }), exit].filter(Boolean).join(" · ")
+          : null
+      }
+      action={may && !act.fromCard.isPending ? t("actionCard.proxy.save") : null}
+      onAction={() => act.fromCard.mutate(messageId, { onError: (e) => toast({ title: errorText(t, e), icon: "x" }) })}
+      blocked={t("actionCard.proxy.adminOnly")}
     />
   );
 }

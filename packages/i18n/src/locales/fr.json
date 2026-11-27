@@ -4148,6 +4148,14 @@
     "switchAi": "Changer l'IA de {{name}}"
   },
   "actionCard": {
+    "proxy": {
+      "title": "Utiliser le proxy {{proxy}}",
+      "save": "Enregistrer",
+      "for": "Pour {{where}}",
+      "everyComputer": "tous les ordinateurs de l’espace",
+      "saved": "{{proxy}} enregistré pour {{where}}",
+      "adminOnly": "Un admin l’enregistre"
+    },
     "connect_ai": {
       "title": "Connecter une IA pour {{agents}}",
       "title_claude": "Connecter un abonnement Claude pour {{agents}}",
@@ -17145,6 +17153,9 @@
       "notOwner": "Seule la personne qui a connecté cet ordinateur active ses outils. Demandez-lui.",
       "askSelf": "C'est votre ordinateur : activez-le avec le bouton.",
       "adminAskSelf": "Vous pouvez le faire ici vous-même.",
+      "proxyInvalid": "Utilise une adresse de proxy comme socks5://utilisateur:motdepasse@host:1080 ou http://host:3128.",
+      "proxyForbidden": "Seule la personne qui a connecté cet ordinateur, ou un admin, définit son proxy.",
+      "proxySourceGone": "Le message avec l’adresse du proxy n’existe plus. Renvoie-la.",
       "accountMethodUnsupported": "Cet ordinateur ne peut pas encore connecter Claude de cette façon. Mettez à jour le programme agentes.chat dessus ou utilisez une clé API.",
       "windowsOneGemini": "Sous Windows, un ordinateur utilise un seul compte Gemini à la fois. Retirez l'autre compte Gemini de cet ordinateur pour vous connecter avec celui-ci.",
       "brainUnavailable": "Cette IA n'est pas encore configurée sur {{computer}}. Configurez-la là-bas, ou choisissez-en une autre.",
@@ -17269,6 +17280,29 @@
     "feedback": {
       "filesGone": "Un fichier que vous avez ajouté n'est plus là. Ajoutez-le de nouveau.",
       "filesPending": "Trop de fichiers attendent d'être envoyés. Envoyez-en ou retirez-en quelques-uns, puis réessayez."
+    }
+  },
+  "agentProxy": {
+    "title": "Proxy des agents",
+    "uses": "Les agents sortent par {{proxy}}",
+    "usesWorkspace": "Les agents sortent par le proxy de l’espace, {{proxy}}",
+    "none": "Aucun proxy : les agents sortent par l’internet prêté d’une personne s’il y en a un, sinon par le chemin habituel.",
+    "noneWorkspace": "Aucun proxy pour tous les ordinateurs. Chaque ordinateur peut aussi avoir le sien, sur sa page.",
+    "withSignIn": "avec utilisateur et mot de passe",
+    "order": "L’ordre : le proxy de cet ordinateur, sinon celui de l’espace, puis l’internet prêté d’une personne, puis le chemin habituel. Tant qu’un proxy est défini, les navigateurs et sites des agents passent uniquement par lui : s’il tombe, ces sites échouent jusqu’à son retour ou son retrait.",
+    "address": "Adresse du proxy",
+    "example": "socks5://utilisateur:motdepasse@host:1080",
+    "replace": "Nouvelle adresse du proxy",
+    "addressHint": "HTTP, HTTPS ou SOCKS5, avec l’utilisateur et le mot de passe s’il en faut. Conservé chiffré : seuls l’hôte et le port s’affichent à nouveau.",
+    "save": "Enregistrer",
+    "test": "Tester",
+    "remove": "Retirer",
+    "exit": "Les agents sortent par {{ip}}",
+    "exitIn": "Les agents sortent par {{ip}}, en {{country}}",
+    "failed": {
+      "unreachable": "Impossible de joindre le proxy. Vérifie l’hôte et le port.",
+      "auth": "Le proxy a refusé l’utilisateur ou le mot de passe.",
+      "refused": "Le proxy a répondu mais n’a pas atteint le site de test."
     }
   },
   "machines": {
@@ -20392,6 +20426,7 @@
       "redacted": "[supprimé : cela ressemblait à une connexion ou à une clé]",
       "action_connect_ai": "Connecter une IA",
       "action_connect_app": "Connecter {{name}}",
+      "action_proxy": "Utiliser le proxy {{name}}",
       "action_add_mcp": "Ajouter un serveur MCP",
       "action_invite_people": "Inviter des personnes",
       "action_install_skill": "Installer une compétence",
@@ -20700,6 +20735,10 @@
     "offer_open_page": {
       "label": "Proposer d'ouvrir un écran",
       "description": "Publie une carte dont le bouton ouvre un écran de l'app, comme la facturation, les rôles ou la page d'un agent."
+    },
+    "offer_proxy": {
+      "label": "Proposer d’utiliser un proxy",
+      "description": "Publie une carte qui enregistre un proxy saisi par une personne, pour les agents de l’espace ou d’un ordinateur."
     },
     "offer_voice_setup": {
       "label": "Proposer d'activer les messages vocaux",

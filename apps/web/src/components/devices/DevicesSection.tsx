@@ -37,6 +37,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentComputersCard } from "@/components/AgentComputer";
+import { AgentProxyCard } from "@/components/computer/AgentProxy";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { HostComputerCard } from "@/components/Machines";
@@ -196,6 +197,8 @@ export function DevicesSection({ start }: { start?: ConnectStart | null }) {
           </div>
         </Card>
       )}
+      {/* A proxy for every computer's agents (ADR 0262): who configures the workspace sets it. */}
+      {admin && devices.isSuccess && <AgentProxyCard machineId={null} />}
       {edition === "selfhost" && (
         <>
           <HostComputerCard onlyOff />

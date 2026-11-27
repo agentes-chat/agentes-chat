@@ -425,6 +425,39 @@ export const machines = pgTable(
 );
 
 /**
+ * A proxy a workspace chose for its agents' web traffic (ADR 0262): the workspace's (`machine_id` null), which every
+ * computer of it uses, or one computer's, which wins there. It comes before a lent internet (ADR 0237) and the usual
+ * way out, and never falls back to them. The whole address, user and password included, is sealed (envelope
+ * encryption, as connections are); only its scheme, host and port are kept in the clear, for the apps.
+ */
+export const agentProxies = pgTable(
+  "agent_proxies",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    machineId: uuid().references(() => machines.id, { onDelete: "cascade" }),
+    scheme: text({ enum: ["http", "https", "socks5"] }).notNull(),
+    host: text().notNull(),
+    port: integer().notNull(),
+    /** It carries a user and password (in the sealed address). */
+    hasAuth: boolean().notNull().default(false),
+    secretCiphertext: text().notNull(),
+    wrappedDataKey: text().notNull(),
+    kekId: text().notNull(),
+    createdByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("agent_proxies_org_workspace").on(t.orgId).where(sql`${t.machineId} is null`),
+    uniqueIndex("agent_proxies_machine").on(t.machineId).where(sql`${t.machineId} is not null`),
+    check("agent_proxies_port", sql`${t.port} between 1 and 65535`),
+  ],
+);
+
+/**
  * How far the workspace's computer is (ADR 0056 §10), with
  * `MACHINE_PROVISIONING=external`: `preparing` (`step`: reserving, starting,
  * installing, connecting), `waiting` (`reason`: capacity; an older

@@ -40,6 +40,7 @@ import { editDistance, firstOf } from "./format";
 import { insertMessage, messageView, parseMentionHandles } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
+import { offerProxyTool } from "./proxy-card";
 import { personBehindCall, relayedRefusal, relayedRequest } from "./requester";
 import { isRightHand } from "./right-hand";
 import { queueRightHandLook } from "./right-hand-approvals";
@@ -1089,7 +1090,7 @@ export function createSetupToolSource(deps: {
   ];
   // Any agent that may set the team up proposes teammates' settings too: the right hand decides another agent's card
   // for the person who asked (ADR 0139), never its own.
-  const all = [...tools, settingsTool(deps)];
+  const all = [...tools, offerProxyTool(deps, SETUP_SCOPE), settingsTool(deps)];
   // The right hand changes its own settings with the card above; every other agent asks for its own here.
   const others = [...all, settingsTool(deps, true)];
   // The right hand's own invite card takes the place of the dialog's.

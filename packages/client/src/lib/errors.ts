@@ -162,6 +162,9 @@ const KNOWN = {
   "machine.not_owner": "errors.machine.notOwner",
   "machine.ask_self": "errors.machine.askSelf",
   "admin_ask.self": "errors.machine.adminAskSelf",
+  "proxy.invalid": "errors.machine.proxyInvalid",
+  "proxy.forbidden": "errors.machine.proxyForbidden",
+  "proxy.card_source_gone": "errors.machine.proxySourceGone",
   // A computer that can't take the request now (`MachineOfflineError`, `MachinePausedError`: `name`), or its own
   // refusal (`MachineRequestError`, as `machine.<code>`).
   "machine.offline": "errors.machine.offline",
