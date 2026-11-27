@@ -213,7 +213,7 @@ function UnreadConversation({ c, onRead }: { c: Unread; onRead: () => void }) {
       {shown.length > 0 && (
         <ul className="unreads__msgs">
           {shown.map((m) => (
-            <li key={m.id} className="unreads__msg">
+            <li key={m.id} className="unreads__msg ac-iconline">
               {m.author.id && m.author.type !== "app" && (
                 <ActorAvatar actor={{ type: m.author.type, id: m.author.id }} name={nameOf(m)} size="xs" />
               )}
@@ -225,7 +225,12 @@ function UnreadConversation({ c, onRead }: { c: Unread; onRead: () => void }) {
           ))}
         </ul>
       )}
-      {more > 0 && <p className="unreads__more">{t("unreads.more", { count: more })}</p>}
+      {/* None of its messages here yet (an older page, a thread's): how many wait, not "more". */}
+      {more > 0 && (
+        <p className="unreads__more">
+          {shown.length > 0 ? t("unreads.more", { count: more }) : t("shell.unread", { count: more })}
+        </p>
+      )}
     </article>
   );
 }

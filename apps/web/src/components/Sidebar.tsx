@@ -541,7 +541,8 @@ export function Sidebar() {
       ? [item("archived-channels", t("channel.archivedTitle"), "archive", () => setShowArchived(true))]
       : [];
   const createAgentItem = makesAgents(org) ? [item("create-agent", t("shell.createAgent"), "plus", newAgent)] : [];
-  const invites = can(org, "invite_people") && invite !== null;
+  // Not while the workspace is being deleted: nothing new joins it.
+  const invites = can(org, "invite_people") && !org.deletion && invite !== null;
   // With no channel to list, a personal workspace's group conversations show only for who may create one: the section
   // then holds a "New group conversation" row, the way to the first.
   const channelsShown = !personal || listedChannels.length > 0 || newChannelItem.length > 0;

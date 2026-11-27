@@ -65,11 +65,6 @@
   padding: 0;
   list-style: none;
 }
-.unreads__msg {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
 .unreads__msg-text {
   min-width: 0;
   color: var(--ink2);
