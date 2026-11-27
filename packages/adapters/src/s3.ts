@@ -89,12 +89,20 @@ function locate(s: S3Settings, key: string) {
 }
 
 function decodeXml(s: string) {
-  return s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
+  const named: Record<string, string> = { lt: "<", gt: ">", quot: '"', apos: "'", amp: "&" };
+  // Decode once: a literal `&amp;#32;` in a key must stay `&#32;`, not become a space.
+  return s.replace(/&(lt|gt|quot|apos|amp|#\d+|#x[\da-fA-F]+);/g, (match, entity: string) => {
+    if (!entity.startsWith("#")) return named[entity] ?? match;
+    const n = entity.startsWith("#x") ? Number.parseInt(entity.slice(2), 16) : Number(entity.slice(1));
+    const valid =
+      n === 9 ||
+      n === 10 ||
+      n === 13 ||
+      (n >= 0x20 && n <= 0xd7ff) ||
+      (n >= 0xe000 && n <= 0xfffd) ||
+      (n >= 0x10000 && n <= 0x10ffff);
+    return valid ? String.fromCodePoint(n) : match;
+  });
 }
 
 const AUTH_CODES = ["InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidToken", "ExpiredToken"];
