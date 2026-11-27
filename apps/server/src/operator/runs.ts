@@ -392,6 +392,9 @@ const Trace = z
                 }),
                 initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
                 firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
+                firstRequestMs: Count.nullable().openapi({
+                  description: "Turn start to the CLI's first API request: before it, the CLI's own work.",
+                }),
                 firstTokenMs: Count.nullable().openapi({
                   description: "Turn start to the model API's first streamed message (time to first token).",
                 }),
