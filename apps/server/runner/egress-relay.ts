@@ -12,6 +12,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { publicAddress } from "./egress";
 import { pipeSocket } from "./egress-share";
+import type { NetworkConfig } from "./network-state";
 import type { DataSocket } from "./streams";
 
 /**
@@ -217,8 +218,13 @@ export function setEgressProxy(next: { port: number; direct: string[] } | null) 
 /** What `setEgressProxy` holds: the workers' state carries it. */
 export const egressProxyState = () => lentProxy;
 
-/** The runner itself goes out through a proxy its operator set: theirs wins, and agents get nothing from us. */
-export const hasOwnProxy = (env: NodeJS.ProcessEnv = process.env) =>
+/**
+ * The runner itself goes out through a proxy its operator set, or its agents through a network of their own (a
+ * `networkLauncher` namespace, whose 127.0.0.1 never reaches this proxy, or a `networkMark` route root's dial would
+ * skip): theirs wins, and agents get nothing from us.
+ */
+export const hasOwnProxy = (env: NodeJS.ProcessEnv = process.env, network?: NetworkConfig | null) =>
+  Boolean(network?.networkLauncher || network?.networkMark) ||
   ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"].some((k) => env[k]);
 
 /** Never through the proxy: this computer, the private and local ranges, the AI CLIs' services, and `direct`. */

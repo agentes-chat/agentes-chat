@@ -217,6 +217,10 @@ test("what agents get while the computer borrows: proxy settings, the model serv
   );
   expect(hasOwnProxy({ https_proxy: "http://corp:3128" })).toBe(true);
   expect(hasOwnProxy({})).toBe(false);
+  // Agents in a network of their own: a namespace's 127.0.0.1 never reaches the proxy, and a mark's route stays theirs.
+  expect(hasOwnProxy({}, { networkLauncher: "/usr/local/libexec/agent-net" })).toBe(true);
+  expect(hasOwnProxy({}, { networkMark: 0x100 })).toBe(true);
+  expect(hasOwnProxy({}, {})).toBe(false);
 
   // Chrome: through the proxy, names resolved by the lending computer, WebRTC kept off UDP.
   const args = chromeLaunchArgs("130.0.0.0", "/p", "linux", null, false, "about:blank", 0, undefined, true, [

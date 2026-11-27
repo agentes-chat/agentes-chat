@@ -259,8 +259,9 @@ CLIs' model and sign-in services (`NO_PROXY`), never private, local or this comp
 search service you set (Brave, SearXNG). The lending computer resolves each name itself and refuses non-public
 addresses and its own networks, at most 256 connections at once, with no daily cap. With nothing lending online, a
 refusal or a lending computer that doesn't answer, connections go out the usual way (and stay that way for a
-minute before asking again). A runner that runs with a proxy of its own (`HTTPS_PROXY` in its environment) keeps
-it, and its agents get nothing from this.
+minute before asking again). A runner that runs with a proxy of its own (`HTTPS_PROXY` in its environment), or
+whose agents run in a network of their own (a `networkLauncher` or `networkMark`), keeps it, and its agents get
+nothing from this.
 
 **Good to know.**
 

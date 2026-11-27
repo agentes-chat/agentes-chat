@@ -2285,7 +2285,7 @@ export class RunnerDaemon implements RequestObserver {
    */
   private async borrowEgress(on: boolean): Promise<boolean> {
     const server = this.config?.server;
-    if (on && server && !hasOwnProxy()) {
+    if (on && server && !hasOwnProxy(process.env, this.session?.network ?? this.config)) {
       this.egressProxy ??= startEgressProxy({
         home: this.opts.home,
         dial: (streamId, target) =>

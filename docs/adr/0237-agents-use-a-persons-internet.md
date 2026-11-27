@@ -134,9 +134,10 @@ block datacenters, the person's own location).
    task, both modes; system mode's workers get it in `worker.state`) and Claude Code's `--settings` env, which also
    keeps the turn's endpoint direct. Chrome gets `--proxy-server=socks5://…` (names resolved by the lender), the same
    bypass list and WebRTC kept off UDP outside the proxy. No `HTTP_PROXY`: plain http goes direct but for curl via
-   `ALL_PROXY`. Nothing is handed out where the runner itself runs with a proxy of its operator's. Processes started
-   before keep their environment; a proxy turned off stays up and dials direct. The agents' container service never
-   gets it (image pulls through a home connection are no help).
+   `ALL_PROXY`. Nothing is handed out where the runner itself runs with a proxy of its operator's, or where its agents
+   run in a network of their own (`networkLauncher`, `networkMark`). Processes started before keep their environment;
+   a proxy turned off stays up and dials direct. The agents' container service never gets it (image pulls through a
+   home connection are no help).
 5. **Shown.** The lender's row records when it last carried a lent connection, whoever borrowed
    (`machines.egress_lent_at`, at most once a minute per process): "In use now" while that is under five minutes (or
    the managed computer's `egress_via` names it). `egress_via` is written on any borrower's row, so a host or marked
