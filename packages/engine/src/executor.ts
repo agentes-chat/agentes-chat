@@ -464,6 +464,7 @@ import {
 import { type Approval, type InvokeResult, isSensitive, type ToolGateway } from "./tools/gateway";
 import { grantedScopeKeys, grantKey } from "./tools/scopes";
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
+import { closeEmptyTurnThread, openTurnThread } from "./turn-thread";
 import { slowMarks, type TurnTrace, turnRecorder } from "./turn-trace";
 import {
   budgetUsedPercent,
@@ -1643,6 +1644,8 @@ async function executeRunInner(
   // Where it answers. Long work (ADR 0121) moves it to its anchor's thread mid-run, a move a person asked for to
   // another place (`adoptWork`). In a confidential thread that is under the thread's root, whatever asked.
   let replyThreadId = replyThreadOf({ ...run, confidential: sealedAtClaim });
+  /** It answers under its own first message (ADR 0261) since this claim: an empty thread is undone at its end. */
+  let turnThread = false;
   const where = { channelId: run.channelId, threadId: replyThreadId, agentId: run.agentId, runId: run.id };
   const tellPhase = phaseTeller(
     (phase) => void publishChannelEvent(deps.pubsub, { type: "agent.phase", ...where, phase }).catch(() => {}),
@@ -1719,8 +1722,11 @@ async function executeRunInner(
     }
     // The turn's bridge tokens die with it (a resumed turn gets a new one).
     if (brainPlan && brainPlan.kind !== "model") await revokeRunToolTokens(db, { runId: run.id }).catch(() => {});
-    if (status === "done" || status === "failed" || status === "canceled")
+    if (status === "done" || status === "failed" || status === "canceled") {
       await deps.releaseRunPhones?.(run).catch(() => {});
+      // Its one message was its answer: it ends in the main timeline, as it was asked (ADR 0261).
+      if (turnThread && (await closeEmptyTurnThread(db, run.id).catch(() => false))) placeTurn(null);
+    }
     if (status === "done" && standInUsed && !run.background) {
       const line = standInUsed;
       standInUsed = null;
@@ -2049,6 +2055,16 @@ async function executeRunInner(
     replyThreadId = run.threadRootId;
     where.threadId = replyThreadId;
   };
+  /** Where it answers now: under `rootId` (its first message), or back in the main timeline (null). */
+  const placeTurn = (rootId: string | null) => {
+    turnThread = rootId !== null;
+    run.threadRootId = rootId ?? run.triggerMessageId;
+    run.replyInThread = rootId !== null;
+    ctx.threadRootId = run.threadRootId;
+    ctx.replyInThread = run.replyInThread;
+    replyThreadId = rootId;
+    where.threadId = rootId;
+  };
   /** Its long work (ADR 0121): where the report goes home. */
   let workHome: { id: string; homeThreadId: string | null } | null = null;
   const loadWorkHome = async () => {
@@ -2069,13 +2085,21 @@ async function executeRunInner(
    */
   const adoptWork = async () => {
     const [row] = await db
-      .select({ workId: agentRuns.workId, threadRootId: agentRuns.threadRootId, channelId: agentRuns.channelId })
+      .select({
+        workId: agentRuns.workId,
+        threadRootId: agentRuns.threadRootId,
+        channelId: agentRuns.channelId,
+        replyInThread: agentRuns.replyInThread,
+      })
       .from(agentRuns)
       .where(eq(agentRuns.id, run.id));
     if (!row) return;
+    if (row.replyInThread && !run.replyInThread) turnThread = true;
     run.workId = row.workId;
     run.threadRootId = row.threadRootId;
+    run.replyInThread = row.replyInThread;
     ctx.threadRootId = row.threadRootId;
+    ctx.replyInThread = row.replyInThread;
     replyThreadId = replyThreadOf({ ...run, confidential: ctx.confidential });
     where.threadId = replyThreadId;
     if (row.channelId !== ctx.channelId) {
@@ -2737,6 +2761,17 @@ async function executeRunInner(
       },
       createdAt,
     );
+    // Its first words in a channel's main timeline: what it posts after them goes in their thread (ADR 0261).
+    if (
+      !note &&
+      threadId === null &&
+      channelRow?.kind === "channel" &&
+      !ctx.confidential &&
+      !run.workId &&
+      !run.background &&
+      (await openTurnThread(tx, run.id, m.id))
+    )
+      placeTurn(m.id);
     await linkRunChecks(
       tx,
       run.orgId,
