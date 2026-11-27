@@ -9275,6 +9275,12 @@ export interface ComputerDevice {
   arch: string;
   hostname: string;
   cpus: number | null;
+  /** The processor's name (`Apple M4 Pro`); null: an older runner. Absent from an older server. */
+  cpuModel?: string | null;
+  /** Its physical cores (`cpus` counts logical CPUs, threads); null: an older runner, or Windows. Absent: older server. */
+  cores?: number | null;
+  /** The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer. */
+  system?: string | null;
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;

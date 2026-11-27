@@ -17612,6 +17612,12 @@
     "cpus_one": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} cœur",
+    "cores_many": "{{count}} de cœurs",
+    "cores_other": "{{count}} cœurs",
+    "threads_one": "{{count}} thread",
+    "threads_many": "{{count}} de threads",
+    "threads_other": "{{count}} threads",
     "memory": "{{gb}} Go",
     "system": {
       "android": "Android {{version}}",

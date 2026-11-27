@@ -17538,6 +17538,12 @@
     "cpus_one": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} núcleo",
+    "cores_many": "{{count}} de núcleos",
+    "cores_other": "{{count}} núcleos",
+    "threads_one": "{{count}} hilo",
+    "threads_many": "{{count}} de hilos",
+    "threads_other": "{{count}} hilos",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
