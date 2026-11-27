@@ -40,13 +40,22 @@ export interface ProxyCard {
   exit?: { ip: string; country: string | null } | { failed: string };
 }
 
+/** A sentence's punctuation after an address ("…:1080." or "(…:1080)"), cut from its end without a pattern. */
+const TRAILING = new Set([".", ",", ";", ":", ")", "]"]);
+function untrailed(raw: string) {
+  let end = raw.length;
+  while (end > 0 && TRAILING.has(raw[end - 1] as string)) end--;
+  return raw.slice(0, end);
+}
+
 /** Proxy addresses in a text: a SOCKS one, or an HTTP(S) one with a port or a user (a plain link is no proxy). */
 export function proxiesIn(text: string): ProxyAddress[] {
   const out: ProxyAddress[] = [];
-  for (const [raw] of text.matchAll(/\b(?:socks5h?|https?):\/\/[^\s<>"'`]+/gi)) {
-    const p = parseProxyUrl(raw.replace(/[.,;:)\]]+$/, ""));
+  for (const [found] of text.matchAll(/\b(?:socks5h?|https?):\/\/[^\s<>"'`]+/gi)) {
+    const raw = untrailed(found);
+    const p = parseProxyUrl(raw);
     if (!p) continue;
-    if (p.scheme === "socks5" || p.username || /:\d+\/?$/.test(raw.replace(/[.,;:)\]]+$/, ""))) out.push(p);
+    if (p.scheme === "socks5" || p.username || new URL(raw).port !== "") out.push(p);
   }
   return out;
 }

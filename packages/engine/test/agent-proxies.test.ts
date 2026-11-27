@@ -7,6 +7,7 @@ import {
   createToolGateway,
   insertMessage,
   listAgentProxies,
+  proxiesIn,
   proxyForMachine,
   removeAgentProxy,
   saveProxyFromCard,
@@ -16,9 +17,10 @@ import {
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
 
-let f: Fixture;
+let f: Fixture | undefined;
 afterEach(async () => {
   await f?.close();
+  f = undefined;
 });
 
 const PUBLIC = async () => ["203.0.113.10"];
@@ -184,4 +186,14 @@ test("from the chat: the card holds no password; saving reads it from the messag
     input: { host: "other.example.com", why: "x" },
   });
   expect(none.type === "result" && none.output.isError).toBe(true);
+});
+
+test("proxies in a message: SOCKS, or HTTP with a port or a user, a sentence's punctuation left out; a plain link is none", () => {
+  expect(
+    proxiesIn(
+      "use (socks5://ana:pw@a.example.com:1080). or http://b.example.com:3128, not https://c.example.com/page",
+    ).map((p) => `${p.scheme}://${p.host}:${p.port}`),
+  ).toEqual(["socks5://a.example.com:1080", "http://b.example.com:3128"]);
+  // Many closing marks in a row read in one pass.
+  expect(proxiesIn(`socks5://a.example.com:1080${")".repeat(50_000)}x`)).toEqual([]);
 });
