@@ -90,7 +90,10 @@ async function recipientsOf(deps: NotificationDeps, m: MachineRow) {
   return [...new Set([...admins, ...(m.kind === "connected" && m.pairedByUserId ? [m.pairedByUserId] : [])])];
 }
 
-/** Away by plan or by its owner's choice: asleep in standby, moving hosts, removed, or its workspace not at work. */
+/**
+ * Away by plan or by its owner's choice: asleep in standby, away for what we do to it (a move, a restart…: ADR 0256),
+ * removed, or its workspace not at work.
+ */
 async function awayByPlan(db: Database, m: MachineRow, now: Date) {
   if (m.deletedAt || shownOnline(m, now) || shownMoving(m, now)) return true;
   return workRefusal(await orgStanding(db, m.orgId)) !== null;

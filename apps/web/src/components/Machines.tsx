@@ -10,6 +10,7 @@ import {
   useMachines,
   useReduceMachineAccess,
 } from "@agenteschat/client";
+import { maintenanceOf } from "@agenteschat/client/lib/computer-maintenance";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -167,7 +168,7 @@ function MachineRow({
             {machineTitle(m, t("machines.host.label"))}
           </Link>
           {m.kind === "host" && m.name && <Chip icon="computer">{t("machines.host.label")}</Chip>}
-          <MachineChip online={m.online} moving={m.moving} />
+          <MachineChip online={m.online} maintenance={maintenanceOf(m)} />
           <PausedChip paused={m.paused} />
           {!m.execAllowed && <Chip icon="block">{t("machines.execOff")}</Chip>}
         </span>
@@ -934,7 +935,11 @@ export function MachinePage({ machineId }: { machineId: string }) {
             {managed ? <ComputerTitle name={title}>{heading}</ComputerTitle> : heading}
             {/* One status word: paused outranks online. */}
             <span className="row" style={{ gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              {paused ? <PausedChip paused={m.paused} /> : <MachineChip online={m.online} moving={m.moving} />}
+              {paused ? (
+                <PausedChip paused={m.paused} />
+              ) : (
+                <MachineChip online={m.online} maintenance={maintenanceOf(m)} />
+              )}
             </span>
           </span>
           {m.canManage && <MachineMenu machine={m} onRename={() => setRenaming(m)} onRemove={() => setRemoving(m)} />}

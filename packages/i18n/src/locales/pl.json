@@ -17811,10 +17811,48 @@
       "viaBy": "Agenci korzystają z internetu komputera {{name}} ({{person}})",
       "viaHint": "Strony widzą lokalizację tego komputera. Osoba, która go podłączyła, może to wyłączyć na jego stronie."
     },
-    "moving": {
-      "short": "Zmiana serwera",
-      "line": "Przenosi się na nowy serwer… wróci za kilka minut",
-      "named": "{{computer}} przenosi się na nowy serwer… wróci za kilka minut"
+    "maintenance": {
+      "short": {
+        "moving": "Zmiana serwera",
+        "restarting": "Restart",
+        "updating": "Aktualizacja",
+        "converting": "Ulepszanie dysku",
+        "host_maintenance": "Konserwacja",
+        "other": "Konserwacja"
+      },
+      "what": {
+        "moving": "Przenosi się na nowy serwer",
+        "copying": "Kopiowanie na nowy serwer",
+        "restarting": "Restart",
+        "updating": "Aktualizacja oprogramowania",
+        "converting": "Ulepszanie dysku",
+        "host_maintenance": "Jego serwer przechodzi konserwację",
+        "other": "Trwają prace"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "wróci za około {{time}}",
+      "backSoon": "wróci za kilka minut",
+      "late": "trwa to trochę dłużej, niż zakładano",
+      "slower": "w tym czasie może działać wolniej",
+      "slowerFor": "może działać wolniej przez około {{time}}",
+      "why": {
+        "moving": "Przenosimy go na nowy serwer.",
+        "copying": "Kopiujemy jego pliki na nowy serwer, gdy pracuje.",
+        "handover": "Przekazujemy jego ostatnie zmiany na nowy serwer.",
+        "restarting": "Restartujemy go.",
+        "unresponsive": "Przestał odpowiadać, więc automatycznie go zrestartowaliśmy.",
+        "updating": "Aktualizujemy jego oprogramowanie.",
+        "converting": "Przenosimy jego dysk na szybszą pamięć.",
+        "host_maintenance": "Serwer, na którym działa, przechodzi konserwację.",
+        "other": "Wykonujemy przy nim prace."
+      },
+      "since": "Od {{time}}",
+      "expectedBack": "Powrót przewidywany około {{time}}",
+      "expectedDone": "Koniec przewidywany około {{time}}",
+      "meanwhile": "Wiadomości do jego agentów czekają i ruszą same, gdy wróci.",
+      "working": "Jego agenci w tym czasie dalej pracują.",
+      "about": "Co się dzieje"
     },
     "online": "Online",
     "offline": "Offline",
@@ -18045,6 +18083,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
+      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
+      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
+      "asked": "Potrzebne do uruchomienia {{trigger}}",
+      "names": {
+        "app_management": "Zarządzanie aplikacjami",
+        "screen": "Nagrywanie ekranu",
+        "accessibility": "Dostępność",
+        "disk": "Pełny dostęp do dysku",
+        "network": "Sieć lokalna",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automatyzacja"
+      }
+    },
     "leadCloud": "Gdzie pracują twoi agenci: komputer przestrzeni roboczej i urządzenia, które podłączają osoby z zespołu.",
     "lead": "Gdzie pracują twoi agenci: komputery i telefony, które podłączają osoby z zespołu.",
     "connect": "Podłącz urządzenie",
@@ -18695,22 +18749,6 @@
         "once": "Zezwolono raz.",
         "always": "Urządzenie {{deviceName}} jest im teraz udostępnione.",
         "no": "Odmówiono."
-      }
-    },
-    "permission": {
-      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
-      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
-      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
-      "asked": "Potrzebne do uruchomienia {{trigger}}",
-      "names": {
-        "app_management": "Zarządzanie aplikacjami",
-        "screen": "Nagrywanie ekranu",
-        "accessibility": "Dostępność",
-        "disk": "Pełny dostęp do dysku",
-        "network": "Sieć lokalna",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Automatyzacja"
       }
     }
   },

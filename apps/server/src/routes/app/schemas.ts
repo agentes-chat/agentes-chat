@@ -1,4 +1,5 @@
 import { ACCOUNT_KINDS, BRAIN_EFFORTS, BRAIN_SPEEDS } from "@agenteschat/adapters";
+import { schema } from "@agenteschat/db";
 import {
   AGENT_ACTION_KINDS,
   AGENT_STYLES,
@@ -17,6 +18,23 @@ import {
 } from "@agenteschat/engine";
 import { CONTEXT_LIMITS, ENDPOINT_STYLES, MODEL_TIERS, PROVIDER_IDS } from "@agenteschat/providers";
 import { z } from "@hono/zod-openapi";
+
+/** What we do to the workspace's own computer (`shownMaintenance`, ADR 0256), which the apps say instead of offline. */
+export const MaintenanceView = z
+  .object({
+    kind: z.enum(schema.MAINTENANCE_KINDS).openapi({
+      description:
+        "`moving` to another server, `restarting`, `updating` its software, `converting` its disk, `host_maintenance` of the server it runs on. An app that doesn't know a kind says it is being worked on.",
+    }),
+    since: z.string().openapi({ description: "ISO time this began." }),
+    eta: z.string().nullable().openapi({ description: "ISO time it should be back (away) or done; null: unknown." }),
+    detail: z.enum(schema.MAINTENANCE_DETAILS).nullable().openapi({
+      description:
+        "A move's `copying` (it works, maybe slower) or `handover`, a restart's `unresponsive` (it stopped answering, so it was restarted).",
+    }),
+    away: z.boolean().openapi({ description: "Away for it, said instead of offline. False: it works, maybe slower." }),
+  })
+  .openapi("ComputerMaintenance");
 
 /** Who a task or a wiki page is for (ADR 0151): "only me" is a list of one. Administrators always see it. */
 export const AudienceChoice = z

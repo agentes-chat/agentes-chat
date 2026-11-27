@@ -1251,6 +1251,32 @@ describe("A device's page", () => {
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
+  test("a computer we restarted because it stopped answering: restarting, about when it is back, why behind its ⓘ", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+      const list = acmeDevices();
+      const imac = list.devices.find((d) => d.id === IMAC);
+      if (!imac) throw new Error("fixture");
+      const since = new Date(Date.now() - 60_000).toISOString();
+      const maintenance = {
+        kind: "restarting",
+        since,
+        eta: new Date(Date.now() + 2 * 60_000 + 10_000).toISOString(),
+        detail: "unresponsive",
+        away: true,
+      };
+      imac.status = { kind: "moving", since, maintenance };
+      imac.maintenance = maintenance;
+      devices.set(list);
+    });
+    const line = document.querySelector(".dv-statusline__text");
+    expect(line?.textContent).toContain("Restarting… back in about 2 min");
+    expect(document.body.textContent).toContain("Restarting");
+    expect(document.body.textContent).toContain("It stopped answering, so we restarted it automatically.");
+    expect(document.body.textContent).toContain("Messages to its agents wait and go on by themselves when it's back.");
+    expect(line?.textContent).not.toMatch(/offline/i);
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
   test("a computer's typed name in the line stays as typed: its backticks and asterisks mark nothing", async () => {
     const name = "Ana's `iMac` **<b>2</b>**";
     await open(`/org/${ORG_ID}/settings/devices/phones/p-ana-iphone`, (devices) => {

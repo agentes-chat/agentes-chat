@@ -32,7 +32,7 @@ import { fetchesCli } from "../cli-fetch";
 import type { CodeSessionContext } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
-import { pausedMessage } from "../machines";
+import { maintenanceWords, pausedMessage } from "../machines";
 import { missionTurnFor } from "../missions-engine";
 import {
   isRightHand,
@@ -436,7 +436,14 @@ export function computerBrainUnavailable(
     return { code: e.code, message: e.message, ...(e.code === "machine_paused" ? pausedUntil : {}) };
   }
   if (!status?.online) {
-    return { code: "machine_offline", message: `${name}${status ? ` on ${status.name}` : ""} is offline.` };
+    const away = status?.maintenance?.away ? status.maintenance : null;
+    return {
+      code: "machine_offline",
+      message:
+        away && status
+          ? maintenanceWords(status.name, away)
+          : `${name}${status ? ` on ${status.name}` : ""} is offline.`,
+    };
   }
   if (status.paused) {
     return {

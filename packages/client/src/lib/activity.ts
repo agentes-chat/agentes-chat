@@ -3,8 +3,7 @@ import type { AgentStatusLine, ConsultationWait, RunConsultation } from "../api/
 import type { LiveConsult, LiveConsultStatus } from "../realtime/consults";
 import type { LiveRun } from "../realtime/streams";
 import type { TypingWho } from "../realtime/typing";
-import { durationText } from "./computer-queue";
-import { formatLineTime, joinNames } from "./format";
+import { durationText, formatLineTime, joinNames } from "./format";
 import { agentGrammar } from "./grammar";
 import { MAIL_BRANDS } from "./mail";
 

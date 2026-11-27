@@ -1,10 +1,16 @@
 import { expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next, { type TFunction } from "i18next";
-import type { ComputerQueue, ManagedTask, TaskWait } from "../src/api/types";
+import type { ComputerMaintenance, ComputerQueue, ManagedTask, TaskWait } from "../src/api/types";
 import { type AgentComputerFacts, entryLine, entryPortrait, entryState } from "../src/lib/agent-computer";
+import {
+  maintenanceDetails,
+  maintenanceLine,
+  maintenanceNamed,
+  maintenanceShort,
+} from "../src/lib/computer-maintenance";
 import { queueStatusText, queueView } from "../src/lib/computer-queue";
-import { statusLook, statusPill, statusSentence } from "../src/lib/devices";
+import { statusDetail, statusLook, statusPill, statusSentence } from "../src/lib/devices";
 import { waitCardState } from "../src/lib/machine-outages";
 import { taskWaitWords } from "../src/lib/task-manager";
 
@@ -33,7 +39,7 @@ const line = (moving: boolean) =>
   entryLine(t, entryState(facts(moving)), { ...words, person: () => "", step: null, emailPromised: false });
 
 test("the agent's computer entry: moving, dimmed, where it would say it isn't answering", () => {
-  expect(entryState(facts(true))).toEqual({ kind: "moving" });
+  expect(entryState(facts(true))).toMatchObject({ kind: "moving", maintenance: { kind: "moving", away: true } });
   expect(line(true)).toBe(MOVING);
   expect(entryPortrait(entryState(facts(true)), null)).toBe("paused");
   expect(entryState(facts(false))).toEqual({ kind: "offline" });
@@ -77,9 +83,71 @@ test("the chat's waiting card and the computer's line know it moves", () => {
   };
   expect(waitCardState({ machineId: "m1", agentId: "a1" }, [outage], "a1")).toMatchObject({
     kind: "waiting",
-    moving: true,
+    maintenance: { kind: "moving", away: true },
   });
   const queue: ComputerQueue = { machineId: "m1", name: away.name, moving: true, working: [], waiting: [] };
   expect(queueStatusText(t, queueView(queue, "me"), queue)).toBe(MOVING);
   expect(queueStatusText(t, queueView({ ...queue, moving: false }, "me"), { moving: false })).not.toBe(MOVING);
+});
+
+/** What we do to it (ADR 0256): each kind in its own words, about when it is back, and the tip's details. */
+const NOW = new Date("2026-11-20T14:10:00.000Z");
+const restart: ComputerMaintenance = {
+  kind: "restarting",
+  since: "2026-11-20T14:06:00.000Z",
+  eta: "2026-11-20T14:12:00.000Z",
+  detail: "unresponsive",
+  away: true,
+};
+
+test("a restart says so with about when it is back, everywhere it would say offline", () => {
+  expect(maintenanceShort(t, restart)).toBe("Restarting");
+  expect(maintenanceLine(t, restart, NOW)).toBe("Restarting… back in about 2 min");
+  expect(maintenanceNamed(t, restart, "Acme's computer", NOW)).toBe("Acme's computer: Restarting… back in about 2 min");
+  expect(maintenanceDetails(t, "en", restart, NOW)).toEqual([
+    "It stopped answering, so we restarted it automatically.",
+    "Since 2:06 PM",
+    "Expected back around 2:12 PM",
+    "Messages to its agents wait and go on by themselves when it's back.",
+  ]);
+  // Past its time: never a time already gone.
+  const late = new Date("2026-11-20T14:15:00.000Z");
+  expect(maintenanceLine(t, restart, late)).toBe("Restarting… taking a little longer than expected");
+  expect(maintenanceDetails(t, "en", restart, late)).not.toContain("Expected back around 2:12 PM");
+
+  const s = { kind: "moving", since: restart.since, maintenance: restart } as const;
+  expect(statusPill(t, s)).toBe("Restarting");
+  expect(statusDetail(t, "en", s, { now: NOW })).toBe("back in about 2 min");
+  expect(statusSentence(t, "en", s, { now: NOW })).toBe("Restarting… back in about 2 min");
+  const f = { ...facts(false), machine: { ...away, moving: true, maintenance: restart } };
+  expect(entryLine(t, entryState(f), { ...words, person: () => "", step: null, emailPromised: false, now: NOW })).toBe(
+    "Restarting… back in about 2 min",
+  );
+});
+
+test("a move's copy while it works: it may be slower, never away; other kinds and unknown ones have words", () => {
+  const copying: ComputerMaintenance = {
+    kind: "moving",
+    since: restart.since,
+    eta: "2026-11-20T14:50:00.000Z",
+    detail: "copying",
+    away: false,
+  };
+  expect(maintenanceLine(t, copying, NOW)).toBe("Copying to a new server… it may be slower for about 40 min");
+  expect(statusDetail(t, "en", { kind: "ready" }, { now: NOW, maintenance: copying })).toBe("Moving servers");
+  expect(statusSentence(t, "en", { kind: "ready" }, { now: NOW, maintenance: copying })).toBe(
+    "Copying to a new server… it may be slower for about 40 min",
+  );
+  expect(maintenanceDetails(t, "en", copying, NOW).at(-1)).toBe("Its agents keep working meanwhile.");
+  for (const [kind, short] of [
+    ["updating", "Updating"],
+    ["converting", "Upgrading disk"],
+    ["host_maintenance", "Maintenance"],
+    ["a_kind_from_later", "Maintenance"],
+  ] as const) {
+    expect(maintenanceShort(t, { ...restart, kind, detail: null })).toBe(short);
+  }
+  expect(maintenanceLine(t, { ...restart, kind: "updating", eta: null, detail: null }, NOW)).toBe(
+    "Updating its software… back in a few minutes",
+  );
 });
