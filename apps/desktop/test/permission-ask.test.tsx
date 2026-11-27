@@ -64,13 +64,18 @@ test("Full Disk Access an agent's command waits on: what, why, who asked, its Se
     await act(async () => runner?.setPermissions([need("disk", "ls ~/Desktop")]));
     await act(async () => host.showLayer({ screen: "permissionAsk" }));
     await until(() => el.querySelector("h1")?.textContent === "agentes.chat needs Full Disk Access");
-    const sheet = el.querySelector(".dk-fr__sheet") as HTMLElement;
-    expect([...sheet.querySelectorAll("p")].map((p) => p.textContent)).toEqual([
+    // In the sheet frame, over the site there (a Mac).
+    const sheet = el.querySelector('.dk-shf[data-mode="sheet"] [role="dialog"] [data-screen="permissionAsk"]');
+    expect(sheet).toBeTruthy();
+    expect([...(sheet?.querySelectorAll("p") ?? [])].map((p) => p.textContent)).toEqual([
       "Agents need it to open your files without macOS asking for each folder.",
       "Asked by Dev to run ls ~/Desktop",
       "In Settings, turn on agentes.chat in the list, or add it with +.",
-      "When macOS asks to Quit & Reopen, choose it. agentes.chat opens again right here.",
     ]);
+    // What macOS asks once it is on, beside the buttons.
+    expect(sheet?.querySelector(".dk-sh__help")?.textContent).toBe(
+      "When macOS asks to Quit & Reopen, choose it. agentes.chat opens again right here.",
+    );
     // macOS says whether it is on: no "I allowed it" to press.
     expect(button(el, "I allowed it")).toBeUndefined();
     await act(async () => button(el, "Open Settings")?.click());
@@ -88,8 +93,9 @@ test("Automation, which macOS never tells: its pane, and I allowed it ends the w
     await act(async () => runner?.setPermissions([need("automation", "osascript -e 'tell app \"Finder\" to quit'")]));
     await act(async () => host.showLayer({ screen: "permissionAsk" }));
     await until(() => el.querySelector("h1")?.textContent === "agentes.chat needs Automation");
-    expect(el.textContent).toContain("Agents need it to control other apps on this Mac.");
+    expect(el.querySelector(".dk-sh__lead")?.textContent).toBe("Agents need it to control other apps on this Mac.");
     expect(el.textContent).not.toContain("Quit & Reopen");
+    expect(el.querySelector(".dk-sh__help")).toBeNull();
     await act(async () => button(el, "Open Settings")?.click());
     expect(host.mac.panes).toEqual(["automation"]);
     await act(async () => button(el, "I allowed it")?.click());

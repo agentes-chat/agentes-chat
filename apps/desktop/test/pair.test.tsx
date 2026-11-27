@@ -14,12 +14,12 @@ import type { ServerWorkspaces } from "../src/control/server";
 import { DesktopStore, pairedHomes, type Snapshot } from "../src/control/store";
 import { FAKE_LINKS, FAKE_SERVER } from "../src/dev/fake-runner";
 import { writePref } from "../src/hooks";
-import { createFakeHost, type FakeHost } from "../src/host/fake";
+import { createFakeHost, type FakeHost, type Scenario } from "../src/host/fake";
 import type { LayerRoute } from "../src/host/types";
 import { createDesktopI18n } from "../src/i18n";
+import { Settings } from "../src/layer/settings/Settings";
 import { ToastProvider } from "../src/ui/Toast";
 import { WindowView } from "../src/WindowView";
-import { General } from "../src/windows/prefs/General";
 import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -29,9 +29,16 @@ async function mount(
   route: LayerRoute,
   view: ReactNode,
   check: (el: HTMLElement, host: FakeHost, store: DesktopStore) => Promise<void>,
-  options: { link?: string; macReady?: boolean; host?: (host: FakeHost) => void } = {},
+  options: {
+    link?: string;
+    macReady?: boolean;
+    scenario?: Scenario;
+    tools?: "claude" | "none";
+    host?: (host: FakeHost) => void;
+  } = {},
 ) {
-  const host = createFakeHost("app", "selfhost", { link: options.link, macReady: options.macReady, route });
+  const { link, macReady, tools } = options;
+  const host = createFakeHost("app", options.scenario ?? "selfhost", { link, macReady, tools, route });
   options.host?.(host);
   await host.setAutostart(false);
   const store = new DesktopStore(host, {});
@@ -152,126 +159,179 @@ describe("pairing from the app", () => {
     expect(nextOffer(list, signedOut, { loaded: false, homes: [] }, [])).toBeNull();
   });
 
-  test("the card after sign-in: what agents can do, prefilled open; Allow pairs with those and always turns on open at login", () => {
+  test("Get this Mac ready: what agents get here in four lines, no switch and no checkbox; it pairs, opens at login and goes on to Prepare", () => {
     const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
     return mount({ screen: "pairOffer", target }, layer, async (el, host, store) => {
-      await until(() => el.querySelector("h1")?.textContent === "Let Estúdio Norte's agents use this Mac?");
-      // A sheet over the site there (a Mac).
+      await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready for Estúdio Norte's agents?");
+      // A sheet over the site there (a Mac), in the sheet frame.
       expect(host.layer.mode).toBe("sheet");
+      expect(el.querySelector('.dk-shf[data-mode="sheet"] [role="dialog"] [data-screen="ready"]')).toBeTruthy();
+      // A Mac with permissions still off: the first of two steps.
+      await until(() => el.querySelector(".dk-sh__step")?.textContent === "This Mac · 1 of 2");
       // A server this Mac only opens: lending it is optional.
-      expect(el.textContent).toContain(
+      expect(el.querySelector(".dk-sh__lead")?.textContent).toBe(
         "Only if you want this Mac to do agents' work too. With Not now you still use Estúdio Norte here as usual.",
       );
-      // Who can use it comes once it's in, not before Allow.
-      expect(rowOf(el, "Who can use it")).toBeUndefined();
-      expect(el.querySelector('[role="combobox"]')).toBeNull();
-      // Open at login comes with Allow, no checkbox to leave it off (ADR 0256 §7).
+      // The four lines, the coding tools found here by name.
+      await until(() => el.textContent?.includes("Claude Code and Codex, already here."));
+      expect([...el.querySelectorAll(".dk-sh__line")].map((li) => li.textContent)).toEqual([
+        "The agents' own browserWithout your logins and passwords.",
+        "Commands and coding toolsClaude Code and Codex, already here. They run as your user.",
+        "Your folders only with your OKEach request shows in the chat and in the menu bar.",
+        "Opens by itself when the Mac startsSo agents come back without you having to remember.",
+      ]);
+      expect(el.querySelector(".dk-sh__help")?.textContent).toBe(
+        "Change it any time in Settings\u00a0›\u00a0This Mac.",
+      );
+      // Nothing to switch, and open at login comes with it (ADR 0256 §7).
+      expect(el.querySelector('[role="switch"]')).toBeNull();
       expect(el.querySelector('[role="checkbox"]')).toBeNull();
-      expect(el.textContent).not.toContain("open agentes.chat at login");
-      expect(el.textContent).toContain("What agents can do here");
-      expect(el.textContent).toContain("No folders of yours yet. Add them later in Preferences\u00a0›\u00a0Folders.");
-      // Commands on; Claude Code, Codex and the browser as the other workspaces here have them.
-      await until(() => rowOf(el, "Codex"));
-      expect(switches(el)).toEqual({ Commands: "true", "Claude Code": "true", Codex: "false", Browser: "false" });
-      expect(rowOf(el, "Commands")?.textContent).toContain("Commands can reach the rest of this Mac");
+      // No card inside the card.
+      expect(el.querySelector(".dk-sh .dk-card")).toBeNull();
       expect(button(el, "Not now")).toBeTruthy();
-      expect(document.activeElement).not.toBe(button(el, "Allow"));
+      expect(document.activeElement).not.toBe(button(el, "Get it ready"));
 
-      await act(async () => toggle(el, "Commands"));
-      await act(async () => toggle(el, "Browser"));
-      expect(switches(el)).toMatchObject({ Commands: "false", Browser: "true" });
-      await act(async () => button(el, "Allow")?.click());
-      // A Mac with permissions not on yet: the same window prepares it.
-      await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready");
-      expect(el.textContent).toContain("Connected to Estúdio Norte. Allow these now so its agents never stop to ask.");
+      await act(async () => button(el, "Get it ready")?.click());
+      // Paired with the main window's session, then Prepare (a route of its own) for this workspace.
+      await until(() => host.layer.route?.screen === "prepare");
+      expect(host.layer.route).toEqual({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
       expect(await host.autostart()).toBe(true);
       expect(host.site.calls.filter((c) => c.method === "POST").map((c) => c.path)).toEqual([
         expect.stringMatching(/^\/api\/app\/organizations\/o-norte\/machines\/device\/[A-Z0-9]{6}\/confirm$/),
       ]);
-      // It joins as the person's alone; one switch over the permissions shares it, saved at once.
+      // It joins as the person's alone (Settings shares it), with the tools open as the other workspaces have them.
       expect(host.site.calls.some((c) => c.method === "PATCH")).toBe(false);
-      const share = rowOf(el, "Let the whole workspace use it");
-      expect(share?.querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("false");
-      expect(share?.textContent).toContain("Only you for now");
-      await act(async () => toggle(el, "Let the whole workspace use it"));
-      await until(() => host.site.calls.some((c) => c.method === "PATCH"));
-      expect(host.site.calls.filter((c) => c.method === "PATCH")).toEqual([
-        {
-          method: "PATCH",
-          path: expect.stringMatching(/^\/api\/app\/organizations\/o-norte\/devices\/computers\/[^/]+$/),
-          body: { audience: { mode: "everyone", userIds: [], roleIds: [] } },
-        },
-      ]);
-      await until(() =>
-        rowOf(el, "Let the whole workspace use it")?.textContent?.includes("Everyone in Estúdio Norte"),
-      );
       const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
-      await until(() => norte()?.access?.tools.browser === true);
-      expect(norte()?.access?.tools).toMatchObject({ claude: true, codex: false, commands: false, browser: true });
-
-      await act(async () => button(el, "Continue")?.click());
-      // The layer steps aside: the site is there.
-      await until(() => host.layer.route === null);
-      expect(host.mac.setup).toBeNull();
+      await until(() => {
+        const tools = norte()?.access?.tools;
+        return tools?.claude === true && tools.codex === false && tools.commands === true && tools.browser === false;
+      });
+      await until(() => el.querySelector("h1")?.textContent === "macOS asks three things, once");
     });
   });
 
-  test("Prepare this Mac: notifications and Screen Recording asked once, Full Disk Access in Settings, no Local Network; kept for Quit & Reopen", () =>
+  test("Get this PC ready: the same card on the app's background, no menu bar, no second step", () => {
+    const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
+    return mount(
+      { screen: "pairOffer", target },
+      layer,
+      async (el, host) => {
+        await until(() => el.querySelector("h1")?.textContent === "Get this PC ready for Estúdio Norte's agents?");
+        // Nothing is drawn over the site on Windows: the same card on the app's background.
+        expect(host.layer.mode).toBe("full");
+        expect(el.querySelector('.dk-shf[data-mode="full"] [role="dialog"]')).toBeTruthy();
+        expect(el.querySelector(".dk-shf__scrim")).toBeNull();
+        expect(el.querySelector(".dk-sh__step")?.textContent).toBe("This PC");
+        expect(el.textContent).toContain("Each request shows in the chat and on the app's icon.");
+        expect(el.textContent).not.toContain("menu bar");
+        // No coding tool found here yet: only how they run.
+        expect(el.textContent).toContain("Commands and coding toolsThey run as your user.");
+      },
+      { scenario: "windows" },
+    );
+  });
+
+  test("Get this Mac ready names only the coding tool found here", () => {
+    const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
+    return mount(
+      { screen: "pairOffer", target },
+      layer,
+      async (el) => {
+        await until(() => el.textContent?.includes("Claude Code, already here. They run as your user."));
+        expect(el.textContent).not.toContain("Codex");
+      },
+      { tools: "claude" },
+    );
+  });
+
+  test("a Mac with every permission on: Get it ready pairs and the sheet steps aside, no Prepare", () => {
+    const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
+    return mount(
+      { screen: "pairOffer", target },
+      layer,
+      async (el, host, store) => {
+        await until(() => button(el, "Get it ready"));
+        expect(el.querySelector(".dk-sh__step")?.textContent).toBe("This Mac");
+        await act(async () => button(el, "Get it ready")?.click());
+        await until(() => host.layer.route === null);
+        expect(host.routes.some((r) => r.screen === "prepare")).toBe(false);
+        await until(() => pairedWith(store, "o-norte"));
+      },
+      { macReady: true },
+    );
+  });
+
+  test("Prepare: three rows between hairlines, read live; notifications and Screen Recording asked once, then System Settings with the wait under the row", () =>
     mount(SETTINGS, layer, async (el, host) => {
       await act(async () => host.showLayer({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER }));
-      await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready");
+      await until(() => el.querySelector("h1")?.textContent === "macOS asks three things, once");
+      expect(el.querySelector(".dk-sh__step")?.textContent).toBe("This Mac · 2 of 2");
+      expect(el.querySelector(".dk-sh__lead")?.textContent).toBe(
+        "Without them, agents stop in the middle of their work to ask.",
+      );
       // Kept from the start: macOS quitting the app now brings it back here.
       await until(() => host.mac.setup?.step === "prepare");
       expect(host.mac.setup).toMatchObject({ step: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
       const end = (title: string) => rowOf(el, title)?.querySelector(".dk-crow__end")?.textContent;
+      const waits = (title: string) => rowOf(el, title)?.querySelector(".dk-sh__wait")?.textContent ?? null;
       await until(() => end("Screen Recording") === "Allow");
-      // Notifications first, then Screen Recording and Full Disk Access; Local Network is asked only when an Android
-      // phone pairs over Wi-Fi (ADR 0256 §7).
-      const asked = ["Notifications", "Screen Recording", "Full Disk Access"];
-      const titles = [...el.querySelectorAll(".dk-crow__title")].map((n) => n.textContent ?? "");
-      expect(titles.filter((title) => asked.includes(title))).toEqual(asked);
-      expect(rowOf(el, "Local network (phones over Wi-Fi)")).toBeUndefined();
-      expect(el.textContent).not.toContain("Not asked yet");
-      expect(rowOf(el, "Screen Recording")?.querySelector("small")?.textContent).toBe(
-        "Lets agents take screenshots of this Mac.",
-      );
-      expect(rowOf(el, "Screen Recording")?.textContent).toContain(
-        "macOS asks again about once a month. Choose Allow.",
-      );
-      // No prompt asks for Full Disk Access: its button is always System Settings, and the row says what to do there.
-      expect(end("Full Disk Access")).toBe("Open Settings");
-      expect(rowOf(el, "Full Disk Access")?.textContent).toContain(
-        "In Settings, turn on agentes.chat in the list, or add it with +.",
-      );
-      expect(el.textContent).not.toContain("When macOS asks to Quit & Reopen");
-
-      // Notifications: the system's prompt once, read back at once, and never a Quit & Reopen.
+      // Rows, not a card in the card; Local Network is asked only when an Android phone pairs over Wi-Fi.
+      expect(el.querySelector(".dk-sh .dk-card")).toBeNull();
+      expect(el.querySelectorAll(".dk-sh__rows > .dk-crow").length).toBe(3);
+      expect([...el.querySelectorAll(".dk-crow__title")].map((n) => n.textContent)).toEqual([
+        "Notifications",
+        "Screen Recording",
+        "Full Disk Access",
+      ]);
+      expect([...el.querySelectorAll(".dk-crow__text small")].map((n) => n.textContent)).toEqual([
+        "When an agent needs you.",
+        "So agents can see what they do on the screen.",
+        "To open the folders you allow without macOS asking again.",
+      ]);
       expect(end("Notifications")).toBe("Allow");
+      expect(end("Full Disk Access")).toBe("Allow");
+      expect(el.querySelector(".dk-sh__wait")).toBeNull();
+      expect(el.querySelector(".dk-sh__help")?.textContent).toBe(
+        "If an update turns one off, we'll tell you right away.",
+      );
+      expect(button(el, "Do it later")).toBeTruthy();
+
+      // Notifications: the system's prompt once, read back at once; nothing to wait on in System Settings.
       await act(async () => button(rowOf(el, "Notifications"), "Allow")?.click());
       await until(() => end("Notifications") === "On");
       expect(host.mac.notifyAsks).toBe(1);
       expect(host.mac.panes).toEqual([]);
-      expect(el.textContent).not.toContain("When macOS asks to Quit & Reopen");
+      expect(waits("Notifications")).toBeNull();
 
-      // Screen Recording applies once the app opens again: asked, it says what macOS will ask, and its way out.
+      // Screen Recording: the system's prompt first (it sends the person to System Settings), and the row waits.
       await act(async () => button(rowOf(el, "Screen Recording"), "Allow")?.click());
-      await until(() => end("Screen Recording") === "Open Settings");
-      expect(el.textContent).toContain(
-        "When macOS asks to Quit & Reopen, choose it. agentes.chat opens again right here.",
+      await until(() => waits("Screen Recording") !== null);
+      expect(waits("Screen Recording")).toBe(
+        "In the System Settings that opened, turn on agentes.chat in the list. We'll notice by ourselves." +
+          "When macOS asks to Quit & Reopen, choose it. agentes.chat opens again right here.",
       );
-      await act(async () => button(rowOf(el, "Screen Recording"), "Open Settings")?.click());
+      expect(host.mac.panes).toEqual([]);
+      // Asked once: Allow now opens its pane.
+      await act(async () => button(rowOf(el, "Screen Recording"), "Allow")?.click());
       expect(host.mac.panes).toEqual(["screen"]);
 
-      await act(async () => button(rowOf(el, "Full Disk Access"), "Open Settings")?.click());
+      // Full Disk Access has no prompt: its pane, and the wait moves under it.
+      await act(async () => button(rowOf(el, "Full Disk Access"), "Allow")?.click());
       expect(host.mac.panes).toEqual(["screen", "disk"]);
-      // Turned on there, it reads On once the window comes back to the front.
+      await until(() => waits("Full Disk Access") !== null);
+      expect(waits("Screen Recording")).toBeNull();
+      // Turned on there, it reads On once the window comes back to the front; the wait goes back to the one left.
       host.mac.disk = true;
       await act(async () => window.dispatchEvent(new Event("focus")));
       await until(() => end("Full Disk Access") === "On");
-      expect(rowOf(el, "Full Disk Access")?.textContent).not.toContain("In Settings");
+      expect(waits("Full Disk Access")).toBeNull();
+      await until(() => waits("Screen Recording") !== null);
       // Read live while one is still off: turned on in System Settings with the window behind it, it reads On.
       host.mac.screen = true;
       await until(() => end("Screen Recording") === "On", 8000);
+      expect(el.querySelector(".dk-sh__wait")).toBeNull();
+      // All on: Continue alone.
+      expect(button(el, "Do it later")).toBeUndefined();
       expect(host.mac.networkAsks).toBe(0);
 
       await act(async () => button(el, "Continue")?.click());
@@ -279,23 +339,28 @@ describe("pairing from the app", () => {
       expect(host.mac.setup).toBeNull();
     }));
 
-  test("Prepare this Mac: notifications turned off once go to System Settings, never a second prompt", () =>
+  test("Prepare: notifications turned off once go to System Settings, never a second prompt", () =>
     mount(
       SETTINGS,
       layer,
       async (el, host) => {
         await act(async () => host.showLayer({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER }));
         const end = (title: string) => rowOf(el, title)?.querySelector(".dk-crow__end")?.textContent;
-        await until(() => end("Notifications") === "Open Settings");
-        await act(async () => button(rowOf(el, "Notifications"), "Open Settings")?.click());
+        await until(() => end("Notifications") === "Allow");
+        await act(async () => button(rowOf(el, "Notifications"), "Allow")?.click());
         expect(host.mac.panes).toEqual(["notifications"]);
         expect(host.mac.notifyAsks).toBe(0);
+        await until(() => rowOf(el, "Notifications")?.querySelector(".dk-sh__wait"));
+        expect(rowOf(el, "Notifications")?.querySelector(".dk-sh__wait")?.textContent).toBe(
+          "In the System Settings that opened, allow notifications for agentes.chat. We'll notice by ourselves.",
+        );
         // Turned on there: read back live.
         host.mac.notifications = "granted";
         await act(async () => window.dispatchEvent(new Event("focus")));
         await until(() => end("Notifications") === "On");
-        await act(async () => button(el, "Skip for now")?.click());
+        await act(async () => button(el, "Do it later")?.click());
         await until(() => host.layer.route === null);
+        expect(host.mac.setup).toBeNull();
       },
       {
         host: (host) => {
@@ -304,15 +369,18 @@ describe("pairing from the app", () => {
       },
     ));
 
-  test("opened again by macOS: the Prepare step comes back with fresh states and says it took effect", () =>
+  test("opened again by macOS: Prepare comes back with fresh states and says it took effect", () =>
     mount(
       { screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER, resumed: true },
       layer,
       async (el, host) => {
-        await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready");
-        expect(el.textContent).toContain("Connected to Estúdio Norte.");
-        await until(() => rowOf(el, "Screen Recording")?.querySelector(".ac-chip")?.textContent === "On");
-        expect(el.textContent).toContain("agentes.chat opened again with your changes.");
+        await until(() => el.querySelector("h1")?.textContent === "macOS asks three things, once");
+        const end = (title: string) => rowOf(el, title)?.querySelector(".dk-crow__end")?.textContent;
+        await until(() => end("Screen Recording") === "On");
+        expect(rowOf(el, "Screen Recording")?.querySelector(".dk-sh__on")).toBeTruthy();
+        await until(
+          () => el.querySelector(".dk-sh__help")?.textContent === "agentes.chat opened again with your changes.",
+        );
         expect(el.textContent).not.toContain("When macOS asks to Quit & Reopen");
         await act(async () => button(el, "Continue")?.click());
         expect(host.mac.setup).toBeNull();
@@ -325,37 +393,42 @@ describe("pairing from the app", () => {
       },
     ));
 
-  test("a Mac with every permission on: pairing ends on Connected, no Prepare step", () => {
-    const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
-    return mount(
-      { screen: "pairOffer", target },
+  test("Prepare after a quit with Full Disk Access asked and still off: the wait is under it again", () =>
+    mount(
+      { screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER, resumed: true },
       layer,
       async (el) => {
-        await until(() => button(el, "Allow"));
-        writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen"] });
-        await act(async () => button(el, "Allow")?.click());
-        await until(() => el.querySelector("h1")?.textContent === "Connected to Estúdio Norte");
-        expect(rowOf(el, "Let the whole workspace use it")?.querySelector('[role="switch"]')).toBeTruthy();
+        await until(() => rowOf(el, "Full Disk Access")?.querySelector(".dk-sh__wait"));
+        expect(el.querySelectorAll(".dk-sh__wait").length).toBe(1);
+        // Not taken effect yet: the usual help line.
+        expect(el.querySelector(".dk-sh__help")?.textContent).toBe(
+          "If an update turns one off, we'll tell you right away.",
+        );
       },
-      { macReady: true },
-    );
-  });
+      {
+        host: (host) => {
+          host.mac.screen = true;
+          writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen", "disk"] });
+        },
+      },
+    ));
 
-  test("a pair link: who asked, from where, this computer; Connect waits for its maker, then it's in", () =>
+  test("a pair link: who asked, from where, this computer, what agents can do; Connect waits for its maker, then it's in", () =>
     mount(
-      { screen: "link" },
+      { screen: "pairLink", server: FAKE_SERVER, code: FAKE_LINKS.live },
       layer,
       async (el, host, store) => {
         await until(() => el.querySelector("h1")?.textContent === "Connect this Mac to Estúdio Norte?");
+        expect(el.querySelector('[role="dialog"] [data-screen="pairLink"]')).toBeTruthy();
         expect(rowOf(el, "Asked by")?.textContent).toContain("Sam Rivera");
         expect(rowOf(el, "From")?.textContent).toContain("agentes.tail1234.ts.net");
         expect(rowOf(el, "This Mac")?.textContent).toContain("Sam's MacBook Pro");
-        expect(el.textContent).toContain("If you didn't ask for this, choose Not now.");
+        expect(el.querySelector(".dk-sh__lead")?.textContent).toBe("If you didn't ask for this, choose Not now.");
         expect(document.activeElement).not.toBe(button(el, "Connect"));
-        await until(() => rowOf(el, "Commands"));
+        await until(() => rowOf(el, "Codex"));
         expect(switches(el)).toMatchObject({ Commands: "true", Browser: "false" });
+        expect(rowOf(el, "Commands")?.textContent).toContain("Commands can reach the rest of this Mac");
         await act(async () => toggle(el, "Browser"));
-        writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen"] });
 
         await act(async () => button(el, "Connect")?.click());
         await until(() => el.textContent?.includes("Waiting for Sam Rivera to let it in…"));
@@ -370,12 +443,21 @@ describe("pairing from the app", () => {
         await act(async () => button(el, "Add folders")?.click());
         expect(host.layer.route).toEqual({ screen: "settings", section: "folders" });
       },
-      { link: pairLink(FAKE_LINKS.live), macReady: true },
+      { macReady: true },
     ));
+
+  test("a pair link on a Mac with a permission off: once it's in, Prepare follows as its own route", () =>
+    mount({ screen: "pairLink", server: FAKE_SERVER, code: FAKE_LINKS.live }, layer, async (el, host) => {
+      await until(() => button(el, "Connect"));
+      await act(async () => button(el, "Connect")?.click());
+      await until(() => host.layer.route?.screen === "prepare");
+      expect(host.layer.route).toEqual({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
+      await until(() => el.querySelector("h1")?.textContent === "macOS asks three things, once");
+    }));
 
   test("a pair link cancelled while waiting: the runner stops asking and nothing joins", () =>
     mount(
-      { screen: "link" },
+      { screen: "pairLink", server: FAKE_SERVER, code: FAKE_LINKS.live },
       layer,
       async (el, host, store) => {
         await until(() => button(el, "Connect"));
@@ -388,10 +470,10 @@ describe("pairing from the app", () => {
         expect([...host.runners.values()].some((r) => r.pendingCode)).toBe(false);
         expect(await host.autostart()).toBe(false);
       },
-      { link: pairLink(FAKE_LINKS.live), macReady: true },
+      { macReady: true },
     ));
 
-  test("a pair link whose maker says no, and one that expired", async () => {
+  test("a pair link whose maker says no, one that expired, and one whose server doesn't answer", async () => {
     await mount({ screen: "pairLink", server: FAKE_SERVER, code: FAKE_LINKS.denied }, layer, async (el, host) => {
       await until(() => button(el, "Connect"));
       await act(async () => button(el, "Connect")?.click());
@@ -401,46 +483,53 @@ describe("pairing from the app", () => {
       // Open at login only comes with a computer that joined.
       expect(await host.autostart()).toBe(false);
     });
-    await mount(
-      { screen: "link" },
-      layer,
-      async (el, host) => {
-        await until(() => el.textContent?.includes("This link expired. Make a new one in Devices."));
-        expect(button(el, "Connect")).toBeUndefined();
-        // Devices on the server that made the link, where a new one is made.
-        const opened: string[] = [];
-        host.openExternal = async (url) => void opened.push(url);
-        await act(async () => button(el, "Open Devices")?.click());
-        expect(opened).toEqual([expect.stringMatching(/\/\?open=devices$/)]);
-        expect(host.runners.size).toBe(2);
-        // Closed with a server open, the layer steps aside; opened again ("Add a server…"), it starts over.
-        await act(async () => button(el, "Close")?.click());
-        await until(() => host.layer.route === null);
-        await act(async () => host.showLayer({ screen: "firstRun", mode: "add" }));
-        await until(() => el.querySelector('[data-screen="choose"]'));
-      },
-      { link: pairLink("WXYZWXYZ") },
-    );
+    await mount({ screen: "pairLink", server: FAKE_SERVER, code: "WXYZWXYZ" }, layer, async (el, host) => {
+      await until(() => el.textContent?.includes("This link expired. Make a new one in Devices."));
+      expect(el.querySelector("h1")?.textContent).toContain("agentes.tail1234.ts.net");
+      expect(button(el, "Connect")).toBeUndefined();
+      // Devices on the server that made the link, where a new one is made.
+      const opened: string[] = [];
+      host.openExternal = async (url) => void opened.push(url);
+      await act(async () => button(el, "Open Devices")?.click());
+      expect(opened).toEqual([`${FAKE_SERVER}/?open=devices`]);
+      expect(host.runners.size).toBe(2);
+      // Closed with a server open, the layer steps aside.
+      await act(async () => button(el, "Close")?.click());
+      await until(() => host.layer.route === null);
+    });
+    const away = "https://chat.example.com";
+    await mount({ screen: "pairLink", server: away, code: FAKE_LINKS.live }, layer, async (el) => {
+      await until(() => button(el, "Try again"));
+      expect(el.textContent).toContain("chat.example.com");
+      expect(button(el, "Cancel")).toBeTruthy();
+    });
   });
 
-  test("Preferences › This Mac: the permissions to turn on again; asking for the screen keeps Preferences to reopen", async () => {
-    await mount(SETTINGS, <General />, async (el, host) => {
-      await until(
-        () => el.textContent?.includes("Permissions") && rowOf(el, "Screen Recording")?.querySelector("button"),
+  test("Settings › This Mac › Overview: the permissions' row turns each on again; asking for the screen keeps Settings to reopen", async () => {
+    const perms = (el: HTMLElement) => rowOf(el, "macOS permissions");
+    await mount(SETTINGS, <Settings />, async (el, host) => {
+      await until(() => button(perms(el), "Allow"));
+      expect(perms(el)?.querySelector("small")?.textContent).toBe(
+        "Still off: Notifications, Screen Recording, and Full Disk Access.",
       );
       expect(el.textContent).not.toContain("agentes.chat opened again");
-      // In Preferences what each one does sits behind its ⓘ.
-      expect(rowOf(el, "Screen Recording")?.querySelector("small")).toBeNull();
-      expect(rowOf(el, "Screen Recording")?.querySelector(".dk-help")).toBeNull();
-      expect(rowOf(el, "Screen Recording")?.querySelector("button.ac-hint")).toBeTruthy();
-      await act(async () => button(rowOf(el, "Screen Recording"), "Allow")?.click());
+      // Notifications first: the system's prompt once, never a Quit & Reopen.
+      await act(async () => button(perms(el), "Allow")?.click());
+      await until(
+        () => perms(el)?.querySelector("small")?.textContent === "Still off: Screen Recording and Full Disk Access.",
+      );
+      expect(host.mac.notifyAsks).toBe(1);
+      expect(host.mac.setup).toBeNull();
+      // Screen Recording next: kept for macOS quitting the app, and what to do when it asks.
+      await until(() => button(perms(el), "Allow") && !button(perms(el), "Allow")?.disabled);
+      await act(async () => button(perms(el), "Allow")?.click());
       await until(() => host.mac.setup?.step === "prefs");
       await until(() => el.textContent?.includes("When macOS asks to Quit & Reopen"));
     });
     // Opened again by macOS: the line says it took effect, and nothing is kept any more.
     await mount(
       SETTINGS,
-      <General />,
+      <Settings />,
       async (el, host) => {
         await until(() => el.textContent?.includes("agentes.chat opened again with your changes."));
         expect(host.mac.setup).toBeNull();
@@ -452,22 +541,21 @@ describe("pairing from the app", () => {
         },
       },
     );
-    // Notifications with the others, and no Local Network row on any macOS: it is asked only when an Android phone
-    // pairs over Wi-Fi (ADR 0256 §7).
-    await mount(SETTINGS, <General />, async (el) => {
-      await until(() => rowOf(el, "Screen Recording")?.querySelector("button"));
-      expect(rowOf(el, "Notifications")).toBeTruthy();
-      expect(rowOf(el, "Full Disk Access")).toBeTruthy();
-      expect(rowOf(el, "Local network (phones over Wi-Fi)")).toBeUndefined();
+    // No Local Network on any macOS: it is asked only when an Android phone pairs over Wi-Fi (ADR 0256 §7).
+    await mount(SETTINGS, <Settings />, async (el) => {
+      await until(() => button(perms(el), "Allow"));
+      expect(el.textContent).not.toContain("Local network");
     });
   });
 
   test(
-    "Preferences: a switch for every workspace here, Allow for one not here yet, which pairs it",
+    "Settings › This Mac › Overview: a switch for every workspace here, Allow for one not here yet, which pairs it",
     () =>
-      mount(SETTINGS, <General />, async (el, host, store) => {
+      mount(SETTINGS, <Settings />, async (el, host, store) => {
         const norte = "Estúdio Norte";
-        await until(() => rowOf(el, norte) && rowOf(el, "Acme")?.querySelector(".ac-chip"));
+        await until(
+          () => rowOf(el, norte) && rowOf(el, "Acme")?.querySelector("small")?.textContent?.includes("agent"),
+        );
         const on = (title: string) => rowOf(el, title)?.querySelector('[role="switch"]')?.getAttribute("aria-checked");
         expect(on("Acme")).toBe("true");
         expect(on("Horizonte")).toBe("true");
@@ -483,10 +571,9 @@ describe("pairing from the app", () => {
         expect(rowOf(el, "Oficina")?.querySelector("small")?.textContent).toBe(
           "agentes.chat Cloud · Its agents don't use this Mac",
         );
-        // Open at login, then Another workspace, close the card.
+        // Another workspace closes the card (opening at login is App settings' now).
         const card = rowOf(el, norte)?.closest(".dk-card");
-        expect([...(card?.querySelectorAll(".dk-crow__title") ?? [])].slice(-2).map((n) => n.textContent)).toEqual([
-          "Open at login",
+        expect([...(card?.querySelectorAll(".dk-crow__title") ?? [])].slice(-1).map((n) => n.textContent)).toEqual([
           "Another workspace",
         ]);
         await act(async () => button(rowOf(el, "Another workspace"), "Add a workspace…")?.click());

@@ -1,9 +1,10 @@
 /**
- * The iPhone setup, in the welcome window (Preferences › This Mac's Show me how, iPhone steps): the Mac does what it
- * can by itself and says what only the person can do. Xcode (or the App Store, and the step goes on once it's
- * there), the iOS platform's download, the Apple Account in Xcode, then the iPhone's own steps as it reports them
- * (plugged in and trusted, Developer Mode, UI Automation, the test helper the Mac builds). Once our phone app is in the
- * App Store, a QR opens the same steps on the iPhone.
+ * The iPhone setup (route `iphone`, ADR 0256: a sheet over the site, opened from Settings › This Mac's phones): the
+ * Mac does what it can by itself and says what only the person can do. Xcode (or the App Store, and the step goes on
+ * once it's there), the iOS platform's download, the Apple Account in Xcode, then the iPhone's own steps as it reports
+ * them (plugged in and trusted, Developer Mode, UI Automation, the test helper the Mac builds). Once our phone app is
+ * in the App Store, a QR beside the steps opens the same steps on the iPhone. The tip and the way out are the sheet's
+ * footer.
  */
 import type { ControlIphoneSetup } from "@agenteschat/adapters/runner-control";
 import {
@@ -23,7 +24,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { Button, Icon, InfoHint, PixelSpinner, QrCode, SettingsPath } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useHost, useSnapshot, useStore } from "../app";
+import { useHost, useSnapshot, useStore } from "../../app";
 import {
   deviceServer,
   downloadDue,
@@ -32,20 +33,20 @@ import {
   iphoneHere,
   iphoneSteps,
   iphoneStepsUrl,
-} from "../control/devices";
-import { pairedHomes } from "../control/store";
-import { useLocalServer, useWifiIphones } from "../hooks";
-import { hintFor } from "../ui/settings";
-import { useToast } from "../ui/Toast";
+} from "../../control/devices";
+import { pairedHomes } from "../../control/store";
+import { useLocalServer, useWifiIphones } from "../../hooks";
+import { hintFor } from "../../ui/settings";
+import { useToast } from "../../ui/Toast";
+import { Sheet } from "./SheetFrame";
 
 /** How often the Mac is asked while the window is open: Xcode installed, the download's progress, a new account. */
 const ASK_MS = 2000;
 
-/** Without the QR the steps take its column too, and the tip and the way out make one footer row under them. */
-const NO_QR = { gridTemplateColumns: "minmax(0, 1fr)", gridTemplateRows: "1fr auto" };
-const NO_QR_SIDE = { flexDirection: "row", alignItems: "center", justifyContent: "space-between" } as const;
+/** Without the QR the steps take its column too. */
+const NO_QR = { gridTemplateColumns: "minmax(0, 1fr)" };
 
-export function IphoneSetup({ onClose }: { onClose: () => void }) {
+export function IphoneSheet({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const host = useHost();
   const store = useStore();
@@ -558,118 +559,121 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="dk-fr" data-screen="iphone">
-      <div className="dk-fr__body">
-        <h1 className="dk-fr__h1sm">{t("devices.iphone.title")}</h1>
-        <p className="dk-lead dk-fr__wide">{t("desktop.iphone.lead")}</p>
-        <div className="dk-ip" style={PHONE_APP_IN_STORE.ios ? undefined : NO_QR}>
-          <div className="dk-ip__main">
-            <ol className="dk-fr__steps" aria-label={t("desktop.iphone.progress")}>
-              {IPHONE_SETUP_STEPS.map((step) => {
-                const state = states[step];
-                const hint = hints[step];
-                return (
-                  <li
-                    key={step}
-                    className="ac-iconline"
-                    data-state={state === "needs" ? "warn" : state}
-                    aria-current={step === current ? "step" : undefined}
-                  >
-                    <span className="dk-fr__stepmark" aria-hidden="true">
-                      {state === "active" ? (
-                        <PixelSpinner size={16} color="sky" />
-                      ) : state === "done" ? (
-                        <Icon name="check" size={16} />
-                      ) : state === "needs" ? (
-                        <Icon name="alert" size={16} />
-                      ) : (
-                        <span className="dk-fr__stepdot" />
-                      )}
-                    </span>
-                    <span className="dk-fr__steptext">
-                      <span className="dk-fr__stepname">
-                        {hint ? (
-                          <span className="ac-hintline">
-                            <b>{title(step)}</b>
-                            <InfoHint name={hintFor(t, title(step), hint).name}>{hint}</InfoHint>
-                          </span>
-                        ) : (
+    <Sheet
+      screen="iphone"
+      wide
+      title={t("devices.iphone.title")}
+      lead={t("desktop.iphone.lead")}
+      help={
+        <span className="dk-ip__tip ac-hintline">
+          <b>{t("desktop.iphone.tip")}</b>
+          <InfoHint name={tip.name}>{tip.text}</InfoHint>
+        </span>
+      }
+      acts={
+        current === null ? (
+          <Button variant="primary" onClick={onClose}>
+            {t("devices.done")}
+          </Button>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                void host.showLayer({ screen: "settings", section: "folders", focus: "phone" }).catch(() => {})
+              }
+            >
+              {t("desktop.common.back")}
+            </Button>
+            <Button onClick={onClose}>{t("desktop.common.cancel")}</Button>
+          </>
+        )
+      }
+    >
+      <div className="dk-ip" style={PHONE_APP_IN_STORE.ios ? undefined : NO_QR}>
+        <div className="dk-ip__main">
+          <ol className="dk-fr__steps" aria-label={t("desktop.iphone.progress")}>
+            {IPHONE_SETUP_STEPS.map((step) => {
+              const state = states[step];
+              const hint = hints[step];
+              return (
+                <li
+                  key={step}
+                  className="ac-iconline"
+                  data-state={state === "needs" ? "warn" : state}
+                  aria-current={step === current ? "step" : undefined}
+                >
+                  <span className="dk-fr__stepmark" aria-hidden="true">
+                    {state === "active" ? (
+                      <PixelSpinner size={16} color="sky" />
+                    ) : state === "done" ? (
+                      <Icon name="check" size={16} />
+                    ) : state === "needs" ? (
+                      <Icon name="alert" size={16} />
+                    ) : (
+                      <span className="dk-fr__stepdot" />
+                    )}
+                  </span>
+                  <span className="dk-fr__steptext">
+                    <span className="dk-fr__stepname">
+                      {hint ? (
+                        <span className="ac-hintline">
                           <b>{title(step)}</b>
-                        )}
-                        {state === "done" && found[step] && <small>{found[step]}</small>}
-                        {state !== "todo" && (
-                          <span className="ac-visually-hidden">
-                            {t(`desktop.here.stepState.${state === "needs" ? "warn" : state}`)}
-                          </span>
-                        )}
-                      </span>
-                      {(step === current || (step === "helper" && state === "todo")) && (
-                        <span className="dk-fr__stepline" role={step === current ? "status" : undefined}>
-                          {line(step)}
-                          {step === current && step !== "developerMode" && (stalled || (looking && plugged)) && (
-                            <span className="dk-ip__stall ac-iconline">
-                              <Icon name="info" size={14} />
-                              <span>{stall(step)}</span>
-                            </span>
-                          )}
+                          <InfoHint name={hintFor(t, title(step), hint).name}>{hint}</InfoHint>
+                        </span>
+                      ) : (
+                        <b>{title(step)}</b>
+                      )}
+                      {state === "done" && found[step] && <small>{found[step]}</small>}
+                      {state !== "todo" && (
+                        <span className="ac-visually-hidden">
+                          {t(`desktop.here.stepState.${state === "needs" ? "warn" : state}`)}
                         </span>
                       )}
                     </span>
-                  </li>
-                );
-              })}
-            </ol>
-            <div
-              className="dk-bar"
-              role="progressbar"
-              aria-label={t("desktop.iphone.progress")}
-              aria-valuemin={0}
-              aria-valuemax={IPHONE_SETUP_STEPS.length}
-              aria-valuenow={done}
-            >
-              <span style={{ width: `${(done / IPHONE_SETUP_STEPS.length) * 100}%` }} />
-            </div>
-            {current === null && phone && (
-              <p className="dk-ip__ready ac-iconline" role="status">
-                <Icon name="check" size={16} />
-                <span>{t("devices.iphone.ready", { name: phone.name ?? phone.model })}</span>
-              </p>
-            )}
+                    {(step === current || (step === "helper" && state === "todo")) && (
+                      <span className="dk-fr__stepline" role={step === current ? "status" : undefined}>
+                        {line(step)}
+                        {step === current && step !== "developerMode" && (stalled || (looking && plugged)) && (
+                          <span className="dk-ip__stall ac-iconline">
+                            <Icon name="info" size={14} />
+                            <span>{stall(step)}</span>
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <div
+            className="dk-bar"
+            role="progressbar"
+            aria-label={t("desktop.iphone.progress")}
+            aria-valuemin={0}
+            aria-valuemax={IPHONE_SETUP_STEPS.length}
+            aria-valuenow={done}
+          >
+            <span style={{ width: `${(done / IPHONE_SETUP_STEPS.length) * 100}%` }} />
           </div>
-          <aside className="dk-ip__side" style={PHONE_APP_IN_STORE.ios ? undefined : NO_QR_SIDE}>
-            {PHONE_APP_IN_STORE.ios && server && orgId && mac && (
-              <div className="dk-card dk-ip__qr" data-padded="">
-                <QrCode text={iphoneStepsUrl(server, orgId, mac.id)} label={t("desktop.iphone.qrLabel")} />
-                <p>{t("desktop.iphone.qr")}</p>
-              </div>
-            )}
-            <span className="dk-ip__tip ac-hintline">
-              <b>{t("desktop.iphone.tip")}</b>
-              <InfoHint name={tip.name}>{tip.text}</InfoHint>
-            </span>
-            <span className="dk-ip__acts">
-              {current === null ? (
-                <Button variant="primary" onClick={onClose}>
-                  {t("devices.done")}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      void host.showLayer({ screen: "settings", section: "folders", focus: "phone" }).catch(() => {})
-                    }
-                  >
-                    {t("desktop.common.back")}
-                  </Button>
-                  <Button onClick={onClose}>{t("desktop.common.cancel")}</Button>
-                </>
-              )}
-            </span>
-          </aside>
+          {current === null && phone && (
+            <p className="dk-ip__ready ac-iconline" role="status">
+              <Icon name="check" size={16} />
+              <span>{t("devices.iphone.ready", { name: phone.name ?? phone.model })}</span>
+            </p>
+          )}
         </div>
+        {PHONE_APP_IN_STORE.ios && server && orgId && mac && (
+          <aside className="dk-ip__side">
+            <div className="dk-card dk-ip__qr" data-padded="">
+              <QrCode text={iphoneStepsUrl(server, orgId, mac.id)} label={t("desktop.iphone.qrLabel")} />
+              <p>{t("desktop.iphone.qr")}</p>
+            </div>
+          </aside>
+        )}
       </div>
-    </div>
+    </Sheet>
   );
 }
 

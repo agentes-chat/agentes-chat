@@ -1,0 +1,304 @@
+/*
+ * The app layer's sheets (ADR 0256, SheetFrame.tsx). Sheet mode: a scrim over the site, its top strip dragging the
+ * window, a card in the middle. Full mode: the same card on the app's background. The card is as tall as what it
+ * holds, up to the window: then its body scrolls and its footer stays.
+ */
+.dk-shf {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+/* A Mac: the window's buttons and the strip that drags it sit over the top 48pt. */
+.dk-shf[data-mac] {
+  padding-top: calc(var(--layer-bar, 48px) + 8px);
+}
+.dk-shf[data-mode="full"] {
+  background: var(--bg);
+}
+.dk-shf__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: dk-shf-in 0.2s var(--out, ease-out) both;
+}
+.dk-shf__drag {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--layer-bar, 48px);
+  z-index: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dk-shf__card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--raised);
+  box-shadow: var(--e3), var(--top);
+  animation: dk-shf-card-in 0.24s var(--out, ease-out) both;
+}
+/* A screen of its own size (a connect link from the first run): the card keeps the old sheet's size. */
+.dk-shf__card[data-fill] {
+  width: min(720px, 100%);
+  height: min(600px, 100%);
+  border-radius: 14px;
+  background: var(--bg);
+}
+.dk-shf__card[data-fill] > * {
+  flex: 1;
+  min-height: 0;
+}
+
+@keyframes dk-shf-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dk-shf-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-shf__scrim,
+  .dk-shf__card {
+    animation: none;
+  }
+}
+
+/* What a card holds: the body (scrolls when the window is short), then the footer. */
+.dk-sh {
+  width: 560px;
+  max-width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-sh[data-wide] {
+  width: 780px;
+}
+.dk-sh__body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 26px 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dk-sh__step {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+.dk-sh__art {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 14px;
+}
+.dk-sh__cast {
+  display: inline-flex;
+  gap: 2px;
+}
+.dk-sh__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.dk-sh__lead {
+  margin: 4px 0 14px;
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.dk-sh__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 28px 20px;
+}
+.dk-sh__help {
+  max-width: 260px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--faint);
+  text-wrap: pretty;
+}
+.dk-sh[data-wide] .dk-sh__help {
+  max-width: 420px;
+}
+.dk-sh__acts {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The pixel trail: three squares fading toward this computer. */
+.dk-sh__trail {
+  display: inline-flex;
+  gap: 5px;
+}
+.dk-sh__trail i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  background: var(--agent2);
+}
+.dk-sh__trail i:nth-child(2) {
+  opacity: 0.7;
+}
+.dk-sh__trail i:nth-child(3) {
+  opacity: 0.4;
+}
+
+/* What getting this computer ready means: one line each, an icon and two lines of words, hairlines between them. */
+.dk-sh__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.dk-sh__line {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.dk-sh__line:first-child {
+  border-top: 0;
+}
+.dk-sh__line > .ac-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--muted);
+}
+.dk-sh__line > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dk-sh__line b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.dk-sh__line small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/*
+ * Rows in a sheet are never a card in the card: the rows of a card (the permissions, a link's facts, the tools'
+ * switches) sit between two hairlines.
+ */
+.dk-sh__rows,
+.dk-sh .dk-card {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.dk-sh .dk-card + .dk-card {
+  margin-top: 0;
+  border-top: 0;
+}
+.dk-sh .dk-ctitle {
+  margin: 10px 0 4px;
+}
+.dk-sh .dk-under-card {
+  margin-top: 8px;
+}
+
+/* A permission that is on: the word in the ok colour, with its check (never a pill). */
+.dk-sh__on {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.dk-sh__wait {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.dk-sh__wait > :first-child {
+  flex: none;
+  margin-top: 2px;
+}
+.dk-sh__wait > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dk-sh__wait small {
+  font-size: 12.5px;
+  font-weight: 400;
+}
+/* Under a permission's row, in line with its words. */
+.dk-crow__under > .dk-sh__wait {
+  padding-bottom: 2px;
+}
+.dk-sh__body > .dk-sh__wait {
+  margin-top: 14px;
+}
+.dk-sh__problem {
+  margin-top: 12px;
+}
+.dk-sh__body > .dk-help {
+  margin-top: 2px;
+}
+.dk-sh__took {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.dk-sh__took .ac-icon {
+  flex: none;
+  color: var(--ok);
+}
+
+/* The iPhone setup's steps take the body's height; its tip goes in the footer. */
+.dk-sh[data-screen="iphone"] .dk-ip {
+  margin-top: 8px;
+}
+/* A title with no lead under it (waiting, a problem): the same room before what follows. */
+.dk-sh__body > .dk-sh__title + :not(.dk-sh__lead) {
+  margin-top: 14px;
+}
+/* The iPhone tip as the footer's line: its words on the sheet's edge, like the title's. */
+.dk-sh__help > .dk-ip__tip {
+  padding-inline: 0;
+}
