@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat potrzebuje uprawnienia {{permission}}",
+    "done": "Zezwoliłem",
+    "later": "Nie teraz",
+    "trayTitle": "Czeka na {{permission}}",
+    "why": {
+      "app_management": "Agenci potrzebują tego, by zmieniać aplikacje na tym {{device}}.",
+      "screen": "Agenci potrzebują tego, by robić zrzuty ekranu tego {{device}}.",
+      "accessibility": "Agenci potrzebują tego, by klikać i pisać w aplikacjach na tym {{device}}.",
+      "disk": "Agenci potrzebują tego, by otwierać Twoje pliki bez pytania macOS o każdy folder.",
+      "network": "Agenci potrzebują tego, by łączyć się z telefonami i urządzeniami w Twojej sieci.",
+      "camera": "Agenci potrzebują tego, by używać kamery tego {{device}}.",
+      "microphone": "Agenci potrzebują tego, by używać mikrofonu tego {{device}}.",
+      "automation": "Agenci potrzebują tego, by sterować innymi aplikacjami na tym {{device}}."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -69,6 +85,12 @@
         "capturing": "robi zrzut ekranu",
         "tabs": "przełącza karty"
       }
+    },
+    "apps": {
+      "title": "{{agent}} używa aplikacji {{app}}",
+      "detail": "Mysz i klawiatura zostają Twoje",
+      "stop": "Zatrzymaj",
+      "stopped": "{{agent}} przestał(a) używać Twoich aplikacji"
     },
     "label": "agentes.chat",
     "now": "Teraz",
@@ -945,21 +967,5 @@
     "bringAllToFront": "Przenieś wszystko na wierzch",
     "help": "Pomoc",
     "downloaded": "Pobieranie zakończone"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat potrzebuje uprawnienia {{permission}}",
-    "done": "Zezwoliłem",
-    "later": "Nie teraz",
-    "trayTitle": "Czeka na {{permission}}",
-    "why": {
-      "app_management": "Agenci potrzebują tego, by zmieniać aplikacje na tym {{device}}.",
-      "screen": "Agenci potrzebują tego, by robić zrzuty ekranu tego {{device}}.",
-      "accessibility": "Agenci potrzebują tego, by klikać i pisać w aplikacjach na tym {{device}}.",
-      "disk": "Agenci potrzebują tego, by otwierać Twoje pliki bez pytania macOS o każdy folder.",
-      "network": "Agenci potrzebują tego, by łączyć się z telefonami i urządzeniami w Twojej sieci.",
-      "camera": "Agenci potrzebują tego, by używać kamery tego {{device}}.",
-      "microphone": "Agenci potrzebują tego, by używać mikrofonu tego {{device}}.",
-      "automation": "Agenci potrzebują tego, by sterować innymi aplikacjami na tym {{device}}."
-    }
   }
 }

@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 93;
+export const MACHINE_PROTOCOL_VERSION = 94;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -871,6 +871,83 @@ export const FOLDER_PICK_PROTOCOL = 92;
  * (agent and session) ends a held one first. A standby (before a sleep) is refused while a turn runs.
  */
 export const HELD_TURN_PROTOCOL = 93;
+/**
+ * From this protocol on (ADR 0258): agents use the apps on the person's own computer through the pinned
+ * `agent-desktop` CLI, which reads an app's accessibility tree and acts on its elements by ref without the person's
+ * pointer or keyboard. `apps.run` runs one command of `APPS_COMMANDS`; the runner adds its own flags and refuses the
+ * rest. `hello.apps` says whether it can run here: a computer where agents work as the person's own user (never
+ * system mode). The server never sends `apps.run` to an older runner.
+ */
+export const PERSON_APPS_PROTOCOL = 94;
+/** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
+export const AGENT_DESKTOP_VERSION = "1.3.1";
+/** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
+export type AgentDesktopTarget =
+  | "aarch64-apple-darwin"
+  | "x86_64-apple-darwin"
+  | "aarch64-pc-windows-msvc"
+  | "x86_64-pc-windows-msvc"
+  | "aarch64-unknown-linux-gnu"
+  | "x86_64-unknown-linux-gnu";
+/** SHA-256 (hex) of each release archive of `AGENT_DESKTOP_VERSION` (its `checksums.txt`), checked before unpacking. */
+export const AGENT_DESKTOP_SHA256: Record<AgentDesktopTarget, string> = {
+  "aarch64-apple-darwin": "9b7b7cfc74892eab46c2c85d6cb7dc4863bf8dab0a222cfcfb8ae4604c69c86c",
+  "x86_64-apple-darwin": "469da10cfb68928c58caff88b92b30526e0ca895ac06bc86b7f533b1d9b309b3",
+  "aarch64-pc-windows-msvc": "805f1f61890f9983fceaf38cda94a37a049c379435d65607db5cedd22c8ef97b",
+  "x86_64-pc-windows-msvc": "6ee4b1e078f4e78792e79f16e32e4a78b9919464aa3c55629b7e27ed53a08c13",
+  "aarch64-unknown-linux-gnu": "438990a703fbeb19775596c341c3701435e80adbfa1b2f64b82ff17567d5573b",
+  "x86_64-unknown-linux-gnu": "ca77b6b75034eeb12e537dd8c0a4f2a3424119253f38b7e6bd79ba0d2fef1264",
+};
+/** Where the pinned release archive for `target` is downloaded from. */
+export const agentDesktopUrl = (target: AgentDesktopTarget) =>
+  `https://github.com/vercel-labs/agent-desktop/releases/download/v${AGENT_DESKTOP_VERSION}/agent-desktop-v${AGENT_DESKTOP_VERSION}-${target}.tar.gz`;
+/**
+ * The `agent-desktop` commands an `apps.run` may name: reads, and actions on a ref that go through the
+ * accessibility API. Pointer and held-key commands, the clipboard, sessions, sandboxes and the MCP server are not
+ * here: they take the person's input or reach past one app.
+ */
+export const APPS_COMMANDS = [
+  "list-apps",
+  "list-windows",
+  "snapshot",
+  "find",
+  "get",
+  "is",
+  "click",
+  "double-click",
+  "right-click",
+  "type",
+  "set-value",
+  "clear",
+  "focus",
+  "select",
+  "toggle",
+  "check",
+  "uncheck",
+  "expand",
+  "collapse",
+  "scroll",
+  "scroll-to",
+  "press",
+  "launch",
+  "close-app",
+] as const;
+export type AppsCommand = (typeof APPS_COMMANDS)[number];
+export const isAppsCommand = (v: unknown): v is AppsCommand =>
+  typeof v === "string" && (APPS_COMMANDS as readonly string[]).includes(v);
+/** The largest parts of an `apps.run`. */
+export const APPS_LIMITS = {
+  /** Arguments in one command. */
+  args: 16,
+  /** Characters of one argument. */
+  arg: 500,
+  /** Characters typed or set in one action (`agent-desktop` takes 10,000 bytes for `type`). */
+  text: 4000,
+} as const;
+/** `apps.run`'s answer: `agent-desktop`'s own result, or its failure as it said it (`retry`: whether repeating is safe). */
+export type AppsRunReply =
+  | { ok: true; data: unknown }
+  | { ok: false; error: { code: string; message: string; retry?: "safe" | "unsafe" | "unknown" } };
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -3179,6 +3256,8 @@ export interface RunnerInfo {
   terminal?: RunnerTerminalInfo;
   /** Protocol 21: whether agents can use their own desktops here (ADR 0062). */
   desktopUse?: RunnerDesktopUseInfo;
+  /** `PERSON_APPS_PROTOCOL`: whether agents can use the person's apps here (ADR 0258). */
+  apps?: RunnerTerminalInfo;
   /**
    * Protocol 18: `system` when each agent works as its own OS user (ADR 0058 §10); absent, every agent
    * works as the runner's own user. Who may control a desktop or open a terminal follows it (§4).
@@ -3403,6 +3482,8 @@ export type MachineRequest = (
   | { op: "desktop.apps" }
   /** Protocol 25: the text on the agent's screen, read on the computer. */
   | { op: "desktop.text" }
+  /** `PERSON_APPS_PROTOCOL`: one `agent-desktop` command on the person's apps; `text` goes in on its stdin. */
+  | { op: "apps.run"; command: AppsCommand; args: string[]; text?: string }
   /** Protocol 45: a one-use key the request's agent's Vault values are sealed to (ADR 0144). */
   | { op: "vault.key" }
   /** `requestId` and `publicKey`: what the answer is sealed to (`madePasswordAad`). */
@@ -3541,6 +3622,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "desktop.capture",
   "desktop.apps",
   "desktop.text",
+  "apps.run",
   "vault.key",
   "vault.password",
   "phone.claim",
@@ -3718,6 +3800,7 @@ export interface MachineReplies {
   "desktop.apps": { apps: { id: string; name: string; generic?: string }[] };
   /** The screen's text (trimmed, `DESKTOP_TEXT_MAX` at most), or `same`: the capture didn't change since the last read. */
   "desktop.text": { text: string } | { same: true };
+  "apps.run": AppsRunReply;
   /** Protocol 45: the key's id, its public key (raw P-256, base64) and when it stops opening anything (ISO). */
   "vault.key": { vaultKey: { keyId: string; publicKey: string; expiresAt: string } };
   "vault.password": { box: WireSecretBox };
@@ -4612,6 +4695,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(isObject(f.desktop) ? { desktop: parseDesktopInfo(f.desktop) } : {}),
         ...(isObject(f.terminal) ? { terminal: parseAvailability(f.terminal) } : {}),
         ...(isObject(f.desktopUse) ? { desktopUse: parseAvailability(f.desktopUse) } : {}),
+        ...(isObject(f.apps) ? { apps: parseAvailability(f.apps) } : {}),
         ...(f.mode === "system" ? { mode: "system" as const } : {}),
         ...(isObject(f.ownUsage) ? { ownUsage: parseOwnUsage(f.ownUsage) } : {}),
         ...(size ? { size } : {}),

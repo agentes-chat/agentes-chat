@@ -156,6 +156,7 @@ import type {
   JoinClaim,
   JoinRequest,
   LearnedSkill,
+  LocalSpeech,
   Machine,
   MachineAccess,
   MachineAccount,
@@ -637,6 +638,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       speechKey: () => nullOn(404, () => request<SpeechKey>("/api/app/speech-key")),
       saveSpeechKey: (input) => request<SpeechKey>("/api/app/speech-key", { method: "PUT", json: input }),
       removeSpeechKey: () => request<SpeechKey>("/api/app/speech-key", { method: "DELETE" }),
+      speechLocal: () => nullOn(404, () => request<LocalSpeech>("/api/app/speech-local")),
+      installSpeechLocal: () => request<LocalSpeech>("/api/app/speech-local", { method: "PUT", json: {} }),
+      removeSpeechLocal: () => request<LocalSpeech>("/api/app/speech-local", { method: "DELETE" }),
     },
     account: {
       authConfig: () => request<AuthConfig>("/api/app/auth-config"),

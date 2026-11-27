@@ -210,6 +210,7 @@ import type {
   JoinRequest,
   LearnedSkill,
   LiveActivityInput,
+  LocalSpeech,
   Machine,
   MachineAccess,
   MachineAccessReduce,
@@ -453,6 +454,12 @@ export interface ApiClient {
     /** Tried with the provider first: `speech_key_invalid` (422) when it refuses. */
     saveSpeechKey(input: SpeechKeyInput): Promise<SpeechKey>;
     removeSpeechKey(): Promise<SpeechKey>;
+    /** The speech model on this server's computer: `null` unless I am its owner on a self-hosted server. */
+    speechLocal(): Promise<LocalSpeech | null>;
+    /** Starts (or goes on with) its download; answers at once. */
+    installSpeechLocal(): Promise<LocalSpeech>;
+    /** Stops it and removes its files. */
+    removeSpeechLocal(): Promise<LocalSpeech>;
   };
   /** Voice messages (ADR 0100). */
   voice: {

@@ -418,6 +418,7 @@ import { isSayNow, linesSaid, SAY_NOW_TOOL, type SaidNow, sayNowApplies, sayNowT
 import { RUN_QUERY_CHARS, sharedQueryEmbedding } from "./search";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
+import type { VoiceStatus } from "./speech-settings";
 import {
   type AccountMove,
   type AccountSwitch,
@@ -622,6 +623,8 @@ export interface EngineDeps {
   shareFile?(ctx: ToolContext, machineId: string, path: string): Promise<ToolOutput>;
   /** Each workspace gets its own computer here (`workspaceComputerText`); absent: people connect theirs. */
   workspaceComputer?: WorkspaceComputer;
+  /** Whether voice becomes text on this server, and who sets it up (`voiceStatusText`); absent: never said. */
+  voiceStatus?(orgId: string): Promise<VoiceStatus | null>;
   /** How long a run whose computer dropped mid-turn waits quietly for it (default `COMPUTER_DROP_GRACE_MS`). */
   computerDropGraceMs?: number;
   /** How long a run waits, still working, for a computer just gone (default `COMPUTER_BLIP_WAIT_MS`). */
@@ -2826,7 +2829,7 @@ async function executeRunInner(
         )
       : undefined;
     const personBehind = () => authority().then((a) => a.personId);
-    const [pending, skillList, repositories, browsers, workApplies, choicesApply, sayNowHere, codeHere] =
+    const [pending, skillList, repositories, browsers, workApplies, choicesApply, sayNowHere, codeHere, voiceNow] =
       await Promise.all([
         deps.tools
           ? pendingConnectors(db, run.orgId, new Set(granted.map((t) => t.name))).catch(() => [])
@@ -2853,6 +2856,7 @@ async function executeRunInner(
         tools.some((t) => t.name === SUGGEST_CODE_SESSION_TOOL)
           ? codeSuggestionApplies(db, run).catch(() => false)
           : false,
+        deps.voiceStatus ? deps.voiceStatus(run.orgId).catch(() => null) : null,
       ]);
     // What its servers connected by address say on using their tools: granted, like the repositories above.
     const serverNotes = serverInstructionsPrompt(granted);
@@ -2898,6 +2902,7 @@ async function executeRunInner(
         machines: deps.machines,
         ai: { gateway: deps.gateway, machines: deps.machines },
         workspaceComputer: deps.workspaceComputer,
+        voice: voiceNow,
         unseal: brainOf(agent.brain) === "model",
       }),
       contextDeps && !appRun

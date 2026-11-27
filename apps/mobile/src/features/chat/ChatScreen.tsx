@@ -279,6 +279,7 @@ function Chat({
     voiceFromField,
     voiceOn,
     voiceTakeBack,
+    voiceAsk,
   } = useChatSend({
     channelId,
     threadId,
@@ -930,6 +931,7 @@ function Chat({
                 afterVoice={afterVoice}
                 voiceFromField={voiceFromField}
                 voiceTakeBack={voiceTakeBack}
+                voiceAsk={voiceAsk}
                 onRecording={onRecording}
                 admin={admin}
                 join={join}

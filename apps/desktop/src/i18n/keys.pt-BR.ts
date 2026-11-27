@@ -88,6 +88,12 @@ export const desktopPtBR = {
         tabs: "trocando de aba",
       },
     },
+    apps: {
+      title: "{{agent}} está usando {{app}}",
+      detail: "Seu mouse e teclado continuam seus",
+      stop: "Parar",
+      stopped: "{{agent}} parou de usar seus apps",
+    },
     label: "agentes.chat",
     now: "Agora",
     seeAll: "Ver tudo",

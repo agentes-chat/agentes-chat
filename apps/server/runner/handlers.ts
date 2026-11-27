@@ -27,6 +27,7 @@ import { redactSecrets } from "@agenteschat/adapters/secret-box";
 import { realFoldersFor } from "./access";
 import type { AccountBrains } from "./account-brains";
 import type { AccountFolders, AccountGrant, AccountManager } from "./accounts";
+import type { AppControl } from "./apps";
 import { type BrainManager, brainKey } from "./brain";
 import { type AntigravityBrainTurnRequest, handleAntigravityBrainTurn } from "./brain-antigravity";
 import { type CodexBrainEvent, type CodexBrainTurnRequest, handleCodexBrainTurn } from "./brain-codex";
@@ -132,6 +133,14 @@ export const RECLAIM_MS = 5_000;
 export const ROOM_POLL_MS = 1_000;
 export const ROOM_WATCH_MS = 60_000;
 /**
+ * A turn refused for room this long (its run asking again all along) runs anyway, under every floor, one such turn at a
+ * time (`pastFloor`). So does a turn while no other runs. A computer whose reading stays short (a PC full of the
+ * person's own apps) runs its turns one at a time instead of never.
+ */
+export const ROOM_WAIT_MAX_MS = 60_000;
+/** What the person sees on a turn `pastFloor` let in. */
+export const PAST_FLOOR_NOTE = "This computer is short of memory, so this may be slow.";
+/**
  * Never refused for room nor at the ceiling: a brain turn holds its request for the whole turn, so a computer
  * full of agents' work would otherwise keep people from watching or taking control, or a person in control from
  * being screened (`desktop.text`). Short, and capped per agent on both sides.
@@ -168,6 +177,7 @@ export const NEW_WORK_OPS: ReadonlySet<string> = new Set([
   "desktop.act",
   "desktop.capture",
   "desktop.apps",
+  "apps.run",
   "vault.key",
   "vault.password",
   "phone.claim",
@@ -236,6 +246,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "desktop.capture": "agent",
   "desktop.apps": "agent",
   "desktop.text": "agent",
+  // Never in system mode (`hello.apps`): a worker has no `apps` and refuses it.
+  "apps.run": "agent",
   // ADR 0144: the key lives in the process that opens the values (the agent's worker), so root never holds one.
   "vault.key": "agent",
   // The password is made and sealed where the Vault's values open: root relays only the box.
@@ -403,6 +415,8 @@ export interface HandlerContext {
   browserViews?: BrowserViews;
   /** Protocol 21: the agents' use of their own desktops (ADR 0062); without it the runner refuses `desktop.look`… */
   desktopUse?: DesktopManager;
+  /** `PERSON_APPS_PROTOCOL`: the person's apps through `agent-desktop` (ADR 0258); without it `apps.run` is refused. */
+  apps?: AppControl;
   /** A person takes control of the agent's desktop: what the agent's pointer and keys are doing stops. */
   desktopTaken?: (agentId: string) => void;
   /** `DESKTOP_STARTING_PROTOCOL`: tells the server a stream's open starts the desktop first (`stream.starting`). */
@@ -898,6 +912,11 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     req.op === "desktop.text"
   ) {
     return handleDesktopUse(ctx, req);
+  }
+  if (req.op === "apps.run") {
+    if (!ctx.apps) throw new RunnerError("unsupported", "Agents can't use the person's apps on this computer");
+    if (!req.agent) throw new RunnerError("bad_request", "Using apps belongs to an agent");
+    return ctx.apps.run(req.agent, req, scope.signal);
   }
   const secrets = await agentSecrets(ctx.secretsDir, req.agent);
   switch (req.op) {
@@ -1990,6 +2009,10 @@ export class RequestRunner {
   private lastPersonTurn = Number.NEGATIVE_INFINITY;
   /** The request in the slot held for a person's turn (`reserve`). */
   private reserved: string | null = null;
+  /** The turn let in under the floor (`pastFloor`). */
+  private pastFloorTurn: string | null = null;
+  /** Runs refused for room: since when, and when they last asked. */
+  private readonly waiting = new Map<string, { since: number; asked: number }>();
   /** When a turn was last refused for room, until `room.freed` was sent. */
   private refusedAt: number | null = null;
   private roomWatch: ReturnType<typeof setInterval> | null = null;
@@ -2043,6 +2066,25 @@ export class RequestRunner {
     this.admitted.push(now);
     this.lastPersonTurn = now;
     this.reserved = id;
+    return true;
+  }
+
+  /**
+   * Every floor turned this turn away: it runs anyway, one such turn at a time, when no turn runs on the computer or
+   * its run has asked for `ROOM_WAIT_MAX_MS`. Idle CLIs were closed for it first.
+   */
+  private pastFloor(id: string, runId: string): boolean {
+    const now = (this.admission.now ?? Date.now)();
+    // A run that stopped asking (canceled, or it went to another computer) is no longer waiting.
+    for (const [run, w] of this.waiting) if (now - w.asked > ROOM_WATCH_MS) this.waiting.delete(run);
+    const since = this.waiting.get(runId)?.since ?? now;
+    const running = Math.max(this.turns, this.held?.size ?? 0);
+    if (this.pastFloorTurn !== null || (running > 0 && now - since < ROOM_WAIT_MAX_MS)) {
+      this.waiting.set(runId, { since, asked: now });
+      return false;
+    }
+    this.admitted.push(now);
+    this.pastFloorTurn = id;
     return true;
   }
 
@@ -2122,7 +2164,7 @@ export class RequestRunner {
     if (req.op === "brain.turn" && !this.ctx.paused?.() && !this.admit(locked, person)) {
       const close = this.ctx.reclaimBrains;
       if (!close || this.memAvailable() === null) {
-        if (this.reserve(id, person)) return this.run(id, req, controller);
+        if (this.reserve(id, person) || this.pastFloor(id, req.runId)) return this.run(id, req, controller);
         this.full(id);
         return Promise.resolve();
       }
@@ -2139,7 +2181,10 @@ export class RequestRunner {
             this.reclaim(() => close(spare), controller.signal, locked, person),
         )
         .then((room) => {
-          if (!this.closed && (room || (!controller.signal.aborted && this.reserve(id, person))))
+          if (
+            !this.closed &&
+            (room || (!controller.signal.aborted && (this.reserve(id, person) || this.pastFloor(id, req.runId))))
+          )
             return this.run(id, req, controller);
           this.inflight.delete(id);
           if (controller.signal.aborted)
@@ -2222,6 +2267,7 @@ export class RequestRunner {
   ): Promise<void> {
     const turn = req.op === "brain.turn";
     if (turn) this.turns++;
+    if (req.op === "brain.turn") this.waiting.delete(req.runId);
     this.inflight.set(id, controller);
     const held =
       req.op === "brain.turn" && this.held
@@ -2255,6 +2301,8 @@ export class RequestRunner {
       },
       emit: (frame) => (held ? held.emit(frame) : this.emitFrame(frame)),
     };
+    if (req.op === "brain.turn" && this.pastFloorTurn === id)
+      scope.emit?.({ type: "brain.event", runId: req.runId, event: { type: "note", text: PAST_FLOOR_NOTE } });
     return this.handler(this.ctx, req, scope)
       .then((data): RequestOutcome => {
         if (controller.signal.aborted && req.op !== "exec") {
@@ -2293,6 +2341,7 @@ export class RequestRunner {
         this.turnsHere.delete(id);
         if (turn) this.turns--;
         if (this.reserved === id) this.reserved = null;
+        if (this.pastFloorTurn === id) this.pastFloorTurn = null;
         // Its CLI is idle now, so a refused turn's ask can close it for room.
         if (turn && this.refusedAt !== null) this.roomFreed();
       });

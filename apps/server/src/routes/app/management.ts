@@ -37,6 +37,7 @@ import {
   ISSUES_VIEW_MAX_LABELS,
   ISSUES_VIEW_PRIORITIES,
   inviteMany,
+  isAgentesCloud,
   listAgentChannels,
   listInvitationsWithStatus,
   listMembers,
@@ -64,6 +65,7 @@ import {
   SIDEBAR_PLACES,
   SIDEBAR_SECTIONS,
   type SidebarItem,
+  SPEECH_STATES,
   START_PAGES,
   STATUS_EMOJI_MAX,
   STATUS_TEXT_MAX,
@@ -87,6 +89,7 @@ import {
   setWorkspaceApprovalsLevel,
   sidebarPlaceAllowed,
   speakerOf,
+  speechOwnerIn,
   taskManager,
   taskSteps,
   updateInvitation,
@@ -256,6 +259,14 @@ const Settings = z
     }),
     voiceAvailable: z.boolean().openapi({
       description: "Read only: this server has a speech engine now, from its environment or from its owner's Settings.",
+    }),
+    speechState: z.enum(SPEECH_STATES).openapi({
+      description:
+        "Read only: whether voice becomes text on this server. `ready`; `installing` (an engine is on its way); `failed` (the one set up here stopped); `none`. Recording works in every state: without `ready` a voice message goes as audio people play (`noWords`).",
+    }),
+    speechOwner: z.object({ userId: z.string(), name: z.string() }).nullable().openapi({
+      description:
+        "Read only: who chooses what turns voice into text here (the installation's owner, Settings › Voice), when they are a member of this workspace. Null on agentes.chat's servers.",
     }),
     gifsAvailable: z.boolean().openapi({
       description:
@@ -659,10 +670,12 @@ export function managementRoutes(deps: AppDeps) {
   app.use("/organizations/*", requireSession(deps.auth));
   const AgentParams = OrgParams.extend({ agentId: z.uuid() });
   /** What this server can do for GIFs and agents' stickers (ADR 0091 §5), so no switch does nothing. */
-  const mediaAvailable = async () => ({
+  const mediaAvailable = async (orgId: string) => ({
     // The provider follows the installation's key, which its owner may add or remove at any time.
     gifsAvailable: adapters.gifs?.available() ?? false,
     voiceAvailable: deps.extras?.speech?.available() ?? false,
+    speechState: deps.extras?.speech?.state() ?? ("none" as const),
+    speechOwner: isAgentesCloud(config.PUBLIC_URL) ? null : await speechOwnerIn(db, orgId),
     agentMediaAvailable: Boolean((await deps.extras?.jevKey?.view())?.source),
   });
 
@@ -682,7 +695,10 @@ export function managementRoutes(deps: AppDeps) {
       const actor = c.get("user").id;
       const settings = await getOrgSettings(db, actor, orgId);
       const [seesCost, viewer] = await Promise.all([canViewCost(db, actor, orgId), getMembership(db, actor, orgId)]);
-      return c.json({ ...settingsFor(settings, seesCost, can(viewer, "configure")), ...(await mediaAvailable()) }, 200);
+      return c.json(
+        { ...settingsFor(settings, seesCost, can(viewer, "configure")), ...(await mediaAvailable(orgId)) },
+        200,
+      );
     },
   );
 
@@ -747,7 +763,7 @@ export function managementRoutes(deps: AppDeps) {
       if (input.mode !== undefined) await publishWorkspaceMode(adapters.pubsub, orgId, settings.mode);
       const seesCost = await canViewCost(db, actor, orgId);
       // Only who configures the workspace gets here (`updateOrgSettings`).
-      return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable()) }, 200);
+      return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable(orgId)) }, 200);
     },
   );
 

@@ -67,6 +67,15 @@ export interface ControlBrowser {
   link?: string;
 }
 
+/** An agent using one of the person's apps here (ADR 0258): what the menu bar says, with Stop. */
+export interface ControlAppUse {
+  agentId: string;
+  /** The app as `agent-desktop` names it (`Mail`, `Finder`). */
+  app: string;
+  /** When the agent last ran a command in it (ISO). */
+  actedAt: string;
+}
+
 export type ControlBrowserDoing =
   | "opening"
   | "reading"
@@ -112,6 +121,8 @@ export interface ControlStatus {
   access?: RunnerAccess;
   /** The agents' browsers that are open or have a person's turn (absent: older runner). */
   browsers?: ControlBrowser[];
+  /** `PERSON_APPS_PROTOCOL`: the agents using the person's apps lately (absent: older runner). */
+  apps?: ControlAppUse[];
   /** The phones this computer reaches now, as the server hears them (absent: older runner, or no phones looked for). */
   phones?: RunnerPhone[];
   /** The OS permissions agents' work waits on here, for the app to ask the person (absent: older runner). */
@@ -276,6 +287,8 @@ export type ControlRequest =
   | { type: "reconnect" }
   /** Closes an agent's browser on this computer (the tray's "Parar"); its profile stays. */
   | { type: "browser.stop"; agentId: string }
+  /** The menu bar's Stop on "<Agent> is using <App>": that agent's next commands in the person's apps are refused. */
+  | { type: "apps.stop"; agentId: string }
   /** The person allowed the permission (or the app found it on): its wait ends here and on the server. */
   | { type: "permission.clear"; permission: OsPermission }
   /**
@@ -338,6 +351,7 @@ export interface ControlReplies {
   "access.answer": { access: RunnerAccess };
   reconnect: { reconnecting: boolean };
   "browser.stop": { stopped: boolean };
+  "apps.stop": { stopped: boolean };
   "permission.clear": { cleared: boolean };
   "accounts.list": { accounts: RunnerAccountInfo[] };
   /** The URL the CLI opened (shown in case the browser didn't open) and, for Codex, the code to type there. */

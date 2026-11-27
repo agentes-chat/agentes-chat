@@ -29,8 +29,10 @@ import {
   closeIdleUnderPressure,
   LOCKED_TURN_MIN_FREE_BYTES,
   MAX_IN_FLIGHT,
+  PAST_FLOOR_NOTE,
   PERSON_TURN_MIN_FREE_BYTES,
   RequestRunner,
+  ROOM_WAIT_MAX_MS,
   TURN_BYTES,
   TURN_SETTLE_MS,
   TURNS_WITHOUT_MEMORY,
@@ -536,11 +538,12 @@ test("a locked-down turn goes past the room check down to its own floor, and a l
   };
   const refused = () => sent.filter((f) => f.id && !f.ok).map((f) => f.id);
 
-  // Below the floor everyone else keeps: the agents' turn waits, the locked-down one runs.
+  // Below the floor everyone else keeps: past the one turn always let in, the agents' turn waits, the locked-down one runs.
+  turn("first", false);
   turn("work", false);
   turn("lodi", true);
   expect(refused()).toEqual(["work"]);
-  expect(runner.size).toBe(1);
+  expect(runner.size).toBe(2);
 
   // A computer about to run out turns it away too, and what it just admitted counts.
   free = LOCKED_TURN_MIN_FREE_BYTES + TURN_BYTES - 1;
@@ -549,7 +552,7 @@ test("a locked-down turn goes past the room check down to its own floor, and a l
 
   // Where memory isn't known room is a count of turns: it doesn't count against it.
   free = null;
-  for (let i = 0; i < TURNS_WITHOUT_MEMORY - 1; i++) turn(`c${i}`, false);
+  for (let i = 0; i < TURNS_WITHOUT_MEMORY - 2; i++) turn(`c${i}`, false);
   turn("over", false);
   turn("lodi3", true);
   expect(refused()).toEqual(["work", "lodi2", "over"]);
@@ -632,16 +635,74 @@ describe("the slot held for a person's turn", () => {
       await waitFor(() => sent.some((f) => f.id === id));
     };
     const started = (id: string) => release.has(id);
-    return { s, runner, turn, person, refused, freed, end, started };
+    const slowNotes = () =>
+      sent.flatMap((f) => {
+        const e = f as unknown as { type: string; runId: string; event?: { type: string; text: string } };
+        return e.type === "brain.event" && e.event?.type === "note" && e.event.text === PAST_FLOOR_NOTE
+          ? [e.runId]
+          : [];
+      });
+    return { s, runner, turn, person, refused, freed, end, started, slowNotes };
   };
 
+  test("a computer that always reads short still runs turns: one while none runs, whatever the reading, told it may be slow", async () => {
+    const r = room({ free: 0.1e9 });
+    void r.turn("agent");
+    expect(r.started("agent")).toBe(true);
+    expect(r.slowNotes()).toEqual(["agent"]);
+    // One at a time: the rest wait, a person's turn too.
+    await r.turn("agent2");
+    await r.person("ana");
+    expect(r.refused()).toEqual(["agent2", "ana"]);
+    await r.end("agent");
+    void r.person("ana");
+    expect(r.started("ana")).toBe(true);
+    expect(r.slowNotes()).toEqual(["agent", "ana"]);
+    r.runner.close();
+  });
+
+  test("a turn refused for room for ROOM_WAIT_MAX_MS runs under the floor, one such turn at a time", async () => {
+    const r = room({ free: MIN_FREE_BYTES + 1 });
+    void r.turn("ok");
+    expect(r.slowNotes()).toEqual([]);
+    r.s.free = 0.1e9;
+    await r.turn("late");
+    await r.turn("later");
+    r.s.now += ROOM_WAIT_MAX_MS - 1;
+    await r.turn("late");
+    expect(r.refused()).toEqual(["late", "later", "late"]);
+    r.s.now += 1;
+    void r.turn("late");
+    expect(r.started("late")).toBe(true);
+    expect(r.slowNotes()).toEqual(["late"]);
+    // "later" waited as long, but one turn already runs under the floor.
+    await r.turn("later");
+    expect(r.refused()).toEqual(["late", "later", "late", "later"]);
+    await r.end("late");
+    await waitFor(() => r.runner.size === 1);
+    void r.turn("later");
+    expect(r.started("later")).toBe(true);
+    // A run that stopped asking starts its wait over.
+    await r.turn("gone");
+    r.s.now += ROOM_WAIT_MAX_MS + 1;
+    await r.turn("fresh");
+    await r.end("later");
+    await waitFor(() => r.runner.size === 1);
+    await r.turn("gone");
+    expect(r.refused().slice(-3)).toEqual(["gone", "fresh", "gone"]);
+    r.runner.close();
+  });
+
   test("below the floor a person's turn goes ahead and an agent's waits; an old server's turn has no flag and waits", async () => {
-    const { runner, turn, person, refused } = room();
+    const { s, runner, turn, person, refused } = room();
+    // The one turn always let in.
+    void turn("first");
+    s.now += TURN_SETTLE_MS;
     await turn("agent");
     expect(refused()).toEqual(["agent"]);
     void person("ana");
     expect(refused()).toEqual(["agent"]);
-    expect(runner.size).toBe(1);
+    expect(runner.size).toBe(2);
     runner.close();
   });
 
@@ -679,7 +740,9 @@ describe("the slot held for a person's turn", () => {
   });
 
   test("its own hard floor: under it the turn waits as ever, and a turn still settling counts", async () => {
-    const { s, runner, person, refused } = room({ free: PERSON_TURN_MIN_FREE_BYTES - 1 });
+    const { s, runner, turn, person, refused } = room({ free: PERSON_TURN_MIN_FREE_BYTES - 1 });
+    void turn("first");
+    s.now += TURN_SETTLE_MS;
     await person("low");
     expect(refused()).toEqual(["low"]);
     s.free = PERSON_TURN_MIN_FREE_BYTES;
@@ -755,6 +818,8 @@ describe("the slot held for a person's turn", () => {
 
   test("room.freed: after a refusal, once a turn ends or the memory is back over the agents' floor, once each", async () => {
     const r = room();
+    void r.turn("first");
+    r.s.now += TURN_SETTLE_MS;
     void r.person("ana");
     await r.turn("agent");
     expect(r.refused()).toEqual(["agent"]);
@@ -914,7 +979,9 @@ test("no room for a turn: idle warm CLIs close first, one at a time, before no_s
   expect(outcome("t1")).toBe("ok");
   expect(closes).toBe(1);
   expect(spares[0]).toBe("a1:s1");
-  // Not enough left to close: refused once nothing more can close.
+  // Not enough left to close, with a turn running: refused once nothing more can close.
+  free = 10e9;
+  const busy = turn("hold-busy");
   free = MIN_FREE_BYTES - 1e9;
   await turn("t2");
   expect(outcome("t2")).toBe("no_slot");
@@ -941,12 +1008,12 @@ test("no room for a turn: idle warm CLIs close first, one at a time, before no_s
   // Memory not known: room is a count of turns, so at the count nothing is closed for one more.
   free = null;
   closes = 0;
-  const holding = Array.from({ length: TURNS_WITHOUT_MEMORY }, (_, i) => turn(`hold${i}`));
+  const holding = Array.from({ length: TURNS_WITHOUT_MEMORY - 1 }, (_, i) => turn(`hold${i}`));
   await turn("t4");
   expect(outcome("t4")).toBe("no_slot");
   expect(closes).toBe(0);
   release();
-  await Promise.all(holding);
+  await Promise.all([busy, ...holding]);
   runner.close();
 });
 
