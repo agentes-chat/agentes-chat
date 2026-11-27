@@ -6530,6 +6530,7 @@
     "undoneBy": "{{name}}님이 되돌림",
     "undoneByYou": "내가 되돌림",
     "undo": "되돌리기",
+    "applyAnyway": "그래도 적용",
     "appliedSome": "{{total}}개 중 {{done}}개 적용됨",
     "waitingAdmin": "관리자 대기 중",
     "stale": "만료됨",

@@ -6532,6 +6532,7 @@
     "undoneBy": "{{name}}が元に戻しました",
     "undoneByYou": "あなたが元に戻しました",
     "undo": "元に戻す",
+    "applyAnyway": "それでも適用",
     "appliedSome": "{{total}}件中{{done}}件を適用",
     "waitingAdmin": "管理者の対応待ち",
     "stale": "古い提案",

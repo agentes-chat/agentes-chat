@@ -6572,6 +6572,7 @@
     "undoneBy": "已由 {{name}} 撤销",
     "undoneByYou": "已由你撤销",
     "undo": "撤销",
+    "applyAnyway": "仍然应用",
     "appliedSome": "已应用 {{done}}/{{total}}",
     "waitingAdmin": "等待管理员",
     "stale": "已过时",

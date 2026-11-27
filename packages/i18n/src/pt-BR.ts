@@ -7278,6 +7278,7 @@ export const ptBR = {
     undoneBy: "Desfeito por {{name}}",
     undoneByYou: "Desfeito por você",
     undo: "Desfazer",
+    applyAnyway: "Aplicar mesmo assim",
     /** A card whose rows ended apart. */
     appliedSome: "{{done}} de {{total}} aplicadas",
     waitingAdmin: "Aguardando um admin",

@@ -7024,6 +7024,7 @@
     "undoneBy": "Deshecho por {{name}}",
     "undoneByYou": "Deshecho por ti",
     "undo": "Deshacer",
+    "applyAnyway": "Aplicar de todos modos",
     "appliedSome": "{{done}} de {{total}} aplicadas",
     "waitingAdmin": "Esperando a un admin",
     "stale": "Desactualizada",

@@ -7331,6 +7331,7 @@
     "undoneBy": "Cofnięte przez: {{name}}",
     "undoneByYou": "Cofnięte przez ciebie",
     "undo": "Cofnij",
+    "applyAnyway": "Zastosuj mimo to",
     "appliedSome": "Zastosowano {{done}} z {{total}}",
     "waitingAdmin": "Czeka na administratora",
     "stale": "Nieaktualna",

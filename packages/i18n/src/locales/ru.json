@@ -7288,6 +7288,7 @@
     "undoneBy": "Отменено: {{name}}",
     "undoneByYou": "Отменено вами",
     "undo": "Отменить",
+    "applyAnyway": "Всё равно применить",
     "appliedSome": "Применено {{done}} из {{total}}",
     "waitingAdmin": "Ждёт администратора",
     "stale": "Устарело",

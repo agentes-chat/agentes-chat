@@ -110,6 +110,17 @@ their agent whatever its role says and teaches what they choose: it is left out 
 destination, a weaker safety rule, steps that serve someone else). A skill sent whole (a .zip, a link) installs with
 its card instead (ADR 0020, amendment of 2026-11-26).
 
+*Addendum 2026-11-27 (long changes, and what the review left out):* the review read a text or skill change as its
+removed lines followed by its added ones, cut to 4,000 characters, so a long rewrite of a skill showed only what it
+removed: a change a person asked for was left out as "truncated, can't verify". It now reads the whole unified diff, in
+order with the unchanged lines around each change (`changeText`, wiki's `diffLines`/`unifiedPatch`); a diff too long
+for its share of the input (100,000 characters across the card) reads as the whole new text, and only past that is it
+cut, marked as cut. A long change or a rewrite is no reason to leave it out. A change the review left out (not a memory
+lesson, which stays in memory) is still the person's to make: "Aplicar mesmo assim" on its card, the history and the
+right hand's cards, for whoever may make it (`leftOutByReview`, the view's `applicable`, `POST …/proposals/{id}/accept`),
+applied as them through the same editors, 409 when what it was made against changed since. The agent that proposed it
+tells the person who asked that they can.
+
 ## Consequences
 
 - Improvements take effect within seconds of being proposed, with nobody asked; people correct after the fact with

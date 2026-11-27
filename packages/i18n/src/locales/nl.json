@@ -6848,6 +6848,7 @@
     "undoneBy": "Door {{name}} ongedaan gemaakt",
     "undoneByYou": "Door jou ongedaan gemaakt",
     "undo": "Ongedaan maken",
+    "applyAnyway": "Toch toepassen",
     "appliedSome": "{{done}} van {{total}} toegepast",
     "waitingAdmin": "Wacht op een beheerder",
     "stale": "Verouderd",

@@ -7376,6 +7376,8 @@ export const en = {
     undoneBy: "Undone by {{name}}",
     undoneByYou: "Undone by you",
     undo: "Undo",
+    /** On a change the agent's review left out: whoever may make it applies it themselves. */
+    applyAnyway: "Apply anyway",
     /** A card whose rows ended apart. */
     appliedSome: "{{done}} of {{total}} applied",
     waitingAdmin: "Waiting for an admin",

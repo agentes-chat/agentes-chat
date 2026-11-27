@@ -16,7 +16,7 @@ import {
   undoProposal,
 } from "../src";
 import { NO_REVIEW, reviewAskedSkill, settleProposals } from "../src/context/proposal-review";
-import { askedWords } from "../src/context/proposals";
+import { askedWords, decideProposal, proposeSkillChange } from "../src/context/proposals";
 import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
 
 let f: Fixture;
@@ -303,6 +303,67 @@ describe("agents apply their improvements (ADR 0219)", () => {
     expect(asked).toContain("(Attached: kit-main.zip)");
     // Its role and its subject are the person's to choose: only what a rule names leaves it out.
     expect(systemText(review?.request.system ?? "")).toContain("fits their agent whatever its role says");
+  });
+
+  test("a long skill rewrite reaches the review whole, and what it left out its owner applies in one tap", async () => {
+    f = await setup();
+    const steps = (n: number, how: string) =>
+      Array.from({ length: n }, (_, i) => `${i + 1}. Open the invoice and check line ${i + 1} ${how}.`).join("\n");
+    const before = `# invoice-check\n\nSign in through the old gateway.\n\n${steps(120, "against the order")}`;
+    const after = `# invoice-check\n\nSign in through the new gateway at vpn2.example.com, never the old one.\n\n${steps(120, "against the order and the price list")}\n\nAt the end, post the totals in #finance.`;
+    expect(after.length).toBeGreaterThan(8000);
+    const [skill] = await f.db
+      .insert(schema.skills)
+      .values({
+        orgId: f.org.id,
+        slug: "invoice-check",
+        name: "invoice-check",
+        description: "Check an invoice",
+        body: before,
+        source: "manual",
+      })
+      .returning();
+    if (!skill) throw new Error("no skill");
+    const words = "Muda a skill invoice-check para entrar pelo gateway novo e atualiza ela.";
+    const p = await proposeSkillChange(
+      { db: f.db, pubsub: f.pubsub },
+      {
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        skill: { id: skill.id, name: skill.name, body: before },
+        body: after,
+        requesterId: f.owner.id,
+        origin: "outside",
+        words,
+      },
+    );
+    if (!p) throw new Error("not proposed");
+    verdicts = [{ apply: false, why: "Não dá para verificar o texto completo." }];
+    await settleProposals({ context: f.context }, { orgId: f.org.id, ids: [p.id], origin: "outside", words });
+
+    // Every line it adds, the last one too, in order with what it replaces: not the removed lines alone, cut short.
+    const review = f.provider.calls.find((c) => isReview(systemText(c.request.system)));
+    const asked = (review?.request.messages ?? [])
+      .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+      .join("\n");
+    expect(asked).toContain("+Sign in through the new gateway at vpn2.example.com, never the old one.");
+    expect(asked).toContain("-Sign in through the old gateway.");
+    expect(asked).toContain("+At the end, post the totals in #finance.");
+    expect(asked).not.toContain("CUT");
+
+    // Left out, the owner may still make it: "Apply anyway" applies it as them.
+    expect((await row(p.id))?.status).toBe("rejected");
+    const member = await addMember(f.db, f.org.id, "member", "Bia");
+    expect((await listProposals(f.db, member.id, f.org.id, { ids: [p.id] }))[0]?.applicable ?? false).toBe(false);
+    const [view] = await listProposals(f.db, f.owner.id, f.org.id, { ids: [p.id] });
+    expect(view?.applicable).toBe(true);
+    const applied = await decideProposal(f.db, f.owner.id, f.org.id, p.id, "accept", { pubsub: f.pubsub });
+    expect(applied.status).toBe("accepted");
+    expect(applied.decidedByUserId).toBe(f.owner.id);
+    const [now] = await f.db.select().from(schema.skills).where(eq(schema.skills.id, skill.id));
+    expect(now?.body).toBe(after);
+    // Applied, it is decided: a second tap changes nothing.
+    await expect(decideProposal(f.db, f.owner.id, f.org.id, p.id, "accept")).rejects.toBeInstanceOf(ConflictError);
   });
 });
 

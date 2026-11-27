@@ -6807,6 +6807,7 @@
     "undoneBy": "Von {{name}} rückgängig gemacht",
     "undoneByYou": "Von dir rückgängig gemacht",
     "undo": "Rückgängig",
+    "applyAnyway": "Trotzdem anwenden",
     "appliedSome": "{{done}} von {{total}} angewendet",
     "waitingAdmin": "Wartet auf einen Admin",
     "stale": "Veraltet",

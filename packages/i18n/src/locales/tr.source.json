@@ -16785,6 +16785,9 @@
   "proposals.undo": {
     "value": "Undo"
   },
+  "proposals.applyAnyway": {
+    "value": "Apply anyway"
+  },
   "proposals.appliedSome": {
     "value": "{{done}} of {{total}} applied"
   },

@@ -7074,6 +7074,7 @@
     "undoneBy": "Annulé par {{name}}",
     "undoneByYou": "Annulé par vous",
     "undo": "Annuler",
+    "applyAnyway": "Appliquer quand même",
     "appliedSome": "{{done}} sur {{total}} appliquées",
     "waitingAdmin": "En attente d'un admin",
     "stale": "Obsolète",

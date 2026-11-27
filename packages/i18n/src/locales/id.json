@@ -6557,6 +6557,7 @@
     "undoneBy": "Diurungkan oleh {{name}}",
     "undoneByYou": "Diurungkan olehmu",
     "undo": "Urungkan",
+    "applyAnyway": "Tetap terapkan",
     "appliedSome": "{{done}} dari {{total}} diterapkan",
     "waitingAdmin": "Menunggu admin",
     "stale": "Kedaluwarsa",
