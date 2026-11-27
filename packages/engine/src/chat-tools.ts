@@ -264,10 +264,24 @@ export function createChatToolSource(deps: {
           }
           const moving = input.move_here === true;
           const [run] = await ctx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, ctx.runId));
-          // A channel that replies in threads keeps a run there (ADR 0214): it never moves to a main timeline.
-          const threadsOnly = Boolean(run?.replyInThread || channel.replyInThreads);
-          if (moving && threadsOnly)
-            return { content: threadsOnlyText(Boolean(run?.replyInThread), channel.name), isError: true };
+          // A channel that replies in threads keeps a run there (ADR 0214): it never moves to a main timeline. A run
+          // under its own first message (ADR 0261) was asked in a main timeline: it moves like one.
+          const underOwnLine = async () =>
+            (
+              await ctx.db
+                .select({ id: schema.messages.id })
+                .from(schema.messages)
+                .where(
+                  and(
+                    eq(schema.messages.orgId, ctx.orgId),
+                    eq(schema.messages.id, ctx.threadRootId),
+                    sql`${schema.messages.meta} ? 'turnThread'`,
+                  ),
+                )
+            ).length > 0;
+          const keptHere = Boolean(run?.replyInThread) && !(moving && (await underOwnLine()));
+          const threadsOnly = keptHere || channel.replyInThreads;
+          if (moving && threadsOnly) return { content: threadsOnlyText(keptHere, channel.name), isError: true };
           const inThread = replyThreadOf(ctx) !== null;
           const movable = (moving || (here && inThread)) && !threadsOnly && !!run && (await movableRun(ctx.db, run));
           // From a thread of the same channel, a post there is a new message at its top level: what was asked.

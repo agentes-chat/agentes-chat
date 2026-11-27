@@ -4,7 +4,7 @@ import { runAuthority } from "./authority";
 import { threadIsConfidential } from "./confidential";
 import { getChannelCached } from "./context";
 import { inAgentOnlyDm } from "./dms";
-import { publishMessageCreated } from "./events";
+import { publishChannelEvent, publishMessageCreated } from "./events";
 import { plainWords } from "./format";
 import { insertMessage, messageView } from "./messages";
 import { missionOfThread } from "./missions";
@@ -17,8 +17,9 @@ import { runStretchOf } from "./stretch";
 import { maskCredentials, scrubSignIns } from "./tool-detail";
 import { listsEveryTool } from "./tools/directory";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
+import { openTurnThread } from "./turn-thread";
 import { withWikiLinks } from "./wiki-links";
-import { movableRun } from "./works";
+import { movableRun, workTopic } from "./works";
 
 const { agentRuns, agentRunSteps, messages } = schema;
 
@@ -242,10 +243,11 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
         if (before && took.length === 0 && !progress) return { kind: "already", body: before.text } as const;
         // A person wrote since the run last read: the line would answer a conversation that has moved on.
         if (await personAmong(tx, locked.orgId, locked.pendingMessageIds)) return { kind: "wroteAgain" } as const;
+        const threadId = replyThreadOf({ ...locked, confidential: ctx.confidential });
         const message = await insertMessage(tx, {
           orgId: locked.orgId,
           channelId: locked.channelId,
-          threadId: replyThreadOf({ ...locked, confidential: ctx.confidential }),
+          threadId,
           author: {
             type: "agent",
             agentId: locked.agentId,
@@ -266,7 +268,9 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
           .update(agentRuns)
           .set({ transcript: sql`coalesce(${agentRuns.transcript}, '{}'::jsonb) || '{"answerOwed":true}'::jsonb` })
           .where(eq(agentRuns.id, locked.id));
-        return { kind: "posted", message } as const;
+        // Said in a channel's main timeline: the work it announces answers in this line's thread (ADR 0261).
+        const opened = threadId === null && (await openTurnThread(tx, locked.id, message.id));
+        return { kind: "posted", message, opened } as const;
       });
       if (outcome.kind === "ended") return refused(REFUSED.ended);
       if (outcome.kind === "wroteAgain") return refused(REFUSED.wroteAgain, false);
@@ -276,6 +280,18 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
         };
       const [view] = await withWikiLinks(ctx.db, run.orgId, [messageView(outcome.message)]);
       if (view && deps.pubsub) await publishMessageCreated(deps.pubsub, view);
+      if (outcome.opened) {
+        ctx.threadRootId = outcome.message.id;
+        ctx.replyInThread = true;
+        if (deps.pubsub) {
+          // Live rows keep the place they started in: this one ends in the main timeline and starts over in the thread.
+          const at = { channelId: run.channelId, agentId: run.agentId, runId: run.id };
+          await publishChannelEvent(deps.pubsub, { type: "agent.idle", ...at, threadId: null });
+          await publishChannelEvent(deps.pubsub, { type: "agent.thinking", ...at, threadId: outcome.message.id });
+          // The executor holding the run, on this replica or another, answers there from now on (`adoptWork`).
+          await deps.pubsub.publish(workTopic(run.id), { type: "run.moved", runId: run.id }).catch(() => {});
+        }
+      }
       return {
         content: "Posted. Do the work now; your final message brings the result, without repeating this line.",
         data: { saidNow: { text, messageId: outcome.message.id } },

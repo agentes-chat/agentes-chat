@@ -730,7 +730,7 @@ export async function moveRun(
   const line = await deps.db.transaction(async (tx) => {
     await tx
       .update(agentRuns)
-      .set({ channelId: to.channelId, threadRootId: run.triggerMessageId, updatedAt: now })
+      .set({ channelId: to.channelId, threadRootId: run.triggerMessageId, replyInThread: false, updatedAt: now })
       .where(eq(agentRuns.id, run.id));
     if (run.workId)
       await tx
