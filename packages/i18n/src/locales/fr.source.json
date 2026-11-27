@@ -6029,6 +6029,111 @@
   "sidebarAgents.dmsEmpty": {
     "value": "Your conversations with people show up here."
   },
+  "sidebarFavorites.title": {
+    "value": "Favorites"
+  },
+  "sidebarFavorites.add": {
+    "value": "Add to favorites"
+  },
+  "sidebarFavorites.remove": {
+    "value": "Remove from favorites"
+  },
+  "sidebarFavorites.full": {
+    "value": "Favorites already holds 50. Remove one to add this one."
+  },
+  "sidebarSections.new": {
+    "value": "New section"
+  },
+  "sidebarSections.newName": {
+    "value": "New section"
+  },
+  "sidebarSections.moveTo": {
+    "value": "Move to section"
+  },
+  "sidebarSections.takeOut": {
+    "value": "Remove from section"
+  },
+  "sidebarSections.rename": {
+    "value": "Rename section"
+  },
+  "sidebarSections.delete": {
+    "value": "Delete section"
+  },
+  "sidebarSections.nameLabel": {
+    "value": "Section name"
+  },
+  "sidebarDms.options": {
+    "value": "Direct messages options"
+  },
+  "sidebarDms.show": {
+    "value": "Show"
+  },
+  "sidebarDms.shows.all": {
+    "value": "Everyone in the workspace"
+  },
+  "sidebarDms.shows.recent": {
+    "value": "Recent conversations only"
+  },
+  "sidebarDms.invite": {
+    "value": "Invite people"
+  },
+  "sidebarDms.invited": {
+    "value": "Invite sent"
+  },
+  "sidebarDms.invitedTip": {
+    "value": "{{email}} hasn't accepted the invitation yet"
+  },
+  "sidebarDms.agentTag": {
+    "value": "AI"
+  },
+  "sidebarDms.agentTip": {
+    "value": "AI agent"
+  },
+  "sidebarColumn.label": {
+    "value": "Tools"
+  },
+  "sidebarColumn.unread": {
+    "value": "{{name}}, something unread"
+  },
+  "sidebarColumn.you": {
+    "value": "{{name}}, something for you"
+  },
+  "unreads.title": {
+    "value": "Unreads"
+  },
+  "unreads.forYou": {
+    "value": "For you"
+  },
+  "unreads.conversations": {
+    "value": "Conversations"
+  },
+  "unreads.markAll": {
+    "value": "Mark all as read"
+  },
+  "unreads.markRead": {
+    "value": "Mark as read"
+  },
+  "unreads.open": {
+    "value": "Open"
+  },
+  "unreads.seeInbox": {
+    "value": "See everything in the inbox"
+  },
+  "unreads.more": {
+    "value": {
+      "one": "{{count}} more message",
+      "other": "{{count}} more messages"
+    }
+  },
+  "unreads.emptyTitle": {
+    "value": "All caught up"
+  },
+  "unreads.emptyText": {
+    "value": "New messages and what waits for you show up here."
+  },
+  "unreads.markedAll": {
+    "value": "Everything marked as read"
+  },
   "sidebarPins.pin": {
     "value": "Pin to top"
   },

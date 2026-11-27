@@ -2596,6 +2596,55 @@
     "newGroupWith": "Nowy dział z {{name}}",
     "dmsEmpty": "Tu pojawiają się twoje rozmowy z ludźmi."
   },
+  "sidebarFavorites": {
+    "title": "Ulubione",
+    "add": "Dodaj do ulubionych",
+    "remove": "Usuń z ulubionych",
+    "full": "Ulubione mają już 50 pozycji. Usuń jedną, aby dodać tę."
+  },
+  "sidebarSections": {
+    "new": "Nowa sekcja",
+    "newName": "Nowa sekcja",
+    "moveTo": "Przenieś do sekcji",
+    "takeOut": "Usuń z sekcji",
+    "rename": "Zmień nazwę sekcji",
+    "delete": "Usuń sekcję",
+    "nameLabel": "Nazwa sekcji"
+  },
+  "sidebarDms": {
+    "options": "Opcje wiadomości bezpośrednich",
+    "show": "Pokaż",
+    "shows": {
+      "all": "Wszyscy w workspace",
+      "recent": "Tylko ostatnie rozmowy"
+    },
+    "invite": "Zaproś osoby",
+    "invited": "Zaproszenie wysłane",
+    "invitedTip": "{{email}} jeszcze nie przyjął zaproszenia",
+    "agentTag": "AI",
+    "agentTip": "Agent AI"
+  },
+  "sidebarColumn": {
+    "label": "Narzędzia",
+    "unread": "{{name}}, coś nieprzeczytanego",
+    "you": "{{name}}, coś dla ciebie"
+  },
+  "unreads": {
+    "title": "Nieprzeczytane",
+    "forYou": "Dla ciebie",
+    "conversations": "Rozmowy",
+    "markAll": "Oznacz wszystko jako przeczytane",
+    "markRead": "Oznacz jako przeczytane",
+    "open": "Otwórz",
+    "seeInbox": "Zobacz wszystko w skrzynce odbiorczej",
+    "more_one": "Jeszcze {{count}} wiadomość",
+    "more_few": "Jeszcze {{count}} wiadomości",
+    "more_many": "Jeszcze {{count}} wiadomości",
+    "more_other": "Jeszcze {{count}} wiadomości",
+    "emptyTitle": "Wszystko przeczytane",
+    "emptyText": "Tu pojawiają się nowe wiadomości i to, co na ciebie czeka.",
+    "markedAll": "Wszystko oznaczone jako przeczytane"
+  },
   "sidebarPins": {
     "pin": "Przypnij na górze",
     "unpin": "Odepnij",

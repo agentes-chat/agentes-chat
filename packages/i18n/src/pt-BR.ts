@@ -2482,6 +2482,58 @@ export const ptBR = {
     newGroupWith: "Novo setor com {{name}}",
     dmsEmpty: "Suas conversas com pessoas aparecem aqui.",
   },
+  /** Favoritos (ADR 0260): pessoas, agentes e canais que a pessoa deixa no topo da barra lateral, pelo nome. */
+  sidebarFavorites: {
+    title: "Favoritos",
+    add: "Adicionar aos favoritos",
+    remove: "Tirar dos favoritos",
+    full: "Favoritos já tem 50. Tire um para adicionar este.",
+  },
+  /** As seções de canais de cada pessoa (ADR 0260): feitas arrastando um canal sobre outro, ou pelo menu do canal. */
+  sidebarSections: {
+    new: "Nova seção",
+    newName: "Nova seção",
+    moveTo: "Mover para a seção",
+    takeOut: "Tirar da seção",
+    rename: "Renomear seção",
+    delete: "Excluir seção",
+    nameLabel: "Nome da seção",
+  },
+  /** Mensagens diretas com pessoas e agentes juntos (ADR 0260). */
+  sidebarDms: {
+    options: "Opções de Mensagens diretas",
+    show: "Mostrar",
+    shows: {
+      all: "Todos do workspace",
+      recent: "Só conversas recentes",
+    },
+    invite: "Convidar pessoas",
+    invited: "Convite enviado",
+    invitedTip: "{{email}} ainda não aceitou o convite",
+    agentTag: "IA",
+    agentTip: "Agente de IA",
+  },
+  /** A coluna de ferramentas da barra lateral (ADR 0260): o que o ponto de um botão diz ao leitor de tela. */
+  sidebarColumn: {
+    label: "Ferramentas",
+    unread: "{{name}}, algo não lido",
+    you: "{{name}}, algo para você",
+  },
+  /** Não lidas (`/unreads`, ADR 0260): tudo o que espera pela pessoa, os itens da caixa de entrada e as conversas não lidas. */
+  unreads: {
+    title: "Não lidas",
+    forYou: "Para você",
+    conversations: "Conversas",
+    markAll: "Marcar tudo como lido",
+    markRead: "Marcar como lida",
+    open: "Abrir",
+    seeInbox: "Ver tudo na caixa de entrada",
+    more_one: "Mais {{count}} mensagem",
+    more_other: "Mais {{count}} mensagens",
+    emptyTitle: "Tudo em dia",
+    emptyText: "Mensagens novas e o que espera por você aparecem aqui.",
+    markedAll: "Tudo marcado como lido",
+  },
   sidebarPins: {
     pin: "Fixar no topo",
     unpin: "Tirar do topo",

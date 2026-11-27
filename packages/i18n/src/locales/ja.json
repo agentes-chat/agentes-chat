@@ -2335,6 +2335,52 @@
     "newGroupWith": "{{name}} を含む新しい部署",
     "dmsEmpty": "メンバーとの会話はここに表示されます。"
   },
+  "sidebarFavorites": {
+    "title": "お気に入り",
+    "add": "お気に入りに追加",
+    "remove": "お気に入りから外す",
+    "full": "お気に入りはすでに50件です。追加するには1件外してください。"
+  },
+  "sidebarSections": {
+    "new": "新しいセクション",
+    "newName": "新しいセクション",
+    "moveTo": "セクションへ移動",
+    "takeOut": "セクションから外す",
+    "rename": "セクション名を変更",
+    "delete": "セクションを削除",
+    "nameLabel": "セクション名"
+  },
+  "sidebarDms": {
+    "options": "ダイレクトメッセージのオプション",
+    "show": "表示",
+    "shows": {
+      "all": "ワークスペースの全員",
+      "recent": "最近の会話のみ"
+    },
+    "invite": "メンバーを招待",
+    "invited": "招待済み",
+    "invitedTip": "{{email}} はまだ招待を承認していません",
+    "agentTag": "AI",
+    "agentTip": "AIエージェント"
+  },
+  "sidebarColumn": {
+    "label": "ツール",
+    "unread": "{{name}}、未読あり",
+    "you": "{{name}}、あなた宛てあり"
+  },
+  "unreads": {
+    "title": "未読",
+    "forYou": "あなた宛て",
+    "conversations": "会話",
+    "markAll": "すべて既読にする",
+    "markRead": "既読にする",
+    "open": "開く",
+    "seeInbox": "受信トレイですべて見る",
+    "more_other": "ほか{{count}}件のメッセージ",
+    "emptyTitle": "すべて確認済み",
+    "emptyText": "新しいメッセージとあなたを待っているものがここに表示されます。",
+    "markedAll": "すべて既読にしました"
+  },
   "sidebarPins": {
     "pin": "上部に固定",
     "unpin": "固定を解除",

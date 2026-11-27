@@ -2421,6 +2421,53 @@
     "newGroupWith": "Neue Abteilung mit {{name}}",
     "dmsEmpty": "Deine Unterhaltungen mit Personen erscheinen hier."
   },
+  "sidebarFavorites": {
+    "title": "Favoriten",
+    "add": "Zu Favoriten hinzufügen",
+    "remove": "Aus Favoriten entfernen",
+    "full": "Favoriten enthält schon 50. Entferne einen, um diesen hinzuzufügen."
+  },
+  "sidebarSections": {
+    "new": "Neuer Abschnitt",
+    "newName": "Neuer Abschnitt",
+    "moveTo": "In Abschnitt verschieben",
+    "takeOut": "Aus Abschnitt entfernen",
+    "rename": "Abschnitt umbenennen",
+    "delete": "Abschnitt löschen",
+    "nameLabel": "Name des Abschnitts"
+  },
+  "sidebarDms": {
+    "options": "Optionen für Direktnachrichten",
+    "show": "Anzeigen",
+    "shows": {
+      "all": "Alle im Workspace",
+      "recent": "Nur letzte Unterhaltungen"
+    },
+    "invite": "Personen einladen",
+    "invited": "Einladung gesendet",
+    "invitedTip": "{{email}} hat die Einladung noch nicht angenommen",
+    "agentTag": "KI",
+    "agentTip": "KI-Agent"
+  },
+  "sidebarColumn": {
+    "label": "Werkzeuge",
+    "unread": "{{name}}, etwas Ungelesenes",
+    "you": "{{name}}, etwas für dich"
+  },
+  "unreads": {
+    "title": "Ungelesen",
+    "forYou": "Für dich",
+    "conversations": "Unterhaltungen",
+    "markAll": "Alles als gelesen markieren",
+    "markRead": "Als gelesen markieren",
+    "open": "Öffnen",
+    "seeInbox": "Alles im Posteingang ansehen",
+    "more_one": "{{count}} weitere Nachricht",
+    "more_other": "{{count}} weitere Nachrichten",
+    "emptyTitle": "Alles erledigt",
+    "emptyText": "Neue Nachrichten und was auf dich wartet, erscheinen hier.",
+    "markedAll": "Alles als gelesen markiert"
+  },
   "sidebarPins": {
     "pin": "Oben anheften",
     "unpin": "Lösen",

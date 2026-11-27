@@ -2957,8 +2957,9 @@ export class BrainManager {
       live.proc.parser.resetStats();
       // A process this turn started: its log from its first line, its start included.
       if (live.debugFile) debugFrom = started === live ? 0 : debugLogMark(live.debugFile);
-      sentAt = Date.now();
-      const out = await this.onLive(live, req, ctx);
+      const out = await this.onLive(live, req, ctx, undefined, () => {
+        sentAt = Date.now();
+      });
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live, "closed");
       if (out.final) return timed(out.final, live);
@@ -3111,6 +3112,8 @@ export class BrainManager {
     req: BrainTurnRequest,
     ctx: BrainTurnContext,
     stalledBefore?: StallInfo,
+    /** As the turn goes to its CLI, after the runner's own waits (a delegated CLI's bridge to the agent's worker). */
+    sent?: () => void,
   ): Promise<TurnOutcome> {
     live.busy = true;
     if (live.idleTimer) clearTimeout(live.idleTimer);
@@ -3138,6 +3141,7 @@ export class BrainManager {
           ...(runToken && isRunToolToken(runToken) ? { serverToken: runToken } : {}),
         });
       }
+      sent?.();
       const prompt = turnPrompt(live, req);
       const lead = [told, stalledBefore ? stallNote(stalledBefore) : ""].filter(Boolean).join("\n\n");
       const out = await runTurnOnProcess(live.proc, lead ? `${lead}\n\n${prompt}` : prompt, {
@@ -3484,10 +3488,11 @@ export class BrainManager {
     const withPlugin = codeTurn && claudeAtLeast(this.opts.claudeVersion?.(), REPO_PLUGIN_MIN_CLAUDE);
     const repoPrint = withPlugin ? repoPluginPrint(cwd) : undefined;
     const plugin = withPlugin ? repoPlugin(cwd, path.join(dir, "repo"), fileMode) : null;
-    // Not delegated: that CLI runs as the sign-in's user, who can't write in this folder.
+    // Delegated: that CLI runs as the sign-in's user, who can't write in this folder, only in its own HOME in its room.
+    const debugHome = launched ? launched.env.HOME : dir;
     const debugFile =
-      !delegated && claudeAtLeast(this.opts.claudeVersion?.(), DEBUG_LOG_MIN_CLAUDE)
-        ? path.join(dir, "debug.log")
+      debugHome && claudeAtLeast(this.opts.claudeVersion?.(), DEBUG_LOG_MIN_CLAUDE)
+        ? path.join(debugHome, launched ? `debug-${id}.log` : "debug.log")
         : undefined;
     const args = claudeBrainArgs({
       session,
@@ -3757,6 +3762,11 @@ export class BrainManager {
     const cleanup = () => {
       rmSync(live.dir, { recursive: true, force: true });
       rmSync(brainTmpDir(live.id), { recursive: true, force: true });
+      try {
+        if (live.debugFile) rmSync(live.debugFile, { force: true });
+      } catch {
+        // A delegated CLI's log is in its sign-in user's folder, where that user may have left a folder: it stays.
+      }
     };
     if (live.proc.exited) cleanup();
     else live.proc.onExit(cleanup);

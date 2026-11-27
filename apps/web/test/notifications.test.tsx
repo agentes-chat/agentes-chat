@@ -83,8 +83,8 @@ const onNarrowScreen = async (run: () => Promise<void>) => {
   }
 };
 /** The inbox's own entry in the sidebar. */
-const sidebarEntry = () =>
-  document.querySelector(`#app-nav a[href="/org/${ORG_ID}/notifications"]`) as HTMLAnchorElement;
+/** The sidebar's way to what waits (ADR 0260): Não lidas, the list's first row. */
+const sidebarEntry = () => document.querySelector(`#app-nav a[href="/org/${ORG_ID}/unreads"]`) as HTMLAnchorElement;
 /** The fake backend with these notifications and no proposals: these cases are about the notifications. */
 const seed = (notifications: AppNotification[], over: Partial<FakeState> = {}) =>
   seedState({ notifications, proposals: [], ...over });

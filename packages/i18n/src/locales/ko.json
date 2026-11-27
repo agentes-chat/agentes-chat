@@ -2335,6 +2335,52 @@
     "newGroupWith": "{{name}}이(가) 있는 새 부서",
     "dmsEmpty": "사람과의 대화가 여기에 표시돼요."
   },
+  "sidebarFavorites": {
+    "title": "즐겨찾기",
+    "add": "즐겨찾기에 추가",
+    "remove": "즐겨찾기에서 제거",
+    "full": "즐겨찾기가 이미 50개입니다. 이 항목을 추가하려면 하나를 제거하세요."
+  },
+  "sidebarSections": {
+    "new": "새 섹션",
+    "newName": "새 섹션",
+    "moveTo": "섹션으로 이동",
+    "takeOut": "섹션에서 빼기",
+    "rename": "섹션 이름 바꾸기",
+    "delete": "섹션 삭제",
+    "nameLabel": "섹션 이름"
+  },
+  "sidebarDms": {
+    "options": "다이렉트 메시지 옵션",
+    "show": "표시",
+    "shows": {
+      "all": "워크스페이스의 모든 사람",
+      "recent": "최근 대화만"
+    },
+    "invite": "사람 초대",
+    "invited": "초대 보냄",
+    "invitedTip": "{{email}} 님이 아직 초대를 수락하지 않았습니다",
+    "agentTag": "AI",
+    "agentTip": "AI 에이전트"
+  },
+  "sidebarColumn": {
+    "label": "도구",
+    "unread": "{{name}}, 읽지 않은 항목 있음",
+    "you": "{{name}}, 나를 위한 항목 있음"
+  },
+  "unreads": {
+    "title": "읽지 않음",
+    "forYou": "나에게",
+    "conversations": "대화",
+    "markAll": "모두 읽음으로 표시",
+    "markRead": "읽음으로 표시",
+    "open": "열기",
+    "seeInbox": "받은편지함에서 모두 보기",
+    "more_other": "메시지 {{count}}개 더",
+    "emptyTitle": "모두 확인했습니다",
+    "emptyText": "새 메시지와 나를 기다리는 일이 여기에 표시됩니다.",
+    "markedAll": "모두 읽음으로 표시했습니다"
+  },
   "sidebarPins": {
     "pin": "맨 위에 고정",
     "unpin": "고정 해제",

@@ -11,6 +11,7 @@ import {
   createModelGateway,
   drainOutbox,
   executeRun,
+  LEARNED_LIMIT_TTL_MS,
   listCredentials,
   MissingCredentialError,
   postPersonMessage,
@@ -133,6 +134,62 @@ test("a model whose limit no row knows: the cap its provider's list tells, asked
   await agentCall();
   expect(f.openaiProvider.calls.map((c) => c.request.maxTokens)).toEqual([8192, 8192]);
   expect(asked).toBe(1);
+});
+
+test("a key's learned output limit outlives the process: the next one sends within it at once, a month at most", async () => {
+  const said = "This model supports at most 16384 completion tokens, whereas you provided 64000.";
+  f = await setup({
+    reply: (request) =>
+      request.maxTokens > 16_384
+        ? new ProviderError(`provider rejected the request (400): ${said}`, false, 400, undefined, said)
+        : { chunks: ["ok"] },
+  });
+  await createCredential(f.db, f.keyWrapper, f.owner.id, f.org.id, {
+    provider: "openai",
+    label: "OpenAI",
+    apiKey: "sk-proj-test-key-12345678",
+  });
+  await f.db
+    .update(schema.agents)
+    .set({ model: "gpt-6.2-sol", credentialId: null })
+    .where(eq(schema.agents.id, f.agent.id));
+  await call(f, [], 64_000);
+  const [kept] = await f.db.select().from(schema.modelOutputLimits);
+  expect(kept).toMatchObject({ orgId: f.org.id, model: "gpt-6.2-sol", maxOutputTokens: 16_384 });
+  const restarted = () =>
+    createModelGateway({
+      db: f.db,
+      keyWrappers: [f.keyWrapper],
+      providers: { openai: f.openaiProvider },
+      platformCredentials: noPlatformCredentials,
+    });
+  const sent = () => f.openaiProvider.calls.map((c) => c.request.maxTokens);
+  await call({ ...f, gateway: restarted() }, [], 64_000);
+  expect(sent()).toEqual([64_000, 16_384, 16_384]);
+  // Learned longer ago than a month: asked again, in case the provider raised it.
+  await f.db.update(schema.modelOutputLimits).set({ learnedAt: new Date(Date.now() - LEARNED_LIMIT_TTL_MS - 60_000) });
+  await call({ ...f, gateway: restarted() }, [], 64_000);
+  expect(sent()).toEqual([64_000, 16_384, 16_384, 64_000, 16_384]);
+});
+
+test("a limit a refusal learned below its model's row outlives the process too", async () => {
+  const said = "max_tokens: 100000 > 32000, which is the maximum allowed number of output tokens";
+  f = await setup({
+    reply: (request) =>
+      request.maxTokens > 32_000
+        ? new ProviderError(`provider rejected the request (400): ${said}`, false, 400, undefined, said)
+        : { chunks: ["ok"] },
+  });
+  await f.db.update(schema.agents).set({ model: "claude-fable-5-2" }).where(eq(schema.agents.id, f.agent.id));
+  await call(f, [], 100_000);
+  const restarted = createModelGateway({
+    db: f.db,
+    keyWrappers: [f.keyWrapper],
+    providers: { anthropic: f.provider },
+    platformCredentials: noPlatformCredentials,
+  });
+  await call({ ...f, gateway: restarted }, [], 100_000);
+  expect(f.provider.calls.map((c) => c.request.maxTokens)).toEqual([100_000, 32_000, 32_000]);
 });
 
 test("decrypts the org credential, streams, and records tokens and cost with org and agent", async () => {
