@@ -27,6 +27,7 @@ import {
   connectorMediaLinks,
   createAgentGifPoster,
   createAgentStyleToolSource,
+  createAppGuideToolSource,
   createApprovalRequestToolSource,
   createArtifactToolSource,
   createAskAgentToolSource,
@@ -504,6 +505,8 @@ export function buildEngine(o: EngineOptions) {
       createFollowUpToolSource({ pubsub: adapters.pubsub }),
       // The right hand sees what the team is doing, with no model call (ADR 0137 §13).
       createTeamStatusToolSource(),
+      // Where things are in the app and what it does, for every agent (issue #1001).
+      createAppGuideToolSource({ cloud: isAgentesCloud(config.PUBLIC_URL) }),
       // Background runs (routines) speak only through it, with a GIF where the agent may send one (ADR 0091).
       createHandOffToolSource({
         pubsub: adapters.pubsub,
