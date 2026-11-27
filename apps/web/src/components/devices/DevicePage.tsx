@@ -6,7 +6,7 @@ import type {
   PermissionNeed,
   PhoneDevice,
 } from "@agenteschat/client";
-import { useMachinePause, useMachines } from "@agenteschat/client";
+import { useAuthConfig, useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
   doctorShown,
@@ -24,6 +24,7 @@ import {
   RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
   SPILL_USES,
+  shareInternetHint,
   shareInternetText,
   spillOfUse,
   spillUseOf,
@@ -344,6 +345,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
   const toast = useToast();
   const devices = useDevices(org.id);
   const machines = useMachines(org.id);
+  const auth = useAuthConfig();
   const update = useUpdateComputer(org.id);
   const back = useBackToList();
   const [renaming, setRenaming] = useState<DeviceTarget | null>(null);
@@ -600,7 +602,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
               id="dv-pc-internet"
               icon="globe"
               label={t("devices.shareInternet")}
-              hint={t("devices.shareInternetHint")}
+              hint={shareInternetHint(t, auth.data)}
               status={shareInternetText(t, d, lending)}
               {...(mayPick
                 ? {

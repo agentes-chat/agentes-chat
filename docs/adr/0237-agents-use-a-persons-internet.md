@@ -2,7 +2,7 @@
 
 - Status: Accepted (phase 1: the switch, the relay on both computers and the server; the workspace computer's
   routing is the Cloud's, later)
-- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers)
+- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers; 2026-11-27 b: every TCP port)
 - Extends: ADR 0025 (connected computers), ADR 0058 §11 (data sockets), ADR 0101 (observed egress)
 - Code: protocol `packages/adapters/src/machine-protocol.ts` (`EGRESS_SHARE_PROTOCOL`, `EGRESS_SHARE`,
   `egress.dial`, `StreamHello.egress`, `welcome.egressRelay`); db `machines.egress_share`, `egress_share_at`,
@@ -49,7 +49,8 @@ computers are already connected (ADR 0025) and hold a socket to the server.
    computer reaches the site, dials its own data socket, and the server joins the two, bytes passed as they come
    (16 MiB queued toward a side at most), and only then answers `stream.ready` to the first. Every hop is a socket that
    already exists, so a computer behind any router lends without opening a port.
-4. **What it carries.** Only TCP to ports 80 and 443 (`EGRESS_SHARE.ports`); SSH and the rest keep their usual way.
+4. **What it carries.** TCP to any port but 25 (amendment 2026-11-27 b; until then only ports 80 and 443); UDP keeps
+   its usual way.
    The lending computer resolves a name itself (so the site's own location answers; a guard that passes the address its
    agent already resolved gets that address) and refuses a name or address that is not public, or that is on one of
    its own interfaces' subnets (a home's global IPv6 prefix, its router, this computer), wholly; at most 256
@@ -158,3 +159,37 @@ Consequences: lent bytes of runner traffic cross the server twice, still with no
 the same server process, else the borrower goes direct (§7); a VPS paired as a connected computer lends by default
 and, as the newest, may be picked over the person's computer, so its owner marks it the workspace's and turns its
 switch off (`SELF_HOSTING.md`); the env proxy is cooperative, not a security boundary.
+
+## Amendment 2026-11-27 b: every TCP port
+
+Owner decision: SSH, git over SSH, databases and any other TCP go through the lending computer too, not only the web.
+
+1. **The ports** (`EGRESS_ANY_PORT_PROTOCOL`, 96). `isEgressTarget` takes any TCP port but `EGRESS_SHARE.refusedPorts`
+   (25: a home address sending mail straight to mail servers is how it lands on spam blocklists; 465 and 587, mail
+   sent through the person's own provider with a sign-in, go through if the person's network allows them). The
+   lending computer keeps every other refusal (non-public addresses, its own subnets, 256 connections at once).
+2. **Older lenders.** A lending computer before protocol 96 refuses anything but 80 and 443 (`bad_request`). The
+   server sends it nothing else (`lenderCarries`): for another port it picks the newest lender that carries it, and
+   while only older ones are online it answers `refused` ("not carried"), never `unreachable`, so the borrower keeps
+   asking for its web connections instead of going quiet for a minute.
+3. **Borrowers ahead of their server.** A server before this rejects a hello naming another port with `badRequest`.
+   The workspace computer's socket answers that "not allowed" and a self-hosted borrower's proxy goes direct for that
+   connection only, both without the minute of quiet.
+4. **The Cloud's guard** sends every agent TCP connection but port 25 to the socket first (the Cloud's ADR 0009), so
+   on the Cloud it is transparent: any program, no settings. **A self-hosted borrower** has no guard: its proxy now
+   asks for any port, but only programs that use the proxy settings reach it (browsers, `HTTPS_PROXY`/`ALL_PROXY`
+   readers: git over HTTPS, curl, most CLIs). OpenSSH, database clients and others that ignore them go out the usual
+   way. Left out: an SSH `ProxyCommand` through the proxy (`GIT_SSH_COMMAND`) was left out: it would replace a
+   person's own `core.sshCommand` and their hosts' `ProxyJump`; add a connect helper when someone needs SSH lent on a
+   self-hosted server.
+5. **The switch's words** say what goes through and what doesn't, on the web, the phone and the desktop app, in 14
+   languages: on the Cloud "websites, git, SSH, databases and other TCP connections", never the person's own network
+   or mail on port 25, while name lookups, calls and other UDP traffic keep the usual way; on a self-hosted server
+   (`selfHosted`, the desktop app's server not the Cloud's) what follows proxy settings and what ignores them
+   (`devices.shareInternetHintProxy`, `desktop.pair.internetHintProxy`). The once-only inbox notice no longer says
+   "only websites".
+
+Consequences: more of the agents' traffic crosses the server and the person's connection (still no byte cap); a
+lending computer on an older app carries the web alone until it updates; lent traffic never touches a paid proxy:
+the Cloud's guard goes the proxy way only for what the socket didn't carry (no lender, a refusal, a failure, port 25,
+root's own traffic, UDP).

@@ -1,7 +1,7 @@
 import type { Machine } from "@agenteschat/client";
-import { ApiError, useConfirmDevice, useDenyDevice, useMachineDevice, useMe } from "@agenteschat/client";
+import { ApiError, useAuthConfig, useConfirmDevice, useDenyDevice, useMachineDevice, useMe } from "@agenteschat/client";
 import { workspaceLabel, workspaceNotes } from "@agenteschat/client/lib/deletion";
-import { lendsInternet } from "@agenteschat/client/lib/devices";
+import { lendsInternet, shareInternetHint } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { computerKind, formatUserCode, locationText } from "@agenteschat/client/lib/machines";
@@ -48,6 +48,7 @@ type Outcome =
 export function ConnectPage({ code }: { code: string }) {
   const { t, i18n } = useTranslation();
   const me = useMe();
+  const auth = useAuthConfig();
   const device = useMachineDevice(code);
   const confirm = useConfirmDevice();
   const deny = useDenyDevice();
@@ -294,7 +295,7 @@ export function ConnectPage({ code }: { code: string }) {
                   id="connect-internet"
                   icon="globe"
                   label={t("devices.shareInternet")}
-                  hint={t("devices.shareInternetHint")}
+                  hint={shareInternetHint(t, auth.data)}
                   control={<Switch checked={lend} onCheckedChange={setLend} />}
                 />
               )}

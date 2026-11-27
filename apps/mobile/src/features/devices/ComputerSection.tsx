@@ -1,9 +1,10 @@
-import { type ComputerDevice, useWifiIphones } from "@agenteschat/client";
+import { type ComputerDevice, useAuthConfig, useWifiIphones } from "@agenteschat/client";
 import {
   lendingDevice,
   mayChangeTasks,
   SPILL_USES,
   type SpillUse,
+  shareInternetHint,
   shareInternetText,
   spillOfUse,
   spillUseOf,
@@ -33,6 +34,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const toast = useToast();
   const { org } = useOrg();
   const meId = useMeId();
+  const auth = useAuthConfig();
   const audienceText = useAudienceText();
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
@@ -195,7 +197,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                 labelLines={2}
                 hint={{
                   name: t("common.about", { label: t("devices.shareInternet") }),
-                  text: t("devices.shareInternetHint"),
+                  text: shareInternetHint(t, auth.data),
                 }}
                 sub={shareInternetText(t, d, lending) ?? undefined}
                 toggle={sharing}

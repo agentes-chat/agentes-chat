@@ -43,6 +43,7 @@ import {
   reasonText,
   SPILL_USES,
   screenGesture,
+  shareInternetHint,
   shareInternetText,
   spilledText,
   spillOfUse,
@@ -851,6 +852,18 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(shareInternetText(t, computer({ shareInternet: { on: false, inUse: false } }), lending)).toBeNull();
     expect(shareInternetText(t, computer({ shareInternet: null }), lending)).toBeNull();
     expect(lendingDevice([mine])).toBeNull();
+  });
+
+  test("the switch's hint: every TCP connection on the Cloud; on a self-hosted server, what follows proxy settings", () => {
+    const cloud = shareInternetHint(t, { cloud: true } as never);
+    expect(cloud).toContain("SSH");
+    expect(cloud).toContain("port 25");
+    expect(cloud).toContain("UDP");
+    const own = shareInternetHint(t, { cloud: false } as never);
+    expect(own).toContain("ignore proxy settings");
+    expect(own).toContain("port 25");
+    // Before the server's config arrives: the Cloud's words, as `selfHosted` reads it.
+    expect(shareInternetHint(t, undefined)).toBe(cloud);
   });
 
   test("a computer that joins lends where the server says computers lend; an older server: beside the workspace's own", () => {

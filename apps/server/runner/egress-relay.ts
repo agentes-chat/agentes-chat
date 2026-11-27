@@ -31,12 +31,18 @@ export const SOCKS_REPLY = {
   notSupported: 7,
 } as const;
 
-/** The SOCKS reply for a data socket the server closed before `stream.ready`. */
+/**
+ * The SOCKS reply for a data socket the server closed before `stream.ready`. `badRequest`: a server older than this
+ * runner refused the destination's port in the hello, which says nothing about whether a computer lends now.
+ */
 export function replyFor(closeCode: number | undefined): number {
-  if (closeCode === STREAM_CLOSE.refused || closeCode === STREAM_CLOSE.forbidden) return SOCKS_REPLY.notAllowed;
+  if (notCarried(closeCode) || closeCode === STREAM_CLOSE.forbidden) return SOCKS_REPLY.notAllowed;
   if (closeCode === STREAM_CLOSE.notFound) return SOCKS_REPLY.hostUnreachable;
   return SOCKS_REPLY.networkUnreachable;
 }
+
+const notCarried = (closeCode: number | undefined) =>
+  closeCode === STREAM_CLOSE.refused || closeCode === STREAM_CLOSE.badRequest;
 
 const socksReply = (code: number) => Buffer.from([5, code, 0, 1, 0, 0, 0, 0, 0, 0]);
 
@@ -159,12 +165,12 @@ async function directDial(
 /**
  * ADR 0237 on a self-hosted server: a computer that borrows a person's internet without the Cloud's guard. Its agents'
  * programs and browsers are told to use `127.0.0.1:<port>` (HTTP CONNECT or SOCKS5, no authentication). While `lent()`,
- * a connection to port 80 or 443 asks the server for a lending computer (`dial`); anything else, nothing lent now, a
+ * a connection to any `isEgressTarget` asks the server for a lending computer (`dial`); port 25, nothing lent now, a
  * refusal or the server away, goes out this computer's own way, to public addresses only. After nothing lent or a
  * "doesn't borrow", it stays direct for `EGRESS_QUIET_MS` without asking. Only `notFound` (the lending computer found no
  * such site) fails the connection.
  *
- * ponytail: any local process may use the port (a single-user computer has no guard): it only reaches public web
+ * ponytail: any local process may use the port (a single-user computer has no guard): it only reaches public
  * addresses, through this workspace's own lending computer. Per-process auth if that ever matters.
  */
 export async function startEgressProxy(o: {
@@ -186,7 +192,7 @@ export async function startEgressProxy(o: {
       } catch (error) {
         const code = (error as { closeCode?: number } | null)?.closeCode;
         if (code === STREAM_CLOSE.notFound) throw error;
-        if (code !== STREAM_CLOSE.refused) quietUntil = now() + EGRESS_QUIET_MS;
+        if (!notCarried(code)) quietUntil = now() + EGRESS_QUIET_MS;
       }
     }
     return directDial(target, resolve, o.connect ?? ((host, port) => tcpConnect({ host, port })));

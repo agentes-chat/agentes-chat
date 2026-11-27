@@ -1,5 +1,6 @@
 import type { ComputerDevice } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import { Icon, Switch } from "@agenteschat/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -56,7 +57,12 @@ export function InternetRow({
       }
       htmlFor={id}
       title={title}
-      hint={hintFor(t, title, t("desktop.pair.internetHint"))}
+      // A self-hosted server's agents reach this computer's internet only through proxy settings.
+      hint={hintFor(
+        t,
+        title,
+        t(server === CLOUD_SERVER ? "desktop.pair.internetHint" : "desktop.pair.internetHintProxy"),
+      )}
       desc={failed ?? (on ? t("desktop.pair.internetOn") : t("desktop.pair.internetOff"))}
       end={
         <Switch

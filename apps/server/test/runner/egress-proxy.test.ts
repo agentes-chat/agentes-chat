@@ -95,7 +95,7 @@ test("an HTTP CONNECT request: its target, more bytes needed, or not one", () =>
   expect(parseHttpConnect(Buffer.from(CONNECT("shop.example:99999")))).toBe(false);
 });
 
-test("lent: web ports through the lending computer; others, nothing lent or a refusal go the computer's own way", async () => {
+test("lent: any port but 25 through the lending computer; 25, nothing lent or a refusal go the computer's own way", async () => {
   const data = fakeData();
   const target = await site();
   const asked: { host: string; port: number }[] = [];
@@ -133,15 +133,21 @@ test("lent: web ports through the lending computer; others, nothing lent or a re
   await until(() => Buffer.concat(heard).length >= 12, "the SOCKS replies");
   expect([...Buffer.concat(heard).subarray(0, 4)]).toEqual([5, 0, 5, 0]);
 
-  // Another port never asks the server.
-  const ssh = await ask(proxy.port, CONNECT("git.example:22"), "ssh");
-  expect(ssh.got()).toStartWith("HTTP/1.1 200");
-  await until(() => target.heard.includes("ssh"), "the direct bytes");
-  expect(asked.map((t) => t.port)).toEqual([443, 443]);
+  // SSH goes through the lending computer too; mail's port 25 never asks the server.
+  expect((await ask(proxy.port, CONNECT("git.example:22"), "ssh")).got()).toStartWith("HTTP/1.1 200");
+  await until(() => data.sent.some((b) => new TextDecoder().decode(b) === "ssh"), "SSH bytes to the lender");
+  const mail = await ask(proxy.port, CONNECT("mx.example:25"), "helo");
+  expect(mail.got()).toStartWith("HTTP/1.1 200");
+  await until(() => target.heard.includes("helo"), "the direct bytes");
+  expect(asked.map((t) => t.port)).toEqual([443, 443, 22]);
 
-  // The lending computer refused that destination: the computer's own way, and it asks again next time.
+  // The lending computer refused that destination, or a server older than this runner its port: the computer's own
+  // way, and it asks again next time.
   answer = STREAM_CLOSE.refused;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 200");
+  answer = STREAM_CLOSE.badRequest;
+  expect((await ask(proxy.port, CONNECT("git.example:22"))).got()).toStartWith("HTTP/1.1 200");
+  expect(asked.length).toBe(5);
   // No such site: no other way finds it either.
   answer = STREAM_CLOSE.notFound;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 504");
@@ -157,6 +163,7 @@ test("lent: web ports through the lending computer; others, nothing lent or a re
   expect(asked.length).toBe(before + 1);
 
   // The computer's own way reaches public addresses only: never its own network.
+  answer = STREAM_CLOSE.refused;
   expect((await ask(proxy.port, CONNECT("nas.lan.example:22"))).got()).toStartWith("HTTP/1.1 403");
   expect((await ask(proxy.port, CONNECT("127.0.0.1:5432"))).got()).toStartWith("HTTP/1.1 403");
 });
