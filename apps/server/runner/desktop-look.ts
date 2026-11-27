@@ -34,7 +34,7 @@ import { xmlEscape, xmlUnescape } from "./xml";
  */
 
 /** Bumped whenever what `lookFiles` writes changes. */
-export const LOOK_VERSION = 8;
+export const LOOK_VERSION = 9;
 
 /** Orchis's light theme (GTK and xfwm4), else GTK's Adwaita and xfwm4's Default. */
 export type LookTheme = "orchis" | "stock";
@@ -377,6 +377,29 @@ const settings = (theme: LookTheme) => `<?xml version="1.0" encoding="UTF-8"?>
 </channel>
 `;
 
+/**
+ * XFCE's screen saver and locker off. An agent's desktop has nobody to unlock it: where the computer has
+ * xfce4-screensaver installed (xfce4-session Recommends it, and a machine with an XFCE desktop of its own usually
+ * has it), the session took /etc/xdg's default and, five minutes without input, the screen went black and locked
+ * over the browser — the Computer card and the agent's screenshots came black until something woke it. The
+ * installer skips that Recommends (`--no-install-recommends`), which says nothing of a computer that has the
+ * package anyway. A session without it reads this channel for nothing.
+ */
+const screensaver = () => `<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-screensaver" version="1.0">
+  <property name="saver" type="empty">
+    <property name="enabled" type="bool" value="false"/>
+    <property name="idle-activation" type="empty">
+      <property name="enabled" type="bool" value="false"/>
+    </property>
+  </property>
+  <property name="lock" type="empty">
+    <property name="enabled" type="bool" value="false"/>
+  </property>
+</channel>
+`;
+
 /** The prompt's own startup file, under HOME. */
 const BASHRC = `${LOOK_DIR}/bashrc`;
 
@@ -593,6 +616,7 @@ export function lookFiles(home: string, o: LookOptions): LookFile[] {
     [`${XFCONF}/xfce4-desktop.xml`, backdrop(home)],
     [`${XFCONF}/xfwm4.xml`, windowManager(o.theme)],
     [`${XFCONF}/xsettings.xml`, settings(o.theme)],
+    [`${XFCONF}/xfce4-screensaver.xml`, screensaver()],
     [`${XFCONF}/xfce4-terminal.xml`, terminal(home, bash)],
     ...dock,
     [".config/gtk-3.0/gtk.css", GTK_CSS],

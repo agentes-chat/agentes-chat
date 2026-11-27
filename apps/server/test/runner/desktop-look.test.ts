@@ -424,6 +424,31 @@ test("the rest: one workspace, the wallpaper 1:1, no desktop icons, the theme th
   );
 });
 
+test("the screen saver: off, so an agent's screen never blanks and locks (its card and its screenshots went black)", () => {
+  // A machine with xfce4-screensaver installed (xfce4-session Recommends it) had the agent's session take the
+  // locker's default: five minutes without input and the screen was black and locked over the browser.
+  const xml = textOf("/HOME", look(), `${XFCONF}/xfce4-screensaver.xml`);
+  for (const p of ["/saver/enabled", "/saver/idle-activation/enabled", "/lock/enabled"]) {
+    expect(xml).toContain(`<property name="${p.split("/").at(-2)}" type="empty">`);
+  }
+  expect(xml.match(/type="bool" value="false"/g)).toHaveLength(3);
+  expect(xml).not.toContain('value="true"');
+  // A desktop that runs takes them through its own xfconfd, like every other setting of the look.
+  for (const p of ["/saver/enabled", "/saver/idle-activation/enabled", "/lock/enabled"]) {
+    expect(lookSettings("/HOME", look())).toContainEqual([
+      "-c",
+      "xfce4-screensaver",
+      "-p",
+      p,
+      "-n",
+      "-t",
+      "bool",
+      "-s",
+      "false",
+    ]);
+  }
+});
+
 test("the terminal: the agent's name in the prompt and the title, from the look's own file, only with bash", () => {
   const home = "/home/ag-01a142cb";
   const terminal = textOf(home, look(), `${XFCONF}/xfce4-terminal.xml`);
@@ -604,8 +629,8 @@ test("files that change come with a new LOOK_VERSION: desktops that have the loo
   }
   // Changed the look on purpose? Bump LOOK_VERSION and put the new hash here.
   expect({ version: LOOK_VERSION, files: hash.digest("hex").slice(0, 16) }).toEqual({
-    version: 8,
-    files: "dfde5d80b93e502a",
+    version: 9,
+    files: "9631468dd55eaa6a",
   });
 });
 
