@@ -935,5 +935,21 @@
     "bringAllToFront": "Tümünü öne getir",
     "help": "Yardım",
     "downloaded": "İndirme tamamlandı"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat için {{permission}} gerekli",
+    "done": "İzin verdim",
+    "later": "Şimdi değil",
+    "trayTitle": "{{permission}} izni bekleniyor",
+    "why": {
+      "app_management": "Ajanların bu {{device}} üzerindeki uygulamaları değiştirmesi için gerekli.",
+      "screen": "Ajanların bu {{device}} için ekran görüntüsü alması için gerekli.",
+      "accessibility": "Ajanların bu {{device}} üzerindeki uygulamalarda tıklayıp yazması için gerekli.",
+      "disk": "Ajanların dosyalarınızı macOS her klasör için sormadan açması için gerekli.",
+      "network": "Ajanların ağınızdaki telefonlara ve cihazlara ulaşması için gerekli.",
+      "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
+      "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
+      "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
+    }
   }
 }

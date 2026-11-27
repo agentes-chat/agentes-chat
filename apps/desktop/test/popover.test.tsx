@@ -9,7 +9,7 @@ import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
 import { ControlError } from "../src/control/client";
 import { siteApi } from "../src/control/devices";
-import { PREPARE_PREF } from "../src/control/permissions";
+import { PERMISSION_ASK_PREF, PREPARE_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
 import { FAKE_SERVER } from "../src/dev/fake-runner";
 import { readPref, writePref } from "../src/hooks";
@@ -97,6 +97,36 @@ test("the menu bar menu: what goes on here scrolls, and Open, Preferences and Qu
       expect(actions.some((text) => text.includes(label))).toBe(true);
     }
   }));
+
+test("a new OS permission an agent's work waits on opens the welcome window's ask, and stays on the menu until it ends", async () => {
+  const host = createFakeHost("popover", "here");
+  await withMenu(async (el) => {
+    const runner = [...host.runners.values()][0];
+    host.window = "popover";
+    await act(async () =>
+      runner?.setPermissions([
+        { permission: "screen", trigger: "screencapture -x a.png", since: "2026-11-26T18:00:00.000Z" },
+      ]),
+    );
+    await until(() => host.window === "welcome");
+    expect(readPref(PERMISSION_ASK_PREF, false)).toBe(true);
+    expect(banners(el)).toContainEqual({
+      title: "Waiting for Screen Recording",
+      line: "Agents need it to take screenshots of this Mac.",
+      actions: ["Allow"],
+    });
+    // Asked again from the menu after the window was closed.
+    writePref(PERMISSION_ASK_PREF, false);
+    host.window = "popover";
+    const allow = [...el.querySelectorAll(".dk-banner__acts button")].find((b) => b.textContent === "Allow");
+    await act(async () => (allow as HTMLElement).click());
+    expect(host.window as string).toBe("welcome");
+    expect(readPref(PERMISSION_ASK_PREF, false)).toBe(true);
+    await act(async () => runner?.setPermissions([]));
+    await until(() => !banners(el).some((b) => b.title === "Waiting for Screen Recording"));
+  }, host);
+  writePref(PERMISSION_ASK_PREF, false);
+});
 
 test("a folder request the computer can't answer says why, and stays to be answered again", () =>
   withMenu(async (el, store) => {

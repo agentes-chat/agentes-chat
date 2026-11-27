@@ -15,6 +15,8 @@ import type {
   CliInstall,
   CliName,
   InstallableCli,
+  OsPermission,
+  PermissionNeed,
   RunnerAccess,
   RunnerAccountInfo,
   RunnerExecutorInfo,
@@ -112,6 +114,8 @@ export interface ControlStatus {
   browsers?: ControlBrowser[];
   /** The phones this computer reaches now, as the server hears them (absent: older runner, or no phones looked for). */
   phones?: RunnerPhone[];
+  /** The OS permissions agents' work waits on here, for the app to ask the person (absent: older runner). */
+  permissions?: PermissionNeed[];
   /** The OS user agents' commands run as here (absent: older runner). */
   user?: string;
   /**
@@ -272,6 +276,8 @@ export type ControlRequest =
   | { type: "reconnect" }
   /** Closes an agent's browser on this computer (the tray's "Parar"); its profile stays. */
   | { type: "browser.stop"; agentId: string }
+  /** The person allowed the permission (or the app found it on): its wait ends here and on the server. */
+  | { type: "permission.clear"; permission: OsPermission }
   /**
    * ADR 0041: the computer brains' accounts on this computer. `accounts.list`
    * asks each CLI (cached). `account.begin` starts the CLI's sign-in here: it
@@ -332,6 +338,7 @@ export interface ControlReplies {
   "access.answer": { access: RunnerAccess };
   reconnect: { reconnecting: boolean };
   "browser.stop": { stopped: boolean };
+  "permission.clear": { cleared: boolean };
   "accounts.list": { accounts: RunnerAccountInfo[] };
   /** The URL the CLI opened (shown in case the browser didn't open) and, for Codex, the code to type there. */
   "account.begin": { loginId: string; url: string; userCode?: string };

@@ -3,6 +3,7 @@ import {
   ACCESS_LIMITS,
   ACCESS_PROTOCOL,
   grantedTo,
+  type PermissionNeed,
   type PubSub,
   type RunnerAccess,
   type RunnerFrame,
@@ -140,6 +141,19 @@ export async function storeMachineToolchains(deps: AccessDeps, machineId: string
     .where(eq(machines.id, machineId))
     .returning({ orgId: machines.orgId });
   if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { toolchains: true });
+}
+
+/** `permissions.changed`: the OS permissions the computer waits on, replaced whole; the rest of `executors` stays. */
+export async function storeMachinePermissions(deps: AccessDeps, machineId: string, permissions: PermissionNeed[]) {
+  const [row] = await deps.db
+    .update(machines)
+    .set({
+      executors: sql`coalesce(${machines.executors}, '{}'::jsonb) || jsonb_build_object('permissions', ${JSON.stringify(permissions)}::jsonb)`,
+      updatedAt: new Date(),
+    })
+    .where(eq(machines.id, machineId))
+    .returning({ orgId: machines.orgId });
+  if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { permissions: true });
 }
 
 export interface ReduceAccessInput {

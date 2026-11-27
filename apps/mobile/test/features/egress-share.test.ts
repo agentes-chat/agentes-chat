@@ -39,3 +39,11 @@ test("a computer whose runner is behind this server, on the phone: its owner see
   expect(screen).toContain("{ computer: title })");
   expect(screen).toContain('m.update === "command" ? ( <> <Gap /> <CommandBlock command={RUNNER_UPDATE_COMMAND} />');
 });
+
+test("a computer waiting on an OS permission, on the phone: the same lines as the web's, under its state", () => {
+  const parts = flat("features/devices/parts.tsx");
+  expect(parts).toContain("permissionWaitLines(t, need, device.name, agent || undefined)");
+  expect(parts).toContain("sub={words.asked ? `$" + "{words.next} $" + "{words.asked}` : words.next}");
+  const screen = flat("features/settings/MachineScreen.tsx");
+  expect(screen).toContain("{device?.permissions?.length ? ( <> <Gap /> <PermissionWaits device={device} />");
+});

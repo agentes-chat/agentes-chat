@@ -3523,6 +3523,10 @@
       "update_workspace": "Zmień przestrzeń roboczą <b>{{name}}</b>",
       "set_action_check_on": "Włącz sprawdzanie, co zespół już zrobił",
       "set_action_check_off": "Wyłącz sprawdzanie, co zespół już zrobił",
+      "set_approvals_level": "Ustaw zatwierdzenia workspace na <b>{{level}}</b>",
+      "set_approvals_level_every": "Ustaw zatwierdzenia wszystkich agentów na <b>{{level}}</b>, także ich własne wybory",
+      "set_agent_approvals_level": "Ustaw zatwierdzenia <b>{{agent}}</b> na <b>{{level}}</b>",
+      "set_agent_approvals_level_workspace": "Niech <b>{{agent}}</b> stosuje zatwierdzenia workspace",
       "invite_people": "Zaproś <b>{{emails}}</b> do przestrzeni roboczej.",
       "invite_roles_one": "Z rolą {{roles}}.",
       "invite_roles_few": "Z rolami {{roles}}.",
@@ -4468,6 +4472,10 @@
       "changed_update_workspace": "Zmieniono przestrzeń roboczą <b>{{name}}</b>",
       "changed_set_action_check_on": "Włączono sprawdzanie, co zespół już zrobił",
       "changed_set_action_check_off": "Wyłączono sprawdzanie, co zespół już zrobił",
+      "changed_set_approvals_level": "Ustawiono zatwierdzenia workspace na <b>{{level}}</b>",
+      "changed_set_approvals_level_every": "Ustawiono zatwierdzenia wszystkich agentów na <b>{{level}}</b>",
+      "changed_set_agent_approvals_level": "Ustawiono zatwierdzenia <b>{{agent}}</b> na <b>{{level}}</b>",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> znów stosuje zatwierdzenia workspace",
       "changed_invite_people": "Zaproszono <b>{{invited}}</b> do przestrzeni roboczej",
       "changed_remove_ai_key": "Usunięto klucz API <b>{{name}}</b>"
     },
@@ -18695,6 +18703,22 @@
         "once": "Zezwolono raz.",
         "always": "Urządzenie {{deviceName}} jest im teraz udostępnione.",
         "no": "Odmówiono."
+      }
+    },
+    "permission": {
+      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
+      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
+      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
+      "asked": "Potrzebne do uruchomienia {{trigger}}",
+      "names": {
+        "app_management": "Zarządzanie aplikacjami",
+        "screen": "Nagrywanie ekranu",
+        "accessibility": "Dostępność",
+        "disk": "Pełny dostęp do dysku",
+        "network": "Sieć lokalna",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automatyzacja"
       }
     }
   },

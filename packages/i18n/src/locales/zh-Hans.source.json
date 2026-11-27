@@ -8165,6 +8165,18 @@
   "rightHand.action.set_action_check_off": {
     "value": "Turn off the check of what the team already did"
   },
+  "rightHand.action.set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>, their own choices too"
+  },
+  "rightHand.action.set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "rightHand.action.set_agent_approvals_level_workspace": {
+    "value": "Make <b>{{agent}}</b> follow the workspace's approvals"
+  },
   "rightHand.action.invite_people": {
     "value": "Invite <b>{{emails}}</b> to the workspace."
   },
@@ -10204,6 +10216,18 @@
   },
   "agentActions.workspace.changed_set_action_check_off": {
     "value": "Turned off the check of what the team already did"
+  },
+  "agentActions.workspace.changed_set_approvals_level": {
+    "value": "Set the workspace's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_approvals_level_every": {
+    "value": "Set every agent's approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level": {
+    "value": "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>"
+  },
+  "agentActions.workspace.changed_set_agent_approvals_level_workspace": {
+    "value": "<b>{{agent}}</b> follows the workspace's approvals again"
   },
   "agentActions.workspace.changed_invite_people": {
     "value": "Invited <b>{{invited}}</b> to the workspace"
@@ -41441,6 +41465,42 @@
   },
   "devices.leadCloud": {
     "value": "Where your agents work: the workspace computer and the devices people connect."
+  },
+  "devices.permission.title": {
+    "value": "Waiting for {{permission}} on {{computer}}"
+  },
+  "devices.permission.next": {
+    "value": "Allow it in the agentes.chat app there."
+  },
+  "devices.permission.askedBy": {
+    "value": "Asked by {{agent}} to run {{trigger}}"
+  },
+  "devices.permission.asked": {
+    "value": "Needed to run {{trigger}}"
+  },
+  "devices.permission.names.app_management": {
+    "value": "App Management"
+  },
+  "devices.permission.names.screen": {
+    "value": "Screen Recording"
+  },
+  "devices.permission.names.accessibility": {
+    "value": "Accessibility"
+  },
+  "devices.permission.names.disk": {
+    "value": "Full Disk Access"
+  },
+  "devices.permission.names.network": {
+    "value": "Local Network"
+  },
+  "devices.permission.names.camera": {
+    "value": "Camera"
+  },
+  "devices.permission.names.microphone": {
+    "value": "Microphone"
+  },
+  "devices.permission.names.automation": {
+    "value": "Automation"
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."

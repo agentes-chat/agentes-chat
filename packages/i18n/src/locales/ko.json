@@ -3150,6 +3150,10 @@
       "update_workspace": "워크스페이스 <b>{{name}}</b> 변경",
       "set_action_check_on": "팀이 이미 한 일 확인 켜기",
       "set_action_check_off": "팀이 이미 한 일 확인 끄기",
+      "set_approvals_level": "워크스페이스 승인을 <b>{{level}}</b>(으)로 변경",
+      "set_approvals_level_every": "모든 에이전트의 승인을 <b>{{level}}</b>(으)로 변경(개별 설정 포함)",
+      "set_agent_approvals_level": "<b>{{agent}}</b>의 승인을 <b>{{level}}</b>(으)로 변경",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b>이(가) 워크스페이스 승인을 따르게 하기",
       "invite_people": "<b>{{emails}}</b>을(를) 워크스페이스에 초대합니다.",
       "invite_roles_other": "{{roles}} 역할로 초대해요.",
       "invite_people_sent_other": "<b>{{emails}}</b>에게 초대를 보냈어요.",
@@ -4004,6 +4008,10 @@
       "changed_update_workspace": "워크스페이스 <b>{{name}}</b>을(를) 변경했어요",
       "changed_set_action_check_on": "팀이 이미 한 일 확인을 켰어요",
       "changed_set_action_check_off": "팀이 이미 한 일 확인을 껐어요",
+      "changed_set_approvals_level": "워크스페이스 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_approvals_level_every": "모든 에이전트의 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_agent_approvals_level": "<b>{{agent}}</b>의 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b>이(가) 다시 워크스페이스 승인을 따라요",
       "changed_invite_people": "<b>{{invited}}</b>을(를) 워크스페이스에 초대했어요",
       "changed_remove_ai_key": "API 키 <b>{{name}}</b>을(를) 삭제했어요"
     },
@@ -16921,6 +16929,22 @@
         "once": "한 번 허용했어요.",
         "always": "이제 {{deviceName}}을(를) 함께 사용해요.",
         "no": "거절했어요."
+      }
+    },
+    "permission": {
+      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
+      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
+      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
+      "asked": "{{trigger}} 실행에 필요해요",
+      "names": {
+        "app_management": "앱 관리",
+        "screen": "화면 기록",
+        "accessibility": "손쉬운 사용",
+        "disk": "전체 디스크 접근 권한",
+        "network": "로컬 네트워크",
+        "camera": "카메라",
+        "microphone": "마이크",
+        "automation": "자동화"
       }
     }
   },

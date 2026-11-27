@@ -87,7 +87,7 @@ import { openPage } from "../ai/parts";
 import { openComputer } from "../computer/AgentComputerRow";
 import { ComputerSection } from "../devices/ComputerSection";
 import { findDevice } from "../devices/logic";
-import { StatusLine } from "../devices/parts";
+import { PermissionWaits, StatusLine } from "../devices/parts";
 import { useDevices } from "../devices/queries";
 import { MachineToolButton } from "../devices/ToolOneClick";
 import { AgentFace } from "../shared/Face";
@@ -289,6 +289,13 @@ function MachinePage({ machineId }: { machineId: string }) {
           </Text>
         ))}
       </View>
+
+      {device?.permissions?.length ? (
+        <>
+          <Gap />
+          <PermissionWaits device={device} />
+        </>
+      ) : null}
 
       {m.canManage && m.update ? (
         <>

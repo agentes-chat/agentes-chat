@@ -48,6 +48,7 @@ import { type CacheFill, type CloneSlots, gitSync } from "./git";
 import { isGitInternalPath, touchesGitInternals } from "./git-guard";
 import { type McpTaskInfo, redactDeep } from "./mcp";
 import { missionWorktree } from "./mission-worktree";
+import { permissionOfOutput } from "./os-permissions";
 import { agentWorkspace, hiddenIn, isInside, resolveForAgent } from "./paths";
 import type { PhoneManager, PhoneRequest } from "./phones";
 import { pullFile } from "./pull";
@@ -290,6 +291,13 @@ type AccessPickOp = Extract<MachineRequest, { op: "access.pick" }>;
 export interface HandlerContext {
   /** Real path of the workspace folder. */
   workspaceReal: string;
+  /** Tests: the system a failed command's output is read for refusals (`permissionOfOutput`). */
+  platform?: string;
+  /**
+   * The agentes.chat app runs this runner and asks the person for an OS permission a command was refused; from a
+   * terminal nothing would ask, so a refusal stays the command's own output.
+   */
+  appAsks?: boolean;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -540,7 +548,11 @@ async function doExec(
     ...(env ? { env } : {}),
     ...(redact ? { redact: redact.redact, redactHold: redact.hold } : {}),
   });
-  return merge ? { ...result, merge } : result;
+  const permission =
+    result.exitCode === 0 || !ctx.appAsks
+      ? null
+      : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
+  return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 
 /**
