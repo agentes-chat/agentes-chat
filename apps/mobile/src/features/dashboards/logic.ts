@@ -23,6 +23,7 @@ import {
   defaultSize,
   type ExampleWords,
   exampleWidgetSpec,
+  kpiUnit,
   phoneSpan,
   sizeToLayout,
   type WidgetSize,
@@ -203,6 +204,18 @@ export function formatWithUnit(value: number, unit: string | undefined, locale: 
   if (unit === "%") return `${n}%`;
   return ["R$", "US$", "$", "€", "£"].includes(unit) ? `${unit} ${n}` : `${n} ${unit}`;
 }
+
+/**
+ * What point `i` of a series says when tapped, as the chat's tapped points read: its label and the value with its
+ * unit ("Nov 12 · R$ 18,420"), the value alone when the point has no label.
+ */
+export const pointTip =
+  (labels: readonly string[] | undefined, values: readonly number[], unit: string | undefined, locale: string) =>
+  (i: number): string => {
+    const value = formatWithUnit(values[i] ?? 0, unit, locale);
+    const label = labels?.[i];
+    return label ? `${label} · ${value}` : value;
+  };
 
 /**
  * Which bars keep their words in a box `width` wide: every label while each bar has room for one (`minWidth`
@@ -557,6 +570,13 @@ export function bleedSeries(spec: WidgetSpec | null | undefined, big: boolean, c
   if (!spec) return null;
   if (spec.kind === "kpi") return (spec.spark?.length ?? 0) > 1 ? (spec.spark ?? null) : null;
   if (spec.kind === "line" && spec.values.length > 1 && (compact || (!big && !spec.note))) return spec.values;
+  return null;
+}
+
+/** What a tapped point of the trend along a card's foot (`bleedSeries`) says: a number's or a line's; null else. */
+export function bleedTip(spec: WidgetSpec | null | undefined, locale: string): ((i: number) => string) | null {
+  if (spec?.kind === "kpi") return pointTip(spec.sparkLabels, spec.spark ?? [], kpiUnit(spec), locale);
+  if (spec?.kind === "line") return pointTip(spec.labels, spec.values, spec.unit, locale);
   return null;
 }
 
