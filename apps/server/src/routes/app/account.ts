@@ -1576,14 +1576,22 @@ export function accountRoutes(deps: AppDeps) {
         if (asked === "required")
           return apiError(c, 403, "org.create_unconfirmed", "Open the link we sent to your email first.");
       }
-      if (!(await deps.adapters.rateLimiter.consume(`new-workspace:${userId}`, WORKSPACES_PER_DAY)).allowed) {
+      const limitKey = `new-workspace:${userId}`;
+      if (!(await deps.adapters.rateLimiter.consume(limitKey, WORKSPACES_PER_DAY)).allowed) {
         return apiError(c, 429, "rate_limited", "Too many new workspaces today. Try again tomorrow.");
       }
-      const { organization, general, existing } = await createOrganization(db, userId, input, {
+      // Only a workspace made counts against the day's: a refusal (one already waiting for its plan, no allowance) or
+      // the one being set up answered again gives its take back.
+      const made = await createOrganization(db, userId, input, {
         holdForPayment: config.BILLING_HOLD_NEW_WORKSPACES,
         needsAllowance: await needsWorkspaceAllowance(db, userId, workspacePolicy(config)),
         onboarding: true,
+      }).catch(async (error: unknown) => {
+        await deps.adapters.rateLimiter.release(limitKey);
+        throw error;
       });
+      const { organization, general, existing } = made;
+      if (existing) await deps.adapters.rateLimiter.release(limitKey);
       if (!existing && config.HOST_COMPUTER_TOKEN) await addHostComputer(db, organization.id);
       if (teamSize || (timezone && isValidTimeZone(timezone))) {
         await updateOrgSettings(db, userId, organization.id, {
