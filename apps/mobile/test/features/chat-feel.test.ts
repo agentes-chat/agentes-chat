@@ -367,11 +367,14 @@ describe("an empty conversation's greeting and the keyboard", () => {
 });
 
 describe("a table wider than its message", () => {
-  test("its scroll redraws it only when an edge's fade turns on or off", () => {
+  test("its scroll never redraws it: the standing column, its edge and the fade follow the scroll on the UI thread", () => {
     const spans = src("features/chat/MessageSpans.tsx");
-    expect(spans).not.toContain("onScroll={(e) => setX(e.nativeEvent.contentOffset.x)}");
-    expect(spans).toContain("if (now.left !== hidden.left || now.right !== hidden.right) setX(offset);");
-    expect(spans).toContain("onScroll={(e) => onScroll(e.nativeEvent.contentOffset.x)}");
+    expect(spans).not.toContain("setX(");
+    expect(spans).toContain("const TableScroller = Animated.createAnimatedComponent(GestureScrollView);");
+    expect(spans).toContain("const onScroll = useAnimatedScrollHandler({");
+    expect(spans).toContain("onScroll={onScroll}");
+    expect(spans).toContain("transform: [{ translateX: Math.max(0, x.value) }],");
+    expect(spans).toContain("opacity: Math.min(1, Math.max(0, (total - frame - x.value) / TABLE_FADE)),");
   });
 });
 

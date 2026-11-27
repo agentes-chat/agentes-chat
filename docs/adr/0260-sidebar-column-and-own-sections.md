@@ -1,4 +1,4 @@
-# 0259. The sidebar: a tool column, the familiar list, each person's own sections
+# 0260. The sidebar: a tool column, the familiar list, each person's own sections
 
 - Status: Accepted
 - Date: 2026-11-27

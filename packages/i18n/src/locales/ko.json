@@ -38,6 +38,9 @@
     "wrapLines": "줄 바꿈",
     "raw": "원본",
     "table": "표",
+    "tableRows_other": "표 · {{count}}행",
+    "tableSeeAll": "{{count}}행 모두 보기",
+    "tableRowCount_other": "{{count}}행",
     "chartItem": "항목",
     "chartShare": "비중",
     "you": "나",
@@ -10143,7 +10146,6 @@
     "filter": {
       "person": "사람",
       "agent": "에이전트",
-      "routine": "루틴",
       "reminder": "리마인더",
       "deadline": "작업 마감일"
     },
@@ -10176,37 +10178,16 @@
         "declined": "참석하지 않아요."
       }
     },
-    "every": {
-      "hour": "매시간",
-      "hours": "{{count}}시간마다",
-      "minutes": "{{count}}분마다"
-    },
-    "perDay": "하루 {{count}}회",
-    "runs_other": "이 기간에 실행 {{count}}회.",
-    "routineDetail": "루틴 · {{target}}에 전달",
     "deadlineDetail": "작업 마감일이에요.",
     "reminderBy": "{{name}} 님이 설정",
     "reminderPosted": "리마인더 · {{target}}에 게시",
     "cancelReminder": "리마인더 취소",
     "reminderCancelled": "리마인더를 취소했습니다",
     "openIssue": "작업 열기",
-    "openRoutines": "루틴에서 보기",
-    "openRoutine": "루틴 열기",
-    "runAria": "루틴 {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "{{time}}의 루틴",
-    "moreRuns_other": "+{{count}}개 루틴",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "답함",
-      "silent": "새 소식 없음",
-      "failed": "실패",
-      "skipped": "실행 안 됨"
-    },
-    "lastResult": "최근: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "예약된 일정이 없어요. 드래그하거나 N을 눌러 만드세요",
-    "agendaEmpty": "앞으로 30일의 일정과 루틴이 여기에 표시돼요.",
+    "agendaEmpty": "앞으로 30일의 일정과 리마인더가 여기에 표시돼요.",
     "agendaEmptyTitle": "앞으로 30일은 일정이 비어 있어요",
     "noResults": "이 필터에 해당하는 항목이 없어요.",
     "more": "+{{count}}개 더",
@@ -17839,7 +17820,21 @@
       "version": "버전",
       "license": "<license>GNU Affero General Public License v3</license>에 따른 자유 소프트웨어이며 보증은 없습니다.",
       "source": "소스 코드",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 및 기여자"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 및 기여자",
+      "latest": "최신 릴리스입니다",
+      "newer": "{{version}} 버전이 나왔어요",
+      "notes": "새로운 기능",
+      "update": {
+        "title": "{{version}} 버전으로 업데이트",
+        "docker": "Docker 사용 시",
+        "native": "Docker 없이",
+        "nativeHelp": "릴리스 패키지를 `~/.agentes/app` 에 압축 해제한 다음 실행하세요.",
+        "desktop": "이 컴퓨터의 데스크톱 앱에서 실행 중인가요? 앱과 함께 업데이트돼요.",
+        "notice": "이 서버용 agentes.chat {{version}} 버전이 나왔어요",
+        "how": "업데이트 방법"
+      },
+      "computers": "컴퓨터 프로그램",
+      "computersAhead_other": "컴퓨터 {{count}}대가 이 서버보다 새 버전으로 실행 중이에요. 지금 그대로 작동하며, 새 기능은 이 서버를 업데이트하면 쓸 수 있어요."
     },
     "title": "설정",
     "account": {

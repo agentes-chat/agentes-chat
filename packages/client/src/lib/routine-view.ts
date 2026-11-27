@@ -9,8 +9,10 @@ import type {
   RoutineTarget,
   WebhookProvider,
 } from "../api/types";
-import type { RunStatus } from "./calendar";
 import { clockAt, whenAt } from "./format";
+
+/** How a run went, as its pixel and words say it. */
+export type RunStatus = "ok" | "silent" | "failed" | "skipped";
 
 /**
  * How Rotinas says a routine (ADR 0053 §11), as pure rules: its state and the one-tap fix for a pause,

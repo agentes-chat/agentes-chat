@@ -1253,7 +1253,7 @@ export function managementRoutes(deps: AppDeps) {
         .object({ agents: PinIds, channels: PinIds, people: PinIds })
         .nullable()
         .openapi({
-          description: `The pins of before Favoritos (ADR 0259): agent, channel and user ids, at most ${SIDEBAR_PIN_LIMIT} each. Read only to start \`favorites\` while it is \`null\`.`,
+          description: `The pins of before Favoritos (ADR 0260): agent, channel and user ids, at most ${SIDEBAR_PIN_LIMIT} each. Read only to start \`favorites\` while it is \`null\`.`,
         }),
       favorites: z.array(z.string().min(3).max(80)).max(SIDEBAR_FAVORITE_LIMIT).nullable().optional().openapi({
         description:
