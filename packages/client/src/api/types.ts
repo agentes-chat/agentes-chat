@@ -131,6 +131,28 @@ export interface SpeechKey {
   envProviders: SpeechProvider[];
 }
 
+/** How the speech model on this server's own computer goes (`GET /api/app/speech-local`). */
+export type LocalSpeechStatus =
+  | { state: "off" }
+  | { state: "downloading"; doneBytes: number; totalBytes: number }
+  | { state: "starting" }
+  | { state: "ready" }
+  /** `download`: the network stopped it (Resume goes on from the same byte). `start`: the helper's own words. */
+  | { state: "failed"; reason: "download" | "disk" | "start"; detail: string };
+
+/**
+ * Speech to text on this server's own computer, for its owner (ADR 0100): `fit` says whether it can run here
+ * (`memory`: under 8 GB or one CPU, `disk`: under `needDiskBytes` free, `platform`: no build for it).
+ */
+export interface LocalSpeech {
+  fit: "fits" | "memory" | "disk" | "platform";
+  memoryBytes: number;
+  freeDiskBytes: number | null;
+  needDiskBytes: number;
+  sizeBytes: number;
+  status: LocalSpeechStatus;
+}
+
 /** What `PUT /api/app/speech-key` takes: tried with the provider before it is kept. */
 export interface SpeechKeyInput {
   provider: SpeechProvider;

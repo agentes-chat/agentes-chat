@@ -1,3 +1,4 @@
+import { dirname, join } from "node:path";
 import {
   type Adapters,
   type BrainTurnRequest,
@@ -65,6 +66,7 @@ import {
   createLiveImages,
   createLlmIntentWriter,
   createLlmJudge,
+  createLocalSpeech,
   createMachineHub,
   createMailToolSource,
   createMediaToolSource,
@@ -822,8 +824,17 @@ export function buildEngine(o: EngineOptions) {
         prepare: prepareCode,
       }),
   };
-  // Voice messages (ADR 0100): engines from the environment, and on any other server the one its owner sets.
+  // Voice messages (ADR 0100): engines from the environment, and on any other server the one its owner sets, or the
+  // helper on this computer they set up (`speech-local.ts`), kept beside the files folder.
+  const speechLocal = isAgentesCloud(config.PUBLIC_URL)
+    ? null
+    : createLocalSpeech({
+        dir: config.FILES_DIR ? join(dirname(config.FILES_DIR), "speech") : null,
+        fetch: o.speechFetch,
+        log: (message, fields) => o.log?.info(message, fields),
+      });
   const speech = createSpeechSettings({
+    local: speechLocal,
     db,
     keyWrapper: adapters.keyWrapper,
     keyWrappers,
@@ -1011,6 +1022,8 @@ export function buildEngine(o: EngineOptions) {
     githubApp,
     /** Likewise: the speech engines, read before the first voice message. */
     speech,
+    /** The helper on this computer (null on agentes.chat's servers). */
+    speechLocal,
     voice,
     /** A person typing where an agent on Claude Code answers: its CLI starts now (`warmWhileTyping`). */
     warmWhileTyping: (where: Parameters<typeof warmWhileTyping>[1]) => warmWhileTyping(jobDeps, where),

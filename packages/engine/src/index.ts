@@ -358,6 +358,7 @@ export * from "./skill-library";
 export * from "./skill-tools";
 export * from "./skill-updates";
 export * from "./skills";
+export * from "./speech-local";
 export * from "./speech-settings";
 export * from "./speed-report";
 export * from "./stage-breakdown";

@@ -12121,6 +12121,31 @@ export const ptBR = {
       leaves: "O áudio das mensagens de voz vai para a {{name}} para virar texto.",
       invalid: "A chave salva não abre neste servidor. Cole de novo.",
     },
+    local: {
+      titleHere: "Neste computador",
+      titleServer: "Neste servidor",
+      titlePhone: "No computador do servidor",
+      textHere: "Parakeet, um download de {{size}}. A voz fica neste computador. 25 idiomas europeus.",
+      textServer: "Parakeet, um download de {{size}}. A voz fica neste servidor. 25 idiomas europeus.",
+      download: "Baixar e ligar",
+      downloading: "Baixando o modelo de voz",
+      progress: "{{done}} de {{total}}",
+      meanwhile: "Você já pode gravar. As mensagens vão como áudio até ficar pronto.",
+      downloadingPhone: "Baixando o modelo de voz no computador do servidor. Você já pode gravar.",
+      starting: "Ligando…",
+      licenses: "Licenças dos modelos",
+      tooSmall:
+        "Este computador tem {{memory}} de memória e o modelo de voz precisa de 8 GB. Use a chave de um provedor abaixo.",
+      noDisk:
+        "{{free}} livres neste disco e o modelo de voz precisa de {{need}}. Libere espaço ou use a chave de um provedor abaixo.",
+      noBuild: "Ainda não há modelo de voz para este computador. Use a chave de um provedor abaixo.",
+      stopped: "O download parou: {{detail}}",
+      diskFull: "O disco encheu durante o download. Libere espaço e tente de novo.",
+      didntStart: "O modelo de voz não ligou: {{detail}}",
+      resume: "Continuar",
+      copy: "Copiar detalhes",
+      copied: "Detalhes copiados",
+    },
     setup: {
       memberTitle: "A voz ainda não está ligada aqui",
       memberText:

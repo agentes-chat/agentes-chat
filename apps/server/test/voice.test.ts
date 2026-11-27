@@ -164,6 +164,18 @@ test("the provider is only for the installation's owner", async () => {
   expect(JSON.stringify(view)).not.toContain("good-key");
 });
 
+test("the speech model on this computer is only for the installation's owner, and says where it can't go", async () => {
+  const { owner, other } = await start({});
+  expect((await other("/api/app/speech-local")).status).toBe(404);
+  const view = (await (await owner("/api/app/speech-local")).json()) as Record<string, unknown>;
+  // No files folder in this test server: nowhere to keep it.
+  expect(view).toMatchObject({ fit: "platform", status: { state: "off" }, needDiskBytes: 2 * 2 ** 30 });
+  expect(view.sizeBytes).toBe(773369957);
+  const put = await owner("/api/app/speech-local", { method: "PUT", json: {} });
+  expect(put.status).toBe(200);
+  expect(((await put.json()) as { status: unknown }).status).toEqual({ state: "off" });
+});
+
 test("on agentes.chat the provider can't be chosen", async () => {
   const origin = "https://app.agentes.chat";
   const server = await createTestServer({ env: { ALLOW_SIGNUP: "true", PUBLIC_URL: origin }, speechFetch: groq });
@@ -174,6 +186,7 @@ test("on agentes.chat the provider can't be chosen", async () => {
     origin,
   });
   expect((await owner("/api/app/speech-key", { origin })).status).toBe(404);
+  expect((await owner("/api/app/speech-local", { origin })).status).toBe(404);
 });
 
 test("a recording past the size is refused even when the request states no length", async () => {

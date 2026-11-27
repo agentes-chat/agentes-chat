@@ -2,6 +2,7 @@ import { SPEECH_PROVIDERS } from "@agenteschat/adapters";
 import {
   acceptVoiceClip,
   isAgentesCloud,
+  type LocalSpeech,
   MAX_MESSAGE_LENGTH,
   NotFoundError,
   pinnedOwner,
@@ -224,6 +225,32 @@ const KeyView = z
   })
   .openapi("SpeechKey");
 
+const LocalStatus = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("off") }),
+  z.object({ state: z.literal("downloading"), doneBytes: z.number(), totalBytes: z.number() }),
+  z.object({ state: z.literal("starting") }),
+  z.object({ state: z.literal("ready") }),
+  z.object({
+    state: z.literal("failed"),
+    reason: z.enum(["download", "disk", "start"]),
+    detail: z.string().openapi({ description: "What stopped it, in the network's or the helper's own words." }),
+  }),
+]);
+
+const LocalView = z
+  .object({
+    fit: z.enum(["fits", "memory", "disk", "platform"]).openapi({
+      description:
+        "`memory`: under 8 GB (a container's limit counts) or one CPU. `disk`: under `needDiskBytes` free. `platform`: no build for this computer, or no files folder to keep it in.",
+    }),
+    memoryBytes: z.number(),
+    freeDiskBytes: z.number().nullable(),
+    needDiskBytes: z.number(),
+    sizeBytes: z.number().openapi({ description: "The whole download." }),
+    status: LocalStatus,
+  })
+  .openapi("LocalSpeech");
+
 const SaveKey = z.object({
   provider: z.enum(SPEECH_PROVIDERS),
   apiKey: z.string().trim().min(8).max(512).optional().openapi({
@@ -240,6 +267,7 @@ export function speechKeyRoutes(deps: AppDeps) {
   const { db, config } = deps;
   const app = createAppRouter(deps);
   app.use("/speech-key", requireSession(deps.auth));
+  app.use("/speech-local", requireSession(deps.auth));
 
   const ownerOnly = async (userId: string): Promise<SpeechSettings> => {
     const speech = deps.extras?.speech;
@@ -304,6 +332,52 @@ export function speechKeyRoutes(deps: AppDeps) {
       responses: { 200: json(KeyView), 401: errors[401], 404: errors[404] },
     }),
     async (c) => c.json(await (await ownerOnly(c.get("user").id)).remove(), 200),
+  );
+
+  const localOnly = async (userId: string): Promise<LocalSpeech> => {
+    await ownerOnly(userId);
+    const local = deps.extras?.speechLocal;
+    if (!local) throw new NotFoundError();
+    return local;
+  };
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/speech-local",
+      tags: ["System"],
+      summary: "Speech to text on this server's own computer: whether it fits, and how its setup goes",
+      description: `${notFound} Polled while it downloads (\`status.doneBytes\` of \`totalBytes\`).`,
+      security,
+      responses: { 200: json(LocalView), 401: errors[401], 404: errors[404] },
+    }),
+    async (c) => c.json(await (await localOnly(c.get("user").id)).view(), 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/speech-local",
+      tags: ["System"],
+      summary: "Download the speech model to this server's computer and turn it on (or go on with the download)",
+      description: `${notFound} Answers at once; the download goes on in the background. Nothing starts when \`fit\` isn't \`fits\`.`,
+      security,
+      responses: { 200: json(LocalView), 401: errors[401], 404: errors[404] },
+    }),
+    async (c) => c.json(await (await localOnly(c.get("user").id)).install(), 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/speech-local",
+      tags: ["System"],
+      summary: "Stop the download or the speech model on this computer, and remove its files",
+      description: notFound,
+      security,
+      responses: { 200: json(LocalView), 401: errors[401], 404: errors[404] },
+    }),
+    async (c) => c.json(await (await localOnly(c.get("user").id)).remove(), 200),
   );
 
   return app;

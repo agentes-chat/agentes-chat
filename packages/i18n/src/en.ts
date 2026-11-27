@@ -12110,6 +12110,33 @@ export const en = {
       leaves: "Audio from voice messages goes to {{name}} to become text.",
       invalid: "The saved key doesn't open on this server. Paste it again.",
     },
+    /** "On this computer": the speech model downloaded to the server's own computer (`LocalSpeechChoice`). */
+    local: {
+      titleHere: "On this computer",
+      titleServer: "On this server",
+      /** On the phone, which never runs it. */
+      titlePhone: "On the server's computer",
+      textHere: "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages.",
+      textServer: "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages.",
+      download: "Download and turn on",
+      downloading: "Downloading the voice model",
+      /** `done` and `total`: sizes, "312 MB". */
+      progress: "{{done}} of {{total}}",
+      meanwhile: "You can record now. Notes go as audio until it's ready.",
+      downloadingPhone: "Downloading the voice model to the server's computer. You can record now.",
+      starting: "Turning it on…",
+      licenses: "Model licenses",
+      tooSmall: "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below.",
+      noDisk:
+        "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below.",
+      noBuild: "There's no voice model for this computer yet. Use a provider key below.",
+      stopped: "The download stopped: {{detail}}",
+      diskFull: "The disk filled up during the download. Free some space and try again.",
+      didntStart: "The voice model didn't start: {{detail}}",
+      resume: "Resume",
+      copy: "Copy details",
+      copied: "Details copied",
+    },
     /** The microphone's first press where nothing turns voice into text yet (`VoiceSetupDialog`). */
     setup: {
       memberTitle: "Voice isn't on here yet",

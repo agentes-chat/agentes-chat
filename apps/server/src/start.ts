@@ -471,6 +471,8 @@ async function boot(
   await engine.jevKey.ready();
   await engine.githubApp.ready();
   await engine.speech.ready();
+  // Set up here before: the helper again, without waiting for it.
+  void engine.speechLocal?.resume();
   log.info("voice messages", { engines: engine.speech.chain().map((e) => e.id) });
   const vectors = engine.embeddings;
   if (config.EMBEDDINGS_PROVIDER !== "none" && !vectors) {
@@ -661,6 +663,7 @@ async function boot(
       gifKey: gifKey ?? undefined,
       githubApp: engine.githubApp,
       speech: engine.speech,
+      speechLocal: engine.speechLocal,
       voice: engine.voice,
       gitProxy: engine.gitProxy,
       pushRelaySender: relayServeSender(direct),

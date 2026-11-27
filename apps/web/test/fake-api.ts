@@ -59,6 +59,7 @@ import type {
   JoinApproval,
   JoinClaim,
   JoinRequest,
+  LocalSpeech,
   Me,
   Member,
   MemberPresence,
@@ -430,6 +431,8 @@ export interface FakeState {
    * (null). Saving one makes GIFs available here (`media.gifsAvailable`), removing it takes them away.
    */
   gifKey?: GifKey;
+  /** `system.speechLocal` for the installation's owner (with `speechKey`): unset = not offered here. */
+  speechLocal?: LocalSpeech;
   /** `system.speechKey`: unset = I'm not the installation's owner on a self-hosted server (null). */
   speechKey?: SpeechKey;
   /** The keys a provider refuses when `system.saveSpeechKey` tries them (422, nothing kept). */
@@ -1642,6 +1645,20 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         state.speechKey = { provider: null, hint: null, state: "off", envProviders: [] };
         state.media = { ...state.media, voiceAvailable: false };
         return state.speechKey;
+      },
+      speechLocal: async () => (state.speechKey ? (state.speechLocal ?? null) : null),
+      installSpeechLocal: async () => {
+        log("system.installSpeechLocal");
+        if (!state.speechLocal) throw new ApiError(404, "not_found", "Not found");
+        state.speechLocal = { ...state.speechLocal, status: { state: "ready" } };
+        state.media = { ...state.media, speechState: "ready" };
+        return state.speechLocal;
+      },
+      removeSpeechLocal: async () => {
+        log("system.removeSpeechLocal");
+        if (!state.speechLocal) throw new ApiError(404, "not_found", "Not found");
+        state.speechLocal = { ...state.speechLocal, status: { state: "off" } };
+        return state.speechLocal;
       },
     },
     voice: {

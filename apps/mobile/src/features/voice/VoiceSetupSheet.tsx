@@ -1,4 +1,4 @@
-import { useAskAdmins } from "@agenteschat/client";
+import { useAskAdmins, useInstallSpeechLocal, useSpeechLocal } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
@@ -24,6 +24,10 @@ export function VoiceSetupSheet({
   const { t } = useTranslation();
   const toast = useToast();
   const askOwner = useAskAdmins(orgId);
+  // The owner may set up the model on the server's computer from here: the server downloads and runs it.
+  const local = useSpeechLocal(isOwner).data;
+  const install = useInstallSpeechLocal();
+  const canInstall = local?.fit === "fits" && local.status.state === "off";
   const name = owner?.name ?? null;
   const text = isOwner
     ? t("voice.setup.ownerPhone")
@@ -34,8 +38,26 @@ export function VoiceSetupSheet({
     <>
       <SheetTitle title={t(isOwner ? "voice.setup.ownerTitle" : "voice.setup.memberTitle")} subtitle={text} />
       <View style={styles.acts}>
+        {canInstall && (
+          <Button
+            variant="primary"
+            wide
+            icon="down"
+            label={`${t("voice.local.download")} · ${t("voice.local.titlePhone")}`}
+            disabled={install.isPending}
+            onPress={() =>
+              install.mutate(undefined, {
+                onSuccess: () => {
+                  onDone();
+                  toast({ title: t("voice.local.downloadingPhone"), icon: "check" });
+                },
+                onError: (e) => toast({ title: errorText(t, e), icon: "x" }),
+              })
+            }
+          />
+        )}
         <Button
-          variant="primary"
+          variant={canInstall ? "secondary" : "primary"}
           wide
           icon="mic"
           label={t("voice.setup.recordAnyway")}

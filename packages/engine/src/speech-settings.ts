@@ -13,6 +13,7 @@ import { and, type Database, eq, schema } from "@agenteschat/db";
 import { openSecret, sealSecret } from "./crypto";
 import { ValidationError } from "./errors";
 import { pinnedOwner } from "./organizations";
+import type { LocalSpeech } from "./speech-local";
 
 const { instanceSecrets, organizationMembers, users } = schema;
 
@@ -79,6 +80,8 @@ export function createSpeechSettings(deps: {
   envEngines: SpeechEngine[];
   /** agentes.chat's own servers read only the environment. */
   envOnly?: boolean;
+  /** The helper on this computer, once its owner set it up (`speech-local.ts`). */
+  local?: LocalSpeech | null;
   fetch?: SpeechFetch;
   now?: () => number;
 }): SpeechSettings {
@@ -120,7 +123,13 @@ export function createSpeechSettings(deps: {
   const chain = () => {
     refresh().catch(() => {});
     const own = saved?.engine ?? null;
-    return own ? [own, ...deps.envEngines.filter((e) => e.id !== own.id)] : deps.envEngines;
+    const here = deps.local?.engine() ?? null;
+    const first = [here, own].filter((e): e is SpeechEngine => e !== null);
+    // The owner's own choices first, the helper on this computer before a key; the environment's `local` steps aside
+    // for the helper's.
+    return first.length
+      ? [...first, ...deps.envEngines.filter((e) => !first.some((f) => f.id === e.id))]
+      : deps.envEngines;
   };
   const snapshot = (): SpeechKeyView => ({
     provider: saved?.provider ?? null,
@@ -133,7 +142,11 @@ export function createSpeechSettings(deps: {
     ready: () => initial,
     chain,
     available: () => chain().length > 0,
-    state: () => (chain().length > 0 ? "ready" : "none"),
+    state: () => {
+      if (chain().length > 0) return "ready";
+      const here = deps.local?.status().state;
+      return here === "downloading" || here === "starting" ? "installing" : here === "failed" ? "failed" : "none";
+    },
     async view() {
       await refresh();
       return snapshot();
