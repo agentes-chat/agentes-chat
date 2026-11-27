@@ -73,7 +73,7 @@ const status = (agentId: string, over: Partial<AgentStatus>): AgentStatus => ({
 const nav = () => screen().getByRole("navigation", { name: "Navegação do workspace" });
 /**
  * A personal workspace (ADR 0159), whose list keeps each agent's work on the line under its name; a team's list has one
- * line per agent, its work in its title and its face (ADR 0259).
+ * line per agent, its work in its title and its face (ADR 0260).
  */
 const personal = () => {
   const state = seedState();

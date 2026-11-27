@@ -25,7 +25,7 @@ const click = async (el: Element) => {
 };
 // The page behind an open dialog is hidden from roles: the sidebar by its element.
 const nav = () => document.getElementById("app-nav") as HTMLElement;
-/** The column's tiles (ADR 0259), by name: a tile says it in its label, before what its dot means. */
+/** The column's tiles (ADR 0260), by name: a tile says it in its label, before what its dot means. */
 const rows = () =>
   [...nav().querySelectorAll(".sidebar__col > a.sidebar__tile")].map(
     (l) => l.getAttribute("aria-label")?.split(",")[0],
@@ -77,7 +77,7 @@ describe("the tools on top", () => {
     expect(router.state.location.pathname).toBe(before);
     const home = within(column).getByRole("link", { name: "Início" });
     expect(home.getAttribute("draggable")).toBeNull();
-    // No grip of a part: a team's list keeps its fixed order (ADR 0259).
+    // No grip of a part: a team's list keeps its fixed order (ADR 0260).
     expect(within(nav()).queryByRole("button", { name: /seção Ferramentas/ })).toBeNull();
   });
 
@@ -134,7 +134,7 @@ describe("the tools on top", () => {
     ).toBe(`/org/${ORG_ID}/task-manager`);
     expect(within(more).getByRole("button", { name: "Personalizar a barra lateral" })).toBeTruthy();
     cleanup();
-    // Não lidas and Threads are the list's first rows (ADR 0259), whatever waits.
+    // Não lidas and Threads are the list's first rows (ADR 0260), whatever waits.
     await go(noneWaiting());
     expect(listed()).toEqual(["Tarefas", "Drive", "Equipe"]);
   });
@@ -143,7 +143,7 @@ describe("the tools on top", () => {
     const state = await go(noneWaiting());
     const dialog = await openSetup();
     expect(chosen(dialog, "Wiki")).toBe("Em Mais");
-    // The inbox and Threads aren't the column's: Não lidas and Threads head the list (ADR 0259).
+    // The inbox and Threads aren't the column's: Não lidas and Threads head the list (ADR 0260).
     expect(within(dialog).queryByRole("radiogroup", { name: "Caixa de entrada" })).toBeNull();
     expect(within(dialog).queryByRole("radiogroup", { name: "Threads" })).toBeNull();
     const offered = (tool: string) =>
@@ -455,7 +455,7 @@ describe("the tools on top", () => {
 });
 
 describe("the sidebar's parts", () => {
-  test("the fixed order, each part in a block of its own; sectors show nowhere in the list (ADR 0259)", async () => {
+  test("the fixed order, each part in a block of its own; sectors show nowhere in the list (ADR 0260)", async () => {
     const state = seedState();
     const engineering = "00000000-0000-4000-8000-0000000000f1";
     state.agentGroups = [...(state.agentGroups ?? []), { id: engineering, name: "Engenharia", agentIds: [] }];

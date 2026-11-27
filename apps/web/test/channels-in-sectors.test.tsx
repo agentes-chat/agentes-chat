@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ATLAS_ID, createFakeApi, ENG_ID, GENERAL_ID, ORG_ID, seedDm, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
-/** Channels in sectors (ADR 0240): picked as a channel is made; the sidebar shows none of them (ADR 0259). */
+/** Channels in sectors (ADR 0240): picked as a channel is made; the sidebar shows none of them (ADR 0260). */
 
 afterEach(() => {
   cleanup();
@@ -56,7 +56,7 @@ const click = async (el: Element) => {
   await act(async () => fireEvent.click(el));
   await settle(3);
 };
-describe("the sidebar (ADR 0259)", () => {
+describe("the sidebar (ADR 0260)", () => {
   test("no sector shows in it: every channel is in Canais, a sector's too", async () => {
     await go();
     expect(within(nav()).queryByRole("button", { name: "Suporte" })).toBeNull();

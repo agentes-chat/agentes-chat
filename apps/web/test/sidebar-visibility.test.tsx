@@ -64,7 +64,7 @@ describe("what a member's sidebar lists", () => {
     expect(within(nav()).getByRole("link", { name: "Equipe" })).toBeTruthy();
   });
 
-  test("no sector in the list at all: Canais and Mensagens diretas, sectors stay on Equipe (ADR 0259)", async () => {
+  test("no sector in the list at all: Canais and Mensagens diretas, sectors stay on Equipe (ADR 0260)", async () => {
     await go(acme("member"));
     expect(sections()).toEqual(["Canais", "Mensagens diretas"]);
   });

@@ -16672,7 +16672,7 @@ html:not([data-pointer]) .store-back:focus-visible {
 }
 
 /*
- * A team's sidebar (ADR 0259): a 64px tool column at its left edge and the list beside it. The column has Ir para…
+ * A team's sidebar (ADR 0260): a 64px tool column at its left edge and the list beside it. The column has Ir para…
  * on top, a line, the tools as 40px tiles (icon only, the name in a tip on their right), and Agora and the collapse at
  * its foot. Collapsed, the list goes and the column stays: one picture of the sidebar in both states. A tablet keeps
  * the column and its toggle opens the list over the page; a phone's drawer holds both.

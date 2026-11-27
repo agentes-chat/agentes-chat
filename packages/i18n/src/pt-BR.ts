@@ -2482,14 +2482,14 @@ export const ptBR = {
     newGroupWith: "Novo setor com {{name}}",
     dmsEmpty: "Suas conversas com pessoas aparecem aqui.",
   },
-  /** Favoritos (ADR 0259): pessoas, agentes e canais que a pessoa deixa no topo da barra lateral, pelo nome. */
+  /** Favoritos (ADR 0260): pessoas, agentes e canais que a pessoa deixa no topo da barra lateral, pelo nome. */
   sidebarFavorites: {
     title: "Favoritos",
     add: "Adicionar aos favoritos",
     remove: "Tirar dos favoritos",
     full: "Favoritos já tem 50. Tire um para adicionar este.",
   },
-  /** As seções de canais de cada pessoa (ADR 0259): feitas arrastando um canal sobre outro, ou pelo menu do canal. */
+  /** As seções de canais de cada pessoa (ADR 0260): feitas arrastando um canal sobre outro, ou pelo menu do canal. */
   sidebarSections: {
     new: "Nova seção",
     newName: "Nova seção",
@@ -2499,7 +2499,7 @@ export const ptBR = {
     delete: "Excluir seção",
     nameLabel: "Nome da seção",
   },
-  /** Mensagens diretas com pessoas e agentes juntos (ADR 0259). */
+  /** Mensagens diretas com pessoas e agentes juntos (ADR 0260). */
   sidebarDms: {
     options: "Opções de Mensagens diretas",
     show: "Mostrar",
@@ -2513,13 +2513,13 @@ export const ptBR = {
     agentTag: "IA",
     agentTip: "Agente de IA",
   },
-  /** A coluna de ferramentas da barra lateral (ADR 0259): o que o ponto de um botão diz ao leitor de tela. */
+  /** A coluna de ferramentas da barra lateral (ADR 0260): o que o ponto de um botão diz ao leitor de tela. */
   sidebarColumn: {
     label: "Ferramentas",
     unread: "{{name}}, algo não lido",
     you: "{{name}}, algo para você",
   },
-  /** Não lidas (`/unreads`, ADR 0259): tudo o que espera pela pessoa, os itens da caixa de entrada e as conversas não lidas. */
+  /** Não lidas (`/unreads`, ADR 0260): tudo o que espera pela pessoa, os itens da caixa de entrada e as conversas não lidas. */
   unreads: {
     title: "Não lidas",
     forYou: "Para você",

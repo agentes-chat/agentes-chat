@@ -39,7 +39,7 @@ interface Unread {
 }
 
 /**
- * Não lidas (ADR 0259): one place for everything waiting for the person. What waits for them in the inbox, and what
+ * Não lidas (ADR 0260): one place for everything waiting for the person. What waits for them in the inbox, and what
  * reached it unread today, on top (each opens where the inbox opens it); then every channel and DM with unread
  * messages, the ones that call on them (a mention, a DM) first, each with its unread messages, Abrir and Marcar como
  * lida. The inbox page stays for the rest of its history.

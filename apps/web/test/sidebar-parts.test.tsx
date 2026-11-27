@@ -91,7 +91,7 @@ const shown = (el: Element) => {
 };
 
 describe("the parts' headers", () => {
-  test("Canais holds every channel, a sector's too: sectors leave the list (ADR 0259)", async () => {
+  test("Canais holds every channel, a sector's too: sectors leave the list (ADR 0260)", async () => {
     await go(withSector());
     const titles = [...nav().querySelectorAll(".sidebar__section--part .sidebar__section-toggle")].map(
       (b) => b.textContent,
@@ -350,7 +350,7 @@ describe("unread marks: bold, red counts for mentions alone", () => {
     const link = (name: string) => nav().querySelector(`a.sidebar__item[title="#${name}"]`) as HTMLElement;
     expect(link("eng").dataset.kind).toBe("channel");
     expect(link("eng").dataset.unread).toBe("true");
-    // No count for a channel's messages (ADR 0259 §7): a count is red, for mentions and DMs only.
+    // No count for a channel's messages (ADR 0260 §7): a count is red, for mentions and DMs only.
     expect(link("eng").querySelector(".sidebar__unread")).toBeNull();
     const count = link("random").querySelector(".sidebar__unread") as HTMLElement;
     expect(count.textContent).toBe("2");

@@ -229,7 +229,7 @@ export function channelInitials(name: string) {
 }
 
 /**
- * The workspace sidebar. A team's (ADR 0259) is a tool column at its left edge (Ir para…, Início, the tools in sight,
+ * The workspace sidebar. A team's (ADR 0260) is a tool column at its left edge (Ir para…, Início, the tools in sight,
  * Mais; Agora and the collapse at its foot) and the familiar list beside it: Não lidas, Threads, Favoritos, Canais with the
  * person's own sections, Mensagens diretas with people and agents together. A personal workspace (ADR 0159) has the
  * person on top (their menu, the bell and the collapse beside it), Go to… as the list's first row and no foot; what
@@ -275,7 +275,7 @@ export function Sidebar() {
     threads: missionsWaiting + unreadThreads,
   };
   // The mode's defaults and order (ADR 0159). Code only where it has anything for me (ADR 0215 §12). A team's column
-  // holds every tool but the inbox and Threads, which Não lidas and Threads' row take in the list (ADR 0259).
+  // holds every tool but the inbox and Threads, which Não lidas and Threads' row take in the list (ADR 0260).
   const toolOrder = offeredTools(sidebarItemOrder(personal), overview.data?.code, sidebarItems).filter(
     (id) => personal || (id !== "waiting" && id !== "threads"),
   );
@@ -370,7 +370,7 @@ export function Sidebar() {
     newAgentDialog ? newAgentDialog.open() : void navigate({ to: "/org/$orgId/agents/new", params: { orgId } });
   const invite = useInviteDialog();
   const sections = useSidebarSections(me.user.id, orgId);
-  // Favoritos (ADR 0259): their own part in a team's list; on top of their own lists in a personal workspace.
+  // Favoritos (ADR 0260): their own part in a team's list; on top of their own lists in a personal workspace.
   const favorites = useSidebarFavorites();
   const { view, setView, pins } = favorites;
 
@@ -401,7 +401,7 @@ export function Sidebar() {
 
   // The agents that talk to me (who manages agents may list the rest): each row opens its DM, so "the rest" are the
   // agents whose DM opens for me (`opensDm`), never someone's private agent the key doesn't reach (ADR 0085 addendum
-  // of 2026-11-17), which Team still lists. Sectors stay on Equipe (ADR 0259).
+  // of 2026-11-17), which Team still lists. Sectors stay on Equipe (ADR 0260).
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
   const arrivedAgents = useArrived(
@@ -615,7 +615,7 @@ export function Sidebar() {
     ),
   };
 
-  // ── A team's list (ADR 0259): Não lidas, Threads, Favoritos, Canais, Mensagens diretas ──
+  // ── A team's list (ADR 0260): Não lidas, Threads, Favoritos, Canais, Mensagens diretas ──
   const favoriteDrag = useListDrag(favorites.list, favorites.place, favorites.move);
   const channelById = new Map(listedChannels.map((c) => [c.id, c]));
   const favoriteRows = personal
@@ -648,7 +648,7 @@ export function Sidebar() {
     first: rightHand?.id,
     locale: i18n.language,
   });
-  // Invitations not accepted yet, for who invites: the invited address with "Convite enviado" (ADR 0259 §5).
+  // Invitations not accepted yet, for who invites: the invited address with "Convite enviado" (ADR 0260 §5).
   const pendingInvites =
     useAllInvitations(orgId, invites && !personal).data?.filter((i) => i.status === "pending") ?? [];
   const dmsUnread = dmRows.reduce((n, l) => n + (dmOf.get(l.id)?.unread ?? 0), 0);
@@ -670,7 +670,7 @@ export function Sidebar() {
           <Link to="/org/$orgId/unreads" params={{ orgId }} className="sidebar__item" data-unread={anyUnread}>
             <Icon name="unreads" />
             <span className="sidebar__item-label">{t("unreads.title")}</span>
-            {/* A count of things that wait, in ink: red is for mentions and DMs alone (ADR 0259). */}
+            {/* A count of things that wait, in ink: red is for mentions and DMs alone (ADR 0260). */}
             {waitingOnMe > 0 && (
               <CountBadge role="img" aria-label={t("notifications.summaryWaiting", { count: waitingOnMe })}>
                 {badgeCount(waitingOnMe)}
@@ -932,7 +932,7 @@ export function Sidebar() {
         main
       ) : (
         <>
-          {/* The tools (ADR 0259): a vertical toolbar, each tile's name in a tip on its right. */}
+          {/* The tools (ADR 0260): a vertical toolbar, each tile's name in a tip on its right. */}
           <div
             className="sidebar__col"
             role="toolbar"
@@ -995,7 +995,7 @@ function CreateAgentTile({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** The fixed parts and one of the person's own channel sections as `section:<id>` (ADR 0259). */
+/** The fixed parts and one of the person's own channel sections as `section:<id>` (ADR 0260). */
 type SectionId = "favorites" | "channels" | "agents" | "people" | `section:${string}`;
 
 /**
@@ -1209,7 +1209,7 @@ const SECTION_KEY = "section:";
 const LOOSE = "loose";
 
 /**
- * Canais (ADR 0259): the channels in none of the person's sections, in the workspace's order, then each section of
+ * Canais (ADR 0260): the channels in none of the person's sections, in the workspace's order, then each section of
  * theirs with its channels. A channel dragged onto one in none makes a section of both (its name field open); onto a
  * channel in a section or a section's header it moves there; onto Canais' header it goes back. The keyboard's way: the
  * row's menu (Mover para a seção) and Alt+Shift+↑/↓ inside a section, on a section's header among the sections.
@@ -1538,7 +1538,7 @@ function SectionNameField({ name, onDone }: { name: string; onDone: (name: strin
 }
 
 /**
- * Canais (ADR 0080, ADR 0259): the channels in none of the person's sections, then each section, closed sections
+ * Canais (ADR 0080, ADR 0260): the channels in none of the person's sections, then each section, closed sections
  * keeping their unread channels and the open one in sight (CSS).
  */
 function SidebarChannels({
@@ -1667,7 +1667,7 @@ function MoreTools({
   onCustomize: () => void;
   /** At a personal workspace's end (ADR 0159): Início and Go to… open its list, and it opens upward. */
   home?: boolean;
-  /** A tile of a team's tool column (ADR 0259). */
+  /** A tile of a team's tool column (ADR 0260). */
   tile?: boolean;
 }) {
   const { t } = useTranslation();
@@ -1780,7 +1780,7 @@ function PinnedMark() {
 
 /**
  * An agent's row (its row is its DM). While it works its face moves and wears the orbit, and nothing else on the row
- * changes (ADR 0259 §7): what it is on, for whom and how long is in the row's title, workspace-wide (its work for me,
+ * changes (ADR 0260 §7): what it is on, for whom and how long is in the row's title, workspace-wide (its work for me,
  * ADR 0084 addendum of 2026-11-13). `oneLine`: one line in Mensagens diretas and Favoritos, its name and a quiet "IA"; a
  * personal workspace's list keeps its role or work under the name. `drag`: its place among the favorites.
  * `live`: it works, waits or wrote to me.
@@ -1995,7 +1995,7 @@ function RightHandRow({
 }: {
   agent: Agent;
   unread: number;
-  /** One line, as Mensagens diretas' rows (ADR 0259): its label as the tag after the name. */
+  /** One line, as Mensagens diretas' rows (ADR 0260): its label as the tag after the name. */
   line?: boolean;
   onPrefetch: () => void;
   onOpen: () => void;
@@ -2093,7 +2093,7 @@ function PersonRow({
   );
 }
 
-/** An invitation not accepted yet (ADR 0259 §5): the invited address, a quiet "Convite enviado", no conversation yet. */
+/** An invitation not accepted yet (ADR 0260 §5): the invited address, a quiet "Convite enviado", no conversation yet. */
 function InviteRow({ email }: { email: string }) {
   const { t } = useTranslation();
   const { org } = useOrg();

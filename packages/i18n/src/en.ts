@@ -2587,14 +2587,14 @@ export const en = {
     newGroupWith: "New department with {{name}}",
     dmsEmpty: "Your conversations with people show up here.",
   },
-  /** Favoritos (ADR 0259): people, agents and channels the person keeps on top of the sidebar, by name. */
+  /** Favoritos (ADR 0260): people, agents and channels the person keeps on top of the sidebar, by name. */
   sidebarFavorites: {
     title: "Favorites",
     add: "Add to favorites",
     remove: "Remove from favorites",
     full: "Favorites already holds 50. Remove one to add this one.",
   },
-  /** Each person's own channel sections (ADR 0259): made by dragging a channel onto another, or from a channel's menu. */
+  /** Each person's own channel sections (ADR 0260): made by dragging a channel onto another, or from a channel's menu. */
   sidebarSections: {
     new: "New section",
     /** The name a new section starts with, selected in its field. */
@@ -2605,7 +2605,7 @@ export const en = {
     delete: "Delete section",
     nameLabel: "Section name",
   },
-  /** Direct messages with people and agents together (ADR 0259). */
+  /** Direct messages with people and agents together (ADR 0260). */
   sidebarDms: {
     options: "Direct messages options",
     show: "Show",
@@ -2621,13 +2621,13 @@ export const en = {
     agentTag: "AI",
     agentTip: "AI agent",
   },
-  /** The sidebar's tool column (ADR 0259): what a tile's dot says to a screen reader. */
+  /** The sidebar's tool column (ADR 0260): what a tile's dot says to a screen reader. */
   sidebarColumn: {
     label: "Tools",
     unread: "{{name}}, something unread",
     you: "{{name}}, something for you",
   },
-  /** Unreads (`/unreads`, ADR 0259): everything waiting for the person, the inbox's items and the unread conversations. */
+  /** Unreads (`/unreads`, ADR 0260): everything waiting for the person, the inbox's items and the unread conversations. */
   unreads: {
     title: "Unreads",
     forYou: "For you",
