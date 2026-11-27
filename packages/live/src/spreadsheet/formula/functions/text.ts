@@ -104,9 +104,21 @@ export function localFormatCode(code: string, calc: SheetLocale): string {
   return out;
 }
 
+/** Keep whole-string lowercasing, but retain source offsets when a character expands (İ → i̇). */
+function lowerWithOffsets(text: string): { text: string; offsets: number[] | null } {
+  const lower = text.toLowerCase();
+  if (lower.length === text.length) return { text: lower, offsets: null };
+  const offsets: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    for (let j = 0; j < text.charAt(i).toLowerCase().length; j++) offsets.push(i);
+  }
+  offsets.push(text.length);
+  return { text: lower, offsets };
+}
+
 /** Occurrences of any of the delimiters, left to right without overlapping. */
 function occurrences(text: string, delims: readonly string[], ignoreCase: boolean): { start: number; end: number }[] {
-  const hay = ignoreCase ? text.toLowerCase() : text;
+  const { text: hay, offsets } = ignoreCase ? lowerWithOffsets(text) : { text, offsets: null };
   const needles = delims.map((d) => (ignoreCase ? d.toLowerCase() : d));
   const out: { start: number; end: number }[] = [];
   let i = 0;
@@ -122,7 +134,7 @@ function occurrences(text: string, delims: readonly string[], ignoreCase: boolea
       }
     }
     if (best < 0) break;
-    out.push({ start: best, end: best + len });
+    out.push({ start: offsets?.[best] ?? best, end: (offsets?.[best + len - 1] ?? best + len - 1) + 1 });
     i = best + len;
   }
   return out;
@@ -345,8 +357,10 @@ export const TEXT: Record<string, FnSpec> = {
     if (isErr(start)) return start;
     if (start < 1 || start > within.length + 1) return ERR["#VALUE!"];
     if (!/[*?~]/.test(find)) {
-      const at = within.toLowerCase().indexOf(find.toLowerCase(), start - 1);
-      return at < 0 ? ERR["#VALUE!"] : at + 1;
+      const lower = lowerWithOffsets(within);
+      const from = lower.offsets?.indexOf(start - 1) ?? start - 1;
+      const at = lower.text.indexOf(find.toLowerCase(), from);
+      return at < 0 ? ERR["#VALUE!"] : (lower.offsets?.[at] ?? at) + 1;
     }
     const re = wildcardSearch(find);
     re.lastIndex = start - 1;
