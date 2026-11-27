@@ -69,8 +69,8 @@ export function IssueLinks({ issue }: { issue: Issue }) {
         </div>
       )}
       {links.data?.map((l) => (
-        <div key={l.id} className="ac-actrow">
-          <span>
+        <div key={l.id} className="row ac-actrow">
+          <span className="ac-actrow__text">
             {t(issueLinkLabel(l))}{" "}
             {l.task ? (
               <Link
