@@ -476,7 +476,7 @@ export function computerSentence(info: ComputerInfo) {
   return [
     info.managed
       ? `Runs on "${info.name}"${os ? ` (${os})` : ""}, this workspace's own computer, always on: a real machine, not an isolated sandbox. It has its own internet and installed tools; commands run in your folder there as your own user.`
-      : `Runs on the connected computer "${info.name}"${os ? ` (${os})` : ""}: a real machine people connected, not an isolated sandbox. It has its own internet and installed tools; commands run in its workspace folder as the user that runs the runner.`,
+      : `Runs on the connected computer "${info.name}"${os ? ` (${os})` : ""}: a real machine people connected, not an isolated sandbox. It has its own internet and installed tools; commands run in its workspace folder as the user agentes.chat runs as there.`,
     info.online
       ? "It is online now."
       : info.managed
