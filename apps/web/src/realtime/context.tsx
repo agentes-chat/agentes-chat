@@ -163,9 +163,13 @@ export interface LiveNotice {
 
 export interface LiveMemoryCard {
   key: string;
+  /** The run that announced it (`memory.updated`). */
+  runId: string;
   agentId: string;
   threadId: string;
   update: MemoryUpdate;
+  /** When it came (ms): a resync asked before it can't drop it. */
+  at: number;
 }
 
 /** A small external store; components subscribe to slices of it (`useLive`). */
@@ -179,14 +183,53 @@ export const PROVISIONAL_TTL_MS = 20_000;
 function dropMemoryCards(
   memory: LiveState["memory"],
   channelId: string,
-  message: Pick<Message, "agentRunId" | "meta">,
+  message: Pick<Message, "agentRunId" | "meta" | "author">,
 ): LiveState["memory"] {
   const list = memory[channelId];
   const updates = message.meta?.memoryUpdates;
-  if (!list || !message.agentRunId || !Array.isArray(updates)) return memory;
-  const shown = new Set(updates.map((u) => `${message.agentRunId}:${(u as { itemId?: unknown }).itemId}`));
-  const kept = list.filter((c) => !shown.has(c.key));
+  if (!list || !Array.isArray(updates)) return memory;
+  // By its run, and by what it says when the message came from another run of the same agent (a long work's report,
+  // a continued run): the same change, on screen twice otherwise.
+  const shown = new Set<string>();
+  const same = new Set<string>();
+  const agentId = message.author?.type === "agent" ? message.author.id : null;
+  for (const u of updates as Partial<MemoryUpdate>[]) {
+    if (typeof u?.itemId !== "string") continue;
+    if (message.agentRunId) shown.add(`${message.agentRunId}:${u.itemId}`);
+    if (agentId) same.add(memoryCardIdentity(agentId, u));
+  }
+  const kept = list.filter((c) => !shown.has(c.key) && !same.has(memoryCardIdentity(c.agentId, c.update)));
   return kept.length === list.length ? memory : { ...memory, [channelId]: kept };
+}
+
+/** One change as a card shows it: its item, what was done and the text (a later change to the same item differs). */
+const memoryCardIdentity = (agentId: string, u: Partial<MemoryUpdate>) =>
+  JSON.stringify([agentId, u.itemId, u.action, u.text, u.proposalId ?? null]);
+
+/**
+ * The run an event says is over (done, failed, stopped, passed), else null. Waiting (an approval, an answer, its
+ * computer) isn't over: it picks up again in the same run.
+ */
+function endedRun(event: ChannelEvent): string | null {
+  // `run.canceled` lives outside `ChannelEvent`: read it loosely, as the consults do.
+  const e = event as { type: string; runId?: unknown; status?: string };
+  if (typeof e.runId !== "string") return null;
+  const over = e.status === "done" || e.status === "failed" || e.status === "canceled";
+  if (e.type === "agent.run" || e.type === "run.finished") return over ? e.runId : null;
+  return e.type === "run.canceled" || e.type === "agent.passed" ? e.runId : null;
+}
+
+/** Drops the live memory cards `stale` picks, in every channel. The same object when nothing was dropped. */
+function dropMemoryCardsWhere(
+  memory: LiveState["memory"],
+  stale: (card: LiveMemoryCard, channelId: string) => boolean,
+): LiveState["memory"] {
+  let next = memory;
+  for (const [channelId, list] of Object.entries(memory)) {
+    const kept = list.filter((c) => !stale(c, channelId));
+    if (kept.length !== list.length) next = { ...next, [channelId]: kept };
+  }
+  return next;
 }
 
 export function createStreamsStore(
@@ -204,6 +247,19 @@ export function createStreamsStore(
     notices: {},
     continued: {},
     consults: {},
+  };
+  // Runs whose message came too big for its event: its body is being read (`seed`). Their cards wait for it instead of
+  // leaving when the run ends, else they would go and come back with the message. Per run: the messages announced
+  // without a body (only their read ends the wait, not another message of the run) and whether the run ended.
+  const awaitingBody = new Map<string, { ids: Set<string>; over: boolean }>();
+  /** A run is over: its cards go, unless its message is still on its way (they go with it, in `seed`). */
+  const endRunCards = (memory: LiveState["memory"], runId: string) => {
+    const waiting = awaitingBody.get(runId);
+    if (waiting) {
+      waiting.over = true;
+      return memory;
+    }
+    return dropMemoryCardsWhere(memory, (c) => c.runId === runId);
   };
   const listeners = new Set<() => void>();
   const notify = () => {
@@ -244,6 +300,12 @@ export function createStreamsStore(
     get: () => state,
     apply: (event: ChannelEvent) => {
       const typing = applyTypingEvent(state.typing, event, now());
+      const ended = endedRun(event);
+      if (event.type === "message.created" && !event.message && event.agentRunId) {
+        const waiting = awaitingBody.get(event.agentRunId) ?? { ids: new Set<string>(), over: false };
+        waiting.ids.add(event.messageId);
+        awaitingBody.set(event.agentRunId, waiting);
+      }
       const memory =
         event.type === "memory.updated"
           ? {
@@ -254,15 +316,21 @@ export function createStreamsStore(
                 ),
                 {
                   key: `${event.runId}:${event.update.itemId}`,
+                  runId: event.runId,
                   agentId: event.agentId,
                   threadId: event.threadId,
                   update: event.update,
+                  at: now(),
                 },
               ],
             }
           : event.type === "message.created" && event.message
             ? dropMemoryCards(state.memory, event.channelId, event.message)
-            : state.memory;
+            : // The run ended (done, failed, stopped): its message holds what it changed, or it never got one. A live
+              // card is only for a run still going: kept, it stayed at the bottom saying "agora" until a reload.
+              ended !== null
+              ? endRunCards(state.memory, ended)
+              : state.memory;
       const questions =
         event.type === "question.asked" || event.type === "question.answered"
           ? { ...state.questions, [event.question.id]: event.question }
@@ -319,6 +387,13 @@ export function createStreamsStore(
       for (const m of messages) {
         receipts = seedReceipt(receipts, m, before !== undefined && receipts[m.id] === before[m.id]);
         memory = dropMemoryCards(memory, m.channelId, m);
+        // The message its run's cards waited for is here: an ended run's other cards go now.
+        const runId = m.agentRunId;
+        const waiting = runId ? awaitingBody.get(runId) : undefined;
+        if (runId && waiting?.ids.delete(m.id) && waiting.ids.size === 0) {
+          awaitingBody.delete(runId);
+          if (waiting.over) memory = endRunCards(memory, runId);
+        }
       }
       set({ ...state, receipts, memory });
     },
@@ -378,14 +453,31 @@ export function createStreamsStore(
       set({ ...state, questions: { ...state.questions, [question.id]: question } }),
     /** Our own delivery or refusal of a secret request, before the server's event. */
     secretAnswered: (request: SecretRequest) => set({ ...state, secrets: { ...state.secrets, [request.id]: request } }),
-    dismiss: (runId: string) => set({ ...state, streams: dismissRun(state.streams, runId) }),
+    /** The run's row goes; its cards too when it `ended` (done, failed, stopped, gone), not while it waits on someone. */
+    dismiss: (runId: string, ended = true) =>
+      set({
+        ...state,
+        streams: dismissRun(state.streams, runId),
+        memory: ended ? endRunCards(state.memory, runId) : state.memory,
+      }),
     /** "Parar" pressed (optimistic) / the cancel failed. */
     stopping: (runId: string, byUserId: string) =>
       set({ ...state, streams: markStopping(state.streams, runId, byUserId) }),
     unstopping: (runId: string) => set({ ...state, streams: unmarkStopping(state.streams, runId) }),
     /** The server's active runs for a channel (load, reconnect): stale rows go away. */
     reconcile: (channelId: string, active: ActiveRun[], askedAt = now()) =>
-      set({ ...state, streams: reconcileRuns(state.streams, channelId, active, now(), askedAt) }),
+      set({
+        ...state,
+        streams: reconcileRuns(state.streams, channelId, active, now(), askedAt),
+        // A missed end (a reconnect): the cards of runs no longer active go too, unless they came after the ask.
+        memory: dropMemoryCardsWhere(state.memory, (c, at) => {
+          if (at !== channelId || c.at >= askedAt || active.some((a) => a.runId === c.runId)) return false;
+          const waiting = awaitingBody.get(c.runId);
+          if (!waiting) return true;
+          waiting.over = true;
+          return false;
+        }),
+      }),
     /** The server's questions still out in a channel (load, reconnect): the "asking…" line. */
     reconcileConsults: (channelId: string, open: OpenConsult[], askedAt = now()) =>
       set({ ...state, consults: reconcileConsults(state.consults, channelId, open, askedAt, now()) }),
@@ -396,7 +488,16 @@ export function createStreamsStore(
     touch: (runId: string) => set({ ...state, streams: touchRun(state.streams, runId, now()) }),
     /** The server's active runs, asked about runs gone quiet (`recheckRuns`). */
     recheck: (runIds: readonly string[], active: readonly ActiveRun[] | undefined) =>
-      set({ ...state, streams: recheckRuns(state.streams, runIds, active, now()) }),
+      set({
+        ...state,
+        streams: recheckRuns(state.streams, runIds, active, now()),
+        // The server says these runs are over (their end never reached this tab): their cards go with their rows.
+        memory: active
+          ? runIds
+              .filter((id) => !active.some((a) => a.runId === id))
+              .reduce((memory, id) => endRunCards(memory, id), state.memory)
+          : state.memory,
+      }),
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
@@ -693,20 +794,28 @@ export async function reconcileChannelRuns(
     else store.reconcile(channelId, active, askedAt);
     return live.some((r) => !active.some((a) => a.runId === r.runId));
   }
-  // No endpoint yet: ask about each live run.
+  // No endpoint yet: ask about each live run, and each run that still has a card here without a row (its row left
+  // while it waited on a person; its end may never reach this tab).
+  const rowIds = new Set(live.map((r) => r.runId));
+  const cardOnly = [...new Set((store.get().memory[channelId] ?? []).map((c) => c.runId))].filter(
+    (id) => !rowIds.has(id) && (!runIds || runIds.includes(id)),
+  );
   let dropped = false;
   await Promise.all(
-    live.map(async (r) => {
+    [...rowIds, ...cardOnly].map(async (runId) => {
+      const hasRow = rowIds.has(runId);
       try {
-        const { run } = await api.agents.run(orgId, r.runId);
-        if (isActiveStatus(run.status)) store.touch(r.runId);
-        else {
-          store.dismiss(r.runId);
+        const { run } = await api.agents.run(orgId, runId);
+        if (isActiveStatus(run.status)) {
+          if (hasRow) store.touch(runId);
+        } else if (hasRow || ENDED_RUN_STATUSES.has(run.status)) {
+          // Waiting on a person (an answer, an approval) leaves the activity line, but the run's cards stay.
+          store.dismiss(runId, ENDED_RUN_STATUSES.has(run.status));
           dropped = true;
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
-          store.dismiss(r.runId);
+          store.dismiss(runId);
           dropped = true;
         }
       }
@@ -714,6 +823,8 @@ export async function reconcileChannelRuns(
   );
   return dropped;
 }
+
+const ENDED_RUN_STATUSES = new Set(["done", "failed", "canceled"]);
 
 let quiet: StreamsStore | null = null;
 const quietStore = () => {

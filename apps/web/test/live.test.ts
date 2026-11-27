@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { ActiveRun, ChannelEvent, Message } from "@agenteschat/client";
+import type { ActiveRun, ApiClient, ChannelEvent, Message } from "@agenteschat/client";
 import {
+  ApiError,
   applyChannelEvent,
   applyReceiptEvent,
   applyTyping,
@@ -19,7 +20,7 @@ import {
   typingIn,
   typingThrottle,
 } from "@agenteschat/client";
-import { createStreamsStore } from "@/realtime/context";
+import { createStreamsStore, reconcileChannelRuns } from "@/realtime/context";
 
 const base = { channelId: "c1", threadId: "m1", runId: "r1", agentId: "ada" };
 
@@ -981,6 +982,245 @@ describe("live memory cards", () => {
       update,
     } as ChannelEvent);
     store.apply({ type: "message.created", channelId: "c1", messageId: "a1", message: reply } as ChannelEvent);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  const announce = (store: ReturnType<typeof createStreamsStore>, runId: string, itemId = "i1") =>
+    store.apply({
+      type: "memory.updated",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId,
+      update: { ...update, itemId },
+    } as ChannelEvent);
+
+  test("the run's end drops its cards, never another run's: no card stuck at the bottom saying now", () => {
+    for (const end of [
+      { type: "agent.run", status: "done" },
+      { type: "agent.run", status: "failed" },
+      { type: "agent.run", status: "canceled" },
+      { type: "run.finished", status: "done" },
+      { type: "run.finished", status: "canceled" },
+      { type: "run.canceled" },
+      { type: "agent.passed" },
+    ]) {
+      const store = createStreamsStore();
+      announce(store, "r1");
+      announce(store, "r2", "i2");
+      store.apply({ ...end, channelId: "c1", threadId: "m1", agentId: "nova", runId: "r1" } as unknown as ChannelEvent);
+      expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i2"]);
+    }
+  });
+
+  test("a run that waits (an approval, an answer) keeps its cards", () => {
+    const store = createStreamsStore();
+    announce(store, "r1");
+    for (const status of ["waiting_approval", "waiting_input"])
+      store.apply({
+        type: "run.finished",
+        channelId: "c1",
+        threadId: "m1",
+        agentId: "nova",
+        runId: "r1",
+        status,
+      } as unknown as ChannelEvent);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i1"]);
+  });
+
+  test("a message of another run of the same agent that shows the same change drops the card", () => {
+    const store = createStreamsStore();
+    announce(store, "r1");
+    // Long work's report, posted by the run that picked it up.
+    store.seed([{ ...reply, agentRunId: "r9" }]);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  test("a later change to the same item, or another agent's, is not the one a message shows", () => {
+    const store = createStreamsStore();
+    store.apply({
+      type: "memory.updated",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r2",
+      update: { ...update, action: "updated", text: "Prefere respostas longas" },
+    } as ChannelEvent);
+    store.apply({
+      type: "memory.updated",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "atlas",
+      runId: "r3",
+      update,
+    } as ChannelEvent);
+    store.seed([reply]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i1", "r3:i1"]);
+  });
+
+  test("a resync drops the cards of runs no longer active, not one that came after the ask", () => {
+    let clock = 1_000;
+    const store = createStreamsStore(undefined, () => clock);
+    announce(store, "r1");
+    announce(store, "r2", "i2");
+    const askedAt = clock + 1;
+    clock = askedAt + 1;
+    announce(store, "r3", "i3");
+    store.reconcile(
+      "c1",
+      [{ runId: "r2", agentId: "nova", channelId: "c1", threadId: "m1", status: "running" }],
+      askedAt,
+    );
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i2", "r3:i3"]);
+  });
+  const running = (store: ReturnType<typeof createStreamsStore>, runId: string) =>
+    store.apply({ type: "agent.delta", channelId: "c1", threadId: "m1", agentId: "nova", runId, seq: 0, text: "…" });
+  const listed = (runId: string): ActiveRun => ({
+    runId,
+    agentId: "nova",
+    channelId: "c1",
+    threadId: "m1",
+    status: "running",
+    startedAt: null,
+  });
+
+  test("a quiet run the server says is over takes its cards along, as an open tab checks it", async () => {
+    const store = createStreamsStore();
+    for (const runId of ["r1", "r2"]) {
+      running(store, runId);
+      announce(store, runId, `i-${runId}`);
+    }
+    const api = { agents: { activeRuns: async () => [listed("r2")] } } as unknown as ApiClient;
+    expect(await reconcileChannelRuns(api, store, "o", "c1", ["r1", "r2"])).toBe(true);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i-r2"]);
+  });
+
+  test("without the endpoint, a run found over (or gone) takes its cards along", async () => {
+    const store = createStreamsStore();
+    for (const runId of ["done", "gone", "busy", "asking"]) {
+      running(store, runId);
+      announce(store, runId, `i-${runId}`);
+    }
+    const api = {
+      agents: {
+        activeRuns: async () => null,
+        run: async (_o: string, runId: string) => {
+          if (runId === "gone") throw new ApiError(404, "not_found", "nope");
+          const status = runId === "busy" ? "running" : runId === "asking" ? "waiting_input" : "failed";
+          return { run: { id: runId, status }, steps: [] };
+        },
+      },
+    } as unknown as ApiClient;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
+    // Waiting on a person is not over: its card stays.
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["busy:i-busy", "asking:i-asking"]);
+  });
+
+  test("without the endpoint, a card whose run left the activity line waiting is checked again on reconnect", async () => {
+    const store = createStreamsStore();
+    running(store, "asking");
+    announce(store, "asking", "i-asking");
+    let status = "waiting_input";
+    const asked: string[] = [];
+    const api = {
+      agents: {
+        activeRuns: async () => null,
+        run: async (_o: string, runId: string) => {
+          asked.push(runId);
+          return { run: { id: runId, status }, steps: [] };
+        },
+      },
+    } as unknown as ApiClient;
+    await reconcileChannelRuns(api, store, "o", "c1");
+    // Waiting on a person: the row goes, the card stays.
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["asking:i-asking"]);
+    // Still waiting on the next reconnect: asked about again, kept.
+    asked.length = 0;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(false);
+    expect(asked).toEqual(["asking"]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["asking:i-asking"]);
+    // It failed and its end never reached this tab: the next reconnect asks about it and its card goes.
+    status = "failed";
+    asked.length = 0;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
+    expect(asked).toEqual(["asking"]);
+    expect(store.get().memory.c1 ?? []).toEqual([]);
+  });
+
+  test("without the endpoint, a card-only run gone from the server (404) takes its card along", async () => {
+    const store = createStreamsStore();
+    running(store, "asking");
+    announce(store, "asking", "i-asking");
+    let gone = false;
+    const api = {
+      agents: {
+        activeRuns: async () => null,
+        run: async (_o: string, runId: string) => {
+          if (gone) throw new ApiError(404, "not_found", "nope");
+          return { run: { id: runId, status: "waiting_input" }, steps: [] };
+        },
+      },
+    } as unknown as ApiClient;
+    await reconcileChannelRuns(api, store, "o", "c1");
+    gone = true;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
+    expect(store.get().memory.c1 ?? []).toEqual([]);
+  });
+
+  test("a message too big for its event: the card waits for it, then leaves with it, never twice", () => {
+    const store = createStreamsStore();
+    announce(store, "r1");
+    announce(store, "r1", "i2");
+    store.apply({ type: "message.created", channelId: "c1", messageId: "a1", agentRunId: "r1" } as ChannelEvent);
+    store.apply({
+      type: "agent.run",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r1",
+      status: "done",
+    } as unknown as ChannelEvent);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i1", "r1:i2"]);
+    // Its body read: the change it shows leaves with it, and the run's other card too (it ended).
+    store.seed([{ ...reply, agentRunId: "r1" }]);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  test("a big message's run ended: another message of the run read first keeps its cards; the announced one ends them", () => {
+    const store = createStreamsStore();
+    announce(store, "r1", "i9");
+    store.apply({ type: "message.created", channelId: "c1", messageId: "a1", agentRunId: "r1" } as ChannelEvent);
+    store.apply({
+      type: "agent.run",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r1",
+      status: "done",
+    } as unknown as ChannelEvent);
+    const earlier = { ...reply, id: "a0", meta: {} } as unknown as Message;
+    store.seed([earlier]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i9"]);
+    store.seed([{ ...reply, meta: {} } as unknown as Message]);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  test("a big message's first read fails: the cards wait, and the retry that brings it ends them", () => {
+    const store = createStreamsStore();
+    announce(store, "r1", "i9");
+    store.apply({ type: "message.created", channelId: "c1", messageId: "a1", agentRunId: "r1" } as ChannelEvent);
+    store.apply({
+      type: "agent.run",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r1",
+      status: "done",
+    } as unknown as ChannelEvent);
+    // The failed read seeds nothing; the retry (catchUpChannel reads again) has the message.
+    store.seed([]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i9"]);
+    store.seed([{ ...reply, meta: {} } as unknown as Message]);
     expect(store.get().memory.c1).toEqual([]);
   });
 });
