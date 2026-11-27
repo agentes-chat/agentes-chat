@@ -768,7 +768,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         machine_id: machine.id,
         os: frame.os,
         browser_failure: "missing",
-        reason: "The computer's runner found no Google Chrome when it connected.",
+        reason: "agentes.chat found no Google Chrome on this computer when it connected.",
       });
       return;
     }
@@ -780,7 +780,12 @@ export function createMachineHub(deps: MachineHubDeps) {
     if (conn.machineId || conn.authing) return;
     conn.authing = true;
     if (frame.protocol < MIN_RUNNER_PROTOCOL) {
-      return refuse(conn, "outdated", "This runner is too old. Install the latest one.", MACHINE_CLOSE.outdated);
+      return refuse(
+        conn,
+        "outdated",
+        "This version of agentes.chat is too old. Install the latest one.",
+        MACHINE_CLOSE.outdated,
+      );
     }
     const machine = await authenticateMachine(db, frame.token);
     if (!machine) {
@@ -806,7 +811,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     const old = local.get(machine.id);
     local.set(machine.id, conn);
     if (old && old !== conn) {
-      refuse(old, "replaced", "Another runner connected for this computer.", MACHINE_CLOSE.replaced);
+      refuse(old, "replaced", "Another copy of agentes.chat connected for this computer.", MACHINE_CLOSE.replaced);
       // Its requests end now, not when (if ever) the dead socket's close arrives: a runner that restarted
       // mid-request lost them all (its requests die with its session).
       await closeConn(old, { code: MACHINE_CLOSE.replaced, reason: "replaced" });
@@ -1607,7 +1612,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         if (!conn || conn.connectionId === event.connectionId) return;
         // The runner came back on another replica: this socket is a stale one (outside the publisher's call stack).
         queueMicrotask(() => {
-          refuse(conn, "replaced", "Another runner connected for this computer.", MACHINE_CLOSE.replaced);
+          refuse(conn, "replaced", "Another copy of agentes.chat connected for this computer.", MACHINE_CLOSE.replaced);
           void closeConn(conn, { code: MACHINE_CLOSE.replaced, reason: "replaced" });
         });
         return;

@@ -1,6 +1,6 @@
 import type { Machine } from "@agenteschat/client";
 import { formatTime } from "@agenteschat/client/lib/format";
-import { egressViaText } from "@agenteschat/client/lib/machines";
+import { egressViaParts } from "@agenteschat/client/lib/machines";
 import { Icon } from "@agenteschat/ui";
 import { countryFlagUrl } from "@agenteschat/ui/brand/flags";
 import { useTranslation } from "react-i18next";
@@ -25,8 +25,9 @@ export function Egress({ machine, compact = false }: { machine: Machine | null |
         })}
       </span>
     );
-  // A person's computer lends its internet (ADR 0237): whose, said even before an address is measured through it.
-  const via = machine ? egressViaText(t, machine) : null;
+  // A person's computer lends its internet (ADR 0237): which, said even before an address is measured through it, and
+  // who connected it on its name's tip.
+  const via = machine ? egressViaParts(t, machine) : null;
   if (!e?.ip && !via) return null;
   const flag = countryFlagUrl(e?.country);
   return (
@@ -40,7 +41,11 @@ export function Egress({ machine, compact = false }: { machine: Machine | null |
         <Icon name="globe" size={14} />
       )}
       {via ? (
-        <span>{via}</span>
+        <span>
+          {via.before}
+          <span title={via.by ?? undefined}>{via.name}</span>
+          {via.after}
+        </span>
       ) : (
         <span style={{ fontVariantNumeric: "tabular-nums" }}>{t("machines.egress.line", { ip: e?.ip ?? "" })}</span>
       )}

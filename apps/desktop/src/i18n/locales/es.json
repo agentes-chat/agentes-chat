@@ -24,6 +24,11 @@
     "welcome": "Bienvenida",
     "prefs": "Preferencias"
   },
+  "background": {
+    "title": "agentes.chat sigue abierto",
+    "bodyMac": "Lo encuentras en la barra de menús, arriba en la pantalla. Desde ahí puedes abrirlo o salir.",
+    "bodyTray": "Lo encuentras en la bandeja del sistema. Desde ahí puedes abrirlo o salir."
+  },
   "common": {
     "cancel": "Cancelar",
     "close": "Cerrar",

@@ -24,6 +24,11 @@
     "welcome": "Hoş geldiniz",
     "prefs": "Tercihler"
   },
+  "background": {
+    "title": "agentes.chat çalışmaya devam ediyor",
+    "bodyMac": "Ekranın üstündeki menü çubuğunda. Oradan açabilir veya çıkabilirsin.",
+    "bodyTray": "Sistem tepsisinde. Oradan açabilir veya çıkabilirsin."
+  },
   "common": {
     "cancel": "İptal",
     "close": "Kapat",

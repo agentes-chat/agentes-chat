@@ -476,12 +476,12 @@ export function computerSentence(info: ComputerInfo) {
   return [
     info.managed
       ? `Runs on "${info.name}"${os ? ` (${os})` : ""}, this workspace's own computer, always on: a real machine, not an isolated sandbox. It has its own internet and installed tools; commands run in your folder there as your own user.`
-      : `Runs on the connected computer "${info.name}"${os ? ` (${os})` : ""}: a real machine people connected, not an isolated sandbox. It has its own internet and installed tools; commands run in its workspace folder as the user that runs the runner.`,
+      : `Runs on the connected computer "${info.name}"${os ? ` (${os})` : ""}: a real machine people connected, not an isolated sandbox. It has its own internet and installed tools; commands run in its workspace folder as the user agentes.chat runs as there.`,
     info.online
       ? "It is online now."
       : info.managed
         ? "It isn't answering right now: calls fail until it is back (usually within minutes); tell the people."
-        : "It is offline now: calls fail until its owner starts the runner; tell the people.",
+        : "It is offline now: calls fail until its owner starts agentes.chat there again; tell the people.",
     info.paused
       ? `${pausedMessage(info.name, info.paused.until, info.paused.timezone)} Tell the people when they ask for work there.`
       : "",
@@ -925,7 +925,7 @@ export function createSandboxToolSource(
   ): ToolDefinition[] => [
     {
       name: "run_code",
-      description: `Run Python, Node.js or bash code. ${computerSentence(computerInfo)}${computerInfo.kind === "machine" && computerInfo.execAllowed && sessionId ? ` ${claudeCodeSentence(sessionId, tasksOn(computerInfo), computerInfo.managed)}` : ""}${computerInfo.kind === "machine" && computerInfo.execAllowed && !tasksOn(computerInfo) ? ` Its runner is too old for background tasks. ${runnerUpdateWay({ kind: computerInfo.managed ? "managed" : null })}` : ""} Returns exit code, stdout and stderr. Default timeout ${execTimeout} s, at most ${maxTimeout} s.${deps.vault ? " With `keys`, saved Vault keys (their variable names, from vault_list) are set as environment variables of this one command only: use them as `$NAME` (bash) or `os.environ` / `process.env`, never print them (output shows them as [secret:NAME]). A routine's own run uses the keys its creator allowed and asks a person for any other; a run started by what a routine read gets none." : ""}`,
+      description: `Run Python, Node.js or bash code. ${computerSentence(computerInfo)}${computerInfo.kind === "machine" && computerInfo.execAllowed && sessionId ? ` ${claudeCodeSentence(sessionId, tasksOn(computerInfo), computerInfo.managed)}` : ""}${computerInfo.kind === "machine" && computerInfo.execAllowed && !tasksOn(computerInfo) ? ` Its agentes.chat program is too old for background tasks. ${runnerUpdateWay({ kind: computerInfo.managed ? "managed" : null })}` : ""} Returns exit code, stdout and stderr. Default timeout ${execTimeout} s, at most ${maxTimeout} s.${deps.vault ? " With `keys`, saved Vault keys (their variable names, from vault_list) are set as environment variables of this one command only: use them as `$NAME` (bash) or `os.environ` / `process.env`, never print them (output shows them as [secret:NAME]). A routine's own run uses the keys its creator allowed and asks a person for any other; a run started by what a routine read gets none." : ""}`,
       scope: SANDBOX_SCOPE,
       readsOutside: true,
       sensitive: requireApproval,
@@ -1055,7 +1055,7 @@ export function createSandboxToolSource(
                     : "unknown OS";
             const where = target.managed
               ? `You are on "${target.name}", this workspace's own computer (${os}), always on: ${target.maintenance ? `${target.online ? "answering, and " : ""}${maintenancePhrase(target.maintenance)} (tell the people so, never that it is offline)` : target.online ? "answering now" : "not answering right now (it usually comes back within minutes; tell the people)"}.`
-              : `You are on the connected computer "${target.name}" (${os}), ${target.online ? "online" : "offline (ask its owner to start the runner)"}.`;
+              : `You are on the connected computer "${target.name}" (${os}), ${target.online ? "online" : "offline (ask its owner to start agentes.chat there)"}.`;
             return {
               content: `${where} Paths are relative to its workspace folder. Commands: ${target.execAllowed ? "allowed" : "turned off (files and uploads only)"}. Network: the machine's own.${more}`,
               data: {

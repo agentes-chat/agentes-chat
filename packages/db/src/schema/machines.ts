@@ -358,9 +358,10 @@ export const machines = pgTable(
     egressShareAt: timestamp({ withTimezone: true }),
     /**
      * The workspace's own computer (`managed`): the lent computer that carried its last connection, and when (written
-     * at most once a minute per server process). The apps say whose internet it uses while that is recent.
+     * at most once a minute per server process). The apps say whose internet it uses while that is recent. `since`:
+     * when that computer began carrying them (absent on rows written before it was kept).
      */
-    egressVia: jsonb().$type<{ machineId: string; at: string }>(),
+    egressVia: jsonb().$type<{ machineId: string; at: string; since?: string | null }>(),
     /** Last known; trust it only with a recent `last_seen_at` (a replica may have died). */
     online: boolean().notNull().default(false),
     /** The server process holding its socket. */
