@@ -317,18 +317,33 @@ export async function settleProposals(
   }
   if (model) {
     try {
-      const result = await deps.context.gateway.complete({
-        orgId: input.orgId,
-        agentId: rows.map(reviewer).find(Boolean) ?? null,
-        kind: "summary",
-        model,
-        system: personal ? REVIEW_SYSTEM_PERSONAL : REVIEW_SYSTEM,
-        messages: [{ role: "user", content: cutTextEnd(blocks.join("\n\n"), INPUT_CHARS) }],
-        maxTokens: 1500,
-        effort: "low",
-        outputSchema: REVIEW_SCHEMA,
-      });
-      verdicts = parseVerdicts(result.text);
+      const system = personal ? REVIEW_SYSTEM_PERSONAL : REVIEW_SYSTEM;
+      const review = async (which: number[]) => {
+        const result = await deps.context.gateway.complete({
+          orgId: input.orgId,
+          agentId: rows.map(reviewer).find(Boolean) ?? null,
+          kind: "summary",
+          model,
+          system,
+          messages: [
+            { role: "user", content: cutTextEnd(which.map((w) => blocks[w] as string).join("\n\n"), INPUT_CHARS) },
+          ],
+          // Each verdict carries `why`, and a memory one's `rule`/`replaces` too: a fixed small budget truncates
+          // the answer on a batch, and what the truncation drops was being declined for good.
+          maxTokens: Math.min(800 + which.length * 250, 8000),
+          effort: "low",
+          outputSchema: REVIEW_SCHEMA,
+        });
+        return parseVerdicts(result.text);
+      };
+      verdicts = await review(rows.map((_, i) => i));
+      // One bounded second pass for the changes the first answer left without a verdict (a truncated answer
+      // used to decline them permanently, and the agent was even told not to propose them again).
+      const missing = rows.map((_, i) => i).filter((i) => !verdicts?.has(keys[i] as string));
+      if (missing.length > 0 && missing.length < rows.length) {
+        const again = await review(missing);
+        for (const [k, v] of again) verdicts?.set(k, v);
+      }
     } catch (error) {
       if ((error as { retryable?: unknown } | null)?.retryable === true) throw error;
       verdicts = null;
@@ -359,6 +374,17 @@ export async function settleProposals(
         (unreviewed(p) ? { ...NO_WORDS, apply: false, why: NO_REVIEW } : { ...NO_WORDS, apply: true }));
     try {
       if (!verdict.apply) {
+        // A person asked for this change: the review's no is a recommendation, never the last word —
+        // the proposal stays pending for the person's own click, with the review's reason on it. A
+        // decline here used to bury an explicit ask without anyone ever seeing it.
+        if (p.requestedByUserId) {
+          await db
+            .update(contextProposals)
+            .set({ review: cutText(verdict.why || "The review recommends against it.", 500) })
+            .where(and(eq(contextProposals.id, p.id), eq(contextProposals.status, "pending")));
+          out.left.push(p.id);
+          continue;
+        }
         await declineByAgent(deps.context, p, by, verdict.why || "Left out after review.");
         out.left.push(p.id);
         continue;

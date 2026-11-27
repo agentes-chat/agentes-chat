@@ -145,7 +145,7 @@ export async function queueSettle(
 
 /**
  * The message that started the run, when `userId` typed it in our apps (`ownTyped`, ADR 0250): the person's own words
- * for a change they asked for, with the names of the files it attached. Null for a notice, a colleague's message, anything an agent wrote, and what was posted
+ * for a change they asked for. Null for a notice, a colleague's message, anything an agent wrote, and what was posted
  * with a token, by an AI app or through a bridge (someone else's words may be in it).
  */
 export async function askedWords(
@@ -155,7 +155,7 @@ export async function askedWords(
 ): Promise<string | null> {
   if (!userId || !ctx.triggerMessageId) return null;
   const [m] = await db
-    .select({ body: messages.body, meta: messages.meta })
+    .select({ body: messages.body, channelId: messages.channelId, meta: messages.meta })
     .from(messages)
     .where(
       and(
@@ -166,11 +166,29 @@ export async function askedWords(
       ),
     );
   if (!m) return null;
+  // The trigger alone is often a bare nudge ("done?") while the real ask sits a message or two before it, in the
+  // same conversation: the review reads what the person said there lately, oldest first, their own words only.
+  const recent = await db
+    .select({ body: messages.body })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, ctx.orgId),
+        eq(messages.channelId, m.channelId),
+        eq(messages.authorType, "person"),
+        eq(messages.authorUserId, userId),
+        sql`${messages.createdAt} >= now() - interval '6 hours'`,
+      ),
+    )
+    .orderBy(asc(messages.createdAt))
+    .limit(6);
+  const bodies = recent.map((r) => r.body?.trim()).filter((b): b is string => !!b);
   // What the message attached is part of the request ("install this skill" with its .zip): its files by name.
   const files = Array.isArray(m.meta?.artifacts)
     ? (m.meta.artifacts as { title?: unknown }[]).map((a) => a.title).filter((t): t is string => typeof t === "string")
     : [];
-  return files.length > 0 ? `${m.body}\n(Attached: ${files.join(", ")})` : m.body;
+  const words = bodies.length > 0 ? bodies.join("\n") : (m.body ?? null);
+  return words && files.length > 0 ? `${words}\n(Attached: ${files.join(", ")})` : words;
 }
 
 /** The reason of a proposal whose agent gave none. */
