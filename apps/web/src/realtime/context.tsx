@@ -794,21 +794,28 @@ export async function reconcileChannelRuns(
     else store.reconcile(channelId, active, askedAt);
     return live.some((r) => !active.some((a) => a.runId === r.runId));
   }
-  // No endpoint yet: ask about each live run.
+  // No endpoint yet: ask about each live run, and each run that still has a card here without a row (its row left
+  // while it waited on a person; its end may never reach this tab).
+  const rowIds = new Set(live.map((r) => r.runId));
+  const cardOnly = [...new Set((store.get().memory[channelId] ?? []).map((c) => c.runId))].filter(
+    (id) => !rowIds.has(id) && (!runIds || runIds.includes(id)),
+  );
   let dropped = false;
   await Promise.all(
-    live.map(async (r) => {
+    [...rowIds, ...cardOnly].map(async (runId) => {
+      const hasRow = rowIds.has(runId);
       try {
-        const { run } = await api.agents.run(orgId, r.runId);
-        if (isActiveStatus(run.status)) store.touch(r.runId);
-        else {
+        const { run } = await api.agents.run(orgId, runId);
+        if (isActiveStatus(run.status)) {
+          if (hasRow) store.touch(runId);
+        } else if (hasRow || ENDED_RUN_STATUSES.has(run.status)) {
           // Waiting on a person (an answer, an approval) leaves the activity line, but the run's cards stay.
-          store.dismiss(r.runId, ENDED_RUN_STATUSES.has(run.status));
+          store.dismiss(runId, ENDED_RUN_STATUSES.has(run.status));
           dropped = true;
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
-          store.dismiss(r.runId);
+          store.dismiss(runId);
           dropped = true;
         }
       }

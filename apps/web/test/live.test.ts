@@ -1116,6 +1116,57 @@ describe("live memory cards", () => {
     expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["busy:i-busy", "asking:i-asking"]);
   });
 
+  test("without the endpoint, a card whose run left the activity line waiting is checked again on reconnect", async () => {
+    const store = createStreamsStore();
+    running(store, "asking");
+    announce(store, "asking", "i-asking");
+    let status = "waiting_input";
+    const asked: string[] = [];
+    const api = {
+      agents: {
+        activeRuns: async () => null,
+        run: async (_o: string, runId: string) => {
+          asked.push(runId);
+          return { run: { id: runId, status }, steps: [] };
+        },
+      },
+    } as unknown as ApiClient;
+    await reconcileChannelRuns(api, store, "o", "c1");
+    // Waiting on a person: the row goes, the card stays.
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["asking:i-asking"]);
+    // Still waiting on the next reconnect: asked about again, kept.
+    asked.length = 0;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(false);
+    expect(asked).toEqual(["asking"]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["asking:i-asking"]);
+    // It failed and its end never reached this tab: the next reconnect asks about it and its card goes.
+    status = "failed";
+    asked.length = 0;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
+    expect(asked).toEqual(["asking"]);
+    expect(store.get().memory.c1 ?? []).toEqual([]);
+  });
+
+  test("without the endpoint, a card-only run gone from the server (404) takes its card along", async () => {
+    const store = createStreamsStore();
+    running(store, "asking");
+    announce(store, "asking", "i-asking");
+    let gone = false;
+    const api = {
+      agents: {
+        activeRuns: async () => null,
+        run: async (_o: string, runId: string) => {
+          if (gone) throw new ApiError(404, "not_found", "nope");
+          return { run: { id: runId, status: "waiting_input" }, steps: [] };
+        },
+      },
+    } as unknown as ApiClient;
+    await reconcileChannelRuns(api, store, "o", "c1");
+    gone = true;
+    expect(await reconcileChannelRuns(api, store, "o", "c1")).toBe(true);
+    expect(store.get().memory.c1 ?? []).toEqual([]);
+  });
+
   test("a message too big for its event: the card waits for it, then leaves with it, never twice", () => {
     const store = createStreamsStore();
     announce(store, "r1");
