@@ -14,7 +14,14 @@ beforeEach(async () => {
 });
 afterEach(() => t.close());
 
-type Delivery = { agentId: string; area: string | null; task: string; firedAt: string | null; runId: string | null };
+type Delivery = {
+  agentId: string;
+  area: string | null;
+  task: string;
+  armedAt: string | null;
+  firedAt: string | null;
+  runId: string | null;
+};
 type ApiError = { error: { code: string; message: string } };
 type Made = { agentId: string; handle: string; channelId: string };
 
@@ -67,6 +74,7 @@ describe("an agent from an area", () => {
       agentId: made.json.agentId,
       area: "support",
       task: support().task,
+      armedAt: null,
       firedAt: null,
       runId: null,
     });
@@ -77,6 +85,11 @@ describe("an agent from an area", () => {
     const [before] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, made.json.agentId));
     expect(before?.archivedAt).not.toBeNull();
     expect((await me.read()).json.delivery).toMatchObject({ agentId: again.json.agentId, area: "finance" });
+    // Leaving the agent's step arms it, its area and task kept.
+    const armed = await me.keep(again.json.agentId);
+    expect(armed.status).toBe(200);
+    expect(armed.json.delivery).toMatchObject({ agentId: again.json.agentId, area: "finance", task: support().task });
+    expect(armed.json.delivery.armedAt).not.toBeNull();
   });
 
   test("400 first_agents.invalid with what is wrong, invalid_request for a wrong shape; signed out 401", async () => {
@@ -125,13 +138,15 @@ describe("an agent from an area", () => {
   });
 });
 
-describe("an agent from another app", () => {
-  test("kept for an agent of this workspace, no area or task; 404 for one not here or archived", async () => {
+describe("arming it as I leave the agent's step", () => {
+  test("an agent from another app takes its place, no area or task, armed; 404 for one not here or archived", async () => {
     const { owner, orgId, agentId } = await setup();
     const me = api(owner, orgId);
+    await me.start(support());
     const kept = await me.keep(agentId);
     expect(kept.status).toBe(200);
-    expect(kept.json.delivery).toEqual({ agentId, area: null, task: "", firedAt: null, runId: null });
+    expect(kept.json.delivery).toMatchObject({ agentId, area: null, task: "", firedAt: null });
+    expect(kept.json.delivery.armedAt).not.toBeNull();
     expect((await me.read()).json.delivery).toEqual(kept.json.delivery);
     const unknown = await me.keep(crypto.randomUUID());
     expect(unknown.status).toBe(404);

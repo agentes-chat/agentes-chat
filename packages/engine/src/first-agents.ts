@@ -672,7 +672,8 @@ export async function pickFirstAgent(
     throw error;
   });
   await db.update(firstAgentProposals).set({ agentId }).where(mine);
-  // Its first delivery, fired once it can work: its routine, else what the AI said it delivers on its first day.
+  // Its first delivery, armed when the person leaves the agent's step and fired once it can work: its routine, else
+  // what the AI said it delivers on its first day.
   await keepFirstDelivery(db, { orgId, userId, agentId, area: "ask", task: option.today[0] ?? option.tasks[0] ?? "" });
   // What the AI said of the workspace (or of the person, in a personal one) is its context while it has none.
   if (row.about && can(membership, "configure")) {
@@ -720,7 +721,8 @@ export type FirstAgentStartInput = z.input<typeof firstAgentStartInput>;
  * The person's first agent from an area of the onboarding (ADR 0256 addendum), as the person (`create_agents`;
  * without it, `create_agents_required`), made the way a picked option is (`makeFirstAgent`) but with no routine:
  * connecting an app brings its routine (ADR 0242), which the onboarding makes. Its first delivery is kept (`area`,
- * `task`) and fires once the agent can work. `replace`: going back and picking another area archives the agent made a
+ * `task`), disarmed until the person leaves the agent's step (`armFirstDelivery`), then fires once the agent can work.
+ * `replace`: going back and picking another area archives the agent made a
  * moment ago, when it is this person's own and its delivery hasn't fired, so two first agents never wait side by side.
  */
 export async function startFirstAgent(

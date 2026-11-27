@@ -1,5 +1,5 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, eq, isNull, lt, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, eq, isNotNull, isNull, lt, schema, sql } from "@agenteschat/db";
 import { getAgent } from "./agents";
 import { type AiStatusDeps, agentAiState } from "./ai-status";
 import { reachesAgent } from "./audience";
@@ -18,10 +18,11 @@ const { agents, firstDeliveries, organizations, routines, users } = schema;
 /**
  * A person's first delivery (ADR 0256 addendum; the onboarding of ADR 0162, the routine an app brings of ADR 0242): the
  * first piece of work the agent they set up on the onboarding does for them, in their DM with it. It is kept from the
- * moment the agent is made, one per person and workspace, and fires once, as soon as the agent can work: the workspace
+ * moment the agent is made, one per person and workspace, armed when the person leaves the agent's step (where they
+ * connect its apps: `armFirstDelivery`), and fires once, as soon as it is armed and the agent can work: the workspace
  * has its plan (no hold) and the agent an AI that reads ready (a plan's sign-in only once its computer is). Whichever of
  * those comes last, Checkout returning, the AI connecting or the computer coming up, a look finds it: one queued when
- * the row is kept and when a billing hold lifts (`setBillingHold`), and the workers' sweep (`enqueueFirstDeliveryChecks`)
+ * it is armed and when a billing hold lifts (`setBillingHold`), and the workers' sweep (`enqueueFirstDeliveryChecks`)
  * for the rest, without a hook in every place an AI or a computer changes.
  *
  * Firing is a notice only the agent reads (`first_delivery`, agent-only) into the person's DM, hop 0, whose run acts
@@ -41,7 +42,9 @@ export interface FirstDeliveryRow {
   agentId: string;
   area: string | null;
   task: string;
-  /** When its notice went out; null while it waits for the plan or the AI. */
+  /** When the person left the agent's step: it fires only once armed. */
+  armedAt: string | null;
+  /** When its notice went out; null while it waits to be armed, for the plan or the AI. */
   firedAt: string | null;
   /** The run its notice woke, once fired. */
   runId: string | null;
@@ -59,6 +62,7 @@ const viewOf = (row: Row): FirstDeliveryRow => ({
   agentId: row.agentId,
   area: row.area,
   task: row.task,
+  armedAt: row.armedAt?.toISOString() ?? null,
   firedAt: row.firedAt?.toISOString() ?? null,
   runId: row.runId,
 });
@@ -69,20 +73,22 @@ const checkNow = (db: Database, orgId: string) =>
 
 /**
  * Keeps the person's first delivery for `agentId`: a new agent takes the place of one that hasn't fired (the person went
- * back and picked another area); one that fired stays as it is. A look at whether it can fire now is queued.
+ * back and picked another area); one that fired stays as it is. Kept disarmed (the person is still on the agent's step)
+ * unless `armed`; armed, a look at whether it can fire now is queued.
  */
 export async function keepFirstDelivery(
   db: Database,
-  input: { orgId: string; userId: string; agentId: string; area: string | null; task: string },
+  input: { orgId: string; userId: string; agentId: string; area: string | null; task: string; armed?: boolean },
 ): Promise<FirstDeliveryRow> {
   const area = input.area?.trim().slice(0, FIRST_DELIVERY_AREA_MAX) || null;
   const task = input.task.trim().slice(0, FIRST_DELIVERY_TASK_MAX);
+  const armedAt = input.armed ? new Date() : null;
   const [kept] = await db
     .insert(firstDeliveries)
-    .values({ orgId: input.orgId, userId: input.userId, agentId: input.agentId, area, task })
+    .values({ orgId: input.orgId, userId: input.userId, agentId: input.agentId, area, task, armedAt })
     .onConflictDoUpdate({
       target: [firstDeliveries.orgId, firstDeliveries.userId],
-      set: { agentId: input.agentId, area, task, createdAt: new Date(), runId: null },
+      set: { agentId: input.agentId, area, task, armedAt, createdAt: new Date(), runId: null },
       setWhere: isNull(firstDeliveries.firedAt),
     })
     .returning();
@@ -95,7 +101,7 @@ export async function keepFirstDelivery(
         .where(and(eq(firstDeliveries.orgId, input.orgId), eq(firstDeliveries.userId, input.userId)))
     )[0];
   if (!row) throw new Error("first delivery not kept");
-  if (kept) await checkNow(db, input.orgId);
+  if (kept?.armedAt) await checkNow(db, input.orgId);
   return viewOf(row);
 }
 
@@ -126,10 +132,12 @@ export async function pendingFirstDelivery(db: Database, orgId: string, userId: 
 }
 
 /**
- * The first delivery of an agent the person brought from another app (the onboarding's import): an agent of this
- * workspace, not archived, that they may talk to. No area, no task: its brief is its routine of theirs, else its role.
+ * Arms the person's first delivery as they leave the agent's step ("Continuar"), for `agentId`: an agent of this
+ * workspace, not archived, that answers them. Their waiting delivery of that agent keeps its area and task; any other
+ * agent (one brought from another app) takes its place with no area and no task, its brief then its routine of theirs,
+ * else its role. One that fired stays as it is. A look at whether it can fire now is queued.
  */
-export async function keepImportedFirstDelivery(
+export async function armFirstDelivery(
   db: Database,
   who: { orgId: string; userId: string },
   agentId: string,
@@ -140,7 +148,21 @@ export async function keepImportedFirstDelivery(
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found", "first_delivery.no_agent");
   if (!(await reachesAgent(db, orgId, agentId, userId)))
     throw new ForbiddenError("This agent doesn't answer you", "first_delivery.not_yours");
-  return keepFirstDelivery(db, { orgId, userId, agentId, area: null, task: "" });
+  const [armed] = await db
+    .update(firstDeliveries)
+    .set({ armedAt: new Date() })
+    .where(
+      and(
+        eq(firstDeliveries.orgId, orgId),
+        eq(firstDeliveries.userId, userId),
+        eq(firstDeliveries.agentId, agentId),
+        isNull(firstDeliveries.firedAt),
+      ),
+    )
+    .returning();
+  if (!armed) return keepFirstDelivery(db, { orgId, userId, agentId, area: null, task: "", armed: true });
+  await checkNow(db, orgId);
+  return viewOf(armed);
 }
 
 // ── The brief ────────────────────────────────────────────────────────────────
@@ -204,8 +226,8 @@ export function firstDeliveryBrief(input: {
 // ── Firing ───────────────────────────────────────────────────────────────────
 
 /**
- * Fires the workspace's first deliveries that can fire now (`FIRST_DELIVERY_JOB`): for each one waiting, while the
- * workspace may work (active, no hold, not being deleted), the person is still a member who reaches the agent, the agent
+ * Fires the workspace's first deliveries that can fire now (`FIRST_DELIVERY_JOB`): for each one armed and waiting, while
+ * the workspace may work (active, no hold, not being deleted), the person is still a member who reaches the agent, the agent
  * is neither archived nor held, and its AI reads ready, claimed (once, whatever runs it twice) and delivered as a
  * `first_delivery` notice into the person's DM with the agent, in the same transaction, published after it. Returns how
  * many fired. One past `FIRST_DELIVERY_KEPT_MS` goes instead.
@@ -215,7 +237,7 @@ export async function fireFirstDeliveries(deps: FirstDeliveryDeps, orgId: string
   const waiting = await db
     .select()
     .from(firstDeliveries)
-    .where(and(eq(firstDeliveries.orgId, orgId), isNull(firstDeliveries.firedAt)))
+    .where(and(eq(firstDeliveries.orgId, orgId), isNull(firstDeliveries.firedAt), isNotNull(firstDeliveries.armedAt)))
     .orderBy(asc(firstDeliveries.createdAt));
   if (waiting.length === 0) return 0;
   // Read fresh, not from the 5-second cache: the hold that lifted a moment ago in another process is gone here too.
@@ -304,8 +326,9 @@ async function fireOne(deps: FirstDeliveryDeps, row: Row): Promise<boolean> {
 // ── The sweep ────────────────────────────────────────────────────────────────
 
 /**
- * How often the sweep looks at a delivery still waiting, by how long it has waited: every 15 seconds in its first hour
- * (Checkout, the AI and the computer usually come then), every minute in its first day, every 10 minutes after.
+ * How often the sweep looks at a delivery still waiting, by how long it has waited since it was armed: every 15 seconds
+ * in its first hour (Checkout, the AI and the computer usually come then), every minute in its first day, every 10
+ * minutes after.
  */
 export function firstDeliveryWindowMs(waitedMs: number) {
   if (waitedMs < 3600_000) return 15_000;
@@ -315,9 +338,9 @@ export function firstDeliveryWindowMs(waitedMs: number) {
 
 /**
  * The workers' sweep (`apps/server/src/workers.ts`, the process that sweeps): drops deliveries that waited past
- * `FIRST_DELIVERY_KEPT_MS`, then queues one look per workspace that may work and has one waiting, keyed by its window of
- * time (`firstDeliveryWindowMs`, by its newest one), so many processes and ticks queue it once. A workspace on a hold
- * gets none: lifting it queues its own. Returns how many it queued.
+ * `FIRST_DELIVERY_KEPT_MS`, then queues one look per workspace that may work and has one armed and waiting, keyed by its
+ * window of time (`firstDeliveryWindowMs`, by the newest armed), so many processes and ticks queue it once. A workspace
+ * on a hold gets none: lifting it queues its own. Returns how many it queued.
  */
 export async function enqueueFirstDeliveryChecks(db: Database, now = new Date()): Promise<number> {
   await db
@@ -329,10 +352,10 @@ export async function enqueueFirstDeliveryChecks(db: Database, now = new Date())
       ),
     );
   const orgs = await db
-    .select({ orgId: firstDeliveries.orgId, newest: sql<string>`max(${firstDeliveries.createdAt})` })
+    .select({ orgId: firstDeliveries.orgId, newest: sql<string>`max(${firstDeliveries.armedAt})` })
     .from(firstDeliveries)
     .innerJoin(organizations, eq(organizations.id, firstDeliveries.orgId))
-    .where(and(isNull(firstDeliveries.firedAt), openOrg))
+    .where(and(isNull(firstDeliveries.firedAt), isNotNull(firstDeliveries.armedAt), openOrg))
     .groupBy(firstDeliveries.orgId);
   if (orgs.length === 0) return 0;
   return enqueueBatch(

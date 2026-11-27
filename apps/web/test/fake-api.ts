@@ -320,8 +320,8 @@ export interface FakeState {
   /** My newest first-agent proposal (`firstAgents.latest`, ADR 0256): none until a test seeds one or pastes one. */
   firstAgents?: FirstAgents | null;
   /**
-   * My first delivery (`firstAgents.delivery`, ADR 0256 addendum): kept by `start` or `keepDelivery`, a test fires it
-   * by setting `firedAt`.
+   * My first delivery (`firstAgents.delivery`, ADR 0256 addendum): kept disarmed by `start`, armed by `keepDelivery`; a
+   * test fires it by setting `firedAt`.
    */
   firstDelivery?: FirstDeliveryRow | null;
   online: Set<string>;
@@ -3486,7 +3486,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         proposal.agentId = agentId;
         return { agentId, handle, channelId };
       },
-      // Like the backend: one agent as me, no routine, its first delivery kept; `replace` takes my pending one's place.
+      // Like the backend: one agent as me, no routine, its first delivery kept disarmed; `replace` takes my pending one's
+      // place.
       start: async (orgId, input) => {
         log("firstAgents.start", orgId, input);
         const mine = state.me ? withPermissions(state.me).organizations.find((o) => o.id === orgId) : undefined;
@@ -3535,7 +3536,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         }
         state.channelMembers[channelId] = [me, agent];
         if (!pending?.firedAt)
-          state.firstDelivery = { agentId, area: input.area, task: input.task ?? "", firedAt: null, runId: null };
+          state.firstDelivery = {
+            agentId,
+            area: input.area,
+            task: input.task ?? "",
+            armedAt: null,
+            firedAt: null,
+            runId: null,
+          };
         return { agentId, handle, channelId };
       },
       delivery: async (orgId) => {
@@ -3547,8 +3555,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("firstAgents.keepDelivery", orgId, agentId);
         if (!state.agents.some((a) => a.id === agentId))
           throw new ApiError(404, "first_delivery.no_agent", "Agent not found");
-        if (!state.firstDelivery?.firedAt)
-          state.firstDelivery = { agentId, area: null, task: "", firedAt: null, runId: null };
+        // Like the backend: my waiting one of this agent is armed as it is; another agent takes its place, armed.
+        const kept = state.firstDelivery;
+        const armedAt = new Date().toISOString();
+        if (kept && !kept.firedAt && kept.agentId === agentId) kept.armedAt = armedAt;
+        else if (!kept?.firedAt)
+          state.firstDelivery = { agentId, area: null, task: "", armedAt, firedAt: null, runId: null };
         return structuredClone(state.firstDelivery as FirstDeliveryRow);
       },
     },

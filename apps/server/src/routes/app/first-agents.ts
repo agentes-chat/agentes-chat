@@ -1,7 +1,7 @@
 import {
+  armFirstDelivery,
   FIRST_AGENT_LIMITS,
   FIRST_AGENT_START_LIMITS,
-  keepImportedFirstDelivery,
   latestFirstAgents,
   pickFirstAgent,
   readFirstDelivery,
@@ -145,6 +145,10 @@ const FirstDelivery = z
     agentId: z.uuid(),
     area: z.string().nullable().openapi({ description: "The onboarding's area; null for an agent from another app." }),
     task: z.string(),
+    armedAt: z
+      .string()
+      .nullable()
+      .openapi({ description: "When I left the agent's step (`PUT`): it fires only once armed." }),
     firedAt: z
       .string()
       .nullable()
@@ -248,7 +252,7 @@ export function firstAgentRoutes(deps: AppDeps) {
       security,
       summary: "Create my first agent from an area of the onboarding",
       description:
-        "One agent, as you, made as a picked proposal is (its own channel in a team's workspace, its AI, a checklist row for each app to connect) but with no routine: connecting an app brings its routine. Its first delivery is kept and fires in your DM with it once the workspace has its plan and the agent its AI. `replace`: your first agent made a moment ago, archived. 400 `first_agents.invalid` with what is wrong; 403 `create_agents_required` without the permission to create agents.",
+        "One agent, as you, made as a picked proposal is (its own channel in a team's workspace, its AI, a checklist row for each app to connect) but with no routine: connecting an app brings its routine. Its first delivery is kept, armed when you leave the agent's step (`PUT …/first-delivery`), and fires in your DM with it once the workspace has its plan and the agent its AI. `replace`: your first agent made a moment ago, archived. 400 `first_agents.invalid` with what is wrong; 403 `create_agents_required` without the permission to create agents.",
       request: { params: OrgParams, body: body(FirstAgentStartBody) },
       responses: { 201: json(Picked), ...errors },
     }),
@@ -289,19 +293,15 @@ export function firstAgentRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/first-delivery",
       tags,
       security,
-      summary: "Keep my first delivery for an agent of this workspace (one brought from another app)",
+      summary: "Arm my first delivery as I leave the agent's step",
       description:
-        "No area and no task: its brief is its routine of yours, else its role. One already fired stays as it is. 404 `first_delivery.no_agent` for an agent not here or archived; 403 `first_delivery.not_yours` for one that doesn't answer you.",
+        "Called by the onboarding's Continue on the agent's step: from then on it fires as soon as the workspace has its plan and the agent its AI. My waiting delivery of this agent keeps its area and task; any other agent of this workspace (one brought from another app) takes its place with no area and no task, its brief then its routine of yours, else its role. One already fired stays as it is. 404 `first_delivery.no_agent` for an agent not here or archived; 403 `first_delivery.not_yours` for one that doesn't answer you.",
       request: { params: OrgParams, body: body(z.object({ agentId: z.uuid() })) },
       responses: { 200: json(z.object({ delivery: FirstDelivery })), ...errors },
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
-      const delivery = await keepImportedFirstDelivery(
-        db,
-        { orgId, userId: c.get("user").id },
-        c.req.valid("json").agentId,
-      );
+      const delivery = await armFirstDelivery(db, { orgId, userId: c.get("user").id }, c.req.valid("json").agentId);
       return c.json({ delivery }, 200);
     },
   );

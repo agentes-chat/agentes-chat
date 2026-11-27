@@ -1541,15 +1541,17 @@ export interface FirstAgentStartInput {
 
 /**
  * My first delivery here (`GET …/first-delivery`, ADR 0256 addendum): what the agent I set up on the onboarding does
- * for me first, in my DM with it, once the workspace has its plan and the agent its AI. Its reply carries
- * `meta.firstDelivery` (`{ summary }`).
+ * for me first, in my DM with it, once I left the agent's step (`keepDelivery` arms it), the workspace has its plan and
+ * the agent its AI. Its reply carries `meta.firstDelivery` (`{ summary }`).
  */
 export interface FirstDeliveryRow {
   agentId: string;
   /** The onboarding's area; null for an agent brought from another app. */
   area: string | null;
   task: string;
-  /** When it went out; null while it waits for the plan or the AI. */
+  /** When I left the agent's step: it fires only once armed. */
+  armedAt: string | null;
+  /** When it went out; null while it waits to be armed, for the plan or the AI. */
   firedAt: string | null;
   /** The run it woke in my DM with the agent, once fired. */
   runId: string | null;

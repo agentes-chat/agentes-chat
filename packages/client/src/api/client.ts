@@ -1056,7 +1056,10 @@ export interface ApiClient {
     start(orgId: string, input: FirstAgentStartInput): Promise<FirstAgentPicked>;
     /** My first delivery here, or null. */
     delivery(orgId: string): Promise<FirstDeliveryRow | null>;
-    /** Keeps my first delivery for an agent of this workspace (one brought from another app). */
+    /**
+     * Arms my first delivery as I leave the agent's step ("Continuar"): that agent's keeps its area and task; another
+     * agent of this workspace (one brought from another app) takes its place.
+     */
     keepDelivery(orgId: string, agentId: string): Promise<FirstDeliveryRow>;
   };
   chat: {

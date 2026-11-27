@@ -1345,7 +1345,7 @@ export function useFirstDeliveryRow(orgId: string, enabled = true) {
   });
 }
 
-/** Keeps my first delivery for an agent brought from another app (the onboarding's import). */
+/** Arms my first delivery as I leave the agent's step, for that agent (or one brought from another app). */
 export function useKeepFirstDelivery(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();

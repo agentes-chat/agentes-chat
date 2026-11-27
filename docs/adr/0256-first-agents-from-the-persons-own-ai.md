@@ -7,8 +7,8 @@
   the team templates' one-click team), ADR 0079 (billing holds), ADR 0164 (the new agent's checklist asks for its apps)
 - Code: `packages/db/src/schema/first-agents.ts` (`first_agent_proposals`, `first_deliveries`);
   `packages/engine/src/first-agents.ts` (`firstAgentsInput`, `saveFirstAgents`, `latestFirstAgents`, `pickFirstAgent`,
-  `startFirstAgent`); `packages/engine/src/first-delivery.ts` (`keepFirstDelivery`, `fireFirstDeliveries`,
-  `enqueueFirstDeliveryChecks`, `deliverySummary`); `packages/engine/src/team-templates.ts`
+  `startFirstAgent`); `packages/engine/src/first-delivery.ts` (`keepFirstDelivery`, `armFirstDelivery`,
+  `fireFirstDeliveries`, `enqueueFirstDeliveryChecks`, `deliverySummary`); `packages/engine/src/team-templates.ts`
   (`createTeamNow`); `packages/engine/src/team-proposals.ts` (`TeamAgent.later`); `packages/engine/src/apps/first-agents-tool.ts`
   (`propose_first_agents`); `packages/engine/src/standing.ts` (`workRefusalBeforePlan`); routes
   `apps/server/src/routes/app/first-agents.ts`; client `packages/client/src/api/*` (`api.firstAgents`,
@@ -149,24 +149,30 @@ work.
   the person, a checklist row for each catalog app its job needs), as the person (`create_agents`), with no routine:
   the app the person connects brings its routine (ADR 0242), which the onboarding makes without asking for a run. Going
   back and picking another area sends `replace` with the agent made a moment ago: it is archived when it is this
-  person's own and its delivery hasn't fired, so two first agents never wait side by side. An agent brought from
-  another app keeps its delivery with `PUT …/first-delivery` (an agent of the workspace, not archived, that answers the
-  person). A pick from the person's own AI keeps one too (area `ask`, its first day's first item).
+  person's own and its delivery hasn't fired, so two first agents never wait side by side. A pick from the person's own
+  AI keeps one too (area `ask`, its first day's first item).
+- **Armed when the person leaves the agent's step.** The apps are connected on that step, so the delivery waits for
+  them: it is kept disarmed (`armed_at` null) and the step's Continue, the owner's and a member's alike, arms it with
+  `PUT …/first-delivery` (`armFirstDelivery`). For the agent of the waiting delivery it keeps its area and task; any
+  other agent of the workspace (one brought from another app) takes its place with no area and no task. The agent must
+  be in the workspace, not archived, and answer the person. A new agent taking a delivery's place disarms it again.
 - **One per person and workspace.** `first_deliveries` (`packages/db/src/schema/first-agents.ts`): the person, the
-  agent, the area (null for an imported agent), the task, when it fired and the run it woke, unique on the workspace and
-  the person. A new agent takes the place of a delivery that hasn't fired; one that fired stays as it is. `GET
-  …/first-delivery` reads it (null once its agent is archived). One that never could fire goes after 30 days.
-- **When it fires.** Once, whichever comes last: Checkout returning, the AI connecting, or the workspace's computer
-  coming up for a plan's sign-in. `fireFirstDeliveries` (`first-delivery.ts`, the job `first_delivery.check`) fires a
-  waiting delivery while the workspace may work (active, no hold, read fresh rather than from the 5-second cache), the
-  person is still a member who reaches the agent, the agent is neither archived nor held, and its AI reads ready
-  (`agentAiState`, which reads a computer brain ready only once its computer is). It is claimed in the same transaction
-  that delivers its notice, so it never fires twice. The check is queued when a delivery is kept and when a billing hold
-  lifts (`setBillingHold`, beside the team's hello), and by a sweep in the process that sweeps
-  (`enqueueFirstDeliveryChecks`, every 15 seconds): one job per workspace that may work and has one waiting, keyed by a
-  window that grows with the wait (15 seconds in its first hour, a minute in its first day, 10 minutes after), so the
-  AI connecting or the computer coming up needs no hook of its own and a workspace that never connects an AI costs a
-  few jobs an hour. A workspace on a hold gets none: lifting it queues its own.
+  agent, the area (null for an imported agent), the task, when it was armed, when it fired and the run it woke, unique
+  on the workspace and the person. A new agent takes the place of a delivery that hasn't fired; one that fired stays as
+  it is. `GET …/first-delivery` reads it (null once its agent is archived). One that never could fire goes after 30
+  days.
+- **When it fires.** Once, whichever comes last: the person leaving the agent's step, Checkout returning, the AI
+  connecting, or the workspace's computer coming up for a plan's sign-in. `fireFirstDeliveries` (`first-delivery.ts`,
+  the job `first_delivery.check`) fires an armed, waiting delivery while the workspace may work (active, no hold, read
+  fresh rather than from the 5-second cache), the person is still a member who reaches the agent, the agent is neither
+  archived nor held, and its AI reads ready (`agentAiState`, which reads a computer brain ready only once its computer
+  is). It is claimed in the same transaction that delivers its notice, so it never fires twice. The check is queued when
+  a delivery is armed and when a billing hold lifts (`setBillingHold`, beside the team's hello), and by a sweep in the
+  process that sweeps (`enqueueFirstDeliveryChecks`, every 15 seconds): one job per workspace that may work and has one
+  armed and waiting, keyed by a window that grows with the wait since it was armed (15 seconds in its first hour, a
+  minute in its first day, 10 minutes after), so the AI connecting or the computer coming up needs no hook of its own
+  and a workspace that never connects an AI costs a few jobs an hour. A workspace on a hold gets none: lifting it queues
+  its own.
 - **The notice.** A new kind, `first_delivery`, agent-only (people never see the brief), delivered with `deliverNotice`
   into the person's DM with the agent at hop 0 (`trigger: "dm"`), with `refs.personId` and the routine's id. Its run
   acts for that person: `authority.ts` roots it in `refs.personId`, as it does a `github_event` or a `work_follow_up`.
@@ -183,6 +189,6 @@ work.
 - **Mailboxes on the way in.** Connecting Gmail or Outlook from the onboarding or a member's welcome page sends `back`
   (`onboarding` or `welcome`); the sign-in returns there (`/onboarding?mail=…&account=…`, `/welcome/<orgId>?…`)
   instead of Settings › Connectors. The desktop app's return stays the app's.
-- **Left for later.** Where the plan and an AI are already there (a member joining a paying workspace, a self-hosted
-  server with a key), the delivery fires as soon as the agent is made, before the person connects its apps on the
-  agent's step: its brief then names the task, and the agent says what it couldn't reach.
+- **Already able to work.** Where the plan and an AI are already there (a member joining a paying workspace, a
+  self-hosted server with a key), it fires as soon as the person leaves the agent's step, with the apps they connected
+  there; an app they didn't connect is one the brief tells the agent to say it couldn't reach.
