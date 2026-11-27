@@ -906,7 +906,9 @@ apps, removes the ways to sign in added since the change and clears the password
 one). Nobody can sign up with that address meanwhile. Without email the address changes at once, with no code or link,
 except one a sign-in provider confirmed, which needs email to change.
 
-**Voice messages.** People hold the microphone and send audio; agents read its words, and the audio's words stay hidden until someone opens them on that message. The microphone shows only with a speech engine. As the server's owner, pick a provider and paste its key in **Settings**, or set it in the environment: `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, `SONIOX_API_KEY`, `GROQ_API_KEY`, `OPENAI_SPEECH_API_KEY` or `DEEPINFRA_API_KEY`, with `SPEECH_ENGINES` for the order they are tried. With any of these, the audio goes to that provider to become text. DeepInfra is the cheapest of them, with the same Whisper as Groq. `LOCAL_SPEECH_URL` points at a server of your own that speaks the OpenAI format (Speaches, a local Whisper or Parakeet), and the audio stays with you: `LOCAL_SPEECH_API_KEY` if it asks for a key, and `LOCAL_SPEECH_WARM=on` if it loads its model on demand and can start when someone presses the microphone (`POST <LOCAL_SPEECH_URL>/warm`). Every request to it names the workspace in `X-Agentes-Org`, and one that takes more than half a minute plus twice the recording goes to the next engine. A self-hosted server has no limit on minutes. Engines hear the language in the audio: the app's language goes only to Soniox, as a hint.
+**Voice messages.** People hold the microphone and send audio; agents read its words, and the audio's words stay hidden until someone opens them on that message. The microphone shows with no engine too: a recording then goes as audio people play, and agents are told they can't hear it. As the server's owner, download the speech model to this computer in **Settings › Voice** (below), or pick a provider and paste its key there, or set it in the environment: `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, `SONIOX_API_KEY`, `GROQ_API_KEY`, `OPENAI_SPEECH_API_KEY` or `DEEPINFRA_API_KEY`, with `SPEECH_ENGINES` for the order they are tried. With any of these, the audio goes to that provider to become text. DeepInfra is the cheapest of them, with the same Whisper as Groq. `LOCAL_SPEECH_URL` points at a server of your own that speaks the OpenAI format (Speaches, a local Whisper or Parakeet), and the audio stays with you: `LOCAL_SPEECH_API_KEY` if it asks for a key, and `LOCAL_SPEECH_WARM=on` if it loads its model on demand and can start when someone presses the microphone (`POST <LOCAL_SPEECH_URL>/warm`). Every request to it names the workspace in `X-Agentes-Org`, and one that takes more than half a minute plus twice the recording goes to the next engine. A self-hosted server has no limit on minutes. Engines hear the language in the audio: the app's language goes only to Soniox, as a hint.
+
+**Voice messages on this computer, from Settings.** On a computer with 8 GB of memory and 2 GB free (a container's limit counts), **Settings › Voice › Download and turn on** fetches `agentes-speech` (`tools/speech-helper`, Parakeet and Whisper tiny on sherpa-onnx, about 740 MB) from this project's GitHub release, checks every file's sha256, and runs it on 127.0.0.1 as the `local` engine: no Docker service and no Python. It keeps its files beside `FILES_DIR` (`~/.agentes/speech`, or the `speech-local` volume at `/data/speech`), resumes a stopped download, frees its memory after 10 idle minutes and starts again once if it stops. Its models' licenses are in `tools/speech-helper/NOTICE` (Parakeet: CC BY 4.0).
 
 **Voice messages on this machine.** The `speech` profile runs NVIDIA's Parakeet on this server, as agentes.chat's Cloud does: add `speech` to `COMPOSE_PROFILES` and set `LOCAL_SPEECH_URL=http://speech:8000/v1`, then `docker compose up -d`. The first pull is about 1 GB, its models included; once it has started, it needs no internet, and its network reaches only the app. Parakeet knows 25 European languages and picks the one spoken, once a language guess gives them together at least `SPEECH_LANGUAGE_MIN` (0.7); another language, an unsure guess, a recording it hears no words in, or one that arrives when every worker is taken, goes to the next engine at once, so give it one: `SPEECH_ENGINES=local,deepinfra` with `DEEPINFRA_API_KEY`, for example. Without one, a recording in another language goes out as audio with no words, and a busy server's wait for the job's retries; `SPEECH_LANGUAGE_MIN=0` then gives Parakeet every recording, unsure ones included. By default it takes up to 4 CPUs and 4 GB of memory (`SPEECH_CPUS`, `SPEECH_MEMORY`; Docker refuses more CPUs than the machine has, so set `SPEECH_CPUS=2` on a 2-CPU server), runs 2 recordings at once on 2 threads each (`SPEECH_WORKERS`, `SPEECH_THREADS`) and lets 4 more wait up to 3 seconds each (`SPEECH_QUEUE`, `SPEECH_WAIT_SECONDS`); a short note takes a few seconds. `LOCAL_SPEECH_API_KEY`, when set, is the key both sides use. The service runs `ghcr.io/agentes-chat/speech`, published with each release under the app's tags, and `AGENTES_SPEECH_IMAGE` holds a version; from a checkout, `docker build -t agentes-speech:local deploy/speech` builds it (downloading the models from Hugging Face), with `AGENTES_SPEECH_IMAGE=agentes-speech:local`.
 
@@ -1369,7 +1371,7 @@ no commands) and `--no-service`.
 That computer runs the commands agents execute, the browser they drive (the computer's own Google
 Chrome, which must be installed there: get it from google.com/chrome; it keeps itself up to date, and
 each agent uses a profile of its own, never yours), and Claude Code, Codex, Cursor's, OpenCode's, xAI's Grok
-Build or Google's Antigravity CLI when an agent thinks with a subscription signed in there (OpenCode's free models need no sign-in at all).
+Build, Google's Antigravity CLI or Cognition's Devin CLI when an agent thinks with a subscription signed in there (OpenCode's free models need no sign-in at all).
 Install the ones you want on that computer, as the user that runs the runner: Cursor's with
 `curl https://cursor.com/install -fsS | bash` (it lands in `~/.local/bin`, which the runner looks in
 even when its service's PATH lacks it), OpenCode's with `npm install -g opencode-ai@1.19.5`, Grok Build with
@@ -1379,7 +1381,10 @@ bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
 and macOS computers, not Windows yet, each in a folder of its own (on a Mac, with a keychain of its own there), and a personal Google plan used this way is against Google's terms for
-consumer plans: Gemini Enterprise or an API key avoids that). A runner in system mode (each agent
+consumer plans: Gemini Enterprise or an API key avoids that), and the Devin CLI with
+`curl -fsSL https://cli.devin.ai/install.sh | bash` (`devin` in `~/.local/bin`; the installer ends with Devin's own
+setup, which you may skip; Devin accounts sign in on Linux and macOS computers, each in a folder of its own, and think
+with the models of the person's Devin plan, ADR 0253). A runner in system mode (each agent
 its own system user) needs the CLI where every agent's user can run it, not in one user's home: install it
 under a shared folder and link it into `/usr/local/bin`, for example
 `sudo env HOME=/opt/cursor sh -c 'curl https://cursor.com/install -fsS | bash'`, then
@@ -1390,15 +1395,18 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 `sudo chmod -R a+rX /opt/grok` and `sudo ln -sf /opt/grok/.local/bin/grok /usr/local/bin/grok`. Grok's installer
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
-then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
+then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`. The Devin CLI too:
+`sudo env HOME=/opt/devin sh -c 'curl -fsSL https://cli.devin.ai/install.sh | bash'`, then
+`sudo chmod -R a+rX /opt/devin` and `sudo ln -sf /opt/devin/.local/bin/devin /usr/local/bin/devin`; there a Devin
+account signs in once per agent.
 One installed in root's own `~/.local/bin` there, or anywhere else an agent's user can't run it, is out of the
 agents' reach: the computer checks each CLI as its agents' users and the apps say so, with the line that installs it
 for all of them or an Install button. Where no agent reaches a copy at all, the runner installs its own pinned build
 for them once an account of that CLI is on the computer (in `/opt/agentes-runner/clis`, linked from `/usr/local/bin`
-unless something is already there). Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
+unless something is already there). Agents never use a sign-in made in a terminal: Gemini, Grok, Devin and the other plans
 sign in from the apps (Settings, AI and usage), once for all of their owner's agents.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
-`agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
+`agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity` or `devin`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.
 
 Ubuntu 24.04 and later block unprivileged user namespaces (`kernel.apparmor_restrict_unprivileged_userns = 1`),

@@ -2,6 +2,22 @@ import type { Widen } from "@agenteschat/i18n/widen";
 
 /** The desktop app's own strings in English, the source: every other language follows this shape. */
 export const desktopEn = {
+  permissionAsk: {
+    title: "agentes.chat needs {{permission}}",
+    done: "I allowed it",
+    later: "Not now",
+    trayTitle: "Waiting for {{permission}}",
+    why: {
+      app_management: "Agents need it to change apps on this {{device}}.",
+      screen: "Agents need it to take screenshots of this {{device}}.",
+      accessibility: "Agents need it to click and type in apps on this {{device}}.",
+      disk: "Agents need it to open your files without macOS asking for each folder.",
+      network: "Agents need it to reach phones and devices on your network.",
+      camera: "Agents need it to use this {{device}}'s camera.",
+      microphone: "Agents need it to use this {{device}}'s microphone.",
+      automation: "Agents need it to control other apps on this {{device}}.",
+    },
+  },
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
   windowTitle: { welcome: "Welcome", prefs: "Preferences" },
@@ -64,6 +80,12 @@ export const desktopEn = {
         capturing: "taking a screenshot",
         tabs: "switching tabs",
       },
+    },
+    apps: {
+      title: "{{agent}} is using {{app}}",
+      detail: "Your mouse and keyboard stay yours",
+      stop: "Stop",
+      stopped: "{{agent}} stopped using your apps",
     },
     label: "agentes.chat",
     now: "Now",
@@ -139,6 +161,11 @@ export const desktopEn = {
     allowedUndo: "Undo",
     allowedOk: "OK",
     allowedUndone: "Off again: {{tool}}",
+    /** Someone asked from agentes.chat (the site or the phone) for a folder here: the popover's card and the notification. */
+    pickTitle: "{{name}} asks for a folder for the agents",
+    pickTitleAgent: "{{name}} asks for a folder for {{agent}}",
+    pickBody: "Choose which folder to allow on this {{device}}.",
+    pickChoose: "Choose folder",
     quitTitle: "Quit agentes.chat?",
     quitBody:
       "Agents can't use this {{device}} while the app is closed. What is already running finishes and sends the result when you open it again.",
@@ -518,7 +545,7 @@ export const desktopEn = {
     internetOn: "Websites the agents open see your location",
     internetOff: "Off: agents use their usual connection",
     internetHint:
-      "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection.",
+      "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection.",
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",
@@ -576,6 +603,11 @@ export const desktopEn = {
     grokDesc: "Writes and changes code in the allowed folders, with your Grok account.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Writes and changes code in the allowed folders, with your Gemini account.",
+    devinName: "Devin CLI",
+    devinDesc: "Writes and changes code in the allowed folders, with your Devin account.",
+    /** On Windows, in place of its install line: the Devin CLI isn't pinned there (ADR 0253). */
+    devinWindows:
+      "Devin doesn't run on Windows yet: here its CLI can't keep each account's sign-in apart. Agents think with Devin on a Mac or Linux computer.",
     found: "Found",
     notFound: "Not found",
     loggedOut: "Not signed in",

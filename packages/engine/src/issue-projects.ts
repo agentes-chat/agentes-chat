@@ -26,7 +26,7 @@ export interface IssueProjectRef {
   archived: boolean;
 }
 
-/** A project with what its page shows besides the card's name and colour (ADR 0253). */
+/** A project with what its page shows besides the card's name and colour (ADR 0259). */
 export interface IssueProjectDetail extends IssueProjectRef {
   description: string | null;
   /** `owner/name`. */
@@ -167,7 +167,7 @@ export async function listIssueProjects(
 }
 
 /**
- * The workspace's projects as an agent reads them (ADR 0253): the live ones, or with the archived. No counts: what a
+ * The workspace's projects as an agent reads them (ADR 0259): the live ones, or with the archived. No counts: what a
  * count may tell depends on whom the agent answers (`canSee`), so a project here is its name, what it is for and its
  * repository, and the tasks stay with `list_issues`.
  */

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { connect, createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { isEgressTarget, parseStreamHello, STREAM_CLOSE } from "@agenteschat/adapters/machine-protocol";
+import { EGRESS_SHARE, isEgressTarget, parseStreamHello, STREAM_CLOSE } from "@agenteschat/adapters/machine-protocol";
 import { parseConnect, replyFor, SOCKS_REPLY, startEgressRelay } from "../../runner/egress-relay";
 import { EgressShare } from "../../runner/egress-share";
 import type { DataListener, DataSocket } from "../../runner/streams";
@@ -95,7 +95,6 @@ test("a lent connection reaches only public addresses, on the web's ports, and c
   data.peer(new TextEncoder().encode("hello"));
   await until(() => data.sent.length > 0, "the echo");
   expect(new TextDecoder().decode(data.sent[0])).toBe("HELLO");
-  expect(share.today).toBe(10);
   data.socket.close();
 });
 
@@ -137,28 +136,31 @@ test("a lent connection never reaches this computer's own networks, though their
   data.socket.close();
 });
 
-test("a day's cap: past it, new connections are refused and an open one ends; it is kept across restarts", async () => {
+test("a lending computer has no daily cap: what bounds it is the web's ports and connections open at once", async () => {
+  expect(Object.keys(EGRESS_SHARE).sort()).toEqual(["connectMs", "open", "ports"]);
   const { port } = await echo();
-  const dir = mkdtempSync(path.join(tmpdir(), "egress-share-"));
-  cleanup.push(() => rmSync(dir, { recursive: true, force: true }));
-  const file = path.join(dir, "egress-share.json");
-  const opts = {
-    file,
+  const share = new EgressShare({
     resolve: async () => ["203.0.113.7"],
     connect: () => connect({ host: "127.0.0.1", port }),
-    limits: { dailyBytes: 8 },
-  };
-  const share = new EgressShare(opts);
-  const data = fakeData();
-  await share.dial({ op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 }, async () => data.socket);
-  data.peer(new TextEncoder().encode("12345"));
-  await until(() => data.isClosed(), "the cap to end it");
+    limits: { open: 1 },
+  });
+  const first = fakeData();
+  await share.dial({ op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 }, async () => first.socket);
+  first.peer(new Uint8Array(256 * 1024).fill(97));
+  await until(() => first.sent.reduce((n, b) => n + b.byteLength, 0) >= 256 * 1024, "the echo");
+  expect(first.isClosed()).toBe(false);
   await expect(
-    new EgressShare(opts).dial(
-      { op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 },
-      async () => fakeData().socket,
-    ),
+    share.dial({ op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 }, async () => fakeData().socket),
   ).rejects.toMatchObject({ code: "no_slot" });
+  first.socket.close();
+  const second = fakeData();
+  expect(
+    await share.dial(
+      { op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 },
+      async () => second.socket,
+    ),
+  ).toEqual({ connected: true });
+  second.socket.close();
 });
 
 test("the workspace's computer's socket: SOCKS5 CONNECT, mode 600, the server's refusal as its reply", async () => {

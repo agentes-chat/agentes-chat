@@ -128,7 +128,11 @@ describe("the load sampler", () => {
   });
 
   test("the disk's latest figures and the shared folder's size ride on the summary as they are (ADR 0115)", () => {
-    expect(diskFigures({ sizeBytes: 100 * GIB, freeBytes: 12.34 * GIB })).toEqual({ diskFreeGb: 12.3, diskUse: 0.88 });
+    expect(diskFigures({ sizeBytes: 100 * GIB, freeBytes: 12.34 * GIB })).toEqual({
+      diskFreeGb: 12.3,
+      diskGb: 100,
+      diskUse: 0.88,
+    });
     expect(diskFigures(null)).toEqual({});
     expect(diskFigures({ sizeBytes: 0, freeBytes: 0 })).toEqual({});
     const w = new LoadWindow();
@@ -145,6 +149,15 @@ describe("the load sampler", () => {
       load: { ...base, diskFreeGb: 10, diskUse: 0.9, sharedGb: 33 },
     });
     expect(pong({ ...base, diskFreeGb: -1, diskUse: 2, sharedGb: "x" })).toEqual({ type: "pong", at: 1, load: base });
+    // The disk's size and what takes it by kind: every kind sane, else no parts at all.
+    const parts = { projects: 12.5, apps: 8, agents: 30.1, caches: 4.2, system: 6 };
+    expect(pong({ ...base, diskGb: 196.7, diskParts: { ...parts, extra: 1 } })).toEqual({
+      type: "pong",
+      at: 1,
+      load: { ...base, diskGb: 196.7, diskParts: parts },
+    });
+    expect(pong({ ...base, diskParts: { ...parts, caches: -1 } })).toEqual({ type: "pong", at: 1, load: base });
+    expect(pong({ ...base, diskParts: { projects: 1 } })).toEqual({ type: "pong", at: 1, load: base });
     // What the agents' temporary folders hold in memory (ADR 0243), as the disk's figures are.
     w.add({ load: 0.4, memory: 0.3 }, t0 + 2 * LOAD_SAMPLE_MS, { agentTmpRamGb: 2.3 });
     expect(w.summary()).toMatchObject({ agentTmpRamGb: 2.3 });

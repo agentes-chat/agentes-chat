@@ -102,6 +102,27 @@ export interface GatewayEmbeddings {
 }
 
 export const EMBED_QUERY_TIMEOUT_MS = 1500;
+/**
+ * A query's call itself goes on this many times its wait: one past its first asker's wait is kept for the next search
+ * of the same words (`gateway.embed`). The hosted model's slow spells last seconds, and every call in one is slow.
+ */
+export const EMBED_QUERY_CALL_WAITS = 4;
+/**
+ * A query that waited its whole wait starts a slow spell: for this long the next queries wait only
+ * `EMBED_SLOW_SPELL_WAIT_MS` before searching with words, until one is answered within the whole wait again. In a
+ * spell nearly every wait ran out (production, 2026-11: 1 context in 10 sat at the 1.5 s wait, hour after hour).
+ */
+export const EMBED_SLOW_SPELL_MS = 60_000;
+export const EMBED_SLOW_SPELL_WAIT_MS = 400;
+/**
+ * A query's call still unanswered after this sends the same request again, and the first answer of the two is the
+ * vector. The hosted model's slow answers are mostly one call's, not a spell's (production, 2026-11: a query after a
+ * slow one was slow 1 time in 4, after a quick one 1 in 9), so a second call is nearly always quick.
+ */
+export const EMBED_QUERY_HEDGE_MS = 500;
+/** How long a query's vector is kept for the same words, and how many are kept. */
+export const QUERY_VECTOR_TTL_MS = 10 * 60_000;
+const QUERY_VECTORS_KEPT = 256;
 /** Only stops a hung server from holding an indexing job: a CPU server takes minutes over a long batch. */
 export const EMBED_DOCUMENT_TIMEOUT_MS = 5 * 60_000;
 /** Embedding calls failed in a row before the outage is reported, once until one succeeds again. */
@@ -270,6 +291,56 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   const now = deps.now ?? (() => new Date());
   const { db } = deps;
   let embedFailures = 0;
+  /** Query vectors by organization and words, while their call runs and for `QUERY_VECTOR_TTL_MS` after. */
+  const queryVectors = new Map<string, { at: number; result: Promise<EmbeddingResult> }>();
+  /** Until when the embeddings server is in a slow spell (`EMBED_SLOW_SPELL_MS`). */
+  let slowSpellUntil = 0;
+  /** One call to the embeddings provider, its usage recorded; its failures in a row counted and reported. */
+  const embedCall = async (
+    embeddings: GatewayEmbeddings,
+    call: { orgId: string; texts: string[]; inputType: "document" | "query" },
+    timeoutMs: number,
+  ): Promise<EmbeddingResult> => {
+    const { provider, apiKey } = embeddings;
+    let result: EmbeddingResult;
+    try {
+      result = await provider.embed(call.texts, {
+        apiKey,
+        inputType: call.inputType,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      if (++embedFailures === EMBED_FAILURES_REPORTED) {
+        try {
+          deps.errors?.capture(error, {
+            cause: "embeddings",
+            provider: provider.id,
+            model: provider.model,
+            input_type: call.inputType,
+          });
+        } catch {
+          // A report that can't be made never fails a search.
+        }
+      }
+      throw error;
+    }
+    embedFailures = 0;
+    const cost = embeddingCostNanoUsd(result.model, result.tokens);
+    await db.insert(usageRecords).values({
+      orgId: call.orgId,
+      agentId: null,
+      kind: "embedding",
+      credentialId: null,
+      provider: provider.id,
+      model: result.model,
+      requestedModel: provider.model,
+      inputTokens: result.tokens,
+      outputTokens: 0,
+      costNanoUsd: cost,
+      createdAt: now(),
+    });
+    return result;
+  };
 
   const providerFor = (provider: string) => {
     const p = deps.providers[provider];
@@ -1154,8 +1225,9 @@ export function createModelGateway(deps: ModelGatewayDeps) {
      * Embeds texts for the organization's search index (kind `embedding`, no agent), within a timeout: a query's is
      * short, a run waits on it. Null when no embedding provider is configured, when none of `kinds` gets vectors (the
      * kinds the texts are, or that a query searches; absent: any), or on a workspace that may not work. Throws when
-     * the provider fails, and callers go on with words alone; the failure that makes `EMBED_FAILURES_REPORTED` in a
-     * row is reported.
+     * the provider fails or a query's wait ends first, and callers go on with words alone; the failure that makes
+     * `EMBED_FAILURES_REPORTED` in a row is reported. The same words of a query share one call: asked early (a run
+     * asks when it reads its trigger), its vector is often there when memory and the wiki search.
      */
     async embed(call: {
       orgId: string;
@@ -1170,47 +1242,63 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       if (embedded && !wanted?.some((k) => embedded.includes(k))) return null;
       // Null, not a refusal: people on a hold still read and search, with full text alone.
       if (await standingRefusal(db, call.orgId)) return null;
-      const { provider, apiKey } = embeddings;
-      const timeoutMs =
-        call.inputType === "query" ? (embeddings.queryTimeoutMs ?? EMBED_QUERY_TIMEOUT_MS) : EMBED_DOCUMENT_TIMEOUT_MS;
-      let result: EmbeddingResult;
-      try {
-        result = await provider.embed(call.texts, {
-          apiKey,
-          inputType: call.inputType,
-          signal: AbortSignal.timeout(timeoutMs),
+      if (call.inputType === "document") return embedCall(embeddings, call, EMBED_DOCUMENT_TIMEOUT_MS);
+      const waitMs = embeddings.queryTimeoutMs ?? EMBED_QUERY_TIMEOUT_MS;
+      const key = `${call.orgId}\0${call.texts.join("\0")}`;
+      let kept = queryVectors.get(key);
+      const askedAt = Date.now();
+      const wait = askedAt < slowSpellUntil ? Math.min(waitMs, EMBED_SLOW_SPELL_WAIT_MS) : waitMs;
+      if (!kept || Date.now() - kept.at > QUERY_VECTOR_TTL_MS) {
+        const once = () => embedCall(embeddings, call, waitMs * EMBED_QUERY_CALL_WAITS);
+        const first = once();
+        const result =
+          EMBED_QUERY_HEDGE_MS >= waitMs
+            ? first
+            : Promise.any([
+                first,
+                new Promise<EmbeddingResult>((resolve, reject) => {
+                  let sent = false;
+                  const hedge = setTimeout(() => {
+                    sent = true;
+                    once().then(resolve, reject);
+                  }, EMBED_QUERY_HEDGE_MS);
+                  // Answered, or failed before the hedge: no second call (a failure is the query's at once).
+                  first.then(
+                    () => clearTimeout(hedge),
+                    (error) => {
+                      if (sent) return;
+                      clearTimeout(hedge);
+                      reject(error);
+                    },
+                  );
+                }),
+              ]).catch((error) => {
+                throw error instanceof AggregateError ? error.errors[0] : error;
+              });
+        // Answered within the whole wait: the spell, if any, is over.
+        result.then(
+          () => {
+            if (Date.now() - askedAt < waitMs) slowSpellUntil = 0;
+          },
+          () => {},
+        );
+        const entry = { at: Date.now(), result };
+        kept = entry;
+        queryVectors.delete(key);
+        queryVectors.set(key, entry);
+        if (queryVectors.size > QUERY_VECTORS_KEPT) queryVectors.delete(queryVectors.keys().next().value as string);
+        result.catch(() => {
+          if (queryVectors.get(key) === entry) queryVectors.delete(key);
         });
-      } catch (error) {
-        if (++embedFailures === EMBED_FAILURES_REPORTED) {
-          try {
-            deps.errors?.capture(error, {
-              cause: "embeddings",
-              provider: provider.id,
-              model: provider.model,
-              input_type: call.inputType,
-            });
-          } catch {
-            // A report that can't be made never fails a search.
-          }
-        }
-        throw error;
       }
-      embedFailures = 0;
-      const cost = embeddingCostNanoUsd(result.model, result.tokens);
-      await db.insert(usageRecords).values({
-        orgId: call.orgId,
-        agentId: null,
-        kind: "embedding",
-        credentialId: null,
-        provider: provider.id,
-        model: result.model,
-        requestedModel: provider.model,
-        inputTokens: result.tokens,
-        outputTokens: 0,
-        costNanoUsd: cost,
-        createdAt: now(),
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const waited = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          if (wait === waitMs) slowSpellUntil = Date.now() + EMBED_SLOW_SPELL_MS;
+          reject(new ProviderError(`the embeddings server took more than ${wait} ms`, true));
+        }, wait);
       });
-      return result;
+      return Promise.race([kept.result, waited]).finally(() => clearTimeout(timer));
     },
 
     /**

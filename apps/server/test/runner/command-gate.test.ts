@@ -113,7 +113,7 @@ test.skipIf(!hasGit)(
   },
 );
 
-test("a long script is read in a child runner: this runner's timers keep firing, and a merge at its end still waits", async () => {
+test("a long script is read in a child runner: this runner's thread stays free, and a merge at its end still waits", async () => {
   const dir = tempDir("gate-");
   dirs.push(dir);
   // 1 MiB of code naming deny-listed programs, its first 128 KiB on one line (a costly shape to read, and quick to
@@ -123,24 +123,22 @@ test("a long script is read in a child runner: this runner's timers keep firing,
   for (let i = 0; crafted.length < 128 * 1024; i++) crafted += `gh api${i} `;
   crafted += "\n";
   for (let i = 0; crafted.length < 1024 * 1024; i++) crafted += `gh api${i} x\n`;
-  writeFileSync(path.join(dir, "run.py"), `${crafted.slice(0, 1024 * 1024 - merge.length)}${merge}`);
-  let last = performance.now();
-  let gap = 0;
-  const tick = setInterval(() => {
-    gap = Math.max(gap, performance.now() - last);
-    last = performance.now();
-  }, 5);
-  let message: string | null;
-  try {
-    message = await gate("python3 run.py", dir, { script: true, apart: { runner: childRunner(RUNNER) } });
-  } finally {
-    clearInterval(tick);
-    // A check that holds the thread to its end lets no tick run after it: that stretch counts too.
-    gap = Math.max(gap, performance.now() - last);
-  }
+  const text = `${crafted.slice(0, 1024 * 1024 - merge.length)}${merge}`;
+  writeFileSync(path.join(dir, "run.py"), text);
+  // This process's CPU time, not the wall clock: on a busy machine the thread waits without doing any work.
+  const cpuMs = (since: NodeJS.CpuUsage) => {
+    const used = process.cpuUsage(since);
+    return (used.user + used.system) / 1000;
+  };
+  let since = process.cpuUsage();
+  const message = await gate("python3 run.py", dir, { script: true, apart: { runner: childRunner(RUNNER) } });
+  const apart = cpuMs(since);
   expect(message).toContain("This is a merge: a person approves it first.");
-  // Read on this thread, the check held every timer for about 0.7 s on a laptop.
-  expect(gap).toBeLessThan(50);
+  // The same read on this thread (about 0.7 s on a laptop): the child's time isn't this process's.
+  since = process.cpuUsage();
+  expect(textVerdict(text, ASK_AGAIN, true).denied).toContain("merge");
+  const here = cpuMs(since);
+  expect(apart).toBeLessThan(here / 3);
 }, 30_000);
 
 test.skipIf(!hasGit)(

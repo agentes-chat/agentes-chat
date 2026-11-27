@@ -44,3 +44,11 @@ test("a section's title reads as every section header: Section draws a SectionHe
   expect(section).not.toContain('variant="label"');
   expect(section).toContain("body: { paddingHorizontal: SCREEN_X }");
 });
+
+test("the workspace computer's Free row leads with a swatch, so its label lines up with the kinds' above it", () => {
+  const screen = src("features/settings/StorageScreen.tsx");
+  const free = screen.slice(screen.lastIndexOf("<GroupedRow", screen.indexOf('"storage.computer.part.free"')));
+  expect(free.slice(0, free.indexOf("/>\n"))).toContain(
+    "leading={<View style={[styles.swatch, { backgroundColor: sunken }]} />}",
+  );
+});

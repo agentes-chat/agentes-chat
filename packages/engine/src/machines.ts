@@ -40,7 +40,7 @@ import { can, requireActiveMembership, requirePermission } from "./organizations
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND } from "./right-hand";
 import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
-import { runnerUpdateOf } from "./runner-update";
+import { folderPickable, runnerUpdateOf } from "./runner-update";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -90,11 +90,15 @@ export class MachineOfflineError extends Error {
   constructor(
     readonly machineName: string,
     kind: string | null | undefined,
+    /** Away for what we do to it (`shownMaintenance`): said instead of not answering. */
+    maintenance?: ShownMaintenance | null,
   ) {
     super(
-      kind === "managed"
-        ? `The computer ${machineName} isn't answering right now. It usually comes back within minutes.`
-        : `The computer ${machineName} is offline. Ask its owner to start the runner.`,
+      maintenance?.away
+        ? maintenanceWords(machineName, maintenance)
+        : kind === "managed"
+          ? `The computer ${machineName} isn't answering right now. It usually comes back within minutes.`
+          : `The computer ${machineName} is offline. Ask its owner to start the runner.`,
     );
     this.name = "MachineOfflineError";
   }
@@ -193,21 +197,90 @@ export const shownOnline = (
   now = new Date(),
 ) => machineOnline(row, now) || shownStandby(row, now);
 
-/** The longest the apps say a computer is moving: one whose move never said it ended shows its real state after. */
+/** The longest the apps say what we do to a computer with no time it should end: past it, its real state shows. */
 export const MOVING_SHOWN_MS = 2 * 60 * 60_000;
+/** How long past its expected end what we do is still said ("taking longer than expected"), then its real state. */
+export const MAINTENANCE_OVERRUN_MS = 30 * 60_000;
+/** The longest what we do is said after the operator's latest word, whatever its `eta`: a far one can't stick. */
+export const MAINTENANCE_LONGEST_MS = 24 * 60 * 60_000;
+
+/** What we do to the workspace's own computer as people see it (`shownMaintenance`). */
+export interface ShownMaintenance {
+  kind: schema.MaintenanceKind;
+  since: string;
+  eta: string | null;
+  detail: schema.MaintenanceDetail | null;
+  /** It is away for it: the apps say this instead of offline. False: it works, maybe slower. */
+  away: boolean;
+}
 
 /**
- * Moving to another server as people see it: the workspace's own computer, away, while the operator says it moves
- * (`moving_at`), for at most `MOVING_SHOWN_MS`. Online, it works as ever: nothing to say.
+ * What we do to the workspace's own computer as people see it (ADR 0257): a move, a restart, an update, a disk
+ * conversion or its host's maintenance, as the operator last said (`moving_at`), until `MAINTENANCE_OVERRUN_MS` past
+ * its expected end (or `MOVING_SHOWN_MS` after the last word when it has none). Away, it is said instead of offline;
+ * online, only work that runs beside its own (a move's copy, a conversion), since it may be slower. Null: nothing to
+ * say. Standby is never one: it shows as online (ADR 0161).
  */
-export const shownMoving = (
-  row: Pick<MachineRow, "online" | "lastSeenAt" | "deletedAt" | "kind" | "movingAt">,
+export function shownMaintenance(
+  row: Pick<MachineRow, "online" | "lastSeenAt" | "deletedAt" | "kind" | "movingAt" | "maintenance">,
   now = new Date(),
-) =>
-  row.kind === "managed" &&
-  row.movingAt !== null &&
-  !machineOnline(row, now) &&
-  now.getTime() - row.movingAt.getTime() < MOVING_SHOWN_MS;
+): ShownMaintenance | null {
+  if (row.kind !== "managed" || row.deletedAt || !row.movingAt) return null;
+  const m = row.maintenance;
+  const said = row.movingAt.getTime();
+  const until = m?.eta
+    ? Math.min(Date.parse(m.eta) + MAINTENANCE_OVERRUN_MS, said + MAINTENANCE_LONGEST_MS)
+    : said + MOVING_SHOWN_MS;
+  if (!(now.getTime() < until)) return null;
+  const kind = m?.kind ?? "moving";
+  const detail = m?.detail ?? null;
+  const away = !machineOnline(row, now);
+  if (!away && kind !== "converting" && detail !== "copying") return null;
+  return { kind, since: m?.since ?? row.movingAt.toISOString(), eta: m?.eta ?? null, detail, away };
+}
+
+/** Away for what we do to it (`shownMaintenance`): the apps say that, never offline or not answering. */
+export const shownMoving = (
+  row: Pick<MachineRow, "online" | "lastSeenAt" | "deletedAt" | "kind" | "movingAt" | "maintenance">,
+  now = new Date(),
+) => shownMaintenance(row, now)?.away === true;
+
+const KIND_WORDS: Record<schema.MaintenanceKind, string> = {
+  moving: "moving to a new server",
+  restarting: "restarting",
+  updating: "updating its software",
+  converting: "upgrading its disk",
+  host_maintenance: "on a server under maintenance",
+};
+
+/**
+ * What we do to it in an agent's words (English, as tools and notes speak): what, why and when it should be back.
+ * "restarting: it stopped answering, so it was restarted automatically, back in about 2 minutes".
+ */
+export function maintenancePhrase(m: ShownMaintenance, now = new Date()) {
+  const why =
+    m.detail === "unresponsive"
+      ? ": it stopped answering, so it was restarted automatically"
+      : m.detail === "copying" && !m.away
+        ? ": its files are being copied, so it may be slower"
+        : m.detail === "handover"
+          ? ": its last changes are being handed over"
+          : "";
+  const left = m.eta ? Math.ceil((Date.parse(m.eta) - now.getTime()) / 60_000) : null;
+  const back =
+    left === null
+      ? m.away
+        ? ", back in a few minutes"
+        : ""
+      : left <= 0
+        ? ", taking longer than expected"
+        : `, ${m.away ? "back" : "done"} in about ${left} minute${left === 1 ? "" : "s"}`;
+  return `${KIND_WORDS[m.kind]}${why}${back}`;
+}
+
+/** "The computer X is restarting: it stopped answering, so it was restarted automatically, back in about 2 minutes." */
+export const maintenanceWords = (name: string, m: ShownMaintenance, now = new Date()) =>
+  `The computer ${name} is ${maintenancePhrase(m, now)}.`;
 
 export type OfflineCause = "unresponsive" | "stopped" | "dropped";
 
@@ -605,8 +678,10 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       offlineCause: offlineCause(m, online),
       /** The workspace's own computer is asleep in standby (ADR 0161) and wakes as it should: nothing is wrong. */
       standby: shownStandby(m, now),
-      /** The workspace's own computer is away moving to another server (`shownMoving`): back in a few minutes. */
+      /** Away for what we do to it (`shownMoving`): apps from before `maintenance` read this alone. */
       moving: shownMoving(m, now),
+      /** What we do to the workspace's own computer now (`shownMaintenance`), said instead of offline. */
+      maintenance: shownMaintenance(m, now),
       networkTransition: managed ? m.networkTransition : null,
       /** The workspace's own computer's agents wait for their way out, as the operator says: a line, never an error. */
       egressWaiting: managed && machineOnline(m, now) && m.egressWaitingAt !== null,
@@ -646,6 +721,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
        * (`CLI_INSTALL_PROTOCOL`); never the workspace's own computer, which installs them itself.
        */
       cliInstall: !managed && m.protocol >= CLI_INSTALL_PROTOCOL,
+      /** A folder can be asked for from here: the agentes.chat app there shows who asks and picks it (`folderPickable`). */
+      folderPick: folderPickable(m),
       /** The coding CLIs there that can't start, with their own error line; admins and the pairer only. */
       cliErrors: (admin || mine) && !managed ? (m.executors?.broken ?? null) : null,
       /**
@@ -684,6 +761,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
               freeGb: m.load.diskFreeGb,
               use: m.load.diskUse ?? null,
               sharedGb: m.load.sharedGb ?? null,
+              sizeGb: m.load.diskGb ?? null,
+              parts: m.load.diskParts ?? null,
             }
           : null,
       /** Whether the agent browser can run there (protocol 12, ADR 0040); null when its runner doesn't say. */
@@ -777,10 +856,59 @@ export async function setMachineEgressWaiting(
   return { waiting };
 }
 
+/** What the operator says it does to the workspace's own computer (`PUT …/maintenance`). */
+export interface MaintenanceSaid {
+  kind: schema.MaintenanceKind;
+  eta?: Date | null;
+  detail?: schema.MaintenanceDetail | null;
+}
+
 /**
- * `PUT …/machines/{machineId}/moving`: the operator says the workspace's own computer is moving to another server
- * (`moving_at` the latest word, which `MOVING_SHOWN_MS` counts from: a move that waits for its next step says it
- * again), or no longer; its people's apps read it again. Null: the workspace has no such managed computer.
+ * `PUT …/machines/{machineId}/maintenance`: the operator says what it does to the workspace's own computer (ADR 0257),
+ * or (null) that it is done; its people's apps read it again. Said again with the same kind it keeps its `since` and
+ * takes the new time and step; `moving_at` is the latest word, which `MOVING_SHOWN_MS` counts from when there is no
+ * `eta`. Null: the workspace has no such managed computer.
+ */
+export async function setMachineMaintenance(
+  deps: { db: Database; pubsub?: PubSub },
+  orgId: string,
+  machineId: string,
+  said: MaintenanceSaid | null,
+) {
+  const where = and(
+    eq(machines.orgId, orgId),
+    eq(machines.id, machineId),
+    eq(machines.kind, "managed"),
+    isNull(machines.deletedAt),
+  );
+  const [now] = await deps.db
+    .select({ movingAt: machines.movingAt, maintenance: machines.maintenance })
+    .from(machines)
+    .where(where);
+  if (!now) return null;
+  const was = now.movingAt ? (now.maintenance ?? { kind: "moving", since: now.movingAt.toISOString() }) : null;
+  const record: schema.MachineMaintenanceRecord | null = said
+    ? {
+        kind: said.kind,
+        since: was?.kind === said.kind ? was.since : new Date().toISOString(),
+        eta: said.eta?.toISOString() ?? null,
+        detail: said.detail ?? null,
+      }
+    : null;
+  const [row] = await deps.db
+    .update(machines)
+    .set({ movingAt: record ? sql`now()` : null, maintenance: record })
+    .where(where)
+    .returning({ id: machines.id });
+  if (!row) return null;
+  // `moving`: what apps from before kinds read (they ask for the list again).
+  await publishMachineUpdated(deps.pubsub, orgId, machineId, { moving: record !== null, maintenance: record });
+  return { maintenance: record };
+}
+
+/**
+ * `PUT …/machines/{machineId}/moving` (from before kinds): a move said, or that the move ended. Ended, it leaves any
+ * other kind in place: a restart said during the move still shows until the computer's hello.
  */
 export async function setMachineMoving(
   deps: { db: Database; pubsub?: PubSub },
@@ -788,21 +916,15 @@ export async function setMachineMoving(
   machineId: string,
   moving: boolean,
 ) {
-  const [row] = await deps.db
-    .update(machines)
-    .set({ movingAt: moving ? sql`now()` : null })
-    .where(
-      and(
-        eq(machines.orgId, orgId),
-        eq(machines.id, machineId),
-        eq(machines.kind, "managed"),
-        isNull(machines.deletedAt),
-      ),
-    )
-    .returning({ id: machines.id });
-  if (!row) return null;
-  await publishMachineUpdated(deps.pubsub, orgId, machineId, { moving });
-  return { moving };
+  if (!moving) {
+    const [row] = await deps.db
+      .select({ maintenance: machines.maintenance })
+      .from(machines)
+      .where(and(eq(machines.orgId, orgId), eq(machines.id, machineId)));
+    if (row?.maintenance && row.maintenance.kind !== "moving") return { moving };
+  }
+  const set = await setMachineMaintenance(deps, orgId, machineId, moving ? { kind: "moving" } : null);
+  return set && { moving };
 }
 
 /** How many `deletedAgentIds` lists: a computer that misses one only keeps that agent's transcripts. */
@@ -1040,6 +1162,7 @@ export async function detachMachine(tx: Executor, machine: Pick<MachineRow, "id"
       wakeWantedAt: null,
       egressWaitingAt: null,
       movingAt: null,
+      maintenance: null,
       previousAgentIds: ids,
       updatedAt: now,
     })

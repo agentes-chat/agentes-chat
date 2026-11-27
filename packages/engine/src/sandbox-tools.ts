@@ -88,6 +88,7 @@ import {
   MachineDroppedError,
   MachineOfflineError,
   MachinePausedError,
+  maintenancePhrase,
   pausedMessage,
   REMOVED_COMPUTER_MESSAGE,
 } from "./machines";
@@ -1053,7 +1054,7 @@ export function createSandboxToolSource(
                     ? "Linux"
                     : "unknown OS";
             const where = target.managed
-              ? `You are on "${target.name}", this workspace's own computer (${os}), always on: ${target.online ? "answering now" : "not answering right now (it usually comes back within minutes; tell the people)"}.`
+              ? `You are on "${target.name}", this workspace's own computer (${os}), always on: ${target.maintenance ? `${target.online ? "answering, and " : ""}${maintenancePhrase(target.maintenance)} (tell the people so, never that it is offline)` : target.online ? "answering now" : "not answering right now (it usually comes back within minutes; tell the people)"}.`
               : `You are on the connected computer "${target.name}" (${os}), ${target.online ? "online" : "offline (ask its owner to start the runner)"}.`;
             return {
               content: `${where} Paths are relative to its workspace folder. Commands: ${target.execAllowed ? "allowed" : "turned off (files and uploads only)"}. Network: the machine's own.${more}`,

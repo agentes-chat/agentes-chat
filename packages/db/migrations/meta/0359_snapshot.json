@@ -1,5 +1,5 @@
 {
-  "id": "188e0727-aeb5-42a0-96d9-3998c7f65bd9",
+  "id": "299b5571-c4af-40e7-b885-1b700f7ead14",
   "prevId": "2b535a05-c972-4bf0-92fc-d75a5bc474fa",
   "version": "7",
   "dialect": "postgresql",
@@ -19446,6 +19446,86 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.ask_kinds": {
+      "name": "ask_kinds",
+      "schema": "",
+      "columns": {
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "p": {
+          "name": "p",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ask_kinds_org_id_created_at_index": {
+          "name": "ask_kinds_org_id_created_at_index",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ask_kinds_org_id_organizations_id_fk": {
+          "name": "ask_kinds_org_id_organizations_id_fk",
+          "tableFrom": "ask_kinds",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.autonomy_signals": {
       "name": "autonomy_signals",
       "schema": "",
@@ -30343,18 +30423,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'graphite'"
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "github_repo": {
-          "name": "github_repo",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "archived_at": {
           "name": "archived_at",

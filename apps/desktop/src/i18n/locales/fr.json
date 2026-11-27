@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat a besoin de {{permission}}",
+    "done": "Je l’ai autorisé",
+    "later": "Pas maintenant",
+    "trayTitle": "En attente de {{permission}}",
+    "why": {
+      "app_management": "Les agents en ont besoin pour modifier des apps sur ce {{device}}.",
+      "screen": "Les agents en ont besoin pour faire des captures d’écran de ce {{device}}.",
+      "accessibility": "Les agents en ont besoin pour cliquer et taper dans les apps de ce {{device}}.",
+      "disk": "Les agents en ont besoin pour ouvrir vos fichiers sans que macOS demande pour chaque dossier.",
+      "network": "Les agents en ont besoin pour joindre les téléphones et appareils de votre réseau.",
+      "camera": "Les agents en ont besoin pour utiliser la caméra de ce {{device}}.",
+      "microphone": "Les agents en ont besoin pour utiliser le micro de ce {{device}}.",
+      "automation": "Les agents en ont besoin pour piloter d’autres apps sur ce {{device}}."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -68,6 +84,12 @@
         "capturing": "fait une capture d'écran",
         "tabs": "change d'onglet"
       }
+    },
+    "apps": {
+      "title": "{{agent}} utilise {{app}}",
+      "detail": "Votre souris et votre clavier restent à vous",
+      "stop": "Arrêter",
+      "stopped": "{{agent}} n'utilise plus vos apps"
     },
     "label": "agentes.chat",
     "now": "Maintenant",
@@ -140,6 +162,10 @@
     "allowedUndo": "Annuler",
     "allowedOk": "Compris",
     "allowedUndone": "De nouveau désactivé : {{tool}}",
+    "pickTitle": "{{name}} demande un dossier pour les agents",
+    "pickTitleAgent": "{{name}} demande un dossier pour {{agent}}",
+    "pickBody": "Choisissez le dossier à autoriser sur ce {{device}}.",
+    "pickChoose": "Choisir un dossier",
     "quitTitle": "Quitter agentes.chat ?",
     "quitBody": "Les agents ne peuvent pas utiliser ce {{device}} quand l'app est fermée. Ce qui tourne déjà se termine et envoie le résultat quand vous la rouvrez.",
     "quitHereBody": "agentes.chat s'arrête sur ce {{device}} : personne ne peut l'utiliser, ici, sur votre téléphone ou celui de vos collègues, tant que vous ne rouvrez pas l'app.",
@@ -464,7 +490,7 @@
     "internet": "Les agents utilisent la connexion internet de cet ordinateur",
     "internetOn": "Les sites que les agents ouvrent voient votre emplacement",
     "internetOff": "Coupé : les agents utilisent leur connexion habituelle",
-    "internetHint": "Les agents du workspace ouvrent des sites via la connexion de cet ordinateur. Uniquement des sites web, jusqu’à 5 Go par jour, et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, ils utilisent leur connexion habituelle.",
+    "internetHint": "Les agents du workspace ouvrent des sites via la connexion de cet ordinateur. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, ils utilisent leur connexion habituelle.",
     "shareOff": "Vous seul pour l'instant",
     "shareHint": "Les agents de tout le monde dans {{org}} peuvent y lancer des tâches, avec votre utilisateur.",
     "addFolders": "Ajouter des dossiers",
@@ -510,6 +536,9 @@
     "grokDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Gemini.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Devin.",
+    "devinWindows": "Devin ne fonctionne pas encore sous Windows : ici, sa CLI ne sépare pas la connexion de chaque compte. Les agents pensent avec Devin sur un ordinateur Mac ou Linux.",
     "found": "Trouvé",
     "notFound": "Introuvable",
     "loggedOut": "Non connecté",

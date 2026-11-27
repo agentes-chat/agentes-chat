@@ -131,6 +131,28 @@ export interface SpeechKey {
   envProviders: SpeechProvider[];
 }
 
+/** How the speech model on this server's own computer goes (`GET /api/app/speech-local`). */
+export type LocalSpeechStatus =
+  | { state: "off" }
+  | { state: "downloading"; doneBytes: number; totalBytes: number }
+  | { state: "starting" }
+  | { state: "ready" }
+  /** `download`: the network stopped it (Resume goes on from the same byte). `start`: the helper's own words. */
+  | { state: "failed"; reason: "download" | "disk" | "start"; detail: string };
+
+/**
+ * Speech to text on this server's own computer, for its owner (ADR 0100): `fit` says whether it can run here
+ * (`memory`: under 8 GB or one CPU, `disk`: under `needDiskBytes` free, `platform`: no build for it).
+ */
+export interface LocalSpeech {
+  fit: "fits" | "memory" | "disk" | "platform";
+  memoryBytes: number;
+  freeDiskBytes: number | null;
+  needDiskBytes: number;
+  sizeBytes: number;
+  status: LocalSpeechStatus;
+}
+
 /** What `PUT /api/app/speech-key` takes: tried with the provider before it is kept. */
 export interface SpeechKeyInput {
   provider: SpeechProvider;
@@ -592,9 +614,18 @@ export interface OrgOnboarding {
   generalChannelId: string;
 }
 
+/** An email invitation that waits for the signed-in person's confirmed address: `token` opens its page. */
+export interface WaitingInvitation {
+  orgId: string;
+  orgName: string;
+  token: string;
+}
+
 export interface Me {
   user: User;
   organizations: OrgSummary[];
+  /** Newest first; absent when none waits or the address isn't confirmed. */
+  invitations?: WaitingInvitation[];
 }
 
 /**
@@ -788,6 +819,8 @@ export interface JoinStatus {
   orgId?: string;
   email: string;
   request: { status: "pending" | "approved" | "denied"; reason: string | null } | null;
+  /** Approved with an email invitation that still waits: its token, which this account accepts as it is. */
+  invitation?: string;
 }
 
 /** `invites.ask`: asking is all a link does; the admins answer. `emailed`: this server sends email. */
@@ -800,12 +833,14 @@ export interface AskToJoinResult {
 }
 
 /**
- * Where the request a page made stands (ADR 0090): waiting, in (once: `signIn` for the one-time sign-in), denied,
- * or closed (run out, turned off, or approved for an address that signs in as it always did).
+ * Where the request a page made stands (ADR 0090): waiting, in (once: `signIn` for the one-time sign-in), invited
+ * (once: an address that already had an account, the invitation's `token` and its email's `mail` proof), denied,
+ * or closed (run out, turned off, or joined another way).
  */
 export type JoinClaim =
   | { status: "pending" }
   | { status: "in"; orgId: string; signIn: string }
+  | { status: "invited"; token: string; mail: string }
   | { status: "denied"; reason: string | null }
   | { status: "closed" };
 
@@ -1310,7 +1345,7 @@ export type CostlyDecision = "go" | "not_now" | "never" | "always";
 export type SuggestedAi =
   | {
       kind: "account";
-      brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+      brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
       machineId: string;
       accountId: string;
       label: string;
@@ -1552,6 +1587,12 @@ export interface Channel {
    * Absent (an older server): the workspace's keys decide.
    */
   can?: { post: boolean; callAgents: boolean; manage: boolean };
+  /**
+   * Channel list only: its first agents, in the order they joined (at most 4), and how many it has. A personal
+   * workspace's group conversation shows them as its face (ADR 0159, amendment of 2026-11-26).
+   */
+  agentIds?: string[];
+  agentCount?: number;
 }
 
 /** A key a channel may change for a role or a person (ADR 0134). */
@@ -2855,7 +2896,7 @@ export interface OrgSettings {
   agentStickers: boolean;
   /** How often agents follow a light reply with a sticker or a GIF. */
   agentMedia: AgentMediaLevel;
-  /** People can send voice messages (ADR 0100); only with `voiceAvailable` too. On by default. */
+  /** People can send voice messages (ADR 0100): the microphone shows with it. On by default. */
   voiceMessages: boolean;
   /** The right hand watches for what stops the team and tells who can fix it. Absent from an older server: on. */
   teamWatch?: boolean;
@@ -2865,6 +2906,13 @@ export interface OrgSettings {
   rightHandLearns?: boolean;
   /** Read only: this server has a speech engine. */
   voiceAvailable: boolean;
+  /**
+   * Read only: whether voice becomes text here. Without `ready` a voice message goes as audio people play. Absent from
+   * an older server, whose microphone shows only with an engine (`voiceAvailable`).
+   */
+  speechState?: SpeechState;
+  /** Read only: who chooses what turns voice into text (the server's owner), when they are in this workspace. */
+  speechOwner?: { userId: string; name: string } | null;
   /** Read only: this server can search GIFs (it has a GIF provider). */
   gifsAvailable: boolean;
   /** Read only: this server can decide when agents send one (agents send none on their own without it). */
@@ -2876,7 +2924,16 @@ export interface OrgSettings {
 }
 
 /** `OrgSettings` the server works out itself, or sets through its own call: never in a PATCH. */
-export type ReadOnlyOrgSettings = "gifsAvailable" | "agentMediaAvailable" | "voiceAvailable" | "approvalsLevel";
+export type ReadOnlyOrgSettings =
+  | "gifsAvailable"
+  | "agentMediaAvailable"
+  | "voiceAvailable"
+  | "speechState"
+  | "speechOwner"
+  | "approvalsLevel";
+
+/** Whether voice becomes text on this server (`OrgSettings.speechState`). */
+export type SpeechState = "ready" | "installing" | "none" | "failed";
 
 /** Automático's sizes: quick tasks, everyday work, hard work. */
 export type ModelTier = "small" | "medium" | "large";
@@ -3684,6 +3741,8 @@ export const WORKSPACE_ACTION_IDS = [
   "update_workspace",
   "set_action_check",
   "set_computer_help",
+  "set_approvals_level",
+  "set_agent_approvals_level",
   "invite_people",
   "remove_ai_key",
 ] as const;
@@ -4567,7 +4626,7 @@ export interface IssueProjectRef {
   archived: boolean;
 }
 
-/** A project with what its page shows besides the card's name and color (ADR 0253). */
+/** A project with what its page shows besides the card's name and color (ADR 0259). */
 export interface IssueProjectDetail extends IssueProjectRef {
   description: string | null;
   /** `owner/name`. */
@@ -5455,8 +5514,10 @@ export interface Machine {
    * from an older server: not in standby.
    */
   standby?: boolean;
-  /** The workspace's own computer is away moving to another server: back in a few minutes. Absent: not moving. */
+  /** The workspace's own computer is away for what we do to it (`maintenance` says what). Absent: it isn't. */
   moving?: boolean;
+  /** What we do to the workspace's own computer now, said instead of offline (ADR 0257). Absent: nothing. */
+  maintenance?: ComputerMaintenance | null;
   /**
    * Why it is offline, from its runner's last close: `unresponsive` (no network, or too busy to answer), `stopped`
    * (its runner stopped), `dropped` (the link dropped). Null or absent: online, the workspace's own, or unknown.
@@ -5497,6 +5558,8 @@ export interface Machine {
   remotePause?: boolean;
   /** Who paired it turns its tools on from the apps (`POST …/access/allow`); `false` or absent: its app is too old. */
   accessAllow?: boolean;
+  /** A folder can be asked for from here (`POST …/access/pick`): the agentes.chat app runs it and the person there picks it. */
+  folderPick?: boolean;
   /**
    * Its coding CLIs are looked for again from the apps (`POST …/clis/check`) and installed there by who paired it
    * (`…/cli-install`); `false` or absent: its app is too old, or it is the workspace's own computer.
@@ -5533,7 +5596,24 @@ export interface Machine {
    * ADR 0115: its workspace disk (free GB, share in use) and the shared folder's size (GB, measured hourly), as its
    * runner last said; null or absent for people who don't manage it, or when its runner doesn't say.
    */
-  disk?: { freeGb: number; use: number | null; sharedGb: number | null } | null;
+  disk?: {
+    freeGb: number;
+    use: number | null;
+    sharedGb: number | null;
+    /** The disk's size; null or absent from an older runner. */
+    sizeGb?: number | null;
+    /** What takes it by kind (GB), measured every few hours on the workspace's own computer; null elsewhere. */
+    parts?: DiskParts | null;
+  } | null;
+}
+
+/** What takes a computer's disk, by kind, in GB (`Machine.disk.parts`). */
+export interface DiskParts {
+  projects: number;
+  apps: number;
+  agents: number;
+  caches: number;
+  system: number;
 }
 
 /** Whether the organization uses the server's own computer (`GET …/machines/host`). */
@@ -5603,7 +5683,15 @@ export interface MachinePause {
 }
 
 /** A tool the person turns on or off on the machine. */
-export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commands";
+export type MachineToolName =
+  | "claude"
+  | "codex"
+  | "cursor"
+  | "opencode"
+  | "grok"
+  | "antigravity"
+  | "devin"
+  | "commands";
 
 /** A folder allowed on the machine and the agents (ids) that may use it; empty: allowed, no agent yet. */
 export interface MachineFolderGrant {
@@ -5618,7 +5706,7 @@ export interface MachineAccess {
    * `browser` (ADR 0040): the agent browser; absent on runners before protocol 12 (off). `desktop` and
    * `terminal` (ADR 0058): the agents' desktops and terminals; absent before protocol 18 (off).
    */
-  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity">, boolean> & {
+  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity" | "devin">, boolean> & {
     /** Protocol 36 (ADR 0114): Cursor's CLI; absent on older runners, where it follows Codex's. */
     cursor?: boolean;
     /** Protocol 39 (ADR 0132): OpenCode's CLI; absent on older runners, where it follows Codex's. */
@@ -5627,6 +5715,8 @@ export interface MachineAccess {
     grok?: boolean;
     /** Protocol 44 (ADR 0143): the Antigravity CLI; absent on older runners, where it follows Codex's. */
     antigravity?: boolean;
+    /** Protocol 89 (ADR 0253): the Devin CLI; absent on older runners, where it is off. */
+    devin?: boolean;
     browser?: boolean;
     desktop?: boolean;
     terminal?: boolean;
@@ -5644,7 +5734,9 @@ export interface MachineAccessReduce {
 export type AdminAsk =
   | { what: "channel_agent"; channelId: string; agentId: string }
   | { what: "create_agents" }
-  | { what: "webhook"; provider: "github" | "sentry" };
+  | { what: "webhook"; provider: "github" | "sentry" }
+  /** The server's owner, to choose what turns voice into text. */
+  | { what: "voice" };
 
 /** A switch on a computer (`RunnerTools`' keys): `POST …/access/allow` turns one on, `…/access/reduce` off. */
 export type MachineTool = MachineToolName | "browser" | "desktop" | "terminal";
@@ -5682,7 +5774,7 @@ export interface DesktopRelease {
 }
 
 /** A computer brain that runs on a connected machine. */
-export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** An agent waiting for an offline computer, and what it has waiting. */
 export interface OutageAgent {
@@ -5701,8 +5793,9 @@ export interface MachineOutage {
   /** The workspace's own computer (ADR 0056 §10). */
   managed?: boolean;
   offlineSince: string;
-  /** The workspace's own computer is away moving to another server: it comes back by itself. Absent: not moving. */
+  /** The workspace's own computer is away for what we do to it: it comes back by itself. Absent: it isn't. */
   moving?: boolean;
+  maintenance?: ComputerMaintenance | null;
   agents: OutageAgent[];
   /** Runs parked until the computer (or another one) can take them. */
   waitingRuns: number;
@@ -5847,8 +5940,9 @@ export interface UsageQueueClosedRow {
 export interface ComputerQueue {
   machineId: string;
   name: string;
-  /** It is away moving to another server: the line waits for it. Absent: not moving. */
+  /** It is away for what we do to it: the line waits for it. Absent: it isn't. */
   moving?: boolean;
+  maintenance?: ComputerMaintenance | null;
   working: QueueWorking[];
   waiting: QueueWaiting[];
 }
@@ -6663,7 +6757,7 @@ export interface MissionSettings {
 }
 
 /** "Quem pensa" (ADR 0032): the API, or Claude Code / Codex on the agent's computer with a person's plan. */
-export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** Why a computer brain can't be chosen now. */
 export type BrainUnavailable =
@@ -6693,8 +6787,12 @@ export interface BrainModelOption {
   contextWindow?: number;
   /** Cursor (ADR 0114): its CLI said the person's plan includes it; absent: it didn't say. */
   inPlan?: boolean;
-  /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). */
+  /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). Devin (ADR 0253): one the plan serves at no cost. */
   free?: boolean;
+  /** Devin (ADR 0253): the effort levels its variants run at (absent: every level the apps offer). */
+  efforts?: BrainEffort[];
+  /** Devin: it has a faster variant, which Velocidade's "Rápida" runs. */
+  fast?: boolean;
 }
 
 export interface BrainOption {
@@ -6808,7 +6906,7 @@ export type BrainEffortSetting = BrainEffort | "auto";
 
 export type BrainSpeed = "standard" | "fast";
 
-export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 /** ADR 0041 §3, ADR 0059: a Claude Code or Codex account signed in on a connected computer (metadata only). */
 export interface MachineAccount {
@@ -6980,6 +7078,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    devin?: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there (absent: an older server). */
@@ -6992,6 +7091,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    devin?: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the viewer connected (absent: a server
@@ -8290,8 +8390,9 @@ export interface TaskWait {
   since?: string | null;
   /** You may press Continuar agora. */
   canContinue: boolean;
-  /** Its computer is away moving to another server: it comes back by itself. */
+  /** Its computer is away for what we do to it: it comes back by itself. */
   moving?: boolean;
+  maintenance?: ComputerMaintenance;
 }
 
 /** A computer with turns running or waiting for room (counts only). */
@@ -9085,6 +9186,22 @@ export interface DeviceAudience {
 }
 
 /** A device's state, worded by the apps. Reason codes: `PhoneReason` in the machine protocol, plus the server's own. */
+/** What we do to the workspace's own computer (ADR 0257): a move, a restart, an update, a disk conversion, host maintenance. */
+export type MaintenanceKind = "moving" | "restarting" | "updating" | "converting" | "host_maintenance";
+
+export interface ComputerMaintenance {
+  /** A kind this app doesn't know yet reads as work being done on it. */
+  kind: MaintenanceKind | (string & {});
+  /** ISO: when it began. */
+  since: string;
+  /** ISO: when it should be back (away) or done; null: unknown. */
+  eta: string | null;
+  /** A move's `copying` (it works, maybe slower) or `handover`, a restart's `unresponsive`. Unknown codes: none. */
+  detail: "copying" | "handover" | "unresponsive" | (string & {}) | null;
+  /** Away for it. False: it works, maybe slower. */
+  away: boolean;
+}
+
 export type DeviceStatus =
   | { kind: "ready" }
   | {
@@ -9101,8 +9218,8 @@ export type DeviceStatus =
   | { kind: "needs_you"; reason: string }
   | { kind: "preparing"; reason: string }
   | { kind: "paused"; until: string | null }
-  /** The workspace's own computer, away while it moves to another server, since `since`. */
-  | { kind: "moving"; since: string }
+  /** The workspace's own computer, away for what we do to it (`maintenance` says what; a move without it), since `since`. */
+  | { kind: "moving"; since: string; maintenance?: ComputerMaintenance }
   /** `cause`: a computer's, as `Machine.offlineCause`; absent: unknown. */
   | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean; cause?: MachineOfflineCause }
   | { kind: "unsupported"; reason: string };
@@ -9123,6 +9240,22 @@ export interface PhoneDevice {
   lastSeenAt: string | null;
   mayUse: boolean;
   mayManage: boolean;
+}
+
+/** An OS permission a computer waits on (macOS's Full Disk Access, Screen Recording…): what asked, which agent, since. */
+export interface PermissionNeed {
+  permission:
+    | "app_management"
+    | "screen"
+    | "accessibility"
+    | "disk"
+    | "network"
+    | "camera"
+    | "microphone"
+    | "automation";
+  trigger: string;
+  agentId?: string;
+  since: string;
 }
 
 export interface ComputerDevice {
@@ -9148,6 +9281,8 @@ export interface ComputerDevice {
    * through it now. Null (or absent from an older server): nothing to lend to.
    */
   shareInternet?: { on: boolean; inUse: boolean } | null;
+  /** What we do to the workspace's own computer now, away (`status` says it too) or while it works, maybe slower. */
+  maintenance?: ComputerMaintenance | null;
   systemMode: boolean;
   audience: DeviceAudience;
   status: DeviceStatus;
@@ -9155,6 +9290,8 @@ export interface ComputerDevice {
   /** Tasks start on room, not on `maxTasks`; null: the count decides (an older app). Absent from an older server. */
   taskRoom?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean } | null;
   toolchains: Record<string, string>;
+  /** The OS permissions its agents' work waits on there, asked in its agentes.chat app; absent from an older server. */
+  permissions?: PermissionNeed[];
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide; absent from an older server. */
   opensXcode?: boolean;
   lastSeenAt: string | null;

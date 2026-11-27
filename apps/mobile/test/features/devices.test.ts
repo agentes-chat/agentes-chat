@@ -305,3 +305,13 @@ test("a folder an agent waits for on my computer: its card says No from here, ne
   expect(card).toContain("refuse.mutate(");
   expect(card).not.toMatch(/allow/i);
 });
+
+test("a simulator's screen: Start or Shut down from the shared choice, its toast, the computer's refusal in words", () => {
+  const source = readFileSync(join(import.meta.dir, "../../src/features/devices/PhoneScreen.tsx"), "utf8");
+  expect(source).toContain("const powers = powerChoice(p);");
+  expect(source).toContain("api.devices.powerPhone(orgId, v.id, v.on)");
+  expect(source).toContain('t(powers === "start" ? "devices.power.start" : "devices.power.stop")');
+  expect(source).toContain("disabled={power.isPending}");
+  expect(source).toContain('t(on ? "devices.power.starting" : "devices.power.stopped", { name: p.name })');
+  expect(source).toMatch(/onError: \(err\) => toast\(\{ title: errorText\(t, err\)/);
+});

@@ -77,3 +77,15 @@
 .ac-alert b {
   font-weight: 600;
 }
+
+/* The workspace computer's legend: each kind's swatch in its bar color (`--seg-*` on the item), free in the track's. */
+.storage-legend > .plan-legend__item {
+  --part: var(--seg-deep);
+}
+[data-theme="dark"] .storage-legend > .plan-legend__item {
+  --part: var(--seg-light);
+}
+.storage-legend > .storage-legend__free {
+  --seg-deep: color-mix(in srgb, var(--ink) 10%, transparent);
+  --seg-light: color-mix(in srgb, var(--ink) 10%, transparent);
+}

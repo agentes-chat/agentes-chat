@@ -463,7 +463,7 @@ describe("the tools on top", () => {
         (within(dialog).getByRole("button", { name: "Mover para cima: Caixa de entrada" }) as HTMLButtonElement)
           .disabled,
       ).toBe(true);
-      // Projetos sits between Tarefas and Drive in the dialog's order (ADR 0253), so Drive goes up three.
+      // Projetos sits between Tarefas and Drive in the dialog's order (ADR 0259), so Drive goes up three.
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));

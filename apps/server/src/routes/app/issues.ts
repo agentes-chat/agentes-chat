@@ -63,7 +63,7 @@ const ProjectRef = z
   })
   .openapi("IssueProjectRef");
 const ProjectDetail = ProjectRef.extend({
-  description: z.string().nullable().openapi({ description: "A few lines on what the project is for (ADR 0253)." }),
+  description: z.string().nullable().openapi({ description: "A few lines on what the project is for (ADR 0259)." }),
   githubRepo: z.string().nullable().openapi({ description: "The repository its work lives in, as `owner/name`." }),
 }).openapi("IssueProjectDetail");
 const Project = ProjectDetail.extend({

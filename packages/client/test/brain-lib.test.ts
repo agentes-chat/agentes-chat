@@ -206,6 +206,15 @@ describe("Velocidade (ADR 0149)", () => {
       },
     ];
     expect(effortLevelsFor("claude_code", null, claude)).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    // A Devin family takes the levels its account listed for it, past high too.
+    const devin = [
+      {
+        kind: "devin" as const,
+        models: [{ value: "swe-2", label: "SWE-2", efforts: ["medium" as const, "high" as const, "max" as const] }],
+        defaultModel: null,
+      },
+    ];
+    expect(effortLevelsFor("devin", "swe-2", devin)).toEqual(["medium", "high", "max"]);
     expect(shownEffort("max", ["low", "medium", "high"])).toBe("high");
     expect(shownEffort("xhigh", ["low", "medium", "high", "xhigh", "max"])).toBe("xhigh");
     expect([null, "auto", "low", "medium", "high", "xhigh", "max"].map((e) => effortOf("model", e))).toEqual([

@@ -1,12 +1,14 @@
 import {
   IPHONE_DEV_MODE_PROTOCOL,
   IPHONE_WIFI_PROTOCOL,
+  type PermissionNeed,
   PHONE_SCREEN_PROTOCOL,
   type PhoneHolder,
   type PhonePlatform,
   type PhoneReason,
   type PhoneTarget,
   type PubSub,
+  parsePermissionNeeds,
   type RateLimiter,
   type RunnerPhone,
   STREAM_CLOSE,
@@ -32,7 +34,8 @@ import {
   type OfflineCause,
   offlineCause,
   publishMachineUpdated,
-  shownMoving,
+  type ShownMaintenance,
+  shownMaintenance,
   shownOnline,
   withTaskLimit,
 } from "./machines";
@@ -78,8 +81,11 @@ export type DeviceStatus =
   | { kind: "needs_you"; reason: PhoneReason | string }
   | { kind: "preparing"; reason: PhoneReason | string }
   | { kind: "paused"; until: string | null }
-  /** The workspace's own computer, away while it moves to another server (`shownMoving`), since `since`. */
-  | { kind: "moving"; since: string }
+  /**
+   * The workspace's own computer, away for what we do to it (`shownMaintenance`: a move, a restart, an update…), since
+   * `since`. Named from when only moves were said: `maintenance` says which (absent from servers before ADR 0257).
+   */
+  | { kind: "moving"; since: string; maintenance?: ShownMaintenance }
   /** `withHost`: a phone whose host is offline. `cause`: a computer's, as `offlineCause` reads it. */
   | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean; cause?: OfflineCause }
   | { kind: "unsupported"; reason: PhoneReason | string };
@@ -131,6 +137,8 @@ export interface ComputerDevice {
    * (`on`), and whether the workspace's computer goes out through it now (`inUse`). Null: nothing to lend to.
    */
   shareInternet: { on: boolean; inUse: boolean } | null;
+  /** What we do to the workspace's own computer now (`shownMaintenance`), away or working slower; null: nothing. */
+  maintenance: ShownMaintenance | null;
   /** Each agent works as its own OS user there (a server install). */
   systemMode: boolean;
   audience: DeviceAudience;
@@ -143,6 +151,8 @@ export interface ComputerDevice {
    */
   taskRoom: TaskRoomReport | null;
   toolchains: Record<string, string>;
+  /** The OS permissions its agents' work waits on there, each asked in its agentes.chat app (`OS_PERMISSIONS_PROTOCOL`). */
+  permissions: PermissionNeed[];
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide (`IPHONE_DEV_MODE_PROTOCOL`). */
   opensXcode: boolean;
   lastSeenAt: string | null;
@@ -328,7 +338,8 @@ export const personalComputer = (m: Pick<MachineRow, "kind" | "pairedByUserId" |
   m.kind === "connected" && m.pairedByUserId !== null && m.executors?.mode !== "system" && !m.belongsToWorkspace;
 
 function computerStatus(m: MachineRow, running: number, now: Date): DeviceStatus {
-  if (shownMoving(m, now) && m.movingAt) return { kind: "moving", since: m.movingAt.toISOString() };
+  const maintenance = shownMaintenance(m, now);
+  if (maintenance?.away) return { kind: "moving", since: maintenance.since, maintenance };
   // Asleep in standby and waking as it should, it reads ready (ADR 0161).
   if (!shownOnline(m, now)) {
     const cause = offlineCause(m, false);
@@ -478,9 +489,12 @@ export async function listDevices(
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
+      maintenance: shownMaintenance(m, now),
       maxTasks: m.size?.maxTasks ?? null,
       taskRoom: m.size?.room ?? null,
       toolchains: m.executors?.toolchains ?? {},
+      // Kept in the runner's memory: an offline computer's last list may be over, and nothing there asks now.
+      permissions: online ? parsePermissionNeeds(m.executors?.permissions) : [],
       opensXcode: !managed && m.os === "darwin" && m.protocol >= IPHONE_DEV_MODE_PROTOCOL,
       lastSeenAt: iso(m.lastSeenAt),
       mayUse,

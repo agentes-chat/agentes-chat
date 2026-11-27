@@ -1004,6 +1004,7 @@
       "admin_ask_channel_agent": "{{names}} prosi o dodanie {{agent}} do #{{label}}",
       "admin_ask_create_agents": "{{names}} prosi o możliwość tworzenia agentów",
       "admin_ask_webhook": "{{names}} prosi o skonfigurowanie webhooka {{service}} dla rutyn",
+      "admin_ask_voice": "{{names}} prosi o włączenie wiadomości głosowych",
       "routine_paused_one": "Rutyna wstrzymana",
       "routine_paused_few": "Rutyny wstrzymane",
       "routine_paused_many": "Rutyny wstrzymane",

@@ -549,13 +549,14 @@ export function mixHex(a: string, b: string, share: number): string {
 }
 
 /**
- * The series a card draws edge to edge along its bottom: a number's trend, or a line with no note on a board (no axis
- * to keep inside the padding). Null when it draws its chart inside (a big line with its labels, a line with a note).
+ * The series a card draws edge to edge along its bottom: a number's trend, a line on the home's strip (`compact`: its
+ * last value and note stand above it), or a line with no note on a board (no axis to keep inside the padding). Null
+ * when it draws its chart inside (a big line with its labels, a board's line with a note).
  */
-export function bleedSeries(spec: WidgetSpec | null | undefined, big: boolean): number[] | null {
+export function bleedSeries(spec: WidgetSpec | null | undefined, big: boolean, compact = false): number[] | null {
   if (!spec) return null;
   if (spec.kind === "kpi") return (spec.spark?.length ?? 0) > 1 ? (spec.spark ?? null) : null;
-  if (spec.kind === "line" && !big && !spec.note && spec.values.length > 1) return spec.values;
+  if (spec.kind === "line" && spec.values.length > 1 && (compact || (!big && !spec.note))) return spec.values;
   return null;
 }
 

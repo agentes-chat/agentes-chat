@@ -32,6 +32,7 @@ export const CLI_OF_KIND: Readonly<Record<string, CliName>> = {
   opencode: "opencode",
   grok: "grok",
   antigravity: "antigravity",
+  devin: "devin",
 };
 
 /** The tool name a run's live line carries while its CLI is being fetched (the apps word it `preparingCli`). */

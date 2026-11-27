@@ -10,6 +10,7 @@ import {
   CODEX_UNELEVATED_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   MISSION_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
@@ -249,13 +250,19 @@ describe("brain settings", () => {
       opencode: "runner_old",
       grok: "runner_old",
       antigravity: "runner_old",
+      devin: "runner_old",
     });
     expect(reasons(mac({ os: "windows", protocol: CLI_COPIES_PROTOCOL, executors }))).toEqual({
       cursor: null,
       opencode: null,
       grok: null,
       antigravity: null,
+      devin: "runner_old",
     });
+    // The Devin CLI's pin has no Windows build: there it doesn't run, installed or not (ADR 0253).
+    const withDevin = { ...executors, devin: { version: "devin 3000.15.14 (abc)" } };
+    expect(reasons(mac({ os: "windows", protocol: DEVIN_PROTOCOL, executors: withDevin })).devin).toBe("system");
+    expect(reasons(mac({ os: "linux", protocol: DEVIN_PROTOCOL, executors: withDevin })).devin).toBeNull();
     expect(reasons(mac({ os: "windows", protocol: CLI_COPIES_PROTOCOL - 1, executors })).cursor).toBe("runner_old");
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
     expect(reasons(mac({ os: "windows", protocol: GROK_WINDOWS_PROTOCOL - 1, executors })).grok).toBe("runner_old");
@@ -269,6 +276,7 @@ describe("brain settings", () => {
       opencode: null,
       grok: null,
       antigravity: "runner_old",
+      devin: "runner_old",
     });
     expect(reasons(mac({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL, executors })).antigravity).toBeNull();
     expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
@@ -276,6 +284,7 @@ describe("brain settings", () => {
       opencode: null,
       grok: null,
       antigravity: null,
+      devin: "runner_old",
     });
   });
 
@@ -290,6 +299,7 @@ describe("brain settings", () => {
       ["opencode", false, "no_computer"],
       ["grok", false, "no_computer"],
       ["antigravity", false, "no_computer"],
+      ["devin", false, "no_computer"],
     ]);
     expect(reasons(mac())).toEqual([
       ["model", true, null],
@@ -303,6 +313,8 @@ describe("brain settings", () => {
       ["grok", false, "runner_old"],
       // The Antigravity CLI needs runner protocol 44 (`ANTIGRAVITY_PROTOCOL`).
       ["antigravity", false, "runner_old"],
+      // The Devin CLI needs runner protocol 89 (`DEVIN_PROTOCOL`).
+      ["devin", false, "runner_old"],
     ]);
     expect(reasons(mac({ execAllowed: false }))[1]).toEqual(["claude_code", false, "exec_off"]);
     expect(reasons(mac({ protocol: MISSION_PROTOCOL - 1 }))[1]).toEqual(["claude_code", false, "runner_old"]);
@@ -344,7 +356,9 @@ describe("brain settings", () => {
     ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
-      brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),
+      brainOptions(both).every(
+        (o) => o.available || ["cursor", "opencode", "grok", "antigravity", "devin"].includes(o.kind),
+      ),
     ).toBe(true);
     // Installed but turned off in the app's Tools: says so (not "not installed"); turned on, available.
     const off = mac({ ...both, access: { tools: { claude: false, codex: true } } });

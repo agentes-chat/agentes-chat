@@ -77,6 +77,7 @@ import {
   PageHeader,
   PlanStrip,
   prefersReducedMotion,
+  Refreshing,
   Spinner,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1618,7 +1619,8 @@ export function NotificationsPage({
     unreadTotal ? t("notifications.summaryUnread", { count: unreadTotal }) : "",
   ]
     .filter(Boolean)
-    .join(" · ");
+    // Tied to the part before it: a line that wraps beside the filter never starts with the dot.
+    .join("\u00a0· ");
   const back = () => {
     setReplying(null);
     setCur(null);
@@ -1661,79 +1663,80 @@ export function NotificationsPage({
               />
             )
           }
-        >
-          {/* Under the title: beside it, a filter's name squeezed the title in the narrow list column. */}
-          <Menu
-            align="end"
-            label={t("notifications.filters")}
-            onClosed={() => {
-              const moved = movedByMenu.current ? keyState.current.cur : null;
-              if (moved) element(moved)?.focus({ preventScroll: true });
-              movedByMenu.current = false;
-            }}
-            trigger={
-              <Button variant="ghost" size="sm" className="ib-filter" aria-label={t("notifications.filters")}>
-                {filterWords(filter)}
-                <Icon name="chevronDown" size={14} />
-              </Button>
-            }
-          >
-            <MenuRadioGroup
+          // At the end of the count's line: beside the title, a filter's name would squeeze it in the narrow list column.
+          metaActions={
+            <Menu
+              align="end"
               label={t("notifications.filters")}
-              value={filter}
-              onValueChange={(f) => {
-                setFilter(f as InboxFilter);
-                setCur(null);
-                setReq(null);
+              onClosed={() => {
+                const moved = movedByMenu.current ? keyState.current.cur : null;
+                if (moved) element(moved)?.focus({ preventScroll: true });
+                movedByMenu.current = false;
               }}
-              options={INBOX_FILTERS.map((f) => ({
-                value: f,
-                label:
-                  f !== "requests" && f !== "done" && counts?.[f] ? (
-                    <span className="ib-menu__opt">
-                      {filterWords(f)}
-                      <span className="ib-menu__n">{counts[f]}</span>
-                    </span>
-                  ) : (
-                    filterWords(f)
-                  ),
-              }))}
-            />
-            {!requestsView && (
-              <>
-                <MenuSeparator />
-                <MenuItem
-                  icon="check"
-                  disabled={doneView || !counts?.unread || action.isPending || bulk}
-                  onSelect={readAll}
-                >
-                  {t("notifications.readAll")}
-                </MenuItem>
-                <MenuItem
-                  icon="archive"
-                  disabled={!canClearAll(listFilter, counts, items) || action.isPending || bulk}
-                  onSelect={doneAll}
-                >
-                  {t("notifications.doneAll")}
-                </MenuItem>
-                <MenuSeparator />
-                <MenuHeading>{t("notifications.keys.title")}</MenuHeading>
-                <MenuItem hint="J · K" disabled={items.length === 0} onSelect={() => menuPress("j")}>
-                  {t("notifications.keys.move")}
-                </MenuItem>
-                <MenuItem hint="E" disabled={!curItem} onSelect={() => menuPress("e")}>
-                  {t("notifications.keys.done")}
-                </MenuItem>
-                <MenuItem hint="R" disabled={!curItem} onSelect={() => menuPress("r")}>
-                  {t("notifications.keys.reply")}
-                </MenuItem>
-                <MenuItem hint="↵" disabled={!curItem} onSelect={() => menuPress("enter")}>
-                  {t("notifications.keys.open")}
-                </MenuItem>
-              </>
-            )}
-          </Menu>
-        </PageHeader>
+              trigger={
+                <Button variant="ghost" size="sm" className="ib-filter" aria-label={t("notifications.filters")}>
+                  {filterWords(filter)}
+                  <Icon name="chevronDown" size={14} />
+                </Button>
+              }
+            >
+              <MenuRadioGroup
+                label={t("notifications.filters")}
+                value={filter}
+                onValueChange={(f) => {
+                  setFilter(f as InboxFilter);
+                  setCur(null);
+                  setReq(null);
+                }}
+                options={INBOX_FILTERS.map((f) => ({
+                  value: f,
+                  label:
+                    f !== "requests" && f !== "done" && counts?.[f] ? (
+                      <span className="ib-menu__opt">
+                        {filterWords(f)}
+                        <span className="ib-menu__n">{counts[f]}</span>
+                      </span>
+                    ) : (
+                      filterWords(f)
+                    ),
+                }))}
+              />
+              {!requestsView && (
+                <>
+                  <MenuSeparator />
+                  <MenuItem
+                    icon="check"
+                    disabled={doneView || !counts?.unread || action.isPending || bulk}
+                    onSelect={readAll}
+                  >
+                    {t("notifications.readAll")}
+                  </MenuItem>
+                  <MenuItem
+                    icon="archive"
+                    disabled={!canClearAll(listFilter, counts, items) || action.isPending || bulk}
+                    onSelect={doneAll}
+                  >
+                    {t("notifications.doneAll")}
+                  </MenuItem>
+                  <MenuSeparator />
+                  <MenuHeading>{t("notifications.keys.title")}</MenuHeading>
+                  <MenuItem hint="J · K" disabled={items.length === 0} onSelect={() => menuPress("j")}>
+                    {t("notifications.keys.move")}
+                  </MenuItem>
+                  <MenuItem hint="E" disabled={!curItem} onSelect={() => menuPress("e")}>
+                    {t("notifications.keys.done")}
+                  </MenuItem>
+                  <MenuItem hint="R" disabled={!curItem} onSelect={() => menuPress("r")}>
+                    {t("notifications.keys.reply")}
+                  </MenuItem>
+                  <MenuItem hint="↵" disabled={!curItem} onSelect={() => menuPress("enter")}>
+                    {t("notifications.keys.open")}
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
+          }
+        />
 
         {requestsView ? (
           <>
@@ -1755,7 +1758,7 @@ export function NotificationsPage({
             </ApprovalLinesProvider>
           </>
         ) : (
-          <>
+          <Refreshing busy={list.isPlaceholderData} label={t("common.loading")}>
             {list.isPending && <LoadingCards count={3} />}
             {list.isError && !list.data && <ErrorState error={list.error} onRetry={() => void list.refetch()} />}
             {list.isSuccess && items.length === 0 && (
@@ -1821,7 +1824,7 @@ export function NotificationsPage({
                 </Button>
               </div>
             )}
-          </>
+          </Refreshing>
         )}
       </aside>
 

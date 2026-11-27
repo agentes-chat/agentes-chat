@@ -16,6 +16,7 @@ import {
   CURSOR_KEY_PROVIDER,
   CURSOR_PROTOCOL,
   claudeLoginMethodsOf,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   isAccountId,
@@ -101,7 +102,7 @@ import { can, requirePermission } from "./organizations";
 import { runState } from "./run-state";
 import { runnerUpdateWay } from "./runner-update";
 import { scrubSignIns } from "./tool-detail";
-import { agentsMovedOnto, usageWaitKey, wakeAgentsBrainWaits, wakeOnRoom } from "./usage-pause";
+import { agentsWaitingOn, usageWaitKey, wakeAgentsBrainWaits, wakeOnRoom } from "./usage-pause";
 
 const { machineAccounts, agents, machines, rightHandBrains, users } = schema;
 
@@ -548,7 +549,7 @@ export async function releaseAgents(
       .delete(rightHandBrains)
       .where(and(eq(rightHandBrains.orgId, orgId), inArray(rightHandBrains.brainAccountId, accountIds)));
   }
-  // Gemini and Grok never think with the computer's own sign-in (`accountOnlyBrain`): without an account, the API.
+  // Gemini, Grok and Devin never think with the computer's own sign-in (`accountOnlyBrain`): without an account, the API.
   const ownSignIn = sql`(exists (select 1 from ${machines} m where m.id = "agents"."machine_id"
     and m.paired_by_user_id = "agents"."owner_user_id")
     and "agents"."brain" not in (${sql.join(
@@ -980,7 +981,7 @@ export async function syncMachineAccounts(
       );
       if (gone.length > 0) {
         const ids = gone.map((r) => r.id);
-        released.push(...(await releaseAgents(tx, orgId, ids, now)));
+        released.push(...(await releaseAgents(tx, orgId, ids, now)), ...(await agentsWaitingOn(tx, orgId, ids)));
         await tx
           .delete(machineAccounts)
           .where(
@@ -1319,11 +1320,12 @@ const sharedSignInProtocol = (kind: string) =>
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
-  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "key",
+  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin" | "key",
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode") return false;
+  // Devin's (ADR 0253): one login per agent there, as Cursor's and OpenCode's.
+  if (which === "cursor" || which === "opencode" || which === "devin") return false;
   return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
@@ -1546,7 +1548,7 @@ export async function beginAccountLogin(
 ): Promise<AccountLoginView> {
   if (!isAccountKind(kind)) {
     throw new ValidationError(
-      "Choose claude_code, codex, cursor, opencode, grok or antigravity",
+      "Choose claude_code, codex, cursor, opencode, grok, antigravity or devin",
       "account.invalid_kind",
     );
   }
@@ -1603,11 +1605,13 @@ export async function beginAccountLogin(
           ? machine.os === "windows"
             ? GROK_WINDOWS_PROTOCOL
             : GROK_PROTOCOL
-          : kind === "opencode"
-            ? OPENCODE_PROTOCOL
-            : plan
-              ? PLAN_KEYS_PROTOCOL
-              : ACCOUNTS_PROTOCOL,
+          : kind === "devin"
+            ? DEVIN_PROTOCOL
+            : kind === "opencode"
+              ? OPENCODE_PROTOCOL
+              : plan
+                ? PLAN_KEYS_PROTOCOL
+                : ACCOUNTS_PROTOCOL,
   );
   // On Windows the Antigravity CLI keeps its sign-in in the user's one Credential Manager (ADR 0143): a second
   // account would take the first one's place.
@@ -1994,7 +1998,7 @@ export async function removeMachineAccount(
   }
   const released = await deps.db.transaction((tx) => tombstone(tx, orgId, [account.id]));
   forgetAgents(orgId, released);
-  await wakeAgentsBrainWaits(deps, orgId, [...released, ...(await agentsMovedOnto(deps.db, orgId, [account.id]))]);
+  await wakeAgentsBrainWaits(deps, orgId, [...released, ...(await agentsWaitingOn(deps.db, orgId, [account.id]))]);
   await recordAudit(deps.db, {
     orgId,
     actor: { type: "person", id: userId },
@@ -2041,15 +2045,10 @@ export async function releaseMemberAccounts(
   const out: ReleasedAccounts = { machines: [], agents: [] };
   for (const org of new Set(rows.map((r) => r.orgId))) {
     const mine = rows.filter((r) => r.orgId === org);
-    out.agents.push({
-      orgId: org,
-      agentIds: await releaseAgents(
-        db,
-        org,
-        mine.map((r) => r.id),
-        now,
-      ),
-    });
+    const ids = mine.map((r) => r.id);
+    // What waited on their plans goes on too (`agentsWaitingOn`), not only the agents that pointed at them.
+    const released = await releaseAgents(db, org, ids, now);
+    out.agents.push({ orgId: org, agentIds: [...new Set([...released, ...(await agentsWaitingOn(db, org, ids))])] });
     for (const machineId of new Set(mine.map((r) => r.machineId))) out.machines.push({ orgId: org, machineId });
   }
   return out;

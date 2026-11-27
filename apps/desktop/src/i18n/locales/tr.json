@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat için {{permission}} gerekli",
+    "done": "İzin verdim",
+    "later": "Şimdi değil",
+    "trayTitle": "{{permission}} izni bekleniyor",
+    "why": {
+      "app_management": "Ajanların bu {{device}} üzerindeki uygulamaları değiştirmesi için gerekli.",
+      "screen": "Ajanların bu {{device}} için ekran görüntüsü alması için gerekli.",
+      "accessibility": "Ajanların bu {{device}} üzerindeki uygulamalarda tıklayıp yazması için gerekli.",
+      "disk": "Ajanların dosyalarınızı macOS her klasör için sormadan açması için gerekli.",
+      "network": "Ajanların ağınızdaki telefonlara ve cihazlara ulaşması için gerekli.",
+      "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
+      "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
+      "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -67,6 +83,12 @@
         "capturing": "ekran görüntüsü alıyor",
         "tabs": "sekme değiştiriyor"
       }
+    },
+    "apps": {
+      "title": "{{agent}}, {{app}} uygulamasını kullanıyor",
+      "detail": "Fare ve klavye sizde kalır",
+      "stop": "Durdur",
+      "stopped": "{{agent}} uygulamalarınızı kullanmayı bıraktı"
     },
     "label": "agentes.chat",
     "now": "Şimdi",
@@ -137,6 +159,10 @@
     "allowedUndo": "Geri al",
     "allowedOk": "Tamam",
     "allowedUndone": "Yeniden kapalı: {{tool}}",
+    "pickTitle": "{{name}} ajanlar için bir klasör istiyor",
+    "pickTitleAgent": "{{name}}, {{agent}} için bir klasör istiyor",
+    "pickBody": "Bu {{device}} üzerinde hangi klasöre izin vereceğini seç.",
+    "pickChoose": "Klasör seç",
     "quitTitle": "agentes.chat'ten çıkılsın mı?",
     "quitBody": "Uygulama kapalıyken ajanlar bu {{device}} üzerinde çalışamaz. Zaten çalışanlar biter ve uygulamayı yeniden açtığınızda sonucu gönderir.",
     "quitHereBody": "agentes.chat bu {{device}} üzerinde durur: uygulamayı yeniden açana kadar ne burada, ne telefonunuzda ne de ekip arkadaşlarınızın cihazlarında kimse onu kullanamaz.",
@@ -460,7 +486,7 @@
     "internet": "Ajanlar bu bilgisayarın internetini kullanır",
     "internetOn": "Ajanların açtığı siteler konumunu görür",
     "internetOff": "Kapalı: ajanlar her zamanki bağlantılarını kullanır",
-    "internetHint": "Çalışma alanının ajanları siteleri bu bilgisayarın bağlantısıyla açar. Yalnızca web siteleri, günde en fazla 5 GB, ve kendi ağındaki hiçbir şey asla. Bu bilgisayar çevrimdışıyken her zamanki bağlantılarını kullanırlar.",
+    "internetHint": "Çalışma alanının ajanları siteleri bu bilgisayarın bağlantısıyla açar. Yalnızca web siteleri açılır, kendi ağındaki hiçbir şeye asla erişilmez. Bu bilgisayar çevrimdışıyken her zamanki bağlantılarını kullanırlar.",
     "shareOff": "Şimdilik yalnızca siz",
     "shareHint": "{{org}} içindeki herkesin ajanları üzerinde sizin kullanıcınız olarak görev çalıştırabilir.",
     "addFolders": "Klasör ekle",
@@ -506,6 +532,9 @@
     "grokDesc": "Grok hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Gemini hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Devin hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
+    "devinWindows": "Devin henüz Windows'ta çalışmıyor: burada CLI'ı her hesabın oturumunu ayrı tutamıyor. Ajanlar Devin ile bir Mac ya da Linux bilgisayarda düşünür.",
     "found": "Bulundu",
     "notFound": "Bulunamadı",
     "loggedOut": "Giriş yapılmadı",

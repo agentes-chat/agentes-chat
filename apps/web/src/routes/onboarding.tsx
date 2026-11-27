@@ -1,6 +1,6 @@
 import { meQuery, useMe } from "@agenteschat/client";
 import { type PaidReturn, paidSearch } from "@agenteschat/client/lib/billing";
-import { settingUp } from "@agenteschat/client/lib/guards";
+import { joinInstead, settingUp } from "@agenteschat/client/lib/guards";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { requireUser } from "@/app/guards";
 import { ConfirmEmailScreen } from "@/components/ConfirmEmail";
@@ -16,7 +16,15 @@ export const Route = createFileRoute("/onboarding")({
     ...paidSearch(search),
     ...(search.delete === undefined ? {} : { delete: 1 as const }),
   }),
-  beforeLoad: ({ context, location }) => requireUser(context, location.href),
+  // An invitation waiting for someone with no workspace set up opens instead of making one; back from billing or
+  // deleting the one they started, the onboarding stays.
+  beforeLoad: async ({ context, location, search }) => {
+    const me = await requireUser(context, location.href);
+    const invitation = joinInstead(me);
+    if (invitation && !search.resume && !search.delete && !search.paid) {
+      throw redirect({ to: "/invite/$token", params: { token: invitation } });
+    }
+  },
   loaderDeps: ({ search }) => ({ resume: search.resume, paid: paidSearch(search) }),
   // Back from the billing page, paid or not, the onboarding resumes where its data is: paid, on its plan step, the
   // payment said as received until the hold lifts, then on connecting an AI (ADR 0162, amended 2026-11-10). A

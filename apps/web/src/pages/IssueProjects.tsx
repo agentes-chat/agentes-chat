@@ -34,7 +34,7 @@ const freeColor = (projects: IssueProjectRef[]) =>
 
 /**
  * "Novo projeto" and "Editar projeto": a name, one of the roles' colors and, optionally, what it is for and its
- * GitHub repository (ADR 0253). Mounted while open. `onDone` gets the project as saved, so whoever opened it from a
+ * GitHub repository (ADR 0259). Mounted while open. `onDone` gets the project as saved, so whoever opened it from a
  * task's field can put the task in it.
  */
 export function ProjectDialog({

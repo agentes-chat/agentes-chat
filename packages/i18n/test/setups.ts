@@ -181,6 +181,12 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // No speech engine yet: Settings › Voice, a tab only a self-hosted server shows.
     "voice.settings.noEngineAsk",
     "voice.settings.noEngineHere",
+    // The microphone's first press with no engine (`speechState`): never on the Cloud, whose engines are always set.
+    "voice.setup.",
+    // The speech model on the server's own computer (`/api/app/speech-local`, 404 on the Cloud).
+    "voice.local.",
+    // The right hand's card to turn voice on: it asks only where voice doesn't become text (never on the Cloud).
+    "voice.offer.askOwner",
     // Deleting: computers people connected, and the person who set up the server, only a self-hosted server has.
     "deleteOrg.goes.computers",
     "deleteAccount.computers_one",

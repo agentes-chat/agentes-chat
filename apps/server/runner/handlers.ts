@@ -27,11 +27,13 @@ import { redactSecrets } from "@agenteschat/adapters/secret-box";
 import { realFoldersFor } from "./access";
 import type { AccountBrains } from "./account-brains";
 import type { AccountFolders, AccountGrant, AccountManager } from "./accounts";
+import type { AppControl } from "./apps";
 import { type BrainManager, brainKey } from "./brain";
 import { type AntigravityBrainTurnRequest, handleAntigravityBrainTurn } from "./brain-antigravity";
 import { type CodexBrainEvent, type CodexBrainTurnRequest, handleCodexBrainTurn } from "./brain-codex";
 import type { CodexAppServers } from "./brain-codex-app";
 import { type CursorBrainTurnRequest, handleCursorBrainTurn } from "./brain-cursor";
+import { type DevinBrainTurnRequest, handleDevinBrainTurn } from "./brain-devin";
 import { type GrokBrainTurnRequest, handleGrokBrainTurn } from "./brain-grok";
 import { handleOpencodeBrainTurn, type OpencodeBrainTurnRequest, steerOpencodeTurn } from "./brain-opencode";
 import { routeWithPlan } from "./brain-route";
@@ -39,7 +41,7 @@ import { type BrowserManager, browserSetupText } from "./browser";
 import type { BrowserViews } from "./browser-views";
 import { allowedMerge, commandApproval, mergeOf, ownBranches } from "./command-gate";
 import type { DesktopManager } from "./desktop";
-import { type DesktopSessions, freeMemoryNow, hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
+import { type DesktopSessions, freeMemoryNow, MIN_FREE_BYTES } from "./desktop-session";
 import type { EgressShare } from "./egress-share";
 import { RunnerError, toMachineError } from "./errors";
 import { runCommand } from "./exec";
@@ -47,6 +49,7 @@ import { type CacheFill, type CloneSlots, gitSync } from "./git";
 import { isGitInternalPath, touchesGitInternals } from "./git-guard";
 import { type McpTaskInfo, redactDeep } from "./mcp";
 import { missionWorktree } from "./mission-worktree";
+import { permissionOfOutput } from "./os-permissions";
 import { agentWorkspace, hiddenIn, isInside, resolveForAgent } from "./paths";
 import type { PhoneManager, PhoneRequest } from "./phones";
 import { pullFile } from "./pull";
@@ -66,7 +69,7 @@ import type { PairRequest } from "./wifi-pair";
  */
 export const MAX_IN_FLIGHT = 128;
 /**
- * Where the memory isn't known (not Linux): brain turns at once, the count the runner always had. Background
+ * Where no memory can be read (`freeMemoryNow` null): brain turns at once, the count the runner always had. Background
  * tasks keep their own count (`maxConcurrentTasks`): a mission item refused for room would sit in its queue,
  * which moves when a task ends or the computer comes back, never when room frees.
  */
@@ -130,6 +133,14 @@ export const RECLAIM_MS = 5_000;
 export const ROOM_POLL_MS = 1_000;
 export const ROOM_WATCH_MS = 60_000;
 /**
+ * A turn refused for room this long (its run asking again all along) runs anyway, under every floor, one such turn at a
+ * time (`pastFloor`). So does a turn while no other runs. A computer whose reading stays short (a PC full of the
+ * person's own apps) runs its turns one at a time instead of never.
+ */
+export const ROOM_WAIT_MAX_MS = 60_000;
+/** What the person sees on a turn `pastFloor` let in. */
+export const PAST_FLOOR_NOTE = "This computer is short of memory, so this may be slow.";
+/**
  * Never refused for room nor at the ceiling: a brain turn holds its request for the whole turn, so a computer
  * full of agents' work would otherwise keep people from watching or taking control, or a person in control from
  * being screened (`desktop.text`). Short, and capped per agent on both sides.
@@ -166,6 +177,7 @@ export const NEW_WORK_OPS: ReadonlySet<string> = new Set([
   "desktop.act",
   "desktop.capture",
   "desktop.apps",
+  "apps.run",
   "vault.key",
   "vault.password",
   "phone.claim",
@@ -209,6 +221,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "access.request": "machine",
   "access.reduce": "machine",
   "access.allow": "machine",
+  "access.pick": "machine",
   "browser.act": "agent",
   "browser.stop": "agent",
   "browser.stream.start": "agent",
@@ -233,6 +246,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "desktop.capture": "agent",
   "desktop.apps": "agent",
   "desktop.text": "agent",
+  // Never in system mode (`hello.apps`): a worker has no `apps` and refuses it.
+  "apps.run": "agent",
   // ADR 0144: the key lives in the process that opens the values (the agent's worker), so root never holds one.
   "vault.key": "agent",
   // The password is made and sealed where the Vault's values open: root relays only the box.
@@ -266,6 +281,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "xcode.open": "machine",
   // The process that sees the phones runs their helpers.
   "phone.repair": "machine",
+  "phone.power": "machine",
   // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
   "clis.check": "machine",
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
@@ -282,10 +298,18 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
 type AccessReduceOp = Extract<MachineRequest, { op: "access.reduce" }>;
 type AccessAllowOp = Extract<MachineRequest, { op: "access.allow" }>;
+type AccessPickOp = Extract<MachineRequest, { op: "access.pick" }>;
 
 export interface HandlerContext {
   /** Real path of the workspace folder. */
   workspaceReal: string;
+  /** Tests: the system a failed command's output is read for refusals (`permissionOfOutput`). */
+  platform?: string;
+  /**
+   * The agentes.chat app runs this runner and asks the person for an OS permission a command was refused; from a
+   * terminal nothing would ask, so a refusal stays the command's own output.
+   */
+  appAsks?: boolean;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -368,6 +392,8 @@ export interface HandlerContext {
     reduce(req: AccessReduceOp): Promise<MachineReplies["access.reduce"]>;
     /** `ACCESS_ALLOW_PROTOCOL`: the owner turned a tool on from the apps; absent: refused. */
     allow?(req: AccessAllowOp): Promise<MachineReplies["access.allow"]>;
+    /** `FOLDER_PICK_PROTOCOL`: someone asks from the apps for a folder, picked here in the app; absent: refused. */
+    pick?(req: AccessPickOp): Promise<MachineReplies["access.pick"]>;
   };
   /** Set per request (protocol 10): the folders allowed for the request's agent, as real paths. */
   grants?: string[];
@@ -389,6 +415,8 @@ export interface HandlerContext {
   browserViews?: BrowserViews;
   /** Protocol 21: the agents' use of their own desktops (ADR 0062); without it the runner refuses `desktop.look`… */
   desktopUse?: DesktopManager;
+  /** `PERSON_APPS_PROTOCOL`: the person's apps through `agent-desktop` (ADR 0258); without it `apps.run` is refused. */
+  apps?: AppControl;
   /** A person takes control of the agent's desktop: what the agent's pointer and keys are doing stops. */
   desktopTaken?: (agentId: string) => void;
   /** `DESKTOP_STARTING_PROTOCOL`: tells the server a stream's open starts the desktop first (`stream.starting`). */
@@ -444,6 +472,7 @@ const TOOL_LABEL: Record<keyof RunnerTools, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI",
+  devin: "Devin CLI",
   commands: "Commands",
   browser: "Browser",
   desktop: "The desktop",
@@ -533,7 +562,11 @@ async function doExec(
     ...(env ? { env } : {}),
     ...(redact ? { redact: redact.redact, redactHold: redact.hold } : {}),
   });
-  return merge ? { ...result, merge } : result;
+  const permission =
+    result.exitCode === 0 || !ctx.appAsks
+      ? null
+      : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
+  return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 
 /**
@@ -742,8 +775,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     }
     if (hosted?.onSharedLogin(req) && req.agent) {
       const { agent } = req;
-      // Root starts such a sign-in's CLI only for its turn.
-      if (req.op === "brain.warm") return { open: false, started: false } satisfies MachineReplies["brain.warm"];
+      if (req.op === "brain.warm") {
+        requireTool(ctx, "claude");
+        return hosted.prewarm(req, agent, scope);
+      }
       if (req.op === "brain.route") {
         requireTool(ctx, "claude");
         return hosted.route(req, agent, scope);
@@ -764,7 +799,12 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (req.op === "brain.turn") signedOut(ctx, req, (out as Partial<MachineReplies["brain.turn"]> | null)?.final);
     return out;
   }
-  if (req.op === "access.request" || req.op === "access.reduce" || req.op === "access.allow") {
+  if (
+    req.op === "access.request" ||
+    req.op === "access.reduce" ||
+    req.op === "access.allow" ||
+    req.op === "access.pick"
+  ) {
     return handleAccess(ctx, req);
   }
   if (req.op === "keep.start" || req.op === "keep.end") {
@@ -817,6 +857,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
     return ctx.phones.repair(req);
   }
+  if (req.op === "phone.power") {
+    if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    return ctx.phones.power(req);
+  }
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
   if (req.op === "xcode.fix") {
@@ -868,6 +912,11 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     req.op === "desktop.text"
   ) {
     return handleDesktopUse(ctx, req);
+  }
+  if (req.op === "apps.run") {
+    if (!ctx.apps) throw new RunnerError("unsupported", "Agents can't use the person's apps on this computer");
+    if (!req.agent) throw new RunnerError("bad_request", "Using apps belongs to an agent");
+    return ctx.apps.run(req.agent, req, scope.signal);
   }
   const secrets = await agentSecrets(ctx.secretsDir, req.agent);
   switch (req.op) {
@@ -1332,7 +1381,7 @@ async function handleAccount(
 }
 
 /** Protocol 10: the agent asks for a folder, or the site reduces what the machine allows. */
-async function handleAccess(ctx: HandlerContext, req: AccessRequestOp | AccessReduceOp | AccessAllowOp) {
+async function handleAccess(ctx: HandlerContext, req: AccessRequestOp | AccessReduceOp | AccessAllowOp | AccessPickOp) {
   if (!ctx.accessOps) throw new RunnerError("bad_request", "This runner keeps no access settings");
   if (req.op === "access.request") {
     if (!req.agent) throw new RunnerError("bad_request", "A folder request belongs to an agent");
@@ -1341,6 +1390,11 @@ async function handleAccess(ctx: HandlerContext, req: AccessRequestOp | AccessRe
   if (req.op === "access.allow") {
     if (!ctx.accessOps.allow) throw new RunnerError("bad_request", "This runner can't turn tools on from the apps");
     return ctx.accessOps.allow(req);
+  }
+  if (req.op === "access.pick") {
+    if (!ctx.accessOps.pick)
+      throw new RunnerError("bad_request", "no_app: this computer has no agentes.chat app to pick a folder in");
+    return ctx.accessOps.pick(req);
   }
   return ctx.accessOps.reduce(req);
 }
@@ -1360,7 +1414,8 @@ async function doBrainTurn(
     req.kind === "cursor" ||
     req.kind === "opencode" ||
     req.kind === "grok" ||
-    req.kind === "antigravity"
+    req.kind === "antigravity" ||
+    req.kind === "devin"
       ? req.kind
       : null;
   requireTool(ctx, cli ?? "claude");
@@ -1406,10 +1461,10 @@ async function doHostedTurn(
 }
 
 /**
- * Cursor, Grok and Antigravity turns in progress, by run: `brain.steer` answers `unsupported` for them (`agent -p`,
- * `grok -p` and `agy -p` take nothing mid-turn).
+ * Cursor, Grok, Antigravity and Devin turns in progress, by run: `brain.steer` answers `unsupported` for them (`agent
+ * -p`, `grok -p` and `agy -p` take nothing mid-turn, and the Devin CLI's turns are read whole).
  */
-const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI">();
+const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI" | "Devin CLI">();
 
 /** OpenCode turns in progress, by run: `no_turn` until the turn can take messages (`steerOpencodeTurn`). */
 const opencodeRuns = new Set<string>();
@@ -1472,7 +1527,8 @@ function signedOut(
     req.kind === "cursor" ||
     req.kind === "opencode" ||
     req.kind === "grok" ||
-    req.kind === "antigravity"
+    req.kind === "antigravity" ||
+    req.kind === "devin"
       ? req.kind
       : "claude_code";
   void (final.code === "not_logged_in" ? accounts.refused(kind, req.account) : Promise.resolve())
@@ -1503,11 +1559,22 @@ async function doCodexTurn(
   const opencode = req.kind === "opencode";
   const grok = req.kind === "grok";
   const agy = req.kind === "antigravity";
-  const name = cursor ? "Cursor" : opencode ? "OpenCode" : grok ? "Grok Build" : agy ? "Antigravity CLI" : "Codex";
+  const devin = req.kind === "devin";
+  const name = cursor
+    ? "Cursor"
+    : opencode
+      ? "OpenCode"
+      : grok
+        ? "Grok Build"
+        : agy
+          ? "Antigravity CLI"
+          : devin
+            ? "Devin CLI"
+            : "Codex";
   if (!codex) throw new RunnerError("bad_request", `This runner runs no ${name} brain turns`);
   let final: CodexBrainEvent = {
     type: "error",
-    code: `${cursor ? "cursor" : opencode ? "opencode" : grok ? "grok" : agy ? "antigravity" : "codex"}_failed`,
+    code: `${cursor ? "cursor" : opencode ? "opencode" : grok ? "grok" : agy ? "antigravity" : devin ? "devin" : "codex"}_failed`,
     message: `${name} ended without an answer.`,
   };
   let ended = false;
@@ -1534,9 +1601,28 @@ async function doCodexTurn(
     scope.emit?.({ type: "brain.event", runId, event });
   };
   if (opencode) opencodeRuns.add(runId);
-  else if (cursor || grok || agy) turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : "Antigravity CLI");
+  else if (cursor || grok || agy || devin)
+    turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : agy ? "Antigravity CLI" : "Devin CLI");
   try {
-    if (agy) {
+    if (devin) {
+      const manager = ctx.accounts;
+      await handleDevinBrainTurn(
+        {
+          folder,
+          exec: toolOn(ctx, "devin"),
+          runnerHome: codex.runnerHome,
+          ...(ctx.secretsDir && !chat ? { secretsDir: ctx.secretsDir } : {}),
+          ...(codex.mcp ? { mcp: codex.mcp } : {}),
+          ...(ctx.grants && !chat ? { grants: ctx.grants } : {}),
+          ...(ctx.accounts || codex.accounts ? { accounts: ctx.accounts ?? codex.accounts } : {}),
+          ...(manager ? { listed: () => manager.listedModels("devin") } : {}),
+          ...(codex.spawn ? { spawn: codex.spawn } : {}),
+          ...(ctx.grant ? { grant: ctx.grant } : {}),
+        },
+        req as unknown as DevinBrainTurnRequest,
+        { signal: scope.signal, emit },
+      );
+    } else if (agy) {
       await handleAntigravityBrainTurn(
         {
           folder,
@@ -1754,6 +1840,8 @@ function describeOp(req: MachineRequest): string {
       return `${req.op} ${String(req.platform)}/${String(req.serial)}${"app" in req && req.app ? ` ${String(req.app)}` : ""}`;
     case "access.allow":
       return `access.allow tool ${String(req.tool)}`;
+    case "access.pick":
+      return `access.pick${req.requestId ? ` request ${String(req.requestId)}` : ""}`;
     case "access.reduce":
       return `access.reduce${req.removeFolder ? ` folder ${String(req.removeFolder.path ?? "")}` : ""}${req.disableTool ? ` tool ${String(req.disableTool)}` : ""}`;
     default:
@@ -1776,13 +1864,130 @@ export interface RequestObserver {
 
 /** Tests: what admission reads. */
 export interface Admission {
-  /** The memory available now (default: `/proc/meminfo`, as desktops read it; null: not known). */
+  /** The memory available now (default: `freeMemoryNow`, Linux, macOS and Windows; null: not known). */
   memAvailable?: () => number | null;
   now?: () => number;
   /** Tests: `RECLAIM_MS`. */
   reclaimMs?: number;
   /** Tests: `ROOM_POLL_MS`. */
   roomPollMs?: number;
+}
+
+/** How long a brain turn runs on after its link to the server dropped, for the next link to take it over. */
+export const HELD_TURN_MS = 2 * 60_000;
+/** The most frames a held turn keeps for the next link: past it the oldest go (its result carries the final event). */
+const HELD_TURN_FRAMES = 2_000;
+
+/** One brain turn, wherever its link is: `send` and `reply` are the link's while one has it, null while it is held. */
+class HeldTurn {
+  /** The link that has it: only that one's end holds it (a later link may have taken it over meanwhile). */
+  owner: unknown = null;
+  send: ((frame: RunnerFrame) => void) | null = null;
+  reply: ((outcome: RequestOutcome) => void) | null = null;
+  readonly frames: RunnerFrame[] = [];
+  outcome: RequestOutcome | undefined;
+  timer: ReturnType<typeof setTimeout> | undefined;
+  constructor(
+    readonly controller: AbortController,
+    /** Its CLI's (agent, session), `brainKey`. */
+    readonly session: string,
+  ) {}
+
+  emit(frame: RunnerFrame) {
+    if (this.send) return this.send(frame);
+    this.frames.push(frame);
+    if (this.frames.length > HELD_TURN_FRAMES) this.frames.shift();
+  }
+}
+
+/**
+ * The brain turns of one runner by run (`HELD_TURN_PROTOCOL`), across its links to the server: a link that drops
+ * leaves them running for `HELD_TURN_MS`, and a `brain.turn` of the same run on a later link takes the turn over, the
+ * frames it sent meanwhile first. A turn the next link doesn't take by then is aborted, as every turn was on a drop.
+ */
+export class HeldTurns {
+  private readonly byRun = new Map<string, HeldTurn>();
+  constructor(private readonly holdMs = HELD_TURN_MS) {}
+
+  /** Turns running on this computer now, held or not. */
+  get size() {
+    let n = 0;
+    for (const t of this.byRun.values()) if (t.outcome === undefined) n++;
+    return n;
+  }
+
+  /** A canceled turn still unwinding is no longer one to take over: its run's next ask starts a turn of its own. */
+  has(runId: string) {
+    const turn = this.byRun.get(runId);
+    return turn !== undefined && !turn.controller.signal.aborted;
+  }
+
+  open(runId: string, controller: AbortController, session: string): HeldTurn {
+    // Another run's held turn on this CLI: that run moved on (canceled or failed while away), and both would share it.
+    for (const [id, other] of this.byRun) {
+      if (id === runId || other.session !== session || other.owner !== null) continue;
+      clearTimeout(other.timer);
+      this.byRun.delete(id);
+      other.controller.abort();
+    }
+    const turn = new HeldTurn(controller, session);
+    this.byRun.set(runId, turn);
+    return turn;
+  }
+
+  /** The turn ended: its link gets the result, or it waits for one with its frames. */
+  finish(runId: string, turn: HeldTurn, outcome: RequestOutcome) {
+    if (turn.reply) {
+      if (this.byRun.get(runId) === turn) this.byRun.delete(runId);
+      turn.reply(outcome);
+    } else turn.outcome = outcome;
+  }
+
+  /** Its link dropped: it runs on, its frames kept, until a link takes it or `holdMs` ends it. */
+  hold(runId: string, turn: HeldTurn, owner: unknown) {
+    if (turn.owner !== owner) return;
+    turn.owner = null;
+    turn.send = null;
+    turn.reply = null;
+    clearTimeout(turn.timer);
+    turn.timer = setTimeout(() => {
+      if (this.byRun.get(runId) === turn) this.byRun.delete(runId);
+      turn.controller.abort();
+    }, this.holdMs);
+    turn.timer.unref?.();
+  }
+
+  /** A link takes the run's turn: what it sent meanwhile goes first, then its result if it already ended. */
+  take(
+    runId: string,
+    owner: unknown,
+    send: (frame: RunnerFrame) => void,
+    reply: (outcome: RequestOutcome) => void,
+  ): HeldTurn | null {
+    const turn = this.byRun.get(runId);
+    if (!turn || turn.controller.signal.aborted) return null;
+    clearTimeout(turn.timer);
+    turn.timer = undefined;
+    for (const frame of turn.frames.splice(0)) send(frame);
+    if (turn.outcome !== undefined) {
+      this.byRun.delete(runId);
+      reply(turn.outcome);
+      return turn;
+    }
+    turn.owner = owner;
+    turn.send = send;
+    turn.reply = reply;
+    return turn;
+  }
+
+  /** The runner stops for good: nothing will take them. */
+  abortAll() {
+    for (const turn of this.byRun.values()) {
+      clearTimeout(turn.timer);
+      turn.controller.abort();
+    }
+    this.byRun.clear();
+  }
 }
 
 /**
@@ -1793,6 +1998,8 @@ export interface Admission {
  */
 export class RequestRunner {
   private readonly inflight = new Map<string, AbortController>();
+  /** The brain turns this link has (`held`), by request id. */
+  private readonly turnsHere = new Map<string, { runId: string; turn: HeldTurn }>();
   private closed = false;
   /** Brain turns running now. */
   private turns = 0;
@@ -1802,6 +2009,10 @@ export class RequestRunner {
   private lastPersonTurn = Number.NEGATIVE_INFINITY;
   /** The request in the slot held for a person's turn (`reserve`). */
   private reserved: string | null = null;
+  /** The turn let in under the floor (`pastFloor`). */
+  private pastFloorTurn: string | null = null;
+  /** Runs refused for room: since when, and when they last asked. */
+  private readonly waiting = new Map<string, { since: number; asked: number }>();
   /** When a turn was last refused for room, until `room.freed` was sent. */
   private refusedAt: number | null = null;
   private roomWatch: ReturnType<typeof setInterval> | null = null;
@@ -1813,6 +2024,8 @@ export class RequestRunner {
     private readonly handler: typeof handleRequest = handleRequest,
     private readonly admission: Admission = {},
     private readonly observer?: RequestObserver,
+    /** The runner's turns across its links: a turn here outlives this link's end (`HELD_TURN_PROTOCOL`). */
+    private readonly held?: HeldTurns,
   ) {}
 
   /**
@@ -1856,6 +2069,25 @@ export class RequestRunner {
     return true;
   }
 
+  /**
+   * Every floor turned this turn away: it runs anyway, one such turn at a time, when no turn runs on the computer or
+   * its run has asked for `ROOM_WAIT_MAX_MS`. Idle CLIs were closed for it first.
+   */
+  private pastFloor(id: string, runId: string): boolean {
+    const now = (this.admission.now ?? Date.now)();
+    // A run that stopped asking (canceled, or it went to another computer) is no longer waiting.
+    for (const [run, w] of this.waiting) if (now - w.asked > ROOM_WATCH_MS) this.waiting.delete(run);
+    const since = this.waiting.get(runId)?.since ?? now;
+    const running = Math.max(this.turns, this.held?.size ?? 0);
+    if (this.pastFloorTurn !== null || (running > 0 && now - since < ROOM_WAIT_MAX_MS)) {
+      this.waiting.set(runId, { since, asked: now });
+      return false;
+    }
+    this.admitted.push(now);
+    this.pastFloorTurn = id;
+    return true;
+  }
+
   /** A turn on its session's open CLI starts no process: it goes down to the person's floor (lower still when locked). */
   private warmFloorHolds(locked: boolean) {
     const free = this.memAvailable();
@@ -1863,7 +2095,7 @@ export class RequestRunner {
   }
 
   private memAvailable() {
-    return (this.admission.memAvailable ?? hostMemAvailable)();
+    return (this.admission.memAvailable ?? freeMemoryNow)();
   }
 
   /**
@@ -1894,6 +2126,10 @@ export class RequestRunner {
     if (this.inflight.has(id)) {
       this.reply(id, { ok: false, error: { code: "bad_request", message: "Duplicate request id" } });
       return Promise.resolve();
+    }
+    // Its run's turn still runs here (its link dropped, or the server lost track of it): taken over, never run twice.
+    if (req.op === "brain.turn" && this.held && (this.held.has(req.runId) || req.reattach)) {
+      return this.takeOver(id, req.runId, req.reattach === "stop");
     }
     if (this.inflight.size >= MAX_IN_FLIGHT && !PEOPLE_OPS.has(req.op)) {
       this.reply(id, { ok: false, error: { code: "internal", message: "busy" } });
@@ -1928,7 +2164,7 @@ export class RequestRunner {
     if (req.op === "brain.turn" && !this.ctx.paused?.() && !this.admit(locked, person)) {
       const close = this.ctx.reclaimBrains;
       if (!close || this.memAvailable() === null) {
-        if (this.reserve(id, person)) return this.run(id, req, controller);
+        if (this.reserve(id, person) || this.pastFloor(id, req.runId)) return this.run(id, req, controller);
         this.full(id);
         return Promise.resolve();
       }
@@ -1945,7 +2181,10 @@ export class RequestRunner {
             this.reclaim(() => close(spare), controller.signal, locked, person),
         )
         .then((room) => {
-          if (!this.closed && (room || (!controller.signal.aborted && this.reserve(id, person))))
+          if (
+            !this.closed &&
+            (room || (!controller.signal.aborted && (this.reserve(id, person) || this.pastFloor(id, req.runId))))
+          )
             return this.run(id, req, controller);
           this.inflight.delete(id);
           if (controller.signal.aborted)
@@ -1955,6 +2194,38 @@ export class RequestRunner {
     }
     return this.run(id, req, controller);
   }
+
+  /** `stop`: its run was canceled while the link was down; the turn ends now, its result to this ask. */
+  private takeOver(id: string, runId: string, stop: boolean): Promise<void> {
+    return new Promise((resolve) => {
+      const turn = this.held?.take(runId, this, this.emitFrame, (outcome) => {
+        this.inflight.delete(id);
+        this.turnsHere.delete(id);
+        this.reply(id, outcome);
+        resolve();
+      });
+      if (!turn) {
+        const message = "The turn stopped on the computer while it was away from the server";
+        this.reply(id, { ok: false, error: { code: "not_found", message } });
+        return resolve();
+      }
+      this.log(stop ? "held brain.turn stopped: its run was canceled" : "brain.turn taken over on the new link");
+      if (turn.owner === this) {
+        this.inflight.set(id, turn.controller);
+        this.turnsHere.set(id, { runId, turn });
+      }
+      if (stop) turn.controller.abort();
+    });
+  }
+
+  private readonly emitFrame = (frame: RunnerFrame) => {
+    if (this.closed) return;
+    try {
+      this.send(frame);
+    } catch {
+      // socket gone
+    }
+  };
 
   private full(id: string) {
     const message = "This computer is short of memory for more work right now";
@@ -1996,7 +2267,18 @@ export class RequestRunner {
   ): Promise<void> {
     const turn = req.op === "brain.turn";
     if (turn) this.turns++;
+    if (req.op === "brain.turn") this.waiting.delete(req.runId);
     this.inflight.set(id, controller);
+    const held =
+      req.op === "brain.turn" && this.held
+        ? this.held.open(req.runId, controller, brainKey(req.agent?.id ?? "", req.session?.id ?? ""))
+        : null;
+    if (held && req.op === "brain.turn") {
+      held.owner = this;
+      held.send = this.emitFrame;
+      held.reply = (outcome) => this.reply(id, outcome);
+      this.turnsHere.set(id, { runId: req.runId, turn: held });
+    }
     // A browser or desktop command is logged when it ends, with how long it took (`browser.act snapshot 812ms`) and
     // what it waited on first (`(install 28.1 s, launch 1.4 s)`).
     const timed =
@@ -2017,15 +2299,10 @@ export class RequestRunner {
       output: (stream, chunk) => {
         if (!this.closed && chunk) this.send({ type: "output", id, stream, chunk });
       },
-      emit: (frame) => {
-        if (this.closed) return;
-        try {
-          this.send(frame);
-        } catch {
-          // socket gone
-        }
-      },
+      emit: (frame) => (held ? held.emit(frame) : this.emitFrame(frame)),
     };
+    if (req.op === "brain.turn" && this.pastFloorTurn === id)
+      scope.emit?.({ type: "brain.event", runId: req.runId, event: { type: "note", text: PAST_FLOOR_NOTE } });
     return this.handler(this.ctx, req, scope)
       .then((data): RequestOutcome => {
         if (controller.signal.aborted && req.op !== "exec") {
@@ -2056,12 +2333,15 @@ export class RequestRunner {
         }
         settled?.(outcome);
         this.observe(() => this.observer?.finished(id, req, outcome));
-        this.reply(id, outcome);
+        if (held && this.held && req.op === "brain.turn") this.held.finish(req.runId, held, outcome);
+        else this.reply(id, outcome);
       })
       .finally(() => {
         this.inflight.delete(id);
+        this.turnsHere.delete(id);
         if (turn) this.turns--;
         if (this.reserved === id) this.reserved = null;
+        if (this.pastFloorTurn === id) this.pastFloorTurn = null;
         // Its CLI is idle now, so a refused turn's ask can close it for room.
         if (turn && this.refusedAt !== null) this.roomFreed();
       });
@@ -2083,7 +2363,11 @@ export class RequestRunner {
   close() {
     this.closed = true;
     this.stopRoomWatch();
-    for (const c of this.inflight.values()) c.abort();
+    for (const [id, c] of this.inflight) {
+      const here = this.turnsHere.get(id);
+      if (here && this.held) this.held.hold(here.runId, here.turn, this);
+      else c.abort();
+    }
   }
 
   private reply(id: string, r: RequestOutcome) {

@@ -3,8 +3,7 @@ import type { AgentStatusLine, ConsultationWait, RunConsultation } from "../api/
 import type { LiveConsult, LiveConsultStatus } from "../realtime/consults";
 import type { LiveRun } from "../realtime/streams";
 import type { TypingWho } from "../realtime/typing";
-import { durationText } from "./computer-queue";
-import { formatLineTime, joinNames } from "./format";
+import { durationText, formatLineTime, joinNames } from "./format";
 import { agentGrammar } from "./grammar";
 import { MAIL_BRANDS } from "./mail";
 
@@ -87,6 +86,7 @@ export type ActivityKind =
   | "usingScreen"
   | "cloningRepo"
   | "listingRepos"
+  | "updatingCode"
   | "preparingCli"
   | "openingPullRequest"
   | "handingOff"
@@ -160,6 +160,7 @@ export const CLI_PROGRAMS: Readonly<Record<string, string>> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity",
+  devin: "Devin",
   // Git for Windows' portable build: Claude Code's shell on Windows (ADR 0228 §6).
   git: "Git",
 };
@@ -172,6 +173,7 @@ export const CLI_OF_BRAIN: Readonly<Record<string, string>> = {
   opencode: "opencode",
   grok: "grok",
   antigravity: "antigravity",
+  devin: "devin",
 };
 
 /** The tool a run's live line carries while its CLI is fetched on its computer (`<cli>|<computer>|<percent>`). */
@@ -292,6 +294,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   // Ours, though their first word reads like an app's name.
   git_clone: "cloningRepo",
   list_repositories: "listingRepos",
+  // The checkouts' update that runs beside the turn, waited for inside it.
+  wait_for_code: "updatingCode",
   open_pull_request: "openingPullRequest",
   hand_off: "handingOff",
   record_findings: "recordingFindings",
@@ -318,6 +322,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   show_block: "preparingCard",
   offer_approvals: "preparingCard",
   offer_open_page: "preparingCard",
+  offer_voice_setup: "preparingCard",
   set_team_week: "preparingCard",
   start_poll: "startingPoll",
   ask_choices: "askingChoices",
