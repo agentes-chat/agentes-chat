@@ -682,10 +682,11 @@ fn tell(app: &AppHandle, server: &str, org: &Org, count: u64, account: Option<&s
 /// another's.
 #[tauri::command]
 pub fn workspaces_get(app: AppHandle, webview: tauri::Webview) -> Result<Vec<ServerWorkspaces>, String> {
-    if !matches!(webview.label(), "main-app" | "popover") {
+    // The cover names the workspace it can't reach (ADR 0256): what is kept, never a read of its own.
+    if !matches!(webview.label(), "main-app" | "popover" | "main-cover") {
         return Err("only the app's own windows ask this".into());
     }
-    if webview.label() != "popover" && stale(&app) {
+    if webview.label() == "main-app" && stale(&app) {
         trigger(&app);
     }
     Ok(list(&app))

@@ -986,7 +986,8 @@ pub async fn tailnet_status(app: AppHandle, webview: tauri::Webview) -> Result<T
 /// rejects with `busy`, `start`, `cancelled` or `failed`. Its stages arrive at `tailnet://sign-in`.
 #[tauri::command]
 pub async fn tailnet_sign_in(app: AppHandle, webview: tauri::Webview) -> Result<Value, String> {
-    crate::local_server::app_window(&webview, &["main-app"])?;
+    // Also the cover's "Turn the network on" over a workspace it can't reach (ADR 0256).
+    crate::local_server::app_window(&webview, &["main-app", "main-cover"])?;
     tauri::async_runtime::spawn_blocking(move || -> Result<Value, String> {
         let device = sign_in(&app, &|| false).map_err(str::to_string)?;
         // With reach on, the server here is shared again now (its key had expired, or it was never signed in), not at

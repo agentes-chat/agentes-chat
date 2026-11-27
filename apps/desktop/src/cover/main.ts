@@ -6,7 +6,8 @@
  * that one's state instead (starting, updating, stopped, not starting), with the buttons that fix it: a start or an
  * update shows its time from 10 s, and Copy details once it takes longer than expected. The window opens the server
  * here at its loopback address, never through the tailnet (ADR 0256 §5), so Tailscale is never its reason. A server
- * out of reach offers another one; one on a Tailscale network says how to connect Tailscale here.
+ * out of reach offers another one; a workspace on a private network (a Tailscale address) while Tailscale is off here
+ * shows a card that turns it on (the app's own Tailscale signs in or starts, the system's opens), never a command.
  */
 
 import { CLOUD_SERVER, isTailnet, serverHost } from "@agenteschat/client/lib/server";
@@ -19,21 +20,28 @@ import "../fonts.css";
 import "./cover.css";
 import {
   coverHere,
-  coverTailnet,
   isHereServer,
   type LocalServerStatus,
   STEP_SLOW_MS,
   stepClock,
   type Tailnet,
+  type TailnetState,
   UPDATE_SLOW_MS,
 } from "../control/local-server";
 import { platformOf } from "../control/platform";
+import type { ServerWorkspaces } from "../control/server";
 import { SITE_URL } from "../control/version";
 import { desktopStrings, systemLocale } from "../i18n";
 import { mountReportPanel } from "../report/panel";
 import { type CoverParts, coverReport, knownServers, type ReportFacts } from "../report/report";
+import { TAILSCALE_MARK } from "../ui/tailscale-mark";
 import { elapsedClock, fillIn } from "../ui/time";
+import { type NetworkFix, networkFix, networkWords, privateTitle } from "./network";
+import "./private.css";
 import { stuckAction } from "./stuck";
+
+// In a plain browser while designing (`bun run dev`, cover.html): answers in place of the app (src/dev/fake-cover.ts).
+if (import.meta.env.DEV && !("__TAURI_INTERNALS__" in window)) await import("../dev/fake-cover");
 
 /** How long the cover waits before it asks whether the site can be reached, and how often after. */
 const CHECK_MS = 3000;
@@ -48,6 +56,11 @@ const time = document.querySelector<HTMLElement>(".cover__time");
 const sky = document.querySelector<HTMLCanvasElement>(".cover__sky");
 const agent = document.querySelector<HTMLCanvasElement>(".cover__agent");
 const acts = document.querySelector<HTMLElement>(".cover__acts");
+const card = document.querySelector<HTMLElement>(".cover__card");
+const cardTitle = document.querySelector<HTMLElement>(".cover__title");
+const cardLead = document.querySelector<HTMLElement>(".cover__lead");
+const cardNote = document.querySelector<HTMLElement>(".cover__note");
+const cardActs = document.querySelector<HTMLElement>(".cover__cardacts");
 document.documentElement.lang = systemLocale();
 
 let shownAt = performance.now();
@@ -63,6 +76,11 @@ let stuckSteps = 0;
 let overHere = false;
 /** A short word in the time's place ("Copied"), until then: the explanation above it stays as it is. */
 let aside: { text: string; until: number } | null = null;
+/** The app's own Tailscale signing in from the card: its page waits in the browser. */
+let signingIn = false;
+/** What turns the network on, as last read, and when: each read runs Tailscale's own command. */
+let network: { at: number; fix: NetworkFix | null } | null = null;
+const NETWORK_READ_MS = 10_000;
 
 function sayAside(text: string) {
   aside = { text, until: performance.now() + 2500 };
@@ -161,6 +179,7 @@ function shown() {
   say("");
   tick();
   buttons([]);
+  hidePrivate();
   root?.removeAttribute("data-fading");
   void check();
 }
@@ -192,11 +211,10 @@ async function reachable(server: string): Promise<boolean> {
   }
 }
 
-/** Why the page isn't there: no internet, or this server; on Tailscale, the likely reason too. */
+/** Why the page isn't there: no internet, or this server. */
 function unreachableText(server: string): string {
   if (!navigator.onLine) return words.offline;
-  const text = fillIn(words.unreachable, { host: serverHost(server) });
-  return isTailnet(server) ? `${text} ${fillIn(words.tailnet, { device })}` : text;
+  return fillIn(words.unreachable, { host: serverHost(server) });
 }
 
 const localStatus = () => invoke<LocalServerStatus>("local_server_status").catch(() => null);
@@ -268,6 +286,7 @@ const openServer = (server: string) => void invoke("server_choose", { server }).
 function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: LocalServerStatus, other: string | null) {
   const start = () => void invoke("local_server_start").catch(() => {});
   const fill = (text: string) => fillIn(text, { device });
+  hidePrivate();
   if (state === "starting" || state === "migrating") {
     if (waitSince?.state !== state) waitSince = { state, at: performance.now() };
     say(fill(state === "starting" ? words.starting : words.migrating));
@@ -297,6 +316,141 @@ function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: Loca
   }
 }
 
+/** The first run, to pick another server or workspace (the main window's app layer, ADR 0256). */
+const otherWorkspace = () =>
+  void invoke("layer_show", { route: { screen: "firstRun", mode: "servers" } }).catch(() => {});
+
+/** What turns the network on here, read at most every few seconds unless `fresh` (a button was just pressed). */
+async function readNetwork(fresh = false): Promise<NetworkFix | null> {
+  if (!fresh && network && performance.now() - network.at < NETWORK_READ_MS) return network.fix;
+  const [system, own] = await Promise.all([
+    invoke<Tailnet>("tailscale_status").catch(() => null),
+    // The app's own Tailscale, when it is the one chosen, is started by reading it.
+    invoke<TailnetState>("tailnet_status").catch(() => null),
+  ]);
+  const fix = networkFix(platform, system, own);
+  network = { at: performance.now(), fix };
+  return fix;
+}
+
+/** The card's buttons: the way to another workspace, then the one that turns the network on. */
+function cardButtons(list: [string, () => void, "ghost" | "primary"][]) {
+  if (!cardActs) return;
+  const now = list.map(([label]) => label).join("|");
+  if (cardActs.dataset.now === now) return;
+  cardActs.dataset.now = now;
+  cardActs.replaceChildren(
+    ...list.map(([label, run, variant]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.variant = variant;
+      button.textContent = label;
+      button.addEventListener("click", run);
+      return button;
+    }),
+  );
+}
+
+/** Tailscale's mark on the card's tile, drawn once. */
+function drawMark(tile: Element) {
+  if (tile.firstChild) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("focusable", "false");
+  for (const [d, opacity] of [
+    [TAILSCALE_MARK.solid, "1"],
+    [TAILSCALE_MARK.faded, "0.4"],
+  ] as const) {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill-opacity", opacity);
+    svg.append(path);
+  }
+  tile.append(svg);
+}
+
+/** Says `text` under the card's line for a moment ("Couldn't sign in to Tailscale"). */
+let noteTimer: ReturnType<typeof setTimeout> | undefined;
+function note(text: string) {
+  if (!cardNote) return;
+  cardNote.textContent = text;
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(() => {
+    if (cardNote) cardNote.textContent = "";
+  }, 5000);
+}
+
+/** The card over a workspace on a private network: its name, what is off here, and what turns it on. */
+async function showPrivate(server: string, fix: NetworkFix) {
+  if (!root || !card) return;
+  const list = await invoke<ServerWorkspaces[]>("workspaces_get").catch(() => null);
+  const title = privateTitle(list?.find((w) => w.server === server)?.orgs);
+  const shownFix: NetworkFix = signingIn ? { act: "signingIn" } : fix;
+  const { line: lineKey, button } = networkWords(shownFix);
+  const tile = card.querySelector(".cover__tile");
+  if (tile) drawMark(tile);
+  if (cardTitle) {
+    cardTitle.textContent =
+      title.key === "privateTitle" ? fillIn(words.privateTitle, { org: title.org ?? "" }) : words.privateTitleAny;
+  }
+  if (cardLead) cardLead.textContent = fillIn(words[lineKey], { device });
+  const actions: [string, () => void, "ghost" | "primary"][] = [[words.useOther, otherWorkspace, "ghost"]];
+  if (button) actions.push([words[button], () => turnOn(shownFix), "primary"]);
+  cardButtons(actions);
+  say("");
+  buttons([]);
+  card.hidden = false;
+  root.setAttribute("data-private", "");
+}
+
+function hidePrivate() {
+  if (card) card.hidden = true;
+  root?.removeAttribute("data-private");
+}
+
+/**
+ * "Turn the network on": the app's own Tailscale signs in (its page in the browser) or starts; the system's opens (its
+ * Mac app, its download page, its admin page where this computer is approved). Once the server answers, the page loads.
+ */
+function turnOn(fix: NetworkFix) {
+  const openPage = (page: "app" | "download" | "approve") =>
+    void invoke("tailscale_open", { page }).catch(() => note(strings.common.error));
+  switch (fix.act) {
+    case "signIn":
+      signingIn = true;
+      void invoke("tailnet_sign_in")
+        .then(
+          () => {},
+          (err: unknown) => {
+            if (String(err) !== "cancelled") note(words.privateFailed);
+          },
+        )
+        .finally(() => {
+          signingIn = false;
+          network = null;
+          void check();
+        });
+      network = null;
+      void check();
+      return;
+    case "start":
+      void readNetwork(true).then(() => check());
+      return;
+    case "approve":
+      openPage("approve");
+      return;
+    case "openApp":
+      openPage("app");
+      return;
+    case "download":
+      openPage("download");
+      return;
+    default:
+      return;
+  }
+}
+
 async function check() {
   if (document.visibilityState !== "visible" || root?.hasAttribute("data-fading")) return;
   const waited = performance.now() - shownAt;
@@ -323,27 +477,18 @@ async function check() {
   if (waited < CHECK_MS) return;
   if (!(await reachable(server))) {
     unreachable = true;
-    say(unreachableText(server));
-    const welcome: [string, () => void] = [
-      words.otherServer,
-      // The first run, to pick another server (the main window's app layer, ADR 0256).
-      () => void invoke("layer_show", { route: { screen: "firstRun", mode: "servers" } }).catch(() => {}),
-    ];
-    // On Tailscale: connecting it here is the likely fix (its Mac app, its icon by the clock, or the terminal).
-    if (!isTailnet(server)) {
-      buttons([welcome]);
+    // A workspace on a private network while the network is off here: the card that turns it on (ADR 0256).
+    const fix = navigator.onLine && isTailnet(server) ? await readNetwork() : null;
+    if (fix) {
+      await showPrivate(server, fix);
       return;
     }
-    const tailnet = await invoke<Tailnet>("tailscale_status").catch(() => null);
-    const next = coverTailnet(platform, tailnet);
-    if (next === "openTailscale") {
-      buttons([[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], welcome]);
-    } else {
-      say(`${unreachableText(server)} ${words[next]}`);
-      buttons([welcome]);
-    }
+    hidePrivate();
+    say(unreachableText(server));
+    buttons([[words.otherServer, otherWorkspace]]);
     return;
   }
+  hidePrivate();
   if (unreachable) {
     // Back: the site loads again; the cover stays until it painted.
     shown();

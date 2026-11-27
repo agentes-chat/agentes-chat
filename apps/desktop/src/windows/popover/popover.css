@@ -1,0 +1,169 @@
+/* The menu bar popover (Popover.tsx, ADR 0256 §7): its head, the server here's row, "Now" and the menu below. */
+.dk-pop.dk-tray {
+  padding: 12px;
+}
+.dk-tray .dk-pop__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dk-tray .dk-pop__body > .dk-banner {
+  margin: 0;
+}
+
+/* This computer: its portrait, its name, and how it is in a line of its colour. */
+.dk-trayhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 4px;
+  min-width: 0;
+}
+.dk-trayhead__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.dk-trayhead__text b {
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dk-trayhead__text small {
+  font-size: 13px;
+}
+
+/* A state in its colour: never a pill. */
+.dk-tray [data-tone="warn"] {
+  color: var(--warn);
+  font-weight: 600;
+}
+.dk-tray [data-tone="ok"] {
+  color: var(--ok);
+  font-weight: 600;
+}
+.dk-tray [data-tone="danger"] {
+  color: var(--danger);
+  font-weight: 600;
+}
+.dk-tray [data-tone="muted"] {
+  color: var(--muted);
+}
+
+/* The server here, when it runs on this computer: one row, its menu and banners under it. */
+.dk-trayhere {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dk-trayhere__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+.dk-trayhere__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.dk-trayhere__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+.dk-trayhere__text b {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dk-trayhere__text small {
+  font-size: 12px;
+}
+.dk-trayhere__more {
+  margin-top: 0;
+}
+.dk-trayhere .dk-banner {
+  margin: 0;
+}
+
+/* "Now": a small caption, then one row per agent. */
+.dk-traynow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dk-tray__label {
+  margin: 4px 6px 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--faint);
+}
+.dk-now {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 6px 4px;
+}
+.dk-now .dk-job {
+  margin: 0 -6px;
+}
+.dk-now__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.dk-now__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+.dk-now__what b {
+  font-weight: 650;
+}
+.dk-now__text small {
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The menu, always in view below what scrolls. */
+.dk-tray__menu {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.dk-tray__sep {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--line);
+}
+.dk-tray__menu .dk-mi > .dk-mi__end {
+  color: var(--faint);
+}
+.dk-kbd {
+  font: 600 11px var(--font-sans);
+  color: var(--faint);
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--plate-soft);
+}

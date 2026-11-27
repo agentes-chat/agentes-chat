@@ -12,8 +12,9 @@ import { siteApi } from "../src/control/devices";
 import { ESSENTIALS_NOTIFIED_PREF } from "../src/control/essentials";
 import { MAC_ASKED_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
+import { AUTO_UPDATE_PREF } from "../src/control/version";
 import { FAKE_SERVER } from "../src/dev/fake-runner";
-import { writePref } from "../src/hooks";
+import { readPref, writePref } from "../src/hooks";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
@@ -86,17 +87,15 @@ const banners = (el: HTMLElement) =>
     actions: [...banner.querySelectorAll(".dk-banner__acts button")].map((b) => b.textContent),
   }));
 
-test("the menu bar menu: what goes on here scrolls, and Open, Preferences and Quit stay below it", () =>
+test("the menu bar menu: what goes on here scrolls, and Pause, Open, This Mac settings and Quit stay below it", () =>
   withMenu((el) => {
     const body = el.querySelector(".dk-pop__body");
     const foot = el.querySelector(".dk-pop__foot");
     expect(body?.querySelector(".dk-req")).toBeTruthy();
-    expect(body?.querySelector(".dk-job")).toBeTruthy();
+    expect(body?.querySelector(".dk-now__row")).toBeTruthy();
     expect(body?.querySelector("button.dk-mi")).toBeNull();
     const actions = [...(foot?.querySelectorAll("button.dk-mi") ?? [])].map((b) => b.textContent ?? "");
-    for (const label of ["Open agentes.chat", "Preferences…", "Quit agentes.chat"]) {
-      expect(actions.some((text) => text.includes(label))).toBe(true);
-    }
+    expect(actions).toEqual(["Pause the agents", "Open agentes.chat⌘O", "This Mac settings⌘,", "Quit agentes.chat⌘Q"]);
   }));
 
 test("a new OS permission an agent's work waits on opens the app layer's ask, and stays on the menu until it ends", async () => {
@@ -337,20 +336,25 @@ describe("Quit from the menu while agents work here", () => {
 describe("the server here's Stop (ADR 0158)", () => {
   test("in its ··· menu, with how long and what it cuts off; an hour says when it's back", () =>
     withMenu(async (el) => {
-      expect([...el.querySelectorAll(".dk-ph button")].some((b) => b.textContent === "Stop")).toBe(false);
-      await act(async () => (el.querySelector(".dk-ph .dk-iconbtn") as HTMLElement).click());
-      const menu = () => [...el.querySelectorAll(".dk-here__more > button")].map((b) => b.textContent);
-      expect(menu()).toEqual(["Restart", "Stop", "Preferences…"]);
-      const stop = [...el.querySelectorAll(".dk-here__more > button")].find((b) => b.textContent === "Stop");
+      // Running: its state in a word, in its colour (never a pill).
+      const state = () => el.querySelector(".dk-trayhere__text small");
+      expect(state()?.textContent).toBe("Running");
+      expect(state()?.getAttribute("data-tone")).toBe("ok");
+      expect([...el.querySelectorAll(".dk-trayhere__row button")].some((b) => b.textContent === "Stop")).toBe(false);
+      await act(async () => (el.querySelector(".dk-trayhere__row .dk-iconbtn") as HTMLElement).click());
+      const menu = () => [...el.querySelectorAll(".dk-trayhere__more > button")].map((b) => b.textContent);
+      expect(menu()).toEqual(["Restart", "Stop", "This Mac settings"]);
+      const stop = [...el.querySelectorAll(".dk-trayhere__more > button")].find((b) => b.textContent === "Stop");
       await act(async () => (stop as HTMLElement).click());
-      const rows = [...el.querySelectorAll(".dk-here__stop button")].map((b) => b.textContent);
+      const rows = [...el.querySelectorAll(".dk-trayhere__stop button")].map((b) => b.textContent);
       expect(rows).toEqual(["Stop for 1 hour", "Stop until I start it", "Don't start it with the app…"]);
-      expect(el.querySelector(".dk-here__stop .dk-sub__hint")?.textContent).toBe(
+      expect(el.querySelector(".dk-trayhere__stop .dk-sub__hint")?.textContent).toBe(
         "Stopping cuts everyone off, the phone included.",
       );
-      await act(async () => (el.querySelector(".dk-here__stop button") as HTMLElement).click());
-      await until(() => el.querySelector(".dk-ph small")?.textContent?.startsWith("Stopped · back at"));
-      const start = [...el.querySelectorAll(".dk-ph button")].find((b) => b.textContent === "Start it");
+      await act(async () => (el.querySelector(".dk-trayhere__stop button") as HTMLElement).click());
+      await until(() => state()?.textContent?.startsWith("Stopped · back at"));
+      expect(state()?.getAttribute("data-tone")).toBe("warn");
+      const start = [...el.querySelectorAll(".dk-trayhere__row button")].find((b) => b.textContent === "Start it");
       expect(start).toBeTruthy();
     }));
 });
@@ -395,7 +399,7 @@ describe("several workspaces on this Mac", () => {
         expect(paused).toEqual(["Acme"]);
       },
       createFakeHost("popover", "selfhost"),
-      (el) => el.querySelectorAll(".dk-ohead").length === 2,
+      (el) => el.querySelectorAll(".dk-now__row").length === 3,
     ));
 });
 
@@ -523,4 +527,163 @@ describe("this computer's essentials (ADR 0256 §7)", () => {
       (el) => el.querySelector(".dk-pop__foot"),
     );
   });
+});
+
+describe("the head, the essentials' banner and the menu (ADR 0256 §7)", () => {
+  const head = (el: HTMLElement) => el.querySelector(".dk-trayhead small");
+  const press = async (el: HTMLElement, selector: string, text: string) => {
+    const button = [...el.querySelectorAll<HTMLButtonElement>(selector)].find((b) => b.textContent?.includes(text));
+    expect(button).toBeDefined();
+    await act(async () => button?.click());
+  };
+
+  test("this Mac's name and how it is, in its colour: what needs the person, then All set once nothing does", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const host = createFakeHost("popover", "here", { macReady: true });
+    await withMenu(async (el) => {
+      expect(el.querySelector(".dk-trayhead .ac-computer")).toBeTruthy();
+      expect(el.querySelector(".dk-trayhead b")?.textContent).toBeTruthy();
+      // The folder request waiting: one thing.
+      await until(() => head(el)?.textContent === "1 thing needs you");
+      expect(head(el)?.getAttribute("data-tone")).toBe("warn");
+      await press(el, ".dk-req button", "Allow");
+      await until(() => head(el)?.textContent === "All set");
+      expect(head(el)?.getAttribute("data-tone")).toBe("ok");
+    }, host);
+  });
+
+  test("the first essential off is a banner with its one fix: Screen Recording opens its list in System Settings", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const host = createFakeHost("popover", "here", { macOn: ["notifications", "disk"] });
+    await withMenu(
+      async (el) => {
+        expect(banners(el)[0]).toEqual({
+          title: "Screen Recording is off",
+          line: "Without it, agents can't see the screen.",
+          actions: ["Turn on again"],
+        });
+        // Screen Recording and the folder request.
+        await until(() => head(el)?.textContent === "2 things need you");
+        await press(el, ".dk-banner__acts button", "Turn on again");
+        expect(host.mac.panes).toEqual(["screen"]);
+        // Allowed there: read again as the app comes back to the front, and the banner goes.
+        host.mac.screen = true;
+        await act(async () => host.sayHealth());
+        await until(() => !banners(el).some((b) => b.title === "Screen Recording is off"));
+        await until(() => head(el)?.textContent === "1 thing needs you");
+      },
+      host,
+      (el) => banners(el).some((b) => b.title === "Screen Recording is off"),
+    );
+  });
+
+  test("opening at login turned off: Turn on turns it on from the popover", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const host = createFakeHost("popover", "here", { macReady: true });
+    await host.setAutostart(false);
+    await withMenu(
+      async (el) => {
+        expect(banners(el)[0]).toEqual({
+          title: "agentes.chat doesn't open at login",
+          line: "After a restart, agents can't use this Mac until you open the app.",
+          actions: ["Turn on"],
+        });
+        await press(el, ".dk-banner__acts button", "Turn on");
+        expect(await host.autostart()).toBe(true);
+        await until(() => !banners(el).some((b) => b.title === "agentes.chat doesn't open at login"));
+      },
+      host,
+      (el) => banners(el).some((b) => b.title === "agentes.chat doesn't open at login"),
+    );
+  });
+
+  test("notifications: the system's prompt while never asked, else This Mac settings where they are turned on", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    const asked = createFakeHost("popover", "here", { macOn: ["screen", "disk"] });
+    await withMenu(
+      async (el) => {
+        await press(el, ".dk-banner__acts button", "Turn on");
+        expect(asked.mac.notifyAsks).toBe(1);
+        await until(() => !banners(el).some((b) => b.title === "Notifications are off"));
+        expect(asked.routes.some((r) => r.screen === "settings")).toBe(false);
+      },
+      asked,
+      (el) => banners(el).some((b) => b.title === "Notifications are off"),
+    );
+
+    const denied = createFakeHost("popover", "here", { macOn: ["screen", "disk"] });
+    denied.mac.notifications = "denied";
+    await withMenu(
+      async (el) => {
+        await press(el, ".dk-banner__acts button", "Turn on");
+        await until(() => denied.layer.route?.screen === "settings");
+        expect(denied.layer.route).toEqual({ screen: "settings", section: "overview", focus: "notifications" });
+      },
+      denied,
+      (el) => banners(el).some((b) => b.title === "Notifications are off"),
+    );
+  });
+
+  test("installing updates at night turned off: Turn on writes the switch and the banner goes", async () => {
+    writePref(ESSENTIALS_NOTIFIED_PREF, null);
+    writePref(AUTO_UPDATE_PREF, false);
+    const host = createFakeHost("popover", "here", { macReady: true });
+    try {
+      await withMenu(
+        async (el) => {
+          await press(el, ".dk-banner__acts button", "Turn on");
+          expect(readPref(AUTO_UPDATE_PREF, false)).toBe(true);
+          await until(() => !banners(el).some((b) => b.title === "Updates don't install by themselves"));
+        },
+        host,
+        (el) => banners(el).some((b) => b.title === "Updates don't install by themselves"),
+      );
+    } finally {
+      writePref(AUTO_UPDATE_PREF, null);
+    }
+  });
+
+  test("This Mac settings opens the main window's settings; Open agentes.chat opens the server open now", async () => {
+    const host = createFakeHost("popover", "here", { macReady: true });
+    await withMenu(async (el) => {
+      await press(el, ".dk-tray__menu button.dk-mi", "This Mac settings");
+      expect(host.layer.route).toEqual({ screen: "settings" });
+      const opened: string[] = [];
+      host.openExternal = async (url: string) => {
+        opened.push(url);
+      };
+      await press(el, ".dk-tray__menu button.dk-mi", "Open agentes.chat");
+      expect(opened).toEqual(["http://127.0.0.1:4310"]);
+    }, host);
+  });
+
+  test("Now: one row per agent, what it does, its workspace and since when", () =>
+    withMenu(
+      (el) => {
+        const rows = [...el.querySelectorAll(".dk-now__row")].map((row) => ({
+          what: row.querySelector(".dk-now__what")?.textContent,
+          where: row.querySelector("small")?.textContent,
+        }));
+        expect(rows).toEqual([
+          { what: "Bento Escrevendo o roteiro", where: "Acme · now" },
+          { what: "Dev Rodando os testes", where: "Acme · 2 min" },
+        ]);
+        expect(el.querySelector(".dk-tray__label")?.textContent).toBe("Now");
+      },
+      createFakeHost("popover", "here", { macReady: true }),
+      (el) => el.querySelectorAll(".dk-now__row").length === 2,
+    ));
+
+  test("a computer nothing uses: the app's face, the server open now and what waits there, no Pause", () =>
+    withMenu(
+      (el) => {
+        expect(el.querySelector(".dk-trayhead b")?.textContent).toBe("agentes.chat");
+        expect(head(el)?.textContent).toBe("Nothing waiting for you");
+        const rows = [...el.querySelectorAll(".dk-tray__menu button.dk-mi")].map((b) => b.textContent);
+        expect(rows).toEqual(["Open agentes.chat⌘O", "This Mac settings⌘,", "Quit agentes.chat⌘Q"]);
+        expect(el.querySelector(".dk-now__row, .dk-tray__label")).toBeNull();
+      },
+      createFakeHost("popover", "cloud"),
+      (el) => el.querySelector(".dk-tray__menu"),
+    ));
 });
