@@ -7714,28 +7714,26 @@ html:not([data-pointer]) .run-continue:focus-visible {
   line-height: var(--msg-line);
 }
 /*
- * Short of room, its pieces wrap whole (who types beside it to a line of its own), and its words wrap rather than end
- * in "…": the row has the room a bar above the composer had not. Its globe and "Ver" stay at the line's end, outside
- * the pieces that wrap.
+ * One line, whatever it says: short of room, its step ends in "…" first (the whole step is its tip), then the names;
+ * never a second line, which came and went as the step turned and moved the conversation and the composer with it.
+ * Its globe and "Ver" stay at the line's end.
  */
 .working-tail__words {
   display: flex;
   flex: 1 1 0;
-  flex-wrap: wrap;
   align-items: center;
   gap: inherit;
   min-width: 0;
+  white-space: nowrap;
 }
-.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] .ac-typing__text {
-  flex-wrap: wrap;
-  overflow: visible;
-  white-space: normal;
-}
-.working-tail__line
-  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers, .ac-typing__also) {
-  flex-wrap: wrap;
-  overflow: visible;
-  white-space: normal;
+/* The name keeps its width whatever the step says (a share of the step's shrinking made it wrap and unwrap), up to
+   half the line, past which it ends in "…". */
+.working-tail .ac-typing__agents:has(> .ac-typing__step) > b {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* What it did so far: the newest last, older ones as "+N". Each line wraps, never cut. */
 .working-tail__trail {
