@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
 import type {
   AppNotification,
+  AuthConfig,
   ComputerDevice,
   ComputerMaintenance,
   ConnectLinkState,
@@ -17,6 +18,7 @@ import type {
 } from "../api/types";
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
+import { selfHosted } from "./about";
 import { computerNameOf } from "./computer";
 import { LEGACY_MOVE, maintenanceLine, maintenanceOf, maintenanceShort, maintenanceWhen } from "./computer-maintenance";
 import { clockAt, firstName, joinNames } from "./format";
@@ -352,6 +354,10 @@ export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use =
 /** ADR 0237: people's computers here lend their internet, so a computer that joins does too (an older server: its own computer). */
 export const lendsInternet = (list: Pick<DevicesList, "devices" | "lendsInternet"> | undefined): boolean =>
   list?.lendsInternet ?? list?.devices.some((d) => d.machineKind === "managed") === true;
+
+/** The switch's hint: a self-hosted server's agents reach a lent internet only through proxy settings (ADR 0237). */
+export const shareInternetHint = (t: TFunction, server: AuthConfig | undefined) =>
+  t(selfHosted(server) ? "devices.shareInternetHintProxy" : "devices.shareInternetHint");
 
 /** ADR 0237: whether a computer of `os` that joins lends its internet: not a Linux one where server boxes borrow. */
 export const joinLends = (
