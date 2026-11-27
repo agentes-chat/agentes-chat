@@ -72,6 +72,19 @@ test("a computer turn's steps are shares of its stage, the model's writing the r
     { stage: "cli_first_byte", ms: 700, queries: 0 },
     { stage: "model_write", ms: 1_300, queries: 0 },
   ]);
+  // A warm process its runner waited on (its turn of its own) before handing it the turn: that wait is the CLI's
+  // getting ready, never the API's first byte.
+  expect(
+    computerTurnParts(40_000, {
+      syncMs: 0,
+      timings: { warm: true, sentMs: 30_000, firstTokenMs: 31_000 },
+      toolsMs: 0,
+    }),
+  ).toEqual([
+    { stage: "cli_init", ms: 30_000, queries: 0 },
+    { stage: "cli_first_byte", ms: 1_000, queries: 0 },
+    { stage: "model_write", ms: 9_000, queries: 0 },
+  ]);
   // Never more than the stage: what the runner said past it is cut, in the order a turn reaches it.
   expect(computerTurnParts(1_000, { syncMs: 800, timings: cold, toolsMs: 0 })).toEqual([
     { stage: "pre_turn_sync", ms: 800, queries: 0 },

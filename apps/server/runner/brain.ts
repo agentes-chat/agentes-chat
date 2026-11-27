@@ -81,6 +81,7 @@ import {
   stallNote,
   stallWords,
 } from "./brain-silence";
+import { DEBUG_LOG_MIN_CLAUDE, debugLogMark, slowTurn, turnEvidence } from "./cli-debug";
 import { withGitBash } from "./cli-install";
 import { coAuthorLines, commitAuthorEnv } from "./co-authors";
 import { ownBranches } from "./command-gate";
@@ -92,6 +93,7 @@ import { descendantPids, killTree } from "./exec";
 import { cliSpawn, endedNotFound, envValue } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
+import { firstDifference } from "./lines";
 import {
   CHAT_DENIED_TOOLS,
   chatToolsBreach,
@@ -1111,6 +1113,8 @@ export interface ClaudeLaunch {
    * no Claude in Chrome (its setup adds its tools to the allowed ones).
    */
   noSlashCommands?: boolean;
+  /** `--debug-file`: the CLI's own debug log, read for a slow or failed turn (`cli-debug.ts`). */
+  debugFile?: string;
 }
 
 /**
@@ -1274,6 +1278,7 @@ export function claudeBrainArgs(l: ClaudeLaunch): string[] {
     ...(l.builtinTools ? ["--tools", l.builtinTools.join(",")] : []),
     ...(l.disallowedTools?.length ? ["--disallowedTools", l.disallowedTools.join(",")] : []),
     ...(l.noSlashCommands ? ["--disable-slash-commands", "--no-chrome"] : []),
+    ...(l.debugFile ? ["--debug-file", l.debugFile] : []),
     l.resume ? "--resume" : "--session-id",
     l.session,
   ];
@@ -1360,6 +1365,8 @@ export class ClaudeProcess {
   bridgeCalls = 0;
   /** When one of those started or ended: its silence counts from there too. */
   bridgeChangedAt = 0;
+  /** Its MCP server's first ask for our tool list since the turn began, and how long our answer took (`bridgeList`). */
+  toolsList: { at: number; ms: number } | null = null;
   /** Its shell timeout when a command sets none (`BASH_DEFAULT_TIMEOUT_MS` in its env, else the CLI's own). */
   readonly bashDefaultMs: number;
   /** Its API timeout (`API_TIMEOUT_MS` in its env), when set. */
@@ -2095,6 +2102,8 @@ export interface BrainManagerOptions {
   };
   /** The local MCP bridge (where the daemon listens and how to start `agentes-runner mcp`). */
   mcp?: { socketPath: string; command: string[] };
+  /** A process's run began: the bridge asks for that run's tool list now, while the CLI starts (`McpBridge.prefetch`). */
+  prefetchTools?: (processId: string) => void;
   /** The runner's home (its accounts among it): turns never read it. */
   runnerHome?: string;
   /**
@@ -2158,6 +2167,8 @@ interface Live {
   keptSystem: string;
   /** Its per-process files. */
   dir: string;
+  /** Its CLI's debug log (`cli-debug.ts`), where its version writes one. */
+  debugFile?: string;
   /** Delegated: its bridge at the agent's worker, as root told it last. */
   bridged?: { frame: DelegatedFrame; to: DelegatedTurn };
   cwd: string;
@@ -2553,6 +2564,12 @@ export class BrainManager {
     proc.bridgeChangedAt = Date.now();
   }
 
+  /** The MCP bridge answered a tool list of the process `id` asked at `at` in `ms`: a turn's first goes in its timings. */
+  bridgeList(id: string, at: number, ms: number) {
+    const b = this.bridge.get(id);
+    if (b?.proc && b.runId !== null) b.proc.toolsList ??= { at, ms };
+  }
+
   /**
    * Protocol 15: messages for the turn of `runId` in progress, on the agent's
    * process for that session (another agent's turn is never reached).
@@ -2807,24 +2824,40 @@ export class BrainManager {
     };
     let warm = false;
     let cold: BrainColdCause | undefined;
+    /** A warm start's text against this turn's: where they part (`warmMismatchAt`). */
+    let mismatchAt: number | undefined;
     let started: Live | undefined;
     const since = (at: number | null | undefined) => (at != null && at >= startedAt ? at - startedAt : undefined);
+    /** Where this turn's lines of its CLI's debug log begin. */
+    let debugFrom: number | undefined;
+    let sentAt: number | undefined;
     const timed = (final: WireBrainEvent, used: Live): WireBrainEvent => {
-      if (final.type !== "done") return final;
+      if (final.type !== "done" && final.type !== "error") return final;
       const s = used.proc.parser.stats;
       const measures: Omit<BrainTurnTimings, "warm"> = {
         initMs: since(started?.proc.initAt),
+        // A new process's wait for our tools, which Claude Code says it is ready only after.
+        ...(started?.proc.toolsList
+          ? { toolsListMs: since(started.proc.toolsList.at), toolsListWaitMs: started.proc.toolsList.ms }
+          : {}),
+        sentMs: since(sentAt),
         firstEventMs,
         firstRequestMs: since(s.firstRequestAt),
         firstTokenMs: since(s.firstTokenAt),
         firstAssistantMs: since(s.firstAssistantAt),
+        warmMismatchAt: mismatchAt,
         retries: s.retries,
         retryDelayMs: s.retryDelayMs,
         thinkingBlocks: s.thinkingBlocks,
         thinkingChars: s.thinkingChars,
       };
       const kept = Object.entries(measures).filter(([, v]) => v !== undefined);
-      return { ...final, timings: { warm, ...(cold ? { cold } : {}), ...Object.fromEntries(kept) } };
+      const timings: BrainTurnTimings = { warm, ...(cold ? { cold } : {}), ...Object.fromEntries(kept) };
+      const evidence =
+        used.debugFile && debugFrom !== undefined && (final.type === "error" || slowTurn(timings))
+          ? turnEvidence(used.debugFile, debugFrom, startedAt)
+          : [];
+      return { ...final, timings: { ...timings, ...(evidence.length > 0 ? { evidence } : {}) } };
     };
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
@@ -2848,6 +2881,7 @@ export class BrainManager {
       const guessed = live.guessed;
       live.guessed = undefined;
       if (guessed !== system) {
+        mismatchAt = firstDifference(guessed, system);
         this.drop(live, "warm_mismatch");
         rmSync(live.keptSystem, { force: true });
         live = undefined;
@@ -2882,6 +2916,9 @@ export class BrainManager {
     }
     if (live) {
       live.proc.parser.resetStats();
+      // A process this turn started: its log from its first line, its start included.
+      if (live.debugFile) debugFrom = started === live ? 0 : debugLogMark(live.debugFile);
+      sentAt = Date.now();
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live, "closed");
@@ -3043,6 +3080,8 @@ export class BrainManager {
     if (bridge) {
       bridge.runId = req.runId;
       bridge.runToken = typeof req.mcp?.token === "string" ? req.mcp.token : null;
+      // A delegated CLI's list goes through the agent's worker's bridge: asked here it would be a second, unused ask.
+      if (!live.bridged) this.opts.prefetchTools?.(live.id);
     }
     this.running.set(req.runId, live);
     // Usage goes to the account the turn thinks with, or to the computer's own sign-in.
@@ -3406,6 +3445,11 @@ export class BrainManager {
     const withPlugin = codeTurn && claudeAtLeast(this.opts.claudeVersion?.(), REPO_PLUGIN_MIN_CLAUDE);
     const repoPrint = withPlugin ? repoPluginPrint(cwd) : undefined;
     const plugin = withPlugin ? repoPlugin(cwd, path.join(dir, "repo"), fileMode) : null;
+    // Not delegated: that CLI runs as the sign-in's user, who can't write in this folder.
+    const debugFile =
+      !delegated && claudeAtLeast(this.opts.claudeVersion?.(), DEBUG_LOG_MIN_CLAUDE)
+        ? path.join(dir, "debug.log")
+        : undefined;
     const args = claudeBrainArgs({
       session,
       resume,
@@ -3418,6 +3462,7 @@ export class BrainManager {
       ...(addDirs.length ? { addDirs } : {}),
       ...(plugin ? { pluginDirs: [plugin] } : {}),
       ...(isBrainEffort(req.effort) ? { effort: req.effort } : {}),
+      ...(debugFile ? { debugFile } : {}),
     });
     // Claimed before it starts: a CLI that dies in its first turn still left a transcript that is this agent's.
     if (delegated && !resume) claimSession(delegated.room, session, ctx.agent.id, String(req.account));
@@ -3452,6 +3497,7 @@ export class BrainManager {
       ranKey,
       keptSystem,
       dir,
+      ...(debugFile ? { debugFile } : {}),
       ...(bridged ? { bridged } : {}),
       cwd,
       repoInFirst:

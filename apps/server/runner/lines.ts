@@ -56,3 +56,10 @@ export const lastLine = (text: string) =>
     .map((l) => l.trim())
     .filter(Boolean)
     .at(-1);
+
+/** Where two texts first differ (the shorter one's length when it is the other's start). */
+export function firstDifference(a: string, b: string) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
+}

@@ -25,6 +25,8 @@ export interface ToolContext {
   orgId: string;
   agentId: string;
   runId: string;
+  /** A source of tools that took past `SLOW_TOOL_SOURCE_MS` to list them (a connected server listing its own). */
+  slowSource?(source: string, ms: number): void;
   channelId: string;
   threadRootId: string;
   triggerMessageId: string;

@@ -7,6 +7,12 @@ import type {
   MachineTool,
   PhoneDevice,
 } from "@agenteschat/client";
+import {
+  LEGACY_MOVE,
+  maintenanceLine,
+  maintenanceOf,
+  maintenanceShort,
+} from "@agenteschat/client/lib/computer-maintenance";
 import { offlineCauseText } from "@agenteschat/client/lib/devices";
 import { clockAt, firstName, namesText } from "@agenteschat/client/lib/format";
 import { computerKind, toolWords } from "@agenteschat/client/lib/machines";
@@ -83,8 +89,10 @@ export function statusView(
         "pause",
         s.until ? t("mobile.devices.status.until", { time: when.time(s.until) }) : null,
       );
-    case "moving":
-      return view(t("machines.moving.short"), "spin", t("machines.moving.line"));
+    case "moving": {
+      const m = maintenanceOf(s) ?? LEGACY_MOVE;
+      return view(maintenanceShort(t, m), "spin", maintenanceLine(t, m));
+    }
     case "offline":
       return view(
         t("mobile.devices.status.offline"),

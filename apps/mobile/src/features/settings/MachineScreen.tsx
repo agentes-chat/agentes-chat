@@ -20,6 +20,12 @@ import {
 } from "@agenteschat/client";
 import { computerName, setupView } from "@agenteschat/client/lib/computer";
 import {
+  maintenanceDetails,
+  maintenanceLine,
+  maintenanceOf,
+  maintenanceShort,
+} from "@agenteschat/client/lib/computer-maintenance";
+import {
   mayChangeTasks,
   offlineCauseText,
   RUNNER_UPDATE_COMMAND,
@@ -226,6 +232,9 @@ function MachinePage({ machineId }: { machineId: string }) {
   // Pause from here: whoever connected it and admins, while it's online; never the workspace's own computer.
   const pausable = m.canManage && m.online && !managed;
 
+  // What we do to it (ADR 0257): away, said instead of offline; its line and details in the facts.
+  const told = maintenanceOf(m);
+  const away = !m.online && told?.away ? told : null;
   // One status word (the device's own line says it when there is one): paused outranks online.
   const status: { icon: IconName; label: string } | null = device
     ? null
@@ -233,8 +242,8 @@ function MachinePage({ machineId }: { machineId: string }) {
       ? { icon: "pause", label: paused }
       : m.online
         ? { icon: "check", label: t("machines.online") }
-        : m.moving
-          ? { icon: "swap", label: t("machines.moving.short") }
+        : away
+          ? { icon: "swap", label: maintenanceShort(t, away) }
           : { icon: "circle", label: t("machines.offline") };
   // One facts line, and why it's paused while it is.
   const facts = [
@@ -244,6 +253,9 @@ function MachinePage({ machineId }: { machineId: string }) {
           .join(" · ")
       : [t(`machines.os.${osOf(m.os)}`), seenText(t, i18n.language, m)].filter(Boolean).join(" · "),
     isPaused(m) ? (pausedByText(t, i18n.language, m.paused, meId ?? "") ?? t("machines.pausedHint")) : null,
+    told && (away || m.online)
+      ? [maintenanceLine(t, told), ...maintenanceDetails(t, i18n.language, told)].join(" ")
+      : null,
   ].filter((x): x is string => Boolean(x));
   // What most people never need, behind one "Detalhes" row, as the web's.
   const details = [

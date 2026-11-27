@@ -18,6 +18,13 @@ import { ownSignInName } from "@agenteschat/client/lib/ai-accounts";
 import { effortOf } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf, setupPortrait, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
 import {
+  LEGACY_MOVE,
+  maintenanceLine,
+  maintenanceNamed,
+  maintenanceOf,
+  maintenanceShort,
+} from "@agenteschat/client/lib/computer-maintenance";
+import {
   allowsInApp,
   commandInReason,
   computerKind,
@@ -319,9 +326,11 @@ export function WorkCard({
       {machine && !machine.online && kind !== "model" && (
         <SettingNote icon="pause">
           {machineRow?.moving
-            ? t("machines.moving.named", {
-                computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
-              })
+            ? maintenanceNamed(
+                t,
+                maintenanceOf(machineRow) ?? LEGACY_MOVE,
+                computerNameOf(t, org.name, machine.name, isPersonal(org)),
+              )
             : edition === "cloud"
               ? t("agentPage.work.offlineCloud", {
                   ...g,
@@ -605,14 +614,16 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
       ...(brain !== "model" && !has(id, brain)
         ? [t("agentPage.work.computer.alsoBrain", { brain: t(`brain.card.${brain}`) })]
         : []),
-      ...(m && !m.online ? [m.moving ? t("machines.moving.line") : t("agentPage.work.computer.alsoOffline", g)] : []),
+      ...(m && !m.online
+        ? [m.moving ? maintenanceLine(t, maintenanceOf(m) ?? LEGACY_MOVE) : t("agentPage.work.computer.alsoOffline", g)]
+        : []),
     ];
   };
   const status = (m: Machine) =>
     m.online
       ? t("agentPage.work.computer.online")
       : m.moving
-        ? t("machines.moving.short")
+        ? maintenanceShort(t, maintenanceOf(m) ?? LEGACY_MOVE)
         : t("agentPage.work.computer.offline");
   const chosen = pickable.find((m) => m.id === choice);
   const use = async () => {

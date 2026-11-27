@@ -122,6 +122,7 @@ import {
   CanceledReturn,
   ChatPrefs,
   Credential,
+  MaintenanceView,
   Model,
   ModelTier,
   OutsideOf,
@@ -589,7 +590,8 @@ const ManagedTask = z
         moving: z
           .boolean()
           .optional()
-          .openapi({ description: "Its computer is away moving to another server: it comes back by itself." }),
+          .openapi({ description: "Its computer is away for what we do to it (`maintenance`): back by itself." }),
+        maintenance: MaintenanceView.optional(),
       })
       .nullable()
       .openapi({

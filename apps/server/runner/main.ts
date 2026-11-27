@@ -98,7 +98,7 @@ import { askPark, parkDone } from "./park";
 import { agentWorkspace } from "./paths";
 import { connectVnc, type VncConnection, vncInit } from "./rfb";
 import { installService, installSystemService, removeOwnService, serviceStatus, uninstallService } from "./service";
-import { askStandby, STANDBY_DEFAULT_MINUTES, STANDBY_MAX_MINUTES, standbyAcked } from "./standby";
+import { askStandby, STANDBY_DEFAULT_MINUTES, STANDBY_MAX_MINUTES, standbyAnswer } from "./standby";
 import type { DataListener, DataSocket } from "./streams";
 import { runTaskWrapper } from "./tasks";
 import { runnerTerminalUser, systemTerminalUser, Terminals, type TerminalsOptions } from "./terminal";
@@ -843,7 +843,12 @@ async function standby(p: Parsed, on: boolean): Promise<number> {
     return 0;
   }
   for (const until = Date.now() + STANDBY_ANSWER_MS; Date.now() < until; await sleep(100)) {
-    if (!standbyAcked(home, ask.id)) continue;
+    const answer = standbyAnswer(home, ask.id);
+    if (!answer) continue;
+    if (answer.refused) {
+      console.error(answer.refused);
+      return 1;
+    }
     console.log(
       on
         ? `In standby for ${minutes} min of running time: no link to the server, everything else runs.`

@@ -40990,14 +40990,110 @@
   "machines.egress.viaHint": {
     "value": "Websites see that computer’s location. Its owner can turn it off on its page."
   },
-  "machines.moving.short": {
+  "machines.maintenance.short.moving": {
     "value": "Moving servers"
   },
-  "machines.moving.line": {
-    "value": "Moving to a new server… back in a few minutes"
+  "machines.maintenance.short.restarting": {
+    "value": "Restarting"
   },
-  "machines.moving.named": {
-    "value": "{{computer}} is moving to a new server… back in a few minutes"
+  "machines.maintenance.short.updating": {
+    "value": "Updating"
+  },
+  "machines.maintenance.short.converting": {
+    "value": "Upgrading disk"
+  },
+  "machines.maintenance.short.host_maintenance": {
+    "value": "Maintenance"
+  },
+  "machines.maintenance.short.other": {
+    "value": "Maintenance"
+  },
+  "machines.maintenance.what.moving": {
+    "value": "Moving to a new server"
+  },
+  "machines.maintenance.what.copying": {
+    "value": "Copying to a new server"
+  },
+  "machines.maintenance.what.restarting": {
+    "value": "Restarting"
+  },
+  "machines.maintenance.what.updating": {
+    "value": "Updating its software"
+  },
+  "machines.maintenance.what.converting": {
+    "value": "Upgrading its disk"
+  },
+  "machines.maintenance.what.host_maintenance": {
+    "value": "Its server is under maintenance"
+  },
+  "machines.maintenance.what.other": {
+    "value": "Being worked on"
+  },
+  "machines.maintenance.line": {
+    "value": "{{what}}… {{when}}"
+  },
+  "machines.maintenance.named": {
+    "value": "{{computer}}: {{line}}"
+  },
+  "machines.maintenance.back": {
+    "value": "back in about {{time}}"
+  },
+  "machines.maintenance.backSoon": {
+    "value": "back in a few minutes"
+  },
+  "machines.maintenance.late": {
+    "value": "taking a little longer than expected"
+  },
+  "machines.maintenance.slower": {
+    "value": "it may be slower meanwhile"
+  },
+  "machines.maintenance.slowerFor": {
+    "value": "it may be slower for about {{time}}"
+  },
+  "machines.maintenance.why.moving": {
+    "value": "We're moving it to a new server."
+  },
+  "machines.maintenance.why.copying": {
+    "value": "We're copying its files to a new server while it works."
+  },
+  "machines.maintenance.why.handover": {
+    "value": "We're handing its last changes over to the new server."
+  },
+  "machines.maintenance.why.restarting": {
+    "value": "We're restarting it."
+  },
+  "machines.maintenance.why.unresponsive": {
+    "value": "It stopped answering, so we restarted it automatically."
+  },
+  "machines.maintenance.why.updating": {
+    "value": "We're updating its software."
+  },
+  "machines.maintenance.why.converting": {
+    "value": "We're moving its disk to faster storage."
+  },
+  "machines.maintenance.why.host_maintenance": {
+    "value": "The server it runs on is getting maintenance."
+  },
+  "machines.maintenance.why.other": {
+    "value": "We're doing some work on it."
+  },
+  "machines.maintenance.since": {
+    "value": "Since {{time}}"
+  },
+  "machines.maintenance.expectedBack": {
+    "value": "Expected back around {{time}}"
+  },
+  "machines.maintenance.expectedDone": {
+    "value": "Expected done around {{time}}"
+  },
+  "machines.maintenance.meanwhile": {
+    "value": "Messages to its agents wait and go on by themselves when it's back."
+  },
+  "machines.maintenance.working": {
+    "value": "Its agents keep working meanwhile."
+  },
+  "machines.maintenance.about": {
+    "value": "What's happening"
   },
   "machines.online": {
     "value": "Online"
@@ -47630,6 +47726,9 @@
   "chat.work.step.listingRepos": {
     "value": "Listed the repositories"
   },
+  "chat.work.step.updatingCode": {
+    "value": "Updated the code"
+  },
   "chat.work.step.preparingCli": {
     "value": "Prepared {{app}}"
   },
@@ -47992,6 +48091,9 @@
   },
   "chat.activity.listingRepos": {
     "value": "listing the repositories"
+  },
+  "chat.activity.updatingCode": {
+    "value": "updating the code"
   },
   "chat.activity.preparingCli": {
     "value": "preparing {{app}} on {{computer}}"

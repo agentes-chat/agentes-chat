@@ -484,6 +484,22 @@ export function agentSystemText(system: readonly SystemBlock[]): string {
     .join("\n\n");
 }
 
+/**
+ * `agentSystemText` by its blocks, each a short hash under its heading's words (`your_folders`), else its place
+ * (`block2`): two turns whose texts differ show which block did, with no word of either. A heading that names
+ * anything (a computer, a person) holds a quote and goes by its place.
+ */
+export function agentSystemParts(system: readonly SystemBlock[]): Record<string, string> {
+  const parts: Record<string, string> = {};
+  agentBlocks(system).forEach((b, i) => {
+    const text = withoutRunLines(b.text);
+    const head = /^# ([A-Za-z][A-Za-z ]{0,38})$/.exec(headingOf(text))?.[1];
+    const name = head ? head.trim().toLowerCase().replaceAll(" ", "_") : `block${i}`;
+    parts[name in parts ? `${name}_${i}` : name] = sha256(text).slice(0, 8);
+  });
+  return parts;
+}
+
 /** A block of the agent's as its computer session's system text holds it (`agentSystemText`). */
 export const withoutRunLines = (text: string) => RUN_LINES.reduce((t, line) => t.replace(line, ""), text);
 
