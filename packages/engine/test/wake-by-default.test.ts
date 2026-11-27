@@ -84,6 +84,31 @@ describe("the judge is asked what must not wake", () => {
     for (const needs of ["plainly asks the agent itself", "a question addressed to it", "the handover"])
       expect(q.criteria.false).toContain(needs);
   });
+
+  test("a request in the middle of a long report reaches the judge as the lines that name the agent", async () => {
+    const judge = createFakeJudge(() => 0.5);
+    const body = [
+      "Walter, o plano da migração está pronto. Resumo do que achei no código:",
+      "- S3, SQS e um RDS; os nomes estão em `infra/env.ts`.",
+      "@kai, inclui no seu inventário os recursos que precisam existir na conta nova.",
+      "Você já tem a organização da conta nova criada? Escrevi para kai@example.com também.",
+    ].join("\n");
+    await mentionNeedsNothing(judge, {
+      orgId: "o",
+      body,
+      author: "@ravi",
+      targets: [
+        { agentId: "a-kai", handle: "kai", name: "Kai", role: "Infra" },
+        { agentId: "a-qa", handle: "qa", name: "QA", role: null },
+      ],
+    });
+    const q = (i: number) => judge.calls[0]?.questions[`nothing_${i}`] as Extract<JudgeQuestion, { type: "noul" }>;
+    const namedIn = (i: number) => (q(i).instructions as Record<string, unknown>).named_in;
+    // An email isn't a mention: only the line that asks Kai.
+    expect(namedIn(0)).toEqual(["@kai, inclui no seu inventário os recursos que precisam existir na conta nova."]);
+    expect(namedIn(1)).toEqual([]);
+    expect(q(0).criteria.false).toContain("one line of a longer message to people");
+  });
 });
 
 describe("an agent's @mention wakes the other agent only when it plainly asks it something", () => {
