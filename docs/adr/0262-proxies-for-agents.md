@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-27
 - Extends: ADR 0237 (agents use a person's internet), ADR 0007 (secrets sealed per org)
-- Code: db `agent_proxies` (migration 0369); adapters `proxy-dial.ts` (`parseProxyUrl`, `dialViaProxy`,
+- Code: db `agent_proxies` (migration 0370); adapters `proxy-dial.ts` (`parseProxyUrl`, `dialViaProxy`,
   `proxyExit`), protocol `CUSTOM_PROXY_PROTOCOL` (`welcome.proxy`, `proxy.set`); engine `agent-proxies.ts`
   (`setAgentProxy`, `removeAgentProxy`, `listAgentProxies`, `proxyForMachine`, `testAgentProxy`), `proxy-card.ts`
   (`offer_proxy`, `saveProxyFromCard`), `machine-hub.ts` (the welcome); server `routes/app/agent-proxies.ts`; runner
@@ -21,7 +21,8 @@ company's egress), as they can lend their own computer's internet (ADR 0237).
 1. **Where.** One proxy for the whole workspace (Settings › Computers, who configures it) and one per computer (its
    page: whoever connected it, or an admin). A computer's own wins there. HTTP, HTTPS (TLS to the proxy) or SOCKS5,
    with an optional user and password; the host must be public (the same check as an MCP server's address).
-2. **Order, shown.** A computer's proxy, else the workspace's; then a person's lent internet; then the usual way. With
+2. **Order, shown.** A computer's proxy, else the workspace's; then a person's lent internet (also when the workspace
+   uses only that internet, ADR 0237 amendment 2026-11-27 c); then the usual way. With
    a proxy set its agents' web connections go through it alone: a proxy that fails fails the connection, never another
    way out (one chosen for its address must not leak the computer's own).
 3. **Secret.** The whole address is sealed like a connection's secret (envelope encryption, `agent-proxy|org|id`);

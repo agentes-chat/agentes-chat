@@ -16026,6 +16026,7 @@
       "spillOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa menyalakan bantuannya. Kamu bisa mematikannya.",
       "shareOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengizinkan agen memakai internetnya. Kamu bisa mematikannya.",
       "shareConnectedOnly": "Hanya komputer yang dihubungkan seseorang yang bisa berbagi internet dengan agen.",
+      "shareOff": "Nyalakan dulu “Agen memakai internet komputer ini”, lalu pilih untuk hanya memakai internetnya.",
       "tasksOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengubah berapa tugas yang dijalankannya sekaligus.",
       "tasksCloud": "Cloud menentukan sendiri ruang komputer ini untuk tugas.",
       "notHome": "Agen tinggal di komputer workspace dan memakai komputer ini saat menyebut namanya."
@@ -16216,7 +16217,8 @@
       "hint": "Alamat yang dilihat situs saat agen menjelajah. Alamat ini ikut berubah saat jaringan komputer berubah.",
       "waiting": "Menyambungkan ulang internet agen. Koneksi mereka menunggu sampai kembali.",
       "via": "Agen memakai internet {{name}}",
-      "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya."
+      "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya.",
+      "offline": "Agen tidak punya internet: {{name}} sedang offline"
     },
     "maintenance": {
       "short": {
@@ -16608,8 +16610,10 @@
     "helpWorkspace": "Komputer membantu saat komputer tim penuh atau tidak ada",
     "helpWorkspaceHint": "Setiap komputer hanya membantu jika pemiliknya mengizinkan. Mati: tidak ada yang membantu, apa pun pilihan pemiliknya.",
     "shareInternet": "Agen memakai internet komputer ini",
-    "shareInternetHint": "Koneksi agen keluar lewat internet komputer ini, jadi situs dan server melihat lokasimu: situs web, git, SSH, database, dan koneksi TCP lainnya. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Pencarian nama, panggilan, dan lalu lintas UDP lainnya memakai koneksi biasa, begitu juga semuanya selama komputer ini offline.",
-    "shareInternetHintProxy": "Browser agen dan program yang mengikuti pengaturan proxy (git lewat HTTPS, curl, sebagian besar alat baris perintah) keluar lewat internet komputer ini, jadi situs melihat lokasimu. SSH, klien database, dan program lain yang mengabaikan pengaturan proxy memakai koneksi biasa, begitu juga pencarian nama dan lalu lintas UDP. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Selama komputer ini offline, semuanya memakai koneksi biasa.",
+    "shareInternetHint": "Koneksi agen keluar lewat internet komputer ini, jadi situs dan server melihat lokasimu: situs web, git, SSH, database, dan koneksi TCP lainnya. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. AI agen, pencarian nama, panggilan, dan lalu lintas UDP lainnya memakai koneksi biasa, begitu juga semuanya selama komputer ini offline.",
+    "shareInternetHintProxy": "Browser agen dan program yang mengikuti pengaturan proxy (git lewat HTTPS, curl, sebagian besar alat baris perintah) keluar lewat internet komputer ini, jadi situs melihat lokasimu. SSH, klien database, dan program lain yang mengabaikan pengaturan proxy memakai koneksi biasa, begitu juga AI agen, pencarian nama, dan lalu lintas UDP. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Selama komputer ini offline, semuanya memakai koneksi biasa.",
+    "shareInternetOnly": "Pakai hanya internet komputer ini",
+    "shareInternetOnlyHint": "Agen hanya memakai internet komputer ini, termasuk untuk AI mereka, dan tidak pernah koneksi biasa. Selama komputer ini offline, agen tidak punya internet sampai komputer ini kembali.",
     "shareInternetInUse": "Sedang dipakai",
     "shareInternetOther": "Agen sedang memakai {{name}}",
     "shareInternetPick": "Pakai yang ini",
@@ -19126,6 +19130,7 @@
       "brain_unavailable_outdated": "Program di komputerku perlu diperbarui agar {{brain}} bisa menjawab. Aku akan menjawab begitu sudah diperbarui.",
       "brain_unavailable_plan_owner": "{{brain}} akan berpikir dengan paket yang bukan milik pemilikku, jadi tidak kupakai. Hubungkan akun pemilikku di halamanku.",
       "brain_unavailable_shared_login": "Komputerku belum bisa memakai login Claude untuk semua agen sekarang. Aku akan menjawab begitu bisa. Kalau terus gagal, hubungkan Claude lagi di Akun AI.",
+      "brain_unavailable_lent_offline": "Aku tidak punya internet sekarang: {{computer}} sedang offline, dan agen di workspace ini hanya memakai internetnya. Aku akan menjawab saat komputer itu kembali, atau setelah “Pakai hanya internet komputer ini” dimatikan di halamannya.",
       "provider_unavailable": "Penyedia AI-ku sedang tidak merespons. Aku akan menjawab begitu ia kembali.",
       "provider_wait_rate_limit": "{{provider}} sedang membatasi permintaan dari kunci ini. Aku akan menjawab begitu diizinkan.",
       "provider_wait_down": "{{provider}} sedang mati atau kelebihan beban. Aku akan menjawab begitu ia kembali.",
@@ -19136,7 +19141,9 @@
       "provider_back": "AI-ku sudah kembali.",
       "confidential_removed": "Dihapus: teks rahasia disimpan selama {{days}} hari.",
       "brain_queued": "Masih dalam antrean. Saya akan menjawab begitu giliran saya tiba.",
-      "brain_interrupted": "{{brain}} berhenti sebelum selesai. Sudah dikerjakan, tidak diulang: {{tools}}.",
+      "brain_interrupted": "{{brain}} berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+      "brain_interrupted_timeout": "{{brain}} melewati batas waktunya dan berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+      "brain_interrupted_computer": "Komputer menghentikan {{brain}} sebelum selesai. Minta lagi untuk melanjutkan.",
       "plan_limit_cut": "Aku berhenti di batas paket {{plan}}. Aku akan melanjutkan dari titik terakhir {{when}}, saat batasnya direset.",
       "plan_limit_cut_unknown": "Aku berhenti di batas paket {{plan}}. Aku akan melanjutkan dari titik terakhir begitu batasnya direset.",
       "plan_limit_wait": "Paket {{plan}} mencapai batasnya. Aku akan menjawab {{when}}, saat batasnya direset. Kalau dibuka lebih awal di {{plan}}, aku akan tahu dan langsung menjawab.",

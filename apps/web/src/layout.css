@@ -5022,6 +5022,12 @@ html:not([data-pointer]) .settings__link:focus-visible {
 .settings-row:first-child {
   border-top: 0;
 }
+/* A setting under the one it depends on (`PrefRow` `nested`): its words start under that row's name (past its 28px
+   icon tile), with no hairline between the two. */
+.settings-row--nested {
+  border-top: 0;
+  padding-inline-start: calc(var(--card-pad) + 28px + var(--space-3));
+}
 /* A group's heading among a card's rows (Limites' Por cargo): on the rows' words, the hairline above it. */
 .settings-rows > .ac-grouphead {
   margin: 0;

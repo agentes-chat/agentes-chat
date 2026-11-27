@@ -297,6 +297,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "egress.proxy": "machine",
   // Root's: the proxy's user and password stay in root's memory, and root hands its agents the loopback address.
   "proxy.set": "machine",
+  // Root's: the guard's policy file and the loopback proxy are the computer's.
+  "egress.only": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -451,6 +453,8 @@ export interface HandlerContext {
   egressProxy?: (on: boolean) => Promise<boolean>;
   /** `CUSTOM_PROXY_PROTOCOL`: the proxy the workspace chose for its agents now, or none (ADR 0262). */
   chooseProxy?: (url: string | null) => Promise<boolean>;
+  /** `EGRESS_ONLY_PROTOCOL`: the workspace uses only the lending computer's internet now, or no longer. */
+  egressOnly?: (on: boolean) => Promise<boolean>;
 }
 
 export interface RequestScope {
@@ -841,6 +845,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   if (req.op === "egress.proxy") {
     if (!ctx.egressProxy) throw new RunnerError("bad_request", "This runner borrows no connection");
     return { on: await ctx.egressProxy(req.on === true) };
+  }
+  if (req.op === "egress.only") {
+    if (!ctx.egressOnly) throw new RunnerError("bad_request", "This runner borrows no connection");
+    return { on: await ctx.egressOnly(req.on === true) };
   }
   if (req.op === "secret" && ctx.systemMode?.()) {
     if (!ctx.workers?.secret) throw new RunnerError("not_allowed", "The root secret broker is unavailable");

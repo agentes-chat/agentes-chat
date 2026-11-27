@@ -290,6 +290,14 @@ export const Machine = z
         description:
           "A computer that borrows (the workspace's own, or on a self-hosted server this server's own or one marked the workspace's that doesn't lend): the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
       }),
+    egressOffline: z
+      .object({ machineId: z.string(), name: z.string(), userName: z.string().nullable() })
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "The workspace's own computer: its agents use only this person's computer's internet (ADR 0237, \"Use only this computer's internet\"), and it is offline or paused, so they have none now. Null: they have internet.",
+      }),
     moving: z.boolean().optional().openapi({
       description:
         "The workspace's own computer is away for what we do to it (`maintenance` says what; a move for apps from before it): it comes back by itself. A change comes as `machine.updated`.",

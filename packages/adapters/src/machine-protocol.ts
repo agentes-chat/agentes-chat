@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 97;
+export const MACHINE_PROTOCOL_VERSION = 98;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -905,10 +905,13 @@ export const EGRESS_PROXY_PROTOCOL = 95;
  * borrowing computer's loopback proxy alike, which then runs on any computer. Its user and password stay in the
  * runner's memory; agents' processes are told the loopback address only.
  */
-export const CUSTOM_PROXY_PROTOCOL = 97;
+export const CUSTOM_PROXY_PROTOCOL = 98;
 /**
- * Hosts a borrowing computer's agents always reach their own way (`NO_PROXY`): the AI CLIs' model and sign-in
- * services, so a key or a sign-in never depends on someone's home connection.
+ * Hosts a borrowing computer's agents reach their own way, never through a lent connection: the AI CLIs' and model
+ * providers' services. A lent hop adds latency and gains nothing there, and a key or a sign-in never depends on
+ * someone's home connection. A self-hosted borrower puts them in `NO_PROXY`; the Cloud's guard reads them in
+ * `egress-relay.json` and matches a TLS connection's server name. "Use only this computer's internet"
+ * (`EGRESS_ONLY_PROTOCOL`) sends them through it too. A leading dot: the name and every name under it.
  */
 export const EGRESS_DIRECT_HOSTS = [
   ".anthropic.com",
@@ -918,8 +921,35 @@ export const EGRESS_DIRECT_HOSTS = [
   ".chatgpt.com",
   ".googleapis.com",
   ".cursor.sh",
+  ".cursor.com",
   ".x.ai",
+  ".openrouter.ai",
+  ".deepseek.com",
+  ".mistral.ai",
+  ".groq.com",
+  ".together.xyz",
+  ".fireworks.ai",
+  ".perplexity.ai",
+  ".cohere.com",
+  ".deepinfra.com",
+  ".z.ai",
+  ".moonshot.ai",
+  ".kimi.com",
+  ".minimax.io",
+  ".voyageai.com",
+  ".devin.ai",
+  ".opencode.ai",
+  ".commandcode.ai",
+  ".githubcopilot.com",
 ] as const;
+/**
+ * From this protocol on (ADR 0237, amendment 2026-11-27 c): a borrowing computer learns whether its workspace uses
+ * only a lending computer's internet (`welcome.egressOnly`, `egress.only` when that changes). Then nothing it sends
+ * goes its usual way: `EGRESS_DIRECT_HOSTS` go through the lending computer too, and a lent connection that fails
+ * fails (the server answers `notFound` while the computer lent "only" is offline). The server sends `egress.only` to
+ * no older runner.
+ */
+export const EGRESS_ONLY_PROTOCOL = 97;
 /** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
 export const AGENT_DESKTOP_VERSION = "1.3.1";
 /** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
@@ -3633,6 +3663,7 @@ export type MachineRequest = (
   | { op: "egress.proxy"; on: boolean }
   /** `CUSTOM_PROXY_PROTOCOL`: the proxy its agents use now (`url`, user and password included), or none. */
   | { op: "proxy.set"; url: string | null }
+  | { op: "egress.only"; on: boolean }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -3724,6 +3755,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "egress.dial",
   "egress.proxy",
   "proxy.set",
+  "egress.only",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -3909,6 +3941,7 @@ export interface MachineReplies {
   "egress.dial": { connected: true };
   "egress.proxy": { on: boolean };
   "proxy.set": { on: boolean };
+  "egress.only": { on: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -4014,6 +4047,8 @@ export type ServerFrame =
       egressProxy?: boolean;
       /** `CUSTOM_PROXY_PROTOCOL`: the proxy its agents use (ADR 0262), user and password included. */
       proxy?: string;
+      /** `EGRESS_ONLY_PROTOCOL`, a borrowing computer: its workspace uses only the lending computer's internet. */
+      egressOnly?: boolean;
       /**
        * The server runs each `mcp.call` once per `callId` and answers a copy with the first answer: a call cut by
        * a reconnect may be sent again. Absent (older servers): sent again it would run twice.

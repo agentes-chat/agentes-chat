@@ -556,6 +556,8 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "egress.proxy",
     // The proxy a workspace chose (ADR 0262): its user and password stay in root's memory.
     "proxy.set",
+    // Whether the workspace uses only lent internet: the guard's file and the loopback proxy are root's.
+    "egress.only",
   ]);
   const install = { op: "cli.install", action: "start", tool: "claude" } as unknown as MachineRequest;
   const installer = { ...ctx, cliInstall: () => ({ install: { tool: "claude" as const, state: "running" as const } }) };

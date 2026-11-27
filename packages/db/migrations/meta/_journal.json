@@ -2553,8 +2553,15 @@
     {
       "idx": 366,
       "version": "7",
-      "when": 1795818032837,
-      "tag": "0369_agent_proxies",
+      "when": 1795819522705,
+      "tag": "0369_egress_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 367,
+      "version": "7",
+      "when": 1795822555988,
+      "tag": "0370_agent_proxies",
       "breakpoints": true
     }
   ]

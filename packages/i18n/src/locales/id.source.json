@@ -40630,6 +40630,9 @@
   "errors.device.shareConnectedOnly": {
     "value": "Only a computer someone connected can share its internet with the agents."
   },
+  "errors.device.shareOff": {
+    "value": "Turn on “Agents use this computer's internet” first, then choose to use only its internet."
+  },
   "errors.device.tasksOwnerOnly": {
     "value": "Only the person who connected this computer can change how many tasks it runs at once."
   },
@@ -41103,6 +41106,9 @@
   },
   "machines.egress.viaHint": {
     "value": "Websites see that computer’s location. Its owner can turn it off on its page."
+  },
+  "machines.egress.offline": {
+    "value": "Agents have no internet: {{name}} is offline"
   },
   "machines.maintenance.short.moving": {
     "value": "Moving servers"
@@ -42103,10 +42109,16 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline."
+    "value": "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. The agents' AI, name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline."
   },
   "devices.shareInternetHintProxy": {
-    "value": "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
+    "value": "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do the agents' AI, name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
+  },
+  "devices.shareInternetOnly": {
+    "value": "Use only this computer's internet"
+  },
+  "devices.shareInternetOnlyHint": {
+    "value": "Agents use only this computer's internet, their AI included, and never the usual connection. While it's offline, they have no internet until it's back."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -48617,6 +48629,9 @@
   "chat.body.brain_unavailable_shared_login": {
     "value": "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts."
   },
+  "chat.body.brain_unavailable_lent_offline": {
+    "value": "I have no internet right now: {{computer}} is offline, and this workspace's agents use only its internet. I'll answer when it's back, or once “Use only this computer's internet” is off on its page."
+  },
   "chat.body.provider_unavailable": {
     "value": "My AI provider isn't answering right now. I'll answer as soon as it's back."
   },
@@ -48648,7 +48663,13 @@
     "value": "Still in line. I'll answer as soon as my turn comes."
   },
   "chat.body.brain_interrupted": {
-    "value": "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}."
+    "value": "{{brain}} stopped before finishing. Ask again to continue."
+  },
+  "chat.body.brain_interrupted_timeout": {
+    "value": "{{brain}} ran past its time limit and stopped before finishing. Ask again to continue."
+  },
+  "chat.body.brain_interrupted_computer": {
+    "value": "The computer stopped {{brain}} before it finished. Ask again to continue."
   },
   "chat.body.plan_limit_cut": {
     "value": "I stopped at the {{plan}} plan's limit. I'll pick up where I left off {{when}}, when it resets."

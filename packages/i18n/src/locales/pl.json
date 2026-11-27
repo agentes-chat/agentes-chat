@@ -17711,6 +17711,7 @@
       "spillOwnerOnly": "Tylko osoba, która połączyła ten komputer, może włączyć jego pomoc. Ty możesz ją wyłączyć.",
       "shareOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może pozwolić agentom korzystać z jego internetu. Ty możesz to wyłączyć.",
       "shareConnectedOnly": "Internetem z agentami może dzielić się tylko komputer, który ktoś podłączył.",
+      "shareOff": "Najpierw włącz „Agenci korzystają z internetu tego komputera”, a potem wybierz korzystanie tylko z jego internetu.",
       "tasksOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może zmienić, ile zadań wykonuje naraz.",
       "tasksCloud": "Cloud sam ustala, ile miejsca na zadania ma ten komputer.",
       "notHome": "Agenci działają na komputerze workspace i używają tego, gdy podadzą jego nazwę."
@@ -17904,7 +17905,8 @@
       "hint": "Adres, który widzą strony, gdy agenci przeglądają sieć. Zmienia się razem z siecią komputera.",
       "waiting": "Ponownie łączymy agentów z internetem. Ich połączenia czekają, aż wróci.",
       "via": "Agenci korzystają z internetu komputera {{name}}",
-      "viaHint": "Strony widzą lokalizację tego komputera. Osoba, która go podłączyła, może to wyłączyć na jego stronie."
+      "viaHint": "Strony widzą lokalizację tego komputera. Osoba, która go podłączyła, może to wyłączyć na jego stronie.",
+      "offline": "Agenci nie mają internetu: {{name}} jest offline"
     },
     "maintenance": {
       "short": {
@@ -18311,8 +18313,10 @@
     "helpWorkspace": "Komputery pomagają, gdy komputer zespołu jest pełny lub niedostępny",
     "helpWorkspaceHint": "Każdy komputer pomaga tylko wtedy, gdy pozwoli na to jego właściciel. Wyłączone: żaden nie pomaga, niezależnie od wyboru właściciela.",
     "shareInternet": "Agenci korzystają z internetu tego komputera",
-    "shareInternetHint": "Połączenia agentów wychodzą przez internet tego komputera, więc strony i serwery widzą Twoją lokalizację: strony internetowe, git, SSH, bazy danych i inne połączenia TCP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Wyszukiwanie nazw, rozmowy i pozostały ruch UDP korzystają ze zwykłego połączenia, podobnie jak wszystko, gdy ten komputer jest offline.",
-    "shareInternetHintProxy": "Przeglądarka agentów i programy, które stosują ustawienia proxy (git przez HTTPS, curl, większość narzędzi wiersza poleceń), wychodzą przez internet tego komputera, więc strony widzą Twoją lokalizację. SSH, klienty baz danych i inne programy, które ignorują ustawienia proxy, korzystają ze zwykłego połączenia, podobnie jak wyszukiwanie nazw i ruch UDP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Gdy ten komputer jest offline, wszystko korzysta ze zwykłego połączenia.",
+    "shareInternetHint": "Połączenia agentów wychodzą przez internet tego komputera, więc strony i serwery widzą Twoją lokalizację: strony internetowe, git, SSH, bazy danych i inne połączenia TCP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. AI agentów, wyszukiwanie nazw, rozmowy i pozostały ruch UDP korzystają ze zwykłego połączenia, podobnie jak wszystko, gdy ten komputer jest offline.",
+    "shareInternetHintProxy": "Przeglądarka agentów i programy, które stosują ustawienia proxy (git przez HTTPS, curl, większość narzędzi wiersza poleceń), wychodzą przez internet tego komputera, więc strony widzą Twoją lokalizację. SSH, klienty baz danych i inne programy, które ignorują ustawienia proxy, korzystają ze zwykłego połączenia, podobnie jak AI agentów, wyszukiwanie nazw i ruch UDP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Gdy ten komputer jest offline, wszystko korzysta ze zwykłego połączenia.",
+    "shareInternetOnly": "Używaj tylko internetu tego komputera",
+    "shareInternetOnlyHint": "Agenci korzystają tylko z internetu tego komputera, także dla swojej AI, i nigdy ze zwykłego połączenia. Gdy jest offline, nie mają internetu, dopóki nie wróci.",
     "shareInternetInUse": "Teraz w użyciu",
     "shareInternetOther": "Agenci korzystają teraz z komputera {{name}}",
     "shareInternetPick": "Użyj tego",
@@ -20976,6 +20980,7 @@
       "brain_unavailable_outdated": "Program na moim komputerze wymaga aktualizacji, zanim {{brain}} będzie mógł odpowiedzieć. Odpowiem, gdy tylko zostanie zaktualizowany.",
       "brain_unavailable_plan_owner": "{{brain}} myślałby z planem, który nie należy do mojego właściciela, więc go nie używam. Podłącz konto mojego właściciela na mojej stronie.",
       "brain_unavailable_shared_login": "Mój komputer nie może teraz użyć logowania Claude dla wszystkich agentów. Odpowiem, gdy tylko się da. Jeśli to dalej nie działa, połącz Claude ponownie w Kontach AI.",
+      "brain_unavailable_lent_offline": "Nie mam teraz internetu: {{computer}} jest offline, a agenci tego workspace’u korzystają tylko z jego internetu. Odpowiem, gdy wróci, albo gdy „Używaj tylko internetu tego komputera” zostanie wyłączone na jego stronie.",
       "provider_unavailable": "Mój dostawca AI teraz nie odpowiada. Odpowiem, gdy tylko wróci.",
       "provider_wait_rate_limit": "{{provider}} ogranicza teraz żądania z tego klucza. Odpowiem, gdy tylko będzie to możliwe.",
       "provider_wait_down": "{{provider}} teraz nie działa lub jest przeciążony. Odpowiem, gdy tylko wróci.",
@@ -20986,7 +20991,9 @@
       "provider_back": "Moja AI wróciła.",
       "confidential_removed": "Usunięto: poufny tekst jest przechowywany przez {{days}} dni.",
       "brain_queued": "Nadal czekam w kolejce. Odpowiem, gdy tylko przyjdzie moja kolej.",
-      "brain_interrupted": "{{brain}} przerwał przed zakończeniem. Już zrobione, bez powtarzania: {{tools}}.",
+      "brain_interrupted": "{{brain}} przerwał przed zakończeniem. Poproś ponownie, żeby kontynuować.",
+      "brain_interrupted_timeout": "{{brain}} przekroczył limit czasu i przerwał przed zakończeniem. Poproś ponownie, żeby kontynuować.",
+      "brain_interrupted_computer": "Komputer zatrzymał {{brain}} przed zakończeniem. Poproś ponownie, żeby kontynuować.",
       "plan_limit_cut": "Praca zatrzymana na limicie planu {{plan}}. Wrócę do niej w tym samym miejscu {{when}}, gdy limit się odnowi.",
       "plan_limit_cut_unknown": "Praca zatrzymana na limicie planu {{plan}}. Wrócę do niej w tym samym miejscu, gdy tylko limit się odnowi.",
       "plan_limit_wait": "Plan {{plan}} osiągnął limit. Odpowiem {{when}}, gdy się odnowi. Jeśli zostanie odblokowany wcześniej w {{plan}}, zauważę to i od razu odpowiem.",

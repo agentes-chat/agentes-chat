@@ -21,6 +21,7 @@ import {
 import { and, type Database, type Executor, eq, gt, inArray, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
 import { AUDIENCE_MODES, type AudienceMode } from "./audience";
 import { recordAudit } from "./audit";
+import { tellBorrowersOnly } from "./egress-share";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import type { MachineCaller, MachineHub } from "./machine-hub";
@@ -144,9 +145,10 @@ export interface ComputerDevice {
   };
   /**
    * ADR 0237, a person's computer in a workspace that has its own computer: whether its owner lends it its internet
-   * (`on`), and whether the workspace's computer goes out through it now (`inUse`). Null: nothing to lend to.
+   * (`on`), and whether the workspace's computer goes out through it now (`inUse`). `only` (amendment 2026-11-27 c):
+   * the workspace's agents use only its internet, AI calls included. Null: nothing to lend to.
    */
-  shareInternet: { on: boolean; inUse: boolean } | null;
+  shareInternet: { on: boolean; inUse: boolean; only: boolean } | null;
   /** What we do to the workspace's own computer now (`shownMaintenance`), away or working slower; null: nothing. */
   maintenance: ShownMaintenance | null;
   /** Each agent works as its own OS user there (a server install). */
@@ -506,7 +508,9 @@ export async function listDevices(
       belongsToWorkspace: m.belongsToWorkspace,
       spill: { own: m.spillOwn, first: m.spillFirst },
       shareInternet:
-        lendsInternet && m.kind === "connected" ? { on: m.egressShare, inUse: m.egressShare && lentLately(m) } : null,
+        lendsInternet && m.kind === "connected"
+          ? { on: m.egressShare, inUse: m.egressShare && lentLately(m), only: m.egressShare && m.egressOnly }
+          : null,
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
@@ -671,6 +675,11 @@ export interface ComputerDeviceInput {
   pushHarder?: boolean;
   /** ADR 0237: lend its internet to the workspace's own computer; on again (or on once more) picks it first. */
   shareInternet?: boolean;
+  /**
+   * ADR 0237 amendment 2026-11-27 c, with `shareInternet` on: the workspace's agents use only this computer's
+   * internet, never their usual way. Its owner's to turn on; off with `shareInternet` off.
+   */
+  internetOnly?: boolean;
 }
 
 /**
@@ -729,6 +738,19 @@ export async function updateComputerDevice(
     }
     set.egressShare = input.shareInternet;
     if (input.shareInternet) set.egressShareAt = new Date();
+    else set.egressOnly = false;
+  }
+  if (input.internetOnly !== undefined) {
+    if (machine.kind !== "connected") {
+      throw new ForbiddenError("Only a person's own computer lends its internet", "device.share_connected_only");
+    }
+    if (input.internetOnly && !owner) {
+      throw new ForbiddenError("Only the device's owner can lend its internet", "device.share_owner_only");
+    }
+    if (input.internetOnly && !(set.egressShare ?? machine.egressShare)) {
+      throw new ValidationError("Turn on lending this computer's internet first", "device.share_off");
+    }
+    if (input.shareInternet !== false) set.egressOnly = input.internetOnly;
   }
   if (input.maxTasks !== undefined || input.pushHarder !== undefined) {
     if (!owner && machine.pairedByUserId !== null) {
@@ -796,6 +818,10 @@ export async function updateComputerDevice(
   if (borrows !== borrowsInternet(machine) && machine.protocol >= EGRESS_PROXY_PROTOCOL) {
     await deps.hub?.call(machine.id, { op: "egress.proxy", on: borrows }, { timeoutMs: 5_000 }).catch(() => undefined);
   }
+  // The workspace's borrowing computers hear at once whether nothing of theirs goes the usual way now, without the
+  // answer waiting for them (one that misses it hears it in its next `welcome`).
+  if ((set.egressOnly ?? machine.egressOnly) !== machine.egressOnly && deps.hub)
+    void tellBorrowersOnly({ db: deps.db, hub: deps.hub }, orgId).catch(() => undefined);
   if (input.shareInternet === false)
     await resolveNotifications(deps, orgId, { groupKey: internetSharedGroup(machine.id) });
   return deviceOf(deps.db, actorId, orgId, machine.id);

@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import type { EventEmitter } from "node:events";
-import { chmodSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, isIP, isIPv6, type Server, type Socket, connect as tcpConnect } from "node:net";
 import path from "node:path";
 import {
@@ -23,6 +23,21 @@ import type { DataSocket } from "./streams";
  * person lent, and goes out through it.
  */
 export const EGRESS_RELAY_SOCKET = "egress-relay.sock";
+/**
+ * Next to the socket, what the guard reads before it asks (ADR 0237, amendment 2026-11-27 c): `direct`, the names a
+ * TLS connection keeps its usual way (`EGRESS_DIRECT_HOSTS`), and `only`: the workspace uses only the lending
+ * computer's internet, so nothing is kept direct and a lent connection that fails is never sent the usual way.
+ */
+export const EGRESS_RELAY_POLICY = "egress-relay.json";
+
+/** Writes `EGRESS_RELAY_POLICY` in `home` whole (the guard may read it at any moment). */
+export function writeEgressPolicy(home: string, only: boolean) {
+  const file = path.join(home, EGRESS_RELAY_POLICY);
+  writeFileSync(`${file}.tmp`, `${JSON.stringify({ only, direct: only ? [] : EGRESS_DIRECT_HOSTS })}\n`, {
+    mode: 0o644,
+  });
+  renameSync(`${file}.tmp`, file);
+}
 
 /** SOCKS5 replies (RFC 1928 §6) the guard tells apart: carried, nothing lent now, not carried here, destination failed. */
 export const SOCKS_REPLY = {
@@ -191,7 +206,9 @@ async function directDial(
  * a connection to any `isEgressTarget` asks the server for a lending computer (`dial`); port 25, nothing lent now, a
  * refusal or the server away, goes out this computer's own way, to public addresses only. After nothing lent or a
  * "doesn't borrow", it stays direct for `EGRESS_QUIET_MS` without asking. Only `notFound` on a web port (the lending
- * computer found no such site) fails the connection.
+ * computer found no such site) fails the connection. While `only()` (amendment 2026-11-27 c), nothing goes direct but
+ * after the server's "nothing lent" (it says that only once no computer is lent "only"): every other failure, and
+ * `notFound` on any port (the one lent "only" is offline), fails the connection.
  *
  * ponytail: any local process may use the port (a single-user computer has no guard): it only reaches public
  * addresses, through this workspace's own lending computer. Per-process auth if that ever matters.
@@ -200,6 +217,7 @@ export async function startEgressProxy(o: {
   home: string;
   dial: (streamId: string, target: Target) => Promise<DataSocket>;
   lent: () => boolean;
+  only?: () => boolean;
   /** The proxy the workspace chose for its agents now (ADR 0262): before lending and the usual way, never after. */
   upstream?: () => ProxyAddress | null;
   now?: () => number;
@@ -213,16 +231,20 @@ export async function startEgressProxy(o: {
   const open: Open = async (target) => {
     const chosen = o.upstream?.();
     if (chosen) return viaChosenProxy(chosen, target);
-    if (o.lent() && isEgressTarget(target) && now() >= quietUntil) {
+    const lent = o.lent();
+    const only = lent && (o.only?.() ?? false);
+    if (only && !isEgressTarget(target)) throw { closeCode: STREAM_CLOSE.refused };
+    if (lent && isEgressTarget(target) && (only || now() >= quietUntil)) {
       try {
         return { data: await o.dial(randomBytes(32).toString("base64url"), target) };
       } catch (error) {
         const code = (error as { closeCode?: number } | null)?.closeCode;
         if (code === STREAM_CLOSE.notFound) {
           // Another port the lending computer couldn't reach (its network may block SSH or a database's port) went
-          // this computer's own way before every port was lent, and still does.
-          if (EGRESS_SHARE.webPorts.includes(target.port)) throw error;
-        } else if (!notCarried(code)) quietUntil = now() + EGRESS_QUIET_MS;
+          // this computer's own way before every port was lent, and still does, but where it is lent "only".
+          if (only || EGRESS_SHARE.webPorts.includes(target.port)) throw error;
+        } else if (only && code !== STREAM_CLOSE.unreachable) throw error;
+        else if (!only && !notCarried(code)) quietUntil = now() + EGRESS_QUIET_MS;
       }
     }
     return directDial(target, resolve, o.connect ?? ((host, port) => tcpConnect({ host, port })));
@@ -243,11 +265,15 @@ export async function startEgressProxy(o: {
   return { port, close: () => server.close() };
 }
 
-/** What a borrowing computer's agents are handed now (`setEgressProxy`); null: they go their usual way. */
-let lentProxy: { port: number; direct: string[] } | null = null;
+/**
+ * What a borrowing computer's agents are handed now (`setEgressProxy`); null: they go their usual way. `only`: the
+ * AI CLIs' services go through the proxy too.
+ */
+type LentProxy = { port: number; direct: string[]; only?: boolean };
+let lentProxy: LentProxy | null = null;
 
 /** The daemon (or, in system mode, each agent's worker from `worker.state`) says whether agents use the proxy. */
-export function setEgressProxy(next: { port: number; direct: string[] } | null) {
+export function setEgressProxy(next: LentProxy | null) {
   lentProxy = next;
 }
 
@@ -263,8 +289,11 @@ export const hasOwnProxy = (env: NodeJS.ProcessEnv = process.env, network?: Netw
   Boolean(network?.networkLauncher || network?.networkMark) ||
   ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"].some((k) => env[k]);
 
-/** Never through the proxy: this computer, the private and local ranges, the AI CLIs' services, and `direct`. */
-const noProxyList = (direct: readonly string[]) => [
+/**
+ * Never through the proxy: this computer, the private and local ranges, the AI CLIs' services (but where the
+ * workspace uses only the lending computer's internet), and `direct`.
+ */
+const noProxyList = (direct: readonly string[], only = false) => [
   "localhost",
   "127.0.0.0/8",
   "::1",
@@ -277,14 +306,14 @@ const noProxyList = (direct: readonly string[]) => [
   "169.254.0.0/16",
   "fc00::/7",
   "fe80::/10",
-  ...EGRESS_DIRECT_HOSTS,
+  ...(only ? [] : EGRESS_DIRECT_HOSTS),
   ...direct,
 ];
 
 /**
  * The proxy settings an agent's processes get while this computer borrows (`{}` otherwise): HTTPS and SOCKS (names
  * resolved by the lending computer), Node's own fetch included, and `NO_PROXY`. `extraDirect`: more hosts that keep
- * their own way (a Claude Code turn's endpoint).
+ * their own way (a Claude Code turn's endpoint), but where the workspace uses only the lending computer's internet.
  *
  * ponytail: no `HTTP_PROXY`, so plain http goes direct (curl still takes `ALL_PROXY`); the proxy forwards CONNECT
  * only. Add an absolute-URI forwarder if plain-http sites ever need the lender.
@@ -292,7 +321,8 @@ const noProxyList = (direct: readonly string[]) => [
 export function egressProxyEnv(extraDirect: readonly string[] = []): Record<string, string> {
   if (!lentProxy) return {};
   const at = `127.0.0.1:${lentProxy.port}`;
-  const none = noProxyList([...lentProxy.direct, ...extraDirect]).join(",");
+  const { only = false } = lentProxy;
+  const none = noProxyList([...lentProxy.direct, ...(only ? [] : extraDirect)], only).join(",");
   return {
     HTTPS_PROXY: `http://${at}`,
     https_proxy: `http://${at}`,
@@ -310,7 +340,9 @@ export function egressProxyEnv(extraDirect: readonly string[] = []): Record<stri
  */
 export function egressProxyChromeArgs(): string[] {
   if (!lentProxy) return [];
-  const bypass = noProxyList(lentProxy.direct).map((h) => (h.startsWith(".") ? `*${h}` : h === "::1" ? "[::1]" : h));
+  const bypass = noProxyList(lentProxy.direct, lentProxy.only).map((h) =>
+    h.startsWith(".") ? `*${h}` : h === "::1" ? "[::1]" : h,
+  );
   return [
     `--proxy-server=socks5://127.0.0.1:${lentProxy.port}`,
     `--proxy-bypass-list=${["<local>", ...bypass].join(";")}`,

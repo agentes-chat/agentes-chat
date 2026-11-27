@@ -1378,6 +1378,28 @@ test("a computer brain that fails after calls posts what it said after its last 
   expect(last?.body).not.toContain("Let me check whether Go is");
 });
 
+test("a computer brain cut off calls after its last words posts none of them: later calls already did what they said", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
+  await computerAgent(f);
+  const { brain } = scriptedComputerBrain(async function* () {
+    yield { type: "text_delta", text: "The clone never started, so I'll start it again." };
+    yield { type: "tool_call", id: "b-1", name: "Bash", input: { command: "git clone" }, executed: { content: "ok" } };
+    yield { type: "tool_call", id: "b-2", name: "Bash", input: { command: "sleep 600" }, executed: { content: "ok" } };
+    yield { type: "error", code: "executor_crashed", message: "Claude Code exited", retryable: true };
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev clone the repo");
+  await drainOutbox(f.db, handlers);
+
+  const last = (await timeline(f)).at(-1);
+  expect(last?.meta.brainInterrupted).toMatchObject({ text: "" });
+  expect(last?.body).not.toContain("start it again");
+});
+
 test("sent on after its turn, a computer brain that opens again with the same line and asks posts that line once", async () => {
   const opening = 'Vou procurar a integração do serviço de cobrança e consultar os gastos de "acme".';
   f = await setup({ askUser: true, judge: (kind) => (kind === "follow_through" ? "continue" : undefined) });
