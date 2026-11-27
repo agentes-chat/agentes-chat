@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createLocalSpeech, type LocalSpeechDeps, SPEECH_MODELS } from "../src";
@@ -110,9 +110,26 @@ test("set up here: the helper and the models come from our release, checked, the
   expect(await settled(after)).toEqual({ state: "ready" });
   expect(again.asked.filter((a) => a.name !== "manifest.json")).toEqual([]);
 
+  writeFileSync(join(dir, "kept.txt"), "not ours");
   await after.remove();
-  expect(existsSync(dir)).toBe(false);
+  // Only its own files: the folder itself may be a volume's mount point.
+  expect(readdirSync(dir)).toEqual(["kept.txt"]);
   expect(after.status()).toEqual({ state: "off" });
+});
+
+test("a download stopped after its last byte, before its check, is checked as it is (the server answers 416)", async () => {
+  const dir = folder();
+  mkdirSync(join(dir, "models/parakeet"), { recursive: true });
+  writeFileSync(join(dir, "models/parakeet/encoder.int8.onnx.part"), MODEL);
+  const { fetch } = release((name, init) =>
+    name === "parakeet-encoder.int8.onnx" && (init?.headers as Record<string, string> | undefined)?.range
+      ? new Response(null, { status: 416 })
+      : null,
+  );
+  const local = createLocalSpeech({ dir, fetch, spawn: helper("listens").spawn, models, machine: () => BIG });
+  await local.install();
+  expect(await settled(local)).toEqual({ state: "ready" });
+  expect(readFileSync(join(dir, "models/parakeet/encoder.int8.onnx"))).toEqual(Buffer.from(MODEL));
 });
 
 test("a stopped download goes on from the same byte", async () => {

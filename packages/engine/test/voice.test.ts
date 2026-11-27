@@ -674,6 +674,10 @@ describe("what agents know of voice here", () => {
     expect(none).toContain("nothing on this server turns voice into text yet");
     expect(none).toContain("Walter (who runs this server) turns it on in Settings › Voice");
     expect(voiceStatusText({ state: "failed", owner: null })).toContain("Whoever runs this server");
-    expect(voiceStatusText({ state: "installing", owner: null })).toContain("getting ready");
+    const installing = voiceStatusText({ state: "installing", owner: null });
+    expect(installing).toContain("getting ready");
+    // Recorded meanwhile, a note goes as audio (`VOICE_NO_ENGINE_BODY`): its words never come later.
+    expect(installing).toContain("can't hear it");
+    expect(installing).not.toContain("with their words");
   });
 });

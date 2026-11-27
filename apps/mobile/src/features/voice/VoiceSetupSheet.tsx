@@ -29,8 +29,9 @@ export function VoiceSetupSheet({
   const install = useInstallSpeechLocal();
   const canInstall = local?.fit === "fits" && local.status.state === "off";
   const name = owner?.name ?? null;
+  // With the download right here, "choose it on a computer" would contradict the button under it.
   const text = isOwner
-    ? t("voice.setup.ownerPhone")
+    ? t(canInstall ? "voice.setup.ownerText" : "voice.setup.ownerPhone")
     : name
       ? t("voice.setup.memberText", { name })
       : t("voice.setup.memberTextNoName");
