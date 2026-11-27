@@ -1079,3 +1079,137 @@ test("a warm start that started nothing gives its room back to the next turn", a
   expect(ran).toEqual(["s1", "s2"]);
   runner.close();
 });
+
+describe("a brain turn outlives a dropped link (HELD_TURN_PROTOCOL)", () => {
+  const turnRequest = (id: string, runId: string, reattach = false) =>
+    ({
+      type: "request",
+      id,
+      op: "brain.turn",
+      runId,
+      kind: "claude_code",
+      session: { id: "s1", resume: true },
+      cwd: "",
+      system: "",
+      prompt: "hi",
+      mcp: { token: "t" },
+      ...(reattach ? { reattach: true } : {}),
+    }) as unknown as ServerFrame;
+
+  /** A turn that says "a" at once, whatever it is handed to `say`, and ends on `end()`. */
+  function turnHandler() {
+    const t = { starts: 0, aborted: 0, say: (_text: string) => {}, end: () => {} };
+    const handler: ConnectionOptions["handler"] = (_ctx, req, scope) => {
+      if (req.op !== "brain.turn") return Promise.resolve({});
+      t.starts++;
+      const say = (text: string) =>
+        scope.emit?.({ type: "brain.event", runId: req.runId, event: { type: "text_delta", text } });
+      say("a");
+      t.say = say;
+      return new Promise((resolve, reject) => {
+        t.end = () => resolve({ runId: req.runId, final: { type: "done", text: "all of it" } });
+        scope.signal.addEventListener("abort", () => {
+          t.aborted++;
+          reject(new RunnerError("internal", "Canceled"));
+        });
+      });
+    };
+    return { t, handler };
+  }
+  const deltas = (s: FakeSocket) =>
+    s.sent.filter((f) => f.type === "brain.event").map((f) => (f.event as { text: string }).text);
+
+  test("before: the drop aborted the turn and the server's next ask started it again; now the next link takes it over", async () => {
+    const { t, handler } = turnHandler();
+    const { sockets, connection } = setup({ handler });
+    const done = connection.run();
+    await waitFor(() => sockets.length === 1);
+    const first = sock(sockets, 0);
+    first.handlers.onOpen();
+    first.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    first.frame(turnRequest("t1", "run1"));
+    await waitFor(() => t.starts === 1);
+    expect(deltas(first)).toEqual(["a"]);
+
+    // The link drops (a network blip, our deploy, the replica the socket was on): the turn runs on.
+    first.handlers.onClose(1006, "");
+    t.say("while away");
+    expect(t.aborted).toBe(0);
+    expect(connection.turns).toBe(1);
+
+    await waitFor(() => sockets.length === 2, 4000);
+    const second = sock(sockets, 1);
+    second.handlers.onOpen();
+    second.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    second.frame(turnRequest("t2", "run1", true));
+    await waitFor(() => deltas(second).length === 1);
+    expect(deltas(second)).toEqual(["while away"]);
+    t.say("after");
+    t.end();
+    await waitFor(() => second.sent.some((f) => f.type === "result"));
+    expect(second.sent.find((f) => f.type === "result")).toEqual({
+      type: "result",
+      id: "t2",
+      ok: true,
+      data: { runId: "run1", final: { type: "done", text: "all of it" } },
+    });
+    expect(deltas(second)).toEqual(["while away", "after"]);
+    expect(first.sent.some((f) => f.type === "result")).toBe(false);
+    // One CLI turn, never aborted, never run twice.
+    expect([t.starts, t.aborted, connection.turns]).toEqual([1, 0, 0]);
+
+    // Nothing of that run held here (the runner restarted): a reattach is answered, never started.
+    second.frame(turnRequest("t3", "run2", true));
+    await waitFor(() => second.sent.some((f) => f.id === "t3"));
+    expect(second.sent.find((f) => f.id === "t3")).toMatchObject({ ok: false, error: { code: "not_found" } });
+    expect(t.starts).toBe(1);
+
+    connection.stop();
+    await done;
+  }, 15_000);
+
+  test("one no link takes ends after the hold; one that ended meanwhile gives its result to the next link", async () => {
+    const { t, handler } = turnHandler();
+    const { sockets, connection } = setup({ handler, heldTurnMs: 300 });
+    const done = connection.run();
+    await waitFor(() => sockets.length === 1);
+    const first = sock(sockets, 0);
+    first.handlers.onOpen();
+    first.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    first.frame(turnRequest("t1", "run1"));
+    await waitFor(() => t.starts === 1);
+    first.handlers.onClose(1006, "");
+    t.end();
+    await waitFor(() => sockets.length === 2, 4000);
+    const second = sock(sockets, 1);
+    second.handlers.onOpen();
+    second.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    second.frame(turnRequest("t2", "run1", true));
+    await waitFor(() => second.sent.some((f) => f.id === "t2"));
+    expect(second.sent.find((f) => f.id === "t2")).toMatchObject({ ok: true, data: { runId: "run1" } });
+
+    second.frame(turnRequest("t3", "run3"));
+    await waitFor(() => t.starts === 2);
+    second.handlers.onClose(1006, "");
+    await waitFor(() => t.aborted === 1, 2000);
+    expect(connection.turns).toBe(0);
+
+    connection.stop();
+    await done;
+  }, 15_000);
+
+  test("stopping for good aborts a held turn at once", async () => {
+    const { t, handler } = turnHandler();
+    const { sockets, connection } = setup({ handler });
+    const done = connection.run();
+    await waitFor(() => sockets.length === 1);
+    const first = sock(sockets, 0);
+    first.handlers.onOpen();
+    first.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    first.frame(turnRequest("t1", "run1"));
+    await waitFor(() => t.starts === 1);
+    connection.stop();
+    await done;
+    expect(t.aborted).toBe(1);
+  });
+});

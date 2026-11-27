@@ -1852,6 +1852,110 @@ export interface Admission {
   roomPollMs?: number;
 }
 
+/** How long a brain turn runs on after its link to the server dropped, for the next link to take it over. */
+export const HELD_TURN_MS = 2 * 60_000;
+/** The most frames a held turn keeps for the next link: past it the oldest go (its result carries the final event). */
+const HELD_TURN_FRAMES = 2_000;
+
+/** One brain turn, wherever its link is: `send` and `reply` are the link's while one has it, null while it is held. */
+class HeldTurn {
+  /** The link that has it: only that one's end holds it (a later link may have taken it over meanwhile). */
+  owner: unknown = null;
+  send: ((frame: RunnerFrame) => void) | null = null;
+  reply: ((outcome: RequestOutcome) => void) | null = null;
+  readonly frames: RunnerFrame[] = [];
+  outcome: RequestOutcome | undefined;
+  timer: ReturnType<typeof setTimeout> | undefined;
+  constructor(readonly controller: AbortController) {}
+
+  emit(frame: RunnerFrame) {
+    if (this.send) return this.send(frame);
+    this.frames.push(frame);
+    if (this.frames.length > HELD_TURN_FRAMES) this.frames.shift();
+  }
+}
+
+/**
+ * The brain turns of one runner by run (`HELD_TURN_PROTOCOL`), across its links to the server: a link that drops
+ * leaves them running for `HELD_TURN_MS`, and a `brain.turn` of the same run on a later link takes the turn over, the
+ * frames it sent meanwhile first. A turn the next link doesn't take by then is aborted, as every turn was on a drop.
+ */
+export class HeldTurns {
+  private readonly byRun = new Map<string, HeldTurn>();
+  constructor(private readonly holdMs = HELD_TURN_MS) {}
+
+  /** Turns running on this computer now, held or not. */
+  get size() {
+    let n = 0;
+    for (const t of this.byRun.values()) if (t.outcome === undefined) n++;
+    return n;
+  }
+
+  has(runId: string) {
+    return this.byRun.has(runId);
+  }
+
+  open(runId: string, controller: AbortController): HeldTurn {
+    const turn = new HeldTurn(controller);
+    this.byRun.set(runId, turn);
+    return turn;
+  }
+
+  /** The turn ended: its link gets the result, or it waits for one with its frames. */
+  finish(runId: string, turn: HeldTurn, outcome: RequestOutcome) {
+    if (turn.reply) {
+      if (this.byRun.get(runId) === turn) this.byRun.delete(runId);
+      turn.reply(outcome);
+    } else turn.outcome = outcome;
+  }
+
+  /** Its link dropped: it runs on, its frames kept, until a link takes it or `holdMs` ends it. */
+  hold(runId: string, turn: HeldTurn, owner: unknown) {
+    if (turn.owner !== owner) return;
+    turn.owner = null;
+    turn.send = null;
+    turn.reply = null;
+    clearTimeout(turn.timer);
+    turn.timer = setTimeout(() => {
+      if (this.byRun.get(runId) === turn) this.byRun.delete(runId);
+      turn.controller.abort();
+    }, this.holdMs);
+    turn.timer.unref?.();
+  }
+
+  /** A link takes the run's turn: what it sent meanwhile goes first, then its result if it already ended. */
+  take(
+    runId: string,
+    owner: unknown,
+    send: (frame: RunnerFrame) => void,
+    reply: (outcome: RequestOutcome) => void,
+  ): HeldTurn | null {
+    const turn = this.byRun.get(runId);
+    if (!turn) return null;
+    clearTimeout(turn.timer);
+    turn.timer = undefined;
+    for (const frame of turn.frames.splice(0)) send(frame);
+    if (turn.outcome !== undefined) {
+      this.byRun.delete(runId);
+      reply(turn.outcome);
+      return turn;
+    }
+    turn.owner = owner;
+    turn.send = send;
+    turn.reply = reply;
+    return turn;
+  }
+
+  /** The runner stops for good: nothing will take them. */
+  abortAll() {
+    for (const turn of this.byRun.values()) {
+      clearTimeout(turn.timer);
+      turn.controller.abort();
+    }
+    this.byRun.clear();
+  }
+}
+
 /**
  * Runs the requests of one connection concurrently, sends their `result`
  * frames, and aborts them on `cancel` or when the connection ends. A brain turn
@@ -1860,6 +1964,8 @@ export interface Admission {
  */
 export class RequestRunner {
   private readonly inflight = new Map<string, AbortController>();
+  /** The brain turns this link has (`held`), by request id. */
+  private readonly turnsHere = new Map<string, { runId: string; turn: HeldTurn }>();
   private closed = false;
   /** Brain turns running now. */
   private turns = 0;
@@ -1880,6 +1986,8 @@ export class RequestRunner {
     private readonly handler: typeof handleRequest = handleRequest,
     private readonly admission: Admission = {},
     private readonly observer?: RequestObserver,
+    /** The runner's turns across its links: a turn here outlives this link's end (`HELD_TURN_PROTOCOL`). */
+    private readonly held?: HeldTurns,
   ) {}
 
   /**
@@ -1962,6 +2070,10 @@ export class RequestRunner {
       this.reply(id, { ok: false, error: { code: "bad_request", message: "Duplicate request id" } });
       return Promise.resolve();
     }
+    // Its run's turn still runs here (its link dropped, or the server lost track of it): taken over, never run twice.
+    if (req.op === "brain.turn" && this.held && (this.held.has(req.runId) || req.reattach === true)) {
+      return this.takeOver(id, req.runId);
+    }
     if (this.inflight.size >= MAX_IN_FLIGHT && !PEOPLE_OPS.has(req.op)) {
       this.reply(id, { ok: false, error: { code: "internal", message: "busy" } });
       return Promise.resolve();
@@ -2023,6 +2135,36 @@ export class RequestRunner {
     return this.run(id, req, controller);
   }
 
+  private takeOver(id: string, runId: string): Promise<void> {
+    return new Promise((resolve) => {
+      const turn = this.held?.take(runId, this, this.emitFrame, (outcome) => {
+        this.inflight.delete(id);
+        this.turnsHere.delete(id);
+        this.reply(id, outcome);
+        resolve();
+      });
+      if (!turn) {
+        const message = "The turn stopped on the computer while it was away from the server";
+        this.reply(id, { ok: false, error: { code: "not_found", message } });
+        return resolve();
+      }
+      this.log("brain.turn taken over on the new link");
+      if (turn.owner === this) {
+        this.inflight.set(id, turn.controller);
+        this.turnsHere.set(id, { runId, turn });
+      }
+    });
+  }
+
+  private readonly emitFrame = (frame: RunnerFrame) => {
+    if (this.closed) return;
+    try {
+      this.send(frame);
+    } catch {
+      // socket gone
+    }
+  };
+
   private full(id: string) {
     const message = "This computer is short of memory for more work right now";
     this.reply(id, { ok: false, error: { code: "no_slot", message } });
@@ -2064,6 +2206,13 @@ export class RequestRunner {
     const turn = req.op === "brain.turn";
     if (turn) this.turns++;
     this.inflight.set(id, controller);
+    const held = req.op === "brain.turn" && this.held ? this.held.open(req.runId, controller) : null;
+    if (held && req.op === "brain.turn") {
+      held.owner = this;
+      held.send = this.emitFrame;
+      held.reply = (outcome) => this.reply(id, outcome);
+      this.turnsHere.set(id, { runId: req.runId, turn: held });
+    }
     // A browser or desktop command is logged when it ends, with how long it took (`browser.act snapshot 812ms`) and
     // what it waited on first (`(install 28.1 s, launch 1.4 s)`).
     const timed =
@@ -2084,14 +2233,7 @@ export class RequestRunner {
       output: (stream, chunk) => {
         if (!this.closed && chunk) this.send({ type: "output", id, stream, chunk });
       },
-      emit: (frame) => {
-        if (this.closed) return;
-        try {
-          this.send(frame);
-        } catch {
-          // socket gone
-        }
-      },
+      emit: (frame) => (held ? held.emit(frame) : this.emitFrame(frame)),
     };
     return this.handler(this.ctx, req, scope)
       .then((data): RequestOutcome => {
@@ -2123,10 +2265,12 @@ export class RequestRunner {
         }
         settled?.(outcome);
         this.observe(() => this.observer?.finished(id, req, outcome));
-        this.reply(id, outcome);
+        if (held && this.held && req.op === "brain.turn") this.held.finish(req.runId, held, outcome);
+        else this.reply(id, outcome);
       })
       .finally(() => {
         this.inflight.delete(id);
+        this.turnsHere.delete(id);
         if (turn) this.turns--;
         if (this.reserved === id) this.reserved = null;
         // Its CLI is idle now, so a refused turn's ask can close it for room.
@@ -2150,7 +2294,11 @@ export class RequestRunner {
   close() {
     this.closed = true;
     this.stopRoomWatch();
-    for (const c of this.inflight.values()) c.abort();
+    for (const [id, c] of this.inflight) {
+      const here = this.turnsHere.get(id);
+      if (here && this.held) this.held.hold(here.runId, here.turn, this);
+      else c.abort();
+    }
   }
 
   private reply(id: string, r: RequestOutcome) {

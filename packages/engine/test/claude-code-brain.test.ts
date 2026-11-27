@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import {
   ACCOUNTS_PROTOCOL,
   ASKS_PROTOCOL,
@@ -9,6 +9,7 @@ import {
   CONTEXT_LIMIT_PROTOCOL,
   CONVERSATION_PROTOCOL,
   createMemoryPubSub,
+  HELD_TURN_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
   type MachineReplies,
   type MachineRequest,
@@ -471,6 +472,82 @@ test("a turn cut mid-way (the link dropped, the agent's worker stopped) waits fo
     expect(events).toEqual([expect.objectContaining({ type: "error", code: "machine_offline", retryable: true })]);
     expect((events[0] as { serverStop?: boolean }).serverStop === true).toBe(serverStop);
   }
+});
+
+describe("a turn whose computer dropped mid-way (HELD_TURN_PROTOCOL)", () => {
+  /**
+   * The link drops once mid-turn; the computer is back after `awayMs`. `held`: the runner kept the turn and the
+   * `reattach` gets the rest of it; else it answers `not_found` (the runner restarted).
+   */
+  function droppingHub(pubsub: PubSub, opts: { held: boolean; awayMs?: number; protocol?: number }) {
+    const calls: MachineRequest[] = [];
+    let backAt = 0;
+    const hub = {
+      status: async () =>
+        status({
+          protocol: opts.protocol ?? HELD_TURN_PROTOCOL,
+          online: Date.now() >= backAt,
+          lastSeenAt: new Date().toISOString(),
+        }),
+      call: async (_machineId: string, request: MachineRequest) => {
+        calls.push(request);
+        const runId = (request as { runId: string }).runId;
+        const say = (event: WireBrainEvent) =>
+          pubsub.publish(brainTopic(runId), { type: "brain.event", machineId: MACHINE, event });
+        if (calls.length === 1) {
+          await say({ type: "text_delta", text: "Looking" });
+          backAt = Date.now() + (opts.awayMs ?? 0);
+          throw new MachineDroppedError("mac");
+        }
+        if (!opts.held) throw new MachineRequestError("not_found", "The turn stopped on the computer");
+        const final = { type: "done", text: "Looking into it: done.", session: { id: SESSION } } as const;
+        await say(final);
+        await pubsub.publish(brainTopic(runId), { type: "brain.done", machineId: MACHINE });
+        return { runId, final } as never;
+      },
+    };
+    const brain = createClaudeCodeBrain({
+      hub,
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      finalGraceMs: 20,
+      heldTurnWaitMs: 2_000,
+    });
+    return { brain, calls };
+  }
+
+  test("before: dropped, the turn failed and was sent again from scratch; now it rides through and ends once", async () => {
+    const pubsub = createMemoryPubSub();
+    const { brain, calls } = droppingHub(pubsub, { held: true, awayMs: 300 });
+    const events = await collect(brain.run(turn(), io()));
+    expect(events.at(-1)).toEqual(expect.objectContaining({ type: "done", text: "Looking into it: done." }));
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    // One turn on the computer: the second ask takes it over, it never starts one.
+    expect(calls.map((r) => (r as { reattach?: boolean }).reattach === true)).toEqual([false, true]);
+  });
+
+  test("the runner no longer has it, an older runner, or a computer not back in time: the drop stands", async () => {
+    for (const opts of [
+      { held: false },
+      { held: true, protocol: HELD_TURN_PROTOCOL - 1 },
+      { held: true, awayMs: 60_000 },
+    ]) {
+      const pubsub = createMemoryPubSub();
+      const { brain } = droppingHub(pubsub, opts);
+      const events = await collect(brain.run(turn(), io()));
+      expect(events.at(-1)).toEqual(expect.objectContaining({ type: "error", code: "machine_offline" }));
+    }
+  }, 15_000);
+
+  test("canceled while it waits for the computer: canceled, not dropped", async () => {
+    const pubsub = createMemoryPubSub();
+    const { brain, calls } = droppingHub(pubsub, { held: true, awayMs: 60_000 });
+    const stop = new AbortController();
+    setTimeout(() => stop.abort(), 200);
+    const events = await collect(brain.run(turn(), io(stop.signal)));
+    expect(events.at(-1)).toEqual(expect.objectContaining({ type: "error", code: "canceled" }));
+    expect(calls).toHaveLength(1);
+  });
 });
 
 test("session ids: stable per agent and conversation, UUID-shaped", () => {

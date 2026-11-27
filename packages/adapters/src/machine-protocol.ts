@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 92;
+export const MACHINE_PROTOCOL_VERSION = 93;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -863,6 +863,13 @@ export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
  * A runner the app doesn't run answers `bad_request` with `no_app`: the apps show the command instead.
  */
 export const FOLDER_PICK_PROTOCOL = 92;
+/**
+ * From this protocol on, a brain turn outlives a dropped link: the runner keeps it running for `HELD_TURN_MS` (its
+ * events and its result kept), and a `brain.turn` for the same run on the next link takes it over instead of starting
+ * the turn again. One sent with `reattach` only takes a turn held there; nothing held, it is answered `not_found`. A
+ * standby (before a sleep) is refused while a turn runs.
+ */
+export const HELD_TURN_PROTOCOL = 93;
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -2689,6 +2696,8 @@ export interface BrainTurnRequest {
    * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
    */
   answers?: "each";
+  /** `HELD_TURN_PROTOCOL`: take over the turn of this run held on the computer, never start one. */
+  reattach?: boolean;
 }
 
 /**
