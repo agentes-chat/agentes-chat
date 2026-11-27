@@ -384,3 +384,41 @@ week, the plan, the photo, the AI step and the people step.
   `MemberOnboardingPage.tsx`, `pages/onboarding/AreaStep.tsx`, `AgentStep.tsx`, `areas.ts`, `Shell.tsx` (`Meet`),
   `HireStep.tsx`, `AiStep.tsx`, `CelebrateStep.tsx`, `components/connect-here.tsx` (a connect flow opened for one agent),
   `lib/first-delivery.ts` (the wizard's row); kit `OptionLinks`'s `flat`.
+
+## Amended 2026-11-27 (later): what the first run through it changed
+
+Going through the new onboarding on a test server left the person stuck or unsure in a few places. Amends the
+amendment above.
+
+- **A team names its workspace again**, on its own step after what it is for: the name from the work e-mail to start
+  with, its logo (the crop dialog; sent once the workspace exists) and its time zone. Continue makes the workspace. A
+  team counts five steps on agentes.chat Cloud, four self-hosted (`stepCount`'s `named`); a personal workspace has no
+  name step.
+- **The work step leads with one way in besides the list.** One "Ask your AI" button over the areas, its marks (the AI
+  makers', then two agent apps') on a line over its words, then the sign-in's "or", then the areas. It opens one
+  dialog, "Start from what you already use": the person's AI (the three most used by name, the rest as "Another AI")
+  opens the ask flow on it in the same dialog, with Back; an agent app (three by name, the rest as "Another app") opens
+  the import on it. A member's has no apps. "Prefer another way?" and its two buttons are gone. The ask flow's row
+  lists one assistant per maker, the most used first (a maker's coding tool asked the same AI again).
+- **One first agent.** Asking the AI again, or after an area's agent, takes the earlier one's place (ADR 0260's
+  `replace` on the pick), so the onboarding never leaves several.
+- **The agent step never holds the person.** Continue goes on with or without an app. An app signed in through its own
+  MCP server is a server row with its address: the catalog's app by that address counts as connected, and its return
+  (`connected=custom:<id>`) reopens its confirmation. Past the apps listed, "Search apps" (a stack of a few apps' marks)
+  opens the app's picker that Criar agente uses; "Other" lists no apps of its own, only that button.
+- **"Not now" on the plan asks first**: "Continue without a plan?" (the agent doesn't start and the first delivery
+  waits), with the plan's Checkout as its main button. Confirmed, the photo comes next, with no AI step (on agentes.chat
+  Cloud an AI's sign-in needs the computer a plan brings): the plan's row to do, the delivery waiting; its button opens
+  the right hand's DM, whose card leads with the plan.
+- **The AI step shows once** after Checkout even where the agents already think (a server's own key): Continue there,
+  "Connect later" and its question where they don't; the stored `ai` moves past it, and an AI connected through it
+  stores it once the agents think.
+- **The photo** offers "Change your photo": the avatar builder and the photo upload, for the person's face on it.
+- **The box is never taller than the window**: the header and the title stay, only the answer scrolls inside, the
+  footer stays in view; the box sits higher (104px under the top bar, 92px on a phone), and a window up to 860px tall
+  shows the apps' wall in two rows.
+- **The welcome wizard** has no Skip, its last list keeps every row one height, and it opens over a focus backdrop: the
+  page blurred under a near-solid tone of the sky with a still pixel dither (the kit Dialog's `scrimClassName`).
+- **Ten new workspaces a day count only the ones made**: a refused create, or the one being set up answered again,
+  gives its take back.
+

@@ -150,7 +150,8 @@ work.
   the app the person connects brings its routine (ADR 0242), which the onboarding makes without asking for a run. Going
   back and picking another area sends `replace` with the agent made a moment ago: it is archived when it is this
   person's own and its delivery hasn't fired, so two first agents never wait side by side. A pick from the person's own
-  AI keeps one too (area `ask`, its first day's first item).
+  AI keeps one too (area `ask`, its first day's first item), and takes the same `replace` (`POST …/first-agents/{id}/
+  pick`): asking the AI again, or after an area's agent, leaves one first agent.
 - **Armed when the person leaves the agent's step.** The apps are connected on that step, so the delivery waits for
   them: it is kept disarmed (`armed_at` null) and the step's Continue, the owner's and a member's alike, arms it with
   `PUT …/first-delivery` (`armFirstDelivery`). For the agent of the waiting delivery it keeps its area and task; any
