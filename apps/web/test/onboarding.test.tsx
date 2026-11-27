@@ -3,7 +3,14 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import type { ApiClient, Connection, DirectMessage, FirstAgentOption, FirstAgents } from "@agenteschat/client";
+import type {
+  ApiClient,
+  Connection,
+  DirectMessage,
+  FirstAgentOption,
+  FirstAgents,
+  MailAccount,
+} from "@agenteschat/client";
 import { ApiError, keys } from "@agenteschat/client";
 import { CUSTOM_LOOK, FIRST_AREAS, type FirstArea } from "@agenteschat/client/lib/first-areas";
 import { IMPORT_CARDS } from "@agenteschat/client/lib/import/flow";
@@ -13,17 +20,20 @@ import { focusManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { fileSaver } from "@/components/artifacts/fileSaver";
 import { CARD_MARK } from "@/lib/import-marks";
+import { setNavigateAway } from "@/lib/navigate";
 import { teamPhoto } from "@/pages/onboarding/team-photo";
 import {
   ATLAS_ID,
   createFakeApi,
   type FakeState,
+  fakeMailOf,
   GENERAL_ID,
   LODI_ID,
   ORG_ID,
   seedState,
   withRightHand,
 } from "./fake-api";
+import { MAIL_PROVIDERS } from "./fakes/mail";
 import { renderApp, screen, settle, showIn } from "./render";
 
 /*
@@ -551,6 +561,55 @@ describe("meeting the first agent and connecting its apps (ADR 0256, ADR 0242)",
     expect(stripe?.sub).toMatch(/^acme · \S/);
     expect(stripe?.sub).toContain("10:00");
     expect(continueOff()).toBe(false);
+  });
+
+  test("Gmail's one-click sign-in comes back to the onboarding, where this agent may write in it from the start", async () => {
+    const left: string[] = [];
+    setNavigateAway((url) => left.push(url));
+    const state = settingUp({ area: "support" });
+    const api = createFakeApi(state);
+    const mail = fakeMailOf.get(api);
+    if (!mail) throw new Error("no mail fake");
+    mail.providers = structuredClone(MAIL_PROVIDERS);
+    await renderApp("/onboarding", { api });
+    await settle(14);
+    await click(within(box()).getByRole("button", { name: "Conectar" }), 8);
+    const flow = () => screen().getAllByRole("dialog").at(-1) as HTMLElement;
+    await click(within(flow()).getByRole("button", { name: "Conectar com Google" }), 6);
+    expect(calls(state, "mail.connectComposio").map((c) => c.args[1])).toEqual([
+      { provider: "gmail", desktop: false, back: "onboarding" },
+    ]);
+    expect(left).toEqual(["https://composio.example/connect/gmail"]);
+    cleanup();
+
+    // Back from Google: the flow reopens on what the mailbox does, then who may use it, Iara writing.
+    mail.accounts = [
+      {
+        id: "mail-1",
+        provider: "gmail",
+        via: "composio",
+        address: "atende@acme.com.br",
+        offActions: [],
+        askActions: [],
+        aliases: [],
+        defaultFrom: null,
+        label: "atende@acme.com.br",
+        status: "active",
+        lastError: null,
+        preset: null,
+        createdAt: new Date().toISOString(),
+        ownerUserId: state.me?.user.id ?? null,
+        agents: [],
+      } as MailAccount,
+    ];
+    await renderApp("/onboarding?mail=connected&account=mail-1", { api });
+    await settle(20);
+    expect(screen().getByRole("dialog", { name: "O que atende@acme.com.br faz" })).toBeTruthy();
+    await click(within(flow()).getByRole("button", { name: "Continuar" }), 8);
+    const iara = within(flow()).getByRole("radiogroup", { name: "Nível de Iara" });
+    expect(within(iara).getByRole("radio", { checked: true }).textContent).toBe("Ler e escrever");
+    const lodi = within(flow()).getByRole("radiogroup", { name: "Nível de Lodi" });
+    expect(within(lodi).getByRole("radio", { checked: true }).textContent).toBe("Sem acesso");
   });
 
   test("Continue arms the first delivery, then keeps the step; on to the plan, its step marked as shown", async () => {
