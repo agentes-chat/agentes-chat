@@ -41,7 +41,7 @@ export interface PinnedStripProps {
 }
 
 /**
- * Favoritos, under Início's widgets: what the person keeps there (the web sidebar's Favoritos, ADR 0259: their own agents
+ * Favoritos, under Início's widgets: what the person keeps there (the web sidebar's Favoritos, ADR 0260: their own agents
  * until they choose),
  * side by side on a strip that scrolls sideways. Each is the app's own face for it: an agent's living body (at work,
  * dozing while it waits for its offline computer, its presence on the corner), a person's photo, a channel's tile; its

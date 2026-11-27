@@ -95,7 +95,7 @@ const ACCESSORY = alongInAccessory(Platform.OS, Platform.Version);
 
 /**
  * How Conversas lists a team's conversations (`HomeView`), remembered on this phone: Recentes, or Seções, the person's
- * own sections as the web's sidebar has them (ADR 0259). A personal workspace has none: always Recentes.
+ * own sections as the web's sidebar has them (ADR 0260). A personal workspace has none: always Recentes.
  */
 function useHomeView(personal: boolean): [HomeView, (next: HomeView) => void] {
   const [view, setView] = useState<HomeView>(() => homeViewOf(readValueSync(STORED.homeView)));

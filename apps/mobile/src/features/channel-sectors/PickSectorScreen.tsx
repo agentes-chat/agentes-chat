@@ -26,7 +26,7 @@ function channelLine(channels: readonly Channel[], ids: readonly string[], excep
 }
 
 /**
- * "Seção" of a channel (ADR 0259), from its ⋯ sheet or a long press on the home, as the web's "Mover para a seção":
+ * "Seção" of a channel (ADR 0260), from its ⋯ sheet or a long press on the home, as the web's "Mover para a seção":
  * the person's own sections, each with its channels, and "Sem seção", the current one checked; a tap moves it and
  * goes back. "Nova seção" names one in a sheet and takes the channel along. Below, its place in its section, one step
  * up or down. Each person's own: nobody else's list changes.

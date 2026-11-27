@@ -695,7 +695,7 @@ export function ChannelOptions({
     onSettled: () => qc.invalidateQueries({ queryKey: keys.channels(orgId) }),
     onError: (e) => toast({ title: errorText(t, e, i18n.language), icon: "x" }),
   });
-  // The person's own section it sits in (ADR 0259).
+  // The person's own section it sits in (ADR 0260).
   const ownSections = useSidebarView(orgId).sections ?? [];
   const sectionName = ownSections.find((s) => s.id === sectionOfChannel(ownSections, channelId))?.name;
   // This conversation's own background, mine alone; none of its own: it follows the others.

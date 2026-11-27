@@ -5,7 +5,7 @@ import { sectorHref } from "../../src/features/channel-sectors/logic";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
-describe("a channel's section on the phone (ADR 0259)", () => {
+describe("a channel's section on the phone (ADR 0260)", () => {
   test("the long press and the ⋯ sheet open Seção, for every channel: the sections are the person's own", () => {
     expect(sectorHref("c 1")).toBe("/channel-sector?channelId=c%201");
     const menus = src("features/channel-sectors/menus.tsx");

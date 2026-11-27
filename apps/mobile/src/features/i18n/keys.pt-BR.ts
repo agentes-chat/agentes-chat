@@ -205,7 +205,7 @@ export const featureKeysPtBR = {
       text: "Ele pode estar fora do ar ou fora da sua rede. Suas conversas aparecem sozinhas quando ele voltar.",
       kept: "Mostrando o que já estava no app.",
     },
-    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0259), under Início's widgets. */
+    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0260), under Início's widgets. */
     favorites: "Favoritos",
     /** Conversas' one list: every chat by its latest activity, with no grouping. */
     recent: "Recentes",

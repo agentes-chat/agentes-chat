@@ -55,7 +55,7 @@ const team = [
 const starters = agentStarters(team);
 const keys = (list: { key: string }[]) => list.map((r) => r.key);
 
-describe("the strip of Favoritos (ADR 0259)", () => {
+describe("the strip of Favoritos (ADR 0260)", () => {
   test("people, agents and channels together, in the person's order", () => {
     const favorites = ["person:ana", "agent:dev", "channel:vendas", "agent:ada"];
     expect(keys(pinnedRows(rows, starters, favorites))).toEqual(["d:d-ana", "d:d-dev", "c:vendas", "d:d-ada"]);

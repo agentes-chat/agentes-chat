@@ -328,7 +328,7 @@ export const rowsOfKind = (rows: ConversationRow[], kind: RowKind) => rows.filte
 export const recentRows = (rows: ConversationRow[]) => rows.filter((r) => kindOf(r) !== "threads");
 
 /**
- * The strip of Favoritos (pure, ADR 0259): the person's favorites (`usePins().favorites`), people, agents and channels
+ * The strip of Favoritos (pure, ADR 0260): the person's favorites (`usePins().favorites`), people, agents and channels
  * in their order. A favorite agent with no conversation yet stands as one to start (its row in `starters`); a favorite
  * channel or person shows while their conversation is among `rows`. A favorite of something no longer listed (gone,
  * hidden from me, the right hand with its own field) holds no place.
@@ -537,7 +537,7 @@ export function serverTrouble(input: {
 }
 
 /**
- * Conversas' two ways to list a team's conversations: by latest activity, or by the person's own sections (ADR 0259).
+ * Conversas' two ways to list a team's conversations: by latest activity, or by the person's own sections (ADR 0260).
  * Stored as before (`sectors`), so the choice made on this phone stays.
  */
 export type HomeView = "recent" | "sectors";
@@ -555,7 +555,7 @@ export interface HomeSectorSection {
 }
 
 /**
- * Seções, as the web's sidebar (ADR 0259): each of the person's own sections with its channels in their order, then
+ * Seções, as the web's sidebar (ADR 0260): each of the person's own sections with its channels in their order, then
  * the channels in none, then Mensagens diretas with people and agents together, by latest activity. Threads and
  * missions stay in Recentes and Threads. An empty part is left out.
  */
@@ -589,7 +589,7 @@ export function sectorSections(
 }
 
 /**
- * Closed, a section stays one line but keeps in sight what calls on the person (ADR 0259): its unread channels, an
+ * Closed, a section stays one line but keeps in sight what calls on the person (ADR 0260): its unread channels, an
  * agent at work or that wrote to them.
  */
 export const keptWhenClosed = (r: ConversationRow) =>

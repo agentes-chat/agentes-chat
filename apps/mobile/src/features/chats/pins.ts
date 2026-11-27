@@ -22,14 +22,14 @@ import { useOrg } from "@/providers/org";
 import { useToast } from "@/ui";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 
-/** A row's kind of pin, as a favorite's (ADR 0259). */
+/** A row's kind of pin, as a favorite's (ADR 0260). */
 const KIND: Record<PinKind, FavoriteKind> = { agents: "agent", channels: "channel", people: "person" };
 
 /** Whether two lists hold the same keys in the same order. */
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((k, i) => k === b[i]);
 
 /**
- * Favoritos (ADR 0259), the web sidebar's on the phone: the same per-person list (`…/me/sidebar/view`), on Conversas'
+ * Favoritos (ADR 0260), the web sidebar's on the phone: the same per-person list (`…/me/sidebar/view`), on Conversas'
  * strip (`PinnedStrip`) in its order and on top of Agentes' Livres. Never saved, it starts from the pins of before,
  * else the person's own agents. The same object while the favorites stay the same, so what is memoized on them holds.
  */

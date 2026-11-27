@@ -11,7 +11,7 @@ export const featureKeysEn = {
     down: "Move down",
     channelPosition: "{{at}} of {{count}}.",
   },
-  /** A channel's "Seção" (ADR 0259): which of the person's own sections it sits in, theirs alone. */
+  /** A channel's "Seção" (ADR 0260): which of the person's own sections it sits in, theirs alone. */
   sections: {
     title: "Section",
     where: "Where #{{channel}} sits for you",
@@ -204,7 +204,7 @@ export const featureKeysEn = {
       text: "It may be down or outside your network. Your chats show up on their own when it's back.",
       kept: "Showing what was already in the app.",
     },
-    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0259), under Início's widgets. */
+    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0260), under Início's widgets. */
     favorites: "Favorites",
     /** Conversas' one list: every chat by its latest activity, with no grouping. */
     recent: "Recent",

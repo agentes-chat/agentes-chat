@@ -26,7 +26,7 @@ export interface RowAction {
 /**
  * The long press of a conversation on the home (its row, or its face on the strip of Favoritos), as a short sheet:
  * "Adicionar aos favoritos" or "Tirar dos favoritos" (a channel, an agent's or a person's DM) and a channel's "Mover
- * para a seção", the person's own sections (ADR 0259). The same actions fill iOS's own menu under the conversation's
+ * para a seção", the person's own sections (ADR 0260). The same actions fill iOS's own menu under the conversation's
  * preview.
  */
 export function useRowMenus() {

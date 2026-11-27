@@ -719,7 +719,7 @@ describe("the app icon's number", () => {
   });
 });
 
-describe("Conversas by my own sections (a team's Seções, ADR 0259)", () => {
+describe("Conversas by my own sections (a team's Seções, ADR 0260)", () => {
   const dm = (id: string, type: "agent" | "person", at: string, over: { unread?: number; working?: boolean } = {}) =>
     ({
       kind: "dm",

@@ -2558,7 +2558,7 @@ export const en = {
     movedOut: "{{name}} left {{group}}",
     undo: "Undo",
   },
-  /** The agents in the sidebar's lists (ADR 0083, ADR 0259). */
+  /** The agents in the sidebar's lists (ADR 0083, ADR 0260). */
   sidebarAgents: {
     showAll: "Show agents that don't talk to me",
     /** Under the agents, only when some aren't listed (they don't talk to me): it opens Team, where all are. */
