@@ -3,6 +3,8 @@ import { testConfig } from "@agenteschat/config";
 import { loopbackCookies, withLoopbackCookies } from "../src/http/loopback-cookies";
 import {
   atLoopbackBesidePublic,
+  HERE_ID_PATH,
+  hereIdAnswer,
   isLoopbackHost,
   nativeHostGuard,
   trustedLoopbackOrigin,
@@ -13,7 +15,8 @@ import { createTestServer, GOOGLE_ENV, type TestServer } from "./harness";
 
 /**
  * A native server (agentes.chat running on this computer, ADR 0256 §5): the computer opens it at its loopback origin,
- * everyone else at `PUBLIC_URL` (the tailnet's https address once reach is on), and each origin keeps its own sign-in.
+ * everyone else at `PUBLIC_URL` (once reach is on, Tailscale's https address or one of the person's own), and each
+ * origin keeps its own sign-in.
  */
 
 const PORT = 4310;
@@ -70,6 +73,67 @@ describe("the host guard", () => {
     for (const host of [PEOPLE_HOST, "127.0.0.1.evil.example", "", null]) {
       expect([host, isLoopbackHost(host)]).toEqual([host, false]);
     }
+  });
+});
+
+describe("this server's id, answered for any address (ADR 0256 §4)", () => {
+  const guard = nativeHostGuard({ port: PORT, publicUrl: PUBLIC });
+  const idOf = async (res: Response | null) => {
+    if (!res) throw new Error("not answered");
+    return ((await res.json()) as { id: string }).id;
+  };
+
+  test("a Host that isn't the server's own gets the id, not a 421, the same as at its own names", async () => {
+    const foreign = guard(request(`https://my-tunnel.example${HERE_ID_PATH}`, { host: "my-tunnel.example" }));
+    expect(foreign?.status).toBe(200);
+    const id = await idOf(foreign);
+    expect(id).toMatch(/^[0-9a-f]{32}$/);
+    expect(await idOf(guard(request(`${LOOPBACK}${HERE_ID_PATH}`)))).toBe(id);
+    expect(await idOf(guard(request(`${PUBLIC}${HERE_ID_PATH}`)))).toBe(id);
+    // Made once per process: another guard (a port move in the same process) and the bare answer name it too.
+    const moved = nativeHostGuard({ port: PORT + 1, publicUrl: LOOPBACK });
+    expect(await idOf(moved(request(`http://evil.example${HERE_ID_PATH}`, { host: "evil.example" })))).toBe(id);
+    expect(await idOf(hereIdAnswer(request(`${LOOPBACK}${HERE_ID_PATH}?x=1`)))).toBe(id);
+  });
+
+  test("never cached, no cookie set, whatever cookie the request carries", () => {
+    const req = new Request(`https://my-tunnel.example${HERE_ID_PATH}`, {
+      headers: {
+        host: "my-tunnel.example",
+        cookie: "__Secure-better-auth.session_token=t; agentes-4310.session_token=x",
+      },
+    });
+    const res = guard(req);
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("cache-control")).toBe("no-store");
+    expect(res?.headers.get("content-type")).toStartWith("application/json");
+    expect(res?.headers.getSetCookie()).toEqual([]);
+  });
+
+  test("HEAD answers the same headers with no body", async () => {
+    const res = guard(request(`http://evil.example${HERE_ID_PATH}`, { method: "HEAD", host: "evil.example" }));
+    expect(res?.status).toBe(200);
+    expect(res?.headers.get("cache-control")).toBe("no-store");
+    expect(await res?.text()).toBe("");
+  });
+
+  test("only GET and HEAD at the exact path: everything else on a foreign Host still gets a 421", () => {
+    const foreign = (path: string, method = "GET") =>
+      guard(request(`http://evil.example${path}`, { method, host: "evil.example" }))?.status;
+    for (const path of [`${HERE_ID_PATH}/`, `${HERE_ID_PATH}x`, "/api/native/latest", "/api/app/me", "/"]) {
+      expect([path, foreign(path)]).toEqual([path, 421]);
+    }
+    for (const method of ["POST", "PUT", "DELETE", "OPTIONS"]) {
+      expect([method, foreign(HERE_ID_PATH, method)]).toEqual([method, 421]);
+    }
+    // At its own names, other methods go on to the app as they did.
+    expect(guard(request(`${LOOPBACK}${HERE_ID_PATH}`, { method: "POST" }))).toBeNull();
+  });
+
+  test("a server that isn't native (Docker, the Cloud) doesn't know the path: 404", async () => {
+    t = await createTestServer();
+    const res = await t.app.fetch(new Request(`http://localhost${HERE_ID_PATH}`));
+    expect(res.status).toBe(404);
   });
 });
 
@@ -272,7 +336,8 @@ describe("a native server with reach on (https PUBLIC_URL)", () => {
   });
 
   test("redirects in the same browser stay at the origin it asked", async () => {
-    t = await createTestServer({ env });
+    // Two people sign up, one at each origin: sign-up stays open after the first account.
+    t = await createTestServer({ env: { ...env, ALLOW_SIGNUP: "true" } });
     const here = browserAt(t, LOOPBACK);
     const landing = await here("/api/auth/error?error=state_mismatch");
     expect(landing.headers.get("location")).toBe("/login?error=state_mismatch");

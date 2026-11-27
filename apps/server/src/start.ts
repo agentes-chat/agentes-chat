@@ -145,6 +145,8 @@ export interface StartOptions {
    * (`127.0.0.1:<PORT>`, `localhost:<PORT>` and `PUBLIC_URL`'s host), with a 421 for any other: it listens on
    * loopback, where a web page that points a name of its own at 127.0.0.1 (DNS rebinding) would otherwise reach it.
    * `127.0.0.1:<PORT>` is served as its own origin, its sign-in cookies named per port (`http/loopback-cookies.ts`).
+   * The one exemption: `GET`/`HEAD` `/api/native/here-id`, this process's id for any Host, so the app can check that
+   * an address of the person's own leads here before it becomes `PUBLIC_URL` (ADR 0256 §4).
    */
   ownHostsOnly?: boolean;
 }
