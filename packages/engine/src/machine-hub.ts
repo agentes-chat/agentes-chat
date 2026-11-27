@@ -842,7 +842,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Awake: whatever put it in standby is over (ADR 0161).
         standbyAt: null,
         wakeWantedAt: null,
-        // Back from a restart or an update: it is over, whatever the operator says next (ADR 0256).
+        // Back from a restart or an update: it is over, whatever the operator says next (ADR 0257).
         ...(machine.maintenance?.kind === "restarting" || machine.maintenance?.kind === "updating"
           ? { movingAt: null, maintenance: null }
           : {}),

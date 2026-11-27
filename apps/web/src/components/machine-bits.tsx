@@ -33,7 +33,7 @@ const MAINTENANCE_ICON: Record<string, IconName> = {
 };
 
 /**
- * Online / Offline, with an icon (never a colored dot). Away for what we do to it (ADR 0256: a move, a restart…), it
+ * Online / Offline, with an icon (never a colored dot). Away for what we do to it (ADR 0257: a move, a restart…), it
  * says that instead, and an ⓘ beside it tells why, since when, about when it is back and what still works; online
  * while a move copies it, the ⓘ says it may be slower.
  */

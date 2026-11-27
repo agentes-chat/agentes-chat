@@ -91,7 +91,7 @@ async function recipientsOf(deps: NotificationDeps, m: MachineRow) {
 }
 
 /**
- * Away by plan or by its owner's choice: asleep in standby, away for what we do to it (a move, a restart…: ADR 0256),
+ * Away by plan or by its owner's choice: asleep in standby, away for what we do to it (a move, a restart…: ADR 0257),
  * removed, or its workspace not at work.
  */
 async function awayByPlan(db: Database, m: MachineRow, now: Date) {

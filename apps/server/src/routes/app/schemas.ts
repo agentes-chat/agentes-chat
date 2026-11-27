@@ -19,7 +19,7 @@ import {
 import { CONTEXT_LIMITS, ENDPOINT_STYLES, MODEL_TIERS, PROVIDER_IDS } from "@agenteschat/providers";
 import { z } from "@hono/zod-openapi";
 
-/** What we do to the workspace's own computer (`shownMaintenance`, ADR 0256), which the apps say instead of offline. */
+/** What we do to the workspace's own computer (`shownMaintenance`, ADR 0257), which the apps say instead of offline. */
 export const MaintenanceView = z
   .object({
     kind: z.enum(schema.MAINTENANCE_KINDS).openapi({

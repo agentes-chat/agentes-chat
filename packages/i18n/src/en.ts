@@ -17189,7 +17189,7 @@ export const en = {
       viaHint: "Websites see that computer’s location. Its owner can turn it off on its page.",
     },
     /**
-     * What we do to the workspace's own computer (ADR 0256), said instead of "offline": a move, a restart, an update,
+     * What we do to the workspace's own computer (ADR 0257), said instead of "offline": a move, a restart, an update,
      * a disk conversion, its server's maintenance. `other`: a kind this app doesn't know yet.
      */
     maintenance: {

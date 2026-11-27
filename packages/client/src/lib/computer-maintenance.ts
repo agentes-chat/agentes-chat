@@ -3,7 +3,7 @@ import type { ComputerMaintenance } from "../api/types";
 import { clockAt, durationText } from "./format";
 
 /**
- * What we do to the workspace's own computer (ADR 0256), worded the same on the web, the desktop app and the phone:
+ * What we do to the workspace's own computer (ADR 0257), worded the same on the web, the desktop app and the phone:
  * a short label for its chip, one line with about when it is back, and the details its tip opens (what, why, since
  * when, expected back, what still works). Never sleep: a computer in standby has no maintenance (ADR 0161).
  */

@@ -90,7 +90,7 @@ test("the chat's waiting card and the computer's line know it moves", () => {
   expect(queueStatusText(t, queueView({ ...queue, moving: false }, "me"), { moving: false })).not.toBe(MOVING);
 });
 
-/** What we do to it (ADR 0256): each kind in its own words, about when it is back, and the tip's details. */
+/** What we do to it (ADR 0257): each kind in its own words, about when it is back, and the tip's details. */
 const NOW = new Date("2026-11-20T14:10:00.000Z");
 const restart: ComputerMaintenance = {
   kind: "restarting",

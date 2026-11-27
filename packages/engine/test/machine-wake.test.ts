@@ -260,7 +260,7 @@ describe("moving to another server", () => {
   });
 });
 
-describe("what we do to it (ADR 0256)", () => {
+describe("what we do to it (ADR 0257)", () => {
   test("a restart, a move's copy, an update: each said with its time, online only what slows it, never past its time", async () => {
     f = await setup();
     const { machineId, token } = await managedComputer();

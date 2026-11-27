@@ -154,7 +154,7 @@ export interface MachineExecutors {
   detectedAt?: string;
 }
 
-/** What we do to the workspace's own computer (`PUT …/maintenance`), worded by the apps (ADR 0256). */
+/** What we do to the workspace's own computer (`PUT …/maintenance`), worded by the apps (ADR 0257). */
 export const MAINTENANCE_KINDS = ["moving", "restarting", "updating", "converting", "host_maintenance"] as const;
 export type MaintenanceKind = (typeof MAINTENANCE_KINDS)[number];
 /**

@@ -94,6 +94,7 @@ import {
 } from "../src";
 import { computerPrompt } from "../src/brains/prompt";
 import { SYSTEM_REFUSED } from "../src/brains/types";
+import type { StageTiming } from "../src/profile";
 import { afterSteered } from "../src/steering";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -353,6 +354,83 @@ test("a computer-brain turn ends after the tools it ran through the bridge (neve
     .where(eq(schema.runToolTokens.runId, run?.id ?? ""));
   expect(tokens.length).toBe(1);
   expect(tokens[0]?.revokedAt).not.toBeNull();
+});
+
+test("a computer turn keeps where its time went: its checkouts' update, the CLI's start and first byte, tools, the model", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn, io) {
+      io.phase?.("code");
+      await Bun.sleep(40);
+      io.phase?.(null);
+      // One of ours through the bridge, timed by the steps the gateway writes, and one of its own at the same time.
+      yield { type: "tool_started", id: "own-1", name: "Bash" };
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_call", { toolUseId: "ours-1", name: "x" });
+      await Bun.sleep(60);
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_result", { toolUseId: "ours-1", name: "x" });
+      yield { type: "tool_call", id: "own-1", name: "Bash", input: {}, executed: { content: "ok" } };
+      yield {
+        type: "done",
+        text: "Feito.",
+        timings: { warm: false, cold: "new_session", initMs: 5, firstTokenMs: 12 },
+      };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev roda");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  const model = claim?.stages.find((s) => s.stage === "model#1");
+  const parts = Object.fromEntries((model?.parts ?? []).map((p) => [p.stage, p.ms]));
+  expect(Object.keys(parts)).toEqual(["pre_turn_sync", "cli_init", "cli_first_byte", "tools", "model_write"]);
+  expect(parts.pre_turn_sync).toBeGreaterThanOrEqual(35);
+  expect([parts.cli_init, parts.cli_first_byte]).toEqual([5, 7]);
+  // The two calls overlapped on different clocks: counted each, never less than the longer.
+  expect(parts.tools).toBeGreaterThanOrEqual(55);
+  const sum = (model?.parts ?? []).reduce((n, p) => n + p.ms, 0);
+  expect(Math.abs(sum - (model?.ms ?? 0))).toBeLessThan(1);
+});
+
+test("a call of ours through the bridge counts once in a computer turn's tools, though the brain tells it too", async () => {
+  f = await setup({ react: true });
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn, io) {
+      const name = turn.tools.find((t) => t.name === "react")?.name ?? "";
+      // The brain tells our call as it starts and ends, and the gateway writes its two steps around the same time.
+      yield { type: "tool_started", id: "ours-1", name };
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_call", { toolUseId: "ours-1", name });
+      await Bun.sleep(80);
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_result", { toolUseId: "ours-1", name });
+      yield { type: "tool_call", id: "ours-1", name, input: {}, executed: { content: "ok" } };
+      io.phase?.(null);
+      await Bun.sleep(200);
+      yield { type: "done", text: "Feito.", timings: { warm: true } };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev roda");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  const model = claim?.stages.find((s) => s.stage === "model#1");
+  const tools = model?.parts?.find((p) => p.stage === "tools")?.ms ?? 0;
+  expect(tools).toBeGreaterThanOrEqual(75);
+  expect(tools).toBeLessThan(150);
 });
 
 test("a computer brain that keeps doing real work between promises gets both continues, never the ask nudge", async () => {
@@ -1913,7 +1991,7 @@ test("its computer moving to another server: the run's wait says so, for the app
   const waitOfTask = async () => (await taskManager(f.db, f.owner.id, f.org.id)).tasks[0]?.wait;
   await f.db.update(schema.machines).set({ movingAt: new Date() }).where(eq(schema.machines.id, machineId));
   expect((await waitOfTask())?.moving).toBe(true);
-  // What is done to it, with when it should be back (ADR 0256).
+  // What is done to it, with when it should be back (ADR 0257).
   const eta = new Date(Date.now() + 2 * 60_000).toISOString();
   const since = new Date().toISOString();
   await f.db
@@ -2691,6 +2769,42 @@ const offline = {
   message: "The computer MacBook is offline.",
   retryable: true,
 } as const;
+
+test("a turn the computer dropped: the claim that picks it up again starts with its wait (`waits`)", async () => {
+  f = await setup();
+  const machineId = await computerAgent(f);
+  let online = true;
+  const { brain, seen } = scriptedComputerBrain((n) => {
+    if (n > 0) return [{ type: "done", text: "Voltei." }];
+    online = false;
+    return [{ type: "tool_call", id: "t1", name: "Bash", input: {}, executed: { content: "ok" } }, offline];
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id, { online }) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  let [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("waiting_input");
+  expect((run?.transcript as { waitingForBrain?: { code?: string } } | null)?.waitingForBrain?.code).toBe(
+    "machine_dropped",
+  );
+  online = true;
+  await resumeRunsWaitingForMachine(f.db, machineId);
+  await drainOutbox(f.db, handlers);
+  [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  expect(seen.length).toBe(2);
+  const profiles = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  expect(
+    profiles
+      .at(-1)
+      ?.stages.map((s) => s.stage)
+      .slice(0, 2),
+  ).toEqual(["waits", "claim"]);
+});
 
 test("drops before the turn said or did anything don't use up the limit: the run goes on past it", async () => {
   f = await setup();

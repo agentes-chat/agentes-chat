@@ -215,7 +215,7 @@ export interface ShownMaintenance {
 }
 
 /**
- * What we do to the workspace's own computer as people see it (ADR 0256): a move, a restart, an update, a disk
+ * What we do to the workspace's own computer as people see it (ADR 0257): a move, a restart, an update, a disk
  * conversion or its host's maintenance, as the operator last said (`moving_at`), until `MAINTENANCE_OVERRUN_MS` past
  * its expected end (or `MOVING_SHOWN_MS` after the last word when it has none). Away, it is said instead of offline;
  * online, only work that runs beside its own (a move's copy, a conversion), since it may be slower. Null: nothing to
@@ -864,7 +864,7 @@ export interface MaintenanceSaid {
 }
 
 /**
- * `PUT …/machines/{machineId}/maintenance`: the operator says what it does to the workspace's own computer (ADR 0256),
+ * `PUT …/machines/{machineId}/maintenance`: the operator says what it does to the workspace's own computer (ADR 0257),
  * or (null) that it is done; its people's apps read it again. Said again with the same kind it keeps its `since` and
  * takes the new time and step; `moving_at` is the latest word, which `MOVING_SHOWN_MS` counts from when there is no
  * `eta`. Null: the workspace has no such managed computer.

@@ -83,7 +83,7 @@ export type DeviceStatus =
   | { kind: "paused"; until: string | null }
   /**
    * The workspace's own computer, away for what we do to it (`shownMaintenance`: a move, a restart, an update…), since
-   * `since`. Named from when only moves were said: `maintenance` says which (absent from servers before ADR 0256).
+   * `since`. Named from when only moves were said: `maintenance` says which (absent from servers before ADR 0257).
    */
   | { kind: "moving"; since: string; maintenance?: ShownMaintenance }
   /** `withHost`: a phone whose host is offline. `cause`: a computer's, as `offlineCause` reads it. */

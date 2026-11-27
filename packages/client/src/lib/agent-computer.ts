@@ -65,7 +65,7 @@ export type EntryState =
   | { kind: "preparing"; eta: EtaView | null }
   | { kind: "waiting" }
   | { kind: "problem" }
-  /** The workspace's own computer, away for what we do to it (a move, a restart…: ADR 0256): never "offline". */
+  /** The workspace's own computer, away for what we do to it (a move, a restart…: ADR 0257): never "offline". */
   | { kind: "moving"; maintenance: ComputerMaintenance }
   | { kind: "offline" }
   | { kind: "paused"; until: string | null }

@@ -232,7 +232,7 @@ function MachinePage({ machineId }: { machineId: string }) {
   // Pause from here: whoever connected it and admins, while it's online; never the workspace's own computer.
   const pausable = m.canManage && m.online && !managed;
 
-  // What we do to it (ADR 0256): away, said instead of offline; its line and details in the facts.
+  // What we do to it (ADR 0257): away, said instead of offline; its line and details in the facts.
   const told = maintenanceOf(m);
   const away = !m.online && told?.away ? told : null;
   // One status word (the device's own line says it when there is one): paused outranks online.

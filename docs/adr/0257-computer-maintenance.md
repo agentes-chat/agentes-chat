@@ -1,4 +1,4 @@
-# 0256. What we do to the workspace's computer is said, never a bare "Offline"
+# 0257. What we do to the workspace's computer is said, never a bare "Offline"
 
 - Status: Accepted
 - Date: 2026-11-26

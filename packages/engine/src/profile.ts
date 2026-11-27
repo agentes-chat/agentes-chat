@@ -22,10 +22,13 @@ export function createProfiler() {
   let partAt = at;
   let partQueries = queries;
   const round = (ms: number) => Math.round(ms * 10) / 10;
-  const mark = (stage: string) => {
+  /** `own`: the stage's steps as worked out by its caller (a computer turn's, `computerTurnParts`), not `part`'s. */
+  const mark = (stage: string, own?: (ms: number) => StageTiming[]) => {
     const now = performance.now();
     const q = currentQueryCount();
-    stages.push({ stage, ms: round(now - at), queries: q - queries, ...(parts.length > 0 ? { parts } : {}) });
+    const ms = round(now - at);
+    const steps = own ? own(ms) : parts;
+    stages.push({ stage, ms, queries: q - queries, ...(steps.length > 0 ? { parts: steps } : {}) });
     parts = [];
     at = partAt = now;
     queries = partQueries = q;
@@ -62,4 +65,51 @@ export function createProfiler() {
       queries: stages.reduce((n, s) => n + s.queries, 0),
     }),
   };
+}
+
+/** A stretch of time something ran, from and to in ms on one clock. */
+export interface Span {
+  from: number;
+  to: number;
+}
+
+/** How long at least one of `spans` was running: two calls at the same time count once. */
+export function spanUnionMs(spans: readonly Span[]) {
+  let total = 0;
+  let end = Number.NEGATIVE_INFINITY;
+  for (const { from, to } of [...spans].sort((a, b) => a.from - b.from)) {
+    if (to <= end) continue;
+    total += to - Math.max(from, end);
+    end = to;
+  }
+  return total;
+}
+
+/**
+ * A computer turn's `model` stage in its steps, named as the operator's breakdown groups them: the agent's checkouts
+ * updated before it (`pre_turn_sync`, the `code` phase), a new CLI process until ready (`cli_init`), ready to the
+ * model API's first streamed message (`cli_first_byte`), the tools it ran (`tools`), and the rest, the model writing
+ * and the trips between (`model_write`). Durations from the runner's clock and the server's mix, never instants. Not
+ * back to back: tools run while the model's turn goes on, so the steps are its shares of `ms`, the last one the rest.
+ */
+export function computerTurnParts(
+  ms: number,
+  turn: { syncMs: number; timings?: BrainTurnTimings | undefined; toolsMs: number },
+): StageTiming[] {
+  const round = (n: number) => Math.round(Math.max(0, n) * 10) / 10;
+  const init = turn.timings?.warm === false ? (turn.timings.initMs ?? 0) : 0;
+  const first = turn.timings?.firstTokenMs ?? turn.timings?.firstEventMs;
+  const known = [
+    { stage: "pre_turn_sync", ms: round(turn.syncMs) },
+    { stage: "cli_init", ms: round(init) },
+    { stage: "cli_first_byte", ms: first === undefined ? 0 : round(first - init) },
+    { stage: "tools", ms: round(turn.toolsMs) },
+  ];
+  let left = ms;
+  const shares = known.flatMap((p) => {
+    const share = round(Math.min(p.ms, left));
+    left -= share;
+    return share > 0 ? [{ ...p, ms: share, queries: 0 }] : [];
+  });
+  return [...shares, { stage: "model_write", ms: round(left), queries: 0 }];
 }

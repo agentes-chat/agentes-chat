@@ -5469,7 +5469,7 @@ export interface Machine {
   standby?: boolean;
   /** The workspace's own computer is away for what we do to it (`maintenance` says what). Absent: it isn't. */
   moving?: boolean;
-  /** What we do to the workspace's own computer now, said instead of offline (ADR 0256). Absent: nothing. */
+  /** What we do to the workspace's own computer now, said instead of offline (ADR 0257). Absent: nothing. */
   maintenance?: ComputerMaintenance | null;
   /**
    * Why it is offline, from its runner's last close: `unresponsive` (no network, or too busy to answer), `stopped`
@@ -9136,7 +9136,7 @@ export interface DeviceAudience {
 }
 
 /** A device's state, worded by the apps. Reason codes: `PhoneReason` in the machine protocol, plus the server's own. */
-/** What we do to the workspace's own computer (ADR 0256): a move, a restart, an update, a disk conversion, host maintenance. */
+/** What we do to the workspace's own computer (ADR 0257): a move, a restart, an update, a disk conversion, host maintenance. */
 export type MaintenanceKind = "moving" | "restarting" | "updating" | "converting" | "host_maintenance";
 
 export interface ComputerMaintenance {

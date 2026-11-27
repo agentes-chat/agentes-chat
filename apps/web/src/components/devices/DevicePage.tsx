@@ -190,7 +190,7 @@ function StatusLine({
   ios?: string | null;
   /** In place of the status's own sentence, as typed (it carries a person's name). */
   text?: string | null;
-  /** What we do to the computer (ADR 0256): its line, with its ⓘ. */
+  /** What we do to the computer (ADR 0257): its line, with its ⓘ. */
   maintenance?: ComputerMaintenance | null;
 }) {
   const { t, i18n } = useTranslation();
