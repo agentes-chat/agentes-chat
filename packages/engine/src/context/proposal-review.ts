@@ -41,6 +41,8 @@ export interface SettleDeps {
 const TEXT_CHARS = 6000;
 const DIFF_CHARS = 4000;
 const INPUT_CHARS = 40_000;
+/** Skill rewrites carry no `Current text` block, so give their diff the same room `reviewAskedSkill` uses. */
+const SKILL_DIFF_CHARS = INPUT_CHARS / 2;
 /** A rule from memory, at most: one line the prompt carries in every run. */
 const RULE_CHARS = 300;
 /** What of the person's message the review reads, at most. */
@@ -188,6 +190,28 @@ const KIND: Record<Proposal["target"], string> = {
 
 type Team = Map<string, { name: string; handle: string; role: string; instructions: string }>;
 
+/**
+ * Changed lines of `diff` within `limit`, giving removals and additions their own share so a long deletion never hides
+ * the added text from the review.
+ */
+function formatDiff(diff: string, limit: number): string {
+  const pick = (sign: string) =>
+    diff
+      .split("\n")
+      .filter((l) => l.startsWith(sign) && l.slice(1).trim())
+      .map((l) => `${sign} ${l.slice(1)}`)
+      .join("\n");
+  const removed = pick("-");
+  const added = pick("+");
+  if (!removed) return cutText(added, limit);
+  if (!added) return cutText(removed, limit);
+  if (removed.length + added.length + 1 <= limit) return `${removed}\n${added}`;
+  const half = Math.floor((limit - 1) / 2);
+  const remBudget = Math.min(removed.length, Math.max(half, limit - 1 - added.length));
+  const addBudget = limit - 1 - remBudget;
+  return `${cutText(removed, remBudget)}\n${cutText(added, addBudget)}`;
+}
+
 /** What the review reads of one change: where it lands, who it came from, the text now and the change. */
 function changeBlock(
   id: string,
@@ -201,11 +225,6 @@ function changeBlock(
   const agent = p.agentId ? team.get(p.agentId) : undefined;
   const proposer = p.proposedByAgentId ? team.get(p.proposedByAgentId) : undefined;
   const memory = p.itemIds.length > 0;
-  const lines = (sign: string) =>
-    p.diff
-      .split("\n")
-      .filter((l) => l.startsWith(sign) && l.slice(1).trim())
-      .map((l) => `${sign} ${l.slice(1)}`);
   const head = [
     `Kind: ${memory ? `memory lesson for the ${KIND[p.target]}` : KIND[p.target]}`,
     agent ? `Agent: ${agent.name} (@${agent.handle}), role: ${agent.role || "none"}` : "Workspace-wide",
@@ -238,7 +257,7 @@ function changeBlock(
       ...(current ? [`Current text: """${cutTextEnd(current, TEXT_CHARS)}"""`] : []),
       p.target === "skill" ? `Skill: ${p.access?.[0]?.label ?? ""}` : "",
       "Change (- removed, + added):",
-      cutText([...lines("-"), ...lines("+")].join("\n"), DIFF_CHARS),
+      formatDiff(p.diff, p.target === "skill" ? SKILL_DIFF_CHARS : DIFF_CHARS),
     ].filter(Boolean);
   }
   return `<change id="${id}">\n${[...head, ...body].join("\n")}\n</change>`;
