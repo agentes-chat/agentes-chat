@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, jsonb, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, index, jsonb, pgTable, smallint, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { agents } from "./agents";
 import { appGrants } from "./apps";
 import { users } from "./auth";
@@ -43,3 +43,40 @@ export const firstAgentProposals = pgTable(
 );
 
 export type FirstAgentProposal = typeof firstAgentProposals.$inferSelect;
+
+/**
+ * A person's first delivery (ADR 0256 addendum): the first piece of work the agent they set up on the onboarding does
+ * for them, kept from the moment the agent is made and fired once in their DM with it, as soon as it can work (the
+ * workspace's plan, its AI and, for a plan's sign-in, its computer). One per person and workspace: a new agent takes
+ * the place of one not fired yet. `area` is the onboarding's area (null for an agent brought from another app), `task`
+ * what it does first when it has no routine of theirs; `run_id` is the run its notice woke.
+ */
+export const firstDeliveries = pgTable(
+  "first_deliveries",
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => Bun.randomUUIDv7()),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    agentId: uuid()
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    area: text(),
+    task: text().notNull().default(""),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    firedAt: timestamp({ withTimezone: true }),
+    runId: uuid(),
+  },
+  (t) => [
+    unique("first_deliveries_person").on(t.orgId, t.userId),
+    // The sweep reads only what still waits to fire.
+    index("first_deliveries_pending_idx").on(t.createdAt).where(sql`${t.firedAt} is null`),
+  ],
+);
+
+export type FirstDelivery = typeof firstDeliveries.$inferSelect;
