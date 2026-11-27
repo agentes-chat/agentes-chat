@@ -820,7 +820,7 @@ export interface Transcript {
     resetsAt?: string;
     /** A usage wait's: when its conversation first paused (`usageWait.since`), its place in line (`usageWaitPlace`). */
     since?: number;
-    /** When this wait began (ms): the claim that resumes it profiles a wait for room from here (`room_wait`). */
+    /** When this wait began (ms): the claim that resumes it profiles the wait from here (`room_wait` for room, else `waits`). */
     at?: number;
     /** A usage wait's plan in words ("Claude", "ChatGPT"): Rotinas says what it waits for. */
     plan?: string;
@@ -4799,7 +4799,7 @@ async function executeRunInner(
       ...(serverStop ? { cause: "restart" as const } : {}),
     };
     const waitId = Bun.randomUUIDv7();
-    t.waitingForBrain = { kind: from, machineId, code: "machine_dropped", waitId };
+    t.waitingForBrain = { kind: from, machineId, code: "machine_dropped", waitId, at: Date.now() };
     await addRunStep(db, run, "error", {
       reason: "brain_dropped",
       code: "machine_offline",
@@ -5854,7 +5854,9 @@ async function executeRunInner(
               // Its line on the way (`say_now`) is talk, not work: a turn that fails after it did nothing to keep.
               if (!isSayNow(call.name)) executedNow.push(call);
               const startedAt = stepTold.get(call.id);
-              if (startedAt !== undefined) ownSpans.push({ from: startedAt, to: Date.now() });
+              // Ours through the bridge are timed by their steps (`bridgeToolSpans`): never twice.
+              if (startedAt !== undefined && !turnTools.some((t) => t.name === call.name))
+                ownSpans.push({ from: startedAt, to: Date.now() });
               // In a code session each call of its own is a step, where its reply's work lists it (ADR 0215). One
               // whose work goes on in the background (its progress started and not ended; a workflow always does)
               // ends, live and on the trail, when that work ends: its line runs until then.
@@ -7629,7 +7631,6 @@ function listRunTools(deps: Pick<EngineDeps, "tools">, ctx: ToolContext): Promis
   return deps.tools ? deps.tools.list(ctx) : Promise.resolve([]);
 }
 
-/** The run's last step number (0 without steps). */
 /**
  * Each call of our tools after `fromSeq`, from its `tool_call` step to its `tool_result`, on the database's clock: the
  * gateway writes the one as the call starts and the other as it ends, whoever ran it (the bridge, the model's loop).
@@ -7659,6 +7660,7 @@ async function bridgeToolSpans(db: Executor, runId: string, fromSeq: number): Pr
   });
 }
 
+/** The run's last step number (0 without steps). */
 async function lastStepSeq(db: Executor, runId: string): Promise<number> {
   const [row] = await db
     .select({ seq: sql<number>`coalesce(max(${schema.agentRunSteps.seq}), 0)` })
