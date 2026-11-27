@@ -26,10 +26,13 @@ import {
   maintenanceShort,
 } from "@agenteschat/client/lib/computer-maintenance";
 import {
+  doctorShown,
   mayChangeTasks,
   offlineCauseText,
+  RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
   taskLimitLine,
+  terminalInstall,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt, firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
@@ -162,6 +165,7 @@ function MachinePage({ machineId }: { machineId: string }) {
   });
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const [techOpen, setTechOpen] = useState(false);
   if (!m) {
     return (
       <SettingsPage title={t("machines.page.back")}>
@@ -278,7 +282,7 @@ function MachinePage({ machineId }: { machineId: string }) {
   const s = device?.status;
   const causeLine =
     s?.kind === "offline" && s.cause && s.lastSeenAt
-      ? offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line")
+      ? offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line", terminalInstall(m))
       : device
         ? taskLimitLine(t, device, mayChangeTasks(device, meId ?? "", can(org, "configure")))
         : null;
@@ -317,6 +321,26 @@ function MachinePage({ machineId }: { machineId: string }) {
             <>
               <Gap />
               <CommandBlock command={RUNNER_UPDATE_COMMAND} />
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {m.canManage && doctorShown(s, m) ? (
+        <>
+          <Gap />
+          <GroupedList>
+            <GroupedRow
+              icon={techOpen ? "up" : "down"}
+              label={t("devices.technical.title")}
+              onPress={() => setTechOpen((o) => !o)}
+            />
+          </GroupedList>
+          {techOpen ? (
+            <>
+              <GroupedFooter>{t("devices.technical.doctor")}</GroupedFooter>
+              <Gap />
+              <CommandBlock command={RUNNER_DOCTOR_COMMAND} />
             </>
           ) : null}
         </>

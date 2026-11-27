@@ -24,6 +24,11 @@
     "welcome": "Welkom",
     "prefs": "Voorkeuren"
   },
+  "background": {
+    "title": "agentes.chat blijft actief",
+    "bodyMac": "Je vindt het in de menubalk boven aan het scherm. Open of sluit het daar af.",
+    "bodyTray": "Je vindt het in het systeemvak. Open of sluit het daar af."
+  },
   "common": {
     "cancel": "Annuleren",
     "close": "Sluiten",

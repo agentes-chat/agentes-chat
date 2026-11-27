@@ -7,6 +7,14 @@ import { FOLDER_PICK_PROTOCOL, MACHINE_PROTOCOL_VERSION, RUNNER_APP_PROTOCOL } f
 const UNSAID_APP_PROTOCOL = 77;
 
 /**
+ * Whether the agentes.chat app runs this computer's runner, rather than a Terminal install. A runner from before
+ * `RUNNER_APP_PROTOCOL` doesn't say: off Linux, where the Terminal install is rare, or new enough to be the app of
+ * that time, it counts as the app.
+ */
+export const runByApp = (m: { os: string; protocol: number; executors?: { app?: true } | null }) =>
+  m.protocol >= RUNNER_APP_PROTOCOL ? m.executors?.app === true : m.os !== "linux" || m.protocol >= UNSAID_APP_PROTOCOL;
+
+/**
  * How the person updates a computer whose runner is behind this server, which `agentes-runner update` and the
  * installer both catch up with: `command` (`agentes-runner update`), `installer` (system mode: the install command
  * again, as root). Null: nothing to update from here: current, the workspace's or this server's own computer (each
@@ -19,11 +27,7 @@ export function runnerUpdateOf(
   server = MACHINE_PROTOCOL_VERSION,
 ): "command" | "installer" | null {
   if (m.kind !== "connected" || m.protocol >= server) return null;
-  const app =
-    m.protocol >= RUNNER_APP_PROTOCOL
-      ? m.executors?.app === true
-      : m.os !== "linux" || m.protocol >= UNSAID_APP_PROTOCOL;
-  if (app) return null;
+  if (runByApp(m)) return null;
   return m.executors?.mode === "system" ? "installer" : "command";
 }
 

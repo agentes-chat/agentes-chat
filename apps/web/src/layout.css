@@ -2765,28 +2765,6 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   display: block;
   image-rendering: pixelated;
 }
-.chart-tip {
-  position: absolute;
-  z-index: 2;
-  padding: 6px 9px;
-  border-radius: 9px;
-  background: var(--ink);
-  color: var(--surface-raised);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  white-space: nowrap;
-  pointer-events: none;
-  transform: translate(-50%, calc(-100% - 8px));
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-.chart-tip[data-on="true"] {
-  opacity: 1;
-}
-.chart-tip[data-below="true"] {
-  transform: translate(-50%, 24px);
-}
 /* Bars: label · rounded bar on a light rail · value. */
 .chart-bars {
   position: relative;
@@ -2855,10 +2833,6 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .chart-line__grid {
   stroke: var(--line);
   stroke-dasharray: 2 4;
-}
-.chart-line__cursor {
-  stroke: var(--line-strong);
-  stroke-dasharray: 2 3;
 }
 .chart-line__stroke {
   transition: stroke-dashoffset 0.7s var(--out);

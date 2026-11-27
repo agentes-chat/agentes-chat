@@ -16780,13 +16780,13 @@
       "browser_download": "De browser van de agents kon niet worden gedownload. Controleer de verbinding van deze computer, dan probeert hij het bij het volgende gebruik opnieuw.",
       "browser_checksum": "De download van de browser van de agents kwam beschadigd binnen en is niet gebruikt. Hij probeert het bij het volgende gebruik opnieuw.",
       "desktop_use_linux": "Apps op de schermen van de agents werken op Linux-computers met de schermen van de agents.",
-      "desktop_use_own_user": "Apps op de schermen hebben voor elke agent een eigen gebruiker op deze computer nodig (systeemmodus). Hier werken alle agents als de gebruiker van de runner.",
+      "desktop_use_own_user": "Apps op de schermen hebben voor elke agent een eigen gebruiker op deze computer nodig (systeemmodus). Hier werken alle agents als dezelfde gebruiker, die waarmee agentes.chat draait.",
       "desktop_use_install": "Installeer op deze computer wat apps op de schermen nodig hebben:",
       "desktop_unavailable": "De schermen van de agents kunnen niet op deze computer draaien.",
       "desktop_linux": "De schermen van de agents draaien alleen op Linux-computers.",
       "desktop_install": "Installeer op deze computer de schermen van de agents:",
-      "not_as_root": "De schermen en terminals van de agents draaien nooit als root. Start de runner als een gewone gebruiker.",
-      "runner_bun_old": "Hiervoor is de runner op Bun 1.3.5 of nieuwer nodig. Werk de runner op deze computer bij.",
+      "not_as_root": "De schermen en terminals van de agents draaien nooit als root. Start agentes.chat als gewone gebruiker.",
+      "runner_bun_old": "Hiervoor is agentes.chat op Bun 1.3.5 of nieuwer nodig. Werk agentes.chat op deze computer bij.",
       "terminal_unsupported": "Terminals werken alleen op Linux- en Mac-computers."
     },
     "egress": {
@@ -16796,7 +16796,6 @@
       "hint": "Het adres dat websites zien als de agents browsen. Het verandert mee met het netwerk van de computer.",
       "waiting": "Het internet van de agents wordt opnieuw verbonden. Hun verbindingen wachten tot het terug is.",
       "via": "Agents gebruiken het internet van {{name}}",
-      "viaBy": "Agents gebruiken het internet van {{name}} ({{person}})",
       "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten."
     },
     "maintenance": {
@@ -17236,6 +17235,8 @@
       "paused": "{{host}} is gepauzeerd, dus de controle wacht tot het verdergaat.",
       "held": "Deze werkruimte is gepauzeerd, dus de bediening wacht tot hij weer actief is.",
       "lost": "De controle is voorbij. Je kijkt weer mee met {{name}}.",
+      "controlLate": "De bediening is niet op tijd begonnen. {{host}} maakt {{name}} nog klaar: probeer het over een minuut opnieuw.",
+      "controlFailed": "Kon {{name}} niet overnemen. Probeer het opnieuw, of start de agentes.chat-app op {{host}} opnieuw.",
       "typeLabel": "Typen op {{name}}"
     },
     "status": {
@@ -17257,7 +17258,7 @@
       "withHost": "met {{host}}",
       "lastSeen": "laatst gezien {{time}}",
       "offlineUnresponsive": "reageert niet meer sinds {{time}}",
-      "offlineStopped": "runner gestopt om {{time}}",
+      "offlineStopped": "agentes.chat gestopt om {{time}}",
       "offlineDropped": "verbinding verbroken om {{time}}"
     },
     "line": {
@@ -17273,9 +17274,14 @@
       "offline": "Agents wachten tot het terug is.",
       "offlineSeen": "Laatst gezien {{time}}. Agents wachten tot het terug is.",
       "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is.",
-      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen netwerk of overbelast. Voer daar `{{command}}` uit.",
-      "offlineStopped": "De runner stopte om {{time}}. Start hem opnieuw, of voer daar `{{command}}` uit om te zien waarom.",
-      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding. Zo niet, voer daar `{{command}}` uit."
+      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen internet of overbelast. Kijk of hij aan staat en online is.",
+      "offlineStopped": "De agentes.chat-app is om {{time}} op deze computer gestopt. Open de app opnieuw.",
+      "offlineStoppedCli": "agentes.chat is om {{time}} op deze computer gestopt. Start het daar opnieuw.",
+      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding."
+    },
+    "technical": {
+      "title": "Technische details",
+      "doctor": "Voer dit daar uit om te zien waarom:"
     },
     "reason": {
       "locked": "De telefoon is vergrendeld",
@@ -20745,7 +20751,7 @@
       "people": "Iedereen kan hem vanaf nu alleen nog lezen en krijgt een e-mail",
       "peopleQuiet": "Iedereen kan hem vanaf nu alleen nog lezen",
       "computer": "De computer stopt nu en wordt gewist",
-      "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot de runner verwijderd wordt.",
+      "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot agentes.chat ervan verwijderd wordt.",
       "connectors": "Connectors en mailboxen worden ontkoppeld"
     },
     "undo": "Elke eigenaar kan hem herstellen tot {{date}} om {{time}}. Daarna kan het niet meer ongedaan gemaakt worden.",
@@ -21109,14 +21115,6 @@
       "doneByYou": "Gedaan door jou om {{time}}. {{agent}} keek opnieuw naar het scherm en ging verder.",
       "doneByYou_female": "Gedaan door jou om {{time}}. {{agent}} keek opnieuw naar het scherm en ging verder."
     },
-    "control": {
-      "notice": "Programma's op de computer van {{name}} kunnen het scherm zien en wat je typt of plakt.",
-      "notice_female": "Programma's op de computer van {{name}} kunnen het scherm zien en wat je typt of plakt."
-    },
-    "session": {
-      "check": "Veiligheidscontroles",
-      "screening": "We kunnen de tekst op dit scherm controleren op misbruik. We bewaren alleen het resultaat. Wat het scherm niet toont, zoals een wachtwoord bij een prompt, wordt nooit vastgelegd."
-    },
     "after": {
       "titleNoSite": "Het scherm gebruikt",
       "noSite": "Voordat er een app geopend werd"
@@ -21126,8 +21124,6 @@
       "group_female": "Scherm van {{name}}"
     },
     "watch": {
-      "notice": "Programma's op de computer van {{name}} kunnen het scherm zien en alles wat daar getypt of geplakt wordt.",
-      "notice_female": "Programma's op de computer van {{name}} kunnen het scherm zien en alles wat daar getypt of geplakt wordt.",
       "step": {
         "desktop_open": "{{detail}} geopend",
         "desktop_open_plain": "Een app geopend",

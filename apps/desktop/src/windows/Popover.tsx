@@ -186,8 +186,8 @@ export function Popover() {
   const [menuBarPref, setMenuBarPref] = useState(() => readPref<boolean | null>(MENU_BAR_PREF, null));
   const iconShown = menuBarShown(menuBarPref, busyHere);
   useEffect(() => {
-    void host.setTrayVisible(iconShown).catch(() => {});
-  }, [host, iconShown]);
+    void host.setTrayVisible(iconShown, menuBarPref === false).catch(() => {});
+  }, [host, iconShown, menuBarPref]);
 
   // The notch window lives only while it's on (Preferências → Geral): this window starts with the app.
   useEffect(() => {
@@ -1406,10 +1406,13 @@ function PickCard({ home, now }: { home: Home; now: number }) {
   if (!pick) return null;
   const name = pick.byName || orgName(home);
   const agent = pick.agentId ? agentOf(home, { id: pick.agentId, name: pick.agentName ?? "" }) : null;
+  // Answered (or the picker closed): the popover goes on hiding when it loses focus, as it does when opened by hand.
+  const answered = () => void host.showWindow("popover").catch(() => {});
   const choose = async () => {
     setBusy(true);
     try {
       const path = await host.pickFolder().catch(() => null);
+      answered();
       if (!path) return;
       const agents = agent ? [agent.id] : (home.status?.agents ?? []).map((a) => a.id);
       await store.request(home.homeId, { type: "folders.add", path, agents });
@@ -1451,7 +1454,15 @@ function PickCard({ home, now }: { home: Home; now: number }) {
         <Button size="sm" variant="primary" icon="drive" loading={busy} onClick={() => void choose()}>
           {t("desktop.tray.pickChoose")}
         </Button>
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => store.dismissPick(home.homeId)}>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => {
+            store.dismissPick(home.homeId);
+            answered();
+          }}
+        >
           {t("desktop.tray.deny")}
         </Button>
       </div>
@@ -1462,6 +1473,7 @@ function PickCard({ home, now }: { home: Home; now: number }) {
 /** An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. */
 function RequestCard({ home, request, now }: { home: Home; request: ControlAccessRequest; now: number }) {
   const { t } = useTranslation();
+  const host = useHost();
   const store = useStore();
   const toast = useToast();
   const [scope, setScope] = useState<"agent" | "all">("agent");
@@ -1472,6 +1484,8 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
     setBusy(true);
     try {
       await store.request(home.homeId, { type: "access.answer", requestId: request.requestId, decision, scope });
+      // Raised for this request (`raisePick`), the popover was kept up: answered, it hides on focus loss again.
+      void host.showWindow("popover").catch(() => {});
       toast(
         decision === "denied"
           ? t("desktop.tray.denied", { agent: agent.name })

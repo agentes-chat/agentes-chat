@@ -19,13 +19,31 @@ test("a computer's page on the phone: its internet for the agents, as the web's 
   expect(computer).toContain("lending !== null && mine");
 });
 
-test("the workspace's computer on the phone says whose internet its agents use", () => {
+test("a borrowing computer on the phone says whose internet its agents use", () => {
   expect(flat("features/settings/MachineScreen.tsx")).toContain("egressViaText(t, m),");
+});
+
+test("an offline computer on the phone: plain words, the command that tells why folded under Technical details", () => {
+  const screen = flat("features/settings/MachineScreen.tsx");
+  expect(screen).toContain(
+    'offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line", terminalInstall(m))',
+  );
+  expect(screen).toContain("{m.canManage && doctorShown(s, m) ? (");
+  expect(screen).toContain('label={t("devices.technical.title")}');
+  expect(screen).toContain("{techOpen ? (");
+  expect(screen).toContain("<CommandBlock command={RUNNER_DOCTOR_COMMAND} />");
+});
+
+test("the agent's screen on the phone says nothing about what programs there see, with no ⓘ for it", () => {
+  const screen = flat("features/computer/AgentScreen.tsx");
+  for (const gone of ["desktop.control.notice", "desktop.session.", "useInfoHint", "notice.button"])
+    expect(screen).not.toContain(gone);
 });
 
 test("letting a computer join on the phone says it will lend its internet, as the web's Let it join does", () => {
   const parts = flat("features/devices/parts.tsx");
-  expect(parts).toContain('d.machineKind === "managed"');
+  // Where the server says computers lend (a self-hosted server too), not only beside the workspace's own computer.
+  expect(parts).toContain("const lends = lendsInternet(useDevices().data);");
   expect(parts).toContain('t("devices.shareInternetJoin")');
   // The devices list's card and the notice's card both show it.
   expect(parts).toContain("{joinFacts(t, r)} </Text> <JoinInternetLine />");

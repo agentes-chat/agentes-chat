@@ -284,6 +284,7 @@ function rig(
     ios?: (env: NodeJS.ProcessEnv, root: string, now: () => number) => IosHelper;
     iosScreen?: IosScreenDriverFactory;
     openMs?: number;
+    startMs?: number;
     pnp?: () => Promise<string | null>;
     emulatorStartMs?: number;
   } = {},
@@ -323,6 +324,7 @@ function rig(
     ...(opts.readOnly ? { readOnly: true } : {}),
     ...(opts.iosScreen ? { iosScreen: opts.iosScreen } : {}),
     ...(opts.openMs ? { openMs: opts.openMs } : {}),
+    ...(opts.startMs ? { startMs: opts.startMs } : {}),
     ...(opts.pnp ? { pnp: opts.pnp } : {}),
     ...(opts.emulatorStartMs ? { emulatorStartMs: opts.emulatorStartMs } : {}),
     pairPollMs: 5,
@@ -1439,6 +1441,29 @@ test("a screen that doesn't open in the server's wait (a first helper build) giv
   expect(opened).toMatchObject({ code: "phone_not_ready", message: OPENING_LATE });
   expect(dialed).toBe(0);
   expect(r.manager.list().find((p) => p.serial === SIM)?.holder).toBeUndefined();
+});
+
+test("control the server gives a start's wait opens once the helper's first picture comes, past an open's wait", async () => {
+  // A helper that comes up after the open's own wait (its first build, its launch).
+  const starting: PhoneScreenDriver = {
+    frame: async () => {
+      await wait(300);
+      return { jpeg: new Uint8Array([0xff, 0xd8, 1]), width: 402, height: 874 };
+    },
+    tap: async () => {},
+    swipe: async () => {},
+    text: async () => {},
+    key: async () => {},
+  };
+  const r = rig(ANDROID_STATE, { iosScreen: () => starting, openMs: 100, startMs: 5000 });
+  const sam = { runId: null, agentId: null, userId: "user-sam", since: "" };
+  const viewer = viewerSocket();
+  await r.manager.view({ platform: "ios", serial: SIM, holder: sam }, "control", async () => viewer.socket, {
+    start: true,
+  });
+  await until(() => viewer.sent.length > 0, "the first picture");
+  expect(viewer.closed).toEqual([]);
+  viewer.socket.close(1000, "done");
 });
 
 test("input lands where the person pressed, in the picture's own size; text is one quoted word for the phone's shell", async () => {

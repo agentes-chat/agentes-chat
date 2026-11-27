@@ -49,6 +49,11 @@ export function peaksOf(levels: readonly number[], n = PEAKS): number[] {
   });
 }
 
+let recordings = 0;
+
+/** A voice note is being recorded (or paused, not yet sent) somewhere on the page: a reload would lose it. */
+export const recordingVoice = () => recordings > 0;
+
 /** One recording: the microphone, what it heard, and listening back while paused. */
 class Recording {
   readonly levels: number[] = [];
@@ -80,6 +85,7 @@ class Recording {
     };
     recorder.start(1000);
     this.t0 = performance.now();
+    recordings++;
   }
 
   static async open() {
@@ -226,7 +232,11 @@ class Recording {
     this.release();
   }
 
+  private released = false;
+
   private release() {
+    if (!this.released) recordings--;
+    this.released = true;
     for (const track of this.stream.getTracks()) track.stop();
     void this.ac.close().catch(() => undefined);
   }

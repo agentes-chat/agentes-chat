@@ -17,6 +17,13 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     preloadLocale(),
+    // When this build was made, on its pages: a later build's `agentes-oldest-good` (index.html) is compared with it.
+    {
+      name: "agentes-build",
+      transformIndexHtml: () => [
+        { tag: "meta", attrs: { name: "agentes-build", content: new Date().toISOString() }, injectTo: "head" },
+      ],
+    },
   ],
   // One copy of Yjs: it checks its own types with instanceof (live files, ADR 0196).
   resolve: {

@@ -9,7 +9,7 @@ import { AuthFrame } from "@/components/AuthLayout";
 import { DesktopDragStrip } from "@/components/DesktopDragStrip";
 import { BootSplash } from "@/components/Sky";
 import { useServerBack } from "@/hooks/useServerBack";
-import { onVersionReload, reloadIfStale, reloadingForNewVersion } from "@/lib/app-version";
+import { onVersionReload, reloadFresh, reloadIfStale, reloadingForNewVersion } from "@/lib/app-version";
 import { inDesktopApp } from "@/lib/desktop";
 import { onReportTaken, reportError, reportTaken, shortErrorId } from "@/lib/error-reports";
 import { firstScreenPainted } from "@/lib/vitals";
@@ -70,7 +70,8 @@ export function ErrorScreen({ error }: ErrorComponentProps) {
       title={t("empty.crashTitle")}
       text={t("empty.crashText")}
       action={
-        <Button variant="primary" size="lg" icon="refresh" onClick={reload}>
+        // The newest version, never the browser's copy of this one: the crash may be fixed there.
+        <Button variant="primary" size="lg" icon="refresh" onClick={() => void reloadFresh()}>
           {t("common.reload")}
         </Button>
       }

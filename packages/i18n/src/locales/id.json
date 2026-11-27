@@ -16163,13 +16163,13 @@
       "browser_download": "Browser agen tidak bisa diunduh. Periksa koneksi komputer ini, dan akan dicoba lagi saat dipakai berikutnya.",
       "browser_checksum": "Unduhan browser agen rusak, jadi tidak dipakai. Akan dicoba lagi saat dipakai berikutnya.",
       "desktop_use_linux": "Aplikasi di layar agen berjalan di komputer Linux yang punya layar agen.",
-      "desktop_use_own_user": "Aplikasi di layar agen butuh setiap agen bekerja sebagai penggunanya sendiri di komputer ini (mode sistem). Di sini semua agen bekerja sebagai pengguna runner.",
+      "desktop_use_own_user": "Aplikasi di layar agen butuh setiap agen bekerja sebagai penggunanya sendiri di komputer ini (mode sistem). Di sini semua agen bekerja sebagai pengguna yang sama, yaitu pengguna yang menjalankan agentes.chat.",
       "desktop_use_install": "Pasang di komputer ini yang dibutuhkan aplikasi di layar agen:",
       "desktop_unavailable": "Layar agen tidak bisa berjalan di komputer ini.",
       "desktop_linux": "Layar agen hanya berjalan di komputer Linux.",
       "desktop_install": "Pasang layar agen di komputer ini:",
-      "not_as_root": "Layar dan terminal agen tidak pernah berjalan sebagai root. Jalankan runner sebagai pengguna biasa.",
-      "runner_bun_old": "Ini butuh runner di Bun 1.3.5 atau yang lebih baru. Perbarui runner di komputer ini.",
+      "not_as_root": "Layar dan terminal agen tidak pernah berjalan sebagai root. Jalankan agentes.chat sebagai pengguna biasa.",
+      "runner_bun_old": "Ini butuh agentes.chat di Bun 1.3.5 atau lebih baru. Perbarui agentes.chat di komputer ini.",
       "terminal_unsupported": "Terminal hanya berjalan di komputer Linux dan Mac."
     },
     "egress": {
@@ -16179,7 +16179,6 @@
       "hint": "Alamat yang dilihat situs saat agen menjelajah. Alamat ini ikut berubah saat jaringan komputer berubah.",
       "waiting": "Menyambungkan ulang internet agen. Koneksi mereka menunggu sampai kembali.",
       "via": "Agen memakai internet {{name}}",
-      "viaBy": "Agen memakai internet {{name}} ({{person}})",
       "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya."
     },
     "maintenance": {
@@ -16616,6 +16615,8 @@
       "paused": "{{host}} sedang dijeda, jadi kendali menunggu sampai dilanjutkan.",
       "held": "Ruang kerja ini dijeda, jadi kontrol menunggu sampai aktif lagi.",
       "lost": "Kendali berakhir. Kamu menonton {{name}} lagi.",
+      "controlLate": "Kontrol tidak dimulai tepat waktu. {{host}} masih menyiapkan {{name}}: coba lagi dalam satu menit.",
+      "controlFailed": "Tidak bisa mengambil kontrol {{name}}. Coba lagi, atau mulai ulang aplikasi agentes.chat di {{host}}.",
       "typeLabel": "Ketik di {{name}}"
     },
     "status": {
@@ -16637,7 +16638,7 @@
       "withHost": "bersama {{host}}",
       "lastSeen": "terakhir terlihat {{time}}",
       "offlineUnresponsive": "berhenti merespons pukul {{time}}",
-      "offlineStopped": "runner berhenti pukul {{time}}",
+      "offlineStopped": "agentes.chat berhenti pukul {{time}}",
       "offlineDropped": "koneksi terputus pukul {{time}}"
     },
     "line": {
@@ -16652,9 +16653,14 @@
       "offline": "Agen menunggu sampai perangkat ini kembali.",
       "offlineSeen": "Terakhir terlihat {{time}}. Agen menunggu sampai perangkat ini kembali.",
       "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali.",
-      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan `{{command}}` di sana.",
-      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan `{{command}}` di sana untuk melihat sebabnya.",
-      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan `{{command}}` di sana."
+      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa internet atau kelebihan beban. Pastikan komputernya menyala dan terhubung ke internet.",
+      "offlineStopped": "Aplikasi agentes.chat berhenti di komputer ini pukul {{time}}. Buka aplikasinya lagi.",
+      "offlineStoppedCli": "agentes.chat berhenti di komputer ini pukul {{time}}. Jalankan lagi di sana.",
+      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri."
+    },
+    "technical": {
+      "title": "Detail teknis",
+      "doctor": "Untuk melihat alasannya, jalankan ini di sana:"
     },
     "reason": {
       "locked": "Ponselnya terkunci",
@@ -20018,7 +20024,7 @@
       "people": "Mulai sekarang semua orang hanya bisa membacanya dan menerima email",
       "peopleQuiet": "Mulai sekarang semua orang hanya bisa membacanya",
       "computer": "Komputernya berhenti sekarang dan dibersihkan",
-      "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai runner-nya dihapus.",
+      "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai agentes.chat dihapus darinya.",
       "connectors": "Konektor dan kotak surat diputuskan"
     },
     "undo": "Pemilik mana pun bisa memulihkannya sampai {{date}} pukul {{time}}. Setelah itu, tidak bisa dibatalkan.",
@@ -20377,14 +20383,6 @@
       "doneByYou": "Kamu selesaikan pukul {{time}}. {{agent}} melihat layar lagi lalu melanjutkan.",
       "doneByYou_female": "Kamu selesaikan pukul {{time}}. {{agent}} melihat layar lagi lalu melanjutkan."
     },
-    "control": {
-      "notice": "Program di komputer {{name}} bisa melihat layar dan apa yang kamu ketik atau tempel.",
-      "notice_female": "Program di komputer {{name}} bisa melihat layar dan apa yang kamu ketik atau tempel."
-    },
-    "session": {
-      "check": "Pemeriksaan keamanan",
-      "screening": "Kami mungkin memeriksa teks di layar ini untuk mencegah penyalahgunaan. Kami hanya menyimpan hasilnya. Apa yang tidak tampil di layar, seperti kata sandi di prompt, tidak pernah direkam."
-    },
     "after": {
       "titleNoSite": "Memakai layar",
       "noSite": "Sebelum membuka aplikasi"
@@ -20394,8 +20392,6 @@
       "group_female": "Layar {{name}}"
     },
     "watch": {
-      "notice": "Program di komputer {{name}} bisa melihat layar dan apa pun yang diketik atau ditempel di sana.",
-      "notice_female": "Program di komputer {{name}} bisa melihat layar dan apa pun yang diketik atau ditempel di sana.",
       "step": {
         "desktop_open": "Membuka {{detail}}",
         "desktop_open_plain": "Membuka aplikasi",
