@@ -17682,6 +17682,7 @@
       "spillOwnerOnly": "Tylko osoba, która połączyła ten komputer, może włączyć jego pomoc. Ty możesz ją wyłączyć.",
       "shareOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może pozwolić agentom korzystać z jego internetu. Ty możesz to wyłączyć.",
       "shareConnectedOnly": "Internetem z agentami może dzielić się tylko komputer, który ktoś podłączył.",
+      "shareOff": "Najpierw włącz „Agenci korzystają z internetu tego komputera”, a potem wybierz korzystanie tylko z jego internetu.",
       "tasksOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może zmienić, ile zadań wykonuje naraz.",
       "tasksCloud": "Cloud sam ustala, ile miejsca na zadania ma ten komputer.",
       "notHome": "Agenci działają na komputerze workspace i używają tego, gdy podadzą jego nazwę."

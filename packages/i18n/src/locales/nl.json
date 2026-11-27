@@ -16613,6 +16613,7 @@
       "spillOwnerOnly": "Alleen wie deze computer heeft gekoppeld kan zijn hulp aanzetten. Jij kunt hem uitzetten.",
       "shareOwnerOnly": "Alleen wie deze computer heeft verbonden, kan agents het internet ervan laten gebruiken. Jij kunt het uitzetten.",
       "shareConnectedOnly": "Alleen een computer die iemand heeft verbonden, kan zijn internet met de agents delen.",
+      "shareOff": "Zet eerst ‘Agents gebruiken het internet van deze computer’ aan en kies daarna om alleen het internet daarvan te gebruiken.",
       "tasksOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan wijzigen hoeveel taken hij tegelijk uitvoert.",
       "tasksCloud": "De Cloud bepaalt zelf hoeveel ruimte deze computer heeft voor taken.",
       "notHome": "Agents wonen op de computer van de workspace en gebruiken deze als ze hem bij naam noemen."

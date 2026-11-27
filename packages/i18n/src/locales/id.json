@@ -15997,6 +15997,7 @@
       "spillOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa menyalakan bantuannya. Kamu bisa mematikannya.",
       "shareOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengizinkan agen memakai internetnya. Kamu bisa mematikannya.",
       "shareConnectedOnly": "Hanya komputer yang dihubungkan seseorang yang bisa berbagi internet dengan agen.",
+      "shareOff": "Nyalakan dulu “Agen memakai internet komputer ini”, lalu pilih untuk hanya memakai internetnya.",
       "tasksOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengubah berapa tugas yang dijalankannya sekaligus.",
       "tasksCloud": "Cloud menentukan sendiri ruang komputer ini untuk tugas.",
       "notHome": "Agen tinggal di komputer workspace dan memakai komputer ini saat menyebut namanya."

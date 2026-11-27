@@ -17105,6 +17105,7 @@
       "spillOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut activer son aide. Tu peux la désactiver.",
       "shareOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut laisser les agents utiliser sa connexion internet. Vous pouvez la couper.",
       "shareConnectedOnly": "Seul un ordinateur que quelqu’un a connecté peut partager sa connexion internet avec les agents.",
+      "shareOff": "Activez d’abord « Les agents utilisent la connexion internet de cet ordinateur », puis choisissez d’utiliser uniquement son internet.",
       "tasksOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut changer le nombre de tâches qu'il exécute en même temps.",
       "tasksCloud": "Le Cloud dimensionne lui-même la place de cet ordinateur pour les tâches.",
       "notHome": "Les agents vivent sur l'ordinateur du workspace et utilisent celui-ci quand ils le nomment."

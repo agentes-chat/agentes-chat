@@ -16474,6 +16474,7 @@
       "spillOwnerOnly": "Bu bilgisayarın yardımını yalnızca onu bağlayan kişi açabilir. Sen kapatabilirsin.",
       "shareOwnerOnly": "Ajanların bu bilgisayarın internetini kullanmasına yalnızca onu bağlayan kişi izin verebilir. Sen kapatabilirsin.",
       "shareConnectedOnly": "İnternetini ajanlarla yalnızca birinin bağladığı bir bilgisayar paylaşabilir.",
+      "shareOff": "Önce “Ajanlar bu bilgisayarın internetini kullanır” seçeneğini aç, sonra yalnızca onun internetini kullanmayı seç.",
       "tasksOwnerOnly": "Bu bilgisayarın aynı anda kaç görev çalıştıracağını yalnızca onu bağlayan kişi değiştirebilir.",
       "tasksCloud": "Bu bilgisayarın görevler için yerini Cloud kendisi belirler.",
       "notHome": "Ajanlar workspace bilgisayarında yaşar ve adını söylediklerinde bunu kullanır."

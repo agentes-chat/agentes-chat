@@ -16989,6 +16989,7 @@ export const ptBR = {
       shareOwnerOnly:
         "Só quem conectou este computador pode deixar os agentes usarem a internet dele. Você pode desligar.",
       shareConnectedOnly: "Só um computador que alguém conectou pode compartilhar a internet com os agentes.",
+      shareOff: "Ligue “Agentes usam a internet deste computador” primeiro e depois escolha usar só a internet dele.",
       tasksOwnerOnly: "Só quem conectou este computador pode mudar quantas tarefas ele roda ao mesmo tempo.",
       tasksCloud: "A Cloud dimensiona sozinha o espaço deste computador para tarefas.",
       notHome: "Os agentes moram no computador do workspace e usam este quando o citam pelo nome.",

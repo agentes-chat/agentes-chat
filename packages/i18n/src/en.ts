@@ -17051,6 +17051,8 @@ export const en = {
       shareOwnerOnly:
         "Only the person who connected this computer can let agents use its internet. You can turn it off.",
       shareConnectedOnly: "Only a computer someone connected can share its internet with the agents.",
+      /** "Use only this computer's internet" asked while the computer doesn't lend it (ADR 0237). */
+      shareOff: "Turn on “Agents use this computer's internet” first, then choose to use only its internet.",
       tasksOwnerOnly: "Only the person who connected this computer can change how many tasks it runs at once.",
       tasksCloud: "The Cloud sizes this computer's room for tasks itself.",
       notHome: "Agents live on the workspace computer and use this one when they name it.",

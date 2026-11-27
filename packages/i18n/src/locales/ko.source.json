@@ -40567,6 +40567,9 @@
   "errors.device.shareConnectedOnly": {
     "value": "Only a computer someone connected can share its internet with the agents."
   },
+  "errors.device.shareOff": {
+    "value": "Turn on “Agents use this computer's internet” first, then choose to use only its internet."
+  },
   "errors.device.tasksOwnerOnly": {
     "value": "Only the person who connected this computer can change how many tasks it runs at once."
   },
