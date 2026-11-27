@@ -65,6 +65,8 @@ export const strings: Partial<PushStrings> = {
   deviceJoinRequestBody: "탭해서 참여를 허용하거나 거절하세요.",
   waitingTitle: "확인할 일이 있어요",
   openBody: "탭해서 여세요.",
+  cutBody: "끝내기 전에 멈췄어요. 계속하려면 다시 요청하세요.",
+  movedBody: "시간이 좀 걸릴 것 같아 백그라운드에서 계속할게요.",
   sentGif: "GIF를 보냈어요",
   sentSticker: "스티커를 보냈어요",
   sentVoice: "음성 메시지를 보냈어요",

@@ -9,7 +9,11 @@
 - Code: engine `packages/engine/src/sidebar-items.ts` (`SidebarView.favorites`, `.sections`, `.dms`,
   `sidebarViewOf`, `setMySidebarView`); db migration `0366_sidebar_sections`; server `routes/app/management.ts`
   (`SidebarView`); client `lib/sidebar-view.ts` (`favoritesOf`, `toggleFavorite`, `placeInSection`, `addSection`,
-  `renameSection`, `removeSection`, `moveSectionBy`, `moveChannelBy`)
+  `renameSection`, `removeSection`, `moveSectionBy`, `moveChannelBy`), `lib/recent.ts` (`dmList`); web `Sidebar.tsx`
+  (the column, `useChannelSections`, `SidebarChannels`, `SectionNameField`, `InviteRow`), `hooks/useSidebarPins.ts`
+  (`useSidebarFavorites`), `pages/UnreadsPage.tsx`, `routes/org.$orgId.unreads.tsx`, `layout.css`; ui `title-tips.ts`
+  (`data-tip-side="right"`); phone `features/chats/pins.ts`, `logic.ts` (`pinnedRows`, `sectorSections`),
+  `ChatsScreen.tsx`, `PinnedStrip.tsx`, `features/channel-sectors/PickSectorScreen.tsx` (Seção), `menus.tsx`
 
 ## Context
 
@@ -60,9 +64,11 @@ list.
 7. **The usual marks.** An unread channel is bold with no count; a red count only for mentions and DMs. A muted
    channel rests dim. An agent at work shows it in its face alone (it moves, with its orbit): no light behind its row,
    which read as the row chosen.
-8. **The phone.** Conversas' strip of pins becomes Favoritos, reading and changing the same `view.favorites`; its
-   grouped view lists the person's own sections instead of the sectors. The native patterns stay (long press, sheets,
-   a pushed screen to move a channel between sections).
+8. **The phone.** Conversas' strip of pins becomes Favoritos, reading and changing the same `view.favorites` in its
+   order; its grouped view (Seções) lists the person's own sections, then the channels in none, then the DMs, with no
+   sector's mark. A conversation's long press and swipe add it to Favoritos or take it off, and a channel's long press
+   and ⋯ sheet open Seção, a pushed screen: Sem seção and the person's sections, Nova seção (named in a sheet) and its
+   place in its section. The native patterns stay.
 
 ## Consequences
 

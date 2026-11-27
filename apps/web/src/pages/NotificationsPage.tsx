@@ -749,6 +749,38 @@ function InboxRow({
 }
 
 /**
+ * One inbox item as Não lidas lists it (ADR 0260): the inbox's face, headline and line, and when (or how long is
+ * left); a click opens it (`onOpen`), where it is answered.
+ */
+export function InboxItemRow({ n, onOpen }: { n: AppNotification; onOpen: (n: AppNotification) => void }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const channels = useChannels(org.id);
+  const channelName = (id: string) => channels.data?.find((c) => c.id === id)?.name ?? "";
+  const words = itemWords(t, n, dir, channelName, i18n.language);
+  const sub = n.waiting
+    ? [words.where, waitingWords(t, n, dir)].filter(Boolean).join(" · ")
+    : [words.where, words.lead, words.text].filter(Boolean).join(" · ");
+  const expires = n.waiting ? n.latest.expiresAt : undefined;
+  const left = expires ? timeLeft(t, expires) : null;
+  return (
+    <button type="button" className={cx("ib-row", n.readAt === null && "is-unread")} onClick={() => onOpen(n)}>
+      <span className="ib-row__face">
+        <ItemFace n={n} dir={dir} state={n.waiting ? "waiting" : undefined} />
+      </span>
+      <span className="ib-row__text">
+        <span className="ib-row__line nt-what">
+          <Headline n={n} dir={dir} channelName={channelName} />
+        </span>
+        {sub && <span className="ib-row__sub">{plainLine(sub)}</span>}
+      </span>
+      <span className="ib-row__end">{left ?? whenText(t, i18n.language, n.updatedAt)}</span>
+    </button>
+  );
+}
+
+/**
  * An approval, decided right here as in its conversation: its own card, or its card's group while others on it still
  * wait (decided together, or one by one in the conversation). In the inbox the card is drawn flat (notifications.css).
  */

@@ -1,5 +1,5 @@
 {
-  "id": "037d14e7-2a6a-4499-9950-8699f7352bd1",
+  "id": "1329be6c-eddb-4bcf-a114-1f05e7b32a4b",
   "prevId": "1fee5eb7-f3ff-44d6-9156-134fb8c0ae50",
   "version": "7",
   "dialect": "postgresql",
@@ -681,6 +681,101 @@
           "value": "\"agents\".\"owner_user_id\" is null or \"agents\".\"owner_role_id\" is null"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.model_output_limits": {
+      "name": "model_output_limits",
+      "schema": "",
+      "columns": {
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_output_tokens": {
+          "name": "max_output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "learned_at": {
+          "name": "learned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "model_output_limits_org_id_index": {
+          "name": "model_output_limits_org_id_index",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "model_output_limits_org_id_organizations_id_fk": {
+          "name": "model_output_limits_org_id_organizations_id_fk",
+          "tableFrom": "model_output_limits",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "model_output_limits_credential_id_provider_credentials_id_fk": {
+          "name": "model_output_limits_credential_id_provider_credentials_id_fk",
+          "tableFrom": "model_output_limits",
+          "tableTo": "provider_credentials",
+          "columnsFrom": [
+            "credential_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "model_output_limits_credential_id_model_pk": {
+          "name": "model_output_limits_credential_id_model_pk",
+          "columns": [
+            "credential_id",
+            "model"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.organization_settings": {
@@ -13665,13 +13760,6 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "egress_only": {
-          "name": "egress_only",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "egress_via": {
           "name": "egress_via",

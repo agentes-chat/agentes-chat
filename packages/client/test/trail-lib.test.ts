@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next from "i18next";
+import { setToolLabelSource } from "../src/lib/tool-labels";
 import { paceTrail, TRAIL_PACE_MS, workTrail } from "../src/lib/trail";
+import { barStep } from "../src/lib/work";
 import { applyChannelEvent, emptyStreams, type LiveWork } from "../src/realtime/streams";
 
 const lang = (lng: string) => {
@@ -42,6 +44,47 @@ test("the trail: its words before a call quoted above it, calls of a kind folded
   expect(workTrail(lang("pt-BR"), { work, step: undefined }, "pt-BR")[0]?.text).toBe(
     "“Let me look at last month first”",
   );
+});
+
+test("a call of the kind just done keeps their line while it runs: the trail never loses a row and gets it back", () => {
+  const t = lang("en");
+  const stripe = (id: string, running = false) =>
+    call(id, "mcp__stripe__list_payouts_for_account", { connector: "Stripe", running });
+  const texts = (work: LiveWork[]) => workTrail(t, { work, step: undefined }, "en").map((l) => [l.key, l.text]);
+  // The first one running is the line above, alone.
+  expect(texts([stripe("a", true)])).toEqual([]);
+  const once = texts([stripe("a")]);
+  expect(once).toHaveLength(1);
+  // A second of the same while it runs: the line of the one done stays, under the same key, as it was.
+  expect(texts([stripe("a"), stripe("b", true)])).toEqual(once);
+  expect(texts([stripe("a"), stripe("b")])[0]?.[1]).toEndWith("×2");
+  expect(texts([stripe("a"), stripe("b"), stripe("c", true)])[0]?.[1]).toEndWith("×2");
+});
+
+test("a connector tool's name the catalog lacks is asked for once in the reader's language, English meanwhile", async () => {
+  const instance = i18next.createInstance();
+  void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+  const asks: { locale: string; keys: string[] }[] = [];
+  const ask = async (_orgId: string, locale: string, keys: string[]) => {
+    asks.push({ locale, keys });
+    return { list_payouts_for_account: "Listar repasses da conta" };
+  };
+  const stop = setToolLabelSource({ i18n: instance, ask: (locale, keys) => ask("o1", locale, keys) });
+  const work = [call("a", "mcp__stripe__list_payouts_for_account", { connector: "Stripe" })];
+  const run = { work, step: undefined };
+  expect(workTrail(instance.t, run, "pt-BR")[0]?.text).toEndWith("· list payouts for account");
+  workTrail(instance.t, run, "pt-BR");
+  await new Promise((r) => setTimeout(r, 80));
+  expect(asks).toEqual([{ locale: "pt-BR", keys: ["list_payouts_for_account"] }]);
+  expect(workTrail(instance.t, run, "pt-BR")[0]?.text).toEndWith("· Listar repasses da conta");
+  // The line above says it the same way while one runs.
+  const running = { ...run, work: [{ ...work[0], running: true } as LiveWork], status: "thinking" as const };
+  expect(barStep(instance.t, running, "pt-BR")).toStartWith("consultando o Stripe · Listar repasses");
+  // Asked once: no second ask for it, nor for English, where the name's words are its own.
+  workTrail(instance.t, run, "pt-BR");
+  await new Promise((r) => setTimeout(r, 80));
+  expect(asks).toHaveLength(1);
+  stop();
 });
 
 test("the trail keeps each call's words as the server told them", () => {

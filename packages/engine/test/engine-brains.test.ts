@@ -531,7 +531,17 @@ test("a computer brain that keeps doing real work between promises gets both con
     typeof s.data.nudged === "string" ? [s.data.nudged] : [],
   );
   expect(nudged).toEqual(["promise", "promise"]);
-  expect((await timeline(f)).at(-1)?.body).toBe("Tudo verde.");
+  // Its first words stay in the channel; the rest of the turn goes in their thread (ADR 0261).
+  const first = (await timeline(f)).at(-1);
+  expect(first?.body).toBe("Rodei os testes; vou corrigir o lint.");
+  const under = await f.db
+    .select({ body: schema.messages.body, threadId: schema.messages.threadId })
+    .from(schema.messages)
+    .orderBy(schema.messages.createdAt);
+  expect(under.filter((m) => m.threadId === first?.id).map((m) => m.body)).toEqual([
+    "Corrigi o lint; vou rodar os testes de novo.",
+    "Tudo verde.",
+  ]);
 });
 
 test("computer sessions: the conversation's session goes on while recent and small; a big, idle or routine one starts fresh", async () => {
@@ -1366,6 +1376,28 @@ test("a computer brain that fails after calls posts what it said after its last 
   expect(last?.meta.brainInterrupted).toMatchObject({ text: "Go isn't installed here, so I'm installing it now." });
   expect(last?.body).toContain("Go isn't installed here, so I'm installing it now.");
   expect(last?.body).not.toContain("Let me check whether Go is");
+});
+
+test("a computer brain cut off calls after its last words posts none of them: later calls already did what they said", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
+  await computerAgent(f);
+  const { brain } = scriptedComputerBrain(async function* () {
+    yield { type: "text_delta", text: "The clone never started, so I'll start it again." };
+    yield { type: "tool_call", id: "b-1", name: "Bash", input: { command: "git clone" }, executed: { content: "ok" } };
+    yield { type: "tool_call", id: "b-2", name: "Bash", input: { command: "sleep 600" }, executed: { content: "ok" } };
+    yield { type: "error", code: "executor_crashed", message: "Claude Code exited", retryable: true };
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev clone the repo");
+  await drainOutbox(f.db, handlers);
+
+  const last = (await timeline(f)).at(-1);
+  expect(last?.meta.brainInterrupted).toMatchObject({ text: "" });
+  expect(last?.body).not.toContain("start it again");
 });
 
 test("sent on after its turn, a computer brain that opens again with the same line and asks posts that line once", async () => {

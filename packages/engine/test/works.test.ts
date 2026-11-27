@@ -1417,6 +1417,25 @@ test("a work's done end takes what was passed on to it and never read: the follo
   expect(await releaseInbox(f.db, f.pubsub, ended, { reason: "done" })).toBeNull();
 });
 
+test("a check-in or move note its turn never read starts no run of its own when that turn ends", async () => {
+  f = await setup({ workTools: true });
+  const run = await working("@dev roda a migração da cobrança");
+  const { work, anchor } = await moved(run, { title: "Migração da cobrança" });
+  const note = await f.db.transaction((tx) =>
+    deliverNoticeToRun(
+      tx,
+      { ...run, threadRootId: anchor.id },
+      { kind: "work_check_in", text: "This is now background work.", refs: { workId: work.id, kind: "moved" } },
+    ),
+  );
+  expect((await runById(run.id))?.pendingMessageIds).toContain(note.message.id);
+  const before = (await runs()).length;
+  // Cut off before it read it (its computer stopped the turn): nothing goes on from an instruction meant for that turn.
+  const ended = await finishRun(run.id);
+  expect(await releaseInbox(f.db, f.pubsub, ended, { reason: "done" })).toBeNull();
+  expect(await runs()).toHaveLength(before);
+});
+
 test("a work that ends at its step cap keeps what its asker passed on to it and it never read, for Continuar", async () => {
   f = await setup({
     workTools: true,

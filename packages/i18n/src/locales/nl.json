@@ -2388,48 +2388,69 @@
     "deleteText": "De agents gaan terug naar Agents.",
     "deleteChannels": "De kanalen gaan terug naar Kanalen.",
     "dropHere": "Sleep agents hierheen",
-    "dropHereAll": "Sleep agents of kanalen hierheen",
     "moved": "{{name}} zit nu in {{group}}",
     "movedOut": "{{name}} heeft {{group}} verlaten",
     "undo": "Ongedaan maken"
   },
   "sidebarAgents": {
-    "options": "Opties voor agents",
-    "add": "Nieuwe agent of afdeling",
-    "order": "Volgorde",
-    "sort": {
-      "workspace": "Die van de werkruimte",
-      "mine": "Mijn agents eerst",
-      "working": "Aan het werk eerst"
-    },
     "showAll": "Agents tonen die niet met mij praten",
-    "collapseAll": "Alles inklappen",
-    "expandAll": "Alles uitklappen",
-    "organize": "Afdelingen ordenen in Team",
     "more_one": "Nog 1 agent in Team",
     "more_other": "Nog {{count}} agents in Team",
     "newAgent": "Nieuwe agent",
-    "working_one": "{{count}} aan het werk",
-    "working_other": "{{count}} aan het werk",
     "count_one": "{{count}} agent",
     "count_other": "{{count}} agents",
     "workingIn": "aan het werk in #{{channel}}",
     "talksOnly": "praat alleen met {{name}}",
     "talksOnlyMore_one": "praat alleen met {{name}} en {{count}} ander",
-    "talksOnlyMore_other": "praat alleen met {{name}} en {{count}} anderen",
-    "changeGroup": "Naar afdeling verplaatsen",
-    "newGroupWith": "Nieuwe afdeling met {{name}}",
-    "dmsEmpty": "Je gesprekken met mensen verschijnen hier."
+    "talksOnlyMore_other": "praat alleen met {{name}} en {{count}} anderen"
   },
-  "sidebarPins": {
-    "pin": "Bovenaan vastzetten",
-    "unpin": "Losmaken",
-    "pinned": "Bovenaan vastgezet",
-    "full": {
-      "agents": "Je hebt al 5 agents vastgezet. Maak er een los om deze vast te zetten.",
-      "channels": "Je hebt al 5 kanalen vastgezet. Maak er een los om dit vast te zetten.",
-      "people": "Je hebt al 5 mensen vastgezet. Maak er een los om deze vast te zetten."
-    }
+  "sidebarFavorites": {
+    "title": "Favorieten",
+    "add": "Toevoegen aan favorieten",
+    "remove": "Verwijderen uit favorieten",
+    "marked": "In favorieten",
+    "full": "Favorieten bevat al 50. Haal er een weg om deze toe te voegen."
+  },
+  "sidebarSections": {
+    "new": "Nieuwe sectie",
+    "newName": "Nieuwe sectie",
+    "moveTo": "Naar sectie verplaatsen",
+    "takeOut": "Uit sectie halen",
+    "rename": "Sectie hernoemen",
+    "delete": "Sectie verwijderen",
+    "nameLabel": "Naam van de sectie"
+  },
+  "sidebarDms": {
+    "options": "Opties voor directe berichten",
+    "show": "Tonen",
+    "shows": {
+      "all": "Iedereen in de workspace",
+      "recent": "Alleen recente gesprekken"
+    },
+    "invite": "Mensen uitnodigen",
+    "invited": "Uitnodiging verstuurd",
+    "invitedTip": "{{email}} heeft de uitnodiging nog niet geaccepteerd",
+    "agentTag": "AI",
+    "agentTip": "AI-agent"
+  },
+  "sidebarColumn": {
+    "label": "Tools",
+    "unread": "{{name}}, iets ongelezens",
+    "you": "{{name}}, iets voor jou"
+  },
+  "unreads": {
+    "title": "Ongelezen",
+    "forYou": "Voor jou",
+    "conversations": "Gesprekken",
+    "markAll": "Alles als gelezen markeren",
+    "markRead": "Markeren als gelezen",
+    "open": "Openen",
+    "seeInbox": "Alles in Postvak IN bekijken",
+    "more_one": "Nog {{count}} bericht",
+    "more_other": "Nog {{count}} berichten",
+    "emptyTitle": "Helemaal bij",
+    "emptyText": "Nieuwe berichten en wat op je wacht, verschijnen hier.",
+    "markedAll": "Alles gemarkeerd als gelezen"
   },
   "appsDownload": {
     "computer": "Computer",
@@ -19761,7 +19782,9 @@
       "provider_back": "Mijn AI is terug.",
       "confidential_removed": "Verwijderd: vertrouwelijke tekst wordt {{days}} dagen bewaard.",
       "brain_queued": "Nog in de wachtrij. Ik antwoord zodra ik aan de beurt ben.",
-      "brain_interrupted": "{{brain}} stopte voordat het klaar was. Al gedaan, niet herhaald: {{tools}}.",
+      "brain_interrupted": "{{brain}} stopte voordat het klaar was. Vraag het opnieuw om verder te gaan.",
+      "brain_interrupted_timeout": "{{brain}} ging over zijn tijdslimiet en stopte voordat het klaar was. Vraag het opnieuw om verder te gaan.",
+      "brain_interrupted_computer": "De computer stopte {{brain}} voordat het klaar was. Vraag het opnieuw om verder te gaan.",
       "plan_limit_cut": "Ik ben gestopt bij de limiet van het {{plan}}-abonnement. Ik ga {{when}} verder waar ik was, als de limiet reset.",
       "plan_limit_cut_unknown": "Ik ben gestopt bij de limiet van het {{plan}}-abonnement. Ik ga verder waar ik was zodra de limiet reset.",
       "plan_limit_wait": "Het {{plan}}-abonnement heeft de limiet bereikt. Ik antwoord {{when}}, als de limiet is gereset. Wordt het eerder vrijgegeven in {{plan}}, dan merk ik dat en antwoord ik meteen.",

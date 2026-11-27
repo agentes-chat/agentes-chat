@@ -15,6 +15,8 @@ import type { DataSocket } from "./streams";
 /** Reading from the destination pauses while the data socket holds more than this. */
 const HIGH_WATER = 1024 * 1024;
 const RESUME_POLL_MS = 25;
+const PAUSE = JSON.stringify({ type: "pause" });
+const RESUME = JSON.stringify({ type: "resume" });
 
 type Limits = { open: number; connectMs: number };
 
@@ -109,13 +111,21 @@ export class EgressShare {
 
 /**
  * Carries a TCP socket's bytes on a data socket and back until either side ends (then both do, `ended` once).
- * Reading from the TCP socket pauses while the data socket is more than `HIGH_WATER` behind. Returns the way to end it.
+ * Reading from the TCP socket pauses while the data socket is more than `HIGH_WATER` behind, or from the server's
+ * `pause` to its `resume`; past `HIGH_WATER` waiting to be written to the TCP socket, this side says `pause` itself
+ * (`resume` once it drained). Returns the way to end it.
  */
 export function pipeSocket(tcp: Socket, data: DataSocket, o: { ended?: () => void } = {}): () => void {
   let done = false;
+  /** The server said `pause`. */
+  let held = false;
+  /** This side said `pause`. */
+  let full = false;
+  let wait: ReturnType<typeof setInterval> | undefined;
   const end = () => {
     if (done) return;
     done = true;
+    clearInterval(wait);
     tcp.destroy();
     data.close(STREAM_CLOSE.normal, "");
     o.ended?.();
@@ -123,20 +133,35 @@ export function pipeSocket(tcp: Socket, data: DataSocket, o: { ended?: () => voi
   tcp.on("data", (chunk: Buffer) => {
     if (done) return;
     data.send(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
-    if (data.bufferedAmount <= HIGH_WATER) return;
+    if (wait || data.bufferedAmount <= HIGH_WATER) return;
     tcp.pause();
-    const wait = setInterval(() => {
-      if (done || data.bufferedAmount <= HIGH_WATER / 2) {
-        clearInterval(wait);
-        if (!done) tcp.resume();
-      }
+    wait = setInterval(() => {
+      if (!done && data.bufferedAmount > HIGH_WATER / 2) return;
+      clearInterval(wait);
+      wait = undefined;
+      if (!done && !held) tcp.resume();
     }, RESUME_POLL_MS);
+  });
+  tcp.on("drain", () => {
+    if (done || !full) return;
+    full = false;
+    data.send(RESUME);
   });
   tcp.on("error", end);
   tcp.on("close", end);
   data.listen({
     bytes: (chunk) => {
-      if (!done) tcp.write(chunk);
+      if (done) return;
+      tcp.write(chunk);
+      if (full || tcp.writableLength <= HIGH_WATER) return;
+      full = true;
+      data.send(PAUSE);
+    },
+    control: (frame) => {
+      if (done || (frame.type !== "pause" && frame.type !== "resume")) return;
+      held = frame.type === "pause";
+      if (held) tcp.pause();
+      else if (!wait) tcp.resume();
     },
     closed: end,
   });
