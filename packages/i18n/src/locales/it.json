@@ -24768,5 +24768,21 @@
         "YEARFRAC": "La frazione di anno tra due date"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Collegamenti",
+    "blocks": "blocca",
+    "blocksIncoming": "è bloccata da",
+    "relates_to": "è collegata a",
+    "duplicates": "duplica",
+    "duplicatesIncoming": "è duplicata da",
+    "clones": "clona",
+    "clonesIncoming": "è clonata da",
+    "parent": "attività principale",
+    "child": "sottoattività",
+    "unavailable": "Non disponibile",
+    "add": "Aggiungi collegamento",
+    "none": "Nessun collegamento",
+    "waiting": "In attesa: {{count}}"
   }
 }

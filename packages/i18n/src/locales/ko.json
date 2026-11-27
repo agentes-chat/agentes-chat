@@ -23207,5 +23207,21 @@
         "YEARFRAC": "두 날짜 사이의 기간이 1년 중 차지하는 비율"
       }
     }
+  },
+  "issueLinks": {
+    "title": "연결",
+    "blocks": "차단함",
+    "blocksIncoming": "차단됨",
+    "relates_to": "관련됨",
+    "duplicates": "중복함",
+    "duplicatesIncoming": "중복됨",
+    "clones": "복제함",
+    "clonesIncoming": "복제됨",
+    "parent": "상위 작업",
+    "child": "하위 작업",
+    "unavailable": "사용할 수 없음",
+    "add": "연결 추가",
+    "none": "연결 없음",
+    "waiting": "대기 중: {{count}}"
   }
 }

@@ -93,8 +93,9 @@ import { Markdown } from "@/lib/markdown";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { useIssueRealtime } from "@/realtime/context";
-import { AssigneeFaces, AssigneesField } from "./IssueAssignees";
+import { AssigneesField } from "./IssueAssignees";
 import { IssueDeleteButton, IssueDeleteProvider, useIssueDeleting } from "./IssueDelete";
+import { IssueLinks } from "./IssueLinks";
 import { NEW_PROJECT, ProjectDialog, useProjectOptions } from "./IssueProjects";
 import { PRIORITY_ICON } from "./IssuesToolbar";
 import "./issues.css";
@@ -390,7 +391,7 @@ export function IssueDetails({
             )}
           </DetailsSection>
           <IssueCriteria issue={i} onSaved={flashSaved} />
-          <IssueSubIssues issue={i} />
+          <IssueLinks issue={i} />
           <DetailsSection title={t("issues.conversation.button")}>
             <TaskConversationSummary issue={i} onOpen={onConversation} />
           </DetailsSection>
@@ -635,40 +636,6 @@ function IssueCriteria({ issue: i, onSaved }: { issue: Issue; onSaved: () => voi
           aria-label={t("issues.form.addCriterion")}
         />
       </div>
-    </DetailsSection>
-  );
-}
-
-/** An issue's sub-issues, with their state and who has them. */
-function IssueSubIssues({ issue: i }: { issue: Issue }) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const actors = useActors();
-  const subs = i.subIssues ?? [];
-  if (subs.length === 0) return null;
-  return (
-    <DetailsSection title={t("issues.subIssues", { count: subs.length })}>
-      <ul className="issue-subl">
-        {subs.map((s) => (
-          <li key={s.id}>
-            <Link to="/org/$orgId/issues/$number" params={{ orgId: org.id, number: String(s.number) }}>
-              <span className="issue-subl__num">#{s.number}</span>
-              <span className="issue-subl__tx">{s.title}</span>
-              {s.assignees.length > 1 ? (
-                <AssigneeFaces all={s.assignees} size="xs" />
-              ) : (
-                s.assignees[0] && (
-                  <span className="issue-subl__who">
-                    <ActorAvatar actor={s.assignees[0]} name={actors.name(s.assignees[0])} size="xs" />
-                    {actors.name(s.assignees[0])}
-                  </span>
-                )
-              )}
-              <Chip icon={STATUS_ICON[s.status]}>{t(`issues.status.${s.status}`)}</Chip>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </DetailsSection>
   );
 }

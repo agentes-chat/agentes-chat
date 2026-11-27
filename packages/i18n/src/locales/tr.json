@@ -23871,5 +23871,21 @@
         "YEARFRAC": "İki tarih arasındaki sürenin yıl içindeki payı"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Bağlantılar",
+    "blocks": "engeller",
+    "blocksIncoming": "tarafından engellenir",
+    "relates_to": "ile ilişkilidir",
+    "duplicates": "yineler",
+    "duplicatesIncoming": "tarafından yinelenir",
+    "clones": "klonlar",
+    "clonesIncoming": "tarafından klonlanır",
+    "parent": "üst görev",
+    "child": "alt görev",
+    "unavailable": "Kullanılamıyor",
+    "add": "Bağlantı ekle",
+    "none": "Bağlantı yok",
+    "waiting": "Bekleyen: {{count}}"
   }
 }

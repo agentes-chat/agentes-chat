@@ -24748,5 +24748,21 @@
         "YEARFRAC": "La fraction d'année entre deux dates"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Liens",
+    "blocks": "bloque",
+    "blocksIncoming": "est bloquée par",
+    "relates_to": "est liée à",
+    "duplicates": "duplique",
+    "duplicatesIncoming": "est dupliquée par",
+    "clones": "clone",
+    "clonesIncoming": "est clonée par",
+    "parent": "tâche parente",
+    "child": "sous-tâche",
+    "unavailable": "Indisponible",
+    "add": "Ajouter un lien",
+    "none": "Aucun lien",
+    "waiting": "En attente : {{count}}"
   }
 }

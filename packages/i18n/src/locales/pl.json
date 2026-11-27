@@ -25412,5 +25412,21 @@
         "YEARFRAC": "Część roku między dwiema datami"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Powiązania",
+    "blocks": "blokuje",
+    "blocksIncoming": "jest blokowane przez",
+    "relates_to": "jest powiązane z",
+    "duplicates": "duplikuje",
+    "duplicatesIncoming": "jest duplikowane przez",
+    "clones": "klonuje",
+    "clonesIncoming": "jest klonowane przez",
+    "parent": "zadanie nadrzędne",
+    "child": "podzadanie",
+    "unavailable": "Niedostępne",
+    "add": "Dodaj powiązanie",
+    "none": "Brak powiązań",
+    "waiting": "Oczekujące: {{count}}"
   }
 }

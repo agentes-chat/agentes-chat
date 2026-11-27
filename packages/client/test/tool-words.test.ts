@@ -60,3 +60,8 @@ describe("the engine's tools and the words for them", () => {
     expect(toolActivity("github_list_issues")).toMatchObject({ kind: "consulting", app: "GitHub" });
   });
 });
+
+test("task links use the task activity line, including the computer bridge", () => {
+  expect(toolActivity("link_issues")).toEqual({ kind: "updatingIssue" });
+  expect(toolActivity("mcp__agentes__link_issues")).toEqual({ kind: "updatingIssue" });
+});

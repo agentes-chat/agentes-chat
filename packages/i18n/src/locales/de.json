@@ -23950,5 +23950,21 @@
         "YEARFRAC": "Der Anteil eines Jahres zwischen zwei Daten"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Verknüpfungen",
+    "blocks": "blockiert",
+    "blocksIncoming": "wird blockiert von",
+    "relates_to": "steht in Beziehung zu",
+    "duplicates": "dupliziert",
+    "duplicatesIncoming": "wird dupliziert von",
+    "clones": "klont",
+    "clonesIncoming": "wird geklont von",
+    "parent": "übergeordnete Aufgabe",
+    "child": "Unteraufgabe",
+    "unavailable": "Nicht verfügbar",
+    "add": "Verknüpfung hinzufügen",
+    "none": "Keine Verknüpfungen",
+    "waiting": "Wartend: {{count}}"
   }
 }

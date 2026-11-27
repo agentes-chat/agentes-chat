@@ -23322,5 +23322,21 @@
         "YEARFRAC": "Bagian tahun di antara dua tanggal"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Tautan",
+    "blocks": "memblokir",
+    "blocksIncoming": "diblokir oleh",
+    "relates_to": "terkait dengan",
+    "duplicates": "menduplikasi",
+    "duplicatesIncoming": "diduplikasi oleh",
+    "clones": "mengkloning",
+    "clonesIncoming": "dikloning oleh",
+    "parent": "tugas induk",
+    "child": "subtugas",
+    "unavailable": "Tidak tersedia",
+    "add": "Tambahkan tautan",
+    "none": "Tidak ada tautan",
+    "waiting": "Menunggu: {{count}}"
   }
 }

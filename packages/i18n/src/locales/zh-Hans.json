@@ -23398,5 +23398,21 @@
         "YEARFRAC": "两个日期之间占一年的比例"
       }
     }
+  },
+  "issueLinks": {
+    "title": "关联",
+    "blocks": "阻塞",
+    "blocksIncoming": "被阻塞",
+    "relates_to": "关联于",
+    "duplicates": "重复",
+    "duplicatesIncoming": "被重复",
+    "clones": "克隆",
+    "clonesIncoming": "被克隆",
+    "parent": "父任务",
+    "child": "子任务",
+    "unavailable": "不可用",
+    "add": "添加关联",
+    "none": "无关联",
+    "waiting": "等待中：{{count}}"
   }
 }

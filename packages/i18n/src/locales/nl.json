@@ -24131,5 +24131,21 @@
         "YEARFRAC": "Het deel van een jaar tussen twee datums"
       }
     }
+  },
+  "issueLinks": {
+    "title": "Koppelingen",
+    "blocks": "blokkeert",
+    "blocksIncoming": "wordt geblokkeerd door",
+    "relates_to": "is gerelateerd aan",
+    "duplicates": "dupliceert",
+    "duplicatesIncoming": "wordt gedupliceerd door",
+    "clones": "kloont",
+    "clonesIncoming": "wordt gekloond door",
+    "parent": "bovenliggende taak",
+    "child": "subtaak",
+    "unavailable": "Niet beschikbaar",
+    "add": "Koppeling toevoegen",
+    "none": "Geen koppelingen",
+    "waiting": "Wachtend: {{count}}"
   }
 }

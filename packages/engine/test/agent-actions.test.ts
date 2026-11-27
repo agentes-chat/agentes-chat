@@ -516,3 +516,17 @@ describe("act with undo: memory, routines, channels, wiki, threads", () => {
     await expect(inDm("set_channel_lead", {})).rejects.toThrow("Only a channel has a responsible agent");
   });
 });
+
+test("link_issues adds and removes a relation through the agent tool", async () => {
+  f = await setup();
+  const ctx = await runContext(f);
+  const call = await toolsOf([createIssueToolSource(f.artifactDeps)], ctx);
+  const a = await createIssue(deps(f), person(f.owner.id), f.org.id, { title: "A" });
+  const b = await createIssue(deps(f), person(f.owner.id), f.org.id, { title: "B" });
+  await call("link_issues", { issue: `#${a.number}`, to: `#${b.number}`, type: "blocks" });
+  const [link] = await f.db.select().from(schema.issueLinks);
+  if (!link) throw new Error("Missing link");
+  expect(link).toMatchObject({ fromIssueId: a.id, toIssueId: b.id, type: "blocks" });
+  await call("link_issues", { issue: `#${a.number}`, to: `#${b.number}`, type: "blocks", unlink: true });
+  expect(await f.db.select().from(schema.issueLinks)).toEqual([]);
+});

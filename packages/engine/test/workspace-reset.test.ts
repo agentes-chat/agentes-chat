@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { and, eq, isNull, like, rowsOf, schema, sql } from "@agenteschat/db";
 import {
+  addIssueLink,
   createFileArtifact,
+  createIssue,
   drainOutbox,
   enqueue,
   enqueueWaitingResets,
@@ -324,4 +326,19 @@ describe("workspace reset", () => {
     const [done] = await f.db.select().from(schema.organizations).where(eq(schema.organizations.id, f.org.id));
     expect(done?.resetRequestedAt).toBeNull();
   });
+});
+
+test("reset erases task links together with their tasks", async () => {
+  f = await setup({ rightHand: true });
+  const actor = { type: "person" as const, userId: f.owner.id };
+  const deps = { db: f.db, pubsub: f.pubsub };
+  const from = await createIssue(deps, actor, f.org.id, { title: "Prepare inputs" });
+  const to = await createIssue(deps, actor, f.org.id, { title: "Review output" });
+  await addIssueLink(deps, actor, f.org.id, from.id, to.id, "blocks");
+  expect(await count("issue_links")).toBe(1);
+  await requestReset(f.db, f.owner.id, f.org.id);
+  expect(await resetWorkspace(resetDeps(), f.org.id)).toBe(true);
+  expect(await count("issue_links")).toBe(0);
+  expect(await count("issues")).toBe(0);
+  expect(await count("organization_members")).toBe(1);
 });

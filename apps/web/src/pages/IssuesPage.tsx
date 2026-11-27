@@ -1453,6 +1453,9 @@ function IssueCard({
     >
       {cardWaits(state) && <CardSky color={color(i) ?? "sky"} />}
       <span className="issue-card__title">{codeAndBold(i.title)}</span>
+      {(i.waitingOnLinks ?? 0) > 0 && (
+        <span className="muted small">{t("issueLinks.waiting", { count: i.waitingOnLinks })}</span>
+      )}
       <CardFacts issue={i} fields={fields} />
       <CardResult issue={i} />
       <CardWho issue={i} state={state} assignee={fields.assignee} />

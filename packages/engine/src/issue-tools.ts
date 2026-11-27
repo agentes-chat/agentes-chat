@@ -6,6 +6,7 @@ import { type ArtifactDeps, fileRefOf, shareArtifact } from "./artifacts";
 import { canTalkTo, speakerFor } from "./audience";
 import { UUID } from "./authority";
 import { callableAgents, notCallableText } from "./brakes";
+import { addIssueLink, type IssueLinkType, listIssueLinks, removeIssueLink } from "./issue-links";
 import { projectByName } from "./issue-projects";
 import {
   askAgentToImplement,
@@ -762,5 +763,48 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
       },
     },
   ];
+  tools.push({
+    name: "link_issues",
+    scope: "issues:write",
+    description: "Add or remove a typed task link. Blocks are informational and do not start or stop work.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issue: issueRef,
+        to: issueRef,
+        type: { enum: ["blocks", "relates_to", "duplicates", "clones"] },
+        remove: { type: "string", description: "Link id to remove" },
+        unlink: {
+          type: "boolean",
+          description: "Remove the outgoing link to the task in to, of the chosen type; no link id needed",
+        },
+      },
+      required: ["issue"],
+      additionalProperties: false,
+    },
+    async execute(input, ctx) {
+      try {
+        if (await rightHandAway(ctx)) return ONLY_IN_DM;
+        const reader = await rightHandReader(ctx);
+        const actor = reader ? { type: "person" as const, userId: reader } : actorOf(ctx);
+        const source = await find(deps, ctx, str(input.issue));
+        if (str(input.remove)) await removeIssueLink(deps, actor, ctx.orgId, source.id, str(input.remove));
+        else {
+          const target = await find(deps, ctx, str(input.to));
+          const kind = str(input.type);
+          if (!["blocks", "relates_to", "duplicates", "clones"].includes(kind)) throw new Error("Choose a link type");
+          if (input.unlink === true) {
+            const links = await listIssueLinks(deps.db, actor, ctx.orgId, source.id);
+            const link = links.find((l) => l.type === kind && !l.incoming && l.task?.id === target.id);
+            if (!link) throw new Error("Link not found");
+            await removeIssueLink(deps, actor, ctx.orgId, source.id, link.id);
+          } else await addIssueLink(deps, actor, ctx.orgId, source.id, target.id, kind as IssueLinkType);
+        }
+        return { content: "Task link updated." };
+      } catch (error) {
+        return failed(error);
+      }
+    },
+  });
   return { name: "issues", tools: async () => tools };
 }
