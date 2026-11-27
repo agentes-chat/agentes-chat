@@ -194,8 +194,8 @@ describe("Conversas with the strip and one list", () => {
     expect(strip).toContain("<ChannelTile size={FACE} />");
     expect(strip).toMatch(/<PressScale\s+haptic=\{false\}/);
     expect(strip).toContain("<Count");
-    // Up to four share the width in equal columns; more scroll.
-    expect(strip).toContain("items.length <= FITS ?");
+    // From the left, the first face in line with the rows' faces (the screen's 16).
+    expect(strip).toContain("const SIDE = SCREEN_X - (ITEM - FACE) / 2;");
     expect(strip).toContain("paddingHorizontal: SIDE");
     expect(strip).toContain("if (items.length === 0) return null;");
     // The kit's sideways strip: a fade at the edge where more pinned faces wait.

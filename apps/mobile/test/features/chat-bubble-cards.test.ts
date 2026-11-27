@@ -20,9 +20,7 @@ test("in bubbles, the cards under someone else's words are bubbles of that messa
   expect(src("features/chat/Receipts.tsx")).toContain("const frame = [styles.card, card.style];");
   // The work it handed is a quiet line under the bubble, its mark where the bubble's words start.
   expect(src("features/chat/WorkLine.tsx")).toContain("quietInBubble: { paddingLeft: 14 },");
-  expect(src("features/shared/bubble-part.ts")).toContain(
-    "export const BUBBLE_PART_CORNERS = corners(RADIUS.sm, RADIUS.xl, RADIUS.xl, RADIUS.sm);",
-  );
+  expect(src("features/shared/bubble-part.ts")).toContain("export const BUBBLE_PART_CORNERS = MESSAGE_CARD_CORNERS;");
 });
 
 test("one frame for every card in a message: the bubble's fill with no outline in bubbles, the bubble's sides", () => {

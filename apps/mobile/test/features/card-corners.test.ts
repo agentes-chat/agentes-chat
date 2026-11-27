@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BUBBLE_PART_CORNERS, MESSAGE_CARD_CORNERS } from "../../src/features/shared/bubble-part";
+import {
+  BUBBLE_PART_CORNERS,
+  MESSAGE_CARD_CORNERS,
+  MY_BUBBLE_CORNERS,
+  THEIR_BUBBLE_CORNERS,
+} from "../../src/features/shared/bubble-part";
 import { corners, insetCorners, RADIUS } from "../../src/ui/radius";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
@@ -15,7 +20,7 @@ test("the phone's corner scale is the design system's", () => {
 test("a shape names its four corners: a corner named earlier never wins over it", () => {
   // React Native draws a corner's own radius over `borderRadius`: a card whose base named its corners (14) kept them
   // under a later `borderRadius: 18`, and stood under the bubble with smaller corners than it.
-  for (const shape of [MESSAGE_CARD_CORNERS, BUBBLE_PART_CORNERS]) {
+  for (const shape of [MESSAGE_CARD_CORNERS, BUBBLE_PART_CORNERS, THEIR_BUBBLE_CORNERS, MY_BUBBLE_CORNERS]) {
     expect(Object.keys(shape).sort()).toEqual([
       "borderBottomLeftRadius",
       "borderBottomRightRadius",
@@ -24,17 +29,20 @@ test("a shape names its four corners: a corner named earlier never wins over it"
     ]);
     expect("borderRadius" in shape).toBe(false);
   }
-  // The bubbles' 18 and the cards' cut corner; in bubbles the top left joins what is above, as a run's bubbles do.
-  expect(MESSAGE_CARD_CORNERS).toEqual(corners(18, 18, 18, 6));
-  expect(BUBBLE_PART_CORNERS).toEqual(corners(6, 18, 18, 6));
-  // The bubble itself and its runs read the same scale.
+  // One shape for every bubble and card: 18 with the top left cut (6); my bubbles mirror it (top right). No corner of a
+  // run squares off to join the next one.
+  expect(MESSAGE_CARD_CORNERS).toEqual(corners(6, 18, 18, 18));
+  expect(BUBBLE_PART_CORNERS).toEqual(MESSAGE_CARD_CORNERS);
+  expect(THEIR_BUBBLE_CORNERS).toEqual(MESSAGE_CARD_CORNERS);
+  expect(MY_BUBBLE_CORNERS).toEqual(corners(18, 6, 18, 18));
+  // The bubble itself reads the same scale, and every bubble takes its shape whatever its place in a run.
   expect(src("features/chat/look.ts")).toMatch(/bubble: \{[^}]*borderRadius: RADIUS\.xl,/);
-  expect(src("features/chat/MessageRow.tsx")).toContain("const BUBBLE_CUT = RADIUS.sm;");
-  expect(src("features/chat/MessageRow.tsx")).toContain(
-    "mid: { borderTopLeftRadius: RADIUS.sm, borderBottomLeftRadius: RADIUS.sm },",
-  );
+  const row = src("features/chat/MessageRow.tsx");
+  expect(row).toContain("MY_BUBBLE_CORNERS,");
+  expect(row).toContain("THEIR_BUBBLE_CORNERS,");
+  expect(row).not.toMatch(/(BUBBLE|OTHER)_RUN\[/);
   // What sits inside one, concentric, never quite square.
-  expect(insetCorners(BUBBLE_PART_CORNERS, 5)).toEqual(corners(1, 13, 13, 1));
+  expect(insetCorners(BUBBLE_PART_CORNERS, 5)).toEqual(corners(1, 13, 13, 13));
 });
 
 test("every card in a message takes the message card's corners, last over its own", () => {

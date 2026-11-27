@@ -2,7 +2,7 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
-import { Count, LineIcon, PixelOrbit, PressScale, SideScroll, Text, weights } from "@/ui";
+import { Count, LineIcon, PixelOrbit, PressScale, SCREEN_X, SideScroll, Text, weights } from "@/ui";
 import type { RowAction } from "../channel-sectors/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { AgentFace, Face } from "../shared/Face";
@@ -18,12 +18,14 @@ import { faceMark, type RowFacts } from "./rowFacts";
  * people keep at hand are.
  */
 const FACE = 60;
-/** Up to this many, the faces share the strip's width in equal columns; more, and it scrolls. */
-const FITS = 4;
-/** A column while it scrolls: four and a part of the fifth show, so it reads as one that scrolls. */
-const ITEM = 84;
-/** The strip's sides: half the screen's 16, as each column centres its face and name in its own room. */
-const SIDE = 8;
+/** Each one's column, the same for every face: room for a short name under it, and the next face peeks past the edge. */
+const ITEM = 76;
+const GAP = 8;
+/**
+ * The strip's start: the column centres its face, so this much in puts the first face's edge on the screen's 16, in
+ * line with the rows' faces under it. The faces keep to the left with the same room between them, however few.
+ */
+const SIDE = SCREEN_X - (ITEM - FACE) / 2;
 /** The marks before the name: the footnote's own height, so they read as part of its line. */
 const MARK = 12;
 
@@ -48,10 +50,10 @@ export interface PinnedStripProps {
 
 /**
  * Fixados, under Início's widgets: what the person pinned (the web sidebar's pins: their own agents until they choose),
- * side by side: up to four share the width in equal columns, more scroll sideways. Each is the app's own face for it,
- * all of one size: an agent's living body (at work, dozing while it waits for its offline computer, its presence on the
- * corner), a person's photo, a channel's tile; its
- * name under it on one line, after the mark its row's second line would carry (the orbit at work, the amber square for
+ * side by side from the left, the first face in line with the rows' faces, on a strip that scrolls sideways once they
+ * pass the edge. Each is the app's own face for it, all of one size: an agent's living body (at work, dozing while it
+ * waits for its offline computer, its presence on the corner), a person's photo, a channel's tile; its name under it on
+ * one line, after the mark its row's second line would carry (the orbit at work, the amber square for
  * what waits on you, a clock for a wait elsewhere), and its unread count on the face's corner as the app's badge. A tap
  * opens the conversation as its row does (an agent with none yet starts one); the long press is the row's own (iOS's
  * menu under the conversation's preview, the sheet elsewhere), with Tirar do topo. A section like the others: its
@@ -62,41 +64,21 @@ export function PinnedStrip({ items, collapsed, onToggle, onStart, onHold, holdA
   if (items.length === 0) return null;
   return (
     <CollapsibleSection title={t("mobile.chats.pinned")} count={items.length} collapsed={collapsed} onToggle={onToggle}>
-      {items.length <= FITS ? (
-        <View style={[styles.strip, styles.fits]}>
-          {items.map((it) => (
-            // Each its equal share: the column stretches whatever the link wraps the face in.
-            <View key={it.row.key} style={styles.share}>
-              <PinnedFace
-                row={it.row}
-                facts={it.facts}
-                live={it.live}
-                shared
-                onStart={onStart}
-                onHold={onHold}
-                holdActions={holdActions}
-                holdLabel={holdLabel}
-              />
-            </View>
-          ))}
-        </View>
-      ) : (
-        // A fade at the edge where more pinned faces wait past it.
-        <SideScroll contentContainerStyle={styles.strip}>
-          {items.map((it) => (
-            <PinnedFace
-              key={it.row.key}
-              row={it.row}
-              facts={it.facts}
-              live={it.live}
-              onStart={onStart}
-              onHold={onHold}
-              holdActions={holdActions}
-              holdLabel={holdLabel}
-            />
-          ))}
-        </SideScroll>
-      )}
+      {/* A fade at the edge where more pinned faces wait past it. */}
+      <SideScroll contentContainerStyle={styles.strip}>
+        {items.map((it) => (
+          <PinnedFace
+            key={it.row.key}
+            row={it.row}
+            facts={it.facts}
+            live={it.live}
+            onStart={onStart}
+            onHold={onHold}
+            holdActions={holdActions}
+            holdLabel={holdLabel}
+          />
+        ))}
+      </SideScroll>
     </CollapsibleSection>
   );
 }
@@ -109,16 +91,11 @@ const PinnedFace = memo(function PinnedFace({
   row: r,
   facts,
   live,
-  shared = false,
   onStart,
   onHold,
   holdActions,
   holdLabel,
-}: PinnedItem &
-  Omit<PinnedStripProps, "items" | "collapsed" | "onToggle"> & {
-    /** In an equal share of the strip's width (four or fewer), not a column of its own width. */
-    shared?: boolean;
-  }) {
+}: PinnedItem & Omit<PinnedStripProps, "items" | "collapsed" | "onToggle">) {
   const { t } = useTranslation();
   const c = useColors();
   const name = r.kind === "channel" ? r.name : r.kind === "dm" ? r.with.name : r.title;
@@ -165,7 +142,7 @@ const PinnedFace = memo(function PinnedFace({
           {...hold}
           accessibilityRole="button"
           accessibilityLabel={a11y}
-          {...(shared ? {} : { style: styles.item })}
+          style={styles.item}
           contentStyle={styles.itemIn}
         >
           <View>
@@ -212,12 +189,10 @@ const PinnedFace = memo(function PinnedFace({
 const styles = StyleSheet.create({
   // Room above for a badge standing over a face's corner and for the orbit's tip: a ring turned upright reaches 0.24 of
   // the face past it (14 points here), and a strip that scrolls clips what passes its top.
-  strip: { paddingHorizontal: SIDE, paddingTop: 11, paddingBottom: 4 },
-  fits: { flexDirection: "row" },
+  strip: { paddingHorizontal: SIDE, gap: GAP, paddingTop: 11, paddingBottom: 4 },
   item: { width: ITEM },
-  share: { flex: 1, minWidth: 0 },
   // The name far enough under the face that the upright ring's tip stays above its letters.
-  itemIn: { alignItems: "center", gap: 10, paddingVertical: 4, paddingHorizontal: 4 },
+  itemIn: { alignItems: "center", gap: 10, paddingVertical: 4 },
   badge: { position: "absolute", top: -6, right: -8, padding: 2, borderRadius: 999 },
   name: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "100%" },
   shrink: { flexShrink: 1 },

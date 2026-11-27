@@ -558,7 +558,7 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
 
 const styles = StyleSheet.create({
   // The app's card: radius 20 with the cut corner.
-  card: { borderRadius: 20, borderBottomLeftRadius: 6 },
+  card: { borderRadius: 20, borderTopLeftRadius: 6 },
   // The mark and the words: text at 14 + 16 + 10 = 40 from the card's left edge.
   line: { flexDirection: "row", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   // In a message: the line under it, as wide as its words, a little under the part above.

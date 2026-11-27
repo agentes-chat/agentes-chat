@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
-    borderBottomLeftRadius: 4,
+    borderTopLeftRadius: 4,
   },
   loading: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },

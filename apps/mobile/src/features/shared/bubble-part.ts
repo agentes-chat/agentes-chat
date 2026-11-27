@@ -15,16 +15,21 @@ export const BubblePartContext = createContext<BubblePart | null>(null);
 export const useBubblePart = () => useContext(BubblePartContext);
 
 /**
- * A card in a message (its tools, what it changed, a request, a file, its work, a proposal): the bubbles' 18 with the
- * cards' cut corner (6) at the bottom left. One shape for every card in a conversation, whatever its own elsewhere.
+ * A conversation's one shape, for every bubble and every card in a message (its tools, what it changed, a request, a
+ * file, its work, a proposal): the bubbles' 18 on three corners and the top left cut (6), on the side the words come
+ * from (my bubbles mirror it, top right). The same wherever it stands in a run: no corner squares off to join the
+ * next one.
  */
-export const MESSAGE_CARD_CORNERS = corners(RADIUS.xl, RADIUS.xl, RADIUS.xl, RADIUS.sm);
+export const MESSAGE_CARD_CORNERS = corners(RADIUS.sm, RADIUS.xl, RADIUS.xl, RADIUS.xl);
 
-/**
- * A card's corners in a bubble group: the bubbles' 18, its top left close to what is above it (a run's 6), its bottom
- * left cut (the cards' own corner). As the web's (`looks.css`).
- */
-export const BUBBLE_PART_CORNERS = corners(RADIUS.sm, RADIUS.xl, RADIUS.xl, RADIUS.sm);
+/** A card in a bubble group: the conversation's one shape, as the bubbles above it. */
+export const BUBBLE_PART_CORNERS = MESSAGE_CARD_CORNERS;
+
+/** Someone else's bubble: the conversation's one shape. */
+export const THEIR_BUBBLE_CORNERS = MESSAGE_CARD_CORNERS;
+
+/** My bubble, on the right: the same shape mirrored, its top right cut. */
+export const MY_BUBBLE_CORNERS = corners(RADIUS.xl, RADIUS.sm, RADIUS.xl, RADIUS.xl);
 
 /**
  * A message with no words whose one card is a request (an approval, a question, a secret): in bubbles its name line

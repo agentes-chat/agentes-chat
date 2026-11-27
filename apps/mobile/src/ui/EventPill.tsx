@@ -39,7 +39,7 @@ const WORDS_LINE = 20;
 /** Under the sentence (it took more than a line, or the phone is too narrow): the actions are words on its column. */
 const UnderContext = createContext(false);
 const MARK = 14;
-/** The small controls' corner, cut at the bottom left (the app's "cut corner"). */
+/** The small controls' corner, cut at the top left (the app's "cut corner", as a message's). */
 const RADIUS = 10;
 const CUT = 3;
 /** Above and below the sentence, inside the frame. */
@@ -74,7 +74,7 @@ export interface EventPillProps {
 /**
  * An automatic event of a conversation (an agent stopped, a follow-up set, a routine's report, a decided request) as
  * one object: a thin frame holding the sentence, its time and what can be done about it. Never a voice, never a
- * card: no fill, one hairline, the small controls' corner cut at the bottom left; left aligned where the caller puts
+ * card: no fill, one hairline, the small controls' corner cut at the top left; left aligned where the caller puts
  * it (the messages' text column). What opens text is an action like the others, with a chevron that turns.
  */
 export function EventPill({ mark, markColor, children, time, actions, below, waiting = false, style }: EventPillProps) {
@@ -259,10 +259,10 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     minHeight: 32,
     borderWidth: 1,
-    borderTopLeftRadius: RADIUS,
+    borderTopLeftRadius: CUT,
     borderTopRightRadius: RADIUS,
     borderBottomRightRadius: RADIUS,
-    borderBottomLeftRadius: CUT,
+    borderBottomLeftRadius: RADIUS,
     // The pressed plate stays inside the corners.
     overflow: "hidden",
   },

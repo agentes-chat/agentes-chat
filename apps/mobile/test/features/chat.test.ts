@@ -171,10 +171,11 @@ describe("timeline", () => {
     expect(runAround("mid", true, true)).toBe("solo");
   });
 
-  test("my row takes its place in the run: the bubble's corners and the time under the run's last", async () => {
+  test("my row takes its place in the run: one bubble shape, the time under the run's last", async () => {
     expect(chatScreenSource()).toContain("run={runPosition(item.grouped, item.continued ?? false)}");
     const row = await source("features/chat/MessageRow.tsx");
-    expect(row).toContain("BUBBLE_RUN[run]");
+    expect(row).toContain("MY_BUBBLE_CORNERS,");
+    expect(row).toContain("THEIR_BUBBLE_CORNERS,");
     expect(row).toContain('(run === "end" || run === "solo")');
   });
 

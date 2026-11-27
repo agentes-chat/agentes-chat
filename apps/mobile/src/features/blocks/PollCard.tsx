@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
-    borderBottomLeftRadius: 4,
+    borderTopLeftRadius: 4,
   },
   loading: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   medium: { fontWeight: "500" },
   options: { gap: 6, padding: 14, paddingTop: 10 },
   // The option's plate (its border, corners and the share's fill cut to them) around the press area.
-  option: { overflow: "hidden", borderWidth: 1, borderRadius: 12, borderBottomLeftRadius: 4 },
+  option: { overflow: "hidden", borderWidth: 1, borderRadius: 12, borderTopLeftRadius: 4 },
   // Top-aligned with 12 above and below: one line is 46 tall and centred as before, a wrapping label grows down.
   optionIn: {
     flexDirection: "row",
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderWidth: 1.6,
     borderRadius: 6,
-    borderBottomLeftRadius: 2,
+    borderTopLeftRadius: 2,
   },
   label: { flex: 1, minWidth: 0 },
   // At the end of the room every option keeps for its faces.

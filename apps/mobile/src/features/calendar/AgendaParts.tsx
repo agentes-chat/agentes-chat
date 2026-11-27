@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 14,
     borderRadius: 18,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: 6,
     gap: 6,
   },
   proposalHead: { flexDirection: "row", alignItems: "center", gap: 8 },

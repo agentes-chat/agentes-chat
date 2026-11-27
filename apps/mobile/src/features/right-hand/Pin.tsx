@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     paddingRight: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: 6,
   },
   grow: { flex: 1, minWidth: 0 },
   pressed: { opacity: 0.85 },

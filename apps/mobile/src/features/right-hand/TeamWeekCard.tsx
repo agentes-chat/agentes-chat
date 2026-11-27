@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
