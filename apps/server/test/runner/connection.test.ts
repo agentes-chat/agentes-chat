@@ -1081,7 +1081,7 @@ test("a warm start that started nothing gives its room back to the next turn", a
 });
 
 describe("a brain turn outlives a dropped link (HELD_TURN_PROTOCOL)", () => {
-  const turnRequest = (id: string, runId: string, reattach = false) =>
+  const turnRequest = (id: string, runId: string, reattach: boolean | "stop" = false) =>
     ({
       type: "request",
       id,
@@ -1093,7 +1093,7 @@ describe("a brain turn outlives a dropped link (HELD_TURN_PROTOCOL)", () => {
       system: "",
       prompt: "hi",
       mcp: { token: "t" },
-      ...(reattach ? { reattach: true } : {}),
+      ...(reattach ? { reattach } : {}),
     }) as unknown as ServerFrame;
 
   /** A turn that says "a" at once, whatever it is handed to `say`, and ends on `end()`. */
@@ -1197,6 +1197,51 @@ describe("a brain turn outlives a dropped link (HELD_TURN_PROTOCOL)", () => {
     connection.stop();
     await done;
   }, 15_000);
+
+  test("before: a held turn ran on after its run was canceled, beside the next run's on its CLI; now both end it", async () => {
+    const { t, handler } = turnHandler();
+    const { sockets, connection } = setup({ handler });
+    const done = connection.run();
+    await waitFor(() => sockets.length === 1);
+    const first = sock(sockets, 0);
+    first.handlers.onOpen();
+    first.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    first.frame(turnRequest("t1", "run1"));
+    await waitFor(() => t.starts === 1);
+    first.handlers.onClose(1006, "");
+    await waitFor(() => sockets.length === 2, 4000);
+    const second = sock(sockets, 1);
+    second.handlers.onOpen();
+    second.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+
+    // Its run was canceled while the link was down: the server's stop ends it, and the ask gets how it ended.
+    second.frame(turnRequest("t2", "run1", "stop"));
+    await waitFor(() => second.sent.some((f) => f.id === "t2"));
+    expect(t.aborted).toBe(1);
+    expect(second.sent.find((f) => f.id === "t2")).toMatchObject({ ok: false });
+
+    // Held again, and the next run of that conversation comes (no stop reached it): the held one ends first.
+    second.frame(turnRequest("t3", "run2"));
+    await waitFor(() => t.starts === 2);
+    second.handlers.onClose(1006, "");
+    await waitFor(() => sockets.length === 3, 4000);
+    const third = sock(sockets, 2);
+    third.handlers.onOpen();
+    third.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+    third.frame(turnRequest("t4", "run3"));
+    await waitFor(() => t.starts === 3);
+    expect(t.aborted).toBe(2);
+    expect(connection.turns).toBe(1);
+
+    // A turn canceled on its live link and asked again before it unwound starts anew, never takes the canceled one.
+    third.frame({ type: "cancel", id: "t4" });
+    third.frame(turnRequest("t5", "run3"));
+    await waitFor(() => t.starts === 4);
+    expect(third.sent.find((f) => f.id === "t5")).toBeUndefined();
+
+    connection.stop();
+    await done;
+  }, 20_000);
 
   test("stopping for good aborts a held turn at once", async () => {
     const { t, handler } = turnHandler();

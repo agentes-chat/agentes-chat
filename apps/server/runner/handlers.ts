@@ -1866,7 +1866,11 @@ class HeldTurn {
   readonly frames: RunnerFrame[] = [];
   outcome: RequestOutcome | undefined;
   timer: ReturnType<typeof setTimeout> | undefined;
-  constructor(readonly controller: AbortController) {}
+  constructor(
+    readonly controller: AbortController,
+    /** Its CLI's (agent, session), `brainKey`. */
+    readonly session: string,
+  ) {}
 
   emit(frame: RunnerFrame) {
     if (this.send) return this.send(frame);
@@ -1891,12 +1895,21 @@ export class HeldTurns {
     return n;
   }
 
+  /** A canceled turn still unwinding is no longer one to take over: its run's next ask starts a turn of its own. */
   has(runId: string) {
-    return this.byRun.has(runId);
+    const turn = this.byRun.get(runId);
+    return turn !== undefined && !turn.controller.signal.aborted;
   }
 
-  open(runId: string, controller: AbortController): HeldTurn {
-    const turn = new HeldTurn(controller);
+  open(runId: string, controller: AbortController, session: string): HeldTurn {
+    // Another run's held turn on this CLI: that run moved on (canceled or failed while away), and both would share it.
+    for (const [id, other] of this.byRun) {
+      if (id === runId || other.session !== session || other.owner !== null) continue;
+      clearTimeout(other.timer);
+      this.byRun.delete(id);
+      other.controller.abort();
+    }
+    const turn = new HeldTurn(controller, session);
     this.byRun.set(runId, turn);
     return turn;
   }
@@ -1931,7 +1944,7 @@ export class HeldTurns {
     reply: (outcome: RequestOutcome) => void,
   ): HeldTurn | null {
     const turn = this.byRun.get(runId);
-    if (!turn) return null;
+    if (!turn || turn.controller.signal.aborted) return null;
     clearTimeout(turn.timer);
     turn.timer = undefined;
     for (const frame of turn.frames.splice(0)) send(frame);
@@ -2071,8 +2084,8 @@ export class RequestRunner {
       return Promise.resolve();
     }
     // Its run's turn still runs here (its link dropped, or the server lost track of it): taken over, never run twice.
-    if (req.op === "brain.turn" && this.held && (this.held.has(req.runId) || req.reattach === true)) {
-      return this.takeOver(id, req.runId);
+    if (req.op === "brain.turn" && this.held && (this.held.has(req.runId) || req.reattach)) {
+      return this.takeOver(id, req.runId, req.reattach === "stop");
     }
     if (this.inflight.size >= MAX_IN_FLIGHT && !PEOPLE_OPS.has(req.op)) {
       this.reply(id, { ok: false, error: { code: "internal", message: "busy" } });
@@ -2135,7 +2148,8 @@ export class RequestRunner {
     return this.run(id, req, controller);
   }
 
-  private takeOver(id: string, runId: string): Promise<void> {
+  /** `stop`: its run was canceled while the link was down; the turn ends now, its result to this ask. */
+  private takeOver(id: string, runId: string, stop: boolean): Promise<void> {
     return new Promise((resolve) => {
       const turn = this.held?.take(runId, this, this.emitFrame, (outcome) => {
         this.inflight.delete(id);
@@ -2148,11 +2162,12 @@ export class RequestRunner {
         this.reply(id, { ok: false, error: { code: "not_found", message } });
         return resolve();
       }
-      this.log("brain.turn taken over on the new link");
+      this.log(stop ? "held brain.turn stopped: its run was canceled" : "brain.turn taken over on the new link");
       if (turn.owner === this) {
         this.inflight.set(id, turn.controller);
         this.turnsHere.set(id, { runId, turn });
       }
+      if (stop) turn.controller.abort();
     });
   }
 
@@ -2206,7 +2221,10 @@ export class RequestRunner {
     const turn = req.op === "brain.turn";
     if (turn) this.turns++;
     this.inflight.set(id, controller);
-    const held = req.op === "brain.turn" && this.held ? this.held.open(req.runId, controller) : null;
+    const held =
+      req.op === "brain.turn" && this.held
+        ? this.held.open(req.runId, controller, brainKey(req.agent?.id ?? "", req.session?.id ?? ""))
+        : null;
     if (held && req.op === "brain.turn") {
       held.owner = this;
       held.send = this.emitFrame;

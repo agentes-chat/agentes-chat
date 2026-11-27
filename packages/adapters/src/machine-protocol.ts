@@ -866,8 +866,9 @@ export const FOLDER_PICK_PROTOCOL = 92;
 /**
  * From this protocol on, a brain turn outlives a dropped link: the runner keeps it running for `HELD_TURN_MS` (its
  * events and its result kept), and a `brain.turn` for the same run on the next link takes it over instead of starting
- * the turn again. One sent with `reattach` only takes a turn held there; nothing held, it is answered `not_found`. A
- * standby (before a sleep) is refused while a turn runs.
+ * the turn again. One sent with `reattach` only takes a turn held there; nothing held, it is answered `not_found`.
+ * `reattach: "stop"` takes it and stops it (its run was canceled meanwhile). A turn of another run on the same CLI
+ * (agent and session) ends a held one first. A standby (before a sleep) is refused while a turn runs.
  */
 export const HELD_TURN_PROTOCOL = 93;
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
@@ -2696,8 +2697,8 @@ export interface BrainTurnRequest {
    * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
    */
   answers?: "each";
-  /** `HELD_TURN_PROTOCOL`: take over the turn of this run held on the computer, never start one. */
-  reattach?: boolean;
+  /** `HELD_TURN_PROTOCOL`: take over the turn of this run held on the computer, never start one; `stop`: and end it. */
+  reattach?: boolean | "stop";
 }
 
 /**

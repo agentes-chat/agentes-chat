@@ -24,6 +24,7 @@ import { type Database, schema } from "@agenteschat/db";
 import { CLI_FLOORS, CLI_UPDATE_COMMAND, cliVersionProblem, type FloorCli } from "@agenteschat/providers/cli-floors";
 import { autoContextFor } from "@agenteschat/providers/context-limits";
 import { getAgentCached } from "../agents";
+import { isShutdown } from "../cancel";
 import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
 import {
@@ -409,11 +410,39 @@ export async function callTurnThroughDrops(
       const back = canceled()
         ? null
         : await computerBackSoon(hub, machineId, { waitMs, signal: call.signal, canceled });
-      if (back === null) throw new MachineRequestError("canceled", "canceled");
+      if (back === null) {
+        // The runner holds the turn still, running on, and no cancel can reach it. Not on our own restart: the next
+        // server takes the turn over.
+        if (!isShutdown(call.signal?.reason)) void stopHeldTurn(hub, machineId, request, waitMs);
+        throw new MachineRequestError("canceled", "canceled");
+      }
       if (!back) throw dropped;
       const status = await hub.status(machineId).catch(() => null);
       if ((status?.protocol ?? 0) < HELD_TURN_PROTOCOL) throw dropped;
     }
+  }
+}
+
+/**
+ * Once the computer is back within `waitMs`, it ends the canceled run's turn it may still hold (`reattach: "stop"`).
+ * Never wakes it: a computer that sleeps holds no turn.
+ */
+async function stopHeldTurn(
+  hub: Pick<MachineCaller, "call" | "status">,
+  machineId: string,
+  request: BrainTurnRequest & { agent?: AgentScope },
+  waitMs: number,
+) {
+  for (const until = Date.now() + waitMs; ; await Bun.sleep(1_000)) {
+    const status = await hub.status(machineId).catch(() => null);
+    if (status?.online) {
+      if ((status.protocol ?? 0) < HELD_TURN_PROTOCOL) return;
+      await hub
+        .call<"brain.turn">(machineId, { op: "brain.turn", ...request, reattach: "stop" }, { timeoutMs: 30_000 })
+        .catch(() => {});
+      return;
+    }
+    if (Date.now() >= until) return;
   }
 }
 

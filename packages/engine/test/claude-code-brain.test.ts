@@ -35,6 +35,7 @@ import {
   postPersonMessage,
   recordPlanUsage,
   restatesReaction,
+  SHUTDOWN_REASON,
 } from "../src";
 import { type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -546,6 +547,27 @@ describe("a turn whose computer dropped mid-way (HELD_TURN_PROTOCOL)", () => {
     setTimeout(() => stop.abort(), 200);
     const events = await collect(brain.run(turn(), io(stop.signal)));
     expect(events.at(-1)).toEqual(expect.objectContaining({ type: "error", code: "canceled" }));
+    expect(calls).toHaveLength(1);
+  });
+
+  test("before: canceled while away, the turn ran on there; now the computer, back, is told to stop it", async () => {
+    const pubsub = createMemoryPubSub();
+    const { brain, calls } = droppingHub(pubsub, { held: true, awayMs: 400 });
+    const stop = new AbortController();
+    setTimeout(() => stop.abort(new Error("run canceled")), 100);
+    const events = await collect(brain.run(turn(), io(stop.signal)));
+    expect(events.at(-1)).toEqual(expect.objectContaining({ type: "error", code: "canceled" }));
+    for (const until = Date.now() + 4000; calls.length < 2 && Date.now() < until; ) await Bun.sleep(50);
+    expect((calls[1] as { reattach?: unknown }).reattach).toBe("stop");
+  });
+
+  test("our own restart while away: no stop, the next server takes the turn over", async () => {
+    const pubsub = createMemoryPubSub();
+    const { brain, calls } = droppingHub(pubsub, { held: true, awayMs: 400 });
+    const stop = new AbortController();
+    setTimeout(() => stop.abort(SHUTDOWN_REASON), 100);
+    await collect(brain.run(turn(), io(stop.signal)));
+    await Bun.sleep(1_500);
     expect(calls).toHaveLength(1);
   });
 });
