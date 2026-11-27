@@ -32,7 +32,7 @@ import { fetchesCli } from "../cli-fetch";
 import type { CodeSessionContext } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
-import { pausedMessage } from "../machines";
+import { maintenanceWords, pausedMessage } from "../machines";
 import { missionTurnFor } from "../missions-engine";
 import {
   isRightHand,
@@ -436,7 +436,14 @@ export function computerBrainUnavailable(
     return { code: e.code, message: e.message, ...(e.code === "machine_paused" ? pausedUntil : {}) };
   }
   if (!status?.online) {
-    return { code: "machine_offline", message: `${name}${status ? ` on ${status.name}` : ""} is offline.` };
+    const away = status?.maintenance?.away ? status.maintenance : null;
+    return {
+      code: "machine_offline",
+      message:
+        away && status
+          ? maintenanceWords(status.name, away)
+          : `${name}${status ? ` on ${status.name}` : ""} is offline.`,
+    };
   }
   if (status.paused) {
     return {
@@ -460,7 +467,7 @@ export function computerBrainUnavailable(
     ) {
       return {
         code: "runner_outdated",
-        message: `The runner on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
       };
     }
     // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn, one before
@@ -469,7 +476,7 @@ export function computerBrainUnavailable(
     if (status.os === "windows" && status.protocol < windowsProtocol) {
       return {
         code: "runner_outdated",
-        message: `The runner on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
+        message: `The agentes.chat program on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
       };
     }
     if (status.executors?.detectedAt && !status.executors[kind] && !fetchesCli(status, kind)) {
@@ -486,7 +493,7 @@ export function computerBrainUnavailable(
   if (status.protocol < BRAIN_PROTOCOL || (windows && status.protocol < CODEX_WINDOWS_PROTOCOL)) {
     return {
       code: "runner_outdated",
-      message: `The runner on ${status.name} is too old for Codex agents${windows ? " on Windows" : ""}. ${runnerUpdateWay(status)}`,
+      message: `The agentes.chat program on ${status.name} is too old for Codex agents${windows ? " on Windows" : ""}. ${runnerUpdateWay(status)}`,
     };
   }
   const codex = status.executors?.codex;
@@ -715,15 +722,22 @@ async function sessionFor(
   conversation: string,
   machineId: string,
   accountId: string | null,
-  options: { fresh?: boolean; promptKey?: string; peek?: boolean },
+  options: { fresh?: boolean; promptKey?: string; promptParts?: Record<string, string>; peek?: boolean },
   now: Date,
-): Promise<{ id: string; resume: boolean; partsRead?: string | null; refreshRead?: string[] }> {
+): Promise<{
+  id: string;
+  resume: boolean;
+  partsRead?: string | null;
+  refreshRead?: string[];
+  notPickedUp?: string[];
+}> {
   if (run.brainSessionId) {
     return { id: run.brainSessionId, resume: await sessionUsed(db, run, kind, run.brainSessionId) };
   }
   let id: string | null = null;
   let partsRead: string | null = null;
   let refreshRead: string[] = [];
+  let notPickedUp: string[] | undefined;
   if (!options.fresh && !run.background) {
     const { agentRuns, agentRunSteps, usageRecords, messages } = schema;
     const [last] = await db
@@ -748,6 +762,7 @@ async function sessionFor(
         promptKey: sql<string | null>`${runState}->>'promptKey'`,
         // Not in `state`: read on this one row only.
         partsRead: sql<string | null>`${agentRuns.transcript}->>'sessionParts'`,
+        promptParts: sql<Record<string, string> | null>`${agentRuns.transcript}->'promptParts'`,
         refreshRead: sql<
           string[]
         >`jsonb_path_query_array(${agentRuns.transcript}->'system', '$[*] ? (@.refresh == true).text')::text`.mapWith(
@@ -790,17 +805,21 @@ async function sessionFor(
       )
       .orderBy(desc(agentRuns.createdAt))
       .limit(1);
-    if (
-      last?.sessionId &&
-      now.getTime() - last.at.getTime() < SESSION_IDLE_MS &&
-      last.input < SESSION_MAX_INPUT_TOKENS &&
-      // A live session keeps the system prompt it started with: after an edit to the instructions (or anything
-      // else `promptKey` covers) a new one starts, with the conversation so far in its first prompt.
-      (options.promptKey === undefined || last.promptKey === options.promptKey)
-    ) {
+    const recent = last?.sessionId && now.getTime() - last.at.getTime() < SESSION_IDLE_MS;
+    // A live session keeps the system prompt it started with: after an edit to the instructions (or anything
+    // else `promptKey` covers) a new one starts, with the conversation so far in its first prompt.
+    const samePrompt = options.promptKey === undefined || last?.promptKey === options.promptKey;
+    if (recent && last.input < SESSION_MAX_INPUT_TOKENS && samePrompt) {
       id = last.sessionId;
       partsRead = last.partsRead;
       refreshRead = last.refreshRead;
+    } else if (recent) {
+      const was = last.promptParts ?? {};
+      const parts = Object.entries(options.promptParts ?? {}).flatMap(([k, v]) => (was[k] === v ? [] : [k]));
+      notPickedUp = [
+        ...(last.input >= SESSION_MAX_INPUT_TOKENS ? ["size"] : []),
+        ...(samePrompt ? [] : parts.length > 0 && last.promptParts ? parts : ["prompt"]),
+      ];
     }
   }
   const sessionId = id ?? brainSessionId(agent.id, `${conversation}:${run.id}`, kind);
@@ -808,7 +827,7 @@ async function sessionFor(
     await db.update(schema.agentRuns).set({ brainSessionId: sessionId }).where(eq(schema.agentRuns.id, run.id));
   return id
     ? { id: sessionId, resume: await sessionUsed(db, run, kind, sessionId), partsRead, refreshRead }
-    : { id: sessionId, resume: false };
+    : { id: sessionId, resume: false, ...(notPickedUp ? { notPickedUp } : {}) };
 }
 
 /**
@@ -838,14 +857,19 @@ export async function resolveBrain(
     fresh?: boolean;
     now?: Date;
     promptKey?: string;
+    /** `promptKey` by its parts (`Transcript.promptParts`): a session it can't pick up says which changed. */
+    promptParts?: Record<string, string>;
     thinker?: Agent;
     peek?: boolean;
     codeSession?: CodeSessionContext | null;
+    /** The right hand's person, for a run with no row yet (a warm start while they type); else read from the run. */
+    person?: string | null;
   } = {},
 ): Promise<BrainPlan> {
   const mission: MissionTurn | null = await missionTurnFor(deps.db, run).catch(() => null);
   // The right hand: the AI of the person whose DM this is, else the workspace's; on a plan, its computer and owner.
-  const person = await rightHandPerson(deps.db, given, run);
+  const person =
+    options.person !== undefined && isRightHand(given) ? options.person : await rightHandPerson(deps.db, given, run);
   const agent = options.thinker ?? (await thinkingAgent(deps.db, given, person));
   const kind = brainFor(agent, run, mission);
   const base = mission ? { missionId: mission.missionId } : {};
@@ -873,7 +897,7 @@ export async function resolveBrain(
   const effort = brainEffortFor(agent, kind);
   const unavailable =
     (isRightHand(agent) && (agent.brainAccountId || agent.machineId)
-      ? await rightHandPlanRefusal(deps.db, agent, run, status)
+      ? await rightHandPlanRefusal(agent, person, status)
       : null) ??
     (account && !isRightHand(agent) ? await replyRefusal(deps.db, agent, account.id, run) : null) ??
     (machineId && !deps.machines

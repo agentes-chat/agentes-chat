@@ -3212,6 +3212,8 @@ export const en = {
     details: "Channel details",
     composerLabel: "Message #{{channel}}",
     composerDm: "Message {{name}}",
+    /** First in who a personal workspace's group conversation holds ("You, Teo and Rita"). */
+    groupYou: "You",
     composerPlaceholder: "Message #{{channel}} · use @ to call an agent",
     send: "Send",
     attach: "Attach file",
@@ -3232,6 +3234,7 @@ export const en = {
     sendFailed: "The message wasn't sent. Try again.",
     reconnecting: "Reconnecting to real time…",
     detailsTitle: "#{{channel}}",
+    detailsTitlePersonal: "{{channel}}",
     detailsSearch: "Search people or agents",
     detailsEmpty: "Nobody found for “{{q}}”.",
     topicLabel: "Channel description",
@@ -3244,9 +3247,11 @@ export const en = {
     replyInThreadsHelp:
       "An agent called in the channel answers in the thread under that message, and the channel shows one line for it. Work already going stays where it is.",
     nameTaken: "There is already #{{name}}.",
+    nameTakenPersonal: "There is already a group conversation called “{{name}}”.",
     generalName: "#general keeps its name.",
     archive: "Archive channel",
     archived: "#{{channel}} archived. The conversation is kept.",
+    archivedPersonal: "“{{channel}}” archived. The conversation is kept.",
     archivedTitle: "Archived channels",
     archivedCount_one: "{{count}} archived channel",
     archivedCount_other: "{{count}} archived channels",
@@ -3255,6 +3260,7 @@ export const en = {
     restore: "Restore",
     restoreName: "Restore #{{channel}}",
     restored: "#{{channel}} is back.",
+    restoredPersonal: "“{{channel}}” is back.",
     leave: "Leave channel",
     left: "You left #{{channel}}",
     leaveTitle: "Leave #{{channel}}?",
@@ -4858,8 +4864,9 @@ export const en = {
     namePlaceholderPersonal: "e.g. trip",
     nameHelp: "Lowercase letters, digits and hyphens. Shows as #{{name}}.",
     nameInvalid: "Use lowercase letters, digits and hyphens, starting with a letter or digit.",
+    nameInvalidPersonal: "Give it a name of up to 80 characters, on one line.",
     nameTaken: "There is already a #{{name}} channel.",
-    nameTakenPersonal: "There is already a group conversation called #{{name}}.",
+    nameTakenPersonal: "There is already a group conversation called “{{name}}”.",
     topic: "Description",
     topicPlaceholder: "What is talked about here",
     visibility: "Who can join",
@@ -4890,6 +4897,7 @@ export const en = {
     selected_one: "{{count}} selected",
     selected_other: "{{count}} selected",
     create: "Create #{{name}}",
+    createPersonal: "Create conversation",
   },
   channelCategories: {
     undo: "Undo",
@@ -4909,6 +4917,7 @@ export const en = {
     invitePersonal: "Invite {{email}} to your workspace and #{{channel}}",
     inviteOrgPersonal: "Invite {{email}} to your workspace",
     addTitle: "Add to #{{channel}}",
+    addTitlePersonal: "Add to {{channel}}",
     addSearch: "Search people or agents",
     addEmpty: "Nobody outside the channel matches “{{q}}”.",
     addEveryone: "Everyone in {{org}} is already in #{{channel}}.",
@@ -4917,6 +4926,7 @@ export const en = {
     actions: "Options for {{name}}",
     remove: "Remove from channel",
     removeTitle: "Remove {{name}} from #{{channel}}?",
+    removeTitlePersonal: "Remove {{name}} from {{channel}}?",
     removePersonBody: "They stop seeing the channel and getting its messages. You can add them back later.",
     removeAgentBody: "He stops reading and answering in this channel. You can add him back later.",
     removeAgentBody_female: "She stops reading and answering in this channel. You can add her back later.",
@@ -6212,6 +6222,7 @@ export const en = {
       adminAskChannel: "<b>{{name}}</b> asks you to add <b>{{agent}}</b> to #{{label}}",
       adminAskCreate: "<b>{{name}}</b> asks to be able to create agents",
       adminAskWebhook: "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines",
+      adminAskVoice: "<b>{{name}}</b> asks you to turn on voice messages",
       invitationAccepted: "<b>{{name}}</b> accepted your invitation and joined {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> accepted your invitation",
       reaction_one: "<b>{{names}}</b> reacted to your message",
@@ -10560,7 +10571,6 @@ export const en = {
       machine_access_granted: "Allowed: {{agent}} can now use {{folder}} on {{computer}}",
       machine_access_denied: "Declined: {{agent}} won't use {{folder}} on {{computer}}",
       machine_access_expired: "The request for the folder {{folder}} on {{computer}} got no answer",
-      access_command: "No app on the computer? Run this in its Terminal:",
     },
     suggestion: {
       pending: "Suggestion for the mission",
@@ -12231,6 +12241,8 @@ export const en = {
     silent: "Didn't hear anything. Nothing was sent.",
     notSent: "Couldn't send the audio.",
     limit: "Today's audio limit is used up. Write here, or try again tomorrow.",
+    /** The workspace has no agentes.chat plan in force (a billing hold): the apps add the way to one. */
+    plan: "Voice messages come with an agentes.chat plan. You can still write here.",
     micBlocked: "The microphone is blocked",
     micBlockedHint: "Allow the microphone in your device settings to record.",
     openSettings: "Open settings",
@@ -12267,11 +12279,12 @@ export const en = {
       title: "Voice messages",
       on: "Voice messages",
       onHelp: "People in this workspace can send audio in conversations.",
-      noEngine: "Voice messages aren't available here yet.",
+      noEngine: "Voice messages go as audio for now, so agents can't hear them yet.",
       /** No engine, for everyone but the installation's owner, who alone sees the picker on this page. */
-      noEngineAsk: "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page.",
+      noEngineAsk:
+        "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page.",
       /** No engine, for the installation's owner, with the picker under it. */
-      noEngineHere: "Voice messages turn on once you choose below what turns voice into text.",
+      noEngineHere: "Voice messages go as audio until you choose below what turns voice into text.",
       engineTitle: "What turns voice into text",
       own: "Your own server",
       ownHelp: "Whisper or Parakeet on your machine. The audio stays there.",
@@ -12279,10 +12292,66 @@ export const en = {
       key: "{{name}} key",
       keyPlaceholder: "Paste here",
       test: "Test",
-      tested: "It works. Everyone now sees the microphone.",
+      tested: "It works. Voice messages now reach the agents as text.",
       sealed: "Kept encrypted on your server and never shown again.",
       leaves: "Audio from voice messages goes to {{name}} to become text.",
       invalid: "The saved key doesn't open on this server. Paste it again.",
+    },
+    /** "On this computer": the speech model downloaded to the server's own computer (`LocalSpeechChoice`). */
+    local: {
+      titleHere: "On this computer",
+      titleServer: "On this server",
+      /** On the phone, which never runs it. */
+      titlePhone: "On the server's computer",
+      textHere: "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages.",
+      textServer: "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages.",
+      download: "Download and turn on",
+      downloading: "Downloading the voice model",
+      /** `done` and `total`: sizes, "312 MB". */
+      progress: "{{done}} of {{total}}",
+      meanwhile: "You can record now. Notes go as audio until it's ready.",
+      downloadingPhone: "Downloading the voice model to the server's computer. You can record now.",
+      starting: "Turning it on…",
+      licenses: "Model licenses",
+      tooSmall: "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below.",
+      noDisk:
+        "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below.",
+      noBuild: "There's no voice model for this computer yet. Use a provider key below.",
+      stopped: "The download stopped: {{detail}}",
+      diskFull: "The disk filled up during the download. Free some space and try again.",
+      didntStart: "The voice model didn't start: {{detail}}",
+      resume: "Resume",
+      copy: "Copy details",
+      copied: "Details copied",
+    },
+    /** The right hand's card (`offer_voice_setup`). `size`: the download, "738 MB". */
+    offer: {
+      title: "Voice messages",
+      download: "Download {{size}} and turn on",
+      choose: "Choose how",
+      askOwner: "Turn voice into text on this server",
+      askMember: "Ask to turn on voice messages",
+      on: "Voice messages are on: agents read them as text.",
+    },
+    /** The microphone's first press where nothing turns voice into text yet (`VoiceSetupDialog`). */
+    setup: {
+      memberTitle: "Voice isn't on here yet",
+      /** `name`: who runs this server. */
+      memberText:
+        "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text.",
+      memberTextNoName:
+        "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text.",
+      ask: "Ask {{name}}",
+      asked: "{{name}} was asked to turn it on",
+      recordAnyway: "Record anyway",
+      ownerTitle: "Choose what turns voice into text",
+      ownerText: "Until you do, voice messages go as audio people can play, and agents can't hear them.",
+      readyTitle: "Voice messages are on",
+      readyText: "What you say reaches the agents as text.",
+      record: "Record a message",
+      /** On the phone, for the server's owner: the phone never runs a model, so the choice is made on a computer. */
+      ownerPhone:
+        "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them.",
     },
   },
   media: {
@@ -15763,6 +15832,9 @@ export const en = {
       desktop_read: "Read the screen",
       desktop_screenshot: "Take a screenshot",
       desktop_ask_person: "Ask someone to take over the computer",
+      apps_list: "See the open apps",
+      apps_read: "Read an app",
+      apps_act: "Use an app",
       computer_use: "Use the computer",
       computer_status: "Check the computer",
       left_click: "Click",
@@ -16824,6 +16896,7 @@ export const en = {
       generalStays: "Everyone stays in #general.",
       leadChannelOnly: "Only channels have a responsible agent.",
       leadNotMember: "The responsible agent has to be in the channel.",
+      groupNameInvalid: "Give it a name of up to 80 characters, on one line.",
       mcpUnreachable: "Couldn't connect to the MCP server. Check its address and try again.",
       notApproved: "This service hasn't approved agentes.chat yet.",
       alreadyInvited: "This person already has an invitation.",
@@ -17350,13 +17423,13 @@ export const en = {
       browser_checksum: "The agent browser's download came damaged, so it wasn't used. It tries again on its next use.",
       desktop_use_linux: "Desktop use runs on Linux computers with the agents' desktops.",
       desktop_use_own_user:
-        "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the runner's user.",
+        "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the same user, the one agentes.chat runs as.",
       desktop_use_install: "Install what desktop use needs on this computer:",
       desktop_unavailable: "The agents' desktops can't run on this computer.",
       desktop_linux: "The agents' desktops run on Linux computers only.",
       desktop_install: "Install the agents' desktops on this computer:",
-      not_as_root: "The agents' desktops and terminals never run as root. Run the runner as a normal user.",
-      runner_bun_old: "This needs the runner on Bun 1.3.5 or newer. Update the runner on this computer.",
+      not_as_root: "The agents' desktops and terminals never run as root. Run agentes.chat as a normal user.",
+      runner_bun_old: "This needs agentes.chat on Bun 1.3.5 or newer. Update agentes.chat on this computer.",
       terminal_unsupported: "Terminals run on Linux and Mac computers only.",
     },
     egress: {
@@ -17367,14 +17440,61 @@ export const en = {
       waiting: "Reconnecting the agents’ internet. Their connections wait until it’s back.",
       /** The workspace's computer opens websites through a person's computer's internet (ADR 0237). */
       via: "Agents use the internet of {{name}}",
-      viaBy: "Agents use the internet of {{name}} ({{person}})",
       viaHint: "Websites see that computer’s location. Its owner can turn it off on its page.",
     },
-    /** The workspace's own computer, away while it moves to another server: never "offline" or "not answering". */
-    moving: {
-      short: "Moving servers",
-      line: "Moving to a new server… back in a few minutes",
-      named: "{{computer}} is moving to a new server… back in a few minutes",
+    /**
+     * What we do to the workspace's own computer (ADR 0257), said instead of "offline": a move, a restart, an update,
+     * a disk conversion, its server's maintenance. `other`: a kind this app doesn't know yet.
+     */
+    maintenance: {
+      /** The chip's and the pill's word. */
+      short: {
+        moving: "Moving servers",
+        restarting: "Restarting",
+        updating: "Updating",
+        converting: "Upgrading disk",
+        host_maintenance: "Maintenance",
+        other: "Maintenance",
+      },
+      /** The line's start, before "… back in about 2 min". */
+      what: {
+        moving: "Moving to a new server",
+        copying: "Copying to a new server",
+        restarting: "Restarting",
+        updating: "Updating its software",
+        converting: "Upgrading its disk",
+        host_maintenance: "Its server is under maintenance",
+        other: "Being worked on",
+      },
+      /** "Restarting… back in about 2 min". */
+      line: "{{what}}… {{when}}",
+      named: "{{computer}}: {{line}}",
+      /** `time`: "2 min", "1 h". */
+      back: "back in about {{time}}",
+      backSoon: "back in a few minutes",
+      late: "taking a little longer than expected",
+      /** Online while it is done (a move's copy): it works. */
+      slower: "it may be slower meanwhile",
+      slowerFor: "it may be slower for about {{time}}",
+      /** The tip's first line: why, in plain words. */
+      why: {
+        moving: "We're moving it to a new server.",
+        copying: "We're copying its files to a new server while it works.",
+        handover: "We're handing its last changes over to the new server.",
+        restarting: "We're restarting it.",
+        unresponsive: "It stopped answering, so we restarted it automatically.",
+        updating: "We're updating its software.",
+        converting: "We're moving its disk to faster storage.",
+        host_maintenance: "The server it runs on is getting maintenance.",
+        other: "We're doing some work on it.",
+      },
+      since: "Since {{time}}",
+      expectedBack: "Expected back around {{time}}",
+      expectedDone: "Expected done around {{time}}",
+      meanwhile: "Messages to its agents wait and go on by themselves when it's back.",
+      working: "Its agents keep working meanwhile.",
+      /** The ⓘ's name beside the chip. */
+      about: "What's happening",
     },
     online: "Online",
     offline: "Offline",
@@ -17447,6 +17567,15 @@ export const en = {
     removed: "{{name}} was removed.",
     name: "Computer name",
     nameHelp: "How people and agents see it.",
+    /**
+     * The name a computer gets when it joins, until someone renames it (`defaultMachineName` in the engine): its model
+     * and the first name of who connected it. `model` is a product name ("MacBook Pro", "Mac", "PC"), never translated.
+     */
+    defaultName: {
+      model: "{{name}}'s {{model}}",
+      linux: "{{name}}'s Linux computer",
+      other: "{{name}}'s computer",
+    },
     os: { linux: "Linux", darwin: "macOS", windows: "Windows", other: "Other system" },
     commandCopied: "Command copied. Paste it in the computer's Terminal.",
     // agentes for Mac (ADR 0036): this Mac, from the site inside the app.
@@ -17597,6 +17726,16 @@ export const en = {
       grantTextTerminal: "Allowing happens on the computer itself, in its Terminal:",
       grantTextAdmin: "Allowing happens on the computer itself, in its Terminal, as its administrator:",
       grantTerminal: "No app? In the computer's terminal:",
+      /** "Liberar uma pasta": the agentes.chat app on that computer opens the system's folder picker for whoever is there. */
+      pickText: "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose.",
+      pick: "Allow a folder",
+      picked: "A folder picker opened on {{machine}}. Choose the folder there.",
+      /** While the person at the computer hasn't picked yet. */
+      pickWaiting: "Waiting for the folder to be chosen on {{machine}}",
+      /** A computer without the app (or one too old): the command, folded under this. */
+      grantTerminalMore: "No app there? Use the Terminal",
+      noApp: "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal.",
+      requestDone: "This request was already answered or has expired.",
       /** Under a one-click button: the same as a command to paste on that computer. */
       preferTerminal: "I'd rather use the Terminal",
       grantOnlyOwner: "Only {{name}} allows more, on the computer itself. If you need something, ask them.",
@@ -17775,6 +17914,10 @@ export const en = {
       paused: "{{host}} is paused, so control waits until it's resumed.",
       held: "This workspace is paused, so control waits until it's active again.",
       lost: "Control ended. You're watching {{name}} again.",
+      /** Control showed no picture in its wait (an iPhone's test helper still building or starting): watching again. */
+      controlLate: "Control didn't start in time. {{host}} is still getting {{name}} ready: try again in a minute.",
+      /** Control couldn't start on the computer: watching again. */
+      controlFailed: "Couldn't take control of {{name}}. Try again, or restart the agentes.chat app on {{host}}.",
       typeLabel: "Type on {{name}}",
     },
     status: {
@@ -17796,10 +17939,10 @@ export const en = {
       until: "until {{time}}",
       withHost: "with {{host}}",
       lastSeen: "last seen {{time}}",
-      /** A computer someone brought, by why it went offline: its runner stopped answering pings. */
+      /** A computer someone brought, by why it went offline: agentes.chat there stopped answering pings. */
       offlineUnresponsive: "stopped answering at {{time}}",
-      /** Its runner stopped (its service stopped, the app quit). */
-      offlineStopped: "runner stopped at {{time}}",
+      /** agentes.chat there stopped (its service stopped, the app quit). */
+      offlineStopped: "agentes.chat stopped at {{time}}",
       /** The connection dropped. */
       offlineDropped: "connection dropped at {{time}}",
     },
@@ -17820,11 +17963,19 @@ export const en = {
       offline: "Agents wait for it to come back.",
       offlineSeen: "Last seen {{time}}. Agents wait for it to come back.",
       offlineWithHost: "{{host}} is offline. Agents wait for it to come back.",
-      /** `command`: `agentes-runner doctor`, as code between its backticks. No network, or the computer too busy to answer. */
-      offlineUnresponsive: "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it.",
-      offlineStopped: "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why.",
-      offlineDropped:
-        "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it.",
+      /** No network, or the computer too busy to answer. */
+      offlineUnresponsive:
+        "Stopped answering at {{time}}, maybe no internet or overloaded. Check that it's on and online.",
+      /** The agentes.chat app there quit, or was closed. */
+      offlineStopped: "The agentes.chat app stopped on this computer at {{time}}. Open the app again.",
+      /** agentes.chat installed from the Terminal (no app) stopped there. */
+      offlineStoppedCli: "agentes.chat stopped on this computer at {{time}}. Start it again there.",
+      offlineDropped: "The connection dropped at {{time}}. It reconnects by itself.",
+    },
+    /** Under an offline computer installed from the Terminal, collapsed: the command that tells why. */
+    technical: {
+      title: "Technical details",
+      doctor: "To see why, run this on it:",
     },
     /** Why a device isn't ready, by the code its computer reports. */
     reason: {
@@ -18357,6 +18508,9 @@ export const en = {
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
+      /** Its button where the agentes.chat app runs that computer: the request opens there, for the person to allow. */
+      folderOnComputer: "Allow on the computer",
+      folderShown: "Opened on {{deviceName}}. Allow it there.",
       /**
        * Once, for a computer paired before agents could use a person's internet (ADR 0237): to its owner, or to admins
        * for a computer marked the workspace's. `deviceName` the computer's name.
@@ -20244,6 +20398,7 @@ export const en = {
         usingScreen: "Used the screen",
         cloningRepo: "Cloned a repository",
         listingRepos: "Listed the repositories",
+        updatingCode: "Updated the code",
         preparingCli: "Prepared {{app}}",
         openingPullRequest: "Opened a pull request",
         handingOff: "Delivered a report",
@@ -20369,6 +20524,7 @@ export const en = {
       usingScreen: "using the screen",
       cloningRepo: "cloning a repository",
       listingRepos: "listing the repositories",
+      updatingCode: "updating the code",
       preparingCli: "preparing {{app}} on {{computer}}",
       preparingCliPct: "preparing {{app}} on {{computer}} ({{percent}}%)",
       openingPullRequest: "opening a pull request",
@@ -20616,6 +20772,7 @@ export const en = {
       welcome_member_agent:
         "You just joined {{org}}, and your first agent is already on the team. Whenever you need me, just call.",
       action_open_page: "Open a screen",
+      action_voice_setup: "Turn on voice messages",
       calendar_proposal: "Event proposal: {{title}}",
       action_workspace: "Proposed a change in the workspace",
       agent_proposal: "Proposed a new agent: {{name}}",
@@ -20929,6 +21086,10 @@ export const en = {
     offer_open_page: {
       label: "Offer to open a screen",
       description: "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page.",
+    },
+    offer_voice_setup: {
+      label: "Offer to turn on voice messages",
+      description: "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them.",
     },
     set_team_week: {
       label: "Change the Team week card",
@@ -21528,7 +21689,8 @@ export const en = {
       people: "Everyone can only read it from now on and gets an email",
       peopleQuiet: "Everyone can only read it from now on",
       computer: "Its computer stops now and is wiped",
-      computers: "Connected computers are disconnected. The agents' folders stay on them until the runner is removed.",
+      computers:
+        "Connected computers are disconnected. The agents' folders stay on them until agentes.chat is removed from them.",
       connectors: "Connectors and mailboxes are disconnected",
     },
     undo: "Any owner can restore it until {{date}} at {{time}}. After that, there's no undo.",
@@ -21919,15 +22081,6 @@ export const en = {
       doneBy: "Done by {{name}} at {{time}}. {{agent}} looked at the screen again and went on.",
       doneByYou: "Done by you at {{time}}. {{agent}} looked at the screen again and went on.",
     },
-    control: {
-      notice: "Programs on {{name}}'s computer can see the screen and what you type or paste.",
-    },
-    /** The ⓘ beside the control line, on agentes.chat Cloud only (ADR 0076). */
-    session: {
-      check: "Safety checks",
-      screening:
-        "We may check the text on this screen for abuse. We keep only the result. What the screen doesn't show, like a password at a prompt, is never captured.",
-    },
     /** What the agent did on its desktop, on its message after the run (ADR 0062); the rest is the browser card's. */
     after: {
       titleNoSite: "Used the screen",
@@ -21937,8 +22090,6 @@ export const en = {
       group: "{{name}}'s screen",
     },
     watch: {
-      /** Under the screen while watching, where whoever watches may not be the one typing. */
-      notice: "Programs on {{name}}'s computer can see the screen and anything typed or pasted there.",
       step: {
         desktop_open: "Opened {{detail}}",
         desktop_open_plain: "Opened an app",
@@ -21963,16 +22114,16 @@ export const en = {
     },
     /** Whether agents can use apps on their desktops on a computer (ADR 0062): its page and the agent's. */
     use: {
-      title: "Apps on the agents' screens",
+      title: "Each agent's own screen",
       description:
-        "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page.",
+        "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours.",
       ready: "Ready",
       off: "Off",
-      unavailable: "Not available",
+      /** A Linux computer that still lacks what the screens need: the line under it says what. */
+      unavailable: "Needs setup",
       offHelp: "Turn on the screens and commands on this computer:",
       /** Whoever connected it turns each switch on with the buttons that follow. */
       offOne: "This computer needs both the screen and commands on.",
-      linuxOnly: "Agents use apps on their own screens only on Linux computers.",
       agent: "{{name}} can't use apps on his screen on {{computer}} yet.",
       agent_female: "{{name}} can't use apps on her screen on {{computer}} yet.",
     },

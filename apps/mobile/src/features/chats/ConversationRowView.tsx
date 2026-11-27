@@ -11,6 +11,7 @@ import type { RowAction } from "../channel-sectors/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
+import { GroupFace } from "../shared/GroupFace";
 import { useColors, useOrgId } from "../shared/hooks";
 import { Tile } from "../shared/parts";
 import { StatusWord } from "../shared/StatusBadge";
@@ -101,6 +102,9 @@ export const ConversationItem = memo(function ConversationItem({
       <AgentFace agentId={r.mission.agentId} size={AVATAR - 2} mode={facts.face} live={live} orbit={ringed} />
     ) : r.kind === "thread" || r.kind === "mission" ? (
       <Face who={r.face} size={r.face.type === "agent" ? AVATAR - 2 : AVATAR} live={live} />
+    ) : r.kind === "channel" && r.face ? (
+      // A personal workspace's group conversation: its agents as its face (ADR 0159).
+      <GroupFace agentIds={r.face.agentIds} count={r.face.count} size={AVATAR} />
     ) : (
       <Tile icon="hash" size={AVATAR} />
     );

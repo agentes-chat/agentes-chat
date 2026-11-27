@@ -1,6 +1,6 @@
 import type { ComputerDevice, DeviceStatus, PhoneDevice } from "@agenteschat/client";
 import { useRoles } from "@agenteschat/client";
-import { permissionWaitLines } from "@agenteschat/client/lib/devices";
+import { lendsInternet, permissionWaitLines } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -125,10 +125,10 @@ export function JoinRequestCard({ request: r }: { request: DeviceJoin }) {
   );
 }
 
-/** Under Let it join, in a workspace with its own computer: this computer will lend it its internet (ADR 0237). */
+/** Under Let it join, where computers lend their internet: this one will too (ADR 0237). */
 export function JoinInternetLine() {
   const { t } = useTranslation();
-  const lends = useDevices().data?.devices.some((d) => d.machineKind === "managed") === true;
+  const lends = lendsInternet(useDevices().data);
   return lends ? (
     <Text variant="small" tone="muted">
       {t("devices.shareInternetJoin")}

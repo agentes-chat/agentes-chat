@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat memerlukan {{permission}}",
+    "done": "Sudah saya izinkan",
+    "later": "Nanti saja",
+    "trayTitle": "Menunggu {{permission}}",
+    "why": {
+      "app_management": "Agen memerlukannya untuk mengubah app di {{device}} ini.",
+      "screen": "Agen memerlukannya untuk mengambil tangkapan layar {{device}} ini.",
+      "accessibility": "Agen memerlukannya untuk mengeklik dan mengetik di app pada {{device}} ini.",
+      "disk": "Agen memerlukannya untuk membuka file Anda tanpa macOS bertanya untuk setiap folder.",
+      "network": "Agen memerlukannya untuk menjangkau ponsel dan perangkat di jaringan Anda.",
+      "camera": "Agen memerlukannya untuk memakai kamera {{device}} ini.",
+      "microphone": "Agen memerlukannya untuk memakai mikrofon {{device}} ini.",
+      "automation": "Agen memerlukannya untuk mengendalikan app lain di {{device}} ini."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -7,6 +23,11 @@
   "windowTitle": {
     "welcome": "Selamat datang",
     "prefs": "Preferensi"
+  },
+  "background": {
+    "title": "agentes.chat masih berjalan",
+    "bodyMac": "Temukan di bar menu di bagian atas layar. Buka atau keluar dari sana.",
+    "bodyTray": "Temukan di baki sistem. Buka atau keluar dari sana."
   },
   "common": {
     "cancel": "Batal",
@@ -66,6 +87,12 @@
         "capturing": "mengambil tangkapan layar",
         "tabs": "berpindah tab"
       }
+    },
+    "apps": {
+      "title": "{{agent}} sedang menggunakan {{app}}",
+      "detail": "Mouse dan keyboard tetap milik Anda",
+      "stop": "Hentikan",
+      "stopped": "{{agent}} berhenti menggunakan aplikasi Anda"
     },
     "label": "agentes.chat",
     "now": "Sekarang",
@@ -134,6 +161,10 @@
     "allowedUndo": "Urungkan",
     "allowedOk": "Oke",
     "allowedUndone": "Mati lagi: {{tool}}",
+    "pickTitle": "{{name}} meminta folder untuk para agen",
+    "pickTitleAgent": "{{name}} meminta folder untuk {{agent}}",
+    "pickBody": "Pilih folder mana yang diizinkan di {{device}} ini.",
+    "pickChoose": "Pilih folder",
     "quitTitle": "Keluar dari agentes.chat?",
     "quitBody": "Agen tidak bisa memakai {{device}} ini selama aplikasi tertutup. Yang sudah berjalan akan selesai dan mengirim hasilnya saat kamu membukanya lagi.",
     "quitHereBody": "agentes.chat berhenti di {{device}} ini: tidak ada yang bisa memakainya, di sini, di ponselmu, atau di ponsel rekan timmu, sampai kamu membuka aplikasinya lagi.",
@@ -926,21 +957,5 @@
     "bringAllToFront": "Bawa semua ke depan",
     "help": "Bantuan",
     "downloaded": "Unduhan selesai"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat memerlukan {{permission}}",
-    "done": "Sudah saya izinkan",
-    "later": "Nanti saja",
-    "trayTitle": "Menunggu {{permission}}",
-    "why": {
-      "app_management": "Agen memerlukannya untuk mengubah app di {{device}} ini.",
-      "screen": "Agen memerlukannya untuk mengambil tangkapan layar {{device}} ini.",
-      "accessibility": "Agen memerlukannya untuk mengeklik dan mengetik di app pada {{device}} ini.",
-      "disk": "Agen memerlukannya untuk membuka file Anda tanpa macOS bertanya untuk setiap folder.",
-      "network": "Agen memerlukannya untuk menjangkau ponsel dan perangkat di jaringan Anda.",
-      "camera": "Agen memerlukannya untuk memakai kamera {{device}} ini.",
-      "microphone": "Agen memerlukannya untuk memakai mikrofon {{device}} ini.",
-      "automation": "Agen memerlukannya untuk mengendalikan app lain di {{device}} ini."
-    }
   }
 }

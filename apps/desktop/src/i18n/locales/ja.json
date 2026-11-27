@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chatに{{permission}}が必要です",
+    "done": "許可しました",
+    "later": "今はしない",
+    "trayTitle": "{{permission}}の許可を待っています",
+    "why": {
+      "app_management": "エージェントがこの{{device}}のアプリを変更するのに必要です。",
+      "screen": "エージェントがこの{{device}}のスクリーンショットを撮るのに必要です。",
+      "accessibility": "エージェントがこの{{device}}のアプリでクリックや入力をするのに必要です。",
+      "disk": "macOSがフォルダごとに確認しなくても、エージェントがファイルを開けるようにします。",
+      "network": "エージェントがネットワーク上のスマートフォンや機器に接続するのに必要です。",
+      "camera": "エージェントがこの{{device}}のカメラを使うのに必要です。",
+      "microphone": "エージェントがこの{{device}}のマイクを使うのに必要です。",
+      "automation": "エージェントがこの{{device}}の他のアプリを操作するのに必要です。"
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -7,6 +23,11 @@
   "windowTitle": {
     "welcome": "ようこそ",
     "prefs": "環境設定"
+  },
+  "background": {
+    "title": "agentes.chatは実行中です",
+    "bodyMac": "画面上部のメニューバーにあります。そこから開くか終了できます。",
+    "bodyTray": "システムトレイにあります。そこから開くか終了できます。"
   },
   "common": {
     "cancel": "キャンセル",
@@ -66,6 +87,12 @@
         "capturing": "スクリーンショットを撮っています",
         "tabs": "タブを切り替えています"
       }
+    },
+    "apps": {
+      "title": "{{agent}}が{{app}}を使用中",
+      "detail": "マウスとキーボードはそのまま使えます",
+      "stop": "停止",
+      "stopped": "{{agent}}はアプリの使用をやめました"
     },
     "label": "agentes.chat",
     "now": "現在",
@@ -134,6 +161,10 @@
     "allowedUndo": "元に戻す",
     "allowedOk": "了解",
     "allowedUndone": "再びオフ: {{tool}}",
+    "pickTitle": "{{name}}がエージェント用のフォルダを求めています",
+    "pickTitleAgent": "{{name}}が{{agent}}用のフォルダを求めています",
+    "pickBody": "この{{device}}で許可するフォルダを選んでください。",
+    "pickChoose": "フォルダを選択",
     "quitTitle": "agentes.chatを終了しますか？",
     "quitBody": "アプリを閉じている間、エージェントはこの{{device}}を使えません。すでに実行中のものは完了し、次にアプリを開いたときに結果を送ります。",
     "quitHereBody": "この{{device}}でagentes.chatが停止します。再びアプリを開くまで、ここでも、あなたやチームメイトのスマートフォンからも、誰も使えません。",
@@ -926,21 +957,5 @@
     "bringAllToFront": "すべてを手前に移動",
     "help": "ヘルプ",
     "downloaded": "ダウンロード完了"
-  },
-  "permissionAsk": {
-    "title": "agentes.chatに{{permission}}が必要です",
-    "done": "許可しました",
-    "later": "今はしない",
-    "trayTitle": "{{permission}}の許可を待っています",
-    "why": {
-      "app_management": "エージェントがこの{{device}}のアプリを変更するのに必要です。",
-      "screen": "エージェントがこの{{device}}のスクリーンショットを撮るのに必要です。",
-      "accessibility": "エージェントがこの{{device}}のアプリでクリックや入力をするのに必要です。",
-      "disk": "macOSがフォルダごとに確認しなくても、エージェントがファイルを開けるようにします。",
-      "network": "エージェントがネットワーク上のスマートフォンや機器に接続するのに必要です。",
-      "camera": "エージェントがこの{{device}}のカメラを使うのに必要です。",
-      "microphone": "エージェントがこの{{device}}のマイクを使うのに必要です。",
-      "automation": "エージェントがこの{{device}}の他のアプリを操作するのに必要です。"
-    }
   }
 }

@@ -2881,6 +2881,7 @@
     "details": "Detail kanal",
     "composerLabel": "Kirim pesan ke #{{channel}}",
     "composerDm": "Kirim pesan ke {{name}}",
+    "groupYou": "Anda",
     "composerPlaceholder": "Kirim pesan ke #{{channel}} · pakai @ untuk memanggil agen",
     "send": "Kirim",
     "attach": "Lampirkan file",
@@ -2901,6 +2902,7 @@
     "sendFailed": "Pesan tidak terkirim. Coba lagi.",
     "reconnecting": "Menghubungkan ulang ke waktu nyata…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Cari orang atau agen",
     "detailsEmpty": "Tidak ditemukan siapa pun untuk “{{q}}”.",
     "topicLabel": "Deskripsi kanal",
@@ -2912,9 +2914,11 @@
     "replyInChannel": "Agen membalas di kanal",
     "replyInThreadsHelp": "Agen yang dipanggil di kanal menjawab di utas di bawah pesan itu, dan kanal menampilkan satu baris untuk utas itu. Pekerjaan yang sudah berjalan tetap di tempatnya.",
     "nameTaken": "Sudah ada #{{name}}.",
+    "nameTakenPersonal": "Sudah ada percakapan grup bernama “{{name}}”.",
     "generalName": "#general tetap dengan namanya.",
     "archive": "Arsipkan kanal",
     "archived": "#{{channel}} diarsipkan. Percakapannya tetap disimpan.",
+    "archivedPersonal": "“{{channel}}” diarsipkan. Percakapannya tetap disimpan.",
     "archivedTitle": "Kanal yang diarsipkan",
     "archivedCount_other": "{{count}} kanal diarsipkan",
     "archivedNone": "Tidak ada kanal diarsipkan untuk dipulihkan",
@@ -2922,6 +2926,7 @@
     "restore": "Pulihkan",
     "restoreName": "Pulihkan #{{channel}}",
     "restored": "#{{channel}} kembali.",
+    "restoredPersonal": "“{{channel}}” kembali.",
     "leave": "Keluar dari kanal",
     "left": "Kamu keluar dari #{{channel}}",
     "leaveTitle": "Keluar dari #{{channel}}?",
@@ -4287,8 +4292,9 @@
     "namePlaceholderPersonal": "misalnya liburan",
     "nameHelp": "Huruf kecil, angka, dan tanda hubung. Tampil sebagai #{{name}}.",
     "nameInvalid": "Pakai huruf kecil, angka, dan tanda hubung, diawali huruf atau angka.",
+    "nameInvalidPersonal": "Beri nama hingga 80 karakter, dalam satu baris.",
     "nameTaken": "Sudah ada kanal #{{name}}.",
-    "nameTakenPersonal": "Sudah ada percakapan grup bernama #{{name}}.",
+    "nameTakenPersonal": "Sudah ada percakapan grup bernama “{{name}}”.",
     "topic": "Deskripsi",
     "topicPlaceholder": "Apa yang dibahas di sini",
     "visibility": "Siapa yang bisa bergabung",
@@ -4317,7 +4323,8 @@
     "membersSearch": "Cari orang atau agen",
     "membersEmpty": "Tidak ada yang ditemukan untuk “{{q}}”.",
     "selected_other": "{{count}} dipilih",
-    "create": "Buat #{{name}}"
+    "create": "Buat #{{name}}",
+    "createPersonal": "Buat percakapan"
   },
   "channelCategories": {
     "undo": "Urungkan",
@@ -4333,6 +4340,7 @@
     "invitePersonal": "Undang {{email}} ke ruang kerjamu dan #{{channel}}",
     "inviteOrgPersonal": "Undang {{email}} ke ruang kerjamu",
     "addTitle": "Tambahkan ke #{{channel}}",
+    "addTitlePersonal": "Tambahkan ke {{channel}}",
     "addSearch": "Cari orang atau agen",
     "addEmpty": "Tidak ada yang di luar kanal cocok dengan “{{q}}”.",
     "addEveryone": "Semua orang di {{org}} sudah ada di #{{channel}}.",
@@ -4340,6 +4348,7 @@
     "actions": "Opsi untuk {{name}}",
     "remove": "Hapus dari kanal",
     "removeTitle": "Hapus {{name}} dari #{{channel}}?",
+    "removeTitlePersonal": "Hapus {{name}} dari {{channel}}?",
     "removePersonBody": "Mereka tidak lagi melihat kanal ini dan menerima pesannya. Kamu bisa menambahkannya lagi nanti.",
     "removeAgentBody": "Dia berhenti membaca dan menjawab di kanal ini. Kamu bisa menambahkannya lagi nanti.",
     "removeAgentBody_female": "Dia berhenti membaca dan menjawab di kanal ini. Kamu bisa menambahkannya lagi nanti.",
@@ -5498,6 +5507,7 @@
       "adminAskChannel": "<b>{{name}}</b> memintamu menambahkan <b>{{agent}}</b> ke #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> meminta izin membuat agen",
       "adminAskWebhook": "<b>{{name}}</b> memintamu menyiapkan webhook {{service}} untuk rutinitas",
+      "adminAskVoice": "<b>{{name}}</b> memintamu menyalakan pesan suara",
       "invitationAccepted": "<b>{{name}}</b> menerima undanganmu dan bergabung ke {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> menerima undanganmu",
       "reaction_other": "<b>{{names}}</b> bereaksi pada pesanmu",
@@ -9621,8 +9631,7 @@
       "machine_access_requested": "{{agent}} meminta folder {{folder}} di {{computer}}. Menunggu jawaban di sana.",
       "machine_access_granted": "Diizinkan: {{agent}} sekarang bisa memakai {{folder}} di {{computer}}",
       "machine_access_denied": "Ditolak: {{agent}} tidak akan memakai {{folder}} di {{computer}}",
-      "machine_access_expired": "Permintaan folder {{folder}} di {{computer}} tidak dijawab",
-      "access_command": "Tidak ada aplikasi di komputer itu? Jalankan ini di Terminal-nya:"
+      "machine_access_expired": "Permintaan folder {{folder}} di {{computer}} tidak dijawab"
     },
     "suggestion": {
       "pending": "Saran untuk misi",
@@ -11251,6 +11260,7 @@
     "silent": "Tidak terdengar apa pun. Tidak ada yang dikirim.",
     "notSent": "Audio tidak bisa dikirim.",
     "limit": "Batas audio hari ini sudah habis. Tulis di sini, atau coba lagi besok.",
+    "plan": "Pesan suara tersedia dengan paket agentes.chat. Kamu tetap bisa menulis di sini.",
     "micBlocked": "Mikrofon diblokir",
     "micBlockedHint": "Izinkan mikrofon di pengaturan perangkatmu untuk merekam.",
     "openSettings": "Buka pengaturan",
@@ -11285,9 +11295,9 @@
       "title": "Pesan suara",
       "on": "Pesan suara",
       "onHelp": "Orang di ruang kerja ini bisa mengirim audio di percakapan.",
-      "noEngine": "Pesan suara belum tersedia di sini.",
-      "noEngineAsk": "Pesan suara belum menyala. Yang mengelola server ini menyalakannya, di halaman ini juga.",
-      "noEngineHere": "Pesan suara menyala setelah kamu memilih di bawah apa yang mengubah suara menjadi teks.",
+      "noEngine": "Untuk sementara pesan suara terkirim sebagai audio, jadi agen belum bisa mendengarnya.",
+      "noEngineAsk": "Untuk sementara pesan suara terkirim sebagai audio, jadi agen tidak bisa mendengarnya. Pengelola server ini memilih apa yang mengubah suara menjadi teks, di halaman ini juga.",
+      "noEngineHere": "Pesan suara terkirim sebagai audio sampai kamu memilih di bawah apa yang mengubah suara menjadi teks.",
       "engineTitle": "Yang mengubah suara menjadi teks",
       "own": "Server milikmu sendiri",
       "ownHelp": "Whisper atau Parakeet di mesinmu. Audionya tetap di sana.",
@@ -11295,10 +11305,55 @@
       "key": "Kunci {{name}}",
       "keyPlaceholder": "Tempel di sini",
       "test": "Uji",
-      "tested": "Berhasil. Sekarang semua orang melihat mikrofon.",
+      "tested": "Berhasil. Sekarang pesan suara sampai ke agen sebagai teks.",
       "sealed": "Disimpan terenkripsi di servermu dan tidak akan ditampilkan lagi.",
       "leaves": "Audio dari pesan suara dikirim ke {{name}} untuk diubah menjadi teks.",
       "invalid": "Kunci yang tersimpan tidak bisa dibuka di server ini. Tempel lagi."
+    },
+    "local": {
+      "titleHere": "Di komputer ini",
+      "titleServer": "Di server ini",
+      "titlePhone": "Di komputer server",
+      "textHere": "Parakeet, unduhan {{size}}. Suara tetap di komputer ini. 25 bahasa Eropa.",
+      "textServer": "Parakeet, unduhan {{size}}. Suara tetap di server ini. 25 bahasa Eropa.",
+      "download": "Unduh dan nyalakan",
+      "downloading": "Mengunduh model suara",
+      "progress": "{{done}} dari {{total}}",
+      "meanwhile": "Kamu sudah bisa merekam. Pesan terkirim sebagai audio sampai siap.",
+      "downloadingPhone": "Mengunduh model suara ke komputer server. Kamu sudah bisa merekam.",
+      "starting": "Menyalakan…",
+      "licenses": "Lisensi model",
+      "tooSmall": "Komputer ini punya memori {{memory}} dan model suara butuh 8 GB. Pakai kunci penyedia di bawah.",
+      "noDisk": "{{free}} kosong di disk ini dan model suara butuh {{need}}. Kosongkan ruang atau pakai kunci penyedia di bawah.",
+      "noBuild": "Belum ada model suara untuk komputer ini. Pakai kunci penyedia di bawah.",
+      "stopped": "Unduhan berhenti: {{detail}}",
+      "diskFull": "Disk penuh saat mengunduh. Kosongkan ruang dan coba lagi.",
+      "didntStart": "Model suara tidak menyala: {{detail}}",
+      "resume": "Lanjutkan",
+      "copy": "Salin detail",
+      "copied": "Detail disalin"
+    },
+    "offer": {
+      "title": "Pesan suara",
+      "download": "Unduh {{size}} dan nyalakan",
+      "choose": "Pilih caranya",
+      "askOwner": "Ubah suara menjadi teks di server ini",
+      "askMember": "Minta pesan suara dinyalakan",
+      "on": "Pesan suara sudah menyala: agen membacanya sebagai teks."
+    },
+    "setup": {
+      "memberTitle": "Suara belum menyala di sini",
+      "memberText": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai {{name}} memilih apa yang mengubah suara menjadi teks.",
+      "memberTextNoName": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai pengelola server ini memilih apa yang mengubah suara menjadi teks.",
+      "ask": "Minta ke {{name}}",
+      "asked": "Permintaan sudah dikirim ke {{name}}",
+      "recordAnyway": "Tetap rekam",
+      "ownerTitle": "Pilih apa yang mengubah suara menjadi teks",
+      "ownerText": "Sampai saat itu, pesan suara terkirim sebagai audio yang bisa diputar semua orang, dan agen tidak bisa mendengarnya.",
+      "readyTitle": "Pesan suara sudah menyala",
+      "readyText": "Yang kamu ucapkan sampai ke agen sebagai teks.",
+      "record": "Rekam pesan",
+      "ownerPhone": "Pilih di Pengaturan › Suara di web atau di aplikasi desktop. Sampai saat itu, pesan suara terkirim sebagai audio yang bisa diputar semua orang, dan agen tidak bisa mendengarnya."
     }
   },
   "media": {
@@ -14764,6 +14819,9 @@
       "desktop_read": "Baca layar",
       "desktop_screenshot": "Ambil tangkapan layar",
       "desktop_ask_person": "Minta seseorang mengambil alih komputer",
+      "apps_list": "Lihat aplikasi yang terbuka",
+      "apps_read": "Baca aplikasi",
+      "apps_act": "Gunakan aplikasi",
       "computer_use": "Gunakan komputer",
       "computer_status": "Periksa komputer",
       "left_click": "Klik",
@@ -15816,6 +15874,7 @@
       "generalStays": "Semua orang tetap di #general.",
       "leadChannelOnly": "Hanya kanal yang punya agen penanggung jawab.",
       "leadNotMember": "Agen penanggung jawab harus ada di kanal.",
+      "groupNameInvalid": "Beri nama hingga 80 karakter, dalam satu baris.",
       "mcpUnreachable": "Tidak bisa terhubung ke server MCP. Periksa alamatnya dan coba lagi.",
       "notApproved": "Layanan ini belum menyetujui agentes.chat.",
       "alreadyInvited": "Orang ini sudah punya undangan.",
@@ -16270,13 +16329,13 @@
       "browser_download": "Browser agen tidak bisa diunduh. Periksa koneksi komputer ini, dan akan dicoba lagi saat dipakai berikutnya.",
       "browser_checksum": "Unduhan browser agen rusak, jadi tidak dipakai. Akan dicoba lagi saat dipakai berikutnya.",
       "desktop_use_linux": "Aplikasi di layar agen berjalan di komputer Linux yang punya layar agen.",
-      "desktop_use_own_user": "Aplikasi di layar agen butuh setiap agen bekerja sebagai penggunanya sendiri di komputer ini (mode sistem). Di sini semua agen bekerja sebagai pengguna runner.",
+      "desktop_use_own_user": "Aplikasi di layar agen butuh setiap agen bekerja sebagai penggunanya sendiri di komputer ini (mode sistem). Di sini semua agen bekerja sebagai pengguna yang sama, yaitu pengguna yang menjalankan agentes.chat.",
       "desktop_use_install": "Pasang di komputer ini yang dibutuhkan aplikasi di layar agen:",
       "desktop_unavailable": "Layar agen tidak bisa berjalan di komputer ini.",
       "desktop_linux": "Layar agen hanya berjalan di komputer Linux.",
       "desktop_install": "Pasang layar agen di komputer ini:",
-      "not_as_root": "Layar dan terminal agen tidak pernah berjalan sebagai root. Jalankan runner sebagai pengguna biasa.",
-      "runner_bun_old": "Ini butuh runner di Bun 1.3.5 atau yang lebih baru. Perbarui runner di komputer ini.",
+      "not_as_root": "Layar dan terminal agen tidak pernah berjalan sebagai root. Jalankan agentes.chat sebagai pengguna biasa.",
+      "runner_bun_old": "Ini butuh agentes.chat di Bun 1.3.5 atau lebih baru. Perbarui agentes.chat di komputer ini.",
       "terminal_unsupported": "Terminal hanya berjalan di komputer Linux dan Mac."
     },
     "egress": {
@@ -16286,13 +16345,50 @@
       "hint": "Alamat yang dilihat situs saat agen menjelajah. Alamat ini ikut berubah saat jaringan komputer berubah.",
       "waiting": "Menyambungkan ulang internet agen. Koneksi mereka menunggu sampai kembali.",
       "via": "Agen memakai internet {{name}}",
-      "viaBy": "Agen memakai internet {{name}} ({{person}})",
       "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya."
     },
-    "moving": {
-      "short": "Pindah server",
-      "line": "Pindah ke server baru… kembali dalam beberapa menit",
-      "named": "{{computer}} sedang pindah ke server baru… kembali dalam beberapa menit"
+    "maintenance": {
+      "short": {
+        "moving": "Pindah server",
+        "restarting": "Memulai ulang",
+        "updating": "Memperbarui",
+        "converting": "Meningkatkan disk",
+        "host_maintenance": "Pemeliharaan",
+        "other": "Pemeliharaan"
+      },
+      "what": {
+        "moving": "Pindah ke server baru",
+        "copying": "Menyalin ke server baru",
+        "restarting": "Memulai ulang",
+        "updating": "Memperbarui perangkat lunaknya",
+        "converting": "Meningkatkan disknya",
+        "host_maintenance": "Servernya sedang dalam pemeliharaan",
+        "other": "Sedang dikerjakan"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "kembali dalam sekitar {{time}}",
+      "backSoon": "kembali dalam beberapa menit",
+      "late": "sedikit lebih lama dari perkiraan",
+      "slower": "mungkin lebih lambat untuk sementara",
+      "slowerFor": "mungkin lebih lambat selama sekitar {{time}}",
+      "why": {
+        "moving": "Kami sedang memindahkannya ke server baru.",
+        "copying": "Kami sedang menyalin filenya ke server baru sambil ia bekerja.",
+        "handover": "Kami sedang menyerahkan perubahan terakhirnya ke server baru.",
+        "restarting": "Kami sedang memulai ulangnya.",
+        "unresponsive": "Ia berhenti merespons, jadi kami memulai ulangnya secara otomatis.",
+        "updating": "Kami sedang memperbarui perangkat lunaknya.",
+        "converting": "Kami sedang memindahkan disknya ke penyimpanan yang lebih cepat.",
+        "host_maintenance": "Server tempat ia berjalan sedang dalam pemeliharaan.",
+        "other": "Kami sedang melakukan pekerjaan padanya."
+      },
+      "since": "Sejak {{time}}",
+      "expectedBack": "Diperkirakan kembali sekitar {{time}}",
+      "expectedDone": "Diperkirakan selesai sekitar {{time}}",
+      "meanwhile": "Pesan untuk agennya menunggu dan berlanjut sendiri saat ia kembali.",
+      "working": "Agennya tetap bekerja sementara itu.",
+      "about": "Apa yang terjadi"
     },
     "online": "Online",
     "offline": "Offline",
@@ -16361,6 +16457,11 @@
     "removed": "{{name}} dihapus.",
     "name": "Nama komputer",
     "nameHelp": "Cara orang dan agen melihatnya.",
+    "defaultName": {
+      "model": "{{model}} {{name}}",
+      "linux": "Komputer Linux {{name}}",
+      "other": "Komputer {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16510,6 +16611,13 @@
       "grantTextTerminal": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya:",
       "grantTextAdmin": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya, sebagai administrator:",
       "grantTerminal": "Tidak ada aplikasi? Di terminal komputer itu:",
+      "pickText": "Aplikasi agentes.chat membuka pemilih folder di {{machine}}, supaya orang di sana yang memilih.",
+      "pick": "Izinkan folder",
+      "picked": "Pemilih folder terbuka di {{machine}}. Pilih foldernya di sana.",
+      "pickWaiting": "Menunggu folder dipilih di {{machine}}",
+      "grantTerminalMore": "Tidak ada aplikasinya di sana? Pakai Terminal",
+      "noApp": "Komputer ini tidak punya aplikasi agentes.chat untuk memilih folder. Izinkan lewat Terminal-nya.",
+      "requestDone": "Permintaan ini sudah dijawab atau sudah kedaluwarsa.",
       "preferTerminal": "Saya lebih suka Terminal",
       "grantOnlyOwner": "Hanya {{name}} yang bisa mengizinkan lebih banyak, di komputer itu sendiri. Kalau kamu butuh sesuatu, minta padanya.",
       "pathPlaceholder": "<folder>",
@@ -16673,6 +16781,8 @@
       "paused": "{{host}} sedang dijeda, jadi kendali menunggu sampai dilanjutkan.",
       "held": "Ruang kerja ini dijeda, jadi kontrol menunggu sampai aktif lagi.",
       "lost": "Kendali berakhir. Kamu menonton {{name}} lagi.",
+      "controlLate": "Kontrol tidak dimulai tepat waktu. {{host}} masih menyiapkan {{name}}: coba lagi dalam satu menit.",
+      "controlFailed": "Tidak bisa mengambil kontrol {{name}}. Coba lagi, atau mulai ulang aplikasi agentes.chat di {{host}}.",
       "typeLabel": "Ketik di {{name}}"
     },
     "status": {
@@ -16694,7 +16804,7 @@
       "withHost": "bersama {{host}}",
       "lastSeen": "terakhir terlihat {{time}}",
       "offlineUnresponsive": "berhenti merespons pukul {{time}}",
-      "offlineStopped": "runner berhenti pukul {{time}}",
+      "offlineStopped": "agentes.chat berhenti pukul {{time}}",
       "offlineDropped": "koneksi terputus pukul {{time}}"
     },
     "line": {
@@ -16709,9 +16819,14 @@
       "offline": "Agen menunggu sampai perangkat ini kembali.",
       "offlineSeen": "Terakhir terlihat {{time}}. Agen menunggu sampai perangkat ini kembali.",
       "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali.",
-      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan `{{command}}` di sana.",
-      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan `{{command}}` di sana untuk melihat sebabnya.",
-      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan `{{command}}` di sana."
+      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa internet atau kelebihan beban. Pastikan komputernya menyala dan terhubung ke internet.",
+      "offlineStopped": "Aplikasi agentes.chat berhenti di komputer ini pukul {{time}}. Buka aplikasinya lagi.",
+      "offlineStoppedCli": "agentes.chat berhenti di komputer ini pukul {{time}}. Jalankan lagi di sana.",
+      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri."
+    },
+    "technical": {
+      "title": "Detail teknis",
+      "doctor": "Untuk melihat alasannya, jalankan ini di sana:"
     },
     "reason": {
       "locked": "Ponselnya terkunci",
@@ -17160,6 +17275,8 @@
       "toolRequest": "<b>{{who}}</b> memintamu menyalakan {{tool}} di <b>{{deviceName}}</b> milikmu",
       "cliRequest": "<b>{{who}}</b> meminta kamu memasang {{tool}} di <b>{{deviceName}}</b> kamu",
       "folderRequest": "<b>{{who}}</b> memintamu membuka folder {{path}} di <b>{{deviceName}}</b> milikmu",
+      "folderOnComputer": "Izinkan di komputer",
+      "folderShown": "Terbuka di {{deviceName}}. Izinkan di sana.",
       "internetShared": "Agen kini membuka situs web lewat internet <b>{{deviceName}}</b>",
       "internetSharedLine": "Hanya agen workspace ini, hanya situs web, tidak pernah apa pun di jaringannya sendiri. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
       "internetOff": "Matikan",
@@ -18875,6 +18992,7 @@
         "usingScreen": "Memakai layar",
         "cloningRepo": "Meng-clone repositori",
         "listingRepos": "Menampilkan daftar repositori",
+        "updatingCode": "Memperbarui kode",
         "preparingCli": "Menyiapkan {{app}}",
         "openingPullRequest": "Membuka pull request",
         "handingOff": "Mengirim laporan",
@@ -18999,6 +19117,7 @@
       "usingScreen": "memakai layar",
       "cloningRepo": "meng-clone repositori",
       "listingRepos": "menampilkan daftar repositori",
+      "updatingCode": "memperbarui kode",
       "preparingCli": "menyiapkan {{app}} di {{computer}}",
       "preparingCliPct": "menyiapkan {{app}} di {{computer}} ({{percent}}%)",
       "openingPullRequest": "membuka pull request",
@@ -19195,6 +19314,7 @@
       "welcome_member": "Anda baru saja bergabung dengan {{org}}. **Apa yang Anda tangani di sini?** Beri tahu saya dan saya siapkan agen pertama Anda bersama Anda.",
       "welcome_member_agent": "Kamu baru bergabung ke {{org}}, dan agen pertamamu sudah ada di tim. Kalau butuh aku, panggil saja.",
       "action_open_page": "Buka layar",
+      "action_voice_setup": "Nyalakan pesan suara",
       "calendar_proposal": "Usulan acara: {{title}}",
       "action_workspace": "Mengusulkan perubahan di ruang kerja",
       "agent_proposal": "Mengusulkan agen baru: {{name}}",
@@ -19489,6 +19609,10 @@
     "offer_open_page": {
       "label": "Tawarkan membuka sebuah layar",
       "description": "Memposting kartu yang tombolnya membuka layar aplikasi, seperti tagihan, peran, atau halaman agen."
+    },
+    "offer_voice_setup": {
+      "label": "Tawarkan menyalakan pesan suara",
+      "description": "Memposting kartu yang menyalakan pesan suara dengan satu klik untuk pengelola server, atau memintanya kepada pengelola."
     },
     "set_team_week": {
       "label": "Ubah kartu Minggu tim",
@@ -20053,7 +20177,7 @@
       "people": "Mulai sekarang semua orang hanya bisa membacanya dan menerima email",
       "peopleQuiet": "Mulai sekarang semua orang hanya bisa membacanya",
       "computer": "Komputernya berhenti sekarang dan dibersihkan",
-      "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai runner-nya dihapus.",
+      "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai agentes.chat dihapus darinya.",
       "connectors": "Konektor dan kotak surat diputuskan"
     },
     "undo": "Pemilik mana pun bisa memulihkannya sampai {{date}} pukul {{time}}. Setelah itu, tidak bisa dibatalkan.",
@@ -20412,14 +20536,6 @@
       "doneByYou": "Kamu selesaikan pukul {{time}}. {{agent}} melihat layar lagi lalu melanjutkan.",
       "doneByYou_female": "Kamu selesaikan pukul {{time}}. {{agent}} melihat layar lagi lalu melanjutkan."
     },
-    "control": {
-      "notice": "Program di komputer {{name}} bisa melihat layar dan apa yang kamu ketik atau tempel.",
-      "notice_female": "Program di komputer {{name}} bisa melihat layar dan apa yang kamu ketik atau tempel."
-    },
-    "session": {
-      "check": "Pemeriksaan keamanan",
-      "screening": "Kami mungkin memeriksa teks di layar ini untuk mencegah penyalahgunaan. Kami hanya menyimpan hasilnya. Apa yang tidak tampil di layar, seperti kata sandi di prompt, tidak pernah direkam."
-    },
     "after": {
       "titleNoSite": "Memakai layar",
       "noSite": "Sebelum membuka aplikasi"
@@ -20429,8 +20545,6 @@
       "group_female": "Layar {{name}}"
     },
     "watch": {
-      "notice": "Program di komputer {{name}} bisa melihat layar dan apa pun yang diketik atau ditempel di sana.",
-      "notice_female": "Program di komputer {{name}} bisa melihat layar dan apa pun yang diketik atau ditempel di sana.",
       "step": {
         "desktop_open": "Membuka {{detail}}",
         "desktop_open_plain": "Membuka aplikasi",
@@ -20454,14 +20568,13 @@
       }
     },
     "use": {
-      "title": "Aplikasi di layar agen",
-      "description": "Di sini agen membuka dan memakai aplikasi di layarnya sendiri, seperti yang dilakukan orang, sementara orang menonton dari halaman tiap agen.",
+      "title": "Layar sendiri untuk tiap agen",
+      "description": "Di sini tiap agen mendapat layarnya sendiri, terpisah dari layarmu, dan memakai aplikasi berjendela di sana, seperti browser atau spreadsheet, seperti yang dilakukan orang. Kamu menontonnya dari halaman agen. Untuk sekarang hanya di Linux, yang bisa membuka layar tambahan untuk tiap agen tanpa mengganggu layarmu.",
       "ready": "Siap",
       "off": "Nonaktif",
-      "unavailable": "Tidak tersedia",
+      "unavailable": "Perlu disiapkan",
       "offHelp": "Aktifkan layar dan perintah di komputer ini:",
       "offOne": "Komputer ini perlu layar dan perintah menyala.",
-      "linuxOnly": "Agen hanya bisa memakai aplikasi di layarnya sendiri pada komputer Linux.",
       "agent": "{{name}} belum bisa memakai aplikasi di layarnya di {{computer}}.",
       "agent_female": "{{name}} belum bisa memakai aplikasi di layarnya di {{computer}}."
     },

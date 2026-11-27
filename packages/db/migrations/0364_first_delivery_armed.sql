@@ -1,1 +1,0 @@
-ALTER TABLE "first_deliveries" ADD COLUMN "armed_at" timestamp with time zone;

@@ -89,11 +89,13 @@ export const strings: Partial<PushStrings> = {
   deviceFolderTitle: (a, f, d) => (f ? `${a} chiede ${f} sul tuo ${d}` : `${a} chiede una cartella sul tuo ${d}`),
   deviceFolderBody: "Consentilo nell'app su quel computer.",
   adminAskTitle: (a, what, l) =>
-    what === "channel_agent"
-      ? `${a} ti chiede di aggiungere un agente a #${l}`
-      : what === "create_agents"
-        ? `${a} chiede di poter creare agenti`
-        : `${a} ti chiede di configurare il webhook di ${l} per le routine`,
+    what === "voice"
+      ? `${a} ti chiede di attivare i messaggi vocali`
+      : what === "channel_agent"
+        ? `${a} ti chiede di aggiungere un agente a #${l}`
+        : what === "create_agents"
+          ? `${a} chiede di poter creare agenti`
+          : `${a} ti chiede di configurare il webhook di ${l} per le routine`,
   deviceWaitingTitle: (p, d) => `L'agente di ${p} sta aspettando il tuo ${d}`,
   deviceWaitingBody: "Inizia quando torna.",
   teamWeekReady: "La settimana del tuo team è pronta",

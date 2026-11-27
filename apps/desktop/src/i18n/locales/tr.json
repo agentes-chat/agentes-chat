@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat için {{permission}} gerekli",
+    "done": "İzin verdim",
+    "later": "Şimdi değil",
+    "trayTitle": "{{permission}} izni bekleniyor",
+    "why": {
+      "app_management": "Ajanların bu {{device}} üzerindeki uygulamaları değiştirmesi için gerekli.",
+      "screen": "Ajanların bu {{device}} için ekran görüntüsü alması için gerekli.",
+      "accessibility": "Ajanların bu {{device}} üzerindeki uygulamalarda tıklayıp yazması için gerekli.",
+      "disk": "Ajanların dosyalarınızı macOS her klasör için sormadan açması için gerekli.",
+      "network": "Ajanların ağınızdaki telefonlara ve cihazlara ulaşması için gerekli.",
+      "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
+      "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
+      "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -7,6 +23,11 @@
   "windowTitle": {
     "welcome": "Hoş geldiniz",
     "prefs": "Tercihler"
+  },
+  "background": {
+    "title": "agentes.chat çalışmaya devam ediyor",
+    "bodyMac": "Ekranın üstündeki menü çubuğunda. Oradan açabilir veya çıkabilirsin.",
+    "bodyTray": "Sistem tepsisinde. Oradan açabilir veya çıkabilirsin."
   },
   "common": {
     "cancel": "İptal",
@@ -67,6 +88,12 @@
         "capturing": "ekran görüntüsü alıyor",
         "tabs": "sekme değiştiriyor"
       }
+    },
+    "apps": {
+      "title": "{{agent}}, {{app}} uygulamasını kullanıyor",
+      "detail": "Fare ve klavye sizde kalır",
+      "stop": "Durdur",
+      "stopped": "{{agent}} uygulamalarınızı kullanmayı bıraktı"
     },
     "label": "agentes.chat",
     "now": "Şimdi",
@@ -137,6 +164,10 @@
     "allowedUndo": "Geri al",
     "allowedOk": "Tamam",
     "allowedUndone": "Yeniden kapalı: {{tool}}",
+    "pickTitle": "{{name}} ajanlar için bir klasör istiyor",
+    "pickTitleAgent": "{{name}}, {{agent}} için bir klasör istiyor",
+    "pickBody": "Bu {{device}} üzerinde hangi klasöre izin vereceğini seç.",
+    "pickChoose": "Klasör seç",
     "quitTitle": "agentes.chat'ten çıkılsın mı?",
     "quitBody": "Uygulama kapalıyken ajanlar bu {{device}} üzerinde çalışamaz. Zaten çalışanlar biter ve uygulamayı yeniden açtığınızda sonucu gönderir.",
     "quitHereBody": "agentes.chat bu {{device}} üzerinde durur: uygulamayı yeniden açana kadar ne burada, ne telefonunuzda ne de ekip arkadaşlarınızın cihazlarında kimse onu kullanamaz.",
@@ -931,21 +962,5 @@
     "bringAllToFront": "Tümünü öne getir",
     "help": "Yardım",
     "downloaded": "İndirme tamamlandı"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat için {{permission}} gerekli",
-    "done": "İzin verdim",
-    "later": "Şimdi değil",
-    "trayTitle": "{{permission}} izni bekleniyor",
-    "why": {
-      "app_management": "Ajanların bu {{device}} üzerindeki uygulamaları değiştirmesi için gerekli.",
-      "screen": "Ajanların bu {{device}} için ekran görüntüsü alması için gerekli.",
-      "accessibility": "Ajanların bu {{device}} üzerindeki uygulamalarda tıklayıp yazması için gerekli.",
-      "disk": "Ajanların dosyalarınızı macOS her klasör için sormadan açması için gerekli.",
-      "network": "Ajanların ağınızdaki telefonlara ve cihazlara ulaşması için gerekli.",
-      "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
-      "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
-      "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
-    }
   }
 }

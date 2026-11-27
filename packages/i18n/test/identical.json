@@ -1219,7 +1219,9 @@
       "connectors.names.datadog_ap1",
       "connectors.names.datadog_ap2",
       "onboarding.areas.list.marketing.title",
-      "onboarding.areas.list.marketing.role"
+      "onboarding.areas.list.marketing.role",
+      "machines.maintenance.short.host_maintenance",
+      "machines.maintenance.short.other"
     ],
     "de": [
       "devices.permission.names.automation",

@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat에 {{permission}} 권한이 필요해요",
+    "done": "허용했어요",
+    "later": "나중에",
+    "trayTitle": "{{permission}} 허용을 기다리는 중",
+    "why": {
+      "app_management": "에이전트가 이 {{device}}의 앱을 변경하려면 필요해요.",
+      "screen": "에이전트가 이 {{device}}의 스크린샷을 찍으려면 필요해요.",
+      "accessibility": "에이전트가 이 {{device}}의 앱에서 클릭하고 입력하려면 필요해요.",
+      "disk": "macOS가 폴더마다 묻지 않고 에이전트가 파일을 열 수 있게 해요.",
+      "network": "에이전트가 네트워크의 휴대폰과 기기에 연결하려면 필요해요.",
+      "camera": "에이전트가 이 {{device}}의 카메라를 쓰려면 필요해요.",
+      "microphone": "에이전트가 이 {{device}}의 마이크를 쓰려면 필요해요.",
+      "automation": "에이전트가 이 {{device}}의 다른 앱을 제어하려면 필요해요."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -7,6 +23,11 @@
   "windowTitle": {
     "welcome": "환영합니다",
     "prefs": "환경설정"
+  },
+  "background": {
+    "title": "agentes.chat이 계속 실행 중입니다",
+    "bodyMac": "화면 위쪽 메뉴 막대에 있습니다. 거기에서 열거나 종료할 수 있습니다.",
+    "bodyTray": "시스템 트레이에 있습니다. 거기에서 열거나 종료할 수 있습니다."
   },
   "common": {
     "cancel": "취소",
@@ -66,6 +87,12 @@
         "capturing": "스크린샷 찍는 중",
         "tabs": "탭 전환하는 중"
       }
+    },
+    "apps": {
+      "title": "{{agent}}이(가) {{app}} 사용 중",
+      "detail": "마우스와 키보드는 그대로 쓸 수 있어요",
+      "stop": "중지",
+      "stopped": "{{agent}}이(가) 앱 사용을 멈췄어요"
     },
     "label": "agentes.chat",
     "now": "지금",
@@ -134,6 +161,10 @@
     "allowedUndo": "되돌리기",
     "allowedOk": "확인",
     "allowedUndone": "다시 꺼짐: {{tool}}",
+    "pickTitle": "{{name}}님이 에이전트용 폴더를 요청해요",
+    "pickTitleAgent": "{{name}}님이 {{agent}}용 폴더를 요청해요",
+    "pickBody": "이 {{device}}에서 허용할 폴더를 고르세요.",
+    "pickChoose": "폴더 선택",
     "quitTitle": "agentes.chat을 종료할까요?",
     "quitBody": "앱이 닫혀 있는 동안 에이전트는 이 {{device}}을(를) 사용할 수 없어요. 이미 실행 중인 작업은 끝까지 진행되고, 앱을 다시 열면 결과를 보내요.",
     "quitHereBody": "이 {{device}}에서 agentes.chat이 멈춰요. 앱을 다시 열 때까지 여기서도, 내 휴대폰이나 팀원의 휴대폰에서도 아무도 쓸 수 없어요.",
@@ -926,21 +957,5 @@
     "bringAllToFront": "모두 앞으로 가져오기",
     "help": "도움말",
     "downloaded": "다운로드 완료"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat에 {{permission}} 권한이 필요해요",
-    "done": "허용했어요",
-    "later": "나중에",
-    "trayTitle": "{{permission}} 허용을 기다리는 중",
-    "why": {
-      "app_management": "에이전트가 이 {{device}}의 앱을 변경하려면 필요해요.",
-      "screen": "에이전트가 이 {{device}}의 스크린샷을 찍으려면 필요해요.",
-      "accessibility": "에이전트가 이 {{device}}의 앱에서 클릭하고 입력하려면 필요해요.",
-      "disk": "macOS가 폴더마다 묻지 않고 에이전트가 파일을 열 수 있게 해요.",
-      "network": "에이전트가 네트워크의 휴대폰과 기기에 연결하려면 필요해요.",
-      "camera": "에이전트가 이 {{device}}의 카메라를 쓰려면 필요해요.",
-      "microphone": "에이전트가 이 {{device}}의 마이크를 쓰려면 필요해요.",
-      "automation": "에이전트가 이 {{device}}의 다른 앱을 제어하려면 필요해요."
-    }
   }
 }

@@ -984,6 +984,8 @@ beforeAll(async () => {
     ...["hour", "day"].map((bucket) => `/analytics/reply-times?${hours}&bucket=${bucket}`),
     `/analytics/asks?${hours}&bucket=hour`,
     `/analytics/asks?${hours}&orgId=${orgId}`,
+    `/analytics/stage-breakdown?${hours}`,
+    `/analytics/stage-breakdown?${hours}&orgId=${orgId}`,
     `/cli-runs?${hours}`,
     `/analytics/ai-accounts?${days}`,
     "/ai-accounts?limit=200",

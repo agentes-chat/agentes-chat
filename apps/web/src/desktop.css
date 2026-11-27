@@ -82,6 +82,11 @@ html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) {
   html[data-desktop] .shell__work {
     padding-top: 0;
   }
+  /* The bar is the sidebar's room on top too: its workspace header starts on the sheet's top line, beside the page's
+     head, not 16px under it. */
+  html[data-desktop] .shell .sidebar {
+    padding-top: 0;
+  }
 }
 /* The workspace's sky over the sidebar's width, its hairline included: one sky with the header below. */
 .workspace-sky--bar {

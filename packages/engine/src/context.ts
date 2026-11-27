@@ -81,7 +81,7 @@ import {
 } from "./reply-policy";
 import { linePrompt } from "./reporting";
 import { wikiPersonOf } from "./requester";
-import { isRightHand } from "./right-hand";
+import { dmPersonBehind, isRightHand } from "./right-hand";
 import { rightHandPrompt, rightHandTools } from "./right-hand-prompt";
 import { seatPlace } from "./right-hand-seats";
 import { isRoutineRoomKey, type RoutineBrief, routineAccessOf, routineBriefOf, routineReportOf } from "./routine-brief";
@@ -90,6 +90,7 @@ import { heldHere } from "./run-inbox";
 import { inChannelRun } from "./run-scope";
 import { type AgentRun, replyThreadOf } from "./runs";
 import { SITE_SECRET_TTL_TEXT, secretStillHeld } from "./secrets";
+import { type VoiceStatus, voiceStatusText } from "./speech-settings";
 import { stretchCardOf } from "./stretch";
 import { type SurfaceConfig, surfaceOn } from "./surfaces/config";
 import { surfaceOfRun } from "./surfaces/deliveries";
@@ -145,6 +146,7 @@ export const HOW_YOU_WORK = [
   "# How you work",
   "- Be proactive. Before answering about code, bugs, data, errors or where something stands, look first with your tools (the repository, logs, errors, analytics, issues, memory, routines) and cite what you read (file and line, numbers, links). Reading never needs anyone's ok. If you asked the person something (a decision, a permission, 'want me to…?'), wait for their answer: end your turn there and don't go ahead as if they had said yes.",
   "- Before a task, look for how it was done before: your memory (# What you know) and `search_context` for the same or a similar task. Reuse what worked (the method, the address, a script on your computer) instead of working it out again.",
+  "- Code that runs where you can't run it (an ad platform's scripts, macros): start from the person's last working version and change only what is asked, saying what changed; check calls it doesn't use in the platform's current docs on the web; parse it before handing it over, as a file. A request now beats a rule built into that version.",
   "- Asked whether a person told you something before, what was decided or what you said: search first (`search_context` with the subject's words, not the question's), which also reads your direct messages with whoever asked, then answer with where and when you found it.",
   "- Read whole files, not just search snippets, and keep going in the same turn until you can answer. Never stop to ask whether to keep looking.",
   "- Work you set out in steps (a plan you listed, a setup, a 'go on' from the person) is yours to finish: after each step, start the next in the same turn. End only when all are done or the next needs what only a person can give, then ask for exactly that in one question.",
@@ -483,6 +485,22 @@ export function agentSystemText(system: readonly SystemBlock[]): string {
     .join("\n\n");
 }
 
+/**
+ * `agentSystemText` by its blocks, each a short hash under its heading's words (`your_folders`), else its place
+ * (`block2`): two turns whose texts differ show which block did, with no word of either. A heading that names
+ * anything (a computer, a person) holds a quote and goes by its place.
+ */
+export function agentSystemParts(system: readonly SystemBlock[]): Record<string, string> {
+  const parts: Record<string, string> = {};
+  agentBlocks(system).forEach((b, i) => {
+    const text = withoutRunLines(b.text);
+    const head = /^# ([A-Za-z][A-Za-z ]{0,38})$/.exec(headingOf(text))?.[1];
+    const name = head ? head.trim().toLowerCase().replaceAll(" ", "_") : `block${i}`;
+    parts[name in parts ? `${name}_${i}` : name] = sha256(text).slice(0, 8);
+  });
+  return parts;
+}
+
 /** A block of the agent's as its computer session's system text holds it (`agentSystemText`). */
 export const withoutRunLines = (text: string) => RUN_LINES.reduce((t, line) => t.replace(line, ""), text);
 
@@ -811,6 +829,8 @@ export async function buildRunContext(
     ai?: Omit<AiStatusDeps, "db">;
     /** Each workspace gets its own computer here; absent: people connect theirs. */
     workspaceComputer?: WorkspaceComputer;
+    /** Whether voice becomes text on this server (`voiceStatusText`): said only while it doesn't. */
+    voice?: VoiceStatus | null;
     /**
      * The run thinks through the Model Gateway, so it reads the words of its own thread when that thread is
      * confidential (ADR 0190). Any other run, and every run outside that thread, reads the stub.
@@ -1281,14 +1301,17 @@ export async function buildRunContext(
   const capabilities = await options.capabilities;
   // The right hand's own block (ADR 0137), in place of instructions: read live for the person behind the run.
   const place = isRightHand(agent) ? await seatPlace(db, run) : null;
+  // In a person's own DM, a teammate's message (a reply it was asked for, a follow-up) is still for that person, as
+  // the run is: the same text as their own turns, so the conversation's session goes on.
+  const talksTo = place ? (requester ?? (await dmPersonBehind(db, agent, run))) : null;
   const rightHand =
-    place && requester
+    place && talksTo
       ? await rightHandPrompt(
           { db, ai: options.ai, workspaceComputer: options.workspaceComputer },
           {
             orgId: run.orgId,
             agent,
-            personId: requester,
+            personId: talksTo,
             inDm: channel.kind === "dm",
             computer: place.state,
             oneUser: place.oneUser,
@@ -1360,6 +1383,7 @@ export async function buildRunContext(
         org.context.trim() ? `# About ${personal ? "the person" : "the organization"}\n${org.context.trim()}` : "",
         teamMemory,
         options.workspaceComputer ? workspaceComputerText(options.workspaceComputer) : "",
+        options.voice ? voiceStatusText(options.voice) : "",
       ]
         .filter(Boolean)
         .join("\n\n"),

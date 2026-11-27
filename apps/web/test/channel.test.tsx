@@ -72,6 +72,26 @@ describe("Canal", () => {
     expect(socket.sent).toContainEqual({ type: "subscribe", channelId: ENG_ID });
   });
 
+  test("a DM with an agent, once its channel is confirmed, tells the server it is open: its agent gets ready", async () => {
+    const state = seedState();
+    seedDm(state, { type: "agent", id: ATLAS_ID });
+    const r = await renderApp(`/org/${ORG_ID}/dm/agent/${ATLAS_ID}`, { api: createFakeApi(state) });
+    await settle(4);
+    const socket = r.sockets.last();
+    await act(async () => socket.open());
+    const dm = `dm-${ATLAS_ID}`;
+    expect(socket.sent).toContainEqual({ type: "subscribe", channelId: dm });
+    expect(socket.sent.some((f) => (f as { type?: string }).type === "open")).toBe(false);
+    await act(async () => socket.push({ type: "subscribed", channelId: dm }));
+    expect(socket.sent.filter((f) => (f as { type?: string }).type === "open")).toEqual([
+      { type: "open", channelId: dm },
+    ]);
+    // A channel's own timeline says nothing: nobody in particular answers there.
+    const channel = await open();
+    await act(async () => channel.socket.push({ type: "subscribed", channelId: ENG_ID }));
+    expect(channel.socket.sent.some((f) => (f as { type?: string }).type === "open")).toBe(false);
+  });
+
   test("the composer posts with Enter and the message appears once (HTTP + event)", async () => {
     const { socket, state } = await open();
     const box = screen().getByRole("combobox", { name: "Mensagem para #eng" });

@@ -2881,6 +2881,7 @@
     "details": "チャンネルの詳細",
     "composerLabel": "#{{channel}}へのメッセージ",
     "composerDm": "{{name}}へのメッセージ",
+    "groupYou": "あなた",
     "composerPlaceholder": "#{{channel}}へのメッセージ · @でエージェントを呼べます",
     "send": "送信",
     "attach": "ファイルを添付",
@@ -2901,6 +2902,7 @@
     "sendFailed": "メッセージを送信できませんでした。もう一度お試しください。",
     "reconnecting": "リアルタイム接続に再接続しています…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "人またはエージェントを検索",
     "detailsEmpty": "「{{q}}」に該当する人はいません。",
     "topicLabel": "チャンネルの説明",
@@ -2912,9 +2914,11 @@
     "replyInChannel": "エージェントはチャンネルで返信",
     "replyInThreadsHelp": "チャンネルで呼ばれたエージェントは、そのメッセージの下のスレッドで答え、チャンネルにはそのスレッドが1行で表示されます。進行中の作業はそのままです。",
     "nameTaken": "#{{name}}はすでにあります。",
+    "nameTakenPersonal": "「{{name}}」というグループ会話はすでにあります。",
     "generalName": "#generalの名前は変更できません。",
     "archive": "チャンネルをアーカイブ",
     "archived": "#{{channel}}をアーカイブしました。会話は残ります。",
+    "archivedPersonal": "「{{channel}}」をアーカイブしました。会話は残ります。",
     "archivedTitle": "アーカイブしたチャンネル",
     "archivedCount_other": "アーカイブしたチャンネル {{count}} 件",
     "archivedNone": "元に戻せるアーカイブ済みのチャンネルはありません",
@@ -2922,6 +2926,7 @@
     "restore": "元に戻す",
     "restoreName": "#{{channel}}を元に戻す",
     "restored": "#{{channel}}が戻りました。",
+    "restoredPersonal": "「{{channel}}」が戻りました。",
     "leave": "チャンネルから退出",
     "left": "#{{channel}}から退出しました",
     "leaveTitle": "#{{channel}}から退出しますか？",
@@ -4269,8 +4274,9 @@
     "namePlaceholderPersonal": "例: trip",
     "nameHelp": "小文字、数字、ハイフンを使えます。#{{name}}と表示されます。",
     "nameInvalid": "小文字、数字、ハイフンを使い、文字か数字で始めてください。",
+    "nameInvalidPersonal": "80文字以内、1行で名前を付けてください。",
     "nameTaken": "#{{name}}というチャンネルはすでにあります。",
-    "nameTakenPersonal": "#{{name}}というグループ会話はすでにあります。",
+    "nameTakenPersonal": "「{{name}}」というグループ会話はすでにあります。",
     "topic": "説明",
     "topicPlaceholder": "ここで話す内容",
     "visibility": "参加できる人",
@@ -4299,7 +4305,8 @@
     "membersSearch": "人またはエージェントを検索",
     "membersEmpty": "「{{q}}」に一致する人は見つかりませんでした。",
     "selected_other": "{{count}}件選択中",
-    "create": "#{{name}}を作成"
+    "create": "#{{name}}を作成",
+    "createPersonal": "会話を作成"
   },
   "channelCategories": {
     "undo": "元に戻す",
@@ -4315,6 +4322,7 @@
     "invitePersonal": "{{email}}をあなたのワークスペースと#{{channel}}に招待",
     "inviteOrgPersonal": "{{email}}をあなたのワークスペースに招待",
     "addTitle": "#{{channel}}に追加",
+    "addTitlePersonal": "{{channel}}に追加",
     "addSearch": "人またはエージェントを検索",
     "addEmpty": "チャンネル外に「{{q}}」に一致する人はいません。",
     "addEveryone": "{{org}} の全員がすでに #{{channel}} にいます。",
@@ -4322,6 +4330,7 @@
     "actions": "{{name}}のオプション",
     "remove": "チャンネルから外す",
     "removeTitle": "{{name}}を#{{channel}}から外しますか？",
+    "removeTitlePersonal": "{{name}}を{{channel}}から外しますか？",
     "removePersonBody": "チャンネルが表示されなくなり、メッセージも届かなくなります。後からまた追加できます。",
     "removeAgentBody": "このチャンネルでの閲覧と返信をやめます。後からまた追加できます。",
     "removeAgentBody_female": "このチャンネルでの閲覧と返信をやめます。後からまた追加できます。",
@@ -5477,6 +5486,7 @@
       "adminAskChannel": "<b>{{name}}</b> が <b>{{agent}}</b> を #{{label}} に追加するよう求めています",
       "adminAskCreate": "<b>{{name}}</b> がエージェントを作成できるよう求めています",
       "adminAskWebhook": "<b>{{name}}</b> がルーティン用の {{service}} Webhook の設定を求めています",
+      "adminAskVoice": "<b>{{name}}</b> がボイスメッセージをオンにするよう求めています",
       "invitationAccepted": "<b>{{name}}</b>があなたの招待を受けて{{org}}に参加しました",
       "invitationAcceptedAny": "<b>{{name}}</b>があなたの招待を受けました",
       "reaction_other": "<b>{{names}}</b>があなたのメッセージにリアクションしました",
@@ -9573,8 +9583,7 @@
       "machine_access_requested": "{{agent}}が{{computer}}のフォルダ{{folder}}を求めました。そちらでの応答を待っています。",
       "machine_access_granted": "許可されました: {{agent}}は{{computer}}の{{folder}}を使えるようになりました",
       "machine_access_denied": "却下されました: {{agent}}は{{computer}}の{{folder}}を使いません",
-      "machine_access_expired": "{{computer}}のフォルダ{{folder}}のリクエストに応答がありませんでした",
-      "access_command": "コンピューターにアプリがない場合は、ターミナルでこれを実行してください:"
+      "machine_access_expired": "{{computer}}のフォルダ{{folder}}のリクエストに応答がありませんでした"
     },
     "suggestion": {
       "pending": "ミッションへの提案",
@@ -11193,6 +11202,7 @@
     "silent": "何も聞こえませんでした。何も送信されていません。",
     "notSent": "音声を送信できませんでした。",
     "limit": "今日の音声の上限に達しました。ここに入力するか、明日また試してください。",
+    "plan": "ボイスメッセージはagentes.chatのプランで使えます。ここに入力することはできます。",
     "micBlocked": "マイクがブロックされています",
     "micBlockedHint": "録音するには、デバイスの設定でマイクを許可してください。",
     "openSettings": "設定を開く",
@@ -11227,9 +11237,9 @@
       "title": "ボイスメッセージ",
       "on": "ボイスメッセージ",
       "onHelp": "このワークスペースの人は、会話で音声を送れます。",
-      "noEngine": "ボイスメッセージはここではまだ使えません。",
-      "noEngineAsk": "ボイスメッセージはまだオンになっていません。このサーバーを管理している人が、このページでオンにします。",
-      "noEngineHere": "下で音声をテキストにするサービスを選ぶと、ボイスメッセージがオンになります。",
+      "noEngine": "今はボイスメッセージが音声のまま送られるので、エージェントにはまだ聞こえません。",
+      "noEngineAsk": "今はボイスメッセージが音声のまま送られるので、エージェントには聞こえません。音声をテキストにするサービスは、このサーバーを管理している人がこのページで選びます。",
+      "noEngineHere": "下で音声をテキストにするサービスを選ぶまで、ボイスメッセージは音声のまま送られます。",
       "engineTitle": "音声をテキストにするサービス",
       "own": "自分のサーバー",
       "ownHelp": "自分のマシンで動く Whisper または Parakeet。音声はそこから出ません。",
@@ -11237,10 +11247,55 @@
       "key": "{{name}}のキー",
       "keyPlaceholder": "ここに貼り付け",
       "test": "テスト",
-      "tested": "動作しています。これで全員にマイクが表示されます。",
+      "tested": "動作しています。これでボイスメッセージがテキストとしてエージェントに届きます。",
       "sealed": "サーバーに暗号化して保存され、二度と表示されません。",
       "leaves": "ボイスメッセージの音声は、テキストにするために{{name}}に送られます。",
       "invalid": "保存されたキーはこのサーバーでは開けません。もう一度貼り付けてください。"
+    },
+    "local": {
+      "titleHere": "このコンピューター",
+      "titleServer": "このサーバー",
+      "titlePhone": "サーバーのコンピューター",
+      "textHere": "Parakeet、{{size}} のダウンロード。音声はこのコンピューターから出ません。ヨーロッパの 25 言語に対応。",
+      "textServer": "Parakeet、{{size}} のダウンロード。音声はこのサーバーから出ません。ヨーロッパの 25 言語に対応。",
+      "download": "ダウンロードしてオンにする",
+      "downloading": "音声モデルをダウンロード中",
+      "progress": "{{done}} / {{total}}",
+      "meanwhile": "もう録音できます。準備ができるまで、メッセージは音声のまま送られます。",
+      "downloadingPhone": "サーバーのコンピューターに音声モデルをダウンロードしています。もう録音できます。",
+      "starting": "オンにしています…",
+      "licenses": "モデルのライセンス",
+      "tooSmall": "このコンピューターのメモリは {{memory}} で、音声モデルには 8 GB 必要です。下のプロバイダーのキーを使ってください。",
+      "noDisk": "このディスクの空きは {{free}} で、音声モデルには {{need}} 必要です。空きを作るか、下のプロバイダーのキーを使ってください。",
+      "noBuild": "このコンピューター用の音声モデルはまだありません。下のプロバイダーのキーを使ってください。",
+      "stopped": "ダウンロードが止まりました: {{detail}}",
+      "diskFull": "ダウンロード中にディスクがいっぱいになりました。空きを作ってもう一度試してください。",
+      "didntStart": "音声モデルが起動しませんでした: {{detail}}",
+      "resume": "再開",
+      "copy": "詳細をコピー",
+      "copied": "詳細をコピーしました"
+    },
+    "offer": {
+      "title": "ボイスメッセージ",
+      "download": "{{size}} をダウンロードしてオンにする",
+      "choose": "方法を選ぶ",
+      "askOwner": "このサーバーで音声をテキストにする",
+      "askMember": "ボイスメッセージをオンにするよう頼む",
+      "on": "ボイスメッセージはオンです。エージェントはテキストとして読みます。"
+    },
+    "setup": {
+      "memberTitle": "ここではまだ音声がオンになっていません",
+      "memberText": "メッセージは誰でも再生できる音声として送られます。{{name}} が音声をテキストにするサービスを選ぶまで、エージェントには聞こえません。",
+      "memberTextNoName": "メッセージは誰でも再生できる音声として送られます。このサーバーを管理している人が音声をテキストにするサービスを選ぶまで、エージェントには聞こえません。",
+      "ask": "{{name}} に頼む",
+      "asked": "{{name}} にオンにするよう頼みました",
+      "recordAnyway": "このまま録音",
+      "ownerTitle": "音声をテキストにするサービスを選ぶ",
+      "ownerText": "選ぶまでは、ボイスメッセージは誰でも再生できる音声として送られ、エージェントには聞こえません。",
+      "readyTitle": "ボイスメッセージがオンになりました",
+      "readyText": "話した内容はテキストとしてエージェントに届きます。",
+      "record": "メッセージを録音",
+      "ownerPhone": "Web かデスクトップアプリの 設定 › 音声 で選んでください。それまでは、ボイスメッセージは誰でも再生できる音声として送られ、エージェントには聞こえません。"
     }
   },
   "media": {
@@ -14704,6 +14759,9 @@
       "desktop_read": "画面を読み取り",
       "desktop_screenshot": "スクリーンショットを撮影",
       "desktop_ask_person": "コンピューターの操作を依頼",
+      "apps_list": "開いているアプリを見る",
+      "apps_read": "アプリを読む",
+      "apps_act": "アプリを使う",
       "computer_use": "コンピューターを操作",
       "computer_status": "コンピューターを確認",
       "left_click": "クリック",
@@ -15756,6 +15814,7 @@
       "generalStays": "全員が#generalに残ります。",
       "leadChannelOnly": "責任者のエージェントを置けるのはチャンネルだけです。",
       "leadNotMember": "責任者のエージェントはチャンネルに参加している必要があります。",
+      "groupNameInvalid": "80文字以内、1行で名前を付けてください。",
       "mcpUnreachable": "MCPサーバーに接続できませんでした。アドレスを確認して、もう一度お試しください。",
       "notApproved": "このサービスはまだagentes.chatを承認していません。",
       "alreadyInvited": "この人はすでに招待を受けています。",
@@ -16210,13 +16269,13 @@
       "browser_download": "エージェントのブラウザをダウンロードできませんでした。このコンピューターの接続を確認してください。次に使うときにもう一度試します。",
       "browser_checksum": "エージェントのブラウザのダウンロードが破損していたため、使いませんでした。次に使うときにもう一度試します。",
       "desktop_use_linux": "エージェントの画面のアプリは、エージェントの画面があるLinuxのコンピューターで動きます。",
-      "desktop_use_own_user": "エージェントの画面のアプリには、このコンピューターで各エージェントが自分のユーザーとして動くこと(システムモード)が必要です。ここではすべてのエージェントがrunnerのユーザーとして動いています。",
+      "desktop_use_own_user": "エージェントの画面のアプリには、このコンピューターで各エージェントが自分のユーザーとして動くこと(システムモード)が必要です。ここではすべてのエージェントが同じユーザー、つまり agentes.chat を動かしているユーザーとして動いています。",
       "desktop_use_install": "エージェントの画面のアプリに必要なものを、このコンピューターにインストールしてください:",
       "desktop_unavailable": "このコンピューターではエージェントの画面を動かせません。",
       "desktop_linux": "エージェントの画面が動くのはLinuxのコンピューターだけです。",
       "desktop_install": "このコンピューターにエージェントの画面をインストールしてください:",
-      "not_as_root": "エージェントの画面とターミナルがrootで動くことはありません。runnerを通常のユーザーで動かしてください。",
-      "runner_bun_old": "これにはBun 1.3.5以降で動くrunnerが必要です。このコンピューターのrunnerを更新してください。",
+      "not_as_root": "エージェントの画面とターミナルは root では動きません。agentes.chat を通常のユーザーで起動してください。",
+      "runner_bun_old": "これには Bun 1.3.5 以降で動く agentes.chat が必要です。このコンピューターの agentes.chat をアップデートしてください。",
       "terminal_unsupported": "ターミナルが動くのはLinuxとMacのコンピューターだけです。"
     },
     "egress": {
@@ -16226,13 +16285,50 @@
       "hint": "エージェントがブラウズするときにサイトから見えるアドレスです。コンピューターのネットワークが変わると更新されます。",
       "waiting": "エージェントのインターネットに再接続しています。戻るまで接続は待機します。",
       "via": "エージェントは {{name}} のインターネットを使っています",
-      "viaBy": "エージェントは {{name}}（{{person}}）のインターネットを使っています",
       "viaHint": "サイトからはそのコンピューターの場所が見えます。接続した人はそのページでオフにできます。"
     },
-    "moving": {
-      "short": "サーバー移行中",
-      "line": "新しいサーバーへ移行中… 数分で戻ります",
-      "named": "{{computer}} は新しいサーバーへ移行中です… 数分で戻ります"
+    "maintenance": {
+      "short": {
+        "moving": "サーバー移行中",
+        "restarting": "再起動中",
+        "updating": "アップデート中",
+        "converting": "ディスク改善中",
+        "host_maintenance": "メンテナンス中",
+        "other": "メンテナンス中"
+      },
+      "what": {
+        "moving": "新しいサーバーへ移行中",
+        "copying": "新しいサーバーへコピー中",
+        "restarting": "再起動中",
+        "updating": "ソフトウェアをアップデート中",
+        "converting": "ディスクを改善中",
+        "host_maintenance": "サーバーがメンテナンス中",
+        "other": "メンテナンス中"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "約{{time}}で戻ります",
+      "backSoon": "数分で戻ります",
+      "late": "予定より少し時間がかかっています",
+      "slower": "その間は遅くなることがあります",
+      "slowerFor": "約{{time}}のあいだ遅くなることがあります",
+      "why": {
+        "moving": "新しいサーバーへ移しています。",
+        "copying": "作業を続けたまま、ファイルを新しいサーバーへコピーしています。",
+        "handover": "最後の変更を新しいサーバーへ引き継いでいます。",
+        "restarting": "再起動しています。",
+        "unresponsive": "応答しなくなったため、自動で再起動しました。",
+        "updating": "ソフトウェアをアップデートしています。",
+        "converting": "ディスクをより高速なストレージへ移しています。",
+        "host_maintenance": "稼働しているサーバーがメンテナンス中です。",
+        "other": "作業を行っています。"
+      },
+      "since": "{{time}}から",
+      "expectedBack": "{{time}}ごろに戻る予定",
+      "expectedDone": "{{time}}ごろに完了予定",
+      "meanwhile": "エージェントへのメッセージは待機し、戻りしだい自動で再開します。",
+      "working": "その間もエージェントは作業を続けます。",
+      "about": "何が起きているか"
     },
     "online": "オンライン",
     "offline": "オフライン",
@@ -16301,6 +16397,11 @@
     "removed": "{{name}}を削除しました。",
     "name": "コンピューターの名前",
     "nameHelp": "人とエージェントに表示される名前です。",
+    "defaultName": {
+      "model": "{{name}}の{{model}}",
+      "linux": "{{name}}のLinuxコンピューター",
+      "other": "{{name}}のコンピューター"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16450,6 +16551,13 @@
       "grantTextTerminal": "許可はコンピューター本体のターミナルで行います:",
       "grantTextAdmin": "許可はコンピューター本体のターミナルで、管理者として行います:",
       "grantTerminal": "アプリがない場合は、コンピューターのターミナルで:",
+      "pickText": "agentes.chatアプリが{{machine}}でフォルダの選択画面を開き、そこにいる人が選びます。",
+      "pick": "フォルダを許可",
+      "picked": "{{machine}}でフォルダの選択画面が開きました。そちらでフォルダを選んでください。",
+      "pickWaiting": "{{machine}}でフォルダが選ばれるのを待っています",
+      "grantTerminalMore": "アプリがない場合はターミナルで",
+      "noApp": "このコンピューターにはフォルダを選ぶためのagentes.chatアプリがありません。そのコンピューターのターミナルで許可してください。",
+      "requestDone": "このリクエストはすでに回答済みか、期限切れです。",
       "preferTerminal": "ターミナルで行う",
       "grantOnlyOwner": "さらに許可できるのは{{name}}だけで、コンピューター本体で行います。必要なものがあれば{{name}}に頼んでください。",
       "pathPlaceholder": "<フォルダ>",
@@ -16613,6 +16721,8 @@
       "paused": "{{host}}は一時停止中なので、再開するまで操作は待機します。",
       "held": "このワークスペースは一時停止中のため、再開されるまで操作できません。",
       "lost": "操作が終わりました。{{name}}をまた見ています。",
+      "controlLate": "時間内に操作を開始できませんでした。{{host}}が{{name}}をまだ準備中です。1分後にもう一度お試しください。",
+      "controlFailed": "{{name}}を操作できませんでした。もう一度試すか、{{host}}でagentes.chatアプリを再起動してください。",
       "typeLabel": "{{name}}に入力"
     },
     "status": {
@@ -16634,7 +16744,7 @@
       "withHost": "{{host}}とともに",
       "lastSeen": "最終接続 {{time}}",
       "offlineUnresponsive": "{{time}} から応答なし",
-      "offlineStopped": "{{time}} にランナー停止",
+      "offlineStopped": "{{time}} に agentes.chat が停止",
       "offlineDropped": "{{time}} に接続が切断"
     },
     "line": {
@@ -16649,9 +16759,14 @@
       "offline": "エージェントは復帰を待っています。",
       "offlineSeen": "最終接続 {{time}}。エージェントは復帰を待っています。",
       "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。",
-      "offlineUnresponsive": "{{time}} から応答がありません。ネットワークがないか、負荷が高すぎる可能性があります。そのコンピューターで `{{command}}` を実行してください。",
-      "offlineStopped": "{{time}} にランナーが停止しました。もう一度起動するか、そのコンピューターで `{{command}}` を実行して原因を確認してください。",
-      "offlineDropped": "{{time}} に接続が切れました。自動で再接続します。戻らない場合は、そのコンピューターで `{{command}}` を実行してください。"
+      "offlineUnresponsive": "{{time}} から応答がありません。インターネットがないか、負荷が高すぎる可能性があります。電源が入っていてインターネットにつながっているか確かめてください。",
+      "offlineStopped": "このコンピューターの agentes.chat アプリが {{time}} に停止しました。アプリをもう一度開いてください。",
+      "offlineStoppedCli": "このコンピューターの agentes.chat が {{time}} に停止しました。そのコンピューターでもう一度起動してください。",
+      "offlineDropped": "{{time}} に接続が切れました。自動で再接続します。"
+    },
+    "technical": {
+      "title": "技術的な詳細",
+      "doctor": "原因を確かめるには、そのコンピューターでこれを実行してください:"
     },
     "reason": {
       "locked": "スマートフォンがロックされています",
@@ -17100,6 +17215,8 @@
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
       "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
       "folderRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> でフォルダ {{path}} を求めています",
+      "folderOnComputer": "コンピューターで許可",
+      "folderShown": "{{deviceName}}で開きました。そちらで許可してください。",
       "internetShared": "エージェントは今後 <b>{{deviceName}}</b> のインターネットを通じてウェブサイトを開きます",
       "internetSharedLine": "対象はこのワークスペースのエージェントのみ、ウェブサイトのみ。そのコンピューターのネットワーク内には一切アクセスしません。オフラインの間は、いつもの接続を使います。",
       "internetOff": "オフにする",
@@ -18815,6 +18932,7 @@
         "usingScreen": "画面を使いました",
         "cloningRepo": "リポジトリをクローンしました",
         "listingRepos": "リポジトリを一覧表示しました",
+        "updatingCode": "コードを更新しました",
         "preparingCli": "{{app}}を準備しました",
         "openingPullRequest": "プルリクエストを作成しました",
         "handingOff": "レポートを届けました",
@@ -18939,6 +19057,7 @@
       "usingScreen": "画面を使用中",
       "cloningRepo": "リポジトリをクローン中",
       "listingRepos": "リポジトリを一覧表示中",
+      "updatingCode": "コードを更新中",
       "preparingCli": "{{computer}}で{{app}}を準備中",
       "preparingCliPct": "{{computer}}で{{app}}を準備中（{{percent}}%）",
       "openingPullRequest": "プルリクエストを作成中",
@@ -19135,6 +19254,7 @@
       "welcome_member": "{{org}}に参加しましたね。**ここでは何を担当していますか？** 教えてもらえれば、最初のエージェントを一緒に設定します。",
       "welcome_member_agent": "{{org}}へようこそ。あなたの最初のエージェントは、もうチームにいます。必要なときは、いつでも呼んでください。",
       "action_open_page": "画面を開く",
+      "action_voice_setup": "ボイスメッセージをオンにする",
       "calendar_proposal": "予定の提案: {{title}}",
       "action_workspace": "ワークスペースの変更を提案しました",
       "agent_proposal": "新しいエージェントを提案しました: {{name}}",
@@ -19429,6 +19549,10 @@
     "offer_open_page": {
       "label": "画面を開くことを提案",
       "description": "請求、ロール、エージェントのページなど、アプリの画面を開くボタン付きのカードを投稿します。"
+    },
+    "offer_voice_setup": {
+      "label": "ボイスメッセージをオンにするよう提案",
+      "description": "サーバーの管理者がワンクリックでボイスメッセージをオンにできるカードを投稿します。それ以外の人は管理者に依頼します。"
     },
     "set_team_week": {
       "label": "チームの1週間のカードを変更",
@@ -19993,7 +20117,7 @@
       "people": "全員がすぐに閲覧だけできる状態になり、メールが届きます",
       "peopleQuiet": "全員がすぐに閲覧だけできる状態になります",
       "computer": "コンピューターはすぐに停止し、消去されます",
-      "computers": "接続されたコンピューターは切断されます。エージェントのフォルダは、ランナーが削除されるまで残ります。",
+      "computers": "接続されたコンピューターは切断されます。エージェントのフォルダは、そこから agentes.chat が削除されるまで残ります。",
       "connectors": "コネクタとメールボックスの接続が解除されます"
     },
     "undo": "{{date}} {{time}}までは、どのオーナーでも復元できます。その後は元に戻せません。",
@@ -20307,13 +20431,6 @@
       "doneBy": "{{time}}に{{name}}が対応しました。{{agent}}は画面を確認し直して作業を続けました。",
       "doneByYou": "{{time}}にあなたが対応しました。{{agent}}は画面を確認し直して作業を続けました。"
     },
-    "control": {
-      "notice": "{{name}}のコンピューター上のプログラムは、画面と、あなたが入力・貼り付けした内容を見ることができます。"
-    },
-    "session": {
-      "check": "安全チェック",
-      "screening": "不正利用がないか、この画面のテキストを確認することがあります。保存するのは結果だけです。プロンプトでのパスワードなど、画面に表示されないものは記録されません。"
-    },
     "after": {
       "titleNoSite": "画面を使用",
       "noSite": "アプリを開く前"
@@ -20322,7 +20439,6 @@
       "group": "{{name}}の画面"
     },
     "watch": {
-      "notice": "{{name}}のコンピューター上のプログラムは、画面と、そこで入力・貼り付けされた内容を見ることができます。",
       "step": {
         "desktop_open": "{{detail}}を開きました",
         "desktop_open_plain": "アプリを開きました",
@@ -20346,14 +20462,13 @@
       }
     },
     "use": {
-      "title": "エージェントの画面のアプリ",
-      "description": "エージェントは人と同じように、ここで自分の画面のアプリを開いて使います。その様子は各エージェントのページで見られます。",
+      "title": "エージェントごとの専用画面",
+      "description": "ここでは各エージェントがあなたの画面とは別の専用画面を持ち、ブラウザやスプレッドシートなどウィンドウのあるアプリを人と同じように使います。様子はエージェントのページで見られます。今のところLinuxのみです。Linuxならあなたの画面に触れずに、エージェントごとに画面を追加できます。",
       "ready": "準備完了",
       "off": "オフ",
-      "unavailable": "利用できません",
+      "unavailable": "準備が必要",
       "offHelp": "このコンピューターで画面とコマンドを有効にしてください:",
       "offOne": "このコンピューターでは画面とコマンドの両方をオンにする必要があります。",
-      "linuxOnly": "エージェントが自分の画面でアプリを使えるのは、Linuxのコンピューターだけです。",
       "agent": "{{name}}はまだ{{computer}}の自分の画面でアプリを使えません。",
       "agent_female": "{{name}}はまだ{{computer}}の自分の画面でアプリを使えません。"
     },

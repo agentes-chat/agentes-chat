@@ -244,6 +244,7 @@ export async function createTestServer(
       gifKey,
       githubApp: engine.githubApp,
       speech: engine.speech,
+      speechLocal: engine.speechLocal,
       voice: engine.voice,
       live: engine.live,
       liveDeps: engine.liveDeps,

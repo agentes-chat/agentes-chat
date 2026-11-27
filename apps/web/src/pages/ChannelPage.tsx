@@ -176,10 +176,11 @@ import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@
 import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appAuthor, appVia, surfaceVia } from "@agenteschat/client/lib/via";
-import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, micShown, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, splitCanceled } from "@agenteschat/client/lib/work";
 import { CodeConversation, useShowsWork } from "@agenteschat/client/lib/work-context";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   AffixInput,
   AppMark,
@@ -286,6 +287,7 @@ import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
 import { ImageSet } from "@/components/artifacts/viewer-context";
 import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
+import { usePlanToast } from "@/components/BillingLinkButton";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
@@ -334,6 +336,7 @@ import { DeviceWaitCard } from "@/components/devices/DeviceWaitCard";
 import { WaitToolOffAction } from "@/components/devices/ToolOneClick";
 import { useArchiveChannelWithUndo } from "@/components/entity-menus";
 import { FeedbackOfferRow } from "@/components/FeedbackOffer";
+import { GroupCover, groupWho } from "@/components/GroupCover";
 import { InPlaceProvider } from "@/components/InPlace";
 import { HandedTaskChips, IssueTakenLine, IssueWorkCard } from "@/components/IssueWork";
 import { ArrivalCard, useArrival } from "@/components/invite/Arrival";
@@ -373,7 +376,7 @@ import {
 import { MissionCommandCard } from "@/components/missions/MissionCommandCard";
 import { NewMissionDialog } from "@/components/missions/MissionDialogs";
 import { NavToggle } from "@/components/NavDrawer";
-import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
+import { ChannelAccessChoice, channelNameError, toChannelName, toGroupName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
 import { useNotificationOpener } from "@/components/NotificationOpen";
 import { useNewAgent } from "@/components/new-agent/new-agent-context";
@@ -422,6 +425,7 @@ import {
   useChannelThreadsView,
 } from "@/components/threads/ThreadLines";
 import { UsageWaitCancel, UsageWaitClosed } from "@/components/UsagePauseCard";
+import { useVoiceSetup } from "@/components/VoiceSetupDialog";
 import { PushAskContext, PushAskInline, usePushAsk } from "@/components/WebPush";
 import { useWikiLinkRenderer } from "@/components/WikiLinks";
 import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, TypingMark, WorkingStack } from "@/components/WorkingLine";
@@ -452,6 +456,7 @@ import {
   useDismissRun,
   useLive,
   useLiveStore,
+  useOpenedConversation,
   useStreams,
   useTypingSender,
 } from "@/realtime/context";
@@ -722,7 +727,10 @@ export function ChannelPage({
   const dms = useDms(org.id);
   const dm = channel ? undefined : dms.data?.find((d) => d.channelId === channelId);
   // "#loja · Acme": the window's name in the app (Window menu, Mission Control), the tab's in a browser.
-  useDocumentTitle(channel && !fallback && !thread ? `#${channel.name} · ${org.name}` : undefined);
+  // A personal workspace's group conversation goes by its name as written (ADR 0159).
+  useDocumentTitle(
+    channel && !fallback && !thread ? `${isPersonal(org) ? "" : "#"}${channel.name} · ${org.name}` : undefined,
+  );
 
   if (channels.isPending && !fallback) return <ChannelSkeleton />;
   if (dm) {
@@ -940,6 +948,7 @@ function ChannelView({
   const arrival = useArrival(channel);
   const arriving = arrival.show && !thread;
   const sendTyping = useTypingSender(channel.id, thread?.id);
+  useOpenedConversation(channel.id, thread?.id, Boolean(chrome?.dmAgentId || thread));
   // ⌘K "Pedir a um agente" leaves the text for this DM's composer.
   const draftKey = chrome?.dmAgentId ? `agent:${chrome.dmAgentId}` : null;
   // What I typed and didn't send stays in this browser: switching conversations or reloading keeps it. Only the box
@@ -1253,6 +1262,10 @@ function ChannelView({
         .filter((p): p is Member => Boolean(p)),
     [members.data, dir.memberById],
   );
+  // A personal workspace's group conversation (ADR 0159, amendment of 2026-11-26): a cover at its start, its name as
+  // written where a channel says "#nome".
+  const groupConversation = isPersonal(org) && !chrome;
+  const composerTarget = chrome?.composerTarget ?? (groupConversation ? channel.name : undefined);
 
   /** Agents of this channel the text mentions (instant "pensando…" before the server answers). */
   const mentioned = (body: string) =>
@@ -1262,6 +1275,7 @@ function ChannelView({
       .map((a) => a.id);
 
   const toast = useToast();
+  const planToast = usePlanToast();
   const qc = useQueryClient();
   const post = usePostMessage(org.id, channel.id, {
     me: { id: me.user.id },
@@ -1305,8 +1319,11 @@ function ChannelView({
   const { send, retry } = sendHelpers(post);
   const sendVoice = useSendVoice(org.id, channel.id, {
     me: { id: me.user.id },
-    onRefused: (error) =>
-      toast.show(errorCode(error) === "voice_limit" ? t("voice.limit") : errorText(t, error), "error"),
+    onRefused: (error) => {
+      const code = errorCode(error);
+      if (code === "voice.plan") planToast(t("voice.plan"));
+      else toast.show(code === "voice_limit" ? t("voice.limit") : errorText(t, error), "error");
+    },
   });
 
   const api = useApi();
@@ -2390,15 +2407,23 @@ function ChannelView({
   // Voice messages (ADR 0100), where this person can write and the workspace has them; a reply to a mission goes in
   // text, to the mission. The recording goes in the box's thread with what was typed and the finished files, in one
   // message. A key pasted in the text stays in the box for the person to choose (`KeyGuardDialog`).
+  // The microphone follows the workspace's switch; where voice doesn't become text yet, the first press asks first
+  // (`useVoiceSetup`). A server older than `speechState` shows it only with an engine.
   const voiceSettings = useSettings(org.id);
-  const voiceOn = Boolean(voiceSettings.data?.voiceAvailable && voiceSettings.data.voiceMessages);
+  const voiceOn = micShown(voiceSettings.data);
+  const voiceSetup = useVoiceSetup(voiceSettings.data);
   const voice: ComposerVoice | undefined =
     voiceOn && !chrome?.locked && !missionReply
       ? {
           scope: `${channel.id}:${thread?.id ?? ""}`,
           allowed: async () => {
-            const { allowed } = await api.voice.allowed(org.id).catch(() => ({ allowed: true }));
-            if (!allowed) toast.show(t("voice.limit"));
+            const asked = await voiceSetup.ask();
+            if (!asked) return false;
+            const { allowed, reason } = await api.voice
+              .allowed(org.id)
+              .catch(() => ({ allowed: true, reason: undefined }));
+            if (reason === "plan") planToast(t("voice.plan"));
+            else if (!allowed) toast.show(t("voice.limit"));
             return allowed;
           },
           // "gravando áudio…" for the others while it records and while it uploads (then the server keeps it until the
@@ -2916,6 +2941,27 @@ function ChannelView({
                               }
                             }}
                           >
+                            {/* A personal workspace's group conversation opens with its cover (ADR 0159), above its
+                                first message: shown once the conversation's start is loaded. */}
+                            {groupConversation &&
+                              readable &&
+                              !thread &&
+                              (olderState === "done" ||
+                                (messages.data !== undefined &&
+                                  messages.data.length < MESSAGES_PAGE &&
+                                  older.length === 0 &&
+                                  !gap)) && (
+                                <GroupCover
+                                  name={channel.name}
+                                  agentIds={channelAgents.map((a) => a.id)}
+                                  who={groupWho(t, me.user.id, channelPeople, channelAgents)}
+                                  hint={
+                                    serverRead && timeline.length === 0 && channel.can?.post !== false
+                                      ? t("chat.sayHiText")
+                                      : undefined
+                                  }
+                                />
+                              )}
                             {/* Pushes short channels down, next to the composer. */}
                             <div className="channel__spacer" aria-hidden="true" />
                             {chrome?.top}
@@ -2929,7 +2975,8 @@ function ChannelView({
                               slots.length === 0 &&
                               !thread &&
                               !adjusting &&
-                              !chrome?.intro && (
+                              !chrome?.intro &&
+                              !groupConversation && (
                                 <div className="channel__empty">
                                   <EmptyState
                                     size="panel"
@@ -3188,15 +3235,16 @@ function ChannelView({
                                 disabled={Boolean(chrome?.locked)}
                                 label={
                                   chrome?.composerLabel ??
-                                  (chrome?.composerTarget
-                                    ? t("channel.composerDm", { name: chrome.composerTarget })
+                                  (composerTarget
+                                    ? t("channel.composerDm", { name: composerTarget })
                                     : t("channel.composerLabel", { channel: channel.name }))
                                 }
                                 placeholder={
-                                  // DMs name the person or agent ("Mensagem para Theo"); channels keep "#nome".
+                                  // DMs and a personal workspace's group conversations name who or what ("Mensagem para
+                                  // Theo"); channels keep "#nome".
                                   chrome?.composerLabel ??
-                                  (chrome?.composerTarget
-                                    ? t("channel.composerDm", { name: chrome.composerTarget })
+                                  (composerTarget
+                                    ? t("channel.composerDm", { name: composerTarget })
                                     : t("channel.composerPlaceholder", { channel: channel.name }))
                                 }
                                 sendLabel={t("channel.send")}
@@ -3239,6 +3287,7 @@ function ChannelView({
                                   onDone={() => setOffer(null)}
                                 />
                               )}
+                              {voiceSetup.dialog}
                               <KeyGuardDialog
                                 ask={keyAsk}
                                 onClose={() => setKeyAsk(null)}
@@ -5368,6 +5417,8 @@ function ChannelDetails({
   const routing = useAiStatus(org.id, open).data?.routing;
   const update = useUpdateChannel(org.id, channel.id);
   const editable = managesChannel(channel, me.user.id, org);
+  // A personal workspace's group conversation (ADR 0159): its name as written, with no #.
+  const groupName = isPersonal(org);
   const toast = useToast();
   const sectors = useAgentGroups(org.id).data ?? [];
   const place = usePlaceChannel(org.id);
@@ -5438,24 +5489,30 @@ function ChannelDetails({
     );
   };
   const saveName = () => {
-    if (!editable || name === channel.name) return;
-    if (!name) {
+    // A personal workspace's group conversation keeps its name as written (ADR 0159); a team's channel, lower case.
+    const next = groupName ? name.trim() : name;
+    if (!editable || next === channel.name) return;
+    if (!next) {
       setName(channel.name);
       return;
     }
-    if (!CHANNEL_NAME.test(name)) {
-      setNameError(t("newChannel.nameInvalid"));
+    if (channelNameError(next, new Set(), groupName) === "invalid") {
+      setNameError(t(modeKey(org, "newChannel.nameInvalid")));
       return;
     }
     update.mutate(
-      { name },
+      { name: next },
       {
         onSuccess: () => {
           setNameError(undefined);
           setSaved(true);
         },
         onError: (e) =>
-          setNameError(e instanceof ApiError && e.status === 409 ? t("channel.nameTaken", { name }) : errorText(t, e)),
+          setNameError(
+            e instanceof ApiError && e.status === 409
+              ? t(modeKey(org, "channel.nameTaken"), { name: next })
+              : errorText(t, e),
+          ),
       },
     );
   };
@@ -5684,7 +5741,7 @@ function ChannelDetails({
         })}
         title={
           <>
-            {t("channel.detailsTitle", { channel: channel.name })}
+            {t(modeKey(org, "channel.detailsTitle"), { channel: channel.name })}
             {editable && <SavedNote shown={saved} label={t("common.saved")} className="channel-topic__saved" />}
           </>
         }
@@ -5766,11 +5823,12 @@ function ChannelDetails({
                     error={nameError}
                   >
                     <AffixInput
-                      prefix="#"
+                      prefix={groupName ? undefined : "#"}
                       value={name}
                       disabled={channel.name === "general"}
+                      maxLength={groupName ? 80 : undefined}
                       onChange={(e) => {
-                        setName(toChannelName(e.target.value));
+                        setName(groupName ? toGroupName(e.target.value) : toChannelName(e.target.value));
                         setNameError(undefined);
                       }}
                       onBlur={saveName}
@@ -5859,7 +5917,7 @@ function ChannelDetails({
       <Dialog
         open={open && Boolean(removing)}
         onOpenChange={(o) => !o && setRemoving(null)}
-        title={t("channelMembers.removeTitle", { name: removing?.name ?? "", channel: channel.name })}
+        title={t(modeKey(org, "channelMembers.removeTitle"), { name: removing?.name ?? "", channel: channel.name })}
         description={t(
           removing?.kind === "agent" ? "channelMembers.removeAgentBody" : "channelMembers.removePersonBody",
           agentGrammar(removing?.name ?? ""),
@@ -5959,7 +6017,7 @@ function AddMembersDialog({
     <Dialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title={t("channelMembers.addTitle", { channel: channel.name })}
+      title={t(modeKey(org, "channelMembers.addTitle"), { channel: channel.name })}
       closeLabel={t("common.close")}
     >
       <Locked when={add.isPending}>

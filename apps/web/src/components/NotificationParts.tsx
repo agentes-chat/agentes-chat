@@ -223,6 +223,7 @@ type WhatKey =
   | "adminAskChannel"
   | "adminAskCreate"
   | "adminAskWebhook"
+  | "adminAskVoice"
   | "reaction";
 
 /** The line on top of a row: who did what, where. */
@@ -421,7 +422,9 @@ export function Headline({
           })
         : n.latest.reason === "webhook"
           ? k("adminAskWebhook", { name, service: n.latest.title ?? "" })
-          : k("adminAskCreate", { name });
+          : n.latest.reason === "voice"
+            ? k("adminAskVoice", { name })
+            : k("adminAskCreate", { name });
     case "approval_cover":
       return k(
         n.latest.statusTo === "declined"

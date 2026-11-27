@@ -70,7 +70,6 @@ import {
   useTheme,
   useToast,
 } from "@/ui";
-import { useInfoHint } from "@/ui/InfoHint";
 import { useNotNow } from "../browser/HandoffCard";
 import { keyPastDraft } from "../browser/logic";
 import { TypeBar } from "../browser/parts";
@@ -390,16 +389,8 @@ export function AgentScreen({
   // What can be done with the screen now, on the capsule across its bottom edge (sideways, the side dock has it):
   // in control the keyboard, laying it down, a note and the way out; watching, taking control.
   const mayTake = live && !status?.controllerUserId && !waiting && canTakeOver && words.mayTake;
-  // What taking control means, behind an ⓘ (ADR 0076): it leads the capsule, as on the sideways dock, and its words
-  // open under the header.
-  const notice = useInfoHint({
-    name: t("common.about", { label: t("desktop.session.check") }),
-    text: `${t("desktop.control.notice", g)}${f?.edition === "cloud" ? ` ${t("desktop.session.screening")}` : ""}`,
-    variant: "footnote",
-  });
   const dock = inControl ? (
     <>
-      <View style={styles.dockInfo}>{notice.button}</View>
       <DockIcon icon="keyboard" label={t("desktop.keyboard.label")} onPress={() => setTyping("screen")} />
       <DockIcon icon="expand" label={t("agentComputer.phone.turn")} onPress={sideways.lieDown} />
       {ask ? <DockIcon icon="x" label={t("mobile.browser.live.couldnt")} onPress={couldnt} /> : null}
@@ -802,7 +793,6 @@ export function AgentScreen({
           back that would hand the screen back mid-gesture (the bar's back still leaves). */}
       <Stack.Screen options={barOptions} />
       {wide ? null : top(sub)}
-      {inControl && !wide ? <View style={styles.notice}>{notice.text}</View> : null}
       {wide ? null : banner}
       {/* The screen and, across its bottom edge, the capsule (it hangs past the screen into this view's margin). */}
       <View style={[inControl || wide ? styles.fill : styles.stage, docked && styles.docked]}>
@@ -891,7 +881,6 @@ export function AgentScreen({
               <TouchDock
                 shown={dockShown}
                 right={insets.right + 10}
-                notice={notice}
                 onKeyboard={() => setTyping("screen")}
                 onUpright={sideways.forced ? sideways.standUp : undefined}
                 onCouldnt={ask ? couldnt : undefined}
@@ -1223,7 +1212,6 @@ function Trackpad({
 function TouchDock({
   shown,
   right,
-  notice,
   onKeyboard,
   onUpright,
   onCouldnt,
@@ -1233,7 +1221,6 @@ function TouchDock({
 }: {
   shown: SharedValue<number>;
   right: number;
-  notice: { button: ReactNode; text: ReactNode; open: boolean };
   onKeyboard: () => void;
   /** Only when the button laid the view down: otherwise turning the phone does it. */
   onUpright?: () => void;
@@ -1247,38 +1234,25 @@ function TouchDock({
   const { colors, shadows } = useTheme();
   const rest = useAnimatedStyle(() => ({ opacity: shown.value }));
   return (
-    <>
-      <Animated.View style={[styles.dock, { right, boxShadow: shadows.e2 }, rest]}>
-        <Glass liquid intensity={70} style={[styles.dockGlass, { borderColor: colors.line2 }]}>
-          <View style={styles.dockInfo}>{notice.button}</View>
-          <IconButton icon="keyboard" label={t("desktop.keyboard.label")} onPress={onKeyboard} />
-          {onUpright ? <IconButton icon="expand" label={t("agentComputer.phone.upright")} onPress={onUpright} /> : null}
-          {onCouldnt ? <IconButton icon="x" label={t("mobile.browser.live.couldnt")} onPress={onCouldnt} /> : null}
-          <IconButton icon="compose" label={t("browser.inCard.addNote")} onPress={onNote} />
-          <PressScale
-            to={0.9}
-            onPress={onDone}
-            accessibilityRole="button"
-            accessibilityLabel={doneLabel}
-            hitSlop={4}
-            style={[styles.dockDone, { backgroundColor: colors.ink }]}
-            contentStyle={styles.dockDoneIn}
-          >
-            <Icon name="check" size={20} color={colors.bg} />
-          </PressScale>
-        </Glass>
-      </Animated.View>
-      <View
-        pointerEvents="box-none"
-        style={[
-          styles.dockNotice,
-          { right },
-          notice.open && [styles.dockNoticeOpen, { backgroundColor: colors.raised, boxShadow: shadows.e2 }],
-        ]}
-      >
-        {notice.text}
-      </View>
-    </>
+    <Animated.View style={[styles.dock, { right, boxShadow: shadows.e2 }, rest]}>
+      <Glass liquid intensity={70} style={[styles.dockGlass, { borderColor: colors.line2 }]}>
+        <IconButton icon="keyboard" label={t("desktop.keyboard.label")} onPress={onKeyboard} />
+        {onUpright ? <IconButton icon="expand" label={t("agentComputer.phone.upright")} onPress={onUpright} /> : null}
+        {onCouldnt ? <IconButton icon="x" label={t("mobile.browser.live.couldnt")} onPress={onCouldnt} /> : null}
+        <IconButton icon="compose" label={t("browser.inCard.addNote")} onPress={onNote} />
+        <PressScale
+          to={0.9}
+          onPress={onDone}
+          accessibilityRole="button"
+          accessibilityLabel={doneLabel}
+          hitSlop={4}
+          style={[styles.dockDone, { backgroundColor: colors.ink }]}
+          contentStyle={styles.dockDoneIn}
+        >
+          <Icon name="check" size={20} color={colors.bg} />
+        </PressScale>
+      </Glass>
+    </Animated.View>
   );
 }
 
@@ -1548,7 +1522,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   grow: { flex: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
-  notice: { paddingHorizontal: 14 },
   stage: { flexShrink: 1 },
   docked: { marginBottom: DOCK_HANG + 12 },
   box: { marginHorizontal: 12, borderRadius: 20, overflow: "hidden", backgroundColor: "#101010" },
@@ -1606,11 +1579,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-  dockInfo: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   dockDone: { width: 40, height: 40, borderRadius: 20 },
   dockDoneIn: { alignItems: "center", justifyContent: "center" },
-  dockNotice: { position: "absolute", top: 70 },
-  dockNoticeOpen: { width: 300, paddingHorizontal: 14, paddingBottom: 12, paddingTop: 8, borderRadius: 14 },
   typing: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 8 },
   typingField: { alignItems: "flex-end" },
   // Focusable and so given the keyboard, but never seen or touched: the keys show on the screen itself.

@@ -1674,7 +1674,7 @@ const missionUpdateRefusal = (
   what: string,
 ) =>
   new ConflictError(
-    `The runner on ${computer.name} ${what}. ${runnerUpdateWay(computer)}`,
+    `The agentes.chat program on ${computer.name} ${what}. ${runnerUpdateWay(computer)}`,
     computer.kind === "managed" ? "machine.updates_itself" : "mission.runner_outdated",
     { computer: computer.name },
   );

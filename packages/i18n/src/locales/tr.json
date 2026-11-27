@@ -2976,6 +2976,7 @@
     "details": "Kanal ayrıntıları",
     "composerLabel": "#{{channel}} kanalına mesaj",
     "composerDm": "{{name}} kişisine mesaj",
+    "groupYou": "Siz",
     "composerPlaceholder": "#{{channel}} kanalına mesaj · bir ajana seslenmek için @ kullanın",
     "send": "Gönder",
     "attach": "Dosya ekle",
@@ -2996,6 +2997,7 @@
     "sendFailed": "Mesaj gönderilmedi. Tekrar deneyin.",
     "reconnecting": "Gerçek zamanlıya yeniden bağlanıyor…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Kişi veya ajan ara",
     "detailsEmpty": "“{{q}}” için kimse bulunamadı.",
     "topicLabel": "Kanal açıklaması",
@@ -3007,9 +3009,11 @@
     "replyInChannel": "Ajanlar kanalda yanıtlar",
     "replyInThreadsHelp": "Kanalda çağrılan bir ajan, o mesajın altındaki ileti dizisinde yanıt verir ve kanal bunun için tek satır gösterir. Süren işler olduğu yerde kalır.",
     "nameTaken": "#{{name}} zaten var.",
+    "nameTakenPersonal": "“{{name}}” adında bir grup sohbeti zaten var.",
     "generalName": "#general adını korur.",
     "archive": "Kanalı arşivle",
     "archived": "#{{channel}} arşivlendi. Sohbet korunur.",
+    "archivedPersonal": "“{{channel}}” arşivlendi. Sohbet korunur.",
     "archivedTitle": "Arşivlenen kanallar",
     "archivedCount_one": "{{count}} arşivlenen kanal",
     "archivedCount_other": "{{count}} arşivlenen kanal",
@@ -3018,6 +3022,7 @@
     "restore": "Geri getir",
     "restoreName": "#{{channel}} kanalını geri getir",
     "restored": "#{{channel}} geri geldi.",
+    "restoredPersonal": "“{{channel}}” geri geldi.",
     "leave": "Kanaldan ayrıl",
     "left": "#{{channel}} kanalından ayrıldınız",
     "leaveTitle": "#{{channel}} kanalından ayrılınsın mı?",
@@ -4413,8 +4418,9 @@
     "namePlaceholderPersonal": "örn. tatil",
     "nameHelp": "Küçük harf, rakam ve tire. #{{name}} olarak görünür.",
     "nameInvalid": "Harf veya rakamla başlayan küçük harf, rakam ve tire kullanın.",
+    "nameInvalidPersonal": "Tek satırda, en fazla 80 karakterlik bir ad verin.",
     "nameTaken": "#{{name}} adında bir kanal zaten var.",
-    "nameTakenPersonal": "#{{name}} adında bir grup sohbeti zaten var.",
+    "nameTakenPersonal": "“{{name}}” adında bir grup sohbeti zaten var.",
     "topic": "Açıklama",
     "topicPlaceholder": "Burada ne konuşulur",
     "visibility": "Kimler katılabilir",
@@ -4444,7 +4450,8 @@
     "membersEmpty": "“{{q}}” için kimse bulunamadı.",
     "selected_one": "{{count}} seçildi",
     "selected_other": "{{count}} seçildi",
-    "create": "#{{name}} oluştur"
+    "create": "#{{name}} oluştur",
+    "createPersonal": "Sohbet oluştur"
   },
   "channelCategories": {
     "undo": "Geri al",
@@ -4460,6 +4467,7 @@
     "invitePersonal": "{{email}} adresini çalışma alanınıza ve #{{channel}} kanalına davet et",
     "inviteOrgPersonal": "{{email}} adresini çalışma alanınıza davet et",
     "addTitle": "#{{channel}} kanalına ekle",
+    "addTitlePersonal": "{{channel}} sohbetine ekle",
     "addSearch": "Kişi veya ajan ara",
     "addEmpty": "Kanal dışında “{{q}}” ile eşleşen kimse yok.",
     "addEveryone": "{{org}} içindeki herkes zaten #{{channel}} kanalında.",
@@ -4468,6 +4476,7 @@
     "actions": "{{name}} seçenekleri",
     "remove": "Kanaldan çıkar",
     "removeTitle": "{{name}}, #{{channel}} kanalından çıkarılsın mı?",
+    "removeTitlePersonal": "{{name}}, {{channel}} sohbetinden çıkarılsın mı?",
     "removePersonBody": "Kanalı görmeyi ve mesajlarını almayı bırakır. Daha sonra yeniden ekleyebilirsiniz.",
     "removeAgentBody": "Bu kanalda okumayı ve yanıt vermeyi bırakır. Daha sonra yeniden ekleyebilirsiniz.",
     "removeAgentBody_female": "Bu kanalda okumayı ve yanıt vermeyi bırakır. Daha sonra yeniden ekleyebilirsiniz.",
@@ -5679,6 +5688,7 @@
       "adminAskChannel": "<b>{{name}}</b>, <b>{{agent}}</b> ajanını #{{label}} kanalına eklemenizi istiyor",
       "adminAskCreate": "<b>{{name}}</b>, ajan oluşturabilmek istiyor",
       "adminAskWebhook": "<b>{{name}}</b>, rutinler için {{service}} webhook'unu kurmanızı istiyor",
+      "adminAskVoice": "<b>{{name}}</b>, sesli mesajları açmanızı istiyor",
       "invitationAccepted": "<b>{{name}}</b> davetinizi kabul etti ve {{org}} çalışma alanına katıldı",
       "invitationAcceptedAny": "<b>{{name}}</b> davetinizi kabul etti",
       "reaction_one": "<b>{{names}}</b> mesajınıza tepki verdi",
@@ -9898,8 +9908,7 @@
       "machine_access_requested": "{{agent}}, {{computer}} üzerindeki {{folder}} klasörünü istedi. Oradan yanıt bekleniyor.",
       "machine_access_granted": "İzin verildi: {{agent}} artık {{computer}} üzerinde {{folder}} klasörünü kullanabilir",
       "machine_access_denied": "Reddedildi: {{agent}}, {{computer}} üzerinde {{folder}} klasörünü kullanmayacak",
-      "machine_access_expired": "{{computer}} üzerindeki {{folder}} klasörü isteğine yanıt gelmedi",
-      "access_command": "Bilgisayarda uygulama yok mu? Bunu Terminal'inde çalıştırın:"
+      "machine_access_expired": "{{computer}} üzerindeki {{folder}} klasörü isteğine yanıt gelmedi"
     },
     "suggestion": {
       "pending": "Misyon için öneri",
@@ -11596,6 +11605,7 @@
     "silent": "Hiçbir şey duyulmadı. Hiçbir şey gönderilmedi.",
     "notSent": "Ses gönderilemedi.",
     "limit": "Bugünkü ses sınırı doldu. Buraya yazın ya da yarın tekrar deneyin.",
+    "plan": "Sesli mesajlar bir agentes.chat planıyla gelir. Buraya yazmaya devam edebilirsiniz.",
     "micBlocked": "Mikrofon engellendi",
     "micBlockedHint": "Kayıt yapmak için cihaz ayarlarınızdan mikrofona izin verin.",
     "openSettings": "Ayarları aç",
@@ -11630,9 +11640,9 @@
       "title": "Sesli mesajlar",
       "on": "Sesli mesajlar",
       "onHelp": "Bu çalışma alanındaki kişiler konuşmalarda ses gönderebilir.",
-      "noEngine": "Sesli mesajlar burada henüz kullanılamıyor.",
-      "noEngineAsk": "Sesli mesajlar henüz açık değil. Bu sunucuyu yöneten kişi onları bu sayfada açar.",
-      "noEngineHere": "Aşağıda sesi metne dönüştüreni seçtiğinizde sesli mesajlar açılır.",
+      "noEngine": "Şimdilik sesli mesajlar ses olarak gidiyor, yani ajanlar onları henüz duyamıyor.",
+      "noEngineAsk": "Şimdilik sesli mesajlar ses olarak gidiyor, yani ajanlar onları duyamıyor. Sesi metne dönüştüreni bu sunucuyu yöneten kişi bu sayfada seçer.",
+      "noEngineHere": "Aşağıda sesi metne dönüştüreni seçene kadar sesli mesajlar ses olarak gider.",
       "engineTitle": "Sesi metne dönüştüren",
       "own": "Kendi sunucunuz",
       "ownHelp": "Makinenizdeki Whisper veya Parakeet. Ses orada kalır.",
@@ -11640,10 +11650,55 @@
       "key": "{{name}} anahtarı",
       "keyPlaceholder": "Buraya yapıştırın",
       "test": "Test et",
-      "tested": "Çalışıyor. Artık herkes mikrofonu görüyor.",
+      "tested": "Çalışıyor. Sesli mesajlar artık ajanlara metin olarak ulaşıyor.",
       "sealed": "Sunucunuzda şifreli olarak saklanır ve bir daha gösterilmez.",
       "leaves": "Sesli mesajların sesi metne dönüşmek için {{name}} hizmetine gider.",
       "invalid": "Kayıtlı anahtar bu sunucuda açılmıyor. Tekrar yapıştırın."
+    },
+    "local": {
+      "titleHere": "Bu bilgisayarda",
+      "titleServer": "Bu sunucuda",
+      "titlePhone": "Sunucunun bilgisayarında",
+      "textHere": "Parakeet, {{size}} indirme. Ses bu bilgisayarda kalır. 25 Avrupa dili.",
+      "textServer": "Parakeet, {{size}} indirme. Ses bu sunucuda kalır. 25 Avrupa dili.",
+      "download": "İndir ve aç",
+      "downloading": "Ses modeli indiriliyor",
+      "progress": "{{done}} / {{total}}",
+      "meanwhile": "Şimdiden kayıt yapabilirsiniz. Hazır olana kadar mesajlar ses olarak gider.",
+      "downloadingPhone": "Ses modeli sunucunun bilgisayarına indiriliyor. Şimdiden kayıt yapabilirsiniz.",
+      "starting": "Açılıyor…",
+      "licenses": "Model lisansları",
+      "tooSmall": "Bu bilgisayarda {{memory}} bellek var, ses modeli 8 GB istiyor. Aşağıdan bir sağlayıcı anahtarı kullanın.",
+      "noDisk": "Bu diskte {{free}} boş alan var, ses modeli {{need}} istiyor. Yer açın ya da aşağıdan bir sağlayıcı anahtarı kullanın.",
+      "noBuild": "Bu bilgisayar için henüz bir ses modeli yok. Aşağıdan bir sağlayıcı anahtarı kullanın.",
+      "stopped": "İndirme durdu: {{detail}}",
+      "diskFull": "İndirme sırasında disk doldu. Yer açıp yeniden deneyin.",
+      "didntStart": "Ses modeli başlamadı: {{detail}}",
+      "resume": "Devam et",
+      "copy": "Ayrıntıları kopyala",
+      "copied": "Ayrıntılar kopyalandı"
+    },
+    "offer": {
+      "title": "Sesli mesajlar",
+      "download": "{{size}} indir ve aç",
+      "choose": "Nasıl olacağını seç",
+      "askOwner": "Bu sunucuda sesi metne dönüştür",
+      "askMember": "Sesli mesajların açılmasını iste",
+      "on": "Sesli mesajlar açık: ajanlar onları metin olarak okur."
+    },
+    "setup": {
+      "memberTitle": "Ses burada henüz açık değil",
+      "memberText": "Mesajın herkesin dinleyebileceği bir ses olarak gider. {{name}} sesi metne dönüştüreni seçene kadar ajanlar onu duyamaz.",
+      "memberTextNoName": "Mesajın herkesin dinleyebileceği bir ses olarak gider. Bu sunucuyu yöneten kişi sesi metne dönüştüreni seçene kadar ajanlar onu duyamaz.",
+      "ask": "{{name}} kişisinden iste",
+      "asked": "{{name}} kişisinden açması istendi",
+      "recordAnyway": "Yine de kaydet",
+      "ownerTitle": "Sesi metne dönüştüreni seçin",
+      "ownerText": "Seçene kadar sesli mesajlar herkesin dinleyebileceği ses olarak gider ve ajanlar onları duyamaz.",
+      "readyTitle": "Sesli mesajlar açık",
+      "readyText": "Söyledikleriniz ajanlara metin olarak ulaşır.",
+      "record": "Mesaj kaydet",
+      "ownerPhone": "Bunu web'de ya da masaüstü uygulamasında Ayarlar › Ses bölümünden seçin. O zamana kadar sesli mesajlar herkesin dinleyebileceği ses olarak gider ve ajanlar onları duyamaz."
     }
   },
   "media": {
@@ -15199,6 +15254,9 @@
       "desktop_read": "Ekranı oku",
       "desktop_screenshot": "Ekran görüntüsü al",
       "desktop_ask_person": "Birinden bilgisayarı devralmasını iste",
+      "apps_list": "Açık uygulamaları gör",
+      "apps_read": "Bir uygulamayı oku",
+      "apps_act": "Bir uygulamayı kullan",
       "computer_use": "Bilgisayarı kullan",
       "computer_status": "Bilgisayarı kontrol et",
       "left_click": "Tıkla",
@@ -16289,6 +16347,7 @@
       "generalStays": "Herkes #general kanalında kalır.",
       "leadChannelOnly": "Yalnızca kanalların sorumlu ajanı olur.",
       "leadNotMember": "Sorumlu ajan kanalda olmalı.",
+      "groupNameInvalid": "Tek satırda, en fazla 80 karakterlik bir ad verin.",
       "mcpUnreachable": "MCP sunucusuna bağlanılamadı. Adresini kontrol edip tekrar deneyin.",
       "notApproved": "Bu hizmet henüz agentes.chat için onay vermedi.",
       "alreadyInvited": "Bu kişinin zaten bir daveti var.",
@@ -16744,13 +16803,13 @@
       "browser_download": "Ajanların tarayıcısı indirilemedi. Bu bilgisayarın bağlantısını kontrol edin, bir sonraki kullanımda yeniden denenir.",
       "browser_checksum": "Ajanların tarayıcısının indirmesi bozuk geldi, bu yüzden kullanılmadı. Bir sonraki kullanımda yeniden denenir.",
       "desktop_use_linux": "Ajanların ekranlarındaki uygulamalar, ajan ekranları olan Linux bilgisayarlarda çalışır.",
-      "desktop_use_own_user": "Ajanların ekranlarındaki uygulamalar için her ajanın bu bilgisayarda kendi kullanıcısıyla çalışması gerekir (sistem modu). Burada tüm ajanlar runner kullanıcısıyla çalışıyor.",
+      "desktop_use_own_user": "Ajanların ekranlarındaki uygulamalar için her ajanın bu bilgisayarda kendi kullanıcısıyla çalışması gerekir (sistem modu). Burada tüm ajanlar aynı kullanıcıyla, agentes.chat'i çalıştıran kullanıcıyla çalışıyor.",
       "desktop_use_install": "Ajanların ekranlarındaki uygulamaların ihtiyaç duyduklarını bu bilgisayara kurun:",
       "desktop_unavailable": "Ajanların ekranları bu bilgisayarda çalışamaz.",
       "desktop_linux": "Ajanların ekranları yalnızca Linux bilgisayarlarda çalışır.",
       "desktop_install": "Ajanların ekranlarını bu bilgisayara kurun:",
-      "not_as_root": "Ajanların ekranları ve terminalleri asla root olarak çalışmaz. Runner'ı normal bir kullanıcıyla çalıştırın.",
-      "runner_bun_old": "Bunun için runner'ın Bun 1.3.5 veya daha yeni sürümde çalışması gerekir. Bu bilgisayardaki runner'ı güncelleyin.",
+      "not_as_root": "Ajanların ekranları ve terminalleri asla root olarak çalışmaz. agentes.chat'i normal bir kullanıcıyla çalıştırın.",
+      "runner_bun_old": "Bunun için Bun 1.3.5 veya daha yenisinde çalışan agentes.chat gerekir. Bu bilgisayardaki agentes.chat'i güncelleyin.",
       "terminal_unsupported": "Terminaller yalnızca Linux ve Mac bilgisayarlarda çalışır."
     },
     "egress": {
@@ -16760,13 +16819,50 @@
       "hint": "Ajanlar gezinirken sitelerin gördüğü adres. Bilgisayarın ağı değişince güncellenir.",
       "waiting": "Ajanların internet bağlantısı yeniden kuruluyor. Bağlantıları geri gelene kadar bekler.",
       "via": "Ajanlar {{name}} bilgisayarının internetini kullanıyor",
-      "viaBy": "Ajanlar {{name}} ({{person}}) bilgisayarının internetini kullanıyor",
       "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir."
     },
-    "moving": {
-      "short": "Sunucu değiştiriyor",
-      "line": "Yeni bir sunucuya taşınıyor… birkaç dakika içinde döner",
-      "named": "{{computer}} yeni bir sunucuya taşınıyor… birkaç dakika içinde döner"
+    "maintenance": {
+      "short": {
+        "moving": "Sunucu değişiyor",
+        "restarting": "Yeniden başlıyor",
+        "updating": "Güncelleniyor",
+        "converting": "Disk iyileştiriliyor",
+        "host_maintenance": "Bakım",
+        "other": "Bakım"
+      },
+      "what": {
+        "moving": "Yeni bir sunucuya taşınıyor",
+        "copying": "Yeni bir sunucuya kopyalanıyor",
+        "restarting": "Yeniden başlıyor",
+        "updating": "Yazılımı güncelleniyor",
+        "converting": "Diski iyileştiriliyor",
+        "host_maintenance": "Sunucusu bakımda",
+        "other": "Üzerinde çalışılıyor"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "yaklaşık {{time}} içinde döner",
+      "backSoon": "birkaç dakika içinde döner",
+      "late": "beklenenden biraz uzun sürüyor",
+      "slower": "bu sırada daha yavaş olabilir",
+      "slowerFor": "yaklaşık {{time}} boyunca daha yavaş olabilir",
+      "why": {
+        "moving": "Onu yeni bir sunucuya taşıyoruz.",
+        "copying": "O çalışırken dosyalarını yeni bir sunucuya kopyalıyoruz.",
+        "handover": "Son değişikliklerini yeni sunucuya aktarıyoruz.",
+        "restarting": "Onu yeniden başlatıyoruz.",
+        "unresponsive": "Yanıt vermeyi bıraktı, bu yüzden otomatik olarak yeniden başlattık.",
+        "updating": "Yazılımını güncelliyoruz.",
+        "converting": "Diskini daha hızlı bir depolamaya taşıyoruz.",
+        "host_maintenance": "Çalıştığı sunucu bakımda.",
+        "other": "Üzerinde çalışıyoruz."
+      },
+      "since": "{{time}} itibarıyla",
+      "expectedBack": "Dönüşü yaklaşık {{time}} bekleniyor",
+      "expectedDone": "Bitişi yaklaşık {{time}} bekleniyor",
+      "meanwhile": "Ajanlarına gönderilen mesajlar bekler ve o dönünce kendiliğinden devam eder.",
+      "working": "Ajanları bu sırada çalışmaya devam eder.",
+      "about": "Neler oluyor"
     },
     "online": "Çevrimiçi",
     "offline": "Çevrimdışı",
@@ -16835,6 +16931,11 @@
     "removed": "{{name}} kaldırıldı.",
     "name": "Bilgisayar adı",
     "nameHelp": "Kişilerin ve ajanların göreceği ad.",
+    "defaultName": {
+      "model": "{{name}} adlı kişinin {{model}} cihazı",
+      "linux": "{{name}} adlı kişinin Linux bilgisayarı",
+      "other": "{{name}} adlı kişinin bilgisayarı"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16986,6 +17087,13 @@
       "grantTextTerminal": "İzin vermek bilgisayarın kendisinde, Terminal'inde yapılır:",
       "grantTextAdmin": "İzin vermek bilgisayarın kendisinde, Terminal'inde, yöneticisi olarak yapılır:",
       "grantTerminal": "Uygulama yok mu? Bilgisayarın terminalinde:",
+      "pickText": "agentes.chat uygulaması {{machine}} üzerinde bir klasör seçici açar, orada olan kişi seçer.",
+      "pick": "Bir klasöre izin ver",
+      "picked": "{{machine}} üzerinde bir klasör seçici açıldı. Klasörü orada seç.",
+      "pickWaiting": "{{machine}} üzerinde klasörün seçilmesi bekleniyor",
+      "grantTerminalMore": "Orada uygulama yok mu? Terminal'i kullan",
+      "noApp": "Bu bilgisayarda klasörü seçmek için agentes.chat uygulaması yok. İzni onun Terminal'inden ver.",
+      "requestDone": "Bu isteğe zaten yanıt verildi ya da süresi doldu.",
       "preferTerminal": "Terminal'i tercih ederim",
       "grantOnlyOwner": "Daha fazlasına yalnızca {{name}}, bilgisayarın kendisinden izin verebilir. Bir şeye ihtiyacınız varsa ona sorun.",
       "pathPlaceholder": "<klasör>",
@@ -17150,6 +17258,8 @@
       "paused": "{{host}} duraklatıldı, bu yüzden kontrol devam edene kadar bekler.",
       "held": "Bu çalışma alanı duraklatıldı, bu yüzden kontrol yeniden etkin olana kadar bekler.",
       "lost": "Kontrol sona erdi. {{name}} cihazını yeniden izliyorsunuz.",
+      "controlLate": "Kontrol zamanında başlamadı. {{host}} hâlâ {{name}} cihazını hazırlıyor: bir dakika sonra yeniden deneyin.",
+      "controlFailed": "{{name}} kontrol edilemedi. Yeniden deneyin ya da {{host}} üzerinde agentes.chat uygulamasını yeniden başlatın.",
       "typeLabel": "{{name}} üzerinde yaz"
     },
     "status": {
@@ -17171,7 +17281,7 @@
       "withHost": "{{host}} ile birlikte",
       "lastSeen": "son görülme: {{time}}",
       "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor",
-      "offlineStopped": "runner {{time}} saatinde durdu",
+      "offlineStopped": "agentes.chat {{time}} saatinde durdu",
       "offlineDropped": "bağlantı {{time}} saatinde koptu"
     },
     "line": {
@@ -17187,9 +17297,14 @@
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
       "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
-      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde `{{command}}` çalıştırın.",
-      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde `{{command}}` çalıştırın.",
-      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde `{{command}}` çalıştırın."
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, internet yok ya da aşırı yüklü olabilir. Açık ve internete bağlı olduğunu kontrol edin.",
+      "offlineStopped": "agentes.chat uygulaması bu bilgisayarda {{time}} saatinde durdu. Uygulamayı yeniden açın.",
+      "offlineStoppedCli": "agentes.chat bu bilgisayarda {{time}} saatinde durdu. Orada yeniden başlatın.",
+      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır."
+    },
+    "technical": {
+      "title": "Teknik ayrıntılar",
+      "doctor": "Nedenini görmek için bunu orada çalıştırın:"
     },
     "reason": {
       "locked": "Telefon kilitli",
@@ -17640,6 +17755,8 @@
       "toolRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{tool}} açmanızı istiyor",
       "cliRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınıza {{tool}} kurmanızı istiyor",
       "folderRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{path}} klasörünü istiyor",
+      "folderOnComputer": "Bilgisayarda izin ver",
+      "folderShown": "{{deviceName}} üzerinde açıldı. İzni orada ver.",
       "internetShared": "Ajanlar artık web sitelerini <b>{{deviceName}}</b> bilgisayarının internetiyle açıyor",
       "internetSharedLine": "Yalnızca bu çalışma alanının ajanları, yalnızca web siteleri, bilgisayarın kendi ağındaki hiçbir şeye asla erişmez. Çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
       "internetOff": "Kapat",
@@ -19390,6 +19507,7 @@
         "usingScreen": "Ekranı kullandı",
         "cloningRepo": "Bir depoyu klonladı",
         "listingRepos": "Depoları listeledi",
+        "updatingCode": "Kodu güncelledi",
         "preparingCli": "{{app}} hazırlandı",
         "openingPullRequest": "Bir pull request açtı",
         "handingOff": "Bir rapor teslim etti",
@@ -19514,6 +19632,7 @@
       "usingScreen": "ekranı kullanıyor",
       "cloningRepo": "depo klonluyor",
       "listingRepos": "depoları listeliyor",
+      "updatingCode": "kodu güncelliyor",
       "preparingCli": "{{app}} uygulamasını {{computer}} üzerinde hazırlıyor",
       "preparingCliPct": "{{app}} uygulamasını {{computer}} üzerinde hazırlıyor (%{{percent}})",
       "openingPullRequest": "pull request açıyor",
@@ -19711,6 +19830,7 @@
       "welcome_member": "{{org}} çalışma alanına az önce katıldın. **Burada nelerle ilgileniyorsun?** Bana anlat, ilk ajanını birlikte kuralım.",
       "welcome_member_agent": "{{org}} ekibine yeni katıldınız ve ilk ajanınız zaten ekipte. Bana ihtiyacınız olduğunda seslenmeniz yeterli.",
       "action_open_page": "Bir ekran aç",
+      "action_voice_setup": "Sesli mesajları aç",
       "calendar_proposal": "Etkinlik önerisi: {{title}}",
       "action_workspace": "Çalışma alanında bir değişiklik önerdi",
       "agent_proposal": "Yeni bir ajan önerdi: {{name}}",
@@ -20008,6 +20128,10 @@
     "offer_open_page": {
       "label": "Bir ekran açmayı öner",
       "description": "Düğmesi faturalandırma, roller veya bir ajanın sayfası gibi uygulamanın bir ekranını açan bir kart paylaşır."
+    },
+    "offer_voice_setup": {
+      "label": "Sesli mesajları açmayı öner",
+      "description": "Sunucuyu yöneten kişi için sesli mesajları tek tıkla açan bir kart paylaşır ya da bunu ondan ister."
     },
     "set_team_week": {
       "label": "Ekibin haftası kartını değiştir",
@@ -20576,7 +20700,7 @@
       "people": "Herkes artık yalnızca okuyabilir ve bir e-posta alır",
       "peopleQuiet": "Herkes artık yalnızca okuyabilir",
       "computer": "Bilgisayarı hemen durur ve silinir",
-      "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, çalıştırıcı kaldırılana kadar o bilgisayarlarda kalır.",
+      "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, agentes.chat kaldırılana kadar o bilgisayarlarda kalır.",
       "connectors": "Bağlayıcıların ve posta kutularının bağlantısı kesilir"
     },
     "undo": "Herhangi bir sahip onu {{date}}, saat {{time}} öncesine kadar geri yükleyebilir. Ondan sonra geri alınamaz.",
@@ -20895,13 +21019,6 @@
       "doneBy": "{{time}} saatinde {{name}} tarafından yapıldı. {{agent}} ekrana yeniden baktı ve devam etti.",
       "doneByYou": "{{time}} saatinde sizin tarafınızdan yapıldı. {{agent}} ekrana yeniden baktı ve devam etti."
     },
-    "control": {
-      "notice": "{{name}} bilgisayarındaki programlar ekranı ve yazdığınız ya da yapıştırdığınız şeyleri görebilir."
-    },
-    "session": {
-      "check": "Güvenlik kontrolleri",
-      "screening": "Kötüye kullanıma karşı bu ekrandaki metni kontrol edebiliriz. Yalnızca sonucu saklarız. Ekranın göstermediği şeyler, örneğin bir istemdeki şifre, asla kaydedilmez."
-    },
     "after": {
       "titleNoSite": "Ekranı kullandı",
       "noSite": "Bir uygulama açmadan önce"
@@ -20910,7 +21027,6 @@
       "group": "{{name}} ekranı"
     },
     "watch": {
-      "notice": "{{name}} bilgisayarındaki programlar ekranı ve orada yazılan ya da yapıştırılan her şeyi görebilir.",
       "step": {
         "desktop_open": "{{detail}} açtı",
         "desktop_open_plain": "Bir uygulama açtı",
@@ -20934,14 +21050,13 @@
       }
     },
     "use": {
-      "title": "Ajanların ekranlarındaki uygulamalar",
-      "description": "Ajanlar burada kendi ekranlarında uygulamaları bir insan gibi açıp kullanır, kişiler de her ajanın sayfasından izler.",
+      "title": "Her ajanın kendi ekranı",
+      "description": "Burada her ajanın seninkinden ayrı, kendine ait bir ekranı olur ve bu ekranda tarayıcı ya da tablo gibi pencereli uygulamaları bir insanın yapacağı gibi kullanır. Ajanın sayfasından izlersin. Şimdilik yalnızca Linux'ta: Linux seninkine dokunmadan her ajan için ek bir ekran açabilir.",
       "ready": "Hazır",
       "off": "Kapalı",
-      "unavailable": "Kullanılamıyor",
+      "unavailable": "Hazırlanması gerekiyor",
       "offHelp": "Bu bilgisayarda ekranları ve komutları açın:",
       "offOne": "Bu bilgisayarda ekran ve komutların ikisi de açık olmalı.",
-      "linuxOnly": "Ajanlar kendi ekranlarında uygulamaları yalnızca Linux bilgisayarlarda kullanır.",
       "agent": "{{name}}, {{computer}} üzerinde kendi ekranındaki uygulamaları henüz kullanamıyor.",
       "agent_female": "{{name}}, {{computer}} üzerinde kendi ekranındaki uygulamaları henüz kullanamıyor."
     },

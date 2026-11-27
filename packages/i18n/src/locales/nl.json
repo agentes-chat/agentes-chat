@@ -2981,6 +2981,7 @@
     "details": "Kanaaldetails",
     "composerLabel": "Bericht aan #{{channel}}",
     "composerDm": "Bericht aan {{name}}",
+    "groupYou": "Jij",
     "composerPlaceholder": "Bericht aan #{{channel}} · gebruik @ om een agent te roepen",
     "send": "Versturen",
     "attach": "Bestand bijvoegen",
@@ -3001,6 +3002,7 @@
     "sendFailed": "Het bericht is niet verstuurd. Probeer het opnieuw.",
     "reconnecting": "Opnieuw verbinden met realtime…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Mensen of agents zoeken",
     "detailsEmpty": "Niemand gevonden voor “{{q}}”.",
     "topicLabel": "Kanaalbeschrijving",
@@ -3012,9 +3014,11 @@
     "replyInChannel": "Agents antwoorden in het kanaal",
     "replyInThreadsHelp": "Een agent die in het kanaal wordt aangeroepen, antwoordt in de thread onder dat bericht, en het kanaal toont er één regel voor. Werk dat al loopt, blijft waar het is.",
     "nameTaken": "Er is al een #{{name}}.",
+    "nameTakenPersonal": "Er is al een groepsgesprek met de naam ‘{{name}}’.",
     "generalName": "#general houdt zijn naam.",
     "archive": "Kanaal archiveren",
     "archived": "#{{channel}} gearchiveerd. Het gesprek blijft bewaard.",
+    "archivedPersonal": "‘{{channel}}’ gearchiveerd. Het gesprek blijft bewaard.",
     "archivedTitle": "Gearchiveerde kanalen",
     "archivedCount_one": "{{count}} gearchiveerd kanaal",
     "archivedCount_other": "{{count}} gearchiveerde kanalen",
@@ -3023,6 +3027,7 @@
     "restore": "Terugzetten",
     "restoreName": "#{{channel}} terugzetten",
     "restored": "#{{channel}} is terug.",
+    "restoredPersonal": "‘{{channel}}’ is terug.",
     "leave": "Kanaal verlaten",
     "left": "Je hebt #{{channel}} verlaten",
     "leaveTitle": "#{{channel}} verlaten?",
@@ -4440,8 +4445,9 @@
     "namePlaceholderPersonal": "bijv. reis",
     "nameHelp": "Kleine letters, cijfers en koppeltekens. Wordt getoond als #{{name}}.",
     "nameInvalid": "Gebruik kleine letters, cijfers en koppeltekens, beginnend met een letter of cijfer.",
+    "nameInvalidPersonal": "Geef het een naam van maximaal 80 tekens, op één regel.",
     "nameTaken": "Er is al een kanaal #{{name}}.",
-    "nameTakenPersonal": "Er is al een groepsgesprek met de naam #{{name}}.",
+    "nameTakenPersonal": "Er is al een groepsgesprek met de naam ‘{{name}}’.",
     "topic": "Beschrijving",
     "topicPlaceholder": "Waar het hier over gaat",
     "visibility": "Wie mag meedoen",
@@ -4471,7 +4477,8 @@
     "membersEmpty": "Niemand gevonden voor „{{q}}”.",
     "selected_one": "{{count}} geselecteerd",
     "selected_other": "{{count}} geselecteerd",
-    "create": "#{{name}} maken"
+    "create": "#{{name}} maken",
+    "createPersonal": "Gesprek maken"
   },
   "channelCategories": {
     "undo": "Ongedaan maken",
@@ -4487,6 +4494,7 @@
     "invitePersonal": "{{email}} uitnodigen voor je werkruimte en #{{channel}}",
     "inviteOrgPersonal": "{{email}} uitnodigen voor je werkruimte",
     "addTitle": "Toevoegen aan #{{channel}}",
+    "addTitlePersonal": "Toevoegen aan {{channel}}",
     "addSearch": "Mensen of agents zoeken",
     "addEmpty": "Niemand buiten het kanaal past bij “{{q}}”.",
     "addEveryone": "Iedereen in {{org}} zit al in #{{channel}}.",
@@ -4495,6 +4503,7 @@
     "actions": "Opties voor {{name}}",
     "remove": "Uit kanaal verwijderen",
     "removeTitle": "{{name}} uit #{{channel}} verwijderen?",
+    "removeTitlePersonal": "{{name}} uit {{channel}} verwijderen?",
     "removePersonBody": "Diegene ziet het kanaal en de berichten dan niet meer. Je kunt diegene later weer toevoegen.",
     "removeAgentBody": "Hij leest en antwoordt dan niet meer in dit kanaal. Je kunt hem later weer toevoegen.",
     "removeAgentBody_female": "Zij leest en antwoordt dan niet meer in dit kanaal. Je kunt haar later weer toevoegen.",
@@ -5711,6 +5720,7 @@
       "adminAskChannel": "<b>{{name}}</b> vraagt je <b>{{agent}}</b> toe te voegen aan #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> vraagt om agents te mogen maken",
       "adminAskWebhook": "<b>{{name}}</b> vraagt je de {{service}}-webhook voor routines in te stellen",
+      "adminAskVoice": "<b>{{name}}</b> vraagt je spraakberichten aan te zetten",
       "invitationAccepted": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd en doet mee in {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd",
       "reaction_one": "<b>{{names}}</b> heeft op je bericht gereageerd",
@@ -10002,8 +10012,7 @@
       "machine_access_requested": "{{agent}} vroeg om de map {{folder}} op {{computer}}. Wacht daar op antwoord.",
       "machine_access_granted": "Toegestaan: {{agent}} kan nu {{folder}} gebruiken op {{computer}}",
       "machine_access_denied": "Geweigerd: {{agent}} gebruikt {{folder}} niet op {{computer}}",
-      "machine_access_expired": "De aanvraag voor de map {{folder}} op {{computer}} kreeg geen antwoord",
-      "access_command": "Geen app op de computer? Voer dit uit in de Terminal:"
+      "machine_access_expired": "De aanvraag voor de map {{folder}} op {{computer}} kreeg geen antwoord"
     },
     "suggestion": {
       "pending": "Suggestie voor de missie",
@@ -11736,6 +11745,7 @@
     "silent": "Niets gehoord. Er is niets verstuurd.",
     "notSent": "Kon de audio niet versturen.",
     "limit": "De audiolimiet van vandaag is op. Typ hier, of probeer het morgen opnieuw.",
+    "plan": "Spraakberichten horen bij een agentes.chat-abonnement. Typen kan hier gewoon.",
     "micBlocked": "De microfoon is geblokkeerd",
     "micBlockedHint": "Sta de microfoon toe in de instellingen van je apparaat om op te nemen.",
     "openSettings": "Instellingen openen",
@@ -11770,9 +11780,9 @@
       "title": "Spraakberichten",
       "on": "Spraakberichten",
       "onHelp": "Mensen in deze werkruimte kunnen audio sturen in gesprekken.",
-      "noEngine": "Spraakberichten zijn hier nog niet beschikbaar.",
-      "noEngineAsk": "Spraakberichten staan nog niet aan. Wie deze server beheert, zet ze aan op deze pagina.",
-      "noEngineHere": "Spraakberichten gaan aan zodra je hieronder kiest wat spraak omzet in tekst.",
+      "noEngine": "Spraakberichten gaan voorlopig als audio, dus agents horen ze nog niet.",
+      "noEngineAsk": "Spraakberichten gaan voorlopig als audio, dus agents horen ze niet. Wie deze server beheert, kiest op deze pagina wat spraak omzet in tekst.",
+      "noEngineHere": "Spraakberichten gaan als audio tot je hieronder kiest wat spraak omzet in tekst.",
       "engineTitle": "Wat spraak omzet in tekst",
       "own": "Je eigen server",
       "ownHelp": "Whisper of Parakeet op je eigen machine. De audio blijft daar.",
@@ -11780,10 +11790,55 @@
       "key": "{{name}}-sleutel",
       "keyPlaceholder": "Hier plakken",
       "test": "Testen",
-      "tested": "Het werkt. Iedereen ziet nu de microfoon.",
+      "tested": "Het werkt. Spraakberichten komen nu als tekst bij de agents.",
       "sealed": "Versleuteld bewaard op je server en nooit meer getoond.",
       "leaves": "Audio van spraakberichten gaat naar {{name}} om tekst te worden.",
       "invalid": "De opgeslagen sleutel opent niet op deze server. Plak hem opnieuw."
+    },
+    "local": {
+      "titleHere": "Op deze computer",
+      "titleServer": "Op deze server",
+      "titlePhone": "Op de computer van de server",
+      "textHere": "Parakeet, een download van {{size}}. Spraak blijft op deze computer. 25 Europese talen.",
+      "textServer": "Parakeet, een download van {{size}}. Spraak blijft op deze server. 25 Europese talen.",
+      "download": "Downloaden en aanzetten",
+      "downloading": "Het spraakmodel wordt gedownload",
+      "progress": "{{done}} van {{total}}",
+      "meanwhile": "Je kunt al opnemen. Berichten gaan als audio tot het klaar is.",
+      "downloadingPhone": "Het spraakmodel wordt naar de computer van de server gedownload. Je kunt al opnemen.",
+      "starting": "Wordt aangezet…",
+      "licenses": "Licenties van de modellen",
+      "tooSmall": "Deze computer heeft {{memory}} geheugen en het spraakmodel heeft 8 GB nodig. Gebruik hieronder de sleutel van een aanbieder.",
+      "noDisk": "{{free}} vrij op deze schijf en het spraakmodel heeft {{need}} nodig. Maak ruimte vrij of gebruik hieronder de sleutel van een aanbieder.",
+      "noBuild": "Er is nog geen spraakmodel voor deze computer. Gebruik hieronder de sleutel van een aanbieder.",
+      "stopped": "De download is gestopt: {{detail}}",
+      "diskFull": "De schijf liep vol tijdens de download. Maak ruimte vrij en probeer het opnieuw.",
+      "didntStart": "Het spraakmodel is niet gestart: {{detail}}",
+      "resume": "Hervatten",
+      "copy": "Details kopiëren",
+      "copied": "Details gekopieerd"
+    },
+    "offer": {
+      "title": "Spraakberichten",
+      "download": "{{size}} downloaden en aanzetten",
+      "choose": "Kiezen hoe",
+      "askOwner": "Spraak omzetten in tekst op deze server",
+      "askMember": "Vragen om spraakberichten aan te zetten",
+      "on": "Spraakberichten staan aan: agents lezen ze als tekst."
+    },
+    "setup": {
+      "memberTitle": "Spraak staat hier nog niet aan",
+      "memberText": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als {{name}} kiest wat spraak omzet in tekst.",
+      "memberTextNoName": "Je bericht gaat als audio die iedereen kan afspelen. Agents horen het pas als wie deze server beheert kiest wat spraak omzet in tekst.",
+      "ask": "Vraag het {{name}}",
+      "asked": "{{name}} is gevraagd het aan te zetten",
+      "recordAnyway": "Toch opnemen",
+      "ownerTitle": "Kies wat spraak omzet in tekst",
+      "ownerText": "Tot dan gaan spraakberichten als audio die iedereen kan afspelen, en horen agents ze niet.",
+      "readyTitle": "Spraakberichten staan aan",
+      "readyText": "Wat je zegt komt als tekst bij de agents.",
+      "record": "Bericht opnemen",
+      "ownerPhone": "Kies het in Instellingen › Spraak op het web of in de desktop-app. Tot dan gaan spraakberichten als audio die iedereen kan afspelen, en horen agents ze niet."
     }
   },
   "media": {
@@ -15343,6 +15398,9 @@
       "desktop_read": "Scherm lezen",
       "desktop_screenshot": "Screenshot maken",
       "desktop_ask_person": "Vragen of iemand de computer overneemt",
+      "apps_list": "Geopende apps bekijken",
+      "apps_read": "Een app lezen",
+      "apps_act": "Een app gebruiken",
       "computer_use": "Computer gebruiken",
       "computer_status": "Computer controleren",
       "left_click": "Klikken",
@@ -16433,6 +16491,7 @@
       "generalStays": "Iedereen blijft in #general.",
       "leadChannelOnly": "Alleen kanalen hebben een verantwoordelijke agent.",
       "leadNotMember": "De verantwoordelijke agent moet in het kanaal zitten.",
+      "groupNameInvalid": "Geef het een naam van maximaal 80 tekens, op één regel.",
       "mcpUnreachable": "Kon geen verbinding maken met de MCP-server. Controleer het adres en probeer het opnieuw.",
       "notApproved": "Deze dienst heeft agentes.chat nog niet goedgekeurd.",
       "alreadyInvited": "Deze persoon heeft al een uitnodiging.",
@@ -16888,13 +16947,13 @@
       "browser_download": "De browser van de agents kon niet worden gedownload. Controleer de verbinding van deze computer, dan probeert hij het bij het volgende gebruik opnieuw.",
       "browser_checksum": "De download van de browser van de agents kwam beschadigd binnen en is niet gebruikt. Hij probeert het bij het volgende gebruik opnieuw.",
       "desktop_use_linux": "Apps op de schermen van de agents werken op Linux-computers met de schermen van de agents.",
-      "desktop_use_own_user": "Apps op de schermen hebben voor elke agent een eigen gebruiker op deze computer nodig (systeemmodus). Hier werken alle agents als de gebruiker van de runner.",
+      "desktop_use_own_user": "Apps op de schermen hebben voor elke agent een eigen gebruiker op deze computer nodig (systeemmodus). Hier werken alle agents als dezelfde gebruiker, die waarmee agentes.chat draait.",
       "desktop_use_install": "Installeer op deze computer wat apps op de schermen nodig hebben:",
       "desktop_unavailable": "De schermen van de agents kunnen niet op deze computer draaien.",
       "desktop_linux": "De schermen van de agents draaien alleen op Linux-computers.",
       "desktop_install": "Installeer op deze computer de schermen van de agents:",
-      "not_as_root": "De schermen en terminals van de agents draaien nooit als root. Start de runner als een gewone gebruiker.",
-      "runner_bun_old": "Hiervoor is de runner op Bun 1.3.5 of nieuwer nodig. Werk de runner op deze computer bij.",
+      "not_as_root": "De schermen en terminals van de agents draaien nooit als root. Start agentes.chat als gewone gebruiker.",
+      "runner_bun_old": "Hiervoor is agentes.chat op Bun 1.3.5 of nieuwer nodig. Werk agentes.chat op deze computer bij.",
       "terminal_unsupported": "Terminals werken alleen op Linux- en Mac-computers."
     },
     "egress": {
@@ -16904,13 +16963,50 @@
       "hint": "Het adres dat websites zien als de agents browsen. Het verandert mee met het netwerk van de computer.",
       "waiting": "Het internet van de agents wordt opnieuw verbonden. Hun verbindingen wachten tot het terug is.",
       "via": "Agents gebruiken het internet van {{name}}",
-      "viaBy": "Agents gebruiken het internet van {{name}} ({{person}})",
       "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten."
     },
-    "moving": {
-      "short": "Verhuist van server",
-      "line": "Verhuist naar een nieuwe server… over een paar minuten terug",
-      "named": "{{computer}} verhuist naar een nieuwe server… over een paar minuten terug"
+    "maintenance": {
+      "short": {
+        "moving": "Verhuist van server",
+        "restarting": "Herstart",
+        "updating": "Wordt bijgewerkt",
+        "converting": "Schijf wordt verbeterd",
+        "host_maintenance": "Onderhoud",
+        "other": "Onderhoud"
+      },
+      "what": {
+        "moving": "Verhuist naar een nieuwe server",
+        "copying": "Wordt naar een nieuwe server gekopieerd",
+        "restarting": "Herstart",
+        "updating": "Software wordt bijgewerkt",
+        "converting": "Schijf wordt verbeterd",
+        "host_maintenance": "Zijn server is in onderhoud",
+        "other": "Er wordt aan gewerkt"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "over ongeveer {{time}} terug",
+      "backSoon": "over een paar minuten terug",
+      "late": "duurt iets langer dan verwacht",
+      "slower": "kan intussen trager zijn",
+      "slowerFor": "kan ongeveer {{time}} trager zijn",
+      "why": {
+        "moving": "We verhuizen hem naar een nieuwe server.",
+        "copying": "We kopiëren zijn bestanden naar een nieuwe server terwijl hij werkt.",
+        "handover": "We zetten zijn laatste wijzigingen over naar de nieuwe server.",
+        "restarting": "We herstarten hem.",
+        "unresponsive": "Hij reageerde niet meer, dus we hebben hem automatisch herstart.",
+        "updating": "We werken zijn software bij.",
+        "converting": "We zetten zijn schijf over naar snellere opslag.",
+        "host_maintenance": "De server waarop hij draait krijgt onderhoud.",
+        "other": "We werken aan hem."
+      },
+      "since": "Sinds {{time}}",
+      "expectedBack": "Rond {{time}} terug verwacht",
+      "expectedDone": "Rond {{time}} klaar verwacht",
+      "meanwhile": "Berichten aan zijn agents wachten en gaan vanzelf verder als hij terug is.",
+      "working": "Zijn agents blijven intussen werken.",
+      "about": "Wat er gebeurt"
     },
     "online": "Online",
     "offline": "Offline",
@@ -16979,6 +17075,11 @@
     "removed": "{{name}} is verwijderd.",
     "name": "Naam van de computer",
     "nameHelp": "Zo zien mensen en agents hem.",
+    "defaultName": {
+      "model": "{{model}} van {{name}}",
+      "linux": "Linux-computer van {{name}}",
+      "other": "Computer van {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -17130,6 +17231,13 @@
       "grantTextTerminal": "Toestaan gebeurt op de computer zelf, in de Terminal:",
       "grantTextAdmin": "Toestaan gebeurt op de computer zelf, in de Terminal, als beheerder van die computer:",
       "grantTerminal": "Geen app? In de terminal van de computer:",
+      "pickText": "De agentes.chat-app opent een mapkiezer op {{machine}}, zodat wie daar is kiest.",
+      "pick": "Een map toestaan",
+      "picked": "Op {{machine}} is een mapkiezer geopend. Kies daar de map.",
+      "pickWaiting": "Wachten tot er op {{machine}} een map is gekozen",
+      "grantTerminalMore": "Geen app daar? Gebruik de Terminal",
+      "noApp": "Deze computer heeft geen agentes.chat-app om de map te kiezen. Sta hem toe via de Terminal ervan.",
+      "requestDone": "Dit verzoek is al beantwoord of verlopen.",
       "preferTerminal": "Liever in de Terminal",
       "grantOnlyOwner": "Alleen {{name}} kan meer toestaan, op de computer zelf. Heb je iets nodig, vraag het dan aan die persoon.",
       "pathPlaceholder": "<map>",
@@ -17294,6 +17402,8 @@
       "paused": "{{host}} is gepauzeerd, dus de controle wacht tot het verdergaat.",
       "held": "Deze werkruimte is gepauzeerd, dus de bediening wacht tot hij weer actief is.",
       "lost": "De controle is voorbij. Je kijkt weer mee met {{name}}.",
+      "controlLate": "De bediening is niet op tijd begonnen. {{host}} maakt {{name}} nog klaar: probeer het over een minuut opnieuw.",
+      "controlFailed": "Kon {{name}} niet overnemen. Probeer het opnieuw, of start de agentes.chat-app op {{host}} opnieuw.",
       "typeLabel": "Typen op {{name}}"
     },
     "status": {
@@ -17315,7 +17425,7 @@
       "withHost": "met {{host}}",
       "lastSeen": "laatst gezien {{time}}",
       "offlineUnresponsive": "reageert niet meer sinds {{time}}",
-      "offlineStopped": "runner gestopt om {{time}}",
+      "offlineStopped": "agentes.chat gestopt om {{time}}",
       "offlineDropped": "verbinding verbroken om {{time}}"
     },
     "line": {
@@ -17331,9 +17441,14 @@
       "offline": "Agents wachten tot het terug is.",
       "offlineSeen": "Laatst gezien {{time}}. Agents wachten tot het terug is.",
       "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is.",
-      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen netwerk of overbelast. Voer daar `{{command}}` uit.",
-      "offlineStopped": "De runner stopte om {{time}}. Start hem opnieuw, of voer daar `{{command}}` uit om te zien waarom.",
-      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding. Zo niet, voer daar `{{command}}` uit."
+      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen internet of overbelast. Kijk of hij aan staat en online is.",
+      "offlineStopped": "De agentes.chat-app is om {{time}} op deze computer gestopt. Open de app opnieuw.",
+      "offlineStoppedCli": "agentes.chat is om {{time}} op deze computer gestopt. Start het daar opnieuw.",
+      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding."
+    },
+    "technical": {
+      "title": "Technische details",
+      "doctor": "Voer dit daar uit om te zien waarom:"
     },
     "reason": {
       "locked": "De telefoon is vergrendeld",
@@ -17784,6 +17899,8 @@
       "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vraagt je om de map {{path}} op je <b>{{deviceName}}</b>",
+      "folderOnComputer": "Toestaan op de computer",
+      "folderShown": "Geopend op {{deviceName}}. Sta het daar toe.",
       "internetShared": "Agents openen websites nu via het internet van <b>{{deviceName}}</b>",
       "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
       "internetOff": "Uitzetten",
@@ -19546,6 +19663,7 @@
         "usingScreen": "Het scherm gebruikt",
         "cloningRepo": "Een repository gekloond",
         "listingRepos": "Heeft de repository's weergegeven",
+        "updatingCode": "Heeft de code bijgewerkt",
         "preparingCli": "{{app}} klaargezet",
         "openingPullRequest": "Een pull request geopend",
         "handingOff": "Een rapport geleverd",
@@ -19670,6 +19788,7 @@
       "usingScreen": "het scherm aan het gebruiken",
       "cloningRepo": "een repository aan het klonen",
       "listingRepos": "geeft de repository's weer",
+      "updatingCode": "werkt de code bij",
       "preparingCli": "{{app}} aan het klaarzetten op {{computer}}",
       "preparingCliPct": "{{app}} aan het klaarzetten op {{computer}} ({{percent}}%)",
       "openingPullRequest": "een pull request aan het openen",
@@ -19868,6 +19987,7 @@
       "welcome_member": "Je bent net bij {{org}} gekomen. **Waar houd je je hier mee bezig?** Vertel het me en ik stel samen met jou je eerste agent in.",
       "welcome_member_agent": "Je bent net bij {{org}} gekomen, en je eerste agent zit al in het team. Als je me nodig hebt, roep me gewoon.",
       "action_open_page": "Een scherm openen",
+      "action_voice_setup": "Spraakberichten aanzetten",
       "calendar_proposal": "Voorstel voor een afspraak: {{title}}",
       "action_workspace": "Stelde een wijziging in de werkruimte voor",
       "agent_proposal": "Nieuwe agent voorgesteld: {{name}}",
@@ -20165,6 +20285,10 @@
     "offer_open_page": {
       "label": "Aanbieden een scherm te openen",
       "description": "Plaatst een kaart met een knop die een scherm van de app opent, zoals facturering, rollen of de pagina van een agent."
+    },
+    "offer_voice_setup": {
+      "label": "Aanbieden om spraakberichten aan te zetten",
+      "description": "Plaatst een kaart die spraakberichten met één klik aanzet voor wie de server beheert, of het die persoon vraagt."
     },
     "set_team_week": {
       "label": "De kaart Teamweek wijzigen",
@@ -20780,7 +20904,7 @@
       "people": "Iedereen kan hem vanaf nu alleen nog lezen en krijgt een e-mail",
       "peopleQuiet": "Iedereen kan hem vanaf nu alleen nog lezen",
       "computer": "De computer stopt nu en wordt gewist",
-      "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot de runner verwijderd wordt.",
+      "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot agentes.chat ervan verwijderd wordt.",
       "connectors": "Connectors en mailboxen worden ontkoppeld"
     },
     "undo": "Elke eigenaar kan hem herstellen tot {{date}} om {{time}}. Daarna kan het niet meer ongedaan gemaakt worden.",
@@ -21144,14 +21268,6 @@
       "doneByYou": "Gedaan door jou om {{time}}. {{agent}} keek opnieuw naar het scherm en ging verder.",
       "doneByYou_female": "Gedaan door jou om {{time}}. {{agent}} keek opnieuw naar het scherm en ging verder."
     },
-    "control": {
-      "notice": "Programma's op de computer van {{name}} kunnen het scherm zien en wat je typt of plakt.",
-      "notice_female": "Programma's op de computer van {{name}} kunnen het scherm zien en wat je typt of plakt."
-    },
-    "session": {
-      "check": "Veiligheidscontroles",
-      "screening": "We kunnen de tekst op dit scherm controleren op misbruik. We bewaren alleen het resultaat. Wat het scherm niet toont, zoals een wachtwoord bij een prompt, wordt nooit vastgelegd."
-    },
     "after": {
       "titleNoSite": "Het scherm gebruikt",
       "noSite": "Voordat er een app geopend werd"
@@ -21161,8 +21277,6 @@
       "group_female": "Scherm van {{name}}"
     },
     "watch": {
-      "notice": "Programma's op de computer van {{name}} kunnen het scherm zien en alles wat daar getypt of geplakt wordt.",
-      "notice_female": "Programma's op de computer van {{name}} kunnen het scherm zien en alles wat daar getypt of geplakt wordt.",
       "step": {
         "desktop_open": "{{detail}} geopend",
         "desktop_open_plain": "Een app geopend",
@@ -21186,14 +21300,13 @@
       }
     },
     "use": {
-      "title": "Apps op de schermen van de agents",
-      "description": "Agents openen en gebruiken hier apps op hun eigen scherm, zoals een mens dat zou doen, terwijl mensen meekijken vanaf de pagina van elke agent.",
+      "title": "Een eigen scherm voor elke agent",
+      "description": "Hier krijgt elke agent een eigen scherm, los van het jouwe, en gebruikt daarop apps met vensters, zoals een browser of een spreadsheet, zoals een mens dat zou doen. Je kijkt mee vanaf de pagina van de agent. Voorlopig alleen op Linux: dat kan voor elke agent een extra scherm openen zonder aan het jouwe te komen.",
       "ready": "Klaar",
       "off": "Uit",
-      "unavailable": "Niet beschikbaar",
+      "unavailable": "Moet nog ingesteld worden",
       "offHelp": "Zet de schermen en opdrachten op deze computer aan:",
       "offOne": "Deze computer heeft het scherm en de commando's aan nodig.",
-      "linuxOnly": "Agents gebruiken apps op hun eigen scherm alleen op Linux-computers.",
       "agent": "{{name}} kan nog geen apps op zijn scherm gebruiken op {{computer}}.",
       "agent_female": "{{name}} kan nog geen apps op haar scherm gebruiken op {{computer}}."
     },

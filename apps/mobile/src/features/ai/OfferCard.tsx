@@ -3,13 +3,17 @@ import {
   type Message,
   useAgents,
   useAllInvitations,
+  useAskAdmins,
   useCalendarProposal,
   useCatalog,
   useChannels,
   useConnections,
   useCustomServers,
+  useInstallSpeechLocal,
   useMembers,
+  useSettings,
   useSkills,
+  useSpeechLocal,
 } from "@agenteschat/client";
 import {
   actionCardOf,
@@ -23,6 +27,7 @@ import { APP_PAGES, appPagePath } from "@agenteschat/client/lib/app-pages";
 import { slotText } from "@agenteschat/client/lib/calendar";
 import { connectedItems, personalServesAgents } from "@agenteschat/client/lib/connected";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { formatBytes } from "@agenteschat/client/lib/files";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { hostOf } from "@agenteschat/client/lib/import/shared";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -64,6 +69,7 @@ export function OfferCard({ message: m }: { message: Message }) {
     );
   if (card.kind === "member_changes") return <OfferPeople card={card} message={m} />;
   if (card.kind === "open_page") return <OpenScreen card={card} />;
+  if (card.kind === "voice_setup") return <VoiceSetupOffer card={card} />;
   if (card.kind === "person_limit") return <PersonLimitNote card={card} />;
   if (card.kind === "calendar_proposal") return <CalendarProposalOffer message={m} card={card} />;
   return null;
@@ -183,6 +189,60 @@ function UpdateSkills({ card, postedAt }: { card: Extract<Card, { kind: "update_
       action={can(org, "manage_agents") ? t("actionCard.update_skills.review") : null}
       onAction={() => router.push(`/settings/skills/${next?.id ?? ""}` as never)}
       blocked={t("actionCard.update_skills.adminOnly")}
+    />
+  );
+}
+
+/**
+ * The web's `VoiceSetupCardView`: the server's owner downloads the speech model to the server's computer in one tap
+ * when it fits there (anything else: Settings › Voice on a computer), anyone else asks the owner.
+ */
+function VoiceSetupOffer({ card }: { card: Extract<Card, { kind: "voice_setup" }> }) {
+  const { t, i18n } = useTranslation();
+  const { orgId } = useOrg();
+  const toast = useToast();
+  const me = useMeId();
+  const settings = useSettings(orgId).data;
+  const owner = settings?.speechOwner ?? null;
+  const isOwner = owner !== null && owner.userId === me;
+  const local = useSpeechLocal(isOwner).data;
+  const install = useInstallSpeechLocal();
+  const ask = useAskAdmins(orgId);
+  const fits = local?.fit === "fits" && local.status.state === "off";
+  const installing = settings?.speechState === "installing";
+  const fail = (e: unknown) => toast({ title: errorText(t, e), icon: "x" });
+  return (
+    <OfferShell
+      icon="mic"
+      title={t("voice.offer.title")}
+      why={card.why}
+      done={settings?.speechState === "ready" ? t("voice.offer.on") : null}
+      action={
+        installing
+          ? null
+          : isOwner && fits
+            ? t("voice.offer.download", { size: formatBytes(i18n.language, local.sizeBytes) })
+            : !isOwner && owner
+              ? t("voice.setup.ask", { name: owner.name })
+              : null
+      }
+      onAction={() =>
+        isOwner
+          ? install.mutate(undefined, {
+              onSuccess: () => toast({ title: t("voice.local.downloadingPhone"), icon: "check" }),
+              onError: fail,
+            })
+          : ask.mutate(
+              { what: "voice" },
+              {
+                onSuccess: () => toast({ title: t("voice.setup.asked", { name: owner?.name ?? "" }), icon: "check" }),
+                onError: fail,
+              },
+            )
+      }
+      blocked={t(
+        installing ? "voice.local.downloading" : isOwner ? "voice.setup.ownerPhone" : "voice.setup.memberTextNoName",
+      )}
     />
   );
 }

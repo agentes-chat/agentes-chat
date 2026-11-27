@@ -327,6 +327,8 @@ export class McpBridge {
   private readonly lists = new Map<string, { run: string; at: number; reply: IpcReply }>();
   /** The list each agent's brain run got last (`McpTaskInfo.agentId`), most recent last. */
   private readonly agentLists = new Map<string, IpcReply>();
+  /** Each MCP process's list on its way from the server, for the run it was asked for (`runList`). */
+  private readonly listing = new Map<string, { run: string; reply: Promise<IpcReply> }>();
 
   constructor(
     private readonly opts: {
@@ -338,8 +340,12 @@ export class McpBridge {
        * meanwhile, so its turn's silence isn't its own (`BrainManager.bridgeCall`).
        */
       onCall?: (taskId: string, delta: 1 | -1) => void;
+      /** A list ask of `taskId`'s, made at `at`, was answered in `ms` (`BrainManager.bridgeList`). */
+      onList?: (taskId: string, at: number, ms: number) => void;
       log?: (line: string) => void;
       callTimeoutMs?: number;
+      /** Tests: `LAST_LIST_AFTER_MS`. */
+      lastListAfterMs?: number;
     },
   ) {}
 
@@ -496,29 +502,17 @@ export class McpBridge {
     if (req.kind === "list") {
       // An older server gave no token: the fixed mission tools.
       if (!info.serverToken) return { ok: true, text: "", tools: [...MISSION_MCP_TOOLS] };
-      // Each MCP process asks every second: the same run's list is answered here, the server asked for a new run
-      // (a brain process's next turn) or once the last answer is `LIST_MEMO_MS` old.
-      const run = `${info.runId ?? taskId}:${info.serverToken}`;
-      const now = Date.now();
-      const last = this.lists.get(taskId);
-      if (last && last.run === run && now - last.at < LIST_MEMO_MS) return last.reply;
-      const callId = randomBytes(12).toString("hex");
-      const reply = await this.relayAndWait(
-        callId,
-        LIST,
-        { type: "mcp.list", callId, taskId: info.runId ?? taskId, token: info.serverToken },
-        true,
-      );
-      if (!reply.ok) return reply;
-      for (const [id, l] of this.lists) if (now - l.at >= LIST_MEMO_MS) this.lists.delete(id);
-      const kept: IpcReply = { ...reply, memo: true };
-      this.lists.set(taskId, { run, at: now, reply: kept });
-      if (info.agentId) {
-        this.agentLists.delete(info.agentId);
-        this.agentLists.set(info.agentId, kept);
-        if (this.agentLists.size > AGENT_LISTS_KEPT) this.agentLists.delete(this.agentLists.keys().next().value ?? "");
-      }
-      return kept;
+      const at = Date.now();
+      const fresh = this.runList(taskId, info, info.serverToken);
+      // A starting Claude Code says it is ready only once it has our list: past a short wait it starts with the agent's
+      // last one, and the run's own is announced when it lands (the server checks every call anyway).
+      const last = info.agentId ? this.agentLists.get(info.agentId) : undefined;
+      const waitMs = this.opts.lastListAfterMs ?? LAST_LIST_AFTER_MS;
+      const reply = await (last
+        ? Promise.race([fresh, new Promise<IpcReply>((resolve) => setTimeout(() => resolve(last), waitMs).unref?.())])
+        : fresh);
+      this.opts.onList?.(taskId, at, Date.now() - at);
+      return reply;
     }
     const tool = typeof req.tool === "string" ? req.tool.slice(0, 64) : "";
     // A bridge (server token): any tool the server lists; the server decides. Else the fixed mission tools.
@@ -567,6 +561,49 @@ export class McpBridge {
     } finally {
       this.opts.onCall?.(taskId, -1);
     }
+  }
+
+  /**
+   * A brain process's run started (`BrainManager`): its list is asked now, while its CLI starts, so the CLI's own ask
+   * finds it here or on its way instead of waiting for the server from then on.
+   */
+  prefetch(taskId: string) {
+    const info = this.opts.task(taskId);
+    if (info?.running && info.serverToken) void this.runList(taskId, info, info.serverToken);
+  }
+
+  /**
+   * The run's list: answered here for the same run (each MCP process asks every second) until `LIST_MEMO_MS` old, one
+   * ask on its way shared, else asked from the server.
+   */
+  private runList(taskId: string, info: McpTaskInfo, token: string): Promise<IpcReply> {
+    const run = `${info.runId ?? taskId}:${token}`;
+    const now = Date.now();
+    const last = this.lists.get(taskId);
+    if (last && last.run === run && now - last.at < LIST_MEMO_MS) return Promise.resolve(last.reply);
+    const asked = this.listing.get(taskId);
+    if (asked?.run === run) return asked.reply;
+    const callId = randomBytes(12).toString("hex");
+    const reply = this.relayAndWait(
+      callId,
+      LIST,
+      { type: "mcp.list", callId, taskId: info.runId ?? taskId, token },
+      true,
+    ).then((r) => {
+      if (this.listing.get(taskId)?.reply === reply) this.listing.delete(taskId);
+      if (!r.ok) return r;
+      for (const [id, l] of this.lists) if (now - l.at >= LIST_MEMO_MS) this.lists.delete(id);
+      const kept: IpcReply = { ...r, memo: true };
+      this.lists.set(taskId, { run, at: now, reply: kept });
+      if (info.agentId) {
+        this.agentLists.delete(info.agentId);
+        this.agentLists.set(info.agentId, kept);
+        if (this.agentLists.size > AGENT_LISTS_KEPT) this.agentLists.delete(this.agentLists.keys().next().value ?? "");
+      }
+      return kept;
+    });
+    this.listing.set(taskId, { run, reply });
+    return reply;
   }
 
   private relayAndWait(callId: string, tool: string, frame: RunnerFrame, resend: boolean) {
@@ -770,6 +807,12 @@ export type ToolLister = () => Promise<readonly McpToolInfo[]>;
 
 /** Agents whose last list the daemon keeps for their brain processes between turns (`McpBridge.agentLists`). */
 const AGENT_LISTS_KEPT = 200;
+
+/**
+ * How long a list ask waits for the server before the agent's last list answers it (`McpBridge.handle`). Claude Code
+ * holds its ready line (`system/init`) until our list comes, so a slow server would add its whole time to the start.
+ */
+export const LAST_LIST_AFTER_MS = 500;
 
 /** How long the MCP process trusts its list before asking again (a `tools/list` within this is answered locally). */
 export const TOOLS_CACHE_MS = 30_000;

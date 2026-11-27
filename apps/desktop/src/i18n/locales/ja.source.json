@@ -1,4 +1,40 @@
 {
+  "permissionAsk.title": {
+    "value": "agentes.chat needs {{permission}}"
+  },
+  "permissionAsk.done": {
+    "value": "I allowed it"
+  },
+  "permissionAsk.later": {
+    "value": "Not now"
+  },
+  "permissionAsk.trayTitle": {
+    "value": "Waiting for {{permission}}"
+  },
+  "permissionAsk.why.app_management": {
+    "value": "Agents need it to change apps on this {{device}}."
+  },
+  "permissionAsk.why.screen": {
+    "value": "Agents need it to take screenshots of this {{device}}."
+  },
+  "permissionAsk.why.accessibility": {
+    "value": "Agents need it to click and type in apps on this {{device}}."
+  },
+  "permissionAsk.why.disk": {
+    "value": "Agents need it to open your files without macOS asking for each folder."
+  },
+  "permissionAsk.why.network": {
+    "value": "Agents need it to reach phones and devices on your network."
+  },
+  "permissionAsk.why.camera": {
+    "value": "Agents need it to use this {{device}}'s camera."
+  },
+  "permissionAsk.why.microphone": {
+    "value": "Agents need it to use this {{device}}'s microphone."
+  },
+  "permissionAsk.why.automation": {
+    "value": "Agents need it to control other apps on this {{device}}."
+  },
   "device.mac": {
     "value": "Mac"
   },
@@ -13,6 +49,15 @@
   },
   "windowTitle.prefs": {
     "value": "Preferences"
+  },
+  "background.title": {
+    "value": "agentes.chat is still running"
+  },
+  "background.bodyMac": {
+    "value": "Find it in the menu bar at the top of the screen. Open it or quit it from there."
+  },
+  "background.bodyTray": {
+    "value": "Find it in the system tray. Open it or quit it from there."
   },
   "common.cancel": {
     "value": "Cancel"
@@ -166,6 +211,18 @@
   },
   "tray.browser.doing.tabs": {
     "value": "switching tabs"
+  },
+  "tray.apps.title": {
+    "value": "{{agent}} is using {{app}}"
+  },
+  "tray.apps.detail": {
+    "value": "Your mouse and keyboard stay yours"
+  },
+  "tray.apps.stop": {
+    "value": "Stop"
+  },
+  "tray.apps.stopped": {
+    "value": "{{agent}} stopped using your apps"
   },
   "tray.label": {
     "value": "agentes.chat"
@@ -373,6 +430,18 @@
   },
   "tray.allowedUndone": {
     "value": "Off again: {{tool}}"
+  },
+  "tray.pickTitle": {
+    "value": "{{name}} asks for a folder for the agents"
+  },
+  "tray.pickTitleAgent": {
+    "value": "{{name}} asks for a folder for {{agent}}"
+  },
+  "tray.pickBody": {
+    "value": "Choose which folder to allow on this {{device}}."
+  },
+  "tray.pickChoose": {
+    "value": "Choose folder"
   },
   "tray.quitTitle": {
     "value": "Quit agentes.chat?"
@@ -2551,41 +2620,5 @@
   },
   "menu.downloaded": {
     "value": "Download complete"
-  },
-  "permissionAsk.title": {
-    "value": "agentes.chat needs {{permission}}"
-  },
-  "permissionAsk.done": {
-    "value": "I allowed it"
-  },
-  "permissionAsk.later": {
-    "value": "Not now"
-  },
-  "permissionAsk.trayTitle": {
-    "value": "Waiting for {{permission}}"
-  },
-  "permissionAsk.why.app_management": {
-    "value": "Agents need it to change apps on this {{device}}."
-  },
-  "permissionAsk.why.screen": {
-    "value": "Agents need it to take screenshots of this {{device}}."
-  },
-  "permissionAsk.why.accessibility": {
-    "value": "Agents need it to click and type in apps on this {{device}}."
-  },
-  "permissionAsk.why.disk": {
-    "value": "Agents need it to open your files without macOS asking for each folder."
-  },
-  "permissionAsk.why.network": {
-    "value": "Agents need it to reach phones and devices on your network."
-  },
-  "permissionAsk.why.camera": {
-    "value": "Agents need it to use this {{device}}'s camera."
-  },
-  "permissionAsk.why.microphone": {
-    "value": "Agents need it to use this {{device}}'s microphone."
-  },
-  "permissionAsk.why.automation": {
-    "value": "Agents need it to control other apps on this {{device}}."
   }
 }

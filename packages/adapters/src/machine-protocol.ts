@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 91;
+export const MACHINE_PROTOCOL_VERSION = 95;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -856,6 +856,121 @@ export function parsePermissionNeeds(v: unknown): PermissionNeed[] {
   }
   return out;
 }
+/**
+ * From this protocol on, `access.pick`: someone who manages the computer asks, from the apps, for a folder to be
+ * allowed there. The agentes.chat app on that computer shows who asks, and the person there picks the folder in the
+ * system's own folder picker (or says not now); with `requestId`, it shows an agent's pending request again instead.
+ * A runner the app doesn't run answers `bad_request` with `no_app`: the apps show the command instead.
+ */
+export const FOLDER_PICK_PROTOCOL = 92;
+/**
+ * From this protocol on, a brain turn outlives a dropped link: the runner keeps it running for `HELD_TURN_MS` (its
+ * events and its result kept), and a `brain.turn` for the same run on the next link takes it over instead of starting
+ * the turn again. One sent with `reattach` only takes a turn held there; nothing held, it is answered `not_found`.
+ * `reattach: "stop"` takes it and stops it (its run was canceled meanwhile). A turn of another run on the same CLI
+ * (agent and session) ends a held one first. A standby (before a sleep) is refused while a turn runs.
+ */
+export const HELD_TURN_PROTOCOL = 93;
+/**
+ * From this protocol on (ADR 0258): agents use the apps on the person's own computer through the pinned
+ * `agent-desktop` CLI, which reads an app's accessibility tree and acts on its elements by ref without the person's
+ * pointer or keyboard. `apps.run` runs one command of `APPS_COMMANDS`; the runner adds its own flags and refuses the
+ * rest. `hello.apps` says whether it can run here: a computer where agents work as the person's own user (never
+ * system mode). The server never sends `apps.run` to an older runner.
+ */
+export const PERSON_APPS_PROTOCOL = 94;
+/**
+ * From this protocol on (ADR 0237, self-hosted servers): a computer that borrows a person's internet without the
+ * Cloud's guard (this server's own computer, or one marked the workspace's with its own switch off) runs a loopback
+ * proxy (HTTP CONNECT and SOCKS5 on one port) and hands its agents' processes and browsers the proxy settings. Its
+ * connections to ports 80 and 443 go out through a lending computer like the workspace computer's (`stream.hello`
+ * with `egress`); anything else, a refusal, or no lender online goes out the computer's usual way. `welcome.egressProxy`
+ * turns it on at connect, `egress.proxy` when the computer's role changes. The server sends neither to an older runner.
+ */
+export const EGRESS_PROXY_PROTOCOL = 95;
+/**
+ * Hosts a borrowing computer's agents always reach their own way (`NO_PROXY`): the AI CLIs' model and sign-in
+ * services, so a key or a sign-in never depends on someone's home connection.
+ */
+export const EGRESS_DIRECT_HOSTS = [
+  ".anthropic.com",
+  ".claude.ai",
+  ".claude.com",
+  ".openai.com",
+  ".chatgpt.com",
+  ".googleapis.com",
+  ".cursor.sh",
+  ".x.ai",
+] as const;
+/** The `agent-desktop` release the runner and the desktop app ship (ADR 0258). */
+export const AGENT_DESKTOP_VERSION = "1.3.1";
+/** Targets of `agent-desktop`'s release archives (`agent-desktop-v<version>-<target>.tar.gz`). */
+export type AgentDesktopTarget =
+  | "aarch64-apple-darwin"
+  | "x86_64-apple-darwin"
+  | "aarch64-pc-windows-msvc"
+  | "x86_64-pc-windows-msvc"
+  | "aarch64-unknown-linux-gnu"
+  | "x86_64-unknown-linux-gnu";
+/** SHA-256 (hex) of each release archive of `AGENT_DESKTOP_VERSION` (its `checksums.txt`), checked before unpacking. */
+export const AGENT_DESKTOP_SHA256: Record<AgentDesktopTarget, string> = {
+  "aarch64-apple-darwin": "9b7b7cfc74892eab46c2c85d6cb7dc4863bf8dab0a222cfcfb8ae4604c69c86c",
+  "x86_64-apple-darwin": "469da10cfb68928c58caff88b92b30526e0ca895ac06bc86b7f533b1d9b309b3",
+  "aarch64-pc-windows-msvc": "805f1f61890f9983fceaf38cda94a37a049c379435d65607db5cedd22c8ef97b",
+  "x86_64-pc-windows-msvc": "6ee4b1e078f4e78792e79f16e32e4a78b9919464aa3c55629b7e27ed53a08c13",
+  "aarch64-unknown-linux-gnu": "438990a703fbeb19775596c341c3701435e80adbfa1b2f64b82ff17567d5573b",
+  "x86_64-unknown-linux-gnu": "ca77b6b75034eeb12e537dd8c0a4f2a3424119253f38b7e6bd79ba0d2fef1264",
+};
+/** Where the pinned release archive for `target` is downloaded from. */
+export const agentDesktopUrl = (target: AgentDesktopTarget) =>
+  `https://github.com/vercel-labs/agent-desktop/releases/download/v${AGENT_DESKTOP_VERSION}/agent-desktop-v${AGENT_DESKTOP_VERSION}-${target}.tar.gz`;
+/**
+ * The `agent-desktop` commands an `apps.run` may name: reads, and actions on a ref that go through the
+ * accessibility API. Pointer and held-key commands, the clipboard, sessions, sandboxes and the MCP server are not
+ * here: they take the person's input or reach past one app.
+ */
+export const APPS_COMMANDS = [
+  "list-apps",
+  "list-windows",
+  "snapshot",
+  "find",
+  "get",
+  "is",
+  "click",
+  "double-click",
+  "right-click",
+  "type",
+  "set-value",
+  "clear",
+  "focus",
+  "select",
+  "toggle",
+  "check",
+  "uncheck",
+  "expand",
+  "collapse",
+  "scroll",
+  "scroll-to",
+  "press",
+  "launch",
+  "close-app",
+] as const;
+export type AppsCommand = (typeof APPS_COMMANDS)[number];
+export const isAppsCommand = (v: unknown): v is AppsCommand =>
+  typeof v === "string" && (APPS_COMMANDS as readonly string[]).includes(v);
+/** The largest parts of an `apps.run`. */
+export const APPS_LIMITS = {
+  /** Arguments in one command. */
+  args: 16,
+  /** Characters of one argument. */
+  arg: 500,
+  /** Characters typed or set in one action (`agent-desktop` takes 10,000 bytes for `type`). */
+  text: 4000,
+} as const;
+/** `apps.run`'s answer: `agent-desktop`'s own result, or its failure as it said it (`retry`: whether repeating is safe). */
+export type AppsRunReply =
+  | { ok: true; data: unknown }
+  | { ok: false; error: { code: string; message: string; retry?: "safe" | "unsafe" | "unknown" } };
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -2368,21 +2483,58 @@ export const CURSOR_MODEL_LIMITS = { models: 80, id: 80, label: 80 } as const;
  * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began. A newer
  * runner adds where the model's own time went: the API's first streamed message (`firstTokenMs`) and the first whole
  * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
- * and the thinking blocks with the characters of their text (0 when the API leaves the text out).
+ * and the thinking blocks with the characters of their text (0 when the API leaves the text out). `firstRequestMs` is
+ * when the CLI said it sent its first API request (`system/status` "requesting"): before it, the CLI's own work; from
+ * it to `firstTokenMs`, the network and the API. A new process's first ask for our tool list (`toolsListMs`, from the
+ * turn's start) and how long the bridge took to answer it (`toolsListWaitMs`): Claude Code says it is ready only after.
+ * A `warm_mismatch` turn says where the warm start's system text and its own first differ (`warmMismatchAt`, in
+ * characters of the turn's): the run's stored context shows which part it was.
  */
 export interface BrainTurnTimings {
   warm: boolean;
   /** Not `warm`: why the turn started a new process (`BRAIN_COLD_CAUSES`). */
   cold?: BrainColdCause;
   initMs?: number;
+  /**
+   * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
+   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   */
+  sentMs?: number;
   firstEventMs?: number;
+  firstRequestMs?: number;
+  toolsListMs?: number;
+  toolsListWaitMs?: number;
+  warmMismatchAt?: number;
   firstTokenMs?: number;
   firstAssistantMs?: number;
   retries?: number;
   retryDelayMs?: number;
   thinkingBlocks?: number;
   thinkingChars?: number;
+  /**
+   * A turn past a `SLOW_TURN_BUDGETS` budget, or one that failed: what the CLI's own debug log said during it, as lines
+   * timed from the turn's start (`+412ms [DEBUG] [API REQUEST] /v1/messages`), only lines of the kinds that explain
+   * time (API requests, retries, MCP servers, sign-in, the network, stalls), scrubbed (`scrubLogLine`). Never a hook's
+   * or a tool's output, a prompt or an answer.
+   */
+  evidence?: string[];
 }
+
+/**
+ * Where a turn is slow enough to explain (ms), the same on the runner, which keeps the CLI's evidence for such a turn,
+ * and on the server, which reports it: the run's context, the work before the turn (checkouts), a new CLI until it was
+ * ready, the first token after that, and a reply with no tool call from the run's claim to its end.
+ */
+/** When a turn's CLI could start on it (ms from the turn's start): started, and handed the turn. */
+export const cliReadyMs = (t: Pick<BrainTurnTimings, "initMs" | "sentMs">) => Math.max(t.initMs ?? 0, t.sentMs ?? 0);
+
+export const SLOW_TURN_BUDGETS = {
+  contextMs: 1500,
+  preTurnMs: 2000,
+  initMs: 8000,
+  firstByteMs: 6000,
+  replyMs: 10_000,
+} as const;
 
 /**
  * Why a turn started a new Claude Code process: a session that never ran on this runner (a new conversation, or a
@@ -2411,7 +2563,12 @@ export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
 /** The measures of `BrainTurnTimings` past `warm`, each a whole number from 0 up to a day. */
 export const BRAIN_TURN_MEASURES = [
   "initMs",
+  "sentMs",
   "firstEventMs",
+  "firstRequestMs",
+  "toolsListMs",
+  "toolsListWaitMs",
+  "warmMismatchAt",
   "firstTokenMs",
   "firstAssistantMs",
   "retries",
@@ -2471,6 +2628,8 @@ export type WireBrainEvent =
       /** Protocol 50: why the provider refused or failed it, and its HTTP status when the CLI said one. */
       cause?: ProviderFailureCause;
       httpStatus?: number;
+      /** How the failed turn went until it failed, as `done` says it (an older runner leaves it out). */
+      timings?: BrainTurnTimings;
     }
   /** Protocol 15: messages handed with `brain.steer` that the turn read (their `uuid`s). */
   | { type: "steer_read"; uuids: string[] }
@@ -2678,6 +2837,8 @@ export interface BrainTurnRequest {
    * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
    */
   answers?: "each";
+  /** `HELD_TURN_PROTOCOL`: take over the turn of this run held on the computer, never start one; `stop`: and end it. */
+  reattach?: boolean | "stop";
 }
 
 /**
@@ -2693,6 +2854,8 @@ export const BRAIN_LIMITS = {
   toolName: 128,
   doneText: 100_000,
   message: 2000,
+  evidenceLines: 60,
+  evidenceLine: 300,
 } as const;
 
 /**
@@ -3116,6 +3279,8 @@ export interface RunnerInfo {
   terminal?: RunnerTerminalInfo;
   /** Protocol 21: whether agents can use their own desktops here (ADR 0062). */
   desktopUse?: RunnerDesktopUseInfo;
+  /** `PERSON_APPS_PROTOCOL`: whether agents can use the person's apps here (ADR 0258). */
+  apps?: RunnerTerminalInfo;
   /**
    * Protocol 18: `system` when each agent works as its own OS user (ADR 0058 §10); absent, every agent
    * works as the runner's own user. Who may control a desktop or open a terminal follows it (§4).
@@ -3244,6 +3409,8 @@ export type MachineRequest = (
     }
   /** `ACCESS_ALLOW_PROTOCOL`: the computer's owner turned `tool` on from the apps (`by` their user id, `byName` shown). */
   | { op: "access.allow"; tool: keyof RunnerTools; by: string; byName: string }
+  /** `FOLDER_PICK_PROTOCOL`: `by` asks for a folder, for one agent (`agentId`) or all; or shows request `requestId`. */
+  | { op: "access.pick"; by: string; byName: string; agentId?: string; agentName?: string; requestId?: string }
   | {
       op: "push";
       path: string;
@@ -3338,6 +3505,8 @@ export type MachineRequest = (
   | { op: "desktop.apps" }
   /** Protocol 25: the text on the agent's screen, read on the computer. */
   | { op: "desktop.text" }
+  /** `PERSON_APPS_PROTOCOL`: one `agent-desktop` command on the person's apps; `text` goes in on its stdin. */
+  | { op: "apps.run"; command: AppsCommand; args: string[]; text?: string }
   /** Protocol 45: a one-use key the request's agent's Vault values are sealed to (ADR 0144). */
   | { op: "vault.key" }
   /** `requestId` and `publicKey`: what the answer is sealed to (`madePasswordAad`). */
@@ -3417,6 +3586,8 @@ export type MachineRequest = (
   | { op: "report.collect" }
   /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
   | { op: "egress.dial"; streamId: string; host: string; port: number }
+  /** `EGRESS_PROXY_PROTOCOL`: this computer now borrows a person's internet (`on`) or no longer does. */
+  | { op: "egress.proxy"; on: boolean }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -3456,6 +3627,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "access.request",
   "access.reduce",
   "access.allow",
+  "access.pick",
   "browser.act",
   "browser.stop",
   "browser.stream.start",
@@ -3475,6 +3647,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "desktop.capture",
   "desktop.apps",
   "desktop.text",
+  "apps.run",
   "vault.key",
   "vault.password",
   "phone.claim",
@@ -3504,6 +3677,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "phone.power",
   "report.collect",
   "egress.dial",
+  "egress.proxy",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -3577,6 +3751,7 @@ export interface MachineReplies {
   "access.request": { requestId: string; status: "pending" | "granted" };
   "access.reduce": { access: RunnerAccess };
   "access.allow": { access: RunnerAccess };
+  "access.pick": { asked: true };
   /**
    * `agent-browser`'s own JSON answer: `success: false` with its `error` is a page-level failure (stale ref, covered
    * click). Protocol 45: `code` names a Vault refusal (`VAULT_TYPE_REFUSALS`).
@@ -3651,6 +3826,7 @@ export interface MachineReplies {
   "desktop.apps": { apps: { id: string; name: string; generic?: string }[] };
   /** The screen's text (trimmed, `DESKTOP_TEXT_MAX` at most), or `same`: the capture didn't change since the last read. */
   "desktop.text": { text: string } | { same: true };
+  "apps.run": AppsRunReply;
   /** Protocol 45: the key's id, its public key (raw P-256, base64) and when it stops opening anything (ISO). */
   "vault.key": { vaultKey: { keyId: string; publicKey: string; expiresAt: string } };
   "vault.password": { box: WireSecretBox };
@@ -3685,6 +3861,7 @@ export interface MachineReplies {
   "phone.power": { on: boolean };
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
+  "egress.proxy": { on: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -3786,6 +3963,8 @@ export type ServerFrame =
        * socket whose connections go out through a computer a person lent (ADR 0237).
        */
       egressRelay?: boolean;
+      /** `EGRESS_PROXY_PROTOCOL`: this computer borrows a person's internet through its loopback proxy (ADR 0237). */
+      egressProxy?: boolean;
       /**
        * The server runs each `mcp.call` once per `callId` and answers a copy with the first answer: a call cut by
        * a reconnect may be sent again. Absent (older servers): sent again it would run twice.
@@ -4311,6 +4490,34 @@ const cutJson = (v: unknown, max: number): unknown => {
   }
 };
 
+/** A turn's `timings` as a runner sent them, checked and cut; undefined when they aren't any. */
+function turnTimingsOf(v: unknown): BrainTurnTimings | undefined {
+  if (!isObject(v) || typeof v.warm !== "boolean") return undefined;
+  // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
+  // (the counts share the bound, far above any real turn's).
+  const DAY_MS = 86_400_000;
+  const ms = (x: unknown) =>
+    finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
+  const measures = BRAIN_TURN_MEASURES.flatMap((k) => {
+    const n = ms(v[k]);
+    return n === undefined ? [] : [[k, n] as const];
+  });
+  const evidence = Array.isArray(v.evidence)
+    ? v.evidence
+        .filter(isString)
+        .slice(0, BRAIN_LIMITS.evidenceLines)
+        .map((line) => line.slice(0, BRAIN_LIMITS.evidenceLine))
+    : [];
+  return {
+    warm: v.warm,
+    ...(!v.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(v.cold)
+      ? { cold: v.cold as BrainColdCause }
+      : {}),
+    ...Object.fromEntries(measures),
+    ...(evidence.length > 0 ? { evidence } : {}),
+  };
+}
+
 /** One `brain.event` event, checked and cut; null when it isn't one. */
 export function parseBrainEvent(v: unknown): WireBrainEvent | null {
   if (!isObject(v) || !isString(v.type)) return null;
@@ -4359,37 +4566,17 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
-      // (the counts share the bound, far above any real turn's).
-      const DAY_MS = 86_400_000;
-      const ms = (x: unknown) =>
-        finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
-      const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
-      const measures = t
-        ? BRAIN_TURN_MEASURES.flatMap((k) => {
-            const n = ms(t[k]);
-            return n === undefined ? [] : [[k, n] as const];
-          })
-        : [];
+      const timings = turnTimingsOf(v.timings);
       return {
         type: "done",
         text: v.text.slice(0, BRAIN_LIMITS.doneText),
         ...(session ? { session } : {}),
-        ...(t
-          ? {
-              timings: {
-                warm: t.warm as boolean,
-                ...(!t.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(t.cold)
-                  ? { cold: t.cold as BrainColdCause }
-                  : {}),
-                ...Object.fromEntries(measures),
-              },
-            }
-          : {}),
+        ...(timings ? { timings } : {}),
       };
     }
-    case "error":
+    case "error": {
       if (!isString(v.code)) return null;
+      const errorTimings = turnTimingsOf(v.timings);
       return {
         type: "error",
         code: v.code.slice(0, 64),
@@ -4400,7 +4587,9 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(Number.isInteger(v.httpStatus) && (v.httpStatus as number) >= 100 && (v.httpStatus as number) <= 599
           ? { httpStatus: v.httpStatus as number }
           : {}),
+        ...(errorTimings ? { timings: errorTimings } : {}),
       };
+    }
     case "steer_read": {
       if (!Array.isArray(v.uuids)) return null;
       const uuids = v.uuids
@@ -4535,6 +4724,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(isObject(f.desktop) ? { desktop: parseDesktopInfo(f.desktop) } : {}),
         ...(isObject(f.terminal) ? { terminal: parseAvailability(f.terminal) } : {}),
         ...(isObject(f.desktopUse) ? { desktopUse: parseAvailability(f.desktopUse) } : {}),
+        ...(isObject(f.apps) ? { apps: parseAvailability(f.apps) } : {}),
         ...(f.mode === "system" ? { mode: "system" as const } : {}),
         ...(isObject(f.ownUsage) ? { ownUsage: parseOwnUsage(f.ownUsage) } : {}),
         ...(size ? { size } : {}),

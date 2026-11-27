@@ -1211,28 +1211,75 @@ describe("A device's page", () => {
     }
   });
 
+  test("control that doesn't start in its wait goes back to watching, says why, and Take control is there again", async () => {
+    const drawn = globalThis.createImageBitmap;
+    globalThis.createImageBitmap = (async () => ({ width: 1080, height: 2400, close() {} })) as never;
+    try {
+      const { sockets } = await open(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
+      const screens = () => sockets.sockets.filter((s) => s.url.includes("/api/phone-screen"));
+      const card = screen().getByRole("region", { name: "Screen" });
+      const watch = screens().at(-1) as (typeof sockets.sockets)[number];
+      await act(async () => watch.open());
+      await act(async () => {
+        watch.onmessage?.({ data: new ArrayBuffer(8) });
+      });
+      await settle(4);
+      await click(within(card).getByRole("button", { name: "Take control" }));
+      const control = screens().at(-1) as (typeof sockets.sockets)[number];
+      await act(async () => control.open());
+      expect(card.textContent).toContain("Opening the screen…");
+      // The server's wait ran out before any picture: no new control socket behind the same spinner.
+      await act(async () => control.drop(4408));
+      await settle(4);
+      expect(document.body.textContent).toContain(
+        "Control didn't start in time. Sam's MacBook Pro is still getting Pixel 8 ready: try again in a minute.",
+      );
+      expect(screens().at(-1)?.url).toContain("mode=watch");
+      expect(screens().filter((s) => s.url.includes("mode=control"))).toHaveLength(1);
+    } finally {
+      globalThis.createImageBitmap = drawn;
+    }
+  });
+
   test("an iPhone follows its Mac", async () => {
     await open(`/org/${ORG_ID}/settings/devices/phones/${IPHONE}`);
     expect(document.querySelector(".settings-rows")?.textContent).toContain("Same as Sam's MacBook Pro");
   });
 
-  test("a brought computer offline for a known cause: its way out names the command as code", async () => {
-    const app = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
-      const list = acmeDevices();
-      const imac = list.devices.find((d) => d.id === IMAC);
-      if (imac?.status.kind !== "offline") throw new Error("fixture");
-      imac.status = { ...imac.status, cause: "unresponsive" };
-      devices.set(list);
-    });
-    const line = document.querySelector(".dv-statusline__text");
-    expect(line?.textContent).toContain("Run agentes-runner doctor on it.");
-    expect(line?.querySelector("code.ac-inlinecode")?.textContent).toBe("agentes-runner doctor");
-    // The longest translation keeps the command whole, with its own backticks never shown.
+  test("a brought computer offline for a known cause: plain words, the command only under Technical details", async () => {
+    const page = async (app: boolean) => {
+      cleanup();
+      const opened = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+        const list = acmeDevices();
+        const imac = list.devices.find((d) => d.id === IMAC);
+        if (imac?.status.kind !== "offline") throw new Error("fixture");
+        imac.status = { ...imac.status, cause: "stopped" };
+        devices.set(list);
+      });
+      fakeMachinesOf.get(opened.api)?.pair({ id: IMAC, name: "Ana's iMac", os: "linux", app, canManage: true });
+      await refetch(opened.services);
+      return opened;
+    };
+    const line = () => document.querySelector(".dv-statusline__text")?.textContent ?? "";
+    const tech = () =>
+      [...document.querySelectorAll("details.ac-disclosure")].find(
+        (d) => d.querySelector("summary")?.textContent === "Technical details",
+      );
+    await page(true);
+    expect(line()).toMatch(/^The agentes\.chat app stopped on this computer at .+\. Open the app again\.$/);
+    expect(tech()).toBeUndefined();
+    const app = await page(false);
+    expect(line()).toMatch(/^agentes\.chat stopped on this computer at .+\. Start it again there\.$/);
+    expect(line()).not.toContain("runner");
+    const folded = tech() as HTMLDetailsElement;
+    expect(folded.open).toBe(false);
+    expect(folded.textContent).toContain("To see why, run this on it:");
+    expect(folded.querySelector(".machine-command code")?.textContent).toBe("agentes-runner doctor");
+    // The longest translation says it in its words, with no command and no backticks in the line.
     await showIn(app.services, "ru");
     await settle(4);
-    const ru = document.querySelector(".dv-statusline__text");
-    expect(ru?.querySelector("code.ac-inlinecode")?.textContent).toBe("agentes-runner doctor");
-    expect(ru?.textContent).not.toContain("`");
+    expect(line()).not.toContain("`");
+    expect(line()).not.toContain("agentes-runner");
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
@@ -1248,6 +1295,32 @@ describe("A device's page", () => {
     expect(line?.textContent).toContain("Moving to a new server… back in a few minutes");
     expect(document.body.textContent).toContain("Moving servers");
     expect(line?.textContent).not.toContain("offline");
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
+  test("a computer we restarted because it stopped answering: restarting, about when it is back, why behind its ⓘ", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+      const list = acmeDevices();
+      const imac = list.devices.find((d) => d.id === IMAC);
+      if (!imac) throw new Error("fixture");
+      const since = new Date(Date.now() - 60_000).toISOString();
+      const maintenance = {
+        kind: "restarting",
+        since,
+        eta: new Date(Date.now() + 2 * 60_000 + 10_000).toISOString(),
+        detail: "unresponsive",
+        away: true,
+      };
+      imac.status = { kind: "moving", since, maintenance };
+      imac.maintenance = maintenance;
+      devices.set(list);
+    });
+    const line = document.querySelector(".dv-statusline__text");
+    expect(line?.textContent).toContain("Restarting… back in about 2 min");
+    expect(document.body.textContent).toContain("Restarting");
+    expect(document.body.textContent).toContain("It stopped answering, so we restarted it automatically.");
+    expect(document.body.textContent).toContain("Messages to its agents wait and go on by themselves when it's back.");
+    expect(line?.textContent).not.toMatch(/offline/i);
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
@@ -1321,6 +1394,54 @@ describe("A device's page", () => {
       { shareInternet: false },
     ]);
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
+  test("on a self-hosted server: a computer that joins hears it will lend its internet, with no workspace computer", async () => {
+    const line = "The agents will also open websites through this computer's internet";
+    // No workspace computer: nothing borrows where the server lends none (the Cloud's rule).
+    const own = () => {
+      const list = acmeDevices();
+      return { ...list, devices: list.devices.filter((d) => d.machineKind !== "managed") };
+    };
+    await open(`/org/${ORG_ID}/settings/devices`, (devices) => devices.set({ ...own(), lendsInternet: false }));
+    await click(
+      within(screen().getByRole("list", { name: "Asking to join" })).getByRole("button", { name: "Let it join" }),
+    );
+    expect(screen().getByRole("dialog", { name: "ci-runner wants to join Acme" }).textContent).not.toContain(line);
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/devices`, (devices) => devices.set({ ...own(), lendsInternet: true }));
+    await click(
+      within(screen().getByRole("list", { name: "Asking to join" })).getByRole("button", { name: "Let it join" }),
+    );
+    expect(screen().getByRole("dialog", { name: "ci-runner wants to join Acme" }).textContent).toContain(line);
+  });
+
+  test("this server's own computer says, on its page, whose internet its agents use (ADR 0237)", async () => {
+    const state = acmeState();
+    const api = createFakeApi(state);
+    const host = fakeMachinesOf.get(api)?.pair({
+      name: "Rented VPS",
+      kind: "host",
+      online: true,
+      egressVia: { machineId: MAC, name: "Sam's MacBook", userName: "Sam Rivera" },
+    });
+    if (!host) throw new Error("no machines fake");
+    const list = acmeDevices();
+    const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice;
+    list.devices.push({
+      ...mac,
+      id: host.id,
+      machineKind: "host",
+      name: "Rented VPS",
+      phones: [],
+      shareInternet: null,
+    });
+    fakeDevicesOf.get(api)?.set(list);
+    const app = await renderApp(`/org/${ORG_ID}/settings/devices/${host.id}`, { api });
+    await settle(6);
+    await showIn(app.services, "en");
+    expect(domWindow().document.body.textContent).toContain("Agents use the internet of Sam's MacBook");
+    expect(domWindow().document.querySelector('[title="Connected by Sam Rivera"]')?.textContent).toBe("Sam's MacBook");
   });
 
   test("someone else's computer that lends its internet: an admin may turn it off, never on", async () => {
@@ -1479,6 +1600,31 @@ describe("In the chat and the inbox", () => {
     await click(within(read).getByRole("button", { name: "No" }));
     await settle(4);
     expect(calls(state, "machines.refuseFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, "fr-1"]]);
+  });
+
+  test("an agent waits for a folder on my computer with the app: Allow on the computer opens the request there", async () => {
+    const state = acmeState();
+    state.notifications = [
+      notification({
+        id: "n-folder",
+        kind: "device.folder_request" as never,
+        waiting: true,
+        actors: [{ type: "agent", id: LIA }],
+        source: { machineId: MAC, label: "Sam's MacBook Pro", agentId: LIA, requestId: "fr-1" } as never,
+        latest: { title: "/Users/sam/Contracts", text: "read the contracts" },
+      }),
+    ];
+    const api = createFakeApi(state);
+    fakeMachinesOf.get(api)?.pair({ id: MAC, name: "Sam's MacBook Pro", os: "darwin", folderPick: true });
+    const app = await renderApp(`/org/${ORG_ID}/notifications`, { api });
+    await settle(6);
+    await showIn(app.services, "en");
+    await click(document.querySelector('[data-n="n-folder"]') as HTMLElement);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    await click(within(read).getByRole("button", { name: "Allow on the computer" }));
+    await settle(4);
+    expect(calls(state, "machines.askFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, { requestId: "fr-1" }]]);
+    expect(document.body.textContent).toContain("Opened on Sam's MacBook Pro. Allow it there.");
   });
 
   test("my computer paired before lends its internet now: the inbox says so plainly, with Turn off", async () => {

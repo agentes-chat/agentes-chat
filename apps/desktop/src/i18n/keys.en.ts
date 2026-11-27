@@ -21,6 +21,14 @@ export const desktopEn = {
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
   windowTitle: { welcome: "Welcome", prefs: "Preferences" },
+  /** The notification the first time someone closes the main window: the app keeps running (background.rs). */
+  background: {
+    title: "agentes.chat is still running",
+    /** A Mac: the icon at the top right of the screen. */
+    bodyMac: "Find it in the menu bar at the top of the screen. Open it or quit it from there.",
+    /** Windows and Linux. */
+    bodyTray: "Find it in the system tray. Open it or quit it from there.",
+  },
   common: {
     cancel: "Cancel",
     close: "Close",
@@ -80,6 +88,12 @@ export const desktopEn = {
         capturing: "taking a screenshot",
         tabs: "switching tabs",
       },
+    },
+    apps: {
+      title: "{{agent}} is using {{app}}",
+      detail: "Your mouse and keyboard stay yours",
+      stop: "Stop",
+      stopped: "{{agent}} stopped using your apps",
     },
     label: "agentes.chat",
     now: "Now",
@@ -155,6 +169,11 @@ export const desktopEn = {
     allowedUndo: "Undo",
     allowedOk: "OK",
     allowedUndone: "Off again: {{tool}}",
+    /** Someone asked from agentes.chat (the site or the phone) for a folder here: the popover's card and the notification. */
+    pickTitle: "{{name}} asks for a folder for the agents",
+    pickTitleAgent: "{{name}} asks for a folder for {{agent}}",
+    pickBody: "Choose which folder to allow on this {{device}}.",
+    pickChoose: "Choose folder",
     quitTitle: "Quit agentes.chat?",
     quitBody:
       "Agents can't use this {{device}} while the app is closed. What is already running finishes and sends the result when you open it again.",

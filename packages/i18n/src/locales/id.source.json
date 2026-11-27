@@ -7396,6 +7396,9 @@
   "channel.composerDm": {
     "value": "Message {{name}}"
   },
+  "channel.groupYou": {
+    "value": "You"
+  },
   "channel.composerPlaceholder": {
     "value": "Message #{{channel}} · use @ to call an agent"
   },
@@ -7456,6 +7459,9 @@
   "channel.detailsTitle": {
     "value": "#{{channel}}"
   },
+  "channel.detailsTitlePersonal": {
+    "value": "{{channel}}"
+  },
   "channel.detailsSearch": {
     "value": "Search people or agents"
   },
@@ -7489,6 +7495,9 @@
   "channel.nameTaken": {
     "value": "There is already #{{name}}."
   },
+  "channel.nameTakenPersonal": {
+    "value": "There is already a group conversation called “{{name}}”."
+  },
   "channel.generalName": {
     "value": "#general keeps its name."
   },
@@ -7497,6 +7506,9 @@
   },
   "channel.archived": {
     "value": "#{{channel}} archived. The conversation is kept."
+  },
+  "channel.archivedPersonal": {
+    "value": "“{{channel}}” archived. The conversation is kept."
   },
   "channel.archivedTitle": {
     "value": "Archived channels"
@@ -7521,6 +7533,9 @@
   },
   "channel.restored": {
     "value": "#{{channel}} is back."
+  },
+  "channel.restoredPersonal": {
+    "value": "“{{channel}}” is back."
   },
   "channel.leave": {
     "value": "Leave channel"
@@ -10837,11 +10852,14 @@
   "newChannel.nameInvalid": {
     "value": "Use lowercase letters, digits and hyphens, starting with a letter or digit."
   },
+  "newChannel.nameInvalidPersonal": {
+    "value": "Give it a name of up to 80 characters, on one line."
+  },
   "newChannel.nameTaken": {
     "value": "There is already a #{{name}} channel."
   },
   "newChannel.nameTakenPersonal": {
-    "value": "There is already a group conversation called #{{name}}."
+    "value": "There is already a group conversation called “{{name}}”."
   },
   "newChannel.topic": {
     "value": "Description"
@@ -10933,6 +10951,9 @@
   "newChannel.create": {
     "value": "Create #{{name}}"
   },
+  "newChannel.createPersonal": {
+    "value": "Create conversation"
+  },
   "channelCategories.undo": {
     "value": "Undo"
   },
@@ -10966,6 +10987,9 @@
   "channelMembers.addTitle": {
     "value": "Add to #{{channel}}"
   },
+  "channelMembers.addTitlePersonal": {
+    "value": "Add to {{channel}}"
+  },
   "channelMembers.addSearch": {
     "value": "Search people or agents"
   },
@@ -10989,6 +11013,9 @@
   },
   "channelMembers.removeTitle": {
     "value": "Remove {{name}} from #{{channel}}?"
+  },
+  "channelMembers.removeTitlePersonal": {
+    "value": "Remove {{name}} from {{channel}}?"
   },
   "channelMembers.removePersonBody": {
     "value": "They stop seeing the channel and getting its messages. You can add them back later."
@@ -13967,6 +13994,9 @@
   },
   "notifications.what.adminAskWebhook": {
     "value": "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines"
+  },
+  "notifications.what.adminAskVoice": {
+    "value": "<b>{{name}}</b> asks you to turn on voice messages"
   },
   "notifications.what.invitationAccepted": {
     "value": "<b>{{name}}</b> accepted your invitation and joined {{org}}"
@@ -24153,9 +24183,6 @@
   "missions.notice.machine_access_expired": {
     "value": "The request for the folder {{folder}} on {{computer}} got no answer"
   },
-  "missions.notice.access_command": {
-    "value": "No app on the computer? Run this in its Terminal:"
-  },
   "missions.suggestion.pending": {
     "value": "Suggestion for the mission"
   },
@@ -28323,6 +28350,9 @@
   "voice.limit": {
     "value": "Today's audio limit is used up. Write here, or try again tomorrow."
   },
+  "voice.plan": {
+    "value": "Voice messages come with an agentes.chat plan. You can still write here."
+  },
   "voice.micBlocked": {
     "value": "The microphone is blocked"
   },
@@ -28423,13 +28453,13 @@
     "value": "People in this workspace can send audio in conversations."
   },
   "voice.settings.noEngine": {
-    "value": "Voice messages aren't available here yet."
+    "value": "Voice messages go as audio for now, so agents can't hear them yet."
   },
   "voice.settings.noEngineAsk": {
-    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+    "value": "Voice messages go as audio for now, so agents can't hear them. Whoever runs this server chooses what turns voice into text, on this same page."
   },
   "voice.settings.noEngineHere": {
-    "value": "Voice messages turn on once you choose below what turns voice into text."
+    "value": "Voice messages go as audio until you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"
@@ -28453,7 +28483,7 @@
     "value": "Test"
   },
   "voice.settings.tested": {
-    "value": "It works. Everyone now sees the microphone."
+    "value": "It works. Voice messages now reach the agents as text."
   },
   "voice.settings.sealed": {
     "value": "Kept encrypted on your server and never shown again."
@@ -28463,6 +28493,123 @@
   },
   "voice.settings.invalid": {
     "value": "The saved key doesn't open on this server. Paste it again."
+  },
+  "voice.local.titleHere": {
+    "value": "On this computer"
+  },
+  "voice.local.titleServer": {
+    "value": "On this server"
+  },
+  "voice.local.titlePhone": {
+    "value": "On the server's computer"
+  },
+  "voice.local.textHere": {
+    "value": "Parakeet, a {{size}} download. Voice stays on this computer. 25 European languages."
+  },
+  "voice.local.textServer": {
+    "value": "Parakeet, a {{size}} download. Voice stays on this server. 25 European languages."
+  },
+  "voice.local.download": {
+    "value": "Download and turn on"
+  },
+  "voice.local.downloading": {
+    "value": "Downloading the voice model"
+  },
+  "voice.local.progress": {
+    "value": "{{done}} of {{total}}"
+  },
+  "voice.local.meanwhile": {
+    "value": "You can record now. Notes go as audio until it's ready."
+  },
+  "voice.local.downloadingPhone": {
+    "value": "Downloading the voice model to the server's computer. You can record now."
+  },
+  "voice.local.starting": {
+    "value": "Turning it on…"
+  },
+  "voice.local.licenses": {
+    "value": "Model licenses"
+  },
+  "voice.local.tooSmall": {
+    "value": "This computer has {{memory}} of memory and the voice model needs 8 GB. Use a provider key below."
+  },
+  "voice.local.noDisk": {
+    "value": "{{free}} free on this disk and the voice model needs {{need}}. Free some space or use a provider key below."
+  },
+  "voice.local.noBuild": {
+    "value": "There's no voice model for this computer yet. Use a provider key below."
+  },
+  "voice.local.stopped": {
+    "value": "The download stopped: {{detail}}"
+  },
+  "voice.local.diskFull": {
+    "value": "The disk filled up during the download. Free some space and try again."
+  },
+  "voice.local.didntStart": {
+    "value": "The voice model didn't start: {{detail}}"
+  },
+  "voice.local.resume": {
+    "value": "Resume"
+  },
+  "voice.local.copy": {
+    "value": "Copy details"
+  },
+  "voice.local.copied": {
+    "value": "Details copied"
+  },
+  "voice.offer.title": {
+    "value": "Voice messages"
+  },
+  "voice.offer.download": {
+    "value": "Download {{size}} and turn on"
+  },
+  "voice.offer.choose": {
+    "value": "Choose how"
+  },
+  "voice.offer.askOwner": {
+    "value": "Turn voice into text on this server"
+  },
+  "voice.offer.askMember": {
+    "value": "Ask to turn on voice messages"
+  },
+  "voice.offer.on": {
+    "value": "Voice messages are on: agents read them as text."
+  },
+  "voice.setup.memberTitle": {
+    "value": "Voice isn't on here yet"
+  },
+  "voice.setup.memberText": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until {{name}} chooses what turns voice into text."
+  },
+  "voice.setup.memberTextNoName": {
+    "value": "Your message goes as audio people can play. Agents can't hear it until whoever runs this server chooses what turns voice into text."
+  },
+  "voice.setup.ask": {
+    "value": "Ask {{name}}"
+  },
+  "voice.setup.asked": {
+    "value": "{{name}} was asked to turn it on"
+  },
+  "voice.setup.recordAnyway": {
+    "value": "Record anyway"
+  },
+  "voice.setup.ownerTitle": {
+    "value": "Choose what turns voice into text"
+  },
+  "voice.setup.ownerText": {
+    "value": "Until you do, voice messages go as audio people can play, and agents can't hear them."
+  },
+  "voice.setup.readyTitle": {
+    "value": "Voice messages are on"
+  },
+  "voice.setup.readyText": {
+    "value": "What you say reaches the agents as text."
+  },
+  "voice.setup.record": {
+    "value": "Record a message"
+  },
+  "voice.setup.ownerPhone": {
+    "value": "Choose it in Settings › Voice on the web or in the desktop app. Until then, voice messages go as audio people can play, and agents can't hear them."
   },
   "media.word.gif": {
     "value": "GIF"
@@ -37449,6 +37596,15 @@
   "toolNames.label.desktop_ask_person": {
     "value": "Ask someone to take over the computer"
   },
+  "toolNames.label.apps_list": {
+    "value": "See the open apps"
+  },
+  "toolNames.label.apps_read": {
+    "value": "Read an app"
+  },
+  "toolNames.label.apps_act": {
+    "value": "Use an app"
+  },
   "toolNames.label.computer_use": {
     "value": "Use the computer"
   },
@@ -40131,6 +40287,9 @@
   "errors.said.leadNotMember": {
     "value": "The responsible agent has to be in the channel."
   },
+  "errors.said.groupNameInvalid": {
+    "value": "Give it a name of up to 80 characters, on one line."
+  },
   "errors.said.mcpUnreachable": {
     "value": "Couldn't connect to the MCP server. Check its address and try again."
   },
@@ -41233,7 +41392,7 @@
     "value": "Desktop use runs on Linux computers with the agents' desktops."
   },
   "machines.reasons.desktop_use_own_user": {
-    "value": "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the runner's user."
+    "value": "Desktop use needs each agent to work as its own user on this computer (system mode). Here every agent works as the same user, the one agentes.chat runs as."
   },
   "machines.reasons.desktop_use_install": {
     "value": "Install what desktop use needs on this computer:"
@@ -41248,10 +41407,10 @@
     "value": "Install the agents' desktops on this computer:"
   },
   "machines.reasons.not_as_root": {
-    "value": "The agents' desktops and terminals never run as root. Run the runner as a normal user."
+    "value": "The agents' desktops and terminals never run as root. Run agentes.chat as a normal user."
   },
   "machines.reasons.runner_bun_old": {
-    "value": "This needs the runner on Bun 1.3.5 or newer. Update the runner on this computer."
+    "value": "This needs agentes.chat on Bun 1.3.5 or newer. Update agentes.chat on this computer."
   },
   "machines.reasons.terminal_unsupported": {
     "value": "Terminals run on Linux and Mac computers only."
@@ -41274,20 +41433,113 @@
   "machines.egress.via": {
     "value": "Agents use the internet of {{name}}"
   },
-  "machines.egress.viaBy": {
-    "value": "Agents use the internet of {{name}} ({{person}})"
-  },
   "machines.egress.viaHint": {
     "value": "Websites see that computer’s location. Its owner can turn it off on its page."
   },
-  "machines.moving.short": {
+  "machines.maintenance.short.moving": {
     "value": "Moving servers"
   },
-  "machines.moving.line": {
-    "value": "Moving to a new server… back in a few minutes"
+  "machines.maintenance.short.restarting": {
+    "value": "Restarting"
   },
-  "machines.moving.named": {
-    "value": "{{computer}} is moving to a new server… back in a few minutes"
+  "machines.maintenance.short.updating": {
+    "value": "Updating"
+  },
+  "machines.maintenance.short.converting": {
+    "value": "Upgrading disk"
+  },
+  "machines.maintenance.short.host_maintenance": {
+    "value": "Maintenance"
+  },
+  "machines.maintenance.short.other": {
+    "value": "Maintenance"
+  },
+  "machines.maintenance.what.moving": {
+    "value": "Moving to a new server"
+  },
+  "machines.maintenance.what.copying": {
+    "value": "Copying to a new server"
+  },
+  "machines.maintenance.what.restarting": {
+    "value": "Restarting"
+  },
+  "machines.maintenance.what.updating": {
+    "value": "Updating its software"
+  },
+  "machines.maintenance.what.converting": {
+    "value": "Upgrading its disk"
+  },
+  "machines.maintenance.what.host_maintenance": {
+    "value": "Its server is under maintenance"
+  },
+  "machines.maintenance.what.other": {
+    "value": "Being worked on"
+  },
+  "machines.maintenance.line": {
+    "value": "{{what}}… {{when}}"
+  },
+  "machines.maintenance.named": {
+    "value": "{{computer}}: {{line}}"
+  },
+  "machines.maintenance.back": {
+    "value": "back in about {{time}}"
+  },
+  "machines.maintenance.backSoon": {
+    "value": "back in a few minutes"
+  },
+  "machines.maintenance.late": {
+    "value": "taking a little longer than expected"
+  },
+  "machines.maintenance.slower": {
+    "value": "it may be slower meanwhile"
+  },
+  "machines.maintenance.slowerFor": {
+    "value": "it may be slower for about {{time}}"
+  },
+  "machines.maintenance.why.moving": {
+    "value": "We're moving it to a new server."
+  },
+  "machines.maintenance.why.copying": {
+    "value": "We're copying its files to a new server while it works."
+  },
+  "machines.maintenance.why.handover": {
+    "value": "We're handing its last changes over to the new server."
+  },
+  "machines.maintenance.why.restarting": {
+    "value": "We're restarting it."
+  },
+  "machines.maintenance.why.unresponsive": {
+    "value": "It stopped answering, so we restarted it automatically."
+  },
+  "machines.maintenance.why.updating": {
+    "value": "We're updating its software."
+  },
+  "machines.maintenance.why.converting": {
+    "value": "We're moving its disk to faster storage."
+  },
+  "machines.maintenance.why.host_maintenance": {
+    "value": "The server it runs on is getting maintenance."
+  },
+  "machines.maintenance.why.other": {
+    "value": "We're doing some work on it."
+  },
+  "machines.maintenance.since": {
+    "value": "Since {{time}}"
+  },
+  "machines.maintenance.expectedBack": {
+    "value": "Expected back around {{time}}"
+  },
+  "machines.maintenance.expectedDone": {
+    "value": "Expected done around {{time}}"
+  },
+  "machines.maintenance.meanwhile": {
+    "value": "Messages to its agents wait and go on by themselves when it's back."
+  },
+  "machines.maintenance.working": {
+    "value": "Its agents keep working meanwhile."
+  },
+  "machines.maintenance.about": {
+    "value": "What's happening"
   },
   "machines.online": {
     "value": "Online"
@@ -41852,6 +42104,27 @@
   "machines.access.grantTerminal": {
     "value": "No app? In the computer's terminal:"
   },
+  "machines.access.pickText": {
+    "value": "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose."
+  },
+  "machines.access.pick": {
+    "value": "Allow a folder"
+  },
+  "machines.access.picked": {
+    "value": "A folder picker opened on {{machine}}. Choose the folder there."
+  },
+  "machines.access.pickWaiting": {
+    "value": "Waiting for the folder to be chosen on {{machine}}"
+  },
+  "machines.access.grantTerminalMore": {
+    "value": "No app there? Use the Terminal"
+  },
+  "machines.access.noApp": {
+    "value": "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal."
+  },
+  "machines.access.requestDone": {
+    "value": "This request was already answered or has expired."
+  },
   "machines.access.preferTerminal": {
     "value": "I'd rather use the Terminal"
   },
@@ -42284,6 +42557,12 @@
   "devices.screen.lost": {
     "value": "Control ended. You're watching {{name}} again."
   },
+  "devices.screen.controlLate": {
+    "value": "Control didn't start in time. {{host}} is still getting {{name}} ready: try again in a minute."
+  },
+  "devices.screen.controlFailed": {
+    "value": "Couldn't take control of {{name}}. Try again, or restart the agentes.chat app on {{host}}."
+  },
   "devices.screen.typeLabel": {
     "value": "Type on {{name}}"
   },
@@ -42336,7 +42615,7 @@
     "value": "stopped answering at {{time}}"
   },
   "devices.detail.offlineStopped": {
-    "value": "runner stopped at {{time}}"
+    "value": "agentes.chat stopped at {{time}}"
   },
   "devices.detail.offlineDropped": {
     "value": "connection dropped at {{time}}"
@@ -42378,13 +42657,22 @@
     "value": "{{host}} is offline. Agents wait for it to come back."
   },
   "devices.line.offlineUnresponsive": {
-    "value": "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it."
+    "value": "Stopped answering at {{time}}, maybe no internet or overloaded. Check that it's on and online."
   },
   "devices.line.offlineStopped": {
-    "value": "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why."
+    "value": "The agentes.chat app stopped on this computer at {{time}}. Open the app again."
+  },
+  "devices.line.offlineStoppedCli": {
+    "value": "agentes.chat stopped on this computer at {{time}}. Start it again there."
   },
   "devices.line.offlineDropped": {
-    "value": "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it."
+    "value": "The connection dropped at {{time}}. It reconnects by itself."
+  },
+  "devices.technical.title": {
+    "value": "Technical details"
+  },
+  "devices.technical.doctor": {
+    "value": "To see why, run this on it:"
   },
   "devices.reason.locked": {
     "value": "The phone is locked"
@@ -43543,6 +43831,12 @@
   },
   "devices.notice.folderRequest": {
     "value": "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.folderOnComputer": {
+    "value": "Allow on the computer"
+  },
+  "devices.notice.folderShown": {
+    "value": "Opened on {{deviceName}}. Allow it there."
   },
   "devices.notice.internetShared": {
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
@@ -47893,6 +48187,9 @@
   "chat.work.step.listingRepos": {
     "value": "Listed the repositories"
   },
+  "chat.work.step.updatingCode": {
+    "value": "Updated the code"
+  },
   "chat.work.step.preparingCli": {
     "value": "Prepared {{app}}"
   },
@@ -48255,6 +48552,9 @@
   },
   "chat.activity.listingRepos": {
     "value": "listing the repositories"
+  },
+  "chat.activity.updatingCode": {
+    "value": "updating the code"
   },
   "chat.activity.preparingCli": {
     "value": "preparing {{app}} on {{computer}}"
@@ -48823,6 +49123,9 @@
   "chat.body.action_open_page": {
     "value": "Open a screen"
   },
+  "chat.body.action_voice_setup": {
+    "value": "Turn on voice messages"
+  },
   "chat.body.calendar_proposal": {
     "value": "Event proposal: {{title}}"
   },
@@ -49311,6 +49614,12 @@
   },
   "builtinTools.offer_open_page.description": {
     "value": "Posts a card whose button opens a screen of the app, such as billing, roles or an agent's page."
+  },
+  "builtinTools.offer_voice_setup.label": {
+    "value": "Offer to turn on voice messages"
+  },
+  "builtinTools.offer_voice_setup.description": {
+    "value": "Posts a card that turns on voice messages in one click for whoever runs the server, or asks them."
   },
   "builtinTools.set_team_week.label": {
     "value": "Change the Team week card"
@@ -50625,7 +50934,7 @@
     "value": "Its computer stops now and is wiped"
   },
   "deleteOrg.goes.computers": {
-    "value": "Connected computers are disconnected. The agents' folders stay on them until the runner is removed."
+    "value": "Connected computers are disconnected. The agents' folders stay on them until agentes.chat is removed from them."
   },
   "deleteOrg.goes.connectors": {
     "value": "Connectors and mailboxes are disconnected"
@@ -51332,15 +51641,6 @@
   "desktop.card.doneByYou": {
     "value": "Done by you at {{time}}. {{agent}} looked at the screen again and went on."
   },
-  "desktop.control.notice": {
-    "value": "Programs on {{name}}'s computer can see the screen and what you type or paste."
-  },
-  "desktop.session.check": {
-    "value": "Safety checks"
-  },
-  "desktop.session.screening": {
-    "value": "We may check the text on this screen for abuse. We keep only the result. What the screen doesn't show, like a password at a prompt, is never captured."
-  },
   "desktop.after.titleNoSite": {
     "value": "Used the screen"
   },
@@ -51349,9 +51649,6 @@
   },
   "desktop.inCard.group": {
     "value": "{{name}}'s screen"
-  },
-  "desktop.watch.notice": {
-    "value": "Programs on {{name}}'s computer can see the screen and anything typed or pasted there."
   },
   "desktop.watch.step.desktop_open": {
     "value": "Opened {{detail}}"
@@ -51411,10 +51708,10 @@
     "value": "Used the screen"
   },
   "desktop.use.title": {
-    "value": "Apps on the agents' screens"
+    "value": "Each agent's own screen"
   },
   "desktop.use.description": {
-    "value": "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page."
+    "value": "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours."
   },
   "desktop.use.ready": {
     "value": "Ready"
@@ -51423,16 +51720,13 @@
     "value": "Off"
   },
   "desktop.use.unavailable": {
-    "value": "Not available"
+    "value": "Needs setup"
   },
   "desktop.use.offHelp": {
     "value": "Turn on the screens and commands on this computer:"
   },
   "desktop.use.offOne": {
     "value": "This computer needs both the screen and commands on."
-  },
-  "desktop.use.linuxOnly": {
-    "value": "Agents use apps on their own screens only on Linux computers."
   },
   "desktop.use.agent": {
     "value": "{{name}} can't use apps on his screen on {{computer}} yet.",

@@ -2504,22 +2504,36 @@
     {
       "idx": 359,
       "version": "7",
-      "when": 1795742902830,
-      "tag": "0362_first_agent_proposals",
+      "when": 1795738474115,
+      "tag": "0362_device_code_model",
       "breakpoints": true
     },
     {
       "idx": 360,
       "version": "7",
-      "when": 1795752902830,
-      "tag": "0363_first_deliveries",
+      "when": 1795743614220,
+      "tag": "0363_machine_maintenance",
       "breakpoints": true
     },
     {
       "idx": 361,
       "version": "7",
-      "when": 1795762902830,
-      "tag": "0364_first_delivery_armed",
+      "when": 1795743674220,
+      "tag": "0364_outbox_wake",
+      "breakpoints": true
+    },
+    {
+      "idx": 362,
+      "version": "7",
+      "when": 1795792167189,
+      "tag": "0365_egress_lent_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 363,
+      "version": "7",
+      "when": 1795802167189,
+      "tag": "0366_onboarding_first_agents",
       "breakpoints": true
     }
   ]

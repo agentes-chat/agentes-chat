@@ -3074,6 +3074,7 @@
     "details": "Detalles del canal",
     "composerLabel": "Mensaje en #{{channel}}",
     "composerDm": "Mensaje para {{name}}",
+    "groupYou": "Tú",
     "composerPlaceholder": "Mensaje en #{{channel}} · usa @ para llamar a un agente",
     "send": "Enviar",
     "attach": "Adjuntar archivo",
@@ -3094,6 +3095,7 @@
     "sendFailed": "El mensaje no se envió. Inténtalo de nuevo.",
     "reconnecting": "Reconectando en tiempo real…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Buscar personas o agentes",
     "detailsEmpty": "No se encontró a nadie para “{{q}}”.",
     "topicLabel": "Descripción del canal",
@@ -3105,9 +3107,11 @@
     "replyInChannel": "Los agentes responden en el canal",
     "replyInThreadsHelp": "Un agente llamado en el canal responde en el hilo bajo ese mensaje, y el canal muestra una línea para él. El trabajo en curso se queda donde está.",
     "nameTaken": "Ya existe #{{name}}.",
+    "nameTakenPersonal": "Ya existe una conversación en grupo llamada “{{name}}”.",
     "generalName": "#general mantiene su nombre.",
     "archive": "Archivar canal",
     "archived": "#{{channel}} archivado. La conversación se conserva.",
+    "archivedPersonal": "“{{channel}}” archivada. La conversación se conserva.",
     "archivedTitle": "Canales archivados",
     "archivedCount_one": "{{count}} canal archivado",
     "archivedCount_many": "{{count}} canales archivados",
@@ -3117,6 +3121,7 @@
     "restore": "Restaurar",
     "restoreName": "Restaurar #{{channel}}",
     "restored": "#{{channel}} volvió.",
+    "restoredPersonal": "“{{channel}}” volvió.",
     "leave": "Salir del canal",
     "left": "Saliste de #{{channel}}",
     "leaveTitle": "¿Salir de #{{channel}}?",
@@ -4574,8 +4579,9 @@
     "namePlaceholderPersonal": "ej.: viaje",
     "nameHelp": "Letras minúsculas, números y guiones. Se muestra como #{{name}}.",
     "nameInvalid": "Usa letras minúsculas, números y guiones, empezando con una letra o un número.",
+    "nameInvalidPersonal": "Ponle un nombre de hasta 80 caracteres, en una sola línea.",
     "nameTaken": "Ya existe un canal #{{name}}.",
-    "nameTakenPersonal": "Ya existe una conversación en grupo llamada #{{name}}.",
+    "nameTakenPersonal": "Ya existe una conversación en grupo llamada “{{name}}”.",
     "topic": "Descripción",
     "topicPlaceholder": "De qué se habla aquí",
     "visibility": "Quién puede unirse",
@@ -4606,7 +4612,8 @@
     "selected_one": "{{count}} seleccionado",
     "selected_many": "{{count}} seleccionados",
     "selected_other": "{{count}} seleccionados",
-    "create": "Crear #{{name}}"
+    "create": "Crear #{{name}}",
+    "createPersonal": "Crear conversación"
   },
   "channelCategories": {
     "undo": "Deshacer",
@@ -4622,6 +4629,7 @@
     "invitePersonal": "Invitar a {{email}} a tu espacio de trabajo y a #{{channel}}",
     "inviteOrgPersonal": "Invitar a {{email}} a tu espacio de trabajo",
     "addTitle": "Agregar a #{{channel}}",
+    "addTitlePersonal": "Agregar a {{channel}}",
     "addSearch": "Buscar personas o agentes",
     "addEmpty": "Nadie fuera del canal coincide con “{{q}}”.",
     "addEveryone": "Todos en {{org}} ya están en #{{channel}}.",
@@ -4631,6 +4639,7 @@
     "actions": "Opciones de {{name}}",
     "remove": "Quitar del canal",
     "removeTitle": "¿Quitar a {{name}} de #{{channel}}?",
+    "removeTitlePersonal": "¿Quitar a {{name}} de {{channel}}?",
     "removePersonBody": "Deja de ver el canal y de recibir sus mensajes. Puedes volver a agregarlo después.",
     "removeAgentBody": "Deja de leer y responder en este canal. Puedes volver a agregarlo después.",
     "removeAgentBody_female": "Deja de leer y responder en este canal. Puedes volver a agregarla después.",
@@ -5885,6 +5894,7 @@
       "adminAskChannel": "<b>{{name}}</b> te pide añadir a <b>{{agent}}</b> a #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> pide poder crear agentes",
       "adminAskWebhook": "<b>{{name}}</b> te pide configurar el webhook de {{service}} para rutinas",
+      "adminAskVoice": "<b>{{name}}</b> te pide activar los mensajes de voz",
       "invitationAccepted": "<b>{{name}}</b> aceptó tu invitación y se unió a {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> aceptó tu invitación",
       "reaction_one": "<b>{{names}}</b> reaccionó a tu mensaje",
@@ -10259,8 +10269,7 @@
       "machine_access_requested": "{{agent}} pidió la carpeta {{folder}} en {{computer}}. Esperando la respuesta ahí.",
       "machine_access_granted": "Permitido: {{agent}} ya puede usar {{folder}} en {{computer}}",
       "machine_access_denied": "Rechazado: {{agent}} no usará {{folder}} en {{computer}}",
-      "machine_access_expired": "La solicitud de la carpeta {{folder}} en {{computer}} no tuvo respuesta",
-      "access_command": "¿No tienes la app en la computadora? Ejecuta esto en su Terminal:"
+      "machine_access_expired": "La solicitud de la carpeta {{folder}} en {{computer}} no tuvo respuesta"
     },
     "suggestion": {
       "pending": "Sugerencia para la misión",
@@ -12038,6 +12047,7 @@
     "silent": "No se escuchó nada. No se envió nada.",
     "notSent": "No se pudo enviar el audio.",
     "limit": "Se acabó el límite de audios de hoy. Escribe aquí o vuelve a intentarlo mañana.",
+    "plan": "Los mensajes de voz vienen con un plan de agentes.chat. Puedes seguir escribiendo aquí.",
     "micBlocked": "El micrófono está bloqueado",
     "micBlockedHint": "Permite el micrófono en la configuración de tu dispositivo para grabar.",
     "openSettings": "Abrir configuración",
@@ -12072,9 +12082,9 @@
       "title": "Mensajes de voz",
       "on": "Mensajes de voz",
       "onHelp": "Las personas de este espacio de trabajo pueden enviar audios en las conversaciones.",
-      "noEngine": "Los mensajes de voz todavía no están disponibles aquí.",
-      "noEngineAsk": "Los mensajes de voz todavía no están activados. Quien administra este servidor los activa en esta misma página.",
-      "noEngineHere": "Los mensajes de voz se activan en cuanto elijas abajo qué convierte la voz en texto.",
+      "noEngine": "Por ahora los mensajes de voz van como audio, así que los agentes todavía no los oyen.",
+      "noEngineAsk": "Por ahora los mensajes de voz van como audio, así que los agentes no los oyen. Quien administra este servidor elige qué convierte la voz en texto, en esta misma página.",
+      "noEngineHere": "Los mensajes de voz van como audio hasta que elijas abajo qué convierte la voz en texto.",
       "engineTitle": "Qué convierte la voz en texto",
       "own": "Tu propio servidor",
       "ownHelp": "Whisper o Parakeet en tu máquina. El audio se queda ahí.",
@@ -12082,10 +12092,55 @@
       "key": "Clave de {{name}}",
       "keyPlaceholder": "Pega aquí",
       "test": "Probar",
-      "tested": "Funciona. Ahora todos ven el micrófono.",
+      "tested": "Funciona. Ahora los mensajes de voz llegan a los agentes como texto.",
       "sealed": "Se guarda cifrada en tu servidor y no se vuelve a mostrar.",
       "leaves": "El audio de los mensajes de voz va a {{name}} para convertirse en texto.",
       "invalid": "La clave guardada no se puede abrir en este servidor. Pégala de nuevo."
+    },
+    "local": {
+      "titleHere": "En esta computadora",
+      "titleServer": "En este servidor",
+      "titlePhone": "En la computadora del servidor",
+      "textHere": "Parakeet, una descarga de {{size}}. La voz se queda en esta computadora. 25 idiomas europeos.",
+      "textServer": "Parakeet, una descarga de {{size}}. La voz se queda en este servidor. 25 idiomas europeos.",
+      "download": "Descargar y activar",
+      "downloading": "Descargando el modelo de voz",
+      "progress": "{{done}} de {{total}}",
+      "meanwhile": "Ya puedes grabar. Los mensajes van como audio hasta que esté listo.",
+      "downloadingPhone": "Descargando el modelo de voz en la computadora del servidor. Ya puedes grabar.",
+      "starting": "Activando…",
+      "licenses": "Licencias de los modelos",
+      "tooSmall": "Esta computadora tiene {{memory}} de memoria y el modelo de voz necesita 8 GB. Usa la clave de un proveedor abajo.",
+      "noDisk": "{{free}} libres en este disco y el modelo de voz necesita {{need}}. Libera espacio o usa la clave de un proveedor abajo.",
+      "noBuild": "Todavía no hay modelo de voz para esta computadora. Usa la clave de un proveedor abajo.",
+      "stopped": "La descarga se detuvo: {{detail}}",
+      "diskFull": "El disco se llenó durante la descarga. Libera espacio y vuelve a intentarlo.",
+      "didntStart": "El modelo de voz no arrancó: {{detail}}",
+      "resume": "Continuar",
+      "copy": "Copiar detalles",
+      "copied": "Detalles copiados"
+    },
+    "offer": {
+      "title": "Mensajes de voz",
+      "download": "Descargar {{size}} y activar",
+      "choose": "Elegir cómo",
+      "askOwner": "Convertir la voz en texto en este servidor",
+      "askMember": "Pedir que activen los mensajes de voz",
+      "on": "Los mensajes de voz están activados: los agentes los leen como texto."
+    },
+    "setup": {
+      "memberTitle": "La voz todavía no está activada aquí",
+      "memberText": "Tu mensaje va como audio que todos pueden escuchar. Los agentes no lo oyen hasta que {{name}} elija qué convierte la voz en texto.",
+      "memberTextNoName": "Tu mensaje va como audio que todos pueden escuchar. Los agentes no lo oyen hasta que quien administra este servidor elija qué convierte la voz en texto.",
+      "ask": "Pedir a {{name}}",
+      "asked": "Le pedimos a {{name}} que la active",
+      "recordAnyway": "Grabar igualmente",
+      "ownerTitle": "Elige qué convierte la voz en texto",
+      "ownerText": "Hasta entonces, los mensajes de voz van como audio que todos pueden escuchar, y los agentes no los oyen.",
+      "readyTitle": "Los mensajes de voz están activados",
+      "readyText": "Lo que dices llega a los agentes como texto.",
+      "record": "Grabar un mensaje",
+      "ownerPhone": "Elígelo en Configuración › Voz en la web o en la app de escritorio. Hasta entonces, los mensajes de voz van como audio que todos pueden escuchar, y los agentes no los oyen."
     }
   },
   "media": {
@@ -15718,6 +15773,9 @@
       "desktop_read": "Leer la pantalla",
       "desktop_screenshot": "Tomar captura de pantalla",
       "desktop_ask_person": "Pedir a alguien que tome el control de la computadora",
+      "apps_list": "Ver las apps abiertas",
+      "apps_read": "Leer una app",
+      "apps_act": "Usar una app",
       "computer_use": "Usar la computadora",
       "computer_status": "Verificar la computadora",
       "left_click": "Hacer clic",
@@ -16844,6 +16902,7 @@
       "generalStays": "Todos se quedan en #general.",
       "leadChannelOnly": "Solo los canales tienen un agente responsable.",
       "leadNotMember": "El agente responsable tiene que estar en el canal.",
+      "groupNameInvalid": "Ponle un nombre de hasta 80 caracteres, en una sola línea.",
       "mcpUnreachable": "No se pudo conectar al servidor MCP. Revisa su dirección e inténtalo de nuevo.",
       "notApproved": "Este servicio todavía no aprobó agentes.chat.",
       "alreadyInvited": "Esta persona ya tiene una invitación.",
@@ -17300,13 +17359,13 @@
       "browser_download": "No se pudo descargar el navegador de los agentes. Revisa la conexión de esta computadora y lo intentará de nuevo en el próximo uso.",
       "browser_checksum": "La descarga del navegador de los agentes llegó dañada, así que no se usó. Lo intentará de nuevo en el próximo uso.",
       "desktop_use_linux": "Las apps en las pantallas de los agentes funcionan en computadoras Linux con las pantallas de los agentes.",
-      "desktop_use_own_user": "Las apps en las pantallas necesitan que cada agente trabaje con su propio usuario en esta computadora (modo sistema). Aquí todos los agentes trabajan con el usuario del runner.",
+      "desktop_use_own_user": "Las apps en las pantallas necesitan que cada agente trabaje con su propio usuario en esta computadora (modo sistema). Aquí todos los agentes trabajan con el mismo usuario, el que ejecuta agentes.chat.",
       "desktop_use_install": "Instala en esta computadora lo que necesitan las apps en las pantallas:",
       "desktop_unavailable": "Las pantallas de los agentes no pueden funcionar en esta computadora.",
       "desktop_linux": "Las pantallas de los agentes funcionan solo en computadoras Linux.",
       "desktop_install": "Instala en esta computadora las pantallas de los agentes:",
-      "not_as_root": "Las pantallas y las terminales de los agentes nunca funcionan como root. Ejecuta el runner como un usuario normal.",
-      "runner_bun_old": "Esto necesita el runner en Bun 1.3.5 o más reciente. Actualiza el runner en esta computadora.",
+      "not_as_root": "Las pantallas y terminales de los agentes nunca se ejecutan como root. Ejecuta agentes.chat como un usuario normal.",
+      "runner_bun_old": "Esto necesita agentes.chat en Bun 1.3.5 o más reciente. Actualiza agentes.chat en esta computadora.",
       "terminal_unsupported": "Las terminales funcionan solo en computadoras Linux y Mac."
     },
     "egress": {
@@ -17316,13 +17375,50 @@
       "hint": "La dirección que ven los sitios web cuando los agentes navegan. Se actualiza cuando cambia la red de la computadora.",
       "waiting": "Reconectando la conexión a internet de los agentes. Sus conexiones esperan hasta que vuelva.",
       "via": "Los agentes usan el internet de {{name}}",
-      "viaBy": "Los agentes usan el internet de {{name}} ({{person}})",
       "viaHint": "Los sitios ven la ubicación de esa computadora. Quien la conectó puede desactivarlo en su página."
     },
-    "moving": {
-      "short": "Cambiando de servidor",
-      "line": "Cambiando a un servidor nuevo… vuelve en unos minutos",
-      "named": "{{computer}} se está cambiando a un servidor nuevo… vuelve en unos minutos"
+    "maintenance": {
+      "short": {
+        "moving": "Cambiando de servidor",
+        "restarting": "Reiniciando",
+        "updating": "Actualizando",
+        "converting": "Mejorando el disco",
+        "host_maintenance": "Mantenimiento",
+        "other": "Mantenimiento"
+      },
+      "what": {
+        "moving": "Pasando a un servidor nuevo",
+        "copying": "Copiando a un servidor nuevo",
+        "restarting": "Reiniciando",
+        "updating": "Actualizando su software",
+        "converting": "Mejorando su disco",
+        "host_maintenance": "Su servidor está en mantenimiento",
+        "other": "En mantenimiento"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "vuelve en unos {{time}}",
+      "backSoon": "vuelve en unos minutos",
+      "late": "está tardando un poco más de lo previsto",
+      "slower": "puede ir más lento mientras tanto",
+      "slowerFor": "puede ir más lento durante unos {{time}}",
+      "why": {
+        "moving": "Lo estamos pasando a un servidor nuevo.",
+        "copying": "Estamos copiando sus archivos a un servidor nuevo mientras trabaja.",
+        "handover": "Estamos pasando sus últimos cambios al servidor nuevo.",
+        "restarting": "Lo estamos reiniciando.",
+        "unresponsive": "Dejó de responder, así que lo reiniciamos automáticamente.",
+        "updating": "Estamos actualizando su software.",
+        "converting": "Estamos pasando su disco a un almacenamiento más rápido.",
+        "host_maintenance": "El servidor donde funciona está en mantenimiento.",
+        "other": "Estamos haciendo un mantenimiento en él."
+      },
+      "since": "Desde las {{time}}",
+      "expectedBack": "Vuelve hacia las {{time}}",
+      "expectedDone": "Termina hacia las {{time}}",
+      "meanwhile": "Los mensajes a sus agentes esperan y siguen solos cuando vuelva.",
+      "working": "Sus agentes siguen trabajando mientras tanto.",
+      "about": "Qué está pasando"
     },
     "online": "En línea",
     "offline": "Sin conexión",
@@ -17391,6 +17487,11 @@
     "removed": "Se quitó {{name}}.",
     "name": "Nombre de la computadora",
     "nameHelp": "Cómo la ven las personas y los agentes.",
+    "defaultName": {
+      "model": "{{model}} de {{name}}",
+      "linux": "Computadora Linux de {{name}}",
+      "other": "Computadora de {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -17544,6 +17645,13 @@
       "grantTextTerminal": "Los permisos se dan en la propia computadora, en su Terminal:",
       "grantTextAdmin": "Los permisos se dan en la propia computadora, en su Terminal, como su administrador:",
       "grantTerminal": "¿No tienes la app? En la terminal de la computadora:",
+      "pickText": "La app de agentes.chat abre un selector de carpetas en {{machine}} para que quien esté allí elija.",
+      "pick": "Permitir una carpeta",
+      "picked": "Se abrió un selector de carpetas en {{machine}}. Elige la carpeta allí.",
+      "pickWaiting": "Esperando que se elija la carpeta en {{machine}}",
+      "grantTerminalMore": "¿No hay app allí? Usa la Terminal",
+      "noApp": "Este computador no tiene la app de agentes.chat para elegir la carpeta. Permítela desde su Terminal.",
+      "requestDone": "Esta solicitud ya fue respondida o expiró.",
       "preferTerminal": "Prefiero la terminal",
       "grantOnlyOwner": "Solo {{name}} permite más, desde la propia computadora. Si necesitas algo, pídeselo.",
       "pathPlaceholder": "<carpeta>",
@@ -17709,6 +17817,8 @@
       "paused": "{{host}} está en pausa, así que el control espera hasta que se reanude.",
       "held": "Este espacio de trabajo está en pausa, así que el control espera hasta que vuelva a estar activo.",
       "lost": "El control terminó. Vuelves a mirar {{name}}.",
+      "controlLate": "El control no empezó a tiempo. {{host}} todavía está preparando {{name}}: inténtalo de nuevo en un minuto.",
+      "controlFailed": "No se pudo tomar el control de {{name}}. Inténtalo de nuevo o reinicia la app de agentes.chat en {{host}}.",
       "typeLabel": "Escribir en {{name}}"
     },
     "status": {
@@ -17730,7 +17840,7 @@
       "withHost": "con {{host}}",
       "lastSeen": "visto por última vez {{time}}",
       "offlineUnresponsive": "dejó de responder a las {{time}}",
-      "offlineStopped": "el runner se detuvo a las {{time}}",
+      "offlineStopped": "agentes.chat se detuvo a las {{time}}",
       "offlineDropped": "la conexión se cayó a las {{time}}"
     },
     "line": {
@@ -17747,9 +17857,14 @@
       "offline": "Los agentes esperan a que vuelva.",
       "offlineSeen": "Visto por última vez {{time}}. Los agentes esperan a que vuelva.",
       "offlineWithHost": "{{host}} está sin conexión. Los agentes esperan a que vuelva.",
-      "offlineUnresponsive": "Dejó de responder a las {{time}}, quizá sin red o sobrecargado. Ejecuta `{{command}}` en él.",
-      "offlineStopped": "El runner se detuvo a las {{time}}. Inícialo de nuevo o ejecuta `{{command}}` en él para ver por qué.",
-      "offlineDropped": "La conexión se cayó a las {{time}}. Se reconecta sola. Si no vuelve, ejecuta `{{command}}` en él."
+      "offlineUnresponsive": "Dejó de responder a las {{time}}, quizá sin internet o sobrecargada. Revisa que esté encendida y con internet.",
+      "offlineStopped": "La app agentes.chat se detuvo en esta computadora a las {{time}}. Vuelve a abrir la app.",
+      "offlineStoppedCli": "agentes.chat se detuvo en esta computadora a las {{time}}. Vuelve a iniciarlo allí.",
+      "offlineDropped": "La conexión se cayó a las {{time}}. Se reconecta sola."
+    },
+    "technical": {
+      "title": "Detalles técnicos",
+      "doctor": "Para ver el motivo, ejecuta esto en ella:"
     },
     "reason": {
       "locked": "El teléfono está bloqueado",
@@ -18202,6 +18317,8 @@
       "toolRequest": "<b>{{who}}</b> te pide activar {{tool}} en tu <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> te pide instalar {{tool}} en tu <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> te pide la carpeta {{path}} en tu <b>{{deviceName}}</b>",
+      "folderOnComputer": "Permitir en el computador",
+      "folderShown": "Abierto en {{deviceName}}. Permítelo allí.",
       "internetShared": "Los agentes ahora abren sitios web a través del internet de <b>{{deviceName}}</b>",
       "internetSharedLine": "Solo los agentes de este workspace, solo sitios web, nunca nada de su propia red. Mientras esté sin conexión, usan su conexión de siempre.",
       "internetOff": "Desactivar",
@@ -19999,6 +20116,7 @@
         "usingScreen": "Usó la pantalla",
         "cloningRepo": "Clonó un repositorio",
         "listingRepos": "Listó los repositorios",
+        "updatingCode": "Actualizó el código",
         "preparingCli": "Preparó {{app}}",
         "openingPullRequest": "Abrió un pull request",
         "handingOff": "Entregó un informe",
@@ -20123,6 +20241,7 @@
       "usingScreen": "usando la pantalla",
       "cloningRepo": "clonando un repositorio",
       "listingRepos": "listando los repositorios",
+      "updatingCode": "actualizando el código",
       "preparingCli": "preparando {{app}} en {{computer}}",
       "preparingCliPct": "preparando {{app}} en {{computer}} ({{percent}} %)",
       "openingPullRequest": "abriendo un pull request",
@@ -20321,6 +20440,7 @@
       "welcome_member": "Acabas de entrar en {{org}}. **¿De qué te encargas aquí?** Cuéntame y creo tu primer agente contigo.",
       "welcome_member_agent": "Acabas de entrar a {{org}}, y tu primer agente ya está en el equipo. Cuando me necesites, solo llámame.",
       "action_open_page": "Abrir una pantalla",
+      "action_voice_setup": "Activar los mensajes de voz",
       "calendar_proposal": "Propuesta de evento: {{title}}",
       "action_workspace": "Propuso un cambio en el espacio de trabajo",
       "agent_proposal": "Propuso un nuevo agente: {{name}}",
@@ -20621,6 +20741,10 @@
     "offer_open_page": {
       "label": "Ofrecer abrir una pantalla",
       "description": "Publica una tarjeta cuyo botón abre una pantalla de la app, como facturación, roles o la página de un agente."
+    },
+    "offer_voice_setup": {
+      "label": "Ofrecer activar los mensajes de voz",
+      "description": "Publica una tarjeta que activa los mensajes de voz con un clic para quien administra el servidor, o se lo pide."
     },
     "set_team_week": {
       "label": "Cambiar la tarjeta Semana del equipo",
@@ -21193,7 +21317,7 @@
       "people": "Desde ahora todos solo pueden leerlo y reciben un correo",
       "peopleQuiet": "Desde ahora todos solo pueden leerlo",
       "computer": "Su computadora se detiene ahora y se borra",
-      "computers": "Las computadoras conectadas se desconectan. Las carpetas de los agentes se quedan en ellas hasta que se quite el runner.",
+      "computers": "Las computadoras conectadas se desconectan. Las carpetas de los agentes se quedan en ellas hasta que se quite agentes.chat de ellas.",
       "connectors": "Los conectores y buzones se desconectan"
     },
     "undo": "Cualquier propietario puede restaurarlo hasta el {{date}} a las {{time}}. Después, ya no se puede deshacer.",
@@ -21562,14 +21686,6 @@
       "doneByYou": "Lo hiciste tú a las {{time}}. {{agent}} volvió a mirar la pantalla y siguió.",
       "doneByYou_female": "Lo hiciste tú a las {{time}}. {{agent}} volvió a mirar la pantalla y siguió."
     },
-    "control": {
-      "notice": "Los programas de la computadora de {{name}} pueden ver la pantalla y lo que escribes o pegas.",
-      "notice_female": "Los programas de la computadora de {{name}} pueden ver la pantalla y lo que escribes o pegas."
-    },
-    "session": {
-      "check": "Controles de seguridad",
-      "screening": "Podemos revisar el texto de esta pantalla para detectar abusos. Solo guardamos el resultado. Lo que la pantalla no muestra, como una contraseña en una terminal, nunca se captura."
-    },
     "after": {
       "titleNoSite": "Usó la pantalla",
       "noSite": "Antes de abrir una app"
@@ -21579,8 +21695,6 @@
       "group_female": "Pantalla de {{name}}"
     },
     "watch": {
-      "notice": "Los programas de la computadora de {{name}} pueden ver la pantalla y todo lo que se escribe o pega ahí.",
-      "notice_female": "Los programas de la computadora de {{name}} pueden ver la pantalla y todo lo que se escribe o pega ahí.",
       "step": {
         "desktop_open": "Abrió {{detail}}",
         "desktop_open_plain": "Abrió una app",
@@ -21604,14 +21718,13 @@
       }
     },
     "use": {
-      "title": "Apps en las pantallas de los agentes",
-      "description": "Aquí los agentes abren y usan apps en sus propias pantallas, como lo haría una persona, mientras las personas miran desde la página de cada agente.",
+      "title": "La pantalla propia de cada agente",
+      "description": "Aquí cada agente tiene una pantalla solo suya, aparte de la tuya, y usa en ella apps con ventanas, como un navegador o una hoja de cálculo, como lo haría una persona. Lo ves desde la página del agente. Por ahora solo en Linux, que abre una pantalla extra para cada agente sin tocar la tuya.",
       "ready": "Listo",
       "off": "Desactivado",
-      "unavailable": "No disponible",
+      "unavailable": "Falta prepararlo",
       "offHelp": "Activa las pantallas y los comandos en esta computadora:",
       "offOne": "Este ordenador necesita la pantalla y los comandos activados.",
-      "linuxOnly": "Los agentes usan apps en sus propias pantallas solo en computadoras con Linux.",
       "agent": "{{name}} todavía no puede usar apps en su pantalla en {{computer}}.",
       "agent_female": "{{name}} todavía no puede usar apps en su pantalla en {{computer}}."
     },

@@ -26,6 +26,7 @@ import { DEFAULT_LIMITS, machineOs, prepareWorkspace } from "./daemon";
 import { type DelegatedBridge, DelegatedTools, delegatedTask, parseBridge, type ToolNotice } from "./delegated-tools";
 import { DesktopManager, type DesktopManagerOptions } from "./desktop";
 import { taskRoomNow } from "./desktop-session";
+import { setEgressProxy } from "./egress-relay";
 import { RUNNER_VERSION, RunnerError, toMachineError } from "./errors";
 import type { CacheFill, CloneSlots } from "./git";
 import { type HandlerContext, handleRequest } from "./handlers";
@@ -109,6 +110,11 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
   const host = typeof f.commitHost === "string" && /^[a-z0-9.-]{1,253}$/i.test(f.commitHost) ? f.commitHost : null;
   const commitHost = host ? { commitHost: host } : {};
   const locale = typeof f.locale === "string" && f.locale.length <= 32 ? { locale: f.locale } : {};
+  const proxy = f.egressProxy as { port?: unknown; direct?: unknown } | null | undefined;
+  const egressProxy =
+    proxy && Number.isSafeInteger(proxy.port) && Array.isArray(proxy.direct)
+      ? { port: proxy.port as number, direct: proxy.direct.filter((h): h is string => typeof h === "string") }
+      : null;
   return access && paused
     ? {
         access,
@@ -117,6 +123,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
         desktopViewers: viewers,
         ...(f.browserKept === true ? { browserKept: true } : {}),
         privateNetwork: f.privateNetwork === true,
+        egressProxy,
         ...account,
         ...accounts,
         ...commitHost,
@@ -604,9 +611,12 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     idleMs: (state.limits.codexIdleMinutes ?? state.limits.brainIdleMinutes) * 60_000,
     maxProcesses: state.limits.codexMaxProcesses ?? state.limits.brainMaxProcesses,
   });
+  // The bridge comes next: a process's run asks for its tools through it.
+  let bridge: McpBridge | null = null;
   const brains = new BrainManager({
     root: path.join(home, "brains"),
     mcp: mcpCommand,
+    prefetchTools: (id) => bridge?.prefetch(id),
     accounts,
     ...(o.claudeCommand ? { claudeCommand: o.claudeCommand } : {}),
     ...brainLimits(),
@@ -681,8 +691,10 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     // A delegated CLI's calls find no process here (root runs it): harmless, as all its tools are this bridge's
     // (`mcp__`), which the silence check never times.
     onCall: (taskId, delta) => brains.bridgeCall(taskId, delta),
+    onList: (taskId, at, ms) => brains.bridgeList(taskId, at, ms),
     log,
   });
+  bridge = mcp;
   await mcp
     .listen()
     .catch((err: unknown) => log(`mission tools unavailable: ${err instanceof Error ? err.message : String(err)}`));
@@ -849,6 +861,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     const use = (s: WorkerState) => s.access.tools.desktop === true && s.access.tools.commands;
     if (use(state) && !use(next)) desktopUse.stopAll();
     state = next;
+    setEgressProxy(next.egressProxy ?? null);
     tasks.setLimits({
       maxConcurrent: next.limits.maxConcurrentTasks,
       defaultMaxSeconds: next.limits.taskMaxSeconds,

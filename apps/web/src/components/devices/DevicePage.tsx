@@ -1,7 +1,15 @@
-import type { ComputerDevice, DeviceAudience, Machine, PermissionNeed, PhoneDevice } from "@agenteschat/client";
+import type {
+  ComputerDevice,
+  ComputerMaintenance,
+  DeviceAudience,
+  Machine,
+  PermissionNeed,
+  PhoneDevice,
+} from "@agenteschat/client";
 import { useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
+  doctorShown,
   findPhone,
   iosOf,
   iphoneOverWifi,
@@ -13,6 +21,7 @@ import {
   phoneLink,
   phoneSystem,
   powerChoice,
+  RUNNER_DOCTOR_COMMAND,
   RUNNER_UPDATE_COMMAND,
   SPILL_USES,
   shareInternetText,
@@ -23,6 +32,7 @@ import {
   taskChoices,
   taskLimitLine,
   tasksAutoText,
+  terminalInstall,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt } from "@agenteschat/client/lib/format";
@@ -53,7 +63,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { MachineAccessCards, MachineAgents, MachineFactsExtra, MachinePage } from "@/components/Machines";
-import { CommandBlock } from "@/components/machine-bits";
+import { CommandBlock, MaintenanceHint } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
@@ -173,6 +183,8 @@ function StatusLine({
   action,
   ios,
   text,
+  maintenance,
+  cli,
 }: {
   status: PhoneDevice["status"];
   host?: string;
@@ -182,16 +194,21 @@ function StatusLine({
   ios?: string | null;
   /** In place of the status's own sentence, as typed (it carries a person's name). */
   text?: string | null;
+  /** What we do to the computer (ADR 0257): its line, with its ⓘ. */
+  maintenance?: ComputerMaintenance | null;
+  /** Installed from the Terminal (`terminalInstall`). */
+  cli?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios });
+  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios, maintenance, cli });
   const label = status.kind === "in_use" && status.label ? status.label : null;
   if (!sentence && !action) return null;
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
-      <span className="dv-statusline__text">
+      <span className={maintenance ? "dv-statusline__text ac-hintline" : "dv-statusline__text"}>
         {text ?? (sentence && codeAndBold(sentence, "cb", [host]))}
         {label && <small> · {label}</small>}
+        {maintenance && <MaintenanceHint maintenance={maintenance} />}
       </span>
       {action}
     </div>
@@ -387,8 +404,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
   const extra = Boolean(
     machine &&
       ((machine.workspace && machine.mode !== "system") ||
-        (machine.kind === "managed" &&
-          (machine.networkTransition || (machine.online && (machine.egress?.ip || machine.egressVia))))),
+        (machine.online && machine.egressVia) ||
+        (machine.kind === "managed" && (machine.networkTransition || (machine.online && machine.egress?.ip)))),
   );
   return (
     <>
@@ -436,7 +453,11 @@ function ComputerPage({ machineId }: { machineId: string }) {
         />
         <StatusLine
           status={status}
-          text={pausedFromApps ?? (status.kind === "busy" ? taskLimitLine(t, d, tasksEditable) : null)}
+          text={
+            pausedFromApps ?? (status.kind === "busy" && !d.maintenance ? taskLimitLine(t, d, tasksEditable) : null)
+          }
+          maintenance={d.maintenance}
+          cli={terminalInstall(machine)}
         />
         {(d.permissions ?? []).map((need) => (
           <PermissionWait key={need.permission} need={need} computer={d.name} />
@@ -447,6 +468,12 @@ function ComputerPage({ machineId }: { machineId: string }) {
             <span className="small muted">{t(`machines.runnerBehind.${machine.update}`, { computer: d.name })}</span>
             {machine.update === "command" && <CommandBlock command={RUNNER_UPDATE_COMMAND} />}
           </>
+        )}
+        {machine?.canManage && doctorShown(status, machine) && (
+          <Disclosure summary={t("devices.technical.title")}>
+            <span className="small muted">{t("devices.technical.doctor")}</span>
+            <CommandBlock command={RUNNER_DOCTOR_COMMAND} />
+          </Disclosure>
         )}
         <Facts facts={facts} />
         {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}

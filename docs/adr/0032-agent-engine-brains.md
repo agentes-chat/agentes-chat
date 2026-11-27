@@ -310,3 +310,21 @@ Adding, switching and signing in to an AI account again were three different pat
   ask first in the line under the list); what changed is said under the account in rows of their own, the agents on
   top, the sentence, then the button: "Undo" (which also gives a taken login back), and "Switch them too" for the
   owner's other agents on the account it left (`AgentAiScreen`).
+
+## Addendum (2026-11-27): a turn outlives a short drop (protocol 93)
+
+A computer whose link to the server dropped mid-turn (a network blip, our deploy, the replica its socket was on, the runner's own reconnect) used to abort the CLI turn there; the run waited for the computer and sent the turn again in the resumed session, so the work in flight was lost and done again. From `HELD_TURN_PROTOCOL` (93):
+
+- **The runner holds the turn** (`HeldTurns` in `apps/server/runner/handlers.ts`): on a dropped link it keeps running for `HELD_TURN_MS` (2 min), its frames and its result kept. A `brain.turn` for the same run on a later link takes it over (the frames first, then the result) and never starts a second CLI; one with `reattach` and nothing held is answered `not_found`.. A turn canceled (its link unwinding) is never taken over. A held turn ends when another run's turn comes for its CLI (agent and session), so two runs never share one, and when the engine sends `reattach: "stop"`: a run canceled while it waited for the computer sends it once the computer is back (`stopHeldTurn`; not on our own restart, whose next server takes the turn over). The runner stopping for good still aborts it.
+- **The engine waits instead of failing** (`callTurnThroughDrops` in `packages/engine/src/brains/claude-code.ts`, used by Claude Code and every brain of `hubBrainLink`): a `brain.turn` cut by a drop waits for the computer (`computerBackSoon`, up to `HELD_TURN_WAIT_MS`, 90 s; the run stays `running`) and asks again with `reattach`. `not_found`, an older runner, a computer not back in time, or a fourth drop: the first drop stands and the engine's own wait (`waitForDroppedComputer`) goes on as before.
+- **No standby while a turn runs** (ADR 0176): the runner turns a new standby ask down while a turn runs here, so the guard calls its pause off.
+
+## Addendum (2026-11-27): warm starts for every conversation
+
+A Claude Code CLI starts before its turn comes (`brain.warm`, protocol 74) when a conversation's run is claimed (`warmAtClaim`), while the person types (`warmWhileTyping`), and now when they open a DM with an agent or a thread (the apps' `open` frame, sent once the socket confirmed that channel; the server warms like typing, at most once every two minutes per conversation). A cold start was 44% of Claude Code turns before this.
+
+- **The right hand too.** Its warm start is its turn's own launch: locked down (`permissions: { mode: "chat" }`), with none of the owner's servers (`personalMcp: false`), no code session, and on the plan of the person the run thinks for. While they type, that person is the one typing (`resolveBrain`'s `person`), so a warm start never lands on someone else's plan. The runner's tool lock (`chatToolsBreach`) checks a warm process as it checks a turn's.
+- **Shared sign-ins** (`AccountBrains.prewarm`): root starts the sign-in's CLI as its turn would, through the agent's worker, admitted by memory like any warm start.
+- **The guess is per sign-in and kept on disk.** A new session starts from the agent's last kept turn's system text on the same account (`last-turns/` in the manager's root, mode 600), never another sign-in's, so a runner started again warms at once instead of `no_launch`.
+- **A ready process is refreshed.** Past `READY_IDLE_MS` (20 min) a new ready process takes the old one's place while the agent's last turn is under 2 h old and the computer has room (`readyRoom`).
+- **Why a session wasn't picked up.** A run whose conversation had a recent session but got a new one keeps why in its transcript (`notPickedUp`): `size`, or the parts of its prompt key that changed (`promptParts`: `rules`, `org`, `agent`, `team`, `skills`, `repositories`, `browsers`, `serverNotes`, `grants`, `personal`). Two causes found that way are fixed: the right hand's connected apps came in no fixed order, and a teammate's message in a person's DM with the right hand dropped the right hand's own block for that turn.

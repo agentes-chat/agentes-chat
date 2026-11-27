@@ -39,7 +39,7 @@ import { useOrg } from "@/providers/org";
 import type { ComposerWorking } from "@/ui";
 import { useSetupSteps } from "../../agents/setup/SetupCard";
 import { usePlanHold } from "../../ai/parts";
-import type { Directory } from "../../shared/hooks";
+import { type Directory, useConnection } from "../../shared/hooks";
 import { agentLook } from "../../shared/logic";
 import { ownsIn } from "../../shared/owner";
 import { browsingRuns } from "../LiveRows";
@@ -173,6 +173,11 @@ export function useChatData({
   const focused = useIsFocused();
   const peeking = useIsPreview();
   const live = useChatLive(orgId, channelId, readable, focused || peeking);
+  // Opened, or back on top: the agent that answers in this DM or thread gets ready before anything is typed.
+  const connection = useConnection();
+  useEffect(() => {
+    if (focused && readable && (dmAgentId || isThread)) connection?.sendOpen(channelId, threadId);
+  }, [connection, focused, readable, dmAgentId, isThread, channelId, threadId]);
   // Agents my message here named that won't answer me: in this conversation or this thread only.
   const notices = useMemo(
     () => live.notices.filter((n) => (isThread ? n.threadId === threadId : n.threadId === null)),

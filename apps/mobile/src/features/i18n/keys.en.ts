@@ -996,6 +996,7 @@ export const featureKeysEn = {
       admin_ask_channel_agent: "{{names}} asks you to add {{agent}} to #{{label}}",
       admin_ask_create_agents: "{{names}} asks to be able to create agents",
       admin_ask_webhook: "{{names}} asks you to set up the {{service}} webhook for routines",
+      admin_ask_voice: "{{names}} asks you to turn on voice messages",
       routine_paused_one: "Routine paused",
       routine_paused_other: "Routine paused",
       routine_stalled_one: "Routine waiting for the computer",

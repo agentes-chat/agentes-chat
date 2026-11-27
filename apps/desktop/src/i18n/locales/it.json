@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat ha bisogno di {{permission}}",
+    "done": "L’ho consentito",
+    "later": "Non ora",
+    "trayTitle": "In attesa di {{permission}}",
+    "why": {
+      "app_management": "Agli agenti serve per modificare le app su questo {{device}}.",
+      "screen": "Agli agenti serve per fare screenshot di questo {{device}}.",
+      "accessibility": "Agli agenti serve per cliccare e scrivere nelle app di questo {{device}}.",
+      "disk": "Agli agenti serve per aprire i tuoi file senza che macOS chieda per ogni cartella.",
+      "network": "Agli agenti serve per raggiungere telefoni e dispositivi sulla tua rete.",
+      "camera": "Agli agenti serve per usare la fotocamera di questo {{device}}.",
+      "microphone": "Agli agenti serve per usare il microfono di questo {{device}}.",
+      "automation": "Agli agenti serve per controllare altre app su questo {{device}}."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -7,6 +23,11 @@
   "windowTitle": {
     "welcome": "Benvenuto",
     "prefs": "Preferenze"
+  },
+  "background": {
+    "title": "agentes.chat è ancora aperto",
+    "bodyMac": "Lo trovi nella barra dei menu, in alto sullo schermo. Da lì puoi aprirlo o uscire.",
+    "bodyTray": "Lo trovi nell'area di notifica. Da lì puoi aprirlo o uscire."
   },
   "common": {
     "cancel": "Annulla",
@@ -68,6 +89,12 @@
         "capturing": "fa uno screenshot",
         "tabs": "cambia scheda"
       }
+    },
+    "apps": {
+      "title": "{{agent}} sta usando {{app}}",
+      "detail": "Mouse e tastiera restano tuoi",
+      "stop": "Ferma",
+      "stopped": "{{agent}} ha smesso di usare le tue app"
     },
     "label": "agentes.chat",
     "now": "Ora",
@@ -140,6 +167,10 @@
     "allowedUndo": "Annulla",
     "allowedOk": "Va bene",
     "allowedUndone": "Di nuovo disattivato: {{tool}}",
+    "pickTitle": "{{name}} chiede una cartella per gli agenti",
+    "pickTitleAgent": "{{name}} chiede una cartella per {{agent}}",
+    "pickBody": "Scegli quale cartella consentire su questo {{device}}.",
+    "pickChoose": "Scegli cartella",
     "quitTitle": "Uscire da agentes.chat?",
     "quitBody": "Gli agenti non possono usare questo {{device}} mentre l'app è chiusa. Quello che è già in corso finisce e invia il risultato quando la riapri.",
     "quitHereBody": "agentes.chat si ferma su questo {{device}}: nessuno può usarlo, qui, sul tuo telefono o su quelli dei colleghi, finché non riapri l'app.",
@@ -936,21 +967,5 @@
     "bringAllToFront": "Porta tutto in primo piano",
     "help": "Aiuto",
     "downloaded": "Download completato"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat ha bisogno di {{permission}}",
-    "done": "L’ho consentito",
-    "later": "Non ora",
-    "trayTitle": "In attesa di {{permission}}",
-    "why": {
-      "app_management": "Agli agenti serve per modificare le app su questo {{device}}.",
-      "screen": "Agli agenti serve per fare screenshot di questo {{device}}.",
-      "accessibility": "Agli agenti serve per cliccare e scrivere nelle app di questo {{device}}.",
-      "disk": "Agli agenti serve per aprire i tuoi file senza che macOS chieda per ogni cartella.",
-      "network": "Agli agenti serve per raggiungere telefoni e dispositivi sulla tua rete.",
-      "camera": "Agli agenti serve per usare la fotocamera di questo {{device}}.",
-      "microphone": "Agli agenti serve per usare il microfono di questo {{device}}.",
-      "automation": "Agli agenti serve per controllare altre app su questo {{device}}."
-    }
   }
 }

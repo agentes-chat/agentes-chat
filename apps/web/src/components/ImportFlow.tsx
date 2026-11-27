@@ -40,6 +40,7 @@ import { HelpLink } from "@/components/HelpLink";
 import { type ImportFocus, ImportSheet, type ImportSheetKind, useFocusOn } from "@/components/ImportSheet";
 import { arrivals } from "@/components/lodi-cursor/arrivals";
 import { useOrg } from "@/components/org-context";
+import { holdReload } from "@/lib/app-version";
 import {
   type AgentFile,
   type ImportFile,
@@ -177,7 +178,11 @@ export function useImportFlow(orgId: string | null, startCard: ImportCard | null
     if (!copying) return;
     const ask = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", ask);
-    return () => window.removeEventListener("beforeunload", ask);
+    const release = holdReload();
+    return () => {
+      window.removeEventListener("beforeunload", ask);
+      release();
+    };
   }, [copying]);
   // Agents whose files were sent to the Drive, so a later apply (a retry) sends only those it brought.
   const sent = useRef(new Set<string>());

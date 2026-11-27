@@ -41,6 +41,8 @@ export function storedStrings(key: string): string[] {
 
 export const STORAGE_KEYS = {
   theme: "agentes.theme",
+  /** JSON list of user ids: who has seen the microphone's first-press dialog where voice doesn't become text yet. */
+  voiceSetupSeen: "agentes.voiceSetupSeen",
   lastOrg: "agentes.lastOrg",
   /** The last page shown in each workspace (JSON, by workspace id): where "Onde você parou" opens (ADR 0108). */
   lastPlace: "agentes.lastPlace",
@@ -161,4 +163,10 @@ export const STORAGE_KEYS = {
 export const rightHandSeen = seenList(
   () => storage.get(STORAGE_KEYS.rightHandSeen),
   (value) => storage.set(STORAGE_KEYS.rightHandSeen, value),
+);
+
+/** Who has seen the microphone's first-press dialog where voice doesn't become text yet (`useVoiceSetup`), by user id. */
+export const voiceSetupSeen = seenList(
+  () => storage.get(STORAGE_KEYS.voiceSetupSeen),
+  (value) => storage.set(STORAGE_KEYS.voiceSetupSeen, value),
 );

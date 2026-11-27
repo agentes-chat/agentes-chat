@@ -2,6 +2,7 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, count, desc, eq, isNull, or, schema, sql } from "@agenteschat/db";
 import { type ArtifactDeps, shareArtifact } from "./artifacts";
 import { recordAudit } from "./audit";
+import { channelNameIs, typedChannelName } from "./channels";
 import { answersAgentsOnly, askerSpeaksIn } from "./consultations";
 import { addAgentReaction, isValidReaction, normalizeReaction } from "./context/feedback";
 import { openPersonAgentDm } from "./dms";
@@ -214,7 +215,7 @@ export function createChatToolSource(deps: {
           // A routine posts where its creator can post, as itself: never with their files.
           const routine = requester ? null : await actingRoutineOfCall(ctx);
           const creator = routine?.creatorUserId ?? null;
-          const name = str(input.channel).trim().replace(/^#/, "").toLowerCase();
+          const name = typedChannelName(str(input.channel));
           const { channels, channelMembers } = schema;
           const [found] = await ctx.db
             .select({
@@ -228,7 +229,7 @@ export function createChatToolSource(deps: {
             .where(
               and(
                 eq(channels.orgId, ctx.orgId),
-                eq(channels.name, name),
+                channelNameIs(name),
                 eq(channels.kind, "channel"),
                 isNull(channels.archivedAt),
               ),
