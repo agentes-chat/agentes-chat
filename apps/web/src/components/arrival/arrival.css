@@ -899,25 +899,6 @@ html:not([data-pointer]) .arrival-have__link:focus-visible {
   font-weight: 600;
   line-height: 24px;
 }
-.arrival-opts__tile {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 48px;
-  height: 48px;
-  box-sizing: border-box;
-  border-radius: 14px 14px 14px 4px;
-  background: var(--raised);
-  box-shadow:
-    inset 0 0 0 1px var(--line),
-    var(--top);
-}
-/* Four marks in one tile: the other plans. */
-.arrival-opts__tile--four {
-  grid-template-columns: 1fr 1fr;
-  gap: 3px;
-  padding: 8px;
-}
 @media (max-width: 760px) {
   .ac-dialog.arrival-connect {
     grid-template-columns: minmax(0, 1fr);

@@ -356,16 +356,20 @@ describe("the team dialog's styles", () => {
     expect(still).not.toMatch(/\.ai-strip__badge[^{]*\{[^}]*animation/);
   });
 
-  test("a choice's title and its line sit as one block on the tile's middle, with what ends the card", async () => {
-    // The choices are the kit's rows (OptionLinks): the row centres the tile, the text and the chevron.
+  test("the choices are flat rows: the mark, the title and the chevron on one line, its line under them", async () => {
+    // The kit's flat rows (OptionLinks `flat`, ADR 0256): a grid whose first line is the mark, the title, what ends
+    // it and the chevron, the description under all but the mark; no card, no tile.
     const kit = await stylesheet("../../../packages/ui/src/styles/components.css");
-    const rule = kit.split(/\n\.ac-optrow \{/)[1]?.split("}")[0] ?? "";
-    expect(rule).toContain("align-items: center");
+    const rule = (selector: string) =>
+      kit.split(new RegExp(`\\n${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{`))[1]?.split("}")[0] ?? "";
+    const lead = rule(".ac-optlinks--flat > .ac-optrow--link.ac-optrow--lead");
+    expect(lead).toContain('"lead title side go"');
+    expect(lead).toContain('". desc desc desc"');
+    expect(rule(".ac-optlinks--flat > .ac-optrow--link")).toContain("background: none");
     const css = await stylesheet("../src/components/arrival/arrival.css");
-    // No nudge pulling the title up to the tile's top any more.
-    expect(css).not.toContain(
-      ".arrival-opts .ac-option > :is(.ac-brand, .arrival-opts__tile):first-child + .ac-option__text > .ac-option__title {",
-    );
+    // One mark column on every row, as wide as the other plans' stack; no tile drawn behind a mark any more.
+    expect(css).toContain(".arrival-opts.ac-optlinks--flat {");
+    expect(css).not.toContain(".arrival-opts__tile");
   });
 
   test("an account row's name and lines wrap whole, never cut", async () => {
