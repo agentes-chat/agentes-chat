@@ -119,6 +119,7 @@ import type {
   FileWave,
   FirstAgentPicked,
   FirstAgents,
+  FirstDeliveryRow,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1109,6 +1110,16 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         (await request<{ proposal: FirstAgents }>(`${org(orgId)}/first-agents`, { json: input })).proposal,
       pick: (orgId, proposalId, index) =>
         request<FirstAgentPicked>(`${org(orgId)}/first-agents/${enc(proposalId)}/pick`, { json: { index } }),
+      start: (orgId, input) => request<FirstAgentPicked>(`${org(orgId)}/first-agents/start`, { json: input }),
+      delivery: async (orgId) =>
+        (await request<{ delivery: FirstDeliveryRow | null }>(`${org(orgId)}/first-delivery`)).delivery,
+      keepDelivery: async (orgId, agentId) =>
+        (
+          await request<{ delivery: FirstDeliveryRow }>(`${org(orgId)}/first-delivery`, {
+            method: "PUT",
+            json: { agentId },
+          })
+        ).delivery,
     },
     voice: {
       allowed: (orgId) => request<{ allowed: boolean }>(`${org(orgId)}/voice/allowed`),

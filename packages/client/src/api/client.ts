@@ -160,8 +160,10 @@ import type {
   FileConversationRef,
   FileWave,
   FirstAgentPicked,
+  FirstAgentStartInput,
   FirstAgents,
   FirstAgentsInput,
+  FirstDeliveryRow,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1050,6 +1052,12 @@ export interface ApiClient {
     paste(orgId: string, input: FirstAgentsInput): Promise<FirstAgents>;
     /** "Criar o …": the option at `index` becomes one agent; again, the same one. 403 `create_agents_required`. */
     pick(orgId: string, proposalId: string, index: number): Promise<FirstAgentPicked>;
+    /** My first agent from an area of the onboarding, its first delivery kept. 403 `create_agents_required`. */
+    start(orgId: string, input: FirstAgentStartInput): Promise<FirstAgentPicked>;
+    /** My first delivery here, or null. */
+    delivery(orgId: string): Promise<FirstDeliveryRow | null>;
+    /** Keeps my first delivery for an agent of this workspace (one brought from another app). */
+    keepDelivery(orgId: string, agentId: string): Promise<FirstDeliveryRow>;
   };
   chat: {
     channels(orgId: string): Promise<Channel[]>;
@@ -2284,9 +2292,16 @@ export interface ApiClient {
      * `desktop`: started in the desktop app's window, which opens the page in the browser and gets the return back.
      * `accountId` reconnects that mailbox (one that needs it) instead of adding one.
      */
+    /** `back`: started on the onboarding or a member's welcome page, which the sign-in returns to (ADR 0256 addendum). */
     connectComposio(
       orgId: string,
-      input: { provider: "gmail" | "outlook"; label?: string; accountId?: string; desktop?: boolean },
+      input: {
+        provider: "gmail" | "outlook";
+        label?: string;
+        accountId?: string;
+        desktop?: boolean;
+        back?: "onboarding" | "welcome";
+      },
     ): Promise<{ accountId: string; redirectUrl: string }>;
     /** A new name, actions, other addresses and the default From, or a new app password (reconnects an IMAP mailbox). */
     update(orgId: string, accountId: string, input: MailAccountUpdate): Promise<MailAccount>;

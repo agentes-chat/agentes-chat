@@ -1517,6 +1517,44 @@ export interface FirstAgentPicked {
   channelId: string;
 }
 
+/**
+ * An agent of one of the onboarding's areas, or of "Outro" (`POST …/first-agents/start`, ADR 0256 addendum): made with
+ * no routine (connecting an app brings it, ADR 0242); its first delivery is kept.
+ */
+export interface FirstAgentStartInput {
+  /** The onboarding's area (`support`, `life`, `custom`), up to 40 characters. */
+  area: string;
+  /** 1 to 60 characters. */
+  name: string;
+  /** Up to 80 characters. */
+  role?: string;
+  /** Up to 4000 characters. */
+  instructions?: string;
+  appearance?: Required<AgentLookInput> | null;
+  /** What it delivers first when it has no routine of mine, up to 500 characters. */
+  task?: string;
+  /** Catalog ids of the apps its job needs, up to 8: its checklist asks for those not connected yet. */
+  apps?: string[];
+  /** My first agent made a moment ago that this one takes the place of: archived while its delivery hasn't fired. */
+  replace?: string | null;
+}
+
+/**
+ * My first delivery here (`GET …/first-delivery`, ADR 0256 addendum): what the agent I set up on the onboarding does
+ * for me first, in my DM with it, once the workspace has its plan and the agent its AI. Its reply carries
+ * `meta.firstDelivery` (`{ summary }`).
+ */
+export interface FirstDeliveryRow {
+  agentId: string;
+  /** The onboarding's area; null for an agent brought from another app. */
+  area: string | null;
+  task: string;
+  /** When it went out; null while it waits for the plan or the AI. */
+  firedAt: string | null;
+  /** The run it woke in my DM with the agent, once fired. */
+  runId: string | null;
+}
+
 /** `meta.replyChips` of a right hand's question: answers to tap, each sent as the person's own message. */
 export interface ReplyChips {
   choices: string[];

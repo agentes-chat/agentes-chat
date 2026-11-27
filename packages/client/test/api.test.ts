@@ -811,4 +811,28 @@ describe("the first agents my own AI proposed (ADR 0256)", () => {
     expect((error as ApiError).code).toBe("first_agents.invalid");
     expect((error as ApiError).status).toBe(400);
   });
+
+  test("an agent from an area, and my first delivery read and kept for an agent brought from another app", async () => {
+    const made = { agentId: "a1", handle: "iara", channelId: "c1" };
+    const delivery = { agentId: "a1", area: "support", task: "Ler os e-mails", firedAt: null, runId: null };
+    const { fetch, calls } = fakeFetch({
+      [`POST ${org}/first-agents/start`]: { status: 201, body: made },
+      [`GET ${org}/first-delivery`]: { status: 200, body: { delivery } },
+      [`PUT ${org}/first-delivery`]: { status: 200, body: { delivery: { ...delivery, area: null, task: "" } } },
+    });
+    const api = createHttpApi({ fetch });
+    const input = { area: "support", name: "Iara", role: "Atendimento", task: "Ler os e-mails", apps: ["zendesk"] };
+    expect(await api.firstAgents.start("o1", input)).toEqual(made);
+    expect(await api.firstAgents.delivery("o1")).toEqual(delivery);
+    expect(await api.firstAgents.keepDelivery("o1", "a1")).toEqual({ ...delivery, area: null, task: "" });
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      `POST ${org}/first-agents/start`,
+      `GET ${org}/first-delivery`,
+      `PUT ${org}/first-delivery`,
+    ]);
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual(input);
+    expect(JSON.parse(String(calls[2]?.init.body))).toEqual({ agentId: "a1" });
+    const none = fakeFetch({ [`GET ${org}/first-delivery`]: { status: 200, body: { delivery: null } } });
+    expect(await createHttpApi({ fetch: none.fetch }).firstAgents.delivery("o1")).toBeNull();
+  });
 });

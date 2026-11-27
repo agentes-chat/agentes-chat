@@ -38,6 +38,8 @@ export const keys = {
   actionCard: (orgId: string, messageId: string) => ["org", orgId, "action-card", messageId] as const,
   /** My newest first-agent proposal (ADR 0256). */
   firstAgents: (orgId: string) => ["org", orgId, "first-agents"] as const,
+  /** My first delivery (ADR 0256 addendum). */
+  firstDelivery: (orgId: string) => ["org", orgId, "first-delivery"] as const,
   teamTemplates: (orgId: string, locale: string) => ["org", orgId, "team-templates", locale] as const,
   team: (orgId: string) => ["org", orgId, "team"] as const,
   credentials: (orgId: string) => ["org", orgId, "credentials"] as const,

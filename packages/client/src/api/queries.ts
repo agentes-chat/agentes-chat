@@ -147,6 +147,7 @@ import type {
   EndpointModel,
   FileConversation,
   FileConversationRef,
+  FirstAgentStartInput,
   FirstAgentsInput,
   ForeignMailbox,
   FormerAgent,
@@ -1314,6 +1315,43 @@ export function usePickFirstAgent(orgId: string) {
         void qc.invalidateQueries({ queryKey: key });
       await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
     },
+  });
+}
+
+/**
+ * My first agent from an area of the onboarding (ADR 0256 addendum), its first delivery kept. Pending until the agents'
+ * list has it; channels, routines, my first delivery and my DMs are read again.
+ */
+export function useStartFirstAgent(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FirstAgentStartInput) => api.firstAgents.start(orgId, input),
+    onSuccess: async () => {
+      for (const key of [keys.channels(orgId), keys.routines(orgId), keys.firstDelivery(orgId), keys.dms(orgId)])
+        void qc.invalidateQueries({ queryKey: key });
+      await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+    },
+  });
+}
+
+/** My first delivery here (ADR 0256 addendum), null when none was kept; `enabled` false skips the read. */
+export function useFirstDeliveryRow(orgId: string, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.firstDelivery(orgId),
+    queryFn: () => api.firstAgents.delivery(orgId),
+    enabled: Boolean(orgId) && enabled,
+  });
+}
+
+/** Keeps my first delivery for an agent brought from another app (the onboarding's import). */
+export function useKeepFirstDelivery(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (agentId: string) => api.firstAgents.keepDelivery(orgId, agentId),
+    onSuccess: (delivery) => qc.setQueryData(keys.firstDelivery(orgId), delivery),
   });
 }
 
@@ -3388,8 +3426,7 @@ export function useMailAction(orgId: string) {
       meta: { silent: true },
     }),
     connectComposio: useMutation({
-      mutationFn: (input: { provider: "gmail" | "outlook"; label?: string; accountId?: string; desktop?: boolean }) =>
-        api.mail.connectComposio(orgId, input),
+      mutationFn: (input: Parameters<typeof api.mail.connectComposio>[1]) => api.mail.connectComposio(orgId, input),
     }),
     update: useMutation({
       mutationFn: ({ accountId, ...input }: MailAccountUpdate & { accountId: string }) =>
