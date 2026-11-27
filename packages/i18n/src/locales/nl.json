@@ -16776,6 +16776,7 @@
     "withSignIn": "met gebruiker en wachtwoord",
     "order": "De volgorde: de proxy van deze computer, anders die van de workspace, dan het geleende internet van iemand, dan de gewone weg. Zolang er een proxy is ingesteld, gaan browsers en websites van agents alleen daarlangs: valt hij uit, dan mislukken die sites tot hij terug is of verwijderd.",
     "address": "Proxyadres",
+    "example": "socks5://gebruiker:wachtwoord@host:1080",
     "replace": "Nieuw proxyadres",
     "addressHint": "HTTP, HTTPS of SOCKS5, met gebruiker en wachtwoord erin als dat nodig is. Versleuteld bewaard: alleen host en poort worden weer getoond.",
     "save": "Opslaan",

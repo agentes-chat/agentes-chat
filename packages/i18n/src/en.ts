@@ -17240,6 +17240,8 @@ export const en = {
     order:
       "The order: this computer's proxy, else the workspace's, then a person's lent internet, then the usual way. While a proxy is set, agents' browsers and websites go through it alone: if it's down, those sites fail until it's back or removed.",
     address: "Proxy address",
+    /** The address field's example: only its user and password words are translated. */
+    example: "socks5://user:password@host:1080",
     replace: "New proxy address",
     addressHint:
       "HTTP, HTTPS or SOCKS5, with the user and password in it if it needs them. Kept encrypted: only its host and port show again.",

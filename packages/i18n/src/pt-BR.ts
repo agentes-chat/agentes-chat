@@ -17166,6 +17166,7 @@ export const ptBR = {
     order:
       "A ordem: o proxy deste computador, senão o do workspace, depois a internet emprestada de uma pessoa, depois o caminho de sempre. Com um proxy salvo, os navegadores e sites dos agentes passam só por ele: se ele cair, esses sites falham até ele voltar ou ser removido.",
     address: "Endereço do proxy",
+    example: "socks5://usuario:senha@host:1080",
     replace: "Novo endereço do proxy",
     addressHint:
       "HTTP, HTTPS ou SOCKS5, com usuário e senha nele se precisar. Fica criptografado: só o host e a porta aparecem de novo.",

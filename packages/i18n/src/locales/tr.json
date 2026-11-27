@@ -16637,6 +16637,7 @@
     "withSignIn": "kullanıcı adı ve şifreyle",
     "order": "Sıra: bu bilgisayarın proxy'si, yoksa workspace'inki, sonra bir kişinin ödünç verdiği internet, sonra her zamanki yol. Bir proxy ayarlıyken ajanların tarayıcıları ve siteleri yalnızca onun üzerinden gider: çökerse, o siteler geri gelene ya da kaldırılana kadar açılmaz.",
     "address": "Proxy adresi",
+    "example": "socks5://kullanici:sifre@host:1080",
     "replace": "Yeni proxy adresi",
     "addressHint": "HTTP, HTTPS ya da SOCKS5. Gerekiyorsa kullanıcı adı ve şifre içinde olsun. Şifreli saklanır: yalnızca host ve port yeniden görünür.",
     "save": "Kaydet",

@@ -16709,6 +16709,7 @@
     "withSignIn": "mit Benutzer und Passwort",
     "order": "Die Reihenfolge: der Proxy dieses Computers, sonst der des Workspace, dann das geliehene Internet einer Person, dann der gewohnte Weg. Solange ein Proxy gesetzt ist, gehen Browser und Websites der Agenten nur über ihn: Fällt er aus, schlagen diese Seiten fehl, bis er wieder da ist oder entfernt wird.",
     "address": "Proxy-Adresse",
+    "example": "socks5://benutzer:passwort@host:1080",
     "replace": "Neue Proxy-Adresse",
     "addressHint": "HTTP, HTTPS oder SOCKS5, mit Benutzer und Passwort darin, falls nötig. Verschlüsselt gespeichert: Nur Host und Port werden wieder angezeigt.",
     "save": "Speichern",

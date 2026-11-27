@@ -40969,6 +40969,9 @@
   "agentProxy.address": {
     "value": "Proxy address"
   },
+  "agentProxy.example": {
+    "value": "socks5://user:password@host:1080"
+  },
   "agentProxy.replace": {
     "value": "New proxy address"
   },

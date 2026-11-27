@@ -16159,6 +16159,7 @@
     "withSignIn": "dengan nama pengguna dan kata sandi",
     "order": "Urutannya: proxy komputer ini, kalau tidak proxy workspace, lalu internet yang dipinjamkan seseorang, lalu jalur biasa. Selama proxy disetel, browser dan situs agen hanya lewat proxy itu: kalau proxy mati, situs-situs itu gagal sampai proxy kembali atau dihapus.",
     "address": "Alamat proxy",
+    "example": "socks5://pengguna:katasandi@host:1080",
     "replace": "Alamat proxy baru",
     "addressHint": "HTTP, HTTPS, atau SOCKS5, dengan nama pengguna dan kata sandi di dalamnya jika perlu. Disimpan terenkripsi: hanya host dan port yang tampil lagi.",
     "save": "Simpan",

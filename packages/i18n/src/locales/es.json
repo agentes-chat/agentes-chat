@@ -17195,6 +17195,7 @@
     "withSignIn": "con usuario y contraseña",
     "order": "El orden: el proxy de este ordenador, si no el del workspace, luego el internet prestado de una persona, luego el camino de siempre. Con un proxy guardado, los navegadores y sitios de los agentes pasan solo por él: si se cae, esos sitios fallan hasta que vuelva o se quite.",
     "address": "Dirección del proxy",
+    "example": "socks5://usuario:contraseña@host:1080",
     "replace": "Nueva dirección del proxy",
     "addressHint": "HTTP, HTTPS o SOCKS5, con usuario y contraseña si los necesita. Se guarda cifrado: solo vuelven a mostrarse el host y el puerto.",
     "save": "Guardar",

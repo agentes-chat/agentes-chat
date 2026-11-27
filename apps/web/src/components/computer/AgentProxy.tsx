@@ -78,7 +78,7 @@ export function AgentProxyCard({ machineId, canChange }: { machineId: string | n
               value={url}
               autoComplete="off"
               spellCheck={false}
-              placeholder="socks5://user:password@host:1080"
+              placeholder={t("agentProxy.example")}
               disabled={busy}
               onChange={(e) => setUrl(e.target.value)}
             />

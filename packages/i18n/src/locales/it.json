@@ -17294,6 +17294,7 @@
     "withSignIn": "con utente e password",
     "order": "L’ordine: il proxy di questo computer, altrimenti quello del workspace, poi l’internet prestato di una persona, poi la solita strada. Con un proxy impostato, browser e siti degli agenti passano solo da lì: se cade, quei siti falliscono finché non torna o viene rimosso.",
     "address": "Indirizzo del proxy",
+    "example": "socks5://utente:password@host:1080",
     "replace": "Nuovo indirizzo del proxy",
     "addressHint": "HTTP, HTTPS o SOCKS5, con utente e password se servono. Salvato cifrato: si rivedono solo host e porta.",
     "save": "Salva",

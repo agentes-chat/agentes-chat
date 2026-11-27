@@ -17847,6 +17847,7 @@
     "withSignIn": "z użytkownikiem i hasłem",
     "order": "Kolejność: proxy tego komputera, w przeciwnym razie proxy workspace’u, potem pożyczony internet jakiejś osoby, potem zwykła droga. Gdy proxy jest ustawione, przeglądarki i strony agentów idą tylko przez nie: jeśli padnie, te strony nie działają, dopóki nie wróci albo nie zostanie usunięte.",
     "address": "Adres proxy",
+    "example": "socks5://uzytkownik:haslo@host:1080",
     "replace": "Nowy adres proxy",
     "addressHint": "HTTP, HTTPS albo SOCKS5, z użytkownikiem i hasłem w środku, jeśli są potrzebne. Przechowywane w postaci zaszyfrowanej: ponownie widać tylko host i port.",
     "save": "Zapisz",

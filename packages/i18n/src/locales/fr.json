@@ -17269,6 +17269,7 @@
     "withSignIn": "avec utilisateur et mot de passe",
     "order": "L’ordre : le proxy de cet ordinateur, sinon celui de l’espace, puis l’internet prêté d’une personne, puis le chemin habituel. Tant qu’un proxy est défini, les navigateurs et sites des agents passent uniquement par lui : s’il tombe, ces sites échouent jusqu’à son retour ou son retrait.",
     "address": "Adresse du proxy",
+    "example": "socks5://utilisateur:motdepasse@host:1080",
     "replace": "Nouvelle adresse du proxy",
     "addressHint": "HTTP, HTTPS ou SOCKS5, avec l’utilisateur et le mot de passe s’il en faut. Conservé chiffré : seuls l’hôte et le port s’affichent à nouveau.",
     "save": "Enregistrer",
