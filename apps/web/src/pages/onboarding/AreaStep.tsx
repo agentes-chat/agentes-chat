@@ -42,11 +42,11 @@ import "./area-step.css";
  */
 
 /** The AI makers on "Ask your AI", the assistants people use most. */
-const ASK_MARKS = ["openai", "claude", "gemini"] as const;
+const ASK_MARKS = ["openai", "gemini", "claude"] as const;
 /** The agent apps after them, where the import is offered. */
 const APP_MARKS = ["grok-bot", "openbotrun"] as const satisfies readonly Exclude<ImportCard, "other">[];
 /** The assistants the dialog names (`ASK_CLIENTS` ids); every other one is "Another AI", the ask flow's own row. */
-const NAMED_AIS = ["chatgpt", "claude", "gemini"] as const;
+const NAMED_AIS = ["chatgpt", "gemini", "claude"] as const;
 /** "Another AI"'s marks: the next assistants in the ask flow's row. */
 const MORE_AIS = ["grok", "perplexity", "cursor"] as const;
 /**
@@ -168,6 +168,8 @@ export function AreaStep({
       <Locked when={busy}>
         <div className="onb-areas">
           <AskButton apps={onImport !== undefined} onClick={() => setAsking(true)} />
+          {/* The sign-in's "or" between the two ways in: the person's AI, or a work from the list. */}
+          <div className="auth__or onb-or">{t("common.or")}</div>
           <OptionLinks flat className="onb-areas__list" aria-label={title} options={rows} />
         </div>
       </Locked>

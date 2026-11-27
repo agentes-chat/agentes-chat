@@ -105,7 +105,7 @@ describe("the welcome wizard, right after the onboarding", () => {
     const css = readFileSync(join(import.meta.dir, "../src/components/arrival/welcome-wizard.css"), "utf8");
     const rule = (selector: string, from = css) => from.slice(from.indexOf(`${selector} {`)).split("}")[0] ?? "";
     const scrim = rule("\n.ac-dialog__scrim.wiz-scrim");
-    expect(scrim).toContain("backdrop-filter: blur(10px)");
+    expect(scrim).toContain("backdrop-filter: blur(24px)");
     expect(scrim).toContain("background: var(--wiz-sky)");
     // Both themes, and a browser that blurs nothing behind.
     expect(css).toContain('[data-theme="dark"] .ac-dialog__scrim.wiz-scrim {');

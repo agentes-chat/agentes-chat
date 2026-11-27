@@ -505,7 +505,13 @@ describe("the work its first agent does (ADR 0256)", () => {
       plates.map(
         (p) => p.querySelector(".ac-brand")?.getAttribute("data-mark") ?? p.querySelector("img")?.getAttribute("src"),
       ),
-    ).toEqual(["openai", "claude", "gemini", CARD_MARK["grok-bot"].icon, CARD_MARK.openbotrun.icon]);
+    ).toEqual(["openai", "gemini", "claude", CARD_MARK["grok-bot"].icon, CARD_MARK.openbotrun.icon]);
+    // The marks on a line of their own, over the words; then the sign-in's "or" before the works.
+    expect(ask.firstElementChild?.matches(".onb-start__marks")).toBe(true);
+    const or = ask.nextElementSibling as HTMLElement;
+    expect(or.matches(".auth__or.onb-or")).toBe(true);
+    expect(or.textContent).toBe("ou");
+    expect(or.nextElementSibling?.matches(".onb-areas__list")).toBe(true);
     // Nothing else on the step points to the other ways in: no second button, nothing pinned under the list.
     expect(screen().queryByRole("button", { name: /Trazer de outro app/ })).toBeNull();
     expect(box().querySelector(".onb-other, .onbx__pinned")).toBeNull();
@@ -614,8 +620,8 @@ describe("the work its first agent does (ADR 0256)", () => {
     const ai = "Sugere o primeiro agente pelo que você já faz";
     expect(rows("A sua IA")).toEqual([
       { title: "ChatGPT", line: ai },
-      { title: "Claude", line: ai },
       { title: "Gemini", line: ai },
+      { title: "Claude", line: ai },
       { title: "Outra IA", line: "Grok, Perplexity, Cursor e mais" },
     ]);
     // The agent apps by the import's own names, each led by its mark; every other one is "Another app".
@@ -642,6 +648,10 @@ describe("the work its first agent does (ADR 0256)", () => {
     expect(dialog.querySelector(".onb-ask")).not.toBeNull();
     const pressed = () => dialog.querySelector(".onb-ask__ai[aria-pressed='true']")?.textContent;
     expect(pressed()).toBe("Gemini");
+    // Its row: the most used first, one per maker (a maker's coding tool would ask the same AI again).
+    const row = [...dialog.querySelectorAll(".onb-ask__ai")].map((b) => b.textContent);
+    expect(row.slice(0, 7)).toEqual(["ChatGPT", "Gemini", "Claude", "Grok", "Perplexity", "GitHub Copilot", "Cursor"]);
+    for (const twin of ["Claude Code", "Codex", "Gemini CLI", "Copilot CLI"]) expect(row).not.toContain(twin);
     expect(dialog.textContent).toContain("Cole este pedido numa conversa nova");
     await click(within(dialog).getByRole("button", { name: "Voltar" }), 6);
     expect(screen().getByRole("dialog", { name: "Comece pelo que você já usa" })).toBe(dialog);

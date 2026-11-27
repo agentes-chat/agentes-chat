@@ -4,22 +4,25 @@
  * button's own dialog lists what the person already uses in two groups of flat rows.
  */
 .onb-areas {
-  container: onb-areas / inline-size;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 /*
  * "Ask your AI": a real button in the kit's raised surface (its line and lift, its hover, its press, its focus ring),
- * no tint. The marks and the chevron on the title's line; the title over its quiet line.
+ * no tint. The marks on a line of their own on top, then the title over its quiet line, the chevron on the title's
+ * line.
  */
 .onb-start {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "marks ."
+    "text go";
+  row-gap: 12px;
+  column-gap: 12px;
   width: 100%;
-  min-height: 64px;
-  padding: 12px 16px;
+  padding: 16px;
   border: 0;
   border-radius: var(--radius-lg);
   background: var(--raised);
@@ -46,20 +49,19 @@ html:not([data-pointer]) .onb-start:focus-visible {
   cursor: default;
   opacity: 0.6;
 }
-/* As tall as the title's line, the 24px plates centred on it. */
+/* The makers' and the apps' marks on their own line: 28px plates, each a little over the one before. */
 .onb-start__marks {
+  grid-area: marks;
   display: inline-flex;
-  flex: none;
   align-items: center;
-  height: 22px;
 }
 .onb-start__plate {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   overflow: hidden;
-  border-radius: 8px 8px 8px 3px;
+  border-radius: 9px 9px 9px 3px;
   background: var(--raised);
   box-shadow:
     inset 0 0 0 1px var(--line),
@@ -71,15 +73,15 @@ html:not([data-pointer]) .onb-start:focus-visible {
 .onb-start__plate > img,
 .onb-start__plate > .ac-brand,
 .onb-start__plate > .ac-brand svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 .onb-start__plate > img {
   object-fit: contain;
 }
 .onb-start__text {
+  grid-area: text;
   display: flex;
-  flex: 1 1 auto;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
@@ -97,30 +99,13 @@ html:not([data-pointer]) .onb-start:focus-visible {
   text-wrap: pretty;
 }
 .onb-start__go {
-  flex: none;
+  grid-area: go;
   margin-top: 3px;
   color: var(--muted);
 }
-/* A phone's narrow step: the marks on a line of their own over the title, the chevron still on the title's line. */
-@container onb-areas (max-width: 380px) {
-  .onb-start {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "marks ."
-      "text go";
-    row-gap: 10px;
-    column-gap: 12px;
-  }
-  .onb-start__marks {
-    grid-area: marks;
-  }
-  .onb-start__text {
-    grid-area: text;
-  }
-  .onb-start__go {
-    grid-area: go;
-  }
+/* "or" between the button and the list, the sign-in's divider: a hairline each side. */
+.onb-or {
+  margin-block: -2px;
 }
 /* The ask flow's Back, before the title: on the title's capitals, as a dialog's face is (the kit centres the line). */
 .onb-askdlg .ac-dialog__lead {

@@ -216,22 +216,23 @@
  * `TEAM_NIGHT` at night, packages/ui/src/sky/math.ts).
  */
 .ac-dialog__scrim.wiz-scrim {
-  --wiz-sky: rgba(15, 86, 196, 0.16);
-  --wiz-pixel: rgba(75, 147, 255, 0.2);
+  /* The sky's pale day tone, near solid: the page behind is only a shape under it. */
+  --wiz-sky: rgba(206, 224, 250, 0.84);
+  --wiz-pixel: rgba(75, 147, 255, 0.24);
   background: var(--wiz-sky);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 [data-theme="dark"] .ac-dialog__scrim.wiz-scrim {
-  --wiz-sky: rgba(5, 8, 20, 0.58);
-  --wiz-pixel: rgba(43, 83, 173, 0.36);
+  --wiz-sky: rgba(8, 12, 28, 0.86);
+  --wiz-pixel: rgba(43, 83, 173, 0.4);
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .ac-dialog__scrim.wiz-scrim {
-    --wiz-sky: rgba(10, 63, 156, 0.5);
+    --wiz-sky: rgba(206, 224, 250, 0.96);
   }
   [data-theme="dark"] .ac-dialog__scrim.wiz-scrim {
-    --wiz-sky: rgba(5, 8, 20, 0.86);
+    --wiz-sky: rgba(8, 12, 28, 0.96);
   }
 }
 .ac-dialog__scrim.wiz-scrim::before,

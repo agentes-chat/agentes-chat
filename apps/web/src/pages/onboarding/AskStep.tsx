@@ -30,30 +30,24 @@ const APPS_POLL_MS = 5000;
 const STUCK_MS = 2 * 60_000;
 
 /** The assistants first in the row, the most used first; every other app of the list after them, in its order. */
-const FIRST = [
-  "chatgpt",
-  "claude",
-  "gemini",
-  "grok",
-  "perplexity",
-  "le_chat",
-  "cursor",
-  "claude_code",
-  "codex",
-  "vscode",
-];
+const FIRST = ["chatgpt", "gemini", "claude", "grok", "perplexity", "copilot_ides", "cursor", "le_chat", "vscode"];
 const rank = (id: string) => {
   const i = FIRST.indexOf(id);
   return i < 0 ? FIRST.length : i;
 };
-/** "Other app" asks for a token, which the onboarding has no place for: other agent apps go through the import. */
-export const ASK_CLIENTS: readonly AppClient[] = APP_CLIENTS.filter((c) => c.id !== "other").sort(
-  (a, b) => rank(a.id) - rank(b.id),
-);
 
 /** The maker a mark stands for, so a connected app's verified brand matches the clients it covers. */
 const MAKER: Record<string, string> = { claude_code: "claude", codex: "openai" };
 const makerOf = (mark: string | null) => (mark ? (MAKER[mark] ?? mark) : null);
+
+/**
+ * The row of assistants: "Other app" asks for a token, which the onboarding has no place for (other agent apps go
+ * through the import); one assistant per maker, its chat app before its coding tools (a maker's second one asks the
+ * same AI), the most used first.
+ */
+export const ASK_CLIENTS: readonly AppClient[] = APP_CLIENTS.filter((c) => c.id !== "other")
+  .sort((a, b) => rank(a.id) - rank(b.id) || Number(a.group !== "chat") - Number(b.group !== "chat"))
+  .filter((c, i, all) => all.findIndex((x) => makerOf(x.mark) === makerOf(c.mark)) === i);
 
 /**
  * The request the person pastes into a new conversation with their AI: the opening and what to read first in the
