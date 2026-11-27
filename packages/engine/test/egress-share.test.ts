@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { connect } from "node:net";
 import {
+  EGRESS_ANY_PORT_PROTOCOL,
   EGRESS_PROXY_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
@@ -269,6 +270,43 @@ test("nothing lent, a refused destination or a computer that isn't the workspace
   expect(await ask(laptop)).toBe(STREAM_CLOSE.forbidden);
   // A data socket naming no lent connection is left to the others.
   expect(relay.claim(hello("c".repeat(43)), laptop, fakeSocket().socket)).toBeNull();
+});
+
+test("SSH and other ports go only to a lender whose app carries them; while only older ones lend, it isn't carried", async () => {
+  f = await setup();
+  const desk = await pair(f.owner.id, "Desk", EGRESS_ANY_PORT_PROTOCOL);
+  const laptop = await pair(f.owner.id, "Laptop", EGRESS_ANY_PORT_PROTOCOL - 1);
+  const managed = await issueManagedMachine({ db: f.db }, f.org.id);
+  if (!managed) throw new Error("no managed computer");
+  let online = [desk, laptop];
+  const asked: string[] = [];
+  const relay = createEgressRelay({
+    db: f.db,
+    hub: {
+      status: async (id) => ({ online: online.includes(id) }) as never,
+      call: async (machineId) => {
+        asked.push(machineId);
+        throw new MachineRequestError("not_found", "no");
+      },
+    },
+  });
+  const ask = async (port: number) => {
+    const s = fakeSocket();
+    relay.claim(hello("f".repeat(43), { host: "git.example", port }), managed.machineId, s.socket);
+    await until(() => s.closed !== null, "close");
+    return s.closed?.code;
+  };
+
+  // The laptop, paired last, carries the web; SSH goes to the desk, whose app carries any port.
+  await ask(443);
+  await ask(22);
+  expect(asked).toEqual([laptop, desk]);
+  // Only the older one online: SSH is "not carried", so the web keeps asking, never "none lends".
+  online = [laptop];
+  expect(await ask(22)).toBe(STREAM_CLOSE.refused);
+  expect(asked).toEqual([laptop, desk]);
+  online = [];
+  expect(await ask(22)).toBe(STREAM_CLOSE.unreachable);
 });
 
 test("a lending computer that is paused or doesn't answer is passed over: the next ask goes to another", async () => {

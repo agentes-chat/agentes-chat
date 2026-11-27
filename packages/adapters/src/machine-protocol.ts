@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 95;
+export const MACHINE_PROTOCOL_VERSION = 96;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -301,6 +301,15 @@ export interface MachineSize {
   maxTasks?: number;
   /** `TASK_ROOM_PROTOCOL`: tasks start on room here. */
   room?: TaskRoomReport;
+  /** The processor's name (`Apple M4 Pro`, `AMD EPYC 7763`). Absent from an older runner: no protocol number. */
+  cpuModel?: string;
+  /**
+   * Its physical cores, where the system says them (macOS, Linux on x86); `cpus` counts logical CPUs, threads on a
+   * processor with simultaneous multithreading. Absent from an older runner and from Windows.
+   */
+  cores?: number;
+  /** The system and its version (`macOS 26.1`, `Ubuntu 24.04`, `Windows 11`). Absent from an older runner. */
+  system?: string;
 }
 
 /** A memory size as `MachineSize` says it: in GB (2^30 bytes), to 0.5. */
@@ -883,8 +892,9 @@ export const PERSON_APPS_PROTOCOL = 94;
  * From this protocol on (ADR 0237, self-hosted servers): a computer that borrows a person's internet without the
  * Cloud's guard (this server's own computer, or one marked the workspace's with its own switch off) runs a loopback
  * proxy (HTTP CONNECT and SOCKS5 on one port) and hands its agents' processes and browsers the proxy settings. Its
- * connections to ports 80 and 443 go out through a lending computer like the workspace computer's (`stream.hello`
- * with `egress`); anything else, a refusal, or no lender online goes out the computer's usual way. `welcome.egressProxy`
+ * connections (ports 80 and 443; from `EGRESS_ANY_PORT_PROTOCOL`, any `isEgressTarget`) go out through a lending
+ * computer like the workspace computer's (`stream.hello` with `egress`); anything else, a refusal, or no lender
+ * online goes out the computer's usual way. `welcome.egressProxy`
  * turns it on at connect, `egress.proxy` when the computer's role changes. The server sends neither to an older runner.
  */
 export const EGRESS_PROXY_PROTOCOL = 95;
@@ -2912,7 +2922,8 @@ export const TASK_ROOM_PROTOCOL = 78;
 
 /**
  * Protocol 81 (ADR 0237): a person's computer may lend its internet connection to its workspace's own computer.
- * `egress.dial` asks it to open one TCP connection to `host`:`port` (`EGRESS_SHARE`'s ports only, a name it resolves
+ * `egress.dial` asks it to open one TCP connection to `host`:`port` (any port but `EGRESS_SHARE.refusedPorts`; the web
+ * ports alone before `EGRESS_ANY_PORT_PROTOCOL`, a name it resolves
  * itself or a public address, never one on its own network) and to carry its bytes on a data socket it dials for
  * `streamId`; it answers once that socket is ready. A data socket's `stream.hello` may carry `egress`: the workspace's
  * computer asks the server for such a connection, and the server answers `stream.ready` once a lent connection
@@ -2920,10 +2931,18 @@ export const TASK_ROOM_PROTOCOL = 78;
  * carried). The server asks no older runner, and `welcome.egressRelay` goes to the workspace's computer alone.
  */
 export const EGRESS_SHARE_PROTOCOL = 81;
+/**
+ * Protocol 96 (ADR 0237, amendment 2026-11-27 b): a lending computer carries TCP to any port but
+ * `EGRESS_SHARE.refusedPorts` (SSH, git, databases), where an older one carries `EGRESS_SHARE.webPorts` alone. The
+ * server sends an older lender nothing else and answers such a destination `refused` while only older ones lend.
+ */
+export const EGRESS_ANY_PORT_PROTOCOL = 96;
 /** What a lent connection carries, at most. */
 export const EGRESS_SHARE = {
-  /** The web only: anything else leaves the workspace's computer its usual way. */
-  ports: [80, 443] as readonly number[],
+  /** All a lending computer before `EGRESS_ANY_PORT_PROTOCOL` carries. */
+  webPorts: [80, 443] as readonly number[],
+  /** Never carried: mail servers' port, so the person's home address is never blocklisted for spam. */
+  refusedPorts: [25] as readonly number[],
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */
@@ -2936,9 +2955,17 @@ export const isEgressHost = (v: unknown): v is string =>
   v.length <= 253 &&
   (/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.?$/.test(v) ||
     /^[0-9A-Fa-f:.]+$/.test(v));
-/** A target `stream.hello` or `egress.dial` names: a host as `isEgressHost` and one of `EGRESS_SHARE.ports`. */
+/** A target `stream.hello` or `egress.dial` names: a host as `isEgressHost` and a TCP port not refused. */
 export const isEgressTarget = (v: unknown): v is { host: string; port: number } =>
-  isObject(v) && isEgressHost(v.host) && typeof v.port === "number" && EGRESS_SHARE.ports.includes(v.port);
+  isObject(v) &&
+  isEgressHost(v.host) &&
+  Number.isInteger(v.port) &&
+  (v.port as number) > 0 &&
+  (v.port as number) < 65536 &&
+  !EGRESS_SHARE.refusedPorts.includes(v.port as number);
+/** Whether a lending computer at `protocol` carries `port` (`EGRESS_ANY_PORT_PROTOCOL`). */
+export const lenderCarries = (protocol: number, port: number) =>
+  protocol >= EGRESS_ANY_PORT_PROTOCOL || EGRESS_SHARE.webPorts.includes(port);
 
 /**
  * Protocol 84 (ADR 0143): Gemini signs in and thinks on Windows, one account a computer (the CLI keeps its sign-in in
@@ -5504,6 +5531,8 @@ export function parseMachineSize(v: unknown): MachineSize | null {
       ? { limit: { cpus: l.cpus, memoryGb: l.memoryGb } }
       : {};
   const room = parseTaskRoom(v.room);
+  const cpuModel = sizeName(v.cpuModel);
+  const system = sizeName(v.system);
   return {
     cpus: v.cpus,
     memoryGb: v.memoryGb,
@@ -5511,8 +5540,17 @@ export function parseMachineSize(v: unknown): MachineSize | null {
     ...limit,
     ...(taskLimit(v.maxTasks) ? { maxTasks: v.maxTasks } : {}),
     ...(room ? { room } : {}),
+    ...(cpuModel ? { cpuModel } : {}),
+    ...(inRange(v.cores, [1, v.cpus]) ? { cores: v.cores } : {}),
+    ...(system ? { system } : {}),
   };
 }
+
+/** `MachineSize.cpuModel` and `system`: one printable line of at most 80 characters, else none. */
+const sizeName = (v: unknown) => {
+  const s = typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+  return s && /^[\p{L}\p{N}\p{P}\p{Zs}+]+$/u.test(s) ? s : undefined;
+};
 
 const taskLimit = (v: unknown): v is number => inRange(v, TASK_LIMIT_BOUNDS);
 

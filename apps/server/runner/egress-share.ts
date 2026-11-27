@@ -21,9 +21,9 @@ const RESUME = JSON.stringify({ type: "resume" });
 type Limits = { open: number; connectMs: number };
 
 /**
- * ADR 0237, on a person's computer: `egress.dial` opens one web connection for the workspace's own computer and
- * carries it on a data socket. Only a public address is reached (the person's own network never is), only on
- * `EGRESS_SHARE.ports`, at most `open` at once. Bytes are not capped: a product decision (ADR 0237 §4).
+ * ADR 0237, on a person's computer: `egress.dial` opens one TCP connection for the workspace's own computer and
+ * carries it on a data socket. Only a public address is reached (the person's own network never is), on any port but
+ * `EGRESS_SHARE.refusedPorts`, at most `open` at once. Bytes are not capped: a product decision (ADR 0237 §4).
  */
 export class EgressShare {
   private open = 0;
@@ -57,7 +57,7 @@ export class EgressShare {
   ): Promise<MachineReplies["egress.dial"]> {
     const { streamId } = req;
     if (!isStreamId(streamId) || !isEgressTarget({ host: req.host, port: req.port })) {
-      throw new RunnerError("bad_request", "egress.dial takes a stream, a host and a web port");
+      throw new RunnerError("bad_request", "egress.dial takes a stream, a host and a port it carries");
     }
     if (this.open >= this.limits.open) throw new RunnerError("no_slot", "This computer carries enough connections now");
     const found = await this.addresses(req.host);
