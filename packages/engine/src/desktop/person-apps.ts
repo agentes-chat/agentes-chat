@@ -81,8 +81,13 @@ const LATIN_COSTLY = [
 const CJK_COSTLY =
   "送信|支払|購入|公開|投稿|削除|承認|보내기|전송|결제|구매|게시|삭제|승인|发送|付款|支付|购买|发布|删除|批准";
 const COSTLY_WORDS = new RegExp(`(?:^|[^\\p{L}])(?:${LATIN_COSTLY.join("|")})(?![\\p{L}])|${CJK_COSTLY}`, "iu");
-/** A key that sends what is typed (a message field's Enter). */
-const SENDING_KEY = /(^|\+)(enter|return)$/i;
+/**
+ * A press that can send or delete: Enter (a message field's), Delete, and any shortcut with a modifier other than Shift
+ * (Mail sends on cmd+shift+d, Finder trashes on cmd+delete, cmd+v pastes the person's clipboard). Plain keys (Tab,
+ * Escape, arrows, letters) don't.
+ */
+const SENDING_KEY =
+  /(^|\+)(enter|return|delete|backspace|del|forwarddelete)$|(^|\+)(meta|cmd|command|super|win|ctrl|control|alt|option)\+/i;
 
 export const costlyElement = (name: string) => COSTLY_WORDS.test(name);
 
@@ -286,7 +291,9 @@ export function createPersonAppsToolSource(deps: PersonAppsToolDeps): ToolSource
   /** Whether `apps_act` with this input only does what can be undone (no card at the default level). */
   const asksNobody = (input: Record<string, unknown>) => {
     if (!isAction(input.do)) return true;
-    if (input.do === "press") return !SENDING_KEY.test(str(input.key).trim());
+    if (input.do === "press") return !SENDING_KEY.test(str(input.key).replace(/\s+/g, ""));
+    // A line break typed in a chat field is its Enter.
+    if (input.do === "type") return !/[\r\n]/.test(str(input.text));
     if (!MAY_COST.has(input.do)) return true;
     const e = refs.get(str(input.ref).trim());
     // A ref this server never read (another replica, a restart): asked, to be sure.

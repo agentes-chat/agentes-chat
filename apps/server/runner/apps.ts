@@ -30,7 +30,8 @@ import { RunnerError } from "./errors";
  * - Only `APPS_COMMANDS`, only the flags in `FLAGS`: never `--headed` (real input), coordinates, `--force`, a window
  *   by id, `--activate`, sessions, the clipboard.
  * - The agentes.chat app is never read or acted on (an agent must never click its own approval): an app named so is
- *   refused, a snapshot of it is dropped, and so is one whose window shows agentes.chat in a browser.
+ *   refused, and so is the person's web browser, where agentes.chat runs signed in as them (agents browse in their
+ *   own browser). A snapshot of either is dropped, and so is one whose window shows agentes.chat.
  * - A ref acts only when this agent's own snapshot of an allowed app gave it.
  * - Text to type goes on the CLI's stdin, never in its arguments. Nothing it prints is logged.
  * - Each agent has a state root of its own (its snapshots), under the runner's home.
@@ -96,7 +97,15 @@ const READS: ReadonlySet<AppsCommand> = new Set(["list-apps", "list-windows", "s
 
 /** agentes.chat itself, by display name, bundle id (`chat.agentes.desktop`) or executable (`agentes-runner`). */
 const OURS = /agentes/i;
-/** Our web app in a browser window: its tab titles end with the product's name. */
+/**
+ * The person's web browsers, by the names `list-apps` and `launch` take (macOS, Windows, Linux) and bundle ids. Our web
+ * app runs in them signed in as the person, and its tab titles don't name us ("#general · Acme"), so a window title
+ * can't tell it apart.
+ * ponytail: a list of names; an unlisted browser still falls to `OUR_WINDOW` only. Upgrade: read the address bar.
+ */
+const BROWSERS =
+  /chrome|chromium|safari|firefox|microsoft edge|msedge|edgemac|\bbrave\b|\bopera\b|vivaldi|\barc\b|thebrowser|\borion\b|zen browser|app\.zen|duckduckgo|yandex|tor browser|waterfox|librewolf|floorp|thorium|sidekick|sigmaos|epiphany|falkon|midori|konqueror|\bcomet\b|chatgpt atlas|iexplore|internet explorer/i;
+/** A window showing our web app where its title still names us (the default tab title, a page's own). */
 const OUR_WINDOW = /agentes\.chat/i;
 const REF = /^@([a-z0-9]{1,40}):e\d{1,6}$/;
 const ACT_TIMEOUT_MS = 60_000;
@@ -298,6 +307,12 @@ export class AppControl {
 
   private allowedApp(name: string): string {
     if (OURS.test(name)) throw new RunnerError("not_allowed", "agentes.chat itself is never used by agents");
+    if (BROWSERS.test(name)) {
+      throw new RunnerError(
+        "not_allowed",
+        "The person's web browser isn't yours to use: browse in your own browser (browser_do) instead",
+      );
+    }
     // A path would start any program: commands are run_code's.
     if (/[/\\]/.test(name)) throw new RunnerError("not_allowed", "Name the app as list-apps does, not a path");
     return name;
@@ -320,8 +335,7 @@ export class AppControl {
   private keepSnapshot(s: AgentState, reply: Extract<AppsRunReply, { ok: true }>, asked?: string): AppsRunReply {
     const data = isRecord(reply.data) ? reply.data : {};
     const app = typeof data.app === "string" ? data.app : asked;
-    const window = isRecord(data.window) && typeof data.window.title === "string" ? data.window.title : "";
-    if ((app && OURS.test(app)) || OUR_WINDOW.test(window)) {
+    if ((app && (OURS.test(app) || BROWSERS.test(app))) || windowTitles(data).some((t) => OUR_WINDOW.test(t))) {
       return {
         ok: false,
         error: {
@@ -453,7 +467,7 @@ export class AppControl {
     const [file, ...args] = argv as [string, ...string[]];
     return new Promise((resolve, reject) => {
       const child = spawn(file, args, {
-        env: { ...(this.opts.env ?? process.env), ...env },
+        env: { ...withoutOwnVars(this.opts.env ?? process.env), ...env },
         stdio: ["pipe", "pipe", "ignore"],
         windowsHide: true,
       });
@@ -485,6 +499,27 @@ export class AppControl {
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+
+/**
+ * The window titles a read names: a snapshot's `window` and its tree's window root, and each `find` match's path
+ * (`window:<title>`, its only mention of the window).
+ */
+function windowTitles(data: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  if (isRecord(data.window) && typeof data.window.title === "string") out.push(data.window.title);
+  if (isRecord(data.tree) && data.tree.role === "window" && typeof data.tree.name === "string")
+    out.push(data.tree.name);
+  const matches = Array.isArray(data.matches) ? data.matches : isRecord(data.match) ? [data.match] : [];
+  for (const m of matches) {
+    if (!isRecord(m) || !Array.isArray(m.path)) continue;
+    for (const step of m.path) if (typeof step === "string" && step.startsWith("window:")) out.push(step.slice(7));
+  }
+  return out;
+}
+
+/** The CLI's own variables (a session, an agent id, another state root, a helper) come only from here. */
+const withoutOwnVars = (env: NodeJS.ProcessEnv) =>
+  Object.fromEntries(Object.entries(env).filter(([k]) => !k.toUpperCase().startsWith("AGENT_DESKTOP_")));
 
 /** `agent-desktop`'s one JSON envelope (its last line), or a failure built from its exit. */
 export function parseEnvelope(stdout: string, code: number | null): AppsRunReply {

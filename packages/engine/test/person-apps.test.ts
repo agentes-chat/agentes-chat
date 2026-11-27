@@ -136,6 +136,19 @@ test("a click that sends asks a person; typing and other clicks don't; the answe
   ).toBe("approval");
 });
 
+test("shortcuts, Delete and a typed line break ask a person; plain keys don't", async () => {
+  const a = await appsSetup();
+  await a.invoke("apps_read", { app: "Mail" });
+  const why = "Ana asked for the Q3 report by mail; sending it to her now.";
+  for (const key of ["cmd+shift+d", "Cmd + Backspace", "delete", "ctrl+enter", "cmd+v"])
+    expect((await a.invoke("apps_act", { do: "press", key, app: "Mail", why })).type).toBe("approval");
+  expect((await a.invoke("apps_act", { do: "type", ref: "@s1abc:e2", text: "Hi\n", why })).type).toBe("approval");
+  for (const key of ["tab", "escape", "down", "shift+tab"])
+    expect((await a.invoke("apps_act", { do: "press", key, app: "Mail" })).type).toBe("result");
+  expect(a.runs().filter((c) => c.command === "press")).toHaveLength(4);
+  expect(a.runs().some((c) => c.command === "type")).toBe(false);
+});
+
 test("an agent that never asks never asks", async () => {
   const a = await appsSetup();
   await f.db.update(schema.agents).set({ approvalsLevel: "never" }).where(eq(schema.agents.id, f.agent.id));

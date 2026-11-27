@@ -36,15 +36,31 @@ if (failure) {
 const appArg = argv.includes("--app") ? argv[argv.indexOf("--app") + 1] : undefined;
 const snapshotId = state.snapshot ?? "s1abc";
 switch (command) {
-  case "snapshot":
+  // As the real one: a find names neither its app nor its window, only each match's path.
   case "find":
+    print({
+      ok: true,
+      data: {
+        snapshot_id: snapshotId,
+        matches: [
+          {
+            role: "button",
+            name: "Send",
+            ref_id: `@${snapshotId}:e1`,
+            path: [`window:${state.window ?? "Inbox"}`, "group"],
+          },
+        ],
+      },
+    });
+    break;
+  case "snapshot":
     print({
       ok: true,
       data: {
         app: state.app ?? appArg,
         snapshot_id: snapshotId,
         complete: true,
-        ...(state.window ? { window: { id: "w-1", title: state.window } } : {}),
+        ...(state.window && !state.noWindowField ? { window: { id: "w-1", title: state.window } } : {}),
         tree: {
           role: "window",
           name: state.window ?? "Inbox",

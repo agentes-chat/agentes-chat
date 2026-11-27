@@ -138,11 +138,64 @@ describe("the person's apps through agent-desktop (ADR 0258)", () => {
       expect(await errorCode(() => t.apps.run(dev, { command: "snapshot", args: ["--app", app] }))).toBe("not_allowed");
       expect(await errorCode(() => t.apps.run(dev, { command: "launch", args: [app] }))).toBe("not_allowed");
     }
-    t.setState({ window: "#general · agentes.chat" });
-    const shot = await t.apps.run(dev, { command: "snapshot", args: ["--app", "Google Chrome"] });
-    expect(shot.ok).toBe(false);
-    // Its refs never act.
-    expect(await errorCode(() => t.apps.run(dev, { command: "click", args: ["@s1abc:e1"] }))).toBe("not_allowed");
+    // Our web app runs in the person's browser signed in as them, under titles that don't name us.
+    for (const app of [
+      "Google Chrome",
+      "Safari",
+      "Firefox",
+      "Microsoft Edge",
+      "msedge.exe",
+      "Arc",
+      "com.google.Chrome",
+    ]) {
+      expect(await errorCode(() => t.apps.run(dev, { command: "snapshot", args: ["--app", app] }))).toBe("not_allowed");
+      expect(await errorCode(() => t.apps.run(dev, { command: "launch", args: [app] }))).toBe("not_allowed");
+    }
+    expect(
+      await errorCode(() => t.apps.run(dev, { command: "press", args: ["return", "--app", "Google Chrome"] })),
+    ).toBe("not_allowed");
+    expect(t.calls()).toHaveLength(0);
+    // A browser we don't know, showing a page of ours that names us: dropped, by its window, its tree or a find's path.
+    for (const state of [
+      { window: "Settings · agentes.chat", snapshot: "s2abc" },
+      { window: "Settings · agentes.chat", snapshot: "s3abc", noWindowField: true },
+    ]) {
+      t.setState(state);
+      const shot = await t.apps.run(dev, { command: "snapshot", args: ["--app", "Some Browser"] });
+      expect(shot.ok).toBe(false);
+      // Its refs never act.
+      const ref = `@${state.snapshot}:e1`;
+      expect(await errorCode(() => t.apps.run(dev, { command: "click", args: [ref] }))).toBe("not_allowed");
+    }
+    t.setState({ window: "Settings · agentes.chat", snapshot: "s4abc" });
+    const found = await t.apps.run(dev, { command: "find", args: ["--app", "Some Browser", "--text", "Approve"] });
+    expect(found.ok).toBe(false);
+    expect(await errorCode(() => t.apps.run(dev, { command: "click", args: ["@s4abc:e1"] }))).toBe("not_allowed");
+    // A find in another app's window keeps its refs.
+    t.setState({ window: "Inbox", snapshot: "s5abc" });
+    expect((await t.apps.run(dev, { command: "find", args: ["--app", "Mail", "--text", "Send"] })).ok).toBe(true);
+    expect((await t.apps.run(dev, { command: "click", args: ["@s5abc:e1"] })).ok).toBe(true);
+  });
+
+  test("the CLI never inherits variables of its own from the runner's environment", async () => {
+    const t = setup({}, {});
+    const env = { ...process.env, AGENT_DESKTOP_SESSION: "other", AGENT_DESKTOP_HOME: "/tmp/elsewhere" };
+    const log = path.join(t.home, "env.jsonl");
+    const probe = new AppControl({
+      home: t.home,
+      log: () => {},
+      command: [
+        process.execPath,
+        "-e",
+        `require("node:fs").appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.env) + "\\n"); console.log(JSON.stringify({ ok: true, data: {} }))`,
+      ],
+      platform: "darwin",
+      env,
+    });
+    ok(await probe.run(dev, { command: "list-apps", args: [] }));
+    const seen = JSON.parse(readFileSync(log, "utf8").trim()) as Record<string, string>;
+    expect(seen.AGENT_DESKTOP_SESSION).toBeUndefined();
+    expect(seen.AGENT_DESKTOP_HOME).toBe(path.join(t.home, "apps", dev.id));
   });
 
   test("a ref acts only from the same agent's snapshot", async () => {
