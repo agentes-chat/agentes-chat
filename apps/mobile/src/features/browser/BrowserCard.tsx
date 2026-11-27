@@ -19,6 +19,7 @@ import {
   useMachines,
 } from "@agenteschat/client";
 import { browserCardLine, hostAndPath, titleKind } from "@agenteschat/client/lib/browser-card";
+import { LEGACY_MOVE, maintenanceNamed, maintenanceOf } from "@agenteschat/client/lib/computer-maintenance";
 import { lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { browserNoAnswerMessage, browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
@@ -204,7 +205,7 @@ export const BrowserCard = memo(function BrowserCard({
   const away = live.unavailable === "offline";
   const machines = useMachines(orgId, offHere || away);
   const profileMachine = offHere ? machines.data?.find((m) => m.id === profile?.machineId) : undefined;
-  // Its computer away moving to another server: said so, never that it isn't answering.
+  // Its computer away for what we do to it (a move, a restart…): said so, never that it isn't answering.
   const moving = away
     ? machines.data?.find((m) => (profile ? m.id === profile.machineId : m.agents.some((a) => a.id === agentId)))
     : undefined;
@@ -343,7 +344,7 @@ export const BrowserCard = memo(function BrowserCard({
         ? // The card's top (or the full view's head) says who is in control; the page only why it hides.
           t("browser.inCard.hiddenHelp", grammar)
         : note.say === "offline" && moving?.moving
-          ? t("machines.moving.named", { computer: moving.name })
+          ? maintenanceNamed(t, maintenanceOf(moving) ?? LEGACY_MOVE, moving.name)
           : t(pageGapKey(note.say, g, cloud), { name });
   const coverHelp =
     note.say === "starting"

@@ -154,6 +154,25 @@ export interface MachineExecutors {
   detectedAt?: string;
 }
 
+/** What we do to the workspace's own computer (`PUT …/maintenance`), worded by the apps (ADR 0257). */
+export const MAINTENANCE_KINDS = ["moving", "restarting", "updating", "converting", "host_maintenance"] as const;
+export type MaintenanceKind = (typeof MAINTENANCE_KINDS)[number];
+/**
+ * Why, or which step, as a code the apps word: a move's `copying` (it works, maybe slower) or `handover` (away for a
+ * minute or two), a restart's `unresponsive` (it stopped answering, so we restarted it).
+ */
+export const MAINTENANCE_DETAILS = ["copying", "handover", "unresponsive"] as const;
+export type MaintenanceDetail = (typeof MAINTENANCE_DETAILS)[number];
+
+export interface MachineMaintenanceRecord {
+  kind: MaintenanceKind;
+  /** ISO: when this kind of work began (kept while the operator says the same kind again). */
+  since: string;
+  /** ISO: when it should be back or done, as the operator expects; null: unknown. */
+  eta: string | null;
+  detail: MaintenanceDetail | null;
+}
+
 /** A computer's size as its runner reported it (protocol 22), the same shape as `MachineSize` in the protocol. */
 export interface MachineSizeRecord {
   cpus: number;
@@ -364,10 +383,12 @@ export const machines = pgTable(
      */
     egressWaitingAt: timestamp({ withTimezone: true }),
     /**
-     * The operator says the workspace's own computer is moving to another server (`PUT …/moving`): while it is away
-     * the apps say so instead of offline, for at most `MOVING_SHOWN_MS`. Null: not moving.
+     * When the operator last said what it does to the workspace's own computer (`PUT …/maintenance`, or `PUT …/moving`
+     * from before kinds, hence the name): the apps say that instead of offline (`shownMaintenance`). Null: nothing.
      */
     movingAt: timestamp({ withTimezone: true }),
+    /** What it does, as last said (`PUT …/maintenance`); null with `moving_at` set: a move told by `PUT …/moving`. */
+    maintenance: jsonb().$type<MachineMaintenanceRecord>(),
     /** Last time a run or a person wanted this computer (written at most every 30 s per server process). */
     wantedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

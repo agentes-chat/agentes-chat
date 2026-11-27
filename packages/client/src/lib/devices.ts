@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type {
   AppNotification,
   ComputerDevice,
+  ComputerMaintenance,
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
@@ -16,6 +17,7 @@ import type {
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
 import { computerNameOf } from "./computer";
+import { LEGACY_MOVE, maintenanceLine, maintenanceOf, maintenanceShort, maintenanceWhen } from "./computer-maintenance";
 import { clockAt, firstName, joinNames } from "./format";
 import { computerKind, osName } from "./machines";
 import { norm as fold } from "./tool-review";
@@ -67,7 +69,7 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
     case "paused":
       return t("devices.status.paused");
     case "moving":
-      return t("machines.moving.short");
+      return maintenanceShort(t, maintenanceOf(s) ?? LEGACY_MOVE);
     case "offline":
       return t("devices.status.offline");
     case "unsupported":
@@ -141,7 +143,14 @@ export const fixText = (t: TFunction, reason: string, os?: string | null) =>
  * `hostOs`: the host's system, which a phone with no driver reads by. `ios`: an iPhone's iOS version, which its
  * "too old" line names.
  */
-type StatusOptions = { host?: string | null; hostOs?: string | null; now?: Date; ios?: string | null };
+type StatusOptions = {
+  host?: string | null;
+  hostOs?: string | null;
+  now?: Date;
+  ios?: string | null;
+  /** The computer's `maintenance`: while it works (a move's copy), the line says it may be slower. */
+  maintenance?: ComputerMaintenance | null;
+};
 
 /** An iPhone's iOS version, for `StatusOptions.ios`. */
 export const iosOf = (d: ComputerDevice | PhoneDevice) =>
@@ -180,8 +189,11 @@ export function statusDetail(
       return s.reason === "os_too_old" && options.ios != null
         ? t("devices.reason.iosTooOld", { version: tooOldVersion(t, options.ios) })
         : reasonText(t, s.reason);
+    case "moving":
+      return maintenanceWhen(t, maintenanceOf(s) ?? LEGACY_MOVE, now);
+    // The row's column is narrow: the word alone, its line behind the row's ⓘ.
     default:
-      return null;
+      return options.maintenance && !options.maintenance.away ? maintenanceShort(t, options.maintenance) : null;
   }
 }
 
@@ -200,7 +212,7 @@ export function statusSentence(
     case "needs_you":
       return reasonText(t, s.reason, options.hostOs);
     case "moving":
-      return t("machines.moving.line");
+      return maintenanceLine(t, maintenanceOf(s) ?? LEGACY_MOVE, now);
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
       if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
@@ -209,7 +221,7 @@ export function statusSentence(
         : t("devices.line.offline");
     case "busy":
     case "ready":
-      return null;
+      return options.maintenance && !options.maintenance.away ? maintenanceLine(t, options.maintenance, now) : null;
     default:
       return statusDetail(t, locale, s, options);
   }

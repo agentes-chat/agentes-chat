@@ -1,5 +1,6 @@
 import type { BrainTurnTimings } from "@agenteschat/adapters";
 import { currentQueryCount } from "@agenteschat/db";
+import type { TurnTrace } from "./turn-trace";
 
 export interface StageTiming {
   stage: string;
@@ -56,6 +57,10 @@ export function createProfiler() {
     startedAt,
     stages,
     brain,
+    /** Every brain turn of the claim as the server saw it (`turnRecorder`). */
+    turns: [] as TurnTrace[],
+    /** Sources of tools that were slow to list theirs (`ToolContext.slowSource`). */
+    slowSources: [] as { source: string; ms: number }[],
     /** The computer its turns ran on (or were refused by): speed split by computer, and by host where it is known. */
     machineId: undefined as string | undefined,
     /** The run it profiles, once claimed: its profile is kept with it. */
@@ -87,9 +92,9 @@ export function spanUnionMs(spans: readonly Span[]) {
 
 /**
  * A computer turn's `model` stage in its steps, named as the operator's breakdown groups them: the agent's checkouts
- * updated before it (`pre_turn_sync`, the `code` phase), a new CLI process until ready (`cli_init`), ready to the
- * model API's first streamed message (`cli_first_byte`), the tools it ran (`tools`), and the rest, the model writing
- * and the trips between (`model_write`). Durations from the runner's clock and the server's mix, never instants. Not
+ * updated before it (`pre_turn_sync`, the `code` phase), a new CLI process until ready or the runner's wait for an
+ * open one (`cli_init`), ready to the model API's first streamed message (`cli_first_byte`), the tools it ran
+ * (`tools`), and the rest, the model writing and the trips between (`model_write`). Durations from the runner's clock and the server's mix, never instants. Not
  * back to back: tools run while the model's turn goes on, so the steps are its shares of `ms`, the last one the rest.
  */
 export function computerTurnParts(
@@ -97,7 +102,8 @@ export function computerTurnParts(
   turn: { syncMs: number; timings?: BrainTurnTimings | undefined; toolsMs: number },
 ): StageTiming[] {
   const round = (n: number) => Math.round(Math.max(0, n) * 10) / 10;
-  const init = turn.timings?.warm === false ? (turn.timings.initMs ?? 0) : 0;
+  // Until the CLI could start the turn: a new process ready, or the runner's own waits for an open one (`sentMs`).
+  const init = Math.max(turn.timings?.warm === false ? (turn.timings.initMs ?? 0) : 0, turn.timings?.sentMs ?? 0);
   const first = turn.timings?.firstTokenMs ?? turn.timings?.firstEventMs;
   const known = [
     { stage: "pre_turn_sync", ms: round(turn.syncMs) },

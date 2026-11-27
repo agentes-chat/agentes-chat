@@ -81,6 +81,7 @@ import {
   stallNote,
   stallWords,
 } from "./brain-silence";
+import { DEBUG_LOG_MIN_CLAUDE, debugLogMark, slowTurn, turnEvidence } from "./cli-debug";
 import { withGitBash } from "./cli-install";
 import { coAuthorLines, commitAuthorEnv } from "./co-authors";
 import { ownBranches } from "./command-gate";
@@ -1112,6 +1113,8 @@ export interface ClaudeLaunch {
    * no Claude in Chrome (its setup adds its tools to the allowed ones).
    */
   noSlashCommands?: boolean;
+  /** `--debug-file`: the CLI's own debug log, read for a slow or failed turn (`cli-debug.ts`). */
+  debugFile?: string;
 }
 
 /**
@@ -1275,6 +1278,7 @@ export function claudeBrainArgs(l: ClaudeLaunch): string[] {
     ...(l.builtinTools ? ["--tools", l.builtinTools.join(",")] : []),
     ...(l.disallowedTools?.length ? ["--disallowedTools", l.disallowedTools.join(",")] : []),
     ...(l.noSlashCommands ? ["--disable-slash-commands", "--no-chrome"] : []),
+    ...(l.debugFile ? ["--debug-file", l.debugFile] : []),
     l.resume ? "--resume" : "--session-id",
     l.session,
   ];
@@ -2163,6 +2167,8 @@ interface Live {
   keptSystem: string;
   /** Its per-process files. */
   dir: string;
+  /** Its CLI's debug log (`cli-debug.ts`), where its version writes one. */
+  debugFile?: string;
   /** Delegated: its bridge at the agent's worker, as root told it last. */
   bridged?: { frame: DelegatedFrame; to: DelegatedTurn };
   cwd: string;
@@ -2822,8 +2828,11 @@ export class BrainManager {
     let mismatchAt: number | undefined;
     let started: Live | undefined;
     const since = (at: number | null | undefined) => (at != null && at >= startedAt ? at - startedAt : undefined);
+    /** Where this turn's lines of its CLI's debug log begin. */
+    let debugFrom: number | undefined;
+    let sentAt: number | undefined;
     const timed = (final: WireBrainEvent, used: Live): WireBrainEvent => {
-      if (final.type !== "done") return final;
+      if (final.type !== "done" && final.type !== "error") return final;
       const s = used.proc.parser.stats;
       const measures: Omit<BrainTurnTimings, "warm"> = {
         initMs: since(started?.proc.initAt),
@@ -2831,6 +2840,7 @@ export class BrainManager {
         ...(started?.proc.toolsList
           ? { toolsListMs: since(started.proc.toolsList.at), toolsListWaitMs: started.proc.toolsList.ms }
           : {}),
+        sentMs: since(sentAt),
         firstEventMs,
         firstRequestMs: since(s.firstRequestAt),
         firstTokenMs: since(s.firstTokenAt),
@@ -2842,7 +2852,12 @@ export class BrainManager {
         thinkingChars: s.thinkingChars,
       };
       const kept = Object.entries(measures).filter(([, v]) => v !== undefined);
-      return { ...final, timings: { warm, ...(cold ? { cold } : {}), ...Object.fromEntries(kept) } };
+      const timings: BrainTurnTimings = { warm, ...(cold ? { cold } : {}), ...Object.fromEntries(kept) };
+      const evidence =
+        used.debugFile && debugFrom !== undefined && (final.type === "error" || slowTurn(timings))
+          ? turnEvidence(used.debugFile, debugFrom, startedAt)
+          : [];
+      return { ...final, timings: { ...timings, ...(evidence.length > 0 ? { evidence } : {}) } };
     };
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
@@ -2901,6 +2916,9 @@ export class BrainManager {
     }
     if (live) {
       live.proc.parser.resetStats();
+      // A process this turn started: its log from its first line, its start included.
+      if (live.debugFile) debugFrom = started === live ? 0 : debugLogMark(live.debugFile);
+      sentAt = Date.now();
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live, "closed");
@@ -3426,6 +3444,11 @@ export class BrainManager {
     const withPlugin = codeTurn && claudeAtLeast(this.opts.claudeVersion?.(), REPO_PLUGIN_MIN_CLAUDE);
     const repoPrint = withPlugin ? repoPluginPrint(cwd) : undefined;
     const plugin = withPlugin ? repoPlugin(cwd, path.join(dir, "repo"), fileMode) : null;
+    // Not delegated: that CLI runs as the sign-in's user, who can't write in this folder.
+    const debugFile =
+      !delegated && claudeAtLeast(this.opts.claudeVersion?.(), DEBUG_LOG_MIN_CLAUDE)
+        ? path.join(dir, "debug.log")
+        : undefined;
     const args = claudeBrainArgs({
       session,
       resume,
@@ -3438,6 +3461,7 @@ export class BrainManager {
       ...(addDirs.length ? { addDirs } : {}),
       ...(plugin ? { pluginDirs: [plugin] } : {}),
       ...(isBrainEffort(req.effort) ? { effort: req.effort } : {}),
+      ...(debugFile ? { debugFile } : {}),
     });
     // Claimed before it starts: a CLI that dies in its first turn still left a transcript that is this agent's.
     if (delegated && !resume) claimSession(delegated.room, session, ctx.agent.id, String(req.account));
@@ -3472,6 +3496,7 @@ export class BrainManager {
       ranKey,
       keptSystem,
       dir,
+      ...(debugFile ? { debugFile } : {}),
       ...(bridged ? { bridged } : {}),
       cwd,
       repoInFirst:

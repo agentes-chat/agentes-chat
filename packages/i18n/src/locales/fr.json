@@ -17242,10 +17242,48 @@
       "viaBy": "Les agents utilisent la connexion internet de {{name}} ({{person}})",
       "viaHint": "Les sites voient l’emplacement de cet ordinateur. La personne qui l’a connecté peut couper ça sur sa page."
     },
-    "moving": {
-      "short": "Changement de serveur",
-      "line": "Passe sur un nouveau serveur… de retour dans quelques minutes",
-      "named": "{{computer}} passe sur un nouveau serveur… de retour dans quelques minutes"
+    "maintenance": {
+      "short": {
+        "moving": "Changement de serveur",
+        "restarting": "Redémarrage",
+        "updating": "Mise à jour",
+        "converting": "Amélioration du disque",
+        "host_maintenance": "Maintenance",
+        "other": "Maintenance"
+      },
+      "what": {
+        "moving": "Passage sur un nouveau serveur",
+        "copying": "Copie vers un nouveau serveur",
+        "restarting": "Redémarrage",
+        "updating": "Mise à jour de son logiciel",
+        "converting": "Amélioration de son disque",
+        "host_maintenance": "Son serveur est en maintenance",
+        "other": "En maintenance"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "de retour dans environ {{time}}",
+      "backSoon": "de retour dans quelques minutes",
+      "late": "cela prend un peu plus longtemps que prévu",
+      "slower": "il peut être plus lent en attendant",
+      "slowerFor": "il peut être plus lent pendant environ {{time}}",
+      "why": {
+        "moving": "Nous le déplaçons sur un nouveau serveur.",
+        "copying": "Nous copions ses fichiers vers un nouveau serveur pendant qu’il travaille.",
+        "handover": "Nous transférons ses dernières modifications vers le nouveau serveur.",
+        "restarting": "Nous le redémarrons.",
+        "unresponsive": "Il ne répondait plus, alors nous l’avons redémarré automatiquement.",
+        "updating": "Nous mettons à jour son logiciel.",
+        "converting": "Nous passons son disque sur un stockage plus rapide.",
+        "host_maintenance": "Le serveur sur lequel il tourne est en maintenance.",
+        "other": "Nous effectuons une intervention dessus."
+      },
+      "since": "Depuis {{time}}",
+      "expectedBack": "Retour prévu vers {{time}}",
+      "expectedDone": "Fin prévue vers {{time}}",
+      "meanwhile": "Les messages à ses agents attendent et repartent d’eux-mêmes à son retour.",
+      "working": "Ses agents continuent de travailler en attendant.",
+      "about": "Ce qui se passe"
     },
     "online": "En ligne",
     "offline": "Hors ligne",
@@ -17486,6 +17524,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "En attente de {{permission}} sur {{computer}}",
+      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
+      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
+      "asked": "Nécessaire pour lancer {{trigger}}",
+      "names": {
+        "app_management": "Gestion des apps",
+        "screen": "Enregistrement de l’écran",
+        "accessibility": "Accessibilité",
+        "disk": "Accès complet au disque",
+        "network": "Réseau local",
+        "camera": "Caméra",
+        "microphone": "Micro",
+        "automation": "Automatisation"
+      }
+    },
     "leadCloud": "Là où travaillent vos agents : l'ordinateur de l'espace de travail et les appareils que les personnes connectent.",
     "lead": "Là où travaillent vos agents : les ordinateurs et les téléphones que les personnes connectent.",
     "connect": "Connecter un appareil",
@@ -18134,22 +18188,6 @@
         "once": "Autorisé une fois.",
         "always": "{{deviceName}} est maintenant partagé avec eux.",
         "no": "Vous avez dit non."
-      }
-    },
-    "permission": {
-      "title": "En attente de {{permission}} sur {{computer}}",
-      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
-      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
-      "asked": "Nécessaire pour lancer {{trigger}}",
-      "names": {
-        "app_management": "Gestion des apps",
-        "screen": "Enregistrement de l’écran",
-        "accessibility": "Accessibilité",
-        "disk": "Accès complet au disque",
-        "network": "Réseau local",
-        "camera": "Caméra",
-        "microphone": "Micro",
-        "automation": "Automatisation"
       }
     }
   },
@@ -19948,6 +19986,7 @@
         "usingScreen": "A utilisé l'écran",
         "cloningRepo": "A cloné un dépôt",
         "listingRepos": "A listé les dépôts",
+        "updatingCode": "A mis à jour le code",
         "preparingCli": "A préparé {{app}}",
         "openingPullRequest": "A ouvert une pull request",
         "handingOff": "A livré un rapport",
@@ -20072,6 +20111,7 @@
       "usingScreen": "utilisation de l'écran",
       "cloningRepo": "clonage d'un dépôt",
       "listingRepos": "liste les dépôts",
+      "updatingCode": "met à jour le code",
       "preparingCli": "préparation de {{app}} sur {{computer}}",
       "preparingCliPct": "préparation de {{app}} sur {{computer}} ({{percent}} %)",
       "openingPullRequest": "ouverture d'une pull request",

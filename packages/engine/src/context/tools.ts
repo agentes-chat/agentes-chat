@@ -412,7 +412,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
       },
     },
     {
-      name: "get_summary",
+      name: GET_SUMMARY_TOOL,
       description: "Get a summary of a thread (default: the current one). Generates it if missing or outdated.",
       scope: "context:read",
       inputSchema: {
@@ -1089,6 +1089,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
 const personRequester = (ctx: ToolContext): Promise<string | null> => personBehindCall(ctx);
 
 export const READ_CONVERSATION_TOOL = "read_conversation";
+export const GET_SUMMARY_TOOL = "get_summary";
 const CONVERSATION_MAX = 40;
 const CONVERSATION_MESSAGE_CHARS = 1500;
 

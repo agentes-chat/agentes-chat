@@ -5467,8 +5467,10 @@ export interface Machine {
    * from an older server: not in standby.
    */
   standby?: boolean;
-  /** The workspace's own computer is away moving to another server: back in a few minutes. Absent: not moving. */
+  /** The workspace's own computer is away for what we do to it (`maintenance` says what). Absent: it isn't. */
   moving?: boolean;
+  /** What we do to the workspace's own computer now, said instead of offline (ADR 0257). Absent: nothing. */
+  maintenance?: ComputerMaintenance | null;
   /**
    * Why it is offline, from its runner's last close: `unresponsive` (no network, or too busy to answer), `stopped`
    * (its runner stopped), `dropped` (the link dropped). Null or absent: online, the workspace's own, or unknown.
@@ -5742,8 +5744,9 @@ export interface MachineOutage {
   /** The workspace's own computer (ADR 0056 §10). */
   managed?: boolean;
   offlineSince: string;
-  /** The workspace's own computer is away moving to another server: it comes back by itself. Absent: not moving. */
+  /** The workspace's own computer is away for what we do to it: it comes back by itself. Absent: it isn't. */
   moving?: boolean;
+  maintenance?: ComputerMaintenance | null;
   agents: OutageAgent[];
   /** Runs parked until the computer (or another one) can take them. */
   waitingRuns: number;
@@ -5888,8 +5891,9 @@ export interface UsageQueueClosedRow {
 export interface ComputerQueue {
   machineId: string;
   name: string;
-  /** It is away moving to another server: the line waits for it. Absent: not moving. */
+  /** It is away for what we do to it: the line waits for it. Absent: it isn't. */
   moving?: boolean;
+  maintenance?: ComputerMaintenance | null;
   working: QueueWorking[];
   waiting: QueueWaiting[];
 }
@@ -8336,8 +8340,9 @@ export interface TaskWait {
   since?: string | null;
   /** You may press Continuar agora. */
   canContinue: boolean;
-  /** Its computer is away moving to another server: it comes back by itself. */
+  /** Its computer is away for what we do to it: it comes back by itself. */
   moving?: boolean;
+  maintenance?: ComputerMaintenance;
 }
 
 /** A computer with turns running or waiting for room (counts only). */
@@ -9131,6 +9136,22 @@ export interface DeviceAudience {
 }
 
 /** A device's state, worded by the apps. Reason codes: `PhoneReason` in the machine protocol, plus the server's own. */
+/** What we do to the workspace's own computer (ADR 0257): a move, a restart, an update, a disk conversion, host maintenance. */
+export type MaintenanceKind = "moving" | "restarting" | "updating" | "converting" | "host_maintenance";
+
+export interface ComputerMaintenance {
+  /** A kind this app doesn't know yet reads as work being done on it. */
+  kind: MaintenanceKind | (string & {});
+  /** ISO: when it began. */
+  since: string;
+  /** ISO: when it should be back (away) or done; null: unknown. */
+  eta: string | null;
+  /** A move's `copying` (it works, maybe slower) or `handover`, a restart's `unresponsive`. Unknown codes: none. */
+  detail: "copying" | "handover" | "unresponsive" | (string & {}) | null;
+  /** Away for it. False: it works, maybe slower. */
+  away: boolean;
+}
+
 export type DeviceStatus =
   | { kind: "ready" }
   | {
@@ -9147,8 +9168,8 @@ export type DeviceStatus =
   | { kind: "needs_you"; reason: string }
   | { kind: "preparing"; reason: string }
   | { kind: "paused"; until: string | null }
-  /** The workspace's own computer, away while it moves to another server, since `since`. */
-  | { kind: "moving"; since: string }
+  /** The workspace's own computer, away for what we do to it (`maintenance` says what; a move without it), since `since`. */
+  | { kind: "moving"; since: string; maintenance?: ComputerMaintenance }
   /** `cause`: a computer's, as `Machine.offlineCause`; absent: unknown. */
   | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean; cause?: MachineOfflineCause }
   | { kind: "unsupported"; reason: string };
@@ -9210,6 +9231,8 @@ export interface ComputerDevice {
    * through it now. Null (or absent from an older server): nothing to lend to.
    */
   shareInternet?: { on: boolean; inUse: boolean } | null;
+  /** What we do to the workspace's own computer now, away (`status` says it too) or while it works, maybe slower. */
+  maintenance?: ComputerMaintenance | null;
   systemMode: boolean;
   audience: DeviceAudience;
   status: DeviceStatus;

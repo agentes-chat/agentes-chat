@@ -286,6 +286,8 @@ export type BrainEvent =
       /** Claude Code (runner protocol 50): why the provider refused or failed it, and its HTTP status. */
       cause?: ProviderFailureCause;
       httpStatus?: number;
+      /** How the turn went until it failed (`done.timings`), from a newer runner. */
+      timings?: BrainTurnTimings;
     }
   /** Messages handed mid-turn (`BrainIO.steerable`) that the turn read, by their `uuid`. */
   | { type: "steer_read"; uuids: string[] }

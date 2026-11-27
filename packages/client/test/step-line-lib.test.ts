@@ -91,3 +91,9 @@ test("a call means the update is over, even when its end never arrived", () => {
   const code = { type: "agent.phase", ...base, phase: "code" };
   expect(stepAfter([code, call("b1", "search_context"), ended("b1")], 1000)).toBe("pensando…");
 });
+
+test("the agent waiting inside its turn for its checkouts' update reads as the same line", () => {
+  // The bridge names our tool with its server's prefix; the line is the same either way.
+  expect(stepAfter([call("w1", "wait_for_code")], 1000)).toBe("atualizando o código…");
+  expect(stepAfter([call("w1", "mcp__agentes__wait_for_code")], 1000)).toBe("atualizando o código…");
+});
