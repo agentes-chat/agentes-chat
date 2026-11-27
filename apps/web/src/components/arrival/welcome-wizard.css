@@ -101,7 +101,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 40px;
+  /* Every row as tall as one with its small button: the hairlines evenly spaced, with or without an action. */
+  min-height: calc(var(--control-h-sm) + 12px);
   padding: 6px 0;
   font-size: 14.5px;
   line-height: 20px;
@@ -185,6 +186,10 @@
 .wiz-betaline b {
   color: var(--ink);
   font-weight: 600;
+}
+/* Under the list, its hairline where the next row's would be. */
+.wiz-board + .wiz-betaline {
+  margin-top: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
