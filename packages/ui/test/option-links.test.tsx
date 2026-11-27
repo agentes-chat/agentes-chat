@@ -71,16 +71,19 @@ test("each way is a button named by its title, described by its line, the recomm
 });
 
 test("flat: the same rows as a box's list, marked for the kit's flat look; each lead in its column", () => {
+  // In a box's padding, as wherever it shows: a flat row's hover reaches past the text on both sides.
   const { container } = render(
-    <OptionLinks
-      flat
-      className="my-list"
-      aria-label="Works"
-      options={[
-        { value: "support", title: "Support", leading: <span>icon</span>, side: "apps", onSelect: () => {} },
-        { value: "other", title: "Other", onSelect: () => {} },
-      ]}
-    />,
+    <div style={{ padding: "0 16px" }}>
+      <OptionLinks
+        flat
+        className="my-list"
+        aria-label="Works"
+        options={[
+          { value: "support", title: "Support", leading: <span>icon</span>, side: "apps", onSelect: () => {} },
+          { value: "other", title: "Other", onSelect: () => {} },
+        ]}
+      />
+    </div>,
   );
   const list = within(container).getByRole("list", { name: "Works" });
   expect([...list.classList]).toEqual(["ac-optlist", "ac-optlinks", "ac-optlinks--flat", "my-list"]);

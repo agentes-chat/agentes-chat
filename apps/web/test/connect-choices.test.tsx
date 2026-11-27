@@ -19,12 +19,15 @@ afterEach(() => cleanup());
 
 const choices = async (opts: { mayAddKey?: boolean; dims?: (c: PlanChoice) => boolean } = {}) => {
   const picked: AiChoice[] = [];
+  // In a box's padding, as wherever it shows: a flat row's hover reaches past the text on both sides.
   await renderPage(
-    <ConnectChoices
-      mayAddKey={opts.mayAddKey ?? true}
-      dims={opts.dims ?? (() => false)}
-      onPick={(c) => picked.push(c)}
-    />,
+    <div style={{ padding: "0 16px" }}>
+      <ConnectChoices
+        mayAddKey={opts.mayAddKey ?? true}
+        dims={opts.dims ?? (() => false)}
+        onPick={(c) => picked.push(c)}
+      />
+    </div>,
     { api: createFakeApi(seedState()) },
   );
   await settle(2);

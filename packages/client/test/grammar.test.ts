@@ -6,7 +6,11 @@ import { agentGrammar } from "../src/lib/grammar";
 test("an agent's gender is an i18next context: female for names ending in a, none for the rest", () => {
   expect(agentGrammar("Ada")).toEqual({ name: "Ada", context: "female" });
   expect(agentGrammar("Iris")).toEqual({ name: "Iris", context: "female" });
+  // The onboarding's marketing agent (ADR 0256): "a Gabi", whatever the case it is written in.
+  expect(agentGrammar("Gabi")).toEqual({ name: "Gabi", context: "female" });
+  expect(agentGrammar("GABI")).toEqual({ name: "GABI", context: "female" });
   expect(agentGrammar("Theo")).toEqual({ name: "Theo", context: undefined });
+  expect(agentGrammar("Caio")).toEqual({ name: "Caio", context: undefined });
 });
 
 test("a pt-BR `key_female` reads through `t`; English and a language without it keep the base key", () => {
