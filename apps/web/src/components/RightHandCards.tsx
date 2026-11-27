@@ -56,7 +56,13 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AgentProposalCardView } from "@/components/ActionCard";
 import { AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
-import { isReviewing, ProposalUndo, proposalEndedAt, proposalOutcome, proposalsOutcome } from "@/components/ChatCards";
+import {
+  isReviewing,
+  ProposalAction,
+  proposalEndedAt,
+  proposalOutcome,
+  proposalsOutcome,
+} from "@/components/ChatCards";
 import { useOrg } from "@/components/org-context";
 import { RemoveMemberDialog } from "@/components/RemoveMember";
 import { type RequestAnswer, RequestCard, RequestOpen } from "@/components/RequestCard";
@@ -176,7 +182,7 @@ function RemovalCard({
                 </span>
                 <span className="ac-mediarow__end">
                   <span className="proposal-row__status">{proposalOutcome(t, p, me.user.id)}</span>
-                  {p.reviewed && <ProposalUndo p={p} />}
+                  {p.reviewed && <ProposalAction p={p} />}
                 </span>
                 {p.review && (
                   <span className="ac-mediarow__body">
@@ -248,7 +254,7 @@ function SettingsRow({
     const undoable =
       receipt && !receipt.undoneAt && receipt.undoableUntil && Date.parse(receipt.undoableUntil) > Date.now();
     const at = proposalEndedAt(p);
-    const undoChange = <ProposalUndo p={p} />;
+    const undoChange = <ProposalAction p={p} />;
     const undoReceipt = undoable && (
       <Button
         size="sm"

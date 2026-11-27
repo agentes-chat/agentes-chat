@@ -494,6 +494,13 @@ async function unsentHidden(db: Database, actorId: string, p: Proposal) {
   return !card || !(await userVisibleChannels(db, p.orgId, actorId)).includes(card.channelId);
 }
 
+/**
+ * Left out by the review (ADR 0219), and so still a person's to apply: a lesson stays in memory instead, a person's
+ * own refusal stands, and deleting an agent can't be put back, so that stays a delete made on the agent's page.
+ */
+export const leftOutByReview = (p: Pick<Proposal, "status" | "decidedByUserId" | "review" | "itemIds" | "settings">) =>
+  p.status === "rejected" && !p.decidedByUserId && !!p.review && p.itemIds.length === 0 && !deletes(p);
+
 async function mayDecide(db: Database, actorId: string, p: Proposal, known?: Membership, byReview = false) {
   const membership = known ?? (await requirePermission(db, actorId, p.orgId, "read"));
   // The review applies a row as someone who may make it, whether or not the person who asked sent it on (ADR 0219).
@@ -556,7 +563,7 @@ export async function listProposals(
   const shown = await proposalsShown(db, actorId, membership, all);
   const rows = can(membership, "review_memory") ? shown : await proposalsVisible(db, actorId, orgId, shown);
   const outdated = await outdatedIds(db, orgId, rows);
-  const out: (Proposal & { canDecide: boolean; undoable: boolean })[] = [];
+  const out: (Proposal & { canDecide: boolean; undoable: boolean; applicable: boolean })[] = [];
   // Who may put a change back depends on what kind of change it is and on which agent, not on the row: the history's
   // 200 rows ask once per kind (a settings row's lines differ, so each asks).
   const mayUndo = new Map<string, Promise<boolean>>();
@@ -573,22 +580,27 @@ export async function listProposals(
   for (const r of rows) {
     if (r.status === "pending" && (await unsentHidden(db, actorId, r))) continue;
     // What was applied may be put back by whoever may make it (ADR 0219); a deleted agent can't come back.
+    // Also what the review left out: whoever may make it applies it themselves.
     let undoable = false;
-    if (r.status === "accepted" && !deletes(r)) {
+    let applicable = false;
+    if ((r.status === "accepted" && !deletes(r)) || leftOutByReview(r)) {
       const key = undoKey(r);
       if (!mayUndo.has(key))
         mayUndo.set(
           key,
           mayDecide(db, actorId, r, membership, true).catch(() => false),
         );
-      undoable = await (mayUndo.get(key) as Promise<boolean>);
+      const may = await (mayUndo.get(key) as Promise<boolean>);
+      if (r.status === "accepted") undoable = may;
+      else applicable = may;
     }
-    if (outdated.has(r.id)) out.push({ ...r, status: "stale", canDecide: false, undoable: false });
+    if (outdated.has(r.id)) out.push({ ...r, status: "stale", canDecide: false, undoable: false, applicable: false });
     else
       out.push({
         ...r,
         canDecide: r.status === "pending" && (await mayDecide(db, actorId, r, membership)),
         undoable,
+        applicable,
       });
   }
   return out;
@@ -672,9 +684,11 @@ export async function decideProposal(
     .where(and(eq(contextProposals.id, proposalId), eq(contextProposals.orgId, orgId)));
   if (!p) throw new NotFoundError("Proposal not found");
   const review = options.review;
-  if (!(await mayDecide(db, actorId, p, undefined, !!review)))
+  // What the review left out, whoever may make it still applies from its card.
+  const reapply = !review && decision === "accept" && leftOutByReview(p);
+  if (!(await mayDecide(db, actorId, p, undefined, !!review || reapply)))
     throw new ForbiddenError("Only the agent's owner or an admin can decide this");
-  if (p.status !== "pending") throw new ConflictError("This proposal was already decided");
+  if (p.status !== "pending" && !reapply) throw new ConflictError("This proposal was already decided");
   if (options.finalText !== undefined && isAgentSetting(p))
     throw new ValidationError("Only instructions and the workspace context can be edited before accepting");
   // A person may adjust the text before accepting; it still can't carry secrets or permission rules.
@@ -736,7 +750,7 @@ export async function decideProposal(
         decidedAt: new Date(),
         ...(status === "accepted" ? { proposedText: finalText } : {}),
       })
-      .where(and(eq(contextProposals.id, proposalId), eq(contextProposals.status, "pending")))
+      .where(and(eq(contextProposals.id, proposalId), eq(contextProposals.status, p.status)))
       .returning();
     // Someone decided it while this waited for the agent: their decision stands.
     if (!row) throw new ConflictError("This proposal was already decided");
@@ -1178,7 +1192,7 @@ async function cardResult(db: Executor, proposerId: string, rows: Proposal[], vi
     reviewedAccepted &&
       `Applied after review: ${reviewedAccepted}. It is in effect now, even if your instructions above still show the old text (this notice wins until they refresh): say it is done in a line, without checking it.`,
     reviewedLeft &&
-      `Left out after review, not applied: ${reviewedLeft}. Don't propose it again unless someone asks; if a person asked for it, tell them why in a line.`,
+      `Left out after review, not applied: ${reviewedLeft}. Don't propose it again unless someone asks; if a person asked for it, tell them why in a line, and that whoever may make the change can apply it themselves from its card ("Apply anyway"), after a look at the change.`,
     accepted.lines &&
       `${accepted.who} accepted: ${accepted.lines}. It is already applied and in effect now, even if your instructions above still show the old text (this notice wins until they refresh): don't propose or check it, say so here in a line.`,
     refused.lines && `${refused.who} refused: ${refused.lines}. Don't propose it again unless someone asks.`,
