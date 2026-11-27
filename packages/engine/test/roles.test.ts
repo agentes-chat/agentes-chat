@@ -172,6 +172,39 @@ describe("hierarchy", () => {
     expect(roles.find((r) => r.id === helpers.id)?.givable).toBe(true);
   });
 
+  test("an administrator gives and takes roles at their own level; anyone else only below", async () => {
+    const boss = await addMember(f.db, f.org.id, "admin", "boss");
+    const other = await addMember(f.db, f.org.id, "admin", "other");
+    const dev = await addMember(f.db, f.org.id, "member", "dev");
+    const admin = await adminRoleId(f.db, f.org.id);
+    expect((await listRoles(f.db, boss.id, f.org.id)).roles.find((r) => r.id === admin)?.givable).toBe(true);
+    await setMemberRoles(f.db, boss.id, f.org.id, dev.id, [admin]);
+    expect(can(await getMembership(f.db, dev.id, f.org.id), "administrator")).toBe(true);
+    // Level with them: another administrator's roles too, and an invitation that carries Admin.
+    await setMemberRoles(f.db, boss.id, f.org.id, other.id, []);
+    expect(can(await getMembership(f.db, other.id, f.org.id), "administrator")).toBe(false);
+    const { invitation } = await createInvitation(f.db, boss.id, f.org.id, {
+      email: "new-admin@example.com",
+      roleIds: [admin],
+    });
+    expect(invitation.roleIds).toEqual([admin]);
+    // The role itself stays with who stands above it, and an owner's roles with owners.
+    await expect(updateRole(f.db, boss.id, f.org.id, admin, { name: "Chefes" })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(setMemberRoles(f.db, boss.id, f.org.id, f.owner.id, [admin])).rejects.toBeInstanceOf(ForbiddenError);
+    // Without `administrator`, level is not enough: a lead neither gives Leads nor changes another lead.
+    const leads = await createRole(f.db, f.owner.id, f.org.id, { name: "Leads", permissions: ["manage_members"] });
+    const lead = await addMember(f.db, f.org.id, "member", "lead");
+    const peer = await addMember(f.db, f.org.id, "member", "peer");
+    await setMemberRoles(f.db, f.owner.id, f.org.id, lead.id, [leads.id]);
+    await setMemberRoles(f.db, f.owner.id, f.org.id, peer.id, [leads.id]);
+    await expect(setMemberRoles(f.db, lead.id, f.org.id, other.id, [leads.id])).rejects.toMatchObject({
+      code: "role.above_you",
+    });
+    await expect(setMemberRoles(f.db, lead.id, f.org.id, peer.id, [])).rejects.toMatchObject({
+      code: "role.above_you",
+    });
+  });
+
   test("an owner's roles only owners change", async () => {
     const boss = await addMember(f.db, f.org.id, "admin", "boss");
     await expect(setMemberRoles(f.db, boss.id, f.org.id, f.owner.id, [])).rejects.toBeInstanceOf(ForbiddenError);

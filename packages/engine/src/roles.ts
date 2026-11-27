@@ -24,6 +24,7 @@ import {
   announceMembers,
   can,
   getMembership,
+  givesAtRank,
   lockOrgMembers,
   type Membership,
   outranks,
@@ -164,7 +165,7 @@ export async function listRoles(db: Database, actorId: string, orgId: string) {
     ...r,
     permissions: r.permissions.filter(isRolePermission),
     editable: mayEdit(actor, r),
-    givable: r.kind === "custom" && outranks(actor, r.position) && holdsAll(actor, r.permissions),
+    givable: r.kind === "custom" && givesAtRank(actor, r.position) && holdsAll(actor, r.permissions),
     ...reach(r),
   }));
   return { roles, areas: PERMISSION_AREAS, colors: ROLE_COLORS, icons: ROLE_ICONS };
@@ -688,8 +689,8 @@ export async function reorderRoles(
 }
 
 /**
- * The roles in `ids` the actor may give (or take): custom roles of this workspace below them whose keys they all
- * hold, so nobody hands themselves or anyone else more than they can do. Unknown or base ids refuse the whole call;
+ * The roles in `ids` the actor may give (or take): custom roles of this workspace below them (an administrator's own
+ * level too, `givesAtRank`) whose keys they all hold, so nobody hands themselves or anyone else more than they can do. Unknown or base ids refuse the whole call;
  * the result keeps the ids in the workspace.
  */
 export async function givableRoleIds(db: Executor, actor: Membership, orgId: string, ids: readonly string[]) {
@@ -701,7 +702,7 @@ export async function givableRoleIds(db: Executor, actor: Membership, orgId: str
     .where(and(eq(orgRoles.orgId, orgId), inArray(orgRoles.id, wanted)));
   if (rows.length !== wanted.length || rows.some((r) => r.kind !== "custom"))
     throw new ValidationError("Unknown role", "role.unknown");
-  if (rows.some((r) => !outranks(actor, r.position)))
+  if (rows.some((r) => !givesAtRank(actor, r.position)))
     throw new ForbiddenError("You can only give roles below your own", "role.above_you");
   if (rows.some((r) => !holdsAll(actor, r.permissions)))
     throw new ForbiddenError("You can only give roles whose permissions you hold", "role.grant_forbidden");
@@ -723,7 +724,7 @@ export async function stillGivableRoleIds(
     .select({ id: orgRoles.id, position: orgRoles.position, permissions: orgRoles.permissions })
     .from(orgRoles)
     .where(and(eq(orgRoles.orgId, orgId), eq(orgRoles.kind, "custom"), inArray(orgRoles.id, [...new Set(ids)])));
-  return rows.filter((r) => outranks(actor, r.position) && holdsAll(actor, r.permissions)).map((r) => r.id);
+  return rows.filter((r) => givesAtRank(actor, r.position) && holdsAll(actor, r.permissions)).map((r) => r.id);
 }
 
 /** The ids among `ids` that are still custom roles of the workspace. */
@@ -772,8 +773,8 @@ export async function memberRoleIds(db: Executor, orgId: string, userId: string)
 
 /**
  * Sets a member's roles to exactly `roleIds` (ADR 0085). Needs `manage_members`; anyone but an owner only touches
- * people below them (themselves aside) and only adds or removes roles below their own. An owner's roles are set
- * by owners only.
+ * people below them (themselves aside) and only adds or removes roles below their own; who holds `administrator`
+ * reaches their own level too (`givesAtRank`). An owner's roles are set by owners only.
  */
 export async function setMemberRoles(
   db: Database,
@@ -794,7 +795,7 @@ export async function setMemberRoles(
   if (!target) throw new ConflictError("That user is not a member");
   if (target.role === "owner" && actor.role !== "owner")
     throw new ForbiddenError("Only owners change an owner's roles", "role.above_you");
-  if (actorId !== targetUserId && !outranks(actor, target.rank))
+  if (actorId !== targetUserId && !givesAtRank(actor, target.rank))
     throw new ForbiddenError("Only someone above them changes their roles", "role.above_you");
   const next = [...new Set(roleIds)];
   // The roles given or taken: an agent one of them answers for changes who is asked its approvals (`rerouted` below).

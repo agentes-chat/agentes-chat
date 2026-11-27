@@ -160,6 +160,17 @@ export function outranks(actor: Pick<Membership, "role" | "rank">, rank: number 
   return (actor.rank ?? Number.POSITIVE_INFINITY) < (rank ?? Number.POSITIVE_INFINITY);
 }
 
+/**
+ * Whether `actor` may give or take a role at `position`, or change the roles of a person whose highest role is
+ * `rank` (ADR 0085 §6, amended 2026-11-23): above it, or level with it while holding `administrator`, so
+ * administrators make and unmake one another without waiting for an owner. Changing a role itself, the order and
+ * removing a person stay with who stands above (`outranks`).
+ */
+export function givesAtRank(actor: Pick<Membership, "role" | "rank" | "permissions">, rank: number | null) {
+  if (outranks(actor, rank)) return true;
+  return can(actor, "administrator") && (actor.rank ?? Number.POSITIVE_INFINITY) === (rank ?? Number.POSITIVE_INFINITY);
+}
+
 type MembershipRow = Omit<Membership, "permissions"> & { keys: string[] };
 const withPermissions = ({ keys, ...row }: MembershipRow): Membership => ({
   ...row,

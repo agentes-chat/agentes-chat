@@ -13,7 +13,7 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { namesText } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { removalLines } from "@agenteschat/client/lib/removal";
-import { isBelow, leaves, removes } from "@agenteschat/client/lib/roles";
+import { changesRolesOf, leaves, removes } from "@agenteschat/client/lib/roles";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, useMemo } from "react";
@@ -75,7 +75,7 @@ export function MembersPage() {
     m.userId === meId ? leaves(viewer, list ?? []) : !frozen && removes(viewer, m, roles);
   // Their cargos (P11): who manages people, for someone below them (or themselves), with a cargo to give.
   const givesCargos = (m: Person) =>
-    !frozen && can(org, "manage_members") && isBelow(viewer, m, roles) && roles.some((r) => r.givable);
+    !frozen && can(org, "manage_members") && changesRolesOf(viewer, m, roles) && roles.some((r) => r.givable);
   // Sorted once per list: the page draws again on every change of anyone's presence.
   const sorted = useMemo(() => (list ? membersByName(list, i18n.language) : []), [list, i18n.language]);
   // A row's menu, the same function for every row and render (the rows are memoized).

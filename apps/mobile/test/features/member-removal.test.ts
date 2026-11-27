@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { OrgRole, Person, RemovalPreview } from "@agenteschat/client";
 import { removalLines } from "@agenteschat/client/lib/removal";
-import { leaves, removes } from "@agenteschat/client/lib/roles";
+import { changesRolesOf, leaves, removes } from "@agenteschat/client/lib/roles";
 import { translator } from "./fixtures";
 
 /** Remover do workspace on the members screen: who gets it, and what its confirmation says, in both languages. */
@@ -24,6 +24,17 @@ describe("who may remove whom", () => {
     expect(removes(admin, person("u-adm", "member", ["r-admin"]), roles)).toBe(false);
     const owner = { role: "owner", rank: -1, userId: "u-own", permissions: ["manage_members"] };
     expect(removes(owner, person("u-own2", "owner"), roles)).toBe(true);
+  });
+  test("an administrator changes the roles of someone level with them, and still removes only below", () => {
+    const boss = { ...admin, permissions: ["manage_members", "administrator"] };
+    const peer = person("u-adm2", "member", ["r-admin"]);
+    expect(changesRolesOf(boss, peer, roles)).toBe(true);
+    expect(removes(boss, peer, roles)).toBe(false);
+    expect(changesRolesOf(boss, person("u-own", "owner"), roles)).toBe(false);
+    // Without `administrator`, only below them or themselves.
+    expect(changesRolesOf(admin, peer, roles)).toBe(false);
+    expect(changesRolesOf(admin, person("u-dev", "member", ["r-devs"]), roles)).toBe(true);
+    expect(changesRolesOf(admin, person("u-adm", "member", ["r-admin"]), roles)).toBe(true);
   });
   test("anyone leaves but the last owner", () => {
     expect(leaves({ role: "member" }, [person("a", "owner")])).toBe(true);

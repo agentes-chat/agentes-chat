@@ -3,7 +3,7 @@ import { useApi, useSetMemberRoles } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { can } from "@agenteschat/client/lib/permissions";
-import { isBelow, PEOPLE_SEARCH_FROM, peopleWith, roleLock, roleName } from "@agenteschat/client/lib/roles";
+import { changesRolesOf, PEOPLE_SEARCH_FROM, peopleWith, roleLock, roleName } from "@agenteschat/client/lib/roles";
 import {
   Avatar,
   Button,
@@ -127,8 +127,8 @@ export function RolePeople({
   const name = roleName(t, role);
   const lock = roleLock(org, role) !== null;
   const gives = !lock && role.givable && can(org, "manage_members");
-  const viewer = { role: org.role, rank: org.rank, userId: me.user.id };
-  const below = (p: Person) => isBelow(viewer, p, data.roles);
+  const viewer = { role: org.role, rank: org.rank, userId: me.user.id, permissions: org.permissions };
+  const below = (p: Person) => changesRolesOf(viewer, p, data.roles);
   const q = fold(query.trim());
   const shown = holders.filter((p) => !q || fold(`${p.name} ${p.email}`).includes(q));
   const agent = q ? dir.agents.find((a) => fold(a.name).includes(q)) : undefined;

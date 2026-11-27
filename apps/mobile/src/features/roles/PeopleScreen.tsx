@@ -3,8 +3,8 @@ import { useChangeRole, useSetMemberRoles } from "@agenteschat/client";
 import { firstName } from "@agenteschat/client/lib/format";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import {
+  changesRolesOf,
   giveRole,
-  isBelow,
   ownerCandidates,
   PEOPLE_SEARCH_FROM,
   peopleWith,
@@ -99,7 +99,7 @@ export function RolePeopleScreen({ roleId }: { roleId: string }) {
           />
         ) : null}
         {shown.map((p) => {
-          const below = isBelow(viewer, p, data.roles);
+          const below = changesRolesOf(viewer, p, data.roles);
           return (
             <GroupedRow
               key={p.userId}
@@ -156,7 +156,7 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
   const candidates = (
     owner
       ? ownerCandidates(people)
-      : people.filter((p) => !(p.roleIds ?? []).includes(roleId) && isBelow(viewer, p, data.roles))
+      : people.filter((p) => !(p.roleIds ?? []).includes(roleId) && changesRolesOf(viewer, p, data.roles))
   ).sort(byName);
   const shown = candidates.filter((p) => matchesWords(`${p.name} ${p.email}`, query));
   const add = async () => {

@@ -516,7 +516,7 @@ export function rankOf(person: Pick<Person, "role" | "roleIds">, roles: readonly
   return mine.length ? Math.min(...mine.map((r) => r.position)) : Number.POSITIVE_INFINITY;
 }
 
-/** Whether the viewer may touch this person's roles (the server checks it again): someone below them, or themselves. */
+/** Whether this person stands below the viewer (an owner above all), or is the viewer. */
 export const isBelow = (
   viewer: { role: string; rank?: number | null; userId: string },
   person: Pick<Person, "userId" | "role" | "roleIds">,
@@ -525,6 +525,21 @@ export const isBelow = (
   viewer.role === "owner" ||
   (person.role !== "owner" &&
     (person.userId === viewer.userId || rankOf(person, roles) > (viewer.rank ?? Number.POSITIVE_INFINITY)));
+
+/**
+ * Whether the viewer may change this person's roles (the server checks it again, `setMemberRoles`): someone below
+ * them, themselves, or, for who holds `administrator`, someone level with them: administrators make and unmake one
+ * another (ADR 0085 §6). Which roles they may give is each role's `givable`.
+ */
+export const changesRolesOf = (
+  viewer: { role: string; rank?: number | null; userId: string; permissions?: readonly string[] },
+  person: Pick<Person, "userId" | "role" | "roleIds">,
+  roles: readonly OrgRole[],
+) =>
+  isBelow(viewer, person, roles) ||
+  (person.role !== "owner" &&
+    can(viewer, "administrator") &&
+    rankOf(person, roles) === (viewer.rank ?? Number.POSITIVE_INFINITY));
 
 /**
  * Whether the viewer may remove this person from the workspace (the server checks it again, `removeMember`): who may
