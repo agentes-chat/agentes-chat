@@ -185,6 +185,9 @@ export interface MachineSizeRecord {
   maxTasks?: number;
   /** Protocol 78: about how many more tasks fit now, where memory is read (`TaskRoomReport` in the protocol). */
   room?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean };
+  /** The processor's and the system's names (`MachineSize.cpuModel`, `system`); absent from an older runner. */
+  cpuModel?: string;
+  system?: string;
 }
 
 /** How busy a computer got over the last day (protocol 22: `MachineLoad` in the protocol), and when it said so. */

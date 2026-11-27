@@ -137,6 +137,13 @@ const Computer = z
     arch: z.string(),
     hostname: z.string(),
     cpus: z.number().nullable(),
+    cpuModel: z
+      .string()
+      .nullable()
+      .openapi({ description: "The processor's name (`Apple M4 Pro`); null: an older runner." }),
+    system: z.string().nullable().openapi({
+      description: "The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer.",
+    }),
     memoryGb: z.number().nullable(),
     ownerUserId: z.string().nullable(),
     belongsToWorkspace: z.boolean(),

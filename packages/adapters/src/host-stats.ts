@@ -3,7 +3,7 @@
  * and the runner its computer (protocol 22) and its agents' browsers' traffic (protocol 23). Node's `os`
  * and `fs` only, so the runner bundle can use it.
  */
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statfsSync } from "node:fs";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
@@ -45,6 +45,49 @@ export function machineSize(dir: string): MachineSize {
   const limitMemory = Math.min(memory, process.constrainedMemory?.() || memory);
   if (limitCpus < cpus || limitMemory < memory) size.limit = { cpus: limitCpus, memoryGb: halfGb(limitMemory) };
   return size;
+}
+
+/**
+ * `AMD Ryzen 9 7950X 16-Core Processor` → `AMD Ryzen 9 7950X`; `Intel(R) Xeon(R) CPU E5-2680 @ 2.40GHz` → `Intel Xeon
+ * E5-2680`; `12th Gen Intel(R) Core(TM) i7-12700H` → `Intel Core i7-12700H`.
+ */
+export const cpuName = (model: string) =>
+  model
+    .replace(/\((R|TM)\)/gi, "")
+    .replace(/\s*@.*$/, "")
+    .replace(/^\d+(st|nd|rd|th) Gen\s+/i, "")
+    .replace(/\s+\d+-Cores?( Processor)?$/i, "")
+    .replace(/\bCPU\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** "macOS 26.1", "Ubuntu 24.04", "Windows 11". */
+export function systemName(platform: NodeJS.Platform = process.platform): string {
+  if (platform === "darwin") {
+    const v = spawnSync("sw_vers", ["-productVersion"], { encoding: "utf8" }).stdout?.trim();
+    return v ? `macOS ${v}` : "macOS";
+  }
+  if (platform === "win32") return Number(os.release().split(".")[2]) >= 22000 ? "Windows 11" : "Windows 10";
+  if (platform === "linux") {
+    try {
+      const text = readFileSync("/etc/os-release", "utf8");
+      const field = (k: string) => new RegExp(`^${k}="?([^"\\n]+)`, "m").exec(text)?.[1];
+      return [field("NAME"), field("VERSION_ID")].filter(Boolean).join(" ") || "Linux";
+    } catch {
+      return "Linux";
+    }
+  }
+  return os.type();
+}
+
+/**
+ * The processor's name and the system's, as `MachineSize.cpuModel` and `system` say them. Node reads the processor's
+ * name where each system keeps it (macOS `machdep.cpu.brand_string`, Linux `/proc/cpuinfo`, Windows the registry's
+ * `ProcessorNameString`); an ARM Linux's cpuinfo often names none, so it is left out there.
+ */
+export function cpuAndSystem(platform: NodeJS.Platform = process.platform): Pick<MachineSize, "cpuModel" | "system"> {
+  const cpu = cpuName(os.cpus()[0]?.model ?? "");
+  return { ...(cpu && cpu.toLowerCase() !== "unknown" ? { cpuModel: cpu } : {}), system: systemName(platform) };
 }
 
 /**

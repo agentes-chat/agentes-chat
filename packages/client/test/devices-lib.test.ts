@@ -38,6 +38,7 @@ import {
   phoneScreenCover,
   phoneScreenUrl,
   powerChoice,
+  processorText,
   reasonText,
   SPILL_USES,
   screenGesture,
@@ -48,6 +49,7 @@ import {
   statusDetail,
   statusPill,
   statusSentence,
+  systemText,
   taskChoices,
   taskLimitLine,
   tasksAutoText,
@@ -859,4 +861,20 @@ test("Ligar on an offline simulator, Desligar on one running and free; never a r
   expect(said("device.power_start_failed", { name: "Pixel 8", computer: "Build PC", why: "PANIC: no image" })).toBe(
     "Pixel 8 didn't start. Build PC said: PANIC: no image",
   );
+});
+
+describe("a computer's system and processor", () => {
+  test("the version and the processor's name its runner said, the cores aside; an older runner's family and cores", () => {
+    const said = computer({ cpus: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+    expect(systemText(t, said)).toBe("macOS 26.1");
+    expect(processorText(t, said)).toEqual({ name: "Apple M4 Pro", cores: "14 cores" });
+    const older = computer({});
+    expect(systemText(t, older)).toBe("macOS");
+    expect(processorText(t, older)).toEqual({ name: "12 cores", cores: null });
+    expect(processorText(t, computer({ cpus: null }))).toBeNull();
+    expect(processorText(t, computer({ cpus: null, cpuModel: "AMD EPYC 7763" }))).toEqual({
+      name: "AMD EPYC 7763",
+      cores: null,
+    });
+  });
 });

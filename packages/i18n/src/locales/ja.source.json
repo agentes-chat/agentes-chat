@@ -41811,6 +41811,12 @@
       "other": "{{count}} CPU"
     }
   },
+  "devices.cores": {
+    "value": {
+      "one": "{{count}} core",
+      "other": "{{count}} cores"
+    }
+  },
   "devices.memory": {
     "value": "{{gb}} GB"
   },
@@ -42406,7 +42412,7 @@
     "value": "System"
   },
   "devices.facts.cpu": {
-    "value": "CPU"
+    "value": "Processor"
   },
   "devices.facts.memory": {
     "value": "Memory"

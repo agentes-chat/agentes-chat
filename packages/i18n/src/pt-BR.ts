@@ -17495,6 +17495,8 @@ export const ptBR = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPUs",
+    cores_one: "{{count}} núcleo",
+    cores_other: "{{count}} núcleos",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulador", simulator: "Simulador" },
@@ -17724,7 +17726,7 @@ export const ptBR = {
     },
     facts: {
       system: "Sistema",
-      cpu: "CPU",
+      cpu: "Processador",
       memory: "Memória",
       lastSeen: "Visto por último",
       toolchains: "Ferramentas encontradas",

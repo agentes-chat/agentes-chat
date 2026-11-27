@@ -16976,6 +16976,8 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} çekirdek",
+    "cores_other": "{{count}} çekirdek",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

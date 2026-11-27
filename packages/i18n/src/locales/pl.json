@@ -18192,6 +18192,10 @@
     "cpus_few": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} rdzeń",
+    "cores_few": "{{count}} rdzenie",
+    "cores_many": "{{count}} rdzeni",
+    "cores_other": "{{count}} rdzenia",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

@@ -17048,6 +17048,8 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPUs",
+    "cores_one": "{{count}} Kern",
+    "cores_other": "{{count}} Kerne",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",

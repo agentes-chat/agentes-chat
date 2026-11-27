@@ -16503,6 +16503,7 @@
     "workspace": "工作区",
     "cloud": "Cloud",
     "cpus_other": "{{count}} 个 CPU",
+    "cores_other": "{{count}} 核",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16723,7 +16724,7 @@
     },
     "facts": {
       "system": "系统",
-      "cpu": "CPU",
+      "cpu": "处理器",
       "memory": "内存",
       "lastSeen": "上次在线",
       "toolchains": "已找到的工具链",

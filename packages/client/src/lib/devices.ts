@@ -250,6 +250,22 @@ export const deviceName = (t: TFunction, d: { name: string; machineKind?: string
 
 export { osName };
 
+/** A computer's system as its page says it: "macOS 26.1" when its runner said the version, else "macOS". */
+export const systemText = (t: TFunction, d: Pick<ComputerDevice, "os" | "system">) => d.system || osName(t, d.os);
+
+/**
+ * A computer's processor as its page says it: its name ("Apple M4 Pro") with its cores aside ("14 cores", a tooltip),
+ * or the cores alone when its runner is older and names no processor. Null when neither is known.
+ */
+export function processorText(
+  t: TFunction,
+  d: Pick<ComputerDevice, "cpus" | "cpuModel">,
+): { name: string; cores: string | null } | null {
+  const cores = d.cpus ? t("devices.cores", { count: d.cpus }) : null;
+  if (d.cpuModel) return { name: d.cpuModel, cores };
+  return cores ? { name: cores, cores: null } : null;
+}
+
 /** "macOS 26.1 · 12 CPU · 36 GB"; the workspace computer says "Cloud" where a system would go. */
 export function computerLine(t: TFunction, d: ComputerDevice): string {
   return [

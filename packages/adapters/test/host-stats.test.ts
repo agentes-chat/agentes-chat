@@ -6,6 +6,8 @@ import {
   cgroupCounters,
   combineLoads,
   combineTraffic,
+  cpuAndSystem,
+  cpuName,
   diskFigures,
   diskSpace,
   LoadWindow,
@@ -241,6 +243,28 @@ describe("protocol 22 on the wire", () => {
     expect(hello({})).not.toHaveProperty("size");
     expect(hello({ size: { cpus: 0, memoryGb: 4, diskGb: 80 } })).not.toHaveProperty("size");
     expect(hello({ size: { cpus: 2, memoryGb: "4", diskGb: 80 } })).not.toHaveProperty("size");
+  });
+
+  test("hello's size names the processor and the system; an older runner's names neither, nonsense is left out", () => {
+    const size = { cpus: 14, memoryGb: 48, diskGb: 926 };
+    expect(
+      (hello({ size: { ...size, cpuModel: "Apple M4 Pro", system: "macOS 26.1" } }) as { size: object }).size,
+    ).toEqual({ ...size, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+    expect((hello({ size }) as { size: object }).size).toEqual(size);
+    const odd = { ...size, cpuModel: "x\u0000<script>", system: 7 };
+    expect((hello({ size: odd }) as { size: object }).size).toEqual(size);
+    const long = hello({ size: { ...size, cpuModel: "A".repeat(200) } }) as { size: { cpuModel: string } };
+    expect(long.size.cpuModel).toHaveLength(80);
+  });
+
+  test("this computer's processor and system, as the runner reports them", () => {
+    const model = cpuAndSystem();
+    expect(model.system).toBeTruthy();
+    if (model.cpuModel) expect(model.cpuModel).not.toMatch(/\((R|TM)\)|@/);
+    expect(cpuName("12th Gen Intel(R) Core(TM) i7-12700H")).toBe("Intel Core i7-12700H");
+    expect(cpuName("AMD EPYC 7763 64-Core Processor")).toBe("AMD EPYC 7763");
+    expect(cpuName("AMD Ryzen Threadripper PRO 7995WX 96-Cores")).toBe("AMD Ryzen Threadripper PRO 7995WX");
+    expect(cpuName("Apple M4 Pro")).toBe("Apple M4 Pro");
   });
 
   test("a pong carries the load; without one, or a bad one, it is a plain pong", () => {

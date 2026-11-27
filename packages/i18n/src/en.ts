@@ -17585,6 +17585,8 @@ export const en = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPU",
+    cores_one: "{{count}} core",
+    cores_other: "{{count}} cores",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulator", simulator: "Simulator" },
@@ -17836,7 +17838,7 @@ export const en = {
     },
     facts: {
       system: "System",
-      cpu: "CPU",
+      cpu: "Processor",
       memory: "Memory",
       lastSeen: "Last seen",
       toolchains: "Toolchains found",
