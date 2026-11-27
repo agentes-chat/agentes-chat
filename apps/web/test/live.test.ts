@@ -983,6 +983,95 @@ describe("live memory cards", () => {
     store.apply({ type: "message.created", channelId: "c1", messageId: "a1", message: reply } as ChannelEvent);
     expect(store.get().memory.c1).toEqual([]);
   });
+
+  const announce = (store: ReturnType<typeof createStreamsStore>, runId: string, itemId = "i1") =>
+    store.apply({
+      type: "memory.updated",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId,
+      update: { ...update, itemId },
+    } as ChannelEvent);
+
+  test("the run's end drops its cards, never another run's: no card stuck at the bottom saying now", () => {
+    for (const end of [
+      { type: "agent.run", status: "done" },
+      { type: "agent.run", status: "failed" },
+      { type: "agent.run", status: "canceled" },
+      { type: "run.finished", status: "done" },
+      { type: "run.finished", status: "canceled" },
+      { type: "run.canceled" },
+      { type: "agent.passed" },
+    ]) {
+      const store = createStreamsStore();
+      announce(store, "r1");
+      announce(store, "r2", "i2");
+      store.apply({ ...end, channelId: "c1", threadId: "m1", agentId: "nova", runId: "r1" } as unknown as ChannelEvent);
+      expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i2"]);
+    }
+  });
+
+  test("a run that waits (an approval, an answer) keeps its cards", () => {
+    const store = createStreamsStore();
+    announce(store, "r1");
+    for (const status of ["waiting_approval", "waiting_input"])
+      store.apply({
+        type: "run.finished",
+        channelId: "c1",
+        threadId: "m1",
+        agentId: "nova",
+        runId: "r1",
+        status,
+      } as unknown as ChannelEvent);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r1:i1"]);
+  });
+
+  test("a message of another run of the same agent that shows the same change drops the card", () => {
+    const store = createStreamsStore();
+    announce(store, "r1");
+    // Long work's report, posted by the run that picked it up.
+    store.seed([{ ...reply, agentRunId: "r9" }]);
+    expect(store.get().memory.c1).toEqual([]);
+  });
+
+  test("a later change to the same item, or another agent's, is not the one a message shows", () => {
+    const store = createStreamsStore();
+    store.apply({
+      type: "memory.updated",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "nova",
+      runId: "r2",
+      update: { ...update, action: "updated", text: "Prefere respostas longas" },
+    } as ChannelEvent);
+    store.apply({
+      type: "memory.updated",
+      channelId: "c1",
+      threadId: "m1",
+      agentId: "atlas",
+      runId: "r3",
+      update,
+    } as ChannelEvent);
+    store.seed([reply]);
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i1", "r3:i1"]);
+  });
+
+  test("a resync drops the cards of runs no longer active, not one that came after the ask", () => {
+    let clock = 1_000;
+    const store = createStreamsStore(undefined, () => clock);
+    announce(store, "r1");
+    announce(store, "r2", "i2");
+    const askedAt = clock + 1;
+    clock = askedAt + 1;
+    announce(store, "r3", "i3");
+    store.reconcile(
+      "c1",
+      [{ runId: "r2", agentId: "nova", channelId: "c1", threadId: "m1", status: "running" }],
+      askedAt,
+    );
+    expect(store.get().memory.c1?.map((c) => c.key)).toEqual(["r2:i2", "r3:i3"]);
+  });
 });
 
 describe("receipt ticks: clock, one, two", () => {
