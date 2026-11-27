@@ -70,7 +70,7 @@ export function AgentProxyCard({ machineId, canChange }: { machineId: string | n
           <Field
             label={t(own ? "agentProxy.replace" : "agentProxy.address")}
             id={`${heading}-url`}
-            hint={t("agentProxy.addressHint")}
+            hint={{ name: t("common.about", { label: t("agentProxy.address") }), text: t("agentProxy.addressHint") }}
             error={error ?? undefined}
           >
             <Input

@@ -21,11 +21,11 @@ import { useColors } from "../shared/hooks";
  */
 export function ProxySection({ machineId, canChange = false }: { machineId: string | null; canChange?: boolean }) {
   const { t, i18n } = useTranslation();
-  const { org } = useOrg();
+  const { orgId, org } = useOrg();
   const c = useColors();
   const toast = useToast();
-  const proxies = useAgentProxies(org.id);
-  const act = useAgentProxyMutations(org.id);
+  const proxies = useAgentProxies(orgId);
+  const act = useAgentProxyMutations(orgId);
   const [url, setUrl] = useState("");
   const [test, setTest] = useState<AgentProxyTest | null>(null);
   const may = can(org, "configure") || (machineId !== null && canChange);
@@ -55,7 +55,7 @@ export function ProxySection({ machineId, canChange = false }: { machineId: stri
             spellCheck={false}
             editable={!busy}
             placeholder="socks5://user:password@host:1080"
-            placeholderTextColor={c.ink3}
+            placeholderTextColor={c.faint}
             accessibilityLabel={t(own ? "agentProxy.replace" : "agentProxy.address")}
             style={[styles.field, fieldText("body"), { color: c.ink }]}
           />
@@ -68,6 +68,7 @@ export function ProxySection({ machineId, canChange = false }: { machineId: stri
       {may ? (
         <View style={styles.actions}>
           <Button
+            variant="primary"
             label={t("agentProxy.save")}
             disabled={busy || !typed}
             loading={act.set.isPending}

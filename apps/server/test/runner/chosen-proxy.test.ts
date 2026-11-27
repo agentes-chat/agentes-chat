@@ -23,7 +23,11 @@ const listen = (server: Server, at?: string) =>
 
 /** A CONNECT proxy that sends every tunnel to a site answering "hi " plus what it got; `seen`: the targets. */
 async function chosenProxy(seen: string[]) {
-  const site = await listen(createServer((s) => s.on("data", (d) => s.write(Buffer.concat([Buffer.from("hi "), d])))));
+  const site = await listen(
+    createServer((s) => {
+      s.on("data", (d: Buffer) => s.write(Buffer.concat([Buffer.from("hi "), d])));
+    }),
+  );
   return listen(
     createServer((client) => {
       client.once("data", (d) => {
