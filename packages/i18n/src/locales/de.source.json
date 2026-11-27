@@ -5945,9 +5945,6 @@
   "agentGroups.dropHere": {
     "value": "Drag agents here"
   },
-  "agentGroups.dropHereAll": {
-    "value": "Drag agents or channels here"
-  },
   "agentGroups.moved": {
     "value": "{{name}} moved to {{group}}"
   },
@@ -5957,35 +5954,8 @@
   "agentGroups.undo": {
     "value": "Undo"
   },
-  "sidebarAgents.options": {
-    "value": "Agents options"
-  },
-  "sidebarAgents.add": {
-    "value": "New agent or department"
-  },
-  "sidebarAgents.order": {
-    "value": "Order"
-  },
-  "sidebarAgents.sort.workspace": {
-    "value": "Workspace's order"
-  },
-  "sidebarAgents.sort.mine": {
-    "value": "Mine first"
-  },
-  "sidebarAgents.sort.working": {
-    "value": "Working first"
-  },
   "sidebarAgents.showAll": {
     "value": "Show agents that don't talk to me"
-  },
-  "sidebarAgents.collapseAll": {
-    "value": "Collapse all"
-  },
-  "sidebarAgents.expandAll": {
-    "value": "Expand all"
-  },
-  "sidebarAgents.organize": {
-    "value": "Organize departments in Team"
   },
   "sidebarAgents.more": {
     "value": {
@@ -5995,12 +5965,6 @@
   },
   "sidebarAgents.newAgent": {
     "value": "New agent"
-  },
-  "sidebarAgents.working": {
-    "value": {
-      "one": "{{count}} working",
-      "other": "{{count}} working"
-    }
   },
   "sidebarAgents.count": {
     "value": {
@@ -6020,15 +5984,6 @@
       "other": "only talks to {{name}} and {{count}} more"
     }
   },
-  "sidebarAgents.changeGroup": {
-    "value": "Move to department"
-  },
-  "sidebarAgents.newGroupWith": {
-    "value": "New department with {{name}}"
-  },
-  "sidebarAgents.dmsEmpty": {
-    "value": "Your conversations with people show up here."
-  },
   "sidebarFavorites.title": {
     "value": "Favorites"
   },
@@ -6037,6 +5992,9 @@
   },
   "sidebarFavorites.remove": {
     "value": "Remove from favorites"
+  },
+  "sidebarFavorites.marked": {
+    "value": "Favorite"
   },
   "sidebarFavorites.full": {
     "value": "Favorites already holds 50. Remove one to add this one."
@@ -6133,24 +6091,6 @@
   },
   "unreads.markedAll": {
     "value": "Everything marked as read"
-  },
-  "sidebarPins.pin": {
-    "value": "Pin to top"
-  },
-  "sidebarPins.unpin": {
-    "value": "Unpin"
-  },
-  "sidebarPins.pinned": {
-    "value": "Pinned"
-  },
-  "sidebarPins.full.agents": {
-    "value": "You already pinned 5 agents. Unpin one to pin this one."
-  },
-  "sidebarPins.full.channels": {
-    "value": "You already pinned 5 channels. Unpin one to pin this one."
-  },
-  "sidebarPins.full.people": {
-    "value": "You already pinned 5 people. Unpin one to pin this one."
   },
   "appsDownload.computer": {
     "value": "Computer"

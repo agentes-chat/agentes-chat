@@ -608,12 +608,13 @@ describe("working line", () => {
     expect(awayRun(both, [ada, atlas])).toBeUndefined();
     expect(lineStops(both, [ada, atlas], () => true)).toEqual([]);
     // The step takes its own width, so its time follows the words instead of floating after a fixed gap; short of room
-    // it gives way first. The name is never cut: no line cap, no width cap, it wraps.
+    // it gives way first. The name keeps its width on one line (up to half the line, then "…"): a share of the step's
+    // shrinking wrapped it onto a second line and back as the step turned.
     const lines = await source("features/chat/LiveRows.tsx");
     expect(lines).toContain("barStep: { flexShrink: 1000, minWidth: 0 },");
-    expect(lines).toContain("awayName: { flexShrink: 1 },");
+    expect(lines).toContain('awayName: { flexShrink: 0, maxWidth: "50%" },');
     const away = lines.slice(lines.indexOf("function AwayStep("), lines.indexOf("const TURN"));
-    expect(away.slice(0, away.indexOf("{name}"))).not.toContain("numberOfLines");
+    expect(away.slice(0, away.indexOf("{name}"))).toContain("numberOfLines={1}");
     // No "Ver": no row to go back to while it works. "Parar", the word, is the one stop: the composer keeps only its send.
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
     expect(line).not.toContain("seeable");

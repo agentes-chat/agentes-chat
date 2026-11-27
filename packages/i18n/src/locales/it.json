@@ -2472,31 +2472,16 @@
     "deleteText": "I suoi agenti tornano in Agenti.",
     "deleteChannels": "I suoi canali tornano in Canali.",
     "dropHere": "Trascina qui gli agenti",
-    "dropHereAll": "Trascina qui agenti o canali",
     "moved": "{{name}} è passato a {{group}}",
     "movedOut": "{{name}} ha lasciato {{group}}",
     "undo": "Annulla"
   },
   "sidebarAgents": {
-    "options": "Opzioni degli agenti",
-    "add": "Nuovo agente o reparto",
-    "order": "Ordine",
-    "sort": {
-      "workspace": "Quello dello spazio di lavoro",
-      "mine": "I miei prima",
-      "working": "Al lavoro prima"
-    },
     "showAll": "Mostra gli agenti che non parlano con me",
-    "collapseAll": "Comprimi tutti",
-    "expandAll": "Espandi tutti",
-    "organize": "Organizza i reparti in Team",
     "more_one": "1 altro agente in Team",
     "more_many": "Altri {{count}} agenti in Team",
     "more_other": "Altri {{count}} agenti in Team",
     "newAgent": "Nuovo agente",
-    "working_one": "{{count}} al lavoro",
-    "working_many": "{{count}} al lavoro",
-    "working_other": "{{count}} al lavoro",
     "count_one": "{{count}} agente",
     "count_many": "{{count}} agenti",
     "count_other": "{{count}} agenti",
@@ -2504,15 +2489,13 @@
     "talksOnly": "parla solo con {{name}}",
     "talksOnlyMore_one": "parla solo con {{name}} e altri {{count}}",
     "talksOnlyMore_many": "parla solo con {{name}} e altri {{count}}",
-    "talksOnlyMore_other": "parla solo con {{name}} e altri {{count}}",
-    "changeGroup": "Sposta in un reparto",
-    "newGroupWith": "Nuovo reparto con {{name}}",
-    "dmsEmpty": "Le tue conversazioni con le persone appaiono qui."
+    "talksOnlyMore_other": "parla solo con {{name}} e altri {{count}}"
   },
   "sidebarFavorites": {
     "title": "Preferiti",
     "add": "Aggiungi ai preferiti",
     "remove": "Rimuovi dai preferiti",
+    "marked": "Nei preferiti",
     "full": "I preferiti sono già 50. Rimuovine uno per aggiungere questo."
   },
   "sidebarSections": {
@@ -2556,16 +2539,6 @@
     "emptyTitle": "Tutto letto",
     "emptyText": "I nuovi messaggi e ciò che ti aspetta compaiono qui.",
     "markedAll": "Tutto segnato come letto"
-  },
-  "sidebarPins": {
-    "pin": "Fissa in alto",
-    "unpin": "Togli dall’alto",
-    "pinned": "Fissato in alto",
-    "full": {
-      "agents": "Hai già fissato 5 agenti. Toglierne uno per fissare questo.",
-      "channels": "Hai già fissato 5 canali. Toglierne uno per fissare questo.",
-      "people": "Hai già fissato 5 persone. Toglierne una per fissare questa."
-    }
   },
   "appsDownload": {
     "computer": "Computer",

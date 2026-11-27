@@ -7998,10 +7998,13 @@ button.ac-voice__play:active {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+/* One width for 1×, 1.5× and 2×: the chip and what is beside it hold still as the speed goes round. */
 .ac-voice__speed {
   flex: none;
+  width: 36px;
   height: 22px;
-  padding: 0 6px;
+  padding: 0;
+  text-align: center;
   border: 0;
   border-radius: 6px;
   background: var(--plate);
@@ -8291,10 +8294,13 @@ button.ac-voice__play:active {
   white-space: nowrap;
   color: var(--muted);
 }
+/* One width for 1×, 1.5× and 2×: the chip and what is beside it hold still as the speed goes round. */
 .ac-video__speed {
   flex: none;
+  width: 36px;
   height: 22px;
-  padding: 0 6px;
+  padding: 0;
+  text-align: center;
   border: 0;
   border-radius: 6px;
   background: var(--plate);

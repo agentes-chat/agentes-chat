@@ -8011,28 +8011,82 @@ html:not([data-pointer]) .run-continue:focus-visible {
   line-height: var(--msg-line);
 }
 /*
- * Short of room, its pieces wrap whole (who types beside it to a line of its own), and its words wrap rather than end
- * in "…": the row has the room a bar above the composer had not. Its globe and "Ver" stay at the line's end, outside
- * the pieces that wrap.
+ * One line, whatever it says: short of room, its step ends in "…" first (the whole step is its tip), then the names;
+ * never a second line, which came and went as the step turned and moved the conversation and the composer with it.
+ * Its globe and "Ver" stay at the line's end.
  */
 .working-tail__words {
   display: flex;
   flex: 1 1 0;
-  flex-wrap: wrap;
   align-items: center;
   gap: inherit;
   min-width: 0;
+  white-space: nowrap;
 }
-.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] .ac-typing__text {
+/* No single agent's step (people typing or recording, several agents): its pieces wrap whole, as people come and go. */
+.working-tail__words:not(:has(.ac-typing__step)) {
+  flex-wrap: wrap;
+}
+.working-tail
+  > .working-tail__body
+  > .working-tail__line.ac-typing[data-active]
+  > .working-tail__words:not(:has(.ac-typing__step))
+  .ac-typing__text {
   flex-wrap: wrap;
   overflow: visible;
   white-space: normal;
 }
-.working-tail__line
-  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers, .ac-typing__also) {
+.working-tail__words:not(:has(.ac-typing__step))
+  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers) {
   flex-wrap: wrap;
   overflow: visible;
   white-space: normal;
+}
+/* A phone's line with "Ver código" too: the button takes a second row, there from the first command to the reply, so
+   the step keeps its room. The step's width is its words' (up to what is left), never a reason to wrap. */
+.working-tail__body {
+  container-type: inline-size;
+}
+@container (max-width: 20rem) {
+  .working-tail__words:has(> .ac-typing__see[aria-expanded]) {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .working-tail__words > .ac-typing__sep:has(+ .ac-typing__see[aria-expanded]) {
+    flex-basis: 100%;
+    height: 0;
+    margin: 0;
+  }
+  .working-tail__words:has(> .ac-typing__see[aria-expanded]) .ac-typing__step {
+    flex: 1 1000 0;
+    max-width: max-content;
+  }
+}
+/* Who types or records beside one agent's step: a row of its own under it, so the step never gives way to them. */
+.working-tail__line:has(> .working-tail__also) {
+  flex-wrap: wrap;
+}
+.working-tail__also {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  column-gap: var(--space-1);
+  min-width: 0;
+}
+.working-tail__also:empty {
+  display: none;
+}
+.working-tail__also > .ac-typing__also:first-child::before {
+  content: none;
+}
+/* The name keeps its width whatever the step says (a share of the step's shrinking made it wrap and unwrap), up to
+   half the line, past which it ends in "…". */
+.working-tail .ac-typing__agents:has(> .ac-typing__step) > b {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* What it did so far: the newest last, older ones as "+N". Each line wraps, never cut. */
 .working-tail__trail {

@@ -2471,31 +2471,16 @@
     "deleteText": "Sus agentes vuelven a Agentes.",
     "deleteChannels": "Sus canales vuelven a Canales.",
     "dropHere": "Arrastra agentes aquí",
-    "dropHereAll": "Arrastra agentes o canales aquí",
     "moved": "{{name}} pasó a {{group}}",
     "movedOut": "{{name}} salió de {{group}}",
     "undo": "Deshacer"
   },
   "sidebarAgents": {
-    "options": "Opciones de Agentes",
-    "add": "Nuevo agente o departamento",
-    "order": "Orden",
-    "sort": {
-      "workspace": "El del espacio de trabajo",
-      "mine": "Los míos primero",
-      "working": "Trabajando primero"
-    },
     "showAll": "Mostrar agentes que no hablan conmigo",
-    "collapseAll": "Contraer todos",
-    "expandAll": "Expandir todos",
-    "organize": "Organizar departamentos en Equipo",
     "more_one": "1 agente más en Equipo",
     "more_many": "{{count}} agentes más en Equipo",
     "more_other": "{{count}} agentes más en Equipo",
     "newAgent": "Nuevo agente",
-    "working_one": "{{count}} trabajando",
-    "working_many": "{{count}} trabajando",
-    "working_other": "{{count}} trabajando",
     "count_one": "{{count}} agente",
     "count_many": "{{count}} agentes",
     "count_other": "{{count}} agentes",
@@ -2503,15 +2488,13 @@
     "talksOnly": "solo habla con {{name}}",
     "talksOnlyMore_one": "solo habla con {{name}} y {{count}} más",
     "talksOnlyMore_many": "solo habla con {{name}} y {{count}} más",
-    "talksOnlyMore_other": "solo habla con {{name}} y {{count}} más",
-    "changeGroup": "Mover a departamento",
-    "newGroupWith": "Nuevo departamento con {{name}}",
-    "dmsEmpty": "Tus conversaciones con personas aparecen aquí."
+    "talksOnlyMore_other": "solo habla con {{name}} y {{count}} más"
   },
   "sidebarFavorites": {
     "title": "Favoritos",
     "add": "Añadir a favoritos",
     "remove": "Quitar de favoritos",
+    "marked": "En favoritos",
     "full": "Favoritos ya tiene 50. Quita uno para añadir este."
   },
   "sidebarSections": {
@@ -2555,16 +2538,6 @@
     "emptyTitle": "Todo al día",
     "emptyText": "Los mensajes nuevos y lo que te espera aparecen aquí.",
     "markedAll": "Todo marcado como leído"
-  },
-  "sidebarPins": {
-    "pin": "Fijar arriba",
-    "unpin": "Quitar de arriba",
-    "pinned": "Fijado arriba",
-    "full": {
-      "agents": "Ya fijaste 5 agentes. Quita uno para fijar este.",
-      "channels": "Ya fijaste 5 canales. Quita uno para fijar este.",
-      "people": "Ya fijaste 5 personas. Quita una para fijar esta."
-    }
   },
   "appsDownload": {
     "computer": "Computadora",

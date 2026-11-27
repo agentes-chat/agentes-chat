@@ -309,8 +309,10 @@ describe("the working row at the conversation's end (the bar above the composer 
     expect(bar().textContent).toStartWith("Ada consultando o GitHub");
     const took = typingBar().querySelector(".run-tail__clock") as HTMLElement;
     expect(took.textContent).toBe("1 min");
-    // Who is typing after its time and its stop; the time and the stop stay the agent's.
-    expect(took.closest(".run-tail")?.nextElementSibling?.textContent).toBe("João digitando…");
+    // Who is typing on a row of its own under the line, so the agent's step keeps the line; the time and the stop stay
+    // the agent's.
+    expect(took.closest(".run-tail")?.nextElementSibling).toBeNull();
+    expect(typingBar().querySelector(".working-tail__also")?.textContent).toBe("João digitando…");
     // Tabular figures: the minutes turn without nudging what is beside them.
     expect(took.classList.contains("ac-num")).toBe(true);
   });

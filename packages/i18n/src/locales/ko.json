@@ -2306,39 +2306,24 @@
     "deleteText": "그룹의 에이전트는 에이전트 목록으로 돌아가요.",
     "deleteChannels": "그룹의 채널은 채널 목록으로 돌아가요.",
     "dropHere": "에이전트를 여기로 드래그하세요",
-    "dropHereAll": "에이전트나 채널을 여기로 드래그하세요",
     "moved": "{{name}}이(가) {{group}}(으)로 옮겨졌어요",
     "movedOut": "{{name}}이(가) {{group}}에서 빠졌어요",
     "undo": "실행 취소"
   },
   "sidebarAgents": {
-    "options": "에이전트 옵션",
-    "add": "새 에이전트 또는 부서",
-    "order": "순서",
-    "sort": {
-      "workspace": "워크스페이스 순서",
-      "mine": "내 에이전트 먼저",
-      "working": "작업 중 먼저"
-    },
     "showAll": "나와 대화하지 않는 에이전트 표시",
-    "collapseAll": "모두 접기",
-    "expandAll": "모두 펼치기",
-    "organize": "팀에서 부서 정리",
     "more_other": "팀에 에이전트 {{count}}개 더",
     "newAgent": "새 에이전트",
-    "working_other": "{{count}}개 작업 중",
     "count_other": "에이전트 {{count}}개",
     "workingIn": "#{{channel}}에서 작업 중",
     "talksOnly": "{{name}}와(과)만 대화",
-    "talksOnlyMore_other": "{{name}} 외 {{count}}명과만 대화",
-    "changeGroup": "부서 옮기기",
-    "newGroupWith": "{{name}}이(가) 있는 새 부서",
-    "dmsEmpty": "사람과의 대화가 여기에 표시돼요."
+    "talksOnlyMore_other": "{{name}} 외 {{count}}명과만 대화"
   },
   "sidebarFavorites": {
     "title": "즐겨찾기",
     "add": "즐겨찾기에 추가",
     "remove": "즐겨찾기에서 제거",
+    "marked": "즐겨찾기",
     "full": "즐겨찾기가 이미 50개입니다. 이 항목을 추가하려면 하나를 제거하세요."
   },
   "sidebarSections": {
@@ -2380,16 +2365,6 @@
     "emptyTitle": "모두 확인했습니다",
     "emptyText": "새 메시지와 나를 기다리는 일이 여기에 표시됩니다.",
     "markedAll": "모두 읽음으로 표시했습니다"
-  },
-  "sidebarPins": {
-    "pin": "맨 위에 고정",
-    "unpin": "고정 해제",
-    "pinned": "맨 위에 고정됨",
-    "full": {
-      "agents": "이미 에이전트 5개를 고정했어요. 이걸 고정하려면 하나를 해제하세요.",
-      "channels": "이미 채널 5개를 고정했어요. 이걸 고정하려면 하나를 해제하세요.",
-      "people": "이미 5명을 고정했어요. 이분을 고정하려면 한 명을 해제하세요."
-    }
   },
   "appsDownload": {
     "computer": "컴퓨터",

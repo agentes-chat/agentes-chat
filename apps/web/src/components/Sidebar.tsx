@@ -1772,7 +1772,7 @@ function MoreTools({
 function PinnedMark() {
   const { t } = useTranslation();
   return (
-    <span className="sidebar__item-meta sidebar__pinned" role="img" aria-label={t("sidebarPins.pinned")}>
+    <span className="sidebar__item-meta sidebar__pinned" role="img" aria-label={t("sidebarFavorites.marked")}>
       <Icon name="pin" size={14} />
     </span>
   );

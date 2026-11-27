@@ -36,15 +36,12 @@ test("'Falar com o Theo' hands '@theo ' to that conversation's composer, once", 
   expect(currentComposerRequest()).toBeNull();
 });
 
-test("the agents' talk quoted in a reply: its head on one line, the subject in up to two, the time never cut", () => {
+test("the agents' row before a reply: the names give way to nothing but the subject, how it went never cut", () => {
   const group = readFileSync(join(import.meta.dir, "../../src/features/chat/ConsultGroup.tsx"), "utf8");
-  const quoted = group.slice(group.indexOf("export function ConsultQuote("));
-  // The head: the agent asked and how it went, on one line; the name gives way, the time never.
-  expect(quoted).toContain('name: { fontWeight: "600", flexShrink: 1 },');
-  expect(quoted).toContain("how: { flexShrink: 0 },");
-  expect(quoted).toContain("{`· $" + "{how}`}");
-  // The question's subject in up to two lines under it: what supports a card's title (13 under the names' 15).
-  expect(quoted).toContain('<Text variant="footnote" tone="muted" numberOfLines={2}>');
+  const row = group.slice(group.indexOf("export function ConsultPairRow("));
+  expect(row).toContain('name: { fontWeight: "600", flexShrink: 1 },');
+  expect(row).toContain("whole: { flexShrink: 0 },");
+  expect(row).toContain('<Text variant="footnote" tone="faint" numberOfLines={1} style={row.whole}>');
 });
 
 test("two agents' conversation is a sheet over the one that asked, as the web's dialog", () => {
