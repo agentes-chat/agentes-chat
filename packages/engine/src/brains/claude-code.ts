@@ -541,7 +541,9 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           deps.permissions?.(turn),
         ]);
         const permissions = askingPermissions(asked, true);
-        if (permissions?.mode === "chat") return false;
+        // Locked down as its turn is (ADR 0137 §4), the same launch, so the turn takes this process. Every runner that
+        // warms (`BRAIN_WARM_PROTOCOL`) locks the CLI down.
+        const chat = permissions?.mode === "chat";
         const reply = await deps.hub.call<"brain.warm">(
           session.machineId,
           {
@@ -551,10 +553,10 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
             session: { id: session.id, resume: session.resume },
             cwd: session.cwd,
             ...(turn.model ? { model: turn.model } : {}),
-            personalMcp,
+            personalMcp: personalMcp && !chat,
             // A code session's turn starts with its own tools (ADR 0215 §6): the warm process the same, or it isn't
             // the one the turn takes.
-            ...(session.codeSession ? { codeSession: true } : {}),
+            ...(session.codeSession && !chat ? { codeSession: true } : {}),
             ...(permissions ? { permissions } : {}),
             ...accountFields(status.protocol, turn),
             ...contextFields(status.protocol, turn, "claude_code"),

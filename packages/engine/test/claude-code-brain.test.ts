@@ -886,3 +886,30 @@ test("brain.warm: the turn's launch without its words, sent only to a runner tha
   expect(await answering({ open: true, started: false })).toBe(true);
   expect(await answering({ open: false, started: false })).toBe(false);
 });
+
+test("brain.warm: a locked-down turn (the right hand's) warms with its turn's own launch, never more", async () => {
+  const pubsub = createMemoryPubSub();
+  const { hub, calls } = fakeHub(pubsub, { status: status({ protocol: BRAIN_WARM_PROTOCOL }) });
+  const brain = createClaudeCodeBrain({
+    hub,
+    pubsub,
+    agentScope: async (t) => ({ id: t.agentId, handle: "lodi" }),
+    permissions: async () => ({ mode: "chat" }),
+    personalMcp: () => true,
+    finalGraceMs: 20,
+  });
+  const locked = turn({ session: { id: SESSION, resume: true, machineId: MACHINE, cwd: "", codeSession: true } });
+  await brain.warm?.(locked);
+  await collect(brain.run(locked, io()));
+  const [warm, run] = calls.map((c) => c.request as Record<string, unknown>);
+  // What starts the process: the same on both, so the turn takes the warm one (the runner's `signature`).
+  const launch = (r: Record<string, unknown> | undefined) => {
+    const { session, cwd, model, personalMcp, codeSession, permissions, account, effort, contextTokens, agent } =
+      r ?? {};
+    return { session, cwd, model, personalMcp, codeSession, permissions, account, effort, contextTokens, agent };
+  };
+  expect(warm?.op).toBe("brain.warm");
+  expect(run?.op).toBe("brain.turn");
+  expect(launch(warm)).toEqual(launch(run));
+  expect(launch(warm)).toMatchObject({ permissions: { mode: "chat" }, personalMcp: false, codeSession: undefined });
+});

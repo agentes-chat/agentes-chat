@@ -81,7 +81,7 @@ import {
 } from "./reply-policy";
 import { linePrompt } from "./reporting";
 import { wikiPersonOf } from "./requester";
-import { isRightHand } from "./right-hand";
+import { dmPersonBehind, isRightHand } from "./right-hand";
 import { rightHandPrompt, rightHandTools } from "./right-hand-prompt";
 import { seatPlace } from "./right-hand-seats";
 import { isRoutineRoomKey, type RoutineBrief, routineAccessOf, routineBriefOf, routineReportOf } from "./routine-brief";
@@ -1297,14 +1297,17 @@ export async function buildRunContext(
   const capabilities = await options.capabilities;
   // The right hand's own block (ADR 0137), in place of instructions: read live for the person behind the run.
   const place = isRightHand(agent) ? await seatPlace(db, run) : null;
+  // In a person's own DM, a teammate's message (a reply it was asked for, a follow-up) is still for that person, as
+  // the run is: the same text as their own turns, so the conversation's session goes on.
+  const talksTo = place ? (requester ?? (await dmPersonBehind(db, agent, run))) : null;
   const rightHand =
-    place && requester
+    place && talksTo
       ? await rightHandPrompt(
           { db, ai: options.ai, workspaceComputer: options.workspaceComputer },
           {
             orgId: run.orgId,
             agent,
-            personId: requester,
+            personId: talksTo,
             inDm: channel.kind === "dm",
             computer: place.state,
             oneUser: place.oneUser,

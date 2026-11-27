@@ -150,6 +150,11 @@ export interface BrainSession {
   partsRead?: string | null;
   /** With `partsRead`: that run's blocks of what it can do here, so the turn says only their changed lines. */
   refreshRead?: string[];
+  /**
+   * A new session where the conversation had a recent one: why that one wasn't picked up, `size`, and the names of
+   * the parts of its prompt key that changed (`Transcript.promptParts`), else `prompt`.
+   */
+  notPickedUp?: string[];
 }
 
 export interface BrainTurn {

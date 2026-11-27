@@ -6,7 +6,7 @@ import { brainOf } from "./brain-settings";
 import { brainSessionId } from "./brains/claude-code";
 import { dmAgents } from "./dms";
 import { type EngineDeps, warmAtClaim } from "./executor";
-import { isRightHand } from "./right-hand";
+import { isRightHand, withPersonalBrain } from "./right-hand";
 import type { AgentRun } from "./runs";
 import { previousRunHere } from "./tool-loading";
 
@@ -83,8 +83,10 @@ export async function warmWhileTyping(deps: EngineDeps, where: TypingWhere, now 
   if (warmedAt.size > 10_000) for (const [k, at] of warmedAt) if (now - at >= TYPING_WARM_EVERY_MS) warmedAt.delete(k);
   warmedAt.set(key, now);
   const agentId = await typingReplier(deps, where);
-  const agent = agentId ? await getAgentCached(deps.db, where.orgId, agentId) : null;
-  if (!agent || isRightHand(agent) || brainOf(agent.brain) !== "claude_code") return;
+  const stored = agentId ? await getAgentCached(deps.db, where.orgId, agentId) : null;
+  // The right hand thinks for the person who will send the message: their own AI, as their run's would.
+  const agent = stored && isRightHand(stored) ? (await withPersonalBrain(deps.db, stored, where.userId)).agent : stored;
+  if (!agent || brainOf(agent.brain) !== "claude_code") return;
   // The run the message will start, as far as its session and its kept choices go: nothing of it is written.
   const id = crypto.randomUUID();
   const run = {
@@ -104,17 +106,28 @@ export async function warmWhileTyping(deps: EngineDeps, where: TypingWhere, now 
   const conversation = where.threadId ?? where.channelId;
   // What `resolveBrain` names a session it found none to pick up for: this run's own, which the real one won't get.
   const ownId = brainSessionId(agent.id, `${conversation}:${run.id}`, "claude_code");
-  await warmAtClaim(deps, agent, run, conversation, null, where.userId, guess, null, async (plan) => {
-    const machineId = plan.session?.machineId;
-    if (plan.unavailable?.code === "machine_offline" && machineId) {
-      const status = await deps.machines?.status(machineId).catch(() => null);
-      if (status?.standby) {
-        await deps.machines?.wake?.(machineId, "run");
-        // Awake soon: a later frame warms its CLI.
-        warmedAt.delete(key);
+  await warmAtClaim(
+    deps,
+    agent,
+    run,
+    conversation,
+    null,
+    where.userId,
+    guess,
+    null,
+    async (plan) => {
+      const machineId = plan.session?.machineId;
+      if (plan.unavailable?.code === "machine_offline" && machineId) {
+        const status = await deps.machines?.status(machineId).catch(() => null);
+        if (status?.standby) {
+          await deps.machines?.wake?.(machineId, "run");
+          // Awake soon: a later frame warms its CLI.
+          warmedAt.delete(key);
+        }
+        return false;
       }
-      return false;
-    }
-    return Boolean(plan.session && plan.session.id !== ownId);
-  });
+      return Boolean(plan.session && plan.session.id !== ownId);
+    },
+    where.userId,
+  );
 }
