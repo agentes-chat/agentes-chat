@@ -17096,6 +17096,10 @@
     "cloud": "Cloud",
     "cpus_one": "{{count}} CPU",
     "cpus_other": "{{count}} CPU's",
+    "cores_one": "{{count}} kern",
+    "cores_other": "{{count}} kernen",
+    "threads_one": "{{count}} thread",
+    "threads_other": "{{count}} threads",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17324,7 +17328,7 @@
     },
     "facts": {
       "system": "Systeem",
-      "cpu": "CPU",
+      "cpu": "Processor",
       "memory": "Geheugen",
       "lastSeen": "Laatst gezien",
       "toolchains": "Gevonden toolchains",

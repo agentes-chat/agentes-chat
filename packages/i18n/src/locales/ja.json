@@ -16416,6 +16416,8 @@
     "workspace": "ワークスペース",
     "cloud": "Cloud",
     "cpus_other": "CPU {{count}}個",
+    "cores_other": "{{count}} コア",
+    "threads_other": "{{count}} スレッド",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16643,7 +16645,7 @@
     },
     "facts": {
       "system": "システム",
-      "cpu": "CPU",
+      "cpu": "プロセッサ",
       "memory": "メモリ",
       "lastSeen": "最終接続",
       "toolchains": "検出されたツールチェーン",

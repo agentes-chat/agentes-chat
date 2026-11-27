@@ -41,6 +41,7 @@ import {
   modelInfo,
   modelProvider,
   openRouterListed,
+  outputCapRefusal,
   outputTokensWithin,
   PROVIDERS,
   ProviderError,
@@ -226,6 +227,8 @@ export interface ImageGatewayResult {
 export const RESERVATION_TTL_MS = 15 * 60_000;
 /** Below this many output tokens a call isn't worth making: the budget counts as exhausted. */
 export const MIN_OUTPUT_TOKENS = 256;
+/** How many times a call the provider refused for its output cap is sent again, each time lower (`outputCapRefusal`). */
+const OUTPUT_CAP_RETRIES = 3;
 /** A test call that takes longer says the key couldn't be checked: it never holds a person's save up for long. */
 export const KEY_CHECK_TIMEOUT_MS = 15_000;
 
@@ -472,8 +475,53 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     throw new ValidationError(`OpenRouter doesn't list ${model} anymore. Pick another model in the agent's settings.`);
   }
 
-  /** The output cap sent: the call's, within the most the model may write. */
-  const capOf = (maxTokens: number, info: ModelInfo) => Math.min(maxTokens, info.maxOutputTokens ?? maxTokens);
+  /**
+   * The most each key and model may write (`${credentialId ?? "platform"}|${model}`), for what its row doesn't say or
+   * says wrong: as its provider's list tells it (`ModelProvider.outputLimit`), or as a refusal did (`outputCapRefusal`).
+   * Null: its provider was asked and told nothing.
+   */
+  // ponytail: per process, so each start pays one list read or one refused call per key and model; a column on the
+  // credential would keep them across restarts.
+  const learnedLimits = new Map<string, number | null>();
+  const limitKey = (key: Key, model: string) => `${key.credentialId ?? "platform"}|${model}`;
+
+  /** The output cap sent: the call's, within the most the model may write (its row's, else what was learned). */
+  async function capOf(maxTokens: number, info: ModelInfo, provider: ModelProvider, model: string, key: Key) {
+    const at = limitKey(key, model);
+    if (!info.maxOutputTokens && !learnedLimits.has(at) && provider.outputLimit) {
+      const told = await provider
+        .outputLimit(model, { apiKey: key.apiKey, ...(key.endpoint ? { endpoint: key.endpoint } : {}) })
+        .catch(() => null);
+      learnedLimits.set(at, told);
+    }
+    return Math.min(maxTokens, info.maxOutputTokens ?? maxTokens, learnedLimits.get(at) ?? maxTokens);
+  }
+
+  /**
+   * `provider.stream`, sent again lower when the provider refuses the output cap before anything streamed
+   * (`outputCapRefusal`): a lower cap only shrinks what the budget reserved. `request.maxTokens` ends as the cap sent.
+   */
+  async function streamWithinCap(
+    provider: ModelProvider,
+    request: ModelRequest,
+    options: Parameters<ModelProvider["stream"]>[1],
+    key: Key,
+  ): Promise<ModelResult> {
+    for (let tries = 0; ; tries++) {
+      try {
+        return await provider.stream(request, options);
+      } catch (error) {
+        const cut =
+          tries < OUTPUT_CAP_RETRIES && error instanceof ProviderError
+            ? outputCapRefusal(error, request.maxTokens)
+            : null;
+        if (!cut || cut.retry < MIN_OUTPUT_TOKENS) throw error;
+        const at = limitKey(key, request.model);
+        if (cut.learn) learnedLimits.set(at, Math.min(cut.learn, learnedLimits.get(at) ?? cut.learn));
+        request.maxTokens = cut.retry;
+      }
+    }
+  }
 
   /** Usage of a stream that failed midway: what the provider reported, else counted or estimated. */
   async function partialUsage(
@@ -920,7 +968,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         model: agent.model,
         system: call.system,
         messages: call.messages,
-        maxTokens: capOf(call.maxTokens, info),
+        maxTokens: await capOf(call.maxTokens, info, provider, agent.model, key),
         tools: call.tools,
         ...(call.effort ? { effort: call.effort } : {}),
         ...(call.cacheTtl ? { cacheTtl: call.cacheTtl } : {}),
@@ -951,16 +999,21 @@ export function createModelGateway(deps: ModelGatewayDeps) {
 
       let result: ModelResult;
       try {
-        result = await provider.stream(request, {
-          apiKey: key.apiKey,
-          workspaceId: key.workspaceId,
-          organization: key.organization,
-          project: key.project,
-          endpoint: key.endpoint,
-          ...(call.session ? { session: call.session } : {}),
-          onDelta: call.onDelta,
-          ...(call.onNote ? { onNote: call.onNote } : {}),
-        });
+        result = await streamWithinCap(
+          provider,
+          request,
+          {
+            apiKey: key.apiKey,
+            workspaceId: key.workspaceId,
+            organization: key.organization,
+            project: key.project,
+            endpoint: key.endpoint,
+            ...(call.session ? { session: call.session } : {}),
+            onDelta: call.onDelta,
+            ...(call.onNote ? { onNote: call.onNote } : {}),
+          },
+          key,
+        );
       } catch (error) {
         const usage = error instanceof ProviderError ? await partialUsage(error, provider, request, key) : null;
         let actual = 0;
@@ -1013,7 +1066,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         ...(refused ? { thinking: { ...result.thinking, refused: withoutKey(refused, key.apiKey) } } : {}),
         usageRecordId: record.id,
         costNanoUsd: record.cost,
-        maxTokens,
+        maxTokens: request.maxTokens,
       };
     },
 
@@ -1372,7 +1425,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         model: call.model,
         system: call.system,
         messages: call.messages,
-        maxTokens: capOf(call.maxTokens, info),
+        maxTokens: await capOf(call.maxTokens, info, provider, call.model, key),
         ...(call.tools ? { tools: call.tools } : {}),
         outputSchema: call.outputSchema,
         effort: call.effort,
@@ -1389,12 +1442,12 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       };
       let result: ModelResult;
       try {
-        result = await provider.stream(request, {
-          apiKey: key.apiKey,
-          workspaceId: key.workspaceId,
-          endpoint: key.endpoint,
-          onDelta: () => {},
-        });
+        result = await streamWithinCap(
+          provider,
+          request,
+          { apiKey: key.apiKey, workspaceId: key.workspaceId, endpoint: key.endpoint, onDelta: () => {} },
+          key,
+        );
       } catch (error) {
         const usage = error instanceof ProviderError ? await partialUsage(error, provider, request, key) : null;
         if (usage) await recordUsage(db, { ...base, model: call.model, usage, partial: true });
