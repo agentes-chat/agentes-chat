@@ -708,10 +708,11 @@ export async function teammatesNowAgain(
   deps: Omit<AiStatusDeps, "db"> & { db: Database },
   orgId: string,
   system: ContextBlock[],
+  person?: string | null,
 ): Promise<ContextBlock[]> {
   const block = system.find((b) => b.teammates);
   if (!block?.teammates) return system;
-  const text = await teammatesNowPrompt(deps, orgId, block.teammates);
+  const text = await teammatesNowPrompt(deps, orgId, block.teammates, person);
   return text ? system.map((b) => (b === block ? { ...b, text } : b)) : system.filter((b) => b !== block);
 }
 
@@ -1183,9 +1184,11 @@ export async function buildRunContext(
     ...others.map((m) => ({ id: m.agentId as string, handle: m.agentHandle as string })),
     ...(named.length > TEAM_IN_PROMPT ? [] : named.map((a) => ({ id: a.id, handle: a.handle }))),
   ];
+  // Whose conversation this list belongs to: the person behind the run, as `settleReach` judges it (ADR 0137 §11).
+  const teammatesPerson = (await runAuthority(db, run).catch(() => null))?.personId ?? workedFor;
   const [otherScopes, teammatesNow] = await Promise.all([
     rosterScopeNames(db, options.machines, run.orgId, [...here]),
-    options.ai ? teammatesNowPrompt({ db, ...options.ai }, run.orgId, listed) : "",
+    options.ai ? teammatesNowPrompt({ db, ...options.ai }, run.orgId, listed, teammatesPerson) : "",
   ]);
   const otherAgents = others
     .map((m) => {

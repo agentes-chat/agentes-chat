@@ -535,11 +535,12 @@ export async function teammatesNowPrompt(
   deps: Omit<AiStatusDeps, "db"> & { db: Database },
   orgId: string,
   listed: { id: string; handle: string }[],
+  person?: string | null,
 ): Promise<string> {
   const ids = listed.map((a) => a.id);
   if (ids.length === 0) return "";
   const [ai, presence, personal] = await Promise.all([
-    agentAiStates(deps, orgId, ids),
+    agentAiStates(deps, orgId, ids, person),
     loadAgentStatuses(deps.db, orgId, new Date(), ids),
     isPersonalWorkspace(deps.db, orgId),
   ]);

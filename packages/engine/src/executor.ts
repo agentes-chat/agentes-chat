@@ -2756,7 +2756,8 @@ async function executeRunInner(
   // Resumed (its computer back, a decision, an answer): its teammates as they are after the wait.
   if (transcript) {
     const ai = { db, gateway: deps.gateway, machines: deps.machines };
-    transcript.system = await teammatesNowAgain(ai, run.orgId, transcript.system);
+    const teammatesPerson = (await runAuthority(db, run).catch(() => null))?.personId ?? null;
+    transcript.system = await teammatesNowAgain(ai, run.orgId, transcript.system, teammatesPerson);
   }
   if (!transcript) {
     const contextDeps = deps.context;

@@ -167,7 +167,9 @@ async function reachableAgent(ctx: ToolContext, input: unknown, ai?: AiCheck, pu
       },
     };
   }
-  if (ai && (await agentAiState({ ...ai, db }, target)).state === "no_ai") {
+  // The right hand's AI is each person's own (ADR 0137 §11): judge it for the person behind this call,
+  // as `settleReach` does, or it reads as no AI whenever a person's own brain thinks for it.
+  if (ai && (await agentAiState({ ...ai, db }, target, undefined, person ?? undefined)).state === "no_ai") {
     return {
       refused: refuse(`@${handle} has no AI connected yet, so it can't answer. An owner can connect one on its page.`),
     };

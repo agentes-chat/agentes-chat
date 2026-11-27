@@ -827,6 +827,62 @@ describe("ask_agent", () => {
     ]);
   });
 
+  test("the right hand's AI is the person's own: a colleague asks it when that person's AI can think for it", async () => {
+    const askLodi = (req: ModelRequest) => {
+      if (inAgentDm(req)) return answer("Nothing is open.");
+      const last = lastText(req);
+      if (last.includes("tool_result")) return { chunks: ["Asked @lodi; I'll tell you when it answers."] };
+      return { chunks: [], toolUses: [{ name: "ask_agent", input: { agent: "@lodi", question: "What is open?" } }] };
+    };
+    f = await setup({ askAgent: true, reply: askLodi, rightHand: true });
+    const [rightHand] = await f.db.select().from(schema.agents).where(eq(schema.agents.builtin, "right_hand"));
+    if (!rightHand) throw new Error("no right hand");
+    // Its own row has no AI to think with (a model whose provider has no key here): only a person's own AI can (§11).
+    await f.db
+      .update(schema.agents)
+      .set({ brain: "model", model: "gpt-6-luna", credentialId: null })
+      .where(eq(schema.agents.id, rightHand.id));
+
+    // Nobody's own AI for it yet: refused at once, saying why.
+    await post("@dev ask the assistant what is open");
+    await drainOutbox(f.db, f.handlers);
+    expect(await consultations()).toHaveLength(0);
+    expect(
+      f.provider.calls
+        .map((c) => lastText(c.request))
+        .filter((t) => t.includes("tool_result"))
+        .some((t) => t.includes("@lodi has no AI connected yet, so it can't answer.")),
+    ).toBe(true);
+
+    // The person's own AI for the right hand: their computer's own sign-in (§11). The question goes through to it.
+    const { machineId } = await pairMachine({ db: f.db }, f.owner.id, f.org.id, RUNNER);
+    await f.db.update(schema.machines).set({ pairedByUserId: f.owner.id }).where(eq(schema.machines.id, machineId));
+    await f.db.insert(schema.rightHandBrains).values({
+      orgId: f.org.id,
+      userId: f.owner.id,
+      brain: "claude_code",
+      brainModel: null,
+      machineId,
+    });
+    // Its own run would need a computer: the question being taken is what this checks.
+    const handled: JobHandlers = {
+      ...f.handlers,
+      "agent_run.execute": async (job, ctx) => {
+        const [run] = await f.db
+          .select({ agentId: schema.agentRuns.agentId })
+          .from(schema.agentRuns)
+          .where(eq(schema.agentRuns.id, String(job.payload.runId)));
+        if (run?.agentId === rightHand.id) return;
+        await f.handlers["agent_run.execute"]?.(job, ctx);
+      },
+    };
+    await post("@dev ask the assistant what is open");
+    await drainOutbox(f.db, handled);
+    expect((await consultations()).map((c) => [c.targetAgentId, c.question, c.status])).toEqual([
+      [rightHand.id, "What is open?", "open"],
+    ]);
+  });
+
   test("a question waits as long as its colleague's run is queued; once that run is gone it expires and the asker hears it", async () => {
     f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
     const infra = await addInfra();
