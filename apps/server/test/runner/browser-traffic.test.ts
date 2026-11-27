@@ -426,6 +426,32 @@ test("a session that answers Fetch.enable with an error isn't paused: the guard 
   c.close();
 });
 
+test("a session Chrome dropped without a detach (frames of a reloaded page) doesn't hold the guard back", async () => {
+  const { c, cdp } = counter();
+  cdp.onopen?.();
+  cdp.reply(1);
+  await c.attached;
+  cdp.attach("page-1");
+  // reCAPTCHA's frame, which runs its own workers: after a reload Chrome forgets it but never says so.
+  cdp.event("Target.attachedToTarget", { sessionId: "frame-gone", targetInfo: { type: "iframe" } }, "page-1");
+  const enables = () => cdp.sent.filter((m) => m.method === "Fetch.enable");
+  const guard = c.guard(["hunter2-reloaded sign-in"], 60_000, () => {});
+  for (const m of enables()) {
+    cdp.onmessage?.({
+      data: JSON.stringify(
+        m.sessionId === "frame-gone"
+          ? { id: m.id, error: { code: -32001, message: "Session with given id not found." } }
+          : { id: m.id, result: {} },
+      ),
+    });
+  }
+  expect(await guard.ready).toBe(true);
+  // Forgotten: the next guard doesn't ask it again.
+  c.guard(["hunter2-reloaded sign-in"], 60_000, () => {});
+  expect(enables().map((m) => m.sessionId)).toEqual(["page-1", "frame-gone"]);
+  c.close();
+});
+
 test("a dedicated worker has no Fetch of its own and doesn't hold the guard back: its requests pause on its page", async () => {
   const { c, cdp } = counter();
   cdp.onopen?.();
