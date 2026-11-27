@@ -24,6 +24,11 @@
     "welcome": "欢迎",
     "prefs": "偏好设置"
   },
+  "background": {
+    "title": "agentes.chat 仍在运行",
+    "bodyMac": "它在屏幕顶部的菜单栏中。可以从那里打开或退出。",
+    "bodyTray": "它在系统托盘中。可以从那里打开或退出。"
+  },
   "common": {
     "cancel": "取消",
     "close": "关闭",

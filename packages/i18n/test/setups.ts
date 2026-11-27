@@ -256,6 +256,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "help.selfhost.run-on-your-computer.sections.10.blocks.4.list.3",
     "help.selfhost.run-on-your-computer.sections.10.blocks.4.list.4",
     "desktop.prefs.general.menuBarTitle",
+    // The first close's notice on a Mac (background.rs picks it there, `bodyTray` elsewhere).
+    "desktop.background.bodyMac",
     // The app icon's hint shows only in the Mac's desktop app (AppIconPicker.tsx): its Dock and Finder.
     "appIcon.hintMac",
     "desktop.prefs.updates.",

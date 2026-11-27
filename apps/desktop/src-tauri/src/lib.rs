@@ -8,6 +8,7 @@
 //! web view.
 
 mod app_icon;
+mod background;
 mod bench;
 mod cookies;
 mod cover;
@@ -105,6 +106,9 @@ pub(crate) fn present(app: &AppHandle, name: &str) -> Result<(), String> {
     if name == "popover" {
         // Right under the menu bar icon.
         let _ = window.move_window(Position::TrayCenter);
+    }
+    if background::APP_WINDOWS.contains(&name) {
+        background::showing(app);
     }
     let _ = window.unminimize();
     window.show().map_err(|e| e.to_string())?;
@@ -316,7 +320,7 @@ pub(crate) fn run_watched(
 }
 
 /// Graceful quit: the children stop, then the app exits.
-fn begin_quit(app: AppHandle) {
+pub(crate) fn begin_quit(app: AppHandle) {
     leave(app, false);
 }
 
@@ -895,6 +899,8 @@ pub fn run() {
             }
             // The app icon picked on this computer (ADR 0179).
             app_icon::show(&handle);
+            // A start at login: on a Mac out of the Dock, in the menu bar.
+            background::settle(&handle, None);
             bench::setup_done(&handle);
             Ok(())
         });
@@ -968,26 +974,26 @@ fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
         {
             api.prevent_close();
             let _ = window.hide();
+            background::settle(window.app_handle(), None);
         }
         // Welcome and Preferences really close (made again when they open), and a setup on screen ends with them.
         WindowEvent::CloseRequested { .. } if MADE_ON_OPEN.contains(&window.label()) => {
             prepare::closed(window.app_handle(), window.label());
         }
+        WindowEvent::Destroyed if MADE_ON_OPEN.contains(&window.label()) => {
+            background::settle(window.app_handle(), Some(window.label()))
+        }
         WindowEvent::CloseRequested { api, .. } => {
-            // The other windows are made once and only hidden; quitting goes through "Quit".
+            // The other windows are made once and only hidden; quitting goes through "Quit". The main window
+            // goes to the background (background.rs).
             api.prevent_close();
             if window.label() == main_window::LABEL {
                 window_state::remember(window, false);
-                // Some Linux desktops show no tray icon: there the window stays in reach, minimized. One that
-                // may be black (its page arrived on the graphics card and never painted) quits instead, so
-                // opening the app again draws without the graphics card (graphics.rs `decide`).
+                // A window that may be black on Linux (its page arrived on the graphics card and never painted)
+                // quits instead, so opening the app again draws without the graphics card (graphics.rs `decide`).
                 #[cfg(target_os = "linux")]
-                {
-                    if cover::unpainted_on_gpu(window.app_handle()) {
-                        begin_quit(window.app_handle().clone());
-                        return;
-                    }
-                    let _ = window.minimize();
+                if cover::unpainted_on_gpu(window.app_handle()) {
+                    begin_quit(window.app_handle().clone());
                     return;
                 }
                 // ⌘W in full screen: out of full screen first, so no empty Space stays behind.
@@ -998,9 +1004,13 @@ fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
                     std::thread::spawn(move || {
                         std::thread::sleep(Duration::from_millis(700));
                         let _ = window.hide();
+                        background::closed(window.app_handle());
                     });
                     return;
                 }
+                let _ = window.hide();
+                background::closed(window.app_handle());
+                return;
             }
             let _ = window.hide();
         }
