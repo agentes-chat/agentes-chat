@@ -35,7 +35,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Eingeschaltet lassen",
         blocks: [
-          "Auf einem Computer, den andere nutzen, richtest du es einmal ein. **Am Laufen halten** unter **Einstellungen\u00a0›\u00a0Server** zeigt, was noch fehlt, und öffnet die passenden Einstellungen:",
+          "Auf einem Computer, den andere nutzen, richtest du es einmal ein. **Immer bereit** unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Übersicht** zeigt, was noch fehlt, jeweils mit dem einen Knopf, der es behebt:",
           {
             list: [
               "**Bei der Anmeldung öffnen** schaltet sich nach der Einrichtung von selbst ein.",
@@ -51,15 +51,15 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Deine Agenten arbeiten auch hier",
         blocks: [
           "Deine Agenten arbeiten auch auf diesem Computer, in eigenen Ordnern, mit einem Browser und mit Claude Code oder Codex, wenn sie hier installiert sind.",
-          "Agenten laufen hier als du. **Befehle** sind von Anfang an eingeschaltet, und damit erreichen die Agenten jedes Workspace, der diesen Computer nutzt, alles darauf, auch die Daten des Servers. Ausschalten kannst du sie unter **Einstellungen\u00a0›\u00a0Tools**. Siehe [Was Agenten erreichen können](/help/computers#reach).",
+          "Agenten laufen hier als du. **Befehle** sind von Anfang an eingeschaltet, und damit erreichen die Agenten jedes Workspace, der diesen Computer nutzt, alles darauf, auch die Daten des Servers. Ausschalten kannst du sie unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Ordner und Werkzeuge**. Siehe [Was Agenten erreichen können](/help/computers#reach).",
         ],
       },
       {
         id: "another-workspace",
         heading: "Auch einem anderen Workspace leihen",
         blocks: [
-          "Die Workspaces des Servers, den du hier betreibst, nutzen diesen Computer von selbst. Damit ihn auch ein Workspace an anderer Stelle nutzen kann, etwa einer auf agentes.chat Cloud, drück **Workspace hinzufügen…** unten in der ersten Karte unter **Einstellungen\u00a0›\u00a0Allgemein** oder **Server hinzufügen…** unter **Einstellungen\u00a0›\u00a0Server**. Melde dich bei diesem Workspace an und drück **Erlauben**, wenn die App fragt.",
-          "Jeder Workspace bekommt hier eigene Agenten und Ordner. **Befehle** sind auch für ihn von Anfang an eingeschaltet. Schalte sie in der Frage der App aus, bevor du **Erlauben** drückst, oder später unter **Einstellungen\u00a0›\u00a0Tools**, wo jeder Workspace einen eigenen Schalter hat und die App nachfragt, bevor sie einen wieder einschaltet.",
+          "Die Workspaces des Servers, den du hier betreibst, nutzen diesen Computer von selbst. Damit ihn auch ein Workspace an anderer Stelle nutzen kann, etwa einer auf agentes.chat Cloud, drück **Workspace hinzufügen…** unten bei **Wer diesen Computer nutzt** unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Übersicht** oder **Server hinzufügen…** unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0App-Einstellungen**. Melde dich bei diesem Workspace an und drück **Erlauben**, wenn die App fragt.",
+          "Jeder Workspace bekommt hier eigene Agenten und Ordner. **Befehle** sind auch für ihn von Anfang an eingeschaltet. Schalte sie in der Frage der App aus, bevor du **Erlauben** drückst, oder später unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Ordner und Werkzeuge**, wo jeder Workspace einen eigenen Schalter hat und die App nachfragt, bevor sie einen wieder einschaltet.",
         ],
       },
       {
@@ -74,7 +74,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Anmelden auf anderen Geräten",
         blocks: [
-          "Der Inhaber startet ohne Passwort: Die App meldet dich auf diesem Computer an. Um dich im Browser eines anderen Computers anzumelden, leg unter **Einstellungen\u00a0›\u00a0Dein Konto** eins an. Bis dahin weist **Einstellungen\u00a0›\u00a0Server** darauf hin, und **Passwort anlegen** öffnet diese Seite. Die Handy-App verbindet sich, wenn du den QR-Code unter **Auf deinem Handy** in **Einstellungen\u00a0›\u00a0Server** scannst. Dafür muss **Von deinem Handy und deinem Team erreichbar** an sein.",
+          "Der Inhaber startet ohne Passwort: Die App meldet dich auf diesem Computer an. Um dich im Browser eines anderen Computers anzumelden, leg unter **Einstellungen\u00a0›\u00a0Dein Konto** eins an. Bis dahin weist **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Server auf diesem Computer** darauf hin, und **Passwort anlegen** öffnet diese Seite. Die Handy-App verbindet sich, wenn du den QR-Code unter **Auf deinem Handy** in **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Server auf diesem Computer** scannst. Dafür muss **Von deinem Handy und deinem Team erreichbar** an sein.",
           "Löscht der Inhaber sein Konto unter **Einstellungen\u00a0›\u00a0Dein Konto**, ist es 7 Tage später endgültig weg, und die Workspaces, in denen nur er war, verschwinden mit ihm. Bis dahin meldest du dich an und drückst **Konto wiederherstellen**, um es zurückzuholen. Ist es weg und kein Konto mehr übrig, öffnet die App ihr Willkommensfenster, um einen neuen Inhaber anzulegen. Haben andere noch ein Konto, meldet sich jeder mit seiner eigenen E-Mail an.",
         ],
       },
@@ -82,14 +82,14 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "updates",
         heading: "Updates",
         blocks: [
-          "Die App sucht selbst nach Updates. Ist **Updates nachts von selbst installieren** unter **Einstellungen\u00a0›\u00a0Updates** an, installiert sie sie zwischen 3:00 und 5:00, solange die App offen ist. Das ist von Anfang an an, wenn der Server hier läuft. Sonst drück **Aktualisieren und neu öffnen**. Der Server und alle Agenten starten damit neu. Vorher wird die Datenbank kopiert, und antwortet die neue Version nicht innerhalb von 3 Minuten, kehrt die App von selbst zur vorherigen Version und ihren Daten zurück.",
+          "Die App sucht selbst nach Updates. Ist **Updates nachts von selbst installieren** unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0App-Einstellungen** an, installiert sie sie zwischen 3:00 und 5:00, solange die App offen ist. Das ist von Anfang an an, wenn der Server hier läuft. Sonst drück **Aktualisieren und neu öffnen**. Der Server und alle Agenten starten damit neu. Vorher wird die Datenbank kopiert, und antwortet die neue Version nicht innerhalb von 3 Minuten, kehrt die App von selbst zur vorherigen Version und ihren Daten zurück.",
         ],
       },
       {
         id: "backups",
         heading: "Backups",
         blocks: [
-          "Ist **Jede Nacht sichern** an (ab App-Version 0.8.1), unter **Einstellungen\u00a0›\u00a0Server**, speichert die App jede Nacht um 3:00 die Datenbank, die Dateien und `.env` in `.agentes/backups` in deinem Benutzerordner. Ein Computer, der da schlief, sichert, sobald er wach ist. **Jetzt sichern** macht dasselbe sofort. Jede Sicherung stoppt den Server kurz, und die zwei neuesten bleiben erhalten.",
+          "Ist **Jede Nacht sichern** an (ab App-Version 0.8.1), unter **Sicherungen** in **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Server auf diesem Computer**, speichert die App jede Nacht um 3:00 die Datenbank, die Dateien und `.env` in `.agentes/backups` in deinem Benutzerordner. Ein Computer, der da schlief, sichert, sobald er wach ist. **Jetzt sichern** macht dasselbe sofort. Jede Sicherung stoppt den Server kurz, und die zwei neuesten bleiben erhalten.",
           "**Kopieren nach** legt jede neue Sicherung zusätzlich in einen Ordner deiner Wahl, etwa auf einen USB-Stick oder in iCloud Drive, wo die zwei neuesten bleiben. Sie enthalten deine Schlüssel: Behalte sie für dich. **Wiederherstellen…** setzt agentes.chat auf eine Sicherung zurück: Nachrichten, Dateien und Einstellungen. Es stoppt dafür eine Minute, und was vorher da war, bleibt im Sicherungsordner.",
         ],
       },
@@ -98,12 +98,12 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Neu anfangen oder deinstallieren",
         blocks: [
           "Alles, was agentes.chat auf diesem Computer speichert, liegt in Ordnern in deinem Benutzerordner, nicht in der App. Wenn du die App in den Papierkorb legst, wird also nichts davon gelöscht, und agentes.chat stoppt nicht, falls es läuft.",
-          "Um neu anzufangen, drück **Löschen und neu anfangen…** in **Einstellungen\u00a0›\u00a0Server**. agentes.chat stoppt hier, und alles, was es enthält, wird in einen neuen Ordner in deinem Benutzerordner verschoben, der `agentes.chat erased` mit dem Datum des Tages heißt. Dort bleibt es, bis du ihn löschst. Was seine Agenten auf diesem Computer gespeichert hatten, etwa ihre Browser und Anmeldungen, wird aus `.agentes-runner` gelöscht. Seine Workspaces verschwinden für alle, die sie nutzen. Danach öffnet sich das Willkommensfenster, und du richtest es mit einem neuen Inhaber-Konto neu ein. Die Dateien der Agenten, in `agentes` in deinem Benutzerordner, bleiben, wo sie sind.",
+          "Um neu anzufangen, drück **Löschen und neu anfangen…** in **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Server auf diesem Computer**. agentes.chat stoppt hier, und alles, was es enthält, wird in einen neuen Ordner in deinem Benutzerordner verschoben, der `agentes.chat erased` mit dem Datum des Tages heißt. Dort bleibt es, bis du ihn löschst. Was seine Agenten auf diesem Computer gespeichert hatten, etwa ihre Browser und Anmeldungen, wird aus `.agentes-runner` gelöscht. Seine Workspaces verschwinden für alle, die sie nutzen. Danach öffnet die App ihre Einrichtung, und du richtest es mit einem neuen Inhaber-Konto neu ein. Die Dateien der Agenten, in `agentes` in deinem Benutzerordner, bleiben, wo sie sind.",
           "Um es später zurückzuholen, beende die App, leg einen neueren Ordner `.agentes` beiseite, falls es einen gibt, benenne den Ordner `agentes.chat erased` in `.agentes` um, öffne die App und richte es auf diesem Computer wieder ein. Es startet mit seinen Workspaces und seinem Eigentümer, wie sie waren. Was seine Agenten auf diesem Computer gespeichert hatten, kommt nicht zurück, sie müssen sich also neu anmelden.",
           "So entfernst du agentes.chat ganz von diesem Computer:",
           {
             list: [
-              "Schalte **Bei der Anmeldung öffnen** unter **Einstellungen\u00a0›\u00a0Allgemein** aus.",
+              "Schalte **Bei der Anmeldung öffnen** unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0App-Einstellungen** aus.",
               "Beende die App. Das Fenster zu schließen reicht nicht. Auf einem Mac klickst du auf ihr Symbol im Dock und wählst im Menü agentes.chat oben am Bildschirm **agentes.chat beenden**, oder du drückst ⌘Q. Unter Windows und Linux klickst du auf das agentes.chat-Symbol neben der Uhr und wählst **agentes.chat beenden**. Fragt sie **agentes.chat beenden?**, drück **Beenden**.",
               "Lösch die App. Auf einem Mac legst du sie in den Papierkorb. Unter Windows und Linux deinstallierst du sie wie jede andere App.",
               "Lösch diese Ordner in deinem Benutzerordner. Sie enthalten deine Daten, und einmal gelöscht kommen sie nicht zurück. Leg also vorher woanders ein Backup ab, falls du sie noch brauchen könntest: `.agentes` (Nachrichten, Dateien, Konten, Einstellungen und Backups), jeden Ordner `agentes.chat erased`, `.agentes-runner` (was die Agenten auf diesem Computer speichern, etwa ihre Browser und Anmeldungen) und `agentes` (die Dateien der Agenten). Ordner, deren Name mit einem Punkt beginnt, sind ausgeblendet. Auf einem Mac öffnest du deinen Benutzerordner im Finder und drückst ⇧⌘. (Umschalt, Befehl und die Punkttaste), um sie zu zeigen.",
@@ -116,7 +116,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "ai-programs",
         heading: "Claude Code und Codex",
         blocks: [
-          "Die App findet Claude Code und Codex über den `PATH` deiner Login-Shell und in den üblichen Ordnern wie `~/.local/bin`, `/opt/homebrew/bin` und `/usr/local/bin`. Zeigt **Einstellungen\u00a0›\u00a0Tools** **Nicht gefunden**, steht dort die Zeile, die es installiert. Führ sie im Terminal aus und drück dann **Erneut prüfen**.",
+          "Die App findet Claude Code und Codex über den `PATH` deiner Login-Shell und in den üblichen Ordnern wie `~/.local/bin`, `/opt/homebrew/bin` und `/usr/local/bin`. Zeigt **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Ordner und Werkzeuge** **Nicht gefunden**, steht dort die Zeile, die es installiert. Führ sie im Terminal aus und drück dann **Erneut prüfen**.",
         ],
       },
       {
@@ -190,7 +190,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Mit der agentes.chat-App",
         blocks: [
           "Installiere die App auf dem Computer, öffne sie und melde dich bei deinem Workspace an. Sie fragt **Agenten von <workspace> diesen Mac nutzen lassen?** (diesen PC unter Windows, diesen Computer unter Linux). Wähle, wer ihn nutzen darf, und drück **Erlauben**. Das ist alles.",
-          "Schon angemeldet? Öffne **Einstellungen\u00a0›\u00a0Allgemein** und drück in der ersten Karte **Erlauben** in der Zeile des Workspace. Nicht dabei? Drück **Workspace hinzufügen…** unten in dieser Karte und melde dich an.",
+          "Schon angemeldet? Öffne **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Übersicht** und drück unter **Wer diesen Computer nutzt** **Erlauben** in der Zeile des Workspace. Nicht dabei? Drück **Workspace hinzufügen…** unten in dieser Liste und melde dich an.",
         ],
       },
       {
@@ -233,7 +233,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Pausieren und trennen",
         blocks: [
-          "Auf dem Computer pausiert das agentes.chat-Symbol neben der Uhr die Agenten aller Workspaces oder nur eines Workspace. Unter **Einstellungen\u00a0›\u00a0Allgemein** pausiert der Schalter eines Workspace nur diesen einen, und **Trennen** in seinem **⋯**-Menü trennt ihn. Während der Pause startet nichts Neues, und was gerade läuft, wird noch fertig. Beim Trennen bleiben die Ordner der Agenten auf der Festplatte.",
+          "Auf dem Computer pausiert das agentes.chat-Symbol neben der Uhr die Agenten aller Workspaces oder nur eines Workspace. Unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Übersicht** pausiert der Schalter eines Workspace nur diesen einen, und **Trennen** in seinem **⋯**-Menü trennt ihn. Während der Pause startet nichts Neues, und was gerade läuft, wird noch fertig. Beim Trennen bleiben die Ordner der Agenten auf der Festplatte.",
           "Auf der Website trennst du ein Gerät mit **Entfernen** auf seiner Seite.",
         ],
       },
@@ -259,7 +259,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "folders",
         heading: "Ordner",
         blocks: [
-          "Jeder Agent hat immer einen eigenen Ordner, in `~/agentes/<workspace>`. Weitere Ordner gibst du nur auf dem Computer selbst frei, nie über die Website: in der App unter **Einstellungen\u00a0›\u00a0Ordner** oder auf einem Server mit `agentes-runner folders allow`. Jeder Workspace gibt seine eigenen Ordner frei: Was du für einen freigibst, gilt nur für dessen Agenten. Einen Ordner zu entfernen löscht nichts. Es nimmt nur den Zugriff weg.",
+          "Jeder Agent hat immer einen eigenen Ordner, in `~/agentes/<workspace>`. Weitere Ordner gibst du nur auf dem Computer selbst frei, nie über die Website: in der App unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Ordner und Werkzeuge** oder auf einem Server mit `agentes-runner folders allow`. Jeder Workspace gibt seine eigenen Ordner frei: Was du für einen freigibst, gilt nur für dessen Agenten. Einen Ordner zu entfernen löscht nichts. Es nimmt nur den Zugriff weg.",
         ],
       },
       {
@@ -275,7 +275,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
               "auf einem Computer, der auch agentes.chat ausführt, dessen Datenbank und Schlüssel in `.agentes`",
             ],
           },
-          "agentes.chat lehnt Befehle ab, die seine Schlüssel, Tokens und Anmeldungen nennen, aber das ist eine Regel, keine Mauer. **Befehle** sind von Anfang an eingeschaltet. Schalte sie in der Frage der App aus, bevor du **Erlauben** drückst, oder später unter **Einstellungen\u00a0›\u00a0Tools**, wo jeder Workspace einen eigenen Schalter hat (ab App-Version 0.8.1) und die App nachfragt, bevor sie einen wieder einschaltet. Claude Code und Codex führen ihre eigenen Befehle im Ordner des Agenten aus, nach ihren eigenen Regeln, auch wenn Befehle aus sind.",
+          "agentes.chat lehnt Befehle ab, die seine Schlüssel, Tokens und Anmeldungen nennen, aber das ist eine Regel, keine Mauer. **Befehle** sind von Anfang an eingeschaltet. Schalte sie in der Frage der App aus, bevor du **Erlauben** drückst, oder später unter **Einstellungen\u00a0›\u00a0Dieser Computer\u00a0›\u00a0Ordner und Werkzeuge**, wo jeder Workspace einen eigenen Schalter hat (ab App-Version 0.8.1) und die App nachfragt, bevor sie einen wieder einschaltet. Claude Code und Codex führen ihre eigenen Befehle im Ordner des Agenten aus, nach ihren eigenen Regeln, auch wenn Befehle aus sind.",
           "Für eine echte Mauer nimm einen Linux-Server. Unter Debian 13, installiert mit `--system`, ist jeder Agent ein eigener Benutzer. Unter Ubuntu teilen sich die Agenten einen Benutzer, `agentes`: Sie sehen die Ordner der anderen, aber nicht deine oder die des Servers. Oder gib den Agenten einen eigenen Computer.",
         ],
       },

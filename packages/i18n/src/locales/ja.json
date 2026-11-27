@@ -684,6 +684,9 @@
       "browserLead": "{{provider}}でログインすると、ここに戻ります。",
       "codeHint": "ブラウザにこのコードが表示されます。続ける前に一致していることを確認してください。",
       "reopen": "もう一度ブラウザを開く",
+      "timedOut": "ログインの時間切れです",
+      "timedOutLead": "10分たってもブラウザから何も戻りませんでした。準備ができたら、もう一度始めてください。",
+      "startAgain": "もう一度始める",
       "otherWay": "別の方法でログイン",
       "otherServer": "別のサーバーを使う",
       "opening": "{{provider}}を開いています…",
@@ -2368,7 +2371,7 @@
     "private": "このコードをスキャンした人は、あなたとしてログインします。",
     "failed": "コードを作成できませんでした。",
     "localOnly": "このサーバーは動いているコンピューターでしか開けないため、スマートフォンからは届きません。",
-    "localOnlyHow": "そのコンピューターのagentes.chatアプリで、環境設定 › サーバーの「スマートフォンやチームメイトからアクセスする」をオンにしてから、ここに戻ってください。",
+    "localOnlyHow": "そのコンピューターのagentes.chatアプリで、設定 › この{{device}}のサーバーの「スマートフォンやチームメイトからアクセスする」をオンにしてから、ここに戻ってください。",
     "localOnlyHere": "「スマートフォンやチームメイトからアクセスする」をオンにしてから、ここに戻ってください。"
   },
   "surface": {
@@ -5978,14 +5981,14 @@
         "title": "あと1ステップ、{{computer}}本体で",
         "waiting": "待機中",
         "one": "時計の横にあるagentes.chatのアイコンをクリック",
-        "two": "環境設定",
+        "two": "この{{device}}の設定",
         "three": "「ブラウザ」をオンにする",
         "done": "これで完了です。このページは自動で検知するので、再読み込みは不要です。",
         "menuOpen": "agentesを開く",
-        "menuPrefs": "環境設定…",
+        "menuPrefs": "この{{device}}の設定…",
         "menuPause": "一時停止",
         "menuQuit": "終了",
-        "tools": "ツール",
+        "tools": "フォルダとツール",
         "commands": "コマンド"
       },
       "offlineCloud": "{{computer}}が応答していません。対応中です。戻ると{{name}}はまた返信します。"
@@ -7662,7 +7665,7 @@
     "linkEmpty": "リンクを作成するとコピーできます",
     "linkFailed": "リンクを作成できませんでした。{{cause}}",
     "localOnly": "このサーバーは動いているコンピューターでしか開けないため、招待した人は招待を開けません。",
-    "localOnlyHow": "そのコンピューターのagentes.chatアプリで、環境設定 › サーバーの「スマートフォンやチームメイトからアクセスする」をオンにするか、招待する人が開けるサーバーでagentes.chatを動かしてください。そのあとで招待してください。",
+    "localOnlyHow": "そのコンピューターのagentes.chatアプリで、設定 › この{{device}}のサーバーの「スマートフォンやチームメイトからアクセスする」をオンにするか、招待する人が開けるサーバーでagentes.chatを動かしてください。そのあとで招待してください。",
     "localOnlyHere": "「スマートフォンやチームメイトからアクセスする」をオンにしてから、招待してください。",
     "never": "無期限",
     "untilDate": "{{date}}まで",
@@ -16153,16 +16156,16 @@
         "windows": "PC",
         "linux": "コンピューター"
       },
-      "grantHere": "この{{device}}です。アプリの環境設定でフォルダを許可してください。",
-      "openFolders": "フォルダを開く",
-      "openServers": "サーバーを開く",
+      "grantHere": "この{{device}}です。この{{device}}の設定の「フォルダとツール」でフォルダを許可してください。",
+      "openFolders": "フォルダとツールを開く",
+      "openServers": "この{{device}}のサーバーを開く",
       "openTools": "ツールを開く",
       "reconnect": "再接続",
       "reconnecting": "この{{device}}を再接続しています…",
       "seeRequest": "アプリで確認",
       "offline": "この{{device}}は現在オフラインです。",
       "outageTitle": "この{{device}}は{{ago}}に接続が切れました",
-      "toolsOff": "この{{device}}ではオフです。アプリの環境設定の「ツール」でオンにしてください。",
+      "toolsOff": "この{{device}}ではオフです。この{{device}}の設定の「フォルダとツール」でオンにしてください。",
       "noReport": "この{{device}}は、許可している内容をまだ報告していません。アプリをアップデートしてください。",
       "update": "アプリをアップデート"
     },
@@ -16280,7 +16283,7 @@
       "disableText": "このコンピューターでエージェントは{{tool}}を使わなくなります。再びオンにするには、そのコンピューター上で、またはここで接続した人が行います。",
       "disabled": "{{tool}}をオフにしました。",
       "grantTitle": "さらに許可するには",
-      "grantText": "許可はコンピューター本体で行います。そのコンピューターでagentes.chatアプリを開いてください（環境設定 → フォルダ）。",
+      "grantText": "許可はコンピューター本体で行います。そのコンピューターでagentes.chatアプリを開いてください（設定 › この{{device}} › フォルダとツール）。",
       "grantTextTerminal": "許可はコンピューター本体のターミナルで行います:",
       "grantTextAdmin": "許可はコンピューター本体のターミナルで、管理者として行います:",
       "grantTerminal": "アプリがない場合は、コンピューターのターミナルで:",
@@ -16291,6 +16294,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}で{{permission}}の許可を待っています",
+      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
+      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
+      "asked": "{{trigger}}の実行に必要です",
+      "names": {
+        "app_management": "App管理",
+        "screen": "画面収録",
+        "accessibility": "アクセシビリティ",
+        "disk": "フルディスクアクセス",
+        "network": "ローカルネットワーク",
+        "camera": "カメラ",
+        "microphone": "マイク",
+        "automation": "オートメーション"
+      }
+    },
     "leadCloud": "エージェントが作業する場所: ワークスペースのコンピューターと、メンバーが接続したデバイス。",
     "lead": "エージェントが作業する場所: メンバーが接続したコンピューターとスマートフォン。",
     "connect": "デバイスを接続",
@@ -16929,22 +16948,6 @@
         "once": "今回のみ許可しました。",
         "always": "{{deviceName}}を共有しました。",
         "no": "許可しませんでした。"
-      }
-    },
-    "permission": {
-      "title": "{{computer}}で{{permission}}の許可を待っています",
-      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
-      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
-      "asked": "{{trigger}}の実行に必要です",
-      "names": {
-        "app_management": "App管理",
-        "screen": "画面収録",
-        "accessibility": "アクセシビリティ",
-        "disk": "フルディスクアクセス",
-        "network": "ローカルネットワーク",
-        "camera": "カメラ",
-        "microphone": "マイク",
-        "automation": "オートメーション"
       }
     }
   },
@@ -17612,6 +17615,17 @@
   "settings": {
     "notOpen": "このワークスペースでのあなたのロールでは{{section}}を開けません。ロールを管理している人が開けるようにできます。",
     "nav": "設定のセクション",
+    "thisDevice": {
+      "title": "この{{device}}",
+      "section": {
+        "overview": "概要",
+        "folders": "フォルダとツール",
+        "server": "この{{device}}のサーバー",
+        "activity": "アクティビティ",
+        "app": "アプリの設定"
+      },
+      "needs_other": "{{count}}件があなたの対応待ち"
+    },
     "group": {
       "org": "ワークスペース"
     },
@@ -17831,7 +17845,7 @@
       "label": "匿名の利用統計をagentes.chatに送信する",
       "help": "人数、エージェント数、マシンのサイズ、使用したAIトークン数、エージェントのブラウザが送受信したデータ量、アプリの起動や動作の速さなどの数値です。メッセージ、ファイル、名前、サイトは一切送信しません。",
       "envOff": "このサーバーの設定でオフになっています（TELEMETRY=off）。",
-      "envOffDesktop": "このサーバーのコンピューターにあるagentes.chatアプリでオフになっています（環境設定 › サーバー）。",
+      "envOffDesktop": "このサーバーのコンピューターにあるagentes.chatアプリでオフになっています（設定 › この{{device}}のサーバー）。",
       "envOffHere": "このコンピューターのagentes.chatアプリでオフになっています。",
       "see": "送信内容を見る",
       "dialogTitle": "送信内容",
@@ -19497,7 +19511,7 @@
     "machine": {
       "ready": "準備完了",
       "off": "オフ",
-      "offHelp": "コンピューターを接続した人が、ここで、またはそのコンピューターの agentes.chat アプリでオンにします: 環境設定 → ツール。",
+      "offHelp": "コンピューターを接続した人が、ここで、またはそのコンピューターの agentes.chat アプリでオンにします: 設定 › この{{device}} › フォルダとツール。",
       "needsCommand": "コマンドが必要",
       "notReady": "まだ準備ができていません",
       "turnOff": "オフにする",

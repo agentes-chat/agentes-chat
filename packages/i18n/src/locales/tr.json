@@ -699,6 +699,9 @@
       "browserLead": "{{provider}} ile giriş yaptığınızda buraya döneceğiz.",
       "codeHint": "Tarayıcınız bu kodu gösterecek. Devam etmeden önce eşleştiğini doğrulayın.",
       "reopen": "Tarayıcıyı yeniden aç",
+      "timedOut": "Girişin süresi doldu",
+      "timedOutLead": "Tarayıcıdan 10 dakika içinde bir şey gelmedi. Hazır olduğunuzda yeniden başlayın.",
+      "startAgain": "Yeniden başla",
       "otherWay": "Başka bir yolla giriş yap",
       "otherServer": "Başka bir sunucu kullan",
       "opening": "{{provider}} açılıyor…",
@@ -2453,7 +2456,7 @@
     "private": "Bu kodu tarayan herkes sizin adınıza giriş yapar.",
     "failed": "Kod oluşturulamadı.",
     "localOnly": "Bu sunucu yalnızca çalıştığı bilgisayarda açılıyor, bu yüzden telefonunuz ona ulaşamıyor.",
-    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Tercihler › Sunucular bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün.",
+    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Ayarlar › Bu {{device}} üzerindeki sunucu bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün.",
     "localOnlyHere": "Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün."
   },
   "surface": {
@@ -6204,14 +6207,14 @@
         "title": "Bir adım kaldı, {{computer}} bilgisayarının kendisinde",
         "waiting": "Bekleniyor",
         "one": "Saatin yanındaki agentes.chat simgesine tıklayın",
-        "two": "Tercihler",
+        "two": "Bu {{device}} ayarları",
         "three": "Tarayıcıyı açın",
         "done": "Hepsi bu. Bu sayfa bunu kendisi fark eder, yenilemeye gerek yok.",
         "menuOpen": "agentes'i aç",
-        "menuPrefs": "Tercihler…",
+        "menuPrefs": "Bu {{device}} ayarları…",
         "menuPause": "Duraklat",
         "menuQuit": "Çık",
-        "tools": "Araçlar",
+        "tools": "Klasörler ve araçlar",
         "commands": "Komutlar"
       },
       "offlineCloud": "{{computer}} yanıt vermiyor. İlgileniyoruz. Geri geldiğinde {{name}} yeniden yanıt verir."
@@ -7926,7 +7929,7 @@
     "linkEmpty": "Kopyalamak için bağlantıyı oluşturun",
     "linkFailed": "Bağlantı oluşturulamadı. {{cause}}",
     "localOnly": "Bu sunucu yalnızca çalıştığı bilgisayarda açılıyor, bu yüzden davet ettiğiniz kişiler davetlerini açamıyor.",
-    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Tercihler › Sunucular bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın ya da agentes.chat'i onların açabileceği bir sunucuda çalıştırın. Sonra onları davet edin.",
+    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Ayarlar › Bu {{device}} üzerindeki sunucu bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın ya da agentes.chat'i onların açabileceği bir sunucuda çalıştırın. Sonra onları davet edin.",
     "localOnlyHere": "Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra onları davet edin.",
     "never": "Süresi dolmaz",
     "untilDate": "{{date}} tarihine kadar",
@@ -16691,16 +16694,16 @@
         "windows": "PC",
         "linux": "bilgisayar"
       },
-      "grantHere": "Bu, şu anki {{device}}: klasörlere uygulamanın Tercihler bölümünden izin verin.",
-      "openFolders": "Klasörleri aç",
-      "openServers": "Sunucuları aç",
+      "grantHere": "Bu, şu anki {{device}}: klasörlere Bu {{device}} ayarlarında, Klasörler ve araçlar bölümünden izin verin.",
+      "openFolders": "Klasörleri ve araçları aç",
+      "openServers": "Bu {{device}} üzerindeki sunucuyu aç",
       "openTools": "Araçları aç",
       "reconnect": "Yeniden bağlan",
       "reconnecting": "Bu {{device}} yeniden bağlanıyor…",
       "seeRequest": "Uygulamada gör",
       "offline": "Bu {{device}} şu an çevrimdışı.",
       "outageTitle": "Bu {{device}} bağlantısını kaybetti ({{ago}})",
-      "toolsOff": "Bu {{device}} üzerinde kapalı. Uygulamanın Tercihler bölümünde, Araçlar altında açın.",
+      "toolsOff": "Bu {{device}} üzerinde kapalı. Bu {{device}} ayarlarında, Klasörler ve araçlar altında açın.",
       "noReport": "Bu {{device}} neye izin verdiğini henüz bildirmedi. Uygulamayı güncelleyin.",
       "update": "Uygulamayı güncelle"
     },
@@ -16820,7 +16823,7 @@
       "disableText": "Ajanlar bu bilgisayarda {{tool}} kullanmayı bırakır. Yeniden açmak için: bilgisayarın kendisinde, ya da burada onu bağlayan kişi tarafından.",
       "disabled": "{{tool}} kapatıldı.",
       "grantTitle": "Daha fazlasına izin vermek için",
-      "grantText": "İzin vermek bilgisayarın kendisinde yapılır: oradaki agentes.chat uygulamasını açın (Tercihler → Klasörler).",
+      "grantText": "İzin vermek bilgisayarın kendisinde yapılır: oradaki agentes.chat uygulamasını açın (Ayarlar › Bu {{device}} › Klasörler ve araçlar).",
       "grantTextTerminal": "İzin vermek bilgisayarın kendisinde, Terminal'inde yapılır:",
       "grantTextAdmin": "İzin vermek bilgisayarın kendisinde, Terminal'inde, yöneticisi olarak yapılır:",
       "grantTerminal": "Uygulama yok mu? Bilgisayarın terminalinde:",
@@ -16831,6 +16834,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
+      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
+      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
+      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
+      "names": {
+        "app_management": "Uygulama Yönetimi",
+        "screen": "Ekran Kaydı",
+        "accessibility": "Erişilebilirlik",
+        "disk": "Tam Disk Erişimi",
+        "network": "Yerel Ağ",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomasyon"
+      }
+    },
     "leadCloud": "Ajanlarınızın çalıştığı yer: çalışma alanının bilgisayarı ve kişilerin bağladığı cihazlar.",
     "lead": "Ajanlarınızın çalıştığı yer: kişilerin bağladığı bilgisayarlar ve telefonlar.",
     "connect": "Cihaz bağla",
@@ -17473,22 +17492,6 @@
         "once": "Bir kez izin verildi.",
         "always": "{{deviceName}} artık onlarla paylaşılıyor.",
         "no": "Hayır dediniz."
-      }
-    },
-    "permission": {
-      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
-      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
-      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
-      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
-      "names": {
-        "app_management": "Uygulama Yönetimi",
-        "screen": "Ekran Kaydı",
-        "accessibility": "Erişilebilirlik",
-        "disk": "Tam Disk Erişimi",
-        "network": "Yerel Ağ",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomasyon"
       }
     }
   },
@@ -18174,6 +18177,18 @@
   "settings": {
     "notOpen": "Bu çalışma alanındaki rolünüz {{section}} bölümünü açmıyor. Rolleri yöneten kişi sizin için açabilir.",
     "nav": "Ayarlar bölümleri",
+    "thisDevice": {
+      "title": "Bu {{device}}",
+      "section": {
+        "overview": "Genel bakış",
+        "folders": "Klasörler ve araçlar",
+        "server": "Bu {{device}} üzerindeki sunucu",
+        "activity": "Etkinlik",
+        "app": "Uygulama ayarları"
+      },
+      "needs_one": "{{count}} şey sizi bekliyor",
+      "needs_other": "{{count}} şey sizi bekliyor"
+    },
     "group": {
       "org": "Çalışma alanı"
     },
@@ -18393,7 +18408,7 @@
       "label": "agentes.chat'e anonim kullanım istatistikleri gönder",
       "help": "Kişi ve ajan sayısı, makine boyutları, kullanılan yapay zeka token'ları, ajanların tarayıcılarının ne kadar veri gönderip aldığı ve uygulamaların ne kadar hızlı açılıp çalıştığı gibi sayılar. Asla mesajlar, dosyalar, adlar ya da siteler değil.",
       "envOff": "Bu sunucunun ayarlarında kapatıldı (TELEMETRY=off).",
-      "envOffDesktop": "Bu sunucunun bilgisayarındaki agentes.chat uygulamasında kapatıldı (Tercihler › Sunucular).",
+      "envOffDesktop": "Bu sunucunun bilgisayarındaki agentes.chat uygulamasında kapatıldı (Ayarlar › Bu {{device}} üzerindeki sunucu).",
       "envOffHere": "Bu bilgisayardaki agentes.chat uygulamasında kapatıldı.",
       "see": "Neyin gönderildiğini gör",
       "dialogTitle": "Ne gönderiliyor",
@@ -20083,7 +20098,7 @@
     "machine": {
       "ready": "Hazır",
       "off": "Kapalı",
-      "offHelp": "Bilgisayarı bağlayan kişi burada ya da oradaki agentes.chat uygulamasında açar: Tercihler → Araçlar.",
+      "offHelp": "Bilgisayarı bağlayan kişi burada ya da oradaki agentes.chat uygulamasında açar: Ayarlar › Bu {{device}} › Klasörler ve araçlar.",
       "needsCommand": "Bir komut gerekiyor",
       "notReady": "Henüz hazır değil",
       "turnOff": "Kapat",

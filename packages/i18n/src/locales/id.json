@@ -684,6 +684,9 @@
       "browserLead": "Kita kembali ke sini setelah kamu masuk dengan {{provider}}.",
       "codeHint": "Browsermu akan menampilkan kode ini. Pastikan sama sebelum melanjutkan.",
       "reopen": "Buka browser lagi",
+      "timedOut": "Waktu masuk habis",
+      "timedOutLead": "Tidak ada balasan dari browser dalam 10 menit. Mulai lagi kalau sudah siap.",
+      "startAgain": "Mulai lagi",
       "otherWay": "Masuk dengan cara lain",
       "otherServer": "Pakai server lain",
       "opening": "Membuka {{provider}}…",
@@ -2368,7 +2371,7 @@
     "private": "Siapa pun yang memindai kode ini akan masuk sebagai kamu.",
     "failed": "Kode tidak bisa dibuat.",
     "localOnly": "Server ini hanya terbuka di komputer tempat ia berjalan, jadi ponselmu tidak bisa menjangkaunya.",
-    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server. Lalu kembali ke sini.",
+    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Pengaturan › Server di {{device}} ini. Lalu kembali ke sini.",
     "localOnlyHere": "Nyalakan Akses dari ponselmu dan rekan tim. Lalu kembali ke sini."
   },
   "surface": {
@@ -6000,14 +6003,14 @@
         "title": "Tinggal satu langkah, di {{computer}} itu sendiri",
         "waiting": "Menunggu",
         "one": "Klik ikon agentes.chat di dekat jam",
-        "two": "Preferensi",
+        "two": "Pengaturan {{device}} ini",
         "three": "Nyalakan Browser",
         "done": "Selesai. Halaman ini mendeteksinya sendiri, tidak perlu dimuat ulang.",
         "menuOpen": "Buka agentes",
-        "menuPrefs": "Preferensi…",
+        "menuPrefs": "Pengaturan {{device}} ini…",
         "menuPause": "Jeda",
         "menuQuit": "Keluar",
-        "tools": "Alat",
+        "tools": "Folder dan alat",
         "commands": "Perintah"
       },
       "offlineCloud": "{{computer}} tidak merespons. Kami sedang menanganinya. {{name}} menjawab lagi saat komputernya kembali."
@@ -7697,7 +7700,7 @@
     "linkEmpty": "Buat tautan untuk menyalinnya",
     "linkFailed": "Tautan tidak bisa dibuat. {{cause}}",
     "localOnly": "Server ini hanya terbuka di komputer tempat ia berjalan, jadi orang yang kamu undang tidak bisa membuka undangannya.",
-    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server, atau jalankan agentes.chat di server yang bisa mereka buka. Lalu undang mereka.",
+    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Pengaturan › Server di {{device}} ini, atau jalankan agentes.chat di server yang bisa mereka buka. Lalu undang mereka.",
     "localOnlyHere": "Nyalakan Akses dari ponselmu dan rekan tim. Lalu undang mereka.",
     "never": "Tidak kedaluwarsa",
     "untilDate": "Sampai {{date}}",
@@ -16213,16 +16216,16 @@
         "windows": "PC",
         "linux": "komputer"
       },
-      "grantHere": "Ini {{device}} ini: izinkan folder di Preferensi aplikasi.",
-      "openFolders": "Buka Folder",
-      "openServers": "Buka Server",
+      "grantHere": "Ini {{device}} yang sedang kamu pakai: izinkan folder di Pengaturan {{device}} ini, di bagian Folder dan alat.",
+      "openFolders": "Buka Folder dan alat",
+      "openServers": "Buka Server di {{device}} ini",
       "openTools": "Buka Alat",
       "reconnect": "Hubungkan ulang",
       "reconnecting": "Menghubungkan ulang {{device}} ini…",
       "seeRequest": "Lihat di aplikasi",
       "offline": "{{device}} ini sedang offline.",
       "outageTitle": "{{device}} ini kehilangan koneksi {{ago}}",
-      "toolsOff": "Mati di {{device}} ini. Nyalakan di Preferensi aplikasi, di bagian Alat.",
+      "toolsOff": "Mati di {{device}} ini. Nyalakan di Pengaturan {{device}} ini, di bagian Folder dan alat.",
       "noReport": "{{device}} ini belum melaporkan apa yang diizinkannya. Perbarui aplikasinya.",
       "update": "Perbarui aplikasi"
     },
@@ -16340,7 +16343,7 @@
       "disableText": "Agen berhenti memakai {{tool}} di komputer ini. Untuk menyalakannya lagi: di komputer itu sendiri, atau di sini oleh orang yang menghubungkannya.",
       "disabled": "{{tool}} dimatikan.",
       "grantTitle": "Untuk mengizinkan lebih banyak",
-      "grantText": "Izin diberikan di komputer itu sendiri: buka aplikasi agentes.chat di sana (Preferensi → Folder).",
+      "grantText": "Izin diberikan di komputer itu sendiri: buka aplikasi agentes.chat di sana (Pengaturan › {{device}} ini › Folder dan alat).",
       "grantTextTerminal": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya:",
       "grantTextAdmin": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya, sebagai administrator:",
       "grantTerminal": "Tidak ada aplikasi? Di terminal komputer itu:",
@@ -16351,6 +16354,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
+    },
     "leadCloud": "Tempat agenmu bekerja: komputer ruang kerja dan perangkat yang dihubungkan orang-orang.",
     "lead": "Tempat agenmu bekerja: komputer dan ponsel yang dihubungkan orang-orang.",
     "connect": "Hubungkan perangkat",
@@ -16989,22 +17008,6 @@
         "once": "Diizinkan sekali.",
         "always": "{{deviceName}} sekarang dibagikan dengan mereka.",
         "no": "Kamu menolak."
-      }
-    },
-    "permission": {
-      "title": "Menunggu {{permission}} di {{computer}}",
-      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
-      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
-      "asked": "Diperlukan untuk menjalankan {{trigger}}",
-      "names": {
-        "app_management": "Manajemen App",
-        "screen": "Perekaman Layar",
-        "accessibility": "Aksesibilitas",
-        "disk": "Akses Disk Penuh",
-        "network": "Jaringan Lokal",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomatisasi"
       }
     }
   },
@@ -17672,6 +17675,17 @@
   "settings": {
     "notOpen": "Peranmu di ruang kerja ini tidak membuka {{section}}. Orang yang mengelola peran bisa membukanya untukmu.",
     "nav": "Bagian pengaturan",
+    "thisDevice": {
+      "title": "{{device}} ini",
+      "section": {
+        "overview": "Ringkasan",
+        "folders": "Folder dan alat",
+        "server": "Server di {{device}} ini",
+        "activity": "Aktivitas",
+        "app": "Pengaturan aplikasi"
+      },
+      "needs_other": "{{count}} hal butuh kamu"
+    },
     "group": {
       "org": "Ruang kerja"
     },
@@ -17891,7 +17905,7 @@
       "label": "Kirim statistik pemakaian anonim ke agentes.chat",
       "help": "Angka seperti jumlah orang, agen, ukuran mesin, token AI yang terpakai, berapa banyak data yang dikirim dan diterima browser agen, dan seberapa cepat aplikasi terbuka dan berjalan. Tidak pernah pesan, file, nama, atau situs.",
       "envOff": "Dimatikan di pengaturan server ini (TELEMETRY=off).",
-      "envOffDesktop": "Dimatikan di aplikasi agentes.chat di komputer server ini (Preferensi › Server).",
+      "envOffDesktop": "Dimatikan di aplikasi agentes.chat di komputer server ini (Pengaturan › Server di {{device}} ini).",
       "envOffHere": "Dimatikan di aplikasi agentes.chat di komputer ini.",
       "see": "Lihat apa yang dikirim",
       "dialogTitle": "Apa yang dikirim",
@@ -19557,7 +19571,7 @@
     "machine": {
       "ready": "Siap",
       "off": "Mati",
-      "offHelp": "Orang yang menghubungkan komputer menyalakannya di sini atau di aplikasi agentes.chat di komputer itu: Preferensi → Alat.",
+      "offHelp": "Orang yang menghubungkan komputer menyalakannya di sini atau di aplikasi agentes.chat di komputer itu: Pengaturan › {{device}} ini › Folder dan alat.",
       "needsCommand": "Butuh perintah",
       "notReady": "Belum siap",
       "turnOff": "Matikan",

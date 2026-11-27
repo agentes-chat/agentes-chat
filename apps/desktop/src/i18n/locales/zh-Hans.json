@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat 需要“{{permission}}”权限",
+    "done": "我已允许",
+    "later": "以后再说",
+    "trayTitle": "正在等待“{{permission}}”权限",
+    "why": {
+      "app_management": "代理需要它来更改这台{{device}}上的应用。",
+      "screen": "代理需要它来截取这台{{device}}的屏幕。",
+      "accessibility": "代理需要它在这台{{device}}的应用中点击和输入。",
+      "disk": "代理需要它来打开你的文件，macOS 不必为每个文件夹询问。",
+      "network": "代理需要它来连接你网络中的手机和设备。",
+      "camera": "代理需要它来使用这台{{device}}的摄像头。",
+      "microphone": "代理需要它来使用这台{{device}}的麦克风。",
+      "automation": "代理需要它来控制这台{{device}}上的其他应用。"
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -6,7 +22,8 @@
   },
   "windowTitle": {
     "welcome": "欢迎",
-    "prefs": "偏好设置"
+    "prefs": "偏好设置",
+    "settings": "设置"
   },
   "common": {
     "cancel": "取消",
@@ -69,10 +86,7 @@
     },
     "label": "agentes.chat",
     "now": "当前",
-    "seeAll": "查看全部",
     "background": "在后台",
-    "nothingNow": "当前没有内容",
-    "waitingConnection": "正在等待连接",
     "calmTitle": "一切安好",
     "calmBody": "智能体需要时会使用这台 {{device}}。",
     "pausedEmptyTitle": "一切已暂停",
@@ -88,6 +102,7 @@
     "pauseHintServer": "已在运行的任务会正常结束。服务器保持在线。",
     "resume": "恢复智能体",
     "open": "打开 agentes.chat",
+    "thisMac": "这台 {{device}} 的设置…",
     "quit": "退出 agentes.chat",
     "pausedFor1h": "已暂停 1 小时",
     "pausedTomorrow": "已暂停到明天上午 9 点",
@@ -136,14 +151,154 @@
     "quitTitle": "退出 agentes.chat？",
     "quitBody": "应用关闭期间，智能体无法使用这台 {{device}}。已在运行的工作会完成，并在你再次打开应用时发送结果。",
     "quitHereBody": "agentes.chat 将在这台 {{device}} 上停止运行：在你再次打开应用之前，任何人都无法使用它，无论是在这里、你的手机上还是队友的手机上。",
-    "quitConfirm": "退出"
+    "quitConfirm": "退出",
+    "needsYou_other": "{{count}} 项等你处理",
+    "allSet": "一切就绪",
+    "thisDevice": "这台 {{device}}",
+    "settings": "这台 {{device}} 的设置",
+    "essential": {
+      "turnOn": "开启",
+      "turnOnAgain": "重新开启",
+      "fix": "去解决",
+      "launchAtLogin": {
+        "title": "登录时 agentes.chat 不会自动打开",
+        "body": "重启后，在你打开应用之前，智能体无法使用这台 {{device}}。"
+      },
+      "notifications": {
+        "title": "通知已关闭",
+        "body": "智能体在这里需要你时，你不会知道。"
+      },
+      "screen": {
+        "body": "没有它，智能体就看不到屏幕。"
+      },
+      "disk": {
+        "body": "智能体可能会为每个文件夹停下来询问。"
+      },
+      "reach": {
+        "approve": {
+          "title": "Tailscale 在等你点一下",
+          "body": "在 Tailscale 的管理页面允许后，你的手机和团队就能访问 agentes.chat。"
+        },
+        "down": {
+          "title": "这台 {{device}} 上的 Tailscale 未连接",
+          "body": "你的手机和团队无法访问 agentes.chat。"
+        },
+        "address": {
+          "title": "你的地址现在没有指向这里",
+          "body": "在它恢复之前，你的手机和团队无法访问 agentes.chat。请检查你的隧道是否已开启。"
+        }
+      },
+      "backup": {
+        "off": {
+          "title": "每晚备份已关闭",
+          "body": "开启后，agentes.chat 每晚都会保留一份副本。"
+        },
+        "backup": {
+          "body": "现在备份，让今天的工作也有一份副本。"
+        },
+        "copy": {
+          "title": "昨晚的备份没有存到副本位置",
+          "body": "副本所在的文件夹可能已断开或已满。"
+        }
+      },
+      "autoUpdate": {
+        "title": "更新不会自动安装",
+        "body": "开启后，这台 {{device}} 会一直使用能正常运行的版本。"
+      }
+    }
   },
   "first": {
     "addTitle": "添加工作区",
     "addLead": "你已有的工作区都保留在这里，各自保持登录。",
     "addCloud": "在 agentes.chat 创建工作区",
     "addNew": "想要一个新的工作区？",
-    "addNewLink": "创建一个"
+    "addNewLink": "创建一个",
+    "welcome": {
+      "title": "欢迎使用 agentes.chat",
+      "lead": "你的 AI 智能体团队，在聊天中与你一起工作。",
+      "google": "使用 Google 继续",
+      "apple": "使用 Apple 继续",
+      "email": "使用邮箱继续",
+      "others": "其他使用方式",
+      "here": "在这台 {{device}} 上免费运行",
+      "hereText": "数据留在这里。无需云端账号。",
+      "company": "登录我公司的服务器",
+      "companyText": "通过地址，例如 agentes.yourcompany.com。",
+      "install": "要为团队安装到服务器上吗？",
+      "installLink": "查看方法",
+      "foundTailnet": "你的网络上有 agentes.chat",
+      "foundHere": "agentes.chat 正在这台 {{device}} 上运行"
+    },
+    "run": {
+      "step": "在这台 {{device}} 上运行 · 第 {{n}} 步，共 {{total}} 步",
+      "flow": "在这台 {{device}} 上运行",
+      "ownerTitle": "谁来当所有者？",
+      "ownerLead": "你用这个邮箱登录，之后可以邀请任何人。所有内容都保存在这台 {{device}} 上。",
+      "usage": "发送匿名使用统计",
+      "usageText": "只有数量，绝不包括消息、文件或名字。",
+      "whereTitle": "你要在哪里使用？",
+      "whereLead": "随时都可以更改。",
+      "everywhere": "在这台 {{device}}、你的手机和你的团队中",
+      "everywhereText": "通过 Tailscale 或你自己的地址。",
+      "hereOnly": "只在这台 {{device}} 上",
+      "hereOnlyText": "手机可以以后再说。",
+      "netTitle": "手机和团队怎样到达这里？",
+      "netLead": "之后可以在设置中更改。",
+      "later": "以后再说",
+      "changeAddress": "更改地址",
+      "ask": "<b>只差一步。</b>在打开的 Tailscale 页面上点击 <b>Enable</b>。这会让你的地址带上锁，更安全。我们会自动继续，不用着急。",
+      "askOpen": "打开页面",
+      "askSkip": "不开启也完成",
+      "doneTitle": "完成了。拿到手机上用吧",
+      "phone1": "安装 agentes.chat 应用",
+      "phone1Text": "从 App Store 或 Google Play 下载。",
+      "phone2": "安装 Tailscale，并用同一个账号登录",
+      "phone2Text": "它让你的手机在任何地方都能连到这台 {{device}}。",
+      "phone3": "用相机对准二维码",
+      "phone3Text": "立即登录。二维码会自动更新。",
+      "qrLabel": "用于在手机上登录的二维码",
+      "qrFailed": "二维码没有加载出来。",
+      "address": "你的地址：<b>{{address}}</b>",
+      "open": "打开 agentes.chat"
+    }
+  },
+  "reach": {
+    "label": "手机和团队到达这里的方式",
+    "tailscale": "通过 Tailscale",
+    "tailscaleText": "免费。连接你和团队设备的私有网络。",
+    "address": "通过我自己的地址",
+    "addressText": "这台 {{device}} 上已经指向这里的隧道。",
+    "checking": "正在检查这台 {{device}} 上的 Tailscale…",
+    "tailscaleOn": "这台 {{device}} 上的 Tailscale 已连接。",
+    "download": "下载 Tailscale",
+    "downloadNote": "免费，来自 Tailscale 官方网站。",
+    "openApp": "打开 Tailscale 并登录",
+    "tray": "从时钟旁的图标打开 Tailscale 并登录。",
+    "terminal": "在终端中连接 Tailscale：",
+    "waitNow": "正在等待 Tailscale…",
+    "waitInstall": "安装、打开并登录。之后会自动继续，不用着急。",
+    "waitSignIn": "请在那里登录。之后会自动继续，不用着急。",
+    "addressLabel": "你的地址",
+    "pointAt": "指向",
+    "problem": {
+      "notHttps": "地址必须以 https:// 开头",
+      "unreachable": "无法打开。请检查你的隧道是否已开启并指向 {{target}}。",
+      "unreachablePlain": "无法打开。请检查你的隧道是否已开启并指向这台 {{device}}。",
+      "otherServer": "它打开的是另一台服务器，而不是这台 {{device}} 上的。",
+      "error": "它返回了错误（{{status}}）。",
+      "errorPlain": "它返回了错误。"
+    },
+    "reason": {
+      "address": "你的地址没有指向这里"
+    },
+    "stage": {
+      "checking": "正在检查你的地址…",
+      "done": "已就绪：你的手机和团队都能打开。"
+    },
+    "line": {
+      "address": "运行中 · 使用你的地址",
+      "addressDown": "运行中 · 你的地址现在没有指向这里"
+    }
   },
   "place": {
     "title": "你的工作区要放在哪里？",
@@ -205,7 +360,6 @@
   },
   "here": {
     "title": "一起准备这台 {{device}}",
-    "how": "只需一分钟。一切都保存在这里，只属于你。",
     "again": "它之前在这里运行过，数据仍在 {{path}} 中。",
     "ownerNone": "这里已经没有任何账号了。填写你的名字和邮箱，你就会成为新的所有者。",
     "name": "你的名字",
@@ -213,28 +367,25 @@
     "email": "你的邮箱",
     "emailNeeded": "请填写你的邮箱，例如 ana@example.com。",
     "reach": "从你的手机和队友那里访问",
-    "reachText": "使用 Tailscale，一个属于你设备的私有网络：你的手机和你邀请的人都会加入，其他人无法访问 agentes.chat。",
+    "reachText": "通过 Tailscale（一个供你的设备使用的免费私有网络）或你自己的地址，你的手机和你邀请的人可以在任何地方打开 agentes.chat。",
     "reachStage": {
       "sharing": "正在请求 Tailscale 共享…",
       "approve": "Tailscale 要求在你的网络中开启 HTTPS。请在它的页面上开启：其余步骤会自动完成。",
-      "restarting": "正在新地址重启 agentes.chat…",
-      "signingIn": "正在新地址重新登录…"
+      "restarting": "正在新地址重启 agentes.chat…"
     },
     "approveOpen": "打开 Tailscale 页面",
     "approveStop": "停止等待",
     "openTailscale": "打开 Tailscale",
     "usage": "向 agentes.chat 发送匿名使用统计",
     "usageText": "统计数量，例如成员数、智能体数、机器规格、已用的 AI 词元、智能体的浏览器收发了多少数据，以及应用打开和运行的速度。绝不包括消息、文件、名称或网站。",
-    "start": "开始",
     "setting": "正在准备一切",
-    "rest": "关闭应用时，你的智能体会休息。一打开它们就会回来。",
     "step": {
       "database": "正在为你的数据腾出空间",
       "databaseNote": "仅首次需要",
       "start": "正在开启 agentes.chat",
       "account": "正在创建你的账号",
       "computer": "正在呼叫你的智能体",
-      "reach": "正在开启手机访问"
+      "reach": "正在开启随处访问"
     },
     "stepState": {
       "active": "进行中",
@@ -246,7 +397,7 @@
       "start": "agentes.chat 没有在这台 {{device}} 上启动。",
       "database": "数据库没有准备好。",
       "account": "你的账号没有创建成功。",
-      "retry": "在偏好设置中重试"
+      "retry": "在设置中重试"
     },
     "reason": {
       "https": "你的 Tailscale 网络未开启 HTTPS",
@@ -431,14 +582,14 @@
   },
   "pair": {
     "title": "允许 {{org}} 的智能体在这台 {{device}} 上工作？",
-    "body": "{{host}} 发起了请求。智能体可以运行命令、使用浏览器和这里的编程工具。文件夹稍后在偏好设置中添加。",
+    "body": "{{host}} 发起了请求。智能体可以在这里运行命令、使用浏览器和编程工具。文件夹稍后在设置中添加。",
     "allow": "允许",
     "notNow": "以后再说",
     "offerTitle": "允许 {{org}} 的智能体使用这台 {{device}}？",
     "keepReady": "保持就绪：登录时打开 agentes.chat",
     "offerOnlyIf": "仅当你希望这台 {{device}} 也承担智能体的工作时才需要。选择“以后再说”，你仍可以照常在这里使用 {{org}}。",
     "canDo": "智能体在这里能做什么",
-    "foldersLater": "还没有你的文件夹。稍后可在“偏好设置 › 文件夹”中添加。",
+    "foldersLater": "还没有你的文件夹。稍后可在“设置 › 文件夹和工具”中添加。",
     "linkTitle": "将这台 {{device}} 连接到 {{org}}？",
     "askedBy": "请求人",
     "from": "来自",
@@ -460,6 +611,39 @@
     "canUse": "智能体可以使用",
     "notUsing": "该工作区的智能体不使用这台 {{device}}"
   },
+  "sheets": {
+    "step": "这台 {{device}} · 第 {{at}} 步，共 {{total}} 步",
+    "stepOnly": "这台 {{device}}",
+    "ready": {
+      "title": "要为 {{org}} 的智能体准备好这台 {{device}} 吗？",
+      "lead": "准备好后，只要 {{device}} 开着，智能体就能在这里做更多事。",
+      "browser": "智能体自己的浏览器",
+      "browserDesc": "不含你的登录信息和密码。",
+      "code": "命令和编程工具",
+      "codeOne": "{{tool}} 已在这里。它们以你的用户身份运行。",
+      "codeTwo": "{{a}} 和 {{b}} 已在这里。它们以你的用户身份运行。",
+      "codeNone": "它们以你的用户身份运行。",
+      "folders": "你的文件夹只在你同意时使用",
+      "foldersDesc": "每个请求都会显示在聊天和应用图标上。",
+      "foldersDescMac": "每个请求都会显示在聊天和菜单栏中。",
+      "login": "{{device}} 启动时自动打开",
+      "loginDesc": "这样不用你记着，智能体也能回来。",
+      "help": "随时可在设置 › 这台 {{device}} 中更改。",
+      "allow": "准备好"
+    },
+    "prepare": {
+      "title": "macOS 会询问三件事，只问一次",
+      "lead": "没有它们，智能体会在工作中途停下来询问。",
+      "notifications": "通知",
+      "notificationsDesc": "当智能体需要你时。",
+      "screenDesc": "让智能体能看到自己在屏幕上做的事。",
+      "diskDesc": "打开你允许的文件夹时，macOS 不会再次询问。",
+      "waitList": "在打开的系统设置中，在列表里开启 agentes.chat。我们会自动察觉。",
+      "waitNotifications": "在打开的系统设置中，允许 agentes.chat 的通知。我们会自动察觉。",
+      "help": "如果更新关掉了其中一项，我们会马上告诉你。",
+      "later": "以后再说"
+    }
+  },
   "prepare": {
     "title": "准备好这台 {{device}}",
     "lead": "已连接到 {{org}}。现在就允许，智能体以后就不会停下来询问。",
@@ -468,6 +652,8 @@
     "screenAgain": "macOS 大约每月会再问一次，请选择“允许”。",
     "disk": "完全磁盘访问权限",
     "diskDesc": "让智能体打开你的文件，macOS 不会再逐个文件夹询问。",
+    "notifications": "通知",
+    "notificationsDesc": "在智能体需要你，或这台 {{device}} 上有东西停止运行时通知你。",
     "diskHow": "在设置的列表中打开 agentes.chat，或用 + 添加。",
     "network": "本地网络（通过 Wi-Fi 连接的手机）",
     "networkDesc": "让智能体找到并使用你 Wi-Fi 上的 Android 手机。",
@@ -481,6 +667,35 @@
     "skip": "暂时跳过",
     "prefsTitle": "权限",
     "prefsHint": "应用更新时，macOS 可能会关闭这些权限。请在这里重新开启。"
+  },
+  "essentials": {
+    "tray": "这台 {{device}} 上有事需要你处理",
+    "notify": {
+      "screen": {
+        "title": "屏幕录制已关闭",
+        "body": "macOS 关闭了它。在你重新允许之前，智能体无法截图。"
+      },
+      "disk": {
+        "title": "完全磁盘访问权限已关闭",
+        "body": "在你重新开启之前，智能体可能会为文件夹停下来询问。"
+      },
+      "reach": {
+        "title": "你的手机和团队无法访问 agentes.chat",
+        "body": "从你的设备访问需要你在这台 {{device}} 上处理。打开应用来解决。"
+      },
+      "backup": {
+        "title": "昨晚的备份没有完成",
+        "body": "打开应用重新备份。"
+      },
+      "autoUpdate": {
+        "title": "agentes.chat 需要更新",
+        "body": "这个版本无法继续使用。打开应用安装新版本。"
+      },
+      "awake": {
+        "title": "这台 {{device}} 在提供服务时可能会进入睡眠",
+        "body": "在这里重启 agentes.chat，让它为你的手机和团队保持唤醒。"
+      }
+    }
   },
   "tools": {
     "claudeName": "Claude Code",
@@ -792,6 +1007,99 @@
       "folderDesc": "每个工作区一个文件夹，其中每个智能体各有一个文件夹。"
     }
   },
+  "settings": {
+    "nav": {
+      "label": "设置",
+      "title": "设置",
+      "thisDevice": "这台 {{device}}",
+      "overview": "概览",
+      "folders": "文件夹和工具",
+      "server": "这台 {{device}} 上的服务器",
+      "activity": "动态",
+      "app": "应用设置",
+      "back": "返回 {{name}}",
+      "needs_other": "{{count}} 项等你处理"
+    },
+    "away": {
+      "title": "与 {{name}} 的连接已断开。",
+      "body": "属于这台 {{device}} 的部分照常工作。谁能使用它以及智能体的名字会在连接恢复后回来。"
+    },
+    "overview": {
+      "rename": "重命名",
+      "allSet": "一切就绪",
+      "used": "{{orgs}} 的智能体在使用这台 {{device}}",
+      "version": "版本 {{version}}，已是最新",
+      "versionNewer": "版本 {{version}}，{{latest}} 可用",
+      "always": "随时就绪",
+      "who": "谁在使用这台 {{device}}"
+    },
+    "essentials": {
+      "on": "已开启",
+      "allOn": "全部开启",
+      "turnOn": "开启",
+      "turnOnAgain": "重新开启",
+      "permissions": "macOS 权限",
+      "permissionsOff": "仍未开启：{{names}}。",
+      "launchAtLogin": "{{device}} 启动时打开",
+      "reach": "随处访问",
+      "reachOff": "只在这台 {{device}} 上。你的手机和团队无法打开。",
+      "reachDown": "这台 {{device}} 上的 Tailscale 未连接。",
+      "reachApprove": "Tailscale 正在等你在网络中开启 HTTPS。",
+      "reachAddress": "你的地址现在没有指向这里。",
+      "checkAgain": "再检查一次",
+      "backup": "每晚备份",
+      "backupOff": "已关闭",
+      "autoUpdate": "夜间自动更新",
+      "autoUpdateDesc": "如果新版本打不开，会自动退回",
+      "updateRequired": "这个版本无法继续使用。",
+      "awake": "智能体工作时不睡眠",
+      "awakeOff": "在这里重启 agentes.chat，让它保持唤醒。",
+      "powerRestart": "断电后自动启动",
+      "systemOnly": "只有 macOS 的设置能开启它。"
+    },
+    "server": {
+      "anywhere": "你的手机和团队都能打开",
+      "onlyHere": "只在这台 {{device}} 上",
+      "onlyHereDesc": "你的手机和团队无法打开。",
+      "wayTailscale": "通过 Tailscale，带锁",
+      "wayAddress": "通过你的地址",
+      "changeWay": "更改",
+      "reachOff": "关闭",
+      "useWay": "使用这个",
+      "phoneDesc": "用同一个账号安装 agentes.chat 应用和 Tailscale，再用相机对准。它会自动登录。",
+      "phoneDescAddress": "安装 agentes.chat 应用，再用相机对准。它会自动登录。",
+      "phoneSignedOut": "在应用中登录这台 {{device}} 上的 agentes.chat 即可显示二维码。",
+      "qrLabel": "用于在手机上登录的二维码",
+      "invite": "邀请团队成员",
+      "inviteDesc": "先邀请他们加入工作区，再在 Tailscale 中与他们共享这台 {{device}}。",
+      "inviteDescAddress": "邀请他们加入工作区。他们用你的地址打开。",
+      "inviteButton": "邀请",
+      "share": "在 Tailscale 中共享",
+      "everyNight": "每晚 {{at}}",
+      "copyAlso": "另存一份副本到",
+      "backupsOff": "每晚备份已关闭"
+    },
+    "access": {
+      "title": "文件夹和工具",
+      "lead": "所有工作区的智能体在这台 {{device}} 上使用的内容。",
+      "tools": "工具",
+      "browserDesc": "仅限智能体，不含你的登录信息",
+      "commandsDesc": "以你的身份运行，可触及这台 {{device}} 的其他部分",
+      "notHere": "这台 {{device}} 上暂不可用",
+      "folders": "已允许的文件夹",
+      "addTitle": "允许另一个文件夹",
+      "addDesc": "智能体需要文件夹时，会在聊天和这里询问。",
+      "addFor": "用于 {{org}}"
+    },
+    "app": {
+      "title": "应用设置",
+      "notifications": "通知",
+      "thisApp": "这个应用",
+      "servers": "服务器和账号",
+      "advanced": "高级",
+      "onlyHere": "只在这台 {{device}} 上"
+    }
+  },
   "iphone": {
     "lead": "这台 {{device}} 会完成设置。只有步骤提示时，你才需要在 iPhone 上点按。",
     "account": "Xcode 中的 Apple 账户",
@@ -836,7 +1144,15 @@
     "held": "这台 {{device}} 上的 agentes.chat 已停止，直到你启动它。",
     "heldUntil": "这台 {{device}} 上的 agentes.chat 已停止。它会在 {{time}} 自动恢复。",
     "startNow": "立即启动",
-    "openOther": "打开 {{server}}"
+    "openOther": "打开 {{server}}",
+    "privateTitle": "{{org}} 在私有网络上",
+    "privateTitleAny": "这个工作区在私有网络上",
+    "privateLine": "而这台 {{device}} 上的网络已关闭。开启后，工作区会自动打开。",
+    "privateMissing": "而这台 {{device}} 上还没有私有网络 Tailscale。下载并登录后，工作区会自动打开。",
+    "privateTray": "而这台 {{device}} 上的网络已关闭。从时钟旁的 Tailscale 图标开启它，工作区就会自动打开。",
+    "privateElsewhere": "而这台 {{device}} 上的网络已关闭。开启 Tailscale，工作区就会自动打开。",
+    "useOther": "使用另一个工作区",
+    "getTailscale": "下载 Tailscale"
   },
   "report": {
     "button": "发送报告",
@@ -912,21 +1228,5 @@
     "bringAllToFront": "全部置于顶层",
     "help": "帮助",
     "downloaded": "下载完成"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat 需要“{{permission}}”权限",
-    "done": "我已允许",
-    "later": "以后再说",
-    "trayTitle": "正在等待“{{permission}}”权限",
-    "why": {
-      "app_management": "代理需要它来更改这台{{device}}上的应用。",
-      "screen": "代理需要它来截取这台{{device}}的屏幕。",
-      "accessibility": "代理需要它在这台{{device}}的应用中点击和输入。",
-      "disk": "代理需要它来打开你的文件，macOS 不必为每个文件夹询问。",
-      "network": "代理需要它来连接你网络中的手机和设备。",
-      "camera": "代理需要它来使用这台{{device}}的摄像头。",
-      "microphone": "代理需要它来使用这台{{device}}的麦克风。",
-      "automation": "代理需要它来控制这台{{device}}上的其他应用。"
-    }
   }
 }

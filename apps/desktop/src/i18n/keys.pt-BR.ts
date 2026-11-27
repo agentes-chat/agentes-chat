@@ -90,10 +90,7 @@ export const desktopPtBR = {
     },
     label: "agentes.chat",
     now: "Agora",
-    seeAll: "Ver tudo",
     background: "Em segundo plano",
-    nothingNow: "Nada agora",
-    waitingConnection: "Esperando a conexão",
     calmTitle: "Tudo calmo por aqui",
     calmBody: "Os agentes usam este {{device}} quando precisam.",
     pausedEmptyTitle: "Tudo parado",
@@ -373,7 +370,6 @@ export const desktopPtBR = {
   /** "Neste computador" (FirstRun.tsx): the form, getting it ready, and what already runs here. */
   here: {
     title: "Vamos preparar este {{device}}",
-    how: "Leva um minuto. Tudo fica guardado aqui, só com você.",
     again: "Ele já rodou aqui, e os dados continuam em {{path}}.",
     ownerNone: "Não sobrou nenhuma conta nele. Com seu nome e e-mail você vira o novo dono.",
     name: "Seu nome",
@@ -389,7 +385,6 @@ export const desktopPtBR = {
       approve:
         "O Tailscale pede para ligar o HTTPS na sua rede. Ligue na página dele: o resto continua sozinho quando você ligar.",
       restarting: "Reiniciando o agentes.chat no endereço novo…",
-      signingIn: "Entrando de novo no endereço novo…",
     },
     approveOpen: "Abrir a página do Tailscale",
     approveStop: "Parar de esperar",
@@ -397,9 +392,7 @@ export const desktopPtBR = {
     usage: "Enviar estatísticas de uso anônimas ao agentes.chat",
     usageText:
       "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, o volume de dados que os navegadores dos agentes enviam e recebem e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites.",
-    start: "Começar",
     setting: "Preparando tudo",
-    rest: "Quando você fechar o app, seus agentes descansam. Eles voltam assim que você abrir de novo.",
     step: {
       database: "Guardando um espaço para seus dados",
       databaseNote: "só da primeira vez",

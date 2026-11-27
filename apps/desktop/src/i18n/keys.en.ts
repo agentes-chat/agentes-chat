@@ -83,10 +83,7 @@ export const desktopEn = {
     },
     label: "agentes.chat",
     now: "Now",
-    seeAll: "See all",
     background: "In the background",
-    nothingNow: "Nothing now",
-    waitingConnection: "Waiting for the connection",
     calmTitle: "All quiet here",
     calmBody: "Agents use this {{device}} when they need it.",
     pausedEmptyTitle: "Everything is on hold",
@@ -218,7 +215,7 @@ export const desktopEn = {
     },
   },
   first: {
-    /** The welcome window opened by the site's "Add workspace" (ADR 0154). */
+    /** The first run opened by the site's "Add workspace" (ADR 0154). */
     addTitle: "Add a workspace",
     addLead: "The ones you have stay here, each with its own sign-in.",
     addCloud: "Create a workspace on agentes.chat",
@@ -405,7 +402,6 @@ export const desktopEn = {
   },
   here: {
     title: "Let's get this {{device}} ready",
-    how: "It takes a minute. Everything stays here, with you alone.",
     again: "It ran here before, and its data is still in {{path}}.",
     ownerNone: "No account is left on it. Your name and email make you its new owner.",
     name: "Your name",
@@ -421,7 +417,6 @@ export const desktopEn = {
       approve:
         "Tailscale asks for HTTPS to be turned on in your network. Turn it on in its page: the rest goes on by itself.",
       restarting: "Restarting agentes.chat at its new address…",
-      signingIn: "Signing in again at the new address…",
     },
     approveOpen: "Open Tailscale's page",
     approveStop: "Stop waiting",
@@ -429,10 +424,7 @@ export const desktopEn = {
     usage: "Send anonymous usage statistics to agentes.chat",
     usageText:
       "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.",
-    start: "Start",
     setting: "Getting everything ready",
-    /** Under the form, beside a sleeping agent: what closing the app does. */
-    rest: "When you close the app, your agents rest. They're back as soon as you open it again.",
     step: {
       database: "Making room for your data",
       databaseNote: "first time only",

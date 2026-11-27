@@ -35,7 +35,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Açık tutun",
         blocks: [
-          "Başkalarının da kullandığı bir bilgisayarda bunu bir kez ayarlayın. **Tercihler\u00a0›\u00a0Sunucular** içindeki **Çalışır halde tut**, hâlâ eksik olanı gösterir ve doğru ayarları açar:",
+          "Başkalarının da kullandığı bir bilgisayarda bunu bir kez ayarlayın. **Ayarlar › Bu bilgisayar › Genel bakış** içindeki **Her zaman hazır**, hâlâ eksik olanı, her birini düzelten tek düğmeyle birlikte gösterir:",
           {
             list: [
               "**Oturum açılınca başlat** kurulumdan sonra kendiliğinden açılır.",
@@ -51,15 +51,15 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Ajanlarınız da burada çalışır",
         blocks: [
           "Ajanlarınız da bu bilgisayarda, kendi klasörlerinde, bir tarayıcıyla ve burada kuruluysa Claude Code ya da Codex ile çalışır.",
-          "Buradaki ajanlar sizin adınıza çalışır. **Komutlar** varsayılan olarak açıktır. Açıkken bu bilgisayarı kullanan her çalışma alanının ajanları, sunucunun verileri dahil, bu bilgisayardaki her şeye ulaşabilir. Onları **Tercihler\u00a0›\u00a0Araçlar** içinde kapatabilirsiniz. [Ajanlar nelere ulaşabilir](/help/computers#reach) bölümüne bakın.",
+          "Buradaki ajanlar sizin adınıza çalışır. **Komutlar** varsayılan olarak açıktır. Açıkken bu bilgisayarı kullanan her çalışma alanının ajanları, sunucunun verileri dahil, bu bilgisayardaki her şeye ulaşabilir. Onları **Ayarlar › Bu bilgisayar › Klasörler ve araçlar** içinde kapatabilirsiniz. [Ajanlar nelere ulaşabilir](/help/computers#reach) bölümüne bakın.",
         ],
       },
       {
         id: "another-workspace",
         heading: "Başka bir çalışma alanına da açın",
         blocks: [
-          "Burada çalıştırdığınız sunucunun çalışma alanları bu bilgisayarı kendiliğinden kullanır. Başka bir yerdeki bir çalışma alanının da, örneğin agentes.chat Cloud'daki birinin, kullanmasını istiyorsanız **Tercihler\u00a0›\u00a0Genel** içindeki ilk kartın en altında bulunan **Çalışma alanı ekle…** düğmesine ya da **Tercihler\u00a0›\u00a0Sunucular** içindeki **Sunucu ekle…** düğmesine basın. O çalışma alanında oturum açın ve uygulama sorduğunda **İzin ver** düğmesine basın.",
-          "Her çalışma alanının burada kendi ajanları ve klasörleri olur. **Komutlar** onun için de varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır ve uygulama birini yeniden açmadan önce sorar.",
+          "Burada çalıştırdığınız sunucunun çalışma alanları bu bilgisayarı kendiliğinden kullanır. Başka bir yerdeki bir çalışma alanının da, örneğin agentes.chat Cloud'daki birinin, kullanmasını istiyorsanız **Ayarlar › Bu bilgisayar › Genel bakış** içindeki **Bu bilgisayarı kimler kullanıyor** bölümünün en altında bulunan **Çalışma alanı ekle…** düğmesine ya da **Ayarlar › Bu bilgisayar › Uygulama ayarları** içindeki **Sunucu ekle…** düğmesine basın. O çalışma alanında oturum açın ve uygulama sorduğunda **İzin ver** düğmesine basın.",
+          "Her çalışma alanının burada kendi ajanları ve klasörleri olur. **Komutlar** onun için de varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Ayarlar › Bu bilgisayar › Klasörler ve araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır ve uygulama birini yeniden açmadan önce sorar.",
         ],
       },
       {
@@ -74,7 +74,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Diğer cihazlardan giriş",
         blocks: [
-          "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Eklemediğiniz sürece **Tercihler\u00a0›\u00a0Sunucular** bunu hatırlatır ve **Parola ekle** o sayfayı açar. Telefon uygulaması, **Tercihler\u00a0›\u00a0Sunucular** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
+          "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Eklemediğiniz sürece **Ayarlar › Bu bilgisayar › Bu bilgisayar üzerindeki sunucu** bunu hatırlatır ve **Parola ekle** o sayfayı açar. Telefon uygulaması, **Ayarlar › Bu bilgisayar › Bu bilgisayar üzerindeki sunucu** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
           "Sahip, **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden hesabını sildiğinde hesap 7 gün sonra tamamen silinir ve yalnızca onun bulunduğu çalışma alanları da onunla gider. O zamana kadar oturum açıp **Hesabı geri yükle** düğmesine basarak hesabı geri getirebilirsiniz. Hesap silindikten sonra hiç hesap kalmadıysa uygulama yeni bir sahip oluşturmak için karşılama penceresini açar. Başkalarının hâlâ hesabı varsa her biri kendi e-postasıyla giriş yapar.",
         ],
       },
@@ -82,14 +82,14 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "updates",
         heading: "Güncellemeler",
         blocks: [
-          "Uygulama güncellemeleri kendisi arar. **Tercihler\u00a0›\u00a0Güncellemeler** içinde **Güncellemeleri gece kendiliğinden yükle** açıksa, uygulama açık olduğu sürece onları 3:00 ile 5:00 arasında yükler. Sunucu burada çalışıyorsa bu baştan açıktır. Değilse **Güncelle ve yeniden aç** düğmesine basın. Sunucu ve tüm ajanlar onunla birlikte yeniden başlar. Önce veritabanı kopyalanır ve yeni sürüm 3 dakika içinde yanıt vermezse uygulama kendiliğinden önceki sürüme ve onun verilerine geri döner.",
+          "Uygulama güncellemeleri kendisi arar. **Ayarlar › Bu bilgisayar › Uygulama ayarları** içinde **Güncellemeleri gece kendiliğinden yükle** açıksa, uygulama açık olduğu sürece onları 3:00 ile 5:00 arasında yükler. Sunucu burada çalışıyorsa bu baştan açıktır. Değilse **Güncelle ve yeniden aç** düğmesine basın. Sunucu ve tüm ajanlar onunla birlikte yeniden başlar. Önce veritabanı kopyalanır ve yeni sürüm 3 dakika içinde yanıt vermezse uygulama kendiliğinden önceki sürüme ve onun verilerine geri döner.",
         ],
       },
       {
         id: "backups",
         heading: "Yedekler",
         blocks: [
-          "**Tercihler\u00a0›\u00a0Sunucular** içinde **Her gece yedekle** açıksa (uygulama 0.8.1 ve sonrası), uygulama her gece saat 3:00'te veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. O saatte uykuda olan bir bilgisayar uyandığında yedekler. **Şimdi yedekle** aynısını hemen yapar. Her yedekleme sunucuyu kısa bir süre durdurur ve en yeni iki yedek kalır.",
+          "**Ayarlar › Bu bilgisayar › Bu bilgisayar üzerindeki sunucu** içindeki **Yedekler** bölümünde **Her gece yedekle** açıksa (uygulama 0.8.1 ve sonrası), uygulama her gece saat 3:00'te veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. O saatte uykuda olan bir bilgisayar uyandığında yedekler. **Şimdi yedekle** aynısını hemen yapar. Her yedekleme sunucuyu kısa bir süre durdurur ve en yeni iki yedek kalır.",
           "**Şuraya kopyala**, her yeni yedeği seçtiğiniz bir klasöre de koyar, örneğin bir USB belleğe ya da iCloud Drive'a, ve orada da en yeni iki yedek kalır. İçlerinde anahtarlarınız var: onları gizli tutun. **Geri yükle…** agentes.chat'i bir yedeğe döndürür: mesajlar, dosyalar ve ayarlar. Bir dakikalığına durur ve önceden orada olanlar yedek klasöründe kalır.",
         ],
       },
@@ -98,12 +98,12 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Baştan başlamak veya kaldırmak",
         blocks: [
           "agentes.chat'in bu bilgisayarda tuttuğu her şey uygulamanın içinde değil, ana klasörünüzdeki klasörlerdedir. Bu yüzden uygulamayı Çöp Sepeti'ne taşımak bunların hiçbirini silmez ve çalışıyorsa agentes.chat'i durdurmaz.",
-          "Baştan başlamak için **Tercihler\u00a0›\u00a0Sunucular** içindeki **Sil ve baştan başla…** düğmesine basın. Buradaki agentes.chat durur ve içindeki her şey ana klasörünüzde `agentes.chat erased` ve günün tarihiyle adlandırılan yeni bir klasöre taşınır, siz silene kadar orada kalır. Ajanlarının bu bilgisayarda tuttukları, örneğin tarayıcıları ve oturumları, `.agentes-runner` içinden silinir. Çalışma alanları, onları kullanan herkes için kaybolur. Sonra karşılama penceresi açılır ve onu yeni bir sahip hesabıyla yeniden kurarsınız. Ajanların ana klasörünüzdeki `agentes` içinde bulunan dosyaları oldukları yerde kalır.",
+          "Baştan başlamak için **Ayarlar › Bu bilgisayar › Bu bilgisayar üzerindeki sunucu** içindeki **Sil ve baştan başla…** düğmesine basın. Buradaki agentes.chat durur ve içindeki her şey ana klasörünüzde `agentes.chat erased` ve günün tarihiyle adlandırılan yeni bir klasöre taşınır, siz silene kadar orada kalır. Ajanlarının bu bilgisayarda tuttukları, örneğin tarayıcıları ve oturumları, `.agentes-runner` içinden silinir. Çalışma alanları, onları kullanan herkes için kaybolur. Sonra uygulama kurulumunu açar ve onu yeni bir sahip hesabıyla yeniden kurarsınız. Ajanların ana klasörünüzdeki `agentes` içinde bulunan dosyaları oldukları yerde kalır.",
           "Sonradan geri getirmek için uygulamadan çıkın, varsa daha yeni bir `.agentes` klasörünü kenara alın, `agentes.chat erased` klasörünün adını `.agentes` olarak değiştirin, sonra uygulamayı açıp onu bu bilgisayarda yeniden kurun. Çalışma alanları ve sahibiyle, bıraktığınız gibi açılır. Ajanlarının bu bilgisayarda tuttukları geri gelmez, bu yüzden yeniden oturum açmaları gerekir.",
           "agentes.chat'i bu bilgisayardan tamamen kaldırmak için:",
           {
             list: [
-              "**Tercihler\u00a0›\u00a0Genel** içinde **Oturum açılınca başlat** seçeneğini kapatın.",
+              "**Ayarlar › Bu bilgisayar › Uygulama ayarları** içinde **Oturum açılınca başlat** seçeneğini kapatın.",
               "Uygulamadan çıkın. Penceresini kapatmak yetmez. Mac'te Dock'taki simgesine tıklayın, sonra ekranın üstündeki agentes.chat menüsünden **agentes.chat'ten çık** seçeneğini seçin ya da ⌘Q tuşlarına basın. Windows ve Linux'ta saatin yanındaki agentes.chat simgesine tıklayın ve **agentes.chat'ten çık** seçeneğini seçin. **agentes.chat'ten çıkılsın mı?** diye sorarsa **Çık** düğmesine basın.",
               "Uygulamayı silin. Mac'te Çöp Sepeti'ne taşıyın. Windows ve Linux'ta diğer uygulamalar gibi kaldırın.",
               "Ana klasörünüzdeki şu klasörleri silin. Verileriniz bunlardadır ve silindikten sonra geri gelmez, bu yüzden ileride isteyebilirseniz önce başka bir yerde yedek alın: `.agentes` (mesajlar, dosyalar, hesaplar, ayarlar ve yedekler), her `agentes.chat erased` klasörü, `.agentes-runner` (ajanların bu bilgisayarda tuttukları, örneğin tarayıcıları ve oturumları) ve `agentes` (ajanların dosyaları). Adı nokta ile başlayan klasörler gizlidir. Mac'te ana klasörünüzü Finder'da açın ve göstermek için ⇧⌘. (Shift, Command ve nokta tuşu) tuşlarına basın.",
@@ -116,7 +116,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "ai-programs",
         heading: "Claude Code ve Codex",
         blocks: [
-          "Uygulama Claude Code ve Codex'i oturum açma kabuğunuzun `PATH` değişkeniyle ve `~/.local/bin`, `/opt/homebrew/bin` ve `/usr/local/bin` gibi alışılmış klasörlerde arar. **Tercihler\u00a0›\u00a0Araçlar** **Bulunamadı** diyorsa, onu kuran satırı da gösterir. O satırı Terminal'de çalıştırın, sonra **Tekrar kontrol et** düğmesine basın.",
+          "Uygulama Claude Code ve Codex'i oturum açma kabuğunuzun `PATH` değişkeniyle ve `~/.local/bin`, `/opt/homebrew/bin` ve `/usr/local/bin` gibi alışılmış klasörlerde arar. **Ayarlar › Bu bilgisayar › Klasörler ve araçlar** **Bulunamadı** diyorsa, onu kuran satırı da gösterir. O satırı Terminal'de çalıştırın, sonra **Tekrar kontrol et** düğmesine basın.",
         ],
       },
       {
@@ -150,7 +150,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "agentes.chat uygulamasından",
         blocks: [
           "Uygulamayı bilgisayara kurun, açın ve çalışma alanınızda oturum açın. Uygulama **<workspace> ajanları bu Mac cihazını kullanabilsin mi?** diye sorar (Windows'ta bu PC, Linux'ta bu bilgisayar). Kimlerin kullanabileceğini seçin ve **İzin ver** düğmesine basın. Hepsi bu.",
-          "Zaten oturum açtınız mı? **Tercihler\u00a0›\u00a0Genel** bölümünü açın ve ilk karttaki çalışma alanı satırında **İzin ver** düğmesine basın. Orada yok mu? O kartın en altındaki **Çalışma alanı ekle…** düğmesine basın ve oturum açın.",
+          "Zaten oturum açtınız mı? **Ayarlar › Bu bilgisayar › Genel bakış** bölümünü açın ve **Bu bilgisayarı kimler kullanıyor** altındaki çalışma alanı satırında **İzin ver** düğmesine basın. Orada yok mu? O listenin en altındaki **Çalışma alanı ekle…** düğmesine basın ve oturum açın.",
         ],
       },
       {
@@ -193,7 +193,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Duraklatma ve bağlantıyı kesme",
         blocks: [
-          "Bilgisayarda, saatin yanındaki agentes.chat simgesi tüm çalışma alanlarının ya da yalnızca birinin ajanlarını duraklatır. **Tercihler\u00a0›\u00a0Genel** içinde her çalışma alanının anahtarı yalnızca onu duraklatır, **⋯** menüsündeki **Ayrıl** ise bağlantısını keser. Duraklatılmışken yeni hiçbir şey başlamaz ve çalışmakta olanlar tamamlanır. Bağlantıyı kesmek ajanların klasörlerini diskte bırakır.",
+          "Bilgisayarda, saatin yanındaki agentes.chat simgesi tüm çalışma alanlarının ya da yalnızca birinin ajanlarını duraklatır. **Ayarlar › Bu bilgisayar › Genel bakış** içinde her çalışma alanının anahtarı yalnızca onu duraklatır, **⋯** menüsündeki **Ayrıl** ise bağlantısını keser. Duraklatılmışken yeni hiçbir şey başlamaz ve çalışmakta olanlar tamamlanır. Bağlantıyı kesmek ajanların klasörlerini diskte bırakır.",
           "Web sitesinden, cihazın sayfasındaki **Kaldır** onun bağlantısını keser.",
         ],
       },
@@ -219,7 +219,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "folders",
         heading: "Klasörler",
         blocks: [
-          "Her ajanın `~/agentes/<workspace>` içinde her zaman kendi klasörü vardır. Başka klasörlere izin bilgisayarın kendisinden verilir, asla web sitesinden verilmez: uygulamada **Tercihler › Klasörler** bölümünden, bir sunucudaysa `agentes-runner folders allow` ile. Her çalışma alanı kendi klasörlerine izin verir: birine verdiğiniz izin yalnızca onun ajanları için geçerlidir. Bir klasörü kaldırmak hiçbir şeyi silmez. Yalnızca erişimi kaldırır.",
+          "Her ajanın `~/agentes/<workspace>` içinde her zaman kendi klasörü vardır. Başka klasörlere izin bilgisayarın kendisinden verilir, asla web sitesinden verilmez: uygulamada **Ayarlar › Bu bilgisayar › Klasörler ve araçlar** bölümünden, bir sunucudaysa `agentes-runner folders allow` ile. Her çalışma alanı kendi klasörlerine izin verir: birine verdiğiniz izin yalnızca onun ajanları için geçerlidir. Bir klasörü kaldırmak hiçbir şeyi silmez. Yalnızca erişimi kaldırır.",
         ],
       },
       {
@@ -235,7 +235,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat'i de çalıştıran bir bilgisayarda, onun `.agentes` içindeki veritabanı ve anahtarları",
             ],
           },
-          "agentes.chat anahtarların, token'ların ve oturum bilgilerinin adını geçiren komutları reddeder, ama bu bir kuraldır, duvar değil. **Komutlar** varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır (uygulama 0.8.1 ve sonrası) ve uygulama birini yeniden açmadan önce sorar. Claude Code ve Codex, Komutlar kapalıyken bile kendi komutlarını ajanın klasöründe, kendi kurallarıyla çalıştırır.",
+          "agentes.chat anahtarların, token'ların ve oturum bilgilerinin adını geçiren komutları reddeder, ama bu bir kuraldır, duvar değil. **Komutlar** varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Ayarlar › Bu bilgisayar › Klasörler ve araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır (uygulama 0.8.1 ve sonrası) ve uygulama birini yeniden açmadan önce sorar. Claude Code ve Codex, Komutlar kapalıyken bile kendi komutlarını ajanın klasöründe, kendi kurallarıyla çalıştırır.",
           "Gerçek bir duvar için bir Linux sunucu kullanın. Debian 13'te `--system` ile kurulduğunda her ajan ayrı bir kullanıcıdır. Ubuntu'da ajanlar tek bir kullanıcıyı, `agentes` kullanıcısını paylaşır: birbirlerinin klasörlerini görürler, sizinkileri ya da sunucununkileri görmezler. Ya da ajanlara kendilerine ait bir bilgisayar verin.",
         ],
       },

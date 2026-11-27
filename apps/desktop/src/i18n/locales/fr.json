@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat a besoin de {{permission}}",
+    "done": "Je l’ai autorisé",
+    "later": "Pas maintenant",
+    "trayTitle": "En attente de {{permission}}",
+    "why": {
+      "app_management": "Les agents en ont besoin pour modifier des apps sur ce {{device}}.",
+      "screen": "Les agents en ont besoin pour faire des captures d’écran de ce {{device}}.",
+      "accessibility": "Les agents en ont besoin pour cliquer et taper dans les apps de ce {{device}}.",
+      "disk": "Les agents en ont besoin pour ouvrir vos fichiers sans que macOS demande pour chaque dossier.",
+      "network": "Les agents en ont besoin pour joindre les téléphones et appareils de votre réseau.",
+      "camera": "Les agents en ont besoin pour utiliser la caméra de ce {{device}}.",
+      "microphone": "Les agents en ont besoin pour utiliser le micro de ce {{device}}.",
+      "automation": "Les agents en ont besoin pour piloter d’autres apps sur ce {{device}}."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -6,7 +22,8 @@
   },
   "windowTitle": {
     "welcome": "Bienvenue",
-    "prefs": "Préférences"
+    "prefs": "Préférences",
+    "settings": "Paramètres"
   },
   "common": {
     "cancel": "Annuler",
@@ -71,10 +88,7 @@
     },
     "label": "agentes.chat",
     "now": "Maintenant",
-    "seeAll": "Tout voir",
     "background": "En arrière-plan",
-    "nothingNow": "Rien pour le moment",
-    "waitingConnection": "En attente de la connexion",
     "calmTitle": "Tout est calme ici",
     "calmBody": "Les agents utilisent ce {{device}} quand ils en ont besoin.",
     "pausedEmptyTitle": "Tout est en pause",
@@ -92,6 +106,7 @@
     "pauseHintServer": "Ce qui tourne déjà se termine normalement. Le serveur reste en ligne.",
     "resume": "Relancer les agents",
     "open": "Ouvrir agentes.chat",
+    "thisMac": "Paramètres de ce {{device}}…",
     "quit": "Quitter agentes.chat",
     "pausedFor1h": "En pause pendant 1 heure",
     "pausedTomorrow": "En pause jusqu'à demain 9 h",
@@ -142,14 +157,156 @@
     "quitTitle": "Quitter agentes.chat ?",
     "quitBody": "Les agents ne peuvent pas utiliser ce {{device}} quand l'app est fermée. Ce qui tourne déjà se termine et envoie le résultat quand vous la rouvrez.",
     "quitHereBody": "agentes.chat s'arrête sur ce {{device}} : personne ne peut l'utiliser, ici, sur votre téléphone ou celui de vos collègues, tant que vous ne rouvrez pas l'app.",
-    "quitConfirm": "Quitter"
+    "quitConfirm": "Quitter",
+    "needsYou_one": "{{count}} chose a besoin de vous",
+    "needsYou_many": "{{count}} choses ont besoin de vous",
+    "needsYou_other": "{{count}} choses ont besoin de vous",
+    "allSet": "Tout est en ordre",
+    "thisDevice": "Ce {{device}}",
+    "settings": "Paramètres de ce {{device}}",
+    "essential": {
+      "turnOn": "Activer",
+      "turnOnAgain": "Réactiver",
+      "fix": "Corriger",
+      "launchAtLogin": {
+        "title": "agentes.chat ne s'ouvre pas à la connexion",
+        "body": "Après un redémarrage, les agents ne peuvent pas utiliser ce {{device}} tant que vous n'ouvrez pas l'app."
+      },
+      "notifications": {
+        "title": "Les notifications sont désactivées",
+        "body": "Vous ne saurez pas quand un agent a besoin de vous ici."
+      },
+      "screen": {
+        "body": "Sans cela, les agents ne voient pas l'écran."
+      },
+      "disk": {
+        "body": "Les agents risquent de s'arrêter pour demander chaque dossier."
+      },
+      "reach": {
+        "approve": {
+          "title": "Tailscale attend un clic",
+          "body": "Votre téléphone et vos collègues accèdent à agentes.chat dès que vous l'autorisez sur la page d'administration de Tailscale."
+        },
+        "down": {
+          "title": "Tailscale n'est pas connecté sur ce {{device}}",
+          "body": "Votre téléphone et vos collègues ne peuvent pas accéder à agentes.chat."
+        },
+        "address": {
+          "title": "Votre adresse ne mène pas ici en ce moment",
+          "body": "Votre téléphone et vos collègues ne peuvent pas accéder à agentes.chat tant que ce n'est pas rétabli. Vérifiez que votre tunnel est actif."
+        }
+      },
+      "backup": {
+        "off": {
+          "title": "La sauvegarde de chaque nuit est désactivée",
+          "body": "Activez-la pour qu'agentes.chat garde une copie chaque nuit."
+        },
+        "backup": {
+          "body": "Sauvegardez maintenant pour que le travail d'aujourd'hui ait une copie."
+        },
+        "copy": {
+          "title": "La sauvegarde de cette nuit n'a pas été copiée",
+          "body": "Le dossier de copie est peut-être débranché ou plein."
+        }
+      },
+      "autoUpdate": {
+        "title": "Les mises à jour ne s'installent pas toutes seules",
+        "body": "Activez-les pour que ce {{device}} reste sur une version qui continue de fonctionner."
+      }
+    }
   },
   "first": {
     "addTitle": "Ajouter un espace de travail",
     "addLead": "Ceux que vous avez déjà restent ici, chacun avec sa propre connexion.",
     "addCloud": "Créer un espace de travail sur agentes.chat",
     "addNew": "Vous voulez un nouveau workspace ?",
-    "addNewLink": "En créer un"
+    "addNewLink": "En créer un",
+    "welcome": {
+      "title": "Bienvenue dans agentes.chat",
+      "lead": "Votre équipe d'agents IA, qui travaille avec vous dans le chat.",
+      "google": "Continuer avec Google",
+      "apple": "Continuer avec Apple",
+      "email": "Continuer avec un e-mail",
+      "others": "Autres façons de l'utiliser",
+      "here": "L'utiliser gratuitement sur ce {{device}}",
+      "hereText": "Vos données restent ici. Pas de compte cloud.",
+      "company": "Me connecter au serveur de mon entreprise",
+      "companyText": "Avec son adresse, comme agentes.votreentreprise.com.",
+      "install": "Vous l'installez pour l'équipe sur un serveur ?",
+      "installLink": "Voir comment",
+      "foundTailnet": "agentes.chat est sur votre réseau",
+      "foundHere": "agentes.chat tourne sur ce {{device}}"
+    },
+    "run": {
+      "step": "Utiliser sur ce {{device}} · {{n}} sur {{total}}",
+      "flow": "Utiliser sur ce {{device}}",
+      "ownerTitle": "Qui sera le propriétaire ?",
+      "ownerLead": "Vous vous connectez avec cet e-mail et invitez qui vous voulez ensuite. Tout reste sur ce {{device}}.",
+      "usage": "Envoyer des statistiques d'utilisation anonymes",
+      "usageText": "Des chiffres, jamais de messages, de fichiers ni de noms.",
+      "whereTitle": "Où allez-vous l'utiliser ?",
+      "whereLead": "Vous pouvez changer à tout moment.",
+      "everywhere": "Sur ce {{device}}, votre téléphone et vos collègues",
+      "everywhereText": "Avec Tailscale ou une adresse à vous.",
+      "hereOnly": "Seulement sur ce {{device}}",
+      "hereOnlyText": "Le téléphone pourra venir plus tard.",
+      "netTitle": "Comment le téléphone et les collègues arrivent-ils ici ?",
+      "netLead": "Vous pourrez changer plus tard dans Paramètres.",
+      "later": "Plus tard",
+      "changeAddress": "Changer l'adresse",
+      "ask": "<b>Plus qu'un clic.</b> Sur la page Tailscale qui s'est ouverte, cliquez sur <b>Enable</b>. Votre adresse devient sécurisée, avec un cadenas. La suite se fait toute seule, sans se presser.",
+      "askOpen": "Ouvrir la page",
+      "askSkip": "Terminer sans",
+      "doneTitle": "C'est fait. Passez à votre téléphone",
+      "phone1": "Installez l'app agentes.chat",
+      "phone1Text": "Depuis l'App Store ou Google Play.",
+      "phone2": "Installez Tailscale et connectez-vous avec le même compte",
+      "phone2Text": "C'est ce qui relie votre téléphone à ce {{device}}, où que vous soyez.",
+      "phone3": "Pointez l'appareil photo vers le code",
+      "phone3Text": "La connexion est immédiate. Le code se renouvelle tout seul.",
+      "qrLabel": "QR code pour vous connecter sur votre téléphone",
+      "qrFailed": "Le code ne s'est pas chargé.",
+      "address": "Votre adresse : <b>{{address}}</b>",
+      "open": "Ouvrir agentes.chat"
+    }
+  },
+  "reach": {
+    "label": "Comment le téléphone et les collègues arrivent ici",
+    "tailscale": "Avec Tailscale",
+    "tailscaleText": "Gratuit. Un réseau privé entre vos appareils et ceux de vos collègues.",
+    "address": "Avec une adresse à moi",
+    "addressText": "Un tunnel sur ce {{device}} qui mène déjà ici.",
+    "checking": "Vérification de Tailscale sur ce {{device}}…",
+    "tailscaleOn": "Tailscale est connecté sur ce {{device}}.",
+    "download": "Télécharger Tailscale",
+    "downloadNote": "Gratuit, depuis le site de Tailscale.",
+    "openApp": "Ouvrez Tailscale et connectez-vous",
+    "tray": "Ouvrez Tailscale depuis son icône près de l'horloge et connectez-vous.",
+    "terminal": "Connectez Tailscale dans le terminal :",
+    "waitNow": "En attente de Tailscale…",
+    "waitInstall": "Installez-le, ouvrez-le et connectez-vous. La suite se fait toute seule, sans se presser.",
+    "waitSignIn": "Connectez-vous là-bas. La suite se fait toute seule, sans se presser.",
+    "addressLabel": "Votre adresse",
+    "pointAt": "Faites-la pointer vers",
+    "problem": {
+      "notHttps": "L'adresse doit commencer par https://",
+      "unreachable": "Impossible de l'ouvrir. Vérifiez que votre tunnel est actif et pointe vers {{target}}.",
+      "unreachablePlain": "Impossible de l'ouvrir. Vérifiez que votre tunnel est actif et pointe vers ce {{device}}.",
+      "otherServer": "Elle ouvre un autre serveur, pas celui de ce {{device}}.",
+      "error": "Elle a répondu par une erreur ({{status}}).",
+      "errorPlain": "Elle a répondu par une erreur."
+    },
+    "reason": {
+      "address": "votre adresse ne mène pas ici"
+    },
+    "stage": {
+      "checking": "Vérification de votre adresse…",
+      "done": "Prêt : votre téléphone et vos collègues peuvent l'ouvrir."
+    },
+    "line": {
+      "address": "En marche · à votre adresse",
+      "addressDown": "En marche · votre adresse ne mène pas ici en ce moment"
+    }
   },
   "place": {
     "title": "Où votre workspace va-t-il vivre ?",
@@ -211,7 +368,6 @@
   },
   "here": {
     "title": "Préparons ce {{device}}",
-    "how": "Ça prend une minute. Tout reste ici, rien qu'avec vous.",
     "again": "Il a déjà tourné ici, et ses données sont toujours dans {{path}}.",
     "ownerNone": "Il n’y reste plus aucun compte. Avec votre nom et votre e-mail, vous en devenez le nouveau propriétaire.",
     "name": "Votre nom",
@@ -219,28 +375,25 @@
     "email": "Votre e-mail",
     "emailNeeded": "Écrivez votre e-mail, par ex. ana@example.com.",
     "reach": "Y accéder depuis votre téléphone et vos collègues",
-    "reachText": "Avec Tailscale, un réseau privé pour vos appareils : votre téléphone et les personnes que vous invitez le rejoignent, et personne d'autre ne peut joindre agentes.chat.",
+    "reachText": "Avec Tailscale, un réseau privé gratuit pour vos appareils, ou avec une adresse à vous : votre téléphone et les personnes que vous invitez ouvrent agentes.chat de partout.",
     "reachStage": {
       "sharing": "Demande de partage à Tailscale…",
       "approve": "Tailscale demande d'activer HTTPS sur votre réseau. Activez-le sur sa page : le reste se fait tout seul.",
-      "restarting": "Redémarrage d'agentes.chat à sa nouvelle adresse…",
-      "signingIn": "Reconnexion à la nouvelle adresse…"
+      "restarting": "Redémarrage d'agentes.chat à sa nouvelle adresse…"
     },
     "approveOpen": "Ouvrir la page de Tailscale",
     "approveStop": "Ne plus attendre",
     "openTailscale": "Ouvrir Tailscale",
     "usage": "Envoyer des statistiques d'utilisation anonymes à agentes.chat",
     "usageText": "Des comptages comme le nombre de personnes, d'agents, la taille des machines, les jetons d'IA utilisés, le volume de données envoyées et reçues par les navigateurs des agents et la vitesse à laquelle les apps s'ouvrent et répondent. Jamais de messages, fichiers, noms ou sites.",
-    "start": "Commencer",
     "setting": "Tout se prépare",
-    "rest": "Quand vous fermez l'app, vos agents se reposent. Ils reviennent dès que vous la rouvrez.",
     "step": {
       "database": "On fait de la place pour vos données",
       "databaseNote": "la première fois seulement",
       "start": "On allume agentes.chat",
       "account": "Création de votre compte",
       "computer": "On appelle vos agents",
-      "reach": "On active l'accès depuis le téléphone"
+      "reach": "On active l'accès depuis partout"
     },
     "stepState": {
       "active": "en cours",
@@ -252,7 +405,7 @@
       "start": "agentes.chat n'a pas démarré sur ce {{device}}.",
       "database": "La base de données n'a pas été préparée.",
       "account": "Votre compte n'a pas été créé.",
-      "retry": "Réessayer dans Préférences"
+      "retry": "Réessayer dans Paramètres"
     },
     "reason": {
       "https": "HTTPS est désactivé sur votre réseau Tailscale",
@@ -439,14 +592,14 @@
   },
   "pair": {
     "title": "Laisser les agents de {{org}} travailler sur ce {{device}} ?",
-    "body": "{{host}} a demandé. Les agents auront commandes, navigateur et outils de code. Les dossiers ensuite, en Préférences.",
+    "body": "{{host}} a demandé. Les agents auront commandes, navigateur et outils de code. Les dossiers ensuite, en Paramètres.",
     "allow": "Autoriser",
     "notNow": "Plus tard",
     "offerTitle": "Laisser les agents de {{org}} utiliser ce {{device}} ?",
     "keepReady": "Le garder prêt : ouvrir agentes.chat à la connexion",
     "offerOnlyIf": "Seulement si vous voulez que ce {{device}} fasse aussi le travail des agents. Avec Plus tard, vous utilisez toujours {{org}} ici comme d'habitude.",
     "canDo": "Ce que les agents peuvent faire ici",
-    "foldersLater": "Aucun de vos dossiers pour l'instant. Ajoutez-les plus tard dans Préférences › Dossiers.",
+    "foldersLater": "Aucun de vos dossiers pour l'instant. Ajoutez-les plus tard dans Paramètres › Dossiers et outils.",
     "linkTitle": "Connecter ce {{device}} à {{org}} ?",
     "askedBy": "Demandé par",
     "from": "Depuis",
@@ -468,6 +621,39 @@
     "canUse": "Les agents peuvent l'utiliser",
     "notUsing": "Ses agents n'utilisent pas ce {{device}}"
   },
+  "sheets": {
+    "step": "Ce {{device}} · {{at}} sur {{total}}",
+    "stepOnly": "Ce {{device}}",
+    "ready": {
+      "title": "Préparer ce {{device}} pour les agents de {{org}} ?",
+      "lead": "Ainsi, ils en font plus d'ici, tant que le {{device}} est allumé.",
+      "browser": "Le navigateur propre aux agents",
+      "browserDesc": "Sans vos identifiants ni vos mots de passe.",
+      "code": "Commandes et outils de code",
+      "codeOne": "{{tool}}, déjà installé ici. Ils tournent sous votre utilisateur.",
+      "codeTwo": "{{a}} et {{b}}, déjà installés ici. Ils tournent sous votre utilisateur.",
+      "codeNone": "Ils tournent sous votre utilisateur.",
+      "folders": "Vos dossiers, seulement avec votre accord",
+      "foldersDesc": "Chaque demande s'affiche dans le chat et sur l'icône de l'app.",
+      "foldersDescMac": "Chaque demande s'affiche dans le chat et dans la barre des menus.",
+      "login": "S'ouvre tout seul au démarrage du {{device}}",
+      "loginDesc": "Les agents reviennent sans que vous ayez à y penser.",
+      "help": "Modifiable à tout moment dans Paramètres › Ce {{device}}.",
+      "allow": "Le préparer"
+    },
+    "prepare": {
+      "title": "macOS demande trois choses, une seule fois",
+      "lead": "Sans elles, les agents s'arrêtent en plein travail pour demander.",
+      "notifications": "Notifications",
+      "notificationsDesc": "Quand un agent a besoin de vous.",
+      "screenDesc": "Pour que les agents voient ce qu'ils font à l'écran.",
+      "diskDesc": "Pour ouvrir les dossiers que vous autorisez sans que macOS redemande.",
+      "waitList": "Dans les Réglages Système qui se sont ouverts, activez agentes.chat dans la liste. Nous le verrons de nous-mêmes.",
+      "waitNotifications": "Dans les Réglages Système qui se sont ouverts, autorisez les notifications pour agentes.chat. Nous le verrons de nous-mêmes.",
+      "help": "Si une mise à jour en désactive une, nous vous le dirons tout de suite.",
+      "later": "Plus tard"
+    }
+  },
   "prepare": {
     "title": "Préparer ce {{device}}",
     "lead": "Connecté à {{org}}. Autorisez ceci maintenant pour que ses agents n'aient jamais à s'arrêter pour demander.",
@@ -476,6 +662,8 @@
     "screenAgain": "macOS redemande environ une fois par mois. Choisissez Autoriser.",
     "disk": "Accès complet au disque",
     "diskDesc": "Permet aux agents d'ouvrir vos fichiers sans que macOS demande pour chaque dossier.",
+    "notifications": "Notifications",
+    "notificationsDesc": "Vous prévient quand les agents ont besoin de vous, et quand quelque chose sur ce {{device}} cesse de fonctionner.",
     "diskHow": "Dans les Réglages, activez agentes.chat dans la liste, ou ajoutez-le avec +.",
     "network": "Réseau local (téléphones en Wi-Fi)",
     "networkDesc": "Permet aux agents de trouver et d'utiliser les téléphones Android de votre Wi-Fi.",
@@ -489,6 +677,35 @@
     "skip": "Passer pour l'instant",
     "prefsTitle": "Autorisations",
     "prefsHint": "macOS peut les désactiver quand l'app se met à jour. Réactivez-les ici."
+  },
+  "essentials": {
+    "tray": "Quelque chose sur ce {{device}} a besoin de vous",
+    "notify": {
+      "screen": {
+        "title": "L'enregistrement de l'écran est désactivé",
+        "body": "macOS l'a désactivé. Les agents ne peuvent pas faire de captures d'écran tant que vous ne l'autorisez pas de nouveau."
+      },
+      "disk": {
+        "title": "L'accès complet au disque est désactivé",
+        "body": "Les agents risquent de s'arrêter pour demander des dossiers tant que vous ne le réactivez pas."
+      },
+      "reach": {
+        "title": "Votre téléphone et vos collègues ne peuvent pas accéder à agentes.chat",
+        "body": "L'accès depuis vos appareils a besoin de vous sur ce {{device}}. Ouvrez l'app pour corriger."
+      },
+      "backup": {
+        "title": "La sauvegarde de cette nuit n'a pas abouti",
+        "body": "Ouvrez l'app pour relancer la sauvegarde."
+      },
+      "autoUpdate": {
+        "title": "agentes.chat a besoin d'une mise à jour",
+        "body": "Cette version ne peut plus fonctionner. Ouvrez l'app pour installer la nouvelle."
+      },
+      "awake": {
+        "title": "Ce {{device}} risque de se mettre en veille pendant qu'il sert",
+        "body": "Redémarrez agentes.chat ici pour qu'il reste éveillé pour votre téléphone et vos collègues."
+      }
+    }
   },
   "tools": {
     "claudeName": "Claude Code",
@@ -802,6 +1019,101 @@
       "folderDesc": "Un dossier par espace de travail, avec un dossier pour chaque agent."
     }
   },
+  "settings": {
+    "nav": {
+      "label": "Paramètres",
+      "title": "Paramètres",
+      "thisDevice": "Ce {{device}}",
+      "overview": "Vue d'ensemble",
+      "folders": "Dossiers et outils",
+      "server": "Serveur sur ce {{device}}",
+      "activity": "Activité",
+      "app": "Paramètres de l'app",
+      "back": "Retour à {{name}}",
+      "needs_one": "{{count}} chose a besoin de vous",
+      "needs_many": "{{count}} choses ont besoin de vous",
+      "needs_other": "{{count}} choses ont besoin de vous"
+    },
+    "away": {
+      "title": "Pas de connexion avec {{name}}.",
+      "body": "Ce qui appartient à ce {{device}} fonctionne de la même façon. Qui peut l'utiliser et les noms des agents reviennent avec la connexion."
+    },
+    "overview": {
+      "rename": "Renommer",
+      "allSet": "Tout est en ordre",
+      "used": "Les agents de {{orgs}} utilisent ce {{device}}",
+      "version": "version {{version}}, à jour",
+      "versionNewer": "version {{version}}, la {{latest}} est disponible",
+      "always": "Toujours prêt",
+      "who": "Qui utilise ce {{device}}"
+    },
+    "essentials": {
+      "on": "Activé",
+      "allOn": "Tout est activé",
+      "turnOn": "Activer",
+      "turnOnAgain": "Réactiver",
+      "permissions": "Autorisations macOS",
+      "permissionsOff": "Encore désactivé : {{names}}.",
+      "launchAtLogin": "S'ouvre au démarrage du {{device}}",
+      "reach": "Accès depuis partout",
+      "reachOff": "Seulement sur ce {{device}}. Votre téléphone et vos collègues ne peuvent pas l'ouvrir.",
+      "reachDown": "Tailscale n'est pas connecté sur ce {{device}}.",
+      "reachApprove": "Tailscale attend que HTTPS soit activé sur votre réseau.",
+      "reachAddress": "Votre adresse ne mène pas ici en ce moment.",
+      "checkAgain": "Vérifier de nouveau",
+      "backup": "Sauvegarde chaque nuit",
+      "backupOff": "Désactivée",
+      "autoUpdate": "Se met à jour tout seul la nuit",
+      "autoUpdateDesc": "Revient tout seul en arrière si la nouvelle version ne s'ouvre pas",
+      "updateRequired": "Cette version ne peut plus fonctionner.",
+      "awake": "Ne se met pas en veille pendant que les agents travaillent",
+      "awakeOff": "Redémarrez agentes.chat ici pour qu'il reste éveillé.",
+      "powerRestart": "Redémarre tout seul après une coupure de courant",
+      "systemOnly": "Seuls les réglages de macOS activent cette option."
+    },
+    "server": {
+      "anywhere": "votre téléphone et vos collègues peuvent l'ouvrir",
+      "onlyHere": "seulement sur ce {{device}}",
+      "onlyHereDesc": "Votre téléphone et vos collègues ne peuvent pas l'ouvrir.",
+      "wayTailscale": "Avec Tailscale, avec un cadenas",
+      "wayAddress": "Avec votre adresse",
+      "changeWay": "Changer",
+      "reachOff": "Désactiver",
+      "useWay": "Utiliser",
+      "phoneDesc": "Installez l'app agentes.chat et Tailscale avec le même compte, puis pointez l'appareil photo. La connexion se fait toute seule.",
+      "phoneDescAddress": "Installez l'app agentes.chat et pointez l'appareil photo. La connexion se fait toute seule.",
+      "phoneSignedOut": "Connectez-vous à l'agentes.chat de ce {{device}} dans l'app pour afficher le code.",
+      "qrLabel": "QR code pour vous connecter sur le téléphone",
+      "invite": "Inviter un collègue",
+      "inviteDesc": "Invitez cette personne dans l'espace de travail, puis partagez-lui ce {{device}} dans Tailscale.",
+      "inviteDescAddress": "Invitez cette personne dans l'espace de travail. Elle l'ouvre à votre adresse.",
+      "inviteButton": "Inviter",
+      "share": "Partager dans Tailscale",
+      "everyNight": "Chaque nuit, à {{at}}",
+      "copyAlso": "Une copie aussi dans",
+      "backupsOff": "Les sauvegardes de chaque nuit sont désactivées"
+    },
+    "access": {
+      "title": "Dossiers et outils",
+      "lead": "Ce que les agents utilisent sur ce {{device}}, dans chaque espace de travail.",
+      "tools": "Outils",
+      "browserDesc": "Seulement celui des agents, sans vos identifiants",
+      "commandsDesc": "Tournent sous votre nom et accèdent au reste de ce {{device}}",
+      "notHere": "Pas encore sur ce {{device}}",
+      "folders": "Dossiers autorisés",
+      "addTitle": "Autoriser un autre dossier",
+      "addDesc": "Quand un agent en a besoin, il le demande dans le chat et ici.",
+      "addFor": "Pour {{org}}"
+    },
+    "app": {
+      "title": "Paramètres de l'app",
+      "notifications": "Notifications",
+      "thisApp": "Cette app",
+      "servers": "Serveurs et comptes",
+      "advanced": "Avancé",
+      "onlyHere": "Seulement sur ce {{device}}"
+    }
+  },
   "iphone": {
     "lead": "Ce {{device}} s'occupe de la configuration. Vous touchez l'iPhone seulement quand une étape le demande.",
     "account": "Compte Apple dans Xcode",
@@ -846,7 +1158,15 @@
     "held": "agentes.chat est arrêté sur ce {{device}} jusqu'à ce que vous le démarriez.",
     "heldUntil": "agentes.chat est arrêté sur ce {{device}}. Il redémarre tout seul à {{time}}.",
     "startNow": "Démarrer maintenant",
-    "openOther": "Ouvrir {{server}}"
+    "openOther": "Ouvrir {{server}}",
+    "privateTitle": "{{org}} est sur le réseau privé",
+    "privateTitleAny": "Cet espace de travail est sur le réseau privé",
+    "privateLine": "Et le réseau est désactivé sur ce {{device}}. Activez-le et l'espace de travail s'ouvre tout seul.",
+    "privateMissing": "Et Tailscale, le réseau privé, n'est pas encore sur ce {{device}}. Installez-le, connectez-vous, et l'espace de travail s'ouvre tout seul.",
+    "privateTray": "Et le réseau est désactivé sur ce {{device}}. Activez-le depuis l'icône de Tailscale près de l'horloge, et l'espace de travail s'ouvre tout seul.",
+    "privateElsewhere": "Et le réseau est désactivé sur ce {{device}}. Activez Tailscale, et l'espace de travail s'ouvre tout seul.",
+    "useOther": "Utiliser un autre espace de travail",
+    "getTailscale": "Télécharger Tailscale"
   },
   "report": {
     "button": "Envoyer un rapport",
@@ -922,21 +1242,5 @@
     "bringAllToFront": "Tout ramener au premier plan",
     "help": "Aide",
     "downloaded": "Téléchargement terminé"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat a besoin de {{permission}}",
-    "done": "Je l’ai autorisé",
-    "later": "Pas maintenant",
-    "trayTitle": "En attente de {{permission}}",
-    "why": {
-      "app_management": "Les agents en ont besoin pour modifier des apps sur ce {{device}}.",
-      "screen": "Les agents en ont besoin pour faire des captures d’écran de ce {{device}}.",
-      "accessibility": "Les agents en ont besoin pour cliquer et taper dans les apps de ce {{device}}.",
-      "disk": "Les agents en ont besoin pour ouvrir vos fichiers sans que macOS demande pour chaque dossier.",
-      "network": "Les agents en ont besoin pour joindre les téléphones et appareils de votre réseau.",
-      "camera": "Les agents en ont besoin pour utiliser la caméra de ce {{device}}.",
-      "microphone": "Les agents en ont besoin pour utiliser le micro de ce {{device}}.",
-      "automation": "Les agents en ont besoin pour piloter d’autres apps sur ce {{device}}."
-    }
   }
 }

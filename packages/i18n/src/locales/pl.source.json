@@ -1685,6 +1685,15 @@
   "auth.desktop.reopen": {
     "value": "Open the browser again"
   },
+  "auth.desktop.timedOut": {
+    "value": "That sign-in timed out"
+  },
+  "auth.desktop.timedOutLead": {
+    "value": "Nothing came back from the browser in 10 minutes. Start again when you're ready."
+  },
+  "auth.desktop.startAgain": {
+    "value": "Start again"
+  },
   "auth.desktop.otherWay": {
     "value": "Sign in another way"
   },
@@ -6099,7 +6108,7 @@
     "value": "This server only opens on the computer it runs on, so your phone can't reach it."
   },
   "openOnPhone.localOnlyHow": {
-    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers. Then come back here."
+    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Settings › Server on this {{device}}. Then come back here."
   },
   "openOnPhone.localOnlyHere": {
     "value": "Turn on Reach it from your phone and teammates. Then come back here."
@@ -15324,7 +15333,7 @@
     "value": "Click the agentes.chat icon by the clock"
   },
   "agentPage.work.steps.two": {
-    "value": "Preferences"
+    "value": "This {{device}} settings"
   },
   "agentPage.work.steps.three": {
     "value": "Turn on Browser"
@@ -15336,7 +15345,7 @@
     "value": "Open agentes"
   },
   "agentPage.work.steps.menuPrefs": {
-    "value": "Preferences…"
+    "value": "This {{device}} settings…"
   },
   "agentPage.work.steps.menuPause": {
     "value": "Pause"
@@ -15345,7 +15354,7 @@
     "value": "Quit"
   },
   "agentPage.work.steps.tools": {
-    "value": "Tools"
+    "value": "Folders and tools"
   },
   "agentPage.work.steps.commands": {
     "value": "Commands"
@@ -19497,7 +19506,7 @@
     "value": "This server only opens on the computer it runs on, so the people you invite can't open their invitation."
   },
   "invites.localOnlyHow": {
-    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them."
+    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Settings › Server on this {{device}}, or run agentes.chat on a server they can open. Then invite them."
   },
   "invites.localOnlyHere": {
     "value": "Turn on Reach it from your phone and teammates. Then invite them."
@@ -41087,13 +41096,13 @@
     "value": "computer"
   },
   "machines.thisMac.grantHere": {
-    "value": "It's this {{device}}: allow folders in the app's Preferences."
+    "value": "It's this {{device}}: allow folders in This {{device}} settings, under Folders and tools."
   },
   "machines.thisMac.openFolders": {
-    "value": "Open Folders"
+    "value": "Open Folders and tools"
   },
   "machines.thisMac.openServers": {
-    "value": "Open Servers"
+    "value": "Open Server on this {{device}}"
   },
   "machines.thisMac.openTools": {
     "value": "Open Tools"
@@ -41114,7 +41123,7 @@
     "value": "This {{device}} lost its connection {{ago}}"
   },
   "machines.thisMac.toolsOff": {
-    "value": "Off on this {{device}}. Turn it on in the app's Preferences, under Tools."
+    "value": "Off on this {{device}}. Turn it on in This {{device}} settings, under Folders and tools."
   },
   "machines.thisMac.noReport": {
     "value": "This {{device}} hasn't reported what it allows yet. Update the app."
@@ -41422,7 +41431,7 @@
     "value": "To allow more"
   },
   "machines.access.grantText": {
-    "value": "Allowing happens on the computer itself: open the agentes.chat app there (Preferences → Folders)."
+    "value": "Allowing happens on the computer itself: open the agentes.chat app there (Settings › This {{device}} › Folders and tools)."
   },
   "machines.access.grantTextTerminal": {
     "value": "Allowing happens on the computer itself, in its Terminal:"
@@ -41444,9 +41453,6 @@
   },
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
-  },
-  "devices.leadCloud": {
-    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.permission.title": {
     "value": "Waiting for {{permission}} on {{computer}}"
@@ -41483,6 +41489,9 @@
   },
   "devices.permission.names.automation": {
     "value": "Automation"
+  },
+  "devices.leadCloud": {
+    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."
@@ -44826,6 +44835,30 @@
   "settings.nav": {
     "value": "Settings sections"
   },
+  "settings.thisDevice.title": {
+    "value": "This {{device}}"
+  },
+  "settings.thisDevice.section.overview": {
+    "value": "Overview"
+  },
+  "settings.thisDevice.section.folders": {
+    "value": "Folders and tools"
+  },
+  "settings.thisDevice.section.server": {
+    "value": "Server on this {{device}}"
+  },
+  "settings.thisDevice.section.activity": {
+    "value": "Activity"
+  },
+  "settings.thisDevice.section.app": {
+    "value": "App settings"
+  },
+  "settings.thisDevice.needs": {
+    "value": {
+      "one": "{{count}} thing needs you",
+      "other": "{{count}} things need you"
+    }
+  },
   "settings.group.org": {
     "value": "Workspace"
   },
@@ -45403,7 +45436,7 @@
     "value": "Turned off in this server's settings (TELEMETRY=off)."
   },
   "settings.telemetry.envOffDesktop": {
-    "value": "Turned off in the agentes.chat app on this server's computer (Preferences › Servers)."
+    "value": "Turned off in the agentes.chat app on this server's computer (Settings › Server on this {{device}})."
   },
   "settings.telemetry.envOffHere": {
     "value": "Turned off in the agentes.chat app on this computer."
@@ -49359,7 +49392,7 @@
     "value": "Off"
   },
   "browser.machine.offHelp": {
-    "value": "Whoever connected the computer turns it on here or in the agentes.chat app on it: Preferences → Tools."
+    "value": "Whoever connected the computer turns it on here or in the agentes.chat app on it: Settings › This {{device}} › Folders and tools."
   },
   "browser.machine.needsCommand": {
     "value": "Needs a command"

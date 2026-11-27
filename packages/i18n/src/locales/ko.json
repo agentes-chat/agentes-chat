@@ -684,6 +684,9 @@
       "browserLead": "{{provider}}(으)로 로그인하면 여기로 돌아와요.",
       "codeHint": "브라우저에 이 코드가 표시돼요. 계속하기 전에 일치하는지 확인하세요.",
       "reopen": "브라우저 다시 열기",
+      "timedOut": "로그인 시간이 지났어요",
+      "timedOutLead": "10분 동안 브라우저에서 아무것도 돌아오지 않았어요. 준비되면 다시 시작하세요.",
+      "startAgain": "다시 시작",
       "otherWay": "다른 방법으로 로그인",
       "otherServer": "다른 서버 사용",
       "opening": "{{provider}} 여는 중…",
@@ -2368,7 +2371,7 @@
     "private": "이 코드를 스캔하는 사람은 누구나 내 계정으로 로그인해요.",
     "failed": "코드를 만들지 못했어요.",
     "localOnly": "이 서버는 실행 중인 컴퓨터에서만 열려서 휴대폰으로는 접속할 수 없어요.",
-    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 환경설정 › 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 여기로 돌아오세요.",
+    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 설정 › 이 {{device}}의 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 여기로 돌아오세요.",
     "localOnlyHere": "휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 여기로 돌아오세요."
   },
   "surface": {
@@ -5976,14 +5979,14 @@
         "title": "{{computer}}에서 직접 할 단계가 하나 남았어요",
         "waiting": "기다리는 중",
         "one": "시계 옆의 agentes.chat 아이콘을 클릭하세요",
-        "two": "환경설정",
+        "two": "이 {{device}} 설정",
         "three": "브라우저 켜기",
         "done": "끝났어요. 새로고침하지 않아도 이 페이지가 알아서 감지해요.",
         "menuOpen": "agentes 열기",
-        "menuPrefs": "환경설정…",
+        "menuPrefs": "이 {{device}} 설정…",
         "menuPause": "일시 중지",
         "menuQuit": "종료",
-        "tools": "도구",
+        "tools": "폴더와 도구",
         "commands": "명령"
       },
       "offlineCloud": "{{computer}}이(가) 응답하지 않아요. 해결 중이에요. 돌아오면 {{name}}이(가) 다시 답해요."
@@ -7659,7 +7662,7 @@
     "linkEmpty": "링크를 만들면 복사할 수 있어요",
     "linkFailed": "링크를 만들지 못했어요. {{cause}}",
     "localOnly": "이 서버는 실행 중인 컴퓨터에서만 열려서 초대받은 사람은 초대를 열 수 없어요.",
-    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 환경설정 › 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켜거나, 초대받는 사람이 열 수 있는 서버에서 agentes.chat을 실행하세요. 그다음 초대하세요.",
+    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 설정 › 이 {{device}}의 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켜거나, 초대할 사람이 열 수 있는 서버에서 agentes.chat을 실행하세요. 그런 다음 초대하세요.",
     "localOnlyHere": "휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 초대하세요.",
     "never": "만료 없음",
     "untilDate": "{{date}}까지",
@@ -16147,16 +16150,16 @@
         "windows": "PC",
         "linux": "컴퓨터"
       },
-      "grantHere": "지금 이 {{device}}예요. 앱의 환경설정에서 폴더를 허용하세요.",
-      "openFolders": "폴더 열기",
-      "openServers": "서버 열기",
+      "grantHere": "이 {{device}}예요. 이 {{device}} 설정의 폴더와 도구에서 폴더를 허용하세요.",
+      "openFolders": "폴더와 도구 열기",
+      "openServers": "이 {{device}}의 서버 열기",
       "openTools": "도구 열기",
       "reconnect": "다시 연결",
       "reconnecting": "이 {{device}}를 다시 연결하는 중…",
       "seeRequest": "앱에서 보기",
       "offline": "이 {{device}}는 지금 오프라인이에요.",
       "outageTitle": "이 {{device}}의 연결이 {{ago}} 끊겼어요",
-      "toolsOff": "이 {{device}}에서 꺼져 있어요. 앱의 환경설정에 있는 도구에서 켜세요.",
+      "toolsOff": "이 {{device}}에서는 꺼져 있어요. 이 {{device}} 설정의 폴더와 도구에서 켜세요.",
       "noReport": "이 {{device}}가 아직 허용 항목을 알려 주지 않았어요. 앱을 업데이트하세요.",
       "update": "앱 업데이트"
     },
@@ -16272,7 +16275,7 @@
       "disableText": "에이전트가 이 컴퓨터에서 {{tool}}을(를) 더 이상 사용하지 않습니다. 다시 켜려면 그 컴퓨터에서, 또는 연결한 사람이 여기서 켜세요.",
       "disabled": "{{tool}}을(를) 껐어요.",
       "grantTitle": "더 허용하려면",
-      "grantText": "허용은 컴퓨터에서 직접 해요. 그 컴퓨터에서 agentes.chat 앱을 여세요(환경설정 → 폴더).",
+      "grantText": "허용은 컴퓨터에서 직접 해요. 그 컴퓨터에서 agentes.chat 앱을 여세요(설정 › 이 {{device}} › 폴더와 도구).",
       "grantTextTerminal": "허용은 컴퓨터에서 직접, 터미널에서 해요.",
       "grantTextAdmin": "허용은 컴퓨터에서 직접, 관리자 권한으로 터미널에서 해요.",
       "grantTerminal": "앱이 없나요? 컴퓨터의 터미널에서:",
@@ -16283,6 +16286,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
+      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
+      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
+      "asked": "{{trigger}} 실행에 필요해요",
+      "names": {
+        "app_management": "앱 관리",
+        "screen": "화면 기록",
+        "accessibility": "손쉬운 사용",
+        "disk": "전체 디스크 접근 권한",
+        "network": "로컬 네트워크",
+        "camera": "카메라",
+        "microphone": "마이크",
+        "automation": "자동화"
+      }
+    },
     "leadCloud": "에이전트가 일하는 곳: 워크스페이스 컴퓨터와 사람들이 연결한 기기예요.",
     "lead": "에이전트가 일하는 곳: 사람들이 연결한 컴퓨터와 휴대폰이에요.",
     "connect": "기기 연결",
@@ -16921,22 +16940,6 @@
         "once": "한 번 허용했어요.",
         "always": "이제 {{deviceName}}을(를) 함께 사용해요.",
         "no": "거절했어요."
-      }
-    },
-    "permission": {
-      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
-      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
-      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
-      "asked": "{{trigger}} 실행에 필요해요",
-      "names": {
-        "app_management": "앱 관리",
-        "screen": "화면 기록",
-        "accessibility": "손쉬운 사용",
-        "disk": "전체 디스크 접근 권한",
-        "network": "로컬 네트워크",
-        "camera": "카메라",
-        "microphone": "마이크",
-        "automation": "자동화"
       }
     }
   },
@@ -17604,6 +17607,17 @@
   "settings": {
     "notOpen": "이 워크스페이스에서 내 역할로는 {{section}}을(를) 열 수 없어요. 역할을 관리하는 사람이 열어 줄 수 있어요.",
     "nav": "설정 섹션",
+    "thisDevice": {
+      "title": "이 {{device}}",
+      "section": {
+        "overview": "개요",
+        "folders": "폴더와 도구",
+        "server": "이 {{device}}의 서버",
+        "activity": "활동",
+        "app": "앱 설정"
+      },
+      "needs_other": "{{count}}건이 나를 기다려요"
+    },
     "group": {
       "org": "워크스페이스"
     },
@@ -17823,7 +17837,7 @@
       "label": "agentes.chat에 익명 사용 통계 보내기",
       "help": "사람 수, 에이전트 수, 머신 크기, 사용한 AI 토큰, 에이전트 브라우저가 주고받은 데이터 양, 앱이 열리고 동작하는 속도 같은 수치예요. 메시지, 파일, 이름, 사이트는 절대 보내지 않아요.",
       "envOff": "이 서버의 설정에서 꺼져 있어요(TELEMETRY=off).",
-      "envOffDesktop": "이 서버 컴퓨터의 agentes.chat 앱에서 꺼져 있어요(환경설정 › 서버).",
+      "envOffDesktop": "이 서버가 있는 컴퓨터의 agentes.chat 앱에서 꺼져 있어요(설정 › 이 {{device}}의 서버).",
       "envOffHere": "이 컴퓨터의 agentes.chat 앱에서 꺼져 있어요.",
       "see": "보내는 내용 보기",
       "dialogTitle": "보내는 내용",
@@ -19489,7 +19503,7 @@
     "machine": {
       "ready": "준비됨",
       "off": "꺼짐",
-      "offHelp": "컴퓨터를 연결한 사람이 여기서 또는 그 컴퓨터의 agentes.chat 앱에서 켭니다: 환경설정 → 도구.",
+      "offHelp": "컴퓨터를 연결한 사람이 여기서 또는 그 컴퓨터의 agentes.chat 앱에서 켜요: 설정 › 이 {{device}} › 폴더와 도구.",
       "needsCommand": "명령이 필요해요",
       "notReady": "아직 준비되지 않음",
       "turnOff": "끄기",

@@ -714,6 +714,9 @@
       "browserLead": "Torneremo qui dopo che avrai effettuato l'accesso con {{provider}}.",
       "codeHint": "Il browser mostrerà questo codice. Verifica che corrisponda prima di continuare.",
       "reopen": "Apri di nuovo il browser",
+      "timedOut": "L'accesso è scaduto",
+      "timedOutLead": "Dal browser non è arrivato nulla in 10 minuti. Ricomincia quando vuoi.",
+      "startAgain": "Ricomincia",
       "otherWay": "Accedi in un altro modo",
       "otherServer": "Usa un altro server",
       "opening": "Apertura di {{provider}}…",
@@ -2540,7 +2543,7 @@
     "private": "Chi scansiona questo codice accede come te.",
     "failed": "Non è stato possibile creare il codice.",
     "localOnly": "Questo server si apre solo sul computer dove gira, quindi il telefono non lo raggiunge.",
-    "localOnlyHow": "Nell'app agentes.chat di quel computer, attiva Raggiungilo dal telefono e dai colleghi in Preferenze › Server. Poi torna qui.",
+    "localOnlyHow": "Nell'app agentes.chat di quel computer, attiva Raggiungilo dal telefono e dai colleghi in Impostazioni › Server su questo {{device}}. Poi torna qui.",
     "localOnlyHere": "Attiva Raggiungilo dal telefono e dai colleghi. Poi torna qui."
   },
   "surface": {
@@ -6471,14 +6474,14 @@
         "title": "Manca un passaggio, su {{computer}} stesso",
         "waiting": "In attesa",
         "one": "Fai clic sull'icona di agentes.chat vicino all'orologio",
-        "two": "Preferenze",
+        "two": "Impostazioni di questo {{device}}",
         "three": "Attiva Browser",
         "done": "Fatto. Questa pagina se ne accorge da sola, non serve ricaricare.",
         "menuOpen": "Apri agentes",
-        "menuPrefs": "Preferenze…",
+        "menuPrefs": "Impostazioni di questo {{device}}…",
         "menuPause": "Pausa",
         "menuQuit": "Esci",
-        "tools": "Strumenti",
+        "tools": "Cartelle e strumenti",
         "commands": "Comandi"
       },
       "offlineCloud": "{{computer}} non risponde. Ci stiamo lavorando. {{name}} risponderà di nuovo quando tornerà disponibile.",
@@ -8278,7 +8281,7 @@
     "linkEmpty": "Crea il link per copiarlo",
     "linkFailed": "Non è stato possibile creare il link. {{cause}}",
     "localOnly": "Questo server si apre solo sul computer dove gira, quindi le persone che inviti non riescono ad aprire l'invito.",
-    "localOnlyHow": "Nell'app agentes.chat di quel computer, attiva Raggiungilo dal telefono e dai colleghi in Preferenze › Server, oppure fai girare agentes.chat su un server che possano aprire. Poi invitale.",
+    "localOnlyHow": "Nell'app agentes.chat di quel computer, attiva Raggiungilo dal telefono e dai colleghi in Impostazioni › Server su questo {{device}}, oppure fai girare agentes.chat su un server che possano aprire. Poi invitale.",
     "localOnlyHere": "Attiva Raggiungilo dal telefono e dai colleghi. Poi invitale.",
     "never": "Non scade",
     "untilDate": "Fino al {{date}}",
@@ -17348,16 +17351,16 @@
         "windows": "PC",
         "linux": "computer"
       },
-      "grantHere": "È questo {{device}}: consenti le cartelle nelle Preferenze dell'app.",
-      "openFolders": "Apri Cartelle",
-      "openServers": "Apri Server",
+      "grantHere": "È questo {{device}}: consenti le cartelle in Impostazioni di questo {{device}}, in Cartelle e strumenti.",
+      "openFolders": "Apri Cartelle e strumenti",
+      "openServers": "Apri Server su questo {{device}}",
       "openTools": "Apri Strumenti",
       "reconnect": "Ricollega",
       "reconnecting": "Ricollegamento di questo {{device}}…",
       "seeRequest": "Vedi nell'app",
       "offline": "Questo {{device}} è offline in questo momento.",
       "outageTitle": "Questo {{device}} ha perso la connessione {{ago}}",
-      "toolsOff": "Disattivato su questo {{device}}. Attivalo nelle Preferenze dell'app, in Strumenti.",
+      "toolsOff": "Disattivato su questo {{device}}. Attivalo in Impostazioni di questo {{device}}, in Cartelle e strumenti.",
       "noReport": "Questo {{device}} non ha ancora comunicato cosa consente. Aggiorna l'app.",
       "update": "Aggiorna l'app"
     },
@@ -17479,7 +17482,7 @@
       "disableText": "Gli agenti smettono di usare {{tool}} su questo computer. Per riattivarlo: sul computer stesso, o qui da chi lo ha collegato.",
       "disabled": "{{tool}} disattivato.",
       "grantTitle": "Per consentire di più",
-      "grantText": "Si consente sul computer stesso: apri lì l'app agentes.chat (Preferenze → Cartelle).",
+      "grantText": "Si consente sul computer stesso: apri lì l'app agentes.chat (Impostazioni › Questo {{device}} › Cartelle e strumenti).",
       "grantTextTerminal": "Si consente sul computer stesso, nel suo Terminale:",
       "grantTextAdmin": "Si consente sul computer stesso, nel suo Terminale, come amministratore:",
       "grantTerminal": "Niente app? Nel terminale del computer:",
@@ -17490,6 +17493,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "In attesa di {{permission}} su {{computer}}",
+      "next": "Consentilo nell’app agentes.chat su quel computer.",
+      "askedBy": "Richiesto da {{agent}} per eseguire {{trigger}}",
+      "asked": "Serve per eseguire {{trigger}}",
+      "names": {
+        "app_management": "Gestione app",
+        "screen": "Registrazione schermo",
+        "accessibility": "Accessibilità",
+        "disk": "Accesso completo al disco",
+        "network": "Rete locale",
+        "camera": "Fotocamera",
+        "microphone": "Microfono",
+        "automation": "Automazione"
+      }
+    },
     "leadCloud": "Dove lavorano i tuoi agenti: il computer dello spazio di lavoro e i dispositivi che le persone collegano.",
     "lead": "Dove lavorano i tuoi agenti: i computer e i telefoni che le persone collegano.",
     "connect": "Collega un dispositivo",
@@ -18136,22 +18155,6 @@
         "once": "Consentito una volta.",
         "always": "{{deviceName}} ora è condiviso con loro.",
         "no": "Hai detto di no."
-      }
-    },
-    "permission": {
-      "title": "In attesa di {{permission}} su {{computer}}",
-      "next": "Consentilo nell’app agentes.chat su quel computer.",
-      "askedBy": "Richiesto da {{agent}} per eseguire {{trigger}}",
-      "asked": "Serve per eseguire {{trigger}}",
-      "names": {
-        "app_management": "Gestione app",
-        "screen": "Registrazione schermo",
-        "accessibility": "Accessibilità",
-        "disk": "Accesso completo al disco",
-        "network": "Rete locale",
-        "camera": "Fotocamera",
-        "microphone": "Microfono",
-        "automation": "Automazione"
       }
     }
   },
@@ -18855,6 +18858,19 @@
   "settings": {
     "notOpen": "Il tuo ruolo in questo spazio di lavoro non apre {{section}}. Chi gestisce i ruoli può aprirlo per te.",
     "nav": "Sezioni delle impostazioni",
+    "thisDevice": {
+      "title": "Questo {{device}}",
+      "section": {
+        "overview": "Panoramica",
+        "folders": "Cartelle e strumenti",
+        "server": "Server su questo {{device}}",
+        "activity": "Attività",
+        "app": "Impostazioni dell'app"
+      },
+      "needs_one": "{{count}} cosa ha bisogno di te",
+      "needs_many": "{{count}} cose hanno bisogno di te",
+      "needs_other": "{{count}} cose hanno bisogno di te"
+    },
     "group": {
       "org": "Spazio di lavoro"
     },
@@ -19074,7 +19090,7 @@
       "label": "Invia statistiche di utilizzo anonime ad agentes.chat",
       "help": "Conteggi come persone, agenti, dimensioni delle macchine, token IA usati, quanti dati inviano e ricevono i browser degli agenti e quanto velocemente si aprono e rispondono le app. Mai messaggi, file, nomi o siti.",
       "envOff": "Disattivate nelle impostazioni di questo server (TELEMETRY=off).",
-      "envOffDesktop": "Disattivate nell'app agentes.chat sul computer di questo server (Preferenze › Server).",
+      "envOffDesktop": "Disattivate nell'app agentes.chat sul computer di questo server (Impostazioni › Server su questo {{device}}).",
       "envOffHere": "Disattivate nell'app agentes.chat di questo computer.",
       "see": "Vedi cosa viene inviato",
       "dialogTitle": "Cosa viene inviato",
@@ -20813,7 +20829,7 @@
     "machine": {
       "ready": "Pronto",
       "off": "Disattivato",
-      "offHelp": "Chi ha collegato il computer lo attiva qui o nell'app agentes.chat su quel computer: Preferenze → Strumenti.",
+      "offHelp": "Chi ha collegato il computer lo attiva qui o nell'app agentes.chat su quel computer: Impostazioni › Questo {{device}} › Cartelle e strumenti.",
       "needsCommand": "Serve un comando",
       "notReady": "Non ancora pronto",
       "turnOff": "Disattiva",

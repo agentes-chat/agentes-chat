@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat için {{permission}} gerekli",
+    "done": "İzin verdim",
+    "later": "Şimdi değil",
+    "trayTitle": "{{permission}} izni bekleniyor",
+    "why": {
+      "app_management": "Ajanların bu {{device}} üzerindeki uygulamaları değiştirmesi için gerekli.",
+      "screen": "Ajanların bu {{device}} için ekran görüntüsü alması için gerekli.",
+      "accessibility": "Ajanların bu {{device}} üzerindeki uygulamalarda tıklayıp yazması için gerekli.",
+      "disk": "Ajanların dosyalarınızı macOS her klasör için sormadan açması için gerekli.",
+      "network": "Ajanların ağınızdaki telefonlara ve cihazlara ulaşması için gerekli.",
+      "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
+      "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
+      "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -6,7 +22,8 @@
   },
   "windowTitle": {
     "welcome": "Hoş geldiniz",
-    "prefs": "Tercihler"
+    "prefs": "Tercihler",
+    "settings": "Ayarlar"
   },
   "common": {
     "cancel": "İptal",
@@ -70,10 +87,7 @@
     },
     "label": "agentes.chat",
     "now": "Şimdi",
-    "seeAll": "Tümünü gör",
     "background": "Arka planda",
-    "nothingNow": "Şu an bir şey yok",
-    "waitingConnection": "Bağlantı bekleniyor",
     "calmTitle": "Burada her şey sakin",
     "calmBody": "Ajanlar gerektiğinde bu {{device}} üzerinde çalışır.",
     "pausedEmptyTitle": "Her şey beklemede",
@@ -90,6 +104,7 @@
     "pauseHintServer": "Zaten çalışan işler normal şekilde biter. Sunucu açık kalır.",
     "resume": "Ajanları sürdür",
     "open": "agentes.chat'i aç",
+    "thisMac": "Bu {{device}} ayarları…",
     "quit": "agentes.chat'ten çık",
     "pausedFor1h": "1 saatliğine duraklatıldı",
     "pausedTomorrow": "Yarın saat 09.00'a kadar duraklatıldı",
@@ -139,14 +154,155 @@
     "quitTitle": "agentes.chat'ten çıkılsın mı?",
     "quitBody": "Uygulama kapalıyken ajanlar bu {{device}} üzerinde çalışamaz. Zaten çalışanlar biter ve uygulamayı yeniden açtığınızda sonucu gönderir.",
     "quitHereBody": "agentes.chat bu {{device}} üzerinde durur: uygulamayı yeniden açana kadar ne burada, ne telefonunuzda ne de ekip arkadaşlarınızın cihazlarında kimse onu kullanamaz.",
-    "quitConfirm": "Çık"
+    "quitConfirm": "Çık",
+    "needsYou_one": "{{count}} şey sizi bekliyor",
+    "needsYou_other": "{{count}} şey sizi bekliyor",
+    "allSet": "Her şey hazır",
+    "thisDevice": "Bu {{device}}",
+    "settings": "Bu {{device}} ayarları",
+    "essential": {
+      "turnOn": "Aç",
+      "turnOnAgain": "Yeniden aç",
+      "fix": "Düzelt",
+      "launchAtLogin": {
+        "title": "agentes.chat oturum açılınca açılmıyor",
+        "body": "Yeniden başlatmadan sonra, siz uygulamayı açana kadar ajanlar bu {{device}} cihazını kullanamaz."
+      },
+      "notifications": {
+        "title": "Bildirimler kapalı",
+        "body": "Bir ajanın burada size ihtiyacı olduğunda haberiniz olmaz."
+      },
+      "screen": {
+        "body": "Bu olmadan ajanlar ekranı göremez."
+      },
+      "disk": {
+        "body": "Ajanlar her klasör için sormak üzere durabilir."
+      },
+      "reach": {
+        "approve": {
+          "title": "Tailscale tek bir tık bekliyor",
+          "body": "Tailscale'in yönetim sayfasında izin verdiğinizde telefonunuz ve ekibiniz agentes.chat'e ulaşır."
+        },
+        "down": {
+          "title": "Tailscale bu {{device}} üzerinde bağlı değil",
+          "body": "Telefonunuz ve ekibiniz agentes.chat'e ulaşamıyor."
+        },
+        "address": {
+          "title": "Adresiniz şu an buraya yönlendirmiyor",
+          "body": "Bu düzelene kadar telefonunuz ve ekibiniz agentes.chat'e ulaşamaz. Tünelinizin açık olduğunu kontrol edin."
+        }
+      },
+      "backup": {
+        "off": {
+          "title": "Gece yedeği kapalı",
+          "body": "agentes.chat'in her gece bir kopya tutması için açın."
+        },
+        "backup": {
+          "body": "Bugünkü çalışmanın bir kopyası olsun diye şimdi yedekleyin."
+        },
+        "copy": {
+          "title": "Dün geceki yedek kopya klasörüne ulaşmadı",
+          "body": "Kopyalandığı klasör çıkarılmış ya da dolu olabilir."
+        }
+      },
+      "autoUpdate": {
+        "title": "Güncellemeler kendiliğinden yüklenmiyor",
+        "body": "Bu {{device}} çalışmaya devam eden bir sürümde kalsın diye açın."
+      }
+    }
   },
   "first": {
     "addTitle": "Çalışma alanı ekle",
     "addLead": "Zaten sahip olduklarınız, her biri kendi girişiyle burada kalır.",
     "addCloud": "agentes.chat'te çalışma alanı oluştur",
     "addNew": "Yeni bir workspace mi istiyorsun?",
-    "addNewLink": "Bir tane oluştur"
+    "addNewLink": "Bir tane oluştur",
+    "welcome": {
+      "title": "agentes.chat'e hoş geldiniz",
+      "lead": "Yapay zeka ajanlarından oluşan ekibiniz, sohbette sizinle birlikte çalışıyor.",
+      "google": "Google ile devam et",
+      "apple": "Apple ile devam et",
+      "email": "E-posta ile devam et",
+      "others": "Diğer kullanım yolları",
+      "here": "Bu {{device}} üzerinde ücretsiz çalıştır",
+      "hereText": "Verileriniz burada kalır. Bulut hesabı gerekmez.",
+      "company": "Şirketimin sunucusuna giriş yap",
+      "companyText": "Adresiyle, örneğin agentes.sirketiniz.com.",
+      "install": "Ekip için bir sunucuya mı kuruyorsunuz?",
+      "installLink": "Nasıl yapılır",
+      "foundTailnet": "agentes.chat ağınızda",
+      "foundHere": "agentes.chat bu {{device}} üzerinde çalışıyor"
+    },
+    "run": {
+      "step": "Bu {{device}} üzerinde çalıştır · {{n}}/{{total}}",
+      "flow": "Bu {{device}} üzerinde çalıştır",
+      "ownerTitle": "Sahibi kim olacak?",
+      "ownerLead": "Bu e-postayla giriş yaparsınız ve istediğiniz kişileri sonra davet edersiniz. Her şey bu {{device}} üzerinde tutulur.",
+      "usage": "Anonim kullanım istatistikleri gönder",
+      "usageText": "Yalnızca sayılar, asla mesajlar, dosyalar ya da adlar değil.",
+      "whereTitle": "Nerede kullanacaksınız?",
+      "whereLead": "İstediğiniz zaman değiştirebilirsiniz.",
+      "everywhere": "Bu {{device}}, telefonunuz ve ekibiniz",
+      "everywhereText": "Tailscale ya da size ait bir adres üzerinden.",
+      "hereOnly": "Yalnızca bu {{device}} üzerinde",
+      "hereOnlyText": "Telefon daha sonra eklenebilir.",
+      "netTitle": "Telefon ve ekip buraya nasıl ulaşacak?",
+      "netLead": "Daha sonra Ayarlar'dan değiştirebilirsiniz.",
+      "later": "Sonra yap",
+      "changeAddress": "Adresi değiştir",
+      "ask": "<b>Bir tık kaldı.</b> Açılan Tailscale sayfasında <b>Enable</b> düğmesine tıklayın. Bu, adresinizi kilitli ve güvenli yapar. Gerisine kendimiz devam ederiz, acele yok.",
+      "askOpen": "Sayfayı aç",
+      "askSkip": "Onsuz bitir",
+      "doneTitle": "Tamam. Şimdi telefonunuza geçin",
+      "phone1": "agentes.chat uygulamasını yükleyin",
+      "phone1Text": "App Store'dan ya da Google Play'den.",
+      "phone2": "Tailscale'i yükleyin ve aynı hesapla giriş yapın",
+      "phone2Text": "Telefonunuzu her yerden bu {{device}} cihazına ulaştıran odur.",
+      "phone3": "Kamerayı koda tutun",
+      "phone3Text": "Hemen giriş yaparsınız. Kod kendiliğinden yenilenir.",
+      "qrLabel": "Telefonunuzda giriş yapmak için QR kodu",
+      "qrFailed": "Kod yüklenmedi.",
+      "address": "Adresiniz: <b>{{address}}</b>",
+      "open": "agentes.chat'i aç"
+    }
+  },
+  "reach": {
+    "label": "Telefon ve ekip buraya nasıl ulaşır",
+    "tailscale": "Tailscale üzerinden",
+    "tailscaleText": "Ücretsiz. Sizin ve ekibinizin cihazları arasında özel bir ağ.",
+    "address": "Bana ait bir adres üzerinden",
+    "addressText": "Bu {{device}} üzerinde, zaten buraya yönlendiren bir tünel.",
+    "checking": "Bu {{device}} üzerinde Tailscale kontrol ediliyor…",
+    "tailscaleOn": "Tailscale bu {{device}} üzerinde bağlı.",
+    "download": "Tailscale'i indir",
+    "downloadNote": "Ücretsiz, Tailscale'in kendi sitesinden.",
+    "openApp": "Tailscale'i açın ve giriş yapın",
+    "tray": "Tailscale'i saatin yanındaki simgesinden açın ve giriş yapın.",
+    "terminal": "Tailscale'i terminalde bağlayın:",
+    "waitNow": "Tailscale bekleniyor…",
+    "waitInstall": "Yükleyin, açın ve giriş yapın. Gerisi kendiliğinden devam eder, acele yok.",
+    "waitSignIn": "Orada giriş yapın. Gerisi kendiliğinden devam eder, acele yok.",
+    "addressLabel": "Adresiniz",
+    "pointAt": "Şuraya yönlendirin",
+    "problem": {
+      "notHttps": "Adres https:// ile başlamalı",
+      "unreachable": "Açamadık. Tünelinizin açık olduğunu ve {{target}} adresine yönlendirdiğini kontrol edin.",
+      "unreachablePlain": "Açamadık. Tünelinizin açık olduğunu ve bu {{device}} cihazına yönlendirdiğini kontrol edin.",
+      "otherServer": "Bu {{device}} cihazının değil, başka bir sunucuyu açıyor.",
+      "error": "Bir hatayla yanıt verdi ({{status}}).",
+      "errorPlain": "Bir hatayla yanıt verdi."
+    },
+    "reason": {
+      "address": "adresiniz buraya yönlendirmiyor"
+    },
+    "stage": {
+      "checking": "Adresiniz kontrol ediliyor…",
+      "done": "Hazır: telefonunuz ve ekibiniz açabilir."
+    },
+    "line": {
+      "address": "Çalışıyor · adresinizde",
+      "addressDown": "Çalışıyor · adresiniz şu an buraya yönlendirmiyor"
+    }
   },
   "place": {
     "title": "Workspace'iniz nerede olacak?",
@@ -208,7 +364,6 @@
   },
   "here": {
     "title": "Bu {{device}} cihazını hazırlayalım",
-    "how": "Bir dakika sürer. Her şey burada, yalnızca sizde kalır.",
     "again": "Daha önce burada çalıştı ve verileri hâlâ {{path}} konumunda.",
     "ownerNone": "Burada hiç hesap kalmadı. Adınız ve e-postanızla yeni sahibi siz olursunuz.",
     "name": "Adınız",
@@ -216,28 +371,25 @@
     "email": "E-postanız",
     "emailNeeded": "E-postanızı yazın, ör. ana@example.com.",
     "reach": "Telefonunuzdan ve ekip arkadaşlarınızdan erişin",
-    "reachText": "Cihazlarınız için özel bir ağ olan Tailscale ile: telefonunuz ve davet ettiğiniz kişiler bu ağa katılır, başka hiç kimse agentes.chat'e ulaşamaz.",
+    "reachText": "Cihazlarınız için ücretsiz özel bir ağ olan Tailscale ya da size ait bir adres üzerinden: telefonunuz ve davet ettiğiniz kişiler agentes.chat'i her yerden açar.",
     "reachStage": {
       "sharing": "Tailscale'den paylaşması isteniyor…",
       "approve": "Tailscale, ağınızda HTTPS'nin açılmasını istiyor. Onun sayfasından açın: gerisi kendiliğinden devam eder.",
-      "restarting": "agentes.chat yeni adresinde yeniden başlatılıyor…",
-      "signingIn": "Yeni adreste yeniden giriş yapılıyor…"
+      "restarting": "agentes.chat yeni adresinde yeniden başlatılıyor…"
     },
     "approveOpen": "Tailscale sayfasını aç",
     "approveStop": "Beklemeyi bırak",
     "openTailscale": "Tailscale'i aç",
     "usage": "agentes.chat'e anonim kullanım istatistikleri gönder",
     "usageText": "Kişi ve ajan sayısı, makine boyutları, kullanılan yapay zeka token'ları, ajanların tarayıcılarının ne kadar veri gönderip aldığı ve uygulamaların ne kadar hızlı açılıp çalıştığı gibi sayılar. Asla mesajlar, dosyalar, adlar veya siteler değil.",
-    "start": "Başla",
     "setting": "Her şey hazırlanıyor",
-    "rest": "Uygulamayı kapattığınızda ajanlarınız dinlenir. Yeniden açtığınız anda geri gelirler.",
     "step": {
       "database": "Verileriniz için yer açılıyor",
       "databaseNote": "yalnızca ilk seferde",
       "start": "agentes.chat açılıyor",
       "account": "Hesabınız oluşturuluyor",
       "computer": "Ajanlarınız çağrılıyor",
-      "reach": "Telefondan erişim açılıyor"
+      "reach": "Her yerden erişim açılıyor"
     },
     "stepState": {
       "active": "devam ediyor",
@@ -249,7 +401,7 @@
       "start": "agentes.chat bu {{device}} üzerinde başlamadı.",
       "database": "Veritabanı hazırlanamadı.",
       "account": "Hesabınız oluşturulamadı.",
-      "retry": "Tercihler'de tekrar dene"
+      "retry": "Ayarlar'da tekrar dene"
     },
     "reason": {
       "https": "Tailscale ağınızda HTTPS kapalı",
@@ -435,14 +587,14 @@
   },
   "pair": {
     "title": "{{org}} ajanları bu {{device}} üzerinde çalışabilsin mi?",
-    "body": "{{host}} istedi. Ajanlar komutları, tarayıcıyı ve kodlama araçlarını kullanır. Klasörleri sonra Tercihler'den eklersin.",
+    "body": "{{host}} istedi. Ajanlar burada komutları, tarayıcıyı ve kodlama araçlarını kullanır. Klasörler sonra, Ayarlar'da.",
     "allow": "İzin ver",
     "notNow": "Şimdi değil",
     "offerTitle": "{{org}} ajanları bu {{device}} cihazını kullanabilsin mi?",
     "keepReady": "Hazır tut: oturum açılınca agentes.chat'i başlat",
     "offerOnlyIf": "Yalnızca bu {{device}} cihazının da ajanların işini yapmasını istiyorsan. Şimdi değil dersen {{org}} alanını burada her zamanki gibi kullanmaya devam edersin.",
     "canDo": "Ajanların burada yapabilecekleri",
-    "foldersLater": "Henüz hiçbir klasörün yok. Daha sonra Tercihler › Klasörler bölümünden ekle.",
+    "foldersLater": "Henüz klasörünüz yok. Sonra Ayarlar › Klasörler ve araçlar bölümünden ekleyin.",
     "linkTitle": "Bu {{device}} cihazı {{org}} ile bağlansın mı?",
     "askedBy": "İsteyen",
     "from": "Nereden",
@@ -464,6 +616,39 @@
     "canUse": "Ajanlar kullanabilir",
     "notUsing": "Ajanları bu {{device}} cihazını kullanmıyor"
   },
+  "sheets": {
+    "step": "Bu {{device}} · {{at}}/{{total}}",
+    "stepOnly": "Bu {{device}}",
+    "ready": {
+      "title": "Bu {{device}}, {{org}} ajanları için hazırlansın mı?",
+      "lead": "Böylece {{device}} açıkken buradan daha fazlasını yapabilirler.",
+      "browser": "Ajanların kendi tarayıcısı",
+      "browserDesc": "Sizin girişleriniz ve parolalarınız olmadan.",
+      "code": "Komutlar ve kodlama araçları",
+      "codeOne": "{{tool}} zaten burada. Sizin kullanıcınız olarak çalışırlar.",
+      "codeTwo": "{{a}} ve {{b}} zaten burada. Sizin kullanıcınız olarak çalışırlar.",
+      "codeNone": "Sizin kullanıcınız olarak çalışırlar.",
+      "folders": "Klasörleriniz yalnızca sizin onayınızla",
+      "foldersDesc": "Her istek sohbette ve uygulamanın simgesinde görünür.",
+      "foldersDescMac": "Her istek sohbette ve menü çubuğunda görünür.",
+      "login": "{{device}} açılınca kendiliğinden açılır",
+      "loginDesc": "Siz hatırlamak zorunda kalmadan ajanlar geri gelsin diye.",
+      "help": "İstediğiniz zaman Ayarlar › Bu {{device}} bölümünden değiştirin.",
+      "allow": "Hazırla"
+    },
+    "prepare": {
+      "title": "macOS bir kez üç şey soruyor",
+      "lead": "Bunlar olmadan ajanlar sormak için işlerinin ortasında durur.",
+      "notifications": "Bildirimler",
+      "notificationsDesc": "Bir ajanın size ihtiyacı olduğunda.",
+      "screenDesc": "Ajanlar ekranda ne yaptıklarını görebilsin diye.",
+      "diskDesc": "İzin verdiğiniz klasörleri macOS yeniden sormadan açmak için.",
+      "waitList": "Açılan Sistem Ayarları'nda listedeki agentes.chat'i açın. Kendimiz fark ederiz.",
+      "waitNotifications": "Açılan Sistem Ayarları'nda agentes.chat için bildirimlere izin verin. Kendimiz fark ederiz.",
+      "help": "Bir güncelleme bunlardan birini kapatırsa hemen söyleriz.",
+      "later": "Sonra yap"
+    }
+  },
   "prepare": {
     "title": "Bu {{device}} cihazını hazırla",
     "lead": "{{org}} ile bağlantı kuruldu. Şimdi izin ver, ajanlar sormak için hiç durmasın.",
@@ -472,6 +657,8 @@
     "screenAgain": "macOS yaklaşık ayda bir yeniden sorar. İzin ver'i seç.",
     "disk": "Tam Disk Erişimi",
     "diskDesc": "Ajanların dosyalarını, macOS her klasör için sormadan açmasını sağlar.",
+    "notifications": "Bildirimler",
+    "notificationsDesc": "Ajanların size ihtiyacı olduğunda ve bu {{device}} üzerinde bir şey çalışmayı bıraktığında haber verir.",
     "diskHow": "Ayarlar'da listedeki agentes.chat'i aç ya da + ile ekle.",
     "network": "Yerel ağ (Wi-Fi üzerinden telefonlar)",
     "networkDesc": "Ajanların Wi-Fi ağındaki Android telefonları bulup kullanmasını sağlar.",
@@ -485,6 +672,35 @@
     "skip": "Şimdilik atla",
     "prefsTitle": "İzinler",
     "prefsHint": "Uygulama güncellendiğinde macOS bunları kapatabilir. Buradan yeniden aç."
+  },
+  "essentials": {
+    "tray": "Bu {{device}} üzerinde bir şey sizi bekliyor",
+    "notify": {
+      "screen": {
+        "title": "Ekran Kaydı kapalı",
+        "body": "macOS bunu kapattı. Siz yeniden izin verene kadar ajanlar ekran görüntüsü alamaz."
+      },
+      "disk": {
+        "title": "Tam Disk Erişimi kapalı",
+        "body": "Siz yeniden açana kadar ajanlar klasörler için sormak üzere durabilir."
+      },
+      "reach": {
+        "title": "Telefonunuz ve ekibiniz agentes.chat'e ulaşamıyor",
+        "body": "Cihazlarınızdan erişim için bu {{device}} üzerinde size ihtiyaç var. Düzeltmek için uygulamayı açın."
+      },
+      "backup": {
+        "title": "Dün geceki yedek tamamlanmadı",
+        "body": "Yeniden yedeklemek için uygulamayı açın."
+      },
+      "autoUpdate": {
+        "title": "agentes.chat'in güncellenmesi gerekiyor",
+        "body": "Bu sürüm çalışmaya devam edemez. Yenisini yüklemek için uygulamayı açın."
+      },
+      "awake": {
+        "title": "Bu {{device}} hizmet verirken uyuyabilir",
+        "body": "Telefonunuz ve ekibiniz için uyanık kalsın diye agentes.chat'i burada yeniden başlatın."
+      }
+    }
   },
   "tools": {
     "claudeName": "Claude Code",
@@ -797,6 +1013,100 @@
       "folderDesc": "Her çalışma alanı için bir klasör, içinde her ajan için bir klasör."
     }
   },
+  "settings": {
+    "nav": {
+      "label": "Ayarlar",
+      "title": "Ayarlar",
+      "thisDevice": "Bu {{device}}",
+      "overview": "Genel bakış",
+      "folders": "Klasörler ve araçlar",
+      "server": "Bu {{device}} üzerindeki sunucu",
+      "activity": "Etkinlik",
+      "app": "Uygulama ayarları",
+      "back": "{{name}} sayfasına dön",
+      "needs_one": "{{count}} şey sizi bekliyor",
+      "needs_other": "{{count}} şey sizi bekliyor"
+    },
+    "away": {
+      "title": "{{name}} ile bağlantı yok.",
+      "body": "Bu {{device}} cihazına ait olanlar aynı şekilde çalışır. Kimlerin kullanabileceği ve ajanların adları bağlantıyla geri gelir."
+    },
+    "overview": {
+      "rename": "Yeniden adlandır",
+      "allSet": "Her şey hazır",
+      "used": "{{orgs}} ajanları bu {{device}} cihazını kullanıyor",
+      "version": "sürüm {{version}}, güncel",
+      "versionNewer": "sürüm {{version}}, {{latest}} çıktı",
+      "always": "Her zaman hazır",
+      "who": "Bu {{device}} cihazını kimler kullanıyor"
+    },
+    "essentials": {
+      "on": "Açık",
+      "allOn": "Hepsi açık",
+      "turnOn": "Aç",
+      "turnOnAgain": "Yeniden aç",
+      "permissions": "macOS izinleri",
+      "permissionsOff": "Hâlâ kapalı: {{names}}.",
+      "launchAtLogin": "{{device}} açılınca açılır",
+      "reach": "Her yerden erişim",
+      "reachOff": "Yalnızca bu {{device}} üzerinde. Telefonunuz ve ekibiniz açamaz.",
+      "reachDown": "Tailscale bu {{device}} üzerinde bağlı değil.",
+      "reachApprove": "Tailscale, ağınızda HTTPS'nin açılmasını bekliyor.",
+      "reachAddress": "Adresiniz şu an buraya yönlendirmiyor.",
+      "checkAgain": "Yeniden kontrol et",
+      "backup": "Her gece yedek",
+      "backupOff": "Kapatıldı",
+      "autoUpdate": "Geceleri kendiliğinden güncellenir",
+      "autoUpdateDesc": "Yeni sürüm açılmazsa kendiliğinden geri döner",
+      "updateRequired": "Bu sürüm çalışmaya devam edemez.",
+      "awake": "Ajanlar çalışırken uyumaz",
+      "awakeOff": "Uyanık kalması için agentes.chat'i burada yeniden başlatın.",
+      "powerRestart": "Elektrik kesintisinden sonra kendiliğinden açılır",
+      "systemOnly": "Bunu yalnızca macOS ayarları açabilir."
+    },
+    "server": {
+      "anywhere": "telefonunuz ve ekibiniz açabilir",
+      "onlyHere": "yalnızca bu {{device}} üzerinde",
+      "onlyHereDesc": "Telefonunuz ve ekibiniz açamaz.",
+      "wayTailscale": "Tailscale üzerinden, kilitli",
+      "wayAddress": "Adresiniz üzerinden",
+      "changeWay": "Değiştir",
+      "reachOff": "Kapat",
+      "useWay": "Bunu kullan",
+      "phoneDesc": "agentes.chat uygulamasını ve Tailscale'i aynı hesapla yükleyin, kamerayı tutun. Kendiliğinden giriş yapar.",
+      "phoneDescAddress": "agentes.chat uygulamasını yükleyin ve kamerayı tutun. Kendiliğinden giriş yapar.",
+      "phoneSignedOut": "Kodu göstermek için bu {{device}} üzerindeki uygulamada agentes.chat'e giriş yapın.",
+      "qrLabel": "Telefonda giriş yapmak için QR kodu",
+      "invite": "Ekipten birini davet et",
+      "inviteDesc": "Onu çalışma alanına davet edin, sonra Tailscale'de bu {{device}} cihazını onunla paylaşın.",
+      "inviteDescAddress": "Onu çalışma alanına davet edin. Adresinizden açar.",
+      "inviteButton": "Davet et",
+      "share": "Tailscale'de paylaş",
+      "everyNight": "Her gece, saat {{at}}",
+      "copyAlso": "Bir kopyası da şurada",
+      "backupsOff": "Gece yedekleri kapalı"
+    },
+    "access": {
+      "title": "Klasörler ve araçlar",
+      "lead": "Ajanların tüm çalışma alanlarında bu {{device}} üzerinde kullandıkları.",
+      "tools": "Araçlar",
+      "browserDesc": "Yalnızca ajanların, sizin girişleriniz olmadan",
+      "commandsDesc": "Sizin olarak çalışır ve bu {{device}} cihazının geri kalanına ulaşır",
+      "notHere": "Henüz bu {{device}} üzerinde yok",
+      "folders": "İzin verilen klasörler",
+      "addTitle": "Başka bir klasöre izin ver",
+      "addDesc": "Bir ajanın klasöre ihtiyacı olduğunda sohbette ve burada sorar.",
+      "addFor": "{{org}} için"
+    },
+    "app": {
+      "title": "Uygulama ayarları",
+      "notifications": "Bildirimler",
+      "thisApp": "Bu uygulama",
+      "servers": "Sunucular ve hesaplar",
+      "advanced": "Gelişmiş",
+      "onlyHere": "Yalnızca bu {{device}} üzerinde"
+    }
+  },
   "iphone": {
     "lead": "Kurulumu bu {{device}} yapar. iPhone'a yalnızca bir adım istediğinde dokunursunuz.",
     "account": "Xcode'daki Apple Hesabı",
@@ -841,7 +1151,15 @@
     "held": "agentes.chat siz başlatana kadar bu {{device}} üzerinde durduruldu.",
     "heldUntil": "agentes.chat bu {{device}} üzerinde durduruldu. {{time}} saatinde kendiliğinden geri gelir.",
     "startNow": "Şimdi başlat",
-    "openOther": "{{server}} aç"
+    "openOther": "{{server}} aç",
+    "privateTitle": "{{org}} özel ağda",
+    "privateTitleAny": "Bu çalışma alanı özel ağda",
+    "privateLine": "Ama bu {{device}} üzerinde ağ kapalı. Açın, çalışma alanı kendiliğinden açılır.",
+    "privateMissing": "Ama özel ağ olan Tailscale bu {{device}} üzerinde henüz yok. İndirin, giriş yapın, çalışma alanı kendiliğinden açılır.",
+    "privateTray": "Ama bu {{device}} üzerinde ağ kapalı. Saatin yanındaki Tailscale simgesinden açın, çalışma alanı kendiliğinden açılır.",
+    "privateElsewhere": "Ama bu {{device}} üzerinde ağ kapalı. Tailscale'i açın, çalışma alanı kendiliğinden açılır.",
+    "useOther": "Başka bir çalışma alanı kullan",
+    "getTailscale": "Tailscale'i indir"
   },
   "report": {
     "button": "Rapor gönder",
@@ -917,21 +1235,5 @@
     "bringAllToFront": "Tümünü öne getir",
     "help": "Yardım",
     "downloaded": "İndirme tamamlandı"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat için {{permission}} gerekli",
-    "done": "İzin verdim",
-    "later": "Şimdi değil",
-    "trayTitle": "{{permission}} izni bekleniyor",
-    "why": {
-      "app_management": "Ajanların bu {{device}} üzerindeki uygulamaları değiştirmesi için gerekli.",
-      "screen": "Ajanların bu {{device}} için ekran görüntüsü alması için gerekli.",
-      "accessibility": "Ajanların bu {{device}} üzerindeki uygulamalarda tıklayıp yazması için gerekli.",
-      "disk": "Ajanların dosyalarınızı macOS her klasör için sormadan açması için gerekli.",
-      "network": "Ajanların ağınızdaki telefonlara ve cihazlara ulaşması için gerekli.",
-      "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
-      "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
-      "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
-    }
   }
 }
