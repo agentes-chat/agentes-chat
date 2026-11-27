@@ -33,6 +33,8 @@ jobs:
       - uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: tools/speech-helper
+          # Registry only: sherpa-onnx-sys unpacks its libraries under target/, which a restored target loses.
+          cache-targets: false
       - name: sherpa-onnx's static libraries, with retries (its build script tries once)
         run: bash fetch-sherpa.sh x86_64-unknown-linux-gnu "$RUNNER_TEMP/sherpa" >> "$GITHUB_ENV"
       - run: cargo test --release --locked
@@ -69,6 +71,8 @@ jobs:
       - uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: tools/speech-helper
+          # Registry only: sherpa-onnx-sys unpacks its libraries under target/, which a restored target loses.
+          cache-targets: false
           key: ${{ matrix.target }}
       - name: sherpa-onnx's static libraries, with retries (its build script tries once)
         run: bash fetch-sherpa.sh ${{ matrix.target }} "$RUNNER_TEMP/sherpa" >> "$GITHUB_ENV"
