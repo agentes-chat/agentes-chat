@@ -8042,6 +8042,26 @@ html:not([data-pointer]) .run-continue:focus-visible {
   overflow: visible;
   white-space: normal;
 }
+/* A phone's line with "Ver código" too: the button takes a second row, there from the first command to the reply, so
+   the step keeps its room. The step's width is its words' (up to what is left), never a reason to wrap. */
+.working-tail__body {
+  container-type: inline-size;
+}
+@container (max-width: 20rem) {
+  .working-tail__words:has(> .ac-typing__see[aria-expanded]) {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .working-tail__words > .ac-typing__sep:has(+ .ac-typing__see[aria-expanded]) {
+    flex-basis: 100%;
+    height: 0;
+    margin: 0;
+  }
+  .working-tail__words:has(> .ac-typing__see[aria-expanded]) .ac-typing__step {
+    flex: 1 1000 0;
+    max-width: max-content;
+  }
+}
 /* Who types or records beside one agent's step: a row of its own under it, so the step never gives way to them. */
 .working-tail__line:has(> .working-tail__also) {
   flex-wrap: wrap;
