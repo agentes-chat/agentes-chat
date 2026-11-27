@@ -56,8 +56,8 @@ export function parseCron(expression: string): CronSpec {
     days: field(d, 1, 31),
     months: field(mo, 1, 12),
     weekdays,
-    dayRestricted: d !== "*",
-    weekdayRestricted: w !== "*",
+    dayRestricted: !d.startsWith("*"),
+    weekdayRestricted: !w.startsWith("*"),
   };
 }
 
