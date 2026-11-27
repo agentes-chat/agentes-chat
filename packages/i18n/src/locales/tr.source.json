@@ -5945,9 +5945,6 @@
   "agentGroups.dropHere": {
     "value": "Drag agents here"
   },
-  "agentGroups.dropHereAll": {
-    "value": "Drag agents or channels here"
-  },
   "agentGroups.moved": {
     "value": "{{name}} moved to {{group}}"
   },
@@ -5957,35 +5954,8 @@
   "agentGroups.undo": {
     "value": "Undo"
   },
-  "sidebarAgents.options": {
-    "value": "Agents options"
-  },
-  "sidebarAgents.add": {
-    "value": "New agent or department"
-  },
-  "sidebarAgents.order": {
-    "value": "Order"
-  },
-  "sidebarAgents.sort.workspace": {
-    "value": "Workspace's order"
-  },
-  "sidebarAgents.sort.mine": {
-    "value": "Mine first"
-  },
-  "sidebarAgents.sort.working": {
-    "value": "Working first"
-  },
   "sidebarAgents.showAll": {
     "value": "Show agents that don't talk to me"
-  },
-  "sidebarAgents.collapseAll": {
-    "value": "Collapse all"
-  },
-  "sidebarAgents.expandAll": {
-    "value": "Expand all"
-  },
-  "sidebarAgents.organize": {
-    "value": "Organize departments in Team"
   },
   "sidebarAgents.more": {
     "value": {
@@ -5995,12 +5965,6 @@
   },
   "sidebarAgents.newAgent": {
     "value": "New agent"
-  },
-  "sidebarAgents.working": {
-    "value": {
-      "one": "{{count}} working",
-      "other": "{{count}} working"
-    }
   },
   "sidebarAgents.count": {
     "value": {
@@ -6020,32 +5984,113 @@
       "other": "only talks to {{name}} and {{count}} more"
     }
   },
-  "sidebarAgents.changeGroup": {
-    "value": "Move to department"
+  "sidebarFavorites.title": {
+    "value": "Favorites"
   },
-  "sidebarAgents.newGroupWith": {
-    "value": "New department with {{name}}"
+  "sidebarFavorites.add": {
+    "value": "Add to favorites"
   },
-  "sidebarAgents.dmsEmpty": {
-    "value": "Your conversations with people show up here."
+  "sidebarFavorites.remove": {
+    "value": "Remove from favorites"
   },
-  "sidebarPins.pin": {
-    "value": "Pin to top"
+  "sidebarFavorites.marked": {
+    "value": "Favorite"
   },
-  "sidebarPins.unpin": {
-    "value": "Unpin"
+  "sidebarFavorites.full": {
+    "value": "Favorites already holds 50. Remove one to add this one."
   },
-  "sidebarPins.pinned": {
-    "value": "Pinned"
+  "sidebarSections.new": {
+    "value": "New section"
   },
-  "sidebarPins.full.agents": {
-    "value": "You already pinned 5 agents. Unpin one to pin this one."
+  "sidebarSections.newName": {
+    "value": "New section"
   },
-  "sidebarPins.full.channels": {
-    "value": "You already pinned 5 channels. Unpin one to pin this one."
+  "sidebarSections.moveTo": {
+    "value": "Move to section"
   },
-  "sidebarPins.full.people": {
-    "value": "You already pinned 5 people. Unpin one to pin this one."
+  "sidebarSections.takeOut": {
+    "value": "Remove from section"
+  },
+  "sidebarSections.rename": {
+    "value": "Rename section"
+  },
+  "sidebarSections.delete": {
+    "value": "Delete section"
+  },
+  "sidebarSections.nameLabel": {
+    "value": "Section name"
+  },
+  "sidebarDms.options": {
+    "value": "Direct messages options"
+  },
+  "sidebarDms.show": {
+    "value": "Show"
+  },
+  "sidebarDms.shows.all": {
+    "value": "Everyone in the workspace"
+  },
+  "sidebarDms.shows.recent": {
+    "value": "Recent conversations only"
+  },
+  "sidebarDms.invite": {
+    "value": "Invite people"
+  },
+  "sidebarDms.invited": {
+    "value": "Invite sent"
+  },
+  "sidebarDms.invitedTip": {
+    "value": "{{email}} hasn't accepted the invitation yet"
+  },
+  "sidebarDms.agentTag": {
+    "value": "AI"
+  },
+  "sidebarDms.agentTip": {
+    "value": "AI agent"
+  },
+  "sidebarColumn.label": {
+    "value": "Tools"
+  },
+  "sidebarColumn.unread": {
+    "value": "{{name}}, something unread"
+  },
+  "sidebarColumn.you": {
+    "value": "{{name}}, something for you"
+  },
+  "unreads.title": {
+    "value": "Unreads"
+  },
+  "unreads.forYou": {
+    "value": "For you"
+  },
+  "unreads.conversations": {
+    "value": "Conversations"
+  },
+  "unreads.markAll": {
+    "value": "Mark all as read"
+  },
+  "unreads.markRead": {
+    "value": "Mark as read"
+  },
+  "unreads.open": {
+    "value": "Open"
+  },
+  "unreads.seeInbox": {
+    "value": "See everything in the inbox"
+  },
+  "unreads.more": {
+    "value": {
+      "one": "{{count}} more message",
+      "other": "{{count}} more messages"
+    }
+  },
+  "unreads.emptyTitle": {
+    "value": "All caught up"
+  },
+  "unreads.emptyText": {
+    "value": "New messages and what waits for you show up here."
+  },
+  "unreads.markedAll": {
+    "value": "Everything marked as read"
   },
   "appsDownload.computer": {
     "value": "Computer"
@@ -41974,7 +42019,10 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection."
+    "value": "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline."
+  },
+  "devices.shareInternetHintProxy": {
+    "value": "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -41986,7 +42034,7 @@
     "value": "Use this one"
   },
   "devices.shareInternetJoin": {
-    "value": "The agents will also open websites through this computer's internet, so sites see your location. You can turn it off on its page."
+    "value": "The agents will also go online through this computer's internet, so sites and servers see your location. You can turn it off on its page."
   },
   "devices.connectedBy": {
     "value": "Connected by {{name}}"
@@ -43393,7 +43441,7 @@
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
   },
   "devices.notice.internetSharedLine": {
-    "value": "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection."
+    "value": "Only this workspace's agents, never anything on its own network, never email on port 25. While it's offline, they use their usual connection."
   },
   "devices.notice.internetOff": {
     "value": "Turn off"
@@ -48516,7 +48564,13 @@
     "value": "Still in line. I'll answer as soon as my turn comes."
   },
   "chat.body.brain_interrupted": {
-    "value": "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}."
+    "value": "{{brain}} stopped before finishing. Ask again to continue."
+  },
+  "chat.body.brain_interrupted_timeout": {
+    "value": "{{brain}} ran past its time limit and stopped before finishing. Ask again to continue."
+  },
+  "chat.body.brain_interrupted_computer": {
+    "value": "The computer stopped {{brain}} before it finished. Ask again to continue."
   },
   "chat.body.plan_limit_cut": {
     "value": "I stopped at the {{plan}} plan's limit. I'll pick up where I left off {{when}}, when it resets."

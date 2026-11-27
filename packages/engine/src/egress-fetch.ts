@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { createServer, type Socket } from "node:net";
-import { isEgressTarget, STREAM_CLOSE } from "@agenteschat/adapters";
+import { isEgressTarget, parseStreamControl, STREAM_CLOSE } from "@agenteschat/adapters";
 import type { EgressRelay } from "./egress-share";
 import { serverLending } from "./machines";
 
@@ -59,6 +59,9 @@ export function createEgressFetch(relay: Pick<EgressRelay, "connect" | "lending"
       const leg = relay.connect(orgId, target, {
         send(data) {
           if (typeof data !== "string") return void client.write(data);
+          const control = ready ? parseStreamControl(data) : null;
+          if (control?.type === "pause") return void client.pause();
+          if (control?.type === "resume") return void client.resume();
           if (ready || !data.includes('"stream.ready"')) return;
           ready = true;
           clearTimeout(timer);

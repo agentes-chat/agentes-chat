@@ -1,4 +1,4 @@
-import { closeSync, openSync, readSync, statSync, truncateSync } from "node:fs";
+import { closeSync, constants, fstatSync, ftruncateSync, openSync, readSync } from "node:fs";
 import { scrubLogLine } from "@agenteschat/adapters/error-scrub";
 import {
   BRAIN_LIMITS,
@@ -31,32 +31,52 @@ const NEVER = /\bHook\b.*\bsuccess:|"content"|\bprompt\b.*:|Server stderr:/i;
 const KEY = /\[API|\[dispatch\]|first chunk|\[engine\] turn|retry|overloaded|\b(?:429|529)\b|rate.?limit/i;
 const LINE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) (\[[A-Z]+\]) (.*)$/;
 
+/**
+ * The log, opened by root: a plain file of one link, never what a link points to nor a pipe that would block. A
+ * sign-in several agents share writes its CLI's log in that sign-in's own folder (`spawn`), where that user could leave
+ * one in its place.
+ */
+function openLog(file: string, flags: number): number | undefined {
+  let fd: number | undefined;
+  try {
+    fd = openSync(file, flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+    const st = fstatSync(fd);
+    if (st.isFile() && st.nlink === 1) return fd;
+  } catch {
+    // Not written yet (a process starting), gone, or a link.
+  }
+  if (fd !== undefined) closeSync(fd);
+  return undefined;
+}
+
 /** Where a turn's lines start: the log's size now, after emptying one past its bound. */
 export function debugLogMark(file: string): number {
+  const fd = openLog(file, constants.O_RDWR);
+  if (fd === undefined) return 0;
   try {
-    const size = statSync(file).size;
+    const size = fstatSync(fd).size;
     if (size <= DEBUG_LOG_MAX_BYTES) return size;
-    truncateSync(file, 0);
-  } catch {
-    // Not written yet (a process starting), or gone.
+    ftruncateSync(fd, 0);
+    return 0;
+  } finally {
+    closeSync(fd);
   }
-  return 0;
 }
 
 /** What the log holds from `from` on, its last `TURN_READ_MAX_BYTES` at most. */
 function readFrom(file: string, from: number): string {
-  let fd: number | undefined;
+  const fd = openLog(file, constants.O_RDONLY);
+  if (fd === undefined) return "";
   try {
-    const size = statSync(file).size;
+    const size = fstatSync(fd).size;
     const start = Math.max(from > size ? 0 : from, size - TURN_READ_MAX_BYTES);
     const buf = Buffer.alloc(size - start);
-    fd = openSync(file, "r");
     readSync(fd, buf, 0, buf.length, start);
     return buf.toString("utf8");
   } catch {
     return "";
   } finally {
-    if (fd !== undefined) closeSync(fd);
+    closeSync(fd);
   }
 }
 

@@ -133,14 +133,20 @@ test("what ships draws the working row's rings with transforms only, still with 
   const line = ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active]";
   expect(last(line, "max-height")).toBe("none");
   expect(last(line, "font-size")).toBe("var(--msg-text)");
-  // Its pieces wrap whole inside the line; its globe and "Ver" stay outside them, at its end.
-  expect(last(".working-tail__words", "flex-wrap")).toBe("wrap");
-  // Its words, and what it did so far, wrap: never cut.
+  // One line whatever it says: no piece wraps to a second (it came and went as the step turned, moving the
+  // conversation and the composer), the step gives way first, and the name keeps its width up to half the line.
+  expect(last(".working-tail__words", "flex-wrap")).toBeUndefined();
+  expect(last(".working-tail__words", "white-space")).toBe("nowrap");
   expect(
     last(
       ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active] .ac-typing__text",
       "white-space",
     ),
-  ).toBe("normal");
+  ).toBeUndefined();
+  const name = ".working-tail .ac-typing__agents:has(>.ac-typing__step)>b";
+  expect(last(name, "flex")).toBe("none");
+  expect(last(name, "max-width")).toBe("50%");
+  expect(last(name, "white-space")).toBe("nowrap");
+  // What it did so far wraps: never cut.
   expect(last(".working-tail__trail>li", "overflow-wrap")).toBe("anywhere");
 });

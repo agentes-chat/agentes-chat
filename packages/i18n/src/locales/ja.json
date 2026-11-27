@@ -2306,44 +2306,65 @@
     "deleteText": "グループ内のエージェントは「エージェント」に戻ります。",
     "deleteChannels": "グループ内のチャンネルは「チャンネル」に戻ります。",
     "dropHere": "ここにエージェントをドラッグ",
-    "dropHereAll": "ここにエージェントかチャンネルをドラッグ",
     "moved": "{{name}} は {{group}} に移動しました",
     "movedOut": "{{name}} は {{group}} から外れました",
     "undo": "元に戻す"
   },
   "sidebarAgents": {
-    "options": "エージェントのオプション",
-    "add": "新しいエージェントまたは部署",
-    "order": "並び順",
-    "sort": {
-      "workspace": "ワークスペースの順",
-      "mine": "自分のエージェントを先に",
-      "working": "作業中を先に"
-    },
     "showAll": "自分と話さないエージェントも表示",
-    "collapseAll": "すべて折りたたむ",
-    "expandAll": "すべて展開",
-    "organize": "チームで部署を整理",
     "more_other": "チームにエージェントがあと {{count}} 体",
     "newAgent": "新しいエージェント",
-    "working_other": "{{count}} 件が作業中",
     "count_other": "エージェント {{count}} 件",
     "workingIn": "#{{channel}} で作業中",
     "talksOnly": "{{name}} とだけ話します",
-    "talksOnlyMore_other": "{{name}} とほか {{count}} 件とだけ話します",
-    "changeGroup": "部署を移動",
-    "newGroupWith": "{{name}} を含む新しい部署",
-    "dmsEmpty": "メンバーとの会話はここに表示されます。"
+    "talksOnlyMore_other": "{{name}} とほか {{count}} 件とだけ話します"
   },
-  "sidebarPins": {
-    "pin": "上部に固定",
-    "unpin": "固定を解除",
-    "pinned": "上部に固定済み",
-    "full": {
-      "agents": "すでにエージェントを 5 件固定しています。固定するには 1 件解除してください。",
-      "channels": "すでにチャンネルを 5 件固定しています。固定するには 1 件解除してください。",
-      "people": "すでにメンバーを 5 人固定しています。固定するには 1 人解除してください。"
-    }
+  "sidebarFavorites": {
+    "title": "お気に入り",
+    "add": "お気に入りに追加",
+    "remove": "お気に入りから外す",
+    "marked": "お気に入り",
+    "full": "お気に入りはすでに50件です。追加するには1件外してください。"
+  },
+  "sidebarSections": {
+    "new": "新しいセクション",
+    "newName": "新しいセクション",
+    "moveTo": "セクションへ移動",
+    "takeOut": "セクションから外す",
+    "rename": "セクション名を変更",
+    "delete": "セクションを削除",
+    "nameLabel": "セクション名"
+  },
+  "sidebarDms": {
+    "options": "ダイレクトメッセージのオプション",
+    "show": "表示",
+    "shows": {
+      "all": "ワークスペースの全員",
+      "recent": "最近の会話のみ"
+    },
+    "invite": "メンバーを招待",
+    "invited": "招待済み",
+    "invitedTip": "{{email}} はまだ招待を承認していません",
+    "agentTag": "AI",
+    "agentTip": "AIエージェント"
+  },
+  "sidebarColumn": {
+    "label": "ツール",
+    "unread": "{{name}}、未読あり",
+    "you": "{{name}}、あなた宛てあり"
+  },
+  "unreads": {
+    "title": "未読",
+    "forYou": "あなた宛て",
+    "conversations": "会話",
+    "markAll": "すべて既読にする",
+    "markRead": "既読にする",
+    "open": "開く",
+    "seeInbox": "受信トレイですべて見る",
+    "more_other": "ほか{{count}}件のメッセージ",
+    "emptyTitle": "すべて確認済み",
+    "emptyText": "新しいメッセージとあなたを待っているものがここに表示されます。",
+    "markedAll": "すべて既読にしました"
   },
   "appsDownload": {
     "computer": "パソコン",
@@ -16493,11 +16514,12 @@
     "helpWorkspace": "チームのコンピューターが満杯または不在のとき、ほかのコンピューターが手伝う",
     "helpWorkspaceHint": "各コンピューターはオーナーが許可した場合だけ手伝います。オフ：オーナーの選択に関係なく、どれも手伝いません。",
     "shareInternet": "エージェントがこのコンピューターのインターネットを使う",
-    "shareInternetHint": "エージェントが開くサイトはこのコンピューターの接続を通るため、サイトからはあなたの場所が見えます。対象はウェブサイトのみで、あなた自身のネットワーク上のものには決してアクセスしません。このコンピューターがオフラインの間、エージェントはいつもの接続を使います。",
+    "shareInternetHint": "エージェントの接続はこのコンピューターのインターネットを通るため、サイトやサーバーからはあなたの場所が見えます。対象はウェブサイト、git、SSH、データベースなどの TCP 接続です。あなた自身のネットワーク上のものには決してアクセスせず、ポート 25 のメールも送りません。名前の解決、通話などの UDP 通信はいつもの接続を使い、このコンピューターがオフラインの間はすべていつもの接続を使います。",
+    "shareInternetHintProxy": "エージェントのブラウザーと、プロキシ設定に従うプログラム（HTTPS の git、curl、ほとんどのコマンドラインツール）はこのコンピューターのインターネットを通るため、サイトからはあなたの場所が見えます。SSH、データベースクライアントなど、プロキシ設定を無視するプログラムはいつもの接続を使い、名前の解決と UDP 通信も同じです。あなた自身のネットワーク上のものには決してアクセスせず、ポート 25 のメールも送りません。このコンピューターがオフラインの間は、すべていつもの接続を使います。",
     "shareInternetInUse": "使用中",
     "shareInternetOther": "エージェントは今 {{name}} を使っています",
     "shareInternetPick": "これを使う",
-    "shareInternetJoin": "エージェントはこのコンピューターのインターネットを通してもサイトを開くため、サイトからはあなたの場所が見えます。そのページでオフにできます。",
+    "shareInternetJoin": "エージェントはこのコンピューターのインターネットも使うため、サイトやサーバーからはあなたの場所が見えます。そのページでオフにできます。",
     "connectedBy": "{{name}}が接続",
     "downloadFor": "{{system}}版をダウンロード",
     "downloadApp": "アプリをダウンロード",
@@ -17036,7 +17058,7 @@
       "folderOnComputer": "コンピューターで許可",
       "folderShown": "{{deviceName}}で開きました。そちらで許可してください。",
       "internetShared": "エージェントは今後 <b>{{deviceName}}</b> のインターネットを通じてウェブサイトを開きます",
-      "internetSharedLine": "対象はこのワークスペースのエージェントのみ、ウェブサイトのみ。そのコンピューターのネットワーク内には一切アクセスしません。オフラインの間は、いつもの接続を使います。",
+      "internetSharedLine": "対象はこのワークスペースのエージェントのみ。そのコンピューターのネットワーク内には一切アクセスせず、ポート 25 のメールも送りません。オフラインの間は、いつもの接続を使います。",
       "internetOff": "オフにする",
       "internetOffDone": "エージェントは {{deviceName}} のインターネットを使わなくなりました。",
       "once": "今回のみ許可",
@@ -19020,7 +19042,9 @@
       "provider_back": "AIが戻りました。",
       "confidential_removed": "削除済み：機密テキストの保存期間は{{days}}日です。",
       "brain_queued": "まだ順番待ちです。順番が来たらすぐに返信します。",
-      "brain_interrupted": "{{brain}}が完了前に停止しました。完了済みで繰り返さないもの: {{tools}}。",
+      "brain_interrupted": "{{brain}}が完了前に停止しました。続けるにはもう一度依頼してください。",
+      "brain_interrupted_timeout": "{{brain}}が制限時間を超えたため、完了前に停止しました。続けるにはもう一度依頼してください。",
+      "brain_interrupted_computer": "パソコンが完了前に{{brain}}を停止しました。続けるにはもう一度依頼してください。",
       "plan_limit_cut": "{{plan}}プランの上限で停止しました。リセットされる{{when}}に、続きから再開します。",
       "plan_limit_cut_unknown": "{{plan}}プランの上限で停止しました。リセットされ次第、続きから再開します。",
       "plan_limit_wait": "{{plan}}プランが上限に達しました。リセットされる{{when}}に返信します。{{plan}}側で先に解除されたら、気づいてすぐに返信します。",

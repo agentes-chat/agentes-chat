@@ -2388,48 +2388,69 @@
     "deleteText": "De agents gaan terug naar Agents.",
     "deleteChannels": "De kanalen gaan terug naar Kanalen.",
     "dropHere": "Sleep agents hierheen",
-    "dropHereAll": "Sleep agents of kanalen hierheen",
     "moved": "{{name}} zit nu in {{group}}",
     "movedOut": "{{name}} heeft {{group}} verlaten",
     "undo": "Ongedaan maken"
   },
   "sidebarAgents": {
-    "options": "Opties voor agents",
-    "add": "Nieuwe agent of afdeling",
-    "order": "Volgorde",
-    "sort": {
-      "workspace": "Die van de werkruimte",
-      "mine": "Mijn agents eerst",
-      "working": "Aan het werk eerst"
-    },
     "showAll": "Agents tonen die niet met mij praten",
-    "collapseAll": "Alles inklappen",
-    "expandAll": "Alles uitklappen",
-    "organize": "Afdelingen ordenen in Team",
     "more_one": "Nog 1 agent in Team",
     "more_other": "Nog {{count}} agents in Team",
     "newAgent": "Nieuwe agent",
-    "working_one": "{{count}} aan het werk",
-    "working_other": "{{count}} aan het werk",
     "count_one": "{{count}} agent",
     "count_other": "{{count}} agents",
     "workingIn": "aan het werk in #{{channel}}",
     "talksOnly": "praat alleen met {{name}}",
     "talksOnlyMore_one": "praat alleen met {{name}} en {{count}} ander",
-    "talksOnlyMore_other": "praat alleen met {{name}} en {{count}} anderen",
-    "changeGroup": "Naar afdeling verplaatsen",
-    "newGroupWith": "Nieuwe afdeling met {{name}}",
-    "dmsEmpty": "Je gesprekken met mensen verschijnen hier."
+    "talksOnlyMore_other": "praat alleen met {{name}} en {{count}} anderen"
   },
-  "sidebarPins": {
-    "pin": "Bovenaan vastzetten",
-    "unpin": "Losmaken",
-    "pinned": "Bovenaan vastgezet",
-    "full": {
-      "agents": "Je hebt al 5 agents vastgezet. Maak er een los om deze vast te zetten.",
-      "channels": "Je hebt al 5 kanalen vastgezet. Maak er een los om dit vast te zetten.",
-      "people": "Je hebt al 5 mensen vastgezet. Maak er een los om deze vast te zetten."
-    }
+  "sidebarFavorites": {
+    "title": "Favorieten",
+    "add": "Toevoegen aan favorieten",
+    "remove": "Verwijderen uit favorieten",
+    "marked": "In favorieten",
+    "full": "Favorieten bevat al 50. Haal er een weg om deze toe te voegen."
+  },
+  "sidebarSections": {
+    "new": "Nieuwe sectie",
+    "newName": "Nieuwe sectie",
+    "moveTo": "Naar sectie verplaatsen",
+    "takeOut": "Uit sectie halen",
+    "rename": "Sectie hernoemen",
+    "delete": "Sectie verwijderen",
+    "nameLabel": "Naam van de sectie"
+  },
+  "sidebarDms": {
+    "options": "Opties voor directe berichten",
+    "show": "Tonen",
+    "shows": {
+      "all": "Iedereen in de workspace",
+      "recent": "Alleen recente gesprekken"
+    },
+    "invite": "Mensen uitnodigen",
+    "invited": "Uitnodiging verstuurd",
+    "invitedTip": "{{email}} heeft de uitnodiging nog niet geaccepteerd",
+    "agentTag": "AI",
+    "agentTip": "AI-agent"
+  },
+  "sidebarColumn": {
+    "label": "Tools",
+    "unread": "{{name}}, iets ongelezens",
+    "you": "{{name}}, iets voor jou"
+  },
+  "unreads": {
+    "title": "Ongelezen",
+    "forYou": "Voor jou",
+    "conversations": "Gesprekken",
+    "markAll": "Alles als gelezen markeren",
+    "markRead": "Markeren als gelezen",
+    "open": "Openen",
+    "seeInbox": "Alles in Postvak IN bekijken",
+    "more_one": "Nog {{count}} bericht",
+    "more_other": "Nog {{count}} berichten",
+    "emptyTitle": "Helemaal bij",
+    "emptyText": "Nieuwe berichten en wat op je wacht, verschijnen hier.",
+    "markedAll": "Alles gemarkeerd als gelezen"
   },
   "appsDownload": {
     "computer": "Computer",
@@ -17175,11 +17196,12 @@
     "helpWorkspace": "Computers helpen als die van het team vol of weg is",
     "helpWorkspaceHint": "Elke computer helpt alleen als zijn eigenaar het toestaat. Uit: geen enkele helpt, wat de eigenaar ook koos.",
     "shareInternet": "Agents gebruiken het internet van deze computer",
-    "shareInternetHint": "Websites die de agents openen, gaan via de verbinding van deze computer en zien dus jouw locatie. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken de agents hun gewone verbinding.",
+    "shareInternetHint": "De verbindingen van de agents gaan via het internet van deze computer, dus websites en servers zien jouw locatie: websites, git, SSH, databases en andere TCP-verbindingen. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Naamopzoekingen, gesprekken en ander UDP-verkeer gebruiken de gewone verbinding, net als alles zolang deze computer offline is.",
+    "shareInternetHintProxy": "De browser van de agents en de programma’s die proxyinstellingen volgen (git via HTTPS, curl, de meeste commandoregeltools) gaan via het internet van deze computer, dus websites zien jouw locatie. SSH, databaseclients en andere programma’s die proxyinstellingen negeren, gebruiken de gewone verbinding, net als naamopzoekingen en UDP-verkeer. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Zolang deze computer offline is, gebruikt alles de gewone verbinding.",
     "shareInternetInUse": "Nu in gebruik",
     "shareInternetOther": "Agents gebruiken nu {{name}}",
     "shareInternetPick": "Deze gebruiken",
-    "shareInternetJoin": "De agents openen ook websites via het internet van deze computer, dus websites zien jouw locatie. Je kunt het op zijn pagina uitzetten.",
+    "shareInternetJoin": "De agents gaan ook via het internet van deze computer online, dus websites en servers zien jouw locatie. Je kunt het op zijn pagina uitzetten.",
     "connectedBy": "Gekoppeld door {{name}}",
     "downloadFor": "Downloaden voor {{system}}",
     "downloadApp": "De app downloaden",
@@ -17721,7 +17743,7 @@
       "folderOnComputer": "Toestaan op de computer",
       "folderShown": "Geopend op {{deviceName}}. Sta het daar toe.",
       "internetShared": "Agents openen websites nu via het internet van <b>{{deviceName}}</b>",
-      "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
+      "internetSharedLine": "Alleen de agents van deze workspace, nooit iets op het eigen netwerk van de computer, nooit e-mail via poort 25. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
       "internetOff": "Uitzetten",
       "internetOffDone": "Agents gebruiken het internet van {{deviceName}} niet meer.",
       "once": "Eén keer toestaan",
@@ -19755,7 +19777,9 @@
       "provider_back": "Mijn AI is terug.",
       "confidential_removed": "Verwijderd: vertrouwelijke tekst wordt {{days}} dagen bewaard.",
       "brain_queued": "Nog in de wachtrij. Ik antwoord zodra ik aan de beurt ben.",
-      "brain_interrupted": "{{brain}} stopte voordat het klaar was. Al gedaan, niet herhaald: {{tools}}.",
+      "brain_interrupted": "{{brain}} stopte voordat het klaar was. Vraag het opnieuw om verder te gaan.",
+      "brain_interrupted_timeout": "{{brain}} ging over zijn tijdslimiet en stopte voordat het klaar was. Vraag het opnieuw om verder te gaan.",
+      "brain_interrupted_computer": "De computer stopte {{brain}} voordat het klaar was. Vraag het opnieuw om verder te gaan.",
       "plan_limit_cut": "Ik ben gestopt bij de limiet van het {{plan}}-abonnement. Ik ga {{when}} verder waar ik was, als de limiet reset.",
       "plan_limit_cut_unknown": "Ik ben gestopt bij de limiet van het {{plan}}-abonnement. Ik ga verder waar ik was zodra de limiet reset.",
       "plan_limit_wait": "Het {{plan}}-abonnement heeft de limiet bereikt. Ik antwoord {{when}}, als de limiet is gereset. Wordt het eerder vrijgegeven in {{plan}}, dan merk ik dat en antwoord ik meteen.",

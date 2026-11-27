@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { ApiError, type Message } from "@agenteschat/client";
-import { act, cleanup, fireEvent, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { stepAt } from "@/components/Loading";
 import { createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
@@ -187,20 +187,17 @@ describe("a thread opening in the panel", () => {
     expect(within(panel).queryByRole("status", { name: "Carregando mensagens" })).toBeNull();
   });
 
-  test("a thread no list holds yet: one skeleton shaped like it, the composer's box with no bar in it", async () => {
+  test("a thread no list holds yet: its link waits to know where it lives, then opens it beside its channel", async () => {
     const api = createFakeApi(seedState());
     const release = holdThread(api);
-    await renderApp(`/org/${ORG_ID}/threads/m-1`, { api });
+    const { router } = await renderApp(`/org/${ORG_ID}/threads/m-1`, { api });
     await settle(6);
-    const skeleton = document.querySelector(".channel__skeleton") as HTMLElement;
-    expect(skeleton.querySelector(".thread-head")).toBeTruthy();
-    expect(skeleton.querySelectorAll(".ac-skeleton-msg")).toHaveLength(6);
-    const box = skeleton.querySelector(".channel__composer-skeleton") as HTMLElement;
-    expect(box.querySelectorAll(".ac-skeleton")).toHaveLength(1);
-    expect(box.querySelector(".ac-composer__tools .channel__composer-skeleton-send")).toBeTruthy();
+    // No page of the thread's own on the way: no thread skeleton to swap for the channel.
+    expect(document.querySelector(".thread-head")).toBeNull();
     await release();
-    await settle(8);
-    expect(document.querySelector(".channel__skeleton")).toBeNull();
-    expect(screen().getByRole("combobox", { name: "Responder na thread" })).toBeTruthy();
+    const panel = await waitFor(() => screen().getByRole("complementary", { name: "Thread" }));
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
+    await settle(6);
+    expect(within(panel).getByRole("combobox", { name: "Responder na thread" })).toBeTruthy();
   });
 });

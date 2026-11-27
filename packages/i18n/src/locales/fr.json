@@ -2472,31 +2472,16 @@
     "deleteText": "Ses agents retournent dans Agents.",
     "deleteChannels": "Ses canaux retournent dans Canaux.",
     "dropHere": "Faites glisser des agents ici",
-    "dropHereAll": "Faites glisser des agents ou des canaux ici",
     "moved": "{{name}} est passé dans {{group}}",
     "movedOut": "{{name}} a quitté {{group}}",
     "undo": "Annuler"
   },
   "sidebarAgents": {
-    "options": "Options des agents",
-    "add": "Nouvel agent ou service",
-    "order": "Ordre",
-    "sort": {
-      "workspace": "Celui de l’espace de travail",
-      "mine": "Les miens d’abord",
-      "working": "Au travail d’abord"
-    },
     "showAll": "Afficher les agents qui ne me parlent pas",
-    "collapseAll": "Tout replier",
-    "expandAll": "Tout déplier",
-    "organize": "Organiser les services dans Équipe",
     "more_one": "1 agent de plus dans Équipe",
     "more_many": "{{count}} agents de plus dans Équipe",
     "more_other": "{{count}} agents de plus dans Équipe",
     "newAgent": "Nouvel agent",
-    "working_one": "{{count}} au travail",
-    "working_many": "{{count}} au travail",
-    "working_other": "{{count}} au travail",
     "count_one": "{{count}} agent",
     "count_many": "{{count}} agents",
     "count_other": "{{count}} agents",
@@ -2504,20 +2489,56 @@
     "talksOnly": "ne parle qu’à {{name}}",
     "talksOnlyMore_one": "ne parle qu’à {{name}} et {{count}} autre",
     "talksOnlyMore_many": "ne parle qu’à {{name}} et {{count}} autres",
-    "talksOnlyMore_other": "ne parle qu’à {{name}} et {{count}} autres",
-    "changeGroup": "Déplacer vers un service",
-    "newGroupWith": "Nouveau service avec {{name}}",
-    "dmsEmpty": "Vos conversations avec des personnes apparaissent ici."
+    "talksOnlyMore_other": "ne parle qu’à {{name}} et {{count}} autres"
   },
-  "sidebarPins": {
-    "pin": "Épingler en haut",
-    "unpin": "Désépingler",
-    "pinned": "Épinglé en haut",
-    "full": {
-      "agents": "Vous avez déjà épinglé 5 agents. Désépinglez-en un pour épingler celui-ci.",
-      "channels": "Vous avez déjà épinglé 5 canaux. Désépinglez-en un pour épingler celui-ci.",
-      "people": "Vous avez déjà épinglé 5 personnes. Désépinglez-en une pour épingler celle-ci."
-    }
+  "sidebarFavorites": {
+    "title": "Favoris",
+    "add": "Ajouter aux favoris",
+    "remove": "Retirer des favoris",
+    "marked": "Dans les favoris",
+    "full": "Les favoris en contiennent déjà 50. Retirez-en un pour ajouter celui-ci."
+  },
+  "sidebarSections": {
+    "new": "Nouvelle section",
+    "newName": "Nouvelle section",
+    "moveTo": "Déplacer vers la section",
+    "takeOut": "Retirer de la section",
+    "rename": "Renommer la section",
+    "delete": "Supprimer la section",
+    "nameLabel": "Nom de la section"
+  },
+  "sidebarDms": {
+    "options": "Options des messages directs",
+    "show": "Afficher",
+    "shows": {
+      "all": "Tout le workspace",
+      "recent": "Conversations récentes seulement"
+    },
+    "invite": "Inviter des personnes",
+    "invited": "Invitation envoyée",
+    "invitedTip": "{{email}} n'a pas encore accepté l'invitation",
+    "agentTag": "IA",
+    "agentTip": "Agent IA"
+  },
+  "sidebarColumn": {
+    "label": "Outils",
+    "unread": "{{name}}, quelque chose de non lu",
+    "you": "{{name}}, quelque chose pour vous"
+  },
+  "unreads": {
+    "title": "Non lus",
+    "forYou": "Pour vous",
+    "conversations": "Conversations",
+    "markAll": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "open": "Ouvrir",
+    "seeInbox": "Tout voir dans la boîte de réception",
+    "more_one": "{{count}} message de plus",
+    "more_many": "{{count}} messages de plus",
+    "more_other": "{{count}} messages de plus",
+    "emptyTitle": "Vous êtes à jour",
+    "emptyText": "Les nouveaux messages et ce qui vous attend apparaissent ici.",
+    "markedAll": "Tout est marqué comme lu"
   },
   "appsDownload": {
     "computer": "Ordinateur",
@@ -17673,11 +17694,12 @@
     "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
     "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "shareInternet": "Les agents utilisent la connexion internet de cet ordinateur",
-    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
+    "shareInternetHint": "Les connexions des agents passent par l’internet de cet ordinateur, les sites et les serveurs voient donc votre emplacement : sites web, git, SSH, bases de données et autres connexions TCP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Les résolutions de noms, les appels et le reste du trafic UDP utilisent la connexion habituelle, comme tout le reste tant que cet ordinateur est hors ligne.",
+    "shareInternetHintProxy": "Le navigateur des agents et les programmes qui suivent les réglages de proxy (git via HTTPS, curl, la plupart des outils en ligne de commande) passent par l’internet de cet ordinateur, les sites voient donc votre emplacement. SSH, les clients de base de données et les autres programmes qui ignorent les réglages de proxy utilisent la connexion habituelle, comme les résolutions de noms et le trafic UDP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Tant que cet ordinateur est hors ligne, tout utilise la connexion habituelle.",
     "shareInternetInUse": "Utilisé en ce moment",
     "shareInternetOther": "Les agents utilisent {{name}} en ce moment",
     "shareInternetPick": "Utiliser celui-ci",
-    "shareInternetJoin": "Les agents ouvriront aussi des sites via la connexion internet de cet ordinateur, les sites verront donc votre emplacement. Vous pouvez couper ça sur sa page.",
+    "shareInternetJoin": "Les agents passeront aussi par l’internet de cet ordinateur, les sites et les serveurs verront donc votre emplacement. Vous pouvez couper ça sur sa page.",
     "connectedBy": "Connecté par {{name}}",
     "downloadFor": "Télécharger pour {{system}}",
     "downloadApp": "Télécharger l'app",
@@ -18222,7 +18244,7 @@
       "folderOnComputer": "Autoriser sur l'ordinateur",
       "folderShown": "Ouvert sur {{deviceName}}. Autorisez-le là-bas.",
       "internetShared": "Les agents ouvrent désormais les sites web via la connexion internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
+      "internetSharedLine": "Uniquement les agents de ce workspace, jamais rien sur son propre réseau, jamais d’e-mail sur le port 25. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
       "internetOff": "Désactiver",
       "internetOffDone": "Les agents n’utilisent plus la connexion internet de {{deviceName}}.",
       "once": "Autoriser une fois",
@@ -20305,7 +20327,9 @@
       "provider_back": "Mon IA est de retour.",
       "confidential_removed": "Supprimé : le texte confidentiel est conservé pendant {{days}} jours.",
       "brain_queued": "Toujours dans la file. Je réponds dès que mon tour arrive.",
-      "brain_interrupted": "{{brain}} s'est arrêté avant de terminer. Déjà fait, non répété : {{tools}}.",
+      "brain_interrupted": "{{brain}} s'est arrêté avant de terminer. Redemandez pour continuer.",
+      "brain_interrupted_timeout": "{{brain}} a dépassé son temps limite et s'est arrêté avant de terminer. Redemandez pour continuer.",
+      "brain_interrupted_computer": "L'ordinateur a arrêté {{brain}} avant la fin. Redemandez pour continuer.",
       "plan_limit_cut": "Je me suis arrêté à la limite de l'abonnement {{plan}}. Je reprendrai là où j'en étais {{when}}, quand elle se réinitialisera.",
       "plan_limit_cut_unknown": "Je me suis arrêté à la limite de l'abonnement {{plan}}. Je reprendrai là où j'en étais dès qu'elle se réinitialisera.",
       "plan_limit_wait": "L'abonnement {{plan}} a atteint sa limite. Je répondrai {{when}}, quand elle se réinitialisera. S'il est libéré plus tôt dans {{plan}}, je le verrai et répondrai aussitôt.",

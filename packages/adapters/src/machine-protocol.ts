@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 95;
+export const MACHINE_PROTOCOL_VERSION = 96;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -896,8 +896,9 @@ export const PERSON_APPS_PROTOCOL = 94;
  * From this protocol on (ADR 0237, self-hosted servers): a computer that borrows a person's internet without the
  * Cloud's guard (this server's own computer, or one marked the workspace's with its own switch off) runs a loopback
  * proxy (HTTP CONNECT and SOCKS5 on one port) and hands its agents' processes and browsers the proxy settings. Its
- * connections to ports 80 and 443 go out through a lending computer like the workspace computer's (`stream.hello`
- * with `egress`); anything else, a refusal, or no lender online goes out the computer's usual way. `welcome.egressProxy`
+ * connections (ports 80 and 443; from `EGRESS_ANY_PORT_PROTOCOL`, any `isEgressTarget`) go out through a lending
+ * computer like the workspace computer's (`stream.hello` with `egress`); anything else, a refusal, or no lender
+ * online goes out the computer's usual way. `welcome.egressProxy`
  * turns it on at connect, `egress.proxy` when the computer's role changes. The server sends neither to an older runner.
  */
 export const EGRESS_PROXY_PROTOCOL = 95;
@@ -2035,7 +2036,14 @@ export type StreamControl =
   | { type: "tap"; x: number; y: number }
   | { type: "swipe"; x1: number; y1: number; x2: number; y2: number; ms: number }
   | { type: "text"; text: string }
-  | { type: "key"; key: PhoneKey };
+  | { type: "key"; key: PhoneKey }
+  /**
+   * A lent connection's data socket (ADR 0237), either way: from the server, stop reading the TCP side until `resume`
+   * (the other side is backed up); from a computer, what reaches it backs up on its TCP side, so the other stops.
+   * Unknown to an older runner or server, which goes on as before.
+   */
+  | { type: "pause" }
+  | { type: "resume" };
 
 /**
  * A person's turn in an agent's browser (`browser.handoff`, ADR 0040 §6), as
@@ -2510,7 +2518,8 @@ export interface BrainTurnTimings {
   initMs?: number;
   /**
    * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
-   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   * turn of its own, a model switch, a sign-in's route stopping, a shared sign-in's handshake with the agent's worker),
+   * which would otherwise read as the CLI's or the API's.
    */
   sentMs?: number;
   firstEventMs?: number;
@@ -2918,7 +2927,8 @@ export const TASK_ROOM_PROTOCOL = 78;
 
 /**
  * Protocol 81 (ADR 0237): a person's computer may lend its internet connection to its workspace's own computer.
- * `egress.dial` asks it to open one TCP connection to `host`:`port` (`EGRESS_SHARE`'s ports only, a name it resolves
+ * `egress.dial` asks it to open one TCP connection to `host`:`port` (any port but `EGRESS_SHARE.refusedPorts`; the web
+ * ports alone before `EGRESS_ANY_PORT_PROTOCOL`, a name it resolves
  * itself or a public address, never one on its own network) and to carry its bytes on a data socket it dials for
  * `streamId`; it answers once that socket is ready. A data socket's `stream.hello` may carry `egress`: the workspace's
  * computer asks the server for such a connection, and the server answers `stream.ready` once a lent connection
@@ -2926,10 +2936,18 @@ export const TASK_ROOM_PROTOCOL = 78;
  * carried). The server asks no older runner, and `welcome.egressRelay` goes to the workspace's computer alone.
  */
 export const EGRESS_SHARE_PROTOCOL = 81;
+/**
+ * Protocol 96 (ADR 0237, amendment 2026-11-27 b): a lending computer carries TCP to any port but
+ * `EGRESS_SHARE.refusedPorts` (SSH, git, databases), where an older one carries `EGRESS_SHARE.webPorts` alone. The
+ * server sends an older lender nothing else and answers such a destination `refused` while only older ones lend.
+ */
+export const EGRESS_ANY_PORT_PROTOCOL = 96;
 /** What a lent connection carries, at most. */
 export const EGRESS_SHARE = {
-  /** The web only: anything else leaves the workspace's computer its usual way. */
-  ports: [80, 443] as readonly number[],
+  /** All a lending computer before `EGRESS_ANY_PORT_PROTOCOL` carries. */
+  webPorts: [80, 443] as readonly number[],
+  /** Never carried: mail servers' port, so the person's home address is never blocklisted for spam. */
+  refusedPorts: [25] as readonly number[],
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */
@@ -2942,9 +2960,17 @@ export const isEgressHost = (v: unknown): v is string =>
   v.length <= 253 &&
   (/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.?$/.test(v) ||
     /^[0-9A-Fa-f:.]+$/.test(v));
-/** A target `stream.hello` or `egress.dial` names: a host as `isEgressHost` and one of `EGRESS_SHARE.ports`. */
+/** A target `stream.hello` or `egress.dial` names: a host as `isEgressHost` and a TCP port not refused. */
 export const isEgressTarget = (v: unknown): v is { host: string; port: number } =>
-  isObject(v) && isEgressHost(v.host) && typeof v.port === "number" && EGRESS_SHARE.ports.includes(v.port);
+  isObject(v) &&
+  isEgressHost(v.host) &&
+  Number.isInteger(v.port) &&
+  (v.port as number) > 0 &&
+  (v.port as number) < 65536 &&
+  !EGRESS_SHARE.refusedPorts.includes(v.port as number);
+/** Whether a lending computer at `protocol` carries `port` (`EGRESS_ANY_PORT_PROTOCOL`). */
+export const lenderCarries = (protocol: number, port: number) =>
+  protocol >= EGRESS_ANY_PORT_PROTOCOL || EGRESS_SHARE.webPorts.includes(port);
 
 /**
  * Protocol 84 (ADR 0143): Gemini signs in and thinks on Windows, one account a computer (the CLI keeps its sign-in in
@@ -5623,6 +5649,7 @@ export function parseStreamControl(raw: string): StreamControl | null {
   if (f.type === "moved") return { type: "moved" };
   if (f.type === "mode" && (f.mode === "watch" || f.mode === "control")) return { type: "mode", mode: f.mode };
   if (f.type === "ack") return { type: "ack" };
+  if (f.type === "pause" || f.type === "resume") return { type: f.type };
   return null;
 }
 
