@@ -161,6 +161,9 @@ export function ConsultPairRow({
   const word = pair.word ? t(pair.word.key, pair.word.values) : null;
   const time = pair.seconds !== null ? consultTimeText(t, i18n.language, live, pair.seconds) : null;
   const how = [word, time].filter(Boolean).join(" · ");
+  // A hand-off on a phone's width shows what was asked instead: "por você" and the time give way, as the web's.
+  const tight = handed && !roomy;
+  const shownTime = tight ? null : time;
   return (
     <View style={row.line}>
       <View style={[row.rule, { backgroundColor: c.line }]} />
@@ -213,7 +216,7 @@ export function ConsultPairRow({
         <Text variant="footnote" tone="ink2" numberOfLines={1} style={row.name}>
           {to}
         </Text>
-        {handed ? (
+        {handed && !tight ? (
           <Text variant="footnote" tone="muted" numberOfLines={1} style={row.whole}>
             {t("chat.consultPair.forYou")}
           </Text>
@@ -226,7 +229,7 @@ export function ConsultPairRow({
             {subject}
           </Text>
         ) : null}
-        {word || time ? (
+        {word || shownTime ? (
           <Text variant="footnote" tone="faint" numberOfLines={1} style={row.whole}>
             {"· "}
             {word ? (
@@ -234,10 +237,10 @@ export function ConsultPairRow({
                 {word}
               </Text>
             ) : null}
-            {word && time ? " " : null}
-            {time ? (
+            {word && shownTime ? " " : null}
+            {shownTime ? (
               <Text variant="footnote" tone="faint" style={row.time}>
-                {time}
+                {shownTime}
               </Text>
             ) : null}
           </Text>

@@ -128,6 +128,10 @@ describe("agents it asked first: the web's slim row between hairlines, before th
     ).toBe(true);
     // A phone's width has no room for the subject (the web hides it under 420): only a hand-off shows it.
     expect(pair).toContain("handed || roomy ? consultSubject(opened?.question) : null");
+    // There a hand-off's "por você" and its time give way instead, as the web's.
+    expect(pair).toContain("const tight = handed && !roomy;");
+    expect(pair).toContain("{handed && !tight ? (");
+    expect(pair).toContain("{shownTime ? (");
     expect(pair).toContain("subject: { flexShrink: 1000, minWidth: 0 },");
   });
 
