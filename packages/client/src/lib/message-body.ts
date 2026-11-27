@@ -48,6 +48,8 @@ const WAIT_CAUSES: Record<string, string> = {
   cli_outdated: "outdated",
   plan_not_owner: "plan_owner",
   shared_login_off: "shared_login",
+  // ADR 0237: its agents use only a person's computer's internet, offline now.
+  lent_offline: "lent_offline",
 };
 const waitCauseOf = (code: unknown) =>
   typeof code === "string" && Object.hasOwn(WAIT_CAUSES, code) ? WAIT_CAUSES[code] : null;

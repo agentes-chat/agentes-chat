@@ -110,10 +110,14 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
   const host = typeof f.commitHost === "string" && /^[a-z0-9.-]{1,253}$/i.test(f.commitHost) ? f.commitHost : null;
   const commitHost = host ? { commitHost: host } : {};
   const locale = typeof f.locale === "string" && f.locale.length <= 32 ? { locale: f.locale } : {};
-  const proxy = f.egressProxy as { port?: unknown; direct?: unknown } | null | undefined;
+  const proxy = f.egressProxy as { port?: unknown; direct?: unknown; only?: unknown } | null | undefined;
   const egressProxy =
     proxy && Number.isSafeInteger(proxy.port) && Array.isArray(proxy.direct)
-      ? { port: proxy.port as number, direct: proxy.direct.filter((h): h is string => typeof h === "string") }
+      ? {
+          port: proxy.port as number,
+          direct: proxy.direct.filter((h): h is string => typeof h === "string"),
+          ...(proxy.only === true ? { only: true } : {}),
+        }
       : null;
   return access && paused
     ? {

@@ -17296,7 +17296,8 @@
       "hint": "L’indirizzo che i siti vedono quando gli agenti navigano. Si aggiorna quando cambia la rete del computer.",
       "waiting": "Gli agenti si stanno ricollegando a internet. Le loro connessioni aspettano che torni.",
       "via": "Gli agenti usano la connessione internet di {{name}}",
-      "viaHint": "I siti vedono la posizione di quel computer. Chi l’ha collegato può disattivarlo nella sua pagina."
+      "viaHint": "I siti vedono la posizione di quel computer. Chi l’ha collegato può disattivarlo nella sua pagina.",
+      "offline": "Gli agenti non hanno internet: {{name}} è offline"
     },
     "maintenance": {
       "short": {
@@ -17698,8 +17699,10 @@
     "helpWorkspace": "I computer aiutano quando quello del team è pieno o assente",
     "helpWorkspaceHint": "Ogni computer aiuta solo se il suo proprietario lo permette. Disattivato: nessuno aiuta, qualunque cosa abbia scelto il proprietario.",
     "shareInternet": "Gli agenti usano la connessione internet di questo computer",
-    "shareInternetHint": "Le connessioni degli agenti escono dall’internet di questo computer, quindi siti e server vedono la tua posizione: siti web, git, SSH, database e altre connessioni TCP. Mai nulla della tua rete, né email sulla porta 25. Le ricerche dei nomi, le chiamate e il resto del traffico UDP usano la connessione abituale, come tutto il resto finché questo computer è offline.",
-    "shareInternetHintProxy": "Il browser degli agenti e i programmi che seguono le impostazioni del proxy (git via HTTPS, curl, la maggior parte degli strumenti da riga di comando) escono dall’internet di questo computer, quindi i siti vedono la tua posizione. SSH, i client di database e gli altri programmi che ignorano le impostazioni del proxy usano la connessione abituale, come le ricerche dei nomi e il traffico UDP. Mai nulla della tua rete, né email sulla porta 25. Finché questo computer è offline, tutto usa la connessione abituale.",
+    "shareInternetHint": "Le connessioni degli agenti escono dall’internet di questo computer, quindi siti e server vedono la tua posizione: siti web, git, SSH, database e altre connessioni TCP. Mai nulla della tua rete, né email sulla porta 25. L’IA degli agenti, le ricerche dei nomi, le chiamate e il resto del traffico UDP usano la connessione abituale, come tutto il resto finché questo computer è offline.",
+    "shareInternetHintProxy": "Il browser degli agenti e i programmi che seguono le impostazioni del proxy (git via HTTPS, curl, la maggior parte degli strumenti da riga di comando) escono dall’internet di questo computer, quindi i siti vedono la tua posizione. SSH, i client di database e gli altri programmi che ignorano le impostazioni del proxy usano la connessione abituale, come l’IA degli agenti, le ricerche dei nomi e il traffico UDP. Mai nulla della tua rete, né email sulla porta 25. Finché questo computer è offline, tutto usa la connessione abituale.",
+    "shareInternetOnly": "Usa solo l’internet di questo computer",
+    "shareInternetOnlyHint": "Gli agenti usano solo l’internet di questo computer, anche per la loro IA, e mai la connessione abituale. Finché è offline, restano senza internet fino al suo ritorno.",
     "shareInternetInUse": "In uso ora",
     "shareInternetOther": "Gli agenti ora usano {{name}}",
     "shareInternetPick": "Usa questo",
@@ -20315,6 +20318,7 @@
       "brain_unavailable_outdated": "Il programma sul mio computer va aggiornato perché {{brain}} possa rispondere. Risponderò appena sarà aggiornato.",
       "brain_unavailable_plan_owner": "{{brain}} penserebbe con un piano che non è del mio proprietario, quindi non lo uso. Collega l'account del mio proprietario nella mia pagina.",
       "brain_unavailable_shared_login": "Il mio computer non riesce a usare l'accesso di Claude per tutti gli agenti in questo momento. Risponderò appena possibile. Se continua a non funzionare, ricollega Claude in Account IA.",
+      "brain_unavailable_lent_offline": "Ora non ho internet: {{computer}} è offline e gli agenti di questo workspace usano solo il suo internet. Risponderò quando torna, oppure quando “Usa solo l’internet di questo computer” sarà disattivato nella sua pagina.",
       "provider_unavailable": "Il mio provider di IA non risponde in questo momento. Risponderò appena tornerà disponibile.",
       "provider_wait_rate_limit": "{{provider}} sta limitando le richieste di questa chiave. Risponderò appena lo consentirà.",
       "provider_wait_down": "{{provider}} è fuori servizio o sovraccarico in questo momento. Risponderò appena tornerà disponibile.",

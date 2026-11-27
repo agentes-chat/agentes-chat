@@ -2535,6 +2535,13 @@
       "when": 1795792227189,
       "tag": "0366_sidebar_sections",
       "breakpoints": true
+    },
+    {
+      "idx": 364,
+      "version": "7",
+      "when": 1795811524883,
+      "tag": "0367_egress_only",
+      "breakpoints": true
     }
   ]
 }

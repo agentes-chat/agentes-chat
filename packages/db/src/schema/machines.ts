@@ -362,6 +362,12 @@ export const machines = pgTable(
     /** When it was last turned on or picked: the newest online one carries the traffic. Null: since it was paired. */
     egressShareAt: timestamp({ withTimezone: true }),
     /**
+     * With `egressShare` on: the workspace's agents use only this computer's internet (ADR 0237, amendment
+     * 2026-11-27 c), their AI calls included, and never their usual way. Offline, they have no internet until it is
+     * back. Only whoever connected it turns it on.
+     */
+    egressOnly: boolean().notNull().default(false),
+    /**
      * A computer that borrows (`borrowsInternet`): the lent computer that carried its last connection, and when (written
      * at most once a minute per server process). The apps say whose internet it uses while that is recent. `since`:
      * when that computer began carrying them (absent on rows written before it was kept).

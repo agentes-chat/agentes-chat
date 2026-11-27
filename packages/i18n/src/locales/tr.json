@@ -16639,7 +16639,8 @@
       "hint": "Ajanlar gezinirken sitelerin gördüğü adres. Bilgisayarın ağı değişince güncellenir.",
       "waiting": "Ajanların internet bağlantısı yeniden kuruluyor. Bağlantıları geri gelene kadar bekler.",
       "via": "Ajanlar {{name}} bilgisayarının internetini kullanıyor",
-      "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir."
+      "viaHint": "Siteler o bilgisayarın konumunu görür. Onu bağlayan kişi bunu sayfasından kapatabilir.",
+      "offline": "Ajanların interneti yok: {{name}} çevrimdışı"
     },
     "maintenance": {
       "short": {
@@ -17036,8 +17037,10 @@
     "helpWorkspace": "Ekibin bilgisayarı dolu ya da uzaktayken bilgisayarlar yardım eder",
     "helpWorkspaceHint": "Her bilgisayar yalnızca sahibi izin verirse yardım eder. Kapalı: sahibi ne seçerse seçsin hiçbiri yardım etmez.",
     "shareInternet": "Ajanlar bu bilgisayarın internetini kullanır",
-    "shareInternetHint": "Ajanların bağlantıları bu bilgisayarın internetinden çıkar, bu yüzden siteler ve sunucular konumunu görür: web siteleri, git, SSH, veritabanları ve diğer TCP bağlantıları. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Ad sorguları, aramalar ve diğer UDP trafiği her zamanki bağlantıyı kullanır, bu bilgisayar çevrimdışıyken de her şey öyle.",
-    "shareInternetHintProxy": "Ajanların tarayıcısı ve proxy ayarlarına uyan programlar (HTTPS üzerinden git, curl, çoğu komut satırı aracı) bu bilgisayarın internetinden çıkar, bu yüzden siteler konumunu görür. SSH, veritabanı istemcileri ve proxy ayarlarını yok sayan diğer programlar her zamanki bağlantıyı kullanır, ad sorguları ve UDP trafiği de öyle. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Bu bilgisayar çevrimdışıyken her şey her zamanki bağlantıyı kullanır.",
+    "shareInternetHint": "Ajanların bağlantıları bu bilgisayarın internetinden çıkar, bu yüzden siteler ve sunucular konumunu görür: web siteleri, git, SSH, veritabanları ve diğer TCP bağlantıları. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Ajanların yapay zekâsı, ad sorguları, aramalar ve diğer UDP trafiği her zamanki bağlantıyı kullanır, bu bilgisayar çevrimdışıyken de her şey öyle.",
+    "shareInternetHintProxy": "Ajanların tarayıcısı ve proxy ayarlarına uyan programlar (HTTPS üzerinden git, curl, çoğu komut satırı aracı) bu bilgisayarın internetinden çıkar, bu yüzden siteler konumunu görür. SSH, veritabanı istemcileri ve proxy ayarlarını yok sayan diğer programlar her zamanki bağlantıyı kullanır, ajanların yapay zekâsı, ad sorguları ve UDP trafiği de öyle. Kendi ağındaki hiçbir şeye asla erişilmez, 25 numaralı porttan e-posta da gönderilmez. Bu bilgisayar çevrimdışıyken her şey her zamanki bağlantıyı kullanır.",
+    "shareInternetOnly": "Yalnızca bu bilgisayarın internetini kullan",
+    "shareInternetOnlyHint": "Ajanlar, yapay zekâları dahil yalnızca bu bilgisayarın internetini kullanır, her zamanki bağlantıyı asla kullanmaz. Bu bilgisayar çevrimdışıyken, geri gelene kadar internetleri olmaz.",
     "shareInternetInUse": "Şu an kullanılıyor",
     "shareInternetOther": "Ajanlar şu an {{name}} kullanıyor",
     "shareInternetPick": "Bunu kullan",
@@ -19594,6 +19597,7 @@
       "brain_unavailable_outdated": "{{brain}}'ın yanıt verebilmesi için bilgisayarımdaki programın güncellenmesi gerekiyor. Güncellenir güncellenmez yanıt vereceğim.",
       "brain_unavailable_plan_owner": "{{brain}}, sahibime ait olmayan bir planla düşünecekti, bu yüzden kullanmıyorum. Sayfamda sahibimin hesabını bağlayın.",
       "brain_unavailable_shared_login": "Bilgisayarım tüm ajanlar için Claude oturumunu şu anda kullanamıyor. Kullanabildiğimde yanıtlayacağım. Başarısız olmaya devam ederse Yapay zekâ hesapları bölümünde Claude'u yeniden bağlayın.",
+      "brain_unavailable_lent_offline": "Şu an internetim yok: {{computer}} çevrimdışı ve bu çalışma alanının ajanları yalnızca onun internetini kullanıyor. Geri geldiğinde ya da sayfasında “Yalnızca bu bilgisayarın internetini kullan” kapatıldığında yanıtlayacağım.",
       "provider_unavailable": "Yapay zeka sağlayıcım şu anda yanıt vermiyor. Geri gelir gelmez yanıt vereceğim.",
       "provider_wait_rate_limit": "{{provider}} şu anda bu anahtarın isteklerini sınırlıyor. İzin verir vermez yanıt vereceğim.",
       "provider_wait_down": "{{provider}} şu anda çalışmıyor veya aşırı yüklü. Geri gelir gelmez yanıt vereceğim.",

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import {
+  EGRESS_ONLY_PROTOCOL,
   EGRESS_SHARE,
   EGRESS_SHARE_PROTOCOL,
   lenderCarries,
@@ -8,7 +9,7 @@ import {
 } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
-import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending } from "./machines";
+import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending, usesOnlyLent } from "./machines";
 import { runByApp } from "./runner-update";
 import type { ClaimedStream, StreamSocket } from "./streams";
 
@@ -33,6 +34,7 @@ const CANDIDATES_MS = 5_000;
  * The computers of a workspace that lend it their internet now (ADR 0237): people's own (`connected`), with the
  * switch on, new enough to, newest pick first (turned on or picked last, else paired last). Where this server lends,
  * those the agentes.chat app runs come before Terminal installs: a person's own desktop over a box in a server room.
+ * `only`: the workspace uses only that one's internet (amendment 2026-11-27 c).
  */
 export async function lendingComputers(db: Database, orgId: string) {
   const rows = await db
@@ -43,6 +45,7 @@ export async function lendingComputers(db: Database, orgId: string) {
       os: machines.os,
       protocol: machines.protocol,
       executors: sql<{ app?: true }>`jsonb_strip_nulls(jsonb_build_object('app', ${machines.executors}->'app'))`,
+      only: machines.egressOnly,
     })
     .from(machines)
     .where(
@@ -62,6 +65,36 @@ export async function lendingComputers(db: Database, orgId: string) {
 /** Said by its runner, or an older one off Linux (`runByApp`): an old Linux runner that doesn't say comes after. */
 const desktopApp = (m: Parameters<typeof runByApp>[0]) =>
   m.executors?.app === true || (m.os !== "linux" && runByApp(m));
+
+type Lender = Awaited<ReturnType<typeof lendingComputers>>[number];
+
+/**
+ * Where the workspace's agents use only lent internet (amendment 2026-11-27 c): just the computers lent "only" may
+ * carry it, and none online means no internet. Otherwise every lending computer.
+ */
+const carriers = (rows: Lender[]) => {
+  const only = rows.filter((r) => r.only);
+  return { rows: only.length > 0 ? only : rows, only: only[0] ?? null };
+};
+
+/**
+ * Tells `orgId`'s borrowing computers (`borrowsInternet`, `EGRESS_ONLY_PROTOCOL`) whether it uses only lent internet
+ * now (`egress.only`). One offline hears it in its next `welcome`.
+ */
+export async function tellBorrowersOnly(deps: { db: Database; hub: Pick<MachineCaller, "call"> }, orgId: string) {
+  const [on, rows] = await Promise.all([
+    usesOnlyLent(deps.db, orgId),
+    deps.db
+      .select()
+      .from(machines)
+      .where(and(eq(machines.orgId, orgId), gte(machines.protocol, EGRESS_ONLY_PROTOCOL), isNull(machines.deletedAt))),
+  ]);
+  await Promise.all(
+    rows
+      .filter(borrowsInternet)
+      .map((m) => deps.hub.call(m.id, { op: "egress.only", on }, { timeoutMs: 5_000 }).catch(() => undefined)),
+  );
+}
 
 const closeCodeFor = (error: unknown) => {
   if (!(error instanceof MachineRequestError)) return STREAM_CLOSE.unreachable;
@@ -135,18 +168,20 @@ export function createEgressRelay(deps: {
   };
 
   /**
-   * The lending computer for `orgId` now that carries `port` (any, when null), never `borrowerId` itself. `"older"`:
-   * only lenders on an app that carries the web alone are online.
+   * The lending computer for `orgId` now that carries `port` (any, when null), never `borrowerId` itself. `older`:
+   * only lenders on an app that carries the web alone are online. `only`: the workspace uses only lent internet
+   * (`carriers`), the computer it names.
    */
   async function pick(orgId: string, borrowerId: string | null, port: number | null) {
     let older = false;
-    for (const row of await lenders(orgId)) {
+    const { rows, only } = carriers(await lenders(orgId));
+    for (const row of rows) {
       if (row.id === borrowerId || (full.get(row.id) ?? 0) > now()) continue;
       if (!(await deps.hub.status(row.id).catch(() => null))?.online) continue;
-      if (port === null || lenderCarries(row.protocol, port)) return row;
+      if (port === null || lenderCarries(row.protocol, port)) return { device: row, older, only };
       older = true;
     }
-    return older ? "older" : null;
+    return { device: null, older, only };
   }
 
   /** Who carried the last connection, on the borrower's row (the server itself has none), and when, on the lender's. */
@@ -181,24 +216,27 @@ export function createEgressRelay(deps: {
     borrower: { orgId: string; machineId: string | null },
     target: { host: string; port: number },
   ) {
-    const device = await pick(borrower.orgId, borrower.machineId, target.port);
+    const { device, older, only } = await pick(borrower.orgId, borrower.machineId, target.port);
     if (leg.closed) return;
-    if (!device) return end(leg, STREAM_CLOSE.unreachable, "no computer lends its internet now");
+    // Not "none lends": that would send the borrower its usual way, which a workspace lent "only" never takes.
+    if (!device && only && !older) return end(leg, STREAM_CLOSE.notFound, `${only.name} is offline`);
     // Not "none lends": the borrower keeps asking for its web connections, which that computer carries.
-    if (device === "older") return end(leg, STREAM_CLOSE.refused, "the lending computer carries the web only");
+    if (!device && older) return end(leg, STREAM_CLOSE.refused, "the lending computer carries the web only");
+    if (!device) return end(leg, STREAM_CLOSE.unreachable, "no computer lends its internet now");
     const streamId = randomBytes(32).toString("base64url");
     pending.set(streamId, { deviceId: device.id, leg });
     try {
       await deps.hub.call(device.id, { op: "egress.dial", streamId, ...target }, { timeoutMs: DIAL_MS });
     } catch (error) {
       if (error instanceof MachineRequestError && PASS_OVER.has(error.code)) full.set(device.id, now() + FULL_MS);
-      end(leg, closeCodeFor(error), "the lent connection didn't open");
+      end(leg, only ? STREAM_CLOSE.notFound : closeCodeFor(error), "the lent connection didn't open");
       return;
     } finally {
       pending.delete(streamId);
     }
     // Answered once its data socket was ready: no pair by now means none is coming.
-    if (!leg.peer) return end(leg, STREAM_CLOSE.unreachable, "the lent connection didn't open");
+    if (!leg.peer)
+      return end(leg, only ? STREAM_CLOSE.notFound : STREAM_CLOSE.unreachable, "the lent connection didn't open");
     await noteVia(borrower.machineId, device.id).catch((error) =>
       deps.log?.warn("egress via write failed", { machineId: borrower.machineId, error: String(error) }),
     );
@@ -241,16 +279,25 @@ export function createEgressRelay(deps: {
      */
     connect(orgId: string, target: { host: string; port: number }, socket: StreamSocket): ClaimedStream {
       const leg: Leg = { socket, peer: null, closed: false };
-      if (!serverLending()) end(leg, STREAM_CLOSE.forbidden, "this server lends no connection to itself");
-      else
-        void open(leg, { orgId, machineId: null }, target).catch((error) => {
-          deps.log?.warn("egress relay failed", { orgId, error: String(error) });
-          end(leg, STREAM_CLOSE.internal, "internal");
-        });
+      void (async () => {
+        // A workspace lent "only" (amendment 2026-11-27 c): its agents' reads of pages go through it on the Cloud too.
+        if (!serverLending() && !carriers(await lenders(orgId)).only)
+          return end(leg, STREAM_CLOSE.forbidden, "this server lends no connection to itself");
+        await open(leg, { orgId, machineId: null }, target);
+      })().catch((error) => {
+        deps.log?.warn("egress relay failed", { orgId, error: String(error) });
+        end(leg, STREAM_CLOSE.internal, "internal");
+      });
       return claimed(leg);
     },
-    /** Whether a computer lends `orgId` its internet now. */
-    lending: async (orgId: string) => (await pick(orgId, null, null)) !== null,
+    /**
+     * How `orgId`'s agents' reads of pages go now: `lent`, a computer lends it its internet; `only`, the computer it
+     * uses only the internet of (`carriers`), which then never goes the usual way.
+     */
+    lending: async (orgId: string) => {
+      const { device, only } = await pick(orgId, null, null);
+      return { lent: device !== null, only: only ? { machineId: only.id, name: only.name } : null };
+    },
   };
 }
 

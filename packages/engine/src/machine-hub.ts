@@ -7,6 +7,7 @@ import {
   CLAUDE_SHARED_PROTOCOL,
   CLI_COPIES_PROTOCOL,
   CO_AUTHOR_CASE_PROTOCOL,
+  EGRESS_ONLY_PROTOCOL,
   EGRESS_PROXY_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
@@ -105,6 +106,7 @@ import {
   type ShownMaintenance,
   shownMaintenance,
   shownStandby,
+  usesOnlyLent,
   withTaskLimit,
 } from "./machines";
 import {
@@ -940,6 +942,16 @@ export function createMachineHub(deps: MachineHubDeps) {
         connectionId: conn.connectionId,
       })
       .catch(() => undefined);
+    // ADR 0237 amendment 2026-11-27 c: a borrowing computer hears whether its workspace uses only lent internet.
+    const relays = machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL;
+    const proxies =
+      machine.kind !== "managed" &&
+      frame.protocol >= EGRESS_PROXY_PROTOCOL &&
+      borrowsInternet({ ...said, egressShare: machine.egressShare && !lendOff });
+    const egressOnly =
+      (relays || proxies) && frame.protocol >= EGRESS_ONLY_PROTOCOL
+        ? usesOnlyLent(db, machine.orgId).catch(() => false)
+        : false;
     // Protocol 13 (ADR 0041): the accounts of the computer brains on it (an older runner says nothing: kept).
     // Stored before `welcome`: what the runner found since `hello` comes once it is welcomed (`accounts.changed`)
     // and must land after this older list, never under it.
@@ -959,13 +971,10 @@ export function createMachineHub(deps: MachineHubDeps) {
       heartbeatMs,
       mcpOnce: true,
       observeEgress: machine.kind === "managed",
-      ...(machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL ? { egressRelay: true } : {}),
+      ...(relays ? { egressRelay: true } : {}),
       // Without the Cloud's guard (ADR 0237, self-hosted servers): its agents' programs use its loopback proxy.
-      ...(machine.kind !== "managed" &&
-      frame.protocol >= EGRESS_PROXY_PROTOCOL &&
-      borrowsInternet({ ...said, egressShare: machine.egressShare && !lendOff })
-        ? { egressProxy: true }
-        : {}),
+      ...(proxies ? { egressProxy: true } : {}),
+      ...((await egressOnly) ? { egressOnly: true } : {}),
     });
     if (lendOff) {
       await resolveNotifications({ db, pubsub }, machine.orgId, { groupKey: internetSharedGroup(machine.id) }).catch(

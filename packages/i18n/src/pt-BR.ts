@@ -17173,6 +17173,7 @@ export const ptBR = {
       waiting: "Reconectando a internet dos agentes. As conexões deles esperam até ela voltar.",
       via: "Agentes usam a internet de {{name}}",
       viaHint: "Os sites veem a localização desse computador. Quem o conectou pode desligar na página dele.",
+      offline: "Agentes sem internet: {{name}} está offline",
     },
     maintenance: {
       short: {
@@ -17568,9 +17569,12 @@ export const ptBR = {
       "Cada computador só ajuda se o dono permitir. Com isto desativado, nenhum ajuda, seja qual for a escolha do dono.",
     shareInternet: "Agentes usam a internet deste computador",
     shareInternetHint:
-      "As conexões dos agentes saem pela internet deste computador, então sites e servidores veem a sua localização: sites, git, SSH, bancos de dados e outras conexões TCP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Consultas de nome, chamadas e outro tráfego UDP usam a conexão de sempre, assim como tudo enquanto este computador estiver offline.",
+      "As conexões dos agentes saem pela internet deste computador, então sites e servidores veem a sua localização: sites, git, SSH, bancos de dados e outras conexões TCP. Nunca nada da sua própria rede, nem e-mail pela porta 25. A IA dos agentes, consultas de nome, chamadas e outro tráfego UDP usam a conexão de sempre, assim como tudo enquanto este computador estiver offline.",
     shareInternetHintProxy:
-      "O navegador dos agentes e os programas que seguem as configurações de proxy (git por HTTPS, curl, a maioria das ferramentas de linha de comando) saem pela internet deste computador, então os sites veem a sua localização. SSH, clientes de banco de dados e outros programas que ignoram as configurações de proxy usam a conexão de sempre, assim como consultas de nome e tráfego UDP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Enquanto este computador estiver offline, tudo usa a conexão de sempre.",
+      "O navegador dos agentes e os programas que seguem as configurações de proxy (git por HTTPS, curl, a maioria das ferramentas de linha de comando) saem pela internet deste computador, então os sites veem a sua localização. SSH, clientes de banco de dados e outros programas que ignoram as configurações de proxy usam a conexão de sempre, assim como a IA dos agentes, consultas de nome e tráfego UDP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Enquanto este computador estiver offline, tudo usa a conexão de sempre.",
+    shareInternetOnly: "Usar só a internet deste computador",
+    shareInternetOnlyHint:
+      "Os agentes usam só a internet deste computador, inclusive a IA, e nunca a conexão de sempre. Enquanto ele estiver offline, ficam sem internet até ele voltar.",
     shareInternetInUse: "Em uso agora",
     shareInternetOther: "Agentes usam {{name}} agora",
     shareInternetPick: "Usar este",
@@ -20283,6 +20287,8 @@ export const ptBR = {
         "O {{brain}} pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
       brain_unavailable_shared_login:
         "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
+      brain_unavailable_lent_offline:
+        "Estou sem internet agora: {{computer}} está offline, e os agentes deste workspace usam só a internet dele. Respondo quando ele voltar, ou assim que “Usar só a internet deste computador” for desligado na página dele.",
       provider_unavailable: "Meu provedor de IA não está respondendo agora. Respondo assim que ele voltar.",
       provider_wait_rate_limit: "{{provider}} está limitando os pedidos desta chave agora. Respondo assim que liberar.",
       provider_wait_down: "{{provider}} está fora do ar ou sobrecarregado agora. Respondo assim que voltar.",
