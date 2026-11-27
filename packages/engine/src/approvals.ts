@@ -45,6 +45,7 @@ import { learnFromRefusal } from "./context/feedback";
 import type { MemoryJudging } from "./context/items";
 import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { publishChannelEvent, publishUserEvent } from "./events";
+import { runFeedbackFacts, SEND_FEEDBACK_TOOL } from "./feedback-run-facts";
 import { type MailPreview, parseMailDetail, withoutReplyPrefix } from "./mail/preview";
 import { notifyApproval, notifyNewcomers, resolveApprovalNotifications } from "./notification-producers";
 import { can, type Membership, requirePermission } from "./organizations";
@@ -131,6 +132,11 @@ export interface ApprovalView {
   connectorAccount: string | null;
   /** The email itself (From, To, Subject, text), for mail drafts and sends; null for every other action. */
   email: ApprovalEmail | null;
+  /**
+   * `send_feedback` (ADR 0160 §11): what goes along with its text in the person's name (`runFeedbackFacts`), so the
+   * card lists all of it before they approve; null for every other action.
+   */
+  feedback: ApprovalFeedback | null;
   /** The agent's required reason (ADR 0053): what it found and why this action, shown on the card. */
   why: string | null;
   /** Asked while nobody watched: by a routine (its name) or an unattended run; null when a person was behind it. */
@@ -164,11 +170,17 @@ export interface ApprovalView {
   routine: boolean;
 }
 
+/** What a feedback an agent sends carries besides its text, as label and value. */
+export interface ApprovalFeedback {
+  facts: [string, string][];
+}
+
 /** What the approval row alone doesn't say: the connector, the issue (and, for one, the trail). */
 interface ApprovalContext {
   connector: string | null;
   connectorAccount: string | null;
   email: ApprovalEmail | null;
+  feedback: ApprovalFeedback | null;
   issue: { id: string; number: number; title: string } | null;
   trail: { text: string; at: string }[];
   /** A person's own connection: its whole name and account, for that person's eyes alone (`viewsOf`). */
@@ -288,6 +300,20 @@ async function approvalContexts(db: Database, rows: Approval[], trail = false): 
   const connectionOf = new Map(connections.map((c) => [c.id, c]));
   const mailboxOf = new Map(mailboxes.map((m) => [m.id, m]));
   const issueOfRun = new Map(runs.map((r) => [r.id, issueRows.find((i) => i.id === r.issueId) ?? null]));
+  // A feedback an agent sends: the lines its email carries besides the text, read as it will send them.
+  const feedbackOf = new Map(
+    await Promise.all(
+      rows
+        .filter((r) => r.tool === SEND_FEEDBACK_TOOL)
+        .map(
+          async (r) =>
+            [
+              r.id,
+              { facts: await runFeedbackFacts(db, { orgId: r.orgId, runId: r.runId, agentId: r.agentId }) },
+            ] as const,
+        ),
+    ),
+  );
   for (const row of rows) {
     const connection = row.connectionId ? connectionOf.get(row.connectionId) : undefined;
     const mailbox = row.connectionId ? mailboxOf.get(row.connectionId) : undefined;
@@ -309,6 +335,7 @@ async function approvalContexts(db: Database, rows: Approval[], trail = false): 
           }
         : {}),
       email: mailbox ? approvalEmail(row, mailbox) : null,
+      feedback: feedbackOf.get(row.id) ?? null,
       issue: row.runId ? (issueOfRun.get(row.runId) ?? null) : null,
       trail: trails.get(row.id) ?? [],
     });
@@ -503,6 +530,7 @@ async function viewsOf(
       connector: null,
       connectorAccount: null,
       email: null,
+      feedback: null,
       issue: null,
       trail: [],
     };
@@ -557,6 +585,7 @@ export const approvalView = (a: Approval, canDecide = false, routine = false): A
   connector: null,
   connectorAccount: null,
   email: null,
+  feedback: null,
   why: a.why.trim() || null,
   origin: approvalOriginOf(a.origin),
   issue: null,

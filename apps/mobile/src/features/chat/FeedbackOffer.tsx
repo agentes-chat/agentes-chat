@@ -77,6 +77,14 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
             <Text variant="small" tone="ink2">
               {offer.text}
             </Text>
+            {/* What goes along with it (the run it came from), as the email carries it: the person reads it before
+                it goes in their name. */}
+            {(offer.facts ?? []).map(([label, value], i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: a label may repeat (one line per tool error)
+              <Text key={i} variant="footnote" tone="faint" style={styles.detail}>
+                {label}: {value}
+              </Text>
+            ))}
             <Text variant="footnote" tone="faint" style={styles.detail}>
               {t("feedback.offer.answer")}
             </Text>
