@@ -14,7 +14,6 @@ import {
   CHECKOUT_BACKOFF_MS,
   CHECKOUT_SYNC_EVERY_MS,
   CHECKOUT_SYNC_SECONDS,
-  CHECKOUT_WAIT_MS,
   type ConnectorDeps,
   codePrompt,
   codeStart,
@@ -166,6 +165,24 @@ async function world(options: { scopes?: string[]; protocol?: number } = {}) {
   };
 }
 
+/** `wait_for_code` as the agent's run calls it, on the world's computer and clock. */
+async function waitTool(w: Awaited<ReturnType<typeof world>> & { clock?: { at: number } }) {
+  const clock = w.clock;
+  const source = createGitToolSource({
+    sandbox: {
+      db: f.db,
+      machines: { hub: w.hub },
+      git: w.git,
+      ...(clock ? { now: () => new Date(clock.at) } : {}),
+    } as never,
+    connectors: w.connectors,
+  });
+  const ctx = await runCtx();
+  const tool = (await source.tools(ctx)).find((t) => t.name === "wait_for_code");
+  if (!tool) throw new Error("no wait_for_code");
+  return { execute: tool.execute.bind(tool), ctx };
+}
+
 async function runCtx(): Promise<ToolContext> {
   const msg = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
     body: "@dev oi",
@@ -276,8 +293,8 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
     const ctx = await runCtx();
     const tools = await source.tools(ctx);
     // GitHub's own tools count as GitHub the native way, beside its MCP server's (ADR 0103).
-    // (The first, `list_repositories`, is every host's and counts as no connector's.)
-    expect(tools.slice(1).map((t) => t.connector)).toEqual(
+    // (The first two, `list_repositories` and `wait_for_code`, are every host's and count as no connector's.)
+    expect(tools.slice(2).map((t) => t.connector)).toEqual(
       ["git_clone", "open_pull_request", "delete_branches", "request_branch_push"].map((tool) => ({
         key: "github",
         via: "native",
@@ -378,6 +395,11 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
       messages: [{ content: "earlier" }],
       session: { machineId: w.paired.machineId, cwd: "" },
     });
+    // Its first turn on the computer: nothing known yet, the sync beside it, and the turn told so.
+    const first = await prepareAgentCode(w.machineDeps, turn("o build do Web quebrou, olha acme/web"));
+    expect(first?.cwd).toBe("");
+    expect(first?.start).toContain("being found and updated right now");
+    await settleCheckoutSyncs();
     const named = await prepareAgentCode(w.machineDeps, turn("o build do Web quebrou, olha acme/web"));
     expect(named?.cwd).toBe("repos/acme/web");
     const [sync] = w.runner.syncs();
@@ -403,7 +425,7 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
     // Where it starts goes in the turn's prompt, with the agent's own line on its commits (ADR 0156): the system text
     // stays the same whichever checkout a turn is about.
     expect(named?.start).toBe(
-      `You start in ${FOLDER}/repos/acme/web.\nCommits you make this turn: end each commit message with the line Co-Authored-By: Dev <noreply@agentes.chat>`,
+      `You start in ${FOLDER}/repos/acme/web.\nYour checkouts were last updated 0 min ago.\nCommits you make this turn: end each commit message with the line Co-Authored-By: Dev <noreply@agentes.chat>`,
     );
     expect(named?.prompt).not.toContain("beta/old");
     // Nothing named: the agent's first repository.
@@ -459,8 +481,11 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
 
     // The last chat turn's sync, then seven hours of mission work in its own folder.
     await turn("", 0);
+    await settleCheckoutSyncs();
     expect((await push(7)).status).toBe(401);
     expect(await turn("missions/fix-login", 7)).toBeNull();
+    // Beside the turn, never waited for: its first push comes long after.
+    await settleCheckoutSyncs();
     // Its folder's checkout isn't touched: only the credential comes along.
     expect(w.runner.syncs().at(-1)).toMatchObject({ repos: [] });
     expect(w.runner.syncs().at(-1)?.existing).toBeUndefined();
@@ -472,8 +497,8 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
 describe("a turn starts at once; its checkouts sync beside it", () => {
   const TIMED_OUT = "it took too long (network slow or offline)";
   /**
-   * The slow DM's shape: three repositories on the computer, a clock the test moves, and a first turn that synced
-   * them (it knew nothing yet, so it waited).
+   * The slow DM's shape: three repositories on the computer, a clock the test moves, and a first turn whose sync,
+   * beside it, found them.
    */
   async function synced() {
     const w = await world();
@@ -504,7 +529,7 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
       return { out, ms: performance.now() - started };
     };
     const first = await timed("oi");
-    expect(first.out?.cwd).toBe("repos/acme/app");
+    expect(first.out?.cwd).toBe("");
     await settleCheckoutSyncs();
     const row = async () =>
       (await f.db.select().from(schema.agentCheckouts).where(eq(schema.agentCheckouts.agentId, f.agent.id)))[0];
@@ -536,6 +561,9 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
     expect(greeting.out?.prompt).toContain(
       `acme/app is checked out at ${FOLDER}/repos/acme/app (default branch main).`,
     );
+    // It is told the update is on, and how to wait for it when the task needs the code.
+    expect(greeting.out?.start).toContain("Your checkouts are being updated right now (last updated 3 min ago).");
+    expect(greeting.out?.start).toContain("call wait_for_code before you read or change it");
     await settleCheckoutSyncs();
     expect(w.runner.syncs()).toHaveLength(2);
     const next = await w.timed("bom dia");
@@ -546,26 +574,55 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
     expect(w.runner.syncs()).toHaveLength(2);
   });
 
-  test("a message about one of its repositories waits for the sync, 2 s at most", async () => {
+  test("the slow DM: a message about one of its repositories starts at once; wait_for_code waits inside the turn", async () => {
     const w = await synced();
+    const wait = await waitTool(w);
     w.delay.ms = 3000;
     w.answers.fn = timedOut;
     w.clock.at += CHECKOUT_SYNC_EVERY_MS;
-    const slow = await w.timed("o build do web quebrou");
-    expect(slow.ms).toBeGreaterThanOrEqual(CHECKOUT_WAIT_MS - 50);
-    expect(slow.ms).toBeLessThan(CHECKOUT_WAIT_MS + 800);
-    // Not done in time: the turn starts from the last sync, in the repository it is about.
-    expect(slow.out?.cwd).toBe("repos/acme/web");
-    expect(slow.out?.prompt).not.toContain("its last update failed");
-    await settleCheckoutSyncs();
-    // Done in time: the turn gets this sync's word.
-    w.delay.ms = 1;
-    w.answers.fn = (req) =>
-      w.updated(req).map((r) => (r.repo === "acme/web" ? { ...r, status: "failed" as const, message: "refused" } : r));
-    w.clock.at += CHECKOUT_BACKOFF_MS * 4;
-    const fresh = await w.timed("olha acme/web");
-    expect(fresh.out?.prompt).toContain("acme/web is checked out at");
-    expect(fresh.out?.prompt).toContain("its last update failed: refused");
+    const begun = performance.now();
+    const turn = await w.timed("o build do web quebrou");
+    // Before, a turn whose message named a repository waited for the sync up to 2 s before its model started.
+    expect(turn.ms).toBeLessThan(300);
+    expect(turn.out?.cwd).toBe("repos/acme/web");
+    expect(turn.out?.prompt).not.toContain("its last update failed");
+    expect(turn.out?.start).toContain("being updated right now");
+    // The agent, having said it looks at the latest code, waits for the very sync started beside its turn.
+    const out = await wait.execute({}, wait.ctx);
+    expect(performance.now() - begun).toBeGreaterThan(2900);
+    expect(w.runner.syncs()).toHaveLength(2);
+    expect(out.isError).toBeFalsy();
+    expect(out.content).toContain("Your checkouts were updated");
+    expect(out.content).toContain(`acme/web at ${FOLDER}/repos/acme/web: its update failed (${TIMED_OUT})`);
+  });
+
+  test("wait_for_code: another process's sync is waited for; with none on it starts one; one just done is enough", async () => {
+    const w = await synced();
+    const wait = await waitTool(w);
+    // Another process started a sync a moment ago and hasn't answered: the row says so; it answers in a second.
+    const t = schema.agentCheckouts;
+    const startedAt = new Date(w.clock.at + 1);
+    await f.db.update(t).set({ syncStartedAt: startedAt }).where(eq(t.agentId, f.agent.id));
+    const answered = Bun.sleep(1000).then(() =>
+      f.db
+        .update(t)
+        .set({ syncedAt: new Date(w.clock.at + 2) })
+        .where(eq(t.agentId, f.agent.id)),
+    );
+    const started = performance.now();
+    const elsewhere = await wait.execute({}, wait.ctx);
+    await answered;
+    expect(performance.now() - started).toBeGreaterThan(900);
+    expect(elsewhere.content).toContain("Your checkouts were updated");
+    expect(w.runner.syncs()).toHaveLength(1);
+    // Nothing running and the last one started over 30 s ago: it starts one and waits for it.
+    w.clock.at += 60_000;
+    const own = await wait.execute({}, wait.ctx);
+    expect(w.runner.syncs()).toHaveLength(2);
+    expect(own.content).toContain(`acme/app at ${FOLDER}/repos/acme/app (main at abc1234): updated.`);
+    // Asked again at once: the update that just ended is the newest.
+    expect((await wait.execute({}, wait.ctx)).content).toContain("Your checkouts were updated");
+    expect(w.runner.syncs()).toHaveLength(2);
   });
 
   test("synced at most once every few minutes, whichever process runs the turn", async () => {
@@ -639,7 +696,7 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
     w.delay.ms = 3000;
     const next = await w.timed("olha acme/web");
     expect(next.out?.cwd).toBe("repos/acme/web");
-    expect(next.ms).toBeLessThan(CHECKOUT_WAIT_MS + 800);
+    expect(next.ms).toBeLessThan(500);
     // None is asked for in its backoff; only the computer's credential is refreshed.
     await settleCheckoutSyncs();
     expect(w.runner.syncs().at(-1)).toMatchObject({ repos: [] });
@@ -658,7 +715,7 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
     expect((await w.row())?.credentialAt?.getTime()).toBe(w.clock.at);
   });
 
-  test("its first turn on the computer waits 2 s at most, and says nothing is missing when it can't know yet", async () => {
+  test("its first turn on the computer starts at once, told its checkouts are being found, and says none is missing", async () => {
     const w = await world();
     await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
     w.delay.ms = 3000;
@@ -667,16 +724,21 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
       orgId: f.org.id,
       agentId: f.agent.id,
       threadRootId: null,
-      trigger: "oi",
+      trigger: "olha o acme/app",
       messages: [],
       session: { machineId: w.paired.machineId, cwd: "" },
+      tools: [{ name: "say_now" }],
     });
-    expect(performance.now() - started).toBeLessThan(CHECKOUT_WAIT_MS + 800);
+    // Before, its first turn waited for the sync up to 2 s.
+    expect(performance.now() - started).toBeLessThan(300);
     expect(out?.cwd).toBe("");
     expect(out?.prompt).toBe("");
+    expect(out?.start).toBe(
+      "Your checkouts on this computer are being found and updated right now: what this turn says of them may be missing some. When the task needs the code, call wait_for_code before you read or change it, after telling the person in one short line (say_now), in their language, that you'll look at the latest code; a turn that doesn't touch the code needs no wait.\nCommits you make this turn: end each commit message with the line Co-Authored-By: Dev <noreply@agentes.chat>",
+    );
   });
 
-  test("a repository just granted isn't known yet: the turn waits for it, whatever the last sync's time", async () => {
+  test("a repository just granted isn't known yet: the turn starts at once, told so, and the next one has it", async () => {
     const w = await synced();
     await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, [
       "acme/app",
@@ -684,9 +746,13 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
       "acme/infra",
       "acme/new",
     ]);
+    w.delay.ms = 3000;
     const out = await w.timed("oi");
+    expect(out.ms).toBeLessThan(300);
+    expect(out.out?.start).toContain("being updated right now");
+    await settleCheckoutSyncs();
     expect(w.asked().at(-1)).toContain("acme/new");
-    expect(out.out?.prompt).toContain(`acme/new is checked out at ${FOLDER}/repos/acme/new`);
+    expect((await w.timed("oi")).out?.prompt).toContain(`acme/new is checked out at ${FOLDER}/repos/acme/new`);
   });
 
   test("a repository no sync can answer (past the request's limit) doesn't make every turn sync again", async () => {
@@ -730,8 +796,9 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
       messages: [],
       session: { machineId: w.paired.machineId, cwd: "" },
     };
-    expect((await prepareAgentCode(w.machineDeps, turn))?.prompt).toContain("Not cloned yet: acme/app");
+    await prepareAgentCode(w.machineDeps, turn);
     await settleCheckoutSyncs();
+    expect((await prepareAgentCode(w.machineDeps, turn))?.prompt).toContain("Not cloned yet: acme/app");
     const source = createGitToolSource({
       sandbox: { db: f.db, machines: { hub: w.hub }, git: w.git } as never,
       connectors: w.connectors,
@@ -823,6 +890,7 @@ describe("fetches straight from GitHub with the App (ADR 0116)", () => {
         session: { machineId: w.paired.machineId, cwd: "" },
       },
     );
+    await settleCheckoutSyncs();
     expect(w.runner.syncs().at(-1)?.repos).toEqual([
       { repo: "acme/app", dir: "repos/acme/app", clone: false, github: APP_TOKEN },
     ]);
@@ -946,6 +1014,7 @@ describe("fetches straight from GitHub: who gets a token, and what the turn is t
     w.listing.dirs = ["repos/acme", "repos/acme/app", "repos/other", "repos/other/thing"];
     w.answers.fn = (req) => req.repos.map((r) => ({ repo: r.repo, dir: r.dir, status: "updated" as const }));
     await prepareAgentCode(w.deps, turn(w.paired.machineId));
+    await settleCheckoutSyncs();
     const repos = w.runner.syncs().at(-1)?.repos ?? [];
     expect(repos.find((r) => r.repo === "acme/app")?.github).toBe(TOKEN);
     // A folder outside the grant gets none (the proxy would refuse it as well).
@@ -968,7 +1037,7 @@ describe("fetches straight from GitHub: who gets a token, and what the turn is t
       req.repos.map((r) => ({ repo: r.repo, dir: r.dir, path: `${FOLDER}/${r.dir}`, status: "updated" as const }));
     const clock = { at: Date.now() };
     const deps = { ...w.deps, now: () => new Date(clock.at) };
-    expect((await prepareAgentCode(deps, turn(w.paired.machineId)))?.cwd).toBe("repos/acme/app");
+    await prepareAgentCode(deps, turn(w.paired.machineId));
     await settleCheckoutSyncs();
     // The list waits behind the agent's worker starting (a warm start before it, on the computer).
     w.delay.ms = 3000;
@@ -985,6 +1054,7 @@ describe("fetches straight from GitHub: who gets a token, and what the turn is t
     await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
     w.answers.fn = (req) => req.repos.map((r) => ({ repo: r.repo, dir: r.dir, status: "updated" as const }));
     await prepareAgentCode(w.deps, turn(w.paired.machineId));
+    await settleCheckoutSyncs();
     const [sync] = w.runner.syncs();
     expect(sync?.repos).toEqual([{ repo: "acme/app", dir: "repos/acme/app", clone: false }]);
     expect(verifyGitToken(SECRET, sync?.proxy.token ?? "")?.kind).toBe("machine");
@@ -1008,6 +1078,8 @@ describe("fetches straight from GitHub: who gets a token, and what the turn is t
           ? { repo: r.repo, dir: r.dir, status: "cloning" as const, message: "still downloading" }
           : { repo: r.repo, dir: r.dir, path: `${FOLDER}/${r.dir}`, status: "updated" as const },
       );
+    await prepareAgentCode(w.deps, turn(w.paired.machineId));
+    await settleCheckoutSyncs();
     const out = await prepareAgentCode(w.deps, turn(w.paired.machineId));
     expect(out?.prompt).toContain("Still downloading on your computer: acme/app.");
     expect(out?.prompt).not.toContain("Not cloned yet");
@@ -1122,6 +1194,9 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       session: { machineId: w.paired.machineId, cwd: "" },
     };
     w.answers.fn = () => [];
+    // Its first turn looks for its checkouts beside it; none is there.
+    await prepareAgentCode(deps, turn);
+    await settleCheckoutSyncs();
     const dev = "Co-Authored-By: Dev <noreply@agentes.chat>";
     const own = `Commits you make this turn: end each commit message with the line ${dev}`;
     // The agent's own line turned off and no GitHub linked: nothing to say.
@@ -1148,8 +1223,12 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
     await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
     w.answers.fn = (req) =>
       req.repos.map((r) => ({ repo: r.repo, dir: r.dir, path: `${FOLDER}/${r.dir}`, status: "updated" as const }));
+    await prepareAgentCode(deps, turn);
+    await settleCheckoutSyncs();
     const code = await prepareAgentCode(deps, turn);
-    expect(code?.start).toBe(`You start in ${FOLDER}/repos/acme/app.\n${credit}`);
+    expect(code?.start).toBe(
+      `You start in ${FOLDER}/repos/acme/app.\nYour checkouts were last updated 0 min ago.\n${credit}`,
+    );
     // Picked again for other words, the credit stays.
     expect(code?.pick ? codeStart(code.pick, { trigger: "x", messages: [] }).start : "").toBe(code?.start ?? "-");
 
@@ -1175,12 +1254,12 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       })
       .returning();
     expect((await prepareAgentCode(deps, { ...turn, runId: run?.id }))?.start).toBe(
-      `You start in ${FOLDER}/repos/acme/app.\nCommits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: bia <583232+bia-gh@users.noreply.github.com>`,
+      `You start in ${FOLDER}/repos/acme/app.\nYour checkouts were last updated 0 min ago.\nCommits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: bia <583232+bia-gh@users.noreply.github.com>`,
     );
     // Nobody asked and nobody answers for the agent: no person's credit, the agent's own line alone.
     await f.db.update(schema.agents).set({ ownerUserId: null }).where(eq(schema.agents.id, f.agent.id));
     expect(await prepareAgentCode(deps, turn)).toMatchObject({
-      start: `You start in ${FOLDER}/repos/acme/app.\n${own}`,
+      start: `You start in ${FOLDER}/repos/acme/app.\nYour checkouts were last updated 0 min ago.\n${own}`,
     });
   });
 });

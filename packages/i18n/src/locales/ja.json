@@ -16283,6 +16283,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}で{{permission}}の許可を待っています",
+      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
+      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
+      "asked": "{{trigger}}の実行に必要です",
+      "names": {
+        "app_management": "App管理",
+        "screen": "画面収録",
+        "accessibility": "アクセシビリティ",
+        "disk": "フルディスクアクセス",
+        "network": "ローカルネットワーク",
+        "camera": "カメラ",
+        "microphone": "マイク",
+        "automation": "オートメーション"
+      }
+    },
     "leadCloud": "エージェントが作業する場所: ワークスペースのコンピューターと、メンバーが接続したデバイス。",
     "lead": "エージェントが作業する場所: メンバーが接続したコンピューターとスマートフォン。",
     "connect": "デバイスを接続",
@@ -16921,22 +16937,6 @@
         "once": "今回のみ許可しました。",
         "always": "{{deviceName}}を共有しました。",
         "no": "許可しませんでした。"
-      }
-    },
-    "permission": {
-      "title": "{{computer}}で{{permission}}の許可を待っています",
-      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
-      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
-      "asked": "{{trigger}}の実行に必要です",
-      "names": {
-        "app_management": "App管理",
-        "screen": "画面収録",
-        "accessibility": "アクセシビリティ",
-        "disk": "フルディスクアクセス",
-        "network": "ローカルネットワーク",
-        "camera": "カメラ",
-        "microphone": "マイク",
-        "automation": "オートメーション"
       }
     }
   },
@@ -18641,6 +18641,7 @@
         "usingScreen": "画面を使いました",
         "cloningRepo": "リポジトリをクローンしました",
         "listingRepos": "リポジトリを一覧表示しました",
+        "updatingCode": "コードを更新しました",
         "preparingCli": "{{app}}を準備しました",
         "openingPullRequest": "プルリクエストを作成しました",
         "handingOff": "レポートを届けました",
@@ -18765,6 +18766,7 @@
       "usingScreen": "画面を使用中",
       "cloningRepo": "リポジトリをクローン中",
       "listingRepos": "リポジトリを一覧表示中",
+      "updatingCode": "コードを更新中",
       "preparingCli": "{{computer}}で{{app}}を準備中",
       "preparingCliPct": "{{computer}}で{{app}}を準備中（{{percent}}%）",
       "openingPullRequest": "プルリクエストを作成中",

@@ -16962,6 +16962,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wacht op {{permission}} op {{computer}}",
+      "next": "Sta het toe in de agentes.chat-app op die computer.",
+      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
+      "asked": "Nodig om {{trigger}} uit te voeren",
+      "names": {
+        "app_management": "Appbeheer",
+        "screen": "Schermopname",
+        "accessibility": "Toegankelijkheid",
+        "disk": "Volledige schijftoegang",
+        "network": "Lokaal netwerk",
+        "camera": "Camera",
+        "microphone": "Microfoon",
+        "automation": "Automatisering"
+      }
+    },
     "leadCloud": "Waar je agents werken: de computer van de werkruimte en de apparaten die mensen koppelen.",
     "lead": "Waar je agents werken: de computers en telefoons die mensen koppelen.",
     "connect": "Apparaat koppelen",
@@ -17604,22 +17620,6 @@
         "once": "Eén keer toegestaan.",
         "always": "{{deviceName}} wordt nu met hen gedeeld.",
         "no": "Je zei nee."
-      }
-    },
-    "permission": {
-      "title": "Wacht op {{permission}} op {{computer}}",
-      "next": "Sta het toe in de agentes.chat-app op die computer.",
-      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
-      "asked": "Nodig om {{trigger}} uit te voeren",
-      "names": {
-        "app_management": "Appbeheer",
-        "screen": "Schermopname",
-        "accessibility": "Toegankelijkheid",
-        "disk": "Volledige schijftoegang",
-        "network": "Lokaal netwerk",
-        "camera": "Camera",
-        "microphone": "Microfoon",
-        "automation": "Automatisering"
       }
     }
   },
@@ -19371,6 +19371,7 @@
         "usingScreen": "Het scherm gebruikt",
         "cloningRepo": "Een repository gekloond",
         "listingRepos": "Heeft de repository's weergegeven",
+        "updatingCode": "Heeft de code bijgewerkt",
         "preparingCli": "{{app}} klaargezet",
         "openingPullRequest": "Een pull request geopend",
         "handingOff": "Een rapport geleverd",
@@ -19495,6 +19496,7 @@
       "usingScreen": "het scherm aan het gebruiken",
       "cloningRepo": "een repository aan het klonen",
       "listingRepos": "geeft de repository's weer",
+      "updatingCode": "werkt de code bij",
       "preparingCli": "{{app}} aan het klaarzetten op {{computer}}",
       "preparingCliPct": "{{app}} aan het klaarzetten op {{computer}} ({{percent}}%)",
       "openingPullRequest": "een pull request aan het openen",

@@ -16343,6 +16343,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
+    },
     "leadCloud": "Tempat agenmu bekerja: komputer ruang kerja dan perangkat yang dihubungkan orang-orang.",
     "lead": "Tempat agenmu bekerja: komputer dan ponsel yang dihubungkan orang-orang.",
     "connect": "Hubungkan perangkat",
@@ -16981,22 +16997,6 @@
         "once": "Diizinkan sekali.",
         "always": "{{deviceName}} sekarang dibagikan dengan mereka.",
         "no": "Kamu menolak."
-      }
-    },
-    "permission": {
-      "title": "Menunggu {{permission}} di {{computer}}",
-      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
-      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
-      "asked": "Diperlukan untuk menjalankan {{trigger}}",
-      "names": {
-        "app_management": "Manajemen App",
-        "screen": "Perekaman Layar",
-        "accessibility": "Aksesibilitas",
-        "disk": "Akses Disk Penuh",
-        "network": "Jaringan Lokal",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomatisasi"
       }
     }
   },
@@ -18701,6 +18701,7 @@
         "usingScreen": "Memakai layar",
         "cloningRepo": "Meng-clone repositori",
         "listingRepos": "Menampilkan daftar repositori",
+        "updatingCode": "Memperbarui kode",
         "preparingCli": "Menyiapkan {{app}}",
         "openingPullRequest": "Membuka pull request",
         "handingOff": "Mengirim laporan",
@@ -18825,6 +18826,7 @@
       "usingScreen": "memakai layar",
       "cloningRepo": "meng-clone repositori",
       "listingRepos": "menampilkan daftar repositori",
+      "updatingCode": "memperbarui kode",
       "preparingCli": "menyiapkan {{app}} di {{computer}}",
       "preparingCliPct": "menyiapkan {{app}} di {{computer}} ({{percent}}%)",
       "openingPullRequest": "membuka pull request",

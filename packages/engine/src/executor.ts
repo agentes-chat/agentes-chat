@@ -209,8 +209,8 @@ import { recordContextUse } from "./context/feedback";
 import { afterTurnDone, learnTags, reportLearnFailure } from "./context/learn";
 import { rulesForRun } from "./context/rules";
 import { memoryArmOf } from "./context/scorecard";
-import { type ContextDeps, ensureThreadSummary } from "./context/summaries";
-import { EXPAND_TOOL, itemLabel, retrieveForRun } from "./context/tools";
+import { type ContextDeps, currentThreadSummary, ensureThreadSummary } from "./context/summaries";
+import { EXPAND_TOOL, GET_SUMMARY_TOOL, itemLabel, retrieveForRun } from "./context/tools";
 import {
   compactToolResults,
   cutOldToolSteps,
@@ -2904,10 +2904,14 @@ async function executeRunInner(
     if (issueId) later(() => linkRunToIssue({ db, pubsub: deps.pubsub }, run, issueId));
     const system: ContextBlock[] = [...context.system];
     if (contextDeps && context.stats.truncated) {
-      // Long thread: the summary stands in for what didn't fit.
-      const found = await ensureThreadSummary(contextDeps, run.orgId, run.threadRootId, { force: true }).catch(
-        () => null,
-      );
+      // Long thread: the summary kept stands in for what didn't fit, at once; one covering the newest messages is
+      // written beside the turn, for the next (`get_summary` waits for it when this turn needs it). An agent that
+      // can't call it still waits for the summary: it would otherwise not know what was said before.
+      const asks = granted.some((t) => t.name === GET_SUMMARY_TOOL);
+      const writing = ensureThreadSummary(contextDeps, run.orgId, run.threadRootId, { force: true }).catch(() => null);
+      const found = asks
+        ? await currentThreadSummary(db, run.orgId, run.threadRootId).catch(() => null)
+        : await writing;
       const dm = found
         ? await agentsDmReads(db, run.orgId, run.channelId, () => readerOfRun(db, run.orgId, run.id))
         : null;
@@ -2917,6 +2921,7 @@ async function executeRunInner(
           conversation: true,
           text: `# Earlier in this thread (summary)\n${itemLabel(summary)} ${summary.content}`,
         });
+      else if (asks) system.push({ conversation: true, text: SUMMARY_COMING_NOTE });
       prof.part("summary");
     }
     // Per turn like memory: who the run acts for picks the rules, so they never move the cached prompt.
@@ -7339,6 +7344,9 @@ function brainTurnOf(
     ...(options.personWaiting ? { personWaiting: true } : {}),
   };
 }
+
+/** A long thread with no summary kept yet: the turn starts without one, and the agent reads it when it needs it. */
+export const SUMMARY_COMING_NOTE = `# Earlier in this thread\nThis thread is longer than what is shown here, and its summary is being written now: call ${GET_SUMMARY_TOOL} when you need what was said before.`;
 
 /** An early checkouts sync for a turn whose words may have changed since: where it starts picked again from them. */
 const startAgain = (code: Promise<CodeSetup | null>, turn: Parameters<typeof codeStart>[1]) =>

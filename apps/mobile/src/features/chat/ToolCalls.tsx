@@ -144,6 +144,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   waitingForDevice: "wait",
   cloningRepo: "code",
   listingRepos: "code",
+  updatingCode: "code",
   openingPullRequest: "code",
   handingOff: "clock",
   recordingFindings: "flag",

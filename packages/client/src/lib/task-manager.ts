@@ -355,6 +355,7 @@ function programOf(now: TaskNow | null): TaskProgram | null {
     case "runningSkillScriptAny":
     case "cloningRepo":
     case "listingRepos":
+    case "updatingCode":
     case "pcFiles":
       return { kind: "terminal", activity, detail };
     case "consulting":
