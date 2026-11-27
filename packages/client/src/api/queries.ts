@@ -1308,8 +1308,8 @@ export function usePickFirstAgent(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ proposalId, index }: { proposalId: string; index: number }) =>
-      api.firstAgents.pick(orgId, proposalId, index),
+    mutationFn: ({ proposalId, index, replace }: { proposalId: string; index: number; replace?: string | null }) =>
+      api.firstAgents.pick(orgId, proposalId, index, replace),
     onSuccess: async () => {
       for (const key of [keys.firstAgents(orgId), keys.channels(orgId), keys.routines(orgId)])
         void qc.invalidateQueries({ queryKey: key });

@@ -217,7 +217,7 @@ export function firstAgentRoutes(deps: AppDeps) {
       security,
       summary: 'Create the agent of one option ("Criar o …")',
       description:
-        "One agent, as you, through the right hand's team card in your DM with it (Undo for a day): its routine, its AI, its own channel in a team's workspace. Picking again answers with the same agent. 403 `create_agents_required` without the permission to create agents; 409 `first_agents.picking` while another pick of it runs.",
+        "One agent, as you, through the right hand's team card in your DM with it (Undo for a day): its routine, its AI, its own channel in a team's workspace. Picking again answers with the same agent. `replace`: your first agent made a moment ago on the onboarding (an area's, or an earlier proposal's) whose first delivery hasn't gone, archived, so the onboarding leaves one. 403 `create_agents_required` without the permission to create agents; 409 `first_agents.picking` while another pick of it runs.",
       request: {
         params: OrgParams.extend({ id: z.uuid() }),
         body: body(
@@ -227,6 +227,7 @@ export function firstAgentRoutes(deps: AppDeps) {
               .int()
               .min(0)
               .max(FIRST_AGENT_LIMITS.options - 1),
+            replace: z.uuid().nullish(),
           }),
         ),
       },
@@ -239,6 +240,7 @@ export function firstAgentRoutes(deps: AppDeps) {
         { orgId, userId: c.get("user").id },
         id,
         c.req.valid("json").index,
+        c.req.valid("json").replace,
       );
       return c.json(picked, 200);
     },

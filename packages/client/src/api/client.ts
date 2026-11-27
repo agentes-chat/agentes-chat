@@ -1050,8 +1050,11 @@ export interface ApiClient {
     latest(orgId: string): Promise<FirstAgents | null>;
     /** An AI's answer pasted ("Sem conector? Cole a resposta"): 400 `first_agents.invalid` says what is wrong. */
     paste(orgId: string, input: FirstAgentsInput): Promise<FirstAgents>;
-    /** "Criar o …": the option at `index` becomes one agent; again, the same one. 403 `create_agents_required`. */
-    pick(orgId: string, proposalId: string, index: number): Promise<FirstAgentPicked>;
+    /**
+     * "Criar o …": the option at `index` becomes one agent; again, the same one. `replace`: the onboarding's first agent
+     * made a moment ago, archived. 403 `create_agents_required`.
+     */
+    pick(orgId: string, proposalId: string, index: number, replace?: string | null): Promise<FirstAgentPicked>;
     /** My first agent from an area of the onboarding, its first delivery kept. 403 `create_agents_required`. */
     start(orgId: string, input: FirstAgentStartInput): Promise<FirstAgentPicked>;
     /** My first delivery here, or null. */

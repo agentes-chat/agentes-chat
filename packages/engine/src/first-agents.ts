@@ -629,6 +629,8 @@ export async function pickFirstAgent(
   who: { orgId: string; userId: string },
   id: string,
   index: number,
+  /** The person's first agent made a moment ago on the onboarding, whose place this one takes (archived). */
+  replace?: string | null,
 ): Promise<{ agentId: string; handle: string; channelId: string }> {
   const { db } = deps;
   const { orgId, userId } = who;
@@ -669,6 +671,8 @@ export async function pickFirstAgent(
       .update(firstAgentProposals)
       .set({ picked: null, pickedAt: null })
       .where(and(mine, isNull(firstAgentProposals.agentId)));
+  // Asked of the person's AI again, or after an area's agent: one first agent, never several side by side.
+  if (replace) await replaceFirstAgent(deps, orgId, userId, replace);
   const agentId = await makeFirstAgent(deps, orgId, userId, optionPlan(option)).catch(async (error: unknown) => {
     await release();
     throw error;

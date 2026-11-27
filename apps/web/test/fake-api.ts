@@ -3427,8 +3427,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         state.firstAgents = proposal;
         return structuredClone(proposal);
       },
-      pick: async (orgId, proposalId, index) => {
-        log("firstAgents.pick", orgId, proposalId, index);
+      // `replace`, as the backend: my pending first agent from the onboarding takes the new one's place.
+      pick: async (orgId, proposalId, index, replace) => {
+        log("firstAgents.pick", orgId, proposalId, index, ...(replace ? [replace] : []));
         const proposal = state.firstAgents;
         if (!proposal || proposal.id !== proposalId) {
           throw new ApiError(404, "first_agents.not_found", "Proposal not found");
@@ -3445,6 +3446,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           const entry = Object.entries(state.channelMembers).find(([, ms]) => ms.some((m) => m.id === made.id));
           return { agentId: made.id, handle: made.handle, channelId: entry?.[0] ?? "" };
         }
+        const pending = state.firstDelivery;
+        if (replace && pending && !pending.firedAt && pending.area !== null && pending.agentId === replace)
+          state.agents = state.agents.filter((a) => a.id !== replace);
         const taken = new Set(state.agents.map((a) => a.handle));
         let handle = option.handle;
         for (let i = 2; taken.has(handle); i++) handle = `${option.handle}${i}`;

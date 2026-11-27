@@ -290,6 +290,32 @@ describe("keeping it", () => {
       task: "A lista de quem está atrasado",
     });
   });
+
+  test("a pick from the person's AI takes the place of the first agent made a moment ago: one, however often asked", async () => {
+    f = await setup({ rightHand: true });
+    const ask = (name: string) =>
+      saveFirstAgents(
+        { db: f.db, pubsub: f.pubsub, context: f.context },
+        { orgId: f.org.id, userId: f.owner.id, grantId: null, source: "paste" },
+        { options: [{ name, role: "Triagem", why: "Chega muita coisa.", tasks: ["Separa o que importa"] }] },
+      );
+    // An area's agent first, then the AI asked twice: each new one archives the one before it.
+    const area = await start(f, f.owner.id, support());
+    const first = await ask("Nina");
+    const nina = await pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, first.id, 0, area.agentId);
+    expect((await agentRow(f, area.agentId)).archivedAt).not.toBeNull();
+    const again = await ask("Lia");
+    const lia = await pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, again.id, 0, nina.agentId);
+    expect((await agentRow(f, nina.agentId)).archivedAt).not.toBeNull();
+    expect((await agentRow(f, lia.agentId)).archivedAt).toBeNull();
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toMatchObject({ agentId: lia.agentId, area: "ask" });
+    // Never one whose first delivery went, nor the workspace's own agent.
+    await f.db.update(schema.firstDeliveries).set({ firedAt: new Date() });
+    const later = await ask("Rui");
+    await pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, later.id, 0, lia.agentId);
+    expect((await agentRow(f, lia.agentId)).archivedAt).toBeNull();
+    expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
+  });
 });
 
 describe("firing it", () => {
