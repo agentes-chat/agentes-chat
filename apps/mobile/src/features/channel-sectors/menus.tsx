@@ -1,4 +1,5 @@
 import { useChannels } from "@agenteschat/client";
+import { managesChannel } from "@agenteschat/client/lib/permissions";
 import { useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
@@ -9,29 +10,28 @@ import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { ActionList, Tile } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
-import { movesChannel, sectorHref } from "./logic";
+import { sectorHref } from "./logic";
 
 const NO_CHANNELS: never[] = [];
 
 /** One of a row's long press actions: the app's sheet shows `icon`, iOS's own menu the SF Symbol `symbol`. */
 export interface RowAction {
   key: "pin" | "move";
-  icon: "pin" | "list";
-  symbol: "pin" | "pin.slash" | "folder";
+  icon: "star" | "list";
+  symbol: "star" | "star.slash" | "folder";
   label: string;
   run: () => void;
 }
 
 /**
- * The long press of a conversation on the home (its row, or its face on the pinned strip), as a short sheet: "Fixar no
- * topo" or "Tirar do topo" (a channel, an agent's or a person's DM) and a channel's "Mudar de setor" (only where
- * `movesChannel`, ADR 0240). The same actions fill iOS's own menu under the conversation's preview.
+ * The long press of a conversation on the home (its row, or its face on the strip of Favoritos), as a short sheet:
+ * "Adicionar aos favoritos" or "Tirar dos favoritos" (a channel, an agent's or a person's DM) and a channel's "Mover
+ * para a seção", the person's own sections (ADR 0259). The same actions fill iOS's own menu under the conversation's
+ * preview.
  */
 export function useRowMenus() {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const { org } = useOrg();
-  const meId = useMeId();
   const sheet = useSheet();
   const channels = useChannels(orgId).data ?? NO_CHANNELS;
   // Every row asks for its channel: by id, made once per list.
@@ -47,7 +47,7 @@ export function useRowMenus() {
       return { kind: r.with.type === "agent" ? ("agents" as const) : ("people" as const), id: r.with.id };
     return null;
   };
-  // What a row's long press offers: pin it on top or take it off, and move a channel (only where `movesChannel`). The
+  // What a row's long press offers: add it to Favoritos or take it off, and move a channel to one of my sections. The
   // same list fills the app's sheet and iOS's own menu.
   const rowActions = (r: ConversationRow): RowAction[] => {
     const channel = r.kind === "channel" ? channelsById.get(r.channelId) : undefined;
@@ -57,18 +57,18 @@ export function useRowMenus() {
     return [
       {
         key: "pin",
-        icon: "pin",
-        symbol: pinned ? "pin.slash" : "pin",
-        label: pinned ? t("sidebarPins.unpin") : t("sidebarPins.pin"),
+        icon: "star",
+        symbol: pinned ? "star.slash" : "star",
+        label: pinned ? t("sidebarFavorites.remove") : t("sidebarFavorites.add"),
         run: () => pins.toggle(pin.kind, pin.id),
       },
-      ...(channel && movesChannel(channel, meId, org)
+      ...(channel
         ? [
             {
               key: "move" as const,
               icon: "list" as const,
               symbol: "folder" as const,
-              label: t("sidebarAgents.changeGroup"),
+              label: t("sidebarSections.moveTo"),
               run: () => router.push(sectorHref(channel.id)),
             },
           ]
@@ -108,7 +108,16 @@ export function useRowMenus() {
   const pinLabelOf = (r: ConversationRow) => {
     const pin = pinOf(r);
     if (!pin) return null;
-    return pins.isPinned(pin.kind, pin.id) ? t("sidebarPins.unpin") : t("sidebarPins.pin");
+    return pins.isPinned(pin.kind, pin.id) ? t("sidebarFavorites.remove") : t("sidebarFavorites.add");
   };
   return { openRowMenu, rowActionsOf, pinLabelOf };
+}
+
+/** Whether I may change this channel (its ⋯ sheet shows "reply in threads" then): who manages it, its creator. */
+export function useMovesChannel(channelId: string) {
+  const orgId = useOrgId();
+  const { org } = useOrg();
+  const meId = useMeId();
+  const channel = useChannels(orgId).data?.find((c) => c.id === channelId);
+  return channel ? managesChannel(channel, meId, org) : false;
 }

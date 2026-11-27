@@ -4,12 +4,17 @@
     "send": "Kirim"
   },
   "categories": {
-    "where": "Tempat #{{channel}} muncul",
-    "whereHelp": "Berubah untuk semua orang. Siapa yang ikut di kanal tetap sama.",
-    "order": "Posisi di daftar",
     "up": "Naikkan",
     "down": "Turunkan",
     "channelPosition": "{{at}} dari {{count}}."
+  },
+  "sections": {
+    "title": "Bagian",
+    "where": "Tempat #{{channel}} untuk Anda",
+    "whereHelp": "Hanya daftar Anda yang berubah. Setiap orang mengatur bagiannya sendiri.",
+    "none": "Tanpa bagian",
+    "order": "Posisi di bagian",
+    "tooLong": "Gunakan paling banyak 40 karakter."
   },
   "blocks": {
     "send": "Kirim",
@@ -172,11 +177,11 @@
       "text": "Mungkin sedang mati atau di luar jaringanmu. Obrolanmu akan muncul sendiri begitu server kembali.",
       "kept": "Menampilkan yang sudah ada di aplikasi."
     },
-    "pinned": "Disematkan",
+    "favorites": "Favorit",
     "recent": "Terbaru",
     "view": {
       "title": "Tampilkan percakapan",
-      "sectors": "Sektor",
+      "sections": "Bagian",
       "dms": "Pesan langsung",
       "channels": "Kanal"
     },

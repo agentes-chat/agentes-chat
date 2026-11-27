@@ -2383,43 +2383,27 @@
     "deleteText": "Ajanları Ajanlar bölümüne geri döner.",
     "deleteChannels": "Kanalları Kanallar bölümüne geri döner.",
     "dropHere": "Ajanları buraya sürükleyin",
-    "dropHereAll": "Ajanları veya kanalları buraya sürükleyin",
     "moved": "{{name}}, {{group}} departmanına geçti",
     "movedOut": "{{name}}, {{group}} departmanından ayrıldı",
     "undo": "Geri al"
   },
   "sidebarAgents": {
-    "options": "Ajan seçenekleri",
-    "add": "Yeni ajan veya departman",
-    "order": "Sıra",
-    "sort": {
-      "workspace": "Çalışma alanı sırası",
-      "mine": "Önce benimkiler",
-      "working": "Önce çalışanlar"
-    },
     "showAll": "Benimle konuşmayan ajanları göster",
-    "collapseAll": "Tümünü daralt",
-    "expandAll": "Tümünü genişlet",
-    "organize": "Departmanları Ekip'te düzenle",
     "more_one": "Ekip'te 1 ajan daha",
     "more_other": "Ekip'te {{count}} ajan daha",
     "newAgent": "Yeni ajan",
-    "working_one": "{{count}} çalışıyor",
-    "working_other": "{{count}} çalışıyor",
     "count_one": "{{count}} ajan",
     "count_other": "{{count}} ajan",
     "workingIn": "#{{channel}} kanalında çalışıyor",
     "talksOnly": "yalnızca {{name}} ile konuşur",
     "talksOnlyMore_one": "yalnızca {{name}} ve {{count}} kişiyle daha konuşur",
-    "talksOnlyMore_other": "yalnızca {{name}} ve {{count}} kişiyle daha konuşur",
-    "changeGroup": "Departmana taşı",
-    "newGroupWith": "{{name}} ile yeni departman",
-    "dmsEmpty": "Kişilerle konuşmalarınız burada görünür."
+    "talksOnlyMore_other": "yalnızca {{name}} ve {{count}} kişiyle daha konuşur"
   },
   "sidebarFavorites": {
     "title": "Favoriler",
     "add": "Favorilere ekle",
     "remove": "Favorilerden çıkar",
+    "marked": "Favorilerde",
     "full": "Favorilerde zaten 50 öğe var. Bunu eklemek için birini çıkar."
   },
   "sidebarSections": {
@@ -2462,16 +2446,6 @@
     "emptyTitle": "Hepsi okundu",
     "emptyText": "Yeni mesajlar ve seni bekleyenler burada görünür.",
     "markedAll": "Tümü okundu olarak işaretlendi"
-  },
-  "sidebarPins": {
-    "pin": "En üste sabitle",
-    "unpin": "Sabitlemeyi kaldır",
-    "pinned": "En üste sabitlendi",
-    "full": {
-      "agents": "Zaten 5 ajan sabitlediniz. Bunu sabitlemek için birini kaldırın.",
-      "channels": "Zaten 5 kanal sabitlediniz. Bunu sabitlemek için birini kaldırın.",
-      "people": "Zaten 5 kişi sabitlediniz. Bunu sabitlemek için birini kaldırın."
-    }
   },
   "appsDownload": {
     "computer": "Bilgisayar",

@@ -4,12 +4,17 @@
     "send": "Senden"
   },
   "categories": {
-    "where": "Wo #{{channel}} erscheint",
-    "whereHelp": "Ändert sich für alle. Wer im Kanal mitmacht, bleibt gleich.",
-    "order": "Platz in der Liste",
     "up": "Nach oben",
     "down": "Nach unten",
     "channelPosition": "{{at}} von {{count}}."
+  },
+  "sections": {
+    "title": "Abschnitt",
+    "where": "Wo #{{channel}} für dich steht",
+    "whereHelp": "Nur deine Liste ändert sich. Jede Person ordnet ihre eigenen Abschnitte.",
+    "none": "Kein Abschnitt",
+    "order": "Platz im Abschnitt",
+    "tooLong": "Höchstens 40 Zeichen."
   },
   "blocks": {
     "send": "Senden",
@@ -177,11 +182,11 @@
       "text": "Er ist vielleicht offline oder außerhalb deines Netzwerks. Deine Chats erscheinen von selbst, sobald er wieder da ist.",
       "kept": "Du siehst, was schon in der App war."
     },
-    "pinned": "Angepinnt",
+    "favorites": "Favoriten",
     "recent": "Zuletzt",
     "view": {
       "title": "Unterhaltungen anzeigen",
-      "sectors": "Bereiche",
+      "sections": "Abschnitte",
       "dms": "Direktnachrichten",
       "channels": "Kanäle"
     },

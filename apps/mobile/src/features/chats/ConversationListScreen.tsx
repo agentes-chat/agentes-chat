@@ -67,7 +67,7 @@ function ConversationList() {
     icon: "chat" as const,
     onPress: () => router.push("/new-chat"),
   };
-  const holdLabel = t("sidebarPins.pin");
+  const holdLabel = t("sidebarFavorites.add");
   return (
     <PushedLargeTitle
       title={t("mobile.chats.recent")}

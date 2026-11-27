@@ -13,7 +13,6 @@ import {
   type ReactionCount,
   resolvedOf,
   type ThreadInfo,
-  useAgentGroups,
   useApi,
   useCloseMission,
   useFollowThread,
@@ -21,6 +20,7 @@ import {
   usePinMessage,
   usePins,
   useResolveComment,
+  useSidebarView,
   useThreadInfo,
   useThreadMutation,
   useToggleReaction,
@@ -29,6 +29,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { textOrMedia } from "@agenteschat/client/lib/media";
 import { messagePath } from "@agenteschat/client/lib/message-links";
 import { summaryParts } from "@agenteschat/client/lib/missions";
+import { sectionOfChannel } from "@agenteschat/client/lib/sidebar-view";
 import { listedText } from "@agenteschat/client/lib/voice";
 import { conversationWallpaperOf } from "@agenteschat/client/lib/wallpaper";
 import { chartBlocksOf } from "@agenteschat/ui/widgets/spec";
@@ -42,7 +43,7 @@ import { useOrg } from "@/providers/org";
 import { CHROME_MAX_SCALE, Count, GroupedList, GroupedRow, Icon, PressScale, SkeletonList, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { sectorHref } from "../channel-sectors/logic";
-import { useMovesChannel } from "../channel-sectors/PickSectorScreen";
+import { useMovesChannel } from "../channel-sectors/menus";
 import { setPinDraft } from "../dashboards/logic";
 import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
@@ -673,13 +674,11 @@ export function ChannelOptions({
   const sheet = useSheet();
   const pins = usePins(orgId, channelId);
   const count = pins.data?.length ?? 0;
-  // A channel's sector (ADR 0240), for whoever may move it.
+  // Who may change the channel (its "reply in threads").
   const moves = useMovesChannel(channelId);
-  // Only what this sheet reads of the lists (its sector, whether it is a DM): they are read again for any message.
+  // Only what this sheet reads of the lists (whether it is a DM): they are read again for any message.
   const api = useApi();
-  const sectorOf = useCallback((all: Channel[]) => all.find((c) => c.id === channelId)?.groupId ?? null, [channelId]);
   const isDm = useCallback((all: DirectMessage[]) => all.some((d) => d.channelId === channelId), [channelId]);
-  const groupId = useQuery({ ...channelsQuery(api, orgId), select: sectorOf }).data;
   // "Agents reply in threads" (ADR 0214), for whoever may change the channel: undefined where it isn't a channel.
   const threadsOf = useCallback(
     (all: Channel[]) => {
@@ -696,8 +695,9 @@ export function ChannelOptions({
     onSettled: () => qc.invalidateQueries({ queryKey: keys.channels(orgId) }),
     onError: (e) => toast({ title: errorText(t, e, i18n.language), icon: "x" }),
   });
-  const sectors = useAgentGroups(orgId);
-  const sectorName = groupId ? sectors.data?.find((g) => g.id === groupId)?.name : undefined;
+  // The person's own section it sits in (ADR 0259).
+  const ownSections = useSidebarView(orgId).sections ?? [];
+  const sectionName = ownSections.find((s) => s.id === sectionOfChannel(ownSections, channelId))?.name;
   // This conversation's own background, mine alone; none of its own: it follows the others.
   const { org } = useOrg();
   const dm = useQuery({ ...dmsQuery(api, orgId), select: isDm }).data === true;
@@ -723,13 +723,13 @@ export function ChannelOptions({
             ...(count > 0 ? { trailing: <Count value={count} max={99} /> } : {}),
             onPress: onPins,
           },
-          ...(onMembers && moves
+          ...(onMembers
             ? [
                 {
                   key: "sector",
                   icon: "list" as const,
-                  label: t("agentGroups.group"),
-                  hint: sectorName ?? t("agentGroups.none"),
+                  label: t("mobile.sections.title"),
+                  hint: sectionName ?? t("mobile.sections.none"),
                   onPress: () => {
                     sheet.close();
                     router.push(sectorHref(channelId));

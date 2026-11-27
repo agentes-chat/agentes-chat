@@ -328,23 +328,29 @@ export const rowsOfKind = (rows: ConversationRow[], kind: RowKind) => rows.filte
 export const recentRows = (rows: ConversationRow[]) => rows.filter((r) => kindOf(r) !== "threads");
 
 /**
- * The pinned strip (pure): what the person pinned (the web sidebar's pins, `usePins`), agents first, then channels,
- * then people, each in the pins' order. A pinned agent with no conversation yet stands as one to start (its row in
- * `starters`); a pinned channel or person shows while their conversation is among `rows`. A pin of something no longer
- * listed (gone, hidden from me, the right hand with its own field) holds no place.
+ * The strip of Favoritos (pure, ADR 0259): the person's favorites (`usePins().favorites`), people, agents and channels
+ * in their order. A favorite agent with no conversation yet stands as one to start (its row in `starters`); a favorite
+ * channel or person shows while their conversation is among `rows`. A favorite of something no longer listed (gone,
+ * hidden from me, the right hand with its own field) holds no place.
  */
 export function pinnedRows(
   rows: readonly ConversationRow[],
   starters: readonly ConversationRow[],
-  pins: { agents: readonly string[]; channels: readonly string[]; people: readonly string[] },
+  favorites: readonly string[],
 ): ConversationRow[] {
   const dmWith = (kind: "agents" | "people", id: string) => (r: ConversationRow) =>
     r.kind === "dm" && kindOf(r) === kind && r.with.id === id;
-  return [
-    ...pins.agents.map((id) => rows.find(dmWith("agents", id)) ?? starters.find(dmWith("agents", id))),
-    ...pins.channels.map((id) => rows.find((r) => r.kind === "channel" && r.channelId === id)),
-    ...pins.people.map((id) => rows.find(dmWith("people", id))),
-  ].filter((r): r is ConversationRow => r !== undefined);
+  return favorites
+    .map((key) => {
+      const at = key.indexOf(":");
+      const kind = key.slice(0, at);
+      const id = key.slice(at + 1);
+      if (kind === "agent") return rows.find(dmWith("agents", id)) ?? starters.find(dmWith("agents", id));
+      if (kind === "channel") return rows.find((r) => r.kind === "channel" && r.channelId === id);
+      if (kind === "person") return rows.find(dmWith("people", id));
+      return undefined;
+    })
+    .filter((r): r is ConversationRow => r !== undefined);
 }
 
 /** #general with nothing new in it: no unread message and no mention of me. */
@@ -530,88 +536,65 @@ export function serverTrouble(input: {
   return { kind: "problem", problem };
 }
 
-/** Conversas' two ways to list a team's conversations: by latest activity, or by the agents' sectors (ADR 0083). */
+/**
+ * Conversas' two ways to list a team's conversations: by latest activity, or by the person's own sections (ADR 0259).
+ * Stored as before (`sectors`), so the choice made on this phone stays.
+ */
 export type HomeView = "recent" | "sectors";
 
 export const homeViewOf = (stored: string | null): HomeView => (stored === "sectors" ? "sectors" : "recent");
 
-/** One section of Setores: a sector's conversations, the agents in none, the direct messages, the other channels. */
+/** One part of Seções: one of the person's channel sections, the channels in none, the direct messages. */
 export interface HomeSectorSection {
-  /** Remembered collapsed by it: `sector:<id>`, or `agents`, `dms`, `channels`. */
+  /** Remembered collapsed by it: `section:<id>`, or `channels`, `dms`. */
   key: string;
-  kind: "sector" | "agents" | "dms" | "channels";
-  /** The sector's own (its name, color and icon); null for the other three. */
-  group: { id: string; name: string; color?: string | undefined; icon?: string | null | undefined } | null;
-  /** A sector's agents first, then its channels (from `channelsFrom`). */
+  kind: "section" | "channels" | "dms";
+  /** The section's own (its name); null for the other two. */
+  group: { id: string; name: string } | null;
   rows: ConversationRow[];
-  /** Where a sector's channels start in `rows`, after a hairline (ADR 0240); `rows.length` when it has none. */
-  channelsFrom: number;
 }
 
 /**
- * Setores, as the web's sidebar (ADR 0083, ADR 0240): each sector with its agents' conversations, then its channels, in
- * the workspace's order of sectors; then the agents in no sector, the direct messages with people and the channels in
- * no sector. Threads and missions stay in Recentes and Threads. Each part is by latest activity (`recentRows`); an
- * empty section is left out.
+ * Seções, as the web's sidebar (ADR 0259): each of the person's own sections with its channels in their order, then
+ * the channels in none, then Mensagens diretas with people and agents together, by latest activity. Threads and
+ * missions stay in Recentes and Threads. An empty part is left out.
  */
 export function sectorSections(
   rows: readonly ConversationRow[],
-  groups: readonly { id: string; name: string; agentIds: readonly string[]; color?: string; icon?: string | null }[],
+  sections: readonly { id: string; name: string; channelIds: readonly string[] }[],
 ): HomeSectorSection[] {
   const ordered = recentRows([...rows]);
-  const agentRows = ordered.filter((r) => r.kind === "dm" && r.with.type === "agent");
   const channelRows = ordered.filter((r) => r.kind === "channel");
-  const agentOf = (r: ConversationRow) => (r.kind === "dm" ? r.with.id : "");
-  const sectorOf = (r: ConversationRow) => (r.kind === "channel" ? r.groupId : null);
-  const known = new Set(groups.map((g) => g.id));
+  const byId = new Map(channelRows.map((r) => [r.kind === "channel" ? r.channelId : "", r]));
   const placed = new Set<string>();
-  const sections: HomeSectorSection[] = groups.map((g) => {
-    const ids = new Set(g.agentIds);
-    const mine = agentRows.filter((r) => ids.has(agentOf(r)) && !placed.has(r.key));
-    for (const r of mine) placed.add(r.key);
-    const channels = channelRows.filter((r) => sectorOf(r) === g.id);
-    return {
-      key: `sector:${g.id}`,
-      kind: "sector",
-      group: { id: g.id, name: g.name, color: g.color, icon: g.icon ?? null },
-      rows: [...mine, ...channels],
-      channelsFrom: mine.length,
-    };
+  const parts: HomeSectorSection[] = sections.map((g) => {
+    const mine = g.channelIds.flatMap((id) => {
+      const r = byId.get(id);
+      if (!r || placed.has(id)) return [];
+      placed.add(id);
+      return [r];
+    });
+    return { key: `section:${g.id}`, kind: "section", group: { id: g.id, name: g.name }, rows: mine };
   });
-  const rest = (kind: "agents" | "dms" | "channels", list: ConversationRow[]): HomeSectorSection => ({
-    key: kind,
-    kind,
-    group: null,
-    rows: list,
-    channelsFrom: kind === "channels" ? 0 : list.length,
-  });
-  sections.push(
-    rest(
-      "agents",
-      agentRows.filter((r) => !placed.has(r.key)),
-    ),
-    rest(
-      "dms",
-      ordered.filter((r) => r.kind === "dm" && r.with.type !== "agent"),
-    ),
-    rest(
-      "channels",
-      channelRows.filter((r) => {
-        const g = sectorOf(r);
-        return !g || !known.has(g);
-      }),
-    ),
+  parts.push(
+    {
+      key: "channels",
+      kind: "channels",
+      group: null,
+      rows: channelRows.filter((r) => r.kind === "channel" && !placed.has(r.channelId)),
+    },
+    { key: "dms", kind: "dms", group: null, rows: ordered.filter((r) => r.kind === "dm") },
   );
-  return sections.filter((s) => s.rows.length > 0);
+  return parts.filter((s) => s.rows.length > 0);
 }
 
 /**
- * Closed, a sector stays one line but keeps in sight what calls on the person (ADR 0083 §7, ADR 0240): its agents at
- * work or that wrote to them, its unread channels.
+ * Closed, a section stays one line but keeps in sight what calls on the person (ADR 0259): its unread channels, an
+ * agent at work or that wrote to them.
  */
 export const keptWhenClosed = (r: ConversationRow) =>
   r.unread > 0 || (r.kind === "channel" && r.mentions > 0) || (r.kind === "dm" && r.working === true);
 
-/** A closed sector's one count: the unread across its agents' DMs and its channels (a channel's mentions while muted). */
+/** A closed section's one count: the unread across its conversations (a channel's mentions while muted). */
 export const closedUnread = (rows: readonly ConversationRow[]) =>
   rows.reduce((n, r) => n + (r.unread > 0 ? r.unread : r.kind === "channel" ? r.mentions : 0), 0);

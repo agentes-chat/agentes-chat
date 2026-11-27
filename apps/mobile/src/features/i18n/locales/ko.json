@@ -4,12 +4,17 @@
     "send": "보내기"
   },
   "categories": {
-    "where": "#{{channel}}이(가) 표시되는 곳",
-    "whereHelp": "모두에게 바뀌어요. 채널에 참여하는 사람은 그대로예요.",
-    "order": "목록에서의 위치",
     "up": "위로 이동",
     "down": "아래로 이동",
     "channelPosition": "{{count}}개 중 {{at}}번째."
+  },
+  "sections": {
+    "title": "섹션",
+    "where": "내 목록에서 #{{channel}}의 위치",
+    "whereHelp": "내 목록만 바뀝니다. 섹션은 각자 정리합니다.",
+    "none": "섹션 없음",
+    "order": "섹션 안의 위치",
+    "tooLong": "40자 이하로 입력하세요."
   },
   "blocks": {
     "send": "보내기",
@@ -172,11 +177,11 @@
       "text": "서버가 꺼져 있거나 네트워크 밖에 있을 수 있어요. 다시 켜지면 채팅이 알아서 나타나요.",
       "kept": "앱에 이미 있던 내용을 보여 드리고 있어요."
     },
-    "pinned": "고정됨",
+    "favorites": "즐겨찾기",
     "recent": "최근",
     "view": {
       "title": "대화 보기",
-      "sectors": "부서",
+      "sections": "섹션",
       "dms": "다이렉트 메시지",
       "channels": "채널"
     },

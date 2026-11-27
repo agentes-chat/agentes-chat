@@ -2465,31 +2465,16 @@
     "deleteText": "Ses agents retournent dans Agents.",
     "deleteChannels": "Ses canaux retournent dans Canaux.",
     "dropHere": "Faites glisser des agents ici",
-    "dropHereAll": "Faites glisser des agents ou des canaux ici",
     "moved": "{{name}} est passé dans {{group}}",
     "movedOut": "{{name}} a quitté {{group}}",
     "undo": "Annuler"
   },
   "sidebarAgents": {
-    "options": "Options des agents",
-    "add": "Nouvel agent ou service",
-    "order": "Ordre",
-    "sort": {
-      "workspace": "Celui de l’espace de travail",
-      "mine": "Les miens d’abord",
-      "working": "Au travail d’abord"
-    },
     "showAll": "Afficher les agents qui ne me parlent pas",
-    "collapseAll": "Tout replier",
-    "expandAll": "Tout déplier",
-    "organize": "Organiser les services dans Équipe",
     "more_one": "1 agent de plus dans Équipe",
     "more_many": "{{count}} agents de plus dans Équipe",
     "more_other": "{{count}} agents de plus dans Équipe",
     "newAgent": "Nouvel agent",
-    "working_one": "{{count}} au travail",
-    "working_many": "{{count}} au travail",
-    "working_other": "{{count}} au travail",
     "count_one": "{{count}} agent",
     "count_many": "{{count}} agents",
     "count_other": "{{count}} agents",
@@ -2497,15 +2482,13 @@
     "talksOnly": "ne parle qu’à {{name}}",
     "talksOnlyMore_one": "ne parle qu’à {{name}} et {{count}} autre",
     "talksOnlyMore_many": "ne parle qu’à {{name}} et {{count}} autres",
-    "talksOnlyMore_other": "ne parle qu’à {{name}} et {{count}} autres",
-    "changeGroup": "Déplacer vers un service",
-    "newGroupWith": "Nouveau service avec {{name}}",
-    "dmsEmpty": "Vos conversations avec des personnes apparaissent ici."
+    "talksOnlyMore_other": "ne parle qu’à {{name}} et {{count}} autres"
   },
   "sidebarFavorites": {
     "title": "Favoris",
     "add": "Ajouter aux favoris",
     "remove": "Retirer des favoris",
+    "marked": "Dans les favoris",
     "full": "Les favoris en contiennent déjà 50. Retirez-en un pour ajouter celui-ci."
   },
   "sidebarSections": {
@@ -2549,16 +2532,6 @@
     "emptyTitle": "Vous êtes à jour",
     "emptyText": "Les nouveaux messages et ce qui vous attend apparaissent ici.",
     "markedAll": "Tout est marqué comme lu"
-  },
-  "sidebarPins": {
-    "pin": "Épingler en haut",
-    "unpin": "Désépingler",
-    "pinned": "Épinglé en haut",
-    "full": {
-      "agents": "Vous avez déjà épinglé 5 agents. Désépinglez-en un pour épingler celui-ci.",
-      "channels": "Vous avez déjà épinglé 5 canaux. Désépinglez-en un pour épingler celui-ci.",
-      "people": "Vous avez déjà épinglé 5 personnes. Désépinglez-en une pour épingler celle-ci."
-    }
   },
   "appsDownload": {
     "computer": "Ordinateur",

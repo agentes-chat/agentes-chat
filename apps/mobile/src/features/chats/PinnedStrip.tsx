@@ -41,7 +41,8 @@ export interface PinnedStripProps {
 }
 
 /**
- * Fixados, under Início's widgets: what the person pinned (the web sidebar's pins: their own agents until they choose),
+ * Favoritos, under Início's widgets: what the person keeps there (the web sidebar's Favoritos, ADR 0259: their own agents
+ * until they choose),
  * side by side on a strip that scrolls sideways. Each is the app's own face for it: an agent's living body (at work,
  * dozing while it waits for its offline computer, its presence on the corner), a person's photo, a channel's tile; its
  * name under it on one line, after the mark its row's second line would carry (the orbit at work, the amber square for
@@ -54,7 +55,12 @@ export function PinnedStrip({ items, collapsed, onToggle, onStart, onHold, holdA
   const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
-    <CollapsibleSection title={t("mobile.chats.pinned")} count={items.length} collapsed={collapsed} onToggle={onToggle}>
+    <CollapsibleSection
+      title={t("mobile.chats.favorites")}
+      count={items.length}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
       {/* A fade at the edge where more pinned faces wait past it. */}
       <SideScroll contentContainerStyle={styles.strip}>
         {items.map((it) => (

@@ -2383,43 +2383,27 @@
     "deleteText": "Ihre Agenten kommen zurück zu Agenten.",
     "deleteChannels": "Ihre Kanäle kommen zurück zu Kanäle.",
     "dropHere": "Agenten hierher ziehen",
-    "dropHereAll": "Agenten oder Kanäle hierher ziehen",
     "moved": "{{name}} ist jetzt in {{group}}",
     "movedOut": "{{name}} hat {{group}} verlassen",
     "undo": "Rückgängig"
   },
   "sidebarAgents": {
-    "options": "Optionen für Agenten",
-    "add": "Neuer Agent oder neue Abteilung",
-    "order": "Reihenfolge",
-    "sort": {
-      "workspace": "Wie im Workspace",
-      "mine": "Meine zuerst",
-      "working": "Arbeitende zuerst"
-    },
     "showAll": "Agenten zeigen, die nicht mit mir sprechen",
-    "collapseAll": "Alle einklappen",
-    "expandAll": "Alle ausklappen",
-    "organize": "Abteilungen im Team ordnen",
     "more_one": "1 weiterer Agent in Team",
     "more_other": "{{count}} weitere Agenten in Team",
     "newAgent": "Neuer Agent",
-    "working_one": "{{count}} arbeitet",
-    "working_other": "{{count}} arbeiten",
     "count_one": "{{count}} Agent",
     "count_other": "{{count}} Agenten",
     "workingIn": "arbeitet in #{{channel}}",
     "talksOnly": "spricht nur mit {{name}}",
     "talksOnlyMore_one": "spricht nur mit {{name}} und {{count}} weiteren",
-    "talksOnlyMore_other": "spricht nur mit {{name}} und {{count}} weiteren",
-    "changeGroup": "In Abteilung verschieben",
-    "newGroupWith": "Neue Abteilung mit {{name}}",
-    "dmsEmpty": "Deine Unterhaltungen mit Personen erscheinen hier."
+    "talksOnlyMore_other": "spricht nur mit {{name}} und {{count}} weiteren"
   },
   "sidebarFavorites": {
     "title": "Favoriten",
     "add": "Zu Favoriten hinzufügen",
     "remove": "Aus Favoriten entfernen",
+    "marked": "Favorit",
     "full": "Favoriten enthält schon 50. Entferne einen, um diesen hinzuzufügen."
   },
   "sidebarSections": {
@@ -2462,16 +2446,6 @@
     "emptyTitle": "Alles erledigt",
     "emptyText": "Neue Nachrichten und was auf dich wartet, erscheinen hier.",
     "markedAll": "Alles als gelesen markiert"
-  },
-  "sidebarPins": {
-    "pin": "Oben anheften",
-    "unpin": "Lösen",
-    "pinned": "Oben angeheftet",
-    "full": {
-      "agents": "Du hast schon 5 Agenten angeheftet. Löse einen, um diesen anzuheften.",
-      "channels": "Du hast schon 5 Kanäle angeheftet. Löse einen, um diesen anzuheften.",
-      "people": "Du hast schon 5 Personen angeheftet. Löse eine, um diese anzuheften."
-    }
   },
   "appsDownload": {
     "computer": "Rechner",

@@ -4,12 +4,17 @@
     "send": "Gönder"
   },
   "categories": {
-    "where": "#{{channel}} kanalının göründüğü yer",
-    "whereHelp": "Herkes için değişir. Kanala kimlerin katıldığı aynı kalır.",
-    "order": "Listedeki yeri",
     "up": "Yukarı taşı",
     "down": "Aşağı taşı",
     "channelPosition": "{{at}} / {{count}}."
+  },
+  "sections": {
+    "title": "Bölüm",
+    "where": "#{{channel}} senin listende nerede",
+    "whereHelp": "Yalnızca senin listen değişir. Herkes kendi bölümlerini düzenler.",
+    "none": "Bölüm yok",
+    "order": "Bölümdeki yeri",
+    "tooLong": "En fazla 40 karakter kullan."
   },
   "blocks": {
     "send": "Gönder",
@@ -177,11 +182,11 @@
       "text": "Sunucu kapalı ya da ağınızın dışında olabilir. Tekrar açıldığında sohbetleriniz kendiliğinden görünür.",
       "kept": "Uygulamada zaten olanlar gösteriliyor."
     },
-    "pinned": "Sabitlenenler",
+    "favorites": "Favoriler",
     "recent": "Son sohbetler",
     "view": {
       "title": "Sohbetleri göster",
-      "sectors": "Bölümler",
+      "sections": "Bölümler",
       "dms": "Doğrudan mesajlar",
       "channels": "Kanallar"
     },

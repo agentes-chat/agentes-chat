@@ -4748,7 +4748,9 @@
       "coding.commit",
       "aiHub.orderGroup",
       "aiHub.choice.effort",
-      "aiHub.choice.api"
+      "aiHub.choice.api",
+      "chats.view.sections",
+      "sections.title"
     ],
     "de": [
       "live.doc.styles.code",
