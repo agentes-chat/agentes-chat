@@ -77,8 +77,6 @@ test("every card in a message takes the message card's corners, last over its ow
     // Never the bubble's corners by hand: the hook says which.
     expect([file, text.includes("BUBBLE_PART_CORNERS")]).toEqual([file, false]);
   }
-  // The work line under a reply is no card: a quiet line under the bubble, as the conversation's working line.
-  expect(src("features/chat/WorkLine.tsx")).toContain(
-    "<View style={[styles.quiet, part ? styles.quietInBubble : null, cardTop]}",
-  );
+  // The work under a reply (the agent's own long work, or one it handed) is a bubble of the message, in its frame.
+  expect(src("features/chat/WorkLine.tsx")).toContain("const frame = [styles.handed, card.style];");
 });

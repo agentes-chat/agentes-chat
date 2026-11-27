@@ -1385,16 +1385,29 @@ export function MemoryFix({
         onError: failed,
       },
     );
+  // Asked first, as the profile's swipe asks: the agent stops using it at once.
   const forget = () =>
-    action.mutate(
-      { type: "archive", id: m.id, archived: true },
-      {
-        onSuccess: () => {
-          toast({ title: t("mobile.intentAgents.fix.forgotten"), agentId });
-          onDone();
+    Alert.alert(
+      t("mobile.intentAgents.knows.forgetTitle"),
+      t("mobile.intentAgents.knows.forgetBody", agentGrammar(agentName)),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mobile.intentAgents.knows.forget"),
+          style: "destructive",
+          onPress: () =>
+            action.mutate(
+              { type: "archive", id: m.id, archived: true },
+              {
+                onSuccess: () => {
+                  toast({ title: t("mobile.intentAgents.fix.forgotten"), agentId });
+                  onDone();
+                },
+                onError: failed,
+              },
+            ),
         },
-        onError: failed,
-      },
+      ],
     );
   return (
     <>

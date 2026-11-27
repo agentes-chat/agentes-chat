@@ -112,6 +112,8 @@
     "directChat": "1:1 채팅"
   },
   "approval": {
+    "cancelAheadTitle": "이 예약된 작업을 취소할까요?",
+    "cancelAheadText": "예정된 시간에 실행되지 않아요. 나중에 하려면 에이전트가 요청할 때 다시 승인하세요.",
     "asksIn": "승인을 요청해요 · #{{channel}}",
     "asksYou": "승인을 요청해요",
     "expiresIn_other": "{{count}}분 후 만료",
@@ -321,9 +323,11 @@
     "seeAll": "전체 보기"
   },
   "chat": {
+    "followUpCancelTitle": "{{name}}의 {{when}} 후속 확인을 취소할까요?",
     "someone": "누군가",
     "handedTo": "{{name}}에게 넘김",
     "handedTo_female": "{{name}}에게 넘김",
+    "inBackground": "백그라운드에서",
     "pairAsked": "{{from}}의 질문",
     "messageTo": "{{name}}에게 메시지 보내기",
     "messageIn": "{{channel}}에 메시지 보내기",
@@ -1282,7 +1286,9 @@
       "priority": "우선순위",
       "assignee": "담당자",
       "cancel": "작업 취소",
-      "canceled": "#{{number}} 취소됨"
+      "canceled": "#{{number}} 취소됨",
+      "cancelTitle": "작업 #{{number}}을(를) 취소할까요?",
+      "cancelText": "열린 작업에서 빠져요. 나중에 다시 열 수 있어요."
     },
     "nobody": "없음",
     "you": "나",
@@ -1435,6 +1441,11 @@
     "add": "추가"
   },
   "coding": {
+    "removeTitle": "{{name}}을(를) 세션에서 내보낼까요?",
+    "removeText": "세션과 대화를 더 이상 볼 수 없어요. 다시 부르려면 대화에 @와 이름을 입력하세요.",
+    "removeConfirm": "세션에서 내보내기",
+    "leaveTitle": "세션에서 나갈까요?",
+    "leaveText": "목록에서 사라져요. 돌아오려면 세션의 누군가가 불러야 해요.",
     "pill": "{{who}}. 코드 보기",
     "seeChanges": "변경 사항 보기",
     "project": "프로젝트",
@@ -1873,6 +1884,8 @@
       "name": "이름",
       "renamed": "이제 이름이 {{name}}이에요",
       "stop": "{{name}} 중지",
+      "stopTitle": "{{device}}에서 {{name}}을(를) 중지할까요?",
+      "stopText": "그 위에서 실행 중인 작업이 지금 멈춰요. 나중에 다시 요청할 수 있어요.",
       "stopped": "{{device}}이(가) {{name}}에게서 돌아왔어요",
       "forget": "이 휴대폰 지우기",
       "forgetTitle": "{{name}}을(를) 지울까요?",
@@ -2026,7 +2039,8 @@
       "allowOnce": "한 번 허용",
       "always": "{{name}} 항상 허용",
       "no": "아니요",
-      "stop": "중지"
+      "stop": "중지",
+      "stopTitle": "{{device}} 사용을 중지할까요?"
     },
     "wait": {
       "waiting": "{{device}} 기다리는 중",
@@ -2225,6 +2239,8 @@
     "failed": "저장하지 못했어요. 다시 시도해 주세요."
   },
   "ai": {
+    "dontRunTitle": "이 요청을 실행하지 않을까요?",
+    "dontRunText": "취소되며 한도가 돌아와도 실행되지 않아요.",
     "yourPlan": "내 AI 요금제",
     "plansSub": "Claude, ChatGPT, Gemini, GLM 등",
     "plansFoot": "에이전트가 내 요금제로 생각해요. API 키는 필요 없어요. 에이전트의 컴퓨터에서 로그인해요.",

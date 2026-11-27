@@ -22,6 +22,7 @@ import { openAgentEdit } from "../agents/AgentEditScreen";
 import { AskDone, AskWaiting } from "../chat/asks";
 import { UsageQueueSheet } from "../queue/UsageQueueSheet";
 import { useFailed } from "../routines/hooks";
+import { confirmAction } from "../settings/parts";
 import { useDirectory, useMeId, useNow } from "../shared/hooks";
 import { useSheetIfAny } from "../shared/SheetHost";
 import { openAgentAi } from "./AgentAiScreen";
@@ -31,12 +32,13 @@ import { openAgentAi } from "./AgentAiScreen";
  * limit is back; the agent's status and its queue follow.
  */
 function useDontRun(runId: string | null) {
+  const { t } = useTranslation();
   const api = useApi();
   const qc = useQueryClient();
   const { orgId } = useOrg();
   const failed = useFailed();
   const [pending, setPending] = useState(false);
-  const go = async () => {
+  const cancel = async () => {
     if (!runId) return;
     setPending(true);
     try {
@@ -47,6 +49,17 @@ function useDontRun(runId: string | null) {
       setPending(false);
       void qc.invalidateQueries({ queryKey: keys.agentStatus(orgId) });
     }
+  };
+  // Asked first: the work it drops doesn't come back when the limit does.
+  const go = () => {
+    if (!runId) return;
+    confirmAction({
+      title: t("mobile.ai.dontRunTitle"),
+      text: t("mobile.ai.dontRunText"),
+      action: t("usageCard.dontRun"),
+      cancel: t("common.cancel"),
+      onConfirm: () => void cancel(),
+    });
   };
   return { pending, go };
 }
@@ -66,7 +79,7 @@ export function DontRunButton({ runId, may, count = 1 }: { runId: string | null;
       label={count > 1 ? t("usageCard.dontRunThese", { count }) : t("usageCard.dontRun")}
       loading={pending}
       disabled={!may}
-      onPress={() => void go()}
+      onPress={go}
     />
   );
 }
@@ -257,7 +270,7 @@ export function UsagePauseCard({ message: m }: { message: Message }) {
                   label={t("usageCard.dontRun")}
                   loading={dontRun.pending}
                   disabled={busy}
-                  onPress={() => void dontRun.go()}
+                  onPress={dontRun.go}
                 />
               ) : null,
             ]

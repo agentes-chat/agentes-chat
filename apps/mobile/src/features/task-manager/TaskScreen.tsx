@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  Button,
   EmptyState,
   GroupedFooter,
   GroupedHeader,
@@ -15,7 +16,6 @@ import {
   PixelFail,
   PixelStopped,
   SCREEN_X,
-  Section,
   SkeletonList,
   Text,
   weights,
@@ -37,7 +37,8 @@ import { StateLine } from "./parts";
  * A task's screen (ADR 0128), pushed from the task manager or an agent's tasks: whose it is (its face running while it
  * works) and how it stands, on one head; what was asked, whole (the lists cut it to one line), with who asked and
  * where, a row that opens the conversation; its steps so far; its place in its computer's line, when it waits for
- * room; and "Parar tarefa" as the list's red row, confirmed by a system alert that says what happens. Once it ends,
+ * room; and "Parar tarefa" as red words centred under it (an action on what runs, not a setting), confirmed by a
+ * system alert that says what happens. Once it ends,
  * how it ended and how long it took. While the list loads, the rows' shape; one not listed today says it's gone.
  * Pulling down asks for it again (it is also asked while the screen is on top).
  */
@@ -220,9 +221,9 @@ function Page({
             {...(opens ? { chevron: true, onPress: () => router.push(opens) } : {})}
           />
         </GroupedList>
-        <Section title={t("taskManager.panel.steps")}>
-          <RunSteps runId={task.runId} color={agentLook(agent).color} calls={steps.calls} live={steps.live} />
-        </Section>
+        {/* Its steps under a heading like the request's, as wide as the request's card. */}
+        <GroupedHeader>{t("taskManager.panel.steps")}</GroupedHeader>
+        <RunSteps runId={task.runId} color={agentLook(agent).color} calls={steps.calls} live={steps.live} />
         {line ? (
           <View style={styles.apart}>
             <GroupedList>
@@ -231,10 +232,8 @@ function Page({
           </View>
         ) : null}
         {stop ? (
-          <View style={styles.apart}>
-            <GroupedList>
-              <GroupedRow label={t("taskManager.actions.stopTask")} danger onPress={stop} />
-            </GroupedList>
+          <View style={[styles.apart, styles.stop]}>
+            <Button variant="text" danger label={t("taskManager.actions.stopTask")} onPress={stop} />
             {stopNote ? <GroupedFooter>{stopNote}</GroupedFooter> : null}
           </View>
         ) : null}
@@ -253,4 +252,6 @@ const styles = StyleSheet.create({
   semibold: { fontWeight: weights.semibold },
   num: { fontVariant: ["tabular-nums"] },
   apart: { marginTop: 24 },
+  // The stop's words centred under the page, its note under them.
+  stop: { alignItems: "center" },
 });

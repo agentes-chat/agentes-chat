@@ -18,8 +18,11 @@ test("in bubbles, the cards under someone else's words are bubbles of that messa
   // The ones outlined elsewhere (its tools, what it changed, a check, a poll, the work it handed) take the one frame
   // of a message's card: the bubble's fill and no outline there (`useMessageCardFrame`, below).
   expect(src("features/chat/Receipts.tsx")).toContain("const frame = [styles.card, card.style];");
-  // The work it handed is a quiet line under the bubble, its mark where the bubble's words start.
-  expect(src("features/chat/WorkLine.tsx")).toContain("quietInBubble: { paddingLeft: 14 },");
+  // The agent's own long work is the handed work's bubble too: its state, then its last update under a hairline.
+  expect(src("features/chat/WorkLine.tsx")).toContain("const state = h ?? line.handed();");
+  expect(src("features/chat/WorkLine.tsx")).toContain(
+    "<View style={[styles.handedDetail, { borderTopColor: c.line }]}>",
+  );
   expect(src("features/shared/bubble-part.ts")).toContain("export const BUBBLE_PART_CORNERS = MESSAGE_CARD_CORNERS;");
 });
 
@@ -106,7 +109,7 @@ test("one hierarchy for the words of every card in a message", () => {
   }
   // Handed work: its title over its state as a status badge (the lists' and the web's), then its facts.
   const work = src("features/chat/WorkLine.tsx");
-  expect(work).toContain("<StatusBadge text={h.state} tone={badgeTone} color={agentColor} />");
+  expect(work).toContain("<StatusBadge text={state.state} tone={badgeTone} color={agentColor} />");
   const quote = src("features/chat/ConsultGroup.tsx");
   expect(quote).toContain('<Text variant="small" numberOfLines={1} style={[quote.name, { color: ink }]}>');
   // The waiting card, a thread's link, the tool block's head and the name line's words take the same roles.

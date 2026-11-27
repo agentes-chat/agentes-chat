@@ -129,6 +129,9 @@ export const featureKeysPtBR = {
     directChat: "Conversa direta",
   },
   approval: {
+    /** The system alert before withdrawing an action approved ahead. */
+    cancelAheadTitle: "Cancelar esta ação agendada?",
+    cancelAheadText: "Ela não roda na hora marcada. Para fazer depois, aprove de novo quando o agente pedir.",
     asksIn: "pede sua aprovação · #{{channel}}",
     asksYou: "pede sua aprovação",
     expiresIn_one: "expira em {{count}} min",
@@ -351,9 +354,14 @@ export const featureKeysPtBR = {
     seeAll: "Ver tudo",
   },
   chat: {
+    /** The system alert before cancelling an agent's scheduled return (`when`: "amanhã às 9:00"). */
+    followUpCancelTitle: "Cancelar o retorno do {{name}} {{when}}?",
+    followUpCancelTitle_female: "Cancelar o retorno da {{name}} {{when}}?",
     someone: "Alguém",
     handedTo: "Passado para o {{name}}",
     handedTo_female: "Passado para a {{name}}",
+    /** The agent's own long work, as a bubble under the reply that started it. */
+    inBackground: "Em segundo plano",
     pairAsked: "{{from}} perguntou",
     messageTo: "Mensagem para {{name}}",
     messageIn: "Mensagem em {{channel}}",
@@ -1427,6 +1435,9 @@ export const featureKeysPtBR = {
       assignee: "Quem faz",
       cancel: "Cancelar tarefa",
       canceled: "#{{number}} cancelada",
+      /** The system alert before cancelling a task from its menu. */
+      cancelTitle: "Cancelar a tarefa #{{number}}?",
+      cancelText: "Ela sai das tarefas abertas. Dá para reabrir depois.",
     },
     nobody: "Ninguém",
     you: "Você",
@@ -1581,6 +1592,12 @@ export const featureKeysPtBR = {
   },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
+    /** The system alerts before taking someone out of a code session, or leaving it. */
+    removeTitle: "Tirar {{name}} da sessão?",
+    removeText: "Deixa de ver a sessão e a conversa dela. Para chamar de novo, escreva @ e o nome na conversa.",
+    removeConfirm: "Tirar da sessão",
+    leaveTitle: "Sair da sessão?",
+    leaveText: "Ela some da sua lista. Para voltar, alguém da sessão precisa te chamar.",
     pill: "{{who}}. Ver o código",
     seeChanges: "Ver as mudanças",
     project: "Projeto",
@@ -2033,6 +2050,9 @@ export const featureKeysPtBR = {
       name: "Nome",
       renamed: "Agora se chama {{name}}",
       stop: "Parar {{name}}",
+      /** The system alert before stopping who uses the phone now. */
+      stopTitle: "Parar {{name}} no {{device}}?",
+      stopText: "O que está rodando nele para agora. Dá para pedir de novo depois.",
       stopped: "{{device}} voltou de {{name}}",
       forget: "Esquecer este celular",
       forgetTitle: "Esquecer {{name}}?",
@@ -2193,6 +2213,8 @@ export const featureKeysPtBR = {
       always: "Sempre permitir {{name}}",
       no: "Não",
       stop: "Parar",
+      /** The system alert before stopping an agent on this person's phone, from the inbox. */
+      stopTitle: "Parar o uso do {{device}}?",
     },
     wait: {
       waiting: "Esperando {{device}}",
@@ -2405,6 +2427,9 @@ export const featureKeysPtBR = {
     failed: "Não deu para salvar. Tente de novo.",
   },
   ai: {
+    /** The system alert before "Não rodar" drops a request waiting for a limit. */
+    dontRunTitle: "Não rodar este pedido?",
+    dontRunText: "Ele é cancelado e não roda quando o limite voltar.",
     yourPlan: "Seu plano de IA",
     plansSub: "Claude, ChatGPT, Gemini, GLM e outros",
     plansFoot: "Os agentes pensam com o seu plano, sem chave de API. Ele entra pelo computador do agente.",

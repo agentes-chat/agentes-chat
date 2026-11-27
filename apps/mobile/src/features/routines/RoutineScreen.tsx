@@ -60,7 +60,7 @@ import { MissingScreen } from "../dashboards/parts";
 import { chatHref, widgetHref } from "../links/logic";
 import { openSwitchComputer } from "../outages/OutageNotice";
 import { useMachineOutages } from "../outages/queries";
-import { CommandBlock } from "../settings/parts";
+import { CommandBlock, confirmAction } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import {
@@ -273,7 +273,19 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
                       icon="stop"
                       label={t(stopWordsKey(r))}
                       disabled={controls.action.isPending}
-                      onPress={controls.stop}
+                      // Asked first, as a task's stop: the run it ends can't be taken back.
+                      onPress={() =>
+                        confirmAction({
+                          title: t("mobile.taskManager.stopTitle", { title: r.name }),
+                          text:
+                            r.state === "usage_paused"
+                              ? t("usageCard.dontRunHint")
+                              : t("mobile.taskManager.stopBody", agentGrammar(agentName)),
+                          action: t(stopWordsKey(r)),
+                          cancel: t("common.cancel"),
+                          onConfirm: controls.stop,
+                        })
+                      }
                     />
                   ) : (
                     <GroupedRow

@@ -112,6 +112,8 @@
     "directChat": "私聊"
   },
   "approval": {
+    "cancelAheadTitle": "取消此计划的操作？",
+    "cancelAheadText": "它不会在预定时间运行。若要稍后执行，请在智能体请求时再次批准。",
     "asksIn": "请求你审批 · #{{channel}}",
     "asksYou": "请求你审批",
     "expiresIn_other": "{{count}} 分钟后过期",
@@ -321,9 +323,11 @@
     "seeAll": "查看全部"
   },
   "chat": {
+    "followUpCancelTitle": "取消 {{name}} {{when}} 的跟进？",
     "someone": "某人",
     "handedTo": "已交给 {{name}}",
     "handedTo_female": "已交给 {{name}}",
+    "inBackground": "后台进行中",
     "pairAsked": "{{from}} 提问",
     "messageTo": "发消息给 {{name}}",
     "messageIn": "在 {{channel}} 发消息",
@@ -1282,7 +1286,9 @@
       "priority": "优先级",
       "assignee": "负责人",
       "cancel": "取消任务",
-      "canceled": "#{{number}} 已取消"
+      "canceled": "#{{number}} 已取消",
+      "cancelTitle": "取消任务 #{{number}}？",
+      "cancelText": "它会从未完成的任务中移出。之后可以重新打开。"
     },
     "nobody": "无人",
     "you": "你",
@@ -1435,6 +1441,11 @@
     "add": "添加"
   },
   "coding": {
+    "removeTitle": "将 {{name}} 移出会话？",
+    "removeText": "对方将不再看到该会话及其对话。要再次邀请，请在对话中输入 @ 和其名字。",
+    "removeConfirm": "移出会话",
+    "leaveTitle": "离开会话？",
+    "leaveText": "它会从你的列表中消失。要回来，需要会话中的某人邀请你。",
     "pill": "{{who}}。查看代码",
     "seeChanges": "查看改动",
     "project": "项目",
@@ -1873,6 +1884,8 @@
       "name": "名称",
       "renamed": "已重命名为 {{name}}",
       "stop": "停止 {{name}}",
+      "stopTitle": "在 {{device}} 上停止 {{name}}？",
+      "stopText": "上面正在运行的内容会立即停止。之后可以再次请求。",
       "stopped": "{{device}} 已从 {{name}} 那里收回",
       "forget": "忘记这台手机",
       "forgetTitle": "忘记“{{name}}”？",
@@ -2026,7 +2039,8 @@
       "allowOnce": "允许一次",
       "always": "始终允许 {{name}}",
       "no": "不允许",
-      "stop": "停止"
+      "stop": "停止",
+      "stopTitle": "停止使用 {{device}}？"
     },
     "wait": {
       "waiting": "正在等待 {{device}}",
@@ -2225,6 +2239,8 @@
     "failed": "无法保存，请重试。"
   },
   "ai": {
+    "dontRunTitle": "不运行此请求？",
+    "dontRunText": "它会被取消，额度恢复后也不会运行。",
     "yourPlan": "你的 AI 套餐",
     "plansSub": "Claude、ChatGPT、Gemini、GLM 等",
     "plansFoot": "智能体使用你的套餐思考，无需 API 密钥。套餐会在智能体的电脑上登录。",

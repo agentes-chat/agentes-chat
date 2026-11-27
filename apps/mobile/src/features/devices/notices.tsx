@@ -19,6 +19,7 @@ import { Button, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { AskButtons } from "../chat/asks";
 import { useRowDirectory } from "../chat/row-data";
+import { confirmAction } from "../settings/parts";
 import { useColors, useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
 import { WaitingCard } from "../shared/WaitingCard";
@@ -340,8 +341,19 @@ export function DeviceNoticeActions({ item: n }: { item: AppNotification }) {
         size="sm"
         label={t("mobile.devices.notice.stop")}
         disabled={stop.isPending}
+        // Asked first, as the phone's page asks: what runs on it now stops, and can't be taken back.
         onPress={() =>
-          stop.mutate(phoneId, { onSuccess: done, onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
+          confirmAction({
+            title: t("mobile.devices.notice.stopTitle", { device: d.device }),
+            text: t("mobile.devices.page.stopText"),
+            action: t("taskManager.confirm.stop", { count: 1 }),
+            cancel: t("common.cancel"),
+            onConfirm: () =>
+              stop.mutate(phoneId, {
+                onSuccess: done,
+                onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+              }),
+          })
         }
       />
     </View>

@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet } from "react-native";
 import { useOrg } from "@/providers/org";
 import { GroupedFooter, GroupedList, GroupedRow, MEDIA_ROW, SCREEN_X, SkeletonList, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
+import { confirmAction } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useDirectory, useErrorToast, useMeId, useOrgId } from "../shared/hooks";
 import { PushedHeader } from "../shared/parts";
@@ -74,7 +75,15 @@ export function PeopleScreen({ sessionId }: { sessionId: string }) {
                       ? {
                           remove: {
                             label: self ? t("codeSessions.who.leave") : t("codeSessions.who.remove", { name }),
-                            onPress: () => remove.mutate(p),
+                            // Asked first: out of it, the session and its conversation are gone from their list.
+                            onPress: () =>
+                              confirmAction({
+                                title: self ? t("mobile.coding.leaveTitle") : t("mobile.coding.removeTitle", { name }),
+                                text: self ? t("mobile.coding.leaveText") : t("mobile.coding.removeText"),
+                                action: self ? t("codeSessions.who.leave") : t("mobile.coding.removeConfirm"),
+                                cancel: t("common.cancel"),
+                                onConfirm: () => remove.mutate(p),
+                              }),
                           },
                         }
                       : {})}

@@ -18,7 +18,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isStill, landsOnRoot, STILL_PARAM } from "@/features/links/landing";
 import { needsHeaderBlur, pushOnce } from "@/lib/nav";
@@ -238,13 +238,20 @@ export function usePushedOptions(): NativeStackNavigationOptions {
   );
 }
 
-/** Android's back button: a round plate (the toolbar's own arrow hidden); iOS keeps the system's. */
+/**
+ * Android's back button: a round plate (the toolbar's own arrow hidden); iOS keeps the system's. The toolbar starts the
+ * title right where a view of ours on its left ends, so the plate keeps the room the system's own arrow has after it.
+ */
 function plateBack(label: string): NativeStackNavigationOptions {
   if (Platform.OS !== "android") return {};
   return {
     headerBackVisible: false,
     headerLeft: ({ canGoBack }) =>
-      canGoBack ? <IconButton icon="back" label={label} plate onPress={() => goBack()} /> : null,
+      canGoBack ? (
+        <View style={styles.backPlate}>
+          <IconButton icon="back" label={label} plate onPress={() => goBack()} />
+        </View>
+      ) : null,
   };
 }
 
@@ -304,3 +311,8 @@ export const coverBarOptions: NativeStackNavigationOptions = {
   headerTransparent: true,
   headerStyle: { backgroundColor: "transparent" },
 };
+
+const styles = StyleSheet.create({
+  // The room between the back plate and the title: the toolbar's own after its arrow (Material's 12 past the button).
+  backPlate: { marginRight: 12 },
+});

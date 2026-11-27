@@ -269,6 +269,12 @@
   "home.directChat": {
     "value": "Direct chat"
   },
+  "approval.cancelAheadTitle": {
+    "value": "Cancel this scheduled action?"
+  },
+  "approval.cancelAheadText": {
+    "value": "It won't run at its time. To do it later, approve it again when the agent asks."
+  },
   "approval.asksIn": {
     "value": "asks for your approval · #{{channel}}"
   },
@@ -776,12 +782,18 @@
   "voice.seeAll": {
     "value": "See all"
   },
+  "chat.followUpCancelTitle": {
+    "value": "Cancel {{name}}'s follow-up {{when}}?"
+  },
   "chat.someone": {
     "value": "Someone"
   },
   "chat.handedTo": {
     "value": "Handed to {{name}}",
     "female": "Handed to {{name}}"
+  },
+  "chat.inBackground": {
+    "value": "In the background"
   },
   "chat.pairAsked": {
     "value": "{{from}} asked"
@@ -3400,6 +3412,12 @@
   "issues.actions.canceled": {
     "value": "#{{number}} canceled"
   },
+  "issues.actions.cancelTitle": {
+    "value": "Cancel task #{{number}}?"
+  },
+  "issues.actions.cancelText": {
+    "value": "It leaves the open tasks. You can reopen it later."
+  },
   "issues.nobody": {
     "value": "Nobody"
   },
@@ -3782,6 +3800,21 @@
   },
   "calendar.add": {
     "value": "Add"
+  },
+  "coding.removeTitle": {
+    "value": "Take {{name}} out of the session?"
+  },
+  "coding.removeText": {
+    "value": "They stop seeing the session and its conversation. To bring them back, type @ and their name in it."
+  },
+  "coding.removeConfirm": {
+    "value": "Take out"
+  },
+  "coding.leaveTitle": {
+    "value": "Leave the session?"
+  },
+  "coding.leaveText": {
+    "value": "It leaves your list. To come back, someone in the session has to call you in."
   },
   "coding.pill": {
     "value": "{{who}}. See the code"
@@ -4857,6 +4890,12 @@
   "devices.page.stop": {
     "value": "Stop {{name}}"
   },
+  "devices.page.stopTitle": {
+    "value": "Stop {{name}} on {{device}}?"
+  },
+  "devices.page.stopText": {
+    "value": "What runs on it stops now. You can ask again later."
+  },
   "devices.page.stopped": {
     "value": "{{device}} is back from {{name}}"
   },
@@ -5258,6 +5297,9 @@
   },
   "devices.notice.stop": {
     "value": "Stop"
+  },
+  "devices.notice.stopTitle": {
+    "value": "Stop the use of {{device}}?"
   },
   "devices.wait.waiting": {
     "value": "Waiting for {{device}}"
@@ -5745,6 +5787,12 @@
   },
   "onb.failed": {
     "value": "Couldn't save. Try again."
+  },
+  "ai.dontRunTitle": {
+    "value": "Don't run this request?"
+  },
+  "ai.dontRunText": {
+    "value": "It's cancelled and won't run when the limit is back."
   },
   "ai.yourPlan": {
     "value": "Your AI plan"

@@ -1,10 +1,7 @@
-import { useHeaderHeight } from "expo-router/react-navigation";
 import type { ReactElement, ReactNode } from "react";
-import { Platform, type RefreshControlProps, ScrollView, StyleSheet, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { type RefreshControlProps, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BAR_TITLE_FROM, BAR_TITLE_TO, type HeaderAction, LargeTitleHead, useLargeTitleScroll } from "@/ui";
-import { FadingHeaderTitle } from "@/ui/cover";
+import type { HeaderAction } from "@/ui";
 import { ReadableColumn } from "@/ui/pane";
 import { useColors } from "./hooks";
 import { FocusLive, type HeaderWordAction, PushedHeader } from "./parts";
@@ -37,12 +34,13 @@ type PushedLargeTitleProps = {
  * A pushed screen with a large title (Issues, Drive). On iOS it is the system's own: the large title in the bar
  * folds into it as the list scrolls and the bar takes the system's material (iOS 26's glass and its scroll edge, a
  * blur before) over what passes under it, so the title and the buttons always read; the scroll view is the
- * screen's first child, as the system needs to follow it. Android has no large title in its bar: the title is drawn
- * at the top of the content and the bar's own title fades in as it scrolls away (`DrawnLargeTitle`).
+ * screen's first child, as the system needs to follow it. Android's bar has no large title: there the title is the
+ * bar's own, beside the back button, as on every other pushed screen (one drawn under the bar read as a different kind
+ * of screen).
  * `collapsed` folds the large title away (a search field under it took the focus, as the system's search bar does).
  */
 export function PushedLargeTitle(props: PushedLargeTitleProps) {
-  return Platform.OS === "ios" ? <SystemLargeTitle {...props} /> : <DrawnLargeTitle {...props} />;
+  return <SystemLargeTitle {...props} />;
 }
 
 function SystemLargeTitle({
@@ -92,67 +90,6 @@ function SystemLargeTitle({
       </FocusLive>
       {dock}
     </>
-  );
-}
-
-/** Android's: the large title at the top of the content, the bar's title fading in as it scrolls away. */
-function DrawnLargeTitle({
-  title,
-  right,
-  actions,
-  action,
-  refreshControl,
-  onScrollBeginDrag,
-  onScrollEnd,
-  bottomInset = 24,
-  collapsed = false,
-  grouped = false,
-  keyboard = false,
-  dock,
-  children,
-}: PushedLargeTitleProps) {
-  const c = useColors();
-  const insets = useSafeAreaInsets();
-  const headerHeight = useHeaderHeight();
-  // iOS insets the scroll view by the bar (automatic adjustment): at rest the offset is minus its height.
-  const scroll = useLargeTitleScroll(Platform.OS === "ios" ? headerHeight : 0, { snap: !collapsed });
-  return (
-    <View style={[styles.screen, { backgroundColor: grouped ? c.grouped : c.bg }]}>
-      <PushedHeader
-        title={<FadingHeaderTitle y={scroll.y} from={BAR_TITLE_FROM} to={BAR_TITLE_TO} text={title} />}
-        right={right}
-        {...(actions ? { actions } : {})}
-        {...(action ? { action } : {})}
-        solid={false}
-        grouped={grouped}
-      />
-      <FocusLive>
-        <Animated.ScrollView
-          ref={scroll.ref}
-          onScroll={scroll.onScroll}
-          onScrollBeginDrag={onScrollBeginDrag}
-          onScrollEndDrag={(e) => {
-            scroll.onScrollEndDrag(e);
-            onScrollEnd?.();
-          }}
-          onMomentumScrollEnd={(e) => {
-            scroll.onMomentumScrollEnd(e);
-            onScrollEnd?.();
-          }}
-          scrollEventThrottle={16}
-          contentInsetAdjustmentBehavior="automatic"
-          refreshControl={refreshControl}
-          keyboardDismissMode={keyboard ? "interactive" : "on-drag"}
-          automaticallyAdjustKeyboardInsets={keyboard}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: insets.bottom + bottomInset }}
-        >
-          <LargeTitleHead y={scroll.y} title={title} collapsed={collapsed} />
-          <ReadableColumn>{children}</ReadableColumn>
-        </Animated.ScrollView>
-      </FocusLive>
-      {dock}
-    </View>
   );
 }
 

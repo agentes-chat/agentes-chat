@@ -130,6 +130,8 @@
     "directChat": "Czat bezpośredni"
   },
   "approval": {
+    "cancelAheadTitle": "Anulować tę zaplanowaną akcję?",
+    "cancelAheadText": "Nie zostanie wykonana o zaplanowanej porze. Aby zrobić to później, zatwierdź ją ponownie, gdy agent poprosi.",
     "asksIn": "prosi o zatwierdzenie · #{{channel}}",
     "asksYou": "prosi o zatwierdzenie",
     "expiresIn_one": "wygasa za {{count}} min",
@@ -351,9 +353,11 @@
     "seeAll": "Pokaż wszystko"
   },
   "chat": {
+    "followUpCancelTitle": "Anulować przypomnienie {{name}} {{when}}?",
     "someone": "Ktoś",
     "handedTo": "Przekazano: {{name}}",
     "handedTo_female": "Przekazano: {{name}}",
+    "inBackground": "W tle",
     "pairAsked": "{{from}} pyta",
     "messageTo": "Wiadomość do: {{name}}",
     "messageIn": "Wiadomość w {{channel}}",
@@ -1537,7 +1541,9 @@
       "priority": "Priorytet",
       "assignee": "Kto to robi",
       "cancel": "Anuluj zadanie",
-      "canceled": "#{{number}} anulowane"
+      "canceled": "#{{number}} anulowane",
+      "cancelTitle": "Anulować zadanie #{{number}}?",
+      "cancelText": "Zniknie z otwartych zadań. Możesz otworzyć je ponownie później."
     },
     "nobody": "Nikt",
     "you": "Ty",
@@ -1708,6 +1714,11 @@
     "add": "Dodaj"
   },
   "coding": {
+    "removeTitle": "Usunąć {{name}} z sesji?",
+    "removeText": "Ta osoba przestanie widzieć sesję i jej rozmowę. Aby ją przywołać, wpisz w rozmowie @ i jej imię.",
+    "removeConfirm": "Usuń z sesji",
+    "leaveTitle": "Opuścić sesję?",
+    "leaveText": "Zniknie z twojej listy. Aby wrócić, ktoś z sesji musi cię zaprosić.",
     "pill": "{{who}}. Zobacz kod",
     "seeChanges": "Zobacz zmiany",
     "project": "Projekt",
@@ -2188,6 +2199,8 @@
       "name": "Nazwa",
       "renamed": "Nowa nazwa: {{name}}",
       "stop": "Zatrzymaj: {{name}}",
+      "stopTitle": "Zatrzymać {{name}} na {{device}}?",
+      "stopText": "To, co na nim działa, zatrzyma się teraz. Możesz poprosić ponownie później.",
       "stopped": "{{name}} już nie używa {{device}}",
       "forget": "Zapomnij ten telefon",
       "forgetTitle": "Zapomnieć {{name}}?",
@@ -2341,7 +2354,8 @@
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
-      "stop": "Zatrzymaj"
+      "stop": "Zatrzymaj",
+      "stopTitle": "Przestać używać {{device}}?"
     },
     "wait": {
       "waiting": "Czekam na {{device}}",
@@ -2555,6 +2569,8 @@
     "failed": "Nie udało się zapisać. Spróbuj ponownie."
   },
   "ai": {
+    "dontRunTitle": "Nie uruchamiać tej prośby?",
+    "dontRunText": "Zostanie anulowana i nie uruchomi się, gdy limit wróci.",
     "yourPlan": "Twój plan AI",
     "plansSub": "Claude, ChatGPT, Gemini, GLM i inne",
     "plansFoot": "Agenci myślą za pomocą twojego planu, bez klucza API. Logowanie odbywa się na komputerze agenta.",

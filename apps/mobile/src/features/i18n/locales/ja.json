@@ -112,6 +112,8 @@
     "directChat": "ダイレクトチャット"
   },
   "approval": {
+    "cancelAheadTitle": "この予約されたアクションをキャンセルしますか？",
+    "cancelAheadText": "予定の時刻に実行されません。後で行うには、エージェントが求めたときにもう一度承認してください。",
     "asksIn": "があなたの承認を求めています · #{{channel}}",
     "asksYou": "があなたの承認を求めています",
     "expiresIn_other": "あと{{count}}分で期限切れ",
@@ -321,9 +323,11 @@
     "seeAll": "すべて表示"
   },
   "chat": {
+    "followUpCancelTitle": "{{name}}の{{when}}のフォローアップをキャンセルしますか？",
     "someone": "誰か",
     "handedTo": "{{name}}に引き継ぎ",
     "handedTo_female": "{{name}}に引き継ぎ",
+    "inBackground": "バックグラウンドで作業中",
     "pairAsked": "{{from}}が質問",
     "messageTo": "{{name}}にメッセージ",
     "messageIn": "{{channel}}にメッセージ",
@@ -1282,7 +1286,9 @@
       "priority": "優先度",
       "assignee": "担当者",
       "cancel": "タスクをキャンセル",
-      "canceled": "#{{number}}をキャンセルしました"
+      "canceled": "#{{number}}をキャンセルしました",
+      "cancelTitle": "タスク #{{number}} をキャンセルしますか？",
+      "cancelText": "未完了のタスクから外れます。あとで再開できます。"
     },
     "nobody": "なし",
     "you": "あなた",
@@ -1435,6 +1441,11 @@
     "add": "追加"
   },
   "coding": {
+    "removeTitle": "{{name}}をセッションから外しますか？",
+    "removeText": "セッションとその会話が見えなくなります。もう一度呼ぶには、会話で @ と名前を入力してください。",
+    "removeConfirm": "セッションから外す",
+    "leaveTitle": "セッションから退出しますか？",
+    "leaveText": "リストから消えます。戻るには、セッションの誰かに呼んでもらう必要があります。",
     "pill": "{{who}}。コードを見る",
     "seeChanges": "変更を見る",
     "project": "プロジェクト",
@@ -1873,6 +1884,8 @@
       "name": "名前",
       "renamed": "名前を{{name}}に変更しました",
       "stop": "{{name}}を停止",
+      "stopTitle": "{{device}}で{{name}}を停止しますか？",
+      "stopText": "実行中の処理はすぐに停止します。あとでもう一度依頼できます。",
       "stopped": "{{device}}が{{name}}から解放されました",
       "forget": "このスマートフォンをリストから外す",
       "forgetTitle": "{{name}}をリストから外しますか？",
@@ -2026,7 +2039,8 @@
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",
-      "stop": "停止"
+      "stop": "停止",
+      "stopTitle": "{{device}}の使用を停止しますか？"
     },
     "wait": {
       "waiting": "{{device}}を待っています",
@@ -2225,6 +2239,8 @@
     "failed": "保存できませんでした。もう一度お試しください。"
   },
   "ai": {
+    "dontRunTitle": "このリクエストを実行しませんか？",
+    "dontRunText": "キャンセルされ、上限が戻っても実行されません。",
     "yourPlan": "あなたのAIプラン",
     "plansSub": "Claude、ChatGPT、Gemini、GLMなど",
     "plansFoot": "エージェントはあなたのプランで考えます。APIキーは不要です。エージェントのコンピューターでログインします。",

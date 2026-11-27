@@ -124,6 +124,9 @@ export const featureKeysEn = {
     directChat: "Direct chat",
   },
   approval: {
+    /** The system alert before withdrawing an action approved ahead. */
+    cancelAheadTitle: "Cancel this scheduled action?",
+    cancelAheadText: "It won't run at its time. To do it later, approve it again when the agent asks.",
     asksIn: "asks for your approval · #{{channel}}",
     asksYou: "asks for your approval",
     expiresIn_one: "expires in {{count}} min",
@@ -361,10 +364,15 @@ export const featureKeysEn = {
     seeAll: "See all",
   },
   chat: {
+    /** The system alert before cancelling an agent's scheduled return (`when`: "tomorrow at 9:00 AM"). */
+    followUpCancelTitle: "Cancel {{name}}'s follow-up {{when}}?",
+    followUpCancelTitle_female: "Cancel {{name}}'s follow-up {{when}}?",
     someone: "Someone",
     /** A handed work's bubble under the reply that handed it: the agent that took it. */
     handedTo: "Handed to {{name}}",
     handedTo_female: "Handed to {{name}}",
+    /** The agent's own long work, as a bubble under the reply that started it. */
+    inBackground: "In the background",
     /** Two agents' talk quoted on its own (its reply not here): who asked, before the agent asked. */
     pairAsked: "{{from}} asked",
     messageTo: "Message {{name}}",
@@ -1485,6 +1493,9 @@ export const featureKeysEn = {
       assignee: "Who does it",
       cancel: "Cancel task",
       canceled: "#{{number}} canceled",
+      /** The system alert before cancelling a task from its menu. */
+      cancelTitle: "Cancel task #{{number}}?",
+      cancelText: "It leaves the open tasks. You can reopen it later.",
     },
     nobody: "Nobody",
     you: "You",
@@ -1665,6 +1676,12 @@ export const featureKeysEn = {
   },
   // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
   coding: {
+    /** The system alerts before taking someone out of a code session, or leaving it. */
+    removeTitle: "Take {{name}} out of the session?",
+    removeText: "They stop seeing the session and its conversation. To bring them back, type @ and their name in it.",
+    removeConfirm: "Take out",
+    leaveTitle: "Leave the session?",
+    leaveText: "It leaves your list. To come back, someone in the session has to call you in.",
     /** A session's pill in its conversation, which opens its code. */
     pill: "{{who}}. See the code",
     /** The step line's words over the composer ("3 files changed"), which open the session's Git view. */
@@ -2133,6 +2150,9 @@ export const featureKeysEn = {
       name: "Name",
       renamed: "Renamed to {{name}}",
       stop: "Stop {{name}}",
+      /** The system alert before stopping who uses the phone now. */
+      stopTitle: "Stop {{name}} on {{device}}?",
+      stopText: "What runs on it stops now. You can ask again later.",
       stopped: "{{device}} is back from {{name}}",
       forget: "Forget this phone",
       forgetTitle: "Forget {{name}}?",
@@ -2312,6 +2332,8 @@ export const featureKeysEn = {
       always: "Always allow {{name}}",
       no: "No",
       stop: "Stop",
+      /** The system alert before stopping an agent on this person's phone, from the inbox. */
+      stopTitle: "Stop the use of {{device}}?",
     },
     /** A run waiting for a device, in its conversation. */
     wait: {
@@ -2539,6 +2561,9 @@ export const featureKeysEn = {
     failed: "Couldn't save. Try again.",
   },
   ai: {
+    /** The system alert before "Don't run" drops a request waiting for a limit. */
+    dontRunTitle: "Don't run this request?",
+    dontRunText: "It's cancelled and won't run when the limit is back.",
     yourPlan: "Your AI plan",
     plansSub: "Claude, ChatGPT, Gemini, GLM and others",
     plansFoot: "Agents think with your plan, no API key needed. It signs in on the agent's computer.",

@@ -118,6 +118,8 @@
     "directChat": "Doğrudan sohbet"
   },
   "approval": {
+    "cancelAheadTitle": "Bu planlanmış işlem iptal edilsin mi?",
+    "cancelAheadText": "Planlanan saatte çalışmaz. Daha sonra yapmak için ajan istediğinde yeniden onayla.",
     "asksIn": "onayınızı istiyor · #{{channel}}",
     "asksYou": "onayınızı istiyor",
     "expiresIn_one": "{{count}} dk içinde sona eriyor",
@@ -331,9 +333,11 @@
     "seeAll": "Tümünü gör"
   },
   "chat": {
+    "followUpCancelTitle": "{{name}} adlı ajanın {{when}} takibi iptal edilsin mi?",
     "someone": "Biri",
     "handedTo": "{{name}} adlı ajana devredildi",
     "handedTo_female": "{{name}} adlı ajana devredildi",
+    "inBackground": "Arka planda",
     "pairAsked": "{{from}} sordu",
     "messageTo": "{{name}} kişisine mesaj",
     "messageIn": "{{channel}} kanalına mesaj",
@@ -1367,7 +1371,9 @@
       "priority": "Öncelik",
       "assignee": "Kim yapacak",
       "cancel": "Görevi iptal et",
-      "canceled": "#{{number}} iptal edildi"
+      "canceled": "#{{number}} iptal edildi",
+      "cancelTitle": "#{{number}} numaralı görev iptal edilsin mi?",
+      "cancelText": "Açık görevlerden çıkar. Daha sonra yeniden açabilirsin."
     },
     "nobody": "Kimse",
     "you": "Siz",
@@ -1526,6 +1532,11 @@
     "add": "Ekle"
   },
   "coding": {
+    "removeTitle": "{{name}} oturumdan çıkarılsın mı?",
+    "removeText": "Oturumu ve sohbetini artık görmez. Tekrar çağırmak için sohbete @ ve adını yaz.",
+    "removeConfirm": "Oturumdan çıkar",
+    "leaveTitle": "Oturumdan ayrılınsın mı?",
+    "leaveText": "Listenden kaybolur. Geri dönmek için oturumdaki birinin seni çağırması gerekir.",
     "pill": "{{who}}. Kodu gör",
     "seeChanges": "Değişiklikleri gör",
     "project": "Proje",
@@ -1978,6 +1989,8 @@
       "name": "Ad",
       "renamed": "Yeni ad: {{name}}",
       "stop": "Durdur: {{name}}",
+      "stopTitle": "{{device}} üzerinde {{name}} durdurulsun mu?",
+      "stopText": "Üzerinde çalışan şey şimdi durur. Daha sonra yeniden isteyebilirsin.",
       "stopped": "{{device}} artık {{name}} tarafından kullanılmıyor",
       "forget": "Bu telefonu unut",
       "forgetTitle": "{{name}} unutulsun mu?",
@@ -2131,7 +2144,8 @@
       "allowOnce": "Bir kez izin ver",
       "always": "{{name}} için her zaman izin ver",
       "no": "Hayır",
-      "stop": "Durdur"
+      "stop": "Durdur",
+      "stopTitle": "{{device}} kullanımı durdurulsun mu?"
     },
     "wait": {
       "waiting": "Bekleniyor: {{device}}",
@@ -2335,6 +2349,8 @@
     "failed": "Kaydedilemedi. Tekrar deneyin."
   },
   "ai": {
+    "dontRunTitle": "Bu istek çalıştırılmasın mı?",
+    "dontRunText": "İptal edilir ve sınır geri geldiğinde çalışmaz.",
     "yourPlan": "Yapay zeka planınız",
     "plansSub": "Claude, ChatGPT, Gemini, GLM ve diğerleri",
     "plansFoot": "Ajanlar planınızla düşünür, API anahtarı gerekmez. Plan, ajanın bilgisayarında oturum açar.",

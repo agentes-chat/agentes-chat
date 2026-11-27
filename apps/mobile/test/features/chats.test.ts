@@ -860,6 +860,6 @@ describe("a handed work's bubble", () => {
     expect(line).toContain(
       '<IconButton icon="stop" small label={halt.label} disabled={halt.disabled} onPress={halt.onPress} />',
     );
-    expect(line).toContain("handedWords: { flexShrink: 1, minWidth: 0, gap: 1 },");
+    expect(line).toContain("handedWords: { flexShrink: 1, flexGrow: 1, minWidth: 0, gap: 1 },");
   });
 });

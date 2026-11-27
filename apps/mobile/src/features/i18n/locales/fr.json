@@ -124,6 +124,8 @@
     "directChat": "Discussion directe"
   },
   "approval": {
+    "cancelAheadTitle": "Annuler cette action programmée ?",
+    "cancelAheadText": "Elle ne s’exécute pas à l’heure prévue. Pour la faire plus tard, approuvez-la à nouveau quand l’agent le demande.",
     "asksIn": "demande votre approbation · #{{channel}}",
     "asksYou": "demande votre approbation",
     "expiresIn_one": "expire dans {{count}} min",
@@ -341,9 +343,11 @@
     "seeAll": "Tout voir"
   },
   "chat": {
+    "followUpCancelTitle": "Annuler le suivi de {{name}} {{when}} ?",
     "someone": "Quelqu'un",
     "handedTo": "Confié à {{name}}",
     "handedTo_female": "Confié à {{name}}",
+    "inBackground": "En arrière-plan",
     "pairAsked": "{{from}} a demandé",
     "messageTo": "Message à {{name}}",
     "messageIn": "Message dans {{channel}}",
@@ -1449,7 +1453,9 @@
       "priority": "Priorité",
       "assignee": "Qui s'en charge",
       "cancel": "Annuler la tâche",
-      "canceled": "#{{number}} annulée"
+      "canceled": "#{{number}} annulée",
+      "cancelTitle": "Annuler la tâche #{{number}} ?",
+      "cancelText": "Elle quitte les tâches ouvertes. Vous pourrez la rouvrir plus tard."
     },
     "nobody": "Personne",
     "you": "Vous",
@@ -1613,6 +1619,11 @@
     "add": "Ajouter"
   },
   "coding": {
+    "removeTitle": "Retirer {{name}} de la session ?",
+    "removeText": "Cette personne ne voit plus la session ni sa conversation. Pour la rappeler, écrivez @ suivi de son nom dans la conversation.",
+    "removeConfirm": "Retirer de la session",
+    "leaveTitle": "Quitter la session ?",
+    "leaveText": "Elle disparaît de votre liste. Pour revenir, quelqu’un de la session doit vous y inviter.",
     "pill": "{{who}}. Voir le code",
     "seeChanges": "Voir les modifications",
     "project": "Projet",
@@ -2078,6 +2089,8 @@
       "name": "Nom",
       "renamed": "Il s'appelle maintenant {{name}}",
       "stop": "Arrêter {{name}}",
+      "stopTitle": "Arrêter {{name}} sur {{device}} ?",
+      "stopText": "Ce qui s’y exécute s’arrête maintenant. Vous pourrez redemander plus tard.",
       "stopped": "{{device}} est revenu de {{name}}",
       "forget": "Oublier ce téléphone",
       "forgetTitle": "Oublier {{name}} ?",
@@ -2231,7 +2244,8 @@
       "allowOnce": "Autoriser une fois",
       "always": "Toujours autoriser {{name}}",
       "no": "Non",
-      "stop": "Arrêter"
+      "stop": "Arrêter",
+      "stopTitle": "Arrêter d’utiliser {{device}} ?"
     },
     "wait": {
       "waiting": "En attente de {{device}}",
@@ -2438,6 +2452,8 @@
     "failed": "Impossible d'enregistrer. Réessayez."
   },
   "ai": {
+    "dontRunTitle": "Ne pas exécuter cette demande ?",
+    "dontRunText": "Elle est annulée et ne s’exécutera pas quand la limite reviendra.",
     "yourPlan": "Votre abonnement IA",
     "plansSub": "Claude, ChatGPT, Gemini, GLM et d'autres",
     "plansFoot": "Les agents réfléchissent avec votre abonnement, sans clé API. Il se connecte sur l'ordinateur de l'agent.",

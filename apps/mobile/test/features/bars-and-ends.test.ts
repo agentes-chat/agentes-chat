@@ -44,7 +44,9 @@ test("above the conversation's end, the dock's height and the keyboard move noth
 
 test("a pushed screen's large title is the system's on iOS, over a scroll view that is the screen's first child", () => {
   const pushed = src("features/shared/PushedLargeTitle.tsx");
-  expect(pushed).toContain('Platform.OS === "ios" ? <SystemLargeTitle {...props} /> : <DrawnLargeTitle {...props} />');
+  // Android's bar has no large title: the bar's own title there, beside the back button, as every pushed screen's.
+  expect(pushed).toContain("return <SystemLargeTitle {...props} />;");
+  expect(pushed).not.toContain("DrawnLargeTitle");
   expect(pushed).toContain('contentInsetAdjustmentBehavior="automatic"');
   const header = src("features/shared/parts.tsx");
   expect(header).toContain("...(IOS ? { headerLargeTitleEnabled: largeTitle } : null),");

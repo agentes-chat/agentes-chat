@@ -124,6 +124,8 @@
     "directChat": "Chat directo"
   },
   "approval": {
+    "cancelAheadTitle": "¿Cancelar esta acción programada?",
+    "cancelAheadText": "No se ejecuta a la hora prevista. Para hacerla más tarde, apruébala de nuevo cuando el agente lo pida.",
     "asksIn": "pide tu aprobación · #{{channel}}",
     "asksYou": "pide tu aprobación",
     "expiresIn_one": "vence en {{count}} min",
@@ -341,9 +343,11 @@
     "seeAll": "Ver todo"
   },
   "chat": {
+    "followUpCancelTitle": "¿Cancelar el seguimiento de {{name}} {{when}}?",
     "someone": "Alguien",
     "handedTo": "Pasado a {{name}}",
     "handedTo_female": "Pasado a {{name}}",
+    "inBackground": "En segundo plano",
     "pairAsked": "{{from}} preguntó",
     "messageTo": "Mensaje para {{name}}",
     "messageIn": "Mensaje en {{channel}}",
@@ -1449,7 +1453,9 @@
       "priority": "Prioridad",
       "assignee": "Quién la hace",
       "cancel": "Cancelar tarea",
-      "canceled": "#{{number}} cancelada"
+      "canceled": "#{{number}} cancelada",
+      "cancelTitle": "¿Cancelar la tarea #{{number}}?",
+      "cancelText": "Sale de las tareas abiertas. Puedes reabrirla después."
     },
     "nobody": "Nadie",
     "you": "Tú",
@@ -1613,6 +1619,11 @@
     "add": "Añadir"
   },
   "coding": {
+    "removeTitle": "¿Sacar a {{name}} de la sesión?",
+    "removeText": "Deja de ver la sesión y su conversación. Para llamarlo de nuevo, escribe @ y su nombre en ella.",
+    "removeConfirm": "Sacar de la sesión",
+    "leaveTitle": "¿Salir de la sesión?",
+    "leaveText": "Desaparece de tu lista. Para volver, alguien de la sesión tiene que llamarte.",
     "pill": "{{who}}. Ver el código",
     "seeChanges": "Ver los cambios",
     "project": "Proyecto",
@@ -2078,6 +2089,8 @@
       "name": "Nombre",
       "renamed": "Ahora se llama {{name}}",
       "stop": "Detener {{name}}",
+      "stopTitle": "¿Detener {{name}} en {{device}}?",
+      "stopText": "Lo que se está ejecutando en él se detiene ahora. Puedes pedirlo de nuevo después.",
       "stopped": "{{device}} volvió de {{name}}",
       "forget": "Olvidar este teléfono",
       "forgetTitle": "¿Olvidar {{name}}?",
@@ -2231,7 +2244,8 @@
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",
-      "stop": "Detener"
+      "stop": "Detener",
+      "stopTitle": "¿Dejar de usar {{device}}?"
     },
     "wait": {
       "waiting": "Esperando a {{device}}",
@@ -2438,6 +2452,8 @@
     "failed": "No se pudo guardar. Inténtalo de nuevo."
   },
   "ai": {
+    "dontRunTitle": "¿No ejecutar este pedido?",
+    "dontRunText": "Se cancela y no se ejecuta cuando vuelva el límite.",
     "yourPlan": "Tu plan de IA",
     "plansSub": "Claude, ChatGPT, Gemini, GLM y otros",
     "plansFoot": "Los agentes piensan con tu plan, sin clave de API. Inicia sesión en la computadora del agente.",
