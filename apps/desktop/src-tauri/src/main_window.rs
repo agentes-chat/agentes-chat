@@ -860,7 +860,9 @@ const LISTEN_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_WAITING: usize = 16;
 /// Organizations in the Go menu (⌘⌥1–9 for the first nine).
 const MAX_ORGS: usize = 20;
-const PREF_TABS: &[&str] = &["folders", "tools", "updates"];
+const PREF_TABS: &[&str] = &["folders", "tools", "updates", "servers"];
+/// The System Settings lists a page may open (control/this-mac.ts `PRIVACY_PANES`): a voice message, Wi-Fi pairing.
+const PRIVACY_PANES: &[&str] = &["microphone", "network"];
 /// A notification's size, as a phone push's (apps/server push-messages.ts).
 const NOTIFY_TITLE_MAX: usize = 80;
 const NOTIFY_BODY_MAX: usize = 180;
@@ -951,6 +953,11 @@ fn checked(request: &Value) -> Result<Value, String> {
         Some("prefs") => match text("tab") {
             Some(tab) if PREF_TABS.contains(&tab) => Ok(json!({ "kind": "prefs", "tab": tab })),
             _ => Err("unknown tab".into()),
+        },
+        // System Settings on one permission's list: the page's way out where the system refused it something.
+        Some("privacy") => match text("pane") {
+            Some(pane) if PRIVACY_PANES.contains(&pane) => Ok(json!({ "kind": "privacy", "pane": pane })),
+            _ => Err("unknown pane".into()),
         },
         // The Dock's badge: two counts, nothing else.
         Some("badge") => {
@@ -1564,6 +1571,12 @@ mod tests {
         assert!(checked(&json!({ "kind": "connect" })).is_err());
         assert_eq!(checked(&json!({ "kind": "prefs", "tab": "folders" })), Ok(json!({ "kind": "prefs", "tab": "folders" })));
         assert!(checked(&json!({ "kind": "prefs", "tab": "advanced" })).is_err());
+        assert_eq!(checked(&json!({ "kind": "prefs", "tab": "servers" })), Ok(json!({ "kind": "prefs", "tab": "servers" })));
+        assert_eq!(
+            checked(&json!({ "kind": "privacy", "pane": "microphone", "x": 1 })),
+            Ok(json!({ "kind": "privacy", "pane": "microphone" }))
+        );
+        assert!(checked(&json!({ "kind": "privacy", "pane": "screen" })).is_err());
         assert_eq!(checked(&json!({ "kind": "reconnect", "orgId": "o1" })), Ok(json!({ "kind": "reconnect", "orgId": "o1" })));
         assert!(checked(&json!({ "kind": "reconnect" })).is_err());
         assert_eq!(checked(&json!({ "kind": "requests", "x": 1 })), Ok(json!({ "kind": "requests" })));

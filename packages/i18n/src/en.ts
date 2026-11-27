@@ -19126,6 +19126,27 @@ export const en = {
       license: "Free software under the <license>GNU Affero General Public License v3</license>, with no warranty.",
       source: "Source code",
       copyright: "Copyright © 2026 AGENTESCHAT, LLC and contributors",
+      /** Beside the version, for who configures the workspace: the public releases on GitHub, asked by the browser. */
+      latest: "The newest release",
+      newer: "{{version}} is out",
+      notes: "What's new",
+      /** The upgrade, as SELF_HOSTING.md gives it: keep the commands' words as they are. */
+      update: {
+        title: "Update to {{version}}",
+        docker: "With Docker",
+        native: "Without Docker",
+        nativeHelp: "Extract the release's package into ~/.agentes/app, then run:",
+        desktop: "Runs in the desktop app on this computer? It updates with the app.",
+        /** The quiet notice, once per release, for who configures the workspace. */
+        notice: "agentes.chat {{version}} is out for this server",
+        how: "How to update",
+      },
+      /** The computers' program (the runner) newer than this server: it works, the newest features wait. */
+      computers: "Computers' program",
+      computersAhead_one:
+        "{{count}} computer runs a newer version than this server. It works as it is, and what's new in it comes with this server's update.",
+      computersAhead_other:
+        "{{count}} computers run a newer version than this server. They work as they are, and what's new in them comes with this server's update.",
     },
     title: "Settings",
     account: {

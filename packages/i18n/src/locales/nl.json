@@ -18496,7 +18496,22 @@
       "version": "Versie",
       "license": "Vrije software onder de <license>GNU Affero General Public License v3</license>, zonder garantie.",
       "source": "Broncode",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers",
+      "latest": "De nieuwste versie",
+      "newer": "{{version}} is uit",
+      "notes": "Wat is er nieuw",
+      "update": {
+        "title": "Bijwerken naar {{version}}",
+        "docker": "Met Docker",
+        "native": "Zonder Docker",
+        "nativeHelp": "Pak het pakket van de versie uit in ~/.agentes/app en voer dan uit:",
+        "desktop": "Draait hij in de desktop-app op deze computer? Hij werkt zichzelf bij met de app.",
+        "notice": "agentes.chat {{version}} is uit voor deze server",
+        "how": "Zo werk je bij"
+      },
+      "computers": "Programma van de computers",
+      "computersAhead_one": "{{count}} computer draait een nieuwere versie dan deze server. Hij werkt zoals hij is, en wat er nieuw in zit komt met de update van deze server.",
+      "computersAhead_other": "{{count}} computers draaien een nieuwere versie dan deze server. Ze werken zoals ze zijn, en wat er nieuw in zit komt met de update van deze server."
     },
     "title": "Instellingen",
     "account": {

@@ -6,6 +6,7 @@ import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "
 import { useEffect, useRef } from "react";
 import { requireUserIn } from "@/app/guards";
 import { usePageTextSize } from "@/chat/look";
+import { ServerUpdateNotice } from "@/components/AboutSettings";
 import { useFollowPickedAgent } from "@/components/AppIconPicker";
 import { Arrival } from "@/components/arrival/Arrival";
 import { FeedbackHost } from "@/components/arrival/FeedbackDialog";
@@ -191,6 +192,7 @@ function OrgLayout() {
                                 {!focused && <NoticeIsland />}
                                 <Arrival />
                                 <FeedbackHost />
+                                <ServerUpdateNotice />
                                 <Outlet />
                               </DetailsHost>
                             </ComputerDialogProvider>

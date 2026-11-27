@@ -829,6 +829,7 @@ pub fn run() {
             cover::page_ready,
             cover::cover_retry,
             cover::cover_hide,
+            cover::cover_hold,
             cover::cover_server,
             cover::cover_details,
             prepare::screen_access,

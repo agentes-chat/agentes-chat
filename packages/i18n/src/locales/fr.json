@@ -19013,7 +19013,23 @@
       "version": "Version",
       "license": "Logiciel libre sous la <license>GNU Affero General Public License v3</license>, sans garantie.",
       "source": "Code source",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC et contributeurs"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC et contributeurs",
+      "latest": "La version la plus récente",
+      "newer": "La {{version}} est sortie",
+      "notes": "Nouveautés",
+      "update": {
+        "title": "Passer à la {{version}}",
+        "docker": "Avec Docker",
+        "native": "Sans Docker",
+        "nativeHelp": "Extrayez le paquet de la version dans ~/.agentes/app, puis lancez :",
+        "desktop": "Il tourne dans l'app de bureau de cet ordinateur ? Il se met à jour avec l'app.",
+        "notice": "agentes.chat {{version}} est sorti pour ce serveur",
+        "how": "Comment mettre à jour"
+      },
+      "computers": "Programme des ordinateurs",
+      "computersAhead_one": "{{count}} ordinateur utilise une version plus récente que ce serveur. Il fonctionne tel quel, et ses nouveautés arrivent avec la mise à jour de ce serveur.",
+      "computersAhead_many": "{{count}} ordinateurs utilisent une version plus récente que ce serveur. Ils fonctionnent tels quels, et leurs nouveautés arrivent avec la mise à jour de ce serveur.",
+      "computersAhead_other": "{{count}} ordinateurs utilisent une version plus récente que ce serveur. Ils fonctionnent tels quels, et leurs nouveautés arrivent avec la mise à jour de ce serveur."
     },
     "title": "Paramètres",
     "account": {

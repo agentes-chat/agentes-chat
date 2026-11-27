@@ -18357,7 +18357,22 @@
       "version": "Sürüm",
       "license": "<license>GNU Affero General Public License v3</license> kapsamında özgür yazılım, garantisi yoktur.",
       "source": "Kaynak kodu",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC ve katkıda bulunanlar"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC ve katkıda bulunanlar",
+      "latest": "En yeni sürüm",
+      "newer": "{{version}} çıktı",
+      "notes": "Yenilikler",
+      "update": {
+        "title": "{{version}} sürümüne güncelle",
+        "docker": "Docker ile",
+        "native": "Docker olmadan",
+        "nativeHelp": "Sürümün paketini ~/.agentes/app içine çıkarın, ardından çalıştırın:",
+        "desktop": "Bu bilgisayardaki masaüstü uygulamasında mı çalışıyor? Uygulamayla birlikte güncellenir.",
+        "notice": "Bu sunucu için agentes.chat {{version}} çıktı",
+        "how": "Nasıl güncellenir"
+      },
+      "computers": "Bilgisayarların programı",
+      "computersAhead_one": "{{count}} bilgisayar bu sunucudan daha yeni bir sürüm çalıştırıyor. Olduğu gibi çalışır ve yenilikleri bu sunucunun güncellemesiyle gelir.",
+      "computersAhead_other": "{{count}} bilgisayar bu sunucudan daha yeni bir sürüm çalıştırıyor. Oldukları gibi çalışırlar ve yenilikleri bu sunucunun güncellemesiyle gelir."
     },
     "title": "Ayarlar",
     "account": {

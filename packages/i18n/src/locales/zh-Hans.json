@@ -17863,7 +17863,21 @@
       "version": "版本",
       "license": "依据 <license>GNU Affero General Public License v3</license> 发布的自由软件，不提供任何担保。",
       "source": "源代码",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者",
+      "latest": "已是最新版本",
+      "newer": "{{version}} 已发布",
+      "notes": "新功能",
+      "update": {
+        "title": "更新到 {{version}}",
+        "docker": "使用 Docker",
+        "native": "不使用 Docker",
+        "nativeHelp": "将该版本的安装包解压到 ~/.agentes/app，然后运行：",
+        "desktop": "在这台电脑的桌面应用中运行？它会随应用一起更新。",
+        "notice": "此服务器的 agentes.chat {{version}} 已发布",
+        "how": "如何更新"
+      },
+      "computers": "电脑上的程序",
+      "computersAhead_other": "有 {{count}} 台电脑运行的版本比此服务器更新。它们照常工作，新功能会随此服务器的更新一起到来。"
     },
     "title": "设置",
     "account": {

@@ -4780,6 +4780,26 @@ html:not([data-pointer]) .settings__link:focus-visible {
 .settings-rows > .ac-grouphead + .settings-row {
   border-top: 0;
 }
+/* Settings › About's update: each way to update (Docker, without it), its name 4 above its command, 16 between. */
+.about-update {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.about-update__way {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.about-update__name {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+.about-update__help {
+  margin: 0;
+  color: var(--ink-muted);
+}
 /* Under a card's title the rows start below it, a hairline above the first as between the others: a row's hover
    plate never reaches the title. */
 .ac-card__head + .settings-rows {

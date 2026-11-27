@@ -157,6 +157,34 @@ describe("finding the settings", () => {
     expect(screen().getByText("Copyright © 2026 AGENTESCHAT, LLC e colaboradores")).toBeTruthy();
   });
 
+  test("a newer server release: who configures the workspace gets its upgrade and one notice, a member neither", async () => {
+    const release = { version: "0.1.19", url: "https://github.com/agentes-chat/agentes-chat/releases/tag/v0.1.19" };
+    const state = seedState({ authConfig: { cloud: false } });
+    state.instance = { version: "0.1.18" };
+    state.serverRelease = release;
+    await go("settings/about", state);
+    expect(screen().getByRole("heading", { level: 2, name: "Atualize para a 0.1.19" })).toBeTruthy();
+    expect(screen().getByRole("link", { name: "Saiu a 0.1.19" }).getAttribute("href")).toBe(release.url);
+    const commands = [...document.querySelectorAll(".about-update code")].map((c) => c.textContent);
+    expect(commands).toEqual([
+      "curl -fsSLO https://raw.githubusercontent.com/agentes-chat/agentes-chat/v0.1.19/docker-compose.yml\ndocker compose pull\ndocker compose up -d",
+      "~/.agentes/app/0.1.19/bin/agentes-server service install --data ~/.agentes",
+    ]);
+    expect(screen().getByText("Saiu o agentes.chat 0.1.19 para este servidor")).toBeTruthy();
+    expect(state.serverReleaseAsked).toBeGreaterThan(0);
+    cleanup();
+
+    const member = seedState({ authConfig: { cloud: false } });
+    if (member.me?.organizations[0]) member.me.organizations[0].role = "member";
+    member.instance = { version: "0.1.18" };
+    member.serverRelease = release;
+    await go("settings/about", member);
+    expect(screen().getByText("0.1.18")).toBeTruthy();
+    expect(screen().queryByRole("heading", { level: 2, name: "Atualize para a 0.1.19" })).toBeNull();
+    // Nothing asked of GitHub for whoever can't act on it.
+    expect(member.serverReleaseAsked ?? 0).toBe(0);
+  });
+
   test("Sobre o agentes.chat only on a self-hosted server: agentes.chat Cloud lists it nowhere, its link opens Sua conta", async () => {
     const nav = () => within(screen().getByRole("navigation", { name: "Seções das configurações" }));
     const license = () => screen().queryByRole("link", { name: "GNU Affero General Public License v3" });

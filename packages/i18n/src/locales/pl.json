@@ -19616,7 +19616,24 @@
       "version": "Wersja",
       "license": "Wolne oprogramowanie na licencji <license>GNU Affero General Public License v3</license>, bez gwarancji.",
       "source": "Kod źródłowy",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC i współtwórcy"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC i współtwórcy",
+      "latest": "Najnowsza wersja",
+      "newer": "Wyszła wersja {{version}}",
+      "notes": "Co nowego",
+      "update": {
+        "title": "Zaktualizuj do {{version}}",
+        "docker": "Z Dockerem",
+        "native": "Bez Dockera",
+        "nativeHelp": "Rozpakuj pakiet wersji do ~/.agentes/app, a potem uruchom:",
+        "desktop": "Działa w aplikacji na komputer na tym komputerze? Aktualizuje się razem z aplikacją.",
+        "notice": "Wyszedł agentes.chat {{version}} dla tego serwera",
+        "how": "Jak zaktualizować"
+      },
+      "computers": "Program komputerów",
+      "computersAhead_one": "{{count}} komputer ma nowszą wersję niż ten serwer. Działa tak, jak jest, a nowości przyjdą z aktualizacją tego serwera.",
+      "computersAhead_few": "{{count}} komputery mają nowszą wersję niż ten serwer. Działają tak, jak są, a nowości przyjdą z aktualizacją tego serwera.",
+      "computersAhead_many": "{{count}} komputerów ma nowszą wersję niż ten serwer. Działają tak, jak są, a nowości przyjdą z aktualizacją tego serwera.",
+      "computersAhead_other": "{{count}} komputera ma nowszą wersję niż ten serwer. Działają tak, jak są, a nowości przyjdą z aktualizacją tego serwera."
     },
     "title": "Ustawienia",
     "account": {

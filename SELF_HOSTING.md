@@ -1216,6 +1216,14 @@ one, `https://app.agentes.chat/api/desktop/update` (its version and package type
 for its newest version from the browser (Connect a computer, above, says what that request carries).
 The instance itself downloads nothing from agentes.chat.
 
+**Newer releases.** For whoever configures a workspace, **Settings › About** (and the phone's About screen)
+asks GitHub for this repository's releases (`https://api.github.com/repos/agentes-chat/agentes-chat/releases`)
+from the browser or the phone, never from the instance, at most every 6 hours. It carries no cookie and no
+referrer, but, like any request a page makes to another site, it carries this instance's address (its
+`Origin` header) and the browser's IP. A newer release shows there with the upgrade commands (Upgrades, below)
+and, once per release, as a notice. It also says when the program on some of the workspace's computers is
+newer than the instance: those computers keep working, and what's new in them comes with the instance's update.
+
 **Help pages.** The app's help links ("How computers work", "About this computer") open the public docs at
 `https://agentes.chat/docs`, in the reader's language (`/pt/docs`, `/zh/docs`, `/fr/docs`…), the same pages for
 every server. They open in a new tab with no referrer and carry only the page, the language and the section, never

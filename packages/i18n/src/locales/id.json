@@ -17855,7 +17855,21 @@
       "version": "Versi",
       "license": "Perangkat lunak bebas di bawah <license>GNU Affero General Public License v3</license>, tanpa jaminan.",
       "source": "Kode sumber",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor",
+      "latest": "Rilis terbaru",
+      "newer": "{{version}} sudah keluar",
+      "notes": "Yang baru",
+      "update": {
+        "title": "Perbarui ke {{version}}",
+        "docker": "Dengan Docker",
+        "native": "Tanpa Docker",
+        "nativeHelp": "Ekstrak paket rilis ke ~/.agentes/app, lalu jalankan:",
+        "desktop": "Berjalan di aplikasi desktop komputer ini? Server itu ikut diperbarui bersama aplikasinya.",
+        "notice": "agentes.chat {{version}} sudah keluar untuk server ini",
+        "how": "Cara memperbarui"
+      },
+      "computers": "Program komputer",
+      "computersAhead_other": "{{count}} komputer menjalankan versi yang lebih baru dari server ini. Komputer itu tetap berfungsi, dan fitur barunya datang bersama pembaruan server ini."
     },
     "title": "Pengaturan",
     "account": {
