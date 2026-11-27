@@ -61,6 +61,3 @@ export const viaSettings = (p: MacPermission, grant: Grant) => p === "disk" || g
 export type SetupState = ({ step: "prepare"; org: string; server: string } | { step: "prefs" }) & {
   resumed?: boolean;
 };
-
-/** The site's This computer paired it: the welcome window takes this once and shows the Prepare step. */
-export const PREPARE_PREF = "prepare";

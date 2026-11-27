@@ -1,0 +1,38 @@
+/* Development only (DevFrame.tsx): the main window's stand-in site behind the app layer. */
+.dk-dev__layer {
+  height: 100%;
+}
+.dk-dev__window[data-window="app"] .dk-dev__layer {
+  position: absolute;
+  inset: 0;
+}
+.dk-dev__window[data-window="app"] .dk-dev__layer[data-mode="hidden"] {
+  pointer-events: none;
+}
+.dk-dev__site {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  background: var(--side);
+}
+.dk-dev__siteside {
+  width: 248px;
+  background: var(--sunken);
+}
+.dk-dev__sitemain {
+  flex: 1;
+  padding: 72px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg);
+}
+.dk-dev__siteline {
+  height: 12px;
+  width: 70%;
+  border-radius: 6px;
+  background: var(--plate);
+}
+.dk-dev__siteline[data-short] {
+  width: 40%;
+}

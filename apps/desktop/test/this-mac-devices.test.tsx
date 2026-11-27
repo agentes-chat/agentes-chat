@@ -8,10 +8,9 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider, useSnapshot } from "../src/app";
-import { IPHONE_SETUP_PREF } from "../src/control/devices";
 import { DesktopStore, pairedHomes } from "../src/control/store";
-import { readPref, writePref } from "../src/hooks";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
+import type { LayerRoute } from "../src/host/types";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
 import { WindowView } from "../src/WindowView";
@@ -20,12 +19,9 @@ import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-async function mount(
-  window: "prefs" | "welcome",
-  view: ReactNode,
-  check: (el: HTMLElement, host: FakeHost) => Promise<void>,
-) {
-  const host = createFakeHost(window, "selfhost");
+/** The app layer (ADR 0255) on `route`, with `view` drawn in it. */
+async function mount(route: LayerRoute, view: ReactNode, check: (el: HTMLElement, host: FakeHost) => Promise<void>) {
+  const host = createFakeHost("app", "selfhost", { route });
   const store = new DesktopStore(host, {});
   const stop = store.start();
   const el = document.body.appendChild(document.createElement("div"));
@@ -48,6 +44,10 @@ async function mount(
     for (const runner of host.runners.values()) runner.stop();
   }
 }
+
+const SETTINGS: LayerRoute = { screen: "settings" };
+const IPHONE: LayerRoute = { screen: "iphone" };
+const layer = <WindowView name="app" />;
 
 /** The first workspace's cards alone (the fake has two). */
 function OneWorkspace() {
@@ -77,7 +77,7 @@ async function openWho(el: HTMLElement, org: string) {
 
 describe("Preferences › This Mac", () => {
   test("agents, who can use it, and each phone with its state and one way out", () =>
-    mount("prefs", <OneWorkspace />, async (el, host) => {
+    mount(SETTINGS, <OneWorkspace />, async (el, host) => {
       await until(() => rowOf(el, "Pixel 8"));
       expect(rowOf(el, "Acme")?.querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("true");
       // The phones' help is one line in their card.
@@ -104,15 +104,13 @@ describe("Preferences › This Mac", () => {
         "/api/app/organizations/org_acme/devices/phones/0b6c5a8e-0000-4000-8000-000000000001/stop",
       ]);
 
-      // Show me how on the iPhone: the setup, in the welcome window.
+      // Show me how on the iPhone: the setup, the app layer's sheet.
       await act(async () => button(rowOf(el, "Sam's iPhone 16"), "Show me how")?.click());
-      expect(readPref(IPHONE_SETUP_PREF, false)).toBe(true);
-      expect(host.window).toBe("welcome");
-      writePref(IPHONE_SETUP_PREF, false);
+      expect(host.layer.route).toEqual({ screen: "iphone" });
     }));
 
   test("a simulator on this Mac: Start when it's off, then Shut down while it starts", () =>
-    mount("prefs", <OneWorkspace />, async (el, host) => {
+    mount(SETTINGS, <OneWorkspace />, async (el, host) => {
       await until(() => rowOf(el, "iPhone 17 Pro"));
       expect(rowOf(el, "iPhone 17 Pro")?.querySelector(".ac-chip")?.textContent).toBe("Offline");
       await act(async () => button(rowOf(el, "iPhone 17 Pro"), "Start")?.click());
@@ -128,7 +126,7 @@ describe("Preferences › This Mac", () => {
     }));
 
   test("an iPhone on this Mac's Wi-Fi: offered, used once picked, and let go again", () =>
-    mount("prefs", <OneWorkspace />, async (el, host) => {
+    mount(SETTINGS, <OneWorkspace />, async (el, host) => {
       const offer = "Also on this Mac's Wi-Fi: Ana's iPhone 14";
       await until(() => rowOf(el, offer));
       expect(host.site.calls.some((c) => c.method === "PUT")).toBe(false);
@@ -144,7 +142,7 @@ describe("Preferences › This Mac", () => {
     }));
 
   test("signed out on that server: says so, with the way to sign in", () =>
-    mount("prefs", <OneWorkspace />, async (el, host) => {
+    mount(SETTINGS, <OneWorkspace />, async (el, host) => {
       host.site.signedOut = true;
       await until(() => rowOf(el, "Acme"));
       await openWho(el, "Acme");
@@ -157,15 +155,11 @@ describe("Preferences › This Mac", () => {
 });
 
 describe("the iPhone setup window", () => {
-  test("Preferences' Show me how opens it in the welcome window; the Mac downloads what Xcode needs by itself", async () => {
-    writePref(IPHONE_SETUP_PREF, true);
-    await mount("welcome", <WindowView name="welcome" />, async (el, host) => {
+  test("Show me how opens it on the app layer; the Mac downloads what Xcode needs by itself", async () => {
+    await mount(IPHONE, layer, async (el, host) => {
       await until(() => el.querySelector('[data-screen="iphone"]') && el.querySelector('[aria-current="step"]'));
-      expect(readPref(IPHONE_SETUP_PREF, true)).toBe(false);
-      // Asked again while it shows: taken at once, so the next welcome window is the first run again.
-      writePref(IPHONE_SETUP_PREF, true);
-      await act(() => host.showWindow("welcome"));
-      expect(readPref(IPHONE_SETUP_PREF, true)).toBe(false);
+      // Asked again while it shows: the same setup, where it was.
+      await act(() => host.showLayer({ screen: "iphone" }));
       expect(el.querySelector("h1")?.textContent).toBe("Connect an iPhone");
       // Xcode is there, the iOS platform isn't: it starts downloading and reaches the iPhone's own step.
       await until(() => el.querySelector('[aria-current="step"] b')?.textContent === "Turn on Developer Mode");
@@ -203,8 +197,7 @@ describe("the iPhone setup window", () => {
   });
 
   test("every iPhone state names its way out, and a step that sits still says what most likely holds it", async () => {
-    writePref(IPHONE_SETUP_PREF, true);
-    await mount("welcome", <WindowView name="welcome" />, async (el, host) => {
+    await mount(IPHONE, layer, async (el, host) => {
       const step = () => el.querySelector('[aria-current="step"]');
       const at = (name: string) => until(() => step()?.querySelector("b")?.textContent === name);
       const phone = (over: Partial<RunnerPhone>) => {
@@ -276,8 +269,7 @@ describe("the iPhone setup window", () => {
   }, 30_000);
 
   test("Developer Mode: a restart keeps the step, check again asks the Mac, and why the switch may be missing", async () => {
-    writePref(IPHONE_SETUP_PREF, true);
-    await mount("welcome", <WindowView name="welcome" />, async (el, host) => {
+    await mount(IPHONE, layer, async (el, host) => {
       const step = () => el.querySelector('[aria-current="step"]');
       await until(() => step()?.querySelector("b")?.textContent === "Turn on Developer Mode");
       const runners = [...host.runners.values()];
@@ -307,9 +299,14 @@ describe("the iPhone setup window", () => {
     });
   });
 
-  test("without the ask, the welcome window is the first run", () =>
-    mount("welcome", <WindowView name="welcome" />, async (el) => {
-      await until(() => el.querySelector(".dk-fr"));
-      expect(el.querySelector('[data-screen="iphone"]')).toBeNull();
+  test("Back goes to this computer's settings, Cancel steps the layer aside", () =>
+    mount(IPHONE, layer, async (el, host) => {
+      await until(() => button(el, "Back"));
+      await act(async () => button(el, "Back")?.click());
+      expect(host.layer.route).toEqual({ screen: "settings", section: "folders", focus: "phone" });
+      await act(async () => host.showLayer({ screen: "iphone" }));
+      await until(() => button(el, "Cancel"));
+      await act(async () => button(el, "Cancel")?.click());
+      expect(host.layer.route).toBeNull();
     }));
 });

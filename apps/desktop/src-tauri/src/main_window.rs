@@ -106,10 +106,18 @@ fn route(url: &Url, site: &Url) -> Route {
     }
 }
 
-/// The route for `url` against the server open now; with none, nothing stays in the window.
+/// The route for `url` against the server open now; with none, only the blank page the window opens with stays in it
+/// (the window exists before any server is chosen: the app layer's first run is over it, ADR 0255).
 fn route_now(app: &AppHandle, url: &Url) -> Route {
-    site(app).map(|s| route(url, &s)).unwrap_or_else(|| outside_or_drop(url))
+    match site(app) {
+        Some(site) => route(url, &site),
+        None if url.as_str() == BLANK => Route::Stay,
+        None => outside_or_drop(url),
+    }
 }
+
+/// What the window's site web view loads while no server is chosen yet.
+const BLANK: &str = "about:blank";
 
 fn open_outside(app: &AppHandle, url: &Url) {
     if url.as_str().len() > 8192 || outside_or_drop(url) == Route::Drop {
@@ -183,15 +191,49 @@ pub fn follow_move(app: &AppHandle, old: &str) {
 pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
     let site = site(app).ok_or("no server chosen yet")?;
     let url = url.filter(|u| same_site(u, &site));
-    // The window holds two web views (the site, and the app's cover over it), so it is found by its parts.
-    // Already open: never a reload (where the person was, drafts, scroll stay), only the route moves.
+    // The window holds three web views (the site, the app's cover and the app layer over it), so it is found by its
+    // parts. Already open: never a reload (where the person was, drafts, scroll stay), only the route moves; a window
+    // made before any server was chosen loads the site now.
     if let Some(page) = app.get_webview(LABEL) {
-        if let Some(js) = url.as_ref().and_then(go_in_page) {
+        if page.url().is_ok_and(|u| u.scheme() == "about") {
+            page.navigate(url.unwrap_or(site)).map_err(|e| e.to_string())?;
+        } else if let Some(js) = url.as_ref().and_then(go_in_page) {
             page.eval(js).map_err(|e| e.to_string())?;
         }
         return front(app);
     }
+    build(app, Some(url.unwrap_or(site)))?;
+    front(app)
+}
 
+/// The main window exists: made now when it doesn't, on the server open now, or blank before any is chosen (the app
+/// layer's first run fills it). Shows nothing by itself.
+pub fn ensure_window(app: &AppHandle) -> Result<(), String> {
+    if app.get_webview(LABEL).is_some() {
+        return Ok(());
+    }
+    build(app, site(app))
+}
+
+/// The site moves to `url`, a page of the server it shows (the app layer's settings list): in the page, or a whole
+/// load when the site isn't up yet.
+pub fn go_to(app: &AppHandle, url: Url) -> Result<(), String> {
+    let page = app.get_webview(LABEL).ok_or("no window")?;
+    let shows_it = page.url().is_ok_and(|u| same_site(&u, &url));
+    match go_in_page(&url).filter(|_| shows_it) {
+        Some(js) => page.eval(js).map_err(|e| e.to_string())?,
+        None => page.navigate(url).map_err(|e| e.to_string())?,
+    }
+    front(app)
+}
+
+/// Makes the window, its site web view on `page` (blank when None), the cover and its bookkeeping.
+fn build(app: &AppHandle, page: Option<Url>) -> Result<(), String> {
+    let splash = page.is_some();
+    let start = match page {
+        Some(page) => page,
+        None => BLANK.parse().map_err(|_| "not a URL")?,
+    };
     let on_nav = app.clone();
     let on_new = app.clone();
     let on_download = app.clone();
@@ -204,7 +246,7 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         .get_webview_window("popover")
         .and_then(|w| w.theme().ok())
         .unwrap_or(Theme::Light);
-    let builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url.unwrap_or_else(|| site.clone())))
+    let builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(start))
         .title("agentes.chat")
         .min_inner_size(960.0, 600.0)
         // As the person left it (window_state.rs), on a screen that is still there.
@@ -221,6 +263,10 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         .background_throttling(BackgroundThrottlingPolicy::Disabled)
         // The window's name is the page's ("#loja · Acme"): the Window menu, Mission Control, VoiceOver.
         .on_document_title_changed(move |_, title| {
+            // Kept for when the app layer steps aside; while it names the window itself, the site's waits.
+            if !crate::app_layer::site_title(&on_title, &title) {
+                return;
+            }
             if let Some(window) = on_title.get_window(LABEL) {
                 let _ = window.set_title(window_title(&title));
                 // A new title lays the title bar out anew, the buttons back at its top.
@@ -233,9 +279,10 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // so), that a connector's sign-in and the window's own browser sign-in come back here (`deep_link.rs`,
         // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
         // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
-        // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
+        // (`renderer`, and Linux's `system` facts: graphics.rs), and that this computer's settings are the app's own
+        // screens (`settings`, ADR 0255: the site lists them and asks for one with `this_mac` `settings`); nothing else.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, settings: 1, renderer: {renderer:?}, system: {system} }});",
             renderer = crate::graphics::renderer(),
             system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
@@ -270,7 +317,12 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         })
         // A whole page loading again (⌘R, macOS ended it, a full navigation): the cover, never a blank window.
         .on_page_load(move |page, payload| match payload.event() {
-            PageLoadEvent::Started => crate::cover::show(&on_load),
+            // The blank page of a window with no server yet loads under the first run: no cover for it.
+            PageLoadEvent::Started if payload.url().scheme() == "about" => {}
+            PageLoadEvent::Started => {
+                crate::app_layer::site_loading(&on_load, payload.url());
+                crate::cover::show(&on_load);
+            }
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
             PageLoadEvent::Finished => {
                 page_loaded();
@@ -343,12 +395,15 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
     if let Some(step) = saved.zoom {
         let _ = built.set_zoom(crate::menus::restore_zoom(app, step));
     }
-    crate::cover::attach(app, &window).map_err(|e| e.to_string())?;
-    crate::cover::opening(app);
+    crate::cover::attach(app, &window, splash).map_err(|e| e.to_string())?;
+    // The next opening's check that this one painted: only for a site (a blank window never paints one).
+    if splash {
+        crate::cover::opening(app);
+    }
     #[cfg(target_os = "macos")]
     follow_lights(app);
     fit_page(app);
-    front(app)
+    Ok(())
 }
 
 /// The main frame's renderer ended: logged with its exit code (`0x80000003` is the `STATUS_BREAKPOINT` WebView2's page
@@ -404,7 +459,7 @@ fn reload_when_renderer_ends(app: AppHandle, view: &tauri::webview::PlatformWebv
 }
 
 /// The window's name for the page's title: the site's own long title (sign-in, the landing) is just the app's.
-fn window_title(title: &str) -> &str {
+pub fn window_title(title: &str) -> &str {
     let title = title.trim();
     if title.is_empty() || title.starts_with("agentes.chat ·") {
         "agentes.chat"
@@ -423,6 +478,8 @@ pub fn fit_page(app: &AppHandle) {
     let _ = app.run_on_main_thread(move || {
         let window = handle.get_window(LABEL);
         let full = window.as_ref().is_some_and(in_full_screen);
+        // The app layer draws its own title bar: it hears full screen too.
+        crate::app_layer::full_screen(&handle, full);
         let Some(page) = handle.get_webview(LABEL) else { return };
         let zoom = crate::menus::current_zoom(&handle).to_string();
         let mut told = PAGE_TOLD.lock().unwrap_or_else(|e| e.into_inner());
@@ -820,19 +877,48 @@ fn quarantine(path: &Path) {
 #[cfg(not(target_os = "macos"))]
 fn quarantine(_path: &Path) {}
 
-fn front(app: &AppHandle) -> Result<(), String> {
+/// The window in front, typing in what shows on top (`focus_top`).
+pub fn front(app: &AppHandle) -> Result<(), String> {
     let window = app.get_window(LABEL).ok_or("window not found")?;
     let _ = window.unminimize();
     window.show().map_err(|e| e.to_string())?;
-    window.set_focus().map_err(|e| e.to_string())
+    window.set_focus().map_err(|e| e.to_string())?;
+    focus_top(app, false);
+    Ok(())
+}
+
+/// The main window is the one in front (focus moves only inside it, never brings it forward).
+pub fn window_is_key(app: &AppHandle) -> bool {
+    app.get_window(LABEL).and_then(|w| w.is_focused().ok()).unwrap_or(false)
+}
+
+/// Typing goes to the web view on top: the app layer while it shows, else the cover while it covers, else the site.
+/// `only_if_key`: nothing while another window is in front (moving focus inside the window never brings it forward).
+pub fn focus_top(app: &AppHandle, only_if_key: bool) {
+    if only_if_key && !window_is_key(app) {
+        return;
+    }
+    let top = if crate::app_layer::shown(app) {
+        app.get_webview(crate::app_layer::LABEL)
+    } else if crate::cover::covering(app) {
+        app.get_webview(crate::cover::LABEL)
+    } else {
+        None
+    };
+    if let Some(view) = top.or_else(|| app.get_webview(LABEL)) {
+        let _ = view.set_focus();
+    }
 }
 
 /// What the site may ask of this computer: which of its organizations this computer works for (`status`),
 /// pairing it with one (`connect`: the system's own dialog asks first, then the site confirms the runner's
-/// code with its own session), reconnecting it (`reconnect`), Preferences on a tab (`prefs`), the menu bar's
-/// access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
-/// notification while the app is in the background (`notify`), the first run's window to pick another server
-/// (`servers`: the sign-in page's way out, the same window as Servers › Add a server…), the app's own speed numbers
+/// code with its own session), reconnecting it (`reconnect`), This computer's settings on a section (`settings`, and
+/// `prefs` on a tab from older sites: the app layer, ADR 0255), its own settings list for the layer's (`settingsNav`),
+/// how many of this computer's essentials need the person and whether the server runs here (`thisMacHealth`), the menu
+/// bar's access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
+/// notification while the app is in the background (`notify`), System Settings on a permission it was refused
+/// (`privacy`) and the Local Network permission an Android phone over Wi-Fi needs (`localNetwork`), the first run to
+/// pick another server (`servers`: the sign-in page's way out, the same as Servers › Add a server…), the app's own speed numbers
 /// for the site's report (`vitals`: its opening and its web view's memory) and, on the server here, signing its
 /// owner in (`signIn`: the app spends its owner key on a one-time sign-in, which the window trades itself) and the
 /// folder of its files (`files`: Storage's "Show the folder"). Rust checks
@@ -850,6 +936,28 @@ pub struct Bridge {
     signed_in: Mutex<Option<Instant>>,
 }
 
+/// What the popover last worked out about this computer's essentials (`health_publish`), for the site's settings list
+/// (`this_mac` `thisMacHealth`): how many need the person, and whether the server runs here.
+#[derive(Default)]
+pub struct HealthPublished(Mutex<Option<(u32, bool)>>);
+
+/// The popover's count of the essentials that need the person, and whether the server runs here.
+#[tauri::command]
+pub fn health_publish(app: AppHandle, webview: tauri::Webview, needs: u32, server: bool) -> Result<(), String> {
+    if webview.label() != "popover" {
+        return Err("only the popover says this".into());
+    }
+    *app.state::<HealthPublished>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some((needs.min(100), server));
+    Ok(())
+}
+
+/// The answer to `thisMacHealth`: what the popover published, or before it did, nothing needing the person and whether
+/// the app runs a server here.
+fn health_answer(published: Option<(u32, bool)>, runs_here: bool) -> Value {
+    let (needs, server) = published.unwrap_or((0, runs_here));
+    json!({ "needs": needs, "server": server })
+}
+
 const SIGN_IN_GAP: Duration = Duration::from_secs(10);
 
 /// How long the popover has to answer (`connect` waits for the runner's code).
@@ -860,7 +968,31 @@ const LISTEN_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_WAITING: usize = 16;
 /// Organizations in the Go menu (⌘⌥1–9 for the first nine).
 const MAX_ORGS: usize = 20;
-const PREF_TABS: &[&str] = &["folders", "tools", "updates"];
+const PREF_TABS: &[&str] = &["folders", "tools", "updates", "servers"];
+/// The permissions the site may open System Settings on, where macOS refused it one (a voice message, Wi-Fi pairing).
+const PRIVACY_PANES: &[&str] = &["microphone", "network"];
+
+/// The app layer's route for an older site's `prefs{tab}` (ADR 0255): the tabs became sections of This computer's
+/// settings. `servers` is the server here's section when it runs here, else the app's own list of servers.
+fn prefs_route(tab: &str, runs_here: bool) -> crate::app_layer::Route {
+    use crate::app_layer::{Route, Section};
+    match tab {
+        "tools" => Route::settings(Some(Section::Folders), Some("tools")),
+        "updates" => Route::settings(Some(Section::Overview), Some("updates")),
+        "servers" if runs_here => Route::settings(Some(Section::Server), None),
+        "servers" => Route::settings(Some(Section::App), Some("servers")),
+        _ => Route::settings(Some(Section::Folders), None),
+    }
+}
+
+/// The app layer's route for the site's `settings` (already checked).
+fn settings_route(request: &Value) -> Option<crate::app_layer::Route> {
+    let section: Option<crate::app_layer::Section> = match request.get("section") {
+        Some(section) => Some(serde_json::from_value(section.clone()).ok()?),
+        None => None,
+    };
+    Some(crate::app_layer::Route::settings(section, request["focus"].as_str()))
+}
 /// A notification's size, as a phone push's (apps/server push-messages.ts).
 const NOTIFY_TITLE_MAX: usize = 80;
 const NOTIFY_BODY_MAX: usize = 180;
@@ -951,6 +1083,34 @@ fn checked(request: &Value) -> Result<Value, String> {
         Some("prefs") => match text("tab") {
             Some(tab) if PREF_TABS.contains(&tab) => Ok(json!({ "kind": "prefs", "tab": tab })),
             _ => Err("unknown tab".into()),
+        },
+        // This computer's settings (the app layer, ADR 0255), on one of its sections and one of its rows.
+        Some("settings") => {
+            let mut out = json!({ "kind": "settings" });
+            if let Some(section) = text("section") {
+                if !["overview", "folders", "server", "activity", "app"].contains(&section) {
+                    return Err("unknown section".into());
+                }
+                out["section"] = json!(section);
+            }
+            if let Some(focus) = text("focus") {
+                if !crate::app_layer::FOCUS.contains(&focus) {
+                    return Err("unknown focus".into());
+                }
+                out["focus"] = json!(focus);
+            }
+            Ok(out)
+        }
+        // The site's own settings list, for the layer's.
+        Some("settingsNav") => {
+            let nav = crate::app_layer::checked_nav(request)?;
+            Ok(json!({ "kind": "settingsNav", "org": nav["org"], "main": nav["main"], "advanced": nav["advanced"] }))
+        }
+        Some("thisMacHealth") => Ok(json!({ "kind": "thisMacHealth" })),
+        Some("localNetwork") => Ok(json!({ "kind": "localNetwork" })),
+        Some("privacy") => match text("pane") {
+            Some(pane) if PRIVACY_PANES.contains(&pane) => Ok(json!({ "kind": "privacy", "pane": pane })),
+            _ => Err("unknown pane".into()),
         },
         // The Dock's badge: two counts, nothing else.
         Some("badge") => {
@@ -1137,10 +1297,10 @@ pub fn focused(app: &AppHandle) {
     }
 }
 
-/// Preferences › General › "Let me know about messages and requests" (the popover sends it at start).
+/// Settings › "Let me know about messages and requests" (the popover sends it at start).
 #[tauri::command]
-pub fn notify_site_set(app: AppHandle, window: tauri::Window, on: bool) -> Result<(), String> {
-    if !matches!(window.label(), "popover" | "prefs") {
+pub fn notify_site_set(app: AppHandle, webview: tauri::Webview, on: bool) -> Result<(), String> {
+    if !matches!(webview.label(), "popover" | "main-app") {
         return Err("only the app's own windows set this".into());
     }
     app.state::<Notices>().0.lock().unwrap_or_else(|e| e.into_inner()).on = on;
@@ -1170,12 +1330,12 @@ fn ask_to_pair(app: &AppHandle, org: &str, host: &str) -> bool {
         .blocking_show()
 }
 
-/// Preferences › This Mac's switch for a workspace this computer doesn't work for yet: the same system dialog as the
+/// Settings › This Mac's switch for a workspace this computer doesn't work for yet: the same system dialog as the
 /// site's "This Mac", for a server of the app's list. False when declined.
 #[tauri::command]
-pub async fn pair_ask(app: AppHandle, window: tauri::Window, server: String, org: String) -> Result<bool, String> {
-    if window.label() != "prefs" {
-        return Err("only Preferences asks this".into());
+pub async fn pair_ask(app: AppHandle, webview: tauri::Webview, server: String, org: String) -> Result<bool, String> {
+    if webview.label() != "main-app" {
+        return Err("only the app's settings ask this".into());
     }
     if !servers::get(&app).servers.contains(&server) {
         return Err("not a server of this app".into());
@@ -1267,10 +1427,35 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             }
             return Ok(json!({}));
         }
-        // Only a window of the app's own: the person picks and confirms the server there.
+        // Only the app's own screens: the person picks and confirms the server there.
         Some("servers") => {
-            crate::present(&app, "welcome")?;
+            let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Servers));
+            crate::app_layer::show(&app, route)?;
             return Ok(json!({}));
+        }
+        // This computer's settings, never the site's to draw (ADR 0255).
+        Some("settings") => {
+            let route = settings_route(&request).ok_or("unknown section")?;
+            crate::app_layer::open_from_site(&app, route)?;
+            return Ok(json!({}));
+        }
+        // An older site's Preferences tab: the same settings, on the section the tab became.
+        Some("prefs") => {
+            let route = prefs_route(request["tab"].as_str().unwrap_or_default(), crate::local_server::runs(&app));
+            crate::app_layer::open_from_site(&app, route)?;
+            return Ok(json!({}));
+        }
+        Some("settingsNav") => {
+            let mut nav = request.clone();
+            if let Some(fields) = nav.as_object_mut() {
+                fields.remove("kind");
+            }
+            crate::app_layer::set_nav(&app, &origin, nav);
+            return Ok(json!({}));
+        }
+        Some("thisMacHealth") => {
+            let published = *app.state::<HealthPublished>().0.lock().unwrap_or_else(|e| e.into_inner());
+            return Ok(health_answer(published, crate::local_server::runs(&app)));
         }
         // The other servers' workspaces, as last read (the page's own server lists its own): the app reads them every
         // minute while this window shows.
@@ -1284,10 +1469,10 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             let others: Vec<_> = crate::workspaces::list(&app).into_iter().filter(|s| s.server != origin).collect();
             return Ok(json!({ "servers": others }));
         }
-        // "Add a workspace": the welcome window, in that mode.
+        // "Add a workspace": the first run, in that mode.
         Some("addWorkspace") => {
-            *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("add");
-            crate::present(&app, "welcome")?;
+            let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Add));
+            crate::app_layer::show(&app, route)?;
             return Ok(json!({}));
         }
         // A workspace on another server of the list: the window goes there (already signed in, its cookies).
@@ -1602,6 +1787,72 @@ mod tests {
         ] {
             assert!(checked(&bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn this_computers_settings_from_the_site() {
+        assert_eq!(checked(&json!({ "kind": "settings", "x": 1 })), Ok(json!({ "kind": "settings" })));
+        assert_eq!(
+            checked(&json!({ "kind": "settings", "section": "folders", "focus": "tools" })),
+            Ok(json!({ "kind": "settings", "section": "folders", "focus": "tools" }))
+        );
+        assert!(checked(&json!({ "kind": "settings", "section": "billing" })).is_err());
+        assert!(checked(&json!({ "kind": "settings", "focus": "anything" })).is_err());
+        assert_eq!(
+            settings_route(&json!({ "kind": "settings", "section": "server", "focus": "reach" })),
+            Some(crate::app_layer::Route::settings(Some(crate::app_layer::Section::Server), Some("reach")))
+        );
+        assert_eq!(
+            settings_route(&json!({ "kind": "settings" })),
+            Some(crate::app_layer::Route::settings(None, None))
+        );
+    }
+
+    #[test]
+    fn an_older_sites_preferences_tab_opens_its_section() {
+        use crate::app_layer::{Route, Section};
+        assert_eq!(checked(&json!({ "kind": "prefs", "tab": "servers" })), Ok(json!({ "kind": "prefs", "tab": "servers" })));
+        assert_eq!(prefs_route("folders", false), Route::settings(Some(Section::Folders), None));
+        assert_eq!(prefs_route("tools", false), Route::settings(Some(Section::Folders), Some("tools")));
+        assert_eq!(prefs_route("updates", true), Route::settings(Some(Section::Overview), Some("updates")));
+        assert_eq!(prefs_route("servers", true), Route::settings(Some(Section::Server), None));
+        assert_eq!(prefs_route("servers", false), Route::settings(Some(Section::App), Some("servers")));
+    }
+
+    #[test]
+    fn the_sites_settings_list_reaches_the_app_checked() {
+        let nav = json!({
+            "kind": "settingsNav",
+            "org": { "id": "o1", "name": "Acme" },
+            "main": [{ "id": "people", "label": "People", "icon": "users", "path": "/org/o1/settings/people" }],
+            "origin": "https://evil.example",
+        });
+        assert_eq!(
+            checked(&nav),
+            Ok(json!({
+                "kind": "settingsNav",
+                "org": { "id": "o1", "name": "Acme" },
+                "main": [{ "id": "people", "label": "People", "icon": "users", "path": "/org/o1/settings/people" }],
+                "advanced": [],
+            }))
+        );
+        let outside = json!({ "kind": "settingsNav", "main": [{ "id": "x", "label": "X", "icon": "x", "path": "/admin" }] });
+        assert!(checked(&outside).is_err());
+    }
+
+    #[test]
+    fn health_permissions_and_local_network() {
+        assert_eq!(checked(&json!({ "kind": "thisMacHealth", "needs": 9 })), Ok(json!({ "kind": "thisMacHealth" })));
+        assert_eq!(health_answer(Some((2, true)), false), json!({ "needs": 2, "server": true }));
+        assert_eq!(health_answer(None, true), json!({ "needs": 0, "server": true }), "before the popover said");
+        assert_eq!(checked(&json!({ "kind": "localNetwork", "x": 1 })), Ok(json!({ "kind": "localNetwork" })));
+        assert_eq!(
+            checked(&json!({ "kind": "privacy", "pane": "microphone" })),
+            Ok(json!({ "kind": "privacy", "pane": "microphone" }))
+        );
+        assert_eq!(checked(&json!({ "kind": "privacy", "pane": "network" })), Ok(json!({ "kind": "privacy", "pane": "network" })));
+        assert!(checked(&json!({ "kind": "privacy", "pane": "disk" })).is_err());
+        assert!(checked(&json!({ "kind": "privacy" })).is_err());
     }
 
     #[test]

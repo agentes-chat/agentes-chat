@@ -10,7 +10,7 @@ import type {
   StepChange,
   Tailnet,
 } from "../control/local-server";
-import type { LinkInfo } from "../control/pair";
+import type { LinkInfo, PairTarget } from "../control/pair";
 import type { MacPermission, SetupState } from "../control/permissions";
 import type { Platform } from "../control/platform";
 import type { ServerList, ServerWorkspaces } from "../control/server";
@@ -18,9 +18,54 @@ import type { ThisMacRequest } from "../control/this-mac";
 import type { TrayState } from "../control/tray";
 import type { ReportFacts } from "../report/report";
 
-/** The app's windows (Tauri labels). */
-export type WindowName = "popover" | "welcome" | "prefs" | "notch";
-export const WINDOW_NAMES: readonly WindowName[] = ["popover", "welcome", "prefs", "notch"];
+/**
+ * The app's screens: the menu bar's popover and the notch (windows of their own), and the app layer (`app`), the
+ * main window's web view of the app's own screens (ADR 0255; its Tauri label is `main-app`).
+ */
+export type WindowName = "popover" | "app" | "notch";
+export const WINDOW_NAMES: readonly WindowName[] = ["popover", "app", "notch"];
+
+/** This computer's settings, by section (the app layer's settings route). */
+export type LayerSection = "overview" | "folders" | "server" | "activity" | "app";
+export const LAYER_SECTIONS: readonly LayerSection[] = ["overview", "folders", "server", "activity", "app"];
+
+/** What the app layer shows (app_layer.rs `Route` is the source). */
+export type LayerRoute =
+  | { screen: "firstRun"; mode?: "add" | "owner" | "servers" }
+  | { screen: "settings"; section?: LayerSection; focus?: string }
+  | { screen: "pairOffer"; target: PairTarget }
+  | { screen: "prepare"; org: string; server: string; resumed?: boolean }
+  | { screen: "pairLink"; server: string; code: string }
+  /** A connect link is waiting: read it with `takeLink()`. */
+  | { screen: "link" }
+  | { screen: "iphone" };
+
+/** How the layer shows: not at all, the whole window, or a sheet over the site (macOS only). */
+export type LayerMode = "hidden" | "full" | "sheet";
+
+/** One of the site's settings sections, as it sent them (`this_mac` `settingsNav`). */
+export interface SiteNavItem {
+  id: string;
+  label: string;
+  icon: string;
+  path: string;
+}
+
+export interface SiteNav {
+  org: { id: string; name: string } | null;
+  main: SiteNavItem[];
+  advanced: SiteNavItem[];
+}
+
+/** What the layer draws from (`layer://state`); `seq` grows with every route shown or hidden. */
+export interface LayerState {
+  seq: number;
+  mode: LayerMode;
+  route: LayerRoute | null;
+  /** `there`: a page of a server of the app's list shows, its cover out of the way; `nav`: its settings list. */
+  site: { there: boolean; nav: SiteNav | null };
+  fullScreen: boolean;
+}
 
 /** One organization home and its runner child, as the Rust side knows it. */
 export interface RunnerInfo {
@@ -94,8 +139,27 @@ export interface Host {
   removeRunner(homeId: string): Promise<void>;
   onLine(cb: (homeId: string, line: string) => void): () => void;
   onRunnerState(cb: (change: RunnerStateChange) => void): () => void;
-  /** A window was brought up (`show_window`). */
+  /** The popover or the notch was brought up (`show_window`). */
   onShown(cb: (name: WindowName) => void): () => void;
+  /**
+   * Puts a route on the app layer, in the main window (made if needed): from the layer itself, the popover, and the
+   * cover (only `{ screen: "firstRun", mode: "servers" }`).
+   */
+  showLayer(route: LayerRoute): Promise<void>;
+  /** The layer steps aside, now or once the site painted (`afterSitePaints`: a server was just chosen). */
+  hideLayer(opts?: { afterSitePaints?: boolean }): Promise<void>;
+  /** What the layer shows now (the layer only). */
+  layerState(): Promise<LayerState>;
+  /** Every change of the layer's state (the layer only). */
+  onLayer(cb: (state: LayerState) => void): () => void;
+  /** The layer painted route `seq`: it shows now. */
+  layerPainted(seq: number): Promise<void>;
+  /** A workspace section of the layer's settings list: the layer steps aside and the site moves to `path`. */
+  siteGo(path: string): Promise<void>;
+  /** The first run's sign-in to agentes.chat: the window loads its sign-in, Google and Apple going to the browser. */
+  firstRunSignIn(method: "google" | "apple" | "email"): Promise<void>;
+  /** The popover's count of this computer's essentials that need the person, for the site (`thisMacHealth`). */
+  publishHealth(health: { needs: number; server: boolean }): Promise<void>;
   /**
    * A page of a server this app opens goes to the main window (switching to that server); a provider's
    * sign-in page opens in the person's browser. Nothing else opens.
@@ -113,26 +177,18 @@ export interface Host {
   /** The app read the workspaces again and something changed. */
   onWorkspaces(cb: () => void): () => void;
   /**
-   * A pair link's workspace and maker, asked of its server by the app without a session (the welcome window only);
+   * A pair link's workspace and maker, asked of its server by the app without a session (the app layer only);
    * rejects with `link_expired` (unknown, used or expired) or `unreachable`.
    */
   pairLinkInfo(server: string, code: string): Promise<LinkInfo>;
-  /** The system's own dialog before Preferences pairs this computer with `org` on `server`: false when declined. */
+  /** The system's dialog before the app's settings pair this computer with `org` on `server`: false when declined. */
   askToPair(server: string, org: string): Promise<boolean>;
   /**
-   * One request to a server of the app's list with the main window's session there (Preferences and the welcome
-   * window): this computer's devices, who can use them, a phone's Stop and confirming this computer's own pairing
+   * One request to a server of the app's list with the main window's session there (the app layer only): this
+   * computer's devices, who can use them, a phone's Stop and confirming this computer's own pairing
    * code (`site_fetch` in workspaces.rs allows only those).
    */
   siteFetch(server: string, method: string, path: string, body?: string): Promise<SiteAnswer>;
-  /**
-   * How the welcome window opens, taken once: `add` from the site's "Add a workspace", `owner` when the app opened it
-   * on Run here's form to make a new owner (no account is left on the server it runs, or it was just erased), else
-   * null.
-   */
-  welcomeMode(): Promise<"add" | "owner" | null>;
-  /** The welcome window in its adding mode ("Add a workspace", from Preferences). */
-  addWorkspace(): Promise<void>;
   /** Takes `server` out of the list (the server and the account there stay as they are). */
   removeServer(server: string): Promise<void>;
   /** Signs the app out of `server`, which stays in the list (signed out); a window on it goes to its sign-in. */
@@ -143,7 +199,7 @@ export interface Host {
   checkServer(server: string): Promise<ServerCheck>;
   /** The connect link (`agenteschat://connect…`) waiting for an answer, taken once; null when none. */
   takeLink(): Promise<string | null>;
-  /** A connect link arrived (the welcome window takes it). */
+  /** A connect link arrived (the app layer takes it). */
   onLink(cb: () => void): () => void;
   /** Shows a local folder in Finder. */
   revealFolder(path: string): Promise<void>;
@@ -151,8 +207,9 @@ export interface Host {
   setTrayState(state: TrayState): Promise<void>;
   /** The menu bar icon on a Mac (Windows and Linux always keep theirs, `tray.rs`). */
   setTrayVisible(show: boolean): Promise<void>;
-  showWindow(name: WindowName): Promise<void>;
-  hideWindow(name: WindowName): Promise<void>;
+  /** The popover (the notch's way to it); every other screen is the app layer's (`showLayer`). */
+  showWindow(name: Exclude<WindowName, "app">): Promise<void>;
+  hideWindow(name: Exclude<WindowName, "app">): Promise<void>;
   quit(): Promise<void>;
   /**
    * Asks with the system's own dialog whether to quit, and quits on yes (`quit_ask`): a window of its own, which stays
@@ -185,7 +242,7 @@ export interface Host {
   notchInfo(): Promise<NotchInfo | null>;
   /** Sizes and shows the notch window over the notch (0 × 0 hides it); null when there's no notch. */
   notchPlace(width: number, height: number): Promise<NotchInfo | null>;
-  /** The current window's size in points (the popover follows its content). */
+  /** The popover's size in points (it follows its content); never the layer's, which is the main window's. */
   resize(width: number, height: number): Promise<void>;
   /** The site in the main window asking this computer (the popover answers, `this_mac` in main_window.rs). */
   onThisMac(cb: (id: number, request: ThisMacRequest) => void): () => void;
@@ -237,9 +294,9 @@ export interface Host {
   /** The server here goes back to one of its backups; rejects with `start` when that backup didn't start. */
   restoreLocalServer(file: string): Promise<void>;
   /**
-   * "Erase and start over": it stops, its folder moves whole to `eraseTo`, the app forgets it and the welcome window
-   * opens. Resolves with where its data went; when the folder couldn't move (its data stays where it was), rejects with
-   * `held` (another server uses the folder), `move` (the move itself failed; it stays stopped) or `running` (it started
+   * "Erase and start over": it stops, its folder moves whole to `eraseTo`, the app forgets it and the first run
+   * opens on Run here's form. Resolves with where its data went; when the folder couldn't move (its data stays where
+   * it was), rejects with `held` (another server uses the folder), `move` (the move itself failed; it stays stopped) or `running` (it started
    * again meanwhile).
    */
   eraseLocalServer(): Promise<string>;

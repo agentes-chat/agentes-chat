@@ -1,10 +1,10 @@
 /**
- * The welcome window: how the app finds its server. "Onde fica o seu workspace?" first, the Cloud chosen and one's
- * own server beside it; one's own server leads to Connect (an address, or one found on this computer or the Tailscale
- * network, and the one-command setup for a server that has none yet) or to running agentes.chat on this
- * computer. A connect link (`agenteschat://connect`) opens here
- * too: the server in large type, nothing changes before Connect. Choosing a server opens the main window there
- * and closes this one. A pair link (`agenteschat://pair`) asks to connect this computer instead (`PairLinkSheet`).
+ * The first run, on the main window's app layer (ADR 0255): how the app finds its server. "Onde fica o seu workspace?"
+ * first, the Cloud chosen and one's own server beside it; one's own server leads to Connect (an address, or one found
+ * on this computer or the Tailscale network, and the one-command setup for a server that has none yet) or to running
+ * agentes.chat on this computer. A connect link (`agenteschat://connect`) opens here too: the server in large type,
+ * nothing changes before Connect. Choosing a server loads it in the main window and the layer steps aside once it
+ * painted. A pair link (`agenteschat://pair`) asks to connect this computer instead (`PairLinkSheet`).
  */
 import {
   CLOUD_SERVER,
@@ -66,7 +66,8 @@ import {
 } from "../control/local-server";
 import { parsePairLink } from "../control/pair";
 import { serverKind, serverName } from "../control/server";
-import { useOnShown, useTailnet, writePref } from "../hooks";
+import { useTailnet } from "../hooks";
+import { settingsRouteOf } from "../layer/routes";
 import { BrandFace, CommandCopy } from "../ui/bits";
 import { CopyDetails, ReachProblem, ReachProgress, ReachRow, ServerTile } from "../ui/here";
 import { hintFor, PrefRow } from "../ui/settings";
@@ -75,7 +76,12 @@ import { PairLinkSheet } from "./Pair";
 
 const PROBLEM_HOSTLESS: ReadonlySet<ConnectProblem> = new Set(["invalid"]);
 
-export function FirstRun() {
+/**
+ * `mode`: why the layer opened it (`add` from "Add a workspace", `owner` when the server here has no account left and
+ * Run here's form makes the new owner, `servers` to pick another server). `shownAt`: the layer's `seq` when it was put
+ * on screen; a new one is the first run shown again.
+ */
+export function FirstRun({ mode, shownAt }: { mode?: "add" | "owner" | "servers"; shownAt?: number } = {}) {
   const host = useHost();
   const [screen, setScreen] = useState<FirstScreen>("choose");
   // Opened by the site's "Add a workspace" (ADR 0154): its first screen says so.
@@ -120,10 +126,11 @@ export function FirstRun() {
     });
   }, []);
 
+  // The site comes in under the layer, which steps aside once it painted (never its cover in between).
   const finish = useCallback(
     async (server: string, page?: string) => {
       await host.chooseServer(server, page);
-      await host.hideWindow("welcome").catch(() => {});
+      await host.hideLayer({ afterSitePaints: true }).catch(() => {});
     },
     [host],
   );
@@ -177,25 +184,21 @@ export function FirstRun() {
     [host, finish],
   );
 
-  // How it opened: taken when it's made, and each time it shows again.
+  // How it opened (the layer's route): when it's made, and each time it shows again.
   const takeMode = useCallback(() => {
-    void host
-      .welcomeMode()
-      .then((mode) => {
-        setAdding(mode === "add");
-        // No account left on the server the app runs, or it was just erased: straight to Run here's form, which
-        // makes the new owner.
-        const at = screenRef.current;
-        if (mode !== "owner" || at === "link" || at === "pair" || settingUp.current) return;
-        setTrail(["choose"]);
-        setScreen("here");
-      })
-      .catch(() => setAdding(false));
+    setAdding(mode === "add");
+    // No account left on the server the app runs, or it was just erased: straight to Run here's form, which makes
+    // the new owner.
+    const at = screenRef.current;
+    if (mode === "owner" && at !== "link" && at !== "pair" && !settingUp.current) {
+      setTrail(["choose"]);
+      setScreen("here");
+    }
     void host
       .workspaces()
       .then((list) => setCloudSignedIn(list.some((s) => s.server === CLOUD_SERVER && s.signedIn)))
       .catch(() => setCloudSignedIn(false));
-  }, [host]);
+  }, [host, mode]);
   useEffect(takeMode, [takeMode]);
 
   useEffect(() => {
@@ -222,15 +225,22 @@ export function FirstRun() {
     return host.onLink(take);
   }, [host, openLink]);
 
-  // Opened again ("Add a server…"): from the start, unless a link or the setup is on screen.
-  useOnShown("welcome", () => {
+  // Shown again ("Add a server…"): from the start, unless a link or the setup is on screen.
+  const shownFirst = useRef(shownAt);
+  const again = useRef(() => {});
+  again.current = () => {
     takeMode();
     // A link or pair screen whose sheet is gone has nothing to draw: it starts over too.
     if ((screen === "link" && link) || (screen === "pair" && pair) || settingUp.current) return;
     setTrail([]);
     setScreen("choose");
     setAddress("");
-  });
+  };
+  useEffect(() => {
+    if (shownAt === undefined || shownAt === shownFirst.current) return;
+    shownFirst.current = shownAt;
+    again.current();
+  }, [shownAt]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -239,7 +249,7 @@ export function FirstRun() {
       if (action === "back") back();
       else if (action === "close")
         void host.servers().then(({ current }) => {
-          if (current) void host.hideWindow("welcome").catch(() => {});
+          if (current) void host.hideLayer().catch(() => {});
         });
     };
     window.addEventListener("keydown", onKey);
@@ -288,7 +298,7 @@ export function FirstRun() {
               // An address typed in Connect: back there with it, as Esc does.
               if (link.typed && trail.length > 0) return back();
               void host.servers().then(({ current }) => {
-                if (current) void host.hideWindow("welcome").catch(() => {});
+                if (current) void host.hideLayer().catch(() => {});
                 else if (trail.length > 0) back();
                 else setScreen("choose");
               });
@@ -303,7 +313,7 @@ export function FirstRun() {
             onClose={() => {
               setPair(null);
               void host.servers().then(({ current }) => {
-                if (current) void host.hideWindow("welcome").catch(() => {});
+                if (current) void host.hideLayer().catch(() => {});
                 else if (trail.length > 0) back();
                 else setScreen("choose");
               });
@@ -474,10 +484,7 @@ function ProblemLine({ problem, host: where }: { problem: ConnectProblem; host: 
     problem === "app-too-old"
       ? {
           label: t("desktop.connect.checkUpdates"),
-          run: () => {
-            writePref("prefsTab", "updates");
-            void host.showWindow("prefs").catch(() => {});
-          },
+          run: () => void host.showLayer(settingsRouteOf("updates")).catch(() => {}),
         }
       : problem === "unreachable-tailnet" && tailscaleFrom(host.platform, tailnet) === "app"
         ? { label: t("desktop.here.openTailscale"), run: () => void host.openTailscale("app").catch(() => {}) }
@@ -885,7 +892,7 @@ function RunHere({
     try {
       await host.installLocalServer(choice);
       setSetup((s) => s && { ...s, end: "done" });
-      if (!warned.current) await host.hideWindow("welcome").catch(() => {});
+      if (!warned.current) await host.hideLayer({ afterSitePaints: true }).catch(() => {});
     } catch (e) {
       if (e === "cancelled") backToForm();
       else setSetup((s) => s && { ...s, end: "failed" });
@@ -904,7 +911,7 @@ function RunHere({
         {...setup}
         onCancel={cancel}
         onRetry={() => void start()}
-        onContinue={() => void host.hideWindow("welcome").catch(() => {})}
+        onContinue={() => void host.hideLayer().catch(() => {})}
       />
     );
   }

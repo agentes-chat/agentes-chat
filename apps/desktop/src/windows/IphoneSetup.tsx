@@ -656,10 +656,9 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
                 <>
                   <Button
                     variant="ghost"
-                    onClick={() => {
-                      void host.showWindow("prefs").catch(() => {});
-                      onClose();
-                    }}
+                    onClick={() =>
+                      void host.showLayer({ screen: "settings", section: "folders", focus: "phone" }).catch(() => {})
+                    }
                   >
                     {t("desktop.common.back")}
                   </Button>

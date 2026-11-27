@@ -115,7 +115,8 @@ fn menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
         menu.append(&item(action.0, action.1)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&item("prefs", "trayPrefs")?)?;
+    // This computer's settings (the app layer, ADR 0255), the same as ⌘, on a Mac.
+    menu.append(&item("prefs", "trayThisMac")?)?;
     menu.append(&item("quit", "quit")?)?;
     Ok(menu)
 }
@@ -165,8 +166,8 @@ pub fn set_state(app: &AppHandle, state: &str) -> Result<(), String> {
 
 /// On a Mac, whether the menu bar icon shows (the popover decides: agents here, or the person's choice).
 #[tauri::command]
-pub fn tray_visible(app: AppHandle, window: tauri::Window, show: bool) -> Result<(), String> {
-    if !matches!(window.label(), "popover" | "prefs") {
+pub fn tray_visible(app: AppHandle, webview: tauri::Webview, show: bool) -> Result<(), String> {
+    if !matches!(webview.label(), "popover" | "main-app") {
         return Err("only the app's own windows set this".into());
     }
     #[cfg(target_os = "macos")]

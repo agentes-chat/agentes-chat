@@ -27,7 +27,7 @@ const EVERY: Duration = Duration::from_secs(60);
 const EVERY_HIDDEN: Duration = Duration::from_secs(5 * 60);
 /// Each wait is this share longer or shorter, at random.
 const JITTER: f64 = 0.15;
-/// Preferences and the welcome window ask for a fresh list when a server's answer is older than this.
+/// The app layer asks for a fresh list when a server's answer is older than this.
 const STALE: Duration = Duration::from_secs(30);
 const TIMEOUT: Duration = Duration::from_secs(10);
 /// Workspaces kept per server.
@@ -640,16 +640,16 @@ fn tell(app: &AppHandle, server: &str, org: &Org, count: u64, account: Option<&s
     main_window::notice(app, &title, &body, url);
 }
 
-/// Preferences › Servers, the popover and the welcome window's "Add a workspace": every server's workspaces (the
-/// app's own windows only). Preferences and the welcome window, opened by a person, have them read again when some
-/// answer is stale; the popover reads them when they changed, and asking again from there would read the server
-/// open in the window at every change of another's.
+/// The app layer (settings, the first run's "Add a workspace") and the popover: every server's workspaces (the app's
+/// own screens only). The layer, opened by a person, has them read again when some answer is stale; the popover reads
+/// them when they changed, and asking again from there would read the server open in the window at every change of
+/// another's.
 #[tauri::command]
-pub fn workspaces_get(app: AppHandle, window: tauri::Window) -> Result<Vec<ServerWorkspaces>, String> {
-    if !matches!(window.label(), "prefs" | "popover" | "welcome") {
+pub fn workspaces_get(app: AppHandle, webview: tauri::Webview) -> Result<Vec<ServerWorkspaces>, String> {
+    if !matches!(webview.label(), "main-app" | "popover") {
         return Err("only the app's own windows ask this".into());
     }
-    if window.label() != "popover" && stale(&app) {
+    if webview.label() != "popover" && stale(&app) {
         trigger(&app);
     }
     Ok(list(&app))
@@ -731,46 +731,23 @@ pub fn with_session(
     Ok(SiteAnswer { status, body: text })
 }
 
-/// Preferences › This Mac and the welcome window's pairing card read and set this computer's devices on its server
+/// The app layer's settings (This Mac) and pairing sheets read and set this computer's devices on its server
 /// (`with_session`).
 #[tauri::command]
 pub async fn site_fetch(
     app: AppHandle,
-    window: tauri::Window,
+    webview: tauri::Webview,
     server: String,
     method: String,
     path: String,
     body: Option<String>,
 ) -> Result<SiteAnswer, String> {
-    if !matches!(window.label(), "prefs" | "welcome") {
-        return Err("only Preferences and the welcome window ask this".into());
+    if webview.label() != "main-app" {
+        return Err("only the app's own screens ask this".into());
     }
     tauri::async_runtime::spawn_blocking(move || with_session(&app, &server, &method, &path, body.as_deref()))
         .await
         .map_err(|e| e.to_string())?
-}
-
-/// How the welcome window opens next, taken once: `add` when the site's "Add a workspace" opened it.
-#[derive(Default)]
-pub struct WelcomeMode(pub Mutex<Option<&'static str>>);
-
-#[tauri::command]
-pub fn welcome_mode_take(app: AppHandle, window: tauri::Window) -> Result<Option<String>, String> {
-    if window.label() != "welcome" {
-        return Err("only the welcome window asks this".into());
-    }
-    Ok(app.state::<WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()).take().map(str::to_string))
-}
-
-/// "Add a workspace…" and "Add a server…" in Preferences: the welcome window, in its adding mode.
-/// Async, as `show_window`: the welcome window may be made here.
-#[tauri::command]
-pub async fn welcome_add(app: AppHandle, window: tauri::Window) -> Result<(), String> {
-    if window.label() != "prefs" {
-        return Err("only Preferences asks this".into());
-    }
-    *app.state::<WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("add");
-    crate::present(&app, "welcome")
 }
 
 #[cfg(test)]

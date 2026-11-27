@@ -36,9 +36,9 @@ import { hereBanner, hereLine, isHereServer, type LocalServerStatus } from "../c
 import { menuLabels } from "../control/menu-labels";
 import { NOTCH_PREF } from "../control/notch";
 import { SITE_NOTIFY_PREF } from "../control/notify";
-import { nextOffer, PAIR_OFFER_PREF, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
+import { nextOffer, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
-import { PREPARE_PREF } from "../control/permissions";
+import { type Asked, askedIn, MAC_ASKED_PREF, withAsked } from "../control/permissions";
 import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
@@ -46,6 +46,7 @@ import { isOnline, macStateOf, trayStateOf } from "../control/tray";
 import { AUTO_UPDATE_PREF, autoUpdateOn, installNight } from "../control/version";
 import { agentOf, readPref, useLocalServer, useOnShown, usePending, useUpdateCheck, writePref } from "../hooks";
 import type { BadgeCounts } from "../host/types";
+import { settingsRouteOf } from "../layer/routes";
 import { AgentFace, Banner, BrandFace, Count, HelpLink, MacPortrait, MenuRow, OrgTile } from "../ui/bits";
 import { CopyDetails } from "../ui/here";
 import { needsPrepare } from "../ui/permissions";
@@ -106,7 +107,7 @@ export function Popover() {
 
   // The server here's sync made a home: its first tools once its runner is up.
   useEffect(() => host.onNewHostHome((homeId) => whenHostHomeReady(store, homeId)), [host, store]);
-  // Signed in to a workspace this computer doesn't work for yet: its card, once, in the welcome window.
+  // Signed in to a workspace this computer doesn't work for yet: its card, once, on the main window's app layer.
   const workspacesSeen = useRef<ServerWorkspaces[] | null>(null);
   useEffect(
     () =>
@@ -120,8 +121,7 @@ export function Popover() {
             const offer = nextOffer(list, before, store.getSnapshot(), offered);
             if (!offer) return;
             writePref(PAIR_OFFERED_PREF, [...offered, targetKey(offer)]);
-            writePref(PAIR_OFFER_PREF, offer);
-            return host.showWindow("welcome");
+            return host.showLayer({ screen: "pairOffer", target: offer });
           })
           .catch(() => {});
       }),
@@ -254,10 +254,7 @@ export function Popover() {
   // The site in the main window asking this Mac (ADR 0036): the popover owns the runners, so it answers.
   useEffect(() => {
     const off = host.onThisMac((id, request) => {
-      const openPrefsOn = async (tab: PrefsTab) => {
-        writePref("prefsTab", tab);
-        await host.showWindow("prefs");
-      };
+      const openPrefsOn = (tab: PrefsTab) => host.showLayer(settingsRouteOf(tab));
       const showRequests = () => host.showWindow("popover");
       const localDir = () => host.localServer().then((s) => s.dir);
       const revealFolder = (path: string) => host.revealFolder(path);
@@ -268,8 +265,7 @@ export function Popover() {
         void needsPrepare(host)
           .then((needed) => {
             if (!needed) return;
-            writePref(PREPARE_PREF, { org, server: request.origin });
-            return host.showWindow("welcome");
+            return host.showLayer({ screen: "prepare", org, server: request.origin });
           })
           .catch(() => {});
       };
@@ -282,6 +278,16 @@ export function Popover() {
           revealFolder,
           onPaired,
           openPrivacy: (pane) => host.openPrivacy(pane),
+          localNetwork: async () => {
+            // The system's prompt the first time in this version (macOS says nothing of the answer), then the
+            // Local Network list in System Settings, as Prepare this Mac does.
+            if (host.platform !== "mac") return;
+            const { version } = await host.appInfo();
+            const saved = readPref<Asked | null>(MAC_ASKED_PREF, null);
+            if (askedIn(saved, version).includes("network")) return host.openPrivacy("network");
+            writePref(MAC_ASKED_PREF, withAsked(saved, version, "network"));
+            await host.askLocalNetwork();
+          },
         },
         request,
       )
@@ -310,8 +316,7 @@ export function Popover() {
     () =>
       host.onMenuAction((action) => {
         if (action === "updates" || action === "thisMac" || action === "servers") {
-          if (action !== "thisMac") writePref("prefsTab", action);
-          void host.showWindow("prefs").catch(() => {});
+          void host.showLayer(settingsRouteOf(action)).catch(() => {});
         } else if (action === "pause1h" || action === "pauseTomorrow" || action === "pauseManual") {
           pauseRef.current(action === "pause1h" ? "1h" : action === "pauseTomorrow" ? "tomorrow" : "manual");
         } else if (action === "resume") {
@@ -353,12 +358,12 @@ export function Popover() {
 
   /** The main window on the server open now; the first run while there is none. */
   const openMain = () => {
-    void (current ? host.openExternal(current) : host.showWindow("welcome")).catch(() => {});
+    void (current ? host.openExternal(current) : host.showLayer({ screen: "firstRun" })).catch(() => {});
     void host.hideWindow("popover").catch(() => {});
   };
+  /** This computer's settings (the app layer, ADR 0255), on the section an old Preferences tab name became. */
   const openPrefs = (tab?: string) => {
-    if (tab) writePref("prefsTab", tab);
-    void host.showWindow("prefs").catch(() => {});
+    void host.showLayer(settingsRouteOf(tab)).catch(() => {});
   };
   /**
    * "Reconnect this Mac": that organization's Computers settings in the main window, where its one-click

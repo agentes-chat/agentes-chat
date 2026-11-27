@@ -12,7 +12,7 @@ import { DevFrame } from "./dev/DevFrame";
 import { readPref } from "./hooks";
 import { createFakeHost, SCENARIOS, type Scenario } from "./host/fake";
 import { createTauriHost, inTauri } from "./host/tauri";
-import { type Host, WINDOW_NAMES, type WindowName } from "./host/types";
+import { type Host, type LayerRoute, WINDOW_NAMES, type WindowName } from "./host/types";
 import { LOCALE_PREF, loadDesktopI18n, pickLocale, switchDesktopLocale, systemLocale } from "./i18n";
 import { ToastProvider } from "./ui/Toast";
 import { baseName } from "./ui/time";
@@ -21,6 +21,17 @@ import { WindowError, WindowView } from "./WindowView";
 const params = new URLSearchParams(window.location.search);
 const asked = params.get("window");
 const scenario = params.get("scenario");
+/** `?route=<json>`: the app layer's first route while designing (a `LayerRoute`); anything unreadable is ignored. */
+const askedRoute = (() => {
+  const raw = params.get("route");
+  if (!raw) return undefined;
+  try {
+    const route = JSON.parse(raw) as LayerRoute;
+    return route && typeof route.screen === "string" ? route : undefined;
+  } catch {
+    return undefined;
+  }
+})();
 const fakeHost = inTauri()
   ? null
   : createFakeHost(
@@ -31,6 +42,7 @@ const fakeHost = inTauri()
         found: params.get("found") !== "0",
         someCommands: params.get("commands") === "some",
         macReady: params.get("mac") === "ready",
+        route: askedRoute,
         here: {
           phase: (params.get("phase") as LocalPhase | null) ?? undefined,
           reach: params.get("reach") === "1",
@@ -56,7 +68,7 @@ const i18n = await loadDesktopI18n(
   host.platform,
 );
 document.documentElement.lang = i18n.language;
-// A language picked in Preferences reaches every open window.
+// A language picked in settings reaches every open screen.
 window.addEventListener("storage", (e) => {
   if (e.key === `agentes.desktop.${LOCALE_PREF}`) switchDesktopLocale(i18n, systemLocale(), host.platform);
 });

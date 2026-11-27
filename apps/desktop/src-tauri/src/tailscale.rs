@@ -219,7 +219,7 @@ pub fn unserve(public_url: &str) {
 
 #[tauri::command]
 pub async fn tailscale_status(webview: tauri::Webview) -> Result<Tailnet, String> {
-    if !matches!(webview.label(), "welcome" | "prefs" | "main-cover") {
+    if !matches!(webview.label(), "main-app" | "main-cover") {
         return Err("only the app's own windows ask this".into());
     }
     tauri::async_runtime::spawn_blocking(tailnet).await.map_err(|e| e.to_string())
@@ -231,7 +231,7 @@ pub async fn tailscale_status(webview: tauri::Webview) -> Result<Tailnet, String
 #[tauri::command]
 pub async fn tailscale_open(app: tauri::AppHandle, webview: tauri::Webview, page: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    if !matches!(webview.label(), "welcome" | "prefs" | "main-cover") {
+    if !matches!(webview.label(), "main-app" | "main-cover") {
         return Err("only the app's own windows open this".into());
     }
     // Off the main thread: opening runs a program and waits for it.

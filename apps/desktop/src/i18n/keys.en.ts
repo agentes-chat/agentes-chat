@@ -4,7 +4,7 @@ import type { Widen } from "@agenteschat/i18n/widen";
 export const desktopEn = {
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */
-  windowTitle: { welcome: "Welcome", prefs: "Preferences" },
+  windowTitle: { welcome: "Welcome", prefs: "Preferences", settings: "Settings" },
   common: {
     cancel: "Cancel",
     close: "Close",
@@ -90,6 +90,8 @@ export const desktopEn = {
     resume: "Resume the agents",
     open: "Open agentes.chat",
     prefs: "Preferences…",
+    /** The tray's item on Windows and Linux: this computer's settings in the app's window (ADR 0255). */
+    thisMac: "This {{device}} settings…",
     quit: "Quit agentes.chat",
     pausedFor1h: "Paused for 1 hour",
     pausedTomorrow: "Paused until tomorrow at 9 AM",

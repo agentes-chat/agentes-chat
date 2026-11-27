@@ -50,13 +50,13 @@ fn failed(error: &'static str) -> Sent {
 /// Whether sending is on (the cover shows Copy only when it isn't).
 #[tauri::command]
 pub fn problem_report_on(webview: tauri::Webview) -> Result<bool, String> {
-    crate::local_server::app_window(&webview, &["main-cover", "prefs"])?;
+    crate::local_server::app_window(&webview, &["main-cover", "main-app"])?;
     Ok(target().is_some())
 }
 
 #[tauri::command]
 pub async fn problem_report_send(webview: tauri::Webview, json: String) -> Result<Sent, String> {
-    crate::local_server::app_window(&webview, &["main-cover", "prefs"])?;
+    crate::local_server::app_window(&webview, &["main-cover", "main-app"])?;
     if let Err(e) = check(&json) {
         return Ok(failed(e));
     }

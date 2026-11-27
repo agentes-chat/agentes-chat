@@ -1,13 +1,15 @@
-//! agentes.chat for macOS, Windows and Linux: the main window on the server open now (agentes.chat or a
-//! server of the person's own, `servers`), the welcome window that finds one, and, only while agents work on
-//! this computer for a server of the person's own, the runners it spawns (one per organization), the menu bar
-//! popover and Preferences' tabs for this computer. On every system it can also run agentes.chat itself, as
+//! agentes.chat for macOS, Windows and Linux: one window (ADR 0255), the server open now (agentes.chat or a
+//! server of the person's own, `servers`) with the app's own screens over it (`app_layer`: the first run that finds
+//! one, This computer's settings, the sheets), and, only while agents work on this computer for a server of the
+//! person's own, the runners it spawns (one per organization) and the menu bar popover. On every system it can also
+//! run agentes.chat itself, as
 //! its child (`local_server`, with this computer as its agents' computer, `host_sync`). Rust stays thin:
 //! windows, the tray, the server list, links, the children, single instance, start at login, notifications,
 //! native dialogs and self-update. Everything else lives in the runner and the server (TypeScript) and in the
 //! web view.
 
 mod app_icon;
+mod app_layer;
 mod bench;
 mod cookies;
 mod cover;
@@ -48,7 +50,9 @@ use tauri_plugin_updater::UpdaterExt;
 
 use runners::{RunnerInfo, Runners};
 
-const WINDOWS: &[&str] = &["popover", "welcome", "prefs"];
+/// The app's windows besides the main one (the notch is its own, `notch.rs`): only the menu bar's popover. Everything
+/// else is the main window's app layer (ADR 0255).
+const WINDOWS: &[&str] = &["popover"];
 
 /// When the popover last hid because it lost focus: a click on the tray icon blurs it first,
 /// and that same click must not open it again.
@@ -94,53 +98,18 @@ fn is_help_page(url: &str) -> bool {
     path.starts_with("docs/")
 }
 
+/// The popover, right under the menu bar icon (made at start, `tauri.conf.json`).
 pub(crate) fn present(app: &AppHandle, name: &str) -> Result<(), String> {
     if !WINDOWS.contains(&name) {
         return Err(format!("unknown window: {name}"));
     }
-    let window = match app.get_webview_window(name) {
-        Some(window) => window,
-        None => make_window(app, name)?,
-    };
-    if name == "popover" {
-        // Right under the menu bar icon.
-        let _ = window.move_window(Position::TrayCenter);
-    }
+    let window = app.get_webview_window(name).ok_or("window not found")?;
+    let _ = window.move_window(Position::TrayCenter);
     let _ = window.unminimize();
     window.show().map_err(|e| e.to_string())?;
     window.set_focus().map_err(|e| e.to_string())?;
     let _ = app.emit("window://shown", name);
     Ok(())
-}
-
-/// Welcome and Preferences are made when they open and go when they close (`"create": false` in
-/// tauri.conf.json): each is a whole web view, kept alive for nothing otherwise.
-const MADE_ON_OPEN: &[&str] = &["welcome", "prefs"];
-
-fn make_window(app: &AppHandle, name: &str) -> Result<tauri::WebviewWindow, String> {
-    let config = app
-        .config()
-        .app
-        .windows
-        .iter()
-        .find(|w| w.label == name)
-        .ok_or("window not found")?
-        .clone();
-    let window = tauri::WebviewWindowBuilder::from_config(app, &config)
-        .and_then(|b| b.build())
-        .map_err(|e| e.to_string())?;
-    // On Windows and Linux a new window starts with the bundle's icon: the person's pick (ADR 0179).
-    app_icon::show(app);
-    // Named in the app's language (the Dock's list, the Window menu): never a second "agentes.chat".
-    let key = match name {
-        "welcome" => Some("windowWelcome"),
-        "prefs" => Some("windowPrefs"),
-        _ => None,
-    };
-    if let Some(title) = key.and_then(|k| menus::labels(app).get(k).cloned()) {
-        let _ = window.set_title(&title);
-    }
-    Ok(window)
 }
 
 /// A panel (the menu bar's popover, the notch's island) stays out of the Window menu and the Dock's list of
@@ -159,14 +128,16 @@ pub(crate) fn keep_out_of_window_list(ns_window: *mut std::ffi::c_void) {
 /// The launch argument start at login passes, so a login start stays in the menu bar.
 const AUTOSTART_ARG: &str = "--autostart";
 
-/// "Open the app": the main window on the server open now, or the first run while there is none. A setup whose
-/// window was closed comes back where it is (still running, or on the step that failed).
+/// "Open the app": the main window on the server open now, or the first run while there is none. A first run whose
+/// window was closed (its setup going on, or stopped on the step that failed) comes back where it is: the red button
+/// only hides the window and leaves the first run in it.
 pub(crate) fn open_app(app: &AppHandle) {
-    let hidden_setup = app.get_webview_window("welcome").is_some_and(|w| !w.is_visible().unwrap_or(true));
-    if servers::current(app).is_some() && !hidden_setup {
+    if app_layer::route(app).is_some() && app.get_window(main_window::LABEL).is_some() {
+        let _ = main_window::front(app);
+    } else if servers::current(app).is_some() {
         let _ = main_window::open(app, None);
     } else {
-        let _ = present(app, "welcome");
+        let _ = app_layer::show(app, app_layer::Route::first_run(None));
     }
 }
 
@@ -433,14 +404,19 @@ async fn runner_remove(app: AppHandle, home_id: String) -> Result<(), String> {
 /// that may make a window (`server_choose`).
 #[tauri::command]
 async fn open_external(app: AppHandle, url: String) -> Result<(), String> {
+    open_link(&app, &url)
+}
+
+/// `open_external`'s rules, also for a link the app layer opens in a new window (`app_layer.rs`).
+pub(crate) fn open_link(app: &AppHandle, url: &str) -> Result<(), String> {
     if url.len() > 4096 || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
         return Err("not a link the app opens".into());
     }
-    if is_sign_in_url(&url) || is_app_download(&url) || is_help_page(&url) {
+    if is_sign_in_url(url) || is_app_download(url) || is_help_page(url) {
         return app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string());
     }
     let page: Url = url.parse().map_err(|_| "not a URL")?;
-    main_window::show_url(&app, page)
+    main_window::show_url(app, page)
 }
 
 /// Off the main thread: a folder on a drive that went away keeps `is_dir` waiting.
@@ -468,7 +444,7 @@ fn set_tray_state(app: AppHandle, state: String) -> Result<(), String> {
     tray::set_state(&app, &state)
 }
 
-/// Async: Welcome and Preferences are made here (`server_choose`).
+/// The popover (the notch's "open"); every other screen is the app layer's (`layer_show`).
 #[tauri::command]
 async fn show_window(app: AppHandle, name: String) -> Result<(), String> {
     present(&app, &name)
@@ -480,14 +456,7 @@ fn hide_window(app: AppHandle, name: String) -> Result<(), String> {
         return Err(format!("unknown window: {name}"));
     }
     let Some(window) = app.get_webview_window(&name) else { return Ok(()) };
-    if MADE_ON_OPEN.contains(&name.as_str()) {
-        // `destroy` skips CloseRequested, where a setup on screen ends with its window.
-        prepare::closed(&app, &name);
-        window.destroy().map_err(|e| e.to_string())?;
-    } else {
-        window.hide().map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    window.hide().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -581,7 +550,7 @@ struct UpdateDownload(Mutex<Option<Box<dyn Fn() + Send>>>);
 
 const UPDATE_PROGRESS_EVENT: &str = "update://progress";
 
-/// Downloads the newer version, with its progress to Preferences, then installs it (signed with the key built
+/// Downloads the newer version, with its progress to the app's settings (the app layer), then installs it (signed with the key built
 /// into the app, checked by the plugin), stops the runners and relaunches. `false`: nothing newer to install.
 /// Err "cancelled": Cancel dropped the check or the download.
 #[tauri::command]
@@ -618,7 +587,7 @@ async fn update_install(app: AppHandle) -> Result<bool, String> {
             let step = total.map_or(got / 1_048_576, |t| got * 100 / t.max(1));
             if said != Some(step) {
                 said = Some(step);
-                let _ = progress.emit_to("prefs", UPDATE_PROGRESS_EVENT, (got, total));
+                let _ = progress.emit_to(app_layer::LABEL, UPDATE_PROGRESS_EVENT, (got, total));
             }
         };
         let bytes = update.download(on_chunk, || {}).await?;
@@ -750,7 +719,8 @@ pub fn run() {
         .manage(main_window::Bridge::default())
         .manage(main_window::Notices::default())
         .manage(workspaces::Workspaces::default())
-        .manage(workspaces::WelcomeMode::default())
+        .manage(app_layer::Layer::default())
+        .manage(main_window::HealthPublished::default())
         .manage(menus::Zoom::default())
         .manage(cover::Cover::default())
         .manage(dock::Dock::default())
@@ -820,10 +790,15 @@ pub fn run() {
             main_window::this_mac_listening,
             main_window::notify_site_set,
             main_window::pair_ask,
+            main_window::health_publish,
+            app_layer::layer_show,
+            app_layer::layer_hide,
+            app_layer::layer_state,
+            app_layer::layer_painted,
+            app_layer::layer_site_go,
+            app_layer::first_run_sign_in,
             workspaces::workspaces_get,
             workspaces::site_fetch,
-            workspaces::welcome_mode_take,
-            workspaces::welcome_add,
             menus::app_menu_set,
             menus::context_menu,
             cover::page_ready,
@@ -875,23 +850,23 @@ pub fn run() {
             // Started at login: in the background (the popover, the tray). Opened by hand: the main window on
             // the server open now, or the first run while there is none. Opened again by macOS in the middle of a
             // setup (the "Quit & Reopen" after a permission): the main window on the page it showed, and the setup's
-            // window over it.
+            // screen over it (the app layer, ADR 0255).
             let at_login = started_at_login(std::env::args(), reopened);
             let resume = prepare::resume(&handle, at_login);
             if servers::current(&handle).is_none() {
-                let _ = present(&handle, "welcome");
+                let _ = app_layer::show(&handle, app_layer::Route::first_run(None));
             } else if !at_login {
                 vitals::window_at_launch();
                 let page = bench::url().or_else(|| resume.as_ref().and_then(|r| r.page.clone()));
                 let _ = main_window::open(&handle, page);
             }
             if let Some(resume) = resume {
-                let _ = present(&handle, resume.window);
+                let _ = app_layer::show(&handle, resume.route);
             }
-            // The last opening with the graphics card never painted: this one draws without it, and Preferences says
-            // so (when it next opens, after a start at login).
+            // The last opening with the graphics card never painted: this one draws without it, and the app's
+            // settings say so (when they next open, after a start at login).
             if graphics::fall_back(&handle) && !at_login {
-                let _ = present(&handle, "prefs");
+                let _ = app_layer::show(&handle, app_layer::Route::settings(Some(app_layer::Section::App), None));
             }
             // The app icon picked on this computer (ADR 0179).
             app_icon::show(&handle);
@@ -962,22 +937,14 @@ fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
         WindowEvent::Focused(false) if window.label() == main_window::LABEL => {
             main_window::keep_lights(window.app_handle());
         }
-        // Closing it while agentes.chat is being set up only hides it: the setup goes on (Cancel stops it).
-        WindowEvent::CloseRequested { api, .. }
-            if window.label() == "welcome" && local_server::setting_up(window.app_handle()) =>
-        {
-            api.prevent_close();
-            let _ = window.hide();
-        }
-        // Welcome and Preferences really close (made again when they open), and a setup on screen ends with them.
-        WindowEvent::CloseRequested { .. } if MADE_ON_OPEN.contains(&window.label()) => {
-            prepare::closed(window.app_handle(), window.label());
-        }
         WindowEvent::CloseRequested { api, .. } => {
-            // The other windows are made once and only hidden; quitting goes through "Quit".
+            // The windows are made once and only hidden; quitting goes through "Quit".
             api.prevent_close();
             if window.label() == main_window::LABEL {
                 window_state::remember(window, false);
+                // Settings and sheets end with the window (a setup on screen too, `prepare.rs`); the first run stays
+                // in it, its setup going on (Cancel stops it), and opening the app brings it back.
+                app_layer::window_closing(window.app_handle());
                 // Some Linux desktops show no tray icon: there the window stays in reach, minimized. One that
                 // may be black (its page arrived on the graphics card and never painted) quits instead, so
                 // opening the app again draws without the graphics card (graphics.rs `decide`).

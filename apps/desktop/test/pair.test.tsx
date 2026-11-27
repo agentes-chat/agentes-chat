@@ -8,20 +8,14 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
-import {
-  nextOffer,
-  PAIR_OFFER_PREF,
-  PAIR_OFFERED_PREF,
-  type PairTarget,
-  parsePairLink,
-  unpairedWorkspaces,
-} from "../src/control/pair";
-import { MAC_ASKED_PREF, PREPARE_PREF } from "../src/control/permissions";
+import { nextOffer, PAIR_OFFERED_PREF, type PairTarget, parsePairLink, unpairedWorkspaces } from "../src/control/pair";
+import { MAC_ASKED_PREF } from "../src/control/permissions";
 import type { ServerWorkspaces } from "../src/control/server";
 import { DesktopStore, pairedHomes, type Snapshot } from "../src/control/store";
 import { FAKE_LINKS, FAKE_SERVER } from "../src/dev/fake-runner";
-import { readPref, writePref } from "../src/hooks";
+import { writePref } from "../src/hooks";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
+import type { LayerRoute } from "../src/host/types";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
 import { WindowView } from "../src/WindowView";
@@ -30,13 +24,14 @@ import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+/** The app layer (ADR 0255) on `route` (This computer's settings by default), with `view` drawn in it. */
 async function mount(
-  window: "prefs" | "welcome",
+  route: LayerRoute,
   view: ReactNode,
   check: (el: HTMLElement, host: FakeHost, store: DesktopStore) => Promise<void>,
   options: { link?: string; macReady?: boolean; host?: (host: FakeHost) => void } = {},
 ) {
-  const host = createFakeHost(window, "selfhost", { link: options.link, macReady: options.macReady });
+  const host = createFakeHost("app", "selfhost", { link: options.link, macReady: options.macReady, route });
   options.host?.(host);
   await host.setAutostart(false);
   const store = new DesktopStore(host, {});
@@ -63,11 +58,12 @@ async function mount(
 }
 
 afterEach(() => {
-  writePref(PAIR_OFFER_PREF, null);
   writePref(PAIR_OFFERED_PREF, []);
-  writePref(PREPARE_PREF, null);
   writePref(MAC_ASKED_PREF, null);
 });
+
+const SETTINGS: LayerRoute = { screen: "settings" };
+const layer = <WindowView name="app" />;
 
 const button = (root: ParentNode | undefined, text: string) =>
   [...(root?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((b) => b.textContent === text);
@@ -158,10 +154,10 @@ describe("pairing from the app", () => {
 
   test("the card after sign-in: what agents can do, prefilled open; Allow pairs with those and turns on open at login", () => {
     const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
-    writePref(PAIR_OFFER_PREF, target);
-    return mount("welcome", <WindowView name="welcome" />, async (el, host, store) => {
+    return mount({ screen: "pairOffer", target }, layer, async (el, host, store) => {
       await until(() => el.querySelector("h1")?.textContent === "Let Estúdio Norte's agents use this Mac?");
-      expect(readPref(PAIR_OFFER_PREF, null)).toBeNull();
+      // A sheet over the site there (a Mac).
+      expect(host.layer.mode).toBe("sheet");
       // A server this Mac only opens: lending it is optional.
       expect(el.textContent).toContain(
         "Only if you want this Mac to do agents' work too. With Not now you still use Estúdio Norte here as usual.",
@@ -212,17 +208,16 @@ describe("pairing from the app", () => {
       expect(norte()?.access?.tools).toMatchObject({ claude: true, codex: false, commands: false, browser: true });
 
       await act(async () => button(el, "Continue")?.click());
-      await until(() => el.querySelector('[data-screen="choose"]'));
+      // The layer steps aside: the site is there.
+      await until(() => host.layer.route === null);
       expect(host.mac.setup).toBeNull();
     });
   });
 
   test("Prepare this Mac: Screen Recording and Local Network asked once, Full Disk Access in Settings; kept for Quit & Reopen", () =>
-    mount("welcome", <WindowView name="welcome" />, async (el, host) => {
-      writePref(PREPARE_PREF, { org: "Estúdio Norte", server: FAKE_SERVER });
-      await act(async () => host.showWindow("welcome"));
+    mount(SETTINGS, layer, async (el, host) => {
+      await act(async () => host.showLayer({ screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER }));
       await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready");
-      expect(readPref(PREPARE_PREF, null)).toBeNull();
       // Kept from the start: macOS quitting the app now brings it back here.
       await until(() => host.mac.setup?.step === "prepare");
       expect(host.mac.setup).toMatchObject({ step: "prepare", org: "Estúdio Norte", server: FAKE_SERVER });
@@ -271,14 +266,14 @@ describe("pairing from the app", () => {
       expect(host.mac.networkAsks).toBe(1);
 
       await act(async () => button(el, "Skip for now")?.click());
-      await until(() => el.querySelector('[data-screen="choose"]'));
+      await until(() => host.layer.route === null);
       expect(host.mac.setup).toBeNull();
     }));
 
   test("opened again by macOS: the Prepare step comes back with fresh states and says it took effect", () =>
     mount(
-      "welcome",
-      <WindowView name="welcome" />,
+      { screen: "prepare", org: "Estúdio Norte", server: FAKE_SERVER, resumed: true },
+      layer,
       async (el, host) => {
         await until(() => el.querySelector("h1")?.textContent === "Get this Mac ready");
         expect(el.textContent).toContain("Connected to Estúdio Norte.");
@@ -297,10 +292,10 @@ describe("pairing from the app", () => {
     ));
 
   test("a Mac with every permission on: pairing ends on Connected, no Prepare step", () => {
-    writePref(PAIR_OFFER_PREF, { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null });
+    const target: PairTarget = { server: FAKE_SERVER, orgId: "o-norte", name: "Estúdio Norte", logo: null };
     return mount(
-      "welcome",
-      <WindowView name="welcome" />,
+      { screen: "pairOffer", target },
+      layer,
       async (el) => {
         await until(() => button(el, "Allow"));
         writePref(MAC_ASKED_PREF, { version: "0.6.0", asked: ["screen", "network"] });
@@ -314,8 +309,8 @@ describe("pairing from the app", () => {
 
   test("a pair link: who asked, from where, this computer; Connect waits for its maker, then it's in", () =>
     mount(
-      "welcome",
-      <WindowView name="welcome" />,
+      { screen: "link" },
+      layer,
       async (el, host, store) => {
         await until(() => el.querySelector("h1")?.textContent === "Connect this Mac to Estúdio Norte?");
         expect(rowOf(el, "Asked by")?.textContent).toContain("Sam Rivera");
@@ -337,17 +332,17 @@ describe("pairing from the app", () => {
         const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
         await until(() => norte()?.access?.tools.browser === true);
         expect(norte()?.access?.tools.commands).toBe(true);
-        // Folders come after pairing: one click to Preferences › Folders.
+        // Folders come after pairing: one click to This computer's settings, on its folders.
         await act(async () => button(el, "Add folders")?.click());
-        expect(localStorage.getItem("agentes.desktop.prefsTab")).toBe('"folders"');
+        expect(host.layer.route).toEqual({ screen: "settings", section: "folders" });
       },
       { link: pairLink(FAKE_LINKS.live), macReady: true },
     ));
 
   test("a pair link cancelled while waiting: the runner stops asking and nothing joins", () =>
     mount(
-      "welcome",
-      <WindowView name="welcome" />,
+      { screen: "link" },
+      layer,
       async (el, host, store) => {
         await until(() => button(el, "Connect"));
         await act(async () => button(el, "Connect")?.click());
@@ -363,23 +358,18 @@ describe("pairing from the app", () => {
     ));
 
   test("a pair link whose maker says no, and one that expired", async () => {
+    await mount({ screen: "pairLink", server: FAKE_SERVER, code: FAKE_LINKS.denied }, layer, async (el, host) => {
+      await until(() => button(el, "Connect"));
+      await act(async () => button(el, "Connect")?.click());
+      await until(() => el.textContent?.includes("Sam Rivera didn't let it in. Nothing changed."));
+      expect(button(el, "Close")).toBeTruthy();
+      expect(button(el, "Try again")).toBeUndefined();
+      // Open at login only comes with a computer that joined.
+      expect(await host.autostart()).toBe(false);
+    });
     await mount(
-      "welcome",
-      <WindowView name="welcome" />,
-      async (el, host) => {
-        await until(() => button(el, "Connect"));
-        await act(async () => button(el, "Connect")?.click());
-        await until(() => el.textContent?.includes("Sam Rivera didn't let it in. Nothing changed."));
-        expect(button(el, "Close")).toBeTruthy();
-        expect(button(el, "Try again")).toBeUndefined();
-        // Open at login only comes with a computer that joined.
-        expect(await host.autostart()).toBe(false);
-      },
-      { link: pairLink(FAKE_LINKS.denied) },
-    );
-    await mount(
-      "welcome",
-      <WindowView name="welcome" />,
+      { screen: "link" },
+      layer,
       async (el, host) => {
         await until(() => el.textContent?.includes("This link expired. Make a new one in Devices."));
         expect(button(el, "Connect")).toBeUndefined();
@@ -389,9 +379,10 @@ describe("pairing from the app", () => {
         await act(async () => button(el, "Open Devices")?.click());
         expect(opened).toEqual([expect.stringMatching(/\/\?open=devices$/)]);
         expect(host.runners.size).toBe(2);
-        // Closed with a server open, the window hides; opened again ("Add a server…"), it starts over.
+        // Closed with a server open, the layer steps aside; opened again ("Add a server…"), it starts over.
         await act(async () => button(el, "Close")?.click());
-        await act(async () => host.showWindow("welcome"));
+        await until(() => host.layer.route === null);
+        await act(async () => host.showLayer({ screen: "firstRun", mode: "add" }));
         await until(() => el.querySelector('[data-screen="choose"]'));
       },
       { link: pairLink("WXYZWXYZ") },
@@ -399,7 +390,7 @@ describe("pairing from the app", () => {
   });
 
   test("Preferences › This Mac: the permissions to turn on again; asking for the screen keeps Preferences to reopen", async () => {
-    await mount("prefs", <General />, async (el, host) => {
+    await mount(SETTINGS, <General />, async (el, host) => {
       await until(
         () => el.textContent?.includes("Permissions") && rowOf(el, "Screen Recording")?.querySelector("button"),
       );
@@ -414,7 +405,7 @@ describe("pairing from the app", () => {
     });
     // Opened again by macOS: the line says it took effect, and nothing is kept any more.
     await mount(
-      "prefs",
+      SETTINGS,
       <General />,
       async (el, host) => {
         await until(() => el.textContent?.includes("agentes.chat opened again with your changes."));
@@ -429,7 +420,7 @@ describe("pairing from the app", () => {
     );
     // macOS 14 has no Local Network permission: no row that could only ever say "Asked".
     await mount(
-      "prefs",
+      SETTINGS,
       <General />,
       async (el) => {
         await until(() => rowOf(el, "Screen Recording")?.querySelector("button"));
@@ -448,7 +439,7 @@ describe("pairing from the app", () => {
   test(
     "Preferences: a switch for every workspace here, Allow for one not here yet, which pairs it",
     () =>
-      mount("prefs", <General />, async (el, host, store) => {
+      mount(SETTINGS, <General />, async (el, host, store) => {
         const norte = "Estúdio Norte";
         await until(() => rowOf(el, norte) && rowOf(el, "Acme")?.querySelector(".ac-chip"));
         const on = (title: string) => rowOf(el, title)?.querySelector('[role="switch"]')?.getAttribute("aria-checked");
@@ -473,7 +464,7 @@ describe("pairing from the app", () => {
           "Another workspace",
         ]);
         await act(async () => button(rowOf(el, "Another workspace"), "Add a workspace…")?.click());
-        expect(host.window).toBe("welcome");
+        expect(host.layer.route).toEqual({ screen: "firstRun", mode: "add" });
 
         // Pausing one workspace pauses only its own agents. Every switch waits while another request is pending, and
         // on a slow runner the fake runner's answer can come late or fail (a toast, the switch back on): click whenever

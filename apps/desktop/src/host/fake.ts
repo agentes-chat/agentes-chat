@@ -1,7 +1,9 @@
 /**
  * The host for a plain browser (`bun run dev`): fake runners and servers in memory instead of the Tauri
- * shell, so the screens can be designed and checked without building the app. One page shows one window at
- * a time; `showWindow` switches it (the dev bar does too) and keeps the fake state.
+ * shell, so the screens can be designed and checked without building the app. One page shows one screen at
+ * a time; `showWindow` and `showLayer` switch it (the dev bar does too) and keep the fake state. The app layer
+ * (`?window=app`) starts on `?route=<json>` (a `LayerRoute`), else the first run with no server and This computer's
+ * settings with one; a stand-in of the site shows behind it (DevFrame), so a sheet can be checked over it.
  *
  * Scenarios (`?scenario=`): `first` (a Mac, nothing chosen yet), `windows` and `linux` (the same there),
  * `cloud` (agentes.chat, nothing on this computer), `selfhost` (the default: a server on Tailscale with two
@@ -16,7 +18,7 @@
  * anything else isn't agentes.chat. `?found=0` makes discovery find nothing.
  * The server here: `?phase=` (starting, updating, stopped, failing), `?reach=1`, `?back=<version>` (an update
  * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
- * welcome window opens on Run here's form), `?usage=0` (usage statistics off),
+ * first run opens on Run here's form), `?usage=0` (usage statistics off),
  * `?tailscale=` (on, off, missing), `?installed=terminal` (one from the terminal; `&claim=1` waits for its owner,
  * `&serving=0` isn't running), `?fail=` (database, start, account, reach: that setup step fails), `?hold=<step>`
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
@@ -44,7 +46,18 @@ import type { TrayState } from "../control/tray";
 import { acmeSeed, FAKE_LINKS, FAKE_SERVER, FakeRunner, horizonteSeed } from "../dev/fake-runner";
 import { createFakeSite, type FakeSite } from "../dev/fake-site";
 import type { ReportFacts } from "../report/report";
-import type { AppInfo, CompatMode, Host, RunnerInfo, RunnerStateChange, WindowName } from "./types";
+import type {
+  AppInfo,
+  CompatMode,
+  Host,
+  LayerMode,
+  LayerRoute,
+  LayerState,
+  RunnerInfo,
+  RunnerStateChange,
+  SiteNav,
+  WindowName,
+} from "./types";
 
 export type Scenario = "first" | "windows" | "linux" | "cloud" | "selfhost" | "link" | "here";
 export const SCENARIOS: readonly Scenario[] = ["first", "windows", "linux", "cloud", "selfhost", "link", "here"];
@@ -99,6 +112,31 @@ export interface FakeHost extends Host {
   };
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;
+  /** The app layer as Rust would keep it (`app_layer.rs`), and the routes shown, in order. */
+  readonly layer: LayerState;
+  readonly routes: LayerRoute[];
+  /** The site's paths the layer moved it to (`siteGo`). */
+  readonly sitePaths: string[];
+  /** What the popover last published about this computer's essentials (`publishHealth`). */
+  readonly health: { needs: number; server: boolean } | null;
+}
+
+/** The stand-in site's settings list (the layer's settings show it above This computer's sections). */
+const FAKE_NAV: SiteNav = {
+  org: { id: "org_acme", name: "Acme" },
+  main: [
+    { id: "general", label: "General", icon: "settings", path: "/org/org_acme/settings" },
+    { id: "people", label: "People", icon: "users", path: "/org/org_acme/settings/people" },
+    { id: "agents", label: "Agents", icon: "bot", path: "/org/org_acme/settings/agents" },
+    { id: "connectors", label: "Connectors", icon: "plug", path: "/org/org_acme/settings/connectors" },
+  ],
+  advanced: [{ id: "usage", label: "Usage", icon: "chart", path: "/org/org_acme/settings/usage" }],
+};
+
+/** How a route shows (app_layer.rs `mode_for`): sheets over a site only on a Mac. */
+export function layerModeFor(route: LayerRoute, siteThere: boolean, platform: Platform): LayerMode {
+  if (route.screen === "firstRun" || route.screen === "settings") return "full";
+  return platform === "mac" && siteThere ? "sheet" : "full";
 }
 
 /**
@@ -146,7 +184,8 @@ export function createFakeHost(
     found?: boolean;
     here?: HereOptions;
     someCommands?: boolean;
-    welcomeAdd?: boolean;
+    /** The app layer's first route (`?route=`); by default the first run, or settings once a server is chosen. */
+    route?: LayerRoute | null;
     /** Screen Recording and Full Disk Access allowed already (`?mac=ready`). */
     macReady?: boolean;
   } = {},
@@ -167,8 +206,6 @@ export function createFakeHost(
   let version = "0.6.0";
   const platform: Platform = scenario === "windows" ? "windows" : scenario === "linux" ? "linux" : "mac";
   const here = options.here ?? {};
-  // With no account left, the app opens the welcome window on Run here's form once.
-  let ownerMode = here.owner === false;
   const tailnet: Tailnet =
     here.tailscale === "missing"
       ? { state: "missing" }
@@ -241,6 +278,55 @@ export function createFakeHost(
   const waits = link?.includes("claim=") ?? false;
   const devChanged = () => {
     for (const l of devListeners) l();
+  };
+  const layerListeners = new Set<(state: LayerState) => void>();
+  const routes: LayerRoute[] = [];
+  const sitePaths: string[] = [];
+  let health: { needs: number; server: boolean } | null = null;
+  // The stand-in site is there once a server is chosen (a design tool: no cover, no sign-in).
+  const siteThere = () => list.current !== null;
+  const firstRoute: LayerRoute | null =
+    options.route !== undefined
+      ? options.route
+      : initial !== "app"
+        ? null
+        : here.owner === false
+          ? { screen: "firstRun", mode: "owner" }
+          : list.current
+            ? { screen: "settings" }
+            : { screen: "firstRun" };
+  const layer: LayerState = {
+    seq: firstRoute ? 1 : 0,
+    mode: firstRoute ? layerModeFor(firstRoute, siteThere(), platform) : "hidden",
+    route: firstRoute,
+    site: { there: siteThere(), nav: siteThere() ? FAKE_NAV : null },
+    fullScreen: false,
+  };
+  if (firstRoute) routes.push(firstRoute);
+  const sayLayer = () => {
+    layer.site = { there: siteThere(), nav: siteThere() ? FAKE_NAV : null };
+    const now = { ...layer, site: { ...layer.site } };
+    for (const l of layerListeners) l(now);
+    devChanged();
+  };
+  const putLayer = (route: LayerRoute) => {
+    routes.push(route);
+    layer.seq++;
+    layer.route = route;
+    layer.mode = layerModeFor(route, siteThere(), platform);
+    host.window = "app";
+    sayLayer();
+  };
+  const dropLayer = () => {
+    // Nothing under it with no server chosen: the first run comes back, as in the app.
+    if (!list.current) {
+      if (layer.route?.screen !== "firstRun") putLayer({ screen: "firstRun" });
+      return;
+    }
+    layer.seq++;
+    layer.route = null;
+    layer.mode = "hidden";
+    sayLayer();
   };
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -370,15 +456,31 @@ export function createFakeHost(
       };
     },
     askToPair: async () => true,
-    welcomeMode: async () => {
-      if (options.welcomeAdd) return "add";
-      if (!ownerMode) return null;
-      ownerMode = false;
-      return "owner";
+    layer,
+    routes,
+    sitePaths,
+    get health() {
+      return health;
     },
-    addWorkspace: async () => {
-      options.welcomeAdd = true;
-      await host.showWindow("welcome");
+    showLayer: async (route) => putLayer(route),
+    hideLayer: async () => dropLayer(),
+    layerState: async () => ({ ...layer, site: { ...layer.site } }),
+    onLayer: (cb) => {
+      layerListeners.add(cb);
+      return () => layerListeners.delete(cb);
+    },
+    layerPainted: async () => {},
+    siteGo: async (path) => {
+      sitePaths.push(path);
+      console.info("[fake] the site moves to", path);
+      dropLayer();
+    },
+    firstRunSignIn: async (method) => {
+      await host.chooseServer(CLOUD_SERVER, method === "email" ? "/login" : `/login?with=${method}`);
+      dropLayer();
+    },
+    publishHealth: async (next) => {
+      health = next;
     },
     siteFetch: async (server, method, path, body) => {
       if (!list.servers.includes(server)) throw "not a server of this app";
@@ -653,8 +755,7 @@ export function createFakeHost(
       for (const [homeId, runner] of runners) if (runner.server === LOCAL_URL) await host.removeRunner(homeId);
       for (const server of new Set([local.publicUrl, local.url])) if (server) await host.removeServer(server);
       setLocal({ ...NO_SERVER, bundled: true, dir: local.dir, systemName: "Ana Souza", erased: to });
-      ownerMode = true;
-      await host.showWindow("welcome");
+      putLayer({ screen: "firstRun", mode: "owner" });
       return to;
     },
     keepRunning: async () => ({ autoLogin: false, autoRestart: false }),

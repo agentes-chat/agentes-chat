@@ -7,7 +7,8 @@ import { Glob } from "bun";
  * Tauri refuses an app command the window's capability (src-tauri/capabilities) doesn't allow, some commands
  * refuse other windows themselves, and the call's `.catch` swallows the refusal: the button does nothing. Tests with
  * a fake host never see that, so each window's code is read here for the commands it can reach, and each one has to
- * be allowed in its capability and answer that window.
+ * be allowed in its capability and answer that window. The app layer (`main-app`, ADR 0255) is a web view inside the
+ * main window, which the site shares: its capability names the web view, and its commands check the web view's label.
  */
 
 const SRC = join(import.meta.dir, "../src");
@@ -17,7 +18,12 @@ const read = (file: string) => readFileSync(file, "utf8");
 
 const capabilities = readdirSync(CAPABILITIES).map(
   (file) =>
-    JSON.parse(read(join(CAPABILITIES, file))) as { windows?: string[]; webviews?: string[]; permissions: unknown[] },
+    JSON.parse(read(join(CAPABILITIES, file))) as {
+      identifier: string;
+      windows?: string[];
+      webviews?: string[];
+      permissions: unknown[];
+    },
 );
 const allowedIn = (label: string) =>
   new Set(
@@ -80,13 +86,14 @@ const COMMAND = new Map(
   ),
 );
 
-/** The windows' screens (WindowView); main.tsx runs in each of them, the router itself leads to all four. */
+/** The screens (WindowView) by label; main.tsx runs in each of them, the router itself leads to all three. */
 const SCREENS: Record<string, string> = {
   popover: "windows/Popover.tsx#Popover",
-  welcome: "WindowView.tsx#Welcome",
-  prefs: "windows/Prefs.tsx#Prefs",
+  "main-app": "layer/AppLayer.tsx#AppLayer",
   notch: "windows/Notch.tsx#Notch",
 };
+/** The main window's own web views: the site (main.json, remote only) and the cover (its own bundle, tested below). */
+const NOT_SCREENS = ["main", "main-cover"];
 const ROUTER = "WindowView.tsx#WindowView";
 
 /** The windows' bundle, without the in-browser fake (`bun run dev`), the bridge itself, the strings and the cover. */
@@ -184,11 +191,14 @@ describe("each window may call every app command its code calls", () => {
   });
 
   test("the commands that check their caller are read", () => {
-    expect(ANSWERS.get("link_take")).toEqual(["welcome"]);
-    expect(ANSWERS.get("tray_visible")).toEqual(["popover", "prefs"]);
-    expect(ANSWERS.get("local_server_status")).toEqual(["welcome", "popover", "prefs", "main-cover"]);
+    expect(ANSWERS.get("link_take")).toEqual(["main-app"]);
+    expect(ANSWERS.get("tray_visible")).toEqual(["popover", "main-app"]);
+    expect(ANSWERS.get("local_server_status")).toEqual(["main-app", "popover", "main-cover"]);
     expect(ANSWERS.get("cover_retry")).toEqual(["main-cover"]);
     expect(ANSWERS.get("page_ready")).toEqual(["main"]);
+    expect(ANSWERS.get("layer_show")).toEqual(["main-app", "popover", "main-cover"]);
+    expect(ANSWERS.get("layer_hide")).toEqual(["main-app"]);
+    expect(ANSWERS.get("health_publish")).toEqual(["popover"]);
   });
 
   test("every command that looks at its caller's label has the windows it answers read", () => {
@@ -199,14 +209,37 @@ describe("each window may call every app command its code calls", () => {
     expect(unread.map(([command]) => command)).toEqual([]);
   });
 
-  test("every window with a capability has its screen here", () => {
-    expect(capabilities.flatMap((c) => c.windows ?? []).sort()).toEqual(Object.keys(SCREENS).sort());
+  test("every window and web view with a capability has its screen here", () => {
+    const labels = capabilities.flatMap((c) => [...(c.windows ?? []), ...(c.webviews ?? [])]);
+    expect(labels.filter((l) => !NOT_SCREENS.includes(l)).sort()).toEqual(Object.keys(SCREENS).sort());
     for (const screen of Object.values(SCREENS))
       expect({ screen, found: units.has(screen) }).toEqual({ screen, found: true });
   });
 
-  test("the welcome window still reaches the browser: a paired computer's page on its server", () => {
-    expect(commandsOf("welcome").get("open_external")).toBe("windows/Pair.tsx#PairLinkSheet");
+  test("no capability is the main window's: the site shares it with the app layer and its cover", () => {
+    // A `windows: ["main"]` capability would hand the site every command it lists.
+    expect(capabilities.filter((c) => c.windows?.includes("main")).map((c) => c.identifier)).toEqual([]);
+    const layer = capabilities.filter((c) => c.webviews?.includes("main-app"));
+    expect(layer.map((c) => c.identifier)).toEqual(["app"]);
+    expect(layer[0]?.webviews).toEqual(["main-app"]);
+  });
+
+  test("every command that answers the app layer checks the web view's label, never the window's", () => {
+    // The layer's window is `main`, the site's too: a gate on the window's label would let the site through (or
+    // refuse the layer).
+    const layerGated = [...ANSWERS].filter(([, labels]) => labels.includes("main-app")).map(([command]) => command);
+    expect(layerGated.length).toBeGreaterThan(0);
+    const byWindow = layerGated.filter((command) => /\bwindow\.label\(\)/.test(COMMANDS.get(command) ?? ""));
+    expect(byWindow).toEqual([]);
+    // And none of them answers the site itself.
+    expect(layerGated.filter((command) => ANSWERS.get(command)?.includes("main"))).toEqual([]);
+  });
+
+  test("the app layer still reaches the browser and the popover the layer", () => {
+    // A paired computer's page on its server (the pair link's sheet), help pages, provider sign-ins.
+    expect(commandsOf("main-app").has("open_external")).toBe(true);
+    // "This Mac settings", the offer and Prepare open on the main window's layer.
+    expect(commandsOf("popover").has("layer_show")).toBe(true);
   });
 
   for (const label of Object.keys(SCREENS)) {

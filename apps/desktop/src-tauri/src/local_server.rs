@@ -1916,7 +1916,7 @@ fn open_signed_in(app: &AppHandle, origin: &str, token: &str) -> Result<(), Stri
 }
 
 /// The site's sign-in asked to sign the owner in ("Continue on this Mac", `this_mac` `signIn`). Refused with
-/// `owner_gone` or `owner_none`, which the page explains; with no account left, the welcome window opens on the
+/// `owner_gone` or `owner_none`, which the page explains; with no account left, the first run opens on the
 /// account step to make the new owner (setting up again over the same folder only adds the owner).
 pub fn sign_in_window(app: &AppHandle, origin: &str) -> Result<(), String> {
     if !answers_within(app, origin, Duration::ZERO) {
@@ -1930,9 +1930,8 @@ pub fn sign_in_window(app: &AppHandle, origin: &str) -> Result<(), String> {
             // A setup on screen makes the owner itself: its account step may be under way.
             if code == "owner_none" && !setting_up(app) {
                 save_owner(app, false);
-                *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) =
-                    Some("owner");
-                let _ = crate::present(app, "welcome");
+                let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Owner));
+                let _ = crate::app_layer::show(app, route);
             }
             return Err(code.into());
         }
@@ -1998,7 +1997,7 @@ fn step(app: &AppHandle, step: &'static str, state: &'static str) {
 fn say_step(app: &AppHandle, event: StepEvent) {
     let secs = state(app).setting_up.map_or(0.0, |since| since.elapsed().as_secs_f64());
     note(app, format!("setup {secs:.1} s: {} {}", event.step, event.state));
-    let _ = app.emit_to("welcome", STEP_EVENT, event);
+    let _ = app.emit_to(crate::app_layer::LABEL, STEP_EVENT, event);
 }
 
 /// The setup's way out of a step: "cancelled" (no step event) after Cancel, else the step failed, said on screen
@@ -2671,8 +2670,8 @@ fn erase(app: &AppHandle) -> Result<String, String> {
             let to = to.to_string_lossy().into_owned();
             state(app).erased = Some(to.clone());
             emit_status(app);
-            *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("owner");
-            let _ = crate::present(app, "welcome");
+            let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Owner));
+            let _ = crate::app_layer::show(app, route);
             Ok(to)
         }
         Err((why, cause)) => {
@@ -2699,22 +2698,22 @@ pub(crate) fn app_window(webview: &tauri::Webview, allowed: &[&str]) -> Result<(
     }
 }
 
-/// The welcome, the popover, Preferences and the main window's cover.
-const ANY: &[&str] = &["welcome", "popover", "prefs", "main-cover"];
+/// The app layer (ADR 0255), the popover and the main window's cover.
+const ANY: &[&str] = &["main-app", "popover", "main-cover"];
 
 /// Async, as every command here that reads files or runs a program: a sync command runs on the main thread, and every
-/// window stands still while it waits (`status` reads the folder, and on the welcome window asks the system for the
+/// window stands still while it waits (`status` reads the folder, and for the first run asks the system for the
 /// person's name).
 #[tauri::command]
 pub async fn local_server_status(app: AppHandle, webview: tauri::Webview) -> Result<Status, String> {
     app_window(&webview, ANY)?;
-    let welcome = webview.label() == "welcome";
+    let welcome = webview.label() == crate::app_layer::LABEL && crate::app_layer::first_run_on_screen(&app);
     tauri::async_runtime::spawn_blocking(move || status(&app, welcome)).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn local_server_install(app: AppHandle, webview: tauri::Webview, choice: Choice) -> Result<(), String> {
-    app_window(&webview, &["welcome"])?;
+    app_window(&webview, &["main-app"])?;
     let check = |s: &Option<String>, max: usize| s.as_ref().map_or(true, |v| !v.trim().is_empty() && v.chars().count() <= max);
     if !check(&choice.name, 100) || !check(&choice.email, 254) || choice.name.is_some() != choice.email.is_some() {
         return Err("bad name or email".into());
@@ -2754,13 +2753,12 @@ fn set_up(app: &AppHandle, choice: &Choice) -> Result<(), String> {
             discard_unowned(&folder);
         }
     }
-    if let Some(window) = app.get_webview_window("welcome").filter(|w| !w.is_visible().unwrap_or(true)) {
-        match &result {
-            Err(why) if why != "cancelled" => notify(app, "setupFailed", "setupFailedBody", None),
-            // Done, or stopped from the popover or Preferences.
-            _ => {
-                let _ = window.destroy();
-            }
+    // Its screen closed meanwhile (the main window hidden, or the first run no longer in it): a failure is said with a
+    // notification, and opening the app brings the first run back on that step.
+    let window_shown = app.get_window(crate::main_window::LABEL).is_some_and(|w| w.is_visible().unwrap_or(false));
+    if !window_shown || !crate::app_layer::first_run_on_screen(app) {
+        if matches!(&result, Err(why) if why != "cancelled") {
+            notify(app, "setupFailed", "setupFailedBody", None);
         }
     }
     state(app).setting_up = None;
@@ -2771,7 +2769,7 @@ fn set_up(app: &AppHandle, choice: &Choice) -> Result<(), String> {
 /// Cancel while it is set up (Esc too): every wait of the setup ends, and `set_up` undoes it.
 #[tauri::command]
 pub fn local_server_cancel(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
-    app_window(&webview, &["welcome"])?;
+    app_window(&webview, &["main-app"])?;
     if setting_up(&app) {
         app.state::<LocalServer>().cancel.store(true, SeqCst);
     }
@@ -2815,7 +2813,7 @@ pub async fn local_server_stop(
     forget: bool,
     minutes: Option<u64>,
 ) -> Result<(), String> {
-    app_window(&webview, &["popover", "prefs"])?;
+    app_window(&webview, &["popover", "main-app"])?;
     // The popover's Stop during a setup is its Cancel.
     if setting_up(&app) {
         app.state::<LocalServer>().cancel.store(true, SeqCst);
@@ -2840,7 +2838,7 @@ pub async fn local_server_stop(
 /// where it was).
 #[tauri::command]
 pub async fn local_server_erase(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2854,7 +2852,7 @@ pub async fn local_server_erase(app: AppHandle, webview: tauri::Webview) -> Resu
 
 #[tauri::command]
 pub async fn local_server_restart(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
-    app_window(&webview, &["popover", "prefs"])?;
+    app_window(&webview, &["popover", "main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2867,7 +2865,7 @@ pub async fn local_server_restart(app: AppHandle, webview: tauri::Webview) -> Re
 /// Reach on or off; the main window follows the address, signed in. The reason when it didn't turn on.
 #[tauri::command]
 pub async fn local_server_reach(app: AppHandle, webview: tauri::Webview, on: bool) -> Result<Value, String> {
-    app_window(&webview, &["prefs", "main-cover"])?;
+    app_window(&webview, &["main-app", "main-cover"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2901,7 +2899,7 @@ pub async fn local_server_reach(app: AppHandle, webview: tauri::Webview, on: boo
 /// "Stop waiting": reach stops waiting for HTTPS to be allowed in the tailnet (it ends as not turned on).
 #[tauri::command]
 pub fn local_server_reach_stop(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
-    app_window(&webview, &["welcome", "prefs"])?;
+    app_window(&webview, &["main-app"])?;
     app.state::<LocalServer>().reach_stop.store(true, SeqCst);
     Ok(())
 }
@@ -2909,7 +2907,7 @@ pub fn local_server_reach_stop(app: AppHandle, webview: tauri::Webview) -> Resul
 /// The usage-statistics switch: `TELEMETRY` in `.env` (the server reads it at start, so it starts again).
 #[tauri::command]
 pub async fn local_server_usage(app: AppHandle, webview: tauri::Webview, on: bool) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2926,7 +2924,7 @@ pub async fn local_server_usage(app: AppHandle, webview: tauri::Webview, on: boo
 
 #[tauri::command]
 pub async fn local_server_backup(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2944,7 +2942,7 @@ pub async fn local_server_backups_set(
     nightly: bool,
     copy_to: Option<String>,
 ) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     if copy_to.as_deref().is_some_and(|d| !Path::new(d).is_absolute() || !Path::new(d).is_dir()) {
         return Err("not a folder".into());
     }
@@ -2964,7 +2962,7 @@ pub async fn local_server_backups_set(
 
 #[tauri::command]
 pub async fn local_server_restore(app: AppHandle, webview: tauri::Webview, file: String) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2995,7 +2993,7 @@ pub fn auto_restart_in(pmset: &str) -> Option<bool> {
 
 #[tauri::command]
 pub async fn keep_running(webview: tauri::Webview) -> Result<KeepRunning, String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     if !cfg!(target_os = "macos") {
         return Ok(KeepRunning { auto_login: None, auto_restart: None });
     }
@@ -3019,7 +3017,7 @@ pub async fn keep_running(webview: tauri::Webview) -> Result<KeepRunning, String
 /// System Settings at Users & Groups (automatic login) or Energy (start after a power failure). macOS only.
 #[tauri::command]
 pub async fn open_system_settings(webview: tauri::Webview, page: String) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     if !cfg!(target_os = "macos") {
         return Err("macOS only".into());
     }

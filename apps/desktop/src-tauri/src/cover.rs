@@ -57,17 +57,18 @@ fn window_points(window: &tauri::Window) -> tauri::Result<LogicalSize<f64>> {
     Ok(window.inner_size()?.to_logical(window.scale_factor()?))
 }
 
-/// Adds the cover to the freshly made main window, showing (the splash).
-pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
+/// Adds the cover to the freshly made main window: showing (the splash) when the window opens a server, hidden and with
+/// no size when it opens with no server chosen yet (the app layer's first run covers the window then, ADR 0255).
+pub fn attach(app: &AppHandle, window: &tauri::Window, splash: bool) -> tauri::Result<()> {
     // Covering from before the cover's web view exists: making it can take seconds (WebView2's first start), and a
     // site that paints meanwhile must still find a cover to step aside from.
     {
         let mut shown = lock(app);
-        shown.covering = true;
+        shown.covering = splash;
         shown.generation += 1;
     }
     if OVER_THE_SITE {
-        let size = window_points(window)?;
+        let size = if splash { window_points(window)? } else { LogicalSize::new(0.0, 0.0) };
         let cover = WebviewBuilder::new(LABEL, WebviewUrl::App("cover.html".into()))
             // Transparent only where the site shows through it as it fades: a transparent WebView2 shows black, not
             // the web view under it, and drops the color.
@@ -75,17 +76,16 @@ pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
             .background_color(SKY)
             .auto_resize();
         window.add_child(cover, LogicalPosition::new(0.0, 0.0), size)?;
-        // The site painted while the cover was being made: it steps aside at once.
+        // The site painted while the cover was being made (or there is no site yet): it steps aside at once.
         if !lock(app).covering {
             if let Some(cover) = app.get_webview(LABEL) {
                 let _ = cover.hide();
-                crate::bench::cover_gone();
-                main_window::keep_lights(app);
-                if window_is_key(app) {
-                    if let Some(site) = app.get_webview(main_window::LABEL) {
-                        let _ = site.set_focus();
-                    }
+                let _ = cover.set_size(LogicalSize::new(0.0, 0.0));
+                if splash {
+                    crate::bench::cover_gone();
                 }
+                main_window::keep_lights(app);
+                main_window::focus_top(app, true);
             }
         }
     }
@@ -94,6 +94,11 @@ pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
 
 fn lock(app: &AppHandle) -> std::sync::MutexGuard<'_, Shown> {
     app.state::<Cover>().inner().0.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The cover is over the site now (the site isn't there for the app layer, `app_layer.rs`).
+pub fn covering(app: &AppHandle) -> bool {
+    lock(app).covering
 }
 
 /// Covers the site now (it is loading a whole page again).
@@ -115,17 +120,9 @@ pub fn show(app: &AppHandle) {
     }
     let _ = cover.show();
     main_window::keep_lights(app);
-    // Typing goes to what shows, not to the page loading behind it.
-    if window_is_key(app) {
-        let _ = cover.set_focus();
-    }
-}
-
-/// The main window is the one in front (focus moves only inside it, never brings it forward).
-fn window_is_key(app: &AppHandle) -> bool {
-    app.get_window(main_window::LABEL)
-        .and_then(|w| w.is_focused().ok())
-        .unwrap_or(false)
+    // Typing goes to what shows, not to the page loading behind it (the app layer first, when it is over both).
+    main_window::focus_top(app, true);
+    crate::app_layer::site_changed(app);
 }
 
 /// The site painted: the cover fades and steps aside.
@@ -166,11 +163,8 @@ pub fn hide(app: &AppHandle) {
         }
         // Hiding a web view lays the window out anew, the buttons back at the title bar's top.
         main_window::keep_lights(&app);
-        if window_is_key(&app) {
-            if let Some(site) = app.get_webview(main_window::LABEL) {
-                let _ = site.set_focus();
-            }
-        }
+        main_window::focus_top(&app, true);
+        crate::app_layer::site_changed(&app);
     });
 }
 
@@ -219,6 +213,8 @@ pub fn page_ready(app: AppHandle, webview: tauri::Webview, site: Option<bool>) -
         crate::bench::painted(&app, &webview);
     }
     hide(&app);
+    // A layer that waited for the site steps aside now (a server just chosen in the first run, ADR 0255).
+    crate::app_layer::site_painted(&app);
     Ok(())
 }
 

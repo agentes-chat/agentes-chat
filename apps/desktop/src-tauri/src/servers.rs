@@ -257,7 +257,7 @@ pub async fn server_choose(app: AppHandle, server: String, page: Option<String>)
 }
 
 /// A server leaves the list: the window's sign-in there goes with it (its cookies; the account and the server stay),
-/// and a window still on it moves to the server open now, or hides when none is left. Async, with the cookies on a
+/// and a window still on it moves to the server open now, or to the first run when none is left. Async, with the cookies on a
 /// thread of their own: reading or deleting them from a sync command deadlocks on Windows (WebView2).
 #[tauri::command]
 pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String> {
@@ -273,10 +273,12 @@ pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String>
     crate::workspaces::trigger(&app);
     match current(&app) {
         Some(next) if showing => crate::main_window::show_url(&app, next)?,
+        // No server left: the window stays, with the first run over it (ADR 0255).
         None => {
-            if let Some(window) = app.get_window(crate::main_window::LABEL) {
-                let _ = window.hide();
+            if let Some(page) = app.get_webview(crate::main_window::LABEL) {
+                let _ = page.navigate("about:blank".parse().map_err(|_| "not a URL")?);
             }
+            crate::app_layer::show(&app, crate::app_layer::Route::first_run(None))?;
         }
         _ => {}
     }

@@ -97,7 +97,7 @@ test("a server's tile: Tailscale's own icon for one on the Tailscale network, a 
 
 test("Preferences › Servers: the server on the Tailscale network by Tailscale's icon, the Cloud by its glyph", () =>
   servers(
-    createFakeHost("prefs", "selfhost"),
+    createFakeHost("app", "selfhost"),
     (el) => el.querySelectorAll(".dk-crow").length >= 2,
     (el) => {
       const rows = [...el.querySelectorAll(".dk-crow")].map((row) => [
@@ -117,7 +117,7 @@ test("Preferences › Servers: the server here leads to Jev's key in its Setting
   const jev = (el: HTMLElement) =>
     [...el.querySelectorAll(".dk-crow")].find((row) => row.querySelector(".dk-crow__title")?.textContent === "Jev");
   const openOf = (el: HTMLElement) => jev(el)?.querySelector<HTMLButtonElement>(".dk-crow__end button");
-  await servers(createFakeHost("prefs", "here", { here: { reach: true } }), jev, async (el, opened) => {
+  await servers(createFakeHost("app", "here", { here: { reach: true } }), jev, async (el, opened) => {
     const row = jev(el);
     // Its title's ⓘ says what Jev is and where its key goes, no line under it, and only Open at the end.
     expect(row?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe("About Jev");
@@ -129,12 +129,12 @@ test("Preferences › Servers: the server here leads to Jev's key in its Setting
     expect(opened).toEqual(["https://ana-mac.tail1234.ts.net/?open=jev"]);
   });
   // Not running: nothing answers there yet, so Open waits.
-  await servers(createFakeHost("prefs", "here", { here: { phase: "stopped" } }), jev, (el) => {
+  await servers(createFakeHost("app", "here", { here: { phase: "stopped" } }), jev, (el) => {
     expect(openOf(el)?.disabled).toBe(true);
   });
   // Stopped running here (its data kept): one row to start it again, and nothing else.
   await servers(
-    createFakeHost("prefs", "here", { here: { run: false } }),
+    createFakeHost("app", "here", { here: { run: false } }),
     (el) => el.querySelector(".dk-crow"),
     (el) => {
       expect(el.textContent).toContain("Start it here");
@@ -144,7 +144,7 @@ test("Preferences › Servers: the server here leads to Jev's key in its Setting
 });
 
 test("Sign in by address: what it finds on the Tailscale network by Tailscale's icon, this Mac by its glyph", async () => {
-  const host = createFakeHost("welcome", "first");
+  const host = createFakeHost("app", "first");
   // Discovery answers at once (the fake host waits like a network would); both still get checked.
   host.discover = async () => [
     { server: "http://127.0.0.1:4310", where: "here" },

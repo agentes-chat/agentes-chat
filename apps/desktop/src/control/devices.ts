@@ -57,9 +57,6 @@ export const iphoneStepsUrl = (server: string, orgId: string, machineId: string)
 
 // ── The iPhone setup ─────────────────────────────────────────────────────────
 
-/** Preferences opens the welcome window as the iPhone setup (read once by that window, then cleared). */
-export const IPHONE_SETUP_PREF = "iphoneSetup";
-
 export const IPHONE_SETUP_STEPS = [
   "xcode",
   "tools",

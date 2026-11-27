@@ -21,7 +21,7 @@ function Tailnet() {
 test("Tailscale is read as the window opens and when it comes up again, at most every 15 seconds", async () => {
   const start = new Date(2026, 10, 18, 12, 0, 0);
   setSystemTime(start);
-  const host = createFakeHost("prefs", "selfhost");
+  const host = createFakeHost("app", "selfhost");
   let reads = 0;
   const read = host.tailscale;
   host.tailscale = () => {

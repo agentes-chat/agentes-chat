@@ -96,9 +96,10 @@ fn site_call(function: &str, args: &[&str]) -> String {
     format!("window.{function}?.({})", args.join(","))
 }
 
-/// A choice for the site. From the menu bar it also brings the window forward (⌘K from Preferences lands in
-/// the window, not in a hidden page).
+/// A choice for the site. From the menu bar it also brings the window forward, and settings step aside (⌘K from
+/// This computer's settings lands in the site, not under the app layer, ADR 0255).
 fn to_site(app: &AppHandle, js: String) {
+    crate::app_layer::dismiss_settings(app);
     if let Some(page) = app.get_webview(main_window::LABEL) {
         let _ = page.eval(js);
         let _ = main_window::open(app, None);
@@ -129,11 +130,13 @@ pub fn on_event(app: &AppHandle, id: &str) {
     }
     let Some(action) = id.strip_prefix("app:") else { return };
     match action {
+        // ⌘, and the tray's item: This computer's settings, the app layer's (ADR 0255).
         "prefs" => {
-            let _ = crate::present(app, "prefs");
+            let _ = crate::app_layer::show(app, crate::app_layer::Route::settings(None, None));
         }
         "serversAdd" => {
-            let _ = crate::present(app, "welcome");
+            let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Add));
+            let _ = crate::app_layer::show(app, route);
         }
         "open" => crate::open_app(app),
         // The tray's line for the server here (Windows and Linux).

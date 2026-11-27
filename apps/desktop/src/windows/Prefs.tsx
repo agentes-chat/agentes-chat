@@ -1,17 +1,18 @@
 /**
- * Preferences: General, Servers and Updates always; while agents work on this computer, its own tabs too
+ * This computer's settings on the main window's app layer (ADR 0255), today's tabs until its sections land: General,
+ * Servers and Updates always; while agents work on this computer, its own tabs too
  * (Folders, Tools, Activity, Advanced). Everything about this computer acts through the runners; nothing is
  * granted from the site.
  */
 import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import { CountChip, Icon, type IconName } from "@agenteschat/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot } from "../app";
 import { serverName } from "../control/server";
 import { pairedHomes } from "../control/store";
 import { macStateOf } from "../control/tray";
-import { readPref, useLocalServer, useOnShown, useUpdateCheck, writePref } from "../hooks";
+import { useLocalServer, useUpdateCheck } from "../hooks";
 import { BrandFace, MacPortrait } from "../ui/bits";
 import { Activity } from "./prefs/Activity";
 import { Advanced } from "./prefs/Advanced";
@@ -37,15 +38,16 @@ const DEVICE_TABS: Tab[] = [
 const UPDATE_TAB: Tab = { id: "updates", icon: "download" };
 const isTab = (v: unknown): v is PrefTab => [...APP_TABS, ...DEVICE_TABS, UPDATE_TAB].some((t) => t.id === v);
 
-export function Prefs() {
+/**
+ * `tab`: the one the layer's route asks for (its section); `shownAt`: the layer's `seq` when it was put on screen, a new
+ * one is the settings shown again (the asked tab, a fresh update check).
+ */
+export function Prefs({ tab: asked, shownAt }: { tab?: PrefTab; shownAt?: number } = {}) {
   const { t } = useTranslation();
   const host = useHost();
   const snap = useSnapshot();
   const update = useUpdateCheck(false);
-  const [tab, setTab] = useState<PrefTab>(() => {
-    const asked = readPref<string | null>("prefsTab", null);
-    return isTab(asked) ? asked : "general";
-  });
+  const [tab, setTab] = useState<PrefTab>(() => (isTab(asked) ? asked : "general"));
   const [current, setCurrent] = useState<string | null>(null);
   const local = useLocalServer();
   const readCurrent = () => {
@@ -55,14 +57,19 @@ export function Prefs() {
       .catch(() => {});
   };
 
-  // The popover can ask for a tab ("See what's new", "Manage servers…").
-  useOnShown("prefs", () => {
-    const asked = readPref<string | null>("prefsTab", null);
+  // Shown again, maybe on another tab (the popover's "See what's new", "Manage servers…", the site's rows).
+  const shownFirst = useRef(shownAt);
+  const again = useRef(() => {});
+  again.current = () => {
     if (isTab(asked)) setTab(asked);
-    writePref("prefsTab", null);
     void update.check();
     readCurrent();
-  });
+  };
+  useEffect(() => {
+    if (shownAt === undefined || shownAt === shownFirst.current) return;
+    shownFirst.current = shownAt;
+    again.current();
+  }, [shownAt]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: again when the server here's address moves, or it leaves
   useEffect(readCurrent, [host, local.publicUrl, local.run]);
 

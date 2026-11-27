@@ -3,10 +3,10 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { act } from "react";
+import { act, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
-import { AppProvider } from "../src/app";
+import { AppProvider, useHost } from "../src/app";
 import type { Tailnet } from "../src/control/local-server";
 import { DesktopStore } from "../src/control/store";
 import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
@@ -16,6 +16,15 @@ import { FirstRun } from "../src/windows/FirstRun";
 import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+/** The first run as the app layer draws it (ADR 0255): its route's mode, and each time it is shown again. */
+function LayerFirstRun() {
+  const host = useHost() as FakeHost;
+  const [state, setState] = useState(() => ({ ...host.layer }));
+  useEffect(() => host.onLayer(setState), [host]);
+  const mode = state.route?.screen === "firstRun" ? state.route.mode : undefined;
+  return <FirstRun mode={mode} shownAt={state.seq} />;
+}
 
 const REACH_TEXT =
   "With Tailscale, a private network for your devices: your phone and the people you invite join it, and nobody else can reach agentes.chat.";
@@ -28,7 +37,7 @@ async function firstRun(
   check: (screen: ReturnType<typeof screenOf>) => Promise<void>,
   options: { here?: HereOptions; lang?: AppLocale; host?: (host: FakeHost) => void } = {},
 ) {
-  const host = createFakeHost("welcome", scenario, { here: options.here });
+  const host = createFakeHost("app", scenario, { here: options.here });
   options.host?.(host);
   const opened: string[] = [];
   host.openExternal = async (url) => {
@@ -50,7 +59,7 @@ async function firstRun(
         <I18nextProvider i18n={createDesktopI18n(options.lang ?? "en", host.platform)}>
           <AppProvider host={host} store={store}>
             <ToastProvider>
-              <FirstRun />
+              <LayerFirstRun />
             </ToastProvider>
           </AppProvider>
         </I18nextProvider>,
@@ -194,14 +203,12 @@ describe("Run agentes.chat on this Mac", () => {
 
   test("open already when the app finds no account left: shown again, it goes to the form", () => {
     let gone = false;
-    let mode: "owner" | null = null;
     return firstRun(
       "here",
       async ({ el, host, until }) => {
         await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
         gone = true;
-        mode = "owner";
-        await act(async () => host.showWindow("welcome"));
+        await act(async () => host.showLayer({ screen: "firstRun", mode: "owner" }));
         await until(() => el.querySelector("form.dk-fr__here .dk-fr__who"));
         expect(el.querySelector(".dk-lead")?.textContent).toStartWith("No account is left on it.");
       },
@@ -209,11 +216,8 @@ describe("Run agentes.chat on this Mac", () => {
         host: (host) => {
           const read = host.localServer;
           host.localServer = async () => ({ ...(await read()), ...(gone ? { owner: false } : {}) });
-          host.welcomeMode = async () => {
-            const taken = mode;
-            mode = null;
-            return taken;
-          };
+          // Open on the first run (the app layer's route), not on settings.
+          host.layer.route = { screen: "firstRun" };
         },
       },
     );
@@ -236,7 +240,7 @@ describe("Run agentes.chat on this Mac", () => {
       "here",
       async ({ el, host, until }) => {
         await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
-        await act(async () => host.addWorkspace());
+        await act(async () => host.showLayer({ screen: "firstRun", mode: "add" }));
         await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
         expect(el.querySelector(".dk-fr")?.getAttribute("data-screen")).toBe("choose");
       },
@@ -395,7 +399,7 @@ describe("Where will your workspace live?", () => {
           host.chooseServer = async (_server, page) => {
             chosen.push(page);
           };
-          host.hideWindow = async () => {};
+          host.hideLayer = async () => {};
         },
       },
     );
@@ -830,7 +834,7 @@ describe("Setting it up here", () => {
         const { el, until, host } = screen;
         await startSetup(screen);
         await until(() => stepOf(el, "Creating your account")?.dataset.state === "active");
-        await act(async () => host.showWindow("welcome"));
+        await act(async () => host.showLayer({ screen: "firstRun" }));
         expect(el.querySelector(".dk-fr__setup")).toBeTruthy();
         expect(stepOf(el, "Creating your account")?.dataset.state).toBe("active");
       },
@@ -865,14 +869,14 @@ describe("Setting it up here", () => {
 });
 
 describe("Add a workspace", () => {
-  /** The welcome window opened by the site's "Add workspace", with agentes.chat signed in here or not. */
+  /** The first run opened by the site's "Add workspace", with agentes.chat signed in here or not. */
   const adding = (cloud: boolean, chosen: (string | undefined)[]) => (host: FakeHost) => {
-    host.welcomeMode = async () => "add";
+    host.layer.route = { screen: "firstRun", mode: "add" };
     host.workspaces = async () => [{ server: "https://app.agentes.chat", signedIn: cloud, orgs: [] }];
     host.chooseServer = async (_server, page) => {
       chosen.push(page);
     };
-    host.hideWindow = async () => {};
+    host.hideLayer = async () => {};
   };
 
   test("not signed in to agentes.chat: the cloud's row signs in (the workspaces you have), a new one is the line", () => {

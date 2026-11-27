@@ -14,7 +14,8 @@ export function menuLabels(t: TFunction): Record<string, string> {
     serversAdd: t("desktop.servers.add"),
     serversManage: t("desktop.servers.manage"),
     trayOpen: t("desktop.tray.open"),
-    trayPrefs: t("desktop.tray.prefs"),
+    // The tray's way to this computer's settings on Windows and Linux (tray.rs, ADR 0255).
+    trayThisMac: t("desktop.tray.thisMac"),
     trayPause: t("desktop.tray.pause"),
     trayPause1h: t("desktop.tray.pause1h"),
     trayPauseTomorrow: t("desktop.tray.pauseTomorrow"),
@@ -49,9 +50,9 @@ export function menuLabels(t: TFunction): Record<string, string> {
     setupFailedBody: t("desktop.here.notifyFailedBody"),
     // Another server's new notifications (workspaces.rs, ADR 0154): "{count}" is left for Rust.
     serversCloud: t("desktop.servers.cloud"),
-    // The app's own windows by name, so the Dock's list never shows three "agentes.chat".
+    // The main window's name while the app layer fills it (app_layer.rs), never a second "agentes.chat".
     windowWelcome: t("desktop.windowTitle.welcome"),
-    windowPrefs: t("desktop.windowTitle.prefs"),
+    windowSettings: t("desktop.windowTitle.settings"),
     workspaceNewsOne: t("desktop.servers.newsOne"),
     workspaceNewsMany: t("desktop.servers.newsMany", { n: "{count}" }),
     // The Stop on the notification of a phone someone's agent uses (main_window.rs `show_notice`).

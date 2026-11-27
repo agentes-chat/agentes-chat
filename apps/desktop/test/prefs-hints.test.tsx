@@ -35,7 +35,7 @@ async function pane(
   check: (el: HTMLElement, host: FakeHost, opened: string[]) => Promise<void> | void,
   options: { someCommands?: boolean; here?: HereOptions; host?: (host: FakeHost) => void } = {},
 ) {
-  const host = createFakeHost("prefs", scenario, { someCommands: options.someCommands, here: options.here });
+  const host = createFakeHost("app", scenario, { someCommands: options.someCommands, here: options.here });
   options.host?.(host);
   const opened: string[] = [];
   host.openExternal = async (url) => {
@@ -263,7 +263,8 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
         expect(document.querySelector(".dk-toast")?.textContent).toContain(
           "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
         );
-        expect(host.window).toBe("welcome");
+        // The first run, on Run here's form for the new owner (the app layer, ADR 0255).
+        expect(host.layer.route).toEqual({ screen: "firstRun", mode: "owner" });
         expect(await host.localServer()).toMatchObject({ installed: "none", run: false });
       },
     ));

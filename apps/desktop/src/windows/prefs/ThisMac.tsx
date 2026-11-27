@@ -33,19 +33,12 @@ import {
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useStore } from "../../app";
-import {
-  androidStepsUrl,
-  deviceServer,
-  IPHONE_SETUP_PREF,
-  isSignedOut,
-  siteApi,
-  thisComputer,
-} from "../../control/devices";
+import { androidStepsUrl, deviceServer, isSignedOut, siteApi, thisComputer } from "../../control/devices";
 import { serverPlace } from "../../control/local-server";
 import { type PairTarget, pairWithSession, targetKey } from "../../control/pair";
 import { homeServer, serverName } from "../../control/server";
 import { type Home, orgName } from "../../control/store";
-import { agentOf, useLocalServer, usePending, useWifiIphones, writePref } from "../../hooks";
+import { agentOf, useLocalServer, usePending, useWifiIphones } from "../../hooks";
 import type { Host } from "../../host/types";
 import { AgentFace, ConnectionChip, OrgTile } from "../../ui/bits";
 import { MacPermissionCard, useMacGrants } from "../../ui/permissions";
@@ -59,10 +52,9 @@ import { InternetRow } from "../InternetRow";
  */
 const POLL_MS = 30_000;
 
-/** The iPhone setup, in the welcome window (it reads the pref once it shows). */
+/** The iPhone setup, the app layer's sheet. */
 export function openIphoneSetup(host: Host) {
-  writePref(IPHONE_SETUP_PREF, true);
-  void host.showWindow("welcome").catch(() => {});
+  void host.showLayer({ screen: "iphone" }).catch(() => {});
 }
 
 interface Target {
@@ -312,7 +304,7 @@ export function ThisMacCards({
           title={t("desktop.prefs.thisMac.otherWorkspace")}
           hint={hintFor(t, t("desktop.prefs.thisMac.otherWorkspace"), t("desktop.prefs.thisMac.otherWorkspaceDesc"))}
           end={
-            <Button size="sm" onClick={() => void host.addWorkspace().catch(() => {})}>
+            <Button size="sm" onClick={() => void host.showLayer({ screen: "firstRun", mode: "add" }).catch(() => {})}>
               {t("desktop.prefs.thisMac.addWorkspace")}
             </Button>
           }

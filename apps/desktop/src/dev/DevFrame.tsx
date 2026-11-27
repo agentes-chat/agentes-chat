@@ -1,20 +1,47 @@
 /**
- * Development only (`bun run dev` in a browser): a bar to switch windows and nudge the fake runners
- * (go offline, raise a folder request), and a frame the size of each real window. `?bare=1` drops the bar
- * (screenshots). Not product UI.
+ * Development only (`bun run dev` in a browser): a bar to switch screens and nudge the fake runners
+ * (go offline, raise a folder request), and a frame the size of each real one. The app layer (`app`) shows in a
+ * 1240×800 main window with a stand-in of the site behind it, so a sheet can be checked over it. `?bare=1` drops the
+ * bar (screenshots). Not product UI.
  */
 import { switchTheme } from "@agenteschat/ui";
 import { useEffect, useReducer } from "react";
 import type { FakeHost } from "../host/fake";
-import type { WindowName } from "../host/types";
+import type { LayerRoute, WindowName } from "../host/types";
 import { WindowView } from "../WindowView";
+import "./dev-frame.css";
 
 const SIZES: Record<WindowName, { width: number; height: number | "auto" }> = {
   popover: { width: 380, height: "auto" },
-  welcome: { width: 720, height: 600 },
-  prefs: { width: 860, height: 600 },
+  app: { width: 1240, height: 800 },
   notch: { width: 480, height: 420 },
 };
+
+/** The layer's routes the bar offers. */
+const ROUTES: { name: string; route: LayerRoute }[] = [
+  { name: "first run", route: { screen: "firstRun" } },
+  { name: "settings", route: { screen: "settings" } },
+  { name: "prepare", route: { screen: "prepare", org: "Acme", server: "https://agentes.tail1234.ts.net" } },
+  { name: "iphone", route: { screen: "iphone" } },
+];
+
+/** The site behind the layer: a plain stand-in, so a sheet's scrim and card can be seen over something. */
+function SiteStandIn({ there }: { there: boolean }) {
+  return (
+    <div className="dk-dev__site" aria-hidden="true">
+      {there && (
+        <>
+          <div className="dk-dev__siteside" />
+          <div className="dk-dev__sitemain">
+            <div className="dk-dev__siteline" />
+            <div className="dk-dev__siteline" data-short />
+            <div className="dk-dev__siteline" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function DevFrame({ host }: { host: FakeHost }) {
   const [, rerender] = useReducer((n: number) => n + 1, 0);
@@ -28,11 +55,26 @@ export function DevFrame({ host }: { host: FakeHost }) {
     <div className="dk-dev" data-bare={bare || undefined}>
       {!bare && (
         <div className="dk-dev__bar">
-          {(["popover", "welcome", "prefs", "notch"] as const).map((w) => (
+          {(["popover", "notch"] as const).map((w) => (
             <button key={w} type="button" aria-pressed={w === name} onClick={() => void host.showWindow(w)}>
               {w}
             </button>
           ))}
+          {ROUTES.map(({ name: label, route }) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={name === "app" && host.layer.route?.screen === route.screen}
+              onClick={() => void host.showLayer(route)}
+            >
+              {label}
+            </button>
+          ))}
+          {name === "app" && host.layer.route && (
+            <button type="button" onClick={() => void host.hideLayer()}>
+              hide layer
+            </button>
+          )}
           <span className="dk-dev__sep" />
           <button type="button" onClick={() => first?.setOnline(false)}>
             offline
@@ -56,7 +98,10 @@ export function DevFrame({ host }: { host: FakeHost }) {
         data-window={name}
         style={{ width: size.width, height: size.height === "auto" ? undefined : size.height }}
       >
-        <WindowView key={name} name={name} />
+        {name === "app" && <SiteStandIn there={host.layer.site.there} />}
+        <div className="dk-dev__layer" data-mode={name === "app" ? host.layer.mode : undefined}>
+          <WindowView key={name} name={name} />
+        </div>
       </div>
     </div>
   );

@@ -28,8 +28,7 @@ export interface LinkInfo {
   computer: string | null;
 }
 
-/** The workspace the welcome window offers this computer to (taken once), and those already offered (never again). */
-export const PAIR_OFFER_PREF = "pairOffer";
+/** The workspaces already offered this computer (the popover's offer, the app layer's sheet: never again). */
 export const PAIR_OFFERED_PREF = "pairOffered";
 
 export const targetKey = (t: Pick<PairTarget, "server" | "orgId">) => `${t.server} ${t.orgId}`;

@@ -11,7 +11,7 @@ export const desktopPtBR = {
   /** This computer's name in the copy: "este {{device}}", "neste {{device}}" (all masculine). */
   device: { mac: "Mac", windows: "PC", linux: "computador" },
   /** O nome das janelas do próprio app (a lista do Dock, o menu Janela, o Mission Control). */
-  windowTitle: { welcome: "Boas-vindas", prefs: "Preferências" },
+  windowTitle: { welcome: "Boas-vindas", prefs: "Preferências", settings: "Configurações" },
   common: {
     cancel: "Cancelar",
     close: "Fechar",
@@ -96,6 +96,7 @@ export const desktopPtBR = {
     resume: "Retomar os agentes",
     open: "Abrir o agentes.chat",
     prefs: "Preferências…",
+    thisMac: "Configurações deste {{device}}…",
     quit: "Sair do agentes.chat",
     pausedFor1h: "Pausado por 1 hora",
     pausedTomorrow: "Pausado até amanhã às 9h",

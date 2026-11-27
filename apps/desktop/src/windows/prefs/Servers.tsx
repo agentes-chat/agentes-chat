@@ -31,7 +31,7 @@ import {
   serverName,
 } from "../../control/server";
 import { pairedHomes } from "../../control/store";
-import { useLocalServer, useOnShown, usePending, useTailnet } from "../../hooks";
+import { useLayerShown, useLocalServer, usePending, useTailnet } from "../../hooks";
 import { OrgTile } from "../../ui/bits";
 import { CopyDetails, ReachProblem, ReachProgress, ReachRow, ServerTile } from "../../ui/here";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
@@ -73,7 +73,7 @@ export function Servers() {
   };
   // biome-ignore lint/correctness/useExhaustiveDependencies: again when the server here's address moves
   useEffect(read, [host, local.publicUrl, local.run]);
-  useOnShown("prefs", read);
+  useLayerShown(read);
 
   const homesOf = (server: string) => pairedHomes(snap).filter((h) => homeServer(h) === server);
   // The server here has its own card, above.
@@ -212,7 +212,11 @@ export function Servers() {
         </>
       )}
       <div className="dk-under-card">
-        <Button size="sm" icon="plus" onClick={() => void host.addWorkspace().catch(() => {})}>
+        <Button
+          size="sm"
+          icon="plus"
+          onClick={() => void host.showLayer({ screen: "firstRun", mode: "add" }).catch(() => {})}
+        >
           {t("desktop.servers.add")}
         </Button>
       </div>
@@ -917,7 +921,7 @@ function KeepItRunning({ awake }: { awake: boolean }) {
     window.addEventListener("focus", read);
     return () => window.removeEventListener("focus", read);
   }, [read]);
-  useOnShown("prefs", read);
+  useLayerShown(read);
   const rows: { key: string; ok: boolean | null; title: string; hint?: string; fix?: ReactNode }[] = [
     {
       key: "login",

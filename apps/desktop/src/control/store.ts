@@ -147,6 +147,17 @@ export class DesktopStore {
         }),
       );
     }
+    // The app layer is a web view that stays alive in the main window: each route it puts on screen reads again.
+    if (this.host.window === "app" && typeof this.host.onLayer === "function") {
+      let seq: number | null = null;
+      this.stops.push(
+        this.host.onLayer((state) => {
+          if (state.mode === "hidden" || state.seq === seq) return;
+          seq = state.seq;
+          void this.reload();
+        }),
+      );
+    }
     void this.reload();
     return () => {
       for (const s of this.stops) s();

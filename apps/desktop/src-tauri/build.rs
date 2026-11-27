@@ -68,8 +68,6 @@ const COMMANDS: &[&str] = &[
     "tailscale_open",
     "workspaces_get",
     "site_fetch",
-    "welcome_mode_take",
-    "welcome_add",
     "pair_link_info",
     "pair_ask",
     "screen_access",
@@ -79,6 +77,13 @@ const COMMANDS: &[&str] = &[
     "privacy_open",
     "setup_state_get",
     "setup_state_set",
+    "health_publish",
+    "layer_show",
+    "layer_hide",
+    "layer_state",
+    "layer_painted",
+    "layer_site_go",
+    "first_run_sign_in",
 ];
 
 fn main() {
