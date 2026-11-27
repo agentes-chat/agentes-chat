@@ -93,7 +93,8 @@ export function AgentStep({
   onBack?: (() => void) | null;
   /** "Other": makes the agent with what was typed, and answers with it. */
   onCreate: (draft: { name: string; does: string; apps: string[] }) => Promise<AgentStepAgent | null>;
-  onContinue: () => void;
+  /** Continue, with the agent it leaves: the one shown, or the one "Other" made a moment ago. */
+  onContinue: (agent: AgentStepAgent | null) => void;
 }) {
   const { t, i18n } = useTranslation();
   const catalog = useCatalog();
@@ -154,7 +155,9 @@ export function AgentStep({
     const rule = made?.trigger.type === "schedule" ? made.trigger.rule : null;
     return rule ? ruleSentence(t, i18n.language, fromApiRule(rule, toYmd(new Date())), new Date(), false) : null;
   };
-  const anyConnected = own.some((a) => connectedOf(a) !== null) || found.some((a) => connectedOf(a) !== null);
+  // Only the rows on screen: an app connected in the workspace that this list doesn't show counts for nothing here.
+  const anyConnected =
+    own.some((a) => connectedOf(a) !== null) || (searching && found.some((a) => connectedOf(a) !== null));
   // Continue: once one app is connected; at once where the work needs none, or where none can connect here.
   const ready = custom
     ? agent !== null || (name.trim() !== "" && does.trim() !== "")
@@ -270,8 +273,10 @@ export function AgentStep({
             disabled={!ready || busy || making}
             loading={busy || making}
             onClick={async () => {
-              if (custom && !(await ensureAgent())) return;
-              onContinue();
+              // "Other" makes its agent first; the page's own data has it only on its next render.
+              const made = custom ? await ensureAgent() : agent;
+              if (custom && !made) return;
+              onContinue(made);
             }}
           >
             {t("onboarding.actions.continue")}

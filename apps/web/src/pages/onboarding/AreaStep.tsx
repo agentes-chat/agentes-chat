@@ -2,7 +2,7 @@ import type { FirstAgents } from "@agenteschat/client";
 import type { AppClient } from "@agenteschat/client/lib/app-clients";
 import { areasFor, FIRST_AREAS, type FirstArea } from "@agenteschat/client/lib/first-areas";
 import { lowerFirst } from "@agenteschat/client/lib/format";
-import { IMPORT_CARDS } from "@agenteschat/client/lib/import/flow";
+import type { ImportCard } from "@agenteschat/client/lib/import/flow";
 import { browserTimezone, timezoneName } from "@agenteschat/client/lib/routines";
 import {
   Button,
@@ -22,7 +22,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { ZonePicker } from "@/components/ZoneSelect";
-import { CARD_MARK } from "@/lib/import-flow";
+import { CARD_MARK } from "@/lib/import-marks";
 import { useTheme } from "@/lib/theme";
 import { type AskVariant, AskYourAi } from "./AskStep";
 import { AREA_ICON, useAreaApps } from "./areas";
@@ -39,10 +39,14 @@ import "./area-step.css";
 
 /** Asking the person's AI: the assistants it names most, as the dialog's row shows them first. */
 const ASK_MARKS = ["openai", "claude", "gemini"] as const;
-/** Bringing agents from another app: the import's first three apps. */
-const IMPORT_MARKS = IMPORT_CARDS.filter(
-  (c): c is Exclude<(typeof IMPORT_CARDS)[number], "other"> => c !== "other",
-).slice(0, 3);
+/**
+ * Bringing agents from another app: the import's first three apps (`IMPORT_CARDS`), named here so the work step loads
+ * none of the import's readers (a test holds them to the import's order).
+ */
+const IMPORT_MARKS = ["grok-bot", "chatgpt-dots", "openbotrun"] as const satisfies readonly Exclude<
+  ImportCard,
+  "other"
+>[];
 
 /** The wall's faces: the areas' agents, never the right hand. */
 export function areaFaces(personal: boolean): ShellFace[] {
@@ -87,7 +91,10 @@ export function AreaStep({
   eyebrow?: ReactNode;
   /** The agent is being made: the rows wait. */
   busy: boolean;
-  /** The workspace's name and time zone in the footer, with "Change" (who set the workspace up); none for a member. */
+  /**
+   * The workspace's name and time zone (its IANA id) in the footer, with "Change" (who set the workspace up); none for
+   * a member.
+   */
   place?: { name: string; zone: string; onSave: (next: { name: string; timezone: string }) => Promise<void> } | null;
   onArea: (area: FirstArea) => void;
   onCustom: () => void;
@@ -96,7 +103,7 @@ export function AreaStep({
   /** "Bring from another app": the import dialog, the page's. */
   onImport?: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dark = useTheme().resolved === "dark";
   const [asking, setAsking] = useState(false);
   const [changing, setChanging] = useState(false);
@@ -132,7 +139,7 @@ export function AreaStep({
           // The workspace's name, from the work e-mail, and its time zone: the name step's two answers, in one line.
           <span className="onbx__note onb-place-line">
             <span>
-              {t("onboarding.areas.place", { name: place.name, zone: place.zone })} ·{" "}
+              {t("onboarding.areas.place", { name: place.name, zone: zoneWords(place.zone, i18n.language) })} ·{" "}
               <button type="button" className="ac-link onb__link" onClick={() => setChanging(true)}>
                 {t("onboarding.areas.change")}
               </button>

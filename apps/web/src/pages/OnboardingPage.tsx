@@ -77,7 +77,7 @@ import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { AgentStep, type AgentStepAgent } from "./onboarding/AgentStep";
 import { AiHost, AiStep } from "./onboarding/AiStep";
-import { AreaStep, zoneWords } from "./onboarding/AreaStep";
+import { AreaStep } from "./onboarding/AreaStep";
 import { TeamWelcome } from "./onboarding/CelebrateStep";
 import { HireTeam } from "./onboarding/HireStep";
 import { Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
@@ -198,14 +198,16 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   const [polling, setPolling] = useState(false);
   const status = useAiStatus(orgId ?? "", orgId !== null && lodi !== undefined, polling ? AI_POLL_MS : false);
   // Read again when the agents change (an agent made or brought, here or in another tab): a read from before them says
-  // nothing of them.
+  // nothing of them, nor of which work an agent made in another tab was made for.
   const idsKey = ids.join(",");
   const readFor = useRef(idsKey);
   useEffect(() => {
     if (readFor.current === idsKey) return;
     const before = readFor.current;
     readFor.current = idsKey;
-    if (before !== "" && orgId) void qc.invalidateQueries({ queryKey: keys.aiStatus(orgId) });
+    if (before === "" || !orgId) return;
+    void qc.invalidateQueries({ queryKey: keys.aiStatus(orgId) });
+    void qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
   }, [idsKey, orgId, qc]);
   const listed =
     status.data && status.dataUpdatedAt >= agents.dataUpdatedAt
@@ -279,12 +281,12 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   // The agent step's Continue: its first delivery may go once the agent can work (its apps were connected on the step,
   // ADR 0256; one brought from another app gets its own here), then kept as "agents", so a reload resumes past it.
   const agentDone = useMutation({
-    mutationFn: async (id: string) => {
-      if (firstAgent) await api.firstAgents.keepDelivery(id, firstAgent.id);
+    mutationFn: async ({ id, agentId }: { id: string; agentId: string | null }) => {
+      if (agentId) await api.firstAgents.keepDelivery(id, agentId);
       void qc.invalidateQueries({ queryKey: keys.firstDelivery(id) });
       return api.orgs.saveOnboarding(id, { step: "agents" });
     },
-    onSuccess: (saved, id) => {
+    onSuccess: (saved, { id }) => {
       remember(id, saved);
       setPicked(null);
     },
@@ -618,7 +620,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             variant={personalNow ? "personal" : "team"}
             eyebrow={stepLine}
             busy={busy}
-            place={{ name, zone: zoneWords(zoneNow, i18n.language), onSave: savePlace }}
+            place={{ name, zone: zoneNow, onSave: savePlace }}
             onArea={startArea}
             onCustom={() => setCustom(true)}
             onProposal={(p) =>
@@ -666,7 +668,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
               setPicked("area");
             }}
             onCreate={startCustom}
-            onContinue={() => agentDone.mutate(orgId)}
+            onContinue={(made) => agentDone.mutate({ id: orgId, agentId: made?.id ?? firstAgent?.id ?? null })}
           />
         ),
       };

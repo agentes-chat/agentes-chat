@@ -114,11 +114,9 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
     go().catch(() => setLeaving(false));
   };
   const toWorkspace = () => leave(() => navigate({ to: "/org/$orgId", params: { orgId }, search: arrival }));
-  const toAgent = () =>
-    agent
-      ? leave(() =>
-          navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId: agent.id }, search: arrival }),
-        )
+  const toAgent = (agentId = agent?.id) =>
+    agentId
+      ? leave(() => navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId }, search: arrival }))
       : toWorkspace();
   // Whether the workspace has an AI that answers for the agent: the AI step only when it doesn't.
   const thinks =
@@ -255,15 +253,19 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
             }
             return madeNow;
           }}
-          onContinue={() => {
+          onContinue={(made) => {
             // Its first delivery may go once the agent can work (ADR 0256): the apps were connected on the step.
-            if (!agent) return;
+            const id = made?.id ?? agent?.id;
+            if (!id) return;
             setLeaving(true);
             api.firstAgents
-              .keepDelivery(orgId, agent.id)
-              .then(() => {
+              .keepDelivery(orgId, id)
+              // Whether an AI answers for it, read now: a read from before the agent was made says nothing of it.
+              .then(() => status.refetch())
+              .then((fresh) => {
                 setLeaving(false);
-                if (thinks) toAgent();
+                const ai = fresh.data?.agents.find((a) => a.agentId === id)?.state ?? "no_ai";
+                if (ai !== "no_ai") toAgent(id);
                 else setView("ai");
               })
               .catch((e: unknown) => {
@@ -283,7 +285,14 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
         note={<BoxNote>{t("arrival.connect.without")}</BoxNote>}
         acts={
           thinks ? (
-            <Button variant="primary" kbd={["↵"]} data-enter="" loading={leaving} disabled={leaving} onClick={toAgent}>
+            <Button
+              variant="primary"
+              kbd={["↵"]}
+              data-enter=""
+              loading={leaving}
+              disabled={leaving}
+              onClick={() => toAgent()}
+            >
               {t("onboarding.actions.continue")}
             </Button>
           ) : (
@@ -303,7 +312,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
           width={460}
         >
           <DialogFooter>
-            <Button loading={leaving} disabled={leaving} onClick={toAgent}>
+            <Button loading={leaving} disabled={leaving} onClick={() => toAgent()}>
               {t("onboarding.flow.ai.skipGo")}
             </Button>
             <Button variant="primary" onClick={() => setSkipAsk(false)}>
