@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat heeft {{permission}} nodig",
+    "done": "Ik heb het toegestaan",
+    "later": "Niet nu",
+    "trayTitle": "Wacht op {{permission}}",
+    "why": {
+      "app_management": "Agents hebben dit nodig om apps op deze {{device}} te wijzigen.",
+      "screen": "Agents hebben dit nodig om schermafbeeldingen van deze {{device}} te maken.",
+      "accessibility": "Agents hebben dit nodig om in apps op deze {{device}} te klikken en te typen.",
+      "disk": "Agents hebben dit nodig om je bestanden te openen zonder dat macOS per map vraagt.",
+      "network": "Agents hebben dit nodig om telefoons en apparaten op je netwerk te bereiken.",
+      "camera": "Agents hebben dit nodig om de camera van deze {{device}} te gebruiken.",
+      "microphone": "Agents hebben dit nodig om de microfoon van deze {{device}} te gebruiken.",
+      "automation": "Agents hebben dit nodig om andere apps op deze {{device}} te besturen."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "pc",
@@ -67,6 +83,12 @@
         "capturing": "maakt een schermafbeelding",
         "tabs": "wisselt van tabblad"
       }
+    },
+    "apps": {
+      "title": "{{agent}} gebruikt {{app}}",
+      "detail": "Je muis en toetsenbord blijven van jou",
+      "stop": "Stoppen",
+      "stopped": "{{agent}} gebruikt je apps niet meer"
     },
     "label": "agentes.chat",
     "now": "Nu",
@@ -935,21 +957,5 @@
     "bringAllToFront": "Alles naar voorgrond",
     "help": "Help",
     "downloaded": "Download voltooid"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat heeft {{permission}} nodig",
-    "done": "Ik heb het toegestaan",
-    "later": "Niet nu",
-    "trayTitle": "Wacht op {{permission}}",
-    "why": {
-      "app_management": "Agents hebben dit nodig om apps op deze {{device}} te wijzigen.",
-      "screen": "Agents hebben dit nodig om schermafbeeldingen van deze {{device}} te maken.",
-      "accessibility": "Agents hebben dit nodig om in apps op deze {{device}} te klikken en te typen.",
-      "disk": "Agents hebben dit nodig om je bestanden te openen zonder dat macOS per map vraagt.",
-      "network": "Agents hebben dit nodig om telefoons en apparaten op je netwerk te bereiken.",
-      "camera": "Agents hebben dit nodig om de camera van deze {{device}} te gebruiken.",
-      "microphone": "Agents hebben dit nodig om de microfoon van deze {{device}} te gebruiken.",
-      "automation": "Agents hebben dit nodig om andere apps op deze {{device}} te besturen."
-    }
   }
 }

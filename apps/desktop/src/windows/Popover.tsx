@@ -6,7 +6,12 @@
  * its banners. This window also owns the tray icon's state, answers the site's questions about this computer
  * and raises the notifications for folder requests (it lives, hidden, for as long as the app runs).
  */
-import type { ControlAccessRequest, ControlBrowser, ControlJob } from "@agenteschat/adapters/runner-control";
+import type {
+  ControlAccessRequest,
+  ControlAppUse,
+  ControlBrowser,
+  ControlJob,
+} from "@agenteschat/adapters/runner-control";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { Button, Icon, Kbd, normalizeAppearance, PixelSpinner, Segmented } from "@agenteschat/ui";
 import {
@@ -23,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../app";
 import { saidText, toolWords } from "../control/activity";
 import {
+  appUsesOf,
   BROWSER_NOTIFY_PREF,
   browserRowState,
   browsersOf,
@@ -1048,12 +1054,13 @@ function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean; now: 
   const { t } = useTranslation();
   const rows = homes.map((h) => {
     const browsers = browsersOf(h.status);
+    const uses = appUsesOf(h.status, now);
     const inBrowser = new Set(browsers.map((b) => b.agentId));
     // An agent in its browser shows once, as its browser row (its thinking is what drives it).
     const jobs = h.jobs.filter((j) => !(j.kind === "brain" && j.agent && inBrowser.has(j.agent.id)));
-    return { home: h, browsers, jobs };
+    return { home: h, browsers, uses, jobs };
   });
-  const total = rows.reduce((n, r) => n + r.jobs.length + r.browsers.length, 0);
+  const total = rows.reduce((n, r) => n + r.jobs.length + r.browsers.length + r.uses.length, 0);
   if (total === 0) {
     const someone = homes.flatMap((h) => h.status?.agents ?? [])[0];
     return (
@@ -1072,18 +1079,21 @@ function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean; now: 
   }
   return (
     <>
-      {rows.map(({ home: h, browsers, jobs }) => (
+      {rows.map(({ home: h, browsers, uses, jobs }) => (
         <div key={h.homeId}>
           <div className="dk-ohead">
             <OrgTile logo={h.logo} size="sm" />
             {orgName(h)}
-            <Count n={jobs.length + browsers.length} />
-            {jobs.length + browsers.length === 0 && (
+            <Count n={jobs.length + browsers.length + uses.length} />
+            {jobs.length + browsers.length + uses.length === 0 && (
               <span className="dk-ohead__end">
                 {isOnline(h) ? t("desktop.tray.nothingNow") : t("desktop.tray.waitingConnection")}
               </span>
             )}
           </div>
+          {uses.map((u) => (
+            <AppUseRow key={`apps:${u.agentId}`} home={h} use={u} />
+          ))}
           {browsers.map((b) => (
             <BrowserRow key={`browser:${b.agentId}`} home={h} browser={b} />
           ))}
@@ -1202,6 +1212,58 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
           title={t("desktop.tray.browser.stop")}
           aria-label={t("desktop.tray.browser.stop")}
           onClick={() => setConfirm(true)}
+        >
+          <Icon name="stop" size={14} />
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * An agent using one of the person's apps here (ADR 0258): "Theo está usando Mail", through the system's
+ * accessibility (the person's mouse and keyboard stay theirs), with Parar: its next commands in the apps are refused.
+ */
+function AppUseRow({ home, use }: { home: Home; use: ControlAppUse }) {
+  const { t } = useTranslation();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const agent = agentOf(home, { id: use.agentId, name: t("desktop.tray.browser.someAgent") });
+  const color = normalizeAppearance(agent.look).color;
+  const stop = async () => {
+    setBusy(true);
+    try {
+      await store.request(home.homeId, { type: "apps.stop", agentId: use.agentId });
+      toast(t("desktop.tray.apps.stopped", { agent: agent.name }), "stop");
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="dk-job dk-job--browser">
+      <span className="dk-job__av">
+        <AgentFace agent={agent} size="sm" state="writing" />
+      </span>
+      <span className="dk-job__text">
+        <b>
+          <span>{t("desktop.tray.apps.title", { agent: agent.name, app: use.app })}</span>
+        </b>
+        <small>
+          <PixelSpinner size={14} color={color} />
+          <span className="dk-job__detail">{t("desktop.tray.apps.detail")}</span>
+        </small>
+      </span>
+      <span className="dk-job__acts">
+        <button
+          type="button"
+          className="dk-iconbtn"
+          disabled={busy}
+          title={t("desktop.tray.apps.stop")}
+          aria-label={t("desktop.tray.apps.stop")}
+          onClick={() => void stop()}
         >
           <Icon name="stop" size={14} />
         </button>

@@ -266,6 +266,8 @@ const LOOKS_ONLY = new Set([
   "browser_profile",
   "desktop_read",
   "desktop_screenshot",
+  "apps_list",
+  "apps_read",
   "git_clone",
   "gitlab_git_clone",
   "bitbucket_git_clone",
