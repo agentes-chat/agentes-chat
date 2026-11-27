@@ -100,6 +100,9 @@ const NO_PASSKEYS: CdpCommand[] = [
     },
   },
 ];
+/** Chrome's answer to a command sent to a session it no longer has. */
+const sessionGone = (message: unknown) =>
+  typeof message === "string" && /session with given id not found/i.test(message);
 /** The GET guard pauses every request before it is sent (its address is all it reads). */
 const FETCH = { patterns: [{ urlPattern: "*", requestStage: "Request" }] };
 /** How long a guard waits for Chrome to acknowledge `Fetch.enable` on its sessions before it gives up. */
@@ -276,7 +279,7 @@ export function countChromeTraffic(
   /** What waits on an answer, by the id it was asked under. */
   const answers = new Map<number, (result: Params) => void>();
   /** What waits only for Chrome to answer, told whether it was an error, by the id it was asked under. */
-  const acks = new Map<number, (failed: boolean) => void>();
+  const acks = new Map<number, (failed: boolean, gone: boolean) => void>();
   /** Guards waiting on acknowledgements: told when the socket closes (they never come then). */
   const closeWaiters = new Set<() => void>();
   let closed = false;
@@ -298,7 +301,7 @@ export function countChromeTraffic(
     params: Params,
     sessionId?: string,
     then?: (result: Params) => void,
-    ack?: (failed: boolean) => void,
+    ack?: (failed: boolean, gone: boolean) => void,
   ) => {
     const id = nextId++;
     if (then) answers.set(id, then);
@@ -366,8 +369,11 @@ export function countChromeTraffic(
         resolve(false);
       };
       closeWaiters.add(onClose);
-      send("Fetch.enable", FETCH, sessionId, undefined, (failed) => {
+      send("Fetch.enable", FETCH, sessionId, undefined, (failed, gone) => {
         closeWaiters.delete(onClose);
+        // A frame or worker Chrome dropped without telling (a reload under a page whose frames hold their own
+        // workers, as reCAPTCHA's do): nothing left there to pause, so it's forgotten like a detached one.
+        if (gone) forget(sessionId);
         state.ok = !failed || !sessions.has(sessionId);
         resolve(state.ok);
       });
@@ -398,6 +404,15 @@ export function countChromeTraffic(
         resolve(oks.every(Boolean));
       });
     });
+  };
+  /** A session that ended: detached, or one Chrome says it no longer has. */
+  const forget = (sessionId: string) => {
+    const closed = pages.get(sessionId);
+    sessions.delete(sessionId);
+    pages.delete(sessionId);
+    workers.delete(sessionId);
+    fetchStates.delete(sessionId);
+    if (closed) onPageClosed?.(closed);
   };
   const entry = (sessionId: string, requestId: unknown) => {
     const requests = sessions.get(sessionId);
@@ -432,7 +447,7 @@ export function countChromeTraffic(
       answers.delete(msg.id);
       const ack = acks.get(msg.id);
       acks.delete(msg.id);
-      ack?.(msg.error !== undefined);
+      ack?.(msg.error !== undefined, isObject(msg.error) && sessionGone(msg.error.message));
       if (then && isObject(msg.result)) then(msg.result);
       return;
     }
@@ -489,14 +504,7 @@ export function countChromeTraffic(
         return;
       }
       case "Target.detachedFromTarget":
-        if (typeof p.sessionId === "string") {
-          const closed = pages.get(p.sessionId);
-          sessions.delete(p.sessionId);
-          pages.delete(p.sessionId);
-          workers.delete(p.sessionId);
-          fetchStates.delete(p.sessionId);
-          if (closed) onPageClosed?.(closed);
-        }
+        if (typeof p.sessionId === "string") forget(p.sessionId);
         return;
       case "Inspector.targetCrashed": {
         const targetId = pages.get(sessionId);
