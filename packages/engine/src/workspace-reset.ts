@@ -30,8 +30,8 @@ const KEPT_COLUMNS = { ...STANDING_COLUMNS, deletionHoldAt: organizations.deleti
 
 /**
  * Tenant tables a reset leaves as they are: the workspace's settings, its people and how they join (and the apps they
- * have open), their own settings there, AI accounts, computers, connectors, the Vault (people's own logins among them)
- * and storage, usage and the audit. `blobs` is a storage: the
+ * have open), their own settings there, AI accounts and what their keys' models may write, computers, connectors, the
+ * Vault (people's own logins among them) and storage, usage and the audit. `blobs` is a storage: the
  * erased files' bytes leave it through their store. `outbox` keeps only the jobs of `RESET_KEEPS_JOBS`, and
  * `outbox_dedupe` every key, as the outbox's finished rows do.
  */
@@ -55,6 +55,7 @@ export const RESET_KEEPS = [
   "support_requests",
   "feedback_files",
   "provider_credentials",
+  "model_output_limits",
   "machines",
   "machine_accounts",
   "machine_provisioning",
@@ -65,6 +66,8 @@ export const RESET_KEEPS = [
   "machine_rpc",
   "connector_connections",
   "connector_tool_pins",
+  // Kept connectors' tool names in a language: words, never anything made in the workspace.
+  "tool_label_words",
   "custom_tools",
   "oauth_clients",
   "oauth_states",

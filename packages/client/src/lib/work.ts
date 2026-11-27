@@ -16,7 +16,7 @@ import { POSTGRES_MARK } from "./databases";
 import { capitalize, joinNames, lowerFirst, shortTarget } from "./format";
 import { workDuration } from "./long-work";
 import { MAIL_BRANDS } from "./mail";
-import { catalogLabel, toolKey } from "./tool-labels";
+import { catalogLabel, connectorToolWords, toolKey } from "./tool-labels";
 
 /**
  * Whether a finished reply shows what the agent did ("Usou 4 ferramentas"): only for a person who turned it on in this
@@ -82,17 +82,15 @@ export function autoApprovedWords(t: TFunction, a: AutoApproved): string {
 }
 
 /**
- * A line's grey words: none beside code, who approved it for good where a rule did, else its hint, a connector
- * tool's name by the catalog's words where it has them ("Buscar issues", not "search issues").
+ * A line's hint in words: a connector tool's name by the catalog's words where it has them ("Buscar issues", not
+ * "search issues"), else by the words written for the workspace in the reader's language (`connectorToolWords`).
  */
+export const hintWords = (t: TFunction, l: Pick<ToolLine, "hint" | "kind">) =>
+  l.kind === "consulting" && l.hint ? connectorToolWords(t, l.hint) : l.hint;
+
+/** A line's grey words: none beside code, who approved it for good where a rule did, else its hint (`hintWords`). */
 export const toolLineHint = (t: TFunction, l: Pick<ToolLine, "code" | "hint" | "autoApproved" | "kind">) =>
-  l.code
-    ? null
-    : l.autoApproved
-      ? autoApprovedWords(t, l.autoApproved)
-      : l.kind === "consulting" && l.hint
-        ? (catalogLabel(t, l.hint) ?? l.hint)
-        : l.hint;
+  l.code ? null : l.autoApproved ? autoApprovedWords(t, l.autoApproved) : hintWords(t, l);
 
 /** What the agent said before a model call's tools (`model_call` step: `narration`, `turn`). */
 export interface WorkNarration {
@@ -908,7 +906,10 @@ export function waitStep(
   // The folded line keeps its first call's hint; the step line names the call running now, one the block lists: a call
   // it leaves out (the line before slow work, after a call refused for its arguments) never lends it its name.
   const listed = (work ?? []).findLast(listedCall);
-  const hint = listed?.running ? toolHint(listed.tool, now, listed.detail) : now.hint;
+  const hint = hintWords(t, {
+    kind: now.kind,
+    hint: listed?.running ? toolHint(listed.tool, now, listed.detail) : now.hint,
+  });
   const target = hint ? shortTarget(hint) : "";
   return target ? `${verb} · ${target}…` : `${verb}…`;
 }

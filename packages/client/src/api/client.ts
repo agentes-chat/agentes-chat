@@ -1201,6 +1201,8 @@ export interface ApiClient {
   connectors: {
     /** Connectors agentes.chat knows, with their scopes, plus the built-in scopes. */
     catalog(): Promise<ConnectorCatalog>;
+    /** Connector tools' names in `locale` by their catalog keys (`toolKey`); a key left out keeps its English words. */
+    toolLabels(orgId: string, locale: string, keys: string[]): Promise<Record<string, string>>;
     /** The team's connections and the person's own (no secrets). `others`: also everyone else's personal ones (who manages connectors gets them, as read-only rows). */
     list(orgId: string, options?: { others?: boolean }): Promise<Connection[]>;
     /**

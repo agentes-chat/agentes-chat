@@ -1,5 +1,5 @@
 {
-  "id": "6b33d36a-23ca-41d5-acd7-ebf7a48340b8",
+  "id": "1329be6c-eddb-4bcf-a114-1f05e7b32a4b",
   "prevId": "1fee5eb7-f3ff-44d6-9156-134fb8c0ae50",
   "version": "7",
   "dialect": "postgresql",
@@ -681,6 +681,101 @@
           "value": "\"agents\".\"owner_user_id\" is null or \"agents\".\"owner_role_id\" is null"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.model_output_limits": {
+      "name": "model_output_limits",
+      "schema": "",
+      "columns": {
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_output_tokens": {
+          "name": "max_output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "learned_at": {
+          "name": "learned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "model_output_limits_org_id_index": {
+          "name": "model_output_limits_org_id_index",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "model_output_limits_org_id_organizations_id_fk": {
+          "name": "model_output_limits_org_id_organizations_id_fk",
+          "tableFrom": "model_output_limits",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "model_output_limits_credential_id_provider_credentials_id_fk": {
+          "name": "model_output_limits_credential_id_provider_credentials_id_fk",
+          "tableFrom": "model_output_limits",
+          "tableTo": "provider_credentials",
+          "columnsFrom": [
+            "credential_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "model_output_limits_credential_id_model_pk": {
+          "name": "model_output_limits_credential_id_model_pk",
+          "columns": [
+            "credential_id",
+            "model"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.organization_settings": {
@@ -11833,179 +11928,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.agent_proxies": {
-      "name": "agent_proxies",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "machine_id": {
-          "name": "machine_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "scheme": {
-          "name": "scheme",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "host": {
-          "name": "host",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "port": {
-          "name": "port",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "has_auth": {
-          "name": "has_auth",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "secret_ciphertext": {
-          "name": "secret_ciphertext",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "wrapped_data_key": {
-          "name": "wrapped_data_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kek_id": {
-          "name": "kek_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by_user_id": {
-          "name": "created_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "agent_proxies_org_workspace": {
-          "name": "agent_proxies_org_workspace",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"agent_proxies\".\"machine_id\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_proxies_machine": {
-          "name": "agent_proxies_machine",
-          "columns": [
-            {
-              "expression": "machine_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"agent_proxies\".\"machine_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "agent_proxies_org_id_organizations_id_fk": {
-          "name": "agent_proxies_org_id_organizations_id_fk",
-          "tableFrom": "agent_proxies",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agent_proxies_machine_id_machines_id_fk": {
-          "name": "agent_proxies_machine_id_machines_id_fk",
-          "tableFrom": "agent_proxies",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "machine_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agent_proxies_created_by_user_id_users_id_fk": {
-          "name": "agent_proxies_created_by_user_id_users_id_fk",
-          "tableFrom": "agent_proxies",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "agent_proxies_port": {
-          "name": "agent_proxies_port",
-          "value": "\"agent_proxies\".\"port\" between 1 and 65535"
-        }
-      },
       "isRLSEnabled": false
     },
     "public.claude_auth_settings": {

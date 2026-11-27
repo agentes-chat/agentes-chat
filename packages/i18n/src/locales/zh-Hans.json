@@ -2306,44 +2306,65 @@
     "deleteText": "其中的智能体会回到“智能体”。",
     "deleteChannels": "其中的频道会回到“频道”。",
     "dropHere": "把智能体拖到这里",
-    "dropHereAll": "把智能体或频道拖到这里",
     "moved": "{{name}} 已移到 {{group}}",
     "movedOut": "{{name}} 已离开 {{group}}",
     "undo": "撤销"
   },
   "sidebarAgents": {
-    "options": "智能体选项",
-    "add": "新建智能体或部门",
-    "order": "顺序",
-    "sort": {
-      "workspace": "工作区的顺序",
-      "mine": "我的优先",
-      "working": "工作中优先"
-    },
     "showAll": "显示不与我对话的智能体",
-    "collapseAll": "全部收起",
-    "expandAll": "全部展开",
-    "organize": "在团队中整理部门",
     "more_other": "团队中还有 {{count}} 个智能体",
     "newAgent": "新智能体",
-    "working_other": "{{count}} 个工作中",
     "count_other": "{{count}} 个智能体",
     "workingIn": "正在 #{{channel}} 工作",
     "talksOnly": "只与 {{name}} 对话",
-    "talksOnlyMore_other": "只与 {{name}} 和另外 {{count}} 人对话",
-    "changeGroup": "移到部门",
-    "newGroupWith": "包含 {{name}} 的新部门",
-    "dmsEmpty": "你与成员的对话会显示在这里。"
+    "talksOnlyMore_other": "只与 {{name}} 和另外 {{count}} 人对话"
   },
-  "sidebarPins": {
-    "pin": "置顶",
-    "unpin": "取消置顶",
-    "pinned": "已置顶",
-    "full": {
-      "agents": "你已置顶 5 个智能体。取消一个才能置顶这个。",
-      "channels": "你已置顶 5 个频道。取消一个才能置顶这个。",
-      "people": "你已置顶 5 个人。取消一个才能置顶这位。"
-    }
+  "sidebarFavorites": {
+    "title": "收藏",
+    "add": "加入收藏",
+    "remove": "移出收藏",
+    "marked": "已收藏",
+    "full": "收藏已有 50 项。移除一项后才能添加这一项。"
+  },
+  "sidebarSections": {
+    "new": "新建分区",
+    "newName": "新分区",
+    "moveTo": "移到分区",
+    "takeOut": "移出分区",
+    "rename": "重命名分区",
+    "delete": "删除分区",
+    "nameLabel": "分区名称"
+  },
+  "sidebarDms": {
+    "options": "私信选项",
+    "show": "显示",
+    "shows": {
+      "all": "工作区所有人",
+      "recent": "仅最近的对话"
+    },
+    "invite": "邀请成员",
+    "invited": "已发送邀请",
+    "invitedTip": "{{email}} 尚未接受邀请",
+    "agentTag": "AI",
+    "agentTip": "AI 智能体"
+  },
+  "sidebarColumn": {
+    "label": "工具",
+    "unread": "{{name}}，有未读内容",
+    "you": "{{name}}，有你的事项"
+  },
+  "unreads": {
+    "title": "未读",
+    "forYou": "给你的",
+    "conversations": "对话",
+    "markAll": "全部标为已读",
+    "markRead": "标为已读",
+    "open": "打开",
+    "seeInbox": "在收件箱中查看全部",
+    "more_other": "还有 {{count}} 条消息",
+    "emptyTitle": "全部看完了",
+    "emptyText": "新消息和等你处理的事项会显示在这里。",
+    "markedAll": "已全部标为已读"
   },
   "appsDownload": {
     "computer": "电脑",

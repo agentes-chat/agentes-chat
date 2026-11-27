@@ -2306,44 +2306,65 @@
     "deleteText": "그룹의 에이전트는 에이전트 목록으로 돌아가요.",
     "deleteChannels": "그룹의 채널은 채널 목록으로 돌아가요.",
     "dropHere": "에이전트를 여기로 드래그하세요",
-    "dropHereAll": "에이전트나 채널을 여기로 드래그하세요",
     "moved": "{{name}}이(가) {{group}}(으)로 옮겨졌어요",
     "movedOut": "{{name}}이(가) {{group}}에서 빠졌어요",
     "undo": "실행 취소"
   },
   "sidebarAgents": {
-    "options": "에이전트 옵션",
-    "add": "새 에이전트 또는 부서",
-    "order": "순서",
-    "sort": {
-      "workspace": "워크스페이스 순서",
-      "mine": "내 에이전트 먼저",
-      "working": "작업 중 먼저"
-    },
     "showAll": "나와 대화하지 않는 에이전트 표시",
-    "collapseAll": "모두 접기",
-    "expandAll": "모두 펼치기",
-    "organize": "팀에서 부서 정리",
     "more_other": "팀에 에이전트 {{count}}개 더",
     "newAgent": "새 에이전트",
-    "working_other": "{{count}}개 작업 중",
     "count_other": "에이전트 {{count}}개",
     "workingIn": "#{{channel}}에서 작업 중",
     "talksOnly": "{{name}}와(과)만 대화",
-    "talksOnlyMore_other": "{{name}} 외 {{count}}명과만 대화",
-    "changeGroup": "부서 옮기기",
-    "newGroupWith": "{{name}}이(가) 있는 새 부서",
-    "dmsEmpty": "사람과의 대화가 여기에 표시돼요."
+    "talksOnlyMore_other": "{{name}} 외 {{count}}명과만 대화"
   },
-  "sidebarPins": {
-    "pin": "맨 위에 고정",
-    "unpin": "고정 해제",
-    "pinned": "맨 위에 고정됨",
-    "full": {
-      "agents": "이미 에이전트 5개를 고정했어요. 이걸 고정하려면 하나를 해제하세요.",
-      "channels": "이미 채널 5개를 고정했어요. 이걸 고정하려면 하나를 해제하세요.",
-      "people": "이미 5명을 고정했어요. 이분을 고정하려면 한 명을 해제하세요."
-    }
+  "sidebarFavorites": {
+    "title": "즐겨찾기",
+    "add": "즐겨찾기에 추가",
+    "remove": "즐겨찾기에서 제거",
+    "marked": "즐겨찾기",
+    "full": "즐겨찾기가 이미 50개입니다. 이 항목을 추가하려면 하나를 제거하세요."
+  },
+  "sidebarSections": {
+    "new": "새 섹션",
+    "newName": "새 섹션",
+    "moveTo": "섹션으로 이동",
+    "takeOut": "섹션에서 빼기",
+    "rename": "섹션 이름 바꾸기",
+    "delete": "섹션 삭제",
+    "nameLabel": "섹션 이름"
+  },
+  "sidebarDms": {
+    "options": "다이렉트 메시지 옵션",
+    "show": "표시",
+    "shows": {
+      "all": "워크스페이스의 모든 사람",
+      "recent": "최근 대화만"
+    },
+    "invite": "사람 초대",
+    "invited": "초대 보냄",
+    "invitedTip": "{{email}} 님이 아직 초대를 수락하지 않았습니다",
+    "agentTag": "AI",
+    "agentTip": "AI 에이전트"
+  },
+  "sidebarColumn": {
+    "label": "도구",
+    "unread": "{{name}}, 읽지 않은 항목 있음",
+    "you": "{{name}}, 나를 위한 항목 있음"
+  },
+  "unreads": {
+    "title": "읽지 않음",
+    "forYou": "나에게",
+    "conversations": "대화",
+    "markAll": "모두 읽음으로 표시",
+    "markRead": "읽음으로 표시",
+    "open": "열기",
+    "seeInbox": "받은편지함에서 모두 보기",
+    "more_other": "메시지 {{count}}개 더",
+    "emptyTitle": "모두 확인했습니다",
+    "emptyText": "새 메시지와 나를 기다리는 일이 여기에 표시됩니다.",
+    "markedAll": "모두 읽음으로 표시했습니다"
   },
   "appsDownload": {
     "computer": "컴퓨터",

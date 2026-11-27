@@ -2306,44 +2306,65 @@
     "deleteText": "Agen di dalamnya kembali ke Agen.",
     "deleteChannels": "Kanal di dalamnya kembali ke Kanal.",
     "dropHere": "Seret agen ke sini",
-    "dropHereAll": "Seret agen atau kanal ke sini",
     "moved": "{{name}} pindah ke {{group}}",
     "movedOut": "{{name}} keluar dari {{group}}",
     "undo": "Urungkan"
   },
   "sidebarAgents": {
-    "options": "Opsi agen",
-    "add": "Agen atau departemen baru",
-    "order": "Urutan",
-    "sort": {
-      "workspace": "Urutan ruang kerja",
-      "mine": "Milik saya dulu",
-      "working": "Yang bekerja dulu"
-    },
     "showAll": "Tampilkan agen yang tidak berbicara dengan saya",
-    "collapseAll": "Ciutkan semua",
-    "expandAll": "Bentangkan semua",
-    "organize": "Tata departemen di Tim",
     "more_other": "{{count}} agen lagi di Tim",
     "newAgent": "Agen baru",
-    "working_other": "{{count}} sedang bekerja",
     "count_other": "{{count}} agen",
     "workingIn": "bekerja di #{{channel}}",
     "talksOnly": "hanya berbicara dengan {{name}}",
-    "talksOnlyMore_other": "hanya berbicara dengan {{name}} dan {{count}} lainnya",
-    "changeGroup": "Pindahkan ke departemen",
-    "newGroupWith": "Departemen baru dengan {{name}}",
-    "dmsEmpty": "Percakapanmu dengan orang muncul di sini."
+    "talksOnlyMore_other": "hanya berbicara dengan {{name}} dan {{count}} lainnya"
   },
-  "sidebarPins": {
-    "pin": "Sematkan di atas",
-    "unpin": "Lepas sematan",
-    "pinned": "Disematkan di atas",
-    "full": {
-      "agents": "Kamu sudah menyematkan 5 agen. Lepaskan satu untuk menyematkan yang ini.",
-      "channels": "Kamu sudah menyematkan 5 kanal. Lepaskan satu untuk menyematkan yang ini.",
-      "people": "Kamu sudah menyematkan 5 orang. Lepaskan satu untuk menyematkan yang ini."
-    }
+  "sidebarFavorites": {
+    "title": "Favorit",
+    "add": "Tambahkan ke favorit",
+    "remove": "Hapus dari favorit",
+    "marked": "Di favorit",
+    "full": "Favorit sudah berisi 50. Hapus satu untuk menambahkan yang ini."
+  },
+  "sidebarSections": {
+    "new": "Bagian baru",
+    "newName": "Bagian baru",
+    "moveTo": "Pindahkan ke bagian",
+    "takeOut": "Keluarkan dari bagian",
+    "rename": "Ganti nama bagian",
+    "delete": "Hapus bagian",
+    "nameLabel": "Nama bagian"
+  },
+  "sidebarDms": {
+    "options": "Opsi pesan langsung",
+    "show": "Tampilkan",
+    "shows": {
+      "all": "Semua orang di workspace",
+      "recent": "Hanya percakapan terbaru"
+    },
+    "invite": "Undang orang",
+    "invited": "Undangan terkirim",
+    "invitedTip": "{{email}} belum menerima undangan",
+    "agentTag": "AI",
+    "agentTip": "Agen AI"
+  },
+  "sidebarColumn": {
+    "label": "Alat",
+    "unread": "{{name}}, ada yang belum dibaca",
+    "you": "{{name}}, ada sesuatu untuk Anda"
+  },
+  "unreads": {
+    "title": "Belum dibaca",
+    "forYou": "Untuk Anda",
+    "conversations": "Percakapan",
+    "markAll": "Tandai semua sudah dibaca",
+    "markRead": "Tandai sudah dibaca",
+    "open": "Buka",
+    "seeInbox": "Lihat semuanya di kotak masuk",
+    "more_other": "{{count}} pesan lagi",
+    "emptyTitle": "Semua sudah dibaca",
+    "emptyText": "Pesan baru dan yang menunggu Anda muncul di sini.",
+    "markedAll": "Semua ditandai sudah dibaca"
   },
   "appsDownload": {
     "computer": "Komputer",

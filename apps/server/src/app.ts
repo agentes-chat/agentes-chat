@@ -83,6 +83,7 @@ import { teamWeekRoutes } from "./routes/app/team-week";
 import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
 import { thumbRoutes } from "./routes/app/thumbs";
+import { toolLabelRoutes } from "./routes/app/tool-labels";
 import { vaultRoutes } from "./routes/app/vault";
 import { speechKeyRoutes, voiceRoutes } from "./routes/app/voice";
 import { waitingRoutes } from "./routes/app/waiting";
@@ -230,6 +231,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", desktopRoutes(deps));
     api.route("/app", notificationRoutes(deps));
     api.route("/app", waitingRoutes(deps));
+    api.route("/app", toolLabelRoutes(deps));
     api.route("/app", pushRoutes(deps));
     api.route("/app", secretRoutes(deps));
     api.route("/app", vaultRoutes(deps));

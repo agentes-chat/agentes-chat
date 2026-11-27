@@ -231,7 +231,7 @@ export function useGroupEntries() {
   };
 }
 
-/** A group header's "…" (owners and admins), on Equipe and in the sidebar (`className`: the header's buttons). */
+/** A group header's "…" (owners and admins), on Equipe (`className`: the header's buttons). */
 export function GroupMenu({ className, ...choices }: GroupChoices & { className?: string }) {
   const { t } = useTranslation();
   const entries = useGroupEntries();
@@ -355,7 +355,7 @@ export function useMoveAgent(groups: AgentGroup[]) {
 }
 
 /**
- * Dragging agents between groups (Equipe and the sidebar's AGENTES, for who manages agents) (owners and admins): rows are draggable, groups take the drop.
+ * Dragging agents between groups on Equipe, for who manages agents: rows are draggable, groups take the drop.
  * Inside a group the row lands where the pointer is (`over.index`, before the first row whose middle is below it);
  * the agents in no group keep the workspace's order.
  */

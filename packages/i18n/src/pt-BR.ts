@@ -2450,27 +2450,16 @@ export const ptBR = {
     /** After deleteText when the setor holds channels (ADR 0240). */
     deleteChannels: "Os canais dele voltam para Canais.",
     dropHere: "Arraste agentes para cá",
-    /** The sidebar's empty setor: agents and channels both drop there (ADR 0240). */
-    dropHereAll: "Arraste agentes ou canais para cá",
     moved: "{{name}} foi para o setor {{group}}",
     movedOut: "{{name}} saiu do setor {{group}}",
     undo: "Desfazer",
   },
   sidebarAgents: {
-    options: "Opções de Agentes",
-    add: "Novo agente ou setor",
-    order: "Ordem",
-    sort: { workspace: "Do workspace", mine: "Meus primeiro", working: "Trabalhando primeiro" },
     showAll: "Mostrar agentes que não falam comigo",
-    collapseAll: "Recolher todos",
-    expandAll: "Expandir todos",
-    organize: "Organizar setores na Equipe",
     /** Under the agents, only when some aren't listed (they don't talk to me): it opens Equipe, where all are. */
     more_one: "Mais 1 agente na Equipe",
     more_other: "Mais {{count}} agentes na Equipe",
     newAgent: "Novo agente",
-    working_one: "{{count}} trabalhando",
-    working_other: "{{count}} trabalhando",
     count_one: "{{count}} agente",
     count_other: "{{count}} agentes",
     /** Under an agent's name while it works, lower case like its role. */
@@ -2478,19 +2467,59 @@ export const ptBR = {
     talksOnly: "só fala com {{name}}",
     talksOnlyMore_one: "só fala com {{name}} e mais {{count}}",
     talksOnlyMore_other: "só fala com {{name}} e mais {{count}}",
-    changeGroup: "Mudar de setor",
-    newGroupWith: "Novo setor com {{name}}",
-    dmsEmpty: "Suas conversas com pessoas aparecem aqui.",
   },
-  sidebarPins: {
-    pin: "Fixar no topo",
-    unpin: "Tirar do topo",
-    pinned: "Fixado no topo",
-    full: {
-      agents: "Você já fixou 5 agentes. Tire um do topo para fixar este.",
-      channels: "Você já fixou 5 canais. Tire um do topo para fixar este.",
-      people: "Você já fixou 5 pessoas. Tire uma do topo para fixar esta.",
+  /** Favoritos (ADR 0260): pessoas, agentes e canais que a pessoa deixa no topo da barra lateral, pelo nome. */
+  sidebarFavorites: {
+    title: "Favoritos",
+    add: "Adicionar aos favoritos",
+    remove: "Tirar dos favoritos",
+    marked: "Nos favoritos",
+    full: "Favoritos já tem 50. Tire um para adicionar este.",
+  },
+  /** As seções de canais de cada pessoa (ADR 0260): feitas arrastando um canal sobre outro, ou pelo menu do canal. */
+  sidebarSections: {
+    new: "Nova seção",
+    newName: "Nova seção",
+    moveTo: "Mover para a seção",
+    takeOut: "Tirar da seção",
+    rename: "Renomear seção",
+    delete: "Excluir seção",
+    nameLabel: "Nome da seção",
+  },
+  /** Mensagens diretas com pessoas e agentes juntos (ADR 0260). */
+  sidebarDms: {
+    options: "Opções de Mensagens diretas",
+    show: "Mostrar",
+    shows: {
+      all: "Todos do workspace",
+      recent: "Só conversas recentes",
     },
+    invite: "Convidar pessoas",
+    invited: "Convite enviado",
+    invitedTip: "{{email}} ainda não aceitou o convite",
+    agentTag: "IA",
+    agentTip: "Agente de IA",
+  },
+  /** A coluna de ferramentas da barra lateral (ADR 0260): o que o ponto de um botão diz ao leitor de tela. */
+  sidebarColumn: {
+    label: "Ferramentas",
+    unread: "{{name}}, algo não lido",
+    you: "{{name}}, algo para você",
+  },
+  /** Não lidas (`/unreads`, ADR 0260): tudo o que espera pela pessoa, os itens da caixa de entrada e as conversas não lidas. */
+  unreads: {
+    title: "Não lidas",
+    forYou: "Para você",
+    conversations: "Conversas",
+    markAll: "Marcar tudo como lido",
+    markRead: "Marcar como lida",
+    open: "Abrir",
+    seeInbox: "Ver tudo na caixa de entrada",
+    more_one: "Mais {{count}} mensagem",
+    more_other: "Mais {{count}} mensagens",
+    emptyTitle: "Tudo em dia",
+    emptyText: "Mensagens novas e o que espera por você aparecem aqui.",
+    markedAll: "Tudo marcado como lido",
   },
   /** Configurações › Apps do agentes.chat (`AppsDownload.tsx`): the desktop app for this computer and the phone apps. */
   appsDownload: {

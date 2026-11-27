@@ -2040,7 +2040,14 @@ export type StreamControl =
   | { type: "tap"; x: number; y: number }
   | { type: "swipe"; x1: number; y1: number; x2: number; y2: number; ms: number }
   | { type: "text"; text: string }
-  | { type: "key"; key: PhoneKey };
+  | { type: "key"; key: PhoneKey }
+  /**
+   * A lent connection's data socket (ADR 0237), either way: from the server, stop reading the TCP side until `resume`
+   * (the other side is backed up); from a computer, what reaches it backs up on its TCP side, so the other stops.
+   * Unknown to an older runner or server, which goes on as before.
+   */
+  | { type: "pause" }
+  | { type: "resume" };
 
 /**
  * A person's turn in an agent's browser (`browser.handoff`, ADR 0040 §6), as
@@ -2515,7 +2522,8 @@ export interface BrainTurnTimings {
   initMs?: number;
   /**
    * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
-   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   * turn of its own, a model switch, a sign-in's route stopping, a shared sign-in's handshake with the agent's worker),
+   * which would otherwise read as the CLI's or the API's.
    */
   sentMs?: number;
   firstEventMs?: number;
@@ -5644,6 +5652,7 @@ export function parseStreamControl(raw: string): StreamControl | null {
   if (f.type === "moved") return { type: "moved" };
   if (f.type === "mode" && (f.mode === "watch" || f.mode === "control")) return { type: "mode", mode: f.mode };
   if (f.type === "ack") return { type: "ack" };
+  if (f.type === "pause" || f.type === "resume") return { type: f.type };
   return null;
 }
 

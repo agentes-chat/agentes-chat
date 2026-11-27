@@ -2555,33 +2555,17 @@
     "deleteText": "Jej agenci wrócą do sekcji Agenci.",
     "deleteChannels": "Jej kanały wrócą do sekcji Kanały.",
     "dropHere": "Przeciągnij tu agentów",
-    "dropHereAll": "Przeciągnij tu agentów lub kanały",
     "moved": "{{name}} trafia do działu {{group}}",
     "movedOut": "{{name}} opuszcza dział {{group}}",
     "undo": "Cofnij"
   },
   "sidebarAgents": {
-    "options": "Opcje agentów",
-    "add": "Nowy agent lub dział",
-    "order": "Kolejność",
-    "sort": {
-      "workspace": "Taka jak w przestrzeni roboczej",
-      "mine": "Moi najpierw",
-      "working": "Pracujący najpierw"
-    },
     "showAll": "Pokaż agentów, którzy ze mną nie rozmawiają",
-    "collapseAll": "Zwiń wszystkie",
-    "expandAll": "Rozwiń wszystkie",
-    "organize": "Porządkuj działy w Zespole",
     "more_one": "Jeszcze 1 agent w Zespole",
     "more_few": "Jeszcze {{count}} agenci w Zespole",
     "more_many": "Jeszcze {{count}} agentów w Zespole",
     "more_other": "Jeszcze {{count}} agenta w Zespole",
     "newAgent": "Nowy agent",
-    "working_one": "{{count}} pracuje",
-    "working_few": "{{count}} pracują",
-    "working_many": "{{count}} pracuje",
-    "working_other": "{{count}} pracuje",
     "count_one": "{{count}} agent",
     "count_few": "{{count}} agentów",
     "count_many": "{{count}} agentów",
@@ -2591,20 +2575,57 @@
     "talksOnlyMore_one": "rozmawia tylko z {{name}} i {{count}} inną osobą",
     "talksOnlyMore_few": "rozmawia tylko z {{name}} i {{count}} innymi",
     "talksOnlyMore_many": "rozmawia tylko z {{name}} i {{count}} innymi",
-    "talksOnlyMore_other": "rozmawia tylko z {{name}} i {{count}} innymi",
-    "changeGroup": "Przenieś do działu",
-    "newGroupWith": "Nowy dział z {{name}}",
-    "dmsEmpty": "Tu pojawiają się twoje rozmowy z ludźmi."
+    "talksOnlyMore_other": "rozmawia tylko z {{name}} i {{count}} innymi"
   },
-  "sidebarPins": {
-    "pin": "Przypnij na górze",
-    "unpin": "Odepnij",
-    "pinned": "Przypięte na górze",
-    "full": {
-      "agents": "Masz już 5 przypiętych agentów. Odepnij jednego, aby przypiąć tego.",
-      "channels": "Masz już 5 przypiętych kanałów. Odepnij jeden, aby przypiąć ten.",
-      "people": "Masz już 5 przypiętych osób. Odepnij jedną, aby przypiąć tę."
-    }
+  "sidebarFavorites": {
+    "title": "Ulubione",
+    "add": "Dodaj do ulubionych",
+    "remove": "Usuń z ulubionych",
+    "marked": "W ulubionych",
+    "full": "Ulubione mają już 50 pozycji. Usuń jedną, aby dodać tę."
+  },
+  "sidebarSections": {
+    "new": "Nowa sekcja",
+    "newName": "Nowa sekcja",
+    "moveTo": "Przenieś do sekcji",
+    "takeOut": "Usuń z sekcji",
+    "rename": "Zmień nazwę sekcji",
+    "delete": "Usuń sekcję",
+    "nameLabel": "Nazwa sekcji"
+  },
+  "sidebarDms": {
+    "options": "Opcje wiadomości bezpośrednich",
+    "show": "Pokaż",
+    "shows": {
+      "all": "Wszyscy w workspace",
+      "recent": "Tylko ostatnie rozmowy"
+    },
+    "invite": "Zaproś osoby",
+    "invited": "Zaproszenie wysłane",
+    "invitedTip": "{{email}} jeszcze nie przyjął zaproszenia",
+    "agentTag": "AI",
+    "agentTip": "Agent AI"
+  },
+  "sidebarColumn": {
+    "label": "Narzędzia",
+    "unread": "{{name}}, coś nieprzeczytanego",
+    "you": "{{name}}, coś dla ciebie"
+  },
+  "unreads": {
+    "title": "Nieprzeczytane",
+    "forYou": "Dla ciebie",
+    "conversations": "Rozmowy",
+    "markAll": "Oznacz wszystko jako przeczytane",
+    "markRead": "Oznacz jako przeczytane",
+    "open": "Otwórz",
+    "seeInbox": "Zobacz wszystko w skrzynce odbiorczej",
+    "more_one": "Jeszcze {{count}} wiadomość",
+    "more_few": "Jeszcze {{count}} wiadomości",
+    "more_many": "Jeszcze {{count}} wiadomości",
+    "more_other": "Jeszcze {{count}} wiadomości",
+    "emptyTitle": "Wszystko przeczytane",
+    "emptyText": "Tu pojawiają się nowe wiadomości i to, co na ciebie czeka.",
+    "markedAll": "Wszystko oznaczone jako przeczytane"
   },
   "appsDownload": {
     "computer": "Komputer",

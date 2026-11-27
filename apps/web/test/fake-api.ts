@@ -3857,6 +3857,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     },
     connectors: {
       catalog: async () => CATALOG,
+      toolLabels: async (orgId, locale, keys) => {
+        log("connectors.toolLabels", orgId, locale, keys);
+        return {};
+      },
       // As the backend: the team's and the viewer's own; everyone's with `others`.
       list: async (_orgId, options) =>
         structuredClone(
