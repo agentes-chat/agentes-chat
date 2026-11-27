@@ -11,14 +11,7 @@ import { cutText } from "./format";
 import type { GifMedia } from "./media";
 import type { AgentGifPoster } from "./media-tools";
 import { messageLink } from "./message-links";
-import {
-  insertMessage,
-  MAX_MESSAGE_LENGTH,
-  messageView,
-  unreachedAgents,
-  unreachedNote,
-  unreachedPeople,
-} from "./messages";
+import { insertMessage, messageView, unreachedAgents, unreachedNote, unreachedPeople } from "./messages";
 import { enqueue } from "./outbox";
 import { runReadOutsideById } from "./outside";
 import { actingRoutineOfCall, personBehindCall } from "./requester";
@@ -193,7 +186,7 @@ export function createChatToolSource(deps: {
         type: "object",
         properties: {
           channel: { type: "string", minLength: 1, maxLength: 100 },
-          text: { type: "string", maxLength: MAX_MESSAGE_LENGTH },
+          text: { type: "string" },
           move_here: { type: "boolean" },
           artifact_ids: {
             type: "array",
@@ -385,7 +378,7 @@ export function createChatToolSource(deps: {
         type: "object",
         properties: {
           person: { type: "string", minLength: 1, maxLength: 200 },
-          text: { type: "string", maxLength: MAX_MESSAGE_LENGTH },
+          text: { type: "string" },
           artifact_ids: {
             type: "array",
             items: { type: "string", minLength: 36, maxLength: 36 },

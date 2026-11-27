@@ -1918,8 +1918,12 @@ async function executeRunInner(
   const redispatchPending = (reason: ReleaseReason) => releaseInbox(db, deps.pubsub, run, { reason }).catch(() => null);
   /** Set once the run can post (`closeWith`): it ends the run on the reply it held back (`held`). */
   let endWithHeld: (() => Promise<void>) | null = null;
+  let postCutReply: (() => Promise<void>) | null = null;
   /** `ledger`: the routine run's coded reason when the run error's own code isn't the right one. */
   const fail = async (reason: string, ledger?: { code: string; detail?: string }, model?: string) => {
+    // A reply its output limit cut whose next call failed: what it wrote so far goes out, then the failure shows.
+    if (postCutReply && transcript?.cutReply?.trim() && reason !== "agent_archived" && !standingErrorDetail(reason))
+      await postCutReply();
     // The turn after a held reply failed (its provider, its plan): that reply is still the answer, and it goes out.
     if (
       endWithHeld &&
@@ -4044,6 +4048,23 @@ async function executeRunInner(
     return closeWith(held, null, { held: true });
   };
   endWithHeld = closeOnHeld;
+
+  postCutReply = async () => {
+    const t = transcript as Transcript;
+    const words = withoutSaidNow(stripSentinel(dropSquashedEcho((t.cutReply ?? "").trim())), t.saidNow);
+    delete t.cutReply;
+    if (!words) return;
+    const m = await db.transaction(async (tx) => {
+      const m = await post(tx, workThread(), words, withFallback(t, takeMemoryUpdates(t)));
+      t.postedUpTo = t.messages.length;
+      t.postedCount++;
+      await addRunStep(tx, run, "message", { messageId: m.id, cut: true });
+      await saveTranscript(tx, t);
+      return m;
+    });
+    const [view] = await withWikiLinks(db, run.orgId, [messageView(m)]);
+    if (view) await publishMessageCreated(deps.pubsub, view);
+  };
 
   /**
    * A conversation run at its cap in the middle of its work: instead of failing, it says it ran out of steps (with
@@ -6497,8 +6518,8 @@ async function executeRunInner(
         continue;
       }
       // A reply cut at the output limit with no call in flight goes on in the next call, within the run's steps and
-      // budget; its parts are posted as one reply. Not past what one message holds, nor after a second cut in a row
-      // with no text (all thinking): either only spends the budget on words that never post.
+      // budget; its parts are posted as one reply (as several messages past what one holds). Not once it fills one
+      // message, nor after a second cut in a row with no text (all thinking): neither is worth the budget it spends.
       const cutWords = textOf(result.content);
       if (
         result.stopReason === "max_tokens" &&

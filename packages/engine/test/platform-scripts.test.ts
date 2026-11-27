@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
-import type { ModelRequest } from "@agenteschat/providers";
-import { drainOutbox, HOW_YOU_WORK, postPersonMessage, type ToolContext, type ToolSource } from "../src";
+import { type ModelRequest, ProviderError } from "@agenteschat/providers";
+import {
+  drainOutbox,
+  HOW_YOU_WORK,
+  MAX_MESSAGE_LENGTH,
+  postPersonMessage,
+  type ToolContext,
+  type ToolSource,
+} from "../src";
 import { CONTINUE_AFTER_CUT, CUT_AT_OUTPUT_LIMIT } from "../src/executor";
 import { syntaxError } from "../src/file-syntax";
 import { type Fixture, setup } from "./fixtures";
@@ -180,6 +187,24 @@ describe("a reply cut at the output limit", () => {
     expect(posted.map((m) => m.body)).toEqual(["Primeira metade, segunda metade."]);
   });
 
+  test("its next call failing: what it wrote so far is posted, and the run fails", async () => {
+    f = await setup({
+      reply: (_req, call) =>
+        call === 1
+          ? { chunks: ["Primeira metade, "], stopReason: "max_tokens" }
+          : new ProviderError("provider rejected the request (400): bad request", false, 400),
+    });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev escreve o texto todo",
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
+    expect(posted.map((m) => m.body)).toContain("Primeira metade,");
+    const [run] = await f.db.select().from(schema.agentRuns);
+    expect(run?.status).toBe("failed");
+  });
+
   test("all thinking twice in a row: it goes on no more, so a model that only thinks never runs the run's steps out", async () => {
     f = await setup({
       reply: () => ({
@@ -195,6 +220,43 @@ describe("a reply cut at the output limit", () => {
 
     // Two calls each time it is told to answer, as with any reply that says nothing; never the run's 200 steps.
     expect(f.provider.calls.length).toBeLessThanOrEqual(6);
+  });
+});
+
+describe("a reply longer than one message", () => {
+  test("posts as consecutive messages in its place, cut between paragraphs, a code block closed and opened again", async () => {
+    const prose = `${"Uma frase de texto corrido. ".repeat(2000)}`.trim();
+    const code = Array.from({ length: 4000 }, (_, i) => `const line${i} = ${i}; // the code goes on`).join("\n");
+    const reply = `${prose}\n\n${prose}\n\n\`\`\`ts\n${code}\n\`\`\`\n\nE pronto.`;
+    expect(reply.length).toBeGreaterThan(MAX_MESSAGE_LENGTH);
+    f = await setup({ reply: () => ({ chunks: [reply] }) });
+    const events = f.listen(f.general.id);
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev escreve tudo",
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    const posted = (await f.db.select().from(schema.messages))
+      .filter((m) => m.authorType === "agent")
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
+    expect(posted.length).toBeGreaterThan(1);
+    for (const m of posted) {
+      expect(m.body.length).toBeLessThanOrEqual(MAX_MESSAGE_LENGTH);
+      expect(m.threadId).toBe(posted[0]?.threadId ?? null);
+      // Every part's fences pair up: no part leaves a code block open.
+      expect((m.body.match(/^```/gm) ?? []).length % 2).toBe(0);
+    }
+    expect(posted[0]?.body.startsWith("Uma frase")).toBe(true);
+    expect(posted.at(-1)?.body.endsWith("E pronto.")).toBe(true);
+    const words = posted.map((m) => m.body.replace(/^```(ts)?$/gm, "")).join("\n");
+    expect(words.replace(/\s+/g, " ")).toBe(reply.replace(/^```(ts)?$/gm, "").replace(/\s+/g, " "));
+    // What shows once under a reply is on its last part alone.
+    expect(posted.map((m) => "work" in m.meta)).toEqual(posted.map((_, i) => i === posted.length - 1));
+    // The apps hear every part, in order.
+    const created = events.flatMap((e) => (e.type === "message.created" ? [e.messageId] : []));
+    expect(created.filter((id) => posted.some((m) => m.id === id))).toEqual(posted.map((m) => m.id));
+    const [run] = await f.db.select().from(schema.agentRuns);
+    expect(run?.status).toBe("done");
   });
 });
 

@@ -1,5 +1,5 @@
 import type { ErrorReporter, KeyWrapper, PlatformCredentials, PubSub, SearchKind } from "@agenteschat/adapters";
-import { and, type Database, desc, type Executor, eq, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, desc, type Executor, eq, gt, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   costNanoUsd,
   customModelOf,
@@ -57,6 +57,7 @@ import { decryptCredential, usableCredentialRow } from "./credentials";
 import { loadEndpointModels } from "./endpoints";
 import { BudgetExceededError, MissingCredentialError, NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
+import { getOrMake } from "./format";
 import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
@@ -71,6 +72,7 @@ const {
   organizationSettings,
   organizationMembers,
   personUsageMonths,
+  modelOutputLimits,
 } = schema;
 
 export interface ModelGatewayDeps {
@@ -229,6 +231,8 @@ export const RESERVATION_TTL_MS = 15 * 60_000;
 export const MIN_OUTPUT_TOKENS = 256;
 /** How many times a call the provider refused for its output cap is sent again, each time lower (`outputCapRefusal`). */
 const OUTPUT_CAP_RETRIES = 3;
+/** A key's output limit learned longer ago is learned again: a provider may raise it. */
+export const LEARNED_LIMIT_TTL_MS = 30 * 24 * 3600_000;
 /** A test call that takes longer says the key couldn't be checked: it never holds a person's save up for long. */
 export const KEY_CHECK_TIMEOUT_MS = 15_000;
 
@@ -480,19 +484,51 @@ export function createModelGateway(deps: ModelGatewayDeps) {
    * says wrong: as its provider's list tells it (`ModelProvider.outputLimit`), or as a refusal did (`outputCapRefusal`).
    * Null: its provider was asked and told nothing.
    */
-  // ponytail: per process, so each start pays one list read or one refused call per key and model; a column on the
-  // credential would keep them across restarts.
+  // A workspace key's are kept (`model_output_limits`) and read once per process; the platform key's stay in the
+  // process (ponytail: one list read or refused call per start and model, a row of their own if that ever shows).
   const learnedLimits = new Map<string, number | null>();
+  const storedLimits = new Map<string, Promise<void>>();
   const limitKey = (key: Key, model: string) => `${key.credentialId ?? "platform"}|${model}`;
+
+  /** What an earlier process learned for a workspace key and model, read the first time this one needs it. */
+  const loadLimit = (at: string, key: Key, model: string) =>
+    key.credentialId === null || learnedLimits.has(at)
+      ? undefined
+      : getOrMake(storedLimits, at, async () => {
+          const [row] = await db
+            .select({ max: modelOutputLimits.maxOutputTokens })
+            .from(modelOutputLimits)
+            .where(
+              and(
+                eq(modelOutputLimits.credentialId, key.credentialId as string),
+                eq(modelOutputLimits.model, model),
+                gt(modelOutputLimits.learnedAt, new Date(Date.now() - LEARNED_LIMIT_TTL_MS)),
+              ),
+            )
+            .catch(() => []);
+          if (row && !learnedLimits.has(at)) learnedLimits.set(at, row.max);
+        });
+
+  /** Learned now: kept for this process, and a workspace key's for the next ones. */
+  async function learnLimit(at: string, key: Key, model: string, max: number | null) {
+    learnedLimits.set(at, max);
+    if (key.credentialId === null) return;
+    await db
+      .execute(sql`insert into ${modelOutputLimits} (org_id, credential_id, model, max_output_tokens, learned_at)
+        select c.org_id, c.id, ${model}, ${max}::integer, now() from ${providerCredentials} c where c.id = ${key.credentialId}::uuid
+        on conflict (credential_id, model) do update set max_output_tokens = excluded.max_output_tokens, learned_at = now()`)
+      .catch(() => {});
+  }
 
   /** The output cap sent: the call's, within the most the model may write (its row's, else what was learned). */
   async function capOf(maxTokens: number, info: ModelInfo, provider: ModelProvider, model: string, key: Key) {
     const at = limitKey(key, model);
+    if (!info.maxOutputTokens) await loadLimit(at, key, model);
     if (!info.maxOutputTokens && !learnedLimits.has(at) && provider.outputLimit) {
       const told = await provider
         .outputLimit(model, { apiKey: key.apiKey, ...(key.endpoint ? { endpoint: key.endpoint } : {}) })
         .catch(() => null);
-      learnedLimits.set(at, told);
+      await learnLimit(at, key, model, told);
     }
     return Math.min(maxTokens, info.maxOutputTokens ?? maxTokens, learnedLimits.get(at) ?? maxTokens);
   }
@@ -517,7 +553,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
             : null;
         if (!cut || cut.retry < MIN_OUTPUT_TOKENS) throw error;
         const at = limitKey(key, request.model);
-        if (cut.learn) learnedLimits.set(at, Math.min(cut.learn, learnedLimits.get(at) ?? cut.learn));
+        if (cut.learn)
+          await learnLimit(at, key, request.model, Math.min(cut.learn, learnedLimits.get(at) ?? cut.learn));
         request.maxTokens = cut.retry;
       }
     }
