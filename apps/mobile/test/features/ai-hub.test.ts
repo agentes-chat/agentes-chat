@@ -53,6 +53,8 @@ describe("an account's lines", () => {
     expect(hubTitle(t, a)).toBe("Trabalho");
     expect(hubLine(t, a)).toBe("Max · de Walter");
     expect(hubLine(t, a, true)).toBe("Claude · Max · de Walter");
+    // The computer it signed in on goes last: an account thinks only there.
+    expect(hubLine(t, a, true, "Notebook")).toBe("Claude · Max · de Walter · Notebook");
     // The viewer's own unnamed account goes by its email, never the automatic "Claude 2".
     expect(hubTitle(t, account({ named: false, mine: true, label: "Claude 2", email: "ana@example.com" }))).toBe(
       "ana@example.com",

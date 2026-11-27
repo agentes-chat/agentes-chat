@@ -34,16 +34,21 @@ export function hubTitle(t: TFunction, a: Titled): string {
   return a.email ?? t("aiAccounts.unnamed");
 }
 
-/** Its plan and whose it is ("Max · de João"); with `maker`, its maker first ("Claude · Max · de João"). */
+/**
+ * Its plan and whose it is ("Max · de João"); with `maker`, its maker first ("Claude · Max · de João"); with
+ * `computer`, the computer it signed in on last, since an account thinks only there.
+ */
 export function hubLine(
   t: TFunction,
   a: Pick<MachineAccount, "plan" | "ownerName" | "kind" | "provider">,
   maker = false,
+  computer?: string,
 ): string {
   return [
     maker ? (a.provider ? providerLabel(a.provider) : t(`aiAccounts.connect.${a.kind}`)) : null,
     a.plan ? planName(a.plan) : null,
     a.ownerName ? t("usageViews.whose", { name: firstName(a.ownerName) }) : null,
+    computer || null,
   ]
     .filter(Boolean)
     .join(" · ");

@@ -9,10 +9,12 @@ import {
   useSetKeyFallback,
 } from "@agenteschat/client";
 import { orderDrop, orderStep } from "@agenteschat/client/lib/ai-accounts";
+import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
 import { planOf } from "@agenteschat/client/lib/plans";
 import { isEveryone, roleName } from "@agenteschat/client/lib/roles";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { PLAN_TONE } from "@agenteschat/ui/plan-state";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -89,6 +91,7 @@ function StateLine({ text, tone }: { text: string; tone: StateTone }) {
 export function HubList({ hub, connect, before }: { hub: AiHub; connect: boolean; before?: ReactNode }) {
   const { t, i18n } = useTranslation();
   const meId = useMeId();
+  const { org } = useOrg();
   const accounts = hubAccounts(hub, meId ?? "");
   const orders = hub.order.length > 0 || hub.canConfigure;
   return (
@@ -110,7 +113,7 @@ export function HubList({ hub, connect, before }: { hub: AiHub; connect: boolean
               key={a.id}
               leading={<ProviderLogo id={a.provider ?? a.kind} size="sm" off={a.status !== "active"} />}
               label={hubTitle(t, a)}
-              sub={hubLine(t, a)}
+              sub={hubLine(t, a, false, computerNameOf(t, org?.name ?? "", a.computer, isPersonal(org)))}
               {...(state ? { below: <StateLine {...state} /> } : {})}
               chevron
               onPress={() => openAiAccount(a.id)}
@@ -150,7 +153,7 @@ function useHub() {
  */
 export function AiAccountScreen({ accountId }: { accountId: string }) {
   const { t } = useTranslation();
-  const { orgId } = useOrg();
+  const { orgId, org } = useOrg();
   const toast = useToast();
   const { ai, hub } = useHub();
   const dir = useDirectory();
@@ -244,7 +247,7 @@ export function AiAccountScreen({ accountId }: { accountId: string }) {
   return (
     <SettingsPage
       title={hubTitle(t, a)}
-      subtitle={hubLine(t, a, true)}
+      subtitle={hubLine(t, a, true, computerNameOf(t, org?.name ?? "", a.computer, isPersonal(org)))}
       {...(menu.length > 0
         ? {
             actions: [

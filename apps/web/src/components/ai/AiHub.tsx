@@ -86,11 +86,15 @@ const newestUsage = (logins: readonly AiHubAccount[]) =>
     .filter((u): u is NonNullable<typeof u> => u !== null)
     .sort((x, y) => Date.parse(y.at) - Date.parse(x.at))[0] ?? null;
 
-/** "Max · de João": its plan, whose it is (the viewer's own needs no name: it is in "Suas contas"). */
-function facts(t: TFunction, a: AiHubAccount): string {
+/**
+ * "Max · de João · Notebook": its plan, whose it is (the viewer's own needs no name: it is in "Suas contas") and the
+ * computer it signed in on, since an account thinks only there.
+ */
+function facts(t: TFunction, a: AiHubAccount, computer?: string): string {
   return [
     a.plan ? planName(a.plan) : null,
     a.ownerName && !a.mine ? t("aiHub.of", { name: firstName(a.ownerName) }) : null,
+    computer || null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -203,7 +207,7 @@ export function AiAccountsTab({ keys }: { keys?: ReactNode }) {
   const row = (logins: AiHubAccount[]) => {
     const a = lead(logins);
     const title = accountShortName(t, a);
-    const sub = facts(t, a);
+    const sub = facts(t, a, computerNameOf(t, org.name, a.computer, isPersonal(org)));
     return (
       <div key={a.id} className="plan-row">
         <button
@@ -352,7 +356,9 @@ function AccountDialog({ logins, onClose }: { logins: readonly AiHubAccount[]; o
       open
       onOpenChange={(o) => !o && onClose()}
       title={title}
-      subtitle={[makerOf(t, a), facts(t, a)].filter(Boolean).join(" · ")}
+      subtitle={[makerOf(t, a), facts(t, a, computerNameOf(t, org.name, a.computer, isPersonal(org)))]
+        .filter(Boolean)
+        .join(" · ")}
       leading={<ProviderLogo id={a.provider ?? a.kind} size="sm" off={a.status !== "active"} />}
       actions={<AccountMenu logins={logins} canManage={a.rights.canManage} label={more} />}
       closeLabel={t("common.close")}
