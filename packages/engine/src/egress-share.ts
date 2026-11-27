@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { EGRESS_SHARE, EGRESS_SHARE_PROTOCOL, STREAM_CLOSE, type StreamHello } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
-import { getMachineById } from "./machines";
+import { EGRESS_VIA_SHOWN_MS, getMachineById } from "./machines";
 import type { ClaimedStream, StreamSocket } from "./streams";
 
 const { machines } = schema;
@@ -123,9 +123,18 @@ export function createEgressRelay(deps: {
     const last = viaWritten.get(managedId);
     if (last && last.deviceId === deviceId && now() - last.at < VIA_WRITE_MS) return;
     viaWritten.set(managedId, { deviceId, at: now() });
+    const at = new Date(now()).toISOString();
+    const via = machines.egressVia;
+    // `since` stays while the same computer goes on lending (other server processes write `at` too); a new one, or
+    // one back after the apps stopped saying it, starts it again.
     await deps.db
       .update(machines)
-      .set({ egressVia: { machineId: deviceId, at: new Date(now()).toISOString() } })
+      .set({
+        egressVia: sql`jsonb_build_object('machineId', ${deviceId}::text, 'at', ${at}::text, 'since',
+          case when ${via}->>'machineId' = ${deviceId}::text
+            and (${via}->>'at')::timestamptz > ${at}::timestamptz - make_interval(secs => ${EGRESS_VIA_SHOWN_MS / 1000})
+          then ${via}->'since' else to_jsonb(${at}::text) end)`,
+      })
       .where(eq(machines.id, managedId));
   }
 

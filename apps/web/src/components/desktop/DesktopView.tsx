@@ -18,7 +18,7 @@ import {
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { quoteExcerpt } from "@agenteschat/client/lib/reply";
 import { useSeat } from "@agenteschat/client/lib/seat-context";
-import { Button, cx, Icon, InfoHint } from "@agenteschat/ui";
+import { Button, cx, Icon } from "@agenteschat/ui";
 import type RFB from "@novnc/novnc";
 import { type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -527,23 +527,6 @@ export function DesktopView({
         ? (head?.watching ?? t("agentComputer.sub.watching"))
         : "";
   const retrying = <span>{t("desktop.state.retrying")}</span>;
-  const notice = <span className="muted">{t("desktop.control.notice", g)}</span>;
-  // What programs there can see, kept to one line in the window (desktop.css). agentes.chat Cloud may screen the
-  // session (ADR 0076): said behind an ⓘ after it.
-  const controlLine = (
-    <span className="dsk-words">
-      {edition === "cloud" ? (
-        <span className="ac-hintline">
-          {notice}
-          <InfoHint name={t("common.about", { label: t("desktop.session.check") })}>
-            {t("desktop.session.screening")}
-          </InfoHint>
-        </span>
-      ) : (
-        notice
-      )}
-    </span>
-  );
   const again = (
     <Button size="sm" icon="refresh" onClick={retry}>
       {t("desktop.retry")}
@@ -742,9 +725,7 @@ export function DesktopView({
               <Icon name={said.error ? "alert" : "check"} size={14} />
               <span>{said.text}</span>
             </span>
-          ) : got === null ? (
-            controlLine
-          ) : (
+          ) : got !== null ? (
             <span className="dsk-got" role="status">
               <span className="muted">{t("desktop.clipboard.got", g)}</span>
               <q>{quoteExcerpt(got, 120)}</q>
@@ -758,7 +739,7 @@ export function DesktopView({
                 {t("desktop.clipboard.copy")}
               </button>
             </span>
-          )}
+          ) : null}
           <Egress machine={machine} compact />
         </div>
       )}
