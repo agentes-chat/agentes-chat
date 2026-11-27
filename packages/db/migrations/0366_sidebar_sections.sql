@@ -1,4 +1,4 @@
--- Channel sections become each person's own (ADR 0259). A workspace whose sectors hold channels chose to group them:
+-- Channel sections become each person's own (ADR 0260). A workspace whose sectors hold channels chose to group them:
 -- everyone in it starts with one section per such sector, the sector's name and order, its channels in their order.
 -- Only the channels the person sees: the public ones and the private ones they are in. A person whose view already has
 -- sections keeps them. Sectors stay as they are, on Equipe › Setores.

@@ -67,6 +67,19 @@
     "more": "Voir les {{count}} lignes",
     "gone": "Ce code n'est plus ouvert."
   },
+  "table": {
+    "label_one": "Tableau · {{count}} ligne",
+    "label_many": "Tableau · {{count}} lignes",
+    "label_other": "Tableau · {{count}} lignes",
+    "title": "Tableau",
+    "rows_one": "{{count}} ligne",
+    "rows_many": "{{count}} lignes",
+    "rows_other": "{{count}} lignes",
+    "copy": "Copier le tableau",
+    "copied": "Tableau copié",
+    "more": "Voir les {{count}} lignes",
+    "gone": "Ce tableau n'est plus ouvert."
+  },
   "time": {
     "today": "Aujourd'hui",
     "yesterday": "Hier",

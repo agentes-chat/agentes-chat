@@ -65,6 +65,15 @@
     "more": "查看全部 {{count}} 行",
     "gone": "此代码已不再打开。"
   },
+  "table": {
+    "label_other": "表格 · {{count}} 行",
+    "title": "表格",
+    "rows_other": "{{count}} 行",
+    "copy": "复制表格",
+    "copied": "已复制表格",
+    "more": "查看全部 {{count}} 行",
+    "gone": "此表格已不再打开。"
+  },
   "time": {
     "today": "今天",
     "yesterday": "昨天",

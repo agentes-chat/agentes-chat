@@ -51,6 +51,14 @@ export const en = {
     /** A formatted block (JSON) shown as it was written. */
     raw: "Raw",
     table: "Table",
+    /** A Markdown table's card in a message or a document: its top line, beside Copy and Full screen. */
+    tableRows_one: "Table · {{count}} row",
+    tableRows_other: "Table · {{count}} rows",
+    /** Under a long table in a message, which shows only its first rows: opens the whole table in full screen. */
+    tableSeeAll: "See all {{count}} rows",
+    /** Under the title of a table in full screen. */
+    tableRowCount_one: "{{count}} row",
+    tableRowCount_other: "{{count}} rows",
     chartItem: "Item",
     chartShare: "Share",
     you: "you",
@@ -2565,7 +2573,7 @@ export const en = {
     talksOnlyMore_one: "only talks to {{name}} and {{count}} more",
     talksOnlyMore_other: "only talks to {{name}} and {{count}} more",
   },
-  /** Favoritos (ADR 0259): people, agents and channels the person keeps on top of the sidebar, by name. */
+  /** Favoritos (ADR 0260): people, agents and channels the person keeps on top of the sidebar, by name. */
   sidebarFavorites: {
     title: "Favorites",
     add: "Add to favorites",
@@ -2574,7 +2582,7 @@ export const en = {
     marked: "Favorite",
     full: "Favorites already holds 50. Remove one to add this one.",
   },
-  /** Each person's own channel sections (ADR 0259): made by dragging a channel onto another, or from a channel's menu. */
+  /** Each person's own channel sections (ADR 0260): made by dragging a channel onto another, or from a channel's menu. */
   sidebarSections: {
     new: "New section",
     /** The name a new section starts with, selected in its field. */
@@ -2585,7 +2593,7 @@ export const en = {
     delete: "Delete section",
     nameLabel: "Section name",
   },
-  /** Direct messages with people and agents together (ADR 0259). */
+  /** Direct messages with people and agents together (ADR 0260). */
   sidebarDms: {
     options: "Direct messages options",
     show: "Show",
@@ -2601,13 +2609,13 @@ export const en = {
     agentTag: "AI",
     agentTip: "AI agent",
   },
-  /** The sidebar's tool column (ADR 0259): what a tile's dot says to a screen reader. */
+  /** The sidebar's tool column (ADR 0260): what a tile's dot says to a screen reader. */
   sidebarColumn: {
     label: "Tools",
     unread: "{{name}}, something unread",
     you: "{{name}}, something for you",
   },
-  /** Unreads (`/unreads`, ADR 0259): everything waiting for the person, the inbox's items and the unread conversations. */
+  /** Unreads (`/unreads`, ADR 0260): everything waiting for the person, the inbox's items and the unread conversations. */
   unreads: {
     title: "Unreads",
     forYou: "For you",
@@ -11083,7 +11091,6 @@ export const en = {
     filter: {
       person: "People",
       agent: "Agents",
-      routine: "Routines",
       reminder: "Reminders",
       deadline: "Task due dates",
     },
@@ -11117,12 +11124,6 @@ export const en = {
         declined: "You're not going.",
       },
     },
-    every: { hour: "every hour", hours: "every {{count}} h", minutes: "every {{count}} min" },
-    perDay: "{{count}}× a day",
-    runs_one: "{{count}} run in these days.",
-    runs_other: "{{count}} runs in these days.",
-    /** Under a run's title in its details; the agent's name and face are the line above. */
-    routineDetail: "Routine · delivers to {{target}}",
     deadlineDetail: "The task is due.",
     reminderBy: "Set by {{name}}",
     /** Under a reminder's title in its details; the agent that posts it is the line above. */
@@ -11130,21 +11131,11 @@ export const en = {
     cancelReminder: "Cancel reminder",
     reminderCancelled: "Reminder cancelled",
     openIssue: "Open task",
-    openRoutines: "See in Routines",
-    openRoutine: "Open routine",
-    runAria: "Routine {{name}}, {{time}}",
     /** An item's hover: its name, whose it is, when. */
     runHint: "{{name}} · {{agent}} · {{time}}",
-    runsAt: "Routines at {{time}}",
-    /** Under a stack of routine runs in the week: the runs it doesn't show, which it opens. */
-    moreRuns_one: "+{{count}} routine",
-    moreRuns_other: "+{{count}} routines",
-    runTimes: "×{{count}}",
-    result: { ok: "replied", silent: "nothing new", failed: "failed", skipped: "didn't run" },
-    lastResult: "last: {{result}}",
     upcomingMeta: "{{day}} · {{time}}",
     emptyHint: "Nothing scheduled. Drag to create or press N",
-    agendaEmpty: "Events and routines in the next 30 days show up here.",
+    agendaEmpty: "Events and reminders in the next 30 days show up here.",
     agendaEmptyTitle: "A clear calendar for the next 30 days",
     noResults: "Nothing with this filter.",
     more: "+{{count}} more",
@@ -19169,6 +19160,27 @@ export const en = {
       license: "Free software under the <license>GNU Affero General Public License v3</license>, with no warranty.",
       source: "Source code",
       copyright: "Copyright © 2026 AGENTESCHAT, LLC and contributors",
+      /** Beside the version, for who configures the workspace: the public releases on GitHub, asked by the browser. */
+      latest: "The newest release",
+      newer: "{{version}} is out",
+      notes: "What's new",
+      /** The upgrade, as SELF_HOSTING.md gives it: keep the commands' words as they are. */
+      update: {
+        title: "Update to {{version}}",
+        docker: "With Docker",
+        native: "Without Docker",
+        nativeHelp: "Extract the release's package into `~/.agentes/app`, then run:",
+        desktop: "Runs in the desktop app on this computer? It updates with the app.",
+        /** The quiet notice, once per release, for who configures the workspace. */
+        notice: "agentes.chat {{version}} is out for this server",
+        how: "How to update",
+      },
+      /** The computers' program (the runner) newer than this server: it works, the newest features wait. */
+      computers: "Computers' program",
+      computersAhead_one:
+        "{{count}} computer runs a newer version than this server. It works as it is, and what's new in it comes with this server's update.",
+      computersAhead_other:
+        "{{count}} computers run a newer version than this server. They work as they are, and what's new in them comes with this server's update.",
     },
     title: "Settings",
     account: {

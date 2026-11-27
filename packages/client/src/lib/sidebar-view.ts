@@ -109,7 +109,7 @@ export function sortAgents<A extends Pick<Agent, "id" | "ownerUserId">>(
   return [...agents.filter(first), ...agents.filter((a) => !first(a))];
 }
 
-// ── Favoritos (ADR 0259) ──
+// ── Favoritos (ADR 0260) ──
 
 /** At most this many favorites (`SIDEBAR_FAVORITE_LIMIT`, packages/engine/src/sidebar-items.ts). */
 export const SIDEBAR_FAVORITE_LIMIT = 50;
@@ -170,7 +170,7 @@ export function moveBy<T>(list: readonly T[], item: T, delta: -1 | 1): T[] {
   return out;
 }
 
-// ── Channel sections, each person's own (ADR 0259) ──
+// ── Channel sections, each person's own (ADR 0260) ──
 
 /** A section's name, as typed, at most this long (`SIDEBAR_SECTION_NAME_MAX` in the engine). */
 export const SIDEBAR_SECTION_NAME_MAX = 40;
@@ -181,7 +181,7 @@ export const newSectionId = () => `s${Date.now().toString(36)}${Math.random().to
 export const sectionOfChannel = (sections: readonly SidebarChannelSection[], channelId: string) =>
   sections.find((s) => s.channelIds.includes(channelId))?.id ?? null;
 
-/** Sections with no channel left go away (ADR 0259 §2). */
+/** Sections with no channel left go away (ADR 0260 §2). */
 const kept = (sections: SidebarChannelSection[]) => sections.filter((s) => s.channelIds.length > 0);
 
 /**

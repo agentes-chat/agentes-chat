@@ -749,7 +749,7 @@ function InboxRow({
 }
 
 /**
- * One inbox item as Não lidas lists it (ADR 0259): the inbox's face, headline and line, and when (or how long is
+ * One inbox item as Não lidas lists it (ADR 0260): the inbox's face, headline and line, and when (or how long is
  * left); a click opens it (`onOpen`), where it is answered.
  */
 export function InboxItemRow({ n, onOpen }: { n: AppNotification; onOpen: (n: AppNotification) => void }) {

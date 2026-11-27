@@ -198,7 +198,7 @@ const rowPresence = (name: string) =>
 /** The badge on my face in the sidebar's account button. */
 const footerPresence = () =>
   document.querySelector(".sidebar__user .ac-presence")?.getAttribute("data-presence") ?? null;
-/** The sidebar's links: the list's rows and the tool column's tiles (ADR 0259). */
+/** The sidebar's links: the list's rows and the tool column's tiles (ADR 0260). */
 const links = () => [...document.querySelectorAll<HTMLAnchorElement>("a.sidebar__item, a.sidebar__tile")];
 const label = (a: HTMLAnchorElement) => a.querySelector(".sidebar__item-label")?.textContent?.trim().replace(/^#/, "");
 const link = (name: string) => links().find((a) => label(a) === name);

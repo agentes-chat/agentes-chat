@@ -48,7 +48,7 @@ export const recentDms = <D extends Pick<DirectMessage, "with" | "lastMessage" |
     )
     .sort((a, b) => (dmActivityAt(b) ?? "").localeCompare(dmActivityAt(a) ?? ""));
 
-/** Someone Mensagens diretas lists (ADR 0259): a person or an agent, by id and name. */
+/** Someone Mensagens diretas lists (ADR 0260): a person or an agent, by id and name. */
 export interface DmListed {
   kind: "person" | "agent";
   id: string;
@@ -56,7 +56,7 @@ export interface DmListed {
 }
 
 /**
- * Mensagens diretas with people and agents together (ADR 0259): `first` (the right hand) on top, then by their DM's
+ * Mensagens diretas with people and agents together (ADR 0260): `first` (the right hand) on top, then by their DM's
  * latest activity, then everyone with none by name. `recent` keeps only the ones talked to (as `recentDms` reads a DM),
  * and anyone whose DM has something unread.
  */

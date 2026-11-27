@@ -2394,8 +2394,8 @@
       }
     },
     /**
-     * A day's column of the calendar: no item covers another. A stack of routine runs and a meeting that meet sit side
-     * by side, and a stack stops before the next item (`runStacks`, `layoutDay`). A meeting reaches down its slot (its
+     * A day's column of the calendar: no item covers another. A reminder and a meeting that meet sit side by side
+     * (`layoutDay`). A meeting reaches down its slot (its
      * `min-height`): what a wrapped title draws past it, the page measures and lays out again (`TimeGrid`'s heights),
      * which a captured screen never ran, so only the slots are held here.
      */
@@ -2406,7 +2406,7 @@
         return { left: r.left, right: r.right, top: r.top, bottom: planned > 0 ? r.top + planned : r.bottom };
       };
       for (const col of document.body.querySelectorAll(".cal-week__col")) {
-        const items = [...col.querySelectorAll(":scope > .cal-chip--block, :scope > .cal-week__runs")].filter(seen);
+        const items = [...col.querySelectorAll(":scope > .cal-chip--block, :scope > .cal-week__moment")].filter(seen);
         for (const [i, a] of items.entries()) {
           const ra = slot(a);
           for (const b of items.slice(i + 1)) {

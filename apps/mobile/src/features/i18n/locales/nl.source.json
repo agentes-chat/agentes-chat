@@ -158,6 +158,33 @@
   "code.gone": {
     "value": "This code is no longer open."
   },
+  "table.label": {
+    "value": {
+      "one": "Table · {{count}} row",
+      "other": "Table · {{count}} rows"
+    }
+  },
+  "table.title": {
+    "value": "Table"
+  },
+  "table.rows": {
+    "value": {
+      "one": "{{count}} row",
+      "other": "{{count}} rows"
+    }
+  },
+  "table.copy": {
+    "value": "Copy the table"
+  },
+  "table.copied": {
+    "value": "Table copied"
+  },
+  "table.more": {
+    "value": "See all {{count}} rows"
+  },
+  "table.gone": {
+    "value": "This table is no longer open."
+  },
   "time.today": {
     "value": "Today"
   },

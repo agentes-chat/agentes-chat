@@ -67,6 +67,19 @@
     "more": "Ver las {{count}} líneas",
     "gone": "Este código ya no está abierto."
   },
+  "table": {
+    "label_one": "Tabla · {{count}} fila",
+    "label_many": "Tabla · {{count}} filas",
+    "label_other": "Tabla · {{count}} filas",
+    "title": "Tabla",
+    "rows_one": "{{count}} fila",
+    "rows_many": "{{count}} filas",
+    "rows_other": "{{count}} filas",
+    "copy": "Copiar la tabla",
+    "copied": "Tabla copiada",
+    "more": "Ver las {{count}} filas",
+    "gone": "Esta tabla ya no está abierta."
+  },
   "time": {
     "today": "Hoy",
     "yesterday": "Ayer",

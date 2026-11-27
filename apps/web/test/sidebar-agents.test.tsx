@@ -9,7 +9,7 @@ import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, GENERAL_ID, ORG_ID, seedDm, se
 import { renderApp, screen, settle } from "./render";
 
 /**
- * A team's list (ADR 0259): the agents that talk to me sit in Mensagens diretas with the people, one line each; Favoritos
+ * A team's list (ADR 0260): the agents that talk to me sit in Mensagens diretas with the people, one line each; Favoritos
  * holds people, agents and channels by name, in my order; Canais has my own sections, made by dragging a channel onto
  * another, or from a channel's menu.
  */
@@ -117,7 +117,7 @@ const shown = (el: Element) => {
 };
 
 describe("agents in Mensagens diretas", () => {
-  test("an agent at work shows it in its face alone: the orbit, no light behind its row (ADR 0259 §7)", async () => {
+  test("an agent at work shows it in its face alone: the orbit, no light behind its row (ADR 0260 §7)", async () => {
     const state = seedState();
     seedDm(state, { type: "agent", id: ATLAS_ID }, { ago: 1, unread: 2 });
     const r = await go(state);

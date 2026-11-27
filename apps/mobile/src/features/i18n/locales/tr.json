@@ -66,6 +66,17 @@
     "more": "{{count}} satırın tümünü gör",
     "gone": "Bu kod artık açık değil."
   },
+  "table": {
+    "label_one": "Tablo · {{count}} satır",
+    "label_other": "Tablo · {{count}} satır",
+    "title": "Tablo",
+    "rows_one": "{{count}} satır",
+    "rows_other": "{{count}} satır",
+    "copy": "Tabloyu kopyala",
+    "copied": "Tablo kopyalandı",
+    "more": "{{count}} satırın tümünü gör",
+    "gone": "Bu tablo artık açık değil."
+  },
   "time": {
     "today": "Bugün",
     "yesterday": "Dün",

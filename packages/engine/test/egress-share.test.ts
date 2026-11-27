@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { connect } from "node:net";
-import { EGRESS_PROXY_PROTOCOL, EGRESS_SHARE_PROTOCOL, type MachineRequest, STREAM_CLOSE } from "@agenteschat/adapters";
+import {
+  EGRESS_PROXY_PROTOCOL,
+  EGRESS_SHARE_PROTOCOL,
+  MACHINE_PROTOCOL_VERSION,
+  type MachineRequest,
+  STREAM_CLOSE,
+} from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { runMigration } from "@agenteschat/db/testing";
 import {
@@ -442,9 +448,9 @@ describe("on a self-hosted server (ADR 0237): people's computers lend to this se
   test("its role changing tells an online computer at once: marked the workspace's with its switch off, it borrows", async () => {
     f = await setup({ machines: true });
     setServerLending(true);
-    const paired = await pairMachine(deps(), f.owner.id, f.org.id, { name: "Build VPS", ...RUNNER });
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, { name: "Office PC", ...RUNNER });
     const runner = fakeRunner(f.machineHub as MachineHub);
-    await runner.hello(paired.token);
+    await runner.hello(paired.token, { app: true });
     // A computer that lends gets no proxy at connect.
     expect(runner.sent.find((frame) => frame.type === "welcome")).not.toHaveProperty("egressProxy");
     const asked = () =>
@@ -466,6 +472,67 @@ describe("on a self-hosted server (ADR 0237): people's computers lend to this se
     const old = fakeRunner(f.machineHub as MachineHub);
     await old.hello(paired.token, { protocol: EGRESS_PROXY_PROTOCOL - 1 });
     expect(old.sent.find((frame) => frame.type === "welcome")).not.toHaveProperty("egressProxy");
+  });
+
+  test("a server box (a Linux Terminal install) borrows by default: its switch goes off at hello unless its owner turned it on", async () => {
+    f = await setup({ machines: true });
+    const hub = f.machineHub as MachineHub;
+    const connected = async (name: string, extra: Record<string, unknown> = {}) => {
+      const paired = await pairMachine(deps(), f.owner.id, f.org.id, { name, ...RUNNER });
+      const runner = fakeRunner(hub);
+      await runner.hello(paired.token, extra);
+      return { id: paired.machineId, token: paired.token, welcome: runner.sent.find((x) => x.type === "welcome") };
+    };
+
+    // Where a provisioner makes the computers (the Cloud), nothing changes: it lends as before.
+    const cloudBox = await connected("Cloud box");
+    expect((await row(cloudBox.id)).egressShare).toBe(true);
+
+    setServerLending(true);
+    const laptop = await connected("Ana's laptop", { app: true });
+    await noticeLendingComputers(f.db);
+    // Paired before: told it lends, turned off at its next hello, its notice done; the welcome hands it the proxy.
+    const again = fakeRunner(hub);
+    await again.hello(cloudBox.token);
+    expect((await row(cloudBox.id)).egressShare).toBe(false);
+    expect(again.sent.find((x) => x.type === "welcome")).toMatchObject({ egressProxy: true });
+    const notices = await f.db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.kind, "device.internet_shared"));
+    expect(notices.find((n) => n.source.machineId === cloudBox.id)?.doneAt).not.toBeNull();
+    expect(notices.find((n) => n.source.machineId === laptop.id)?.doneAt).toBeNull();
+
+    // Paired now: borrows from its first hello, without being marked the workspace's.
+    const vps = await connected("VPS");
+    expect((await row(vps.id)).egressShare).toBe(false);
+    expect(vps.welcome).toMatchObject({ egressProxy: true });
+    const { relay } = lendingRelay(laptop.id);
+    expect((await ask(relay, vps.id)).sent[0]).toBe(JSON.stringify({ type: "stream.ready" }));
+
+    // The desktop app's computer keeps lending, on Linux too; a box its owner turned on stays on.
+    expect((await row(laptop.id)).egressShare).toBe(true);
+    expect(laptop.welcome).not.toHaveProperty("egressProxy");
+    await updateComputerDevice(deps(), f.owner.id, f.org.id, vps.id, { shareInternet: true });
+    await fakeRunner(hub).hello(vps.token);
+    expect((await row(vps.id)).egressShare).toBe(true);
+    expect((await ask(relay, vps.id)).closed?.code).toBe(STREAM_CLOSE.forbidden);
+  });
+
+  test("the pick prefers a computer the desktop app runs over a newer Terminal install, where the server lends", async () => {
+    f = await setup();
+    const desktop = await pair(f.owner.id, "Laptop", MACHINE_PROTOCOL_VERSION);
+    await f.db
+      .update(schema.machines)
+      .set({ executors: { app: true } })
+      .where(eq(schema.machines.id, desktop));
+    const box = await pair(f.owner.id, "Server room box", MACHINE_PROTOCOL_VERSION);
+    // A Linux runner from before runners said whether the app runs them: not taken for the app here.
+    const oldBox = await pair(f.owner.id, "Old VPS", EGRESS_SHARE_PROTOCOL);
+    // The Cloud: newest first, as before.
+    expect((await lendingComputers(f.db, f.org.id)).map((m) => m.id)).toEqual([oldBox, box, desktop]);
+    setServerLending(true);
+    expect((await lendingComputers(f.db, f.org.id)).map((m) => m.id)).toEqual([desktop, oldBox, box]);
   });
 
   test("the owners of computers that lend hear it once, where the server starts lending", async () => {

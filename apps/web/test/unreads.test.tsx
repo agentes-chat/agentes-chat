@@ -9,7 +9,7 @@ import { notification } from "./fakes/notifications";
 import { renderApp, screen, settle } from "./render";
 
 /**
- * Não lidas (ADR 0259): the list's first row, and one page for everything waiting for the person, the inbox's items
+ * Não lidas (ADR 0260): the list's first row, and one page for everything waiting for the person, the inbox's items
  * that wait or came unread today, then every conversation with unread messages, mentions and DMs first.
  */
 

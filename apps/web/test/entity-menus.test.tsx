@@ -235,7 +235,7 @@ describe("typing keeps the browser's menu", () => {
   });
 });
 
-describe("a personal workspace's parts, in my order (a team's list keeps its fixed one, ADR 0259)", () => {
+describe("a personal workspace's parts, in my order (a team's list keeps its fixed one, ADR 0260)", () => {
   const blocks = () => [...nav().querySelectorAll<HTMLElement>(".sidebar__block")].map((b) => b.dataset.section);
   const personal = (over: Parameters<typeof seedState>[0] = {}) => {
     const state = seedState(over);

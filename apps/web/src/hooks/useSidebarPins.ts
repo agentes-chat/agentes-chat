@@ -18,7 +18,7 @@ import { useToast } from "@/lib/toast";
 import { useDirectory } from "./useDirectory";
 
 /**
- * Favoritos (ADR 0259): people, agents and channels the person keeps on top of the sidebar, in their order, and the
+ * Favoritos (ADR 0260): people, agents and channels the person keeps on top of the sidebar, in their order, and the
  * menu item that adds or removes one. Saved per person (`…/me/sidebar/view`); never saved, they start from the pins
  * of before, else (day one) the person's own agents. A personal workspace (ADR 0159) shows its favorite agents and
  * conversations on top of their own lists (`pins`).

@@ -55,7 +55,7 @@ function inbox(): AppNotification[] {
 }
 
 const nav = () => document.getElementById("app-nav") as HTMLElement;
-/** The sidebar's entry for what waits: Não lidas, the list's first row (ADR 0218, ADR 0259). */
+/** The sidebar's entry for what waits: Não lidas, the list's first row (ADR 0218, ADR 0260). */
 const entry = () => within(nav()).getByRole("link", { name: /^Não lidas/ });
 const rowIds = () => [...document.querySelectorAll<HTMLElement>(".ib-list [data-n]")].map((r) => r.dataset.n);
 

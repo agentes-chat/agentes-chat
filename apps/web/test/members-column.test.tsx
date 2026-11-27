@@ -158,7 +158,7 @@ describe("the members column", () => {
     expect(document.getElementById(ada.getAttribute("aria-describedby") ?? "")?.getAttribute("title")).toContain(
       "pensando",
     );
-    // Only its face says it works (ADR 0259 §7): no light behind the row, which read as the row chosen.
+    // Only its face says it works (ADR 0260 §7): no light behind the row, which read as the row chosen.
     expect(ada.querySelector(".sidebar__trail")).toBeNull();
     // ↑/↓ between the rows.
     const rows = [...(column() as HTMLElement).querySelectorAll<HTMLElement>(".members-side__row")];

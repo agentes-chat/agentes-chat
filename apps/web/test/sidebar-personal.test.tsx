@@ -504,7 +504,7 @@ describe("a personal workspace's sidebar", () => {
     expect(document.querySelector(".channel__empty")).toBeNull();
   });
 
-  test("a team's sidebar is its own (ADR 0259): the tool column, the workspace on top of the list, me at the foot", async () => {
+  test("a team's sidebar is its own (ADR 0260): the tool column, the workspace on top of the list, me at the foot", async () => {
     await go(seedState());
     expect(nav().querySelector(".sidebar__end")).toBeNull();
     expect(nav().querySelector(".sidebar__col")).not.toBeNull();

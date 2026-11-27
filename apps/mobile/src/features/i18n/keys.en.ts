@@ -72,6 +72,17 @@ export const featureKeysEn = {
     more: "See all {{count}} lines",
     gone: "This code is no longer open.",
   },
+  table: {
+    label_one: "Table · {{count}} row",
+    label_other: "Table · {{count}} rows",
+    title: "Table",
+    rows_one: "{{count}} row",
+    rows_other: "{{count}} rows",
+    copy: "Copy the table",
+    copied: "Table copied",
+    more: "See all {{count}} rows",
+    gone: "This table is no longer open.",
+  },
   time: {
     today: "Today",
     yesterday: "Yesterday",

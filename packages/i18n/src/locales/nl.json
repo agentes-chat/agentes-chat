@@ -38,6 +38,11 @@
     "wrapLines": "Regels afbreken",
     "raw": "Origineel",
     "table": "Tabel",
+    "tableRows_one": "Tabel · {{count}} rij",
+    "tableRows_other": "Tabel · {{count}} rijen",
+    "tableSeeAll": "Alle {{count}} rijen bekijken",
+    "tableRowCount_one": "{{count}} rij",
+    "tableRowCount_other": "{{count}} rijen",
     "chartItem": "Item",
     "chartShare": "Aandeel",
     "you": "jij",
@@ -10605,7 +10610,6 @@
     "filter": {
       "person": "Mensen",
       "agent": "Agents",
-      "routine": "Routines",
       "reminder": "Herinneringen",
       "deadline": "Deadlines van taken"
     },
@@ -10638,39 +10642,16 @@
         "declined": "Je komt niet."
       }
     },
-    "every": {
-      "hour": "elk uur",
-      "hours": "elke {{count}} u",
-      "minutes": "elke {{count}} min"
-    },
-    "perDay": "{{count}}× per dag",
-    "runs_one": "{{count}} run in deze dagen.",
-    "runs_other": "{{count}} runs in deze dagen.",
-    "routineDetail": "Routine · levert aan {{target}}",
     "deadlineDetail": "De deadline van de taak.",
     "reminderBy": "Ingesteld door {{name}}",
     "reminderPosted": "Herinnering · verschijnt in {{target}}",
     "cancelReminder": "Herinnering annuleren",
     "reminderCancelled": "Herinnering geannuleerd",
     "openIssue": "Taak openen",
-    "openRoutines": "Bekijken in Routines",
-    "openRoutine": "Routine openen",
-    "runAria": "Routine {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "Routines om {{time}}",
-    "moreRuns_one": "+{{count}} routine",
-    "moreRuns_other": "+{{count}} routines",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "geantwoord",
-      "silent": "niets nieuws",
-      "failed": "mislukt",
-      "skipped": "niet uitgevoerd"
-    },
-    "lastResult": "laatste: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Niets gepland. Sleep om te maken of druk op N",
-    "agendaEmpty": "Afspraken en routines van de komende 30 dagen verschijnen hier.",
+    "agendaEmpty": "Afspraken en herinneringen van de komende 30 dagen verschijnen hier.",
     "agendaEmptyTitle": "Agenda vrij voor de komende 30 dagen",
     "noResults": "Niets met dit filter.",
     "more": "+{{count}} meer",
@@ -18523,7 +18504,22 @@
       "version": "Versie",
       "license": "Vrije software onder de <license>GNU Affero General Public License v3</license>, zonder garantie.",
       "source": "Broncode",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers",
+      "latest": "De nieuwste versie",
+      "newer": "{{version}} is uit",
+      "notes": "Wat is er nieuw",
+      "update": {
+        "title": "Bijwerken naar {{version}}",
+        "docker": "Met Docker",
+        "native": "Zonder Docker",
+        "nativeHelp": "Pak het pakket van de versie uit in `~/.agentes/app` en voer dan uit:",
+        "desktop": "Draait hij in de desktop-app op deze computer? Hij werkt zichzelf bij met de app.",
+        "notice": "agentes.chat {{version}} is uit voor deze server",
+        "how": "Zo werk je bij"
+      },
+      "computers": "Programma van de computers",
+      "computersAhead_one": "{{count}} computer draait een nieuwere versie dan deze server. Hij werkt zoals hij is, en wat er nieuw in zit komt met de update van deze server.",
+      "computersAhead_other": "{{count}} computers draaien een nieuwere versie dan deze server. Ze werken zoals ze zijn, en wat er nieuw in zit komt met de update van deze server."
     },
     "title": "Instellingen",
     "account": {

@@ -38,7 +38,7 @@ async function mentioned(state = seedState()) {
   return { api, state, issue, at, marked };
 }
 
-/** Tarefas' tile in the tool column (ADR 0259): a dot, red for a mention of me, ink for something unread. */
+/** Tarefas' tile in the tool column (ADR 0260): a dot, red for a mention of me, ink for something unread. */
 const tasksRow = () => document.querySelector<HTMLElement>(".sidebar__tile[href$='/issues']") as HTMLElement;
 const mentionsIn = (el: Element | null) => el?.querySelector('[aria-label="1 menção a você"]')?.textContent ?? null;
 

@@ -160,7 +160,7 @@ describe("route guards", () => {
     expect(nav.textContent).toContain("2 membros · 2 agentes");
     // Where the workspace lives, before its counts.
     expect(nav.querySelector(".sidebar__org-where")?.textContent).toBe("Cloud");
-    // Não lidas counts what waits on me (ADR 0218, ADR 0259). Proposals wait on nobody (ADR 0219): the workspace's two
+    // Não lidas counts what waits on me (ADR 0218, ADR 0260). Proposals wait on nobody (ADR 0219): the workspace's two
     // open ones are the review's, and nothing else waits here, so it shows no count.
     const unreads = nav.querySelector('a.sidebar__item[href$="/unreads"]') as HTMLElement;
     expect(unreads.textContent).toContain("Não lidas");

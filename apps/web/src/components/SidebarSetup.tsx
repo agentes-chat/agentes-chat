@@ -177,7 +177,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
   const sections = useSectionOrder(org.id, personal);
   const tools = useToolOrder(org.id, personal);
   // Code only where it has anything for me (ADR 0215 §12); the arrows move a tool past its shown neighbour.
-  // A team's list has Não lidas and Threads as its first rows (ADR 0259): only the column's tools are placed here.
+  // A team's list has Não lidas and Threads as its first rows (ADR 0260): only the column's tools are placed here.
   const shown = offeredTools(tools.order, useOverview(org.id).data?.code, items).filter(
     (id) => personal || (id !== "waiting" && id !== "threads"),
   );
@@ -242,7 +242,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
             </li>
           ))}
         </ul>
-        {/* A team's list keeps its fixed order (ADR 0259): only a personal workspace orders its parts. */}
+        {/* A team's list keeps its fixed order (ADR 0260): only a personal workspace orders its parts. */}
         {personal && (
           <>
             <div className="ac-field__label-row">

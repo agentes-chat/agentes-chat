@@ -66,6 +66,17 @@
     "more": "Alle {{count}} regels bekijken",
     "gone": "Deze code is niet meer open."
   },
+  "table": {
+    "label_one": "Tabel · {{count}} rij",
+    "label_other": "Tabel · {{count}} rijen",
+    "title": "Tabel",
+    "rows_one": "{{count}} rij",
+    "rows_other": "{{count}} rijen",
+    "copy": "De tabel kopiëren",
+    "copied": "Tabel gekopieerd",
+    "more": "Alle {{count}} rijen bekijken",
+    "gone": "Deze tabel is niet meer open."
+  },
   "time": {
     "today": "Vandaag",
     "yesterday": "Gisteren",

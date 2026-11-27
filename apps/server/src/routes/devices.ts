@@ -318,6 +318,10 @@ export function deviceAppRoutes(deps: AppDeps) {
               description:
                 "People's computers here lend their internet (ADR 0237): the workspace has its own computer, or this server lends to its own computer and its reads of web pages. The apps say so where a computer joins.",
             }),
+            serverBoxesBorrow: z.boolean().openapi({
+              description:
+                "This server lends (ADR 0237), so a Linux computer that joins from a Terminal install borrows instead: its switch starts off.",
+            }),
           }),
         ),
         ...errors,
