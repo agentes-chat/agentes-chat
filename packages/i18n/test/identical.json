@@ -359,7 +359,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role"
     ],
     "es": [
       "surface.nudge.hours",
@@ -668,7 +670,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role"
     ],
     "fr": [
       "agentPage.facts.budget",
@@ -1213,7 +1217,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role"
     ],
     "de": [
       "devices.permission.names.automation",
@@ -1737,7 +1743,10 @@
       "skills.one.name",
       "skills.one.inChannel",
       "integrations.badge",
-      "integrations.name"
+      "integrations.name",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role",
+      "onboarding.meet.name"
     ],
     "it": [
       "agentPage.facts.budget",
@@ -2158,7 +2167,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role"
     ],
     "nl": [
       "devices.permission.names.camera",
@@ -2861,7 +2872,10 @@
       "skills.page.colSkill",
       "skills.one.inChannel",
       "skills.page.inRepo",
-      "integrations.badge"
+      "integrations.badge",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role",
+      "onboarding.hire.next"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -3773,7 +3787,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -4358,7 +4374,9 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "onboarding.areas.list.marketing.title",
+      "onboarding.areas.list.marketing.role"
     ],
     "ru": [
       "live.canvas.sizes.short.s",

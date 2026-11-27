@@ -2387,38 +2387,27 @@
   "onboarding.flow.plan.all": {
     "value": "See all plans"
   },
-  "onboarding.flow.ai.titleNow": {
+  "onboarding.flow.ai.title": {
     "value": "Now, the AI you already pay for"
   },
-  "onboarding.flow.ai.titleNowPersonal": {
-    "value": "Now, the AI you already pay for"
-  },
-  "onboarding.flow.ai.leadNow": {
-    "value": "With it, the team starts today. The agents use your account, at no extra cost here."
-  },
-  "onboarding.flow.ai.leadNowPersonal": {
-    "value": "With it, your agents start today. They use your account, at no extra cost here."
+  "onboarding.flow.ai.lead": {
+    "value": "{{name}} thinks with it, at no extra cost here. As soon as you connect it, the first delivery starts."
   },
   "onboarding.flow.ai.later": {
     "value": "Connect later"
   },
-  "onboarding.flow.ai.doneTitle": {
-    "value": "Done. The {{org}} team is thinking now."
+  "onboarding.flow.ai.skipTitle": {
+    "value": "Continue without an AI?"
   },
-  "onboarding.flow.ai.doneTitlePersonal": {
-    "value": "Done. {{name}} is thinking now."
+  "onboarding.flow.ai.skipText": {
+    "value": "Without an AI, {{name}} doesn't make the first delivery or answer. He waits until you connect one.",
+    "female": "Without an AI, {{name}} doesn't make the first delivery or answer. She waits until you connect one."
   },
-  "onboarding.flow.ai.doneLead": {
-    "value": "Your {{label}} answers for every agent. You can change it later, one by one."
+  "onboarding.flow.ai.skipGo": {
+    "value": "Continue without AI"
   },
-  "onboarding.flow.ai.doneLeadAny": {
-    "value": "The AI you connected answers for every agent. You can change it later, one by one."
-  },
-  "onboarding.flow.ai.connected": {
-    "value": "Connected"
-  },
-  "onboarding.flow.ai.enter": {
-    "value": "Go to the workspace"
+  "onboarding.flow.ai.connectNow": {
+    "value": "Connect now"
   },
   "onboarding.flow.people.title": {
     "value": "Who works with you?"
@@ -4490,35 +4479,459 @@
   "onboarding.week.aboutAny": {
     "value": "What your AI said"
   },
+  "onboarding.areas.title": {
+    "value": "What will your first agent do?"
+  },
+  "onboarding.areas.lead": {
+    "value": "Pick one job. You create more agents later."
+  },
+  "onboarding.areas.other": {
+    "value": "Other"
+  },
+  "onboarding.areas.otherLine": {
+    "value": "Create your agent and pick its apps"
+  },
+  "onboarding.areas.otherWays": {
+    "value": "Prefer another way?"
+  },
+  "onboarding.areas.ask": {
+    "value": "Ask your AI"
+  },
+  "onboarding.areas.askTitle": {
+    "value": "Ask your AI for your first agent"
+  },
+  "onboarding.areas.import": {
+    "value": "Bring from another app"
+  },
+  "onboarding.areas.place": {
+    "value": "{{name}} · {{zone}}"
+  },
+  "onboarding.areas.change": {
+    "value": "Change"
+  },
+  "onboarding.areas.changeTitle": {
+    "value": "Name and time zone"
+  },
+  "onboarding.areas.list.support.title": {
+    "value": "Support"
+  },
+  "onboarding.areas.list.support.line": {
+    "value": "Answers customer emails and tickets"
+  },
+  "onboarding.areas.list.support.role": {
+    "value": "Support"
+  },
+  "onboarding.areas.list.support.heading": {
+    "value": "{{name}}, for support"
+  },
+  "onboarding.areas.list.support.does": {
+    "value": "Answers customer emails and tickets, with a draft ready for each one. Nothing goes out without your OK."
+  },
+  "onboarding.areas.list.support.connect": {
+    "value": "Connect where customers write"
+  },
+  "onboarding.areas.list.support.today": {
+    "value": "the emails that need a reply"
+  },
+  "onboarding.areas.list.support.working": {
+    "value": "{{name}} is reading your emails"
+  },
+  "onboarding.areas.list.support.instructions": {
+    "value": "You look after support: you read customer emails and tickets, sort out what needs a reply and leave a draft ready for each one. Nothing is sent without the OK of whoever asked."
+  },
+  "onboarding.areas.list.support.task": {
+    "value": "Read the last 7 days of email, say how many need a reply and leave a draft ready for today's."
+  },
+  "onboarding.areas.list.sales.title": {
+    "value": "Sales"
+  },
+  "onboarding.areas.list.sales.line": {
+    "value": "Follows up new leads and stalled deals"
+  },
+  "onboarding.areas.list.sales.role": {
+    "value": "Sales"
+  },
+  "onboarding.areas.list.sales.heading": {
+    "value": "{{name}}, for sales"
+  },
+  "onboarding.areas.list.sales.does": {
+    "value": "Follows up new leads and stalled deals, with the next message ready for each one. Nothing goes out without your OK."
+  },
+  "onboarding.areas.list.sales.connect": {
+    "value": "Connect where your customers are"
+  },
+  "onboarding.areas.list.sales.today": {
+    "value": "the deals that need attention"
+  },
+  "onboarding.areas.list.sales.working": {
+    "value": "{{name}} is looking at your deals"
+  },
+  "onboarding.areas.list.sales.instructions": {
+    "value": "You look after sales: you follow up new leads and stalled deals and leave the next message ready for each one. Nothing is sent without the OK of whoever asked."
+  },
+  "onboarding.areas.list.sales.task": {
+    "value": "Look at new leads and deals stalled for over 7 days, say how many need attention and leave the next message ready for the most important ones."
+  },
+  "onboarding.areas.list.finance.title": {
+    "value": "Finance"
+  },
+  "onboarding.areas.list.finance.line": {
+    "value": "Flags payments with a problem"
+  },
+  "onboarding.areas.list.finance.role": {
+    "value": "Finance"
+  },
+  "onboarding.areas.list.finance.heading": {
+    "value": "{{name}}, for finance"
+  },
+  "onboarding.areas.list.finance.does": {
+    "value": "Finds payments with a problem and leaves the reminder to the customer ready. Nothing goes out without your OK."
+  },
+  "onboarding.areas.list.finance.connect": {
+    "value": "Connect where you get paid"
+  },
+  "onboarding.areas.list.finance.today": {
+    "value": "the payments with a problem"
+  },
+  "onboarding.areas.list.finance.working": {
+    "value": "{{name}} is looking at your payments"
+  },
+  "onboarding.areas.list.finance.instructions": {
+    "value": "You look after finance: you find payments that failed or are late and leave the reminder ready for each customer. Nothing is sent without the OK of whoever asked."
+  },
+  "onboarding.areas.list.finance.task": {
+    "value": "Look at the last 7 days of payments, say how many failed or are late and leave the reminder ready for each customer."
+  },
+  "onboarding.areas.list.marketing.title": {
+    "value": "Marketing"
+  },
+  "onboarding.areas.list.marketing.line": {
+    "value": "Finds what people say about the company, and content ideas"
+  },
+  "onboarding.areas.list.marketing.role": {
+    "value": "Marketing"
+  },
+  "onboarding.areas.list.marketing.heading": {
+    "value": "{{name}}, for marketing"
+  },
+  "onboarding.areas.list.marketing.does": {
+    "value": "Finds what people say about {{org}} online and brings what needs an answer."
+  },
+  "onboarding.areas.list.marketing.connect": {
+    "value": "He starts with the web already. Connect to go further",
+    "female": "She starts with the web already. Connect to go further"
+  },
+  "onboarding.areas.list.marketing.today": {
+    "value": "what people say about {{org}} online"
+  },
+  "onboarding.areas.list.marketing.working": {
+    "value": "{{name}} is looking for what people say about {{org}}"
+  },
+  "onboarding.areas.list.marketing.instructions": {
+    "value": "You look after marketing: you find what people say about {{org}} online and on social media, bring what needs an answer and suggest content ideas. Nothing is published without the OK of whoever asked."
+  },
+  "onboarding.areas.list.marketing.task": {
+    "value": "Look for what people said about {{org}} online in the last 7 days, say what needs an answer and bring 3 content ideas."
+  },
+  "onboarding.areas.list.day.title": {
+    "value": "My day"
+  },
+  "onboarding.areas.list.day.line": {
+    "value": "Today's emails, meetings and tasks"
+  },
+  "onboarding.areas.list.day.role": {
+    "value": "Your day"
+  },
+  "onboarding.areas.list.day.heading": {
+    "value": "{{name}}, for your day"
+  },
+  "onboarding.areas.list.day.does": {
+    "value": "Puts today's emails, meetings and tasks in one summary, every morning."
+  },
+  "onboarding.areas.list.day.connect": {
+    "value": "Connect where your days are"
+  },
+  "onboarding.areas.list.day.today": {
+    "value": "your day's summary"
+  },
+  "onboarding.areas.list.day.working": {
+    "value": "{{name}} is putting your day together"
+  },
+  "onboarding.areas.list.day.instructions": {
+    "value": "You look after the day of whoever asked: every morning, you put the emails that need a reply, the meetings and today's tasks in one short summary."
+  },
+  "onboarding.areas.list.day.task": {
+    "value": "Put together today's summary: the meetings, the tasks due and the emails that need a reply."
+  },
+  "onboarding.areas.list.tech.title": {
+    "value": "Engineering"
+  },
+  "onboarding.areas.list.tech.line": {
+    "value": "Finds PRs waiting for review and new errors"
+  },
+  "onboarding.areas.list.tech.role": {
+    "value": "Engineering"
+  },
+  "onboarding.areas.list.tech.heading": {
+    "value": "{{name}}, for engineering"
+  },
+  "onboarding.areas.list.tech.does": {
+    "value": "Finds the PRs waiting for review and the new errors, and says what to look at first."
+  },
+  "onboarding.areas.list.tech.connect": {
+    "value": "Connect where the team works"
+  },
+  "onboarding.areas.list.tech.today": {
+    "value": "the PRs and errors that need attention"
+  },
+  "onboarding.areas.list.tech.working": {
+    "value": "{{name}} is looking at the PRs and errors"
+  },
+  "onboarding.areas.list.tech.instructions": {
+    "value": "You look after engineering: you find the PRs waiting for review and the new errors, and say what the team should look at first. Nothing is changed without the OK of whoever asked."
+  },
+  "onboarding.areas.list.tech.task": {
+    "value": "List the PRs waiting for review and the new errors from the last 7 days, and say what to look at first."
+  },
+  "onboarding.areas.list.life.title": {
+    "value": "Life in order"
+  },
+  "onboarding.areas.list.life.line": {
+    "value": "Calendar, reminders and bills"
+  },
+  "onboarding.areas.list.life.role": {
+    "value": "Life in order"
+  },
+  "onboarding.areas.list.life.heading": {
+    "value": "{{name}}, for your life in order"
+  },
+  "onboarding.areas.list.life.does": {
+    "value": "Puts today's meetings, tasks and emails in one summary."
+  },
+  "onboarding.areas.list.life.connect": {
+    "value": "Connect where your days are"
+  },
+  "onboarding.areas.list.life.today": {
+    "value": "your day's summary"
+  },
+  "onboarding.areas.list.life.working": {
+    "value": "{{name}} is putting your day together"
+  },
+  "onboarding.areas.list.life.instructions": {
+    "value": "You keep the life of whoever asked in order: calendar, reminders and bills. Every morning, you put today's meetings, tasks and emails in one summary."
+  },
+  "onboarding.areas.list.life.task": {
+    "value": "Put together today's summary: the meetings, the tasks, the emails that need a reply and the bills due this week."
+  },
+  "onboarding.areas.list.freelance.title": {
+    "value": "Working for myself"
+  },
+  "onboarding.areas.list.freelance.line": {
+    "value": "Clients, invoices and calendar"
+  },
+  "onboarding.areas.list.freelance.role": {
+    "value": "Work"
+  },
+  "onboarding.areas.list.freelance.heading": {
+    "value": "{{name}}, for your work"
+  },
+  "onboarding.areas.list.freelance.does": {
+    "value": "Keeps up with your clients, invoices and calendar, and tells you what needs you today."
+  },
+  "onboarding.areas.list.freelance.connect": {
+    "value": "Connect where you work"
+  },
+  "onboarding.areas.list.freelance.today": {
+    "value": "what needs you today"
+  },
+  "onboarding.areas.list.freelance.working": {
+    "value": "{{name}} is looking at your clients"
+  },
+  "onboarding.areas.list.freelance.instructions": {
+    "value": "You look after the work of whoever asked, who works for themselves: clients, invoices and calendar. You flag what needs attention and get ready what can be. Nothing is sent without the OK of whoever asked."
+  },
+  "onboarding.areas.list.freelance.task": {
+    "value": "Look at client emails, open invoices and this week's calendar, and say what needs attention today."
+  },
+  "onboarding.areas.list.study.title": {
+    "value": "Studies and ideas"
+  },
+  "onboarding.areas.list.study.line": {
+    "value": "Study plan, reviews and writing"
+  },
+  "onboarding.areas.list.study.role": {
+    "value": "Studies"
+  },
+  "onboarding.areas.list.study.heading": {
+    "value": "{{name}}, for your studies"
+  },
+  "onboarding.areas.list.study.does": {
+    "value": "Makes your study plan, reminds you of reviews and helps you organize your ideas."
+  },
+  "onboarding.areas.list.study.connect": {
+    "value": "Connect where your notes are"
+  },
+  "onboarding.areas.list.study.today": {
+    "value": "the week's study plan"
+  },
+  "onboarding.areas.list.study.working": {
+    "value": "{{name}} is making your plan"
+  },
+  "onboarding.areas.list.study.instructions": {
+    "value": "You look after the studies and ideas of whoever asked: you make the study plan, remind them of reviews and help organize what they write."
+  },
+  "onboarding.areas.list.study.task": {
+    "value": "Read the recent notes, make this week's study plan and say what to review first."
+  },
+  "onboarding.areas.list.travel.title": {
+    "value": "Travel"
+  },
+  "onboarding.areas.list.travel.line": {
+    "value": "Trips planned to the last detail"
+  },
+  "onboarding.areas.list.travel.role": {
+    "value": "Travel"
+  },
+  "onboarding.areas.list.travel.heading": {
+    "value": "{{name}}, for your trips"
+  },
+  "onboarding.areas.list.travel.does": {
+    "value": "Keeps bookings, times and what's missing for each trip in one place."
+  },
+  "onboarding.areas.list.travel.connect": {
+    "value": "Connect where your bookings arrive"
+  },
+  "onboarding.areas.list.travel.today": {
+    "value": "what's missing for your next trips"
+  },
+  "onboarding.areas.list.travel.working": {
+    "value": "{{name}} is looking at your trips"
+  },
+  "onboarding.areas.list.travel.instructions": {
+    "value": "You look after the trips of whoever asked: you gather bookings, flights and times, and flag what's missing for each trip."
+  },
+  "onboarding.areas.list.travel.task": {
+    "value": "Look for the bookings and trips in the next 60 days and say what's missing for each one."
+  },
+  "onboarding.areas.list.home.title": {
+    "value": "Home"
+  },
+  "onboarding.areas.list.home.line": {
+    "value": "Shopping, chores and bills"
+  },
+  "onboarding.areas.list.home.role": {
+    "value": "Home"
+  },
+  "onboarding.areas.list.home.heading": {
+    "value": "{{name}}, for your home"
+  },
+  "onboarding.areas.list.home.does": {
+    "value": "Looks after the shopping list, the chores and the month's bills."
+  },
+  "onboarding.areas.list.home.connect": {
+    "value": "Connect where your lists are"
+  },
+  "onboarding.areas.list.home.today": {
+    "value": "what the house needs this week"
+  },
+  "onboarding.areas.list.home.working": {
+    "value": "{{name}} is looking at your home"
+  },
+  "onboarding.areas.list.home.instructions": {
+    "value": "You look after the home of whoever asked: shopping list, chores and the month's bills. You remind them of what's due and what's missing."
+  },
+  "onboarding.areas.list.home.task": {
+    "value": "Look at the lists and the calendar and say what the house needs this week: shopping, chores and bills due."
+  },
+  "onboarding.areas.list.health.title": {
+    "value": "Health"
+  },
+  "onboarding.areas.list.health.line": {
+    "value": "Workouts and meals"
+  },
+  "onboarding.areas.list.health.role": {
+    "value": "Health"
+  },
+  "onboarding.areas.list.health.heading": {
+    "value": "{{name}}, for your health"
+  },
+  "onboarding.areas.list.health.does": {
+    "value": "Plans the week's workouts and meals in your calendar and reminds you at the right time."
+  },
+  "onboarding.areas.list.health.connect": {
+    "value": "Connect where your calendar is"
+  },
+  "onboarding.areas.list.health.today": {
+    "value": "your week of workouts"
+  },
+  "onboarding.areas.list.health.working": {
+    "value": "{{name}} is planning your week"
+  },
+  "onboarding.areas.list.health.instructions": {
+    "value": "You look after the health of whoever asked: workouts and meals. You plan the week in their calendar and remind them at the right time."
+  },
+  "onboarding.areas.list.health.task": {
+    "value": "Look at this week's calendar and suggest times for workouts and meals."
+  },
+  "onboarding.meet.eyebrow": {
+    "value": "{{step}} · Your first agent"
+  },
+  "onboarding.meet.eyebrowAlone": {
+    "value": "Your first agent"
+  },
+  "onboarding.meet.apps": {
+    "value": "Connect the apps he works in",
+    "female": "Connect the apps she works in"
+  },
+  "onboarding.meet.connect": {
+    "value": "Connect"
+  },
+  "onboarding.meet.connected": {
+    "value": "Connected"
+  },
+  "onboarding.meet.otherApp": {
+    "value": "Another app"
+  },
+  "onboarding.meet.account": {
+    "value": "{{account}} · {{when}}"
+  },
+  "onboarding.meet.customTitle": {
+    "value": "Create your agent"
+  },
+  "onboarding.meet.name": {
+    "value": "Name"
+  },
+  "onboarding.meet.does": {
+    "value": "What does it do?"
+  },
+  "onboarding.meet.appsUsed": {
+    "value": "Apps it uses"
+  },
+  "onboarding.meet.search": {
+    "value": "Search apps"
+  },
+  "onboarding.meet.noApps": {
+    "value": "No app by that name."
+  },
   "onboarding.hire.the": {
     "value": "{{name}}"
   },
   "onboarding.hire.title": {
-    "value": "Hire the team"
-  },
-  "onboarding.hire.titleOne": {
-    "value": "Hire {{name}}"
+    "value": "{{org}}'s team starts with {{agent}}"
   },
   "onboarding.hire.titlePersonal": {
-    "value": "Hire your agents"
+    "value": "Your agents start with {{agent}}"
   },
   "onboarding.hire.lead": {
-    "value": "You're hiring {{agent}} for {{role}}. It starts today, with {{lodi}}, and works day and night."
+    "value": "He delivers {{today}} today. Then create as many agents as you like, and they hand work to each other.",
+    "female": "She delivers {{today}} today. Then create as many agents as you like, and they hand work to each other."
   },
-  "onboarding.hire.leadNoRole": {
-    "value": "You're hiring {{agent}}. It starts today, with {{lodi}}, and works day and night."
+  "onboarding.hire.leadAny": {
+    "value": "He starts his first delivery today. Then create as many agents as you like, and they hand work to each other.",
+    "female": "She starts her first delivery today. Then create as many agents as you like, and they hand work to each other."
   },
-  "onboarding.hire.leadMany": {
-    "value": "You're hiring {{names}}. They start today, with {{lodi}}, and work day and night."
-  },
-  "onboarding.hire.leadAlone": {
-    "value": "You start with {{name}}, the agents' HR. {{name}} creates each agent with you and works day and night."
-  },
-  "onboarding.hire.rightHand": {
-    "value": "Agents' HR"
-  },
-  "onboarding.hire.rightHandLine": {
-    "value": "Creates and adjusts your agents, whenever you ask."
+  "onboarding.hire.next": {
+    "value": "Later:"
   },
   "onboarding.hire.plan": {
     "value": "{{name}} plan"
@@ -4528,24 +4941,24 @@
   },
   "onboarding.hire.fine": {
     "value": {
-      "one": "Up to {{count}} person. Create more agents later at no extra cost. Cancel in one click.",
-      "other": "Up to {{count}} people. Create more agents later at no extra cost. Cancel in one click."
+      "one": "Unlimited agents and up to {{count}} person. Cancel in one click.",
+      "other": "Unlimited agents and up to {{count}} people. Cancel in one click."
     }
   },
+  "onboarding.hire.finePersonal": {
+    "value": "Unlimited agents, just for you. Cancel in one click."
+  },
   "onboarding.hire.fineAny": {
-    "value": "Create more agents later at no extra cost. Cancel in one click."
+    "value": "Unlimited agents. Cancel in one click."
   },
   "onboarding.hire.later": {
     "value": "Not now"
   },
-  "onboarding.hire.cta": {
-    "value": "Hire the team"
+  "onboarding.hire.subscribe": {
+    "value": "Subscribe to the {{name}} plan"
   },
-  "onboarding.hire.ctaOne": {
-    "value": "Hire {{name}}"
-  },
-  "onboarding.hire.ctaPersonal": {
-    "value": "Hire your agents"
+  "onboarding.hire.subscribeAny": {
+    "value": "Subscribe to the plan"
   },
   "onboarding.celebrate.say": {
     "value": "Hi, {{first}}. We start today."
@@ -4569,7 +4982,10 @@
     "value": "You"
   },
   "onboarding.celebrate.lead": {
-    "value": "{{names}}. From today on, working together, day and night."
+    "value": "{{you}} and {{agent}}, the team's first. From today on, working together, day and night."
+  },
+  "onboarding.celebrate.leadPersonal": {
+    "value": "{{you}} and {{agent}}, your first agent. From today on, looking after your days together."
   },
   "onboarding.celebrate.plan": {
     "value": "{{name}} plan on"
@@ -4577,35 +4993,26 @@
   "onboarding.celebrate.planAny": {
     "value": "Plan on"
   },
-  "onboarding.celebrate.ai": {
-    "value": "Connect the AI you already pay for"
+  "onboarding.celebrate.aiDone": {
+    "value": "{{label}} connected"
   },
-  "onboarding.celebrate.aiPersonal": {
-    "value": "Connect the AI you already pay for"
-  },
-  "onboarding.celebrate.people": {
-    "value": "Invite the people you work with"
-  },
-  "onboarding.celebrate.start": {
-    "value": {
-      "one": "And the team starts its first delivery",
-      "other": "And the team starts its {{count}} deliveries"
-    }
-  },
-  "onboarding.celebrate.startAny": {
-    "value": "And the team gets to work"
-  },
-  "onboarding.celebrate.startPersonal": {
-    "value": {
-      "one": "And your agents start their first delivery",
-      "other": "And your agents start their {{count}} deliveries"
-    }
-  },
-  "onboarding.celebrate.startAnyPersonal": {
-    "value": "And your agents get to work"
+  "onboarding.celebrate.aiDoneAny": {
+    "value": "AI connected"
   },
   "onboarding.celebrate.connect": {
     "value": "Connect the AI"
+  },
+  "onboarding.celebrate.working": {
+    "value": "{{name}} is making the first delivery"
+  },
+  "onboarding.celebrate.workingLine": {
+    "value": "The first delivery arrives in a few minutes."
+  },
+  "onboarding.celebrate.waiting": {
+    "value": "{{name}}'s first delivery"
+  },
+  "onboarding.celebrate.enter": {
+    "value": "Explore the workspace"
   },
   "onboarding.celebrate.download": {
     "value": "Download the team photo"
@@ -41694,9 +42101,6 @@
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
   },
-  "devices.leadCloud": {
-    "value": "Where your agents work: the workspace computer and the devices people connect."
-  },
   "devices.permission.title": {
     "value": "Waiting for {{permission}} on {{computer}}"
   },
@@ -41732,6 +42136,9 @@
   },
   "devices.permission.names.automation": {
     "value": "Automation"
+  },
+  "devices.leadCloud": {
+    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."
@@ -54637,6 +55044,22 @@
   "arrival.welcome.ready.feedback": {
     "value": "Tell us what's missing in {{where}}, at the bottom of the sidebar."
   },
+  "arrival.welcome.ready.delivery.done": {
+    "value": "{{name}}'s first delivery is ready"
+  },
+  "arrival.welcome.ready.delivery.working": {
+    "value": "{{name}} is still working"
+  },
+  "arrival.welcome.ready.delivery.workingLine": {
+    "value": "He says so in this conversation when he's done.",
+    "female": "She says so in this conversation when she's done."
+  },
+  "arrival.welcome.ready.delivery.see": {
+    "value": "See the delivery"
+  },
+  "arrival.welcome.ready.delivery.open": {
+    "value": "Go to the conversation"
+  },
   "arrival.welcome.ready.rows.plan": {
     "value": "{{plan}} plan active"
   },
@@ -54728,10 +55151,7 @@
     "value": "Start free"
   },
   "arrival.connect.freeText": {
-    "value": "With OpenCode's free models"
-  },
-  "arrival.connect.noPlan": {
-    "value": "No subscription"
+    "value": "No subscription, with OpenCode's free models"
   },
   "arrival.connect.without": {
     "value": "Without an AI, agents don't answer."
