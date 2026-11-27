@@ -3761,8 +3761,12 @@ export class BrainManager {
     // The process may still read its files while it exits.
     const cleanup = () => {
       rmSync(live.dir, { recursive: true, force: true });
-      if (live.debugFile) rmSync(live.debugFile, { force: true });
       rmSync(brainTmpDir(live.id), { recursive: true, force: true });
+      try {
+        if (live.debugFile) rmSync(live.debugFile, { force: true });
+      } catch {
+        // A delegated CLI's log is in its sign-in user's folder, where that user may have left a folder: it stays.
+      }
     };
     if (live.proc.exited) cleanup();
     else live.proc.onExit(cleanup);

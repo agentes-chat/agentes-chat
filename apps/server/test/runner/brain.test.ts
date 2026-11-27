@@ -3107,6 +3107,37 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "delegated: a folder the sign-in's user leaves where its debug log was never breaks the cleanup",
+  async () => {
+    const d = delegatedSetup({}, { claudeVersion: () => "2.1.300" });
+    const home = path.join(d.room, "home");
+    mkdirSync(home);
+    const launch = d.delegated.launch;
+    d.delegated.launch = async (cwd) => {
+      const l = await launch(cwd);
+      return { ...l, env: { ...l.env, HOME: home } };
+    };
+    await d.turn(1, "hi");
+    const spawn = d.spawns()[0] as { args: string[] };
+    const file = typed(spawn, "--debug-file") as string;
+    rmSync(file, { force: true });
+    mkdirSync(file);
+    const thrown: unknown[] = [];
+    const caught = (e: unknown) => void thrown.push(e);
+    process.on("uncaughtException", caught);
+    try {
+      d.m.close();
+      await waitFor(() => !existsSync(typed(spawn, "--settings") as string), 4000);
+      await Bun.sleep(50);
+    } finally {
+      process.off("uncaughtException", caught);
+    }
+    expect(thrown).toEqual([]);
+    expect(existsSync(file)).toBe(true);
+  },
+);
+
+test.if(posix)(
   "delegated: the handshake with the agent's worker counts as the runner's wait, not the CLI's",
   async () => {
     const d = delegatedSetup();
