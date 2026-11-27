@@ -26,8 +26,10 @@
 # SPEECH_ENGINES. Over SSH,
 # a deploy key's line in authorized_keys can run this script alone, with the commit the caller sends:
 #   command="/srv/agentes/deploy/deploy.sh $SSH_ORIGINAL_COMMAND",restrict ssh-ed25519 AAAA...
-# With DEPLOY_IMAGE=ghcr.io/agentes-chat/agentes:edge before the script's path there, it pulls the
-# image CI publishes instead of building one.
+# With DEPLOY_IMAGE before the script's path there, it pulls the image CI publishes instead of building
+# one: ghcr.io/agentes-chat/agentes:sha-<the full commit> is that commit's image, published once its tests
+# passed (none for a commit whose run was cancelled or touched no code), and :edge main's newest. An
+# image built from another commit than the one deployed is refused (its org.opencontainers.image.revision).
 #
 # Back by hand to the version that ran before the current one (one step; the next deploy moves on):
 #   git checkout --quiet --detach refs/deploy/previous && docker tag agentes:previous agentes:current
@@ -85,6 +87,12 @@ main() {
   echo "deploy: ${target:0:7}${version:+ ($version)}"
   if [[ -n ${DEPLOY_IMAGE:-} ]]; then
     docker pull --quiet "$DEPLOY_IMAGE"
+    local revision
+    revision=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$DEPLOY_IMAGE")
+    if [[ -n $revision && $revision != "$target" ]]; then
+      echo "deploy: $DEPLOY_IMAGE is ${revision:0:7}'s image, not ${target:0:7}'s" >&2
+      false
+    fi
     docker tag "$DEPLOY_IMAGE" agentes:next
   else
     docker build --tag agentes:next .

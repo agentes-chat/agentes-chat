@@ -596,7 +596,8 @@ jobs:
 
   # Images publish only from a green run on a push to main or a version tag, never from a pull
   # request, so a tag a deployment tracks can never point at a build the tests rejected. main → :edge
-  # (moving head); version tags → :1.2.3, :1.2 and :latest (metadata-action adds :latest to semver
+  # (moving head) and :sha-<full commit> (that commit's image, for a deploy of exactly that commit,
+  # deploy/deploy.sh); version tags → :1.2.3, :1.2 and :latest (metadata-action adds :latest to semver
   # tags by itself). A private copy of the repository publishes tags only (an edge image costs about
   # 10 runner minutes there; public repositories run them free). The backup and speech services' images
   # ship on the same tags, so the standalone compose file needs no build context. The speech image has no
@@ -723,6 +724,7 @@ jobs:
           images: ${{ env.APP_IMAGE }}
           tags: |
             type=edge,branch=main
+            type=sha,format=long
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
       - name: Create the multi-arch manifests

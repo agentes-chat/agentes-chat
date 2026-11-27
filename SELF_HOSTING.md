@@ -1916,8 +1916,8 @@ on its own.
 Migrations run when the new version starts, so that is the whole upgrade for a small instance. The
 compose file runs `ghcr.io/agentes-chat/agentes:latest`, the latest release, for amd64 and arm64;
 `:1.2.3` and `:1.2` tags exist alongside it, and `:edge` is built from every push to `main` that
-passes CI. To hold a version, set `AGENTES_IMAGE` in `.env` to a version tag or a digest
-(`ghcr.io/agentes-chat/agentes@sha256:…`), and keep that version's compose file. This prints the digest you have:
+passes CI, which also tags it `:sha-<full commit>`. To hold a version, set `AGENTES_IMAGE` in `.env`
+to a version tag or a digest (`ghcr.io/agentes-chat/agentes@sha256:…`), and keep that version's compose file. This prints the digest you have:
 
 ```sh
 docker image inspect --format '{{index .RepoDigests 0}}' ghcr.io/agentes-chat/agentes:latest
