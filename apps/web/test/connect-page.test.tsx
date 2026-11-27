@@ -14,11 +14,11 @@ const click = (el: Element) => act(async () => fireEvent.click(el));
 const CODE = "K7Q4ZP";
 
 /** `/conectar?code=` with a computer waiting for that code (ADR 0036 §5). */
-async function open(path = `/conectar?code=${CODE}`, device = true, lendsInternet?: boolean) {
+async function open(path = `/conectar?code=${CODE}`, device = true, lendsInternet?: boolean, os?: string) {
   const state = seedState();
   const api = createFakeApi(state);
   const machines = fakeMachinesOf.get(api) as NonNullable<ReturnType<typeof fakeMachinesOf.get>>;
-  if (device) machines.addDevice(CODE);
+  if (device) machines.addDevice(CODE, os ? { os } : undefined);
   if (lendsInternet !== undefined) fakeDevicesOf.get(api)?.set({ devices: [], requests: [], lendsInternet });
   const r = await renderApp(path, { api });
   await settle(6);
@@ -91,6 +91,28 @@ describe("/conectar: confirm a computer's code", () => {
     await settle(6);
     expect(calls(state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([
       { spill: { own: true }, shareInternet: false },
+    ]);
+  });
+
+  test("a Linux computer is a server that borrows: its internet off unless turned on here (ADR 0237)", async () => {
+    const label = "Agentes usam a internet deste computador";
+    const linux = async () => {
+      const r = await open(undefined, true, true, "linux");
+      const page = document.querySelector(".connect-page") as HTMLElement;
+      return { ...r, page, lend: within(page).getByRole("switch", { name: label }) };
+    };
+    const left = await linux();
+    expect(left.lend.getAttribute("aria-checked")).toBe("false");
+    await click(within(left.page).getByRole("button", { name: "Conectar" }));
+    await settle(6);
+    expect(calls(left.state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([{ spill: { own: true } }]);
+    cleanup();
+    const on = await linux();
+    await click(on.lend);
+    await click(within(on.page).getByRole("button", { name: "Conectar" }));
+    await settle(6);
+    expect(calls(on.state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([
+      { spill: { own: true }, shareInternet: true },
     ]);
   });
 

@@ -2,7 +2,7 @@
 
 - Status: Accepted (phase 1: the switch, the relay on both computers and the server; the workspace computer's
   routing is the Cloud's, later)
-- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers)
+- Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers, then servers borrow)
 - Extends: ADR 0025 (connected computers), ADR 0058 §11 (data sockets), ADR 0101 (observed egress)
 - Code: protocol `packages/adapters/src/machine-protocol.ts` (`EGRESS_SHARE_PROTOCOL`, `EGRESS_SHARE`,
   `egress.dial`, `StreamHello.egress`, `welcome.egressRelay`); db `machines.egress_share`, `egress_share_at`,
@@ -15,8 +15,8 @@
   `windows/InternetRow.tsx` (after pairing, and in Preferences › This Mac). Self-hosted servers (amendment
   2026-11-27): `EGRESS_PROXY_PROTOCOL`, `welcome.egressProxy`, `egress.proxy`, `EGRESS_DIRECT_HOSTS`; db
   `machines.egress_lent_at` (migration 0365); engine `machines.ts` (`setServerLending`, `serverLending`,
-  `borrowsInternet`), `egress-share.ts` (`EgressRelay.connect`, `lending`), `egress-fetch.ts` (`createEgressFetch`),
-  `web-tools.ts` (`lent`), `devices.ts` (`lendsInternet`, `noticeLendingComputers`); server `start.ts` (the boot
+  `borrowsInternet`, `serverBox`, `lendsOffAtHello`), `machine-hub.ts` (the hello's default), `egress-share.ts`
+  (`EgressRelay.connect`, `lending`, the pick), `egress-fetch.ts` (`createEgressFetch`), `web-tools.ts` (`lent`), `devices.ts` (`lendsInternet`, `noticeLendingComputers`); server `start.ts` (the boot
   setting and the once-only notice); runner `egress-relay.ts` (`startEgressProxy`, `egressProxyEnv`,
   `egressProxyChromeArgs`), `daemon.ts` (`borrowEgress`), `secrets.ts`, `accounts.ts` (`accountSettingsEnv`),
   `browser.ts` (`chromeLaunchArgs`), `loopback-guard.ts` (`ownServices`), `host.ts` (`egressProxies`); client
@@ -102,8 +102,8 @@ block datacenters, the person's own location).
    provisioner makes (`MACHINE_PROVISIONING=external`, the Cloud), where only the managed computer borrows, as
    before. No new setting.
 2. **Who borrows** (`borrowsInternet`): the managed computer always; where the server lends, also this server's own
-   computer (`host`), a computer marked the workspace's whose own switch is off, and the server process itself for
-   its reads of web pages. A computer that lends never borrows (the two need the switch in opposite states, and the
+   computer (`host`), with its own switch off a computer marked the workspace's or a server box (§8), and the server
+   process itself for its reads of web pages. A computer that lends never borrows (the two need the switch in opposite states, and the
    pick skips the borrower), a person's own computer that doesn't lend doesn't borrow either (turning the switch off
    never starts using a colleague's internet), and a host computer never lends. Anything else asking gets
    `forbidden`, read as "go out your usual way". The lenders are unchanged (§1, §2), and a lending computer at
@@ -153,8 +153,22 @@ block datacenters, the person's own location).
    runner's proxy port is opened only to that organization's block of uids (`ownServices`, a `ct mark` range rule
    before the shared services). Where agents run as the installing user (the simple mode, a Mac) organizations
    can't be told apart, as for their folders already.
+8. **Servers borrow, desktops lend** (same day). The main case pairs a runner on the VPS (or another server-room box)
+   and the desktop app on the person's own computer. With the switch on by default and the newest picked, the VPS
+   lent, and could be picked over the person's computer. Without the owner marking anything:
+   - A server box (`serverBox`) is a connected Linux computer whose runner the agentes.chat app doesn't run
+     (`runByApp`: `hello.app` from protocol 87, the older rule before). Where the server lends, its hello turns its
+     switch off while its owner never turned it on (`egress_share_at` null, `lendsOffAtHello`), and resolves its
+     `device.internet_shared` notice: a newly paired one from its first hello, one paired before at its next, once
+     (off, it stays as people set it). It then borrows (§2) without being marked the workspace's. Its owner may turn
+     it on to lend; that sets `egress_share_at`, which keeps it. The code page (`/conectar`, which confirms Terminal
+     installs; the app confirms its own) starts the switch off for Linux and sends it only when changed there.
+   - The pick (`lendingComputers`) puts computers the app runs before Terminal installs, then the newest as before.
+   - People's own desktops keep the switch on by default (a Mac or PC, and Linux run by the app). A computer still
+     never lends and borrows at once (the switch's two states), and the pick skips the borrower.
+   - Never on the Cloud (`MACHINE_PROVISIONING=external`): the hello leaves the switch alone and the pick stays
+     newest first. No protocol change: the runner already says `hello.app` and takes `welcome.egressProxy`.
 
 Consequences: lent bytes of runner traffic cross the server twice, still with no cap; both connections must reach
-the same server process, else the borrower goes direct (§7); a VPS paired as a connected computer lends by default
-and, as the newest, may be picked over the person's computer, so its owner marks it the workspace's and turns its
-switch off (`SELF_HOSTING.md`); the env proxy is cooperative, not a security boundary.
+the same server process, else the borrower goes direct (§7); a Linux person who runs the runner from the Terminal on their own desktop has
+it borrow until they turn the switch on (§8); the env proxy is cooperative, not a security boundary.

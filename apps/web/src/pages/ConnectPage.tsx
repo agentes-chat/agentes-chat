@@ -57,13 +57,19 @@ export function ConnectPage({ code }: { code: string }) {
   const [name, setName] = useState("");
   /** "Help when the team's computer is full or away" (`spill.own`): on, as a new computer's is, unless turned off here. */
   const [help, setHelp] = useState(true);
-  /** Its internet for the computers that borrow it (ADR 0237): on unless the person turns it off here. */
-  const [lend, setLend] = useState(true);
+  /**
+   * Its internet for the computers that borrow it (ADR 0237): on unless turned off here, but off on Linux. This page
+   * confirms Terminal installs (the app confirms its own), and one on Linux is a server, which borrows instead
+   * (`serverBox`). Null: left as it starts, so the server's default stands.
+   */
+  const [lendSet, setLend] = useState<boolean | null>(null);
   const lends = lendsInternet(useDevices(orgId ?? "", false, !!orgId).data);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = device.data;
+  const lendDefault = request?.os !== "linux";
+  const lend = lendSet ?? lendDefault;
   const reconnect =
     request?.reconnect && orgs.some((o) => o.id === request.reconnect?.orgId) ? request.reconnect : null;
 
@@ -216,7 +222,7 @@ export function ConnectPage({ code }: { code: string }) {
                     spill.mutate({
                       id: machine.id,
                       spill: { own: help },
-                      ...(lends && !lend ? { shareInternet: false } : {}),
+                      ...(lends && lend !== lendDefault ? { shareInternet: lend } : {}),
                     });
                   setOutcome({
                     kind: "confirmed",
