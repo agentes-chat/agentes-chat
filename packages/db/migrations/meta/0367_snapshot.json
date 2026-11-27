@@ -1,5 +1,5 @@
 {
-  "id": "cb0d3ad0-fd3a-4e55-b96a-c6eeb1a0d342",
+  "id": "1329be6c-eddb-4bcf-a114-1f05e7b32a4b",
   "prevId": "1fee5eb7-f3ff-44d6-9156-134fb8c0ae50",
   "version": "7",
   "dialect": "postgresql",
@@ -681,6 +681,101 @@
           "value": "\"agents\".\"owner_user_id\" is null or \"agents\".\"owner_role_id\" is null"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.model_output_limits": {
+      "name": "model_output_limits",
+      "schema": "",
+      "columns": {
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_output_tokens": {
+          "name": "max_output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "learned_at": {
+          "name": "learned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "model_output_limits_org_id_index": {
+          "name": "model_output_limits_org_id_index",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "model_output_limits_org_id_organizations_id_fk": {
+          "name": "model_output_limits_org_id_organizations_id_fk",
+          "tableFrom": "model_output_limits",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "model_output_limits_credential_id_provider_credentials_id_fk": {
+          "name": "model_output_limits_credential_id_provider_credentials_id_fk",
+          "tableFrom": "model_output_limits",
+          "tableTo": "provider_credentials",
+          "columnsFrom": [
+            "credential_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "model_output_limits_credential_id_model_pk": {
+          "name": "model_output_limits_credential_id_model_pk",
+          "columns": [
+            "credential_id",
+            "model"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.organization_settings": {
@@ -6877,73 +6972,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tool_label_words": {
-      "name": "tool_label_words",
-      "schema": "",
-      "columns": {
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "locale": {
-          "name": "locale",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "words": {
-          "name": "words",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "tool_label_words_org_id_organizations_id_fk": {
-          "name": "tool_label_words_org_id_organizations_id_fk",
-          "tableFrom": "tool_label_words",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "tool_label_words_org_id_locale_key_pk": {
-          "name": "tool_label_words_org_id_locale_key_pk",
-          "columns": [
-            "org_id",
-            "locale",
-            "key"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

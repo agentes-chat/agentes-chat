@@ -2509,6 +2509,54 @@
     "newGroupWith": "Nouveau service avec {{name}}",
     "dmsEmpty": "Vos conversations avec des personnes apparaissent ici."
   },
+  "sidebarFavorites": {
+    "title": "Favoris",
+    "add": "Ajouter aux favoris",
+    "remove": "Retirer des favoris",
+    "full": "Les favoris en contiennent déjà 50. Retirez-en un pour ajouter celui-ci."
+  },
+  "sidebarSections": {
+    "new": "Nouvelle section",
+    "newName": "Nouvelle section",
+    "moveTo": "Déplacer vers la section",
+    "takeOut": "Retirer de la section",
+    "rename": "Renommer la section",
+    "delete": "Supprimer la section",
+    "nameLabel": "Nom de la section"
+  },
+  "sidebarDms": {
+    "options": "Options des messages directs",
+    "show": "Afficher",
+    "shows": {
+      "all": "Tout le workspace",
+      "recent": "Conversations récentes seulement"
+    },
+    "invite": "Inviter des personnes",
+    "invited": "Invitation envoyée",
+    "invitedTip": "{{email}} n'a pas encore accepté l'invitation",
+    "agentTag": "IA",
+    "agentTip": "Agent IA"
+  },
+  "sidebarColumn": {
+    "label": "Outils",
+    "unread": "{{name}}, quelque chose de non lu",
+    "you": "{{name}}, quelque chose pour vous"
+  },
+  "unreads": {
+    "title": "Non lus",
+    "forYou": "Pour vous",
+    "conversations": "Conversations",
+    "markAll": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "open": "Ouvrir",
+    "seeInbox": "Tout voir dans la boîte de réception",
+    "more_one": "{{count}} message de plus",
+    "more_many": "{{count}} messages de plus",
+    "more_other": "{{count}} messages de plus",
+    "emptyTitle": "Vous êtes à jour",
+    "emptyText": "Les nouveaux messages et ce qui vous attend apparaissent ici.",
+    "markedAll": "Tout est marqué comme lu"
+  },
   "sidebarPins": {
     "pin": "Épingler en haut",
     "unpin": "Désépingler",
@@ -7074,6 +7122,7 @@
     "undoneBy": "Annulé par {{name}}",
     "undoneByYou": "Annulé par vous",
     "undo": "Annuler",
+    "applyAnyway": "Appliquer quand même",
     "appliedSome": "{{done}} sur {{total}} appliquées",
     "waitingAdmin": "En attente d'un admin",
     "stale": "Obsolète",
@@ -17672,11 +17721,12 @@
     "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
     "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "shareInternet": "Les agents utilisent la connexion internet de cet ordinateur",
-    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
+    "shareInternetHint": "Les connexions des agents passent par l’internet de cet ordinateur, les sites et les serveurs voient donc votre emplacement : sites web, git, SSH, bases de données et autres connexions TCP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Les résolutions de noms, les appels et le reste du trafic UDP utilisent la connexion habituelle, comme tout le reste tant que cet ordinateur est hors ligne.",
+    "shareInternetHintProxy": "Le navigateur des agents et les programmes qui suivent les réglages de proxy (git via HTTPS, curl, la plupart des outils en ligne de commande) passent par l’internet de cet ordinateur, les sites voient donc votre emplacement. SSH, les clients de base de données et les autres programmes qui ignorent les réglages de proxy utilisent la connexion habituelle, comme les résolutions de noms et le trafic UDP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Tant que cet ordinateur est hors ligne, tout utilise la connexion habituelle.",
     "shareInternetInUse": "Utilisé en ce moment",
     "shareInternetOther": "Les agents utilisent {{name}} en ce moment",
     "shareInternetPick": "Utiliser celui-ci",
-    "shareInternetJoin": "Les agents ouvriront aussi des sites via la connexion internet de cet ordinateur, les sites verront donc votre emplacement. Vous pouvez couper ça sur sa page.",
+    "shareInternetJoin": "Les agents passeront aussi par l’internet de cet ordinateur, les sites et les serveurs verront donc votre emplacement. Vous pouvez couper ça sur sa page.",
     "connectedBy": "Connecté par {{name}}",
     "downloadFor": "Télécharger pour {{system}}",
     "downloadApp": "Télécharger l'app",
@@ -18221,7 +18271,7 @@
       "folderOnComputer": "Autoriser sur l'ordinateur",
       "folderShown": "Ouvert sur {{deviceName}}. Autorisez-le là-bas.",
       "internetShared": "Les agents ouvrent désormais les sites web via la connexion internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
+      "internetSharedLine": "Uniquement les agents de ce workspace, jamais rien sur son propre réseau, jamais d’e-mail sur le port 25. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
       "internetOff": "Désactiver",
       "internetOffDone": "Les agents n’utilisent plus la connexion internet de {{deviceName}}.",
       "once": "Autoriser une fois",

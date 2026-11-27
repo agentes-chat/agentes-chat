@@ -8672,59 +8672,6 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
 .sidebar__org .ac-btn:hover {
   background: var(--plate);
 }
-.sidebar__item[data-busy="true"] {
-  position: relative;
-  overflow: hidden;
-}
-/*
- * Above the trail and the glow. Zero specificity (`:where`): the collapsed rail hides the name with
- * `position: absolute`, and this must not bring it back into the row (it pushed the avatar off center).
- */
-.sidebar__item[data-busy="true"] > :where(:not(.sidebar__trail, .sidebar__glow)) {
-  position: relative;
-}
-.sidebar__trail,
-.sidebar__glow {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-}
-.sidebar__glow {
-  display: none;
-}
-/* The chosen item's frame, small: the row's sky at its own 2px cells around one plate, in the agent's color. */
-.sidebar__busy {
-  position: relative;
-  isolation: isolate;
-  padding: 2px 9px;
-  border-radius: 8px;
-  background-color: var(--side-active);
-  background-image: var(--sel-sky, none);
-  background-position: right center;
-  background-size: auto 40px;
-  background-repeat: no-repeat;
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-[data-theme="dark"] .sidebar__busy {
-  background-image: var(--sel-sky-dark, none);
-}
-.sidebar__busy::before {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  z-index: -1;
-  border-radius: 6px;
-  background:
-    linear-gradient(
-      to left,
-      color-mix(in srgb, var(--sel-glow-color, var(--agent)) var(--sel-glow, 24%), transparent),
-      transparent 70%
-    ),
-    var(--side-active);
-}
 .sidebar__foot {
   isolation: isolate;
 }
@@ -8779,12 +8726,6 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
 .sidebar[data-rail="true"] .sidebar__org .sidebar__org-button {
   justify-content: center;
   padding: 6px;
-}
-.sidebar[data-rail="true"] .sidebar__trail {
-  display: none;
-}
-.sidebar[data-rail="true"] .sidebar__glow {
-  display: block;
 }
 .sidebar[data-rail="true"] .sidebar__me {
   background: transparent;
@@ -16781,5 +16722,200 @@ html:not([data-pointer]) .store-back:focus-visible {
   from {
     opacity: 0;
     transform: translateY(-8px);
+  }
+}
+
+/*
+ * A team's sidebar (ADR 0260): a 64px tool column at its left edge and the list beside it. The column has Ir para…
+ * on top, a line, the tools as 40px tiles (icon only, the name in a tip on their right), and Agora and the collapse at
+ * its foot. Collapsed, the list goes and the column stays: one picture of the sidebar in both states. A tablet keeps
+ * the column and its toggle opens the list over the page; a phone's drawer holds both.
+ */
+.sidebar[data-layout="column"] {
+  flex: 0 0 320px;
+  flex-direction: row;
+  align-items: stretch;
+  width: 320px;
+  min-width: 320px;
+  gap: 0;
+  padding: 0;
+  /* One line in Mensagens diretas and Favoritos: a 24px face, 8 from its name, 8 from the plate's edges. */
+  --sidebar-agent-face: 24px;
+  --sidebar-agent-gap: var(--space-2);
+}
+.sidebar__col {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: 64px;
+  padding: var(--space-4) 0;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar__col::-webkit-scrollbar {
+  display: none;
+}
+.sidebar__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+}
+.sidebar__main > * {
+  position: relative;
+  z-index: 1;
+}
+.sidebar__col-line {
+  flex: none;
+  width: 24px;
+  margin: var(--space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.sidebar__col-gap {
+  flex: 1 0 var(--space-2);
+}
+.sidebar__tile {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  padding: 0;
+  border: 0;
+  border-radius: var(--control-r-md);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.sidebar__tile > .ac-icon {
+  width: var(--control-icon-md);
+  height: var(--control-icon-md);
+}
+.sidebar__tile:hover,
+.sidebar__tile[data-state="open"] {
+  background: var(--side-hover);
+  color: var(--ink);
+}
+.sidebar__tile[data-status="active"] {
+  background: var(--side-chosen);
+  color: var(--ink);
+}
+html:not([data-pointer]) .sidebar__tile:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* A tile's mark, on one anchor for every tile: an ink dot for something unread, a red one for something for me. */
+.sidebar__tile[data-dot] {
+  color: var(--ink);
+}
+.sidebar__tile[data-dot]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--side);
+}
+.sidebar__tile[data-dot="you"]::after {
+  background: var(--danger);
+}
+/* The tools keep their order by dragging and Alt+Shift+↑/↓ (ToolList): no grip on a tile, the tile is what moves. */
+.sidebar__col .sidebar__tool-grip {
+  display: none;
+}
+.sidebar__col :is(.sidebar__collapse, .sidebar__agora).ac-btn {
+  flex: none;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  border-radius: var(--control-r-md);
+}
+/* The workspace's name opens its menu: no chevron beside it (the column took the room it had). */
+.sidebar[data-layout="column"] .sidebar__org-button > .ac-icon:last-child {
+  display: none;
+}
+/* Collapsed (or a tablet at rest): the column alone. */
+.sidebar[data-layout="column"][data-rail="true"] {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 64px;
+  padding: 0;
+  gap: 0;
+}
+.sidebar[data-layout="column"][data-rail="true"] .sidebar__main {
+  display: none;
+}
+.sidebar[data-layout="column"][data-rail="true"] .sidebar__col {
+  border-right: 0;
+}
+.shell:has(> .sidebar[data-layout="column"][data-float="true"]) {
+  padding-left: 64px;
+}
+/* One line per person and agent: the name as wide as it needs, the "IA" tag right after it, a count at the end. */
+.sidebar__item > .sidebar__item-label:has(+ .sidebar__kind) {
+  flex: 0 1 auto;
+}
+.sidebar__kind.ac-tag {
+  flex: none;
+}
+.sidebar__kind ~ :is(.sidebar__unread, .sidebar__item-meta, .ac-count, .ac-countchip) {
+  margin-left: auto;
+}
+.sidebar[data-layout="column"] .sidebar__item > .ac-avatar--sm,
+.sidebar[data-layout="column"] .sidebar__item > .ac-orbit > .ac-avatar--sm {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.sidebar[data-layout="column"] :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]) {
+  gap: var(--sidebar-agent-gap);
+}
+.sidebar[data-layout="column"] .sidebar__item:has(> .ac-avatar),
+.sidebar[data-layout="column"] .sidebar__item:has(> .ac-orbit),
+.sidebar[data-layout="column"] .sidebar__new-agent {
+  gap: var(--sidebar-agent-gap);
+  padding-block: 8px;
+}
+/* An invitation not accepted yet: the address quieter than a member's name. */
+.sidebar__invite .sidebar__item-label {
+  color: var(--muted);
+}
+/* A section's name typed in place, on its header's line and size. */
+.sidebar__section-name {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: var(--control-r-sm);
+  background: var(--pane);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+html:not([data-pointer]) .sidebar__section-name:focus-visible,
+.sidebar__section-name:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+} /* A phone's drawer holds the column and the list. */
+@media (max-width: 760px) {
+  .shell .sidebar[data-layout="column"] {
+    width: min(368px, calc(100vw - 56px));
+    padding: 0;
   }
 }

@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { linkSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { debugEvidence, debugLogMark, slowTurn, turnEvidence } from "../../runner/cli-debug";
@@ -65,6 +65,24 @@ test("a turn reads its log from where it began, and a log past its bound is empt
   expect(debugLogMark(file)).toBe(0);
   expect(statSync(file).size).toBe(0);
 });
+
+test.if(process.platform !== "win32")(
+  "a link left where the log goes is never emptied nor read through, a symbolic one or a hard one",
+  () => {
+    const target = path.join(dir, "root-owned");
+    writeFileSync(target, `${LOG}\n${"x".repeat(5 * 1024 * 1024)}`);
+    const size = statSync(target).size;
+    const soft = path.join(dir, "soft.log");
+    const hard = path.join(dir, "hard.log");
+    symlinkSync(target, soft);
+    linkSync(target, hard);
+    for (const file of [soft, hard]) {
+      expect(debugLogMark(file)).toBe(0);
+      expect(turnEvidence(file, 0, START)).toEqual([]);
+    }
+    expect(statSync(target).size).toBe(size);
+  },
+);
 
 test("a turn is slow past its CLI's start, a retry, or a late first token once ready", () => {
   expect(slowTurn({ initMs: 3000, firstTokenMs: 5000 })).toBe(false);

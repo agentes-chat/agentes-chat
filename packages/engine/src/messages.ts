@@ -36,7 +36,7 @@ import {
   publishMessageCreated,
   publishUserEvent,
 } from "./events";
-import { cutText, inertLinks } from "./format";
+import { cutText, inertLinks, splitMarkdown } from "./format";
 import { pictureSize } from "./image-size";
 import {
   appAuthorOf,
@@ -95,9 +95,13 @@ const { messages, agents, channelMembers, channels, agentRuns, outbox, agentQues
 
 export type Message = typeof messages.$inferSelect;
 
+/** A message just written: an agent's text longer than one message also wrote `before` ahead of it (`insertLongAgentMessage`). */
+export type PostedMessage = Message & { before?: Message[] };
+
 /**
  * The longest message, in characters. The whole text is indexed for search as one `tsvector`, which Postgres caps at
- * 1 MB: 100,000 characters of short distinct words stay near 0.6 MB. Longer texts go as a file.
+ * 1 MB: 100,000 characters of short distinct words stay near 0.6 MB. A person's longer text goes as a file; an agent's
+ * as several messages (`insertLongAgentMessage`).
  * Mirrored in packages/client/src/lib/message-length.ts.
  */
 export const MAX_MESSAGE_LENGTH = 100_000;
@@ -142,6 +146,8 @@ export interface MessageView {
   handedWorks?: WorkView[];
   /** `meta.liveRef` as the chat reads it (ADR 0199): the live file the message is about and what was selected in it. */
   liveRef?: LiveRef;
+  /** Only as just written: the parts of an agent's text too long for one message, posted ahead of this, its last. */
+  before?: MessageView[];
   createdAt: string;
 }
 
@@ -213,10 +219,11 @@ export interface MessageUsage {
 }
 
 /** A message as the people who read its conversation see it: a sealed one with its words (`unsealed`, ADR 0190). */
-export const messageView = (stored: Message): MessageView => {
+export const messageView = (stored: PostedMessage): MessageView => {
   const m = unsealed(stored);
   const liveRef = liveRefOf(m.meta);
   return {
+    ...(stored.before?.length ? { before: stored.before.map(messageView) } : {}),
     id: m.id,
     channelId: m.channelId,
     threadId: m.threadId,
@@ -675,7 +682,7 @@ export async function pruneMessageClientIds(db: Executor, olderThanMs = MESSAGE_
  * channel; an agent never mentions itself. No permission checks: callers
  * (`postPersonMessage`, the run executor) do them.
  */
-export async function insertMessage(tx: Executor, input: NewMessage): Promise<Message> {
+export async function insertMessage(tx: Executor, input: NewMessage): Promise<PostedMessage> {
   return (await insertMessageWithRuns(tx, input, { startRuns: false })).message;
 }
 
@@ -724,6 +731,59 @@ const parseUuidArray = (v: string[] | string | null) =>
 const parseJson = <T>(v: T | string | null, fallback: T): T =>
   typeof v === "string" ? (JSON.parse(v) as T) : (v ?? fallback);
 
+/** What shows once with a reply (its files, a GIF, its work, its checks, whom it missed): on a long one's last part. */
+const LAST_PART_META = [
+  "artifacts",
+  "media",
+  "work",
+  "teamChecks",
+  "unreachedAgents",
+  "unreachedPeople",
+  "memoryUpdates",
+  "feedbackOffer",
+];
+
+/**
+ * An agent's text longer than one message (a long reply, a cut one that went on, a CLI's, a post tool's): consecutive
+ * messages in the same place, cut between paragraphs and never inside a code block (`splitMarkdown`), each written as
+ * any message is, a quote on the first. Not a file: this needs only the database, the words read in the chat as any
+ * reply, and the agent reads them back in its context the same way. Returns the last, carrying the others (`before`)
+ * for the apps to hear first (`publishMessageCreated`).
+ */
+async function insertLongAgentMessage(
+  tx: Executor,
+  input: NewMessage,
+  body: string,
+  options: Parameters<typeof insertMessageWithRuns>[2],
+): ReturnType<typeof insertMessageWithRuns> {
+  const parts = splitMarkdown(body, MAX_MESSAGE_LENGTH);
+  // Apart by a millisecond each, so no page of the conversation cuts between equal times.
+  const at = (input.createdAt ?? new Date()).getTime();
+  const { replyTo, ...meta } = input.meta ?? {};
+  const ahead = Object.fromEntries(Object.entries(meta).filter(([key]) => !LAST_PART_META.includes(key)));
+  const before: Message[] = [];
+  for (const [i, part] of parts.entries()) {
+    const last = i === parts.length - 1;
+    const out = await insertMessageWithRuns(
+      tx,
+      {
+        ...input,
+        body: part,
+        meta: { ...(last ? meta : ahead), ...(i === 0 && replyTo !== undefined ? { replyTo } : {}) },
+        createdAt: new Date(at + i),
+      },
+      {
+        ...options,
+        part: { first: i === 0 && (options.part?.first ?? true), last: last && (options.part?.last ?? true) },
+      },
+    );
+    before.push(...(out.message.before ?? []));
+    if (last) return { ...out, message: { ...out.message, before } };
+    before.push(out.message);
+  }
+  throw new Error("splitMarkdown returned no part");
+}
+
 /**
  * Writes a message in ONE statement (the database may be far away): thread
  * check, mention resolution (active agents that are members of the
@@ -740,9 +800,13 @@ export async function insertMessageWithRuns(
    * `deliver: false`: a person's message written on their behalf (a routine's trigger) answers no open
    * question and joins no run in progress; only the runs its caller starts read it.
    */
-  options: { startRuns: boolean; deliver?: boolean },
+  /**
+   * `part`: one of an agent's long text's messages (`insertLongAgentMessage`): only the first notifies and only the
+   * last is routed and assessed, so the reply rings and routes once; a part's own mentions still do both.
+   */
+  options: { startRuns: boolean; deliver?: boolean; part?: { first: boolean; last: boolean } },
 ): Promise<{
-  message: Message;
+  message: PostedMessage;
   /** `replyInThread`: it answers under the message (ADR 0214). */
   runs: { id: string; agentId: string; replyInThread: boolean }[];
   blocked: string[];
@@ -769,6 +833,10 @@ export async function insertMessageWithRuns(
   // The sticker or GIF an agent adds after its own reply is silent (ADR 0091 §4): it notifies nobody, and a thread
   // waits for the reply's own assessment.
   const silent = isMediaAfterReply(input.meta);
+  const notFirst = options.part ? !options.part.first : false;
+  const notLast = options.part ? !options.part.last : false;
+  if (body.length > MAX_MESSAGE_LENGTH && input.author.type === "agent")
+    return insertLongAgentMessage(tx, input, body, options);
   if (body.length > MAX_MESSAGE_LENGTH)
     throw new ValidationError(`Message is longer than ${MAX_MESSAGE_LENGTH} characters`, "message.too_long", {
       length: body.length,
@@ -1195,16 +1263,16 @@ export async function insertMessageWithRuns(
           -- An agent's message without a mention goes to the router too: another agent may chime in (ADR 0034).
           -- A GIF or a sticker alone goes to nobody, an agent's silent one after its reply included (ADR 0091).
           where not ${mediaOnly}::boolean and (m.author_type = 'person' or cardinality(m.mentioned_agent_ids) > 0
-            or m.hop < ${AGENT_CHIME_IN_MAX_HOP})
+            or (m.hop < ${AGENT_CHIME_IN_MAX_HOP} and not ${notLast}::boolean))
         union all
         -- In-app notifications: people mentioned, a reply in a thread, a person's DM, an agent's answer to whoever
         -- is behind its run (ADR 0071), a routine's report (it may have no mention and no run).
         select gen_random_uuid(), ${input.orgId}::uuid, 'notifications.message', jsonb_build_object('messageId', m.id),
           'notifications.message:' || m.id, 4 from m
-          where not ${silent}::boolean and (cardinality(m.mentioned_user_ids) > 0 or m.thread_id is not null
+          where not ${silent}::boolean and (cardinality(m.mentioned_user_ids) > 0 or (not ${notFirst}::boolean and (m.thread_id is not null
             or m.agent_run_id is not null or m.meta -> 'routine' is not null
             or (m.author_type = 'person' and exists (
-              select 1 from ${channels} dc where dc.id = ${input.channelId}::uuid and dc.kind = 'dm')))
+              select 1 from ${channels} dc where dc.id = ${input.channelId}::uuid and dc.kind = 'dm')))))
         union all
         -- An agent's message where an integration app reads, for the app's webhook (ADR 0251). Notices and a
         -- confidential thread's words never leave.
@@ -1225,7 +1293,7 @@ export async function insertMessageWithRuns(
         select gen_random_uuid(), ${input.orgId}::uuid, 'threads.assess',
           jsonb_build_object('threadRootId', m.thread_id, 'messageId', m.id), 'threads.assess:' || m.id, 2,
           now() + ${THREAD_ASSESS_DELAY_MS / 1000}::int * interval '1 second'
-        from m where m.thread_id is not null and not ${silent}::boolean
+        from m where m.thread_id is not null and not ${silent}::boolean and not ${notLast}::boolean
         on conflict do nothing
         returning id
       )

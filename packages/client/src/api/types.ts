@@ -2866,6 +2866,8 @@ export interface Proposal {
   reviewed: boolean;
   /** Applied, and the viewer may put it back (`proposals.undo`). */
   undoable: boolean;
+  /** Left out by the review, and the viewer may apply it themselves (`proposals.accept`); older servers: absent. */
+  applicable?: boolean;
   undoneBy: { userId: string; name: string } | null;
   undoneAt: string | null;
   decidedAt: string | null;

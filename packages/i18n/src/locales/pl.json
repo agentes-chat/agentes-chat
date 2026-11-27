@@ -2596,6 +2596,55 @@
     "newGroupWith": "Nowy dział z {{name}}",
     "dmsEmpty": "Tu pojawiają się twoje rozmowy z ludźmi."
   },
+  "sidebarFavorites": {
+    "title": "Ulubione",
+    "add": "Dodaj do ulubionych",
+    "remove": "Usuń z ulubionych",
+    "full": "Ulubione mają już 50 pozycji. Usuń jedną, aby dodać tę."
+  },
+  "sidebarSections": {
+    "new": "Nowa sekcja",
+    "newName": "Nowa sekcja",
+    "moveTo": "Przenieś do sekcji",
+    "takeOut": "Usuń z sekcji",
+    "rename": "Zmień nazwę sekcji",
+    "delete": "Usuń sekcję",
+    "nameLabel": "Nazwa sekcji"
+  },
+  "sidebarDms": {
+    "options": "Opcje wiadomości bezpośrednich",
+    "show": "Pokaż",
+    "shows": {
+      "all": "Wszyscy w workspace",
+      "recent": "Tylko ostatnie rozmowy"
+    },
+    "invite": "Zaproś osoby",
+    "invited": "Zaproszenie wysłane",
+    "invitedTip": "{{email}} jeszcze nie przyjął zaproszenia",
+    "agentTag": "AI",
+    "agentTip": "Agent AI"
+  },
+  "sidebarColumn": {
+    "label": "Narzędzia",
+    "unread": "{{name}}, coś nieprzeczytanego",
+    "you": "{{name}}, coś dla ciebie"
+  },
+  "unreads": {
+    "title": "Nieprzeczytane",
+    "forYou": "Dla ciebie",
+    "conversations": "Rozmowy",
+    "markAll": "Oznacz wszystko jako przeczytane",
+    "markRead": "Oznacz jako przeczytane",
+    "open": "Otwórz",
+    "seeInbox": "Zobacz wszystko w skrzynce odbiorczej",
+    "more_one": "Jeszcze {{count}} wiadomość",
+    "more_few": "Jeszcze {{count}} wiadomości",
+    "more_many": "Jeszcze {{count}} wiadomości",
+    "more_other": "Jeszcze {{count}} wiadomości",
+    "emptyTitle": "Wszystko przeczytane",
+    "emptyText": "Tu pojawiają się nowe wiadomości i to, co na ciebie czeka.",
+    "markedAll": "Wszystko oznaczone jako przeczytane"
+  },
   "sidebarPins": {
     "pin": "Przypnij na górze",
     "unpin": "Odepnij",
@@ -7331,6 +7380,7 @@
     "undoneBy": "Cofnięte przez: {{name}}",
     "undoneByYou": "Cofnięte przez ciebie",
     "undo": "Cofnij",
+    "applyAnyway": "Zastosuj mimo to",
     "appliedSome": "Zastosowano {{done}} z {{total}}",
     "waitingAdmin": "Czeka na administratora",
     "stale": "Nieaktualna",
@@ -18255,11 +18305,12 @@
     "helpWorkspace": "Komputery pomagają, gdy komputer zespołu jest pełny lub niedostępny",
     "helpWorkspaceHint": "Każdy komputer pomaga tylko wtedy, gdy pozwoli na to jego właściciel. Wyłączone: żaden nie pomaga, niezależnie od wyboru właściciela.",
     "shareInternet": "Agenci korzystają z internetu tego komputera",
-    "shareInternetHint": "Strony otwierane przez agentów przechodzą przez połączenie tego komputera, więc widzą Twoją lokalizację. Tylko strony internetowe i nigdy nic w Twojej własnej sieci. Gdy ten komputer jest offline, agenci korzystają ze zwykłego połączenia.",
+    "shareInternetHint": "Połączenia agentów wychodzą przez internet tego komputera, więc strony i serwery widzą Twoją lokalizację: strony internetowe, git, SSH, bazy danych i inne połączenia TCP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Wyszukiwanie nazw, rozmowy i pozostały ruch UDP korzystają ze zwykłego połączenia, podobnie jak wszystko, gdy ten komputer jest offline.",
+    "shareInternetHintProxy": "Przeglądarka agentów i programy, które stosują ustawienia proxy (git przez HTTPS, curl, większość narzędzi wiersza poleceń), wychodzą przez internet tego komputera, więc strony widzą Twoją lokalizację. SSH, klienty baz danych i inne programy, które ignorują ustawienia proxy, korzystają ze zwykłego połączenia, podobnie jak wyszukiwanie nazw i ruch UDP. Nigdy nic w Twojej własnej sieci ani poczta przez port 25. Gdy ten komputer jest offline, wszystko korzysta ze zwykłego połączenia.",
     "shareInternetInUse": "Teraz w użyciu",
     "shareInternetOther": "Agenci korzystają teraz z komputera {{name}}",
     "shareInternetPick": "Użyj tego",
-    "shareInternetJoin": "Agenci będą też otwierać strony przez internet tego komputera, więc strony zobaczą Twoją lokalizację. Możesz to wyłączyć na jego stronie.",
+    "shareInternetJoin": "Agenci będą też łączyć się z internetem przez ten komputer, więc strony i serwery zobaczą Twoją lokalizację. Możesz to wyłączyć na jego stronie.",
     "connectedBy": "Podłączone przez: {{name}}",
     "downloadFor": "Pobierz na {{system}}",
     "downloadApp": "Pobierz aplikację",
@@ -18807,7 +18858,7 @@
       "folderOnComputer": "Zezwól na komputerze",
       "folderShown": "Otwarto na {{deviceName}}. Zezwól tam.",
       "internetShared": "Agenci otwierają teraz strony przez internet komputera <b>{{deviceName}}</b>",
-      "internetSharedLine": "Tylko agenci tego workspace’u, tylko strony internetowe, nigdy nic z jego własnej sieci. Gdy jest offline, korzystają ze swojego zwykłego połączenia.",
+      "internetSharedLine": "Tylko agenci tego workspace’u, nigdy nic z jego własnej sieci, nigdy poczta przez port 25. Gdy jest offline, korzystają ze swojego zwykłego połączenia.",
       "internetOff": "Wyłącz",
       "internetOffDone": "Agenci nie korzystają już z internetu komputera {{deviceName}}.",
       "once": "Zezwól raz",

@@ -2335,6 +2335,52 @@
     "newGroupWith": "Departemen baru dengan {{name}}",
     "dmsEmpty": "Percakapanmu dengan orang muncul di sini."
   },
+  "sidebarFavorites": {
+    "title": "Favorit",
+    "add": "Tambahkan ke favorit",
+    "remove": "Hapus dari favorit",
+    "full": "Favorit sudah berisi 50. Hapus satu untuk menambahkan yang ini."
+  },
+  "sidebarSections": {
+    "new": "Bagian baru",
+    "newName": "Bagian baru",
+    "moveTo": "Pindahkan ke bagian",
+    "takeOut": "Keluarkan dari bagian",
+    "rename": "Ganti nama bagian",
+    "delete": "Hapus bagian",
+    "nameLabel": "Nama bagian"
+  },
+  "sidebarDms": {
+    "options": "Opsi pesan langsung",
+    "show": "Tampilkan",
+    "shows": {
+      "all": "Semua orang di workspace",
+      "recent": "Hanya percakapan terbaru"
+    },
+    "invite": "Undang orang",
+    "invited": "Undangan terkirim",
+    "invitedTip": "{{email}} belum menerima undangan",
+    "agentTag": "AI",
+    "agentTip": "Agen AI"
+  },
+  "sidebarColumn": {
+    "label": "Alat",
+    "unread": "{{name}}, ada yang belum dibaca",
+    "you": "{{name}}, ada sesuatu untuk Anda"
+  },
+  "unreads": {
+    "title": "Belum dibaca",
+    "forYou": "Untuk Anda",
+    "conversations": "Percakapan",
+    "markAll": "Tandai semua sudah dibaca",
+    "markRead": "Tandai sudah dibaca",
+    "open": "Buka",
+    "seeInbox": "Lihat semuanya di kotak masuk",
+    "more_other": "{{count}} pesan lagi",
+    "emptyTitle": "Semua sudah dibaca",
+    "emptyText": "Pesan baru dan yang menunggu Anda muncul di sini.",
+    "markedAll": "Semua ditandai sudah dibaca"
+  },
   "sidebarPins": {
     "pin": "Sematkan di atas",
     "unpin": "Lepas sematan",
@@ -6557,6 +6603,7 @@
     "undoneBy": "Diurungkan oleh {{name}}",
     "undoneByYou": "Diurungkan olehmu",
     "undo": "Urungkan",
+    "applyAnyway": "Tetap terapkan",
     "appliedSome": "{{done}} dari {{total}} diterapkan",
     "waitingAdmin": "Menunggu admin",
     "stale": "Kedaluwarsa",
@@ -16552,11 +16599,12 @@
     "helpWorkspace": "Komputer membantu saat komputer tim penuh atau tidak ada",
     "helpWorkspaceHint": "Setiap komputer hanya membantu jika pemiliknya mengizinkan. Mati: tidak ada yang membantu, apa pun pilihan pemiliknya.",
     "shareInternet": "Agen memakai internet komputer ini",
-    "shareInternetHint": "Situs yang dibuka agen lewat koneksi komputer ini, jadi situs melihat lokasimu. Hanya situs web dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, agen memakai koneksi biasa mereka.",
+    "shareInternetHint": "Koneksi agen keluar lewat internet komputer ini, jadi situs dan server melihat lokasimu: situs web, git, SSH, database, dan koneksi TCP lainnya. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Pencarian nama, panggilan, dan lalu lintas UDP lainnya memakai koneksi biasa, begitu juga semuanya selama komputer ini offline.",
+    "shareInternetHintProxy": "Browser agen dan program yang mengikuti pengaturan proxy (git lewat HTTPS, curl, sebagian besar alat baris perintah) keluar lewat internet komputer ini, jadi situs melihat lokasimu. SSH, klien database, dan program lain yang mengabaikan pengaturan proxy memakai koneksi biasa, begitu juga pencarian nama dan lalu lintas UDP. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Selama komputer ini offline, semuanya memakai koneksi biasa.",
     "shareInternetInUse": "Sedang dipakai",
     "shareInternetOther": "Agen sedang memakai {{name}}",
     "shareInternetPick": "Pakai yang ini",
-    "shareInternetJoin": "Agen juga akan membuka situs lewat internet komputer ini, jadi situs melihat lokasimu. Kamu bisa mematikannya di halamannya.",
+    "shareInternetJoin": "Agen juga akan terhubung ke internet lewat komputer ini, jadi situs dan server melihat lokasimu. Kamu bisa mematikannya di halamannya.",
     "connectedBy": "Dihubungkan oleh {{name}}",
     "downloadFor": "Unduh untuk {{system}}",
     "downloadApp": "Unduh aplikasinya",
@@ -17095,7 +17143,7 @@
       "folderOnComputer": "Izinkan di komputer",
       "folderShown": "Terbuka di {{deviceName}}. Izinkan di sana.",
       "internetShared": "Agen kini membuka situs web lewat internet <b>{{deviceName}}</b>",
-      "internetSharedLine": "Hanya agen workspace ini, hanya situs web, tidak pernah apa pun di jaringannya sendiri. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
+      "internetSharedLine": "Hanya agen workspace ini, tidak pernah apa pun di jaringannya sendiri, tidak pernah email lewat port 25. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
       "internetOff": "Matikan",
       "internetOffDone": "Agen tidak lagi memakai internet {{deviceName}}.",
       "once": "Izinkan sekali",
