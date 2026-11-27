@@ -7,6 +7,7 @@ import { GROK_ACCOUNT_HOMES } from "@agenteschat/adapters/command-policy";
 import { type KnownLabel, scrubLogLine } from "@agenteschat/adapters/error-scrub";
 import {
   cgroupCounters,
+  cpuAndSystem,
   diskFigures,
   diskSpace,
   LoadWindow,
@@ -647,6 +648,8 @@ export class RunnerDaemon implements RequestObserver {
   private readonly refreshPath: (() => void) | undefined;
   /** `hello.windowsBuild` (`CODEX_UNELEVATED_PROTOCOL`): a Windows computer's build; null elsewhere. */
   private readonly windowsBuild: string | null;
+  /** `hello.size.cpuModel`, `cores` and `system`, read once: macOS asks `sw_vers` and `sysctl`. */
+  private readonly specs = cpuAndSystem();
 
   constructor(private readonly opts: DaemonOptions) {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
@@ -2442,7 +2445,12 @@ export class RunnerDaemon implements RequestObserver {
       exec: access.tools.commands,
       paused: this.pauseState(),
       access,
-      size: { ...machineSize(workspaceReal), maxTasks: this.taskLimit(this.stored), ...this.taskRoom() },
+      size: {
+        ...machineSize(workspaceReal),
+        ...this.specs,
+        maxTasks: this.taskLimit(this.stored),
+        ...this.taskRoom(),
+      },
       ...this.loginHello(),
       ...(this.accounts.authEgressGroup() ? { authEgressGroup: true as const } : {}),
       ...(this.stored?.managedBy === "desktop" ? { app: true as const } : {}),

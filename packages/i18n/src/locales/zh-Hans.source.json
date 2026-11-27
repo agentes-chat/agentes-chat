@@ -41868,6 +41868,18 @@
       "other": "{{count}} CPU"
     }
   },
+  "devices.cores": {
+    "value": {
+      "one": "{{count}} core",
+      "other": "{{count}} cores"
+    }
+  },
+  "devices.threads": {
+    "value": {
+      "one": "{{count}} thread",
+      "other": "{{count}} threads"
+    }
+  },
   "devices.memory": {
     "value": "{{gb}} GB"
   },
@@ -42478,7 +42490,7 @@
     "value": "System"
   },
   "devices.facts.cpu": {
-    "value": "CPU"
+    "value": "Processor"
   },
   "devices.facts.memory": {
     "value": "Memory"
