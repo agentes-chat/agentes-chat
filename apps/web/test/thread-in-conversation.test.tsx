@@ -46,6 +46,15 @@ describe("a thread's link", () => {
     await waitFor(() => screen().getByRole("complementary", { name: "Thread" }));
   });
 
+  test("a thread of a channel no longer in my list (archived) keeps its page, not a channel that isn't there", async () => {
+    const state = seedState();
+    state.channels = state.channels.filter((c) => c.id !== ENG_ID);
+    const r = await renderApp(`/org/${ORG_ID}/threads/m-1`, { api: createFakeApi(state) });
+    await settle(10);
+    expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/m-1`);
+    expect(screen().queryByText("Este canal não existe ou não está mais disponível.")).toBeNull();
+  });
+
   test("a thread that isn't there keeps its page, which says so", async () => {
     const r = await renderApp(`/org/${ORG_ID}/threads/nope`, { api: createFakeApi(seedState()) });
     await settle(8);
