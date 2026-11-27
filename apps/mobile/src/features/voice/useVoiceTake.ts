@@ -86,14 +86,6 @@ const removeFile = (uri: string) => {
   } catch {}
 };
 
-/**
- * One recording, from the press to the send. A wave and a clock tick twenty times a second on a timer: the wave goes
- * straight to Skia through a shared value, and only a new second renders.
- *
- * Pausing stops the recorder, because a file can only be played once it is finished: that is what lets a paused
- * recording be heard. Going on starts a new stretch, and `joinM4a` makes them one file. A stretch that can't be
- * joined still goes, as a message of its own: nothing said is lost.
- */
 /** Tells the sender why a recording can't go: the plan says where it is chosen, in words only (App Store 3.1.1). */
 export function useSayVoiceRefusal() {
   const { t } = useTranslation();
@@ -114,6 +106,14 @@ export function useSayVoiceRefusal() {
   );
 }
 
+/**
+ * One recording, from the press to the send. A wave and a clock tick twenty times a second on a timer: the wave goes
+ * straight to Skia through a shared value, and only a new second renders.
+ *
+ * Pausing stops the recorder, because a file can only be played once it is finished: that is what lets a paused
+ * recording be heard. Going on starts a new stretch, and `joinM4a` makes them one file. A stretch that can't be
+ * joined still goes, as a message of its own: nothing said is lost.
+ */
 export function useVoiceTake(target: VoiceTarget) {
   const { t, i18n } = useTranslation();
   const toast = useToast();

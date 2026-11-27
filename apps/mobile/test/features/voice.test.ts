@@ -211,6 +211,9 @@ describe("a voice note with typed text and files", () => {
     expect(src("features/voice/outbox.ts")).toContain(
       'onRefused(verdict === "limit" || verdict === "plan" ? verdict : "refused", item);',
     );
+    // Every refusal on the phone, a retried voice note's included, says why in the same words ("voice.plan" too).
+    expect(src("features/chat/screen/useChatSend.tsx")).toContain("const voiceRefused = useSayVoiceRefusal();");
+    expect(src("features/voice/useVoiceOutbox.ts")).toContain("const refused = useSayVoiceRefusal();");
     const chat = chatScreenSource();
     expect(chat).toContain("takeBack: voiceTakeBack,");
     // The files come back from what was uploaded for the take, to wait above the field again.
