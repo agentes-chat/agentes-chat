@@ -2866,6 +2866,8 @@ export interface Proposal {
   reviewed: boolean;
   /** Applied, and the viewer may put it back (`proposals.undo`). */
   undoable: boolean;
+  /** Left out by the review, and the viewer may apply it themselves (`proposals.accept`); older servers: absent. */
+  applicable?: boolean;
   undoneBy: { userId: string; name: string } | null;
   undoneAt: string | null;
   decidedAt: string | null;
@@ -8118,13 +8120,27 @@ export interface SidebarPins {
   channels: string[];
   people: string[];
 }
-/** How my sidebar shows the agents, and what I pinned, in one workspace (`GET …/me/sidebar/view`). */
+/** One of my own channel sections (ADR 0260): its name and its channels, in order. */
+export interface SidebarChannelSection {
+  id: string;
+  name: string;
+  channelIds: string[];
+}
+/** What Mensagens diretas lists: everyone in the workspace, or only who I talked to. */
+export type SidebarDmShow = "all" | "recent";
+/** How my sidebar shows the agents, my Favoritos and my channel sections, in one workspace (`GET …/me/sidebar/view`). */
 export interface SidebarView {
   agentSort: AgentSort;
   /** Who manages agents also lists the ones that don't talk to them. */
   showAllAgents: boolean;
-  /** Never saved: the apps pin my own agents (`dayOnePins`). */
+  /** The pins of before Favoritos: read only to start `favorites` (`favoritesOf`). */
   pins: SidebarPins | null;
+  /** Favoritos in order (`agent:<id>`, `channel:<id>`, `person:<user id>`); null or absent: never saved. */
+  favorites?: string[] | null;
+  /** My channel sections in order; null or absent: none. */
+  sections?: SidebarChannelSection[] | null;
+  /** Absent: `all`. */
+  dms?: SidebarDmShow;
 }
 
 /**

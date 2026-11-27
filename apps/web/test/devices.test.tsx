@@ -1415,7 +1415,7 @@ describe("A device's page", () => {
   });
 
   test("on a self-hosted server: a computer that joins hears it will lend its internet, with no workspace computer", async () => {
-    const line = "The agents will also open websites through this computer's internet";
+    const line = "The agents will also go online through this computer's internet";
     // No workspace computer: nothing borrows where the server lends none (the Cloud's rule).
     const own = () => {
       const list = acmeDevices();
@@ -1660,7 +1660,7 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).toContain("never anything on its own network, never email on port 25");
     expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);
