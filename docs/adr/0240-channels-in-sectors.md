@@ -1,6 +1,7 @@
 # 0240. Channels in sectors
 
-- Status: Accepted
+- Status: Accepted. Amended 2026-11-27 by ADR 0259: §6 to §9, sectors leave the sidebar (a channel keeps its sector, on
+  Equipe › Setores and in the pickers); channel sections are each person's own
 - Date: 2026-11-25
 - Amends: ADR 0080 (channel categories go away; their placing rules move to sectors), ADR 0083 and its 2026-11-04
   amendment (a sector holds channels as well as agents)

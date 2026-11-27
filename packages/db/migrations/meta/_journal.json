@@ -2521,6 +2521,13 @@
       "when": 1795743674220,
       "tag": "0364_outbox_wake",
       "breakpoints": true
+    },
+    {
+      "idx": 362,
+      "version": "7",
+      "when": 1795743734220,
+      "tag": "0365_sidebar_sections",
+      "breakpoints": true
     }
   ]
 }
