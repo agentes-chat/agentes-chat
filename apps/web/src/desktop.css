@@ -94,6 +94,13 @@ html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) {
 .workspace-sky--bar.workspace-sky--rail {
   width: 67px;
 }
+/* A team's sidebar is its tool column and its list (ADR 0259): 320px, the column's 64 alone when collapsed. */
+:root:has(.sidebar[data-layout="column"]) .workspace-sky--bar {
+  width: 320px;
+}
+:root:has(.sidebar[data-layout="column"]) .workspace-sky--bar.workspace-sky--rail {
+  width: 63px;
+}
 .titlebar__nav {
   display: flex;
   gap: var(--space-2);

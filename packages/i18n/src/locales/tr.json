@@ -2416,6 +2416,53 @@
     "newGroupWith": "{{name}} ile yeni departman",
     "dmsEmpty": "Kişilerle konuşmalarınız burada görünür."
   },
+  "sidebarFavorites": {
+    "title": "Favoriler",
+    "add": "Favorilere ekle",
+    "remove": "Favorilerden çıkar",
+    "full": "Favorilerde zaten 50 öğe var. Bunu eklemek için birini çıkar."
+  },
+  "sidebarSections": {
+    "new": "Yeni bölüm",
+    "newName": "Yeni bölüm",
+    "moveTo": "Bölüme taşı",
+    "takeOut": "Bölümden çıkar",
+    "rename": "Bölümü yeniden adlandır",
+    "delete": "Bölümü sil",
+    "nameLabel": "Bölüm adı"
+  },
+  "sidebarDms": {
+    "options": "Doğrudan mesaj seçenekleri",
+    "show": "Göster",
+    "shows": {
+      "all": "Çalışma alanındaki herkes",
+      "recent": "Yalnızca son konuşmalar"
+    },
+    "invite": "Kişi davet et",
+    "invited": "Davet gönderildi",
+    "invitedTip": "{{email}} daveti henüz kabul etmedi",
+    "agentTag": "YZ",
+    "agentTip": "YZ ajanı"
+  },
+  "sidebarColumn": {
+    "label": "Araçlar",
+    "unread": "{{name}}, okunmamış bir şey var",
+    "you": "{{name}}, senin için bir şey var"
+  },
+  "unreads": {
+    "title": "Okunmamışlar",
+    "forYou": "Senin için",
+    "conversations": "Konuşmalar",
+    "markAll": "Tümünü okundu olarak işaretle",
+    "markRead": "Okundu olarak işaretle",
+    "open": "Aç",
+    "seeInbox": "Gelen kutusunda tümünü gör",
+    "more_one": "{{count}} mesaj daha",
+    "more_other": "{{count}} mesaj daha",
+    "emptyTitle": "Hepsi okundu",
+    "emptyText": "Yeni mesajlar ve seni bekleyenler burada görünür.",
+    "markedAll": "Tümü okundu olarak işaretlendi"
+  },
   "sidebarPins": {
     "pin": "En üste sabitle",
     "unpin": "Sabitlemeyi kaldır",

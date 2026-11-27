@@ -5,7 +5,7 @@ setupDom();
 
 import type { AgentStatus, AgentWork, Message, ThreadInfo } from "@agenteschat/client";
 import { formatTime } from "@agenteschat/client/lib/format";
-import { act, cleanup, within } from "@testing-library/react";
+import { act, cleanup } from "@testing-library/react";
 import { DESKTOP_QUERY } from "@/components/NavDrawer";
 import {
   ADA_ID,
@@ -71,11 +71,21 @@ const status = (agentId: string, over: Partial<AgentStatus>): AgentStatus => ({
 });
 
 const nav = () => screen().getByRole("navigation", { name: "Navegação do workspace" });
+/**
+ * A personal workspace (ADR 0159), whose list keeps each agent's work on the line under its name; a team's list has one
+ * line per agent, its work in its title and its face (ADR 0259).
+ */
+const personal = () => {
+  const state = seedState();
+  const org = state.me?.organizations[0];
+  if (org) org.mode = "personal";
+  return state;
+};
 const agentRow = (id: string) => nav().querySelector(`[data-agent-row="${id}"]`) as HTMLElement;
 
 describe("the sidebar's agents", () => {
-  test("its status and how long, whom it helps in its title, its orbit, and Agentes counts it; amber for what waits on you", async () => {
-    const state = seedState();
+  test("its status and how long, whom it helps in its title, and its orbit; amber for what waits on you", async () => {
+    const state = personal();
     state.agentStatuses = [
       status(ATLAS_ID, { presence: "busy", working: true, work: work({ forAgentId: ADA_ID }) }),
       status(ADA_ID, { work: work({ state: "you", ask: "approval", since: ago(3), channelId: ENG_ID }) }),
@@ -99,12 +109,10 @@ describe("the sidebar's agents", () => {
     expect(ada.querySelector(".work-line")?.textContent).toBe("esperando você 3 min");
     expect(ada.querySelector(".work-line")?.getAttribute("data-tone")).toBe("you");
     expect(ada.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("waiting");
-    const head = within(nav()).getByRole("button", { name: "Agentes" }).closest(".sidebar__section-head");
-    expect(head?.querySelector(".sidebar__section-working")?.textContent).toBe("1 trabalhando");
   });
 
   test("an agent idle a while reads Inativo, never a person's Ausente; its role comes back", async () => {
-    const state = seedState();
+    const state = personal();
     state.agentStatuses = [status(ATLAS_ID, { presence: "away", activeAt: ago(120) })];
     await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}`, { api: createFakeApi(state) });
     await settle(8);
@@ -118,7 +126,7 @@ describe("the sidebar's agents", () => {
 
 describe("a return it set (ADR 0037 addendum)", () => {
   test("free with a return: 'retorno às 00:32' in the quiet tone, its face Disponível, where in its title", async () => {
-    const state = seedState();
+    const state = personal();
     const at = new Date(Date.now() + 33 * 60_000).toISOString();
     state.agentStatuses = [
       status(ATLAS_ID, { work: work({ state: "later", at, since: at, count: 0 }) }),
@@ -153,7 +161,7 @@ describe("a return it set (ADR 0037 addendum)", () => {
 describe("the worst case (break-ui, measured by CI's geometry step)", () => {
   test("long names, an unread count beside the line, an hour and a half: one line that gives up its time first", async () => {
     desktop();
-    const state = seedState();
+    const state = personal();
     const ada = state.agents.find((a) => a.id === ADA_ID);
     const atlas = state.agents.find((a) => a.id === ATLAS_ID);
     if (!ada || !atlas) throw new Error("no agents");
@@ -177,7 +185,7 @@ describe("the worst case (break-ui, measured by CI's geometry step)", () => {
 
 describe("two blues on small faces", () => {
   test("at work (its orbit) beside out of office (the arrow, asleep): each keeps its own mark", async () => {
-    const state = seedState();
+    const state = personal();
     state.agentStatuses = [
       status(ATLAS_ID, { presence: "busy", working: true, work: work({ forAgentId: ADA_ID }) }),
       status(ADA_ID, {

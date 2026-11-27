@@ -1215,7 +1215,8 @@
       "connectors.names.datadog_ap1",
       "connectors.names.datadog_ap2",
       "machines.maintenance.short.host_maintenance",
-      "machines.maintenance.short.other"
+      "machines.maintenance.short.other",
+      "unreads.conversations"
     ],
     "de": [
       "devices.permission.names.automation",
@@ -2864,7 +2865,9 @@
       "skills.page.colSkill",
       "skills.one.inChannel",
       "skills.page.inRepo",
-      "integrations.badge"
+      "integrations.badge",
+      "sidebarColumn.label",
+      "sidebarDms.agentTag"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -3057,7 +3060,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "ko": [
       "live.sheet.args.k",
@@ -3243,7 +3247,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3418,7 +3423,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "id": [
       "drive.folder",
@@ -3776,7 +3782,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -4361,7 +4368,8 @@
       "connectors.names.datadog_us5",
       "connectors.names.datadog_eu",
       "connectors.names.datadog_ap1",
-      "connectors.names.datadog_ap2"
+      "connectors.names.datadog_ap2",
+      "sidebarDms.agentTag"
     ],
     "ru": [
       "live.canvas.sizes.short.s",

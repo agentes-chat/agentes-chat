@@ -65,7 +65,16 @@ const SECTIONS: AgoraSection[] = ["you", "working", "waiting"];
  * `below`: its list opens under it (a phone's drawer), else on its right, clear of the sidebar's agents. The sidebar
  * sizes it as the collapse beside it.
  */
-export function AgoraButton({ below = false, className }: { below?: boolean; className?: string }) {
+export function AgoraButton({
+  below = false,
+  align,
+  className,
+}: {
+  below?: boolean;
+  /** Beside the sidebar: its top on the button's (`start`), or its bottom (`end`, at the tool column's foot). */
+  align?: "start" | "end";
+  className?: string;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
@@ -104,7 +113,7 @@ export function AgoraButton({ below = false, className }: { below?: boolean; cla
         open={open}
         onOpenChange={toggle}
         side={below ? "bottom" : "right"}
-        align={below ? "end" : "start"}
+        align={below ? "end" : (align ?? "start")}
         sideOffset={offset}
         label={t("agora.label")}
         className="agora"

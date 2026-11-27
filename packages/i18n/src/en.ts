@@ -2579,6 +2579,61 @@ export const en = {
     newGroupWith: "New department with {{name}}",
     dmsEmpty: "Your conversations with people show up here.",
   },
+  /** Favoritos (ADR 0259): people, agents and channels the person keeps on top of the sidebar, by name. */
+  sidebarFavorites: {
+    title: "Favorites",
+    add: "Add to favorites",
+    remove: "Remove from favorites",
+    full: "Favorites already holds 50. Remove one to add this one.",
+  },
+  /** Each person's own channel sections (ADR 0259): made by dragging a channel onto another, or from a channel's menu. */
+  sidebarSections: {
+    new: "New section",
+    /** The name a new section starts with, selected in its field. */
+    newName: "New section",
+    moveTo: "Move to section",
+    takeOut: "Remove from section",
+    rename: "Rename section",
+    delete: "Delete section",
+    nameLabel: "Section name",
+  },
+  /** Direct messages with people and agents together (ADR 0259). */
+  sidebarDms: {
+    options: "Direct messages options",
+    show: "Show",
+    shows: {
+      all: "Everyone in the workspace",
+      recent: "Recent conversations only",
+    },
+    invite: "Invite people",
+    /** After an invited address that hasn't joined yet. */
+    invited: "Invite sent",
+    invitedTip: "{{email}} hasn't accepted the invitation yet",
+    /** The quiet tag after an agent's name: it is an AI, not a person. */
+    agentTag: "AI",
+    agentTip: "AI agent",
+  },
+  /** The sidebar's tool column (ADR 0259): what a tile's dot says to a screen reader. */
+  sidebarColumn: {
+    label: "Tools",
+    unread: "{{name}}, something unread",
+    you: "{{name}}, something for you",
+  },
+  /** Unreads (`/unreads`, ADR 0259): everything waiting for the person, the inbox's items and the unread conversations. */
+  unreads: {
+    title: "Unreads",
+    forYou: "For you",
+    conversations: "Conversations",
+    markAll: "Mark all as read",
+    markRead: "Mark as read",
+    open: "Open",
+    seeInbox: "See everything in the inbox",
+    more_one: "{{count}} more message",
+    more_other: "{{count}} more messages",
+    emptyTitle: "All caught up",
+    emptyText: "New messages and what waits for you show up here.",
+    markedAll: "Everything marked as read",
+  },
   /** "Pin to top": a row kept on top of its own sidebar section, above a thin line. */
   sidebarPins: {
     pin: "Pin to top",

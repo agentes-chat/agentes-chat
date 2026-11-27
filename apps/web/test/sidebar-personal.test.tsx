@@ -504,12 +504,16 @@ describe("a personal workspace's sidebar", () => {
     expect(document.querySelector(".channel__empty")).toBeNull();
   });
 
-  test("a team's sidebar is as before: the workspace on top, ⌘K under it, me at the foot, with no bell", async () => {
+  test("a team's sidebar is its own (ADR 0259): the tool column, the workspace on top of the list, me at the foot", async () => {
     await go(seedState());
     expect(nav().querySelector(".sidebar__end")).toBeNull();
-    expect(nav().querySelector(".sidebar__jump")).not.toBeNull();
+    expect(nav().querySelector(".sidebar__col")).not.toBeNull();
     expect(nav().querySelector(".sidebar__foot .sidebar__me")).not.toBeNull();
     expect(nav().querySelector(".sidebar__bell")).toBeNull();
-    expect(blocks()).toEqual(["tools", "channels", "agents", "people"]);
+    expect(blocks()).toEqual(["tools", "channels", "people"]);
+    cleanup();
+    // A personal workspace keeps its own: no column.
+    await go(personal());
+    expect(nav().querySelector(".sidebar__col")).toBeNull();
   });
 });

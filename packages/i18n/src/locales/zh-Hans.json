@@ -2332,6 +2332,52 @@
     "newGroupWith": "包含 {{name}} 的新部门",
     "dmsEmpty": "你与成员的对话会显示在这里。"
   },
+  "sidebarFavorites": {
+    "title": "收藏",
+    "add": "加入收藏",
+    "remove": "移出收藏",
+    "full": "收藏已有 50 项。移除一项后才能添加这一项。"
+  },
+  "sidebarSections": {
+    "new": "新建分区",
+    "newName": "新分区",
+    "moveTo": "移到分区",
+    "takeOut": "移出分区",
+    "rename": "重命名分区",
+    "delete": "删除分区",
+    "nameLabel": "分区名称"
+  },
+  "sidebarDms": {
+    "options": "私信选项",
+    "show": "显示",
+    "shows": {
+      "all": "工作区所有人",
+      "recent": "仅最近的对话"
+    },
+    "invite": "邀请成员",
+    "invited": "已发送邀请",
+    "invitedTip": "{{email}} 尚未接受邀请",
+    "agentTag": "AI",
+    "agentTip": "AI 智能体"
+  },
+  "sidebarColumn": {
+    "label": "工具",
+    "unread": "{{name}}，有未读内容",
+    "you": "{{name}}，有你的事项"
+  },
+  "unreads": {
+    "title": "未读",
+    "forYou": "给你的",
+    "conversations": "对话",
+    "markAll": "全部标为已读",
+    "markRead": "标为已读",
+    "open": "打开",
+    "seeInbox": "在收件箱中查看全部",
+    "more_other": "还有 {{count}} 条消息",
+    "emptyTitle": "全部看完了",
+    "emptyText": "新消息和等你处理的事项会显示在这里。",
+    "markedAll": "已全部标为已读"
+  },
   "sidebarPins": {
     "pin": "置顶",
     "unpin": "取消置顶",

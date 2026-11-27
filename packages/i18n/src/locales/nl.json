@@ -2416,6 +2416,53 @@
     "newGroupWith": "Nieuwe afdeling met {{name}}",
     "dmsEmpty": "Je gesprekken met mensen verschijnen hier."
   },
+  "sidebarFavorites": {
+    "title": "Favorieten",
+    "add": "Toevoegen aan favorieten",
+    "remove": "Verwijderen uit favorieten",
+    "full": "Favorieten bevat al 50. Haal er een weg om deze toe te voegen."
+  },
+  "sidebarSections": {
+    "new": "Nieuwe sectie",
+    "newName": "Nieuwe sectie",
+    "moveTo": "Naar sectie verplaatsen",
+    "takeOut": "Uit sectie halen",
+    "rename": "Sectie hernoemen",
+    "delete": "Sectie verwijderen",
+    "nameLabel": "Naam van de sectie"
+  },
+  "sidebarDms": {
+    "options": "Opties voor directe berichten",
+    "show": "Tonen",
+    "shows": {
+      "all": "Iedereen in de workspace",
+      "recent": "Alleen recente gesprekken"
+    },
+    "invite": "Mensen uitnodigen",
+    "invited": "Uitnodiging verstuurd",
+    "invitedTip": "{{email}} heeft de uitnodiging nog niet geaccepteerd",
+    "agentTag": "AI",
+    "agentTip": "AI-agent"
+  },
+  "sidebarColumn": {
+    "label": "Tools",
+    "unread": "{{name}}, iets ongelezens",
+    "you": "{{name}}, iets voor jou"
+  },
+  "unreads": {
+    "title": "Ongelezen",
+    "forYou": "Voor jou",
+    "conversations": "Gesprekken",
+    "markAll": "Alles als gelezen markeren",
+    "markRead": "Markeren als gelezen",
+    "open": "Openen",
+    "seeInbox": "Alles in Postvak IN bekijken",
+    "more_one": "Nog {{count}} bericht",
+    "more_other": "Nog {{count}} berichten",
+    "emptyTitle": "Helemaal bij",
+    "emptyText": "Nieuwe berichten en wat op je wacht, verschijnen hier.",
+    "markedAll": "Alles gemarkeerd als gelezen"
+  },
   "sidebarPins": {
     "pin": "Bovenaan vastzetten",
     "unpin": "Losmaken",

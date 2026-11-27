@@ -2502,6 +2502,54 @@
     "newGroupWith": "Nouveau service avec {{name}}",
     "dmsEmpty": "Vos conversations avec des personnes apparaissent ici."
   },
+  "sidebarFavorites": {
+    "title": "Favoris",
+    "add": "Ajouter aux favoris",
+    "remove": "Retirer des favoris",
+    "full": "Les favoris en contiennent déjà 50. Retirez-en un pour ajouter celui-ci."
+  },
+  "sidebarSections": {
+    "new": "Nouvelle section",
+    "newName": "Nouvelle section",
+    "moveTo": "Déplacer vers la section",
+    "takeOut": "Retirer de la section",
+    "rename": "Renommer la section",
+    "delete": "Supprimer la section",
+    "nameLabel": "Nom de la section"
+  },
+  "sidebarDms": {
+    "options": "Options des messages directs",
+    "show": "Afficher",
+    "shows": {
+      "all": "Tout le workspace",
+      "recent": "Conversations récentes seulement"
+    },
+    "invite": "Inviter des personnes",
+    "invited": "Invitation envoyée",
+    "invitedTip": "{{email}} n'a pas encore accepté l'invitation",
+    "agentTag": "IA",
+    "agentTip": "Agent IA"
+  },
+  "sidebarColumn": {
+    "label": "Outils",
+    "unread": "{{name}}, quelque chose de non lu",
+    "you": "{{name}}, quelque chose pour vous"
+  },
+  "unreads": {
+    "title": "Non lus",
+    "forYou": "Pour vous",
+    "conversations": "Conversations",
+    "markAll": "Tout marquer comme lu",
+    "markRead": "Marquer comme lu",
+    "open": "Ouvrir",
+    "seeInbox": "Tout voir dans la boîte de réception",
+    "more_one": "{{count}} message de plus",
+    "more_many": "{{count}} messages de plus",
+    "more_other": "{{count}} messages de plus",
+    "emptyTitle": "Vous êtes à jour",
+    "emptyText": "Les nouveaux messages et ce qui vous attend apparaissent ici.",
+    "markedAll": "Tout est marqué comme lu"
+  },
   "sidebarPins": {
     "pin": "Épingler en haut",
     "unpin": "Désépingler",
