@@ -531,7 +531,17 @@ test("a computer brain that keeps doing real work between promises gets both con
     typeof s.data.nudged === "string" ? [s.data.nudged] : [],
   );
   expect(nudged).toEqual(["promise", "promise"]);
-  expect((await timeline(f)).at(-1)?.body).toBe("Tudo verde.");
+  // Its first words stay in the channel; the rest of the turn goes in their thread (ADR 0261).
+  const first = (await timeline(f)).at(-1);
+  expect(first?.body).toBe("Rodei os testes; vou corrigir o lint.");
+  const under = await f.db
+    .select({ body: schema.messages.body, threadId: schema.messages.threadId })
+    .from(schema.messages)
+    .orderBy(schema.messages.createdAt);
+  expect(under.filter((m) => m.threadId === first?.id).map((m) => m.body)).toEqual([
+    "Corrigi o lint; vou rodar os testes de novo.",
+    "Tudo verde.",
+  ]);
 });
 
 test("computer sessions: the conversation's session goes on while recent and small; a big, idle or routine one starts fresh", async () => {

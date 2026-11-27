@@ -3085,6 +3085,74 @@ test.if(posix)(
   },
 );
 
+test.if(posix)(
+  "delegated: the CLI's debug log is written in the sign-in's own HOME, read for a slow turn, and goes with its process",
+  async () => {
+    const d = delegatedSetup({}, { claudeVersion: () => "2.1.300" });
+    const home = path.join(d.room, "home");
+    mkdirSync(home);
+    const launch = d.delegated.launch;
+    d.delegated.launch = async (cwd) => {
+      const l = await launch(cwd);
+      return { ...l, env: { ...l.env, HOME: home } };
+    };
+    const slow = await d.turn(1, "RETRYWAIT");
+    const file = typed(d.spawns()[0] as { args: string[] }, "--debug-file") as string;
+    expect(path.dirname(file)).toBe(home);
+    const evidence = slow.final.type === "done" ? (slow.final.timings?.evidence ?? []) : [];
+    expect(evidence.some((l) => l.includes("[API REQUEST] /v1/messages"))).toBe(true);
+    d.m.close();
+    await waitFor(() => !existsSync(file), 4000);
+  },
+);
+
+test.if(posix)(
+  "delegated: a folder the sign-in's user leaves where its debug log was never breaks the cleanup",
+  async () => {
+    const d = delegatedSetup({}, { claudeVersion: () => "2.1.300" });
+    const home = path.join(d.room, "home");
+    mkdirSync(home);
+    const launch = d.delegated.launch;
+    d.delegated.launch = async (cwd) => {
+      const l = await launch(cwd);
+      return { ...l, env: { ...l.env, HOME: home } };
+    };
+    await d.turn(1, "hi");
+    const spawn = d.spawns()[0] as { args: string[] };
+    const file = typed(spawn, "--debug-file") as string;
+    rmSync(file, { force: true });
+    mkdirSync(file);
+    const thrown: unknown[] = [];
+    const caught = (e: unknown) => void thrown.push(e);
+    process.on("uncaughtException", caught);
+    try {
+      d.m.close();
+      await waitFor(() => !existsSync(typed(spawn, "--settings") as string), 4000);
+      await Bun.sleep(50);
+    } finally {
+      process.off("uncaughtException", caught);
+    }
+    expect(thrown).toEqual([]);
+    expect(existsSync(file)).toBe(true);
+  },
+);
+
+test.if(posix)(
+  "delegated: the handshake with the agent's worker counts as the runner's wait, not the CLI's",
+  async () => {
+    const d = delegatedSetup();
+    const bridge = d.delegated.bridge;
+    d.delegated.bridge = async (f) => {
+      if (f.runId) await Bun.sleep(300);
+      return bridge(f);
+    };
+    await d.turn(1, "hi");
+    const next = await d.turn(2, "there");
+    expect(next.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(next.final.type === "done" ? next.final.timings?.sentMs : 0).toBeGreaterThanOrEqual(300);
+  },
+);
+
 test.if(posix)("delegated: a session it doesn't own is never resumed on the CLI's word", async () => {
   process.env.FAKE_CLAUDE_SESSION_TAKEN = "1";
   try {

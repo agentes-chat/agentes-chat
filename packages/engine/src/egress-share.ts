@@ -1,5 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { EGRESS_SHARE, EGRESS_SHARE_PROTOCOL, STREAM_CLOSE, type StreamHello } from "@agenteschat/adapters";
+import {
+  EGRESS_SHARE,
+  EGRESS_SHARE_PROTOCOL,
+  lenderCarries,
+  STREAM_CLOSE,
+  type StreamHello,
+} from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
 import { borrowsInternet, EGRESS_VIA_SHOWN_MS, getMachineById, serverLending } from "./machines";
@@ -128,13 +134,19 @@ export function createEgressRelay(deps: {
     return rows;
   };
 
-  /** The lending computer for `orgId` now, never `borrowerId` itself. */
-  async function pick(orgId: string, borrowerId: string | null) {
+  /**
+   * The lending computer for `orgId` now that carries `port` (any, when null), never `borrowerId` itself. `"older"`:
+   * only lenders on an app that carries the web alone are online.
+   */
+  async function pick(orgId: string, borrowerId: string | null, port: number | null) {
+    let older = false;
     for (const row of await lenders(orgId)) {
       if (row.id === borrowerId || (full.get(row.id) ?? 0) > now()) continue;
-      if ((await deps.hub.status(row.id).catch(() => null))?.online) return row;
+      if (!(await deps.hub.status(row.id).catch(() => null))?.online) continue;
+      if (port === null || lenderCarries(row.protocol, port)) return row;
+      older = true;
     }
-    return null;
+    return older ? "older" : null;
   }
 
   /** Who carried the last connection, on the borrower's row (the server itself has none), and when, on the lender's. */
@@ -169,9 +181,11 @@ export function createEgressRelay(deps: {
     borrower: { orgId: string; machineId: string | null },
     target: { host: string; port: number },
   ) {
-    const device = await pick(borrower.orgId, borrower.machineId);
+    const device = await pick(borrower.orgId, borrower.machineId, target.port);
     if (leg.closed) return;
     if (!device) return end(leg, STREAM_CLOSE.unreachable, "no computer lends its internet now");
+    // Not "none lends": the borrower keeps asking for its web connections, which that computer carries.
+    if (device === "older") return end(leg, STREAM_CLOSE.refused, "the lending computer carries the web only");
     const streamId = randomBytes(32).toString("base64url");
     pending.set(streamId, { deviceId: device.id, leg });
     try {
@@ -236,7 +250,7 @@ export function createEgressRelay(deps: {
       return claimed(leg);
     },
     /** Whether a computer lends `orgId` its internet now. */
-    lending: async (orgId: string) => (await pick(orgId, null)) !== null,
+    lending: async (orgId: string) => (await pick(orgId, null, null)) !== null,
   };
 }
 

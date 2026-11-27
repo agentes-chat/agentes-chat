@@ -119,10 +119,6 @@ html:not([data-pointer]) .members-side__row.profile-trigger:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-.members-side__inner .sidebar__trail {
-  z-index: -1;
-  opacity: 0.9;
-}
 .members-side__inner > .ac-avatar,
 .members-side__inner > .ac-orbit > .ac-avatar {
   flex: none;

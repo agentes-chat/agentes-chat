@@ -185,11 +185,10 @@ async function go(state: FakeState) {
 }
 
 describe("the button", () => {
-  test("between Ir para… and the collapse: the task manager's icon at rest, its tip says nobody works", async () => {
+  test("at the tool column's foot, over the collapse: the task manager's icon at rest, its tip says nobody works", async () => {
     await go(seedState());
-    const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
-    expect([...row.children].map((c) => c.getAttribute("aria-label") ?? c.className)).toEqual([
-      "sidebar__jump",
+    const column = nav().querySelector(".sidebar__col") as HTMLElement;
+    expect([...column.children].slice(-2).map((c) => c.getAttribute("aria-label"))).toEqual([
       "Agora",
       "Minimizar barra lateral",
     ]);
@@ -509,14 +508,13 @@ describe("the rail and the Mac app", () => {
     expect(desktop).not.toContain(".sidebar__agora");
   });
 
-  test("the rail: Agora is a tile under ⌘K, the toggle under it", async () => {
+  test("collapsed, the column stays: Agora a tile at its foot, the toggle under it", async () => {
     await go(seedState());
     await click(within(nav()).getByRole("button", { name: "Minimizar barra lateral" }));
     try {
       expect(nav().dataset.rail).toBe("true");
-      const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
-      expect([...row.children].map((c) => c.getAttribute("aria-label") ?? c.className)).toEqual([
-        "sidebar__jump",
+      const column = nav().querySelector(".sidebar__col") as HTMLElement;
+      expect([...column.children].slice(-2).map((c) => c.getAttribute("aria-label"))).toEqual([
         "Agora",
         "Expandir barra lateral",
       ]);
@@ -525,7 +523,7 @@ describe("the rail and the Mac app", () => {
     }
   });
 
-  test("in the Mac app, ⌘K and Agora stay in the sidebar: the title bar holds the toggle, back and forward alone", async () => {
+  test("in the Mac app, Ir para… and Agora stay in the tool column: the title bar holds the toggle, back and forward alone", async () => {
     const w = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
     w.__agentesDesktop = { version: "0.6.0" };
     w.__TAURI_INTERNALS__ = { invoke: async (cmd: string) => (cmd === "this_mac" ? { orgs: [] } : {}) };
@@ -537,9 +535,9 @@ describe("the rail and the Mac app", () => {
         "Voltar",
         "Avançar",
       ]);
-      const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
-      expect(row.querySelector(".sidebar__jump")).toBeTruthy();
-      expect(within(row).getByRole("button", { name: "Agora" })).toBeTruthy();
+      const column = within(nav()).getByRole("toolbar", { name: "Ferramentas" });
+      expect(within(column).getByRole("button", { name: "Ir para…" })).toBeTruthy();
+      expect(within(column).getByRole("button", { name: "Agora" })).toBeTruthy();
     } finally {
       delete w.__agentesDesktop;
       delete w.__TAURI_INTERNALS__;

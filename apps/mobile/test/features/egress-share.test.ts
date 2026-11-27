@@ -11,6 +11,8 @@ test("a computer's page on the phone: its internet for the agents, as the web's 
   expect(computer).toContain("d.shareInternet && (d.mayManage || sharing)");
   expect(computer).toContain('label={t("devices.shareInternet")}');
   expect(computer).toContain("sub={shareInternetText(t, d, lending) ?? undefined}");
+  // What goes through it depends on the server: all TCP on the Cloud, what follows proxy settings on one's own.
+  expect(computer).toContain("text: shareInternetHint(t, auth.data),");
   // Its owner turns it on; an admin may only turn it off.
   expect(computer).toContain("disabled={!d.mayManage || (!mine && !sharing)}");
   // The pending value shows at once; on again picks it first, its owner's alone.
