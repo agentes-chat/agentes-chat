@@ -81,6 +81,12 @@ export const desktopEn = {
         tabs: "switching tabs",
       },
     },
+    apps: {
+      title: "{{agent}} is using {{app}}",
+      detail: "Your mouse and keyboard stay yours",
+      stop: "Stop",
+      stopped: "{{agent}} stopped using your apps",
+    },
     label: "agentes.chat",
     now: "Now",
     seeAll: "See all",

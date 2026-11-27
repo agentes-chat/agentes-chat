@@ -37066,6 +37066,15 @@
   "toolNames.label.desktop_ask_person": {
     "value": "Ask someone to take over the computer"
   },
+  "toolNames.label.apps_list": {
+    "value": "See the open apps"
+  },
+  "toolNames.label.apps_read": {
+    "value": "Read an app"
+  },
+  "toolNames.label.apps_act": {
+    "value": "Use an app"
+  },
   "toolNames.label.computer_use": {
     "value": "Use the computer"
   },
@@ -41493,9 +41502,6 @@
   "machines.access.agentPlaceholder": {
     "value": "<agent>"
   },
-  "devices.leadCloud": {
-    "value": "Where your agents work: the workspace computer and the devices people connect."
-  },
   "devices.permission.title": {
     "value": "Waiting for {{permission}} on {{computer}}"
   },
@@ -41531,6 +41537,9 @@
   },
   "devices.permission.names.automation": {
     "value": "Automation"
+  },
+  "devices.leadCloud": {
+    "value": "Where your agents work: the workspace computer and the devices people connect."
   },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."

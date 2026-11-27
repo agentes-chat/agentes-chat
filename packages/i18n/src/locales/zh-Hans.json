@@ -14620,6 +14620,9 @@
       "desktop_read": "读取屏幕",
       "desktop_screenshot": "截取屏幕",
       "desktop_ask_person": "请人接管电脑",
+      "apps_list": "查看打开的应用",
+      "apps_read": "读取应用",
+      "apps_act": "使用应用",
       "computer_use": "使用电脑",
       "computer_status": "检查电脑状态",
       "left_click": "点击",
@@ -16380,6 +16383,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "正在等待 {{computer}} 上的“{{permission}}”权限",
+      "next": "请在那台电脑上的 agentes.chat 应用中允许。",
+      "askedBy": "{{agent}} 运行 {{trigger}} 时需要",
+      "asked": "运行 {{trigger}} 时需要",
+      "names": {
+        "app_management": "App 管理",
+        "screen": "屏幕录制",
+        "accessibility": "辅助功能",
+        "disk": "完全磁盘访问权限",
+        "network": "本地网络",
+        "camera": "摄像头",
+        "microphone": "麦克风",
+        "automation": "自动化"
+      }
+    },
     "leadCloud": "你的智能体工作的地方：工作区的电脑，以及成员连接的设备。",
     "lead": "你的智能体工作的地方：成员连接的电脑和手机。",
     "connect": "连接设备",
@@ -17020,22 +17039,6 @@
         "once": "已允许一次。",
         "always": "现在已与他们共享 {{deviceName}}。",
         "no": "你拒绝了。"
-      }
-    },
-    "permission": {
-      "title": "正在等待 {{computer}} 上的“{{permission}}”权限",
-      "next": "请在那台电脑上的 agentes.chat 应用中允许。",
-      "askedBy": "{{agent}} 运行 {{trigger}} 时需要",
-      "asked": "运行 {{trigger}} 时需要",
-      "names": {
-        "app_management": "App 管理",
-        "screen": "屏幕录制",
-        "accessibility": "辅助功能",
-        "disk": "完全磁盘访问权限",
-        "network": "本地网络",
-        "camera": "摄像头",
-        "microphone": "麦克风",
-        "automation": "自动化"
       }
     }
   },

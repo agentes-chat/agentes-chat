@@ -15190,6 +15190,9 @@
       "desktop_read": "Scherm lezen",
       "desktop_screenshot": "Screenshot maken",
       "desktop_ask_person": "Vragen of iemand de computer overneemt",
+      "apps_list": "Geopende apps bekijken",
+      "apps_read": "Een app lezen",
+      "apps_act": "Een app gebruiken",
       "computer_use": "Computer gebruiken",
       "computer_status": "Computer controleren",
       "left_click": "Klikken",
@@ -16991,6 +16994,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Wacht op {{permission}} op {{computer}}",
+      "next": "Sta het toe in de agentes.chat-app op die computer.",
+      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
+      "asked": "Nodig om {{trigger}} uit te voeren",
+      "names": {
+        "app_management": "Appbeheer",
+        "screen": "Schermopname",
+        "accessibility": "Toegankelijkheid",
+        "disk": "Volledige schijftoegang",
+        "network": "Lokaal netwerk",
+        "camera": "Camera",
+        "microphone": "Microfoon",
+        "automation": "Automatisering"
+      }
+    },
     "leadCloud": "Waar je agents werken: de computer van de werkruimte en de apparaten die mensen koppelen.",
     "lead": "Waar je agents werken: de computers en telefoons die mensen koppelen.",
     "connect": "Apparaat koppelen",
@@ -17635,22 +17654,6 @@
         "once": "Eén keer toegestaan.",
         "always": "{{deviceName}} wordt nu met hen gedeeld.",
         "no": "Je zei nee."
-      }
-    },
-    "permission": {
-      "title": "Wacht op {{permission}} op {{computer}}",
-      "next": "Sta het toe in de agentes.chat-app op die computer.",
-      "askedBy": "Gevraagd door {{agent}} om {{trigger}} uit te voeren",
-      "asked": "Nodig om {{trigger}} uit te voeren",
-      "names": {
-        "app_management": "Appbeheer",
-        "screen": "Schermopname",
-        "accessibility": "Toegankelijkheid",
-        "disk": "Volledige schijftoegang",
-        "network": "Lokaal netwerk",
-        "camera": "Camera",
-        "microphone": "Microfoon",
-        "automation": "Automatisering"
       }
     }
   },

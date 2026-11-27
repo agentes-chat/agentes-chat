@@ -16183,6 +16183,9 @@
       "desktop_read": "Przeczytaj ekran",
       "desktop_screenshot": "Zrób zrzut ekranu",
       "desktop_ask_person": "Poproś o przejęcie komputera",
+      "apps_list": "Zobacz otwarte aplikacje",
+      "apps_read": "Odczytaj aplikację",
+      "apps_act": "Użyj aplikacji",
       "computer_use": "Użyj komputera",
       "computer_status": "Sprawdź komputer",
       "left_click": "Kliknij",
@@ -18066,6 +18069,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
+      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
+      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
+      "asked": "Potrzebne do uruchomienia {{trigger}}",
+      "names": {
+        "app_management": "Zarządzanie aplikacjami",
+        "screen": "Nagrywanie ekranu",
+        "accessibility": "Dostępność",
+        "disk": "Pełny dostęp do dysku",
+        "network": "Sieć lokalna",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automatyzacja"
+      }
+    },
     "leadCloud": "Gdzie pracują twoi agenci: komputer przestrzeni roboczej i urządzenia, które podłączają osoby z zespołu.",
     "lead": "Gdzie pracują twoi agenci: komputery i telefony, które podłączają osoby z zespołu.",
     "connect": "Podłącz urządzenie",
@@ -18718,22 +18737,6 @@
         "once": "Zezwolono raz.",
         "always": "Urządzenie {{deviceName}} jest im teraz udostępnione.",
         "no": "Odmówiono."
-      }
-    },
-    "permission": {
-      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
-      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
-      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
-      "asked": "Potrzebne do uruchomienia {{trigger}}",
-      "names": {
-        "app_management": "Zarządzanie aplikacjami",
-        "screen": "Nagrywanie ekranu",
-        "accessibility": "Dostępność",
-        "disk": "Pełny dostęp do dysku",
-        "network": "Sieć lokalna",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Automatyzacja"
       }
     }
   },

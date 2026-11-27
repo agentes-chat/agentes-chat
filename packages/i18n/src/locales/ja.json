@@ -14552,6 +14552,9 @@
       "desktop_read": "画面を読み取り",
       "desktop_screenshot": "スクリーンショットを撮影",
       "desktop_ask_person": "コンピューターの操作を依頼",
+      "apps_list": "開いているアプリを見る",
+      "apps_read": "アプリを読む",
+      "apps_act": "アプリを使う",
       "computer_use": "コンピューターを操作",
       "computer_status": "コンピューターを確認",
       "left_click": "クリック",
@@ -16312,6 +16315,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}で{{permission}}の許可を待っています",
+      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
+      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
+      "asked": "{{trigger}}の実行に必要です",
+      "names": {
+        "app_management": "App管理",
+        "screen": "画面収録",
+        "accessibility": "アクセシビリティ",
+        "disk": "フルディスクアクセス",
+        "network": "ローカルネットワーク",
+        "camera": "カメラ",
+        "microphone": "マイク",
+        "automation": "オートメーション"
+      }
+    },
     "leadCloud": "エージェントが作業する場所: ワークスペースのコンピューターと、メンバーが接続したデバイス。",
     "lead": "エージェントが作業する場所: メンバーが接続したコンピューターとスマートフォン。",
     "connect": "デバイスを接続",
@@ -16952,22 +16971,6 @@
         "once": "今回のみ許可しました。",
         "always": "{{deviceName}}を共有しました。",
         "no": "許可しませんでした。"
-      }
-    },
-    "permission": {
-      "title": "{{computer}}で{{permission}}の許可を待っています",
-      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
-      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
-      "asked": "{{trigger}}の実行に必要です",
-      "names": {
-        "app_management": "App管理",
-        "screen": "画面収録",
-        "accessibility": "アクセシビリティ",
-        "disk": "フルディスクアクセス",
-        "network": "ローカルネットワーク",
-        "camera": "カメラ",
-        "microphone": "マイク",
-        "automation": "オートメーション"
       }
     }
   },

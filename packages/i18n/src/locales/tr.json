@@ -15051,6 +15051,9 @@
       "desktop_read": "Ekranı oku",
       "desktop_screenshot": "Ekran görüntüsü al",
       "desktop_ask_person": "Birinden bilgisayarı devralmasını iste",
+      "apps_list": "Açık uygulamaları gör",
+      "apps_read": "Bir uygulamayı oku",
+      "apps_act": "Bir uygulamayı kullan",
       "computer_use": "Bilgisayarı kullan",
       "computer_status": "Bilgisayarı kontrol et",
       "left_click": "Tıkla",
@@ -16852,6 +16855,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
+      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
+      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
+      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
+      "names": {
+        "app_management": "Uygulama Yönetimi",
+        "screen": "Ekran Kaydı",
+        "accessibility": "Erişilebilirlik",
+        "disk": "Tam Disk Erişimi",
+        "network": "Yerel Ağ",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomasyon"
+      }
+    },
     "leadCloud": "Ajanlarınızın çalıştığı yer: çalışma alanının bilgisayarı ve kişilerin bağladığı cihazlar.",
     "lead": "Ajanlarınızın çalıştığı yer: kişilerin bağladığı bilgisayarlar ve telefonlar.",
     "connect": "Cihaz bağla",
@@ -17496,22 +17515,6 @@
         "once": "Bir kez izin verildi.",
         "always": "{{deviceName}} artık onlarla paylaşılıyor.",
         "no": "Hayır dediniz."
-      }
-    },
-    "permission": {
-      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
-      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
-      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
-      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
-      "names": {
-        "app_management": "Uygulama Yönetimi",
-        "screen": "Ekran Kaydı",
-        "accessibility": "Erişilebilirlik",
-        "disk": "Tam Disk Erişimi",
-        "network": "Yerel Ağ",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomasyon"
       }
     }
   },

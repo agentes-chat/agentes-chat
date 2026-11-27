@@ -1,4 +1,20 @@
 {
+  "permissionAsk": {
+    "title": "agentes.chat memerlukan {{permission}}",
+    "done": "Sudah saya izinkan",
+    "later": "Nanti saja",
+    "trayTitle": "Menunggu {{permission}}",
+    "why": {
+      "app_management": "Agen memerlukannya untuk mengubah app di {{device}} ini.",
+      "screen": "Agen memerlukannya untuk mengambil tangkapan layar {{device}} ini.",
+      "accessibility": "Agen memerlukannya untuk mengeklik dan mengetik di app pada {{device}} ini.",
+      "disk": "Agen memerlukannya untuk membuka file Anda tanpa macOS bertanya untuk setiap folder.",
+      "network": "Agen memerlukannya untuk menjangkau ponsel dan perangkat di jaringan Anda.",
+      "camera": "Agen memerlukannya untuk memakai kamera {{device}} ini.",
+      "microphone": "Agen memerlukannya untuk memakai mikrofon {{device}} ini.",
+      "automation": "Agen memerlukannya untuk mengendalikan app lain di {{device}} ini."
+    }
+  },
   "device": {
     "mac": "Mac",
     "windows": "PC",
@@ -66,6 +82,12 @@
         "capturing": "mengambil tangkapan layar",
         "tabs": "berpindah tab"
       }
+    },
+    "apps": {
+      "title": "{{agent}} sedang menggunakan {{app}}",
+      "detail": "Mouse dan keyboard tetap milik Anda",
+      "stop": "Hentikan",
+      "stopped": "{{agent}} berhenti menggunakan aplikasi Anda"
     },
     "label": "agentes.chat",
     "now": "Sekarang",
@@ -930,21 +952,5 @@
     "bringAllToFront": "Bawa semua ke depan",
     "help": "Bantuan",
     "downloaded": "Unduhan selesai"
-  },
-  "permissionAsk": {
-    "title": "agentes.chat memerlukan {{permission}}",
-    "done": "Sudah saya izinkan",
-    "later": "Nanti saja",
-    "trayTitle": "Menunggu {{permission}}",
-    "why": {
-      "app_management": "Agen memerlukannya untuk mengubah app di {{device}} ini.",
-      "screen": "Agen memerlukannya untuk mengambil tangkapan layar {{device}} ini.",
-      "accessibility": "Agen memerlukannya untuk mengeklik dan mengetik di app pada {{device}} ini.",
-      "disk": "Agen memerlukannya untuk membuka file Anda tanpa macOS bertanya untuk setiap folder.",
-      "network": "Agen memerlukannya untuk menjangkau ponsel dan perangkat di jaringan Anda.",
-      "camera": "Agen memerlukannya untuk memakai kamera {{device}} ini.",
-      "microphone": "Agen memerlukannya untuk memakai mikrofon {{device}} ini.",
-      "automation": "Agen memerlukannya untuk mengendalikan app lain di {{device}} ini."
-    }
   }
 }

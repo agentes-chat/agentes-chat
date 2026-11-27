@@ -15671,6 +15671,9 @@
       "desktop_read": "Leggi lo schermo",
       "desktop_screenshot": "Fai uno screenshot",
       "desktop_ask_person": "Chiedi a qualcuno di prendere il controllo del computer",
+      "apps_list": "Vedere le app aperte",
+      "apps_read": "Leggere un'app",
+      "apps_act": "Usare un'app",
       "computer_use": "Usa il computer",
       "computer_status": "Controlla il computer",
       "left_click": "Clicca",
@@ -17511,6 +17514,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "In attesa di {{permission}} su {{computer}}",
+      "next": "Consentilo nell’app agentes.chat su quel computer.",
+      "askedBy": "Richiesto da {{agent}} per eseguire {{trigger}}",
+      "asked": "Serve per eseguire {{trigger}}",
+      "names": {
+        "app_management": "Gestione app",
+        "screen": "Registrazione schermo",
+        "accessibility": "Accessibilità",
+        "disk": "Accesso completo al disco",
+        "network": "Rete locale",
+        "camera": "Fotocamera",
+        "microphone": "Microfono",
+        "automation": "Automazione"
+      }
+    },
     "leadCloud": "Dove lavorano i tuoi agenti: il computer dello spazio di lavoro e i dispositivi che le persone collegano.",
     "lead": "Dove lavorano i tuoi agenti: i computer e i telefoni che le persone collegano.",
     "connect": "Collega un dispositivo",
@@ -18159,22 +18178,6 @@
         "once": "Consentito una volta.",
         "always": "{{deviceName}} ora è condiviso con loro.",
         "no": "Hai detto di no."
-      }
-    },
-    "permission": {
-      "title": "In attesa di {{permission}} su {{computer}}",
-      "next": "Consentilo nell’app agentes.chat su quel computer.",
-      "askedBy": "Richiesto da {{agent}} per eseguire {{trigger}}",
-      "asked": "Serve per eseguire {{trigger}}",
-      "names": {
-        "app_management": "Gestione app",
-        "screen": "Registrazione schermo",
-        "accessibility": "Accessibilità",
-        "disk": "Accesso completo al disco",
-        "network": "Rete locale",
-        "camera": "Fotocamera",
-        "microphone": "Microfono",
-        "automation": "Automazione"
       }
     }
   },

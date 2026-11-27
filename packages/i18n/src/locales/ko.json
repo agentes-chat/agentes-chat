@@ -14546,6 +14546,9 @@
       "desktop_read": "화면 읽기",
       "desktop_screenshot": "스크린샷 찍기",
       "desktop_ask_person": "컴퓨터 넘겨받기 요청",
+      "apps_list": "열린 앱 보기",
+      "apps_read": "앱 읽기",
+      "apps_act": "앱 사용하기",
       "computer_use": "컴퓨터 사용",
       "computer_status": "컴퓨터 상태 확인",
       "left_click": "클릭",
@@ -16304,6 +16307,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
+      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
+      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
+      "asked": "{{trigger}} 실행에 필요해요",
+      "names": {
+        "app_management": "앱 관리",
+        "screen": "화면 기록",
+        "accessibility": "손쉬운 사용",
+        "disk": "전체 디스크 접근 권한",
+        "network": "로컬 네트워크",
+        "camera": "카메라",
+        "microphone": "마이크",
+        "automation": "자동화"
+      }
+    },
     "leadCloud": "에이전트가 일하는 곳: 워크스페이스 컴퓨터와 사람들이 연결한 기기예요.",
     "lead": "에이전트가 일하는 곳: 사람들이 연결한 컴퓨터와 휴대폰이에요.",
     "connect": "기기 연결",
@@ -16944,22 +16963,6 @@
         "once": "한 번 허용했어요.",
         "always": "이제 {{deviceName}}을(를) 함께 사용해요.",
         "no": "거절했어요."
-      }
-    },
-    "permission": {
-      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
-      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
-      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
-      "asked": "{{trigger}} 실행에 필요해요",
-      "names": {
-        "app_management": "앱 관리",
-        "screen": "화면 기록",
-        "accessibility": "손쉬운 사용",
-        "disk": "전체 디스크 접근 권한",
-        "network": "로컬 네트워크",
-        "camera": "카메라",
-        "microphone": "마이크",
-        "automation": "자동화"
       }
     }
   },

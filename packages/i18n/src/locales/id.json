@@ -14612,6 +14612,9 @@
       "desktop_read": "Baca layar",
       "desktop_screenshot": "Ambil tangkapan layar",
       "desktop_ask_person": "Minta seseorang mengambil alih komputer",
+      "apps_list": "Lihat aplikasi yang terbuka",
+      "apps_read": "Baca aplikasi",
+      "apps_act": "Gunakan aplikasi",
       "computer_use": "Gunakan komputer",
       "computer_status": "Periksa komputer",
       "left_click": "Klik",
@@ -16372,6 +16375,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
+    },
     "leadCloud": "Tempat agenmu bekerja: komputer ruang kerja dan perangkat yang dihubungkan orang-orang.",
     "lead": "Tempat agenmu bekerja: komputer dan ponsel yang dihubungkan orang-orang.",
     "connect": "Hubungkan perangkat",
@@ -17012,22 +17031,6 @@
         "once": "Diizinkan sekali.",
         "always": "{{deviceName}} sekarang dibagikan dengan mereka.",
         "no": "Kamu menolak."
-      }
-    },
-    "permission": {
-      "title": "Menunggu {{permission}} di {{computer}}",
-      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
-      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
-      "asked": "Diperlukan untuk menjalankan {{trigger}}",
-      "names": {
-        "app_management": "Manajemen App",
-        "screen": "Perekaman Layar",
-        "accessibility": "Aksesibilitas",
-        "disk": "Akses Disk Penuh",
-        "network": "Jaringan Lokal",
-        "camera": "Kamera",
-        "microphone": "Mikrofon",
-        "automation": "Otomatisasi"
       }
     }
   },
