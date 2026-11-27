@@ -761,8 +761,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     }
     if (hosted?.onSharedLogin(req) && req.agent) {
       const { agent } = req;
-      // Root starts such a sign-in's CLI only for its turn.
-      if (req.op === "brain.warm") return { open: false, started: false } satisfies MachineReplies["brain.warm"];
+      if (req.op === "brain.warm") {
+        requireTool(ctx, "claude");
+        return hosted.prewarm(req, agent, scope);
+      }
       if (req.op === "brain.route") {
         requireTool(ctx, "claude");
         return hosted.route(req, agent, scope);

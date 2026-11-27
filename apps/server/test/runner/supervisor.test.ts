@@ -4296,6 +4296,45 @@ test.if(posix)("a turn on a shared CLI login runs in root: its worker serves it,
 });
 
 test.if(posix)(
+  "a warm start on a shared CLI login starts its CLI in root, and the turn there takes it; the worker gets no request",
+  async () => {
+    const t = setup();
+    const h = hosted(t);
+    t.sup.boot();
+    t.sup.attach();
+    const first = handleRequest(h.ctx, hostedTurn(), scope().scope);
+    await waitFor(() => t.workers.length === 1);
+    const ana = t.last(ANA.id);
+    ana.hello();
+    const stop = answersAsWorker(ana, "/home/ag-a1b2c3d4/ana-a1b2c3d4");
+    await first;
+    const next = "0193aaaa-0000-7000-8000-0000000000f2";
+    const warm = (await handleRequest(
+      h.ctx,
+      {
+        op: "brain.warm",
+        kind: "claude_code",
+        session: { id: next, resume: false },
+        cwd: "",
+        account: SHARED_LOGIN,
+        agent: ANA,
+      } as unknown as MachineRequest,
+      scope().scope,
+    )) as { open: boolean; started: boolean };
+    expect(warm).toEqual({ open: true, started: true });
+    const out = (await handleRequest(
+      h.ctx,
+      hostedTurn({ runId: "run-00000002", session: { id: next, resume: false }, prompt: "there" }),
+      scope().scope,
+    )) as { final: { type: string; timings?: { warm?: boolean } } };
+    stop();
+    expect(out.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(ana.of("request")).toHaveLength(0);
+    h.brains.brains.close();
+  },
+);
+
+test.if(posix)(
   "a self-check that waited for an agent's user: the turn makes this agent's, asks the check again, then runs",
   async () => {
     const t = setup();
