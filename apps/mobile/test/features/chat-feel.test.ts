@@ -173,6 +173,10 @@ describe("older pages", () => {
     );
     expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
     expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
+    // In a thread, one of the conversation outside it (a long work's report) opens in the conversation, at it.
+    expect(chat).not.toContain("if (isThread || (around?.id === seek && around.done))");
+    expect(chat).toContain(".messages(orgId, channelId, { around: seek, limit: 1 })");
+    expect(chat).toContain("router.push(chatHref(channelId, null, seek));");
     // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
     expect(chat).toContain("onEndReached={gap ? loadNewer : undefined}");
     expect(chat).toContain("maintainScrollAtEnd={readHold || gap ? false : GLIDE}");

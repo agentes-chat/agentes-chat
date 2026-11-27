@@ -20494,7 +20494,10 @@ export const en = {
       provider_back: "My AI is back.",
       confidential_removed: "Removed: confidential text is kept for {{days}} days.",
       brain_queued: "Still in line. I'll answer as soon as my turn comes.",
-      brain_interrupted: "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}.",
+      brain_interrupted: "{{brain}} stopped before finishing. Ask again to continue.",
+      brain_interrupted_timeout:
+        "{{brain}} ran past its time limit and stopped before finishing. Ask again to continue.",
+      brain_interrupted_computer: "The computer stopped {{brain}} before it finished. Ask again to continue.",
       plan_limit_cut: "I stopped at the {{plan}} plan's limit. I'll pick up where I left off {{when}}, when it resets.",
       plan_limit_cut_unknown:
         "I stopped at the {{plan}} plan's limit. I'll pick up where I left off as soon as it resets.",

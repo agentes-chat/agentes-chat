@@ -48501,7 +48501,13 @@
     "value": "Still in line. I'll answer as soon as my turn comes."
   },
   "chat.body.brain_interrupted": {
-    "value": "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}."
+    "value": "{{brain}} stopped before finishing. Ask again to continue."
+  },
+  "chat.body.brain_interrupted_timeout": {
+    "value": "{{brain}} ran past its time limit and stopped before finishing. Ask again to continue."
+  },
+  "chat.body.brain_interrupted_computer": {
+    "value": "The computer stopped {{brain}} before it finished. Ask again to continue."
   },
   "chat.body.plan_limit_cut": {
     "value": "I stopped at the {{plan}} plan's limit. I'll pick up where I left off {{when}}, when it resets."

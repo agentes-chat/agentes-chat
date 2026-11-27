@@ -20287,7 +20287,10 @@ export const ptBR = {
       provider_back: "Minha IA voltou.",
       confidential_removed: "Removido: texto confidencial fica guardado por {{days}} dias.",
       brain_queued: "Ainda estou na fila. Respondo assim que chegar a minha vez.",
-      brain_interrupted: "O {{brain}} parou antes de terminar. Já feito, sem repetir: {{tools}}.",
+      brain_interrupted: "O {{brain}} parou antes de terminar. Peça de novo para continuar.",
+      brain_interrupted_timeout:
+        "O {{brain}} passou do tempo limite e parou antes de terminar. Peça de novo para continuar.",
+      brain_interrupted_computer: "O computador parou o {{brain}} antes de terminar. Peça de novo para continuar.",
       plan_limit_cut: "Parei no limite do plano do {{plan}}. Continuo de onde parei {{when}}, quando ele renovar.",
       plan_limit_cut_unknown: "Parei no limite do plano do {{plan}}. Continuo de onde parei assim que ele renovar.",
       plan_limit_wait:

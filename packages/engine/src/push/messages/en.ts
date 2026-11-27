@@ -54,6 +54,10 @@ export interface PushStrings {
   deviceJoinRequestBody: string;
   waitingTitle: string;
   openBody: string;
+  /** A reply its computer or a restart cut before the agent wrote anything. */
+  cutBody: string;
+  /** Long work the agent moved to the background on its own, in its own words. */
+  movedBody: string;
   sentGif: string;
   sentSticker: string;
   sentVoice: string;
@@ -190,6 +194,8 @@ export const en: PushStrings = {
   deviceJoinRequestBody: "Tap to let it join or deny.",
   waitingTitle: "Something is waiting for you",
   openBody: "Tap to open.",
+  cutBody: "Stopped before finishing. Ask again to continue.",
+  movedBody: "This will take a while, so I'll keep going in the background.",
   sentGif: "Sent a GIF",
   sentSticker: "Sent a sticker",
   sentVoice: "Sent a voice message",

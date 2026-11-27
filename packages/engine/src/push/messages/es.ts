@@ -65,6 +65,8 @@ export const strings: Partial<PushStrings> = {
   deviceJoinRequestBody: "Toca para aceptar o rechazar.",
   waitingTitle: "Algo te está esperando",
   openBody: "Toca para abrir.",
+  cutBody: "Se detuvo antes de terminar. Vuelve a pedirlo para continuar.",
+  movedBody: "Esto va a tardar, así que sigo en segundo plano.",
   sentGif: "Envió un GIF",
   sentSticker: "Envió un sticker",
   sentVoice: "Envió un mensaje de voz",

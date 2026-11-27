@@ -8118,9 +8118,14 @@ function createTurnText(
     answer: () => showable(true),
     /**
      * What the brain said after its last call, as its final answer is (the model brain's is its last call's text): the
-     * stretches before it were said on the way, or dropped half-written for a call and written again after it.
+     * stretches before it were said on the way, or dropped half-written for a call and written again after it. Nothing
+     * since that call: the words that led to it, never an older stretch, whose plan later calls already carried out.
      */
-    lastText: () => stretches().at(-1) ?? "",
+    lastText: () => {
+      const at = breaks.map(([, upTo]) => upTo);
+      const since = all.slice(at.at(-1) ?? 0).trim();
+      return since || all.slice(at.at(-2) ?? 0, at.at(-1) ?? 0).trim();
+    },
     /**
      * What led to a bridged call made at `askedAt` (ms): the stretch the brain was writing then, from the call before
      * it. Text that lands up to `graceMs` later still counts (the stream can trail the call), but never past a call
