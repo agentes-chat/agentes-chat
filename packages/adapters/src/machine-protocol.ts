@@ -2506,7 +2506,8 @@ export interface BrainTurnTimings {
   initMs?: number;
   /**
    * Until the turn was handed to its CLI: on a process already open, the runner's own waits before it (the process's
-   * turn of its own, a model switch, a sign-in's route stopping), which would otherwise read as the API's.
+   * turn of its own, a model switch, a sign-in's route stopping, a shared sign-in's handshake with the agent's worker),
+   * which would otherwise read as the CLI's or the API's.
    */
   sentMs?: number;
   firstEventMs?: number;
