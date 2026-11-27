@@ -1,4 +1,4 @@
-import { pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
+import { OS_PERMISSIONS, pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
 import {
   approveDeviceJoin,
   cancelWifiPairing,
@@ -117,6 +117,15 @@ const Phone = z
   })
   .openapi("PhoneDevice");
 
+const PermissionNeed = z
+  .object({
+    permission: z.enum(OS_PERMISSIONS),
+    trigger: z.string().openapi({ description: "What asked, as the person reads it (a command, redacted)." }),
+    agentId: z.string().optional(),
+    since: z.string(),
+  })
+  .openapi("PermissionNeed");
+
 const Computer = z
   .object({
     id: z.uuid(),
@@ -149,6 +158,10 @@ const Computer = z
           "Tasks start on room there, not on `maxTasks`: about how many more fit now, the free memory in GB, whether the processor stays near full, and the owner's Push harder. Null: the count decides.",
       }),
     toolchains: z.record(z.string(), z.string()),
+    permissions: z.array(PermissionNeed).openapi({
+      description:
+        "The OS permissions its agents' work waits on there (macOS's Full Disk Access, Screen Recording…): what asked, which agent, since when. The agentes.chat app on it asks the person; the wait ends when they allow it there.",
+    }),
     opensXcode: z.boolean().openapi({
       description: "A Mac whose agentes.chat opens Xcode and looks at its iPhone again for the iPhone guide.",
     }),

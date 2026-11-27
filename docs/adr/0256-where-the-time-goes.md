@@ -1,4 +1,4 @@
-# 0255. Where the time goes: each run's time by stage group, charted
+# 0256. Where the time goes: each run's time by stage group, charted
 
 - Status: Accepted (built: the stages each run keeps, the operator API's read and the trace's waterfall, for an
   operator's console to chart)

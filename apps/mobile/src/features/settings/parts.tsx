@@ -398,18 +398,35 @@ export function CommandBlock({ command, copiedTitle }: { command: string; copied
 }
 
 /** How far something went (a copy of files): a sunken track, the part done in ink. */
-export function Meter({ value, max, label }: { value: number; max: number; label: string }) {
+/** `segments`: `value` split into pieces from the left, each in its color, a hairline of track between them. */
+export function Meter({
+  value,
+  max,
+  label,
+  segments,
+}: {
+  value: number;
+  max: number;
+  label: string;
+  segments?: readonly { key: string; value: number; color: string }[];
+}) {
   const c = useColors();
-  const share = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
+  const share = (n: number) => (max > 0 ? Math.min(1, Math.max(0, n / max)) : 0);
   return (
     <View
       accessible
       accessibilityRole="progressbar"
       accessibilityLabel={label}
       accessibilityValue={{ min: 0, max, now: value }}
-      style={[styles.track, { backgroundColor: c.sunken }]}
+      style={[styles.track, segments?.length ? styles.segs : null, { backgroundColor: c.sunken }]}
     >
-      <View style={[styles.done, { width: `${share * 100}%`, backgroundColor: c.ink }]} />
+      {segments?.length ? (
+        segments.map((s) => (
+          <View key={s.key} style={[styles.seg, { width: `${share(s.value) * 100}%`, backgroundColor: s.color }]} />
+        ))
+      ) : (
+        <View style={[styles.done, { width: `${share(value) * 100}%`, backgroundColor: c.ink }]} />
+      )}
     </View>
   );
 }
@@ -425,6 +442,8 @@ const styles = StyleSheet.create({
   mono: { fontFamily: MONO, fontSize: 13, lineHeight: 19 },
   track: { height: 6, borderRadius: 999, overflow: "hidden" },
   done: { height: 6, borderRadius: 999 },
+  segs: { flexDirection: "row", gap: 1 },
+  seg: { height: 6 },
   uploading: {
     position: "absolute",
     top: 0,

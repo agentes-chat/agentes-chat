@@ -18,6 +18,7 @@ import { DesktopDragStrip } from "@/components/DesktopDragStrip";
 import { MenuBarActions } from "@/components/DesktopMenus";
 import { DesktopTitleBar } from "@/components/DesktopTitleBar";
 import { DetailsHost } from "@/components/DetailsHost";
+import { InvitedBanner } from "@/components/InvitedBanner";
 import { InviteDialogProvider } from "@/components/invite/InviteDialog";
 import { LeaveChannelDialog } from "@/components/LeaveChannelDialog";
 import { useHoldBannerWaits } from "@/components/lodi-cursor/arrivals";
@@ -175,6 +176,7 @@ function OrgLayout() {
                           {!focused && !membership.deletion && (
                             <MorphRoom pace="panel" className="shell__notices">
                               <ConfirmEmailBanner />
+                              <InvitedBanner />
                               {/* Lodi's cursor shows a new team land first, then the page glides under the banner. */}
                               {!bannerWaits && <HoldBanner />}
                               <ComputerSetupNotice />

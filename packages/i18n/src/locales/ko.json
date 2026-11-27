@@ -3150,6 +3150,10 @@
       "update_workspace": "워크스페이스 <b>{{name}}</b> 변경",
       "set_action_check_on": "팀이 이미 한 일 확인 켜기",
       "set_action_check_off": "팀이 이미 한 일 확인 끄기",
+      "set_approvals_level": "워크스페이스 승인을 <b>{{level}}</b>(으)로 변경",
+      "set_approvals_level_every": "모든 에이전트의 승인을 <b>{{level}}</b>(으)로 변경(개별 설정 포함)",
+      "set_agent_approvals_level": "<b>{{agent}}</b>의 승인을 <b>{{level}}</b>(으)로 변경",
+      "set_agent_approvals_level_workspace": "<b>{{agent}}</b>이(가) 워크스페이스 승인을 따르게 하기",
       "invite_people": "<b>{{emails}}</b>을(를) 워크스페이스에 초대합니다.",
       "invite_roles_other": "{{roles}} 역할로 초대해요.",
       "invite_people_sent_other": "<b>{{emails}}</b>에게 초대를 보냈어요.",
@@ -4004,6 +4008,10 @@
       "changed_update_workspace": "워크스페이스 <b>{{name}}</b>을(를) 변경했어요",
       "changed_set_action_check_on": "팀이 이미 한 일 확인을 켰어요",
       "changed_set_action_check_off": "팀이 이미 한 일 확인을 껐어요",
+      "changed_set_approvals_level": "워크스페이스 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_approvals_level_every": "모든 에이전트의 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_agent_approvals_level": "<b>{{agent}}</b>의 승인을 <b>{{level}}</b>(으)로 바꿨어요",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b>이(가) 다시 워크스페이스 승인을 따라요",
       "changed_invite_people": "<b>{{invited}}</b>을(를) 워크스페이스에 초대했어요",
       "changed_remove_ai_key": "API 키 <b>{{name}}</b>을(를) 삭제했어요"
     },
@@ -12796,6 +12804,23 @@
     "s3": "내 저장 공간",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 또는 기타 S3 호환 저장 공간.",
     "current": "사용 중",
+    "computer": {
+      "title": "워크스페이스 컴퓨터",
+      "used": "{{size}} 중 {{used}} 사용 중",
+      "bar": "워크스페이스 컴퓨터의 디스크",
+      "measuring": "공간을 차지하는 항목을 측정하는 중이에요.",
+      "part": {
+        "projects": "프로젝트와 코드",
+        "apps": "앱과 도구",
+        "agents": "에이전트 파일",
+        "caches": "캐시와 임시 파일",
+        "system": "시스템",
+        "other": "기타",
+        "free": "여유 공간"
+      },
+      "full": "거의 가득 찼어요. {{free}} 남았어요. 에이전트가 캐시와 임시 파일을 비우고 아무도 쓰지 않는 것을 지울 수 있어요.",
+      "ask": "워크스페이스 컴퓨터의 공간을 확보해 줘: 캐시와 임시 파일(패키지 관리자, 브라우저, 빌드 도구)을 비운 다음, 그 밖에 공간을 가장 많이 차지하는 게 무엇인지 알려 줘."
+    },
     "usage": {
       "files": "파일 {{size}}",
       "none": "파일 없음",
@@ -16338,15 +16363,21 @@
     "belongs": "워크스페이스 소유",
     "belongsHint": "연결한 사람이 떠나도 남아 있고, 소유자가 없는 동안에는 누구나 사용할 수 있어요.",
     "spillOwn": "팀 컴퓨터가 가득 찼거나 없을 때 돕기",
-    "spillOwnHint": "에이전트의 컴퓨터가 가득 찼거나 없을 때, 그 답장, 요청, 루틴이 내 로그인으로 여기서 생각할 수 있습니다.",
-    "spillTeamHint": "에이전트의 컴퓨터가 가득 찼거나 없을 때, 그 답장, 요청, 루틴이 이 컴퓨터에 있는 소유자의 로그인으로 여기서 생각할 수 있습니다.",
+    "spillOwnHint": "팀 컴퓨터가 가득 찼거나 없을 때, 내 에이전트의 답장, 요청, 루틴이 여기서 생각할 수 있어요. 이 컴퓨터에 로그인된 AI 계정을 써요.",
+    "spillTeamHint": "에이전트의 컴퓨터가 가득 찼거나 없을 때, 그 답장, 요청, 루틴이 여기서 생각할 수 있어요. 소유자가 이 컴퓨터에 로그인한 AI 계정을 써요.",
     "spillWorkspaceOff": "관리자가 워크스페이스 전체에서 이 기능을 껐습니다.",
-    "spillFirst": "이 컴퓨터를 내 에이전트 작업에 사용",
-    "spillFirstHint": "에이전트의 요청, 루틴, 긴 작업은 이 컴퓨터가 비어 있으면 여기서, 여기에 연결한 AI로 시작됩니다. 사람에게 보내는 답장은 팀 컴퓨터가 꽉 찼거나 없을 때만 여기서 시작됩니다.",
+    "helpUse": "에이전트를 돕는 방식",
+    "helpUses": {
+      "off": "돕지 않음",
+      "help": "예비로만",
+      "first": "내 에이전트 먼저"
+    },
+    "helpUseHint": "예비로만: 팀 컴퓨터가 가득 찼거나 없을 때 내 에이전트가 여기로 와요. 내 에이전트 먼저: 에이전트의 요청, 루틴, 긴 작업은 이 컴퓨터가 비어 있으면 언제든 여기서 시작하고, 사람에게 보내는 답장은 팀 컴퓨터가 가득 찼거나 없을 때만 여기서 시작해요. 둘 다 이 컴퓨터에 로그인된 AI 계정을 써요.",
+    "helpUseTeamHint": "예비로만: 누구의 에이전트든 자기 컴퓨터가 가득 찼거나 없을 때 여기로 와요. 그 소유자가 이 컴퓨터에 로그인한 AI 계정을 써요. 내 에이전트 먼저: 내 에이전트의 요청, 루틴, 긴 작업은 이 컴퓨터가 비어 있으면 언제든 여기서 시작해요.",
     "helpWorkspace": "팀 컴퓨터가 가득 찼거나 없을 때 다른 컴퓨터가 돕기",
     "helpWorkspaceHint": "각 컴퓨터는 소유자가 허용할 때만 돕습니다. 끔: 소유자의 선택과 상관없이 아무 컴퓨터도 돕지 않습니다.",
     "shareInternet": "에이전트가 이 컴퓨터의 인터넷을 써요",
-    "shareInternetHint": "에이전트가 여는 사이트는 이 컴퓨터의 연결을 거치므로 사이트에 내 위치가 보여요. 웹사이트만, 하루 5 GB까지이고, 내 네트워크에 있는 것에는 절대 접근하지 않아요. 이 컴퓨터가 오프라인인 동안에는 에이전트가 평소 연결을 써요.",
+    "shareInternetHint": "에이전트가 여는 사이트는 이 컴퓨터의 연결을 거치므로 사이트에 내 위치가 보여요. 웹사이트만 열고, 내 네트워크에 있는 것에는 절대 접근하지 않아요. 이 컴퓨터가 오프라인인 동안에는 에이전트가 평소 연결을 써요.",
     "shareInternetInUse": "지금 사용 중",
     "shareInternetOther": "에이전트가 지금 {{name}}을(를) 써요",
     "shareInternetPick": "이걸로 쓰기",
@@ -16880,7 +16911,7 @@
       "cliRequest": "<b>{{who}}</b> 님이 <b>{{deviceName}}</b>에 {{tool}}을(를) 설치해 달라고 요청합니다",
       "folderRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{path}} 폴더를 요청합니다",
       "internetShared": "이제 에이전트가 <b>{{deviceName}}</b>의 인터넷으로 웹사이트를 열어요",
-      "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만, 하루 최대 5GB까지 쓰고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
+      "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만 열고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
       "internetOff": "끄기",
       "internetOffDone": "에이전트가 더 이상 {{deviceName}}의 인터넷을 쓰지 않아요.",
       "once": "한 번 허용",
@@ -16890,6 +16921,22 @@
         "once": "한 번 허용했어요.",
         "always": "이제 {{deviceName}}을(를) 함께 사용해요.",
         "no": "거절했어요."
+      }
+    },
+    "permission": {
+      "title": "{{computer}}에서 {{permission}} 허용을 기다리는 중",
+      "next": "그 컴퓨터의 agentes.chat 앱에서 허용하세요.",
+      "askedBy": "{{agent}}이(가) {{trigger}} 실행에 필요로 해요",
+      "asked": "{{trigger}} 실행에 필요해요",
+      "names": {
+        "app_management": "앱 관리",
+        "screen": "화면 기록",
+        "accessibility": "손쉬운 사용",
+        "disk": "전체 디스크 접근 권한",
+        "network": "로컬 네트워크",
+        "camera": "카메라",
+        "microphone": "마이크",
+        "automation": "자동화"
       }
     }
   },

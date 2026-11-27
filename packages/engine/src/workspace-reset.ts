@@ -126,6 +126,7 @@ export const RESET_ERASES = [
   "integration_app_channels",
   "agent_actions",
   "agent_budget_periods",
+  "agent_checkouts",
   "agent_consultations",
   "agent_groups",
   "agent_learning_days",

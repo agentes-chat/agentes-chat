@@ -33,6 +33,7 @@ import {
   NO_IPHONE_RESTART,
   narrowsAudience,
   newComputerOf,
+  permissionWaitLines,
   phoneCloseState,
   phoneScreenCover,
   phoneScreenUrl,
@@ -815,6 +816,21 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(shareInternetText(t, computer({ shareInternet: null }), lending)).toBeNull();
     expect(lendingDevice([mine])).toBeNull();
   });
+});
+
+test("a computer's wait for an OS permission: what and where, the one way on, and who asked it for what", () => {
+  const disk = { permission: "disk", trigger: "ls ~/Desktop", since: "2026-11-26T18:00:00.000Z" } as const;
+  expect(permissionWaitLines(t, disk, "Sam's MacBook Pro", "Lia")).toEqual({
+    title: "Waiting for Full Disk Access on Sam's MacBook Pro",
+    next: "Allow it in the agentes.chat app there.",
+    asked: "Asked by Lia to run ls ~/Desktop",
+  });
+  expect(permissionWaitLines(t, { ...disk, trigger: "" }, "Mac").asked).toBeNull();
+  expect(permissionWaitLines(t, disk, "Mac").asked).toBe("Needed to run ls ~/Desktop");
+  const pt = i18n.cloneInstance({ lng: "pt-BR" }).t as TFunction;
+  expect(permissionWaitLines(pt, { ...disk, permission: "screen" }, "iMac").title).toBe(
+    "Aguardando Gravação de Tela em iMac",
+  );
 });
 
 test("Ligar on an offline simulator, Desligar on one running and free; never a real phone, its Mac away, or held", () => {
