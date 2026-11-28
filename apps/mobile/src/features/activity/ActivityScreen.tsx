@@ -369,7 +369,7 @@ function WaitingRow({ item: n, divider }: { item: AppNotification; divider: bool
           <UsageLimitActions n={n} />
         </View>
       ) : null}
-      {divider ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
+      {divider ? <View style={[styles.divider, { backgroundColor: c.separator }]} /> : null}
     </View>
   );
 }
@@ -714,7 +714,7 @@ const ActivityRow = memo(function ActivityRow({
           <UsageLimitActions n={n} />
         </View>
       ) : null}
-      {divider ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
+      {divider ? <View style={[styles.divider, { backgroundColor: c.separator }]} /> : null}
     </View>
   );
 });

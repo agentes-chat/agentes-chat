@@ -602,7 +602,46 @@ describe("viewer", () => {
   test("on Android a video draws with the views around it, inside rounded corners and under a pull", () => {
     const player = src("features/files/VideoPlayer.tsx");
     expect(player).toContain('const SURFACE = "textureView";');
-    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(3);
+    // Only the viewer's video is a live view: a message's and one on its way up are stills.
+    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(1);
+  });
+
+  test("a video in a message is a still: no player stays mounted per row, a few decoders at most at a time", () => {
+    const player = src("features/files/VideoPlayer.tsx");
+    // One player in the whole file stays mounted (the viewer's); the stills' players are released once read.
+    expect(player.match(/useVideoPlayer\(/g)?.length).toBe(1);
+    expect(player.match(/<VideoView\b/g)?.length).toBe(1);
+    expect(player).toContain("createVideoPlayer(source)");
+    expect(player).toContain("player.generateThumbnailsAsync([0], { maxWidth: STILL_PIXELS })");
+    expect(player).toContain("player.release();");
+    expect(player).toContain("const STILLS_AT_ONCE = 2;");
+    // Read once per file version, whatever link it came from.
+    expect(player).toContain("const stills = new BoundedMap<string, Still>(");
+    expect(src("features/files/MessageFiles.tsx")).toContain("stillKey={pictureKey(file.id, file.version)}");
+    for (const part of ["function InlineVideo(", "export function VideoFirstFrame("]) {
+      const at = player.indexOf(part);
+      const body = player.slice(at, player.indexOf("\n}\n", at));
+      expect({ part, still: body.includes("useStill(") && body.includes("<Image") }).toEqual({ part, still: true });
+    }
+  });
+
+  test("a video's length pill grows with the text size, never letting the time spill out", () => {
+    for (const file of ["features/files/VideoPlayer.tsx", "features/files/MessageFiles.tsx"]) {
+      const s = src(file);
+      const pill = s.match(/\n {2}length: \{([^}]*)\}/)?.[1] ?? "";
+      expect({ file, fixed: /\n\s+height: 20,/.test(pill), grows: pill.includes("minHeight: 20,") }).toEqual({
+        file,
+        fixed: false,
+        grows: true,
+      });
+      expect({
+        file,
+        capped: s.includes("<RNText maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.lengthText}>"),
+      }).toEqual({
+        file,
+        capped: true,
+      });
+    }
   });
 
   test("a picture fits whole, zooms up to twice its own pixels, and a double tap zooms in at the spot", () => {

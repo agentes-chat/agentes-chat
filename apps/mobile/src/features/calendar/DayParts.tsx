@@ -5,7 +5,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { Button, Icon, RowPressable, SCREEN_X, Text, useTheme, weights } from "@/ui";
+import { Button, CHROME_MAX_SCALE, Icon, RowPressable, SCREEN_X, Text, useFontScale, useTheme, weights } from "@/ui";
 import { AgentFace } from "../shared/Face";
 import { type DayRow, isOn, isOver, markOf, type RowMark, shortWeekday, weekdayName } from "./logic";
 
@@ -15,8 +15,15 @@ const DOT = 9;
 const GAP = 12;
 /** The time's column: "14:00" (or "prazo", "dia todo"); wider where the clock has twelve hours ("10:30 AM"). */
 export const timeWidth = (locale: string) => (uses12h(locale) ? 64 : 48);
-/** Where the hairline between a day's rows starts: its text column (16 + 48 + 12 + 22 + 12 = 110). */
-const insetOf = (locale: string) => SCREEN_X + timeWidth(locale) + GAP + MARK + GAP;
+/**
+ * The time's column on screen: its width at the default text size, grown as far as its words grow (they stop at the
+ * chrome's cap), so a larger text size never cuts "14:30" to "14:…".
+ */
+function useTimeWidth(locale: string) {
+  return Math.round(timeWidth(locale) * Math.min(useFontScale(), CHROME_MAX_SCALE));
+}
+/** Where the hairline between a day's rows starts: its text column (16 + 48 + 12 + 22 + 12 = 110 at the default size). */
+const insetOf = (time: number) => SCREEN_X + time + GAP + MARK + GAP;
 
 const at = (d: Date) => d.toISOString();
 
@@ -42,9 +49,15 @@ export function NowLine({ now }: { now: Date }) {
   const { i18n } = useTranslation();
   const { colors: c } = useTheme();
   const locale = i18n.language;
+  const time = useTimeWidth(locale);
   return (
     <View style={styles.now} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-      <Text variant="footnote" style={[styles.nowTime, { width: timeWidth(locale), color: c.badge }]}>
+      <Text
+        variant="footnote"
+        numberOfLines={1}
+        maxFontSizeMultiplier={CHROME_MAX_SCALE}
+        style={[styles.nowTime, { width: time, color: c.badge }]}
+      >
         {formatTime(locale, at(now))}
       </Text>
       <View style={[styles.nowLine, { backgroundColor: c.badge }]}>
@@ -103,17 +116,18 @@ export const CalRow = memo(function CalRow({
 }: CalRowProps) {
   const { i18n } = useTranslation();
   const { colors: c } = useTheme();
-  const locale = i18n.language;
+  const timeCol = useTimeWidth(i18n.language);
   const body = (
     <>
-      {divider ? <View style={[styles.divider, { left: insetOf(locale), backgroundColor: c.separator }]} /> : null}
+      {divider ? <View style={[styles.divider, { left: insetOf(timeCol), backgroundColor: c.separator }]} /> : null}
       <Text
         variant={words ? "footnote" : "small"}
         numberOfLines={1}
+        maxFontSizeMultiplier={CHROME_MAX_SCALE}
         style={[
           styles.time,
           words ? styles.timeWords : null,
-          { width: timeWidth(locale), color: past || words ? c.faint : c.ink2 },
+          { width: timeCol, color: past || words ? c.faint : c.ink2 },
         ]}
       >
         {time}

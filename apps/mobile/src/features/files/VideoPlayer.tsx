@@ -1,9 +1,17 @@
+import { BoundedMap } from "@agenteschat/ui/bounded-map";
 import { useEventListener } from "expo";
-import { type VideoPlayer as Player, useVideoPlayer, VideoView } from "expo-video";
-import { useEffect, useState } from "react";
+import { Image } from "expo-image";
+import {
+  createVideoPlayer,
+  type VideoPlayer as Player,
+  useVideoPlayer,
+  type VideoThumbnail,
+  VideoView,
+} from "expo-video";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Text as RNText, StyleSheet, View } from "react-native";
-import { Icon, PressScale } from "@/ui";
+import { PixelRatio, Text as RNText, StyleSheet, View } from "react-native";
+import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
@@ -15,6 +23,144 @@ import { videoClock, videoHeight } from "./logic";
  * around it. iOS ignores the prop.
  */
 const SURFACE = "textureView";
+
+/**
+ * A video in a message or on its way up is a still: its first frame and its length, read once per file (`id@version`,
+ * or the phone's own file) by a player that lives only for that and is released at once. A live player per row held a
+ * decoder and a stream for as long as the row was mounted, and Android has only a few decoders: past them a video that
+ * plays fine failed and became its file's card. Only the viewer (`ViewerVideo`) mounts a player that stays.
+ */
+interface Still {
+  /** The first frame as a native image (expo-image draws it); null when it couldn't be read. */
+  frame: VideoThumbnail | null;
+  /** Its length in seconds, 0 when unknown. */
+  duration: number;
+  /** This phone can't open it at all (a format it lacks, a file it can't read). */
+  failed: boolean;
+}
+
+/** The stills read in this run, the latest 24: each holds a frame's pixels, so a long conversation reads old ones again. */
+const stills = new BoundedMap<string, Still>(24);
+const reading = new Map<string, Promise<Still>>();
+/** A still's frame, in pixels across: a message's widest picture (300 points) on this screen. */
+const STILL_PIXELS = Math.round(300 * Math.min(PixelRatio.get(), 3));
+/** A video that hasn't said its length by then shows its play key alone; the next time its row comes it's read again. */
+const STILL_WAIT_MS = 20_000;
+/** Two read at a time: a conversation of videos never opens a decoder per video at once. */
+const STILLS_AT_ONCE = 2;
+let readingNow = 0;
+const queued: (() => void)[] = [];
+function takeTurn(): Promise<void> {
+  if (readingNow < STILLS_AT_ONCE) {
+    readingNow++;
+    return Promise.resolve();
+  }
+  return new Promise((go) => {
+    queued.push(go);
+  });
+}
+function endTurn() {
+  const next = queued.shift();
+  // The turn goes straight to the next in line, so a new reader never slips in ahead of it.
+  if (next) next();
+  else readingNow--;
+}
+
+type StillSource = { uri: string; headers?: Record<string, string> };
+
+/**
+ * One still, read by a silent player released as soon as its frame and length are in. `kept`: remembered for the run; a
+ * failure or a wait that ran out isn't, so the row tries again when it comes back, as a player of its own did.
+ */
+function readOnce(source: StillSource): Promise<Still & { kept: boolean }> {
+  return new Promise((resolve) => {
+    const player = silentPlayer(source);
+    if (!player) {
+      resolve({ frame: null, duration: 0, failed: true, kept: false });
+      return;
+    }
+    let loaded = false;
+    let done = false;
+    const finish = (still: Still & { kept: boolean }) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      for (const s of subscriptions) s.remove();
+      try {
+        player.release();
+      } catch {
+        // Already released.
+      }
+      resolve(still);
+    };
+    const timer = setTimeout(() => finish({ frame: null, duration: 0, failed: false, kept: false }), STILL_WAIT_MS);
+    const subscriptions = [
+      player.addListener("sourceLoad", ({ duration }) => {
+        loaded = true;
+        player.generateThumbnailsAsync([0], { maxWidth: STILL_PIXELS }).then(
+          ([frame]) => finish({ frame: frame ?? null, duration, failed: false, kept: true }),
+          () => finish({ frame: null, duration, failed: false, kept: true }),
+        );
+      }),
+      // Only before it loaded: the file itself can't be opened here. Past that, it plays in the viewer.
+      player.addListener("statusChange", ({ status }) => {
+        if (status === "error" && !loaded) finish({ frame: null, duration: 0, failed: true, kept: false });
+      }),
+    ];
+  });
+}
+
+/** A muted player that never plays, or null when this phone can't make one for the file. */
+function silentPlayer(source: StillSource): Player | null {
+  try {
+    const player = createVideoPlayer(source);
+    player.muted = true;
+    return player;
+  } catch {
+    return null;
+  }
+}
+
+function readStill(key: string, source: StillSource): Promise<Still> {
+  const pending = reading.get(key);
+  if (pending) return pending;
+  const run = takeTurn()
+    .then(() => readOnce(source))
+    .then(({ kept, ...still }) => {
+      if (kept) stills.set(key, still);
+      return still;
+    })
+    .finally(() => {
+      endTurn();
+      reading.delete(key);
+    });
+  reading.set(key, run);
+  return run;
+}
+
+/** A video's still by its key (`stills`), read once; undefined while it is read. */
+function useStill(key: string, source: StillSource): Still | undefined {
+  const [still, setStill] = useState(() => stills.get(key));
+  // The link the still is read from: one per key (a message's video reads its link once), never a reason to read again.
+  const from = useRef(source);
+  from.current = source;
+  useEffect(() => {
+    const kept = stills.get(key);
+    if (kept) {
+      setStill(kept);
+      return;
+    }
+    setStill(undefined);
+    let live = true;
+    void readStill(key, from.current).then((s) => {
+      if (live) setStill(s);
+    });
+    return () => {
+      live = false;
+    };
+  }, [key]);
+  return still;
+}
 
 /** One thing plays at a time: starting a video pauses the one before and a voice message playing. */
 let current: Player | null = null;
@@ -36,6 +182,8 @@ onVoiceStarts(pauseCurrent);
 export interface VideoPlayerProps {
   /** Where it plays from, with the session when the link is ours. */
   source: { uri: string; headers?: Record<string, string> };
+  /** Its still's key, the same for every link to this version of the file (`pictureKey`). */
+  stillKey: string;
   name: string;
   /** Its width in the message (one shape, the video whole in it). */
   width?: number;
@@ -53,10 +201,11 @@ export interface VideoPlayerProps {
  * plays it at once with the platform's controls (play, the timeline to drag, full screen and back out of it, AirPlay),
  * so it feels like every other video on the phone, with no controls of ours to get stuck behind.
  */
-export function VideoPlayer({ source, name, width = 300, height, onOpen, onFailed }: VideoPlayerProps) {
+export function VideoPlayer({ source, stillKey, name, width = 300, height, onOpen, onFailed }: VideoPlayerProps) {
   return (
     <InlineVideo
       source={source}
+      stillKey={stillKey}
       name={name}
       width={width}
       height={height ?? videoHeight(width)}
@@ -69,6 +218,7 @@ export function VideoPlayer({ source, name, width = 300, height, onOpen, onFaile
 /** In a message: the first frame, the play key and the length; nothing plays here. */
 function InlineVideo({
   source,
+  stillKey,
   name,
   width,
   height,
@@ -76,6 +226,7 @@ function InlineVideo({
   onFailed,
 }: {
   source: VideoPlayerProps["source"];
+  stillKey: string;
   name: string;
   width: number;
   height: number;
@@ -86,15 +237,15 @@ function InlineVideo({
   const c = useColors();
   // In a message, the corners every card there has, as the picture's beside it (its loading frame had them).
   const cardCorners = useMessageCardCorners();
-  // Silent and still: it is here only for its first frame and its length.
-  const player = useVideoPlayer(source, (p) => {
-    p.muted = true;
-  });
-  const [duration, setDuration] = useState(0);
-  useEventListener(player, "sourceLoad", ({ duration: d }) => setDuration(d));
-  useEventListener(player, "statusChange", ({ status }) => {
-    if (status === "error") onFailed?.();
-  });
+  // Its first frame and its length, read once (`useStill`): no player stays in the message.
+  const still = useStill(stillKey, source);
+  const failed = still?.failed === true;
+  const fail = useRef(onFailed);
+  fail.current = onFailed;
+  useEffect(() => {
+    if (failed) fail.current?.();
+  }, [failed]);
+  const duration = still?.duration ?? 0;
   const length = duration > 0 ? videoClock(duration) : "";
   return (
     // Opening it is navigation, as opening a picture: the press shows it, no tap.
@@ -106,15 +257,15 @@ function InlineVideo({
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
       style={[styles.inline, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
     >
-      <VideoView
-        player={player}
-        nativeControls={false}
-        contentFit="contain"
-        allowsPictureInPicture={false}
-        surfaceType={SURFACE}
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-      />
+      {still?.frame ? (
+        <Image
+          source={still.frame}
+          contentFit="contain"
+          transition={0}
+          accessible={false}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       <View style={styles.center} pointerEvents="none">
         <View style={[styles.big, { backgroundColor: c.raised }]}>
           <Icon name="play" size={24} color={c.ink} />
@@ -124,7 +275,9 @@ function InlineVideo({
         // The length as a video on its way up shows it (`MessageFiles`): a play mark and the time on a dark pill.
         <View style={styles.length} pointerEvents="none">
           <Icon name="play" size={9} color="#fff" />
-          <RNText style={styles.lengthText}>{length}</RNText>
+          <RNText maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.lengthText}>
+            {length}
+          </RNText>
         </View>
       ) : null}
     </PressScale>
@@ -209,22 +362,12 @@ export function ViewerVideo({
   );
 }
 
-/** A video on the phone at its first frame (picked, or on its way up): a silent player that never plays, covering. */
+/** A video on the phone at its first frame (picked, or on its way up): its still (`useStill`), covering. */
 export function VideoFirstFrame({ uri }: { uri: string }) {
-  const player = useVideoPlayer({ uri }, (p) => {
-    p.muted = true;
-  });
-  return (
-    <VideoView
-      player={player}
-      nativeControls={false}
-      contentFit="cover"
-      allowsPictureInPicture={false}
-      surfaceType={SURFACE}
-      pointerEvents="none"
-      style={StyleSheet.absoluteFill}
-    />
-  );
+  const still = useStill(uri, { uri });
+  return still?.frame ? (
+    <Image source={still.frame} contentFit="cover" transition={0} accessible={false} style={StyleSheet.absoluteFill} />
+  ) : null;
 }
 
 const styles = StyleSheet.create({
@@ -260,7 +403,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 7,
-    height: 20,
+    // Grows with a large text size (up to the chrome's cap) instead of the time spilling out of it.
+    minHeight: 20,
+    paddingVertical: 2,
     borderRadius: 10,
     backgroundColor: "rgba(0,0,0,0.6)",
   },

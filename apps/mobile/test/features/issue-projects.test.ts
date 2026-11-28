@@ -102,3 +102,13 @@ describe("Tarefas' projects on the phone", () => {
     expect(parts).toContain("{ borderWidth: 1.5, borderColor: c.faint }");
   });
 });
+
+test("Quadro's columns are sized from the width its pager lays out in, not the window's", () => {
+  // In the readable column on a tablet or an unfolded phone (ADR 0212), or in a pane: a column a swipe wide, the next
+  // one's edge in sight, the snap on it. A phone keeps the window's width (no side, no pane).
+  const screen = src("IssuesScreen.tsx");
+  const board = screen.slice(screen.indexOf("function Board("), screen.indexOf("function Column("));
+  expect(board).toContain("const width = useContentWidth() - 2 * useReadableSide();");
+  expect(board).toContain("const columnWidth = width - PEEK - SCREEN_X;");
+  expect(board).not.toContain("useWindowDimensions()");
+});

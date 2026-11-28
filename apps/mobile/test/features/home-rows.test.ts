@@ -156,19 +156,35 @@ describe("a screen of rows", () => {
     for (const screen of [home, all]) {
       expect(screen).toContain("<HomeRow");
       expect(screen).toContain("facts={factsOf(r, agentStates.get(r.key))}");
-      expect(screen).toContain("onHold={menus.openRowMenu}");
-      expect(screen).toContain("holdActions={menus.rowActionsOf}");
       expect(screen).toContain("onMute={muteRow}");
       expect(screen).toContain("useConversationRows()");
     }
+    expect(home).toContain("onHold={menus.openRowMenu}");
+    expect(home).toContain("holdActions={menus.rowActionsOf}");
+    expect(all).toContain("const { openRowMenu, rowActionsOf, pinLabelOf } = useRowMenus();");
+    expect(all).toContain("onHold={openRowMenu}");
+    expect(all).toContain("holdActions={rowActionsOf}");
     // Ver todos: the home's large title, rows of its shape while it loads (never "Loading…"), the sheet its menu needs.
-    expect(all).toContain("<PushedLargeTitle");
+    expect(all).toContain('<PushedHeader title={t("mobile.chats.recent")} solid={false} largeTitle />');
     expect(all).toContain("<SkeletonList rows={6} />");
     expect(all).not.toContain("mobile.common.loading");
     expect(all).toContain("<SheetHostProvider>");
     const row = src("chats/HomeRow.tsx");
     expect(row).toContain("export const HomeRow = memo(");
     expect(row).toContain("<SwipeRow right={panes}>");
+  });
+
+  test("Ver todos draws only the rows near the screen: a list, not every row in a scroll view", () => {
+    const all = src("chats/ConversationListScreen.tsx");
+    // Each row is a swipe with its own face: hundreds of conversations never mount at once on the push.
+    expect(all).toContain("<FlatList");
+    expect(all).not.toContain("rows.map(");
+    expect(all).toContain("windowSize={ROW_WINDOW}");
+    // The screen's first scroll view, so the system's large title folds over it, the rows in the readable column.
+    expect(all).toContain('contentInsetAdjustmentBehavior="automatic"');
+    expect(all).toContain("paddingHorizontal: side");
+    // The stand-ins, the failure and the first step are what the empty list shows.
+    expect(all).toContain("ListEmptyComponent={");
   });
 
   test("a row reads nothing itself: no directory, presence or clock per row, one minute's clock for the list", () => {
@@ -235,4 +251,12 @@ describe("a screen of rows", () => {
     expect(home).toContain("<GreetingSky />");
     expect(home).not.toContain("SKY_ARRIVE_MS");
   });
+});
+
+test("a row's, a pinned face's and a sector's long press is felt as it takes, before its menu opens", () => {
+  // iOS's preview menu gives its own; elsewhere (Android, beside the open conversation) the hold opens our sheet.
+  const row = src("chats/ConversationRowView.tsx");
+  expect(row).toMatch(/onLongPress: \(\) => \{\s*haptics\.medium\(\);\s*onHold\(r\);\s*\}/);
+  const section = src("chats/HomeSection.tsx");
+  expect(section).toMatch(/onLongPress: \(\) => \{\s*haptics\.medium\(\);\s*menu\.onPress\(\);\s*\}/);
 });

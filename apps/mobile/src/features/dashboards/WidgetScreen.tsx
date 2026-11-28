@@ -22,8 +22,8 @@ import { WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
+import { Alert, Platform, RefreshControl, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import {
@@ -200,12 +200,12 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
           : {})}
       />
       <FocusLive>
-        <ScrollView
+        <KeyboardAwareScrollView
           contentInsetAdjustmentBehavior="automatic"
           refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}
-          // The ask at the bottom: the keyboard drags away with the page, and the page's end clears it.
-          keyboardDismissMode="interactive"
-          automaticallyAdjustKeyboardInsets
+          // The ask at the bottom: the keyboard drags away with the page (on Android, a drag puts it away), and the
+          // page grows by the keyboard on both systems, so its end still scrolls clear of the ask over it.
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: insets.bottom + (w.canEdit ? 96 : 28) }}
         >
@@ -376,7 +376,7 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
               </>
             ) : null}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </FocusLive>
       {w.canEdit ? <AskChange widget={w} name={look.name} /> : null}
     </View>
@@ -508,7 +508,14 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     paddingVertical: 6,
   },
-  input: { flex: 1, maxHeight: 120, paddingTop: 6, paddingBottom: 6 },
+  input: {
+    flex: 1,
+    maxHeight: 120,
+    paddingTop: 6,
+    paddingBottom: 6,
+    // Android: no extra font padding, so the line sits in the middle of the send button's height (as the composer's).
+    ...Platform.select({ android: { includeFontPadding: false, textAlignVertical: "center" as const } }),
+  },
   // As a conversation's line in place of its composer.
   readOnly: { textAlign: "center", paddingHorizontal: 16, paddingVertical: 12 },
   send: { width: 36, height: 36, borderRadius: 18 },

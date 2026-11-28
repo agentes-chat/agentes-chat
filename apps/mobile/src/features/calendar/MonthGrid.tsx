@@ -10,7 +10,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { PressScale, Text, useTheme, weights } from "@/ui";
+import { CHROME_MAX_SCALE, PressScale, Text, useTheme, weights } from "@/ui";
 import { monthWeeks } from "./logic";
 
 /** The weekday letters, Sunday first (the shared `recurrence.wd.*.short`: "D S T Q Q S S"). */
@@ -191,8 +191,10 @@ export function DayCell({
       contentStyle={styles.cellIn}
     >
       <View style={[styles.num, isToday ? { backgroundColor: c.ink } : chosen ? { backgroundColor: c.plate } : null]}>
+        {/* Grown only as far as the fixed circle and the week's row hold it, as the weekday letters are. */}
         <Text
           variant="body"
+          maxFontSizeMultiplier={CHROME_MAX_SCALE}
           style={[
             styles.digits,
             isToday ? { color: c.bg, fontWeight: weights.semibold } : chosen ? { fontWeight: weights.semibold } : null,
@@ -215,6 +217,7 @@ const styles = StyleSheet.create({
   // The column's target, a finger's 44 at least (the screen's seventh is wider on every phone).
   cellIn: { alignItems: "center", gap: 2, minHeight: 44 },
   num: { width: DAY, height: DAY, borderRadius: DAY / 2, alignItems: "center", justifyContent: "center" },
-  digits: { fontVariant: ["tabular-nums"] },
+  // Centred in its circle on Android too: no extra font padding under the digits (the kit's `countBadge`).
+  digits: { fontVariant: ["tabular-nums"], includeFontPadding: false, textAlignVertical: "center" },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2 },
 });

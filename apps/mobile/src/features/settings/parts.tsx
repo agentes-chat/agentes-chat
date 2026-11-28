@@ -17,7 +17,7 @@ import { KeyboardAwareScrollView, KeyboardController, KeyboardStickyView } from 
 import { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, GroupedList, GroupedRow, type HeaderAction, type IconName, Locked, Text, useToast } from "@/ui";
-import { KeyboardBar, TOOLBAR_HEIGHT } from "@/ui/auth/AuthScaffold";
+import { DRAG_DISMISS, KeyboardBar, TOOLBAR_HEIGHT } from "@/ui/auth/AuthScaffold";
 import { useReadableSide } from "@/ui/pane";
 import { useColors, useNow, usePullRefresh } from "../shared/hooks";
 import { showActionSheet } from "../shared/PickerSheet";
@@ -159,7 +159,7 @@ function CompactPage({
         style={styles.fill}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
+        keyboardDismissMode={DRAG_DISMISS}
         bottomOffset={bar + FIELD_CLEARANCE}
         extraKeyboardSpace={toolbarRoom}
         {...(refreshControl ? { refreshControl } : {})}

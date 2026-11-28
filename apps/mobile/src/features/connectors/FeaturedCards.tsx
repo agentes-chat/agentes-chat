@@ -1,7 +1,7 @@
 import type { ConnectorDef } from "@agenteschat/client";
 import { brandLook } from "@agenteschat/client/lib/brand-look";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
-import { PressScale, SideScroll, Text, useTheme } from "@/ui";
+import { CHROME_MAX_SCALE, PressScale, SideScroll, Text, useTheme } from "@/ui";
 import { useSurface } from "../shared/parts";
 import { BrandArt } from "./BrandArt";
 import { ConnectorIcon } from "./ConnectorIcon";
@@ -92,11 +92,12 @@ function FeaturedCard({
         <View style={[styles.mark, { boxShadow: dark ? MARK_RING_DARK : MARK_RING }]}>
           <ConnectorIcon def={def} label={name} size={MARK} />
         </View>
+        {/* The words grow with the text size only as far as the card's fixed height keeps them under the mark. */}
         <View style={styles.body}>
-          <Text variant="title2" numberOfLines={1}>
+          <Text variant="title2" numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {name}
           </Text>
-          <Text variant="small" tone="muted" numberOfLines={2}>
+          <Text variant="small" tone="muted" numberOfLines={2} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {text}
           </Text>
         </View>

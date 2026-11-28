@@ -40,6 +40,8 @@ import { WeekStrip } from "./WeekStrip";
 /** How far a drag on the handle (or how fast a flick) folds the month to its week, or opens it again. */
 const FOLD_DISTANCE = 24;
 const FOLD_SPEED = 400;
+/** The handle's line. */
+const GRABBER = 5;
 
 /**
  * Calendário, pushed from Você › Trabalho (the month and the day, the approved direction): the month as the system's
@@ -242,8 +244,16 @@ export function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  // The handle's line, a finger's 44 to pull or tap.
-  handle: { height: TOUCH * 0.5, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  grabber: { width: 36, height: 5, borderRadius: 3 },
+  // The handle's line, a finger's 44 to pull or tap: its half under the line reaches over the day's heading's empty
+  // top (never up into the grid's days), drawn over it so it takes the touch, nothing below it moved.
+  handle: {
+    height: TOUCH,
+    marginTop: 2,
+    marginBottom: -TOUCH / 2,
+    paddingTop: (TOUCH / 2 - GRABBER) / 2,
+    alignItems: "center",
+    zIndex: 1,
+  },
+  grabber: { width: 36, height: GRABBER, borderRadius: 3 },
   day: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 2 },
 });

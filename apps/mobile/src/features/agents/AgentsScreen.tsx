@@ -42,6 +42,7 @@ import { useOrg } from "@/providers/org";
 import {
   type HeaderAction,
   LargeTitleScreen,
+  LIST_AVATAR,
   LIST_PREVIEW,
   LineIcon,
   ListRow,
@@ -378,7 +379,7 @@ function AgentsList() {
                     accessibilityActions={[{ name: "restore", label: t("team.restore") }]}
                     onAccessibilityAction={() => restoreOne(a)}
                     divider={i > 0}
-                    leading={<AgentFace agentId={a.id} size={52} mode="rest" live={false} />}
+                    leading={<AgentFace agentId={a.id} size={LIST_AVATAR} mode="rest" live={false} />}
                     title={a.name}
                     sub={
                       <Text variant="small" tone="faint" numberOfLines={1} style={LIST_PREVIEW}>
@@ -415,7 +416,7 @@ function ManagerRow({ working, waiting, onPress }: { working: number; waiting: n
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={[t("mobile.taskManager.title"), line].join(", ")}
-      leading={<Tile icon="list" size={52} />}
+      leading={<Tile icon="list" size={LIST_AVATAR} />}
       title={t("mobile.taskManager.title")}
       sub={
         <Text variant="small" style={[LIST_PREVIEW, { color: waiting > 0 ? c.amber : c.muted }]} numberOfLines={1}>
@@ -729,12 +730,12 @@ const AgentRow = memo(function AgentRow({
         leading={
           state === "routine" ? (
             // Out on its routine: the frame keeps its sky and waits for it.
-            <AgentFace agentId={a.id} size={52} live={false} bodyless />
+            <AgentFace agentId={a.id} size={LIST_AVATAR} live={false} bodyless />
           ) : (
             <Animated.View key="here" entering={reduced ? undefined : FACE_IN}>
               <AgentFace
                 agentId={a.id}
-                size={52}
+                size={LIST_AVATAR}
                 mode={
                   state === "works" ? "run" : state === "away" || state === "noAi" || state === "out" ? "rest" : "idle"
                 }

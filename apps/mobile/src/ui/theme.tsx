@@ -1,5 +1,6 @@
 import { durations, motion as motionCurves, radius as radii, type ShadowLayer } from "@agenteschat/tokens";
 import { isAccentHex } from "@agenteschat/tokens/accent";
+import * as SystemUI from "expo-system-ui";
 import {
   createContext,
   type ReactNode,
@@ -10,7 +11,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AccessibilityInfo, Platform, useColorScheme } from "react-native";
+import { AccessibilityInfo, Appearance, Platform, useColorScheme } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { readValue, STORED, writeValue } from "@/lib/storage";
 import { type AppColors, appColors, appShadows, paintSky, type Scheme, skyAccent, withAccent } from "./palette";
@@ -124,11 +125,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void writeValue(STORED.theme, next);
   }, []);
 
+  // The person's choice is the system's for the app too: the keyboard, the menus, the sheets and the bars' glass follow
+  // it (iOS sets the windows' interface style, Android the app's night mode), not only our colors; `useColorScheme`
+  // then reads it back, and "system" lets go of it.
+  useEffect(() => {
+    Appearance.setColorScheme(preference === "system" ? "unspecified" : preference);
+  }, [preference]);
+
   const scheme: Scheme = preference === "system" ? (system === "dark" ? "dark" : "light") : preference;
   const value = useMemo<Theme>(
     () => ({ ...makeTheme(scheme, reducedMotion), preference, setPreference }),
     [scheme, reducedMotion, preference, setPreference],
   );
+  // Android's window under the screens (seen while one slides in or the keyboard resizes them): the page's color.
+  const bg = value.colors.bg;
+  useEffect(() => {
+    if (Platform.OS === "android") SystemUI.setBackgroundColorAsync(bg).catch(() => {});
+  }, [bg]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 

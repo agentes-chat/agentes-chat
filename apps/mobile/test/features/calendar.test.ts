@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CalendarProposal } from "@agenteschat/client";
 import type { CalItem } from "@agenteschat/client/lib/calendar";
 import {
@@ -185,5 +187,35 @@ describe("the chosen day", () => {
     expect(next && keysOf([next.row])).toEqual(["planning"]);
     expect(nextAfter(items, proposals, new Date(2026, 11, 5), to)).toBeNull();
     expect(rowsOn(items, proposals, new Date(2026, 10, 29))).toEqual([]);
+  });
+});
+
+describe("the calendar at a large text size, and its handle under a finger", () => {
+  const src = (file: string) => readFileSync(join(import.meta.dir, "../../src/features/calendar", file), "utf8");
+
+  test("a day's number stays in its circle and its week's row, centred on Android too", () => {
+    for (const file of ["MonthGrid.tsx", "WeekStrip.tsx"]) {
+      const grid = src(file);
+      expect(grid).toMatch(/<Text\s+variant="body"\s+maxFontSizeMultiplier=\{CHROME_MAX_SCALE\}/);
+      expect(grid).toContain(
+        'digits: { fontVariant: ["tabular-nums"], includeFontPadding: false, textAlignVertical: "center" },',
+      );
+    }
+  });
+
+  test("the time column grows with its words, which stop at the chrome's cap: never cut, the now line's time on one line", () => {
+    const parts = src("DayParts.tsx");
+    expect(parts).toContain("return Math.round(timeWidth(locale) * Math.min(useFontScale(), CHROME_MAX_SCALE));");
+    expect(parts).toContain("left: insetOf(timeCol)");
+    expect(parts).toContain("{ width: timeCol, color: past || words ? c.faint : c.ink2 }");
+    expect(parts).toMatch(/variant="footnote"\s+numberOfLines=\{1\}\s+maxFontSizeMultiplier=\{CHROME_MAX_SCALE\}/);
+    expect(parts).not.toContain("width: timeWidth(locale)");
+  });
+
+  test("the fold handle is a finger's 44 tall, reaching over the heading's empty top and drawn over it", () => {
+    const screen = src("CalendarScreen.tsx");
+    expect(screen).toMatch(/handle: \{\s*height: TOUCH,\s*marginTop: 2,\s*marginBottom: -TOUCH \/ 2,/);
+    expect(screen).toContain("zIndex: 1,");
+    expect(screen).not.toContain("TOUCH * 0.5");
   });
 });

@@ -5,7 +5,7 @@ import { Image } from "expo-image";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Text as RNText, StyleSheet, View } from "react-native";
-import { Icon, MESSAGE_CARD_X, PressScale, Text } from "@/ui";
+import { CHROME_MAX_SCALE, Icon, MESSAGE_CARD_X, PressScale, Text } from "@/ui";
 import { ChoicesCard } from "../blocks/ChoicesCard";
 import { LiveBlockCard } from "../blocks/LiveBlock";
 import { PollCard } from "../blocks/PollCard";
@@ -33,7 +33,15 @@ import {
 } from "./logic";
 import { openFile } from "./open";
 import { LocalPdfPage } from "./pdf-preview";
-import { pictureDrawn, pictureFade, rememberLocalCopy, useArtifacts, usePicture, useRemoteFile } from "./source";
+import {
+  pictureDrawn,
+  pictureFade,
+  pictureKey,
+  rememberLocalCopy,
+  useArtifacts,
+  usePicture,
+  useRemoteFile,
+} from "./source";
 import { VideoFirstFrame, VideoPlayer } from "./VideoPlayer";
 
 /**
@@ -349,6 +357,7 @@ function InlineVideo({
         <VideoPlayer
           key={`${file.id}@${file.version ?? "latest"}`}
           source={source}
+          stillKey={pictureKey(file.id, file.version)}
           name={info?.name || file.title}
           width={box.width}
           height={box.height}
@@ -480,7 +489,11 @@ function LocalMedia({
       {video && !sending ? (
         <View style={styles.length} pointerEvents="none">
           <Icon name="play" size={9} color="#fff" />
-          {file.duration ? <RNText style={styles.lengthText}>{videoClock(file.duration)}</RNText> : null}
+          {file.duration ? (
+            <RNText maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.lengthText}>
+              {videoClock(file.duration)}
+            </RNText>
+          ) : null}
         </View>
       ) : null}
       {sending ? (
@@ -601,7 +614,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 7,
-    height: 20,
+    // Grows with a large text size (up to the chrome's cap) instead of the time spilling out of it.
+    minHeight: 20,
+    paddingVertical: 2,
     borderRadius: 10,
     backgroundColor: "rgba(0,0,0,0.6)",
   },

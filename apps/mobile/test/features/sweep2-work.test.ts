@@ -115,6 +115,18 @@ describe("bars and pulls", () => {
     expect(widget).toContain("{w.canEdit ? <AskChange widget={w} name={look.name} /> : null}");
   });
 
+  test("a widget's ask: the page clears the keyboard on Android too, and the field's words sit centred there", () => {
+    const widget = src("dashboards/WidgetScreen.tsx");
+    // The page grows by the keyboard on both systems, never by an iOS-only inset; Android puts it away on a drag.
+    expect(widget).toContain("<KeyboardAwareScrollView");
+    expect(widget).not.toContain("automaticallyAdjustKeyboardInsets");
+    expect(widget).toContain('keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}');
+    // Android's extra font padding off in the ask, as in the composer: the line in the send button's middle.
+    expect(widget).toContain(
+      '...Platform.select({ android: { includeFontPadding: false, textAlignVertical: "center" as const } }),',
+    );
+  });
+
   test("the Dashboards list's \"+\" is the system's bar button", () => {
     const list = src("dashboards/DashboardsScreen.tsx");
     expect(list).not.toContain("IconButton");

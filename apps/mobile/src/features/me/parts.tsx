@@ -4,11 +4,12 @@ import * as ImagePicker from "expo-image-picker";
 import { type ReactNode, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { KeyboardAvoidingView, KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import { Locked, useToast } from "@/ui";
+import { DRAG_DISMISS } from "@/ui/auth/AuthScaffold";
 import { chooseAction } from "../settings/parts";
 import { useColors, useDirectory, useMeId, usePullRefresh } from "../shared/hooks";
 import { type HeaderWordAction, PushedHeader } from "../shared/parts";
@@ -16,13 +17,17 @@ import { type AccountDraft, PHOTO_MAX_BASE64, photoContentType } from "./logic";
 
 const NOTHING_TO_READ = () => Promise.resolve();
 
+/** Between the footer's button and what is under it: the keyboard, or the screen's foot with no home indicator. */
+const FOOTER_GAP = 12;
+
 /**
  * One screen of Você's (Conta, Membros, Notificações…), pushed with the platform's push: the native bar (its back
  * button and edge swipe, the title, a word that saves on the right) over the grouped gray, which scrolls under it.
  * A focused field scrolls clear of the keyboard on both systems (with the keyboard library's provider on, Android no
  * longer resizes the window by itself), and a drag down the page takes the keyboard with it. `footer`: a button that
- * stays at the bottom, over the keyboard, with the page scrolling above it (the page gives way to the keyboard there,
- * so the scroll view adds nothing of its own). `onRefresh`: a list read from the server is read again on a pull.
+ * stays at the bottom and rides the keyboard (as `SettingsPage`'s docked action), the page scrolling above it; the home
+ * indicator's room under it drops behind the keyboard, so it sits as close over the keyboard as over the screen's
+ * foot. `onRefresh`: a list read from the server is read again on a pull.
  */
 export function Page({
   title,
@@ -44,36 +49,38 @@ export function Page({
   const c = useColors();
   const insets = useSafeAreaInsets();
   const pull = usePullRefresh(onRefresh ?? NOTHING_TO_READ);
-  const scroll = (
-    <KeyboardAwareScrollView
-      enabled={!footer}
-      bottomOffset={24}
-      style={styles.fill}
-      contentInsetAdjustmentBehavior="automatic"
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      {...(onRefresh
-        ? { refreshControl: <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} /> }
-        : {})}
-      contentContainerStyle={[styles.body, { paddingBottom: footer ? 24 : 24 + insets.bottom }]}
-    >
-      {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
-      <Locked when={locked}>
-        <LayoutAnimationConfig skipEntering>{children}</LayoutAnimationConfig>
-      </Locked>
-    </KeyboardAwareScrollView>
-  );
+  // The footer's room under its button: the home indicator's, or 12 where there is none.
+  const footerBottom = Math.max(insets.bottom, FOOTER_GAP);
+  // With the keyboard up, what of it drops behind the keyboard: 12 stays between the button and the keyboard.
+  const behind = footerBottom - FOOTER_GAP;
+  // What the docked footer covers over the keyboard, kept clear of a focused field.
+  const [footerHeight, setFooterHeight] = useState(0);
+  const docked = footer ? Math.max(0, footerHeight - behind) : 0;
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
       <PushedHeader title={title} solid={false} grouped {...(action ? { action } : {})} />
+      <KeyboardAwareScrollView
+        bottomOffset={docked + 24}
+        style={styles.fill}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={DRAG_DISMISS}
+        {...(onRefresh
+          ? { refreshControl: <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} /> }
+          : {})}
+        contentContainerStyle={[styles.body, { paddingBottom: footer ? 24 : 24 + insets.bottom }]}
+      >
+        {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
+        <Locked when={locked}>
+          <LayoutAnimationConfig skipEntering>{children}</LayoutAnimationConfig>
+        </Locked>
+      </KeyboardAwareScrollView>
       {footer ? (
-        <KeyboardAvoidingView behavior="padding" style={styles.fill}>
-          {scroll}
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>{footer}</View>
-        </KeyboardAvoidingView>
-      ) : (
-        scroll
-      )}
+        <KeyboardStickyView offset={{ opened: behind }} onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}>
+          {/* On the page's gray: over the keyboard, the page scrolls under it. */}
+          <View style={[styles.footer, { paddingBottom: footerBottom, backgroundColor: c.grouped }]}>{footer}</View>
+        </KeyboardStickyView>
+      ) : null}
     </View>
   );
 }

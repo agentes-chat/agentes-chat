@@ -4,8 +4,9 @@ import { CODE_LENGTH, typedCode } from "@agenteschat/client/lib/join-requests";
 import { browserTimezone, zoneDisplayName } from "@agenteschat/client/lib/routines";
 import { isEmail } from "@agenteschat/client/lib/text";
 import { filterZones, type ZoneOption, zoneOptions } from "@agenteschat/ui/timezones";
+import { type SheetDetent, TrueSheet } from "@lodev09/react-native-true-sheet";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FlatList, StyleSheet, TextInput, type TextInputInstance, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,13 +24,17 @@ import {
   GroupedRow,
   PersonAvatar,
   SearchField,
+  SHEET_GAP,
   SHEET_X,
-  Sheet,
+  SheetContent,
   Text,
+  useSheetProps,
   useTheme,
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { sheetColors } from "@/ui/palette";
+import { ThemeColorsOverride } from "@/ui/theme";
 import { openOwnPage } from "../ai/parts";
 import { SheetHeader } from "../new/parts";
 import { ResendCode, Uploading, useUnsavedGuard } from "../settings/parts";
@@ -465,10 +470,20 @@ function useZoneOptions(value: string | null, orgZone: string | null, people: st
   }, [value, orgZone, people, i18n.language]);
 }
 
+/** A zone of the list, or the header of its group ("Sugeridos", "Todos"). */
+type ZoneItem = ZoneOption | { header: string };
+
+/**
+ * The zones sheet's height: the whole screen however many zones the search leaves, so it never jumps at a keystroke or
+ * collapses when nothing matches (its list is virtual: it has no height of its own to take).
+ */
+const ZONE_DETENTS: SheetDetent[] = [1];
+
 /**
  * The first run's time zone, in a sheet over it (the first run sits outside the navigator, so no screen is pushed):
  * the sheet's bar with × and the search stay on top while the zones scroll under them, the phone's own suggested
- * first. The zones are drawn only while the sheet is up, so the long list costs the screen under it nothing.
+ * first. The zones are a virtualized list, as on the pushed screen (`ZonePicker`): every zone mounted at once (several
+ * hundred rows) held the sheet up as it opened. They are made only while the sheet is up.
  */
 export function ZoneSheet({
   open,
@@ -484,36 +499,57 @@ export function ZoneSheet({
   onPick: (zone: string) => void;
 }) {
   const { t } = useTranslation();
+  const { colors, scheme } = useTheme();
+  const ref = useRef<TrueSheet>(null);
+  const list = useRef<FlatList<ZoneItem>>(null);
   const [query, setQuery] = useState("");
   // From the moment it opens until it is off the screen, so the list never empties while the sheet slides away.
   const [shown, setShown] = useState(open);
   if (open && !shown) setShown(true);
+  const props = useSheetProps({
+    open,
+    onClose,
+    onGone: () => {
+      setShown(false);
+      setQuery("");
+    },
+    ref,
+    detents: ZONE_DETENTS,
+  });
+  // The bar over the list reads the sheet's colors, as every sheet's pinned header does.
+  const inside = useMemo(() => sheetColors(colors, scheme), [colors, scheme]);
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      onGone={() => {
-        setShown(false);
-        setQuery("");
-      }}
+    <TrueSheet
+      ref={ref}
+      {...props}
+      scrollableRef={list}
+      style={styles.fill}
       header={
-        <View style={styles.sheetHead}>
-          <SheetHeader title={title} onPress={onClose} />
-          <SearchField value={query} onChangeText={setQuery} placeholder={t("mobile.me.zone.search")} />
+        <View>
+          <ThemeColorsOverride colors={inside}>
+            <View style={styles.sheetHead}>
+              <SheetHeader title={title} onPress={onClose} />
+              <SearchField value={query} onChangeText={setQuery} placeholder={t("mobile.me.zone.search")} />
+            </View>
+          </ThemeColorsOverride>
         </View>
       }
     >
-      {shown ? <ZoneSheetRows value={value} query={query} onPick={onPick} /> : null}
-    </Sheet>
+      <SheetContent fill>
+        {shown ? <ZoneSheetRows listRef={list} value={value} query={query} onPick={onPick} /> : null}
+      </SheetContent>
+    </TrueSheet>
   );
 }
 
-/** The sheet's zones as grouped rows (a sheet scrolls a plain view, so the list isn't virtualized here). */
+/** The sheet's zones: the suggested group, then every other (or what the search finds), drawn as the list scrolls. */
 function ZoneSheetRows({
+  listRef,
   value,
   query,
   onPick,
 }: {
+  listRef: RefObject<FlatList<ZoneItem> | null>;
   value: string | null;
   query: string;
   onPick: (zone: string) => void;
@@ -521,30 +557,57 @@ function ZoneSheetRows({
   const { t } = useTranslation();
   const options = useZoneOptions(value, null, "");
   const q = query.trim();
-  const row = (o: ZoneOption) => (
-    <GroupedRow
-      key={o.zone}
-      label={o.name}
-      value={o.offsetLabel}
-      checked={o.zone === value}
-      onPress={() => onPick(o.zone)}
-    />
+  const rows = useMemo<ZoneItem[]>(
+    () =>
+      q
+        ? filterZones([...options.suggested, ...options.rest], q)
+        : [
+            { header: t("mobile.me.zone.suggested") },
+            ...options.suggested,
+            { header: t("mobile.me.zone.all") },
+            ...options.rest,
+          ],
+    [q, options, t],
   );
-  if (q) {
-    const found = filterZones([...options.suggested, ...options.rest], q);
-    return found.length > 0 ? (
-      <GroupedList>{found.map(row)}</GroupedList>
-    ) : (
-      <GroupedFooter>{t("mobile.me.zone.none")}</GroupedFooter>
-    );
-  }
+  // One pick for every row, whatever the owner hands down on each render: the rows stay as they were drawn.
+  const pickRef = useRef(onPick);
+  pickRef.current = onPick;
+  const pick = useCallback((zone: string) => pickRef.current(zone), []);
+  // A group starts after a header (or the top) and ends before the next one (or the end).
+  const edge = (i: number) => {
+    const row = rows[i];
+    return row === undefined || "header" in row;
+  };
   return (
-    <>
-      <GroupedHeader>{t("mobile.me.zone.suggested")}</GroupedHeader>
-      <GroupedList>{options.suggested.map(row)}</GroupedList>
-      <GroupedHeader>{t("mobile.me.zone.all")}</GroupedHeader>
-      <GroupedList>{options.rest.map(row)}</GroupedList>
-    </>
+    <FlatList
+      ref={listRef}
+      data={rows}
+      keyExtractor={(r) => ("header" in r ? `h:${r.header}` : r.zone)}
+      style={styles.fill}
+      keyboardShouldPersistTaps="handled"
+      // A drag down the zones puts the keyboard away, as on every sheet with a field.
+      keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={20}
+      contentContainerStyle={styles.zoneSheetList}
+      ListEmptyComponent={<GroupedFooter>{t("mobile.me.zone.none")}</GroupedFooter>}
+      renderItem={({ item, index }) =>
+        "header" in item ? (
+          // The sheet's rhythm between a header and its group, and before the next header.
+          <View style={index === 0 ? styles.zoneHeadFirst : styles.zoneHead}>
+            <GroupedHeader>{item.header}</GroupedHeader>
+          </View>
+        ) : (
+          <ZoneRow
+            option={item}
+            checked={item.zone === value}
+            first={edge(index - 1)}
+            last={edge(index + 1)}
+            onPick={pick}
+          />
+        )
+      }
+    />
   );
 }
 
@@ -619,7 +682,7 @@ function ZonePicker({
               checked={item.zone === value}
               first={edge(index - 1)}
               last={edge(index + 1)}
-              onPress={() => onPick(item.zone)}
+              onPick={onPick}
             />
           )
         }
@@ -631,19 +694,20 @@ function ZonePicker({
 /**
  * One zone, a row of a GroupedList drawn piece by piece so the long list stays virtualized: the group's corners on its
  * first and last row, the hairline from the text on, and the group's shadow kept to its sides where two rows meet.
+ * Memoized: a row redraws only when its own zone, check or place in the group changes.
  */
-function ZoneRow({
+const ZoneRow = memo(function ZoneRow({
   option,
   checked,
   first,
   last,
-  onPress,
+  onPick,
 }: {
   option: ZoneOption;
   checked: boolean;
   first: boolean;
   last: boolean;
-  onPress: () => void;
+  onPick: (zone: string) => void;
 }) {
   const { colors: c, shadows } = useTheme();
   return (
@@ -657,15 +721,24 @@ function ZoneRow({
         ]}
       >
         {first ? null : <View style={[styles.zoneDivider, { backgroundColor: c.line2 }]} />}
-        <GroupedRow label={option.name} value={option.offsetLabel} checked={checked} onPress={onPress} />
+        <GroupedRow
+          label={option.name}
+          value={option.offsetLabel}
+          checked={checked}
+          onPress={() => onPick(option.zone)}
+        />
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   // The zones sheet's bar and search, on every sheet's side margin, over the list.
   sheetHead: { paddingHorizontal: SHEET_X, paddingBottom: 8, gap: 4 },
+  // A sheet's body under a pinned header (`useSheetBody(8)`); its gap between blocks is the headers' own room here.
+  zoneSheetList: { paddingHorizontal: SHEET_X, paddingTop: 8, paddingBottom: 24 },
+  zoneHeadFirst: { paddingBottom: SHEET_GAP },
+  zoneHead: { paddingTop: SHEET_GAP, paddingBottom: SHEET_GAP },
   fill: { flex: 1 },
   photo: { alignItems: "center", gap: 8, paddingTop: 6, paddingBottom: 14 },
   photoBusy: { width: PHOTO, height: PHOTO, borderRadius: PHOTO / 2 },

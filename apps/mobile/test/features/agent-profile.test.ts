@@ -656,3 +656,14 @@ describe("Perfil: the page's order and rhythm", () => {
     expect(card).toContain("<Pressable onPress={press} accessible={false} style={[styles.frame,");
   });
 });
+
+test("the cover reads where the stack's bar really ends: Android's toolbar is taller than iOS's bar", async () => {
+  const screen = await Bun.file(
+    new URL("../../src/features/agents/AgentProfileScreen.tsx", import.meta.url).pathname,
+  ).text();
+  // The face fades, the name comes into the bar and the backdrop ends at the bar's foot on both platforms.
+  expect(screen).toContain("const barBottom = useContext(HeaderHeightContext) || insets.top + PEEK_BAR;");
+  expect(screen).toContain("const underBar = AVATAR_TOP - barBottom;");
+  expect(screen).toContain("height={barBottom}");
+  expect(screen).not.toContain("BAR_HEIGHT");
+});

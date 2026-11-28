@@ -16,6 +16,7 @@ import { readValueSync, STORED, writeValue } from "@/lib/storage";
 import {
   Count,
   Disclosure,
+  haptics,
   Icon,
   IconButton,
   LIST_INSET,
@@ -158,7 +159,11 @@ export function CollapsibleSection({
         onPress={onToggle}
         {...(menu
           ? {
-              onLongPress: menu.onPress,
+              // Felt as the hold takes, as a row's menu is.
+              onLongPress: () => {
+                haptics.medium();
+                menu.onPress();
+              },
               delayLongPress: 380,
               accessibilityActions: [{ name: "menu", label: menu.label }],
               onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => {

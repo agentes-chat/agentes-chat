@@ -270,12 +270,9 @@ export function FolderPath({ trail }: { trail: readonly DriveFolder[] }) {
             {last ? (
               <Text variant="footnote">{s.name}</Text>
             ) : (
-              // An 18-point line: 13 above and under reach the 44 a finger needs.
-              <Pressable
-                accessibilityRole="link"
-                hitSlop={{ top: 13, bottom: 13, left: 6, right: 6 }}
-                onPress={() => goTo(s.id)}
-              >
+              // An 18-point line: 13 above and under reach the 44 a finger needs, as the crumb's own room (a hitSlop
+              // past a parent as tall as the line is cut at the parent's edge on Android).
+              <Pressable accessibilityRole="link" style={styles.crumbTouch} onPress={() => goTo(s.id)}>
                 <Text variant="footnote" tone="muted">
                   {s.name}
                 </Text>
@@ -289,6 +286,7 @@ export function FolderPath({ trail }: { trail: readonly DriveFolder[] }) {
 }
 
 const styles = StyleSheet.create({
+  crumbTouch: { paddingVertical: 13, marginVertical: -13, paddingHorizontal: 6, marginHorizontal: -6 },
   // 16 under the chips (their own 4 and these 12); under the folders, the next header's own 24.
   rows: { paddingHorizontal: SCREEN_X, paddingTop: 12 },
   path: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: SCREEN_X, paddingBottom: 10 },

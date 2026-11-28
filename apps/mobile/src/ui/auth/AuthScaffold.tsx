@@ -1,7 +1,7 @@
 import type { Expression } from "@agenteschat/ui/agent/engine";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { KeyboardAwareScrollView, KeyboardToolbar } from "react-native-keyboard-controller";
 import Animated, { Easing, FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,6 +26,11 @@ const AGENT_OVERLAP = 8;
 export const TOOLBAR_HEIGHT = 42;
 /** Between a focused field and the keyboard (or the bar over it) when the page scrolls it into view. */
 const FIELD_CLEARANCE = 16;
+/**
+ * A form's drag down that puts the keyboard away: with the finger on iOS ("interactive"); on Android, where React
+ * Native treats "interactive" as "none" and the keyboard stayed up under a scrolled form, as the drag starts.
+ */
+export const DRAG_DISMISS = Platform.OS === "ios" ? "interactive" : "on-drag";
 
 /**
  * The system's bar over the keyboard: ‹ › between a form's fields (`arrows`) and Done, so the keyboard walks the form
@@ -129,7 +134,7 @@ export function AuthScaffold({
         extraKeyboardSpace={bar}
         keyboardShouldPersistTaps="handled"
         // A drag down the screen takes the keyboard down with the finger, as the system's own forms do.
-        keyboardDismissMode="interactive"
+        keyboardDismissMode={DRAG_DISMISS}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 16 }}
       >
         <View

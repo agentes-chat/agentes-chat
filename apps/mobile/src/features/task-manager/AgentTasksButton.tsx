@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Count, Icon, PressScale } from "@/ui";
 import { useColors, useDirectory } from "../shared/hooks";
-import { tapHaptic } from "../shared/parts";
 import { useAgentTasks } from "./hooks";
 import { type AgentTaskView, tasksBadge } from "./logic";
 import { TaskMark, useAgentColor } from "./parts";
@@ -40,10 +39,8 @@ export function AgentTasksButton({
   return (
     <PressScale
       to={0.9}
-      onPress={() => {
-        tapHaptic();
-        onPress();
-      }}
+      // PressScale's own light haptic is the press's one buzz.
+      onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={4}

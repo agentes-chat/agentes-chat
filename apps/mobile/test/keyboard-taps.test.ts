@@ -42,8 +42,10 @@ test("a field low on a page scrolls clear of the keyboard on Android too, never 
   expect(auth).toContain('mode="layout"');
   expect(auth).toContain("bottomOffset={bar + FIELD_CLEARANCE}");
   expect(auth).toContain("extraKeyboardSpace={bar}");
-  // A drag down the sign-in's screens takes the keyboard with the finger; no back circle drawn on its sky.
-  expect(auth).toContain('keyboardDismissMode="interactive"');
+  // A drag down the sign-in's screens takes the keyboard with the finger (as the drag starts on Android, which has no
+  // "interactive"); no back circle drawn on its sky.
+  expect(auth).toContain('export const DRAG_DISMISS = Platform.OS === "ios" ? "interactive" : "on-drag";');
+  expect(auth).toContain("keyboardDismissMode={DRAG_DISMISS}");
   expect(auth).not.toContain("onBack");
   expect(source("features/onboarding/OnboardingFlow.tsx")).not.toContain("scrollToFocus");
   // A form of several fields gets the bar over the keyboard (‹ › and Done), and the page keeps clear of it.
@@ -74,4 +76,15 @@ test("deleting the account or the workspace: the password field waits, so the ke
     const field = source(file).match(/<PasswordField[\s\S]*?\/>/)?.[0] ?? "";
     expect({ file, waits: field.includes("autoFocus={false}") }).toEqual({ file, waits: true });
   }
+});
+
+test("a Você page's footer button rides the keyboard, with no home-indicator band between them", () => {
+  const page = source("features/me/parts.tsx");
+  // The whole page padded by the keyboard kept the footer's home-indicator room over it: an empty band.
+  expect(page).not.toContain("KeyboardAvoidingView");
+  expect(page).toContain("<KeyboardStickyView offset={{ opened: behind }}");
+  expect(page).toContain("const behind = footerBottom - FOOTER_GAP;");
+  // A focused field keeps clear of what the footer covers over the keyboard.
+  expect(page).toContain("bottomOffset={docked + 24}");
+  expect(page).not.toContain("enabled={!footer}");
 });

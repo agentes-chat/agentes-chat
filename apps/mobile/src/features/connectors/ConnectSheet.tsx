@@ -1061,6 +1061,7 @@ function ConnectStep({
                 autoCapitalize="none"
                 autoCorrect={false}
                 placeholder={def.address === "optional" ? "https://gitlab.com" : "https://"}
+                placeholderTextColor={c.faint}
                 accessibilityLabel={t("connectFlow.git.address")}
                 style={field}
               />

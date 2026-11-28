@@ -9,7 +9,7 @@ const src = (path: string) => readFileSync(join(import.meta.dir, "..", "..", "sr
 describe("the settings and Você page frames", () => {
   test("a form page lets a drag take the keyboard away, and its docked action rides over the keyboard", () => {
     const page = src("features/settings/parts.tsx");
-    expect(page).toContain('keyboardDismissMode="interactive"');
+    expect(page).toContain("keyboardDismissMode={DRAG_DISMISS}");
     // The docked action sits over the keyboard (over the system's ‹ › bar too) and a focused field stays clear of it.
     expect(page).toContain("<KeyboardStickyView");
     expect(page).toContain("offset={{ opened: insets.bottom - toolbarRoom }}");
@@ -17,7 +17,8 @@ describe("the settings and Você page frames", () => {
     expect(page).toContain("bottomOffset={bar + FIELD_CLEARANCE}");
     // The home indicator's room is the docked bar's, never added twice under the content.
     expect(page).toContain("paddingBottom: bottom ? 24 : 24 + insets.bottom");
-    expect(src("features/me/parts.tsx")).toContain('keyboardDismissMode="interactive"');
+    // A drag takes the keyboard away on both platforms ("interactive" on iOS, "on-drag" on Android).
+    expect(src("features/me/parts.tsx")).toContain("keyboardDismissMode={DRAG_DISMISS}");
   });
 
   test("a list read from the server is read again on a pull, on both frames", () => {
@@ -130,7 +131,10 @@ describe("lists read again on a pull, and searches make room for the keyboard", 
       "features/computer/ComputerScreen.tsx",
       "features/browser/ProfileLoginScreen.tsx",
     ])
-      expect({ file, drag: src(file).includes('keyboardDismissMode="interactive"') }).toEqual({ file, drag: true });
+      expect({ file, drag: /keyboardDismissMode=("interactive"|\{DRAG_DISMISS\})/.test(src(file)) }).toEqual({
+        file,
+        drag: true,
+      });
   });
 
   test("Ferramentas is the settings page, its Save docked over the keyboard", () => {

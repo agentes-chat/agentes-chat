@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
-import { type RefreshControlProps, ScrollView, StyleSheet } from "react-native";
+import { Platform, type RefreshControlProps, ScrollView, type ScrollViewProps, StyleSheet } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { HeaderAction } from "@/ui";
 import { ReadableColumn } from "@/ui/pane";
@@ -29,6 +30,10 @@ type PushedLargeTitleProps = {
   dock?: ReactNode;
   children?: ReactNode;
 };
+
+const IOS = Platform.OS === "ios";
+/** Between a focused field and the keyboard when Android's page scrolls it into view. */
+const FIELD_ROOM = 16;
 
 /**
  * A pushed screen with a large title (Issues, Drive). On iOS it is the system's own: the large title in the bar
@@ -72,25 +77,37 @@ function SystemLargeTitle({
         largeTitle={!collapsed}
       />
       <FocusLive>
-        <ScrollView
+        <PageScroll
+          aware={keyboard && !IOS}
           contentInsetAdjustmentBehavior="automatic"
           style={[styles.screen, { backgroundColor: grouped ? c.grouped : c.bg }]}
           onScrollBeginDrag={onScrollBeginDrag}
           onScrollEndDrag={onScrollEnd}
           onMomentumScrollEnd={onScrollEnd}
           refreshControl={refreshControl}
-          keyboardDismissMode={keyboard ? "interactive" : "on-drag"}
-          automaticallyAdjustKeyboardInsets={keyboard}
+          // Android has no interactive dismissal (it reads as "none"): there a drag takes the keyboard away at once.
+          keyboardDismissMode={keyboard && IOS ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets={keyboard && IOS}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: insets.bottom + bottomInset }}
         >
           {/* On a large screen the content keeps to the readable column (ADR 0212). */}
           <ReadableColumn>{children}</ReadableColumn>
-        </ScrollView>
+        </PageScroll>
       </FocusLive>
       {dock}
     </>
   );
+}
+
+/**
+ * The page's scroll view. iOS keeps the system's own, which its large title follows and whose keyboard inset makes room
+ * for a field. On Android the keyboard library's provider keeps the window edge to edge, so the window no longer shrinks
+ * for the keyboard and that inset doesn't exist: a page with a field (`aware`) takes the library's scroll view, which
+ * makes the room and scrolls the focused field clear. Android's bar has no large title to follow it.
+ */
+function PageScroll({ aware, ...props }: ScrollViewProps & { aware: boolean }) {
+  return aware ? <KeyboardAwareScrollView {...props} bottomOffset={FIELD_ROOM} /> : <ScrollView {...props} />;
 }
 
 const styles = StyleSheet.create({

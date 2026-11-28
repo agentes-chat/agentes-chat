@@ -4,7 +4,7 @@ import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
-import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Tag, Text } from "@/ui";
+import { Count, haptics, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Tag, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { withAlpha } from "@/ui/palette";
 import type { RowAction } from "../channel-sectors/menus";
@@ -308,10 +308,14 @@ export function OpensConversation({
   const peekHref = starts && r.kind === "dm" ? (`/agent/${r.with.id}` as const) : href;
   // Beside the list (ADR 0212) the conversation opens next to it: no preview to peek at, the long press is the menu.
   const peeks = Platform.OS === "ios" && peekHref !== null && !opener;
+  // The menu is felt as the hold takes, as the system's own long press is (iOS's preview gives its own).
   const hold: HoldProps =
     onHold && !peeks
       ? {
-          onLongPress: () => onHold(r),
+          onLongPress: () => {
+            haptics.medium();
+            onHold(r);
+          },
           delayLongPress: 380,
           accessibilityActions: [{ name: "menu", label: holdLabel }],
           onAccessibilityAction: (e) => {

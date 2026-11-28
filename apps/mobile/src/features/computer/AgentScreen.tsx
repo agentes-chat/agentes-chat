@@ -25,9 +25,19 @@ import { type AgentColorName, bodyTones } from "@agenteschat/ui/agent/engine";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import * as Clipboard from "expo-clipboard";
 import { Stack, useIsFocused } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, type LayoutChangeEvent, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import {
+  BackHandler,
+  Keyboard,
+  type LayoutChangeEvent,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 import {
   GestureDetector,
   useLongPressGesture,
@@ -784,6 +794,18 @@ export function AgentScreen({
   };
   // Set when they change only: the screen renders on every page event.
   const barOptions = useMemo(() => ({ headerShown: !wide, gestureEnabled: !inControl }), [wide, inControl]);
+  // Android's back is a swipe from the screen's edge, which the trackpad and the sideways picture reach: in control it
+  // never leaves (that would hand the screen back mid-gesture), as iOS's edge swipe doesn't; the bar's back still does.
+  // Sideways by the button, it stands the screen up first, as a full-screen player's back does.
+  const focused = useIsFocused();
+  useEffect(() => {
+    if (Platform.OS !== "android" || !inControl || !focused) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (wide && sideways.forced) sideways.standUp();
+      return true;
+    });
+    return () => sub.remove();
+  });
 
   return (
     // Under the screen's bar: its true place on the screen, so the keys and the trackpad clear the keyboard by the
@@ -792,6 +814,9 @@ export function AgentScreen({
       {/* Sideways the picture takes the whole phone: no bar. In control the edge swipe is the trackpad's, never a way
           back that would hand the screen back mid-gesture (the bar's back still leaves). */}
       <Stack.Screen options={barOptions} />
+      {/* Sideways the status bar goes too (an iPhone hides it there by itself; Android and an iPad keep it), so the
+          clock and the system's icons don't sit on the picture and the dock's buttons. */}
+      {wide ? <StatusBar hidden animated /> : null}
       {wide ? null : top(sub)}
       {wide ? null : banner}
       {/* The screen and, across its bottom edge, the capsule (it hangs past the screen into this view's margin). */}
