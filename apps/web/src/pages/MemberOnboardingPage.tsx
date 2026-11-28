@@ -8,7 +8,7 @@ import {
   usePickFirstAgent,
   useStartFirstAgent,
 } from "@agenteschat/client";
-import { errorText } from "@agenteschat/client/lib/errors";
+import { errorCode, errorText } from "@agenteschat/client/lib/errors";
 import {
   areaAgentInput,
   CUSTOM_AREA,
@@ -144,6 +144,26 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
       ? (status.data.agents.find((a) => a.agentId === agent.id)?.state ?? "no_ai") !== "no_ai"
       : false;
 
+  // Their first agent already kept elsewhere (another tab won, 409 `first_agents.kept`): read again and move on to it
+  // (its step, or past it once armed), with no error. Anything else, or nothing to move on to, says why.
+  const firstAgentFailed = async (e: unknown) => {
+    if (errorCode(e) === "first_agents.kept") {
+      const [kept] = await Promise.all([
+        qc.fetchQuery({
+          queryKey: keys.firstDelivery(orgId),
+          queryFn: () => api.firstAgents.delivery(orgId),
+          staleTime: 0,
+        }),
+        qc.invalidateQueries({ queryKey: keys.agents(orgId) }),
+      ]);
+      if (kept) {
+        setCustom(false);
+        setView(null);
+        return;
+      }
+    }
+    toast.show(errorText(t, e), "error");
+  };
   const startArea = (a: FirstArea) => {
     if (row?.area === a && agent) return setView("agent");
     start.mutate(
@@ -155,7 +175,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
           await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
           setView("agent");
         },
-        onError: (e) => toast.show(errorText(t, e), "error"),
+        onError: (e) => void firstAgentFailed(e),
       },
     );
   };
@@ -173,7 +193,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
       await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
       return { id: made.agentId, name: draft.name, role: "", look: normalizeAppearance(CUSTOM_LOOK) };
     } catch (e) {
-      toast.show(errorText(t, e), "error");
+      await firstAgentFailed(e);
       return null;
     }
   };
@@ -240,7 +260,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
                   await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
                   setView("agent");
                 },
-                onError: (e) => toast.show(errorText(t, e), "error"),
+                onError: (e) => void firstAgentFailed(e),
               },
             )
           }

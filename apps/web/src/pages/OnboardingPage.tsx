@@ -453,6 +453,26 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   const start = useStartFirstAgent(orgId ?? "");
   const pick = usePickFirstAgent(orgId ?? "");
   const replaced = row && !row.firedAt ? row.agentId : null;
+  // Its first agent already kept elsewhere (another tab won, 409 `first_agents.kept`): read again and move on to it,
+  // with no error. Anything else, or nothing to move on to, says why.
+  const firstAgentFailed = async (e: unknown) => {
+    if (orgId && errorCode(e) === "first_agents.kept") {
+      const [kept] = await Promise.all([
+        qc.fetchQuery({
+          queryKey: keys.firstDelivery(orgId),
+          queryFn: () => api.firstAgents.delivery(orgId),
+          staleTime: 0,
+        }),
+        qc.invalidateQueries({ queryKey: keys.agents(orgId) }),
+      ]);
+      if (kept) {
+        setCustom(false);
+        setPicked(null);
+        return;
+      }
+    }
+    toast.show(errorText(t, e), "error");
+  };
   const startArea = (a: FirstArea) => {
     if (!orgId) return;
     // The same work again (back from its agent): the agent made for it stays.
@@ -471,7 +491,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
           await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
           setPicked(null);
         },
-        onError: (e) => toast.show(errorText(t, e), "error"),
+        onError: (e) => void firstAgentFailed(e),
       },
     );
   };
@@ -487,7 +507,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       ]);
       setPicked(null);
     },
-    onError: (e) => toast.show(errorText(t, e), "error"),
+    onError: (e) => void firstAgentFailed(e),
   });
   // Nothing brought: the step it was opened from stays (the work step, after Back); the agent brought moves on to it.
   const closeImport = async () => {
@@ -517,7 +537,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       setPicked(null);
       return { id: made.agentId, name: draft.name, role: "", look: normalizeAppearance(CUSTOM_LOOK) };
     } catch (e) {
-      toast.show(errorText(t, e), "error");
+      await firstAgentFailed(e);
       return null;
     }
   };
@@ -826,7 +846,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
                     await qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) });
                     setPicked(null);
                   },
-                  onError: (e) => toast.show(errorText(t, e), "error"),
+                  onError: (e) => void firstAgentFailed(e),
                 },
               )
             }

@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import type { FirstAgentOption, FirstAgents } from "@agenteschat/client";
-import { keys } from "@agenteschat/client";
+import { ApiError, keys } from "@agenteschat/client";
 import { FIRST_AREAS } from "@agenteschat/client/lib/first-areas";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createFakeApi, type FakeState, GENERAL_ID, ORG_ID, seedState, withRightHand } from "./fake-api";
@@ -317,6 +317,36 @@ describe("a member's onboarding (ADR 0264)", () => {
     const fired = noAiYet(withIara({ armedAt: new Date().toISOString(), firedAt: new Date().toISOString() }));
     const again = await welcome(fired);
     expect(again.router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/agent-iara`);
+  });
+
+  test("the tab that loses the race to another: on to the agent the other made, with no error", async () => {
+    const state = joined();
+    const api = createFakeApi(state);
+    const ada = state.agents.find((a) => a.name === "Ada");
+    api.firstAgents.start = async () => {
+      state.agents.push({
+        ...(ada as FakeState["agents"][number]),
+        id: "agent-iara",
+        name: "Iara",
+        handle: "iara",
+        ownerUserId: "u-walter",
+        appearance: FIRST_AREAS.support.look,
+      });
+      state.firstDelivery = {
+        agentId: "agent-iara",
+        area: "support",
+        task: "",
+        armedAt: null,
+        firedAt: null,
+        runId: null,
+      };
+      throw new ApiError(409, "first_agents.kept", "Your first agent is already made");
+    };
+    await renderApp(`/welcome/${ORG_ID}`, { api });
+    await settle(12);
+    await click(area("Marketing"), 24);
+    expect(heading()).toBe("Iara, do atendimento");
+    expect(document.querySelector(".ac-toasts")?.textContent ?? "").toBe("");
   });
 
   test("a personal workspace's own works", async () => {

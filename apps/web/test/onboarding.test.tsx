@@ -826,6 +826,21 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
     expect(heading()).toBe("Newsy");
   });
 
+  test("the tab that loses the race to another: on to the first agent the other made, with no error", async () => {
+    const state = settingUp();
+    const api = createFakeApi(state);
+    // Another tab made the finance agent a moment ago: this tab's start is refused for it.
+    api.firstAgents.start = async () => {
+      madeFor(state, "finance");
+      throw new ApiError(409, "first_agents.kept", "Your first agent is already made");
+    };
+    await renderApp("/onboarding", { api });
+    await settle(14);
+    await click(area("Atendimento"), 24);
+    expect(heading()).toBe("Caio, do financeiro");
+    expect(document.querySelector(".ac-toasts")?.textContent ?? "").toBe("");
+  });
+
   test("its first delivery armed (a Continue whose save didn't land): past its step, with no way back to the work", async () => {
     const state = settingUp({ area: "support" });
     if (state.firstDelivery) state.firstDelivery.armedAt = new Date().toISOString();
