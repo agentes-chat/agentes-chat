@@ -158,6 +158,16 @@ describe("keeping it", () => {
     expect(await checkJobs(f)).toEqual([]);
   });
 
+  test("its checklist asks only for apps this server can connect, as the agent step offers them", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { ...pickDeps(f), catalog: { oauthApps: {} } };
+    const who = { orgId: f.org.id, userId: f.owner.id };
+    const made = await startFirstAgent(deps, who, support({ apps: ["zendesk", "stripe"] }));
+    // Zendesk connects only through Composio, which this server hasn't: never asked for; Stripe's own server is.
+    const agent = await agentRow(f, made.agentId);
+    expect(Object.keys((agent.setup as { apps?: object }).apps ?? {})).toEqual(["stripe"]);
+  });
+
   test("going back to another area takes back the agent made a moment ago, once the new one is made", async () => {
     f = await setup({ rightHand: true });
     const first = await start(f, f.owner.id, support());

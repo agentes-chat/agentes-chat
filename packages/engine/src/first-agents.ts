@@ -7,7 +7,7 @@ import { AGENT_LOOK, type AgentAppearance, validateAppearance } from "./appearan
 import { recordAudit } from "./audit";
 import { CHANNEL_NAME_PATTERN } from "./channels";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
-import { CONNECTOR_BRANDS } from "./connectors/listing";
+import { CONNECTOR_BRANDS, connectorListing, type ServerCatalog } from "./connectors/listing";
 import { MCP_PRESETS } from "./connectors/presets";
 import type { ContextDeps } from "./context/summaries";
 import { openPersonAgentDm } from "./dms";
@@ -177,7 +177,14 @@ export interface FirstAgentsDeps {
   context?: ContextDeps;
 }
 
-export type FirstAgentsPickDeps = TeamDeps & { context?: ContextDeps };
+export type FirstAgentsPickDeps = TeamDeps & {
+  context?: ContextDeps;
+  /**
+   * What this server's connectors store can connect: a first agent's checklist asks only for those, as its agent step
+   * offers them (none: every app of the catalog not still to come).
+   */
+  catalog?: ServerCatalog;
+};
 
 const viewOf = (row: typeof firstAgentProposals.$inferSelect): FirstAgents => ({
   id: row.id,
@@ -468,10 +475,15 @@ async function channelFor(db: Database, orgId: string, userId: string, role: str
 
 /**
  * The catalog apps (by id) an agent's job needs that this workspace hasn't connected: its checklist asks for them. An id
- * the catalog doesn't know, or one still to come, is left out.
+ * the catalog doesn't know, one still to come, or, with `catalog`, one this server can't connect (as the agent step
+ * leaves it out: Zendesk with no Composio) is left out.
  */
-async function appsToConnect(db: Database, orgId: string, wanted: readonly string[]) {
-  const known = new Set(catalogApps().flatMap((c) => (c.soon ? [] : [c.id])));
+async function appsToConnect(db: Database, orgId: string, wanted: readonly string[], catalog?: ServerCatalog) {
+  const known = new Set(
+    catalog
+      ? connectorListing(catalog).flatMap((c) => (c.available ? [c.id] : []))
+      : catalogApps().flatMap((c) => (c.soon ? [] : [c.id])),
+  );
   const ids = [...new Set(wanted)].filter((id) => known.has(id));
   if (ids.length === 0) return [];
   const connected = new Set(
@@ -561,7 +573,7 @@ async function makeFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: 
       .from(agents)
       .where(and(eq(agents.orgId, orgId), isNull(agents.builtin)))
       .limit(1),
-    appsToConnect(db, orgId, plan.apps),
+    appsToConnect(db, orgId, plan.apps, deps.catalog),
   ]);
   const handle = taken.has(plan.handle) ? freeHandle(plan.handle, taken) : plan.handle;
   const place: DraftPlace = { orgId, channelId: at.dm.id, personId: userId };

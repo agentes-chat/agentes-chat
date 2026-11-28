@@ -96,6 +96,14 @@ describe("an agent from an area", () => {
     expect(armed.json.delivery.armedAt).not.toBeNull();
   });
 
+  test("its checklist asks only for apps this server can connect: no Zendesk without Composio", async () => {
+    const { owner, orgId } = await setup();
+    const made = await api(owner, orgId).start(support({ apps: ["zendesk", "stripe"] }));
+    expect(made.status).toBe(201);
+    const [agent] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, made.json.agentId));
+    expect(Object.keys((agent?.setup as { apps?: object } | null)?.apps ?? {})).toEqual(["stripe"]);
+  });
+
   test("400 first_agents.invalid with what is wrong, invalid_request for a wrong shape; signed out 401", async () => {
     const { owner, orgId } = await setup();
     const me = api(owner, orgId);

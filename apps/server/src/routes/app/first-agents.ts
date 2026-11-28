@@ -1,13 +1,17 @@
+import { connectorOAuthApps } from "@agenteschat/config";
 import {
   adoptFirstAgent,
   armFirstDelivery,
+  composioConnectorsOf,
   FIRST_AGENT_LIMITS,
   FIRST_AGENT_START_LIMITS,
+  isAgentesCloud,
   latestFirstAgents,
   pickFirstAgent,
   readFirstDelivery,
   requireActiveMembership,
   saveFirstAgents,
+  type ServerCatalog,
   startFirstAgent,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
@@ -165,9 +169,23 @@ const FirstDelivery = z
  * agent does for them first, in their DM with it, once the workspace has its plan and the agent its AI.
  */
 export function firstAgentRoutes(deps: AppDeps) {
-  const { db, adapters } = deps;
+  const { db, adapters, config } = deps;
   const app = createAppRouter(deps);
   app.use("/organizations/*", requireSession(deps.auth));
+  // What this server connects, as its connectors store lists it: a first agent's checklist asks only for those.
+  const catalog: ServerCatalog = {
+    oauthApps: connectorOAuthApps(config),
+    mail: adapters.mail,
+    composio: composioConnectorsOf(adapters.mail),
+    cloud: isAgentesCloud(config.PUBLIC_URL),
+  };
+  const pickDeps = () => ({
+    db,
+    pubsub: adapters.pubsub,
+    gateway: deps.extras?.context?.gateway,
+    context: deps.extras?.context,
+    catalog,
+  });
 
   app.openapi(
     createRoute({
@@ -237,7 +255,7 @@ export function firstAgentRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, id } = c.req.valid("param");
       const picked = await pickFirstAgent(
-        { db, pubsub: adapters.pubsub, gateway: deps.extras?.context?.gateway, context: deps.extras?.context },
+        pickDeps(),
         { orgId, userId: c.get("user").id },
         id,
         c.req.valid("json").index,
@@ -261,11 +279,7 @@ export function firstAgentRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
-      const made = await startFirstAgent(
-        { db, pubsub: adapters.pubsub, gateway: deps.extras?.context?.gateway, context: deps.extras?.context },
-        { orgId, userId: c.get("user").id },
-        c.req.valid("json"),
-      );
+      const made = await startFirstAgent(pickDeps(), { orgId, userId: c.get("user").id }, c.req.valid("json"));
       return c.json(made, 201);
     },
   );
@@ -295,11 +309,7 @@ export function firstAgentRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
-      const adopted = await adoptFirstAgent(
-        { db, pubsub: adapters.pubsub, gateway: deps.extras?.context?.gateway, context: deps.extras?.context },
-        { orgId, userId: c.get("user").id },
-        c.req.valid("json"),
-      );
+      const adopted = await adoptFirstAgent(pickDeps(), { orgId, userId: c.get("user").id }, c.req.valid("json"));
       return c.json(adopted, 200);
     },
   );
