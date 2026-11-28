@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { CODING_PLANS, type CodingPlan } from "@agenteschat/providers/plans";
 import type { TFunction } from "i18next";
 import type {
   AccountOrderGroup,
@@ -554,12 +555,20 @@ describe("the quota per model of a plan whose models have limits of their own", 
   });
 
   test("a plan with no usage source names its maker; another plan or no plan invents nothing", () => {
-    // MiniMax publishes no usage endpoint (`plans.ts`): nothing to list, and the line says whose usage it is.
-    expect(notSharedText(t, "minimax")).toBe("MiniMax doesn't share usage here.");
+    // When a plan publishes no usage endpoint (`plans.ts`): nothing to list, and the line says whose usage it is.
+    const minimax = CODING_PLANS.minimax as CodingPlan;
+    const savedUsage = minimax.usage;
+    delete minimax.usage;
+    try {
+      expect(notSharedText(t, "minimax")).toBe("MiniMax doesn't share usage here.");
+    } finally {
+      minimax.usage = savedUsage;
+    }
     expect(
       planModelUsage(t, "en", withModels({ "glm-5.3": { at: NOW.toISOString(), off: true } }), "minimax", NOW),
     ).toEqual([]);
     // Plans we do read, and a computer's own sign-in (its CLI reports it), aren't "no reading".
+    expect(notSharedText(t, "minimax")).toBeNull();
     expect(notSharedText(t, "opencode")).toBeNull();
     expect(notSharedText(t, null)).toBeNull();
     expect(planModelUsage(t, "en", withModels({ "glm-5.3": { at: NOW.toISOString() } }), null, NOW)).toEqual([]);

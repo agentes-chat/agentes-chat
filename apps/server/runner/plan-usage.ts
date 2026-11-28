@@ -269,10 +269,64 @@ function opencodeWindows(body: unknown): PlanWindow[] {
   return out;
 }
 
+/**
+ * MiniMax M Plan's `/remains`: `model_remains` holds one entry per modality; pick the text/coding entry and read its
+ * 5-hour (`current_interval_*`) and 7-day (`current_weekly_*`) windows (`*_usage_count` is remaining count, `status`
+ * `2` exhausted, `3` unused).
+ */
+function minimaxWindows(body: unknown): PlanWindow[] {
+  if (!isObj(body)) return [];
+  if (isObj(body.base_resp) && body.base_resp.status_code !== undefined && body.base_resp.status_code !== 0) {
+    return [];
+  }
+  const remains = Array.isArray(body.model_remains) ? body.model_remains.filter(isObj) : [];
+  const pick =
+    remains.find((m) => String(m.model_name ?? "").toLowerCase() === "general") ??
+    remains.find((m) =>
+      String(m.model_name ?? "")
+        .toLowerCase()
+        .includes("minimax"),
+    ) ??
+    remains.find((m) => !["video", "speech", "image", "music"].includes(String(m.model_name ?? "").toLowerCase())) ??
+    remains[0];
+  if (!pick) return [];
+  const usedOfWindow = (
+    status: number | undefined,
+    remPct: number | undefined,
+    reported: number | undefined,
+    total: number | undefined,
+  ): number | undefined => {
+    if (status === 2) return 100;
+    if (remPct !== undefined) return Math.max(0, Math.min(100, 100 - remPct));
+    if (total !== undefined && total > 0 && reported !== undefined && reported >= 0 && reported <= total) {
+      return ((total - reported) / total) * 100;
+    }
+    if (status === 3) return 0;
+    return undefined;
+  };
+  const out: PlanWindow[] = [];
+  const u5 = usedOfWindow(
+    numeric(pick.current_interval_status),
+    numeric(pick.current_interval_remaining_percent),
+    numeric(pick.current_interval_usage_count),
+    numeric(pick.current_interval_total_count),
+  );
+  if (u5 !== undefined) out.push(planWindow({ kind: "five_hour" }, u5, pick.end_time));
+  const u7 = usedOfWindow(
+    numeric(pick.current_weekly_status),
+    numeric(pick.current_weekly_remaining_percent),
+    numeric(pick.current_weekly_usage_count),
+    numeric(pick.current_weekly_total_count),
+  );
+  if (u7 !== undefined) out.push(planWindow({ kind: "seven_day" }, u7, pick.weekly_end_time));
+  return out;
+}
+
 /** How each coding plan's usage endpoint (`plans.ts` `usage`) answers, as windows. */
 const PLAN_KEY_WINDOWS: Partial<Record<PlanId, (body: unknown) => PlanWindow[]>> = {
   zai: zaiWindows,
   kimi: kimiWindows,
+  minimax: minimaxWindows,
   opencode: opencodeWindows,
 };
 
