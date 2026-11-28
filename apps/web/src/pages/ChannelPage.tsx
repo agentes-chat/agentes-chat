@@ -599,7 +599,9 @@ function highlightMessage(scroller: HTMLElement | null, messageId: string) {
   // ones around it are drawn, center it again. They are drawn by the next frame's rendering, which runs
   // after its animation callbacks, so the second centering waits for a task after that frame.
   requestAnimationFrame(() => setTimeout(() => el.scrollIntoView?.({ block: "center" }), 0));
-  // A soft plate that fades (CSS; static with reduced motion).
+  // A soft plate that fades (CSS; static with reduced motion), one at a time: a thread's root the conversation opened
+  // at loses it when the thread sends the person on to a message of the conversation.
+  for (const lit of scroller?.querySelectorAll(".ac-msg--focus") ?? []) lit.classList.remove("ac-msg--focus");
   el.classList.add("ac-msg--focus");
   setTimeout(() => el.classList.remove("ac-msg--focus"), HIGHLIGHT_MS);
   return true;
@@ -2221,11 +2223,14 @@ function ChannelView({
           setAround({ id: focusTarget, done: true });
           if (!page.some((m) => m.id === focusTarget)) return missing();
           setFocusDone(true);
+          // From a link (`?tm=` in the panel): Back would open the thread at it again and come right back here.
+          const replace = !jumping.current;
           jumping.current = false;
           void navigateTo({
             to: "/org/$orgId/c/$channelId",
             params: { orgId: org.id, channelId: channel.id },
             search: { m: focusTarget },
+            replace,
           });
         })
         .catch(missing);
