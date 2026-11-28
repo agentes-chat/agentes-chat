@@ -230,12 +230,13 @@
   line-height: 1.1;
   overflow-wrap: anywhere;
 }
+/* Rename stays quiet beside the name: a fainter ink until the name is under the pointer (never its opacity). */
 .dk-sx__headtext h2 .ac-btn {
-  opacity: 0.6;
+  color: var(--faint);
 }
 .dk-sx__headtext h2:hover .ac-btn,
 .dk-sx__headtext h2 .ac-btn:focus-visible {
-  opacity: 1;
+  color: var(--muted);
 }
 /* The lead under the name, as a section's: its state first, then who uses it and the version. */
 .dk-sx__headtext > p {
