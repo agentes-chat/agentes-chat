@@ -1349,6 +1349,8 @@ export function usePickFirstAgent(orgId: string) {
   return useMutation({
     mutationFn: ({ proposalId, index, replace }: { proposalId: string; index: number; replace?: string | null }) =>
       api.firstAgents.pick(orgId, proposalId, index, replace),
+    // The onboarding's pages say what went wrong themselves (a tab that lost the race moves on): no global toast.
+    meta: { silent: true },
     onSuccess: async () => {
       for (const key of [keys.firstAgents(orgId), keys.channels(orgId), keys.routines(orgId)])
         void qc.invalidateQueries({ queryKey: key });
@@ -1366,6 +1368,8 @@ export function useStartFirstAgent(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: FirstAgentStartInput) => api.firstAgents.start(orgId, input),
+    // The onboarding's pages say what went wrong themselves (a tab that lost the race moves on): no global toast.
+    meta: { silent: true },
     onSuccess: async () => {
       for (const key of [keys.channels(orgId), keys.routines(orgId), keys.firstDelivery(orgId), keys.dms(orgId)])
         void qc.invalidateQueries({ queryKey: key });

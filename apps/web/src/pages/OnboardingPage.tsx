@@ -499,6 +499,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   // of the one made a moment ago, so the onboarding leaves one (ADR 0264 addendum).
   const adopt = useMutation({
     mutationFn: (input: { agentId: string; replace: string | null }) => api.firstAgents.adopt(orgId ?? "", input),
+    meta: { silent: true },
     onSuccess: async () => {
       if (!orgId) return;
       await Promise.all([
