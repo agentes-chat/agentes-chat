@@ -171,7 +171,7 @@ import { picksForMe, replyAloneKey } from "@agenteschat/client/lib/routing";
 import { ConversationSeat } from "@agenteschat/client/lib/seat-context";
 import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { hiddenCount, tasksOf, todayStart } from "@agenteschat/client/lib/task-manager";
-import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
+import { hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
@@ -599,7 +599,9 @@ function highlightMessage(scroller: HTMLElement | null, messageId: string) {
   // ones around it are drawn, center it again. They are drawn by the next frame's rendering, which runs
   // after its animation callbacks, so the second centering waits for a task after that frame.
   requestAnimationFrame(() => setTimeout(() => el.scrollIntoView?.({ block: "center" }), 0));
-  // A soft plate that fades (CSS; static with reduced motion).
+  // A soft plate that fades (CSS; static with reduced motion), one at a time: a thread's root the conversation opened
+  // at loses it when the thread sends the person on to a message of the conversation.
+  for (const lit of scroller?.querySelectorAll(".ac-msg--focus") ?? []) lit.classList.remove("ac-msg--focus");
   el.classList.add("ac-msg--focus");
   setTimeout(() => el.classList.remove("ac-msg--focus"), HIGHLIGHT_MS);
   return true;
@@ -1477,11 +1479,6 @@ function ChannelView({
     };
   }, [thread, threadList, threadLines]);
   const threadsStore = useValueStore(threadsView);
-  // Messages that are a thread's context and still in the channel: the gutter mark.
-  const contextMarkIds = useMemo(
-    () => (thread ? NO_MARKS : contextMarks(threadList, [...older, ...(channelMessages.data ?? [])], channel.id)),
-    [thread, threadList, older, channelMessages.data, channel.id],
-  );
   const timeline = useMemo(() => {
     if (thread) {
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
@@ -2221,11 +2218,14 @@ function ChannelView({
           setAround({ id: focusTarget, done: true });
           if (!page.some((m) => m.id === focusTarget)) return missing();
           setFocusDone(true);
+          // From a link (`?tm=` in the panel): Back would open the thread at it again and come right back here.
+          const replace = !jumping.current;
           jumping.current = false;
           void navigateTo({
             to: "/org/$orgId/c/$channelId",
             params: { orgId: org.id, channelId: channel.id },
             search: { m: focusTarget },
+            replace,
           });
         })
         .catch(missing);
@@ -3068,7 +3068,6 @@ function ChannelView({
                                   dmPersonId={thread ? undefined : chrome?.dmPersonId}
                                   consultGroups={consultGroups}
                                   seenId={thread ? null : seenId}
-                                  marks={contextMarkIds}
                                   progressive={opensAtEnd}
                                   openThreadId={panel?.id ?? null}
                                 />
@@ -3563,7 +3562,6 @@ const Timeline = memo(function Timeline({
   dmPersonId,
   consultGroups,
   seenId = null,
-  marks,
   progressive = false,
   openThreadId = null,
 }: {
@@ -3585,8 +3583,6 @@ const Timeline = memo(function Timeline({
   consultGroups: ConsultGroups;
   /** My message they read last: their face is its receipt. */
   seenId?: string | null;
-  /** Messages that are a thread's context and still in the channel: the gutter mark. */
-  marks: ReadonlySet<string>;
   /** It opens at its end: the last rows are drawn first, the ones above them right after (`FIRST_ROWS`). */
   progressive?: boolean;
   /** The thread open in the panel beside the channel: only its line reads it (`OpenThreadContext`). */
@@ -3777,7 +3773,6 @@ const Timeline = memo(function Timeline({
           grouped={grouped}
           entering={false}
           modelLabels={modelLabels}
-          contextMark={marks.has(m.id)}
           replyContext={item.context}
           lastOfRun={lastByRun.get(m.agentRunId) === item.key}
           run={run}
@@ -3791,7 +3786,6 @@ const Timeline = memo(function Timeline({
           grouped={grouped}
           entering={entering}
           modelLabels={modelLabels}
-          contextMark={marks.has(m.id)}
           replyContext={item.context}
           lastOfRun={Boolean(m.agentRunId && lastByRun.get(m.agentRunId) === item.key)}
           dmPersonId={dmPersonId}
@@ -3861,7 +3855,6 @@ const HELD_RECENT_MS = 12 * 60 * 60_000;
 
 /** Model names for the rows of "Ajustar trecho" (no usage line is shown there). */
 const NO_LABELS = new Map<string, string>();
-const NO_MARKS: ReadonlySet<string> = new Set();
 const NO_SLOTS: RunSlot[] = [];
 const NO_ROWS: ReturnType<typeof buildTimeline> = [];
 
@@ -3897,7 +3890,6 @@ function RunBlock({
   grouped: boolean;
   entering: boolean;
   modelLabels: Map<string, string>;
-  contextMark?: boolean;
   replyContext?: ReplyRef;
   lastOfRun?: boolean;
   run?: RunPosition;
@@ -4628,7 +4620,6 @@ export const TimelineMessage = memo(function TimelineMessage({
   grouped,
   entering,
   modelLabels,
-  contextMark,
   replyContext,
   live = null,
   seenLive,
@@ -4645,8 +4636,6 @@ export const TimelineMessage = memo(function TimelineMessage({
   grouped: boolean;
   entering: boolean;
   modelLabels: Map<string, string>;
-  /** Part of a thread's context (still in the channel): the quiet mark in the gutter. */
-  contextMark?: boolean;
   /** Shown away from the message it answers: that message, quoted above (`buildTimeline`). */
   replyContext?: ReplyRef;
   /** The run still at work (the row is its live block; `message` is a placeholder). */
@@ -4980,7 +4969,6 @@ export const TimelineMessage = memo(function TimelineMessage({
         streaming={Boolean(live) && !liveFailed && !liveWaiting}
         className={cx(
           local && `ac-msg--local ac-msg--${local}`,
-          contextMark && "msg--context",
           mentionsMe && "ac-msg--mentions-me",
           wide && "ac-msg--wide",
         )}

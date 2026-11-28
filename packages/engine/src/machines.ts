@@ -22,6 +22,7 @@ import {
   desc,
   type Executor,
   eq,
+  gte,
   inArray,
   isNotNull,
   isNull,
@@ -656,6 +657,50 @@ export const lendsOffAtHello = (m: LendingFacts & Pick<MachineRow, "egressShare"
   lendingOnThisServer && m.egressShare && m.egressShareAt === null && serverBox(m);
 
 /**
+ * Whether `orgId`'s agents use only a lending computer's internet (ADR 0237, amendment 2026-11-27 c): a person's
+ * computer that lends it has "Use only this computer's internet" on.
+ */
+export async function usesOnlyLent(db: Executor, orgId: string): Promise<boolean> {
+  return (await onlyLenders(db, orgId)).length > 0;
+}
+
+/** The computers `orgId` is lent "only" (`usesOnlyLent`), the newest pick first. */
+const onlyLenders = (db: Executor, orgId: string) =>
+  db
+    .select({ id: machines.id, name: machines.name })
+    .from(machines)
+    .where(
+      and(
+        eq(machines.orgId, orgId),
+        eq(machines.kind, "connected"),
+        eq(machines.egressShare, true),
+        eq(machines.egressOnly, true),
+        gte(machines.protocol, EGRESS_SHARE_PROTOCOL),
+        isNull(machines.deletedAt),
+      ),
+    )
+    .orderBy(desc(sql`coalesce(${machines.egressShareAt}, ${machines.createdAt})`));
+
+/**
+ * The computer `orgId`'s agents use only the internet of (`usesOnlyLent`), while none such is online: they have no
+ * internet now. Null otherwise.
+ */
+export async function lentOnlyOffline(
+  deps: { db: Executor; machines?: { status(machineId: string): Promise<{ online: boolean } | null> } },
+  orgId: string,
+): Promise<{ machineId: string; name: string } | null> {
+  const rows = await onlyLenders(deps.db, orgId);
+  const [first] = rows;
+  if (!first || !deps.machines) return null;
+  const online = await Promise.all(rows.map((r) => deps.machines?.status(r.id).catch(() => null)));
+  return online.some((m) => m?.online) ? null : { machineId: first.id, name: first.name };
+}
+
+/** What an agent reads when nothing reaches the internet because the computer it is lent "only" is offline. */
+export const lentOfflineText = (name: string) =>
+  `No internet: ${name} is offline, and this workspace's agents use only its internet ("Use only this computer's internet" on its page). Nothing reaches the internet until it is back online.`;
+
+/**
  * The workspace's computer's observed way out, its country kept only when it was seen on the route its agents take
  * now: through the lent computer since that one began carrying them, or the usual way while none is online to lend.
  * Otherwise the flag would be the last route's (the Cloud's own exit) until the next observation comes in.
@@ -719,14 +764,14 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       ? { machineId: homeRow.id, agentId: rightHand.id }
       : null;
   // A person's computer online to lend its internet (ADR 0237): the agents' next connections go out through it.
-  const lenderOnline = rows.some(
-    ({ machine: r }) =>
-      r.kind === "connected" &&
-      r.egressShare &&
-      r.protocol >= EGRESS_SHARE_PROTOCOL &&
-      machineOnline(r, now) &&
-      !machinePause(r, now),
+  const lenders = rows.filter(
+    ({ machine: r }) => r.kind === "connected" && r.egressShare && r.protocol >= EGRESS_SHARE_PROTOCOL,
   );
+  const lends = ({ machine: r }: (typeof rows)[number]) => machineOnline(r, now) && !machinePause(r, now);
+  const lenderOnline = lenders.some(lends);
+  // Lent "only" (amendment 2026-11-27 c) and none such lends now: the agents have no internet, and the apps say whose.
+  const onlyLenders = lenders.filter((r) => r.machine.egressOnly);
+  const onlyLender = onlyLenders.some(lends) ? undefined : onlyLenders.at(-1);
   return rows.map(({ machine: m, pairedByName }) => {
     const mine = m.pairedByUserId === actorId;
     const pause = machinePause(m, now);
@@ -754,6 +799,14 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       egress: managed && machineOnline(m, now) ? egressOnRoute(m, lenderOnline, now) : null,
       /** ADR 0237: the person's computer whose internet this computer's agents' web traffic uses now. */
       egressVia: via ? { machineId: via.machine.id, name: via.machine.name, userName: via.pairedByName } : null,
+      /**
+       * ADR 0237 amendment 2026-11-27 c, the workspace's own computer: its agents use only this person's computer's
+       * internet, and it is offline or paused, so they have none now. Null: they have internet.
+       */
+      egressOffline:
+        managed && onlyLender
+          ? { machineId: onlyLender.machine.id, name: onlyLender.machine.name, userName: onlyLender.pairedByName }
+          : null,
       lastSeenAt: m.lastSeenAt?.toISOString() ?? null,
       hostname: managed ? "" : m.hostname,
       os: managed ? "other" : m.os,

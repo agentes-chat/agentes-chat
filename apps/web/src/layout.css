@@ -2454,9 +2454,11 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .md ol {
   padding-left: 22px;
 }
+/* A quote is a plate of its own, no bar at its side (as a message's, `.md--message blockquote`). */
 .md blockquote {
-  padding-left: 12px;
-  border-left: 3px solid var(--line);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--plate);
   color: var(--ink-muted);
 }
 .md hr {
@@ -5021,6 +5023,12 @@ html:not([data-pointer]) .settings__link:focus-visible {
 }
 .settings-row:first-child {
   border-top: 0;
+}
+/* A setting under the one it depends on (`PrefRow` `nested`): its words start under that row's name (past its 28px
+   icon tile), with no hairline between the two. */
+.settings-row--nested {
+  border-top: 0;
+  padding-inline-start: calc(var(--card-pad) + 28px + var(--space-3));
 }
 /* A group's heading among a card's rows (Limites' Por cargo): on the rows' words, the hairline above it. */
 .settings-rows > .ac-grouphead {
@@ -11528,12 +11536,6 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 }
 .agp-card > .ac-card__foot {
   margin-bottom: -12px;
-}
-/* Something changed in it: a bar on its left edge, inside the card's line. */
-.agp-card[data-changed] {
-  box-shadow:
-    var(--card-shadow),
-    inset 2px 0 0 var(--ink);
 }
 /*
  * The overview. Wide: what it does and its recent work on the left, the Ficha as a column on the right (its rows

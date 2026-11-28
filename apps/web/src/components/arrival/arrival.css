@@ -988,8 +988,6 @@ html:not([data-pointer]) .arrival-have__link:focus-visible {
   overflow: hidden;
   max-width: 100%;
   margin: 0;
-  padding-left: 12px;
-  border-left: 2px solid var(--line2);
   color: var(--ink2);
   font-size: 14px;
   line-height: 20px;

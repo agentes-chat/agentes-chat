@@ -960,4 +960,27 @@ describe("Agents use this computer's internet: what goes through it, by server",
         },
       );
   });
+
+  test("use only this computer's internet: nested under the switch while it lends, none from an older server", async () => {
+    const lent = { ...computer, shareInternet: { on: true, inUse: false, only: false } } as ComputerDevice;
+    await pane(
+      "selfhost",
+      <InternetRow server={CLOUD_SERVER} orgId="o-1" computer={lent} />,
+      (el) => row(el, "Use only this computer's internet"),
+      (el) => {
+        const only = row(el, "Use only this computer's internet");
+        expect(only?.hint).toContain("their AI included");
+        const line = el.querySelector("#internet-m-desk-only")?.closest(".dk-crow");
+        expect(line?.getAttribute("data-nested")).toBe("true");
+      },
+    );
+    await pane(
+      "selfhost",
+      <InternetRow server={CLOUD_SERVER} orgId="o-1" computer={computer} />,
+      (el) => row(el, "Agents use this computer's internet"),
+      (el) => {
+        expect(row(el, "Use only this computer's internet")).toBeUndefined();
+      },
+    );
+  });
 });

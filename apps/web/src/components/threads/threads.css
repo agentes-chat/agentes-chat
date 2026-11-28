@@ -7,16 +7,6 @@
  */
 
 /* ── In the channel ────────────────────────────────────────────────────── */
-.msg--context::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--ink) 18%, transparent);
-}
 .thread-marker {
   flex-wrap: wrap;
   gap: 6px 8px;
@@ -828,17 +818,26 @@ html:not([data-pointer]) .thsel-cap__handle:focus-visible,
   }
 }
 
-/* The message a thread belongs to, while that thread is open beside it and 700ms after it closes: a soft plate and a
-   2px mark on its left edge (a color fade, kept under reduced motion). */
+/* The message a thread belongs to, while that thread is open beside it and 700ms after it closes (a color fade, kept
+   under reduced motion), never a mark on its edge. In bubbles the bubble is the plate, as on hover: it goes a step
+   deeper (an ink veil over whatever its color) and the row stays clear, no box around the bubble. In the other looks
+   the row takes the soft plate. */
 .channel__messages .ac-msg:has(.thread-line) {
   transition:
     background-color 0.12s,
     box-shadow var(--dur-base) ease 520ms;
 }
-.channel__messages .ac-msg:has(.thread-line[aria-pressed="true"]) {
-  box-shadow:
-    inset 2px 0 0 var(--line-strong),
-    inset 0 0 0 100vmax var(--plate-soft);
+.channel__messages .ac-msg:not([data-look="bubbles"]):has(.thread-line[aria-pressed="true"]) {
+  box-shadow: inset 0 0 0 100vmax var(--plate-soft);
+  transition-delay: 0s;
+}
+.channel__messages .ac-msg[data-look="bubbles"]:has(.thread-line) .ac-msg__text {
+  transition:
+    filter 0.12s,
+    box-shadow var(--dur-base) ease 520ms;
+}
+.channel__messages .ac-msg[data-look="bubbles"]:has(.thread-line[aria-pressed="true"]) .ac-msg__text {
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--ink) 7%, transparent);
   transition-delay: 0s;
 }
 /*

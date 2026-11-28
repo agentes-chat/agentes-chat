@@ -16801,6 +16801,7 @@
       "spillOwnerOnly": "Alleen wie deze computer heeft gekoppeld kan zijn hulp aanzetten. Jij kunt hem uitzetten.",
       "shareOwnerOnly": "Alleen wie deze computer heeft verbonden, kan agents het internet ervan laten gebruiken. Jij kunt het uitzetten.",
       "shareConnectedOnly": "Alleen een computer die iemand heeft verbonden, kan zijn internet met de agents delen.",
+      "shareOff": "Zet eerst ‘Agents gebruiken het internet van deze computer’ aan en kies daarna om alleen het internet daarvan te gebruiken.",
       "tasksOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan wijzigen hoeveel taken hij tegelijk uitvoert.",
       "tasksCloud": "De Cloud bepaalt zelf hoeveel ruimte deze computer heeft voor taken.",
       "notHome": "Agents wonen op de computer van de workspace en gebruiken deze als ze hem bij naam noemen."
@@ -16966,7 +16967,8 @@
       "hint": "Het adres dat websites zien als de agents browsen. Het verandert mee met het netwerk van de computer.",
       "waiting": "Het internet van de agents wordt opnieuw verbonden. Hun verbindingen wachten tot het terug is.",
       "via": "Agents gebruiken het internet van {{name}}",
-      "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten."
+      "viaHint": "Websites zien de locatie van die computer. Wie hem heeft verbonden, kan het op zijn pagina uitzetten.",
+      "offline": "Agents hebben geen internet: {{name}} is offline"
     },
     "maintenance": {
       "short": {
@@ -17363,8 +17365,10 @@
     "helpWorkspace": "Computers helpen als die van het team vol of weg is",
     "helpWorkspaceHint": "Elke computer helpt alleen als zijn eigenaar het toestaat. Uit: geen enkele helpt, wat de eigenaar ook koos.",
     "shareInternet": "Agents gebruiken het internet van deze computer",
-    "shareInternetHint": "De verbindingen van de agents gaan via het internet van deze computer, dus websites en servers zien jouw locatie: websites, git, SSH, databases en andere TCP-verbindingen. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Naamopzoekingen, gesprekken en ander UDP-verkeer gebruiken de gewone verbinding, net als alles zolang deze computer offline is.",
-    "shareInternetHintProxy": "De browser van de agents en de programma’s die proxyinstellingen volgen (git via HTTPS, curl, de meeste commandoregeltools) gaan via het internet van deze computer, dus websites zien jouw locatie. SSH, databaseclients en andere programma’s die proxyinstellingen negeren, gebruiken de gewone verbinding, net als naamopzoekingen en UDP-verkeer. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Zolang deze computer offline is, gebruikt alles de gewone verbinding.",
+    "shareInternetHint": "De verbindingen van de agents gaan via het internet van deze computer, dus websites en servers zien jouw locatie: websites, git, SSH, databases en andere TCP-verbindingen. Nooit iets op je eigen netwerk en geen e-mail via poort 25. De AI van de agents, naamopzoekingen, gesprekken en ander UDP-verkeer gebruiken de gewone verbinding, net als alles zolang deze computer offline is.",
+    "shareInternetHintProxy": "De browser van de agents en de programma’s die proxyinstellingen volgen (git via HTTPS, curl, de meeste commandoregeltools) gaan via het internet van deze computer, dus websites zien jouw locatie. SSH, databaseclients en andere programma’s die proxyinstellingen negeren, gebruiken de gewone verbinding, net als de AI van de agents, naamopzoekingen en UDP-verkeer. Nooit iets op je eigen netwerk en geen e-mail via poort 25. Zolang deze computer offline is, gebruikt alles de gewone verbinding.",
+    "shareInternetOnly": "Alleen het internet van deze computer gebruiken",
+    "shareInternetOnlyHint": "De agents gebruiken alleen het internet van deze computer, ook voor hun AI, en nooit de gewone verbinding. Zolang hij offline is, hebben ze geen internet tot hij terug is.",
     "shareInternetInUse": "Nu in gebruik",
     "shareInternetOther": "Agents gebruiken nu {{name}}",
     "shareInternetPick": "Deze gebruiken",
@@ -19934,6 +19938,7 @@
       "brain_unavailable_outdated": "Het programma op mijn computer heeft een update nodig voordat {{brain}} kan antwoorden. Ik antwoord zodra het bijgewerkt is.",
       "brain_unavailable_plan_owner": "{{brain}} zou denken met een abonnement dat niet van mijn eigenaar is, dus ik gebruik het niet. Koppel het account van mijn eigenaar op mijn pagina.",
       "brain_unavailable_shared_login": "Mijn computer kan Claudes login voor alle agents nu niet gebruiken. Ik antwoord zodra het lukt. Blijft het mislukken, verbind Claude dan opnieuw in AI-accounts.",
+      "brain_unavailable_lent_offline": "Ik heb nu geen internet: {{computer}} is offline en de agents van deze workspace gebruiken alleen het internet daarvan. Ik antwoord zodra hij terug is, of zodra ‘Alleen het internet van deze computer gebruiken’ op zijn pagina uit staat.",
       "provider_unavailable": "Mijn AI-aanbieder reageert nu niet. Ik antwoord zodra die terug is.",
       "provider_wait_rate_limit": "{{provider}} beperkt nu de verzoeken van deze sleutel. Ik antwoord zodra dat weer kan.",
       "provider_wait_down": "{{provider}} is nu uitgevallen of overbelast. Ik antwoord zodra die terug is.",

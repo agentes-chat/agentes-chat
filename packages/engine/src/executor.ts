@@ -4435,7 +4435,9 @@ async function executeRunInner(
         ? await moveToNextAccount("limit", (await longNow()) ? underTheLine : undefined)
         : null;
     if (next?.plan) return "moved";
-    const machineId = plan.session?.machineId ?? agent.machineId ?? null;
+    // No internet for its computer (`lent_offline`): the run waits for the computer lent "only", whose coming back
+    // resumes it as its own computer's would (`resumeRunsWaitingForMachine`).
+    const machineId = u.lent?.machineId ?? plan.session?.machineId ?? agent.machineId ?? null;
     if (look && machineId && u.code === "machine_offline") {
       const back = await computerBackSoon(deps.machines, machineId, {
         waitMs: deps.computerBlipWaitMs,
@@ -4610,7 +4612,7 @@ async function executeRunInner(
             replyThreadId,
             busy ? "Still in line. I'll answer as soon as my turn comes." : `${u.message} I'll answer when it's back.`,
             {
-              ...bodyCode("brain_unavailable", { brain: name }),
+              ...bodyCode("brain_unavailable", { brain: name, ...(u.lent ? { computer: u.lent.name } : {}) }),
               // `machineId` and `agentId`: the app shows the note as a live "waiting" card tied to the computer's outage.
               brainUnavailable: {
                 brain: from,

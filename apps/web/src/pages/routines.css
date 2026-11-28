@@ -257,16 +257,6 @@ html:not([data-pointer]) .routines-horizon__label:focus-visible {
 .routine-row--on {
   background: color-mix(in srgb, var(--sunken) 80%, transparent);
 }
-.routine-row--on::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--ink);
-}
 .routine-row__who {
   display: flex;
   justify-content: center;

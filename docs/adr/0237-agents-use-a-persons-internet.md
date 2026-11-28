@@ -3,7 +3,7 @@
 - Status: Accepted (phase 1: the switch, the relay on both computers and the server; the workspace computer's
   routing is the Cloud's, later)
 - Date: 2026-11-24 (amended 2026-11-26: no daily cap; 2026-11-27: self-hosted servers, then servers borrow;
-  2026-11-27 b: every TCP port)
+  2026-11-27 b: every TCP port; 2026-11-27 c: AI direct, "use only this computer's internet")
 - Extends: ADR 0025 (connected computers), ADR 0058 §11 (data sockets), ADR 0101 (observed egress)
 - Code: protocol `packages/adapters/src/machine-protocol.ts` (`EGRESS_SHARE_PROTOCOL`, `EGRESS_SHARE`,
   `egress.dial`, `StreamHello.egress`, `welcome.egressRelay`); db `machines.egress_share`, `egress_share_at`,
@@ -212,3 +212,44 @@ Consequences: more of the agents' traffic crosses the server and the person's co
 lending computer on an older app carries the web alone until it updates; lent traffic never touches a paid proxy:
 the Cloud's guard goes the proxy way only for what the socket didn't carry (no lender, a refusal, a failure, port 25,
 root's own traffic, UDP).
+
+## Amendment 2026-11-27 c: AI calls go direct; "Use only this computer's internet"
+
+Owner decision: by default the agents' AI traffic never goes through the person's computer. A lent hop adds latency to
+every model call and gains nothing (providers don't block datacenters), and a key or a sign-in never depends on
+someone's home connection. Under the switch, a nested choice, off by default, sends everything through it.
+
+1. **One list.** `EGRESS_DIRECT_HOSTS` (`machine-protocol.ts`) names the model providers' and the AI CLIs' services
+   (a leading dot: the name and every name under it); new ones are added there alone. A self-hosted borrower already
+   put them in `NO_PROXY`. On the Cloud the workspace's computer's runner writes them next to its socket
+   (`<runner home>/egress-relay.json`: `{ only, direct }`, `writeEgressPolicy`), and the guard keeps a TLS connection
+   to port 443 whose server name matches one its usual way, without asking the socket (the Cloud's ADR 0009). The
+   server's own model calls never went through a lent connection (§3 of the 2026-11-27 amendment).
+2. **The choice.** "Use only this computer's internet" (`machines.egress_only`, migration 0367; `internetOnly` in
+   `PATCH …/devices/computers/{id}`, `shareInternet.only` in the list) shows under the switch while it is on, on the
+   web (`PrefRow` `nested`), the phone (`GroupedRow` `depth`) and the desktop app (`PrefRow` `nested`). Its owner
+   turns it on (`device.share_owner_only`), only while it lends (`device.share_off`); an admin may turn it off;
+   turning the switch off turns it off. An older server sends no `only`, and the apps show no such row.
+3. **What it does.** While a computer in the workspace is lent "only", just such computers carry its connections
+   (the pick ignores the others), and nothing goes the usual way: `EGRESS_DIRECT_HOSTS` go through it too (the guard's
+   file says `direct: []`, a self-hosted borrower's `NO_PROXY` and Chrome's bypass list drop them and a Claude Code
+   turn's endpoint), and the server's reads of web pages go through it on the Cloud too, with no fallback
+   (`EgressFetch.lentFetch` `only`). Borrowers hear it in `welcome.egressOnly` and in `egress.only` when it changes
+   (`EGRESS_ONLY_PROTOCOL`, 97; `tellBorrowersOnly`, not awaited by the change).
+4. **Offline.** None of them online (or a dial that fails on one): the server closes the borrower's data socket
+   `notFound` ("<name> is offline"), never `unreachable`, so no borrower goes its usual way. The runner's proxy and
+   the Cloud's guard, told `only`, fail every other failure too, but the server's `unreachable`: that means no
+   computer is lent "only" any more (it was turned off or removed while they missed the change), so the usual way.
+   Port 25 then never goes out. Name lookups and other UDP keep their way (the guard drops QUIC while lending).
+5. **Said.** A computer brain on a borrowing computer (`managed`, `host`) can't reach its AI then: `resolveBrain`
+   answers `lent_offline` (`lentOnlyOffline`, read alongside its computer's status so no turn waits for it), and the
+   run waits for that computer as for its own (`waitingMachineId` is the lent one, so its coming back resumes it),
+   its note "I have no internet right now: <computer> is offline… I'll answer when it's back, or once “Use only this
+   computer's internet” is off on its page" (`chat.body.brain_unavailable_lent_offline`). A model brain's page reads
+   fail with `lentOfflineText`. The workspace's computer's page says "Agents have no internet: <name> is offline"
+   (`egressOffline` in the machine view), on the web and the phone. 14 languages.
+
+Consequences: AI calls from the workspace's computer stop crossing the server and a home connection by default; with
+the choice on, the workspace's agents are offline whenever that computer is; a self-hosted borrower stays
+cooperative (programs that ignore proxy settings still go out their own way, as before); a paused lending computer
+reads online to `lentOnlyOffline` (the run's turn then fails on its own, as any CLI error).

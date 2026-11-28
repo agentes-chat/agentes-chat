@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { messagePath } from "@agenteschat/client/lib/message-links";
-import { act, cleanup, fireEvent } from "@testing-library/react";
+import { act, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { messageLink } from "@/components/MessageMore";
 import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
@@ -244,13 +244,22 @@ describe("a message of the conversation asked for inside one of its threads", ()
     return state;
   }
 
+  // A thread's link opens its conversation with the thread in the panel beside it (`?tm=` the panel's message).
   test("it opens in the conversation, at it, never a toast saying it's gone", async () => {
     const { router } = await renderApp(`/org/${ORG_ID}/threads/${TARGET}?m=${OUTSIDE}`, {
       api: createFakeApi(withReport()),
     });
-    await settle(12);
+    await waitFor(() => expect(router.state.location.search).toEqual({ m: OUTSIDE }));
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
-    expect(document.querySelector(`[data-message-id="${OUTSIDE}"]`)?.classList.contains("ac-msg--focus")).toBe(true);
+    await waitFor(() =>
+      expect(document.querySelector(`[data-message-id="${OUTSIDE}"]`)?.classList.contains("ac-msg--focus")).toBe(true),
+    );
+    await settle(6);
+    // The root the conversation opened at is lit no more: one plate, on the report.
+    expect([...document.querySelectorAll(".ac-msg--focus")].map((e) => e.getAttribute("data-message-id"))).toEqual([
+      OUTSIDE,
+    ]);
+    expect(screen().queryByRole("complementary", { name: "Thread" })).toBeNull();
     expect(document.body.textContent).not.toContain(missing);
   });
 
@@ -258,8 +267,9 @@ describe("a message of the conversation asked for inside one of its threads", ()
     const { router } = await renderApp(`/org/${ORG_ID}/threads/${TARGET}?m=${GONE}`, {
       api: createFakeApi(withReport()),
     });
-    await settle(12);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/${TARGET}`);
-    expect(document.body.textContent).toContain(missing);
+    await waitFor(() => expect(document.body.textContent).toContain(missing));
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${ENG_ID}`);
+    expect(router.state.location.search).toMatchObject({ thread: TARGET });
+    screen().getByRole("complementary", { name: "Thread" });
   });
 });

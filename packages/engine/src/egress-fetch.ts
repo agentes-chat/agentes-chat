@@ -3,7 +3,7 @@ import type { EventEmitter } from "node:events";
 import { createServer, type Socket } from "node:net";
 import { isEgressTarget, parseStreamControl, STREAM_CLOSE } from "@agenteschat/adapters";
 import type { EgressRelay } from "./egress-share";
-import { serverLending } from "./machines";
+import { lentOfflineText, serverLending } from "./machines";
 
 const READY = "HTTP/1.1 200 Connection Established\r\n\r\n";
 const answer = (status: string) => `HTTP/1.1 ${status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n`;
@@ -99,13 +99,25 @@ export function createEgressFetch(relay: Pick<EgressRelay, "connect" | "lending"
   return {
     /**
      * A `fetch` whose connections go out through the computer that lends `orgId` its internet, or null when none
-     * does now (or this server lends none): the caller then goes its usual way.
+     * does now (or this server lends none): the caller then goes its usual way. `only`: the workspace uses only that
+     * computer's internet (amendment 2026-11-27 c), on the Cloud too, so the caller never goes its usual way; while
+     * that computer is offline the `fetch` fails saying so.
      */
-    async lentFetch(orgId: string): Promise<typeof fetch | null> {
-      if (!serverLending() || !(await relay.lending(orgId).catch(() => false))) return null;
+    async lentFetch(orgId: string): Promise<{ fetch: typeof fetch; only: boolean } | null> {
+      const now = await relay.lending(orgId).catch(() => null);
+      if (now?.only && !now.lent) {
+        const name = now.only.name;
+        return {
+          fetch: (() => Promise.reject(new Error(lentOfflineText(name)))) as unknown as typeof fetch,
+          only: true,
+        };
+      }
+      if (!now?.lent || (!serverLending() && !now.only)) return null;
       const port = await start();
       const proxy = `http://${encodeURIComponent(orgId)}:${token.toString()}@127.0.0.1:${port}`;
-      return ((url: string | URL | Request, init?: RequestInit) => fetch(url, { ...init, proxy })) as typeof fetch;
+      const lent = ((url: string | URL | Request, init?: RequestInit) =>
+        fetch(url, { ...init, proxy })) as typeof fetch;
+      return { fetch: lent, only: now.only !== null };
     },
   };
 }

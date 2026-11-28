@@ -175,13 +175,6 @@ html:not([data-pointer]) .nt-item:focus-visible {
   line-height: 1.5;
   min-width: 0;
 }
-.nt-quote::before {
-  content: "";
-  width: 3px;
-  border-radius: 3px;
-  background: var(--line2);
-  flex: none;
-}
 .nt-quote span {
   min-width: 0;
   display: -webkit-box;

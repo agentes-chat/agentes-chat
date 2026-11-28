@@ -25,6 +25,7 @@ import {
   computerStorage,
   desktopTargetOf,
   downloadHref,
+  egressOfflineText,
   egressViaParts,
   egressViaText,
   folderName,
@@ -908,5 +909,11 @@ test("whose internet a borrowing computer uses: the computer in the line, who co
   );
   expect(egressViaParts(words, { kind: "host", online: true, egressVia: via })?.name).toBe("Ana's iMac");
   expect(egressViaText(t, { kind: "connected", online: true, egressVia: null })).toBeNull();
+  // Lent "only" and that computer offline: the workspace's computer says its agents have no internet, and whose.
+  expect(egressOfflineText(t, { kind: "managed", egressOffline: via })).toBe(
+    'machines.egress.offline{"name":"Ana\'s iMac"}',
+  );
+  expect(egressOfflineText(t, { kind: "managed", egressOffline: null })).toBeNull();
+  expect(egressOfflineText(t, { kind: "managed" })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

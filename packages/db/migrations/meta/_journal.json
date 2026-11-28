@@ -2553,8 +2553,15 @@
     {
       "idx": 366,
       "version": "7",
-      "when": 1795825963197,
-      "tag": "0369_onboarding_first_agents",
+      "when": 1795819522705,
+      "tag": "0369_egress_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 367,
+      "version": "7",
+      "when": 1795829522705,
+      "tag": "0370_onboarding_first_agents",
       "breakpoints": true
     }
   ]

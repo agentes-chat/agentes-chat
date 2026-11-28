@@ -1329,10 +1329,16 @@
     "value": "Off: agents use their usual connection"
   },
   "pair.internetHint": {
-    "value": "The workspace's agents go online through this computer's connection: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use their usual connection, and so does everything while this computer is offline."
+    "value": "The workspace's agents go online through this computer's connection: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. The agents' AI, name lookups, calls and other UDP traffic use their usual connection, and so does everything while this computer is offline."
   },
   "pair.internetHintProxy": {
-    "value": "The workspace's agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go online through this computer's connection. SSH, database clients and other programs that ignore proxy settings use their usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
+    "value": "The workspace's agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go online through this computer's connection. SSH, database clients and other programs that ignore proxy settings use their usual connection, and so do the agents' AI, name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection."
+  },
+  "pair.internetOnly": {
+    "value": "Use only this computer's internet"
+  },
+  "pair.internetOnlyHint": {
+    "value": "Agents use only this computer's internet, their AI included, and never the usual connection. While it's offline, they have no internet until it's back."
   },
   "pair.shareOff": {
     "value": "Only you for now"

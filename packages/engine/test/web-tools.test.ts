@@ -172,10 +172,13 @@ describe("web_fetch", () => {
         searxngUrl: "https://search.example.org",
         lent: async (orgId) =>
           lending
-            ? async (url) => {
-                lentAsked.push({ org: orgId, url });
-                if (broken) throw new Error("the tunnel broke");
-                return new Response(url.includes("duckduckgo") ? DDG : "lent");
+            ? {
+                only: false,
+                fetch: async (url: string) => {
+                  lentAsked.push({ org: orgId, url });
+                  if (broken) throw new Error("the tunnel broke");
+                  return new Response(url.includes("duckduckgo") ? DDG : "lent");
+                },
               }
             : null,
       },
@@ -194,6 +197,24 @@ describe("web_fetch", () => {
     expect((await w.run("web_fetch", { url: "https://site.example.com/a" })).content).toContain("direct");
     lending = false;
     expect((await w.run("web_fetch", { url: "https://site.example.com/a" })).content).toContain("direct");
+  });
+
+  test("a workspace lent only one computer's internet: a page that fails there never goes the usual way (ADR 0237)", async () => {
+    const w = web(
+      { "https://site.example.com/a": () => new Response("direct") },
+      {
+        lent: async () => ({
+          only: true,
+          fetch: async () => {
+            throw new Error("No internet: Ana's laptop is offline");
+          },
+        }),
+      },
+    );
+    const read = (await w.run("web_fetch", { url: "https://site.example.com/a" })).content;
+    expect(read).toContain("No internet: Ana's laptop is offline");
+    expect(read).not.toContain("direct");
+    expect(w.asked).not.toContain("https://site.example.com/a");
   });
 
   test("every run may read the web, a routine's included", () => {

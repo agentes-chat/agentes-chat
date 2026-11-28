@@ -189,7 +189,7 @@ import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
-import { ThreadRootMark, useLandingEntrance } from "./thread-open";
+import { ThreadBubbleVeil, ThreadRootMark, useLandingEntrance } from "./thread-open";
 import { keptTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
 import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
@@ -687,6 +687,9 @@ function RowBody({
           bubbleEdge,
         ]}
       >
+        <ThreadBubbleVeil
+          corners={{ borderRadius: (bubbled ? lookRows.bubble : styles.bubble).borderRadius, ...BUBBLE_RUN[run] }}
+        />
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
         <ClippedMessage id={m.id} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
           <MessageText
@@ -1078,6 +1081,7 @@ function RowBody({
                         bubbleCap.capStyle,
                       ]}
                     >
+                      <ThreadBubbleVeil corners={{ borderRadius: lookRows.bubble.borderRadius, ...OTHER_RUN[run] }} />
                       {!grouped && (look.names || tagged) ? who(true) : null}
                       {quoteInWords}
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
