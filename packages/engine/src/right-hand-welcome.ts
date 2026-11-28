@@ -32,6 +32,7 @@ const {
   agents,
   channels,
   firstAgentProposals,
+  firstDeliveries,
   messages,
   organizationMembers,
   organizationSettings,
@@ -50,20 +51,31 @@ export const WELCOME_BODY = "welcome_member";
  */
 export const WELCOME_AGENT_BODY = "welcome_member_agent";
 
-/** Whether this person made their first agent from what their own AI proposed here (`first_agent_proposals`). */
+/**
+ * Whether this person made their first agent on their own onboarding here (ADR 0264): one picked from what their own
+ * AI proposed (`first_agent_proposals`), or any first agent the onboarding keeps for them (`first_deliveries`: an
+ * area's, "Other", one brought from another app).
+ */
 async function pickedFirstAgent(db: Database, orgId: string, userId: string) {
-  const [row] = await db
-    .select({ id: firstAgentProposals.id })
-    .from(firstAgentProposals)
-    .where(
-      and(
-        eq(firstAgentProposals.orgId, orgId),
-        eq(firstAgentProposals.userId, userId),
-        isNotNull(firstAgentProposals.agentId),
-      ),
-    )
-    .limit(1);
-  return row !== undefined;
+  const [[proposed], [kept]] = await Promise.all([
+    db
+      .select({ id: firstAgentProposals.id })
+      .from(firstAgentProposals)
+      .where(
+        and(
+          eq(firstAgentProposals.orgId, orgId),
+          eq(firstAgentProposals.userId, userId),
+          isNotNull(firstAgentProposals.agentId),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: firstDeliveries.id })
+      .from(firstDeliveries)
+      .where(and(eq(firstDeliveries.orgId, orgId), eq(firstDeliveries.userId, userId)))
+      .limit(1),
+  ]);
+  return proposed !== undefined || kept !== undefined;
 }
 
 /**
@@ -172,8 +184,9 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
 
 /**
  * What the right hand keeps in mind with someone new: a member who is not an owner (an owner has the first-run
- * checklist), joined in the last `NEWCOMER_DAYS` days, has no agent of their own and made none from their own AI's
- * proposal on their onboarding (ADR 0264). Only this person's own data. "" with the workspace's switch off.
+ * checklist), joined in the last `NEWCOMER_DAYS` days, has no agent of their own and made none on their onboarding
+ * (ADR 0264: a pick from their own AI's proposal, or any first agent it kept for them). Only this person's own data. ""
+ * with the workspace's switch off.
  */
 export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promise<string> {
   const [person] = await db
@@ -195,6 +208,9 @@ export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promi
         sql`not exists (select 1 from ${firstAgentProposals}
           where ${firstAgentProposals.orgId} = ${ctx.orgId} and ${firstAgentProposals.userId} = ${ctx.personId}
           and ${firstAgentProposals.agentId} is not null)`,
+        // Nor once the onboarding kept any first agent for them (an area's, "Other", one brought from another app).
+        sql`not exists (select 1 from ${firstDeliveries}
+          where ${firstDeliveries.orgId} = ${ctx.orgId} and ${firstDeliveries.userId} = ${ctx.personId})`,
       ),
     );
   if (!person) return "";

@@ -24,6 +24,7 @@ import {
   saveFirstAgents,
   sendPlanWaitingEmail,
   setBillingHold,
+  startFirstAgent,
   updateOrgSettings,
   WELCOME_AGENT_BODY,
   WELCOME_BODY,
@@ -534,6 +535,26 @@ describe("a member's own onboarding", () => {
     await postWelcome(f.jobDeps, f.org.id, { userId: caio.id });
     const again = await f.db.select().from(schema.messages).where(eq(schema.messages.authorAgentId, lodi.id));
     expect(again.filter((m) => m.meta.bodyCode === WELCOME_AGENT_BODY)).toHaveLength(1);
+  });
+});
+
+describe("a member's own onboarding, from an area", () => {
+  test("their area's agent made before the greeting goes out: hello with nothing to tap, and it asks no more", async () => {
+    f = await setup({ rightHand: true });
+    const nina = await join(f, "nina");
+    await startFirstAgent(
+      { db: f.db, pubsub: f.pubsub, context: f.context },
+      { orgId: f.org.id, userId: nina.id },
+      { area: "sales", name: "Leo", role: "Vendas", task: "Ver os leads de hoje." },
+    );
+    await postWelcome(f.jobDeps, f.org.id, { userId: nina.id });
+    const lodi = await lodiOf(f);
+    const said = await f.db.select().from(schema.messages).where(eq(schema.messages.authorAgentId, lodi.id));
+    const greeting = said.find((m) => m.meta.bodyCode === WELCOME_AGENT_BODY);
+    expect(greeting?.meta).toEqual({ bodyCode: WELCOME_AGENT_BODY, bodyParams: { org: "Acme" }, forUserId: nina.id });
+    // Its new-member prompt stays out, even once that agent is someone else's.
+    await f.db.update(schema.agents).set({ ownerUserId: f.owner.id }).where(eq(schema.agents.ownerUserId, nina.id));
+    expect(await newcomerBlock(f.db, { orgId: f.org.id, agentId: lodi.id, personId: nina.id })).toBe("");
   });
 });
 
