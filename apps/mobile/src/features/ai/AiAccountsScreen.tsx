@@ -467,7 +467,7 @@ export function useAccountActions(
           label: t("aiAccounts.page.useFor", agentGrammar(g.name)),
           onPress: () => void give(a, g),
         })),
-        ...(plan && a.status === "active"
+        ...(a.status === "active"
           ? [{ label: t("aiAccounts.page.useAll"), onPress: () => openKeyForAll(a.machineId, a.id) }]
           : []),
         { label: t("aiAccounts.page.rename"), onPress: () => rename(a) },

@@ -94,7 +94,9 @@ export function AccountMenu({
   const copies = a.mine ? unusedCopies(account) : [];
   const plan = planOf(a.provider);
   const again = a.mine && (account.logins.some(offersSignInAgain) || Boolean(plan));
-  const all = Boolean(plan) && a.status === "active" && a.rights.canUse;
+  // "Usar em todos os agentes" on any account the viewer may use, a sign-in as a key: the server's preview says which
+  // agents can take it (ADR 0094).
+  const all = a.status === "active" && a.rights.canUse;
   if (!canManage && !again && !all && copies.length === 0) return null;
   return (
     <>
