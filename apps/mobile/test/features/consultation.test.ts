@@ -54,6 +54,11 @@ test("two agents' conversation is a sheet over the one that asked, as the web's 
   expect(screen).toContain("consultChoices(items");
   expect(screen).toContain("t(consultChoiceKey(ch.state, ch.item))");
   expect(screen).toContain("<Segmented");
+  // In the look of a conversation of two (the direct conversations', bubbles by default), as the chat it opened from,
+  // with each agent's name and face over its words (a channel's look was lines).
+  expect(screen).toContain("const twoLook = useConversationLook(true);");
+  expect(screen).toContain("const look = useMemo(() => ({ ...twoLook, names: true, faces: true }), [twoLook]);");
+  expect(screen).not.toContain("useConversationLook(false)");
 });
 
 test("the composer names whom it writes to in its placeholder only: no face in an agent's field", () => {

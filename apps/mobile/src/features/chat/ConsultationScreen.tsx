@@ -89,7 +89,10 @@ function Consultation({
   const meId = useMeId();
   const dir = useDirectory();
   const c = useColors();
-  const look = useConversationLook(false);
+  // An exchange between two agents reads as a conversation of two (the direct conversations' look, bubbles unless
+  // the person chose otherwise), each one's name and face over its words: neither side is the reader's own.
+  const twoLook = useConversationLook(true);
+  const look = useMemo(() => ({ ...twoLook, names: true, faces: true }), [twoLook]);
   const insets = useSafeAreaInsets();
   const several = Boolean(group && group.length > 1);
   const listed = useConsultations(orgId, channelId, several && Boolean(channelId));
