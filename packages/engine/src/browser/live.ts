@@ -17,7 +17,8 @@ import { getAgentCached } from "../agents";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { type MachineHub, MachineRequestError } from "../machine-hub";
 import { getMachineById, shownOnline } from "../machines";
-import { isRightHand } from "../right-hand";
+import { isRightHand, isRightHandId } from "../right-hand";
+import { viewerScope } from "../right-hand-seats";
 import type { ClaimedStream, StreamSocket } from "../streams";
 import {
   agentBrowserLink,
@@ -350,6 +351,24 @@ export interface BrowserLiveDeps extends Omit<HandoffDeps, "live"> {
 export function createBrowserLive(deps: BrowserLiveDeps) {
   const relay = createMemoryStreamRelay();
   const live = new Map<string, AgentLive>();
+  // The wire key of a personal browser is its seat UUID, never the shared built-in agent UUID.
+  // Each viewer gets only their seat's stream; outward messages still name the agent the client watches.
+  const seats = new Map<string, { agentId: string; orgId: string; userId: string; scope: AgentScope }>();
+  const sourceId = (key: string) => seats.get(key)?.agentId ?? key;
+  const personOf = (key: string) => seats.get(key)?.userId;
+  const scopeFor = (key: string, handle: string): AgentScope => seats.get(key)?.scope ?? { id: key, handle };
+  const keyFor = async (orgId: string, agentId: string, userId: string, make = false) => {
+    if (profileIdOfKey(agentId) || !(await isRightHandId(deps.db, orgId, agentId))) return agentId;
+    await requireBrowserAccess(deps.db, userId, orgId, agentId);
+    const target = await viewerScope(deps.db, orgId, agentId, userId, undefined, make);
+    if (!target || "reason" in target || !target.scope) return null;
+    seats.set(target.scope.id, { orgId, agentId, userId, scope: target.scope });
+    return target.scope.id;
+  };
+  const handoffKey = (row: Pick<BrowserHandoffRow, "orgId" | "agentId" | "seatUserId">) =>
+    [...seats].find(
+      ([, seat]) => seat.orgId === row.orgId && seat.agentId === row.agentId && seat.userId === row.seatUserId,
+    )?.[0] ?? row.agentId;
   const graceMs = deps.graceMs ?? CONTROL_GRACE_MS;
   const recheckMs = deps.accessRecheckMs ?? ACCESS_RECHECK_MS;
   const stopDelayMs = deps.stopDelayMs ?? STREAM_STOP_DELAY_MS;
@@ -511,7 +530,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
     state.viewRetry = setTimeout(() => {
       state.viewRetry = null;
       if (live.get(agentId) !== state || state.mode === null || state.view) return;
-      openView(agentId, state, { id: agentId, handle: state.handle });
+      openView(agentId, state, scopeFor(agentId, state.handle));
     }, wait);
   }
 
@@ -591,7 +610,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       }, stopDelayMs);
       return;
     }
-    const agent = { id: agentId, handle: state.handle };
+    const agent = scopeFor(agentId, state.handle);
     // A fresh stream (or none): the page is known again from its first frame.
     if (state.mode === null || mode === null) {
       state.page = null;
@@ -706,7 +725,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
 
   /** Another screen's handoff changed: it hides this view only while it shows the same window (its desktop). */
   const sharedChanged = async (agentId: string, state: AgentLive) => {
-    const row = await openElsewhere(deps.db, state.orgId, agentId, "browser");
+    const row = await openElsewhere(deps.db, state.orgId, sourceId(agentId), "browser", personOf(agentId));
     if (live.get(agentId) !== state) return;
     announce(agentId, state, () => {
       state.shared = row ? handoffView(row) : null;
@@ -720,15 +739,17 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
 
   const handoffHooks: HandoffLiveHooks = {
     changed(row) {
-      const state = live.get(row.agentId);
+      const key = handoffKey(row);
+      const state = live.get(key);
       if (!state) return;
-      if (ofBrowser(row.screen)) handoffChanged(row.agentId, state, row);
-      else reloadShared(row.agentId, state);
+      if (ofBrowser(row.screen)) handoffChanged(key, state, row);
+      else reloadShared(key, state);
     },
     /** The latest frame's page while the stream runs here; otherwise the computer is asked for the address. */
     async page(row) {
       if (!ofBrowser(row.screen)) return null;
-      const state = live.get(row.agentId);
+      const key = handoffKey(row);
+      const state = live.get(key);
       if (state && state.machineId === row.machineId && state.mode !== null && state.page) return state.page;
       const [agent] = await deps.db
         .select({ handle: agents.handle })
@@ -736,7 +757,9 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
         .where(and(eq(agents.id, row.agentId), eq(agents.orgId, row.orgId)));
       if (!agent) return null;
       // Short: a hand back waits on this answer before the agent is told.
-      const url = await askUrl(row.machineId, { id: row.agentId, handle: agent.handle });
+      const keyForPage = row.seatUserId ? await keyFor(row.orgId, row.agentId, row.seatUserId) : row.agentId;
+      if (!keyForPage) return null;
+      const url = await askUrl(row.machineId, scopeFor(keyForPage, agent.handle));
       return url ? { url } : null;
     },
   };
@@ -746,7 +769,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
   /** The open handoff of an agent's browser, or a person's control of a profile in the same shape. */
   const controlRow = async (orgId: string, key: string): Promise<BrowserHandoffRow | null> => {
     const profileId = profileIdOfKey(key);
-    if (!profileId) return openHandoffOf(deps.db, orgId, key);
+    if (!profileId) return openHandoffOf(deps.db, orgId, sourceId(key), "browser", personOf(key));
     const row = await getBrowserProfile(deps.db, orgId, profileId);
     return row ? profileControlRow(row) : null;
   };
@@ -762,7 +785,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
   /** Tells the computer (when its socket is here) the agent's open handoff, or that there is none: its tray shows it. */
   const tellComputer = async (machineId: string, orgId: string, agentId: string) => {
     if (!deps.hub.sendBrowserHandoff || !deps.hub.isLocal(machineId)) return;
-    const row = await openHandoffOf(deps.db, orgId, agentId);
+    const row = await controlRow(orgId, agentId);
     const info = row && row.machineId === machineId ? await handoffInfo(deps.db, row) : null;
     deps.hub.sendBrowserHandoff(machineId, agentId, info);
   };
@@ -772,15 +795,26 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
     if (event.type === "browser.stopped" || !ofBrowser(event.screen)) return;
     const { machineId, orgId, agentId } = event;
     if (typeof machineId !== "string" || typeof orgId !== "string" || typeof agentId !== "string") return;
-    void tellComputer(machineId, orgId, agentId).catch((error) =>
-      deps.log?.warn("browser handoff to computer failed", { agentId, error: String(error) }),
-    );
+    // The runner can be on a replica that has never hosted this person's viewer.
+    // Resolve their seat from storage rather than relying on the local stream cache.
+    void (async () => {
+      const key = typeof event.seatUserId === "string" ? await keyFor(orgId, agentId, event.seatUserId) : agentId;
+      if (key) await tellComputer(machineId, orgId, key);
+    })().catch((error) => deps.log?.warn("browser handoff to computer failed", { agentId, error: String(error) }));
   });
 
   // A handoff changed on another replica (a person claimed it there, handed it back…): the state
   // here, where the computer's socket may be, is read again from the database.
   const unsubscribeHandoffs = deps.pubsub?.subscribe(BROWSER_HANDOFF_TOPIC, (event) => {
-    const agentId = typeof event.agentId === "string" ? event.agentId : null;
+    const source = typeof event.agentId === "string" ? event.agentId : null;
+    const agentId =
+      source && typeof event.orgId === "string"
+        ? handoffKey({
+            orgId: event.orgId,
+            agentId: source,
+            seatUserId: typeof event.seatUserId === "string" ? event.seatUserId : null,
+          })
+        : null;
     const state = agentId ? live.get(agentId) : undefined;
     if (!agentId || !state || event.orgId !== state.orgId) return;
     if (!ofBrowser(event.screen)) {
@@ -828,7 +862,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       void deps.hub
         .call(old.machineId, {
           op: "browser.stream.stop",
-          agent: { id: agentId, handle: old.handle },
+          agent: scopeFor(agentId, old.handle),
           ...profileOp(agentId),
         })
         .catch(() => {});
@@ -948,20 +982,39 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
           .select({ handle: agents.handle, builtin: agents.builtin })
           .from(agents)
           .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId)));
-        // One view per agent goes to everyone watching it, and the right hand's browser is a different one for each
-        // person (ADR 0175): it has no live view. Its desktop shows each person their own.
-        agent = isRightHand(row) ? undefined : row;
-        // The computer the browser runs on now (an open handoff's, a mission's, else the agent's).
-        machineId = agent ? await browserMachineOf(deps.db, orgId, agentId) : null;
+        agent = row;
+        if (isRightHand(row)) {
+          const publicId = agentId;
+          const key = await keyFor(orgId, agentId, viewer.userId, true);
+          if (!key) agent = undefined;
+          else {
+            agentId = key;
+            const client = viewer;
+            viewer = {
+              ...client,
+              send(message) {
+                // Re-encode frame headers for the public id; keep the JPEG, never another person's cached frame.
+                client.send(
+                  message.type === "browser.frame"
+                    ? { ...message, agentId: publicId, bytes: undefined }
+                    : { ...message, agentId: publicId },
+                );
+              },
+            };
+          }
+        }
+        machineId = agent
+          ? await browserMachineOf(deps.db, orgId, sourceId(agentId), "browser", personOf(agentId))
+          : null;
       }
       if (!agent || !machineId) {
         viewer.send({ type: "browser.unavailable", agentId, reason: "no_computer" });
         return { stop: () => {}, streaming: false };
       }
       // Someone opened the agent's computer: its browser gets ready for the agent's next command meanwhile.
-      if (!profileId) deps.warm?.({ orgId, agentId, machineId });
+      if (!profileId && !seats.has(agentId)) deps.warm?.({ orgId, agentId, machineId });
       // A profile's Chrome too, so a view opened again after a failed start starts it again (a no-op while it runs).
-      else {
+      else if (profileId) {
         void deps.hub
           .call<"browser.warm">(
             machineId,
@@ -1009,7 +1062,9 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       }
       const current = state;
       applyHandoff(current, await controlRow(orgId, agentId));
-      const shared = profileId ? null : await openElsewhere(deps.db, orgId, agentId, "browser");
+      const shared = profileId
+        ? null
+        : await openElsewhere(deps.db, orgId, sourceId(agentId), "browser", personOf(agentId));
       current.shared = shared ? handoffView(shared) : null;
       current.viewers.add(viewer);
       current.unsubscribe.set(
@@ -1040,7 +1095,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       const recheck = setInterval(() => {
         const allowed = profileId
           ? requireProfileWatcher(deps.db, viewer.userId, orgId, profileId)
-          : requireBrowserAccess(deps.db, viewer.userId, orgId, agentId);
+          : requireBrowserAccess(deps.db, viewer.userId, orgId, sourceId(agentId));
         void allowed.then(
           () => {
             checked.set(`${viewer.userId}:${agentId}`, Date.now());
@@ -1079,7 +1134,10 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       return { stop, streaming: true };
     },
 
-    viewerReady,
+    viewerReady(agentId: string) {
+      viewerReady(agentId);
+      for (const [key, seat] of seats) if (seat.agentId === agentId) viewerReady(key);
+    },
 
     /**
      * A person's input on the live view, gathered for `inputBatchMs` and sent
@@ -1119,10 +1177,13 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
      * in control of too.
      */
     async sendInput(userId: string, orgId: string, agentId: string, events: BrowserInputEvent[]): Promise<InputAnswer> {
+      const seatKey = await keyFor(orgId, agentId, userId);
+      if (!seatKey) return { accepted: 0, refused: true };
+      agentId = seatKey;
       const profileId = profileIdOfKey(agentId);
       const open =
         (await controlRow(orgId, agentId)) ??
-        (profileId ? null : await openElsewhere(deps.db, orgId, agentId, "browser"));
+        (profileId ? null : await openElsewhere(deps.db, orgId, sourceId(agentId), "browser", personOf(agentId)));
       if (open?.status !== "active" || open.controllerUserId !== userId) return { accepted: 0, refused: true };
       // Control changed where this process didn't hear it (another replica, a lost event): the others'
       // view is hidden here before any of the person's typing reaches the page.
@@ -1135,7 +1196,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       if (Date.now() - (checked.get(key) ?? 0) > recheckMs) {
         try {
           if (profileId) await requireProfileDriver(deps.db, userId, orgId, profileId);
-          else await requireBrowserControl(deps.db, userId, orgId, agentId, open);
+          else await requireBrowserControl(deps.db, userId, orgId, sourceId(agentId), open);
           checked.set(key, Date.now());
         } catch {
           checked.delete(key);
@@ -1145,7 +1206,9 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       // The person in control is here: their grace moves on (a write at most every 30 s).
       await touchFor(agentId, open.id, userId).catch(() => {});
       let scope: AgentScope;
+      const personalSeat = seats.get(agentId);
       if (profileId) scope = profileScope(profileId);
+      else if (personalSeat) scope = personalSeat.scope;
       else {
         const [agent] = await deps.db
           .select({ handle: agents.handle })
@@ -1180,23 +1243,31 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       await requireBrowserControl(deps.db, userId, orgId, agentId);
       if (!(await agentUsesScreen(deps.db, orgId, agentId)))
         throw new ForbiddenError("This agent can't use its browser");
-      const machineId = await browserMachineOf(deps.db, orgId, agentId);
+      const key = await keyFor(orgId, agentId, userId);
+      if (!key) throw new ValidationError("This agent has no computer");
+      const machineId = await browserMachineOf(deps.db, orgId, agentId, "browser", personOf(key));
       if (!machineId) throw new ValidationError("This agent has no computer");
       const agent = await getAgentCached(deps.db, orgId, agentId);
+      agentId = key;
       if (!agent) throw new NotFoundError("Agent not found");
       // Already restarting here: its end brings every view the page.
       if (restarting.has(agentId)) return;
       // ponytail: only this server's views miss the stop's "stopped"; with several replicas, an event of its own.
       restarting.add(agentId);
-      const scope: AgentScope = { id: agentId, handle: agent.handle, ...(agent.name ? { name: agent.name } : {}) };
+      const scope: AgentScope = scopeFor(agentId, agent.handle);
       const hold = () =>
-        openHandoffOf(deps.db, orgId, agentId)
+        controlRow(orgId, agentId)
           .then((open) => open && touchControl(deps.db, open.id, userId, new Date(), true))
           .catch(() => {});
       // Every replica's views of it (the one holding the computer's socket among them) start their streams again.
       const streamsAgain = async () => {
         const told = await deps.pubsub
-          ?.publish(BROWSER_HANDOFF_TOPIC, { type: "browser.opened", orgId, agentId })
+          ?.publish(BROWSER_HANDOFF_TOPIC, {
+            type: "browser.opened",
+            orgId,
+            agentId: sourceId(agentId),
+            ...(personOf(agentId) ? { seatUserId: personOf(agentId) } : {}),
+          })
           .then(() => true)
           .catch(() => false);
         const now = live.get(agentId);
@@ -1215,7 +1286,9 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       }
       void (async () => {
         try {
-          const desktop = (await browserOnDesktop(deps.db, orgId, agentId, machineId)) ? { desktop: true } : {};
+          const desktop = (await browserOnDesktop(deps.db, orgId, sourceId(agentId), machineId))
+            ? { desktop: true }
+            : {};
           if (page) {
             await deps.hub.call<"browser.act">(
               machineId,
@@ -1226,7 +1299,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
                 args: [page],
                 timeoutSeconds: 60,
                 ...(agent.browserAllowedDomains ? { allowedDomains: agent.browserAllowedDomains } : {}),
-                link: agentBrowserLink(orgId, agentId),
+                link: agentBrowserLink(orgId, sourceId(agentId)),
                 ...desktop,
                 // The person's restart: it runs even if their live view is back in control meanwhile.
                 person: true,
@@ -1351,7 +1424,8 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
             for (const row of rows) {
               if (!ofBrowser(row.screen)) continue;
               const info = await handoffInfo(deps.db, row);
-              deps.hub.sendBrowserHandoff?.(machineId, row.agentId, info);
+              const key = row.seatUserId ? await keyFor(row.orgId, row.agentId, row.seatUserId) : row.agentId;
+              if (key) deps.hub.sendBrowserHandoff?.(machineId, key, info);
             }
           })
           .catch((error) => deps.log?.warn("browser handoffs resync failed", { machineId, error: String(error) }));
@@ -1380,6 +1454,8 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
           id: browserHandoffs.id,
           agentId: browserHandoffs.agentId,
           machineId: browserHandoffs.machineId,
+          orgId: browserHandoffs.orgId,
+          seatUserId: browserHandoffs.seatUserId,
           handle: agents.handle,
         })
         .from(browserHandoffs)
@@ -1394,29 +1470,33 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
         (h) =>
           deps.hub.isLocal(h.machineId) &&
           now - (touched.get(h.id) ?? 0) >= HANDOFF_KEEPALIVE_MS &&
-          live.get(h.agentId)?.mode !== "control",
+          live.get(handoffKey(h))?.mode !== "control",
       );
       for (const h of due) touched.set(h.id, now);
       for (let i = 0; i < due.length; i += KEEPALIVE_PARALLEL) {
         await Promise.all(
-          due.slice(i, i + KEEPALIVE_PARALLEL).map((h) =>
-            deps.hub
+          due.slice(i, i + KEEPALIVE_PARALLEL).map(async (h) => {
+            const key = h.seatUserId ? await keyFor(h.orgId, h.agentId, h.seatUserId) : h.agentId;
+            if (!key) return;
+            return deps.hub
               .call(h.machineId, {
                 op: "browser.act",
-                agent: { id: h.agentId, handle: h.handle },
+                agent: scopeFor(key, h.handle),
                 command: "get",
                 args: ["url"],
                 timeoutSeconds: 10,
               })
-              .catch(() => {}),
-          ),
+              .catch(() => {});
+          }),
         );
       }
       return due.length;
     },
 
     /** Whether anyone watches this agent's browser here. */
-    watching: (agentId: string) => (live.get(agentId)?.viewers.size ?? 0) > 0,
+    watching: (agentId: string) =>
+      (live.get(agentId)?.viewers.size ?? 0) > 0 ||
+      [...seats].some(([key, seat]) => seat.agentId === agentId && (live.get(key)?.viewers.size ?? 0) > 0),
 
     /** Stops hearing handoff changes from other replicas (shutdown, tests). */
     close() {

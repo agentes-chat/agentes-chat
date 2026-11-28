@@ -9,14 +9,19 @@ import {
   browserFrameBytes,
   createBrowserLive,
   createBrowserToolSource,
+  ensureRightHand,
   grantScopes,
   type MachineCaller,
   MachineDroppedError,
   type MachineHub,
   MachineOfflineError,
+  openPageInControl,
+  RIGHT_HAND,
+  seatOf,
+  startTakeover,
   withConnectedMachine,
 } from "../src";
-import { type Fixture, setup } from "./fixtures";
+import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine, RUNNER } from "./machine-fixtures";
 import { runContext } from "./mail-fixtures";
 import { fakeSocket } from "./stream-fixtures";
@@ -40,10 +45,12 @@ const PAGE = { snapshot: '- heading "agentes.chat" [ref=e1]', origin: "https://a
  */
 function browserRunner(hub: MachineHub, opts: { dead?: boolean; closedBrowser?: boolean; viewError?: string } = {}) {
   const got: Request[] = [];
+  const handoffs: ServerFrame[] = [];
   const reply = (frame: unknown) => hub.message(conn, JSON.stringify(frame));
   const socket = {
     send(text: string) {
       const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type === "browser.handoff") handoffs.push(frame);
       if (frame.type !== "request") return;
       got.push(frame);
       setTimeout(() => {
@@ -67,6 +74,7 @@ function browserRunner(hub: MachineHub, opts: { dead?: boolean; closedBrowser?: 
           });
         }
         if (frame.op === "browser.warm") return ok({ started: false });
+        if (frame.op === "browser.input") return ok({ accepted: frame.events.length });
         if (frame.op === "browser.batch") {
           const { commands } = frame as unknown as { commands: { command: string }[] };
           return ok({ answers: commands.map((c) => ({ success: true, data: c.command === "snapshot" ? PAGE : {} })) });
@@ -81,7 +89,10 @@ function browserRunner(hub: MachineHub, opts: { dead?: boolean; closedBrowser?: 
   const conn = hub.open(socket);
   return {
     conn,
+    handoffs: () => handoffs,
     starts: () => got.filter((r) => r.op === "browser.stream.start"),
+    inputs: () => got.filter((r) => r.op === "browser.input"),
+    acts: () => got.filter((r) => r.op === "browser.act"),
     views: () => got.filter((r) => r.op === "browser.view.open") as (Request & { streamId: string })[],
     batches: () => got.filter((r) => r.op === "browser.batch"),
     hello: (token: string) =>
@@ -573,4 +584,117 @@ test("a run's call on a computer just gone waits for its runner to say hello aga
   const refused = await withConnectedMachine(hub, person, target, async () => "reached").catch((e: unknown) => e);
   expect(Date.now() - started).toBeLessThan(1000);
   expect(refused).toBeInstanceOf(MachineOfflineError);
+});
+
+test("Lodi browser viewing and control stay on each viewer's own seat on a browser-only Mac", async () => {
+  const { hub, paired, live, got, viewer } = await liveSetup();
+  await f.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, paired.machineId));
+  await ensureRightHand(f.db, f.org.id);
+  const [lodi] = await f.db.select().from(schema.agents).where(eq(schema.agents.builtin, RIGHT_HAND));
+  if (!lodi) throw Error("No right hand");
+  const runner = browserRunner(hub);
+  await runner.hello(paired.token);
+  const other = await addMember(f.db, f.org.id, "admin");
+  const otherMessages: BrowserLiveMessage[] = [];
+  const stops: (() => void)[] = [];
+  try {
+    const own = await live.watch(viewer, f.org.id, lodi.id);
+    stops.push(own.stop);
+    expect(own.streaming).toBe(true);
+    const theirs = await live.watch({ userId: other.id, send: (m) => otherMessages.push(m) }, f.org.id, lodi.id);
+    stops.push(theirs.stop);
+    expect(theirs.streaming).toBe(true);
+    await until(() => runner.starts().length === 2);
+    const ownSeat = await seatOf(f.db, f.org.id, f.owner.id, false);
+    const otherSeat = await seatOf(f.db, f.org.id, other.id, false);
+    if (!ownSeat || !otherSeat) throw Error("Seats were not created");
+    expect(ownSeat.id).toBeTruthy();
+    expect(otherSeat.id).not.toBe(ownSeat.id);
+    expect(
+      runner
+        .starts()
+        .map((r) => (r as Request & { agent: { id: string } }).agent.id)
+        .sort(),
+    ).toEqual([ownSeat.id, otherSeat.id].sort());
+    await hub.message(
+      runner.conn,
+      JSON.stringify({
+        type: "browser.frame",
+        agentId: ownSeat.id,
+        seq: 1,
+        data: "owner-only",
+        metadata: { deviceWidth: 800, deviceHeight: 600, url: "https://design.penpot.app/" },
+      }),
+    );
+    expect(got.filter((m) => m.type === "browser.frame")).toMatchObject([{ agentId: lodi.id, data: "owner-only" }]);
+    expect(otherMessages.filter((m) => m.type === "browser.frame")).toHaveLength(0);
+    await startTakeover(live.handoffDeps, f.owner.id, f.org.id, lodi.id);
+    await openPageInControl(live.handoffDeps, hub, f.owner.id, f.org.id, lodi.id, "https://design.penpot.app/");
+    expect(runner.acts().at(-1)).toMatchObject({
+      agent: { id: ownSeat.id },
+      command: "open",
+      args: ["https://design.penpot.app/"],
+    });
+    await expect(
+      openPageInControl(live.handoffDeps, hub, other.id, f.org.id, lodi.id, "https://design.penpot.app/"),
+    ).rejects.toThrow();
+    const answer = await live.sendInput(f.owner.id, f.org.id, lodi.id, [{ kind: "key", type: "keyDown", key: "Tab" }]);
+    expect(answer).toMatchObject({ refused: false, accepted: 1 });
+    expect(runner.inputs().at(-1)).toMatchObject({ agent: { id: ownSeat.id } });
+    expect(
+      otherMessages.filter((m) => m.type === "browser.status").every((m) => m.controllerUserId !== f.owner.id),
+    ).toBe(true);
+    await expect(live.watch({ userId: "not-a-member", send: () => {} }, f.org.id, lodi.id)).rejects.toThrow();
+    const cross = await live.sendInput(other.id, f.org.id, lodi.id, [{ kind: "key", type: "keyDown", key: "Tab" }]);
+    expect(cross.refused).toBe(true);
+    await hub.message(
+      runner.conn,
+      JSON.stringify({
+        type: "browser.pointer",
+        agentId: ownSeat.id,
+        x: 10,
+        y: 20,
+        width: 800,
+        height: 600,
+        act: "click",
+      }),
+    );
+    expect(got.filter((m) => m.type === "browser.pointer")).toMatchObject([{ agentId: lodi.id, x: 10, y: 20 }]);
+    expect(otherMessages.filter((m) => m.type === "browser.pointer")).toHaveLength(0);
+  } finally {
+    for (const stop of stops) stop();
+    live.close();
+  }
+});
+
+test("Lodi handoff reaches its personal runner seat before this replica has a viewer", async () => {
+  const { hub, paired, live } = await liveSetup();
+  await f.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, paired.machineId));
+  await ensureRightHand(f.db, f.org.id);
+  const [lodi] = await f.db.select().from(schema.agents).where(eq(schema.agents.builtin, RIGHT_HAND));
+  if (!lodi) throw Error("No right hand");
+  const runner = browserRunner(hub);
+  await runner.hello(paired.token);
+  const elsewhere = createBrowserLive({ db: f.db, hub, pubsub: f.pubsub });
+  try {
+    await startTakeover(elsewhere.handoffDeps, f.owner.id, f.org.id, lodi.id);
+    const ownSeat = await seatOf(f.db, f.org.id, f.owner.id, false);
+    if (!ownSeat) throw Error("No personal seat");
+    await until(() =>
+      runner.handoffs().some((frame) => frame.type === "browser.handoff" && frame.agentId === ownSeat.id),
+    );
+    expect(runner.handoffs()).toContainEqual(
+      expect.objectContaining({
+        type: "browser.handoff",
+        agentId: ownSeat.id,
+        handoff: expect.objectContaining({ status: "active" }),
+      }),
+    );
+    expect(runner.handoffs().some((frame) => frame.type === "browser.handoff" && frame.agentId === lodi.id)).toBe(
+      false,
+    );
+  } finally {
+    elsewhere.close();
+    live.close();
+  }
 });
