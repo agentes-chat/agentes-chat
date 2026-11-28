@@ -1414,6 +1414,41 @@ describe("A device's page", () => {
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
+  test("use only this computer's internet: nested under the switch while it lends, its owner's to turn on", async () => {
+    const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      for (const d of list.devices) if (d.id === MAC) d.shareInternet = { on: true, inUse: true, only: false };
+      devices.set(list);
+    });
+    const only = screen().getByRole("switch", { name: "Use only this computer's internet" });
+    expect(only.getAttribute("aria-checked")).toBe("false");
+    expect(only.closest(".settings-row")?.classList.contains("settings-row--nested")).toBe(true);
+    await click(only);
+    await settle(4);
+    expect(
+      screen().getByRole("switch", { name: "Use only this computer's internet" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+    // Lending off: the choice under it goes with it.
+    await click(screen().getByRole("switch", { name: "Agents use this computer's internet" }));
+    await settle(4);
+    expect(screen().queryByRole("switch", { name: "Use only this computer's internet" })).toBeNull();
+    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([
+      { internetOnly: true },
+      { shareInternet: false },
+    ]);
+  });
+
+  test("an older server with no such choice shows none", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      for (const d of list.devices) if (d.id === MAC) d.shareInternet = { on: true, inUse: true };
+      devices.set(list);
+    });
+    expect(screen().getByRole("switch", { name: "Agents use this computer's internet" })).toBeTruthy();
+    expect(screen().queryByRole("switch", { name: "Use only this computer's internet" })).toBeNull();
+  });
+
   test("on a self-hosted server: a computer that joins hears it will lend its internet, with no workspace computer", async () => {
     const line = "The agents will also go online through this computer's internet";
     // No workspace computer: nothing borrows where the server lends none (the Cloud's rule).

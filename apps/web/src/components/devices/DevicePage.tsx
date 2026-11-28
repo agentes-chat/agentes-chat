@@ -641,6 +641,24 @@ function ComputerPage({ machineId }: { machineId: string }) {
                   })}
             />
           )}
+          {/* Under the switch while it lends: nothing of the agents' goes their usual way, AI calls included. Its
+              owner's to turn on, as the switch is; an admin may only turn it off. */}
+          {internet?.on && internet.only !== undefined && (d.mayManage || internet.only) && (
+            <PrefRow
+              id="dv-pc-internet-only"
+              nested
+              label={t("devices.shareInternetOnly")}
+              hint={t("devices.shareInternetOnlyHint")}
+              control={
+                <Switch
+                  id="dv-pc-internet-only-switch"
+                  checked={internet.only}
+                  disabled={!d.mayManage || (!owner && !internet.only)}
+                  onCheckedChange={(on) => save({ id: d.id, internetOnly: on })}
+                />
+              }
+            />
+          )}
           {admin && d.machineKind === "connected" && (
             <PrefRow
               id="dv-pc-belongs"

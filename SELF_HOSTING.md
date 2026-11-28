@@ -268,6 +268,12 @@ minute before asking again). A runner that runs with a proxy of its own (`HTTPS_
 whose agents run in a network of their own (a `networkLauncher` or `networkMark`), keeps it, and its agents get
 nothing from this.
 
+**Use only this computer's internet.** Under the switch, while it lends, its owner may turn this on (an admin may turn
+it off). Then only that computer carries the workspace's agents' connections, the AI CLIs' services included, and
+nothing goes the usual way: while it is offline the proxy fails every connection, the agents have no internet, their
+coding CLIs can't reach their AI (the run waits for that computer and says why), and `web_fetch` says so. Programs
+that ignore proxy settings still go out their own way: on a self-hosted server it is a preference, not a fence.
+
 **Good to know.**
 
 - The lent bytes pass through your server, between the two computers' connections to it; nothing goes to

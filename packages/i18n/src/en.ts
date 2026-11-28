@@ -17083,6 +17083,8 @@ export const en = {
       shareOwnerOnly:
         "Only the person who connected this computer can let agents use its internet. You can turn it off.",
       shareConnectedOnly: "Only a computer someone connected can share its internet with the agents.",
+      /** "Use only this computer's internet" asked while the computer doesn't lend it (ADR 0237). */
+      shareOff: "Turn on “Agents use this computer's internet” first, then choose to use only its internet.",
       tasksOwnerOnly: "Only the person who connected this computer can change how many tasks it runs at once.",
       tasksCloud: "The Cloud sizes this computer's room for tasks itself.",
       notHome: "Agents live on the workspace computer and use this one when they name it.",
@@ -17274,6 +17276,8 @@ export const en = {
       /** The workspace's computer opens websites through a person's computer's internet (ADR 0237). */
       via: "Agents use the internet of {{name}}",
       viaHint: "Websites see that computer’s location. Its owner can turn it off on its page.",
+      /** Its agents use only a person's computer's internet, and that computer is offline (ADR 0237). */
+      offline: "Agents have no internet: {{name}} is offline",
     },
     /**
      * What we do to the workspace's own computer (ADR 0257), said instead of "offline": a move, a restart, an update,
@@ -17701,10 +17705,14 @@ export const en = {
     /** A person's computer lends its internet to the workspace's own computer (ADR 0237). */
     shareInternet: "Agents use this computer's internet",
     shareInternetHint:
-      "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. Name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline.",
+      "The agents' connections go out through this computer's internet, so sites and servers see your location: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. The agents' AI, name lookups, calls and other UDP traffic use the usual connection, and so does everything while this computer is offline.",
     /** The same on a self-hosted server, where agents reach it through proxy settings (ADR 0237). */
     shareInternetHintProxy:
-      "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
+      "The agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go out through this computer's internet, so sites see your location. SSH, database clients and other programs that ignore proxy settings use the usual connection, and so do the agents' AI, name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
+    /** Nested under `shareInternet` while it is on (ADR 0237, amendment 2026-11-27 c). */
+    shareInternetOnly: "Use only this computer's internet",
+    shareInternetOnlyHint:
+      "Agents use only this computer's internet, their AI included, and never the usual connection. While it's offline, they have no internet until it's back.",
     shareInternetInUse: "In use now",
     shareInternetOther: "Agents use {{name}} now",
     shareInternetPick: "Use this one",
@@ -20521,6 +20529,9 @@ export const en = {
       /** The computer is online, but Claude's sign-in for all agents can't run there (its switch off, its self-check failing). */
       brain_unavailable_shared_login:
         "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.",
+      /** Its agents use only a person's computer's internet, and that computer is offline (ADR 0237). */
+      brain_unavailable_lent_offline:
+        "I have no internet right now: {{computer}} is offline, and this workspace's agents use only its internet. I'll answer when it's back, or once “Use only this computer's internet” is off on its page.",
       provider_unavailable: "My AI provider isn't answering right now. I'll answer as soon as it's back.",
       provider_wait_rate_limit:
         "{{provider}} is limiting requests on this key right now. I'll answer as soon as it lets me.",

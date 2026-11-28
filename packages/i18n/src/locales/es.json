@@ -17052,6 +17052,7 @@
       "spillOwnerOnly": "Solo quien conectó esta computadora puede activar su ayuda. Tú puedes desactivarla.",
       "shareOwnerOnly": "Solo quien conectó esta computadora puede dejar que los agentes usen su internet. Tú puedes desactivarlo.",
       "shareConnectedOnly": "Solo una computadora que alguien conectó puede compartir su internet con los agentes.",
+      "shareOff": "Primero activa “Los agentes usan el internet de esta computadora” y luego elige usar solo su internet.",
       "tasksOwnerOnly": "Solo quien conectó esta computadora puede cambiar cuántas tareas ejecuta a la vez.",
       "tasksCloud": "La Cloud dimensiona por sí misma el espacio de este ordenador para tareas.",
       "notHome": "Los agentes viven en la computadora del workspace y usan esta cuando la nombran."
@@ -17218,7 +17219,8 @@
       "hint": "La dirección que ven los sitios web cuando los agentes navegan. Se actualiza cuando cambia la red de la computadora.",
       "waiting": "Reconectando la conexión a internet de los agentes. Sus conexiones esperan hasta que vuelva.",
       "via": "Los agentes usan el internet de {{name}}",
-      "viaHint": "Los sitios ven la ubicación de esa computadora. Quien la conectó puede desactivarlo en su página."
+      "viaHint": "Los sitios ven la ubicación de esa computadora. Quien la conectó puede desactivarlo en su página.",
+      "offline": "Los agentes no tienen internet: {{name}} está sin conexión"
     },
     "maintenance": {
       "short": {
@@ -17620,8 +17622,10 @@
     "helpWorkspace": "Las computadoras ayudan cuando la del equipo está llena o fuera",
     "helpWorkspaceHint": "Cada computadora ayuda solo si su dueño lo permite. Desactivado: ninguna ayuda, elija lo que elija su dueño.",
     "shareInternet": "Los agentes usan el internet de esta computadora",
-    "shareInternetHint": "Las conexiones de los agentes salen por el internet de esta computadora, así que los sitios y servidores ven tu ubicación: sitios web, git, SSH, bases de datos y otras conexiones TCP. Nunca nada de tu propia red, ni correo por el puerto 25. Las consultas de nombres, las llamadas y el resto del tráfico UDP usan la conexión de siempre, igual que todo mientras esta computadora esté sin conexión.",
-    "shareInternetHintProxy": "El navegador de los agentes y los programas que siguen la configuración de proxy (git por HTTPS, curl, la mayoría de las herramientas de línea de comandos) salen por el internet de esta computadora, así que los sitios ven tu ubicación. SSH, los clientes de bases de datos y otros programas que ignoran la configuración de proxy usan la conexión de siempre, igual que las consultas de nombres y el tráfico UDP. Nunca nada de tu propia red, ni correo por el puerto 25. Mientras esta computadora esté sin conexión, todo usa la conexión de siempre.",
+    "shareInternetHint": "Las conexiones de los agentes salen por el internet de esta computadora, así que los sitios y servidores ven tu ubicación: sitios web, git, SSH, bases de datos y otras conexiones TCP. Nunca nada de tu propia red, ni correo por el puerto 25. La IA de los agentes, las consultas de nombres, las llamadas y el resto del tráfico UDP usan la conexión de siempre, igual que todo mientras esta computadora esté sin conexión.",
+    "shareInternetHintProxy": "El navegador de los agentes y los programas que siguen la configuración de proxy (git por HTTPS, curl, la mayoría de las herramientas de línea de comandos) salen por el internet de esta computadora, así que los sitios ven tu ubicación. SSH, los clientes de bases de datos y otros programas que ignoran la configuración de proxy usan la conexión de siempre, igual que la IA de los agentes, las consultas de nombres y el tráfico UDP. Nunca nada de tu propia red, ni correo por el puerto 25. Mientras esta computadora esté sin conexión, todo usa la conexión de siempre.",
+    "shareInternetOnly": "Usar solo el internet de esta computadora",
+    "shareInternetOnlyHint": "Los agentes usan solo el internet de esta computadora, también para su IA, y nunca la conexión de siempre. Mientras esté sin conexión, se quedan sin internet hasta que vuelva.",
     "shareInternetInUse": "En uso ahora",
     "shareInternetOther": "Los agentes usan {{name}} ahora",
     "shareInternetPick": "Usar esta",
@@ -20230,6 +20234,7 @@
       "brain_unavailable_outdated": "El programa de mi computadora necesita una actualización para que {{brain}} pueda responder. Responderé en cuanto se actualice.",
       "brain_unavailable_plan_owner": "{{brain}} pensaría con un plan que no es de mi dueño, así que no lo uso. Conecta la cuenta de mi dueño en mi página.",
       "brain_unavailable_shared_login": "Mi computadora no puede usar el inicio de sesión de Claude para todos los agentes ahora. Responderé en cuanto pueda. Si sigue fallando, vuelve a conectar Claude en Cuentas de IA.",
+      "brain_unavailable_lent_offline": "Ahora no tengo internet: {{computer}} está sin conexión y los agentes de este workspace usan solo su internet. Responderé cuando vuelva, o cuando “Usar solo el internet de esta computadora” esté desactivado en su página.",
       "provider_unavailable": "Mi proveedor de IA no responde ahora. Responderé en cuanto vuelva.",
       "provider_wait_rate_limit": "{{provider}} está limitando las solicitudes de esta clave ahora. Responderé en cuanto lo permita.",
       "provider_wait_down": "{{provider}} está caído o sobrecargado ahora. Responderé en cuanto vuelva.",

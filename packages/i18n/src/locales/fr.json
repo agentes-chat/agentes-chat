@@ -17126,6 +17126,7 @@
       "spillOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut activer son aide. Tu peux la désactiver.",
       "shareOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut laisser les agents utiliser sa connexion internet. Vous pouvez la couper.",
       "shareConnectedOnly": "Seul un ordinateur que quelqu’un a connecté peut partager sa connexion internet avec les agents.",
+      "shareOff": "Activez d’abord « Les agents utilisent la connexion internet de cet ordinateur », puis choisissez d’utiliser uniquement son internet.",
       "tasksOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut changer le nombre de tâches qu'il exécute en même temps.",
       "tasksCloud": "Le Cloud dimensionne lui-même la place de cet ordinateur pour les tâches.",
       "notHome": "Les agents vivent sur l'ordinateur du workspace et utilisent celui-ci quand ils le nomment."
@@ -17292,7 +17293,8 @@
       "hint": "L’adresse que voient les sites quand les agents naviguent. Elle change quand le réseau de l’ordinateur change.",
       "waiting": "Les agents se reconnectent à internet. Leurs connexions attendent son retour.",
       "via": "Les agents utilisent la connexion internet de {{name}}",
-      "viaHint": "Les sites voient l’emplacement de cet ordinateur. La personne qui l’a connecté peut couper ça sur sa page."
+      "viaHint": "Les sites voient l’emplacement de cet ordinateur. La personne qui l’a connecté peut couper ça sur sa page.",
+      "offline": "Les agents n’ont pas d’internet : {{name}} est hors ligne"
     },
     "maintenance": {
       "short": {
@@ -17694,8 +17696,10 @@
     "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
     "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "shareInternet": "Les agents utilisent la connexion internet de cet ordinateur",
-    "shareInternetHint": "Les connexions des agents passent par l’internet de cet ordinateur, les sites et les serveurs voient donc votre emplacement : sites web, git, SSH, bases de données et autres connexions TCP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Les résolutions de noms, les appels et le reste du trafic UDP utilisent la connexion habituelle, comme tout le reste tant que cet ordinateur est hors ligne.",
-    "shareInternetHintProxy": "Le navigateur des agents et les programmes qui suivent les réglages de proxy (git via HTTPS, curl, la plupart des outils en ligne de commande) passent par l’internet de cet ordinateur, les sites voient donc votre emplacement. SSH, les clients de base de données et les autres programmes qui ignorent les réglages de proxy utilisent la connexion habituelle, comme les résolutions de noms et le trafic UDP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Tant que cet ordinateur est hors ligne, tout utilise la connexion habituelle.",
+    "shareInternetHint": "Les connexions des agents passent par l’internet de cet ordinateur, les sites et les serveurs voient donc votre emplacement : sites web, git, SSH, bases de données et autres connexions TCP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. L’IA des agents, les résolutions de noms, les appels et le reste du trafic UDP utilisent la connexion habituelle, comme tout le reste tant que cet ordinateur est hors ligne.",
+    "shareInternetHintProxy": "Le navigateur des agents et les programmes qui suivent les réglages de proxy (git via HTTPS, curl, la plupart des outils en ligne de commande) passent par l’internet de cet ordinateur, les sites voient donc votre emplacement. SSH, les clients de base de données et les autres programmes qui ignorent les réglages de proxy utilisent la connexion habituelle, comme l’IA des agents, les résolutions de noms et le trafic UDP. Jamais rien sur votre propre réseau, ni d’e-mail sur le port 25. Tant que cet ordinateur est hors ligne, tout utilise la connexion habituelle.",
+    "shareInternetOnly": "Utiliser uniquement l’internet de cet ordinateur",
+    "shareInternetOnlyHint": "Les agents utilisent uniquement l’internet de cet ordinateur, leur IA comprise, et jamais la connexion habituelle. Tant qu’il est hors ligne, ils n’ont pas d’internet jusqu’à son retour.",
     "shareInternetInUse": "Utilisé en ce moment",
     "shareInternetOther": "Les agents utilisent {{name}} en ce moment",
     "shareInternetPick": "Utiliser celui-ci",
@@ -20317,6 +20321,7 @@
       "brain_unavailable_outdated": "Le programme de mon ordinateur doit être mis à jour pour que {{brain}} puisse répondre. Je répondrai dès qu'il sera à jour.",
       "brain_unavailable_plan_owner": "{{brain}} réfléchirait avec un abonnement qui n'est pas celui de mon propriétaire, donc je ne l'utilise pas. Connectez le compte de mon propriétaire sur ma page.",
       "brain_unavailable_shared_login": "Mon ordinateur ne peut pas utiliser la connexion de Claude pour tous les agents pour l'instant. Je répondrai dès que possible. Si l'échec continue, reconnectez Claude dans Comptes IA.",
+      "brain_unavailable_lent_offline": "Je n’ai pas d’internet pour le moment : {{computer}} est hors ligne, et les agents de ce workspace utilisent uniquement son internet. Je répondrai à son retour, ou dès que « Utiliser uniquement l’internet de cet ordinateur » sera désactivé sur sa page.",
       "provider_unavailable": "Mon fournisseur d'IA ne répond pas pour le moment. Je répondrai dès son retour.",
       "provider_wait_rate_limit": "{{provider}} limite les requêtes de cette clé pour le moment. Je répondrai dès que possible.",
       "provider_wait_down": "{{provider}} est en panne ou surchargé pour le moment. Je répondrai dès son retour.",

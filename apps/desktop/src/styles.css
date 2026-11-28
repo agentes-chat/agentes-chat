@@ -1690,6 +1690,11 @@ body[data-window="popover"] {
   flex-wrap: wrap;
   min-width: 0;
 }
+/* Under the row it depends on: its words start under that row's title (past the 32px logo and the 12px gap). */
+.dk-crow[data-nested] {
+  border-top: 0;
+  padding-inline-start: 44px;
+}
 .dk-crow:first-child {
   border-top: 0;
 }

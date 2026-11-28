@@ -32,7 +32,7 @@ import { fetchesCli } from "../cli-fetch";
 import type { CodeSessionContext } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
-import { maintenanceWords, pausedMessage } from "../machines";
+import { lentOfflineText, lentOnlyOffline, maintenanceWords, pausedMessage } from "../machines";
 import { missionTurnFor } from "../missions-engine";
 import {
   isRightHand,
@@ -361,6 +361,11 @@ export interface BrainUnavailability {
   resetsAt?: string;
   /** A `plan_limit` that is one model's (`refusalScope`), not the account's. */
   scope?: ModelScope;
+  /**
+   * `lent_offline` (ADR 0237, amendment 2026-11-27 c): the computer whose internet its agents use only, offline. The
+   * run waits for that one, not for its own computer.
+   */
+  lent?: { machineId: string; name: string };
 }
 
 /**
@@ -535,6 +540,7 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "plan_not_shared",
   "plan_unattended",
   "tools_not_locked",
+  "lent_offline",
 ]);
 
 /**
@@ -552,6 +558,15 @@ export const NO_AI_CODES: ReadonlySet<string> = new Set([
   "antigravity_missing",
   "devin_missing",
 ]);
+
+/** `lent_offline` while the computer `orgId`'s agents use only the internet of is offline (`lentOnlyOffline`). */
+async function lentUnavailable(
+  deps: Parameters<typeof lentOnlyOffline>[0],
+  orgId: string,
+): Promise<BrainUnavailability | null> {
+  const lent = await lentOnlyOffline(deps, orgId).catch(() => null);
+  return lent ? { code: "lent_offline", message: lentOfflineText(lent.name), lent } : null;
+}
 
 /** What the engine runs a turn with. */
 export interface BrainPlan {
@@ -882,6 +897,9 @@ export async function resolveBrain(
   // session: its own agent's turn runs there (an agent called in, or a mission's thread, keeps its own).
   const place = mission?.session ? null : (options.codeSession?.place ?? null);
   const machineId = mission?.session?.machineId ?? place?.machineId ?? agent.machineId ?? null;
+  // Read alongside, so no turn waits for it: kept only where that computer borrows a person's internet.
+  const lent =
+    machineId && deps.machines ? lentUnavailable({ db: deps.db, machines: deps.machines }, agent.orgId) : null;
   const [status, account] = await Promise.all([
     machineId && deps.machines ? deps.machines.status(machineId).catch(() => null) : null,
     brainAccountFor(deps.db, agent, kind, machineId),
@@ -912,7 +930,9 @@ export async function resolveBrain(
           usage,
           // "Automático" runs another model where the one it maps to is held (`autoPlanModel`).
           isAutoModel(runs) ? autoPlanModel(account?.provider, runs, usage) : runs,
-        ));
+        )) ??
+    // Its computer's agents use only a person's computer's internet, offline now: its CLI can't reach its AI.
+    (status?.kind === "managed" || status?.kind === "host" ? await lent : null);
   // The right hand's plan can't think now: another plan or the workspace's key thinks for it (ADR 0137 §7, amended
   // 2026-11-15). Not while its computer is coming back (`computerBackSoon` waits for it, as `agentAiState` says):
   // one in standby, which the run wakes, or one gone less than the outage grace (a server restart, its runner redialing).

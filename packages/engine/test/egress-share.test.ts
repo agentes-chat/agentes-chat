@@ -136,7 +136,7 @@ test("a lent connection: the workspace's computer asks, the lending computer dia
   const computer = (await listMachines(f.db, f.owner.id, f.org.id)).find((m) => m.id === managed.machineId);
   expect(computer?.egressVia).toMatchObject({ machineId: laptop, name: "Ana's laptop", userName: "ana" });
   const lent = (await listDevices(f.db, f.org.id, ana.id)).devices.find((d) => d.id === laptop);
-  expect(lent?.shareInternet).toEqual({ on: true, inUse: true });
+  expect(lent?.shareInternet).toEqual({ on: true, inUse: true, only: false });
 
   held.side?.closed();
   expect(cloud.closed).toMatchObject({ code: STREAM_CLOSE.normal });
@@ -485,7 +485,7 @@ describe("on a self-hosted server (ADR 0237): people's computers lend to this se
     expect(computer?.egressVia).toMatchObject({ machineId: laptop, name: "Ana's laptop", userName: "ana" });
     const list = await listDevices(f.db, f.org.id, ana.id);
     expect(list.lendsInternet).toBe(true);
-    expect(list.devices.find((d) => d.id === laptop)?.shareInternet).toEqual({ on: true, inUse: true });
+    expect(list.devices.find((d) => d.id === laptop)?.shareInternet).toEqual({ on: true, inUse: true, only: false });
   });
 
   test("a computer marked the workspace's borrows with its switch off; on, it lends and is refused as a borrower", async () => {
@@ -540,8 +540,10 @@ describe("on a self-hosted server (ADR 0237): people's computers lend to this se
     expect(await createEgressFetch(lendingRelay(laptop).relay).lentFetch(f.org.id)).toBeNull();
     await f.db.update(schema.machines).set({ egressShare: true }).where(eq(schema.machines.id, laptop));
     const { relay, device, held } = lendingRelay(laptop);
-    const open = await createEgressFetch(relay).lentFetch(f.org.id);
-    if (!open) throw new Error("no lent fetch");
+    const lent = await createEgressFetch(relay).lentFetch(f.org.id);
+    if (!lent) throw new Error("no lent fetch");
+    expect(lent.only).toBe(false);
+    const open = lent.fetch;
 
     // Bun's fetch tunnels through the proxy: the lending computer's side gets the TLS handshake.
     const real = globalThis.fetch;

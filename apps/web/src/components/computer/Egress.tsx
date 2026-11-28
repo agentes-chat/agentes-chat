@@ -1,6 +1,6 @@
 import type { Machine } from "@agenteschat/client";
 import { formatTime } from "@agenteschat/client/lib/format";
-import { egressViaParts } from "@agenteschat/client/lib/machines";
+import { egressOfflineText, egressViaParts } from "@agenteschat/client/lib/machines";
 import { Icon } from "@agenteschat/ui";
 import { countryFlagUrl } from "@agenteschat/ui/brand/flags";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,14 @@ export function Egress({ machine, compact = false }: { machine: Machine | null |
     return (
       <span role="status" className={compact ? "dsk-egress ac-iconline muted" : "setup-line small"}>
         {t("machines.egress.waiting")}
+      </span>
+    );
+  // Lent "only" and that computer offline: no internet at all, and whose it is (ADR 0237).
+  const offline = machine ? egressOfflineText(t, machine) : null;
+  if (offline)
+    return (
+      <span role="status" className={compact ? "dsk-egress ac-iconline muted" : "setup-line small"}>
+        {offline}
       </span>
     );
   if (transition)

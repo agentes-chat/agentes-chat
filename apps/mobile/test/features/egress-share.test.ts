@@ -21,6 +21,20 @@ test("a computer's page on the phone: its internet for the agents, as the web's 
   expect(computer).toContain("lending !== null && mine");
 });
 
+test("use only this computer's internet on the phone: one step in under the switch while it lends, as the web's", () => {
+  const computer = flat("features/devices/ComputerSection.tsx");
+  expect(computer).toContain(
+    "{sharing && d.shareInternet?.only !== undefined && (d.mayManage || onlyLent) ? ( <GroupedRow depth={1}",
+  );
+  expect(computer).toContain('label={t("devices.shareInternetOnly")}');
+  expect(computer).toContain('text: t("devices.shareInternetOnlyHint"),');
+  // Its owner turns it on; an admin may only turn it off.
+  expect(computer).toContain("disabled={!d.mayManage || (!mine && !onlyLent)}");
+  expect(computer).toContain("api.devices.updateComputer(orgId, d.id, { internetOnly: on })");
+  // The workspace's computer says when its agents have no internet, and whose computer is offline.
+  expect(flat("features/settings/MachineScreen.tsx")).toContain("egressOfflineText(t, m),");
+});
+
 test("a borrowing computer on the phone says whose internet its agents use", () => {
   expect(flat("features/settings/MachineScreen.tsx")).toContain("egressViaText(t, m),");
 });
