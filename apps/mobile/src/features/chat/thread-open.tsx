@@ -1,12 +1,29 @@
-import { createContext, type ReactNode, useContext, useEffect, useState, useSyncExternalStore } from "react";
-import { StyleSheet, View } from "react-native";
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { StyleSheet, View, type ViewStyle } from "react-native";
+import Animated, {
+  FadeIn,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import { motion, useTheme } from "@/ui";
 
 /*
- * A thread opened from its message, as on the web: the message stays marked in its conversation (a soft plate and a
- * 2pt mark on its left edge) while its thread's screen is open, and the mark fades once back. On the thread's screen,
- * the rows of its first load fade in 35ms apart.
+ * A thread opened from its message, as on the web: the message stays marked in its conversation while its thread's
+ * screen is open, and the mark fades once back. Never a mark on its edge: a bubble is the plate (it goes a step deeper,
+ * `ThreadBubbleVeil`), and a row with no bubble takes a soft plate. On the thread's screen, the rows of its first load
+ * fade in 35ms apart.
  */
 
 const open = new Map<string, number>();
@@ -37,6 +54,9 @@ export function useMarkThreadOpen(threadId: string | null) {
 /** After its thread's screen closes, the mark stays this long before it fades (the web's 700ms, fade included). */
 const LINGER_MS = 520;
 
+/** The open thread's mark, for the bubbles of its row that take it (`ThreadBubbleVeil`). */
+const MarkContext = createContext<{ opacity: SharedValue<number>; claim: () => () => void } | null>(null);
+
 /** The root message of a thread, marked while that thread's screen is open. */
 export function ThreadRootMark({ threadId, children }: { threadId: string; children: ReactNode }) {
   const { colors: c } = useTheme();
@@ -48,14 +68,47 @@ export function ThreadRootMark({ threadId, children }: { threadId: string; child
     );
   }, [shown, opacity]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+  // A bubble in the row takes the mark itself: then no plate around the row (no box around the bubble).
+  const [bubbles, setBubbles] = useState(0);
+  const mark = useMemo(
+    () => ({
+      opacity,
+      claim: () => {
+        setBubbles((n) => n + 1);
+        return () => setBubbles((n) => n - 1);
+      },
+    }),
+    [opacity],
+  );
   return (
-    <View>
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.mark, { backgroundColor: c.plateSoft, borderLeftColor: c.lineStrong }, style]}
-      />
-      {children}
-    </View>
+    <MarkContext.Provider value={mark}>
+      <View>
+        {bubbles === 0 ? (
+          <Animated.View pointerEvents="none" style={[styles.mark, { backgroundColor: c.plateSoft }, style]} />
+        ) : null}
+        {children}
+      </View>
+    </MarkContext.Provider>
+  );
+}
+
+/** How much ink a marked bubble takes over its own color: a step deeper, the web's 7%. */
+const VEIL = 0.07;
+
+/**
+ * The first child of a bubble in a thread's root row (under its words): the bubble goes a step deeper while the thread
+ * is open, whatever its color, in place of a plate around the row. `corners`: the bubble's own radii. Outside a
+ * thread's root row, nothing.
+ */
+export function ThreadBubbleVeil({ corners }: { corners: ViewStyle }) {
+  const mark = useContext(MarkContext);
+  const { colors: c } = useTheme();
+  useLayoutEffect(() => mark?.claim(), [mark]);
+  const opacity = mark?.opacity;
+  const style = useAnimatedStyle(() => ({ opacity: opacity ? opacity.get() * VEIL : 0 }));
+  if (!mark) return null;
+  return (
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, corners, { backgroundColor: c.ink }, style]} />
   );
 }
 
@@ -85,5 +138,5 @@ export function useLandingEntrance(reduced: boolean) {
 }
 
 const styles = StyleSheet.create({
-  mark: { ...StyleSheet.absoluteFill, borderLeftWidth: 2, borderRadius: 14 },
+  mark: { ...StyleSheet.absoluteFill, borderRadius: 14 },
 });

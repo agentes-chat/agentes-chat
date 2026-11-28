@@ -219,24 +219,6 @@ export function selectionOf(list: Message[], ctx: ThreadInfo["context"]): RangeS
 // ── What the channel shows ─────────────────────────────────────────────────
 
 /**
- * Messages of this channel that are the context of a thread (still in the
- * channel): they get the quiet mark in the gutter. `list` is the channel's
- * top-level timeline, oldest first.
- */
-export function contextMarks(threads: ThreadInfo[], list: Message[], channelId: string): Set<string> {
-  const marks = new Set<string>();
-  const top = rangeCandidates(list);
-  for (const t of threads) {
-    const ctx = t.context;
-    if (!ctx || ctx.moved || ctx.channelId !== channelId || t.state === "archived") continue;
-    const sel = selectionOf(top, ctx);
-    if (!sel) continue;
-    for (const m of selectionInfo(top, sel).included) marks.add(m.id);
-  }
-  return marks;
-}
-
-/**
  * What the channel hides because of threads: the replies of closed and
  * archived threads (a closed one is one line; an archived one isn't shown),
  * archived roots, and the replies of threads made from a range (those live in

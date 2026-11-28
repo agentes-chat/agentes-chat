@@ -1,6 +1,5 @@
 import type { ComputerSummary, EndedTask, ManagedTask, TaskSteps } from "@agenteschat/client";
 import { activityVerb } from "@agenteschat/client/lib/activity";
-import { WAIT_WORDS } from "@agenteschat/client/lib/agent-work";
 import { capitalize } from "@agenteschat/client/lib/format";
 import {
   type AgentTasks,
@@ -265,7 +264,9 @@ export function taskLine(
   // Someone else's ok or answer: never "Esperando você".
   const theirs = task.work?.state;
   const other = theirs === "approval" || theirs === "answer" ? theirs : null;
-  if (other) return { text: capitalize(t(WAIT_WORDS[other]), locale), tone: "later" };
+  // The work line's own sentence-start words ("Esperando aprovação"), as each language writes them.
+  if (other)
+    return { text: t(other === "approval" ? "work.status.wait.approval" : "work.status.wait.answer"), tone: "later" };
   const words = taskStateWords(t, locale, task, state, opts.now);
   return { text: [words.state, words.next].filter(Boolean).join(" · "), tone: "later" };
 }

@@ -163,8 +163,9 @@ describe("by how each stands (direction A)", () => {
       text: "Na fila",
       tone: "later",
     });
+    // The work line's own sentence-start words, never a translation with its first letter changed (ADR 0122).
     expect(line(task({ runId: "l2", status: "waiting_approval", work: work("approval") })).text).toBe(
-      "Esperando aprovação",
+      "Aguardando aprovação",
     );
     expect(line(ok, null, new Set(["ok"]))).toEqual({ text: "Parando…", tone: "stopping" });
   });

@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Message, ThreadInfo } from "../src/index";
 import {
-  contextMarks,
   excludedRuns,
   hiddenByThreads,
   moveEdge,
@@ -176,12 +175,6 @@ describe("what the channel shows", () => {
     moved: false,
     count: 2,
   };
-
-  test("context messages still in the channel get the mark", () => {
-    expect([...contextMarks([thread({ context: ctx })], list, "c")]).toEqual(["a", "c"]);
-    expect(contextMarks([thread({ context: { ...ctx, moved: true } })], list, "c").size).toBe(0);
-    expect(contextMarks([thread({ context: ctx })], list, "other").size).toBe(0);
-  });
 
   test("closed and archived threads hide their replies; archived roots and range replies too", () => {
     const hidden = hiddenByThreads(
