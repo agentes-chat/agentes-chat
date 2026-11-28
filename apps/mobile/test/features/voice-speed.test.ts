@@ -18,19 +18,27 @@ mock.module("../../src/lib/voice-session", () => ({
   playSystemSound: () => false,
   systemSounds: false,
 }));
-// The app's one shared player, counting the speeds it is given. A test moves its clock (`currentTime`, of a 9 s clip)
-// and can hold its seeks until it lets them land.
+// The app's one shared player, counting the speeds it is given. A test moves its clock (`currentTime`, of a 9 s clip),
+// sets the length it reads (`duration`), says it ended (`finish`), and can hold its seeks until it lets them land.
 const rates: number[] = [];
-const clock = { currentTime: 0, holdSeeks: false, land: null as null | (() => void) };
-// What the player says of itself (the system's controls pause and play it), and what it gave the system to show.
-const status: { didJustFinish: boolean; isLoaded?: boolean; playing?: boolean; isBuffering?: boolean } = {
-  didJustFinish: false,
+const clock = {
+  currentTime: 0,
+  duration: 9,
+  state: "ready",
+  holdSeeks: false,
+  land: null as null | (() => void),
+  status: null as null | ((status: { didJustFinish?: boolean; error?: string }) => void),
 };
+const finish = () => clock.status?.({ didJustFinish: true });
+// What the player says of itself (the system's controls pause and play it), and what it gave the system to show.
+const status: { isLoaded?: boolean; playing?: boolean; isBuffering?: boolean } = {};
 const shown: { active: boolean; title?: string; artist?: string }[] = [];
 mock.module("expo-audio", () => ({
   setAudioModeAsync: async () => undefined,
   createAudioPlayer: () => ({
-    addListener: () => undefined,
+    addListener: (_: string, listener: typeof clock.status) => {
+      clock.status = listener;
+    },
     replace: () => undefined,
     setPlaybackRate: (rate: number) => void rates.push(rate),
     seekTo: (seconds: number) =>
@@ -48,12 +56,14 @@ mock.module("expo-audio", () => ({
       void shown.push({ active, ...metadata }),
     clearLockScreenControls: () => void shown.push({ active: false }),
     get currentStatus() {
-      return status;
+      return { ...status, didJustFinish: false, playbackState: clock.state };
     },
     get currentTime() {
       return clock.currentTime;
     },
-    duration: 9,
+    get duration() {
+      return clock.duration;
+    },
   }),
 }));
 
@@ -190,8 +200,39 @@ describe("where a voice message stands lives in the playback module, not in its 
     await ticks();
     expect(placeOf("clip-f")).toBeCloseTo(0.5, 5);
     clock.currentTime = 9;
+    finish();
     await ticks();
     expect([placeOf("clip-f"), playingId(), ended]).toEqual([0, null, 1]);
+  });
+
+  test("a clip keeps playing to its own end when the player reads a shorter length (a file a browser recorded)", async () => {
+    // Android's player reads 1.2 s of a 17 s recording whose header carries no full length.
+    clock.currentTime = 0;
+    clock.duration = 1.2;
+    let ended = 0;
+    await startPlayback({ ...request("clip-g"), durationMs: 17_000, onEnd: () => ended++ });
+    clock.currentTime = 1.2;
+    await ticks();
+    expect(playingId()).toBe("clip-g");
+    expect(placeOf("clip-g")).toBeCloseTo(1.2 / 17, 5);
+    clock.currentTime = 16.9;
+    await ticks();
+    expect([playingId(), ended]).toEqual(["clip-g", 0]);
+    // Its end is the player's: Android's state says it before the event comes.
+    clock.state = "ended";
+    await ticks();
+    expect([placeOf("clip-g"), playingId(), ended]).toEqual([0, null, 1]);
+    clock.state = "ready";
+    clock.duration = 9;
+  });
+
+  test("an audio file with no length of its own plays by the player's", async () => {
+    clock.currentTime = 0;
+    await startPlayback({ ...request("clip-h"), durationMs: 0 });
+    clock.currentTime = 4.5;
+    await ticks();
+    expect(placeOf("clip-h")).toBeCloseTo(0.5, 5);
+    stopPlayback();
   });
 });
 
@@ -199,7 +240,7 @@ describe("what plays is the system's: its controls, who said it, paused there an
   test("a message's clip goes to the system with who said it; a take heard back stays in the app; a stop takes it away", async () => {
     clock.currentTime = 0;
     shown.length = 0;
-    await startPlayback({ ...request("clip-g"), nowPlaying: { title: "Ana Souza", artist: "Mensagem de voz" } });
+    await startPlayback({ ...request("clip-i"), nowPlaying: { title: "Ana Souza", artist: "Mensagem de voz" } });
     expect(shown).toEqual([{ active: true, title: "Ana Souza", artist: "Mensagem de voz" }]);
     stopPlayback();
     expect(shown.at(-1)).toEqual({ active: false });
@@ -212,24 +253,48 @@ describe("what plays is the system's: its controls, who said it, paused there an
   test("paused from the Lock Screen it shows stopped where it is, keeps its controls, and plays on from there", async () => {
     clock.currentTime = 0;
     shown.length = 0;
-    await startPlayback({ ...request("clip-h"), nowPlaying: { title: "Bruno Lima" } });
+    await startPlayback({ ...request("clip-j"), nowPlaying: { title: "Bruno Lima" } });
     clock.currentTime = 3;
     Object.assign(status, { isLoaded: true, playing: true, isBuffering: false });
     await ticks();
-    expect(playingId()).toBe("clip-h");
+    expect(playingId()).toBe("clip-j");
     // The system paused it: the row shows play, its place kept, the controls still there.
     status.playing = false;
     await ticks();
     expect(playingId()).toBeNull();
-    expect(placeOf("clip-h")).toBeCloseTo(1 / 3, 5);
+    expect(placeOf("clip-j")).toBeCloseTo(1 / 3, 5);
     expect(shown.some((s) => !s.active)).toBe(false);
     // Played again there: it is the clip playing again.
     status.playing = true;
     await Bun.sleep(400);
-    expect(playingId()).toBe("clip-h");
+    expect(playingId()).toBe("clip-j");
     stopPlayback();
     expect(shown.at(-1)).toEqual({ active: false });
     Object.assign(status, { isLoaded: undefined, playing: undefined, isBuffering: undefined });
+  });
+
+  test("a clip that ends just after it read as paused (it stops playing at its end) leaves the Lock Screen with its end", async () => {
+    for (const end of ["event", "state"] as const) {
+      clock.currentTime = 0;
+      shown.length = 0;
+      let ended = 0;
+      await startPlayback({ ...request(`clip-end-${end}`), nowPlaying: { title: "Bruno Lima" }, onEnd: () => ended++ });
+      Object.assign(status, { isLoaded: true, playing: true, isBuffering: false });
+      clock.currentTime = 8.9;
+      await ticks();
+      // At its end it stops playing, which a tick takes for a pause from the system before the end is said.
+      status.playing = false;
+      clock.currentTime = 9;
+      await ticks();
+      expect(playingId()).toBeNull();
+      // iOS says it in the event; Android's state says it, read while it waits.
+      if (end === "event") finish();
+      else clock.state = "ended";
+      await Bun.sleep(400);
+      expect([placeOf(`clip-end-${end}`), ended, shown.at(-1)]).toEqual([0, 1, { active: false }]);
+      clock.state = "ready";
+      Object.assign(status, { isLoaded: undefined, playing: undefined, isBuffering: undefined });
+    }
   });
 
   test("the audio mode keeps a playing voice going in the background, never a take", () => {

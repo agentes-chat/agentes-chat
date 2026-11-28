@@ -2306,44 +2306,65 @@
     "deleteText": "그룹의 에이전트는 에이전트 목록으로 돌아가요.",
     "deleteChannels": "그룹의 채널은 채널 목록으로 돌아가요.",
     "dropHere": "에이전트를 여기로 드래그하세요",
-    "dropHereAll": "에이전트나 채널을 여기로 드래그하세요",
     "moved": "{{name}}이(가) {{group}}(으)로 옮겨졌어요",
     "movedOut": "{{name}}이(가) {{group}}에서 빠졌어요",
     "undo": "실행 취소"
   },
   "sidebarAgents": {
-    "options": "에이전트 옵션",
-    "add": "새 에이전트 또는 부서",
-    "order": "순서",
-    "sort": {
-      "workspace": "워크스페이스 순서",
-      "mine": "내 에이전트 먼저",
-      "working": "작업 중 먼저"
-    },
     "showAll": "나와 대화하지 않는 에이전트 표시",
-    "collapseAll": "모두 접기",
-    "expandAll": "모두 펼치기",
-    "organize": "팀에서 부서 정리",
     "more_other": "팀에 에이전트 {{count}}개 더",
     "newAgent": "새 에이전트",
-    "working_other": "{{count}}개 작업 중",
     "count_other": "에이전트 {{count}}개",
     "workingIn": "#{{channel}}에서 작업 중",
     "talksOnly": "{{name}}와(과)만 대화",
-    "talksOnlyMore_other": "{{name}} 외 {{count}}명과만 대화",
-    "changeGroup": "부서 옮기기",
-    "newGroupWith": "{{name}}이(가) 있는 새 부서",
-    "dmsEmpty": "사람과의 대화가 여기에 표시돼요."
+    "talksOnlyMore_other": "{{name}} 외 {{count}}명과만 대화"
   },
-  "sidebarPins": {
-    "pin": "맨 위에 고정",
-    "unpin": "고정 해제",
-    "pinned": "맨 위에 고정됨",
-    "full": {
-      "agents": "이미 에이전트 5개를 고정했어요. 이걸 고정하려면 하나를 해제하세요.",
-      "channels": "이미 채널 5개를 고정했어요. 이걸 고정하려면 하나를 해제하세요.",
-      "people": "이미 5명을 고정했어요. 이분을 고정하려면 한 명을 해제하세요."
-    }
+  "sidebarFavorites": {
+    "title": "즐겨찾기",
+    "add": "즐겨찾기에 추가",
+    "remove": "즐겨찾기에서 제거",
+    "marked": "즐겨찾기",
+    "full": "즐겨찾기가 이미 50개입니다. 이 항목을 추가하려면 하나를 제거하세요."
+  },
+  "sidebarSections": {
+    "new": "새 섹션",
+    "newName": "새 섹션",
+    "moveTo": "섹션으로 이동",
+    "takeOut": "섹션에서 빼기",
+    "rename": "섹션 이름 바꾸기",
+    "delete": "섹션 삭제",
+    "nameLabel": "섹션 이름"
+  },
+  "sidebarDms": {
+    "options": "다이렉트 메시지 옵션",
+    "show": "표시",
+    "shows": {
+      "all": "워크스페이스의 모든 사람",
+      "recent": "최근 대화만"
+    },
+    "invite": "사람 초대",
+    "invited": "초대 보냄",
+    "invitedTip": "{{email}} 님이 아직 초대를 수락하지 않았습니다",
+    "agentTag": "AI",
+    "agentTip": "AI 에이전트"
+  },
+  "sidebarColumn": {
+    "label": "도구",
+    "unread": "{{name}}, 읽지 않은 항목 있음",
+    "you": "{{name}}, 나를 위한 항목 있음"
+  },
+  "unreads": {
+    "title": "읽지 않음",
+    "forYou": "나에게",
+    "conversations": "대화",
+    "markAll": "모두 읽음으로 표시",
+    "markRead": "읽음으로 표시",
+    "open": "열기",
+    "seeInbox": "받은편지함에서 모두 보기",
+    "more_other": "메시지 {{count}}개 더",
+    "emptyTitle": "모두 확인했습니다",
+    "emptyText": "새 메시지와 나를 기다리는 일이 여기에 표시됩니다.",
+    "markedAll": "모두 읽음으로 표시했습니다"
   },
   "appsDownload": {
     "computer": "컴퓨터",
@@ -6530,6 +6551,7 @@
     "undoneBy": "{{name}}님이 되돌림",
     "undoneByYou": "내가 되돌림",
     "undo": "되돌리기",
+    "applyAnyway": "그래도 적용",
     "appliedSome": "{{total}}개 중 {{done}}개 적용됨",
     "waitingAdmin": "관리자 대기 중",
     "stale": "만료됨",
@@ -15930,6 +15952,7 @@
       "spillOwnerOnly": "이 컴퓨터를 연결한 사람만 돕기를 켤 수 있습니다. 끌 수는 있습니다.",
       "shareOwnerOnly": "이 컴퓨터를 연결한 사람만 에이전트가 이 컴퓨터의 인터넷을 쓰게 할 수 있어요. 끄는 건 할 수 있어요.",
       "shareConnectedOnly": "누군가 연결한 컴퓨터만 에이전트와 인터넷을 나눌 수 있어요.",
+      "shareOff": "먼저 ‘에이전트가 이 컴퓨터의 인터넷을 써요’를 켠 다음, 그 인터넷만 사용하도록 선택하세요.",
       "tasksOwnerOnly": "이 컴퓨터가 동시에 실행하는 작업 수는 컴퓨터를 연결한 사람만 바꿀 수 있어요.",
       "tasksCloud": "이 컴퓨터의 작업 여유는 Cloud가 알아서 정해요.",
       "notHome": "에이전트는 워크스페이스 컴퓨터에 있고, 이름을 부를 때 이 컴퓨터를 써요."
@@ -16094,7 +16117,8 @@
       "hint": "에이전트가 웹을 탐색할 때 사이트에 보이는 주소예요. 컴퓨터의 네트워크가 바뀌면 함께 바뀌어요.",
       "waiting": "에이전트의 인터넷을 다시 연결하고 있어요. 돌아올 때까지 연결이 기다려요.",
       "via": "에이전트가 {{name}}의 인터넷을 써요",
-      "viaHint": "사이트에는 그 컴퓨터의 위치가 보여요. 연결한 사람이 그 컴퓨터 페이지에서 끌 수 있어요."
+      "viaHint": "사이트에는 그 컴퓨터의 위치가 보여요. 연결한 사람이 그 컴퓨터 페이지에서 끌 수 있어요.",
+      "offline": "에이전트 인터넷 없음: {{name}} 오프라인"
     },
     "maintenance": {
       "short": {
@@ -16407,6 +16431,8 @@
     "workspace": "워크스페이스",
     "cloud": "Cloud",
     "cpus_other": "CPU {{count}}개",
+    "cores_other": "코어 {{count}}개",
+    "threads_other": "스레드 {{count}}개",
     "memory": "{{gb}}GB",
     "system": {
       "android": "Android {{version}}",
@@ -16482,11 +16508,14 @@
     "helpWorkspace": "팀 컴퓨터가 가득 찼거나 없을 때 다른 컴퓨터가 돕기",
     "helpWorkspaceHint": "각 컴퓨터는 소유자가 허용할 때만 돕습니다. 끔: 소유자의 선택과 상관없이 아무 컴퓨터도 돕지 않습니다.",
     "shareInternet": "에이전트가 이 컴퓨터의 인터넷을 써요",
-    "shareInternetHint": "에이전트가 여는 사이트는 이 컴퓨터의 연결을 거치므로 사이트에 내 위치가 보여요. 웹사이트만 열고, 내 네트워크에 있는 것에는 절대 접근하지 않아요. 이 컴퓨터가 오프라인인 동안에는 에이전트가 평소 연결을 써요.",
+    "shareInternetHint": "에이전트의 연결은 이 컴퓨터의 인터넷을 거치므로 사이트와 서버에 내 위치가 보여요. 웹사이트, git, SSH, 데이터베이스 등 TCP 연결이 해당돼요. 내 네트워크에 있는 것에는 절대 접근하지 않고, 포트 25로 이메일을 보내지도 않아요. 에이전트의 AI, 이름 조회, 통화 등 UDP 트래픽은 평소 연결을 쓰고, 이 컴퓨터가 오프라인인 동안에는 모두 평소 연결을 써요.",
+    "shareInternetHintProxy": "에이전트의 브라우저와 프록시 설정을 따르는 프로그램(HTTPS를 통한 git, curl, 대부분의 명령줄 도구)은 이 컴퓨터의 인터넷을 거치므로 사이트에 내 위치가 보여요. SSH, 데이터베이스 클라이언트 등 프록시 설정을 무시하는 프로그램은 평소 연결을 쓰고, 에이전트의 AI, 이름 조회, UDP 트래픽도 마찬가지예요. 내 네트워크에 있는 것에는 절대 접근하지 않고, 포트 25로 이메일을 보내지도 않아요. 이 컴퓨터가 오프라인인 동안에는 모두 평소 연결을 써요.",
+    "shareInternetOnly": "이 컴퓨터의 인터넷만 사용",
+    "shareInternetOnlyHint": "에이전트가 AI까지 포함해 이 컴퓨터의 인터넷만 쓰고, 평소 연결은 쓰지 않아요. 이 컴퓨터가 오프라인인 동안에는 돌아올 때까지 인터넷을 쓸 수 없어요.",
     "shareInternetInUse": "지금 사용 중",
     "shareInternetOther": "에이전트가 지금 {{name}}을(를) 써요",
     "shareInternetPick": "이걸로 쓰기",
-    "shareInternetJoin": "에이전트가 이 컴퓨터의 인터넷으로도 사이트를 열기 때문에 사이트에 내 위치가 보여요. 컴퓨터 페이지에서 끌 수 있어요.",
+    "shareInternetJoin": "에이전트가 이 컴퓨터의 인터넷으로도 접속하기 때문에 사이트와 서버에 내 위치가 보여요. 컴퓨터 페이지에서 끌 수 있어요.",
     "connectedBy": "{{name}} 님이 연결함",
     "downloadFor": "{{system}}용 다운로드",
     "downloadApp": "앱 다운로드",
@@ -16634,7 +16663,7 @@
     },
     "facts": {
       "system": "시스템",
-      "cpu": "CPU",
+      "cpu": "프로세서",
       "memory": "메모리",
       "lastSeen": "마지막 확인",
       "toolchains": "찾은 도구 체인",
@@ -17025,7 +17054,7 @@
       "folderOnComputer": "컴퓨터에서 허용",
       "folderShown": "{{deviceName}}에서 열렸어요. 그곳에서 허용하세요.",
       "internetShared": "이제 에이전트가 <b>{{deviceName}}</b>의 인터넷으로 웹사이트를 열어요",
-      "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만 열고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
+      "internetSharedLine": "이 워크스페이스의 에이전트만 쓰고, 그 컴퓨터의 네트워크에는 절대 접근하지 않으며, 포트 25로 이메일을 보내지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
       "internetOff": "끄기",
       "internetOffDone": "에이전트가 더 이상 {{deviceName}}의 인터넷을 쓰지 않아요.",
       "once": "한 번 허용",
@@ -18999,6 +19028,7 @@
       "brain_unavailable_outdated": "{{brain}}이(가) 답하려면 내 컴퓨터의 프로그램을 업데이트해야 해요. 업데이트되면 바로 답할게요.",
       "brain_unavailable_plan_owner": "{{brain}}은(는) 내 소유자의 것이 아닌 요금제로 생각하게 되므로 쓰지 않아요. 내 페이지에서 소유자의 계정을 연결하세요.",
       "brain_unavailable_shared_login": "제 컴퓨터에서 지금은 모든 에이전트용 Claude 로그인을 쓸 수 없어요. 쓸 수 있게 되면 답할게요. 계속 실패하면 AI 계정에서 Claude를 다시 연결하세요.",
+      "brain_unavailable_lent_offline": "지금은 인터넷을 쓸 수 없어요. 이 워크스페이스의 에이전트는 {{computer}}의 인터넷만 쓰는데, 지금 오프라인이에요. 돌아오면, 또는 그 페이지에서 ‘이 컴퓨터의 인터넷만 사용’을 끄면 답할게요.",
       "provider_unavailable": "지금 AI 제공업체가 응답하지 않아요. 돌아오는 대로 답할게요.",
       "provider_wait_rate_limit": "지금 {{provider}}이(가) 이 키의 요청을 제한하고 있어요. 풀리는 대로 답할게요.",
       "provider_wait_down": "지금 {{provider}}이(가) 중단됐거나 과부하 상태예요. 돌아오는 대로 답할게요.",
@@ -19009,7 +19039,9 @@
       "provider_back": "AI가 돌아왔어요.",
       "confidential_removed": "삭제됨: 기밀 텍스트는 {{days}}일 동안 보관됩니다.",
       "brain_queued": "아직 대기 중입니다. 차례가 오면 바로 답하겠습니다.",
-      "brain_interrupted": "{{brain}}이(가) 끝내기 전에 멈췄어요. 이미 완료되어 반복하지 않은 것: {{tools}}.",
+      "brain_interrupted": "{{brain}}이(가) 끝내기 전에 멈췄어요. 계속하려면 다시 요청하세요.",
+      "brain_interrupted_timeout": "{{brain}}이(가) 제한 시간을 넘겨 끝내기 전에 멈췄어요. 계속하려면 다시 요청하세요.",
+      "brain_interrupted_computer": "컴퓨터가 끝나기 전에 {{brain}}을(를) 멈췄어요. 계속하려면 다시 요청하세요.",
       "plan_limit_cut": "{{plan}} 요금제 한도에서 멈췄어요. 초기화되는 {{when}}에 멈춘 곳부터 이어 갈게요.",
       "plan_limit_cut_unknown": "{{plan}} 요금제 한도에서 멈췄어요. 초기화되는 대로 멈춘 곳부터 이어 갈게요.",
       "plan_limit_wait": "{{plan}} 요금제가 한도에 도달했어요. 초기화되는 {{when}}에 답할게요. {{plan}}에서 더 일찍 풀리면 바로 알아채고 답할게요.",

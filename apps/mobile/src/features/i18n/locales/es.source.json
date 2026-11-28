@@ -5,15 +5,6 @@
   "app.send": {
     "value": "Send"
   },
-  "categories.where": {
-    "value": "Where #{{channel}} shows"
-  },
-  "categories.whereHelp": {
-    "value": "Changes for everyone. Who takes part in the channel stays the same."
-  },
-  "categories.order": {
-    "value": "Place in the list"
-  },
   "categories.up": {
     "value": "Move up"
   },
@@ -22,6 +13,24 @@
   },
   "categories.channelPosition": {
     "value": "{{at}} of {{count}}."
+  },
+  "sections.title": {
+    "value": "Section"
+  },
+  "sections.where": {
+    "value": "Where #{{channel}} sits for you"
+  },
+  "sections.whereHelp": {
+    "value": "Only your list changes. Each person arranges their own sections."
+  },
+  "sections.none": {
+    "value": "No section"
+  },
+  "sections.order": {
+    "value": "Place in the section"
+  },
+  "sections.tooLong": {
+    "value": "Use 40 characters or fewer."
   },
   "blocks.send": {
     "value": "Send"
@@ -455,8 +464,8 @@
   "chats.serverError.kept": {
     "value": "Showing what was already in the app."
   },
-  "chats.pinned": {
-    "value": "Pinned"
+  "chats.favorites": {
+    "value": "Favorites"
   },
   "chats.recent": {
     "value": "Recent"
@@ -464,8 +473,8 @@
   "chats.view.title": {
     "value": "Show chats"
   },
-  "chats.view.sectors": {
-    "value": "Sectors"
+  "chats.view.sections": {
+    "value": "Sections"
   },
   "chats.view.dms": {
     "value": "Direct messages"

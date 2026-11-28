@@ -859,7 +859,7 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
 
   test("its facts start at the card's edge, under the portrait, whatever the portrait's width", async () => {
     await open();
-    expect(document.querySelector(".ac-card > .dv-facts")?.textContent).toContain("macOS");
+    expect(document.querySelector(".ac-card > details.ac-disclosure .dv-facts")?.textContent).toContain("macOS");
     const css = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();
     expect(css).toContain("\n.machine-page__facts {\n  display: flex;");
     // No indent past a portrait: a tower is half as wide as a laptop.

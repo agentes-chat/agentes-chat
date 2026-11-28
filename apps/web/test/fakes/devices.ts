@@ -107,14 +107,16 @@ export function createFakeDevices(
     },
     updateComputer: async (orgId, id, input) => {
       record("devices.updateComputer", orgId, id, input);
-      const { spill, shareInternet, ...rest } = input;
+      const { spill, shareInternet, internetOnly, ...rest } = input;
       const c = computer(id);
       Object.assign(c, rest, spill ? { spill: { ...c.spill, ...spill } } : {});
       // As the server: on again picks this one, so it is the one in use while the workspace's computer goes out.
       if (shareInternet !== undefined && c.shareInternet) {
         if (shareInternet) for (const d of current().devices) if (d.shareInternet) d.shareInternet.inUse = false;
-        c.shareInternet = { on: shareInternet, inUse: shareInternet };
+        c.shareInternet = { ...c.shareInternet, on: shareInternet, inUse: shareInternet };
+        if (!shareInternet && c.shareInternet.only !== undefined) c.shareInternet.only = false;
       }
+      if (internetOnly !== undefined && c.shareInternet) c.shareInternet.only = internetOnly;
       return clone(c);
     },
     setHelp: async (orgId, on) => {

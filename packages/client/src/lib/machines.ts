@@ -700,6 +700,11 @@ export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" |
   return via ? t("machines.egress.via", { name: via.name }) : null;
 }
 
+/** The workspace's own computer's agents have no internet: the computer they use only the internet of is offline. */
+export function egressOfflineText(t: TFunction, m: Pick<Machine, "kind" | "egressOffline">): string | null {
+  return m.kind === "managed" && m.egressOffline ? t("machines.egress.offline", { name: m.egressOffline.name }) : null;
+}
+
 /**
  * `egressViaText` as the words around the lending computer's name, in the language's order, so a screen can give the
  * name alone a tip: who connected it ("Connected by Ana"), or null when nobody is named.

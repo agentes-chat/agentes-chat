@@ -65,6 +65,8 @@ export const strings: Partial<PushStrings> = {
   deviceJoinRequestBody: "Katılmasına izin vermek ya da reddetmek için dokunun.",
   waitingTitle: "Sizi bekleyen bir şey var",
   openBody: "Açmak için dokunun.",
+  cutBody: "Bitirmeden durdu. Devam etmek için yeniden sorun.",
+  movedBody: "Bu biraz sürecek, o yüzden arka planda devam ediyorum.",
   sentGif: "Bir GIF gönderdi",
   sentSticker: "Bir çıkartma gönderdi",
   sentVoice: "Bir sesli mesaj gönderdi",

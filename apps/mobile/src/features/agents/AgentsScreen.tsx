@@ -719,7 +719,7 @@ const AgentRow = memo(function AgentRow({
         accessibilityRole="button"
         accessibilityLabel={[
           said,
-          pinned ? t("sidebarPins.pinned") : null,
+          pinned ? t("sidebarFavorites.marked") : null,
           a.role.trim() || null,
           time,
           state === "waits" && waits ? workLineText(waits) : state === "away" ? null : role,

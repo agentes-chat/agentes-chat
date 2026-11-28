@@ -32,6 +32,7 @@
     "./icons/data": "./src/icons/data.ts",
     "./presence/badge": "./src/presence/badge.ts",
     "./sfx": "./src/sfx/synth.ts",
+    "./voice/bars": "./src/components/voice-bars.ts",
     "./sky/engine": "./src/sky/engine.ts",
     "./sky/math": "./src/sky/math.ts",
     "./sky/forming": "./src/sky/forming.ts",

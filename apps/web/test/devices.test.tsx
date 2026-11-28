@@ -209,19 +209,37 @@ describe("Settings › Devices", () => {
     ).toBeTruthy();
   });
 
-  test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
-    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+  test("a computer's page: its system, processor, size and toolchains behind Details, closed", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
+      if (!mac) throw new Error("fixture");
+      Object.assign(mac, { cpus: 14, cores: 14, cpuModel: "Apple M4 Pro", system: "macOS 26.1" });
+      devices.set(list);
+    });
     const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
-    const glance = card.querySelector(":scope > .dv-facts") as HTMLElement;
-    expect([...glance.querySelectorAll("dt")].map((d) => d.textContent)).toEqual(["System"]);
+    expect(card.querySelector(":scope > .dv-facts")).toBeNull();
     const more = card.querySelector("details.ac-disclosure") as HTMLDetailsElement;
     expect(more.open).toBe(false);
     expect(more.querySelector("summary")?.textContent).toBe("Details");
-    expect([...more.querySelectorAll(".dv-facts dt")].map((d) => d.textContent)).toEqual([
-      "CPU",
-      "Memory",
-      "Toolchains found",
+    const facts = [...more.querySelectorAll(".dv-facts > div")].map((f) => [
+      f.querySelector("dt")?.textContent,
+      f.querySelector("dd")?.textContent,
     ]);
+    expect(facts.slice(0, 3)).toEqual([
+      ["System", "macOS 26.1"],
+      // The cores in a tooltip, and for a screen reader after the name.
+      ["Processor", "Apple M4 Pro, 14 cores"],
+      ["Memory", "36 GB"],
+    ]);
+    expect(facts[3]?.[0]).toBe("Toolchains found");
+  });
+
+  test("a computer's page from an older runner: the system's family, and the processor as its threads", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    const facts = [...card.querySelectorAll("details .dv-facts > div")].map((f) => f.textContent);
+    expect(facts.slice(0, 2)).toEqual(["SystemmacOS", "Processor12 threads"]);
   });
 
   test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {
@@ -1396,8 +1414,43 @@ describe("A device's page", () => {
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
+  test("use only this computer's internet: nested under the switch while it lends, its owner's to turn on", async () => {
+    const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      for (const d of list.devices) if (d.id === MAC) d.shareInternet = { on: true, inUse: true, only: false };
+      devices.set(list);
+    });
+    const only = screen().getByRole("switch", { name: "Use only this computer's internet" });
+    expect(only.getAttribute("aria-checked")).toBe("false");
+    expect(only.closest(".settings-row")?.classList.contains("settings-row--nested")).toBe(true);
+    await click(only);
+    await settle(4);
+    expect(
+      screen().getByRole("switch", { name: "Use only this computer's internet" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+    // Lending off: the choice under it goes with it.
+    await click(screen().getByRole("switch", { name: "Agents use this computer's internet" }));
+    await settle(4);
+    expect(screen().queryByRole("switch", { name: "Use only this computer's internet" })).toBeNull();
+    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([
+      { internetOnly: true },
+      { shareInternet: false },
+    ]);
+  });
+
+  test("an older server with no such choice shows none", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      for (const d of list.devices) if (d.id === MAC) d.shareInternet = { on: true, inUse: true };
+      devices.set(list);
+    });
+    expect(screen().getByRole("switch", { name: "Agents use this computer's internet" })).toBeTruthy();
+    expect(screen().queryByRole("switch", { name: "Use only this computer's internet" })).toBeNull();
+  });
+
   test("on a self-hosted server: a computer that joins hears it will lend its internet, with no workspace computer", async () => {
-    const line = "The agents will also open websites through this computer's internet";
+    const line = "The agents will also go online through this computer's internet";
     // No workspace computer: nothing borrows where the server lends none (the Cloud's rule).
     const own = () => {
       const list = acmeDevices();
@@ -1642,7 +1695,7 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).toContain("never anything on its own network, never email on port 25");
     expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);

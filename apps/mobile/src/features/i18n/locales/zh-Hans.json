@@ -4,12 +4,17 @@
     "send": "发送"
   },
   "categories": {
-    "where": "#{{channel}} 显示的位置",
-    "whereHelp": "对所有人生效。频道的成员保持不变。",
-    "order": "在列表中的位置",
     "up": "上移",
     "down": "下移",
     "channelPosition": "第 {{at}} 个，共 {{count}} 个。"
+  },
+  "sections": {
+    "title": "分区",
+    "where": "#{{channel}} 在你列表中的位置",
+    "whereHelp": "只改变你的列表。每个人整理自己的分区。",
+    "none": "无分区",
+    "order": "在分区中的位置",
+    "tooLong": "最多 40 个字符。"
   },
   "blocks": {
     "send": "发送",
@@ -183,11 +188,11 @@
       "text": "它可能已停机，或不在你的网络中。恢复后你的聊天会自动显示。",
       "kept": "正在显示应用中已有的内容。"
     },
-    "pinned": "已置顶",
+    "favorites": "收藏",
     "recent": "最近",
     "view": {
       "title": "显示对话",
-      "sectors": "部门",
+      "sections": "分区",
       "dms": "私信",
       "channels": "频道"
     },

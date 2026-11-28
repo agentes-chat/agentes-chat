@@ -2472,31 +2472,16 @@
     "deleteText": "I suoi agenti tornano in Agenti.",
     "deleteChannels": "I suoi canali tornano in Canali.",
     "dropHere": "Trascina qui gli agenti",
-    "dropHereAll": "Trascina qui agenti o canali",
     "moved": "{{name}} è passato a {{group}}",
     "movedOut": "{{name}} ha lasciato {{group}}",
     "undo": "Annulla"
   },
   "sidebarAgents": {
-    "options": "Opzioni degli agenti",
-    "add": "Nuovo agente o reparto",
-    "order": "Ordine",
-    "sort": {
-      "workspace": "Quello dello spazio di lavoro",
-      "mine": "I miei prima",
-      "working": "Al lavoro prima"
-    },
     "showAll": "Mostra gli agenti che non parlano con me",
-    "collapseAll": "Comprimi tutti",
-    "expandAll": "Espandi tutti",
-    "organize": "Organizza i reparti in Team",
     "more_one": "1 altro agente in Team",
     "more_many": "Altri {{count}} agenti in Team",
     "more_other": "Altri {{count}} agenti in Team",
     "newAgent": "Nuovo agente",
-    "working_one": "{{count}} al lavoro",
-    "working_many": "{{count}} al lavoro",
-    "working_other": "{{count}} al lavoro",
     "count_one": "{{count}} agente",
     "count_many": "{{count}} agenti",
     "count_other": "{{count}} agenti",
@@ -2504,20 +2489,56 @@
     "talksOnly": "parla solo con {{name}}",
     "talksOnlyMore_one": "parla solo con {{name}} e altri {{count}}",
     "talksOnlyMore_many": "parla solo con {{name}} e altri {{count}}",
-    "talksOnlyMore_other": "parla solo con {{name}} e altri {{count}}",
-    "changeGroup": "Sposta in un reparto",
-    "newGroupWith": "Nuovo reparto con {{name}}",
-    "dmsEmpty": "Le tue conversazioni con le persone appaiono qui."
+    "talksOnlyMore_other": "parla solo con {{name}} e altri {{count}}"
   },
-  "sidebarPins": {
-    "pin": "Fissa in alto",
-    "unpin": "Togli dall’alto",
-    "pinned": "Fissato in alto",
-    "full": {
-      "agents": "Hai già fissato 5 agenti. Toglierne uno per fissare questo.",
-      "channels": "Hai già fissato 5 canali. Toglierne uno per fissare questo.",
-      "people": "Hai già fissato 5 persone. Toglierne una per fissare questa."
-    }
+  "sidebarFavorites": {
+    "title": "Preferiti",
+    "add": "Aggiungi ai preferiti",
+    "remove": "Rimuovi dai preferiti",
+    "marked": "Nei preferiti",
+    "full": "I preferiti sono già 50. Rimuovine uno per aggiungere questo."
+  },
+  "sidebarSections": {
+    "new": "Nuova sezione",
+    "newName": "Nuova sezione",
+    "moveTo": "Sposta nella sezione",
+    "takeOut": "Togli dalla sezione",
+    "rename": "Rinomina sezione",
+    "delete": "Elimina sezione",
+    "nameLabel": "Nome della sezione"
+  },
+  "sidebarDms": {
+    "options": "Opzioni dei messaggi diretti",
+    "show": "Mostra",
+    "shows": {
+      "all": "Tutti nel workspace",
+      "recent": "Solo conversazioni recenti"
+    },
+    "invite": "Invita persone",
+    "invited": "Invito inviato",
+    "invitedTip": "{{email}} non ha ancora accettato l'invito",
+    "agentTag": "IA",
+    "agentTip": "Agente IA"
+  },
+  "sidebarColumn": {
+    "label": "Strumenti",
+    "unread": "{{name}}, qualcosa da leggere",
+    "you": "{{name}}, qualcosa per te"
+  },
+  "unreads": {
+    "title": "Da leggere",
+    "forYou": "Per te",
+    "conversations": "Conversazioni",
+    "markAll": "Segna tutto come letto",
+    "markRead": "Segna come letto",
+    "open": "Apri",
+    "seeInbox": "Vedi tutto nella posta in arrivo",
+    "more_one": "Ancora {{count}} messaggio",
+    "more_many": "Ancora {{count}} messaggi",
+    "more_other": "Ancora {{count}} messaggi",
+    "emptyTitle": "Tutto letto",
+    "emptyText": "I nuovi messaggi e ciò che ti aspetta compaiono qui.",
+    "markedAll": "Tutto segnato come letto"
   },
   "appsDownload": {
     "computer": "Computer",
@@ -7085,6 +7106,7 @@
     "undoneBy": "Annullato da {{name}}",
     "undoneByYou": "Annullato da te",
     "undo": "Annulla",
+    "applyAnyway": "Applica comunque",
     "appliedSome": "{{done}} di {{total}} applicati",
     "waitingAdmin": "In attesa di un admin",
     "stale": "Superata",
@@ -17129,6 +17151,7 @@
       "spillOwnerOnly": "Solo chi ha collegato questo computer può attivarne l'aiuto. Tu puoi disattivarlo.",
       "shareOwnerOnly": "Solo chi ha collegato questo computer può far usare la sua connessione internet agli agenti. Tu puoi disattivarla.",
       "shareConnectedOnly": "Solo un computer collegato da qualcuno può condividere la sua connessione internet con gli agenti.",
+      "shareOff": "Attiva prima “Gli agenti usano la connessione internet di questo computer”, poi scegli di usare solo il suo internet.",
       "tasksOwnerOnly": "Solo chi ha collegato questo computer può cambiare quante attività esegue in contemporanea.",
       "tasksCloud": "Il Cloud dimensiona da solo lo spazio di questo computer per le attività.",
       "notHome": "Gli agenti vivono sul computer del workspace e usano questo quando lo nominano."
@@ -17295,7 +17318,8 @@
       "hint": "L’indirizzo che i siti vedono quando gli agenti navigano. Si aggiorna quando cambia la rete del computer.",
       "waiting": "Gli agenti si stanno ricollegando a internet. Le loro connessioni aspettano che torni.",
       "via": "Gli agenti usano la connessione internet di {{name}}",
-      "viaHint": "I siti vedono la posizione di quel computer. Chi l’ha collegato può disattivarlo nella sua pagina."
+      "viaHint": "I siti vedono la posizione di quel computer. Chi l’ha collegato può disattivarlo nella sua pagina.",
+      "offline": "Gli agenti non hanno internet: {{name}} è offline"
     },
     "maintenance": {
       "short": {
@@ -17616,6 +17640,12 @@
     "cpus_one": "{{count}} CPU",
     "cpus_many": "{{count}} CPU",
     "cpus_other": "{{count}} CPU",
+    "cores_one": "{{count}} core",
+    "cores_many": "{{count}} di core",
+    "cores_other": "{{count}} core",
+    "threads_one": "{{count}} thread",
+    "threads_many": "{{count}} di thread",
+    "threads_other": "{{count}} thread",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -17691,11 +17721,14 @@
     "helpWorkspace": "I computer aiutano quando quello del team è pieno o assente",
     "helpWorkspaceHint": "Ogni computer aiuta solo se il suo proprietario lo permette. Disattivato: nessuno aiuta, qualunque cosa abbia scelto il proprietario.",
     "shareInternet": "Gli agenti usano la connessione internet di questo computer",
-    "shareInternetHint": "I siti che gli agenti aprono passano dalla connessione di questo computer, quindi vedono la tua posizione. Solo siti web e mai nulla della tua rete. Finché questo computer è offline, gli agenti usano la loro connessione abituale.",
+    "shareInternetHint": "Le connessioni degli agenti escono dall’internet di questo computer, quindi siti e server vedono la tua posizione: siti web, git, SSH, database e altre connessioni TCP. Mai nulla della tua rete, né email sulla porta 25. L’IA degli agenti, le ricerche dei nomi, le chiamate e il resto del traffico UDP usano la connessione abituale, come tutto il resto finché questo computer è offline.",
+    "shareInternetHintProxy": "Il browser degli agenti e i programmi che seguono le impostazioni del proxy (git via HTTPS, curl, la maggior parte degli strumenti da riga di comando) escono dall’internet di questo computer, quindi i siti vedono la tua posizione. SSH, i client di database e gli altri programmi che ignorano le impostazioni del proxy usano la connessione abituale, come l’IA degli agenti, le ricerche dei nomi e il traffico UDP. Mai nulla della tua rete, né email sulla porta 25. Finché questo computer è offline, tutto usa la connessione abituale.",
+    "shareInternetOnly": "Usa solo l’internet di questo computer",
+    "shareInternetOnlyHint": "Gli agenti usano solo l’internet di questo computer, anche per la loro IA, e mai la connessione abituale. Finché è offline, restano senza internet fino al suo ritorno.",
     "shareInternetInUse": "In uso ora",
     "shareInternetOther": "Gli agenti ora usano {{name}}",
     "shareInternetPick": "Usa questo",
-    "shareInternetJoin": "Gli agenti apriranno siti anche tramite la connessione internet di questo computer, quindi i siti vedranno la tua posizione. Puoi disattivarlo nella sua pagina.",
+    "shareInternetJoin": "Gli agenti andranno online anche tramite l’internet di questo computer, quindi siti e server vedranno la tua posizione. Puoi disattivarlo nella sua pagina.",
     "connectedBy": "Collegato da {{name}}",
     "downloadFor": "Scarica per {{system}}",
     "downloadApp": "Scarica l'app",
@@ -18240,7 +18273,7 @@
       "folderOnComputer": "Consenti sul computer",
       "folderShown": "Aperto su {{deviceName}}. Consentilo lì.",
       "internetShared": "Ora gli agenti aprono i siti web tramite la connessione internet di <b>{{deviceName}}</b>",
-      "internetSharedLine": "Solo gli agenti di questo workspace, solo siti web, mai nulla sulla sua rete. Mentre è offline, usano la loro connessione di sempre.",
+      "internetSharedLine": "Solo gli agenti di questo workspace, mai nulla sulla sua rete, mai email sulla porta 25. Mentre è offline, usano la loro connessione di sempre.",
       "internetOff": "Disattiva",
       "internetOffDone": "Gli agenti non usano più la connessione internet di {{deviceName}}.",
       "once": "Consenti una volta",
@@ -20307,6 +20340,7 @@
       "brain_unavailable_outdated": "Il programma sul mio computer va aggiornato perché {{brain}} possa rispondere. Risponderò appena sarà aggiornato.",
       "brain_unavailable_plan_owner": "{{brain}} penserebbe con un piano che non è del mio proprietario, quindi non lo uso. Collega l'account del mio proprietario nella mia pagina.",
       "brain_unavailable_shared_login": "Il mio computer non riesce a usare l'accesso di Claude per tutti gli agenti in questo momento. Risponderò appena possibile. Se continua a non funzionare, ricollega Claude in Account IA.",
+      "brain_unavailable_lent_offline": "Ora non ho internet: {{computer}} è offline e gli agenti di questo workspace usano solo il suo internet. Risponderò quando torna, oppure quando “Usa solo l’internet di questo computer” sarà disattivato nella sua pagina.",
       "provider_unavailable": "Il mio provider di IA non risponde in questo momento. Risponderò appena tornerà disponibile.",
       "provider_wait_rate_limit": "{{provider}} sta limitando le richieste di questa chiave. Risponderò appena lo consentirà.",
       "provider_wait_down": "{{provider}} è fuori servizio o sovraccarico in questo momento. Risponderò appena tornerà disponibile.",
@@ -20317,7 +20351,9 @@
       "provider_back": "La mia IA è tornata.",
       "confidential_removed": "Rimosso: il testo riservato viene conservato per {{days}} giorni.",
       "brain_queued": "Sono ancora in coda. Rispondo appena arriva il mio turno.",
-      "brain_interrupted": "{{brain}} si è fermato prima di finire. Già fatto, non ripetuto: {{tools}}.",
+      "brain_interrupted": "{{brain}} si è fermato prima di finire. Chiedi di nuovo per continuare.",
+      "brain_interrupted_timeout": "{{brain}} ha superato il tempo massimo e si è fermato prima di finire. Chiedi di nuovo per continuare.",
+      "brain_interrupted_computer": "Il computer ha fermato {{brain}} prima che finisse. Chiedi di nuovo per continuare.",
       "plan_limit_cut": "Mi sono fermato al limite del piano {{plan}}. Riprenderò da dove ho lasciato {{when}}, quando si azzera.",
       "plan_limit_cut_unknown": "Mi sono fermato al limite del piano {{plan}}. Riprenderò da dove ho lasciato appena si azzera.",
       "plan_limit_wait": "Il piano {{plan}} ha raggiunto il limite. Risponderò {{when}}, quando si azzera. Se viene sbloccato prima in {{plan}}, me ne accorgo e rispondo subito.",

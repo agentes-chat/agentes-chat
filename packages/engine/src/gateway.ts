@@ -1,5 +1,5 @@
 import type { ErrorReporter, KeyWrapper, PlatformCredentials, PubSub, SearchKind } from "@agenteschat/adapters";
-import { and, type Database, desc, type Executor, eq, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, desc, type Executor, eq, gt, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   costNanoUsd,
   customModelOf,
@@ -41,6 +41,7 @@ import {
   modelInfo,
   modelProvider,
   openRouterListed,
+  outputCapRefusal,
   outputTokensWithin,
   PROVIDERS,
   ProviderError,
@@ -56,6 +57,7 @@ import { decryptCredential, usableCredentialRow } from "./credentials";
 import { loadEndpointModels } from "./endpoints";
 import { BudgetExceededError, MissingCredentialError, NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
+import { getOrMake } from "./format";
 import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
@@ -70,6 +72,7 @@ const {
   organizationSettings,
   organizationMembers,
   personUsageMonths,
+  modelOutputLimits,
 } = schema;
 
 export interface ModelGatewayDeps {
@@ -226,6 +229,10 @@ export interface ImageGatewayResult {
 export const RESERVATION_TTL_MS = 15 * 60_000;
 /** Below this many output tokens a call isn't worth making: the budget counts as exhausted. */
 export const MIN_OUTPUT_TOKENS = 256;
+/** How many times a call the provider refused for its output cap is sent again, each time lower (`outputCapRefusal`). */
+const OUTPUT_CAP_RETRIES = 3;
+/** A key's output limit learned longer ago is learned again: a provider may raise it. */
+export const LEARNED_LIMIT_TTL_MS = 30 * 24 * 3600_000;
 /** A test call that takes longer says the key couldn't be checked: it never holds a person's save up for long. */
 export const KEY_CHECK_TIMEOUT_MS = 15_000;
 
@@ -472,8 +479,87 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     throw new ValidationError(`OpenRouter doesn't list ${model} anymore. Pick another model in the agent's settings.`);
   }
 
-  /** The output cap sent: the call's, within the most the model may write. */
-  const capOf = (maxTokens: number, info: ModelInfo) => Math.min(maxTokens, info.maxOutputTokens ?? maxTokens);
+  /**
+   * The most each key and model may write (`${credentialId ?? "platform"}|${model}`), for what its row doesn't say or
+   * says wrong: as its provider's list tells it (`ModelProvider.outputLimit`), or as a refusal did (`outputCapRefusal`).
+   * Null: its provider was asked and told nothing.
+   */
+  // A workspace key's are kept (`model_output_limits`) and read once per process; the platform key's stay in the
+  // process (ponytail: one list read or refused call per start and model, a row of their own if that ever shows).
+  const learnedLimits = new Map<string, number | null>();
+  const storedLimits = new Map<string, Promise<void>>();
+  const limitKey = (key: Key, model: string) => `${key.credentialId ?? "platform"}|${model}`;
+
+  /** What an earlier process learned for a workspace key and model, read the first time this one needs it. */
+  const loadLimit = (at: string, key: Key, model: string) =>
+    key.credentialId === null || learnedLimits.has(at)
+      ? undefined
+      : getOrMake(storedLimits, at, async () => {
+          const [row] = await db
+            .select({ max: modelOutputLimits.maxOutputTokens })
+            .from(modelOutputLimits)
+            .where(
+              and(
+                eq(modelOutputLimits.credentialId, key.credentialId as string),
+                eq(modelOutputLimits.model, model),
+                gt(modelOutputLimits.learnedAt, new Date(Date.now() - LEARNED_LIMIT_TTL_MS)),
+              ),
+            )
+            .catch(() => []);
+          if (row && !learnedLimits.has(at)) learnedLimits.set(at, row.max);
+        });
+
+  /** Learned now: kept for this process, and a workspace key's for the next ones. */
+  async function learnLimit(at: string, key: Key, model: string, max: number | null) {
+    learnedLimits.set(at, max);
+    if (key.credentialId === null) return;
+    await db
+      .execute(sql`insert into ${modelOutputLimits} (org_id, credential_id, model, max_output_tokens, learned_at)
+        select c.org_id, c.id, ${model}, ${max}::integer, now() from ${providerCredentials} c where c.id = ${key.credentialId}::uuid
+        on conflict (credential_id, model) do update set max_output_tokens = excluded.max_output_tokens, learned_at = now()`)
+      .catch(() => {});
+  }
+
+  /** The output cap sent: the call's, within the most the model may write (its row's, else what was learned). */
+  async function capOf(maxTokens: number, info: ModelInfo, provider: ModelProvider, model: string, key: Key) {
+    const at = limitKey(key, model);
+    // Also for a model its row knows: a refusal may have said the row is wrong for this key.
+    await loadLimit(at, key, model);
+    if (!info.maxOutputTokens && !learnedLimits.has(at) && provider.outputLimit) {
+      const told = await provider
+        .outputLimit(model, { apiKey: key.apiKey, ...(key.endpoint ? { endpoint: key.endpoint } : {}) })
+        .catch(() => null);
+      await learnLimit(at, key, model, told);
+    }
+    return Math.min(maxTokens, info.maxOutputTokens ?? maxTokens, learnedLimits.get(at) ?? maxTokens);
+  }
+
+  /**
+   * `provider.stream`, sent again lower when the provider refuses the output cap before anything streamed
+   * (`outputCapRefusal`): a lower cap only shrinks what the budget reserved. `request.maxTokens` ends as the cap sent.
+   */
+  async function streamWithinCap(
+    provider: ModelProvider,
+    request: ModelRequest,
+    options: Parameters<ModelProvider["stream"]>[1],
+    key: Key,
+  ): Promise<ModelResult> {
+    for (let tries = 0; ; tries++) {
+      try {
+        return await provider.stream(request, options);
+      } catch (error) {
+        const cut =
+          tries < OUTPUT_CAP_RETRIES && error instanceof ProviderError
+            ? outputCapRefusal(error, request.maxTokens)
+            : null;
+        if (!cut || cut.retry < MIN_OUTPUT_TOKENS) throw error;
+        const at = limitKey(key, request.model);
+        if (cut.learn)
+          await learnLimit(at, key, request.model, Math.min(cut.learn, learnedLimits.get(at) ?? cut.learn));
+        request.maxTokens = cut.retry;
+      }
+    }
+  }
 
   /** Usage of a stream that failed midway: what the provider reported, else counted or estimated. */
   async function partialUsage(
@@ -920,7 +1006,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         model: agent.model,
         system: call.system,
         messages: call.messages,
-        maxTokens: capOf(call.maxTokens, info),
+        maxTokens: await capOf(call.maxTokens, info, provider, agent.model, key),
         tools: call.tools,
         ...(call.effort ? { effort: call.effort } : {}),
         ...(call.cacheTtl ? { cacheTtl: call.cacheTtl } : {}),
@@ -951,16 +1037,21 @@ export function createModelGateway(deps: ModelGatewayDeps) {
 
       let result: ModelResult;
       try {
-        result = await provider.stream(request, {
-          apiKey: key.apiKey,
-          workspaceId: key.workspaceId,
-          organization: key.organization,
-          project: key.project,
-          endpoint: key.endpoint,
-          ...(call.session ? { session: call.session } : {}),
-          onDelta: call.onDelta,
-          ...(call.onNote ? { onNote: call.onNote } : {}),
-        });
+        result = await streamWithinCap(
+          provider,
+          request,
+          {
+            apiKey: key.apiKey,
+            workspaceId: key.workspaceId,
+            organization: key.organization,
+            project: key.project,
+            endpoint: key.endpoint,
+            ...(call.session ? { session: call.session } : {}),
+            onDelta: call.onDelta,
+            ...(call.onNote ? { onNote: call.onNote } : {}),
+          },
+          key,
+        );
       } catch (error) {
         const usage = error instanceof ProviderError ? await partialUsage(error, provider, request, key) : null;
         let actual = 0;
@@ -1013,7 +1104,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         ...(refused ? { thinking: { ...result.thinking, refused: withoutKey(refused, key.apiKey) } } : {}),
         usageRecordId: record.id,
         costNanoUsd: record.cost,
-        maxTokens,
+        maxTokens: request.maxTokens,
       };
     },
 
@@ -1372,7 +1463,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         model: call.model,
         system: call.system,
         messages: call.messages,
-        maxTokens: capOf(call.maxTokens, info),
+        maxTokens: await capOf(call.maxTokens, info, provider, call.model, key),
         ...(call.tools ? { tools: call.tools } : {}),
         outputSchema: call.outputSchema,
         effort: call.effort,
@@ -1389,12 +1480,12 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       };
       let result: ModelResult;
       try {
-        result = await provider.stream(request, {
-          apiKey: key.apiKey,
-          workspaceId: key.workspaceId,
-          endpoint: key.endpoint,
-          onDelta: () => {},
-        });
+        result = await streamWithinCap(
+          provider,
+          request,
+          { apiKey: key.apiKey, workspaceId: key.workspaceId, endpoint: key.endpoint, onDelta: () => {} },
+          key,
+        );
       } catch (error) {
         const usage = error instanceof ProviderError ? await partialUsage(error, provider, request, key) : null;
         if (usage) await recordUsage(db, { ...base, model: call.model, usage, partial: true });

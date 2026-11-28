@@ -950,7 +950,7 @@ export function MachinePage({ machineId }: { machineId: string }) {
     ),
     // Egress draws nothing without an observation, a wait or a move: only then does it count as a detail.
     ((m.online && m.egressVia) ||
-      (managed && (m.networkTransition || (m.online && (m.egressWaiting || m.egress?.ip))))) && (
+      (managed && (m.egressOffline || m.networkTransition || (m.online && (m.egressWaiting || m.egress?.ip))))) && (
       <Egress key="egress" machine={m} />
     ),
     // System mode: each agent works in its own home, never in the folder the computer was connected from.

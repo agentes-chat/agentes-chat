@@ -80,7 +80,7 @@ function ConversationList() {
     },
     [muteChannel],
   );
-  const holdLabel = t("sidebarPins.pin");
+  const holdLabel = t("sidebarFavorites.add");
   const renderRow = useCallback(
     ({ item: r, index: i }: ListRenderItemInfo<ConversationRow>) => (
       <HomeRow

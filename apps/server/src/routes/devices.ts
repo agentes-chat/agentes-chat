@@ -137,6 +137,16 @@ const Computer = z
     arch: z.string(),
     hostname: z.string(),
     cpus: z.number().nullable(),
+    cpuModel: z
+      .string()
+      .nullable()
+      .openapi({ description: "The processor's name (`Apple M4 Pro`); null: an older runner." }),
+    cores: z.number().nullable().openapi({
+      description: "Its physical cores (`cpus` counts logical CPUs, threads); null: an older runner, or Windows.",
+    }),
+    system: z.string().nullable().openapi({
+      description: "The system and its version (`macOS 26.1`); null: an older runner or the workspace's own computer.",
+    }),
     memoryGb: z.number().nullable(),
     ownerUserId: z.string().nullable(),
     belongsToWorkspace: z.boolean(),
@@ -147,9 +157,9 @@ const Computer = z
     maintenance: MaintenanceView.nullable().optional().openapi({
       description: "What we do to the workspace's own computer now, away (`status` says it too) or while it works.",
     }),
-    shareInternet: z.object({ on: z.boolean(), inUse: z.boolean() }).nullable().openapi({
+    shareInternet: z.object({ on: z.boolean(), inUse: z.boolean(), only: z.boolean() }).nullable().openapi({
       description:
-        "A person's computer where computers lend their internet (ADR 0237, `lendsInternet`): whether its owner lends it, and whether it carried agents' web traffic in the last five minutes. Null: nothing to lend to.",
+        "A person's computer where computers lend their internet (ADR 0237, `lendsInternet`): whether its owner lends it, whether it carried agents' web traffic in the last five minutes, and whether the workspace's agents use only its internet, AI calls included, never their usual way (`only`). Null: nothing to lend to.",
     }),
     systemMode: z.boolean().openapi({ description: "Each agent works as its own OS user there (a server install)." }),
     audience: Audience,
@@ -318,6 +328,10 @@ export function deviceAppRoutes(deps: AppDeps) {
               description:
                 "People's computers here lend their internet (ADR 0237): the workspace has its own computer, or this server lends to its own computer and its reads of web pages. The apps say so where a computer joins.",
             }),
+            serverBoxesBorrow: z.boolean().openapi({
+              description:
+                "This server lends (ADR 0237), so a Linux computer that joins from a Terminal install borrows instead: its switch starts off.",
+            }),
           }),
         ),
         ...errors,
@@ -369,6 +383,10 @@ export function deviceAppRoutes(deps: AppDeps) {
             maxTasks: z.number().int().min(TASK_LIMIT_BOUNDS[0]).max(TASK_LIMIT_BOUNDS[1]).optional(),
             pushHarder: z.boolean().optional(),
             shareInternet: z.boolean().optional(),
+            internetOnly: z.boolean().optional().openapi({
+              description:
+                "With `shareInternet` on: the workspace's agents use only this computer's internet, AI calls included, and have none while it is offline. Its owner turns it on (`device.share_owner_only`), only while it lends (`device.share_off`); an admin may turn it off.",
+            }),
           }),
         ),
       },

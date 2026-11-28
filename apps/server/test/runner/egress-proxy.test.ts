@@ -9,12 +9,14 @@ import { chromeLaunchArgs } from "../../runner/browser";
 import {
   EGRESS_PROXY_FILE,
   EGRESS_QUIET_MS,
+  EGRESS_RELAY_POLICY,
   egressProxyChromeArgs,
   egressProxyEnv,
   hasOwnProxy,
   parseHttpConnect,
   setEgressProxy,
   startEgressProxy,
+  writeEgressPolicy,
 } from "../../runner/egress-relay";
 import { type HandlerContext, handleRequest } from "../../runner/handlers";
 import { renderRuleset } from "../../runner/loopback-guard";
@@ -95,7 +97,7 @@ test("an HTTP CONNECT request: its target, more bytes needed, or not one", () =>
   expect(parseHttpConnect(Buffer.from(CONNECT("shop.example:99999")))).toBe(false);
 });
 
-test("lent: web ports through the lending computer; others, nothing lent or a refusal go the computer's own way", async () => {
+test("lent: any port but 25 through the lending computer; 25, nothing lent or a refusal go the computer's own way", async () => {
   const data = fakeData();
   const target = await site();
   const asked: { host: string; port: number }[] = [];
@@ -133,18 +135,26 @@ test("lent: web ports through the lending computer; others, nothing lent or a re
   await until(() => Buffer.concat(heard).length >= 12, "the SOCKS replies");
   expect([...Buffer.concat(heard).subarray(0, 4)]).toEqual([5, 0, 5, 0]);
 
-  // Another port never asks the server.
-  const ssh = await ask(proxy.port, CONNECT("git.example:22"), "ssh");
-  expect(ssh.got()).toStartWith("HTTP/1.1 200");
-  await until(() => target.heard.includes("ssh"), "the direct bytes");
-  expect(asked.map((t) => t.port)).toEqual([443, 443]);
+  // SSH goes through the lending computer too; mail's port 25 never asks the server.
+  expect((await ask(proxy.port, CONNECT("git.example:22"), "ssh")).got()).toStartWith("HTTP/1.1 200");
+  await until(() => data.sent.some((b) => new TextDecoder().decode(b) === "ssh"), "SSH bytes to the lender");
+  const mail = await ask(proxy.port, CONNECT("mx.example:25"), "helo");
+  expect(mail.got()).toStartWith("HTTP/1.1 200");
+  await until(() => target.heard.includes("helo"), "the direct bytes");
+  expect(asked.map((t) => t.port)).toEqual([443, 443, 22]);
 
-  // The lending computer refused that destination: the computer's own way, and it asks again next time.
+  // The lending computer refused that destination, or a server older than this runner its port: the computer's own
+  // way, and it asks again next time.
   answer = STREAM_CLOSE.refused;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 200");
+  answer = STREAM_CLOSE.badRequest;
+  expect((await ask(proxy.port, CONNECT("git.example:22"))).got()).toStartWith("HTTP/1.1 200");
+  expect(asked.length).toBe(5);
   // No such site: no other way finds it either.
   answer = STREAM_CLOSE.notFound;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 504");
+  // Another port the lending computer couldn't reach (its network blocks it): the computer's own way, as before.
+  expect((await ask(proxy.port, CONNECT("db.example:5432"))).got()).toStartWith("HTTP/1.1 200");
   // Nothing lent now: direct, and the server isn't asked again for a minute.
   answer = STREAM_CLOSE.unreachable;
   expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 200");
@@ -157,6 +167,7 @@ test("lent: web ports through the lending computer; others, nothing lent or a re
   expect(asked.length).toBe(before + 1);
 
   // The computer's own way reaches public addresses only: never its own network.
+  answer = STREAM_CLOSE.refused;
   expect((await ask(proxy.port, CONNECT("nas.lan.example:22"))).got()).toStartWith("HTTP/1.1 403");
   expect((await ask(proxy.port, CONNECT("127.0.0.1:5432"))).got()).toStartWith("HTTP/1.1 403");
 });
@@ -229,6 +240,68 @@ test("what agents get while the computer borrows: proxy settings, the model serv
   expect(args).toContain("--proxy-server=socks5://127.0.0.1:41234");
   expect(args.find((a) => a.startsWith("--proxy-bypass-list="))).toContain("*.anthropic.com");
   expect(args.filter((a) => a === "--force-webrtc-ip-handling-policy=disable_non_proxied_udp")).toHaveLength(1);
+});
+
+test("lent only: nothing goes the computer's own way but after the server's \"nothing lent\"; AI hosts go through too", async () => {
+  const data = fakeData();
+  const target = await site();
+  let answer: number | null = STREAM_CLOSE.notFound;
+  const proxy = await startEgressProxy({
+    home: home(),
+    lent: () => true,
+    only: () => true,
+    resolve: async () => ["93.184.216.34"],
+    connect: () => connect(target.port, "127.0.0.1"),
+    dial: async () => {
+      if (answer !== null) throw Object.assign(new Error("no"), { closeCode: answer });
+      return data.socket;
+    },
+  });
+  cleanup.push(() => proxy.close());
+  // The computer lent only is offline, refused it, or the server is away: the connection fails, never direct.
+  expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 504");
+  answer = STREAM_CLOSE.refused;
+  expect((await ask(proxy.port, CONNECT("git.example:22"))).got()).toStartWith("HTTP/1.1 403");
+  answer = STREAM_CLOSE.internal;
+  expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 502");
+  // Mail's port is never lent, so it never goes out at all.
+  expect((await ask(proxy.port, CONNECT("mx.example:25"))).got()).toStartWith("HTTP/1.1 403");
+  // "Nothing lent" (no computer lent only any more): the usual way, and no minute of quiet.
+  answer = STREAM_CLOSE.unreachable;
+  expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 200");
+  answer = null;
+  expect((await ask(proxy.port, CONNECT("shop.example:443"))).got()).toStartWith("HTTP/1.1 200");
+  expect(target.heard).toEqual([]);
+
+  // The AI CLIs' services and a Claude Code turn's endpoint go through the proxy too.
+  setEgressProxy({ port: 41234, direct: ["agentes.example.com"], only: true });
+  const none = (egressProxyEnv(["llm.plan.example"]).NO_PROXY ?? "").split(",");
+  expect(none).toContain("agentes.example.com");
+  expect(none).toContain("10.0.0.0/8");
+  for (const h of [...EGRESS_DIRECT_HOSTS, "llm.plan.example"]) expect(none).not.toContain(h);
+  expect(accountSettingsEnv(undefined, "opus", {}).NO_PROXY?.split(",")).not.toContain("api.anthropic.com");
+  expect(egressProxyChromeArgs().find((a) => a.startsWith("--proxy-bypass-list="))).not.toContain("anthropic");
+});
+
+test("the Cloud's guard reads what keeps its usual way next to the socket: the AI hosts, none when lent only", async () => {
+  const dir = home();
+  const read = () => JSON.parse(readFileSync(path.join(dir, EGRESS_RELAY_POLICY), "utf8"));
+  writeEgressPolicy(dir, false);
+  expect(read()).toEqual({ only: false, direct: [...EGRESS_DIRECT_HOSTS] });
+  writeEgressPolicy(dir, true);
+  expect(read()).toEqual({ only: true, direct: [] });
+});
+
+test("the server says whether the workspace uses only lent internet: egress.only", async () => {
+  const told: boolean[] = [];
+  const ctx = { egressOnly: async (on: boolean) => told.push(on) > 0 && on } as unknown as HandlerContext;
+  const scope = { signal: new AbortController().signal, output: () => {} };
+  expect(await handleRequest(ctx, { op: "egress.only", on: true }, scope)).toEqual({ on: true });
+  expect(await handleRequest(ctx, { op: "egress.only", on: false }, scope)).toEqual({ on: false });
+  expect(told).toEqual([true, false]);
+  await expect(handleRequest({} as HandlerContext, { op: "egress.only", on: true }, scope)).rejects.toMatchObject({
+    code: "bad_request",
+  });
 });
 
 test("the server turns the proxy on or off at once: egress.proxy", async () => {

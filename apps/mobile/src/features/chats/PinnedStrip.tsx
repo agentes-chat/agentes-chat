@@ -49,11 +49,11 @@ export interface PinnedStripProps {
 }
 
 /**
- * Fixados, under Início's widgets: what the person pinned (the web sidebar's pins: their own agents until they choose),
- * side by side from the left, the first face in line with the rows' faces, on a strip that scrolls sideways once they
- * pass the edge. Each is the app's own face for it, all of one size: an agent's living body (at work, dozing while it
- * waits for its offline computer, its presence on the corner), a person's photo, a channel's tile; its name under it on
- * one line, after the mark its row's second line would carry (the orbit at work, the amber square for
+ * Favoritos, under Início's widgets: what the person keeps there (the web sidebar's Favoritos, ADR 0260: their own agents
+ * until they choose), side by side from the left, the first face in line with the rows' faces, on a strip that scrolls
+ * sideways once they pass the edge. Each is the app's own face for it, all of one size: an agent's living body (at work,
+ * dozing while it waits for its offline computer, its presence on the corner), a person's photo, a channel's tile; its
+ * name under it on one line, after the mark its row's second line would carry (the orbit at work, the amber square for
  * what waits on you, a clock for a wait elsewhere), and its unread count on the face's corner as the app's badge. A tap
  * opens the conversation as its row does (an agent with none yet starts one); the long press is the row's own (iOS's
  * menu under the conversation's preview, the sheet elsewhere), with Tirar do topo. A section like the others: its
@@ -63,7 +63,12 @@ export function PinnedStrip({ items, collapsed, onToggle, onStart, onHold, holdA
   const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
-    <CollapsibleSection title={t("mobile.chats.pinned")} count={items.length} collapsed={collapsed} onToggle={onToggle}>
+    <CollapsibleSection
+      title={t("mobile.chats.favorites")}
+      count={items.length}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
       {/* A fade at the edge where more pinned faces wait past it. */}
       <SideScroll contentContainerStyle={styles.strip}>
         {items.map((it) => (

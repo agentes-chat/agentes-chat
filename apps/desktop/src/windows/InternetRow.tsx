@@ -1,5 +1,6 @@
 import type { ComputerDevice } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import { Icon, Switch } from "@agenteschat/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,19 +28,24 @@ export function InternetRow({
   const { t, i18n } = useTranslation();
   const host = useHost();
   const [on, setOn] = useState(computer.shareInternet?.on ?? false);
+  const [only, setOnly] = useState(computer.shareInternet?.only ?? false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => setOn(computer.shareInternet?.on ?? false), [computer.shareInternet?.on]);
+  useEffect(() => setOnly(computer.shareInternet?.only ?? false), [computer.shareInternet?.only]);
   if (!computer.shareInternet) return null;
   const id = `internet-${computer.id}`;
   const title = t("desktop.pair.internet");
   const owner = computer.mayManage;
-  const save = async (next: boolean) => {
+  const save = async (next: { shareInternet: boolean } | { internetOnly: boolean }) => {
     setSaving(true);
     setFailed(null);
     try {
-      await siteApi(host, server).devices.updateComputer(orgId, computer.id, { shareInternet: next });
-      setOn(next);
+      await siteApi(host, server).devices.updateComputer(orgId, computer.id, next);
+      if ("shareInternet" in next) {
+        setOn(next.shareInternet);
+        if (!next.shareInternet) setOnly(false);
+      } else setOnly(next.internetOnly);
       await onChanged?.();
     } catch (err) {
       setFailed(errorText(t, err, i18n.language));
@@ -47,27 +53,53 @@ export function InternetRow({
       setSaving(false);
     }
   };
+  const onlyTitle = t("desktop.pair.internetOnly");
   return (
-    <PrefRow
-      lead={
-        <span className="dk-logo">
-          <Icon name="globe" size={16} />
-        </span>
-      }
-      htmlFor={id}
-      title={title}
-      hint={hintFor(t, title, t("desktop.pair.internetHint"))}
-      desc={failed ?? (on ? t("desktop.pair.internetOn") : t("desktop.pair.internetOff"))}
-      end={
-        <Switch
-          id={id}
-          aria-describedby={`${id}-hint`}
-          checked={on}
-          disabled={saving || !owner}
-          onCheckedChange={(next) => void save(next)}
+    <>
+      <PrefRow
+        lead={
+          <span className="dk-logo">
+            <Icon name="globe" size={16} />
+          </span>
+        }
+        htmlFor={id}
+        title={title}
+        // A self-hosted server's agents reach this computer's internet only through proxy settings.
+        hint={hintFor(
+          t,
+          title,
+          t(server === CLOUD_SERVER ? "desktop.pair.internetHint" : "desktop.pair.internetHintProxy"),
+        )}
+        desc={failed ?? (on ? t("desktop.pair.internetOn") : t("desktop.pair.internetOff"))}
+        end={
+          <Switch
+            id={id}
+            aria-describedby={`${id}-hint`}
+            checked={on}
+            disabled={saving || !owner}
+            onCheckedChange={(next) => void save({ shareInternet: next })}
+          />
+        }
+      />
+      {/* Under the switch while it lends (an older server has no such choice): nothing goes the usual way, AI included. */}
+      {on && computer.shareInternet.only !== undefined && (
+        <PrefRow
+          nested
+          htmlFor={`${id}-only`}
+          title={onlyTitle}
+          hint={hintFor(t, onlyTitle, t("desktop.pair.internetOnlyHint"))}
+          end={
+            <Switch
+              id={`${id}-only`}
+              aria-describedby={`${id}-only-hint`}
+              checked={only}
+              disabled={saving || !owner}
+              onCheckedChange={(next) => void save({ internetOnly: next })}
+            />
+          }
         />
-      }
-    />
+      )}
+    </>
   );
 }
 

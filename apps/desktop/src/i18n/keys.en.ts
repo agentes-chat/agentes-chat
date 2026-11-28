@@ -550,10 +550,17 @@ export const desktopEn = {
     share: "Let the whole workspace use it",
     /** A workspace with its own computer opens websites through this one's internet (ADR 0237); on by default. */
     internet: "Agents use this computer's internet",
-    internetOn: "Websites the agents open see your location",
+    internetOn: "Sites and servers the agents reach see your location",
     internetOff: "Off: agents use their usual connection",
     internetHint:
-      "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection.",
+      "The workspace's agents go online through this computer's connection: websites, git, SSH, databases and other TCP connections. Never anything on your own network, nor email on port 25. The agents' AI, name lookups, calls and other UDP traffic use their usual connection, and so does everything while this computer is offline.",
+    /** The same on a self-hosted server, where agents reach it through proxy settings (ADR 0237). */
+    internetHintProxy:
+      "The workspace's agents' browsers and the programs that follow proxy settings (git over HTTPS, curl, most command-line tools) go online through this computer's connection. SSH, database clients and other programs that ignore proxy settings use their usual connection, and so do the agents' AI, name lookups and UDP traffic. Never anything on your own network, nor email on port 25. While this computer is offline, everything uses the usual connection.",
+    /** Nested under `internet` while it is on (ADR 0237, amendment 2026-11-27 c). */
+    internetOnly: "Use only this computer's internet",
+    internetOnlyHint:
+      "Agents use only this computer's internet, their AI included, and never the usual connection. While it's offline, they have no internet until it's back.",
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",

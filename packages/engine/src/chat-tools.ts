@@ -11,14 +11,7 @@ import { cutText } from "./format";
 import type { GifMedia } from "./media";
 import type { AgentGifPoster } from "./media-tools";
 import { messageLink } from "./message-links";
-import {
-  insertMessage,
-  MAX_MESSAGE_LENGTH,
-  messageView,
-  unreachedAgents,
-  unreachedNote,
-  unreachedPeople,
-} from "./messages";
+import { insertMessage, messageView, unreachedAgents, unreachedNote, unreachedPeople } from "./messages";
 import { enqueue } from "./outbox";
 import { runReadOutsideById } from "./outside";
 import { actingRoutineOfCall, personBehindCall } from "./requester";
@@ -193,7 +186,7 @@ export function createChatToolSource(deps: {
         type: "object",
         properties: {
           channel: { type: "string", minLength: 1, maxLength: 100 },
-          text: { type: "string", maxLength: MAX_MESSAGE_LENGTH },
+          text: { type: "string" },
           move_here: { type: "boolean" },
           artifact_ids: {
             type: "array",
@@ -264,10 +257,24 @@ export function createChatToolSource(deps: {
           }
           const moving = input.move_here === true;
           const [run] = await ctx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, ctx.runId));
-          // A channel that replies in threads keeps a run there (ADR 0214): it never moves to a main timeline.
-          const threadsOnly = Boolean(run?.replyInThread || channel.replyInThreads);
-          if (moving && threadsOnly)
-            return { content: threadsOnlyText(Boolean(run?.replyInThread), channel.name), isError: true };
+          // A channel that replies in threads keeps a run there (ADR 0214): it never moves to a main timeline. A run
+          // under its own first message (ADR 0261) was asked in a main timeline: it moves like one.
+          const underOwnLine = async () =>
+            (
+              await ctx.db
+                .select({ id: schema.messages.id })
+                .from(schema.messages)
+                .where(
+                  and(
+                    eq(schema.messages.orgId, ctx.orgId),
+                    eq(schema.messages.id, ctx.threadRootId),
+                    sql`${schema.messages.meta} ? 'turnThread'`,
+                  ),
+                )
+            ).length > 0;
+          const keptHere = Boolean(run?.replyInThread) && !(moving && (await underOwnLine()));
+          const threadsOnly = keptHere || channel.replyInThreads;
+          if (moving && threadsOnly) return { content: threadsOnlyText(keptHere, channel.name), isError: true };
           const inThread = replyThreadOf(ctx) !== null;
           const movable = (moving || (here && inThread)) && !threadsOnly && !!run && (await movableRun(ctx.db, run));
           // From a thread of the same channel, a post there is a new message at its top level: what was asked.
@@ -385,7 +392,7 @@ export function createChatToolSource(deps: {
         type: "object",
         properties: {
           person: { type: "string", minLength: 1, maxLength: 200 },
-          text: { type: "string", maxLength: MAX_MESSAGE_LENGTH },
+          text: { type: "string" },
           artifact_ids: {
             type: "array",
             items: { type: "string", minLength: 36, maxLength: 36 },

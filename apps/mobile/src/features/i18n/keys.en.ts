@@ -7,12 +7,18 @@ export const featureKeysEn = {
     send: "Send",
   },
   categories: {
-    where: "Where #{{channel}} shows",
-    whereHelp: "Changes for everyone. Who takes part in the channel stays the same.",
-    order: "Place in the list",
     up: "Move up",
     down: "Move down",
     channelPosition: "{{at}} of {{count}}.",
+  },
+  /** A channel's "Seção" (ADR 0260): which of the person's own sections it sits in, theirs alone. */
+  sections: {
+    title: "Section",
+    where: "Where #{{channel}} sits for you",
+    whereHelp: "Only your list changes. Each person arranges their own sections.",
+    none: "No section",
+    order: "Place in the section",
+    tooLong: "Use 40 characters or fewer.",
   },
   blocks: {
     send: "Send",
@@ -201,17 +207,17 @@ export const featureKeysEn = {
       text: "It may be down or outside your network. Your chats show up on their own when it's back.",
       kept: "Showing what was already in the app.",
     },
-    /** Conversas' strip of what the person pinned (the web sidebar's pins), under Início's widgets. */
-    pinned: "Pinned",
+    /** Conversas' strip of the person's Favoritos (the web sidebar's, ADR 0260), under Início's widgets. */
+    favorites: "Favorites",
     /** Conversas' one list: every chat by its latest activity, with no grouping. */
     recent: "Recent",
     /**
-     * A team's Conversas lists its chats by latest activity or by the agents' sectors (as the web's sidebar): the bar
-     * button's menu title, the second choice, and the sections Setores ends with.
+     * A team's Conversas lists its chats by latest activity or by the person's own sections (as the web's sidebar): the
+     * bar button's menu title, the second choice, and the parts Seções ends with.
      */
     view: {
       title: "Show chats",
-      sectors: "Sectors",
+      sections: "Sections",
       dms: "Direct messages",
       channels: "Channels",
     },
