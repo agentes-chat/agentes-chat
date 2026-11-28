@@ -3,9 +3,15 @@ import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { connect, createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { isEgressTarget, parseStreamHello, STREAM_CLOSE } from "@agenteschat/adapters/machine-protocol";
+import {
+  EGRESS_SHARE,
+  isEgressTarget,
+  parseStreamHello,
+  STREAM_CLOSE,
+  type StreamControl,
+} from "@agenteschat/adapters/machine-protocol";
 import { parseConnect, replyFor, SOCKS_REPLY, startEgressRelay } from "../../runner/egress-relay";
-import { EgressShare } from "../../runner/egress-share";
+import { EgressShare, pipeSocket } from "../../runner/egress-share";
 import type { DataListener, DataSocket } from "../../runner/streams";
 
 const cleanup: (() => void)[] = [];
@@ -16,11 +22,13 @@ afterEach(() => {
 /** A data socket in memory: what was sent on it, and a way to play the server's side. */
 function fakeData() {
   const sent: Uint8Array[] = [];
+  const texts: string[] = [];
   let listener: DataListener | null = null;
   let closed = false;
   const socket: DataSocket = {
     send: (data) => {
       if (typeof data !== "string") sent.push(data);
+      else texts.push(data);
     },
     close: () => {
       if (closed) return;
@@ -32,7 +40,14 @@ function fakeData() {
       listener = on;
     },
   };
-  return { socket, sent, peer: (bytes: Uint8Array) => listener?.bytes(bytes), isClosed: () => closed };
+  return {
+    socket,
+    sent,
+    texts,
+    peer: (bytes: Uint8Array) => listener?.bytes(bytes),
+    control: (frame: StreamControl) => listener?.control?.(frame),
+    isClosed: () => closed,
+  };
 }
 
 /** A TCP server on this computer that echoes what it hears, uppercased. */
@@ -53,12 +68,15 @@ const until = async (done: () => boolean, what = "condition") => {
 
 const STREAM = "s".repeat(43);
 
-test("what a lent connection carries: the web's ports, a plain host; a hello may ask for one", () => {
-  expect(isEgressTarget({ host: "gov.example", port: 443 })).toBe(true);
+test("what a lent connection carries: any TCP port but mail's 25, a plain host; a hello may ask for one", () => {
+  for (const port of [443, 80, 22, 5432, 587, 465, 65535])
+    expect(isEgressTarget({ host: "gov.example", port })).toBe(true);
   expect(isEgressTarget({ host: "203.0.113.4", port: 80 })).toBe(true);
   for (const bad of [
-    { host: "gov.example", port: 22 },
     { host: "gov.example", port: 25 },
+    { host: "gov.example", port: 0 },
+    { host: "gov.example", port: 65536 },
+    { host: "gov.example", port: 22.5 },
     { host: "a b", port: 443 },
     { host: "", port: 443 },
     { host: "x".repeat(254), port: 443 },
@@ -73,7 +91,7 @@ test("what a lent connection carries: the web's ports, a plain host; a hello may
   expect(parseStreamHello(JSON.stringify({ ...hello, egress: { host: "gov.example", port: 25 } }))).toBeNull();
 });
 
-test("a lent connection reaches only public addresses, on the web's ports, and carries the bytes both ways", async () => {
+test("a lent connection reaches only public addresses, never port 25, and carries the bytes both ways", async () => {
   const { port } = await echo();
   const share = new EgressShare({
     resolve: async (host) => (host === "lan.example" ? ["192.168.1.1"] : ["203.0.113.7"]),
@@ -89,14 +107,60 @@ test("a lent connection reaches only public addresses, on the web's ports, and c
 
   await expect(dial("lan.example")).rejects.toMatchObject({ code: "not_allowed" });
   await expect(dial("127.0.0.1")).rejects.toMatchObject({ code: "not_allowed" });
-  await expect(dial("gov.example", 22)).rejects.toMatchObject({ code: "bad_request" });
+  await expect(dial("gov.example", 25)).rejects.toMatchObject({ code: "bad_request" });
 
-  expect(await dial("gov.example")).toEqual({ connected: true });
-  data.peer(new TextEncoder().encode("hello"));
-  await until(() => data.sent.length > 0, "the echo");
-  expect(new TextDecoder().decode(data.sent[0])).toBe("HELLO");
-  expect(share.today).toBe(10);
+  for (const p of [443, 22]) {
+    const sent = data.sent.length;
+    expect(await dial("gov.example", p)).toEqual({ connected: true });
+    data.peer(new TextEncoder().encode("hello"));
+    await until(() => data.sent.length > sent, "the echo");
+    expect(new TextDecoder().decode(data.sent[sent])).toBe("HELLO");
+  }
   data.socket.close();
+});
+
+test("a lent connection's flow: the server's pause stops reading the site; a site slow to read makes it say pause", async () => {
+  // A site that sends as fast as it is read, and reads nothing until resumed.
+  let site: Socket | null = null;
+  const server = createServer((s) => {
+    site = s;
+    s.on("error", () => undefined);
+    s.pause();
+    const chunk = Buffer.alloc(64 * 1024);
+    const fill = () => {
+      while (s.writable && s.write(chunk));
+    };
+    s.on("drain", fill);
+    fill();
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  cleanup.push(() => server.close());
+  const data = fakeData();
+  const tcp = connect({ host: "127.0.0.1", port: (server.address() as { port: number }).port });
+  const end = pipeSocket(tcp, data.socket);
+  cleanup.push(end);
+  // Counted and let go: loopback carries gigabytes a second.
+  let total = 0;
+  const heard = () => {
+    for (const b of data.sent.splice(0)) total += b.byteLength;
+    return total;
+  };
+  await until(() => heard() > 1024 * 1024, "the site's bytes");
+
+  data.control({ type: "pause" });
+  await Bun.sleep(50);
+  const before = heard();
+  await Bun.sleep(200);
+  expect(heard()).toBe(before);
+  data.control({ type: "resume" });
+  await until(() => heard() > before + 1024 * 1024, "more of the site's bytes");
+
+  // What goes to the site waits on this computer while the site doesn't read: past 1 MiB it says so, once.
+  for (let i = 0; i < 512 && !data.texts.length; i++) data.peer(new Uint8Array(64 * 1024));
+  expect(data.texts).toEqual([JSON.stringify({ type: "pause" })]);
+  (site as Socket | null)?.resume();
+  await until(() => data.texts.length === 2, "resume");
+  expect(data.texts[1]).toBe(JSON.stringify({ type: "resume" }));
 });
 
 test("a lent connection never reaches this computer's own networks, though their addresses are global", async () => {
@@ -137,28 +201,31 @@ test("a lent connection never reaches this computer's own networks, though their
   data.socket.close();
 });
 
-test("a day's cap: past it, new connections are refused and an open one ends; it is kept across restarts", async () => {
+test("a lending computer has no daily cap: what bounds it is port 25 and connections open at once", async () => {
+  expect(Object.keys(EGRESS_SHARE).sort()).toEqual(["connectMs", "open", "refusedPorts", "webPorts"]);
   const { port } = await echo();
-  const dir = mkdtempSync(path.join(tmpdir(), "egress-share-"));
-  cleanup.push(() => rmSync(dir, { recursive: true, force: true }));
-  const file = path.join(dir, "egress-share.json");
-  const opts = {
-    file,
+  const share = new EgressShare({
     resolve: async () => ["203.0.113.7"],
     connect: () => connect({ host: "127.0.0.1", port }),
-    limits: { dailyBytes: 8 },
-  };
-  const share = new EgressShare(opts);
-  const data = fakeData();
-  await share.dial({ op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 }, async () => data.socket);
-  data.peer(new TextEncoder().encode("12345"));
-  await until(() => data.isClosed(), "the cap to end it");
+    limits: { open: 1 },
+  });
+  const first = fakeData();
+  await share.dial({ op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 }, async () => first.socket);
+  first.peer(new Uint8Array(256 * 1024).fill(97));
+  await until(() => first.sent.reduce((n, b) => n + b.byteLength, 0) >= 256 * 1024, "the echo");
+  expect(first.isClosed()).toBe(false);
   await expect(
-    new EgressShare(opts).dial(
-      { op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 },
-      async () => fakeData().socket,
-    ),
+    share.dial({ op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 }, async () => fakeData().socket),
   ).rejects.toMatchObject({ code: "no_slot" });
+  first.socket.close();
+  const second = fakeData();
+  expect(
+    await share.dial(
+      { op: "egress.dial", streamId: STREAM, host: "gov.example", port: 443 },
+      async () => second.socket,
+    ),
+  ).toEqual({ connected: true });
+  second.socket.close();
 });
 
 test("the workspace's computer's socket: SOCKS5 CONNECT, mode 600, the server's refusal as its reply", async () => {
@@ -175,6 +242,8 @@ test("the workspace's computer's socket: SOCKS5 CONNECT, mode 600, the server's 
   expect(parseConnect(Buffer.from([5, 2, 0, 1]))).toBe(false);
   expect(replyFor(STREAM_CLOSE.unreachable)).toBe(SOCKS_REPLY.networkUnreachable);
   expect(replyFor(STREAM_CLOSE.refused)).toBe(SOCKS_REPLY.notAllowed);
+  // A server older than this runner refusing SSH's port in the hello is "not carried", never "none lends now".
+  expect(replyFor(STREAM_CLOSE.badRequest)).toBe(SOCKS_REPLY.notAllowed);
   expect(replyFor(STREAM_CLOSE.notFound)).toBe(SOCKS_REPLY.hostUnreachable);
 
   const dir = mkdtempSync(path.join(tmpdir(), "egress-relay-"));

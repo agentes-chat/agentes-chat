@@ -38,6 +38,9 @@
     "wrapLines": "Bungkus baris",
     "raw": "Asli",
     "table": "Tabel",
+    "tableRows_other": "Tabel · {{count}} baris",
+    "tableSeeAll": "Lihat semua {{count}} baris",
+    "tableRowCount_other": "{{count}} baris",
     "chartItem": "Item",
     "chartShare": "Porsi",
     "you": "kamu",
@@ -2303,44 +2306,65 @@
     "deleteText": "Agen di dalamnya kembali ke Agen.",
     "deleteChannels": "Kanal di dalamnya kembali ke Kanal.",
     "dropHere": "Seret agen ke sini",
-    "dropHereAll": "Seret agen atau kanal ke sini",
     "moved": "{{name}} pindah ke {{group}}",
     "movedOut": "{{name}} keluar dari {{group}}",
     "undo": "Urungkan"
   },
   "sidebarAgents": {
-    "options": "Opsi agen",
-    "add": "Agen atau departemen baru",
-    "order": "Urutan",
-    "sort": {
-      "workspace": "Urutan ruang kerja",
-      "mine": "Milik saya dulu",
-      "working": "Yang bekerja dulu"
-    },
     "showAll": "Tampilkan agen yang tidak berbicara dengan saya",
-    "collapseAll": "Ciutkan semua",
-    "expandAll": "Bentangkan semua",
-    "organize": "Tata departemen di Tim",
     "more_other": "{{count}} agen lagi di Tim",
     "newAgent": "Agen baru",
-    "working_other": "{{count}} sedang bekerja",
     "count_other": "{{count}} agen",
     "workingIn": "bekerja di #{{channel}}",
     "talksOnly": "hanya berbicara dengan {{name}}",
-    "talksOnlyMore_other": "hanya berbicara dengan {{name}} dan {{count}} lainnya",
-    "changeGroup": "Pindahkan ke departemen",
-    "newGroupWith": "Departemen baru dengan {{name}}",
-    "dmsEmpty": "Percakapanmu dengan orang muncul di sini."
+    "talksOnlyMore_other": "hanya berbicara dengan {{name}} dan {{count}} lainnya"
   },
-  "sidebarPins": {
-    "pin": "Sematkan di atas",
-    "unpin": "Lepas sematan",
-    "pinned": "Disematkan di atas",
-    "full": {
-      "agents": "Kamu sudah menyematkan 5 agen. Lepaskan satu untuk menyematkan yang ini.",
-      "channels": "Kamu sudah menyematkan 5 kanal. Lepaskan satu untuk menyematkan yang ini.",
-      "people": "Kamu sudah menyematkan 5 orang. Lepaskan satu untuk menyematkan yang ini."
-    }
+  "sidebarFavorites": {
+    "title": "Favorit",
+    "add": "Tambahkan ke favorit",
+    "remove": "Hapus dari favorit",
+    "marked": "Di favorit",
+    "full": "Favorit sudah berisi 50. Hapus satu untuk menambahkan yang ini."
+  },
+  "sidebarSections": {
+    "new": "Bagian baru",
+    "newName": "Bagian baru",
+    "moveTo": "Pindahkan ke bagian",
+    "takeOut": "Keluarkan dari bagian",
+    "rename": "Ganti nama bagian",
+    "delete": "Hapus bagian",
+    "nameLabel": "Nama bagian"
+  },
+  "sidebarDms": {
+    "options": "Opsi pesan langsung",
+    "show": "Tampilkan",
+    "shows": {
+      "all": "Semua orang di workspace",
+      "recent": "Hanya percakapan terbaru"
+    },
+    "invite": "Undang orang",
+    "invited": "Undangan terkirim",
+    "invitedTip": "{{email}} belum menerima undangan",
+    "agentTag": "AI",
+    "agentTip": "Agen AI"
+  },
+  "sidebarColumn": {
+    "label": "Alat",
+    "unread": "{{name}}, ada yang belum dibaca",
+    "you": "{{name}}, ada sesuatu untuk Anda"
+  },
+  "unreads": {
+    "title": "Belum dibaca",
+    "forYou": "Untuk Anda",
+    "conversations": "Percakapan",
+    "markAll": "Tandai semua sudah dibaca",
+    "markRead": "Tandai sudah dibaca",
+    "open": "Buka",
+    "seeInbox": "Lihat semuanya di kotak masuk",
+    "more_other": "{{count}} pesan lagi",
+    "emptyTitle": "Semua sudah dibaca",
+    "emptyText": "Pesan baru dan yang menunggu Anda muncul di sini.",
+    "markedAll": "Semua ditandai sudah dibaca"
   },
   "appsDownload": {
     "computer": "Komputer",
@@ -2722,6 +2746,7 @@
     "details": "Detail kanal",
     "composerLabel": "Kirim pesan ke #{{channel}}",
     "composerDm": "Kirim pesan ke {{name}}",
+    "groupYou": "Anda",
     "composerPlaceholder": "Kirim pesan ke #{{channel}} · pakai @ untuk memanggil agen",
     "send": "Kirim",
     "attach": "Lampirkan file",
@@ -2742,6 +2767,7 @@
     "sendFailed": "Pesan tidak terkirim. Coba lagi.",
     "reconnecting": "Menghubungkan ulang ke waktu nyata…",
     "detailsTitle": "#{{channel}}",
+    "detailsTitlePersonal": "{{channel}}",
     "detailsSearch": "Cari orang atau agen",
     "detailsEmpty": "Tidak ditemukan siapa pun untuk “{{q}}”.",
     "topicLabel": "Deskripsi kanal",
@@ -2753,9 +2779,11 @@
     "replyInChannel": "Agen membalas di kanal",
     "replyInThreadsHelp": "Agen yang dipanggil di kanal menjawab di utas di bawah pesan itu, dan kanal menampilkan satu baris untuk utas itu. Pekerjaan yang sudah berjalan tetap di tempatnya.",
     "nameTaken": "Sudah ada #{{name}}.",
+    "nameTakenPersonal": "Sudah ada percakapan grup bernama “{{name}}”.",
     "generalName": "#general tetap dengan namanya.",
     "archive": "Arsipkan kanal",
     "archived": "#{{channel}} diarsipkan. Percakapannya tetap disimpan.",
+    "archivedPersonal": "“{{channel}}” diarsipkan. Percakapannya tetap disimpan.",
     "archivedTitle": "Kanal yang diarsipkan",
     "archivedCount_other": "{{count}} kanal diarsipkan",
     "archivedNone": "Tidak ada kanal diarsipkan untuk dipulihkan",
@@ -2763,6 +2791,7 @@
     "restore": "Pulihkan",
     "restoreName": "Pulihkan #{{channel}}",
     "restored": "#{{channel}} kembali.",
+    "restoredPersonal": "“{{channel}}” kembali.",
     "leave": "Keluar dari kanal",
     "left": "Kamu keluar dari #{{channel}}",
     "leaveTitle": "Keluar dari #{{channel}}?",
@@ -3150,6 +3179,10 @@
       "update_workspace": "Ubah ruang kerja <b>{{name}}</b>",
       "set_action_check_on": "Nyalakan pemeriksaan atas apa yang sudah dilakukan tim",
       "set_action_check_off": "Matikan pemeriksaan atas apa yang sudah dilakukan tim",
+      "set_approvals_level": "Ubah persetujuan workspace menjadi <b>{{level}}</b>",
+      "set_approvals_level_every": "Ubah persetujuan semua agen menjadi <b>{{level}}</b>, termasuk pilihan mereka sendiri",
+      "set_agent_approvals_level": "Ubah persetujuan <b>{{agent}}</b> menjadi <b>{{level}}</b>",
+      "set_agent_approvals_level_workspace": "Buat <b>{{agent}}</b> mengikuti persetujuan workspace",
       "invite_people": "Undang <b>{{emails}}</b> ke ruang kerja.",
       "invite_roles_other": "Dengan peran {{roles}}.",
       "invite_people_sent_other": "Undangan terkirim ke <b>{{emails}}</b>.",
@@ -3322,6 +3355,8 @@
       "grok_female": "Grok belum masuk di komputer ini. Hubungkan akun Grok di halaman {{name}}.",
       "antigravity": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
       "antigravity_female": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
+      "devin": "Devin belum masuk di komputer ini. Hubungkan akun Devin di halaman {{name}}.",
+      "devin_female": "Devin belum masuk di komputer ini. Hubungkan akun Devin di halaman {{name}}.",
       "opencode": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}."
     },
@@ -3336,6 +3371,8 @@
       "grok_female": "Grok belum masuk di {{computer}}. Hubungkan akun Grok di halaman {{name}}.",
       "antigravity": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
       "antigravity_female": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
+      "devin": "Devin belum masuk di {{computer}}. Hubungkan akun Devin di halaman {{name}}.",
+      "devin_female": "Devin belum masuk di {{computer}}. Hubungkan akun Devin di halaman {{name}}.",
       "opencode": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}."
     },
@@ -3395,6 +3432,7 @@
       "cursor": "Hubungkan paket Cursor-mu",
       "grok": "Hubungkan paket Grok-mu",
       "gemini": "Hubungkan paket Gemini-mu",
+      "devin": "Hubungkan paket Devin-mu",
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
     },
@@ -3536,6 +3574,10 @@
         "warning": "Google menyatakan bahwa memakai paket Gemini pribadi di dalam aplikasi lain bisa membuat akun ditangguhkan. Untuk menghindari risiko itu, pakai kunci API Gemini atau Gemini Enterprise.",
         "windowsOne": "Di Windows, satu komputer memakai satu akun Gemini dalam satu waktu."
       },
+      "devin": {
+        "title": "Paket Devin-mu",
+        "tiers": "Free, Pro, Max, atau Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Model gratis, atau kunci OpenCode-mu"
@@ -3643,6 +3685,7 @@
       "cursor": "Cursor masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Cursor lalu coba lagi.",
       "grok": "Grok masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Grok lalu coba lagi.",
       "antigravity": "Gemini masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Google lalu coba lagi.",
+      "devin": "Devin masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Devin lalu coba lagi.",
       "opencode": "OpenCode masuk sebagai {{email}}, bukan {{account}}. Coba lagi dengan kunci yang benar."
     },
     "useAnyway": "Pakai {{email}}",
@@ -4014,6 +4057,10 @@
       "changed_update_workspace": "Mengubah ruang kerja <b>{{name}}</b>",
       "changed_set_action_check_on": "Menyalakan pemeriksaan atas apa yang sudah dilakukan tim",
       "changed_set_action_check_off": "Mematikan pemeriksaan atas apa yang sudah dilakukan tim",
+      "changed_set_approvals_level": "Mengubah persetujuan workspace menjadi <b>{{level}}</b>",
+      "changed_set_approvals_level_every": "Mengubah persetujuan semua agen menjadi <b>{{level}}</b>",
+      "changed_set_agent_approvals_level": "Mengubah persetujuan <b>{{agent}}</b> menjadi <b>{{level}}</b>",
+      "changed_set_agent_approvals_level_workspace": "<b>{{agent}}</b> kembali mengikuti persetujuan workspace",
       "changed_invite_people": "Mengundang <b>{{invited}}</b> ke ruang kerja",
       "changed_remove_ai_key": "Menghapus kunci API <b>{{name}}</b>"
     },
@@ -4110,8 +4157,9 @@
     "namePlaceholderPersonal": "misalnya liburan",
     "nameHelp": "Huruf kecil, angka, dan tanda hubung. Tampil sebagai #{{name}}.",
     "nameInvalid": "Pakai huruf kecil, angka, dan tanda hubung, diawali huruf atau angka.",
+    "nameInvalidPersonal": "Beri nama hingga 80 karakter, dalam satu baris.",
     "nameTaken": "Sudah ada kanal #{{name}}.",
-    "nameTakenPersonal": "Sudah ada percakapan grup bernama #{{name}}.",
+    "nameTakenPersonal": "Sudah ada percakapan grup bernama “{{name}}”.",
     "topic": "Deskripsi",
     "topicPlaceholder": "Apa yang dibahas di sini",
     "visibility": "Siapa yang bisa bergabung",
@@ -4140,7 +4188,8 @@
     "membersSearch": "Cari orang atau agen",
     "membersEmpty": "Tidak ada yang ditemukan untuk “{{q}}”.",
     "selected_other": "{{count}} dipilih",
-    "create": "Buat #{{name}}"
+    "create": "Buat #{{name}}",
+    "createPersonal": "Buat percakapan"
   },
   "channelCategories": {
     "undo": "Urungkan",
@@ -4156,6 +4205,7 @@
     "invitePersonal": "Undang {{email}} ke ruang kerjamu dan #{{channel}}",
     "inviteOrgPersonal": "Undang {{email}} ke ruang kerjamu",
     "addTitle": "Tambahkan ke #{{channel}}",
+    "addTitlePersonal": "Tambahkan ke {{channel}}",
     "addSearch": "Cari orang atau agen",
     "addEmpty": "Tidak ada yang di luar kanal cocok dengan “{{q}}”.",
     "addEveryone": "Semua orang di {{org}} sudah ada di #{{channel}}.",
@@ -4163,6 +4213,7 @@
     "actions": "Opsi untuk {{name}}",
     "remove": "Hapus dari kanal",
     "removeTitle": "Hapus {{name}} dari #{{channel}}?",
+    "removeTitlePersonal": "Hapus {{name}} dari {{channel}}?",
     "removePersonBody": "Mereka tidak lagi melihat kanal ini dan menerima pesannya. Kamu bisa menambahkannya lagi nanti.",
     "removeAgentBody": "Dia berhenti membaca dan menjawab di kanal ini. Kamu bisa menambahkannya lagi nanti.",
     "removeAgentBody_female": "Dia berhenti membaca dan menjawab di kanal ini. Kamu bisa menambahkannya lagi nanti.",
@@ -5321,6 +5372,7 @@
       "adminAskChannel": "<b>{{name}}</b> memintamu menambahkan <b>{{agent}}</b> ke #{{label}}",
       "adminAskCreate": "<b>{{name}}</b> meminta izin membuat agen",
       "adminAskWebhook": "<b>{{name}}</b> memintamu menyiapkan webhook {{service}} untuk rutinitas",
+      "adminAskVoice": "<b>{{name}}</b> memintamu menyalakan pesan suara",
       "invitationAccepted": "<b>{{name}}</b> menerima undanganmu dan bergabung ke {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> menerima undanganmu",
       "reaction_other": "<b>{{names}}</b> bereaksi pada pesanmu",
@@ -5848,6 +5900,7 @@
             "cursor": "Tambah akun Cursor",
             "grok": "Tambah akun Grok",
             "antigravity": "Tambah akun Gemini",
+            "devin": "Tambah akun Devin",
             "opencode": "Tambah kunci OpenCode"
           },
           "stepOne": {
@@ -5855,6 +5908,7 @@
             "codex": "Akun dengan paketmu",
             "cursor": "Akun dengan paketmu",
             "grok": "Akun dengan paketmu",
+            "devin": "Akun dengan paketmu",
             "antigravity": "Akun Google dengan paketmu",
             "antigravityEnterprise": "Akun Gemini Enterprise-mu"
           },
@@ -5864,7 +5918,8 @@
             "codex": "Masuk dengan ChatGPT",
             "cursor": "Masuk dengan Cursor",
             "grok": "Masuk dengan Grok",
-            "antigravity": "Masuk dengan Google"
+            "antigravity": "Masuk dengan Google",
+            "devin": "Masuk dengan Devin"
           },
           "opencodeFree": "Model gratis OpenCode tidak perlu kunci. Kunci dari konsol OpenCode menambahkan model berbayarnya.",
           "cursorFinish": "Masuk di halaman Cursor, dan proses masuk selesai sendiri di {{computer}}.",
@@ -5879,6 +5934,9 @@
           "notCode": "Itu sepertinya bukan kode Claude.",
           "stepTwoGoogle": "Tempel kode yang ditampilkan Google",
           "codeLabelGoogle": "Kode Google",
+          "stepTwoDevin": "Tempel kode yang ditampilkan Devin",
+          "codeHintDevin": "Tempel kode yang ditampilkan halaman Devin, bukan alamat halamannya.",
+          "codeLabelDevin": "Kode Devin",
           "codeHintGoogle": "Tempel kode yang ditampilkan halaman Google, bukan alamat halamannya.",
           "notCodeGoogle": "Itu alamat tanpa kode. Tempel kode yang ditampilkan halaman Google.",
           "send": "Kirim ke {{computer}}",
@@ -5912,6 +5970,7 @@
             "cursor": "Cursor masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Cursor lalu coba lagi.",
             "grok": "Grok masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Grok lalu coba lagi.",
             "antigravity": "Gemini masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Google lalu coba lagi.",
+            "devin": "Devin masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Devin lalu coba lagi.",
             "opencode": "Kunci OpenCode itu sudah terhubung sebagai {{account}}."
           },
           "startFailed": "Tidak ada jawaban dari {{computer}}. Coba lagi sebentar lagi.",
@@ -6519,6 +6578,7 @@
     "undoneBy": "Diurungkan oleh {{name}}",
     "undoneByYou": "Diurungkan olehmu",
     "undo": "Urungkan",
+    "applyAnyway": "Tetap terapkan",
     "appliedSome": "{{done}} dari {{total}} diterapkan",
     "waitingAdmin": "Menunggu admin",
     "stale": "Kedaluwarsa",
@@ -9436,8 +9496,7 @@
       "machine_access_requested": "{{agent}} meminta folder {{folder}} di {{computer}}. Menunggu jawaban di sana.",
       "machine_access_granted": "Diizinkan: {{agent}} sekarang bisa memakai {{folder}} di {{computer}}",
       "machine_access_denied": "Ditolak: {{agent}} tidak akan memakai {{folder}} di {{computer}}",
-      "machine_access_expired": "Permintaan folder {{folder}} di {{computer}} tidak dijawab",
-      "access_command": "Tidak ada aplikasi di komputer itu? Jalankan ini di Terminal-nya:"
+      "machine_access_expired": "Permintaan folder {{folder}} di {{computer}} tidak dijawab"
     },
     "suggestion": {
       "pending": "Saran untuk misi",
@@ -10125,7 +10184,6 @@
     "filter": {
       "person": "Orang",
       "agent": "Agen",
-      "routine": "Rutinitas",
       "reminder": "Pengingat",
       "deadline": "Tenggat tugas"
     },
@@ -10158,37 +10216,16 @@
         "declined": "Kamu tidak hadir."
       }
     },
-    "every": {
-      "hour": "setiap jam",
-      "hours": "setiap {{count}} jam",
-      "minutes": "setiap {{count}} menit"
-    },
-    "perDay": "{{count}}× sehari",
-    "runs_other": "{{count}} proses di hari-hari ini.",
-    "routineDetail": "Rutinitas · dikirim ke {{target}}",
     "deadlineDetail": "Tugas ini jatuh tempo.",
     "reminderBy": "Dibuat oleh {{name}}",
     "reminderPosted": "Pengingat · diposting di {{target}}",
     "cancelReminder": "Batalkan pengingat",
     "reminderCancelled": "Pengingat dibatalkan",
     "openIssue": "Buka tugas",
-    "openRoutines": "Lihat di Rutinitas",
-    "openRoutine": "Buka rutinitas",
-    "runAria": "Rutinitas {{name}}, {{time}}",
     "runHint": "{{name}} · {{agent}} · {{time}}",
-    "runsAt": "Rutinitas pukul {{time}}",
-    "moreRuns_other": "+{{count}} rutinitas",
-    "runTimes": "×{{count}}",
-    "result": {
-      "ok": "membalas",
-      "silent": "tidak ada yang baru",
-      "failed": "gagal",
-      "skipped": "tidak berjalan"
-    },
-    "lastResult": "terakhir: {{result}}",
     "upcomingMeta": "{{day}} · {{time}}",
     "emptyHint": "Tidak ada jadwal. Seret untuk membuat atau tekan N",
-    "agendaEmpty": "Acara dan rutinitas 30 hari ke depan muncul di sini.",
+    "agendaEmpty": "Acara dan pengingat 30 hari ke depan muncul di sini.",
     "agendaEmptyTitle": "Agenda kosong 30 hari ke depan",
     "noResults": "Tidak ada apa pun dengan filter ini.",
     "more": "+{{count}} lainnya",
@@ -10793,6 +10830,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Perbarui agentes di komputer untuk memakai kunci paket"
@@ -11065,6 +11103,7 @@
     "silent": "Tidak terdengar apa pun. Tidak ada yang dikirim.",
     "notSent": "Audio tidak bisa dikirim.",
     "limit": "Batas audio hari ini sudah habis. Tulis di sini, atau coba lagi besok.",
+    "plan": "Pesan suara tersedia dengan paket agentes.chat. Kamu tetap bisa menulis di sini.",
     "micBlocked": "Mikrofon diblokir",
     "micBlockedHint": "Izinkan mikrofon di pengaturan perangkatmu untuk merekam.",
     "openSettings": "Buka pengaturan",
@@ -11099,9 +11138,9 @@
       "title": "Pesan suara",
       "on": "Pesan suara",
       "onHelp": "Orang di ruang kerja ini bisa mengirim audio di percakapan.",
-      "noEngine": "Pesan suara belum tersedia di sini.",
-      "noEngineAsk": "Pesan suara belum menyala. Yang mengelola server ini menyalakannya, di halaman ini juga.",
-      "noEngineHere": "Pesan suara menyala setelah kamu memilih di bawah apa yang mengubah suara menjadi teks.",
+      "noEngine": "Untuk sementara pesan suara terkirim sebagai audio, jadi agen belum bisa mendengarnya.",
+      "noEngineAsk": "Untuk sementara pesan suara terkirim sebagai audio, jadi agen tidak bisa mendengarnya. Pengelola server ini memilih apa yang mengubah suara menjadi teks, di halaman ini juga.",
+      "noEngineHere": "Pesan suara terkirim sebagai audio sampai kamu memilih di bawah apa yang mengubah suara menjadi teks.",
       "engineTitle": "Yang mengubah suara menjadi teks",
       "own": "Server milikmu sendiri",
       "ownHelp": "Whisper atau Parakeet di mesinmu. Audionya tetap di sana.",
@@ -11109,10 +11148,55 @@
       "key": "Kunci {{name}}",
       "keyPlaceholder": "Tempel di sini",
       "test": "Uji",
-      "tested": "Berhasil. Sekarang semua orang melihat mikrofon.",
+      "tested": "Berhasil. Sekarang pesan suara sampai ke agen sebagai teks.",
       "sealed": "Disimpan terenkripsi di servermu dan tidak akan ditampilkan lagi.",
       "leaves": "Audio dari pesan suara dikirim ke {{name}} untuk diubah menjadi teks.",
       "invalid": "Kunci yang tersimpan tidak bisa dibuka di server ini. Tempel lagi."
+    },
+    "local": {
+      "titleHere": "Di komputer ini",
+      "titleServer": "Di server ini",
+      "titlePhone": "Di komputer server",
+      "textHere": "Parakeet, unduhan {{size}}. Suara tetap di komputer ini. 25 bahasa Eropa.",
+      "textServer": "Parakeet, unduhan {{size}}. Suara tetap di server ini. 25 bahasa Eropa.",
+      "download": "Unduh dan nyalakan",
+      "downloading": "Mengunduh model suara",
+      "progress": "{{done}} dari {{total}}",
+      "meanwhile": "Kamu sudah bisa merekam. Pesan terkirim sebagai audio sampai siap.",
+      "downloadingPhone": "Mengunduh model suara ke komputer server. Kamu sudah bisa merekam.",
+      "starting": "Menyalakan…",
+      "licenses": "Lisensi model",
+      "tooSmall": "Komputer ini punya memori {{memory}} dan model suara butuh 8 GB. Pakai kunci penyedia di bawah.",
+      "noDisk": "{{free}} kosong di disk ini dan model suara butuh {{need}}. Kosongkan ruang atau pakai kunci penyedia di bawah.",
+      "noBuild": "Belum ada model suara untuk komputer ini. Pakai kunci penyedia di bawah.",
+      "stopped": "Unduhan berhenti: {{detail}}",
+      "diskFull": "Disk penuh saat mengunduh. Kosongkan ruang dan coba lagi.",
+      "didntStart": "Model suara tidak menyala: {{detail}}",
+      "resume": "Lanjutkan",
+      "copy": "Salin detail",
+      "copied": "Detail disalin"
+    },
+    "offer": {
+      "title": "Pesan suara",
+      "download": "Unduh {{size}} dan nyalakan",
+      "choose": "Pilih caranya",
+      "askOwner": "Ubah suara menjadi teks di server ini",
+      "askMember": "Minta pesan suara dinyalakan",
+      "on": "Pesan suara sudah menyala: agen membacanya sebagai teks."
+    },
+    "setup": {
+      "memberTitle": "Suara belum menyala di sini",
+      "memberText": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai {{name}} memilih apa yang mengubah suara menjadi teks.",
+      "memberTextNoName": "Pesanmu terkirim sebagai audio yang bisa diputar semua orang. Agen belum bisa mendengarnya sampai pengelola server ini memilih apa yang mengubah suara menjadi teks.",
+      "ask": "Minta ke {{name}}",
+      "asked": "Permintaan sudah dikirim ke {{name}}",
+      "recordAnyway": "Tetap rekam",
+      "ownerTitle": "Pilih apa yang mengubah suara menjadi teks",
+      "ownerText": "Sampai saat itu, pesan suara terkirim sebagai audio yang bisa diputar semua orang, dan agen tidak bisa mendengarnya.",
+      "readyTitle": "Pesan suara sudah menyala",
+      "readyText": "Yang kamu ucapkan sampai ke agen sebagai teks.",
+      "record": "Rekam pesan",
+      "ownerPhone": "Pilih di Pengaturan › Suara di web atau di aplikasi desktop. Sampai saat itu, pesan suara terkirim sebagai audio yang bisa diputar semua orang, dan agen tidak bisa mendengarnya."
     }
   },
   "media": {
@@ -12221,6 +12305,7 @@
       "cursor": "{{model}} dengan paket Cursor",
       "grok": "{{model}} dengan paket Grok",
       "gemini": "{{model}} dengan paket Gemini",
+      "devin": "{{model}} dengan paket Devin",
       "zen": "{{model}} lewat OpenCode",
       "coding": "{{model}} dengan {{plan}}",
       "claudeOf": "{{model}} dengan paket Claude milik {{owner}}",
@@ -12228,6 +12313,7 @@
       "cursorOf": "{{model}} dengan paket Cursor milik {{owner}}",
       "grokOf": "{{model}} dengan paket Grok milik {{owner}}",
       "geminiOf": "{{model}} dengan paket Gemini milik {{owner}}",
+      "devinOf": "{{model}} dengan paket Devin milik {{owner}}",
       "zenOf": "{{model}} lewat OpenCode milik {{owner}}",
       "codingOf": "{{model}} dengan {{plan}} milik {{owner}}",
       "claudeAuto": "Paket Claude",
@@ -12235,6 +12321,7 @@
       "cursorAuto": "Paket Cursor",
       "grokAuto": "Paket Grok",
       "geminiAuto": "Paket Gemini",
+      "devinAuto": "Paket Devin",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Paket Claude milik {{owner}}",
@@ -12242,6 +12329,7 @@
       "cursorAutoOf": "Paket Cursor milik {{owner}}",
       "grokAutoOf": "Paket Grok milik {{owner}}",
       "geminiAutoOf": "Paket Gemini milik {{owner}}",
+      "devinAutoOf": "Paket Devin milik {{owner}}",
       "zenAutoOf": "OpenCode milik {{owner}}",
       "codingAutoOf": "{{plan}} milik {{owner}}",
       "on": "{{line}} di {{computer}}"
@@ -12255,7 +12343,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Lewat API",
@@ -12268,6 +12357,7 @@
     "cursorText": "Memakai paket Cursor milik orang yang menghubungkan komputer.",
     "grokText": "Memakai paket Grok milik orang yang menghubungkan komputer.",
     "antigravityText": "Memakai paket Gemini milik orang yang menghubungkan komputer.",
+    "devinText": "Memakai paket Devin milik orang yang menghubungkan komputer.",
     "opencodeText": "Model gratis OpenCode, atau kunci OpenCode milik orang yang menghubungkan komputer.",
     "cursorModel": {
       "inPlan": "Termasuk dalam paket Cursor-mu",
@@ -12285,6 +12375,7 @@
       "home_only": "{{program}} hanya terpasang untuk root di {{computer}}, yang tidak bisa dijangkau para agen.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
+      "systemDevin": "{{computer}} memakai Windows, tempat Devin belum berjalan: di sana CLI-nya tidak bisa memisahkan login setiap akun. Gunakan Devin di komputer Mac atau Linux, atau pilih AI lain.",
       "windows_sandbox": "Windows di {{computer}} tidak dapat mengisolasi perintah {{program}}. Pilih Claude atau kunci API sebagai gantinya, atau perbarui komputer itu ke Windows 11 24H2 atau yang lebih baru, dengan pembaruan terbarunya.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },
@@ -12330,6 +12421,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -12836,6 +12928,23 @@
     "s3": "Penyimpanan milikmu sendiri",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2, atau lainnya yang kompatibel dengan S3.",
     "current": "Sedang dipakai",
+    "computer": {
+      "title": "Komputer ruang kerja",
+      "used": "{{used}} dari {{size}} terpakai",
+      "bar": "Disk komputer ruang kerja",
+      "measuring": "Mengukur apa yang memakai ruang.",
+      "part": {
+        "projects": "Proyek dan kode",
+        "apps": "Aplikasi dan alat",
+        "agents": "File agen",
+        "caches": "Cache dan file sementara",
+        "system": "Sistem",
+        "other": "Lainnya",
+        "free": "Kosong"
+      },
+      "full": "Hampir penuh, tersisa {{free}}. Agen bisa membersihkan cache dan file sementara serta menghapus yang tidak dipakai lagi.",
+      "ask": "Kosongkan ruang di komputer ruang kerja: bersihkan cache dan file sementara (manajer paket, browser, alat build), lalu beri tahu saya apa lagi yang paling banyak memakai ruang."
+    },
     "usage": {
       "files": "{{size}} file",
       "none": "Tidak ada file",
@@ -14553,6 +14662,9 @@
       "desktop_read": "Baca layar",
       "desktop_screenshot": "Ambil tangkapan layar",
       "desktop_ask_person": "Minta seseorang mengambil alih komputer",
+      "apps_list": "Lihat aplikasi yang terbuka",
+      "apps_read": "Baca aplikasi",
+      "apps_act": "Gunakan aplikasi",
       "computer_use": "Gunakan komputer",
       "computer_status": "Periksa komputer",
       "left_click": "Klik",
@@ -15605,6 +15717,7 @@
       "generalStays": "Semua orang tetap di #general.",
       "leadChannelOnly": "Hanya kanal yang punya agen penanggung jawab.",
       "leadNotMember": "Agen penanggung jawab harus ada di kanal.",
+      "groupNameInvalid": "Beri nama hingga 80 karakter, dalam satu baris.",
       "mcpUnreachable": "Tidak bisa terhubung ke server MCP. Periksa alamatnya dan coba lagi.",
       "notApproved": "Layanan ini belum menyetujui agentes.chat.",
       "alreadyInvited": "Orang ini sudah punya undangan.",
@@ -15905,6 +16018,7 @@
       "spillOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa menyalakan bantuannya. Kamu bisa mematikannya.",
       "shareOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengizinkan agen memakai internetnya. Kamu bisa mematikannya.",
       "shareConnectedOnly": "Hanya komputer yang dihubungkan seseorang yang bisa berbagi internet dengan agen.",
+      "shareOff": "Nyalakan dulu “Agen memakai internet komputer ini”, lalu pilih untuk hanya memakai internetnya.",
       "tasksOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengubah berapa tugas yang dijalankannya sekaligus.",
       "tasksCloud": "Cloud menentukan sendiri ruang komputer ini untuk tugas.",
       "notHome": "Agen tinggal di komputer workspace dan memakai komputer ini saat menyebut namanya."
@@ -16053,13 +16167,13 @@
       "browser_download": "Browser agen tidak bisa diunduh. Periksa koneksi komputer ini, dan akan dicoba lagi saat dipakai berikutnya.",
       "browser_checksum": "Unduhan browser agen rusak, jadi tidak dipakai. Akan dicoba lagi saat dipakai berikutnya.",
       "desktop_use_linux": "Aplikasi di layar agen berjalan di komputer Linux yang punya layar agen.",
-      "desktop_use_own_user": "Aplikasi di layar agen butuh setiap agen bekerja sebagai penggunanya sendiri di komputer ini (mode sistem). Di sini semua agen bekerja sebagai pengguna runner.",
+      "desktop_use_own_user": "Aplikasi di layar agen butuh setiap agen bekerja sebagai penggunanya sendiri di komputer ini (mode sistem). Di sini semua agen bekerja sebagai pengguna yang sama, yaitu pengguna yang menjalankan agentes.chat.",
       "desktop_use_install": "Pasang di komputer ini yang dibutuhkan aplikasi di layar agen:",
       "desktop_unavailable": "Layar agen tidak bisa berjalan di komputer ini.",
       "desktop_linux": "Layar agen hanya berjalan di komputer Linux.",
       "desktop_install": "Pasang layar agen di komputer ini:",
-      "not_as_root": "Layar dan terminal agen tidak pernah berjalan sebagai root. Jalankan runner sebagai pengguna biasa.",
-      "runner_bun_old": "Ini butuh runner di Bun 1.3.5 atau yang lebih baru. Perbarui runner di komputer ini.",
+      "not_as_root": "Layar dan terminal agen tidak pernah berjalan sebagai root. Jalankan agentes.chat sebagai pengguna biasa.",
+      "runner_bun_old": "Ini butuh agentes.chat di Bun 1.3.5 atau lebih baru. Perbarui agentes.chat di komputer ini.",
       "terminal_unsupported": "Terminal hanya berjalan di komputer Linux dan Mac."
     },
     "egress": {
@@ -16069,13 +16183,51 @@
       "hint": "Alamat yang dilihat situs saat agen menjelajah. Alamat ini ikut berubah saat jaringan komputer berubah.",
       "waiting": "Menyambungkan ulang internet agen. Koneksi mereka menunggu sampai kembali.",
       "via": "Agen memakai internet {{name}}",
-      "viaBy": "Agen memakai internet {{name}} ({{person}})",
-      "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya."
+      "viaHint": "Situs melihat lokasi komputer itu. Orang yang menghubungkannya bisa mematikannya di halamannya.",
+      "offline": "Agen tidak punya internet: {{name}} sedang offline"
     },
-    "moving": {
-      "short": "Pindah server",
-      "line": "Pindah ke server baru… kembali dalam beberapa menit",
-      "named": "{{computer}} sedang pindah ke server baru… kembali dalam beberapa menit"
+    "maintenance": {
+      "short": {
+        "moving": "Pindah server",
+        "restarting": "Memulai ulang",
+        "updating": "Memperbarui",
+        "converting": "Meningkatkan disk",
+        "host_maintenance": "Pemeliharaan",
+        "other": "Pemeliharaan"
+      },
+      "what": {
+        "moving": "Pindah ke server baru",
+        "copying": "Menyalin ke server baru",
+        "restarting": "Memulai ulang",
+        "updating": "Memperbarui perangkat lunaknya",
+        "converting": "Meningkatkan disknya",
+        "host_maintenance": "Servernya sedang dalam pemeliharaan",
+        "other": "Sedang dikerjakan"
+      },
+      "line": "{{what}}… {{when}}",
+      "named": "{{computer}}: {{line}}",
+      "back": "kembali dalam sekitar {{time}}",
+      "backSoon": "kembali dalam beberapa menit",
+      "late": "sedikit lebih lama dari perkiraan",
+      "slower": "mungkin lebih lambat untuk sementara",
+      "slowerFor": "mungkin lebih lambat selama sekitar {{time}}",
+      "why": {
+        "moving": "Kami sedang memindahkannya ke server baru.",
+        "copying": "Kami sedang menyalin filenya ke server baru sambil ia bekerja.",
+        "handover": "Kami sedang menyerahkan perubahan terakhirnya ke server baru.",
+        "restarting": "Kami sedang memulai ulangnya.",
+        "unresponsive": "Ia berhenti merespons, jadi kami memulai ulangnya secara otomatis.",
+        "updating": "Kami sedang memperbarui perangkat lunaknya.",
+        "converting": "Kami sedang memindahkan disknya ke penyimpanan yang lebih cepat.",
+        "host_maintenance": "Server tempat ia berjalan sedang dalam pemeliharaan.",
+        "other": "Kami sedang melakukan pekerjaan padanya."
+      },
+      "since": "Sejak {{time}}",
+      "expectedBack": "Diperkirakan kembali sekitar {{time}}",
+      "expectedDone": "Diperkirakan selesai sekitar {{time}}",
+      "meanwhile": "Pesan untuk agennya menunggu dan berlanjut sendiri saat ia kembali.",
+      "working": "Agennya tetap bekerja sementara itu.",
+      "about": "Apa yang terjadi"
     },
     "online": "Online",
     "offline": "Offline",
@@ -16091,6 +16243,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "perintah",
         "browser": "browser",
         "desktop": "layar",
@@ -16143,6 +16296,11 @@
     "removed": "{{name}} dihapus.",
     "name": "Nama komputer",
     "nameHelp": "Cara orang dan agen melihatnya.",
+    "defaultName": {
+      "model": "{{model}} {{name}}",
+      "linux": "Komputer Linux {{name}}",
+      "other": "Komputer {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
@@ -16262,6 +16420,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Perintah",
         "browser": "Browser"
@@ -16272,6 +16431,7 @@
         "cursor": "Seperti Claude Code, dengan akun Cursor. Hanya di folder yang diizinkan.",
         "grok": "Seperti Claude Code, dengan akun Grok. Hanya di folder yang diizinkan.",
         "antigravity": "Seperti Claude Code, dengan akun Gemini. Hanya di folder yang diizinkan.",
+        "devin": "Seperti Claude Code, dengan akun Devin. Hanya di folder yang diizinkan.",
         "opencode": "Seperti Claude Code, dengan model gratis OpenCode atau kunci OpenCode. Hanya di folder yang diizinkan.",
         "commands": "Menjalankan perintah Terminal, seperti tes dan build."
       },
@@ -16290,6 +16450,13 @@
       "grantTextTerminal": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya:",
       "grantTextAdmin": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya, sebagai administrator:",
       "grantTerminal": "Tidak ada aplikasi? Di terminal komputer itu:",
+      "pickText": "Aplikasi agentes.chat membuka pemilih folder di {{machine}}, supaya orang di sana yang memilih.",
+      "pick": "Izinkan folder",
+      "picked": "Pemilih folder terbuka di {{machine}}. Pilih foldernya di sana.",
+      "pickWaiting": "Menunggu folder dipilih di {{machine}}",
+      "grantTerminalMore": "Tidak ada aplikasinya di sana? Pakai Terminal",
+      "noApp": "Komputer ini tidak punya aplikasi agentes.chat untuk memilih folder. Izinkan lewat Terminal-nya.",
+      "requestDone": "Permintaan ini sudah dijawab atau sudah kedaluwarsa.",
       "preferTerminal": "Saya lebih suka Terminal",
       "grantOnlyOwner": "Hanya {{name}} yang bisa mengizinkan lebih banyak, di komputer itu sendiri. Kalau kamu butuh sesuatu, minta padanya.",
       "pathPlaceholder": "<folder>",
@@ -16297,6 +16464,22 @@
     }
   },
   "devices": {
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
+    },
     "leadCloud": "Tempat agenmu bekerja: komputer ruang kerja dan perangkat yang dihubungkan orang-orang.",
     "lead": "Tempat agenmu bekerja: komputer dan ponsel yang dihubungkan orang-orang.",
     "connect": "Hubungkan perangkat",
@@ -16316,6 +16499,8 @@
     "workspace": "Ruang kerja",
     "cloud": "Cloud",
     "cpus_other": "{{count}} CPU",
+    "cores_other": "{{count}} inti",
+    "threads_other": "{{count}} thread",
     "memory": "{{gb}} GB",
     "system": {
       "android": "Android {{version}}",
@@ -16349,6 +16534,19 @@
     "forgotten": "{{name}} dilupakan.",
     "stop": "Hentikan",
     "stopped": "Dihentikan. {{name}} sudah bebas.",
+    "power": {
+      "start": "Nyalakan",
+      "stop": "Matikan",
+      "starting": "{{name}} sedang dinyalakan. Sebentar lagi siap.",
+      "stopped": "{{name}} sudah dimatikan.",
+      "toolMissingIos": "{{computer}} perlu Xcode untuk menjalankan simulator. Instal Xcode dari App Store di Mac itu.",
+      "toolMissingAndroid": "{{computer}} belum punya Android Emulator. Instal di Android Studio › SDK Manager › SDK Tools di komputer itu.",
+      "gone": "{{name}} sudah tidak ada di {{computer}}: sudah dihapus di sana. Lupakan di sini, atau buat lagi di sana.",
+      "busy": "{{name}} sedang dipakai. Hentikan dulu yang memakainya, atau coba lagi saat sudah bebas.",
+      "startFailed": "{{name}} tidak menyala. {{computer}} menjawab: {{why}}",
+      "stopFailed": "{{name}} tidak mati. {{computer}} menjawab: {{why}}",
+      "notSimulator": "Dari sini, hanya simulator dan emulator yang bisa dinyalakan dan dimatikan."
+    },
     "showMe": "Tunjukkan caranya",
     "notFound": "Perangkat ini sudah tidak ada di sini",
     "notFoundText": "Perangkat ini sudah dihapus, atau tautannya salah.",
@@ -16364,19 +16562,28 @@
     "belongs": "Milik ruang kerja",
     "belongsHint": "Perangkat ini tetap ada saat orang yang menghubungkannya keluar, dan semua orang bisa memakainya selama tidak ada pemiliknya.",
     "spillOwn": "Bantu saat komputer tim penuh atau tidak ada",
-    "spillOwnHint": "Saat komputer agenmu penuh atau tidak ada, balasan, permintaan, dan rutinitas mereka bisa berpikir di sini dengan login-mu.",
-    "spillTeamHint": "Saat komputer sebuah agen penuh atau tidak ada, balasan, permintaan, dan rutinitasnya bisa berpikir di sini dengan login pemiliknya di komputer ini.",
+    "spillOwnHint": "Saat komputer tim penuh atau tidak ada, balasan, permintaan, dan rutinitas agenmu bisa berpikir di sini, memakai akun AI yang login di komputer ini.",
+    "spillTeamHint": "Saat komputer sebuah agen penuh atau tidak ada, balasan, permintaan, dan rutinitasnya bisa berpikir di sini, memakai akun AI yang login oleh pemiliknya di komputer ini.",
     "spillWorkspaceOff": "Admin mematikan ini untuk workspace.",
-    "spillFirst": "Gunakan komputer ini untuk pekerjaan agen saya",
-    "spillFirstHint": "Permintaan, rutinitas, dan pekerjaan panjang agenmu dimulai di sini setiap kali komputer ini kosong, dengan AI yang kamu hubungkan di sini. Balasan untuk orang hanya dimulai di sini saat komputer tim penuh atau tidak ada.",
+    "helpUse": "Cara membantu agenmu",
+    "helpUses": {
+      "off": "Tidak membantu",
+      "help": "Hanya sebagai cadangan",
+      "first": "Utamakan untuk agen saya"
+    },
+    "helpUseHint": "Hanya sebagai cadangan: agenmu datang ke sini saat komputer tim penuh atau tidak ada. Utamakan untuk agen saya: permintaan, rutinitas, dan pekerjaan panjang mereka dimulai di sini setiap kali komputer ini kosong, dan balasan untuk orang hanya saat komputer tim penuh atau tidak ada. Keduanya memakai akun AI yang login di komputer ini.",
+    "helpUseTeamHint": "Hanya sebagai cadangan: agen siapa pun datang ke sini saat komputernya penuh atau tidak ada, memakai akun AI yang login oleh pemiliknya di komputer ini. Utamakan untuk agen saya: permintaan, rutinitas, dan pekerjaan panjang agenmu dimulai di sini setiap kali komputer ini kosong.",
     "helpWorkspace": "Komputer membantu saat komputer tim penuh atau tidak ada",
     "helpWorkspaceHint": "Setiap komputer hanya membantu jika pemiliknya mengizinkan. Mati: tidak ada yang membantu, apa pun pilihan pemiliknya.",
     "shareInternet": "Agen memakai internet komputer ini",
-    "shareInternetHint": "Situs yang dibuka agen lewat koneksi komputer ini, jadi situs melihat lokasimu. Hanya situs web, sampai 5 GB per hari, dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, agen memakai koneksi biasa mereka.",
+    "shareInternetHint": "Koneksi agen keluar lewat internet komputer ini, jadi situs dan server melihat lokasimu: situs web, git, SSH, database, dan koneksi TCP lainnya. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. AI agen, pencarian nama, panggilan, dan lalu lintas UDP lainnya memakai koneksi biasa, begitu juga semuanya selama komputer ini offline.",
+    "shareInternetHintProxy": "Browser agen dan program yang mengikuti pengaturan proxy (git lewat HTTPS, curl, sebagian besar alat baris perintah) keluar lewat internet komputer ini, jadi situs melihat lokasimu. SSH, klien database, dan program lain yang mengabaikan pengaturan proxy memakai koneksi biasa, begitu juga AI agen, pencarian nama, dan lalu lintas UDP. Tidak pernah apa pun di jaringanmu sendiri, dan tidak pernah email lewat port 25. Selama komputer ini offline, semuanya memakai koneksi biasa.",
+    "shareInternetOnly": "Pakai hanya internet komputer ini",
+    "shareInternetOnlyHint": "Agen hanya memakai internet komputer ini, termasuk untuk AI mereka, dan tidak pernah koneksi biasa. Selama komputer ini offline, agen tidak punya internet sampai komputer ini kembali.",
     "shareInternetInUse": "Sedang dipakai",
     "shareInternetOther": "Agen sedang memakai {{name}}",
     "shareInternetPick": "Pakai yang ini",
-    "shareInternetJoin": "Agen juga akan membuka situs lewat internet komputer ini, jadi situs melihat lokasimu. Kamu bisa mematikannya di halamannya.",
+    "shareInternetJoin": "Agen juga akan terhubung ke internet lewat komputer ini, jadi situs dan server melihat lokasimu. Kamu bisa mematikannya di halamannya.",
     "connectedBy": "Dihubungkan oleh {{name}}",
     "downloadFor": "Unduh untuk {{system}}",
     "downloadApp": "Unduh aplikasinya",
@@ -16418,6 +16625,8 @@
       "paused": "{{host}} sedang dijeda, jadi kendali menunggu sampai dilanjutkan.",
       "held": "Ruang kerja ini dijeda, jadi kontrol menunggu sampai aktif lagi.",
       "lost": "Kendali berakhir. Kamu menonton {{name}} lagi.",
+      "controlLate": "Kontrol tidak dimulai tepat waktu. {{host}} masih menyiapkan {{name}}: coba lagi dalam satu menit.",
+      "controlFailed": "Tidak bisa mengambil kontrol {{name}}. Coba lagi, atau mulai ulang aplikasi agentes.chat di {{host}}.",
       "typeLabel": "Ketik di {{name}}"
     },
     "status": {
@@ -16439,7 +16648,7 @@
       "withHost": "bersama {{host}}",
       "lastSeen": "terakhir terlihat {{time}}",
       "offlineUnresponsive": "berhenti merespons pukul {{time}}",
-      "offlineStopped": "runner berhenti pukul {{time}}",
+      "offlineStopped": "agentes.chat berhenti pukul {{time}}",
       "offlineDropped": "koneksi terputus pukul {{time}}"
     },
     "line": {
@@ -16454,9 +16663,14 @@
       "offline": "Agen menunggu sampai perangkat ini kembali.",
       "offlineSeen": "Terakhir terlihat {{time}}. Agen menunggu sampai perangkat ini kembali.",
       "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali.",
-      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan `{{command}}` di sana.",
-      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan `{{command}}` di sana untuk melihat sebabnya.",
-      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan `{{command}}` di sana."
+      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa internet atau kelebihan beban. Pastikan komputernya menyala dan terhubung ke internet.",
+      "offlineStopped": "Aplikasi agentes.chat berhenti di komputer ini pukul {{time}}. Buka aplikasinya lagi.",
+      "offlineStoppedCli": "agentes.chat berhenti di komputer ini pukul {{time}}. Jalankan lagi di sana.",
+      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri."
+    },
+    "technical": {
+      "title": "Detail teknis",
+      "doctor": "Untuk melihat alasannya, jalankan ini di sana:"
     },
     "reason": {
       "locked": "Ponselnya terkunci",
@@ -16517,7 +16731,7 @@
     },
     "facts": {
       "system": "Sistem",
-      "cpu": "CPU",
+      "cpu": "Prosesor",
       "memory": "Memori",
       "lastSeen": "Terakhir terlihat",
       "toolchains": "Toolchain yang ditemukan",
@@ -16905,8 +17119,10 @@
       "toolRequest": "<b>{{who}}</b> memintamu menyalakan {{tool}} di <b>{{deviceName}}</b> milikmu",
       "cliRequest": "<b>{{who}}</b> meminta kamu memasang {{tool}} di <b>{{deviceName}}</b> kamu",
       "folderRequest": "<b>{{who}}</b> memintamu membuka folder {{path}} di <b>{{deviceName}}</b> milikmu",
+      "folderOnComputer": "Izinkan di komputer",
+      "folderShown": "Terbuka di {{deviceName}}. Izinkan di sana.",
       "internetShared": "Agen kini membuka situs web lewat internet <b>{{deviceName}}</b>",
-      "internetSharedLine": "Hanya agen workspace ini, hanya situs web, hingga 5 GB sehari, tidak pernah apa pun di jaringannya sendiri. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
+      "internetSharedLine": "Hanya agen workspace ini, tidak pernah apa pun di jaringannya sendiri, tidak pernah email lewat port 25. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
       "internetOff": "Matikan",
       "internetOffDone": "Agen tidak lagi memakai internet {{deviceName}}.",
       "once": "Izinkan sekali",
@@ -17655,7 +17871,21 @@
       "version": "Versi",
       "license": "Perangkat lunak bebas di bawah <license>GNU Affero General Public License v3</license>, tanpa jaminan.",
       "source": "Kode sumber",
-      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor",
+      "latest": "Rilis terbaru",
+      "newer": "{{version}} sudah keluar",
+      "notes": "Yang baru",
+      "update": {
+        "title": "Perbarui ke {{version}}",
+        "docker": "Dengan Docker",
+        "native": "Tanpa Docker",
+        "nativeHelp": "Ekstrak paket rilis ke `~/.agentes/app`, lalu jalankan:",
+        "desktop": "Berjalan di aplikasi desktop komputer ini? Server itu ikut diperbarui bersama aplikasinya.",
+        "notice": "agentes.chat {{version}} sudah keluar untuk server ini",
+        "how": "Cara memperbarui"
+      },
+      "computers": "Program komputer",
+      "computersAhead_other": "{{count}} komputer menjalankan versi yang lebih baru dari server ini. Komputer itu tetap berfungsi, dan fitur barunya datang bersama pembaruan server ini."
     },
     "title": "Pengaturan",
     "account": {
@@ -18377,6 +18607,7 @@
     "namesMore": "{{first}} dan {{count}} lainnya",
     "wait": {
       "thinking": "Berpikir…",
+      "code": "Memperbarui kode…",
       "held": "Menunggu persetujuan…",
       "said": "“{{text}}”"
     },
@@ -18619,6 +18850,7 @@
         "usingScreen": "Memakai layar",
         "cloningRepo": "Meng-clone repositori",
         "listingRepos": "Menampilkan daftar repositori",
+        "updatingCode": "Memperbarui kode",
         "preparingCli": "Menyiapkan {{app}}",
         "openingPullRequest": "Membuka pull request",
         "handingOff": "Mengirim laporan",
@@ -18743,6 +18975,7 @@
       "usingScreen": "memakai layar",
       "cloningRepo": "meng-clone repositori",
       "listingRepos": "menampilkan daftar repositori",
+      "updatingCode": "memperbarui kode",
       "preparingCli": "menyiapkan {{app}} di {{computer}}",
       "preparingCliPct": "menyiapkan {{app}} di {{computer}} ({{percent}}%)",
       "openingPullRequest": "membuka pull request",
@@ -18863,6 +19096,7 @@
       "brain_unavailable_outdated": "Program di komputerku perlu diperbarui agar {{brain}} bisa menjawab. Aku akan menjawab begitu sudah diperbarui.",
       "brain_unavailable_plan_owner": "{{brain}} akan berpikir dengan paket yang bukan milik pemilikku, jadi tidak kupakai. Hubungkan akun pemilikku di halamanku.",
       "brain_unavailable_shared_login": "Komputerku belum bisa memakai login Claude untuk semua agen sekarang. Aku akan menjawab begitu bisa. Kalau terus gagal, hubungkan Claude lagi di Akun AI.",
+      "brain_unavailable_lent_offline": "Aku tidak punya internet sekarang: {{computer}} sedang offline, dan agen di workspace ini hanya memakai internetnya. Aku akan menjawab saat komputer itu kembali, atau setelah “Pakai hanya internet komputer ini” dimatikan di halamannya.",
       "provider_unavailable": "Penyedia AI-ku sedang tidak merespons. Aku akan menjawab begitu ia kembali.",
       "provider_wait_rate_limit": "{{provider}} sedang membatasi permintaan dari kunci ini. Aku akan menjawab begitu diizinkan.",
       "provider_wait_down": "{{provider}} sedang mati atau kelebihan beban. Aku akan menjawab begitu ia kembali.",
@@ -18873,7 +19107,9 @@
       "provider_back": "AI-ku sudah kembali.",
       "confidential_removed": "Dihapus: teks rahasia disimpan selama {{days}} hari.",
       "brain_queued": "Masih dalam antrean. Saya akan menjawab begitu giliran saya tiba.",
-      "brain_interrupted": "{{brain}} berhenti sebelum selesai. Sudah dikerjakan, tidak diulang: {{tools}}.",
+      "brain_interrupted": "{{brain}} berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+      "brain_interrupted_timeout": "{{brain}} melewati batas waktunya dan berhenti sebelum selesai. Minta lagi untuk melanjutkan.",
+      "brain_interrupted_computer": "Komputer menghentikan {{brain}} sebelum selesai. Minta lagi untuk melanjutkan.",
       "plan_limit_cut": "Aku berhenti di batas paket {{plan}}. Aku akan melanjutkan dari titik terakhir {{when}}, saat batasnya direset.",
       "plan_limit_cut_unknown": "Aku berhenti di batas paket {{plan}}. Aku akan melanjutkan dari titik terakhir begitu batasnya direset.",
       "plan_limit_wait": "Paket {{plan}} mencapai batasnya. Aku akan menjawab {{when}}, saat batasnya direset. Kalau dibuka lebih awal di {{plan}}, aku akan tahu dan langsung menjawab.",
@@ -18938,6 +19174,7 @@
       "action_approvals": "Persetujuan yang menunggumu",
       "welcome_member": "Anda baru saja bergabung dengan {{org}}. **Apa yang Anda tangani di sini?** Beri tahu saya dan saya siapkan agen pertama Anda bersama Anda.",
       "action_open_page": "Buka layar",
+      "action_voice_setup": "Nyalakan pesan suara",
       "calendar_proposal": "Usulan acara: {{title}}",
       "action_workspace": "Mengusulkan perubahan di ruang kerja",
       "agent_proposal": "Mengusulkan agen baru: {{name}}",
@@ -19232,6 +19469,10 @@
     "offer_open_page": {
       "label": "Tawarkan membuka sebuah layar",
       "description": "Memposting kartu yang tombolnya membuka layar aplikasi, seperti tagihan, peran, atau halaman agen."
+    },
+    "offer_voice_setup": {
+      "label": "Tawarkan menyalakan pesan suara",
+      "description": "Memposting kartu yang menyalakan pesan suara dengan satu klik untuk pengelola server, atau memintanya kepada pengelola."
     },
     "set_team_week": {
       "label": "Ubah kartu Minggu tim",
@@ -19796,7 +20037,7 @@
       "people": "Mulai sekarang semua orang hanya bisa membacanya dan menerima email",
       "peopleQuiet": "Mulai sekarang semua orang hanya bisa membacanya",
       "computer": "Komputernya berhenti sekarang dan dibersihkan",
-      "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai runner-nya dihapus.",
+      "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai agentes.chat dihapus darinya.",
       "connectors": "Konektor dan kotak surat diputuskan"
     },
     "undo": "Pemilik mana pun bisa memulihkannya sampai {{date}} pukul {{time}}. Setelah itu, tidak bisa dibatalkan.",
@@ -20155,14 +20396,6 @@
       "doneByYou": "Kamu selesaikan pukul {{time}}. {{agent}} melihat layar lagi lalu melanjutkan.",
       "doneByYou_female": "Kamu selesaikan pukul {{time}}. {{agent}} melihat layar lagi lalu melanjutkan."
     },
-    "control": {
-      "notice": "Program di komputer {{name}} bisa melihat layar dan apa yang kamu ketik atau tempel.",
-      "notice_female": "Program di komputer {{name}} bisa melihat layar dan apa yang kamu ketik atau tempel."
-    },
-    "session": {
-      "check": "Pemeriksaan keamanan",
-      "screening": "Kami mungkin memeriksa teks di layar ini untuk mencegah penyalahgunaan. Kami hanya menyimpan hasilnya. Apa yang tidak tampil di layar, seperti kata sandi di prompt, tidak pernah direkam."
-    },
     "after": {
       "titleNoSite": "Memakai layar",
       "noSite": "Sebelum membuka aplikasi"
@@ -20172,8 +20405,6 @@
       "group_female": "Layar {{name}}"
     },
     "watch": {
-      "notice": "Program di komputer {{name}} bisa melihat layar dan apa pun yang diketik atau ditempel di sana.",
-      "notice_female": "Program di komputer {{name}} bisa melihat layar dan apa pun yang diketik atau ditempel di sana.",
       "step": {
         "desktop_open": "Membuka {{detail}}",
         "desktop_open_plain": "Membuka aplikasi",
@@ -20197,14 +20428,13 @@
       }
     },
     "use": {
-      "title": "Aplikasi di layar agen",
-      "description": "Di sini agen membuka dan memakai aplikasi di layarnya sendiri, seperti yang dilakukan orang, sementara orang menonton dari halaman tiap agen.",
+      "title": "Layar sendiri untuk tiap agen",
+      "description": "Di sini tiap agen mendapat layarnya sendiri, terpisah dari layarmu, dan memakai aplikasi berjendela di sana, seperti browser atau spreadsheet, seperti yang dilakukan orang. Kamu menontonnya dari halaman agen. Untuk sekarang hanya di Linux, yang bisa membuka layar tambahan untuk tiap agen tanpa mengganggu layarmu.",
       "ready": "Siap",
       "off": "Nonaktif",
-      "unavailable": "Tidak tersedia",
+      "unavailable": "Perlu disiapkan",
       "offHelp": "Aktifkan layar dan perintah di komputer ini:",
       "offOne": "Komputer ini perlu layar dan perintah menyala.",
-      "linuxOnly": "Agen hanya bisa memakai aplikasi di layarnya sendiri pada komputer Linux.",
       "agent": "{{name}} belum bisa memakai aplikasi di layarnya di {{computer}}.",
       "agent_female": "{{name}} belum bisa memakai aplikasi di layarnya di {{computer}}."
     },

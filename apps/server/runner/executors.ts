@@ -6,12 +6,19 @@ import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
   CLI_HOME_ONLY,
+  CURSOR_MODEL_LIMITS,
   type CursorModelInfo,
   parseExecutors,
   type RunnerExecutorInfo,
   type RunnerInfo,
 } from "@agenteschat/adapters/machine-protocol";
-import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
+import {
+  DEVIN_FUSION_HELPER,
+  DEVIN_LEVELS,
+  devinVariantOf,
+  isOpencodeFreeModel,
+  OPENCODE_FREE_MODELS,
+} from "@agenteschat/providers/plans";
 import { type CodexSignIn, codexLoginStatusOf } from "./codex-sign-in";
 import { consoleText } from "./console-text";
 import { readSmallJson, writeJson } from "./json-file";
@@ -598,6 +605,97 @@ function detectAntigravity(run: Run): Promise<Probe> {
   return detectWithModels(run, AGY_BIN, AGY_VERSION, parseAgyModels);
 }
 
+/** Cognition's Devin CLI (ADR 0253). */
+export const DEVIN_BIN = "devin";
+
+/** The Devin CLI's version line (`devin 3000.14.30821 (a09cd7f323ee)`); anything else is skipped. */
+const DEVIN_VERSION = /^devin \d+\.\d+\.\d+\b/;
+
+/**
+ * Protocol 89 (ADR 0253): the Devin CLI, by its version alone. Its models are what the accounts signed in here list
+ * (`AccountManager.listedModels`): the computer's own CLI thinks for no agent.
+ */
+async function detectDevin(run: Run): Promise<Probe> {
+  const r = await run(DEVIN_BIN, ["--version"]);
+  if (r.error || r.status !== 0) return versionFailed(r);
+  const version = firstLine(r);
+  return DEVIN_VERSION.test(version) ? { entry: { version } } : {};
+}
+
+/** The most model families kept from one `devin models list` (its Fusion pairs counted as one per main model). */
+const DEVIN_MAX_FAMILIES = CURSOR_MODEL_LIMITS.models;
+/** The most variants kept for one family. */
+const DEVIN_MAX_VARIANTS = 24;
+
+/**
+ * `devin models list --format json` (`{ families: [{ family_uid, family_label, variants: [{ model_uid, label,
+ * max_context_tokens, cost_tier, … }] }] }`, CLI 3000.14) → one model per family: its levels, whether it has a faster
+ * variant, its window, its variants (kept on the runner) and `free` when every standard variant is "Free" on the plan.
+ * Fusion becomes one model per main family, each with SWE-2 Medium as its helper (`DEVIN_FUSION_HELPER`). Anything
+ * that doesn't read as that shape lists nothing.
+ */
+export function parseDevinModels(output: string): CursorModelInfo[] {
+  let o: unknown;
+  try {
+    o = JSON.parse(output);
+  } catch {
+    return [];
+  }
+  const families = (o as { families?: unknown } | null)?.families;
+  if (!Array.isArray(families)) return [];
+  type Variant = { uid: string; label: string; window: number; free: boolean };
+  type Family = { id: string; label: string; variants: Variant[] };
+  const word = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const read: Family[] = [];
+  for (const f of families) {
+    const r = f as Record<string, unknown> | null;
+    const id = word(r?.family_uid, 80);
+    if (!id || !/^[\w.:-]{1,80}$/.test(id) || !Array.isArray(r?.variants)) continue;
+    const variants: Variant[] = [];
+    for (const v of r.variants as unknown[]) {
+      const x = v as Record<string, unknown> | null;
+      const uid = word(x?.model_uid, 120);
+      if (!uid || !/^[\w.:-]{1,120}$/.test(uid)) continue;
+      const window = typeof x?.max_context_tokens === "number" ? Math.round(x.max_context_tokens) : 0;
+      variants.push({ uid, label: word(x?.label, 80), window, free: x?.cost_tier === "Free" });
+    }
+    if (variants.length) read.push({ id, label: word(r.family_label, 80) || id, variants });
+  }
+  // Fusion: one model per main family, with the free helper.
+  const familyOfUid = new Map<string, Family>();
+  for (const f of read) if (f.id !== "fusion") for (const v of f.variants) familyOfUid.set(v.uid, f);
+  const fused = new Map<string, Family>();
+  for (const v of read.find((f) => f.id === "fusion")?.variants ?? []) {
+    if (!v.uid.endsWith(DEVIN_FUSION_HELPER)) continue;
+    const main = familyOfUid.get(v.uid.slice("fusion-".length, -DEVIN_FUSION_HELPER.length));
+    if (!main) continue;
+    const id = `fusion-${main.id}`.slice(0, 80);
+    const f = fused.get(id) ?? { id, label: `Fusion · ${main.label}`, variants: [] };
+    f.variants.push({ ...v, free: false });
+    fused.set(id, f);
+  }
+  const all = [...read.filter((f) => f.id !== "fusion"), ...fused.values()];
+  const out: CursorModelInfo[] = [];
+  for (const f of all) {
+    const variants = f.variants.slice(0, DEVIN_MAX_VARIANTS);
+    const kinds = variants.map((v) => devinVariantOf(v.uid));
+    const standard = variants.filter((_, i) => !kinds[i]?.fast);
+    const efforts = DEVIN_LEVELS.filter((l) => kinds.some((k) => !k.fast && k.level === l));
+    const window = Math.max(0, ...variants.map((v) => v.window));
+    out.push({
+      id: f.id,
+      label: f.label.slice(0, CURSOR_MODEL_LIMITS.label),
+      ...(standard.length > 0 && standard.every((v) => v.free) ? { free: true } : {}),
+      ...(efforts.length ? { efforts: [...efforts] } : {}),
+      ...(kinds.some((k) => k.fast) ? { fast: true } : {}),
+      ...(window > 0 ? { contextWindow: window } : {}),
+      variants: variants.map((v) => v.uid),
+    });
+    if (out.length >= DEVIN_MAX_FAMILIES) break;
+  }
+  return out;
+}
+
 /**
  * One CLI's look: what it found, and whether it couldn't tell (then the last good look stands). `exited`: unsure
  * because `--version` failed with an exit code, counted toward `EXECUTORS_EXIT_STRIKES`.
@@ -775,6 +873,7 @@ const HOME_INSTALLED = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  devin: DEVIN_BIN,
 } as const;
 
 /** `bin` in the install folders under `home` (`~/.local/bin`…), which other users can't reach; null: none there. */
@@ -806,7 +905,7 @@ export async function detectExecutors(
   codexSignIn?: CodexSignInProbe,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
-  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "devin"] as const;
   const codex = async () => {
     const probe = await detectCodex(run, codexBins());
     return codexSignIn ? withCodexSignIn(run, probe, codexSignIn) : probe;
@@ -818,6 +917,7 @@ export async function detectExecutors(
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
     safe(() => detectAntigravity(run)),
+    safe(() => detectDevin(run)),
   ]);
   const found: Executors = {};
   const broken: NonNullable<Executors["broken"]> = {};

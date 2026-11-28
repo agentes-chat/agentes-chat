@@ -60,7 +60,7 @@ test("connect link over HTTP: the one-line install, the computer asking to join,
     status: string;
     request: { id: string; name: string };
   };
-  expect(state).toMatchObject({ status: "asking", request: { name: "build-box" } });
+  expect(state).toMatchObject({ status: "asking", request: { name: "Computador Linux do sam" } });
   expect((await rui(`/devices/connect-links/${link.id}`)).status).toBe(404);
   const listed = (await (await owner("/devices")).json()) as { requests: { id: string }[] };
   expect(listed.requests.map((r) => r.id)).toEqual([state.request.id]);
@@ -155,6 +155,44 @@ test("a computer and its phones over HTTP: rename, who can use it, stop, forget,
 
   expect((await owner(`/devices/computers/${machine.id}`, { method: "DELETE" })).status).toBe(204);
   expect(((await (await owner("/devices")).json()) as { devices: unknown[] }).devices).toEqual([]);
+});
+
+test("Ligar a simulator over HTTP: a real phone refused, an old app said, an offline Mac said, the body checked", async () => {
+  const { owner } = await start();
+  const paired = await pairComputer(t, owner, { ...RUNNER, os: "darwin" }, { name: "MacBook" });
+  const [machine] = await t.db.select().from(schema.machines).where(eq(schema.machines.id, paired.machineId));
+  if (!machine) throw new Error("no machine");
+  const [sim, pixel] = await syncMachinePhones(t.db, machine, [
+    {
+      platform: "ios",
+      serial: "D54B1757",
+      kind: "simulator",
+      model: "iPhone 17 Pro",
+      osVersion: "26.2",
+      state: "ready",
+    },
+    {
+      platform: "android",
+      serial: "33141FDH2000AB",
+      kind: "device",
+      model: "Pixel 8",
+      osVersion: "16",
+      state: "ready",
+    },
+  ]);
+  const power = (id: string | undefined, json: unknown) => owner(`/devices/phones/${id}/power`, { json });
+  const code = async (r: Response) => ((await r.json()) as { error: { code: string } }).error.code;
+  expect((await power(sim?.id, {})).status).toBe(400);
+  const real = await power(pixel?.id, { on: true });
+  expect([real.status, await code(real)]).toEqual([400, "device.not_simulator"]);
+  const old = await power(sim?.id, { on: true });
+  expect([old.status, await code(old)]).toEqual([409, "machine.outdated"]);
+  await t.db
+    .update(schema.machines)
+    .set({ protocol: MACHINE_PROTOCOL_VERSION })
+    .where(eq(schema.machines.id, machine.id));
+  const away = await power(sim?.id, { on: true });
+  expect([away.status, await code(away)]).toEqual([409, "machine.offline"]);
 });
 
 test("Wi-Fi pairing over HTTP: the computer's owner only, a checked address and code, its computer reached", async () => {

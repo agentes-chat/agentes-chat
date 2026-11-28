@@ -7,6 +7,7 @@ import {
   customModelId,
   customModelOf,
   endpointModelId,
+  endpointOutputLimit,
   isOpenRouterModel,
   listEndpointModels,
   maxCostNanoUsd,
@@ -97,6 +98,30 @@ describe("model lists", () => {
       { id: "qwen3" },
     ]);
     expect(parseEndpointModels("nope")).toEqual([]);
+  });
+
+  test("a model's output limit as its list tells it: its own field, else a quarter of its window, else none", async () => {
+    const body = {
+      data: [
+        { id: "router/m", top_provider: { max_completion_tokens: 32_768 }, context_length: 131_072 },
+        { id: "groq-m", max_completion_tokens: 8192, context_window: 131_072 },
+        { id: "claude-y", max_tokens: 64_000, max_input_tokens: 200_000 },
+        { id: "vllm-m", max_model_len: 32_768 },
+        { id: "bare" },
+      ],
+    };
+    expect(endpointOutputLimit(body, "router/m")).toBe(32_768);
+    expect(endpointOutputLimit(body, "groq-m")).toBe(8192);
+    expect(endpointOutputLimit(body, "claude-y")).toBe(64_000);
+    expect(endpointOutputLimit(body, "vllm-m")).toBe(8192);
+    expect(endpointOutputLimit(body, "bare")).toBeNull();
+    expect(endpointOutputLimit(body, "absent")).toBeNull();
+    expect(endpointOutputLimit({ models: [{ name: "qwen3", max_output_tokens: 4096 }] }, "qwen3")).toBe(4096);
+
+    const fetcher = (async () => new Response(JSON.stringify(body))) as unknown as typeof fetch;
+    const provider = createCustomProvider({ fetch: fetcher });
+    const endpoint = { style: "openai" as const, baseURL: "https://gw.example/v1" };
+    expect(await provider.outputLimit?.(customModelId(CRED, "groq-m"), { apiKey: "k-123456789", endpoint })).toBe(8192);
   });
 
   test("the list's address and key by style; a refusal and an oversized list fail with words", async () => {

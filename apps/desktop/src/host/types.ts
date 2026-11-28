@@ -1,3 +1,4 @@
+import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import type { ServerCheck } from "@agenteschat/client/lib/server";
 import type { HelloLine } from "../control/client";
 import type { Candidate } from "../control/first-run";
@@ -149,9 +150,16 @@ export interface Host {
   revealFolder(path: string): Promise<void>;
   pickFolder(): Promise<string | null>;
   setTrayState(state: TrayState): Promise<void>;
-  /** The menu bar icon on a Mac (Windows and Linux always keep theirs, `tray.rs`). */
-  setTrayVisible(show: boolean): Promise<void>;
-  showWindow(name: WindowName): Promise<void>;
+  /**
+   * The menu bar icon on a Mac while a window shows (Windows and Linux always keep theirs, `tray.rs`). `off`: the
+   * person turned it off, so closing the window keeps the Dock icon instead (`background.rs`).
+   */
+  setTrayVisible(show: boolean, off: boolean): Promise<void>;
+  /**
+   * `keep`: the popover, raised for a request rather than by the person, stays up when it loses focus until it is
+   * shown again without it or hidden.
+   */
+  showWindow(name: WindowName, o?: { keep?: boolean }): Promise<void>;
   hideWindow(name: WindowName): Promise<void>;
   quit(): Promise<void>;
   /**
@@ -266,7 +274,7 @@ export interface Host {
   /** macOS: a short Bonjour browse, which raises the Local Network prompt the first time. Nothing says the answer. */
   askLocalNetwork(): Promise<void>;
   /** System Settings › Privacy & Security on the permission's own list (the microphone: for voice messages). */
-  openPrivacy(pane: MacPermission | "microphone"): Promise<void>;
+  openPrivacy(pane: MacPermission | OsPermission): Promise<void>;
   /** The setup macOS may quit the app in the middle of, kept until it is finished (`prepare.rs`). */
   setupState(): Promise<SetupState | null>;
   /** Keeps it (with the main window's page, to open there again) or, null, forgets it. */

@@ -34,6 +34,8 @@ import {
   gateDims,
   gateLine,
   gateRechecks,
+  HOST_CONNECT_WAIT_MS,
+  hostConnecting,
   isStandInLine,
   keptCardState,
   kindOf,
@@ -375,7 +377,7 @@ describe("the Cloud's plan gate tells the truth", () => {
   test("a computer away moving to another server says so, never to use an API key for now", () => {
     const moving = { lastSeenAt: new Date(NOW - CLOUD_AWAY_MS - 60_000).toISOString(), moving: true };
     const line = cloudLine({ state: "offline" }, "claude_code", moving);
-    expect(line?.text).toBe("Acme is moving to a new server… back in a few minutes");
+    expect(line?.text).toBe("Acme: Moving to a new server… back in a few minutes");
   });
 
   function cloudLine(
@@ -452,6 +454,25 @@ describe("planGateWithoutAgent: a plan connected before its owner has any agent"
   test("a computer that never connected is offline, not a runner to update", () => {
     const paired = { ...MAC, online: false, canAdd: false };
     expect(at({ computers: [paired] })).toEqual({ gate: { state: "offline" }, computer: paired });
+  });
+});
+
+describe("hostConnecting: the server's own computer added with a new workspace", () => {
+  const NOW = Date.parse("2026-11-26T12:00:00Z");
+  const offline: PlanGate = { state: "offline" };
+  const host = { kind: "host" as const, lastSeenAt: null, createdAt: new Date(NOW - 10_000).toISOString() };
+
+  test("offline before its runner's first sync: connecting, not a computer to wait for or replace with a key", () => {
+    expect(hostConnecting(offline, host, NOW)).toBe(true);
+  });
+
+  test("only the server's own, never seen, and only while the runner's sync may still come", () => {
+    expect(hostConnecting({ state: "ready" }, host, NOW)).toBe(false);
+    expect(hostConnecting(offline, { ...host, kind: "connected" }, NOW)).toBe(false);
+    expect(hostConnecting(offline, { ...host, lastSeenAt: new Date(NOW - 60_000).toISOString() }, NOW)).toBe(false);
+    const old = { ...host, createdAt: new Date(NOW - HOST_CONNECT_WAIT_MS).toISOString() };
+    expect(hostConnecting(offline, old, NOW)).toBe(false);
+    expect(hostConnecting(offline, undefined, NOW)).toBe(false);
   });
 });
 
@@ -541,13 +562,14 @@ describe("the agent a plan starts on, and the order of the plans", () => {
     expect(firstAgent([], () => false)).toBeUndefined();
   });
 
-  test("Claude, ChatGPT, Gemini, Grok, Cursor, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
+  test("Claude, ChatGPT, Gemini, Grok, Cursor, Devin, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
     expect(PLAN_CHOICES).toEqual([
       "claude",
       "chatgpt",
       "gemini",
       "grok",
       "cursor",
+      "devin",
       "zen",
       "zai",
       "kimi",
@@ -560,6 +582,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
       "antigravity",
       "grok",
       "cursor",
+      "devin",
       "opencode",
       "claude_code",
       "claude_code",

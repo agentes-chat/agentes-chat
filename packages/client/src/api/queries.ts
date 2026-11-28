@@ -170,6 +170,7 @@ import type {
   JevKey,
   JevKeyInput,
   JoinRequest,
+  LocalSpeech,
   Machine,
   MachineAccessReduce,
   MachinePause,
@@ -618,6 +619,44 @@ function useSpeechKeyChange<T>(change: (api: ApiClient, input: T) => Promise<Spe
 export const useSaveSpeechKey = () =>
   useSpeechKeyChange((api, input: SpeechKeyInput) => api.system.saveSpeechKey(input), true);
 export const useRemoveSpeechKey = () => useSpeechKeyChange<void>((api) => api.system.removeSpeechKey());
+
+/** The speech model on this server's computer (ADR 0100), for its owner; polled while it downloads or starts. */
+export const useSpeechLocal = (enabled = true) => {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: keys.speechLocal,
+    enabled,
+    queryFn: async () => {
+      const was = qc.getQueryData<LocalSpeech | null>(keys.speechLocal)?.status.state;
+      const view = await api.system.speechLocal();
+      // Ready or failed now: `speechState` changed in every workspace.
+      if (was && was !== view?.status.state) {
+        void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "org" && q.queryKey[2] === "settings" });
+      }
+      return view;
+    },
+    refetchInterval: (q) => {
+      const s = q.state.data?.status.state;
+      return s === "downloading" || s === "starting" ? 1000 : false;
+    },
+  });
+};
+
+function useSpeechLocalChange(change: (api: ApiClient) => Promise<LocalSpeech>) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => change(api),
+    onSuccess: (view) => {
+      qc.setQueryData(keys.speechLocal, view);
+      // `speechState` follows it in every workspace.
+      void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "org" && q.queryKey[2] === "settings" });
+    },
+  });
+}
+export const useInstallSpeechLocal = () => useSpeechLocalChange((api) => api.system.installSpeechLocal());
+export const useRemoveSpeechLocal = () => useSpeechLocalChange((api) => api.system.removeSpeechLocal());
 
 /**
  * The server's Web Push key (ADR 0071): `null` when this server has Web Push off. Asked only where this
@@ -4027,6 +4066,8 @@ export const usePeopleUsage = (orgId: string, period: { since?: string; until?: 
     queryKey: keys.peopleUsage(orgId, period),
     queryFn: () => api.orgs.peopleUsage(orgId, period),
     enabled,
+    // Another period keeps the last one on screen while it loads.
+    placeholderData: (prev) => prev,
     // ponytail: "Agora" polls; the runs' realtime events could refresh it instead.
     refetchInterval: 15_000,
   });
@@ -5052,6 +5093,21 @@ export function useUndoProposal(orgId: string) {
     onSuccess: (row) => {
       editProposals(qc, orgId, patchIn<Proposal>(row.id, row));
       refreshAccepted(qc, orgId, [row]);
+    },
+    onSettled: () => void refreshProposals(qc, orgId),
+  });
+}
+
+/** "Apply anyway" on a change the agent's review left out: applied as the viewer, the row then reads applied by them. */
+export function useApplyProposal(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.proposals.accept(orgId, id),
+    onSuccess: (row) => {
+      editProposals(qc, orgId, patchIn<Proposal>(row.id, row));
+      refreshAccepted(qc, orgId, [row]);
+      if (row.target.type === "skill") void qc.invalidateQueries({ queryKey: keys.skills(orgId) });
     },
     onSettled: () => void refreshProposals(qc, orgId),
   });
@@ -6866,6 +6922,16 @@ export function useRefuseFolderRequest(orgId: string) {
       api.machines.refuseFolder(orgId, machineId, requestId),
     meta: { silent: true },
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.notifications(orgId) }),
+  });
+}
+
+/** "Liberar uma pasta": the agentes.chat app on the computer asks the person there to pick one (`askFolder`). */
+export function useAskMachineFolder(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: ({ machineId, ...input }: { machineId: string; agentId?: string; requestId?: string }) =>
+      api.machines.askFolder(orgId, machineId, input),
+    meta: { silent: true },
   });
 }
 

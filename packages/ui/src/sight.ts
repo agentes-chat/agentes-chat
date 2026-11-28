@@ -16,6 +16,10 @@ export type Sight = "present" | "idle" | "away" | "hidden";
 export const IDLE_MS = 2 * 60_000;
 
 let current: Sight = "present";
+let lastInput = Date.now();
+
+/** When the person last pressed, typed, touched, scrolled or moved the pointer (`watchSight` follows it). */
+export const lastInputAt = () => lastInput;
 const listeners = new Set<(sight: Sight) => void>();
 
 export const sight = (): Sight => current;
@@ -63,6 +67,7 @@ export function watchSight(idleMs = IDLE_MS): () => void {
   // One timer for a burst of input: it re-arms from the last input when it fires.
   const active = () => {
     last = Date.now();
+    lastInput = last;
     if (timer === undefined) timer = setTimeout(check, idleMs);
     if (!idle) return;
     idle = false;

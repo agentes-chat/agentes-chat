@@ -22,8 +22,11 @@ import {
   commandInReason,
   computerKind,
   computerState,
+  computerStorage,
   desktopTargetOf,
   downloadHref,
+  egressOfflineText,
+  egressViaParts,
   egressViaText,
   folderName,
   foldersOfAgent,
@@ -442,7 +445,7 @@ describe("connected computers helpers (ADR 0036)", () => {
   });
 });
 
-test("an observed exit address updates live and is cleared across connection changes", () => {
+test("an observed exit address updates live, its country left to the server, and is cleared across connection changes", () => {
   const qc = new QueryClient();
   const list = keys.machines("o1");
   qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, egress: null }]);
@@ -451,7 +454,9 @@ test("an observed exit address updates live and is cleared across connection cha
   const current = () => qc.getQueryData<Machine[]>(list)?.[0]?.egress;
   const first = { ip: "8.8.8.8", country: "US", at: "2026-11-01T12:00:00Z" };
   event({ egress: first });
-  expect(current()).toEqual(first);
+  // The event can't tell whether it was seen on the route the agents take now: no flag until the list says.
+  expect(current()).toEqual({ ip: "8.8.8.8", at: first.at });
+  expect(qc.getQueryState(list)?.isInvalidated).toBe(true);
   event({ egress: { ip: "1.1.1.1", country: 42, at: first.at } });
   expect(current()).toEqual({ ip: "1.1.1.1", at: first.at });
   event({ egress: { ip: "<bad>", at: first.at } });
@@ -524,6 +529,31 @@ describe("the shared folder (ADR 0115)", () => {
       'machines.shared.size{"size":"3.2 GB"} · machines.shared.free{"free":"43 GB"}',
     );
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
+  });
+
+  test("a computer's storage: its size, what is in use, what takes it by kind with the rest as Other, and when it fills up", () => {
+    const parts = { projects: 20, apps: 10, agents: 30, caches: 8, system: 0 };
+    const s = computerStorage({ freeGb: 20, use: 0.8, sharedGb: null, sizeGb: 100, parts });
+    expect(s).toMatchObject({ sizeGb: 100, usedGb: 80, freeGb: 20, full: false });
+    // A kind that takes nothing draws nothing; what no kind covers is Other, in its gray.
+    expect(s?.parts.map((p) => [p.key, p.gb])).toEqual([
+      ["projects", 20],
+      ["apps", 10],
+      ["agents", 30],
+      ["caches", 8],
+      ["other", 12],
+    ]);
+    expect(s?.parts.at(-1)).toMatchObject({ light: "#9a9a94", dark: "#6f6f6a" });
+    expect(new Set(s?.parts.map((p) => p.light)).size).toBe(5);
+    expect(computerStorage({ freeGb: 10, use: 0.9, sharedGb: null, sizeGb: 100, parts })?.full).toBe(true);
+    // Counted over what df says is used (rounding): no negative Other.
+    expect(computerStorage({ freeGb: 40, use: 0.6, sharedGb: null, sizeGb: 100, parts })?.parts.at(-1)?.key).toBe(
+      "caches",
+    );
+    // An older runner: the size from what is free and the share in use, no parts yet.
+    expect(computerStorage({ freeGb: 25, use: 0.75, sharedGb: null })).toMatchObject({ sizeGb: 100, parts: [] });
+    expect(computerStorage({ freeGb: 25, use: null, sharedGb: null })).toBeNull();
+    expect(computerStorage(null)).toBeNull();
   });
 
   test("why a sign-in ended: a line per code, the CLI's words under three of them, none when canceled", () => {
@@ -680,6 +710,26 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     ).toBe(t("aiAccounts.connect.needsCloud.stuck", { computer: "Computador da Acme", program: "Codex" }));
   });
 
+  test("Devin on a Windows computer: the plan's line says why it doesn't run there, and the way out", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const line = (kind: "devin" | "grok", os: string) =>
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "system", os },
+        edition: "selfhost",
+        kind,
+        computer: "Estudio-PC",
+      })?.text;
+    expect(line("devin", "windows")).toBe(
+      "O Estudio-PC usa Windows, onde o Devin ainda não roda: lá a CLI dele não consegue manter separado o login de cada conta. Use o Devin num computador Mac ou Linux, ou escolha outra IA.",
+    );
+    // Any other plan off its system keeps the plain line.
+    expect(line("grok", "windows")).toBe(t("brain.reasons.system", { computer: "Estudio-PC", program: "Grok Build" }));
+  });
+
   test("a CLI the apps don't install: the line to run there, for every agent's user in system mode", async () => {
     const { ptBR, resources } = await import("@agenteschat/i18n");
     const i18next = (await import("i18next")).default;
@@ -834,16 +884,36 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
   });
 });
 
-test("whose internet the workspace's computer uses: the computer and who connected it, only while it is online", () => {
+test("whose internet a borrowing computer uses: the computer in the line, who connected it on its name's tip", () => {
   const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
   const via = { machineId: "m-ana", name: "Ana's iMac", userName: "Ana" };
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: via })).toBe(
-    'machines.egress.viaBy{"name":"Ana\'s iMac","person":"Ana"}',
-  );
-  expect(egressViaText(t, { kind: "managed", online: true, egressVia: { ...via, userName: null } })).toBe(
     'machines.egress.via{"name":"Ana\'s iMac"}',
   );
+  const words = ((key: string, o?: Record<string, string>) =>
+    key === "machines.egress.via" ? `Agents use the internet of ${o?.name}` : `Connected by ${o?.name}`) as never;
+  expect(egressViaParts(words, { kind: "managed", online: true, egressVia: via })).toEqual({
+    before: "Agents use the internet of ",
+    name: "Ana's iMac",
+    after: "",
+    by: "Connected by Ana",
+  });
+  expect(
+    egressViaParts(words, { kind: "managed", online: true, egressVia: { ...via, userName: null } })?.by,
+  ).toBeNull();
+  expect(egressViaParts(words, { kind: "managed", online: false, egressVia: via })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: false, egressVia: via })).toBeNull();
-  expect(egressViaText(t, { kind: "connected", online: true, egressVia: via })).toBeNull();
+  // A self-hosted server's own computer, or one marked the workspace's, borrows too (the server sends it only then).
+  expect(egressViaText(t, { kind: "host", online: true, egressVia: via })).toBe(
+    'machines.egress.via{"name":"Ana\'s iMac"}',
+  );
+  expect(egressViaParts(words, { kind: "host", online: true, egressVia: via })?.name).toBe("Ana's iMac");
+  expect(egressViaText(t, { kind: "connected", online: true, egressVia: null })).toBeNull();
+  // Lent "only" and that computer offline: the workspace's computer says its agents have no internet, and whose.
+  expect(egressOfflineText(t, { kind: "managed", egressOffline: via })).toBe(
+    'machines.egress.offline{"name":"Ana\'s iMac"}',
+  );
+  expect(egressOfflineText(t, { kind: "managed", egressOffline: null })).toBeNull();
+  expect(egressOfflineText(t, { kind: "managed" })).toBeNull();
   expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

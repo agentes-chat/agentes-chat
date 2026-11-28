@@ -1,4 +1,5 @@
 import { ACCOUNT_KINDS, BRAIN_EFFORTS, BRAIN_SPEEDS } from "@agenteschat/adapters";
+import { schema } from "@agenteschat/db";
 import {
   AGENT_ACTION_KINDS,
   AGENT_STYLES,
@@ -17,6 +18,23 @@ import {
 } from "@agenteschat/engine";
 import { CONTEXT_LIMITS, ENDPOINT_STYLES, MODEL_TIERS, PROVIDER_IDS } from "@agenteschat/providers";
 import { z } from "@hono/zod-openapi";
+
+/** What we do to the workspace's own computer (`shownMaintenance`, ADR 0257), which the apps say instead of offline. */
+export const MaintenanceView = z
+  .object({
+    kind: z.enum(schema.MAINTENANCE_KINDS).openapi({
+      description:
+        "`moving` to another server, `restarting`, `updating` its software, `converting` its disk, `host_maintenance` of the server it runs on. An app that doesn't know a kind says it is being worked on.",
+    }),
+    since: z.string().openapi({ description: "ISO time this began." }),
+    eta: z.string().nullable().openapi({ description: "ISO time it should be back (away) or done; null: unknown." }),
+    detail: z.enum(schema.MAINTENANCE_DETAILS).nullable().openapi({
+      description:
+        "A move's `copying` (it works, maybe slower) or `handover`, a restart's `unresponsive` (it stopped answering, so it was restarted).",
+    }),
+    away: z.boolean().openapi({ description: "Away for it, said instead of offline. False: it works, maybe slower." }),
+  })
+  .openapi("ComputerMaintenance");
 
 /** Who a task or a wiki page is for (ADR 0151): "only me" is a list of one. Administrators always see it. */
 export const AudienceChoice = z
@@ -667,7 +685,7 @@ export const Agent = z
     }),
     brain: z
       .object({
-        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]),
+        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]),
         model: z
           .string()
           .nullable()
@@ -747,6 +765,11 @@ export const Channel = z
     muted: z.boolean().optional().openapi({
       description: "Channel list only: you muted it, so it never looks unread (`PUT`/`DELETE …/mute`).",
     }),
+    agentIds: z.array(z.uuid()).optional().openapi({
+      description:
+        "Channel list only: its first agents, in the order they joined (at most 4); a personal workspace's group conversation shows them as its face (ADR 0159).",
+    }),
+    agentCount: z.number().int().optional().openapi({ description: "Channel list only: how many agents it has." }),
     lastMessage: z
       .object({
         id: z.uuid(),
@@ -1098,7 +1121,7 @@ export const Model = z
 
 /** ADR 0032: who thinks for an agent. */
 export const BrainKind = z
-  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"])
+  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"])
   .openapi("BrainKind");
 
 export const BrainUnavailable = z.enum([
@@ -1138,10 +1161,18 @@ export const BrainOption = z
           .boolean()
           .optional()
           .openapi({ description: "Cursor: its CLI said the person's plan includes it (others cost API prices)." }),
-        free: z
+        free: z.boolean().optional().openapi({
+          description:
+            "OpenCode: a model of OpenCode's free tier (no key, no cost). Devin: one its plan serves at no cost.",
+        }),
+        efforts: z
+          .array(z.enum(["low", "medium", "high", "xhigh", "max"]))
+          .optional()
+          .openapi({ description: "Devin: the effort levels its variants run at (absent: every level)." }),
+        fast: z
           .boolean()
           .optional()
-          .openapi({ description: "OpenCode: a model of OpenCode's free tier (no key, no cost)." }),
+          .openapi({ description: "Devin: it has a faster variant, which the fast speed runs." }),
       }),
     ),
     defaultModel: z.string().nullable(),

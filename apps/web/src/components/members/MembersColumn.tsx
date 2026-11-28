@@ -11,17 +11,7 @@ import {
   agentWhyKey,
   isOutOfOffice,
 } from "@agenteschat/client/lib/presence";
-import {
-  Avatar,
-  agentGradient,
-  Button,
-  Icon,
-  matchesWords,
-  OPEN_LAYER,
-  OrbitGlyph,
-  RoleMark,
-  SearchField,
-} from "@agenteschat/ui";
+import { Avatar, Button, Icon, matchesWords, OPEN_LAYER, OrbitGlyph, RoleMark, SearchField } from "@agenteschat/ui";
 import { type KeyboardEvent, type TouchEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -34,7 +24,6 @@ import { useOrg } from "@/components/org-context";
 import { StatusLine } from "@/components/Presence";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { unshownRow } from "@/components/Sidebar";
-import { AgentTrail, colorOf } from "@/components/Sky";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { useArrived } from "@/hooks/useArrived";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -435,7 +424,6 @@ function AgentRow({
         data-busy={busy || undefined}
         title={[doing ?? workWords ?? full ?? word, agent.role].filter(Boolean).join(" · ") || undefined}
       >
-        {busy && <AgentTrail color={colorOf(agent)} />}
         {atWork ? <OrbitGlyph appearance={lookOf(agent)}>{face}</OrbitGlyph> : face}
         <span className="members-side__text">
           <span className="members-side__name">
@@ -444,7 +432,7 @@ function AgentRow({
           {/* What it does, for screen readers, after its name (the orbit before it says it to the eye). */}
           {atWork && (doing ?? word) && <span className="ac-visually-hidden">{doing ?? word}</span>}
           {under?.work ? (
-            <AgentWorkLine line={under.work} tone={agentGradient(colorOf(agent))[1]} className="members-side__line" />
+            <AgentWorkLine line={under.work} className="members-side__line" />
           ) : under?.line ? (
             <StatusLine {...under.line} className="members-side__line" />
           ) : under?.why ? (

@@ -52,6 +52,14 @@ export const ptBR = {
     /** A formatted block (JSON) shown as it was written. */
     raw: "Original",
     table: "Tabela",
+    /** A Markdown table's card in a message or a document: its top line, beside Copy and Full screen. */
+    tableRows_one: "Tabela · {{count}} linha",
+    tableRows_other: "Tabela · {{count}} linhas",
+    /** Under a long table in a message, which shows only its first rows: opens the whole table in full screen. */
+    tableSeeAll: "Ver as {{count}} linhas",
+    /** Under the title of a table in full screen. */
+    tableRowCount_one: "{{count}} linha",
+    tableRowCount_other: "{{count}} linhas",
     chartItem: "Item",
     chartShare: "Parte",
     you: "você",
@@ -2442,27 +2450,16 @@ export const ptBR = {
     /** After deleteText when the setor holds channels (ADR 0240). */
     deleteChannels: "Os canais dele voltam para Canais.",
     dropHere: "Arraste agentes para cá",
-    /** The sidebar's empty setor: agents and channels both drop there (ADR 0240). */
-    dropHereAll: "Arraste agentes ou canais para cá",
     moved: "{{name}} foi para o setor {{group}}",
     movedOut: "{{name}} saiu do setor {{group}}",
     undo: "Desfazer",
   },
   sidebarAgents: {
-    options: "Opções de Agentes",
-    add: "Novo agente ou setor",
-    order: "Ordem",
-    sort: { workspace: "Do workspace", mine: "Meus primeiro", working: "Trabalhando primeiro" },
     showAll: "Mostrar agentes que não falam comigo",
-    collapseAll: "Recolher todos",
-    expandAll: "Expandir todos",
-    organize: "Organizar setores na Equipe",
     /** Under the agents, only when some aren't listed (they don't talk to me): it opens Equipe, where all are. */
     more_one: "Mais 1 agente na Equipe",
     more_other: "Mais {{count}} agentes na Equipe",
     newAgent: "Novo agente",
-    working_one: "{{count}} trabalhando",
-    working_other: "{{count}} trabalhando",
     count_one: "{{count}} agente",
     count_other: "{{count}} agentes",
     /** Under an agent's name while it works, lower case like its role. */
@@ -2470,19 +2467,59 @@ export const ptBR = {
     talksOnly: "só fala com {{name}}",
     talksOnlyMore_one: "só fala com {{name}} e mais {{count}}",
     talksOnlyMore_other: "só fala com {{name}} e mais {{count}}",
-    changeGroup: "Mudar de setor",
-    newGroupWith: "Novo setor com {{name}}",
-    dmsEmpty: "Suas conversas com pessoas aparecem aqui.",
   },
-  sidebarPins: {
-    pin: "Fixar no topo",
-    unpin: "Tirar do topo",
-    pinned: "Fixado no topo",
-    full: {
-      agents: "Você já fixou 5 agentes. Tire um do topo para fixar este.",
-      channels: "Você já fixou 5 canais. Tire um do topo para fixar este.",
-      people: "Você já fixou 5 pessoas. Tire uma do topo para fixar esta.",
+  /** Favoritos (ADR 0260): pessoas, agentes e canais que a pessoa deixa no topo da barra lateral, pelo nome. */
+  sidebarFavorites: {
+    title: "Favoritos",
+    add: "Adicionar aos favoritos",
+    remove: "Tirar dos favoritos",
+    marked: "Nos favoritos",
+    full: "Favoritos já tem 50. Tire um para adicionar este.",
+  },
+  /** As seções de canais de cada pessoa (ADR 0260): feitas arrastando um canal sobre outro, ou pelo menu do canal. */
+  sidebarSections: {
+    new: "Nova seção",
+    newName: "Nova seção",
+    moveTo: "Mover para a seção",
+    takeOut: "Tirar da seção",
+    rename: "Renomear seção",
+    delete: "Excluir seção",
+    nameLabel: "Nome da seção",
+  },
+  /** Mensagens diretas com pessoas e agentes juntos (ADR 0260). */
+  sidebarDms: {
+    options: "Opções de Mensagens diretas",
+    show: "Mostrar",
+    shows: {
+      all: "Todos do workspace",
+      recent: "Só conversas recentes",
     },
+    invite: "Convidar pessoas",
+    invited: "Convite enviado",
+    invitedTip: "{{email}} ainda não aceitou o convite",
+    agentTag: "IA",
+    agentTip: "Agente de IA",
+  },
+  /** A coluna de ferramentas da barra lateral (ADR 0260): o que o ponto de um botão diz ao leitor de tela. */
+  sidebarColumn: {
+    label: "Ferramentas",
+    unread: "{{name}}, algo não lido",
+    you: "{{name}}, algo para você",
+  },
+  /** Não lidas (`/unreads`, ADR 0260): tudo o que espera pela pessoa, os itens da caixa de entrada e as conversas não lidas. */
+  unreads: {
+    title: "Não lidas",
+    forYou: "Para você",
+    conversations: "Conversas",
+    markAll: "Marcar tudo como lido",
+    markRead: "Marcar como lida",
+    open: "Abrir",
+    seeInbox: "Ver tudo na caixa de entrada",
+    more_one: "Mais {{count}} mensagem",
+    more_other: "Mais {{count}} mensagens",
+    emptyTitle: "Tudo em dia",
+    emptyText: "Mensagens novas e o que espera por você aparecem aqui.",
+    markedAll: "Tudo marcado como lido",
   },
   /** Configurações › Apps do agentes.chat (`AppsDownload.tsx`): the desktop app for this computer and the phone apps. */
   appsDownload: {
@@ -2894,6 +2931,8 @@ export const ptBR = {
     details: "Detalhes do canal",
     composerLabel: "Mensagem para #{{channel}}",
     composerDm: "Mensagem para {{name}}",
+    /** First in who a personal workspace's group conversation holds ("Você, Teo e Rita"). */
+    groupYou: "Você",
     composerPlaceholder: "Mensagem para #{{channel}} · use @ para chamar um agente",
     send: "Enviar",
     attach: "Anexar arquivo",
@@ -2915,6 +2954,7 @@ export const ptBR = {
     sendFailed: "A mensagem não foi enviada. Tente de novo.",
     reconnecting: "Reconectando ao tempo real…",
     detailsTitle: "#{{channel}}",
+    detailsTitlePersonal: "{{channel}}",
     detailsSearch: "Buscar pessoa ou agente",
     detailsEmpty: "Ninguém encontrado com “{{q}}”.",
     topicLabel: "Descrição do canal",
@@ -2927,9 +2967,11 @@ export const ptBR = {
     replyInThreadsHelp:
       "O agente chamado no canal responde na thread abaixo da mensagem, e o canal mostra uma linha para ela. O que já está em andamento fica onde está.",
     nameTaken: "Já existe #{{name}}.",
+    nameTakenPersonal: "Já existe uma conversa em grupo chamada “{{name}}”.",
     generalName: "O #general mantém o nome.",
     archive: "Arquivar canal",
     archived: "#{{channel}} arquivado. A conversa fica guardada.",
+    archivedPersonal: "“{{channel}}” arquivada. A conversa fica guardada.",
     archivedTitle: "Canais arquivados",
     archivedCount_one: "{{count}} canal arquivado",
     archivedCount_other: "{{count}} canais arquivados",
@@ -2938,6 +2980,7 @@ export const ptBR = {
     restore: "Restaurar",
     restoreName: "Restaurar #{{channel}}",
     restored: "#{{channel}} voltou.",
+    restoredPersonal: "“{{channel}}” voltou.",
     leave: "Sair do canal",
     left: "Você saiu de #{{channel}}",
     leaveTitle: "Sair de #{{channel}}?",
@@ -3413,6 +3456,12 @@ export const ptBR = {
       update_workspace: "Mudar o workspace <b>{{name}}</b>",
       set_action_check_on: "Ligar a conferência do que o time já fez",
       set_action_check_off: "Desligar a conferência do que o time já fez",
+      /** `level`: the choice's title, as on Settings › Approvals ("Never ask"). */
+      set_approvals_level: "Mudar as aprovações do workspace para <b>{{level}}</b>",
+      set_approvals_level_every:
+        "Mudar as aprovações de todos os agentes para <b>{{level}}</b>, também as escolhas próprias",
+      set_agent_approvals_level: "Mudar as aprovações de <b>{{agent}}</b> para <b>{{level}}</b>",
+      set_agent_approvals_level_workspace: "Fazer <b>{{agent}}</b> seguir as aprovações do workspace",
       invite_people: "Convidar <b>{{emails}}</b> para o workspace.",
       /** Under it: the roles every address gets ("Vendas e Suporte"). `count`: how many roles. */
       invite_roles_one: "Com o cargo {{roles}}.",
@@ -3625,6 +3674,8 @@ export const ptBR = {
       antigravity: "O Gemini está sem login neste computador. Conecte uma conta do Gemini na página do\u00a0{{name}}.",
       antigravity_female:
         "O Gemini está sem login neste computador. Conecte uma conta do Gemini na página da\u00a0{{name}}.",
+      devin: "O Devin está sem login neste computador. Conecte uma conta do Devin na página do\u00a0{{name}}.",
+      devin_female: "O Devin está sem login neste computador. Conecte uma conta do Devin na página da\u00a0{{name}}.",
       opencode:
         "O OpenCode não consegue pensar neste computador. Conecte uma chave do OpenCode na página do\u00a0{{name}}.",
       opencode_female:
@@ -3645,6 +3696,8 @@ export const ptBR = {
       antigravity: "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página do\u00a0{{name}}.",
       antigravity_female:
         "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página da\u00a0{{name}}.",
+      devin: "O Devin está sem login no {{computer}}. Conecte uma conta do Devin na página do\u00a0{{name}}.",
+      devin_female: "O Devin está sem login no {{computer}}. Conecte uma conta do Devin na página da\u00a0{{name}}.",
       opencode:
         "O OpenCode não consegue pensar no {{computer}}. Conecte uma chave do OpenCode na página do\u00a0{{name}}.",
       opencode_female:
@@ -3722,6 +3775,7 @@ export const ptBR = {
       cursor: "Conectar o seu plano do Cursor",
       grok: "Conectar o seu plano do Grok",
       gemini: "Conectar o seu plano do Gemini",
+      devin: "Conectar o seu plano do Devin",
       zen: "Conectar o OpenCode",
       api_key: "Adicionar uma chave de API",
     },
@@ -3908,6 +3962,7 @@ export const ptBR = {
           "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.",
         windowsOne: "No Windows, um computador usa uma conta do Gemini por vez.",
       },
+      devin: { title: "Seu plano do Devin", tiers: "Free, Pro, Max ou Teams" },
       zen: { title: "OpenCode", tiers: "Modelos grátis, ou a sua chave do OpenCode" },
       zai: { tiers: "Lite, Pro ou Max" },
       kimi: { tiers: "Plus, Pro, Max ou Ultra" },
@@ -4010,6 +4065,7 @@ export const ptBR = {
       cursor: "O Cursor entrou como {{email}}, não como {{account}}. Saia na página do Cursor e tente de novo.",
       grok: "O Grok entrou como {{email}}, não como {{account}}. Saia na página do Grok e tente de novo.",
       antigravity: "O Gemini entrou como {{email}}, não como {{account}}. Saia na página do Google e tente de novo.",
+      devin: "O Devin entrou como {{email}}, não como {{account}}. Saia na página do Devin e tente de novo.",
       opencode: "O OpenCode entrou como {{email}}, não como {{account}}. Tente de novo com a chave certa.",
     },
     useAnyway: "Usar {{email}}",
@@ -4417,6 +4473,10 @@ export const ptBR = {
       changed_update_workspace: "Mudei o workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Liguei a conferência do que o time já fez",
       changed_set_action_check_off: "Desliguei a conferência do que o time já fez",
+      changed_set_approvals_level: "Mudei as aprovações do workspace para <b>{{level}}</b>",
+      changed_set_approvals_level_every: "Mudei as aprovações de todos os agentes para <b>{{level}}</b>",
+      changed_set_agent_approvals_level: "Mudei as aprovações de <b>{{agent}}</b> para <b>{{level}}</b>",
+      changed_set_agent_approvals_level_workspace: "<b>{{agent}}</b> voltou a seguir as aprovações do workspace",
       changed_invite_people: "Convidei <b>{{invited}}</b> para o workspace",
       changed_remove_ai_key: "Apaguei a chave de API <b>{{name}}</b>",
     },
@@ -4521,8 +4581,9 @@ export const ptBR = {
     namePlaceholderPersonal: "ex.: viagem",
     nameHelp: "Letras minúsculas, números e hífens. Aparece como #{{name}}.",
     nameInvalid: "Use letras minúsculas, números e hífens, começando por letra ou número.",
+    nameInvalidPersonal: "Dê um nome de até 80 caracteres, numa linha só.",
     nameTaken: "Já existe um canal #{{name}}.",
-    nameTakenPersonal: "Já existe uma conversa em grupo chamada #{{name}}.",
+    nameTakenPersonal: "Já existe uma conversa em grupo chamada “{{name}}”.",
     topic: "Descrição",
     topicPlaceholder: "Do que se fala aqui",
     visibility: "Quem pode entrar",
@@ -4553,6 +4614,7 @@ export const ptBR = {
     selected_one: "{{count}} selecionado",
     selected_other: "{{count}} selecionados",
     create: "Criar #{{name}}",
+    createPersonal: "Criar conversa",
   },
   channelCategories: {
     undo: "Desfazer",
@@ -4571,6 +4633,7 @@ export const ptBR = {
     invitePersonal: "Convidar {{email}} para o seu workspace e para #{{channel}}",
     inviteOrgPersonal: "Convidar {{email}} para o seu workspace",
     addTitle: "Adicionar a #{{channel}}",
+    addTitlePersonal: "Adicionar a {{channel}}",
     addSearch: "Buscar pessoa ou agente",
     addEmpty: "Ninguém fora do canal com “{{q}}”.",
     addEveryone: "Todo mundo da {{org}} já está em #{{channel}}.",
@@ -4579,6 +4642,7 @@ export const ptBR = {
     actions: "Opções de {{name}}",
     remove: "Tirar do canal",
     removeTitle: "Tirar {{name}} de #{{channel}}?",
+    removeTitlePersonal: "Tirar {{name}} de {{channel}}?",
     removePersonBody: "Deixa de ver o canal e de receber as mensagens daqui. Dá para adicionar de novo depois.",
     removeAgentBody: "Para de ler e de responder neste canal. Dá para adicionar de novo depois.",
     removeConfirm: "Tirar do canal",
@@ -5861,6 +5925,7 @@ export const ptBR = {
       adminAskChannel: "<b>{{name}}</b> pede para adicionar <b>{{agent}}</b> a #{{label}}",
       adminAskCreate: "<b>{{name}}</b> pede para poder criar agentes",
       adminAskWebhook: "<b>{{name}}</b> pede para ligar o webhook do {{service}} para rotinas",
+      adminAskVoice: "<b>{{name}}</b> pede para ligar as mensagens de voz",
       invitationAccepted: "<b>{{name}}</b> aceitou seu convite e entrou na {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> aceitou seu convite",
       reaction_one: "<b>{{names}}</b> reagiu à sua mensagem",
@@ -6449,6 +6514,7 @@ export const ptBR = {
             cursor: "Adicionar conta do Cursor",
             grok: "Adicionar conta do Grok",
             antigravity: "Adicionar conta do Gemini",
+            devin: "Adicionar conta do Devin",
             opencode: "Adicionar chave do OpenCode",
           },
           stepOne: {
@@ -6456,6 +6522,7 @@ export const ptBR = {
             codex: "A conta com o seu plano",
             cursor: "A conta com o seu plano",
             grok: "A conta com o seu plano",
+            devin: "A conta com o seu plano",
             antigravity: "A conta do Google com o seu plano",
             antigravityEnterprise: "A sua conta do Gemini Enterprise",
           },
@@ -6468,6 +6535,7 @@ export const ptBR = {
             cursor: "Entrar com Cursor",
             grok: "Entrar com Grok",
             antigravity: "Entrar com Google",
+            devin: "Entrar com Devin",
           },
           opencodeFree:
             "Os modelos grátis do OpenCode não pedem chave. Uma chave do console do OpenCode libera os pagos.",
@@ -6487,6 +6555,9 @@ export const ptBR = {
           /** The Gemini sign-in's second step: Google's page shows a code and takes it out of its own address. */
           stepTwoGoogle: "Cole o código que o Google mostrar",
           codeLabelGoogle: "Código do Google",
+          stepTwoDevin: "Cole o código que o Devin mostrar",
+          codeHintDevin: "Cole o código que a página do Devin mostra, não o endereço da página.",
+          codeLabelDevin: "Código do Devin",
           /** That step's ⓘ. */
           codeHintGoogle: "Cole o código que a página do Google mostra, não o endereço da página.",
           /** Under the field while it holds an address with no code in it (never sent). */
@@ -6534,6 +6605,8 @@ export const ptBR = {
             grok: "O Grok entrou como {{account}}, uma conta que você já conectou. Para usar outra, saia na página do Grok e tente de novo.",
             antigravity:
               "O Gemini entrou como {{account}}, uma conta que você já conectou. Para usar outra, saia na página do Google e tente de novo.",
+            devin:
+              "O Devin entrou como {{account}}, uma conta que você já conectou. Para usar outra, saia na página do Devin e tente de novo.",
             opencode: "Essa chave do OpenCode já está conectada como {{account}}.",
           },
           startFailed: "O {{computer}} não respondeu. Tente de novo em instantes.",
@@ -7234,6 +7307,7 @@ export const ptBR = {
     undoneBy: "Desfeito por {{name}}",
     undoneByYou: "Desfeito por você",
     undo: "Desfazer",
+    applyAnyway: "Aplicar mesmo assim",
     /** A card whose rows ended apart. */
     appliedSome: "{{done}} de {{total}} aplicadas",
     waitingAdmin: "Aguardando um admin",
@@ -10299,7 +10373,6 @@ export const ptBR = {
       machine_access_granted: "Liberado: {{agent}} já pode usar {{folder}} no {{computer}}",
       machine_access_denied: "Recusado: {{agent}} não vai usar {{folder}} no {{computer}}",
       machine_access_expired: "O pedido da pasta {{folder}} no {{computer}} ficou sem resposta",
-      access_command: "Sem o app no computador? Rode no Terminal dele:",
     },
     suggestion: {
       pending: "Sugestão para a missão",
@@ -10972,7 +11045,6 @@ export const ptBR = {
     filter: {
       person: "Pessoas",
       agent: "Agentes",
-      routine: "Rotinas",
       reminder: "Lembretes",
       deadline: "Prazos de tarefas",
     },
@@ -11006,12 +11078,6 @@ export const ptBR = {
         declined: "Você não vai.",
       },
     },
-    every: { hour: "a cada hora", hours: "a cada {{count}} h", minutes: "a cada {{count}} min" },
-    perDay: "{{count}}× por dia",
-    runs_one: "{{count}} execução nestes dias.",
-    runs_other: "{{count}} execuções nestes dias.",
-    /** Under a run's title in its details; the agent's name and face are the line above. */
-    routineDetail: "Rotina · entrega em {{target}}",
     deadlineDetail: "Prazo da tarefa.",
     reminderBy: "Criado por {{name}}",
     /** Under a reminder's title in its details; the agent that posts it is the line above. */
@@ -11019,21 +11085,11 @@ export const ptBR = {
     cancelReminder: "Cancelar lembrete",
     reminderCancelled: "Lembrete cancelado",
     openIssue: "Abrir tarefa",
-    openRoutines: "Ver em Rotinas",
-    openRoutine: "Abrir rotina",
-    runAria: "Rotina {{name}}, {{time}}",
     /** An item's hover: its name, whose it is, when. */
     runHint: "{{name}} · {{agent}} · {{time}}",
-    runsAt: "Rotinas às {{time}}",
-    /** Under a stack of routine runs in the week: the runs it doesn't show, which it opens. */
-    moreRuns_one: "+{{count}} rotina",
-    moreRuns_other: "+{{count}} rotinas",
-    runTimes: "×{{count}}",
-    result: { ok: "respondeu", silent: "nada novo", failed: "falhou", skipped: "não rodou" },
-    lastResult: "última: {{result}}",
     upcomingMeta: "{{day}} · {{time}}",
     emptyHint: "Nada marcado. Arraste para criar ou aperte N",
-    agendaEmpty: "Eventos e rotinas dos próximos 30 dias aparecem aqui.",
+    agendaEmpty: "Eventos e lembretes dos próximos 30 dias aparecem aqui.",
     agendaEmptyTitle: "Agenda livre nos próximos 30 dias",
     noResults: "Nada com esse filtro.",
     more: "+{{count}} mais",
@@ -11696,6 +11752,7 @@ export const ptBR = {
       cursor: "Cursor",
       grok: "Grok",
       antigravity: "Gemini",
+      devin: "Devin",
       opencode: "OpenCode",
       needs: {
         keys: "Atualize o agentes no computador para usar a chave de um plano",
@@ -12035,6 +12092,7 @@ export const ptBR = {
     silent: "Não ouvi nada. Nada foi enviado.",
     notSent: "Não deu para enviar o áudio.",
     limit: "O limite de áudios de hoje acabou. Escreva por aqui ou tente de novo amanhã.",
+    plan: "As mensagens de voz vêm com um plano do agentes.chat. Você ainda pode escrever aqui.",
     micBlocked: "O microfone está bloqueado",
     micBlockedHint: "Libere o microfone nos ajustes do aparelho para gravar.",
     openSettings: "Abrir ajustes",
@@ -12069,9 +12127,10 @@ export const ptBR = {
       title: "Mensagens de voz",
       on: "Mensagens de voz",
       onHelp: "Quem está no workspace pode mandar áudio nas conversas.",
-      noEngine: "As mensagens de voz ainda não estão disponíveis aqui.",
-      noEngineAsk: "As mensagens de voz ainda não estão ligadas. Quem cuida deste servidor liga, nesta mesma página.",
-      noEngineHere: "As mensagens de voz ligam quando você escolher abaixo quem transforma a voz em texto.",
+      noEngine: "Por enquanto as mensagens de voz vão como áudio, e os agentes ainda não conseguem ouvi-las.",
+      noEngineAsk:
+        "Por enquanto as mensagens de voz vão como áudio, e os agentes não conseguem ouvi-las. Quem cuida deste servidor escolhe o que transforma a voz em texto, nesta mesma página.",
+      noEngineHere: "As mensagens de voz vão como áudio até você escolher abaixo o que transforma a voz em texto.",
       engineTitle: "Quem transforma a voz em texto",
       own: "Servidor próprio",
       ownHelp: "Whisper ou Parakeet na sua máquina. O áudio não sai dela.",
@@ -12079,10 +12138,61 @@ export const ptBR = {
       key: "Chave da {{name}}",
       keyPlaceholder: "Cole aqui",
       test: "Testar",
-      tested: "Funcionou. O microfone já aparece para todo mundo.",
+      tested: "Funcionou. Agora as mensagens de voz chegam aos agentes como texto.",
       sealed: "Fica cifrada no seu servidor e nunca volta para a tela.",
       leaves: "O áudio das mensagens de voz vai para a {{name}} para virar texto.",
       invalid: "A chave salva não abre neste servidor. Cole de novo.",
+    },
+    local: {
+      titleHere: "Neste computador",
+      titleServer: "Neste servidor",
+      titlePhone: "No computador do servidor",
+      textHere: "Parakeet, um download de {{size}}. A voz fica neste computador. 25 idiomas europeus.",
+      textServer: "Parakeet, um download de {{size}}. A voz fica neste servidor. 25 idiomas europeus.",
+      download: "Baixar e ligar",
+      downloading: "Baixando o modelo de voz",
+      progress: "{{done}} de {{total}}",
+      meanwhile: "Você já pode gravar. As mensagens vão como áudio até ficar pronto.",
+      downloadingPhone: "Baixando o modelo de voz no computador do servidor. Você já pode gravar.",
+      starting: "Ligando…",
+      licenses: "Licenças dos modelos",
+      tooSmall:
+        "Este computador tem {{memory}} de memória e o modelo de voz precisa de 8 GB. Use a chave de um provedor abaixo.",
+      noDisk:
+        "{{free}} livres neste disco e o modelo de voz precisa de {{need}}. Libere espaço ou use a chave de um provedor abaixo.",
+      noBuild: "Ainda não há modelo de voz para este computador. Use a chave de um provedor abaixo.",
+      stopped: "O download parou: {{detail}}",
+      diskFull: "O disco encheu durante o download. Libere espaço e tente de novo.",
+      didntStart: "O modelo de voz não ligou: {{detail}}",
+      resume: "Continuar",
+      copy: "Copiar detalhes",
+      copied: "Detalhes copiados",
+    },
+    offer: {
+      title: "Mensagens de voz",
+      download: "Baixar {{size}} e ligar",
+      choose: "Escolher como",
+      askOwner: "Transformar voz em texto neste servidor",
+      askMember: "Pedir para ligar as mensagens de voz",
+      on: "As mensagens de voz estão ligadas: os agentes leem como texto.",
+    },
+    setup: {
+      memberTitle: "A voz ainda não está ligada aqui",
+      memberText:
+        "Sua mensagem vai como áudio que as pessoas podem ouvir. Os agentes só vão ouvir quando {{name}} escolher o que transforma a voz em texto.",
+      memberTextNoName:
+        "Sua mensagem vai como áudio que as pessoas podem ouvir. Os agentes só vão ouvir quando quem cuida deste servidor escolher o que transforma a voz em texto.",
+      ask: "Pedir para {{name}}",
+      asked: "Pedimos para {{name}} ligar",
+      recordAnyway: "Gravar mesmo assim",
+      ownerTitle: "Escolha o que transforma a voz em texto",
+      ownerText:
+        "Até lá, as mensagens de voz vão como áudio que as pessoas podem ouvir, e os agentes não conseguem ouvi-las.",
+      readyTitle: "As mensagens de voz estão ligadas",
+      readyText: "O que você fala chega aos agentes como texto.",
+      record: "Gravar uma mensagem",
+      ownerPhone:
+        "Escolha em Configurações › Voz na web ou no app para computador. Até lá, as mensagens de voz vão como áudio que as pessoas podem ouvir, e os agentes não conseguem ouvi-las.",
     },
   },
   /** GIFs and the agents' stickers in chat (ADR 0091). */
@@ -13245,6 +13355,7 @@ export const ptBR = {
       cursor: "{{model}} pelo plano do Cursor",
       grok: "{{model}} pelo plano do Grok",
       gemini: "{{model}} pelo plano do Gemini",
+      devin: "{{model}} pelo plano do Devin",
       zen: "{{model}} pelo OpenCode",
       coding: "{{model}} pelo {{plan}}",
       claudeOf: "{{model}} pelo plano do Claude de {{owner}}",
@@ -13252,6 +13363,7 @@ export const ptBR = {
       cursorOf: "{{model}} pelo plano do Cursor de {{owner}}",
       grokOf: "{{model}} pelo plano do Grok de {{owner}}",
       geminiOf: "{{model}} pelo plano do Gemini de {{owner}}",
+      devinOf: "{{model}} pelo plano do Devin de {{owner}}",
       zenOf: "{{model}} pelo OpenCode de {{owner}}",
       codingOf: "{{model}} pelo {{plan}} de {{owner}}",
       claudeAuto: "Plano do Claude",
@@ -13259,6 +13371,7 @@ export const ptBR = {
       cursorAuto: "Plano do Cursor",
       grokAuto: "Plano do Grok",
       geminiAuto: "Plano do Gemini",
+      devinAuto: "Plano do Devin",
       zenAuto: "OpenCode",
       codingAuto: "{{plan}}",
       claudeAutoOf: "Plano do Claude de {{owner}}",
@@ -13266,6 +13379,7 @@ export const ptBR = {
       cursorAutoOf: "Plano do Cursor de {{owner}}",
       grokAutoOf: "Plano do Grok de {{owner}}",
       geminiAutoOf: "Plano do Gemini de {{owner}}",
+      devinAutoOf: "Plano do Devin de {{owner}}",
       zenAutoOf: "OpenCode de {{owner}}",
       codingAutoOf: "{{plan}} de {{owner}}",
       on: "{{line}} no {{computer}}",
@@ -13281,6 +13395,7 @@ export const ptBR = {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
     },
     foot: {
       api: "Pela API",
@@ -13293,6 +13408,7 @@ export const ptBR = {
     cursorText: "Usa o plano do Cursor de quem conectou o computador.",
     grokText: "Usa o plano do Grok de quem conectou o computador.",
     antigravityText: "Usa o plano do Gemini de quem conectou o computador.",
+    devinText: "Usa o plano do Devin de quem conectou o computador.",
     opencodeText: "Os modelos grátis do OpenCode, ou a chave do OpenCode de quem conectou o computador.",
     /** Cursor's models (ADR 0114), where its CLI said which the plan includes. */
     cursorModel: { inPlan: "No seu plano do Cursor", apiPrice: "O Cursor cobra pelo preço da API" },
@@ -13313,6 +13429,8 @@ export const ptBR = {
       home_only: "O {{program}} está instalado só para o root no {{computer}}, onde os agentes não chegam.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
+      systemDevin:
+        "O {{computer}} usa Windows, onde o Devin ainda não roda: lá a CLI dele não consegue manter separado o login de cada conta. Use o Devin num computador Mac ou Linux, ou escolha outra IA.",
       /** Codex on a Windows computer where neither MXC nor Codex's own sandbox could start. */
       windows_sandbox:
         "O Windows do {{computer}} não consegue isolar os comandos do {{program}}. Escolha o Claude ou uma chave de API, ou atualize esse computador para o Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia.",
@@ -13375,6 +13493,7 @@ export const ptBR = {
       cursor: "Cursor · {{model}}",
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
+      devin: "Devin CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
     },
     mission: {
@@ -13910,6 +14029,23 @@ export const ptBR = {
     s3: "Seu próprio armazenamento",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 ou outro compatível com S3.",
     current: "Em uso",
+    computer: {
+      title: "Computador do workspace",
+      used: "{{used}} de {{size}} em uso",
+      bar: "Disco do computador do workspace",
+      measuring: "Medindo o que ocupa o espaço.",
+      part: {
+        projects: "Projetos e código",
+        apps: "Apps e ferramentas",
+        agents: "Arquivos dos agentes",
+        caches: "Caches e temporários",
+        system: "Sistema",
+        other: "Outros",
+        free: "Livre",
+      },
+      full: "Quase cheio, restam {{free}}. Um agente pode limpar caches e arquivos temporários e apagar o que ninguém usa mais.",
+      ask: "Libere espaço no computador do workspace: limpe caches e arquivos temporários (gerenciadores de pacotes, navegadores, ferramentas de build) e me diga o que mais ocupa espaço.",
+    },
     // What the option in use holds, no-break spaces inside each part: a narrow card breaks the line after its "·".
     usage: {
       files: "{{size}}\u00a0de\u00a0arquivos",
@@ -15500,6 +15636,9 @@ export const ptBR = {
       desktop_read: "Ler a tela",
       desktop_screenshot: "Tirar uma captura de tela",
       desktop_ask_person: "Pedir para alguém assumir o computador",
+      apps_list: "Ver os apps abertos",
+      apps_read: "Ler um app",
+      apps_act: "Usar um app",
       computer_use: "Usar o computador",
       computer_status: "Ver como está o computador",
       left_click: "Clicar",
@@ -16546,6 +16685,7 @@ export const ptBR = {
       generalStays: "Todo mundo fica no #general.",
       leadChannelOnly: "Só canais têm agente responsável.",
       leadNotMember: "O agente responsável precisa estar no canal.",
+      groupNameInvalid: "Dê um nome de até 80 caracteres, numa linha só.",
       mcpUnreachable: "Não foi possível conectar ao servidor MCP. Confira o endereço e tente de novo.",
       notApproved: "Este serviço ainda não aprovou o agentes.chat.",
       alreadyInvited: "Essa pessoa já tem um convite.",
@@ -16878,6 +17018,7 @@ export const ptBR = {
       shareOwnerOnly:
         "Só quem conectou este computador pode deixar os agentes usarem a internet dele. Você pode desligar.",
       shareConnectedOnly: "Só um computador que alguém conectou pode compartilhar a internet com os agentes.",
+      shareOff: "Ligue “Agentes usam a internet deste computador” primeiro e depois escolha usar só a internet dele.",
       tasksOwnerOnly: "Só quem conectou este computador pode mudar quantas tarefas ele roda ao mesmo tempo.",
       tasksCloud: "A Cloud dimensiona sozinha o espaço deste computador para tarefas.",
       notHome: "Os agentes moram no computador do workspace e usam este quando o citam pelo nome.",
@@ -17043,14 +17184,15 @@ export const ptBR = {
         "O download do navegador dos agentes veio com defeito e não foi usado. Ele tenta de novo no próximo uso.",
       desktop_use_linux: "O uso da área de trabalho roda em computadores Linux com as áreas de trabalho dos agentes.",
       desktop_use_own_user:
-        "O uso da área de trabalho precisa que cada agente trabalhe como seu próprio usuário neste computador (modo sistema). Aqui todos trabalham como o usuário do runner.",
+        "O uso da área de trabalho precisa que cada agente trabalhe como seu próprio usuário neste computador (modo sistema). Aqui todos trabalham como o mesmo usuário, o que roda o agentes.chat.",
       desktop_use_install: "Instale neste computador o que o uso da área de trabalho precisa:",
       desktop_unavailable: "As áreas de trabalho dos agentes não rodam neste computador.",
       desktop_linux: "As áreas de trabalho dos agentes rodam só em computadores Linux.",
       desktop_install: "Instale neste computador as áreas de trabalho dos agentes:",
       not_as_root:
-        "As áreas de trabalho e os terminais dos agentes nunca rodam como root. Rode o runner como um usuário comum.",
-      runner_bun_old: "Isso precisa do runner no Bun 1.3.5 ou mais novo. Atualize o runner neste computador.",
+        "As áreas de trabalho e os terminais dos agentes nunca rodam como root. Rode o agentes.chat como um usuário comum.",
+      runner_bun_old:
+        "Isso precisa do agentes.chat no Bun 1.3.5 ou mais novo. Atualize o agentes.chat neste computador.",
       terminal_unsupported: "Os terminais rodam só em computadores Linux e Mac.",
     },
     egress: {
@@ -17060,13 +17202,51 @@ export const ptBR = {
       hint: "O endereço que os sites veem quando os agentes navegam. Ele acompanha as mudanças de rede do computador.",
       waiting: "Reconectando a internet dos agentes. As conexões deles esperam até ela voltar.",
       via: "Agentes usam a internet de {{name}}",
-      viaBy: "Agentes usam a internet de {{name}} ({{person}})",
       viaHint: "Os sites veem a localização desse computador. Quem o conectou pode desligar na página dele.",
+      offline: "Agentes sem internet: {{name}} está offline",
     },
-    moving: {
-      short: "Mudando de servidor",
-      line: "Mudando de servidor… volta em alguns minutos",
-      named: "{{computer}} está mudando de servidor… volta em alguns minutos",
+    maintenance: {
+      short: {
+        moving: "Mudando de servidor",
+        restarting: "Reiniciando",
+        updating: "Atualizando",
+        converting: "Melhorando o disco",
+        host_maintenance: "Manutenção",
+        other: "Manutenção",
+      },
+      what: {
+        moving: "Mudando de servidor",
+        copying: "Copiando para um novo servidor",
+        restarting: "Reiniciando",
+        updating: "Atualizando o software",
+        converting: "Melhorando o disco",
+        host_maintenance: "O servidor dele está em manutenção",
+        other: "Em manutenção",
+      },
+      line: "{{what}}… {{when}}",
+      named: "{{computer}}: {{line}}",
+      back: "volta em cerca de {{time}}",
+      backSoon: "volta em alguns minutos",
+      late: "está levando um pouco mais que o previsto",
+      slower: "pode ficar mais lento enquanto isso",
+      slowerFor: "pode ficar mais lento por cerca de {{time}}",
+      why: {
+        moving: "Estamos mudando ele para um novo servidor.",
+        copying: "Estamos copiando os arquivos dele para um novo servidor enquanto ele trabalha.",
+        handover: "Estamos passando as últimas mudanças dele para o novo servidor.",
+        restarting: "Estamos reiniciando ele.",
+        unresponsive: "Ele parou de responder, então reiniciamos automaticamente.",
+        updating: "Estamos atualizando o software dele.",
+        converting: "Estamos passando o disco dele para um armazenamento mais rápido.",
+        host_maintenance: "O servidor onde ele roda está em manutenção.",
+        other: "Estamos fazendo uma manutenção nele.",
+      },
+      since: "Desde {{time}}",
+      expectedBack: "Previsão de volta por volta de {{time}}",
+      expectedDone: "Previsão de término por volta de {{time}}",
+      meanwhile: "As mensagens para os agentes dele esperam e seguem sozinhas quando ele voltar.",
+      working: "Os agentes dele continuam trabalhando enquanto isso.",
+      about: "O que está acontecendo",
     },
     online: "Online",
     offline: "Offline",
@@ -17082,6 +17262,7 @@ export const ptBR = {
         opencode: "o OpenCode",
         grok: "o Grok Build",
         antigravity: "o Antigravity CLI",
+        devin: "o Devin CLI",
         commands: "os comandos",
         browser: "o navegador",
         desktop: "a tela",
@@ -17138,6 +17319,14 @@ export const ptBR = {
     removed: "{{name}} foi removido.",
     name: "Nome do computador",
     nameHelp: "Como ele aparece para as pessoas e os agentes.",
+    defaultName: {
+      model: "{{model}} do {{name}}",
+      model_female: "{{model}} da {{name}}",
+      linux: "Computador Linux do {{name}}",
+      linux_female: "Computador Linux da {{name}}",
+      other: "Computador do {{name}}",
+      other_female: "Computador da {{name}}",
+    },
     os: { linux: "Linux", darwin: "macOS", windows: "Windows", other: "Outro sistema" },
     commandCopied: "Comando copiado. Cole no Terminal do computador.",
     // agentes for Mac (ADR 0036): this Mac, from the site inside the app.
@@ -17251,6 +17440,7 @@ export const ptBR = {
         cursor: "Cursor",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         opencode: "OpenCode",
         commands: "Comandos",
         browser: "Navegador",
@@ -17262,6 +17452,7 @@ export const ptBR = {
         cursor: "Como o Claude Code, com uma conta do Cursor. Só nas pastas liberadas.",
         grok: "Como o Claude Code, com uma conta do Grok. Só nas pastas liberadas.",
         antigravity: "Como o Claude Code, com uma conta do Gemini. Só nas pastas liberadas.",
+        devin: "Como o Claude Code, com uma conta do Devin. Só nas pastas liberadas.",
         opencode: "Como o Claude Code, com os modelos grátis do OpenCode ou uma chave dele. Só nas pastas liberadas.",
         commands: "Roda comandos do Terminal, como testes e builds.",
       },
@@ -17281,6 +17472,13 @@ export const ptBR = {
       grantTextTerminal: "Liberar é no próprio computador, no Terminal dele:",
       grantTextAdmin: "Liberar é no próprio computador, no Terminal dele, como administrador:",
       grantTerminal: "Sem o app? No terminal do computador:",
+      pickText: "O app do agentes.chat abre a escolha de pasta no {{machine}}, para quem estiver lá escolher.",
+      pick: "Liberar uma pasta",
+      picked: "A escolha de pasta abriu no {{machine}}. Escolha a pasta lá.",
+      pickWaiting: "Esperando a escolha da pasta no {{machine}}",
+      grantTerminalMore: "Sem o app lá? Use o Terminal",
+      noApp: "Este computador não tem o app do agentes.chat para escolher a pasta. Libere pelo Terminal dele.",
+      requestDone: "Este pedido já foi respondido ou expirou.",
       /** Under a one-click button: the same as a command to paste on that computer. */
       preferTerminal: "Prefiro no Terminal",
       grantOnlyOwner: "Só {{name}} libera, no próprio computador. Se precisar de algo, peça para ele ou ela.",
@@ -17289,6 +17487,22 @@ export const ptBR = {
     },
   },
   devices: {
+    permission: {
+      title: "Aguardando {{permission}} em {{computer}}",
+      next: "Permita no app agentes.chat nesse computador.",
+      askedBy: "Pedido por {{agent}} para rodar {{trigger}}",
+      asked: "Necessário para rodar {{trigger}}",
+      names: {
+        app_management: "Gerenciamento de Apps",
+        screen: "Gravação de Tela",
+        accessibility: "Acessibilidade",
+        disk: "Acesso Total ao Disco",
+        network: "Rede Local",
+        camera: "Câmera",
+        microphone: "Microfone",
+        automation: "Automação",
+      },
+    },
     leadCloud: "Onde seus agentes trabalham: o computador do workspace e os dispositivos que as pessoas conectam.",
     lead: "Onde seus agentes trabalham: os computadores e celulares que as pessoas conectam.",
     connect: "Conectar um dispositivo",
@@ -17304,6 +17518,10 @@ export const ptBR = {
     cloud: "Cloud",
     cpus_one: "{{count}} CPU",
     cpus_other: "{{count}} CPUs",
+    cores_one: "{{count}} núcleo",
+    cores_other: "{{count}} núcleos",
+    threads_one: "{{count}} thread",
+    threads_other: "{{count}} threads",
     memory: "{{gb}} GB",
     system: { android: "Android {{version}}", ios: "iOS {{version}}" },
     phoneKind: { emulator: "Emulador", simulator: "Simulador" },
@@ -17328,6 +17546,22 @@ export const ptBR = {
     forgotten: "{{name}} esquecido.",
     stop: "Parar",
     stopped: "Parado. {{name}} está livre.",
+    /** Ligar / Desligar on an iOS simulator or an Android emulator, which its computer starts or shuts down. */
+    power: {
+      start: "Ligar",
+      stop: "Desligar",
+      starting: "{{name}} está ligando. Fica pronto em instantes.",
+      stopped: "{{name}} foi desligado.",
+      toolMissingIos: "{{computer}} precisa do Xcode para rodar simuladores. Instale o Xcode pela App Store nesse Mac.",
+      toolMissingAndroid:
+        "{{computer}} não tem o Android Emulator. Instale em Android Studio › SDK Manager › SDK Tools nesse computador.",
+      gone: "{{name}} não está mais em {{computer}}: foi apagado lá. Esqueça-o aqui, ou crie de novo lá.",
+      busy: "{{name}} está em uso agora. Pare o que o usa primeiro, ou tente de novo quando estiver livre.",
+      /** `why`: the computer's own words, as its tools said them (in English). */
+      startFailed: "{{name}} não ligou. {{computer}} disse: {{why}}",
+      stopFailed: "{{name}} não desligou. {{computer}} disse: {{why}}",
+      notSimulator: "Só um simulador ou um emulador liga e desliga por aqui.",
+    },
     showMe: "Mostrar como",
     notFound: "Este dispositivo não está mais aqui",
     notFoundText: "Ele foi removido, ou este link está errado.",
@@ -17346,25 +17580,36 @@ export const ptBR = {
     belongsHint: "Ele fica quando quem o conectou sai, e todos podem usá-lo enquanto ninguém for dono dele.",
     spillOwn: "Ajudar quando o computador da equipe estiver cheio ou fora",
     spillOwnHint:
-      "Quando o computador dos seus agentes estiver cheio ou fora, as respostas, os pedidos e as rotinas deles podem pensar aqui com o seu login.",
+      "Quando o computador da equipe estiver cheio ou fora, as respostas, os pedidos e as rotinas dos seus agentes podem pensar aqui, usando as contas de IA conectadas neste computador.",
     spillTeamHint:
-      "Quando o computador de um agente estiver cheio ou fora, as respostas, os pedidos e as rotinas dele podem pensar aqui com o login do dono dele neste computador.",
+      "Quando o computador de um agente estiver cheio ou fora, as respostas, os pedidos e as rotinas dele podem pensar aqui, usando a conta de IA que o dono dele conectou neste computador.",
     spillWorkspaceOff: "Um admin desativou isso para o workspace.",
-    /** `machines.spill_first`: its owner's agents' work starts here first. */
-    spillFirst: "Usar este computador para os trabalhos dos meus agentes",
-    spillFirstHint:
-      "Os pedidos, as rotinas e os trabalhos longos dos seus agentes começam aqui sempre que ele estiver livre, com a IA que você conectou nele. Respostas para pessoas só começam aqui quando o computador da equipe estiver cheio ou fora.",
+    helpUse: "Como ajuda os seus agentes",
+    helpUses: {
+      off: "Não ajuda",
+      help: "Só como reserva",
+      first: "Primeiro para os meus agentes",
+    },
+    helpUseHint:
+      "Só como reserva: seus agentes vêm para cá quando o computador da equipe estiver cheio ou fora. Primeiro para os meus agentes: os pedidos, as rotinas e os trabalhos longos deles começam aqui sempre que este estiver livre, e as respostas para pessoas só quando o da equipe estiver cheio ou fora. Os dois usam as contas de IA conectadas neste computador.",
+    helpUseTeamHint:
+      "Só como reserva: os agentes de qualquer pessoa vêm para cá quando o computador deles estiver cheio ou fora, usando a conta de IA que o dono de cada um conectou neste computador. Primeiro para os meus agentes: os pedidos, as rotinas e os trabalhos longos dos seus agentes começam aqui sempre que este estiver livre.",
     helpWorkspace: "Computadores ajudam quando o da equipe estiver cheio ou fora",
     helpWorkspaceHint:
       "Cada computador só ajuda se o dono permitir. Com isto desativado, nenhum ajuda, seja qual for a escolha do dono.",
     shareInternet: "Agentes usam a internet deste computador",
     shareInternetHint:
-      "Os sites que os agentes abrem passam pela conexão deste computador, então veem a sua localização. Só sites, até 5 GB por dia, e nunca nada da sua própria rede. Enquanto este computador estiver offline, os agentes usam a conexão de sempre.",
+      "As conexões dos agentes saem pela internet deste computador, então sites e servidores veem a sua localização: sites, git, SSH, bancos de dados e outras conexões TCP. Nunca nada da sua própria rede, nem e-mail pela porta 25. A IA dos agentes, consultas de nome, chamadas e outro tráfego UDP usam a conexão de sempre, assim como tudo enquanto este computador estiver offline.",
+    shareInternetHintProxy:
+      "O navegador dos agentes e os programas que seguem as configurações de proxy (git por HTTPS, curl, a maioria das ferramentas de linha de comando) saem pela internet deste computador, então os sites veem a sua localização. SSH, clientes de banco de dados e outros programas que ignoram as configurações de proxy usam a conexão de sempre, assim como a IA dos agentes, consultas de nome e tráfego UDP. Nunca nada da sua própria rede, nem e-mail pela porta 25. Enquanto este computador estiver offline, tudo usa a conexão de sempre.",
+    shareInternetOnly: "Usar só a internet deste computador",
+    shareInternetOnlyHint:
+      "Os agentes usam só a internet deste computador, inclusive a IA, e nunca a conexão de sempre. Enquanto ele estiver offline, ficam sem internet até ele voltar.",
     shareInternetInUse: "Em uso agora",
     shareInternetOther: "Agentes usam {{name}} agora",
     shareInternetPick: "Usar este",
     shareInternetJoin:
-      "Os agentes também vão abrir sites pela internet deste computador, então os sites veem a sua localização. Você pode desligar na página dele.",
+      "Os agentes também vão acessar a internet por este computador, então sites e servidores veem a sua localização. Você pode desligar na página dele.",
     connectedBy: "Conectado por {{name}}",
     downloadFor: "Baixar para {{system}}",
     downloadApp: "Baixar o app",
@@ -17408,6 +17653,12 @@ export const ptBR = {
       paused: "{{host}} está pausado, então o controle espera até ele voltar.",
       held: "Este workspace está pausado, então o controle espera até ele voltar a ficar ativo.",
       lost: "O controle acabou. Você voltou a assistir {{name}}.",
+      /** O controle não mostrou nada a tempo (o assistente de testes de um iPhone ainda compilando ou abrindo). */
+      controlLate:
+        "O controle não começou a tempo. {{host}} ainda está preparando {{name}}: tente de novo em um minuto.",
+      /** O controle não conseguiu começar no computador. */
+      controlFailed:
+        "Não deu para assumir o controle de {{name}}. Tente de novo ou reinicie o app do agentes.chat no {{host}}.",
       typeLabel: "Digitar em {{name}}",
     },
     status: {
@@ -17429,7 +17680,7 @@ export const ptBR = {
       withHost: "com {{host}}",
       lastSeen: "visto às {{time}}",
       offlineUnresponsive: "parou de responder às {{time}}",
-      offlineStopped: "o runner parou às {{time}}",
+      offlineStopped: "o agentes.chat parou às {{time}}",
       offlineDropped: "a conexão caiu às {{time}}",
     },
     line: {
@@ -17448,9 +17699,14 @@ export const ptBR = {
       offlineSeen: "Visto às {{time}}. Os agentes esperam ele voltar.",
       offlineWithHost: "{{host}} está offline. Os agentes esperam ele voltar.",
       offlineUnresponsive:
-        "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode `{{command}}` nele.",
-      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode `{{command}}` nele para ver o motivo.",
-      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode `{{command}}` nele.",
+        "Parou de responder às {{time}}, talvez sem internet ou sobrecarregado. Veja se ele está ligado e com internet.",
+      offlineStopped: "O app agentes.chat parou neste computador às {{time}}. Abra o app de novo.",
+      offlineStoppedCli: "O agentes.chat parou neste computador às {{time}}. Inicie de novo nele.",
+      offlineDropped: "A conexão caiu às {{time}}. Ela volta sozinha.",
+    },
+    technical: {
+      title: "Detalhes técnicos",
+      doctor: "Para ver o motivo, rode isto nele:",
     },
     reason: {
       locked: "O celular está bloqueado",
@@ -17511,7 +17767,7 @@ export const ptBR = {
     },
     facts: {
       system: "Sistema",
-      cpu: "CPU",
+      cpu: "Processador",
       memory: "Memória",
       lastSeen: "Visto por último",
       toolchains: "Ferramentas encontradas",
@@ -17935,9 +18191,11 @@ export const ptBR = {
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
       folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
+      folderOnComputer: "Liberar no computador",
+      folderShown: "Aberto no {{deviceName}}. Libere lá.",
       internetShared: "Agora os agentes abrem sites pela internet de <b>{{deviceName}}</b>",
       internetSharedLine:
-        "Só os agentes deste workspace, só sites, até 5 GB por dia, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
+        "Só os agentes deste workspace, nunca nada da rede dele, nunca e-mail pela porta 25. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
       internetOff: "Desligar",
       internetOffDone: "Os agentes não usam mais a internet de {{deviceName}}.",
       once: "Permitir uma vez",
@@ -18717,6 +18975,23 @@ export const ptBR = {
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
       copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
+      latest: "A versão mais recente",
+      newer: "Saiu a {{version}}",
+      notes: "O que mudou",
+      update: {
+        title: "Atualize para a {{version}}",
+        docker: "Com Docker",
+        native: "Sem Docker",
+        nativeHelp: "Extraia o pacote da versão em `~/.agentes/app` e rode:",
+        desktop: "Roda no app para computador, nesta máquina? Ele se atualiza com o app.",
+        notice: "Saiu o agentes.chat {{version}} para este servidor",
+        how: "Como atualizar",
+      },
+      computers: "Programa dos computadores",
+      computersAhead_one:
+        "{{count}} computador roda uma versão mais nova que a deste servidor. Ele funciona como está, e o que há de novo nele chega com a atualização deste servidor.",
+      computersAhead_other:
+        "{{count}} computadores rodam uma versão mais nova que a deste servidor. Eles funcionam como estão, e o que há de novo neles chega com a atualização deste servidor.",
     },
     title: "Configurações",
     account: {
@@ -19461,6 +19736,8 @@ export const ptBR = {
     /** The waiting row's step line before its first step (`waitStep`). */
     wait: {
       thinking: "Pensando…",
+      /** Before the model has the turn: the agent's checkouts are being updated from their repositories. */
+      code: "Atualizando o código…",
       held: "Esperando aprovação…",
       /** The agent's own words for its step (what it wrote before the call), quoted. */
       said: "“{{text}}”",
@@ -19780,6 +20057,7 @@ export const ptBR = {
         usingScreen: "Usou a tela",
         cloningRepo: "Clonou um repositório",
         listingRepos: "Listou os repositórios",
+        updatingCode: "Atualizou o código",
         preparingCli: "Preparou o {{app}}",
         openingPullRequest: "Abriu um pull request",
         handingOff: "Entregou um relatório",
@@ -19904,6 +20182,7 @@ export const ptBR = {
       usingScreen: "usando a tela",
       cloningRepo: "clonando um repositório",
       listingRepos: "listando os repositórios",
+      updatingCode: "atualizando o código",
       preparingCli: "preparando o {{app}} no {{computer}}",
       preparingCliPct: "preparando o {{app}} no {{computer}} ({{percent}}%)",
       openingPullRequest: "abrindo um pull request",
@@ -20038,6 +20317,8 @@ export const ptBR = {
         "O {{brain}} pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
       brain_unavailable_shared_login:
         "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
+      brain_unavailable_lent_offline:
+        "Estou sem internet agora: {{computer}} está offline, e os agentes deste workspace usam só a internet dele. Respondo quando ele voltar, ou assim que “Usar só a internet deste computador” for desligado na página dele.",
       provider_unavailable: "Meu provedor de IA não está respondendo agora. Respondo assim que ele voltar.",
       provider_wait_rate_limit: "{{provider}} está limitando os pedidos desta chave agora. Respondo assim que liberar.",
       provider_wait_down: "{{provider}} está fora do ar ou sobrecarregado agora. Respondo assim que voltar.",
@@ -20049,7 +20330,10 @@ export const ptBR = {
       provider_back: "Minha IA voltou.",
       confidential_removed: "Removido: texto confidencial fica guardado por {{days}} dias.",
       brain_queued: "Ainda estou na fila. Respondo assim que chegar a minha vez.",
-      brain_interrupted: "O {{brain}} parou antes de terminar. Já feito, sem repetir: {{tools}}.",
+      brain_interrupted: "O {{brain}} parou antes de terminar. Peça de novo para continuar.",
+      brain_interrupted_timeout:
+        "O {{brain}} passou do tempo limite e parou antes de terminar. Peça de novo para continuar.",
+      brain_interrupted_computer: "O computador parou o {{brain}} antes de terminar. Peça de novo para continuar.",
       plan_limit_cut: "Parei no limite do plano do {{plan}}. Continuo de onde parei {{when}}, quando ele renovar.",
       plan_limit_cut_unknown: "Parei no limite do plano do {{plan}}. Continuo de onde parei assim que ele renovar.",
       plan_limit_wait:
@@ -20140,6 +20424,7 @@ export const ptBR = {
       welcome_member:
         "Você acabou de entrar na {{org}}. **Do que você cuida por aqui?** Me conta e eu monto seu primeiro agente com você.",
       action_open_page: "Abrir uma tela",
+      action_voice_setup: "Ligar as mensagens de voz",
       calendar_proposal: "Proposta de evento: {{title}}",
       action_workspace: "Propôs uma mudança no workspace",
       agent_proposal: "Propôs um novo agente: {{name}}",
@@ -20451,6 +20736,11 @@ export const ptBR = {
     offer_open_page: {
       label: "Oferecer abrir uma tela",
       description: "Posta um card cujo botão abre uma tela do app, como cobrança, cargos ou a página de um agente.",
+    },
+    offer_voice_setup: {
+      label: "Oferecer ligar as mensagens de voz",
+      description:
+        "Posta um card que liga as mensagens de voz num clique para quem cuida do servidor, ou pede para essa pessoa.",
     },
     set_team_week: {
       label: "Mudar o card da Semana da equipe",
@@ -21096,7 +21386,7 @@ export const ptBR = {
       peopleQuiet: "Todos passam a só ler",
       computer: "O computador dele para agora e é apagado",
       computers:
-        "Os computadores conectados são desconectados. As pastas dos agentes ficam neles até o runner ser removido.",
+        "Os computadores conectados são desconectados. As pastas dos agentes ficam neles até o agentes.chat ser removido deles.",
       connectors: "Os conectores e as caixas de email são desconectados",
     },
     undo: "Qualquer dono pode restaurar até {{date}} às {{time}}. Depois disso, não tem volta.",
@@ -21519,16 +21809,6 @@ export const ptBR = {
       doneByYou: "Feito por você às {{time}}. O {{agent}} olhou a tela de novo e seguiu.",
       doneByYou_female: "Feito por você às {{time}}. A {{agent}} olhou a tela de novo e seguiu.",
     },
-    control: {
-      notice: "Os programas do computador do {{name}} veem a tela e o que você digita ou cola.",
-      notice_female: "Os programas do computador da {{name}} veem a tela e o que você digita ou cola.",
-    },
-    /** The ⓘ beside the control line, on agentes.chat Cloud only (ADR 0076). */
-    session: {
-      check: "Verificações de segurança",
-      screening:
-        "Podemos verificar o texto desta tela para impedir abuso. Guardamos só o resultado. O que a tela não mostra, como uma senha num prompt, nunca é capturado.",
-    },
     /** What the agent did on its desktop, on its message after the run (ADR 0062); the rest is the browser card's. */
     after: {
       titleNoSite: "Usou a tela",
@@ -21539,9 +21819,6 @@ export const ptBR = {
       group_female: "Tela da {{name}}",
     },
     watch: {
-      /** Under the screen while watching, where whoever watches may not be the one typing. */
-      notice: "Os programas do computador do {{name}} veem a tela e tudo o que é digitado ou colado nele.",
-      notice_female: "Os programas do computador da {{name}} veem a tela e tudo o que é digitado ou colado nele.",
       step: {
         desktop_open: "Abriu {{detail}}",
         desktop_open_plain: "Abriu um app",
@@ -21566,16 +21843,15 @@ export const ptBR = {
     },
     /** Whether agents can use apps on their desktops on a computer (ADR 0062): its page and the agent's. */
     use: {
-      title: "Apps nas telas dos agentes",
+      title: "Tela própria de cada agente",
       description:
-        "Os agentes abrem e usam apps na própria tela aqui, como uma pessoa faria, e as pessoas assistem pela página de cada um.",
+        "Aqui cada agente ganha uma tela só dele, separada da sua, e usa nela apps com janelas, como um navegador ou uma planilha, como uma pessoa faria. Você assiste pela página do agente. Por enquanto só no Linux, que abre uma tela extra para cada agente sem mexer na sua.",
       ready: "Pronto",
       off: "Desligado",
-      unavailable: "Indisponível",
+      unavailable: "Falta preparar",
       offHelp: "Ligue a tela e os comandos neste computador:",
       /** Whoever connected it turns each switch on with the buttons that follow. */
       offOne: "A tela e os comandos precisam estar ligados neste computador.",
-      linuxOnly: "Os agentes só usam apps na própria tela em computadores Linux.",
       agent: "O {{name}} ainda não consegue usar apps na própria tela no {{computer}}.",
       agent_female: "A {{name}} ainda não consegue usar apps na própria tela no {{computer}}.",
     },

@@ -70,8 +70,23 @@ export interface MachineExecutors {
   grok?: { version: string; models?: { id: string; label?: string }[] };
   /** Google's Antigravity CLI (protocol 44, ADR 0143), and the models it lists. */
   antigravity?: { version: string; models?: { id: string; label?: string }[] };
+  /**
+   * Cognition's Devin CLI (protocol 89, ADR 0253), and the model families its accounts list: each one's levels, whether
+   * it has a faster variant, its window, and whether the plan serves it at no cost.
+   */
+  devin?: {
+    version: string;
+    models?: {
+      id: string;
+      label?: string;
+      free?: boolean;
+      efforts?: string[];
+      fast?: boolean;
+      contextWindow?: number;
+    }[];
+  };
   /** A CLI that is there and can't start (`--version` keeps failing), with its own error line; `git_missing`: see `CLI_GIT_MISSING`. */
-  broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", string>>;
+  broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin", string>>;
   /** `hello.browser` (ADR 0040): whether the agent browser can run there; absent = not reported. */
   browser?: {
     available: boolean;
@@ -88,6 +103,8 @@ export interface MachineExecutors {
   terminal?: { available: boolean; reason?: string; code?: string };
   /** `hello.desktopUse` (ADR 0062): whether agents can use their desktops there; absent = not reported. */
   desktopUse?: { available: boolean; reason?: string; code?: string };
+  /** `hello.apps` (ADR 0258): whether agents can use the person's apps there; absent = not reported. */
+  apps?: { available: boolean; reason?: string; code?: string };
   /** `hello.mode` (ADR 0058 §10): each agent works as its own OS user; absent = all as the runner's user. */
   mode?: "system";
   /** `hello.windowsBuild` (runner protocol 80): a Windows computer's build (`10.0.19045`); absent elsewhere or older. */
@@ -97,10 +114,10 @@ export interface MachineExecutors {
    * (`fetching` with bytes done and total, `ready`, or `failed` with why), updated by its `cli.fetch` frames.
    */
   copies?: {
-    fetchable?: ("claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git")[];
+    fetchable?: ("claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin" | "git")[];
     fetch?: Partial<
       Record<
-        "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git",
+        "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin" | "git",
         | { state: "fetching"; version: string; done: number; total: number | null }
         | { state: "ready"; version: string }
         | {
@@ -119,6 +136,11 @@ export interface MachineExecutors {
   authEgressGroup?: true;
   /** `hello.app` (protocol 87): the agentes.chat app runs its runner; absent: from the terminal, or an older runner. */
   app?: true;
+  /**
+   * `hello.permissions` and `permissions.changed`: the OS permissions its agents' work waits on there (macOS's Full
+   * Disk Access, Screen Recording…), one each, with what asked and when; absent: none reported.
+   */
+  permissions?: { permission: string; trigger: string; agentId?: string; since: string }[];
   /** `hello.toolchains` (bring your own devices): what it can build and drive phones with, by tool, its version. */
   toolchains?: Record<string, string>;
   /** The usage of the computer's own sign-ins (protocol 19), by brain; kept across reconnects. */
@@ -129,8 +151,28 @@ export interface MachineExecutors {
     opencode?: MachinePlanUsage;
     grok?: MachinePlanUsage;
     antigravity?: MachinePlanUsage;
+    devin?: MachinePlanUsage;
   };
   detectedAt?: string;
+}
+
+/** What we do to the workspace's own computer (`PUT …/maintenance`), worded by the apps (ADR 0257). */
+export const MAINTENANCE_KINDS = ["moving", "restarting", "updating", "converting", "host_maintenance"] as const;
+export type MaintenanceKind = (typeof MAINTENANCE_KINDS)[number];
+/**
+ * Why, or which step, as a code the apps word: a move's `copying` (it works, maybe slower) or `handover` (away for a
+ * minute or two), a restart's `unresponsive` (it stopped answering, so we restarted it).
+ */
+export const MAINTENANCE_DETAILS = ["copying", "handover", "unresponsive"] as const;
+export type MaintenanceDetail = (typeof MAINTENANCE_DETAILS)[number];
+
+export interface MachineMaintenanceRecord {
+  kind: MaintenanceKind;
+  /** ISO: when this kind of work began (kept while the operator says the same kind again). */
+  since: string;
+  /** ISO: when it should be back or done, as the operator expects; null: unknown. */
+  eta: string | null;
+  detail: MaintenanceDetail | null;
 }
 
 /** A computer's size as its runner reported it (protocol 22), the same shape as `MachineSize` in the protocol. */
@@ -143,6 +185,11 @@ export interface MachineSizeRecord {
   maxTasks?: number;
   /** Protocol 78: about how many more tasks fit now, where memory is read (`TaskRoomReport` in the protocol). */
   room?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean };
+  /** The processor's and the system's names (`MachineSize.cpuModel`, `system`); absent from an older runner. */
+  cpuModel?: string;
+  system?: string;
+  /** Physical cores (`MachineSize.cores`); `cpus` counts logical CPUs. Absent from an older runner and Windows. */
+  cores?: number;
 }
 
 /** How busy a computer got over the last day (protocol 22: `MachineLoad` in the protocol), and when it said so. */
@@ -158,6 +205,9 @@ export interface MachineLoadRecord {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** The workspace disk's size in GB, and what takes it by kind (`MachineLoad.diskGb`, `diskParts`). */
+  diskGb?: number;
+  diskParts?: { projects: number; apps: number; agents: number; caches: number; system: number };
   /** What the agents' temporary folders held in memory, GB (`MachineLoad.agentTmpRamGb`). */
   agentTmpRamGb?: number;
   /** The server's own mark: its admins heard of this disk passing the line, and won't again until it drops under 80%. */
@@ -187,6 +237,7 @@ export interface MachineAccess {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    devin?: boolean;
     commands: boolean;
     browser?: boolean;
     desktop?: boolean;
@@ -311,10 +362,22 @@ export const machines = pgTable(
     /** When it was last turned on or picked: the newest online one carries the traffic. Null: since it was paired. */
     egressShareAt: timestamp({ withTimezone: true }),
     /**
-     * The workspace's own computer (`managed`): the lent computer that carried its last connection, and when (written
-     * at most once a minute per server process). The apps say whose internet it uses while that is recent.
+     * With `egressShare` on: the workspace's agents use only this computer's internet (ADR 0237, amendment
+     * 2026-11-27 c), their AI calls included, and never their usual way. Offline, they have no internet until it is
+     * back. Only whoever connected it turns it on.
      */
-    egressVia: jsonb().$type<{ machineId: string; at: string }>(),
+    egressOnly: boolean().notNull().default(false),
+    /**
+     * A computer that borrows (`borrowsInternet`): the lent computer that carried its last connection, and when (written
+     * at most once a minute per server process). The apps say whose internet it uses while that is recent. `since`:
+     * when that computer began carrying them (absent on rows written before it was kept).
+     */
+    egressVia: jsonb().$type<{ machineId: string; at: string; since?: string | null }>(),
+    /**
+     * A lending computer (`connected`): when it last carried a lent connection, whoever borrowed (written at most once
+     * a minute per server process). Its page says "In use now" while that is recent.
+     */
+    egressLentAt: timestamp({ withTimezone: true }),
     /** Last known; trust it only with a recent `last_seen_at` (a replica may have died). */
     online: boolean().notNull().default(false),
     /** The server process holding its socket. */
@@ -339,10 +402,12 @@ export const machines = pgTable(
      */
     egressWaitingAt: timestamp({ withTimezone: true }),
     /**
-     * The operator says the workspace's own computer is moving to another server (`PUT …/moving`): while it is away
-     * the apps say so instead of offline, for at most `MOVING_SHOWN_MS`. Null: not moving.
+     * When the operator last said what it does to the workspace's own computer (`PUT …/maintenance`, or `PUT …/moving`
+     * from before kinds, hence the name): the apps say that instead of offline (`shownMaintenance`). Null: nothing.
      */
     movingAt: timestamp({ withTimezone: true }),
+    /** What it does, as last said (`PUT …/maintenance`); null with `moving_at` set: a move told by `PUT …/moving`. */
+    maintenance: jsonb().$type<MachineMaintenanceRecord>(),
     /** Last time a run or a person wanted this computer (written at most every 30 s per server process). */
     wantedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -546,6 +611,8 @@ export const machineDeviceCodes = pgTable(
     os: text().notNull().default("other"),
     arch: text().notNull().default(""),
     hostname: text().notNull().default(""),
+    /** Its maker's model as the runner read it ("MacBook Pro"); empty from older runners. Names it on confirm. */
+    model: text().notNull().default(""),
     runnerVersion: text().notNull().default(""),
     /** Optional extras a runner may send (copied to the machine row). */
     protocol: integer(),

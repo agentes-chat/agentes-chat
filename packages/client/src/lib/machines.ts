@@ -1,9 +1,11 @@
+import { DATA_OTHER, DATA_SERIES } from "@agenteschat/tokens/data";
 import type { TFunction } from "i18next";
 import type {
   AccountLoginFailure,
   AccountLoginStatus,
   CliInstall,
   DeviceLocation,
+  DiskParts,
   InstallableCli,
   Machine,
   MachineAccess,
@@ -140,6 +142,7 @@ const CLI_INSTALLERS: Record<string, { script: string; bin: string; opt: string;
     windows: 'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
   },
   cursor: { script: "curl https://cursor.com/install -fsS | bash", bin: "agent", opt: "/opt/cursor", flags: "" },
+  devin: { script: "curl -fsSL https://cli.devin.ai/install.sh | bash", bin: "devin", opt: "/opt/devin", flags: "" },
 };
 
 /**
@@ -324,6 +327,7 @@ export const MACHINE_TOOLS: MachineToolName[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
 ];
 
@@ -349,6 +353,41 @@ export function sharedFolderFacts(t: TFunction, locale: string, disk: Machine["d
     disk?.sharedGb != null ? t("machines.shared.size", { size: gb(disk.sharedGb) }) : t("machines.shared.measuring"),
     ...(disk ? [t("machines.shared.free", { free: gb(disk.freeGb) })] : []),
   ].join(" · ");
+}
+
+/** The kinds a computer's disk splits into, in the bar's order; `other` is the rest of what is in use. */
+export const COMPUTER_PARTS = ["projects", "apps", "agents", "caches", "system", "other"] as const;
+export type ComputerPart = (typeof COMPUTER_PARTS)[number];
+
+/** A disk this full is filling up: the server's own line for telling admins (`DISK_WARN_USE` in notification-producers.ts). */
+export const COMPUTER_DISK_FULL = 0.85;
+
+export interface ComputerStorage {
+  sizeGb: number;
+  usedGb: number;
+  freeGb: number;
+  full: boolean;
+  /** What takes it, in the bar's order, each kind with its colors; none before the computer first measured it. */
+  parts: { key: ComputerPart; gb: number; light: string; dark: string }[];
+}
+
+/** A computer's disk as Armazenamento shows it; null when its runner doesn't say how big the disk is. */
+export function computerStorage(disk: Machine["disk"]): ComputerStorage | null {
+  if (!disk) return null;
+  const sizeGb = disk.sizeGb ?? (disk.use != null && disk.use < 1 ? disk.freeGb / (1 - disk.use) : null);
+  if (!sizeGb) return null;
+  const usedGb = Math.max(0, sizeGb - disk.freeGb);
+  const known = disk.parts ?? null;
+  const kinds = COMPUTER_PARTS.filter((k): k is keyof DiskParts => k !== "other");
+  const otherGb = known ? usedGb - kinds.reduce((n, k) => n + known[k], 0) : 0;
+  const parts = known
+    ? COMPUTER_PARTS.map((key, i) => ({
+        key,
+        gb: key === "other" ? Math.max(0, otherGb) : known[key],
+        ...(DATA_SERIES[i] ?? DATA_OTHER),
+      })).filter((p) => p.gb >= 0.05)
+    : [];
+  return { sizeGb, usedGb, freeGb: disk.freeGb, full: usedGb / sizeGb >= COMPUTER_DISK_FULL, parts };
 }
 
 /** Paused now: `until` absent or still ahead. */
@@ -655,11 +694,24 @@ const OS_CODES = new Set(["linux", "darwin", "windows", "other"]);
 export const osName = (t: TFunction, os: string) =>
   OS_CODES.has(os) ? (t as unknown as (key: string) => string)(`machines.os.${os}`) : os;
 
-/** ADR 0237: "Agents use the internet of Ana's laptop (Ana)" while a person's computer lends its internet; else null. */
+/** ADR 0237: "Agents use the internet of Ana's laptop" while a person's computer lends its internet; else null. */
 export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">): string | null {
-  const via = m.kind === "managed" && m.online ? m.egressVia : null;
+  const via = m.online ? m.egressVia : null;
+  return via ? t("machines.egress.via", { name: via.name }) : null;
+}
+
+/** The workspace's own computer's agents have no internet: the computer they use only the internet of is offline. */
+export function egressOfflineText(t: TFunction, m: Pick<Machine, "kind" | "egressOffline">): string | null {
+  return m.kind === "managed" && m.egressOffline ? t("machines.egress.offline", { name: m.egressOffline.name }) : null;
+}
+
+/**
+ * `egressViaText` as the words around the lending computer's name, in the language's order, so a screen can give the
+ * name alone a tip: who connected it ("Connected by Ana"), or null when nobody is named.
+ */
+export function egressViaParts(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">) {
+  const via = m.online ? m.egressVia : null;
   if (!via) return null;
-  return via.userName
-    ? t("machines.egress.viaBy", { name: via.name, person: via.userName })
-    : t("machines.egress.via", { name: via.name });
+  const [before = "", after = ""] = t("machines.egress.via", { name: "\u0000" }).split("\u0000");
+  return { before, name: via.name, after, by: via.userName ? t("machines.pairedBy", { name: via.userName }) : null };
 }

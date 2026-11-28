@@ -1054,6 +1054,14 @@ export function useTypingSender(channelId: string, threadId?: string) {
   };
 }
 
+/** A DM or a thread open on screen (`on`): the agent that answers there gets ready before anything is typed. */
+export function useOpenedConversation(channelId: string, threadId: string | undefined, on: boolean) {
+  const { connection } = useRealtime();
+  useEffect(() => {
+    if (on) connection?.sendOpen(channelId, threadId);
+  }, [connection, channelId, threadId, on]);
+}
+
 export function useDismissRun() {
   return useRealtime().streams.dismiss;
 }

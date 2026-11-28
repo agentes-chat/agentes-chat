@@ -31,7 +31,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, Icon, Text } from "@/ui";
-import { UndoProposal } from "../agents/InstructionProposalCard";
+import { ApplyProposal, UndoProposal } from "../agents/InstructionProposalCard";
 import { proposalOutcome } from "../agents/logic";
 import { AgentProposalView } from "../agents/ProposalCard";
 import { useDelegateUndoAction } from "../agents/RightHandDelegate";
@@ -181,7 +181,13 @@ function SettingsRow({
       words: back ? `${who} · ${t("rightHand.card.undone")}` : (who ?? ""),
       time: outcome.at ? when.short(outcome.at) : undefined,
       note: byRightHand ? delegate?.reason : outcome.why,
-      actions: byRightHand ? delegateUndo : p.undoable && !back ? <UndoProposal id={p.id} /> : null,
+      actions: byRightHand ? (
+        delegateUndo
+      ) : p.undoable && !back ? (
+        <UndoProposal id={p.id} />
+      ) : p.applicable ? (
+        <ApplyProposal id={p.id} />
+      ) : null,
     };
   }
   return (

@@ -368,6 +368,7 @@ export { ChosenValue, Select, type SelectOption, type SelectProps } from "./comp
 export { SettingNote, SettingRow, SettingsMore, SettingsSection } from "./components/Settings";
 export { SettingsPath } from "./components/SettingsPath";
 export {
+  Refreshing,
   SKELETON_DELAY_MS,
   Skeleton,
   SkeletonCard,
@@ -438,6 +439,7 @@ export {
   type VoicePlayerProps,
 } from "./components/VoicePlayer";
 export {
+  recordingVoice,
   type VoiceNotice,
   type VoiceTake,
   voiceRecordingSupported,
@@ -531,7 +533,7 @@ export {
   zonedInstant,
 } from "./recurrence";
 export { fold, matchesWords } from "./search";
-export { IDLE_MS, onSight, type Sight, sight, watchSight } from "./sight";
+export { IDLE_MS, lastInputAt, onSight, type Sight, sight, watchSight } from "./sight";
 export { workspaceSky } from "./sky/accent";
 export { pixelBurst, pixelConfetti, pixelVeil } from "./sky/burst";
 export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
@@ -598,8 +600,17 @@ export {
 } from "./timezones";
 export { installTitleTips, TITLE_TIP_GRACE_MS, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "./title-tips";
 export { dragsFiles, pastedFiles, transferFiles } from "./transfer";
-export { DitherLine, fillEnds, paintCells, paintLineArea, useElementWidth } from "./widgets/ChartPieces";
-export { formatWidgetNumber, formatWithUnit, useCountUp, widgetDigits } from "./widgets/format";
+export {
+  ChartTip,
+  type ChartTipAt,
+  DitherLine,
+  fillEnds,
+  paintCells,
+  paintLineArea,
+  useChartCursor,
+  useElementWidth,
+} from "./widgets/ChartPieces";
+export { formatWidgetNumber, formatWithUnit, seriesTip, useCountUp, widgetDigits } from "./widgets/format";
 export { ditherTile, WIDGET_CELL, widgetTileVars, widgetTones } from "./widgets/tiles";
 export { BuildingDither, WidgetBody, type WidgetBodyProps } from "./widgets/WidgetBody";
 export {

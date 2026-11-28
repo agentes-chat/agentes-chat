@@ -80,6 +80,26 @@ export const providerCredentials = pgTable(
 );
 
 /**
+ * The most a workspace key may make a model write, where the catalog doesn't know it: as the provider's model list told
+ * it, or as a refusal of a larger request did. Null: the list was asked and told nothing. Read once per process.
+ */
+export const modelOutputLimits = pgTable(
+  "model_output_limits",
+  {
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    credentialId: uuid()
+      .notNull()
+      .references(() => providerCredentials.id, { onDelete: "cascade" }),
+    model: text().notNull(),
+    maxOutputTokens: integer(),
+    learnedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.credentialId, t.model] }), index().on(t.orgId)],
+);
+
+/**
  * A named group of the workspace's agents, shared by everyone in it (ADR 0083): the sidebar's sections. Shown as a
  * setor (department, ADR 0148) with its color, icon, the person who leads it and their substitute.
  * An agent is in at most one (`agents.group_id`).
@@ -454,7 +474,7 @@ export const organizationSettings = pgTable("organization_settings", {
  * agents, is what new agents start with. Validated in code (`agent-setup.ts`).
  */
 export interface AgentSetup {
-  brain: "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  brain: "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
   /** The API brain: the agent's model (`auto` included). A computer brain: its model as stored (null: the default). */
   model: string | null;
   /** The API brain's key (null: the workspace's default). */

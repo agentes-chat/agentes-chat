@@ -17,11 +17,12 @@ import { useEffect, useState } from "react";
  * `machines`, which every computer event refreshes); `pollMs` also asks on a timer, while a dialog waits for a
  * phone or a computer to show up.
  */
-export const useDevices = (orgId: string, pollMs: number | false = false) => {
+export const useDevices = (orgId: string, pollMs: number | false = false, enabled = true) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.devices(orgId),
     queryFn: () => api.devices.list(orgId),
+    enabled,
     retry: false,
     refetchInterval: pollMs,
     meta: { quiet: true },
@@ -136,6 +137,23 @@ export function useForgetPhone(orgId: string) {
 export function useStopPhone(orgId: string) {
   const api = useApi();
   return useDevicesMutation(orgId, (id: string) => api.devices.stopPhone(orgId, id));
+}
+
+/** Ligar / Desligar a simulator or an emulator: it shows starting, or offline, at once (a refusal puts it back). */
+export function usePowerPhone(orgId: string) {
+  const api = useApi();
+  return useDevicesMutation(
+    orgId,
+    ({ id, on }: { id: string; on: boolean }) => api.devices.powerPhone(orgId, id, on),
+    ({ id, on }) => [
+      phoneEdit(orgId, id, (p) => ({
+        ...p,
+        status: on
+          ? { kind: "preparing", reason: "booting" }
+          : { kind: "offline", lastSeenAt: new Date().toISOString() },
+      })),
+    ],
+  );
 }
 
 export function useApproveRequest(orgId: string) {

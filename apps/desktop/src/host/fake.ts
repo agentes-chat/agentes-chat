@@ -22,6 +22,8 @@
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
  * does). An update downloads in about 1.5 s with its progress, and Cancel drops it.
  */
+
+import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import { CLOUD_SERVER, isLoopback, readInstance, type ServerCheck } from "@agenteschat/client/lib/server";
 import type { Candidate } from "../control/first-run";
 import {
@@ -95,8 +97,10 @@ export interface FakeHost extends Host {
     disk: boolean;
     networkAsks: number;
     setup: SetupState | null;
-    panes: (MacPermission | "microphone")[];
+    panes: (MacPermission | OsPermission)[];
   };
+  /** Every window shown, and whether it was kept up (`showWindow`'s `keep`). */
+  readonly shown: { name: WindowName; keep: boolean }[];
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;
 }
@@ -290,6 +294,7 @@ export function createFakeHost(
 
   const host: FakeHost = {
     window: initial,
+    shown: [],
     compat: { on: true, fellBack: false, own: false },
     fake: true,
     platform,
@@ -425,7 +430,8 @@ export function createFakeHost(
       }
     },
     setTrayVisible: async () => {},
-    showWindow: async (name) => {
+    showWindow: async (name, o) => {
+      host.shown.push({ name, keep: o?.keep === true });
       host.window = name;
       devChanged();
       for (const l of shownListeners) l(name);

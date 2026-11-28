@@ -1,17 +1,23 @@
 import { expect, test } from "bun:test";
 import {
+  brainTopic,
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
+  createMemoryPubSub,
   GROK_WINDOWS_PROTOCOL,
+  HELD_TURN_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
+  type MachineRequest,
   OPENCODE_ACP_PROTOCOL,
+  type WireBrainEvent,
 } from "@agenteschat/adapters";
 import {
   type BrainTurnRequest,
   CodexBrain,
   type ComputerBrainLink,
   GrokBrain,
+  hubBrainLink,
   OpencodeBrain,
 } from "../src/brains/codex";
 import { computerPrompt } from "../src/brains/prompt";
@@ -452,4 +458,44 @@ test("a runner before CODEX_FOLDER_PROTOCOL: the turn stays in the agent's folde
     sent: { cwd: "repos/acme/app", system: `You are Dev.\n\n${code.prompt}` },
     prepared: 1,
   });
+});
+
+test("Codex, Antigravity and the rest: a turn the link cut mid-way is taken over on the computer, not failed", async () => {
+  const pubsub = createMemoryPubSub();
+  const runId = turn().runId;
+  const calls: MachineRequest[] = [];
+  let online = true;
+  const hub = {
+    status: async () => ({ online, protocol: HELD_TURN_PROTOCOL, lastSeenAt: new Date().toISOString() }) as never,
+    call: async (_machineId: string, request: MachineRequest) => {
+      calls.push(request);
+      const say = (event: WireBrainEvent) =>
+        pubsub.publish(brainTopic(runId), { type: "brain.event", machineId: "m1", event });
+      if (calls.length === 1) {
+        await say({ type: "text_delta", text: "On it" });
+        online = false;
+        setTimeout(() => (online = true), 200);
+        throw new MachineDroppedError("mac");
+      }
+      await say({ type: "done", text: "On it: done." });
+      await pubsub.publish(brainTopic(runId), { type: "brain.done", machineId: "m1" });
+      return { runId, final: { type: "done", text: "On it: done." } } as never;
+    },
+  };
+  const events: unknown[] = [];
+  await hubBrainLink({ hub, pubsub, finalGraceMs: 20, heldTurnWaitMs: 2_000 }).turn(
+    "m1",
+    {
+      runId,
+      kind: "codex",
+      session: { id: SESSION, resume: true },
+      cwd: "",
+      system: "",
+      prompt: "hi",
+      mcp: { token: "t" },
+    },
+    { signal: new AbortController().signal, onEvent: (e) => events.push(e) },
+  );
+  expect(events.at(-1)).toEqual(expect.objectContaining({ type: "done", text: "On it: done." }));
+  expect(calls.map((r) => (r as { reattach?: boolean }).reattach === true)).toEqual([false, true]);
 });

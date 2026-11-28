@@ -178,6 +178,36 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
     expect(rpc?.status).toBe("failed");
   });
 
+  test("a row a little stale while its replica still holds the socket: the turn goes on, never canceled", async () => {
+    f = await setup({ machines: true });
+    const hubA = f.machineHub as MachineHub;
+    const hubB = createMachineHub({
+      db: f.db,
+      pubsub: f.pubsub,
+      replicaId: "replica-b",
+      rpcPollMs: 10,
+      rpcLivenessMs: 20,
+    });
+    hubs.push(hubB);
+    const paired = await pair();
+    const runner = fakeRunner(hubA);
+    await runner.hello(paired.token);
+    const turn = hubB.call(paired.machineId, brainTurn());
+    await until(() => runner.sent.some((s) => s.type === "request" && s.op === "brain.turn"));
+    const lastSeen = (ms: number) =>
+      f.db
+        .update(schema.machines)
+        .set({ lastSeenAt: new Date(Date.now() - ms) })
+        .where(eq(schema.machines.id, paired.machineId));
+    // Its disk made its writes wait: no pong for a while, so the row is past `machineOnline`'s 75 s.
+    await lastSeen(90_000);
+    expect(await within(turn, 120)).toBe("pending");
+    // Far past what the holder would keep: that replica is gone, the turn is a drop its runner holds for the reattach.
+    await lastSeen(10 * 60_000);
+    expect(await within(turn, 300)).toBeInstanceOf(MachineDroppedError);
+    expect(runner.sent.some((s) => s.type === "cancel")).toBe(false);
+  });
+
   test("no pong: the socket's requests fail and the machine goes offline even if its close never comes", async () => {
     f = await setup({ machines: true });
     const hub = createMachineHub({ db: f.db, pubsub: f.pubsub, replicaId: "replica-p", heartbeatMs: 20 });
@@ -534,10 +564,21 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
       );
     await runner.frame({ type: "pong", at: 1, load: { ...base, diskFreeGb: 40, diskUse: 0.6, sharedGb: 2.5 } });
     expect(await warnings()).toEqual([]);
-    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({ freeGb: 40, use: 0.6, sharedGb: 2.5 });
+    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({
+      freeGb: 40,
+      use: 0.6,
+      sharedGb: 2.5,
+      sizeGb: null,
+      parts: null,
+    });
 
     await runner.frame({ type: "pong", at: 2, load: { ...base, diskFreeGb: 9, diskUse: 0.91, sharedGb: 30 } });
-    await runner.frame({ type: "pong", at: 3, load: { ...base, diskFreeGb: 8, diskUse: 0.92, sharedGb: 31 } });
+    const parts = { projects: 20, apps: 15, agents: 40, caches: 12, system: 6 };
+    await runner.frame({
+      type: "pong",
+      at: 3,
+      load: { ...base, diskFreeGb: 8, diskUse: 0.92, sharedGb: 31, diskGb: 100, diskParts: parts },
+    });
     const [warned] = await warnings();
     expect(await warnings()).toHaveLength(1);
     expect(warned?.source).toMatchObject({ machineId: paired.machineId, label: "Build box" });
@@ -545,7 +586,13 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
 
     // A runner that restarts reports once without the disk: the page keeps it and nobody hears it again.
     await runner.frame({ type: "pong", at: 4, load: base });
-    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({ freeGb: 8, use: 0.92, sharedGb: 31 });
+    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({
+      freeGb: 8,
+      use: 0.92,
+      sharedGb: 31,
+      sizeGb: 100,
+      parts,
+    });
     await runner.frame({ type: "pong", at: 5, load: { ...base, diskFreeGb: 8, diskUse: 0.92 } });
     // Hovering at the line: under 85% but not under 80% doesn't arm it again.
     await runner.frame({ type: "pong", at: 6, load: { ...base, diskFreeGb: 14, diskUse: 0.83 } });
@@ -1331,7 +1378,7 @@ describe("tools on a connected machine", () => {
     await runner.disconnect();
     const offline = await call(ctx, "run_code", { language: "bash", code: "ls" });
     expect(offline).toMatchObject({ isError: true });
-    expect(offline.content).toContain("The computer Build box is offline. Ask its owner to start the runner.");
+    expect(offline.content).toContain("The computer Build box is offline. Ask its owner to start agentes.chat there.");
     // The workspace's own computer has no runner for anyone to start: it comes back by itself.
     await kind("managed");
     const away = await call(ctx, "run_code", { language: "bash", code: "ls" });

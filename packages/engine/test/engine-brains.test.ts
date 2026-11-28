@@ -26,13 +26,13 @@ import {
   type ChannelEvent,
   CODEX_IMAGE_NOTE,
   COMPUTER_BUSY_RETRY_MS,
+  COMPUTER_MEDIA_NOTE,
   COMPUTER_QUEUE_NOTE_MS,
   COMPUTER_REACT_NOTE,
   COMPUTER_TOOLS_NOTE,
   cancelRun,
   clearPlanLimits,
   computerBrainUnavailable,
-  computerMediaNote,
   computerQueue,
   connectorScope,
   consultationWait,
@@ -68,12 +68,14 @@ import {
   mcpSessionOver,
   notePlanLimit,
   OUTAGE_PARK,
+  openAgentDm,
   openDm,
   operatorRunTimings,
   outageParkedOf,
   PERSON_ROOM_RETRY_MS,
   postPersonMessage,
   queueOnRun,
+  type RunProfileReport,
   receiptsFor,
   recoverStaleRuns,
   resetAccountFailures,
@@ -81,6 +83,7 @@ import {
   resumeRunsWaitingForMachine,
   roomGate,
   roomHead,
+  runClaims,
   runWhere,
   SESSION_IDLE_MS,
   SESSION_MAX_INPUT_TOKENS,
@@ -93,6 +96,7 @@ import {
 } from "../src";
 import { computerPrompt } from "../src/brains/prompt";
 import { SYSTEM_REFUSED } from "../src/brains/types";
+import type { StageTiming } from "../src/profile";
 import { afterSteered } from "../src/steering";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -354,6 +358,147 @@ test("a computer-brain turn ends after the tools it ran through the bridge (neve
   expect(tokens[0]?.revokedAt).not.toBeNull();
 });
 
+test("each turn keeps its trace with the claim: the server's marks, its runner's, its system by blocks, broken budgets", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(_turn, io) {
+      io.phase?.("code");
+      await Bun.sleep(30);
+      io.phase?.(null);
+      yield { type: "tool_started", id: "t1", name: "Bash" };
+      await Bun.sleep(20);
+      yield { type: "tool_call", id: "t1", name: "Bash", input: {}, executed: { content: "ok" } };
+      yield { type: "text_delta", text: "Pronto." };
+      yield {
+        type: "done",
+        text: "Pronto.",
+        timings: {
+          warm: false,
+          cold: "new_session",
+          initMs: 9100,
+          firstTokenMs: 9600,
+          evidence: ["+412ms [DEBUG] [API REQUEST] /v1/messages"],
+        },
+      };
+    },
+  };
+  const told: RunProfileReport[] = [];
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+    onRunProfile: (p) => told.push(p),
+  });
+  await post(f, "@dev roda os testes");
+  await drainOutbox(f.db, handlers);
+
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { turns: Record<string, unknown>[]; slow: unknown[] }[];
+  const [turn] = claim?.turns ?? [];
+  expect(turn).toMatchObject({ brain: "claude_code", end: "done", tools: { count: 1 } });
+  expect(turn?.preTurnMs as number).toBeGreaterThanOrEqual(25);
+  expect(turn?.firstTextMs as number).toBeGreaterThanOrEqual(turn?.firstEventMs as number);
+  expect((turn?.tools as { ms: number } | undefined)?.ms ?? 0).toBeGreaterThanOrEqual(15);
+  expect(turn?.runner).toMatchObject({ initMs: 9100, evidence: ["+412ms [DEBUG] [API REQUEST] /v1/messages"] });
+  // Its system text by blocks, a short hash each: which block changed between two turns, with no word of it.
+  const system = Object.values(turn?.system as Record<string, string>);
+  expect(system.length).toBeGreaterThan(1);
+  for (const hash of system) expect(hash).toMatch(/^[0-9a-f]{8}$/);
+  // A new CLI past its budget; its first token 500 ms after it was ready is within its own.
+  expect(claim?.slow).toEqual([{ stage: "init", ms: 9100, budgetMs: 8000, cause: "new_session", turn: 1 }]);
+  expect(told.at(-1)?.slow).toEqual(claim?.slow as RunProfileReport["slow"]);
+  // The operator reads it as a waterfall: the claim's stages and the turn's marks on one time line.
+  const [read] = runClaims(run?.profiles);
+  expect(read?.turns[0]).toMatchObject({
+    brain: "claude_code",
+    runner: { initMs: 9100 },
+    evidence: [expect.any(String)],
+  });
+  const spans = read?.waterfall.map((w) => w.span) ?? [];
+  expect(spans).toEqual(expect.arrayContaining(["turn#1", "turn#1.pre_turn", "turn#1.init", "turn#1.first_token"]));
+  expect(spans.some((s) => s.startsWith("model#1"))).toBe(true);
+});
+
+test("a computer turn keeps where its time went: its checkouts' update, the CLI's start and first byte, tools, the model", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn, io) {
+      io.phase?.("code");
+      await Bun.sleep(40);
+      io.phase?.(null);
+      // One of ours through the bridge, timed by the steps the gateway writes, and one of its own at the same time.
+      yield { type: "tool_started", id: "own-1", name: "Bash" };
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_call", { toolUseId: "ours-1", name: "x" });
+      await Bun.sleep(60);
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_result", { toolUseId: "ours-1", name: "x" });
+      yield { type: "tool_call", id: "own-1", name: "Bash", input: {}, executed: { content: "ok" } };
+      yield {
+        type: "done",
+        text: "Feito.",
+        timings: { warm: false, cold: "new_session", initMs: 5, firstTokenMs: 12 },
+      };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev roda");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  const model = claim?.stages.find((s) => s.stage === "model#1");
+  const parts = Object.fromEntries((model?.parts ?? []).map((p) => [p.stage, p.ms]));
+  expect(Object.keys(parts)).toEqual(["pre_turn_sync", "cli_init", "cli_first_byte", "tools", "model_write"]);
+  expect(parts.pre_turn_sync).toBeGreaterThanOrEqual(35);
+  expect([parts.cli_init, parts.cli_first_byte]).toEqual([5, 7]);
+  // The two calls overlapped on different clocks: counted each, never less than the longer.
+  expect(parts.tools).toBeGreaterThanOrEqual(55);
+  const sum = (model?.parts ?? []).reduce((n, p) => n + p.ms, 0);
+  expect(Math.abs(sum - (model?.ms ?? 0))).toBeLessThan(1);
+});
+
+test("a call of ours through the bridge counts once in a computer turn's tools, though the brain tells it too", async () => {
+  f = await setup({ react: true });
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn, io) {
+      const name = turn.tools.find((t) => t.name === "react")?.name ?? "";
+      // The brain tells our call as it starts and ends, and the gateway writes its two steps around the same time.
+      yield { type: "tool_started", id: "ours-1", name };
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_call", { toolUseId: "ours-1", name });
+      await Bun.sleep(80);
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_result", { toolUseId: "ours-1", name });
+      yield { type: "tool_call", id: "ours-1", name, input: {}, executed: { content: "ok" } };
+      io.phase?.(null);
+      await Bun.sleep(200);
+      yield { type: "done", text: "Feito.", timings: { warm: true } };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev roda");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  const model = claim?.stages.find((s) => s.stage === "model#1");
+  const tools = model?.parts?.find((p) => p.stage === "tools")?.ms ?? 0;
+  expect(tools).toBeGreaterThanOrEqual(75);
+  expect(tools).toBeLessThan(150);
+});
+
 test("a computer brain that keeps doing real work between promises gets both continues, never the ask nudge", async () => {
   f = await setup({
     judge: (kind, _id, state) =>
@@ -386,7 +531,17 @@ test("a computer brain that keeps doing real work between promises gets both con
     typeof s.data.nudged === "string" ? [s.data.nudged] : [],
   );
   expect(nudged).toEqual(["promise", "promise"]);
-  expect((await timeline(f)).at(-1)?.body).toBe("Tudo verde.");
+  // Its first words stay in the channel; the rest of the turn goes in their thread (ADR 0261).
+  const first = (await timeline(f)).at(-1);
+  expect(first?.body).toBe("Rodei os testes; vou corrigir o lint.");
+  const under = await f.db
+    .select({ body: schema.messages.body, threadId: schema.messages.threadId })
+    .from(schema.messages)
+    .orderBy(schema.messages.createdAt);
+  expect(under.filter((m) => m.threadId === first?.id).map((m) => m.body)).toEqual([
+    "Corrigi o lint; vou rodar os testes de novo.",
+    "Tudo verde.",
+  ]);
 });
 
 test("computer sessions: the conversation's session goes on while recent and small; a big, idle or routine one starts fresh", async () => {
@@ -570,6 +725,17 @@ test("edited instructions or org context reach a kept-alive session's next turn:
   await reply("@dev e a loja?");
   expect(seen[4]?.session?.resume).toBe(false);
   expect(systems[4]).toContain("We sell bikes.");
+  // Each new session says which part of the session's text changed, so the operator sees why it started cold.
+  const why = async (runId: string | undefined) => {
+    const [run] = await f.db
+      .select({ transcript: schema.agentRuns.transcript })
+      .from(schema.agentRuns)
+      .where(eq(schema.agentRuns.id, runId ?? ""));
+    return (run?.transcript as { notPickedUp?: string[] } | null)?.notPickedUp;
+  };
+  expect(await why(seen[2]?.runId)).toEqual(["agent"]);
+  expect(await why(seen[4]?.runId)).toEqual(["org"]);
+  expect(await why(seen[3]?.runId)).toBeUndefined();
 });
 
 test("people taking turns keep one session; a repository added to the agent's access starts a new one", async () => {
@@ -596,7 +762,8 @@ test("people taking turns keep one session; a repository added to the agent's ac
   await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: bia.id });
   const systems: string[] = [];
   const { brain, seen } = scriptedComputerBrain((_n, turn) => {
-    systems.push(turn.system);
+    // What the session starts with: its system text and, once, what holds for the conversation (its tools, repositories).
+    systems.push(`${turn.system}\n${turn.conversation ?? ""}`);
     return [
       { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
       { type: "done", text: "ok" },
@@ -1209,6 +1376,28 @@ test("a computer brain that fails after calls posts what it said after its last 
   expect(last?.meta.brainInterrupted).toMatchObject({ text: "Go isn't installed here, so I'm installing it now." });
   expect(last?.body).toContain("Go isn't installed here, so I'm installing it now.");
   expect(last?.body).not.toContain("Let me check whether Go is");
+});
+
+test("a computer brain cut off calls after its last words posts none of them: later calls already did what they said", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
+  await computerAgent(f);
+  const { brain } = scriptedComputerBrain(async function* () {
+    yield { type: "text_delta", text: "The clone never started, so I'll start it again." };
+    yield { type: "tool_call", id: "b-1", name: "Bash", input: { command: "git clone" }, executed: { content: "ok" } };
+    yield { type: "tool_call", id: "b-2", name: "Bash", input: { command: "sleep 600" }, executed: { content: "ok" } };
+    yield { type: "error", code: "executor_crashed", message: "Claude Code exited", retryable: true };
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev clone the repo");
+  await drainOutbox(f.db, handlers);
+
+  const last = (await timeline(f)).at(-1);
+  expect(last?.meta.brainInterrupted).toMatchObject({ text: "" });
+  expect(last?.body).not.toContain("start it again");
 });
 
 test("sent on after its turn, a computer brain that opens again with the same line and asks posts that line once", async () => {
@@ -1911,6 +2100,20 @@ test("its computer moving to another server: the run's wait says so, for the app
   const waitOfTask = async () => (await taskManager(f.db, f.owner.id, f.org.id)).tasks[0]?.wait;
   await f.db.update(schema.machines).set({ movingAt: new Date() }).where(eq(schema.machines.id, machineId));
   expect((await waitOfTask())?.moving).toBe(true);
+  // What is done to it, with when it should be back (ADR 0257).
+  const eta = new Date(Date.now() + 2 * 60_000).toISOString();
+  const since = new Date().toISOString();
+  await f.db
+    .update(schema.machines)
+    .set({ maintenance: { kind: "restarting", since, eta, detail: "unresponsive" } })
+    .where(eq(schema.machines.id, machineId));
+  expect((await waitOfTask())?.maintenance).toEqual({
+    kind: "restarting",
+    since,
+    eta,
+    detail: "unresponsive",
+    away: true,
+  });
   await f.db.update(schema.machines).set({ movingAt: null }).where(eq(schema.machines.id, machineId));
   expect((await waitOfTask())?.moving).toBeUndefined();
 });
@@ -2676,6 +2879,42 @@ const offline = {
   retryable: true,
 } as const;
 
+test("a turn the computer dropped: the claim that picks it up again starts with its wait (`waits`)", async () => {
+  f = await setup();
+  const machineId = await computerAgent(f);
+  let online = true;
+  const { brain, seen } = scriptedComputerBrain((n) => {
+    if (n > 0) return [{ type: "done", text: "Voltei." }];
+    online = false;
+    return [{ type: "tool_call", id: "t1", name: "Bash", input: {}, executed: { content: "ok" } }, offline];
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id, { online }) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  let [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("waiting_input");
+  expect((run?.transcript as { waitingForBrain?: { code?: string } } | null)?.waitingForBrain?.code).toBe(
+    "machine_dropped",
+  );
+  online = true;
+  await resumeRunsWaitingForMachine(f.db, machineId);
+  await drainOutbox(f.db, handlers);
+  [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  expect(seen.length).toBe(2);
+  const profiles = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  expect(
+    profiles
+      .at(-1)
+      ?.stages.map((s) => s.stage)
+      .slice(0, 2),
+  ).toEqual(["waits", "claim"]);
+});
+
 test("drops before the turn said or did anything don't use up the limit: the run goes on past it", async () => {
   f = await setup();
   await computerAgent(f);
@@ -3247,17 +3486,14 @@ test("a computer brain with the react tool is told to end with an empty reply af
   expect(systems[0]).toContain("not even the emoji again");
 });
 
-test("a computer brain with the GIF and sticker tools is told an empty reply after one adds nothing", async () => {
-  f = await setup({ mediaTools: true });
+test("a computer agent that may send GIFs and stickers is told so in one text, whether or not this run lists them", async () => {
+  f = await setup({ mediaTools: true, react: true });
   await computerAgent(f);
   const systems: string[] = [];
-  const brain: Brain = {
-    kind: "claude_code",
-    async *run(turn) {
-      systems.push(turn.system);
-      yield { type: "done", text: "Oi." };
-    },
-  };
+  const { brain, seen } = scriptedComputerBrain((_n, turn) => {
+    systems.push(turn.system);
+    return [{ type: "done", text: "Oi." }];
+  });
   const handlers = createJobHandlers({
     ...f.jobDeps,
     brains: { claude_code: () => brain },
@@ -3265,10 +3501,115 @@ test("a computer brain with the GIF and sticker tools is told an empty reply aft
   });
   await post(f, "@dev oi");
   await drainOutbox(f.db, handlers);
-  // No GIF search on this server: the note names only the sticker, and no reaction note without `react`.
-  expect(systems[0]).toContain(computerMediaNote(["send_sticker"]));
+  // Another agent's DM: nobody there to send a sticker to, so the run doesn't list it.
+  const qa = await createAgent(
+    f.db,
+    f.owner.id,
+    f.org.id,
+    { name: "QA", handle: "qa", role: "Tests", instructions: "", credentialId: f.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  const dm = await openAgentDm(f.db, f.org.id, f.agent.id, qa.id);
+  const asked = await insertMessage(f.db, {
+    orgId: f.org.id,
+    channelId: dm.id,
+    author: { type: "agent", agentId: qa.id, runId: null, hop: 1, stretchId: null },
+    body: "Os testes passaram?",
+  });
+  const [run] = await f.db
+    .insert(schema.agentRuns)
+    .values({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      channelId: dm.id,
+      threadRootId: asked.id,
+      triggerMessageId: asked.id,
+      trigger: "dm",
+      hop: 1,
+    })
+    .returning();
+  if (!run) throw new Error("no run");
+  await enqueue(f.db, {
+    orgId: f.org.id,
+    kind: "agent_run.execute",
+    payload: { runId: run.id },
+    dedupeKey: `agent_run.execute:${run.id}`,
+  });
+  await drainOutbox(f.db, handlers);
+
+  expect(seen[0]?.tools.map((t) => t.name)).toContain("send_sticker");
+  expect(seen[1]?.tools.map((t) => t.name)).not.toContain("send_sticker");
+  // The CLI its computer started with the agent's last text is the one each of these turns takes.
+  expect(systems[1]).toBe(systems[0] as string);
+  expect(systems[0]).toContain(COMPUTER_MEDIA_NOTE);
+  expect(systems[0]).toContain(COMPUTER_REACT_NOTE);
+  // No GIF search on this server: no GIF tool is named.
   expect(systems[0]).not.toContain("`send_gif`");
-  expect(systems[0]).not.toContain(COMPUTER_REACT_NOTE);
+
+  // An agent whose own switch is off is never told of them.
+  await f.db.update(schema.agents).set({ mediaReplies: false }).where(eq(schema.agents.id, f.agent.id));
+  await post(f, "@dev e agora?");
+  await drainOutbox(f.db, handlers);
+  expect(systems[2]).not.toContain(COMPUTER_MEDIA_NOTE);
+});
+
+test("a resumed session reads what it can do here again when it changed, and goes on rather than starting over", async () => {
+  let more = false;
+  const listed = (name: string) => ({
+    name,
+    description: `The ${name} tool.`,
+    scope: "",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    execute: async () => ({ content: "ok" }),
+  });
+  // A tool of the conversation's own (no scope to grant) that shows up between two turns.
+  const source: ToolSource = {
+    name: "late",
+    tools: async () => [listed("check_build"), ...(more ? [listed("check_deploy")] : [])],
+  };
+  f = await setup({ toolSources: [source] });
+  await computerAgent(f);
+  const prompts: string[] = [];
+  const { brain, seen } = scriptedComputerBrain((_n, turn) => {
+    prompts.push(computerPrompt(turn));
+    return [
+      { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
+      { type: "done", text: "ok" },
+    ];
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const question = await post(f, "@dev o build passou?");
+  await drainOutbox(f.db, handlers);
+  const reply = async (body: string) => {
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body,
+      threadId: question.id,
+    });
+    await drainOutbox(f.db, handlers);
+  };
+
+  // Nothing changed here: the session goes on and isn't told again.
+  await reply("@dev e o lint?");
+  expect(seen[1]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
+  expect(prompts[1]).not.toContain("# This conversation, now");
+
+  more = true;
+  await reply("@dev e o deploy?");
+  expect(seen[2]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
+  expect(prompts[2]).toContain("# This conversation, now");
+  expect(prompts[2]).toContain("`check_deploy`");
+  // Only the lines of "What you can do" that changed, not the whole block again.
+  expect(prompts[2]).toContain("### What you can do (changed lines)");
+  expect(prompts[2]).not.toContain("You can:");
+
+  // Read once: the turn after goes on without it.
+  await reply("@dev e agora?");
+  expect(seen[3]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
+  expect(prompts[3]).not.toContain("# This conversation, now");
 });
 
 test("bridged side effects reach the engine: artifacts and memory cards on the reply, memory.updated published", async () => {
@@ -4650,6 +4991,23 @@ test("agents' turns on one computer start apart, parked in line (never handed to
     (j) => j.dedupeKey?.startsWith(`agent_run.execute:${fromAgents.id}:room-kick:`) && j.status === "pending",
   );
   expect(kick).toBeDefined();
+});
+
+test("an agent's turn on a CLI its computer already holds open isn't spaced: it starts no process", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
+  const machineId = await computerAgent(f);
+  const { brain: scripted, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const brain: Brain = { ...scripted, warm: async () => true };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await askedJustNow(f, machineId);
+  const fromAgents = await secondRun(f, (await personMessage(f, "@dev revisa")).id, 2);
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(1);
+  expect((await runById(f, fromAgents.id))?.status).toBe("done");
 });
 
 test("only the head of the computer's line asks it: an agent's run waits behind a person's", async () => {

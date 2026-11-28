@@ -9,8 +9,10 @@ import type {
   RoutineTarget,
   WebhookProvider,
 } from "../api/types";
-import type { RunStatus } from "./calendar";
 import { clockAt, whenAt } from "./format";
+
+/** How a run went, as its pixel and words say it. */
+export type RunStatus = "ok" | "silent" | "failed" | "skipped";
 
 /**
  * How Rotinas says a routine (ADR 0053 §11), as pure rules: its state and the one-tap fix for a pause,
@@ -437,7 +439,7 @@ export function busyOnComputer(
   if (
     !where.selfHost ||
     !brain ||
-    !["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"].includes(brain.kind)
+    !["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"].includes(brain.kind)
   )
     return null;
   if (perDay < BUSY_RUNS_PER_DAY) return null;

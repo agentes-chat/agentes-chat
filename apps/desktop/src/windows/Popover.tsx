@@ -6,7 +6,12 @@
  * its banners. This window also owns the tray icon's state, answers the site's questions about this computer
  * and raises the notifications for folder requests (it lives, hidden, for as long as the app runs).
  */
-import type { ControlAccessRequest, ControlBrowser, ControlJob } from "@agenteschat/adapters/runner-control";
+import type {
+  ControlAccessRequest,
+  ControlAppUse,
+  ControlBrowser,
+  ControlJob,
+} from "@agenteschat/adapters/runner-control";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { Button, Icon, Kbd, normalizeAppearance, PixelSpinner, Segmented } from "@agenteschat/ui";
 import {
@@ -23,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../app";
 import { saidText, toolWords } from "../control/activity";
 import {
+  appUsesOf,
   BROWSER_NOTIFY_PREF,
   browserRowState,
   browsersOf,
@@ -38,8 +44,15 @@ import { NOTCH_PREF } from "../control/notch";
 import { SITE_NOTIFY_PREF } from "../control/notify";
 import { nextOffer, PAIR_OFFER_PREF, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
-import { PREPARE_PREF } from "../control/permissions";
-import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
+import { askKey, PERMISSION_ASK_PREF, PREPARE_PREF, permissionAsks } from "../control/permissions";
+import {
+  homeServer,
+  type ServerList,
+  type ServerWorkspaces,
+  serverName,
+  type VersionProblem,
+  versionProblem,
+} from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
 import { isOnline, macStateOf, trayStateOf } from "../control/tray";
@@ -83,6 +96,7 @@ export function Popover() {
   const runningJobs = useRef(0);
   runningJobs.current = jobs.length;
   const requests = homes.flatMap((h) => h.requests.map((r) => ({ home: h, request: r })));
+  const picks = homes.filter((h) => h.pick);
   const incompatible = snap.homes.some(isIncompatible);
   const refused = homes.find(isRefusedHome);
   const outdated = homes.some((h) => h.status?.connection === "outdated");
@@ -100,6 +114,23 @@ export function Popover() {
       .catch(() => {});
   useEffect(readList, [host]);
   useEffect(() => host.onBadge(setCounts), [host]);
+  // The server open now, checked again each time the popover shows (the cover says it as the server opens).
+  const [tooOld, setTooOld] = useState<VersionProblem | null>(null);
+  useEffect(() => {
+    if (!current) {
+      setTooOld(null);
+      return;
+    }
+    const ask = () =>
+      void host
+        .checkServer(current)
+        .then((c) => setTooOld(versionProblem(c)))
+        .catch(() => {});
+    ask();
+    return host.onShown((name) => {
+      if (name === "popover") ask();
+    });
+  }, [host, current]);
   // The server here's address moves with reach: the list again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: when its address or whether it runs changes
   useEffect(readList, [local.publicUrl, local.run]);
@@ -155,8 +186,8 @@ export function Popover() {
   const [menuBarPref, setMenuBarPref] = useState(() => readPref<boolean | null>(MENU_BAR_PREF, null));
   const iconShown = menuBarShown(menuBarPref, busyHere);
   useEffect(() => {
-    void host.setTrayVisible(iconShown).catch(() => {});
-  }, [host, iconShown]);
+    void host.setTrayVisible(iconShown, menuBarPref === false).catch(() => {});
+  }, [host, iconShown, menuBarPref]);
 
   // The notch window lives only while it's on (Preferências → Geral): this window starts with the app.
   useEffect(() => {
@@ -184,6 +215,24 @@ export function Popover() {
       void host.notify(t("desktop.tray.browser.notifTitle", { agent: agent.name }), body).catch(() => {});
     }
   }, [helpKeys]);
+
+  // An OS permission an agent's work waits on here: the welcome window asks for it, once per new wait.
+  const asks = permissionAsks(homes);
+  const askKeys = asks.map(askKey).sort().join("|");
+  const asked = useRef(new Set<string>());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the set of waits changes
+  useEffect(() => {
+    const now = new Set(asks.map(askKey));
+    const fresh = [...now].some((k) => !asked.current.has(k));
+    asked.current = now;
+    if (!fresh) return;
+    writePref(PERMISSION_ASK_PREF, true);
+    void host.showWindow("welcome").catch(() => {});
+  }, [askKeys]);
+  const openAsk = () => {
+    writePref(PERMISSION_ASK_PREF, true);
+    void host.showWindow("welcome").catch(() => {});
+  };
 
   // "há 2 min" stays true.
   useEffect(() => {
@@ -588,6 +637,21 @@ export function Popover() {
                 </span>
               </header>
             )}
+            {tooOld && current && (
+              <Banner
+                icon="alert"
+                title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                  host: serverName(current),
+                })}
+                actions={
+                  tooOld === "app-too-old" && (
+                    <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
+                      {t("desktop.connect.checkUpdates")}
+                    </Button>
+                  )
+                }
+              />
+            )}
             {!update.state.required && update.state.available && update.state.latest && (
               <Banner
                 icon="download"
@@ -628,6 +692,21 @@ export function Popover() {
             </header>
           )}
 
+          {tooOld && current && (
+            <Banner
+              icon="alert"
+              title={t(tooOld === "app-too-old" ? "desktop.connect.appTooOld" : "desktop.connect.serverTooOld", {
+                host: serverName(current),
+              })}
+              actions={
+                tooOld === "app-too-old" && (
+                  <Button size="sm" variant="primary" onClick={() => openPrefs("updates")}>
+                    {t("desktop.connect.checkUpdates")}
+                  </Button>
+                )
+              }
+            />
+          )}
           {incompatible && (
             <Banner icon="alert" title={t("desktop.tray.incompatibleTitle")}>
               {t("desktop.tray.incompatibleBody")}
@@ -740,11 +819,31 @@ export function Popover() {
 
           {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
 
-          {requests.length > 0 && (
+          {asks.map((a) => (
+            <Banner
+              key={askKey(a)}
+              icon="lock"
+              title={t("desktop.permissionAsk.trayTitle", {
+                permission: t(`devices.permission.names.${a.need.permission}`),
+              })}
+              actions={
+                <Button size="sm" variant="primary" onClick={openAsk}>
+                  {t("desktop.pair.allow")}
+                </Button>
+              }
+            >
+              {t(`desktop.permissionAsk.why.${a.need.permission}`)}
+            </Banner>
+          ))}
+
+          {requests.length + picks.length > 0 && (
             <section className="dk-psec">
               <div className="dk-pcap">
-                {t("desktop.tray.requests")} <Count n={requests.length} />
+                {t("desktop.tray.requests")} <Count n={requests.length + picks.length} />
               </div>
+              {picks.map((h) => (
+                <PickCard key={h.homeId} home={h} now={now} />
+              ))}
               {requests.map(({ home, request }) => (
                 <RequestCard key={request.requestId} home={home} request={request} now={now} />
               ))}
@@ -1009,12 +1108,13 @@ function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean; now: 
   const { t } = useTranslation();
   const rows = homes.map((h) => {
     const browsers = browsersOf(h.status);
+    const uses = appUsesOf(h.status, now);
     const inBrowser = new Set(browsers.map((b) => b.agentId));
     // An agent in its browser shows once, as its browser row (its thinking is what drives it).
     const jobs = h.jobs.filter((j) => !(j.kind === "brain" && j.agent && inBrowser.has(j.agent.id)));
-    return { home: h, browsers, jobs };
+    return { home: h, browsers, uses, jobs };
   });
-  const total = rows.reduce((n, r) => n + r.jobs.length + r.browsers.length, 0);
+  const total = rows.reduce((n, r) => n + r.jobs.length + r.browsers.length + r.uses.length, 0);
   if (total === 0) {
     const someone = homes.flatMap((h) => h.status?.agents ?? [])[0];
     return (
@@ -1033,18 +1133,21 @@ function NowList({ homes, paused, now }: { homes: Home[]; paused: boolean; now: 
   }
   return (
     <>
-      {rows.map(({ home: h, browsers, jobs }) => (
+      {rows.map(({ home: h, browsers, uses, jobs }) => (
         <div key={h.homeId}>
           <div className="dk-ohead">
             <OrgTile logo={h.logo} size="sm" />
             {orgName(h)}
-            <Count n={jobs.length + browsers.length} />
-            {jobs.length + browsers.length === 0 && (
+            <Count n={jobs.length + browsers.length + uses.length} />
+            {jobs.length + browsers.length + uses.length === 0 && (
               <span className="dk-ohead__end">
                 {isOnline(h) ? t("desktop.tray.nothingNow") : t("desktop.tray.waitingConnection")}
               </span>
             )}
           </div>
+          {uses.map((u) => (
+            <AppUseRow key={`apps:${u.agentId}`} home={h} use={u} />
+          ))}
           {browsers.map((b) => (
             <BrowserRow key={`browser:${b.agentId}`} home={h} browser={b} />
           ))}
@@ -1171,6 +1274,58 @@ function BrowserRow({ home, browser }: { home: Home; browser: ControlBrowser }) 
   );
 }
 
+/**
+ * An agent using one of the person's apps here (ADR 0258): "Theo está usando Mail", through the system's
+ * accessibility (the person's mouse and keyboard stay theirs), with Parar: its next commands in the apps are refused.
+ */
+function AppUseRow({ home, use }: { home: Home; use: ControlAppUse }) {
+  const { t } = useTranslation();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const agent = agentOf(home, { id: use.agentId, name: t("desktop.tray.browser.someAgent") });
+  const color = normalizeAppearance(agent.look).color;
+  const stop = async () => {
+    setBusy(true);
+    try {
+      await store.request(home.homeId, { type: "apps.stop", agentId: use.agentId });
+      toast(t("desktop.tray.apps.stopped", { agent: agent.name }), "stop");
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="dk-job dk-job--browser">
+      <span className="dk-job__av">
+        <AgentFace agent={agent} size="sm" state="writing" />
+      </span>
+      <span className="dk-job__text">
+        <b>
+          <span>{t("desktop.tray.apps.title", { agent: agent.name, app: use.app })}</span>
+        </b>
+        <small>
+          <PixelSpinner size={14} color={color} />
+          <span className="dk-job__detail">{t("desktop.tray.apps.detail")}</span>
+        </small>
+      </span>
+      <span className="dk-job__acts">
+        <button
+          type="button"
+          className="dk-iconbtn"
+          disabled={busy}
+          title={t("desktop.tray.apps.stop")}
+          aria-label={t("desktop.tray.apps.stop")}
+          onClick={() => void stop()}
+        >
+          <Icon name="stop" size={14} />
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function JobRow({ home, job, now }: { home: Home; job: ControlJob; now: number }) {
   const { t, i18n } = useTranslation();
   const agent = job.agent ? agentOf(home, job.agent) : null;
@@ -1237,9 +1392,88 @@ function AllowedBanner({ home }: { home: Home }) {
   );
 }
 
+/**
+ * Someone asked from the apps for a folder here (`access.pick`): the person here picks it in the system's folder
+ * picker, for the agent named or every agent of that organization here, or says not now. Nothing is allowed unpicked.
+ */
+function PickCard({ home, now }: { home: Home; now: number }) {
+  const { t } = useTranslation();
+  const host = useHost();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const pick = home.pick;
+  if (!pick) return null;
+  const name = pick.byName || orgName(home);
+  const agent = pick.agentId ? agentOf(home, { id: pick.agentId, name: pick.agentName ?? "" }) : null;
+  // Answered (or the picker closed): the popover goes on hiding when it loses focus, as it does when opened by hand.
+  const answered = () => void host.showWindow("popover").catch(() => {});
+  const choose = async () => {
+    setBusy(true);
+    try {
+      const path = await host.pickFolder().catch(() => null);
+      answered();
+      if (!path) return;
+      const agents = agent ? [agent.id] : (home.status?.agents ?? []).map((a) => a.id);
+      await store.request(home.homeId, { type: "folders.add", path, agents });
+      store.dismissPick(home.homeId);
+      const folder = baseName(path);
+      toast(
+        agent ? t("desktop.tray.allowedOne", { folder, agent: agent.name }) : t("desktop.tray.allowedAll", { folder }),
+        "check",
+      );
+    } catch (err) {
+      toast(
+        err instanceof ControlError && ["invalid_path", "not_found", "bad_request"].includes(err.code)
+          ? t("desktop.tray.answerFailed", { message: err.message })
+          : t("desktop.common.error"),
+        "alert",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="dk-banner dk-req">
+      <div className="dk-req__who">
+        {agent ? <AgentFace agent={agent} size="sm" state="waiting" /> : <OrgTile logo={home.logo} size="sm" />}
+        <span className="dk-req__whotext">
+          <b>
+            {agent
+              ? t("desktop.tray.pickTitleAgent", { name, agent: agent.name })
+              : t("desktop.tray.pickTitle", { name })}
+          </b>
+          <small>
+            {agent && <OrgTile logo={home.logo} size="sm" />}
+            {orgName(home)} · {since(pick.at, t, now)}
+          </small>
+        </span>
+      </div>
+      <div className="dk-req__quote">{t("desktop.tray.pickBody")}</div>
+      <div className="dk-banner__acts">
+        <Button size="sm" variant="primary" icon="drive" loading={busy} onClick={() => void choose()}>
+          {t("desktop.tray.pickChoose")}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => {
+            store.dismissPick(home.homeId);
+            answered();
+          }}
+        >
+          {t("desktop.tray.deny")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. */
 function RequestCard({ home, request, now }: { home: Home; request: ControlAccessRequest; now: number }) {
   const { t } = useTranslation();
+  const host = useHost();
   const store = useStore();
   const toast = useToast();
   const [scope, setScope] = useState<"agent" | "all">("agent");
@@ -1250,6 +1484,8 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
     setBusy(true);
     try {
       await store.request(home.homeId, { type: "access.answer", requestId: request.requestId, decision, scope });
+      // Raised for this request (`raisePick`), the popover was kept up: answered, it hides on focus loss again.
+      void host.showWindow("popover").catch(() => {});
       toast(
         decision === "denied"
           ? t("desktop.tray.denied", { agent: agent.name })

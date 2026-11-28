@@ -89,6 +89,36 @@ test("typing frames fan out to subscribers of the channel (throttled), never to 
   b.ws.close();
 });
 
+test("opening a DM or a thread warms the agent that will answer there, once subscribed, with no typing line", async () => {
+  const channelId = "0193a2b4-0000-7000-8000-000000000000";
+  const threadId = "0193a2b4-0000-7000-8000-0000000000aa";
+  expect(parseClientFrame(JSON.stringify({ type: "open", channelId, threadId }))).toEqual({
+    type: "open",
+    channelId,
+    threadId,
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const seeded = await seedOrg(owner);
+  const url = `ws://127.0.0.1:${server.port}/api/ws?orgId=${seeded.orgId}`;
+  const a = connect(url, { origin: ORIGIN, cookie: owner.cookie() });
+  await a.opened;
+  const warms = spyOn(t.engine, "warmWhileTyping");
+  const heard: unknown[] = [];
+  t.adapters.pubsub.subscribe(typingTopic, (e) => heard.push(e));
+  // Not a channel this connection reads yet: nothing.
+  a.send({ type: "open", channelId: seeded.channelId });
+  a.send({ type: "subscribe", channelId: seeded.channelId });
+  await a.until((f) => f.type === "subscribed");
+  a.send({ type: "open", channelId: seeded.channelId, threadId });
+  await Bun.sleep(100);
+  expect(warms.mock.calls).toEqual([
+    [{ orgId: seeded.orgId, channelId: seeded.channelId, threadId, userId: expect.any(String) }],
+  ]);
+  expect(heard).toEqual([]);
+  a.ws.close();
+});
+
 test("a voice frame (“gravando áudio…”) goes on with its kind, through the same limit; another kind reads as typing", async () => {
   const channelId = "0193a2b4-0000-7000-8000-000000000000";
   expect(parseClientFrame(JSON.stringify({ type: "typing", channelId, kind: "voice" }))).toEqual({

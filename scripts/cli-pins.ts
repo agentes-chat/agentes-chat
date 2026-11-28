@@ -3,7 +3,7 @@
  * Rewrites the coding CLIs' pins (`packages/providers/src/cli-pins.ts`, ADR 0228 §6) from each vendor's latest stable
  * release: the version, and each system's build with its hash. The vendor's own hash where it publishes one (Claude
  * Code's manifest, Codex's, OpenCode's and MinGit's release assets, the Antigravity CLI's manifests per platform, the
- * ones its installers read); otherwise the build is downloaded and hashed here (Cursor's, Grok Build's). Prints what
+ * ones its installers read, the Devin CLI's manifest); otherwise the build is downloaded and hashed here (Cursor's, Grok Build's). Prints what
  * changed; with nothing new it leaves the file as it is. The `cli-pins` workflow runs it daily and opens a pull
  * request with the change, never merged by itself.
  *
@@ -209,6 +209,32 @@ async function antigravity(): Promise<CliPin> {
   return { version, builds };
 }
 
+/**
+ * The Devin CLI: the manifest its installer reads (`cli.devin.ai/install.sh`), each platform's bundle with its sha256.
+ * No Windows build is pinned (ADR 0253).
+ */
+async function devin(): Promise<CliPin> {
+  const m = await json<{ version: string; platforms: Record<string, { url: string; sha256: string }> }>(
+    "https://static.devin.ai/cli/current/manifest.json",
+  );
+  if (!/^\d+\.\d+\.\d+$/.test(m.version)) throw new Error(`devin: unexpected version "${m.version}"`);
+  const systems: [PinPlatform, string][] = [
+    ["darwin-arm64", "aarch64-apple-darwin"],
+    ["darwin-x64", "x86_64-apple-darwin"],
+    ["linux-x64", "x86_64-unknown-linux"],
+    ["linux-arm64", "aarch64-unknown-linux"],
+    ["linux-x64-musl", "x86_64-unknown-linux-musl"],
+    ["linux-arm64-musl", "aarch64-unknown-linux-musl"],
+  ];
+  const builds: CliPin["builds"] = {};
+  for (const [platform, target] of systems) {
+    const b = m.platforms[target];
+    if (!b?.url.startsWith("https://") || !/^[0-9a-f]{64}$/i.test(b.sha256)) throw new Error(`devin: ${target}`);
+    builds[platform] = { url: b.url, hash: sha256(b.sha256.toLowerCase()), archive: "tar.gz", executable: "bin/devin" };
+  }
+  return { version: m.version, builds };
+}
+
 /** Git for Windows' portable build (MinGit), Claude Code's shell on Windows: its release assets' sha256. */
 async function git(): Promise<CliPin> {
   const r = await release("git-for-windows/git");
@@ -273,7 +299,16 @@ function render(cli: PinCli, pin: CliPin): string {
   return `  ${cli}: {\n    version: ${JSON.stringify(pin.version)},\n    builds: {\n${builds}\n    },\n  },`;
 }
 
-const FETCHERS: Record<PinCli, () => Promise<CliPin>> = { claude, codex, cursor, opencode, grok, antigravity, git };
+const FETCHERS: Record<PinCli, () => Promise<CliPin>> = {
+  claude,
+  codex,
+  cursor,
+  opencode,
+  grok,
+  antigravity,
+  devin,
+  git,
+};
 
 const check = process.argv.includes("--check");
 let source = readFileSync(FILE, "utf8");

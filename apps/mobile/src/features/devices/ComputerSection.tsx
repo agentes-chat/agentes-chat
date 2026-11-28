@@ -1,8 +1,13 @@
-import { type ComputerDevice, useWifiIphones } from "@agenteschat/client";
+import { type ComputerDevice, useAuthConfig, useWifiIphones } from "@agenteschat/client";
 import {
   lendingDevice,
   mayChangeTasks,
+  SPILL_USES,
+  type SpillUse,
+  shareInternetHint,
   shareInternetText,
+  spillOfUse,
+  spillUseOf,
   taskChoices,
   tasksAutoText,
 } from "@agenteschat/client/lib/devices";
@@ -29,6 +34,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const toast = useToast();
   const { org } = useOrg();
   const meId = useMeId();
+  const auth = useAuthConfig();
   const audienceText = useAudienceText();
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
@@ -36,8 +42,8 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const spill = useDeviceMutation((api, orgId, own: boolean) =>
     api.devices.updateComputer(orgId, d.id, { spill: { own } }),
   );
-  const first = useDeviceMutation((api, orgId, on: boolean) =>
-    api.devices.updateComputer(orgId, d.id, { spill: { first: on } }),
+  const use = useDeviceMutation((api, orgId, next: SpillUse) =>
+    api.devices.updateComputer(orgId, d.id, { spill: spillOfUse(next) }),
   );
   const helpOff = useDevices().data?.devicesHelp === false;
   const tasks = useDeviceMutation((api, orgId, maxTasks: number) =>
@@ -48,6 +54,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   );
   const share = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { shareInternet: on }),
+  );
+  const shareOnly = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { internetOnly: on }),
   );
   const lending = lendingDevice(useDevices().data?.devices);
   const brought = d.machineKind === "connected";
@@ -65,13 +74,26 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
       })),
       t("common.cancel"),
     );
+  const askUse = () =>
+    chooseAction(
+      t("devices.helpUse"),
+      SPILL_USES.map((next) => ({
+        label: t(`devices.helpUses.${next}`),
+        checked: next === helpUse,
+        onPress: () => {
+          if (next !== helpUse) use.mutate(next, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) });
+        },
+      })),
+      t("common.cancel"),
+    );
   // What is being saved shows at once: a switch moves as it is tapped. Each change stays pending until the computers
   // are read again (`useDeviceMutation`), so the saved value takes over with no flicker.
   const spillOn = (spill.isPending ? spill.variables : undefined) ?? d.spill.own;
-  const firstOn = (first.isPending ? first.variables : undefined) ?? d.spill.first ?? false;
+  const helpUse = (use.isPending ? use.variables : undefined) ?? spillUseOf(d);
   const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;
   const pushing = (push.isPending ? push.variables : undefined) ?? d.taskRoom?.pushHarder ?? false;
   const sharing = (share.isPending ? share.variables : undefined) ?? d.shareInternet?.on ?? false;
+  const onlyLent = (shareOnly.isPending ? shareOnly.variables : undefined) ?? d.shareInternet?.only ?? false;
   const mine = d.ownerUserId === meId;
   // Someone else's lends now: its owner may pick this one instead (on again moves it first).
   const mayPick = sharing && !share.isPending && !d.shareInternet?.inUse && lending !== null && mine;
@@ -138,8 +160,25 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   : {})}
               />
             ) : null}
-            {/* Its help: its owner turns it on, an admin only off, and the workspace's switch off wins. */}
-            {brought && d.mayManage && !d.systemMode ? (
+            {/* Its help, its owner's one choice: never, only as backup, or first for their own agents' work. The
+                workspace's switch off wins. */}
+            {brought && mine && !d.systemMode ? (
+              <GroupedRow
+                label={t("devices.helpUse")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.helpUse") }),
+                  text: t(d.belongsToWorkspace ? "devices.helpUseTeamHint" : "devices.helpUseHint"),
+                }}
+                {...(helpOff ? { sub: t("devices.spillWorkspaceOff"), subLines: 0 } : {})}
+                value={t(`devices.helpUses.${helpOff ? "off" : helpUse}`)}
+                menu
+                disabled={helpOff}
+                onPress={askUse}
+              />
+            ) : null}
+            {/* Someone else's computer: an admin may only turn its help off. */}
+            {brought && !mine && d.mayManage && !d.systemMode ? (
               <GroupedRow
                 label={t("devices.spillOwn")}
                 labelLines={2}
@@ -149,26 +188,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                 }}
                 {...(helpOff ? { sub: t("devices.spillWorkspaceOff"), subLines: 0 } : {})}
                 toggle={spillOn && !helpOff}
-                disabled={helpOff || (d.ownerUserId !== meId && !spillOn)}
+                disabled={helpOff || !spillOn}
                 onPress={() =>
                   spill.mutate(!spillOn, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
-                }
-              />
-            ) : null}
-            {/* Its owner's agents' work starts here first: only its owner chooses it, for their own agents. */}
-            {brought && d.ownerUserId === meId && !d.systemMode ? (
-              <GroupedRow
-                label={t("devices.spillFirst")}
-                labelLines={2}
-                hint={{
-                  name: t("common.about", { label: t("devices.spillFirst") }),
-                  text: t("devices.spillFirstHint"),
-                }}
-                {...(helpOff ? { sub: t("devices.spillWorkspaceOff"), subLines: 0 } : {})}
-                toggle={firstOn && !helpOff}
-                disabled={helpOff}
-                onPress={() =>
-                  first.mutate(!firstOn, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
                 }
               />
             ) : null}
@@ -179,7 +201,7 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                 labelLines={2}
                 hint={{
                   name: t("common.about", { label: t("devices.shareInternet") }),
-                  text: t("devices.shareInternetHint"),
+                  text: shareInternetHint(t, auth.data),
                 }}
                 sub={shareInternetText(t, d, lending) ?? undefined}
                 toggle={sharing}
@@ -197,6 +219,21 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                       ),
                     }
                   : {})}
+              />
+            ) : null}
+            {/* Under the switch while it lends: nothing goes the usual way, AI included. Its owner's to turn on. */}
+            {sharing && d.shareInternet?.only !== undefined && (d.mayManage || onlyLent) ? (
+              <GroupedRow
+                depth={1}
+                label={t("devices.shareInternetOnly")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.shareInternetOnly") }),
+                  text: t("devices.shareInternetOnlyHint"),
+                }}
+                toggle={onlyLent}
+                disabled={!d.mayManage || (!mine && !onlyLent)}
+                onPress={() => shareOnly.mutate(!onlyLent, { onError: shareFailed })}
               />
             ) : null}
             {brought && admin ? (

@@ -148,7 +148,7 @@ jobs:
           $setup = (Get-ChildItem build/*-setup.exe | Select-Object -First 1).FullName
           Start-Process -Wait -FilePath $setup -ArgumentList '/S'
           $dir = Join-Path $env:LOCALAPPDATA 'agentes.chat'
-          $exe = Get-ChildItem $dir -Filter *.exe | Where-Object { $_.Name -notmatch '^(agentes-runner|agent-browser|uninstall)' } | Select-Object -First 1
+          $exe = Get-ChildItem $dir -Filter *.exe | Where-Object { $_.Name -notmatch '^(agentes-runner|agent-browser|agent-desktop|uninstall)' } | Select-Object -First 1
           "APP=$($exe.FullName)" >> $env:GITHUB_ENV
           "SERVER_RUNNER=$(Join-Path $dir 'agentes-runner.exe')" >> $env:GITHUB_ENV
           "NATIVE=$dir" >> $env:GITHUB_ENV
@@ -162,7 +162,7 @@ jobs:
           sudo apt-get install -y -qq "./$DEB" xvfb dbus
           FILES=$(dpkg -L "$(dpkg-deb -f "$DEB" Package)")
           {
-            echo "APP=$(grep '^/usr/bin/' <<< "$FILES" | grep -v -e agentes-runner -e agent-browser | head -1)"
+            echo "APP=$(grep '^/usr/bin/' <<< "$FILES" | grep -v -e agentes-runner -e agent-browser -e agent-desktop | head -1)"
             echo "SERVER_RUNNER=/usr/bin/agentes-runner"
             echo "NATIVE=$(dirname "$(dirname "$(grep '/server/native.js$' <<< "$FILES")")")"
           } >> "$GITHUB_ENV"

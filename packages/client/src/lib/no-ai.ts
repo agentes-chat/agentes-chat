@@ -18,6 +18,7 @@ import { groupPlans, type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf }
 import { answersOthers, audienceOf, managesAgent } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
+import { maintenanceNamed, maintenanceOf } from "./computer-maintenance";
 import { firstName } from "./format";
 import { brainTool, CLI_GIT_MISSING, CLI_HOME_ONLY, osName } from "./machines";
 import { can } from "./permissions";
@@ -148,7 +149,8 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
       o.own === "cursor" ||
       o.own === "opencode" ||
       o.own === "grok" ||
-      o.own === "antigravity")
+      o.own === "antigravity" ||
+      o.own === "devin")
       ? o.own
       : null;
   return {
@@ -343,18 +345,24 @@ export const opensByItself = (x: { intent?: string; autoOpen?: boolean }) =>
  * The brain a plan thinks with, on the agent's computer: a Claude plan through Claude Code, ChatGPT's through Codex,
  * OpenCode's (`zen`: its free tier or an OpenCode key, ADR 0132) through OpenCode's CLI, a SuperGrok or X Premium+ plan
  * through Grok Build (ADR 0142), a Google AI Pro or Ultra plan or Gemini Enterprise through the Antigravity CLI (ADR
- * 0143).
+ * 0143), a Devin plan through the Devin CLI (ADR 0253).
  */
-export const PLAN_BRAIN: Record<"claude" | "chatgpt" | "cursor" | "zen" | "grok" | "gemini", MachineAccountKind> = {
+export const PLAN_BRAIN: Record<
+  "claude" | "chatgpt" | "cursor" | "zen" | "grok" | "gemini" | "devin",
+  MachineAccountKind
+> = {
   claude: "claude_code",
   chatgpt: "codex",
   cursor: "cursor",
   zen: "opencode",
   grok: "grok",
   gemini: "antigravity",
+  devin: "devin",
 };
 /** The plan a CLI signs in to by itself (`PLAN_BRAIN` the other way): ChatGPT's for Codex, Claude's for Claude Code. */
-export const planOfKind = (kind: MachineAccountKind): "claude" | "chatgpt" | "cursor" | "zen" | "grok" | "gemini" =>
+export const planOfKind = (
+  kind: MachineAccountKind,
+): "claude" | "chatgpt" | "cursor" | "zen" | "grok" | "gemini" | "devin" =>
   kind === "codex"
     ? "chatgpt"
     : kind === "cursor"
@@ -365,7 +373,9 @@ export const planOfKind = (kind: MachineAccountKind): "claude" | "chatgpt" | "cu
           ? "grok"
           : kind === "antigravity"
             ? "gemini"
-            : "claude";
+            : kind === "devin"
+              ? "devin"
+              : "claude";
 
 type AiState = AiStatus["agents"][number]["state"];
 
@@ -377,16 +387,20 @@ export const aiStateOf = (status: AiStatus | undefined, agentId: string): AiStat
  * A plan a person signs in with, on the agent's computer: Claude's, ChatGPT's, Cursor's (a sign-in or its API key,
  * ADR 0114), OpenCode's (`zen`, its free tier or an OpenCode key, ADR 0132), or a coding plan's key.
  */
-export type PlanChoice = "claude" | "chatgpt" | "cursor" | "zen" | "grok" | "gemini" | PlanId;
+export type PlanChoice = "claude" | "chatgpt" | "cursor" | "zen" | "grok" | "gemini" | "devin" | PlanId;
 /** What the picker offers: a plan, or the workspace's API key. */
 export type AiChoice = PlanChoice | "key";
-/** Every picker's order, the most used first: Claude (chosen first), ChatGPT, Gemini, Grok, Cursor, OpenCode, then the coding plans. */
+/**
+ * Every picker's order, the most used first: Claude (chosen first), ChatGPT, Gemini, Grok, Cursor, Devin, OpenCode, then
+ * the coding plans.
+ */
 export const PLAN_CHOICES: readonly PlanChoice[] = [
   "claude",
   "chatgpt",
   "gemini",
   "grok",
   "cursor",
+  "devin",
   "zen",
   ...PLAN_IDS,
 ];
@@ -394,7 +408,12 @@ export const PLAN_CHOICES: readonly PlanChoice[] = [
 export const SCENE_PLANS = ["claude", "chatgpt", "gemini"] as const satisfies readonly PlanChoice[];
 /** The account a plan signs in as: ChatGPT's through Codex, Cursor's and OpenCode's through their CLIs; the rest through Claude Code. */
 export const kindOf = (choice: PlanChoice): MachineAccountKind =>
-  choice === "chatgpt" || choice === "cursor" || choice === "zen" || choice === "grok" || choice === "gemini"
+  choice === "chatgpt" ||
+  choice === "cursor" ||
+  choice === "zen" ||
+  choice === "grok" ||
+  choice === "gemini" ||
+  choice === "devin"
     ? PLAN_BRAIN[choice]
     : PLAN_BRAIN.claude;
 /** The plan an account signs in with: a coding plan's key, ChatGPT's through Codex, Cursor's, else Claude's. */
@@ -445,6 +464,7 @@ const PLAN_SEARCH_NAMES: Partial<Record<PlanChoice, string>> = {
   chatgpt: "Codex",
   gemini: "Gemini CLI Antigravity",
   grok: "Grok Build",
+  devin: "Devin CLI Cognition Windsurf",
   zen: "OpenCode Zen",
 };
 export const planSearchNames = (choice: PlanChoice) => PLAN_SEARCH_NAMES[choice] ?? "";
@@ -666,6 +686,27 @@ export const gateRechecks = (gate: PlanGate, edition: Edition | null) =>
     !gate.overdue &&
     (gate.reason === "not_reported" || (edition === "cloud" && gate.reason !== "tool_off")));
 
+/**
+ * How long the server's own computer may take to connect the first time: its runner asks for its token every minute
+ * (`agentes-runner host`), the desktop app at once when the site tells it of a new workspace and every five minutes
+ * otherwise. Past this, it is offline like any other computer.
+ */
+export const HOST_CONNECT_WAIT_MS = 5 * 60_000;
+
+/**
+ * The server's own computer (ADR 0060 §3), added with a new workspace and not connected yet: its row exists before the
+ * runner here gets its token, so a plan's panel says it is connecting, with its steps waiting, instead of offline.
+ */
+export const hostConnecting = (
+  gate: PlanGate,
+  machine: Pick<Machine, "kind" | "lastSeenAt" | "createdAt"> | null | undefined,
+  now = Date.now(),
+) =>
+  gate.state === "offline" &&
+  machine?.kind === "host" &&
+  machine.lastSeenAt === null &&
+  now - Date.parse(machine.createdAt) < HOST_CONNECT_WAIT_MS;
+
 /** The Cloud's line per reason a plan can't sign in on the workspace's computer (`aiAccounts.connect.needsCloud.*`). */
 const CLOUD_REASON = {
   no_computer: "preparing",
@@ -709,7 +750,7 @@ export function gateLine(
     edition: Edition | null;
     kind: MachineAccountKind;
     computer: string;
-    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind" | "cliErrors" | "moving">> | null;
+    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind" | "cliErrors" | "moving" | "maintenance">> | null;
     hold?: string | null;
     now?: number;
   },
@@ -721,8 +762,9 @@ export function gateLine(
   if (gate.state === "missing" && edition === "cloud")
     return { text: t("aiAccounts.connect.needsCloud.stuck", { computer, program }), rechecks };
   if (gate.state === "offline") {
-    // Away moving to another server: back by itself, never "use an API key for now".
-    if (machine?.moving) return { text: t("machines.moving.named", { computer }), rechecks };
+    // Away for what we do to it (a move, a restart…): back by itself, never "use an API key for now".
+    const away = maintenanceOf(machine);
+    if (away?.away) return { text: maintenanceNamed(t, away, computer), rechecks };
     const seen = machine?.lastSeenAt ? Date.parse(machine.lastSeenAt) : null;
     if (edition === "cloud" && seen !== null && now - seen >= CLOUD_AWAY_MS)
       return { text: t("aiAccounts.connect.needsCloud.away", { computer }), rechecks };
@@ -765,6 +807,9 @@ export function gateLine(
       rechecks,
     };
   }
+  // The Devin CLI's pin has no Windows build (ADR 0253): its line says why, and the way out.
+  if (gate.reason === "system" && kind === "devin" && gate.os === "windows")
+    return { text: t("brain.reasons.systemDevin", { computer }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 
@@ -878,6 +923,7 @@ export function agentAi(agent: Pick<Agent, "brain"> | undefined, state: AiState 
   if (brain?.kind === "opencode") return "zen";
   if (brain?.kind === "grok") return "grok";
   if (brain?.kind === "antigravity") return "gemini";
+  if (brain?.kind === "devin") return "devin";
   if (brain?.kind === "claude_code") return isPlanId(brain.provider) ? brain.provider : "claude";
   return state === undefined || state === "no_ai" ? null : "key";
 }

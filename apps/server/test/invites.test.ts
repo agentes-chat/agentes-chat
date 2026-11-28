@@ -550,6 +550,47 @@ test("an ask with a password: approval makes the account, and the asking page si
   expect(signIn.status).toBe(200);
 });
 
+test("an ask for an address whose account was never confirmed: the page opens the invitation; signed in confirmed, it waits in `me`", async () => {
+  const { owner, orgId, token } = await start({ ALLOW_SIGNUP: "true" });
+  const lia = browser(t);
+  await signUp(lia, "lia@example.com");
+  await unconfirm(t, "lia@example.com");
+  // Asked signed out, the address proven with its code, as someone who forgot they had an account does.
+  const anon = browser(t);
+  const code = await codeFor(anon, token, "lia@example.com");
+  const asked = await ask(anon, token, {
+    name: "Lia",
+    email: "lia@example.com",
+    code,
+    password: "correct horse battery",
+  });
+  const { key } = (await asked.json()) as { key: string };
+  const [request] = await requests(owner, orgId);
+  const approved = await owner(`/api/app/organizations/${orgId}/join-requests/${request?.id}/approve`, { json: {} });
+  const { url } = (await approved.json()) as { outcome: string; url: string };
+  const invitation = url.split("/invite/")[1] ?? "";
+  await t.drain();
+  const emailed = mailTo("lia@example.com").flatMap(
+    (m) => m.text.match(/\/invite\/[\w-]+\?mail=([\w-]{43})/)?.[1] ?? [],
+  );
+
+  // The page that asked is handed the invitation as its email links it, once.
+  const claim = () => anon(`/api/app/invitations/${token}/requests/claim`, { json: { key } });
+  expect(await (await claim()).json()).toEqual({ status: "invited", token: invitation, mail: emailed.at(-1) });
+  expect(await (await claim()).json()).toEqual({ status: "closed" });
+
+  // Signed in unconfirmed, nothing is offered: anyone can sign up with an address that isn't theirs.
+  const me = async () => (await (await lia("/api/app/me")).json()) as { invitations?: unknown[] };
+  expect((await me()).invitations).toBeUndefined();
+  // Confirmed (a reset, the confirmation link), the invitation waits for them, and the link's page opens it.
+  await t.db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.email, "lia@example.com"));
+  expect((await me()).invitations).toEqual([{ orgId, orgName: "Acme", token: invitation }]);
+  const preview = (await (await lia(`/api/app/invitations/${token}`)).json()) as { you?: { invitation?: string } };
+  expect(preview.you?.invitation).toBe(invitation);
+  expect((await lia(`/api/app/invitations/${invitation}/accept`, { json: {} })).status).toBe(200);
+  expect((await me()).invitations).toBeUndefined();
+});
+
 test("sign-up from the invitation's email: no 'confirm your email'; from a copied link or none, it goes (ADR 0090)", async () => {
   const { owner, orgId } = await start();
   const invite = async (email: string) => {

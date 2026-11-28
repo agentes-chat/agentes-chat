@@ -50,6 +50,7 @@ import { Route as OrgOrgIdSearchRouteImport } from './routes/org.$orgId.search'
 import { Route as OrgOrgIdSettingsRouteImport } from './routes/org.$orgId.settings'
 import { Route as OrgOrgIdTaskManagerRouteImport } from './routes/org.$orgId.task-manager'
 import { Route as OrgOrgIdTeamRouteImport } from './routes/org.$orgId.team'
+import { Route as OrgOrgIdUnreadsRouteImport } from './routes/org.$orgId.unreads'
 import { Route as OrgOrgIdWaitingRouteImport } from './routes/org.$orgId.waiting'
 import { Route as OrgOrgIdWikiRouteImport } from './routes/org.$orgId.wiki'
 import { Route as OrgOrgIdAgentsNewRouteImport } from './routes/org.$orgId.agents.new'
@@ -283,6 +284,11 @@ const OrgOrgIdTeamRoute = OrgOrgIdTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
+const OrgOrgIdUnreadsRoute = OrgOrgIdUnreadsRouteImport.update({
+  id: '/unreads',
+  path: '/unreads',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdWaitingRoute = OrgOrgIdWaitingRouteImport.update({
   id: '/waiting',
   path: '/waiting',
@@ -469,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/settings': typeof OrgOrgIdSettingsRoute
   '/org/$orgId/task-manager': typeof OrgOrgIdTaskManagerRoute
   '/org/$orgId/team': typeof OrgOrgIdTeamRoute
+  '/org/$orgId/unreads': typeof OrgOrgIdUnreadsRoute
   '/org/$orgId/waiting': typeof OrgOrgIdWaitingRoute
   '/org/$orgId/wiki': typeof OrgOrgIdWikiRoute
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
@@ -538,6 +545,7 @@ export interface FileRoutesByTo {
   '/org/$orgId/settings': typeof OrgOrgIdSettingsRoute
   '/org/$orgId/task-manager': typeof OrgOrgIdTaskManagerRoute
   '/org/$orgId/team': typeof OrgOrgIdTeamRoute
+  '/org/$orgId/unreads': typeof OrgOrgIdUnreadsRoute
   '/org/$orgId/waiting': typeof OrgOrgIdWaitingRoute
   '/org/$orgId/wiki': typeof OrgOrgIdWikiRoute
   '/org/$orgId': typeof OrgOrgIdIndexRoute
@@ -609,6 +617,7 @@ export interface FileRoutesById {
   '/org/$orgId/settings': typeof OrgOrgIdSettingsRoute
   '/org/$orgId/task-manager': typeof OrgOrgIdTaskManagerRoute
   '/org/$orgId/team': typeof OrgOrgIdTeamRoute
+  '/org/$orgId/unreads': typeof OrgOrgIdUnreadsRoute
   '/org/$orgId/waiting': typeof OrgOrgIdWaitingRoute
   '/org/$orgId/wiki': typeof OrgOrgIdWikiRoute
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
@@ -681,6 +690,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings'
     | '/org/$orgId/task-manager'
     | '/org/$orgId/team'
+    | '/org/$orgId/unreads'
     | '/org/$orgId/waiting'
     | '/org/$orgId/wiki'
     | '/org/$orgId/'
@@ -750,6 +760,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings'
     | '/org/$orgId/task-manager'
     | '/org/$orgId/team'
+    | '/org/$orgId/unreads'
     | '/org/$orgId/waiting'
     | '/org/$orgId/wiki'
     | '/org/$orgId'
@@ -820,6 +831,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings'
     | '/org/$orgId/task-manager'
     | '/org/$orgId/team'
+    | '/org/$orgId/unreads'
     | '/org/$orgId/waiting'
     | '/org/$orgId/wiki'
     | '/org/$orgId/'
@@ -1168,6 +1180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdTeamRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/unreads': {
+      id: '/org/$orgId/unreads'
+      path: '/unreads'
+      fullPath: '/org/$orgId/unreads'
+      preLoaderRoute: typeof OrgOrgIdUnreadsRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/waiting': {
       id: '/org/$orgId/waiting'
       path: '/waiting'
@@ -1375,6 +1394,7 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdSettingsRoute: typeof OrgOrgIdSettingsRoute
   OrgOrgIdTaskManagerRoute: typeof OrgOrgIdTaskManagerRoute
   OrgOrgIdTeamRoute: typeof OrgOrgIdTeamRoute
+  OrgOrgIdUnreadsRoute: typeof OrgOrgIdUnreadsRoute
   OrgOrgIdWaitingRoute: typeof OrgOrgIdWaitingRoute
   OrgOrgIdWikiRoute: typeof OrgOrgIdWikiRoute
   OrgOrgIdIndexRoute: typeof OrgOrgIdIndexRoute
@@ -1420,6 +1440,7 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdSettingsRoute: OrgOrgIdSettingsRoute,
   OrgOrgIdTaskManagerRoute: OrgOrgIdTaskManagerRoute,
   OrgOrgIdTeamRoute: OrgOrgIdTeamRoute,
+  OrgOrgIdUnreadsRoute: OrgOrgIdUnreadsRoute,
   OrgOrgIdWaitingRoute: OrgOrgIdWaitingRoute,
   OrgOrgIdWikiRoute: OrgOrgIdWikiRoute,
   OrgOrgIdIndexRoute: OrgOrgIdIndexRoute,

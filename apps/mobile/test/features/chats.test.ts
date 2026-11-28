@@ -135,6 +135,25 @@ describe("the list", () => {
   });
 });
 
+describe("a personal workspace's group conversations by their agents (ADR 0159, amendment of 2026-11-26)", () => {
+  const rows = (personal: boolean, c: Partial<Channel>) =>
+    buildConversations({ channels: [{ ...channel("c1", "Viagem pra Lisboa"), ...c }], dms: [], threads: [], personal });
+  const face = (personal: boolean, c: Partial<Channel>) => {
+    const row = rows(personal, c)[0];
+    return row?.kind === "channel" ? row.face : "not a channel";
+  };
+
+  test("a server that lists the channel's agents: they are its face, with how many it has", () => {
+    expect(face(true, { agentIds: ["a1", "a2"], agentCount: 5 })).toEqual({ agentIds: ["a1", "a2"], count: 5 });
+    expect(face(true, { agentIds: [], agentCount: 0 })).toEqual({ agentIds: [], count: 0 });
+  });
+
+  test("an older server (no agentIds) or a team's workspace: a channel with its #", () => {
+    expect(face(true, {})).toBeUndefined();
+    expect(face(false, { agentIds: ["a1"], agentCount: 1 })).toBeUndefined();
+  });
+});
+
 describe("a personal workspace's #general (ADR 0159)", () => {
   const rows = (general: Partial<Channel>) =>
     buildConversations({
@@ -700,108 +719,65 @@ describe("the app icon's number", () => {
   });
 });
 
-describe("Conversas by sector (a team's Setores)", () => {
-  test("each sector's agents, then the agents in none, the direct messages and the channels; empty ones left out", () => {
-    const dm = (id: string, type: "agent" | "person", at: string) =>
-      ({
-        kind: "dm",
-        key: `dm:${id}`,
-        channelId: `c-${id}`,
-        with: { type, id, name: id, handle: id },
-        last: null,
-        at,
-        unread: 0,
-        working: false,
-      }) as const;
-    const channel = {
+describe("Conversas by my own sections (a team's Seções, ADR 0260)", () => {
+  const dm = (id: string, type: "agent" | "person", at: string, over: { unread?: number; working?: boolean } = {}) =>
+    ({
+      kind: "dm",
+      key: `dm:${id}`,
+      channelId: `c-${id}`,
+      with: { type, id, name: id, handle: id },
+      last: null,
+      at,
+      unread: over.unread ?? 0,
+      working: over.working ?? false,
+    }) as const;
+  const channel = (id: string, at: string, over: { unread?: number; mentions?: number } = {}) =>
+    ({
       kind: "channel",
-      key: "ch:geral",
-      channelId: "geral",
-      name: "geral",
+      key: `ch:${id}`,
+      channelId: id,
+      name: id,
       topic: "",
       groupId: null,
       last: null,
-      at: "2026-11-22T09:00:00Z",
-      unread: 0,
-      mentions: 0,
-    } as const;
+      at,
+      unread: over.unread ?? 0,
+      mentions: over.mentions ?? 0,
+    }) as const;
+
+  test("each of my sections with its channels in their order, then the channels in none, then every DM; no sector", () => {
     const rows = [
       dm("atlas", "agent", "3"),
       dm("bruno", "person", "2"),
-      dm("theo", "agent", "1"),
-      dm("otto", "agent", "0"),
-      channel,
+      channel("seo", "5"),
+      channel("marketing", "1"),
+      channel("geral", "4"),
     ];
-    const groups = [
-      { id: "g1", name: "Design", agentIds: ["atlas"], color: "violet", icon: "pen" },
-      { id: "g2", name: "Marketing", agentIds: ["theo"] },
-      { id: "g3", name: "Vendas", agentIds: ["nina"] },
-    ];
-    const sections = sectorSections(rows, groups);
-    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key)])).toEqual([
-      ["sector:g1", ["dm:atlas"]],
-      ["sector:g2", ["dm:theo"]],
-      ["agents", ["dm:otto"]],
-      ["dms", ["dm:bruno"]],
-      ["channels", ["ch:geral"]],
+    const sections = sectorSections(rows, [
+      { id: "s1", name: "Go-to-market", channelIds: ["marketing", "seo", "gone"] },
+      { id: "s2", name: "Vazia", channelIds: ["gone"] },
     ]);
-    expect(sections[0]?.group).toEqual({ id: "g1", name: "Design", color: "violet", icon: "pen" });
+    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key)])).toEqual([
+      ["section:s1", ["ch:marketing", "ch:seo"]],
+      ["channels", ["ch:geral"]],
+      ["dms", ["dm:atlas", "dm:bruno"]],
+    ]);
+    expect(sections[0]?.group).toEqual({ id: "s1", name: "Go-to-market" });
     expect(homeViewOf("sectors")).toBe("sectors");
     expect(homeViewOf(null)).toBe("recent");
     expect(homeViewOf("anything")).toBe("recent");
   });
 
-  test("a sector holds its channels after its agents (ADR 0240); channels in none stay in Canais", () => {
-    const agent = (id: string, at: string, over: { unread?: number; working?: boolean } = {}) =>
-      ({
-        kind: "dm",
-        key: `dm:${id}`,
-        channelId: `c-${id}`,
-        with: { type: "agent", id, name: id, handle: id },
-        last: null,
-        at,
-        unread: over.unread ?? 0,
-        working: over.working ?? false,
-      }) as const;
-    const channel = (
-      id: string,
-      groupId: string | null,
-      at: string,
-      over: { unread?: number; mentions?: number } = {},
-    ) =>
-      ({
-        kind: "channel",
-        key: `ch:${id}`,
-        channelId: id,
-        name: id,
-        topic: "",
-        groupId,
-        last: null,
-        at,
-        unread: over.unread ?? 0,
-        mentions: over.mentions ?? 0,
-      }) as const;
+  test("closed, a section keeps its unread channels in sight and counts them as one", () => {
     const rows = [
-      agent("ada", "5"),
-      agent("bento", "4", { unread: 2 }),
-      agent("clara", "3", { working: true }),
-      channel("suporte-n1", "sup", "2", { unread: 3 }),
-      channel("bugs", "sup", "1"),
-      channel("geral", null, "6"),
-      channel("old", "gone", "0"),
+      channel("seo", "2", { unread: 3 }),
+      channel("ads", "1"),
+      dm("clara", "agent", "3", { working: true }),
     ];
-    const groups = [{ id: "sup", name: "Suporte", agentIds: ["ada", "bento", "clara"] }];
-    const sections = sectorSections(rows, groups);
-    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key), s.channelsFrom])).toEqual([
-      ["sector:sup", ["dm:ada", "dm:bento", "dm:clara", "ch:suporte-n1", "ch:bugs"], 3],
-      // A channel whose sector isn't listed shows with the ones in none.
-      ["channels", ["ch:geral", "ch:old"], 0],
-    ]);
-    // Closed: one line that keeps who wrote to me, who works and the unread channels, and one count for them all.
-    const sector = sections[0]?.rows ?? [];
-    expect(sector.filter(keptWhenClosed).map((r) => r.key)).toEqual(["dm:bento", "dm:clara", "ch:suporte-n1"]);
-    expect(closedUnread(sector)).toBe(5);
-    expect(closedUnread([channel("muted", "sup", "1", { mentions: 1 })])).toBe(1);
+    const [section] = sectorSections(rows, [{ id: "s1", name: "Marketing", channelIds: ["seo", "ads"] }]);
+    expect(section?.rows.filter(keptWhenClosed).map((r) => r.key)).toEqual(["ch:seo"]);
+    expect(closedUnread(section?.rows ?? [])).toBe(3);
+    expect(closedUnread([channel("muted", "1", { mentions: 1 })])).toBe(1);
   });
 
   test("the view is a bar button with the system's menu, only in a team; an agent's row says its role", () => {

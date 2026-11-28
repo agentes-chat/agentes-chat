@@ -116,7 +116,7 @@ import {
   usageLine,
 } from "@agenteschat/client/lib/chat";
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
-import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import { choiceReplyLine, choiceReplyRows } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
 import { type ConsultPairItem, consultsForLine, type RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
@@ -171,15 +171,16 @@ import { picksForMe, replyAloneKey } from "@agenteschat/client/lib/routing";
 import { ConversationSeat } from "@agenteschat/client/lib/seat-context";
 import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { hiddenCount, tasksOf, todayStart } from "@agenteschat/client/lib/task-manager";
-import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
+import { hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appAuthor, appVia, surfaceVia } from "@agenteschat/client/lib/via";
-import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, micShown, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, splitCanceled } from "@agenteschat/client/lib/work";
 import { CodeConversation, useShowsWork } from "@agenteschat/client/lib/work-context";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   AffixInput,
   AppMark,
@@ -286,6 +287,7 @@ import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
 import { ImageSet } from "@/components/artifacts/viewer-context";
 import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
+import { usePlanToast } from "@/components/BillingLinkButton";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
@@ -334,6 +336,7 @@ import { DeviceWaitCard } from "@/components/devices/DeviceWaitCard";
 import { WaitToolOffAction } from "@/components/devices/ToolOneClick";
 import { useArchiveChannelWithUndo } from "@/components/entity-menus";
 import { FeedbackOfferRow } from "@/components/FeedbackOffer";
+import { GroupCover, groupWho } from "@/components/GroupCover";
 import { InPlaceProvider } from "@/components/InPlace";
 import { HandedTaskChips, IssueTakenLine, IssueWorkCard } from "@/components/IssueWork";
 import { ArrivalCard, useArrival } from "@/components/invite/Arrival";
@@ -373,7 +376,7 @@ import {
 import { MissionCommandCard } from "@/components/missions/MissionCommandCard";
 import { NewMissionDialog } from "@/components/missions/MissionDialogs";
 import { NavToggle } from "@/components/NavDrawer";
-import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
+import { ChannelAccessChoice, channelNameError, toChannelName, toGroupName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
 import { useNotificationOpener } from "@/components/NotificationOpen";
 import { useNewAgent } from "@/components/new-agent/new-agent-context";
@@ -422,6 +425,7 @@ import {
   useChannelThreadsView,
 } from "@/components/threads/ThreadLines";
 import { UsageWaitCancel, UsageWaitClosed } from "@/components/UsagePauseCard";
+import { useVoiceSetup } from "@/components/VoiceSetupDialog";
 import { PushAskContext, PushAskInline, usePushAsk } from "@/components/WebPush";
 import { useWikiLinkRenderer } from "@/components/WikiLinks";
 import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, TypingMark, WorkingStack } from "@/components/WorkingLine";
@@ -452,6 +456,7 @@ import {
   useDismissRun,
   useLive,
   useLiveStore,
+  useOpenedConversation,
   useStreams,
   useTypingSender,
 } from "@/realtime/context";
@@ -594,7 +599,9 @@ function highlightMessage(scroller: HTMLElement | null, messageId: string) {
   // ones around it are drawn, center it again. They are drawn by the next frame's rendering, which runs
   // after its animation callbacks, so the second centering waits for a task after that frame.
   requestAnimationFrame(() => setTimeout(() => el.scrollIntoView?.({ block: "center" }), 0));
-  // A soft plate that fades (CSS; static with reduced motion).
+  // A soft plate that fades (CSS; static with reduced motion), one at a time: a thread's root the conversation opened
+  // at loses it when the thread sends the person on to a message of the conversation.
+  for (const lit of scroller?.querySelectorAll(".ac-msg--focus") ?? []) lit.classList.remove("ac-msg--focus");
   el.classList.add("ac-msg--focus");
   setTimeout(() => el.classList.remove("ac-msg--focus"), HIGHLIGHT_MS);
   return true;
@@ -722,7 +729,10 @@ export function ChannelPage({
   const dms = useDms(org.id);
   const dm = channel ? undefined : dms.data?.find((d) => d.channelId === channelId);
   // "#loja · Acme": the window's name in the app (Window menu, Mission Control), the tab's in a browser.
-  useDocumentTitle(channel && !fallback && !thread ? `#${channel.name} · ${org.name}` : undefined);
+  // A personal workspace's group conversation goes by its name as written (ADR 0159).
+  useDocumentTitle(
+    channel && !fallback && !thread ? `${isPersonal(org) ? "" : "#"}${channel.name} · ${org.name}` : undefined,
+  );
 
   if (channels.isPending && !fallback) return <ChannelSkeleton />;
   if (dm) {
@@ -940,6 +950,7 @@ function ChannelView({
   const arrival = useArrival(channel);
   const arriving = arrival.show && !thread;
   const sendTyping = useTypingSender(channel.id, thread?.id);
+  useOpenedConversation(channel.id, thread?.id, Boolean(chrome?.dmAgentId || thread));
   // ⌘K "Pedir a um agente" leaves the text for this DM's composer.
   const draftKey = chrome?.dmAgentId ? `agent:${chrome.dmAgentId}` : null;
   // What I typed and didn't send stays in this browser: switching conversations or reloading keeps it. Only the box
@@ -1253,6 +1264,10 @@ function ChannelView({
         .filter((p): p is Member => Boolean(p)),
     [members.data, dir.memberById],
   );
+  // A personal workspace's group conversation (ADR 0159, amendment of 2026-11-26): a cover at its start, its name as
+  // written where a channel says "#nome".
+  const groupConversation = isPersonal(org) && !chrome;
+  const composerTarget = chrome?.composerTarget ?? (groupConversation ? channel.name : undefined);
 
   /** Agents of this channel the text mentions (instant "pensando…" before the server answers). */
   const mentioned = (body: string) =>
@@ -1262,6 +1277,7 @@ function ChannelView({
       .map((a) => a.id);
 
   const toast = useToast();
+  const planToast = usePlanToast();
   const qc = useQueryClient();
   const post = usePostMessage(org.id, channel.id, {
     me: { id: me.user.id },
@@ -1305,8 +1321,11 @@ function ChannelView({
   const { send, retry } = sendHelpers(post);
   const sendVoice = useSendVoice(org.id, channel.id, {
     me: { id: me.user.id },
-    onRefused: (error) =>
-      toast.show(errorCode(error) === "voice_limit" ? t("voice.limit") : errorText(t, error), "error"),
+    onRefused: (error) => {
+      const code = errorCode(error);
+      if (code === "voice.plan") planToast(t("voice.plan"));
+      else toast.show(code === "voice_limit" ? t("voice.limit") : errorText(t, error), "error");
+    },
   });
 
   const api = useApi();
@@ -1460,11 +1479,6 @@ function ChannelView({
     };
   }, [thread, threadList, threadLines]);
   const threadsStore = useValueStore(threadsView);
-  // Messages that are a thread's context and still in the channel: the gutter mark.
-  const contextMarkIds = useMemo(
-    () => (thread ? NO_MARKS : contextMarks(threadList, [...older, ...(channelMessages.data ?? [])], channel.id)),
-    [thread, threadList, older, channelMessages.data, channel.id],
-  );
   const timeline = useMemo(() => {
     if (thread) {
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
@@ -2186,13 +2200,37 @@ function ChannelView({
       toBottom();
       toast.show(text, "error");
     };
-    // A thread view holds all it can show; a page read around it that still doesn't show it: deleted or not visible.
-    if (thread || (around?.id === focusTarget && around.done)) {
+    // A page read around it that still doesn't show it: deleted or not visible.
+    if (around?.id === focusTarget && around.done) {
       // A cached page refreshing may still bring it.
       if (!messages.isFetching) missing();
       return;
     }
     if (around?.id === focusTarget) return;
+    // A thread view holds all of its thread: a message of the conversation outside it (a long work's report, posted
+    // where it was asked) opens in the conversation, at it, and only one there is nowhere says it is gone.
+    if (thread) {
+      if (messages.isFetching) return;
+      setAround({ id: focusTarget, done: false });
+      api.chat
+        .messages(org.id, channel.id, { around: focusTarget, limit: 1 })
+        .then((page) => {
+          setAround({ id: focusTarget, done: true });
+          if (!page.some((m) => m.id === focusTarget)) return missing();
+          setFocusDone(true);
+          // From a link (`?tm=` in the panel): Back would open the thread at it again and come right back here.
+          const replace = !jumping.current;
+          jumping.current = false;
+          void navigateTo({
+            to: "/org/$orgId/c/$channelId",
+            params: { orgId: org.id, channelId: channel.id },
+            search: { m: focusTarget },
+            replace,
+          });
+        })
+        .catch(missing);
+      return;
+    }
     setAround({ id: focusTarget, done: false });
     api.chat
       .messages(org.id, channel.id, { around: focusTarget, limit: FOCUS_PAGE, onCards: cardsInto(qc, org.id) })
@@ -2390,15 +2428,23 @@ function ChannelView({
   // Voice messages (ADR 0100), where this person can write and the workspace has them; a reply to a mission goes in
   // text, to the mission. The recording goes in the box's thread with what was typed and the finished files, in one
   // message. A key pasted in the text stays in the box for the person to choose (`KeyGuardDialog`).
+  // The microphone follows the workspace's switch; where voice doesn't become text yet, the first press asks first
+  // (`useVoiceSetup`). A server older than `speechState` shows it only with an engine.
   const voiceSettings = useSettings(org.id);
-  const voiceOn = Boolean(voiceSettings.data?.voiceAvailable && voiceSettings.data.voiceMessages);
+  const voiceOn = micShown(voiceSettings.data);
+  const voiceSetup = useVoiceSetup(voiceSettings.data);
   const voice: ComposerVoice | undefined =
     voiceOn && !chrome?.locked && !missionReply
       ? {
           scope: `${channel.id}:${thread?.id ?? ""}`,
           allowed: async () => {
-            const { allowed } = await api.voice.allowed(org.id).catch(() => ({ allowed: true }));
-            if (!allowed) toast.show(t("voice.limit"));
+            const asked = await voiceSetup.ask();
+            if (!asked) return false;
+            const { allowed, reason } = await api.voice
+              .allowed(org.id)
+              .catch(() => ({ allowed: true, reason: undefined }));
+            if (reason === "plan") planToast(t("voice.plan"));
+            else if (!allowed) toast.show(t("voice.limit"));
             return allowed;
           },
           // "gravando áudio…" for the others while it records and while it uploads (then the server keeps it until the
@@ -2916,6 +2962,27 @@ function ChannelView({
                               }
                             }}
                           >
+                            {/* A personal workspace's group conversation opens with its cover (ADR 0159), above its
+                                first message: shown once the conversation's start is loaded. */}
+                            {groupConversation &&
+                              readable &&
+                              !thread &&
+                              (olderState === "done" ||
+                                (messages.data !== undefined &&
+                                  messages.data.length < MESSAGES_PAGE &&
+                                  older.length === 0 &&
+                                  !gap)) && (
+                                <GroupCover
+                                  name={channel.name}
+                                  agentIds={channelAgents.map((a) => a.id)}
+                                  who={groupWho(t, me.user.id, channelPeople, channelAgents)}
+                                  hint={
+                                    serverRead && timeline.length === 0 && channel.can?.post !== false
+                                      ? t("chat.sayHiText")
+                                      : undefined
+                                  }
+                                />
+                              )}
                             {/* Pushes short channels down, next to the composer. */}
                             <div className="channel__spacer" aria-hidden="true" />
                             {chrome?.top}
@@ -2929,7 +2996,8 @@ function ChannelView({
                               slots.length === 0 &&
                               !thread &&
                               !adjusting &&
-                              !chrome?.intro && (
+                              !chrome?.intro &&
+                              !groupConversation && (
                                 <div className="channel__empty">
                                   <EmptyState
                                     size="panel"
@@ -3000,7 +3068,6 @@ function ChannelView({
                                   dmPersonId={thread ? undefined : chrome?.dmPersonId}
                                   consultGroups={consultGroups}
                                   seenId={thread ? null : seenId}
-                                  marks={contextMarkIds}
                                   progressive={opensAtEnd}
                                   openThreadId={panel?.id ?? null}
                                 />
@@ -3188,15 +3255,16 @@ function ChannelView({
                                 disabled={Boolean(chrome?.locked)}
                                 label={
                                   chrome?.composerLabel ??
-                                  (chrome?.composerTarget
-                                    ? t("channel.composerDm", { name: chrome.composerTarget })
+                                  (composerTarget
+                                    ? t("channel.composerDm", { name: composerTarget })
                                     : t("channel.composerLabel", { channel: channel.name }))
                                 }
                                 placeholder={
-                                  // DMs name the person or agent ("Mensagem para Theo"); channels keep "#nome".
+                                  // DMs and a personal workspace's group conversations name who or what ("Mensagem para
+                                  // Theo"); channels keep "#nome".
                                   chrome?.composerLabel ??
-                                  (chrome?.composerTarget
-                                    ? t("channel.composerDm", { name: chrome.composerTarget })
+                                  (composerTarget
+                                    ? t("channel.composerDm", { name: composerTarget })
                                     : t("channel.composerPlaceholder", { channel: channel.name }))
                                 }
                                 sendLabel={t("channel.send")}
@@ -3239,6 +3307,7 @@ function ChannelView({
                                   onDone={() => setOffer(null)}
                                 />
                               )}
+                              {voiceSetup.dialog}
                               <KeyGuardDialog
                                 ask={keyAsk}
                                 onClose={() => setKeyAsk(null)}
@@ -3493,7 +3562,6 @@ const Timeline = memo(function Timeline({
   dmPersonId,
   consultGroups,
   seenId = null,
-  marks,
   progressive = false,
   openThreadId = null,
 }: {
@@ -3515,8 +3583,6 @@ const Timeline = memo(function Timeline({
   consultGroups: ConsultGroups;
   /** My message they read last: their face is its receipt. */
   seenId?: string | null;
-  /** Messages that are a thread's context and still in the channel: the gutter mark. */
-  marks: ReadonlySet<string>;
   /** It opens at its end: the last rows are drawn first, the ones above them right after (`FIRST_ROWS`). */
   progressive?: boolean;
   /** The thread open in the panel beside the channel: only its line reads it (`OpenThreadContext`). */
@@ -3707,7 +3773,6 @@ const Timeline = memo(function Timeline({
           grouped={grouped}
           entering={false}
           modelLabels={modelLabels}
-          contextMark={marks.has(m.id)}
           replyContext={item.context}
           lastOfRun={lastByRun.get(m.agentRunId) === item.key}
           run={run}
@@ -3721,7 +3786,6 @@ const Timeline = memo(function Timeline({
           grouped={grouped}
           entering={entering}
           modelLabels={modelLabels}
-          contextMark={marks.has(m.id)}
           replyContext={item.context}
           lastOfRun={Boolean(m.agentRunId && lastByRun.get(m.agentRunId) === item.key)}
           dmPersonId={dmPersonId}
@@ -3791,7 +3855,6 @@ const HELD_RECENT_MS = 12 * 60 * 60_000;
 
 /** Model names for the rows of "Ajustar trecho" (no usage line is shown there). */
 const NO_LABELS = new Map<string, string>();
-const NO_MARKS: ReadonlySet<string> = new Set();
 const NO_SLOTS: RunSlot[] = [];
 const NO_ROWS: ReturnType<typeof buildTimeline> = [];
 
@@ -3827,7 +3890,6 @@ function RunBlock({
   grouped: boolean;
   entering: boolean;
   modelLabels: Map<string, string>;
-  contextMark?: boolean;
   replyContext?: ReplyRef;
   lastOfRun?: boolean;
   run?: RunPosition;
@@ -3991,6 +4053,31 @@ function RunTail({ run }: { run: LiveRun }) {
       {atWork && <span className="run-tail__clock ac-num">{runElapsed(t, run, now)}</span>}
       {stoppable && <StopButton run={run} onStop={stop} place="row" />}
     </span>
+  );
+}
+
+/**
+ * The person's picks on a choice card (ADR 0124), sent as their message: the check on the first line, then a line per
+ * question, the question quiet and the answer standing out. A reply that doesn't carry them apart is one line.
+ */
+function ChoiceReply({ body, meta }: { body: string; meta: Record<string, unknown> | undefined }) {
+  const rows = choiceReplyRows(body, meta);
+  return (
+    <div className="choice-reply ac-iconline">
+      <Icon name="check" size={14} />
+      {rows ? (
+        <span className="choice-reply__rows">
+          {rows.map((r, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: the card's questions in their order, never reordered
+            <span key={i} className="choice-reply__row">
+              <span className="choice-reply__asked">{r.question}</span> <b>{r.answer}</b>
+            </span>
+          ))}
+        </span>
+      ) : (
+        <b>{choiceReplyLine(body)}</b>
+      )}
+    </div>
   );
 }
 
@@ -4450,7 +4537,7 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             <span className="ac-typing__text" title={consultTip}>
               {step !== null && lead ? <BarStep name={lead.name} step={step} /> : <BarPhrase entries={entries} />}
             </span>
-            {/* Its time and its stop right after its words; who types beside it after them. */}
+            {/* Its time and its stop right after its words. */}
             {solo && step !== null && <RunTail run={solo} />}
             {solo && code && (
               <>
@@ -4467,7 +4554,6 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             )}
             <ConsultClock entries={entries} now={now} />
             {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
-            {step !== null && <BarAlsoTyping entries={entries} />}
           </span>
           {openBrowser && (
             <Button
@@ -4488,6 +4574,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
                 {t("run.strip.see")}
               </button>
             </>
+          )}
+          {/* Who types beside its step: a row of its own, so the step keeps the line. */}
+          {step !== null && (
+            <span className="working-tail__also">
+              <BarAlsoTyping entries={entries} />
+            </span>
           )}
         </div>
         {trail.lines.length > 0 && (
@@ -4528,7 +4620,6 @@ export const TimelineMessage = memo(function TimelineMessage({
   grouped,
   entering,
   modelLabels,
-  contextMark,
   replyContext,
   live = null,
   seenLive,
@@ -4545,8 +4636,6 @@ export const TimelineMessage = memo(function TimelineMessage({
   grouped: boolean;
   entering: boolean;
   modelLabels: Map<string, string>;
-  /** Part of a thread's context (still in the channel): the quiet mark in the gutter. */
-  contextMark?: boolean;
   /** Shown away from the message it answers: that message, quoted above (`buildTimeline`). */
   replyContext?: ReplyRef;
   /** The run still at work (the row is its live block; `message` is a placeholder). */
@@ -4880,7 +4969,6 @@ export const TimelineMessage = memo(function TimelineMessage({
         streaming={Boolean(live) && !liveFailed && !liveWaiting}
         className={cx(
           local && `ac-msg--local ac-msg--${local}`,
-          contextMark && "msg--context",
           mentionsMe && "ac-msg--mentions-me",
           wide && "ac-msg--wide",
         )}
@@ -5070,12 +5158,7 @@ export const TimelineMessage = memo(function TimelineMessage({
                 </ClippedBody>
               </MessageText>
             )}
-            {choiceReply && (
-              <p className="choice-reply">
-                <Icon name="check" size={14} />
-                <b>{choiceReplyLine(body)}</b>
-              </p>
-            )}
+            {choiceReply && <ChoiceReply body={body} meta={m.meta} />}
             {media && <ChatMedia media={media} />}
             {voice && <ChatVoice message={m} voice={voice} />}
             {m.author.type === "agent" && meta.speedFallback === true && <SpeedFallbackLine agent={agent} />}
@@ -5368,6 +5451,8 @@ function ChannelDetails({
   const routing = useAiStatus(org.id, open).data?.routing;
   const update = useUpdateChannel(org.id, channel.id);
   const editable = managesChannel(channel, me.user.id, org);
+  // A personal workspace's group conversation (ADR 0159): its name as written, with no #.
+  const groupName = isPersonal(org);
   const toast = useToast();
   const sectors = useAgentGroups(org.id).data ?? [];
   const place = usePlaceChannel(org.id);
@@ -5438,24 +5523,30 @@ function ChannelDetails({
     );
   };
   const saveName = () => {
-    if (!editable || name === channel.name) return;
-    if (!name) {
+    // A personal workspace's group conversation keeps its name as written (ADR 0159); a team's channel, lower case.
+    const next = groupName ? name.trim() : name;
+    if (!editable || next === channel.name) return;
+    if (!next) {
       setName(channel.name);
       return;
     }
-    if (!CHANNEL_NAME.test(name)) {
-      setNameError(t("newChannel.nameInvalid"));
+    if (channelNameError(next, new Set(), groupName) === "invalid") {
+      setNameError(t(modeKey(org, "newChannel.nameInvalid")));
       return;
     }
     update.mutate(
-      { name },
+      { name: next },
       {
         onSuccess: () => {
           setNameError(undefined);
           setSaved(true);
         },
         onError: (e) =>
-          setNameError(e instanceof ApiError && e.status === 409 ? t("channel.nameTaken", { name }) : errorText(t, e)),
+          setNameError(
+            e instanceof ApiError && e.status === 409
+              ? t(modeKey(org, "channel.nameTaken"), { name: next })
+              : errorText(t, e),
+          ),
       },
     );
   };
@@ -5684,7 +5775,7 @@ function ChannelDetails({
         })}
         title={
           <>
-            {t("channel.detailsTitle", { channel: channel.name })}
+            {t(modeKey(org, "channel.detailsTitle"), { channel: channel.name })}
             {editable && <SavedNote shown={saved} label={t("common.saved")} className="channel-topic__saved" />}
           </>
         }
@@ -5766,11 +5857,12 @@ function ChannelDetails({
                     error={nameError}
                   >
                     <AffixInput
-                      prefix="#"
+                      prefix={groupName ? undefined : "#"}
                       value={name}
                       disabled={channel.name === "general"}
+                      maxLength={groupName ? 80 : undefined}
                       onChange={(e) => {
-                        setName(toChannelName(e.target.value));
+                        setName(groupName ? toGroupName(e.target.value) : toChannelName(e.target.value));
                         setNameError(undefined);
                       }}
                       onBlur={saveName}
@@ -5859,7 +5951,7 @@ function ChannelDetails({
       <Dialog
         open={open && Boolean(removing)}
         onOpenChange={(o) => !o && setRemoving(null)}
-        title={t("channelMembers.removeTitle", { name: removing?.name ?? "", channel: channel.name })}
+        title={t(modeKey(org, "channelMembers.removeTitle"), { name: removing?.name ?? "", channel: channel.name })}
         description={t(
           removing?.kind === "agent" ? "channelMembers.removeAgentBody" : "channelMembers.removePersonBody",
           agentGrammar(removing?.name ?? ""),
@@ -5959,7 +6051,7 @@ function AddMembersDialog({
     <Dialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title={t("channelMembers.addTitle", { channel: channel.name })}
+      title={t(modeKey(org, "channelMembers.addTitle"), { channel: channel.name })}
       closeLabel={t("common.close")}
     >
       <Locked when={add.isPending}>

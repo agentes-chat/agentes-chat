@@ -436,6 +436,29 @@ describe("no AI connected: above the composer", () => {
     expect(within(panel).queryByRole("button", { name: "Conectar meu computador" })).toBeNull();
   });
 
+  test("no agent, and the server's own computer just added: it connects, its steps waiting, never a blank name", async () => {
+    const { box } = await bareDialog((machines) => {
+      // Made with the workspace before the runner here got its token (ADR 0060 §3): no name yet, never seen.
+      const host = machines.pair({
+        name: "",
+        kind: "host",
+        online: false,
+        lastSeenAt: null,
+        pairedBy: null,
+        createdAt: new Date().toISOString(),
+      });
+      return { accounts: [], computers: [{ ...SERVER, machineId: host.id, name: "", online: false }] };
+    });
+    await chooseAi(box, "Claude");
+    await settle(4);
+    const panel = within(box).getByRole("region", { name: "Seu plano do Claude" });
+    expect(panel.textContent).toContain("O computador deste servidor conecta em até um minuto.");
+    expect(panel.textContent).not.toContain("está offline");
+    expect(within(panel).queryByRole("button", { name: "Usar uma chave de API agora" })).toBeNull();
+    // The sign-in's steps stay in view, off until it connects.
+    expect((within(panel).getByRole("button", { name: /Entrar com Claude/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   test("a DM with an agent that has none says so for that agent; an organization with AI shows nothing in channels", async () => {
     const state = seedState({ aiStatus: aiStatus(true, ADA_ID) });
     await open(state, `dm/agent/${ADA_ID}`);

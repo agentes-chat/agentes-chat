@@ -4,12 +4,17 @@
     "send": "Kirim"
   },
   "categories": {
-    "where": "Tempat #{{channel}} muncul",
-    "whereHelp": "Berubah untuk semua orang. Siapa yang ikut di kanal tetap sama.",
-    "order": "Posisi di daftar",
     "up": "Naikkan",
     "down": "Turunkan",
     "channelPosition": "{{at}} dari {{count}}."
+  },
+  "sections": {
+    "title": "Bagian",
+    "where": "Tempat #{{channel}} untuk Anda",
+    "whereHelp": "Hanya daftar Anda yang berubah. Setiap orang mengatur bagiannya sendiri.",
+    "none": "Tanpa bagian",
+    "order": "Posisi di bagian",
+    "tooLong": "Gunakan paling banyak 40 karakter."
   },
   "blocks": {
     "send": "Kirim",
@@ -59,6 +64,15 @@
     "raw": "Asli",
     "more": "Lihat semua {{count}} baris",
     "gone": "Kode ini sudah tidak terbuka."
+  },
+  "table": {
+    "label_other": "Tabel · {{count}} baris",
+    "title": "Tabel",
+    "rows_other": "{{count}} baris",
+    "copy": "Salin tabel",
+    "copied": "Tabel disalin",
+    "more": "Lihat semua {{count}} baris",
+    "gone": "Tabel ini sudah tidak terbuka."
   },
   "time": {
     "today": "Hari ini",
@@ -172,11 +186,11 @@
       "text": "Mungkin sedang mati atau di luar jaringanmu. Obrolanmu akan muncul sendiri begitu server kembali.",
       "kept": "Menampilkan yang sudah ada di aplikasi."
     },
-    "pinned": "Disematkan",
+    "favorites": "Favorit",
     "recent": "Terbaru",
     "view": {
       "title": "Tampilkan percakapan",
-      "sectors": "Sektor",
+      "sections": "Bagian",
       "dms": "Pesan langsung",
       "channels": "Kanal"
     },
@@ -875,6 +889,7 @@
       "admin_ask_channel_agent": "{{names}} memintamu menambahkan {{agent}} ke #{{label}}",
       "admin_ask_create_agents": "{{names}} meminta izin membuat agen",
       "admin_ask_webhook": "{{names}} memintamu menyiapkan webhook {{service}} untuk rutinitas",
+      "admin_ask_voice": "{{names}} memintamu menyalakan pesan suara",
       "routine_paused_other": "Rutinitas dijeda",
       "routine_stalled_other": "Rutinitas menunggu komputer",
       "agent_unreached_other": "Rutinitas tidak bisa memanggil agen",

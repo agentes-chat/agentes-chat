@@ -6,6 +6,7 @@ import type { ChatPrefs } from "../lib/chat-look";
 import type { OnboardingStepId } from "../lib/onboarding";
 import type { LegacyPrefsPatch, LodiPrefs, LodiPrefsPatch } from "../lib/right-hand-prefs";
 import type { Seat } from "../lib/seat";
+import type { ServerRelease } from "../lib/server-release";
 import type { TeamWeekAct } from "../lib/team-week";
 import type { Wallpaper } from "../lib/wallpaper";
 import type { AudienceChoice } from "../lib/who-sees";
@@ -210,6 +211,7 @@ import type {
   JoinRequest,
   LearnedSkill,
   LiveActivityInput,
+  LocalSpeech,
   Machine,
   MachineAccess,
   MachineAccessReduce,
@@ -415,6 +417,8 @@ export interface ApiClient {
   system: {
     health(): Promise<Health>;
     instance(): Promise<Instance>;
+    /** The newest server release on GitHub, asked from this device, never the server (Settings › About). */
+    serverRelease(): Promise<ServerRelease | null>;
     /** `null` unless I am the installation's owner (and not on agentes.chat itself). */
     telemetry(): Promise<ServerTelemetry | null>;
     setTelemetry(enabled: boolean): Promise<ServerTelemetry>;
@@ -453,11 +457,18 @@ export interface ApiClient {
     /** Tried with the provider first: `speech_key_invalid` (422) when it refuses. */
     saveSpeechKey(input: SpeechKeyInput): Promise<SpeechKey>;
     removeSpeechKey(): Promise<SpeechKey>;
+    /** The speech model on this server's computer: `null` unless I am its owner on a self-hosted server. */
+    speechLocal(): Promise<LocalSpeech | null>;
+    /** Starts (or goes on with) its download; answers at once. */
+    installSpeechLocal(): Promise<LocalSpeech>;
+    /** Stops it and removes its files. */
+    removeSpeechLocal(): Promise<LocalSpeech>;
   };
   /** Voice messages (ADR 0100). */
   voice: {
     /** Whether I may record now: fair use, on agentes.chat's own servers. */
-    allowed(orgId: string): Promise<{ allowed: boolean }>;
+    /** `reason: "plan"`: the workspace has no plan in force, and voice comes with one. */
+    allowed(orgId: string): Promise<{ allowed: boolean; reason?: "plan" }>;
     /** Stores a recording; its message arrives over the socket with this `clientId`. */
     send(
       orgId: string,
@@ -1187,6 +1198,8 @@ export interface ApiClient {
   connectors: {
     /** Connectors agentes.chat knows, with their scopes, plus the built-in scopes. */
     catalog(): Promise<ConnectorCatalog>;
+    /** Connector tools' names in `locale` by their catalog keys (`toolKey`); a key left out keeps its English words. */
+    toolLabels(orgId: string, locale: string, keys: string[]): Promise<Record<string, string>>;
     /** The team's connections and the person's own (no secrets). `others`: also everyone else's personal ones (who manages connectors gets them, as read-only rows). */
     list(orgId: string, options?: { others?: boolean }): Promise<Connection[]>;
     /**
@@ -1277,6 +1290,8 @@ export interface ApiClient {
     forgetPhone(orgId: string, phoneId: string): Promise<void>;
     /** Takes the phone back from the agent using it. */
     stopPhone(orgId: string, phoneId: string): Promise<void>;
+    /** Starts (`on`) or shuts down a simulator or an emulator on its computer. */
+    powerPhone(orgId: string, phoneId: string, on: boolean): Promise<void>;
     createLink(orgId: string, kind: "server" | "computer"): Promise<ConnectLink>;
     link(orgId: string, linkId: string): Promise<ConnectLinkState>;
     approveRequest(
@@ -1342,6 +1357,11 @@ export interface ApiClient {
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
     /** Admins or whoever paired it: no to a folder an agent waits for there (never a yes). The request's outcome. */
     refuseFolder(orgId: string, machineId: string, requestId: string): Promise<{ status: string }>;
+    /**
+     * Admins or whoever paired it: asks the agentes.chat app there for a folder, picked by the person at the computer,
+     * for one agent or all (`agentId` absent); with `requestId`, an agent's pending request is shown there again.
+     */
+    askFolder(orgId: string, machineId: string, input: { agentId?: string; requestId?: string }): Promise<void>;
     /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
     checkClis(orgId: string, machineId: string): Promise<void>;
     /** ADR 0228 §6: "Try again" on a CLI's fetch; where it stands now. */

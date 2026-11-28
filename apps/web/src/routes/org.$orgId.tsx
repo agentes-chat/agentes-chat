@@ -1,11 +1,14 @@
-import { useMe } from "@agenteschat/client";
+import { useApi, useMe } from "@agenteschat/client";
 import { membershipIn, settingUp } from "@agenteschat/client/lib/guards";
 import { can } from "@agenteschat/client/lib/permissions";
+import { useToolLabelSource } from "@agenteschat/client/lib/tool-labels";
 import { MorphRoom } from "@agenteschat/ui";
 import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { requireUserIn } from "@/app/guards";
 import { usePageTextSize } from "@/chat/look";
+import { ServerUpdateNotice } from "@/components/AboutSettings";
 import { useFollowPickedAgent } from "@/components/AppIconPicker";
 import { Arrival } from "@/components/arrival/Arrival";
 import { FeedbackHost } from "@/components/arrival/FeedbackDialog";
@@ -18,6 +21,7 @@ import { DesktopDragStrip } from "@/components/DesktopDragStrip";
 import { MenuBarActions } from "@/components/DesktopMenus";
 import { DesktopTitleBar } from "@/components/DesktopTitleBar";
 import { DetailsHost } from "@/components/DetailsHost";
+import { InvitedBanner } from "@/components/InvitedBanner";
 import { InviteDialogProvider } from "@/components/invite/InviteDialog";
 import { LeaveChannelDialog } from "@/components/LeaveChannelDialog";
 import { useHoldBannerWaits } from "@/components/lodi-cursor/arrivals";
@@ -86,6 +90,9 @@ function OrgLayout() {
   // Notifications in this browser (ADR 0071), when already on: the server hears of them again, quietly.
   useWebPushRefresh(me.user.id);
   useServerLocale(me.user);
+  // Connector tools' names in the person's language on the work lines, written for this workspace.
+  const { i18n } = useTranslation();
+  useToolLabelSource(i18n, orgId, useApi().connectors.toolLabels);
   // …and the ones it still shows for what was already read elsewhere close.
   useWebPushClear();
   usePageTextSize(membership?.chatPrefs);
@@ -175,6 +182,7 @@ function OrgLayout() {
                           {!focused && !membership.deletion && (
                             <MorphRoom pace="panel" className="shell__notices">
                               <ConfirmEmailBanner />
+                              <InvitedBanner />
                               {/* Lodi's cursor shows a new team land first, then the page glides under the banner. */}
                               {!bannerWaits && <HoldBanner />}
                               <ComputerSetupNotice />
@@ -189,6 +197,7 @@ function OrgLayout() {
                                 {!focused && <NoticeIsland />}
                                 <Arrival />
                                 <FeedbackHost />
+                                <ServerUpdateNotice />
                                 <Outlet />
                               </DetailsHost>
                             </ComputerDialogProvider>

@@ -132,6 +132,27 @@ describe("chooseAutoModel", () => {
     ).toMatchObject({ tier: "large", source: "conversation" });
   });
 
+  test("high effort below the large tier only when the judge is sure, where a person waits: else medium", async () => {
+    const judged = (tier: "small" | "medium" | "large", p?: number): Judge => ({
+      name: "judged",
+      ask: async () => ({
+        tier: { choice: tier, probabilities: { [tier]: 0.9 } },
+        effort: { choice: "high", ...(p === undefined ? {} : { probabilities: { high: p, medium: 1 - p } }) },
+      }),
+    });
+    const asked = { ...input, mission: false, message: "corrige o teste que está falhando" };
+    const unsure = await chooseAutoModel(judged("medium", 0.55), asked);
+    expect(unsure).toMatchObject({ tier: "medium", effort: "medium", source: "judge" });
+    expect(unsure.reason).toBe("Everyday work (90%); medium effort (high not sure enough (55%)).");
+    expect(await chooseAutoModel(judged("medium", 0.6), asked)).toMatchObject({ effort: "high" });
+    // A judge that gives no probabilities is taken at its word.
+    expect(await chooseAutoModel(judged("medium"), asked)).toMatchObject({ effort: "high" });
+    // Hard work, a routine nobody waits on and a mission's plan keep the judge's pick.
+    expect(await chooseAutoModel(judged("large", 0.4), asked)).toMatchObject({ tier: "large", effort: "high" });
+    expect(await chooseAutoModel(judged("medium", 0.4), { ...asked, routine: true })).toMatchObject({ effort: "high" });
+    expect(await chooseAutoModel(judged("medium", 0.4), { ...asked, mission: true })).toMatchObject({ effort: "high" });
+  });
+
   test("never blocks the run: a timeout, a failure or an answer off the list is medium/medium, and says why", async () => {
     const slow: Judge = { name: "slow", ask: () => new Promise(() => {}) };
     expect(await chooseAutoModel(slow, { ...input, timeoutMs: 5 })).toEqual({

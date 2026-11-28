@@ -528,15 +528,21 @@ type LinePiece = (text: string, style?: StyleProp<TextStyle>, onTextLayout?: (e:
 type GroupFaces = { typing: ReactNode; voice: ReactNode };
 
 /**
- * One agent at work, as the web's `BarStep`: its name in ink, never cut (it wraps onto a second line when the line is
- * that narrow), and its step ("Nina consultando o Email · …"), which gives way first when the line is short of room,
- * its time right after it; each new step fades in (a plain swap with Reduce Motion). The line's label says the whole
- * step.
+ * One agent at work, as the web's `BarStep`: its name in ink on one line, its width whatever the step says (up to half
+ * the line, past which it ends in "…"), and its step ("Nina consultando o Email · …"), which gives way first when the
+ * line is short of room, its time right after it; each new step fades in (a plain swap with Reduce Motion). The line's
+ * label says the whole step.
  */
 function AwayStep({ name, step, reduced }: { name: string; step: string; reduced: boolean }) {
   return (
     <View style={styles.awayStep}>
-      <Text variant="caption" tone="ink" maxFontSizeMultiplier={CHROME_MAX_SCALE} style={[styles.ink, styles.awayName]}>
+      <Text
+        variant="caption"
+        tone="ink"
+        numberOfLines={1}
+        maxFontSizeMultiplier={CHROME_MAX_SCALE}
+        style={[styles.ink, styles.awayName]}
+      >
         {name}
       </Text>
       <Animated.View key={step} entering={reduced ? undefined : FadeIn.duration(160)} style={styles.barStep}>
@@ -752,8 +758,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
     paddingVertical: 2,
     paddingHorizontal: 8,
-    borderRadius: 999,
-    overflow: "hidden",
+    // Nothing clips: the orbit's rings, turned upright, reach past the line's 28 points (the dock's padding takes them).
   },
   stack: { flexDirection: "row", alignItems: "center", flexShrink: 0 },
   // The rings reach past the face into the gap on each side.
@@ -787,7 +792,8 @@ const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
   // One agent: its name, then its step, which gives way first (cut with "…", the line's label says it whole).
   awayStep: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 },
-  awayName: { flexShrink: 1 },
+  // Never a share of the step's shrinking: that wrapped it onto a second line and back as the step turned.
+  awayName: { flexShrink: 0, maxWidth: "50%" },
   // Its own width, so the time follows the words instead of floating after a fixed gap.
   barStep: { flexShrink: 1000, minWidth: 0 },
   // Who types beside it, after its time: it gives way before the step does, its names first.

@@ -11,6 +11,7 @@ import {
   ARTIFACT_LIMITS,
   allowMachineTool,
   askMachineCliInstall,
+  askMachineFolder,
   askMachineTool,
   authenticateMachine,
   checkMachineClis,
@@ -64,6 +65,7 @@ import {
   requireSession,
   security,
 } from "./app/context";
+import { MaintenanceView } from "./app/schemas";
 
 const tags = ["Connected computers"];
 
@@ -88,6 +90,7 @@ const MachineTool = z.enum([
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
   "browser",
   "desktop",
@@ -121,6 +124,10 @@ export const MachineAccess = z
         .boolean()
         .optional()
         .openapi({ description: "Google's Antigravity CLI (protocol 44, ADR 0143); absent = follows `codex`." }),
+      devin: z
+        .boolean()
+        .optional()
+        .openapi({ description: "Cognition's Devin CLI (protocol 89, ADR 0253); absent = follows `codex`." }),
       commands: z.boolean(),
       browser: z
         .boolean()
@@ -172,6 +179,10 @@ export const Machine = z
       description:
         "Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the install command again, as root (system mode). Null: nothing to update from here (current, the workspace's or this server's own computer, or run by the agentes.chat app, which updates itself).",
     }),
+    app: z.boolean().openapi({
+      description:
+        "The agentes.chat app runs it; `false`: installed from the Terminal (or the server's own, or the workspace's own computer). A runner too old to say counts as the app off Linux.",
+    }),
     browserProfiles: z.boolean().openapi({
       description:
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",
@@ -183,6 +194,10 @@ export const Machine = z
     accessAllow: z.boolean().openapi({
       description:
         "The person who paired it can turn its tools on from here (`POST …/access/allow`); `false`: its app is too old, or it is the workspace's own computer.",
+    }),
+    folderPick: z.boolean().openapi({
+      description:
+        "A folder can be asked for from here (`…/access/pick`): the agentes.chat app runs it and the person there picks it.",
     }),
     cliInstall: z.boolean().openapi({
       description:
@@ -273,12 +288,21 @@ export const Machine = z
       .optional()
       .openapi({
         description:
-          "The workspace's own computer: the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
+          "A computer that borrows (the workspace's own, or on a self-hosted server this server's own or one marked the workspace's that doesn't lend): the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
+      }),
+    egressOffline: z
+      .object({ machineId: z.string(), name: z.string(), userName: z.string().nullable() })
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "The workspace's own computer: its agents use only this person's computer's internet (ADR 0237, \"Use only this computer's internet\"), and it is offline or paused, so they have none now. Null: they have internet.",
       }),
     moving: z.boolean().optional().openapi({
       description:
-        "The workspace's own computer is away moving to another server: it comes back by itself in a few minutes. A change comes as `machine.updated`.",
+        "The workspace's own computer is away for what we do to it (`maintenance` says what; a move for apps from before it): it comes back by itself. A change comes as `machine.updated`.",
     }),
+    maintenance: MaintenanceView.nullable().optional(),
     egressWaiting: z.boolean().optional().openapi({
       description:
         "The workspace's own computer, online, has its agents waiting for their way out: its network sends them only through a proxy and none works now, so their connections are refused for a while. A change comes as `machine.updated`.",
@@ -289,6 +313,20 @@ export const Machine = z
         freeGb: z.number().openapi({ description: "Free GB on the workspace's disk." }),
         use: z.number().nullable().openapi({ description: "Share of that disk in use, 0 to 1." }),
         sharedGb: z.number().nullable().openapi({ description: "The shared folder's size in GB (measured hourly)." }),
+        sizeGb: z.number().nullable().openapi({ description: "The disk's size in GB; null from an older runner." }),
+        parts: z
+          .object({
+            projects: z.number(),
+            apps: z.number(),
+            agents: z.number(),
+            caches: z.number(),
+            system: z.number(),
+          })
+          .nullable()
+          .openapi({
+            description:
+              "What takes the disk by kind, in GB (projects and code, apps and tools, the agents' files, caches and temporary files, the system), measured every few hours on the workspace's own computer; the rest in use is everything else. Null elsewhere, or before the first measure.",
+          }),
       })
       .nullable()
       .openapi({
@@ -394,7 +432,7 @@ const DeviceCode = z
 
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 
-const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]);
+const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]);
 const Platform = z.string().openapi({
   description: "`mac`, `windows`, `linux`, `other` (the workspace's own computer), or the runner's `os` as reported.",
 });
@@ -409,8 +447,10 @@ const MachineOutage = z
       .openapi({ description: "The workspace's own computer (ADR 0056 §10): its platform is `other`." }),
     offlineSince: z.string().openapi({ description: "ISO time of its last sign of life." }),
     moving: z.boolean().openapi({
-      description: "The workspace's own computer is away moving to another server: it comes back by itself.",
+      description:
+        "The workspace's own computer is away for what we do to it (`maintenance`): it comes back by itself.",
     }),
+    maintenance: MaintenanceView.nullable().optional(),
     agents: z.array(
       z.object({
         agentId: z.uuid(),
@@ -471,8 +511,9 @@ const ComputerQueue = z
     machineId: z.uuid(),
     name: z.string(),
     moving: z.boolean().optional().openapi({
-      description: "It is away moving to another server: the line waits for it, back in a few minutes.",
+      description: "It is away for what we do to it (`maintenance`): the line waits for it, back by itself.",
     }),
+    maintenance: MaintenanceView.nullable().optional(),
     working: z.array(
       z.object({
         runId: z.uuid(),
@@ -754,6 +795,35 @@ export function machineAppRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, machineId, requestId } = c.req.valid("param");
       return c.json(await refuseFolderRequest({ db, pubsub }, c.get("user").id, orgId, machineId, requestId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/access/pick",
+      tags,
+      security,
+      summary:
+        "Ask the agentes.chat app on the computer for a folder (admins or the person who paired it): the person there picks it",
+      description:
+        "For one agent there (`agentId`) or all of them; with `requestId`, an agent's pending folder request is shown there again. Never allows by itself. 400 `machine.no_app` where no agentes.chat app runs the computer (or it is too old): allow it there with the terminal command; 403 `machine.managed_access` on the workspace's own computer; 409 `machine.offline`.",
+      request: {
+        params: MachineParams,
+        body: body(z.object({ agentId: z.uuid().optional(), requestId: z.uuid().optional() }).strict()),
+      },
+      responses: {
+        200: json(z.object({ asked: z.literal(true) })),
+        ...errors,
+        409: errorResponse("The computer is offline (`machine.offline`)"),
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(
+        await askMachineFolder({ db, pubsub, hub: hub() }, c.get("user").id, orgId, machineId, c.req.valid("json")),
+        200,
+      );
     },
   );
 
@@ -1179,6 +1249,11 @@ const DeviceBody = z.object({
   os: z.string().max(20).default("other"),
   arch: z.string().max(40).default(""),
   hostname: z.string().max(200).default(""),
+  model: z
+    .string()
+    .max(100)
+    .optional()
+    .openapi({ description: 'Its maker\'s model ("MacBook Pro"): it names the computer.' }),
   version: z.string().max(40).default(""),
   protocol: z.number().int().optional(),
   workspace: z.string().max(500).optional(),

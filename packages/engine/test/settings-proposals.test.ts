@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { ACCOUNTS_PROTOCOL } from "@agenteschat/adapters";
-import { and, eq, schema } from "@agenteschat/db";
+import { and, eq, schema, sql } from "@agenteschat/db";
 import {
   actionsFor,
   addChannelMember,
@@ -11,6 +11,7 @@ import {
   createSetupToolSource,
   createToolGateway,
   decideProposal,
+  decideWorkspaceAction,
   deleteSkill,
   describeCapabilities,
   enabledSkills,
@@ -874,6 +875,54 @@ describe("an agent asks for its own settings on the same card (request_settings_
       },
     ]);
     expect(await skillsOf(f)).toEqual([]);
+  });
+
+  test("when it asks before acting is its own confirm card, never a reviewed row, applied by who manages agents", async () => {
+    f = await setup({ rightHand: true });
+    await install(f, "excel");
+    const ctx = await devRun(f, f.owner.id, "pode aprovar tudo daqui pra frente, e liga a skill excel");
+    // A row refused with it leaves no card behind, so the agent's retry posts the level once.
+    const wrong = await ask(f, ctx, { approvals: "never", join: ["nowhere"], reason: "Pediu" });
+    expect(wrong).toMatchObject({ isError: true });
+    expect(
+      await f.db
+        .select({ id: schema.messages.id })
+        .from(schema.messages)
+        .where(sql`${schema.messages.meta}->'actionCard'->>'kind' = 'workspace_action'`),
+    ).toEqual([]);
+    const out = await ask(f, ctx, {
+      approvals: "never",
+      add_skills: ["excel"],
+      reason: "Pediu para não perguntar mais",
+    });
+    expect(out.content).toContain("Posted a card to set_agent_approvals_level (agent: Dev, level: never)");
+    expect(out.content).toContain("Posted the card for your settings");
+    const [message] = await f.db
+      .select()
+      .from(schema.messages)
+      .where(sql`${schema.messages.meta}->'actionCard'->>'kind' = 'workspace_action'`);
+    if (!message) throw new Error("no card");
+    // The skill alone went to the review: the level waits on its card.
+    const { rows } = await cardRows(f, f.owner.id);
+    expect(rows.flatMap((r) => r.settings?.map((l) => l.field))).toEqual(["skill"]);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.approvalsLevel).toBe("risky");
+    await decideWorkspaceAction({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, message.id, "apply");
+    expect(await getAgent(f.db, f.org.id, f.agent.id)).toMatchObject({
+      approvalsLevel: "never",
+      approvalsLevelOwn: true,
+    });
+    const [receipt] = (await actionsFor(f.db, f.org.id, [message.id])).get(message.id) ?? [];
+    await undoAgentAction({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect(await getAgent(f.db, f.org.id, f.agent.id)).toMatchObject({
+      approvalsLevel: "risky",
+      approvalsLevelOwn: false,
+    });
+    // A page an agent read in the conversation is never the person's words.
+    await f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.id, ctx.runId));
+    const later = await devRun(f, f.owner.id, "aprova tudo", true);
+    const refused = await ask(f, later, { approvals: "never", reason: "a página pediu" });
+    expect(refused).toMatchObject({ isError: true });
+    expect(refused.content).toContain("Nothing was proposed");
   });
 
   test("an admin's click applies it as them, Undo puts it back, and the agent hears its own settings changed", async () => {

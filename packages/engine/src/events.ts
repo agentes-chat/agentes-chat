@@ -7,6 +7,7 @@ import type { ApprovalView } from "./approvals";
 import type { ArtifactView } from "./artifacts";
 import type { BlockStateView } from "./block-state";
 import type { ChoicesView, PollView } from "./blocks";
+import type { BrainPhase } from "./brains/types";
 import type { BrowserHandoffView } from "./browser/handoff";
 import type { CalendarEventView, CalendarProposalView } from "./calendar";
 import type { CliProgress, CliToolSummary } from "./cli-tools";
@@ -311,6 +312,18 @@ export type ChannelEvent =
       runId: string;
       agentId: string;
       text: string;
+    }
+  /**
+   * A step before the model has the turn that is taking a while (`phaseTeller`): the bar says it instead of
+   * "Pensando…" (`code`: the agent's checkouts are being updated). `phase: null` once it is over. Never stored.
+   */
+  | {
+      type: "agent.phase";
+      channelId: string;
+      threadId: string | null;
+      runId: string;
+      agentId: string;
+      phase: BrainPhase | null;
     }
   /** What a computer command prints while it runs (throttled, ≤ 64 KB per call). */
   | {
@@ -851,7 +864,10 @@ export function activityLine(message: MessageView): ActivityLine | null {
   return Buffer.byteLength(JSON.stringify(line)) <= ACTIVITY_LINE_LIMIT ? line : null;
 }
 
-export async function publishMessageCreated(pubsub: PubSub, message: MessageView) {
+export async function publishMessageCreated(pubsub: PubSub, posted: MessageView) {
+  // The parts of a long agent text written ahead of this one go out first, each as the message it is.
+  const { before, ...message } = posted;
+  for (const part of before ?? []) await publishMessageCreated(pubsub, part);
   const inline = Buffer.byteLength(JSON.stringify(message)) <= INLINE_LIMIT;
   const authorUserId = message.author.type === "person" ? message.author.id : null;
   await publishChannelEvent(pubsub, {

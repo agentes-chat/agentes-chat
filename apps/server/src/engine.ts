@@ -1,3 +1,4 @@
+import { dirname, join } from "node:path";
 import {
   type Adapters,
   type BrainTurnRequest,
@@ -49,6 +50,7 @@ import {
   createDesktopPointers,
   createDesktopToolSource,
   createDeviceToolSource,
+  createEgressFetch,
   createEgressRelay,
   createFeedbackToolSource,
   createFindAgentToolSource,
@@ -65,6 +67,7 @@ import {
   createLiveImages,
   createLlmIntentWriter,
   createLlmJudge,
+  createLocalSpeech,
   createMachineHub,
   createMailToolSource,
   createMediaToolSource,
@@ -75,6 +78,7 @@ import {
   createNativeConnectorToolSource,
   createPassToolSource,
   createPermissionToolSource,
+  createPersonAppsToolSource,
   createReactToolSource,
   createReleaseAsksToolSource,
   createSandboxToolSource,
@@ -97,6 +101,7 @@ import {
   createWithdrawRequestToolSource,
   createWorkspaceToolSource,
   createWorkToolSource,
+  DevinBrain,
   deliverToApp,
   deviceWaitHooks,
   type EmailArt,
@@ -145,6 +150,7 @@ import {
   setWorkOrgCap,
   shareSavedFile,
   smallModelFor,
+  speechOwnerIn,
   standingJudge,
   streamClosed,
   type ToolSource,
@@ -608,6 +614,8 @@ export function buildEngine(o: EngineOptions) {
         searxngUrl: config.SEARXNG_URL,
         browser: browserTools.readPage,
         resolveHost: o.resolveHost,
+        // ADR 0237 on a self-hosted server: pages through the computer that lends the workspace its internet.
+        lent: (orgId) => egressFetch.lentFetch(orgId),
         usage: gateway,
         // `show_image` (ADR 0217): pictures from the web saved where the run posts.
         artifacts,
@@ -620,6 +628,8 @@ export function buildEngine(o: EngineOptions) {
         vision,
         publicUrl: config.PUBLIC_URL,
       }),
+      // The person's own apps on their connected computer (ADR 0258): with Run code, when its runner serves them.
+      createPersonAppsToolSource({ machines: { hub: machineHub } }),
       // Git through our proxy (ADR 0024): connected machines clone and push through the runner's `git.sync`
       // (only our credential reaches the machine; nothing global changes there).
       createGitToolSource({
@@ -688,6 +698,7 @@ export function buildEngine(o: EngineOptions) {
   // its access checked again while open; control changing hands closes the views it hides. Where sessions are
   // screened no terminal opens: a shell nobody screens would be the way around it.
   const egressRelay = createEgressRelay({ db, hub: machineHub, log: o.log });
+  const egressFetch = createEgressFetch(egressRelay);
   const streams = createStreamBroker({
     db,
     hub: machineHub,
@@ -741,7 +752,7 @@ export function buildEngine(o: EngineOptions) {
         });
   // Before a chat turn on a connected machine: the agent's checkouts updated through the git proxy, the turn
   // started in the repository it is about, and the "# Your code" block (ADR 0024 addendum).
-  const prepareCode = (turn: Parameters<typeof prepareAgentCode>[1], signal: AbortSignal) => {
+  const prepareCode = (turn: Parameters<typeof prepareAgentCode>[1]) => {
     const app = githubApp.current();
     return prepareAgentCode(
       {
@@ -751,9 +762,6 @@ export function buildEngine(o: EngineOptions) {
         github: app ? { app, http: githubAppAccess.http } : null,
       },
       turn,
-      {
-        signal,
-      },
     );
   };
   // A background run (a routine's) keeps no computer process alive after its turn.
@@ -813,9 +821,27 @@ export function buildEngine(o: EngineOptions) {
         permissions: turnPermissions,
         prepare: prepareCode,
       }),
+    // ADR 0253: Cognition's Devin CLI over ACP, one process per turn like OpenCode's.
+    devin: (_agent, _run, setup) =>
+      new DevinBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
   };
-  // Voice messages (ADR 0100): engines from the environment, and on any other server the one its owner sets.
+  // Voice messages (ADR 0100): engines from the environment, and on any other server the one its owner sets, or the
+  // helper on this computer they set up (`speech-local.ts`), kept beside the files folder.
+  const speechLocal = isAgentesCloud(config.PUBLIC_URL)
+    ? null
+    : createLocalSpeech({
+        dir: config.FILES_DIR ? join(dirname(config.FILES_DIR), "speech") : null,
+        fetch: o.speechFetch,
+        log: (message, fields) => o.log?.info(message, fields),
+      });
   const speech = createSpeechSettings({
+    local: speechLocal,
     db,
     keyWrapper: adapters.keyWrapper,
     keyWrappers,
@@ -916,6 +942,15 @@ export function buildEngine(o: EngineOptions) {
       ),
     machines: machineHub,
     workspaceComputer,
+    // agentes.chat's servers always have their engines: nothing to say there.
+    ...(isAgentesCloud(config.PUBLIC_URL)
+      ? {}
+      : {
+          voiceStatus: async (orgId: string) => ({
+            state: speech.state(),
+            owner: (await speechOwnerIn(db, orgId))?.name ?? null,
+          }),
+        }),
     releaseRunPhones: (run) => releaseRunPhones({ db, hub: machineHub }, run),
     maxOutputTokens: config.AGENT_MAX_OUTPUT_TOKENS,
     contextMessages: config.AGENT_CONTEXT_MESSAGES,
@@ -994,6 +1029,8 @@ export function buildEngine(o: EngineOptions) {
     githubApp,
     /** Likewise: the speech engines, read before the first voice message. */
     speech,
+    /** The helper on this computer (null on agentes.chat's servers). */
+    speechLocal,
     voice,
     /** A person typing where an agent on Claude Code answers: its CLI starts now (`warmWhileTyping`). */
     warmWhileTyping: (where: Parameters<typeof warmWhileTyping>[1]) => warmWhileTyping(jobDeps, where),

@@ -19,7 +19,7 @@ import {
   retryAfterFromReason,
   waitAfterRetryHint,
 } from "@agenteschat/client/lib/backoff";
-import { type HandlerContext, handleRequest, type RequestObserver, RequestRunner } from "./handlers";
+import { type HandlerContext, HeldTurns, handleRequest, type RequestObserver, RequestRunner } from "./handlers";
 import type { McpBridge } from "./mcp";
 
 /** After the server says it is stopping (close 1001), the first dial goes out at a random point within this. */
@@ -113,6 +113,8 @@ export interface ConnectionOptions {
   /** What `hello` says; a function is asked again for each `hello` (pause and access change over time). */
   info: RunnerInfo | (() => RunnerInfo);
   context: HandlerContext;
+  /** Tests: `HELD_TURN_MS`. */
+  heldTurnMs?: number;
   dial?: Dial;
   log?: (line: string) => void;
   random?: () => number;
@@ -141,6 +143,10 @@ export interface ConnectionOptions {
     observeEgress: boolean;
     /** `EGRESS_SHARE_PROTOCOL`: the workspace's own computer offers its guard the lent connections' socket. */
     egressRelay: boolean;
+    /** `EGRESS_PROXY_PROTOCOL`: this computer borrows a person's internet through its loopback proxy. */
+    egressProxy: boolean;
+    /** `EGRESS_ONLY_PROTOCOL`: its workspace uses only the lending computer's internet. */
+    egressOnly: boolean;
   }) => void;
   /** Protocol 9: the server's `agents` frame (the agents that use this machine). */
   onAgents?: (agents: unknown, deleted: unknown) => void;
@@ -183,10 +189,18 @@ export class RunnerConnection {
   private wake?: () => void;
   /** The welcomed session's sender (null while connecting or down). */
   private live: ((frame: RunnerFrame) => void) | null = null;
+  /** Brain turns outlive a dropped link (`HELD_TURN_PROTOCOL`): the next session takes them over. */
+  private readonly held: HeldTurns;
   private readonly log: (line: string) => void;
 
   constructor(private readonly opts: ConnectionOptions) {
     this.log = opts.log ?? (() => {});
+    this.held = new HeldTurns(opts.heldTurnMs);
+  }
+
+  /** Brain turns running on this computer, a held one included. */
+  get turns() {
+    return this.held.size;
   }
 
   /** Whether a session is welcomed right now. */
@@ -326,6 +340,7 @@ export class RunnerConnection {
         opts.handler ?? handleRequest,
         undefined,
         opts.observer,
+        this.held,
       );
       const tasks = opts.tasks ?? opts.context.tasks;
 
@@ -335,6 +350,7 @@ export class RunnerConnection {
         if (watchdog) clearTimeout(watchdog);
         if (this.live === send) this.live = null;
         runner.close();
+        if (this.stopped) this.held.abortAll();
         tasks?.detach();
         opts.mcp?.detach();
         if (this.stopped) socket?.close(RUNNER_STOPPED_CLOSE, "stopped");
@@ -380,6 +396,8 @@ export class RunnerConnection {
               heartbeatMs,
               observeEgress,
               egressRelay: frame.egressRelay === true,
+              egressProxy: frame.egressProxy === true,
+              egressOnly: frame.egressOnly === true,
             });
             // First: a supervisor passes what this server does with a repeated call on to its workers' welcome.
             opts.mcp?.attach(send, { mcpOnce: frame.mcpOnce === true });

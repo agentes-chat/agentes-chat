@@ -41,6 +41,8 @@ export function storedStrings(key: string): string[] {
 
 export const STORAGE_KEYS = {
   theme: "agentes.theme",
+  /** JSON list of user ids: who has seen the microphone's first-press dialog where voice doesn't become text yet. */
+  voiceSetupSeen: "agentes.voiceSetupSeen",
   lastOrg: "agentes.lastOrg",
   /** The last page shown in each workspace (JSON, by workspace id): where "Onde você parou" opens (ADR 0108). */
   lastPlace: "agentes.lastPlace",
@@ -85,6 +87,8 @@ export const STORAGE_KEYS = {
   liveTalk: "agentes.live.talk",
   /** Prefix (`.<user id>.<org id>`): the width (px) the person dragged a live file's conversation to there. */
   liveTalkWidth: "agentes.live.talkWidth",
+  /** The server release whose notice this browser already showed (`ServerUpdateNotice`). */
+  serverUpdateSeen: "agentes.serverUpdate.seen",
   /** Offline-computer notices the person closed (`machineId@offlineSince`), until that computer comes back. */
   outagesDismissed: "agentes.outages.dismissed",
   /** The workspace computer's notice the person closed (`setupNoticeKey`), until its state changes. */
@@ -156,4 +160,10 @@ export const STORAGE_KEYS = {
 export const rightHandSeen = seenList(
   () => storage.get(STORAGE_KEYS.rightHandSeen),
   (value) => storage.set(STORAGE_KEYS.rightHandSeen, value),
+);
+
+/** Who has seen the microphone's first-press dialog where voice doesn't become text yet (`useVoiceSetup`), by user id. */
+export const voiceSetupSeen = seenList(
+  () => storage.get(STORAGE_KEYS.voiceSetupSeen),
+  (value) => storage.set(STORAGE_KEYS.voiceSetupSeen, value),
 );
