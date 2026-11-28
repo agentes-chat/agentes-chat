@@ -679,7 +679,7 @@ async function keepMade(
  * may configure it. One first agent (`replaceable`): `replace` names the one this one takes the place of, taken back
  * once this one is made.
  */
-export async function pickFirstAgent(
+async function pickFirstAgentNow(
   deps: FirstAgentsPickDeps,
   who: { orgId: string; userId: string },
   id: string,
@@ -799,7 +799,7 @@ export type FirstAgentStartInput = z.input<typeof firstAgentStartInput>;
  * new one is made, so two first agents never wait side by side; while one is kept, a start that doesn't name it is
  * `first_agents.kept`.
  */
-export async function startFirstAgent(
+async function startFirstAgentNow(
   deps: FirstAgentsPickDeps,
   who: { orgId: string; userId: string },
   raw: unknown,
@@ -863,7 +863,7 @@ export type FirstAgentAdoptInput = z.input<typeof firstAgentAdoptInput>;
  * area. Only the person's own agent, made by them, in the team (`first_delivery.no_agent`, `first_delivery.not_yours`);
  * while another first agent is kept, `first_agents.kept` as for a new one. Adopting it again answers with it.
  */
-export async function adoptFirstAgent(
+async function adoptFirstAgentNow(
   deps: FirstAgentsPickDeps,
   who: { orgId: string; userId: string },
   raw: unknown,
@@ -917,4 +917,54 @@ export async function firstAgentsOpen(
   const kept = await keptFirstAgent(db, orgId, userId);
   if (kept && (kept.armedAt || kept.firedAt)) return { open: false };
   return { open: true, pickIn: owner ? "onboarding" : "welcome" };
+}
+
+// ── One at a time ────────────────────────────────────────────────────────────
+
+type FirstAgentHome = { agentId: string; handle: string; channelId: string };
+
+/**
+ * One person's first-agent changes in a workspace (start, pick, adopt) run one after another in this process: two
+ * tabs or a retry can't each make an agent and leave both (ADR 0264 addendum). The conditional save in `keepMade`
+ * still decides between replicas.
+ */
+const firstAgentTurns = new Map<string, Promise<unknown>>();
+function inTurn<T>(who: { orgId: string; userId: string }, run: () => Promise<T>): Promise<T> {
+  const key = `${who.orgId}:${who.userId}`;
+  const mine = (firstAgentTurns.get(key) ?? Promise.resolve()).catch(() => undefined).then(run);
+  const tail = mine.catch(() => undefined);
+  firstAgentTurns.set(key, tail);
+  void tail.then(() => {
+    if (firstAgentTurns.get(key) === tail) firstAgentTurns.delete(key);
+  });
+  return mine;
+}
+
+/** `pickFirstAgentNow`, one at a time for the person (`inTurn`). */
+export function pickFirstAgent(
+  deps: FirstAgentsPickDeps,
+  who: { orgId: string; userId: string },
+  id: string,
+  index: number,
+  replace?: string | null,
+): Promise<FirstAgentHome> {
+  return inTurn(who, () => pickFirstAgentNow(deps, who, id, index, replace));
+}
+
+/** `startFirstAgentNow`, one at a time for the person (`inTurn`). */
+export function startFirstAgent(
+  deps: FirstAgentsPickDeps,
+  who: { orgId: string; userId: string },
+  raw: unknown,
+): Promise<FirstAgentHome> {
+  return inTurn(who, () => startFirstAgentNow(deps, who, raw));
+}
+
+/** `adoptFirstAgentNow`, one at a time for the person (`inTurn`). */
+export function adoptFirstAgent(
+  deps: FirstAgentsPickDeps,
+  who: { orgId: string; userId: string },
+  raw: unknown,
+): Promise<FirstAgentHome> {
+  return inTurn(who, () => adoptFirstAgentNow(deps, who, raw));
 }

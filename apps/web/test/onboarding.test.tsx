@@ -748,7 +748,9 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
       appearance: { color: "teal", eyes: "happy", accessory: "none" },
     });
     const dialog = screen().getByRole("dialog", { name: /^Trazer o time d[oa] OpenMausBot$/ });
-    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    // The sheet's × goes back to the list of apps; that dialog's × closes the import.
+    await click(within(dialog).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
+    await click(within(screen().getByRole("dialog")).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
     await settle(24);
     expect(calls(state, "firstAgents.adopt").map((c) => c.args)).toEqual([
       [ORG_ID, { agentId: "agent-bruno", replace: agentIdOf("support") }],
@@ -764,7 +766,9 @@ describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
     await click(button("Pedir à sua IA"), 8);
     await click(within(screen().getByRole("dialog")).getByRole("button", { name: "OpenMausBot" }), 16);
     const dialog = screen().getByRole("dialog", { name: /^Trazer o time d[oa] OpenMausBot$/ });
-    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    // The sheet's × goes back to the list of apps; that dialog's × closes the import.
+    await click(within(dialog).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
+    await click(within(screen().getByRole("dialog")).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement, 4);
     await settle(16);
     expect(calls(state, "firstAgents.adopt")).toEqual([]);
     expect(heading()).toBe("Iara, do atendimento");
