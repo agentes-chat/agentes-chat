@@ -1,0 +1,19 @@
+/*
+ * The cover over a workspace on a private network this computer can't reach now (ADR 0265): the same stack as every
+ * state, its picture Tailscale's mark on its own 48 px tile (its brand toolkit's), standing on the sky with no card
+ * around it and no shadow.
+ */
+.cover__tile {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #1e1e1f;
+  background: #f3f3f1;
+}
+.cover__tile svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}

@@ -15,7 +15,7 @@ use tauri_plugin_notification::NotificationExt;
 use crate::main_window;
 
 /// The windows that bring the Dock icon back: the popover and the notch are panels.
-pub const APP_WINDOWS: &[&str] = &[main_window::LABEL, "welcome", "prefs"];
+pub const APP_WINDOWS: &[&str] = &[main_window::LABEL];
 
 /// The popover's say on the menu bar icon (`tray_visible`): shown, and whether the person turned it off.
 #[cfg(target_os = "macos")]

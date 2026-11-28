@@ -23,6 +23,7 @@ import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { createMiddleware } from "hono/factory";
 import { type Auth, type SessionUser, sessionUser, signInPageUrl } from "../../auth";
 import { apiError, errorResponse, validationHook } from "../../http/errors";
+import { trustedLoopbackOrigin } from "../../http/native-hosts";
 import type { Logger } from "../../logger";
 import type { AppExtras } from "./extras";
 
@@ -76,6 +77,16 @@ export const routineConnectorDeps = (deps: AppDeps): ConnectorTriggerDeps => {
  */
 export const requestBaseUrl = (deps: Pick<AppDeps, "db" | "config">, headers: Headers) =>
   baseUrlFor(deps.db, deps.config.PUBLIC_URL, headers.get("host"));
+
+/**
+ * The server's own loopback origin when this request came to it while people use `PUBLIC_URL` (a native server,
+ * ADR 0265 §5), else null: what must come back to the origin it started at (an MCP server's sign-in and the callback's
+ * landing) goes there. Grants nothing: the Host only picks which of the server's own origins answers.
+ */
+export function requestLoopback(config: Config, headers: Headers): string | null {
+  const origin = trustedLoopbackOrigin(config);
+  return origin && headers.get("host")?.toLowerCase() === new URL(origin).host ? origin : null;
+}
 
 /** Allowed browser origins for state-changing requests and WebSocket upgrades. */
 export function allowedOrigins(config: Config): Set<string> {
@@ -238,10 +249,10 @@ export function readOnlyWhileDeleting(deps: Pick<AppDeps, "auth" | "db">) {
   });
 }
 
-/** The sign-in page, coming back to this request's address once signed in. */
-export function signInPage(publicUrl: string, requestUrl: string) {
-  const { pathname, search } = new URL(requestUrl);
-  return signInPageUrl(publicUrl, { redirect: pathname + search });
+/** The sign-in page, coming back to this request's path once signed in (on the origin the browser asked). */
+export function signInPage(requestUrl: string) {
+  const { pathname, search } = new URL(requestUrl, "http://localhost");
+  return signInPageUrl({ redirect: pathname + search });
 }
 
 /**
@@ -249,10 +260,10 @@ export function signInPage(publicUrl: string, requestUrl: string) {
  * connecting): with none in this browser, the sign-in page first, and the return finishes once signed in. Never the
  * API's JSON 401 on screen.
  */
-export function signInFirst(auth: Auth, publicUrl: string) {
+export function signInFirst(auth: Auth) {
   return createMiddleware<AppEnv>(async (c, next) => {
     const user = c.get("user") ?? (await sessionUser(auth, c.req.raw.headers));
-    if (!user) return c.redirect(signInPage(publicUrl, c.req.url), 302);
+    if (!user) return c.redirect(signInPage(c.req.url), 302);
     c.set("user", user);
     await next();
   });

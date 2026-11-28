@@ -44,6 +44,7 @@ import {
 import { createRoute, z } from "@hono/zod-openapi";
 import { sessionUser } from "../../auth";
 import { isExpectedError } from "../../http/errors";
+import { trustedLoopbackOrigin } from "../../http/native-hosts";
 import { githubAccess } from "../github-app";
 import { OthersQuery, Outcome, Personal } from "./connectors-custom";
 import {
@@ -56,6 +57,7 @@ import {
   OrgParams,
   oauthFailedUrl,
   oauthFailure,
+  requestLoopback,
   requireSession,
   security,
   signInPage,
@@ -183,6 +185,7 @@ export function connectorRoutes(deps: AppDeps) {
     keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers],
     oauthApps,
     publicUrl: config.PUBLIC_URL,
+    loopbackUrl: trustedLoopbackOrigin(config),
     http: deps.extras?.http,
     resolveHost: deps.extras?.resolveHost,
     // A sign-in's account is asked of the server before it's stored (two accounts are told apart by it).
@@ -383,7 +386,15 @@ export function connectorRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId, connector } = c.req.valid("param");
-      const { authorizeUrl } = await startOAuth(connectorDeps, c.get("user").id, orgId, connector, c.req.valid("json"));
+      // Asked at the server's loopback origin: an MCP server's sign-in comes back there (ADR 0265 §5).
+      const atLoopback = requestLoopback(config, c.req.raw.headers) !== null;
+      const { authorizeUrl } = await startOAuth(
+        { ...connectorDeps, atLoopback },
+        c.get("user").id,
+        orgId,
+        connector,
+        c.req.valid("json"),
+      );
       return c.json({ authorizeUrl }, 200);
     },
   );
@@ -416,7 +427,9 @@ export function connectorRoutes(deps: AppDeps) {
         code: query.code ?? query.connected_account_id,
         error: query.error ?? (query.status === "failed" ? "connector.unfinished" : undefined),
       };
-      const base = config.PUBLIC_URL.replace(/\/$/, "");
+      // Back to the origin the provider returned to: `PUBLIC_URL`, or the server's loopback origin for a sign-in
+      // started there (ADR 0265 §5).
+      const base = (requestLoopback(config, c.req.raw.headers) ?? config.PUBLIC_URL).replace(/\/$/, "");
       // Started by the phone app: the system browser has no session of ours. Hand what the provider sent back
       // to the app, which finishes with its own session (the state stays bound to the person who started it).
       const started = q.state ? await peekOAuthState(connectorDeps, q.state) : null;
@@ -449,7 +462,7 @@ export function connectorRoutes(deps: AppDeps) {
       if (!q.state || !q.code) return fail("failed");
       const user = c.get("user") ?? (await sessionUser(deps.auth, c.req.raw.headers));
       // No session in this browser: the sign-in page first, and the return finishes once signed in.
-      if (!user) return c.redirect(signInPage(config.PUBLIC_URL, c.req.url), 302);
+      if (!user) return c.redirect(signInPage(c.req.url), 302);
       try {
         const { connection, returnTo, outcome } = await completeOAuth(connectorDeps, user, {
           state: q.state,

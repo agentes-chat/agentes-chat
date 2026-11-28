@@ -2,11 +2,15 @@ import { checkServer } from "@agenteschat/client/lib/server";
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import type {
+  AddressCheck,
   KeepRunning,
   LocalServerStatus,
+  PhoneLink,
   ReachResult,
   ReachStage,
   StepChange,
@@ -24,6 +28,7 @@ import {
   type BadgeCounts,
   type CompatMode,
   type Host,
+  type LayerState,
   type MenuAction,
   type NotchInfo,
   type RunnerInfo,
@@ -32,6 +37,12 @@ import {
   WINDOW_NAMES,
   type WindowName,
 } from "./types";
+
+/** The screen a web view's Tauri label names: the app layer is `main-app`, a web view inside the window `main`. */
+export function windowNameOf(label: string): WindowName {
+  if (label === "main-app") return "app";
+  return (WINDOW_NAMES as readonly string[]).includes(label) ? (label as WindowName) : "popover";
+}
 
 /** Tauri's `listen` is async; this returns a plain unsubscribe that also works before it resolves. */
 function subscribe<T>(event: string, cb: (payload: T) => void): () => void {
@@ -51,8 +62,8 @@ function subscribe<T>(event: string, cb: (payload: T) => void): () => void {
 export const inTauri = () => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export function createTauriHost(): Host {
-  const label = getCurrentWindow().label;
-  const name: WindowName = (WINDOW_NAMES as readonly string[]).includes(label) ? (label as WindowName) : "popover";
+  // The web view's own label: the layer shares the window `main` with the site, so the window's label says nothing.
+  const name = windowNameOf(getCurrentWebview().label);
   return {
     window: name,
     fake: false,
@@ -64,6 +75,18 @@ export function createTauriHost(): Host {
     onLine: (cb) => subscribe<{ homeId: string; line: string }>("runner://line", (p) => cb(p.homeId, p.line)),
     onRunnerState: (cb) => subscribe<RunnerStateChange>("runner://state", cb),
     onShown: (cb) => subscribe<WindowName>("window://shown", cb),
+    showLayer: (route) => invoke<void>("layer_show", { route }),
+    hideLayer: (opts) => invoke<void>("layer_hide", { afterSitePaints: opts?.afterSitePaints ?? null }),
+    layerState: () => invoke<LayerState>("layer_state"),
+    onLayer: (cb) => subscribe<LayerState>("layer://state", cb),
+    layerPainted: (seq) => invoke<void>("layer_painted", { seq }),
+    siteGo: (path) => invoke<void>("layer_site_go", { path }),
+    firstRunSignIn: (method) => invoke<void>("first_run_sign_in", { method }),
+    publishHealth: (health) => invoke<void>("health_publish", health),
+    health: () => invoke<Health>("health_get"),
+    onHealth: (cb) => subscribe<Health>("health://changed", cb),
+    notificationPermission: () => invoke<NotifyPermission>("notify_permission"),
+    requestNotifications: () => invoke<NotifyPermission>("notify_request"),
     openExternal: (url) => invoke<void>("open_external", { url }),
     servers: () => invoke<ServerList>("servers_get"),
     chooseServer: (server, page) => invoke<void>("server_choose", { server, page: page ?? null }),
@@ -75,9 +98,6 @@ export function createTauriHost(): Host {
     askToPair: (server, org) => invoke<boolean>("pair_ask", { server, org }),
     siteFetch: (server, method, path, body) =>
       invoke<SiteAnswer>("site_fetch", { server, method, path, body: body ?? null }),
-    welcomeMode: () =>
-      invoke<string | null>("welcome_mode_take").then((m) => (m === "add" || m === "owner" ? m : null)),
-    addWorkspace: () => invoke<void>("welcome_add"),
     discover: () => invoke<Candidate[]>("discover"),
     // From the web view itself: every server answers `/api/instance` to any origin (it is public).
     checkServer: (server) => checkServer(server),
@@ -105,7 +125,9 @@ export function createTauriHost(): Host {
     setNotch: (on) => invoke<void>("notch_set", { on }),
     notchInfo: () => invoke<NotchInfo | null>("notch_info"),
     notchPlace: (width, height) => invoke<NotchInfo | null>("notch_place", { width, height }),
-    resize: (width, height) => getCurrentWindow().setSize(new LogicalSize(width, height)),
+    // The popover's own window; in the layer it would resize the main window, so it does nothing there.
+    resize: (width, height) =>
+      name === "app" ? Promise.resolve() : getCurrentWindow().setSize(new LogicalSize(width, height)),
     onThisMac: (cb) =>
       subscribe<{ id: number; request: ThisMacRequest }>("this-mac://request", (p) => cb(p.id, p.request)),
     thisMacReply: (id, ok, data) => invoke<void>("this_mac_reply", { id, ok, data }),
@@ -122,9 +144,10 @@ export function createTauriHost(): Host {
     startLocalServer: () => invoke<void>("local_server_start"),
     stopLocalServer: (forget, minutes) => invoke<void>("local_server_stop", { forget, minutes: minutes ?? null }),
     restartLocalServer: () => invoke<void>("local_server_restart"),
-    setLocalReach: (on) => invoke<ReachResult>("local_server_reach", { on }),
+    setLocalReach: (on, way) => invoke<ReachResult>("local_server_reach", { on, way: way ?? null }),
     onLocalReach: (cb) => subscribe<ReachStage>("local-server://reach", cb),
     stopLocalReach: () => invoke<void>("local_server_reach_stop"),
+    checkAddress: (url) => invoke<AddressCheck>("local_server_check_address", { url }),
     setLocalUsage: (on) => invoke<void>("local_server_usage", { on }),
     backupLocalServer: () => invoke<string>("local_server_backup"),
     setLocalBackups: (nightly, copyTo) => invoke<void>("local_server_backups_set", { nightly, copyTo }),
@@ -136,6 +159,7 @@ export function createTauriHost(): Host {
     syncLocalHomes: (rotate) => invoke<void>("local_server_sync", { rotate }),
     tailscale: () => invoke<Tailnet>("tailscale_status"),
     openTailscale: (page) => invoke<void>("tailscale_open", { page }),
+    phoneLink: () => invoke<PhoneLink>("local_server_phone_link"),
     onNewHostHome: (cb) => subscribe<string>("host://new", cb),
     screenAccess: () => invoke<boolean>("screen_access"),
     requestScreenAccess: () => invoke<boolean>("screen_request"),

@@ -19,7 +19,8 @@ import {
   type UpdateState,
   updateStateOf,
 } from "./control/version";
-import type { AppInfo, WindowName } from "./host/types";
+import type { AppInfo, LayerState, WindowName } from "./host/types";
+import { settingsRouteOf } from "./layer/routes";
 
 /**
  * The iPhones on this Mac's Wi-Fi that trust it, from its server (`GET …/wifi-iphones`, for who may manage the Mac),
@@ -208,7 +209,7 @@ export function useTailnet(): Tailnet | null {
 
 const TAILNET_READ_GAP_MS = 15_000;
 
-/** Runs `fn` whenever the shell brings this window up. */
+/** Runs `fn` whenever the shell brings this window up (the popover, the notch; the app layer has `useLayerShown`). */
 export function useOnShown(name: WindowName, fn: () => void) {
   const host = useHost();
   const ref = useRef(fn);
@@ -220,6 +221,30 @@ export function useOnShown(name: WindowName, fn: () => void) {
       }),
     [host, name],
   );
+}
+
+/**
+ * Runs `fn` whenever the app layer puts a route on screen (a new `seq` with the layer showing): what `useOnShown` was
+ * for the windows it replaced. Not for the state it starts with: the screen reads that when it mounts.
+ */
+export function useLayerShown(fn: (state: LayerState) => void) {
+  const host = useHost();
+  const ref = useRef(fn);
+  ref.current = fn;
+  useEffect(() => {
+    let last: number | null = null;
+    void host
+      .layerState()
+      .then((s) => {
+        last ??= s.seq;
+      })
+      .catch(() => {});
+    return host.onLayer((state) => {
+      if (state.mode === "hidden" || state.route === null || state.seq === last) return;
+      last = state.seq;
+      ref.current(state);
+    });
+  }, [host]);
 }
 
 /** The agent's look from its organization's agents list (jobs and requests carry only id and name). */
@@ -253,13 +278,12 @@ export function usePref<T>(key: string, fallback: T): [T, (value: T) => void] {
   return [value, set];
 }
 
-/** Preferences, on `tab` when given: the window reads the tab it is asked for when it shows (`Prefs`). */
+/** This computer's settings (the app layer, ADR 0265), on the section an old Preferences tab name became. */
 export function useOpenPrefs() {
   const host = useHost();
   return useCallback(
     (tab?: string) => {
-      if (tab) writePref("prefsTab", tab);
-      void host.showWindow("prefs").catch(() => {});
+      void host.showLayer(settingsRouteOf(tab)).catch(() => {});
     },
     [host],
   );

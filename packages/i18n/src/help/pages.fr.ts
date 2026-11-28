@@ -35,7 +35,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Le garder allumé",
         blocks: [
-          "Sur un ordinateur que d’autres utilisent, préparez-le une fois. **Le garder en marche**, dans **Préférences\u00a0›\u00a0Serveurs**, montre ce qui manque encore et ouvre les bons réglages\u00a0:",
+          "Sur un ordinateur que d’autres utilisent, préparez-le une fois. **Toujours prêt**, dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Vue d'ensemble**, montre ce qui manque encore, chaque point avec le bouton qui le règle\u00a0:",
           {
             list: [
               "**Ouvrir à la connexion** s’active tout seul après la configuration.",
@@ -51,15 +51,15 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Vos agents travaillent ici aussi",
         blocks: [
           "Vos agents travaillent aussi sur cet ordinateur, dans des dossiers rien qu’à eux, avec un navigateur, et avec Claude Code ou Codex s’ils sont installés ici.",
-          "Ici, les agents tournent sous votre compte. Les **Commandes** sont activées par défaut, et avec elles les agents de chaque espace de travail qui utilise cet ordinateur peuvent atteindre tout ce qu’il contient, y compris les données du serveur. Désactivez-les dans **Préférences\u00a0›\u00a0Outils**. Voir [Ce que les agents peuvent atteindre](/help/computers#reach).",
+          "Ici, les agents tournent sous votre compte. Les **Commandes** sont activées par défaut, et avec elles les agents de chaque espace de travail qui utilise cet ordinateur peuvent atteindre tout ce qu’il contient, y compris les données du serveur. Désactivez-les dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Dossiers et outils**. Voir [Ce que les agents peuvent atteindre](/help/computers#reach).",
         ],
       },
       {
         id: "another-workspace",
         heading: "Le prêter aussi à un autre espace de travail",
         blocks: [
-          "Les espaces de travail du serveur que vous faites tourner ici utilisent déjà cet ordinateur, sans rien à faire. Pour qu’un espace de travail d’ailleurs l’utilise aussi, par exemple sur agentes.chat Cloud, cliquez sur **Ajouter un espace de travail…** en bas de la première carte de **Préférences\u00a0›\u00a0Général**, ou sur **Ajouter un serveur…** dans **Préférences\u00a0›\u00a0Serveurs**. Connectez-vous à cet espace de travail et cliquez sur **Autoriser** quand l’app le demande.",
-          "Chaque espace de travail a ici ses propres agents et dossiers. Les **Commandes** y sont aussi activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Préférences\u00a0›\u00a0Outils**, où chaque espace de travail a son propre interrupteur et où l’app demande confirmation avant d’en réactiver un.",
+          "Les espaces de travail du serveur que vous faites tourner ici utilisent déjà cet ordinateur, sans rien à faire. Pour qu’un espace de travail d’ailleurs l’utilise aussi, par exemple sur agentes.chat Cloud, cliquez sur **Ajouter un espace de travail…** en bas de **Qui utilise cet ordinateur**, dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Vue d'ensemble**, ou sur **Ajouter un serveur…** dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Paramètres de l'app**. Connectez-vous à cet espace de travail et cliquez sur **Autoriser** quand l’app le demande.",
+          "Chaque espace de travail a ici ses propres agents et dossiers. Les **Commandes** y sont aussi activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Dossiers et outils**, où chaque espace de travail a son propre interrupteur et où l’app demande confirmation avant d’en réactiver un.",
         ],
       },
       {
@@ -74,7 +74,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Se connecter depuis d’autres appareils",
         blocks: [
-          "Le propriétaire commence sans mot de passe\u00a0: l’app vous connecte sur cet ordinateur. Pour vous connecter depuis un navigateur sur un autre ordinateur, ajoutez-en un dans **Paramètres\u00a0›\u00a0Votre compte**. En attendant, **Préférences\u00a0›\u00a0Serveurs** vous le rappelle, et **Ajouter un mot de passe** ouvre cette page. L’app mobile se connecte en scannant le QR code sous **Sur votre téléphone**, dans **Préférences\u00a0›\u00a0Serveurs**. Il faut pour cela que **Y accéder depuis votre téléphone et vos collègues** soit activé.",
+          "Le propriétaire commence sans mot de passe\u00a0: l’app vous connecte sur cet ordinateur. Pour vous connecter depuis un navigateur sur un autre ordinateur, ajoutez-en un dans **Paramètres\u00a0›\u00a0Votre compte**. En attendant, **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Serveur sur ce poste** vous le rappelle, et **Ajouter un mot de passe** ouvre cette page. L’app mobile se connecte en scannant le QR code sous **Sur votre téléphone**, dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Serveur sur ce poste**. Il faut pour cela que **Y accéder depuis votre téléphone et vos collègues** soit activé.",
           "Quand le propriétaire supprime son compte, dans **Paramètres\u00a0›\u00a0Votre compte**, il disparaît pour de bon 7 jours plus tard, et les espaces de travail où il était seul partent avec lui. D’ici là, connectez-vous et appuyez sur **Restaurer le compte** pour le récupérer. Une fois le compte disparu, s’il ne reste aucun compte, l’app ouvre sa fenêtre de bienvenue pour créer un nouveau propriétaire. Si d’autres personnes ont encore un compte, chacune se connecte avec son propre e-mail.",
         ],
       },
@@ -82,14 +82,14 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "updates",
         heading: "Mises à jour",
         blocks: [
-          "L’app cherche les mises à jour toute seule. Avec **Installer les mises à jour tout seul, la nuit** activé, dans **Préférences\u00a0›\u00a0Mises à jour**, elle les installe entre 3:00 et 5:00 tant que l’app est ouverte. C’est activé d’office quand le serveur tourne ici. Sinon, cliquez sur **Mettre à jour et rouvrir**. Le serveur et tous les agents redémarrent avec elle. La base de données est d’abord copiée, et si la nouvelle version ne répond pas dans les 3 minutes, l’app revient toute seule à la version précédente et à ses données.",
+          "L’app cherche les mises à jour toute seule. Avec **Installer les mises à jour tout seul, la nuit** activé, dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Paramètres de l'app**, elle les installe entre 3:00 et 5:00 tant que l’app est ouverte. C’est activé d’office quand le serveur tourne ici. Sinon, cliquez sur **Mettre à jour et rouvrir**. Le serveur et tous les agents redémarrent avec elle. La base de données est d’abord copiée, et si la nouvelle version ne répond pas dans les 3 minutes, l’app revient toute seule à la version précédente et à ses données.",
         ],
       },
       {
         id: "backups",
         heading: "Sauvegardes",
         blocks: [
-          "Avec **Sauvegarder chaque nuit** activé (app 0.8.1 et plus récente), dans **Préférences\u00a0›\u00a0Serveurs**, l’app enregistre chaque nuit à 3:00 la base de données, les fichiers et le `.env` dans `.agentes/backups`, dans votre dossier personnel. Un ordinateur en veille à ce moment-là sauvegarde dès qu’il se réveille. **Sauvegarder maintenant** fait la même chose tout de suite. Chaque sauvegarde arrête le serveur un instant, et les deux plus récentes sont gardées.",
+          "Avec **Sauvegarder chaque nuit** activé (app 0.8.1 et plus récente), sous **Sauvegardes** dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Serveur sur ce poste**, l’app enregistre chaque nuit à 3:00 la base de données, les fichiers et le `.env` dans `.agentes/backups`, dans votre dossier personnel. Un ordinateur en veille à ce moment-là sauvegarde dès qu’il se réveille. **Sauvegarder maintenant** fait la même chose tout de suite. Chaque sauvegarde arrête le serveur un instant, et les deux plus récentes sont gardées.",
           "**Copier dans** place aussi chaque nouvelle sauvegarde dans un dossier de votre choix, comme une clé USB ou iCloud Drive, où les deux plus récentes sont gardées. Elles contiennent vos clés\u00a0: gardez-les privées. **Restaurer…** ramène agentes.chat à une sauvegarde\u00a0: messages, fichiers et réglages. Il s’arrête une minute, et ce qui était là avant est gardé dans le dossier des sauvegardes.",
         ],
       },
@@ -98,12 +98,12 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Recommencer ou désinstaller",
         blocks: [
           "Tout ce qu’agentes.chat garde sur cet ordinateur se trouve dans des dossiers de votre dossier personnel, pas dans l’app. Mettre l’app à la corbeille n’en supprime donc rien, et n’arrête pas agentes.chat s’il tourne.",
-          "Pour recommencer, appuyez sur **Effacer et repartir de zéro…** dans **Préférences\u00a0›\u00a0Serveurs**. agentes.chat s’arrête ici et tout ce qu’il contient part dans un nouveau dossier de votre dossier personnel, nommé `agentes.chat erased` suivi de la date du jour, où il reste jusqu’à ce que vous le supprimiez. Ce que ses agents gardaient sur cet ordinateur, comme leurs navigateurs et leurs connexions, est supprimé de `.agentes-runner`. Ses espaces de travail disparaissent pour tous ceux qui les utilisent. Ensuite, la fenêtre de bienvenue s’ouvre et vous le configurez de nouveau avec un nouveau compte propriétaire. Les fichiers des agents, dans `agentes` dans votre dossier personnel, restent où ils sont.",
+          "Pour recommencer, appuyez sur **Effacer et repartir de zéro…** dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Serveur sur ce poste**. agentes.chat s’arrête ici et tout ce qu’il contient part dans un nouveau dossier de votre dossier personnel, nommé `agentes.chat erased` suivi de la date du jour, où il reste jusqu’à ce que vous le supprimiez. Ce que ses agents gardaient sur cet ordinateur, comme leurs navigateurs et leurs connexions, est supprimé de `.agentes-runner`. Ses espaces de travail disparaissent pour tous ceux qui les utilisent. Ensuite, l’app ouvre sa configuration et vous le configurez de nouveau avec un nouveau compte propriétaire. Les fichiers des agents, dans `agentes` dans votre dossier personnel, restent où ils sont.",
           "Pour le retrouver plus tard, quittez l’app, mettez de côté un dossier `.agentes` plus récent s’il y en a un, renommez le dossier `agentes.chat erased` en `.agentes`, puis ouvrez l’app et configurez-le à nouveau sur cet ordinateur. Il revient avec ses espaces de travail et son propriétaire tels qu’ils étaient. Ce que ses agents gardaient sur cet ordinateur ne revient pas : ils doivent se reconnecter.",
           "Pour retirer complètement agentes.chat de cet ordinateur\u00a0:",
           {
             list: [
-              "Désactivez **Ouvrir à la connexion** dans **Préférences\u00a0›\u00a0Général**.",
+              "Désactivez **Ouvrir à la connexion** dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Paramètres de l'app**.",
               "Quittez l’app. Fermer sa fenêtre ne suffit pas. Sur un Mac, cliquez sur son icône dans le Dock, puis choisissez **Quitter agentes.chat** dans le menu agentes.chat, en haut de l’écran, ou appuyez sur ⌘Q. Sous Windows et Linux, cliquez sur l’icône agentes.chat près de l’horloge et choisissez **Quitter agentes.chat**. S’il demande **Quitter agentes.chat\u00a0?**, appuyez sur **Quitter**.",
               "Supprimez l’app. Sur un Mac, mettez-la à la corbeille. Sous Windows et Linux, désinstallez-la comme n’importe quelle autre app.",
               "Supprimez ces dossiers de votre dossier personnel. Ils contiennent vos données, et une fois supprimées elles ne reviennent pas, alors gardez d’abord une sauvegarde ailleurs si vous pourriez en avoir besoin\u00a0: `.agentes` (messages, fichiers, comptes, réglages et sauvegardes), chaque dossier `agentes.chat erased`, `.agentes-runner` (ce que les agents gardent sur cet ordinateur, comme leurs navigateurs et leurs connexions) et `agentes` (les fichiers des agents). Les dossiers dont le nom commence par un point sont masqués. Sur un Mac, ouvrez votre dossier personnel dans le Finder et appuyez sur ⇧⌘. (Maj, Commande et la touche point) pour les afficher.",
@@ -116,7 +116,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "ai-programs",
         heading: "Claude Code et Codex",
         blocks: [
-          "L’app trouve Claude Code et Codex grâce au `PATH` de votre shell de connexion, plus les dossiers habituels comme `~/.local/bin`, `/opt/homebrew/bin` et `/usr/local/bin`. Si **Préférences\u00a0›\u00a0Outils** indique **Introuvable**, la ligne qui l’installe s’affiche. Lancez-la dans le Terminal, puis cliquez sur **Vérifier à nouveau**.",
+          "L’app trouve Claude Code et Codex grâce au `PATH` de votre shell de connexion, plus les dossiers habituels comme `~/.local/bin`, `/opt/homebrew/bin` et `/usr/local/bin`. Si **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Dossiers et outils** indique **Introuvable**, la ligne qui l’installe s’affiche. Lancez-la dans le Terminal, puis cliquez sur **Vérifier à nouveau**.",
         ],
       },
       {
@@ -190,7 +190,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Depuis l’app agentes.chat",
         blocks: [
           "Installez l’app sur l’ordinateur, ouvrez-la et connectez-vous à votre espace de travail. Elle demande **Laisser les agents de <workspace> utiliser ce Mac\u00a0?** (ce PC sous Windows, cet ordinateur sous Linux). Choisissez qui peut l’utiliser et cliquez sur **Autoriser**. C’est tout.",
-          "Déjà connecté\u00a0? Ouvrez **Préférences\u00a0›\u00a0Général** et cliquez sur **Autoriser** dans la ligne de l’espace de travail, dans la première carte. Il n’y est pas\u00a0? Cliquez sur **Ajouter un espace de travail…** en bas de cette carte et connectez-vous.",
+          "Déjà connecté\u00a0? Ouvrez **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Vue d'ensemble** et cliquez sur **Autoriser** dans la ligne de l’espace de travail, sous **Qui utilise cet ordinateur**. Il n’y est pas\u00a0? Cliquez sur **Ajouter un espace de travail…** en bas de cette liste et connectez-vous.",
         ],
       },
       {
@@ -233,7 +233,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Mettre en pause et déconnecter",
         blocks: [
-          "Sur l’ordinateur, l’icône agentes.chat près de l’horloge met en pause les agents de tous les espaces de travail, ou d’un seul. Dans **Préférences\u00a0›\u00a0Général**, l’interrupteur de chaque espace de travail ne met en pause que celui-ci, et **Quitter**, dans son menu **⋯**, le déconnecte. Rien de nouveau ne démarre pendant la pause, et ce qui était en cours se termine. Déconnecter garde les dossiers des agents sur le disque.",
+          "Sur l’ordinateur, l’icône agentes.chat près de l’horloge met en pause les agents de tous les espaces de travail, ou d’un seul. Dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Vue d'ensemble**, l’interrupteur de chaque espace de travail ne met en pause que celui-ci, et **Quitter**, dans son menu **⋯**, le déconnecte. Rien de nouveau ne démarre pendant la pause, et ce qui était en cours se termine. Déconnecter garde les dossiers des agents sur le disque.",
           "Depuis le site, **Retirer** sur la page de l’appareil le déconnecte.",
         ],
       },
@@ -259,7 +259,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "folders",
         heading: "Dossiers",
         blocks: [
-          "Chaque agent a toujours son propre dossier, dans `~/agentes/<workspace>`. D’autres dossiers peuvent être autorisés sur l’ordinateur lui-même, jamais depuis le site : dans l’app, via **Préférences › Dossiers**, ou avec `agentes-runner folders allow` sur un serveur. Chaque espace de travail autorise ses propres dossiers : ce que vous autorisez pour l’un ne vaut que pour ses agents. Retirer un dossier ne supprime rien. Cela retire seulement l’accès.",
+          "Chaque agent a toujours son propre dossier, dans `~/agentes/<workspace>`. D’autres dossiers peuvent être autorisés sur l’ordinateur lui-même, jamais depuis le site : dans l’app, via **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Dossiers et outils**, ou avec `agentes-runner folders allow` sur un serveur. Chaque espace de travail autorise ses propres dossiers : ce que vous autorisez pour l’un ne vaut que pour ses agents. Retirer un dossier ne supprime rien. Cela retire seulement l’accès.",
         ],
       },
       {
@@ -275,7 +275,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
               "sur un ordinateur qui fait aussi tourner agentes.chat, sa base de données et ses clés dans `.agentes`",
             ],
           },
-          "agentes.chat refuse les commandes qui citent ses clés, ses jetons et les connexions enregistrées, mais c’est une règle, pas un mur. Les **Commandes** sont activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Préférences\u00a0›\u00a0Outils**, où chaque espace de travail a son propre interrupteur (app 0.8.1 et plus récente) et où l’app demande confirmation avant d’en réactiver un. Claude Code et Codex lancent leurs propres commandes dans le dossier de l’agent, selon leurs propres règles, même avec les commandes désactivées.",
+          "agentes.chat refuse les commandes qui citent ses clés, ses jetons et les connexions enregistrées, mais c’est une règle, pas un mur. Les **Commandes** sont activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Paramètres\u00a0›\u00a0Ce poste\u00a0›\u00a0Dossiers et outils**, où chaque espace de travail a son propre interrupteur (app 0.8.1 et plus récente) et où l’app demande confirmation avant d’en réactiver un. Claude Code et Codex lancent leurs propres commandes dans le dossier de l’agent, selon leurs propres règles, même avec les commandes désactivées.",
           "Pour un vrai mur, utilisez un serveur Linux. Sous Debian 13, installé avec `--system`, chaque agent est un utilisateur à part. Sous Ubuntu, les agents partagent un utilisateur, `agentes`\u00a0: ils voient les dossiers les uns des autres, pas les vôtres ni ceux du serveur. Ou donnez aux agents un ordinateur rien qu’à eux.",
         ],
       },

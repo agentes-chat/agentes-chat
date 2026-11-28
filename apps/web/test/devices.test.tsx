@@ -722,10 +722,11 @@ describe("Connect a device", () => {
     expect(screen().getByRole("dialog", { name: "Galaxy S24 is connected" })).toBeTruthy();
   });
 
-  test("over Wi-Fi in the app on that very Mac: a Local Network failure opens that setting", async () => {
+  test("over Wi-Fi on that very Mac: Local Network is asked as pairing starts, and from its failure", async () => {
     const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
     const asked: Record<string, unknown>[] = [];
-    win.__agentesDesktop = { version: "0.8.6", platform: "mac" };
+    win.__agentesDesktop = { version: "0.20.0", platform: "mac", settings: 1 };
+    localStorage.removeItem("agentes.thisMac.localNetworkAsked");
     win.__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: { request?: Record<string, unknown> }) => {
         if (cmd !== "this_mac" || !args.request) return {};
@@ -740,14 +741,27 @@ describe("Connect a device", () => {
       await click(screen().getByRole("button", { name: "Connect a device" }));
       await click(screen().getByRole("button", { name: /Android phone/ }));
       const dialog = screen().getByRole("dialog", { name: "Connect an Android phone" });
+      const localNetwork = () => asked.filter((r) => r.kind === "localNetwork");
+      expect(localNetwork()).toEqual([]);
+      // Just in time (ADR 0265): the system's question as Wi-Fi pairing starts on this very Mac, once.
       await click(within(dialog).getByRole("radio", { name: "Over Wi-Fi" }));
+      await settle(4);
+      expect(localNetwork()).toEqual([{ kind: "localNetwork" }]);
+      // The next start asks no more: after the system's question, the app would open System Settings.
+      // The cable's option carries its "Recommended" note in its name.
+      await click(within(dialog).getByRole("radio", { name: /^With a cable/ }));
+      await click(within(dialog).getByRole("radio", { name: "Over Wi-Fi" }));
+      await settle(4);
+      expect(localNetwork()).toHaveLength(1);
       devices.setPairing({ state: "failed", reason: "same_wifi" });
       await act(async () => {
         await services.queryClient.invalidateQueries({ queryKey: ["wifi-pair-state"] });
       });
       await refetch(services);
+      expect(localNetwork()).toHaveLength(1);
       await click(within(dialog).getByRole("button", { name: "Open Local Network" }));
-      expect(asked).toContainEqual({ kind: "privacy", pane: "network" });
+      expect(localNetwork()).toHaveLength(2);
+      expect(asked.some((r) => r.kind === "privacy")).toBe(false);
       // A cause that setting has nothing to do with gets no such button.
       devices.setPairing({ state: "failed", reason: "refused" });
       await act(async () => {
@@ -758,6 +772,7 @@ describe("Connect a device", () => {
     } finally {
       delete win.__agentesDesktop;
       delete win.__TAURI_INTERNALS__;
+      localStorage.removeItem("agentes.thisMac.localNetworkAsked");
     }
   });
 

@@ -67,6 +67,11 @@ export const STORAGE_KEYS = {
   thisMacSignedInAt: "agentes.thisMac.signedInAt",
   /** sessionStorage (JSON `{ to, at }`): the page to come back to after the desktop app signs the window in again. */
   thisMacReturn: "agentes.thisMac.return",
+  /**
+   * "1" once this window asked the desktop app for the Local Network permission as an Android phone started pairing
+   * over Wi-Fi (ADR 0265): asked again only from that pairing's failure, never as the next one starts.
+   */
+  localNetworkAsked: "agentes.thisMac.localNetworkAsked",
   /** "0" when the person switched off the picture viewer's hover lens (on by default). */
   imageLens: "agentes.image.lens",
   /** A press on a file with its comments open marks it ("0" = it moves the file instead). */

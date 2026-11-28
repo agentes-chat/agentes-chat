@@ -76,7 +76,7 @@ describe("a link opened in a browser that the API refuses: our page, same status
     expect(pageOf(html)).toEqual({
       title: "Este arquivo não está disponível para você",
       text: "Ele pode ter sido apagado ou estar só numa conversa em que você não está. Peça a quem enviou para compartilhar com você pelo botão Compartilhar do arquivo.",
-      action: ["http://localhost:3000/", "Abrir o agentes.chat"],
+      action: ["/", "Abrir o agentes.chat"],
     });
     // The product's look: the logo and the sky of the sign-in pages.
     expect(html).toContain('class="logo"');
@@ -105,7 +105,7 @@ describe("a link opened in a browser that the API refuses: our page, same status
     expect(pageOf(await res.text())).toEqual({
       title: "Sign in to open this link",
       text: "Once you're in, you come right back here.",
-      action: [`http://localhost:3000/login?redirect=${encodeURIComponent(back).replace(/%20/g, "+")}`, "Sign in"],
+      action: [`/login?redirect=${encodeURIComponent(back).replace(/%20/g, "+")}`, "Sign in"],
     });
   });
 
@@ -115,7 +115,7 @@ describe("a link opened in a browser that the API refuses: our page, same status
     expect(pageOf(await res.text())).toEqual({
       title: "Este link não está disponível para você",
       text: "Ele pode ter expirado, já ter sido usado ou levar a um lugar em que você não está. Peça um novo a quem enviou.",
-      action: ["http://localhost:3000/", "Abrir o agentes.chat"],
+      action: ["/", "Abrir o agentes.chat"],
     });
   });
 
@@ -132,14 +132,14 @@ describe("a link opened in a browser that the API refuses: our page, same status
     expect(pageOf(await version.text())).toEqual({
       title: "Esta versão do arquivo não existe",
       text: "O link pede uma versão que o arquivo não tem.",
-      action: [`http://localhost:3000/org/${orgId}/drive?artifact=${report.id}`, "Abrir a versão mais recente"],
+      action: [`/org/${orgId}/drive?artifact=${report.id}`, "Abrir a versão mais recente"],
     });
     const format = await open(bia, `${base}/artifacts/${report.id}/file?format=patch`);
     expect(format.status).toBe(400);
     expect(pageOf(await format.text())).toEqual({
       title: "Este arquivo não sai nesse formato",
       text: "O link pede um formato em que este arquivo não pode ser salvo.",
-      action: [`http://localhost:3000/org/${orgId}/drive?artifact=${report.id}`, "Abrir o arquivo"],
+      action: [`/org/${orgId}/drive?artifact=${report.id}`, "Abrir o arquivo"],
     });
     // A link cut or garbled where its version is: that version doesn't exist, never a failure of ours.
     const garbled = await open(bia, `${base}/artifacts/${report.id}/file?version=2%26for&format=pdf`);

@@ -35,7 +35,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Tienilo acceso",
         blocks: [
-          "Su un computer che usano anche altri, preparalo una volta. **Tienilo acceso**, in **Preferenze\u00a0›\u00a0Server**, mostra cosa manca ancora e apre le impostazioni giuste:",
+          "Su un computer che usano anche altri, preparalo una volta. **Sempre pronto**, in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Panoramica**, mostra cosa manca ancora, ognuna con il pulsante che la sistema:",
           {
             list: [
               "**Apri all’accesso** si attiva da solo dopo la configurazione.",
@@ -51,15 +51,15 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Anche i tuoi agenti lavorano qui",
         blocks: [
           "I tuoi agenti lavorano anche su questo computer, in cartelle tutte loro, con un browser, e con Claude Code o Codex se sono installati qui.",
-          "Qui gli agenti girano come te. I **Comandi** sono attivi fin dall’inizio, e con loro gli agenti di ogni spazio di lavoro che usa questo computer possono raggiungere tutto ciò che contiene, anche i dati del server. Disattivali in **Preferenze\u00a0›\u00a0Strumenti**. Vedi [Cosa possono raggiungere gli agenti](/help/computers#reach).",
+          "Qui gli agenti girano come te. I **Comandi** sono attivi fin dall’inizio, e con loro gli agenti di ogni spazio di lavoro che usa questo computer possono raggiungere tutto ciò che contiene, anche i dati del server. Disattivali in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Cartelle e strumenti**. Vedi [Cosa possono raggiungere gli agenti](/help/computers#reach).",
         ],
       },
       {
         id: "another-workspace",
         heading: "Prestalo anche a un altro spazio di lavoro",
         blocks: [
-          "Gli spazi di lavoro del server che fai girare qui usano questo computer da soli. Per farlo usare anche a uno spazio di lavoro altrove, come uno su agentes.chat Cloud, premi **Aggiungi uno spazio di lavoro…** in fondo alla prima scheda di **Preferenze\u00a0›\u00a0Generali**, oppure **Aggiungi un server…** in **Preferenze\u00a0›\u00a0Server**. Accedi a quello spazio di lavoro e premi **Consenti** quando l’app lo chiede.",
-          "Ogni spazio di lavoro ha qui i suoi agenti e le sue cartelle. Anche per lui i **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Preferenze\u00a0›\u00a0Strumenti**, dove ogni spazio di lavoro ha il suo interruttore e l’app chiede conferma prima di riattivarne uno.",
+          "Gli spazi di lavoro del server che fai girare qui usano questo computer da soli. Per farlo usare anche a uno spazio di lavoro altrove, come uno su agentes.chat Cloud, premi **Aggiungi uno spazio di lavoro…** in fondo a **Chi usa questo computer**, in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Panoramica**, oppure **Aggiungi un server…** in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Impostazioni dell'app**. Accedi a quello spazio di lavoro e premi **Consenti** quando l’app lo chiede.",
+          "Ogni spazio di lavoro ha qui i suoi agenti e le sue cartelle. Anche per lui i **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Cartelle e strumenti**, dove ogni spazio di lavoro ha il suo interruttore e l’app chiede conferma prima di riattivarne uno.",
         ],
       },
       {
@@ -74,7 +74,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Accedere da altri dispositivi",
         blocks: [
-          "Il proprietario parte senza password: l’app ti fa accedere su questo computer. Per accedere da un browser su un altro computer, aggiungine una in **Impostazioni\u00a0›\u00a0Il tuo account**. Finché non lo fai, **Preferenze\u00a0›\u00a0Server** te lo ricorda, e **Aggiungi una password** apre quella pagina. L’app per il telefono si collega scansionando il codice QR sotto **Sul telefono**, in **Preferenze\u00a0›\u00a0Server**. Serve **Raggiungilo dal telefono e dai colleghi** attivo.",
+          "Il proprietario parte senza password: l’app ti fa accedere su questo computer. Per accedere da un browser su un altro computer, aggiungine una in **Impostazioni\u00a0›\u00a0Il tuo account**. Finché non lo fai, **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Server su questo computer** te lo ricorda, e **Aggiungi una password** apre quella pagina. L’app per il telefono si collega scansionando il codice QR sotto **Sul telefono**, in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Server su questo computer**. Serve **Raggiungilo dal telefono e dai colleghi** attivo.",
           "Quando il proprietario elimina il suo account, in **Impostazioni\u00a0›\u00a0Il tuo account**, l’account sparisce per sempre 7 giorni dopo, e gli spazi di lavoro in cui c’era solo lui se ne vanno con esso. Fino ad allora, accedi e premi **Ripristina account** per recuperarlo. Quando non c’è più, se non resta nessun account, l’app apre la finestra di benvenuto per creare un nuovo proprietario. Se altre persone hanno ancora un account, ognuna accede con la propria email.",
         ],
       },
@@ -82,14 +82,14 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "updates",
         heading: "Aggiornamenti",
         blocks: [
-          "L’app cerca gli aggiornamenti da sola. Con **Installa gli aggiornamenti da solo, di notte** attivo, in **Preferenze\u00a0›\u00a0Aggiornamenti**, li installa tra le 3:00 e le 5:00 mentre l’app è aperta. È attivo fin dall’inizio quando il server gira qui. Altrimenti premi **Aggiorna e riapri**. Il server e tutti gli agenti si riavviano con lei. Prima il database viene copiato, e se la nuova versione non risponde entro 3 minuti, l’app torna da sola alla versione precedente e ai suoi dati.",
+          "L’app cerca gli aggiornamenti da sola. Con **Installa gli aggiornamenti da solo, di notte** attivo, in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Impostazioni dell'app**, li installa tra le 3:00 e le 5:00 mentre l’app è aperta. È attivo fin dall’inizio quando il server gira qui. Altrimenti premi **Aggiorna e riapri**. Il server e tutti gli agenti si riavviano con lei. Prima il database viene copiato, e se la nuova versione non risponde entro 3 minuti, l’app torna da sola alla versione precedente e ai suoi dati.",
         ],
       },
       {
         id: "backups",
         heading: "Backup",
         blocks: [
-          "Con **Fai un backup ogni notte** attivo (app 0.8.1 e successive), in **Preferenze\u00a0›\u00a0Server**, l’app salva ogni notte alle 3:00 il database, i file e `.env` in `.agentes/backups`, nella tua cartella personale. Un computer che dormiva a quell’ora fa il backup appena si risveglia. **Fai il backup ora** fa lo stesso subito. Ogni backup ferma il server per un momento, e restano i due più recenti.",
+          "Con **Fai un backup ogni notte** attivo (app 0.8.1 e successive), sotto **Backup del server** in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Server su questo computer**, l’app salva ogni notte alle 3:00 il database, i file e `.env` in `.agentes/backups`, nella tua cartella personale. Un computer che dormiva a quell’ora fa il backup appena si risveglia. **Fai il backup ora** fa lo stesso subito. Ogni backup ferma il server per un momento, e restano i due più recenti.",
           "**Copia in** mette anche ogni nuovo backup in una cartella che scegli, come una chiavetta USB o iCloud Drive, dove restano i due più recenti. Contengono le tue chiavi: tienili privati. **Ripristina…** riporta agentes.chat a un backup: messaggi, file e impostazioni. Si ferma per un minuto, e quello che c’era prima resta nella cartella dei backup.",
         ],
       },
@@ -98,12 +98,12 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Ricominciare o disinstallare",
         blocks: [
           "Tutto ciò che agentes.chat tiene su questo computer sta in cartelle della tua cartella personale, non dentro l’app. Quindi spostare l’app nel Cestino non ne elimina niente, e non ferma agentes.chat se è in funzione.",
-          "Per ricominciare, premi **Cancella e ricomincia da capo…** in **Preferenze\u00a0›\u00a0Server**. agentes.chat si ferma qui e tutto ciò che contiene viene spostato in una nuova cartella della tua cartella personale, chiamata `agentes.chat erased` con la data del giorno, dove resta finché non la elimini. Ciò che i suoi agenti tenevano su questo computer, come i loro browser e accessi, viene eliminato da `.agentes-runner`. I suoi spazi di lavoro spariscono per tutti quelli che li usano. Poi si apre la finestra di benvenuto e lo configuri di nuovo con un nuovo account proprietario. I file degli agenti, in `agentes` nella tua cartella personale, restano dove sono.",
+          "Per ricominciare, premi **Cancella e ricomincia da capo…** in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Server su questo computer**. agentes.chat si ferma qui e tutto ciò che contiene viene spostato in una nuova cartella della tua cartella personale, chiamata `agentes.chat erased` con la data del giorno, dove resta finché non la elimini. Ciò che i suoi agenti tenevano su questo computer, come i loro browser e accessi, viene eliminato da `.agentes-runner`. I suoi spazi di lavoro spariscono per tutti quelli che li usano. Poi l’app apre la sua configurazione e lo configuri di nuovo con un nuovo account proprietario. I file degli agenti, in `agentes` nella tua cartella personale, restano dove sono.",
           "Per riaverlo più tardi, esci dall’app, sposta altrove una cartella `.agentes` più recente, se c’è, rinomina la cartella `agentes.chat erased` in `.agentes`, poi apri l’app e configuralo di nuovo su questo computer. Riparte con i suoi spazi di lavoro e il suo proprietario com’erano. Ciò che i suoi agenti tenevano su questo computer non torna, quindi devono accedere di nuovo.",
           "Per togliere del tutto agentes.chat da questo computer:",
           {
             list: [
-              "Disattiva **Apri all'accesso** in **Preferenze\u00a0›\u00a0Generali**.",
+              "Disattiva **Apri all'accesso** in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Impostazioni dell'app**.",
               "Esci dall’app. Chiudere la finestra non basta. Su un Mac, fai clic sulla sua icona nel Dock e scegli **Esci da agentes.chat** nel menu agentes.chat, in alto sullo schermo, oppure premi ⌘Q. Su Windows e Linux, fai clic sull’icona di agentes.chat vicino all’orologio e scegli **Esci da agentes.chat**. Se chiede **Uscire da agentes.chat?**, premi **Esci**.",
               "Elimina l’app. Su un Mac, spostala nel Cestino. Su Windows e Linux, disinstallala come qualsiasi altra app.",
               "Elimina queste cartelle della tua cartella personale. Contengono i tuoi dati, e una volta eliminati non tornano, quindi tieni prima un backup altrove se potresti volerli: `.agentes` (messaggi, file, account, impostazioni e backup), ogni cartella `agentes.chat erased`, `.agentes-runner` (ciò che gli agenti tengono su questo computer, come i loro browser e accessi) e `agentes` (i file degli agenti). Le cartelle il cui nome inizia con un punto sono nascoste. Su un Mac, apri la tua cartella personale nel Finder e premi ⇧⌘. (Maiuscole, Comando e il tasto del punto) per mostrarle.",
@@ -116,7 +116,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "ai-programs",
         heading: "Claude Code e Codex",
         blocks: [
-          "L’app trova Claude Code e Codex tramite il `PATH` della tua shell di login, più le cartelle solite come `~/.local/bin`, `/opt/homebrew/bin` e `/usr/local/bin`. Se **Preferenze\u00a0›\u00a0Strumenti** dice **Non trovato**, mostra la riga che lo installa. Eseguila nel Terminale, poi premi **Controlla di nuovo**.",
+          "L’app trova Claude Code e Codex tramite il `PATH` della tua shell di login, più le cartelle solite come `~/.local/bin`, `/opt/homebrew/bin` e `/usr/local/bin`. Se **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Cartelle e strumenti** dice **Non trovato**, mostra la riga che lo installa. Eseguila nel Terminale, poi premi **Controlla di nuovo**.",
         ],
       },
       {
@@ -188,7 +188,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Dall’app agentes.chat",
         blocks: [
           "Installa l’app sul computer, aprila e accedi al tuo spazio di lavoro. Ti chiede **Lasciare che gli agenti di <workspace> usino questo Mac?** (questo PC su Windows, questo computer su Linux). Scegli chi può usarlo e premi **Consenti**. Tutto qui.",
-          "Hai già fatto l’accesso? Apri **Preferenze\u00a0›\u00a0Generali** e premi **Consenti** nella riga dello spazio di lavoro, nella prima scheda. Non c’è? Premi **Aggiungi uno spazio di lavoro…** in fondo a quella scheda e accedi.",
+          "Hai già fatto l’accesso? Apri **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Panoramica** e premi **Consenti** nella riga dello spazio di lavoro, sotto **Chi usa questo computer**. Non c’è? Premi **Aggiungi uno spazio di lavoro…** in fondo a quell’elenco e accedi.",
         ],
       },
       {
@@ -231,7 +231,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Mettere in pausa e scollegare",
         blocks: [
-          "Sul computer, l’icona di agentes.chat vicino all’orologio mette in pausa gli agenti di tutti gli spazi di lavoro, o di uno solo. In **Preferenze\u00a0›\u00a0Generali**, l’interruttore di ogni spazio di lavoro mette in pausa solo quello, e **Esci**, nel suo menu **⋯**, lo scollega. In pausa non parte niente di nuovo, e quello che era in corso finisce. Scollegando, le cartelle degli agenti restano sul disco.",
+          "Sul computer, l’icona di agentes.chat vicino all’orologio mette in pausa gli agenti di tutti gli spazi di lavoro, o di uno solo. In **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Panoramica**, l’interruttore di ogni spazio di lavoro mette in pausa solo quello, e **Esci**, nel suo menu **⋯**, lo scollega. In pausa non parte niente di nuovo, e quello che era in corso finisce. Scollegando, le cartelle degli agenti restano sul disco.",
           "Dal sito, **Rimuovi** nella pagina del dispositivo lo scollega.",
         ],
       },
@@ -257,7 +257,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "folders",
         heading: "Cartelle",
         blocks: [
-          "Ogni agente ha sempre una cartella sua, in `~/agentes/<workspace>`. Altre cartelle si autorizzano sul computer stesso, mai dal sito: nell’app, in **Preferenze › Cartelle**, oppure con `agentes-runner folders allow` su un server. Ogni spazio di lavoro autorizza le sue cartelle: quello che autorizzi per uno vale solo per i suoi agenti. Rimuovere una cartella non elimina nulla. Toglie solo l’accesso.",
+          "Ogni agente ha sempre una cartella sua, in `~/agentes/<workspace>`. Altre cartelle si autorizzano sul computer stesso, mai dal sito: nell’app, in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Cartelle e strumenti**, oppure con `agentes-runner folders allow` su un server. Ogni spazio di lavoro autorizza le sue cartelle: quello che autorizzi per uno vale solo per i suoi agenti. Rimuovere una cartella non elimina nulla. Toglie solo l’accesso.",
         ],
       },
       {
@@ -273,7 +273,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
               "su un computer che fa girare anche agentes.chat, il suo database e le sue chiavi in `.agentes`",
             ],
           },
-          "agentes.chat rifiuta i comandi che nominano le sue chiavi, i token e gli accessi salvati, ma è una regola, non un muro. I **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Preferenze\u00a0›\u00a0Strumenti**, dove ogni spazio di lavoro ha il suo interruttore (app 0.8.1 e successive) e l’app chiede conferma prima di riattivarne uno. Claude Code e Codex eseguono i propri comandi nella cartella dell’agente, con le proprie regole, anche con i comandi disattivati.",
+          "agentes.chat rifiuta i comandi che nominano le sue chiavi, i token e gli accessi salvati, ma è una regola, non un muro. I **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Impostazioni\u00a0›\u00a0Questo computer\u00a0›\u00a0Cartelle e strumenti**, dove ogni spazio di lavoro ha il suo interruttore (app 0.8.1 e successive) e l’app chiede conferma prima di riattivarne uno. Claude Code e Codex eseguono i propri comandi nella cartella dell’agente, con le proprie regole, anche con i comandi disattivati.",
           "Per un vero muro, usa un server Linux. Su Debian 13, installato con `--system`, ogni agente è un utente a sé. Su Ubuntu, gli agenti condividono un solo utente, `agentes`: vedono le cartelle degli altri, non le tue né quelle del server. Oppure dai agli agenti un computer tutto loro.",
         ],
       },

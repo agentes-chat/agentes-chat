@@ -608,7 +608,9 @@ describe("a computer connected in system mode (each agent its own user)", () => 
 
     // A Mac keeps the app first, the terminal as the way without it.
     const onMac = await page(mac.id);
-    expect(onMac).toContain("abra o app do agentes.chat nele (Preferências → Pastas).");
+    expect(onMac).toContain(
+      "abra o app do agentes.chat nele (Configurações\u00a0›\u00a0Este Mac\u00a0›\u00a0Pastas e ferramentas).",
+    );
     expect(onMac).toContain("Sem o app lá? Use o Terminal");
   });
 });

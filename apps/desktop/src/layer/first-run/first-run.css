@@ -1,0 +1,568 @@
+/*
+ * The first run (ADR 0265 §2, §3; `layer/first-run/`): one frame for the first screen and every step after it. The
+ * team's sky fills the window behind, and the screen sits on a card in its middle: the team drawn small at the card's
+ * top, then where the step is, the title, the lead, the content and, as the card's last row, Back on its left edge and
+ * the actions ending on its right edge.
+ *
+ * One scale everywhere here: titles 22 on a step's card and 28 on the first screen's, the lead 14.5/21, a row's title
+ * 14/20 at 600, everything under it 13/18; spaces of 4, 8, 12, 16, 24 and 32; one icon column, a 20 px slot and a 12
+ * gap, so the words start at 32 (the first screen's rows and buttons carry it 16 in, their words at 48).
+ */
+
+/* The Mac's title bar floats over the first run: the sky reaches the window's top edge, as the site's own pages do, and
+   the bar still drags the window (the window's buttons sit on the sky). */
+.dk-layer[data-mode="full"]:has(> .dk-layer__page > .dk-first) {
+  position: relative;
+}
+.dk-layer[data-mode="full"]:has(> .dk-layer__page > .dk-first) > .dk-layer__bar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 5;
+}
+
+.dk-first {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  /* Plain figures in words; times and counts set their own. */
+  font-feature-settings: normal;
+  animation: dk-first-in 0.3s var(--out, ease-out) both;
+}
+
+/* ── the frame: the sky behind, the card in the middle ── */
+.dk-first__sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Before the sky's first frame: its own blue. */
+  background: #2468dc;
+}
+/* Under the title bar to the window's foot; a card taller than the window scrolls from its top. */
+.dk-first__stage {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--layer-bar, 48px) 24px 24px;
+}
+.dk-first__card {
+  flex: none;
+  width: 100%;
+  max-width: 640px;
+  margin: auto 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: var(--raised);
+  box-shadow: var(--e3), var(--top);
+}
+/* The team and the place, small at the card's top: the scene shrunk whole from its bottom left, so the team and the
+   computer keep one ground line; the trail between them in the card's own inks. */
+.dk-first__art {
+  position: relative;
+  flex: none;
+  height: 60px;
+  margin-bottom: 16px;
+}
+.dk-first__art .ac-hosting {
+  background: none;
+  overflow: visible;
+}
+.dk-first__art .ac-sky {
+  visibility: hidden;
+}
+.dk-first__art .ac-hosting__row {
+  inset: auto auto 0 0;
+  justify-content: flex-start;
+  transform: scale(0.6);
+  transform-origin: 0 100%;
+}
+.dk-first__art .ac-hosting__trail i {
+  background: var(--line);
+}
+.dk-first__art .ac-hosting__trail[data-lit] i {
+  background: var(--muted);
+}
+
+/* ── the step's parts on the card ── */
+.dk-flow__step {
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.dk-flow__body {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* The card's last row: Back on its left edge, the actions ending on its right edge, 8 apart. */
+.dk-flow__foot {
+  padding-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dk-flow__acts {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── type ── */
+.dk-first__h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+/* Focused for screen readers where a step starts something, never by the keyboard (tabIndex -1). */
+.dk-first__h1:focus {
+  outline: none;
+}
+/* One or two lines: balanced, as older Mac web views ignore `pretty` (no word left alone on the last line). */
+.dk-first__lead {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 21px;
+  text-wrap: balance;
+}
+.dk-first__hint,
+.dk-first__foot {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+/* A group's caption, on its rows' edge. */
+.dk-first__label {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.dk-first__problem {
+  margin: 0;
+}
+/* Waiting on something, its spinner in the icon column. */
+.dk-first__looking {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.dk-first__looking > .ac-pixspin {
+  margin-inline: 2px;
+}
+/* A line led by a mark (what's wrong with an address): the mark in the 20 px slot, the words at 32. */
+:is(.dk-first, .dk-linksheet) .ac-iconline {
+  gap: 12px;
+}
+:is(.dk-first, .dk-linksheet) .ac-iconline > .ac-icon:first-child {
+  margin-inline: 2px;
+}
+:is(.dk-first, .dk-linksheet) .dk-honest {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+
+/* ── the icon column and the rows: a hairline over the first and under each, nothing behind them ── */
+.dk-first__glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  color: var(--muted);
+}
+.dk-first__rows,
+.dk-first__picks {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+.dk-first__row,
+.dk-first__pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+label.dk-first__pick {
+  cursor: pointer;
+}
+.dk-first__rowtext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-first__rowtext b {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dk-first__rowtext small {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+/* The kit's links (`OptionLinks`) as these rows: no plate, the mark in the icon column, the chevron on the edge. */
+.dk-first .dk-first__links {
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.dk-first .dk-first__links > .ac-optrow {
+  min-height: 0;
+  padding: 12px 0;
+  gap: 12px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border-bottom: 1px solid var(--line);
+}
+.dk-first .dk-first__links > .ac-optrow:hover {
+  background: none;
+  box-shadow: none;
+}
+.dk-first .dk-first__links > .ac-optrow:active {
+  transform: none;
+}
+.dk-first .dk-first__links .ac-optrow__lead {
+  width: 20px;
+  justify-content: center;
+  color: var(--muted);
+}
+.dk-first .dk-first__links .ac-optrow__title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.dk-first .dk-first__links .ac-optrow__desc {
+  margin-top: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* ── the first screen: the brand on the sky, sign in on the card ── */
+.dk-welcome__brand {
+  position: absolute;
+  z-index: 1;
+  top: 56px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 20px;
+  color: #fff;
+}
+.dk-welcome__card {
+  max-width: 440px;
+}
+.dk-welcome .dk-first__h1 {
+  font-size: 28px;
+  line-height: 1.1;
+}
+/* The team alone, at their own size: no place is picked yet, so no trail and nothing at its end. */
+.dk-welcome .dk-first__art .ac-hosting__trail,
+.dk-welcome .dk-first__art .ac-place__subject {
+  display: none;
+}
+/* A server found here, on top, and what's wrong with it once picked. */
+.dk-welcome__top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.dk-welcome__signin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+}
+/* Each sign-in's mark 16 in, in a 20 px slot, its words at 48: the rows' columns under them. */
+.dk-welcome .dk-welcome__provider {
+  justify-content: flex-start;
+  gap: 12px;
+  padding-inline: 16px;
+}
+.dk-welcome__mark {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 1px;
+}
+.dk-welcome .dk-welcome__provider > .ac-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-inline: 1px;
+}
+.dk-welcome .dk-first__foot {
+  margin-top: 16px;
+}
+.dk-welcome__or {
+  margin: 24px 0 8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.dk-welcome .dk-first__row,
+.dk-welcome .dk-first__links > .ac-optrow {
+  padding-inline: 16px;
+}
+.dk-welcome__top > .dk-first__problem {
+  padding-inline: 16px;
+}
+
+/* ── Run here: the owner ── */
+.dk-first__owner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dk-first__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+/* The usage line: the checkbox in the icon column, centred on the first line. */
+.dk-first__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+.dk-first__check > .dk-first__glyph {
+  height: 20px;
+}
+.dk-first__check > .dk-first__rowtext {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+/* ── the setup's steps: the shared list (`.dk-fr__steps`), its lines in the first run's sizes ── */
+.dk-fr__steps.dk-first__steps {
+  margin: 0;
+  gap: 12px;
+}
+.dk-first__steps .dk-fr__stepname b {
+  line-height: 20px;
+}
+.dk-first__steps .dk-fr__stepname small,
+.dk-first__steps .dk-fr__steptime {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.dk-first__steps :is(.dk-fr__stepline, .dk-reach-stage, .dk-fr__problem) {
+  font-size: 13px;
+  line-height: 18px;
+}
+/* The step's own mark spins already: its stage line says what it does, with no second spinner. */
+.dk-first__steps .dk-reach-stage__line > .ac-pixspin {
+  display: none;
+}
+/* What is left on Tailscale's page, or why an address doesn't lead here, under its step's name. */
+.dk-first__ask {
+  display: block;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.dk-first__ask b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.dk-first__askacts {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin-top: 8px;
+}
+
+/* ── the phone's code: the code, its steps beside it from its top, the address under ── */
+.dk-first__phone {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+/* A QR code keeps its white with a hairline, no shadow. */
+.dk-first__qr {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fff;
+  color: #1e1e1f;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.dk-first__qr svg[role="img"] {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.dk-first__addr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.dk-first__addr b {
+  color: var(--ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Numbered steps (the phone's, the install's): the number's ring in the icon column, the words at 32. */
+.dk-first__numbered {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: dk-first-step;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dk-first__numbered li {
+  counter-increment: dk-first-step;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 4px;
+}
+.dk-first__numbered li::before {
+  content: counter(dk-first-step);
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line2);
+}
+.dk-first__numbered li > * {
+  grid-column: 2;
+}
+.dk-first__numbered b {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.dk-first__numbered small {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+/* A command to copy: drawn as a field (a control, so it stands on the card), its words in the mono's 12. */
+.dk-first .dk-fr__cmd:not(.dk-fr__cmd--inline) {
+  gap: 8px;
+  min-height: 40px;
+  padding: 3px 4px 3px 12px;
+  border-radius: var(--control-r-md);
+  background: var(--field-bg);
+  box-shadow: inset 0 0 0 1px var(--field-line);
+}
+.dk-first .dk-fr__cmd code {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ── a company's server: the address, then what was found ── */
+.dk-first__address {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dk-first__found {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The list's caption on its edge, looking again at its end (the row keeps its height while it looks). */
+.dk-first__caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--control-h-sm);
+}
+
+/* ── a connect link: the sheet's own layout (`Sheet`), what it means under the question ── */
+/* Opened from a step: the sheet's card on the first run's sky, not on the window's plain background. */
+.dk-first > .dk-shf[data-mode="full"] {
+  background: none;
+}
+.dk-linksheet__host {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.dk-linksheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@keyframes dk-first-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-first {
+    animation: none;
+  }
+}
+
+/* A narrow window: two fields stack, and the code goes over its steps. */
+@media (max-width: 640px) {
+  .dk-first__fields,
+  .dk-first__phone {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

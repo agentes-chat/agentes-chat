@@ -745,6 +745,10 @@ export const en = {
       browserLead: "We'll come back here once you sign in with {{provider}}.",
       codeHint: "Your browser will show this code. Confirm it matches before you continue.",
       reopen: "Open the browser again",
+      // The browser's sign-in ran out of time (ADR 0265 §3).
+      timedOut: "That sign-in timed out",
+      timedOutLead: "Nothing came back from the browser in 10 minutes. Start again when you're ready.",
+      startAgain: "Start again",
       otherWay: "Sign in another way",
       otherServer: "Use another server",
       opening: "Opening {{provider}}…",
@@ -2664,7 +2668,7 @@ export const en = {
     /** The desktop app's server with access from other devices off: no phone reaches it. */
     localOnly: "This server only opens on the computer it runs on, so your phone can't reach it.",
     localOnlyHow:
-      "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers. Then come back here.",
+      "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Settings › Server on this {{device}}. Then come back here.",
     localOnlyHere: "Turn on Reach it from your phone and teammates. Then come back here.",
   },
   /** An outside chat app linked to a person's account (ADR 0187). {{surface}} is that app's name, as the server sets it. */
@@ -6819,14 +6823,14 @@ export const en = {
         title: "One step left, on {{computer}} itself",
         waiting: "Waiting",
         one: "Click the agentes.chat icon by the clock",
-        two: "Preferences",
+        two: "This {{device}} settings",
         three: "Turn on Browser",
         done: "That's it. This page notices on its own, no reload needed.",
         menuOpen: "Open agentes",
-        menuPrefs: "Preferences…",
+        menuPrefs: "This {{device}} settings…",
         menuPause: "Pause",
         menuQuit: "Quit",
-        tools: "Tools",
+        tools: "Folders and tools",
         commands: "Commands",
       },
       offlineCloud: "{{computer}} isn't answering. We're on it. {{name}} answers again when it's back.",
@@ -8638,7 +8642,7 @@ export const en = {
     localOnly:
       "This server only opens on the computer it runs on, so the people you invite can't open their invitation.",
     localOnlyHow:
-      "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them.",
+      "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Settings › Server on this {{device}}, or run agentes.chat on a server they can open. Then invite them.",
     localOnlyHere: "Turn on Reach it from your phone and teammates. Then invite them.",
     never: "Never expires",
     untilDate: "Until {{date}}",
@@ -17424,16 +17428,16 @@ export const en = {
       folders: "This {{device}}'s folders",
       // `{{device}}` in these strings, inside the desktop app (lib/desktop.ts).
       device: { mac: "Mac", windows: "PC", linux: "computer" },
-      grantHere: "It's this {{device}}: allow folders in the app's Preferences.",
-      openFolders: "Open Folders",
-      openServers: "Open Servers",
+      grantHere: "It's this {{device}}: allow folders in This {{device}} settings, under Folders and tools.",
+      openFolders: "Open Folders and tools",
+      openServers: "Open Server on this {{device}}",
       openTools: "Open Tools",
       reconnect: "Reconnect",
       reconnecting: "Reconnecting this {{device}}…",
       seeRequest: "See in the app",
       offline: "This {{device}} is offline right now.",
       outageTitle: "This {{device}} lost its connection {{ago}}",
-      toolsOff: "Off on this {{device}}. Turn it on in the app's Preferences, under Tools.",
+      toolsOff: "Off on this {{device}}. Turn it on in This {{device}} settings, under Folders and tools.",
       noReport: "This {{device}} hasn't reported what it allows yet. Update the app.",
       update: "Update the app",
     },
@@ -17559,7 +17563,8 @@ export const en = {
         "Agents stop using {{tool}} on this computer. To turn it back on: on the computer itself, or here by whoever connected it.",
       disabled: "{{tool}} turned off.",
       grantTitle: "To allow more",
-      grantText: "Allowing happens on the computer itself: open the agentes.chat app there (Preferences → Folders).",
+      grantText:
+        "Allowing happens on the computer itself: open the agentes.chat app there (Settings\u00a0›\u00a0This {{device}}\u00a0›\u00a0Folders and tools).",
       grantTextTerminal: "Allowing happens on the computer itself, in its Terminal:",
       grantTextAdmin: "Allowing happens on the computer itself, in its Terminal, as its administrator:",
       grantTerminal: "No app? In the computer's terminal:",
@@ -19096,6 +19101,19 @@ export const en = {
   settings: {
     notOpen: "Your role in this workspace doesn't open {{section}}. Whoever manages roles can open it for you.",
     nav: "Settings sections",
+    // In the desktop app: this computer's own settings, opened in the app (ADR 0265 §2).
+    thisDevice: {
+      title: "This {{device}}",
+      section: {
+        overview: "Overview",
+        folders: "Folders and tools",
+        server: "Server on this {{device}}",
+        activity: "Activity",
+        app: "App settings",
+      },
+      needs_one: "{{count}} thing needs you",
+      needs_other: "{{count}} things need you",
+    },
     group: {
       org: "Workspace",
     },
@@ -19357,7 +19375,8 @@ export const en = {
       label: "Send anonymous usage statistics to agentes.chat",
       help: "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.",
       envOff: "Turned off in this server's settings (TELEMETRY=off).",
-      envOffDesktop: "Turned off in the agentes.chat app on this server's computer (Preferences\u00a0›\u00a0Servers).",
+      envOffDesktop:
+        "Turned off in the agentes.chat app on this server's computer (Settings\u00a0›\u00a0Server on this {{device}}).",
       envOffHere: "Turned off in the agentes.chat app on this computer.",
       see: "See what is sent",
       dialogTitle: "What is sent",
@@ -21205,7 +21224,8 @@ export const en = {
     machine: {
       ready: "Ready",
       off: "Off",
-      offHelp: "Whoever connected the computer turns it on here or in the agentes.chat app on it: Preferences → Tools.",
+      offHelp:
+        "Whoever connected the computer turns it on here or in the agentes.chat app on it: Settings\u00a0›\u00a0This {{device}}\u00a0›\u00a0Folders and tools.",
       needsCommand: "Needs a command",
       notReady: "Not ready yet",
       turnOff: "Turn off",

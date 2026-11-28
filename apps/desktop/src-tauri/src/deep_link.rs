@@ -1,6 +1,6 @@
-//! `agenteschat://` links (the setup's end, a QR code's link, a teammate's): the welcome window shows them,
-//! with the server in large type, and nothing changes before the person confirms there. Rust keeps only the
-//! newest link until the window takes it (`link_take`), and passes nothing it didn't check is one of ours.
+//! `agenteschat://` links (the setup's end, a QR code's link, a teammate's): the main window's app layer shows them
+//! (ADR 0265), with the server in large type, and nothing changes before the person confirms there. Rust keeps only the
+//! newest link until the layer takes it (`link_take`), and passes nothing it didn't check is one of ours.
 //! A connector's sign-in that the browser hands back (`agenteschat://desktop/connectors/oauth`) goes to the
 //! main window instead, which finishes it with its own session.
 //! The browser's page after a sign-in for the app (`agenteschat://desktop/signed-in`) only brings the app forward: the
@@ -93,7 +93,7 @@ pub fn pair_link(url: &Url) -> Option<PairLink> {
     Some(PairLink { server, code })
 }
 
-/// The link the welcome window takes: only its checked fields.
+/// The link the first run takes: only its checked fields.
 fn pair_url(pair: &PairLink) -> String {
     let mut url = Url::parse("agenteschat://pair").expect("a fixed URL");
     url.query_pairs_mut().append_pair("server", &pair.server).append_pair("link", &pair.code);
@@ -133,9 +133,33 @@ fn receive(app: &AppHandle, urls: Vec<Url>) {
     } else {
         url.to_string()
     };
-    *app.state::<PendingLink>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(pending);
-    let _ = crate::present(app, "welcome");
-    let _ = app.emit_to("welcome", "link://pending", ());
+    // The first run on screen takes any link itself (its setup may be under way); otherwise the link's own sheet.
+    let first_run = crate::app_layer::first_run_on_screen(app);
+    let route = match url.host_str() {
+        Some("pair") if !first_run => pair_link(&url).map(|pair| crate::app_layer::Route::PairLink {
+            server: pair.server,
+            code: pair.code,
+        }),
+        _ => None,
+    };
+    let route = match route {
+        Some(route) => route,
+        None => {
+            *app.state::<PendingLink>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(pending);
+            if first_run {
+                crate::app_layer::Route::first_run(None)
+            } else {
+                crate::app_layer::Route::Link
+            }
+        }
+    };
+    if first_run {
+        // Over the first run already: it hears the link and takes it.
+        let _ = crate::main_window::front(app);
+    } else {
+        let _ = crate::app_layer::show(app, route);
+    }
+    let _ = app.emit_to(crate::app_layer::LABEL, "link://pending", ());
 }
 
 /// Listens for links, takes the one the app was opened with, and (Linux, where an AppImage has no
@@ -156,9 +180,9 @@ pub fn in_args(args: &[String]) -> bool {
 }
 
 #[tauri::command]
-pub fn link_take(app: AppHandle, window: tauri::Window) -> Result<Option<String>, String> {
-    if window.label() != "welcome" {
-        return Err("only the welcome window takes links".into());
+pub fn link_take(app: AppHandle, webview: tauri::Webview) -> Result<Option<String>, String> {
+    if webview.label() != "main-app" {
+        return Err("only the app's own screens take links".into());
     }
     Ok(app.state::<PendingLink>().0.lock().unwrap_or_else(|e| e.into_inner()).take())
 }
@@ -209,12 +233,12 @@ fn computer_name() -> Option<String> {
         .filter(|n| !n.is_empty() && n.chars().count() <= 64)
 }
 
-/// The welcome window's pair link: who made it and for which workspace, asked of its server over plain HTTPS
+/// A pair link's sheet: who made it and for which workspace, asked of its server over plain HTTPS
 /// (no cookies: the link is the only thing it knows). `link_expired`, or `unreachable`.
 #[tauri::command]
-pub async fn pair_link_info(window: tauri::Window, server: String, code: String) -> Result<LinkInfo, String> {
-    if window.label() != "welcome" {
-        return Err("only the welcome window asks this".into());
+pub async fn pair_link_info(webview: tauri::Webview, server: String, code: String) -> Result<LinkInfo, String> {
+    if webview.label() != "main-app" {
+        return Err("only the app's own screens ask this".into());
     }
     let pair = Url::parse(&pair_url(&PairLink { server, code })).ok().and_then(|u| pair_link(&u)).ok_or("bad link")?;
     tauri::async_runtime::spawn_blocking(move || {

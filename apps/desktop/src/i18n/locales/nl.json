@@ -22,7 +22,8 @@
   },
   "windowTitle": {
     "welcome": "Welkom",
-    "prefs": "Voorkeuren"
+    "prefs": "Voorkeuren",
+    "settings": "Instellingen"
   },
   "background": {
     "title": "agentes.chat blijft actief",
@@ -97,10 +98,7 @@
     },
     "label": "agentes.chat",
     "now": "Nu",
-    "seeAll": "Alles bekijken",
     "background": "Op de achtergrond",
-    "nothingNow": "Nu niets",
-    "waitingConnection": "Wacht op de verbinding",
     "calmTitle": "Alles rustig hier",
     "calmBody": "Agents gebruiken deze {{device}} als ze die nodig hebben.",
     "pausedEmptyTitle": "Alles staat stil",
@@ -117,7 +115,7 @@
     "pauseHintServer": "Wat al loopt, eindigt gewoon. De server blijft online.",
     "resume": "De agents hervatten",
     "open": "agentes.chat openen",
-    "prefs": "Voorkeuren…",
+    "thisMac": "Instellingen van deze {{device}}…",
     "quit": "agentes.chat afsluiten",
     "pausedFor1h": "1 uur gepauzeerd",
     "pausedTomorrow": "Gepauzeerd tot morgen 9.00 uur",
@@ -125,9 +123,9 @@
     "resumed": "Agents zijn terug",
     "reconnect": "Opnieuw verbinden",
     "reconnecting": "Opnieuw verbinden…",
-    "offlineTitle": "Geen internet. We proberen het opnieuw…",
+    "offlineTitle": "Geen internet",
     "offlineBody": "Wat al begonnen is, draait hier door en stuurt het resultaat zodra de verbinding terug is.",
-    "unreachable": "{{host}} is niet bereikbaar. We proberen het opnieuw…",
+    "unreachable": "{{host}} is niet bereikbaar",
     "unreachableBody": "Wat al begonnen is, draait hier door en stuurt het resultaat zodra de server terug is.",
     "pausedUntil": "Gepauzeerd tot {{time}}",
     "pausedUntilResume": "Gepauzeerd tot je hervat",
@@ -171,14 +169,156 @@
     "quitTitle": "agentes.chat afsluiten?",
     "quitBody": "Agents kunnen deze {{device}} niet gebruiken terwijl de app gesloten is. Wat al draait, wordt afgemaakt en stuurt het resultaat zodra je de app weer opent.",
     "quitHereBody": "agentes.chat stopt op deze {{device}}: niemand kan het gebruiken, hier, op je telefoon of die van je teamgenoten, tot je de app weer opent.",
-    "quitConfirm": "Afsluiten"
+    "quitConfirm": "Afsluiten",
+    "needsYou_one": "{{count}} ding heeft je nodig",
+    "needsYou_other": "{{count}} dingen hebben je nodig",
+    "allSet": "Alles in orde",
+    "thisDevice": "Deze {{device}}",
+    "settings": "Instellingen van deze {{device}}",
+    "essential": {
+      "turnOn": "Aanzetten",
+      "turnOnAgain": "Weer aanzetten",
+      "fix": "Oplossen",
+      "launchAtLogin": {
+        "title": "agentes.chat opent niet bij het inloggen",
+        "body": "Na een herstart kunnen agents deze {{device}} pas gebruiken als je de app opent."
+      },
+      "notifications": {
+        "title": "Meldingen staan uit",
+        "body": "Je weet niet wanneer een agent je hier nodig heeft."
+      },
+      "screen": {
+        "body": "Zonder deze toestemming kunnen agents het scherm niet zien."
+      },
+      "disk": {
+        "body": "Agents stoppen misschien om voor elke map toestemming te vragen."
+      },
+      "reach": {
+        "approve": {
+          "title": "Tailscale wacht op één klik",
+          "body": "Je telefoon en team bereiken agentes.chat zodra je het toestaat op de beheerpagina van Tailscale."
+        },
+        "down": {
+          "title": "Tailscale is niet verbonden op deze {{device}}",
+          "body": "Je telefoon en team kunnen agentes.chat niet bereiken."
+        },
+        "address": {
+          "title": "Je adres leidt nu niet hierheen",
+          "body": "Je telefoon en team kunnen agentes.chat pas bereiken als dat weer zo is. Controleer of je tunnel aanstaat."
+        }
+      },
+      "backup": {
+        "off": {
+          "title": "De nachtelijke back-up staat uit",
+          "body": "Zet hem aan zodat agentes.chat elke nacht een kopie bewaart."
+        },
+        "backup": {
+          "body": "Maak nu een back-up zodat het werk van vandaag een kopie heeft."
+        },
+        "copy": {
+          "title": "De back-up van vannacht is niet bij de kopie aangekomen",
+          "body": "De map waarnaar hij kopieert is misschien losgekoppeld of vol."
+        }
+      },
+      "autoUpdate": {
+        "title": "Updates installeren niet vanzelf",
+        "body": "Zet het aan zodat deze {{device}} op een versie blijft die blijft werken."
+      }
+    }
   },
   "first": {
     "addTitle": "Een werkruimte toevoegen",
     "addLead": "Die je al hebt blijven hier, elk met een eigen aanmelding.",
     "addCloud": "Een werkruimte maken bij agentes.chat",
     "addNew": "Wil je een nieuwe workspace?",
-    "addNewLink": "Maak er een"
+    "addNewLink": "Maak er een",
+    "companyFlow": "Server van je bedrijf",
+    "welcome": {
+      "title": "Welkom bij agentes.chat",
+      "lead": "Je team van AI-agents, dat met je samenwerkt in de chat.",
+      "google": "Doorgaan met Google",
+      "apple": "Doorgaan met Apple",
+      "email": "Doorgaan met e-mail",
+      "others": "Andere manieren om het te gebruiken",
+      "here": "Gratis draaien op deze {{device}}",
+      "hereText": "Je gegevens blijven hier. Geen cloudaccount.",
+      "company": "Inloggen bij de server van mijn bedrijf",
+      "companyText": "Via het adres, zoals agentes.jouwbedrijf.com.",
+      "install": "Installeer je het voor het team op een server?",
+      "installLink": "Zo werkt het",
+      "foundTailnet": "agentes.chat staat in je netwerk",
+      "foundHere": "agentes.chat draait op deze {{device}}"
+    },
+    "run": {
+      "step": "Draaien op deze {{device}} · {{n}} van {{total}}",
+      "flow": "Draaien op deze {{device}}",
+      "ownerTitle": "Wie wordt de eigenaar?",
+      "ownerLead": "Je logt in met dit e-mailadres en nodigt later uit wie je wilt. Alles blijft op deze {{device}}.",
+      "usage": "Anonieme gebruiksstatistieken sturen",
+      "usageText": "Aantallen, nooit berichten, bestanden of namen.",
+      "whereTitle": "Waar ga je het gebruiken?",
+      "whereLead": "Je kunt het altijd wijzigen.",
+      "everywhere": "Op deze {{device}}, je telefoon en bij je team",
+      "everywhereText": "Via Tailscale of een eigen adres.",
+      "hereOnly": "Alleen op deze {{device}}",
+      "hereOnlyText": "De telefoon kan later.",
+      "netTitle": "Hoe komen de telefoon en het team hier?",
+      "netLead": "Je kunt het later wijzigen in Instellingen.",
+      "later": "Later doen",
+      "changeAddress": "Het adres wijzigen",
+      "ask": "<b>Nog één klik.</b> Klik op de Tailscale-pagina die openging op <b>Enable</b>. Zo wordt je adres veilig, met een slotje. We gaan vanzelf verder, geen haast.",
+      "askOpen": "De pagina openen",
+      "askSkip": "Afronden zonder",
+      "doneTitle": "Klaar. Neem het mee naar je telefoon",
+      "phone1": "Installeer de agentes.chat-app",
+      "phone1Text": "Uit de App Store of Google Play.",
+      "phone2": "Installeer Tailscale en log in met hetzelfde account",
+      "phone2Text": "Daarmee komt je telefoon overal vandaan bij deze {{device}}.",
+      "phone3": "Richt de camera op de code",
+      "phone3Text": "Je bent meteen ingelogd. De code vernieuwt zichzelf.",
+      "qrLabel": "QR-code om in te loggen op je telefoon",
+      "qrFailed": "De code is niet geladen.",
+      "address": "Je adres: <b>{{address}}</b>",
+      "open": "agentes.chat openen"
+    }
+  },
+  "reach": {
+    "label": "Hoe de telefoon en het team hier komen",
+    "tailscale": "Via Tailscale",
+    "tailscaleText": "Gratis. Een privénetwerk tussen jouw apparaten en die van je team.",
+    "address": "Via een eigen adres",
+    "addressText": "Een tunnel op deze {{device}} die al hierheen leidt.",
+    "checking": "Tailscale op deze {{device}} controleren…",
+    "tailscaleOn": "Tailscale is verbonden op deze {{device}}.",
+    "download": "Tailscale downloaden",
+    "downloadNote": "Gratis, van de eigen site van Tailscale.",
+    "openApp": "Open Tailscale en log in",
+    "tray": "Open Tailscale via het pictogram bij de klok en log in.",
+    "terminal": "Verbind Tailscale in de terminal:",
+    "waitNow": "Wachten op Tailscale…",
+    "waitInstall": "Installeer het, open het en log in. Dit gaat vanzelf verder, geen haast.",
+    "waitSignIn": "Log daar in. Dit gaat vanzelf verder, geen haast.",
+    "addressLabel": "Je adres",
+    "pointAt": "Laat het wijzen naar",
+    "problem": {
+      "notHttps": "Het adres moet beginnen met https://",
+      "unreachable": "We konden het niet openen. Controleer of je tunnel aanstaat en naar {{target}} wijst.",
+      "unreachablePlain": "We konden het niet openen. Controleer of je tunnel aanstaat en naar deze {{device}} wijst.",
+      "otherServer": "Het opent een andere server, niet die van deze {{device}}.",
+      "error": "Het gaf een fout terug ({{status}}).",
+      "errorPlain": "Het gaf een fout terug."
+    },
+    "reason": {
+      "address": "je adres leidt niet hierheen"
+    },
+    "stage": {
+      "checking": "Je adres controleren…",
+      "done": "Klaar: je telefoon en team kunnen het openen."
+    },
+    "line": {
+      "address": "Draait · op je adres",
+      "addressDown": "Draait · je adres leidt nu niet hierheen"
+    }
   },
   "place": {
     "title": "Waar komt je workspace te staan?",
@@ -240,7 +380,6 @@
   },
   "here": {
     "title": "Laten we deze {{device}} klaarmaken",
-    "how": "Het duurt een minuut. Alles blijft hier, alleen bij jou.",
     "again": "Het draaide hier al eerder, en de gegevens staan nog in {{path}}.",
     "ownerNone": "Er is geen account meer over. Met je naam en e-mail word je de nieuwe eigenaar.",
     "name": "Je naam",
@@ -248,34 +387,27 @@
     "email": "Je e-mail",
     "emailNeeded": "Schrijf je e-mailadres, zoals ana@example.com.",
     "reach": "Bereik het vanaf je telefoon en je teamgenoten",
-    "reachText": "Met Tailscale, een privénetwerk voor je apparaten: je telefoon en de mensen die je uitnodigt komen erin, en verder kan niemand agentes.chat bereiken.",
-    "reachOff": "Tailscale is niet verbonden.",
-    "reachOffTerminal": "Tailscale is niet verbonden. Verbind het in de terminal:",
-    "reachTray": "Tailscale is niet verbonden. Verbind het via het pictogram naast de klok.",
-    "reachMissing": "Heeft Tailscale nodig, dat gratis is.",
-    "reachChecking": "Controleren of Tailscale verbonden is…",
+    "reachText": "Via Tailscale, een gratis privénetwerk voor je apparaten, of via een eigen adres: je telefoon en de mensen die je uitnodigt openen agentes.chat overal vandaan.",
     "reachStage": {
       "sharing": "Tailscale vragen om het te delen…",
       "approve": "Tailscale vraagt om HTTPS aan te zetten in je netwerk. Zet het aan op de pagina ervan: de rest gaat vanzelf.",
-      "restarting": "agentes.chat opnieuw starten op het nieuwe adres…",
-      "signingIn": "Opnieuw inloggen op het nieuwe adres…"
+      "restarting": "agentes.chat opnieuw starten op het nieuwe adres…"
     },
     "approveOpen": "De pagina van Tailscale openen",
     "approveStop": "Stoppen met wachten",
     "openTailscale": "Tailscale openen",
-    "getTailscale": "Tailscale downloaden",
     "usage": "Anonieme gebruiksstatistieken naar agentes.chat sturen",
     "usageText": "Aantallen zoals mensen, agents, machinegroottes, gebruikte AI-tokens, hoeveel data de browsers van de agents versturen en ontvangen en hoe snel de apps openen en reageren. Nooit berichten, bestanden, namen of sites.",
-    "start": "Beginnen",
     "setting": "Alles wordt klaargezet",
-    "rest": "Als je de app sluit, rusten je agents. Ze zijn terug zodra je hem weer opent.",
+    "settingAlmost": "Bijna klaar",
+    "settingFailed": "Instellen is niet afgerond",
     "step": {
       "database": "Ruimte maken voor je gegevens",
       "databaseNote": "alleen de eerste keer",
       "start": "agentes.chat aanzetten",
       "account": "Je account aanmaken",
       "computer": "Je agents roepen",
-      "reach": "Toegang vanaf je telefoon aanzetten"
+      "reach": "Toegang van overal aanzetten"
     },
     "stepState": {
       "active": "bezig",
@@ -287,7 +419,7 @@
       "start": "agentes.chat is niet gestart op deze {{device}}.",
       "database": "De database is niet voorbereid.",
       "account": "Je account is niet aangemaakt.",
-      "retry": "Opnieuw proberen in Voorkeuren"
+      "retry": "Opnieuw proberen in Instellingen"
     },
     "reason": {
       "https": "HTTPS staat uit op je Tailscale-netwerk",
@@ -352,8 +484,6 @@
     "removeBody": "De server en je account daar blijven zoals ze zijn.",
     "removeAgents": "Agents van de werkruimtes ervan werken niet meer op deze {{device}}.",
     "removed": "{{host}} is uit deze app verwijderd",
-    "workspaces_one": "{{count}} werkruimte",
-    "workspaces_other": "{{count}} werkruimtes",
     "signedOut": "Niet ingelogd",
     "offline": "Offline sinds {{time}}",
     "signIn": "Aanmelden",
@@ -473,20 +603,22 @@
   },
   "pair": {
     "title": "Agents van {{org}} laten werken op deze {{device}}?",
-    "body": "{{host}} vroeg erom. Agents krijgen opdrachten, de browser en de codetools hier. Mappen voeg je later toe in Voorkeuren.",
+    "body": "{{host}} vroeg erom. Agents krijgen opdrachten, de browser en de codetools hier. Mappen voeg je later toe in Instellingen.",
     "allow": "Toestaan",
     "notNow": "Niet nu",
     "offerTitle": "Agents van {{org}} deze {{device}} laten gebruiken?",
     "keepReady": "Klaar houden: agentes.chat openen bij inloggen",
     "offerOnlyIf": "Alleen als je wilt dat deze {{device}} ook werk van de agents doet. Met Niet nu gebruik je {{org}} hier gewoon zoals altijd.",
     "canDo": "Wat agents hier kunnen doen",
-    "foldersLater": "Nog geen mappen van jou. Voeg ze later toe via Voorkeuren › Mappen.",
+    "foldersLater": "Nog geen mappen van jou. Voeg ze later toe via Instellingen › Mappen en tools.",
     "linkTitle": "Deze {{device}} verbinden met {{org}}?",
+    "connectTitle": "Deze {{device}} verbinden?",
     "askedBy": "Gevraagd door",
     "from": "Van",
     "linkBody": "Heb je hier niet om gevraagd, kies dan Niet nu.",
     "waiting": "Wachten tot {{by}} hem binnenlaat…",
     "done": "Verbonden met {{org}}",
+    "doneLead": "De agents kunnen nu op deze {{device}} werken.",
     "share": "Laat de hele werkruimte hem gebruiken",
     "internet": "Agents gebruiken het internet van deze computer",
     "internetOn": "Websites en servers die de agents bereiken, zien jouw locatie",
@@ -498,12 +630,50 @@
     "shareOff": "Voorlopig alleen jij",
     "shareHint": "De agents van iedereen in {{org}} kunnen er taken op draaien, als jouw gebruiker.",
     "addFolders": "Mappen toevoegen",
-    "expired": "Deze link is verlopen. Maak een nieuwe via Apparaten.",
     "openDevices": "Apparaten openen",
-    "denied": "{{by}} heeft hem niet binnengelaten. Er is niets veranderd.",
+    "expiredTitle": "Deze link is verlopen",
+    "expiredLead": "Maak een nieuwe via Apparaten op {{server}}.",
+    "deniedTitle": "{{by}} heeft hem niet binnengelaten",
+    "deniedLead": "Er is niets veranderd op deze {{device}}.",
+    "unreachableTitle": "{{server}} is niet bereikbaar",
+    "unreachableLead": "Controleer de verbinding en probeer het opnieuw.",
+    "failedTitle": "Deze {{device}} kon niet worden verbonden",
     "letOrg": "Agents van {{org}} deze {{device}} laten gebruiken",
     "canUse": "Agents kunnen hem gebruiken",
     "notUsing": "De agents daarvan gebruiken deze {{device}} niet"
+  },
+  "sheets": {
+    "step": "Deze {{device}} · {{at}} van {{total}}",
+    "stepOnly": "Deze {{device}}",
+    "ready": {
+      "title": "Deze {{device}} klaarmaken voor de agents van {{org}}?",
+      "lead": "Dan doen ze meer vanaf hier, zolang de {{device}} aanstaat.",
+      "browser": "De eigen browser van de agents",
+      "browserDesc": "Zonder jouw aanmeldingen en wachtwoorden.",
+      "code": "Opdrachten en codetools",
+      "codeOne": "{{tool}} staat er al. Ze draaien als jouw gebruiker.",
+      "codeTwo": "{{a}} en {{b}} staan er al. Ze draaien als jouw gebruiker.",
+      "codeNone": "Ze draaien als jouw gebruiker.",
+      "folders": "Je mappen alleen met jouw oké",
+      "foldersDesc": "Elk verzoek verschijnt in de chat en bij het pictogram van de app.",
+      "foldersDescMac": "Elk verzoek verschijnt in de chat en in de menubalk.",
+      "login": "Opent vanzelf als de {{device}} opstart",
+      "loginDesc": "Zodat agents terugkomen zonder dat jij eraan hoeft te denken.",
+      "help": "Wijzig het wanneer je wilt in Instellingen › Deze {{device}}.",
+      "allow": "Klaarmaken"
+    },
+    "prepare": {
+      "title": "macOS vraagt drie dingen, één keer",
+      "lead": "Zonder deze stoppen agents midden in hun werk om het te vragen.",
+      "notifications": "Meldingen",
+      "notificationsDesc": "Als een agent je nodig heeft.",
+      "screenDesc": "Zodat agents kunnen zien wat ze op het scherm doen.",
+      "diskDesc": "Om de mappen die je toestaat te openen zonder dat macOS opnieuw vraagt.",
+      "waitList": "Zet in de Systeeminstellingen die openden agentes.chat aan in de lijst. We merken het vanzelf.",
+      "waitNotifications": "Sta in de Systeeminstellingen die openden meldingen toe voor agentes.chat. We merken het vanzelf.",
+      "help": "Zet een update er een uit, dan zeggen we het je meteen.",
+      "later": "Later doen"
+    }
   },
   "prepare": {
     "title": "Maak deze {{device}} klaar",
@@ -513,6 +683,8 @@
     "screenAgain": "macOS vraagt het ongeveer eens per maand opnieuw. Kies Toestaan.",
     "disk": "Volledige schijftoegang",
     "diskDesc": "Laat de agents je bestanden openen zonder dat macOS per map vraagt.",
+    "notifications": "Meldingen",
+    "notificationsDesc": "Laat je weten wanneer agents je nodig hebben, en wanneer iets op deze {{device}} niet meer werkt.",
     "diskHow": "Zet agentes.chat aan in de lijst in Instellingen, of voeg het toe met +.",
     "network": "Lokaal netwerk (telefoons via wifi)",
     "networkDesc": "Laat de agents Android-telefoons op je wifi vinden en gebruiken.",
@@ -526,6 +698,35 @@
     "skip": "Nu overslaan",
     "prefsTitle": "Toestemmingen",
     "prefsHint": "macOS kan ze uitzetten als de app wordt bijgewerkt. Zet ze hier weer aan."
+  },
+  "essentials": {
+    "tray": "Iets op deze {{device}} heeft je nodig",
+    "notify": {
+      "screen": {
+        "title": "Schermopname staat uit",
+        "body": "macOS heeft het uitgezet. Agents kunnen geen schermafbeeldingen maken tot je het weer toestaat."
+      },
+      "disk": {
+        "title": "Volledige schijftoegang staat uit",
+        "body": "Agents stoppen misschien om naar mappen te vragen tot je het weer aanzet."
+      },
+      "reach": {
+        "title": "Je telefoon en team kunnen agentes.chat niet bereiken",
+        "body": "Toegang vanaf je apparaten heeft je nodig op deze {{device}}. Open de app om het op te lossen."
+      },
+      "backup": {
+        "title": "De back-up van vannacht is niet afgerond",
+        "body": "Open de app om opnieuw een back-up te maken."
+      },
+      "autoUpdate": {
+        "title": "agentes.chat heeft een update nodig",
+        "body": "Deze versie kan niet blijven werken. Open de app om de nieuwe te installeren."
+      },
+      "awake": {
+        "title": "Deze {{device}} kan in slaap vallen terwijl hij als server draait",
+        "body": "Start agentes.chat hier opnieuw zodat hij wakker blijft voor je telefoon en team."
+      }
+    }
   },
   "tools": {
     "claudeName": "Claude Code",
@@ -838,6 +1039,100 @@
       "folderDesc": "Eén map per werkruimte, met een map voor elke agent."
     }
   },
+  "settings": {
+    "nav": {
+      "label": "Instellingen",
+      "thisDevice": "Deze {{device}}",
+      "overview": "Overzicht",
+      "folders": "Mappen en tools",
+      "server": "Server op deze {{device}}",
+      "activity": "Activiteit",
+      "app": "App-instellingen",
+      "needs_one": "{{count}} ding heeft je nodig",
+      "needs_other": "{{count}} dingen hebben je nodig"
+    },
+    "away": {
+      "title": "Geen verbinding met {{name}}.",
+      "body": "Wat bij deze {{device}} hoort, werkt hetzelfde. Wie hem mag gebruiken en de namen van de agents komen terug met de verbinding."
+    },
+    "overview": {
+      "rename": "Naam wijzigen",
+      "allSet": "Alles in orde",
+      "used": "Agents van {{orgs}} gebruiken deze {{device}}",
+      "version": "versie {{version}}, up-to-date",
+      "versionNewer": "versie {{version}}, {{latest}} is beschikbaar",
+      "always": "Altijd klaar",
+      "who": "Wie deze {{device}} gebruikt"
+    },
+    "essentials": {
+      "on": "Aan",
+      "allOn": "Alles aan",
+      "turnOn": "Aanzetten",
+      "turnOnAgain": "Weer aanzetten",
+      "permissions": "macOS-toestemmingen",
+      "permissionsOff": "Staat nog uit: {{names}}.",
+      "launchAtLogin": "Opent als de {{device}} opstart",
+      "reach": "Overal bereikbaar",
+      "reachOff": "Alleen op deze {{device}}. Je telefoon en team kunnen het niet openen.",
+      "reachDown": "Tailscale is niet verbonden op deze {{device}}.",
+      "reachApprove": "Tailscale wacht tot HTTPS aangezet wordt in je netwerk.",
+      "reachAddress": "Je adres leidt nu niet hierheen.",
+      "checkAgain": "Opnieuw controleren",
+      "backup": "Elke nacht een back-up",
+      "backupOff": "Uitgezet",
+      "autoUpdate": "Werkt 's nachts vanzelf bij",
+      "autoUpdateDesc": "Gaat vanzelf terug als de nieuwe versie niet opent",
+      "updateRequired": "Deze versie kan niet blijven werken.",
+      "awake": "Slaapt niet terwijl agents werken",
+      "awakeOff": "Start agentes.chat hier opnieuw zodat hij wakker blijft.",
+      "powerRestart": "Start vanzelf na een stroomstoring",
+      "systemOnly": "Alleen de instellingen van macOS zetten dit aan."
+    },
+    "server": {
+      "anywhere": "je telefoon en team kunnen het openen",
+      "onlyHere": "alleen op deze {{device}}",
+      "onlyHereDesc": "Je telefoon en team kunnen het niet openen.",
+      "wayTailscale": "Via Tailscale, met een slotje",
+      "wayAddress": "Via je adres",
+      "changeWay": "Wijzigen",
+      "reachOff": "Uitzetten",
+      "useWay": "Dit gebruiken",
+      "phoneDesc": "Installeer de agentes.chat-app en Tailscale met hetzelfde account, en richt de camera op de code. Het logt vanzelf in.",
+      "phoneDescAddress": "Installeer de agentes.chat-app en richt de camera op de code. Het logt vanzelf in.",
+      "phoneSignedOut": "Log in de app in bij agentes.chat op deze {{device}} om de code te tonen.",
+      "qrLabel": "QR-code om in te loggen op de telefoon",
+      "invite": "Iemand van het team uitnodigen",
+      "inviteDesc": "Nodig ze uit voor de werkruimte en deel deze {{device}} daarna met ze in Tailscale.",
+      "inviteDescAddress": "Nodig ze uit voor de werkruimte. Ze openen hem op je adres.",
+      "inviteButton": "Uitnodigen",
+      "share": "Delen in Tailscale",
+      "everyNight": "Elke nacht om {{at}}",
+      "copyAlso": "Ook een kopie in",
+      "backupsOff": "Nachtelijke back-ups staan uit"
+    },
+    "access": {
+      "title": "Mappen en tools",
+      "lead": "Wat agents op deze {{device}} gebruiken, in elke werkruimte.",
+      "tools": "Hulpmiddelen",
+      "browserDesc": "Alleen die van de agents, zonder jouw aanmeldingen",
+      "commandsDesc": "Draaien als jij en bereiken de rest van deze {{device}}",
+      "notHere": "Nog niet op deze {{device}}",
+      "folders": "Toegestane mappen",
+      "addTitle": "Nog een map toestaan",
+      "addDesc": "Als een agent er een nodig heeft, vraagt hij het in de chat en hier.",
+      "addFor": "Voor {{org}}"
+    },
+    "app": {
+      "title": "App-instellingen",
+      "notifications": "Meldingen",
+      "thisApp": "Deze app",
+      "servers": "Servers en accounts",
+      "advanced": "Geavanceerd",
+      "onlyHere": "Alleen op deze {{device}}",
+      "version": "Versie {{version}}",
+      "otherServer": "Andere server"
+    }
+  },
   "iphone": {
     "lead": "Deze {{device}} doet de instelling. Je tikt alleen op de iPhone als een stap erom vraagt.",
     "account": "Apple Account in Xcode",
@@ -866,15 +1161,10 @@
   "cover": {
     "offline": "Geen internetverbinding · we proberen het opnieuw…",
     "unreachable": "{{host}} is niet bereikbaar · we proberen het opnieuw…",
-    "tailnet": "Is Tailscale verbonden op deze {{device}}?",
     "starting": "agentes.chat starten op deze {{device}}…",
     "migrating": "agentes.chat wordt bijgewerkt op deze {{device}}. Dit kan een minuutje duren.",
     "stopped": "agentes.chat is gestopt op deze {{device}}",
     "failing": "agentes.chat start niet op deze {{device}}",
-    "tailnetOff": "Verbind Tailscale op deze {{device}} om agentes.chat te openen.",
-    "tailnetUp": "In de terminal: sudo tailscale up",
-    "tailnetTray": "Open het via het pictogram naast de klok.",
-    "onlyHere": "Alleen op deze {{device}} gebruiken",
     "start": "Starten",
     "copy": "Details kopiëren",
     "copied": "Gekopieerd",
@@ -888,8 +1178,14 @@
     "heldUntil": "agentes.chat is gestopt op deze {{device}}. Het start vanzelf weer om {{time}}.",
     "startNow": "Nu starten",
     "openOther": "{{server}} openen",
-    "onlyHereWorking": "Toegang vanaf je apparaten uitzetten…",
-    "onlyHereFailed": "Toegang vanaf je apparaten kon niet worden uitgezet."
+    "privateTitle": "{{org}} staat op het privénetwerk",
+    "privateTitleAny": "Deze werkruimte staat op het privénetwerk",
+    "privateLine": "En het netwerk staat uit op deze {{device}}. Zet het aan en de werkruimte opent vanzelf.",
+    "privateMissing": "En Tailscale, het privénetwerk, staat nog niet op deze {{device}}. Download het, log in en de werkruimte opent vanzelf.",
+    "privateTray": "En het netwerk staat uit op deze {{device}}. Zet het aan via het pictogram van Tailscale bij de klok, en de werkruimte opent vanzelf.",
+    "privateElsewhere": "En het netwerk staat uit op deze {{device}}. Zet Tailscale aan en de werkruimte opent vanzelf.",
+    "useOther": "Een andere werkruimte gebruiken",
+    "getTailscale": "Tailscale downloaden"
   },
   "report": {
     "button": "Rapport versturen",

@@ -145,22 +145,22 @@ ${id}<div class="actions"><a class="btn btn--primary" href="${escapeHtml(action)
 </html>`;
 }
 
-/** The app's address of a file (the Drive with it open), from a file route's path: `/api/app/organizations/<org>/artifacts/<id>/…`. */
-function fileAppLink(base: string, path: string): string | null {
+/** The app's path of a file (the Drive with it open), from a file route's path: `/api/app/organizations/<org>/artifacts/<id>/…`. */
+function fileAppLink(path: string): string | null {
   const m = /^\/api\/app\/organizations\/([0-9a-f-]{36})\/artifacts\/([0-9a-f-]{36})(?:\/|$)/i.exec(path);
-  return m?.[1] && m[2] ? `${base}${filePath(m[1], m[2])}` : null;
+  return m?.[1] && m[2] ? filePath(m[1], m[2]) : null;
 }
 
 /**
  * After every API route: a browser's navigation answered with an API error gets the page instead, with the same
- * status. The JSON's code says the cause; the request decides the way out.
+ * status. The JSON's code says the cause; the request decides the way out. Its links are paths, so the way out stays
+ * at the origin the browser asked (a native server's loopback origin keeps its own sign-in, ADR 0265 §5).
  */
-export function errorPages(publicUrl: string | undefined): MiddlewareHandler {
+export function errorPages(): MiddlewareHandler {
   return async (c, next) => {
     await next();
     const res = c.res;
     if (res.status < 400 || !isPageRequest(c.req.raw.headers, c.req.method)) return;
-    const base = (publicUrl ?? new URL(c.req.url).origin).replace(/\/$/, "");
     if (!res.headers.get("content-type")?.startsWith("application/json")) return;
     const code = await res
       .clone()
@@ -171,16 +171,16 @@ export function errorPages(publicUrl: string | undefined): MiddlewareHandler {
       })
       .catch(() => "");
     const cause = causeOf(res.status, code, c.req.path);
-    const file = fileAppLink(base, c.req.path);
-    const here = `${base}${c.req.path}${new URL(c.req.url).search}`;
+    const file = fileAppLink(c.req.path);
+    const here = `${c.req.path}${new URL(c.req.url).search}`;
     const action =
       cause === "signIn"
-        ? signInPage(base, here)
+        ? signInPage(here)
         : cause === "version" || cause === "format"
-          ? (file ?? `${base}/`)
+          ? (file ?? "/")
           : cause === "busy" || cause === "server"
             ? here
-            : `${base}/`;
+            : "/";
     const html = errorPageHtml({ cause, locale: pageLocale(c), action, errorId: c.get("requestId") as string });
     c.res = new Response(html, {
       status: res.status,

@@ -256,6 +256,11 @@ export class FakeRunner {
   pendingCode: string | null = null;
   /** The OS permissions agents' work waits on here (`setPermissions`), ended by `permission.clear`. */
   permissions: PermissionNeed[] = [];
+  /** The coding tools this computer has (`?tools=` in the fake host): Claude Code and Codex by default. */
+  executors: ControlStatus["executors"] = {
+    claude: { version: "2.1.300 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
+    codex: { version: "codex-cli 0.170.0" },
+  };
   /** The phones plugged into this computer: a Pixel an agent uses, an iPhone that needs Developer Mode. */
   phones: RunnerPhone[] = [
     {
@@ -638,10 +643,7 @@ export class FakeRunner {
       version: VERSION,
       protocol: MACHINE_PROTOCOL,
       paused: this.paused,
-      executors: {
-        claude: { version: "2.1.300 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
-        codex: { version: "codex-cli 0.170.0" },
-      },
+      executors: this.executors,
       workspace: this.config.workspace,
       agents: s?.agents ?? [],
       access: s?.access,

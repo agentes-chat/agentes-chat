@@ -704,6 +704,9 @@
       "browserLead": "We komen hier terug zodra je inlogt met {{provider}}.",
       "codeHint": "Je browser toont deze code. Controleer of hij overeenkomt voordat je doorgaat.",
       "reopen": "Browser opnieuw openen",
+      "timedOut": "Het inloggen is verlopen",
+      "timedOutLead": "Er kwam in 10 minuten niets terug van de browser. Begin opnieuw wanneer je klaar bent.",
+      "startAgain": "Opnieuw beginnen",
       "otherWay": "Op een andere manier inloggen",
       "otherServer": "Andere server gebruiken",
       "opening": "{{provider}} openen…",
@@ -2479,7 +2482,7 @@
     "private": "Wie deze code scant, logt in als jou.",
     "failed": "Wie deze code scant, logt in als jij.",
     "localOnly": "Deze server opent alleen op de computer waarop hij draait, dus je telefoon kan hem niet bereiken.",
-    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Voorkeuren › Servers. Kom daarna hier terug.",
+    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Instellingen › Server op deze {{device}}. Kom daarna hier terug.",
     "localOnlyHere": "Zet Bereik het vanaf je telefoon en je teamgenoten aan. Kom daarna hier terug."
   },
   "surface": {
@@ -6291,14 +6294,14 @@
         "title": "Nog één stap, op {{computer}} zelf",
         "waiting": "Wachten",
         "one": "Klik op het agentes.chat-icoon bij de klok",
-        "two": "Voorkeuren",
+        "two": "Instellingen van deze {{device}}",
         "three": "Zet Browser aan",
         "done": "Dat was het. Deze pagina merkt het vanzelf op, opnieuw laden is niet nodig.",
         "menuOpen": "agentes openen",
-        "menuPrefs": "Voorkeuren…",
+        "menuPrefs": "Instellingen van deze {{device}}…",
         "menuPause": "Pauzeren",
         "menuQuit": "Stoppen",
-        "tools": "Tools",
+        "tools": "Mappen en tools",
         "commands": "Opdrachten"
       },
       "offlineCloud": "{{computer}} reageert niet. We zijn ermee bezig. {{name}} antwoordt weer zodra hij terug is.",
@@ -8049,7 +8052,7 @@
     "linkEmpty": "Maak de link om hem te kopiëren",
     "linkFailed": "De link kon niet worden gemaakt. {{cause}}",
     "localOnly": "Deze server opent alleen op de computer waarop hij draait, dus de mensen die je uitnodigt kunnen hun uitnodiging niet openen.",
-    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Voorkeuren › Servers, of draai agentes.chat op een server die zij kunnen openen. Nodig ze daarna uit.",
+    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Instellingen › Server op deze {{device}}, of draai agentes.chat op een server die zij kunnen openen. Nodig ze daarna uit.",
     "localOnlyHere": "Zet Bereik het vanaf je telefoon en je teamgenoten aan. Nodig ze daarna uit.",
     "never": "Verloopt nooit",
     "untilDate": "Tot {{date}}",
@@ -16936,16 +16939,16 @@
         "windows": "pc",
         "linux": "computer"
       },
-      "grantHere": "Het is deze {{device}}: sta mappen toe in de Voorkeuren van de app.",
-      "openFolders": "Mappen openen",
-      "openServers": "Servers openen",
+      "grantHere": "Het is deze {{device}}: sta mappen toe in Instellingen van deze {{device}}, onder Mappen en tools.",
+      "openFolders": "Mappen en tools openen",
+      "openServers": "Server op deze {{device}} openen",
       "openTools": "Tools openen",
       "reconnect": "Opnieuw verbinden",
       "reconnecting": "Deze {{device}} maakt opnieuw verbinding…",
       "seeRequest": "Bekijken in de app",
       "offline": "Deze {{device}} is nu offline.",
       "outageTitle": "Deze {{device}} heeft {{ago}} de verbinding verloren",
-      "toolsOff": "Uit op deze {{device}}. Zet het aan in de Voorkeuren van de app, onder Tools.",
+      "toolsOff": "Uit op deze {{device}}. Zet het aan in Instellingen van deze {{device}}, onder Mappen en tools.",
       "noReport": "Deze {{device}} heeft nog niet doorgegeven wat hij toestaat. Werk de app bij.",
       "update": "App bijwerken"
     },
@@ -17065,7 +17068,7 @@
       "disableText": "Agents gebruiken {{tool}} niet meer op deze computer. Weer aanzetten: op de computer zelf, of hier door wie hem heeft gekoppeld.",
       "disabled": "{{tool}} uitgezet.",
       "grantTitle": "Om meer toe te staan",
-      "grantText": "Toestaan gebeurt op de computer zelf: open daar de agentes.chat-app (Voorkeuren → Mappen).",
+      "grantText": "Toestaan gebeurt op de computer zelf: open daar de agentes.chat-app (Instellingen › Deze {{device}} › Mappen en tools).",
       "grantTextTerminal": "Toestaan gebeurt op de computer zelf, in de Terminal:",
       "grantTextAdmin": "Toestaan gebeurt op de computer zelf, in de Terminal, als beheerder van die computer:",
       "grantTerminal": "Geen app? In de terminal van de computer:",
@@ -18442,6 +18445,18 @@
   "settings": {
     "notOpen": "Je rol in deze werkruimte opent {{section}} niet. Wie de rollen beheert, kan het voor je openzetten.",
     "nav": "Onderdelen van de instellingen",
+    "thisDevice": {
+      "title": "Deze {{device}}",
+      "section": {
+        "overview": "Overzicht",
+        "folders": "Mappen en tools",
+        "server": "Server op deze {{device}}",
+        "activity": "Activiteit",
+        "app": "App-instellingen"
+      },
+      "needs_one": "{{count}} ding heeft je nodig",
+      "needs_other": "{{count}} dingen hebben je nodig"
+    },
     "group": {
       "org": "Werkruimte"
     },
@@ -18676,7 +18691,7 @@
       "label": "Anonieme gebruiksstatistieken naar agentes.chat sturen",
       "help": "Aantallen zoals mensen, agents, machinegroottes, gebruikte AI-tokens, hoeveel data de browsers van de agents versturen en ontvangen en hoe snel de apps openen en reageren. Nooit berichten, bestanden, namen of sites.",
       "envOff": "Uitgezet in de instellingen van deze server (TELEMETRY=off).",
-      "envOffDesktop": "Uitgezet in de agentes.chat-app op de computer van deze server (Voorkeuren › Servers).",
+      "envOffDesktop": "Uitgezet in de agentes.chat-app op de computer van deze server (Instellingen › Server op deze {{device}}).",
       "envOffHere": "Uitgezet in de agentes.chat-app op deze computer.",
       "see": "Bekijk wat er wordt verstuurd",
       "dialogTitle": "Wat er wordt verstuurd",
@@ -20395,7 +20410,7 @@
     "machine": {
       "ready": "Klaar",
       "off": "Uit",
-      "offHelp": "Wie de computer heeft gekoppeld zet het hier aan of in de agentes.chat-app daarop: Voorkeuren → Tools.",
+      "offHelp": "Wie de computer heeft gekoppeld zet het hier aan of in de agentes.chat-app daarop: Instellingen › Deze {{device}} › Mappen en tools.",
       "needsCommand": "Heeft een opdracht nodig",
       "notReady": "Nog niet klaar",
       "turnOff": "Uitzetten",

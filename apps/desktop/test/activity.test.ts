@@ -144,7 +144,7 @@ describe("each line in the person's words", () => {
 
 describe("Atividade's organization filter", () => {
   test("another organization keeps the lines shown dimmed under a bar until its page comes, as the app's lists do", async () => {
-    const src = await Bun.file(new URL("../src/windows/prefs/Activity.tsx", import.meta.url).pathname).text();
+    const src = await Bun.file(new URL("../src/layer/settings/Activity.tsx", import.meta.url).pathname).text();
     expect(src).toContain('<Refreshing busy={kept} label={t("common.loading")}>');
     expect(src).toContain("const kept = replacing && entries.length > 0;");
     // The spinner at the list's foot is for the next page only, or for a first load with nothing to keep.

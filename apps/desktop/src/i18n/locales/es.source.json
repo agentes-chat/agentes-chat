@@ -50,6 +50,9 @@
   "windowTitle.prefs": {
     "value": "Preferences"
   },
+  "windowTitle.settings": {
+    "value": "Settings"
+  },
   "background.title": {
     "value": "agentes.chat is still running"
   },
@@ -230,17 +233,8 @@
   "tray.now": {
     "value": "Now"
   },
-  "tray.seeAll": {
-    "value": "See all"
-  },
   "tray.background": {
     "value": "In the background"
-  },
-  "tray.nothingNow": {
-    "value": "Nothing now"
-  },
-  "tray.waitingConnection": {
-    "value": "Waiting for the connection"
   },
   "tray.calmTitle": {
     "value": "All quiet here"
@@ -290,8 +284,8 @@
   "tray.open": {
     "value": "Open agentes.chat"
   },
-  "tray.prefs": {
-    "value": "Preferences…"
+  "tray.thisMac": {
+    "value": "This {{device}} settings…"
   },
   "tray.quit": {
     "value": "Quit agentes.chat"
@@ -315,13 +309,13 @@
     "value": "Reconnecting…"
   },
   "tray.offlineTitle": {
-    "value": "No internet. Trying again…"
+    "value": "No internet"
   },
   "tray.offlineBody": {
     "value": "What already started keeps running here and sends the result when the connection is back."
   },
   "tray.unreachable": {
-    "value": "Can't reach {{host}}. Trying again…"
+    "value": "Can't reach {{host}}"
   },
   "tray.unreachableBody": {
     "value": "What already started keeps running here and sends the result when the server is back."
@@ -455,6 +449,87 @@
   "tray.quitConfirm": {
     "value": "Quit"
   },
+  "tray.needsYou": {
+    "value": {
+      "one": "{{count}} thing needs you",
+      "other": "{{count}} things need you"
+    }
+  },
+  "tray.allSet": {
+    "value": "All set"
+  },
+  "tray.thisDevice": {
+    "value": "This {{device}}"
+  },
+  "tray.settings": {
+    "value": "This {{device}} settings"
+  },
+  "tray.essential.turnOn": {
+    "value": "Turn on"
+  },
+  "tray.essential.turnOnAgain": {
+    "value": "Turn on again"
+  },
+  "tray.essential.fix": {
+    "value": "Fix it"
+  },
+  "tray.essential.launchAtLogin.title": {
+    "value": "agentes.chat doesn't open at login"
+  },
+  "tray.essential.launchAtLogin.body": {
+    "value": "After a restart, agents can't use this {{device}} until you open the app."
+  },
+  "tray.essential.notifications.title": {
+    "value": "Notifications are off"
+  },
+  "tray.essential.notifications.body": {
+    "value": "You won't know when an agent needs you here."
+  },
+  "tray.essential.screen.body": {
+    "value": "Without it, agents can't see the screen."
+  },
+  "tray.essential.disk.body": {
+    "value": "Agents may stop to ask for each folder."
+  },
+  "tray.essential.reach.approve.title": {
+    "value": "Tailscale waits for one click"
+  },
+  "tray.essential.reach.approve.body": {
+    "value": "Your phone and team reach agentes.chat once you allow it in Tailscale's admin page."
+  },
+  "tray.essential.reach.down.title": {
+    "value": "Tailscale isn't connected on this {{device}}"
+  },
+  "tray.essential.reach.down.body": {
+    "value": "Your phone and team can't reach agentes.chat."
+  },
+  "tray.essential.reach.address.title": {
+    "value": "Your address doesn't lead here now"
+  },
+  "tray.essential.reach.address.body": {
+    "value": "Your phone and team can't reach agentes.chat until it does. Check that your tunnel is on."
+  },
+  "tray.essential.backup.off.title": {
+    "value": "The nightly backup is off"
+  },
+  "tray.essential.backup.off.body": {
+    "value": "Turn it on so agentes.chat keeps a copy every night."
+  },
+  "tray.essential.backup.backup.body": {
+    "value": "Back up now so today's work has a copy."
+  },
+  "tray.essential.backup.copy.title": {
+    "value": "Last night's backup didn't reach its copy"
+  },
+  "tray.essential.backup.copy.body": {
+    "value": "The folder it copies to may be unplugged or full."
+  },
+  "tray.essential.autoUpdate.title": {
+    "value": "Updates don't install by themselves"
+  },
+  "tray.essential.autoUpdate.body": {
+    "value": "Turn it on so this {{device}} stays on a version that keeps working."
+  },
   "first.addTitle": {
     "value": "Add a workspace"
   },
@@ -469,6 +544,225 @@
   },
   "first.addNewLink": {
     "value": "Create one"
+  },
+  "first.companyFlow": {
+    "value": "Your company's server"
+  },
+  "first.welcome.title": {
+    "value": "Welcome to agentes.chat"
+  },
+  "first.welcome.lead": {
+    "value": "Your team of AI agents, working with you in the chat."
+  },
+  "first.welcome.google": {
+    "value": "Continue with Google"
+  },
+  "first.welcome.apple": {
+    "value": "Continue with Apple"
+  },
+  "first.welcome.email": {
+    "value": "Continue with email"
+  },
+  "first.welcome.others": {
+    "value": "Other ways to use it"
+  },
+  "first.welcome.here": {
+    "value": "Run free on this {{device}}"
+  },
+  "first.welcome.hereText": {
+    "value": "Your data stays here. No cloud account."
+  },
+  "first.welcome.company": {
+    "value": "Sign in to my company's server"
+  },
+  "first.welcome.companyText": {
+    "value": "By its address, like agentes.yourcompany.com."
+  },
+  "first.welcome.install": {
+    "value": "Installing it for the team on a server?"
+  },
+  "first.welcome.installLink": {
+    "value": "See how"
+  },
+  "first.welcome.foundTailnet": {
+    "value": "agentes.chat is on your network"
+  },
+  "first.welcome.foundHere": {
+    "value": "agentes.chat is running on this {{device}}"
+  },
+  "first.run.step": {
+    "value": "Run on this {{device}} · {{n}} of {{total}}"
+  },
+  "first.run.flow": {
+    "value": "Run on this {{device}}"
+  },
+  "first.run.ownerTitle": {
+    "value": "Who will be the owner?"
+  },
+  "first.run.ownerLead": {
+    "value": "You sign in with this email and invite whoever you want later. Everything is kept on this {{device}}."
+  },
+  "first.run.usage": {
+    "value": "Send anonymous usage statistics"
+  },
+  "first.run.usageText": {
+    "value": "Counts, never messages, files or names."
+  },
+  "first.run.whereTitle": {
+    "value": "Where will you use it?"
+  },
+  "first.run.whereLead": {
+    "value": "You can change it anytime."
+  },
+  "first.run.everywhere": {
+    "value": "On this {{device}}, your phone and your team"
+  },
+  "first.run.everywhereText": {
+    "value": "Through Tailscale or an address of yours."
+  },
+  "first.run.hereOnly": {
+    "value": "Only on this {{device}}"
+  },
+  "first.run.hereOnlyText": {
+    "value": "The phone can come later."
+  },
+  "first.run.netTitle": {
+    "value": "How do the phone and the team get here?"
+  },
+  "first.run.netLead": {
+    "value": "You can change it later in Settings."
+  },
+  "first.run.later": {
+    "value": "Do it later"
+  },
+  "first.run.changeAddress": {
+    "value": "Change the address"
+  },
+  "first.run.ask": {
+    "value": "<b>One click left.</b> On the Tailscale page that opened, click <b>Enable</b>. It makes your address secure, with a lock. We go on by ourselves, no rush."
+  },
+  "first.run.askOpen": {
+    "value": "Open the page"
+  },
+  "first.run.askSkip": {
+    "value": "Finish without it"
+  },
+  "first.run.doneTitle": {
+    "value": "Done. Take it to your phone"
+  },
+  "first.run.phone1": {
+    "value": "Install the agentes.chat app"
+  },
+  "first.run.phone1Text": {
+    "value": "From the App Store or Google Play."
+  },
+  "first.run.phone2": {
+    "value": "Install Tailscale and sign in with the same account"
+  },
+  "first.run.phone2Text": {
+    "value": "It's what takes your phone to this {{device}}, from anywhere."
+  },
+  "first.run.phone3": {
+    "value": "Point the camera at the code"
+  },
+  "first.run.phone3Text": {
+    "value": "You're signed in right away. The code renews by itself."
+  },
+  "first.run.qrLabel": {
+    "value": "QR code to sign in on your phone"
+  },
+  "first.run.qrFailed": {
+    "value": "The code didn't load."
+  },
+  "first.run.address": {
+    "value": "Your address: <b>{{address}}</b>"
+  },
+  "first.run.open": {
+    "value": "Open agentes.chat"
+  },
+  "reach.label": {
+    "value": "How the phone and the team get here"
+  },
+  "reach.tailscale": {
+    "value": "Through Tailscale"
+  },
+  "reach.tailscaleText": {
+    "value": "Free. A private network between your devices and your team's."
+  },
+  "reach.address": {
+    "value": "Through an address of mine"
+  },
+  "reach.addressText": {
+    "value": "A tunnel on this {{device}} that already leads here."
+  },
+  "reach.checking": {
+    "value": "Checking Tailscale on this {{device}}…"
+  },
+  "reach.tailscaleOn": {
+    "value": "Tailscale is connected on this {{device}}."
+  },
+  "reach.download": {
+    "value": "Download Tailscale"
+  },
+  "reach.downloadNote": {
+    "value": "Free, from Tailscale's own site."
+  },
+  "reach.openApp": {
+    "value": "Open Tailscale and sign in"
+  },
+  "reach.tray": {
+    "value": "Open Tailscale from its icon by the clock and sign in."
+  },
+  "reach.terminal": {
+    "value": "Connect Tailscale in the terminal:"
+  },
+  "reach.waitNow": {
+    "value": "Waiting for Tailscale…"
+  },
+  "reach.waitInstall": {
+    "value": "Install it, open it and sign in. This goes on by itself, no rush."
+  },
+  "reach.waitSignIn": {
+    "value": "Sign in there. This goes on by itself, no rush."
+  },
+  "reach.addressLabel": {
+    "value": "Your address"
+  },
+  "reach.pointAt": {
+    "value": "Point it at"
+  },
+  "reach.problem.notHttps": {
+    "value": "The address must start with https://"
+  },
+  "reach.problem.unreachable": {
+    "value": "We couldn't open it. Check that your tunnel is on and points to {{target}}."
+  },
+  "reach.problem.unreachablePlain": {
+    "value": "We couldn't open it. Check that your tunnel is on and points to this {{device}}."
+  },
+  "reach.problem.otherServer": {
+    "value": "It opens another server, not this {{device}}'s."
+  },
+  "reach.problem.error": {
+    "value": "It answered with an error ({{status}})."
+  },
+  "reach.problem.errorPlain": {
+    "value": "It answered with an error."
+  },
+  "reach.reason.address": {
+    "value": "your address doesn't lead here"
+  },
+  "reach.stage.checking": {
+    "value": "Checking your address…"
+  },
+  "reach.stage.done": {
+    "value": "Ready: your phone and team can open it."
+  },
+  "reach.line.address": {
+    "value": "Running · at your address"
+  },
+  "reach.line.addressDown": {
+    "value": "Running · your address doesn't lead here now"
   },
   "place.title": {
     "value": "Where will your workspace live?"
@@ -629,9 +923,6 @@
   "here.title": {
     "value": "Let's get this {{device}} ready"
   },
-  "here.how": {
-    "value": "It takes a minute. Everything stays here, with you alone."
-  },
   "here.again": {
     "value": "It ran here before, and its data is still in {{path}}."
   },
@@ -654,22 +945,7 @@
     "value": "Reach it from your phone and teammates"
   },
   "here.reachText": {
-    "value": "With Tailscale, a private network for your devices: your phone and the people you invite join it, and nobody else can reach agentes.chat."
-  },
-  "here.reachOff": {
-    "value": "Tailscale isn't connected."
-  },
-  "here.reachOffTerminal": {
-    "value": "Tailscale isn't connected. Connect it in the terminal:"
-  },
-  "here.reachTray": {
-    "value": "Tailscale isn't connected. Connect it from its icon by the clock."
-  },
-  "here.reachMissing": {
-    "value": "Needs Tailscale, which is free."
-  },
-  "here.reachChecking": {
-    "value": "Checking whether Tailscale is connected…"
+    "value": "Through Tailscale, a free private network for your devices, or through an address of your own: your phone and the people you invite open agentes.chat from anywhere."
   },
   "here.reachStage.sharing": {
     "value": "Asking Tailscale to share it…"
@@ -680,9 +956,6 @@
   "here.reachStage.restarting": {
     "value": "Restarting agentes.chat at its new address…"
   },
-  "here.reachStage.signingIn": {
-    "value": "Signing in again at the new address…"
-  },
   "here.approveOpen": {
     "value": "Open Tailscale's page"
   },
@@ -692,23 +965,20 @@
   "here.openTailscale": {
     "value": "Open Tailscale"
   },
-  "here.getTailscale": {
-    "value": "Get Tailscale"
-  },
   "here.usage": {
     "value": "Send anonymous usage statistics to agentes.chat"
   },
   "here.usageText": {
     "value": "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites."
   },
-  "here.start": {
-    "value": "Start"
-  },
   "here.setting": {
     "value": "Getting everything ready"
   },
-  "here.rest": {
-    "value": "When you close the app, your agents rest. They're back as soon as you open it again."
+  "here.settingAlmost": {
+    "value": "Almost ready"
+  },
+  "here.settingFailed": {
+    "value": "Setup didn't finish"
   },
   "here.step.database": {
     "value": "Making room for your data"
@@ -726,7 +996,7 @@
     "value": "Calling your agents"
   },
   "here.step.reach": {
-    "value": "Turning on access from your phone"
+    "value": "Turning on access from anywhere"
   },
   "here.stepState.active": {
     "value": "in progress"
@@ -750,7 +1020,7 @@
     "value": "Your account wasn't created."
   },
   "here.fail.retry": {
-    "value": "Try again in Preferences"
+    "value": "Try again in Settings"
   },
   "here.reason.https": {
     "value": "HTTPS is off on your Tailscale network"
@@ -922,12 +1192,6 @@
   },
   "servers.removed": {
     "value": "{{host}} left this app"
-  },
-  "servers.workspaces": {
-    "value": {
-      "one": "{{count}} workspace",
-      "other": "{{count}} workspaces"
-    }
   },
   "servers.signedOut": {
     "value": "Not signed in"
@@ -1275,7 +1539,7 @@
     "value": "Let agents of {{org}} work on this {{device}}?"
   },
   "pair.body": {
-    "value": "{{host}} asked. Agents get commands, the browser and coding tools here. Folders come later, in Preferences."
+    "value": "{{host}} asked. Agents get commands, the browser and coding tools here. Folders come later, in Settings."
   },
   "pair.allow": {
     "value": "Allow"
@@ -1296,10 +1560,13 @@
     "value": "What agents can do here"
   },
   "pair.foldersLater": {
-    "value": "No folders of yours yet. Add them later in Preferences › Folders."
+    "value": "No folders of yours yet. Add them later in Settings › Folders and tools."
   },
   "pair.linkTitle": {
     "value": "Connect this {{device}} to {{org}}?"
+  },
+  "pair.connectTitle": {
+    "value": "Connect this {{device}}?"
   },
   "pair.askedBy": {
     "value": "Asked by"
@@ -1315,6 +1582,9 @@
   },
   "pair.done": {
     "value": "Connected to {{org}}"
+  },
+  "pair.doneLead": {
+    "value": "Its agents can work on this {{device}} now."
   },
   "pair.share": {
     "value": "Let the whole workspace use it"
@@ -1349,14 +1619,29 @@
   "pair.addFolders": {
     "value": "Add folders"
   },
-  "pair.expired": {
-    "value": "This link expired. Make a new one in Devices."
-  },
   "pair.openDevices": {
     "value": "Open Devices"
   },
-  "pair.denied": {
-    "value": "{{by}} didn't let it in. Nothing changed."
+  "pair.expiredTitle": {
+    "value": "This link expired"
+  },
+  "pair.expiredLead": {
+    "value": "Make a new one in Devices on {{server}}."
+  },
+  "pair.deniedTitle": {
+    "value": "{{by}} didn't let it in"
+  },
+  "pair.deniedLead": {
+    "value": "Nothing changed on this {{device}}."
+  },
+  "pair.unreachableTitle": {
+    "value": "Couldn't reach {{server}}"
+  },
+  "pair.unreachableLead": {
+    "value": "Check the connection and try again."
+  },
+  "pair.failedTitle": {
+    "value": "Couldn't connect this {{device}}"
   },
   "pair.letOrg": {
     "value": "Let {{org}}'s agents use this {{device}}"
@@ -1366,6 +1651,87 @@
   },
   "pair.notUsing": {
     "value": "Its agents don't use this {{device}}"
+  },
+  "sheets.step": {
+    "value": "This {{device}} · {{at}} of {{total}}"
+  },
+  "sheets.stepOnly": {
+    "value": "This {{device}}"
+  },
+  "sheets.ready.title": {
+    "value": "Get this {{device}} ready for {{org}}'s agents?"
+  },
+  "sheets.ready.lead": {
+    "value": "With it, they do more from here, while the {{device}} is on."
+  },
+  "sheets.ready.browser": {
+    "value": "The agents' own browser"
+  },
+  "sheets.ready.browserDesc": {
+    "value": "Without your logins and passwords."
+  },
+  "sheets.ready.code": {
+    "value": "Commands and coding tools"
+  },
+  "sheets.ready.codeOne": {
+    "value": "{{tool}}, already here. They run as your user."
+  },
+  "sheets.ready.codeTwo": {
+    "value": "{{a}} and {{b}}, already here. They run as your user."
+  },
+  "sheets.ready.codeNone": {
+    "value": "They run as your user."
+  },
+  "sheets.ready.folders": {
+    "value": "Your folders only with your OK"
+  },
+  "sheets.ready.foldersDesc": {
+    "value": "Each request shows in the chat and on the app's icon."
+  },
+  "sheets.ready.foldersDescMac": {
+    "value": "Each request shows in the chat and in the menu bar."
+  },
+  "sheets.ready.login": {
+    "value": "Opens by itself when the {{device}} starts"
+  },
+  "sheets.ready.loginDesc": {
+    "value": "So agents come back without you having to remember."
+  },
+  "sheets.ready.help": {
+    "value": "Change it any time in Settings › This {{device}}."
+  },
+  "sheets.ready.allow": {
+    "value": "Get it ready"
+  },
+  "sheets.prepare.title": {
+    "value": "macOS asks three things, once"
+  },
+  "sheets.prepare.lead": {
+    "value": "Without them, agents stop in the middle of their work to ask."
+  },
+  "sheets.prepare.notifications": {
+    "value": "Notifications"
+  },
+  "sheets.prepare.notificationsDesc": {
+    "value": "When an agent needs you."
+  },
+  "sheets.prepare.screenDesc": {
+    "value": "So agents can see what they do on the screen."
+  },
+  "sheets.prepare.diskDesc": {
+    "value": "To open the folders you allow without macOS asking again."
+  },
+  "sheets.prepare.waitList": {
+    "value": "In the System Settings that opened, turn on agentes.chat in the list. We'll notice by ourselves."
+  },
+  "sheets.prepare.waitNotifications": {
+    "value": "In the System Settings that opened, allow notifications for agentes.chat. We'll notice by ourselves."
+  },
+  "sheets.prepare.help": {
+    "value": "If an update turns one off, we'll tell you right away."
+  },
+  "sheets.prepare.later": {
+    "value": "Do it later"
   },
   "prepare.title": {
     "value": "Get this {{device}} ready"
@@ -1387,6 +1753,12 @@
   },
   "prepare.diskDesc": {
     "value": "Lets agents open your files without macOS asking for each folder."
+  },
+  "prepare.notifications": {
+    "value": "Notifications"
+  },
+  "prepare.notificationsDesc": {
+    "value": "Tells you when agents need you, and when something on this {{device}} stops working."
   },
   "prepare.diskHow": {
     "value": "In Settings, turn on agentes.chat in the list, or add it with +."
@@ -1426,6 +1798,45 @@
   },
   "prepare.prefsHint": {
     "value": "macOS may turn these off when the app updates. Turn them on again here."
+  },
+  "essentials.tray": {
+    "value": "Something on this {{device}} needs you"
+  },
+  "essentials.notify.screen.title": {
+    "value": "Screen Recording is off"
+  },
+  "essentials.notify.screen.body": {
+    "value": "macOS turned it off. Agents can't take screenshots until you allow it again."
+  },
+  "essentials.notify.disk.title": {
+    "value": "Full Disk Access is off"
+  },
+  "essentials.notify.disk.body": {
+    "value": "Agents may stop to ask for folders until you turn it on again."
+  },
+  "essentials.notify.reach.title": {
+    "value": "Your phone and team can't reach agentes.chat"
+  },
+  "essentials.notify.reach.body": {
+    "value": "Access from your devices needs you on this {{device}}. Open the app to fix it."
+  },
+  "essentials.notify.backup.title": {
+    "value": "Last night's backup didn't finish"
+  },
+  "essentials.notify.backup.body": {
+    "value": "Open the app to back up again."
+  },
+  "essentials.notify.autoUpdate.title": {
+    "value": "agentes.chat needs an update"
+  },
+  "essentials.notify.autoUpdate.body": {
+    "value": "This version can't keep working. Open the app to install the new one."
+  },
+  "essentials.notify.awake.title": {
+    "value": "This {{device}} may sleep while it serves"
+  },
+  "essentials.notify.awake.body": {
+    "value": "Restart agentes.chat here so it stays awake for your phone and team."
   },
   "tools.claudeName": {
     "value": "Claude Code"
@@ -2270,6 +2681,240 @@
   "prefs.advanced.folderDesc": {
     "value": "One folder per workspace, with a folder for each agent."
   },
+  "settings.nav.label": {
+    "value": "Settings"
+  },
+  "settings.nav.thisDevice": {
+    "value": "This {{device}}"
+  },
+  "settings.nav.overview": {
+    "value": "Overview"
+  },
+  "settings.nav.folders": {
+    "value": "Folders and tools"
+  },
+  "settings.nav.server": {
+    "value": "Server on this {{device}}"
+  },
+  "settings.nav.activity": {
+    "value": "Activity"
+  },
+  "settings.nav.app": {
+    "value": "App settings"
+  },
+  "settings.nav.needs": {
+    "value": {
+      "one": "{{count}} thing needs you",
+      "other": "{{count}} things need you"
+    }
+  },
+  "settings.away.title": {
+    "value": "No connection with {{name}}."
+  },
+  "settings.away.body": {
+    "value": "What belongs to this {{device}} works the same. Who can use it and the agents' names come back with the connection."
+  },
+  "settings.overview.rename": {
+    "value": "Rename"
+  },
+  "settings.overview.allSet": {
+    "value": "All set"
+  },
+  "settings.overview.used": {
+    "value": "Agents of {{orgs}} use this {{device}}"
+  },
+  "settings.overview.version": {
+    "value": "version {{version}}, up to date"
+  },
+  "settings.overview.versionNewer": {
+    "value": "version {{version}}, {{latest}} is available"
+  },
+  "settings.overview.always": {
+    "value": "Always ready"
+  },
+  "settings.overview.who": {
+    "value": "Who uses this {{device}}"
+  },
+  "settings.essentials.on": {
+    "value": "On"
+  },
+  "settings.essentials.allOn": {
+    "value": "All on"
+  },
+  "settings.essentials.turnOn": {
+    "value": "Turn on"
+  },
+  "settings.essentials.turnOnAgain": {
+    "value": "Turn on again"
+  },
+  "settings.essentials.permissions": {
+    "value": "macOS permissions"
+  },
+  "settings.essentials.permissionsOff": {
+    "value": "Still off: {{names}}."
+  },
+  "settings.essentials.launchAtLogin": {
+    "value": "Opens when the {{device}} starts"
+  },
+  "settings.essentials.reach": {
+    "value": "Reach from anywhere"
+  },
+  "settings.essentials.reachOff": {
+    "value": "Only on this {{device}}. Your phone and team can't open it."
+  },
+  "settings.essentials.reachDown": {
+    "value": "Tailscale isn't connected on this {{device}}."
+  },
+  "settings.essentials.reachApprove": {
+    "value": "Tailscale waits for HTTPS to be turned on in your network."
+  },
+  "settings.essentials.reachAddress": {
+    "value": "Your address doesn't lead here now."
+  },
+  "settings.essentials.checkAgain": {
+    "value": "Check again"
+  },
+  "settings.essentials.backup": {
+    "value": "Backup every night"
+  },
+  "settings.essentials.backupOff": {
+    "value": "Switched off"
+  },
+  "settings.essentials.autoUpdate": {
+    "value": "Updates by itself at night"
+  },
+  "settings.essentials.autoUpdateDesc": {
+    "value": "Goes back by itself if the new version doesn't open"
+  },
+  "settings.essentials.updateRequired": {
+    "value": "This version can't keep working."
+  },
+  "settings.essentials.awake": {
+    "value": "Doesn't sleep while agents work"
+  },
+  "settings.essentials.awakeOff": {
+    "value": "Restart agentes.chat here so it stays awake."
+  },
+  "settings.essentials.powerRestart": {
+    "value": "Starts by itself after a power cut"
+  },
+  "settings.essentials.systemOnly": {
+    "value": "Only macOS's settings turn this on."
+  },
+  "settings.server.anywhere": {
+    "value": "your phone and team can open it"
+  },
+  "settings.server.onlyHere": {
+    "value": "only on this {{device}}"
+  },
+  "settings.server.onlyHereDesc": {
+    "value": "Your phone and team can't open it."
+  },
+  "settings.server.wayTailscale": {
+    "value": "Through Tailscale, with a lock"
+  },
+  "settings.server.wayAddress": {
+    "value": "Through your address"
+  },
+  "settings.server.changeWay": {
+    "value": "Change"
+  },
+  "settings.server.reachOff": {
+    "value": "Turn off"
+  },
+  "settings.server.useWay": {
+    "value": "Use this"
+  },
+  "settings.server.phoneDesc": {
+    "value": "Install the agentes.chat app and Tailscale with the same account, and point the camera. It signs in by itself."
+  },
+  "settings.server.phoneDescAddress": {
+    "value": "Install the agentes.chat app and point the camera. It signs in by itself."
+  },
+  "settings.server.phoneSignedOut": {
+    "value": "Sign in to agentes.chat on this {{device}} in the app to show the code."
+  },
+  "settings.server.qrLabel": {
+    "value": "QR code to sign in on the phone"
+  },
+  "settings.server.invite": {
+    "value": "Invite someone from the team"
+  },
+  "settings.server.inviteDesc": {
+    "value": "Invite them to the workspace, then share this {{device}} with them in Tailscale."
+  },
+  "settings.server.inviteDescAddress": {
+    "value": "Invite them to the workspace. They open it at your address."
+  },
+  "settings.server.inviteButton": {
+    "value": "Invite"
+  },
+  "settings.server.share": {
+    "value": "Share in Tailscale"
+  },
+  "settings.server.everyNight": {
+    "value": "Every night, at {{at}}"
+  },
+  "settings.server.copyAlso": {
+    "value": "A copy also in"
+  },
+  "settings.server.backupsOff": {
+    "value": "Nightly backups are off"
+  },
+  "settings.access.title": {
+    "value": "Folders and tools"
+  },
+  "settings.access.lead": {
+    "value": "What agents use on this {{device}}, in every workspace."
+  },
+  "settings.access.tools": {
+    "value": "Tools"
+  },
+  "settings.access.browserDesc": {
+    "value": "Only the agents', without your logins"
+  },
+  "settings.access.commandsDesc": {
+    "value": "Run as you and reach the rest of this {{device}}"
+  },
+  "settings.access.notHere": {
+    "value": "Not on this {{device}} yet"
+  },
+  "settings.access.folders": {
+    "value": "Allowed folders"
+  },
+  "settings.access.addTitle": {
+    "value": "Allow another folder"
+  },
+  "settings.access.addDesc": {
+    "value": "When an agent needs one, it asks in the chat and here."
+  },
+  "settings.access.addFor": {
+    "value": "For {{org}}"
+  },
+  "settings.app.title": {
+    "value": "App settings"
+  },
+  "settings.app.notifications": {
+    "value": "Notifications"
+  },
+  "settings.app.thisApp": {
+    "value": "This app"
+  },
+  "settings.app.servers": {
+    "value": "Servers and accounts"
+  },
+  "settings.app.advanced": {
+    "value": "Advanced"
+  },
+  "settings.app.onlyHere": {
+    "value": "Only on this {{device}}"
+  },
+  "settings.app.version": {
+    "value": "Version {{version}}"
+  },
+  "settings.app.otherServer": {
+    "value": "Another server"
+  },
   "iphone.lead": {
     "value": "This {{device}} does the setup. You only tap on the iPhone when a step asks."
   },
@@ -2345,9 +2990,6 @@
   "cover.unreachable": {
     "value": "Can't reach {{host}} · trying again…"
   },
-  "cover.tailnet": {
-    "value": "Is Tailscale connected on this {{device}}?"
-  },
   "cover.starting": {
     "value": "Starting agentes.chat on this {{device}}…"
   },
@@ -2359,18 +3001,6 @@
   },
   "cover.failing": {
     "value": "agentes.chat isn't starting on this {{device}}"
-  },
-  "cover.tailnetOff": {
-    "value": "Connect Tailscale on this {{device}} to open agentes.chat."
-  },
-  "cover.tailnetUp": {
-    "value": "In the terminal: sudo tailscale up"
-  },
-  "cover.tailnetTray": {
-    "value": "Open it from its icon by the clock."
-  },
-  "cover.onlyHere": {
-    "value": "Use only on this {{device}}"
   },
   "cover.start": {
     "value": "Start it"
@@ -2411,11 +3041,29 @@
   "cover.openOther": {
     "value": "Open {{server}}"
   },
-  "cover.onlyHereWorking": {
-    "value": "Turning off access from your devices…"
+  "cover.privateTitle": {
+    "value": "{{org}} is on the private network"
   },
-  "cover.onlyHereFailed": {
-    "value": "Couldn't turn off access from your devices."
+  "cover.privateTitleAny": {
+    "value": "This workspace is on the private network"
+  },
+  "cover.privateLine": {
+    "value": "And the network is off on this {{device}}. Turn it on and the workspace opens by itself."
+  },
+  "cover.privateMissing": {
+    "value": "And Tailscale, the private network, isn't on this {{device}} yet. Get it, sign in, and the workspace opens by itself."
+  },
+  "cover.privateTray": {
+    "value": "And the network is off on this {{device}}. Turn it on from Tailscale's icon by the clock, and the workspace opens by itself."
+  },
+  "cover.privateElsewhere": {
+    "value": "And the network is off on this {{device}}. Turn Tailscale on, and the workspace opens by itself."
+  },
+  "cover.useOther": {
+    "value": "Use another workspace"
+  },
+  "cover.getTailscale": {
+    "value": "Download Tailscale"
   },
   "report.button": {
     "value": "Send a report"

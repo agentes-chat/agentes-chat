@@ -20,6 +20,7 @@ import { authHandler, signInPageUrl } from "./auth";
 import { apiBodyLimit } from "./http/body-limit";
 import { errorPages, isPageRequest } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
+import { isLoopbackHost } from "./http/native-hosts";
 import { busyResponse } from "./load-shed";
 import { createLogger, type Logger, loggedPath } from "./logger";
 import { ownHosts } from "./operator/hosts";
@@ -143,7 +144,8 @@ export interface AppOptions {
  * - `/api/git/*`          git proxy for agents' computers (their own credential, ADR 0024)
  * - `/api/machines/*`     connected computers' runner: device-code connection, uploads, install.sh, a connect link's info (ADR 0025, 0036)
  * - `/api/desktop/*`      public: the desktop app's latest build and its download (ADR 0036)
- * - `/api/native/*`       public: the packages that run agentes.chat without Docker, for the installer (ADR 0060)
+ * - `/api/native/*`       public: the packages that run agentes.chat without Docker, for the installer (ADR 0060);
+ *                         `/api/native/here-id` is answered in front of the app by a native server only (ADR 0265 §4)
  * - `/api/hooks/*`        public: a webhook routine's own address (its chosen methods, ADR 0106)
  * - `/api/waitlist`       public: join the waiting list and confirm the email (the landing page, only with LANDING_URL)
  * - `/api/partners/waitlist` public: join the partner program's waiting list (the landing page, only with LANDING_URL)
@@ -187,9 +189,9 @@ export function createApp(options: AppOptions) {
   });
 
   if (options.services) {
-    const { auth, config, db } = options.services;
+    const { auth, db } = options.services;
     const handleAuth = authHandler(auth, db);
-    const serverError = signInPageUrl(config.PUBLIC_URL, { error: "server_error" });
+    const serverError = signInPageUrl({ error: "server_error" });
     api.on(["GET", "POST"], "/auth/*", async (c) => {
       const res = await handleAuth(c.req.raw);
       // A browser's own navigation that failed on our side (an OAuth callback): the sign-in page says so, never an
@@ -386,7 +388,10 @@ export function createApp(options: AppOptions) {
     const h = c.res.headers;
     if (!h.has("x-frame-options")) h.set("x-frame-options", "DENY");
     if (!h.has("content-security-policy")) h.set("content-security-policy", APP_CSP);
-    if (httpsPublicUrl && !h.has("strict-transport-security")) h.set("strict-transport-security", "max-age=63072000");
+    // Never on a loopback address: a native server's own window opens it over http there (ADR 0265 §5).
+    if (httpsPublicUrl && !h.has("strict-transport-security") && !isLoopbackHost(c.req.header("host"))) {
+      h.set("strict-transport-security", "max-age=63072000");
+    }
   });
   // A CDN in front may cache by the path's extension, whatever the type: without this, a private
   // answer at a path that ends like a file (a skill's `data.csv`) would be served to anyone asking.
@@ -395,7 +400,7 @@ export function createApp(options: AppOptions) {
     if (!c.res.headers.has("cache-control")) c.res.headers.set("cache-control", "no-store");
   });
   // A link a person opens in a browser that the API refuses: our page, never the JSON on screen (ADR 0157).
-  app.use("/api/*", errorPages(options.services?.config.PUBLIC_URL));
+  app.use("/api/*", errorPages());
   // A late event loop or slow database: the apps' reads wait for a calmer moment (or, behind a proxy, another
   // process); writes carry on. A full socket count turns new sockets away only.
   const overloaded = options.overloaded;

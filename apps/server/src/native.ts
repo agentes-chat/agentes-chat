@@ -49,6 +49,7 @@ import {
   systemdUserAvailable,
   userServiceStatus,
 } from "../runner/service";
+import { withLoopbackOrigin } from "./http/native-hosts";
 import { createLogger } from "./logger";
 import { prepareDatabase, startServer } from "./start";
 import { printTelemetry } from "./telemetry";
@@ -150,6 +151,10 @@ async function nativeEnv(dir: string, env: NodeJS.ProcessEnv = process.env) {
   for (const [key, value] of envEntries(readFileSync(files.env, "utf8"))) env[key] ??= value;
   env.PORT ??= String(NATIVE_PORTS.first);
   env.PUBLIC_URL ??= `http://127.0.0.1:${env.PORT}`;
+  // The window on this computer opens the server at its loopback origin whatever `PUBLIC_URL` is (the tailnet's
+  // address once reach is on): trusted for sign-in and saving on every start, never written to `.env` (ADR 0265 §5).
+  const extra = withLoopbackOrigin(env.EXTRA_TRUSTED_ORIGINS, env.PORT, env.PUBLIC_URL);
+  if (extra !== undefined) env.EXTRA_TRUSTED_ORIGINS = extra;
   env.INSTALL_MODE ??= "native";
   env.WEB_DIR ??= join(PACKAGE, "web");
   env.DATABASE_URL = pgliteUrl(files.db);

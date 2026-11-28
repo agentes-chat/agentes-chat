@@ -1,5 +1,5 @@
 /**
- * The first run's decisions as pure state (FirstRun.tsx draws them): which screen comes next, what
+ * The first run's decisions as pure state (`layer/first-run/` draws them): which screen comes next, what
  * discovery found, what a typed address or a connect link leads to. Nothing here changes the server
  * the app opens; the window does that only after the person confirmed (`chooseServer`).
  */
@@ -13,7 +13,11 @@ import {
 } from "@agenteschat/client/lib/server";
 import { appServer, serverName } from "./server";
 
-export type FirstScreen = "choose" | "install" | "connect" | "here" | "link" | "pair";
+/**
+ * The first run's screens (ADR 0265 §2): sign in first (`welcome`), a company's server by its address (`company`) and
+ * how to install one (`install`), running agentes.chat here in three steps (`here`), and a connect link in large type.
+ */
+export type FirstScreen = "welcome" | "company" | "install" | "here" | "link";
 
 /**
  * Esc in the first run: back a screen, or the window closes (when a server is open already); never while
@@ -125,21 +129,39 @@ const problemOf = (check: Extract<ServerCheck, { ok: false }>): ConnectProblem =
 };
 
 /**
- * `own`: the addresses of the agentes.chat this computer runs (its loopback and, with reach on, its Tailscale one).
- * Picked there, it opens at once at the address people use: no sheet about another host, which is still this one.
+ * The agentes.chat this computer runs: the address the window opens it at (`open`, its loopback one, ADR 0265 §5), and
+ * every address it answers at (`all`: that one and, with reach on, its Tailscale one).
  */
-export function connectOutcome(asked: string, check: ServerCheck, own: readonly string[] = []): ConnectOutcome {
+export interface OwnAddresses {
+  open: string | null;
+  all: string[];
+}
+const NOT_OWN: OwnAddresses = { open: null, all: [] };
+
+/**
+ * `own`: the agentes.chat this computer runs. Typed or picked at any of its addresses (the Tailscale one too, which
+ * the server's own check names), it opens at once at its loopback address: no sheet about another host, which is
+ * still this one, and never through the tailnet.
+ */
+export function connectOutcome(asked: string, check: ServerCheck, own: OwnAddresses = NOT_OWN): ConnectOutcome {
   if (!check.ok) return { kind: "problem", problem: problemOf(check), host: serverHost(check.server) };
   if (check.instance.ownerClaim) return { kind: "problem", problem: "no-owner", host: serverHost(check.server) };
-  if (own.includes(asked) || own.includes(check.server)) return { kind: "use", server: check.server };
+  if (own.all.includes(asked) || own.all.includes(check.server))
+    return { kind: "use", server: own.open ?? check.server };
   return serverHost(check.server) === serverHost(asked)
     ? { kind: "use", server: check.server }
     : { kind: "confirm", server: check.server };
 }
 
-/** The addresses of the agentes.chat this computer runs, from its status (`connectOutcome`'s `own`). */
-export const ownAddresses = (status: { url: string | null; publicUrl: string | null } | null): string[] =>
-  status ? [status.url, status.publicUrl].filter((u): u is string => !!u) : [];
+/** The agentes.chat this computer runs, from its status (`connectOutcome`'s `own`). */
+export function ownAddresses(
+  status: { url: string | null; localUrl?: string | null; publicUrl: string | null } | null,
+): OwnAddresses {
+  if (!status) return NOT_OWN;
+  const open = status.localUrl ?? status.url;
+  const all = [...new Set([open, status.url, status.publicUrl].filter((u): u is string => !!u))];
+  return { open, all };
+}
 
 /**
  * How to start the agentes.chat installed from the terminal in `dir`, for a person to copy: the default folder in
@@ -195,4 +217,51 @@ export function linkView(link: ConnectLink | null, check: ServerCheck | "checkin
   }
   if (server === current) return { kind: "front", server };
   return { kind: "ask", server, question: "question", button: "connect", leave };
+}
+
+/**
+ * Run here's own steps before the setup (ADR 0265 §3): who owns it, where it will be used, and how the phone and the
+ * team get here (`net`: Tailscale or an address of the person's own, ADR 0265 §4).
+ */
+export type HereStep = "owner" | "where" | "net";
+
+/**
+ * The steps Run here shows, in order: the owner only while there is none (`ask`), how people get here only when it will
+ * be used beyond this computer and the system's Tailscale isn't on already (`needsNet`).
+ */
+export const hereSteps = (ask: boolean, needsNet: boolean): HereStep[] => [
+  ...(ask ? (["owner"] as const) : []),
+  "where",
+  ...(needsNet ? (["net"] as const) : []),
+];
+
+/**
+ * Whether "How do the phone and the team get here?" shows: used beyond this computer, with the system's Tailscale not
+ * on (on, it is used as it is: the step is skipped, ADR 0265 §4). `system` null: not read yet, so asked.
+ */
+export const needsPrivateNetwork = (place: "everywhere" | "here", system: { state: string } | null): boolean =>
+  place === "everywhere" && system?.state !== "on";
+
+/**
+ * "Where will you use it?" chosen at first: everywhere when the system's Tailscale is on already (nothing left to do
+ * for it), else only on this computer (ADR 0265 §4). `system` null: not read yet, so only here.
+ */
+export const defaultPlace = (system: { state: string } | null): "everywhere" | "here" =>
+  system?.state === "on" ? "everywhere" : "here";
+
+/**
+ * The phone's code is a one-time sign-in that lasts a few minutes (`phoneLink`): asked again every 150 s while it shows,
+ * sooner when it lasts less, and never more often than every 10 s.
+ */
+export const PHONE_LINK_EVERY_S = 150;
+export const phoneLinkRefreshMs = (expiresIn: number) =>
+  Math.max(10, Math.min(PHONE_LINK_EVERY_S, expiresIn - 30)) * 1000;
+
+/**
+ * The server the first screen offers on top (ADR 0265 §2): the first one discovery found that can be used as it is,
+ * or whose owner page this app can open (`claimable`), this computer's before the Tailscale network's.
+ */
+export function topFound(found: readonly Found[], claimable: (server: string) => boolean): Found | null {
+  const usable = found.filter((f) => !f.problem || (f.problem === "no-owner" && claimable(f.server)));
+  return usable.find((f) => f.where === "here") ?? usable[0] ?? null;
 }

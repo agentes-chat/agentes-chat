@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { ControlEvent, ControlStatus } from "@agenteschat/adapters/runner-control";
 import type { ControlError } from "../src/control/client";
 import { DesktopStore } from "../src/control/store";
-import type { Host } from "../src/host/types";
+import type { Host, LayerState } from "../src/host/types";
 
 const PNG = "data:image/png;base64,iVBORw0KGgo=";
 
@@ -85,14 +85,15 @@ test("the org logo: asked once per etag, again when it changes, cleared when the
 });
 
 /** A home whose runner's replies wait until the test lets them out (in any order with events). */
-function heldSetup() {
+function heldSetup(window: "notch" | "app" = "notch") {
   const held: { type: string; send: () => void }[] = [];
   let onLine: (homeId: string, line: string) => void = () => {};
   let onShown: (name: string) => void = () => {};
+  let onLayer: (state: LayerState) => void = () => {};
   const asked: string[] = [];
   const reply = { status: { ...status(), seq: 1 } as ControlStatus };
   const host = {
-    window: "prefs",
+    window,
     fake: true,
     listRunners: async () => [{ homeId: "h1", dir: "/tmp/h1", running: true, hello: null }],
     onLine: (cb: typeof onLine) => {
@@ -102,6 +103,10 @@ function heldSetup() {
     onRunnerState: () => () => {},
     onShown: (cb: typeof onShown) => {
       onShown = cb;
+      return () => {};
+    },
+    onLayer: (cb: typeof onLayer) => {
+      onLayer = cb;
       return () => {};
     },
     send: async (homeId: string, line: string) => {
@@ -135,7 +140,15 @@ function heldSetup() {
       await settle();
     }
   };
-  return { store, reply, event, line, release, drain, asked, shown: (name: string) => onShown(name) };
+  const layer = (seq: number, mode: LayerState["mode"] = "full") =>
+    onLayer({
+      seq,
+      mode,
+      route: mode === "hidden" ? null : { screen: "settings" },
+      site: { there: true, org: null },
+      fullScreen: false,
+    });
+  return { store, reply, event, line, release, drain, asked, shown: (name: string) => onShown(name), layer };
 }
 
 const at = (seq: number, connection: ControlStatus["connection"]): ControlStatus => ({ ...status(), connection, seq });
@@ -207,10 +220,30 @@ test("status: showing this window reads every home again; another window being s
   shown("popover");
   await drain();
   expect(asked.filter((t) => t === "status").length).toBe(before);
-  shown("prefs");
+  shown("notch");
   await drain();
   expect(asked.filter((t) => t === "status").length).toBe(before + 1);
   expect(store.home("h1")?.status?.connection).toBe("online");
+});
+
+test("status: the app layer reads every home again for each route it puts on screen, not when it steps aside", async () => {
+  const { store, reply, asked, layer, drain } = heldSetup("app");
+  reply.status = at(1, "connecting");
+  store.start();
+  await drain();
+  const before = asked.filter((t) => t === "status").length;
+  reply.status = at(9, "online");
+  layer(4, "hidden");
+  await drain();
+  expect(asked.filter((t) => t === "status").length).toBe(before);
+  layer(5);
+  await drain();
+  expect(asked.filter((t) => t === "status").length).toBe(before + 1);
+  expect(store.home("h1")?.status?.connection).toBe("online");
+  // The same route told again (its site changed) reads nothing more.
+  layer(5);
+  await drain();
+  expect(asked.filter((t) => t === "status").length).toBe(before + 1);
 });
 
 test("stopping: a request still waiting for its reply fails at once, so nothing waits on its timer after the window", async () => {

@@ -20,11 +20,25 @@ export interface LocalServerStatus {
   /** Its owner's account exists. */
   owner: boolean;
   phase: LocalPhase;
-  /** Its loopback address. */
+  /** Its loopback address (a terminal install's too). */
   url: string | null;
-  /** Its address for people: the Tailscale one with reach on. */
+  /** The address the main window on this computer opens: the app's own server's loopback one (ADR 0265 §5). */
+  localUrl: string | null;
+  /** Its address for people (the phone, the team, links): the Tailscale one or the person's own with reach on, else null. */
   publicUrl: string | null;
   reach: boolean;
+  /**
+   * How the phone and the team reach it, as saved with it (ADR 0265 §4): kept while reach is off, for turning it on
+   * again; null: never chosen.
+   */
+  way: ReachWay | null;
+  /**
+   * The port it listens on at loopback (`PORT`), the one a tunnel points at; before any setup, the port the setup would
+   * pick now. Null: not known.
+   */
+  port: number | null;
+  /** Reach in one word, for this computer's essentials. */
+  reachHealth: ReachHealth;
   /** Usage statistics on (`TELEMETRY`). */
   usage: boolean;
   /** The installed bundle's version, even while the server is stopped or restarting. */
@@ -44,8 +58,8 @@ export interface LocalServerStatus {
   held: boolean;
   /** When a stop for a while ends and it starts again by itself (milliseconds since 1970); null: until Start. */
   heldUntil: number | null;
-  /** Reach is on, but Tailscale isn't connected on this computer: nobody else reaches it now. */
-  tailnetDown: boolean;
+  /** Reach is on, but people can't get here now (Tailscale not connected here, or the person's address down). */
+  reachDown: boolean;
   backups: LocalBackups;
   /** This Mac doesn't sleep while it runs (`caffeinate`). */
   awake: boolean;
@@ -72,8 +86,36 @@ export interface KeepRunning {
   autoRestart: boolean | null;
 }
 
-/** `app`: Tailscale's Mac app is there to open, not only its command-line tool (Homebrew's). */
+/** `app`: Tailscale's Mac app is there to open, not only its command-line tool (Homebrew's). The system's Tailscale. */
 export type Tailnet = { state: "missing" } | { state: "off"; app: boolean } | { state: "on"; device: string };
+
+/**
+ * How the phone and the team reach the server here (ADR 0265 §4): the official Tailscale the person installs, or an
+ * address of their own (a tunnel or a domain of theirs, running on this computer, that leads to the server here).
+ */
+export type ReachWay = { kind: "tailscale" } | { kind: "address"; url: string };
+/**
+ * Why an address of the person's own doesn't lead here: not an https origin, nothing opens there, another server
+ * answers there, or it answered with an error (its HTTP status when there was one).
+ */
+export type AddressProblem = "notHttps" | "unreachable" | "otherServer" | "error";
+/** The app's check of an address (`local_server_check_address`): its origin when it leads here. */
+export type AddressCheck = { ok: true; url: string } | { ok: false; why: AddressProblem; status?: number };
+/**
+ * Reach in one word (`reachHealth`): off, on, or what keeps the phone and the team from it now: HTTPS waiting for the
+ * Tailscale network's admin (`approve`), Tailscale not connected here (`down`), the person's address not leading here
+ * now (`address`).
+ */
+export type ReachHealth = "on" | "off" | "approve" | "down" | "address";
+/** Tailscale's pages the app opens: its Mac app, its official download page, where HTTPS is turned on, its admin. */
+export type TailscalePage = "app" | "download" | "https" | "admin";
+/** The phone's QR code: the link it opens, its server (the address for people), and seconds left. */
+export interface PhoneLink {
+  link: string;
+  server: string;
+  expiresIn: number;
+}
+
 /**
  * Where Tailscale gets connected on this system: its app, which the app opens (a Mac with that app), its icon by the
  * clock (Windows: tailscale.com/kb/1022/install-windows), or `sudo tailscale up` in the terminal (Linux, and a Mac
@@ -84,35 +126,90 @@ export function tailscaleFrom(platform: Platform, tailnet: Tailnet | null): "app
   if (platform === "linux") return "terminal";
   return tailnet?.state === "off" && !tailnet.app ? "terminal" : "app";
 }
-const COVER_TAILNET = { app: "openTailscale", tray: "tailnetTray", terminal: "tailnetUp" } as const;
-/** After the cover's "Connect Tailscale on this {{device}}…": the Open Tailscale button, or how it connects. */
-export const coverTailnet = (platform: Platform, tailnet: Tailnet | null) =>
-  COVER_TAILNET[tailscaleFrom(platform, tailnet)];
 /**
- * Why reach didn't turn on: HTTPS off in the tailnet, Tailscale's permission (Linux), Tailscale missing or refusing,
- * Tailscale installed but not connected here (`app`: its Mac app is there to open), the person stopped waiting for
- * HTTPS, or the server didn't answer again at its new address. `back`: turning it off, the server didn't answer again
- * at this computer's own address.
+ * Why reach didn't turn on: HTTPS off in the Tailscale network, Tailscale's permission (Linux), Tailscale missing or
+ * refusing, Tailscale installed but not connected here (`app`: its Mac app is there to open), the person stopped
+ * waiting for HTTPS, the server didn't answer again at its new address, or the person's own address doesn't lead here
+ * (`why`, ADR 0265 §4). `back`: turning it off, the server didn't answer again at this computer's own address.
  */
 export type ServeProblem =
   | { reason: "https"; url: string | null }
   | { reason: "operator" }
   | { reason: "serve" }
   | { reason: "notConnected"; app: boolean }
+  | { reason: "address"; why: AddressProblem; status?: number }
   | { reason: "stopped" }
   | { reason: "start" }
   | { reason: "back" };
 /**
- * What turning reach on or off is doing now (`local-server://reach`): Tailscale sharing it, Tailscale waiting for
- * HTTPS to be allowed at `url`, the server starting again at its new address, the window signing in there.
+ * What turning reach on or off is doing now (`local-server://reach`): confirming the person's address leads here
+ * (`checking`), Tailscale sharing it, Tailscale waiting for HTTPS to be allowed at `url`, the server starting again
+ * behind the window with its address for people, and done (that address). The window stays on this computer's own
+ * address throughout (ADR 0265 §5).
  */
-export type ReachStage = { stage: "sharing" | "restarting" | "signingIn" } | { stage: "approve"; url: string };
+export type ReachStage =
+  | { stage: "checking" | "sharing" | "restarting" }
+  | { stage: "approve"; url: string }
+  | { stage: "done"; url: string };
 export type ReachResult = { ok: true; url: string } | { ok: false; problem: ServeProblem };
 
+/**
+ * An address the person typed, by its form only (the app checks where it leads, `checkAddress`): an https origin, with
+ * a port or not, and nothing after it but "/" (no path, query, fragment or user). Ok: the origin, lowercased by the
+ * URL parser, as the server's `PUBLIC_URL` will be (ADR 0265 §4).
+ */
+export function addressForm(input: string): { ok: true; url: string } | { ok: false; why: "notHttps" } {
+  const raw = input.trim();
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { ok: false, why: "notHttps" };
+  }
+  const bare = url.pathname === "/" && !url.search && !url.hash && !raw.endsWith("?") && !raw.endsWith("#");
+  if (url.protocol !== "https:" || !url.hostname || url.username || url.password || !bare)
+    return { ok: false, why: "notHttps" };
+  return { ok: true, url: url.origin };
+}
+
+/** Where a tunnel on this computer points to reach the server here: its loopback address, by its port. */
+export const tunnelTarget = (port: number | null) => (port ? `http://127.0.0.1:${port}` : null);
+
+/** What each address problem says (`desktop.reach.problem.*`; `unreachable` takes `{ target }`, `error` `{ status }`). */
+export const ADDRESS_TEXT: Record<AddressProblem, string> = {
+  notHttps: "desktop.reach.problem.notHttps",
+  unreachable: "desktop.reach.problem.unreachable",
+  otherServer: "desktop.reach.problem.otherServer",
+  error: "desktop.reach.problem.error",
+};
+/** The words of an address problem: the key and its values (no status, or no port known: a line without them). */
+export function addressWords(
+  why: AddressProblem,
+  status: number | undefined,
+  port: number | null,
+): { key: string; values: Record<string, string | number> } {
+  if (why === "error")
+    return status === undefined
+      ? { key: "desktop.reach.problem.errorPlain", values: {} }
+      : { key: ADDRESS_TEXT.error, values: { status } };
+  if (why === "unreachable") {
+    const target = tunnelTarget(port);
+    return target
+      ? { key: ADDRESS_TEXT.unreachable, values: { target } }
+      : { key: "desktop.reach.problem.unreachablePlain", values: {} };
+  }
+  return { key: ADDRESS_TEXT[why], values: {} };
+}
+
+/** Where agentes.chat on this computer will be used: here, the phone and the team, or here only. */
+export type LocalPlace = "everywhere" | "here";
+
+/** What Run here asks the app to set up; `place: "everywhere"` carries how people reach it (`way`). */
 export interface LocalChoice {
   name?: string;
   email?: string;
-  reach: boolean;
+  place: LocalPlace;
+  way?: ReachWay;
   usage: boolean;
 }
 
@@ -132,8 +229,12 @@ export const NO_SERVER: LocalServerStatus = {
   owner: false,
   phase: "off",
   url: null,
+  localUrl: null,
   publicUrl: null,
   reach: false,
+  way: null,
+  port: null,
+  reachHealth: "off",
   usage: true,
   installedVersion: null,
   serverVersion: null,
@@ -144,20 +245,23 @@ export const NO_SERVER: LocalServerStatus = {
   backTo: null,
   held: false,
   heldUntil: null,
-  tailnetDown: false,
+  reachDown: false,
   backups: { nightly: true, copyTo: null, files: [], problem: null },
   awake: false,
   eraseTo: null,
   erased: null,
 };
 
-/** "Setting it up", in order; access from other devices only when it was asked for. */
-export const setupSteps = (reach: boolean): SetupStep[] => [
+/**
+ * "Setting it up", in order; access from the phone and the team only when it will be used there. The window is signed
+ * in right after `account`, before `computer` and `reach` (ADR 0265 §3).
+ */
+export const setupSteps = (place: LocalPlace): SetupStep[] => [
   "database",
   "start",
   "account",
   "computer",
-  ...(reach ? (["reach"] as const) : []),
+  ...(place === "everywhere" ? (["reach"] as const) : []),
 ];
 
 /** Each step's state from the changes that arrived; a step not heard of yet is still to do. */
@@ -202,7 +306,7 @@ export const FAIL_TEXT: Record<SetupStep, string> = {
 export type HereView =
   /** The form; `ask`: the owner's name and email (no owner yet). */
   | { kind: "form"; ask: boolean }
-  /** The app runs it already: open it. */
+  /** The app runs it already: open it (at its loopback address, the one this computer opens). */
   | { kind: "running"; server: string }
   /** One already runs on this computer, installed from the terminal: use it (its owner page while it waits). */
   | { kind: "already"; server: string; claim: string | null }
@@ -221,7 +325,7 @@ export const ownerless = (status: LocalServerStatus) => status.installed === "ap
  */
 export function hereView(status: LocalServerStatus, answering: string | null): HereView {
   if (ownerless(status)) return { kind: "form", ask: true };
-  if (status.run) return { kind: "running", server: status.publicUrl ?? status.url ?? "" };
+  if (status.run) return { kind: "running", server: status.localUrl ?? status.url ?? "" };
   if (status.installed === "terminal")
     return status.serving && status.url
       ? { kind: "already", server: status.url, claim: status.claim }
@@ -236,6 +340,7 @@ export const REASON_TEXT: Record<ServeProblem["reason"], string> = {
   operator: "desktop.here.reason.operator",
   serve: "desktop.here.reason.serve",
   notConnected: "desktop.here.reason.notConnected",
+  address: "desktop.reach.reason.address",
   stopped: "desktop.here.reason.stopped",
   start: "desktop.here.reason.start",
   back: "desktop.here.reason.back",
@@ -244,9 +349,12 @@ export const REASON_TEXT: Record<ServeProblem["reason"], string> = {
 /** The server here in a few words: "Running · only on this Mac", "Starting", … */
 export function hereLine(status: LocalServerStatus): string {
   switch (status.phase) {
-    case "running":
+    case "running": {
       if (!status.reach) return "desktop.server.onlyHere";
-      return status.tailnetDown ? "desktop.server.tailnetDown" : "desktop.server.onTailnet";
+      const down = status.reachDown || status.reachHealth === "down" || status.reachHealth === "address";
+      if (status.way?.kind === "address") return down ? "desktop.reach.line.addressDown" : "desktop.reach.line.address";
+      return down ? "desktop.server.tailnetDown" : "desktop.server.onTailnet";
+    }
     case "starting":
       return "desktop.server.starting";
     case "restarting":
@@ -274,28 +382,28 @@ export function hereBanner(status: LocalServerStatus): "stopped" | "failing" | "
  */
 export const filesFolder = (dir: string) => `${dir}${dir.includes("\\") ? "\\" : "/"}files`;
 
-/** Whether `server` is the server here, at either of its addresses. */
+/** Whether `server` is the server here, at any of its addresses. */
 export const isHereServer = (status: LocalServerStatus, server: string | null) =>
-  status.run && !!server && (server === status.url || server === status.publicUrl);
+  status.run && !!server && (server === status.url || server === status.localUrl || server === status.publicUrl);
 
 /** Where a workspace's server runs: on this computer, on agentes.chat's Cloud, or elsewhere. */
 export const serverPlace = (status: LocalServerStatus, server: string | null): "here" | "cloud" | "other" =>
   isHereServer(status, server) ? "here" : server === CLOUD_SERVER ? "cloud" : "other";
 
 /**
- * The main window's cover over the server here: starting, updating, stopped, not starting, or running at its
- * Tailscale address while Tailscale isn't connected on this computer (`reachable`: that address answered).
+ * The main window's cover over the server here: starting, updating, stopped or not starting. The window opens it at
+ * its loopback address, never through the tailnet (ADR 0265 §5), so Tailscale being off is no reason for a cover: it is
+ * an item of this computer's essentials instead.
  */
 export function coverHere(
   status: LocalServerStatus,
   current: string | null,
-  reachable: boolean,
-): "starting" | "migrating" | "stopped" | "failing" | "tailnetOff" | null {
+): "starting" | "migrating" | "stopped" | "failing" | null {
   if (!isHereServer(status, current)) return null;
   // Starting again by itself: the same wait as a start, never "stopped".
   if (status.phase === "starting" || status.phase === "restarting") return "starting";
   if (status.phase === "updating") return "migrating";
   if (status.phase === "failing") return "failing";
   if (status.phase !== "running") return "stopped";
-  return status.reach && current === status.publicUrl && !reachable ? "tailnetOff" : null;
+  return null;
 }

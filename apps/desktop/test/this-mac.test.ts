@@ -101,6 +101,15 @@ test("privacy: the page opens the microphone's or Local Network's list in System
   await expect(answerThisMac(deps, { kind: "privacy", pane: "microphone" })).rejects.toThrow("not_here");
 });
 
+test("localNetwork: an Android phone over Wi-Fi asks for Local Network just in time; an app without the ask refuses", async () => {
+  const { deps } = setup({ h1: paired("o1") });
+  let asked = 0;
+  const withAsk = { ...deps, localNetwork: async () => void asked++ };
+  expect(await answerThisMac(withAsk, { kind: "localNetwork" })).toEqual({});
+  expect(asked).toBe(1);
+  await expect(answerThisMac(deps, { kind: "localNetwork" })).rejects.toThrow("not_here");
+});
+
 test("status: only the asking server's organizations, and whether agents may work here for it", async () => {
   const { store, deps } = setup({ h1: paired("o1"), h2: unpaired, h3: paired("o3", "online", OTHER) });
   store.start();

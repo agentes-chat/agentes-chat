@@ -66,7 +66,7 @@ import { MachineToolButton, useToolOneClick } from "@/components/devices/ToolOne
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
-import { OpenPrefsButton, ToolsOffHereNote, useIsThisMac } from "@/components/ThisMac";
+import { OpenThisMacButton, ToolsOffHereNote, useIsThisMac } from "@/components/ThisMac";
 import { useToast } from "@/lib/toast";
 import { BrowserProfilesCard } from "./browser/BrowserProfiles";
 import { MachineBrowserCard } from "./browser/MachineBrowserCard";
@@ -491,7 +491,9 @@ function FoldersCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r:
           <p className="small muted" style={{ margin: 0, flex: 1, minWidth: 200 }}>
             {t("machines.thisMac.noReport")}
           </p>
-          <OpenPrefsButton tab="updates">{t("machines.thisMac.update")}</OpenPrefsButton>
+          <OpenThisMacButton section="overview" focus="updates">
+            {t("machines.thisMac.update")}
+          </OpenThisMacButton>
         </div>
       ) : !access ? (
         // The server only shows the folders to admins and whoever connected it.
@@ -669,7 +671,7 @@ function ToolsCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: R
 function GrantCard({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  // In the app, on this very Mac: straight to Preferences → Pastas (ADR 0036).
+  // In the app, on this very computer: straight to its Folders and tools (ADR 0036, ADR 0265).
   const here = useIsThisMac(org.id, m.id);
   const path = t("machines.access.pathPlaceholder");
   const agent = t("machines.access.agentPlaceholder");
@@ -685,7 +687,7 @@ function GrantCard({ machine: m }: { machine: Machine }) {
           <p className="small" style={{ margin: 0, flex: 1, minWidth: 200 }}>
             {t("machines.thisMac.grantHere")}
           </p>
-          <OpenPrefsButton tab="folders">{t("machines.thisMac.openFolders")}</OpenPrefsButton>
+          <OpenThisMacButton section="folders">{t("machines.thisMac.openFolders")}</OpenThisMacButton>
         </div>
       ) : m.canManage && m.folderPick ? (
         <AskFolder machine={m} />
@@ -693,7 +695,7 @@ function GrantCard({ machine: m }: { machine: Machine }) {
         <>
           <p className="small" style={{ margin: 0 }}>
             {app
-              ? t("machines.access.grantText")
+              ? t("machines.access.grantText", { device: t(`machines.thisMac.device.${computerKind(m.os)}`) })
               : system
                 ? t("machines.access.grantTextAdmin")
                 : t("machines.access.grantTextTerminal")}

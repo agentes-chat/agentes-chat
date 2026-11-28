@@ -3,26 +3,32 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
 import { DesktopStore } from "../src/control/store";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
+import { FirstRun } from "../src/layer/first-run/FirstRun";
+import { ReachLead } from "../src/layer/settings/AlwaysOn";
+import { Servers } from "../src/layer/settings/Servers";
+import { About } from "../src/layer/settings/Updates";
 import { ServerTile } from "../src/ui/here";
 import { ToastProvider } from "../src/ui/Toast";
-import { FirstRun } from "../src/windows/FirstRun";
-import { Servers } from "../src/windows/prefs/Servers";
 import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-/** Preferences › Servers on `host`, once `ready` says it shows what the test looks at; what it opened in the app. */
+/**
+ * App settings › Servers and accounts (or another part of App settings, `view`) on `host`, once `ready` says it shows
+ * what the test looks at; what it opened in the app.
+ */
 async function servers(
   host: FakeHost,
   ready: (el: HTMLElement) => unknown,
   check: (el: HTMLElement, opened: string[]) => Promise<void> | void,
+  view: ReactNode = <Servers />,
 ) {
   const opened: string[] = [];
   host.openExternal = async (url) => {
@@ -37,9 +43,7 @@ async function servers(
       root.render(
         <I18nextProvider i18n={createDesktopI18n("en", host.platform)}>
           <AppProvider host={host} store={store}>
-            <ToastProvider>
-              <Servers />
-            </ToastProvider>
+            <ToastProvider>{view}</ToastProvider>
           </AppProvider>
         </I18nextProvider>,
       ),
@@ -95,56 +99,91 @@ test("a server's tile: Tailscale's own icon for one on the Tailscale network, a 
   expect(rule('[data-theme="dark"] .dk-tailscale')).toContain("fill: #fff");
 });
 
-test("Preferences › Servers: the server on the Tailscale network by Tailscale's icon, the Cloud by its glyph", () =>
+test("reach's tile by its way (ADR 0265 §4): Tailscale's own icon, a link for the person's address", async () => {
+  const el = document.body.appendChild(document.createElement("div"));
+  const root = createRoot(el);
+  await act(async () =>
+    root.render(
+      <>
+        <ReachLead way={{ kind: "tailscale" }} />
+        <ReachLead way={{ kind: "address", url: "https://agentes.example.com" }} />
+        <ReachLead way={null} />
+      </>,
+    ),
+  );
+  const marks = [...el.children].map((tile) => tile.querySelector("svg")?.getAttribute("class"));
+  // Not chosen yet: Tailscale's, the way chosen by default.
+  expect(marks).toEqual(["dk-tailscale", "ac-icon", "dk-tailscale"]);
+  expect([...el.children].every((tile) => tile.className === "dk-logo dk-logo--soft")).toBe(true);
+  await act(async () => root.unmount());
+  el.remove();
+});
+
+test("App settings › Servers and accounts: the server on the Tailscale network by Tailscale's icon, the Cloud by its glyph, then Another server", () =>
   servers(
-    createFakeHost("prefs", "selfhost"),
-    (el) => el.querySelectorAll(".dk-crow").length >= 2,
+    createFakeHost("app", "selfhost"),
+    (el) => el.querySelectorAll(".dk-crow").length >= 3,
     (el) => {
       const rows = [...el.querySelectorAll(".dk-crow")].map((row) => [
         row.querySelector(".dk-crow__title")?.textContent,
-        row.querySelector(".dk-logo--lg svg")?.getAttribute("class"),
+        row.querySelector(".dk-logo svg")?.getAttribute("class"),
       ]);
       expect(rows).toEqual([
         ["agentes.tail1234.ts.net", "dk-tailscale"],
         ["agentes.chat", "ac-icon"],
+        ["Another server", "ac-icon"],
       ]);
+      // One more is added from its own row, as the Overview adds a workspace.
+      const add = [...el.querySelectorAll(".dk-crow")].at(-1);
+      expect(add?.querySelector(".dk-crow__end button")?.textContent).toBe("Add a server…");
       // Jev's key is a server's own: nothing about it for one this app only opens.
       expect(el.textContent).not.toContain("Jev");
     },
   ));
 
-test("Preferences › Servers: the server here leads to Jev's key in its Settings, with no state of its own", async () => {
+test("App settings › About: the server here leads to Jev's key in its Settings, with no state of its own", async () => {
   const jev = (el: HTMLElement) =>
     [...el.querySelectorAll(".dk-crow")].find((row) => row.querySelector(".dk-crow__title")?.textContent === "Jev");
   const openOf = (el: HTMLElement) => jev(el)?.querySelector<HTMLButtonElement>(".dk-crow__end button");
-  await servers(createFakeHost("prefs", "here", { here: { reach: true } }), jev, async (el, opened) => {
-    const row = jev(el);
-    // Its title's ⓘ says what Jev is and where its key goes, no line under it, and only Open at the end.
-    expect(row?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe("About Jev");
-    expect(row?.querySelector(".dk-crow__text > small")).toBeNull();
-    expect(row?.querySelector(".ac-chip")).toBeNull();
-    expect([openOf(el)?.textContent, openOf(el)?.disabled]).toEqual(["Open", false]);
-    await act(async () => openOf(el)?.click());
-    // Its card on the server here, at the address people use, in the main window.
-    expect(opened).toEqual(["https://ana-mac.tail1234.ts.net/?open=jev"]);
-  });
-  // Not running: nothing answers there yet, so Open waits.
-  await servers(createFakeHost("prefs", "here", { here: { phase: "stopped" } }), jev, (el) => {
-    expect(openOf(el)?.disabled).toBe(true);
-  });
-  // Stopped running here (its data kept): one row to start it again, and nothing else.
+  const about = <About />;
   await servers(
-    createFakeHost("prefs", "here", { here: { run: false } }),
-    (el) => el.querySelector(".dk-crow"),
+    createFakeHost("app", "here", { here: { reach: true } }),
+    jev,
+    async (el, opened) => {
+      const row = jev(el);
+      // Its title's ⓘ says what Jev is and where its key goes, no line under it, and only Open at the end.
+      expect(row?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe("About Jev");
+      expect(row?.querySelector(".dk-crow__text > small")).toBeNull();
+      expect(row?.querySelector(".ac-chip")).toBeNull();
+      expect([openOf(el)?.textContent, openOf(el)?.disabled]).toEqual(["Open", false]);
+      await act(async () => openOf(el)?.click());
+      // Its card on the server here, at the address people use, in the main window.
+      expect(opened).toEqual(["https://ana-mac.tail1234.ts.net/?open=jev"]);
+    },
+    about,
+  );
+  // Not running: nothing answers there yet, so Open waits.
+  await servers(
+    createFakeHost("app", "here", { here: { phase: "stopped" } }),
+    jev,
     (el) => {
-      expect(el.textContent).toContain("Start it here");
+      expect(openOf(el)?.disabled).toBe(true);
+    },
+    about,
+  );
+  // Stopped running here (its data kept): nothing about it in About.
+  await servers(
+    createFakeHost("app", "here", { here: { run: false } }),
+    (el) => el.textContent?.includes("Based on agentes.chat"),
+    (el) => {
       expect(jev(el)).toBeUndefined();
     },
+    about,
   );
 });
 
-test("Sign in by address: what it finds on the Tailscale network by Tailscale's icon, this Mac by its glyph", async () => {
-  const host = createFakeHost("welcome", "first");
+test("A company's server: what it finds on the Tailscale network by Tailscale's icon, this Mac by its glyph", async () => {
+  const host = createFakeHost("app", "first");
   // Discovery answers at once (the fake host waits like a network would); both still get checked.
   host.discover = async () => [
     { server: "http://127.0.0.1:4310", where: "here" },
@@ -154,7 +193,6 @@ test("Sign in by address: what it finds on the Tailscale network by Tailscale's 
   const stop = store.start();
   const el = document.body.appendChild(document.createElement("div"));
   const root = createRoot(el);
-  const button = (name: string) => [...el.querySelectorAll("button")].find((b) => b.textContent?.includes(name));
   try {
     await act(async () =>
       root.render(
@@ -167,19 +205,22 @@ test("Sign in by address: what it finds on the Tailscale network by Tailscale's 
         </I18nextProvider>,
       ),
     );
-    await act(async () => button("Sign in by its address")?.click());
+    const row = [...el.querySelectorAll<HTMLButtonElement>(".ac-optrow__hit")].find((b) =>
+      b.textContent?.includes("Sign in to my company's server"),
+    );
+    await act(async () => row?.click());
     // Each found server shows as soon as its own check answers: both, then.
-    for (let i = 0; i < 100 && el.querySelectorAll(".dk-fr__foundrow").length < 2; i++) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-    }
-    const rows = [...el.querySelectorAll(".dk-fr__foundrow")].map((row) => [
-      row.querySelector(".dk-fr__foundtext small")?.textContent,
-      row.querySelector(".dk-logo--lg svg")?.getAttribute("class"),
+    await until(() => el.querySelectorAll(".dk-first__foundrow").length >= 2);
+    // Each by its bare mark in the rows' icon column, never on a tile (ADR 0265 §6).
+    const rows = [...el.querySelectorAll(".dk-first__foundrow")].map((found) => [
+      found.querySelector(".dk-first__foundtext small")?.textContent,
+      found.querySelector(".dk-first__glyph svg")?.classList[0],
     ]);
     expect(rows).toEqual([
       ["agentes.chat is running here", "ac-icon"],
       ["On your team's network", "dk-tailscale"],
     ]);
+    expect(el.querySelector(".dk-first__foundrow .dk-logo")).toBeNull();
   } finally {
     await act(async () => root.unmount());
     el.remove();

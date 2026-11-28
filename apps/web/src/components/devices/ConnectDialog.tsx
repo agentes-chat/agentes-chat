@@ -27,6 +27,7 @@ import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { ThisMacButton, useAgentsHere } from "@/components/ThisMac";
 import { inDesktopApp } from "@/lib/desktop";
+import { publicOrigin } from "@/lib/public-origin";
 import { AndroidFlow, IphoneFlow } from "./ConnectPhone";
 import { Joined, JoinRequestForm } from "./dialogs";
 import { FlowFooter, type FlowProps } from "./flow";
@@ -148,7 +149,7 @@ function Chooser({ onPick, onClose }: { onPick: (step: ConnectStep) => void; onC
     ? "link"
     : isHandheld(navigator.userAgent)
       ? null
-      : appPairsWith(window.location.origin)
+      : appPairsWith(publicOrigin())
         ? "this"
         : "link";
   return (
@@ -171,7 +172,7 @@ function Chooser({ onPick, onClose }: { onPick: (step: ConnectStep) => void; onC
               options={[
                 ...(inDesktopApp() && agentsHere
                   ? []
-                  : thisStep === "link" && plainHttpServer(window.location.origin)
+                  : thisStep === "link" && plainHttpServer(publicOrigin())
                     ? [
                         option(
                           thisStep,
@@ -380,7 +381,7 @@ function LinkFlow({
         onDenied={() => void link.refetch()}
       />
     );
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const origin = publicOrigin();
   return (
     <>
       <DialogBody>

@@ -109,9 +109,10 @@ p {
 .dk-lead {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 14.5px;
+  line-height: 21px;
   max-width: 54ch;
-  text-wrap: pretty;
+  text-wrap: balance;
 }
 .dk-path,
 .dk-code-inline {
@@ -171,6 +172,11 @@ p {
   height: 32px;
   fill: #1e1e1f;
 }
+/* In a 32 px tile (a settings row): the same proportions. */
+.dk-logo:not(.dk-logo--lg) > .dk-tailscale {
+  width: 21px;
+  height: 21px;
+}
 [data-theme="dark"] .dk-tailscale {
   fill: #fff;
 }
@@ -193,9 +199,10 @@ p {
   font-size: 9px;
   border-radius: 5px 5px 5px 2px;
 }
+/* A settings row's picture: the 32 px of the rows' other icons. */
 .dk-org[data-size="lg"] {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   font-size: 13px;
   border-radius: 9px 9px 9px 3px;
 }
@@ -318,6 +325,12 @@ body[data-window="popover"] {
    (--pop-room). Past it, the middle scrolls and the actions below it (the way to the app, Preferences,
    Quit) stay in view. */
 .dk-pop {
+  /* One grid for every row (ADR 0265 §7): rows sit 12 in from the card's 6, a 24 px lead column then 10 to the
+     words, so every glyph, face and caption starts 18 from the card's edge, every word at 52, and every end at 18. */
+  --pop-px: 12px;
+  --pop-lead: 24px;
+  --pop-gap: 10px;
+  --pop-text: calc(var(--pop-px) + var(--pop-lead) + var(--pop-gap));
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -350,59 +363,27 @@ body[data-window="popover"] {
 .dk-pop__foot {
   flex: none;
 }
-.dk-ph {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 8px 6px 4px;
-}
-.dk-ph__text {
-  flex: 1;
-  min-width: 0;
+.dk-psec {
   display: flex;
   flex-direction: column;
 }
-.dk-ph__text b {
-  font-weight: 650;
-  font-size: 14px;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dk-ph__text small {
-  color: var(--muted);
-  font-size: 12px;
-}
-.dk-psec {
-  padding: 4px 2px;
-}
-.dk-psec + .dk-psec,
-.dk-pop__foot--ruled > .dk-psec:first-child {
-  border-top: 1px solid var(--line);
-  margin-top: 2px;
-  padding-top: 6px;
-}
+/* A group's caption on the rows' lead edge, as the kit's menu heading: its count in plain figures, never a chip. */
 .dk-pcap {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--faint);
-  font-weight: 600;
-}
-.dk-pcap__end {
-  margin-left: auto;
-  text-transform: none;
-  letter-spacing: 0;
+  padding: 6px var(--pop-px) 4px;
   font-size: 12px;
-}
-.dk-pcap__end .dk-link {
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--muted);
-  text-decoration: none;
+}
+.dk-pcap__count {
+  color: var(--faint);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 .dk-ohead {
   display: flex;
@@ -419,33 +400,30 @@ body[data-window="popover"] {
   font-weight: 500;
   color: var(--faint);
 }
+/* An agent in its browser or in one of the person's apps: a row of "Now", its buttons on the end edge. */
 .dk-job {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: 12px;
+  gap: var(--pop-gap);
+  min-height: 44px;
+  padding: 3px var(--pop-px);
   min-width: 0;
 }
-.dk-job:hover {
-  background: var(--plate);
-}
 .dk-job__av {
-  width: 28px;
-  display: flex;
-  justify-content: center;
-  flex: none;
+  flex: 0 0 var(--pop-lead);
+  display: grid;
+  place-items: center;
 }
 .dk-job__text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
 }
 .dk-job__text b {
   font-weight: 600;
   font-size: 13.5px;
+  line-height: 20px;
   display: flex;
   min-width: 0;
 }
@@ -455,7 +433,8 @@ body[data-window="popover"] {
   white-space: nowrap;
 }
 .dk-job__text small {
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 18px;
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -464,27 +443,13 @@ body[data-window="popover"] {
   white-space: nowrap;
   overflow: hidden;
 }
-.dk-job__end {
-  flex: none;
-  color: var(--faint);
-  font-size: 12px;
-}
-/* An agent in its browser: Ver and Parar always in view. */
+/* An agent in its browser: See and Stop always in view. */
 .dk-job__detail {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .dk-job__acts {
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.dk-job--needs {
-  background: var(--plate);
-}
-.dk-job--confirm .dk-job__acts {
-  gap: 6px;
 }
 .dk-iconbtn {
   all: unset;
@@ -502,22 +467,20 @@ body[data-window="popover"] {
   background: var(--plate);
   color: var(--ink);
 }
-.dk-job--needs .dk-iconbtn:hover,
-.dk-job--needs .dk-iconbtn:focus-visible {
-  background: var(--plate-soft);
-}
+/* A menu row: 32 tall, its highlight 6 from the card's edge in the card's concentric corner (18 - 6). */
 .dk-mi {
   all: unset;
   box-sizing: border-box;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--pop-gap);
   width: 100%;
-  min-height: 34px;
-  padding: 5px 8px;
-  border-radius: 10px;
+  min-height: 32px;
+  padding: 6px var(--pop-px);
+  border-radius: 12px;
   font-size: 13.5px;
+  line-height: 20px;
   font-weight: 500;
 }
 .dk-mi:not(:disabled):hover,
@@ -529,12 +492,18 @@ body[data-window="popover"] {
   cursor: default;
   opacity: 0.5;
 }
-.dk-mi > .ac-icon {
+.dk-mi__lead {
+  flex: 0 0 var(--pop-lead);
+  display: grid;
+  place-items: center;
   color: var(--muted);
 }
 .dk-mi__label {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dk-mi__end {
   margin-left: auto;
@@ -542,10 +511,13 @@ body[data-window="popover"] {
   gap: 4px;
   align-items: center;
   color: var(--faint);
-  font-size: 12px;
+}
+/* A chevron's ink, not its box, on the end edge: the 16 px drawing leaves 5 px of air on its right. */
+.dk-mi__end > .ac-icon:last-child {
+  margin-right: -5px;
 }
 .dk-mi[data-danger],
-.dk-mi[data-danger] > .ac-icon {
+.dk-mi[data-danger] .dk-mi__lead {
   color: var(--danger);
 }
 .dk-sub {
@@ -564,71 +536,107 @@ body[data-window="popover"] {
 .dk-empty {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 8px 12px;
+  gap: var(--pop-gap);
+  min-height: 44px;
+  padding: 3px var(--pop-px);
 }
 .dk-empty__text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 18px;
   color: var(--muted);
 }
 .dk-empty__text b {
   color: var(--ink);
+  font-size: 13.5px;
+  line-height: 20px;
   font-weight: 600;
 }
+/*
+ * A note on the popover (Banner, ui/bits.tsx; ADR 0265 §7): a row of its grid, flat on the card (one surface in it).
+ * Its glyph on the title's first line, its words on the text edge, its buttons under them; only a title, its one
+ * button at the row's end.
+ */
 .dk-banner {
-  margin: 2px 2px 6px;
-  padding: 12px;
-  border-radius: 14px;
-  background: var(--raised);
-  box-shadow: var(--e1), var(--top);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: var(--pop-lead) minmax(0, 1fr);
+  column-gap: var(--pop-gap);
+  row-gap: 8px;
+  padding: 8px var(--pop-px);
   animation: dk-fade-up 0.25s var(--out) both;
 }
-.dk-banner__head {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
+.dk-banner__lead {
+  grid-column: 1;
+  grid-row: 1;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
 }
 .dk-banner__text {
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 .dk-banner__text b {
-  font-weight: 650;
+  font-weight: 600;
   font-size: 13.5px;
+  line-height: 20px;
+  text-wrap: balance;
 }
 .dk-banner__text small {
   font-size: 12.5px;
+  line-height: 18px;
   color: var(--muted);
+  text-wrap: pretty;
 }
 .dk-banner__acts {
+  grid-column: 2;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
-.dk-req__who {
+.dk-banner[data-inline] {
+  grid-template-columns: var(--pop-lead) minmax(0, 1fr) auto;
+  align-items: center;
+}
+.dk-banner[data-inline] .dk-banner__acts {
+  grid-column: 3;
+  grid-row: 1;
+}
+/* A folder request or pick (Popover.tsx): flat on the grid, who and the folder in the lead column, the rest from the
+   text edge. */
+.dk-req {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px var(--pop-px);
+  animation: dk-fade-up 0.25s var(--out) both;
+}
+.dk-req__who,
+.dk-req__fold {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--pop-gap);
+  min-width: 0;
 }
-.dk-req__whotext {
+.dk-req__whotext,
+.dk-req__foldtext {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
-.dk-req__whotext b {
+.dk-req__whotext b,
+.dk-req__foldtext b {
   font-size: 13.5px;
-  font-weight: 650;
+  line-height: 20px;
+  font-weight: 600;
 }
 .dk-req__whotext small {
   display: flex;
@@ -636,31 +644,30 @@ body[data-window="popover"] {
   gap: 6px;
   color: var(--muted);
   font-size: 12.5px;
+  line-height: 18px;
+}
+.dk-req__quote,
+.dk-req__for,
+.dk-req > .dk-banner__acts {
+  margin-left: calc(var(--pop-lead) + var(--pop-gap));
 }
 .dk-req__quote {
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 18px;
   color: var(--ink2);
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--plate);
+  text-wrap: pretty;
 }
-.dk-req__fold {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-.dk-req__foldtext {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.dk-req__foldtext b {
-  font-weight: 600;
-  font-size: 13.5px;
+/* One line, the folder's end in sight: its start gives way with "…" (isolated, it still reads left to right). */
+.dk-req__foldtext .dk-path {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  direction: rtl;
+  text-align: left;
+  line-height: 18px;
+  color: var(--muted);
 }
 .dk-req__for {
   display: flex;
@@ -668,31 +675,35 @@ body[data-window="popover"] {
   gap: 8px;
   flex-wrap: wrap;
   font-size: 12.5px;
+  line-height: 18px;
   color: var(--muted);
 }
+/* Quit's question in the popover's place: on the same edges as its rows, no rule above its buttons. */
 .dk-confirm {
-  padding: 14px 12px 10px;
+  padding: 12px var(--pop-px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .dk-confirm h2 {
   font-family: var(--font-display);
   font-weight: 300;
   font-size: 22px;
+  line-height: 28px;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  text-wrap: balance;
 }
 .dk-confirm p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 18px;
+  text-wrap: pretty;
 }
 .dk-confirm__foot {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+  padding-top: 8px;
 }
 
 /* ---------- First run (FirstRun.tsx): where the workspace lives, then one's own server's ways ---------- */
@@ -1185,7 +1196,7 @@ body[data-window="popover"] {
 .dk-fr__steps .dk-fr__problem {
   margin: 0;
 }
-/* The iPhone setup (IphoneSetup.tsx): the steps, and beside them the QR, the tip and the way out. */
+/* The iPhone setup (layer/sheets/IphoneSheet.tsx): the steps, and beside them the QR. */
 .dk-ip {
   flex: 1;
   margin-top: var(--space-6);
@@ -1409,71 +1420,17 @@ body[data-window="popover"] {
   text-transform: uppercase;
   color: var(--faint);
 }
-/* The action under a card ("Add a server…"). */
+/* A note under a group (how folders work). */
 .dk-under-card {
   margin-top: 12px;
 }
-/* A server's workspaces under its row in Preferences › Servers (ADR 0154), when it has several: a line each, logo,
-   name and unread count. One workspace is named in the subtitle instead. */
-.dk-ws-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.dk-ws-rows li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.dk-ws-name {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-/* A server's accounts under its row (ADR 0183), when the window is signed in there with several: who each is and the
-   way to it on one line, its workspaces under it. */
-.dk-accts {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.dk-accts > li {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
+/* A server's accounts under its row (ADR 0183), when the window is signed in there with several: a row each, dimmed
+   while the server doesn't answer (ADR 0158). */
 .dk-accts[data-dim] {
-  opacity: 0.5;
-}
-.dk-acct {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-}
-.dk-acct__who {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-/* A server that doesn't answer: its last workspaces dimmed, its state in the waiting color (ADR 0158). */
-.dk-ws-rows[data-dim] {
   opacity: 0.5;
 }
 .dk-state-waiting {
   color: var(--warn);
-}
-.dk-ws-count {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 /* Preferences › Servers › Keep it running: a green check when it's set, an amber dot when it's not, in a tile's place. */
 .dk-keep {
@@ -1490,32 +1447,15 @@ body[data-window="popover"] {
   border-radius: 50%;
   background: var(--warn);
 }
-/* The server here: Restart and Stop under its card, "Stop running it here…" at the far end. */
-.dk-here__acts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.dk-here__end {
-  margin-left: auto;
-}
-/* Its card on top of the popover. */
-.dk-here__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-}
-.dk-here__more {
-  margin-top: 0;
-}
-/* "Also works for …" under it: on the same left edge as the rows below (.dk-psec plus .dk-ohead). */
+/* "Also works for …" under the server here's row (popover): on its text edge. */
 .dk-here__also {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
-  padding: 2px 10px 4px;
+  padding: 0 var(--pop-px) 0 var(--pop-text);
+  font-size: 12.5px;
+  line-height: 18px;
 }
 
 .dk-prefs {
@@ -1546,8 +1486,9 @@ body[data-window="popover"] {
 }
 /* A computer's name as its system gives it ("Ana’s MacBook Pro") in full: two lines at most. */
 .dk-pnav__whotext b {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1556,7 +1497,8 @@ body[data-window="popover"] {
   text-wrap: balance;
 }
 .dk-pnav__whotext small {
-  font-size: 11.5px;
+  font-size: 13px;
+  line-height: 18px;
   color: var(--muted);
 }
 .dk-pnav button {
@@ -1571,8 +1513,8 @@ body[data-window="popover"] {
   border-radius: 10px;
   color: var(--muted);
   font-weight: 500;
-  font-size: 13.5px;
-  line-height: normal;
+  font-size: 14px;
+  line-height: 20px;
   white-space: nowrap;
 }
 .dk-pnav button:hover,
@@ -1600,12 +1542,13 @@ body[data-window="popover"] {
   padding: 20px 26px 28px;
   animation: dk-fade-up 0.25s var(--out) both;
 }
+/* A section's heading: title, its lead 8 under it, the content 24 under that; its actions on the lead's last line. */
 .dk-phead {
   display: flex;
   align-items: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 .dk-phead > div {
   flex: 1 1 280px;
@@ -1619,19 +1562,23 @@ body[data-window="popover"] {
   line-height: 1.1;
 }
 .dk-phead .dk-lead {
-  font-size: 13.5px;
-  margin-top: 6px;
+  margin-top: 8px;
 }
+.dk-phead__acts {
+  flex: none;
+}
+/* A group's caption, on its rows' edge (never inset). */
 .dk-ctitle {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--muted);
   font-weight: 600;
-  margin: 18px 4px 8px;
+  margin: 16px 0 8px;
 }
 /* A card title with its ⓘ after the heading: the heading keeps the title's type, the ⓘ follows its last word. */
 .dk-ctitle.ac-hintline {
@@ -1684,16 +1631,15 @@ body[data-window="popover"] {
   flex-direction: column;
   gap: 2px;
 }
+/* A row's title: one size and weight whatever control ends the row (a switch's too). */
 .dk-crow__title {
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-/* A switch's label at regular weight, lighter than a field's; a line under it stays small and muted. */
-.dk-crow:has(> .dk-crow__end > .ac-switch) .dk-crow__title {
-  font-weight: 400;
 }
 /* A chip on a title's line: 8px after the title, or 4px after its ⓘ's glyph (the ⓘ takes no room of its own). The
    chip, not the ⓘ, ends the line. */
@@ -1709,7 +1655,9 @@ body[data-window="popover"] {
 }
 .dk-crow__text small {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13px;
+  line-height: 18px;
+  text-wrap: pretty;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1725,11 +1673,15 @@ body[data-window="popover"] {
   flex-basis: 100%;
   margin-top: 2px;
 }
+/* A line of actions (`ac-acts`, PrefRow): the kit's gap, and a ghost or icon button reaching out to the row's edge. */
 .dk-crow__end {
   display: flex;
-  gap: 6px;
   align-items: center;
   margin-left: auto;
+}
+/* A row's lead slot (`LeadSlot`): no box of its own unless a surface gives it one (the Settings dialog). */
+.dk-crow__lead {
+  display: contents;
 }
 .dk-crow__under {
   flex-basis: 100%;
@@ -1820,30 +1772,13 @@ body[data-window="popover"] {
   text-align: center;
   font-size: 15px;
 }
-.dk-ver {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 14px 0;
-}
-.dk-ver__big {
-  font-size: 34px;
-  letter-spacing: 0.02em;
-  line-height: 1;
-}
-.dk-ver__text {
-  flex: 1 1 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+/* A line of buttons under a card's words (an update's Download), 8 apart, 12 under the words. */
 .dk-ver__acts {
   display: flex;
-  gap: 8px 12px;
+  gap: 8px 16px;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 /* Alone in its card: no space above the button. */
 .dk-ver__acts:first-child {
@@ -1887,30 +1822,33 @@ body[data-window="popover"] {
   flex-direction: column;
   gap: 4px;
 }
+/* A day's caption in the activity, as a group's caption: on the lines' edge. */
 .dk-act__day {
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--muted);
   font-weight: 600;
-  margin: 14px 4px 6px;
+  margin: 16px 0 4px;
 }
 .dk-act > div:first-child .dk-act__day {
   margin-top: 0;
 }
+/* One line of activity: its time, who did it, what, and its result on the content's right edge. */
 .dk-ev {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 8px 4px;
-  border-radius: 12px;
+  padding: 8px 0;
 }
 .dk-ev__tm {
   width: 40px;
   flex: none;
-  font-size: 12px;
-  color: var(--faint);
-  padding-top: 2px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .dk-ev__av {
   width: 22px;
@@ -1922,7 +1860,8 @@ body[data-window="popover"] {
 .dk-ev__tx {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--ink2);
 }
 .dk-ev__tx b {
@@ -1932,17 +1871,20 @@ body[data-window="popover"] {
 .dk-ev__tx small {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 18px;
 }
 .dk-ev__st {
   flex: none;
-  padding-top: 2px;
+  display: flex;
+  align-items: center;
+  height: 20px;
   color: var(--ok);
 }
 .dk-act__more {
   display: flex;
   justify-content: center;
-  padding: 10px 0 2px;
+  padding: 12px 0 0;
 }
 
 /* ---------- Development frame (browser only) ---------- */

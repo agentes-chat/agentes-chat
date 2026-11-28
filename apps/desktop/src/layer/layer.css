@@ -1,0 +1,52 @@
+/*
+ * The app layer (ADR 0265, AppLayer.tsx): a web view of its own over the site in the main window. Full: the whole
+ * window, opaque. Sheet (macOS only): transparent, with the scrim and the card of `sheets/sheets.css`. Hidden: nothing.
+ */
+:root {
+  /* The Mac's title bar, as the site's (apps/web desktop.css): 48pt, and the room for the window's buttons. */
+  --layer-bar: 48px;
+  --layer-lights: 78px;
+}
+html[data-fullscreen] {
+  --layer-lights: 12px;
+}
+
+body[data-window="app"] {
+  background: var(--bg);
+}
+body[data-window="app"][data-mode="sheet"],
+body[data-window="app"][data-mode="hidden"] {
+  background: transparent;
+}
+
+.dk-layer {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.dk-layer[data-mode="hidden"] {
+  display: none;
+}
+.dk-layer[data-mode="full"] {
+  background: var(--bg);
+}
+
+/* Full: the bar on top drags the window (double-click zooms it); the page fills the rest. */
+.dk-layer__bar {
+  flex: none;
+  height: var(--layer-bar);
+  padding-left: var(--layer-lights);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dk-layer__page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-layer__page > * {
+  flex: 1;
+  min-height: 0;
+}

@@ -27,7 +27,7 @@ const EVERY: Duration = Duration::from_secs(60);
 const EVERY_HIDDEN: Duration = Duration::from_secs(5 * 60);
 /// Each wait is this share longer or shorter, at random.
 const JITTER: f64 = 0.15;
-/// Preferences and the welcome window ask for a fresh list when a server's answer is older than this.
+/// The app layer asks for a fresh list when a server's answer is older than this.
 const STALE: Duration = Duration::from_secs(30);
 const TIMEOUT: Duration = Duration::from_secs(10);
 /// Workspaces kept per server.
@@ -416,18 +416,54 @@ fn logo_data(
 /// Whether the window's cookie goes with a request to `url`. Not wry's `cookies_for_url`: it compares the cookie's
 /// domain with `Url::domain`, which is None for an IP address, so the server on this computer
 /// (`http://127.0.0.1:4310`) got no cookie, read as signed out and left the site's workspace menu.
+/// On this computer cookies are per host, not per port: one the server here named after its port (`agentes-<PORT>.…`,
+/// apps/server http/loopback-cookies.ts, ADR 0265 §5) goes only to that port, never to another server on 127.0.0.1.
 pub fn sent_to<C: CookieLike>(cookie: &C, url: &Url) -> bool {
-    cookie_for(cookie.domain_of(), cookie.secure_of(), cookie.path_of(), url)
+    cookie_for(cookie.domain_of(), cookie.secure_of(), cookie.path_of(), url) && port_ok(cookie.name_of(), url)
+}
+
+/// The cookie is `url`'s own sign-in: `sent_to` it, and on this computer named after its port (the others on
+/// 127.0.0.1 are other servers', which signing out of or removing this one leaves alone).
+pub fn own_cookie<C: CookieLike>(cookie: &C, url: &Url) -> bool {
+    sent_to(cookie, url) && (!loopback_url(url) || port_cookie(cookie.name_of()).is_some())
+}
+
+/// The port in a cookie name the server here gives its sign-in at its loopback address (`agentes-4310.session_token`).
+pub fn port_cookie(name: &str) -> Option<u16> {
+    let (head, rest) = name.strip_prefix("agentes-")?.split_once('.')?;
+    if rest.is_empty() || head.is_empty() || head.len() > 5 || !head.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    head.parse().ok()
+}
+
+fn loopback_url(url: &Url) -> bool {
+    url.host_str().is_some_and(|h| {
+        let h = h.trim_start_matches('[').trim_end_matches(']');
+        h == "localhost" || h.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback())
+    })
+}
+
+/// A cookie named after a port goes only to that port on this computer (and never anywhere else).
+pub fn port_ok(name: &str, url: &Url) -> bool {
+    match port_cookie(name) {
+        None => true,
+        Some(port) => loopback_url(url) && url.port_or_known_default() == Some(port),
+    }
 }
 
 /// The cookie crate's `Cookie`, as `sent_to` reads it (a trait so the rule is tested without a web view).
 pub trait CookieLike {
+    fn name_of(&self) -> &str;
     fn domain_of(&self) -> Option<&str>;
     fn secure_of(&self) -> bool;
     fn path_of(&self) -> Option<&str>;
 }
 
 impl CookieLike for tauri::webview::Cookie<'_> {
+    fn name_of(&self) -> &str {
+        self.name()
+    }
     fn domain_of(&self) -> Option<&str> {
         self.domain()
     }
@@ -640,16 +676,17 @@ fn tell(app: &AppHandle, server: &str, org: &Org, count: u64, account: Option<&s
     main_window::notice(app, &title, &body, url);
 }
 
-/// Preferences › Servers, the popover and the welcome window's "Add a workspace": every server's workspaces (the
-/// app's own windows only). Preferences and the welcome window, opened by a person, have them read again when some
-/// answer is stale; the popover reads them when they changed, and asking again from there would read the server
-/// open in the window at every change of another's.
+/// The app layer (settings, the first run's "Add a workspace") and the popover: every server's workspaces (the app's
+/// own screens only). The layer, opened by a person, has them read again when some answer is stale; the popover reads
+/// them when they changed, and asking again from there would read the server open in the window at every change of
+/// another's.
 #[tauri::command]
-pub fn workspaces_get(app: AppHandle, window: tauri::Window) -> Result<Vec<ServerWorkspaces>, String> {
-    if !matches!(window.label(), "prefs" | "popover" | "welcome") {
+pub fn workspaces_get(app: AppHandle, webview: tauri::Webview) -> Result<Vec<ServerWorkspaces>, String> {
+    // The cover names the workspace it can't reach (ADR 0265): what is kept, never a read of its own.
+    if !matches!(webview.label(), "main-app" | "popover" | "main-cover") {
         return Err("only the app's own windows ask this".into());
     }
-    if window.label() != "popover" && stale(&app) {
+    if webview.label() == "main-app" && stale(&app) {
         trigger(&app);
     }
     Ok(list(&app))
@@ -704,6 +741,21 @@ pub fn with_session(
     if !site_path_allowed(method, path) || body.is_some_and(|b| b.len() > SITE_BODY_MAX) {
         return Err("not allowed".into());
     }
+    session_request(app, server, method, path, body)
+}
+
+/// `with_session` for the app's own requests, whose path is the app's, never a page's (the server here's phone
+/// sign-in, `local_server::phone_link`). Blocking, as `with_session`.
+pub(crate) fn session_request(
+    app: &AppHandle,
+    server: &str,
+    method: &str,
+    path: &str,
+    body: Option<&str>,
+) -> Result<SiteAnswer, String> {
+    if !servers::get(app).servers.iter().any(|s| s == server) {
+        return Err("not a server of this app".into());
+    }
     let url: Url = format!("{server}{path}").parse().map_err(|_| "bad address")?;
     let page = app.get_webview(main_window::LABEL).ok_or("signed_out")?;
     let cookies: Vec<_> = crate::cookies::read(&page).into_iter().filter(|c| sent_to(c, &url)).collect();
@@ -731,46 +783,23 @@ pub fn with_session(
     Ok(SiteAnswer { status, body: text })
 }
 
-/// Preferences › This Mac and the welcome window's pairing card read and set this computer's devices on its server
+/// The app layer's settings (This Mac) and pairing sheets read and set this computer's devices on its server
 /// (`with_session`).
 #[tauri::command]
 pub async fn site_fetch(
     app: AppHandle,
-    window: tauri::Window,
+    webview: tauri::Webview,
     server: String,
     method: String,
     path: String,
     body: Option<String>,
 ) -> Result<SiteAnswer, String> {
-    if !matches!(window.label(), "prefs" | "welcome") {
-        return Err("only Preferences and the welcome window ask this".into());
+    if webview.label() != "main-app" {
+        return Err("only the app's own screens ask this".into());
     }
     tauri::async_runtime::spawn_blocking(move || with_session(&app, &server, &method, &path, body.as_deref()))
         .await
         .map_err(|e| e.to_string())?
-}
-
-/// How the welcome window opens next, taken once: `add` when the site's "Add a workspace" opened it.
-#[derive(Default)]
-pub struct WelcomeMode(pub Mutex<Option<&'static str>>);
-
-#[tauri::command]
-pub fn welcome_mode_take(app: AppHandle, window: tauri::Window) -> Result<Option<String>, String> {
-    if window.label() != "welcome" {
-        return Err("only the welcome window asks this".into());
-    }
-    Ok(app.state::<WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()).take().map(str::to_string))
-}
-
-/// "Add a workspace…" and "Add a server…" in Preferences: the welcome window, in its adding mode.
-/// Async, as `show_window`: the welcome window may be made here.
-#[tauri::command]
-pub async fn welcome_add(app: AppHandle, window: tauri::Window) -> Result<(), String> {
-    if window.label() != "prefs" {
-        return Err("only Preferences asks this".into());
-    }
-    *app.state::<WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("add");
-    crate::present(&app, "welcome")
 }
 
 #[cfg(test)]
@@ -800,6 +829,49 @@ mod tests {
         assert!(!cookie_for(None, false, Some("/"), &url("http://127.0.0.1:4310")));
         // An IP address never takes a parent domain's cookie.
         assert!(!cookie_for(Some("0.0.1"), false, Some("/"), &url("http://127.0.0.1:4310")));
+    }
+
+    struct Jar(&'static str, &'static str);
+    impl CookieLike for Jar {
+        fn name_of(&self) -> &str {
+            self.0
+        }
+        fn domain_of(&self) -> Option<&str> {
+            Some(self.1)
+        }
+        fn secure_of(&self) -> bool {
+            false
+        }
+        fn path_of(&self) -> Option<&str> {
+            Some("/")
+        }
+    }
+
+    #[test]
+    fn the_server_here_s_sign_in_at_loopback_is_its_port_s_alone() {
+        let url = |u: &str| u.parse::<Url>().unwrap();
+        assert_eq!(port_cookie("agentes-4310.session_token"), Some(4310));
+        assert_eq!(port_cookie("agentes-4310.session_data"), Some(4310));
+        for not in ["better-auth.session_token", "agentes-.x", "agentes-4310", "agentes-4310.", "agentes-43a0.x", "agentes-999999.x"] {
+            assert_eq!(port_cookie(not), None, "{not}");
+        }
+        let here = url("http://127.0.0.1:4310");
+        let other = url("http://127.0.0.1:4311");
+        let mine = Jar("agentes-4310.session_token", "127.0.0.1");
+        assert!(sent_to(&mine, &here));
+        assert!(!sent_to(&mine, &other), "another server on this computer never gets it");
+        // A terminal install or another program on 127.0.0.1 keeps Better Auth's own names: sent as before.
+        let shared = Jar("better-auth.session_token", "127.0.0.1");
+        assert!(sent_to(&shared, &here) && sent_to(&shared, &other));
+        // Signing out of or removing the server here drops only its own.
+        assert!(own_cookie(&mine, &here));
+        assert!(!own_cookie(&shared, &here));
+        assert!(!own_cookie(&mine, &other));
+        // Anywhere else, every cookie it is sent is its own.
+        let cloud = Jar("__Secure-better-auth.session_token", "app.agentes.chat");
+        assert!(own_cookie(&cloud, &url("https://app.agentes.chat")));
+        // A name that looks like a port's never goes to a server elsewhere.
+        assert!(!port_ok("agentes-443.session_token", &url("https://agentes.tail1234.ts.net")));
     }
 
     #[test]

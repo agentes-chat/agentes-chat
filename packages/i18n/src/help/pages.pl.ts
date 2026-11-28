@@ -35,7 +35,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Niech zostaje włączony",
         blocks: [
-          "Na komputerze, z którego korzystają inni, ustaw to raz. **Utrzymuj działanie**, w **Preferencje\u00a0›\u00a0Serwery**, pokazuje, czego jeszcze brakuje, i otwiera właściwe ustawienia:",
+          "Na komputerze, z którego korzystają inni, ustaw to raz. **Zawsze gotowe**, w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Przegląd**, pokazuje, czego jeszcze brakuje, a przy każdej rzeczy jest jeden przycisk, który ją naprawia:",
           {
             list: [
               "**Otwieraj po zalogowaniu** włącza się samo po konfiguracji.",
@@ -51,15 +51,15 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Twoi agenci też tu pracują",
         blocks: [
           "Twoi agenci też pracują na tym komputerze, we własnych folderach, z przeglądarką oraz z Claude Code lub Codexem, jeśli są tu zainstalowane.",
-          "Agenci działają tu jako ty. **Polecenia** są domyślnie włączone, a z nimi agenci każdej przestrzeni roboczej, która używa tego komputera, mają dostęp do wszystkiego na nim, także do danych serwera. Wyłączysz je w **Preferencje\u00a0›\u00a0Narzędzia**. Zobacz [Do czego mają dostęp agenci](/help/computers#reach).",
+          "Agenci działają tu jako ty. **Polecenia** są domyślnie włączone, a z nimi agenci każdej przestrzeni roboczej, która używa tego komputera, mają dostęp do wszystkiego na nim, także do danych serwera. Wyłączysz je w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Foldery i narzędzia**. Zobacz [Do czego mają dostęp agenci](/help/computers#reach).",
         ],
       },
       {
         id: "another-workspace",
         heading: "Udostępnij go też innej przestrzeni roboczej",
         blocks: [
-          "Przestrzenie robocze serwera, który tu uruchamiasz, korzystają z tego komputera same. Żeby mogła z niego korzystać także przestrzeń robocza gdzie indziej, na przykład w agentes.chat Cloud, naciśnij **Dodaj przestrzeń roboczą…** na dole pierwszej karty w **Preferencje\u00a0›\u00a0Ogólne** albo **Dodaj serwer…** w **Preferencje\u00a0›\u00a0Serwery**. Zaloguj się do tej przestrzeni roboczej i naciśnij **Zezwól**, gdy aplikacja zapyta.",
-          "Każda przestrzeń robocza ma tu własnych agentów i foldery. **Polecenia** są dla niej też domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Preferencje\u00a0›\u00a0Narzędzia**, gdzie każda przestrzeń robocza ma własny przełącznik, a aplikacja pyta, zanim ponownie jakiś włączy.",
+          "Przestrzenie robocze serwera, który tu uruchamiasz, korzystają z tego komputera same. Żeby mogła z niego korzystać także przestrzeń robocza gdzie indziej, na przykład w agentes.chat Cloud, naciśnij **Dodaj przestrzeń roboczą…** na dole sekcji **Kto korzysta z tego urządzenia**, w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Przegląd**, albo **Dodaj serwer…** w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Ustawienia aplikacji**. Zaloguj się do tej przestrzeni roboczej i naciśnij **Zezwól**, gdy aplikacja zapyta.",
+          "Każda przestrzeń robocza ma tu własnych agentów i foldery. **Polecenia** są dla niej też domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Foldery i narzędzia**, gdzie każda przestrzeń robocza ma własny przełącznik, a aplikacja pyta, zanim ponownie jakiś włączy.",
         ],
       },
       {
@@ -74,7 +74,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Logowanie z innych urządzeń",
         blocks: [
-          "Właściciel zaczyna bez hasła: aplikacja loguje cię na tym komputerze. Żeby zalogować się w przeglądarce na innym komputerze, ustaw hasło w **Ustawienia\u00a0›\u00a0Twoje konto**. Dopóki tego nie zrobisz, **Preferencje\u00a0›\u00a0Serwery** o tym przypomina, a **Dodaj hasło** otwiera tę stronę. Aplikacja na telefon łączy się po zeskanowaniu kodu QR z sekcji **Na telefonie**, w **Preferencje\u00a0›\u00a0Serwery**. Musi być przy tym włączone **Dostęp z telefonu i dla zespołu**.",
+          "Właściciel zaczyna bez hasła: aplikacja loguje cię na tym komputerze. Żeby zalogować się w przeglądarce na innym komputerze, ustaw hasło w **Ustawienia\u00a0›\u00a0Twoje konto**. Dopóki tego nie zrobisz, **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Serwer na tym urządzeniu (komputer)** o tym przypomina, a **Dodaj hasło** otwiera tę stronę. Aplikacja na telefon łączy się po zeskanowaniu kodu QR z sekcji **Na telefonie**, w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Serwer na tym urządzeniu (komputer)**. Musi być przy tym włączone **Dostęp z telefonu i dla zespołu**.",
           "Gdy właściciel usunie swoje konto w **Ustawienia\u00a0›\u00a0Twoje konto**, znika ono na dobre 7 dni później, a przestrzenie robocze, w których był tylko on, znikają razem z nim. Do tego czasu zaloguj się i naciśnij **Przywróć konto**, żeby je odzyskać. Gdy już go nie ma i nie zostało żadne konto, aplikacja otwiera okno powitalne, żeby utworzyć nowego właściciela. Jeśli inni nadal mają konta, każdy loguje się własnym adresem e-mail.",
         ],
       },
@@ -82,14 +82,14 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "updates",
         heading: "Aktualizacje",
         blocks: [
-          "Aplikacja sama szuka aktualizacji. Gdy **Instaluj aktualizacje samodzielnie, w nocy** jest włączone, w **Preferencje\u00a0›\u00a0Aktualizacje**, instaluje je między 3:00 a 5:00, kiedy aplikacja jest otwarta. Jest to włączone od początku, gdy serwer działa tutaj. W przeciwnym razie naciśnij **Zaktualizuj i otwórz ponownie**. Serwer i wszyscy agenci uruchamiają się wtedy ponownie. Najpierw powstaje kopia bazy danych, a jeśli nowa wersja nie odpowie w ciągu 3 minut, aplikacja sama wraca do poprzedniej wersji i jej danych.",
+          "Aplikacja sama szuka aktualizacji. Gdy **Instaluj aktualizacje samodzielnie, w nocy** jest włączone, w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Ustawienia aplikacji**, instaluje je między 3:00 a 5:00, kiedy aplikacja jest otwarta. Jest to włączone od początku, gdy serwer działa tutaj. W przeciwnym razie naciśnij **Zaktualizuj i otwórz ponownie**. Serwer i wszyscy agenci uruchamiają się wtedy ponownie. Najpierw powstaje kopia bazy danych, a jeśli nowa wersja nie odpowie w ciągu 3 minut, aplikacja sama wraca do poprzedniej wersji i jej danych.",
         ],
       },
       {
         id: "backups",
         heading: "Kopie zapasowe",
         blocks: [
-          "Gdy **Rób kopię co noc** jest włączone (aplikacja 0.8.1 i nowsze), w **Preferencje\u00a0›\u00a0Serwery**, aplikacja co noc o 3:00 zapisuje bazę danych, pliki i `.env` w `.agentes/backups`, w twoim folderze domowym. Komputer, który wtedy spał, robi kopię, gdy się obudzi. **Zrób kopię zapasową teraz** robi to samo od razu. Każda kopia na chwilę zatrzymuje serwer, a zostają dwie najnowsze.",
+          "Gdy **Rób kopię co noc** jest włączone (aplikacja 0.8.1 i nowsze), w sekcji **Kopie zapasowe** w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Serwer na tym urządzeniu (komputer)**, aplikacja co noc o 3:00 zapisuje bazę danych, pliki i `.env` w `.agentes/backups`, w twoim folderze domowym. Komputer, który wtedy spał, robi kopię, gdy się obudzi. **Zrób kopię zapasową teraz** robi to samo od razu. Każda kopia na chwilę zatrzymuje serwer, a zostają dwie najnowsze.",
           "**Kopiuj do** umieszcza też każdą nową kopię w wybranym folderze, na przykład na pendrivie albo w iCloud Drive, gdzie zostają dwie najnowsze. Zawierają twoje klucze: trzymaj je w tajemnicy. **Przywróć…** cofa agentes.chat do kopii: wiadomości, plików i ustawień. Zatrzymuje się na minutę, a to, co było wcześniej, zostaje w folderze kopii.",
         ],
       },
@@ -98,12 +98,12 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Zacznij od nowa lub odinstaluj",
         blocks: [
           "Wszystko, co agentes.chat trzyma na tym komputerze, jest w folderach w twoim folderze domowym, nie w aplikacji. Dlatego przeniesienie aplikacji do Kosza niczego z tego nie usuwa i nie zatrzymuje agentes.chat, jeśli działa.",
-          "Żeby zacząć od nowa, naciśnij **Wymaż i zacznij od nowa…** w **Preferencje\u00a0›\u00a0Serwery**. agentes.chat zatrzymuje się tutaj, a wszystko, co zawiera, trafia do nowego folderu w twoim folderze domowym, nazwanego `agentes.chat erased` z datą tego dnia, i zostaje tam, dopóki go nie usuniesz. To, co jego agenci trzymali na tym komputerze, na przykład ich przeglądarki i logowania, zostaje usunięte z `.agentes-runner`. Jego przestrzenie robocze znikają dla wszystkich, którzy z nich korzystają. Potem otwiera się okno powitalne i konfigurujesz go od nowa z nowym kontem właściciela. Pliki agentów, w `agentes` w twoim folderze domowym, zostają tam, gdzie są.",
+          "Żeby zacząć od nowa, naciśnij **Wymaż i zacznij od nowa…** w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Serwer na tym urządzeniu (komputer)**. agentes.chat zatrzymuje się tutaj, a wszystko, co zawiera, trafia do nowego folderu w twoim folderze domowym, nazwanego `agentes.chat erased` z datą tego dnia, i zostaje tam, dopóki go nie usuniesz. To, co jego agenci trzymali na tym komputerze, na przykład ich przeglądarki i logowania, zostaje usunięte z `.agentes-runner`. Jego przestrzenie robocze znikają dla wszystkich, którzy z nich korzystają. Potem aplikacja otwiera konfigurację i konfigurujesz go od nowa z nowym kontem właściciela. Pliki agentów, w `agentes` w twoim folderze domowym, zostają tam, gdzie są.",
           "Żeby później go przywrócić, zakończ aplikację, odłóż na bok nowszy folder `.agentes`, jeśli jest, zmień nazwę folderu `agentes.chat erased` na `.agentes`, otwórz aplikację i skonfiguruj go ponownie na tym komputerze. Wraca ze swoimi przestrzeniami roboczymi i właścicielem, tak jak były. To, co jego agenci trzymali na tym komputerze, nie wraca, więc muszą zalogować się ponownie.",
           "Żeby całkowicie usunąć agentes.chat z tego komputera:",
           {
             list: [
-              "Wyłącz **Otwieraj po zalogowaniu** w **Preferencje\u00a0›\u00a0Ogólne**.",
+              "Wyłącz **Otwieraj po zalogowaniu** w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Ustawienia aplikacji**.",
               "Zakończ aplikację. Samo zamknięcie okna nie wystarczy. Na Macu kliknij jej ikonę w Docku i wybierz **Zakończ agentes.chat** w menu agentes.chat u góry ekranu albo naciśnij ⌘Q. Na Windowsie i Linuksie kliknij ikonę agentes.chat przy zegarze i wybierz **Zakończ agentes.chat**. Jeśli zapyta **Zakończyć agentes.chat?**, naciśnij **Zakończ**.",
               "Usuń aplikację. Na Macu przenieś ją do Kosza. Na Windowsie i Linuksie odinstaluj ją jak każdą inną aplikację.",
               "Usuń te foldery ze swojego folderu domowego. Są w nich twoje dane, a po usunięciu nie da się ich odzyskać, więc najpierw zrób kopię w innym miejscu, jeśli możesz ich jeszcze potrzebować: `.agentes` (wiadomości, pliki, konta, ustawienia i kopie zapasowe), każdy folder `agentes.chat erased`, `.agentes-runner` (to, co agenci trzymają na tym komputerze, na przykład ich przeglądarki i logowania) i `agentes` (pliki agentów). Foldery, których nazwa zaczyna się od kropki, są ukryte. Na Macu otwórz swój folder domowy w Finderze i naciśnij ⇧⌘. (Shift, Command i klawisz kropki), żeby je pokazać.",
@@ -116,7 +116,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "ai-programs",
         heading: "Claude Code i Codex",
         blocks: [
-          "Aplikacja znajduje Claude Code i Codex przez `PATH` twojej powłoki logowania oraz w typowych folderach, takich jak `~/.local/bin`, `/opt/homebrew/bin` i `/usr/local/bin`. Jeśli **Preferencje\u00a0›\u00a0Narzędzia** pokazuje **Nie znaleziono**, widać tam też wiersz, który go instaluje. Uruchom go w Terminalu, a potem naciśnij **Sprawdź ponownie**.",
+          "Aplikacja znajduje Claude Code i Codex przez `PATH` twojej powłoki logowania oraz w typowych folderach, takich jak `~/.local/bin`, `/opt/homebrew/bin` i `/usr/local/bin`. Jeśli **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Foldery i narzędzia** pokazuje **Nie znaleziono**, widać tam też wiersz, który go instaluje. Uruchom go w Terminalu, a potem naciśnij **Sprawdź ponownie**.",
         ],
       },
       {
@@ -188,7 +188,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Z aplikacji agentes.chat",
         blocks: [
           "Zainstaluj aplikację na komputerze, otwórz ją i zaloguj się do swojej przestrzeni roboczej. Zapyta **Pozwolić agentom z <workspace> używać tego urządzenia (Mac)?** (PC na Windowsie, komputer na Linuksie). Wybierz, kto może z niego korzystać, i naciśnij **Zezwól**. To wszystko.",
-          "Jesteś już zalogowany? Otwórz **Preferencje\u00a0›\u00a0Ogólne** i naciśnij **Zezwól** w wierszu przestrzeni roboczej na pierwszej karcie. Nie ma jej tam? Naciśnij **Dodaj przestrzeń roboczą…** na dole tej karty i zaloguj się.",
+          "Jesteś już zalogowany? Otwórz **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Przegląd** i naciśnij **Zezwól** w wierszu przestrzeni roboczej w sekcji **Kto korzysta z tego urządzenia**. Nie ma jej tam? Naciśnij **Dodaj przestrzeń roboczą…** na dole tej listy i zaloguj się.",
         ],
       },
       {
@@ -231,7 +231,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Pauza i odłączanie",
         blocks: [
-          "Na komputerze ikona agentes.chat przy zegarze wstrzymuje agentów wszystkich przestrzeni roboczych albo tylko jednej. W **Preferencje\u00a0›\u00a0Ogólne** przełącznik każdej przestrzeni roboczej wstrzymuje tylko ją, a **Odłącz** w jej menu **⋯** ją odłącza. Podczas pauzy nic nowego się nie zaczyna, a to, co już działało, kończy się. Po odłączeniu foldery agentów zostają na dysku.",
+          "Na komputerze ikona agentes.chat przy zegarze wstrzymuje agentów wszystkich przestrzeni roboczych albo tylko jednej. W **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Przegląd** przełącznik każdej przestrzeni roboczej wstrzymuje tylko ją, a **Odłącz** w jej menu **⋯** ją odłącza. Podczas pauzy nic nowego się nie zaczyna, a to, co już działało, kończy się. Po odłączeniu foldery agentów zostają na dysku.",
           "Na stronie internetowej urządzenie odłączysz przyciskiem **Usuń** na jego stronie.",
         ],
       },
@@ -257,7 +257,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "folders",
         heading: "Foldery",
         blocks: [
-          "Każdy agent zawsze ma własny folder w `~/agentes/<workspace>`. Na kolejne foldery można zezwolić tylko na samym komputerze, nigdy ze strony: w aplikacji w **Preferencje › Foldery** albo na serwerze poleceniem `agentes-runner folders allow`. Każda przestrzeń robocza ma własne dozwolone foldery: to, na co zezwolisz w jednej, dotyczy tylko jej agentów. Usunięcie folderu niczego nie kasuje. Odbiera tylko dostęp.",
+          "Każdy agent zawsze ma własny folder w `~/agentes/<workspace>`. Na kolejne foldery można zezwolić tylko na samym komputerze, nigdy ze strony: w aplikacji w **Ustawienia › Ten komputer › Foldery i narzędzia** albo na serwerze poleceniem `agentes-runner folders allow`. Każda przestrzeń robocza ma własne dozwolone foldery: to, na co zezwolisz w jednej, dotyczy tylko jej agentów. Usunięcie folderu niczego nie kasuje. Odbiera tylko dostęp.",
         ],
       },
       {
@@ -273,7 +273,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
               "na komputerze, który uruchamia też agentes.chat, jego bazę danych i klucze w `.agentes`",
             ],
           },
-          "agentes.chat odrzuca polecenia, które wskazują jego klucze, tokeny i dane logowania, ale to zasada, nie mur. **Polecenia** są domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Preferencje\u00a0›\u00a0Narzędzia**, gdzie każda przestrzeń robocza ma własny przełącznik (aplikacja 0.8.1 i nowsze), a aplikacja pyta, zanim ponownie jakiś włączy. Claude Code i Codex uruchamiają własne polecenia w folderze agenta, według własnych zasad, nawet przy wyłączonych poleceniach.",
+          "agentes.chat odrzuca polecenia, które wskazują jego klucze, tokeny i dane logowania, ale to zasada, nie mur. **Polecenia** są domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Ustawienia\u00a0›\u00a0Ten komputer\u00a0›\u00a0Foldery i narzędzia**, gdzie każda przestrzeń robocza ma własny przełącznik (aplikacja 0.8.1 i nowsze), a aplikacja pyta, zanim ponownie jakiś włączy. Claude Code i Codex uruchamiają własne polecenia w folderze agenta, według własnych zasad, nawet przy wyłączonych poleceniach.",
           "Prawdziwy mur da ci serwer z Linuksem. Na Debianie 13, zainstalowanym z `--system`, każdy agent jest osobnym użytkownikiem. Na Ubuntu agenci dzielą jednego użytkownika, `agentes`: widzą nawzajem swoje foldery, ale nie twoje ani serwera. Możesz też dać agentom osobny komputer.",
         ],
       },

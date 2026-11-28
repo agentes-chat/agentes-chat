@@ -142,7 +142,7 @@ export function githubAppRoutes(deps: AppDeps) {
   const session = requireSession(deps.auth);
   // GitHub's returns are browser navigations: the sign-in page first where there's no session. The install return
   // started on the phone needs none: it only hands what GitHub sent back to the app.
-  const navigation = signInFirst(deps.auth, deps.config.PUBLIC_URL);
+  const navigation = signInFirst(deps.auth);
   app.use("/organizations/*", session);
   app.use("/github-app/*", (c, next) => {
     if (c.req.path.endsWith("/github-app/callback")) return next();
@@ -404,7 +404,7 @@ export function githubAppRoutes(deps: AppDeps) {
       if (!q.state && q.installation_id && q.setup_action === "install") return fail("installed_outside");
       if (!q.state || !q.code || !q.installation_id) return fail("failed");
       const user = c.get("user") ?? (await sessionUser(deps.auth, c.req.raw.headers));
-      if (!user) return c.redirect(signInPage(deps.config.PUBLIC_URL, c.req.url), 302);
+      if (!user) return c.redirect(signInPage(c.req.url), 302);
       try {
         const { returnTo } = await completeGitHubAppInstall(install, user, {
           state: q.state,

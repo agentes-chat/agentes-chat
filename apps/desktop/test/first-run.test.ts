@@ -4,13 +4,18 @@ import { LOCALES } from "@agenteschat/i18n/locale";
 import { menuBarShown } from "../src/control/dock";
 import {
   connectOutcome,
+  defaultPlace,
   escapeAction,
   foundServers,
+  hereSteps,
   INSTALL_COMMAND,
   linkView,
+  needsPrivateNetwork,
   ownAddresses,
   PROBLEM_TEXT,
+  phoneLinkRefreshMs,
   terminalStartCommand,
+  topFound,
   typedServer,
 } from "../src/control/first-run";
 import { MAX_MENU_LABEL, menuLabels } from "../src/control/menu-labels";
@@ -110,12 +115,28 @@ describe("a typed address", () => {
     });
   });
 
-  test("this computer's own agentes.chat opens at once at the address people use, never a sheet about another host", () => {
-    const own = ownAddresses({ url: "http://127.0.0.1:4310", publicUrl: BOX });
-    expect(own).toEqual(["http://127.0.0.1:4310", BOX]);
-    expect(connectOutcome("http://127.0.0.1:4310", ok(BOX), own)).toEqual({ kind: "use", server: BOX });
-    expect(connectOutcome("http://127.0.0.1:4310", ok(BOX))).toEqual({ kind: "confirm", server: BOX });
-    expect(ownAddresses(null)).toEqual([]);
+  test("this computer's own agentes.chat opens at once at its loopback address, never a sheet about another host", () => {
+    const here = "http://127.0.0.1:4310";
+    const own = ownAddresses({ url: here, localUrl: here, publicUrl: BOX });
+    expect(own).toEqual({ open: here, all: [here, BOX] });
+    // Typed at loopback: its own check names the Tailscale address, and it still opens at loopback.
+    expect(connectOutcome(here, ok(BOX), own)).toEqual({ kind: "use", server: here });
+    // Typed (or found by discovery) at its Tailscale address: on this computer, at loopback too (ADR 0265 §5).
+    expect(connectOutcome(BOX, ok(BOX), own)).toEqual({ kind: "use", server: here });
+    expect(connectOutcome(here, ok(BOX))).toEqual({ kind: "confirm", server: BOX });
+    // Reach off: only its loopback address.
+    expect(ownAddresses({ url: here, localUrl: here, publicUrl: null })).toEqual({ open: here, all: [here] });
+    // A terminal install (no `localUrl`): its own loopback address.
+    expect(ownAddresses({ url: "http://127.0.0.1:4311", publicUrl: null })).toEqual({
+      open: "http://127.0.0.1:4311",
+      all: ["http://127.0.0.1:4311"],
+    });
+    expect(ownAddresses(null)).toEqual({ open: null, all: [] });
+    // Another server is never taken for this one.
+    expect(connectOutcome("https://chat.example.com", ok("https://chat.example.com"), own)).toEqual({
+      kind: "use",
+      server: "https://chat.example.com",
+    });
   });
 
   test("Tailscale is named only for a server on a Tailscale network", () => {
@@ -257,5 +278,51 @@ describe("the menu bar and the labels Rust shows", () => {
       }
       expect(labels.backgroundBodyMac).not.toBe(labels.backgroundBodyTray);
     }
+  });
+});
+
+describe("running agentes.chat here (ADR 0265 §3)", () => {
+  test("the steps: the owner only while there is none, how people get here only when it is needed", () => {
+    expect(hereSteps(true, true)).toEqual(["owner", "where", "net"]);
+    expect(hereSteps(true, false)).toEqual(["owner", "where"]);
+    expect(hereSteps(false, true)).toEqual(["where", "net"]);
+    expect(hereSteps(false, false)).toEqual(["where"]);
+  });
+
+  test("how people get here: only beyond this computer, and never with the system's Tailscale on (ADR 0265 §4)", () => {
+    expect(needsPrivateNetwork("everywhere", { state: "off" })).toBe(true);
+    expect(needsPrivateNetwork("everywhere", { state: "missing" })).toBe(true);
+    // Not read yet: asked.
+    expect(needsPrivateNetwork("everywhere", null)).toBe(true);
+    expect(needsPrivateNetwork("here", { state: "off" })).toBe(false);
+    expect(needsPrivateNetwork("here", null)).toBe(false);
+    // The system's, on: used as it is.
+    expect(needsPrivateNetwork("everywhere", { state: "on" })).toBe(false);
+  });
+
+  test("where it will be used, chosen at first: everywhere only with the system's Tailscale on", () => {
+    expect(defaultPlace({ state: "on" })).toBe("everywhere");
+    expect(defaultPlace({ state: "off" })).toBe("here");
+    expect(defaultPlace({ state: "missing" })).toBe("here");
+    // Not read yet: only here.
+    expect(defaultPlace(null)).toBe("here");
+  });
+
+  test("the phone's code: asked again every 150 s, sooner when it lasts less, at most every 10 s", () => {
+    expect(phoneLinkRefreshMs(180)).toBe(150_000);
+    expect(phoneLinkRefreshMs(600)).toBe(150_000);
+    expect(phoneLinkRefreshMs(60)).toBe(30_000);
+    expect(phoneLinkRefreshMs(20)).toBe(10_000);
+  });
+
+  test("the server on top: usable, this computer's first, one waiting for its owner only when claimable", () => {
+    const tailnet = { server: BOX, where: "tailnet" as const };
+    const here = { server: "http://127.0.0.1:4310", where: "here" as const };
+    expect(topFound([tailnet, here], () => false)).toEqual(here);
+    expect(topFound([tailnet], () => false)).toEqual(tailnet);
+    expect(topFound([{ ...here, problem: "no-owner" }], () => false)).toBeNull();
+    expect(topFound([{ ...here, problem: "no-owner" }], () => true)).toEqual({ ...here, problem: "no-owner" });
+    expect(topFound([{ ...tailnet, problem: "server-too-old" }], () => true)).toBeNull();
+    expect(topFound([], () => true)).toBeNull();
   });
 });

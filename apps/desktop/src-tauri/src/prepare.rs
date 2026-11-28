@@ -12,6 +12,8 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager, Url};
 use tauri_plugin_opener::OpenerExt;
 
+use crate::app_layer::{Route, Section};
+
 /// The setup kept in the app's data folder while it is on screen: what the page sent, the time and the main
 /// window's page (`setup_state_set`).
 const FILE: &str = "setup.json";
@@ -26,8 +28,8 @@ pub struct Resumed(AtomicBool);
 
 #[derive(Debug, PartialEq)]
 pub struct Resume {
-    /// `welcome` (the pairing's Prepare step) or `prefs`.
-    pub window: &'static str,
+    /// The app layer's screen to open again (ADR 0265): the pairing's Prepare step, or This computer's settings.
+    pub route: Route,
     /// The main window's page when the setup was kept.
     pub page: Option<Url>,
 }
@@ -57,13 +59,19 @@ fn resume_of(state: &Value, now: u64) -> Option<Resume> {
     if at > now || now - at > RESUME_WITHIN_SECS {
         return None;
     }
-    let window = match state.get("step")?.as_str()? {
-        "prepare" => "welcome",
-        "prefs" => "prefs",
+    let text = |key: &str| state.get(key).and_then(Value::as_str).map(str::to_string);
+    let route = match state.get("step")?.as_str()? {
+        "prepare" => Route::Prepare { org: text("org")?, server: text("server")?, resumed: Some(true) },
+        "prefs" => Route::settings(Some(Section::Overview), None),
         _ => return None,
     };
     let page = state.get("page").and_then(Value::as_str).and_then(|p| p.parse().ok());
-    Some(Resume { window, page })
+    Some(Resume { route, page })
+}
+
+/// Whether two routes are the same screen (a kept setup and the screen closing).
+fn same_screen(a: &Route, b: &Route) -> bool {
+    std::mem::discriminant(a) == std::mem::discriminant(b)
 }
 
 /// At launch: the setup to open again, unless the app started at login (it stays in the background then) or it was
@@ -78,10 +86,11 @@ pub fn resume(app: &AppHandle, at_login: bool) -> Option<Resume> {
     resume
 }
 
-/// Its window closed by hand: the setup ends with it (quitting never closes windows, so a kept setup survives that).
-pub fn closed(app: &AppHandle, label: &str) {
-    let kept = read(app).and_then(|s| resume_of(&s, now())).map(|r| r.window);
-    if kept.is_none_or(|window| window == label) {
+/// Its screen closed by hand (the app layer stepped aside): the setup ends with it (quitting never closes the layer, so
+/// a kept setup survives that).
+pub fn closed(app: &AppHandle, route: &Route) {
+    let kept = read(app).and_then(|s| resume_of(&s, now())).map(|r| r.route);
+    if kept.is_none_or(|kept| same_screen(&kept, route)) {
         forget(app);
     }
 }
@@ -185,13 +194,18 @@ fn opens_first(files: &[PathBuf]) -> bool {
 /// open is "operation not permitted", never a prompt: the user's copy, or the system's on an account without one yet.
 #[tauri::command]
 pub async fn disk_access(app: AppHandle) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || disk_allowed(&app)).await.map_err(|e| e.to_string())
+}
+
+/// `disk_access`, blocking (it opens a file): also read with this computer's other essentials (`always_on.rs`).
+pub fn disk_allowed(app: &AppHandle) -> bool {
     if !cfg!(target_os = "macos") {
-        return Ok(true);
+        return true;
     }
     let tcc = Path::new("Library/Application Support/com.apple.TCC/TCC.db");
     let files: Vec<PathBuf> =
         app.path().home_dir().ok().map(|home| home.join(tcc)).into_iter().chain([Path::new("/").join(tcc)]).collect();
-    tauri::async_runtime::spawn_blocking(move || opens_first(&files)).await.map_err(|e| e.to_string())
+    opens_first(&files)
 }
 
 /// macOS's version (`15.1`), which says whether Local Network is a permission there (15 and later).
@@ -277,8 +291,12 @@ pub async fn network_ask() -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(browse_briefly).await.map_err(|e| e.to_string())?
 }
 
-/// System Settings › Privacy & Security on one pane.
+/// System Settings › Privacy & Security on one pane; or Notifications on the app's own entry (the way back once the
+/// person turned the app's notifications off: no prompt asks twice, ADR 0265).
 fn pane_url(pane: &str) -> Option<String> {
+    if pane == "notifications" {
+        return Some("x-apple.systempreferences:com.apple.preference.notifications?id=chat.agentes.desktop".into());
+    }
     let anchor = match pane {
         "screen" => "Privacy_ScreenCapture",
         "disk" => "Privacy_AllFiles",
@@ -307,18 +325,45 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn a_setup_left_minutes_ago_comes_back_in_its_window_and_an_old_or_odd_one_does_not() {
+    fn a_setup_left_minutes_ago_comes_back_on_its_screen_and_an_old_or_odd_one_does_not() {
         let at = 1_000_000;
-        let prepare = json!({ "step": "prepare", "org": "Acme", "at": at, "page": "https://app.agentes.chat/org/o1" });
+        let prepare = json!({
+            "step": "prepare",
+            "org": "Acme",
+            "server": "https://app.agentes.chat",
+            "at": at,
+            "page": "https://app.agentes.chat/org/o1",
+        });
         assert_eq!(
             resume_of(&prepare, at + 60),
-            Some(Resume { window: "welcome", page: Some("https://app.agentes.chat/org/o1".parse().unwrap()) })
+            Some(Resume {
+                route: Route::Prepare {
+                    org: "Acme".into(),
+                    server: "https://app.agentes.chat".into(),
+                    resumed: Some(true)
+                },
+                page: Some("https://app.agentes.chat/org/o1".parse().unwrap())
+            })
         );
-        assert_eq!(resume_of(&json!({ "step": "prefs", "at": at }), at), Some(Resume { window: "prefs", page: None }));
+        assert_eq!(
+            resume_of(&json!({ "step": "prefs", "at": at }), at),
+            Some(Resume { route: Route::settings(Some(Section::Overview), None), page: None })
+        );
         assert_eq!(resume_of(&prepare, at + RESUME_WITHIN_SECS + 1), None);
         assert_eq!(resume_of(&prepare, at - 1), None);
         assert_eq!(resume_of(&json!({ "step": "other", "at": at }), at), None);
         assert_eq!(resume_of(&json!({ "step": "prepare" }), at), None);
+        // A Prepare kept without its workspace or server can't be drawn again.
+        assert_eq!(resume_of(&json!({ "step": "prepare", "org": "Acme", "at": at }), at), None);
+    }
+
+    #[test]
+    fn a_setup_ends_only_with_its_own_screen() {
+        let prepare = Route::Prepare { org: "Acme".into(), server: "https://app.agentes.chat".into(), resumed: None };
+        let other = Route::Prepare { org: "Beta".into(), server: "https://x.example".into(), resumed: Some(true) };
+        assert!(same_screen(&prepare, &other));
+        assert!(!same_screen(&prepare, &Route::settings(None, None)));
+        assert!(same_screen(&Route::settings(Some(Section::Overview), None), &Route::settings(None, Some("tools"))));
     }
 
     #[test]
@@ -367,6 +412,10 @@ mod tests {
         assert_eq!(
             pane_url("microphone").as_deref(),
             Some("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+        );
+        assert_eq!(
+            pane_url("notifications").as_deref(),
+            Some("x-apple.systempreferences:com.apple.preference.notifications?id=chat.agentes.desktop")
         );
         assert_eq!(
             pane_url("app_management").as_deref(),

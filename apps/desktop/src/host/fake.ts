@@ -1,7 +1,9 @@
 /**
  * The host for a plain browser (`bun run dev`): fake runners and servers in memory instead of the Tauri
- * shell, so the screens can be designed and checked without building the app. One page shows one window at
- * a time; `showWindow` switches it (the dev bar does too) and keeps the fake state.
+ * shell, so the screens can be designed and checked without building the app. One page shows one screen at
+ * a time; `showWindow` and `showLayer` switch it (the dev bar does too) and keep the fake state. The app layer
+ * (`?window=app`) starts on `?route=<json>` (a `LayerRoute`), else the first run with no server and This computer's
+ * settings with one; a stand-in of the site shows behind it (DevFrame), so a sheet can be checked over it.
  *
  * Scenarios (`?scenario=`): `first` (a Mac, nothing chosen yet), `windows` and `linux` (the same there),
  * `cloud` (agentes.chat, nothing on this computer), `selfhost` (the default: a server on Tailscale with two
@@ -9,28 +11,48 @@
  * computer, its organization's agents too); `?link=` makes any scenario start with that link waiting. A pair link
  * (`agenteschat://pair?server=…&link=ABCDEFGH`) joins Estúdio Norte once its maker lets it in, `HGFEDCBA`'s maker
  * says no, and any other code expired.
- * `?mac=ready`: Screen Recording and Full Disk Access allowed already (with Local Network asked, Prepare this Mac
- * is skipped).
+ * `?mac=ready`: notifications, Screen Recording and Full Disk Access allowed already (Prepare this Mac is skipped);
+ * `?mac=notifications,screen` allows only those, and `?asked=disk` (or `screen`) says it was asked in this version
+ * and is still off (Prepare waits on it in System Settings). The sheets: `?tools=` (`claude`, `none`) is which coding
+ * tools this computer has (both by default), `?ask=<permission>` (`disk`, `automation`…) makes an agent's work here
+ * wait on that permission, and a pair link from chat.example.com can't be read (its server doesn't answer).
  * Servers answer by host: agentes.tail1234.ts.net, agentes.chat and http://127.0.0.1:4310 are servers;
  * noowner.tail1234.ts.net waits for its owner; old.example.com is too old; chat.example.com doesn't answer;
  * anything else isn't agentes.chat. `?found=0` makes discovery find nothing.
  * The server here: `?phase=` (starting, updating, stopped, failing), `?reach=1`, `?back=<version>` (an update
  * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
- * welcome window opens on Run here's form), `?usage=0` (usage statistics off),
- * `?tailscale=` (on, off, missing), `?installed=terminal` (one from the terminal; `&claim=1` waits for its owner,
+ * first run opens on Run here's form), `?usage=0` (usage statistics off),
+ * `?tailscale=` (on, off, missing: the system's Tailscale, ADR 0265 §4; `&install=1` turns it on about 6 s after
+ * "Download Tailscale" or "Open Tailscale", as if the person installed it or signed in, so the waiting screens can be
+ * captured), `?way=address&addr=<https address>` (reach through an address of the person's own, saved; with
+ * `?reach=1`), `?addr=` (unreachable, other, error, nothttps: `checkAddress` fails that way), `?health=` (approve,
+ * down, address: reach on but kept from people, with `?reach=1`), `?installed=terminal` (one from
+ * the terminal; `&claim=1` waits for its owner,
  * `&serving=0` isn't running), `?fail=` (database, start, account, reach: that setup step fails), `?hold=<step>`
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
- * does). An update downloads in about 1.5 s with its progress, and Cancel drops it.
+ * does). `?approve=1`: the setup's access step waits for HTTPS on Tailscale's page until "Finish without it"
+ * ("One click left"). `?first=<state>` opens the first run on one of its states
+ * (`dev/first-run-start.ts`). An update downloads in about 1.5 s with its progress, and Cancel drops it.
+ * Settings › This computer: `?site=0` keeps the site away (offline: This computer's sections alone, with the line
+ * that says so), `?autostart=0` has opening at login off, `?backup=` (failed, copy, off) is the server here's backups'
+ * state, `?awake=0` lets this Mac sleep while it serves.
  */
 
 import type { OsPermission } from "@agenteschat/adapters/machine-protocol";
 import { CLOUD_SERVER, isLoopback, readInstance, type ServerCheck } from "@agenteschat/client/lib/server";
+import type { Health, NotifyPermission } from "../control/essentials";
 import type { Candidate } from "../control/first-run";
 import {
+  type AddressCheck,
+  type AddressProblem,
+  addressForm,
+  type KeepRunning,
   type LocalPhase,
   type LocalServerStatus,
   NO_SERVER,
+  type PhoneLink,
   type ReachStage,
+  type ReachWay,
   type ServeProblem,
   type SetupStep,
   type StepChange,
@@ -46,7 +68,17 @@ import type { TrayState } from "../control/tray";
 import { acmeSeed, FAKE_LINKS, FAKE_SERVER, FakeRunner, horizonteSeed } from "../dev/fake-runner";
 import { createFakeSite, type FakeSite } from "../dev/fake-site";
 import type { ReportFacts } from "../report/report";
-import type { AppInfo, CompatMode, Host, RunnerInfo, RunnerStateChange, WindowName } from "./types";
+import type {
+  AppInfo,
+  CompatMode,
+  Host,
+  LayerMode,
+  LayerRoute,
+  LayerState,
+  RunnerInfo,
+  RunnerStateChange,
+  WindowName,
+} from "./types";
 
 export type Scenario = "first" | "windows" | "linux" | "cloud" | "selfhost" | "link" | "here";
 export const SCENARIOS: readonly Scenario[] = ["first", "windows", "linux", "cloud", "selfhost", "link", "here"];
@@ -70,10 +102,34 @@ export interface HereOptions {
   hold?: SetupStep;
   /** Each setup step's time in ms (the tests' 10); a little over a second by default. */
   pace?: number;
+  /** `?install=1`: the system's Tailscale turns on about 6 s after its download page or app is opened. */
+  install?: boolean;
+  /** How reach is saved (`?way=`): Tailscale when unset. */
+  way?: ReachWay["kind"];
+  /** `?addr=`: the saved https address, or how `checkAddress` fails (unreachable, other, error, nothttps). */
+  addr?: string;
+  /** `?health=`: reach on but kept from people (HTTPS waiting for the admin, Tailscale down, the address down). */
+  health?: "approve" | "down" | "address";
+  /** Its backups (`?backup=`): the last one failed, didn't reach its copy, or nightly backups are off. */
+  backup?: "failed" | "copy" | "off";
+  /** False (`?awake=0`): it serves without keeping this Mac awake. */
+  awake?: boolean;
+  /** The setup's access step waits for HTTPS to be allowed until "Finish without it" (`?approve=1`). */
+  approve?: boolean;
 }
 
 const LOCAL_URL = "http://127.0.0.1:4310";
+const LOCAL_PORT = 4310;
 const TAILNET_URL = "https://ana-mac.tail1234.ts.net";
+/** An address of the person's own, a tunnel's (`?way=address` without `?addr=`). */
+const OWN_ADDRESS = "https://agentes.example.com";
+/** How `checkAddress` fails for `?addr=` (ADR 0265 §4). */
+const ADDRESS_FAILS: Record<string, { why: AddressProblem; status?: number }> = {
+  unreachable: { why: "unreachable" },
+  other: { why: "otherServer" },
+  error: { why: "error", status: 502 },
+  nothttps: { why: "notHttps" },
+};
 const LOCAL_BUNDLE_VERSION = "0.8.5";
 const LOCAL_SERVER_VERSION = "0.1.1";
 
@@ -89,20 +145,41 @@ export interface FakeHost extends Host {
   onDev(cb: () => void): () => void;
   setVersion(version: string): void;
   /**
-   * This Mac's permissions: Screen Recording, Full Disk Access, the Local Network prompts raised, the setup kept, the
-   * panes opened.
+   * This Mac's permissions: Screen Recording, Full Disk Access, the app's notifications (`?mac=ready`: all three on),
+   * the notification and Local Network prompts raised, the setup kept, the panes opened.
    */
   readonly mac: {
     screen: boolean;
     disk: boolean;
+    notifications: NotifyPermission;
+    notifyAsks: number;
     networkAsks: number;
     setup: SetupState | null;
     panes: (MacPermission | OsPermission)[];
   };
+  /** What keeps the server here up after a restart or a power cut (`keepRunning`, `health`): tests turn them. */
+  readonly keep: KeepRunning;
+  /** The system notifications raised (`notify`), in order. */
+  readonly notified: { title: string; body: string }[];
+  /** This computer's essentials read again and sent, as Rust does when the app comes to the front (`onHealth`). */
+  sayHealth(): void;
   /** Every window shown, and whether it was kept up (`showWindow`'s `keep`). */
   readonly shown: { name: WindowName; keep: boolean }[];
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;
+  /** The app layer as Rust would keep it (`app_layer.rs`), and the routes shown, in order. */
+  readonly layer: LayerState;
+  readonly routes: LayerRoute[];
+  /** The site's paths the layer moved it to (`siteGo`). */
+  readonly sitePaths: string[];
+  /** What the popover last published about this computer's essentials (`publishHealth`). */
+  readonly publishedHealth: { needs: number; server: boolean } | null;
+}
+
+/** How a route shows (app_layer.rs `mode_for`): settings and sheets over a site only on a Mac. */
+export function layerModeFor(route: LayerRoute, siteThere: boolean, platform: Platform): LayerMode {
+  if (route.screen === "firstRun") return "full";
+  return platform === "mac" && siteThere ? "sheet" : "full";
 }
 
 /**
@@ -150,9 +227,22 @@ export function createFakeHost(
     found?: boolean;
     here?: HereOptions;
     someCommands?: boolean;
-    welcomeAdd?: boolean;
+    /** The app layer's first route (`?route=`); by default the first run, or settings once a server is chosen. */
+    route?: LayerRoute | null;
     /** Screen Recording and Full Disk Access allowed already (`?mac=ready`). */
     macReady?: boolean;
+    /** Only these of the Mac's permissions allowed already (`?mac=notifications,screen`). */
+    macOn?: readonly MacPermission[];
+    /** Asked in this version and still off (`?asked=disk`): kept as the app keeps it (`MAC_ASKED_PREF`). */
+    macAsked?: readonly MacPermission[];
+    /** The coding tools this computer has (`?tools=`): both by default. */
+    tools?: "claude" | "none";
+    /** An agent's work on the first runner waits on this OS permission (`?ask=`). */
+    ask?: OsPermission;
+    /** False (`?site=0`): the site never shows behind the layer (offline, its server down). */
+    site?: boolean;
+    /** False (`?autostart=0`): the app doesn't open at login. */
+    autostart?: boolean;
   } = {},
 ): FakeHost {
   const runners = new Map<string, FakeRunner>();
@@ -167,19 +257,22 @@ export function createFakeHost(
   /** Servers the app signed out of (`signOutServer`): listed with no workspaces. */
   const signedOut = new Set<string>();
   let tray: TrayState = "idle";
-  let autostart = true;
+  let autostart = options.autostart !== false;
   let version = "0.6.0";
   const platform: Platform = scenario === "windows" ? "windows" : scenario === "linux" ? "linux" : "mac";
   const here = options.here ?? {};
-  // With no account left, the app opens the welcome window on Run here's form once.
-  let ownerMode = here.owner === false;
-  const tailnet: Tailnet =
+  let tailnet: Tailnet =
     here.tailscale === "missing"
       ? { state: "missing" }
       : here.tailscale === "off"
         ? { state: "off", app: platform === "mac" }
         : { state: "on", device: "ana-mac.tail1234.ts.net" };
   const running = scenario === "here" && here.run !== false;
+  // `?addr=` names a failure, else it is the saved address itself.
+  const addrFails = here.addr ? ADDRESS_FAILS[here.addr] : undefined;
+  const savedWay: ReachWay =
+    here.way === "address" ? { kind: "address", url: (!addrFails && here.addr) || OWN_ADDRESS } : { kind: "tailscale" };
+  const peopleOf = (way: ReachWay) => (way.kind === "address" ? way.url : TAILNET_URL);
   let local: LocalServerStatus = {
     ...NO_SERVER,
     bundled: true,
@@ -192,20 +285,24 @@ export function createFakeHost(
           owner: here.owner !== false,
           phase: running ? (here.phase ?? "running") : "off",
           url: LOCAL_URL,
-          publicUrl: here.reach ? TAILNET_URL : LOCAL_URL,
+          localUrl: running ? LOCAL_URL : null,
+          publicUrl: here.reach ? peopleOf(savedWay) : null,
           reach: !!here.reach,
+          way: here.reach ? savedWay : null,
+          reachHealth: here.reach ? (here.health ?? "on") : "off",
+          reachDown: !!here.reach && (here.health === "down" || here.health === "address"),
           installedVersion: LOCAL_BUNDLE_VERSION,
           serverVersion: running && (here.phase ?? "running") === "running" ? LOCAL_SERVER_VERSION : null,
           backTo: here.back ?? null,
-          awake: running,
+          awake: running && here.awake !== false,
           eraseTo: "/Users/voce/agentes.chat erased 2026-11-14",
           backups: {
-            nightly: true,
+            nightly: here.backup !== "off",
             copyTo: null,
             files: [
               { path: "/Users/voce/.agentes/backups/agentes-2026-10-25-030000.tar.gz", at: Date.UTC(2026, 9, 25, 6) },
             ],
-            problem: null,
+            problem: here.backup === "failed" ? "backup" : here.backup === "copy" ? "copy" : null,
           },
         }
       : here.installed === "terminal"
@@ -216,7 +313,11 @@ export function createFakeHost(
             claim: here.claim && here.serving !== false ? "b3duZXItY2xhaW0tYWJjZGVmZ2hpamtsbW5vcHFy" : null,
           }
         : { systemName: "Ana Souza" }),
+    // The port the setup would pick now, and keeps (ADR 0265 §4: a tunnel points at it).
+    port: here.installed === "terminal" ? null : LOCAL_PORT,
   };
+  // `?install=1`: the person installs Tailscale (or signs in to it) about 6 s after its page or app opened.
+  let installing = false;
   const localListeners = new Set<(s: LocalServerStatus) => void>();
   const stepListeners = new Set<(c: StepChange) => void>();
   const reachListeners = new Set<(s: ReachStage) => void>();
@@ -239,12 +340,74 @@ export function createFakeHost(
       : scenario === "selfhost"
         ? { current: FAKE_SERVER, servers: [FAKE_SERVER, CLOUD_SERVER] }
         : running
-          ? { current: local.publicUrl, servers: [local.publicUrl ?? LOCAL_URL] }
+          ? // The window opens the server here at its loopback address (ADR 0265 §5).
+            { current: LOCAL_URL, servers: [LOCAL_URL] }
           : { current: null, servers: [] };
   let link: string | null = options.link ?? (scenario === "link" ? CLAIM_LINK : null);
   const waits = link?.includes("claim=") ?? false;
   const devChanged = () => {
     for (const l of devListeners) l();
+  };
+  const layerListeners = new Set<(state: LayerState) => void>();
+  const routes: LayerRoute[] = [];
+  const sitePaths: string[] = [];
+  let published: { needs: number; server: boolean } | null = null;
+  const healthListeners = new Set<(health: Health) => void>();
+  const notified: { title: string; body: string }[] = [];
+  const keep: KeepRunning = { autoLogin: false, autoRestart: false };
+  // What Rust's `health_get` reads (always_on.rs): only a Mac has the permissions, the settings and `caffeinate`.
+  const healthNow = (): Health => ({
+    autostart,
+    screen: platform !== "mac" || host.mac.screen,
+    disk: platform !== "mac" || host.mac.disk,
+    notifications: platform === "mac" ? host.mac.notifications : "granted",
+    keepRunning: platform === "mac" ? { ...keep } : { autoLogin: null, autoRestart: null },
+    awake: platform === "mac" ? local.awake : null,
+  });
+  // The stand-in site is there once a server is chosen (a design tool: no cover, no sign-in).
+  const siteThere = () => list.current !== null && options.site !== false;
+  const firstRoute: LayerRoute | null =
+    options.route !== undefined
+      ? options.route
+      : initial !== "app"
+        ? null
+        : here.owner === false
+          ? { screen: "firstRun", mode: "owner" }
+          : list.current
+            ? { screen: "settings" }
+            : { screen: "firstRun" };
+  const layer: LayerState = {
+    seq: firstRoute ? 1 : 0,
+    mode: firstRoute ? layerModeFor(firstRoute, siteThere(), platform) : "hidden",
+    route: firstRoute,
+    site: { there: siteThere(), org: siteThere() ? "org_acme" : null },
+    fullScreen: false,
+  };
+  if (firstRoute) routes.push(firstRoute);
+  const sayLayer = () => {
+    layer.site = { there: siteThere(), org: siteThere() ? "org_acme" : null };
+    const now = { ...layer, site: { ...layer.site } };
+    for (const l of layerListeners) l(now);
+    devChanged();
+  };
+  const putLayer = (route: LayerRoute) => {
+    routes.push(route);
+    layer.seq++;
+    layer.route = route;
+    layer.mode = layerModeFor(route, siteThere(), platform);
+    host.window = "app";
+    sayLayer();
+  };
+  const dropLayer = () => {
+    // Nothing under it with no server chosen: the first run comes back, as in the app.
+    if (!list.current) {
+      if (layer.route?.screen !== "firstRun") putLayer({ screen: "firstRun" });
+      return;
+    }
+    layer.seq++;
+    layer.route = null;
+    layer.mode = "hidden";
+    sayLayer();
   };
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -276,6 +439,27 @@ export function createFakeHost(
     spawn("0e7c1d2a-0000-4000-8000-000000000001", acmeSeed());
     for (const r of runners.values()) r.server = LOCAL_URL;
     signIns = 1;
+  }
+  // The sheets' states: the coding tools found here (`?tools=`), a permission an agent's work waits on (`?ask=`).
+  for (const r of runners.values()) {
+    if (options.tools === "none") r.executors = {};
+    if (options.tools === "claude") r.executors = { claude: r.executors.claude };
+  }
+  if (options.ask) {
+    const since = new Date().toISOString();
+    [...runners.values()][0]?.setPermissions([
+      { permission: options.ask, trigger: "ls ~/Desktop", agentId: "ag_dev", since },
+    ]);
+  }
+  // This Mac's permissions allowed already (`?mac=`); asked in this version and still off, as the app keeps it
+  // (`MAC_ASKED_PREF`, under `agentes.desktop.`).
+  const macOn = (p: MacPermission) => options.macReady === true || !!options.macOn?.includes(p);
+  if (options.macAsked?.length) {
+    try {
+      localStorage.setItem("agentes.desktop.macAsked", JSON.stringify({ version, asked: options.macAsked }));
+    } catch {
+      // Not kept: Prepare shows them as never asked.
+    }
   }
 
   const orgsOf = (i: number): ServerWorkspace[] =>
@@ -363,8 +547,9 @@ export function createFakeHost(
       })),
     // The fake reads nothing again by itself: an offer never takes the one window over while designing.
     onWorkspaces: () => () => {},
-    pairLinkInfo: async (_server, code): Promise<LinkInfo> => {
+    pairLinkInfo: async (server, code): Promise<LinkInfo> => {
       await wait(300);
+      if (new URL(server).host === "chat.example.com") throw "unreachable";
       if (code !== FAKE_LINKS.live && code !== FAKE_LINKS.denied) throw "link_expired";
       return {
         org: "Estúdio Norte",
@@ -375,15 +560,52 @@ export function createFakeHost(
       };
     },
     askToPair: async () => true,
-    welcomeMode: async () => {
-      if (options.welcomeAdd) return "add";
-      if (!ownerMode) return null;
-      ownerMode = false;
-      return "owner";
+    layer,
+    routes,
+    sitePaths,
+    get publishedHealth() {
+      return published;
     },
-    addWorkspace: async () => {
-      options.welcomeAdd = true;
-      await host.showWindow("welcome");
+    keep,
+    notified,
+    health: async () => healthNow(),
+    onHealth: (cb) => {
+      healthListeners.add(cb);
+      return () => healthListeners.delete(cb);
+    },
+    sayHealth: () => {
+      const now = healthNow();
+      for (const l of healthListeners) l(now);
+    },
+    notificationPermission: async () => (platform === "mac" ? host.mac.notifications : "granted"),
+    requestNotifications: async () => {
+      if (platform !== "mac") return "granted";
+      // macOS asks once: after that the person changes it in System Settings.
+      if (host.mac.notifications === "notDetermined") {
+        host.mac.notifyAsks++;
+        host.mac.notifications = "granted";
+      }
+      return host.mac.notifications;
+    },
+    showLayer: async (route) => putLayer(route),
+    hideLayer: async () => dropLayer(),
+    layerState: async () => ({ ...layer, site: { ...layer.site } }),
+    onLayer: (cb) => {
+      layerListeners.add(cb);
+      return () => layerListeners.delete(cb);
+    },
+    layerPainted: async () => {},
+    siteGo: async (path) => {
+      sitePaths.push(path);
+      console.info("[fake] the site moves to", path);
+      dropLayer();
+    },
+    firstRunSignIn: async (method) => {
+      await host.chooseServer(CLOUD_SERVER, method === "email" ? "/login" : `/login?with=${method}`);
+      dropLayer();
+    },
+    publishHealth: async (next) => {
+      published = next;
     },
     siteFetch: async (server, method, path, body) => {
       if (!list.servers.includes(server)) throw "not a server of this app";
@@ -401,9 +623,11 @@ export function createFakeHost(
     discover: async (): Promise<Candidate[]> => {
       await wait(1200);
       if (options.found === false) return [];
+      // With the system's Tailscale off or missing, nothing on the network can be found.
+      const onNetwork = tailnet.state === "on";
       return [
         { server: "http://127.0.0.1:4310", where: "here" },
-        { server: FAKE_SERVER, where: "tailnet" },
+        ...(onNetwork ? [{ server: FAKE_SERVER, where: "tailnet" as const }] : []),
       ];
     },
     checkServer: async (server) => {
@@ -503,6 +727,7 @@ export function createFakeHost(
       return () => clearTimeout(timer);
     },
     notify: async (title, body) => {
+      notified.push({ title, body });
       console.info("[fake] notification:", title, "—", body);
     },
     // Nothing installs in a browser: once downloaded, the manual way.
@@ -552,17 +777,53 @@ export function createFakeHost(
         cancelSetup = () => reject("cancelled");
       });
       cancelled.catch(() => {});
-      for (const step of setupSteps(choice.reach)) {
+      // People reach it at the end: its step went through.
+      let reached = false;
+      for (const step of setupSteps(choice.place)) {
         say({ step, state: "active" });
         await Promise.race([
           cancelled,
           here.hold === step ? new Promise(() => {}) : wait(here.pace ?? (step === "database" ? 1400 : 800)),
         ]);
+        if (step === "reach" && choice.way?.kind === "address") {
+          // An address of the person's own: confirmed to lead here, then the server starts again behind it.
+          sayReach({ stage: "checking" });
+          const check = await host.checkAddress(choice.way.url);
+          if (!check.ok) {
+            say({ step, state: "warn", reason: { reason: "address", why: check.why, status: check.status } });
+            continue;
+          }
+          sayReach({ stage: "restarting" });
+          say({ step, state: "done" });
+          reached = true;
+          continue;
+        }
+        if (step === "reach" && here.approve) {
+          // Tailscale waits for HTTPS to be allowed on its page, with no time limit: "Finish without it" ends it.
+          reachStopped = false;
+          let over = false;
+          cancelled.catch(() => {
+            over = true;
+          });
+          sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
+          await Promise.race([
+            cancelled,
+            (async () => {
+              while (!reachStopped && !over) await wait(50);
+            })(),
+          ]);
+          say({ step, state: "warn", reason: { reason: "stopped" } });
+          continue;
+        }
         if (step === "reach" && (here.fail === "reach" || tailnet.state !== "on")) {
           const reason: ServeProblem =
-            here.reason === "operator" || here.reason === "serve"
-              ? { reason: here.reason }
-              : { reason: "https", url: null };
+            tailnet.state === "missing"
+              ? { reason: "serve" }
+              : tailnet.state === "off"
+                ? { reason: "notConnected", app: tailnet.app }
+                : here.reason === "operator" || here.reason === "serve"
+                  ? { reason: here.reason }
+                  : { reason: "https", url: null };
           say({ step, state: "warn", reason });
           continue;
         }
@@ -571,21 +832,27 @@ export function createFakeHost(
           throw new Error(step);
         }
         say({ step, state: "done" });
+        if (step === "reach") reached = true;
       }
-      const reach = choice.reach && tailnet.state === "on" && here.fail !== "reach";
+      const way: ReachWay = choice.way ?? { kind: "tailscale" };
+      const reach = choice.place === "everywhere" && reached;
       setLocal({
         installed: "app",
         run: true,
         owner: true,
         phase: "running",
         url: LOCAL_URL,
-        publicUrl: reach ? TAILNET_URL : LOCAL_URL,
+        localUrl: LOCAL_URL,
+        publicUrl: reach ? peopleOf(way) : null,
         reach,
+        way: reach ? way : null,
+        reachHealth: reach ? "on" : "off",
         usage: choice.usage,
         installedVersion: LOCAL_BUNDLE_VERSION,
       });
       cancelSetup = null;
-      await host.chooseServer(local.publicUrl ?? LOCAL_URL, "/desktop/handover#token=fake");
+      // At its loopback address, always (the app signs the window in there after the account step).
+      await host.chooseServer(LOCAL_URL, "/desktop/handover#token=fake");
     },
     cancelLocalSetup: async () => cancelSetup?.(),
     startLocalServer: async () => {
@@ -601,32 +868,48 @@ export function createFakeHost(
         held: !forget,
         heldUntil: !forget && minutes ? Date.now() + minutes * 60_000 : null,
       });
-      if (forget) await host.removeServer(local.publicUrl ?? LOCAL_URL);
+      if (forget) await host.removeServer(LOCAL_URL);
     },
     restartLocalServer: async () => {
       setLocal({ phase: "starting" });
       await wait(1200);
-      setLocal({ phase: "running" });
+      // Started again, it keeps this Mac awake with it (`caffeinate`).
+      setLocal({ phase: "running", awake: platform === "mac" });
     },
-    setLocalReach: async (on) => {
+    setLocalReach: async (on, asked) => {
       reachStopped = false;
-      if (on) sayReach({ stage: "sharing" });
-      await wait(900);
-      if (on && tailnet.state !== "on") return { ok: false, problem: { reason: "serve" } };
-      if (on && here.fail === "reach") {
-        // Tailscale asks for HTTPS to be allowed and waits: until "Stop waiting", or a few seconds as if never allowed.
-        sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
-        for (let i = 0; i < 40 && !reachStopped; i++) await wait(100);
-        return { ok: false, problem: reachStopped ? { reason: "stopped" } : { reason: "https", url: null } };
+      const way: ReachWay = asked ?? local.way ?? { kind: "tailscale" };
+      if (on && way.kind === "address") {
+        sayReach({ stage: "checking" });
+        const check = await host.checkAddress(way.url);
+        if (!check.ok) return { ok: false, problem: { reason: "address", why: check.why, status: check.status } };
+      } else if (on) {
+        sayReach({ stage: "sharing" });
+        await wait(900);
+        if (tailnet.state === "missing") return { ok: false, problem: { reason: "serve" } };
+        if (tailnet.state === "off") return { ok: false, problem: { reason: "notConnected", app: tailnet.app } };
+        if (here.fail === "reach") {
+          // Tailscale asks for HTTPS to be allowed and waits: until "Stop waiting", or a few seconds as if never allowed.
+          sayReach({ stage: "approve", url: "https://login.tailscale.com/f/serve?node=fake" });
+          for (let i = 0; i < 40 && !reachStopped; i++) await wait(100);
+          return { ok: false, problem: reachStopped ? { reason: "stopped" } : { reason: "https", url: null } };
+        }
       }
       sayReach({ stage: "restarting" });
       setLocal({ phase: "starting" });
       await wait(900);
       setLocal({ phase: "running" });
-      const url = on ? TAILNET_URL : LOCAL_URL;
-      list.servers = list.servers.map((s) => (s === local.publicUrl ? url : s));
-      if (list.current === local.publicUrl) list.current = url;
-      setLocal({ reach: on, publicUrl: url });
+      // The window stays on the loopback address: the list never changes (ADR 0265 §5).
+      const url = on ? peopleOf(way) : LOCAL_URL;
+      setLocal({
+        reach: on,
+        publicUrl: on ? url : null,
+        // Kept while it is off, for turning it on again (as the app keeps it).
+        way: on ? way : local.way,
+        reachHealth: on ? "on" : "off",
+        reachDown: false,
+      });
+      if (on) sayReach({ stage: "done", url });
       return { ok: true, url };
     },
     setLocalUsage: async (on) => {
@@ -657,13 +940,12 @@ export function createFakeHost(
       const to = local.eraseTo ?? "";
       // Its agents' homes on this computer go with it.
       for (const [homeId, runner] of runners) if (runner.server === LOCAL_URL) await host.removeRunner(homeId);
-      for (const server of new Set([local.publicUrl, local.url])) if (server) await host.removeServer(server);
+      for (const server of new Set([local.localUrl, local.url])) if (server) await host.removeServer(server);
       setLocal({ ...NO_SERVER, bundled: true, dir: local.dir, systemName: "Ana Souza", erased: to });
-      ownerMode = true;
-      await host.showWindow("welcome");
+      putLayer({ screen: "firstRun", mode: "owner" });
       return to;
     },
-    keepRunning: async () => ({ autoLogin: false, autoRestart: false }),
+    keepRunning: async () => (platform === "mac" ? { ...keep } : { autoLogin: null, autoRestart: null }),
     openSystemSettings: async (page) => {
       console.info("[fake] open System Settings:", page);
     },
@@ -676,15 +958,38 @@ export function createFakeHost(
     stopLocalReach: async () => {
       reachStopped = true;
     },
+    // The form, then where it leads (`?addr=`): about half a second, as a request through a tunnel.
+    checkAddress: async (url): Promise<AddressCheck> => {
+      const form = addressForm(url);
+      if (!form.ok) return form;
+      await wait(here.pace ?? 600);
+      return addrFails ? { ok: false, ...addrFails } : { ok: true, url: form.url };
+    },
     tailscale: async () => tailnet,
     openTailscale: async (page) => {
       console.info("[fake] open Tailscale:", page);
+      // `?install=1`: installed (or signed in to) about 6 s later, as the person would.
+      if (!here.install || installing || tailnet.state === "on" || (page !== "download" && page !== "app")) return;
+      installing = true;
+      setTimeout(() => {
+        tailnet = { state: "on", device: "ana-mac.tail1234.ts.net" };
+        devChanged();
+      }, 6000);
+    },
+    // A one-time sign-in for the phone, only while people reach it (Tailscale or the person's address).
+    phoneLink: async (): Promise<PhoneLink> => {
+      if (!local.reach || !local.publicUrl) return Promise.reject("not_served");
+      const token = `fake${Date.now().toString(36)}${"x".repeat(32)}`;
+      const query = new URLSearchParams({ server: local.publicUrl, token });
+      return { link: `agenteschat://connect?${query}`, server: local.publicUrl, expiresIn: 180 };
     },
     onNewHostHome: () => () => {},
     // Screen Recording and Full Disk Access take effect once the app opens again, as on a Mac.
     mac: {
-      screen: options.macReady === true,
-      disk: options.macReady === true,
+      screen: macOn("screen"),
+      disk: macOn("disk"),
+      notifications: macOn("notifications") ? "granted" : "notDetermined",
+      notifyAsks: 0,
       networkAsks: 0,
       setup: null,
       panes: [],

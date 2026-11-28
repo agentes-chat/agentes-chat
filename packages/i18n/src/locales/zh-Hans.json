@@ -687,6 +687,9 @@
       "browserLead": "用 {{provider}} 登录后，我们会回到这里。",
       "codeHint": "你的浏览器会显示这个代码。继续前请确认两者一致。",
       "reopen": "再次打开浏览器",
+      "timedOut": "登录已超时",
+      "timedOutLead": "10 分钟内浏览器没有返回任何内容。准备好后请重新开始。",
+      "startAgain": "重新开始",
       "otherWay": "用其他方式登录",
       "otherServer": "使用其他服务器",
       "opening": "正在打开 {{provider}}…",
@@ -2392,7 +2395,7 @@
     "private": "扫描此二维码的人会以你的身份登录。",
     "failed": "无法生成二维码。",
     "localOnly": "这台服务器只能在运行它的电脑上打开，所以你的手机无法访问它。",
-    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，然后回到这里。",
+    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开设置 › 这台 {{device}} 上的服务器里的“从你的手机和队友那里访问”，然后回到这里。",
     "localOnlyHere": "打开“从你的手机和队友那里访问”，然后回到这里。"
   },
   "surface": {
@@ -6037,14 +6040,14 @@
         "title": "还差一步，需在 {{computer}} 本机上完成",
         "waiting": "等待中",
         "one": "点击时钟旁的 agentes.chat 图标",
-        "two": "偏好设置",
+        "two": "这台 {{device}} 的设置",
         "three": "开启“浏览器”",
         "done": "完成了。此页面会自动检测，无需刷新。",
         "menuOpen": "打开 agentes",
-        "menuPrefs": "偏好设置…",
+        "menuPrefs": "这台 {{device}} 的设置…",
         "menuPause": "暂停",
         "menuQuit": "退出",
-        "tools": "工具",
+        "tools": "文件夹和工具",
         "commands": "命令"
       },
       "offlineCloud": "{{computer}} 无响应，我们正在处理。恢复后 {{name}} 会再次回复。",
@@ -7734,7 +7737,7 @@
     "linkEmpty": "创建链接后即可复制",
     "linkFailed": "无法创建链接。{{cause}}",
     "localOnly": "这台服务器只能在运行它的电脑上打开，所以你邀请的人打不开邀请。",
-    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，或者把 agentes.chat 运行在他们能打开的服务器上。然后再邀请他们。",
+    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开设置 › 这台 {{device}} 上的服务器里的“从你的手机和队友那里访问”，或者在他们能打开的服务器上运行 agentes.chat。然后再邀请他们。",
     "localOnlyHere": "打开“从你的手机和队友那里访问”，然后再邀请他们。",
     "never": "永不过期",
     "untilDate": "至 {{date}}",
@@ -16327,16 +16330,16 @@
         "windows": "PC",
         "linux": "电脑"
       },
-      "grantHere": "就是这台{{device}}：请在应用的偏好设置中允许文件夹。",
-      "openFolders": "打开文件夹设置",
-      "openServers": "打开服务器设置",
+      "grantHere": "就是这台 {{device}}：在这台 {{device}} 的设置中的“文件夹和工具”里允许文件夹。",
+      "openFolders": "打开文件夹和工具",
+      "openServers": "打开这台 {{device}} 上的服务器",
       "openTools": "打开工具设置",
       "reconnect": "重新连接",
       "reconnecting": "正在重新连接这台{{device}}…",
       "seeRequest": "在应用中查看",
       "offline": "这台{{device}}目前离线。",
       "outageTitle": "这台{{device}}在{{ago}}断开了连接",
-      "toolsOff": "这台{{device}}上已关闭。请在应用的偏好设置的“工具”中开启。",
+      "toolsOff": "在这台 {{device}} 上已关闭。请在这台 {{device}} 的设置中的“文件夹和工具”里开启。",
       "noReport": "这台{{device}}还没有报告它允许的内容。请更新应用。",
       "update": "更新应用"
     },
@@ -16454,7 +16457,7 @@
       "disableText": "智能体将不再在这台电脑上使用{{tool}}。要重新打开：在那台电脑上，或由连接它的人在这里打开。",
       "disabled": "{{tool}} 已关闭。",
       "grantTitle": "要允许更多",
-      "grantText": "允许操作需要在这台电脑上进行：在那台电脑上打开 agentes.chat 应用（偏好设置 → 文件夹）。",
+      "grantText": "允许需要在那台电脑上操作：在那里打开 agentes.chat 应用（设置 › 这台 {{device}} › 文件夹和工具）。",
       "grantTextTerminal": "允许操作需要在这台电脑上进行，在它的终端中：",
       "grantTextAdmin": "允许操作需要在这台电脑上进行，以管理员身份在它的终端中：",
       "grantTerminal": "没有应用？在这台电脑的终端中：",
@@ -17807,6 +17810,17 @@
   "settings": {
     "notOpen": "你在这个工作区的角色打不开 {{section}}。管理角色的人可以为你开放。",
     "nav": "设置分区",
+    "thisDevice": {
+      "title": "这台 {{device}}",
+      "section": {
+        "overview": "概览",
+        "folders": "文件夹和工具",
+        "server": "这台 {{device}} 上的服务器",
+        "activity": "动态",
+        "app": "应用设置"
+      },
+      "needs_other": "{{count}} 项等你处理"
+    },
     "group": {
       "org": "工作区"
     },
@@ -18040,7 +18054,7 @@
       "label": "向 agentes.chat 发送匿名使用统计",
       "help": "成员数、智能体数、机器规格、使用的 AI token 数、智能体浏览器收发的数据量，以及应用打开和运行的速度等计数。绝不包括消息、文件、名称或网站。",
       "envOff": "已在此服务器的设置中关闭（TELEMETRY=off）。",
-      "envOffDesktop": "已在此服务器所在电脑上的 agentes.chat 应用中关闭（偏好设置 › 服务器）。",
+      "envOffDesktop": "已在这台服务器所在电脑的 agentes.chat 应用中关闭（设置 › 这台 {{device}} 上的服务器）。",
       "envOffHere": "已在这台电脑的 agentes.chat 应用中关闭。",
       "see": "查看发送的内容",
       "dialogTitle": "发送的内容",
@@ -19729,7 +19743,7 @@
     "machine": {
       "ready": "就绪",
       "off": "已关闭",
-      "offHelp": "连接这台电脑的人可以在这里打开，或在那台电脑上的 agentes.chat 应用中打开：偏好设置 → 工具。",
+      "offHelp": "由连接这台电脑的人在这里或在它上面的 agentes.chat 应用中开启：设置 › 这台 {{device}} › 文件夹和工具。",
       "needsCommand": "需要运行命令",
       "notReady": "尚未就绪",
       "turnOff": "关闭",

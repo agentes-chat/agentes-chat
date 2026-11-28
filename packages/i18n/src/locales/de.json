@@ -704,6 +704,9 @@
       "browserLead": "Wir kommen hierher zurück, sobald du dich mit {{provider}} angemeldet hast.",
       "codeHint": "Dein Browser zeigt diesen Code. Prüf, ob er übereinstimmt, bevor du weitermachst.",
       "reopen": "Browser erneut öffnen",
+      "timedOut": "Die Anmeldung ist abgelaufen",
+      "timedOutLead": "Vom Browser kam in 10 Minuten nichts zurück. Fang neu an, wenn du so weit bist.",
+      "startAgain": "Neu anfangen",
       "otherWay": "Anders anmelden",
       "otherServer": "Anderen Server verwenden",
       "opening": "{{provider}} wird geöffnet…",
@@ -2479,7 +2482,7 @@
     "private": "Wer diesen Code scannt, ist als du angemeldet.",
     "failed": "Der Code konnte nicht erstellt werden.",
     "localOnly": "Dieser Server öffnet sich nur auf dem Computer, auf dem er läuft, deshalb erreicht dein Handy ihn nicht.",
-    "localOnlyHow": "Schalte in der agentes.chat-App auf diesem Computer unter Einstellungen › Server die Option Von deinem Handy und deinem Team erreichbar ein. Komm dann hierher zurück.",
+    "localOnlyHow": "Schalte in der agentes.chat-App auf diesem Computer unter Einstellungen › Server auf diesem {{device}} die Option Von deinem Handy und deinem Team erreichbar ein. Komm dann hierher zurück.",
     "localOnlyHere": "Schalte Von deinem Handy und deinem Team erreichbar ein. Komm dann hierher zurück."
   },
   "surface": {
@@ -6266,14 +6269,14 @@
         "title": "Noch ein Schritt, direkt auf {{computer}}",
         "waiting": "Warten",
         "one": "Klicke auf das agentes.chat-Symbol neben der Uhr",
-        "two": "Einstellungen",
+        "two": "Einstellungen für diesen {{device}}",
         "three": "Browser einschalten",
         "done": "Das war’s. Diese Seite merkt es von selbst, kein Neuladen nötig.",
         "menuOpen": "agentes öffnen",
-        "menuPrefs": "Einstellungen…",
+        "menuPrefs": "Einstellungen für diesen {{device}}…",
         "menuPause": "Pausieren",
         "menuQuit": "Beenden",
-        "tools": "Tools",
+        "tools": "Ordner und Werkzeuge",
         "commands": "Befehle"
       },
       "offlineCloud": "{{computer}} antwortet nicht. Wir kümmern uns. {{name}} antwortet wieder, sobald er zurück ist."
@@ -8011,7 +8014,7 @@
     "linkEmpty": "Erstelle den Link, um ihn zu kopieren",
     "linkFailed": "Der Link konnte nicht erstellt werden. {{cause}}",
     "localOnly": "Dieser Server öffnet sich nur auf dem Computer, auf dem er läuft, deshalb können die Eingeladenen ihre Einladung nicht öffnen.",
-    "localOnlyHow": "Schalte in der agentes.chat-App auf diesem Computer unter Einstellungen › Server die Option Von deinem Handy und deinem Team erreichbar ein, oder betreibe agentes.chat auf einem Server, den sie öffnen können. Lade sie dann ein.",
+    "localOnlyHow": "Schalte in der agentes.chat-App auf diesem Computer unter Einstellungen › Server auf diesem {{device}} die Option Von deinem Handy und deinem Team erreichbar ein, oder betreibe agentes.chat auf einem Server, den sie öffnen können. Lade sie dann ein.",
     "localOnlyHere": "Schalte Von deinem Handy und deinem Team erreichbar ein. Lade sie dann ein.",
     "never": "Läuft nie ab",
     "untilDate": "Bis {{date}}",
@@ -16869,16 +16872,16 @@
         "windows": "PC",
         "linux": "Computer"
       },
-      "grantHere": "Es ist dieser {{device}}: Erlaube Ordner in den Einstellungen der App.",
-      "openFolders": "Ordner öffnen",
-      "openServers": "Server öffnen",
+      "grantHere": "Es ist dieser {{device}}: Erlaube Ordner in den Einstellungen für diesen {{device}}, unter Ordner und Werkzeuge.",
+      "openFolders": "Ordner und Werkzeuge öffnen",
+      "openServers": "Server auf diesem {{device}} öffnen",
       "openTools": "Tools öffnen",
       "reconnect": "Neu verbinden",
       "reconnecting": "Dieser {{device}} wird neu verbunden…",
       "seeRequest": "In der App ansehen",
       "offline": "Dieser {{device}} ist gerade offline.",
       "outageTitle": "Dieser {{device}} hat {{ago}} die Verbindung verloren",
-      "toolsOff": "Auf diesem {{device}} aus. Schalte es in den Einstellungen der App unter Tools ein.",
+      "toolsOff": "Auf diesem {{device}} aus. Schalte es in den Einstellungen für diesen {{device}} unter Ordner und Werkzeuge ein.",
       "noReport": "Dieser {{device}} hat noch nicht gemeldet, was er erlaubt. Aktualisiere die App.",
       "update": "App aktualisieren"
     },
@@ -16998,7 +17001,7 @@
       "disableText": "Agenten nutzen {{tool}} auf diesem Computer nicht mehr. Wieder einschalten: am Computer selbst, oder hier durch die Person, die ihn verbunden hat.",
       "disabled": "{{tool}} ausgeschaltet.",
       "grantTitle": "Mehr erlauben",
-      "grantText": "Erlaubt wird auf dem Computer selbst: Öffne dort die agentes.chat-App (Einstellungen → Ordner).",
+      "grantText": "Erlaubt wird auf dem Computer selbst: Öffne dort die agentes.chat-App (Einstellungen › Dieser {{device}} › Ordner und Werkzeuge).",
       "grantTextTerminal": "Erlaubt wird auf dem Computer selbst, in seinem Terminal:",
       "grantTextAdmin": "Erlaubt wird auf dem Computer selbst, in seinem Terminal, als dessen Administrator:",
       "grantTerminal": "Keine App? Im Terminal des Computers:",
@@ -18375,6 +18378,18 @@
   "settings": {
     "notOpen": "Deine Rolle in diesem Workspace öffnet {{section}} nicht. Wer die Rollen verwaltet, kann es für dich freigeben.",
     "nav": "Bereiche der Einstellungen",
+    "thisDevice": {
+      "title": "Dieser {{device}}",
+      "section": {
+        "overview": "Übersicht",
+        "folders": "Ordner und Werkzeuge",
+        "server": "Server auf diesem {{device}}",
+        "activity": "Aktivität",
+        "app": "App-Einstellungen"
+      },
+      "needs_one": "{{count}} Sache braucht dich",
+      "needs_other": "{{count}} Sachen brauchen dich"
+    },
     "group": {
       "org": "Workspace"
     },
@@ -18609,7 +18624,7 @@
       "label": "Anonyme Nutzungsstatistiken an agentes.chat senden",
       "help": "Zahlen wie Personen, Agenten, Maschinengrößen, verbrauchte KI-Tokens, wie viele Daten die Browser der Agenten senden und empfangen, und wie schnell die Apps starten und laufen. Nie Nachrichten, Dateien, Namen oder Websites.",
       "envOff": "In den Einstellungen dieses Servers ausgeschaltet (TELEMETRY=off).",
-      "envOffDesktop": "In der agentes.chat-App auf dem Computer dieses Servers ausgeschaltet (Einstellungen › Server).",
+      "envOffDesktop": "In der agentes.chat-App auf dem Computer dieses Servers ausgeschaltet (Einstellungen › Server auf diesem {{device}}).",
       "envOffHere": "In der agentes.chat-App auf diesem Computer ausgeschaltet.",
       "see": "Ansehen, was gesendet wird",
       "dialogTitle": "Was gesendet wird",
@@ -20315,7 +20330,7 @@
     "machine": {
       "ready": "Bereit",
       "off": "Aus",
-      "offHelp": "Wer den Computer verbunden hat, schaltet es hier ein oder in der agentes.chat-App dort: Einstellungen → Werkzeuge.",
+      "offHelp": "Wer den Computer verbunden hat, schaltet es hier ein oder in der agentes.chat-App dort: Einstellungen › Dieser {{device}} › Ordner und Werkzeuge.",
       "needsCommand": "Braucht einen Befehl",
       "notReady": "Noch nicht bereit",
       "turnOff": "Ausschalten",

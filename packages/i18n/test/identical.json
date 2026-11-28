@@ -5159,7 +5159,6 @@
       "prefs.folders.org",
       "prefs.general.orgs",
       "server.jev",
-      "servers.workspaces",
       "tools.antigravityName",
       "tools.devinName",
       "tools.claudeName",
@@ -5202,14 +5201,18 @@
       "prefs.nav.label",
       "prefs.thisMac.agents",
       "prefs.tools.protection",
+      "prepare.notifications",
       "server.jev",
+      "settings.app.notifications",
+      "sheets.prepare.notifications",
       "tools.antigravityName",
       "tools.devinName",
       "tools.claudeName",
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
-      "tools.opencodeName"
+      "tools.opencodeName",
+      "settings.app.version"
     ],
     "de": [
       "device.mac",
@@ -5236,7 +5239,8 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
-      "tools.opencodeName"
+      "tools.opencodeName",
+      "settings.app.version"
     ],
     "it": [
       "common.hours",

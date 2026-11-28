@@ -2,9 +2,10 @@
  * The site in the app's main window asks this computer a few things, relayed by Rust (`this_mac` in
  * main_window.rs, which checked the request and added the asking page's own `origin` and whether agents
  * may work here for it, `agentsHere`): which of its organizations this computer works for, pairing it with
- * one, reconnecting it, Preferences on a tab, the access requests (the popover), and on the server here the
- * folder of its files (Storage's "Show the folder"). The popover answers, since it owns the runners. Pairing
- * starts the device-code sign-in with the page's own server; the site confirms the code with its own session
+ * one, reconnecting it, the access requests (the popover), System Settings on a permission the page was refused,
+ * the Local Network permission an Android phone over Wi-Fi needs, and on the server here the folder of its files
+ * (Storage's "Show the folder"). Rust answers the rest itself (This computer's settings, ADR 0265). The popover
+ * answers, since it owns the runners. Pairing starts the device-code sign-in with the page's own server; the site confirms the code with its own session
  * and the machine's token stays with the runner. Rust already asked the person (the system's own dialog)
  * before a `connect` gets here.
  */
@@ -35,7 +36,9 @@ export type ThisMacRequest =
   | { kind: "requests" }
   | { kind: "files"; local?: boolean }
   /** The page's one way out where macOS refused it something: that permission's own list in System Settings. */
-  | { kind: "privacy"; pane: PrivacyPane };
+  | { kind: "privacy"; pane: PrivacyPane }
+  /** An Android phone pairs over Wi-Fi: the Local Network permission, asked just in time (ADR 0265 §7). */
+  | { kind: "localNetwork" };
 
 export type PrefsTab = "folders" | "tools" | "updates" | "servers";
 /** The microphone (a voice message), the Local Network list (Wi-Fi pairing of a phone). */
@@ -63,6 +66,8 @@ export interface ThisMacDeps {
   showRequests(): Promise<void>;
   /** System Settings on a permission's list; absent: the page's request is refused. */
   openPrivacy?(pane: PrivacyPane): Promise<void>;
+  /** The Local Network permission: the system's prompt the first time, System Settings after; absent: refused. */
+  localNetwork?(): Promise<void>;
   /** The server here's folder (`~/.agentes`), as the app runs it now. */
   localDir(): Promise<string>;
   /** A folder of this computer in Finder or the file manager; rejects when it isn't one. */
@@ -115,6 +120,11 @@ export async function answerThisMac(deps: ThisMacDeps, request: ThisMacRequest):
   if (request.kind === "privacy") {
     if (!PRIVACY_PANES.includes(request.pane) || !deps.openPrivacy) throw new Error("not_here");
     await deps.openPrivacy(request.pane);
+    return {};
+  }
+  if (request.kind === "localNetwork") {
+    if (!deps.localNetwork) throw new Error("not_here");
+    await deps.localNetwork();
     return {};
   }
   if (request.kind === "files") {

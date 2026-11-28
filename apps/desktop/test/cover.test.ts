@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readInstance } from "@agenteschat/client/lib/server";
-import { coverTailnet } from "../src/control/local-server";
 import { versionProblem } from "../src/control/server";
+import { networkFix, networkWords, privateTitle } from "../src/cover/network";
 import { STUCK_STEPS_MS, stuckAction } from "../src/cover/stuck";
 import { desktopEn } from "../src/i18n/keys.en";
 import { desktopPtBR } from "../src/i18n/keys.pt-BR";
@@ -25,22 +25,52 @@ test("the cover names only fonts its own page loads (it doesn't load the app's s
   for (const family of named) expect(loaded).toContain(family);
 });
 
-test("Tailscale off over the server here: the Mac's app, Windows' icon by the clock, the terminal elsewhere", () => {
-  for (const app of [true, false]) {
-    expect(coverTailnet("windows", { state: "off", app })).toBe("tailnetTray");
-    expect(coverTailnet("linux", { state: "off", app })).toBe("tailnetUp");
-  }
-  expect(coverTailnet("mac", { state: "off", app: true })).toBe("openTailscale");
-  // Only the command-line tool (Homebrew's): nothing to open, the command instead.
-  expect(coverTailnet("mac", { state: "off", app: false })).toBe("tailnetUp");
-  // Not read: its app.
-  expect(coverTailnet("mac", null)).toBe("openTailscale");
-  // What follows "Connect Tailscale on this PC to open agentes.chat.": no sudo on Windows, the command elsewhere.
-  for (const { cover } of [desktopEn, desktopPtBR]) {
-    expect(cover.openTailscale).toBeTruthy();
-    expect(cover.tailnetTray).not.toMatch(/sudo|terminal/);
-    expect(cover.tailnetUp).toContain("sudo tailscale up");
-  }
+describe("a workspace on a private network this computer can't reach (ADR 0265)", () => {
+  test("the system's Tailscale only (ADR 0265 §4): its Mac app, its download page, Windows' icon by the clock", () => {
+    expect(networkFix("mac", { state: "off", app: true })).toEqual({ act: "openApp" });
+    // Not read yet: its app.
+    expect(networkFix("mac", null)).toEqual({ act: "openApp" });
+    // Only the command-line tool: nothing to open from here.
+    expect(networkFix("mac", { state: "off", app: false })).toEqual({ act: "elsewhere" });
+    expect(networkFix("windows", { state: "off", app: false })).toEqual({ act: "tray" });
+    expect(networkFix("linux", { state: "off", app: false })).toEqual({ act: "elsewhere" });
+    expect(networkFix("windows", null)).toEqual({ act: "tray" });
+    expect(networkFix("linux", null)).toEqual({ act: "elsewhere" });
+    for (const platform of ["mac", "windows", "linux"] as const) {
+      expect(networkFix(platform, { state: "missing" })).toEqual({ act: "download" });
+      // Tailscale on: the network isn't why, the server itself doesn't answer.
+      expect(networkFix(platform, { state: "on", device: "ana-mac.tail1234.ts.net" })).toBeNull();
+    }
+  });
+
+  test("its words: Open Tailscale or Download Tailscale where the cover can, the way to it where it can't", () => {
+    expect(networkWords({ act: "openApp" })).toEqual({ line: "privateLine", button: "openTailscale" });
+    expect(networkWords({ act: "download" })).toEqual({ line: "privateMissing", button: "getTailscale" });
+    expect(networkWords({ act: "tray" })).toEqual({ line: "privateTray", button: null });
+    expect(networkWords({ act: "elsewhere" })).toEqual({ line: "privateElsewhere", button: null });
+    expect(privateTitle([{ name: "Acme" }])).toEqual({ key: "privateTitle", org: "Acme" });
+    expect(privateTitle([{ name: "Acme" }, { name: "Horizonte" }])).toEqual({ key: "privateTitleAny" });
+    expect(privateTitle(null)).toEqual({ key: "privateTitleAny" });
+    for (const { cover } of [desktopEn, desktopPtBR]) {
+      expect(cover.privateTitle).toContain("{{org}}");
+      for (const words of [
+        cover.privateLine,
+        cover.privateMissing,
+        cover.privateTray,
+        cover.privateElsewhere,
+        cover.useOther,
+        cover.openTailscale,
+        cover.getTailscale,
+      ]) {
+        expect(words).toBeTruthy();
+        expect(words).not.toMatch(/sudo|terminal|tailnet/i);
+      }
+    }
+    expect(desktopEn.cover.getTailscale).toBe("Download Tailscale");
+    expect(desktopPtBR.cover.getTailscale).toBe("Baixar o Tailscale");
+    expect(desktopPtBR.cover.openTailscale).toBe("Abrir o Tailscale");
+    expect(desktopPtBR.cover.useOther).toBe("Usar outro workspace");
+  });
 });
 
 test("a page that never paints while its server answers: loaded again, then with the cache cleared, then said", () => {
@@ -66,6 +96,34 @@ test("the cover never steps aside on its own while the page hasn't painted", () 
   // Only the person's "Show it anyway" hides it; the old 15 s give-up left a blank window.
   expect(main.match(/invoke\("cover_hide"\)/g)).toHaveLength(1);
   expect(main).toContain('words.showAnyway, () => void invoke("cover_hide")');
+});
+
+test("over the server here the cover never turns reach off: the window opens it at loopback (ADR 0265 §5)", () => {
+  const main = read(join(COVER, "main.ts"));
+  expect(main).not.toContain("local_server_reach");
+  expect(main).not.toContain("tailnetOff");
+  // Tailscale is named only for a workspace on a private network the cover can't reach.
+  expect(main).toContain("isTailnet(server) ? await readNetwork()");
+  const capability = JSON.parse(read(join(import.meta.dir, "../src-tauri/capabilities/cover.json"))) as {
+    permissions: string[];
+  };
+  expect(capability.permissions).not.toContain("allow-local-server-reach");
+  // It names the workspace and turns the network on through the system's Tailscale: the app carries none of its own.
+  for (const permission of ["allow-workspaces-get", "allow-tailscale-status", "allow-tailscale-open"]) {
+    expect(capability.permissions).toContain(permission);
+  }
+  for (const permission of ["allow-tailnet-status", "allow-tailnet-sign-in"]) {
+    expect(capability.permissions).not.toContain(permission);
+  }
+  expect(main).not.toContain("tailnet_status");
+  expect(main).not.toContain("tailnet_sign_in");
+});
+
+test("the cover's fake answers only while designing in a browser, never in the app", () => {
+  const main = read(join(COVER, "main.ts"));
+  expect(main).toContain(
+    'if (import.meta.env.DEV && !("__TAURI_INTERNALS__" in window)) await import("../dev/fake-cover");',
+  );
 });
 
 test("each time a saved server opens, the cover asks its app API again and stays over one this app can't use", () => {

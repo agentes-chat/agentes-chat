@@ -616,7 +616,9 @@ export function ComputerStage({
             color={color}
             icon="globe"
             text={t("agentComputer.state.browserOff", { ...g, computer })}
-            help={browserOneClick ? undefined : t("browser.machine.offHelp")}
+            help={
+              browserOneClick ? undefined : t("browser.machine.offHelp", { device: t("machines.thisMac.device.mac") })
+            }
             action={browserOneClick && machine ? <MachineToolButton machine={machine} tool="browser" /> : undefined}
           />
         </Stage>

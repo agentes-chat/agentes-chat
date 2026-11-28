@@ -16,8 +16,12 @@
 //! as nobody's until the last step is done (`discard_unowned`); the folder's settings and the server's copy stay.
 //!
 //! It starts the server with the app (at login too), restarts it after a crash (1 s doubling to 60 s), stops it
-//! gracefully on quit, and listens only on 127.0.0.1; reach from the person's other devices is Tailscale's
-//! `serve` (`tailscale.rs`), which also moves `PUBLIC_URL`, and is shared only while the server runs here.
+//! gracefully on quit, and listens only on 127.0.0.1. Reach from the person's other devices is the way they chose
+//! (ADR 0265 §4, `Way`): the Tailscale they installed (its `serve`, `tailscale.rs`, shared only while the server runs
+//! here), or an address of their own (a tunnel on this computer that leads to the loopback port, checked by
+//! `address.rs`). Either one becomes `PUBLIC_URL`. The main window on this computer always opens it at its loopback
+//! address (ADR 0265 §5): the address for people is for the phone, the team and links, so reach turning on or off, or
+//! that address being down, never moves or signs out the window here.
 //!
 //! Other programs and accounts on this computer can listen on the loopback port too, so only the app's own
 //! child counts as the server: it answers health and names its pid in `server.json` (in the folder only this
@@ -254,7 +258,7 @@ pub fn sha256_hex(text: &str) -> String {
     Sha256::digest(text.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn make_private_dir(dir: &Path) -> io::Result<()> {
+pub(crate) fn make_private_dir(dir: &Path) -> io::Result<()> {
     fs::create_dir_all(dir)?;
     #[cfg(unix)]
     {
@@ -283,13 +287,44 @@ fn write_private(path: &Path, bytes: &[u8], replace: bool) -> io::Result<()> {
     }
 }
 
-/// What the person chose in "Run agentes.chat on this computer".
+/// Where the server here will be used: from the phone and the team too (reach, the way they chose), or only on this
+/// computer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Place {
+    Everywhere,
+    Here,
+}
+
+/// How the phone and the team reach the server here (ADR 0265 §4, control/local-server.ts `ReachWay`): the Tailscale
+/// the person installed, or an address of their own (`url`, an https origin, `address::normalize`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum Way {
+    Tailscale,
+    Address { url: String },
+}
+
+impl Way {
+    /// The way as it is kept: an address only as its https origin (None when it isn't one).
+    pub fn clean(self) -> Option<Way> {
+        match self {
+            Way::Tailscale => Some(Way::Tailscale),
+            Way::Address { url } => crate::address::normalize(&url).map(|url| Way::Address { url }),
+        }
+    }
+}
+
+/// What the person chose in "Run agentes.chat on this computer". `way`: with `Everywhere`, how people reach it (none
+/// given: the one saved, else Tailscale).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Choice {
     pub name: Option<String>,
     pub email: Option<String>,
-    pub reach: bool,
+    pub place: Place,
+    #[serde(default)]
+    pub way: Option<Way>,
     pub usage: bool,
 }
 
@@ -572,9 +607,10 @@ pub fn sign_in_owner(was: Option<&str>, owner: Option<&str>) -> bool {
     }
 }
 
-/// The window follows the server to `url`: signed in as the owner when it was the owner (`sign_in_owner`), else on
-/// that address's sign-in page.
-fn follow_window(app: &AppHandle, folder: &Folder, port: u16, url: &str, was: Option<String>) -> Result<(), String> {
+/// The window comes back to the server here at its loopback address `url` after it was signed in elsewhere as `was`
+/// (an older app's tailnet address, ADR 0265 §5): signed in as the owner when it was the owner (`sign_in_owner`), else
+/// on the sign-in page, where the owner still continues on this computer in one click.
+fn sign_in_again(app: &AppHandle, folder: &Folder, port: u16, url: &str, was: Option<String>) -> Result<(), String> {
     if was.is_some() {
         if let Ok((token, owner)) = owner_sign_in_as(folder, port) {
             if sign_in_owner(was.as_deref(), owner.as_deref()) {
@@ -918,6 +954,26 @@ struct HereFile {
     /// A folder each new backup is copied to as well ("Copy to").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     backup_copy: Option<String>,
+    /// How people reach it (ADR 0265 §4), kept once reach turned on that way: reach turned on again without a way
+    /// uses it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    way: Option<Way>,
+    /// An earlier build's choice of Tailscale (`"system"`, or `"app"`: one the app carried): read as the Tailscale
+    /// way (`read_here`), never written again.
+    #[serde(default, skip_serializing, rename = "tailnet")]
+    old_tailnet: Option<Value>,
+}
+
+/// The app's record as saved, `None` when it isn't one: an earlier build's Tailscale choice reads as the Tailscale way.
+fn read_here(text: &str) -> Option<HereFile> {
+    let mut here: HereFile = serde_json::from_str(text).ok()?;
+    if let Some(old) = here.old_tailnet.take() {
+        if here.way.is_none() && !old.is_null() {
+            here.way = Some(Way::Tailscale);
+        }
+    }
+    here.way = here.way.take().and_then(Way::clean);
+    Some(here)
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -967,12 +1023,15 @@ struct Inner {
     back_to: Option<String>,
     lines: VecDeque<String>,
     https_url: Option<String>,
-    /// Tailscale shares it now (with reach on); false once the server stopped here.
+    /// People reach it now (with reach on): Tailscale shares it, or the person's own address led here at the last
+    /// check; false once the server stopped here.
     served: bool,
-    /// With reach on, Tailscale isn't connected on this computer (the last share or check said so): its devices can't
-    /// reach it, whatever the address says.
-    tailnet_down: bool,
-    /// `caffeinate`'s process while it keeps this Mac awake for the people reaching the server through Tailscale.
+    /// With reach on, people can't get here now, either way: Tailscale isn't connected on this computer (the last share
+    /// or check said so), or the person's own address missed `address::MISSES_DOWN` checks in a row.
+    reach_down: bool,
+    /// Checks in a row through the person's own address that didn't lead here (`check_reach`).
+    address_misses: u32,
+    /// `caffeinate`'s process while it keeps this Mac awake for the people reaching the server from elsewhere.
     awake: Option<u32>,
     /// It is being set up, since then (Copy details' timeline counts from it).
     setting_up: Option<Instant>,
@@ -982,6 +1041,9 @@ struct Inner {
     nightly_tried: Option<String>,
     /// Where "Erase and start over" moved its folder.
     erased: Option<String>,
+    /// The window was on an older app's tailnet address of the server here (`servers.json` now names its loopback
+    /// one): once it answers, the owner is signed in again there when that is who the window was (`migrate_list`).
+    sign_in_again: Option<String>,
 }
 
 #[derive(Default)]
@@ -1007,6 +1069,11 @@ pub fn cancelled(app: &AppHandle) -> bool {
 
 pub fn setting_up(app: &AppHandle) -> bool {
     state(app).setting_up.is_some()
+}
+
+/// Whether `caffeinate` keeps this Mac awake for the server here now (this computer's essentials, `always_on.rs`).
+pub fn awake(app: &AppHandle) -> bool {
+    state(app).awake.is_some()
 }
 
 fn erasing(app: &AppHandle) -> bool {
@@ -1063,7 +1130,7 @@ pub fn answering_loopback(app: &AppHandle) -> Option<String> {
     is_running(app).then(|| loopback(app)).flatten()
 }
 
-/// Its address for people: `PUBLIC_URL` (the Tailscale one with reach on), else the loopback one.
+/// Its `PUBLIC_URL`: the Tailscale address with reach on, else the loopback one.
 pub fn public_url(app: &AppHandle) -> Option<String> {
     let folder = folder(app)?;
     env_get(&read_env(&folder), "PUBLIC_URL")
@@ -1071,9 +1138,51 @@ pub fn public_url(app: &AppHandle) -> Option<String> {
         .or_else(|| port_of(&folder).map(loopback_url))
 }
 
+/// Its address for people (the phone, the team, links): the Tailscale one, only with reach on.
+pub fn people_url(app: &AppHandle) -> Option<String> {
+    public_url(app).filter(|u| u.starts_with("https://"))
+}
+
 /// Whether `origin` is the server here, at either of its addresses.
 pub fn is_here(app: &AppHandle, origin: &str) -> bool {
     runs(app) && (loopback(app).as_deref() == Some(origin) || public_url(app).as_deref() == Some(origin))
+}
+
+/// The origin the app keeps and opens for `origin`: the server here's loopback address for its address for people
+/// (typed, linked or found by discovery), anything else as it is.
+pub fn origin_here(app: &AppHandle, origin: &str) -> String {
+    match (people_url(app), loopback(app)) {
+        (Some(people), Some(local)) if people == origin => local,
+        _ => origin.to_string(),
+    }
+}
+
+/// How people reach the server here: the way saved, or Tailscale while reach is on with none saved (an install from
+/// before the way was kept).
+pub fn way(app: &AppHandle) -> Option<Way> {
+    let saved = state(app).here.way.clone();
+    saved.or_else(|| reached(app).then_some(Way::Tailscale))
+}
+
+/// Keeps the way people reach it, saved at once outside a setup (a setup saves its record when every step is done).
+fn set_way(app: &AppHandle, way: Option<Way>) {
+    let here = {
+        let mut inner = state(app);
+        if inner.here.way == way {
+            return;
+        }
+        inner.here.way = way;
+        inner.here.clone()
+    };
+    if !setting_up(app) {
+        save_here(app, &here);
+    }
+}
+
+/// Whether Tailscale is the way people reach it now (only then does anything ask Tailscale to share or stop sharing:
+/// with an address of the person's own, Tailscale may share other things of theirs).
+fn by_tailscale(app: &AppHandle) -> bool {
+    way(app) == Some(Way::Tailscale)
 }
 
 /// The server here answers now, as the app's own child (host syncs, the owner key and the main window's bridge
@@ -1082,16 +1191,15 @@ pub fn is_running(app: &AppHandle) -> bool {
     phase(app) == Phase::Running
 }
 
-/// Whether `origin`, one of the server here's addresses, leads to the app's own child now: it runs, and at its
-/// Tailscale address Tailscale shares it again (until then that address may still lead to its old port).
-/// Waits up to `wait` while either is on its way (a page that loaded as it came up asks at once).
-pub fn answers_within(app: &AppHandle, origin: &str, wait: Duration) -> bool {
+/// Whether the server here's own child answers now (the window on this computer opens it at its loopback address,
+/// never through the address for people, so its share is never waited on). Waits up to `wait` while it is on its way (a
+/// page that loaded as it came up asks at once).
+pub fn answers_within(app: &AppHandle, _origin: &str, wait: Duration) -> bool {
     let deadline = Instant::now() + wait;
-    let via_tailnet = origin.starts_with("https://");
     loop {
         match phase(app) {
-            Phase::Running if !via_tailnet || state(app).served => return true,
-            Phase::Running | Phase::Starting | Phase::Updating | Phase::Restarting if Instant::now() < deadline => {
+            Phase::Running => return true,
+            Phase::Starting | Phase::Updating | Phase::Restarting if Instant::now() < deadline => {
                 std::thread::sleep(Duration::from_millis(100))
             }
             _ => return false,
@@ -1107,11 +1215,16 @@ pub fn phase(app: &AppHandle) -> Phase {
     }
 }
 
-/// A page of the server here at its loopback address (its homes' links: they keep that address) opens at its
-/// address for people, the one the window signs in at.
-pub fn page_for_people(app: &AppHandle, url: Url) -> Url {
-    let (Some(local), Some(public)) = (loopback(app), public_url(app)) else { return url };
-    moved_page(url, &local, &public)
+/// A page of the server here at its address for people (a link someone shared, a deep link, a notification, a page
+/// typed in) opens at its loopback address, the one the window on this computer signs in at (ADR 0265 §5).
+pub fn page_here(app: &AppHandle, url: Url) -> Url {
+    let (Some(people), Some(local)) = (people_url(app), loopback(app)) else { return url };
+    moved_page(url, &people, &local)
+}
+
+/// Whether `url` is a page of the server here at its address for people (the window opens it at loopback instead).
+pub fn is_people_page(app: &AppHandle, url: &Url) -> bool {
+    people_url(app).is_some_and(|people| url.origin().ascii_serialization() == people) && loopback(app).is_some()
 }
 
 fn moved_page(url: Url, from: &str, to: &str) -> Url {
@@ -1144,9 +1257,20 @@ pub struct Status {
     run: bool,
     owner: bool,
     phase: Phase,
+    /// Its loopback address (a terminal install's too, from its `server.json`).
     url: Option<String>,
+    /// The address the window on this computer opens: the app's own server's loopback one (ADR 0265 §5).
+    local_url: Option<String>,
+    /// Its address for people (the phone, the team, links): the Tailscale one or the person's own with reach on, else
+    /// None.
     public_url: Option<String>,
     reach: bool,
+    /// How people reach it (`way`): saved once reach turned on, kept while it is off for turning it on again.
+    way: Option<Way>,
+    /// Its port (`PORT`), the one a tunnel points at; before any setup, the one a setup would take now.
+    port: Option<u16>,
+    /// Reach in one word, for This computer's essentials (`reach_health`).
+    reach_health: &'static str,
     usage: bool,
     installed_version: Option<String>,
     server_version: Option<String>,
@@ -1163,8 +1287,9 @@ pub struct Status {
     held: bool,
     /// When a stop "for an hour" ends and it starts again by itself (Unix milliseconds).
     held_until: Option<u64>,
-    /// Reach is on but Tailscale isn't connected on this computer: nobody else can reach it now.
-    tailnet_down: bool,
+    /// Reach is on but people can't get here now, either way (Tailscale not connected here, or the person's own
+    /// address not leading here).
+    reach_down: bool,
     backups: Backups,
     /// `caffeinate` keeps this Mac awake for it now.
     awake: bool,
@@ -1224,17 +1349,54 @@ fn server_versions(folder: Option<&Folder>, ready: Option<&Value>, phase: Phase)
     (installed, server)
 }
 
+/// What reach's one word is read from (`reach_health`).
+#[derive(Clone, Copy, Debug)]
+pub struct ReachFacts {
+    /// `PUBLIC_URL` is the address for people (https).
+    pub reach: bool,
+    /// People reach it through the person's own address (else through Tailscale).
+    pub address: bool,
+    /// Tailscale shares it now.
+    pub served: bool,
+    /// Tailscale waits for HTTPS to be allowed in the tailnet.
+    pub approving: bool,
+    /// People can't get here now: Tailscale not connected, or the address missed its checks (`reach_down`).
+    pub down: bool,
+}
+
+/// Reach in one word (`Status.reachHealth`, ADR 0265 §7): `off`, `on`, or what keeps the phone and the team from it
+/// now: `approve` (HTTPS waits for the tailnet's admin), `down` (Tailscale isn't connected here), `address` (the
+/// person's own address doesn't lead here now).
+pub fn reach_health(f: ReachFacts) -> &'static str {
+    if !f.reach {
+        return "off";
+    }
+    if f.address {
+        return if f.down { "address" } else { "on" };
+    }
+    if f.approving && !f.served {
+        return "approve";
+    }
+    // A share that is still on its way after a start isn't "down": only Tailscale saying so is.
+    if f.down {
+        return "down";
+    }
+    "on"
+}
+
 pub fn status(app: &AppHandle, welcome: bool) -> Status {
-    let (here, phase, back_to, tailnet_down, backup_problem, awake, erased) = {
+    let (here, phase, back_to, reach_down, backup_problem, awake, erased, served, https_url) = {
         let inner = state(app);
         (
             inner.here.clone(),
             inner.phase,
             inner.back_to.clone(),
-            inner.tailnet_down,
+            inner.reach_down,
             inner.backup_problem,
             inner.awake.is_some(),
             inner.erased.clone(),
+            inner.served,
+            inner.https_url.clone(),
         )
     };
     let folder = folder(app);
@@ -1260,6 +1422,14 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         .filter(|c| crate::servers::page_path(&format!("/owner#claim={c}")));
     let phase = if run { phase.unwrap_or(Phase::Stopped) } else { Phase::Off };
     let (installed_version, server_version) = server_versions(folder.as_ref(), ready.as_ref(), phase);
+    let way = here.way.clone().or_else(|| reach.then_some(Way::Tailscale));
+    let health = reach_health(ReachFacts {
+        reach,
+        address: matches!(way, Some(Way::Address { .. })),
+        served,
+        approving: https_url.is_some(),
+        down: reach_down,
+    });
     Status {
         bundled: bundle(app).is_some() && runner_binary().is_some(),
         installed,
@@ -1267,8 +1437,13 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         owner: here.owner,
         phase,
         url: port.map(loopback_url).or_else(|| ready.as_ref().and_then(|r| r["url"].as_str().map(str::to_string))),
+        local_url: port.filter(|_| run).map(loopback_url),
         reach,
-        public_url: public,
+        public_url: public.filter(|_| reach),
+        way,
+        // Before any setup (no `.env` yet), the port a setup would take now, for the tunnel to point at.
+        port: port.or_else(|| (installed == Installed::None).then(free_port).flatten()),
+        reach_health: health,
         usage: telemetry_on(env_get(&env, "TELEMETRY").as_deref()),
         installed_version,
         server_version,
@@ -1279,7 +1454,7 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         back_to,
         held: run && here.hold.is_some(),
         held_until: here.hold.and_then(|h| h.until).map(|t| t * 1000),
-        tailnet_down: tailnet_down && reach,
+        reach_down: reach_down && reach,
         backups: Backups {
             nightly: here.nightly.unwrap_or(true),
             files: folder
@@ -1478,7 +1653,10 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
                 crate::host_sync::trigger(app);
                 crate::cover::server_here_ready(app);
                 let app = app.clone();
-                std::thread::spawn(move || ensure_served(&app));
+                std::thread::spawn(move || {
+                    sign_in_after_migration(&app);
+                    ensure_served(&app);
+                });
             } else if since.elapsed() > ANSWER_WITHIN && current(app) {
                 note(app, "it didn't answer within 3 minutes".into());
                 timed_out = true;
@@ -1626,24 +1804,39 @@ fn move_port(app: &AppHandle, folder: &Folder, old: u16) -> Result<u16, String> 
         // Its share still leads to the old port: it goes now, and comes back on the new one once the server
         // answers there (`ensure_served`).
         unserve_here(app);
-    } else {
-        crate::servers::replace(app, &loopback_url(old), &loopback_url(port));
-        crate::main_window::follow_move(app, &loopback_url(old));
     }
+    // The window opens it at its loopback address, whose sign-in is per port (the server names its cookies
+    // `agentes-<PORT>.…`): it follows to the new one, where "Continue on this computer" signs the owner in again.
+    crate::servers::replace(app, &loopback_url(old), &loopback_url(port));
+    crate::main_window::follow_move(app, &loopback_url(old));
     Ok(port)
 }
 
-/// Reach is on: its address for people is the Tailscale one.
+/// Reach is on: its address for people is https (Tailscale's, or the person's own).
 fn reached(app: &AppHandle) -> bool {
     public_url(app).is_some_and(|u| u.starts_with("https://"))
 }
 
-/// With reach on, Tailscale shares the server while it runs here: again after every start, and every minute
-/// until that worked (`host_sync.rs`). It stops sharing whenever the server stops here (`unserve_here`), so
-/// the tailnet address never leads to whatever listens on the port meanwhile.
+/// With reach on, people reach the server while it runs here: through Tailscale, which shares it again after every
+/// start and every minute until that worked (`host_sync.rs`), and stops sharing whenever the server stops here
+/// (`unserve_here`), so the tailnet address never leads to whatever listens on the port meanwhile; or through the
+/// person's own address, which the app doesn't run (it leads here once the server answers, and `check_reach` says
+/// when it doesn't).
 pub fn ensure_served(app: &AppHandle) {
     let Some(url) = public_url(app).filter(|u| u.starts_with("https://")) else { return };
     if !is_running(app) || state(app).served {
+        return;
+    }
+    if !by_tailscale(app) {
+        let changed = {
+            let mut inner = state(app);
+            let changed = !inner.served && !inner.reach_down;
+            inner.served = !inner.reach_down;
+            changed
+        };
+        if changed {
+            emit_status(app);
+        }
         return;
     }
     let Some(folder) = folder(app) else { return };
@@ -1651,48 +1844,79 @@ pub fn ensure_served(app: &AppHandle) {
     // Nobody is there to allow HTTPS now: asked for it, it stops (reach turned on again asks the person).
     let asked = std::cell::Cell::new(false);
     let shared = crate::tailscale::serve(port, &mut |_| asked.set(true), &|| asked.get());
-    let down = matches!(shared, Err(crate::tailscale::ServeError::NotConnected { .. }));
-    if state(app).tailnet_down != down {
-        state(app).tailnet_down = down;
-        emit_status(app);
-    }
+    set_down(app, matches!(shared, Err(crate::tailscale::ServeError::NotConnected { .. })));
     let Ok(now) = shared else { return };
     if !is_running(app) {
         return;
     }
     if now != url {
-        // Tailscale shares it at another address now (this device was renamed, or another share took 443): it
-        // moves there instead of sharing at an address nobody can open. Not while a reach change or a setup runs.
+        // Tailscale shares it at another address now (the device was renamed, or another share took 443): its
+        // address for people moves there instead of staying where nobody can open it. The window here stays on its
+        // loopback address, signed in. Not while a reach change or a setup runs.
         let server = app.state::<LocalServer>();
         let Ok(_busy) = server.busy.try_lock() else { return };
         note(app, format!("Tailscale shares it at {now}, not {url}: moving there"));
-        let was = crate::workspaces::window_user(app, &url);
-        let showing = crate::servers::current(app).is_some_and(|c| c.origin().ascii_serialization() == url);
-        if move_address(app, &folder, Some(&url), &now).is_ok() {
+        if move_address(app, &folder, Some(&url), &now, true).is_ok() {
             emit_status(app);
-            if showing {
-                let _ = follow_window(app, &folder, port, &now, was);
-            }
         }
         return;
     }
     state(app).served = true;
-    crate::cover::server_here_ready(app);
+    emit_status(app);
 }
 
-/// Tailscale's state, read again every minute while reach is on and the server runs (`host_sync.rs`): Tailscale
-/// turned off on this computer means nobody else reaches it, and its line says so; back on, it is shared again.
-pub fn check_tailnet(app: &AppHandle) {
+/// Whether people can't get here now (the last share or check), told when it changed.
+fn set_down(app: &AppHandle, down: bool) {
+    let changed = {
+        let mut inner = state(app);
+        let changed = inner.reach_down != down;
+        inner.reach_down = down;
+        changed
+    };
+    if changed {
+        emit_status(app);
+    }
+}
+
+/// After a check through the person's own address: misses in a row so far, and whether it is down now. One check that
+/// led here clears it; `address::MISSES_DOWN` misses in a row make it down.
+pub fn address_after(misses: u32, led_here: bool) -> (u32, bool) {
+    if led_here {
+        (0, false)
+    } else {
+        let misses = misses.saturating_add(1);
+        (misses, misses >= crate::address::MISSES_DOWN)
+    }
+}
+
+/// The way people reach it, checked again every minute while reach is on and the server runs (`host_sync.rs`):
+/// Tailscale turned off on this computer, or the person's own address no longer leading here, means nobody else
+/// reaches it, and This computer's essentials say so; back on, it is shared again.
+pub fn check_reach(app: &AppHandle) {
     if !reached(app) || !is_running(app) {
         return;
     }
-    let down = !matches!(crate::tailscale::tailnet(), crate::tailscale::Tailnet::On { .. });
+    let down = match way(app) {
+        Some(Way::Address { .. }) => {
+            let (Some(people), Some(local)) = (people_url(app), loopback(app)) else { return };
+            // The address as it is now (`PUBLIC_URL`), asked through and compared with the server here.
+            let led_here = crate::address::check(&people, &local).is_ok();
+            if !is_running(app) {
+                return;
+            }
+            let mut inner = state(app);
+            let (misses, down) = address_after(inner.address_misses, led_here);
+            inner.address_misses = misses;
+            down
+        }
+        _ => !matches!(crate::tailscale::tailnet(), crate::tailscale::Tailnet::On { .. }),
+    };
     let changed = {
         let mut inner = state(app);
-        let changed = inner.tailnet_down != down;
-        inner.tailnet_down = down;
+        let changed = inner.reach_down != down;
+        inner.reach_down = down;
         if down {
-            // Shared again once it is back (`ensure_served`).
+            // Shared (or counted as reached) again once it is back (`ensure_served`).
             inner.served = false;
         }
         changed
@@ -1747,10 +1971,13 @@ fn let_sleep(app: &AppHandle) {
     end(pid);
 }
 
-/// Tailscale stops sharing the server here (it stopped here, or the app quits).
+/// Tailscale stops sharing the server here (it stopped here, or the app quits). The person's own address isn't the
+/// app's to stop: with the server stopped it leads nowhere.
 fn unserve_here(app: &AppHandle) {
-    if let Some(url) = public_url(app).filter(|u| u.starts_with("https://")) {
-        crate::tailscale::unserve(&url);
+    if by_tailscale(app) {
+        if let Some(url) = people_url(app) {
+            crate::tailscale::unserve(&url);
+        }
     }
     state(app).served = false;
 }
@@ -1811,16 +2038,15 @@ fn restart(app: &AppHandle) -> Result<(), String> {
 
 /// At the app's start: what it knew, and the server started when the app runs it.
 pub fn load(app: &AppHandle) {
-    let here: HereFile = here_path(app)
-        .and_then(|p| fs::read_to_string(p).ok())
-        .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_default();
+    let here: HereFile =
+        here_path(app).and_then(|p| fs::read_to_string(p).ok()).and_then(|t| read_here(&t)).unwrap_or_default();
     let hold = here.hold;
     state(app).here = here;
     nightly(app);
     if !runs(app) {
         return;
     }
+    migrate_list(app);
     match hold.map(|h| hold_left(h.until, now_secs())) {
         Some(HoldLeft::UntilStart) => emit_status(app),
         Some(HoldLeft::For(_)) => release_at(app, hold.and_then(|h| h.until).unwrap_or_default()),
@@ -1830,6 +2056,43 @@ pub fn load(app: &AppHandle) {
             }
             start(app);
         }
+    }
+}
+
+/// An older app kept the server here in its list at its address for people (the Tailscale one, which its window
+/// opened while reach was on, ADR 0265 §5): the list names its loopback address instead, once, before the window
+/// opens. The window's sign-in there was the tailnet address's own (cookies are per origin), so once the server
+/// answers the owner is signed in again at the loopback address (`sign_in_after_migration`).
+fn migrate_list(app: &AppHandle) {
+    let (Some(people), Some(local)) = (people_url(app), loopback(app)) else { return };
+    let Some(showing) = list_migration(&crate::servers::get(app), &people) else { return };
+    crate::servers::migrate(app, &people, &local);
+    note(app, format!("the list named it at {people}: at {local} now"));
+    if showing {
+        state(app).sign_in_again = Some(people);
+    }
+}
+
+/// Whether the app's list still names the server here at its address for people `people` (an older app's): Some, with
+/// whether that was the server open now (its window was signed in there), or None when there is nothing to move.
+pub fn list_migration(file: &crate::servers::ServerFile, people: &str) -> Option<bool> {
+    file.servers.iter().any(|s| s == people).then(|| file.current.as_deref() == Some(people))
+}
+
+/// After `migrate_list`, once the server answers: the window, on its loopback address now, signed in as the owner when
+/// that is who it was at the tailnet address (its own sign-in there, read with that address's cookies), else on the
+/// sign-in page, whose "Continue on this computer" signs the owner in. Nothing when the window is signed in there
+/// already.
+fn sign_in_after_migration(app: &AppHandle) {
+    let Some(people) = state(app).sign_in_again.take() else { return };
+    let (Some(folder), Some(local)) = (folder(app), loopback(app)) else { return };
+    let Some(port) = port_of(&folder) else { return };
+    if crate::workspaces::window_user(app, &local).is_some() {
+        return;
+    }
+    let was = crate::workspaces::window_user(app, &people);
+    if let Err(why) = sign_in_again(app, &folder, port, &local, was) {
+        note(app, format!("signing the window in again at {local}: {why}"));
     }
 }
 
@@ -1916,7 +2179,7 @@ fn open_signed_in(app: &AppHandle, origin: &str, token: &str) -> Result<(), Stri
 }
 
 /// The site's sign-in asked to sign the owner in ("Continue on this Mac", `this_mac` `signIn`). Refused with
-/// `owner_gone` or `owner_none`, which the page explains; with no account left, the welcome window opens on the
+/// `owner_gone` or `owner_none`, which the page explains; with no account left, the first run opens on the
 /// account step to make the new owner (setting up again over the same folder only adds the owner).
 pub fn sign_in_window(app: &AppHandle, origin: &str) -> Result<(), String> {
     if !answers_within(app, origin, Duration::ZERO) {
@@ -1930,9 +2193,8 @@ pub fn sign_in_window(app: &AppHandle, origin: &str) -> Result<(), String> {
             // A setup on screen makes the owner itself: its account step may be under way.
             if code == "owner_none" && !setting_up(app) {
                 save_owner(app, false);
-                *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) =
-                    Some("owner");
-                let _ = crate::present(app, "welcome");
+                let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Owner));
+                let _ = crate::app_layer::show(app, route);
             }
             return Err(code.into());
         }
@@ -1998,7 +2260,7 @@ fn step(app: &AppHandle, step: &'static str, state: &'static str) {
 fn say_step(app: &AppHandle, event: StepEvent) {
     let secs = state(app).setting_up.map_or(0.0, |since| since.elapsed().as_secs_f64());
     note(app, format!("setup {secs:.1} s: {} {}", event.step, event.state));
-    let _ = app.emit_to("welcome", STEP_EVENT, event);
+    let _ = app.emit_to(crate::app_layer::LABEL, STEP_EVENT, event);
 }
 
 /// The setup's way out of a step: "cancelled" (no step event) after Cancel, else the step failed, said on screen
@@ -2055,8 +2317,8 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
             return Err(fail("database", format!("migrate ended with {:?} ({:?}): {}", ran.code, ran.cut, ran.err.trim())));
         }
     }
-    // Reach left off this time: its address is this computer's again before it starts.
-    if !choice.reach && reached(app) {
+    // Only on this computer this time: its address is this computer's again before it starts.
+    if choice.place == Place::Here && reached(app) {
         address_here(app, &folder).map_err(|e| fail("database", format!("address: {e}")))?;
     }
     go_on(app)?;
@@ -2070,18 +2332,26 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
         inner.back_to = None;
         inner.on_purpose = false;
     }
-    let port = start_with_owner(app, &folder, choice, &fail)?;
+    let (port, token) = start_with_owner(app, &folder, choice, &fail)?;
     go_on(app)?;
     step(app, "account", "done");
+    // The window is in at once, at the loopback address, before this computer's part and Tailscale are ready (ADR
+    // 0265 §3, §5): signed in as the owner, or else on the sign-in page, whose "Continue on this computer" signs the
+    // owner in. A setup that doesn't finish takes it out of the list again (`set_up`).
+    open_window_here(app, port, token);
 
     step(app, "computer", "active");
     crate::host_sync::sync_now(app, &[]);
     go_on(app)?;
     step(app, "computer", "done");
 
-    if choice.reach {
+    if choice.place == Place::Everywhere {
+        // The way the person chose (ADR 0265 §4): Tailscale's share and HTTPS's approval, which waits on the person
+        // with no time limit until it is done, Cancel or quitting; or checking their own address, now that the server
+        // answers. Reach not done is a warning, never the setup's failure: the server runs here, and Settings turns
+        // reach on later.
         step(app, "reach", "active");
-        let reach = reach_on(app);
+        let reach = reach_on(app, choice.way.clone());
         go_on(app)?;
         match reach {
             Ok(_) => step(app, "reach", "done"),
@@ -2089,7 +2359,7 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
         }
     }
 
-    // Every step is done: it is kept, and nothing from here on undoes it.
+    // Every step is done: it is kept, and nothing from here on undoes it. Open at login with it (ADR 0265 §7).
     let _ = fs::remove_file(folder.pending());
     let here = state(app).here.clone();
     save_here(app, &here);
@@ -2098,31 +2368,30 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
         let _ = app.autolaunch().enable();
     }
     emit_status(app);
-    // The main window opens signed in, or else on the server's sign-in page, whose "Continue on this Mac" signs the
-    // owner in: never a setup that ends in an error with every step done.
-    if let Some(origin) = public_url(app) {
-        let signed_in = owner_sign_in(&folder, port, None)
-            .map_err(|(status, _)| format!("the owner's sign-in: the server answered {status}"))
-            .and_then(|token| open_signed_in(app, &origin, &token));
-        if let Err(why) = signed_in {
-            note(app, why);
-            crate::servers::choose(app, &origin);
-            if let Ok(page) = origin.parse::<Url>() {
-                let _ = crate::main_window::show_url(app, page);
-            }
-        }
-    }
     Ok(())
 }
 
+/// The main window on the server here at its loopback address, signed in with the owner's one-time `token`; when that
+/// doesn't take, on its sign-in page there.
+fn open_window_here(app: &AppHandle, port: u16, token: String) {
+    let origin = loopback_url(port);
+    if let Err(why) = open_signed_in(app, &origin, &token) {
+        note(app, format!("the window at {origin}: {why}"));
+        crate::servers::choose(app, &origin);
+        if let Ok(page) = origin.parse::<Url>() {
+            let _ = crate::main_window::show_url(app, page);
+        }
+    }
+}
+
 /// The setup's start and account steps: the server answers as the app's own child, then its owner exists (kept
-/// in memory until the setup is done). Its port.
+/// in memory until the setup is done). Its port, and a one-time sign-in for the owner.
 fn start_with_owner(
     app: &AppHandle,
     folder: &Folder,
     choice: &Choice,
     fail: &dyn Fn(&'static str, String) -> String,
-) -> Result<u16, String> {
+) -> Result<(u16, String), String> {
     step(app, "start", "active");
     if state(app).pid.is_none() {
         stop_leftover(app, folder);
@@ -2137,42 +2406,63 @@ fn start_with_owner(
     step(app, "account", "active");
     let port = port_of(folder).ok_or_else(|| fail("account", "no PORT in .env".into()))?;
     let who = choice.name.as_deref().zip(choice.email.as_deref());
-    owner_sign_in(folder, port, who)
+    let token = owner_sign_in(folder, port, who)
         .map_err(|(status, _)| fail("account", format!("the owner's account: the server answered {status}")))?;
     state(app).here.owner = true;
-    Ok(port)
+    Ok((port, token))
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ReachStage<'a> {
-    /// `sharing` (Tailscale), `approve` (HTTPS to allow at `url`), `restarting` (at the new address), `signingIn`.
+    /// `checking` (the person's own address leads here), `sharing` (Tailscale), `approve` (HTTPS to allow at `url`),
+    /// `restarting` (at its new address for people, behind the window), `done` (its address for people at `url`).
     stage: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     url: Option<&'a str>,
 }
 
 fn reach_stage(app: &AppHandle, stage: &'static str, url: Option<&str>) {
-    let _ = app.emit(REACH_EVENT, ReachStage { stage, url });
+    let event = ReachStage { stage, url };
+    for label in [crate::app_layer::LABEL, "popover"] {
+        let _ = app.emit_to(label, REACH_EVENT, &event);
+    }
 }
 
-/// Reach on: Tailscale shares the server, `PUBLIC_URL` becomes that address and the server starts again
-/// there; the server list follows. The address, or why it didn't work. Each stage is said as it starts
-/// (`REACH_EVENT`), and Tailscale's page for allowing HTTPS as soon as it names it.
-fn reach_on(app: &AppHandle) -> Result<String, crate::tailscale::ServeError> {
-    let folder = folder(app).ok_or(crate::tailscale::ServeError::Serve)?;
-    let port = port_of(&folder).ok_or(crate::tailscale::ServeError::Serve)?;
-    reach_stage(app, "sharing", None);
+/// Reach on (ADR 0265 §3–§5), the way given, else the one saved, else Tailscale: its address for people, or why it
+/// didn't work. The window stays on the loopback address, signed in, through all of it. Switching ways stops
+/// Tailscale's share when it was the way before. Each stage is said as it starts (`REACH_EVENT`).
+fn reach_on(app: &AppHandle, way: Option<Way>) -> Result<String, crate::tailscale::ServeError> {
+    use crate::address::{AddressFail, AddressProblem};
+    let way = match way {
+        Some(way) => way.clean().ok_or(AddressFail::new(AddressProblem::NotHttps))?,
+        None => self::way(app).unwrap_or(Way::Tailscale),
+    };
+    match way {
+        Way::Tailscale => reach_by_tailscale(app),
+        Way::Address { url } => reach_by_address(app, &url),
+    }
+}
+
+/// Through Tailscale: it shares the server with HTTPS (its admin page allows it), then `PUBLIC_URL` becomes that
+/// address, written only now, and the server starts again there. Waiting for the approval has no time limit: "Stop
+/// waiting", Cancel and quitting end it. Tailscale's page for allowing HTTPS is said as soon as it names it.
+fn reach_by_tailscale(app: &AppHandle) -> Result<String, crate::tailscale::ServeError> {
+    use crate::tailscale::ServeError;
+    let folder = folder(app).ok_or(ServeError::Serve)?;
+    let port = port_of(&folder).ok_or(ServeError::Serve)?;
     let server = app.state::<LocalServer>();
     server.reach_stop.store(false, SeqCst);
-    let mut asks = |url: &str| {
-        state(app).https_url = Some(url.to_string());
-        reach_stage(app, "approve", Some(url));
-    };
     // "Stop waiting", or Cancel and quitting while it is set up.
     let stopped = || server.reach_stop.load(SeqCst) || cancelled(app);
+    reach_stage(app, "sharing", None);
+    let mut asks = |url: &str| {
+        state(app).https_url = Some(url.to_string());
+        emit_status(app);
+        reach_stage(app, "approve", Some(url));
+    };
     let url = crate::tailscale::serve(port, &mut asks, &stopped).inspect_err(|reason| {
-        if let crate::tailscale::ServeError::Https { url } = reason {
+        if let ServeError::Https { url } = reason {
             state(app).https_url.clone_from(url);
         }
     })?;
@@ -2180,35 +2470,100 @@ fn reach_on(app: &AppHandle) -> Result<String, crate::tailscale::ServeError> {
     let pid = {
         let mut inner = state(app);
         inner.served = true;
-        inner.tailnet_down = false;
+        inner.reach_down = false;
+        inner.address_misses = 0;
+        inner.https_url = None;
         inner.pid
     };
+    set_way(app, Some(Way::Tailscale));
     // Already its address (reach was on before): the server has it, no restart.
     if old.as_deref() == Some(url.as_str()) {
         if let Some(pid) = pid {
             keep_awake(app, pid);
         }
+        reach_stage(app, "done", Some(&url));
         return Ok(url);
     }
     reach_stage(app, "restarting", None);
-    move_address(app, &folder, old.as_deref(), &url).map_err(|_| crate::tailscale::ServeError::Start)?;
+    move_address(app, &folder, old.as_deref(), &url, true).map_err(|_| ServeError::Start)?;
+    reach_stage(app, "done", Some(&url));
     Ok(url)
 }
 
-/// Its address moves from `old` to `new` (its settings, the app's list) and it starts again there. When it doesn't
-/// answer there, back to `old`, so the switch, the list and the window never point where it doesn't answer.
-fn move_address(app: &AppHandle, folder: &Folder, old: Option<&str>, new: &str) -> Result<(), ()> {
-    write_env(folder, &[("PUBLIC_URL", new.to_string())]).map_err(|_| ())?;
-    if let Some(old) = old {
-        crate::servers::replace(app, old, new);
+/// Through the person's own address (`typed`): it is checked to lead to this very server (`address::check`), then
+/// `PUBLIC_URL` becomes it and the server starts again there, and it is checked again (the server's id changed with
+/// the restart). Tailscale's share, when it was the way before, stops once the address passed its first check. A first
+/// check that fails changes nothing; one after the restart puts `PUBLIC_URL` back to this computer's own address.
+fn reach_by_address(app: &AppHandle, typed: &str) -> Result<String, crate::tailscale::ServeError> {
+    use crate::tailscale::ServeError;
+    let folder = folder(app).ok_or(ServeError::Serve)?;
+    let port = port_of(&folder).ok_or(ServeError::Serve)?;
+    let local = loopback_url(port);
+    if !is_running(app) {
+        return Err(ServeError::Start);
     }
+    reach_stage(app, "checking", None);
+    let url = crate::address::check(typed, &local)?;
+    if cancelled(app) {
+        return Err(ServeError::Stopped);
+    }
+    let old = public_url(app);
+    if by_tailscale(app) && reached(app) {
+        if let Some(shared) = people_url(app) {
+            crate::tailscale::unserve(&shared);
+        }
+    }
+    {
+        let mut inner = state(app);
+        inner.served = false;
+        inner.https_url = None;
+    }
+    // The way is the address from here on, so the start behind the window never asks Tailscale to share it again
+    // (`ensure_served`); a failure puts the one before back, with reach off.
+    let before = state(app).here.way.clone();
+    set_way(app, Some(Way::Address { url: url.clone() }));
+    let back = |why: ServeError| {
+        let _ = loopback_again(app, &folder);
+        set_way(app, before.clone());
+        let _ = restart(app);
+        why
+    };
+    if old.as_deref() != Some(url.as_str()) {
+        reach_stage(app, "restarting", None);
+        if move_address(app, &folder, None, &url, false).is_err() {
+            return Err(back(ServeError::Start));
+        }
+        reach_stage(app, "checking", None);
+        if let Err(fail) = crate::address::check(&url, &local) {
+            note(app, format!("{url} didn't lead here after the restart: {:?}", fail.why));
+            return Err(back(fail.into()));
+        }
+    }
+    let pid = {
+        let mut inner = state(app);
+        inner.served = true;
+        inner.reach_down = false;
+        inner.address_misses = 0;
+        inner.pid
+    };
+    if let Some(pid) = pid {
+        keep_awake(app, pid);
+    }
+    reach_stage(app, "done", Some(&url));
+    Ok(url)
+}
+
+/// Its address for people moves from `old` to `new` (`PUBLIC_URL`) and it starts again with it. The window stays on
+/// the loopback address (ADR 0265 §5). When it doesn't answer again, back to `old`, and with Tailscale (`tailscale`)
+/// its share at `new` stops when `old` was this computer's own, so the switch never says on while nobody reaches it.
+fn move_address(app: &AppHandle, folder: &Folder, old: Option<&str>, new: &str, tailscale: bool) -> Result<(), ()> {
+    write_env(folder, &[("PUBLIC_URL", new.to_string())]).map_err(|_| ())?;
     if restart(app).is_ok() {
         return Ok(());
     }
     if let Some(old) = old {
         let _ = write_env(folder, &[("PUBLIC_URL", old.to_string())]);
-        crate::servers::replace(app, new, old);
-        if crate::servers::is_loopback(old) {
+        if tailscale && crate::servers::is_loopback(old) {
             crate::tailscale::unserve(new);
             state(app).served = false;
         }
@@ -2217,18 +2572,29 @@ fn move_address(app: &AppHandle, folder: &Folder, old: Option<&str>, new: &str) 
     Err(())
 }
 
-/// Its address back to this computer's loopback, and Tailscale stops sharing it; the server reads it at start.
+/// Its address for people back to this computer's loopback one, and Tailscale stops sharing it when it was the way;
+/// the server reads it at start. The window, on the loopback address already, stays. The way stays saved, for turning
+/// reach on again.
 fn address_here(app: &AppHandle, folder: &Folder) -> Result<String, String> {
+    if by_tailscale(app) {
+        if let Some(old) = people_url(app) {
+            crate::tailscale::unserve(&old);
+        }
+    }
+    loopback_again(app, folder)
+}
+
+/// `PUBLIC_URL` back to this computer's loopback address, asking nothing of Tailscale (the person's own address that
+/// didn't lead here, whatever the way saved says).
+fn loopback_again(app: &AppHandle, folder: &Folder) -> Result<String, String> {
     let port = port_of(folder).ok_or("no port")?;
     let local = loopback_url(port);
-    if let Some(old) = public_url(app).filter(|o| *o != local) {
-        crate::tailscale::unserve(&old);
-        crate::servers::replace(app, &old, &local);
-    }
     {
         let mut inner = state(app);
         inner.served = false;
-        inner.tailnet_down = false;
+        inner.reach_down = false;
+        inner.address_misses = 0;
+        inner.https_url = None;
     }
     let_sleep(app);
     write_env(folder, &[("PUBLIC_URL", local.clone())]).map_err(|e| e.to_string())?;
@@ -2484,8 +2850,20 @@ fn diagnostics(app: &AppHandle) -> String {
             String::from_utf8_lossy(tail).into_owned()
         })
         .unwrap_or_default();
+    // The way people reach it (ADR 0265 §4), and the Tailscale installed here.
+    let way = match &status.way {
+        Some(Way::Tailscale) => "Tailscale",
+        Some(Way::Address { .. }) => "their own address",
+        None => "none",
+    };
+    let tailscale = match crate::tailscale::tailnet() {
+        crate::tailscale::Tailnet::Missing => "missing",
+        crate::tailscale::Tailnet::Off { .. } => "off",
+        crate::tailscale::Tailnet::On { .. } => "on",
+    };
+    let app_store = if crate::tailscale::mac_app_store() { " (App Store)" } else { "" };
     format!(
-        "agentes.chat app {} ({} {})\nserver here: {:?}, installed package version {}, internal server version {}, at {}, reach {}, usage statistics {}\n\n{}\n\n{}",
+        "agentes.chat app {} ({} {})\nserver here: {:?}, installed package version {}, internal server version {}, at {}, reach {} ({}, by {}), Tailscale {}{}, usage statistics {}\n\n{}\n\n{}",
         app.package_info().version,
         std::env::consts::OS,
         std::env::consts::ARCH,
@@ -2494,6 +2872,10 @@ fn diagnostics(app: &AppHandle) -> String {
         status.server_version.as_deref().unwrap_or("unknown"),
         status.public_url.unwrap_or_default(),
         if status.reach { "on" } else { "off" },
+        status.reach_health,
+        way,
+        tailscale,
+        app_store,
         if status.usage { "on" } else { "off" },
         lines,
         log
@@ -2646,8 +3028,8 @@ fn erase(app: &AppHandle) -> Result<String, String> {
                 // Gone from the runners' list once the server stopped, so `remove` alone leaves it on disk.
                 let _ = fs::remove_dir_all(dir);
             }
-            // The loopback one's too, although a server at another port here shares them: its sign-in is asked
-            // again once, where the old session would otherwise meet a new server.
+            // At its loopback address only the sign-in named after its port goes (`drop_cookies`): the old session
+            // would otherwise meet a new server there.
             for origin in &addresses {
                 crate::servers::drop_cookies(app, origin);
             }
@@ -2660,7 +3042,8 @@ fn erase(app: &AppHandle) -> Result<String, String> {
                 inner.back_to = None;
                 inner.update_from = None;
                 inner.https_url = None;
-                inner.tailnet_down = false;
+                inner.reach_down = false;
+                inner.address_misses = 0;
                 inner.backup_problem = None;
             }
             save_here(app, &HereFile::default());
@@ -2671,8 +3054,8 @@ fn erase(app: &AppHandle) -> Result<String, String> {
             let to = to.to_string_lossy().into_owned();
             state(app).erased = Some(to.clone());
             emit_status(app);
-            *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("owner");
-            let _ = crate::present(app, "welcome");
+            let route = crate::app_layer::Route::first_run(Some(crate::app_layer::FirstRunMode::Owner));
+            let _ = crate::app_layer::show(app, route);
             Ok(to)
         }
         Err((why, cause)) => {
@@ -2699,22 +3082,22 @@ pub(crate) fn app_window(webview: &tauri::Webview, allowed: &[&str]) -> Result<(
     }
 }
 
-/// The welcome, the popover, Preferences and the main window's cover.
-const ANY: &[&str] = &["welcome", "popover", "prefs", "main-cover"];
+/// The app layer (ADR 0265), the popover and the main window's cover.
+const ANY: &[&str] = &["main-app", "popover", "main-cover"];
 
 /// Async, as every command here that reads files or runs a program: a sync command runs on the main thread, and every
-/// window stands still while it waits (`status` reads the folder, and on the welcome window asks the system for the
+/// window stands still while it waits (`status` reads the folder, and for the first run asks the system for the
 /// person's name).
 #[tauri::command]
 pub async fn local_server_status(app: AppHandle, webview: tauri::Webview) -> Result<Status, String> {
     app_window(&webview, ANY)?;
-    let welcome = webview.label() == "welcome";
+    let welcome = webview.label() == crate::app_layer::LABEL && crate::app_layer::first_run_on_screen(&app);
     tauri::async_runtime::spawn_blocking(move || status(&app, welcome)).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn local_server_install(app: AppHandle, webview: tauri::Webview, choice: Choice) -> Result<(), String> {
-    app_window(&webview, &["welcome"])?;
+    app_window(&webview, &["main-app"])?;
     let check = |s: &Option<String>, max: usize| s.as_ref().map_or(true, |v| !v.trim().is_empty() && v.chars().count() <= max);
     if !check(&choice.name, 100) || !check(&choice.email, 254) || choice.name.is_some() != choice.email.is_some() {
         return Err("bad name or email".into());
@@ -2728,11 +3111,13 @@ pub async fn local_server_install(app: AppHandle, webview: tauri::Webview, choic
 }
 
 /// `install`, and when it doesn't finish (Cancel, a failure, quitting) the computer as it was before Start: what
-/// it started stops, Tailscale shares nothing it didn't, and the database it made goes. Its window closed meanwhile
-/// (hidden): a notification when it failed, and opening the app brings the window back on that step; else the
-/// window goes (`open_app` brings back any hidden one).
+/// it started stops, Tailscale shares nothing it didn't, the database it made goes, and an address it put in the
+/// app's list leaves it. Its window closed meanwhile (hidden): a notification when it failed, and opening the app
+/// brings the window back on that step; else the window goes (`open_app` brings back any hidden one).
 fn set_up(app: &AppHandle, choice: &Choice) -> Result<(), String> {
     let (was_run, reach_before) = (state(app).here.run, reached(app));
+    let way_before = state(app).here.way.clone();
+    let listed = crate::servers::get(app).servers;
     let folder = folder(app).ok_or("no home folder")?;
     app.state::<LocalServer>().cancel.store(false, SeqCst);
     state(app).setting_up = Some(Instant::now());
@@ -2750,17 +3135,28 @@ fn set_up(app: &AppHandle, choice: &Choice) -> Result<(), String> {
         if !reach_before && reached(app) {
             let _ = address_here(app, &folder);
         }
+        // The way this setup chose isn't kept either (Stop above saved the record with it).
+        let here = {
+            let mut inner = state(app);
+            inner.here.way = way_before;
+            inner.here.clone()
+        };
+        if !was_run {
+            save_here(app, &here);
+        }
         if pending {
             discard_unowned(&folder);
         }
+        if !was_run {
+            unlist(app, &listed);
+        }
     }
-    if let Some(window) = app.get_webview_window("welcome").filter(|w| !w.is_visible().unwrap_or(true)) {
-        match &result {
-            Err(why) if why != "cancelled" => notify(app, "setupFailed", "setupFailedBody", None),
-            // Done, or stopped from the popover or Preferences.
-            _ => {
-                let _ = window.destroy();
-            }
+    // Its screen closed meanwhile (the main window hidden, or the first run no longer in it): a failure is said with a
+    // notification, and opening the app brings the first run back on that step.
+    let window_shown = app.get_window(crate::main_window::LABEL).is_some_and(|w| w.is_visible().unwrap_or(false));
+    if !window_shown || !crate::app_layer::first_run_on_screen(app) {
+        if matches!(&result, Err(why) if why != "cancelled") {
+            notify(app, "setupFailed", "setupFailedBody", None);
         }
     }
     state(app).setting_up = None;
@@ -2768,10 +3164,36 @@ fn set_up(app: &AppHandle, choice: &Choice) -> Result<(), String> {
     result
 }
 
+/// A setup that didn't finish opened the window at the server here's loopback address (`open_window_here`): that
+/// address leaves the list again unless it was there before (`listed`), and a window on it goes to the server open
+/// now, or to a blank page under the first run, which stays on screen with what went wrong.
+fn unlist(app: &AppHandle, listed: &[String]) {
+    let Some(local) = folder(app).and_then(|f| port_of(&f)).map(loopback_url) else { return };
+    if listed.contains(&local) || !crate::servers::get(app).servers.contains(&local) {
+        return;
+    }
+    crate::servers::remove(app, &local);
+    crate::workspaces::trigger(app);
+    let Some(page) = app.get_webview(crate::main_window::LABEL) else { return };
+    if !page.url().is_ok_and(|u| u.origin().ascii_serialization() == local) {
+        return;
+    }
+    match crate::servers::current(app) {
+        Some(next) => {
+            let _ = crate::main_window::show_url(app, next);
+        }
+        None => {
+            if let Ok(blank) = "about:blank".parse::<Url>() {
+                let _ = page.navigate(blank);
+            }
+        }
+    }
+}
+
 /// Cancel while it is set up (Esc too): every wait of the setup ends, and `set_up` undoes it.
 #[tauri::command]
 pub fn local_server_cancel(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
-    app_window(&webview, &["welcome"])?;
+    app_window(&webview, &["main-app"])?;
     if setting_up(&app) {
         app.state::<LocalServer>().cancel.store(true, SeqCst);
     }
@@ -2815,7 +3237,7 @@ pub async fn local_server_stop(
     forget: bool,
     minutes: Option<u64>,
 ) -> Result<(), String> {
-    app_window(&webview, &["popover", "prefs"])?;
+    app_window(&webview, &["popover", "main-app"])?;
     // The popover's Stop during a setup is its Cancel.
     if setting_up(&app) {
         app.state::<LocalServer>().cancel.store(true, SeqCst);
@@ -2840,7 +3262,7 @@ pub async fn local_server_stop(
 /// where it was).
 #[tauri::command]
 pub async fn local_server_erase(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2854,7 +3276,7 @@ pub async fn local_server_erase(app: AppHandle, webview: tauri::Webview) -> Resu
 
 #[tauri::command]
 pub async fn local_server_restart(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
-    app_window(&webview, &["popover", "prefs"])?;
+    app_window(&webview, &["popover", "main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2864,35 +3286,101 @@ pub async fn local_server_restart(app: AppHandle, webview: tauri::Webview) -> Re
     .map_err(|e| e.to_string())?
 }
 
-/// Reach on or off; the main window follows the address, signed in. The reason when it didn't turn on.
+/// Reach on or off: its address for people (`url`: Tailscale's or the person's own, or this computer's when turned
+/// off), or the reason when it didn't turn on. On takes the way (ADR 0265 §4); without one, the way saved. The main
+/// window stays on the loopback address, signed in (ADR 0265 §5); the server starts again behind it.
 #[tauri::command]
-pub async fn local_server_reach(app: AppHandle, webview: tauri::Webview, on: bool) -> Result<Value, String> {
-    app_window(&webview, &["prefs", "main-cover"])?;
+pub async fn local_server_reach(
+    app: AppHandle,
+    webview: tauri::Webview,
+    on: bool,
+    way: Option<Way>,
+) -> Result<Value, String> {
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
-        let shown = crate::servers::current(&app).map(|u| u.origin().ascii_serialization());
-        let was_here = shown.as_deref().is_some_and(|o| is_here(&app, o));
-        // Who the window was signed in as there, asked before its address changes (the old one may stop answering).
-        let was = shown.as_deref().filter(|_| was_here).and_then(|o| crate::workspaces::window_user(&app, o));
         let result = if on {
-            reach_on(&app).map_err(|reason| json!(reason))
+            reach_on(&app, way).map_err(|reason| json!(reason))
         } else {
             // Turning it off asks nothing of Tailscale that can fail: what fails is the start at the address here.
             reach_off(&app).map_err(|_| json!(crate::tailscale::ServeError::Back))
         };
         emit_status(&app);
-        let url = match result {
-            Ok(url) => url,
-            Err(reason) => return Ok(json!({ "ok": false, "problem": reason })),
-        };
-        if was_here {
-            let folder = folder(&app).ok_or("no folder")?;
-            let port = port_of(&folder).ok_or("no port")?;
-            reach_stage(&app, "signingIn", None);
-            follow_window(&app, &folder, port, &url, was)?;
+        Ok(match result {
+            Ok(url) => json!({ "ok": true, "url": url }),
+            Err(reason) => json!({ "ok": false, "problem": reason }),
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// The phone's QR code (ADR 0265 §3): a one-time sign-in for the phone app, made with the window's own session at the
+/// loopback address (`POST /api/app/phone-sign-in`, as the phone asks: no `Origin`, `X-Agentes-Client: mobile`), so
+/// it is tied to that session and its rate limit, and gone once it signs out. `{ link, server, expiresIn }`, with the
+/// address for people in the link. Refused while Tailscale doesn't share it (`not_served`: no phone reaches it), and
+/// with `signed_out` when the window isn't signed in there. The token lasts a few minutes: the screen asks again
+/// while its code is shown.
+pub fn phone_link(app: &AppHandle) -> Result<Value, String> {
+    if !is_running(app) {
+        return Err("not_running".into());
+    }
+    let local = loopback(app).ok_or("not_running")?;
+    if people_url(app).is_none() || !state(app).served {
+        return Err("not_served".into());
+    }
+    let answer = crate::workspaces::session_request(app, &local, "POST", "/api/app/phone-sign-in", Some("{}"))?;
+    match answer.status {
+        200 | 201 => {}
+        401 => return Err("signed_out".into()),
+        409 => return Err("not_served".into()),
+        429 => return Err("too_many".into()),
+        status => return Err(format!("the server answered {status}")),
+    }
+    phone_link_of(&answer.body).ok_or_else(|| "not an answer".into())
+}
+
+/// The link the phone opens from `POST /api/app/phone-sign-in`'s answer (`agenteschat://connect?server=…&token=…`,
+/// packages/client lib/server.ts `connectLink`). Only an https server and a plain token pass.
+pub fn phone_link_of(body: &str) -> Option<Value> {
+    let answer: Value = serde_json::from_str(body).ok()?;
+    let server = answer["server"].as_str().and_then(crate::servers::origin_of).filter(|s| s.starts_with("https://"))?;
+    let token = answer["token"]
+        .as_str()
+        .filter(|t| (20..=200).contains(&t.len()) && t.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'))?;
+    let expires_in = answer["expiresIn"].as_u64().unwrap_or(180);
+    let mut link = Url::parse("agenteschat://connect").ok()?;
+    link.query_pairs_mut().append_pair("server", &server).append_pair("token", token);
+    Some(json!({ "link": link.as_str(), "server": server, "expiresIn": expires_in }))
+}
+
+#[tauri::command]
+pub async fn local_server_phone_link(app: AppHandle, webview: tauri::Webview) -> Result<Value, String> {
+    app_window(&webview, &["main-app"])?;
+    tauri::async_runtime::spawn_blocking(move || phone_link(&app)).await.map_err(|e| e.to_string())?
+}
+
+/// Whether an address of the person's own leads to the server here (ADR 0265 §4, control/local-server.ts
+/// `AddressCheck`): only an https origin, asked for the server's id through it and at the loopback address, each with
+/// `address::CHECK_WAIT`. Refused with `not_running` while the server here doesn't answer (nothing to compare with):
+/// the first run checks it in the setup's reach step.
+#[tauri::command]
+pub async fn local_server_check_address(app: AppHandle, webview: tauri::Webview, url: String) -> Result<Value, String> {
+    app_window(&webview, &["main-app"])?;
+    if url.len() > 2048 {
+        return Ok(crate::address::check_json(&Err(crate::address::AddressFail::new(
+            crate::address::AddressProblem::NotHttps,
+        ))));
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        if crate::address::normalize(&url).is_none() {
+            return Ok(crate::address::check_json(&Err(crate::address::AddressFail::new(
+                crate::address::AddressProblem::NotHttps,
+            ))));
         }
-        Ok(json!({ "ok": true, "url": url }))
+        let local = answering_loopback(&app).ok_or_else(|| "not_running".to_string())?;
+        Ok(crate::address::check_json(&crate::address::check(&url, &local)))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -2901,7 +3389,7 @@ pub async fn local_server_reach(app: AppHandle, webview: tauri::Webview, on: boo
 /// "Stop waiting": reach stops waiting for HTTPS to be allowed in the tailnet (it ends as not turned on).
 #[tauri::command]
 pub fn local_server_reach_stop(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
-    app_window(&webview, &["welcome", "prefs"])?;
+    app_window(&webview, &["main-app"])?;
     app.state::<LocalServer>().reach_stop.store(true, SeqCst);
     Ok(())
 }
@@ -2909,7 +3397,7 @@ pub fn local_server_reach_stop(app: AppHandle, webview: tauri::Webview) -> Resul
 /// The usage-statistics switch: `TELEMETRY` in `.env` (the server reads it at start, so it starts again).
 #[tauri::command]
 pub async fn local_server_usage(app: AppHandle, webview: tauri::Webview, on: bool) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2926,7 +3414,7 @@ pub async fn local_server_usage(app: AppHandle, webview: tauri::Webview, on: boo
 
 #[tauri::command]
 pub async fn local_server_backup(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2944,7 +3432,7 @@ pub async fn local_server_backups_set(
     nightly: bool,
     copy_to: Option<String>,
 ) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     if copy_to.as_deref().is_some_and(|d| !Path::new(d).is_absolute() || !Path::new(d).is_dir()) {
         return Err("not a folder".into());
     }
@@ -2964,7 +3452,7 @@ pub async fn local_server_backups_set(
 
 #[tauri::command]
 pub async fn local_server_restore(app: AppHandle, webview: tauri::Webview, file: String) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     tauri::async_runtime::spawn_blocking(move || {
         let server = app.state::<LocalServer>();
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
@@ -2978,7 +3466,7 @@ pub async fn local_server_restore(app: AppHandle, webview: tauri::Webview, file:
 
 /// What keeps the server here up after a restart or a power cut (macOS; None where the app can't tell): automatic
 /// login, and starting up again after a power failure (`pmset`; None on a Mac without that setting, a laptop).
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct KeepRunning {
     auto_login: Option<bool>,
@@ -2993,33 +3481,35 @@ pub fn auto_restart_in(pmset: &str) -> Option<bool> {
     })
 }
 
+/// Read now, blocking (it runs `defaults` and `pmset`): for `keep_running`, and for this computer's essentials
+/// (`always_on.rs`).
+pub fn keep_running_now() -> KeepRunning {
+    if !cfg!(target_os = "macos") {
+        return KeepRunning { auto_login: None, auto_restart: None };
+    }
+    let auto_login = Command::new("/usr/bin/defaults")
+        .args(["read", "/Library/Preferences/com.apple.loginwindow", "autoLoginUser"])
+        .output()
+        .map(|o| o.status.success() && !String::from_utf8_lossy(&o.stdout).trim().is_empty())
+        .ok();
+    let auto_restart = Command::new("/usr/bin/pmset")
+        .arg("-g")
+        .output()
+        .ok()
+        .and_then(|o| auto_restart_in(&String::from_utf8_lossy(&o.stdout)));
+    KeepRunning { auto_login, auto_restart }
+}
+
 #[tauri::command]
 pub async fn keep_running(webview: tauri::Webview) -> Result<KeepRunning, String> {
-    app_window(&webview, &["prefs"])?;
-    if !cfg!(target_os = "macos") {
-        return Ok(KeepRunning { auto_login: None, auto_restart: None });
-    }
-    tauri::async_runtime::spawn_blocking(|| {
-        let auto_login = Command::new("/usr/bin/defaults")
-            .args(["read", "/Library/Preferences/com.apple.loginwindow", "autoLoginUser"])
-            .output()
-            .map(|o| o.status.success() && !String::from_utf8_lossy(&o.stdout).trim().is_empty())
-            .ok();
-        let auto_restart = Command::new("/usr/bin/pmset")
-            .arg("-g")
-            .output()
-            .ok()
-            .and_then(|o| auto_restart_in(&String::from_utf8_lossy(&o.stdout)));
-        KeepRunning { auto_login, auto_restart }
-    })
-    .await
-    .map_err(|e| e.to_string())
+    app_window(&webview, &["main-app"])?;
+    tauri::async_runtime::spawn_blocking(keep_running_now).await.map_err(|e| e.to_string())
 }
 
 /// System Settings at Users & Groups (automatic login) or Energy (start after a power failure). macOS only.
 #[tauri::command]
 pub async fn open_system_settings(webview: tauri::Webview, page: String) -> Result<(), String> {
-    app_window(&webview, &["prefs"])?;
+    app_window(&webview, &["main-app"])?;
     if !cfg!(target_os = "macos") {
         return Err("macOS only".into());
     }
@@ -3597,15 +4087,147 @@ mod tests {
     }
 
     #[test]
-    fn the_server_here_s_pages_open_at_its_address_for_people() {
+    fn the_server_here_s_pages_open_here_at_its_loopback_address() {
         let page = |u: &str| u.parse::<Url>().unwrap();
-        let (local, public) = ("http://127.0.0.1:4310", "https://ana-mac.tail1234.ts.net");
+        let (people, local) = ("https://agentes.tail1234.ts.net", "http://127.0.0.1:4310");
+        // A link someone shared, a notification, a deep link: at the address for people, opened at loopback.
         assert_eq!(
-            moved_page(page("http://127.0.0.1:4310/org/o1/c/c2?m=1#x"), local, public).as_str(),
-            "https://ana-mac.tail1234.ts.net/org/o1/c/c2?m=1#x"
+            moved_page(page("https://agentes.tail1234.ts.net/org/o1/c/c2?m=1#x"), people, local).as_str(),
+            "http://127.0.0.1:4310/org/o1/c/c2?m=1#x"
         );
-        assert_eq!(moved_page(page("https://app.agentes.chat/org/o1"), local, public).as_str(), "https://app.agentes.chat/org/o1");
-        assert_eq!(moved_page(page("http://127.0.0.1:4310/x"), local, local).as_str(), "http://127.0.0.1:4310/x");
+        assert_eq!(moved_page(page("https://agentes.tail1234.ts.net"), people, local).as_str(), "http://127.0.0.1:4310/");
+        // Other servers, and a page already at loopback, stay as they are.
+        assert_eq!(moved_page(page("https://app.agentes.chat/org/o1"), people, local).as_str(), "https://app.agentes.chat/org/o1");
+        assert_eq!(moved_page(page("http://127.0.0.1:4310/x"), people, local).as_str(), "http://127.0.0.1:4310/x");
+        // The same name on another port is another address.
+        assert_eq!(
+            moved_page(page("https://agentes.tail1234.ts.net:8443/x"), people, local).as_str(),
+            "https://agentes.tail1234.ts.net:8443/x"
+        );
+    }
+
+    #[test]
+    fn an_older_list_that_names_the_tailnet_address_moves_to_loopback_once() {
+        use crate::servers::ServerFile;
+        let people = "https://agentes.tail1234.ts.net";
+        let local = "http://127.0.0.1:4310";
+        let mut file = ServerFile {
+            current: Some(people.into()),
+            servers: vec!["https://app.agentes.chat".into(), people.into()],
+        };
+        assert_eq!(list_migration(&file, people), Some(true), "open now: the owner signs in again there");
+        file.replace(people, local);
+        assert_eq!(file.servers, vec!["https://app.agentes.chat".to_string(), local.to_string()]);
+        assert_eq!(file.current.as_deref(), Some(local));
+        // Done once: nothing left to move.
+        assert_eq!(list_migration(&file, people), None);
+        // In the list but not open: moved, nobody to sign in again.
+        let other = ServerFile { current: Some("https://app.agentes.chat".into()), servers: vec![people.into()] };
+        assert_eq!(list_migration(&other, people), Some(false));
+    }
+
+    #[test]
+    fn where_it_will_be_used_as_the_setup_says_it() {
+        let choice: Choice =
+            serde_json::from_value(json!({ "name": "Ana", "email": "ana@example.com", "place": "everywhere", "usage": true })).unwrap();
+        assert_eq!(choice.place, Place::Everywhere);
+        let here: Choice = serde_json::from_value(json!({ "place": "here", "usage": false })).unwrap();
+        assert_eq!((here.place, here.name, here.usage), (Place::Here, None, false));
+        // The old switch is no longer a choice.
+        assert!(serde_json::from_value::<Choice>(json!({ "reach": true, "usage": true })).is_err());
+    }
+
+    #[test]
+    fn reach_in_one_word() {
+        let on = ReachFacts { reach: true, address: false, served: true, approving: false, down: false };
+        assert_eq!(reach_health(on), "on");
+        assert_eq!(reach_health(ReachFacts { reach: false, ..on }), "off");
+        assert_eq!(reach_health(ReachFacts { reach: false, down: true, approving: true, ..on }), "off");
+        // Through Tailscale: HTTPS waiting for the tailnet's admin, or Tailscale not connected here.
+        assert_eq!(reach_health(ReachFacts { served: false, approving: true, ..on }), "approve");
+        assert_eq!(reach_health(ReachFacts { down: true, ..on }), "down");
+        // HTTPS allowed since (it shares now): no longer waiting.
+        assert_eq!(reach_health(ReachFacts { approving: true, ..on }), "on");
+        // A start still sharing it again isn't "down".
+        assert_eq!(reach_health(ReachFacts { served: false, ..on }), "on");
+        // Through the person's own address: it doesn't lead here now, or it does.
+        let address = ReachFacts { address: true, ..on };
+        assert_eq!(reach_health(address), "on");
+        assert_eq!(reach_health(ReachFacts { down: true, ..address }), "address");
+        assert_eq!(reach_health(ReachFacts { served: false, approving: true, ..address }), "on");
+        assert_eq!(reach_health(ReachFacts { reach: false, down: true, ..address }), "off");
+    }
+
+    #[test]
+    fn an_address_is_down_after_three_misses_in_a_row_and_up_after_one_success() {
+        assert_eq!(address_after(0, false), (1, false));
+        assert_eq!(address_after(1, false), (2, false));
+        assert_eq!(address_after(2, false), (3, true));
+        assert_eq!(address_after(3, false), (4, true));
+        assert_eq!(address_after(7, true), (0, false));
+        assert_eq!(address_after(u32::MAX, false), (u32::MAX, true));
+    }
+
+    #[test]
+    fn the_way_as_the_windows_send_and_read_it() {
+        assert_eq!(serde_json::to_value(Way::Tailscale).unwrap(), json!({ "kind": "tailscale" }));
+        let address = Way::Address { url: "https://agentes.example.com".into() };
+        assert_eq!(serde_json::to_value(&address).unwrap(), json!({ "kind": "address", "url": "https://agentes.example.com" }));
+        let typed: Way = serde_json::from_value(json!({ "kind": "address", "url": " https://Agentes.Example.com/ " })).unwrap();
+        assert_eq!(typed.clean(), Some(address));
+        let plain: Way = serde_json::from_value(json!({ "kind": "address", "url": "http://agentes.example.com" })).unwrap();
+        assert_eq!(plain.clean(), None);
+        assert!(serde_json::from_value::<Way>(json!({ "kind": "funnel" })).is_err());
+        let choice: Choice = serde_json::from_value(json!({
+            "place": "everywhere",
+            "way": { "kind": "address", "url": "https://agentes.example.com" },
+            "usage": true
+        }))
+        .unwrap();
+        assert_eq!(choice.way, Some(Way::Address { url: "https://agentes.example.com".into() }));
+        let no_way: Choice = serde_json::from_value(json!({ "place": "everywhere", "usage": true })).unwrap();
+        assert_eq!(no_way.way, None);
+    }
+
+    #[test]
+    fn the_way_is_kept_with_the_server_here() {
+        let here = HereFile { run: true, owner: true, way: Some(Way::Address { url: "https://agentes.example.com".into() }), ..Default::default() };
+        let text = serde_json::to_string(&here).unwrap();
+        assert!(text.contains(r#""way":{"kind":"address","url":"https://agentes.example.com"}"#), "{text}");
+        assert!(!text.contains("tailnet"), "{text}");
+        assert_eq!(read_here(&text).unwrap().way, here.way);
+        assert_eq!(read_here(r#"{"run":true,"owner":true,"way":{"kind":"tailscale"}}"#).unwrap().way, Some(Way::Tailscale));
+        // An earlier build's choice of Tailscale (the system's, or one the app carried) reads as the Tailscale way, and
+        // is never written again.
+        for old in ["system", "app"] {
+            let read = read_here(&format!(r#"{{"run":true,"owner":true,"tailnet":"{old}"}}"#)).unwrap();
+            assert_eq!(read.way, Some(Way::Tailscale), "{old}");
+            assert!(!serde_json::to_string(&read).unwrap().contains("tailnet"));
+        }
+        // A way saved wins over the old field; nothing saved stays nothing; a saved address that isn't one goes.
+        let both = read_here(r#"{"run":true,"owner":true,"tailnet":"app","way":{"kind":"address","url":"https://agentes.example.com"}}"#).unwrap();
+        assert_eq!(both.way, Some(Way::Address { url: "https://agentes.example.com".into() }));
+        assert_eq!(read_here(r#"{"run":true,"owner":true}"#).unwrap().way, None);
+        assert_eq!(read_here(r#"{"run":true,"owner":true,"tailnet":null}"#).unwrap().way, None);
+        assert_eq!(read_here(r#"{"run":true,"owner":true,"way":{"kind":"address","url":"http://x.example.com"}}"#).unwrap().way, None);
+        assert!(read_here("not json").is_none());
+    }
+
+    #[test]
+    fn the_phone_s_link_from_the_server_s_answer() {
+        let token = "a".repeat(43);
+        let body = json!({ "token": token, "server": "https://agentes.tail1234.ts.net", "expiresIn": 180 }).to_string();
+        let link = phone_link_of(&body).unwrap();
+        assert_eq!(
+            link["link"],
+            json!(format!("agenteschat://connect?server=https%3A%2F%2Fagentes.tail1234.ts.net&token={token}"))
+        );
+        assert_eq!(link["server"], json!("https://agentes.tail1234.ts.net"));
+        assert_eq!(link["expiresIn"], json!(180));
+        // Only an https server the phone can reach, and a plain token.
+        assert!(phone_link_of(&json!({ "token": token, "server": "http://127.0.0.1:4310" }).to_string()).is_none());
+        assert!(phone_link_of(&json!({ "token": "x&y=z", "server": "https://agentes.tail1234.ts.net" }).to_string()).is_none());
+        assert!(phone_link_of("not json").is_none());
     }
 
     #[test]

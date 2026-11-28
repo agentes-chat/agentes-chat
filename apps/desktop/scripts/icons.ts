@@ -6,7 +6,7 @@
  * Windows and Linux.
  *
  * Outputs (all ignored by git):
- *   src-tauri/icons/tray/{idle,working,paused,offline,update,browsing,needs}.png  36×36 template images (18 pt @2x)
+ *   src-tauri/icons/tray/{idle,working,paused,offline,update,browsing,needs,attention}.png  36×36 template images (18 pt @2x)
  *   app-icon.png                                                   1024×1024 app icon master, macOS's shape (ADR 0179)
  *   app-icon-tile.png                                              1024×1024 the same, a full rounded square (Windows, Linux)
  *   src-tauri/icons/app/<id>.png, <id>-tile.png                    the icons a person may pick, Dock and window
@@ -115,7 +115,7 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe
 
 /* ---------- Tray: 36×36 template images (only alpha counts; macOS tints them) ---------- */
 
-type TrayState = "idle" | "working" | "paused" | "offline" | "update" | "browsing" | "needs";
+type TrayState = "idle" | "working" | "paused" | "offline" | "update" | "browsing" | "needs" | "attention";
 const TRAY_PX = 36;
 /** The body's square inside the 36 px canvas. */
 const TB = { x: 4, y: 4, s: 28 };
@@ -143,6 +143,19 @@ function trayCoverage(state: TrayState, px: number, py: number): boolean {
     if (d <= 8) {
       if (d > 6.4) return false; // the gap around the badge
       return state === "needs" ? true : d >= 3.6;
+    }
+  }
+  if (state === "attention") {
+    // One of this computer's essentials fell (ADR 0265 §7): the update badge's place, a filled disc with an
+    // exclamation mark cut out of it (the update badge draws its arrow alone, the needs dot has no mark).
+    const bx = 27;
+    const by = 27;
+    const d = Math.hypot(px - bx, py - by);
+    if (d <= 8.6) {
+      if (d > 7.2) return false; // the gap around the badge
+      const mark =
+        distToSegment(px, py, bx, by - 4.2, bx, by + 0.6) <= 1.2 || Math.hypot(px - bx, py - (by + 3.6)) <= 1.35;
+      return !mark;
     }
   }
   if (state === "update") {
@@ -217,7 +230,7 @@ function appIcons(): {
 
 const trayDir = join(root, "src-tauri", "icons", "tray");
 mkdirSync(trayDir, { recursive: true });
-for (const state of ["idle", "working", "paused", "offline", "update", "browsing", "needs"] as const) {
+for (const state of ["idle", "working", "paused", "offline", "update", "browsing", "needs", "attention"] as const) {
   writeFileSync(join(trayDir, `${state}.png`), trayPng(state));
 }
 const icons = appIcons();
@@ -227,4 +240,4 @@ const appDir = join(root, "src-tauri", "icons", "app");
 mkdirSync(appDir, { recursive: true });
 for (const [id, bytes] of icons.dock) writeFileSync(join(appDir, `${id}.png`), bytes);
 for (const [id, bytes] of icons.window) writeFileSync(join(appDir, `${id}-tile.png`), bytes);
-console.log(`icons: tray (7 states), app-icon.png, app-icon-tile.png and ${icons.dock.size} app icons written`);
+console.log(`icons: tray (8 states), app-icon.png, app-icon-tile.png and ${icons.dock.size} app icons written`);

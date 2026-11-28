@@ -42,11 +42,15 @@ describe("the help page on starting over and uninstalling", () => {
       const restore = `**${serverText(code as AppLocale, "accountDeleting.restore")}**`;
       expect(text).not.toContain(restore);
       expect(linesOf("password").join("\n")).toContain(restore);
-      const prefs = d.windowTitle.prefs;
+      // Settings › This computer › …, as the app names each section (ADR 0265), with the help's own word for this
+      // computer on every system.
+      const fill = (label: string) => label.replaceAll("{{device}}", d.device.linux);
+      const at = (section: string) =>
+        `**${[d.settings.nav.label, fill(d.settings.nav.thisDevice), fill(section)].join("\u00a0›\u00a0")}**`;
       const names = [
-        `**${prefs} › ${d.prefs.nav.servers}**`,
+        at(d.settings.nav.server),
+        at(d.settings.nav.app),
         `**${d.server.erase}**`,
-        `**${prefs} › ${d.prefs.nav.general}**`,
         `**${d.prefs.general.launchTitle}**`,
         `**${d.tray.quit}**`,
         `**${d.tray.quitTitle}**`,

@@ -112,6 +112,7 @@ import { apiError, errorResponse } from "../../http/errors";
 import { humanCheckRefusal } from "../../http/human-check";
 import { humanPassesFor } from "../../http/human-pass";
 import { imageFile } from "../../http/image-file";
+import { atLoopbackBesidePublic } from "../../http/native-hosts";
 import { releaseOf } from "../../version";
 import {
   type AppDeps,
@@ -391,6 +392,10 @@ export function accountRoutes(deps: AppDeps) {
         200: json(
           z.object({
             socialProviders: z.object({ google: z.boolean(), github: z.boolean(), apple: z.boolean() }),
+            publicUrl: z.string().openapi({
+              description:
+                "The address people open (`PUBLIC_URL`, without a trailing slash): links the apps hand out (to copy, share or open elsewhere) use it, also from a native server's loopback address (ADR 0265 §5).",
+            }),
             signupOpen: z
               .boolean()
               .openapi({ description: "Offer the sign-up form (invited people can always sign up)." }),
@@ -485,10 +490,14 @@ export function accountRoutes(deps: AppDeps) {
       const ownerWaits = users === 0 && signupPolicy(config).ownerByLink;
       const reportsTo = (dsn: string | undefined) =>
         dsn ? { dsn, environment: config.SENTRY_ENVIRONMENT, release: releaseOf(config) } : null;
-      const look = await hostLook(db, c.req.header("host"));
+      const host = c.req.header("host");
+      const look = await hostLook(db, host);
       return c.json(
         {
-          ...authUiConfig(config, Boolean(look)),
+          // Sign-in by email alone where a provider's return can't land: a registered host, or a native server's
+          // loopback address while people use another (ADR 0265 §5).
+          ...authUiConfig(config, Boolean(look) || atLoopbackBesidePublic(config, host)),
+          publicUrl: config.PUBLIC_URL.replace(/\/$/, ""),
           signupOpen: await signupOpen(db, config, users),
           firstRun: users === 0 && !ownerWaits,
           ownerClaim: users === 0 && Boolean(config.OWNER_CLAIM_SHA256),

@@ -79,6 +79,7 @@ import { desktopSignIn, FRESH_SIGN_IN_MS } from "./desktop-sign-in";
 import { requestLimitIp } from "./http/client-ip";
 import { humanCheckRefusal } from "./http/human-check";
 import { humanPassesFor } from "./http/human-pass";
+import { atLoopbackBesidePublic } from "./http/native-hosts";
 import type { Logger } from "./logger";
 import { ownerSignIn } from "./owner-claim";
 import { phoneBrowserSignIn, phoneFlowStarted } from "./phone-browser-sign-in";
@@ -409,7 +410,7 @@ export function createAuth(deps: {
       // A sign-in that failed (a provider's refusal, an expired state) lands on our sign-in page, which says why:
       // never Better Auth's own page (it shows outside production, where native installs set NODE_ENV too late),
       // nor production's silent `/?error=`.
-      errorURL: signInPageUrl(config.PUBLIC_URL),
+      errorURL: signInPageUrl(),
       onError: (error) => {
         if (!isAPIError(error) || error.statusCode >= 500) log.error("auth request failed", { error });
       },
@@ -419,8 +420,13 @@ export function createAuth(deps: {
       // The database hook below also guards social sign-in.
       before: createAuthMiddleware(async (ctx) => {
         // A provider's return comes to `PUBLIC_URL`, never to a registered host, so a social sign-in there could only
-        // end on the main address (ADR 0194): refused as on a server without that provider.
-        if (SOCIAL_STARTS.has(ctx.path) && (await hostLook(db, ctx.headers?.get("host")))) {
+        // end on the main address (ADR 0194): refused as on a server without that provider. The same at a native
+        // server's loopback address while people use another (ADR 0265 §5): the window there signs in with the
+        // owner's key or a password.
+        if (
+          SOCIAL_STARTS.has(ctx.path) &&
+          (atLoopbackBesidePublic(config, ctx.headers?.get("host")) || (await hostLook(db, ctx.headers?.get("host"))))
+        ) {
           throw new APIError("NOT_FOUND", { code: "PROVIDER_NOT_FOUND", message: "Provider not found" });
         }
         if (ctx.path === EXPO_PROXY_PATH) {
@@ -707,10 +713,13 @@ export function authHandler(auth: Auth, db: Database) {
 
 export type SessionUser = { id: string; name: string; email: string; image?: string | null };
 
-/** The web app's sign-in page (`/login`), with `query` (`error`, `redirect`) when given. */
-export function signInPageUrl(publicUrl: string, query?: Record<string, string>) {
-  const page = `${publicUrl.replace(/\/$/, "")}/login`;
-  return query ? `${page}?${new URLSearchParams(query)}` : page;
+/**
+ * The web app's sign-in page (`/login`), with `query` (`error`, `redirect`) when given. A path, never an address: a
+ * browser sent there stays at the origin it asked (a native server's loopback origin and its `PUBLIC_URL` each keep
+ * their own sign-in, ADR 0265 §5).
+ */
+export function signInPageUrl(query?: Record<string, string>) {
+  return query ? `/login?${new URLSearchParams(query)}` : "/login";
 }
 
 /** Accounts a sign-in keeps beside it in one browser (ADR 0183): past these, the plugin adds no cookie by itself. */

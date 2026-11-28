@@ -90,7 +90,7 @@ pub struct ReportFacts {
 /// Async: it reads the system's files and asks the web view, off the main thread.
 #[tauri::command]
 pub async fn problem_report_facts(app: AppHandle, webview: tauri::Webview) -> Result<ReportFacts, String> {
-    crate::local_server::app_window(&webview, &["main-cover", "prefs"])?;
+    crate::local_server::app_window(&webview, &["main-cover", "main-app"])?;
     tauri::async_runtime::spawn_blocking(move || ReportFacts {
         os_version: system::os_version(),
         cpus: std::thread::available_parallelism().ok().map(|n| n.get()),

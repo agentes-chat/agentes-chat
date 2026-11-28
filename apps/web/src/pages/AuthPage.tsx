@@ -49,6 +49,7 @@ import {
   thisMac,
 } from "@/lib/desktop";
 import { useHumanCheck } from "@/lib/human-check";
+import { publicOrigin } from "@/lib/public-origin";
 import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
 
 /**
@@ -87,7 +88,11 @@ const STEP_ACTIONS: Partial<Record<Step, HumanAction>> = {
 
 /** How often the Mac app's window asks whether the browser finished, and for how long. */
 const REDEEM_EVERY_MS = 2000;
-const REDEEM_FOR_MS = 10 * 60_000;
+export const REDEEM_FOR_MS = 10 * 60_000;
+
+/** The providers the desktop app's first screen starts a sign-in with (`/login?with=`, ADR 0265 §3). */
+export type BrowserStartProvider = "google" | "apple";
+export const isBrowserStartProvider = (v: unknown): v is BrowserStartProvider => v === "google" || v === "apple";
 
 /**
  * Continue on this Mac refused for a reason the page can name (`sign_in_window` in the desktop app): the server's
@@ -141,6 +146,7 @@ export function AuthPage({
   access,
   refused,
   adding = false,
+  startWith,
 }: {
   start: "in" | "up";
   redirect?: string;
@@ -154,6 +160,11 @@ export function AuthPage({
   refused?: string;
   /** Opened by "Add account" (ADR 0183): someone is signed in and stays so; the page offers the way back to them. */
   adding?: boolean;
+  /**
+   * `/login?with=google|apple`, from the desktop app's first screen (ADR 0265 §3): in the app, that provider's sign-in
+   * in the browser starts at once, or the e-mail step where this server doesn't offer it.
+   */
+  startWith?: BrowserStartProvider;
 }) {
   const { t } = useTranslation();
   const api = useApi();
@@ -209,6 +220,8 @@ export function AuthPage({
     requestId: string;
     code: string;
   } | null>(null);
+  // The browser's sign-in ran out (`REDEEM_FOR_MS`) without coming back: the window says so, with Start again.
+  const [browserExpired, setBrowserExpired] = useState(false);
   // This server runs inside the app here: the app signs its owner in.
   const [local, setLocal] = useState(false);
   // In the app, until it said whether this is its own server: the provider buttons wait, never shown then taken away.
@@ -366,7 +379,8 @@ export function AuthPage({
       human.check,
       (token) =>
         auth.requestPasswordReset(
-          { email: email.trim(), redirectTo: `${window.location.origin}/reset-password` },
+          // The e-mail's link opens this server's public address, never the loopback one of the computer it runs on.
+          { email: email.trim(), redirectTo: `${publicOrigin()}/reset-password` },
           token,
         ),
       options?.pass,
@@ -411,6 +425,7 @@ export function AuthPage({
     const challenge = await challengeOf(verifier);
     const opened = await auth.desktopOpen(challenge).catch(() => null);
     if (!opened) return;
+    setBrowserExpired(false);
     setBrowser({ provider, verifier, requestId: opened.requestId, code: opened.code });
     go("browser");
     window.location.assign(browserSignInUrl(provider, opened.requestId, access));
@@ -430,7 +445,11 @@ export function AuthPage({
       window.location.assign(`${SIGNED_IN_PATH}?${new URLSearchParams({ to: redirect ?? "/" })}`);
     };
     const timer = setInterval(() => void check(), REDEEM_EVERY_MS);
-    const giveUp = setTimeout(() => clearInterval(timer), REDEEM_FOR_MS);
+    const giveUp = setTimeout(() => {
+      clearInterval(timer);
+      stopped = true;
+      setBrowserExpired(true);
+    }, REDEEM_FOR_MS);
     const onFocus = () => void check();
     window.addEventListener("focus", onFocus);
     return () => {
@@ -440,6 +459,25 @@ export function AuthPage({
       window.removeEventListener("focus", onFocus);
     };
   }, [step, browser, auth, redirect]);
+
+  // From the app's first screen (`/login?with=`): once the app said where this is and the providers are known, the
+  // address drops the provider (a reload never opens the browser again), then its sign-in starts in the browser. A
+  // provider this server doesn't offer leaves the e-mail step. The router keeps search keys the route didn't validate
+  // next to the ones it did, so `?with=github` arrives as it is: only Google and Apple start by themselves.
+  const startedWith = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, as soon as the place is known
+  useEffect(() => {
+    if (!startWith || !desktop || !placeKnown || startedWith.current) return;
+    startedWith.current = true;
+    const offered = isBrowserStartProvider(startWith) && offeredProviders.includes(startWith);
+    void navigate({
+      to: ".",
+      replace: true,
+      search: ((prev: Record<string, unknown>) => ({ ...prev, with: undefined })) as never,
+    }).then(() => {
+      if (offered) void signInInBrowser(startWith);
+    });
+  }, [startWith, desktop, placeKnown]);
 
   const capsKey = (e: KeyboardEvent<HTMLInputElement>) => setCaps(e.getModifierState?.("CapsLock") ?? false);
   const toggleShow = () => {
@@ -476,10 +514,12 @@ export function AuthPage({
       ? [t("auth.forgotHere.ownerTitle"), t("auth.forgotHere.ownerLead")]
       : [t("auth.forgotHere.title"), t("auth.forgotHere.lead")],
     sent: [t("auth.flow.sent", { email: email.trim() }), t("auth.flow.sentLead")],
-    browser: [
-      t("auth.desktop.browser"),
-      t("auth.desktop.browserLead", { provider: browser ? t(`auth.provider.${browser.provider}`) : "" }),
-    ],
+    browser: browserExpired
+      ? [t("auth.desktop.timedOut"), t("auth.desktop.timedOutLead")]
+      : [
+          t("auth.desktop.browser"),
+          t("auth.desktop.browserLead", { provider: browser ? t(`auth.provider.${browser.provider}`) : "" }),
+        ],
     ownerWaits: [t("auth.flow.ownerWaits"), t("auth.flow.ownerWaitsLead")],
   };
   // No account yet, and only the installer's owner link makes the first one: nothing to sign in to here.
@@ -591,10 +631,10 @@ export function AuthPage({
           <AgentAvatar
             name="agentes.chat"
             size="lg"
-            state={pending || step === "browser" ? "writing" : undefined}
+            state={pending || (step === "browser" && !browserExpired) ? "writing" : undefined}
             expression={expression}
           />
-          <div className="auth__bubble" key={`${shown}-${wrong}`} aria-live="polite">
+          <div className="auth__bubble" key={`${shown}-${wrong}-${browserExpired}`} aria-live="polite">
             <h1 className="auth__title">{title}</h1>
             {lead && <p className="auth__lead">{lead}</p>}
           </div>
@@ -747,7 +787,24 @@ export function AuthPage({
                 </>
               )}
 
-              {step === "browser" && (
+              {step === "browser" && browserExpired && browser && (
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    block
+                    onClick={() => void signInInBrowser(browser.provider)}
+                  >
+                    {t("auth.desktop.startAgain")}
+                  </Button>
+                  <button type="button" className="auth__quiet" onClick={() => go("email")}>
+                    {t("auth.desktop.otherWay")}
+                  </button>
+                </>
+              )}
+
+              {step === "browser" && !browserExpired && (
                 <>
                   {browser && (
                     <div className="auth__code">

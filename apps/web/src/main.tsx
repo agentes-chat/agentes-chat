@@ -51,6 +51,7 @@ import { dropKeylessKeyEvents, tolerateForeignDomEdits } from "./lib/dom-guard";
 import { announceConfirmation, emailConfirmedToast } from "./lib/email-confirmation";
 import { catchEarlyErrors, reportError, setErrorScope, startErrorReports } from "./lib/error-reports";
 import { pageScrollReset } from "./lib/page-scroll";
+import { rememberPublicUrl } from "./lib/public-origin";
 import { showReturnNotices } from "./lib/return-notices";
 import { snapshotStore } from "./lib/snapshot-store";
 import { installSounds } from "./lib/sounds";
@@ -87,6 +88,12 @@ earlyInstance.catch(() => undefined);
 void authConfig.then(
   (config) => startErrorReports(config.errorReports ?? null),
   () => startErrorReports(null),
+);
+// The address people open, for the links this page hands out (ADR 0265 §5: the desktop app's own server opens here at
+// its loopback address).
+void authConfig.then(
+  (config) => rememberPublicUrl(config.publicUrl ?? null),
+  () => undefined,
 );
 // The language's file is the app's own too: index.html's boot fallback reloads or says so, and the error is reported.
 const i18n = await loadI18n(savedLocale()).catch((error: unknown) => {

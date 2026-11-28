@@ -24,6 +24,7 @@ import {
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { imageFile } from "../../http/image-file";
+import { trustedLoopbackOrigin } from "../../http/native-hosts";
 import {
   type AppDeps,
   body,
@@ -32,6 +33,7 @@ import {
   json,
   noContent,
   OrgParams,
+  requestLoopback,
   requireSession,
   security,
 } from "./context";
@@ -183,6 +185,7 @@ export function customConnectorRoutes(deps: AppDeps) {
     keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers],
     oauthApps: connectorOAuthApps(config),
     publicUrl: config.PUBLIC_URL,
+    loopbackUrl: trustedLoopbackOrigin(config),
     http: deps.extras?.http,
     resolveHost: deps.extras?.resolveHost,
     connect: withComposio(deps.extras?.mcpConnect ?? connectOverHttp, composio),
@@ -259,7 +262,8 @@ export function customConnectorRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const started = await connectCustomServer(
-        custom,
+        // Asked at the server's loopback origin: the sign-in comes back there (ADR 0265 §5).
+        { ...custom, atLoopback: requestLoopback(config, c.req.raw.headers) !== null },
         c.get("user").id,
         c.req.valid("param").orgId,
         c.req.valid("json"),
@@ -331,7 +335,8 @@ export function customConnectorRoutes(deps: AppDeps) {
         });
       }
       const { returnTo, connectionId, personal } = c.req.valid("json");
-      const started = await connectCustomServer(custom, c.get("user").id, orgId, {
+      const atLoopback = requestLoopback(config, c.req.raw.headers) !== null;
+      const started = await connectCustomServer({ ...custom, atLoopback }, c.get("user").id, orgId, {
         serverUrl: way?.serverUrl ?? preset.serverUrl,
         label: preset.label,
         returnTo,

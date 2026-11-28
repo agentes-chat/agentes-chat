@@ -51,6 +51,7 @@ import { TYPED_VALUES } from "@/i18n";
 import { inDesktopApp } from "@/lib/desktop";
 import { useHumanCheck } from "@/lib/human-check";
 import { lookOf } from "@/lib/look";
+import { publicOrigin } from "@/lib/public-origin";
 import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { NameHint, PasswordHelp, passwordHelp } from "@/pages/AuthPage";
 import "./invite.css";
@@ -594,7 +595,7 @@ function EmailInvitation({
   const sendReset = () =>
     run(async () => {
       const result = await withHumanCheck(human.check, (check) =>
-        auth.requestPasswordReset({ email: invited, redirectTo: `${window.location.origin}/reset-password` }, check),
+        auth.requestPasswordReset({ email: invited, redirectTo: `${publicOrigin()}/reset-password` }, check),
       );
       if (result.ok) go("sent");
       else setError(authErrorText(t, result));

@@ -35,7 +35,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Biarkan tetap menyala",
         blocks: [
-          "Di komputer yang juga diandalkan orang lain, siapkan sekali saja. **Tetap berjalan**, di **Preferensi\u00a0›\u00a0Server**, menunjukkan apa yang masih kurang dan membuka pengaturan yang tepat:",
+          "Di komputer yang juga diandalkan orang lain, siapkan sekali saja. **Selalu siap**, di **Pengaturan › komputer ini › Ringkasan**, menunjukkan apa yang masih kurang, masing-masing dengan satu tombol yang memperbaikinya:",
           {
             list: [
               "**Buka saat login** menyala sendiri setelah penyiapan.",
@@ -51,15 +51,15 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Agen-agenmu juga bekerja di sini",
         blocks: [
           "Agen-agenmu juga bekerja di komputer ini, di folder mereka sendiri, dengan browser, dan dengan Claude Code atau Codex kalau terpasang di sini.",
-          "Agen di sini berjalan sebagai kamu. **Perintah** menyala sejak awal, dan dengan itu agen dari setiap ruang kerja yang memakai komputer ini bisa menjangkau semua isinya, termasuk data server. Matikan di **Preferensi\u00a0›\u00a0Alat**. Lihat [Apa yang bisa dijangkau agen](/help/computers#reach).",
+          "Agen di sini berjalan sebagai kamu. **Perintah** menyala sejak awal, dan dengan itu agen dari setiap ruang kerja yang memakai komputer ini bisa menjangkau semua isinya, termasuk data server. Matikan di **Pengaturan › komputer ini › Folder dan alat**. Lihat [Apa yang bisa dijangkau agen](/help/computers#reach).",
         ],
       },
       {
         id: "another-workspace",
         heading: "Pinjamkan juga ke ruang kerja lain",
         blocks: [
-          "Ruang kerja dari server yang kamu jalankan di sini memakai komputer ini dengan sendirinya. Supaya ruang kerja di tempat lain juga bisa memakainya, misalnya ruang kerja di agentes.chat Cloud, tekan **Tambah ruang kerja…** di bagian bawah kartu pertama di **Preferensi\u00a0›\u00a0Umum**, atau **Tambah server…** di **Preferensi\u00a0›\u00a0Server**. Masuk ke ruang kerja itu, lalu tekan **Izinkan** saat aplikasi bertanya.",
-          "Tiap ruang kerja punya agen dan foldernya sendiri di sini. **Perintah** juga menyala sejak awal untuknya. Matikan di pertanyaan aplikasi sebelum menekan **Izinkan**, atau nanti di **Preferensi\u00a0›\u00a0Alat**, tempat tiap ruang kerja punya sakelarnya sendiri dan aplikasi bertanya dulu sebelum menyalakannya lagi.",
+          "Ruang kerja dari server yang kamu jalankan di sini memakai komputer ini dengan sendirinya. Supaya ruang kerja di tempat lain juga bisa memakainya, misalnya ruang kerja di agentes.chat Cloud, tekan **Tambah ruang kerja…** di bagian bawah **Siapa yang memakai komputer ini**, di **Pengaturan › komputer ini › Ringkasan**, atau **Tambah server…** di **Pengaturan › komputer ini › Pengaturan aplikasi**. Masuk ke ruang kerja itu, lalu tekan **Izinkan** saat aplikasi bertanya.",
+          "Tiap ruang kerja punya agen dan foldernya sendiri di sini. **Perintah** juga menyala sejak awal untuknya. Matikan di pertanyaan aplikasi sebelum menekan **Izinkan**, atau nanti di **Pengaturan › komputer ini › Folder dan alat**, tempat tiap ruang kerja punya sakelarnya sendiri dan aplikasi bertanya dulu sebelum menyalakannya lagi.",
         ],
       },
       {
@@ -74,7 +74,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Masuk dari perangkat lain",
         blocks: [
-          "Awalnya pemilik tidak punya kata sandi: aplikasi memasukkanmu di komputer ini. Untuk masuk dari browser di komputer lain, tambahkan kata sandi di **Pengaturan\u00a0›\u00a0Akunmu**. Selama belum ada, **Preferensi\u00a0›\u00a0Server** mengingatkanmu, dan **Tambahkan kata sandi** membuka halaman itu. Aplikasi ponsel terhubung dengan memindai kode QR di bawah **Di ponselmu**, di **Preferensi\u00a0›\u00a0Server**. Untuk itu, **Akses dari ponselmu dan rekan tim** harus menyala.",
+          "Awalnya pemilik tidak punya kata sandi: aplikasi memasukkanmu di komputer ini. Untuk masuk dari browser di komputer lain, tambahkan kata sandi di **Pengaturan\u00a0›\u00a0Akunmu**. Selama belum ada, **Pengaturan › komputer ini › Server di komputer ini** mengingatkanmu, dan **Tambahkan kata sandi** membuka halaman itu. Aplikasi ponsel terhubung dengan memindai kode QR di bawah **Di ponselmu**, di **Pengaturan › komputer ini › Server di komputer ini**. Untuk itu, **Akses dari ponselmu dan rekan tim** harus menyala.",
           "Saat pemilik menghapus akunnya, di **Pengaturan\u00a0›\u00a0Akunmu**, akun itu hilang untuk selamanya 7 hari kemudian, dan ruang kerja yang hanya berisi dia ikut hilang. Sampai saat itu, masuk lalu tekan **Pulihkan akun** untuk memulihkannya. Setelah akun itu hilang, kalau tidak ada akun yang tersisa, aplikasi membuka jendela sambutan untuk membuat pemilik baru. Kalau orang lain masih punya akun, masing-masing masuk dengan email mereka sendiri.",
         ],
       },
@@ -82,14 +82,14 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "updates",
         heading: "Pembaruan",
         blocks: [
-          "Aplikasi mencari pembaruan sendiri. Kalau **Pasang pembaruan sendiri, di malam hari** menyala, di **Preferensi\u00a0›\u00a0Pembaruan**, aplikasi memasangnya antara pukul 3:00 dan 5:00 selama aplikasinya terbuka. Pengaturan ini menyala sejak awal kalau server berjalan di sini. Kalau tidak, tekan **Perbarui dan buka ulang**. Server dan semua agen ikut dimulai ulang. Database disalin dulu, dan kalau versi baru tidak merespons dalam 3 menit, aplikasi kembali sendiri ke versi sebelumnya beserta datanya.",
+          "Aplikasi mencari pembaruan sendiri. Kalau **Pasang pembaruan sendiri, di malam hari** menyala, di **Pengaturan › komputer ini › Pengaturan aplikasi**, aplikasi memasangnya antara pukul 3:00 dan 5:00 selama aplikasinya terbuka. Pengaturan ini menyala sejak awal kalau server berjalan di sini. Kalau tidak, tekan **Perbarui dan buka ulang**. Server dan semua agen ikut dimulai ulang. Database disalin dulu, dan kalau versi baru tidak merespons dalam 3 menit, aplikasi kembali sendiri ke versi sebelumnya beserta datanya.",
         ],
       },
       {
         id: "backups",
         heading: "Cadangan",
         blocks: [
-          "Kalau **Cadangkan setiap malam** menyala (aplikasi 0.8.1 ke atas), di **Preferensi\u00a0›\u00a0Server**, aplikasi menyimpan database, file, dan `.env` di `.agentes/backups`, di folder pribadimu, setiap malam pukul 3:00. Komputer yang sedang tidur saat itu mencadangkan begitu bangun. **Cadangkan sekarang** melakukan hal yang sama saat itu juga. Setiap pencadangan menghentikan server sebentar, dan dua cadangan terbaru yang disimpan.",
+          "Kalau **Cadangkan setiap malam** menyala (aplikasi 0.8.1 ke atas), di bagian **Cadangan** di **Pengaturan › komputer ini › Server di komputer ini**, aplikasi menyimpan database, file, dan `.env` di `.agentes/backups`, di folder pribadimu, setiap malam pukul 3:00. Komputer yang sedang tidur saat itu mencadangkan begitu bangun. **Cadangkan sekarang** melakukan hal yang sama saat itu juga. Setiap pencadangan menghentikan server sebentar, dan dua cadangan terbaru yang disimpan.",
           "**Salin ke** juga menaruh setiap cadangan baru di folder pilihanmu, seperti flashdisk atau iCloud Drive, tempat dua cadangan terbaru disimpan. Isinya kunci-kuncimu: jaga kerahasiaannya. **Pulihkan…** mengembalikan agentes.chat ke sebuah cadangan: pesan, file, dan pengaturan. agentes.chat berhenti selama semenit, dan isi sebelumnya tetap disimpan di folder cadangan.",
         ],
       },
@@ -98,12 +98,12 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Mulai dari awal atau copot pemasangan",
         blocks: [
           "Semua yang disimpan agentes.chat di komputer ini ada di folder-folder dalam folder pribadimu, bukan di dalam aplikasi. Jadi memindahkan aplikasi ke Tempat Sampah tidak menghapus apa pun dari situ, dan tidak menghentikan agentes.chat kalau sedang berjalan.",
-          "Untuk mulai dari awal, tekan **Hapus dan mulai dari awal…** di **Preferensi\u00a0›\u00a0Server**. agentes.chat di sini berhenti dan semua isinya dipindahkan ke folder baru di folder pribadimu, bernama `agentes.chat erased` dengan tanggal hari itu, dan tetap di sana sampai kamu menghapusnya. Yang disimpan para agennya di komputer ini, seperti browser dan login mereka, dihapus dari `.agentes-runner`. Ruang kerjanya hilang bagi semua orang yang memakainya. Lalu jendela sambutan terbuka, dan kamu menyiapkannya lagi dengan akun pemilik baru. File para agen, di `agentes` dalam folder pribadimu, tetap di tempatnya.",
+          "Untuk mulai dari awal, tekan **Hapus dan mulai dari awal…** di **Pengaturan › komputer ini › Server di komputer ini**. agentes.chat di sini berhenti dan semua isinya dipindahkan ke folder baru di folder pribadimu, bernama `agentes.chat erased` dengan tanggal hari itu, dan tetap di sana sampai kamu menghapusnya. Yang disimpan para agennya di komputer ini, seperti browser dan login mereka, dihapus dari `.agentes-runner`. Ruang kerjanya hilang bagi semua orang yang memakainya. Lalu aplikasi membuka penyiapannya, dan kamu menyiapkannya lagi dengan akun pemilik baru. File para agen, di `agentes` dalam folder pribadimu, tetap di tempatnya.",
           "Untuk mengembalikannya nanti, keluar dari aplikasi, singkirkan folder `.agentes` yang lebih baru kalau ada, ubah nama folder `agentes.chat erased` menjadi `.agentes`, lalu buka aplikasi dan siapkan lagi di komputer ini. Ia berjalan lagi dengan ruang kerja dan pemiliknya seperti semula. Yang disimpan para agennya di komputer ini tidak kembali, jadi mereka perlu login lagi.",
           "Untuk menghapus agentes.chat dari komputer ini sepenuhnya:",
           {
             list: [
-              "Matikan **Buka saat login** di **Preferensi\u00a0›\u00a0Umum**.",
+              "Matikan **Buka saat login** di **Pengaturan › komputer ini › Pengaturan aplikasi**.",
               "Keluar dari aplikasi. Menutup jendelanya saja tidak cukup. Di Mac, klik ikonnya di Dock, lalu pilih **Keluar dari agentes.chat** di menu agentes.chat di bagian atas layar, atau tekan ⌘Q. Di Windows dan Linux, klik ikon agentes.chat di dekat jam dan pilih **Keluar dari agentes.chat**. Kalau muncul pertanyaan **Keluar dari agentes.chat?**, tekan **Keluar**.",
               "Hapus aplikasinya. Di Mac, pindahkan ke Tempat Sampah. Di Windows dan Linux, copot pemasangannya seperti aplikasi lain.",
               "Hapus folder-folder ini di folder pribadimu. Isinya datamu, dan setelah dihapus tidak bisa kembali, jadi simpan dulu cadangan di tempat lain kalau mungkin masih kamu perlukan: `.agentes` (pesan, file, akun, pengaturan, dan cadangan), setiap folder `agentes.chat erased`, `.agentes-runner` (yang disimpan para agen di komputer ini, seperti browser dan login mereka), dan `agentes` (file para agen). Folder yang namanya diawali titik tersembunyi. Di Mac, buka folder pribadimu di Finder lalu tekan ⇧⌘. (Shift, Command, dan tombol titik) untuk menampilkannya.",
@@ -116,7 +116,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "ai-programs",
         heading: "Claude Code dan Codex",
         blocks: [
-          "Aplikasi mencari Claude Code dan Codex lewat `PATH` shell login-mu, ditambah folder yang biasa seperti `~/.local/bin`, `/opt/homebrew/bin`, dan `/usr/local/bin`. Kalau **Preferensi\u00a0›\u00a0Alat** menampilkan **Tidak ditemukan**, di situ ada baris untuk memasangnya. Jalankan baris itu di Terminal, lalu tekan **Periksa lagi**.",
+          "Aplikasi mencari Claude Code dan Codex lewat `PATH` shell login-mu, ditambah folder yang biasa seperti `~/.local/bin`, `/opt/homebrew/bin`, dan `/usr/local/bin`. Kalau **Pengaturan › komputer ini › Folder dan alat** menampilkan **Tidak ditemukan**, di situ ada baris untuk memasangnya. Jalankan baris itu di Terminal, lalu tekan **Periksa lagi**.",
         ],
       },
       {
@@ -150,7 +150,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Dari aplikasi agentes.chat",
         blocks: [
           "Pasang aplikasi di komputer itu, buka, lalu masuk ke ruang kerjamu. Aplikasi bertanya **Izinkan agen <workspace> memakai Mac ini?** (PC ini di Windows, komputer ini di Linux). Pilih siapa yang boleh memakainya lalu tekan **Izinkan**. Selesai.",
-          "Sudah masuk? Buka **Preferensi\u00a0›\u00a0Umum** dan tekan **Izinkan** di baris ruang kerjanya, di kartu pertama. Tidak ada? Tekan **Tambah ruang kerja…** di bagian bawah kartu itu lalu masuk.",
+          "Sudah masuk? Buka **Pengaturan › komputer ini › Ringkasan** dan tekan **Izinkan** di baris ruang kerjanya, di bawah **Siapa yang memakai komputer ini**. Tidak ada? Tekan **Tambah ruang kerja…** di bagian bawah daftar itu lalu masuk.",
         ],
       },
       {
@@ -193,7 +193,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Menjeda dan memutuskan",
         blocks: [
-          "Di komputer itu, ikon agentes.chat di dekat jam menjeda agen dari semua ruang kerja, atau dari satu ruang kerja saja. Di **Preferensi\u00a0›\u00a0Umum**, sakelar tiap ruang kerja hanya menjeda ruang kerja itu, dan **Keluar**, di menu **⋯**-nya, memutuskannya. Selama dijeda tidak ada yang baru dimulai, dan yang sedang berjalan tetap diselesaikan. Folder agen tetap tersimpan di disk setelah diputuskan.",
+          "Di komputer itu, ikon agentes.chat di dekat jam menjeda agen dari semua ruang kerja, atau dari satu ruang kerja saja. Di **Pengaturan › komputer ini › Ringkasan**, sakelar tiap ruang kerja hanya menjeda ruang kerja itu, dan **Keluar**, di menu **⋯**-nya, memutuskannya. Selama dijeda tidak ada yang baru dimulai, dan yang sedang berjalan tetap diselesaikan. Folder agen tetap tersimpan di disk setelah diputuskan.",
           "Dari situs, **Hapus** di halaman perangkat memutuskannya.",
         ],
       },
@@ -219,7 +219,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "folders",
         heading: "Folder",
         blocks: [
-          "Tiap agen selalu punya foldernya sendiri, di `~/agentes/<workspace>`. Folder lain hanya bisa diizinkan dari komputer itu sendiri, tidak pernah dari situs: di aplikasi, **Preferensi › Folder**, atau dengan `agentes-runner folders allow` di server. Tiap ruang kerja mengizinkan foldernya sendiri: yang kamu izinkan untuk satu ruang kerja hanya berlaku untuk agen-agennya. Menghapus folder dari daftar tidak menghapus apa pun. Itu hanya mencabut aksesnya.",
+          "Tiap agen selalu punya foldernya sendiri, di `~/agentes/<workspace>`. Folder lain hanya bisa diizinkan dari komputer itu sendiri, tidak pernah dari situs: di aplikasi, **Pengaturan › komputer ini › Folder dan alat**, atau dengan `agentes-runner folders allow` di server. Tiap ruang kerja mengizinkan foldernya sendiri: yang kamu izinkan untuk satu ruang kerja hanya berlaku untuk agen-agennya. Menghapus folder dari daftar tidak menghapus apa pun. Itu hanya mencabut aksesnya.",
         ],
       },
       {
@@ -235,7 +235,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
               "di komputer yang juga menjalankan agentes.chat, database dan kuncinya di `.agentes`",
             ],
           },
-          "agentes.chat menolak perintah yang menyebut kunci, token, dan data login, tapi itu aturan, bukan tembok. **Perintah** menyala sejak awal. Matikan di pertanyaan aplikasi sebelum menekan **Izinkan**, atau nanti di **Preferensi\u00a0›\u00a0Alat**, tempat tiap ruang kerja punya sakelarnya sendiri (aplikasi 0.8.1 ke atas) dan aplikasi bertanya dulu sebelum menyalakannya lagi. Claude Code dan Codex menjalankan perintahnya sendiri di folder agen, dengan aturannya sendiri, bahkan saat Perintah mati.",
+          "agentes.chat menolak perintah yang menyebut kunci, token, dan data login, tapi itu aturan, bukan tembok. **Perintah** menyala sejak awal. Matikan di pertanyaan aplikasi sebelum menekan **Izinkan**, atau nanti di **Pengaturan › komputer ini › Folder dan alat**, tempat tiap ruang kerja punya sakelarnya sendiri (aplikasi 0.8.1 ke atas) dan aplikasi bertanya dulu sebelum menyalakannya lagi. Claude Code dan Codex menjalankan perintahnya sendiri di folder agen, dengan aturannya sendiri, bahkan saat Perintah mati.",
           "Untuk tembok sungguhan, pakai server Linux. Di Debian 13, kalau dipasang dengan `--system`, tiap agen jadi pengguna tersendiri. Di Ubuntu, agen berbagi satu pengguna, `agentes`: mereka bisa melihat folder satu sama lain, tapi bukan foldermu atau folder server. Atau beri agen komputer milik mereka sendiri.",
         ],
       },

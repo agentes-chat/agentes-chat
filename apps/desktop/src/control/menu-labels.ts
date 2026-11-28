@@ -14,7 +14,10 @@ export function menuLabels(t: TFunction): Record<string, string> {
     serversAdd: t("desktop.servers.add"),
     serversManage: t("desktop.servers.manage"),
     trayOpen: t("desktop.tray.open"),
-    trayPrefs: t("desktop.tray.prefs"),
+    // The tray's way to this computer's settings on Windows and Linux (tray.rs, ADR 0265).
+    trayThisMac: t("desktop.tray.thisMac"),
+    // The tray's tooltip, and its menu's first line on Windows and Linux, while an essential is off (tray.rs, ADR 0265).
+    trayAttention: t("desktop.essentials.tray"),
     trayPause: t("desktop.tray.pause"),
     trayPause1h: t("desktop.tray.pause1h"),
     trayPauseTomorrow: t("desktop.tray.pauseTomorrow"),
@@ -49,13 +52,13 @@ export function menuLabels(t: TFunction): Record<string, string> {
     setupFailedBody: t("desktop.here.notifyFailedBody"),
     // Another server's new notifications (workspaces.rs, ADR 0154): "{count}" is left for Rust.
     serversCloud: t("desktop.servers.cloud"),
-    // The app's own windows by name, so the Dock's list never shows three "agentes.chat".
+    // The main window's name while the app layer fills it (app_layer.rs), never a second "agentes.chat".
     windowWelcome: t("desktop.windowTitle.welcome"),
+    windowSettings: t("desktop.windowTitle.settings"),
     // The first close's notification (background.rs): the Mac's words or the tray's.
     backgroundTitle: t("desktop.background.title"),
     backgroundBodyMac: t("desktop.background.bodyMac"),
     backgroundBodyTray: t("desktop.background.bodyTray"),
-    windowPrefs: t("desktop.windowTitle.prefs"),
     workspaceNewsOne: t("desktop.servers.newsOne"),
     workspaceNewsMany: t("desktop.servers.newsMany", { n: "{count}" }),
     // The Stop on the notification of a phone someone's agent uses (main_window.rs `show_notice`).

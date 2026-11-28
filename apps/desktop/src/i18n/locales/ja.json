@@ -22,7 +22,8 @@
   },
   "windowTitle": {
     "welcome": "ようこそ",
-    "prefs": "環境設定"
+    "prefs": "環境設定",
+    "settings": "設定"
   },
   "background": {
     "title": "agentes.chatは実行中です",
@@ -96,10 +97,7 @@
     },
     "label": "agentes.chat",
     "now": "現在",
-    "seeAll": "すべて表示",
     "background": "バックグラウンド",
-    "nothingNow": "今は何もありません",
-    "waitingConnection": "接続を待っています",
     "calmTitle": "すべて落ち着いています",
     "calmBody": "エージェントは必要なときにこの{{device}}を使います。",
     "pausedEmptyTitle": "すべて保留中です",
@@ -115,7 +113,7 @@
     "pauseHintServer": "実行中のものは通常どおり終わります。サーバーは動き続けます。",
     "resume": "エージェントを再開",
     "open": "agentes.chatを開く",
-    "prefs": "環境設定…",
+    "thisMac": "この{{device}}の設定…",
     "quit": "agentes.chatを終了",
     "pausedFor1h": "1時間一時停止中",
     "pausedTomorrow": "明日の午前9時まで一時停止中",
@@ -123,9 +121,9 @@
     "resumed": "エージェントが再開しました",
     "reconnect": "再接続",
     "reconnecting": "再接続中…",
-    "offlineTitle": "インターネットに接続されていません。再試行しています…",
+    "offlineTitle": "インターネットに接続されていません",
     "offlineBody": "すでに始まった作業はここで続き、接続が戻ると結果を送ります。",
-    "unreachable": "{{host}}に接続できません。再試行しています…",
+    "unreachable": "{{host}}に接続できません",
     "unreachableBody": "すでに始まった作業はここで続き、サーバーが戻ると結果を送ります。",
     "pausedUntil": "{{time}}まで一時停止中",
     "pausedUntilResume": "再開するまで一時停止中",
@@ -168,14 +166,155 @@
     "quitTitle": "agentes.chatを終了しますか？",
     "quitBody": "アプリを閉じている間、エージェントはこの{{device}}を使えません。すでに実行中のものは完了し、次にアプリを開いたときに結果を送ります。",
     "quitHereBody": "この{{device}}でagentes.chatが停止します。再びアプリを開くまで、ここでも、あなたやチームメイトのスマートフォンからも、誰も使えません。",
-    "quitConfirm": "終了"
+    "quitConfirm": "終了",
+    "needsYou_other": "{{count}}件があなたの対応待ち",
+    "allSet": "すべて順調です",
+    "thisDevice": "この{{device}}",
+    "settings": "この{{device}}の設定",
+    "essential": {
+      "turnOn": "オンにする",
+      "turnOnAgain": "もう一度オンにする",
+      "fix": "解決する",
+      "launchAtLogin": {
+        "title": "ログイン時にagentes.chatが開きません",
+        "body": "再起動のあと、アプリを開くまでエージェントはこの{{device}}を使えません。"
+      },
+      "notifications": {
+        "title": "通知がオフになっています",
+        "body": "エージェントがここであなたを必要としても気づけません。"
+      },
+      "screen": {
+        "body": "これがないと、エージェントは画面を見られません。"
+      },
+      "disk": {
+        "body": "フォルダごとにエージェントが止まって確認することがあります。"
+      },
+      "reach": {
+        "approve": {
+          "title": "Tailscaleがワンクリックを待っています",
+          "body": "Tailscaleの管理ページで許可すると、スマートフォンとチームがagentes.chatにアクセスできます。"
+        },
+        "down": {
+          "title": "この{{device}}でTailscaleが接続されていません",
+          "body": "スマートフォンとチームがagentes.chatにアクセスできません。"
+        },
+        "address": {
+          "title": "あなたのアドレスが今ここにつながっていません",
+          "body": "つながるまで、スマートフォンとチームはagentes.chatにアクセスできません。トンネルがオンになっているか確認してください。"
+        }
+      },
+      "backup": {
+        "off": {
+          "title": "夜間のバックアップがオフです",
+          "body": "オンにすると、agentes.chatが毎晩コピーを残します。"
+        },
+        "backup": {
+          "body": "今すぐバックアップして、今日の作業のコピーを残しましょう。"
+        },
+        "copy": {
+          "title": "昨夜のバックアップがコピー先に届きませんでした",
+          "body": "コピー先のフォルダが外れているか、いっぱいかもしれません。"
+        }
+      },
+      "autoUpdate": {
+        "title": "アップデートが自動でインストールされません",
+        "body": "オンにすると、この{{device}}は動き続けるバージョンのままになります。"
+      }
+    }
   },
   "first": {
     "addTitle": "ワークスペースを追加",
     "addLead": "今あるワークスペースはそれぞれのログインのまま残ります。",
     "addCloud": "agentes.chatでワークスペースを作成",
     "addNew": "新しいワークスペースが必要ですか？",
-    "addNewLink": "作成する"
+    "addNewLink": "作成する",
+    "companyFlow": "会社のサーバー",
+    "welcome": {
+      "title": "agentes.chatへようこそ",
+      "lead": "あなたのAIエージェントのチームが、チャットであなたと一緒に働きます。",
+      "google": "Googleで続ける",
+      "apple": "Appleで続ける",
+      "email": "メールアドレスで続ける",
+      "others": "ほかの使い方",
+      "here": "この{{device}}で無料で動かす",
+      "hereText": "データはここに残ります。クラウドのアカウントは不要です。",
+      "company": "会社のサーバーにログイン",
+      "companyText": "agentes.yourcompany.com のようなアドレスで。",
+      "install": "チームのためにサーバーにインストールしますか？",
+      "installLink": "方法を見る",
+      "foundTailnet": "agentes.chatがあなたのネットワーク上にあります",
+      "foundHere": "この{{device}}でagentes.chatが動いています"
+    },
+    "run": {
+      "step": "この{{device}}で動かす · {{n}}/{{total}}",
+      "flow": "この{{device}}で動かす",
+      "ownerTitle": "オーナーは誰にしますか？",
+      "ownerLead": "このメールアドレスでログインし、あとで好きな人を招待できます。すべてこの{{device}}に保存されます。",
+      "usage": "匿名の利用統計を送信する",
+      "usageText": "数値だけで、メッセージ、ファイル、名前は送りません。",
+      "whereTitle": "どこで使いますか？",
+      "whereLead": "いつでも変更できます。",
+      "everywhere": "この{{device}}、スマートフォン、チームで",
+      "everywhereText": "Tailscale、またはあなたのアドレスを通じて。",
+      "hereOnly": "この{{device}}だけで",
+      "hereOnlyText": "スマートフォンはあとからでも大丈夫です。",
+      "netTitle": "スマートフォンとチームはどうやってここに来ますか？",
+      "netLead": "あとで設定から変更できます。",
+      "later": "あとで行う",
+      "changeAddress": "アドレスを変更",
+      "ask": "<b>あとワンクリックです。</b>開いたTailscaleのページで<b>Enable</b>をクリックしてください。鍵マーク付きの安全なアドレスになります。あとは自動で進むので、急がなくて大丈夫です。",
+      "askOpen": "ページを開く",
+      "askSkip": "これなしで完了する",
+      "doneTitle": "完了です。スマートフォンでも使いましょう",
+      "phone1": "agentes.chatアプリをインストール",
+      "phone1Text": "App StoreまたはGoogle Playから。",
+      "phone2": "Tailscaleをインストールして、同じアカウントでログイン",
+      "phone2Text": "どこからでも、スマートフォンをこの{{device}}につなぎます。",
+      "phone3": "カメラをコードに向ける",
+      "phone3Text": "すぐにログインできます。コードは自動で更新されます。",
+      "qrLabel": "スマートフォンでログインするためのQRコード",
+      "qrFailed": "コードを読み込めませんでした。",
+      "address": "あなたのアドレス: <b>{{address}}</b>",
+      "open": "agentes.chatを開く"
+    }
+  },
+  "reach": {
+    "label": "スマートフォンとチームがここに来る方法",
+    "tailscale": "Tailscaleを通じて",
+    "tailscaleText": "無料。あなたのデバイスとチームのデバイスをつなぐプライベートネットワークです。",
+    "address": "自分のアドレスを通じて",
+    "addressText": "この{{device}}上の、すでにここにつながっているトンネル。",
+    "checking": "この{{device}}のTailscaleを確認しています…",
+    "tailscaleOn": "この{{device}}でTailscaleが接続されています。",
+    "download": "Tailscaleをダウンロード",
+    "downloadNote": "無料。Tailscaleの公式サイトから。",
+    "openApp": "Tailscaleを開いてログイン",
+    "tray": "時計の近くにあるアイコンからTailscaleを開いて、ログインしてください。",
+    "terminal": "ターミナルでTailscaleを接続してください:",
+    "waitNow": "Tailscaleを待っています…",
+    "waitInstall": "インストールして開き、ログインしてください。あとは自動で進むので、急がなくて大丈夫です。",
+    "waitSignIn": "そちらでログインしてください。あとは自動で進むので、急がなくて大丈夫です。",
+    "addressLabel": "あなたのアドレス",
+    "pointAt": "つなぎ先",
+    "problem": {
+      "notHttps": "アドレスは https:// で始める必要があります",
+      "unreachable": "開けませんでした。トンネルがオンで、{{target}} につながっているか確認してください。",
+      "unreachablePlain": "開けませんでした。トンネルがオンで、この{{device}}につながっているか確認してください。",
+      "otherServer": "この{{device}}のサーバーではなく、別のサーバーが開きます。",
+      "error": "エラーが返ってきました（{{status}}）。",
+      "errorPlain": "エラーが返ってきました。"
+    },
+    "reason": {
+      "address": "あなたのアドレスがここにつながっていません"
+    },
+    "stage": {
+      "checking": "あなたのアドレスを確認しています…",
+      "done": "準備完了: スマートフォンとチームが開けます。"
+    },
+    "line": {
+      "address": "実行中 · あなたのアドレスで",
+      "addressDown": "実行中 · あなたのアドレスが今ここにつながっていません"
+    }
   },
   "place": {
     "title": "ワークスペースをどこに置きますか？",
@@ -237,7 +376,6 @@
   },
   "here": {
     "title": "この{{device}}を準備しましょう",
-    "how": "1分ほどで終わります。すべてここに、あなただけのもとに保存されます。",
     "again": "以前ここで動いていました。データは今も{{path}}にあります。",
     "ownerNone": "アカウントが1つも残っていません。名前とメールアドレスを入れると、あなたが新しいオーナーになります。",
     "name": "あなたの名前",
@@ -245,34 +383,27 @@
     "email": "あなたのメールアドレス",
     "emailNeeded": "メールアドレスを入力してください（例: ana@example.com）。",
     "reach": "スマートフォンやチームメイトからアクセスする",
-    "reachText": "Tailscaleはあなたのデバイス用のプライベートネットワークです。あなたのスマートフォンと招待した人だけが参加でき、ほかの誰もagentes.chatにアクセスできません。",
-    "reachOff": "Tailscaleが接続されていません。",
-    "reachOffTerminal": "Tailscaleが接続されていません。ターミナルで接続してください:",
-    "reachTray": "Tailscaleが接続されていません。時計の横のアイコンから接続してください。",
-    "reachMissing": "Tailscale（無料）が必要です。",
-    "reachChecking": "Tailscaleが接続されているか確認しています…",
+    "reachText": "あなたのデバイス用の無料のプライベートネットワークであるTailscale、またはあなた自身のアドレスを通じて、スマートフォンや招待した人がどこからでもagentes.chatを開けます。",
     "reachStage": {
       "sharing": "Tailscaleに共有を依頼しています…",
       "approve": "TailscaleがネットワークでのHTTPSの有効化を求めています。Tailscaleのページで有効にしてください。残りは自動で進みます。",
-      "restarting": "新しいアドレスでagentes.chatを再起動しています…",
-      "signingIn": "新しいアドレスで再ログインしています…"
+      "restarting": "新しいアドレスでagentes.chatを再起動しています…"
     },
     "approveOpen": "Tailscaleのページを開く",
     "approveStop": "待つのをやめる",
     "openTailscale": "Tailscaleを開く",
-    "getTailscale": "Tailscaleを入手",
     "usage": "匿名の利用統計をagentes.chatに送信する",
     "usageText": "人数、エージェント数、マシンのサイズ、使ったAIトークン、エージェントのブラウザが送受信したデータ量、アプリの起動や動作の速さなどの数値です。メッセージ、ファイル、名前、サイトは送りません。",
-    "start": "始める",
     "setting": "すべて準備しています",
-    "rest": "アプリを閉じると、エージェントは休みます。もう一度開けばすぐに戻ってきます。",
+    "settingAlmost": "もうすぐ完了",
+    "settingFailed": "設定が完了しませんでした",
     "step": {
       "database": "データの保存場所を用意しています",
       "databaseNote": "初回のみ",
       "start": "agentes.chatを起動しています",
       "account": "アカウントを作成しています",
       "computer": "エージェントを呼んでいます",
-      "reach": "スマートフォンからのアクセスをオンにしています"
+      "reach": "どこからでもアクセスできるようにしています"
     },
     "stepState": {
       "active": "進行中",
@@ -284,7 +415,7 @@
       "start": "この{{device}}でagentes.chatが起動しませんでした。",
       "database": "データベースを準備できませんでした。",
       "account": "アカウントを作成できませんでした。",
-      "retry": "環境設定でもう一度試す"
+      "retry": "設定でもう一度試す"
     },
     "reason": {
       "https": "TailscaleネットワークでHTTPSがオフになっています",
@@ -349,7 +480,6 @@
     "removeBody": "サーバーとそこにあるアカウントはそのまま残ります。",
     "removeAgents": "そのワークスペースのエージェントは、この{{device}}で作業しなくなります。",
     "removed": "{{host}}をこのアプリから削除しました",
-    "workspaces_other": "{{count}}個のワークスペース",
     "signedOut": "ログインしていません",
     "offline": "{{time}} からオフライン",
     "signIn": "サインイン",
@@ -469,20 +599,22 @@
   },
   "pair": {
     "title": "{{org}}のエージェントがこの{{device}}で作業するのを許可しますか？",
-    "body": "{{host}} からのリクエストです。エージェントはコマンド、ブラウザ、ここのコーディングツールを使えます。フォルダーは後で環境設定から追加します。",
+    "body": "{{host}} からのリクエストです。エージェントはここでコマンド、ブラウザ、コーディングツールを使えます。フォルダは後で設定から。",
     "allow": "許可",
     "notNow": "今はしない",
     "offerTitle": "{{org}}のエージェントにこの{{device}}を使わせますか？",
     "keepReady": "準備しておく：ログイン時にagentes.chatを開く",
     "offerOnlyIf": "この{{device}}にもエージェントの作業をさせたい場合だけです。「今はしない」を選んでも、ここで{{org}}をいつもどおり使えます。",
     "canDo": "ここでエージェントができること",
-    "foldersLater": "まだあなたのフォルダーはありません。あとで 環境設定 › フォルダ から追加できます。",
+    "foldersLater": "まだあなたのフォルダはありません。あとで 設定 › フォルダとツール から追加できます。",
     "linkTitle": "この{{device}}を{{org}}に接続しますか？",
+    "connectTitle": "この{{device}}を接続しますか？",
     "askedBy": "依頼者",
     "from": "接続元",
     "linkBody": "心当たりがなければ「今はしない」を選んでください。",
     "waiting": "{{by}}が参加を許可するのを待っています…",
     "done": "{{org}}に接続しました",
+    "doneLead": "エージェントがこの{{device}}で作業できるようになりました。",
     "share": "ワークスペースの全員に使わせる",
     "internet": "エージェントがこのコンピューターのインターネットを使う",
     "internetOn": "エージェントがアクセスするサイトやサーバーからあなたの場所が見えます",
@@ -494,12 +626,50 @@
     "shareOff": "今はあなただけ",
     "shareHint": "{{org}}の全員のエージェントが、あなたのユーザーとしてここでタスクを実行できます。",
     "addFolders": "フォルダを追加",
-    "expired": "このリンクは期限切れです。デバイスで新しいリンクを作成してください。",
     "openDevices": "デバイスを開く",
-    "denied": "{{by}}は参加を許可しませんでした。何も変わっていません。",
+    "expiredTitle": "このリンクは期限切れです",
+    "expiredLead": "{{server}}の「デバイス」で新しいリンクを作成してください。",
+    "deniedTitle": "{{by}}は参加を許可しませんでした",
+    "deniedLead": "この{{device}}では何も変わっていません。",
+    "unreachableTitle": "{{server}}に接続できません",
+    "unreachableLead": "接続を確認して、もう一度お試しください。",
+    "failedTitle": "この{{device}}を接続できませんでした",
     "letOrg": "{{org}}のエージェントにこの{{device}}を使わせる",
     "canUse": "エージェントが使えます",
     "notUsing": "このワークスペースのエージェントはこの{{device}}を使っていません"
+  },
+  "sheets": {
+    "step": "この{{device}} · {{at}}/{{total}}",
+    "stepOnly": "この{{device}}",
+    "ready": {
+      "title": "この{{device}}を{{org}}のエージェント用に準備しますか？",
+      "lead": "準備すると、{{device}}がオンの間、エージェントはここからもっと多くのことができます。",
+      "browser": "エージェント専用のブラウザ",
+      "browserDesc": "あなたのログイン情報やパスワードは使いません。",
+      "code": "コマンドとコーディングツール",
+      "codeOne": "{{tool}}がすでにあります。あなたのユーザーとして実行されます。",
+      "codeTwo": "{{a}}と{{b}}がすでにあります。あなたのユーザーとして実行されます。",
+      "codeNone": "あなたのユーザーとして実行されます。",
+      "folders": "あなたのフォルダは許可したときだけ",
+      "foldersDesc": "それぞれのリクエストはチャットとアプリのアイコンに表示されます。",
+      "foldersDescMac": "それぞれのリクエストはチャットとメニューバーに表示されます。",
+      "login": "{{device}}の起動時に自動で開く",
+      "loginDesc": "覚えておかなくても、エージェントが戻ってこられます。",
+      "help": "設定 › この{{device}}でいつでも変更できます。",
+      "allow": "準備する"
+    },
+    "prepare": {
+      "title": "macOSが3つのことを一度だけ確認します",
+      "lead": "これがないと、エージェントは作業の途中で止まって確認します。",
+      "notifications": "通知",
+      "notificationsDesc": "エージェントがあなたを必要としたとき。",
+      "screenDesc": "エージェントが画面上で何をしているか見られるように。",
+      "diskDesc": "許可したフォルダを、macOSに何度も確認されずに開けるように。",
+      "waitList": "開いたシステム設定で、リストのagentes.chatをオンにしてください。自動で気づきます。",
+      "waitNotifications": "開いたシステム設定で、agentes.chatの通知を許可してください。自動で気づきます。",
+      "help": "アップデートでどれかがオフになったら、すぐにお知らせします。",
+      "later": "あとで行う"
+    }
   },
   "prepare": {
     "title": "この{{device}}を準備する",
@@ -509,6 +679,8 @@
     "screenAgain": "macOSは月に1回ほど改めて確認します。「許可」を選んでください。",
     "disk": "フルディスクアクセス",
     "diskDesc": "フォルダごとにmacOSの確認が出ることなく、エージェントがファイルを開けるようにします。",
+    "notifications": "通知",
+    "notificationsDesc": "エージェントがあなたを必要としたときや、この{{device}}で何かが動かなくなったときに知らせます。",
     "diskHow": "設定のリストでagentes.chatをオンにするか、+で追加してください。",
     "network": "ローカルネットワーク（Wi-Fi経由のスマホ）",
     "networkDesc": "エージェントがWi-Fi上のAndroidスマホを見つけて使えるようにします。",
@@ -522,6 +694,35 @@
     "skip": "今はスキップ",
     "prefsTitle": "アクセス許可",
     "prefsHint": "アプリのアップデート時にmacOSがこれらをオフにすることがあります。ここで再びオンにしてください。"
+  },
+  "essentials": {
+    "tray": "この{{device}}で対応が必要なことがあります",
+    "notify": {
+      "screen": {
+        "title": "画面収録がオフになっています",
+        "body": "macOSがオフにしました。もう一度許可するまで、エージェントはスクリーンショットを撮れません。"
+      },
+      "disk": {
+        "title": "フルディスクアクセスがオフになっています",
+        "body": "もう一度オンにするまで、エージェントはフォルダごとに止まって確認することがあります。"
+      },
+      "reach": {
+        "title": "スマートフォンとチームがagentes.chatにアクセスできません",
+        "body": "デバイスからのアクセスには、この{{device}}での対応が必要です。アプリを開いて解決してください。"
+      },
+      "backup": {
+        "title": "昨夜のバックアップが完了しませんでした",
+        "body": "アプリを開いて、もう一度バックアップしてください。"
+      },
+      "autoUpdate": {
+        "title": "agentes.chatのアップデートが必要です",
+        "body": "このバージョンは使い続けられません。アプリを開いて新しいバージョンをインストールしてください。"
+      },
+      "awake": {
+        "title": "サーバーとして動いている間に、この{{device}}がスリープするかもしれません",
+        "body": "ここでagentes.chatを再起動すると、スマートフォンとチームのために起きたままになります。"
+      }
+    }
   },
   "tools": {
     "claudeName": "Claude Code",
@@ -833,6 +1034,99 @@
       "folderDesc": "ワークスペースごとにひとつのフォルダがあり、その中にエージェントごとのフォルダがあります。"
     }
   },
+  "settings": {
+    "nav": {
+      "label": "設定",
+      "thisDevice": "この{{device}}",
+      "overview": "概要",
+      "folders": "フォルダとツール",
+      "server": "この{{device}}のサーバー",
+      "activity": "アクティビティ",
+      "app": "アプリの設定",
+      "needs_other": "{{count}}件があなたの対応待ち"
+    },
+    "away": {
+      "title": "{{name}}に接続できません。",
+      "body": "この{{device}}に関することはそのまま使えます。使える人やエージェントの名前は、接続が戻ると表示されます。"
+    },
+    "overview": {
+      "rename": "名前を変更",
+      "allSet": "すべて順調です",
+      "used": "{{orgs}}のエージェントがこの{{device}}を使っています",
+      "version": "バージョン{{version}}、最新です",
+      "versionNewer": "バージョン{{version}}、{{latest}}が利用できます",
+      "always": "いつでも準備OK",
+      "who": "この{{device}}を使う人"
+    },
+    "essentials": {
+      "on": "オン",
+      "allOn": "すべてオン",
+      "turnOn": "オンにする",
+      "turnOnAgain": "もう一度オンにする",
+      "permissions": "macOSの許可",
+      "permissionsOff": "まだオフ: {{names}}。",
+      "launchAtLogin": "{{device}}の起動時に開く",
+      "reach": "どこからでもアクセス",
+      "reachOff": "この{{device}}だけです。スマートフォンとチームは開けません。",
+      "reachDown": "この{{device}}でTailscaleが接続されていません。",
+      "reachApprove": "Tailscaleは、ネットワークでHTTPSがオンになるのを待っています。",
+      "reachAddress": "あなたのアドレスが今ここにつながっていません。",
+      "checkAgain": "もう一度確認",
+      "backup": "毎晩バックアップ",
+      "backupOff": "オフにしました",
+      "autoUpdate": "夜間に自動でアップデート",
+      "autoUpdateDesc": "新しいバージョンが開かない場合は、自動で元に戻ります",
+      "updateRequired": "このバージョンは使い続けられません。",
+      "awake": "エージェントの作業中はスリープしない",
+      "awakeOff": "ここでagentes.chatを再起動すると、起きたままになります。",
+      "powerRestart": "停電のあと自動で起動する",
+      "systemOnly": "これはmacOSの設定でしかオンにできません。"
+    },
+    "server": {
+      "anywhere": "スマートフォンとチームが開けます",
+      "onlyHere": "この{{device}}だけ",
+      "onlyHereDesc": "スマートフォンとチームは開けません。",
+      "wayTailscale": "Tailscale経由、鍵付き",
+      "wayAddress": "あなたのアドレス経由",
+      "changeWay": "変更",
+      "reachOff": "オフにする",
+      "useWay": "これを使う",
+      "phoneDesc": "agentes.chatアプリとTailscaleを同じアカウントでインストールし、カメラを向けてください。自動でログインします。",
+      "phoneDescAddress": "agentes.chatアプリをインストールして、カメラを向けてください。自動でログインします。",
+      "phoneSignedOut": "コードを表示するには、アプリでこの{{device}}のagentes.chatにログインしてください。",
+      "qrLabel": "スマートフォンでログインするためのQRコード",
+      "invite": "チームの人を招待",
+      "inviteDesc": "ワークスペースに招待してから、Tailscaleでこの{{device}}を共有してください。",
+      "inviteDescAddress": "ワークスペースに招待してください。あなたのアドレスで開けます。",
+      "inviteButton": "招待",
+      "share": "Tailscaleで共有",
+      "everyNight": "毎晩{{at}}に",
+      "copyAlso": "コピーの保存先",
+      "backupsOff": "夜間のバックアップはオフです"
+    },
+    "access": {
+      "title": "フォルダとツール",
+      "lead": "すべてのワークスペースで、エージェントがこの{{device}}で使うもの。",
+      "tools": "ツール",
+      "browserDesc": "エージェント専用。あなたのログイン情報は使いません",
+      "commandsDesc": "あなたとして実行され、この{{device}}のほかの場所にも届きます",
+      "notHere": "この{{device}}ではまだ使えません",
+      "folders": "許可したフォルダ",
+      "addTitle": "別のフォルダを許可",
+      "addDesc": "エージェントがフォルダを必要とすると、チャットとここで確認します。",
+      "addFor": "{{org}}用"
+    },
+    "app": {
+      "title": "アプリの設定",
+      "notifications": "通知",
+      "thisApp": "このアプリ",
+      "servers": "サーバーとアカウント",
+      "advanced": "詳細設定",
+      "onlyHere": "この{{device}}だけ",
+      "version": "バージョン{{version}}",
+      "otherServer": "ほかのサーバー"
+    }
+  },
   "iphone": {
     "lead": "設定はこの{{device}}が行います。iPhoneをタップするのは、手順に求められたときだけです。",
     "account": "XcodeのAppleアカウント",
@@ -861,15 +1155,10 @@
   "cover": {
     "offline": "インターネットに接続されていません · 再試行しています…",
     "unreachable": "{{host}}に接続できません · 再試行しています…",
-    "tailnet": "この{{device}}でTailscaleは接続されていますか？",
     "starting": "この{{device}}でagentes.chatを起動しています…",
     "migrating": "この{{device}}のagentes.chatを更新しています。1分ほどかかることがあります。",
     "stopped": "この{{device}}のagentes.chatが停止しました",
     "failing": "この{{device}}でagentes.chatが起動しません",
-    "tailnetOff": "agentes.chatを開くには、この{{device}}でTailscaleを接続してください。",
-    "tailnetUp": "ターミナルで: sudo tailscale up",
-    "tailnetTray": "時計の横のアイコンから開いてください。",
-    "onlyHere": "この{{device}}でのみ使う",
     "start": "起動する",
     "copy": "詳細をコピー",
     "copied": "コピーしました",
@@ -883,8 +1172,14 @@
     "heldUntil": "この{{device}}のagentes.chatは停止中です。{{time}}に自動で再開します。",
     "startNow": "今すぐ開始",
     "openOther": "{{server}}を開く",
-    "onlyHereWorking": "デバイスからのアクセスをオフにしています…",
-    "onlyHereFailed": "デバイスからのアクセスをオフにできませんでした。"
+    "privateTitle": "{{org}}はプライベートネットワーク上にあります",
+    "privateTitleAny": "このワークスペースはプライベートネットワーク上にあります",
+    "privateLine": "そして、この{{device}}ではネットワークがオフです。オンにすると、ワークスペースが自動で開きます。",
+    "privateMissing": "そして、プライベートネットワークのTailscaleが、この{{device}}にはまだありません。入手してログインすると、ワークスペースが自動で開きます。",
+    "privateTray": "そして、この{{device}}ではネットワークがオフです。時計の近くにあるTailscaleのアイコンからオンにすると、ワークスペースが自動で開きます。",
+    "privateElsewhere": "そして、この{{device}}ではネットワークがオフです。Tailscaleをオンにすると、ワークスペースが自動で開きます。",
+    "useOther": "別のワークスペースを使う",
+    "getTailscale": "Tailscaleをダウンロード"
   },
   "report": {
     "button": "レポートを送信",

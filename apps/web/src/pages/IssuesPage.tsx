@@ -111,6 +111,7 @@ import {
 import { lookOf } from "@/lib/look";
 import { inPlaceClick } from "@/lib/navigate";
 import { useOpenParam } from "@/lib/open-param";
+import { publicOrigin } from "@/lib/public-origin";
 import { type ToastText, useToast } from "@/lib/toast";
 import { AssigneeFaces } from "./IssueAssignees";
 import { AddColumnDialog, Board, type CardState, type IssueGroup, useMoveIssue, usePatchIssue } from "./IssueBoard";
@@ -1378,7 +1379,7 @@ function useIssueMenu() {
         label: t("contextMenu.copyLink"),
         icon: "link",
         run: () =>
-          void copyText(`${window.location.origin}/org/${org.id}/issues/${i.number}`, () =>
+          void copyText(`${publicOrigin()}/org/${org.id}/issues/${i.number}`, () =>
             toast.show(t("contextMenu.linkCopied")),
           ),
       },

@@ -258,7 +258,11 @@ export async function ensureOAuthClient(
   orgId: string,
   issuer: string,
   meta: AuthServerMetadata,
-  input: { redirectUri: string; scope: string | null },
+  /**
+   * `redirectUris`: the return addresses to register, `PUBLIC_URL`'s callback first (`oauthRedirectUris`). One a
+   * server refuses beside the first (an http loopback address, ADR 0265 §5) is left out of a second try.
+   */
+  input: { redirectUris: string[]; scope: string | null },
 ): Promise<OAuthClientRow | NotApproved | null> {
   const [existing] = await deps.db
     .select()
@@ -287,6 +291,7 @@ export async function ensureOAuthClient(
       : supported.includes("client_secret_post")
         ? "client_secret_post"
         : "client_secret_basic";
+  let redirectUris = input.redirectUris;
   const register = async (clientName: string) => {
     const res = await http(deps)(endpoint, {
       method: "POST",
@@ -295,7 +300,7 @@ export async function ensureOAuthClient(
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
         client_name: clientName,
-        redirect_uris: [input.redirectUri],
+        redirect_uris: redirectUris,
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
         token_endpoint_auth_method: method,
@@ -304,10 +309,19 @@ export async function ensureOAuthClient(
     }).catch(() => null);
     return { res, refusal: res && !res.ok ? await res.text().catch(() => "") : "" };
   };
-  let { res, refusal } = await register("agentes.chat");
+  let name = "agentes.chat";
+  let { res, refusal } = await register(name);
   // Calendly takes only letters, digits, hyphens and spaces in a client's name. The others keep the brand's,
   // the name people see on the consent screen.
-  if (res?.status === 400 && /\b(client_)?name\b/i.test(refusal)) ({ res, refusal } = await register("agentes chat"));
+  if (res?.status === 400 && /\b(client_)?name\b/i.test(refusal)) {
+    name = "agentes chat";
+    ({ res, refusal } = await register(name));
+  }
+  // A server that takes https return addresses only: registered with `PUBLIC_URL`'s alone, as before the loopback one.
+  if (res?.status === 400 && redirectUris.length > 1) {
+    redirectUris = redirectUris.slice(0, 1);
+    ({ res, refusal } = await register(name));
+  }
   // RFC 7591: 400 for a redirect URI or metadata it won't take, 401 or 403 for a registration closed to us.
   if (res && [400, 401, 403].includes(res.status)) return { notApproved: true, ...refusalDetail(refusal) };
   if (!res?.ok) return null;
@@ -338,6 +352,7 @@ export async function ensureOAuthClient(
         kekId: sealed?.kekId ?? null,
         scope,
         tokenAuthMethod,
+        redirectUris,
       })
       .where(eq(oauthClients.id, existing.id))
       .returning();
@@ -357,6 +372,7 @@ export async function ensureOAuthClient(
       kekId: sealed?.kekId ?? null,
       scope,
       tokenAuthMethod,
+      redirectUris,
     })
     .onConflictDoNothing()
     .returning();

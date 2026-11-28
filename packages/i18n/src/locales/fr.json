@@ -721,6 +721,9 @@
       "browserLead": "Nous reviendrons ici une fois connecté avec {{provider}}.",
       "codeHint": "Votre navigateur affichera ce code. Vérifiez qu'il correspond avant de continuer.",
       "reopen": "Rouvrir le navigateur",
+      "timedOut": "La connexion a expiré",
+      "timedOutLead": "Rien n'est revenu du navigateur en 10 minutes. Recommencez quand vous voulez.",
+      "startAgain": "Recommencer",
       "otherWay": "Se connecter autrement",
       "otherServer": "Utiliser un autre serveur",
       "opening": "Ouverture de {{provider}}…",
@@ -2568,7 +2571,7 @@
     "private": "Toute personne qui scanne ce code se connecte en tant que vous.",
     "failed": "Impossible de créer le code.",
     "localOnly": "Ce serveur ne s'ouvre que sur l'ordinateur où il tourne, donc votre téléphone ne peut pas le joindre.",
-    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Préférences › Serveurs. Puis revenez ici.",
+    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Paramètres › Serveur sur ce {{device}}. Puis revenez ici.",
     "localOnlyHere": "Activez Y accéder depuis votre téléphone et vos collègues. Puis revenez ici."
   },
   "surface": {
@@ -6499,14 +6502,14 @@
         "title": "Il reste une étape, sur {{computer}} lui-même",
         "waiting": "En attente",
         "one": "Cliquez sur l'icône agentes.chat près de l'horloge",
-        "two": "Préférences",
+        "two": "Paramètres de ce {{device}}",
         "three": "Activez Navigateur",
         "done": "C'est tout. Cette page le détecte toute seule, pas besoin de recharger.",
         "menuOpen": "Ouvrir agentes",
-        "menuPrefs": "Préférences…",
+        "menuPrefs": "Paramètres de ce {{device}}…",
         "menuPause": "Pause",
         "menuQuit": "Quitter",
-        "tools": "Outils",
+        "tools": "Dossiers et outils",
         "commands": "Commandes"
       },
       "offlineCloud": "{{computer}} ne répond pas. On s'en occupe. {{name}} répondra de nouveau à son retour.",
@@ -8297,7 +8300,7 @@
     "linkEmpty": "Créez le lien pour le copier",
     "linkFailed": "Impossible de créer le lien. {{cause}}",
     "localOnly": "Ce serveur ne s'ouvre que sur l'ordinateur où il tourne, donc les personnes que vous invitez ne peuvent pas ouvrir leur invitation.",
-    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Préférences › Serveurs, ou faites tourner agentes.chat sur un serveur qu'elles peuvent ouvrir. Puis invitez-les.",
+    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Paramètres › Serveur sur ce {{device}}, ou faites tourner agentes.chat sur un serveur qu'elles peuvent ouvrir. Puis invitez-les.",
     "localOnlyHere": "Activez Y accéder depuis votre téléphone et vos collègues. Puis invitez-les.",
     "never": "N'expire jamais",
     "untilDate": "Jusqu'au {{date}}",
@@ -17429,16 +17432,16 @@
         "windows": "PC",
         "linux": "poste"
       },
-      "grantHere": "C'est ce {{device}} : autorisez des dossiers dans les Préférences de l'app.",
-      "openFolders": "Ouvrir Dossiers",
-      "openServers": "Ouvrir Serveurs",
+      "grantHere": "C'est ce {{device}} : autorisez des dossiers dans Paramètres de ce {{device}}, sous Dossiers et outils.",
+      "openFolders": "Ouvrir Dossiers et outils",
+      "openServers": "Ouvrir Serveur sur ce {{device}}",
       "openTools": "Ouvrir Outils",
       "reconnect": "Reconnecter",
       "reconnecting": "Reconnexion de ce {{device}}…",
       "seeRequest": "Voir dans l'app",
       "offline": "Ce {{device}} est hors ligne pour le moment.",
       "outageTitle": "Ce {{device}} a perdu sa connexion {{ago}}",
-      "toolsOff": "Désactivé sur ce {{device}}. Activez-le dans les Préférences de l'app, sous Outils.",
+      "toolsOff": "Désactivé sur ce {{device}}. Activez-le dans Paramètres de ce {{device}}, sous Dossiers et outils.",
       "noReport": "Ce {{device}} n'a pas encore indiqué ce qu'il autorise. Mettez l'app à jour.",
       "update": "Mettre l'app à jour"
     },
@@ -17560,7 +17563,7 @@
       "disableText": "Les agents n'utilisent plus {{tool}} sur cet ordinateur. Pour le réactiver : sur l'ordinateur lui-même, ou ici par la personne qui l'a connecté.",
       "disabled": "{{tool}} désactivé.",
       "grantTitle": "Pour autoriser davantage",
-      "grantText": "Les autorisations se donnent sur l'ordinateur lui-même : ouvrez-y l'app agentes.chat (Préférences → Dossiers).",
+      "grantText": "Les autorisations se donnent sur l'ordinateur lui-même : ouvrez-y l'app agentes.chat (Paramètres › Ce {{device}} › Dossiers et outils).",
       "grantTextTerminal": "Les autorisations se donnent sur l'ordinateur lui-même, dans son Terminal :",
       "grantTextAdmin": "Les autorisations se donnent sur l'ordinateur lui-même, dans son Terminal, en tant qu'administrateur :",
       "grantTerminal": "Pas d'app ? Dans le terminal de l'ordinateur :",
@@ -18961,6 +18964,19 @@
   "settings": {
     "notOpen": "Votre rôle dans cet espace de travail n'ouvre pas {{section}}. Les personnes qui gèrent les rôles peuvent vous l'ouvrir.",
     "nav": "Sections des paramètres",
+    "thisDevice": {
+      "title": "Ce {{device}}",
+      "section": {
+        "overview": "Vue d'ensemble",
+        "folders": "Dossiers et outils",
+        "server": "Serveur sur ce {{device}}",
+        "activity": "Activité",
+        "app": "Paramètres de l'app"
+      },
+      "needs_one": "{{count}} chose a besoin de vous",
+      "needs_many": "{{count}} choses ont besoin de vous",
+      "needs_other": "{{count}} choses ont besoin de vous"
+    },
     "group": {
       "org": "Espace de travail"
     },
@@ -19196,7 +19212,7 @@
       "label": "Envoyer des statistiques d'utilisation anonymes à agentes.chat",
       "help": "Des chiffres comme le nombre de personnes, d'agents, la taille des machines, les jetons d'IA utilisés, la quantité de données envoyées et reçues par les navigateurs des agents et la vitesse à laquelle les apps s'ouvrent et répondent. Jamais de messages, fichiers, noms ou sites.",
       "envOff": "Désactivé dans les paramètres de ce serveur (TELEMETRY=off).",
-      "envOffDesktop": "Désactivé dans l'app agentes.chat sur l'ordinateur de ce serveur (Préférences › Serveurs).",
+      "envOffDesktop": "Désactivé dans l'app agentes.chat sur l'ordinateur de ce serveur (Paramètres › Serveur sur ce {{device}}).",
       "envOffHere": "Désactivé dans l'app agentes.chat de cet ordinateur.",
       "see": "Voir ce qui est envoyé",
       "dialogTitle": "Ce qui est envoyé",
@@ -20951,7 +20967,7 @@
     "machine": {
       "ready": "Prêt",
       "off": "Désactivé",
-      "offHelp": "La personne qui a connecté l'ordinateur l'active ici ou dans l'app agentes.chat de cet ordinateur : Préférences → Outils.",
+      "offHelp": "La personne qui a connecté l'ordinateur l'active ici ou dans l'app agentes.chat de cet ordinateur : Paramètres › Ce {{device}} › Dossiers et outils.",
       "needsCommand": "Nécessite une commande",
       "notReady": "Pas encore prêt",
       "turnOff": "Désactiver",

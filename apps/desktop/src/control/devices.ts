@@ -38,10 +38,17 @@ export const isSignedOut = (err: unknown) =>
 export const thisComputer = (list: DevicesList | undefined, home: Home): ComputerDevice | null =>
   list?.devices.find((d) => d.id === home.status?.machine?.id) ?? null;
 
-/** The server a home's devices are asked on: the server here's homes point at its loopback, its window at its address. */
-export const deviceServer = (home: Home, local: { run: boolean; url: string | null; publicUrl: string | null }) => {
+/**
+ * The server a home's devices are asked on, with the window's session there: the server here's homes point at its
+ * loopback address, which is where the window on this computer opens it and signs in (ADR 0265 §5).
+ */
+export const deviceServer = (
+  home: Home,
+  local: { run: boolean; url: string | null; localUrl?: string | null; publicUrl: string | null },
+) => {
   const server = homeServer(home);
-  return local.run && server && server === local.url && local.publicUrl ? local.publicUrl : server;
+  const here = local.run && server && (server === local.url || server === local.publicUrl);
+  return here ? (local.localUrl ?? local.url ?? server) : server;
 };
 
 /** The workspace's agents on the web, each one's "Quem pensa" a click away (where an account is given to agents). */
@@ -56,9 +63,6 @@ export const iphoneStepsUrl = (server: string, orgId: string, machineId: string)
   `${server}/org/${encodeURIComponent(orgId)}/settings/devices/iphone-setup?computer=${encodeURIComponent(machineId)}`;
 
 // ── The iPhone setup ─────────────────────────────────────────────────────────
-
-/** Preferences opens the welcome window as the iPhone setup (read once by that window, then cleared). */
-export const IPHONE_SETUP_PREF = "iphoneSetup";
 
 export const IPHONE_SETUP_STEPS = [
   "xcode",

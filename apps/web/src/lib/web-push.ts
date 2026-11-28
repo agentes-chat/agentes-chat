@@ -1,6 +1,7 @@
 import type { ApiClient, NotificationCount, NotificationEvent, PushDeviceInput } from "@agenteschat/client";
 import type { AuthClient } from "@/auth/client";
 import { inDesktopApp } from "./desktop";
+import { ownOrigins } from "./public-origin";
 import { type PushOpen, pushOpenFrom } from "./push-open";
 
 /**
@@ -132,13 +133,17 @@ export function subscriptionBody(json: PushSubscriptionJSON, locale: string): Pu
 /** The service worker's message when a notification is clicked on a page already open (public/sw.js). */
 export const PUSH_OPEN_MESSAGE = "agentes.push.open";
 
-/** An in-app path from a notification's address: only this site's own pages; anything else is `null`. */
-export function inAppPath(url: unknown, origin: string): string | null {
+/**
+ * An in-app path from a notification's address: only this site's own pages (`origin`: its own origins, `ownOrigins`);
+ * anything else is `null`.
+ */
+export function inAppPath(url: unknown, origin: string | readonly string[]): string | null {
   if (typeof url !== "string" || !url) return null;
   if (url.startsWith("/") && !url.startsWith("//")) return url.startsWith("/api/") ? null : url;
+  const origins: readonly string[] = typeof origin === "string" ? [origin] : origin;
   try {
     const parsed = new URL(url);
-    if (parsed.origin !== origin || parsed.pathname.startsWith("/api/")) return null;
+    if (!origins.includes(parsed.origin) || parsed.pathname.startsWith("/api/")) return null;
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return null;
@@ -298,7 +303,7 @@ export function listenForPushOpens(open: (click: PushOpen) => void): () => void 
   const onMessage = (event: MessageEvent) => {
     const data = event.data as { type?: unknown; url?: unknown; data?: unknown } | null;
     if (!data || data.type !== PUSH_OPEN_MESSAGE) return;
-    const click = pushOpenFrom(data, (url) => inAppPath(url, window.location.origin));
+    const click = pushOpenFrom(data, (url) => inAppPath(url, ownOrigins()));
     if (click) open(click);
   };
   container.addEventListener("message", onMessage);

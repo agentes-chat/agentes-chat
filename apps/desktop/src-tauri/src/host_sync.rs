@@ -18,8 +18,8 @@ use crate::local_server;
 /// Besides the syncs something asks for (the server came up, the site has a new organization, a token was refused):
 /// each one runs the runner, a whole Bun process.
 const EVERY: Duration = Duration::from_secs(5 * 60);
-/// How often Tailscale's state is checked while reach is on.
-const TAILNET_EVERY: Duration = Duration::from_secs(60);
+/// How often the way people reach the server here is checked while reach is on.
+const REACH_EVERY: Duration = Duration::from_secs(60);
 /// `host --once` answers in a second or two: past this it is stuck (it holds the sync's lock meanwhile), and the
 /// next minute's sync tries again.
 const SYNC_WAIT: Duration = Duration::from_secs(60);
@@ -114,8 +114,8 @@ pub fn trigger(app: &AppHandle) {
     sync.ring.notify_one();
 }
 
-/// Every `EVERY`, or sooner when woken, for as long as the app runs; and every minute, with reach on, Tailscale's
-/// state, so the server here is shared again as soon as it can be.
+/// Every `EVERY`, or sooner when woken, for as long as the app runs; and every minute, with reach on, the way people
+/// reach the server here (Tailscale's state, or the person's own address), so it is shared again as soon as it can be.
 pub fn start(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
@@ -126,15 +126,16 @@ pub fn start(app: &AppHandle) {
                 let woken = sync.wake.lock().unwrap_or_else(|e| e.into_inner());
                 let (mut woken, _) = sync
                     .ring
-                    .wait_timeout_while(woken, TAILNET_EVERY, |w| !*w)
+                    .wait_timeout_while(woken, REACH_EVERY, |w| !*w)
                     .unwrap_or_else(|e| e.into_inner());
                 std::mem::take(&mut *woken)
             };
             if app.state::<crate::runners::Runners>().is_quitting() {
                 return;
             }
-            // Tailscale turned off here since: its line says nobody else reaches it, until it is shared again.
-            local_server::check_tailnet(&app);
+            // Tailscale turned off here since, or the person's own address no longer leading here (ADR 0265 §4): its
+            // line says nobody else reaches it, until it is shared again.
+            local_server::check_reach(&app);
             local_server::ensure_served(&app);
             if woken || synced.is_none_or(|at| at.elapsed() >= EVERY) {
                 sync_now(&app, &[]);

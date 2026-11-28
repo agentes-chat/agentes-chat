@@ -1,0 +1,323 @@
+/*
+ * Settings › This computer on the app layer (ADR 0265 §6): a dialog in the sheets' card (`SheetFrame`), the section
+ * list (the desktop's `.dk-pnav` buttons) beside the page, one size for every section, smaller with the window. Inside
+ * it one surface: the groups lose their card and the icons their tile. Every row's picture sits in one 32 px slot
+ * (`LeadSlot`), so its words start 44 px in, and what is said or done under a row starts there too. States are words
+ * in their colour, never pills.
+ */
+.dk-sx {
+  position: relative;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  width: 1000px;
+  max-width: calc(100vw - 48px);
+  height: 720px;
+  min-height: 0;
+  flex-shrink: 1;
+  /* Proportional figures in words; times and counts ask for tabular ones themselves. */
+  font-feature-settings: normal;
+}
+/* The list's title on the section title's line: 22 px in a 28 px line, 2 px down, meets the 28 px title's baseline. */
+.dk-sx .dk-sx__nav {
+  background: none;
+  padding: 32px 12px 16px;
+}
+.dk-sx__title {
+  margin: 0;
+  padding: 2px 9px 16px;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+/* The section open now: a plate on the card, not a second card. */
+.dk-sx .dk-pnav button[aria-current="page"] {
+  background: var(--plate);
+  box-shadow: none;
+}
+/* The page: 48 px on both sides; the × sits in the right one, centred on the section title's line. */
+.dk-sx__body {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 32px 48px;
+}
+.dk-sx__close {
+  position: absolute;
+  top: 32px;
+  right: 16px;
+  z-index: 3;
+}
+.dk-sx__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Something on this computer needs the person: a dot in the waiting colour after Overview. */
+.dk-sx__dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+/* ---- Groups and rows ---- */
+.dk-sx .dk-card {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+/* Two groups with no caption between them read as one: a hairline, no gap. */
+.dk-sx .dk-card + .dk-card {
+  margin-top: 0;
+  border-top: 1px solid var(--line);
+}
+/* A group's caption: 24 over it, its first row's padding under it. */
+.dk-sx .dk-ctitle {
+  margin: 24px 0 4px;
+}
+/* Every row at least as tall as one with a button or a picture (32 + 2 × 12), so a group keeps one rhythm. What is
+   under a row comes 8 under its words. */
+.dk-sx .dk-crow {
+  min-height: 56px;
+  row-gap: 8px;
+}
+.dk-sx .dk-crow__lead {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+}
+/* A glyph bare in the slot, at 20 px (the components draw it so); Tailscale's mark at the same size. */
+.dk-sx .dk-logo:not(.dk-logo--lg) {
+  width: 32px;
+  height: 32px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+.dk-sx .dk-logo:not(.dk-logo--lg) > .dk-tailscale {
+  width: 20px;
+  height: 20px;
+}
+/* A coding program's mark: its own tile, the slot's size. */
+.dk-sx .dk-crow__lead > .dk-crow__brand {
+  width: 32px;
+  height: 32px;
+}
+/* A phone's portrait (narrower than it is tall) in the slot, so its title starts with the others. */
+.dk-crow__pic {
+  flex: none;
+  width: 32px;
+  display: grid;
+  place-items: center;
+}
+/* In a group with pictures, a row without one (a progress line, a note) starts on the words' line too. */
+.dk-sx .dk-card:has(> .dk-crow > .dk-crow__lead) > .dk-crow:not(:has(> .dk-crow__lead)) {
+  padding-inline-start: 44px;
+}
+/* What is under a program's row: its command, a note, then its buttons, 8 apart. */
+.dk-sx .dk-crow__under > * + .dk-tools__acts,
+.dk-sx .dk-crow__under > * + .dk-help {
+  margin-top: 8px;
+}
+.dk-tools__acts {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+/* The kit's and the desktop's smaller lines, on this dialog's scale: notes 13/18, paths and commands 12 in mono. */
+.dk-sx .dk-help,
+.dk-sx .dk-honest,
+.dk-sx .dk-reach-stage {
+  font-size: 13px;
+  line-height: 18px;
+}
+.dk-sx .dk-path {
+  font-size: 12px;
+  line-height: 18px;
+}
+.dk-sx .dk-code-inline {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0;
+  background: none;
+}
+.dk-sx .dk-upd__label {
+  font-size: 14px;
+  line-height: 20px;
+}
+.dk-sx .dk-steps-list,
+.dk-sx .dk-changes {
+  gap: 4px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* ---- States in words ---- */
+.dk-sx__ok,
+.dk-sx__on {
+  color: var(--ok);
+  font-weight: 600;
+}
+.dk-sx__on {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.dk-sx__warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+/* In a row's line, a state reads in its colour at the line's own weight. */
+.dk-crow__text small .dk-sx__warn,
+.dk-crow__text small .dk-sx__ok {
+  font-weight: 500;
+}
+/* A phone's state on its title's line. */
+.dk-sx__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--muted);
+}
+/* After an ⓘ, which takes no room of its own: past its glyph, as a chip there would be. */
+.dk-crow .ac-hintline > .ac-hint ~ .dk-sx__state {
+  margin-left: 24px;
+}
+.dk-sx__state[data-tone="warn"] {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* The workspace's page isn't there: a row on top, with Try again at its end. */
+.dk-sx__away {
+  margin: 0 0 24px;
+}
+
+/* ---- Overview: the computer's picture, its name, whether it needs the person, and a line under ---- */
+.dk-sx__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dk-sx__headtext {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-sx__headtext h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+/* Rename stays quiet beside the name: a fainter ink until the name is under the pointer (never its opacity). */
+.dk-sx__headtext h2 .ac-btn {
+  color: var(--faint);
+}
+.dk-sx__headtext h2:hover .ac-btn,
+.dk-sx__headtext h2 .ac-btn:focus-visible {
+  color: var(--muted);
+}
+/* The lead under the name, as a section's: its state first, then who uses it and the version. */
+.dk-sx__headtext > p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 21px;
+}
+.dk-sx__rename .ac-input {
+  max-width: 320px;
+}
+.dk-sx__sub {
+  font-size: 14.5px;
+  line-height: 21px;
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+/* The phone's QR code at its row's end, on white so any camera reads it, edged with a hairline. */
+.dk-sx__qr {
+  display: block;
+  flex: none;
+  width: 92px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.dk-sx__qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Quiet links under a row ("Change", "Turn off", "Back up now"), on the row's words' line (ADR 0265 §4). */
+.dk-sx__rowlinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  line-height: 18px;
+}
+.dk-sx__rowlinks .ac-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* How people get here, chosen inline under reach's row: the shared picker, then Cancel and the button that applies
+   it. */
+.dk-sx__choose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dk-sx__chooseacts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* The group a route asked for, marked a moment once it is in view: a ring clear of what it holds, nothing moves. */
+[data-focus] .dk-card {
+  border-radius: 12px;
+  outline: 2px solid transparent;
+  outline-offset: 8px;
+  transition: outline-color 0.6s var(--out, ease-out);
+}
+[data-focus][data-focused] .dk-card {
+  outline-color: var(--agent2);
+}
+
+@media (max-width: 760px) {
+  .dk-sx {
+    grid-template-columns: 184px minmax(0, 1fr);
+  }
+  .dk-sx .dk-sx__nav {
+    padding-top: 24px;
+  }
+  /* The × keeps its column on the right. */
+  .dk-sx__body {
+    padding: 24px 48px 24px 24px;
+  }
+  .dk-sx__close {
+    top: 24px;
+  }
+}

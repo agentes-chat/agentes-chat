@@ -21,9 +21,28 @@ mod icons {
     pub const BROWSING: &[u8] = include_bytes!("../icons/tray/browsing.png");
     /// An agent needs a person in its browser: a filled dot in the corner.
     pub const NEEDS: &[u8] = include_bytes!("../icons/tray/needs.png");
+    /// One of this computer's essentials fell (ADR 0265 §7): a disc with an exclamation mark in the corner.
+    pub const ATTENTION: &[u8] = include_bytes!("../icons/tray/attention.png");
 }
 
-const STATES: &[&str] = &["idle", "working", "paused", "offline", "update", "browsing", "needs"];
+const STATES: &[&str] = &["idle", "working", "paused", "offline", "update", "browsing", "needs", "attention"];
+
+/// The tray says one of this computer's essentials needs the person (the `attention` state): in its tooltip, and on
+/// Windows and Linux as the menu's first line, which opens This computer's settings.
+static ATTENTION: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The tooltip: the app's name, or what needs the person in the app's language (the popover's labels).
+fn tooltip(app: &AppHandle, attention: bool) -> String {
+    let said = attention.then(|| crate::menus::labels(app).get("trayAttention").cloned()).flatten();
+    tooltip_text(said)
+}
+
+fn tooltip_text(attention: Option<String>) -> String {
+    match attention {
+        Some(said) if !said.is_empty() => format!("agentes.chat · {said}"),
+        _ => "agentes.chat".into(),
+    }
+}
 
 #[cfg(target_os = "macos")]
 fn bytes_for(state: &str) -> Option<&'static [u8]> {
@@ -36,6 +55,7 @@ fn bytes_for(state: &str) -> Option<&'static [u8]> {
         "update" => Some(UPDATE),
         "browsing" => Some(BROWSING),
         "needs" => Some(NEEDS),
+        "attention" => Some(ATTENTION),
         _ => None,
     }
 }
@@ -94,6 +114,11 @@ fn menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let l = |key: &str| labels.get(key).cloned().unwrap_or_else(|| key.to_string());
     let item = |id: &str, key: &str| MenuItemBuilder::with_id(format!("app:{id}"), l(key)).build(app);
     let menu = Menu::new(app)?;
+    // One of this computer's essentials fell: first, the way to fix it (This computer's settings, ADR 0265 §7).
+    if ATTENTION.load(std::sync::atomic::Ordering::Relaxed) {
+        menu.append(&item("attention", "trayAttention")?)?;
+        menu.append(&PredefinedMenuItem::separator(app)?)?;
+    }
     menu.append(&item("open", "trayOpen")?)?;
     menu.append(&crate::menus::servers_menu(app, &l)?)?;
     // Agents work here (Linux): pause them for the whole computer, or resume.
@@ -123,7 +148,8 @@ fn menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
         menu.append(&item(action.0, action.1)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&item("prefs", "trayPrefs")?)?;
+    // This computer's settings (the app layer, ADR 0265), the same as ⌘, on a Mac.
+    menu.append(&item("prefs", "trayThisMac")?)?;
     menu.append(&item("quit", "quit")?)?;
     Ok(menu)
 }
@@ -138,8 +164,11 @@ fn agents_work_here(app: &AppHandle) -> bool {
 #[cfg(not(target_os = "macos"))]
 static BUILT_WITH_AGENTS: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(2);
 
-/// The tray's menu again (Windows, Linux): the labels or the servers changed.
+/// The tray's menu again (Windows, Linux): the labels or the servers changed. The tooltip too (its words are labels).
 pub fn refresh(app: &AppHandle) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_tooltip(Some(tooltip(app, ATTENTION.load(std::sync::atomic::Ordering::Relaxed))));
+    }
     #[cfg(not(target_os = "macos"))]
     if let (Some(tray), Ok(menu)) = (app.tray_by_id(TRAY_ID), menu(app)) {
         BUILT_WITH_AGENTS.store(u8::from(agents_work_here(app)), std::sync::atomic::Ordering::Relaxed);
@@ -153,6 +182,11 @@ pub fn refresh(app: &AppHandle) {
 pub fn set_state(app: &AppHandle, state: &str) -> Result<(), String> {
     if !STATES.contains(&state) {
         return Err(format!("unknown tray state: {state}"));
+    }
+    // Into or out of `attention`: the tooltip says it, and on Windows and Linux the menu's first line.
+    let attention = state == "attention";
+    if ATTENTION.swap(attention, std::sync::atomic::Ordering::Relaxed) != attention {
+        refresh(app);
     }
     #[cfg(target_os = "macos")]
     {
@@ -174,8 +208,8 @@ pub fn set_state(app: &AppHandle, state: &str) -> Result<(), String> {
 /// On a Mac, whether the menu bar icon shows while a window does (the popover decides: agents here, or the person's
 /// choice; `off`: the person turned it off). In the background it shows anyway, unless turned off (background.rs).
 #[tauri::command]
-pub fn tray_visible(app: AppHandle, window: tauri::Window, show: bool, off: Option<bool>) -> Result<(), String> {
-    if !matches!(window.label(), "popover" | "prefs") {
+pub fn tray_visible(app: AppHandle, webview: tauri::Webview, show: bool, off: Option<bool>) -> Result<(), String> {
+    if !matches!(webview.label(), "popover" | "main-app") {
         return Err("only the app's own windows set this".into());
     }
     crate::background::set_icon(&app, show, off.unwrap_or(false));
@@ -186,5 +220,19 @@ pub fn tray_visible(app: AppHandle, window: tauri::Window, show: bool, off: Opti
 pub fn set_mac_visible(app: &AppHandle, show: bool) {
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let _ = tray.set_visible(show);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_attention_state_is_known_and_its_tooltip_says_what_needs_the_person() {
+        assert!(STATES.contains(&"attention"));
+        assert_eq!(tooltip_text(None), "agentes.chat");
+        // Before the popover sent its labels: the app's name alone, never a key.
+        assert_eq!(tooltip_text(Some(String::new())), "agentes.chat");
+        assert_eq!(tooltip_text(Some("2 things need you".into())), "agentes.chat · 2 things need you");
     }
 }

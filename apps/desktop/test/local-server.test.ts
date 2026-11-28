@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ADDRESS_TEXT,
+  addressForm,
+  addressWords,
   coverHere,
   FAIL_TEXT,
   failedStep,
@@ -15,13 +18,15 @@ import {
   setupSteps,
   stepClock,
   stepStates,
+  tunnelTarget,
   UPDATE_SLOW_MS,
 } from "../src/control/local-server";
 import { menuLabels } from "../src/control/menu-labels";
 import { createDesktopI18n } from "../src/i18n";
 
 const LOCAL = "http://127.0.0.1:4310";
-const TAILNET = "https://ana-mac.tail1234.ts.net";
+const TAILNET = "https://agentes.tail1234.ts.net";
+const OWN = "https://agentes.example.com";
 const running: LocalServerStatus = {
   ...NO_SERVER,
   bundled: true,
@@ -30,21 +35,31 @@ const running: LocalServerStatus = {
   owner: true,
   phase: "running",
   url: LOCAL,
-  publicUrl: LOCAL,
+  localUrl: LOCAL,
+  publicUrl: null,
   installedVersion: "0.8.5",
   serverVersion: "0.1.1",
   dir: "/Users/ana/.agentes",
 };
-const reached: LocalServerStatus = { ...running, reach: true, publicUrl: TAILNET };
+const reached: LocalServerStatus = {
+  ...running,
+  reach: true,
+  publicUrl: TAILNET,
+  way: { kind: "tailscale" },
+  port: 4310,
+  reachHealth: "on",
+};
+/** Reached through an address of the person's own (ADR 0265 §4). */
+const addressed: LocalServerStatus = { ...reached, publicUrl: OWN, way: { kind: "address", url: OWN } };
 
 describe("setting it up", () => {
-  test("the steps in order, access from other devices only when asked", () => {
-    expect(setupSteps(false)).toEqual(["database", "start", "account", "computer"]);
-    expect(setupSteps(true)).toEqual(["database", "start", "account", "computer", "reach"]);
+  test("the steps in order, access from the phone and the team only where it will be used", () => {
+    expect(setupSteps("here")).toEqual(["database", "start", "account", "computer"]);
+    expect(setupSteps("everywhere")).toEqual(["database", "start", "account", "computer", "reach"]);
   });
 
   test("each step's state from what arrived; a failure stays on its step", () => {
-    const steps = setupSteps(true);
+    const steps = setupSteps("everywhere");
     expect(stepStates(steps, [])).toEqual({
       database: "todo",
       start: "todo",
@@ -69,11 +84,18 @@ describe("setting it up", () => {
     for (const lng of ["en", "pt-BR"] as const) {
       const i18n = createDesktopI18n(lng, "mac");
       const has = (key: string) => i18n.exists(key);
-      for (const step of setupSteps(true))
+      for (const step of setupSteps("everywhere"))
         expect({ step, ok: has(`desktop.here.step.${step}`) }).toEqual({ step, ok: true });
       for (const key of [
         ...Object.values(REASON_TEXT),
         ...Object.values(FAIL_TEXT),
+        ...Object.values(ADDRESS_TEXT),
+        "desktop.reach.problem.errorPlain",
+        "desktop.reach.problem.unreachablePlain",
+        "desktop.reach.line.address",
+        "desktop.reach.line.addressDown",
+        "desktop.reach.stage.checking",
+        "desktop.reach.stage.done",
         "desktop.here.slow",
         "desktop.here.copyDetails",
         "desktop.here.serveFix",
@@ -100,7 +122,7 @@ describe("setting it up", () => {
   });
 
   test("a setup that ended in an error always stops on a step", () => {
-    const steps = setupSteps(false);
+    const steps = setupSteps("here");
     const at = (...changes: Parameters<typeof stepStates>[1]) => failedStep(steps, stepStates(steps, changes));
     const done = (step: (typeof steps)[number]) => [
       { step, state: "active" as const },
@@ -154,10 +176,13 @@ describe("which screen", () => {
     });
   });
 
-  test("the app runs it already: open it, never set it up again", () => {
+  test("the app runs it already: open it at its loopback address, never set it up again", () => {
     expect(hereView(running, null)).toEqual({ kind: "running", server: LOCAL });
-    expect(hereView(reached, null)).toEqual({ kind: "running", server: TAILNET });
+    // With reach on too: the window on this computer never opens it through the tailnet (ADR 0265 §5).
+    expect(hereView(reached, null)).toEqual({ kind: "running", server: LOCAL });
     expect(hereView({ ...running, phase: "failing" }, null).kind).toBe("running");
+    // An older app's status without `localUrl`: its loopback `url`.
+    expect(hereView({ ...reached, localUrl: null }, null)).toEqual({ kind: "running", server: LOCAL });
   });
 
   test("running with no account left (its owner deleted theirs): the form asks who the new owner is", () => {
@@ -181,7 +206,12 @@ describe("what the popover, the cover and Preferences say", () => {
     expect(hereLine({ ...running, phase: "stopped" })).toBe("desktop.server.stopped");
     // Starting again by itself is never "stopped"; Tailscale off here means nobody else reaches it.
     expect(hereLine({ ...running, phase: "restarting" })).toBe("desktop.server.restarting");
-    expect(hereLine({ ...reached, tailnetDown: true })).toBe("desktop.server.tailnetDown");
+    expect(hereLine({ ...reached, reachDown: true })).toBe("desktop.server.tailnetDown");
+    expect(hereLine({ ...reached, reachHealth: "down" })).toBe("desktop.server.tailnetDown");
+    // Through the person's own address: its own words, up or down.
+    expect(hereLine(addressed)).toBe("desktop.reach.line.address");
+    expect(hereLine({ ...addressed, reachDown: true, reachHealth: "address" })).toBe("desktop.reach.line.addressDown");
+    expect(hereLine({ ...addressed, reachHealth: "address" })).toBe("desktop.reach.line.addressDown");
   });
 
   test("the popover's banners", () => {
@@ -197,21 +227,31 @@ describe("what the popover, the cover and Preferences say", () => {
     expect(isHereServer(running, LOCAL)).toBe(true);
     expect(isHereServer(reached, TAILNET)).toBe(true);
     expect(isHereServer(reached, LOCAL)).toBe(true);
+    expect(isHereServer({ ...running, url: null }, LOCAL)).toBe(true);
     expect(isHereServer(running, "https://app.agentes.chat")).toBe(false);
     expect(isHereServer({ ...running, run: false }, LOCAL)).toBe(false);
   });
 
-  test("the cover: each state over the server here, and Tailscale not connected at its Tailscale address", () => {
-    expect(coverHere({ ...running, phase: "starting" }, LOCAL, false)).toBe("starting");
-    expect(coverHere({ ...running, phase: "restarting" }, LOCAL, false)).toBe("starting");
-    expect(coverHere({ ...running, phase: "updating" }, LOCAL, false)).toBe("migrating");
-    expect(coverHere({ ...running, phase: "stopped" }, LOCAL, false)).toBe("stopped");
-    expect(coverHere({ ...running, phase: "failing" }, LOCAL, false)).toBe("failing");
-    expect(coverHere(running, LOCAL, true)).toBeNull();
-    expect(coverHere(reached, TAILNET, false)).toBe("tailnetOff");
-    expect(coverHere(reached, TAILNET, true)).toBeNull();
+  test("the cover: each state over the server here, and Tailscale is never one of them", () => {
+    expect(coverHere({ ...running, phase: "starting" }, LOCAL)).toBe("starting");
+    expect(coverHere({ ...running, phase: "restarting" }, LOCAL)).toBe("starting");
+    expect(coverHere({ ...running, phase: "updating" }, LOCAL)).toBe("migrating");
+    expect(coverHere({ ...running, phase: "stopped" }, LOCAL)).toBe("stopped");
+    expect(coverHere({ ...running, phase: "failing" }, LOCAL)).toBe("failing");
+    expect(coverHere(running, LOCAL)).toBeNull();
+    // Reach on and Tailscale down: the window at loopback works; it is an essentials item, not a cover.
+    const down: LocalServerStatus = { ...reached, reachDown: true, reachHealth: "down" };
+    expect(coverHere(down, LOCAL)).toBeNull();
+    expect(coverHere(down, TAILNET)).toBeNull();
+    expect(coverHere({ ...reached, phase: "stopped" }, TAILNET)).toBe("stopped");
     // Another server: the cover's own reachability words, not these.
-    expect(coverHere({ ...running, phase: "stopped" }, "https://app.agentes.chat", false)).toBeNull();
+    expect(coverHere({ ...running, phase: "stopped" }, "https://app.agentes.chat")).toBeNull();
+  });
+
+  test("the server here at its address for people: the person's own one too", () => {
+    expect(isHereServer(addressed, OWN)).toBe(true);
+    expect(isHereServer(addressed, LOCAL)).toBe(true);
+    expect(coverHere({ ...addressed, reachDown: true, reachHealth: "address" }, LOCAL)).toBeNull();
   });
 
   test("Rust's labels for the tray line and the notifications, with {version} left for Rust", () => {
@@ -232,5 +272,55 @@ describe("what the popover, the cover and Preferences say", () => {
       "A preparação do agentes.chat neste PC não terminou",
       "Abra o agentes.chat para ver o que aconteceu.",
     ]);
+  });
+});
+
+describe("an address of the person's own (ADR 0265 §4)", () => {
+  test("its form: an https origin, with a port or not, and nothing after it but a slash", () => {
+    expect(addressForm("https://agentes.example.com")).toEqual({ ok: true, url: OWN });
+    expect(addressForm("  https://agentes.example.com/  ")).toEqual({ ok: true, url: OWN });
+    expect(addressForm("https://Agentes.Example.com:8443")).toEqual({
+      ok: true,
+      url: "https://agentes.example.com:8443",
+    });
+    for (const bad of [
+      "",
+      "agentes.example.com",
+      "http://agentes.example.com",
+      "https://agentes.example.com/chat",
+      "https://agentes.example.com/?a=1",
+      "https://agentes.example.com/#top",
+      "https://agentes.example.com?",
+      "https://ana:secret@agentes.example.com",
+      "ftp://agentes.example.com",
+      "not an address",
+    ])
+      expect({ bad, form: addressForm(bad) }).toEqual({ bad, form: { ok: false, why: "notHttps" } });
+  });
+
+  test("where a tunnel points: this computer's loopback, by the server's port", () => {
+    expect(tunnelTarget(4310)).toBe("http://127.0.0.1:4310");
+    expect(tunnelTarget(null)).toBeNull();
+  });
+
+  test("each problem in plain words, with the tunnel's target and the status when there are some", () => {
+    const en = createDesktopI18n("en", "mac");
+    const say = (...args: Parameters<typeof addressWords>) => {
+      const words = addressWords(...args);
+      return en.t(words.key, words.values);
+    };
+    expect(say("notHttps", undefined, 4310)).toBe("The address must start with https://");
+    expect(say("unreachable", undefined, 4310)).toBe(
+      "We couldn't open it. Check that your tunnel is on and points to http://127.0.0.1:4310.",
+    );
+    expect(say("unreachable", undefined, null)).toBe(
+      "We couldn't open it. Check that your tunnel is on and points to this Mac.",
+    );
+    expect(say("otherServer", undefined, 4310)).toBe("It opens another server, not this Mac's.");
+    expect(say("error", 502, 4310)).toBe("It answered with an error (502).");
+    expect(say("error", undefined, 4310)).toBe("It answered with an error.");
+    const pt = createDesktopI18n("pt-BR", "windows");
+    const words = addressWords("otherServer", undefined, 4310);
+    expect(pt.t(words.key, words.values)).toBe("Ele abre outro servidor, não o deste PC.");
   });
 });

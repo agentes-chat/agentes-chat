@@ -2,18 +2,20 @@ import { authConfigQuery, invitationQuery, meQuery } from "@agenteschat/client";
 import { safeRedirect, signInFor } from "@agenteschat/client/lib/guards";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { fallBackToAccount } from "@/lib/accounts";
-import { AuthPage } from "@/pages/AuthPage";
+import { AuthPage, type BrowserStartProvider, isBrowserStartProvider } from "@/pages/AuthPage";
 
 export const Route = createFileRoute("/login")({
   // `error`: a provider sign-in the server refused comes back here with its code. `add`: another account beside the
-  // one signed in ("Add account", ADR 0183), so the page shows with someone signed in.
+  // one signed in ("Add account", ADR 0183), so the page shows with someone signed in. `with`: the desktop app's first
+  // screen asks for that provider's sign-in in the browser at once (ADR 0265 §3).
   validateSearch: (
     search: Record<string, unknown>,
-  ): { redirect?: string; email?: string; error?: string; add?: boolean } => ({
+  ): { redirect?: string; email?: string; error?: string; add?: boolean; with?: BrowserStartProvider } => ({
     redirect: safeRedirect(search.redirect),
     email: typeof search.email === "string" ? search.email : undefined,
     error: typeof search.error === "string" ? search.error : undefined,
     ...(search.add === true || search.add === "1" || search.add === 1 ? { add: true } : {}),
+    ...(isBrowserStartProvider(search.with) ? { with: search.with } : {}),
   }),
   beforeLoad: async ({ context, search }) => {
     const goal = signInFor(search.redirect);
@@ -44,6 +46,7 @@ export const Route = createFileRoute("/login")({
         email={search.email}
         refused={search.error}
         adding={search.add === true}
+        startWith={search.with}
       />
     );
   },

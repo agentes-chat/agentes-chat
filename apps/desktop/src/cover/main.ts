@@ -3,9 +3,13 @@
  * loads, so the window is never blank. Rust shows it and hides it (the page says when it painted); this page
  * only tells, while it shows, whether the server open now can be reached ("No internet connection…" or
  * "Can't reach {{host}}…"), and when it is back it asks to load the page again. Over the server here it says
- * that one's state instead (starting, updating, stopped, not starting, or Tailscale not connected), with the
- * buttons that fix it: a start or an update shows its time from 10 s, and Copy details once it takes longer than
- * expected. A server out of reach offers another one.
+ * that one's state instead (starting, updating, stopped, not starting), with the buttons that fix it: a start or an
+ * update shows its time from 10 s, and Copy details once it takes longer than expected. The window opens the server
+ * here at its loopback address, never through the tailnet (ADR 0265 §5), so Tailscale is never its reason. A server
+ * out of reach offers another one; a workspace on a private network (a Tailscale address) while Tailscale is off here
+ * says so with the button that turns it on (the system's Tailscale, ADR 0265 §4: its Mac app opens, or its download
+ * page), never a command. Every state is the same stack (cover.html): the picture, a title (the wordmark while it
+ * loads, what happened when the person has something to do), one line, at most two buttons and a link.
  */
 
 import { checkServer, isTailnet, serverHost } from "@agenteschat/client/lib/server";
@@ -18,7 +22,6 @@ import "../fonts.css";
 import "./cover.css";
 import {
   coverHere,
-  coverTailnet,
   isHereServer,
   type LocalServerStatus,
   STEP_SLOW_MS,
@@ -27,14 +30,19 @@ import {
   UPDATE_SLOW_MS,
 } from "../control/local-server";
 import { platformOf } from "../control/platform";
-import { serverName, type VersionProblem, versionProblem } from "../control/server";
+import { type ServerWorkspaces, serverName, type VersionProblem, versionProblem } from "../control/server";
 import { SITE_URL } from "../control/version";
 import { desktopStrings, systemLocale } from "../i18n";
-import { writePref } from "../prefs";
 import { mountReportPanel } from "../report/panel";
 import { type CoverParts, coverReport, knownServers, type ReportFacts } from "../report/report";
+import { TAILSCALE_MARK } from "../ui/tailscale-mark";
 import { elapsedClock, fillIn } from "../ui/time";
+import { type NetworkFix, networkFix, networkWords, privateTitle } from "./network";
+import "./private.css";
 import { stuckAction } from "./stuck";
+
+// In a plain browser while designing (`bun run dev`, cover.html): answers in place of the app (src/dev/fake-cover.ts).
+if (import.meta.env.DEV && !("__TAURI_INTERNALS__" in window)) await import("../dev/fake-cover");
 
 /** How long the cover waits before it asks whether the site can be reached, and how often after. */
 const CHECK_MS = 3000;
@@ -44,11 +52,16 @@ const words = strings.cover;
 const platform = platformOf(navigator.userAgent);
 const device = strings.device[platform];
 const root = document.querySelector<HTMLElement>(".cover");
+const heading = document.querySelector<HTMLElement>(".cover__title");
 const line = document.querySelector<HTMLElement>(".cover__line");
 const time = document.querySelector<HTMLElement>(".cover__time");
 const sky = document.querySelector<HTMLCanvasElement>(".cover__sky");
 const agent = document.querySelector<HTMLCanvasElement>(".cover__agent");
 const acts = document.querySelector<HTMLElement>(".cover__acts");
+const moreAct = document.querySelector<HTMLElement>(".cover__more");
+const tile = document.querySelector<HTMLElement>(".cover__tile");
+/** The wordmark, as cover.html first paints it: the title while nothing needs the person. */
+const wordmark = heading?.querySelector(".cover__word")?.cloneNode(true) ?? null;
 document.documentElement.lang = systemLocale();
 
 let shownAt = performance.now();
@@ -66,9 +79,12 @@ let overHere = false;
 let tooOld: VersionProblem | null = null;
 /** A short word in the time's place ("Copied"), until then: the explanation above it stays as it is. */
 let aside: { text: string; until: number } | null = null;
+/** What turns the network on, as last read, and when: each read runs Tailscale's own command. */
+let network: { at: number; fix: NetworkFix | null } | null = null;
+const NETWORK_READ_MS = 10_000;
 
-function sayAside(text: string) {
-  aside = { text, until: performance.now() + 2500 };
+function sayAside(text: string, ms = 2500) {
+  aside = { text, until: performance.now() + ms };
   tick();
 }
 
@@ -100,7 +116,8 @@ if (agent) {
       const s = agent.width;
       const inner = s * 0.84;
       ctx.clearRect(0, 0, s, s);
-      const pose = idlePose(now / 1000, seed, { every: 10 });
+      // Calm faces only: a cross or a spiral would read as something broken while it waits.
+      const pose = idlePose(now / 1000, seed, { every: 10, expressions: ["happy", "wink"] });
       drawAgent(ctx, (s - inner) / 2, s - inner + s * 0.04, inner, {
         color: "sky",
         eyes: "round",
@@ -117,21 +134,42 @@ function say(text: string) {
   if (line) line.textContent = text;
 }
 
-/** The cover's buttons: label and what it does; the first is the main one. */
-function buttons(list: [string, () => void][]) {
-  if (!acts) return;
-  const now = list.map(([label]) => label).join("|");
+/** The stack's title: what happened, when the person has something to do; the wordmark otherwise. */
+function title(text: string | null) {
+  if (!heading) return;
+  if (text === null) {
+    if (wordmark && !heading.querySelector(".cover__word")) heading.replaceChildren(wordmark.cloneNode(true));
+  } else if (heading.querySelector(".cover__word") || heading.textContent !== text) {
+    heading.textContent = text;
+  }
+}
+
+/** A cover action: its label and what it does. */
+type Act = [string, () => void];
+
+function button(label: string, run: () => void, variant?: "primary") {
+  const node = document.createElement("button");
+  node.type = "button";
+  node.textContent = label;
+  if (variant) node.dataset.variant = variant;
+  node.addEventListener("click", run);
+  return node;
+}
+
+/**
+ * The cover's buttons: at most two, bordered, with `main` (the one that moves forward) white and last; `link`, a third
+ * way, as a link under them.
+ */
+function buttons(list: Act[], main?: Act, link?: Act) {
+  if (!acts || !moreAct) return;
+  const now = [...list, ...(main ? [main] : []), ...(link ? [link] : [])].map(([label]) => label).join("|");
   if (acts.dataset.now === now) return;
   acts.dataset.now = now;
   acts.replaceChildren(
-    ...list.map(([label, run]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = label;
-      button.addEventListener("click", run);
-      return button;
-    }),
+    ...list.map(([label, run]) => button(label, run)),
+    ...(main ? [button(main[0], main[1], "primary")] : []),
   );
+  moreAct.replaceChildren(...(link ? [button(link[0], link[1])] : []));
 }
 
 /**
@@ -152,7 +190,8 @@ function tick() {
   const clock = stepClock(ms, waitSince.state === "migrating" ? UPDATE_SLOW_MS : STEP_SLOW_MS);
   if (time)
     time.textContent = clock.slow ? `${strings.here.slow} · ${elapsedClock(ms)}` : clock.time ? elapsedClock(ms) : "";
-  buttons(clock.slow ? [[words.copy, copyDiagnostics], ...(overHere ? [report] : [])] : []);
+  if (clock.slow) buttons([[words.copy, copyDiagnostics]], undefined, overHere ? report : undefined);
+  else buttons([]);
 }
 
 /** Shown again (cover.rs `show`): the sky fills again, nothing is said yet. */
@@ -162,9 +201,11 @@ function shown() {
   waitSince = null;
   stuckSteps = 0;
   tooOld = null;
+  title(null);
   say("");
   tick();
   buttons([]);
+  hidePrivate();
   root?.removeAttribute("data-fading");
   void checkVersion();
   void check();
@@ -197,11 +238,10 @@ async function reachable(server: string): Promise<boolean> {
   }
 }
 
-/** Why the page isn't there: no internet, or this server; on Tailscale, the likely reason too. */
+/** Why the page isn't there: no internet, or this server. */
 function unreachableText(server: string): string {
   if (!navigator.onLine) return words.offline;
-  const text = fillIn(words.unreachable, { host: serverHost(server) });
-  return isTailnet(server) ? `${text} ${fillIn(words.tailnet, { device })}` : text;
+  return fillIn(words.unreachable, { host: serverHost(server) });
 }
 
 const localStatus = () => invoke<LocalServerStatus>("local_server_status").catch(() => null);
@@ -258,7 +298,7 @@ function sendReport() {
     },
   );
 }
-const report: [string, () => void] = [strings.report.button, sendReport];
+const report: Act = [strings.report.button, sendReport];
 
 /** Another server of the app's list than the one open (and the server here), to open instead. */
 async function otherServer(status: LocalServerStatus | null): Promise<string | null> {
@@ -268,36 +308,14 @@ async function otherServer(status: LocalServerStatus | null): Promise<string | n
 }
 const openServer = (server: string) => void invoke("server_choose", { server }).catch(() => {});
 
-/** "Use only on this Mac": reach off, said while it takes and when it didn't work. */
-function useOnlyHere() {
-  say(fillIn(words.onlyHereWorking, { device }));
-  buttons([]);
-  void invoke<{ ok: boolean }>("local_server_reach", { on: false })
-    .then(
-      (r) => r.ok,
-      () => false,
-    )
-    .then((ok) => {
-      if (ok) return;
-      say(fillIn(words.onlyHereFailed, { device }));
-      buttons([
-        [words.retry, useOnlyHere],
-        [words.copy, copyDiagnostics],
-      ]);
-    });
-}
-
 /** The server here's state on the cover, with what fixes it. */
-function showHere(
-  state: NonNullable<ReturnType<typeof coverHere>>,
-  tailnet: Tailnet | null,
-  status: LocalServerStatus,
-  other: string | null,
-) {
+function showHere(state: NonNullable<ReturnType<typeof coverHere>>, status: LocalServerStatus, other: string | null) {
   const start = () => void invoke("local_server_start").catch(() => {});
   const fill = (text: string) => fillIn(text, { device });
+  hidePrivate();
   if (state === "starting" || state === "migrating") {
     if (waitSince?.state !== state) waitSince = { state, at: performance.now() };
+    title(null);
     say(fill(state === "starting" ? words.starting : words.migrating));
     tick();
     return;
@@ -307,43 +325,94 @@ function showHere(
   if (state === "stopped") {
     // Stopped to stay stopped (Stop): until when, Start now, and another server of the list meanwhile.
     const until = status.held && status.heldUntil ? clockTime(status.heldUntil) : null;
+    title(fill(words.stopped));
     say(
-      until ? fillIn(words.heldUntil, { device, time: until }) : status.held ? fill(words.held) : fill(words.stopped),
+      until
+        ? fillIn(words.heldUntil, { device, time: until })
+        : status.held
+          ? fill(words.held)
+          : fill(strings.server.stoppedBody),
     );
-    buttons([
-      [status.held ? words.startNow : words.start, start],
-      ...(other
-        ? ([[fillIn(words.openOther, { server: serverName(other) }), () => openServer(other)]] as [
-            string,
-            () => void,
-          ][])
-        : []),
-    ]);
-  } else if (state === "failing") {
-    say(fill(words.failing));
-    buttons([[words.retry, start], [words.copy, copyDiagnostics], report]);
+    const others: Act[] = other
+      ? [[fillIn(words.openOther, { server: serverName(other) }), () => openServer(other)]]
+      : [];
+    buttons(others, [status.held ? words.startNow : words.start, start]);
   } else {
-    const onlyHere: [string, () => void] = [fill(words.onlyHere), useOnlyHere];
-    const next = coverTailnet(platform, tailnet);
-    if (next === "openTailscale") {
-      say(fill(words.tailnetOff));
-      buttons([[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], onlyHere]);
-    } else {
-      say(`${fill(words.tailnetOff)} ${words[next]}`);
-      buttons([onlyHere]);
-    }
+    title(fill(words.failing));
+    say("");
+    buttons([[words.copy, copyDiagnostics]], [words.retry, start], report);
   }
 }
 
-const showAnyway: [string, () => void] = [words.showAnyway, () => void invoke("cover_hide").catch(() => {})];
-const welcome: [string, () => void] = [
-  words.otherServer,
-  () => void invoke("show_window", { name: "welcome" }).catch(() => {}),
-];
+/** The first run, to pick another server or workspace (the main window's app layer, ADR 0265). */
+const otherWorkspace = () =>
+  void invoke("layer_show", { route: { screen: "firstRun", mode: "servers" } }).catch(() => {});
+
+/** What turns the network on here, read at most every few seconds unless `fresh` (a button was just pressed). */
+async function readNetwork(fresh = false): Promise<NetworkFix | null> {
+  if (!fresh && network && performance.now() - network.at < NETWORK_READ_MS) return network.fix;
+  const system = await invoke<Tailnet>("tailscale_status").catch(() => null);
+  const fix = networkFix(platform, system);
+  network = { at: performance.now(), fix };
+  return fix;
+}
+
+/** Tailscale's mark on its tile, the stack's picture over a private network, drawn once. */
+function drawMark(tile: Element) {
+  if (tile.firstChild) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("focusable", "false");
+  for (const [d, opacity] of [
+    [TAILSCALE_MARK.solid, "1"],
+    [TAILSCALE_MARK.faded, "0.4"],
+  ] as const) {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill-opacity", opacity);
+    svg.append(path);
+  }
+  tile.append(svg);
+}
+
+/** Says `text` in the time's place for a moment (Tailscale's page didn't open), never over the line. */
+const note = (text: string) => sayAside(text, 5000);
+
+/** Over a workspace on a private network: its name, what is off here, and what turns it on, in the same stack. */
+async function showPrivate(server: string, fix: NetworkFix) {
+  if (!root) return;
+  const list = await invoke<ServerWorkspaces[]>("workspaces_get").catch(() => null);
+  const named = privateTitle(list?.find((w) => w.server === server)?.orgs);
+  const { line: lineKey, button: turnOnKey } = networkWords(fix);
+  if (tile) drawMark(tile);
+  title(named.key === "privateTitle" ? fillIn(words.privateTitle, { org: named.org ?? "" }) : words.privateTitleAny);
+  say(fillIn(words[lineKey], { device }));
+  buttons([[words.useOther, otherWorkspace]], turnOnKey ? [words[turnOnKey], () => turnOn(fix)] : undefined);
+  root.setAttribute("data-private", "");
+}
+
+function hidePrivate() {
+  root?.removeAttribute("data-private");
+}
+
+/**
+ * Its main button: the system's Tailscale opens (its Mac app) or its official download page does. Once the network
+ * is on here and the server answers, the page loads.
+ */
+function turnOn(fix: NetworkFix) {
+  const openPage = (page: "app" | "download") =>
+    void invoke("tailscale_open", { page }).catch(() => note(strings.common.error));
+  if (fix.act === "openApp") openPage("app");
+  else if (fix.act === "download") openPage("download");
+}
+
+const showAnyway: Act = [words.showAnyway, () => void invoke("cover_hide").catch(() => {})];
+const another: Act = [words.otherServer, otherWorkspace];
 
 /**
  * Each time a server of the list opens, whether this app still speaks its app API (`GET /api/instance`, as when it was
- * added): if not, the welcome window's words over its page, which Rust keeps covered (`cover_hold`) until Show it
+ * added): if not, the first run's words over its page, which Rust keeps covered (`cover_hold`) until Show it
  * anyway or another server.
  */
 async function checkVersion() {
@@ -354,15 +423,17 @@ async function checkVersion() {
   void invoke("cover_hold").catch(() => {});
   const host = serverName(server);
   const connect = strings.connect;
-  say(fillIn(problem === "app-too-old" ? connect.appTooOld : connect.serverTooOld, { host }));
-  const updates: [string, () => void] = [
+  title(fillIn(problem === "app-too-old" ? connect.appTooOld : connect.serverTooOld, { host }));
+  say("");
+  const updates: Act = [
     connect.checkUpdates,
-    () => {
-      writePref("prefsTab", "updates");
-      void invoke("show_window", { name: "prefs" }).catch(() => {});
-    },
+    () =>
+      void invoke("layer_show", { route: { screen: "settings", section: "overview", focus: "updates" } }).catch(
+        () => {},
+      ),
   ];
-  buttons(problem === "app-too-old" ? [updates, welcome, showAnyway] : [welcome, showAnyway]);
+  if (problem === "app-too-old") buttons([another], updates, showAnyway);
+  else buttons([], another, showAnyway);
 }
 
 async function check() {
@@ -373,14 +444,12 @@ async function check() {
   const here = await localStatus();
   overHere = !!here && isHereServer(here, server);
   if (here && overHere) {
-    const answered = here.phase === "running" && (await reachable(server));
-    const state = coverHere(here, server, answered);
+    const state = coverHere(here, server);
     if (state) {
       hereWaiting = true;
-      unreachable = state === "stopped" || state === "failing" || state === "tailnetOff";
-      const tailnet = state === "tailnetOff" ? await invoke<Tailnet>("tailscale_status").catch(() => null) : null;
+      unreachable = state === "stopped" || state === "failing";
       const other = state === "stopped" ? await otherServer(here) : null;
-      showHere(state, tailnet, here, other);
+      showHere(state, here, other);
       return;
     }
     if (hereWaiting) {
@@ -394,15 +463,19 @@ async function check() {
   if (waited < CHECK_MS) return;
   if (!(await reachable(server))) {
     unreachable = true;
+    // A workspace on a private network while the network is off here: what turns it on (ADR 0265).
+    const fix = navigator.onLine && isTailnet(server) ? await readNetwork() : null;
+    if (fix) {
+      await showPrivate(server, fix);
+      return;
+    }
+    hidePrivate();
+    title(null);
     say(unreachableText(server));
-    // On Tailscale: connecting it here is the likely fix.
-    buttons(
-      isTailnet(server)
-        ? [[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], welcome]
-        : [welcome],
-    );
+    buttons([another]);
     return;
   }
+  hidePrivate();
   if (unreachable) {
     // Back: the site loads again; the cover stays until it painted.
     shown();
@@ -422,8 +495,10 @@ function stuck(waited: number) {
     void invoke("cover_retry", { fresh: next.action === "fresh", why }).catch(() => {});
     return;
   }
+  title(null);
   say(words.stuck);
-  buttons([
+  buttons(
+    [showAnyway],
     [
       words.retry,
       () => {
@@ -432,8 +507,7 @@ function stuck(waited: number) {
       },
     ],
     [words.copy, copyDiagnostics],
-    showAnyway,
-  ]);
+  );
 }
 
 /** "15:32": the hour and minute in the person's own way. */

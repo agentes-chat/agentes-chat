@@ -1,6 +1,6 @@
 import { InfoHint } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 
 /** An ⓘ's accessible name ("About Show the agents in the notch") and the plain sentences it holds. */
 export type Hint = { name: string; text: ReactNode };
@@ -11,7 +11,10 @@ export const hintFor = (t: TFunction, label: string, text: ReactNode): Hint => (
   text,
 });
 
-/** A tab's heading: title in Funnel Display, at most one line under it, an action on the right. */
+/**
+ * A section's heading: title in Funnel Display, at most one line under it, its actions on the right as one line of
+ * actions (`ac-acts`), on the lead's last line.
+ */
 export function PrefHead({ title, lead, action }: { title: string; lead?: ReactNode; action?: ReactNode }) {
   return (
     <div className="dk-phead">
@@ -19,7 +22,7 @@ export function PrefHead({ title, lead, action }: { title: string; lead?: ReactN
         <h2>{title}</h2>
         {lead && <p className="dk-lead">{lead}</p>}
       </div>
-      {action}
+      {action && <span className="dk-phead__acts ac-acts">{action}</span>}
     </div>
   );
 }
@@ -43,8 +46,16 @@ export const PrefCard = ({ children, padded }: { children: ReactNode; padded?: b
 );
 
 /**
+ * Rows drawn inside this provider put their lead in a slot of its own (`.dk-crow__lead`): the Settings dialog gives
+ * every picture one 32 px column, so each row's words start on the same line whatever leads it (ADR 0265 §6). Without
+ * it a row's lead is its first child, as the sheets lay out.
+ */
+export const LeadSlot = createContext(false);
+
+/**
  * One row: optional lead, a title with its ⓘ and one line under it, the control at the end. The line under the
- * title is for a state ("Turn on reach first."); what a setting does goes in the ⓘ.
+ * title is for a state ("Turn on reach first."); what a setting does goes in the ⓘ. The end is a line of actions
+ * (`ac-acts`): a ghost or icon button there reaches out to the same edge as a switch or a button.
  */
 export function PrefRow({
   lead,
@@ -75,6 +86,7 @@ export function PrefRow({
   /** A setting that only applies while the row above is on: its words under that row's, no hairline between. */
   nested?: boolean;
 }) {
+  const slot = useContext(LeadSlot);
   const label =
     title == null ? null : htmlFor ? (
       <label htmlFor={htmlFor} className="dk-crow__title">
@@ -85,7 +97,7 @@ export function PrefRow({
     );
   return (
     <div className="dk-crow" data-top={top || undefined} data-nested={nested || undefined}>
-      {lead}
+      {lead != null && lead !== false && (slot ? <span className="dk-crow__lead">{lead}</span> : lead)}
       <span className="dk-crow__text">
         {/* The ⓘ sits outside the label: the label stays the control's name, and a press on the ⓘ never
             reaches the control. */}
@@ -104,7 +116,7 @@ export function PrefRow({
         )}
         {desc && <small>{desc}</small>}
       </span>
-      {end && <span className="dk-crow__end">{end}</span>}
+      {end && <span className="dk-crow__end ac-acts">{end}</span>}
       {under && <div className="dk-crow__under">{under}</div>}
     </div>
   );

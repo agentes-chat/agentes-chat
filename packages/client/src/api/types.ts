@@ -239,6 +239,11 @@ export interface FeedbackFile {
 
 export interface AuthConfig {
   socialProviders: { google: boolean; github: boolean; apple?: boolean };
+  /**
+   * The address people open (`PUBLIC_URL`, no trailing slash): links handed out use it, also from a native server's
+   * loopback address on the computer that runs it (ADR 0265 §5). Absent: a server too old to say.
+   */
+  publicUrl?: string;
   signupOpen: boolean;
   firstRun: boolean;
   /** No account yet, and the first one only through the owner link (`/owner#claim=…`; absent: false). */

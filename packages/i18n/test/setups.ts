@@ -266,7 +266,6 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "appIcon.hintMac",
     "desktop.prefs.updates.",
     "desktop.server.reveal",
-    "desktop.cover.tailnetUp",
     // The install guide: the Mac's steps and its Finder scenes show only in the Mac guide, and the download page's
     // "why it asks" names the Mac with Windows beside it.
     "install.mac.",
@@ -300,6 +299,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "mobile.devices.iphone.wifi.",
     // The iPhone setup window opens only on a Mac.
     "desktop.iphone.checkingStall",
+    // "Get this computer ready" names the menu bar only on a Mac (ReadySheet.tsx); Windows and Linux say the app's icon.
+    "desktop.sheets.ready.foldersDescMac",
   ],
 };
 

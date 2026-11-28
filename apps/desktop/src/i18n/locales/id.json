@@ -22,7 +22,8 @@
   },
   "windowTitle": {
     "welcome": "Selamat datang",
-    "prefs": "Preferensi"
+    "prefs": "Preferensi",
+    "settings": "Pengaturan"
   },
   "background": {
     "title": "agentes.chat masih berjalan",
@@ -96,10 +97,7 @@
     },
     "label": "agentes.chat",
     "now": "Sekarang",
-    "seeAll": "Lihat semua",
     "background": "Di latar belakang",
-    "nothingNow": "Tidak ada apa-apa sekarang",
-    "waitingConnection": "Menunggu koneksi",
     "calmTitle": "Semua tenang di sini",
     "calmBody": "Agen memakai {{device}} ini saat mereka membutuhkannya.",
     "pausedEmptyTitle": "Semua sedang ditahan",
@@ -115,7 +113,7 @@
     "pauseHintServer": "Yang sudah berjalan selesai seperti biasa. Server tetap menyala.",
     "resume": "Lanjutkan agen",
     "open": "Buka agentes.chat",
-    "prefs": "Preferensi…",
+    "thisMac": "Pengaturan {{device}} ini…",
     "quit": "Keluar dari agentes.chat",
     "pausedFor1h": "Dijeda selama 1 jam",
     "pausedTomorrow": "Dijeda sampai besok pukul 09.00",
@@ -123,9 +121,9 @@
     "resumed": "Agen sudah kembali",
     "reconnect": "Hubungkan ulang",
     "reconnecting": "Menghubungkan ulang…",
-    "offlineTitle": "Tidak ada internet. Mencoba lagi…",
+    "offlineTitle": "Tidak ada internet",
     "offlineBody": "Yang sudah dimulai tetap berjalan di sini dan mengirim hasilnya begitu koneksi kembali.",
-    "unreachable": "Tidak bisa menjangkau {{host}}. Mencoba lagi…",
+    "unreachable": "Tidak bisa menjangkau {{host}}",
     "unreachableBody": "Yang sudah dimulai tetap berjalan di sini dan mengirim hasilnya begitu server kembali.",
     "pausedUntil": "Dijeda sampai {{time}}",
     "pausedUntilResume": "Dijeda sampai kamu melanjutkan",
@@ -168,14 +166,155 @@
     "quitTitle": "Keluar dari agentes.chat?",
     "quitBody": "Agen tidak bisa memakai {{device}} ini selama aplikasi tertutup. Yang sudah berjalan akan selesai dan mengirim hasilnya saat kamu membukanya lagi.",
     "quitHereBody": "agentes.chat berhenti di {{device}} ini: tidak ada yang bisa memakainya, di sini, di ponselmu, atau di ponsel rekan timmu, sampai kamu membuka aplikasinya lagi.",
-    "quitConfirm": "Keluar"
+    "quitConfirm": "Keluar",
+    "needsYou_other": "{{count}} hal butuh kamu",
+    "allSet": "Semua beres",
+    "thisDevice": "{{device}} ini",
+    "settings": "Pengaturan {{device}} ini",
+    "essential": {
+      "turnOn": "Nyalakan",
+      "turnOnAgain": "Nyalakan lagi",
+      "fix": "Perbaiki",
+      "launchAtLogin": {
+        "title": "agentes.chat tidak terbuka saat login",
+        "body": "Setelah dinyalakan ulang, agen tidak bisa memakai {{device}} ini sampai kamu membuka aplikasinya."
+      },
+      "notifications": {
+        "title": "Notifikasi mati",
+        "body": "Kamu tidak akan tahu saat agen butuh kamu di sini."
+      },
+      "screen": {
+        "body": "Tanpa ini, agen tidak bisa melihat layar."
+      },
+      "disk": {
+        "body": "Agen mungkin berhenti untuk meminta izin tiap folder."
+      },
+      "reach": {
+        "approve": {
+          "title": "Tailscale menunggu satu klik",
+          "body": "Ponsel dan timmu bisa menjangkau agentes.chat setelah kamu mengizinkannya di halaman admin Tailscale."
+        },
+        "down": {
+          "title": "Tailscale tidak terhubung di {{device}} ini",
+          "body": "Ponsel dan timmu tidak bisa menjangkau agentes.chat."
+        },
+        "address": {
+          "title": "Alamatmu sekarang tidak mengarah ke sini",
+          "body": "Ponsel dan timmu tidak bisa menjangkau agentes.chat sampai alamat itu mengarah ke sini lagi. Pastikan tunnel-mu menyala."
+        }
+      },
+      "backup": {
+        "off": {
+          "title": "Cadangan malam hari mati",
+          "body": "Nyalakan supaya agentes.chat menyimpan salinan setiap malam."
+        },
+        "backup": {
+          "body": "Cadangkan sekarang supaya pekerjaan hari ini punya salinan."
+        },
+        "copy": {
+          "title": "Cadangan semalam tidak sampai ke tempat salinannya",
+          "body": "Folder tujuan salinannya mungkin dicabut atau penuh."
+        }
+      },
+      "autoUpdate": {
+        "title": "Pembaruan tidak terpasang sendiri",
+        "body": "Nyalakan supaya {{device}} ini tetap di versi yang terus berfungsi."
+      }
+    }
   },
   "first": {
     "addTitle": "Tambah ruang kerja",
     "addLead": "Yang sudah kamu punya tetap di sini, masing-masing dengan login sendiri.",
     "addCloud": "Buat ruang kerja di agentes.chat",
     "addNew": "Mau workspace baru?",
-    "addNewLink": "Buat satu"
+    "addNewLink": "Buat satu",
+    "companyFlow": "Server perusahaan Anda",
+    "welcome": {
+      "title": "Selamat datang di agentes.chat",
+      "lead": "Tim agen AI-mu, bekerja bersamamu di chat.",
+      "google": "Lanjutkan dengan Google",
+      "apple": "Lanjutkan dengan Apple",
+      "email": "Lanjutkan dengan email",
+      "others": "Cara lain memakainya",
+      "here": "Jalankan gratis di {{device}} ini",
+      "hereText": "Datamu tetap di sini. Tanpa akun cloud.",
+      "company": "Masuk ke server perusahaanku",
+      "companyText": "Lewat alamatnya, seperti agentes.perusahaanmu.com.",
+      "install": "Memasangnya untuk tim di server?",
+      "installLink": "Lihat caranya",
+      "foundTailnet": "agentes.chat ada di jaringanmu",
+      "foundHere": "agentes.chat berjalan di {{device}} ini"
+    },
+    "run": {
+      "step": "Jalankan di {{device}} ini · {{n}} dari {{total}}",
+      "flow": "Jalankan di {{device}} ini",
+      "ownerTitle": "Siapa yang akan jadi pemilik?",
+      "ownerLead": "Kamu masuk dengan email ini dan mengundang siapa pun nanti. Semuanya disimpan di {{device}} ini.",
+      "usage": "Kirim statistik penggunaan anonim",
+      "usageText": "Hanya angka, tidak pernah pesan, file, atau nama.",
+      "whereTitle": "Di mana kamu akan memakainya?",
+      "whereLead": "Bisa diubah kapan saja.",
+      "everywhere": "Di {{device}} ini, ponselmu, dan timmu",
+      "everywhereText": "Lewat Tailscale atau alamatmu sendiri.",
+      "hereOnly": "Hanya di {{device}} ini",
+      "hereOnlyText": "Ponsel bisa menyusul nanti.",
+      "netTitle": "Bagaimana ponsel dan tim sampai ke sini?",
+      "netLead": "Bisa diubah nanti di Pengaturan.",
+      "later": "Nanti saja",
+      "changeAddress": "Ubah alamat",
+      "ask": "<b>Tinggal satu klik.</b> Di halaman Tailscale yang terbuka, klik <b>Enable</b>. Ini membuat alamatmu aman, dengan gembok. Kami lanjut sendiri, tidak perlu buru-buru.",
+      "askOpen": "Buka halamannya",
+      "askSkip": "Selesai tanpa itu",
+      "doneTitle": "Selesai. Bawa ke ponselmu",
+      "phone1": "Pasang aplikasi agentes.chat",
+      "phone1Text": "Dari App Store atau Google Play.",
+      "phone2": "Pasang Tailscale dan masuk dengan akun yang sama",
+      "phone2Text": "Inilah yang membawa ponselmu ke {{device}} ini, dari mana saja.",
+      "phone3": "Arahkan kamera ke kode",
+      "phone3Text": "Kamu langsung masuk. Kodenya diperbarui sendiri.",
+      "qrLabel": "Kode QR untuk masuk di ponselmu",
+      "qrFailed": "Kodenya tidak termuat.",
+      "address": "Alamatmu: <b>{{address}}</b>",
+      "open": "Buka agentes.chat"
+    }
+  },
+  "reach": {
+    "label": "Cara ponsel dan tim sampai ke sini",
+    "tailscale": "Lewat Tailscale",
+    "tailscaleText": "Gratis. Jaringan pribadi antara perangkatmu dan perangkat timmu.",
+    "address": "Lewat alamatku sendiri",
+    "addressText": "Tunnel di {{device}} ini yang sudah mengarah ke sini.",
+    "checking": "Memeriksa Tailscale di {{device}} ini…",
+    "tailscaleOn": "Tailscale terhubung di {{device}} ini.",
+    "download": "Unduh Tailscale",
+    "downloadNote": "Gratis, dari situs resmi Tailscale.",
+    "openApp": "Buka Tailscale dan masuk",
+    "tray": "Buka Tailscale lewat ikonnya di dekat jam, lalu masuk.",
+    "terminal": "Hubungkan Tailscale di terminal:",
+    "waitNow": "Menunggu Tailscale…",
+    "waitInstall": "Pasang, buka, lalu masuk. Ini berlanjut sendiri, tidak perlu buru-buru.",
+    "waitSignIn": "Masuk di sana. Ini berlanjut sendiri, tidak perlu buru-buru.",
+    "addressLabel": "Alamatmu",
+    "pointAt": "Arahkan ke",
+    "problem": {
+      "notHttps": "Alamatnya harus diawali https://",
+      "unreachable": "Kami tidak bisa membukanya. Pastikan tunnel-mu menyala dan mengarah ke {{target}}.",
+      "unreachablePlain": "Kami tidak bisa membukanya. Pastikan tunnel-mu menyala dan mengarah ke {{device}} ini.",
+      "otherServer": "Alamat itu membuka server lain, bukan server {{device}} ini.",
+      "error": "Alamat itu menjawab dengan kesalahan ({{status}}).",
+      "errorPlain": "Alamat itu menjawab dengan kesalahan."
+    },
+    "reason": {
+      "address": "alamatmu tidak mengarah ke sini"
+    },
+    "stage": {
+      "checking": "Memeriksa alamatmu…",
+      "done": "Siap: ponsel dan timmu bisa membukanya."
+    },
+    "line": {
+      "address": "Berjalan · di alamatmu",
+      "addressDown": "Berjalan · alamatmu sekarang tidak mengarah ke sini"
+    }
   },
   "place": {
     "title": "Di mana workspace-mu akan berada?",
@@ -237,7 +376,6 @@
   },
   "here": {
     "title": "Ayo siapkan {{device}} ini",
-    "how": "Hanya semenit. Semuanya tetap di sini, hanya bersamamu.",
     "again": "Pernah berjalan di sini, dan datanya masih ada di {{path}}.",
     "ownerNone": "Tidak ada akun yang tersisa di sini. Dengan nama dan emailmu, kamu menjadi pemilik barunya.",
     "name": "Namamu",
@@ -245,34 +383,27 @@
     "email": "Emailmu",
     "emailNeeded": "Tulis emailmu, misalnya ana@example.com.",
     "reach": "Akses dari ponselmu dan rekan tim",
-    "reachText": "Dengan Tailscale, jaringan pribadi untuk perangkatmu: ponselmu dan orang yang kamu undang bergabung ke jaringan itu, dan tidak ada orang lain yang bisa menjangkau agentes.chat.",
-    "reachOff": "Tailscale belum terhubung.",
-    "reachOffTerminal": "Tailscale belum terhubung. Hubungkan di terminal:",
-    "reachTray": "Tailscale belum terhubung. Hubungkan dari ikonnya di dekat jam.",
-    "reachMissing": "Butuh Tailscale, yang gratis.",
-    "reachChecking": "Memeriksa apakah Tailscale terhubung…",
+    "reachText": "Lewat Tailscale, jaringan pribadi gratis untuk perangkatmu, atau lewat alamatmu sendiri: ponselmu dan orang yang kamu undang membuka agentes.chat dari mana saja.",
     "reachStage": {
       "sharing": "Meminta Tailscale untuk membagikannya…",
       "approve": "Tailscale meminta HTTPS diaktifkan di jaringanmu. Aktifkan di halamannya: sisanya berjalan sendiri.",
-      "restarting": "Memulai ulang agentes.chat di alamat barunya…",
-      "signingIn": "Masuk lagi di alamat baru…"
+      "restarting": "Memulai ulang agentes.chat di alamat barunya…"
     },
     "approveOpen": "Buka halaman Tailscale",
     "approveStop": "Berhenti menunggu",
     "openTailscale": "Buka Tailscale",
-    "getTailscale": "Dapatkan Tailscale",
     "usage": "Kirim statistik pemakaian anonim ke agentes.chat",
     "usageText": "Angka seperti jumlah orang, agen, ukuran mesin, token AI yang dipakai, berapa banyak data yang dikirim dan diterima browser agen, dan seberapa cepat aplikasi terbuka dan berjalan. Tidak pernah pesan, file, nama, atau situs.",
-    "start": "Mulai",
     "setting": "Menyiapkan semuanya",
-    "rest": "Saat kamu menutup aplikasi, agenmu beristirahat. Mereka kembali begitu kamu membukanya lagi.",
+    "settingAlmost": "Hampir siap",
+    "settingFailed": "Penyiapan tidak selesai",
     "step": {
       "database": "Menyiapkan ruang untuk datamu",
       "databaseNote": "hanya pertama kali",
       "start": "Menyalakan agentes.chat",
       "account": "Membuat akunmu",
       "computer": "Memanggil agenmu",
-      "reach": "Menyalakan akses dari ponsel"
+      "reach": "Menyalakan akses dari mana saja"
     },
     "stepState": {
       "active": "sedang berjalan",
@@ -284,7 +415,7 @@
       "start": "agentes.chat tidak berjalan di {{device}} ini.",
       "database": "Database tidak berhasil disiapkan.",
       "account": "Akunmu tidak berhasil dibuat.",
-      "retry": "Coba lagi di Preferensi"
+      "retry": "Coba lagi di Pengaturan"
     },
     "reason": {
       "https": "HTTPS mati di jaringan Tailscale-mu",
@@ -349,7 +480,6 @@
     "removeBody": "Server dan akunmu di sana tetap seperti semula.",
     "removeAgents": "Agen dari ruang kerjanya berhenti bekerja di {{device}} ini.",
     "removed": "{{host}} dihapus dari aplikasi ini",
-    "workspaces_other": "{{count}} ruang kerja",
     "signedOut": "Belum masuk",
     "offline": "Offline sejak {{time}}",
     "signIn": "Masuk",
@@ -469,20 +599,22 @@
   },
   "pair": {
     "title": "Izinkan agen {{org}} bekerja di {{device}} ini?",
-    "body": "{{host}} memintanya. Agen dapat perintah, browser, dan alat coding di sini. Folder ditambahkan nanti di Preferensi.",
+    "body": "{{host}} memintanya. Agen dapat perintah, browser, dan alat coding di sini. Folder ditambahkan nanti di Pengaturan.",
     "allow": "Izinkan",
     "notNow": "Nanti saja",
     "offerTitle": "Izinkan agen {{org}} memakai {{device}} ini?",
     "keepReady": "Tetap siap: buka agentes.chat saat login",
     "offerOnlyIf": "Hanya jika kamu ingin {{device}} ini juga mengerjakan tugas agen. Dengan Nanti saja, kamu tetap memakai {{org}} di sini seperti biasa.",
     "canDo": "Yang bisa dilakukan agen di sini",
-    "foldersLater": "Belum ada folder milikmu. Tambahkan nanti di Preferensi › Folder.",
+    "foldersLater": "Belum ada folder milikmu. Tambahkan nanti di Pengaturan › Folder dan alat.",
     "linkTitle": "Hubungkan {{device}} ini ke {{org}}?",
+    "connectTitle": "Hubungkan {{device}} ini?",
     "askedBy": "Diminta oleh",
     "from": "Dari",
     "linkBody": "Kalau kamu tidak memintanya, pilih Nanti saja.",
     "waiting": "Menunggu {{by}} mengizinkannya masuk…",
     "done": "Terhubung ke {{org}}",
+    "doneLead": "Agennya sekarang bisa bekerja di {{device}} ini.",
     "share": "Izinkan seluruh ruang kerja memakainya",
     "internet": "Agen memakai internet komputer ini",
     "internetOn": "Situs dan server yang dijangkau agen melihat lokasimu",
@@ -494,12 +626,50 @@
     "shareOff": "Hanya kamu untuk saat ini",
     "shareHint": "Agen semua orang di {{org}} bisa menjalankan tugas di sana sebagai penggunamu.",
     "addFolders": "Tambahkan folder",
-    "expired": "Link ini sudah kedaluwarsa. Buat yang baru di Perangkat.",
     "openDevices": "Buka Perangkat",
-    "denied": "{{by}} tidak mengizinkannya masuk. Tidak ada yang berubah.",
+    "expiredTitle": "Link ini sudah kedaluwarsa",
+    "expiredLead": "Buat yang baru di Perangkat, di {{server}}.",
+    "deniedTitle": "{{by}} tidak mengizinkannya masuk",
+    "deniedLead": "Tidak ada yang berubah di {{device}} ini.",
+    "unreachableTitle": "Tidak bisa menjangkau {{server}}",
+    "unreachableLead": "Periksa koneksi lalu coba lagi.",
+    "failedTitle": "Tidak bisa menghubungkan {{device}} ini",
     "letOrg": "Izinkan agen {{org}} memakai {{device}} ini",
     "canUse": "Agen bisa memakainya",
     "notUsing": "Agennya tidak memakai {{device}} ini"
+  },
+  "sheets": {
+    "step": "{{device}} ini · {{at}} dari {{total}}",
+    "stepOnly": "{{device}} ini",
+    "ready": {
+      "title": "Siapkan {{device}} ini untuk agen {{org}}?",
+      "lead": "Dengan begitu, mereka bisa berbuat lebih banyak dari sini, selama {{device}} ini menyala.",
+      "browser": "Browser milik agen sendiri",
+      "browserDesc": "Tanpa login dan kata sandimu.",
+      "code": "Perintah dan alat coding",
+      "codeOne": "{{tool}}, sudah ada di sini. Semuanya berjalan sebagai penggunamu.",
+      "codeTwo": "{{a}} dan {{b}}, sudah ada di sini. Semuanya berjalan sebagai penggunamu.",
+      "codeNone": "Semuanya berjalan sebagai penggunamu.",
+      "folders": "Foldermu hanya dengan izinmu",
+      "foldersDesc": "Setiap permintaan muncul di chat dan di ikon aplikasi.",
+      "foldersDescMac": "Setiap permintaan muncul di chat dan di bar menu.",
+      "login": "Terbuka sendiri saat {{device}} dinyalakan",
+      "loginDesc": "Supaya agen kembali tanpa kamu harus ingat.",
+      "help": "Ubah kapan saja di Pengaturan › {{device}} ini.",
+      "allow": "Siapkan"
+    },
+    "prepare": {
+      "title": "macOS menanyakan tiga hal, sekali saja",
+      "lead": "Tanpa ini, agen berhenti di tengah pekerjaan untuk bertanya.",
+      "notifications": "Notifikasi",
+      "notificationsDesc": "Saat agen butuh kamu.",
+      "screenDesc": "Supaya agen bisa melihat apa yang mereka lakukan di layar.",
+      "diskDesc": "Untuk membuka folder yang kamu izinkan tanpa macOS bertanya lagi.",
+      "waitList": "Di Pengaturan Sistem yang terbuka, nyalakan agentes.chat di daftar. Kami akan tahu sendiri.",
+      "waitNotifications": "Di Pengaturan Sistem yang terbuka, izinkan notifikasi untuk agentes.chat. Kami akan tahu sendiri.",
+      "help": "Kalau pembaruan mematikan salah satunya, kami langsung memberitahumu.",
+      "later": "Nanti saja"
+    }
   },
   "prepare": {
     "title": "Siapkan {{device}} ini",
@@ -509,6 +679,8 @@
     "screenAgain": "macOS bertanya lagi kira-kira sebulan sekali. Pilih Izinkan.",
     "disk": "Akses Disk Penuh",
     "diskDesc": "Membuat agen bisa membuka file-mu tanpa macOS bertanya untuk tiap folder.",
+    "notifications": "Notifikasi",
+    "notificationsDesc": "Memberitahumu saat agen butuh kamu, dan saat sesuatu di {{device}} ini berhenti berfungsi.",
     "diskHow": "Di Pengaturan, aktifkan agentes.chat di daftar, atau tambahkan dengan +.",
     "network": "Jaringan lokal (ponsel lewat Wi-Fi)",
     "networkDesc": "Membuat agen bisa menemukan dan memakai ponsel Android di Wi-Fi-mu.",
@@ -522,6 +694,35 @@
     "skip": "Lewati dulu",
     "prefsTitle": "Izin",
     "prefsHint": "macOS bisa mematikannya saat app diperbarui. Aktifkan lagi di sini."
+  },
+  "essentials": {
+    "tray": "Ada sesuatu di {{device}} ini yang butuh kamu",
+    "notify": {
+      "screen": {
+        "title": "Perekaman Layar mati",
+        "body": "macOS mematikannya. Agen tidak bisa mengambil tangkapan layar sampai kamu mengizinkannya lagi."
+      },
+      "disk": {
+        "title": "Akses Disk Penuh mati",
+        "body": "Agen mungkin berhenti untuk meminta izin folder sampai kamu menyalakannya lagi."
+      },
+      "reach": {
+        "title": "Ponsel dan timmu tidak bisa menjangkau agentes.chat",
+        "body": "Akses dari perangkatmu butuh kamu di {{device}} ini. Buka aplikasinya untuk memperbaikinya."
+      },
+      "backup": {
+        "title": "Cadangan semalam tidak selesai",
+        "body": "Buka aplikasinya untuk mencadangkan lagi."
+      },
+      "autoUpdate": {
+        "title": "agentes.chat perlu diperbarui",
+        "body": "Versi ini tidak bisa terus berjalan. Buka aplikasinya untuk memasang yang baru."
+      },
+      "awake": {
+        "title": "{{device}} ini mungkin tidur saat melayani",
+        "body": "Mulai ulang agentes.chat di sini supaya tetap terjaga untuk ponsel dan timmu."
+      }
+    }
   },
   "tools": {
     "claudeName": "Claude Code",
@@ -833,6 +1034,99 @@
       "folderDesc": "Satu folder per ruang kerja, dengan satu folder untuk setiap agen."
     }
   },
+  "settings": {
+    "nav": {
+      "label": "Pengaturan",
+      "thisDevice": "{{device}} ini",
+      "overview": "Ringkasan",
+      "folders": "Folder dan alat",
+      "server": "Server di {{device}} ini",
+      "activity": "Aktivitas",
+      "app": "Pengaturan aplikasi",
+      "needs_other": "{{count}} hal butuh kamu"
+    },
+    "away": {
+      "title": "Tidak ada koneksi dengan {{name}}.",
+      "body": "Yang menjadi milik {{device}} ini tetap berjalan seperti biasa. Siapa yang bisa memakainya dan nama agen kembali bersama koneksinya."
+    },
+    "overview": {
+      "rename": "Ganti nama",
+      "allSet": "Semua beres",
+      "used": "Agen {{orgs}} memakai {{device}} ini",
+      "version": "versi {{version}}, terbaru",
+      "versionNewer": "versi {{version}}, {{latest}} tersedia",
+      "always": "Selalu siap",
+      "who": "Siapa yang memakai {{device}} ini"
+    },
+    "essentials": {
+      "on": "Menyala",
+      "allOn": "Semua menyala",
+      "turnOn": "Nyalakan",
+      "turnOnAgain": "Nyalakan lagi",
+      "permissions": "Izin macOS",
+      "permissionsOff": "Masih mati: {{names}}.",
+      "launchAtLogin": "Terbuka saat {{device}} dinyalakan",
+      "reach": "Akses dari mana saja",
+      "reachOff": "Hanya di {{device}} ini. Ponsel dan timmu tidak bisa membukanya.",
+      "reachDown": "Tailscale tidak terhubung di {{device}} ini.",
+      "reachApprove": "Tailscale menunggu HTTPS dinyalakan di jaringanmu.",
+      "reachAddress": "Alamatmu sekarang tidak mengarah ke sini.",
+      "checkAgain": "Periksa lagi",
+      "backup": "Cadangan setiap malam",
+      "backupOff": "Dimatikan",
+      "autoUpdate": "Memperbarui sendiri di malam hari",
+      "autoUpdateDesc": "Kembali sendiri jika versi baru tidak terbuka",
+      "updateRequired": "Versi ini tidak bisa terus berjalan.",
+      "awake": "Tidak tidur selama agen bekerja",
+      "awakeOff": "Mulai ulang agentes.chat di sini supaya tetap terjaga.",
+      "powerRestart": "Menyala sendiri setelah listrik padam",
+      "systemOnly": "Hanya pengaturan macOS yang bisa menyalakan ini."
+    },
+    "server": {
+      "anywhere": "ponsel dan timmu bisa membukanya",
+      "onlyHere": "hanya di {{device}} ini",
+      "onlyHereDesc": "Ponsel dan timmu tidak bisa membukanya.",
+      "wayTailscale": "Lewat Tailscale, dengan gembok",
+      "wayAddress": "Lewat alamatmu",
+      "changeWay": "Ubah",
+      "reachOff": "Matikan",
+      "useWay": "Pakai ini",
+      "phoneDesc": "Pasang aplikasi agentes.chat dan Tailscale dengan akun yang sama, lalu arahkan kamera. Ponselmu masuk sendiri.",
+      "phoneDescAddress": "Pasang aplikasi agentes.chat dan arahkan kamera. Ponselmu masuk sendiri.",
+      "phoneSignedOut": "Masuk ke agentes.chat di aplikasi pada {{device}} ini untuk menampilkan kodenya.",
+      "qrLabel": "Kode QR untuk masuk di ponsel",
+      "invite": "Undang seseorang dari tim",
+      "inviteDesc": "Undang mereka ke ruang kerja, lalu bagikan {{device}} ini kepada mereka di Tailscale.",
+      "inviteDescAddress": "Undang mereka ke ruang kerja. Mereka membukanya di alamatmu.",
+      "inviteButton": "Undang",
+      "share": "Bagikan di Tailscale",
+      "everyNight": "Setiap malam, pukul {{at}}",
+      "copyAlso": "Salinan juga di",
+      "backupsOff": "Cadangan malam hari mati"
+    },
+    "access": {
+      "title": "Folder dan alat",
+      "lead": "Yang dipakai agen di {{device}} ini, di setiap ruang kerja.",
+      "tools": "Alat",
+      "browserDesc": "Hanya milik agen, tanpa login-mu",
+      "commandsDesc": "Berjalan sebagai kamu dan bisa menjangkau bagian lain {{device}} ini",
+      "notHere": "Belum ada di {{device}} ini",
+      "folders": "Folder yang diizinkan",
+      "addTitle": "Izinkan folder lain",
+      "addDesc": "Saat agen butuh folder, ia bertanya di chat dan di sini.",
+      "addFor": "Untuk {{org}}"
+    },
+    "app": {
+      "title": "Pengaturan aplikasi",
+      "notifications": "Notifikasi",
+      "thisApp": "Aplikasi ini",
+      "servers": "Server dan akun",
+      "advanced": "Lanjutan",
+      "onlyHere": "Hanya di {{device}} ini",
+      "version": "Versi {{version}}",
+      "otherServer": "Server lain"
+    }
+  },
   "iphone": {
     "lead": "{{device}} ini yang mengurus penyiapannya. Kamu hanya mengetuk iPhone saat sebuah langkah memintanya.",
     "account": "Akun Apple di Xcode",
@@ -861,15 +1155,10 @@
   "cover": {
     "offline": "Tidak ada koneksi internet · mencoba lagi…",
     "unreachable": "Tidak bisa menjangkau {{host}} · mencoba lagi…",
-    "tailnet": "Apakah Tailscale terhubung di {{device}} ini?",
     "starting": "Memulai agentes.chat di {{device}} ini…",
     "migrating": "Memperbarui agentes.chat di {{device}} ini. Ini bisa memakan waktu semenit.",
     "stopped": "agentes.chat berhenti di {{device}} ini",
     "failing": "agentes.chat gagal dimulai di {{device}} ini",
-    "tailnetOff": "Hubungkan Tailscale di {{device}} ini untuk membuka agentes.chat.",
-    "tailnetUp": "Di terminal: sudo tailscale up",
-    "tailnetTray": "Buka dari ikonnya di dekat jam.",
-    "onlyHere": "Pakai hanya di {{device}} ini",
     "start": "Jalankan",
     "copy": "Salin detail",
     "copied": "Disalin",
@@ -883,8 +1172,14 @@
     "heldUntil": "agentes.chat berhenti di {{device}} ini. Akan kembali sendiri pukul {{time}}.",
     "startNow": "Mulai sekarang",
     "openOther": "Buka {{server}}",
-    "onlyHereWorking": "Mematikan akses dari perangkatmu…",
-    "onlyHereFailed": "Akses dari perangkatmu tidak bisa dimatikan."
+    "privateTitle": "{{org}} ada di jaringan pribadi",
+    "privateTitleAny": "Ruang kerja ini ada di jaringan pribadi",
+    "privateLine": "Dan jaringannya mati di {{device}} ini. Nyalakan, dan ruang kerjanya terbuka sendiri.",
+    "privateMissing": "Dan Tailscale, jaringan pribadinya, belum ada di {{device}} ini. Unduh, masuk, dan ruang kerjanya terbuka sendiri.",
+    "privateTray": "Dan jaringannya mati di {{device}} ini. Nyalakan lewat ikon Tailscale di dekat jam, dan ruang kerjanya terbuka sendiri.",
+    "privateElsewhere": "Dan jaringannya mati di {{device}} ini. Nyalakan Tailscale, dan ruang kerjanya terbuka sendiri.",
+    "useOther": "Pakai ruang kerja lain",
+    "getTailscale": "Unduh Tailscale"
   },
   "report": {
     "button": "Kirim laporan",

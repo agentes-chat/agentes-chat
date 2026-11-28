@@ -40,7 +40,7 @@ import {
   shownKeys,
 } from "@agenteschat/client/lib/providers";
 import type { RoleTab } from "@agenteschat/client/lib/roles";
-import { settingsNav, settingsTabs } from "@agenteschat/client/lib/settings-nav";
+import { settingsTabs } from "@agenteschat/client/lib/settings-nav";
 import { parseAmount } from "@agenteschat/client/lib/text";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
@@ -106,7 +106,7 @@ import { ReportProblem, useProblemReports } from "@/components/ReportProblem";
 import { RolesSection } from "@/components/roles/RolesSection";
 import { StorageSection } from "@/components/StorageSettings";
 import { TeamMemoryCard } from "@/components/TeamMemory";
-import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
+import { OpenThisMacButton, ThisDeviceSettingsGroup, useLocalServerHere } from "@/components/ThisMac";
 import { VoiceSettingsSection } from "@/components/VoiceSettings";
 import { VaultSection } from "@/components/vault/VaultSection";
 import { AccentRow } from "@/components/WorkspaceAccent";
@@ -122,8 +122,10 @@ import { MembersPage } from "./MembersPage";
 import {
   isSettingsSection,
   SETTINGS_SECTIONS,
+  type SettingsNavItem,
   type SettingsSection,
   settingsNavEntry,
+  settingsNavModel,
   settingsShort,
 } from "./settings-sections";
 
@@ -200,7 +202,8 @@ function Settings({
   // People joins a personal workspace's short list once someone else is a member (a family).
   const { others } = usePersonalView();
   const short = settingsShort(org, server, others);
-  const nav = settingsNav(visible, short);
+  // The same list the desktop app's layer shows above This {{device}} (ADR 0265 §2).
+  const nav = settingsNavModel(t, org, server, others);
   const open = visible.map((s) => s.id);
   const marked = settingsNavEntry(current, open, short);
   const tabs = settingsTabs(marked, open, short).filter(isSettingsSection);
@@ -216,17 +219,12 @@ function Settings({
   const strip = useRef<HTMLDivElement>(null);
   useCentreCurrent(strip, marked);
   const sectionName = (id: SettingsSection) => t(settingsSectionNameKey(org, id));
-  // An entry's name in the list: a team's Workspace, People and Connectors hold more than the section they open on.
+  // An entry's name in the list (`settingsNavModel`): a team's Workspace, People and Connectors hold more than the
+  // section they open on.
   const entryName = (id: SettingsSection) =>
-    !personal && id === "general"
-      ? t("settings.group.org")
-      : !personal && id === "members"
-        ? t("settings.section.membersPersonal")
-        : !personal && id === "connectors"
-          ? t("access.kind.connectors")
-          : sectionName(id);
+    [...nav.main, ...nav.advanced].find((e) => e.id === id)?.label ?? sectionName(id);
   const navigate = useNavigate();
-  const link = (s: (typeof visible)[number]) => (
+  const link = (s: SettingsNavItem) => (
     <li key={s.id}>
       <Link
         to="/org/$orgId/settings/$section"
@@ -235,7 +233,7 @@ function Settings({
         aria-current={s.id === marked ? "page" : undefined}
       >
         {s.id === "account" ? <MyFace size="xs" /> : <Icon name={s.icon} size={18} />}
-        {entryName(s.id)}
+        {s.label}
       </Link>
     </li>
   );
@@ -359,6 +357,8 @@ function Settings({
               </ul>
             </div>
           )}
+          {/* In the desktop app with its own settings layer: This {{device}}'s sections, opened there (ADR 0265 §2). */}
+          <ThisDeviceSettingsGroup />
         </div>
       </nav>
       <div className="settings__body" data-scroll-restoration-id="settings-section">
@@ -748,7 +748,7 @@ function UsageStatisticsCard() {
   const here = useLocalServerHere();
   const data = telemetry.data;
   if (!data) return null;
-  // Switched off in the app that runs this server: on that very computer, its Preferences › Servers one click away.
+  // Switched off in the app that runs this server: on that very computer, its Server on this {{device}} one click away.
   const inApp = data.envOff && data.report.install === "desktop" && here;
   return (
     <Card aria-labelledby="sec-telemetry">
@@ -782,7 +782,9 @@ function UsageStatisticsCard() {
             {inApp ? (
               <span className="settings-row__status ac-actline">
                 <span id="set-telemetry-help">{t("settings.telemetry.envOffHere")}</span>
-                <OpenPrefsButton tab="servers">{t("machines.thisMac.openServers")}</OpenPrefsButton>
+                <OpenThisMacButton section="server" focus="telemetry">
+                  {t("machines.thisMac.openServers")}
+                </OpenThisMacButton>
               </span>
             ) : (
               data.envOff && (

@@ -187,6 +187,18 @@ pub fn replace(app: &AppHandle, old: &str, new: &str) {
     crate::workspaces::trigger(app);
 }
 
+/// `replace` at the app's start, before its menus and windows exist (the server here's address in an older app's
+/// list, `local_server::migrate_list`): only the list, in memory and on disk.
+pub fn migrate(app: &AppHandle, old: &str, new: &str) {
+    grant(app, new);
+    let file = {
+        let mut file = lock(app);
+        file.replace(old, new);
+        file.clone()
+    };
+    write(app, &file);
+}
+
 pub fn remove(app: &AppHandle, origin: &str) {
     let file = {
         let mut file = lock(app);
@@ -197,10 +209,12 @@ pub fn remove(app: &AppHandle, origin: &str) {
     crate::menus::servers_changed(app);
 }
 
-/// The main window's cookies sent to `origin` go. From a thread of its own only (`cookies`).
+/// The main window's cookies of `origin` go. On this computer cookies are per host, not per port, so there only the
+/// sign-in the server here names after its port (`agentes-<PORT>.…`, ADR 0265 §5) goes: another server on 127.0.0.1
+/// keeps its own. From a thread of its own only (`cookies`).
 pub fn drop_cookies(app: &AppHandle, origin: &str) {
     let (Some(page), Ok(url)) = (app.get_webview(crate::main_window::LABEL), origin.parse::<Url>()) else { return };
-    crate::cookies::remove(&page, move |c| crate::workspaces::sent_to(c, &url));
+    crate::cookies::remove(&page, move |c| crate::workspaces::own_cookie(c, &url));
 }
 
 /// What the main window's page may ask, on agentes.chat (`capabilities/main.json`) as on any other server (`grant`).
@@ -251,21 +265,23 @@ pub async fn server_choose(app: AppHandle, server: String, page: Option<String>)
     if page.as_deref().is_some_and(|p| !page_path(p)) {
         return Err("not a page to open".into());
     }
+    // The server here at its address for people (typed, or found by discovery) opens at its loopback one (ADR 0265 §5).
+    let origin = crate::local_server::origin_here(&app, &origin);
     choose(&app, &origin);
     let url: Url = format!("{origin}{}", page.as_deref().unwrap_or("")).parse().map_err(|_| "not a URL")?;
     crate::main_window::show_url(&app, url)
 }
 
 /// A server leaves the list: the window's sign-in there goes with it (its cookies; the account and the server stay),
-/// and a window still on it moves to the server open now, or hides when none is left. Async, with the cookies on a
+/// and a window still on it moves to the server open now, or to the first run when none is left. Async, with the cookies on a
 /// thread of their own: reading or deleting them from a sync command deadlocks on Windows (WebView2).
 #[tauri::command]
 pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String> {
     remove(&app, &server);
     let page = app.get_webview(crate::main_window::LABEL);
     let showing = page.as_ref().and_then(|p| p.url().ok()).is_some_and(|u| u.origin().ascii_serialization() == server);
-    // Cookies are per host, not per port: on this computer they are also the other servers' here, so they stay.
-    if !is_loopback(&server) {
+    // On this computer only the sign-in named after its port goes (`drop_cookies`): the others are other servers'.
+    {
         let (app, server) = (app.clone(), server.clone());
         tauri::async_runtime::spawn_blocking(move || drop_cookies(&app, &server)).await.map_err(|e| e.to_string())?;
     }
@@ -273,10 +289,12 @@ pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String>
     crate::workspaces::trigger(&app);
     match current(&app) {
         Some(next) if showing => crate::main_window::show_url(&app, next)?,
+        // No server left: the window stays, with the first run over it (ADR 0265).
         None => {
-            if let Some(window) = app.get_window(crate::main_window::LABEL) {
-                let _ = window.hide();
+            if let Some(page) = app.get_webview(crate::main_window::LABEL) {
+                let _ = page.navigate("about:blank".parse().map_err(|_| "not a URL")?);
             }
+            crate::app_layer::show(&app, crate::app_layer::Route::first_run(None))?;
         }
         _ => {}
     }
@@ -284,8 +302,9 @@ pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String>
 }
 
 /// "Sign out of this server" (Preferences › Servers): the server ends the window's session there (as the phone signs
-/// out, no `Origin`, `X-Agentes-Client: mobile`), its cookies go (not on this computer, where they are shared by
-/// port), and it stays in the list, signed out; a window on it goes to its sign-in. Async for the cookies (Windows).
+/// out, no `Origin`, `X-Agentes-Client: mobile`), its cookies go (on this computer, only those named after its port:
+/// `drop_cookies`), and it stays in the list, signed out; a window on it goes to its sign-in. Async for the cookies
+/// (Windows).
 #[tauri::command]
 pub async fn server_sign_out(app: AppHandle, server: String) -> Result<(), String> {
     if !get(&app).servers.iter().any(|s| *s == server) {
@@ -294,7 +313,7 @@ pub async fn server_sign_out(app: AppHandle, server: String) -> Result<(), Strin
     let url: Url = server.parse().map_err(|_| "not a URL")?;
     let Some(page) = app.get_webview(crate::main_window::LABEL) else { return Ok(()) };
     let showing = page.url().is_ok_and(|u| u.origin().ascii_serialization() == server);
-    let (asking, shared) = (server.clone(), is_loopback(&server));
+    let asking = server.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let cookies: Vec<_> =
             crate::cookies::read(&page).into_iter().filter(|c| crate::workspaces::sent_to(c, &url)).collect();
@@ -308,9 +327,7 @@ pub async fn server_sign_out(app: AppHandle, server: String) -> Result<(), Strin
                 .set("Content-Type", "application/json")
                 .send_string("{}");
         }
-        if !shared {
-            crate::cookies::remove(&page, move |c| crate::workspaces::sent_to(c, &url));
-        }
+        crate::cookies::remove(&page, move |c| crate::workspaces::own_cookie(c, &url));
     })
     .await
     .map_err(|e| e.to_string())?;

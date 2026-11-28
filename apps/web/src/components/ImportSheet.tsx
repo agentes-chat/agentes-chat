@@ -54,6 +54,7 @@ import {
   type RequestCard,
 } from "@/lib/import-flow";
 import { hasFiles } from "@/lib/obsidian";
+import { publicOrigin } from "@/lib/public-origin";
 import "./hosting.css";
 import "./import-sheet.css";
 
@@ -918,9 +919,7 @@ function ComputerAsk({ flow, card, app }: { flow: ImportFlowState; card: Compute
   );
   const [byHand, setByHand] = useState(false);
   const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
-  const text = byHand
-    ? migrateCommand(window.location.origin, card, os)
-    : migratePrompt(window.location.origin, card, os);
+  const text = byHand ? migrateCommand(publicOrigin(), card, os) : migratePrompt(publicOrigin(), card, os);
   // The mark goes back to "Copiar" on its own, and at once when what there is to copy changes.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `text` is what resets it
   useEffect(() => setCopied(null), [text]);

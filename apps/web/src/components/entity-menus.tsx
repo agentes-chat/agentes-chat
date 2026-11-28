@@ -24,6 +24,7 @@ import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { useSidebarFavorites } from "@/hooks/useSidebarPins";
 import { requestChannelDetails } from "@/lib/channel-details";
 import { copyText, type MenuEntry } from "@/lib/context-menu";
+import { publicOrigin } from "@/lib/public-origin";
 import { useToast } from "@/lib/toast";
 import { useLiveStore } from "@/realtime/context";
 import { useOpenAgentPanel } from "./agent-panel-context";
@@ -38,7 +39,8 @@ import { isStoppable, useStopRun } from "./StopRun";
  * "…": a channel, an agent, a person. Each lists only what the app does and what the viewer may do.
  */
 
-const linkTo = (path: string) => `${window.location.origin}${path}`;
+// The address people open, also from the desktop app's own server at its loopback address (ADR 0265 §5).
+const linkTo = (path: string) => `${publicOrigin()}${path}`;
 
 /** An archived channel back as it was (the archive's Desfazer, Canais arquivados' Restaurar): it opens again. */
 export function useRestoreChannel() {

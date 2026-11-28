@@ -29,31 +29,6 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "focus": false
-      },
-      {
-        "label": "welcome",
-        "create": false,
-        "url": "index.html",
-        "title": "agentes.chat",
-        "width": 720,
-        "height": 600,
-        "visible": false,
-        "resizable": false,
-        "maximizable": false,
-        "center": true
-      },
-      {
-        "label": "prefs",
-        "create": false,
-        "url": "index.html",
-        "title": "agentes.chat",
-        "width": 860,
-        "height": 600,
-        "minWidth": 720,
-        "minHeight": 520,
-        "visible": false,
-        "maximizable": false,
-        "center": true
       }
     ],
     "security": {

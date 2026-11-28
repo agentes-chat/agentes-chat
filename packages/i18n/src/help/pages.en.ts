@@ -34,7 +34,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "keep-on",
         heading: "Keep it on",
         blocks: [
-          "On a computer that others use, set it up once. **Keep it running**, in **Preferences\u00a0›\u00a0Servers**, shows what's still missing and opens the right settings:",
+          "On a computer that others use, set it up once. **Always ready**, in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Overview**, shows what's still missing, each with the one button that fixes it:",
           {
             list: [
               "**Open at login** turns on by itself after the setup.",
@@ -50,15 +50,15 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Your agents work here too",
         blocks: [
           "Your agents work on this computer too, in folders of their own, with a browser, and with Claude Code or Codex when they're installed here.",
-          "Agents here run as you. **Commands** are on by default, and with them the agents of every workspace that uses this computer can reach everything on it, the server's data included. Turn them off in **Preferences\u00a0›\u00a0Tools**. See [What agents can reach](/help/computers#reach).",
+          "Agents here run as you. **Commands** are on by default, and with them the agents of every workspace that uses this computer can reach everything on it, the server's data included. Turn them off in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Folders and tools**. See [What agents can reach](/help/computers#reach).",
         ],
       },
       {
         id: "another-workspace",
         heading: "Lend it to another workspace too",
         blocks: [
-          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, press **Add a workspace…** at the bottom of the first card in **Preferences\u00a0›\u00a0General**, or **Add a server…** in **Preferences\u00a0›\u00a0Servers**. Sign in to that workspace and press **Allow** when the app asks.",
-          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch and the app asks before turning one back on.",
+          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, press **Add a workspace…** at the bottom of **Who uses this computer**, in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Overview**, or **Add a server…** in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0App settings**. Sign in to that workspace and press **Allow** when the app asks.",
+          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Folders and tools**, where each workspace has its own switch and the app asks before turning one back on.",
         ],
       },
       {
@@ -73,7 +73,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "password",
         heading: "Signing in from other devices",
         blocks: [
-          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Preferences\u00a0›\u00a0Servers** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
+          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Server on this computer** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Server on this computer**. The QR code needs **Reach it from your phone and teammates** on.",
           "When the owner deletes their account, in **Settings\u00a0›\u00a0Your account**, it goes for good 7 days later, and the workspaces only they were in go with it. Until then, sign in and press **Restore account** to bring it back. Once it's gone, if no account is left, the app opens its welcome window to make a new owner. If other people still have accounts, each of them signs in with their own email.",
         ],
       },
@@ -81,14 +81,14 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "updates",
         heading: "Updates",
         blocks: [
-          "The app looks for updates by itself. With **Install updates by itself, at night** on, in **Preferences\u00a0›\u00a0Updates**, it installs them between 3:00 and 5:00 while the app is open. It's on by default when the server runs here. Otherwise, press **Update and reopen**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
+          "The app looks for updates by itself. With **Install updates by itself, at night** on, in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0App settings**, it installs them between 3:00 and 5:00 while the app is open. It's on by default when the server runs here. Otherwise, press **Update and reopen**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
         ],
       },
       {
         id: "backups",
         heading: "Backups",
         blocks: [
-          "With **Back up every night** on (app 0.8.1 and later), in **Preferences\u00a0›\u00a0Servers**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
+          "With **Back up every night** on (app 0.8.1 and later), under **Backups** in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Server on this computer**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
           "**Copy to** also puts each new backup in a folder you pick, like a USB drive or iCloud Drive, where the two newest stay. They hold your keys: keep them private. **Restore…** takes agentes.chat back to a backup: messages, files and settings. It stops for a minute, and what was there before is kept in the backups folder.",
         ],
       },
@@ -97,12 +97,12 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Start over or uninstall",
         blocks: [
           "Everything agentes.chat keeps on this computer is in folders in your home folder, not inside the app. So moving the app to the Trash removes none of it, and doesn't stop agentes.chat if it's running.",
-          "To start over, press **Erase and start over…** in **Preferences\u00a0›\u00a0Servers**. It stops agentes.chat here and moves everything it holds to a new folder in your home folder, named `agentes.chat erased` and the day's date, where it stays until you delete it. What its agents kept on this computer, such as their browsers and sign-ins, is deleted from `.agentes-runner`. Its workspaces go for everyone who uses them. Then the welcome window opens, and you set it up again with a new owner account. The agents' files, in `agentes` in your home folder, stay where they are.",
+          "To start over, press **Erase and start over…** in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Server on this computer**. It stops agentes.chat here and moves everything it holds to a new folder in your home folder, named `agentes.chat erased` and the day's date, where it stays until you delete it. What its agents kept on this computer, such as their browsers and sign-ins, is deleted from `.agentes-runner`. Its workspaces go for everyone who uses them. Then the app opens its setup, and you set it up again with a new owner account. The agents' files, in `agentes` in your home folder, stay where they are.",
           "To bring it back later, quit the app, move a newer `.agentes` folder out of the way if there is one, rename the `agentes.chat erased` folder to `.agentes`, then open the app and set it up on this computer again. It starts with its workspaces and its owner as they were. What its agents kept on this computer doesn't come back, so they need their sign-ins again.",
           "To remove agentes.chat from this computer entirely:",
           {
             list: [
-              "Turn off **Open at login** in **Preferences\u00a0›\u00a0General**.",
+              "Turn off **Open at login** in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0App settings**.",
               "Quit the app. Closing its window isn't enough. On a Mac, click its icon in the Dock, then choose **Quit agentes.chat** in the agentes.chat menu at the top of the screen, or press ⌘Q. On Windows and Linux, click the agentes.chat icon by the clock and choose **Quit agentes.chat**. If it asks **Quit agentes.chat?**, press **Quit**.",
               "Delete the app. On a Mac, move it to the Trash. On Windows and Linux, uninstall it like any other app.",
               "Delete these folders in your home folder. They hold your data, and once they're deleted it can't come back, so keep a backup somewhere else first if you might want it: `.agentes` (messages, files, accounts, settings and backups), every `agentes.chat erased` folder, `.agentes-runner` (what the agents keep on this computer, such as their browsers and sign-ins) and `agentes` (the agents' files). Folders whose name starts with a dot are hidden. On a Mac, open your home folder in Finder and press ⇧⌘. (Shift, Command and the period key) to show them.",
@@ -115,7 +115,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "ai-programs",
         heading: "Claude Code and Codex",
         blocks: [
-          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Preferences\u00a0›\u00a0Tools** says **Not found**, it shows the line that installs it. Run that line in Terminal, then press **Check again**.",
+          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Folders and tools** says **Not found**, it shows the line that installs it. Run that line in Terminal, then press **Check again**.",
         ],
       },
       {
@@ -187,7 +187,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "From the agentes.chat app",
         blocks: [
           "Install the app on the computer, open it and sign in to your workspace. It asks **Let <workspace>'s agents use this Mac?** (this PC on Windows, this computer on Linux). Choose who can use it and press **Allow**. That's all.",
-          "Already signed in? Open **Preferences\u00a0›\u00a0General** and press **Allow** on the workspace's row in the first card. Not there? Press **Add a workspace…** at the bottom of that card and sign in.",
+          "Already signed in? Open **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Overview** and press **Allow** on the workspace's row under **Who uses this computer**. Not there? Press **Add a workspace…** at the bottom of that list and sign in.",
         ],
       },
       {
@@ -230,7 +230,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "pausing",
         heading: "Pausing and disconnecting",
         blocks: [
-          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace, or of just one. In **Preferences\u00a0›\u00a0General**, each workspace's switch pauses just that one, and **Leave**, in its **⋯** menu, disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
+          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace, or of just one. In **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Overview**, each workspace's switch pauses just that one, and **Leave**, in its **⋯** menu, disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
           "From the website, **Remove** on the device's page disconnects it.",
         ],
       },
@@ -256,7 +256,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "folders",
         heading: "Folders",
         blocks: [
-          "Each agent always has its own folder, in `~/agentes/<workspace>`. More folders are allowed on the computer itself, never from the website: in the app, **Preferences\u00a0›\u00a0Folders**, or with `agentes-runner folders allow` on a server. Each workspace allows its own folders: what you allow for one only counts for its agents. Removing a folder deletes nothing. It only takes the access away.",
+          "Each agent always has its own folder, in `~/agentes/<workspace>`. More folders are allowed on the computer itself, never from the website: in the app, **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Folders and tools**, or with `agentes-runner folders allow` on a server. Each workspace allows its own folders: what you allow for one only counts for its agents. Removing a folder deletes nothing. It only takes the access away.",
         ],
       },
       {
@@ -272,7 +272,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "on a computer that also runs agentes.chat, its database and keys in `.agentes`",
             ],
           },
-          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch (app 0.8.1 and later) and the app asks before turning one back on. Claude Code and Codex run their own commands in the agent's folder, under their own rules, even with Commands off.",
+          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Settings\u00a0›\u00a0This computer\u00a0›\u00a0Folders and tools**, where each workspace has its own switch (app 0.8.1 and later) and the app asks before turning one back on. Claude Code and Codex run their own commands in the agent's folder, under their own rules, even with Commands off.",
           "For a real wall, use a Linux server. On Debian 13, installed with `--system`, each agent is a user of its own. On Ubuntu, agents share one user, `agentes`: they see each other's folders, not yours or the server's. Or give the agents a computer of their own.",
         ],
       },

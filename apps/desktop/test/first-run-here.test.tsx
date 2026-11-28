@@ -3,33 +3,49 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { act } from "react";
+import { act, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
-import { AppProvider } from "../src/app";
-import type { Tailnet } from "../src/control/local-server";
+import { AppProvider, useHost } from "../src/app";
+import type { LocalChoice, Tailnet } from "../src/control/local-server";
 import { DesktopStore } from "../src/control/store";
 import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
 import { type AppLocale, createDesktopI18n } from "../src/i18n";
+import { FirstRun } from "../src/layer/first-run/FirstRun";
 import { ToastProvider } from "../src/ui/Toast";
-import { FirstRun } from "../src/windows/FirstRun";
 import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const REACH_TEXT =
-  "With Tailscale, a private network for your devices: your phone and the people you invite join it, and nobody else can reach agentes.chat.";
-const USAGE_TEXT =
-  "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.";
+/**
+ * The first run as the app layer draws it (ADR 0265): drawn again from the start when its route names something else
+ * (as AppLayer keys it), its route's mode, each time it is shown again, and a connect link's sheet alone.
+ */
+function LayerFirstRun() {
+  const host = useHost() as FakeHost;
+  const [state, setState] = useState(() => ({ ...host.layer }));
+  useEffect(() => host.onLayer(setState), [host]);
+  const route = state.route;
+  if (route?.screen === "link") return <FirstRun key="link" shownAt={state.seq} linkOnly />;
+  const mode = route?.screen === "firstRun" ? route.mode : undefined;
+  return <FirstRun key={`firstRun ${mode ?? ""}`} mode={mode} shownAt={state.seq} />;
+}
 
-/** The first run on a fake host, with what it opened in the browser and in Tailscale; `host` changes the host first. */
-async function firstRun(
-  scenario: Scenario,
-  check: (screen: ReturnType<typeof screenOf>) => Promise<void>,
-  options: { here?: HereOptions; lang?: AppLocale; host?: (host: FakeHost) => void } = {},
-) {
-  const host = createFakeHost("welcome", scenario, { here: options.here });
-  options.host?.(host);
+interface Options {
+  here?: HereOptions;
+  lang?: AppLocale;
+  /** The fake servers' own answers (`fake.ts`), not "nothing answers" at once. */
+  realChecks?: boolean;
+  /** Changes the host before the first run opens. */
+  host?: (host: FakeHost) => void;
+}
+
+/**
+ * The first run on a fake host, with what it opened in the browser and in Tailscale, the sign-ins it started, and the
+ * setups it asked for.
+ */
+async function firstRun(scenario: Scenario, check: (screen: Screen) => Promise<void>, options: Options = {}) {
+  const host = createFakeHost("app", scenario, { here: options.here });
   const opened: string[] = [];
   host.openExternal = async (url) => {
     opened.push(url);
@@ -38,8 +54,20 @@ async function firstRun(
   host.openTailscale = async (page) => {
     tailscale.push(page);
   };
-  // Nothing else answers on this computer, and at once (the fake host waits like a network would).
-  host.checkServer = async (server) => ({ ok: false, server, problem: "unreachable" });
+  const signIns: string[] = [];
+  host.firstRunSignIn = async (method) => {
+    signIns.push(method);
+  };
+  const choices: LocalChoice[] = [];
+  const install = host.installLocalServer;
+  host.installLocalServer = (choice) => {
+    choices.push(choice);
+    return install(choice);
+  };
+  // Nothing found, and nothing else answers on this computer, at once (the fake host waits like a network would).
+  host.discover = async () => [];
+  if (!options.realChecks) host.checkServer = async (server) => ({ ok: false, server, problem: "unreachable" });
+  options.host?.(host);
   const store = new DesktopStore(host, {});
   const stop = store.start();
   const el = document.body.appendChild(document.createElement("div"));
@@ -50,7 +78,7 @@ async function firstRun(
         <I18nextProvider i18n={createDesktopI18n(options.lang ?? "en", host.platform)}>
           <AppProvider host={host} store={store}>
             <ToastProvider>
-              <FirstRun />
+              <LayerFirstRun />
             </ToastProvider>
           </AppProvider>
         </I18nextProvider>,
@@ -58,7 +86,7 @@ async function firstRun(
     );
     // Whether this build runs agentes.chat here arrives from the host first.
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
-    await check(screenOf(el, opened, tailscale, host));
+    await check(screenOf(el, { opened, tailscale, signIns, choices, host }));
   } finally {
     await act(async () => root.unmount());
     el.remove();
@@ -67,402 +95,40 @@ async function firstRun(
   }
 }
 
-function screenOf(el: HTMLElement, opened: string[], tailscale: string[], host: FakeHost) {
-  const button = (name: string) => [...el.querySelectorAll("button")].find((b) => b.textContent?.includes(name));
+type Screen = ReturnType<typeof screenOf>;
+
+function screenOf(
+  el: HTMLElement,
+  seen: { opened: string[]; tailscale: string[]; signIns: string[]; choices: LocalChoice[]; host: FakeHost },
+) {
+  const buttons = () => [...el.querySelectorAll("button")];
+  // The button named exactly so, else the first whose words hold the name (a row's title and its line).
+  const button = (name: string) =>
+    buttons().find((b) => b.textContent === name) ?? buttons().find((b) => b.textContent?.includes(name));
   return {
     el,
-    opened,
-    tailscale,
-    host,
+    ...seen,
     button,
     press: async (name: string) => {
       const target = button(name);
       expect({ name, found: !!target }).toEqual({ name, found: true });
       await act(async () => target?.click());
     },
-    until,
+    /** Which step of the first run shows (`data-step`). */
+    step: () => el.querySelector("[data-step]")?.getAttribute("data-step"),
+    title: () => el.querySelector("h1")?.textContent,
+    lead: () => el.querySelector(".dk-first__lead")?.textContent,
+    /** "Run on this Mac · 1 of 3". */
+    counter: () => el.querySelector(".dk-flow__step")?.textContent,
+    /** The footer's buttons, in order. */
+    foot: () => [...el.querySelectorAll(".dk-flow__foot button")].map((b) => b.textContent),
+    /** Submits a form the way its footer's button does (`form=` points at it). */
+    submit: (id: string) => {
+      const submitted = new window.Event("submit", { bubbles: true, cancelable: true });
+      return act(async () => void el.querySelector(`form#${id}`)?.dispatchEvent(submitted));
+    },
   };
 }
-
-/** Each switch row of the card: its label, its ⓘ, the hint that describes the switch, and the line under it. */
-function switchRows(el: HTMLElement) {
-  return [...el.querySelectorAll(".dk-card > .dk-crow")].map((row) => {
-    const control = row.querySelector(':scope > .dk-crow__end > [role="switch"]');
-    const info = row.querySelector("button.ac-hint");
-    return {
-      label: row.querySelector("label.dk-crow__title")?.textContent,
-      about: info?.getAttribute("aria-label"),
-      // The switch and its ⓘ read the same hint, while the bubble is closed too.
-      hint: document.getElementById(control?.getAttribute("aria-describedby") ?? "")?.textContent,
-      same: !!info && info.getAttribute("aria-describedby") === control?.getAttribute("aria-describedby"),
-      line: row.querySelector(".dk-crow__text > small")?.textContent ?? null,
-    };
-  });
-}
-
-describe("Run agentes.chat on this Mac", () => {
-  test("the title, one sentence, the two fields alone, two one-line switches with their ⓘ, and Start", () =>
-    firstRun("first", async ({ el, press, until, button }) => {
-      await press("On this Mac");
-      // Tailscale connected: the reach row has nothing under its label.
-      await until(() => el.querySelector("form.dk-fr__here") && switchRows(el)[0]?.line === null);
-      const form = el.querySelector("form.dk-fr__here") as HTMLElement;
-      expect(el.querySelector("h1")?.textContent).toBe("Let's get this Mac ready");
-      const lead = el.querySelector(".dk-lead")?.textContent ?? "";
-      expect(lead).toBe("It takes a minute. Everything stays here, with you alone.");
-      expect(lead).not.toContain("Docker");
-      // The two fields, the card of switches, the sleeping agent's line and Start.
-      expect([...form.children].map((c) => c.className)).toEqual([
-        "dk-fr__who",
-        "dk-card",
-        "dk-fr__rest",
-        "dk-fr__end",
-      ]);
-      expect(form.querySelector(".dk-fr__rest")?.textContent).toBe(
-        "When you close the app, your agents rest. They're back as soon as you open it again.",
-      );
-      expect(form.querySelector(".dk-fr__rest .ac-avatar")).not.toBeNull();
-      expect([...form.querySelectorAll(".ac-field label")].map((l) => l.textContent)).toEqual([
-        "Your name",
-        "Your email",
-      ]);
-      expect(form.querySelector(".ac-field__label-row")).toBeNull();
-      expect(el.textContent).not.toContain("Your team sees it");
-      expect(switchRows(el)).toEqual([
-        {
-          label: "Reach it from your phone and teammates",
-          about: "About Reach it from your phone and teammates",
-          hint: REACH_TEXT,
-          same: true,
-          line: null,
-        },
-        {
-          label: "Send anonymous usage statistics to agentes.chat",
-          about: "About Send anonymous usage statistics to agentes.chat",
-          hint: USAGE_TEXT,
-          same: true,
-          line: null,
-        },
-      ]);
-      expect(el.textContent).not.toContain("Your agents work here too");
-      expect(el.textContent).not.toContain("Made for you or a small team");
-      expect(button("Start")?.getAttribute("type")).toBe("submit");
-    }));
-
-  test("having run here before: where its data is, as the one sentence, and no fields", () =>
-    firstRun(
-      "here",
-      async ({ el, press, until }) => {
-        await press("On this Mac");
-        await until(() => el.querySelector("form.dk-fr__here"));
-        expect(el.querySelector(".dk-lead")?.textContent).toBe(
-          "It ran here before, and its data is still in ~/.agentes.",
-        );
-        expect(el.querySelector(".dk-fr__who")).toBeNull();
-      },
-      { here: { run: false } },
-    ));
-
-  test("running with no account left: the window opens on the form, says so, and Start makes the new owner", () => {
-    const sent: unknown[] = [];
-    return firstRun(
-      "here",
-      async ({ el, press, until }) => {
-        await until(() => el.querySelector("form.dk-fr__here"));
-        expect(el.querySelector(".dk-lead")?.textContent).toBe(
-          "No account is left on it. Your name and email make you its new owner.",
-        );
-        const [name, email] = [...el.querySelectorAll(".dk-fr__who input")];
-        await act(async () => typeInto(name ?? null, "Carla Dias"));
-        await act(async () => typeInto(email ?? null, "carla@example.com"));
-        await press("Start");
-        await until(() => sent.length > 0);
-        expect(sent[0]).toMatchObject({ name: "Carla Dias", email: "carla@example.com" });
-      },
-      {
-        here: { owner: false, pace: 10 },
-        host: (host) => {
-          const install = host.installLocalServer;
-          host.installLocalServer = async (choice) => {
-            sent.push(choice);
-            return install(choice);
-          };
-        },
-      },
-    );
-  });
-
-  test("open already when the app finds no account left: shown again, it goes to the form", () => {
-    let gone = false;
-    let mode: "owner" | null = null;
-    return firstRun(
-      "here",
-      async ({ el, host, until }) => {
-        await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
-        gone = true;
-        mode = "owner";
-        await act(async () => host.showWindow("welcome"));
-        await until(() => el.querySelector("form.dk-fr__here .dk-fr__who"));
-        expect(el.querySelector(".dk-lead")?.textContent).toStartWith("No account is left on it.");
-      },
-      {
-        host: (host) => {
-          const read = host.localServer;
-          host.localServer = async () => ({ ...(await read()), ...(gone ? { owner: false } : {}) });
-          host.welcomeMode = async () => {
-            const taken = mode;
-            mode = null;
-            return taken;
-          };
-        },
-      },
-    );
-  });
-
-  test("erased from Preferences: it opens on Run here's form, its first line saying where the old data went", () =>
-    firstRun("here", async ({ el, host, until }) => {
-      await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
-      await act(async () => {
-        await host.eraseLocalServer();
-      });
-      await until(() => el.querySelector("form.dk-fr__here .dk-fr__who"));
-      expect(el.querySelector(".dk-lead")?.textContent).toBe(
-        "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
-      );
-    }));
-
-  test("no account left, but opened for something else: the window starts where it always does", () =>
-    firstRun(
-      "here",
-      async ({ el, host, until }) => {
-        await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
-        await act(async () => host.addWorkspace());
-        await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-        expect(el.querySelector(".dk-fr")?.getAttribute("data-screen")).toBe("choose");
-      },
-      {
-        host: (host) => {
-          const read = host.localServer;
-          host.localServer = async () => ({ ...(await read()), owner: false });
-        },
-      },
-    ));
-
-  test("running here already: one sentence, never its address", () =>
-    firstRun("here", async ({ el, press, until }) => {
-      await press("On this Mac");
-      await until(() => el.querySelector("h1")?.textContent === "agentes.chat already runs on this Mac");
-      expect(el.querySelector(".dk-lead")?.textContent).toBe("This app runs it. Open it to sign in.");
-    }));
-
-  test("without Tailscale the switch can't be used, and one line says why, with what fixes it", async () => {
-    await firstRun(
-      "first",
-      async ({ el, press, until, tailscale }) => {
-        await press("On this Mac");
-        await until(() => switchRows(el)[0]?.line?.startsWith("Needs"));
-        const [reach] = switchRows(el);
-        expect(reach?.line).toBe("Needs Tailscale, which is free. Get Tailscale");
-        expect(reach?.hint).toBe(REACH_TEXT);
-        expect(el.querySelector("#here-reach")?.hasAttribute("disabled")).toBe(true);
-        await press("Get Tailscale");
-        expect(tailscale).toEqual(["download"]);
-      },
-      { here: { tailscale: "missing" } },
-    );
-    await firstRun(
-      "first",
-      async ({ el, press, until, tailscale }) => {
-        await press("On this Mac");
-        await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
-        expect(switchRows(el)[0]?.line).toBe("Tailscale isn't connected. Open Tailscale");
-        await press("Open Tailscale");
-        expect(tailscale).toEqual(["app"]);
-      },
-      { here: { tailscale: "off" } },
-    );
-    await firstRun(
-      "linux",
-      async ({ el, press, until }) => {
-        await press("On this computer");
-        await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
-        const row = el.querySelector(".dk-card > .dk-crow");
-        expect(row?.querySelector("small")?.textContent?.trim()).toBe(
-          "Tailscale isn't connected. Connect it in the terminal: sudo tailscale up",
-        );
-        expect(row?.querySelector("small code")?.textContent).toBe("sudo tailscale up");
-        expect(row?.querySelector("small button[aria-label='Copy']")).toBeTruthy();
-      },
-      { here: { tailscale: "off" } },
-    );
-    // A Mac with only Tailscale's command-line tool (Homebrew's): no app to open, the terminal connects it.
-    await firstRun(
-      "first",
-      async ({ el, press, until }) => {
-        await press("On this Mac");
-        await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
-        const row = el.querySelector(".dk-card > .dk-crow");
-        expect(row?.querySelector("small")?.textContent?.trim()).toBe(
-          "Tailscale isn't connected. Connect it in the terminal: sudo tailscale up",
-        );
-        expect(row?.querySelector("small code")?.textContent).toBe("sudo tailscale up");
-        expect(el.textContent).not.toContain("Open Tailscale");
-      },
-      {
-        host: (host) => {
-          host.tailscale = async () => ({ state: "off", app: false });
-        },
-      },
-    );
-    // Windows: no sudo and no app for this one to open, Tailscale's icon by the clock connects it (signed out or not).
-    await firstRun(
-      "windows",
-      async ({ el, press, until }) => {
-        await press("On this PC");
-        await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
-        const line = el.querySelector(".dk-card > .dk-crow small");
-        expect(line?.textContent).toBe("Tailscale isn't connected. Connect it from its icon by the clock.");
-        expect(line?.querySelector("code, button")).toBeNull();
-      },
-      { here: { tailscale: "off" } },
-    );
-  });
-});
-
-describe("Run here, while Tailscale is read", () => {
-  test("the line under reach says it is checking and its switch waits, so no wrong line flashes", async () => {
-    // Tailscale is connected, but its read takes a moment (up to 2 s on a Mac).
-    const answers: ((tailnet: Tailnet) => void)[] = [];
-    await firstRun(
-      "first",
-      async ({ el, press, until }) => {
-        await press("On this Mac");
-        await until(() => el.querySelector("form.dk-fr__here"));
-        expect(switchRows(el)[0]?.line).toBe("Checking whether Tailscale is connected…");
-        expect(el.textContent).not.toContain("Needs Tailscale");
-        expect(el.querySelector("#here-reach")?.hasAttribute("disabled")).toBe(true);
-        await act(async () => {
-          for (const answer of answers) answer({ state: "on", device: "macbook" });
-        });
-        await until(() => !el.querySelector("#here-reach")?.hasAttribute("disabled"));
-        expect(switchRows(el)[0]?.line).toBeNull();
-      },
-      {
-        host: (host) => {
-          host.tailscale = () => new Promise((resolve) => answers.push(resolve));
-        },
-      },
-    );
-  });
-});
-
-describe("Where will your workspace live?", () => {
-  test("the cloud recommended, this Mac and a server or VPS beside it, each a row that goes on by itself; the drawing follows the row pointed at or focused", () => {
-    const chosen: (string | undefined)[] = [];
-    return firstRun(
-      "first",
-      async ({ el, press }) => {
-        expect(el.querySelector("h1")?.textContent).toBe("Where will your workspace live?");
-        // No pick, then a button: each place is the way on, a chevron at its end.
-        expect(el.querySelector('[role="radio"]')).toBeNull();
-        expect(el.querySelector(".dk-choose__list ~ button.dk-btn-lg")).toBeNull();
-        const rows = [...el.querySelectorAll<HTMLElement>(".dk-choose__list .ac-optrow")];
-        expect(rows.map((r) => r.querySelector(".ac-optrow__title")?.textContent)).toEqual([
-          "In the agentes.chat cloudRecommended",
-          "On this Mac",
-          "On a server or VPS",
-        ]);
-        expect(rows.every((r) => r.querySelector(".ac-optrow__go"))).toBe(true);
-        // Recommended on the cloud's row in the kit's tag, as on the web; nothing says "free".
-        expect(
-          [...el.querySelectorAll(".ac-chip")].map((c) => c.closest(".ac-optrow") === rows[0] && c.textContent),
-        ).toEqual(["Recommended"]);
-        expect(el.textContent).not.toContain("Free");
-        const buttons = rows.map((r) => r.querySelector<HTMLButtonElement>(".ac-optrow__hit"));
-        const place = () => el.querySelector(".ac-place")?.getAttribute("data-place");
-        expect(place()).toBe("cloud");
-        await act(async () => buttons[1]?.focus());
-        expect(place()).toBe("here");
-        expect(el.querySelector(".ac-place canvas.ac-computer")?.getAttribute("data-kind")).toBe("mac");
-        await act(async () => buttons[2]?.focus());
-        expect(place()).toBe("box");
-        expect(el.querySelector(".ac-place canvas.ac-computer")?.getAttribute("data-kind")).toBe("linux");
-        await press("In the agentes.chat cloud");
-        expect(chosen).toEqual(["/login"]);
-      },
-      {
-        host: (host) => {
-          host.chooseServer = async (_server, page) => {
-            chosen.push(page);
-          };
-          host.hideWindow = async () => {};
-        },
-      },
-    );
-  });
-
-  test("on Windows, this PC by its own words and drawing, and its row goes to getting it ready", () =>
-    firstRun("windows", async ({ el, press }) => {
-      const pc = [...el.querySelectorAll<HTMLButtonElement>(".dk-choose__list .ac-optrow__hit")].find((r) =>
-        r.textContent?.includes("On this PC"),
-      );
-      await act(async () => pc?.focus());
-      expect(el.querySelector(".ac-place canvas.ac-computer")?.getAttribute("data-kind")).toBe("windows");
-      await press("On this PC");
-      expect(el.querySelector("h1")?.textContent).toBe("Let's get this PC ready");
-    }));
-
-  test("Have one already? signs in by its address, and back comes to the choice", () =>
-    firstRun("first", async ({ el, press }) => {
-      await press("Sign in by its address");
-      expect(el.querySelector("h1")?.textContent).toBe("Sign in to a workspace that already exists");
-      await press("Where will your workspace live?");
-      expect(el.querySelector("h1")?.textContent).toBe("Where will your workspace live?");
-    }));
-});
-
-describe("Install on a server or VPS", () => {
-  test("two steps with the command, and the words to send to whoever installs it", async () => {
-    const copied: string[] = [];
-    const clipboard = Object.getOwnPropertyDescriptor(window.navigator, "clipboard");
-    Object.defineProperty(window.navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: async (text: string) => {
-          copied.push(text);
-        },
-      },
-    });
-    try {
-      await firstRun("first", async ({ el, press, until, button }) => {
-        await press("On a server or VPS");
-        expect(el.querySelector("h1")?.textContent).toBe("Install on a server or VPS");
-        expect([...el.querySelectorAll(".dk-fr__ways > li b")].map((b) => b.textContent)).toEqual([
-          "On the server, open the Terminal (or connect over SSH) and paste this",
-          "At the end a link shows up. Open it here and that's it.",
-        ]);
-        expect(el.querySelector(".dk-fr__ways code")?.textContent).toBe("curl -fsSL https://agentes.chat/install | sh");
-        await press("Copy the instructions");
-        await until(() => button("Instructions copied"));
-        expect(copied).toHaveLength(1);
-        expect(copied[0]).toContain("curl -fsSL https://agentes.chat/install | sh");
-        expect(copied[0]).toContain("At the end a link shows up.");
-        await press("Sign in by its address");
-        expect(el.querySelector("h1")?.textContent).toBe("Sign in to a workspace that already exists");
-      });
-    } finally {
-      if (clipboard) Object.defineProperty(window.navigator, "clipboard", clipboard);
-      else delete (window.navigator as { clipboard?: unknown }).clipboard;
-    }
-  });
-
-  test("Connect sends one who has none yet to the install", () =>
-    firstRun("first", async ({ el, press }) => {
-      await press("Sign in by its address");
-      await press("See how to install");
-      expect(el.querySelector("h1")?.textContent).toBe("Install on a server or VPS");
-    }));
-});
 
 /** Types into a React field: the value through the field's own setter, then the event React listens to. */
 function typeInto(field: Element | null, value: string) {
@@ -474,52 +140,547 @@ function typeInto(field: Element | null, value: string) {
 const pressEscape = () =>
   act(async () => void window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" })));
 
-/** Run here's form with an email typed in, then Start (in the window's language). */
-async function startSetup(
-  { el, press, until }: ReturnType<typeof screenOf>,
-  words = { place: "On this Mac", start: "Start" },
-) {
-  await press(words.place);
-  await until(() => el.querySelector("form.dk-fr__here"));
-  await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
-  await press(words.start);
-  await until(() => el.querySelector(".dk-fr__setup"));
+/** Run here's owner step with an email typed in, then Continue: the "where" step shows. */
+async function toWhere(screen: Screen, words = { row: "Run free on this Mac" }) {
+  await screen.press(words.row);
+  await until(() => screen.step() === "owner");
+  await act(async () => typeInto(screen.el.querySelector('input[type="email"]'), "ana@example.com"));
+  await screen.submit("dk-first-owner");
+  await until(() => screen.step() === "where");
 }
 
 const stepOf = (el: HTMLElement, name: string) =>
-  [...el.querySelectorAll<HTMLElement>(".dk-fr__steps > li")].find((li) => li.querySelector("b")?.textContent === name);
-const runButtons = (el: HTMLElement) => [...el.querySelectorAll(".dk-fr__runacts button")].map((b) => b.textContent);
+  [...el.querySelectorAll<HTMLElement>(".dk-first__steps > li")].find(
+    (li) => li.querySelector("b")?.textContent === name,
+  );
 
-describe("Setting it up here", () => {
-  test("in the window's middle: the computer, the title, the steps, the bar, and Cancel", () =>
+/** Run here up to the setup, on this computer's own Tailscale (connected), with an email. */
+async function toSetup(screen: Screen) {
+  await toWhere(screen);
+  await screen.press("Continue");
+  await until(() => screen.step() === "setup");
+}
+
+describe("Sign in first", () => {
+  test("Google, Apple or email in this window, the other ways under it, and the install as the last line", () =>
+    firstRun("first", async ({ el, press, title, lead, signIns }) => {
+      expect(title()).toBe("Welcome to agentes.chat");
+      expect(lead()).toBe("Your team of AI agents, working with you in the chat.");
+      expect([...el.querySelectorAll(".dk-welcome__signin button")].map((b) => b.textContent)).toEqual([
+        "Continue with Google",
+        "Continue with Apple",
+        "Continue with email",
+      ]);
+      // Each provider by its own mark, e-mail by the kit's icon.
+      expect(el.querySelectorAll(".dk-welcome__signin svg.dk-welcome__mark")).toHaveLength(2);
+      expect(el.querySelector(".dk-welcome__or")?.textContent).toBe("Other ways to use it");
+      expect([...el.querySelectorAll(".ac-optrow__title")].map((r) => r.textContent)).toEqual([
+        "Run free on this Mac",
+        "Sign in to my company's server",
+      ]);
+      expect(el.querySelector(".dk-welcome__card > .dk-first__foot:last-child")?.textContent).toBe(
+        "Installing it for the team on a server? See how",
+      );
+      // Nothing found: nothing on top.
+      expect(el.querySelector(".dk-welcome__found")).toBeNull();
+      // The team's sky behind the card, and the team drawn on it (the cloud's scene, no place picked yet).
+      expect(el.querySelector(".dk-first__sky canvas")).not.toBeNull();
+      expect(el.querySelector(".dk-welcome__card .dk-first__art .ac-place")?.getAttribute("data-place")).toBe("cloud");
+      await press("Continue with Google");
+      await press("Continue with Apple");
+      await press("Continue with email");
+      expect(signIns).toEqual(["google", "apple", "email"]);
+    }));
+
+  test("a build without the server: only a company's server under the sign-in", () =>
+    firstRun(
+      "first",
+      async ({ el }) => {
+        await until(() => el.querySelector(".ac-optrow__title"));
+        expect([...el.querySelectorAll(".ac-optrow__title")].map((r) => r.textContent)).toEqual([
+          "Sign in to my company's server",
+        ]);
+      },
+      {
+        host: (host) => {
+          const read = host.localServer;
+          host.localServer = async () => ({ ...(await read()), bundled: false });
+        },
+      },
+    ));
+
+  test("a server found on the Tailscale network on top, by its address, and Sign in opens it", () =>
+    firstRun(
+      "first",
+      async ({ el, press, host }) => {
+        await until(() => el.querySelector(".dk-welcome__found"));
+        const found = el.querySelector(".dk-welcome__found") as HTMLElement;
+        expect(found.querySelector("b")?.textContent).toBe("agentes.chat is on your network");
+        expect(found.querySelector("small")?.textContent).toBe("agentes.tail1234.ts.net");
+        // Tailscale's own mark, bare in the rows' icon column: never a tile (ADR 0265 §6).
+        expect(found.querySelector(".dk-first__glyph svg.dk-tailscale")).not.toBeNull();
+        expect(found.querySelector(".dk-logo")).toBeNull();
+        // On top: before the title.
+        expect(found.closest(".dk-welcome__top")?.nextElementSibling?.tagName).toBe("H1");
+        await press("Sign in");
+        await until(() => host.list.current === "https://agentes.tail1234.ts.net");
+      },
+      {
+        realChecks: true,
+        host: (host) => {
+          host.discover = async () => [{ server: "https://agentes.tail1234.ts.net", where: "tailnet" }];
+        },
+      },
+    ));
+
+  test("Add a workspace: its own title and the same sign-in, a new workspace the line under it", () => {
+    const chosen: (string | undefined)[] = [];
+    return firstRun(
+      "first",
+      async ({ press, title, button }) => {
+        await until(() => button("Create one"));
+        expect(title()).toBe("Add a workspace");
+        expect(button("Continue with Google")).toBeTruthy();
+        await press("Create one");
+        expect(chosen).toEqual(["/onboarding"]);
+      },
+      { host: adding(false, chosen) },
+    );
+  });
+
+  test("Add a workspace, signed in to agentes.chat here already: making one is the button", () => {
+    const chosen: (string | undefined)[] = [];
+    return firstRun(
+      "first",
+      async ({ press, button }) => {
+        await until(() => button("Create a workspace on agentes.chat"));
+        expect(button("Continue with Google")).toBeUndefined();
+        expect(button("Create one")).toBeUndefined();
+        await press("Create a workspace on agentes.chat");
+        expect(chosen).toEqual(["/onboarding"]);
+      },
+      { host: adding(true, chosen) },
+    );
+  });
+});
+
+/** The first run opened by the site's "Add workspace", with agentes.chat signed in here or not. */
+function adding(cloud: boolean, chosen: (string | undefined)[]) {
+  return (host: FakeHost) => {
+    host.layer.route = { screen: "firstRun", mode: "add" };
+    host.workspaces = async () => [{ server: "https://app.agentes.chat", signedIn: cloud, orgs: [] }];
+    host.chooseServer = async (_server, page) => {
+      chosen.push(page);
+    };
+    host.hideLayer = async () => {};
+  };
+}
+
+describe("A company's server", () => {
+  test("its address in the frame, Sign in in the footer, what's wrong under the field, and Back", () =>
+    firstRun("first", async ({ el, press, title, step, foot, submit, counter }) => {
+      await press("Sign in to my company's server");
+      expect(step()).toBe("company");
+      // Where the person is, over the title, as over Run here's steps.
+      expect(counter()).toBe("Your company's server");
+      expect(title()).toBe("Sign in to a workspace that already exists");
+      expect(el.querySelector(".dk-first__card .dk-first__art .ac-place")?.getAttribute("data-place")).toBe("box");
+      expect(foot()).toEqual(["Back", "Sign in"]);
+      await act(async () => typeInto(el.querySelector(".dk-first__address input"), "not an address"));
+      await submit("dk-first-connect");
+      await until(() => el.querySelector(".dk-first__problem"));
+      expect(el.querySelector(".dk-first__problem")?.textContent).toBe(
+        "Check the address, something like agentes.yourteam.ts.net.",
+      );
+      await press("Back");
+      expect(title()).toBe("Welcome to agentes.chat");
+    }));
+
+  test("installing for the team: two steps with the command, the words to send, and its address after", async () => {
+    const copied: string[] = [];
+    const clipboard = Object.getOwnPropertyDescriptor(window.navigator, "clipboard");
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          copied.push(text);
+        },
+      },
+    });
+    try {
+      await firstRun("first", async ({ el, press, title, step, button }) => {
+        await press("See how");
+        expect(step()).toBe("install");
+        expect(title()).toBe("Install on a server or VPS");
+        expect([...el.querySelectorAll(".dk-first__numbered > li > b")].map((b) => b.textContent)).toEqual([
+          "On the server, open the Terminal (or connect over SSH) and paste this",
+          "At the end a link shows up. Open it here and that's it.",
+        ]);
+        expect(el.querySelector(".dk-first__numbered code")?.textContent).toBe(
+          "curl -fsSL https://agentes.chat/install | sh",
+        );
+        await press("Copy the instructions");
+        await until(() => button("Instructions copied"));
+        expect(copied[0]).toContain("curl -fsSL https://agentes.chat/install | sh");
+        await press("Sign in by its address");
+        expect(title()).toBe("Sign in to a workspace that already exists");
+        // Back retraces the way: the install, then the welcome.
+        await press("Back");
+        expect(step()).toBe("install");
+        await press("Back");
+        expect(step()).toBe("welcome");
+      });
+    } finally {
+      if (clipboard) Object.defineProperty(window.navigator, "clipboard", clipboard);
+      else delete (window.navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  test("a connect link alone: the server as the sheet's title, nothing before Continue, Cancel opens the first run", () =>
+    firstRun(
+      "link",
+      async ({ el, press, host, step }) => {
+        // The server is checked first: its "Checking the server…" line takes the question's place until then.
+        await until(() => el.querySelector(".dk-linksheet__question"));
+        expect(el.querySelector("h1 .dk-linksheet__host")?.textContent).toBe("agentes.tail1234.ts.net");
+        expect(el.querySelector(".dk-linksheet__question")?.textContent).toBe("Open the workspace you installed?");
+        // The question first, then what it means: the owner made now, and what a server on a Tailscale network is.
+        expect([...el.querySelectorAll(".dk-linksheet__body p")].map((p) => p.textContent)).toEqual([
+          "You create its owner account now.",
+          "It's on a Tailscale network: it only opens on devices connected to Tailscale with the same account.",
+        ]);
+        expect([...el.querySelectorAll(".dk-sh__acts button")].map((b) => b.textContent)).toEqual([
+          "Cancel",
+          "Continue",
+        ]);
+        expect(host.list.current).toBeNull();
+        await press("Cancel");
+        // No server open: the whole first run takes the window.
+        await until(() => step() === "welcome");
+        expect(host.layer.route).toEqual({ screen: "firstRun" });
+      },
+      {
+        realChecks: true,
+        host: (host) => {
+          host.layer.route = { screen: "link" };
+        },
+      },
+    ));
+});
+
+describe("Run on this Mac, in three steps", () => {
+  test("one frame: the card's drawing, the count, the title, the owner's fields and the usage line, Back and Continue", () =>
+    firstRun(
+      "first",
+      async ({ el, press, step, title, lead, counter, foot, submit }) => {
+        await press("Run free on this Mac");
+        await until(() => step() === "owner");
+        expect(el.querySelector(".dk-first__card .dk-first__art .ac-place")?.getAttribute("data-place")).toBe("here");
+        // Only on this Mac at first (Tailscale isn't on): two steps until the phone and the team are chosen.
+        expect(counter()).toBe("Run on this Mac · 1 of 2");
+        expect(title()).toBe("Who will be the owner?");
+        expect(lead()).toBe(
+          "You sign in with this email and invite whoever you want later. Everything is kept on this Mac.",
+        );
+        expect([...el.querySelectorAll(".ac-field label")].map((l) => l.textContent)).toEqual([
+          "Your name",
+          "Your email",
+        ]);
+        // This computer's user's name is there already.
+        expect((el.querySelector('input[autocomplete="name"]') as HTMLInputElement).value).toBe("Ana Souza");
+        expect(el.querySelector(".dk-first__check")?.textContent).toBe(
+          "Send anonymous usage statisticsCounts, never messages, files or names.",
+        );
+        expect(el.querySelector("#here-usage")?.getAttribute("aria-checked")).toBe("true");
+        expect(foot()).toEqual(["Back", "Continue"]);
+        // No email: it says what it needs, and stays.
+        await submit("dk-first-owner");
+        await until(() => el.textContent?.includes("Write your email, like ana@example.com."));
+        expect(step()).toBe("owner");
+      },
+      { here: { tailscale: "off" } },
+    ));
+
+  test("where: two rows with a hairline, a plain icon and a radio at the end; only this Mac chosen without Tailscale on", () =>
     firstRun(
       "first",
       async (screen) => {
-        const { el, until } = screen;
-        await startSetup(screen);
+        const { el, counter, title, lead } = screen;
+        await toWhere(screen);
+        expect(counter()).toBe("Run on this Mac · 2 of 2");
+        expect(title()).toBe("Where will you use it?");
+        expect(lead()).toBe("You can change it anytime.");
+        const rows = [...el.querySelectorAll(".dk-first__picks > .dk-first__pick")];
+        expect(rows.map((r) => r.querySelector("b")?.textContent)).toEqual([
+          "On this Mac, your phone and your team",
+          "Only on this Mac",
+        ]);
+        expect(rows.map((r) => r.querySelector("small")?.textContent)).toEqual([
+          "Through Tailscale or an address of yours.",
+          "The phone can come later.",
+        ]);
+        expect(rows.map((r) => r.querySelector('[role="radio"]')?.getAttribute("aria-checked"))).toEqual([
+          "false",
+          "true",
+        ]);
+        // No cards and no tags: the rows are the list.
+        expect(el.querySelector(".dk-first__picks .dk-card, .dk-first__picks .ac-chip")).toBeNull();
+        // The phone and the team chosen: a third step counts.
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        expect(counter()).toBe("Run on this Mac · 2 of 3");
+      },
+      { here: { tailscale: "off" } },
+    ));
+
+  test("where, with the system's Tailscale on: the phone and the team chosen", () =>
+    firstRun("first", async (screen) => {
+      await toWhere(screen);
+      const rows = [...screen.el.querySelectorAll(".dk-first__picks > .dk-first__pick")];
+      expect(rows.map((r) => r.querySelector('[role="radio"]')?.getAttribute("aria-checked"))).toEqual([
+        "true",
+        "false",
+      ]);
+    }));
+
+  test("how the phone and the team get here: Tailscale's row chosen, Back, Do it later and Continue", () =>
+    firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, counter, title, lead, foot, button } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "net");
+        expect(counter()).toBe("Run on this Mac · 3 of 3");
+        expect(title()).toBe("How do the phone and the team get here?");
+        expect(lead()).toBe("You can change it later in Settings.");
+        expect(
+          [...el.querySelectorAll(".dk-way__item")].map((row) => [
+            row.querySelector("b")?.textContent,
+            row.querySelector('[role="radio"]')?.getAttribute("aria-checked"),
+          ]),
+        ).toEqual([
+          ["Through Tailscale", "true"],
+          ["Through an address of mine", "false"],
+        ]);
+        // Tailscale off on a Mac with its app: open it, and the wait with no time limit.
+        expect(button("Open Tailscale and sign in")).toBeTruthy();
+        expect(el.querySelector(".dk-way__now")?.textContent).toBe("Waiting for Tailscale…");
+        expect(foot()).toEqual(["Back", "Do it later", "Continue"]);
+        // One filled button on the card, the way forward: Tailscale's own and the others are bordered.
+        expect([...el.querySelectorAll(".ac-btn--primary")].map((b) => b.textContent)).toEqual(["Continue"]);
+        // Continue waits for Tailscale: it goes on by itself once it is on.
+        expect(button("Continue")?.hasAttribute("disabled")).toBe(true);
+        // Esc goes back a step.
+        await pressEscape();
+        expect(step()).toBe("where");
+      },
+      { here: { tailscale: "off" } },
+    ));
+
+  test("Tailscale turns on while it waits: on to the setup by itself, through Tailscale", async () => {
+    let state: Tailnet = { state: "missing" };
+    await firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, tailscale, choices } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "net");
+        await press("Download Tailscale");
+        expect(tailscale).toEqual(["download"]);
+        await until(() => el.querySelector(".dk-way__now")?.textContent === "Waiting for Tailscale…");
+        // Installed and signed in: read within 2 s, and the setup starts without a press.
+        state = { state: "on", device: "ana-mac.tail1234.ts.net" };
+        await until(() => step() === "setup" || step() === "done");
+        expect(choices).toEqual([
+          { name: "Ana Souza", email: "ana@example.com", place: "everywhere", way: { kind: "tailscale" }, usage: true },
+        ]);
+      },
+      {
+        here: { tailscale: "missing", hold: "account", pace: 10 },
+        host: (host) => {
+          host.tailscale = async () => state;
+        },
+      },
+    );
+  });
+
+  test("an address of mine: Continue checks its form only, then the setup checks where it leads", async () => {
+    await firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, choices } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "net");
+        await act(async () => (el.querySelector("#way-address") as HTMLElement).click());
+        expect(el.querySelector(".dk-way__tunnel")?.textContent).toBe("Point it at http://127.0.0.1:4310Copy");
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "agentes.example.com/chat"));
+        await press("Continue");
+        expect(step()).toBe("net");
+        expect(el.querySelector(".ac-field__error")?.textContent).toBe("The address must start with https://");
+        // Typing again clears it.
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://agentes.example.com/"));
+        expect(el.querySelector(".ac-field__error")).toBeNull();
+        await press("Continue");
+        await until(() => step() === "setup");
+        expect(choices).toEqual([
+          {
+            name: "Ana Souza",
+            email: "ana@example.com",
+            place: "everywhere",
+            way: { kind: "address", url: "https://agentes.example.com" },
+            usage: true,
+          },
+        ]);
+        // It leads here: the phone's code, without Tailscale's step on the phone.
+        await until(() => step() === "done");
+        expect([...el.querySelectorAll(".dk-first__numbered > li > b")].map((b) => b.textContent)).toEqual([
+          "Install the agentes.chat app",
+          "Point the camera at the code",
+        ]);
+        await until(() => el.querySelector(".dk-first__addr b")?.textContent === "agentes.example.com");
+      },
+      { here: { tailscale: "off", pace: 10 } },
+    );
+  });
+
+  test("an address that doesn't lead here: why, Try again, Change the address and Finish without it", async () => {
+    const reaches: unknown[] = [];
+    await firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, foot, host, button } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "net");
+        await act(async () => (el.querySelector("#way-address") as HTMLElement).click());
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://agentes.example.com"));
+        await press("Continue");
+        await until(() => step() === "setup" && !!el.querySelector(".dk-first__ask .dk-honest"));
+        const reach = stepOf(el, "Turning on access from anywhere") as HTMLElement;
+        expect(reach.dataset.state).toBe("warn");
+        expect(reach.querySelector(".dk-honest")?.textContent).toBe(
+          "We couldn't open it. Check that your tunnel is on and points to http://127.0.0.1:4310.",
+        );
+        // Its ways on are the footer's, Try again the main one; the step keeps only why, and the title says the setup
+        // is almost done.
+        expect(reach.querySelectorAll("button")).toHaveLength(0);
+        expect(foot()).toEqual(["Finish without it", "Change the address", "Try again"]);
+        expect(button("Try again")?.className).toContain("ac-btn--primary");
+        expect(screen.title()).toBe("Almost ready");
+        // Try again: access alone, through the same address.
+        await press("Try again");
+        await until(() => reaches.length === 1 && !!button("Change the address"));
+        expect(reaches).toEqual([{ kind: "address", url: "https://agentes.example.com" }]);
+        // Back to the last step with the address in its field; set up already, so no Back.
+        await press("Change the address");
+        await until(() => step() === "net");
+        expect((el.querySelector("#way-address-url") as HTMLInputElement).value).toBe("https://agentes.example.com");
+        expect(foot()).toEqual(["Do it later", "Continue"]);
+        await act(async () => typeInto(el.querySelector("#way-address-url"), "https://chat.example.org"));
+        await press("Continue");
+        await until(() => reaches.length === 2 && !!button("Finish without it"));
+        expect(reaches[1]).toEqual({ kind: "address", url: "https://chat.example.org" });
+        await press("Finish without it");
+        await until(() => host.layer.route === null);
+      },
+      {
+        here: { tailscale: "off", addr: "unreachable", pace: 10 },
+        host: (host) => {
+          const reach = host.setLocalReach;
+          host.setLocalReach = (on, way) => {
+            reaches.push(way);
+            return reach(on, way);
+          };
+        },
+      },
+    );
+  });
+
+  test("Do it later: agentes.chat only on this Mac, no access step", () =>
+    firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, choices } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-everywhere") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "net");
+        await press("Do it later");
+        await until(() => step() === "setup");
+        expect(choices[0]?.place).toBe("here");
+        expect(choices[0]?.way).toBeUndefined();
+        expect(stepOf(el, "Turning on access from anywhere")).toBeUndefined();
+      },
+      { here: { tailscale: "off", hold: "account", pace: 10 } },
+    ));
+
+  test("the system's Tailscale on: no last step, two steps, and Continue starts the setup through it", () =>
+    firstRun(
+      "first",
+      async (screen) => {
+        const { counter, press, step, choices } = screen;
+        await screen.press("Run free on this Mac");
+        await until(() => step() === "owner");
+        expect(counter()).toBe("Run on this Mac · 1 of 2");
+        await act(async () => typeInto(screen.el.querySelector('input[type="email"]'), "ana@example.com"));
+        await screen.submit("dk-first-owner");
+        await until(() => step() === "where");
+        expect(counter()).toBe("Run on this Mac · 2 of 2");
+        await press("Continue");
+        await until(() => step() === "setup");
+        expect(choices).toEqual([
+          { name: "Ana Souza", email: "ana@example.com", place: "everywhere", way: { kind: "tailscale" }, usage: true },
+        ]);
+      },
+      { here: { hold: "account", pace: 10 } },
+    ));
+
+  test("only on this Mac: the layer steps aside once it's set up", () =>
+    firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, step, host, choices } = screen;
+        await toWhere(screen);
+        await act(async () => (el.querySelector("#where-here") as HTMLElement).click());
+        await press("Continue");
+        await until(() => step() === "setup");
+        await until(() => host.layer.route === null);
+        expect(choices[0]?.place).toBe("here");
+      },
+      { here: { pace: 10 } },
+    ));
+});
+
+describe("Setting everything up", () => {
+  test("the steps in the frame, the title focused for screen readers, Cancel alone and no Back", () =>
+    firstRun(
+      "first",
+      async (screen) => {
+        const { el, counter, title, foot } = screen;
+        await toSetup(screen);
         await until(() => stepOf(el, "Creating your account")?.dataset.state === "active");
-        const setup = el.querySelector(".dk-fr__setup") as HTMLElement;
-        expect([...setup.children].map((c) => `${c.tagName.toLowerCase()}.${c.className}`)).toEqual([
-          "div.dk-fr__setupart",
-          "h1.dk-fr__h1sm",
-          "div.dk-fr__run",
+        expect(counter()).toBe("Run on this Mac");
+        expect(title()).toBe("Getting everything ready");
+        expect(document.activeElement).toBe(el.querySelector("h1"));
+        expect(foot()).toEqual(["Cancel"]);
+        expect(
+          [...el.querySelectorAll<HTMLElement>(".dk-first__steps > li")].map((li) => [
+            li.querySelector("b")?.textContent,
+            li.dataset.state,
+          ]),
+        ).toEqual([
+          ["Making room for your data", "done"],
+          ["Turning agentes.chat on", "done"],
+          ["Creating your account", "active"],
+          ["Calling your agents", "todo"],
+          ["Turning on access from anywhere", "todo"],
         ]);
-        // This computer on the sky, the team beside it.
-        expect(setup.querySelector(".ac-place")?.getAttribute("data-place")).toBe("here");
-        expect(setup.querySelector<HTMLCanvasElement>("canvas.ac-computer")?.dataset).toMatchObject({
-          kind: "mac",
-          state: "online",
-        });
-        expect([...(setup.querySelector(".dk-fr__run") as HTMLElement).children].map((c) => c.className)).toEqual([
-          "dk-fr__steps",
-          "dk-bar",
-          "dk-fr__runacts",
-        ]);
-        expect(setup.querySelector("h1")?.textContent).toBe("Getting everything ready");
-        // Screen readers start where they are.
-        expect(document.activeElement).toBe(setup.querySelector("h1"));
-        expect(runButtons(el)).toEqual(["Cancel"]);
-        expect(el.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow")).toBe("2");
         // Before 10 s, no time.
         expect(el.querySelector(".dk-fr__steptime")).toBeNull();
         expect(el.querySelector(".dk-fr__stepline")).toBeNull();
@@ -531,8 +692,8 @@ describe("Setting it up here", () => {
     firstRun(
       "first",
       async (screen) => {
-        const { el, until } = screen;
-        await startSetup(screen);
+        const { el, foot } = screen;
+        await toSetup(screen);
         await until(() => stepOf(el, "Turning agentes.chat on")?.dataset.state === "active");
         setSystemTime(new Date(Date.now() + 31_000));
         try {
@@ -543,7 +704,7 @@ describe("Setting it up here", () => {
           expect(step.querySelector(".dk-fr__stepline")?.textContent).toBe(
             "Taking a little longer than expected · Copy details",
           );
-          expect(runButtons(el)).toEqual(["Cancel"]);
+          expect(foot()).toEqual(["Cancel"]);
         } finally {
           setSystemTime();
         }
@@ -551,177 +712,25 @@ describe("Setting it up here", () => {
       { here: { hold: "start", pace: 10 } },
     ));
 
-  test("it stays where it opened: the room above is pinned as it starts, so the slow line grows it downward", async () => {
-    const css = await Bun.file(new URL("../src/styles.css", import.meta.url).pathname).text();
-    expect(css.split("\n.dk-fr__setup > :first-child {")[1]?.split("}")[0]).toContain(
-      "margin-top: var(--dk-setup-lead, auto);",
-    );
-    // The room above the drawing as the browser lays it out: the auto margin while the block is centred, or the
-    // room pinned on the block.
-    let room = 94;
-    const g = globalThis as { getComputedStyle: typeof getComputedStyle };
-    const real = g.getComputedStyle;
-    g.getComputedStyle = (el: Element, pseudo?: string | null) =>
-      el instanceof HTMLElement && el.classList.contains("dk-fr__setupart")
-        ? ({
-            marginTop: el.parentElement?.style.getPropertyValue("--dk-setup-lead") || `${room}px`,
-          } as CSSStyleDeclaration)
-        : real(el, pseudo);
-    try {
-      await firstRun(
-        "first",
-        async (screen) => {
-          const { el, until } = screen;
-          await startSetup(screen);
-          await until(() => stepOf(el, "Turning agentes.chat on")?.dataset.state === "active");
-          const lead = () =>
-            (el.querySelector(".dk-fr__setup") as HTMLElement).style.getPropertyValue("--dk-setup-lead");
-          expect(lead()).toBe("94px");
-          // Taller with the slow line: left to the browser, the room above would shrink and the block move up.
-          room = 82.6;
-          setSystemTime(new Date(Date.now() + 31_000));
-          try {
-            await until(() => stepOf(el, "Turning agentes.chat on")?.querySelector(".dk-fr__stepline"));
-            expect(lead()).toBe("94px");
-          } finally {
-            setSystemTime();
-          }
-        },
-        { here: { hold: "start", pace: 10 } },
-      );
-    } finally {
-      g.getComputedStyle = real;
-    }
-  });
-
-  test("words that would run past the window take the room above, no more: Continue stays in view", async () => {
-    const g = globalThis as { getComputedStyle: typeof getComputedStyle; ResizeObserver: unknown };
-    const real = { style: g.getComputedStyle, observer: g.ResizeObserver };
-    g.getComputedStyle = (el: Element, pseudo?: string | null) =>
-      el instanceof HTMLElement && el.classList.contains("dk-fr__setupart")
-        ? ({ marginTop: "94px" } as CSSStyleDeclaration)
-        : real.style(el, pseudo);
-    // What the browser reports as the steps, the bar and the buttons grow or shrink.
-    let resized = () => {};
-    g.ResizeObserver = class {
-      report: () => void;
-      constructor(report: () => void) {
-        this.report = report;
-      }
-      observe(target: Element) {
-        if (target.classList.contains("dk-fr__run")) resized = this.report;
-      }
-      unobserve() {}
-      disconnect() {}
-    };
-    try {
-      await firstRun(
-        "first",
-        async (screen) => {
-          const { el, until, button, press } = screen;
-          await press("On this Mac");
-          await until(() => el.querySelector("#here-reach:not([disabled])"));
-          await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
-          await act(async () => (el.querySelector("#here-reach") as HTMLElement).click());
-          await press("Start");
-          await until(() => el.querySelector(".dk-fr__setup"));
-          const setup = el.querySelector(".dk-fr__setup") as HTMLElement;
-          const lead = () => Number.parseFloat(setup.style.getPropertyValue("--dk-setup-lead"));
-          // The window shows 546 px of the column: the room above, then the rest.
-          let rest = 360;
-          const scroller = setup.parentElement as HTMLElement;
-          Object.defineProperty(scroller, "clientHeight", { configurable: true, get: () => 546 });
-          Object.defineProperty(scroller, "scrollHeight", {
-            configurable: true,
-            get: () => Math.max(546, lead() + rest),
-          });
-          await act(async () => resized());
-          expect(lead()).toBe(94);
-          await until(() => button("Continue"));
-          const words = setup.querySelector(".dk-fr__problem")?.textContent ?? "";
-          expect(words).toContain("Give that permission once, in the terminal:");
-          // The step first, then where to try again: under the command, last.
-          expect(words.indexOf("sudo tailscale set --operator=$USER")).toBeGreaterThan(words.indexOf("terminal:"));
-          expect(words.endsWith("Copy Try again in Preferences")).toBe(true);
-          expect(setup.querySelector(".dk-fr__cmd + .dk-fr__retry")).not.toBeNull();
-          // Tailscale's words and their command, 60 px more than the window shows: the room above gives those 60.
-          rest = 512;
-          await act(async () => resized());
-          expect(lead()).toBe(34);
-          expect(scroller.scrollHeight).toBe(scroller.clientHeight);
-          // Shorter again (as after Try again), it goes back to where it opened.
-          rest = 360;
-          await act(async () => resized());
-          expect(lead()).toBe(94);
-        },
-        { here: { fail: "reach", reason: "operator", pace: 10 } },
-      );
-    } finally {
-      g.getComputedStyle = real.style;
-      g.ResizeObserver = real.observer;
-    }
-  });
-
-  test("every reason's end gives its fix first, then where to try again on a line of its own", async () => {
-    const css = await Bun.file(new URL("../src/styles.css", import.meta.url).pathname).text();
-    // Under a link or words as under a command: never run on after "Turn it on".
-    expect(css.split("\n.dk-fr__problem .dk-fr__retry {")[1]?.split("}")[0]).toContain("display: block;");
-    for (const [reason, fix] of [
-      ["https", "HTTPS is off on your Tailscale network. Turn it on"],
-      ["serve", "Install Tailscale from tailscale.com."],
-    ] as const)
-      await firstRun(
-        "first",
-        async ({ el, until, button, press }) => {
-          await press("On this Mac");
-          await until(() => el.querySelector("#here-reach:not([disabled])"));
-          await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
-          await act(async () => (el.querySelector("#here-reach") as HTMLElement).click());
-          await press("Start");
-          await until(() => button("Continue"));
-          const problem = el.querySelector(".dk-fr__problem") as HTMLElement;
-          expect({ reason, words: problem.textContent }).toEqual({
-            reason,
-            words: expect.stringContaining(`${fix} Try again in Preferences`),
-          });
-          // Last: nothing follows it in the problem's words.
-          const retry = problem.querySelector(".dk-fr__retry") as HTMLButtonElement;
-          expect(retry.nextSibling).toBeNull();
-          // It opens Preferences on Servers, where reach is turned on again.
-          await act(async () => retry.click());
-          expect(localStorage.getItem("agentes.desktop.prefsTab")).toBe('"servers"');
-        },
-        { here: { fail: "reach", reason, pace: 10 } },
-      );
-  });
-
-  test("Cancel stops it, and the form comes back as it was", async () => {
+  test("Cancel stops it, and the step it started from comes back as it was", async () => {
     let cancels = 0;
     let cancelNow: (() => Promise<void>) | null = null;
     await firstRun(
       "first",
       async (screen) => {
-        const { el, until, button, press } = screen;
-        const switchOn = (id: string) => el.querySelector(`#${id}`)?.getAttribute("aria-checked");
-        await press("On this Mac");
-        await until(() => el.querySelector("#here-reach:not([disabled])"));
-        await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
-        await act(async () => (el.querySelector("#here-reach") as HTMLElement).click());
-        await act(async () => (el.querySelector("#here-usage") as HTMLElement).click());
-        await press("Start");
+        const { el, step, button, press } = screen;
+        await toSetup(screen);
         await until(() => stepOf(el, "Creating your account")?.dataset.state === "active");
         await press("Cancel");
         expect(cancels).toBe(1);
         // Busy while what it started stops, the same width.
         expect(button("Cancel")?.getAttribute("aria-busy")).toBe("true");
         await act(async () => cancelNow?.());
-        await until(() => el.querySelector("form.dk-fr__here"));
-        expect(el.querySelector(".dk-fr__setup")).toBeNull();
-        expect((el.querySelector('input[autocomplete="name"]') as HTMLInputElement).value).toBe("Ana Souza");
+        await until(() => step() === "where");
+        expect(el.querySelector('[role="radio"][aria-checked="true"]')?.id).toBe("where-everywhere");
+        await pressEscape();
+        expect(step()).toBe("owner");
         expect((el.querySelector('input[type="email"]') as HTMLInputElement).value).toBe("ana@example.com");
-        // The switches as they were set, though the undone setup reads as reach off and usage on.
-        await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-        expect([switchOn("here-reach"), switchOn("here-usage")]).toEqual(["true", "false"]);
       },
       {
         here: { hold: "account", pace: 10 },
@@ -740,20 +749,20 @@ describe("Setting it up here", () => {
     await firstRun(
       "first",
       async (screen) => {
-        await startSetup(screen);
-        await screen.until(() => stepOf(screen.el, "Creating your account")?.dataset.state === "active");
+        await toSetup(screen);
+        await until(() => stepOf(screen.el, "Creating your account")?.dataset.state === "active");
         await pressEscape();
-        await screen.until(() => screen.el.querySelector("form.dk-fr__here"));
+        await until(() => screen.step() === "where");
       },
       { here: { hold: "account", pace: 10 } },
     );
     await firstRun(
       "first",
       async (screen) => {
-        await startSetup(screen);
-        await screen.until(() => screen.button("Try again"));
+        await toSetup(screen);
+        await until(() => screen.button("Try again"));
         await pressEscape();
-        await screen.until(() => screen.el.querySelector("form.dk-fr__here"));
+        await until(() => screen.step() === "where");
       },
       { here: { fail: "start", pace: 10 } },
     );
@@ -764,24 +773,22 @@ describe("Setting it up here", () => {
     await firstRun(
       "first",
       async (screen) => {
-        const { el, until, button, press } = screen;
-        await startSetup(screen);
+        const { el, button, press, foot, step, title } = screen;
+        await toSetup(screen);
         await until(() => button("Try again"));
-        const step = stepOf(el, "Turning agentes.chat on") as HTMLElement;
-        expect(step.dataset.state).toBe("failed");
-        expect(step.querySelector(".dk-honest")?.textContent).toBe(
+        const failed = stepOf(el, "Turning agentes.chat on") as HTMLElement;
+        expect(failed.dataset.state).toBe("failed");
+        expect(failed.querySelector(".dk-honest")?.textContent).toBe(
           "agentes.chat didn't start on this Mac. Copy details",
         );
-        expect(runButtons(el)).toEqual(["Cancel", "Try again"]);
+        // The title says how it ended, never that it is still getting ready.
+        expect(title()).toBe("Setup didn't finish");
+        expect(foot()).toEqual(["Cancel", "Try again"]);
         expect(document.activeElement).toBe(button("Try again") ?? null);
-        // The computer dims.
-        expect(el.querySelector(".dk-fr__setup canvas")?.getAttribute("data-state")).toBe("paused");
-        // Try again runs it again (it fails the same way here).
         await press("Try again");
-        expect(runs).toBe(2);
-        await until(() => button("Try again"));
+        await until(() => runs === 2 && button("Try again"));
         await press("Cancel");
-        await until(() => el.querySelector("form.dk-fr__here"));
+        await until(() => step() === "where");
         expect(runs).toBe(2);
       },
       {
@@ -797,110 +804,218 @@ describe("Setting it up here", () => {
     );
   });
 
-  test("an error with no failed step still ends on a step, with its buttons", () =>
+  test("One click left: Tailscale's page a button away, no time limit, and Finish without it ends on this Mac", () =>
     firstRun(
       "first",
       async (screen) => {
-        const { el, until, button } = screen;
-        await startSetup(screen);
-        await until(() => button("Try again"));
-        const step = stepOf(el, "Creating your account") as HTMLElement;
-        expect(step.dataset.state).toBe("failed");
-        expect(step.querySelector(".dk-honest")?.textContent).toBe("Your account wasn't created. Copy details");
-        expect(runButtons(el)).toEqual(["Cancel", "Try again"]);
+        const { el, press, host, tailscale } = screen;
+        await toSetup(screen);
+        await until(() => el.querySelector(".dk-first__ask"));
+        const reach = stepOf(el, "Turning on access from anywhere") as HTMLElement;
+        expect(reach.dataset.state).toBe("active");
+        expect(reach.querySelector(".dk-first__ask")?.textContent).toStartWith(
+          "One click left. On the Tailscale page that opened, click Enable.",
+        );
+        expect([...reach.querySelectorAll(".dk-first__ask b")].map((b) => b.textContent)).toEqual([
+          "One click left.",
+          "Enable",
+        ]);
+        await press("Open the page");
+        expect(tailscale).toEqual(["https"]);
+        // Waiting on the person is never slow.
+        setSystemTime(new Date(Date.now() + 120_000));
+        try {
+          await act(() => new Promise((resolve) => setTimeout(resolve, 1100)));
+          expect(reach.querySelector(".dk-fr__steptime, .dk-fr__stepline")).toBeNull();
+        } finally {
+          setSystemTime();
+        }
+        await press("Finish without it");
+        await until(() => host.layer.route === null);
       },
-      {
-        here: { hold: "account", pace: 10 },
-        host: (host) => {
-          const install = host.installLocalServer;
-          // The steps arrive up to the account, then the app answers with an error and no failed step.
-          host.installLocalServer = async (choice) => {
-            void install(choice).catch(() => {});
-            await new Promise((resolve) => setTimeout(resolve, 150));
-            throw "account";
-          };
-        },
-      },
+      { here: { approve: true, pace: 10 } },
     ));
+
+  test("access that didn't turn on: why, with its fix, then Continue", () =>
+    firstRun(
+      "first",
+      async (screen) => {
+        const { el, press, host, foot, title } = screen;
+        await toSetup(screen);
+        await until(() => foot().includes("Continue"));
+        const reach = stepOf(el, "Turning on access from anywhere") as HTMLElement;
+        expect(reach.dataset.state).toBe("warn");
+        expect(reach.querySelector(".dk-fr__problem")?.textContent).toContain(
+          "HTTPS is off on your Tailscale network. Turn it on",
+        );
+        // Set up, with access still to see to.
+        expect(title()).toBe("Almost ready");
+        expect(foot()).toEqual(["Continue"]);
+        await press("Continue");
+        await until(() => host.layer.route === null);
+      },
+      { here: { fail: "reach", pace: 10 } },
+    ));
+
+  test("in Portuguese, on this PC", async () => {
+    await firstRun(
+      "first",
+      async (screen) => {
+        const { el, title, counter } = screen;
+        await toWhere(screen, { row: "Rodar grátis neste Mac" });
+        expect(counter()).toBe("Rodar neste Mac · 2 de 2");
+        await screen.press("Continuar");
+        await until(() => stepOf(el, "Criando a sua conta")?.dataset.state === "active");
+        expect(title()).toBe("Preparando tudo");
+        expect(screen.foot()).toEqual(["Cancelar"]);
+      },
+      { here: { hold: "account", pace: 10 }, lang: "pt-BR" },
+    );
+    await firstRun(
+      "windows",
+      async (screen) => {
+        await toWhere(screen, { row: "Run free on this PC" });
+        expect(screen.el.querySelector("#where-here")?.closest("label")?.textContent).toContain("Only on this PC");
+        expect(screen.el.querySelector(".dk-first__art canvas.ac-computer")?.getAttribute("data-kind")).toBe("windows");
+      },
+      { here: { hold: "account", pace: 10 } },
+    );
+  });
 
   test("shown again mid-setup, the window keeps the setup", () =>
     firstRun(
       "first",
       async (screen) => {
-        const { el, until, host } = screen;
-        await startSetup(screen);
+        const { el, host, step } = screen;
+        await toSetup(screen);
         await until(() => stepOf(el, "Creating your account")?.dataset.state === "active");
-        await act(async () => host.showWindow("welcome"));
-        expect(el.querySelector(".dk-fr__setup")).toBeTruthy();
+        await act(async () => host.showLayer({ screen: "firstRun" }));
+        expect(step()).toBe("setup");
         expect(stepOf(el, "Creating your account")?.dataset.state).toBe("active");
       },
       { here: { hold: "account", pace: 10 } },
     ));
-
-  test("on this PC: the monitor and the PC's words, and in Portuguese", async () => {
-    await firstRun(
-      "windows",
-      async (screen) => {
-        const { el, until } = screen;
-        await startSetup(screen, { place: "On this PC", start: "Start" });
-        await until(() => stepOf(el, "Creating your account")?.dataset.state === "active");
-        expect(el.querySelector(".dk-fr__setup canvas.ac-computer")?.getAttribute("data-kind")).toBe("windows");
-        expect(el.querySelector(".dk-fr__setup h1")?.textContent).toBe("Getting everything ready");
-        expect(stepOf(el, "Calling your agents")?.dataset.state).toBe("todo");
-      },
-      { here: { hold: "account", pace: 10 } },
-    );
-    await firstRun(
-      "first",
-      async (screen) => {
-        const { el, until } = screen;
-        await startSetup(screen, { place: "Neste Mac", start: "Começar" });
-        await until(() => stepOf(el, "Criando a sua conta")?.dataset.state === "active");
-        expect(el.querySelector(".dk-fr__setup h1")?.textContent).toBe("Preparando tudo");
-        expect(runButtons(el)).toEqual(["Cancelar"]);
-      },
-      { here: { hold: "account", pace: 10 }, lang: "pt-BR" },
-    );
-  });
 });
 
-describe("Add a workspace", () => {
-  /** The welcome window opened by the site's "Add workspace", with agentes.chat signed in here or not. */
-  const adding = (cloud: boolean, chosen: (string | undefined)[]) => (host: FakeHost) => {
-    host.welcomeMode = async () => "add";
-    host.workspaces = async () => [{ server: "https://app.agentes.chat", signedIn: cloud, orgs: [] }];
-    host.chooseServer = async (_server, page) => {
-      chosen.push(page);
-    };
-    host.hideWindow = async () => {};
-  };
-
-  test("not signed in to agentes.chat: the cloud's row signs in (the workspaces you have), a new one is the line", () => {
-    const chosen: (string | undefined)[] = [];
-    return firstRun(
-      "first",
-      async ({ press, until, button }) => {
-        await until(() => button("Want a new workspace?") || button("Create one"));
-        await press("In the agentes.chat cloud");
-        await press("Create one");
-        expect(chosen).toEqual(["/login", "/onboarding"]);
-        expect(button("Create an account")).toBeUndefined();
+describe("Done, take it to your phone", () => {
+  test("the code beside its three steps, the address with Copy, and Open agentes.chat the one way on", async () => {
+    const copied: string[] = [];
+    const clipboard = Object.getOwnPropertyDescriptor(window.navigator, "clipboard");
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          copied.push(text);
+        },
       },
-      { host: adding(false, chosen) },
-    );
+    });
+    try {
+      await firstRun(
+        "first",
+        async (screen) => {
+          const { el, press, step, title, foot, host, counter, button } = screen;
+          await toSetup(screen);
+          await until(() => step() === "done");
+          expect(counter()).toBe("Run on this Mac");
+          expect(title()).toBe("Done. Take it to your phone");
+          await until(() => el.querySelector('.dk-first__qr svg[role="img"]'));
+          expect(el.querySelector('.dk-first__qr svg[role="img"]')?.getAttribute("aria-label")).toBe(
+            "QR code to sign in on your phone",
+          );
+          expect([...el.querySelectorAll(".dk-first__numbered > li > b")].map((b) => b.textContent)).toEqual([
+            "Install the agentes.chat app",
+            "Install Tailscale and sign in with the same account",
+            "Point the camera at the code",
+          ]);
+          expect(el.querySelector(".dk-first__addr")?.textContent).toBe("Your address: ana-mac.tail1234.ts.netCopy");
+          expect(el.querySelector(".dk-first__addr b")?.textContent).toBe("ana-mac.tail1234.ts.net");
+          await press("Copy");
+          await until(() => button("Copied"));
+          expect(copied).toEqual(["https://ana-mac.tail1234.ts.net"]);
+          // One button: opening agentes.chat is also how the phone is left for later.
+          expect(foot()).toEqual(["Open agentes.chat"]);
+          await press("Open agentes.chat");
+          await until(() => host.layer.route === null);
+        },
+        { here: { pace: 10 } },
+      );
+    } finally {
+      if (clipboard) Object.defineProperty(window.navigator, "clipboard", clipboard);
+      else delete (window.navigator as { clipboard?: unknown }).clipboard;
+    }
   });
 
-  test("signed in to agentes.chat here already: the cloud's row makes a new workspace", () => {
-    const chosen: (string | undefined)[] = [];
-    return firstRun(
+  test("a code that didn't load says so, and tries again", () =>
+    firstRun(
       "first",
-      async ({ press, until, button }) => {
-        await until(() => button("Create a workspace on agentes.chat"));
-        expect(button("Create one")).toBeUndefined();
-        await press("Create a workspace on agentes.chat");
-        expect(chosen).toEqual(["/onboarding"]);
+      async (screen) => {
+        const { el, press, step } = screen;
+        await toSetup(screen);
+        await until(() => step() === "done");
+        await until(() => el.querySelector(".dk-first__problem"));
+        expect(el.querySelector(".dk-first__problem")?.textContent).toBe("The code didn't load. Try again");
+        expect(el.querySelector(".dk-first__addr")).toBeNull();
+        await press("Try again");
+        await until(() => el.querySelector('.dk-first__qr svg[role="img"]'));
       },
-      { host: adding(true, chosen) },
-    );
-  });
+      {
+        here: { pace: 10 },
+        host: (host) => {
+          const link = host.phoneLink;
+          let asks = 0;
+          host.phoneLink = () => (++asks === 1 ? Promise.reject("signed_out") : link());
+        },
+      },
+    ));
+});
+
+describe("Run here as it already is", () => {
+  test("no account left: it opens on the owner step, says so, and the name and email make the new owner", () =>
+    firstRun(
+      "here",
+      async (screen) => {
+        const { el, step, lead, submit, press, choices } = screen;
+        await until(() => step() === "owner");
+        expect(lead()).toBe("No account is left on it. Your name and email make you its new owner.");
+        const [name, email] = [...el.querySelectorAll(".dk-first__fields input")];
+        await act(async () => typeInto(name ?? null, "Carla Dias"));
+        await act(async () => typeInto(email ?? null, "carla@example.com"));
+        await submit("dk-first-owner");
+        await until(() => step() === "where");
+        await press("Continue");
+        await until(() => choices.length > 0);
+        expect(choices[0]).toMatchObject({ name: "Carla Dias", email: "carla@example.com" });
+      },
+      { here: { owner: false, hold: "account", pace: 10 } },
+    ));
+
+  test("erased from its settings: the owner step says where the old data went", () =>
+    firstRun("here", async ({ host, step, lead }) => {
+      await act(async () => {
+        await host.eraseLocalServer();
+      });
+      await until(() => step() === "owner");
+      expect(lead()).toBe("Erased. Its old data is in ~/agentes.chat erased 2026-11-14.");
+    }));
+
+  test("having run here before: no owner step, and where it is used says where its data still is", () =>
+    firstRun(
+      "here",
+      async ({ press, step, lead, counter }) => {
+        await press("Run free on this Mac");
+        await until(() => step() === "where");
+        expect(lead()).toBe("It ran here before, and its data is still in ~/.agentes.");
+        // Only this Mac, as it was: one step, so no count.
+        expect(counter()).toBe("Run on this Mac");
+      },
+      { here: { run: false } },
+    ));
+
+  test("running here already: one sentence, never its address, and Open it", () =>
+    firstRun("here", async ({ press, title, lead, button }) => {
+      await press("Run free on this Mac");
+      await until(() => title() === "agentes.chat already runs on this Mac");
+      expect(lead()).toBe("This app runs it. Open it to sign in.");
+      expect(button("Open it")).toBeTruthy();
+    }));
 });

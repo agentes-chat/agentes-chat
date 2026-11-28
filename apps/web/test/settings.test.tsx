@@ -135,14 +135,14 @@ describe("Configurações do workspace", () => {
     await go(seedState({ telemetry: { enabled: true, envOff: true, report: { report: 1, install: "desktop" } } }));
     const desktop = screen().getByRole("region", { name: "Estatísticas de uso" });
     expect(desktop.querySelector(".settings-row__status")?.textContent).toBe(
-      "Desligado no app do agentes.chat no computador deste servidor (Preferências\u00a0›\u00a0Servidores).",
+      "Desligado no app do agentes.chat no computador deste servidor (Configurações\u00a0›\u00a0Servidor neste Mac).",
     );
     expect(desktop.textContent).not.toContain("TELEMETRY=off");
     cleanup();
-    // In that app, on that very computer: the line says so and the button opens its Preferences › Servers.
+    // In that app, on that very computer: the line says so and the button opens its Server on this Mac, at the switch.
     const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
     const asked: Record<string, unknown>[] = [];
-    win.__agentesDesktop = { version: "0.8.6" };
+    win.__agentesDesktop = { version: "0.20.0", settings: 1 };
     win.__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args: { request?: Record<string, unknown> }) => {
         if (cmd !== "this_mac" || !args.request) return {};
@@ -154,9 +154,16 @@ describe("Configurações do workspace", () => {
       await go(seedState({ telemetry: { enabled: true, envOff: true, report: { report: 1, install: "desktop" } } }));
       const here = screen().getByRole("region", { name: "Estatísticas de uso" });
       expect(here.querySelector(".settings-row__status")?.textContent).toBe(
-        "Desligado no app do agentes.chat deste computador.Abrir Servidores",
+        "Desligado no app do agentes.chat deste computador.Abrir Servidor neste Mac",
       );
-      await click(within(here).getByRole("button", { name: "Abrir Servidores" }));
+      await click(within(here).getByRole("button", { name: "Abrir Servidor neste Mac" }));
+      expect(asked).toContainEqual({ kind: "settings", section: "server", focus: "telemetry" });
+      // An app from before This Mac's settings: its Preferences, on Servers.
+      cleanup();
+      win.__agentesDesktop = { version: "0.8.6" };
+      await go(seedState({ telemetry: { enabled: true, envOff: true, report: { report: 1, install: "desktop" } } }));
+      const before = screen().getByRole("region", { name: "Estatísticas de uso" });
+      await click(within(before).getByRole("button", { name: "Abrir Servidor neste Mac" }));
       expect(asked).toContainEqual({ kind: "prefs", tab: "servers" });
     } finally {
       delete win.__agentesDesktop;

@@ -193,8 +193,9 @@ build isn't notarized by Apple yet and the Windows installer isn't signed, so th
 **System Settings › Privacy & Security › Open Anyway**, right after you try to open it; Windows: **More info ›
 Run anyway**). `/download` shows each step with pictures. Then:
 
-1. On its first screen, under **Sign in to agentes.chat**, click **Use your own server**, then
-   **Connect to my server**.
+1. On its first screen, under **Other ways to use it**, click **Sign in to my company's server**. A
+   server found on this computer or on your tailnet shows on top of that first screen, with its own
+   button.
 2. Type your address (`https://agentes.<your-tailnet>.ts.net`), or click **Use** next to one the app
    found: it looks on this computer and, when Tailscale is connected, on your tailnet. Plain http works
    only for an instance on the same computer (`http://127.0.0.1:…`), which the app then opens at the
@@ -202,15 +203,15 @@ Run anyway**). `/download` shows each step with pictures. Then:
 3. Sign in, as in the browser. The link the setup prints at the end (`agenteschat://connect?…`) does
    steps 1 and 2 for you; the app shows the address in large type and asks before it connects.
 
-**Servers** in the app's Preferences (and its menus) switches between instances; each keeps its own
-sign-in.
+The site's workspace switcher (and the app's menus) switches between instances; each keeps its own
+sign-in. The servers the app opens are also listed in **Settings › This Mac › App settings**.
 
 - **Agents on that computer:** in the instance's onboarding or **Settings › Devices**, click **Use
   this Mac** (**Use this PC** on Windows, **Use this computer** on Linux). The app asks first, in its
   own dialog naming the instance and the organization. Its agents start with commands, the browser and
   Claude Code or Codex when the computer has them, and no folders of yours. Commands are on by
-  default. Turn them off in the app's **Preferences › Tools**, where each workspace on the computer
-  has its own switch. Folders are added in **Preferences › Folders**. The app pairs a computer
+  default. Turn them off in the app's **Settings › This Mac › Folders and tools**, where each workspace
+  on the computer has its own switch. Folders are added there too. The app pairs a computer
   with agentes.chat Cloud the same way. Until you pair it,
   nothing of the computer is used. The app never offers the computer that runs the instance: its agents
   work there through the instance itself (This server as the agents' computer, below).
@@ -618,17 +619,34 @@ It listens on this computer only (`127.0.0.1`), and answers only at its own addr
 `localhost`, it sends the browser there). To reach it from your phone or a teammate's computer, put it
 on your tailnet with `tailscale serve` (on this computer:
 `tailscale serve --bg --https=443 http://127.0.0.1:4310`) and set `PUBLIC_URL` in `~/.agentes/.env` to
-the `https://…ts.net` address it prints, then start it again. The desktop app does both with one
-switch.
+the `https://…ts.net` address it prints, then start it again. The desktop app does both for you, through
+the Tailscale you installed, or uses an address of your own instead (below).
 
-**From the desktop app** (macOS, Windows and Linux). On its first screen, click **Use your own server**,
-then **Run agentes.chat on this Mac** (this PC on Windows, this computer on Linux). On Windows the folder is
-`%USERPROFILE%\.agentes`. Your name comes from this computer; type
-your email (your team sees it). **Reach it from your phone and teammates** puts it on your tailnet
-(off; you can turn it on later), and **Send anonymous usage statistics** is on (it writes `TELEMETRY`
-in `~/.agentes/.env`). **Start agentes.chat** then prepares the folder and the database (the first time
-takes a little longer), starts it, creates your owner account, makes this computer your agents'
-computer and opens agentes.chat, signed in.
+**From the desktop app** (macOS, Windows and Linux). On its first screen, under **Other ways to use it**,
+click **Run free on this Mac** (this PC on Windows, this computer on Linux). On Windows the folder is
+`%USERPROFILE%\.agentes`. Three steps, all in the app's one window:
+
+1. **Who will be the owner?** Your name and email (your team sees it). **Send anonymous usage
+   statistics** is on (it writes `TELEMETRY` in `~/.agentes/.env`).
+2. **Where will you use it?** Only on this computer, or also on your phone and with your team. You can
+   change it any time in **Settings › This Mac › Server on this Mac**.
+3. **How do the phone and the team get here?** (only with the second) The app carries no network
+   software of its own; pick one:
+   - **Tailscale**, installed from Tailscale's own download page (on a Mac its standalone download: the
+     App Store one can't share). The app reads the Tailscale on this computer; when it is missing or
+     signed out, the step says what to do and waits, with no time limit, until it is connected. Then
+     it shares the server on your tailnet with `tailscale serve` over HTTPS (never Funnel). Already
+     connected, this step is skipped.
+   - **An address of your own**: a tunnel or proxy running on this computer that leads to
+     `http://127.0.0.1:<PORT>` (the step shows the port, with Copy). It must be `https://`, with no
+     path. The app checks that it leads to this very server before and after moving `PUBLIC_URL` to
+     it, and says why when it doesn't (not https, doesn't open, another server, an error).
+
+It then prepares the folder and the database (the first time takes a little longer), starts it,
+creates your owner account, makes this computer your agents' computer and opens agentes.chat, signed
+in; with the phone and the team, it ends with the phone's QR code. The window on this computer always
+opens it at `http://127.0.0.1:<PORT>`, so an outage of Tailscale or of your tunnel never locks you out
+here; the phone, the team and the links the site hands out use the address for people (`PUBLIC_URL`).
 
 - **It runs inside the app.** It starts with the app (Open at login turns on), starts again by itself
   if it stops, and stops when you quit the app (which asks first: nobody can use it until you open the
@@ -639,35 +657,39 @@ computer and opens agentes.chat, signed in.
   so the app trusts the server only once its own process answers there (it names itself in
   `~/.agentes/server.json`, which only you can write). Until then nothing of yours goes to that port: not
   your sign-in, not this computer's token, not your agents' connections (they pause while it is down).
-  If something else holds the port when it starts, it moves to a free one. With reach on, Tailscale
-  shares it only while it runs.
+  If something else holds the port when it starts, it moves to a free one. With reach on through
+  Tailscale, Tailscale shares it only while it runs.
 - **Agents with Commands on can reach everything on this Mac**, the server's data in `~/.agentes`
-  included. Commands are on by default. Turn them off in the app's **Preferences › Tools**.
+  included. Commands are on by default. Turn them off in the app's **Settings › This Mac › Folders and
+  tools**.
 - **No password:** the app signs you in, and on its sign-in screen **Continue on this Mac** does it again
   whenever your session ends, for as long as your account exists. For a browser on another device, add one in
   **Settings › Your account**, **Add a password**.
 - **When the owner deletes their account** (**Settings › Your account**), it goes for good 7 days later,
   with the workspaces only they were in; before then, signing in and pressing **Restore account** brings it
-  back. After that, with no account left, the app opens its welcome window on the account step to make a new
+  back. After that, with no account left, the app opens its first run on the owner step to make a new
   owner. With other accounts left, **Continue on this Mac** signs no one in, and each person signs in with
   their own email.
-- **Preferences › Servers › agentes.chat on this Mac:** reach (Tailscale needs HTTPS turned on for your
-  tailnet, which **Turn it on** opens; on Linux, connect Tailscale with `sudo tailscale up`, and run
-  `sudo tailscale set --operator=$USER` once), the phone's QR code, usage statistics, **Back up now**
-  (`~/.agentes/backups/agentes-<date>.tar.gz`, with the database, the files and `.env`), Restart, Stop,
-  and **Stop running it here…**, which keeps its data and stops its agents here; **Start it here** there
-  brings both back.
+- **Settings › This Mac › Server on this Mac:** Restart; **Reach from anywhere**, its address for
+  people with Copy and the way it goes, **Change** to pick the other way and **Turn off** (through
+  Tailscale, HTTPS must be on for your tailnet, which **Open Tailscale's page** opens; on Linux, connect
+  Tailscale with `sudo tailscale up`, and run `sudo tailscale set --operator=$USER` once; while
+  something keeps people from it, that row says what and its one fix, and the app checks it every
+  minute); the phone's QR code and inviting your team while people can reach it; the nightly backup
+  and a copy elsewhere; **Back up now** (`~/.agentes/backups/agentes-<date>.tar.gz`, with the database,
+  the files and `.env`), Stop, and **Stop running it here…**, which keeps its data and stops its agents
+  here; **Start it here** there brings both back. Usage statistics are in **App settings**.
 - **Erase and start over…**, beside it: stops it, moves `~/.agentes` whole to
   `~/agentes.chat erased <YYYY-MM-DD>` (a number after it when that name is taken), deletes its agents'
   homes for this computer in `~/.agentes-runner/orgs`, forgets its addresses and their sign-ins in the
-  app, and opens the welcome window for a new setup with a new owner. Its workspaces go for everyone; the
+  app, and opens the first run for a new setup with a new owner. Its workspaces go for everyone; the
   agents' files in `~/agentes` stay. Only for the folder the app made, never a terminal install's.
   To bring it back: quit the app, move a newer `~/.agentes` out of the way, rename the erased folder to
   `~/.agentes`, and set it up on this computer again. It starts with its workspaces and its owner (the
   owner key is in the folder); its agents' homes are gone, so they sign in again.
 - **The Trash removes nothing.** All of the above lives outside the app, so trashing it leaves every folder
   and doesn't stop a running app. To remove it entirely, in this order: turn off **Open at login**
-  (**Preferences › General**), quit the app (**Quit agentes.chat**: on a Mac in the agentes.chat menu or
+  (**Settings › This Mac › App settings**), quit the app (**Quit agentes.chat**: on a Mac in the agentes.chat menu or
   ⌘Q, on Windows and Linux from its icon by the clock; **Quit** if it asks; closing the window only hides
   it), delete the app, stop a server you installed in `~/.agentes` from the terminal with its own
   `~/.agentes/app/<version>/bin/agentes-server service uninstall` (quitting the app doesn't stop it), then
@@ -1235,8 +1257,8 @@ either way:
 answering, an agent's run that failed, the desktop app's server that won't start) and in **Settings → General**,
 **Send a report** shows a report in full, then sends it to the agentes.chat team only when someone presses **Send**,
 so it goes even with `TELEMETRY=off`. The server posts it as JSON to `PROBLEM_REPORT_URL`
-(`https://telemetry.agentes.chat/v1/problem-report`); the desktop app posts its own (its cover and Preferences →
-Activity) when the server is down or out of reach. Set `PROBLEM_REPORT_URL=off` and the button only copies the
+(`https://telemetry.agentes.chat/v1/problem-report`); the desktop app posts its own (its cover and Settings →
+This Mac → Activity) when the server is down or out of reach. Set `PROBLEM_REPORT_URL=off` and the button only copies the
 report. A report holds:
 
 | Field | What it is |

@@ -1,6 +1,6 @@
 {
   "identifier": "cover",
-  "description": "The main window's cover (cover.rs): a page of the app over the server's page. It may drag the window, ask which server is open, load it again once it is reachable, step aside, or stay over a server whose app API this app doesn't speak; for the server here, start it, turn reach off, copy its details or send a report of them (with this computer's system, size, the web view's memory and the opening's time), read Tailscale's state (whether there is its app to open) or open Tailscale; for a server out of reach or the server here stopped, open the welcome window or another server of the app's list. Nothing of the server's page, the runners or this computer.",
+  "description": "The main window's cover (cover.rs): a page of the app over the server's page. It may drag the window, ask which server is open, load it again once it is reachable, step aside, or stay over a server whose app API this app doesn't speak; for the server here, start it, copy its details or send a report of them (with this computer's system, size, the web view's memory and the opening's time), for a workspace on a Tailscale network it can't reach, name it (the workspaces the app keeps), read Tailscale's state (whether it is installed, on, and has its app to open) and open or download it (ADR 0265 §4); for a server out of reach or the server here stopped, open the first run on another server (the app layer, ADR 0265) or another server of the app's list. Nothing of the server's page, the runners or this computer.",
   "webviews": ["main-cover"],
   "permissions": [
     "core:window:allow-start-dragging",
@@ -13,14 +13,14 @@
     "allow-server-choose",
     "allow-local-server-status",
     "allow-local-server-start",
-    "allow-local-server-reach",
     "allow-local-server-diagnostics",
     "allow-problem-report-parts",
     "allow-problem-report-on",
     "allow-problem-report-send",
     "allow-problem-report-facts",
-    "allow-show-window",
+    "allow-layer-show",
     "allow-tailscale-status",
-    "allow-tailscale-open"
+    "allow-tailscale-open",
+    "allow-workspaces-get"
   ]
 }
