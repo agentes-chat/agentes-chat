@@ -1,6 +1,7 @@
 import { type ErrorBoundaryProps, type NativeStackNavigationOptions, Stack } from "expo-router";
 import { useMemo } from "react";
 import { slideListeners } from "@/agent/live";
+import { opensWithZoom } from "@/features/files/MediaLink";
 import { isStill, STILL_PARAM } from "@/features/links/landing";
 import { ScreenError } from "@/features/shared/ScreenError";
 import { coverBarOptions, usePushedOptions, useScrollUnderPushedOptions, useSideInsets, useTheme } from "@/ui";
@@ -163,7 +164,11 @@ export default function MainStack() {
     };
     return ({ route }: { route: { name: string; params?: object } }): NativeStackNavigationOptions => {
       const options = own[route.name] ?? page;
-      return isStill(route.params) ? { ...options, animation: "none" } : options;
+      if (isStill(route.params)) return { ...options, animation: "none" };
+      // Opened with the system's zoom (`MediaLink`): the stack's own push, which the zoom takes over. Any animation
+      // of the stack's own (the viewer's fade) runs its own animator instead, and the zoom never shows.
+      if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };
+      return options;
     };
   }, [colors, pushed, scrollUnder, side]);
   return (

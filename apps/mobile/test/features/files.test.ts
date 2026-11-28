@@ -260,7 +260,11 @@ describe("viewer", () => {
     const viewer = src("features/files/ImageViewer.tsx");
     // A picture from the copy already on the phone (no link to wait for); a video on the cover its message showed.
     expect(viewer).toContain("const picture = usePicture(orgId, video ? null : id, version);");
-    expect(viewer).toContain("const poster = keptStill(pictureKey(id, version));");
+    // Its tile's cover and link, handed on the touch (`handoff.ts`), before anything kept from before.
+    expect(viewer).toContain("const poster = handed?.frame ?? keptStill(pictureKey(id, version));");
+    expect(viewer).toContain("const [handed] = useState(() => takeVideo(pictureKey(id, version)));");
+    expect(viewer).toContain("const link = useRemoteFile(orgId, fromTile ? null : id, version, { once: true });");
+    expect(viewer).toContain("onFailed={() => (fromTile ? setOwnLink(true) : setUnplayable(true))}");
     expect(viewer).toContain(
       'const video = info ? info.view === "video" : view ? view === "video" : artifact.isError ? false : null;',
     );
@@ -299,6 +303,15 @@ describe("viewer", () => {
     expect(viewer).toContain("enabled: ownPull && active && !zoomed && !paging,");
     expect(viewer).toContain("ownPull={!zoom}");
     expect(src("../app/(app)/(main)/images.tsx")).toContain('zoom={zoom === "1"}');
+    // The zoom's push is the stack's own: the viewer's fade would run its own animator and the zoom never show.
+    expect(src("../app/(app)/(main)/_layout.tsx")).toContain(
+      'if (route.name === "images" && opensWithZoom(route.params)) return { ...options, animation: "default" };',
+    );
+    // The tile hands its cover and link on the touch, under the page's own key.
+    expect(player).toContain(
+      "handVideo(pictureKey(opens.file.id, viewerVersion(opens.file)), source, linkReadAt, frame)",
+    );
+    expect(player).toContain("onPressIn={() => onHand?.(still?.frame ?? null)}");
   });
 
   test("‹ › go one picture at a time and never round past the first or the last", () => {
@@ -649,8 +662,10 @@ describe("viewer", () => {
     expect(source).toContain("refetchOnReconnect: false,");
     expect(source).toContain('queryKey: once ? [...shared, "once", view] : shared,');
     const viewer = src("features/files/ImageViewer.tsx");
-    expect(viewer).toContain("useRemoteFile(orgId, id, version, { once: true })");
-    expect(viewer).toMatch(/key=\{`\$\{id\}@\$\{version \?\? "latest"\}`\}/);
+    // Its own link once, unless its tile handed one (`handoff.ts`).
+    expect(viewer).toContain("useRemoteFile(orgId, fromTile ? null : id, version, { once: true })");
+    // One player per version, and a new one only when the tile's handed link gives way to its own.
+    expect(viewer).toMatch(/key=\{`\$\{id\}@\$\{version \?\? "latest"\}\$\{fromTile \? "" : ":own"\}`\}/);
     const message = src("features/files/MessageFiles.tsx");
     expect(message).toContain("useRemoteFile(orgId, file.id, file.version, { once: true })");
     expect(message).toMatch(/key=\{`\$\{file\.id\}@\$\{file\.version \?\? "latest"\}`\}/);

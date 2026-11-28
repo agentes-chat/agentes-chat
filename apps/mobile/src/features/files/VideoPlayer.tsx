@@ -15,8 +15,10 @@ import { CHROME_MAX_SCALE, Icon, PressScale } from "@/ui";
 import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { onVoiceStarts, stopPlayback } from "../voice/playback";
-import { type FileRef, stillAt, videoClock, videoHeight } from "./logic";
+import { handVideo } from "./handoff";
+import { type FileRef, stillAt, videoClock, videoHeight, viewerVersion } from "./logic";
 import { MediaLink, ZoomSource } from "./MediaLink";
+import { pictureKey } from "./source";
 
 /**
  * Android draws a video on a SurfaceView by default, a window of its own that ignores the rounded corners it sits in
@@ -187,6 +189,8 @@ onVoiceStarts(pauseCurrent);
 export interface VideoPlayerProps {
   /** Where it plays from, with the session when the link is ours. */
   source: { uri: string; headers?: Record<string, string> };
+  /** When `source` was read: handed to the viewer it opens while it has life ahead (`handVideo`). */
+  linkReadAt?: number | undefined;
   /** Its still's key, the same for every link to this version of the file (`pictureKey`). */
   stillKey: string;
   name: string;
@@ -206,11 +210,27 @@ export interface VideoPlayerProps {
  * plays it at once with the platform's controls (play, the timeline to drag, full screen and back out of it, AirPlay),
  * so it feels like every other video on the phone, with no controls of ours to get stuck behind.
  */
-export function VideoPlayer({ source, stillKey, name, width = 300, height, opens, onFailed }: VideoPlayerProps) {
+export function VideoPlayer({
+  source,
+  linkReadAt = 0,
+  stillKey,
+  name,
+  width = 300,
+  height,
+  opens,
+  onFailed,
+}: VideoPlayerProps) {
+  // On the touch, the viewer about to open gets the cover shown here and the link held here (`handoff.ts`): it opens
+  // on the cover and starts playing from the link, never on black while it asks for its own.
+  const hand = opens
+    ? (frame: VideoThumbnail | null) =>
+        handVideo(pictureKey(opens.file.id, viewerVersion(opens.file)), source, linkReadAt, frame)
+    : undefined;
   const tile = (press: (() => void) | undefined) => (
     <InlineVideo
       source={source}
       stillKey={stillKey}
+      onHand={hand}
       name={name}
       width={width}
       height={height ?? videoHeight(width)}
@@ -236,10 +256,13 @@ function InlineVideo({
   width,
   height,
   onPress,
+  onHand,
   onFailed,
 }: {
   source: VideoPlayerProps["source"];
   stillKey: string;
+  /** On the touch: hands the viewer this cover (`handVideo`). */
+  onHand?: ((frame: VideoThumbnail | null) => void) | undefined;
   name: string;
   width: number;
   height: number;
@@ -265,6 +288,7 @@ function InlineVideo({
     // Opening it is navigation, as opening a picture: the press shows it, no tap.
     <PressScale
       haptic={false}
+      onPressIn={() => onHand?.(still?.frame ?? null)}
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"

@@ -353,6 +353,12 @@ export function encodeFileList(
     .join(",");
 }
 
+/**
+ * The version a viewer's page shows: the one the place names (a message's own, which its tile drew), else the one its
+ * details show. The tile and the page read the same cache entry and hand-off (`pictureKey`) with it.
+ */
+export const viewerVersion = (ref: FileRef): number | undefined => ref.version ?? ref.detail?.shownVersion;
+
 /** A file's picture or video, by its details or else its name; undefined when neither says. */
 export function mediaViewOf(ref: FileRef): MediaView | undefined {
   if (ref.detail) {
@@ -433,9 +439,7 @@ export function fileRoute(ref: FileRef, siblings?: readonly FileRef[], from?: st
   return {
     pathname: "/images",
     params: {
-      files: encodeFileList(
-        pages.map((f) => ({ id: f.id, version: f.detail?.shownVersion ?? f.version, view: mediaViewOf(f) })),
-      ),
+      files: encodeFileList(pages.map((f) => ({ id: f.id, version: viewerVersion(f), view: mediaViewOf(f) }))),
       at: String(Math.max(at, 0)),
       ...(from ? { from } : {}),
     },

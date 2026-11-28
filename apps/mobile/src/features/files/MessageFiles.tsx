@@ -362,6 +362,7 @@ function InlineVideo({
         <VideoPlayer
           key={`${file.id}@${file.version ?? "latest"}`}
           source={source}
+          linkReadAt={link.dataUpdatedAt}
           stillKey={pictureKey(file.id, file.version)}
           name={info?.name || file.title}
           width={box.width}

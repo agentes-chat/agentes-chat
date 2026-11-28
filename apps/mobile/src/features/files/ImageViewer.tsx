@@ -41,6 +41,7 @@ import { FileTalkLine } from "../live-files/talk/TalkLine";
 import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { savedAt, useFileActions, useSavedWhen } from "./actions";
+import { takeVideo } from "./handoff";
 import { decodeFileList, fileInfo, type MediaView, pageStep } from "./logic";
 import { ZoomTarget } from "./MediaLink";
 import { pictureKey, usePicture, useRemoteFile } from "./source";
@@ -613,7 +614,13 @@ function PageVideo({
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const link = useRemoteFile(orgId, id, version, { once: true });
+  // What its tile handed on the touch (`handoff.ts`), taken once: its cover, and its link while it has life ahead.
+  const [handed] = useState(() => takeVideo(pictureKey(id, version)));
+  // The tile's link failed to play: a link of its own instead, before saying it can't play.
+  const [ownLink, setOwnLink] = useState(false);
+  const fromTile = handed?.source && !ownLink ? handed.source : null;
+  // A link of its own only when the tile handed none (opened from the Drive, a link, a notice, or an old link).
+  const link = useRemoteFile(orgId, fromTile ? null : id, version, { once: true });
   // Its player: the moment it is at, read when its conversation opens.
   const player = useRef<Player | null>(null);
   const ownPlayer = useCallback((p: Player | null) => {
@@ -635,9 +642,12 @@ function PageVideo({
     };
   }, [active, videoClock]);
   const [unplayable, setUnplayable] = useState(false);
-  const source = useMemo(() => (link.data ? { uri: link.data.uri, headers: link.data.headers } : null), [link.data]);
-  // The cover its message showed: it opens on it, never on black, while the link and the player get ready.
-  const poster = keptStill(pictureKey(id, version));
+  const source = useMemo(
+    () => fromTile ?? (link.data ? { uri: link.data.uri, headers: link.data.headers } : null),
+    [fromTile, link.data],
+  );
+  // The cover its message showed: it opens on it, never on black, while the player gets ready.
+  const poster = handed?.frame ?? keptStill(pictureKey(id, version));
   return (
     <View style={[styles.videoFrame, { top: bars.top, bottom: bars.bottom }]}>
       {unplayable ? (
@@ -649,11 +659,11 @@ function PageVideo({
         </View>
       ) : source ? (
         <ViewerVideo
-          key={`${id}@${version ?? "latest"}`}
+          key={`${id}@${version ?? "latest"}${fromTile ? "" : ":own"}`}
           source={source}
           name={name}
           active={active}
-          onFailed={() => setUnplayable(true)}
+          onFailed={() => (fromTile ? setOwnLink(true) : setUnplayable(true))}
           startAt={startAt}
           onPlayer={ownPlayer}
           poster={poster}

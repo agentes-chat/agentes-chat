@@ -85,7 +85,7 @@ describe("the start screen at launch", () => {
     expect(isStill({ still: "1" })).toBe(true);
     expect(isStill({ still: undefined })).toBe(false);
     expect(isStill(undefined)).toBe(false);
-    expect(mainLayout()).toContain('return isStill(route.params) ? { ...options, animation: "none" } : options;');
+    expect(mainLayout()).toContain('if (isStill(route.params)) return { ...options, animation: "none" };');
     expect(read("src/features/me/useStart.ts")).toContain("router.push(stillHref(href) as never)");
     expect(read("app/(app)/(main)/chat/[channelId].tsx")).toContain("useSettleStill(params);");
     expect(read("src/ui/navigation.tsx")).toContain("router.setParams({ [STILL_PARAM]: undefined })");

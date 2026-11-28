@@ -13,6 +13,10 @@ export const NATIVE_ZOOM = Platform.OS === "ios" && Number.parseFloat(String(Pla
 /** The viewer's param for a viewer opened with the system's zoom: its swipe down is the system's, back into the tile. */
 export const ZOOM_PARAM = "zoom";
 
+/** A viewer's route params that say it opened with the system's zoom (`ZOOM_PARAM`). */
+export const opensWithZoom = (params: object | undefined) =>
+  NATIVE_ZOOM && (params as Record<string, unknown> | undefined)?.[ZOOM_PARAM] === "1";
+
 /** Inside a `MediaLink` that zooms: only there may a `ZoomSource` be the zoom's (the link holds its identity). */
 const InZoomLink = createContext(false);
 
