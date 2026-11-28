@@ -13,7 +13,33 @@
       "camera": "Agen memerlukannya untuk memakai kamera {{device}} ini.",
       "microphone": "Agen memerlukannya untuk memakai mikrofon {{device}} ini.",
       "automation": "Agen memerlukannya untuk mengendalikan app lain di {{device}} ini."
-    }
+    },
+    "by": "Diminta oleh {{agent}}",
+    "how": "Cara mengizinkannya",
+    "steps": {
+      "settings": "Buka Pengaturan Sistem › Privasi & Keamanan › {{pane}}.",
+      "prefs": "Buka Preferensi Sistem › Keamanan & Privasi › Privasi › {{pane}}, lalu klik gembok untuk membuat perubahan.",
+      "turnOn": "Aktifkan agentes.chat.",
+      "turnOnAdd": "Aktifkan agentes.chat. Tidak ada di daftar? Klik +, lalu pilih agentes.chat di Aplikasi.",
+      "automation": "Di bawah agentes.chat, aktifkan app yang ingin dikendalikan agen.",
+      "reopen": "Saat macOS bertanya, pilih Keluar & Buka Ulang: agentes.chat terbuka lagi di sini dan agen lanjut sendiri.",
+      "back": "Kembali ke sini dan klik Sudah saya izinkan."
+    },
+    "panes": {
+      "screen": "Perekaman Layar",
+      "screen15": "Perekaman Layar & Audio Sistem",
+      "disk": "Akses Disk Penuh",
+      "accessibility": "Aksesibilitas",
+      "automation": "Otomatisasi",
+      "app_management": "Manajemen App",
+      "network": "Jaringan Lokal",
+      "camera": "Kamera",
+      "microphone": "Mikrofon"
+    },
+    "onTitle": "{{permission}} sudah aktif",
+    "goesOn": "{{agent}} melanjutkan pekerjaannya.",
+    "goOn": "Agen yang menunggu melanjutkan pekerjaan mereka.",
+    "ok": "Selesai"
   },
   "device": {
     "mac": "Mac",

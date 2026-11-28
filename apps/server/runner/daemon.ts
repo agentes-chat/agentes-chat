@@ -174,7 +174,7 @@ import {
   writeNetworkState,
 } from "./network-state";
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
-import { PermissionNeeds } from "./os-permissions";
+import { fullDiskAccess, PERMISSION_NEEDS_FILE, PermissionNeeds, screenAllowed, screenShimDir } from "./os-permissions";
 import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
 import { ackPark, takePark } from "./park";
 import { agentId8, agentWorkspace } from "./paths";
@@ -478,6 +478,9 @@ export interface DaemonOptions {
   selfCheckRetryMs?: number;
   /** Tests: what `hello.toolchains` says instead of a look at the computer's tools. */
   toolchains?: () => RunnerToolchains | undefined;
+  /** Tests: whether macOS's Screen Recording is on for the app (`screenAllowed`), and how often a wait is read again. */
+  screenAllowed?: () => Promise<boolean | null>;
+  permissionReadEveryMs?: number;
   /** Tests: the system whose refusals a failed command's output is read for (`permissionOfOutput`). */
   platform?: string;
   /** Tests: the phones' tools and folders, or `false` for none (a single-user runner looks for phones). */
@@ -624,10 +627,7 @@ export class RunnerDaemon implements RequestObserver {
   /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
   private iphone: IphoneSetup | null = null;
   /** The OS permissions agents' work waits on here: the app asks the person, the server shows the wait. */
-  private readonly permissionNeeds = new PermissionNeeds((permissions) => {
-    this.send({ type: "permissions.changed", permissions });
-    this.queueStatus();
-  });
+  private readonly permissionNeeds: PermissionNeeds;
   /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
   private holds: Holds | null = null;
   /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
@@ -660,6 +660,19 @@ export class RunnerDaemon implements RequestObserver {
     this.activity = new ActivityLog(opts.home);
     this.now = opts.now ?? Date.now;
     this.requests = new AccessRequests(opts.home, this.now);
+    this.permissionNeeds = new PermissionNeeds(
+      (permissions, allowed) => {
+        const sent = this.send({ type: "permissions.changed", permissions, ...(allowed.length ? { allowed } : {}) });
+        this.queueStatus();
+        return sent;
+      },
+      {
+        now: this.now,
+        file: path.join(opts.home, PERMISSION_NEEDS_FILE),
+        isOn: (p) => (p === "screen" ? this.screenOn() : p === "disk" ? fullDiskAccess() : null),
+        ...(opts.permissionReadEveryMs ? { readEveryMs: opts.permissionReadEveryMs } : {}),
+      },
+    );
     const proc = currentProcess();
     this.self = opts.self ?? { command: selfCommand(proc), compiled: isCompiled(proc) };
     this.refreshPath = opts.refreshPath ?? (process.platform === "win32" ? () => adoptLoginPath() : undefined);
@@ -1146,6 +1159,7 @@ export class RunnerDaemon implements RequestObserver {
     this.stopped = true;
     this.stopWatch?.();
     this.stopStandbyWatch?.();
+    this.permissionNeeds.stop();
     for (const t of this.timers) clearInterval(t);
     if (this.sharedLoginRetry) clearTimeout(this.sharedLoginRetry);
     this.desktops.close();
@@ -1842,6 +1856,14 @@ export class RunnerDaemon implements RequestObserver {
       workspaceReal,
       ...(this.opts.platform ? { platform: this.opts.platform } : {}),
       appAsks: config.managedBy === "desktop",
+      ...(config.managedBy === "desktop"
+        ? {
+            screen: async () => {
+              const on = await this.screenOn();
+              return on === false ? { on, shim: screenShimDir(home) } : { on };
+            },
+          }
+        : {}),
       get exec() {
         return daemon.access().tools.commands;
       },
@@ -1993,6 +2015,8 @@ export class RunnerDaemon implements RequestObserver {
         this.updateStartPages();
         void this.sampleEgress();
         this.flushDecisions();
+        this.permissionNeeds.flush();
+        this.permissionNeeds.start();
         this.syncLogo(config);
         this.executorsChanged();
         const accounts = this.accounts.snapshot();
@@ -2517,6 +2541,10 @@ export class RunnerDaemon implements RequestObserver {
     const executors = this.executors();
     const seen = JSON.stringify(executors);
     if (seen !== this.lastExecutors && this.send({ type: "executors.changed", executors })) this.lastExecutors = seen;
+  }
+
+  private screenOn() {
+    return this.opts.screenAllowed ? this.opts.screenAllowed() : screenAllowed(this.opts.platform);
   }
 
   private send(frame: RunnerFrame) {

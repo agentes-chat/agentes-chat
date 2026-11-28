@@ -13,7 +13,33 @@
       "camera": "Ajanların bu {{device}} kamerasını kullanması için gerekli.",
       "microphone": "Ajanların bu {{device}} mikrofonunu kullanması için gerekli.",
       "automation": "Ajanların bu {{device}} üzerindeki diğer uygulamaları kontrol etmesi için gerekli."
-    }
+    },
+    "by": "{{agent}} istedi",
+    "how": "Nasıl izin verilir",
+    "steps": {
+      "settings": "Sistem Ayarları › Gizlilik ve Güvenlik › {{pane}} bölümünü açın.",
+      "prefs": "Sistem Tercihleri › Güvenlik ve Gizlilik › Gizlilik › {{pane}} bölümünü açın ve değişiklik yapmak için kilide tıklayın.",
+      "turnOn": "agentes.chat’i açın.",
+      "turnOnAdd": "agentes.chat’i açın. Listede yok mu? + düğmesine tıklayın ve Uygulamalar’dan agentes.chat’i seçin.",
+      "automation": "agentes.chat altında, ajanın denetlemek istediği uygulamayı açın.",
+      "reopen": "macOS sorduğunda Çık ve Yeniden Aç’ı seçin: agentes.chat burada yeniden açılır ve ajan kendiliğinden devam eder.",
+      "back": "Buraya dönün ve İzin verdim’e tıklayın."
+    },
+    "panes": {
+      "screen": "Ekran Kaydı",
+      "screen15": "Ekran ve Sistem Sesi Kaydı",
+      "disk": "Tam Disk Erişimi",
+      "accessibility": "Erişilebilirlik",
+      "automation": "Otomasyon",
+      "app_management": "Uygulama Yönetimi",
+      "network": "Yerel Ağ",
+      "camera": "Kamera",
+      "microphone": "Mikrofon"
+    },
+    "onTitle": "{{permission}} açık",
+    "goesOn": "{{agent}} yaptığı işe devam ediyor.",
+    "goOn": "Bekleyen ajanlar yaptıkları işe devam ediyor.",
+    "ok": "Bitti"
   },
   "device": {
     "mac": "Mac",

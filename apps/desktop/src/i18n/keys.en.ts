@@ -17,6 +17,37 @@ export const desktopEn = {
       microphone: "Agents need it to use this {{device}}'s microphone.",
       automation: "Agents need it to control other apps on this {{device}}.",
     },
+    /** Who asked, before the command that asked (shown beside it). */
+    by: "Asked by {{agent}}",
+    how: "How to allow it",
+    /** The steps in System Settings, in order; `{{pane}}` is one of `panes`, as macOS names it. */
+    steps: {
+      settings: "Open System Settings › Privacy & Security › {{pane}}.",
+      /** macOS 11 and 12. */
+      prefs: "Open System Preferences › Security & Privacy › Privacy › {{pane}}, and click the lock to make changes.",
+      turnOn: "Turn on agentes.chat.",
+      turnOnAdd: "Turn on agentes.chat. Not in the list? Click +, then choose agentes.chat in Applications.",
+      automation: "Under agentes.chat, turn on the app the agent wants to control.",
+      reopen: "When macOS asks, choose Quit & Reopen: agentes.chat opens again here, and the agent goes on by itself.",
+      back: "Come back here and click I allowed it.",
+    },
+    /** The panes as macOS names them in this language. */
+    panes: {
+      screen: "Screen Recording",
+      screen15: "Screen & System Audio Recording",
+      disk: "Full Disk Access",
+      accessibility: "Accessibility",
+      automation: "Automation",
+      app_management: "App Management",
+      network: "Local Network",
+      camera: "Camera",
+      microphone: "Microphone",
+    },
+    /** Opened again by macOS after the person allowed it. */
+    onTitle: "{{permission}} is on",
+    goesOn: "{{agent}} goes on with what it was doing.",
+    goOn: "The agents that waited on it go on with what they were doing.",
+    ok: "Done",
   },
   device: { mac: "Mac", windows: "PC", linux: "computer" },
   /** The app's own windows by name (the Dock's list, the Window menu, Mission Control). */

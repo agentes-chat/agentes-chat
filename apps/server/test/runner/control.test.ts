@@ -659,8 +659,62 @@ test("a command macOS refused: the reply names the permission, the app and the s
   // The person allowed it in the app's dialog.
   expect(await c.data({ type: "permission.clear", permission: "app_management" })).toEqual({ cleared: true });
   await waitFor(() => s.of("permissions.changed").length === 2);
-  expect(s.of("permissions.changed")[1]).toEqual({ type: "permissions.changed", permissions: [] });
+  expect(s.of("permissions.changed")[1]).toEqual({
+    type: "permissions.changed",
+    permissions: [],
+    allowed: ["app_management"],
+  });
   expect((await c.request({ type: "permission.clear", permission: "bogus" })).ok).toBe(false);
+});
+
+test("Screen Recording off: the command's screencapture refuses without macOS's prompt, the wait outlives a restart and ends once it is on", async () => {
+  const { home } = pairedHome({
+    exec: true,
+    access: { folders: [], tools: { claude: false, codex: false, commands: true } },
+  });
+  let on = false;
+  const screen = { platform: "darwin", screenAllowed: async () => on, permissionReadEveryMs: 20 };
+  const c = control(home, screen);
+  const s = await c.connect();
+  // A script that goes on after the screenshot and ends well.
+  const command = "screencapture -x shot.png; echo done";
+  s.frame({ type: "request", id: "x1", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
+  await waitFor(() => s.of("permissions.changed").length === 1);
+  const reply = s.sent.find((f) => f.id === "x1") as { data: { exitCode: number; stderr: string; permission: string } };
+  expect(reply.data).toMatchObject({ exitCode: 0, permission: "screen" });
+  expect(reply.data.stderr).toContain("could not create image from display");
+  const wait = { permission: "screen", trigger: command, agentId: AGENT.id, since: expect.any(String) };
+  expect(s.of("permissions.changed")[0]).toEqual({ type: "permissions.changed", permissions: [wait] });
+  c.input.end();
+  await c.done;
+
+  // macOS quit and reopened the app: the new runner still knows who waited, and tells the server it is allowed.
+  const again = control(home, screen);
+  const s2 = await again.connect();
+  expect(s2.of("hello")[0]).toMatchObject({ permissions: [wait] });
+  on = true;
+  await waitFor(() => s2.of("permissions.changed").length === 1);
+  expect(s2.of("permissions.changed")[0]).toEqual({
+    type: "permissions.changed",
+    permissions: [],
+    allowed: ["screen"],
+  });
+});
+
+test("Screen Recording on: a capture that fails for another reason starts no wait", async () => {
+  const { home } = pairedHome({
+    exec: true,
+    access: { folders: [], tools: { claude: false, codex: false, commands: true } },
+  });
+  const c = control(home, { platform: "darwin", screenAllowed: async () => true, permissionReadEveryMs: 20 });
+  const s = await c.connect();
+  const command = "echo 'screencapture: could not create image from display' >&2; exit 1";
+  s.frame({ type: "request", id: "x1", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
+  await waitFor(() => s.sent.some((f) => f.id === "x1"));
+  const reply = s.sent.find((f) => f.id === "x1") as { data: { exitCode: number; permission?: string } };
+  expect(reply.data.exitCode).toBe(1);
+  expect(reply.data.permission).toBeUndefined();
+  expect(s.of("permissions.changed")).toEqual([]);
 });
 
 test("a command macOS refused under a runner from the terminal: no app there to ask, so no wait", async () => {

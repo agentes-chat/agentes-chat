@@ -13,7 +13,33 @@
       "camera": "代理需要它来使用这台{{device}}的摄像头。",
       "microphone": "代理需要它来使用这台{{device}}的麦克风。",
       "automation": "代理需要它来控制这台{{device}}上的其他应用。"
-    }
+    },
+    "by": "由 {{agent}} 请求",
+    "how": "如何允许",
+    "steps": {
+      "settings": "打开“系统设置” › “隐私与安全性” › “{{pane}}”。",
+      "prefs": "打开“系统偏好设置” › “安全性与隐私” › “隐私” › “{{pane}}”，然后点按锁按钮以进行更改。",
+      "turnOn": "打开 agentes.chat。",
+      "turnOnAdd": "打开 agentes.chat。列表里没有？点按 +，然后在“应用程序”中选择 agentes.chat。",
+      "automation": "在 agentes.chat 下方，打开智能体想要控制的 App。",
+      "reopen": "macOS 询问时，选择“退出并重新打开”：agentes.chat 会在这里重新打开，智能体会自动继续。",
+      "back": "回到这里，点按“我已允许”。"
+    },
+    "panes": {
+      "screen": "录屏",
+      "screen15": "录屏与系统录音",
+      "disk": "完全磁盘访问权限",
+      "accessibility": "辅助功能",
+      "automation": "自动化",
+      "app_management": "App 管理",
+      "network": "本地网络",
+      "camera": "摄像头",
+      "microphone": "麦克风"
+    },
+    "onTitle": "“{{permission}}”已打开",
+    "goesOn": "{{agent}} 会继续之前的工作。",
+    "goOn": "等待中的智能体会继续之前的工作。",
+    "ok": "完成"
   },
   "device": {
     "mac": "Mac",

@@ -13,7 +13,33 @@
       "camera": "エージェントがこの{{device}}のカメラを使うのに必要です。",
       "microphone": "エージェントがこの{{device}}のマイクを使うのに必要です。",
       "automation": "エージェントがこの{{device}}の他のアプリを操作するのに必要です。"
-    }
+    },
+    "by": "{{agent}}からの依頼",
+    "how": "許可する方法",
+    "steps": {
+      "settings": "システム設定 › プライバシーとセキュリティ › {{pane}} を開きます。",
+      "prefs": "システム環境設定 › セキュリティとプライバシー › プライバシー › {{pane}} を開き、鍵をクリックして変更できるようにします。",
+      "turnOn": "agentes.chat をオンにします。",
+      "turnOnAdd": "agentes.chat をオンにします。一覧にない場合は + をクリックし、アプリケーションから agentes.chat を選びます。",
+      "automation": "agentes.chat の下で、エージェントが操作したいアプリをオンにします。",
+      "reopen": "macOS に聞かれたら「終了して再度開く」を選びます。agentes.chat がここに戻り、エージェントは自動で続けます。",
+      "back": "ここに戻り、「許可しました」をクリックします。"
+    },
+    "panes": {
+      "screen": "画面収録",
+      "screen15": "画面収録とシステムオーディオ録音",
+      "disk": "フルディスクアクセス",
+      "accessibility": "アクセシビリティ",
+      "automation": "オートメーション",
+      "app_management": "App管理",
+      "network": "ローカルネットワーク",
+      "camera": "カメラ",
+      "microphone": "マイク"
+    },
+    "onTitle": "{{permission}}がオンになりました",
+    "goesOn": "{{agent}}は作業を続けます。",
+    "goOn": "待っていたエージェントは作業を続けます。",
+    "ok": "完了"
   },
   "device": {
     "mac": "Mac",
