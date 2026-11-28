@@ -2160,6 +2160,9 @@ export const en = {
       noPermission: "To create your agent, ask an admin for the permission to create agents.",
       enter: "Open {{org}}",
       enterPersonal: "Open the workspace",
+      /** The way into the workspace with no agent of theirs yet, beside the logo. */
+      later: "Not now, open {{org}}",
+      laterPersonal: "Not now, open the workspace",
     },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).
@@ -17064,6 +17067,8 @@ export const en = {
       invalid: "This answer isn't in the format we asked for. Copy the request again and paste your AI's whole answer.",
       picking: "This agent is already being created. Wait a moment.",
       rateLimited: "Too many tries for now. Try again in a little while.",
+      /** Another first agent is already kept and this request doesn't take its place (ADR 0264 addendum). */
+      kept: "Your first agent is already made, so this one wasn't created.",
     },
     /** Undo on a change an agent applied (ADR 0219). */
     proposal: {

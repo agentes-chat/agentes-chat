@@ -122,6 +122,16 @@ describe("the web onboarding's rail (ADR 0162, amended by ADR 0264's addendum of
     });
   });
 
+  test("a first delivery armed: past the agent step whatever was stored, and never back to the work or the agent", () => {
+    // Self-hosted: the AI step; on agentes.chat Cloud, the plan.
+    expect(web({ agent: true, armed: true })).toMatchObject({ at: "ai", step: "ai" });
+    expect(web({ agent: true, armed: true, standing: payment, billingUrl: BILLING })).toMatchObject({ at: "plan" });
+    expect(web({ agent: true, armed: true, picked: "area" }).step).toBe("ai");
+    expect(web({ agent: true, armed: true, picked: "agent" }).step).toBe("ai");
+    // Not armed yet: back to the work from its agent, as before.
+    expect(web({ agent: true, picked: "area" }).step).toBe("area");
+  });
+
   test("an AI not known yet reads as not yet: the AI step, never the photo", () => {
     const made = { agent: true, funnel: { passed: "agents" as const, thinks: undefined } };
     expect(web(made)).toMatchObject({ at: "ai", thinks: false, aiLater: false });

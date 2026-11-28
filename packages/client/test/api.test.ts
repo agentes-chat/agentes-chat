@@ -848,4 +848,12 @@ describe("the first agents my own AI proposed (ADR 0264)", () => {
     const none = fakeFetch({ [`GET ${org}/first-delivery`]: { status: 200, body: { delivery: null } } });
     expect(await createHttpApi({ fetch: none.fetch }).firstAgents.delivery("o1")).toBeNull();
   });
+
+  test("an agent brought from another app as my first agent, in the place of the one made a moment ago", async () => {
+    const adopted = { agentId: "a2", handle: "bruno", channelId: "d1" };
+    const { fetch, calls } = fakeFetch({ [`POST ${org}/first-agents/adopt`]: { status: 200, body: adopted } });
+    expect(await createHttpApi({ fetch }).firstAgents.adopt("o1", { agentId: "a2", replace: "a1" })).toEqual(adopted);
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([`POST ${org}/first-agents/adopt`]);
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ agentId: "a2", replace: "a1" });
+  });
 });

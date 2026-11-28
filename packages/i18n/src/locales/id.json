@@ -1910,7 +1910,9 @@
       "intro": "Di sini, tiap orang membawa agen yang menyelesaikan salah satu masalahnya.",
       "noPermission": "Untuk membuat agenmu, minta izin membuat agen ke admin.",
       "enter": "Buka {{org}}",
-      "enterPersonal": "Buka ruang kerja"
+      "enterPersonal": "Buka ruang kerja",
+      "later": "Nanti saja, buka {{org}}",
+      "laterPersonal": "Nanti saja, buka ruang kerja"
     }
   },
   "desktopNotice": {
@@ -15993,7 +15995,8 @@
       "needsAdmin": "Membuat agen di ruang kerja ini butuh admin. Minta admin membuatkannya untukmu.",
       "invalid": "Jawaban ini tidak sesuai format yang kami minta. Salin lagi permintaannya dan tempel seluruh jawaban AI-mu.",
       "picking": "Agen ini sedang dibuat. Tunggu sebentar.",
-      "rateLimited": "Terlalu banyak percobaan untuk saat ini. Coba lagi sebentar lagi."
+      "rateLimited": "Terlalu banyak percobaan untuk saat ini. Coba lagi sebentar lagi.",
+      "kept": "Agen pertamamu sudah dibuat, jadi agen ini tidak dibuat."
     },
     "proposal": {
       "changed": "Ini berubah setelah diterapkan: sesuaikan secara manual.",

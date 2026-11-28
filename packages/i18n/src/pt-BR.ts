@@ -2100,6 +2100,8 @@ export const ptBR = {
       noPermission: "Para criar o seu agente, peça a um admin a permissão de criar agentes.",
       enter: "Entrar na {{org}}",
       enterPersonal: "Entrar no workspace",
+      later: "Agora não, entrar na {{org}}",
+      laterPersonal: "Agora não, entrar no workspace",
     },
   },
   /** The desktop app's right click (lib/context-menu.ts). */
@@ -17032,6 +17034,7 @@ export const ptBR = {
       invalid: "Essa resposta não está no formato pedido. Copie o pedido de novo e cole a resposta inteira da sua IA.",
       picking: "Esse agente já está sendo criado. Espere um instante.",
       rateLimited: "Muitas tentativas por agora. Tente de novo daqui a pouco.",
+      kept: "O seu primeiro agente já foi criado, então este não foi.",
     },
     /** Undo on a change an agent applied (ADR 0219). */
     proposal: {

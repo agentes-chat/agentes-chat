@@ -4873,6 +4873,12 @@
   "onboarding.member.enterPersonal": {
     "value": "Open the workspace"
   },
+  "onboarding.member.later": {
+    "value": "Not now, open {{org}}"
+  },
+  "onboarding.member.laterPersonal": {
+    "value": "Not now, open the workspace"
+  },
   "onboarding.member.found": {
     "value": {
       "one": "Your {{app}} found the task that takes most of your time.",
@@ -40580,6 +40586,9 @@
   },
   "errors.firstAgents.rateLimited": {
     "value": "Too many tries for now. Try again in a little while."
+  },
+  "errors.firstAgents.kept": {
+    "value": "Your first agent is already made, so this one wasn't created."
   },
   "errors.proposal.changed": {
     "value": "This changed after it was applied: adjust it by hand."

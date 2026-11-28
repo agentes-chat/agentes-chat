@@ -2060,7 +2060,9 @@
       "intro": "Ici, chaque personne apporte l'agent qui résout un de ses problèmes.",
       "noPermission": "Pour créer votre agent, demandez à un admin l'autorisation de créer des agents.",
       "enter": "Ouvrir {{org}}",
-      "enterPersonal": "Ouvrir l'espace de travail"
+      "enterPersonal": "Ouvrir l'espace de travail",
+      "later": "Pas maintenant, ouvrir {{org}}",
+      "laterPersonal": "Pas maintenant, ouvrir l'espace de travail"
     }
   },
   "desktopNotice": {
@@ -17099,7 +17101,8 @@
       "needsAdmin": "Créer des agents dans cet espace de travail demande un admin. Demandez à un admin de le créer pour vous.",
       "invalid": "Cette réponse n'est pas au format demandé. Copiez à nouveau la demande et collez la réponse complète de votre IA.",
       "picking": "Cet agent est déjà en cours de création. Patientez un instant.",
-      "rateLimited": "Trop de tentatives pour l'instant. Réessayez dans un moment."
+      "rateLimited": "Trop de tentatives pour l'instant. Réessayez dans un moment.",
+      "kept": "Votre premier agent est déjà créé, celui-ci ne l'a donc pas été."
     },
     "proposal": {
       "changed": "Ceci a changé après avoir été appliqué : ajustez-le à la main.",

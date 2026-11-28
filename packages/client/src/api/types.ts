@@ -1562,6 +1562,15 @@ export interface FirstAgentStartInput {
 }
 
 /**
+ * An agent I brought from another app on the onboarding's work step, as my first agent (`POST …/first-agents/adopt`,
+ * ADR 0264 addendum): its first delivery kept, in the place of the one made a moment ago (`replace`, archived).
+ */
+export interface FirstAgentAdoptInput {
+  agentId: string;
+  replace?: string | null;
+}
+
+/**
  * My first delivery here (`GET …/first-delivery`, ADR 0264 addendum): what the agent I set up on the onboarding does
  * for me first, in my DM with it, once I left the agent's step (`keepDelivery` arms it), the workspace has its plan and
  * the agent its AI. Its reply carries `meta.firstDelivery` (`{ summary }`).

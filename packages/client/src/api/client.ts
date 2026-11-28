@@ -160,6 +160,7 @@ import type {
   FeedbackOffer,
   FileConversationRef,
   FileWave,
+  FirstAgentAdoptInput,
   FirstAgentPicked,
   FirstAgentStartInput,
   FirstAgents,
@@ -1068,6 +1069,11 @@ export interface ApiClient {
     pick(orgId: string, proposalId: string, index: number, replace?: string | null): Promise<FirstAgentPicked>;
     /** My first agent from an area of the onboarding, its first delivery kept. 403 `create_agents_required`. */
     start(orgId: string, input: FirstAgentStartInput): Promise<FirstAgentPicked>;
+    /**
+     * An agent my import on the onboarding brought becomes my first agent, in the place of `replace`. 409
+     * `first_agents.kept` while another first agent of mine is kept and `replace` doesn't name it.
+     */
+    adopt(orgId: string, input: FirstAgentAdoptInput): Promise<FirstAgentPicked>;
     /** My first delivery here, or null. */
     delivery(orgId: string): Promise<FirstDeliveryRow | null>;
     /**

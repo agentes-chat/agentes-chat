@@ -92,6 +92,8 @@ const KNOWN = {
   "first_agents.invalid": "errors.firstAgents.invalid",
   "first_agents.picking": "errors.firstAgents.picking",
   "first_agents.rate_limited": "errors.firstAgents.rateLimited",
+  // One first agent: another is kept and the request didn't take its place (ADR 0264 addendum).
+  "first_agents.kept": "errors.firstAgents.kept",
   "agent_proposal.routine_made": "errors.agentProposal.routineMade",
   "agent_proposal.no_routine": "errors.agentProposal.noRoutine",
   "mail.account_not_found": "errors.mail.accountNotFound",

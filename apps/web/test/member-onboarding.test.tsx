@@ -263,6 +263,48 @@ describe("a member's onboarding (ADR 0264)", () => {
     expect(eyebrow()).toBe("Passo 2 de 2 · O seu primeiro agente");
   });
 
+  test("Not now: into the workspace with no agent of theirs yet, on the wizard alone", async () => {
+    const state = joined();
+    const r = await welcome(state);
+    await click(button("Agora não, entrar na Acme"), 16);
+    expect(calls(state, "firstAgents.start")).toEqual([]);
+    expect(r.router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    expect(r.landed.at(-1)?.arrival).toBe("beta");
+  });
+
+  test("opened again once their first delivery is armed: their DM, never the work or the agent's step", async () => {
+    /** Walter with Iara made on this page, her delivery armed (or gone). */
+    const withIara = (delivery: { armedAt: string | null; firedAt: string | null }) => {
+      const state = joined();
+      const ada = state.agents.find((a) => a.name === "Ada");
+      state.agents.push({
+        ...(ada as FakeState["agents"][number]),
+        id: "agent-iara",
+        name: "Iara",
+        handle: "iara",
+        ownerUserId: "u-walter",
+        appearance: FIRST_AREAS.support.look,
+      });
+      state.firstDelivery = { agentId: "agent-iara", area: "support", task: "", runId: null, ...delivery };
+      return state;
+    };
+    const armed = withIara({ armedAt: new Date().toISOString(), firedAt: null });
+    const r = await welcome(armed);
+    expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/agent-iara`);
+    expect(calls(armed, "firstAgents.start")).toEqual([]);
+    cleanup();
+    // No AI answers for her yet: the AI step, with no way back to the work.
+    const waiting = noAiYet(withIara({ armedAt: new Date().toISOString(), firedAt: null }));
+    await welcome(waiting);
+    expect(heading()).toBe(AI);
+    expect(screen().queryByRole("button", { name: "Voltar" })).toBeNull();
+    cleanup();
+    // Gone already: their DM, whatever the AI.
+    const fired = noAiYet(withIara({ armedAt: new Date().toISOString(), firedAt: new Date().toISOString() }));
+    const again = await welcome(fired);
+    expect(again.router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/agent-iara`);
+  });
+
   test("a personal workspace's own works", async () => {
     await welcome(joined({ personal: true }));
     expect(box().querySelector(".onb-areas__list .ac-optrow__title")?.textContent).toBe("Vida em ordem");

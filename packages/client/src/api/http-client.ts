@@ -1119,6 +1119,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           json: { index, ...(replace ? { replace } : {}) },
         }),
       start: (orgId, input) => request<FirstAgentPicked>(`${org(orgId)}/first-agents/start`, { json: input }),
+      adopt: (orgId, input) => request<FirstAgentPicked>(`${org(orgId)}/first-agents/adopt`, { json: input }),
       delivery: async (orgId) =>
         (await request<{ delivery: FirstDeliveryRow | null }>(`${org(orgId)}/first-delivery`)).delivery,
       keepDelivery: async (orgId, agentId) =>

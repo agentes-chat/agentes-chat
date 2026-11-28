@@ -1989,7 +1989,9 @@
       "intro": "Hier bringt jede Person den Agenten mit, der eines ihrer Probleme löst.",
       "noPermission": "Um deinen Agenten zu erstellen, bitte einen Admin um die Berechtigung, Agenten zu erstellen.",
       "enter": "{{org}} öffnen",
-      "enterPersonal": "Den Workspace öffnen"
+      "enterPersonal": "Den Workspace öffnen",
+      "later": "Jetzt nicht, {{org}} öffnen",
+      "laterPersonal": "Jetzt nicht, den Workspace öffnen"
     }
   },
   "desktopNotice": {
@@ -16546,7 +16548,8 @@
       "needsAdmin": "Agenten in diesem Workspace zu erstellen, braucht einen Admin. Bitte einen, ihn für dich zu erstellen.",
       "invalid": "Diese Antwort hat nicht das Format, um das wir gebeten haben. Kopiere die Bitte noch einmal und füge die ganze Antwort deiner KI ein.",
       "picking": "Dieser Agent wird schon erstellt. Warte einen Moment.",
-      "rateLimited": "Gerade zu viele Versuche. Versuch es gleich noch einmal."
+      "rateLimited": "Gerade zu viele Versuche. Versuch es gleich noch einmal.",
+      "kept": "Dein erster Agent ist schon erstellt, deshalb wurde dieser nicht erstellt."
     },
     "proposal": {
       "changed": "Das wurde nach dem Anwenden noch geändert: Passe es von Hand an.",

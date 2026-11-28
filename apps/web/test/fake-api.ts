@@ -3593,6 +3593,27 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           };
         return { agentId, handle, channelId };
       },
+      // Like the backend: an agent my import brought becomes my first agent (area `import`); `replace` takes my pending
+      // one's place.
+      adopt: async (orgId, input) => {
+        log("firstAgents.adopt", orgId, input);
+        const agent = state.agents.find((a) => a.id === input.agentId);
+        if (!agent) throw new ApiError(404, "first_delivery.no_agent", "Agent not found");
+        const pending = state.firstDelivery;
+        if (input.replace && pending && !pending.firedAt && pending.area !== null && pending.agentId === input.replace)
+          state.agents = state.agents.filter((a) => a.id !== input.replace);
+        if (!pending?.firedAt)
+          state.firstDelivery = {
+            agentId: agent.id,
+            area: "import",
+            task: "",
+            armedAt: null,
+            firedAt: null,
+            runId: null,
+          };
+        const entry = Object.entries(state.channelMembers).find(([, ms]) => ms.some((m) => m.id === agent.id));
+        return { agentId: agent.id, handle: agent.handle, channelId: entry?.[0] ?? `dm-${agent.id}` };
+      },
       delivery: async (orgId) => {
         log("firstAgents.delivery", orgId);
         const kept = state.firstDelivery;

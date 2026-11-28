@@ -117,6 +117,11 @@ export function railState(f: {
   billingUrl: string | null | undefined;
   /** An agent besides the right hand is there. */
   agent: boolean;
+  /**
+   * Its first delivery is armed (or went): the agent step was left, whatever the stored step says (a Continue whose
+   * save didn't land), and the work step is behind for good (ADR 0264 addendum: one first agent).
+   */
+  armed?: boolean;
   picked: RailStep | null;
   funnel: RailFunnel;
   /** "Not now" on the plan step, in this visit. */
@@ -132,14 +137,16 @@ export function railState(f: {
   const steps = railSteps({ plan: hasPlanStep });
   const at = railStepAt({
     agent: f.agent,
-    agentSeen: passed >= stepIndex("agents"),
+    agentSeen: passed >= stepIndex("agents") || f.armed === true,
     waitsForPlan,
     planLater: f.planLater === true,
     aiSeen: passed >= stepIndex("ai"),
   });
   const reached = steps.indexOf(at);
   const back = f.picked ? steps.indexOf(f.picked) : -1;
-  const step = back >= 0 && back < reached ? steps[back] : at;
+  // Once armed, the work and the agent's steps are never gone back to.
+  const gone = f.armed === true && (f.picked === "area" || f.picked === "agent");
+  const step = back >= 0 && back < reached && !gone ? steps[back] : at;
   return {
     steps,
     at,

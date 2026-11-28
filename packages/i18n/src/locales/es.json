@@ -2055,7 +2055,9 @@
       "intro": "Aquí, cada persona trae el agente que resuelve un problema suyo.",
       "noPermission": "Para crear tu agente, pide a un admin el permiso para crear agentes.",
       "enter": "Entrar a {{org}}",
-      "enterPersonal": "Entrar al espacio de trabajo"
+      "enterPersonal": "Entrar al espacio de trabajo",
+      "later": "Ahora no, entrar a {{org}}",
+      "laterPersonal": "Ahora no, entrar al espacio de trabajo"
     }
   },
   "desktopNotice": {
@@ -17021,7 +17023,8 @@
       "needsAdmin": "Crear agentes en este espacio de trabajo requiere un admin. Pídele a uno que lo cree por ti.",
       "invalid": "Esta respuesta no tiene el formato que pedimos. Copia el pedido otra vez y pega la respuesta completa de tu IA.",
       "picking": "Este agente ya se está creando. Espera un momento.",
-      "rateLimited": "Demasiados intentos por ahora. Inténtalo de nuevo en un rato."
+      "rateLimited": "Demasiados intentos por ahora. Inténtalo de nuevo en un rato.",
+      "kept": "Tu primer agente ya está creado, así que este no se creó."
     },
     "proposal": {
       "changed": "Esto cambió después de aplicarse: ajústalo a mano.",

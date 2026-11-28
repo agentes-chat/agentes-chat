@@ -23,7 +23,7 @@ import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { isRightHand, RIGHT_HAND_DEFAULT, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { browserTimezone } from "@agenteschat/client/lib/routines";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Avatar, Button, Dialog, DialogFooter, Logo, Menu, MenuItem, normalizeAppearance } from "@agenteschat/ui";
+import { Avatar, Button, Dialog, DialogFooter, Icon, Logo, Menu, MenuItem, normalizeAppearance } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
@@ -71,23 +71,43 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
   const delivery = useFirstDeliveryRow(orgId, makes);
   const firstAgents = useFirstAgents(makes ? orgId : "");
   const [view, setView] = useState<View | null>(null);
+  const list = agents.data ?? [];
+  const row = delivery.data ?? null;
+  const agent = row ? list.find((a) => a.id === row.agentId && !isRightHand(a)) : undefined;
+  // Its first delivery armed or gone as this page opens (Back from their DM, the link again): past the work and the
+  // agent's steps for good, one first agent (ADR 0264 addendum). Their DM, or the AI step while none answers for it.
+  const done = view === null && agent !== undefined && Boolean(row?.armedAt || row?.firedAt);
   // Read again while the AI step shows: a connection made in the dialog (or another tab) lets it go on.
-  const status = useAiStatus(orgId, makes, view === "ai" ? AI_POLL_MS : false);
+  const status = useAiStatus(orgId, makes, view === "ai" || done ? AI_POLL_MS : false);
   const start = useStartFirstAgent(orgId);
   const pick = usePickFirstAgent(orgId);
   const [custom, setCustom] = useState(false);
   const [skipAsk, setSkipAsk] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const ready = Boolean(me && org) && !agents.isPending && (!makes || !delivery.isPending);
 
-  const list = agents.data ?? [];
-  const row = delivery.data ?? null;
-  const agent = row ? list.find((a) => a.id === row.agentId && !isRightHand(a)) : undefined;
   const area: FirstArea | "custom" | null =
     row && isFirstArea(row.area) ? row.area : row?.area === CUSTOM_AREA ? "custom" : null;
+  const doneAgent = done ? agent?.id : undefined;
+  const answered =
+    doneAgent !== undefined &&
+    status.data !== undefined &&
+    (status.data.agents.find((a) => a.agentId === doneAgent)?.state ?? "no_ai") !== "no_ai";
+  const away = doneAgent !== undefined && (Boolean(row?.firedAt) || answered);
+  const ready =
+    Boolean(me && org) && !agents.isPending && (!makes || (!delivery.isPending && !(done && status.isPending)));
   // A reload after the agent was made comes back to it.
-  const shown: View = view ?? (agent ? "agent" : "area");
+  const shown: View = view ?? (done ? "ai" : agent ? "agent" : "area");
+
+  useEffect(() => {
+    if (!away || !doneAgent) return;
+    void navigate({
+      to: "/org/$orgId/dm/agent/$agentId",
+      params: { orgId, agentId: doneAgent },
+      search: { [ARRIVAL_PARAM]: ARRIVAL_BETA_ONLY } as never,
+      replace: true,
+    });
+  }, [away, doneAgent, navigate, orgId]);
 
   // A new view replaces the pressed button under the focus: the focus goes to its heading, which is read out.
   const was = useRef<string | null>(null);
@@ -99,7 +119,7 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
     was.current = key;
   });
 
-  if (!me || !org || !ready) return <BootSplash />;
+  if (!me || !org || !ready || away) return <BootSplash />;
 
   const personal = isPersonal(org);
   const lodi = rightHandOf(list);
@@ -328,7 +348,25 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
   const body = <Fragment key={key}>{scene()}</Fragment>;
   return (
     <World
-      start={<Logo size={22} />}
+      start={
+        <>
+          {/* Not now: into the workspace with no agent of theirs yet, as someone who can't make one goes in. */}
+          {makes && (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label={t(modeKey(org, "onboarding.member.later"), { org: org.name })}
+              title={t(modeKey(org, "onboarding.member.later"), { org: org.name })}
+              disabled={leaving}
+              onClick={toWorkspace}
+            >
+              <Icon name="chevronLeft" />
+            </Button>
+          )}
+          <Logo size={22} />
+        </>
+      }
       end={
         <Menu
           align="end"

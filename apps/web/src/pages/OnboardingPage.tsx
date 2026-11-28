@@ -126,8 +126,9 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
   const [picked, setPicked] = useState<RailStep | null>(null);
   // "Other" on the work step: the agent step's form, before its agent exists.
   const [custom, setCustom] = useState(false);
-  // The other agent apps' import, open over the work step on the app picked (`card` null: its own list of apps).
-  const [importing, setImporting] = useState<{ card: ImportCard | null } | null>(null);
+  // The other agent apps' import, open over the work step on the app picked (`card` null: its own list of apps), with
+  // the agents there as it opened: the one it brings becomes the first agent as it closes.
+  const [importing, setImporting] = useState<{ card: ImportCard | null; before: string[] } | null>(null);
   // What the AI step's dialog connected last in this visit, said on the photo ("Claude").
   const [aiPick, setAiPick] = useState<AiChoice | null>(null);
   // "Connect later" asks first: without an AI there is no first delivery.
@@ -233,11 +234,14 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
     status.isStale && status.isFetching
       ? undefined
       : (teamThinks(ids, status.data) ?? (listed ? teamThinks(listed, status.data) : undefined));
+  // Its first delivery armed (or gone): past the agent step for good, the work never offered again (ADR 0264 addendum).
+  const armed = Boolean(row?.armedAt || row?.firedAt);
   const rail = railState({
     orgId,
     standing: mine?.standing,
     billingUrl: authConfig?.billingUrl,
     agent: firstAgent !== undefined,
+    armed,
     picked,
     funnel: { thinks, passed },
     planLater,
@@ -464,6 +468,32 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       },
     );
   };
+  // An import from the work step brought agents: the oldest of the ones it made becomes the first agent, in the place
+  // of the one made a moment ago, so the onboarding leaves one (ADR 0264 addendum).
+  const adopt = useMutation({
+    mutationFn: (input: { agentId: string; replace: string | null }) => api.firstAgents.adopt(orgId ?? "", input),
+    onSuccess: async () => {
+      if (!orgId) return;
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.firstDelivery(orgId) }),
+        qc.invalidateQueries({ queryKey: keys.agents(orgId) }),
+      ]);
+      setPicked(null);
+    },
+    onError: (e) => toast.show(errorText(t, e), "error"),
+  });
+  const closeImport = async () => {
+    const before = new Set(importing?.before ?? []);
+    setImporting(null);
+    setPicked(null);
+    if (!orgId) return;
+    const fresh = (await agents.refetch()).data ?? [];
+    const you = me.data?.user.id;
+    const brought = fresh
+      .filter((a) => !isRightHand(a) && !before.has(a.id) && a.ownerUserId === you)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+    if (brought) adopt.mutate({ agentId: brought.id, replace: replaced });
+  };
   const startCustom = async (draft: { name: string; does: string }): Promise<AgentStepAgent | null> => {
     if (!orgId) return null;
     try {
@@ -522,7 +552,8 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
     aiAnswered.isPending ||
     agentDone.isPending ||
     start.isPending ||
-    pick.isPending;
+    pick.isPending ||
+    adopt.isPending;
 
   // A read that failed: said, with the way on, never a sky that waits for nothing.
   const failed =
@@ -792,7 +823,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
                 },
               )
             }
-            onImport={(card) => setImporting({ card })}
+            onImport={(card) => setImporting({ card, before: team.map((a) => a.id) })}
           />
         ),
       };
@@ -820,10 +851,15 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
             busy={agentDone.isPending}
             mailBack="onboarding"
             returned={returned}
-            onBack={() => {
-              setCustom(false);
-              setPicked("area");
-            }}
+            // Its delivery armed (a Continue whose save didn't land): no way back to the work, one first agent.
+            onBack={
+              armed
+                ? null
+                : () => {
+                    setCustom(false);
+                    setPicked("area");
+                  }
+            }
             onCreate={startCustom}
             onContinue={(made) => agentDone.mutate({ id: orgId, agentId: made?.id ?? firstAgent?.id ?? null })}
           />
@@ -1055,14 +1091,7 @@ export function OnboardingPage({ returned = null }: { returned?: ConnectReturn |
       {importing && orgId && mine && (
         <OrgProvider org={mine} me={me.data}>
           <Suspense fallback={null}>
-            <ImportAgentsDialog
-              orgId={orgId}
-              card={importing.card}
-              onClose={() => {
-                setImporting(null);
-                setPicked(null);
-              }}
-            />
+            <ImportAgentsDialog orgId={orgId} card={importing.card} onClose={() => void closeImport()} />
           </Suspense>
         </OrgProvider>
       )}

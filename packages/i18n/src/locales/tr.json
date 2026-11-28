@@ -1981,7 +1981,9 @@
       "intro": "Burada herkes, kendi sorunlarından birini çözen ajanı getirir.",
       "noPermission": "Ajanınızı oluşturmak için bir yöneticiden ajan oluşturma izni isteyin.",
       "enter": "{{org}} çalışma alanını aç",
-      "enterPersonal": "Çalışma alanını aç"
+      "enterPersonal": "Çalışma alanını aç",
+      "later": "Şimdi değil, {{org}} çalışma alanını aç",
+      "laterPersonal": "Şimdi değil, çalışma alanını aç"
     }
   },
   "desktopNotice": {
@@ -16466,7 +16468,8 @@
       "needsAdmin": "Bu çalışma alanında ajan oluşturmak için bir yönetici gerekir. Bir yöneticiden sizin için oluşturmasını isteyin.",
       "invalid": "Bu yanıt istediğimiz biçimde değil. İsteği yeniden kopyalayın ve yapay zekanızın yanıtının tamamını yapıştırın.",
       "picking": "Bu ajan zaten oluşturuluyor. Biraz bekleyin.",
-      "rateLimited": "Şimdilik çok fazla deneme yapıldı. Birazdan yeniden deneyin."
+      "rateLimited": "Şimdilik çok fazla deneme yapıldı. Birazdan yeniden deneyin.",
+      "kept": "İlk ajanınız zaten oluşturuldu, bu yüzden bu ajan oluşturulmadı."
     },
     "proposal": {
       "changed": "Bu, uygulandıktan sonra değişti: elle düzenleyin.",

@@ -725,6 +725,61 @@ describe("the work its first agent does (ADR 0264)", () => {
   });
 });
 
+describe("one first agent, whatever way in (ADR 0264 addendum)", () => {
+  test("an app's agents brought over the work step: the one it brought becomes the first agent, in the work's agent's place", async () => {
+    const state = settingUp({ area: "support" });
+    await open(state);
+    expect(heading()).toBe("Iara, do atendimento");
+    await click(button("Voltar"), 8);
+    await click(button("Pedir à sua IA"), 8);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "OpenMausBot" }), 16);
+    // The import brings one agent of the person's.
+    state.agents.push({
+      id: "agent-bruno",
+      name: "Bruno",
+      handle: "bruno",
+      role: "Pesquisa",
+      instructions: "",
+      model: "auto",
+      ownerUserId: state.me?.user.id ?? null,
+      hasCredential: false,
+      monthlyBudgetUsd: null,
+      createdAt: new Date(Date.now() + 1000).toISOString(),
+      appearance: { color: "teal", eyes: "happy", accessory: "none" },
+    });
+    const dialog = screen().getByRole("dialog", { name: /^Trazer o time d[oa] OpenMausBot$/ });
+    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    await settle(24);
+    expect(calls(state, "firstAgents.adopt").map((c) => c.args)).toEqual([
+      [ORG_ID, { agentId: "agent-bruno", replace: agentIdOf("support") }],
+    ]);
+    expect(state.agents.filter((a) => a.builtin !== "right_hand").map((a) => a.name)).toEqual(["Bruno"]);
+    expect(heading()).toBe("Bruno");
+  });
+
+  test("an import that brought no agent leaves the first agent as it was", async () => {
+    const state = settingUp({ area: "support" });
+    await open(state);
+    await click(button("Voltar"), 8);
+    await click(button("Pedir à sua IA"), 8);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: "OpenMausBot" }), 16);
+    const dialog = screen().getByRole("dialog", { name: /^Trazer o time d[oa] OpenMausBot$/ });
+    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    await settle(16);
+    expect(calls(state, "firstAgents.adopt")).toEqual([]);
+    expect(heading()).toBe("Iara, do atendimento");
+  });
+
+  test("its first delivery armed (a Continue whose save didn't land): past its step, with no way back to the work", async () => {
+    const state = settingUp({ area: "support" });
+    if (state.firstDelivery) state.firstDelivery.armedAt = new Date().toISOString();
+    await open(state);
+    expect(heading()).toBe(AI);
+    expect(screen().queryByRole("button", { name: "Voltar" })).toBeNull();
+    expect(calls(state, "firstAgents.start")).toEqual([]);
+  });
+});
+
 describe("meeting the first agent and connecting its apps (ADR 0264, ADR 0242)", () => {
   test("its title and line by its work, where it works, each app with Connect; Continue goes on with none connected", async () => {
     plans(PLANS);
