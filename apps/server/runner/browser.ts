@@ -476,9 +476,10 @@ export function crashPage(memory: boolean, tag?: string | null): string {
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
-/** Live browsers this computer takes: a quarter of its memory at ~300 MB each, 1 to 8. */
+/** Live browsers this computer takes: a quarter of its memory at ~300 MB each, 1 to 16 (a team of agents on one
+ * large computer kept hitting 8 while most of its memory sat free). */
 export function defaultMaxSessions(totalBytes: number = os.totalmem()): number {
-  return Math.max(1, Math.min(8, Math.floor((totalBytes * 0.25) / SESSION_BYTES)));
+  return Math.max(1, Math.min(16, Math.floor((totalBytes * 0.25) / SESSION_BYTES)));
 }
 
 /**
