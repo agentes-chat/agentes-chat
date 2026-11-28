@@ -87,12 +87,18 @@ test("a Gemini turn goes to the runner as kind antigravity with its account; its
     events: [
       { type: "text_delta", text: "All good." },
       { type: "usage", input: 1000, output: 40, source: "plan", model: "gemini-4-argon-high", cacheRead: 400 },
-      { type: "done", text: "All good.", session: { id: "c3b6" } },
+      { type: "done", text: "All good.", session: { id: "c3b6" }, timings: { warm: false, initMs: 2100 } },
     ],
   });
   const events = await collect(brain(l).run(turn({ model: "gemini-4-argon-high" }), io()));
   expect(l.sent[0]).toMatchObject({ kind: "antigravity", account: ACCOUNT.id, model: "gemini-4-argon-high" });
-  expect(events.at(-1)).toEqual({ type: "done", text: "All good.", session: { id: SESSION } });
+  // How the CLI started goes on with the answer, for the run's profile.
+  expect(events.at(-1)).toEqual({
+    type: "done",
+    text: "All good.",
+    session: { id: SESSION },
+    timings: { warm: false, initMs: 2100 },
+  });
   expect(events.find((e) => e.type === "usage")).toMatchObject({ source: "plan", cacheRead: 400 });
 });
 

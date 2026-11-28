@@ -1,5 +1,5 @@
 import type { MissingConnector } from "../connectors/listing";
-import { cutText } from "../format";
+import { cutText, isJsonObject } from "../format";
 import { oneLine } from "../mail/text";
 import { PASS_TOOL } from "../reply-policy";
 import type { JsonSchema } from "./json-schema";
@@ -171,6 +171,26 @@ function unknownTool(
 }
 
 /**
+ * The tool a `use_tool` names and its input. Models also write them as the Antigravity CLI's own `call_mcp_tool`
+ * takes them (`ToolName`, `Arguments`), or as `name`, `tool_name`, `toolName` with `input`, `parameters`, `args`, and
+ * the input as JSON text.
+ */
+export function useToolInput(input: Record<string, unknown>): { tool: string; args: Record<string, unknown> } {
+  const named = [input.tool, input.ToolName, input.tool_name, input.toolName, input.name].find(
+    (v): v is string => typeof v === "string" && v.trim() !== "",
+  );
+  let args = [input.arguments, input.Arguments, input.input, input.parameters, input.args].find((v) => v != null);
+  if (typeof args === "string") {
+    try {
+      args = JSON.parse(args);
+    } catch {
+      args = undefined;
+    }
+  }
+  return { tool: named ?? "", args: isJsonObject(args) ? args : {} };
+}
+
+/**
  * What a call runs, from the run's list as the model sees it (`shown`) and every tool of the sources (`all`): a tool
  * by its name; a directory's `find_tools` as itself (`find`); its `use_tool` as the tool it names, through another
  * directory's `use_tool` inside too. That tool may be any of the sources', by its name or without its connector's
@@ -196,14 +216,13 @@ export function resolveCall<C extends { name: string; input: Record<string, unkn
       return { call: listed.name === current.name ? current : { ...current, name: listed.name }, find: listed };
     }
     if (hop === 3) break;
-    const named = typeof current.input.tool === "string" ? current.input.tool : "";
+    const { tool: named, args } = useToolInput(current.input);
     const spelled = spellings(role, named);
-    const args = current.input.arguments;
     current = {
       ...current,
       // The directory's own first, then any tool by those names: one the agent may not use is refused as itself.
       name: resolveDirectoryTool(role, named)?.name ?? spelled.find((n) => all.has(n)) ?? (spelled[0] as string),
-      input: args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {},
+      input: args,
     };
     within = role;
   }

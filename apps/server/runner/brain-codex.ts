@@ -9,6 +9,7 @@ import {
   type AgentScope,
   type BrainEffort,
   type BrainSpeed,
+  type BrainTurnTimings,
   type CodexSandbox,
   isAccountId,
   isBrainEffort,
@@ -123,7 +124,8 @@ export type CodexBrainEvent =
       lastContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
-  | { type: "done"; text: string; session?: { id: string } }
+  /** `timings`: how the turn started, from the Antigravity CLI's turns (a new process each). */
+  | { type: "done"; text: string; session?: { id: string }; timings?: BrainTurnTimings }
   | { type: "error"; code: string; message: string; retryable?: boolean; worked?: boolean }
   /** Protocol 15 (app-server only): messages handed with `brain.steer` that the turn read. */
   | { type: "steer_read"; uuids: string[] }

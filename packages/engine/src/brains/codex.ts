@@ -500,7 +500,12 @@ export class CodexBrain implements Brain {
         if (event.type === "answer") text = "";
         if (event.type === "done") {
           ended = true;
-          yield { type: "done", text: event.text, session: { id: session.id } };
+          yield {
+            type: "done",
+            text: event.text,
+            session: { id: session.id },
+            ...(event.timings ? { timings: event.timings } : {}),
+          };
           continue;
         }
         if (event.type === "error") ended = true;

@@ -811,9 +811,14 @@ test("MCP JSON-RPC with the bridge's list: tools/list is the run's; a name it la
   };
   expect(listed.result.tools.map((t) => t.name)).toEqual(["github_get_pr", "get_context", "react"]);
   expect(listed.result.tools[1]?.annotations).toEqual({ readOnlyHint: true });
-  // Claude Code lists what agents reach for on their own; the rest wait behind its ToolSearch (token-trim B6).
+  // Claude Code lists what agents reach for on their own; the rest wait behind its ToolSearch (token-trim B6). The
+  // Antigravity CLI gets every one as a function of its own, never through its `call_mcp_tool`.
   const meta = listed.result.tools.map((t) => (t as { _meta?: unknown })._meta);
-  expect(meta).toEqual([undefined, undefined, { "anthropic/alwaysLoad": true }]);
+  expect(meta).toEqual([
+    { "antigravity/alwaysLoad": true },
+    { "antigravity/alwaysLoad": true },
+    { "anthropic/alwaysLoad": true, "antigravity/alwaysLoad": true },
+  ]);
   // What an API brain never loads on demand either (token-trim B3): learning, skills, the wiki, teammates.
   for (const name of [
     "react",

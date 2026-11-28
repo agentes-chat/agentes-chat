@@ -14,7 +14,7 @@ import { getChannelCached } from "./context";
 import { NotFoundError } from "./errors";
 import { type MemoryUpdate, publishChannelEvent, publishMessageCreated, takeStepWords } from "./events";
 import { type PendingFeedbackOffer, pendingFeedbackOfferOf } from "./feedback-offers";
-import { pgSafeStringify } from "./format";
+import { isJsonObject, pgSafeStringify } from "./format";
 import type { Judge } from "./judge";
 import { queueLiveActivityRun } from "./live-activity-queue";
 import { insertMessage, type Message, messageView } from "./messages";
@@ -39,7 +39,7 @@ import { type AgentRun, replyThreadOf } from "./runs";
 import { isSayNow, type SaidNow } from "./say-now";
 import { publishSecret, type SecretRequestRow, secretLabelOf, secretRequestView, syncSecretMessage } from "./secrets";
 import { artifactToolDetail, promptAnswer, promptPoll, toolCode, toolCommand, toolDetail } from "./tool-detail";
-import { directoryRole, HARNESS_PREFIX, ON_DEMAND_USE, resolveDirectoryTool } from "./tools/directory";
+import { directoryRole, HARNESS_PREFIX, ON_DEMAND_USE, resolveDirectoryTool, useToolInput } from "./tools/directory";
 import { type Approval, type InvokeResult, isSensitive, type ToolGateway } from "./tools/gateway";
 import { WIDGET_UP_FRONT_MAX, widgetUpFront, withWhy } from "./tools/run-policy";
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
@@ -531,18 +531,13 @@ export async function invokeWithChip(
   const listed = scope.turnTools?.find((t) => t.name === use.name);
   // Through a big connector's directory: the chip shows the real tool (`use_tool` only points at it).
   const role = directoryRole(listed);
-  const target =
-    role?.kind === "use" && typeof (use.input as { tool?: unknown } | undefined)?.tool === "string"
-      ? resolveDirectoryTool(role, String((use.input as { tool: string }).tool))
-      : undefined;
+  const givenTool = isJsonObject(use.input) ? useToolInput(use.input).tool : "";
+  const target = role?.kind === "use" && givenTool ? resolveDirectoryTool(role, givenTool) : undefined;
   const def = target ?? listed;
   // The bridge has no turn list (`turnTools: null`): the name the model gave is the best label there.
-  const givenTool = (use.input as { tool?: unknown } | undefined)?.tool;
   const shownName =
     target?.name ??
-    (!listed && (use.name === ON_DEMAND_USE || use.name.endsWith("_use_tool")) && typeof givenTool === "string"
-      ? givenTool
-      : use.name);
+    (!listed && (use.name === ON_DEMAND_USE || use.name.endsWith("_use_tool")) && givenTool ? givenTool : use.name);
   const connector = def?.connectorLabel;
   // A short label for the UI (skill, issue, file); built-in tools only, never connector inputs.
   const builtIn = scope.turnTools !== null && !(connector || def?.connectionId);

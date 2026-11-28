@@ -16,7 +16,8 @@
 // `--conversation`'s, or a new one when it doesn't know that one; its tools: our server's alone with `--agent`, else
 // the CLI's own and ours, or $FAKE_AGY_TOOLS), a text delta, a shell step (none with "BRIDGE_ONLY"), a call to our
 // server (a tool of the CLI's own with "OWN_TOOL"), the last delta with usage and the result. "LIMIT": an AGY_ERROR
-// quota line on stderr and exit 3. "ENV": the shell step's output is the env.
+// quota line on stderr and exit 3. "ENV": the shell step's output is the env. "CALL_FIRST": no first delta, and
+// its words come 300 ms after the call.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -179,7 +180,8 @@ if (args[0] === "-p") {
     out({ event: "result", result: { conversation_id: conversation, status: "ERROR", response: "", error: "quota" } });
     process.exit(3);
   }
-  step({ step_index: 1, state: "ACTIVE", step_type: "agent_response", text_delta: "Let me check. " });
+  if (!prompt.includes("CALL_FIRST"))
+    step({ step_index: 1, state: "ACTIVE", step_type: "agent_response", text_delta: "Let me check. " });
   if (prompt.includes("SUBAGENT")) {
     step({ step_index: 2, state: "ACTIVE", step_type: "agent_response", subagent_info: { subagents: [] } });
   }
@@ -219,6 +221,7 @@ if (args[0] === "-p") {
       tool_info: { name: call, parameters: {}, output: "ok" },
     });
   }
+  if (prompt.includes("CALL_FIRST")) await new Promise((r) => setTimeout(r, 300));
   step({
     step_index: 4,
     state: "DONE",
