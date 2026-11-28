@@ -9,6 +9,7 @@ import { AgentAvatar } from "@/agent/AgentAvatar";
 import type { AgentLookInput } from "@/agent/looks";
 import type { AgentMode } from "@/agent/poses";
 import { Sky, WorkspaceSky } from "@/sky/Sky";
+import { useReadableSide } from "../pane";
 import { usePulse } from "../Skeleton";
 import { Text } from "../Text";
 import { useTheme } from "../theme";
@@ -115,6 +116,8 @@ export function AuthScaffold({
   const { colors, reducedMotion } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  // On a large screen the question and its answer keep to the readable column, the sky still edge to edge (ADR 0212).
+  const side = useReadableSide();
   const skyStyle = { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 } as const;
   const bar = toolbar ? TOOLBAR_HEIGHT : 0;
   return (
@@ -149,7 +152,7 @@ export function AuthScaffold({
         <Animated.View
           key={stepKey}
           entering={reducedMotion ? undefined : STEP_IN}
-          style={{ paddingHorizontal: 16, paddingTop: AGENT_OVERLAP + 16, flex: 1 }}
+          style={{ paddingHorizontal: 16 + side, paddingTop: AGENT_OVERLAP + 16, flex: 1 }}
         >
           {progress ? (
             <Text variant="footnote" tone="faint" style={[CENTER, { fontWeight: "600", marginBottom: 8 }]}>
