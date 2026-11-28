@@ -2128,7 +2128,8 @@
       "enter": "Otwórz {{org}}",
       "enterPersonal": "Otwórz przestrzeń roboczą",
       "later": "Nie teraz, otwórz {{org}}",
-      "laterPersonal": "Nie teraz, otwórz przestrzeń roboczą"
+      "laterPersonal": "Nie teraz, otwórz przestrzeń roboczą",
+      "laterShort": "Nie teraz"
     }
   },
   "desktopNotice": {

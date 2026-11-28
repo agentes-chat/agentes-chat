@@ -1911,7 +1911,8 @@
       "enter": "{{org}}を開く",
       "enterPersonal": "ワークスペースを開く",
       "later": "今はやめて、{{org}}を開く",
-      "laterPersonal": "今はやめて、ワークスペースを開く"
+      "laterPersonal": "今はやめて、ワークスペースを開く",
+      "laterShort": "今はしない"
     }
   },
   "desktopNotice": {

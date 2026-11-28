@@ -1911,7 +1911,8 @@
       "enter": "{{org}} 열기",
       "enterPersonal": "워크스페이스 열기",
       "later": "나중에 하고 {{org}} 열기",
-      "laterPersonal": "나중에 하고 워크스페이스 열기"
+      "laterPersonal": "나중에 하고 워크스페이스 열기",
+      "laterShort": "지금은 안 할게요"
     }
   },
   "desktopNotice": {

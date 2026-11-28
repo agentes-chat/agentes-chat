@@ -1990,7 +1990,8 @@
       "enter": "{{org}} öffnen",
       "enterPersonal": "Den Workspace öffnen",
       "later": "Jetzt nicht, {{org}} öffnen",
-      "laterPersonal": "Jetzt nicht, den Workspace öffnen"
+      "laterPersonal": "Jetzt nicht, den Workspace öffnen",
+      "laterShort": "Jetzt nicht"
     }
   },
   "desktopNotice": {

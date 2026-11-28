@@ -2056,7 +2056,8 @@
       "enter": "Entrar a {{org}}",
       "enterPersonal": "Entrar al espacio de trabajo",
       "later": "Ahora no, entrar a {{org}}",
-      "laterPersonal": "Ahora no, entrar al espacio de trabajo"
+      "laterPersonal": "Ahora no, entrar al espacio de trabajo",
+      "laterShort": "Ahora no"
     }
   },
   "desktopNotice": {

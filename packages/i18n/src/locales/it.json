@@ -2056,7 +2056,8 @@
       "enter": "Apri {{org}}",
       "enterPersonal": "Apri lo spazio di lavoro",
       "later": "Non ora, apri {{org}}",
-      "laterPersonal": "Non ora, apri lo spazio di lavoro"
+      "laterPersonal": "Non ora, apri lo spazio di lavoro",
+      "laterShort": "Non ora"
     }
   },
   "desktopNotice": {

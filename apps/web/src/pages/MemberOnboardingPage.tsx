@@ -23,7 +23,7 @@ import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { isRightHand, RIGHT_HAND_DEFAULT, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { browserTimezone } from "@agenteschat/client/lib/routines";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Avatar, Button, Dialog, DialogFooter, Icon, Logo, Menu, MenuItem, normalizeAppearance } from "@agenteschat/ui";
+import { Avatar, Button, Dialog, DialogFooter, Logo, Menu, MenuItem, normalizeAppearance } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
@@ -350,18 +350,19 @@ export function MemberOnboardingPage({ orgId, returned = null }: { orgId: string
     <World
       start={
         <>
-          {/* Not now: into the workspace with no agent of theirs yet, as someone who can't make one goes in. */}
+          {/* Not now: into the workspace, as every way out of here goes: their agent's DM once it exists, else the
+              workspace with no agent of theirs yet. */}
           {makes && (
             <Button
               variant="ghost"
               size="sm"
-              iconOnly
+              icon="chevronLeft"
               aria-label={t(modeKey(org, "onboarding.member.later"), { org: org.name })}
               title={t(modeKey(org, "onboarding.member.later"), { org: org.name })}
               disabled={leaving}
-              onClick={toWorkspace}
+              onClick={() => toAgent()}
             >
-              <Icon name="chevronLeft" />
+              {t("onboarding.member.laterShort")}
             </Button>
           )}
           <Logo size={22} />

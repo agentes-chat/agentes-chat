@@ -2101,6 +2101,7 @@ export const ptBR = {
       enterPersonal: "Entrar no workspace",
       later: "Agora não, entrar na {{org}}",
       laterPersonal: "Agora não, entrar no workspace",
+      laterShort: "Agora não",
     },
   },
   /** The desktop app's right click (lib/context-menu.ts). */

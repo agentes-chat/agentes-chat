@@ -1911,7 +1911,8 @@
       "enter": "打开 {{org}}",
       "enterPersonal": "打开工作区",
       "later": "暂不，打开 {{org}}",
-      "laterPersonal": "暂不，打开工作区"
+      "laterPersonal": "暂不，打开工作区",
+      "laterShort": "暂时不用"
     }
   },
   "desktopNotice": {

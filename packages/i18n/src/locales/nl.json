@@ -1987,7 +1987,8 @@
       "enter": "{{org}} openen",
       "enterPersonal": "De werkruimte openen",
       "later": "Nu niet, {{org}} openen",
-      "laterPersonal": "Nu niet, de werkruimte openen"
+      "laterPersonal": "Nu niet, de werkruimte openen",
+      "laterShort": "Niet nu"
     }
   },
   "desktopNotice": {

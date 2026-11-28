@@ -1911,7 +1911,8 @@
       "enter": "Buka {{org}}",
       "enterPersonal": "Buka ruang kerja",
       "later": "Nanti saja, buka {{org}}",
-      "laterPersonal": "Nanti saja, buka ruang kerja"
+      "laterPersonal": "Nanti saja, buka ruang kerja",
+      "laterShort": "Nanti saja"
     }
   },
   "desktopNotice": {

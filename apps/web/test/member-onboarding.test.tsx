@@ -263,12 +263,26 @@ describe("a member's onboarding (ADR 0264)", () => {
     expect(eyebrow()).toBe("Passo 2 de 2 · O seu primeiro agente");
   });
 
-  test("Not now: into the workspace with no agent of theirs yet, on the wizard alone", async () => {
+  test("Not now, in words beside the logo: into the workspace with no agent of theirs yet, on the wizard alone", async () => {
     const state = joined();
     const r = await welcome(state);
-    await click(button("Agora não, entrar na Acme"), 16);
+    const later = button("Agora não, entrar na Acme");
+    expect(later.textContent).toBe("Agora não");
+    await click(later, 16);
     expect(calls(state, "firstAgents.start")).toEqual([]);
     expect(r.router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    expect(r.landed.at(-1)?.arrival).toBe("beta");
+  });
+
+  test("Not now once their agent exists: their DM with it, as every way out of here", async () => {
+    const state = noAiYet(joined());
+    const r = await welcome(state);
+    await click(area("Marketing"), 20);
+    await click(button(/^Continuar/), 24);
+    expect(heading()).toBe(AI);
+    await click(button("Agora não, entrar na Acme"), 16);
+    const gabi = state.agents.find((a) => a.name === "Gabi")?.id;
+    expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${gabi}`);
     expect(r.landed.at(-1)?.arrival).toBe("beta");
   });
 

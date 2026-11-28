@@ -2162,6 +2162,8 @@ export const en = {
       /** The way into the workspace with no agent of theirs yet, beside the logo. */
       later: "Not now, open {{org}}",
       laterPersonal: "Not now, open the workspace",
+      /** Its visible words, beside the logo; `later` is its full name. */
+      laterShort: "Not now",
     },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).

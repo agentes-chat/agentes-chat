@@ -4876,6 +4876,9 @@
   "onboarding.member.laterPersonal": {
     "value": "Not now, open the workspace"
   },
+  "onboarding.member.laterShort": {
+    "value": "Not now"
+  },
   "onboarding.member.found": {
     "value": {
       "one": "Your {{app}} found the task that takes most of your time.",
