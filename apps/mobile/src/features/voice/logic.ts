@@ -68,6 +68,19 @@ export function handleAt(progress: number, width: number, handle = WAVE_HANDLE):
   return progress * (width - handle);
 }
 
+/**
+ * The whole columns a played wave leaves out around its handle (`x`, its left edge), `room` clear on each side of it:
+ * where they start and how wide, 0 wide when none. The handle never sits on the wave, and no column is cut in two.
+ */
+export function handleRoom(x: number, start: number, room: number): { left: number; width: number } {
+  "worklet";
+  const from = Math.floor((x - room - WAVE_CELL - start) / WAVE_PITCH) + 1;
+  const to = Math.ceil((x + WAVE_HANDLE + room - start) / WAVE_PITCH) - 1;
+  if (to < from) return { left: 0, width: 0 };
+  const left = start + from * WAVE_PITCH;
+  return { left, width: start + to * WAVE_PITCH + WAVE_CELL - left };
+}
+
 /** Where `x` falls on a played wave `width` wide: the handle's middle there, up to 0.999 at the end. */
 export function waveAt(x: number, width: number, handle = WAVE_HANDLE): number {
   "worklet";

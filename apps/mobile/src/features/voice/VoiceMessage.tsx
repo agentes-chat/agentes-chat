@@ -13,6 +13,7 @@ import { reportError } from "@/lib/error-reports";
 import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text, TOUCH } from "@/ui";
 import { useRowDirectory } from "../chat/row-data";
+import { withOpacity } from "../chat/turn";
 import { useColors, useOrgId } from "../shared/hooks";
 import { nextSpeed, spokenWords, waveAt } from "./logic";
 import {
@@ -33,6 +34,10 @@ import { PixelWave, wavePaths } from "./VoiceBars";
 
 /** Six rows of the sky's cells: the wave the take was recorded with, the app's own. */
 const WAVE = 24;
+/** A column's top and bottom cells in a half tone of the column's, so it reads round, as the agents' sky. */
+const ENDS = 0.55;
+/** Clear around the handle: the columns there step aside instead of running under it. */
+const HANDLE_ROOM = 2;
 /** The speed chip, as the web's: one width for 1×, 1,5× and 2×, so nothing beside it moves as the speed goes round. */
 const SPEED_H = 22;
 const SPEED_W = 36;
@@ -53,10 +58,13 @@ const expired = new Set<string>();
 export const VoiceMessage = memo(function VoiceMessage({
   message,
   bare = false,
+  tone,
 }: {
   message: Message;
   /** Inside the message's bubble (a conversation of bubbles): the bubble is its frame, no card of its own. */
   bare?: boolean;
+  /** What it has played, in who said it: their name's color over the bubble. Ink when not given. */
+  tone?: string;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
@@ -81,6 +89,7 @@ export const VoiceMessage = memo(function VoiceMessage({
       isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}
       bare={bare}
       nowPlaying={nowPlaying}
+      {...(tone ? { tone } : {})}
     />
   );
 });
@@ -102,6 +111,7 @@ export function VoiceClip({
   onFailed,
   bare = false,
   nowPlaying,
+  tone,
 }: {
   /** The playback's id: one sound plays at a time, and each keeps its place. */
   clipId: string;
@@ -122,6 +132,8 @@ export function VoiceClip({
   bare?: boolean;
   /** What the system shows while it plays (the Lock Screen, the notification): who said it, or the file's name. */
   nowPlaying?: NowPlaying;
+  /** What it has played, and its handle: who said it (`VoiceMessage`'s `tone`), ink when not given. */
+  tone?: string;
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
@@ -169,7 +181,7 @@ export function VoiceClip({
   }, [playing, rate, clipId]);
   useEffect(() => {
     if (width <= 0) return;
-    const wave = wavePaths(peaks, width, WAVE);
+    const wave = wavePaths(peaks, width, WAVE, false, true);
     inner.value = wave.inner;
     edge.value = wave.edge;
   }, [width, peaks, inner, edge]);
@@ -281,6 +293,9 @@ export function VoiceClip({
     [i18n.language],
   );
   const more = words && !open && (words.length > ONE_LINE || words.includes("\n"));
+  // The played part in who said it, the rest quiet; a column's ends in a half tone of each.
+  const played = tone ?? c.ink;
+  const off = gone ? c.line2 : c.faint;
   return (
     <View style={styles.box}>
       <View style={bare ? styles.bare : [styles.card, { backgroundColor: c.raised, borderColor: c.line }]}>
@@ -315,8 +330,10 @@ export function VoiceClip({
                 inner={inner}
                 edge={edge}
                 progress={progress}
-                tones={[c.ink, c.ink]}
-                off={gone ? c.line2 : c.faint}
+                tones={[played, withOpacity(played, ENDS)]}
+                off={off}
+                offEdge={withOpacity(off, ENDS)}
+                room={HANDLE_ROOM}
                 onWidth={setWidth}
                 height={WAVE}
                 handle={!gone}

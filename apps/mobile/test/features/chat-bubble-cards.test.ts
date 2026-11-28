@@ -35,7 +35,10 @@ test("in bubbles, the cards under someone else's words are bubbles of that messa
   expect(src("features/shared/bubble-part.ts")).toContain("export const BUBBLE_PART_CORNERS = MESSAGE_CARD_CORNERS;");
   // A voice message in bubbles is said in its bubble: the name over its player, the bubble its only frame.
   const voiceRow = src("features/chat/MessageRow.tsx");
-  expect(voiceRow).toContain("{voiced ? <VoiceMessage message={m} bare /> : null}");
+  // Its played part in the name's color, as who said it.
+  expect(voiceRow).toContain(
+    "{voiced ? <VoiceMessage message={m} bare {...(nameColor ? { tone: nameColor } : {})} /> : null}",
+  );
   expect(voiceRow).toContain("{voiceOf(meta) && !voiced ? <VoiceMessage message={m} /> : null}");
 });
 

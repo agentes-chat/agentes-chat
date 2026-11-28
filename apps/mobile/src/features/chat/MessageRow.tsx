@@ -1097,7 +1097,7 @@ function RowBody({
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
                       {opener}
                       {words}
-                      {voiced ? <VoiceMessage message={m} bare /> : null}
+                      {voiced ? <VoiceMessage message={m} bare {...(nameColor ? { tone: nameColor } : {})} /> : null}
                     </View>
                   </>
                 ) : compact && !grouped ? (

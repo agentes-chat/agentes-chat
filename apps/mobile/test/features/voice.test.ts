@@ -5,6 +5,7 @@ import { VOICE_MAX_MS } from "@agenteschat/client/lib/voice";
 import { hidesBody } from "../../src/features/chat/logic";
 import {
   handleAt,
+  handleRoom,
   hasWords,
   levelOf,
   localVoiceMessage,
@@ -132,10 +133,29 @@ describe("voice gestures and wave", () => {
   });
   test("a voice message's wave is the app's own: the sky's cells it was recorded with, never the web's bars", () => {
     const player = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");
-    expect(player).toContain("const wave = wavePaths(peaks, width, WAVE);");
+    expect(player).toContain("const wave = wavePaths(peaks, width, WAVE, false, true);");
     expect(player).toContain("<PixelWave");
     expect(player).not.toContain("BarWave");
     expect(player).toContain("const WAVE = 24;");
+    // Played in who said it (ink when nobody's color), each column's ends in a half tone, room around the handle.
+    expect(player).toContain("const played = tone ?? c.ink;");
+    expect(player).toContain("tones={[played, withOpacity(played, ENDS)]}");
+    expect(player).toContain("offEdge={withOpacity(off, ENDS)}");
+    expect(player).toContain("room={HANDLE_ROOM}");
+    const bars = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceBars.tsx"), "utf8");
+    expect(bars).toContain("<Group clip={clear} invertClip>");
+    expect(bars).toContain("const ends = !shortSolid || cells > 2;");
+  });
+
+  test("the handle's room leaves out whole columns within 2 of it, never half of one", () => {
+    // Columns 4 wide every 6 from 10 (10, 16, 22, 28, 34…); the handle 8 wide.
+    expect(handleRoom(20, 10, 2)).toEqual({ left: 16, width: 16 });
+    // A column that ends where the room starts stays (16 to 20, room from 20); one that starts where it ends too (34).
+    expect(handleRoom(22, 10, 2)).toEqual({ left: 22, width: 10 });
+    expect(handleRoom(24, 10, 2)).toEqual({ left: 22, width: 10 });
+    expect(handleRoom(10, 10, 2)).toEqual({ left: 10, width: 10 });
+    // No room asked and the handle in a gap: nothing left out but what it covers.
+    expect(handleRoom(14, 10, 0)).toEqual({ left: 16, width: 4 });
   });
   test("the speed chip keeps one width as the speed goes round, as the web's", () => {
     const player = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");
