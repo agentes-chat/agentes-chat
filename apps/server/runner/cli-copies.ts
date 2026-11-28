@@ -61,6 +61,14 @@ export const CLI_COMMAND: Readonly<Record<PinCli, string>> = {
   git: GIT_BASH_PICK,
 };
 
+/**
+ * Whether the person's copy at `file` is a snap's (`/snap/bin/agy`, the path the PATH gives, before it resolves to
+ * `/usr/bin/snap`). A strictly confined snap sets its own `HOME`, so it never reads the account folder the runner
+ * prepares for each sign-in (its settings, sign-in and the agentes MCP): agents on it would run with none of them.
+ * The runner's own copy runs in its place, as a snap's Chromium is kept apart in `browser.ts` (`confinedChrome`).
+ */
+export const confinedCopy = (file: string) => file.startsWith("/snap/");
+
 /** Whether `name` is one the runner fetches (a request names it; the server's list may be newer than this runner). */
 export const isPinCli = (name: string): name is PinCli => (PIN_CLIS as readonly string[]).includes(name);
 
@@ -159,6 +167,7 @@ export class CliCopies {
   private readonly failedAt = new Map<PinCli, number>();
   private readonly picked = new Map<PinCli, string | undefined>();
   private readonly states = new Map<PinCli, CliFetchState>();
+  private readonly confined = new Set<PinCli>();
 
   /** System mode: the copies are the agents' (`shared`). */
   readonly forAgents: boolean;
@@ -215,7 +224,8 @@ export class CliCopies {
     const file = this.file(cli);
     if (!file) return this.use(cli, undefined);
     if (isExecutable(file)) return this.use(cli, file);
-    if (!own && !this.opts.inUse(cli)) return;
+    // A confined copy wants the pinned build as an older one does: fetched before a turn asks.
+    if (!own && !this.confined.has(cli) && !this.opts.inUse(cli)) return;
     const failed = this.failedAt.get(cli);
     if (failed && this.now() - failed < RETRY_MS) return;
     await this.use(cli, await this.fetchOnce(cli));
@@ -262,9 +272,19 @@ export class CliCopies {
     return (this.opts.now ?? Date.now)();
   }
 
+  /**
+   * The person's copy of `cli` the runner may run: never a confined one (`confinedCopy`), told once. The agents
+   * reaching the runner's own link to another pin's copy: kept to fall back on, never at this pin.
+   */
   private async ownOf(cli: PinCli) {
     const own = await (this.opts.own ?? ownCopy)(cli, this.pins[cli].version);
-    // The agents reaching the runner's own link to another pin's copy: kept to fall back on, never at this pin.
+    if (own && confinedCopy(own.file)) {
+      if (!this.confined.has(cli)) {
+        this.confined.add(cli);
+        this.opts.log(`${cli}: ${own.file} is a snap, which reads no account folder of the runner's: not running it`);
+      }
+      return null;
+    }
     return own && (await this.linkedElsewhere(cli)) ? { ...own, version: "" } : own;
   }
 
