@@ -61,7 +61,8 @@ export function StatusBadge({ text, tone, color }: { text: string; tone: WorkTon
 }
 
 const styles = StyleSheet.create({
-  badge: { flexShrink: 1, minWidth: 0, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  // Its one word stays whole: the facts after it give way first (a cut "Trabalh…" said nothing).
+  badge: { flexShrink: 0, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
   word: { fontWeight: "600" },
   strong: { fontWeight: weights.semibold },
   shrink: { flexShrink: 1 },

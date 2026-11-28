@@ -5,7 +5,7 @@ import { corners, RADIUS } from "@/ui/radius";
 /**
  * A card under someone else's words in a conversation of bubbles: it is a bubble of the same message, so it takes the
  * bubble's fill (and its light edge over a background) instead of the raised surface and its shadow (`useSurface`),
- * and joins the bubble group above it. Null elsewhere (a conversation of lines, my own row, Atividade, Início).
+ * the one gap under the part above it as every part of the message. Null elsewhere (a conversation of lines, my own row, Atividade, Início).
  */
 export interface BubblePart {
   fill: string;

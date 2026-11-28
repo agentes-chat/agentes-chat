@@ -61,6 +61,7 @@ import {
   Disclosure,
   HoldButton,
   Icon,
+  MESSAGE_CARD_X,
   PixelOrbit,
   PressScale,
   Text,
@@ -101,6 +102,7 @@ import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { type AskAnswer, AskCard, AskFoot, ExpiryLine, useAskStore } from "./asks";
 import { markName, parseInline, threadFaces } from "./logic";
+import { useMessageCardCorners } from "./look";
 import { Spans } from "./MessageSpans";
 import { useRowDirectory, useRowMeId, useRowRoles } from "./row-data";
 import { WaitMark } from "./WaitMark";
@@ -927,6 +929,8 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   const c = useColors();
   const dir = useRowDirectory();
   const surface = useSurface();
+  // In a message, the conversation's shape, as its bubbles and cards.
+  const cardCorners = useMessageCardCorners();
   const when = useWhen();
   const now = useNow(WORK_TICK_MS);
   const faces = threadFaces(thread.participants, 2);
@@ -947,7 +951,7 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
       hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
       // As wide as its words: the press area keeps the link's size.
       fill={false}
-      style={[styles.tlinkBox, surface]}
+      style={[styles.tlinkBox, surface, cardCorners]}
       contentStyle={styles.tlink}
     >
       <View style={styles.faces}>
@@ -1016,6 +1020,8 @@ export function FileCommentsLink({
 }) {
   const { t } = useTranslation();
   const surface = useSurface();
+  // In a message, the conversation's shape, as its bubbles and cards.
+  const cardCorners = useMessageCardCorners();
   const when = useWhen();
   const faces = threadFaces(talk.participants, 2);
   const label = t(`files.comments.line.${media}` as "files.comments.line.image", { count: talk.count });
@@ -1026,7 +1032,7 @@ export function FileCommentsLink({
       accessibilityLabel={label}
       hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
       fill={false}
-      style={[styles.tlinkBox, surface]}
+      style={[styles.tlinkBox, surface, cardCorners]}
       contentStyle={styles.tlink}
     >
       <View style={styles.faces}>
@@ -1065,6 +1071,8 @@ export function ThreadReplyingLink({
   const { t } = useTranslation();
   const dir = useRowDirectory();
   const surface = useSurface();
+  // In a message, the conversation's shape, as its bubbles and cards.
+  const cardCorners = useMessageCardCorners();
   const label = t("threads.line.replying", {
     count: agentIds.length,
     names: joinNames(
@@ -1079,7 +1087,7 @@ export function ThreadReplyingLink({
       accessibilityLabel={label}
       hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
       fill={false}
-      style={[styles.tlinkBox, surface]}
+      style={[styles.tlinkBox, surface, cardCorners]}
       contentStyle={styles.tlink}
     >
       <View style={styles.faces}>
@@ -1152,13 +1160,13 @@ const styles = StyleSheet.create({
   optText: { flexShrink: 1, fontWeight: "500" },
   other: { backgroundColor: "transparent", borderWidth: 1 },
   tlinkBox: { alignSelf: "flex-start", maxWidth: "100%", borderRadius: 10 },
+  // Its faces start where the bubble's words over it do (`MESSAGE_CARD_X`), as every card's content.
   tlink: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     minHeight: THREAD_LINK,
-    paddingLeft: 8,
-    paddingRight: 12,
+    paddingHorizontal: MESSAGE_CARD_X,
   },
   faces: { flexDirection: "row", marginRight: 2 },
   overlap: { marginLeft: -6 },

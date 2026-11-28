@@ -7,11 +7,20 @@ const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", pa
 test("in bubbles, the cards under someone else's words are bubbles of that message", () => {
   const row = src("features/chat/MessageRow.tsx");
   expect(row).toContain("const bubblePart = bubbled ? { fill: otherFill, edge: bubbleEdge } : null;");
-  expect(row).toContain("<RowParts top={partTop} part={bubblePart} head={bubbleHead}>");
+  expect(row).toContain("<RowParts top={cardTop} part={bubblePart} head={bubbleHead}>");
   expect(row).toContain("<BubblePartContext.Provider value={part}>");
-  // Three points under the bubble, as a run of bubbles; cards of a message with no words start where it does.
-  expect(row).toContain("const BUBBLE_JOIN = 3;");
-  expect(row).toContain("const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;");
+  // One gap between every part of a message (its bubble, a card, its thread, its reactions), as between bubbles:
+  // nothing joins closer, nothing stands further; cards of a message with no words start where it does.
+  expect(row).not.toContain("BUBBLE_JOIN");
+  expect(row).toContain('const cardGap = look.style === "bubbles" ? rhythm.part : rhythm.card;');
+  expect(row).toContain("const cardTop = body || media ? cardGap - rhythm.part : 0;");
+  // The thread's link (and a file's comments, and the agents replying) starts its faces where the words over it do,
+  // in the conversation's shape.
+  const cards = src("features/chat/cards.tsx");
+  expect(cards).toMatch(/tlink: \{[^}]*paddingHorizontal: MESSAGE_CARD_X,[^}]*\}/);
+  expect(cards.match(/style=\{\[styles\.tlinkBox, surface, cardCorners\]\}/g)).toHaveLength(3);
+  // The work's state badge keeps its word whole; the facts after it give way.
+  expect(src("features/shared/StatusBadge.tsx")).toContain("badge: { flexShrink: 0,");
   // Every card on the shared surface takes the bubble's fill and no shadow there.
   const parts = src("features/shared/parts.tsx");
   expect(parts).toMatch(/part\s*\?\s*\{ backgroundColor: part\.fill, \.\.\.part\.edge \}/);

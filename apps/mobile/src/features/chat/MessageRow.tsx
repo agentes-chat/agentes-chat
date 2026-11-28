@@ -528,8 +528,13 @@ function RowBody({
   // Settings it proposes, or a workspace action it asks for: their card (`SettingsProposals`).
   const actionKind = actionCardOf(meta)?.kind;
   const settingsCard = actionKind === "settings_proposal" || actionKind === "workspace_action";
-  const rowGap = !grouped || newTurn ? rhythm.turn : cardRow ? rhythm.card : rhythm.part;
-  const cardTop = body || media ? rhythm.card - rhythm.part : 0;
+  const look = useRowLook();
+  // In bubbles every part of a message (a bubble, a card, its thread, its reactions) stands the one gap off the part
+  // above it, as consecutive bubbles do, and so does a card in a row of its own: nothing joins closer, nothing stands
+  // further. The other looks give a card more room under loose words (`CHAT_RHYTHM.card`).
+  const cardGap = look.style === "bubbles" ? rhythm.part : rhythm.card;
+  const rowGap = !grouped || newTurn ? rhythm.turn : cardRow ? cardGap : rhythm.part;
+  const cardTop = body || media ? cardGap - rhythm.part : 0;
   // Where it browsed, or what it did on its desktop, after the run (as on the web): the steps' card.
   // Step summaries, no picture: activity, so the person's setting hides them like the tool block.
   const trails =
@@ -554,7 +559,6 @@ function RowBody({
   // My own message. In the styles that keep it apart, a bubble on the right with no face or name; in the others, a row
   // like anyone's.
   const mine = m.author.type === "person" && Boolean(meId) && m.author.id === meId;
-  const look = useRowLook();
   // The name over the words and its time follow the person's Tamanho do texto, as the words do.
   const nameSize = look.text ? chatNameOf(look.text) : undefined;
   const timeSize = look.text ? chatTimeOf(look.text) : undefined;
@@ -997,10 +1001,9 @@ function RowBody({
     [approvalId, question, secret].filter(Boolean).length === 1;
   const bubbleHead = askAlone ? { who: who(true), time: when.time(m.createdAt) } : null;
   const nameOrWords = Boolean(inBubble || (nameLine && !askAlone) || pinLine || reportOpened || opener || words);
-  // In bubbles, the cards under these words are bubbles of the same message: its fill, 3 points under it, joined
-  // (`BubblePartContext`, `BUBBLE_JOIN`).
+  // In bubbles, the cards under these words are bubbles of the same message: its fill (`BubblePartContext`), the one
+  // gap under it (`cardTop`).
   const bubblePart = bubbled ? { fill: otherFill, edge: bubbleEdge } : null;
-  const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;
   return (
     <>
       {pairRow && m.author.id ? (
@@ -1066,7 +1069,7 @@ function RowBody({
         ) : null}
         {/* Its face and its body give way together (`useGiveWay`), so the bubble never runs under the face. */}
         <Animated.View style={[styles.body, { gap: rhythm.part }, inBubble && giveWay.style, compact && slide]}>
-          <RowParts top={partTop} part={bubblePart} head={bubbleHead}>
+          <RowParts top={cardTop} part={bubblePart} head={bubbleHead}>
             {nameOrWords ? (
               <View onLayout={inBubble ? giveWay.onArea : undefined}>
                 {inBubble ? (
@@ -1683,9 +1686,6 @@ function RowParts({
     </RowPartContext.Provider>
   );
 }
-
-/** How far under a bubble its cards sit in `bubbles`: one group of the same message, as a run of bubbles. */
-const BUBBLE_JOIN = 3;
 
 /** Words and time on my solid bubble. */
 const ON_SOLID = "#ffffff";
