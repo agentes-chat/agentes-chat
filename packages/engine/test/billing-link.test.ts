@@ -22,6 +22,8 @@ import {
   sealLinkToken,
   setBillingHold,
   setOrgStanding,
+  TEAM_TEXT_MAX,
+  teamText,
   testStorage,
   updateIssue,
 } from "../src";
@@ -110,6 +112,20 @@ describe("sealLinkToken", () => {
     }
     expect(sealLinkToken(SECRET, VECTOR)).not.toBe(sealLinkToken(SECRET, VECTOR));
     expect(() => openLinkToken("another-secret-of-thirty-two-characters", TOKEN)).toThrow();
+  });
+});
+
+describe("teamText", () => {
+  test("a name or role trimmed, cut to 80 UTF-16 units, with no space left where the cut lands and no half of a pair", () => {
+    // The cut lands just after a space: the space goes too.
+    expect(teamText(`${"a".repeat(79)} b`)).toBe("a".repeat(79));
+    expect(teamText(`  ${"a".repeat(78)}   bc  `)).toBe("a".repeat(78));
+    // The cut lands inside an emoji's surrogate pair: neither half stays, nor the space before it.
+    expect(teamText(`${"a".repeat(78)} 😀`)).toBe("a".repeat(78));
+    expect(teamText(`${"a".repeat(78)}😀`)).toBe(`${"a".repeat(78)}😀`);
+    expect(teamText("  Caio  ")).toBe("Caio");
+    expect(teamText("   ")).toBe("");
+    expect(teamText("x".repeat(81)).length).toBe(TEAM_TEXT_MAX);
   });
 });
 

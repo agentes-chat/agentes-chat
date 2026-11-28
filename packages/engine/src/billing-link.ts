@@ -238,6 +238,12 @@ const totalsOf = (orgId: string) => ({
 const DEFAULT_LOOK = { color: "sky", eyes: "round" } as const;
 
 /**
+ * An agent's name or role as a link carries it: trimmed, cut to `TEAM_TEXT_MAX` UTF-16 units without splitting a
+ * surrogate pair (`cutText`), then trimmed again, since a cut that lands just after a space would leave it at the end.
+ */
+export const teamText = (text: string) => cutText(text.trim(), TEAM_TEXT_MAX).trimEnd();
+
+/**
  * The workspace's first `TEAM_SHOWN` agents, oldest first, as the billing service's price page names and draws them
  * ("Caio is ready…"): the team's own, not its right hand (ADR 0137), which every workspace has. Agents made at the same
  * moment (a team made before each insert had its own time) come by name, as the agents' list orders them
@@ -254,8 +260,8 @@ async function teamOf(db: Database, orgId: string): Promise<BillingTeamAgent[]> 
   return rows.map(({ name, role, appearance }) => {
     const look = normalizeAppearance(appearance);
     return {
-      name: cutText(name.trim(), TEAM_TEXT_MAX),
-      role: cutText(role.trim(), TEAM_TEXT_MAX) || null,
+      name: teamText(name),
+      role: teamText(role) || null,
       look: {
         color: look.color ?? DEFAULT_LOOK.color,
         eyes: look.eyes ?? DEFAULT_LOOK.eyes,
