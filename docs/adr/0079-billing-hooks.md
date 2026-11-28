@@ -142,12 +142,14 @@ three fields (`BillingTeamAgent`, `BillingMonth` in `packages/engine/src/billing
 
 - **`team`**: the workspace's first 5 agents, oldest first (agents made at the same moment by name, then by id, as the
   agents' list orders them, so every link names the same ones in the same order), archived ones and its right hand left
-  out (every workspace has one, ADR 0137), each with `name` and `role` (cut to 80 UTF-16 units without splitting a character; an empty role
-  is null) and `look`: `color`, `eyes` and `accessory` as the agent engine names them (a preset or `#rrggbb`; the app's
+  out (every workspace has one, ADR 0137), each with `name` and `role` (cut to 80 UTF-16 units without splitting a character, and trimmed
+  again after the cut; an empty role is null) and `look`: `color`, `eyes` and `accessory` as the agent engine names them (a preset or `#rrggbb`; the app's
   default `sky` and `round` for an agent that never picked a look or kept a value the app no longer draws; `accessory`
   null for none). This lifts §3's "never a name" for agents only: their names and roles are the workspace's own words
   about its team, shown back to the owner or admin who opened the link, and the sealed token (`v2`) keeps them out of
-  the address. No other person's name, no message, file or page goes.
+  the address. The billing service keeps them, with the rest of `usage`, in the store of the session the link opens
+  (two hours), until its hourly prune of expired sessions deletes that session. No other person's name, no message,
+  file or page goes.
 - **`routines`**: the routines that are on, counted as an agent's cap counts them (`checkRoutineCap`): repeating ones
   that start runs; one-offs, reminders and widgets' left out.
 - **`month`**: this calendar month so far in the workspace's time zone (`organization_settings.timezone`, UTC without
