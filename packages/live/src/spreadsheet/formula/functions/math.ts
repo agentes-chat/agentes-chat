@@ -333,7 +333,13 @@ export const MATH: Record<string, FnSpec> = {
     if (n < 0 || k < 0 || n < k) return ERR["#NUM!"];
     const m = Math.min(k, n - k);
     let c = 1;
-    for (let i = 1; i <= m; i++) c = (c * (n - m + i)) / i;
+    for (let i = 1; i <= m; i++) {
+      const factor = n - m + i;
+      const product = c * factor;
+      // Divide first only when the intermediate product overflows, keeping ordinary results unchanged.
+      c = Number.isFinite(product) ? product / i : (c / i) * factor;
+      if (!Number.isFinite(c)) return ERR["#NUM!"];
+    }
     return Math.round(c);
   }),
   DEGREES: math1("angle", (x) => (x * 180) / Math.PI),
