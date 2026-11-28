@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { and, eq, isNull, schema } from "@agenteschat/db";
 import {
+  adoptFirstAgent,
   armFirstDelivery,
   createRoutine,
   deliverySummary,
@@ -81,6 +82,37 @@ const deliveryRow = async (fx: Fixture, userId: string) => {
 
 const checkJobs = (fx: Fixture) => fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, FIRST_DELIVERY_JOB));
 
+/** The workspace's agents but its right hand, archived ones too. */
+const team = (fx: Fixture) =>
+  fx.db
+    .select()
+    .from(schema.agents)
+    .where(and(eq(schema.agents.orgId, fx.org.id), isNull(schema.agents.builtin)));
+
+const channelRow = async (fx: Fixture, id: string) => {
+  const [row] = await fx.db.select().from(schema.channels).where(eq(schema.channels.id, id));
+  if (!row) throw new Error("no channel");
+  return row;
+};
+
+/** The right hand's team card that made `agentId`, as stored. */
+const cardOf = async (fx: Fixture, agentId: string) => {
+  const rows = await fx.db.select().from(schema.messages).where(eq(schema.messages.orgId, fx.org.id));
+  return rows
+    .map((m) => m.meta.actionCard as { kind?: string; state?: string; created?: { agentIds: string[] } } | undefined)
+    .find((card) => card?.kind === "team_proposal" && card.created?.agentIds.includes(agentId));
+};
+
+/** The right hand's weekly checks: routines of the right hand's. */
+const weeklyChecks = async (fx: Fixture) => {
+  const rows = await fx.db
+    .select({ id: schema.routines.id })
+    .from(schema.routines)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.routines.agentId))
+    .where(and(eq(schema.routines.orgId, fx.org.id), eq(schema.agents.builtin, "right_hand")));
+  return rows.length;
+};
+
 /** The notices of first deliveries in the person's DM with the agent. */
 const notices = async (fx: Fixture, userId: string, agentId: string) => {
   const dm = await openPersonAgentDm(fx.db, fx.org.id, userId, agentId);
@@ -126,7 +158,7 @@ describe("keeping it", () => {
     expect(await checkJobs(f)).toEqual([]);
   });
 
-  test("going back to another area archives the agent made a moment ago; only that one, and only while it waits", async () => {
+  test("going back to another area takes back the agent made a moment ago, once the new one is made", async () => {
     f = await setup({ rightHand: true });
     const first = await start(f, f.owner.id, support());
     const second = await start(
@@ -135,27 +167,97 @@ describe("keeping it", () => {
       support({ area: "finance", name: "Caio", role: "Financeiro", replace: first.agentId }),
     );
     expect((await agentRow(f, first.agentId)).archivedAt).not.toBeNull();
+    expect((await agentRow(f, second.agentId)).archivedAt).toBeNull();
     expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toMatchObject({
       agentId: second.agentId,
       area: "finance",
     });
-    // A `replace` that isn't this person's waiting first agent archives nothing: the workspace's own agent here.
-    const third = await start(f, f.owner.id, support({ area: "marketing", name: "Gabi", replace: f.agent.id }));
+  });
+
+  test("one first agent: while one is kept, a start that doesn't take its place is first_agents.kept", async () => {
+    f = await setup({ rightHand: true });
+    const iara = await start(f, f.owner.id, support());
+    const live = async () => (await team(f)).filter((a) => a.archivedAt === null).length;
+    const before = await live();
+    // No `replace`, or one that names another agent (the workspace's own here): refused before anything is made.
+    for (const replace of [undefined, null, f.agent.id]) {
+      const refused = await failure(() => start(f, f.owner.id, support({ area: "finance", name: "Caio", replace })));
+      expect(refused).toMatchObject({ name: "ConflictError", code: "first_agents.kept" });
+    }
+    expect(await live()).toBe(before);
     expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
-    expect((await agentRow(f, second.agentId)).archivedAt).toBeNull();
-    // An agent brought from another app (no area) is never archived from the onboarding; a new agent disarms it.
-    await armFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id }, f.agent.id);
-    expect((await deliveryRow(f, f.owner.id))?.armedAt).not.toBeNull();
-    const nina = await start(f, f.owner.id, support({ area: "life", name: "Nina", replace: f.agent.id }));
-    expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
-    expect(await deliveryRow(f, f.owner.id)).toMatchObject({ agentId: nina.agentId, area: "life", armedAt: null });
-    // One that fired stays, its agent too.
+    expect((await deliveryRow(f, f.owner.id))?.agentId).toBe(iara.agentId);
+    // Its delivery gone: it stays the first agent, even named.
     await f.db.update(schema.firstDeliveries).set({ firedAt: new Date() });
-    const fired = await deliveryRow(f, f.owner.id);
-    await start(f, f.owner.id, support({ area: "tech", name: "Léo", replace: fired?.agentId }));
-    expect((await agentRow(f, fired?.agentId as string)).archivedAt).toBeNull();
-    expect((await deliveryRow(f, f.owner.id))?.agentId).toBe(fired?.agentId as string);
-    expect(third.agentId).not.toBe(second.agentId);
+    const leo = support({ area: "tech", name: "Léo", replace: iara.agentId });
+    expect((await failure(() => start(f, f.owner.id, leo))).code).toBe("first_agents.kept");
+    expect((await agentRow(f, iara.agentId)).archivedAt).toBeNull();
+    // Another agent only armed (one that was already here, no area): never taken back from the onboarding.
+    await f.db.delete(schema.firstDeliveries);
+    await armFirstDelivery(f.db, { orgId: f.org.id, userId: f.owner.id }, f.agent.id);
+    const life = support({ area: "life", name: "Nina", replace: f.agent.id });
+    expect((await failure(() => start(f, f.owner.id, life))).code).toBe("first_agents.kept");
+    expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
+    // Once its agent left the team, a new one may be made.
+    await f.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, f.agent.id));
+    const nina = await start(f, f.owner.id, support({ area: "life", name: "Nina" }));
+    expect(await deliveryRow(f, f.owner.id)).toMatchObject({ agentId: nina.agentId, area: "life", armedAt: null });
+  });
+
+  test("two starts at once (two tabs, a retry): one first agent stays, the other is taken back", async () => {
+    f = await setup({ rightHand: true });
+    const both = await Promise.allSettled([
+      start(f, f.owner.id, support()),
+      start(f, f.owner.id, support({ area: "finance", name: "Caio", role: "Financeiro" })),
+    ]);
+    const made = both.flatMap((r) => (r.status === "fulfilled" ? [r.value.agentId] : []));
+    expect(made).toHaveLength(1);
+    for (const r of both)
+      if (r.status === "rejected") expect((r.reason as { code?: string }).code).toBe("first_agents.kept");
+    const live = (await team(f)).filter((a) => a.archivedAt === null && a.id !== f.agent.id);
+    expect(live.map((a) => a.id)).toEqual(made);
+    expect((await deliveryRow(f, f.owner.id))?.agentId).toBe(made[0] as string);
+  });
+
+  test("a new agent that fails to be made leaves the one before it in place", async () => {
+    f = await setup({ rightHand: true });
+    const first = await start(f, f.owner.id, support());
+    // With no right hand, its team card can't be made.
+    await f.db
+      .update(schema.agents)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(schema.agents.orgId, f.org.id), eq(schema.agents.builtin, "right_hand")));
+    const caio = support({ area: "finance", name: "Caio", role: "Financeiro", replace: first.agentId });
+    expect(await failure(() => start(f, f.owner.id, caio))).toMatchObject({ code: "right_hand.missing" });
+    expect((await agentRow(f, first.agentId)).archivedAt).toBeNull();
+    expect((await deliveryRow(f, f.owner.id))?.agentId).toBe(first.agentId);
+  });
+
+  test("the agent taken back: its channel archived while only it and the person are in it, its card undone", async () => {
+    f = await setup({ rightHand: true });
+    // Only the right hand, as a new workspace has: the first card makes the right hand's weekly check.
+    await f.db.delete(schema.agents).where(eq(schema.agents.id, f.agent.id));
+    const first = await start(f, f.owner.id, support());
+    const second = await start(
+      f,
+      f.owner.id,
+      support({ area: "finance", name: "Caio", role: "Financeiro", replace: first.agentId }),
+    );
+    expect((await channelRow(f, first.channelId)).archivedAt).not.toBeNull();
+    expect((await cardOf(f, first.agentId))?.state).toBe("undone");
+    expect((await cardOf(f, second.agentId))?.state).toBe("created");
+    // Someone else in its channel: the channel stays, the card still reads as undone.
+    const bia = await addUser(f.db, "bia");
+    await f.db.transaction((tx) => joinOrganization(tx, f.org.id, bia.id, "member"));
+    await f.db.insert(schema.channelMembers).values({ orgId: f.org.id, channelId: second.channelId, userId: bia.id });
+    const leo = support({ area: "tech", name: "Léo", role: "Tecnologia", replace: second.agentId });
+    const third = await start(f, f.owner.id, leo);
+    expect((await agentRow(f, second.agentId)).archivedAt).not.toBeNull();
+    expect((await channelRow(f, second.channelId)).archivedAt).toBeNull();
+    expect((await cardOf(f, second.agentId))?.state).toBe("undone");
+    expect((await agentRow(f, third.agentId)).archivedAt).toBeNull();
+    // The right hand's weekly check, made with the first card, stays: the next cards don't make it again.
+    expect(await weeklyChecks(f)).toBe(1);
   });
 
   test("the right hand's weekly check comes once with the team's first agent, however many areas are picked", async () => {
@@ -226,11 +328,17 @@ describe("keeping it", () => {
     expect(armed).toMatchObject({ agentId: f.agent.id, area: "support", task: "Ler os e-mails", firedAt: null });
     expect(armed.armedAt).not.toBeNull();
     expect(await checkJobs(f)).toHaveLength(1);
-    // An agent brought from another app: no area, no task, armed.
+    // Another agent while the onboarding's own first agent waits: it stays the one.
     const [caio] = await f.db
       .insert(schema.agents)
       .values({ orgId: f.org.id, name: "Caio", handle: "caio", model: "claude-sonnet-5-5" })
       .returning();
+    expect(await failure(() => armFirstDelivery(f.db, ana, caio?.id as string))).toMatchObject({
+      name: "ConflictError",
+      code: "first_agents.kept",
+    });
+    // An agent that was already here, with no first agent of the onboarding's waiting: no area, no task, armed.
+    await f.db.update(schema.firstDeliveries).set({ area: null });
     const brought = await armFirstDelivery(f.db, ana, caio?.id as string);
     expect(brought).toMatchObject({ agentId: caio?.id, area: null, task: "", firedAt: null });
     expect(brought.armedAt).not.toBeNull();
@@ -309,12 +417,88 @@ describe("keeping it", () => {
     expect((await agentRow(f, nina.agentId)).archivedAt).not.toBeNull();
     expect((await agentRow(f, lia.agentId)).archivedAt).toBeNull();
     expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toMatchObject({ agentId: lia.agentId, area: "ask" });
+    // Asked again without naming it: first_agents.kept, nothing made, the proposal free to pick later.
+    const unnamed = await ask("Bia");
+    const pickUnnamed = () => pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, unnamed.id, 0);
+    expect((await failure(pickUnnamed)).code).toBe("first_agents.kept");
+    const [free] = await f.db
+      .select()
+      .from(schema.firstAgentProposals)
+      .where(eq(schema.firstAgentProposals.id, unnamed.id));
+    expect(free).toMatchObject({ picked: null, pickedAt: null, agentId: null });
     // Never one whose first delivery went, nor the workspace's own agent.
     await f.db.update(schema.firstDeliveries).set({ firedAt: new Date() });
     const later = await ask("Rui");
-    await pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, later.id, 0, lia.agentId);
+    const pickLater = () =>
+      pickFirstAgent(pickDeps(f), { orgId: f.org.id, userId: f.owner.id }, later.id, 0, lia.agentId);
+    expect((await failure(pickLater)).code).toBe("first_agents.kept");
     expect((await agentRow(f, lia.agentId)).archivedAt).toBeNull();
     expect((await agentRow(f, f.agent.id)).archivedAt).toBeNull();
+  });
+});
+
+describe("an agent brought from another app on the onboarding", () => {
+  /** An agent the person's import made: theirs, in the team. */
+  const imported = async (fx: Fixture, name: string, ownerUserId = fx.owner.id) => {
+    const [row] = await fx.db
+      .insert(schema.agents)
+      .values({ orgId: fx.org.id, name, handle: name.toLowerCase(), model: "claude-sonnet-5-5", ownerUserId })
+      .returning();
+    if (!row) throw new Error("no agent");
+    return row.id;
+  };
+  const adopt = (fx: Fixture, userId: string, input: Record<string, unknown>) =>
+    adoptFirstAgent(pickDeps(fx), { orgId: fx.org.id, userId }, input);
+
+  test("after an area's agent: the one brought takes its place, the onboarding leaves one first agent", async () => {
+    f = await setup({ rightHand: true });
+    const iara = await start(f, f.owner.id, support());
+    const bruno = await imported(f, "Bruno");
+    const home = await adopt(f, f.owner.id, { agentId: bruno, replace: iara.agentId });
+    expect(home.agentId).toBe(bruno);
+    expect((await agentRow(f, iara.agentId)).archivedAt).not.toBeNull();
+    expect((await cardOf(f, iara.agentId))?.state).toBe("undone");
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toEqual({
+      agentId: bruno,
+      area: "import",
+      task: "",
+      armedAt: null,
+      firedAt: null,
+      runId: null,
+    });
+    // Again: the same answer, nothing else changes.
+    expect((await adopt(f, f.owner.id, { agentId: bruno })).agentId).toBe(bruno);
+  });
+
+  test("before an area's agent: going back and picking an area takes back the one brought", async () => {
+    f = await setup({ rightHand: true });
+    const bruno = await imported(f, "Bruno");
+    await adopt(f, f.owner.id, { agentId: bruno });
+    // Picking an area without naming it: refused.
+    expect((await failure(() => start(f, f.owner.id, support()))).code).toBe("first_agents.kept");
+    const iara = await start(f, f.owner.id, support({ replace: bruno }));
+    expect((await agentRow(f, bruno)).archivedAt).not.toBeNull();
+    expect(await readFirstDelivery(f.db, f.org.id, f.owner.id)).toMatchObject({
+      agentId: iara.agentId,
+      area: "support",
+    });
+  });
+
+  test("only the person's own agent, in the team; another first agent kept and not named: first_agents.kept", async () => {
+    f = await setup({ rightHand: true });
+    const bia = await addUser(f.db, "bia");
+    await f.db.transaction((tx) => joinOrganization(tx, f.org.id, bia.id, "member"));
+    const hers = await imported(f, "Nina", bia.id);
+    expect(await failure(() => adopt(f, f.owner.id, { agentId: hers }))).toMatchObject({
+      code: "first_delivery.not_yours",
+    });
+    const unknown = await failure(() => adopt(f, f.owner.id, { agentId: crypto.randomUUID() }));
+    expect(unknown.code).toBe("first_delivery.no_agent");
+    await start(f, f.owner.id, support());
+    const bruno = await imported(f, "Bruno");
+    expect((await failure(() => adopt(f, f.owner.id, { agentId: bruno }))).code).toBe("first_agents.kept");
+    // The import stays: it is the person's, never the onboarding's to take back.
+    expect((await agentRow(f, bruno)).archivedAt).toBeNull();
   });
 });
 

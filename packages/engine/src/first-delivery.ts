@@ -1,11 +1,11 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, eq, isNotNull, isNull, lt, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, eq, isNotNull, isNull, lt, or, schema, sql } from "@agenteschat/db";
 import { getAgent } from "./agents";
 import { type AiStatusDeps, agentAiState } from "./ai-status";
 import { reachesAgent } from "./audience";
 import { deliverNotice, publishDelivery } from "./delivery";
 import { openPersonAgentDm } from "./dms";
-import { ForbiddenError, NotFoundError } from "./errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { firstName } from "./format";
 import type { Notice } from "./notices";
 import { getMembership, requireActiveMembership } from "./organizations";
@@ -128,20 +128,70 @@ export async function readFirstDelivery(db: Database, orgId: string, userId: str
   return row ? viewOf(row.row) : null;
 }
 
-/** The person's pending first delivery (not fired yet), as stored: what `startFirstAgent`'s `replace` checks. */
-export async function pendingFirstDelivery(db: Database, orgId: string, userId: string): Promise<Row | null> {
-  const [row] = await db
-    .select()
+/**
+ * The person's first agent here as the onboarding keeps it (ADR 0264 addendum): their first delivery's row, fired or
+ * not, while its agent is in the team (not archived, not deleted), with that agent's owner. Null when there is none: a
+ * new first agent may be made then.
+ */
+export async function keptFirstAgent(
+  db: Database,
+  orgId: string,
+  userId: string,
+): Promise<(Row & { ownerUserId: string | null }) | null> {
+  const [found] = await db
+    .select({ row: firstDeliveries, ownerUserId: agents.ownerUserId })
     .from(firstDeliveries)
-    .where(and(eq(firstDeliveries.orgId, orgId), eq(firstDeliveries.userId, userId), isNull(firstDeliveries.firedAt)));
-  return row ?? null;
+    .innerJoin(agents, and(eq(agents.orgId, firstDeliveries.orgId), eq(agents.id, firstDeliveries.agentId)))
+    .where(
+      and(
+        eq(firstDeliveries.orgId, orgId),
+        eq(firstDeliveries.userId, userId),
+        isNull(agents.archivedAt),
+        isNull(agents.deletedAt),
+      ),
+    );
+  return found ? { ...found.row, ownerUserId: found.ownerUserId } : null;
+}
+
+/**
+ * Takes the person's first delivery for a first agent made a moment ago (`startFirstAgent`, `pickFirstAgent`,
+ * `adoptFirstAgent`), disarmed, in one statement: only when there is none yet, or the one there hasn't fired and is
+ * this agent's, `over`'s (the agent this one takes the place of), or one whose agent left the team. False when another
+ * request kept a first agent of its own meanwhile (two tabs, a retry): the caller's new agent is then one too many.
+ */
+export async function takeFirstDelivery(
+  db: Database,
+  input: { orgId: string; userId: string; agentId: string; area: string; task: string; over: string | null },
+): Promise<boolean> {
+  const area = input.area.trim().slice(0, FIRST_DELIVERY_AREA_MAX) || null;
+  const task = input.task.trim().slice(0, FIRST_DELIVERY_TASK_MAX);
+  const gone = sql`not exists (select 1 from ${agents} where ${agents.id} = ${firstDeliveries.agentId}
+    and ${agents.archivedAt} is null and ${agents.deletedAt} is null)`;
+  const [kept] = await db
+    .insert(firstDeliveries)
+    .values({ orgId: input.orgId, userId: input.userId, agentId: input.agentId, area, task, armedAt: null })
+    .onConflictDoUpdate({
+      target: [firstDeliveries.orgId, firstDeliveries.userId],
+      set: { agentId: input.agentId, area, task, armedAt: null, createdAt: new Date(), runId: null },
+      setWhere: and(
+        isNull(firstDeliveries.firedAt),
+        or(
+          eq(firstDeliveries.agentId, input.agentId),
+          input.over ? eq(firstDeliveries.agentId, input.over) : undefined,
+          gone,
+        ),
+      ),
+    })
+    .returning({ id: firstDeliveries.id });
+  return kept !== undefined;
 }
 
 /**
  * Arms the person's first delivery as they leave the agent's step ("Continuar"), for `agentId`: an agent of this
  * workspace, not archived, that answers them. Their waiting delivery of that agent keeps its area and task; any other
- * agent (one brought from another app) takes its place with no area and no task, its brief then its routine of theirs,
- * else its role. One that fired stays as it is. A look at whether it can fire now is queued.
+ * agent (one that was already here) takes its place with no area and no task, its brief then its routine of theirs,
+ * else its role, unless the onboarding made them a first agent that is still waiting (`first_agents.kept`: it stays
+ * the one, ADR 0264 addendum). One that fired stays as it is. A look at whether it can fire now is queued.
  */
 export async function armFirstDelivery(
   db: Database,
@@ -166,7 +216,12 @@ export async function armFirstDelivery(
       ),
     )
     .returning();
-  if (!armed) return keepFirstDelivery(db, { orgId, userId, agentId, area: null, task: "", armed: true });
+  if (!armed) {
+    const kept = await keptFirstAgent(db, orgId, userId);
+    if (kept && kept.agentId !== agentId && kept.area !== null && !kept.firedAt)
+      throw new ConflictError("Your first agent is already made", "first_agents.kept", { agentId: kept.agentId });
+    return keepFirstDelivery(db, { orgId, userId, agentId, area: null, task: "", armed: true });
+  }
   await checkNow(db, orgId);
   return viewOf(armed);
 }

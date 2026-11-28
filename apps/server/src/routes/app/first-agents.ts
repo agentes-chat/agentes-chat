@@ -1,4 +1,5 @@
 import {
+  adoptFirstAgent,
   armFirstDelivery,
   FIRST_AGENT_LIMITS,
   FIRST_AGENT_START_LIMITS,
@@ -217,7 +218,7 @@ export function firstAgentRoutes(deps: AppDeps) {
       security,
       summary: 'Create the agent of one option ("Criar o …")',
       description:
-        "One agent, as you, through the right hand's team card in your DM with it (Undo for a day): its routine, its AI, its own channel in a team's workspace. Picking again answers with the same agent. `replace`: your first agent made a moment ago on the onboarding (an area's, or an earlier proposal's) whose first delivery hasn't gone, archived, so the onboarding leaves one. 403 `create_agents_required` without the permission to create agents; 409 `first_agents.picking` while another pick of it runs.",
+        "One agent, as you, through the right hand's team card in your DM with it (Undo for a day): its routine, its AI, its own channel in a team's workspace. Picking again answers with the same agent. `replace`: your first agent made a moment ago on the onboarding (an area's, or an earlier proposal's) whose first delivery hasn't gone, archived once this one is made, so the onboarding leaves one. 403 `create_agents_required` without the permission to create agents; 409 `first_agents.picking` while another pick of it runs; 409 `first_agents.kept` while another first agent of yours is kept and `replace` doesn't name it, or it can't be replaced (its delivery went).",
       request: {
         params: OrgParams.extend({ id: z.uuid() }),
         body: body(
@@ -254,7 +255,7 @@ export function firstAgentRoutes(deps: AppDeps) {
       security,
       summary: "Create my first agent from an area of the onboarding",
       description:
-        "One agent, as you, made as a picked proposal is (its own channel in a team's workspace, its AI, a checklist row for each app to connect) but with no routine: connecting an app brings its routine. Its first delivery is kept, armed when you leave the agent's step (`PUT …/first-delivery`), and fires in your DM with it once the workspace has its plan and the agent its AI. `replace`: your first agent made a moment ago, archived. 400 `first_agents.invalid` with what is wrong; 403 `create_agents_required` without the permission to create agents.",
+        "One agent, as you, made as a picked proposal is (its own channel in a team's workspace, its AI, a checklist row for each app to connect) but with no routine: connecting an app brings its routine. Its first delivery is kept, armed when you leave the agent's step (`PUT …/first-delivery`), and fires in your DM with it once the workspace has its plan and the agent its AI. `replace`: your first agent made a moment ago, archived once this one is made. 400 `first_agents.invalid` with what is wrong; 403 `create_agents_required` without the permission to create agents; 409 `first_agents.kept` while another first agent of yours is kept and `replace` doesn't name it, or it can't be replaced (its delivery went).",
       request: { params: OrgParams, body: body(FirstAgentStartBody) },
       responses: { 201: json(Picked), ...errors },
     }),
@@ -266,6 +267,40 @@ export function firstAgentRoutes(deps: AppDeps) {
         c.req.valid("json"),
       );
       return c.json(made, 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/first-agents/adopt",
+      tags,
+      security,
+      summary: "Make an agent I brought from another app my first agent",
+      description:
+        "Called by the onboarding once an import from its work step brought agents: that agent becomes my first agent, its first delivery kept (no task: its brief, then its routine of mine, else its role), armed when I leave the agent's step. `replace`: my first agent made a moment ago, archived, so the onboarding leaves one. Again with the same agent, the same answer. 404 `first_delivery.no_agent` for one not here or archived; 403 `first_delivery.not_yours` for one that isn't mine; 409 `first_agents.kept` while another first agent of mine is kept and `replace` doesn't name it.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            agentId: z.uuid(),
+            replace: z
+              .uuid()
+              .nullish()
+              .openapi({ description: "My first agent made a moment ago, whose place it takes." }),
+          }),
+        ),
+      },
+      responses: { 200: json(Picked), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const adopted = await adoptFirstAgent(
+        { db, pubsub: adapters.pubsub, gateway: deps.extras?.context?.gateway, context: deps.extras?.context },
+        { orgId, userId: c.get("user").id },
+        c.req.valid("json"),
+      );
+      return c.json(adopted, 200);
     },
   );
 
@@ -297,7 +332,7 @@ export function firstAgentRoutes(deps: AppDeps) {
       security,
       summary: "Arm my first delivery as I leave the agent's step",
       description:
-        "Called by the onboarding's Continue on the agent's step: from then on it fires as soon as the workspace has its plan and the agent its AI. My waiting delivery of this agent keeps its area and task; any other agent of this workspace (one brought from another app) takes its place with no area and no task, its brief then its routine of yours, else its role. One already fired stays as it is. 404 `first_delivery.no_agent` for an agent not here or archived; 403 `first_delivery.not_yours` for one that doesn't answer you.",
+        "Called by the onboarding's Continue on the agent's step: from then on it fires as soon as the workspace has its plan and the agent its AI. My waiting delivery of this agent keeps its area and task; any other agent of this workspace (one brought from another app) takes its place with no area and no task, its brief then its routine of yours, else its role. One already fired stays as it is. 404 `first_delivery.no_agent` for an agent not here or archived; 403 `first_delivery.not_yours` for one that doesn't answer you; 409 `first_agents.kept` for another agent while the onboarding's own first agent of yours waits.",
       request: { params: OrgParams, body: body(z.object({ agentId: z.uuid() })) },
       responses: { 200: json(z.object({ delivery: FirstDelivery })), ...errors },
     }),

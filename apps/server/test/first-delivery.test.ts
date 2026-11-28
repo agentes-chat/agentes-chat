@@ -52,6 +52,10 @@ const api = (b: Browser, orgId: string) => ({
     const res = await b(`/api/app/organizations/${orgId}/first-delivery`);
     return { status: res.status, json: (await res.json()) as { delivery: Delivery | null } & ApiError };
   },
+  adopt: async (json: unknown) => {
+    const res = await b(`/api/app/organizations/${orgId}/first-agents/adopt`, { json });
+    return { status: res.status, json: (await res.json()) as Made & ApiError };
+  },
   keep: async (agentId: string) => {
     const res = await b(`/api/app/organizations/${orgId}/first-delivery`, { method: "PUT", json: { agentId } });
     return { status: res.status, json: (await res.json()) as { delivery: Delivery } & ApiError };
@@ -115,8 +119,12 @@ describe("an agent from an area", () => {
     expect((await hers.read()).json.delivery).toBeNull();
     const made = await hers.start(support({ area: "sales", name: "Nina", role: "Vendas" }));
     expect(made.status).toBe(201);
-    // Her `replace` of my agent archives nothing.
-    await hers.start(support({ area: "tech", name: "Léo", role: "Tecnologia", replace: mine.json.agentId }));
+    // Her `replace` of my agent archives nothing: she keeps her own first agent, so it is refused.
+    const mineNamed = await hers.start(
+      support({ area: "tech", name: "Léo", role: "Tecnologia", replace: mine.json.agentId }),
+    );
+    expect(mineNamed.status).toBe(409);
+    expect(mineNamed.json.error.code).toBe("first_agents.kept");
     const [kept] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, mine.json.agentId));
     expect(kept?.archivedAt).toBeNull();
     await t.db
@@ -138,11 +146,65 @@ describe("an agent from an area", () => {
   });
 });
 
-describe("arming it as I leave the agent's step", () => {
-  test("an agent from another app takes its place, no area or task, armed; 404 for one not here or archived", async () => {
+describe("an agent brought from another app on the onboarding", () => {
+  /** An agent my import made: mine, in the team. */
+  const imported = async (orgId: string, ownerUserId: string) => {
+    const [row] = await t.db
+      .insert(schema.agents)
+      .values({ orgId, name: "Bruno", handle: "bruno", model: "claude-sonnet-5-5", ownerUserId })
+      .returning();
+    return row?.id as string;
+  };
+
+  test("it takes the place of my area's agent: one first agent, its delivery kept with no task", async () => {
+    const { owner, orgId } = await setup();
+    const me = api(owner, orgId);
+    const iara = await me.start(support());
+    const [user] = await t.db.select().from(schema.users).where(eq(schema.users.email, "owner@example.com"));
+    const bruno = await imported(orgId, user?.id as string);
+    const adopted = await me.adopt({ agentId: bruno, replace: iara.json.agentId });
+    expect(adopted.status).toBe(200);
+    expect(adopted.json.agentId).toBe(bruno);
+    const [before] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, iara.json.agentId));
+    expect(before?.archivedAt).not.toBeNull();
+    expect((await me.read()).json.delivery).toMatchObject({ agentId: bruno, area: "import", task: "", armedAt: null });
+    // Picking an area again takes it back, named.
+    expect((await me.start(support({ area: "sales", name: "Nina" }))).json.error.code).toBe("first_agents.kept");
+    const nina = await me.start(support({ area: "sales", name: "Nina", replace: bruno }));
+    expect(nina.status).toBe(201);
+    const [gone] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, bruno));
+    expect(gone?.archivedAt).not.toBeNull();
+  });
+
+  test("404 for an agent not here, 403 for one not mine, 400 for a wrong shape; signed out 401", async () => {
     const { owner, orgId, agentId } = await setup();
     const me = api(owner, orgId);
-    await me.start(support());
+    const unknown = await me.adopt({ agentId: crypto.randomUUID() });
+    expect(unknown.status).toBe(404);
+    expect(unknown.json.error.code).toBe("first_delivery.no_agent");
+    const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
+    const notHers = await api(bia, orgId).adopt({ agentId });
+    expect(notHers.status).toBe(403);
+    expect(notHers.json.error.code).toBe("first_delivery.not_yours");
+    expect((await me.adopt({ agentId: "not-an-id" })).status).toBe(400);
+    expect((await api(browser(t), orgId).adopt({ agentId })).status).toBe(401);
+  });
+});
+
+describe("arming it as I leave the agent's step", () => {
+  test("another agent while the onboarding's own first agent waits: 409 first_agents.kept, it stays the one", async () => {
+    const { owner, orgId, agentId } = await setup();
+    const me = api(owner, orgId);
+    const made = await me.start(support());
+    const refused = await me.keep(agentId);
+    expect(refused.status).toBe(409);
+    expect(refused.json.error.code).toBe("first_agents.kept");
+    expect((await me.read()).json.delivery).toMatchObject({ agentId: made.json.agentId, armedAt: null });
+  });
+
+  test("an agent that was already here, armed with no area or task; 404 for one not here or archived", async () => {
+    const { owner, orgId, agentId } = await setup();
+    const me = api(owner, orgId);
     const kept = await me.keep(agentId);
     expect(kept.status).toBe(200);
     expect(kept.json.delivery).toMatchObject({ agentId, area: null, task: "", firedAt: null });

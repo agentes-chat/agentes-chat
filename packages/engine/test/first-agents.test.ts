@@ -84,8 +84,14 @@ const proposal = (
 const save = (fx: Fixture, userId: string, input: unknown, extra: Parameters<typeof deps>[1] = {}) =>
   saveFirstAgents(deps(fx, extra), { orgId: fx.org.id, userId, grantId: null, source: "paste" }, input);
 
-const pick = (fx: Fixture, userId: string, id: string, index: number) =>
-  pickFirstAgent({ db: fx.db, pubsub: fx.pubsub, context: fx.context }, { orgId: fx.org.id, userId }, id, index);
+const pick = (fx: Fixture, userId: string, id: string, index: number, replace?: string | null) =>
+  pickFirstAgent(
+    { db: fx.db, pubsub: fx.pubsub, context: fx.context },
+    { orgId: fx.org.id, userId },
+    id,
+    index,
+    replace,
+  );
 
 /** What a call threw, for its class and code. */
 const failure = async (run: () => Promise<unknown>) => {
@@ -381,9 +387,13 @@ describe("picking one", () => {
     await started(new Date(Date.now() - 2 * MINUTE - 1000));
     const picked = await pick(f, f.owner.id, saved.id, 0);
     expect(await team(f)).toHaveLength(2);
-    // Two clicks at once on a new proposal: one agent, and the other click waits or answers with it.
+    // Two clicks at once on a new proposal (in the place of the one just made): one agent, and the other click waits
+    // or answers with it.
     const again = await save(f, f.owner.id, proposal([billing({ name: "Caio", role: "Suporte" })]));
-    const both = await Promise.allSettled([pick(f, f.owner.id, again.id, 0), pick(f, f.owner.id, again.id, 0)]);
+    const both = await Promise.allSettled([
+      pick(f, f.owner.id, again.id, 0, picked.agentId),
+      pick(f, f.owner.id, again.id, 0, picked.agentId),
+    ]);
     expect(await team(f)).toHaveLength(3);
     const made = new Set(both.flatMap((r) => (r.status === "fulfilled" ? [r.value.agentId] : [])));
     expect(made.size).toBe(1);
@@ -457,7 +467,7 @@ describe("picking one", () => {
       )[0]?.context;
     // A context of its own stays.
     const first = await save(f, f.owner.id, proposal([billing()]));
-    await pick(f, f.owner.id, first.id, 0);
+    const firstPick = await pick(f, f.owner.id, first.id, 0);
     expect(await context()).toBe("Acme builds rockets.");
     // None yet, and a member, who may not configure it: still none.
     await f.db.update(schema.organizations).set({ context: "" }).where(eq(schema.organizations.id, f.org.id));
@@ -467,7 +477,7 @@ describe("picking one", () => {
     expect(await context()).toBe("");
     // The owner's: it becomes the workspace's.
     const second = await save(f, f.owner.id, proposal([billing({ name: "Caio", role: "Suporte" })]));
-    await pick(f, f.owner.id, second.id, 0);
+    await pick(f, f.owner.id, second.id, 0, firstPick.agentId);
     expect(await context()).toBe("A Acme vende foguetes para escolas.");
   });
 });

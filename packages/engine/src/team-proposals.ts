@@ -39,7 +39,7 @@ import {
 import { cardPlace, NO_PERSON_READS } from "./consultations";
 import type { ContextDeps } from "./context/summaries";
 import { publishDelivery } from "./delivery";
-import { openPersonAgentDm } from "./dms";
+import { openPersonAgentDm, personAgentDmKey } from "./dms";
 import { queuePlanWaiting } from "./email";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishAgentsChanged, publishChannelEvent, publishMessageCreated } from "./events";
@@ -845,6 +845,61 @@ export async function undoTeam(deps: TeamDeps, userId: string, orgId: string, me
   const next: TeamProposalCard = { ...card, state: "undone", undoneAt: new Date().toISOString() };
   await writeCard(deps, message, next, "created");
   return { card: next };
+}
+
+/**
+ * Settles the card that made one first agent the onboarding just replaced with another (ADR 0264 addendum): the
+ * channels it made are archived while only that agent and the person are in them, and the card reads as undone, so no
+ * "created" with Undo is left for an agent that is gone. The agent itself is archived by the caller first; its routines
+ * stay paused with it, and the card's other routines (the right hand's weekly check, which the next card doesn't make
+ * again) stay. Nothing when the person's DM with the right hand holds no such card.
+ */
+export async function retireTeamCardOf(
+  deps: { db: Database; pubsub?: PubSub },
+  orgId: string,
+  userId: string,
+  agentId: string,
+): Promise<boolean> {
+  const { db } = deps;
+  const [lodi] = await db
+    .select({ id: agents.id })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND)));
+  if (!lodi) return false;
+  const dm = db
+    .select({ id: channels.id })
+    .from(channels)
+    .where(and(eq(channels.orgId, orgId), eq(channels.dmKey, personAgentDmKey(userId, lodi.id))));
+  const rows = await db
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, orgId),
+        inArray(messages.channelId, dm),
+        eq(messages.authorType, "agent"),
+        sql`${messages.meta}->'actionCard'->>'kind' = ${TEAM_PROPOSAL_CARD}`,
+        sql`${messages.meta}->'actionCard'->>'state' = 'created'`,
+        sql`${messages.meta}->'actionCard'->'created'->'agentIds' @> ${JSON.stringify([agentId])}::jsonb`,
+      ),
+    );
+  const message = rows[0];
+  const card = message ? teamProposalOf(message.meta) : null;
+  if (!message || !card?.created) return false;
+  for (const channelId of card.created.channelIds) {
+    const members = await db
+      .select({ userId: channelMembers.userId, agentId: channelMembers.agentId })
+      .from(channelMembers)
+      .where(and(eq(channelMembers.orgId, orgId), eq(channelMembers.channelId, channelId)));
+    // Someone else in it now (another person, or the new agent that took its name): it stays.
+    if (!members.every((m) => m.userId === userId || m.agentId === agentId)) continue;
+    await archiveChannel(db, userId, orgId, channelId, { pubsub: deps.pubsub }).catch((error: unknown) => {
+      if (!(error instanceof NotFoundError || error instanceof ForbiddenError)) throw error;
+    });
+  }
+  const next: TeamProposalCard = { ...card, state: "undone", undoneAt: new Date().toISOString() };
+  await writeCard(deps, message, next, "created");
+  return true;
 }
 
 /** "Ajustar" (`PATCH …/team-proposals/{messageId}/agents/{handle}`): one agent's draft edited before the team exists. */

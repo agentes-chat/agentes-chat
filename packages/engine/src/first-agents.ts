@@ -13,14 +13,21 @@ import type { ContextDeps } from "./context/summaries";
 import { openPersonAgentDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
-import { keepFirstDelivery, pendingFirstDelivery } from "./first-delivery";
+import { ASK_AREA, IMPORT_AREA, keptFirstAgent, takeFirstDelivery } from "./first-delivery";
 import { handleFromName } from "./imports";
 import { can, requireActiveMembership, updateOrganization } from "./organizations";
 import { personLocale } from "./requester";
 import { settleWelcome } from "./right-hand-welcome";
 import { SETUP_APPS_MAX } from "./setup-checklist";
 import { workRefusalBeforePlan } from "./standing";
-import { channelPlaces, checkTeam, rightHandDm, type TeamDeps, type TeamProposalCard } from "./team-proposals";
+import {
+  channelPlaces,
+  checkTeam,
+  retireTeamCardOf,
+  rightHandDm,
+  type TeamDeps,
+  type TeamProposalCard,
+} from "./team-proposals";
 import { createTeamNow } from "./team-templates";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -616,13 +623,61 @@ async function requireAgentMaker(db: Database, userId: string, orgId: string) {
   return membership;
 }
 
+/** A first agent of this onboarding is already kept, and the request doesn't take its place (ADR 0264 addendum). */
+const keptRefusal = (agentId: string) =>
+  new ConflictError("Your first agent is already made", "first_agents.kept", { agentId });
+
+/**
+ * The onboarding makes one first agent (ADR 0264 addendum): while the person keeps one (`keptFirstAgent`), a new one is
+ * made only in its place, so `replace` must name it, and it must be one the onboarding may take back: made by it (an
+ * area's, an AI's pick, "Other" or one brought from another app there, never another agent that was only armed), the
+ * person's own, its delivery not gone. Anything else is `first_agents.kept` (409), before anything is made. Answers
+ * with the agent to take back once the new one is kept, or null when there is none.
+ */
+async function replaceable(db: Database, orgId: string, userId: string, replace: string | null | undefined) {
+  const kept = await keptFirstAgent(db, orgId, userId);
+  if (!kept) return null;
+  if (replace !== kept.agentId || kept.firedAt || kept.area === null || kept.ownerUserId !== userId)
+    throw keptRefusal(kept.agentId);
+  return kept.agentId;
+}
+
+/**
+ * Takes back the first agent a new one replaced, once the new one is kept (never before: a failure on the way leaves
+ * the person with the one they had): archived as the right hand's Undo archives what it made for them, and its team
+ * card settled (`retireTeamCardOf`: the channel made for it archived while only it and the person are in it, the card
+ * read as undone). Its handle stays taken, as any archived agent's does, so it can come back.
+ */
+async function retireFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: string, agentId: string) {
+  await archiveAgent(deps.db, userId, orgId, agentId, deps.pubsub, true);
+  await retireTeamCardOf(deps, orgId, userId, agentId);
+}
+
+/**
+ * Keeps the first delivery of a first agent made a moment ago, in the place of `over` (`takeFirstDelivery`). Another
+ * request that kept a first agent meanwhile (two tabs, a retry) wins: the agent made here is taken back and the
+ * answer is `first_agents.kept`, so two never stay side by side.
+ */
+async function keepMade(
+  deps: FirstAgentsPickDeps,
+  who: { orgId: string; userId: string },
+  made: { agentId: string; area: string; task: string; over: string | null },
+) {
+  const { orgId, userId } = who;
+  if (await takeFirstDelivery(deps.db, { orgId, userId, ...made })) return;
+  await retireFirstAgent(deps, orgId, userId, made.agentId);
+  const kept = await keptFirstAgent(deps.db, orgId, userId);
+  throw keptRefusal(kept?.agentId ?? made.agentId);
+}
+
 /**
  * "Criar o <agente>": the option picked becomes one agent, as the person (`create_agents`; without it,
  * `create_agents_required`), through the team card a template makes, in their DM with the right hand: its routine,
  * its instructions, the apps the workspace has (an admin's agent) and a checklist row for each app to connect, the AI
  * suggested for them, its own channel in a team's workspace (a personal one's agent lives in its DM). Picking again
  * answers with the same agent. With no context yet, the workspace's becomes what the AI said of it, from someone who
- * may configure it.
+ * may configure it. One first agent (`replaceable`): `replace` names the one this one takes the place of, taken back
+ * once this one is made.
  */
 export async function pickFirstAgent(
   deps: FirstAgentsPickDeps,
@@ -672,15 +727,27 @@ export async function pickFirstAgent(
       .set({ picked: null, pickedAt: null })
       .where(and(mine, isNull(firstAgentProposals.agentId)));
   // Asked of the person's AI again, or after an area's agent: one first agent, never several side by side.
-  if (replace) await replaceFirstAgent(deps, orgId, userId, replace);
+  const over = await replaceable(db, orgId, userId, replace).catch(async (error: unknown) => {
+    await release();
+    throw error;
+  });
   const agentId = await makeFirstAgent(deps, orgId, userId, optionPlan(option)).catch(async (error: unknown) => {
     await release();
     throw error;
   });
-  await db.update(firstAgentProposals).set({ agentId }).where(mine);
   // Its first delivery, armed when the person leaves the agent's step and fired once it can work: its routine, else
   // what the AI said it delivers on its first day.
-  await keepFirstDelivery(db, { orgId, userId, agentId, area: "ask", task: option.today[0] ?? option.tasks[0] ?? "" });
+  await keepMade(deps, who, {
+    agentId,
+    area: ASK_AREA,
+    task: option.today[0] ?? option.tasks[0] ?? "",
+    over,
+  }).catch(async (error: unknown) => {
+    await release();
+    throw error;
+  });
+  await db.update(firstAgentProposals).set({ agentId }).where(mine);
+  if (over) await retireFirstAgent(deps, orgId, userId, over);
   // What the AI said of the workspace (or of the person, in a personal one) is its context while it has none.
   if (row.about && can(membership, "configure")) {
     const [org] = await db
@@ -728,8 +795,9 @@ export type FirstAgentStartInput = z.input<typeof firstAgentStartInput>;
  * without it, `create_agents_required`), made the way a picked option is (`makeFirstAgent`) but with no routine:
  * connecting an app brings its routine (ADR 0242), which the onboarding makes. Its first delivery is kept (`area`,
  * `task`), disarmed until the person leaves the agent's step (`armFirstDelivery`), then fires once the agent can work.
- * `replace`: going back and picking another area archives the agent made a
- * moment ago, when it is this person's own and its delivery hasn't fired, so two first agents never wait side by side.
+ * `replace`: going back and picking another area takes back the agent made a moment ago (`replaceable`), once the
+ * new one is made, so two first agents never wait side by side; while one is kept, a start that doesn't name it is
+ * `first_agents.kept`.
  */
 export async function startFirstAgent(
   deps: FirstAgentsPickDeps,
@@ -742,7 +810,7 @@ export async function startFirstAgent(
   if (!parsed.success) throw new ValidationError(issueText(parsed.error), "first_agents.invalid");
   const input = parsed.data;
   const membership = await requireAgentMaker(db, userId, orgId);
-  if (input.replace) await replaceFirstAgent(deps, orgId, userId, input.replace);
+  const over = await replaceable(db, orgId, userId, input.replace);
   const [taken, looks] = await Promise.all([
     takenHandles(db, orgId),
     db
@@ -770,22 +838,55 @@ export async function startFirstAgent(
     firstTask: input.task,
     apps: input.apps,
   });
-  await keepFirstDelivery(db, { orgId, userId, agentId, area: input.area, task: input.task });
+  await keepMade(deps, who, { agentId, area: input.area, task: input.task, over });
+  if (over) await retireFirstAgent(deps, orgId, userId, over);
   // A member's greeting from the right hand went out as they joined and asks for a first agent: it stops asking.
   if (membership.role !== "owner") await settleWelcome(db, orgId, userId).catch(() => undefined);
   return homeOf(db, orgId, userId, agentId);
 }
 
-/** Archives the first agent `agentId` takes the place of, only while it is this person's and its delivery waits. */
-async function replaceFirstAgent(deps: FirstAgentsPickDeps, orgId: string, userId: string, agentId: string) {
-  const pending = await pendingFirstDelivery(deps.db, orgId, userId);
-  // An agent brought from another app (no area) is never archived from here.
-  if (!pending || pending.agentId !== agentId || pending.area === null) return;
-  const [agent] = await deps.db
-    .select({ owner: agents.ownerUserId, archivedAt: agents.archivedAt })
+// ── Brought from another app ─────────────────────────────────────────────────
+
+/** What the onboarding sends once an import from its work step brought agents (ADR 0264 addendum). */
+export const firstAgentAdoptInput = z.object({
+  agentId: z.uuid(),
+  /** The first agent made a moment ago, whose place the one brought takes. */
+  replace: z.uuid().nullish(),
+});
+export type FirstAgentAdoptInput = z.input<typeof firstAgentAdoptInput>;
+
+/**
+ * An agent the person brought from another app on the onboarding's work step becomes their first agent (ADR 0264
+ * addendum), as an area's agent is: its delivery kept disarmed with no task (`import`: its brief, then its routine of
+ * theirs, else its role), in the place of the one made a moment ago (`replace`, taken back as an area's agent takes it
+ * back), so the import leaves one first agent too; and taken back in its turn when the person goes back and picks an
+ * area. Only the person's own agent, made by them, in the team (`first_delivery.no_agent`, `first_delivery.not_yours`);
+ * while another first agent is kept, `first_agents.kept` as for a new one. Adopting it again answers with it.
+ */
+export async function adoptFirstAgent(
+  deps: FirstAgentsPickDeps,
+  who: { orgId: string; userId: string },
+  raw: unknown,
+): Promise<{ agentId: string; handle: string; channelId: string }> {
+  const { db } = deps;
+  const { orgId, userId } = who;
+  const parsed = firstAgentAdoptInput.safeParse(raw);
+  if (!parsed.success) throw new ValidationError(issueText(parsed.error), "first_agents.invalid");
+  const { agentId, replace } = parsed.data;
+  const membership = await requireAgentMaker(db, userId, orgId);
+  const [agent] = await db
+    .select({ owner: agents.ownerUserId, builtin: agents.builtin })
     .from(agents)
-    .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
-  if (!agent || agent.archivedAt || agent.owner !== userId) return;
-  // The person made it on this onboarding a moment ago, as with the right hand's Undo of what it made for them.
-  await archiveAgent(deps.db, userId, orgId, agentId, deps.pubsub, true);
+    .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId), isNull(agents.archivedAt), isNull(agents.deletedAt)));
+  if (!agent || agent.builtin) throw new NotFoundError("Agent not found", "first_delivery.no_agent");
+  if (agent.owner !== userId) throw new ForbiddenError("This agent isn't yours", "first_delivery.not_yours");
+  const kept = await keptFirstAgent(db, orgId, userId);
+  if (kept?.agentId === agentId) return homeOf(db, orgId, userId, agentId);
+  const over = await replaceable(db, orgId, userId, replace);
+  // The agent is the person's import, never ours to take back: losing the race only refuses.
+  if (!(await takeFirstDelivery(db, { orgId, userId, agentId, area: IMPORT_AREA, task: "", over })))
+    throw keptRefusal((await keptFirstAgent(db, orgId, userId))?.agentId ?? agentId);
+  if (over) await retireFirstAgent(deps, orgId, userId, over);
+  if (membership.role !== "owner") await settleWelcome(db, orgId, userId).catch(() => undefined);
+  return homeOf(db, orgId, userId, agentId);
 }
