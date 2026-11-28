@@ -26,7 +26,6 @@ import {
   SCREEN_X,
   Text,
   useReducedMotion,
-  weights,
 } from "@/ui";
 import { useColors } from "../shared/hooks";
 import { HOME_SECTIONS, type HomeSection, parseCollapsed, toggleCollapsed } from "./logic";
@@ -113,13 +112,11 @@ export function LandRow({
 
 /**
  * A section of Conversas: the title (20, semibold: a step over the rows' 17-point names, so a section reads above its
- * rows), its count beside it in the same size, regular and faint, and a chevron that turns when collapsed; tapping the
- * header collapses or opens it. No `count` while its rows load: a "0" that turns
- * into the real count a moment later is a number that lied.
+ * rows) and a chevron that turns when collapsed; tapping the header collapses or opens it. No count of its rows beside
+ * the title (owner's decision: the titles stand alone); closed, an unread count still says what waits in it.
  */
 export function CollapsibleSection({
   title,
-  count,
   collapsed,
   onToggle,
   menu,
@@ -129,10 +126,9 @@ export function CollapsibleSection({
   children,
 }: {
   title: string;
-  count?: number;
   /** Closed, what still shows under the header (a sector's live agents and unread channels, ADR 0240). */
   kept?: ReactNode;
-  /** Closed, the one unread count that takes the count's place; `hot` in red (a DM or a mention calls on me). */
+  /** Closed, its unread count beside the title; `hot` in red (a DM or a mention calls on me). */
   unread?: { count: number; hot: boolean };
   /** Before the title: a sector's mark (`RoleMark`), in Conversas' Setores. */
   mark?: ReactNode;
@@ -187,9 +183,7 @@ export function CollapsibleSection({
             inverted
             {...(unread.hot ? { fill: TAB_BADGE.background, color: TAB_BADGE.text } : {})}
           />
-        ) : count === undefined ? null : (
-          <Count value={count} size={20} weight={weights.regular} color={c.faint} />
-        )}
+        ) : null}
         <View style={styles.grow} />
         {menu ? (
           <View style={styles.menu}>

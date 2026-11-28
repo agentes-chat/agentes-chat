@@ -456,7 +456,6 @@ function Home() {
                       <CollapsibleSection
                         key={section.key}
                         title={sectionTitle(section)}
-                        count={section.rows.length}
                         {...(section.group
                           ? {
                               // Closed, a section keeps what calls on me in sight, and one count for its channels.
@@ -480,7 +479,6 @@ function Home() {
               {view === "sectors" ? null : (
                 <CollapsibleSection
                   title={t("mobile.chats.recent")}
-                  count={recent.length}
                   collapsed={collapsed.includes("recent")}
                   onToggle={() => toggle("recent")}
                 >
@@ -526,7 +524,6 @@ function Home() {
       {others.length > 0 ? (
         <CollapsibleSection
           title={t(modeKey(org, "shell.otherChannels"))}
-          count={others.length}
           collapsed={collapsed.includes("otherChannels")}
           onToggle={() => toggle("otherChannels")}
         >

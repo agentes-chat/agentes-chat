@@ -202,7 +202,6 @@ export function TaskSections({
       <Animated.View layout={layout}>
         <CollapsibleSection
           title={t("taskManager.ended.title")}
-          count={endedRows.length}
           collapsed={!endedOpen}
           onToggle={() => toggle("ended")}
         >

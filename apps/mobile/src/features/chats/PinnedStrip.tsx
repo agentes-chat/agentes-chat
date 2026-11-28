@@ -63,12 +63,7 @@ export function PinnedStrip({ items, collapsed, onToggle, onStart, onHold, holdA
   const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
-    <CollapsibleSection
-      title={t("mobile.chats.favorites")}
-      count={items.length}
-      collapsed={collapsed}
-      onToggle={onToggle}
-    >
+    <CollapsibleSection title={t("mobile.chats.favorites")} collapsed={collapsed} onToggle={onToggle}>
       {/* A fade at the edge where more pinned faces wait past it. */}
       <SideScroll contentContainerStyle={styles.strip}>
         {items.map((it) => (

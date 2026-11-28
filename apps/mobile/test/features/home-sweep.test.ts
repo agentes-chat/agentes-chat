@@ -84,9 +84,11 @@ describe("states: the rows' shape while loading, LoadFailed when it failed", () 
     expect(src("wiki/WikiAudience.tsx")).not.toContain("return null;");
   });
 
-  test("a section loading has no count yet and its header still opens and closes it", () => {
+  test("a section's title stands alone, no count beside it, and its header still opens and closes it", () => {
     const section = src("chats/HomeSection.tsx");
-    expect(section).toContain("count?: number;");
+    // Owner's decision: no count of a section's rows beside its title; closed, only an unread count says what waits.
+    expect(section).not.toContain("count?: number;");
+    expect(section).toContain("{collapsed && unread && unread.count > 0 ? (");
     for (const file of ["chats/ChatsScreen.tsx", "chats/ThreadsScreen.tsx"]) {
       const code = src(file);
       expect({ file, noop: code.includes("onToggle={() => {}}"), zero: code.includes("count={0}") }).toEqual({

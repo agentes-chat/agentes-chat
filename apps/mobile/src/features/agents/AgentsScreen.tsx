@@ -487,7 +487,6 @@ function FreeSections({
           <CollapsibleSection
             key={group.id}
             title={group.name}
-            count={lines.length}
             collapsed={collapsed.includes(group.id)}
             onToggle={() => toggle(group.id)}
             {...(manages

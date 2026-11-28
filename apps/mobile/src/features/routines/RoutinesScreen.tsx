@@ -167,7 +167,6 @@ export function RoutinesScreen() {
                 <Animated.View {...fade} layout={layout}>
                   <CollapsibleSection
                     title={t("routines.done")}
-                    count={sections.done.length}
                     collapsed={!showDone}
                     onToggle={() => setShowDone((v) => !v)}
                   >
