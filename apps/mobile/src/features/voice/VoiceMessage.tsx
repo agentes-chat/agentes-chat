@@ -14,7 +14,7 @@ import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text, TOUCH } from "@/ui";
 import { useRowDirectory } from "../chat/row-data";
 import { useColors, useOrgId } from "../shared/hooks";
-import { BAR_HANDLE, BAR_WAVE_H, nextSpeed, spokenWords, waveAt } from "./logic";
+import { nextSpeed, spokenWords, waveAt } from "./logic";
 import {
   lengthOf,
   type NowPlaying,
@@ -29,8 +29,10 @@ import {
   subscribePlayback,
 } from "./playback";
 import { setVoiceSpeed, subscribeVoiceSpeed, voiceSpeed } from "./speed";
-import { BarWave, barWave } from "./VoiceBars";
+import { PixelWave, wavePaths } from "./VoiceBars";
 
+/** Six rows of the sky's cells: the wave the take was recorded with, the app's own. */
+const WAVE = 24;
 /** The speed chip, as the web's: one width for 1×, 1,5× and 2×, so nothing beside it moves as the speed goes round. */
 const SPEED_H = 22;
 const SPEED_W = 36;
@@ -131,7 +133,8 @@ export function VoiceClip({
   const progress = useSharedValue(placeOf(clipId));
   // A finger on the wave: what the player says meanwhile doesn't move it (the two fought over the handle).
   const scrubbing = useSharedValue(false);
-  const wave = useSharedValue(Skia.Path.Make());
+  const inner = useSharedValue(Skia.Path.Make());
+  const edge = useSharedValue(Skia.Path.Make());
   const [width, setWidth] = useState(0);
   // The clock, from the clip's place read whole once a second: its length while it has no place.
   const second = useSyncExternalStore(subscribePlace, () => {
@@ -166,8 +169,10 @@ export function VoiceClip({
   }, [playing, rate, clipId]);
   useEffect(() => {
     if (width <= 0) return;
-    wave.value = barWave(peaks, width, BAR_WAVE_H);
-  }, [width, peaks, wave]);
+    const wave = wavePaths(peaks, width, WAVE);
+    inner.value = wave.inner;
+    edge.value = wave.edge;
+  }, [width, peaks, inner, edge]);
 
   const lose = () => {
     expired.add(clipId);
@@ -240,11 +245,11 @@ export function VoiceClip({
     onActivate: (e) => {
       "worklet";
       scrubbing.value = true;
-      if (width > 0) progress.value = waveAt(e.x, width, BAR_HANDLE);
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onUpdate: (e) => {
       "worklet";
-      if (width > 0) progress.value = waveAt(e.x, width, BAR_HANDLE);
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onDeactivate: (e) => {
       "worklet";
@@ -253,7 +258,7 @@ export function VoiceClip({
         return;
       }
       // Where the finger let go, not the last frame drawn before it.
-      const at = width > 0 ? waveAt(e.x, width, BAR_HANDLE) : progress.value;
+      const at = width > 0 ? waveAt(e.x, width) : progress.value;
       progress.value = at;
       scheduleOnRN(endScrub, at);
     },
@@ -263,7 +268,7 @@ export function VoiceClip({
     onDeactivate: (e) => {
       "worklet";
       if (e.canceled || width <= 0) return;
-      const at = waveAt(e.x, width, BAR_HANDLE);
+      const at = waveAt(e.x, width);
       progress.value = at;
       scheduleOnRN(seek, at);
     },
@@ -306,13 +311,14 @@ export function VoiceClip({
           )}
           <GestureDetector gesture={scrub}>
             <View style={[styles.wave, gone && styles.dim]} accessible={false}>
-              <BarWave
-                path={wave}
+              <PixelWave
+                inner={inner}
+                edge={edge}
                 progress={progress}
-                on={c.ink}
+                tones={[c.ink, c.ink]}
                 off={gone ? c.line2 : c.faint}
                 onWidth={setWidth}
-                height={BAR_WAVE_H}
+                height={WAVE}
                 handle={!gone}
               />
             </View>
@@ -406,7 +412,7 @@ const styles = StyleSheet.create({
   play: { width: PLAY, height: PLAY, borderRadius: PLAY / 2 },
   playNudge: { marginLeft: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  wave: { flex: 1, minWidth: 0, height: BAR_WAVE_H, flexDirection: "row" },
+  wave: { flex: 1, minWidth: 0, height: WAVE, flexDirection: "row" },
   dim: { opacity: 0.5, marginLeft: 6 },
   time: { minWidth: 30, textAlign: "right", fontVariant: ["tabular-nums"] },
   speed: { width: SPEED_W, height: SPEED_H, borderRadius: 6 },
